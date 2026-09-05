@@ -336,6 +336,17 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(generation.rawSensors?.generationID, generation.generationID)
         XCTAssertEqual(Array(rawStore.archives.keys), ["2026-08"])
         XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+
+        let lightweight = try await service.saveMonthlyArchive(
+            PlanCloudBackupPayload(snapshot: .empty),
+            date: date.addingTimeInterval(60)
+        )
+        XCTAssertEqual(lightweight.generationID, generation.generationID)
+        guard case let .available(restored) = try await service
+            .loadLatestBackupPackage().rawSensorState else {
+            return XCTFail("Snapshot-only backup must preserve committed raw data")
+        }
+        XCTAssertEqual(restored.sensorReadings.map(\.id), [reading.id])
     }
 
     func testMonthlyGenerationIgnoresRawWhenSnapshotCommitFails()

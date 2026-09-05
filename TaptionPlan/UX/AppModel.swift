@@ -2866,18 +2866,17 @@ final class AppModel {
             )
             guard acceptsDataMutation() else { throw CancellationError() }
             appLogBytes = payload.appLog?.utf8.count ?? 0
-            let generation: PlanCloudBackupGeneration
+            let snapshotArchive: PlanMonthlyArchive
             if includesRawSensors {
-                generation = try await saveCloudBackupGeneration(
+                snapshotArchive = try await saveCloudBackupGeneration(
                     using: securityBackupService,
                     payload: payload,
                     date: date
-                )
+                ).snapshot
             } else {
-                generation = try await securityBackupService
-                    .saveMonthlyGeneration(
+                snapshotArchive = try await securityBackupService
+                    .saveMonthlyArchive(
                         payload,
-                        rawSensorPayload: nil,
                         date: date,
                         dataGeneration: dataDeletionGeneration
                     )
@@ -2888,7 +2887,7 @@ final class AppModel {
                 outcome: "success",
                 fields: [
                     "reason": reason,
-                    "month": generation.snapshot.monthKey,
+                    "month": snapshotArchive.monthKey,
                     "app_log_bytes": String(appLogBytes),
                     "raw_sensors": String(includesRawSensors),
                 ]

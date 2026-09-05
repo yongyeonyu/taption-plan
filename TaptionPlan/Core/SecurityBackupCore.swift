@@ -2122,13 +2122,14 @@ final class PlanSecurityBackupService {
             throw PlanSecurityError.pinRequiredForCloudBackup
         }
         let monthKey = PlanArchiveSchedule.monthKey(for: date)
-        let payload = try payloadPreservingCurrentMonthRoutes(
+        let preserved = try payloadPreservingCurrentMonthRoutes(
             payload,
             monthKey: monthKey,
             accountIdentifier: accountIdentifier,
             pinKeyData: verifier.keyMaterial,
             accountKeyData: accountKey
         )
+        let payload = preserved.payload
         let encoded = try JSONEncoder.taptionPlan.encode(payload)
         let compressed = TaptionSnapshotCompression.encode(encoded)
         let archiveKey = try Self.randomKey()
@@ -2152,7 +2153,9 @@ final class PlanSecurityBackupService {
             wrappedPayloadKey: wrappedPayloadKey,
             accountWrappedPayloadKey: accountWrappedPayloadKey,
             createdAt: date,
-            generationID: generationID
+            generationID: generationID != nil
+                ? generationID
+                : preserved.generationID
         )
         try backupStore.save(archive, at: PlanCloudBackupPath(monthKey: archive.monthKey))
         if recordsSuccessfulBackup {
@@ -2268,11 +2271,11 @@ final class PlanSecurityBackupService {
         accountIdentifier: String,
         pinKeyData: Data,
         accountKeyData: Data?
-    ) throws -> PlanCloudBackupPayload {
+    ) throws -> (payload: PlanCloudBackupPayload, generationID: UUID?) {
         guard let existingArchive = try backupStore.allArchives()
             .filter({ $0.monthKey == monthKey })
             .max(by: Self.archivePrecedes) else {
-            return incoming
+            return (incoming, nil)
         }
         guard existingArchive.accountIdentifier == accountIdentifier else {
             throw PlanSecurityError.accountMismatch
@@ -2289,16 +2292,19 @@ final class PlanSecurityBackupService {
                 accountKeyData: accountKeyData
             )
         }
-        return PlanCloudBackupPayload(
-            snapshot: CloudSnapshotRecoveryEngine.merge(
-                local: incoming.snapshot,
-                remote: existing.snapshot
+        return (
+            PlanCloudBackupPayload(
+                snapshot: CloudSnapshotRecoveryEngine.merge(
+                    local: incoming.snapshot,
+                    remote: existing.snapshot
+                ),
+                routePoints: PlanBackupRoutePointReducer.merging(
+                    existing: existing.routePoints,
+                    incoming: incoming.routePoints
+                ),
+                appLog: incoming.appLog ?? existing.appLog
             ),
-            routePoints: PlanBackupRoutePointReducer.merging(
-                existing: existing.routePoints,
-                incoming: incoming.routePoints
-            ),
-            appLog: incoming.appLog ?? existing.appLog
+            existingArchive.generationID
         )
     }
 
