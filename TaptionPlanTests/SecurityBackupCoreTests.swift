@@ -361,12 +361,14 @@ final class SecurityBackupCoreTests: XCTestCase {
             .appendingPathComponent("backup-size-limit-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let store = FilePlanCloudBackupStore(root: root)
+        let createdAt = Date(timeIntervalSince1970: 1_787_538_400)
         let valid = PlanMonthlyArchive(
             monthKey: "2026-08",
             accountIdentifier: "account-a",
             encryptedPayload: Data([1]),
             wrappedPayloadKey: Data([2]),
-            accountWrappedPayloadKey: Data([3])
+            accountWrappedPayloadKey: Data([3]),
+            createdAt: createdAt
         )
         try store.save(valid, at: PlanCloudBackupPath(monthKey: valid.monthKey))
 
