@@ -113,11 +113,10 @@ enum MapHomeCameraLayoutMath {
 
     static func targetPoint(
         viewportSize: CGSize,
-        searchBottom: CGFloat,
-        sidebarLeft: CGFloat
+        searchBottom: CGFloat
     ) -> CGPoint {
         CGPoint(
-            x: max(0, sidebarLeft) / 2,
+            x: viewportSize.width / 2,
             y: min(max(searchBottom, 0), viewportSize.height)
                 + max(0, viewportSize.height - searchBottom) / 2
         )
@@ -1609,10 +1608,6 @@ struct MapHomeView: View {
             + Layout.horizontalInset
     }
 
-    private var sidebarLeftX: CGFloat {
-        max(0, mapViewportSize.width - sidebarInteractionWidth)
-    }
-
     private var mapSearchWidth: CGFloat {
         MapHomeSearchLayoutMath.searchWidth(
             viewportWidth: mapViewportSize.width > 0
@@ -1650,8 +1645,7 @@ struct MapHomeView: View {
             viewportSize: mapViewportSize,
             searchBottom: searchFieldFrame.maxY > 0
                 ? searchFieldFrame.maxY
-                : CGFloat(2) + Layout.headerVisibleHeight + 8 + 42,
-            sidebarLeft: sidebarLeftX
+                : CGFloat(2) + Layout.headerVisibleHeight + 8 + 42
         )
     }
 

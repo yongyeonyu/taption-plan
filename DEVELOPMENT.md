@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 DOC906U001 · 졸라맨 현재 위치 중앙 포커싱 원인
+
+- 현재 위치 버튼은 `requestAndFollowUserLocation` → `focusUserLocation` → `requestAppleMapCenter` → `MapHomeAppleCameraCommand.center` 경로로 카메라를 갱신하며, 졸라맨은 같은 지도 좌표를 annotation으로 표시한다.
+- 원인은 `MapHomeCameraLayoutMath.targetPoint`가 `x = max(0, sidebarLeft) / 2`를 사용한다는 점이다. `sidebarLeft`는 `mapViewportSize.width - sidebarInteractionWidth`이므로 화면 전체 중앙이 아니라 우측 시간 사이드바를 제외한 왼쪽 영역의 중앙을 목표로 삼는다. 따라서 현재 위치와 졸라맨이 의도적으로 화면 왼쪽에 치우치며, `isMapCenteredOnUser` 판정도 같은 편향된 목표점을 사용한다: `TaptionPlan/UI/MapHomeView.swift:111-145, 1607-1655, 8138-8182, 13323-13378`.
+- `NXT906P002`에서 target point의 x 기준을 `viewportSize.width / 2`로 통일하고 검색창 아래 여백을 반영하는 y 계산과 camera center 변환은 유지했다. 수학·카메라 command·버튼 상태 회귀 3/3과 Simulator Debug build·launch를 통과했으며, 실제 손가락 현재 위치 버튼과 TestFlight 화면은 별도 물리 게이트다.
+
 ## 2026-09-06 SUB906F001 지하철 오탐 수정·TestFlight build 138
 
 - iCloud 진단에서 철도 경로·역 이름·대중교통 일치·승차 후보가 모두 0인데 `travel_mode_counts=walking=2,subway=1,car=2`, `subway_segment_count=1`, `classification_locked_count=5`가 남았다. 확정·유효 노선이 없는 이전 지하철 잠금이 새 분류 결과와 병합될 때 살아난 것이 원인이며, iPhone 행동 문자열을 Watch 보조 근거로 읽는 경로도 함께 차단했다: `/private/tmp/DAY906L001-current-iphone.jsonl`.

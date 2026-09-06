@@ -845,10 +845,9 @@ final class TimeScaleTests: XCTestCase {
         let viewport = CGSize(width: 390, height: 844)
         let target = MapHomeCameraLayoutMath.targetPoint(
             viewportSize: viewport,
-            searchBottom: 98,
-            sidebarLeft: 264
+            searchBottom: 98
         )
-        XCTAssertEqual(target.x, 132)
+        XCTAssertEqual(target.x, viewport.width / 2)
         XCTAssertEqual(target.y, 471)
 
         let source = MapHomeCameraLayoutMath.cameraCenterSourcePoint(
@@ -856,11 +855,11 @@ final class TimeScaleTests: XCTestCase {
             targetPoint: target,
             viewportSize: viewport
         )
-        XCTAssertEqual(source.x, 243)
+        XCTAssertEqual(source.x, 180)
         XCTAssertEqual(source.y, 451)
         XCTAssertTrue(
             MapHomeCameraLayoutMath.isCentered(
-                locationPoint: CGPoint(x: 140, y: 476),
+                locationPoint: CGPoint(x: 203, y: 476),
                 targetPoint: target
             )
         )

@@ -1,5 +1,10 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 NXT906P002 졸라맨 중앙 포커싱
+
+- 현재 위치 목표점 x를 전체 viewport 중앙으로 통일하고 검색창 아래 y 여백은 유지했다. 수학 회귀 1/1과 camera command·버튼 상태 회귀 2/2가 실패·스킵 없이 통과했다: `/private/tmp/NXT906P002-focused.xcresult`, `/private/tmp/NXT906P002-camera-command-r2.xcresult`.
+- 최종 소스의 Simulator Debug build가 통과했다. 물리 iPhone은 `unavailable`이라 실제 손가락 현재 위치 버튼·TestFlight 화면 중앙 정렬은 별도 게이트다.
+
 # 2026-09-06 SUB906F001 지하철 오탐 수정·TestFlight build 138
 
 - iCloud 로그에서 `reading_rail_match_count=0`, `reading_station_name_count=0`, `reading_transit_match_count=0`, `candidate_count=0`인데 `subway_segment_count=1`이 남아 미확정 잠금 보존을 원인으로 확정했다: `/private/tmp/DAY906L001-current-iphone.jsonl`.
