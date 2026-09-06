@@ -155,6 +155,31 @@ enum MapHomeWeatherBackgroundKind: Equatable {
     }
 }
 
+enum MapHomeWeatherRailLayout {
+    static let minimumItemSpacing: CGFloat = 30
+
+    static func visibleIndices(
+        yPositions: [CGFloat],
+        candidateIndices: [Int],
+        priorityIndices: [Int],
+        minimumSpacing: CGFloat = minimumItemSpacing
+    ) -> Set<Int> {
+        var kept: [Int] = []
+        var visited = Set<Int>()
+        let candidates = Set(candidateIndices)
+        for index in priorityIndices + candidateIndices where
+            candidates.contains(index)
+                && yPositions.indices.contains(index)
+                && visited.insert(index).inserted
+        {
+            if kept.allSatisfy({ abs(yPositions[$0] - yPositions[index]) >= minimumSpacing }) {
+                kept.append(index)
+            }
+        }
+        return Set(kept)
+    }
+}
+
 enum MapHomeWeatherRailAlignmentMath {
     static let itemTrailingInset: CGFloat = 1
 
@@ -1774,8 +1799,38 @@ struct MapHomeWeatherSidebar: View {
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: selectedMinute
             )
+            let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
+            let nowComponents = Calendar.autoupdatingCurrent.dateComponents(
+                [.hour, .minute],
+                from: Date.now
+            )
+            let currentMinute = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
+            let isToday = Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: Date.now)
+            let selectedIndex = entries.firstIndex {
+                clampedSelectedMinute >= $0.startMinute
+                    && clampedSelectedMinute < $0.endMinute
+            }
+            let currentIndex = isToday ? entries.firstIndex {
+                currentMinute >= $0.startMinute && currentMinute < $0.endMinute
+            } : nil
+            let yPositions = entries.map { entry in
+                let startMinute = max(entry.startMinute, window.lowerBound)
+                let endMinute = min(entry.endMinute, window.upperBound)
+                let start = MapHomeTimeSidebarMath.position(minute: startMinute, window: window)
+                let end = MapHomeTimeSidebarMath.position(minute: endMinute, window: window)
+                return verticalInset + trackHeight * (start + end) / 2
+            }
+            let candidateIndices = entries.indices.filter { index in
+                max(entries[index].startMinute, window.lowerBound)
+                    < min(entries[index].endMinute, window.upperBound)
+            }
+            let visibleIndices = MapHomeWeatherRailLayout.visibleIndices(
+                yPositions: yPositions,
+                candidateIndices: candidateIndices,
+                priorityIndices: [selectedIndex, currentIndex].compactMap { $0 }
+            )
             ZStack(alignment: .topLeading) {
-                ForEach(entries) { entry in
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                     let startMinute = max(entry.startMinute, window.lowerBound)
                     let endMinute = min(entry.endMinute, window.upperBound)
                     let start = MapHomeTimeSidebarMath.position(
@@ -1786,24 +1841,13 @@ struct MapHomeWeatherSidebar: View {
                         minute: endMinute,
                         window: window
                     )
-                    let y = verticalInset + trackHeight * (start + end) / 2
+                    let y = yPositions[index]
                     let height = max(2, trackHeight * (end - start))
-                    if startMinute < endMinute {
+                    if startMinute < endMinute, visibleIndices.contains(index) {
                         let itemWidth = railWidth - 2
                         let itemHeight = max(22, min(30, height + 8))
-                        let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
-                        let isSelected = clampedSelectedMinute >= entry.startMinute
-                            && clampedSelectedMinute < entry.endMinute
-                        let nowMinute = Calendar.autoupdatingCurrent.dateComponents(
-                            [.hour, .minute],
-                            from: Date.now
-                        )
-                        let currentMinute = (nowMinute.hour ?? 0) * 60 + (nowMinute.minute ?? 0)
-                        let isCurrent = Calendar.autoupdatingCurrent.isDate(
-                            date,
-                            inSameDayAs: Date.now
-                        ) && currentMinute >= entry.startMinute
-                            && currentMinute < entry.endMinute
+                        let isSelected = index == selectedIndex
+                        let isCurrent = index == currentIndex
 
                         HStack(spacing: 2) {
                             Image(systemName: entry.context.symbolName)

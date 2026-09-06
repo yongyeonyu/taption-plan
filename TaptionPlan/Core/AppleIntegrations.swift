@@ -22,14 +22,10 @@ enum CalendarSyncPolicy {
         existing: [String],
         live: [String]
     ) -> [String] {
-        guard !existing.isEmpty, !live.isEmpty else { return existing }
-        let available = existing.filter(live.contains)
-        if !available.isEmpty, available.count < existing.count {
-            return existing
-        }
-        // Keep still-live saved calendars, but recover to the live set after
-        // an account reconnect replaces every calendar identifier.
-        return available.isEmpty ? live : available
+        guard !live.isEmpty else { return existing }
+        let liveIDs = Set(live)
+        let retained = existing.filter(liveIDs.contains)
+        return retained.isEmpty ? live : retained
     }
 
     static func hasCompleteSelection(
@@ -48,17 +44,37 @@ enum CalendarSyncPolicy {
         }
     }
 
-    private static func eventIdentityKey(_ event: CalendarRecord) -> String {
+    static func mergingEvents(
+        existing: [CalendarRecord],
+        fresh: [CalendarRecord],
+        in span: TimeSpan,
+        liveCalendarIDs: Set<String>
+    ) -> [CalendarRecord] {
+        let fetched = deduplicatedEvents(fresh)
+        let freshIDs = Set(fetched.map(\.id))
+        let freshOccurrences = Set(fetched.map(eventIdentityKey))
+        var merged = existing.filter {
+            liveCalendarIDs.contains($0.calendarID)
+                && !freshIDs.contains($0.id)
+                && !freshOccurrences.contains(eventIdentityKey($0))
+                && $0.span.intersection(with: span) == nil
+        }
+        merged.append(contentsOf: fetched.filter { $0.isCancelled != true })
+        return deduplicatedEvents(merged).sorted { $0.span.start < $1.span.start }
+    }
+
+    static func eventIdentityKey(_ event: CalendarRecord) -> String {
         let account = event.sourceIdentifier ?? "calendar:\(event.calendarID)"
         guard let external = event.externalIdentifier,
               !external.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return "event|\(event.id)"
         }
-        let recurrence = event.recurrenceIdentifier ?? "single"
-        let occurrence = event.isAllDay || event.isFloatingTime == true
+        let occurrence = event.occurrenceDate.map {
+            String($0.timeIntervalSinceReferenceDate.rounded())
+        } ?? (event.isAllDay || event.isFloatingTime == true
             ? wallClockKey(event.originalStartDateComponents)
-            : String(event.span.start.timeIntervalSinceReferenceDate.rounded())
-        return "external|\(account)|\(external)|\(recurrence)|\(occurrence)"
+            : String(event.span.start.timeIntervalSinceReferenceDate.rounded()))
+        return "external|\(account)|\(external)|\(occurrence)"
     }
 
     private static func wallClockKey(_ components: DateComponents?) -> String {
@@ -213,6 +229,7 @@ final class AppleCalendarService {
                     recurrenceIdentifier: Self.recurrenceIdentifier(
                         for: event.recurrenceRules
                     ),
+                    occurrenceDate: event.occurrenceDate,
                     attendeeCount: event.attendees?.count,
                     isCancelled: event.status == .canceled
                 ).normalizedForDisplay()
@@ -516,14 +533,23 @@ private final class HealthObserverCompletion: @unchecked Sendable {
 
 final class AppleHealthService: @unchecked Sendable {
     static let shared = AppleHealthService()
+    private static let maximumRouteLocations = 20_000
 
     private final class RouteLocationsAccumulator: @unchecked Sendable {
         private let lock = NSLock()
+        private let maximumCount: Int
         private var values: [CLLocation] = []
+
+        init(maximumCount: Int) {
+            self.maximumCount = maximumCount
+        }
 
         func append(_ locations: [CLLocation]) {
             lock.lock()
-            values.append(contentsOf: locations)
+            let remaining = maximumCount - values.count
+            if remaining > 0 {
+                values.append(contentsOf: locations.prefix(remaining))
+            }
             lock.unlock()
         }
 
@@ -951,7 +977,8 @@ final class AppleHealthService: @unchecked Sendable {
             for route in try await routeSamples(for: workout) {
                 let locations = try await locations(in: route)
                 for location in locations
-                where location.horizontalAccuracy >= 0
+                where result.count < Self.maximumRouteLocations
+                    && location.horizontalAccuracy >= 0
                     && span.contains(location.timestamp) {
                     result.append(
                         SensorReading(
@@ -1017,7 +1044,9 @@ final class AppleHealthService: @unchecked Sendable {
     ) async throws -> [CLLocation] {
         await withCheckedContinuation {
             (continuation: CheckedContinuation<[CLLocation], Never>) in
-            let collected = RouteLocationsAccumulator()
+            let collected = RouteLocationsAccumulator(
+                maximumCount: Self.maximumRouteLocations
+            )
             let gate = RouteLocationsReplyGate(continuation)
             let query = HKWorkoutRouteQuery(
                 route: route

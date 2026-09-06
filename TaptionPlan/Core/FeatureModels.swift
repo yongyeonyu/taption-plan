@@ -1191,6 +1191,9 @@ struct CalendarRecord: Identifiable, Codable, Hashable, Sendable {
     var originalEndDateComponents: DateComponents? = nil
     var externalIdentifier: String? = nil
     var recurrenceIdentifier: String? = nil
+    /// 반복 일정의 원래 발생 시각. 특정 발생분이 다른 날로 이동해도
+    /// 이전 기록과 같은 occurrence로 교체할 수 있게 보존한다.
+    var occurrenceDate: Date? = nil
     /// 정지 구간 문맥 추론에서 쓰는 EventKit 부가 정보. 이전 보관본은 값이
     /// 없으므로 옵셔널로 둔다.
     var attendeeCount: Int? = nil

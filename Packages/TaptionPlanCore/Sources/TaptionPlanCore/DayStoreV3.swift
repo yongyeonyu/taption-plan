@@ -38,6 +38,16 @@ public struct TaptionPlanRawEvent: Codable, Hashable, Sendable {
     }
 }
 
+public struct TaptionPlanRawEventIdentifier: Hashable, Sendable {
+    public let domain: String
+    public let id: String
+
+    public init(domain: String, id: String) {
+        self.domain = domain
+        self.id = id
+    }
+}
+
 public struct TaptionPlanMaterializedDay: Codable, Hashable, Sendable {
     public let device: TaptionPlanStoreDevice
     public let day: TaptionPlanDayKey
@@ -173,16 +183,71 @@ public actor TaptionPlanV3Store {
         }
     }
 
-    public func appendRawEvents(_ events: [TaptionPlanRawEvent]) throws {
+    @discardableResult
+    public func appendRawEvents(
+        _ events: [TaptionPlanRawEvent]
+    ) throws -> Set<TaptionPlanRawEventIdentifier> {
         try validate(events)
-        guard let database else { throw lastError() }
-        let changeCount = sqlite3_total_changes(database)
-        try withTransaction {
-            try insertRawEvents(events)
+        guard !events.isEmpty else { return [] }
+        let insertedIDs = try withTransaction {
+            let insertedIDs = try insertRawEvents(events)
+            let insertedDays = Set(events.lazy.compactMap { event in
+                insertedIDs.contains(
+                    .init(domain: event.domain, id: event.id)
+                ) ? event.day : nil
+            })
+            try removePersistedRawDigests(for: insertedDays)
+            return insertedIDs
         }
-        if sqlite3_total_changes(database) != changeCount {
-            for day in Set(events.map(\.day)) {
-                removeCachedRawDigest(for: day)
+        let insertedDays = Set(events.lazy.compactMap { event in
+            insertedIDs.contains(
+                .init(domain: event.domain, id: event.id)
+            ) ? event.day : nil
+        })
+        for day in insertedDays {
+            removeCachedRawDigest(for: day)
+        }
+        return insertedIDs
+    }
+
+    public func validateRawEventsForAppend(
+        _ events: [TaptionPlanRawEvent]
+    ) throws {
+        try validate(events)
+        guard !events.isEmpty else { return }
+        var candidates: [String: TaptionPlanRawEvent] = [:]
+        for event in events {
+            let key = "\(event.domain)|\(event.id)"
+            if let existing = candidates[key], existing != event {
+                throw TaptionPlanV3StoreError.payloadConflict(
+                    device: event.device,
+                    domain: event.domain,
+                    id: event.id
+                )
+            }
+            candidates[key] = event
+        }
+        let lookup = try prepare(
+            """
+            SELECT device, day_key, timestamp, sequence, id, domain,
+                   provenance, payload
+            FROM raw_events
+            WHERE device = ? AND domain = ? AND id = ?;
+            """
+        )
+        defer { sqlite3_finalize(lookup) }
+        for event in candidates.values {
+            try reset(lookup)
+            try bind(event.device.rawValue, to: lookup, at: 1)
+            try bind(event.domain, to: lookup, at: 2)
+            try bind(event.id, to: lookup, at: 3)
+            guard try step(lookup) == SQLITE_ROW else { continue }
+            guard try readRawEvent(lookup) == event else {
+                throw TaptionPlanV3StoreError.payloadConflict(
+                    device: event.device,
+                    domain: event.domain,
+                    id: event.id
+                )
             }
         }
     }
@@ -207,6 +272,7 @@ public actor TaptionPlanV3Store {
         )
         defer { sqlite3_finalize(delete) }
         try withTransaction {
+            try removePersistedRawDigests(for: Set([day]))
             for domain in domains {
                 try reset(delete)
                 try bind(device.rawValue, to: delete, at: 1)
@@ -214,7 +280,7 @@ public actor TaptionPlanV3Store {
                 try bind(domain, to: delete, at: 3)
                 guard try step(delete) == SQLITE_DONE else { throw lastError() }
             }
-            try insertRawEvents(events)
+            _ = try insertRawEvents(events)
         }
         if sqlite3_total_changes(database) != changeCount {
             removeCachedRawDigest(for: day)
@@ -230,7 +296,58 @@ public actor TaptionPlanV3Store {
         }
     }
 
-    private func insertRawEvents(_ events: [TaptionPlanRawEvent]) throws {
+    public func deleteRawEvents(
+        ids: [String],
+        domain: String
+    ) throws {
+        guard !ids.isEmpty else { return }
+        guard !domain.isEmpty else {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+        guard ids.allSatisfy({ !$0.isEmpty }) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        let lookup = try prepare(
+            "SELECT day_key FROM raw_events WHERE device = ? AND domain = ? AND id = ?;"
+        )
+        let delete = try prepare(
+            "DELETE FROM raw_events WHERE device = ? AND domain = ? AND id = ?;"
+        )
+        defer {
+            sqlite3_finalize(lookup)
+            sqlite3_finalize(delete)
+        }
+        var days = Set<TaptionPlanDayKey>()
+        try withTransaction {
+            for id in Set(ids) {
+                try reset(lookup)
+                try bind(device.rawValue, to: lookup, at: 1)
+                try bind(domain, to: lookup, at: 2)
+                try bind(id, to: lookup, at: 3)
+                if try step(lookup) == SQLITE_ROW,
+                   let value = sqlite3_column_text(lookup, 0).map({
+                       String(cString: $0)
+                   }), let day = parseDayKey(value) {
+                    days.insert(day)
+                }
+            }
+            try removePersistedRawDigests(for: days)
+            for id in Set(ids) {
+                try reset(delete)
+                try bind(device.rawValue, to: delete, at: 1)
+                try bind(domain, to: delete, at: 2)
+                try bind(id, to: delete, at: 3)
+                guard try step(delete) == SQLITE_DONE else { throw lastError() }
+            }
+        }
+        for day in days {
+            removeCachedRawDigest(for: day)
+        }
+    }
+
+    private func insertRawEvents(
+        _ events: [TaptionPlanRawEvent]
+    ) throws -> Set<TaptionPlanRawEventIdentifier> {
         let insert = try prepare(
             """
             INSERT OR IGNORE INTO raw_events(
@@ -251,6 +368,7 @@ public actor TaptionPlanV3Store {
             sqlite3_finalize(insert)
             sqlite3_finalize(conflictLookup)
         }
+        var insertedIDs = Set<TaptionPlanRawEventIdentifier>()
         for event in events {
             try reset(insert)
             try bind(event.device.rawValue, to: insert, at: 1)
@@ -262,7 +380,10 @@ public actor TaptionPlanV3Store {
             try bind(try encodeProvenance(event.provenance), to: insert, at: 7)
             try bind(event.payload, to: insert, at: 8)
             guard try step(insert) == SQLITE_DONE else { throw lastError() }
-            guard sqlite3_changes(database) == 0 else { continue }
+            guard sqlite3_changes(database) == 0 else {
+                insertedIDs.insert(.init(domain: event.domain, id: event.id))
+                continue
+            }
 
             try reset(conflictLookup)
             try bind(event.device.rawValue, to: conflictLookup, at: 1)
@@ -280,6 +401,7 @@ public actor TaptionPlanV3Store {
                 )
             }
         }
+        return insertedIDs
     }
 
     public func rawEvents(
@@ -327,6 +449,10 @@ public actor TaptionPlanV3Store {
     public func rawDigest(for day: TaptionPlanDayKey) throws -> TaptionPlanDayDigest {
         let dataVersion = try currentDataVersion()
         if let digest = cachedRawDigest(for: day, dataVersion: dataVersion) {
+            return digest
+        }
+        if let digest = try persistedRawDigest(for: day) {
+            cacheRawDigest(digest, for: day, dataVersion: dataVersion)
             return digest
         }
         let dayKey = Self.dayKey(day)
@@ -382,6 +508,7 @@ public actor TaptionPlanV3Store {
         )
         let latestDataVersion = try currentDataVersion()
         if latestDataVersion == dataVersion {
+            try persistRawDigest(digest)
             cacheRawDigest(digest, for: day, dataVersion: dataVersion)
         }
         return digest
@@ -511,6 +638,12 @@ public actor TaptionPlanV3Store {
             )
             try execute(
                 "DELETE FROM day_materialized WHERE device = ?;",
+                binds: { statement in
+                    try self.bind(self.device.rawValue, to: statement, at: 1)
+                }
+            )
+            try execute(
+                "DELETE FROM raw_digest_cache WHERE device = ?;",
                 binds: { statement in
                     try self.bind(self.device.rawValue, to: statement, at: 1)
                 }
@@ -648,6 +781,15 @@ public actor TaptionPlanV3Store {
                     key TEXT NOT NULL PRIMARY KEY,
                     completed_at REAL NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS raw_digest_cache(
+                    device TEXT NOT NULL,
+                    day_key TEXT NOT NULL,
+                    event_count INTEGER NOT NULL,
+                    first_timestamp REAL,
+                    last_timestamp REAL,
+                    sha256 TEXT NOT NULL,
+                    PRIMARY KEY(device, day_key)
+                );
                 """
             )
             try sqliteExecute(database, "PRAGMA optimize;")
@@ -700,6 +842,15 @@ public actor TaptionPlanV3Store {
             CREATE TABLE migration_markers(
                 key TEXT NOT NULL PRIMARY KEY,
                 completed_at REAL NOT NULL
+            );
+            CREATE TABLE raw_digest_cache(
+                device TEXT NOT NULL,
+                day_key TEXT NOT NULL,
+                event_count INTEGER NOT NULL,
+                first_timestamp REAL,
+                last_timestamp REAL,
+                sha256 TEXT NOT NULL,
+                PRIMARY KEY(device, day_key)
             );
             """
             )
@@ -928,11 +1079,14 @@ public actor TaptionPlanV3Store {
         )
     }
 
-    private func withTransaction(_ body: () throws -> Void) throws {
+    private func withTransaction<Result>(
+        _ body: () throws -> Result
+    ) throws -> Result {
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
-            try body()
+            let result = try body()
             try execute("COMMIT;")
+            return result
         } catch {
             _ = try? execute("ROLLBACK;")
             throw error
@@ -1023,6 +1177,86 @@ public actor TaptionPlanV3Store {
         defer { sqlite3_finalize(statement) }
         guard try step(statement) == SQLITE_ROW else { throw lastError() }
         return sqlite3_column_int64(statement, 0)
+    }
+
+    private func persistedRawDigest(
+        for day: TaptionPlanDayKey
+    ) throws -> TaptionPlanDayDigest? {
+        let statement = try prepare(
+            """
+            SELECT event_count, first_timestamp, last_timestamp, sha256
+            FROM raw_digest_cache
+            WHERE device = ? AND day_key = ?;
+            """
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(device.rawValue, to: statement, at: 1)
+        try bind(Self.dayKey(day), to: statement, at: 2)
+        guard try step(statement) == SQLITE_ROW else { return nil }
+        let count = sqlite3_column_int64(statement, 0)
+        guard let eventCount = Int(exactly: count), eventCount >= 0,
+              let sha256 = sqlite3_column_text(statement, 3).map({
+                  String(cString: $0)
+              }), !sha256.isEmpty else {
+            throw TaptionPlanV3StoreError.databaseCorrupt(
+                message: "Invalid persisted raw digest"
+            )
+        }
+        let firstTimestamp = sqlite3_column_type(statement, 1) == SQLITE_NULL
+            ? nil : Date(timeIntervalSince1970: sqlite3_column_double(statement, 1))
+        let lastTimestamp = sqlite3_column_type(statement, 2) == SQLITE_NULL
+            ? nil : Date(timeIntervalSince1970: sqlite3_column_double(statement, 2))
+        return TaptionPlanDayDigest(
+            device: device,
+            day: day,
+            eventCount: eventCount,
+            firstTimestamp: firstTimestamp,
+            lastTimestamp: lastTimestamp,
+            sha256: sha256
+        )
+    }
+
+    private func persistRawDigest(_ digest: TaptionPlanDayDigest) throws {
+        try execute(
+            """
+            INSERT INTO raw_digest_cache(
+                device, day_key, event_count, first_timestamp,
+                last_timestamp, sha256
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(device, day_key) DO UPDATE SET
+                event_count = excluded.event_count,
+                first_timestamp = excluded.first_timestamp,
+                last_timestamp = excluded.last_timestamp,
+                sha256 = excluded.sha256;
+            """,
+            binds: { statement in
+                try self.bind(digest.device.rawValue, to: statement, at: 1)
+                try self.bind(Self.dayKey(digest.day), to: statement, at: 2)
+                guard let eventCount = Int64(exactly: digest.eventCount) else {
+                    throw TaptionPlanV3StoreError.integerOverflow
+                }
+                try self.bind(eventCount, to: statement, at: 3)
+                try self.bind(digest.firstTimestamp?.timeIntervalSince1970, to: statement, at: 4)
+                try self.bind(digest.lastTimestamp?.timeIntervalSince1970, to: statement, at: 5)
+                try self.bind(digest.sha256, to: statement, at: 6)
+            }
+        )
+    }
+
+    private func removePersistedRawDigests(
+        for days: Set<TaptionPlanDayKey>
+    ) throws {
+        guard !days.isEmpty else { return }
+        let statement = try prepare(
+            "DELETE FROM raw_digest_cache WHERE device = ? AND day_key = ?;"
+        )
+        defer { sqlite3_finalize(statement) }
+        for day in days {
+            try reset(statement)
+            try bind(device.rawValue, to: statement, at: 1)
+            try bind(Self.dayKey(day), to: statement, at: 2)
+            guard try step(statement) == SQLITE_DONE else { throw lastError() }
+        }
     }
 
     private func cachedRawDigest(

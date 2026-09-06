@@ -296,8 +296,8 @@ struct StoreProductPresentation: Equatable, Sendable {
     var displayPrice: String
 }
 
-enum StorePurchaseOutcome: Equatable, Sendable {
-    case purchased
+enum StorePurchaseOutcome: Sendable {
+    case purchased(Transaction)
     case pending
     case cancelled
 }
@@ -392,8 +392,7 @@ actor StoreKitPurchaseService {
                   ) else {
                 throw StorePurchaseError.unverifiedTransaction
             }
-            await transaction.finish()
-            return .purchased
+            return .purchased(transaction)
         case .pending:
             return .pending
         case .userCancelled:
@@ -404,6 +403,7 @@ actor StoreKitPurchaseService {
     }
 
     func restorePurchases() async throws -> Bool {
+        if await hasProEntitlement() { return true }
         try await AppStore.sync()
         return await hasProEntitlement()
     }
@@ -516,8 +516,9 @@ final class TaptionProAccessController {
         defer { isActionInFlight = false }
         do {
             switch try await purchaseService.purchasePro() {
-            case .purchased:
-                await refresh()
+            case .purchased(let transaction):
+                grantPermanentAccess()
+                await transaction.finish()
                 message = .purchaseCompleted
                 isPurchaseSheetPresented = false
             case .pending:
@@ -556,16 +557,28 @@ final class TaptionProAccessController {
         transactionUpdatesTask = Task { [weak self] in
             for await result in Transaction.updates {
                 guard !Task.isCancelled else { return }
-                if case .verified(let transaction) = result,
-                   transaction.productID == TaptionCommercePolicy.proProductID,
-                   TaptionCommercePolicy.isSupportedProProductType(
-                       transaction.productType
-                   ) {
-                    await transaction.finish()
+                if case .verified(let transaction) = result {
+                    if TaptionCommercePolicy.grantsProAccess(
+                        productID: transaction.productID,
+                        productType: transaction.productType,
+                        revocationDate: transaction.revocationDate
+                    ) {
+                        self?.grantPermanentAccess()
+                        await transaction.finish()
+                    } else {
+                        await transaction.finish()
+                        await self?.refresh()
+                    }
+                } else {
+                    await self?.refresh()
                 }
-                await self?.refresh()
             }
         }
+    }
+
+    private func grantPermanentAccess() {
+        refreshGeneration &+= 1
+        setState(.purchased)
     }
 
     private func setState(_ newState: TaptionProAccessState) {

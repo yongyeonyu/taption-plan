@@ -878,6 +878,7 @@ actor RawDeviceDataDayArchive {
         case invalidEnvelope
     }
     private let store: TaptionPlanDayStore
+    private let legacyDecoder: JSONDecoder
     private let writeLockURL: URL
     private var dataDeletionGeneration: UInt64
 
@@ -887,6 +888,8 @@ actor RawDeviceDataDayArchive {
             withIntermediateDirectories: true
         )
         store = try TaptionPlanDayStore(url: databaseURL)
+        legacyDecoder = JSONDecoder()
+        legacyDecoder.dateDecodingStrategy = .secondsSince1970
         writeLockURL = databaseURL.appendingPathExtension("lock")
         dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
@@ -904,73 +907,157 @@ actor RawDeviceDataDayArchive {
 
     func append(_ envelopes: [RawDeviceDataEnvelope]) async throws {
         guard !envelopes.isEmpty else { return }
-        guard envelopes.allSatisfy(\.hasValidPayload) else {
-            throw Error.invalidEnvelope
-        }
         let generation = dataDeletionGeneration
-        var uniqueByID: [UUID: RawDeviceDataEnvelope] = [:]
-        for envelope in envelopes {
-            if let existing = uniqueByID[envelope.id], existing != envelope {
-                throw TaptionPlanDayStoreError.eventConflict(id: envelope.id.uuidString)
-            }
-            uniqueByID[envelope.id] = envelope
-        }
-        let events = try uniqueByID.values
-            .sorted {
-                if $0.capturedAt != $1.capturedAt {
-                    return $0.capturedAt < $1.capturedAt
-                }
-                return $0.id.uuidString < $1.id.uuidString
-            }
-            .map { envelope in
-                TaptionPlanDayStore.Event(
-                    day: TaptionPlanDayKey(date: envelope.capturedAt),
-                    timestamp: envelope.capturedAt,
-                    sequence: 0,
-                    id: envelope.id.uuidString,
-                    domain: Self.domain,
-                    payload: TaptionPlanCanonicalStorage.envelope(
-                        for: try TaptionPlanCanonicalStorage.encode(envelope)
-                    )
-                )
-            }
+        let events = try events(for: envelopes)
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration(generation)
         try await store.appendUniqueEvents(events)
     }
 
+    func appendForRestore(
+        _ envelopes: [RawDeviceDataEnvelope]
+    ) async throws -> [UUID] {
+        guard !envelopes.isEmpty else { return [] }
+        let generation = dataDeletionGeneration
+        let events = try events(for: envelopes)
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        let inserted = try await store.appendUniqueEvents(events)
+        return inserted.compactMap(UUID.init(uuidString:))
+    }
+
+    func rollbackRestore(ids: [UUID]) async throws {
+        guard !ids.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await store.deleteEvents(
+            ids: ids.map(\.uuidString),
+            domain: Self.domain
+        )
+    }
+
+    func validateAppend(_ envelopes: [RawDeviceDataEnvelope]) async throws {
+        guard !envelopes.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        let events = try events(for: envelopes)
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await store.validateUniqueEvents(events)
+    }
+
     func envelopes(in span: TimeSpan) async throws
         -> [RawDeviceDataEnvelope] {
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
         let events = try await store.events(
             from: TaptionPlanDayKey(date: span.start),
             through: TaptionPlanDayKey(date: span.end),
             domain: Self.domain
         )
-        return try events.compactMap { event in
-            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
-                from: event.payload
-            )
-            let value = try TaptionPlanCanonicalStorage.decode(
-                RawDeviceDataEnvelope.self,
-                from: encoded
-            )
-            guard value.hasValidPayload else { throw Error.invalidEnvelope }
-            return span.contains(value.capturedAt) ? value : nil
+        return try await decodedEnvelopes(
+            events,
+            generation: generation
+        ).filter {
+            span.contains($0.capturedAt)
         }
     }
 
     func allEnvelopes() async throws -> [RawDeviceDataEnvelope] {
-        try await store.allEvents(domain: Self.domain).map { event in
-            guard let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        let events = try await store.allEvents(domain: Self.domain)
+        return try await decodedEnvelopes(events, generation: generation)
+    }
+
+    private func decodedEnvelopes(
+        _ events: [TaptionPlanDayStore.Event],
+        generation: UInt64
+    ) async throws -> [RawDeviceDataEnvelope] {
+        var values: [RawDeviceDataEnvelope] = []
+        var repairs: [TaptionPlanDayStore.Event] = []
+        for event in events {
+            if let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
                 from: event.payload
             ), let value = try? TaptionPlanCanonicalStorage.decode(
                 RawDeviceDataEnvelope.self,
                 from: encoded
-            ), value.hasValidPayload else {
+            ), value.hasValidPayload {
+                values.append(value)
+                continue
+            }
+            guard let value = try? legacyDecoder.decode(
+                RawDeviceDataEnvelope.self,
+                from: event.payload
+            ), value.hasValidPayload,
+                  value.id.uuidString == event.id else {
                 throw Error.invalidEnvelope
             }
-            return value
+            values.append(value)
+            repairs.append(.init(
+                day: event.day,
+                timestamp: event.timestamp,
+                sequence: event.sequence,
+                id: event.id,
+                domain: event.domain,
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(value)
+                )
+            ))
+        }
+        if !repairs.isEmpty {
+            do {
+                try checkDataGeneration(generation)
+                try await store.upsertEvents(repairs)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "raw_device_archive_repaired",
+                    fields: ["count": String(repairs.count)]
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "raw_device_archive_repair_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.compactFields(for: error)
+                )
+            }
+        }
+        return values
+    }
+
+    private func events(
+        for envelopes: [RawDeviceDataEnvelope]
+    ) throws -> [TaptionPlanDayStore.Event] {
+        guard envelopes.allSatisfy(\.hasValidPayload) else {
+            throw Error.invalidEnvelope
+        }
+        var uniqueByID: [UUID: RawDeviceDataEnvelope] = [:]
+        for envelope in envelopes {
+            if let existing = uniqueByID[envelope.id], existing != envelope {
+                throw TaptionPlanDayStoreError.eventConflict(
+                    id: envelope.id.uuidString
+                )
+            }
+            uniqueByID[envelope.id] = envelope
+        }
+        return try uniqueByID.values.map { envelope in
+            TaptionPlanDayStore.Event(
+                day: TaptionPlanDayKey(date: envelope.capturedAt),
+                timestamp: envelope.capturedAt,
+                sequence: 0,
+                id: envelope.id.uuidString,
+                domain: Self.domain,
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(envelope)
+                )
+            )
         }
     }
 
@@ -999,10 +1086,12 @@ actor RawDeviceDataDayArchive {
 }
 
 actor SensorReadingArchive {
-    private static let logger = Logger(
-        subsystem: "com.taption.plan",
-        category: "RawDeviceDataArchive"
-    )
+    private struct RecoveryCache {
+        var legacy: [UUID: SensorReading]?
+        var raw: [UUID: SensorReading]?
+        var tracking: [UUID: SensorReading]?
+    }
+
     private enum Error: Swift.Error {
         case dayStoreUnavailable
         case invalidReading
@@ -1086,6 +1175,52 @@ actor SensorReadingArchive {
         try checkDataGeneration(generation)
         try await ensureMigrated()
         guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await dayStore.appendUniqueEvents(events(for: readings))
+        _ = now
+    }
+
+    func appendForRestore(_ readings: [SensorReading]) async throws -> [UUID] {
+        guard !readings.isEmpty else { return [] }
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await ensureMigrated()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        let inserted = try await dayStore.appendUniqueEvents(
+            events(for: readings)
+        )
+        return inserted.compactMap(UUID.init(uuidString:))
+    }
+
+    func rollbackRestore(ids: [UUID]) async throws {
+        guard !ids.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await ensureMigrated()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await dayStore.deleteEvents(
+            ids: ids.map(\.uuidString),
+            domain: "sensor-reading"
+        )
+    }
+
+    func validateAppend(_ readings: [SensorReading]) async throws {
+        guard !readings.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration(generation)
+        try await ensureMigrated()
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await dayStore.validateUniqueEvents(events(for: readings))
+    }
+
+    private func events(
+        for readings: [SensorReading]
+    ) throws -> [TaptionPlanDayStore.Event] {
         var readingsByID: [UUID: SensorReading] = [:]
         for reading in readings {
             if let existing = readingsByID[reading.id], existing != reading {
@@ -1093,22 +1228,18 @@ actor SensorReadingArchive {
             }
             readingsByID[reading.id] = reading
         }
-        let unique = Array(readingsByID.values)
-        let events = try unique
-            .map { reading in
-                TaptionPlanDayStore.Event(
-                    day: TaptionPlanDayKey(date: reading.timestamp),
-                    timestamp: reading.timestamp,
-                    sequence: UInt64(max(0, reading.sequence ?? 0)),
-                    id: reading.id.uuidString,
-                    domain: "sensor-reading",
-                    payload: TaptionPlanCanonicalStorage.envelope(
-                        for: try TaptionPlanCanonicalStorage.encode(reading)
-                    )
+        return try readingsByID.values.map { reading in
+            TaptionPlanDayStore.Event(
+                day: TaptionPlanDayKey(date: reading.timestamp),
+                timestamp: reading.timestamp,
+                sequence: UInt64(max(0, reading.sequence ?? 0)),
+                id: reading.id.uuidString,
+                domain: "sensor-reading",
+                payload: TaptionPlanCanonicalStorage.envelope(
+                    for: try TaptionPlanCanonicalStorage.encode(reading)
                 )
-            }
-        try await dayStore.appendUniqueEvents(events)
-        _ = now
+            )
+        }
     }
 
     func readings(in span: TimeSpan) async throws -> [SensorReading] {
@@ -1144,13 +1275,11 @@ actor SensorReadingArchive {
         try checkDataGeneration(generation)
         try await ensureMigrated()
         guard let dayStore else { throw Error.dayStoreUnavailable }
-        var readings: [SensorReading] = []
-        for event in try await dayStore.allEvents(domain: "sensor-reading") {
-            if let reading = decodeReading(from: event) {
-                readings.append(reading)
-            }
-        }
-        return readings.sorted(by: readingOrder)
+        let decoded = decodeReadings(
+            try await dayStore.allEvents(domain: "sensor-reading")
+        )
+        await persistRepairs(decoded.repairs, to: dayStore)
+        return decoded.readings.sorted(by: readingOrder)
     }
 
     func compact(now: Date = .now) async throws {
@@ -1225,70 +1354,119 @@ actor SensorReadingArchive {
         guard let dayStore else { throw Error.dayStoreUnavailable }
         let start = TaptionPlanDayKey(date: span.start)
         let end = TaptionPlanDayKey(date: span.end)
-        var readings: [SensorReading] = []
-        var isComplete = true
-        for event in try await dayStore.events(
+        let events = try await dayStore.events(
             from: start,
             through: end,
             domain: "sensor-reading"
-        ) {
-            guard span.contains(event.timestamp) else { continue }
-            guard let reading = decodeReading(from: event) else {
-                isComplete = false
-                continue
-            }
-            if span.contains(reading.timestamp) {
-                readings.append(reading)
-            }
-        }
-        return (readings, isComplete)
+        ).filter { span.contains($0.timestamp) }
+        let decoded = decodeReadings(events)
+        await persistRepairs(decoded.repairs, to: dayStore)
+        return (
+            decoded.readings.filter { span.contains($0.timestamp) },
+            decoded.isComplete
+        )
     }
 
-    private func decodeReading(
-        from event: TaptionPlanDayStore.Event
-    ) -> SensorReading? {
-        do {
-            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
-                from: event.payload
-            )
-            return try TaptionPlanCanonicalStorage.decode(
-                SensorReading.self,
-                from: encoded
-            )
-        } catch {
-            var fields = [
-                "event_id": event.id,
-                "event_day": String(
-                    format: "%04d-%02d-%02d",
-                    event.day.year,
-                    event.day.month,
-                    event.day.day
-                ),
-                "raw_preserved": "true",
-            ]
-            fields.merge(
-                TaptionDiagnosticError.compactFields(for: error),
-                uniquingKeysWith: { _, new in new }
-            )
-            if let recovered = recoveryReading(for: event.id) {
-                fields["recovery_source"] = recovered.source
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "sensor_archive_invalid_reading",
-                    level: .error,
-                    fields: fields
+    private func decodeReadings(
+        _ events: [TaptionPlanDayStore.Event]
+    ) -> (
+        readings: [SensorReading],
+        repairs: [TaptionPlanDayStore.Event],
+        isComplete: Bool
+    ) {
+        var readings: [SensorReading] = []
+        var repairs: [TaptionPlanDayStore.Event] = []
+        var recovery = RecoveryCache()
+        var recoveryCounts: [String: Int] = [:]
+        var invalidCount = 0
+        var firstErrorFields: [String: String] = [:]
+        for event in events {
+            do {
+                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                    from: event.payload
                 )
-                return recovered.reading
+                readings.append(try TaptionPlanCanonicalStorage.decode(
+                    SensorReading.self,
+                    from: encoded
+                ))
+            } catch {
+                invalidCount += 1
+                if firstErrorFields.isEmpty {
+                    firstErrorFields = TaptionDiagnosticError.compactFields(
+                        for: error
+                    )
+                }
+                let recovered: (reading: SensorReading, source: String)?
+                if let reading = try? legacyDecoder.decode(
+                    SensorReading.self,
+                    from: event.payload
+                ), reading.id.uuidString == event.id {
+                    recovered = (reading, "inline_legacy")
+                } else {
+                    recovered = recoveryReading(
+                        for: event.id,
+                        cache: &recovery
+                    )
+                }
+                guard let recovered else {
+                    recoveryCounts["unavailable", default: 0] += 1
+                    continue
+                }
+                recoveryCounts[recovered.source, default: 0] += 1
+                readings.append(recovered.reading)
+                if let encoded = try? TaptionPlanCanonicalStorage.encode(
+                    recovered.reading
+                ) {
+                    repairs.append(.init(
+                        day: event.day,
+                        timestamp: event.timestamp,
+                        sequence: event.sequence,
+                        id: event.id,
+                        domain: event.domain,
+                        payload: TaptionPlanCanonicalStorage.envelope(
+                            for: encoded
+                        )
+                    ))
+                }
             }
-            fields["recovery_source"] = "unavailable"
-            Self.logger.error(
-                "Unreadable sensor archive event preserved: \(event.id, privacy: .public)"
-            )
+        }
+        if invalidCount > 0 {
+            var fields = firstErrorFields
+            fields["invalid_count"] = String(invalidCount)
+            fields["raw_preserved"] = "true"
+            for (source, count) in recoveryCounts {
+                fields["recovered_\(source)"] = String(count)
+            }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_archive_invalid_reading",
                 level: .error,
                 fields: fields
             )
-            return nil
+        }
+        return (
+            readings,
+            repairs,
+            recoveryCounts["unavailable", default: 0] == 0
+        )
+    }
+
+    private func persistRepairs(
+        _ events: [TaptionPlanDayStore.Event],
+        to dayStore: TaptionPlanDayStore
+    ) async {
+        guard !events.isEmpty else { return }
+        do {
+            try await dayStore.upsertEvents(events)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_archive_repaired",
+                fields: ["count": String(events.count)]
+            )
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_archive_repair_failed",
+                level: .error,
+                fields: TaptionDiagnosticError.compactFields(for: error)
+            )
         }
     }
 
@@ -1300,20 +1478,39 @@ actor SensorReadingArchive {
     }
 
     private func recoveryReading(
-        for eventID: String
+        for eventID: String,
+        cache: inout RecoveryCache
     ) -> (reading: SensorReading, source: String)? {
         guard let id = UUID(uuidString: eventID) else { return nil }
-        if let reading = readLegacyFile().first(where: { $0.id == id }) {
+        if cache.legacy == nil {
+            cache.legacy = Dictionary(
+                readLegacyFile().map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
+        if let reading = cache.legacy?[id] {
             return (reading, "legacy")
         }
-        if let rawArchive,
-           let readings = try? rawArchive.sensorReadings(),
-           let reading = readings.first(where: { $0.id == id }) {
+        if cache.raw == nil {
+            let readings = rawArchive.flatMap { try? $0.sensorReadings() } ?? []
+            cache.raw = Dictionary(
+                readings.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
+        if let reading = cache.raw?[id] {
             return (reading, "raw")
         }
-        if let trackingChunkArchive,
-           let readings = try? trackingChunkArchive.allPersistedReadings(),
-           let reading = readings.first(where: { $0.id == id }) {
+        if cache.tracking == nil {
+            let readings = trackingChunkArchive.flatMap {
+                try? $0.allPersistedReadings()
+            } ?? []
+            cache.tracking = Dictionary(
+                readings.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
+        if let reading = cache.tracking?[id] {
             return (reading, "tracking")
         }
         return nil
@@ -1784,6 +1981,24 @@ final class AppleSensorDataService {
         if !inserted.isEmpty {
             onReadingsPersisted?(inserted)
         }
+    }
+
+    func recordExternalReadingsForRestore(
+        _ readings: [SensorReading]
+    ) async throws -> [UUID] {
+        guard !isDataDeletionActive else { throw CancellationError() }
+        return try await archive.appendForRestore(
+            readings.sorted { $0.timestamp < $1.timestamp }
+        )
+    }
+
+    func rollbackExternalReadingsRestore(ids: [UUID]) async throws {
+        try await archive.rollbackRestore(ids: ids)
+    }
+
+    func validateExternalReadings(_ readings: [SensorReading]) async throws {
+        guard !isDataDeletionActive else { throw CancellationError() }
+        try await archive.validateAppend(readings)
     }
 
     func motionActivities(

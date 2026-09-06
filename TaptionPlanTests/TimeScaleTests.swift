@@ -1945,6 +1945,26 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(spans[1].context.id, third.id)
     }
 
+    func testWeatherRailKeepsTheSelectedValueWithoutStackingLabels() {
+        let visible = MapHomeWeatherRailLayout.visibleIndices(
+            yPositions: [10, 22, 34, 70],
+            candidateIndices: [0, 1, 2, 3],
+            priorityIndices: [1],
+            minimumSpacing: 30
+        )
+
+        XCTAssertEqual(visible, Set([1, 3]))
+        XCTAssertEqual(
+            MapHomeWeatherRailLayout.visibleIndices(
+                yPositions: [22, 22, 52],
+                candidateIndices: [1, 2],
+                priorityIndices: [0, 1],
+                minimumSpacing: 30
+            ),
+            Set([1, 2])
+        )
+    }
+
     func testFullDayWeatherOnlyShowsLargeTemperatureChanges() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -3079,6 +3099,43 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testPlaybackCenterDoesNotOverridePinchWithoutLocationChange() {
+        let coordinate = CLLocationCoordinate2D(
+            latitude: 37.55,
+            longitude: 126.99
+        )
+        let target = CGPoint(x: 150, y: 390)
+
+        XCTAssertFalse(MapHomePlaybackCenterPolicy.shouldCenter(
+            previousCoordinate: coordinate,
+            previousTargetPoint: target,
+            coordinate: coordinate,
+            targetPoint: target
+        ))
+        XCTAssertFalse(MapHomePlaybackCenterPolicy.shouldCenter(
+            previousCoordinate: nil,
+            previousTargetPoint: nil,
+            coordinate: coordinate,
+            targetPoint: target,
+            hasPendingViewportCommand: true
+        ))
+        XCTAssertTrue(MapHomePlaybackCenterPolicy.shouldCenter(
+            previousCoordinate: coordinate,
+            previousTargetPoint: target,
+            coordinate: CLLocationCoordinate2D(
+                latitude: 37.550_01,
+                longitude: 126.99
+            ),
+            targetPoint: target
+        ))
+        XCTAssertTrue(MapHomePlaybackCenterPolicy.shouldCenter(
+            previousCoordinate: coordinate,
+            previousTargetPoint: target,
+            coordinate: coordinate,
+            targetPoint: CGPoint(x: 150, y: 400)
+        ))
+    }
+
     func testPlaybackBlocksAutomaticMapFitAndInitialZoomReset() {
         XCTAssertFalse(
             MapHomePlaybackCameraPolicy.allowsAutomaticFit(
@@ -3244,7 +3301,7 @@ final class TimeScaleTests: XCTestCase {
             longitude: 127.01
         )
 
-        MapHomeAppleCameraCommand.center(target, on: mapView)
+        MapHomeAppleCameraCommand.center(target, at: nil, on: mapView)
 
         XCTAssertEqual(mapView.centerCoordinate.latitude, target.latitude, accuracy: 0.000_001)
         XCTAssertEqual(mapView.centerCoordinate.longitude, target.longitude, accuracy: 0.000_001)
@@ -3253,6 +3310,39 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
         XCTAssertEqual(mapView.region.span.latitudeDelta, span.latitudeDelta, accuracy: 0.000_001)
         XCTAssertEqual(mapView.region.span.longitudeDelta, span.longitudeDelta, accuracy: 0.000_001)
+    }
+
+    @MainActor
+    func testAppleCurrentLocationCenterCommandUsesUsableViewportTarget() {
+        let mapView = MKMapView(
+            frame: CGRect(x: 0, y: 0, width: 390, height: 844)
+        )
+        let coordinate = CLLocationCoordinate2D(
+            latitude: 37.55,
+            longitude: 126.99
+        )
+        mapView.setRegion(
+            MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(
+                    latitudeDelta: 0.02,
+                    longitudeDelta: 0.02
+                )
+            ),
+            animated: false
+        )
+        mapView.layoutIfNeeded()
+        let targetPoint = CGPoint(x: 150, y: 390)
+
+        MapHomeAppleCameraCommand.center(
+            coordinate,
+            at: targetPoint,
+            on: mapView
+        )
+
+        let rendered = mapView.convert(coordinate, toPointTo: mapView)
+        XCTAssertEqual(rendered.x, targetPoint.x, accuracy: 2)
+        XCTAssertEqual(rendered.y, targetPoint.y, accuracy: 2)
     }
 
     @MainActor
@@ -3281,6 +3371,7 @@ final class TimeScaleTests: XCTestCase {
         MapHomeAppleCameraCommand.heading(
             0,
             centeredAt: target,
+            targetPoint: nil,
             on: mapView
         )
 
@@ -3293,6 +3384,7 @@ final class TimeScaleTests: XCTestCase {
         MapHomeAppleCameraCommand.heading(
             135,
             centeredAt: nil,
+            targetPoint: nil,
             on: mapView
         )
 

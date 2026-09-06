@@ -157,8 +157,30 @@ final class DayStoreTests: XCTestCase {
             domain: "sensor-reading",
             payload: Data([1])
         )
-        try await store.appendUniqueEvents([first])
-        try await store.appendUniqueEvents([first])
+        try await store.validateUniqueEvents([first])
+        let eventsBeforeAppend = try await store.allEvents(
+            domain: first.domain
+        )
+        XCTAssertTrue(eventsBeforeAppend.isEmpty)
+        let inserted = try await store.appendUniqueEvents([first])
+        let duplicate = try await store.appendUniqueEvents([first])
+        XCTAssertEqual(inserted, [first.id])
+        XCTAssertTrue(duplicate.isEmpty)
+        do {
+            try await store.validateUniqueEvents([
+                .init(
+                    day: day,
+                    timestamp: .init(timeIntervalSince1970: 20),
+                    sequence: 2,
+                    id: first.id,
+                    domain: first.domain,
+                    payload: Data([2])
+                )
+            ])
+            XCTFail("Expected validation conflict")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .eventConflict(id: first.id))
+        }
         do {
             try await store.appendUniqueEvents([
                 .init(

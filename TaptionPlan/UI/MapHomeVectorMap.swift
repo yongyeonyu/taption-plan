@@ -839,13 +839,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let expectedLayer = lineLayer(
                 LayerID.expectedLayer,
                 source: expected,
-                color: NSExpression(
-                    forConstantValue: UIColor(
-                        Color(hex: MapHomeWBSTripStyle.forecastRouteHex)
-                    )
-                ),
+                color: NSExpression(format: "CAST(color, 'UIColor')"),
                 width: MapHomeWBSTripStyle.forecastRouteLineWidth,
-                opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.forecastRouteOpacity)
+                opacity: NSExpression(forKeyPath: "opacity")
             )
             expectedLayer.lineDashPattern = NSExpression(forConstantValue: MapHomeWBSTripStyle.routeDash)
             style.addLayer(expectedLayer)

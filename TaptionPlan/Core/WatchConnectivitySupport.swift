@@ -3,6 +3,16 @@ import TaptionPlanCore
 import WatchConnectivity
 
 actor AppleWatchSensorActivityArchive {
+    struct AccelerationRestoreReceipt: Sendable {
+        let previous: [TaptionWatchAccelerationChunk]
+        let fileExisted: Bool
+    }
+
+    private enum Error: Swift.Error {
+        case conflictingSensorSummary
+        case conflictingAccelerationChunk
+    }
+
     private let fileURL: URL
     private let accelerationFileURL: URL
     private let retentionInterval: TimeInterval
@@ -48,9 +58,14 @@ actor AppleWatchSensorActivityArchive {
         now: Date = .now
     ) throws {
         var values = try load()
-        values.removeAll {
+        if let existing = values.first(where: {
             $0.sessionID == summary.sessionID
                 && $0.sequence == summary.sequence
+        }) {
+            guard existing == summary else {
+                throw Error.conflictingSensorSummary
+            }
+            return
         }
         values.append(summary)
         let cutoff = now.addingTimeInterval(-retentionInterval)
@@ -99,7 +114,12 @@ actor AppleWatchSensorActivityArchive {
         now: Date = .now
     ) throws {
         var values = try loadAccelerationChunks()
-        values.removeAll { $0.id == chunk.id }
+        if let existing = values.first(where: { $0.id == chunk.id }) {
+            guard existing == chunk else {
+                throw Error.conflictingAccelerationChunk
+            }
+            return
+        }
         values.append(chunk)
         let cutoff = now.addingTimeInterval(-retentionInterval)
         values.removeAll { $0.endedAt < cutoff }
@@ -107,17 +127,77 @@ actor AppleWatchSensorActivityArchive {
         if values.count > 10_000 {
             values.removeFirst(values.count - 10_000)
         }
-        try FileManager.default.createDirectory(
-            at: accelerationFileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+        try writeAccelerationChunks(values)
+    }
+
+    func recordForRestore(
+        _ chunks: [TaptionWatchAccelerationChunk],
+        now: Date = .now
+    ) throws -> AccelerationRestoreReceipt? {
+        guard !chunks.isEmpty else { return nil }
+        let previous = try loadAccelerationChunks()
+        let stored = Dictionary(
+            previous.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
-        try encoder.encode(values).write(
-            to: accelerationFileURL,
-            options: [
-                .atomic,
-                .completeFileProtectionUntilFirstUserAuthentication,
-            ]
+        var candidates: [UUID: TaptionWatchAccelerationChunk] = [:]
+        for chunk in chunks {
+            if let existing = candidates[chunk.id], existing != chunk {
+                throw Error.conflictingAccelerationChunk
+            }
+            if let existing = stored[chunk.id], existing != chunk {
+                throw Error.conflictingAccelerationChunk
+            }
+            candidates[chunk.id] = chunk
+        }
+        let inserted = candidates.values.filter { stored[$0.id] == nil }
+        guard !inserted.isEmpty else { return nil }
+        var values = previous + inserted
+        let cutoff = now.addingTimeInterval(-retentionInterval)
+        values.removeAll { $0.endedAt < cutoff }
+        values.sort { $0.endedAt < $1.endedAt }
+        if values.count > 10_000 {
+            values.removeFirst(values.count - 10_000)
+        }
+        let receipt = AccelerationRestoreReceipt(
+            previous: previous,
+            fileExisted: FileManager.default.fileExists(
+                atPath: accelerationFileURL.path
+            )
         )
+        try writeAccelerationChunks(values)
+        return receipt
+    }
+
+    func rollbackAccelerationRestore(
+        _ receipt: AccelerationRestoreReceipt
+    ) throws {
+        if receipt.fileExisted {
+            try writeAccelerationChunks(receipt.previous)
+        } else if FileManager.default.fileExists(
+            atPath: accelerationFileURL.path
+        ) {
+            try FileManager.default.removeItem(at: accelerationFileURL)
+        }
+    }
+
+    func validateAppend(
+        _ chunks: [TaptionWatchAccelerationChunk]
+    ) throws {
+        let stored = Dictionary(
+            try loadAccelerationChunks().map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var candidates: [UUID: TaptionWatchAccelerationChunk] = [:]
+        for chunk in chunks {
+            if let existing = candidates[chunk.id], existing != chunk {
+                throw Error.conflictingAccelerationChunk
+            }
+            if let existing = stored[chunk.id], existing != chunk {
+                throw Error.conflictingAccelerationChunk
+            }
+            candidates[chunk.id] = chunk
+        }
     }
 
     func accelerationChunks(in span: TimeSpan) throws
@@ -187,6 +267,22 @@ actor AppleWatchSensorActivityArchive {
         return try decoder.decode(
             [TaptionWatchAccelerationChunk].self,
             from: Data(contentsOf: accelerationFileURL)
+        )
+    }
+
+    private func writeAccelerationChunks(
+        _ chunks: [TaptionWatchAccelerationChunk]
+    ) throws {
+        try FileManager.default.createDirectory(
+            at: accelerationFileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try encoder.encode(chunks).write(
+            to: accelerationFileURL,
+            options: [
+                .atomic,
+                .completeFileProtectionUntilFirstUserAuthentication,
+            ]
         )
     }
 }
@@ -1044,18 +1140,22 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let report = envelope[
             TaptionWatchEnvelope.launchDiagnosticsKey
         ] as? String {
-            WatchLaunchReportStore.save(report)
-            accepted = true
+            if report.utf8.count <= TaptionWatchEnvelope.diagnosticsMaximumBytes {
+                WatchLaunchReportStore.save(report)
+                accepted = true
+            }
         }
         if let report = envelope[
             TaptionWatchEnvelope.diagnosticsLogKey
         ] as? String, !report.isEmpty {
-            WatchDiagnosticsLogStore.save(report)
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "watch_diagnostics_received",
-                fields: ["bytes": String(report.utf8.count)]
-            )
-            accepted = true
+            if report.utf8.count <= TaptionWatchEnvelope.diagnosticsMaximumBytes {
+                WatchDiagnosticsLogStore.save(report)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_diagnostics_received",
+                    fields: ["bytes": String(report.utf8.count)]
+                )
+                accepted = true
+            }
         }
         if let acknowledged = envelope[
             TaptionWatchEnvelope.purgeAcknowledgedKey
@@ -1075,6 +1175,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
         ] as? Data {
+            guard data.count <= TaptionWatchEnvelope.sensorSummaryMaximumBytes
+            else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_sensor_summary_decode_failed",
+                    level: .error,
+                    fields: ["reason": "payload_too_large", "bytes": String(data.count)]
+                )
+                return accepted
+            }
             do {
                 let summary = try decoder.decode(
                     TaptionWatchSensorSummary.self,
@@ -1112,6 +1221,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[
             TaptionWatchEnvelope.accelerationChunkKey
         ] as? Data {
+            guard data.count <= TaptionWatchEnvelope.accelerationChunkMaximumBytes
+            else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_acceleration_chunk_decode_failed",
+                    level: .error,
+                    fields: ["reason": "payload_too_large", "bytes": String(data.count)]
+                )
+                return accepted
+            }
             do {
                 let chunk = try decoder.decode(
                     TaptionWatchAccelerationChunk.self,
@@ -1148,6 +1266,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[
             TaptionWatchEnvelope.healthSnapshotKey
         ] as? Data {
+            guard data.count <= TaptionWatchEnvelope.healthSnapshotMaximumBytes
+            else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_health_snapshot_decode_failed",
+                    level: .error,
+                    fields: ["reason": "payload_too_large", "bytes": String(data.count)]
+                )
+                return accepted
+            }
             do {
                 let snapshot = try decoder.decode(
                     TaptionWatchHealthSnapshot.self,
@@ -1188,6 +1315,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[
             TaptionWatchEnvelope.activityConfirmationKey
         ] as? Data,
+        data.count <= TaptionWatchEnvelope.confirmationMaximumBytes,
         let confirmation = try? decoder.decode(
             TaptionWatchActivityConfirmation.self,
             from: data
@@ -1264,6 +1392,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         receivedAt: Date
     ) -> Bool {
         guard let data = envelope[TaptionWatchEnvelope.commandKey] as? Data,
+              data.count <= TaptionWatchEnvelope.commandMaximumBytes,
               let command = try? decoder.decode(
                 TaptionWatchCommand.self,
                 from: data

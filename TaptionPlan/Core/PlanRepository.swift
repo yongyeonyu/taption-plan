@@ -304,6 +304,7 @@ enum RepositoryError: Error, Equatable {
     case cloudAccountUnavailable
     case cloudSchemaUnavailable
     case cloudPayloadMissing
+    case cloudPayloadTooLarge
     case appGroupUnavailable
     case staleGeneration
 }
@@ -1354,6 +1355,7 @@ actor CloudKitSnapshotSyncService {
     private static let recordName = "taption-data-v1"
     private static let recordType = "TaptionSnapshot"
     private static let inlineLimit = 850_000
+    private static let inboundPayloadMaximum = TaptionSnapshotCompression.maximumUncompressedSize
     private static let temporaryAssetPrefix = "taption-cloud-"
     private static let temporaryAssetMaximumAge: TimeInterval = 60 * 60
 
@@ -1732,10 +1734,22 @@ actor CloudKitSnapshotSyncService {
     private func snapshot(from record: CKRecord) throws -> TaptionDataSnapshot {
         let data: Data?
         if let inline = record["payload"] as? Data {
+            guard inline.count <= Self.inboundPayloadMaximum else {
+                throw RepositoryError.cloudPayloadTooLarge
+            }
             data = inline
         } else if let asset = record["payloadAsset"] as? CKAsset,
                   let fileURL = asset.fileURL {
+            guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                  let fileSize = values.fileSize,
+                  fileSize >= 0,
+                  fileSize <= Self.inboundPayloadMaximum else {
+                throw RepositoryError.cloudPayloadTooLarge
+            }
             data = try Data(contentsOf: fileURL)
+            guard data?.count ?? 0 <= Self.inboundPayloadMaximum else {
+                throw RepositoryError.cloudPayloadTooLarge
+            }
         } else {
             data = nil
         }

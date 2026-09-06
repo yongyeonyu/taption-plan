@@ -1161,6 +1161,9 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
     /// 만들지 않도록 요청 원본을 응답에 그대로 돌려보낸다.
     var suggestionID: UUID?
     var sensorSessionID: UUID?
+    /// One-time capability issued with the iPhone suggestion. Old queued
+    /// confirmations without it are rejected by the iPhone.
+    var confirmationToken: UUID?
     var pattern: WatchActivityPattern?
 
     init(
@@ -1175,6 +1178,7 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
         correctedBehavior: WatchBehaviorKind? = nil,
         suggestionID: UUID? = nil,
         sensorSessionID: UUID? = nil,
+        confirmationToken: UUID? = nil,
         pattern: WatchActivityPattern? = nil
     ) {
         self.id = id
@@ -1188,6 +1192,7 @@ struct TaptionWatchActivityConfirmation: Codable, Hashable, Sendable {
         self.correctedBehavior = isCorrect ? nil : correctedBehavior
         self.suggestionID = suggestionID
         self.sensorSessionID = sensorSessionID
+        self.confirmationToken = confirmationToken
         self.pattern = pattern
     }
 }
@@ -1228,6 +1233,7 @@ struct WatchActivityPatternSample: Codable, Hashable, Sendable {
 struct TaptionWatchActivitySuggestion: Identifiable, Codable, Hashable,
     Sendable {
     var id: UUID
+    var confirmationToken: UUID?
     var sensorSessionID: UUID
     var generatedAt: Date
     var startedAt: Date
@@ -1240,6 +1246,7 @@ struct TaptionWatchActivitySuggestion: Identifiable, Codable, Hashable,
 
     init(
         id: UUID = UUID(),
+        confirmationToken: UUID? = UUID(),
         sensorSessionID: UUID,
         generatedAt: Date = .now,
         startedAt: Date,
@@ -1251,6 +1258,7 @@ struct TaptionWatchActivitySuggestion: Identifiable, Codable, Hashable,
         pattern: WatchActivityPattern
     ) {
         self.id = id
+        self.confirmationToken = confirmationToken
         self.sensorSessionID = sensorSessionID
         self.generatedAt = generatedAt
         self.startedAt = startedAt
@@ -2177,7 +2185,7 @@ extension TaptionWatchAccelerationChunk {
         if let cutoff, endedAt <= cutoff { return nil }
         guard !retained.isEmpty else { return nil }
         var value = self
-        value.samples = retained
+        value.samples = Array(retained.suffix(TaptionWatchPayloadLimits.maximumAccelerationSamples))
         if let cutoff { value.startedAt = max(startedAt, cutoff) }
         value.endedAt = max(value.startedAt, endedAt)
         return value
@@ -2215,11 +2223,15 @@ extension TaptionWatchSensorSummary {
         }
         guard isAllowed(startedAt), isAllowed(endedAt) else { return nil }
         var value = self
-        value.routePoints = routePoints?.filter {
-            isAllowed($0.capturedAt)
+        value.routePoints = routePoints.map {
+            Array($0.filter { isAllowed($0.capturedAt) }.suffix(
+                TaptionWatchPayloadLimits.maximumRoutePoints
+            ))
         }
-        value.behaviorSegments = behaviorSegments?.filter {
-            isAllowed($0.startedAt) && isAllowed($0.endedAt)
+        value.behaviorSegments = behaviorSegments.map {
+            Array($0.filter {
+                isAllowed($0.startedAt) && isAllowed($0.endedAt)
+            }.suffix(TaptionWatchPayloadLimits.maximumBehaviorSegments))
         }
         return value
     }
@@ -2274,7 +2286,9 @@ extension TaptionWatchHealthSnapshot {
             return segment.endDate > segment.startDate ? segment : nil
         }
         if sleepSegments != nil {
-            value.sleepSegments = retained
+            value.sleepSegments = Array(
+                retained.suffix(TaptionWatchPayloadLimits.maximumSleepSegments)
+            )
             let sleepMinutes = retained
                 .filter {
                     ["core", "deep", "rem", "asleepUnspecified"]
@@ -2320,6 +2334,20 @@ enum TaptionWatchEnvelope {
     static let purgeRequestIDKey = "taption.watch.purge-request-id"
     static let purgeGenerationKey = "taption.watch.purge-generation"
     static let purgeAcknowledgedKey = "taption.watch.purge-acknowledged"
+
+    static let commandMaximumBytes = 64 * 1_024
+    static let sensorSummaryMaximumBytes = 2 * 1_024 * 1_024
+    static let accelerationChunkMaximumBytes = 4 * 1_024 * 1_024
+    static let healthSnapshotMaximumBytes = 512 * 1_024
+    static let confirmationMaximumBytes = 128 * 1_024
+    static let diagnosticsMaximumBytes = 512 * 1_024
+}
+
+enum TaptionWatchPayloadLimits {
+    static let maximumAccelerationSamples = 20_000
+    static let maximumRoutePoints = 10_000
+    static let maximumBehaviorSegments = 2_000
+    static let maximumSleepSegments = 2_000
 }
 
 enum TaptionWatchPurgeGenerationPolicy {

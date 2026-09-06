@@ -338,10 +338,12 @@ public actor TaptionPlanDayStore {
         }
     }
 
-    public func appendUniqueEvents(_ events: [Event]) throws {
-        guard !events.isEmpty else { return }
+    @discardableResult
+    public func appendUniqueEvents(_ events: [Event]) throws -> Set<String> {
+        guard !events.isEmpty else { return [] }
         let insert = try prepare(Self.uniqueEventInsertSQL)
         let lookup = try prepare(Self.eventLookupSQL)
+        var insertedIDs = Set<String>()
         defer {
             sqlite3_finalize(insert)
             sqlite3_finalize(lookup)
@@ -354,13 +356,39 @@ public actor TaptionPlanDayStore {
                 guard try step(insert) == SQLITE_DONE else {
                     throw lastError()
                 }
-                guard sqlite3_changes(database) == 0 else { continue }
+                guard sqlite3_changes(database) == 0 else {
+                    insertedIDs.insert(event.id)
+                    continue
+                }
                 try reset(lookup)
                 try bind(event.id, to: lookup, at: 1)
                 guard try step(lookup) == SQLITE_ROW else { throw lastError() }
                 guard try readEvent(lookup) == event else {
                     throw TaptionPlanDayStoreError.eventConflict(id: event.id)
                 }
+            }
+        }
+        return insertedIDs
+    }
+
+    public func validateUniqueEvents(_ events: [Event]) throws {
+        guard !events.isEmpty else { return }
+        var candidates: [String: Event] = [:]
+        for event in events {
+            try validate(domain: event.domain)
+            if let existing = candidates[event.id], existing != event {
+                throw TaptionPlanDayStoreError.eventConflict(id: event.id)
+            }
+            candidates[event.id] = event
+        }
+        let lookup = try prepare(Self.eventLookupSQL)
+        defer { sqlite3_finalize(lookup) }
+        for event in candidates.values {
+            try reset(lookup)
+            try bind(event.id, to: lookup, at: 1)
+            guard try step(lookup) == SQLITE_ROW else { continue }
+            guard try readEvent(lookup) == event else {
+                throw TaptionPlanDayStoreError.eventConflict(id: event.id)
             }
         }
     }

@@ -319,7 +319,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testRouteReadingsTaskRestartsAfterBootstrapAndOnlyForNewDays() {
+    func testRouteReadingsTaskRestartsOnlyForBootstrapDayOrRawDataChange() {
         let day = makeDate(2026, 8, 25, 8)
         let sameDay = makeDate(2026, 8, 25, 20)
 
@@ -339,13 +339,11 @@ final class FeatureEngineTests: XCTestCase {
             MapHomeRouteReadingsTaskKey(
                 date: day,
                 isBootstrapped: true,
-                dayProjectionRevision: 3,
                 calendar: utcCalendar
             ),
             MapHomeRouteReadingsTaskKey(
                 date: sameDay,
                 isBootstrapped: true,
-                dayProjectionRevision: 3,
                 calendar: utcCalendar
             )
         )
@@ -353,13 +351,86 @@ final class FeatureEngineTests: XCTestCase {
             MapHomeRouteReadingsTaskKey(
                 date: day,
                 isBootstrapped: true,
-                dayProjectionRevision: 3,
+                rawDataRevision: 1,
                 calendar: utcCalendar
             ),
             MapHomeRouteReadingsTaskKey(
                 date: day,
                 isBootstrapped: true,
-                dayProjectionRevision: 4,
+                rawDataRevision: 2,
+                calendar: utcCalendar
+            )
+        )
+    }
+
+    func testMapDayCacheFingerprintRejectsChangedRawReadings() {
+        let date = makeDate(2026, 8, 25, 8)
+        let first = SensorReading(id: UUID(), timestamp: date)
+        let second = SensorReading(
+            id: UUID(),
+            timestamp: date.addingTimeInterval(60)
+        )
+
+        XCTAssertEqual(
+            MapHomeDayCacheReadingsFingerprint(readings: [first]),
+            MapHomeDayCacheReadingsFingerprint(readings: [first])
+        )
+        XCTAssertNotEqual(
+            MapHomeDayCacheReadingsFingerprint(readings: [first]),
+            MapHomeDayCacheReadingsFingerprint(readings: [first, second])
+        )
+    }
+
+    func testDaySourceFingerprintIgnoresTimestampAndOtherDays() {
+        let day = makeDate(2026, 8, 25)
+        var first = TaptionDataSnapshot.empty
+        first.updatedAt = day
+        first.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: day.addingTimeInterval(9 * 3_600),
+                endedAt: day.addingTimeInterval(10 * 3_600),
+                source: .manual
+            ),
+        ]
+        var changedElsewhere = first
+        changedElsewhere.updatedAt = day.addingTimeInterval(60)
+        changedElsewhere.actuals.append(
+            ActualRecord(
+                planID: nil,
+                title: "다른 날 업무",
+                categoryID: "work",
+                startedAt: day.addingTimeInterval(2 * 86_400),
+                endedAt: day.addingTimeInterval(2 * 86_400 + 3_600),
+                source: .manual
+            )
+        )
+
+        XCTAssertEqual(
+            PlanDayDataSnapshot.sourceFingerprint(
+                date: day,
+                source: first,
+                calendar: utcCalendar
+            ),
+            PlanDayDataSnapshot.sourceFingerprint(
+                date: day,
+                source: changedElsewhere,
+                calendar: utcCalendar
+            )
+        )
+
+        changedElsewhere.actuals[0].title = "변경된 업무"
+        XCTAssertNotEqual(
+            PlanDayDataSnapshot.sourceFingerprint(
+                date: day,
+                source: first,
+                calendar: utcCalendar
+            ),
+            PlanDayDataSnapshot.sourceFingerprint(
+                date: day,
+                source: changedElsewhere,
                 calendar: utcCalendar
             )
         )
@@ -1602,6 +1673,37 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(model.snapshot.updatedAt, updatedAt)
 
         await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testAutomaticCloudBackupWaitsOneHourAfterSuccessOrAccountFailure() {
+        let now = Date(timeIntervalSince1970: 2_000_000_000)
+
+        XCTAssertTrue(AppModel.shouldAttemptAutomaticCloudBackup(
+            at: now,
+            latestSuccessfulBackupDate: nil,
+            retryAfter: nil
+        ))
+        XCTAssertFalse(AppModel.shouldAttemptAutomaticCloudBackup(
+            at: now,
+            latestSuccessfulBackupDate: now.addingTimeInterval(-3_599),
+            retryAfter: nil
+        ))
+        XCTAssertTrue(AppModel.shouldAttemptAutomaticCloudBackup(
+            at: now,
+            latestSuccessfulBackupDate: now.addingTimeInterval(-3_600),
+            retryAfter: nil
+        ))
+        XCTAssertFalse(AppModel.shouldAttemptAutomaticCloudBackup(
+            at: now,
+            latestSuccessfulBackupDate: nil,
+            retryAfter: now.addingTimeInterval(1)
+        ))
+        XCTAssertTrue(AppModel.shouldAttemptAutomaticCloudBackup(
+            at: now,
+            latestSuccessfulBackupDate: nil,
+            retryAfter: now
+        ))
     }
 
     func testCloudSnapshotKeepsExternalCalendarDataOnDevice() {
@@ -4672,6 +4774,38 @@ final class FeatureEngineTests: XCTestCase {
             records[0].modelVersion,
             ChargingInactivitySleepEngine.modelVersion
         )
+    }
+
+    func testPhoneSleepFallbackUsesBackgroundSamplesWithoutScreenTelemetry() {
+        let start = makeDate(2026, 8, 24, 22, 0)
+        let readings = (0...4).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 30 * 60),
+                motion: .stationary,
+                motionConfidence: .high,
+                stepCount: 0,
+                powerState: .full
+            )
+        }
+        let span = TimeSpan(
+            start: start,
+            end: start.addingTimeInterval(2 * hour)
+        )
+
+        let records = PhoneSleepFallbackEngine.records(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            nominalMaximumSampleGap: 20 * 60,
+            asOf: span.end
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(
+            records[0].startedAt,
+            start.addingTimeInterval(5 * 60)
+        )
+        XCTAssertEqual(records[0].modelVersion, PhoneSleepWakeEngine.modelVersion)
     }
 
     func testPhoneSleepFallbackDoesNotDuplicateAuthoritativeSleep() {
@@ -12294,6 +12428,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testStoreKitProductPurchaseEntitlementAndRestore() async throws {
         #if targetEnvironment(simulator)
         let osVersion = ProcessInfo.processInfo.operatingSystemVersion
@@ -12317,22 +12452,64 @@ final class FeatureEngineTests: XCTestCase {
             session.resetToDefaultState()
         }
 
+        func waitForEntitlement(
+            _ service: StoreKitPurchaseService,
+            expected: Bool
+        ) async -> Bool {
+            let deadline = Date.now.addingTimeInterval(5)
+            repeat {
+                if await service.hasProEntitlement() == expected { return true }
+                try? await Task.sleep(for: .milliseconds(50))
+            } while Date.now < deadline
+            return false
+        }
+
+        let suiteName = "storekit-access-\(UUID().uuidString)"
+        let localStore = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { localStore.removePersistentDomain(forName: suiteName) }
         let purchaseService = StoreKitPurchaseService()
+        let controller = TaptionProAccessController(
+            purchaseService: purchaseService,
+            trialPersistence: TaptionProTrialPersistence(
+                cloudStore: nil,
+                localStore: localStore,
+                keychainService: nil
+            )
+        )
         let loadedProduct = try await purchaseService.loadProProduct()
         let product = try XCTUnwrap(loadedProduct)
         let entitlementBeforePurchase = await purchaseService.hasProEntitlement()
-        let purchaseOutcome = try await purchaseService.purchasePro()
-        let entitlementAfterPurchase = await purchaseService.hasProEntitlement()
+        await controller.purchase()
+        let entitlementAfterPurchase = await waitForEntitlement(
+            purchaseService,
+            expected: true
+        )
         session.clearTransactions()
-        let priorPurchase = try await session.buyProduct(
+        let entitlementCleared = await waitForEntitlement(
+            purchaseService,
+            expected: false
+        )
+        guard entitlementCleared else {
+            XCTFail("StoreKit test transaction did not clear")
+            return
+        }
+        _ = try await session.buyProduct(
             identifier: TaptionCommercePolicy.proProductID
         )
-        await priorPurchase.finish()
-        let restored = try await StoreKitPurchaseService().restorePurchases()
+        let restoreService = StoreKitPurchaseService()
+        let externalEntitlement = await waitForEntitlement(
+            restoreService,
+            expected: true
+        )
+        guard externalEntitlement else {
+            XCTFail("External StoreKit purchase did not become an entitlement")
+            return
+        }
+        let restored = try await restoreService.restorePurchases()
 
         XCTAssertEqual(product.id, TaptionCommercePolicy.proProductID)
         XCTAssertFalse(entitlementBeforePurchase)
-        XCTAssertEqual(purchaseOutcome, .purchased)
+        XCTAssertTrue(controller.hasPermanentAccess)
         XCTAssertTrue(entitlementAfterPurchase)
         XCTAssertTrue(restored)
     }
@@ -12750,7 +12927,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: unrelated.path))
     }
 
-    func testCalendarSyncPreservesSelectionAcrossEmptyStore() {
+    func testCalendarSyncReconcilesAccountsButPreservesEmptyStore() {
         XCTAssertEqual(
             CalendarSyncPolicy.reconciledCalendarIDs(
                 existing: ["work"],
@@ -12770,7 +12947,7 @@ final class FeatureEngineTests: XCTestCase {
                 existing: ["apple", "google", "naver"],
                 live: ["apple", "naver"]
             ),
-            ["apple", "google", "naver"]
+            ["apple", "naver"]
         )
         XCTAssertEqual(
             CalendarSyncPolicy.reconciledCalendarIDs(
@@ -12784,7 +12961,7 @@ final class FeatureEngineTests: XCTestCase {
                 existing: [],
                 live: ["new"]
             ),
-            []
+            ["new"]
         )
         XCTAssertTrue(CalendarSyncPolicy.hasCompleteSelection(
             selected: ["apple", "google"],
@@ -12915,13 +13092,12 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testCalendarDeduplicationUsesAccountRecurrenceAndOccurrence() {
+    func testCalendarDeduplicationUsesAccountAndOccurrence() {
         let start = makeDate(2026, 9, 5, 10)
         func event(
             id: String,
             source: String,
             occurrence: Date = start,
-            recurrence: String? = "weekly",
             sourceTitle: String = "Google"
         ) -> CalendarRecord {
             CalendarRecord(
@@ -12938,7 +13114,7 @@ final class FeatureEngineTests: XCTestCase {
                 sourceTitle: sourceTitle,
                 sourceIdentifier: source,
                 externalIdentifier: "external-1",
-                recurrenceIdentifier: recurrence
+                recurrenceIdentifier: "weekly"
             )
         }
 
@@ -13003,6 +13179,116 @@ final class FeatureEngineTests: XCTestCase {
             "other-occurrence",
             "all-day-a",
         ])
+
+        let movedOccurrence = event(
+            id: "moved",
+            source: "google-account",
+            occurrence: start.addingTimeInterval(48 * 60 * 60)
+        )
+        var originalOccurrence = event(
+            id: "original",
+            source: "google-account"
+        )
+        originalOccurrence.occurrenceDate = start
+        var moved = movedOccurrence
+        moved.occurrenceDate = start
+        moved.recurrenceIdentifier = nil
+        XCTAssertEqual(
+            CalendarSyncPolicy.eventIdentityKey(originalOccurrence),
+            CalendarSyncPolicy.eventIdentityKey(moved)
+        )
+    }
+
+    func testCalendarMergeAddsAndRemovesAccountsAtomically() {
+        let refresh = TimeSpan(
+            start: makeDate(2026, 9, 5, 0),
+            end: makeDate(2026, 9, 6, 0)
+        )
+        func event(
+            id: String,
+            calendarID: String,
+            start: Date
+        ) -> CalendarRecord {
+            CalendarRecord(
+                id: id,
+                calendarID: calendarID,
+                title: id,
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(hour)
+                ),
+                isAllDay: false,
+                calendarTitle: calendarID,
+                calendarColorHex: nil,
+                sourceTitle: calendarID,
+                sourceIdentifier: calendarID,
+                externalIdentifier: id
+            )
+        }
+        let removedAccount = event(
+            id: "removed-account",
+            calendarID: "icloud",
+            start: makeDate(2026, 9, 3, 9)
+        )
+        let retained = event(
+            id: "retained",
+            calendarID: "google",
+            start: makeDate(2026, 9, 4, 9)
+        )
+        let fresh = event(
+            id: "fresh",
+            calendarID: "google",
+            start: makeDate(2026, 9, 5, 9)
+        )
+
+        let merged = CalendarSyncPolicy.mergingEvents(
+            existing: [removedAccount, retained],
+            fresh: [fresh],
+            in: refresh,
+            liveCalendarIDs: ["google"]
+        )
+
+        XCTAssertEqual(merged.map(\.id), ["retained", "fresh"])
+    }
+
+    func testCalendarMergeReplacesMovedRecurringOccurrenceOutsideRange() {
+        let originalOccurrence = makeDate(2026, 9, 4, 10)
+        func event(id: String, start: Date) -> CalendarRecord {
+            CalendarRecord(
+                id: id,
+                calendarID: "google",
+                title: "주간 회의",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(hour)
+                ),
+                isAllDay: false,
+                calendarTitle: "업무",
+                calendarColorHex: nil,
+                sourceTitle: "Google",
+                sourceIdentifier: "google-account",
+                externalIdentifier: "weekly-meeting",
+                occurrenceDate: originalOccurrence
+            )
+        }
+        let stale = event(id: "stale", start: originalOccurrence)
+        let moved = event(
+            id: "moved",
+            start: makeDate(2026, 9, 8, 14)
+        )
+        let refresh = TimeSpan(
+            start: makeDate(2026, 9, 8, 0),
+            end: makeDate(2026, 9, 9, 0)
+        )
+
+        let merged = CalendarSyncPolicy.mergingEvents(
+            existing: [stale],
+            fresh: [moved],
+            in: refresh,
+            liveCalendarIDs: ["google"]
+        )
+
+        XCTAssertEqual(merged.map(\.id), ["moved"])
     }
 
     func testCalendarSyncRefreshesTodayWithoutBridgingFarHistory() {
@@ -14429,8 +14715,8 @@ final class FeatureEngineTests: XCTestCase {
         let defaults = UserDefaults.standard
         let onboardingKey = "taption.permission-onboarding.v1"
         let reminderKey = "taption.health-permission-reminder.v1"
-        defaults.removeObject(forKey: onboardingKey)
-        defaults.removeObject(forKey: reminderKey)
+        defaults.set(false, forKey: onboardingKey)
+        defaults.set(false, forKey: reminderKey)
         defer {
             defaults.removeObject(forKey: onboardingKey)
             defaults.removeObject(forKey: reminderKey)
@@ -17156,6 +17442,245 @@ final class FeatureEngineTests: XCTestCase {
         let envelopeIDs = try await rawArchive.envelopes(in: span).map(\.id)
         XCTAssertEqual(sensorIDs, [reading.id])
         XCTAssertEqual(envelopeIDs, [envelope.id])
+    }
+
+    @MainActor
+    func testCloudRestoreRollsBackRawWritesWhenSnapshotSaveFails() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-rollback-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorService = AppleSensorDataService(
+            archive: try SensorReadingArchive(
+                fileURL: directory.appendingPathComponent("legacy.jsonl"),
+                dayStoreURL: databaseURL
+            )
+        )
+        let rawArchive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
+        let model = AppModel(
+            repository: RejectingSavePlanRepository(),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            rawDeviceDataArchive: rawArchive,
+            registersHealthBackgroundHandler: false
+        )
+        let date = Date(timeIntervalSince1970: 1_788_000_000)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        let reading = SensorReading(
+            timestamp: date,
+            point: point,
+            sourceDevice: .iPhone
+        )
+        let envelope = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: WeatherContext(
+                observedAt: date,
+                condition: "맑음",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 24,
+                point: point
+            )
+        )
+
+        do {
+            _ = try await model.applyCloudBackup(
+                PlanCloudBackupRestorePackage(
+                    backup: PlanCloudBackupPayload(snapshot: .empty),
+                    rawSensorState: .available(PlanCloudRawSensorPayload(
+                        monthKey: "2026-08",
+                        sensorReadings: [reading],
+                        envelopes: [envelope],
+                        createdAt: date
+                    ))
+                )
+            )
+            XCTFail("Expected snapshot persistence to fail")
+        } catch let error as RepositoryError {
+            XCTAssertEqual(error, .invalidSnapshot)
+        }
+
+        let span = TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(1)
+        )
+        let readings = try await sensorService.archivedReadings(in: span)
+        let envelopes = try await rawArchive.envelopes(in: span)
+        XCTAssertTrue(readings.isEmpty)
+        XCTAssertTrue(envelopes.isEmpty)
+    }
+
+    @MainActor
+    func testCloudRestoreKeepsSnapshotWhenSensorRawMergeFails() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-conflict-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("legacy.jsonl"),
+            dayStoreURL: databaseURL
+        )
+        let sensorService = AppleSensorDataService(archive: sensorArchive)
+        let readingID = UUID()
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let storedReading = SensorReading(
+            id: readingID,
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        try await sensorService.recordExternalReadings([storedReading])
+        var original = TaptionDataSnapshot.empty
+        original.plans = [PlanRecord(
+            title: "기존 기록",
+            span: TimeSpan(
+                start: date,
+                end: date.addingTimeInterval(hour)
+            ),
+            categoryID: "activity"
+        )]
+        let repository = InMemoryPlanRepository(snapshot: original)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        var replacement = TaptionDataSnapshot.empty
+        replacement.plans = [PlanRecord(
+            title: "복원 기록",
+            span: original.plans[0].span,
+            categoryID: "activity"
+        )]
+        var conflictingReading = storedReading
+        conflictingReading.point?.latitude = 37.6
+
+        let result = try await model.applyCloudBackup(
+            PlanCloudBackupRestorePackage(
+                backup: PlanCloudBackupPayload(snapshot: replacement),
+                rawSensorState: .available(PlanCloudRawSensorPayload(
+                    monthKey: "2026-08",
+                    sensorReadings: [conflictingReading],
+                    createdAt: date
+                ))
+            )
+        )
+
+        let persisted = try await repository.load()
+        XCTAssertEqual(result, .unchanged)
+        XCTAssertEqual(model.snapshot.plans.map(\.title), ["기존 기록"])
+        XCTAssertEqual(persisted.plans.map(\.title), ["기존 기록"])
+    }
+
+    @MainActor
+    func testCloudRestoreKeepsSnapshotWhenEnvelopeMergeFails() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-envelope-conflict-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("legacy.jsonl"),
+            dayStoreURL: databaseURL
+        )
+        let sensorService = AppleSensorDataService(archive: sensorArchive)
+        let rawArchive = try RawDeviceDataDayArchive(
+            databaseURL: databaseURL
+        )
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let envelopeID = UUID()
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        let storedEnvelope = try RawDeviceDataEnvelope(
+            id: envelopeID,
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: WeatherContext(
+                observedAt: date,
+                condition: "맑음",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 20,
+                point: point
+            )
+        )
+        try await rawArchive.append(storedEnvelope)
+        let conflictingEnvelope = try RawDeviceDataEnvelope(
+            id: envelopeID,
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: WeatherContext(
+                observedAt: date,
+                condition: "맑음",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 25,
+                point: point
+            )
+        )
+        let newReading = SensorReading(
+            timestamp: date,
+            point: point,
+            sourceDevice: .iPhone
+        )
+        var original = TaptionDataSnapshot.empty
+        original.plans = [PlanRecord(
+            title: "기존 기록",
+            span: TimeSpan(
+                start: date,
+                end: date.addingTimeInterval(hour)
+            ),
+            categoryID: "activity"
+        )]
+        let repository = InMemoryPlanRepository(snapshot: original)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            rawDeviceDataArchive: rawArchive,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let result = try await model.applyCloudBackup(
+            PlanCloudBackupRestorePackage(
+                backup: PlanCloudBackupPayload(snapshot: .empty),
+                rawSensorState: .available(PlanCloudRawSensorPayload(
+                    monthKey: "2026-08",
+                    sensorReadings: [newReading],
+                    envelopes: [conflictingEnvelope],
+                    createdAt: date
+                ))
+            )
+        )
+
+        let persisted = try await repository.load()
+        XCTAssertEqual(result, .unchanged)
+        XCTAssertEqual(model.snapshot.plans.map(\.title), ["기존 기록"])
+        XCTAssertEqual(persisted.plans.map(\.title), ["기존 기록"])
+        let span = TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(1)
+        )
+        let archivedReadings = try await sensorService.archivedReadings(in: span)
+        XCTAssertTrue(archivedReadings.isEmpty)
     }
 
     @MainActor

@@ -5,6 +5,7 @@ import TaptionPlanCore
 private struct PlanDayDatabasePayload: Codable, Hashable, Sendable {
     let day: Date
     let sourceUpdatedAt: Date
+    let sourceFingerprint: String?
     let actuals: [ActualRecord]
     let places: [PlaceStay]
     let travel: [TravelSegment]
@@ -19,14 +20,41 @@ struct PlanDayDatabaseMigrationReport: Equatable, Sendable {
     let exactDigestDayCount: Int
 }
 
-private enum PlanDayDatabaseMigrationError: Error {
-    case rawDigestMismatch(day: TaptionPlanDayKey, device: TaptionPlanStoreDevice)
+private enum PlanDayDatabaseMigrationError: LocalizedError {
+    case rawDigestMismatch(
+        day: TaptionPlanDayKey,
+        device: TaptionPlanStoreDevice,
+        reason: String
+    )
+
+    var errorDescription: String? {
+        switch self {
+        case let .rawDigestMismatch(day, device, reason):
+            return String(
+                format: "Raw digest mismatch: %@ %04d-%02d-%02d %@",
+                device.rawValue,
+                day.year,
+                day.month,
+                day.day,
+                reason
+            )
+        }
+    }
+}
+
+enum PlanDayDatabaseRestoreError: Error {
+    case rollbackFailed
 }
 
 /// App adapter for the package-owned v3 stores. Raw records are copied into
 /// the stores before the derived day row is replaced; the old archives remain
 /// untouched until an externally verified migration authorizes cleanup.
 actor PlanDayDatabase {
+    struct WatchAccelerationRestoreReceipt: Sendable {
+        let watchEventIDs: [String]
+        let iPhoneEventIDs: [String]
+    }
+
     private static let legacyMigrationMarker = "legacy-v2-to-v3"
     private static let projectionDomains: Set<String> = [
         "plan-actual",
@@ -100,7 +128,9 @@ actor PlanDayDatabase {
 
     func load(
         day: Date,
-        sourceRevision: UInt64
+        sourceRevision: UInt64,
+        sourceFingerprint expectedSourceFingerprint: String? = nil,
+        allowStaleSourceFingerprint: Bool = false
     ) async throws -> PlanDayDataSnapshot? {
         guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker) else {
             return nil
@@ -132,8 +162,11 @@ actor PlanDayDatabase {
             return nil
         }
         guard let row,
-              row.sourceRevision == sourceRevision,
               row.projectionVersion == TaptionPlanV3Store.projectionVersion else {
+            return nil
+        }
+        if expectedSourceFingerprint == nil,
+           row.sourceRevision != sourceRevision {
             return nil
         }
         let iPhoneDigest = try await iPhoneStore.rawDigest(for: dayKey)
@@ -194,10 +227,13 @@ actor PlanDayDatabase {
             try await discardMaterializedDayIfCurrent(dayKey, expected: row)
             return nil
         }
-        return PlanDayDataSnapshot(
+        let snapshot = PlanDayDataSnapshot(
             day: payload.day,
-            sourceRevision: row.sourceRevision,
+            sourceRevision: expectedSourceFingerprint == nil
+                ? row.sourceRevision
+                : sourceRevision,
             sourceUpdatedAt: payload.sourceUpdatedAt,
+            sourceFingerprint: payload.sourceFingerprint,
             projectionVersion: row.projectionVersion,
             actuals: payload.actuals,
             places: payload.places,
@@ -205,13 +241,24 @@ actor PlanDayDatabase {
             readings: payload.readings,
             isComplete: payload.isComplete
         )
+        if let expectedSourceFingerprint,
+           !allowStaleSourceFingerprint,
+           snapshot.sourceFingerprint != expectedSourceFingerprint {
+            return nil
+        }
+        return snapshot
     }
 
     func save(_ snapshot: PlanDayDataSnapshot) async throws {
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration()
-        try await save(snapshot, additionalIPhoneEvents: [], additionalWatchEvents: [])
+        try await save(
+            snapshot,
+            baseEvents: try rawEvents(for: snapshot),
+            additionalIPhoneEvents: [],
+            additionalWatchEvents: []
+        )
     }
 
     func requiresLegacyMigration() async throws -> Bool {
@@ -287,6 +334,7 @@ actor PlanDayDatabase {
                 let expectedWatch = baseEvents.watch + extras.watch
                 try await save(
                     snapshot,
+                    baseEvents: baseEvents,
                     additionalIPhoneEvents: extras.iPhone,
                     additionalWatchEvents: extras.watch
                 )
@@ -350,6 +398,10 @@ actor PlanDayDatabase {
 
     private func save(
         _ snapshot: PlanDayDataSnapshot,
+        baseEvents: (
+            iPhone: [TaptionPlanRawEvent],
+            watch: [TaptionPlanRawEvent]
+        ),
         additionalIPhoneEvents: [TaptionPlanRawEvent],
         additionalWatchEvents: [TaptionPlanRawEvent]
     ) async throws {
@@ -371,6 +423,7 @@ actor PlanDayDatabase {
         let payload = PlanDayDatabasePayload(
             day: snapshot.day,
             sourceUpdatedAt: snapshot.sourceUpdatedAt,
+            sourceFingerprint: snapshot.sourceFingerprint,
             actuals: snapshot.actuals,
             places: snapshot.places,
             travel: snapshot.travel,
@@ -379,7 +432,7 @@ actor PlanDayDatabase {
         )
         let encodedPayload = try TaptionPlanCanonicalStorage.encode(payload)
         let materializedPayload = TaptionPlanCanonicalStorage.envelope(for: encodedPayload)
-        let events = try rawEvents(for: snapshot)
+        let events = baseEvents
         let dayKey = TaptionPlanDayKey(date: snapshot.day)
         let iPhoneEvents = events.iPhone + additionalIPhoneEvents
         let projectionEvents = iPhoneEvents.filter {
@@ -463,10 +516,12 @@ actor PlanDayDatabase {
             provenance: Self.watchSummaryProvenance + ["merge:iPhone"],
             payload: payload
         )
-        try await watchStore.appendRawEvents([watchEvent])
+        let watchIDs = try await watchStore.appendRawEvents([watchEvent])
         try checkDataGeneration()
-        try await iPhoneStore.appendRawEvents([mergedEvent])
-        try await iPhoneStore.removeMaterializedDay(for: day)
+        let iPhoneIDs = try await iPhoneStore.appendRawEvents([mergedEvent])
+        if !watchIDs.isEmpty || !iPhoneIDs.isEmpty {
+            try await iPhoneStore.removeMaterializedDay(for: day)
+        }
     }
 
     func watchAccelerationSamples(
@@ -525,9 +580,119 @@ actor PlanDayDatabase {
     func recordWatchAccelerationChunk(
         _ chunk: TaptionWatchAccelerationChunk
     ) async throws {
+        try await recordWatchAccelerationChunks([chunk])
+    }
+
+    func recordWatchAccelerationChunks(
+        _ chunks: [TaptionWatchAccelerationChunk]
+    ) async throws {
+        guard !chunks.isEmpty else { return }
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration()
+        let events = try chunks.map {
+            try Self.watchAccelerationEvents(for: $0)
+        }
+        let receipt = try await appendWatchAccelerationEvents(events)
+        let insertedIDs = Set(receipt.watchEventIDs + receipt.iPhoneEventIDs)
+        for day in Set(events.compactMap {
+            insertedIDs.contains($0.iPhone.id) ? $0.iPhone.day : nil
+        }) {
+            try await iPhoneStore.removeMaterializedDay(for: day)
+        }
+    }
+
+    func recordWatchAccelerationChunksForRestore(
+        _ chunks: [TaptionWatchAccelerationChunk]
+    ) async throws -> WatchAccelerationRestoreReceipt {
+        guard !chunks.isEmpty else {
+            return WatchAccelerationRestoreReceipt(
+                watchEventIDs: [],
+                iPhoneEventIDs: []
+            )
+        }
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration()
+        return try await appendWatchAccelerationEvents(
+            chunks.map { try Self.watchAccelerationEvents(for: $0) }
+        )
+    }
+
+    func rollbackWatchAccelerationRestore(
+        _ receipt: WatchAccelerationRestoreReceipt
+    ) async throws {
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration()
+        var firstError: (any Error)?
+        do {
+            try await iPhoneStore.deleteRawEvents(
+                ids: receipt.iPhoneEventIDs,
+                domain: "watch-acceleration"
+            )
+        } catch {
+            firstError = error
+        }
+        do {
+            try await watchStore.deleteRawEvents(
+                ids: receipt.watchEventIDs,
+                domain: "watch-acceleration"
+            )
+        } catch {
+            if firstError == nil { firstError = error }
+        }
+        if let firstError { throw firstError }
+    }
+
+    func validateWatchAccelerationChunks(
+        _ chunks: [TaptionWatchAccelerationChunk]
+    ) async throws {
+        guard !chunks.isEmpty else { return }
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        try checkDataGeneration()
+        let events = try chunks.map {
+            try Self.watchAccelerationEvents(for: $0)
+        }
+        try await watchStore.validateRawEventsForAppend(events.map { $0.watch })
+        try await iPhoneStore.validateRawEventsForAppend(events.map { $0.iPhone })
+    }
+
+    private func appendWatchAccelerationEvents(
+        _ events: [(watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent)]
+    ) async throws -> WatchAccelerationRestoreReceipt {
+        let watchIDs = try await watchStore.appendRawEvents(
+            events.map(\.watch)
+        )
+        do {
+            try checkDataGeneration()
+            let iPhoneIDs = try await iPhoneStore.appendRawEvents(
+                events.map(\.iPhone)
+            )
+            return WatchAccelerationRestoreReceipt(
+                watchEventIDs: watchIDs.map(\.id),
+                iPhoneEventIDs: iPhoneIDs.map(\.id)
+            )
+        } catch {
+            do {
+                try await watchStore.deleteRawEvents(
+                    ids: watchIDs.map(\.id),
+                    domain: "watch-acceleration"
+                )
+            } catch {
+                Self.logger.error(
+                    "Watch acceleration rollback failed: \(error.localizedDescription, privacy: .public)"
+                )
+                throw PlanDayDatabaseRestoreError.rollbackFailed
+            }
+            throw error
+        }
+    }
+
+    private static func watchAccelerationEvents(
+        for chunk: TaptionWatchAccelerationChunk
+    ) throws -> (watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent) {
         let payload = TaptionPlanCanonicalStorage.envelope(
             for: try TaptionPlanCanonicalStorage.encode(chunk)
         )
@@ -559,10 +724,7 @@ actor PlanDayDatabase {
             provenance: provenance + ["merge:iPhone"],
             payload: payload
         )
-        try await watchStore.appendRawEvents([watchEvent])
-        try checkDataGeneration()
-        try await iPhoneStore.appendRawEvents([mergedEvent])
-        try await iPhoneStore.removeMaterializedDay(for: day)
+        return (watchEvent, mergedEvent)
     }
 
     func watchAccelerationChunks(
@@ -876,10 +1038,32 @@ actor PlanDayDatabase {
         device: TaptionPlanStoreDevice,
         exactDigestDayCount: inout Int
     ) throws {
-        guard Set(expected).isSubset(of: Set(actual)) else {
+        let storedExpected = expected.map { event in
+            TaptionPlanRawEvent(
+                device: event.device,
+                day: event.day,
+                timestamp: Date(
+                    timeIntervalSince1970: event.timestamp.timeIntervalSince1970
+                ),
+                sequence: event.sequence,
+                id: event.id,
+                domain: event.domain,
+                provenance: event.provenance,
+                payload: event.payload
+            )
+        }
+        let actualSet = Set(actual)
+        if let missing = storedExpected.first(where: { !actualSet.contains($0) }) {
+            let stored = actual.first {
+                $0.domain == missing.domain && $0.id == missing.id
+            }
+            let difference = stored.map {
+                "day=\($0.day == missing.day) timestamp=\($0.timestamp == missing.timestamp) sequence=\(missing.sequence)/\($0.sequence) provenance=\($0.provenance == missing.provenance) payload=\($0.payload == missing.payload)"
+            } ?? "stored=false"
             throw PlanDayDatabaseMigrationError.rawDigestMismatch(
                 day: day,
-                device: device
+                device: device,
+                reason: "missing=\(missing.domain)/\(missing.id) \(difference) expected=\(expected.count) actual=\(actual.count)"
             )
         }
         let expectedDigest = TaptionPlanV3Store.digest(
@@ -893,10 +1077,11 @@ actor PlanDayDatabase {
             day: day
         )
         if expectedDigest.eventCount == actualDigest.eventCount {
-            guard expectedDigest == actualDigest else {
+            guard expectedDigest.sha256 == actualDigest.sha256 else {
                 throw PlanDayDatabaseMigrationError.rawDigestMismatch(
                     day: day,
-                    device: device
+                    device: device,
+                    reason: "expected=\(expectedDigest.sha256.prefix(12)) actual=\(actualDigest.sha256.prefix(12)) count=\(actual.count)"
                 )
             }
             exactDigestDayCount += 1
@@ -1061,7 +1246,7 @@ private enum PlanDayDatabaseError: Error {
 final class PlanDayLoadCoordinator {
     private struct CacheKey: Hashable {
         let day: TaptionPlanDayKey
-        let sourceRevision: UInt64
+        let sourceFingerprint: String
         let projectionVersion: UInt64
     }
 
@@ -1100,21 +1285,70 @@ final class PlanDayLoadCoordinator {
         sensorLoader: @escaping (Date) async -> SensorReadingsLoadResult,
         forceReload requestedForceReload: Bool = false
     ) async -> PlanDayDataSnapshot {
+        let loadStartedAt = ProcessInfo.processInfo.systemUptime
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        let sourceFingerprint = PlanDayDataSnapshot.sourceFingerprint(
+            date: dayStart,
+            source: source
+        )
         let key = CacheKey(
             day: TaptionPlanDayKey(date: dayStart),
-            sourceRevision: sourceRevision,
+            sourceFingerprint: sourceFingerprint
+                ?? "revision:\(sourceRevision)",
             projectionVersion: TaptionPlanV3Store.projectionVersion
         )
         let pendingForceReload = forceReloadDays.remove(key.day) != nil
         let forceReload = requestedForceReload || pendingForceReload
+        func finish(
+            _ value: PlanDayDataSnapshot,
+            source: String,
+            durations: [String: TimeInterval] = [:]
+        ) -> PlanDayDataSnapshot {
+            var fields = durations.mapValues {
+                String(Int(max(0, $0) * 1_000))
+            }
+            fields["source"] = source
+            fields["duration_ms"] = String(Int(max(
+                0,
+                ProcessInfo.processInfo.systemUptime - loadStartedAt
+            ) * 1_000))
+            fields["readings"] = String(value.readings.count)
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "day_snapshot_load_finished",
+                fields: fields
+            )
+            return value
+        }
         if let cached = cache[key] {
             if !forceReload, cached.isComplete {
                 touch(key)
-                return cached
+                return finish(cached, source: "memory_cache")
             }
             cache.removeValue(forKey: key)
             recency.removeAll { $0 == key }
+        }
+        if !forceReload,
+           let staleKey = recency.reversed().first(where: { $0.day == key.day }),
+           let stale = cache[staleKey],
+           stale.isComplete {
+            let projectionStartedAt = ProcessInfo.processInfo.systemUptime
+            let reprojected = PlanDayDataSnapshot.make(
+                date: dayStart,
+                sourceRevision: sourceRevision,
+                source: source,
+                sensorResult: SensorReadingsLoadResult(
+                    readings: stale.readings,
+                    isComplete: true
+                )
+            )
+            return finish(
+                reprojected,
+                source: "reprojected_memory_raw",
+                durations: [
+                    "projection_ms": ProcessInfo.processInfo.systemUptime
+                        - projectionStartedAt,
+                ]
+            )
         }
         cancelRequests(except: key)
         if let existing = inFlight[key] {
@@ -1127,31 +1361,101 @@ final class PlanDayLoadCoordinator {
 
         let database = self.database
         let task = Task { @MainActor [source, database, forceReload] in
+            let databaseStartedAt = ProcessInfo.processInfo.systemUptime
             if !forceReload,
                let cached = try? await database.load(
                 day: dayStart,
-                sourceRevision: sourceRevision
+                sourceRevision: sourceRevision,
+                sourceFingerprint: sourceFingerprint
                ), cached.isComplete {
-                return cached
+                return finish(
+                    cached,
+                    source: "database_cache",
+                    durations: [
+                        "database_ms": ProcessInfo.processInfo.systemUptime
+                            - databaseStartedAt,
+                    ]
+                )
             }
+            let databaseDuration = ProcessInfo.processInfo.systemUptime
+                - databaseStartedAt
+            var durations = ["database_ms": databaseDuration]
+            if !forceReload,
+               let stale = try? await database.load(
+                day: dayStart,
+                sourceRevision: sourceRevision,
+                sourceFingerprint: sourceFingerprint,
+                allowStaleSourceFingerprint: true
+               ), stale.isComplete {
+                let projectionStartedAt = ProcessInfo.processInfo.systemUptime
+                let reprojected = PlanDayDataSnapshot.make(
+                    date: dayStart,
+                    sourceRevision: sourceRevision,
+                    source: source,
+                    sensorResult: SensorReadingsLoadResult(
+                        readings: stale.readings,
+                        isComplete: true
+                    )
+                )
+                durations["projection_ms"] = ProcessInfo.processInfo
+                    .systemUptime - projectionStartedAt
+                guard !Task.isCancelled else {
+                    return finish(
+                        reprojected,
+                        source: "reprojected_database_raw_cancelled",
+                        durations: durations
+                    )
+                }
+                let persistenceStartedAt = ProcessInfo.processInfo.systemUptime
+                try? await database.save(reprojected)
+                durations["persistence_ms"] = ProcessInfo.processInfo
+                    .systemUptime - persistenceStartedAt
+                return finish(
+                    reprojected,
+                    source: "reprojected_database_raw",
+                    durations: durations
+                )
+            }
+            let sensorStartedAt = ProcessInfo.processInfo.systemUptime
             let sensorResult = await sensorLoader(dayStart)
+            durations["sensor_ms"] = ProcessInfo.processInfo.systemUptime
+                - sensorStartedAt
+            let projectionStartedAt = ProcessInfo.processInfo.systemUptime
             let projected = PlanDayDataSnapshot.make(
                 date: dayStart,
                 sourceRevision: sourceRevision,
                 source: source,
                 sensorResult: sensorResult
             )
+            durations["projection_ms"] = ProcessInfo.processInfo.systemUptime
+                - projectionStartedAt
             guard !Task.isCancelled, projected.isComplete else {
-                return projected
+                return finish(
+                    projected,
+                    source: "incomplete_projection",
+                    durations: durations
+                )
             }
+            let persistenceStartedAt = ProcessInfo.processInfo.systemUptime
             try? await database.save(projected)
+            durations["persistence_ms"] = ProcessInfo.processInfo.systemUptime
+                - persistenceStartedAt
             if let readBack = try? await database.load(
                 day: dayStart,
-                sourceRevision: sourceRevision
+                sourceRevision: sourceRevision,
+                sourceFingerprint: sourceFingerprint
             ) {
-                return readBack
+                return finish(
+                    readBack,
+                    source: "rebuilt_readback",
+                    durations: durations
+                )
             }
-            return projected
+            return finish(
+                projected,
+                source: "rebuilt_memory",
+                durations: durations
+            )
         }
         let request = InFlightRequest(id: UUID(), task: task)
         inFlight[key] = request
@@ -1207,9 +1511,14 @@ final class PlanDayLoadCoordinator {
         progress?(0)
         for (index, day) in days.enumerated() {
             guard !Task.isCancelled else { return }
+            let sourceFingerprint = PlanDayDataSnapshot.sourceFingerprint(
+                date: day,
+                source: source
+            )
             let key = CacheKey(
                 day: TaptionPlanDayKey(date: day),
-                sourceRevision: sourceRevision,
+                sourceFingerprint: sourceFingerprint
+                    ?? "revision:\(sourceRevision)",
                 projectionVersion: TaptionPlanV3Store.projectionVersion
             )
             if cache[key] == nil {

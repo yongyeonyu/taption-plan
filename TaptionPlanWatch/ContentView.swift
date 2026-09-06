@@ -3,6 +3,7 @@ import SwiftUI
 private struct WatchConfirmationSubject: Identifiable, Hashable {
     var id: String
     var suggestionID: UUID
+    var confirmationToken: UUID
     var sensorSessionID: UUID
     var behavior: WatchBehaviorKind
     var alternatives: [WatchBehaviorKind]
@@ -84,12 +85,14 @@ struct WatchContentView: View {
 
     private var confirmationSubject: WatchConfirmationSubject? {
         guard let suggestion = connectivity.payload?.activitySuggestion,
+              let confirmationToken = suggestion.confirmationToken,
               Date.now.timeIntervalSince(suggestion.endedAt) <= 2 * 3_600
         else { return nil }
         let percent = Int((suggestion.confidenceScore * 100).rounded())
         return WatchConfirmationSubject(
             id: suggestion.id.uuidString,
             suggestionID: suggestion.id,
+            confirmationToken: confirmationToken,
             sensorSessionID: suggestion.sensorSessionID,
             behavior: suggestion.proposedBehavior,
             alternatives: suggestion.alternativeBehaviors,
@@ -283,6 +286,7 @@ struct WatchContentView: View {
                 correctedBehavior: correctedBehavior,
                 suggestionID: subject.suggestionID,
                 sensorSessionID: subject.sensorSessionID,
+                confirmationToken: subject.confirmationToken,
                 pattern: subject.pattern
             )
         )

@@ -1,5 +1,84 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 PAY906Q001 데이터·지도 집중 검증
+
+- iPhone 14 Pro(iOS 26.6.1)에서 raw 복원 실패 원자성, Watch 원본 보존, 캘린더 계정·반복 일정 병합, 지도 cache·pinch 재중심화 회귀 11/11을 실패·스킵 없이 통과했다: `/private/tmp/PAY906Q001-focused-r1.xcresult`.
+- 날씨 rail 간격과 pinch 유지 추가 회귀는 iPhone 17 Pro iOS 26.5 Simulator에서 2/2 통과했다: `/private/tmp/PAY906Q001-weather-r2.xcresult`.
+- 같은 Watch summary/chunk identity의 동일 재전송은 no-op, 다른 payload는 거부하는 원본 불변 회귀 2/2를 통과했다: `/private/tmp/PAY906Q001-focused-r4.XPUojy/focused-r2.xcresult`.
+- 최신 전체 XCTest·Swift Testing은 1,050건 중 1,049 passed·1 skipped·0 failed다: `/private/tmp/PAY906Q001-latest-analyze/full.xcresult`. skip은 iOS 26.5 Simulator의 기존 `SKInternalErrorDomain Code=3` StoreKitTest 시스템 오류다. 최신 iOS static analyzer도 analyzer 경고·오류 0이며 Xcode StoreKitTest SDK 헤더 폐기 경고 1건만 보고했다: `/private/tmp/PAY906Q001-latest-analyze/analyze.xcresult`.
+- 30일 날짜 조회 cold/warm p95는 `25.605708ms`/`0.009167ms`, legacy 100건 복구는 `46.960084ms`, inline legacy 2,346건은 `118.320083ms`다.
+- XCTest 산출물이 없는 일반 시뮬레이터 앱을 설치·launch하고 동일 1206×2622 전후 화면에서 레이아웃·날씨 라벨·현재 위치 버튼을 함께 비교했다: `/private/tmp/PAY906Q001-design-audit-final/02-before-after.png`.
+- 메모 메뉴의 수정 전후를 동일 1206×2622 상태로 결합 비교해 `note.text`·금색 계열 통일과 레이아웃 유지가 보였다: `/private/tmp/PAY906Q001-design-audit-r2/11-before-after-memo.png`. Vector 임시 마커 anchor와 44/48pt hit target, Apple annotation 언어별 접근성 라벨은 코드·빌드로 확인했지만 실데이터 마커와 VoiceOver 낭독은 별도 물리 게이트다.
+- 최신 일반 Debug `1.0 (137)`은 테스트 번들 없이 deep/strict codesign 후 iPhone 설치·developer app 버전 readback·launch PID `14539`를 통과했다: `/private/tmp/PAY906Q001-style-iphone-r1.k3QEtD`. 위치 버튼 회귀는 iPhone 17 Pro iOS 26.5 Simulator에서 1/1 통과했다: `/private/tmp/PAY906Q001-style-simtest-r1.3FJtFo/focused.xcresult`.
+- 현재 launch의 앱 진단 파일은 생성되지 않아 새 runtime 로그 readback은 확보하지 못했다. 실제 두 손가락 pinch·장시간 발열/배터리·Watch/캘린더 실계정 수신·대중교통 경로 화면은 별도 물리 게이트다.
+- snapshot 저장 실패 뒤 새 raw만 되돌리는 복원·Watch 회귀 7/7, 사용자가 선택한 캘린더가 새 live 캘린더 때문에 확대되지 않는 회귀 2/2, pending viewport 중복 재중심화를 막는 카메라 회귀 4/4와 TaptionPlanCore 52/52를 통과했다: `/private/tmp/RAWAUD9061-focused/cloud-regression.xcresult`, `/private/tmp/RAWAUD9061-focused/calendar-regression.xcresult`, `/private/tmp/RAWAUD9061-focused/map-camera-regression.xcresult`, `/private/tmp/RAWAUD9061-focused/map-current-location-regression.xcresult`.
+- 최신 일반 Debug `1.0 (137)`은 테스트 번들 0개·deep/strict codesign 후 iPhone 설치·developer app 버전 readback·launch PID `14718`을 통과했다. Debug dylib SHA-256은 `c6fb740fbd97837e99e48905fe2490da4a2f2f1aa602b9745ee9d2ce813cadf2`다: `/private/tmp/PAY906Q001-iphone-final-r5/evidence.md`.
+
+## 2026-09-06 RTE906C001 반복 날짜 로드 회귀
+
+- 지도 화면의 60초 전체 날짜 재조회와 같은 날 소스 변경에 따른 task 재시작을 제거했다. task key 집중 회귀 1/1, generic Simulator Debug와 iPhone Debug build가 통과했다: `/private/tmp/RTE906C001-focused.xcresult`.
+- iPhone 14 Pro(iOS 26.6.1)에 개발자 서명 `1.0 (137)`을 설치하고 버전·launch·프로세스 PID `15114`를 readback했다. Debug dylib SHA-256은 `4b9b38e2a70842f1768b66497be61cbb0d910b46b5b48a0334aefa6308da465c`다: `/private/tmp/RTE906C001-device-evidence.md`.
+- 설치·실행은 통과했지만 실제 손가락 날짜 전환 지연과 60초 이후 로그 횟수는 별도 실기기 사용 게이트다.
+
+## 2026-09-06 SLP906C001 iPhone 수면 fallback 회귀
+
+- strict 수면 결과가 없을 때만 `PhoneSleepFallbackEngine`을 연결하고, 화면 원본이 비거나 백그라운드 표본 간격이 긴 iPhone 기록을 보완하도록 수정했다. HealthKit·Watch 수면과 겹치는 후보는 기존 차단 규칙을 유지한다.
+- TaptionActivityEngine 14/14와 앱 타깃 집중 회귀 2/2(수면 fallback·날짜 task)를 실패·스킵 없이 통과했다: `/private/tmp/SLP906C001-focused-r2.xcresult`.
+
+## 2026-09-06 DAT906L001 날짜 데이터 재조회 지연
+
+- 실기기 로그에서 날짜 로드 `snapshot_wait_ms` 4~9초의 대부분이 `sensor_ms` 5~8초였고, source fingerprint 변경만으로 raw 센서 아카이브 전체를 다시 읽는 경로가 원인이었다: `/private/tmp/DAY906L001-current-iphone.jsonl`.
+- raw digest가 유효한 메모리·materialized day readings를 재사용해 현재 source만 재투영하고, raw 불일치·불완전 때만 센서 전체 조회로 fallback한다. 재사용 경로는 `reprojected_memory_raw`·`reprojected_database_raw` 로그로 구분한다.
+- source 변경·강제 재로드 회귀 2/2, 30일 cold/warm 날짜 조회 성능 1/1, 실패·스킵 0이다. p95는 `33.542666ms`/`0.04725ms`다: `/private/tmp/DAT906L001-tests-r2.xcresult`, `/private/tmp/DAT906L001-p95.xcresult`.
+
+## 2026-09-06 SEC906D001·SEC906K001·SEC906R001·SEC906C001·SEC906W001 백업·입력 경계 회귀
+
+- 백업 파일·CloudKit payload 크기 제한, PIN 실패 상태 영속화, AAD 메타데이터 인증, 문서 복구 키 기기 이전, Watch/HealthKit route·배열 상한과 confirmation token 검증을 반영했다.
+- 보안 회귀 3/3와 Watch query 22/22, 총 25/25·실패 0·스킵 0 및 Simulator Debug build가 통과했다: `/private/tmp/SEC906-final-derived/Logs/Test/Test-TaptionPlan-2026.09.06_14-12-59-+0900.xcresult`.
+- iPhone 14 Pro에 최신 수정본을 서명 빌드·설치·launch하고 `com.taption.plan 1.0 (137)` readback까지 확인했다: `/private/tmp/DATE906-final-device-build-r2.log`, `/private/tmp/DATE906-final-install-r2.json`, `/private/tmp/DATE906-final-launch-r2.json`. Watch 원본 수신은 별도 게이트이며, Watch command capability와 HealthKit source allowlist는 후속 보안 항목으로 남긴다.
+
+## 2026-09-06 BKP906C001 자동 백업 재시도 회귀
+
+- 최근 성공 또는 iCloud 계정 불가 실패 뒤 1시간 동안 포그라운드 자동 백업을 건너뛰고, 경계 시각부터 다시 허용하는 회귀 1/1을 통과했다: `/private/tmp/BKP906C001-focused.xcresult`.
+- 수동·00:00 백업 경로는 변경하지 않았고 암호화·무결성·복원 회귀 50/50, 실패·스킵 0을 확인했다: `/private/tmp/BKP906C001-security.xcresult`.
+
+## 2026-09-06 ASC906R001 판매 상태 readback
+
+- API readback에서 앱 버전 `1.0`은 `PREPARE_FOR_SUBMISSION`, build `137`은 `VALID`·미만료이고 Internal 그룹 build 관계에 포함됐다. 그룹 테스터는 1명이며 review submission은 0건이다.
+- Pro 상품은 `READY_TO_SUBMIT`, 미국 `USD 9.99`, 175개 지역, 현지화 2건과 심사 이미지 `COMPLETE`다. 버전 한국어 메타데이터와 iPhone 6.7형 스크린샷 2장도 존재·`COMPLETE`다: `/private/tmp/ASC906R001-live.r2SanN`.
+- 심사 연락처·version submission·앱 판매 지역 resource·첫 IAP 연결과 API 밖의 Paid Apps Agreement 확인은 남은 외부 게이트다.
+
+## 2026-09-06 DIG906C001 중복 raw 캐시 회귀
+
+- 같은 raw를 다시 append해도 신규 receipt 0건·digest 메모리 캐시 1건 유지·digest 불변임을 집중 회귀 1/1로 확인했다. TaptionPlanCore 전체 52/52도 실패·스킵 없이 통과했다: `/private/tmp/DIG906C001-core-r3.log`, `/private/tmp/DIG906C001-core-full-r1.log`.
+- iOS·Widget·Watch·Watch Widget을 포함한 generic iOS Debug build가 통과했다: `/private/tmp/DIG906C001-ios-device-build-r1.log`. 최초 dual-architecture Simulator build는 코드 오류가 아닌 디스크 부족으로 중단됐고, 이번에 생성한 DerivedData와 사용되지 않던 Taption Plan DerivedData만 정리한 뒤 device build로 재검증했다.
+
+## 2026-09-06 MAT906C001 중복 Watch 날짜 캐시 회귀
+
+- 변경 없는 Watch 요약·가속도 재전송 뒤에도 materialized day가 남고 raw event count가 각 저장소 1건으로 유지되는 집중 회귀 2/2를 통과했다: `/private/tmp/MAT906C001-focused.xcresult`.
+- `SensorDayStoreTests` 전체 41/41, 실패·스킵 0이며 30일 날짜 조회 성능 회귀와 Debug 앱·Widget·Watch 빌드도 통과했다: `/private/tmp/MAT906C001-store-suite.xcresult`.
+- iPhone 14 Pro에는 deep/strict codesign을 통과한 일반 Debug `1.0 (137)` 설치와 developer app 버전 readback까지 완료했다. 기기가 잠겨 launch는 iOS에서 거부됐으며 실제 날짜 전환 체감과 함께 잠금 해제 뒤 확인한다: `/private/tmp/MAT906C001-iphone-install.json`, `/private/tmp/MAT906C001-iphone-launch.log`.
+
+## 2026-09-06 DAY906L001 날짜 로딩 성능
+
+- iPhone 14 Pro(iOS 26.6.1)에서 legacy/envelope 복구, migration, 불완전 projection, 캐시 무효화·축출과 30일 성능 집중 XCTest 12/12를 실패·스킵 없이 통과했다: `/private/tmp/DAY906L001-iphone-tests-r14.xcresult`.
+- 실기기에서 최대 `78,239ms`였던 센서 조회는 pre-canonical JSON 2,346건의 반복 외부 복구와 실패한 migration 재시도가 원인이었다. SQLite `REAL` 시각의 1 ULP 왕복 차이 회귀를 포함해 수정했고 migration `25일`·iPhone `153,480건`·Watch `910건` 완료를 로그로 readback했다: `/private/tmp/DAY906L001-fixed-iphone-r6.jsonl`.
+- 실기기 30일 cold/warm p95는 `39.534583ms`/`0.010958ms`, migration 이후 후속 지도 날짜 로드는 `277~577ms`, snapshot은 `179~443ms`다. TaptionPlanCore 51/51도 통과했다: `/private/tmp/DAY906L001-core-tests-r2.log`.
+- XCTest 주입물을 제거한 일반 Apple Development Debug `1.0 (137)`을 다시 빌드·deep/strict codesign·설치·launch하고 앱 PID `14347`을 readback했다: `/private/tmp/DAY906L001-iphone-build-r9.log`. 실제 손가락 체감은 별도 물리 게이트다.
+- 정본 snapshot 전 stale 지도 캐시 게시 차단, raw 일자 revision 재조회, 복원 부분쓰기 방지와 60/30Hz 카메라 projection 회귀 8/8을 실패·스킵 없이 통과했다: `/private/tmp/DAY906L001-followup-r3.ZyrSYM/focused.xcresult`.
+- 최신 일반 Debug `1.0 (137)`은 테스트 번들 0개·deep/strict codesign·iPhone 설치·developer app 버전 readback·launch PID `14486`을 통과했다. Debug dylib SHA-256은 `58e2719718ff44e3e1770709710a7219ac0579a77e71926939c55f8f89337726`이며 증적은 `/private/tmp/DAY906L001-iphone-followup.zeZ8iP`다.
+- 최신 실기기 로그 4,040건은 일자 snapshot 204회 중 DB cache 1회·재생성 109회, 지도 cache 거부 89회(`source_revision_mismatch` 69회·`source_updated_at_mismatch` 20회)를 보였다. 지도 날짜 로드 p95는 `1,845ms`였다: `/private/tmp/DAY906L001-live-log-r1/attachments/ED73066A-9479-4D4D-96A6-CC04E4238F71.json`.
+- 전역 실행 revision 대신 해당 날짜 내용 fingerprint와 raw digest를 사용하도록 수정한 뒤 iPhone 날짜 저장·migration·cache·Watch 회귀 42/42와 기존 payload 호환 Simulator 회귀 8/8을 실패·스킵 없이 통과했다. 30일 cold/warm p95는 `38.536208ms`/`0.052541ms`다: `/private/tmp/DAY906L001-regression-r3/regression.xcresult`, `/private/tmp/DAY906L001-compat-r7/compat.xcresult`.
+- 테스트 번들 없는 최신 Debug `1.0 (137)`을 deep/strict codesign·설치하고 developer app 버전 readback·launch PID `14690`을 확인했다. Debug dylib SHA-256은 `fe4b7a8a561e87f38e1aa7201bfd7b86f4ae8941345c43ba41828f25557abe2d`이며 증적은 `/private/tmp/DAY906L001-iphone-final2.9Jm4eN`이다. 실제 날짜 전환 손가락 체감은 별도 물리 게이트다.
+
+## 2026-09-06 IAP905G002 StoreKit 실기기 회귀
+
+- iPhone 14 Pro(iOS 26.6.1) 최초 실행에서 상품 조회·검증 구매 결과는 성공했지만 구매 직후 entitlement가 아직 반영되지 않아 1/1 실패했고, 검증 거래 완료가 UI 잠금 해제보다 앞선 결함을 확인했다: `/private/tmp/IAP905G002-iphone.ebJ0XY/storekit.log`.
+- 구매 상태를 먼저 적용한 뒤 거래를 완료하고, 이미 current entitlement가 있으면 인증 없이 복원하도록 수정했다.
+- 수정본 StoreKit 집중 1/1과 상거래 잠금·14일 체험·시계 역행·상품형·철회·구매·외부 구매 인식·복원 10/10이 실패·스킵 0으로 통과했다: `/private/tmp/IAP905G002-iphone-r2.S0jnmI/storekit.xcresult`, `/private/tmp/IAP905G002-commerce-r3.8ddFUJ/commerce.xcresult`.
+- 최신 전체 소스의 iPhone clean Debug build·설치·launch와 앱 `1.0 (137)`, PID `13950` readback까지 통과했다: `/private/tmp/IAP905G002-iphone-build-r4.log`.
+- entitlement가 실제로 누락된 계정의 강제 `AppStore.sync()`는 시스템 계정 인증이 필요한 별도 수동 게이트다.
+
 ## 2026-09-06 DEV903V001 iPhone·Watch 실기기 확인
 
 - iPhone 14 Pro(iOS 26.6.1)에 최신 Apple Development Debug `1.0 (137)`을 빌드·설치·launch했고 앱 프로세스 PID `13362`와 버전을 readback했다. 빌드·서명 증적은 `/private/tmp/DEV903V001-iphone-settings-r1.log`이며 Debug dylib SHA-256은 `7bd3355fa7bcebfa9c47d087d072fb882563e2f8c75d23e192583a67b184ec06`이다.

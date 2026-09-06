@@ -64,9 +64,22 @@ final class DayStoreV3Tests: XCTestCase {
         let day = TaptionPlanDayKey(year: 2026, month: 8, day: 30)
         let original = event(day: day, id: "stable-1", timestamp: 20, payload: Data([1]))
 
+        try await store.validateRawEventsForAppend([original])
+        let eventsBeforeAppend = try await store.rawEvents(for: day)
+        XCTAssertTrue(eventsBeforeAppend.isEmpty)
         try await store.appendRawEvents([original, original])
         let initialEvents = try await store.rawEvents(for: day)
         XCTAssertEqual(initialEvents, [original])
+        let initialDigest = try await store.rawDigest(for: day)
+        let initialCacheCount = await store.rawDigestCacheCount
+        XCTAssertEqual(initialCacheCount, 1)
+
+        let duplicateReceipt = try await store.appendRawEvents([original])
+        XCTAssertTrue(duplicateReceipt.isEmpty)
+        let duplicateCacheCount = await store.rawDigestCacheCount
+        let duplicateDigest = try await store.rawDigest(for: day)
+        XCTAssertEqual(duplicateCacheCount, 1)
+        XCTAssertEqual(duplicateDigest, initialDigest)
 
         var conflicting = original
         conflicting = TaptionPlanRawEvent(
@@ -80,6 +93,15 @@ final class DayStoreV3Tests: XCTestCase {
             payload: Data([2])
         )
         do {
+            try await store.validateRawEventsForAppend([conflicting])
+            XCTFail("Expected validation conflict")
+        } catch let error as TaptionPlanV3StoreError {
+            XCTAssertEqual(
+                error,
+                .payloadConflict(device: .iPhone, domain: "gps", id: "stable-1")
+            )
+        }
+        do {
             try await store.appendRawEvents([conflicting])
             XCTFail("Expected append-only conflict")
         } catch let error as TaptionPlanV3StoreError {
@@ -90,6 +112,32 @@ final class DayStoreV3Tests: XCTestCase {
         }
         let finalEvents = try await store.rawEvents(for: day)
         XCTAssertEqual(finalEvents, [original])
+    }
+
+    func testRawAppendReceiptRollsBackOnlyNewEvents() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 6)
+        let existing = event(day: day, id: "existing", timestamp: 10)
+        let added = event(day: day, id: "added", timestamp: 20)
+        try await store.appendRawEvents([existing])
+        _ = try await store.rawDigest(for: day)
+
+        let receipt = try await store.appendRawEvents([existing, added])
+        XCTAssertEqual(
+            receipt,
+            [.init(domain: added.domain, id: added.id)]
+        )
+        try await store.deleteRawEvents(
+            ids: receipt.map(\.id),
+            domain: added.domain
+        )
+
+        let remaining = try await store.rawEvents(for: day)
+        let digest = try await store.rawDigest(for: day)
+        XCTAssertEqual(remaining, [existing])
+        XCTAssertEqual(digest.eventCount, 1)
     }
 
     func testRawBatchReusesStatementsAndOptimizePreservesEvents() async throws {

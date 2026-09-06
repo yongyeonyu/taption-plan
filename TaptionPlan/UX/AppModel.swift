@@ -62,10 +62,17 @@ private struct WatchSensorTimelineData: Sendable {
 /// for a map day: persisted iPhone/Watch data is read once, then day-scoped
 /// arrays are derived without changing the source snapshot or raw readings.
 struct PlanDayDataSnapshot: Equatable, Sendable {
+    private struct SourceFingerprintPayload: Encodable {
+        let actuals: [ActualRecord]
+        let places: [PlaceStay]
+        let travel: [TravelSegment]
+    }
+
     let day: Date
     let sourceRevision: UInt64
     let projectionVersion: UInt64
     let sourceUpdatedAt: Date
+    let sourceFingerprint: String?
     let actuals: [ActualRecord]
     let places: [PlaceStay]
     let travel: [TravelSegment]
@@ -85,6 +92,7 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
         day: Date,
         sourceRevision: UInt64,
         sourceUpdatedAt: Date,
+        sourceFingerprint: String? = nil,
         projectionVersion: UInt64 = TaptionPlanV3Store.projectionVersion,
         actuals: [ActualRecord],
         places: [PlaceStay],
@@ -96,6 +104,11 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
         self.sourceRevision = sourceRevision
         self.projectionVersion = projectionVersion
         self.sourceUpdatedAt = sourceUpdatedAt
+        self.sourceFingerprint = sourceFingerprint ?? Self.sourceFingerprint(
+            actuals: actuals,
+            places: places,
+            travel: travel
+        )
         self.actuals = actuals
         self.places = places
         self.travel = travel
@@ -114,27 +127,75 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
         let day = TimeSpan(start: dayStart, end: dayEnd)
+        let records = sourceRecords(in: day, source: source, dayEnd: dayEnd)
         return Self(
             day: dayStart,
             sourceRevision: sourceRevision,
             sourceUpdatedAt: source.updatedAt,
-            actuals: source.actuals.filter {
-                TimeSpan(
-                    start: $0.startedAt,
-                    end: max($0.startedAt, $0.endedAt ?? dayEnd)
-                ).intersection(with: day) != nil
-            },
-            places: source.places.filter {
-                $0.span.intersection(with: day) != nil
-            },
-            travel: source.travel.filter {
-                $0.span.intersection(with: day) != nil
-            },
+            actuals: records.actuals,
+            places: records.places,
+            travel: records.travel,
             readings: sensorResult.readings.filter {
                 $0.timestamp >= dayStart && $0.timestamp < dayEnd
             },
             isComplete: sensorResult.isComplete
         )
+    }
+
+    static func sourceFingerprint(
+        date: Date,
+        source: TaptionDataSnapshot,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> String? {
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let records = sourceRecords(
+            in: TimeSpan(start: dayStart, end: dayEnd),
+            source: source,
+            dayEnd: dayEnd
+        )
+        return sourceFingerprint(
+            actuals: records.actuals,
+            places: records.places,
+            travel: records.travel
+        )
+    }
+
+    private static func sourceRecords(
+        in day: TimeSpan,
+        source: TaptionDataSnapshot,
+        dayEnd: Date
+    ) -> (
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment]
+    ) {
+        (
+            source.actuals.filter {
+                TimeSpan(
+                    start: $0.startedAt,
+                    end: max($0.startedAt, $0.endedAt ?? dayEnd)
+                ).intersection(with: day) != nil
+            },
+            source.places.filter { $0.span.intersection(with: day) != nil },
+            source.travel.filter { $0.span.intersection(with: day) != nil }
+        )
+    }
+
+    private static func sourceFingerprint(
+        actuals: [ActualRecord],
+        places: [PlaceStay],
+        travel: [TravelSegment]
+    ) -> String? {
+        try? TaptionPlanCanonicalStorage.encode(
+            SourceFingerprintPayload(
+                actuals: actuals.sorted { $0.id.uuidString < $1.id.uuidString },
+                places: places.sorted { $0.id.uuidString < $1.id.uuidString },
+                travel: travel.sorted { $0.id.uuidString < $1.id.uuidString }
+            ),
+            compress: false
+        ).checksum
     }
 
     private static func uniqueReadings(
@@ -518,6 +579,7 @@ enum PlanBackupRouteFallbackEngine {
 enum PlanCloudBackupRestoreResult: Equatable {
     case complete
     case snapshotOnly
+    case unchanged
 }
 
 @MainActor
@@ -539,6 +601,17 @@ final class AppModel {
     private static let mapLocationReadingTimeout: TimeInterval = 3
     private static let weatherPreviewRefreshInterval: TimeInterval = 30 * 60
     private static let weatherPreviewMaximumDays = 7
+    private static let automaticCloudBackupInterval: TimeInterval = 60 * 60
+
+    static func shouldAttemptAutomaticCloudBackup(
+        at now: Date,
+        latestSuccessfulBackupDate: Date?,
+        retryAfter: Date?
+    ) -> Bool {
+        (latestSuccessfulBackupDate.map {
+            now.timeIntervalSince($0) >= automaticCloudBackupInterval
+        } ?? true) && (retryAfter.map { now >= $0 } ?? true)
+    }
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
@@ -602,6 +675,10 @@ final class AppModel {
     }
     @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
     @ObservationIgnored private(set) var dayProjectionRevision: UInt64 = 0
+    private(set) var rawDayRevisionSignal: UInt64 = 0
+    @ObservationIgnored private var rawDayRevisions: [Date: UInt64] = [:]
+    @ObservationIgnored private var daySourceFingerprintCache:
+        [Date: (revision: UInt64, value: String?)] = [:]
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
@@ -816,6 +893,7 @@ final class AppModel {
     @ObservationIgnored private var foregroundRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var deferredVisibleRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
+    @ObservationIgnored private var automaticCloudBackupRetryAfter: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
     @ObservationIgnored private var calendarStoreRefreshTask:
@@ -1090,11 +1168,7 @@ final class AppModel {
                 }
                 guard !accepted.isEmpty else { return }
                 self.sensorStorageErrorDescription = nil
-                for day in Set(accepted.map {
-                    Calendar.autoupdatingCurrent.startOfDay(for: $0.timestamp)
-                }) {
-                    self.dayLoadCoordinator?.invalidate(day: day)
-                }
+                self.invalidateRawDays(accepted.map(\.timestamp))
                 self.handlePersistedSensorReadings(accepted)
             }
         }
@@ -1288,6 +1362,7 @@ final class AppModel {
                 date: date
             )
             securityStatus = securityBackupService.status
+            automaticCloudBackupRetryAfter = nil
             logger.finishOperation(
                 operation,
                 outcome: "success",
@@ -1297,6 +1372,11 @@ final class AppModel {
                 ]
             )
         } catch {
+            if error as? PlanSecurityError == .accountUnavailable {
+                automaticCloudBackupRetryAfter = Date.now.addingTimeInterval(
+                    Self.automaticCloudBackupInterval
+                )
+            }
             logger.finishOperation(
                 operation,
                 outcome: "failure",
@@ -1388,77 +1468,138 @@ final class AppModel {
         }
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
-        _ = try await saveToRepository(value)
-        snapshot = value
 
-        if !restoredReadings.isEmpty, let sensorService {
-            do {
-                try await sensorService.recordExternalReadings(
+        do {
+            if !restoredReadings.isEmpty {
+                guard let sensorService else {
+                    throw PlanSecurityError.archiveNotFound
+                }
+                try await sensorService.validateExternalReadings(
                     restoredReadings
                 )
-            } catch {
-                result = .snapshotOnly
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "icloud_backup_restore_sensor_merge_failed",
-                    level: .error,
-                    fields: ["error": String(describing: type(of: error))]
-                )
             }
-        } else if !restoredReadings.isEmpty {
-            result = .snapshotOnly
-        }
-        if let rawSensorPayload, !rawSensorPayload.envelopes.isEmpty,
-           let rawDeviceDataArchive {
-            do {
-                try await rawDeviceDataArchive.append(
-                    rawSensorPayload.envelopes
-                )
-            } catch {
-                result = .snapshotOnly
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "icloud_backup_restore_raw_envelope_merge_failed",
-                    level: .error,
-                    fields: ["error": String(describing: type(of: error))]
-                )
+            if let envelopes = rawSensorPayload?.envelopes,
+               !envelopes.isEmpty {
+                guard let rawDeviceDataArchive else {
+                    throw PlanSecurityError.archiveNotFound
+                }
+                try await rawDeviceDataArchive.validateAppend(envelopes)
             }
-        } else if rawSensorPayload?.envelopes.isEmpty == false {
-            result = .snapshotOnly
-        }
-        if let chunks = rawSensorPayload?.watchAccelerationChunks,
-           !chunks.isEmpty {
-            if watchSensorArchive == nil && dayDatabase == nil {
-                result = .snapshotOnly
-            } else {
-                do {
-                    for chunk in chunks {
-                        if let dayDatabase {
-                            do {
-                                try await dayDatabase
-                                    .recordWatchAccelerationChunk(chunk)
-                            } catch {
-                                guard let watchSensorArchive else { throw error }
-                                try await watchSensorArchive.record(chunk)
-                            }
-                        } else if let watchSensorArchive {
-                            try await watchSensorArchive.record(chunk)
-                        }
-                        dayLoadCoordinator?.invalidate(day: chunk.startedAt)
-                        dayLoadCoordinator?.invalidate(day: chunk.endedAt)
-                    }
-                    TaptionPlanDiagnosticsLogger.shared.record(
-                        "icloud_backup_restore_watch_acceleration_merged",
-                        fields: ["chunks": String(chunks.count)]
+            if let chunks = rawSensorPayload?.watchAccelerationChunks,
+               !chunks.isEmpty {
+                if let dayDatabase {
+                    try await dayDatabase.validateWatchAccelerationChunks(
+                        chunks
                     )
-                } catch {
-                    result = .snapshotOnly
-                    TaptionPlanDiagnosticsLogger.shared.record(
-                        "icloud_backup_restore_watch_acceleration_failed",
-                        level: .error,
-                        fields: TaptionDiagnosticError.compactFields(for: error)
-                    )
+                } else if let watchSensorArchive {
+                    try await watchSensorArchive.validateAppend(chunks)
+                } else {
+                    throw PlanSecurityError.archiveNotFound
                 }
             }
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_restore_raw_preflight_failed",
+                level: .error,
+                fields: TaptionDiagnosticError.compactFields(for: error)
+            )
+            return .unchanged
         }
+
+        var sensorReadingIDs: [UUID] = []
+        var envelopeIDs: [UUID] = []
+        var watchReceipt: PlanDayDatabase.WatchAccelerationRestoreReceipt?
+        var legacyWatchReceipt:
+            AppleWatchSensorActivityArchive.AccelerationRestoreReceipt?
+        do {
+            if !restoredReadings.isEmpty, let sensorService {
+                sensorReadingIDs = try await sensorService
+                    .recordExternalReadingsForRestore(restoredReadings)
+            }
+            if let envelopes = rawSensorPayload?.envelopes,
+               !envelopes.isEmpty, let rawDeviceDataArchive {
+                envelopeIDs = try await rawDeviceDataArchive.appendForRestore(
+                    envelopes
+                )
+            }
+            if let chunks = rawSensorPayload?.watchAccelerationChunks,
+               !chunks.isEmpty {
+                if let dayDatabase {
+                    watchReceipt = try await dayDatabase
+                        .recordWatchAccelerationChunksForRestore(chunks)
+                } else if let watchSensorArchive {
+                    legacyWatchReceipt = try await watchSensorArchive
+                        .recordForRestore(chunks)
+                }
+            }
+        } catch {
+            let mergeError = error
+            do {
+                try await rollbackCloudBackupRawMerge(
+                    sensorReadingIDs: sensorReadingIDs,
+                    envelopeIDs: envelopeIDs,
+                    watchReceipt: watchReceipt,
+                    legacyWatchReceipt: legacyWatchReceipt
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "icloud_backup_restore_raw_rollback_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.compactFields(for: error)
+                )
+                throw error
+            }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_restore_raw_merge_rolled_back",
+                level: .error,
+                fields: TaptionDiagnosticError.compactFields(for: mergeError)
+            )
+            if mergeError is PlanDayDatabaseRestoreError {
+                throw mergeError
+            }
+            return .unchanged
+        }
+        do {
+            _ = try await saveToRepository(value)
+        } catch {
+            let saveError = error
+            do {
+                try await rollbackCloudBackupRawMerge(
+                    sensorReadingIDs: sensorReadingIDs,
+                    envelopeIDs: envelopeIDs,
+                    watchReceipt: watchReceipt,
+                    legacyWatchReceipt: legacyWatchReceipt
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "icloud_backup_restore_raw_rollback_failed",
+                    level: .error,
+                    fields: TaptionDiagnosticError.compactFields(for: error)
+                )
+                throw error
+            }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_restore_repository_failed_raw_rolled_back",
+                level: .error,
+                fields: TaptionDiagnosticError.compactFields(for: saveError)
+            )
+            throw saveError
+        }
+        invalidateRawDays(
+            restoredReadings.map(\.timestamp)
+                + (rawSensorPayload?.envelopes ?? []).map(\.capturedAt)
+                + (rawSensorPayload?.watchAccelerationChunks ?? []).flatMap {
+                    [$0.startedAt, $0.endedAt]
+                }
+        )
+        if let chunks = rawSensorPayload?.watchAccelerationChunks,
+           !chunks.isEmpty {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "icloud_backup_restore_watch_acceleration_merged",
+                fields: ["chunks": String(chunks.count)]
+            )
+        }
+        snapshot = value
         liveMergeCacheKey = nil
         liveMergeCacheValue = []
         sensorRefreshFingerprints.removeAll()
@@ -1508,6 +1649,53 @@ final class AppModel {
         return result
     }
 
+    private func rollbackCloudBackupRawMerge(
+        sensorReadingIDs: [UUID],
+        envelopeIDs: [UUID],
+        watchReceipt: PlanDayDatabase.WatchAccelerationRestoreReceipt?,
+        legacyWatchReceipt:
+            AppleWatchSensorActivityArchive.AccelerationRestoreReceipt?
+    ) async throws {
+        var failures: [any Error] = []
+        if let watchReceipt, let dayDatabase {
+            do {
+                try await dayDatabase.rollbackWatchAccelerationRestore(
+                    watchReceipt
+                )
+            } catch {
+                failures.append(error)
+            }
+        }
+        if let legacyWatchReceipt, let watchSensorArchive {
+            do {
+                try await watchSensorArchive.rollbackAccelerationRestore(
+                    legacyWatchReceipt
+                )
+            } catch {
+                failures.append(error)
+            }
+        }
+        if !envelopeIDs.isEmpty, let rawDeviceDataArchive {
+            do {
+                try await rawDeviceDataArchive.rollbackRestore(
+                    ids: envelopeIDs
+                )
+            } catch {
+                failures.append(error)
+            }
+        }
+        if !sensorReadingIDs.isEmpty, let sensorService {
+            do {
+                try await sensorService.rollbackExternalReadingsRestore(
+                    ids: sensorReadingIDs
+                )
+            } catch {
+                failures.append(error)
+            }
+        }
+        if let failure = failures.first { throw failure }
+    }
+
     private func cloudBackupPayload(
         now: Date = .now,
         includesRoutes: Bool = true
@@ -1550,10 +1738,27 @@ final class AppModel {
         } else {
             envelopes = []
         }
+        var watchChunks = [UUID: TaptionWatchAccelerationChunk]()
+        if await needsLegacyWatchSensorArchive(), let watchSensorArchive {
+            for chunk in (try? await watchSensorArchive.accelerationChunks(
+                in: span
+            )) ?? [] {
+                watchChunks[chunk.id] = chunk
+            }
+        }
+        // The canonical database wins over the migration-only legacy copy.
+        if let dayDatabase {
+            for chunk in (try? await dayDatabase.watchAccelerationChunks(
+                in: span
+            )) ?? [] {
+                watchChunks[chunk.id] = chunk
+            }
+        }
         return PlanCloudRawSensorPayload(
             monthKey: PlanArchiveSchedule.monthKey(for: now),
             sensorReadings: sensorReadings,
             envelopes: envelopes,
+            watchAccelerationChunks: Array(watchChunks.values),
             createdAt: now
         )
     }
@@ -2751,7 +2956,13 @@ final class AppModel {
                 self?.applyAirPodsActivity(observation)
             }
             self.scheduleForegroundRefresh()
-            if self.securityStatus.settings.cloudBackupEnabled {
+            if self.securityStatus.settings.cloudBackupEnabled,
+               Self.shouldAttemptAutomaticCloudBackup(
+                   at: .now,
+                   latestSuccessfulBackupDate:
+                       self.securityStatus.latestSuccessfulBackupDate,
+                   retryAfter: self.automaticCloudBackupRetryAfter
+               ) {
                 await self.saveCloudBackup(
                     reason: "foreground_deferred",
                     includesRawSensors: false
@@ -2913,6 +3124,7 @@ final class AppModel {
                     )
             }
             securityStatus = securityBackupService.status
+            automaticCloudBackupRetryAfter = nil
             logger.finishOperation(
                 operation,
                 outcome: "success",
@@ -2924,6 +3136,11 @@ final class AppModel {
                 ]
             )
         } catch {
+            if error as? PlanSecurityError == .accountUnavailable {
+                automaticCloudBackupRetryAfter = Date.now.addingTimeInterval(
+                    Self.automaticCloudBackupInterval
+                )
+            }
             logger.finishOperation(
                 operation,
                 outcome: "failure",
@@ -3470,6 +3687,12 @@ final class AppModel {
     func requestCalendar() async {
         guard !isRefreshingIntegrations else { return }
         isRefreshingIntegrations = true
+        defer { isRefreshingIntegrations = false }
+        if calendarService.permissionState() == .denied {
+            snapshot.settings.permissions[.calendar] = .denied
+            openSystemSettings()
+            return
+        }
         do {
             let granted = try await calendarService.requestFullAccess()
             let state: PermissionState = granted ? .authorized : .denied
@@ -3502,7 +3725,6 @@ final class AppModel {
             }
             userFacingError = "캘린더를 연결하지 못했습니다. \(error.localizedDescription)"
         }
-        isRefreshingIntegrations = false
     }
 
     func setCalendarEnabled(_ enabled: Bool) async {
@@ -5032,7 +5254,8 @@ final class AppModel {
         TaptionDataDeletionFence.finish(
             generation: dataDeletionGeneration
         )
-        if !(await persist(allowingDeletion: true)) {
+        if deletionFailures.isEmpty,
+           !(await persist(allowingDeletion: true)) {
             deletionFailures.append("빈 저장본")
         }
         if !deletionFailures.isEmpty {
@@ -6766,13 +6989,7 @@ final class AppModel {
             receivedAt: receivedAt,
             requestID: requestID
         )
-        dayLoadCoordinator?.invalidate(day: chunk.startedAt)
-        if !Calendar.autoupdatingCurrent.isDate(
-            chunk.startedAt,
-            inSameDayAs: chunk.endedAt
-        ) {
-            dayLoadCoordinator?.invalidate(day: chunk.endedAt)
-        }
+        invalidateRawDays([chunk.startedAt, chunk.endedAt])
         TaptionPlanDiagnosticsLogger.shared.record(
             "watch_acceleration_chunk_applied",
             fields: [
@@ -7264,20 +7481,33 @@ final class AppModel {
         guard acceptsDataMutation(capturedAt: confirmation.respondedAt) else {
             return
         }
+        guard let suggestion = pendingWatchActivitySuggestion,
+              let confirmationToken = suggestion.confirmationToken,
+              confirmation.suggestionID == suggestion.id,
+              confirmation.sensorSessionID == suggestion.sensorSessionID,
+              confirmation.confirmationToken == confirmationToken,
+              confirmation.observedStartedAt == suggestion.startedAt,
+              confirmation.observedEndedAt == suggestion.endedAt,
+              confirmation.observedBehavior == suggestion.proposedBehavior
+        else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "watch_activity_confirmation_rejected",
+                level: .notice,
+                fields: ["reason": "missing_or_invalid_capability"]
+            )
+            return
+        }
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
         guard !WatchActivityConfirmationStore.read().contains(where: {
             $0.id == confirmation.id
         }) else { return }
         WatchActivityConfirmationStore.append(confirmation)
-        let suggestion = pendingWatchActivitySuggestion.flatMap {
-            confirmation.suggestionID == nil
-                || $0.id == confirmation.suggestionID ? $0 : nil
-        }
         let label = confirmation.isCorrect
             ? confirmation.observedBehavior
             : confirmation.correctedBehavior
-        if let label, let pattern = confirmation.pattern ?? suggestion?.pattern {
+        if let label {
+            let pattern = suggestion.pattern
             WatchActivityLearningStore.append(
                 WatchActivityPatternSample(
                     id: confirmation.id,
@@ -7287,9 +7517,9 @@ final class AppModel {
                 )
             )
         }
-        if let label,
-           let sessionID = confirmation.sensorSessionID
-                ?? suggestion?.sensorSessionID {
+        if let label {
+            let sessionID = confirmation.sensorSessionID
+                ?? suggestion.sensorSessionID
             let previous = snapshot.actuals.first {
                 $0.id == sessionID && $0.source == .appleWatch
             }
@@ -7312,7 +7542,7 @@ final class AppModel {
                         ?? confirmation.observedStartedAt,
                     behavior: label.rawValue,
                     evidence: Array(Set(
-                        (suggestion?.evidence ?? []) + ["사용자 확인"]
+                        suggestion.evidence + ["사용자 확인"]
                     )).sorted(),
                     sensorChunkID: sessionID,
                     modelVersion:
@@ -7329,8 +7559,7 @@ final class AppModel {
                 dayLoadCoordinator?.invalidate(day: confirmation.observedEndedAt)
             }
         }
-        if confirmation.suggestionID == nil
-            || pendingWatchActivitySuggestion?.id == confirmation.suggestionID {
+        if pendingWatchActivitySuggestion?.id == confirmation.suggestionID {
             pendingWatchActivitySuggestion = nil
         }
         Self.integrationLogger.notice(
@@ -8549,7 +8778,7 @@ final class AppModel {
         let homePoint = settings.frequentPlaces.first {
             $0.kind == .home && $0.isAutomaticRecordingEnabled
         }?.point
-        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+        let strictRecords = TaptionActivityEngineAdapter.strictSleepActuals(
             readings: readings,
             actuals: snapshot.actuals,
             inside: span,
@@ -8559,6 +8788,21 @@ final class AppModel {
                 $0.span.intersection(with: span)
             }
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let fallbackRecords: [ActualRecord]
+        if strictRecords.isEmpty {
+            fallbackRecords = PhoneSleepFallbackEngine.records(
+                readings: readings,
+                actuals: snapshot.actuals,
+                inside: span,
+                nominalMaximumSampleGap: maximumSampleGap,
+                authoritativeSleepSpans: sleepSessions.map(\.span)
+            ).filter {
+                !snapshot.settings.suppressedActualIDs.contains($0.id)
+            }
+        } else {
+            fallbackRecords = []
+        }
+        let records = strictRecords + fallbackRecords
         let ordered = readings.sorted { $0.timestamp < $1.timestamp }
         let largeGapCount = zip(ordered, ordered.dropFirst()).filter {
             $1.timestamp.timeIntervalSince($0.timestamp) > maximumSampleGap
@@ -8570,6 +8814,9 @@ final class AppModel {
                     $0.powerState?.isCharging == true
                 }.count),
                 "first": String(evidenceSpan.start.timeIntervalSince1970),
+                "engine": strictRecords.isEmpty
+                    ? (fallbackRecords.isEmpty ? "none" : "iphone-fallback")
+                    : "strict",
                 "health_enabled": String(settings.healthEnabled),
                 "home_point": String(homePoint != nil),
                 "large_gaps": String(largeGapCount),
@@ -8579,6 +8826,8 @@ final class AppModel {
                 "reason": records.isEmpty
                     ? "conditions_or_continuity_not_met"
                     : "recorded",
+                "strict_records": String(strictRecords.count),
+                "fallback_records": String(fallbackRecords.count),
                 "screen_missing": String(readings.filter {
                     $0.screenIsOn == nil
                 }.count),
@@ -8842,35 +9091,33 @@ final class AppModel {
         var summaries = [String: TaptionWatchSensorSummary]()
         var chunks = [UUID: TaptionWatchAccelerationChunk]()
 
-        let needsLegacyArchive: Bool
-        if let dayDatabase {
-            needsLegacyArchive =
-                ((try? await dayDatabase.requiresLegacyMigration()) ?? true)
-                || UserDefaults.standard.bool(
-                    forKey: Self.watchLegacyFallbackReadKey
-                )
-        } else {
-            needsLegacyArchive = true
-        }
-        if needsLegacyArchive, let watchSensorArchive {
-            for summary in (try? await watchSensorArchive.summaries(in: span))
-                ?? [] {
+        if await needsLegacyWatchSensorArchive(), let watchSensorArchive {
+            async let legacySummaries = try? watchSensorArchive.summaries(
+                in: span
+            )
+            async let legacyChunks = try? watchSensorArchive.accelerationChunks(
+                in: span
+            )
+            for summary in (await legacySummaries) ?? [] {
                 summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
                     summary
             }
-            for chunk in (try? await watchSensorArchive.accelerationChunks(in: span))
-                ?? [] {
+            for chunk in (await legacyChunks) ?? [] {
                 chunks[chunk.id] = chunk
             }
         }
         if let dayDatabase {
-            for summary in (try? await dayDatabase.watchSummaries(in: span))
-                ?? [] {
+            async let databaseSummaries = try? dayDatabase.watchSummaries(
+                in: span
+            )
+            async let databaseChunks = try? dayDatabase.watchAccelerationChunks(
+                in: span
+            )
+            for summary in (await databaseSummaries) ?? [] {
                 summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
                     summary
             }
-            for chunk in (try? await dayDatabase.watchAccelerationChunks(in: span))
-                ?? [] {
+            for chunk in (await databaseChunks) ?? [] {
                 chunks[chunk.id] = chunk
             }
         }
@@ -8912,10 +9159,18 @@ final class AppModel {
         )
     }
 
+    private func needsLegacyWatchSensorArchive() async -> Bool {
+        guard let dayDatabase else { return true }
+        return ((try? await dayDatabase.requiresLegacyMigration()) ?? true)
+            || UserDefaults.standard.bool(
+                forKey: Self.watchLegacyFallbackReadKey
+            )
+    }
+
     func sensorReadingsLoadResult(
         in span: TimeSpan
     ) async -> SensorReadingsLoadResult {
-        let watchData = await watchSensorTimelineData(in: span)
+        async let watchDataTask = watchSensorTimelineData(in: span)
         let archived: [SensorReading]
         let isComplete: Bool
         if let sensorService {
@@ -8943,6 +9198,7 @@ final class AppModel {
             archived = []
             isComplete = false
         }
+        let watchData = await watchDataTask
         return SensorReadingsLoadResult(
             readings: (archived + photoBackfillReadings(
                 in: span,
@@ -9019,6 +9275,42 @@ final class AppModel {
         let end = calendar.date(byAdding: .day, value: 1, to: start)
             ?? start.addingTimeInterval(24 * 60 * 60)
         return TimeSpan(start: start, end: end)
+    }
+
+    func rawDataRevision(for date: Date) -> UInt64 {
+        _ = rawDayRevisionSignal
+        return rawDayRevisions[
+            Calendar.autoupdatingCurrent.startOfDay(for: date)
+        ] ?? 0
+    }
+
+    func daySourceFingerprint(for date: Date) -> String? {
+        let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        if let cached = daySourceFingerprintCache[day],
+           cached.revision == dayProjectionRevision {
+            return cached.value
+        }
+        if daySourceFingerprintCache[day] == nil,
+           daySourceFingerprintCache.count >= 42 {
+            daySourceFingerprintCache.removeAll(keepingCapacity: true)
+        }
+        let value = PlanDayDataSnapshot.sourceFingerprint(
+            date: day,
+            source: snapshot
+        )
+        daySourceFingerprintCache[day] = (dayProjectionRevision, value)
+        return value
+    }
+
+    private func invalidateRawDays(_ dates: [Date]) {
+        let calendar = Calendar.autoupdatingCurrent
+        let days = Set(dates.map { calendar.startOfDay(for: $0) })
+        guard !days.isEmpty else { return }
+        for day in days {
+            rawDayRevisions[day, default: 0] &+= 1
+            dayLoadCoordinator?.invalidate(day: day)
+        }
+        rawDayRevisionSignal &+= 1
     }
 
     func sensorReadings(in span: TimeSpan) async -> [SensorReading] {
@@ -9838,6 +10130,11 @@ final class AppModel {
             UserDefaults.standard.removeObject(
                 forKey: Self.calendarAutomaticRefreshKey
             )
+            if snapshot.settings.selectedCalendarIDs.isEmpty {
+                snapshot.settings.selectedCalendarIDs = calendarService
+                    .calendars()
+                    .map(\.id)
+            }
         }
         if !permissionState(for: .calendar).isGranted {
             calendarStoreRefreshTask?.cancel()
@@ -10046,21 +10343,12 @@ final class AppModel {
               Set(snapshot.settings.selectedCalendarIDs) == selected else {
             return false
         }
-        let freshEvents = fresh.filter { $0.isCancelled != true }
-        let deduplicatedFresh = CalendarSyncPolicy.deduplicatedEvents(
-            freshEvents
+        snapshot.calendarEvents = CalendarSyncPolicy.mergingEvents(
+            existing: snapshot.calendarEvents,
+            fresh: fresh,
+            in: span,
+            liveCalendarIDs: liveIDs
         )
-        let freshIDs = Set(deduplicatedFresh.map(\.id))
-        snapshot.calendarEvents.removeAll {
-            !liveIDs.contains($0.calendarID)
-                || freshIDs.contains($0.id)
-                || $0.span.intersection(with: span) != nil
-        }
-        snapshot.calendarEvents.append(contentsOf: deduplicatedFresh)
-        snapshot.calendarEvents = CalendarSyncPolicy.deduplicatedEvents(
-            snapshot.calendarEvents
-        )
-        snapshot.calendarEvents.sort { $0.span.start < $1.span.start }
         return true
     }
 

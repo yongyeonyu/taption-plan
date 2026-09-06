@@ -112,6 +112,80 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertTrue(service.status.state != .unlocked)
     }
 
+    func testAppLockAttemptThrottlePersistsAcrossServiceRecreation() throws {
+        let credentials = InMemoryPlanCredentialStore()
+        let suiteName = "SecurityBackupCoreTests.pin-throttle.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let first = PlanSecurityBackupService(
+            credentialStore: credentials,
+            backupStore: backupStore,
+            settingsDefaults: defaults
+        )
+        try first.setPIN("1234")
+        let blockedAt = Date(timeIntervalSince1970: 10_000)
+        for _ in 0..<5 {
+            XCTAssertThrowsError(try first.verifyPIN("0000", now: blockedAt))
+        }
+
+        let replacement = PlanSecurityBackupService(
+            credentialStore: credentials,
+            backupStore: backupStore,
+            settingsDefaults: defaults
+        )
+        XCTAssertThrowsError(
+            try replacement.verifyPIN(
+                "1234",
+                now: blockedAt.addingTimeInterval(1)
+            )
+        ) { error in
+            guard case .tooManyAttempts = error as? PlanSecurityError else {
+                return XCTFail("Expected persisted PIN throttle, got \(error)")
+            }
+        }
+        try replacement.verifyPIN("1234", now: blockedAt.addingTimeInterval(31))
+
+        let reset = PlanSecurityBackupService(
+            credentialStore: credentials,
+            backupStore: backupStore,
+            settingsDefaults: defaults
+        )
+        XCTAssertEqual(reset.status.failedAttempts, 0)
+        XCTAssertNil(reset.status.retryAfter)
+    }
+
+    func testArchiveMetadataTamperingFailsAuthenticatedDecode() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: backupStore)
+        try service.setPIN("1234")
+        let createdAt = Date(timeIntervalSince1970: 10_000)
+        let archive = try service.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: createdAt
+        )
+        let tampered = PlanMonthlyArchive(
+            monthKey: archive.monthKey,
+            accountIdentifier: archive.accountIdentifier,
+            encryptedPayload: archive.encryptedPayload,
+            wrappedPayloadKey: archive.wrappedPayloadKey,
+            accountWrappedPayloadKey: archive.accountWrappedPayloadKey,
+            createdAt: createdAt.addingTimeInterval(60),
+            generationID: archive.generationID
+        )
+        try backupStore.save(
+            tampered,
+            at: PlanCloudBackupPath(monthKey: tampered.monthKey)
+        )
+
+        XCTAssertThrowsError(
+            try service.loadLatestBackup(accountIdentifier: "account-a")
+        ) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+    }
+
     func testLatestSuccessfulBackupDatePersistsAndUsesArchiveCreatedAt() throws {
         let suiteName = "SecurityBackupCoreTests.latestBackup.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -280,6 +354,32 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertThrowsError(try rawStore.allArchives()) { error in
             XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
         }
+    }
+
+    func testFileBackupSkipsOversizedArchiveBeforeReadingIt() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("backup-size-limit-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let valid = PlanMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([1]),
+            wrappedPayloadKey: Data([2]),
+            accountWrappedPayloadKey: Data([3])
+        )
+        try store.save(valid, at: PlanCloudBackupPath(monthKey: valid.monthKey))
+
+        let oversized = root
+            .appendingPathComponent("Taption Plan", isDirectory: true)
+            .appendingPathComponent("2026-09.taptionbackup")
+        FileManager.default.createFile(atPath: oversized.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: oversized)
+        try handle.seek(toFileOffset: UInt64(512 * 1_024 * 1_024 + 1))
+        try handle.write(contentsOf: Data([0]))
+        try handle.close()
+
+        XCTAssertEqual(try store.allArchives(), [valid])
     }
 
     func testMonthlyGenerationRecordsSuccessOnlyAfterRawArchiveCompletes() async throws {
@@ -487,7 +587,8 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(PlanArchiveSchedule.monthsBetween(start, end, calendar: calendar), ["2025-07", "2025-08", "2025-09", "2025-10"])
     }
 
-    func testRawSensorArchiveKeepsOnlyLocationAndWeatherData() async throws {
+    func testRawSensorArchiveKeepsLocationWeatherAndWatchAcceleration()
+        async throws {
         let rawStore = InMemoryPlanCloudRawSensorBackupStore()
         let recoveryKeys = InMemoryPlanCloudRecoveryKeyProvider()
         let service = makeService(
@@ -591,7 +692,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(decoded.sensorReadings.map(\.id), [reading.id])
         XCTAssertNil(decoded.sensorReadings.first?.stepCount)
         XCTAssertEqual(decoded.envelopes.map(\.id), [weather.id])
-        XCTAssertEqual(decoded.watchAccelerationChunks, [])
+        XCTAssertEqual(decoded.watchAccelerationChunks, [chunk])
     }
 
     func testRawCloudExportCompactsWeatherToDisplayedTransitions() throws {
@@ -1653,9 +1754,18 @@ final class SecurityBackupCoreTests: XCTestCase {
         let verifier = try PlanPINVerifier(pin: "1234") { _ in
             Data(repeating: 4, count: 16)
         }
+        let archiveDate = Date(timeIntervalSince1970: 1_787_538_400)
+        let authenticatedData = try PlanArchiveMetadata.authenticatedData(
+            version: PlanMonthlyArchive.currentVersion,
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            createdAt: archiveDate,
+            generationID: nil
+        )
         let encrypted = try AES.GCM.seal(
             compressed,
-            using: SymmetricKey(data: archiveKey)
+            using: SymmetricKey(data: archiveKey),
+            authenticating: authenticatedData
         ).combined!
         let wrapped = try AES.GCM.seal(
             archiveKey,
@@ -1667,7 +1777,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             encryptedPayload: encrypted,
             wrappedPayloadKey: wrapped,
             accountWrappedPayloadKey: Data(),
-            createdAt: Date(timeIntervalSince1970: 1_787_538_400)
+            createdAt: archiveDate
         )
 
         XCTAssertEqual(
