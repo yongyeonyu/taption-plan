@@ -5,7 +5,7 @@
 - 00:17 기록 당시 물리 앱은 build 137이었다. 같은 날짜 진단에서 철도·역 이름·대중교통·승차 후보·노선이 모두 0인데 재투영 뒤 `subway=1`과 잠금 5건이 생겼다: `/private/tmp/DAY906L001-current-iphone.jsonl`, `/private/tmp/DAY906L001-app-info.json`.
 - 원인은 역 근처라는 단일 조건만으로 상대고도 하강에 지하철 점수를 주던 경로다. 역 인접만으로는 부족하게 하고 반복 철도 일치·좌표 궤적·역 상태·사용자 노선 중 하나가 확인될 때만 해당 점수를 적용한다.
 - 실제 지하철 고도 하강 보존, 자동차 오탐 차단, iPhone 행동 라벨 차단, 무노선 잠금 재평가 회귀 4/4와 Simulator Debug build·launch PID `5406`을 통과했다: `/private/tmp/SUB906R001-focused-r4.xcresult`.
-- iPhone이 `unavailable`이라 새 소스의 물리 기록 재분류와 TestFlight 설치는 별도 게이트다.
+- 최신 Apple Development Debug `1.0 (138)`을 iPhone에 설치하고 `builtByDeveloper=true`·launch PID `16511`을 readback했다: `/private/tmp/SUB906R001-device-apps.json`, `/private/tmp/SUB906R001-device-launch.json`. 실제 자동차 이동 재현과 TestFlight 클라이언트 설치는 별도 게이트다.
 
 ## 2026-09-06 DOC906U001 · 졸라맨 현재 위치 중앙 포커싱 원인
 

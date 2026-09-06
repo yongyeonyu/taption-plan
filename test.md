@@ -4,7 +4,7 @@
 
 - 00:17 당시 설치본은 build 137이며, 동일 날짜 진단은 철도·역·대중교통·후보·노선 0인데 지하철 1건과 잠금 5건을 기록했다.
 - 역 인접만으로 상대고도 하강 점수를 주지 않도록 수정했다. 관련 Simulator XCTest 4/4, Debug build, 설치·launch PID `5406`이 통과했다: `/private/tmp/SUB906R001-focused-r4.xcresult`.
-- 물리 iPhone이 `unavailable`이라 새 소스의 실제 자동차 기록 readback은 미완료다.
+- 최신 Apple Development Debug `1.0 (138)`의 iPhone build·설치·`builtByDeveloper=true`·launch PID `16511`을 readback했다: `/private/tmp/SUB906R001-device-install.json`, `/private/tmp/SUB906R001-device-apps.json`, `/private/tmp/SUB906R001-device-launch.json`. 실제 자동차 이동 재현은 미완료다.
 
 ## 2026-09-06 NXT906P002 졸라맨 중앙 포커싱
 

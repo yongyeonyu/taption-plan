@@ -38,11 +38,11 @@ xcrun simctl list devices
 - 요청 ID는 `SUB906R001`. 00:17 당시 물리 앱은 build 137이었고, 동일 날짜 진단은 철도·역 이름·대중교통·승차 후보·노선이 모두 0인데 재투영 뒤 지하철 1건과 잠금 5건을 남겼다.
 - `TravelModeClassifier`의 역 주변 상대고도 하강 점수는 역 인접만으로 허용하지 않고 반복 철도 일치·좌표 궤적·역 상태·사용자 노선 중 하나가 확인될 때만 적용한다.
 - 관련 회귀 4/4와 Simulator Debug build·설치·launch PID `5406`을 통과했다: `/private/tmp/SUB906R001-focused-r4.xcresult`.
-- iPhone이 `unavailable`이라 새 소스의 물리 자동차 기록 readback과 TestFlight 배포는 별도 게이트다.
+- 최신 Apple Development Debug `1.0 (138)`은 iPhone 설치·`builtByDeveloper=true`·launch PID `16511`까지 readback했다. 실제 자동차 이동 재현과 TestFlight 배포·클라이언트 설치는 별도 게이트다.
 
 ## 남은 외부 게이트
 
-1. iPhone이 연결되면 TestFlight build 138 클라이언트 설치 provenance·버전·launch를 각각 readback하고, 현재 위치 버튼/졸라맨 중앙 정렬을 실제 화면에서 확인한다. 현재 마지막 확인에서는 iPhone·Watch·iPad가 모두 `unavailable`이었다.
+1. TestFlight build 138 클라이언트 설치 provenance·버전·launch를 각각 readback하고, 현재 위치 버튼/졸라맨 중앙 정렬을 실제 화면에서 확인한다. 최신 개발자 앱 `1.0 (138)` 설치·launch는 통과했지만 TestFlight 증거가 아니다.
 2. 실제 두 손가락 pinch, 장시간 발열·배터리, 날짜 전환 체감, Watch 원본 수신·수면, 지하철 오탐 재현, 공백 예상경로, VoiceOver는 코드·시뮬레이터 통과와 분리한다.
 3. iCloud 앱 복원·merge, 실제 Apple/Google/Naver 일정, Paid Apps Agreement·첫 IAP·sandbox/TestFlight 구매/복원은 외부 계정 게이트다.
 
