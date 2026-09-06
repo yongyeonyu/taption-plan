@@ -19,7 +19,7 @@ xcrun simctl list devices
 
 ## 현재 기준
 
-- 기준 소스 커밋: `f6386798a84239167fef1c52789cf0d33ee5f829` (`SUB906F001`, 지하철 오탐 수정과 build 138 배포 문서 포함).
+- 기준 소스는 build 138 배포 커밋 `f6386798a84239167fef1c52789cf0d33ee5f829` 이후 `SUB906R001`의 역 인접 고도 하강 오탐 차단을 포함한다. 이 후속 소스는 아직 TestFlight에 올리지 않았다.
 - TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (138)`, archive `/private/tmp/SUB906F001-release/TaptionPlan-1.0-138.xcarchive`, IPA `/private/tmp/SUB906F001-release/Export/TaptionPlan.ipa`.
 - IPA SHA-256: `9fa557d536c6002294abf2a3435c54f0c8742df533577f69d411f467eb9a36f7`.
 - Delivery/build UUID: `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`. App Store Connect App ID: `6797370230`.
@@ -32,6 +32,13 @@ xcrun simctl list devices
 - 원인은 `TaptionPlan/UI/MapHomeView.swift`의 `MapHomeCameraLayoutMath.targetPoint`가 `x = max(0, sidebarLeft) / 2`를 사용하고, `sidebarLeft = mapViewportSize.width - sidebarInteractionWidth`로 계산되는 것이다. 즉 화면 전체 중심이 아니라 우측 시간 사이드바를 제외한 왼쪽 영역 중심을 목표로 하므로 졸라맨이 왼쪽에 치우친다. `isMapCenteredOnUser`도 같은 목표점을 사용한다.
 - `NXT906P002`에서 target point x를 화면 중앙(`viewportSize.width / 2`)으로 통일하고, y의 검색창 아래 여백과 camera center 변환은 유지했다. 미사용 `sidebarLeftX`만 제거했다.
 - 수학·현재 위치 camera command·버튼 상태 회귀 3/3과 Simulator Debug build·launch를 통과했다. 실제 손가락 터치, 물리 iPhone 설치·launch와 TestFlight client는 별도 게이트다.
+
+## 완료된 최신 구현: 00:17 자동차 기록의 지하철 오탐
+
+- 요청 ID는 `SUB906R001`. 00:17 당시 물리 앱은 build 137이었고, 동일 날짜 진단은 철도·역 이름·대중교통·승차 후보·노선이 모두 0인데 재투영 뒤 지하철 1건과 잠금 5건을 남겼다.
+- `TravelModeClassifier`의 역 주변 상대고도 하강 점수는 역 인접만으로 허용하지 않고 반복 철도 일치·좌표 궤적·역 상태·사용자 노선 중 하나가 확인될 때만 적용한다.
+- 관련 회귀 4/4와 Simulator Debug build·설치·launch PID `5406`을 통과했다: `/private/tmp/SUB906R001-focused-r4.xcresult`.
+- iPhone이 `unavailable`이라 새 소스의 물리 자동차 기록 readback과 TestFlight 배포는 별도 게이트다.
 
 ## 남은 외부 게이트
 

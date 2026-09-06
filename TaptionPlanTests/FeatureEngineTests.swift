@@ -6877,6 +6877,36 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNotNil(result.subwayRoute)
     }
 
+    func testStationAltitudeChangeDoesNotOverrideAutomotiveWithoutRailContext() {
+        let base = makeDate(2026, 9, 6, 0, 17)
+        var readings: [SensorReading] = []
+        for index in 0..<5 {
+            let offset = Double(index)
+            let isNearStation = index < 2
+            readings.append(SensorReading(
+                timestamp: base.addingTimeInterval(Double(index) * 60),
+                point: GeoPoint(
+                    latitude: 37.5 + offset * 0.001,
+                    longitude: 126.9,
+                    altitude: 20 - offset,
+                    horizontalAccuracy: 10,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 9,
+                motion: isNearStation ? .automotive : .unknown,
+                motionConfidence: .high,
+                relativeAltitudeMeters: 5 - offset * 2,
+                nearbyStation: isNearStation,
+                nearbyStationName: isNearStation ? "가정역" : nil
+            ))
+        }
+
+        let result = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertEqual(result.mode, TravelMode.car)
+        XCTAssertFalse(result.evidence.contains("지하철역 주변 고도 하강"))
+    }
+
     func testTemporarySubwayLocationsUseArrivalTimeWithoutRewritingRawGPS() throws {
         let base = makeDate(2026, 8, 18, 7, 0)
         let readings = [

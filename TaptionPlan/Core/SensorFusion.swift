@@ -541,7 +541,7 @@ struct TravelModeClassifier: Sendable {
         if altitudeDelta <= -2 && railContext {
             add(.subway, 0.16, "상대고도 하강")
         }
-        if stationAltitudeDrop {
+        if stationAltitudeDrop && confirmedRailContext {
             add(.subway, 0.24, "지하철역 주변 고도 하강")
         }
         if subwayWiFiSignal, let subwayWiFiFamily {

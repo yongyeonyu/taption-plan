@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 SUB906R001 00:17 지하철 오탐
+
+- 00:17 당시 설치본은 build 137이며, 동일 날짜 진단은 철도·역·대중교통·후보·노선 0인데 지하철 1건과 잠금 5건을 기록했다.
+- 역 인접만으로 상대고도 하강 점수를 주지 않도록 수정했다. 관련 Simulator XCTest 4/4, Debug build, 설치·launch PID `5406`이 통과했다: `/private/tmp/SUB906R001-focused-r4.xcresult`.
+- 물리 iPhone이 `unavailable`이라 새 소스의 실제 자동차 기록 readback은 미완료다.
+
 ## 2026-09-06 NXT906P002 졸라맨 중앙 포커싱
 
 - 현재 위치 목표점 x를 전체 viewport 중앙으로 통일하고 검색창 아래 y 여백은 유지했다. 수학 회귀 1/1과 camera command·버튼 상태 회귀 2/2가 실패·스킵 없이 통과했다: `/private/tmp/NXT906P002-focused.xcresult`, `/private/tmp/NXT906P002-camera-command-r2.xcresult`.
