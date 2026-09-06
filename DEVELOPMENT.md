@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 LOC906F001 · 현재 위치 이중 포커싱 제거
+
+- 현재 위치 버튼이 저장된 좌표로 즉시 이동한 뒤 새 GPS 표본에서 다시 이동했다. `requiresFreshReading`도 캐시가 있으면 새 표본을 기다리지 않아 같은 이중 이동을 허용했다.
+- 버튼 탭 중에는 카메라를 유지하고 새 표본 저장이 확인된 뒤 한 번만 포커싱한다. `locating` 상태의 위치 콜백은 카메라를 움직이지 않고, 새 표본이 없으면 기존 위치로 이동하지 않는다.
+- 집중 회귀 1/1, Simulator Debug build·설치·launch PID `13086`을 통과했다: `/private/tmp/LOC906F001-focused-r3.xcresult`.
+
 ## 2026-09-06 SUB906R001 · 00:17 자동차 기록의 지하철 오탐
 
 - 00:17 기록 당시 물리 앱은 build 137이었다. 같은 날짜 진단에서 철도·역 이름·대중교통·승차 후보·노선이 모두 0인데 재투영 뒤 `subway=1`과 잠금 5건이 생겼다: `/private/tmp/DAY906L001-current-iphone.jsonl`, `/private/tmp/DAY906L001-app-info.json`.

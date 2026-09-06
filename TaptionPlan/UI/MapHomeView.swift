@@ -1223,6 +1223,10 @@ enum MapHomeUserTrackingPolicy {
         duringPlayback || keepsFollowing(after: interaction)
     }
 
+    static func focusesLocationUpdates(in mode: MapHomeUserTrackingMode) -> Bool {
+        mode == .following
+    }
+
     static func isSingleFingerPanStart(
         state: UIGestureRecognizer.State,
         numberOfTouches: Int
@@ -2375,11 +2379,15 @@ struct MapHomeView: View {
         }
         .onChange(of: model.latestSensorReading?.id) { _, _ in
             applyInitialLocationIfAvailable(using: nil)
-            guard userTrackingMode.keepsCameraLocked else { return }
+            guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
+                in: userTrackingMode
+            ) else { return }
             focusDisplayedLocation(using: nil)
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
-            guard userTrackingMode.keepsCameraLocked else { return }
+            guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
+                in: userTrackingMode
+            ) else { return }
             focusDisplayedLocation(using: nil)
         }
         .overlay(alignment: .bottomLeading) {
@@ -2460,11 +2468,15 @@ struct MapHomeView: View {
         }
         .onChange(of: model.latestSensorReading?.id) { _, _ in
             applyInitialLocationIfAvailable(using: nil)
-            guard userTrackingMode.keepsCameraLocked else { return }
+            guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
+                in: userTrackingMode
+            ) else { return }
             focusDisplayedLocation(using: nil)
         }
         .onChange(of: model.liveRouteState.readings.last?.id) { _, _ in
-            guard userTrackingMode.keepsCameraLocked else { return }
+            guard MapHomeUserTrackingPolicy.focusesLocationUpdates(
+                in: userTrackingMode
+            ) else { return }
             focusDisplayedLocation(using: nil)
         }
         .overlay(alignment: .bottomLeading) {
@@ -8155,9 +8167,6 @@ struct MapHomeView: View {
     private func requestAndFollowUserLocation(using proxy: MapProxy?) {
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
-        if currentCoordinate != nil {
-            focusUserLocation(using: proxy, preservesCamera: true)
-        }
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = Task { @MainActor in
             defer { currentLocationRequestTask = nil }
@@ -8167,9 +8176,7 @@ struct MapHomeView: View {
             guard !Task.isCancelled,
                   userTrackingMode.keepsCameraLocked else { return }
             guard isAvailable else {
-                if currentCoordinate == nil {
-                    setUserTrackingMode(.idle)
-                }
+                setUserTrackingMode(.idle)
                 return
             }
             focusUserLocation(using: proxy, preservesCamera: true)

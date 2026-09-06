@@ -25,6 +25,12 @@ xcrun simctl list devices
 - Delivery/build UUID: `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`. App Store Connect App ID: `6797370230`.
 - build 138은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)의 그룹 빌드 관계에 포함된다. 그룹 테스터는 1명(`INSTALLED`)이지만 해당 build 138의 TestFlight 클라이언트 설치 증거로 간주하지 않는다.
 
+## 완료된 최신 구현: 현재 위치 단일 포커싱
+
+- `LOC906F001`에서 현재 위치 버튼이 캐시 좌표로 먼저 이동한 뒤 새 GPS로 다시 이동하던 순서를 제거했다.
+- 버튼 탭은 새 표본 저장을 기다리며 `locating` 중 위치 콜백은 카메라를 움직이지 않는다. 새 표본이 확인된 뒤 한 번만 포커싱하고, 시간 초과면 기존 좌표로 이동하지 않는다.
+- 집중 회귀 1/1과 Simulator Debug build·설치·launch PID `13086`을 통과했다: `/private/tmp/LOC906F001-focused-r3.xcresult`. 실제 손가락·GPS는 물리 게이트다.
+
 ## 완료된 최신 구현: 졸라맨 화면 중앙 포커싱
 
 - 문서 분석 ID: `DOC906U001`. [DEVELOPMENT.md](/Users/u_mo_c/Documents/taption%20plan/DEVELOPMENT.md)에 원인을 기록했다.

@@ -9,6 +9,15 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testLocationUpdatesWaitUntilFreshLocationRequestCompletes() {
+        XCTAssertFalse(
+            MapHomeUserTrackingPolicy.focusesLocationUpdates(in: .locating)
+        )
+        XCTAssertTrue(
+            MapHomeUserTrackingPolicy.focusesLocationUpdates(in: .following)
+        )
+    }
+
     @MainActor
     func testImmediateSensorAnalysisKeepsEveryPendingDay() async throws {
         let directory = FileManager.default.temporaryDirectory

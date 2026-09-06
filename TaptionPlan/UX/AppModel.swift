@@ -4016,8 +4016,9 @@ final class AppModel {
             in: [latestSensorReading, liveRouteState.readings.last]
                 .compactMap { $0 }
         ) != nil
-        if !hasAnchor {
-            _ = await sensorService.waitForPersistedReading(
+        var receivedFreshReading = false
+        if requiresFreshReading || !hasAnchor {
+            receivedFreshReading = await sensorService.waitForPersistedReading(
                 after: persistenceToken,
                 timeout: Self.mapLocationReadingTimeout
             )
@@ -4030,10 +4031,13 @@ final class AppModel {
                     settings.backgroundPreciseLocationEnabled
             ))
         }
-        return MapCurrentLocationAnchorPolicy.latestValidReading(
+        let currentAnchor = MapCurrentLocationAnchorPolicy.latestValidReading(
             in: [latestSensorReading, liveRouteState.readings.last]
                 .compactMap { $0 }
-        ) != nil
+        )
+        return currentAnchor != nil
+            && (!requiresFreshReading
+                || receivedFreshReading && currentAnchor?.id != cachedAnchor?.id)
     }
 
     func disableLocationCollection() async {
