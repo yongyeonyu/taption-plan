@@ -389,7 +389,8 @@ final class HealthKitIntegrationTests: XCTestCase {
                 startDate: start.addingTimeInterval(1_200),
                 endDate: start.addingTimeInterval(1_200),
                 textValue: "private diagnosis text",
-                sourceName: "Hospital"
+                sourceName: "Health",
+                sourceBundleIdentifier: "com.apple.Health"
             ),
         ]
 
@@ -467,6 +468,50 @@ final class HealthKitIntegrationTests: XCTestCase {
                 end: start.addingTimeInterval(3_600)
             )
         )
+        XCTAssertTrue(actuals.isEmpty)
+    }
+
+    func testUntrustedContinuousSourceDoesNotCreateAutomaticEstimate() {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = calendar.startOfDay(
+            for: Date(timeIntervalSince1970: 1_788_000_000)
+        )
+        var records: [HealthKitSampleRecord] = []
+        for dayOffset in -8 ... -1 {
+            for sampleOffset in 0..<4 {
+                let date = calendar.date(
+                    byAdding: .day,
+                    value: dayOffset,
+                    to: day
+                )!.addingTimeInterval(TimeInterval(sampleOffset * 15 * 60))
+                records.append(biometricRecord(
+                    identifier: "HKQuantityTypeIdentifierHeartRate",
+                    at: date,
+                    value: 60,
+                    unit: "count/min",
+                    sourceBundleIdentifier: "com.example.other-health"
+                ))
+            }
+        }
+        let elevatedStart = day.addingTimeInterval(9 * 3_600)
+        for minute in [0, 3, 6, 9, 12] {
+            records.append(biometricRecord(
+                identifier: "HKQuantityTypeIdentifierHeartRate",
+                at: elevatedStart.addingTimeInterval(TimeInterval(minute * 60)),
+                value: 105,
+                unit: "count/min",
+                sourceBundleIdentifier: "com.example.other-health"
+            ))
+        }
+
+        let actuals = HealthKitBehaviorProjectionEngine.actuals(
+            from: records,
+            in: TimeSpan(
+                start: day,
+                end: day.addingTimeInterval(86_400)
+            )
+        )
+
         XCTAssertTrue(actuals.isEmpty)
     }
 
@@ -626,7 +671,8 @@ final class HealthKitIntegrationTests: XCTestCase {
         identifier: String,
         at date: Date,
         value: Double,
-        unit: String
+        unit: String,
+        sourceBundleIdentifier: String? = "com.apple.Health"
     ) -> HealthKitSampleRecord {
         HealthKitSampleRecord(
             uuid: UUID(),
@@ -636,6 +682,7 @@ final class HealthKitIntegrationTests: XCTestCase {
             numericValue: value,
             unit: unit,
             sourceName: "Apple Watch",
+            sourceBundleIdentifier: sourceBundleIdentifier,
             sourceProductType: "Watch"
         )
     }

@@ -734,3 +734,9 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - Release archive/export 성공: `/private/tmp/taption-rel904-build134/TaptionPlan.xcarchive`, `/private/tmp/taption-rel904-build134/Export/TaptionPlan.ipa`; 네 번들 `1.0 (134)`, IPA SHA-256 `225ba74b3de11b05e1c4a530d20a21b495b34ca0b22f8af503184b9dabf45851`이다.
 - `altool --validate-app` 및 업로드 성공. Delivery UUID `a3581625-8668-4d3a-85c1-240078bc054e`는 App Store Connect API에서 `VALID`, `expired=false`로 readback했다.
 - `TP Taption Plan 내부 테스트`에 build 134 연결 후 그룹 빌드 API에서 build 134와 내부 테스터 1명을 readback했다. TestFlight 설치·실행·발열·실제 수면·지하철 화면은 별도 물리 게이트다.
+
+## 2026-09-06 SEC906P002 HealthKit 자동 추정 source 경계
+
+- HealthKit 원본 import와 provenance는 그대로 보존하고, 자동 행동·생체 추정에는 `com.apple.Health`, `com.apple.health`, `com.taption.plan` source만 사용하도록 제한했다. 사용자 입력 기록은 source와 관계없이 명시적 기록으로 보존한다.
+- 다른 앱 source의 연속 심박·에너지·생체값이 자동 활동으로 투영되지 않는 회귀를 추가했다.
+- `HealthKitIntegrationTests` 21/21 통과: `/private/tmp/SEC906P002-health-derived/Logs/Test/Test-TaptionPlan-2026.09.06_14-46-36-+0900.xcresult`.

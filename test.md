@@ -35,7 +35,12 @@
 
 - 백업 파일·CloudKit payload 크기 제한, PIN 실패 상태 영속화, AAD 메타데이터 인증, 문서 복구 키 기기 이전, Watch/HealthKit route·배열 상한과 confirmation token 검증을 반영했다.
 - 보안 회귀 3/3와 Watch query 22/22, 총 25/25·실패 0·스킵 0 및 Simulator Debug build가 통과했다: `/private/tmp/SEC906-final-derived/Logs/Test/Test-TaptionPlan-2026.09.06_14-12-59-+0900.xcresult`.
-- iPhone 14 Pro에 최신 수정본을 서명 빌드·설치·launch하고 `com.taption.plan 1.0 (137)` readback까지 확인했다: `/private/tmp/DATE906-final-device-build-r2.log`, `/private/tmp/DATE906-final-install-r2.json`, `/private/tmp/DATE906-final-launch-r2.json`. Watch 원본 수신은 별도 게이트이며, Watch command capability와 HealthKit source allowlist는 후속 보안 항목으로 남긴다.
+- iPhone 14 Pro에 최신 수정본을 서명 빌드·설치·launch하고 `com.taption.plan 1.0 (137)` readback까지 확인했다: `/private/tmp/DATE906-final-device-build-r2.log`, `/private/tmp/DATE906-final-install-r2.json`, `/private/tmp/DATE906-final-launch-r2.json`. Watch 원본 수신과 일반 Watch command capability는 별도 게이트로 남긴다.
+
+## 2026-09-06 SEC906P002 HealthKit 자동 추정 source 경계
+
+- HealthKit raw import/provenance는 보존하면서 자동 연속 추정은 Apple Health/Taption source bundle allowlist로 제한했다. 사용자 입력 기록은 별도 명시적 기록으로 유지한다.
+- 다른 앱 source의 연속 심박값이 자동 actual을 만들지 않는 회귀를 포함해 `HealthKitIntegrationTests` 21/21 통과, 실패·스킵 0이다: `/private/tmp/SEC906P002-health-derived/Logs/Test/Test-TaptionPlan-2026.09.06_14-46-36-+0900.xcresult`.
 
 ## 2026-09-06 BKP906C001 자동 백업 재시도 회귀
 

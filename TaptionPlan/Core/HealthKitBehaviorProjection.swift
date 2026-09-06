@@ -4,6 +4,11 @@ enum HealthKitBehaviorProjectionEngine {
     static let modelVersion = "healthkit-behavior-v1"
     private static let minimumEstimateDuration: TimeInterval = 10 * 60
     private static let maximumSampleGap: TimeInterval = 5 * 60
+    private static let trustedAutomaticSourceBundles: Set<String> = [
+        "com.apple.Health",
+        "com.apple.health",
+        "com.taption.plan",
+    ]
 
     static func actuals(
         from records: [HealthKitSampleRecord],
@@ -76,6 +81,7 @@ enum HealthKitBehaviorProjectionEngine {
     ) -> ActualRecord? {
         let identifier = record.typeIdentifier
         guard !identifier.contains("UserAnnotatedMedication"),
+              (record.userEntered || trustedAutomaticSource(record)),
               !isDirectGroundTruth(identifier),
               record.startDate <= span.end,
               record.endDate >= span.start else {
@@ -152,6 +158,7 @@ enum HealthKitBehaviorProjectionEngine {
     ) -> [ActualRecord] {
         let numeric = records.filter {
             $0.numericValue?.isFinite == true
+                && trustedAutomaticSource($0)
                 && continuousKind($0.typeIdentifier) != nil
         }
         return Dictionary(grouping: numeric, by: \.typeIdentifier)
@@ -395,6 +402,13 @@ enum HealthKitBehaviorProjectionEngine {
             || identifier == "HKWorkoutRouteTypeIdentifier"
             || identifier == "HKCategoryTypeIdentifierSleepAnalysis"
             || identifier == "HKCategoryTypeIdentifierMindfulSession"
+    }
+
+    private static func trustedAutomaticSource(
+        _ record: HealthKitSampleRecord
+    ) -> Bool {
+        guard let bundle = record.sourceBundleIdentifier else { return false }
+        return trustedAutomaticSourceBundles.contains(bundle)
     }
 
     private static func isHealthEvent(_ identifier: String) -> Bool {
