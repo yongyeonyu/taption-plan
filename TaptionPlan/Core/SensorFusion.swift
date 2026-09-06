@@ -125,9 +125,17 @@ struct TravelModeClassifier: Sendable {
         // vehicle labels before falling back to the broader score fusion.
         let explicitWatchBehavior = ordered
             .reversed()
-            .compactMap({ reading in
-                reading.behavior.flatMap(WatchBehaviorKind.init(rawValue:))
-            })
+            .compactMap { (reading: SensorReading) -> WatchBehaviorKind? in
+                guard reading.sourceDevice == .appleWatch,
+                      let behavior = reading.behavior.flatMap(
+                          WatchBehaviorKind.init(rawValue:)
+                      ),
+                      reading.behaviorConfidenceScore.map({ $0 >= 0.55 })
+                          ?? false else {
+                    return nil
+                }
+                return behavior
+            }
             .first
         if let explicitWatchBehavior {
             switch explicitWatchBehavior {

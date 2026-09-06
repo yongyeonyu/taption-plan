@@ -1161,7 +1161,12 @@ enum ActivityClassificationLockEngine {
             }
             let isResolvedSubway = candidate.mode == .subway
                 && candidate.subwayRoute.map(SubwayStationCatalog.isValid) == true
-            if !candidate.isConfirmed, !isResolvedSubway {
+            let previousSubwayIsValidated = previous.mode != .subway
+                || previous.isConfirmed
+                || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
+            if previousSubwayIsValidated,
+               !candidate.isConfirmed,
+               !isResolvedSubway {
                 value.mode = previous.mode
                 value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
                 value.isConfirmed = previous.isConfirmed
@@ -1170,7 +1175,10 @@ enum ActivityClassificationLockEngine {
             return value
         }
         let retained = locked.filter { previous in
-            !fresh.contains {
+            let validatedSubway = previous.mode != .subway
+                || previous.isConfirmed
+                || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
+            return validatedSubway && !fresh.contains {
                 overlapRatio(previous.span, $0.span) >= 0.2
             }
         }

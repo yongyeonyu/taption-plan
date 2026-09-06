@@ -4569,6 +4569,7 @@ final class FeatureEngineTests: XCTestCase {
             distanceMeters: 5_000,
             confidence: .high,
             evidence: ["철도 경로"],
+            isConfirmed: true,
             isClassificationLocked: true
         )
         let fresh = TravelSegment(
@@ -4591,6 +4592,66 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result[0].mode, .subway)
         XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
+    func testUnvalidatedLockedSubwayIsReevaluatedFromFreshTravel() {
+        let start = makeDate(2026, 8, 12, 10, 0)
+        let old = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["자동 추정"],
+            isClassificationLocked: true
+        )
+        let fresh = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: start.addingTimeInterval(60),
+                end: start.addingTimeInterval(hour + 60)
+            ),
+            distanceMeters: 5_100,
+            confidence: .medium,
+            evidence: ["차량 후보"]
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: [old],
+            fresh: [fresh],
+            inside: TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].mode, .car)
+        XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
+    func testIPhoneBehaviorLabelDoesNotPromoteSubwayWithoutRailEvidence() {
+        let start = makeDate(2026, 8, 12, 10, 0)
+        let readings = [
+            SensorReading(
+                timestamp: start,
+                motion: .stationary,
+                gpsAvailable: false,
+                behavior: WatchBehaviorKind.subway.rawValue,
+                behaviorConfidenceScore: 0.9,
+                behaviorEvidence: ["Watch"],
+                sourceDevice: .iPhone
+            ),
+            SensorReading(
+                timestamp: start.addingTimeInterval(10 * 60),
+                motion: .stationary,
+                gpsAvailable: false,
+                behavior: WatchBehaviorKind.subway.rawValue,
+                behaviorConfidenceScore: 0.9,
+                behaviorEvidence: ["Watch"],
+                sourceDevice: .iPhone
+            ),
+        ]
+
+        let inference = TravelModeClassifier().classify(readings: readings)
+
+        XCTAssertFalse(inference.mode == TravelMode.subway)
     }
 
     func testResolvedSubwayReplacesLockedWalkingClassification() {
