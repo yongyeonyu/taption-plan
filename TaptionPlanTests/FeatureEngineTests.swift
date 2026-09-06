@@ -18,6 +18,11 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRegisteredPlaceIconCenterMatchesStoredCoordinate() {
+        XCTAssertEqual(MapHomePlaceAnnotationLayout.vectorAnchor, .center)
+        XCTAssertEqual(MapHomePlaceAnnotationLayout.appleCenterOffset, .zero)
+    }
+
     @MainActor
     func testImmediateSensorAnalysisKeepsEveryPendingDay() async throws {
         let directory = FileManager.default.temporaryDirectory

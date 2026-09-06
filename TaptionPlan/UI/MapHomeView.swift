@@ -1235,6 +1235,11 @@ enum MapHomeUserTrackingPolicy {
     }
 }
 
+enum MapHomePlaceAnnotationLayout {
+    static let vectorAnchor = UnitPoint.center
+    static let appleCenterOffset = CGPoint.zero
+}
+
 enum MapHomePlaybackCameraPolicy {
     static func allowsAutomaticFit(
         isPlaybackRunning: Bool,
@@ -3003,7 +3008,10 @@ struct MapHomeView: View {
                     in: viewport,
                     for: vectorPlaceMarkerID(place.id)
                 ) {
-                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                    MapHomeProjectedAnnotation(
+                        point: point,
+                        anchor: MapHomePlaceAnnotationLayout.vectorAnchor
+                    ) {
                         if place.destination == .user {
                             Button {
                                 selectedUserLocation = .frequentPlace(place.id)
@@ -14429,7 +14437,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         .fixedSize()
                     ),
                     size: CGSize(width: 130, height: 138),
-                    centerOffset: CGPoint(x: 0, y: -69)
+                    centerOffset: MapHomePlaceAnnotationLayout.appleCenterOffset
                 )
             case .transit(let place):
                 return MapHomeAppleHostedDescriptor(

@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 PIN906A001 · 등록 장소 좌표 anchor 정렬
+
+- 등록 장소 좌표는 원본 그대로 전달됐지만, 130×138pt 카드의 하단을 좌표에 붙이는 Apple `centerOffset.y = -69`와 Vector `.bottom` anchor 때문에 축소할수록 아이콘이 실제 좌표와 떨어져 보였다.
+- Apple·Vector 지도 모두 등록 장소 아이콘의 중심을 저장 좌표에 맞췄다. 라벨·레벨·저장 좌표와 다른 마커는 변경하지 않았다.
+- anchor 계약 회귀와 직전 현재 위치 회귀 2/2, Simulator Debug build·설치·launch PID `17961`을 통과했다: `/private/tmp/PIN906A001-focused-r2.xcresult`.
+
 ## 2026-09-06 LOC906F001 · 현재 위치 이중 포커싱 제거
 
 - 현재 위치 버튼이 저장된 좌표로 즉시 이동한 뒤 새 GPS 표본에서 다시 이동했다. `requiresFreshReading`도 캐시가 있으면 새 표본을 기다리지 않아 같은 이중 이동을 허용했다.

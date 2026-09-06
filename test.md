@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 PIN906A001 등록 장소 좌표 표시
+
+- Apple·Vector 지도 등록 장소 카드의 하단 anchor를 제거하고 아이콘 중심을 저장 좌표에 일치시켰다.
+- anchor·현재 위치 회귀 2/2와 Simulator Debug build·설치·launch PID `17961`이 통과했다: `/private/tmp/PIN906A001-focused-r2.xcresult`.
+- 실제 축소 화면의 손가락 확인은 물리 iPhone 게이트다.
+
 ## 2026-09-06 LOC906F001 현재 위치 이중 포커싱
 
 - 캐시 좌표 선이동과 새 GPS 후속 이동을 제거하고, 새 표본 저장 뒤 한 번만 포커싱하도록 수정했다.

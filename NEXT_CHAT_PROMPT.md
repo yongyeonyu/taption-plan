@@ -25,6 +25,12 @@ xcrun simctl list devices
 - Delivery/build UUID: `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`. App Store Connect App ID: `6797370230`.
 - build 138은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)의 그룹 빌드 관계에 포함된다. 그룹 테스터는 1명(`INSTALLED`)이지만 해당 build 138의 TestFlight 클라이언트 설치 증거로 간주하지 않는다.
 
+## 완료된 최신 구현: 등록 장소 좌표 표시
+
+- `PIN906A001`에서 등록 장소 카드 하단을 좌표에 붙이던 Apple 69pt offset과 Vector bottom anchor를 제거했다.
+- Apple·Vector 지도 모두 등록 장소 아이콘 중심이 저장 좌표에 일치한다. 관련 회귀 2/2와 Simulator Debug build·설치·launch PID `17961`을 통과했다: `/private/tmp/PIN906A001-focused-r2.xcresult`.
+- 실제 축소 화면의 손가락 확인은 물리 iPhone 게이트다.
+
 ## 완료된 최신 구현: 현재 위치 단일 포커싱
 
 - `LOC906F001`에서 현재 위치 버튼이 캐시 좌표로 먼저 이동한 뒤 새 GPS로 다시 이동하던 순서를 제거했다.
