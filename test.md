@@ -1,5 +1,13 @@
 # Taption Plan 실기기 검증
 
+# 2026-09-06 SUB906F001 지하철 오탐 수정·TestFlight build 138
+
+- iCloud 로그에서 `reading_rail_match_count=0`, `reading_station_name_count=0`, `reading_transit_match_count=0`, `candidate_count=0`인데 `subway_segment_count=1`이 남아 미확정 잠금 보존을 원인으로 확정했다: `/private/tmp/DAY906L001-current-iphone.jsonl`.
+- Apple Watch 출처·신뢰도 조건을 지하철 행동 보조 근거에 적용하고, 노선 없는 미확정 잠금은 새 이동 결과로 재평가했다. 지하철 집중 18/18, `TaptionActivityEngineAdapterTests` 16/16, Swift Package 회귀가 통과했다.
+- Release archive/export·`altool --validate-app` 통과, 네 번들 `1.0 (138)`, IPA SHA-256 `9fa557d536c6002294abf2a3435c54f0c8742df533577f69d411f467eb9a36f7`: `/private/tmp/SUB906F001-release`.
+- TestFlight 업로드 Delivery UUID `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`; API readback에서 build 138 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`, 내부 그룹 build 99개 중 build 138과 내부 테스터 1명(`INSTALLED`)을 확인했다.
+- build 138 TestFlight 설치·실행 및 실제 사용자 기록 재검증은 물리 게이트다.
+
 ## 2026-09-06 PAY906Q001 데이터·지도 집중 검증
 
 - iPhone 14 Pro(iOS 26.6.1)에서 raw 복원 실패 원자성, Watch 원본 보존, 캘린더 계정·반복 일정 병합, 지도 cache·pinch 재중심화 회귀 11/11을 실패·스킵 없이 통과했다: `/private/tmp/PAY906Q001-focused-r1.xcresult`.

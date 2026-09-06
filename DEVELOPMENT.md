@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 SUB906F001 지하철 오탐 수정·TestFlight build 138
+
+- iCloud 진단에서 철도 경로·역 이름·대중교통 일치·승차 후보가 모두 0인데 `travel_mode_counts=walking=2,subway=1,car=2`, `subway_segment_count=1`, `classification_locked_count=5`가 남았다. 확정·유효 노선이 없는 이전 지하철 잠금이 새 분류 결과와 병합될 때 살아난 것이 원인이며, iPhone 행동 문자열을 Watch 보조 근거로 읽는 경로도 함께 차단했다: `/private/tmp/DAY906L001-current-iphone.jsonl`.
+- `SensorFusion`은 Apple Watch 출처·신뢰도 조건을 만족한 행동만 지하철 보조 근거로 사용하고, `ActivityClassificationLockEngine`은 확정 또는 유효 노선이 없는 이전 지하철 잠금을 재평가한다. 지하철 관련 집중 XCTest 18/18, `TaptionActivityEngineAdapterTests` 16/16과 Swift Package 회귀를 통과했다. 기능 커밋은 `537f3c2`다.
+- Release archive/export와 `altool --validate-app`을 통과했다. 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (138)`, IPA SHA-256은 `9fa557d536c6002294abf2a3435c54f0c8742df533577f69d411f467eb9a36f7`이며 deep/strict codesign, `beta-reports-active=true`, Production iCloud, `get-task-allow=false`를 확인했다: `/private/tmp/SUB906F001-release`.
+- TestFlight 업로드 Delivery UUID는 `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`이고 App Store Connect API에서 build 138 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`를 readback했다. `TP Taption Plan 내부 테스트`에 build 138이 포함된 그룹 빌드 99개와 내부 테스터 1명(`INSTALLED`)을 확인했다.
+- TestFlight 클라이언트에서 build 138을 설치·실행한 뒤 실제 사용자 데이터로 지하철 오탐이 사라지는지 확인하는 물리 게이트는 남아 있다.
+
 ## 2026-09-06 PAY906Q001 · 데이터 무결성·지도 상호작용 보강
 
 - raw 복원 도중 iPhone·Watch 원본 병합이 하나라도 실패하면 새 snapshot과 파생 기록을 공개하지 않고 기존 기록을 유지한다. Watch 가속도 chunk도 암호화 백업 payload에 그대로 보존하며, 같은 identity의 동일 재전송은 무시하고 내용이 다른 충돌 재전송은 거부해 원본 덮어쓰기를 막는다.
