@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-06 DEV906I001 · 최신 iPhone 설치
+
+- `main@7a490e9`의 Apple Development Debug를 deep/strict codesign 검증 후 iPhone 14 Pro에 기존 데이터 유지 설치했다.
+- 앱 목록에서 `com.taption.plan 1.0 (138)`·`builtByDeveloper=true`를 확인하고 launch PID `16713`을 readback했다: `/private/tmp/DEV906I001-install.json`, `/private/tmp/DEV906I001-apps.json`, `/private/tmp/DEV906I001-launch.json`.
+- 이는 TestFlight 클라이언트 설치 증거가 아니다.
+
 ## 2026-09-06 PIN906A001 · 등록 장소 좌표 anchor 정렬
 
 - 등록 장소 좌표는 원본 그대로 전달됐지만, 130×138pt 카드의 하단을 좌표에 붙이는 Apple `centerOffset.y = -69`와 Vector `.bottom` anchor 때문에 축소할수록 아이콘이 실제 좌표와 떨어져 보였다.

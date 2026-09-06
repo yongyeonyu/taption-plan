@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-06 DEV906I001 iPhone 설치
+
+- 최신 `main@7a490e9` Apple Development Debug를 deep/strict codesign 후 iPhone 14 Pro에 설치했다.
+- `com.taption.plan 1.0 (138)`·`builtByDeveloper=true`·launch PID `16713`을 readback했다: `/private/tmp/DEV906I001-install.json`, `/private/tmp/DEV906I001-apps.json`, `/private/tmp/DEV906I001-launch.json`.
+- 실제 등록 장소 축소 화면 터치와 TestFlight 클라이언트는 별도 게이트다.
+
 ## 2026-09-06 PIN906A001 등록 장소 좌표 표시
 
 - Apple·Vector 지도 등록 장소 카드의 하단 anchor를 제거하고 아이콘 중심을 저장 좌표에 일치시켰다.

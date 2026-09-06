@@ -19,11 +19,12 @@ xcrun simctl list devices
 
 ## 현재 기준
 
-- 기준 소스는 build 138 배포 커밋 `f6386798a84239167fef1c52789cf0d33ee5f829` 이후 `SUB906R001`의 역 인접 고도 하강 오탐 차단을 포함한다. 이 후속 소스는 아직 TestFlight에 올리지 않았다.
+- 기준 소스는 `main@7a490e9`이며 build 138 배포 뒤 지하철 오탐·현재 위치 단일 포커싱·등록 장소 좌표 anchor 수정을 포함한다. 후속 소스는 아직 TestFlight에 올리지 않았다.
 - TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (138)`, archive `/private/tmp/SUB906F001-release/TaptionPlan-1.0-138.xcarchive`, IPA `/private/tmp/SUB906F001-release/Export/TaptionPlan.ipa`.
 - IPA SHA-256: `9fa557d536c6002294abf2a3435c54f0c8742df533577f69d411f467eb9a36f7`.
 - Delivery/build UUID: `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`. App Store Connect App ID: `6797370230`.
 - build 138은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)의 그룹 빌드 관계에 포함된다. 그룹 테스터는 1명(`INSTALLED`)이지만 해당 build 138의 TestFlight 클라이언트 설치 증거로 간주하지 않는다.
+- 최신 Apple Development Debug `1.0 (138)`은 iPhone 설치·`builtByDeveloper=true`·launch PID `16713`까지 readback했다: `/private/tmp/DEV906I001-apps.json`, `/private/tmp/DEV906I001-launch.json`.
 
 ## 완료된 최신 구현: 등록 장소 좌표 표시
 
