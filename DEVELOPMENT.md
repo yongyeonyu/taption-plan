@@ -1,5 +1,12 @@
 # Taption Plan 개발 문서
 
+## 2026-09-07 IAP907B001 · 구매 임시 비활성화·TestFlight build 140
+
+- `TaptionCommercePolicy.supportsPaidPurchase=false` 단일 정책으로 만료 체험과 무관하게 앱·백그라운드·Watch 접근을 허용했다. 구매 메뉴·paywall·상품 로드·구매·복원 호출은 차단하고 기존 StoreKit 구현은 재활성화용으로 보존했다.
+- 정책·만료 접근·상품 미로드·구매/복원 무호출 회귀 2/2와 Release archive/export·`altool --validate-app`을 통과했다: `/tmp/IAP907B001-tests-r2.xcresult`, `/private/tmp/IAP907B001.jpbHS0`.
+- 네 번들 모두 `1.0 (140)`, export IPA는 Apple Distribution 서명·`beta-reports-active=true`·`get-task-allow=false`, SHA-256 `ebf0161b10decb17765eda07f2dea6d3b304320ab79fea57cf103c14bdbf5147`다.
+- Delivery/build UUID `c871d1f4-e933-411d-b840-0d59af3ba6be`는 처리 `COMPLETE`, build `VALID`·미만료다. `TP Taption Plan 내부 테스트` 연결 후 그룹 build 140과 내부 테스터 1명 `INSTALLED`를 API readback했다. TestFlight 클라이언트 설치·launch·구매 UI 비노출·실제 기능 테스트는 물리 게이트다.
+
 ## 2026-09-07 TFB907A001 · TestFlight build 139
 
 - Debug 전용 체험 초기화는 `#if DEBUG`로 Release에서 제외하고, build 번호만 139로 올렸다. 개발자 초기화 회귀 1/1과 Simulator Release build를 통과했으며 Release 바이너리에 초기화 문구·심볼이 없음을 확인했다: `/tmp/TRY907A001-tests-r2.xcresult`, `/tmp/TRY907A001-release-dd`.

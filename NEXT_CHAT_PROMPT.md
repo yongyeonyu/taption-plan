@@ -19,12 +19,12 @@ xcrun simctl list devices
 
 ## 현재 기준
 
-- 최신 작업 소스는 build 139이며 Debug 전용 체험 초기화와 build 번호 변경을 포함한다. 최신 커밋은 live `git status`로 확인한다.
-- TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (139)`, archive `/private/tmp/TFB907A001.j36e1d/TaptionPlan.xcarchive`, IPA `/private/tmp/TFB907A001.j36e1d/Export/TaptionPlan.ipa`.
-- IPA SHA-256: `65c95869f99112813f4d5f0fed5be638fab7e53b822da4a131567188113ddde5`.
-- Delivery/build UUID: `23d0de21-0047-40f1-b681-30bbfb8d26ca`. App Store Connect App ID: `6797370230`.
-- build 139는 API에서 `VALID`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`) 그룹 관계에 포함되고 테스터 1명은 `INSTALLED`다. Chrome 세션 인증 만료로 그룹 빌드·테스터 화면 readback은 미완료다.
-- TestFlight에서는 실제 과금 없는 샌드박스 `Pro 영구 구매`로 접근을 열 수 있다. build 139 클라이언트 설치·구매·launch·실제 터치는 별도 물리 게이트다.
+- 최신 작업 소스는 build 140이며 `TaptionCommercePolicy.supportsPaidPurchase=false`로 구매를 임시 비활성화했다. 만료 체험과 무관하게 앱·백그라운드·Watch 접근을 허용하며 구매 UI·상품 로드·구매·복원 호출은 막힌다.
+- TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (140)`, archive `/private/tmp/IAP907B001.jpbHS0/TaptionPlan.xcarchive`, IPA `/private/tmp/IAP907B001.jpbHS0/Export/TaptionPlan.ipa`.
+- IPA SHA-256: `ebf0161b10decb17765eda07f2dea6d3b304320ab79fea57cf103c14bdbf5147`.
+- Delivery/build UUID: `c871d1f4-e933-411d-b840-0d59af3ba6be`. App Store Connect App ID: `6797370230`.
+- build 140은 upload `COMPLETE`, build `VALID`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`) 그룹에 포함되고 내부 테스터 1명은 `INSTALLED`다.
+- build 140 TestFlight 클라이언트 설치·launch·구매 UI 비노출·실제 기능 접근은 별도 물리 게이트다. 판매 재개 시 Paid Apps Agreement와 첫 IAP 연결 완료 후 정책 스위치를 true로 복구한다.
 - 최신 Apple Development Debug `1.0 (138)`은 iPhone 설치·`builtByDeveloper=true`·launch PID `16713`까지 readback했다: `/private/tmp/DEV906I001-apps.json`, `/private/tmp/DEV906I001-launch.json`.
 
 ## 완료된 최신 구현: 등록 장소 좌표 표시

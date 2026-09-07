@@ -5,7 +5,7 @@ import StoreKit
 
 enum TaptionCommercePolicy {
     static let isAdSupportedFreeMode = false
-    static let supportsPaidPurchase = true
+    static let supportsPaidPurchase = false
     static let proProductID = "com.taption.plan.pro"
     static let trialDuration: TimeInterval = 14 * 24 * 60 * 60
 
@@ -498,7 +498,9 @@ final class TaptionProAccessController {
         )
     }
 
-    var grantsAccess: Bool { state.grantsAccess }
+    var grantsAccess: Bool {
+        !TaptionCommercePolicy.supportsPaidPurchase || state.grantsAccess
+    }
 
     var hasPermanentAccess: Bool {
         state == .purchased
@@ -516,6 +518,7 @@ final class TaptionProAccessController {
     }
 
     static func currentAccessGranted(now: Date = .now) async -> Bool {
+        guard TaptionCommercePolicy.supportsPaidPurchase else { return true }
         if await StoreKitPurchaseService().hasProEntitlement() {
             return true
         }
@@ -528,6 +531,7 @@ final class TaptionProAccessController {
     }
 
     func refreshAccess(now: Date = .now) async {
+        guard TaptionCommercePolicy.supportsPaidPurchase else { return }
         startTransactionUpdatesIfNeeded()
         refreshGeneration &+= 1
         let generation = refreshGeneration
@@ -542,6 +546,7 @@ final class TaptionProAccessController {
     }
 
     func loadProductIfNeeded() async {
+        guard TaptionCommercePolicy.supportsPaidPurchase else { return }
         if product == nil {
             product = try? await purchaseService.loadProProduct()
         }
@@ -582,7 +587,8 @@ final class TaptionProAccessController {
 #endif
 
     func purchase() async {
-        guard !isActionInFlight else { return }
+        guard TaptionCommercePolicy.supportsPaidPurchase,
+              !isActionInFlight else { return }
         isActionInFlight = true
         defer { isActionInFlight = false }
         do {
@@ -607,7 +613,8 @@ final class TaptionProAccessController {
     }
 
     func restore() async {
-        guard !isActionInFlight else { return }
+        guard TaptionCommercePolicy.supportsPaidPurchase,
+              !isActionInFlight else { return }
         isActionInFlight = true
         defer { isActionInFlight = false }
         do {

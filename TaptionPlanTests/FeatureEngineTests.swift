@@ -12520,9 +12520,9 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testCommercePolicyHasPaidPurchaseWithoutAds() {
+    func testCommercePolicyTemporarilyDisablesPaidPurchaseWithoutAds() {
         XCTAssertFalse(TaptionCommercePolicy.isAdSupportedFreeMode)
-        XCTAssertTrue(TaptionCommercePolicy.supportsPaidPurchase)
+        XCTAssertFalse(TaptionCommercePolicy.supportsPaidPurchase)
         XCTAssertEqual(
             TaptionCommercePolicy.proProductID,
             "com.taption.plan.pro"
@@ -12531,6 +12531,33 @@ final class FeatureEngineTests: XCTestCase {
             TaptionCommercePolicy.trialDuration,
             14 * 24 * 60 * 60
         )
+    }
+
+    @MainActor
+    func testDisabledCommerceGrantsAccessWithoutLoadingAProduct() async throws {
+        let suiteName = "commerce-disabled-\(UUID().uuidString)"
+        let localStore = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { localStore.removePersistentDomain(forName: suiteName) }
+        let expiredStart = makeDate(2026, 8, 1, 12)
+        let persistence = TaptionProTrialPersistence(
+            cloudStore: nil,
+            localStore: localStore,
+            keychainService: nil
+        )
+        _ = persistence.startTrial(at: expiredStart)
+        let controller = TaptionProAccessController(
+            trialPersistence: persistence,
+            now: makeDate(2026, 9, 7, 12)
+        )
+
+        await controller.refresh()
+        await controller.purchase()
+        await controller.restore()
+
+        XCTAssertTrue(controller.grantsAccess)
+        XCTAssertNil(controller.product)
+        XCTAssertNil(controller.message)
+        XCTAssertFalse(controller.isActionInFlight)
     }
 
     @MainActor

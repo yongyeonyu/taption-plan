@@ -1429,7 +1429,8 @@ struct TaptionProAccessView: View {
             }
 #endif
 
-            if !controller.hasPermanentAccess {
+            if TaptionCommercePolicy.supportsPaidPurchase,
+               !controller.hasPermanentAccess {
                 Button {
                     Task { await controller.purchase() }
                 } label: {

@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-07 IAP907B001 구매 비활성화·TestFlight build 140
+
+- 구매 정책 OFF에서 만료 기록도 접근 허용, 상품 미로드, 직접 구매·복원 무호출을 집중 XCTest 2/2로 확인했다: `/tmp/IAP907B001-tests-r2.xcresult`.
+- Release archive/export·배포 서명·TestFlight entitlement·`altool --validate-app` 통과, 네 번들 `1.0 (140)`, IPA SHA-256 `ebf0161b10decb17765eda07f2dea6d3b304320ab79fea57cf103c14bdbf5147`: `/private/tmp/IAP907B001.jpbHS0`.
+- Delivery/build UUID `c871d1f4-e933-411d-b840-0d59af3ba6be`는 `COMPLETE`·`VALID`·미만료이며 Internal 그룹 build 140과 테스터 1명 `INSTALLED`를 API readback했다.
+- TestFlight 앱에서 build 140 설치·launch·구매 UI 비노출·만료 상태의 전체 기능 접근은 물리 게이트다.
+
 ## 2026-09-07 TFB907A001 TestFlight build 139
 
 - 개발자 체험 초기화 집중 XCTest 1/1과 Simulator Release build가 통과했고, Release 바이너리에는 Debug 초기화 경로가 없다: `/tmp/TRY907A001-tests-r2.xcresult`, `/tmp/TRY907A001-release-dd`.

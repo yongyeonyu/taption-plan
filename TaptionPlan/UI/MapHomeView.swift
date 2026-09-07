@@ -4304,12 +4304,14 @@ struct MapHomeView: View {
 
             Spacer(minLength: 28)
 
-            menuItem(
-                "sparkles",
-                proMenuTitle,
-                isSelected: proAccess.hasPermanentAccess
-            ) {
-                proAccess.isPurchaseSheetPresented = true
+            if TaptionCommercePolicy.supportsPaidPurchase {
+                menuItem(
+                    "sparkles",
+                    proMenuTitle,
+                    isSelected: proAccess.hasPermanentAccess
+                ) {
+                    proAccess.isPurchaseSheetPresented = true
+                }
             }
 
             Divider()
