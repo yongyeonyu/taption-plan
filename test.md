@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-07 CRH907A001 백그라운드 충돌·지도 CPU 완화
+
+- build 140 충돌 stack과 일치하도록 대용량 payload 인코딩을 파일 lock 밖으로 이동했고, `MapHomeView` 초기화 중 시간 레일 전체 계산을 기존 비동기 refresh로 넘겼다.
+- SQLite 저장소·기능 엔진·시간축 회귀 727건 중 726 PASS·1 SKIP·0 FAIL 및 Simulator Debug build를 통과했다: `/Users/u_mo_c/Library/Developer/Xcode/DerivedData/TaptionPlan-gvqtjbpzkfvutrdlxdzhdyhsyane/Logs/Test/Test-TaptionPlan-2026.09.07_21-39-52-+0900.xcresult`.
+- TestFlight build 140 자체는 수정 전 바이너리다. 수정본의 반복 launch·백그라운드 전환·진단 로그 및 SQLite 저장은 새 빌드에서 별도 확인한다.
+
 ## 2026-09-07 LOG907B001 iPhone 컨테이너·충돌 로그 수집
 
 - Wi-Fi 연결된 iPhone 14 Pro에서 TestFlight `Taption Plan 1.0 (140)` 앱 컨테이너 240MB와 앱 그룹 컨테이너를 읽기 전용으로 수집했다: `/tmp/LOG907B001`.

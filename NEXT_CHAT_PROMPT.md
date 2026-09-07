@@ -1,5 +1,11 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 완료된 최신 구현: build 140 충돌·지도 CPU 완화
+
+- `CRH907A001`에서 build 140의 `0xDEAD10CC` stack과 맞춰 연간 리뷰 등 모든 domain payload 인코딩을 SQLite 파일 lock 획득 전으로 옮겼다.
+- `MapHomeView` 생성 시 시간 레일 전체 계산을 제거하고 placeholder 뒤 기존 비동기 refresh에서 계산한다.
+- 관련 회귀 727건 중 726 PASS·1 SKIP·0 FAIL 및 Simulator Debug build를 통과했다. 이 수정은 TestFlight build 140 이후 소스이며, 새 빌드의 반복 launch·백그라운드 전환·로그 저장은 물리 게이트다.
+
 대표님을 존댓말로 응대하고 `/Users/u_mo_c/Documents/taption plan`에서 작업한다. 새 채팅 시작 시 아래 파일과 live 상태를 먼저 읽는다.
 
 ```bash

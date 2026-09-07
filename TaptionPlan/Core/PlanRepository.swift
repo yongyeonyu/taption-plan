@@ -780,6 +780,28 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        var value = snapshot
+        value.updatedAt = .now
+        let encodedDomains: [(String, Data, Bool)] = [
+            (Self.metadataDomain, try Self.payload(Metadata(
+                schemaVersion: value.schemaVersion,
+                updatedAt: value.updatedAt
+            )), true),
+            ("plan.plans", try Self.payload(value.plans), false),
+            ("plan.actuals", try Self.payload(value.actuals), false),
+            ("plan.recordLinks", try Self.payload(value.recordLinks), false),
+            ("plan.memos", try Self.payload(value.memos), false),
+            ("plan.stickers", try Self.payload(value.stickers), false),
+            ("plan.categories", try Self.payload(value.categories), false),
+            ("plan.photos", try Self.payload(value.photos), false),
+            ("plan.calendarEvents", try Self.payload(value.calendarEvents), false),
+            ("plan.weather", try Self.payload(value.weather), false),
+            ("plan.places", try Self.payload(value.places), false),
+            ("plan.travel", try Self.payload(value.travel), false),
+            ("plan.floorTransitions", try Self.payload(value.floorTransitions), false),
+            ("plan.yearlyReports", try Self.payload(value.yearlyReports), false),
+            ("plan.settings", try Self.payload(value.settings), false),
+        ]
         let lock = try await TaptionDataFileLock.acquire(url: lockURL)
         defer { lock.unlock() }
         let generation = readGeneration()
@@ -792,8 +814,6 @@ actor SQLitePlanRepository: PlanDataRepository {
             throw RepositoryError.staleGeneration
         }
         observedGeneration = generation
-        var value = snapshot
-        value.updatedAt = .now
         let existingRows = try await store.snapshots(day: Self.day)
         let rowsByDomain = Dictionary(
             uniqueKeysWithValues: existingRows.map { ($0.domain, $0) }
@@ -811,28 +831,16 @@ actor SQLitePlanRepository: PlanDataRepository {
         nextRevision += 1
         var writes: [TaptionPlanDayStore.Snapshot] = []
 
-        try append(
-            domain: Self.metadataDomain,
-            value: Metadata(schemaVersion: value.schemaVersion, updatedAt: value.updatedAt),
-            existingPayload: rowsByDomain[Self.metadataDomain]?.payload,
-            force: true,
-            revisions: revisions,
-            to: &writes
-        )
-        try append(domain: "plan.plans", value: value.plans, existingPayload: rowsByDomain["plan.plans"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.actuals", value: value.actuals, existingPayload: rowsByDomain["plan.actuals"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.recordLinks", value: value.recordLinks, existingPayload: rowsByDomain["plan.recordLinks"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.memos", value: value.memos, existingPayload: rowsByDomain["plan.memos"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.stickers", value: value.stickers, existingPayload: rowsByDomain["plan.stickers"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.categories", value: value.categories, existingPayload: rowsByDomain["plan.categories"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.photos", value: value.photos, existingPayload: rowsByDomain["plan.photos"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.calendarEvents", value: value.calendarEvents, existingPayload: rowsByDomain["plan.calendarEvents"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.weather", value: value.weather, existingPayload: rowsByDomain["plan.weather"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.places", value: value.places, existingPayload: rowsByDomain["plan.places"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.travel", value: value.travel, existingPayload: rowsByDomain["plan.travel"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.floorTransitions", value: value.floorTransitions, existingPayload: rowsByDomain["plan.floorTransitions"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.yearlyReports", value: value.yearlyReports, existingPayload: rowsByDomain["plan.yearlyReports"]?.payload, revisions: revisions, to: &writes)
-        try append(domain: "plan.settings", value: value.settings, existingPayload: rowsByDomain["plan.settings"]?.payload, revisions: revisions, to: &writes)
+        for (domain, payload, force) in encodedDomains {
+            try append(
+                domain: domain,
+                payload: payload,
+                existingPayload: rowsByDomain[domain]?.payload,
+                force: force,
+                revisions: revisions,
+                to: &writes
+            )
+        }
         guard !writes.isEmpty else { return }
         guard TaptionDataDeletionFence.allows(
             generation: dataDeletionGeneration
@@ -933,17 +941,20 @@ actor SQLitePlanRepository: PlanDataRepository {
         return try TaptionPlanCanonicalStorage.decode(type, from: encoded)
     }
 
-    private func append<Value: Encodable>(
+    private static func payload<Value: Encodable>(_ value: Value) throws -> Data {
+        TaptionPlanCanonicalStorage.envelope(
+            for: try TaptionPlanCanonicalStorage.encode(value)
+        )
+    }
+
+    private func append(
         domain: String,
-        value: Value,
+        payload: Data,
         existingPayload: Data?,
         force: Bool = false,
         revisions: [String: UInt64],
         to writes: inout [TaptionPlanDayStore.Snapshot]
     ) throws {
-        let payload = TaptionPlanCanonicalStorage.envelope(
-            for: try TaptionPlanCanonicalStorage.encode(value)
-        )
         guard force || payload != existingPayload else { return }
         let currentRevision = revisions[domain] ?? 0
         guard nextRevision > currentRevision else {

@@ -1576,13 +1576,7 @@ struct MapHomeView: View {
         self._proAccess = Bindable(proAccess)
         self.onInitialDataReady = onInitialDataReady
         _selectedScope = State(initialValue: .day)
-        _timeRailSegments = State(
-            initialValue: MapHomeTimeRailSegmentEngine.segments(
-                from: model.snapshot.actuals,
-                travel: model.snapshot.travel,
-                on: model.selectedDate
-            )
-        )
+        _timeRailSegments = State(initialValue: [.wholeDayUnconfirmed])
         _cachedWeatherContexts = State(
             initialValue: MapHomeWeatherTimelineMath.coalescedDisplayContexts(
                 model.snapshot.weather.filter(MapHomeWeatherDisplayPolicy.isComplete)

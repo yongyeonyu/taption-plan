@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-07 CRH907A001 · 백그라운드 충돌·지도 CPU 완화
+
+- TestFlight build 140의 `0xDEAD10CC` 충돌은 연간 리뷰 payload를 인코딩하는 동안 SQLite 파일 lock을 유지한 저장 경로와 일치했다. 같은 빌드의 CPU 진단은 `MapHomeView` 생성 때 시간 레일 전체를 반복 계산하는 경로를 가리켰다.
+- 모든 domain payload를 파일 lock 획득 전에 인코딩하도록 저장 임계 구역을 줄였고, 시간 레일은 초기 placeholder 뒤 기존 비동기 refresh에서 계산하도록 변경했다.
+- SQLite 저장소·기능 엔진·시간축 회귀 727건 중 726 PASS·1 SKIP·0 FAIL 및 Simulator Debug build를 통과했다: `Test-TaptionPlan-2026.09.07_21-39-52-+0900.xcresult`. 실제 TestFlight 반복 실행·로그 생성 확인은 새 배포 후 물리 게이트다.
+
 ## 2026-09-07 ICO907A001 · 정적 활동 전용 아이콘
 
 - 업무·식사·수업·취미 지도 마커에서 졸라맨을 제거하고 각각 모니터 글자, 그릇·포크·스푼, 책장, 음표 애니메이션으로 교체했다.
