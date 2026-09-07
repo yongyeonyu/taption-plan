@@ -1240,6 +1240,10 @@ enum MapHomePlaceAnnotationLayout {
     static let appleCenterOffset = CGPoint.zero
 }
 
+enum MapHomeStickmanAnnotationLayout {
+    static let centerOffset = CGPoint(x: 0, y: -18)
+}
+
 enum MapHomePlaybackCameraPolicy {
     static func allowsAutomaticFit(
         isPlaybackRunning: Bool,
@@ -3162,10 +3166,12 @@ struct MapHomeView: View {
                     routePhase: appleMapPlayback?.phase == .forecast
                         ? .forecast
                         : .actual
-                )
+                    )
                     .position(
-                        x: point.x,
-                        y: point.y - MapHomeStickmanMarker.size.height / 2
+                        x: point.x
+                            + MapHomeStickmanAnnotationLayout.centerOffset.x,
+                        y: point.y
+                            + MapHomeStickmanAnnotationLayout.centerOffset.y
                     )
                     .zIndex(MapHomeLayerPriority.stickman)
                     .allowsHitTesting(false)
@@ -14338,7 +14344,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     )
                 ),
                 size: MapHomeStickmanMarker.size,
-                centerOffset: .zero
+                centerOffset: MapHomeStickmanAnnotationLayout.centerOffset
             )
             UIView.performWithoutAnimation {
                 view.transform = .identity

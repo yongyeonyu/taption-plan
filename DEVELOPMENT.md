@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-07 WAK907A001 · 졸라맨 좌표 anchor 통일
+
+- Apple 지도는 졸라맨 중심을 경로 좌표에 붙이고 Vector 지도는 발끝을 붙여, 18pt 고정 차이가 줌아웃에서 큰 지리 오차처럼 보였다.
+- 공통 `MapHomeStickmanAnnotationLayout.centerOffset`을 두고 Apple·Vector 모두 졸라맨 발끝을 선택 시각의 경로 좌표에 고정했다. 경로·카메라·등록 장소 마커는 변경하지 않았다.
+- anchor 집중 회귀 1/1과 Simulator Debug build를 통과했다: `/tmp/WAK907A001-tests-r2.xcresult`. 실제 TestFlight 줌인·아웃 화면은 별도 물리 게이트다.
+
 ## 2026-09-07 IAP907B001 · 구매 임시 비활성화·TestFlight build 140
 
 - `TaptionCommercePolicy.supportsPaidPurchase=false` 단일 정책으로 만료 체험과 무관하게 앱·백그라운드·Watch 접근을 허용했다. 구매 메뉴·paywall·상품 로드·구매·복원 호출은 차단하고 기존 StoreKit 구현은 재활성화용으로 보존했다.

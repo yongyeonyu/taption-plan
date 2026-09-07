@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-07 WAK907A001 졸라맨 좌표 표시
+
+- Apple 지도와 Vector 지도의 졸라맨 발끝 anchor를 동일한 경로 좌표로 통일했다.
+- anchor 회귀 1/1과 Simulator Debug build가 통과했다: `/tmp/WAK907A001-tests-r2.xcresult`.
+- TestFlight에서 같은 시각을 유지한 채 줌인·아웃했을 때 발끝이 동일 경로 좌표에 남는지 실제 터치 확인은 별도 게이트다.
+
 ## 2026-09-07 IAP907B001 구매 비활성화·TestFlight build 140
 
 - 구매 정책 OFF에서 만료 기록도 접근 허용, 상품 미로드, 직접 구매·복원 무호출을 집중 XCTest 2/2로 확인했다: `/tmp/IAP907B001-tests-r2.xcresult`.

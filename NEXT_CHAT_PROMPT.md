@@ -19,6 +19,7 @@ xcrun simctl list devices
 
 ## 현재 기준
 
+- `WAK907A001`에서 Apple·Vector 졸라맨 발끝 anchor를 선택 시각의 경로 좌표로 통일했다. 집중 회귀 1/1과 Simulator Debug build를 통과했으며 이 변경은 build 140 TestFlight 이후 소스다.
 - 최신 작업 소스는 build 140이며 `TaptionCommercePolicy.supportsPaidPurchase=false`로 구매를 임시 비활성화했다. 만료 체험과 무관하게 앱·백그라운드·Watch 접근을 허용하며 구매 UI·상품 로드·구매·복원 호출은 막힌다.
 - TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (140)`, archive `/private/tmp/IAP907B001.jpbHS0/TaptionPlan.xcarchive`, IPA `/private/tmp/IAP907B001.jpbHS0/Export/TaptionPlan.ipa`.
 - IPA SHA-256: `ebf0161b10decb17765eda07f2dea6d3b304320ab79fea57cf103c14bdbf5147`.

@@ -24,6 +24,14 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testStickmanFeetMatchStoredCoordinateOnEveryMapRenderer() {
+        let offset = MapHomeStickmanAnnotationLayout.centerOffset
+
+        XCTAssertEqual(offset.x, 0)
+        XCTAssertEqual(offset.y, -MapHomeStickmanMarker.size.height / 2)
+    }
+
+    @MainActor
     func testImmediateSensorAnalysisKeepsEveryPendingDay() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
