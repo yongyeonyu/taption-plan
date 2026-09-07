@@ -22867,6 +22867,13 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
+    func testObjectOnlyActivityMarkersAnimateTheirProps() {
+        let actions: [MapHomeStickmanAction] = [.computer, .eating, .reading, .hobby]
+        XCTAssertTrue(actions.allSatisfy(\.animatesPresentation))
+        XCTAssertTrue(actions.allSatisfy { !$0.isMoving })
+        XCTAssertFalse(MapHomeStickmanAction.sleeping.animatesPresentation)
+    }
+
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
         for action in TaptionStickmanPoseAction.allCases {
             let poses = (0..<12).map {

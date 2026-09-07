@@ -139,6 +139,15 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
+    var animatesPresentation: Bool {
+        switch self {
+        case .computer, .reading, .hobby, .eating:
+            true
+        default:
+            isMoving
+        }
+    }
+
     var title: String {
         switch self {
         case .activity: "활동"
@@ -592,7 +601,7 @@ struct MapHomeStickmanMarker: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced || !action.isMoving
+        let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
@@ -629,7 +638,7 @@ struct MapHomeStickmanGlyph: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
-        let isStatic = reduceMotion || isLuminanceReduced || !action.isMoving
+        let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
@@ -1276,21 +1285,9 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let sway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
-        drawMusicNote(&context, canvas: canvas, x: 45 + sway * 2, y: 17, scale: 1, phase: phase)
-        drawMusicNote(&context, canvas: canvas, x: 54 - sway * 2, y: 27, scale: 0.8, phase: phase + 3)
-        let microphoneSway = sway * 0.35
-        context.fill(
-            Path(ellipseIn: canvas.rect(x: 35 + microphoneSway, y: 16, width: 4, height: 6)),
-            with: .color(propFill)
-        )
-        context.stroke(
-            Path(ellipseIn: canvas.rect(x: 35 + microphoneSway, y: 16, width: 4, height: 6)),
-            with: .color(propLine),
-            style: StrokeStyle(lineWidth: 1.1 * canvas.scale, lineCap: .round)
-        )
-        stroke(&context, [canvas.point(37 + microphoneSway, 22), canvas.point(37 + microphoneSway, 39)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(33, 39), canvas.point(41, 39)], color: propLine, width: 1)
-        drawPerson(&context, canvas: canvas, action: .hobby, phase: phase, viewpoint: .front)
+        drawMusicNote(&context, canvas: canvas, x: 21 + sway * 3, y: 18, scale: 1.15, phase: phase)
+        drawMusicNote(&context, canvas: canvas, x: 38 - sway * 2, y: 30, scale: 1, phase: phase + 3)
+        drawMusicNote(&context, canvas: canvas, x: 50 + sway * 2, y: 15, scale: 0.8, phase: phase + 6)
     }
 
     private static func drawUnconfirmed(
@@ -1308,15 +1305,10 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        outlineRect(&context, canvas, x: 31, y: 10, width: 29, height: 22, radius: 2)
+        outlineRect(&context, canvas, x: 10, y: 10, width: 44, height: 30, radius: 3)
         drawTypedText(&context, canvas: canvas, phase: phase)
-        stroke(&context, [canvas.point(45.5, 32), canvas.point(45.5, 36)], color: propLine)
-        stroke(&context, [canvas.point(39, 36), canvas.point(52, 36)], color: propLine, width: 1.2)
-        outlineRect(&context, canvas, x: 27, y: 31, width: 16, height: 4, radius: 1, fillColor: propFill)
-        for x in stride(from: 29.0, through: 41.0, by: 3.0) {
-            stroke(&context, [canvas.point(x, 32.5), canvas.point(x + 1.5, 32.5)], color: propLine, width: 0.7)
-        }
-        drawPerson(&context, canvas: canvas, action: .computer, phase: phase, viewpoint: .rearRight)
+        stroke(&context, [canvas.point(32, 40), canvas.point(32, 46)], color: propLine)
+        stroke(&context, [canvas.point(23, 46), canvas.point(41, 46)], color: propLine, width: 1.2)
     }
 
     private static func drawTypedText(
@@ -1328,9 +1320,9 @@ private enum MapHomeStickmanRenderer {
             phase: phase,
             phaseCount: MapHomeStickmanAnimationEngine.phaseCount
         )
-        let startX: CGFloat = 34
-        let startY: CGFloat = 15
-        let unitStride: CGFloat = 3.6
+        let startX: CGFloat = 16
+        let startY: CGFloat = 17
+        let unitStride: CGFloat = 4.2
         for lineIndex in typing.lineUnits.indices {
             let y = startY + CGFloat(lineIndex) * 5.5
             for unit in 0..<typing.lineUnits[lineIndex] {
@@ -1361,18 +1353,18 @@ private enum MapHomeStickmanRenderer {
         canvas: MapHomeStickmanCanvas,
         phase: Int
     ) {
-        let pageLift = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 0.8
+        let pageLift = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 3
         var leftPage = Path()
-        leftPage.move(to: canvas.point(32, 28))
-        leftPage.addLine(to: canvas.point(43, 25 + pageLift))
-        leftPage.addLine(to: canvas.point(43, 36))
-        leftPage.addLine(to: canvas.point(32, 39))
+        leftPage.move(to: canvas.point(8, 20))
+        leftPage.addLine(to: canvas.point(32, 16 + pageLift))
+        leftPage.addLine(to: canvas.point(32, 45))
+        leftPage.addLine(to: canvas.point(9, 49))
         leftPage.closeSubpath()
         var rightPage = Path()
-        rightPage.move(to: canvas.point(43, 25 + pageLift))
-        rightPage.addLine(to: canvas.point(55, 28))
-        rightPage.addLine(to: canvas.point(54, 39))
-        rightPage.addLine(to: canvas.point(43, 36))
+        rightPage.move(to: canvas.point(32, 16 + pageLift))
+        rightPage.addLine(to: canvas.point(56, 20))
+        rightPage.addLine(to: canvas.point(55, 49))
+        rightPage.addLine(to: canvas.point(32, 45))
         rightPage.closeSubpath()
         for page in [leftPage, rightPage] {
             context.fill(page, with: .color(propFill))
@@ -1382,10 +1374,9 @@ private enum MapHomeStickmanRenderer {
                 style: StrokeStyle(lineWidth: 1.2 * canvas.scale, lineCap: .round, lineJoin: .round)
             )
         }
-        stroke(&context, [canvas.point(35, 31), canvas.point(40, 29.5)], color: propLine, width: 0.8)
-        stroke(&context, [canvas.point(46, 29.5), canvas.point(51, 31)], color: propLine, width: 0.8)
-        stroke(&context, [canvas.point(43, 25 + pageLift), canvas.point(43, 36)], color: propLine, width: 0.8)
-        drawPerson(&context, canvas: canvas, action: .reading, phase: phase, viewpoint: .diagonalLeft)
+        stroke(&context, [canvas.point(14, 28), canvas.point(27, 25)], color: propLine, width: 0.8)
+        stroke(&context, [canvas.point(37, 25), canvas.point(50, 28)], color: propLine, width: 0.8)
+        stroke(&context, [canvas.point(32, 16 + pageLift), canvas.point(32, 45)], color: propLine, width: 0.8)
     }
 
     private static func drawSleeping(
@@ -1633,31 +1624,27 @@ private enum MapHomeStickmanRenderer {
         phase: Int
     ) {
         let bowlLift = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase)) * 0.8
-        stroke(&context, [canvas.point(28, 35), canvas.point(58, 35)], color: propLine, width: 1.4)
-        stroke(&context, [canvas.point(31, 35), canvas.point(29, 47)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(54, 35), canvas.point(56, 47)], color: propLine, width: 1)
         context.fill(
-            Path(ellipseIn: canvas.rect(x: 37, y: 29 + bowlLift, width: 14, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 18, y: 25 + bowlLift, width: 28, height: 7)),
             with: .color(propFill)
         )
         context.stroke(
-            Path(ellipseIn: canvas.rect(x: 37, y: 29 + bowlLift, width: 14, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 18, y: 25 + bowlLift, width: 28, height: 7)),
             with: .color(propLine),
             style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
         )
-        stroke(&context, [canvas.point(39, 31 + bowlLift), canvas.point(40, 35 + bowlLift), canvas.point(48, 35 + bowlLift), canvas.point(50, 31 + bowlLift)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(20, 29 + bowlLift), canvas.point(23, 40 + bowlLift), canvas.point(41, 40 + bowlLift), canvas.point(44, 29 + bowlLift)], color: propLine, width: 1.2)
         let forkSway = CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase + 2)) * 2
-        stroke(&context, [canvas.point(53 + forkSway, 24), canvas.point(53 + forkSway, 34)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(51.5 + forkSway, 24), canvas.point(51.5 + forkSway, 27)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(53 + forkSway, 24), canvas.point(53 + forkSway, 27)], color: propLine, width: 1)
-        stroke(&context, [canvas.point(54.5 + forkSway, 24), canvas.point(54.5 + forkSway, 27)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(10 + forkSway, 17), canvas.point(10 + forkSway, 42)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(8 + forkSway, 17), canvas.point(8 + forkSway, 23)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(10 + forkSway, 17), canvas.point(10 + forkSway, 23)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(12 + forkSway, 17), canvas.point(12 + forkSway, 23)], color: propLine, width: 1)
         let spoonSway = CGFloat(MapHomeStickmanAnimationEngine.secondaryOscillation(for: phase + 1)) * 1.5
-        stroke(&context, [canvas.point(58 + spoonSway, 26), canvas.point(58 + spoonSway, 34)], color: propLine, width: 1)
+        stroke(&context, [canvas.point(54 + spoonSway, 23), canvas.point(54 + spoonSway, 42)], color: propLine, width: 1)
         context.stroke(
-            Path(ellipseIn: canvas.rect(x: 56.7 + spoonSway, y: 22, width: 2.6, height: 4)),
+            Path(ellipseIn: canvas.rect(x: 51.5 + spoonSway, y: 15, width: 5, height: 8)),
             with: .color(propLine),
             style: StrokeStyle(lineWidth: 1 * canvas.scale)
         )
-        drawPerson(&context, canvas: canvas, action: .eating, phase: phase, viewpoint: .diagonalLeft)
     }
 }

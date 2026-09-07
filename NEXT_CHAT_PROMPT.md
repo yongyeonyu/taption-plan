@@ -19,6 +19,7 @@ xcrun simctl list devices
 
 ## 현재 기준
 
+- `ICO907A001`에서 업무·식사·수업·취미 졸라맨을 제거하고 모니터 글자·그릇과 수저·책장·음표 전용 애니메이션으로 교체했다. 지도 마커 회귀 37/37 PASS, 기능 회귀 557 PASS·1 SKIP·0 FAIL 및 Simulator Debug build를 통과했으며 build 140 이후 소스다.
 - `WAK907A001`에서 Apple·Vector 졸라맨 발끝 anchor를 선택 시각의 경로 좌표로 통일했다. 집중 회귀 1/1과 Simulator Debug build를 통과했으며 이 변경은 build 140 TestFlight 이후 소스다.
 - 최신 작업 소스는 build 140이며 `TaptionCommercePolicy.supportsPaidPurchase=false`로 구매를 임시 비활성화했다. 만료 체험과 무관하게 앱·백그라운드·Watch 접근을 허용하며 구매 UI·상품 로드·구매·복원 호출은 막힌다.
 - TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (140)`, archive `/private/tmp/IAP907B001.jpbHS0/TaptionPlan.xcarchive`, IPA `/private/tmp/IAP907B001.jpbHS0/Export/TaptionPlan.ipa`.

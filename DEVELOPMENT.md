@@ -1,5 +1,11 @@
 # Taption Plan 개발 문서
 
+## 2026-09-07 ICO907A001 · 정적 활동 전용 아이콘
+
+- 업무·식사·수업·취미 지도 마커에서 졸라맨을 제거하고 각각 모니터 글자, 그릇·포크·스푼, 책장, 음표 애니메이션으로 교체했다.
+- Apple·Vector 공통 36×36 마커와 좌표 anchor·경로 테두리를 유지하고 Reduce Motion에서는 대표 프레임으로 정지한다.
+- 지도 마커 회귀 37/37 PASS, 기능 회귀 557 PASS·1 SKIP·0 FAIL 및 Simulator Debug build를 통과했다: `Test-TaptionPlan-2026.09.07_18-17-34-+0900.xcresult`, `Test-TaptionPlan-2026.09.07_18-15-29-+0900.xcresult`.
+
 ## 2026-09-07 WAK907A001 · 졸라맨 좌표 anchor 통일
 
 - Apple 지도는 졸라맨 중심을 경로 좌표에 붙이고 Vector 지도는 발끝을 붙여, 18pt 고정 차이가 줌아웃에서 큰 지리 오차처럼 보였다.
