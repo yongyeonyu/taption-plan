@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-07 LOG907B001 iPhone 컨테이너·충돌 로그 수집
+
+- Wi-Fi 연결된 iPhone 14 Pro에서 TestFlight `Taption Plan 1.0 (140)` 앱 컨테이너 240MB와 앱 그룹 컨테이너를 읽기 전용으로 수집했다: `/tmp/LOG907B001`.
+- 17:32:15·17:33:08 충돌은 모두 `SIGKILL`·`RUNNINGBOARD`·`0xDEAD10CC`였고, 19:42·19:48·20:26에는 CPU resource 진단이 연속 기록됐다.
+- build 140 dSYM으로 CPU stack을 symbolicate해 `AppShellView`→`MapHomeView`→`MapHomeTimeRailSegmentEngine.makeSegments` 반복 평가와 `AppModel.startSensorAnalysis` 경로를 확인했다. 수정·재빌드는 아직 수행하지 않았다.
+
 ## 2026-09-07 ICO907A001 정적 활동 전용 아이콘
 
 - 업무·식사·수업·취미는 졸라맨 없이 각각 모니터 글자, 그릇·포크·스푼, 책장, 음표 애니메이션을 사용한다.
