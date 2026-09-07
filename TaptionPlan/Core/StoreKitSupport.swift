@@ -150,6 +150,18 @@ private struct TaptionProKeychain {
             throw TaptionProKeychainError.status(addStatus)
         }
     }
+
+    func removeDate(for account: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw TaptionProKeychainError.status(status)
+        }
+    }
 }
 
 @MainActor
@@ -198,6 +210,49 @@ final class TaptionProTrialPersistence {
         persist(record)
         return record
     }
+
+#if DEBUG
+    func resetTrial(at now: Date) throws -> TaptionProTrialRecord {
+        try keychain?.removeDate(for: Self.startedAtKey)
+        try keychain?.removeDate(for: Self.lastObservedAtKey)
+        cloudStore?.removeObject(forKey: Self.startedAtKey)
+        cloudStore?.removeObject(forKey: Self.lastObservedAtKey)
+        localStore.removeObject(forKey: Self.localStartedAtKey)
+        localStore.removeObject(forKey: Self.localLastObservedAtKey)
+
+        let record = TaptionProTrialRecord(
+            startedAt: now,
+            lastObservedAt: now
+        )
+        if let keychain {
+            try keychain.setDate(record.startedAt, for: Self.startedAtKey)
+            try keychain.setDate(
+                record.lastObservedAt,
+                for: Self.lastObservedAtKey
+            )
+        }
+        if let cloudStore {
+            cloudStore.set(
+                record.startedAt.timeIntervalSince1970,
+                forKey: Self.startedAtKey
+            )
+            cloudStore.set(
+                record.lastObservedAt.timeIntervalSince1970,
+                forKey: Self.lastObservedAtKey
+            )
+            _ = cloudStore.synchronize()
+        }
+        localStore.set(
+            record.startedAt.timeIntervalSince1970,
+            forKey: Self.localStartedAtKey
+        )
+        localStore.set(
+            record.lastObservedAt.timeIntervalSince1970,
+            forKey: Self.localLastObservedAtKey
+        )
+        return record
+    }
+#endif
 
     private func keychainRecord() -> TaptionProTrialRecord? {
         guard let keychain,
@@ -305,6 +360,9 @@ enum StorePurchaseOutcome: Sendable {
 enum TaptionProMessageCode: Equatable, Sendable {
     case trialStarted
     case trialAlreadyUsed
+#if DEBUG
+    case trialResetFailed
+#endif
     case purchaseCompleted
     case purchasePending
     case purchaseUnavailable
@@ -509,6 +567,19 @@ final class TaptionProAccessController {
         }
         isActionInFlight = false
     }
+
+#if DEBUG
+    func resetTrialForTesting(now: Date = .now) {
+        guard !isActionInFlight, !hasPermanentAccess else { return }
+        do {
+            let record = try trialPersistence.resetTrial(at: now)
+            setState(TaptionProTrialPolicy.state(record: record, now: now))
+            message = .trialStarted
+        } catch {
+            message = .trialResetFailed
+        }
+    }
+#endif
 
     func purchase() async {
         guard !isActionInFlight else { return }

@@ -1410,6 +1410,25 @@ struct TaptionProAccessView: View {
                 .tint(Color.tpInk)
             }
 
+
+#if DEBUG
+            if case .expired = controller.state {
+                Button {
+                    controller.resetTrialForTesting()
+                } label: {
+                    Text(text(
+                        "개발자 체험 14일 초기화",
+                        "Reset developer trial for 14 days"
+                    ))
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.tpInk)
+            }
+#endif
+
             if !controller.hasPermanentAccess {
                 Button {
                     Task { await controller.purchase() }
@@ -1471,6 +1490,13 @@ struct TaptionProAccessView: View {
                 "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
                 "The 14-day free trial has already been used on this device or in its synced iCloud record."
             ))
+#if DEBUG
+        case .trialResetFailed:
+            Text(text(
+                "개발자 체험 기록을 초기화하지 못했습니다.",
+                "The developer trial record could not be reset."
+            ))
+#endif
         case .purchaseCompleted:
             Text(text("Pro 영구 구매가 완료되었습니다.", "Your permanent Pro purchase is complete."))
         case .purchasePending:

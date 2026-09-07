@@ -1,5 +1,12 @@
 # Taption Plan 개발 문서
 
+## 2026-09-07 TFB907A001 · TestFlight build 139
+
+- Debug 전용 체험 초기화는 `#if DEBUG`로 Release에서 제외하고, build 번호만 139로 올렸다. 개발자 초기화 회귀 1/1과 Simulator Release build를 통과했으며 Release 바이너리에 초기화 문구·심볼이 없음을 확인했다: `/tmp/TRY907A001-tests-r2.xcresult`, `/tmp/TRY907A001-release-dd`.
+- Release archive/export와 `altool --validate-app`을 통과했다. 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (139)`, export IPA는 Apple Distribution 서명·`beta-reports-active=true`·`get-task-allow=false`이며 SHA-256은 `65c95869f99112813f4d5f0fed5be638fab7e53b822da4a131567188113ddde5`다: `/private/tmp/TFB907A001.j36e1d`.
+- Delivery/build UUID `23d0de21-0047-40f1-b681-30bbfb8d26ca`는 App Store Connect API에서 `VALID`·미만료다. `TP Taption Plan 내부 테스트`에 연결한 뒤 그룹 관계에서 build 139와 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome App Store Connect 세션은 인증 만료로 그룹 빌드·테스터 화면 readback을 완료하지 못했다. TestFlight 클라이언트 build 139 설치·샌드박스 Pro 구매·launch·실제 터치는 별도 물리 게이트다.
+
 ## 2026-09-06 DEV906I001 · 최신 iPhone 설치
 
 - `main@7a490e9`의 Apple Development Debug를 deep/strict codesign 검증 후 iPhone 14 Pro에 기존 데이터 유지 설치했다.

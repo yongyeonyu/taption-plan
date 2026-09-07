@@ -19,11 +19,12 @@ xcrun simctl list devices
 
 ## 현재 기준
 
-- 기준 소스는 `main@7a490e9`이며 build 138 배포 뒤 지하철 오탐·현재 위치 단일 포커싱·등록 장소 좌표 anchor 수정을 포함한다. 후속 소스는 아직 TestFlight에 올리지 않았다.
-- TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (138)`, archive `/private/tmp/SUB906F001-release/TaptionPlan-1.0-138.xcarchive`, IPA `/private/tmp/SUB906F001-release/Export/TaptionPlan.ipa`.
-- IPA SHA-256: `9fa557d536c6002294abf2a3435c54f0c8742df533577f69d411f467eb9a36f7`.
-- Delivery/build UUID: `9caa4563-2a99-4b1a-ab58-c5b4a74b663c`. App Store Connect App ID: `6797370230`.
-- build 138은 API에서 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`)의 그룹 빌드 관계에 포함된다. 그룹 테스터는 1명(`INSTALLED`)이지만 해당 build 138의 TestFlight 클라이언트 설치 증거로 간주하지 않는다.
+- 최신 작업 소스는 build 139이며 Debug 전용 체험 초기화와 build 번호 변경을 포함한다. 최신 커밋은 live `git status`로 확인한다.
+- TestFlight 정본: 앱·iOS Widget·Watch 앱·Watch Widget `1.0 (139)`, archive `/private/tmp/TFB907A001.j36e1d/TaptionPlan.xcarchive`, IPA `/private/tmp/TFB907A001.j36e1d/Export/TaptionPlan.ipa`.
+- IPA SHA-256: `65c95869f99112813f4d5f0fed5be638fab7e53b822da4a131567188113ddde5`.
+- Delivery/build UUID: `23d0de21-0047-40f1-b681-30bbfb8d26ca`. App Store Connect App ID: `6797370230`.
+- build 139는 API에서 `VALID`·`expired=false`; `TP Taption Plan 내부 테스트`(ID `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`) 그룹 관계에 포함되고 테스터 1명은 `INSTALLED`다. Chrome 세션 인증 만료로 그룹 빌드·테스터 화면 readback은 미완료다.
+- TestFlight에서는 실제 과금 없는 샌드박스 `Pro 영구 구매`로 접근을 열 수 있다. build 139 클라이언트 설치·구매·launch·실제 터치는 별도 물리 게이트다.
 - 최신 Apple Development Debug `1.0 (138)`은 iPhone 설치·`builtByDeveloper=true`·launch PID `16713`까지 readback했다: `/private/tmp/DEV906I001-apps.json`, `/private/tmp/DEV906I001-launch.json`.
 
 ## 완료된 최신 구현: 등록 장소 좌표 표시

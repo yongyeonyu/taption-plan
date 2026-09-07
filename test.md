@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-07 TFB907A001 TestFlight build 139
+
+- 개발자 체험 초기화 집중 XCTest 1/1과 Simulator Release build가 통과했고, Release 바이너리에는 Debug 초기화 경로가 없다: `/tmp/TRY907A001-tests-r2.xcresult`, `/tmp/TRY907A001-release-dd`.
+- 네 번들 `1.0 (139)` Release archive/export·배포 서명·TestFlight entitlement·`altool --validate-app`을 통과했다. IPA SHA-256은 `65c95869f99112813f4d5f0fed5be638fab7e53b822da4a131567188113ddde5`다: `/private/tmp/TFB907A001.j36e1d`.
+- Delivery/build UUID `23d0de21-0047-40f1-b681-30bbfb8d26ca`는 `VALID`·미만료이며 내부 그룹 관계에서 build 139와 테스터 1명 `INSTALLED`를 API readback했다.
+- Chrome 세션 인증 만료로 그룹 빌드·테스터 화면 확인은 미완료다. TestFlight 앱의 build 139 설치·샌드박스 Pro 구매·launch·실제 기능 테스트도 물리 게이트다.
+
 ## 2026-09-06 DEV906I001 iPhone 설치
 
 - 최신 `main@7a490e9` Apple Development Debug를 deep/strict codesign 후 iPhone 14 Pro에 설치했다.

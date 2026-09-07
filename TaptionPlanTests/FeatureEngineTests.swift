@@ -12701,6 +12701,36 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+#if DEBUG
+    @MainActor
+    func testDeveloperTrialResetStartsFreshFourteenDays() throws {
+        let suiteName = "TaptionPlanTests.proTrialReset.\(UUID().uuidString)"
+        let localStore = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        localStore.removePersistentDomain(forName: suiteName)
+        defer { localStore.removePersistentDomain(forName: suiteName) }
+
+        let persistence = TaptionProTrialPersistence(
+            cloudStore: nil,
+            localStore: localStore,
+            keychainService: nil
+        )
+        let expiredStart = makeDate(2026, 8, 1, 12)
+        _ = persistence.startTrial(at: expiredStart)
+
+        let resetAt = makeDate(2026, 9, 7, 12)
+        let reset = try persistence.resetTrial(at: resetAt)
+
+        XCTAssertEqual(reset.startedAt, resetAt)
+        XCTAssertEqual(
+            TaptionProTrialPolicy.state(record: reset, now: resetAt),
+            .trial(
+                expiresAt: resetAt.addingTimeInterval(14 * 86_400),
+                remainingDays: 14
+            )
+        )
+    }
+#endif
+
     func testProTrialMergeKeepsEarliestStartAndLatestObservedDate() {
         let start = makeDate(2026, 8, 23, 12)
         let merged = TaptionProTrialPolicy.merged([
