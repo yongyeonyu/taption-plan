@@ -1,8 +1,79 @@
 import Foundation
+import CSQLite
 import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testCancellationDuringSnapshotTransactionRollsBackAndAllowsRetry() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 8)
+        let batch = (0..<20_000).map { index in
+            TaptionPlanDayStore.Snapshot(
+                domain: "plan.\(index)", day: day, revision: 1,
+                updatedAt: .now, payload: Data(repeating: 1, count: 1024)
+            )
+        }
+        var observer: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &observer, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(observer) }
+        let write = Task { try await store.saveSnapshots(batch) }
+        var transactionStarted = false
+        for _ in 0..<1_000 {
+            let result = sqlite3_exec(observer, "BEGIN IMMEDIATE;", nil, nil, nil)
+            if result == SQLITE_BUSY {
+                transactionStarted = true
+                break
+            }
+            XCTAssertEqual(result, SQLITE_OK)
+            _ = sqlite3_exec(observer, "ROLLBACK;", nil, nil, nil)
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        write.cancel()
+        XCTAssertTrue(transactionStarted, "Cancel only after SQLite holds its write lock")
+        do {
+            try await write.value
+            XCTFail("An interrupted transaction must not commit")
+        } catch TaptionPlanDayStoreError.database(let code, _) {
+            XCTAssertEqual(code, SQLITE_INTERRUPT)
+        }
+        let rolledBack = try await store.snapshots(day: day)
+        XCTAssertTrue(rolledBack.isEmpty)
+        try await store.saveSnapshot(batch[0])
+        let retried = try await store.snapshot(domain: batch[0].domain, day: day)
+        XCTAssertEqual(retried?.payload, batch[0].payload)
+    }
+
+    func testCancelledSnapshotWritePreservesStoredValueAndAllowsRetry() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 8)
+        let original = TaptionPlanDayStore.Snapshot(
+            domain: "plan", day: day, revision: 1,
+            updatedAt: .now, payload: Data([1])
+        )
+        let replacement = TaptionPlanDayStore.Snapshot(
+            domain: "plan", day: day, revision: 2,
+            updatedAt: .now, payload: Data([2])
+        )
+        try await store.saveSnapshot(original)
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await store.saveSnapshot(replacement)
+        }
+        do {
+            try await cancelled.value
+            XCTFail("Cancelled writes must not commit")
+        } catch is CancellationError {}
+        let preserved = try await store.snapshot(domain: "plan", day: day)
+        XCTAssertEqual(preserved?.payload, original.payload)
+        try await store.saveSnapshot(replacement)
+        let retried = try await store.snapshot(domain: "plan", day: day)
+        XCTAssertEqual(retried?.payload, replacement.payload)
+    }
+
     func testDeleteAllContentKeepsMigrationMarker() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

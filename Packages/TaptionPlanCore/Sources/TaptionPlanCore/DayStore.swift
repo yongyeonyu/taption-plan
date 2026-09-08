@@ -649,11 +649,18 @@ public actor TaptionPlanDayStore {
     }
 
     private func withTransaction(_ body: () throws -> Void) throws {
+        try Task.checkCancellation()
+        sqlite3_progress_handler(database, 1000, { _ in
+            Task<Never, Never>.isCancelled ? 1 : 0
+        }, nil)
+        defer { sqlite3_progress_handler(database, 0, nil, nil) }
         try execute("BEGIN IMMEDIATE TRANSACTION;")
         do {
             try body()
+            try Task.checkCancellation()
             try execute("COMMIT;")
         } catch {
+            sqlite3_progress_handler(database, 0, nil, nil)
             _ = try? execute("ROLLBACK;")
             throw error
         }

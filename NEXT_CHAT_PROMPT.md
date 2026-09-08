@@ -1,5 +1,13 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 LOG908A001 최신 수정·아이폰 설치
+
+- 최종 앱 저장소 18/18 및 DayStore 19/19로 관련 회귀 총 37/37 PASS·0 SKIP·0 FAIL다. 설치 후 짧은 확인 구간에서 추가 crash report는 없었다.
+
+- 최신 아이폰 crash에서도 build 140의 인코딩 및 SQLite 트랜잭션 중 `0xDEAD10CC`가 확인됐다. 기존 인코딩 lock 분리에 iOS 저장·삭제 background assertion과 만료 시 SQLite 취소·rollback을 추가했다.
+- DayStore 회귀 19/19, 아이폰 Debug build·서명·데이터 유지 설치·launch PID `12262`, 약 1분 백그라운드 후 같은 PID 복귀를 확인했다: `/tmp/LOG908A001`.
+- 현재 아이폰은 수정 소스의 Apple Development Debug `1.0 (140)`이며 TestFlight build 140 배포본과 다르다. 새 TestFlight 업로드·Internal 화면 확인과 장시간 물리 재현은 남아 있다.
+
 ## 완료된 최신 구현: build 140 충돌·지도 CPU 완화
 
 - `CRH907A001`에서 build 140의 `0xDEAD10CC` stack과 맞춰 연간 리뷰 등 모든 domain payload 인코딩을 SQLite 파일 lock 획득 전으로 옮겼다.

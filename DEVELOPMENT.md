@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 LOG908A001 · SQLite 저장 중 백그라운드 종료 보강
+
+- 최종 앱 저장소 회귀 18/18 PASS·0 SKIP·0 FAIL: `/tmp/LOG908A001/repository-r2.xcresult`; DayStore와 합계 37/37 PASS다. 설치 후 crash 목록에 새 TaptionPlan 보고서는 없었으며, 이는 짧은 확인 구간의 결과다.
+
+- 아이폰 TestFlight build 140의 10:38·13:40 충돌은 모두 `RUNNINGBOARD/0xDEAD10CC`다. 일치하는 dSYM으로 오전은 WeatherContext 인코딩, 오후는 `DayStore.saveSnapshots`의 SQLite 트랜잭션으로 확인했다: `/tmp/LOG908A001`.
+- 기존 인코딩 lock 분리에 더해 iOS 앱의 SQLite 저장·삭제 임계 구역에 background assertion을 적용했다. 만료 시 작업을 취소하고 SQLite progress callback으로 진행 중 트랜잭션을 중단·rollback한다. 위젯은 별도 컴파일 조건으로 UIApplication 호출을 제외했다.
+- 저장 전 취소와 실제 write lock 획득 후 `SQLITE_INTERRUPT`·rollback·재시도를 포함한 DayStore 회귀 19/19를 통과했다. 아이폰 Debug build·deep/strict codesign·데이터 유지 설치·`builtByDeveloper=true`·launch PID `12262`를 확인했고 약 1분간 백그라운드 전환 후 같은 PID로 복귀했다. TestFlight 배포 및 장시간 반복 재현은 별도다.
+
 ## 2026-09-07 CRH907A001 · 백그라운드 충돌·지도 CPU 완화
 
 - TestFlight build 140의 `0xDEAD10CC` 충돌은 연간 리뷰 payload를 인코딩하는 동안 SQLite 파일 lock을 유지한 저장 경로와 일치했다. 같은 빌드의 CPU 진단은 `MapHomeView` 생성 때 시간 레일 전체를 반복 계산하는 경로를 가리켰다.

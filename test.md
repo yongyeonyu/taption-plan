@@ -1,5 +1,14 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 LOG908A001 · 아이폰 저장 중 종료 수정
+
+- 최종 SQLitePlanRepositoryTests는 18/18 PASS·0 SKIP·0 FAIL, exit 0: `/tmp/LOG908A001/repository-r2.xcresult`. 설치·백그라운드·복귀 후 crash 목록의 최신 보고서는 수정 전 13:40 기록 그대로다: `/tmp/LOG908A001/crashes-after.json`.
+
+- 원본: TestFlight build 140, 10:38·13:40 `0xDEAD10CC`; `/tmp/LOG908A001/morning.ips`, `/tmp/LOG908A001/latest.ips`.
+- DayStore 회귀 19/19 PASS·0 SKIP: `/tmp/LOG908A001/package-tests-r3.log`. 트랜잭션 시작을 두 번째 SQLite 연결로 확인한 뒤 취소하여 `SQLITE_INTERRUPT`, 원상 복구, 재저장을 검증했다.
+- iPhone Debug build·서명 검증·설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12262` 확인: `/tmp/LOG908A001/device-build.log`, `install.json`, `apps-after.json`, `launch.json`. 설정 앱으로 전환한 뒤 약 1분 후 동일 PID로 복귀했다: `background-settings.json`, `resume.json`, `processes.json`.
+- 첫 Simulator XCTest는 testmanagerd 연결 대기 중 중단했으며 테스트 통과로 계산하지 않는다. 장시간 저장·잠금·반복 백그라운드와 TestFlight 설치는 별도 검증이다.
+
 ## 2026-09-07 CRH907A001 백그라운드 충돌·지도 CPU 완화
 
 - build 140 충돌 stack과 일치하도록 대용량 payload 인코딩을 파일 lock 밖으로 이동했고, `MapHomeView` 초기화 중 시간 레일 전체 계산을 기존 비동기 refresh로 넘겼다.

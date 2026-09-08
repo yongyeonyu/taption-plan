@@ -3,6 +3,9 @@ import Compression
 import Darwin
 import Foundation
 import OSLog
+#if os(iOS) && !TAPTION_WIDGET
+import UIKit
+#endif
 #if canImport(TaptionPlanCore)
 import TaptionPlanCore
 #endif
@@ -11,6 +14,35 @@ protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
     func save(_ snapshot: TaptionDataSnapshot) async throws
     func deleteAll() async throws
+}
+
+enum TaptionRepositoryBackgroundExecution {
+    @MainActor
+    static func run<Value: Sendable>(
+        _ operation: @escaping @Sendable () async throws -> Value
+    ) async throws -> Value {
+        #if os(iOS) && !TAPTION_WIDGET
+        let task = Task {
+            try Task.checkCancellation()
+            return try await operation()
+        }
+        let identifier = UIApplication.shared.beginBackgroundTask(
+            withName: "TaptionPlan.repository"
+        ) { task.cancel() }
+        guard identifier != .invalid else {
+            task.cancel()
+            throw CancellationError()
+        }
+        defer { UIApplication.shared.endBackgroundTask(identifier) }
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        #else
+        return try await operation()
+        #endif
+    }
 }
 
 final class TaptionDataFileLock: @unchecked Sendable {
@@ -32,6 +64,7 @@ final class TaptionDataFileLock: @unchecked Sendable {
     }
 
     static func acquire(url: URL) async throws -> TaptionDataFileLock {
+        try Task.checkCancellation()
         let lock = try TaptionDataFileLock(url: url)
         while flock(lock.descriptor, LOCK_EX | LOCK_NB) != 0 {
             let code = errno
@@ -802,6 +835,12 @@ actor SQLitePlanRepository: PlanDataRepository {
             ("plan.yearlyReports", try Self.payload(value.yearlyReports), false),
             ("plan.settings", try Self.payload(value.settings), false),
         ]
+        try await TaptionRepositoryBackgroundExecution.run {
+            try await self.saveProtected(encodedDomains)
+        }
+    }
+
+    private func saveProtected(_ encodedDomains: [(String, Data, Bool)]) async throws {
         let lock = try await TaptionDataFileLock.acquire(url: lockURL)
         defer { lock.unlock() }
         let generation = readGeneration()
@@ -851,6 +890,12 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func deleteAll() async throws {
+        try await TaptionRepositoryBackgroundExecution.run {
+            try await self.deleteAllProtected()
+        }
+    }
+
+    private func deleteAllProtected() async throws {
         let lock = try await TaptionDataFileLock.acquire(url: lockURL)
         defer { lock.unlock() }
         let current = readGeneration()

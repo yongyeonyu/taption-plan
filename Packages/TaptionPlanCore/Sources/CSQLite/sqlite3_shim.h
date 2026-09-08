@@ -14,6 +14,7 @@ void sqlite3_free(void *);
 int sqlite3_prepare_v2(sqlite3 *, const char *, int, sqlite3_stmt **, const char **);
 int sqlite3_finalize(sqlite3_stmt *);
 int sqlite3_step(sqlite3_stmt *);
+void sqlite3_progress_handler(sqlite3 *, int, int (*)(void *), void *);
 int sqlite3_reset(sqlite3_stmt *);
 int sqlite3_clear_bindings(sqlite3_stmt *);
 int sqlite3_changes(sqlite3 *);
