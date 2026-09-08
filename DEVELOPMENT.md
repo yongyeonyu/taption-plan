@@ -4,7 +4,7 @@
 
 - iPhone 14 Pro의 systemCrashLogs에서 확인된 TaptionPlan crash report는 `2026-09-08 15:02:01`, build 140, iOS 26.6.1이며 `EXC_CRASH/SIGKILL`, `RUNNINGBOARD/0xDEAD10CC`였다. Swift 예외나 faulting frame이 아니라 iOS 실행 관리자가 종료한 기록이며, 현재 build 142의 새 crash report는 확인되지 않았다. 원본은 `/tmp/CRH909A001/TaptionPlan-2026-09-08-150201.ips`에 보존했다.
 - 다음 실행이 정상 종료 없이 끝났는지 `TaptionPlanDiagnosticsSession`이 기록하고, 설정의 기존 `로그 보내기`에서 iPhone·Watch 로그와 직전 비정상 종료 상태를 iCloud Drive `Documents/TaptionLogs`로 내보내도록 보강했다. 개인정보·좌표·원시 건강값은 기존 redaction을 유지한다. 기존 백업 파일은 건드리지 않는다.
-- `DiagnosticsLogSupportTests` 10/10 PASS, iOS generic Debug build PASS. 실기기에는 Apple Development Debug `1.0 (144)`를 설치하고 launch PID를 확인했다. iCloud 전송 실제 탭과 TestFlight 설치는 별도 게이트다.
+- `DiagnosticsLogSupportTests` 10/10 PASS, iOS generic Debug build PASS. 실기기에는 Apple Development Debug `1.0 (144)`를 설치하고 launch PID를 확인했다. Release archive/export·altool 검증·업로드도 완료했고, App Store Connect에서 build 144 `제출 준비 완료`를 확인했다. `TP Taption Plan 내부 테스트`에 연결 후 그룹 빌드 화면에서 144와 1명 테스터 화면을 readback했다. 테스터 설치 표시는 아직 142다.
 
 ## 2026-09-08 REV908A001 · 다방면 코드리뷰 결과
 

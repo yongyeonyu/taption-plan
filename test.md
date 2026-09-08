@@ -3,7 +3,7 @@
 ## 2026-09-09 CRH909A001 · 크래시 진단 및 로그 전송
 
 - iPhone 14 Pro crash report readback: build 140, `EXC_CRASH/SIGKILL`, `RUNNINGBOARD/0xDEAD10CC`, 2026-09-08 15:02:01. 현재 build 142 신규 crash report는 없음. 원본 `/tmp/CRH909A001/TaptionPlan-2026-09-08-150201.ips`.
-- DiagnosticsLogSupportTests 10/10 PASS. generic Debug build PASS. Apple Development Debug `1.0 (144)` 설치·launch readback PASS.
+- DiagnosticsLogSupportTests 10/10 PASS. generic Debug build PASS. Apple Development Debug `1.0 (144)` 설치·launch readback PASS. Release build 144 `제출 준비 완료`, Internal 그룹 연결 및 그룹 빌드 144/테스터 화면 노출 PASS. 테스터 설치 표시는 142다.
 - 설정 `로그 보내기`를 실제로 눌러 iCloud Drive `TaptionLogs` 파일 생성·Watch 로그 수신·비정상 종료 marker 반영을 확인하는 실기기 게이트가 남아 있다.
 
 ## 2026-09-08 REV908A001 · 코드리뷰 게이트
