@@ -1,5 +1,12 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 WAK908B001 졸라맨 표시 순서
+
+- 최신 아이폰은 이 수정이 포함된 Apple Development Debug `1.0 (140)`이며 설치·버전·launch PID `12802`를 확인했다: `/tmp/WAK908B001`.
+
+- 졸라맨을 다른 지도 마커보다 위에 표시하도록 Apple 콘텐츠 갱신·카메라 변경 완료·다른 마커 선택 후 재정렬을 보강했다. Vector·좌표·크기·검색창/시간표 계층은 유지한다.
+- 관련 회귀 2/2 및 Simulator Debug build 통과: `/tmp/WAK908B001/tests.xcresult`. 실제 겹침·줌 화면은 별도 확인한다.
+
 ## 2026-09-08 CAN908A001 취소 오류 팝업 보완
 
 - 최신 아이폰은 이 수정이 포함된 Apple Development Debug `1.0 (140)`이며 설치·버전·launch PID `12388`를 readback했다: `/tmp/CAN908A001`.

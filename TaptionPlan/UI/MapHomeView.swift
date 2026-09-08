@@ -13905,6 +13905,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             updateRoutes(in: mapView)
             updateAnnotations(in: mapView)
             updateWalker(in: mapView)
+            bringWalkerToFront(in: mapView)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
@@ -13989,6 +13990,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            bringWalkerToFront(in: mapView)
             publishCameraFrame(from: mapView, isFinal: true)
         }
 
@@ -14048,6 +14050,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 parent.onAnnotationSelected(annotation.kind)
             }
             mapView.deselectAnnotation(annotation, animated: false)
+            bringWalkerToFront(in: mapView)
         }
 
         func mapView(
@@ -14393,6 +14396,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
                 }
             }
+            bringWalkerToFront(in: mapView)
+        }
+
+        private func bringWalkerToFront(in mapView: MKMapView) {
             guard let walkerAnnotation,
                   let view = mapView.view(for: walkerAnnotation) else { return }
             view.zPriority = .max

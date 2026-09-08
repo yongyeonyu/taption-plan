@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 WAK908B001 · 졸라맨을 지도 마커 최상단에 유지
+
+- 아이폰 Debug build·deep/strict codesign·기존 데이터 유지 설치·`builtByDeveloper=true`·launch PID `12802` 확인: `/tmp/WAK908B001`. 실제 겹침/줌 화면과 TestFlight 배포는 별도다.
+
+- 대표님이 다른 지도 마커보다 위에 표시하는 범위로 확정했다. 기존 Apple 최상위 설정이 annotation 추가 때만 재정렬되어, 콘텐츠·카메라·선택 갱신 후 보정이 빠져 있었다.
+- 기존 최상위 설정을 `bringWalkerToFront`로 재사용해 콘텐츠 갱신·카메라 변경 완료·다른 마커 선택 후 졸라맨만 앞으로 올린다. 전체 annotation을 매번 순회하지 않으며 Vector의 기존 zIndex, 좌표 anchor, 검색창·시간표 계층은 유지한다.
+- 관련 표시 순서 회귀 2/2 PASS·0 SKIP·0 FAIL 및 Simulator Debug build를 통과했다: `/tmp/WAK908B001/tests.xcresult`.
+
 ## 2026-09-08 CAN908A001 · 위치 기록 취소 팝업 제거
 
 - 아이폰 Debug build·deep/strict codesign·기존 데이터 유지 설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12388`를 확인했다: `/tmp/CAN908A001`. TestFlight 배포본은 별도다.

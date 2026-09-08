@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 WAK908B001 · 졸라맨 지도 마커 최상단
+
+- iPhone Debug build·서명·설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12802` 확인: `/tmp/WAK908B001/device-build.log`, `install.json`, `apps.json`, `launch.json`.
+
+- Apple 마커 우선순위와 지도/검색 UI 계층 회귀 2/2 PASS·0 SKIP·0 FAIL, Simulator Debug build: `/tmp/WAK908B001/tests.xcresult`.
+- 실제 겹친 장소·메모 마커 선택 및 줌 조작 중 졸라맨 표시 확인은 물리 화면 검증으로 남긴다.
+
 ## 2026-09-08 CAN908A001 · 위치 기록 취소 팝업
 
 - iPhone Debug build·서명·설치·`builtByDeveloper=true`·launch PID `12388` 확인: `/tmp/CAN908A001/device-build.log`, `install.json`, `apps.json`, `launch.json`. 실제 사용자 화면 재확인과 TestFlight 배포는 별도다.
