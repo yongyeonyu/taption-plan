@@ -297,7 +297,7 @@ struct SettingsView: View {
                                     blue: 0.75
                                 ),
                                 title: "로그 보내기",
-                                subtitle: "iPhone · Apple Watch 진단 로그를 iCloud Drive > TaptionLogs에 저장",
+                                subtitle: "iPhone · Apple Watch 로그와 직전 비정상 종료 상태를 iCloud Drive > TaptionLogs에 저장",
                                 value: model.diagnosticsExportStatus
                             ) {
                                 Task { await model.exportDiagnosticsToICloud() }

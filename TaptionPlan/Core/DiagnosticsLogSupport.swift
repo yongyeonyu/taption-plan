@@ -120,6 +120,52 @@ enum TaptionPlanDiagnosticsLogPolicy {
     }
 }
 
+struct TaptionPlanDiagnosticsSession: Sendable {
+    private static let activeKey = "taption.diagnostics.session.active.v1"
+    private static let startedAtKey = "taption.diagnostics.session.started-at.v1"
+    private static let lastUnfinishedKey =
+        "taption.diagnostics.session.last-unfinished.v1"
+    private static let lastStartedAtKey =
+        "taption.diagnostics.session.last-started-at.v1"
+
+    let previousSessionWasUnfinished: Bool?
+    let previousSessionStartedAt: Date?
+
+    @discardableResult
+    static func begin(defaults: UserDefaults = .standard) -> Self {
+        let hadActiveSession = defaults.object(forKey: activeKey) as? Bool
+        let previousStartedAt = defaults.object(forKey: startedAtKey) as? Date
+        if let hadActiveSession {
+            defaults.set(hadActiveSession, forKey: lastUnfinishedKey)
+            defaults.set(previousStartedAt, forKey: lastStartedAtKey)
+        }
+        defaults.set(true, forKey: activeKey)
+        defaults.set(Date.now, forKey: startedAtKey)
+        return Self(
+            previousSessionWasUnfinished: hadActiveSession,
+            previousSessionStartedAt: previousStartedAt
+        )
+    }
+
+    static func markCleanTermination(defaults: UserDefaults = .standard) {
+        defaults.set(false, forKey: activeKey)
+    }
+
+    static func latestSummary(
+        defaults: UserDefaults = .standard
+    ) -> [String: String] {
+        var values: [String: String] = [:]
+        if let unfinished = defaults.object(forKey: lastUnfinishedKey) as? Bool {
+            values["previous_session_unfinished"] = String(unfinished)
+        }
+        if let startedAt = defaults.object(forKey: lastStartedAtKey) as? Date {
+            values["previous_session_started_at"] =
+                String(startedAt.timeIntervalSince1970)
+        }
+        return values
+    }
+}
+
 /// Safe, compact movement metadata for support packages. Coordinates and raw
 /// sensor samples stay out of the export, while mode and subway-route names
 /// make a transit inference auditable from the iCloud log alone.

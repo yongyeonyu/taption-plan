@@ -24,6 +24,36 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         try super.tearDownWithError()
     }
 
+    func testDiagnosticsSessionMarksUnfinishedPreviousLaunch() throws {
+        let suite = "TaptionPlanDiagnosticsSessionTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let first = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        XCTAssertNil(first.previousSessionWasUnfinished)
+
+        let second = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        XCTAssertEqual(second.previousSessionWasUnfinished, true)
+        XCTAssertNotNil(second.previousSessionStartedAt)
+        XCTAssertEqual(
+            TaptionPlanDiagnosticsSession.latestSummary(defaults: defaults)[
+                "previous_session_unfinished"
+            ],
+            "true"
+        )
+    }
+
+    func testDiagnosticsSessionMarksCleanTermination() throws {
+        let suite = "TaptionPlanDiagnosticsSessionTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        _ = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        TaptionPlanDiagnosticsSession.markCleanTermination(defaults: defaults)
+        let next = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        XCTAssertEqual(next.previousSessionWasUnfinished, false)
+    }
+
     func testPrimaryWriteReportsPrimarySuccess() throws {
         let primary = rootURL.appendingPathComponent("primary")
         let fallback = rootURL.appendingPathComponent("fallback")

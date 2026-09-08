@@ -4999,6 +4999,10 @@ final class AppModel {
             "watch_payload_skipped": String(watchPayloadSkipCount),
         ]
         summary.merge(
+            TaptionPlanDiagnosticsSession.latestSummary(),
+            uniquingKeysWith: { _, new in new }
+        )
+        summary.merge(
             TaptionPlanDiagnosticsTravelSummary.fields(for: snapshot.travel),
             uniquingKeysWith: { _, new in new }
         )

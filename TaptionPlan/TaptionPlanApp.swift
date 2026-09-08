@@ -154,6 +154,16 @@ final class TaptionPlanAppDelegate:
         didFinishLaunchingWithOptions launchOptions:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        let session = TaptionPlanDiagnosticsSession.begin()
+        if session.previousSessionWasUnfinished == true {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "previous_session_unfinished",
+                level: .error,
+                fields: session.previousSessionStartedAt.map {
+                    ["started_at": String($0.timeIntervalSince1970)]
+                } ?? [:]
+            )
+        }
         TaptionPlanDeviceLocalStorage.excludeFromBackup()
         Task.detached(priority: .utility) {
             try? TaptionPlanDiagnosticsICloudExporter()
@@ -198,6 +208,10 @@ final class TaptionPlanAppDelegate:
             await model.performHealthBackgroundRefresh()
         }
         return true
+    }
+
+    func applicationWillTerminate(_ application: UIApplication) {
+        TaptionPlanDiagnosticsSession.markCleanTermination()
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {

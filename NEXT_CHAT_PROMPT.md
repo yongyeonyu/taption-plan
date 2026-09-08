@@ -1,5 +1,10 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-09 CRH909A001 · 크래시 및 진단 로그
+
+- iPhone crash report는 build 140의 `RUNNINGBOARD/0xDEAD10CC` SIGKILL이며 build 142 새 crash report는 미확인이다. `/tmp/CRH909A001`에 원본을 보존했다.
+- 비정상 종료 세션 marker와 기존 설정의 iCloud `TaptionLogs` 전송을 보강했다. DiagnosticsLogSupportTests 10/10, Debug device build/install/launch `1.0 (144)` PASS.
+
 ## 2026-09-08 REV908A001 · 리뷰 및 다음 배포
 
 - 저장·백업, 지도·활동, Watch·Live Activity, 릴리스 경계를 병렬 검토했다. snapshot 크기 제한, MapKit stale 좌표 덮어쓰기, Dynamic Island catalog title fallback을 수정했다.
