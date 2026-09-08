@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 REV908A001 · 다방면 코드리뷰 결과
+
+- 저장·백업: snapshot 복원·저장에도 raw와 같은 크기 제한 검증을 추가해 대형 payload 메모리 할당을 거부한다. version 1 outer metadata 인증과 PIN 변경 migration은 기존 형식 호환을 깨지 않도록 별도 판매/복원 게이트로 남긴다.
+- 지도·활동: 현재 위치 졸라맨이 MapKit stale 좌표로 덮어써지던 경로를 제거하고 모델 좌표 단일 소스를 사용한다. 등록 장소 좌표·업무·식사·수업·취미 소품 전용 렌더러는 유지한다.
+- Watch·Live Activity: command token 단회 소비·source allowlist·현재 활동명 전달 및 구형 payload optional decode를 확인했다. 추가 결함은 확인하지 않았다.
+- 릴리스·상거래: 구매 잠금 정책과 TestFlight entitlement를 확인했다. 계약·심사·유료화는 변경하지 않는다.
+- 리뷰 결론: 백업 크기 제한과 현재 위치 좌표 단일 소스만 수정했다. Dynamic Island는 catalog title fallback을 보강했다. 현재 build 143을 새로 검증한다.
+
 ## 2026-09-08 BAK908A001 · v1 iCloud 백업 호환
 
 - 실제 iCloud Drive에서 복사한 `2026-08.taptionbackup`, `2026-09.taptionbackup`, `Raw Sensors/2026-09.rawsensorbackup`의 envelope은 모두 version 1이었고, 원본은 `/tmp/BAK908A001.pgwpKC`에 보존했다. 세 파일의 ciphertext SHA256은 각 `payloadDigest`와 일치했다.

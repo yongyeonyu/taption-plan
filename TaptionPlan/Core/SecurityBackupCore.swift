@@ -1105,7 +1105,16 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
                 authenticating: authenticatedData
             )
         }
-        let data = TaptionSnapshotCompression.decode(compressed)
+        guard compressed.count <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize else {
+            throw TaptionSnapshotCompressionError.uncompressedSizeExceedsLimit(
+                actual: UInt64(compressed.count),
+                maximum: TaptionSnapshotCompression.maximumRawSensorUncompressedSize
+            )
+        }
+        let data = try TaptionSnapshotCompression.decodeChecked(
+            compressed,
+            maximumSize: TaptionSnapshotCompression.maximumRawSensorUncompressedSize
+        )
         if let payload = try? JSONDecoder.taptionPlan.decode(
             PlanCloudBackupPayload.self,
             from: data
@@ -2362,6 +2371,12 @@ final class PlanSecurityBackupService {
         )
         let payload = preserved.payload
         let encoded = try JSONEncoder.taptionPlan.encode(payload)
+        guard encoded.count <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize else {
+            throw TaptionSnapshotCompressionError.uncompressedSizeExceedsLimit(
+                actual: UInt64(encoded.count),
+                maximum: TaptionSnapshotCompression.maximumRawSensorUncompressedSize
+            )
+        }
         let compressed = TaptionSnapshotCompression.encode(encoded)
         let archiveKey = try Self.randomKey()
         let archiveGenerationID = generationID ?? preserved.generationID

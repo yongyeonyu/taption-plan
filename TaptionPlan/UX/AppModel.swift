@@ -6433,7 +6433,9 @@ final class AppModel {
                 $0.id == categoryID
             }?.systemImage ?? TimelineRowKind(categoryID: categoryID)?.systemImage
                 ?? "sparkles"
-            let title = TimelineRowKind.title(forCategoryID: categoryID) ?? "활동"
+            let title = RecordClassificationCatalog.categories.first {
+                $0.id == categoryID
+            }?.title ?? TimelineRowKind.title(forCategoryID: categoryID) ?? "활동"
             return (title, categoryID, systemImage)
         }
         return (

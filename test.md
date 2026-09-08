@@ -1,5 +1,10 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 REV908A001 · 코드리뷰 게이트
+
+- 저장·백업, 지도·활동, Watch·Live Activity, 릴리스 경계 리뷰에서 snapshot 크기 제한·좌표 단일 소스·활동명 fallback을 수정했다. v1 outer metadata/PIN 변경 migration은 별도 복원 게이트다.
+- 자동 테스트·Debug·Release·TestFlight 처리·Internal 그룹/API/UI·실기기 설치/실행은 서로 분리해 기록한다. build 143 실기기 설치·터치·발열·Watch 수신은 배포 후 확인한다.
+
 ## 2026-09-08 BAK908A001 · 구형 백업 호환 회귀
 
 - 실제 iCloud 파일 3건을 읽기 전용 복사했고 모두 version 1·ciphertext SHA256/digest 일치: `/tmp/BAK908A001.pgwpKC`.

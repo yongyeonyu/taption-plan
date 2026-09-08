@@ -14153,28 +14153,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateWalker(in mapView: MKMapView) {
-            let playback = parent.playback.map { playback in
-                guard playback.followsUserLocation,
-                      let location = mapView.userLocation.location,
-                      location.horizontalAccuracy >= 0,
-                      location.horizontalAccuracy
-                        <= MapCurrentLocationAnchorPolicy
-                            .maximumPreciseAccuracy,
-                      abs(location.timestamp.timeIntervalSinceNow) <= 5 * 60,
-                      CLLocationCoordinate2DIsValid(location.coordinate) else {
-                    return playback
-                }
-                return MapHomeApplePlayback(
-                    coordinate: location.coordinate,
-                    cameraCoordinate: location.coordinate,
-                    headingDegrees: playback.headingDegrees,
-                    action: playback.action,
-                    accessibilityLabel: playback.accessibilityLabel,
-                    phase: playback.phase,
-                    followsUserLocation: true,
-                    stickmanAnimationPhase: playback.stickmanAnimationPhase
-                )
-            }
+            let playback = parent.playback
             let playbackSignature: String? = playback.map { playback in
                 let parts: [String] = [
                     String(playback.coordinate.latitude),

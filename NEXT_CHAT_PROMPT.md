@@ -1,5 +1,10 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 REV908A001 · 리뷰 및 다음 배포
+
+- 저장·백업, 지도·활동, Watch·Live Activity, 릴리스 경계를 병렬 검토했다. snapshot 크기 제한, MapKit stale 좌표 덮어쓰기, Dynamic Island catalog title fallback을 수정했다.
+- build 143은 문서/프로젝트 버전 갱신 후 archive/export → 처리 → Internal 그룹 API/UI → 실기기 게이트 순서로 확인한다.
+
 ## 2026-09-08 BAK908A001 · 최신 백업 오류 수정
 
 - 실제 iCloud 백업이 version 1인데 앱이 version 2/AAD만 허용해 `백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.`를 표시했다. v1 AES-GCM 무-AAD 읽기를 복구하고 v2 metadata AAD 검증은 유지했다.
