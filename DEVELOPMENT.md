@@ -6,6 +6,7 @@
 - build 141 이후 코드가 version 2와 AAD를 요구하면서 구형 파일을 읽기 전에 `invalidArchive`로 거부한 것이 화면 오류의 원인이다. version 1은 기존 AES-GCM 방식(추가 authenticated data 없음)으로만 읽고, version 2는 기존 metadata AAD 검증을 계속 적용한다. 키를 우회하거나 파일을 삭제·교체하지 않는다.
 - `SecurityBackupCoreTests` 55/55 PASS·0 FAIL·0 SKIP: 실제 v1 snapshot/raw envelope 생성·digest 검증·복호화 회귀 포함. iOS Debug generic build PASS: `/tmp/BAK908A001.pgwpKC/{focused.xcresult,debug-device.log}`.
 - 사용자의 PIN 없이는 실제 iCloud payload 복호화 성공을 확인할 수 없으므로 원본 데이터 내용과 실제 기기 복원은 별도 게이트다. 성공적인 다음 저장은 현재 v2 형식으로 기록하며 기존 파일 쓰기는 atomic 경로를 따른다.
+- TestFlight build 142 archive/export·서명·altool 검증·업로드·처리 `VALID` PASS. Delivery UUID `ded15358-7e3b-4360-917a-7c264accfe48`, IPA SHA256 `b1994b9355c8f5b7b661b90eba459198b3f7184fea052c99b9a8f4be7d0391be`. Internal 그룹 API에 연결했고 1명 테스터를 readback했다. Chrome 페이지는 새로고침 뒤 접근성 트리가 비어 build 142 화면 재확인이 되지 않아, 브라우저 UI readback은 미완료로 남긴다.
 
 ## 2026-09-08 INT908A001 · 통합 수정 / build 141
 

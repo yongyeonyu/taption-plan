@@ -4,10 +4,11 @@
 
 - 실제 iCloud 백업이 version 1인데 앱이 version 2/AAD만 허용해 `백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.`를 표시했다. v1 AES-GCM 무-AAD 읽기를 복구하고 v2 metadata AAD 검증은 유지했다.
 - 원본 복사·ciphertext digest 확인: `/tmp/BAK908A001.pgwpKC`; SecurityBackupCoreTests 55/55 PASS·Debug generic build PASS. 실제 PIN 복호화·iPhone 복원은 별도 게이트다.
+- build 142 TestFlight archive/export·검증·업로드·처리 `VALID`, Internal API 연결·테스터 1명 readback 완료. Delivery `ded15358-7e3b-4360-917a-7c264accfe48`; 브라우저 새로고침 뒤 AX 트리가 비어 142 UI readback은 미완료.
 
 ## 2026-09-08 INT908A001 · 최신 진행 정본
 
-- 소스 `e170ba3`, build 141. 전체 1,077 PASS·1 SKIP·0 FAIL, 독립 검토 반영 후 집중 71/71 PASS와 앱·위젯·Watch Debug build PASS. `/tmp/INT908A001.Cn2d4V`.
+- 소스 `e170ba3` + `7ddb22d`, build 142. 기존 전체 1,077 PASS·1 SKIP·0 FAIL, BAK908A001 집중 55/55 PASS와 앱·위젯·Watch Debug/Release archive PASS. `/tmp/BAK908A001.pgwpKC`.
 - ‘전체 설정’ 버튼만 제거하고 다이나믹 아일랜드 축소 화면은 정상 활동 그림/현재 활동명으로 변경했다. Watch 일반 명령 단회 capability·외부 HealthKit 운동 소스 검증도 적용했다. 구매 잠금 해제는 유지한다.
 - PID 12968의 15:02 post-fix DEAD10CC가 raw 읽기 decode/file lock에서 발생해 LOG908B001로 decode 잠금 분리·DB background assertion·취소를 보완했다. BAK907A001 암호화 실패 원인은 별도로 미확정이다.
 - Release archive/export·서명·검증·업로드·처리 PASS, 141 `VALID`. UUID `4a600796-ed30-4c23-9749-d4fb3b0af819`. Internal 그룹 연결(204) 후 API 및 Chrome 그룹 빌드 `1.0 (141)` ‘테스트 중’·테스터 1명 화면까지 확인했다. 테스터의 실제 설치는 아직 140이며 141 설치/실행으로 보고하지 않는다.

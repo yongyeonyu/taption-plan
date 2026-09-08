@@ -5,6 +5,7 @@
 - 실제 iCloud 파일 3건을 읽기 전용 복사했고 모두 version 1·ciphertext SHA256/digest 일치: `/tmp/BAK908A001.pgwpKC`.
 - version 1은 구형 AES-GCM 추가 인증 데이터 없음 경로로 읽고, version 2 AAD 검증은 유지한다. SecurityBackupCoreTests 55/55 PASS·0 SKIP·0 FAIL, iOS Debug generic build PASS.
 - PIN 입력이 필요한 실제 복호화·복원·TestFlight 기기 화면은 아직 미확인이다. 원본 백업은 삭제·덮어쓰지 않았다.
+- build 142 TestFlight archive/export·검증·업로드·처리 `VALID`·Internal API 연결 및 테스터 1명 readback PASS. Delivery `ded15358-7e3b-4360-917a-7c264accfe48`. Chrome 새로고침 후 페이지 AX가 비어 그룹 UI의 142 노출은 미확인이다.
 
 ## 2026-09-08 INT908A001 · build 141 검증
 
