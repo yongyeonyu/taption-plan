@@ -1055,7 +1055,7 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
         pinKeyData: Data? = nil,
         accountKeyData: Data? = nil
     ) throws -> PlanCloudBackupPayload {
-        guard version == Self.currentVersion,
+        guard version == 1 || version == Self.currentVersion,
               payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
@@ -1084,18 +1084,27 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
         archiveKey: Data
     ) throws -> PlanCloudBackupPayload {
         let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
-        let authenticatedData = try PlanArchiveMetadata.authenticatedData(
-            version: version,
-            monthKey: monthKey,
-            accountIdentifier: accountIdentifier,
-            createdAt: createdAt,
-            generationID: generationID
-        )
-        let compressed = try AES.GCM.open(
-            sealed,
-            using: SymmetricKey(data: archiveKey),
-            authenticating: authenticatedData
-        )
+        let compressed: Data
+        if version == 1 {
+            // Version 1 authenticated only the GCM payload and its digest.
+            compressed = try AES.GCM.open(
+                sealed,
+                using: SymmetricKey(data: archiveKey)
+            )
+        } else {
+            let authenticatedData = try PlanArchiveMetadata.authenticatedData(
+                version: version,
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: createdAt,
+                generationID: generationID
+            )
+            compressed = try AES.GCM.open(
+                sealed,
+                using: SymmetricKey(data: archiveKey),
+                authenticating: authenticatedData
+            )
+        }
         let data = TaptionSnapshotCompression.decode(compressed)
         if let payload = try? JSONDecoder.taptionPlan.decode(
             PlanCloudBackupPayload.self,
@@ -1165,7 +1174,7 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
         pinKeyData: Data? = nil,
         accountKeyData: Data? = nil
     ) throws -> PlanCloudRawSensorPayload {
-        guard version == Self.currentVersion,
+        guard version == 1 || version == Self.currentVersion,
               payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
@@ -1203,18 +1212,27 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
         archiveKey: Data
     ) throws -> PlanCloudRawSensorPayload {
         let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
-        let authenticatedData = try PlanArchiveMetadata.authenticatedData(
-            version: version,
-            monthKey: monthKey,
-            accountIdentifier: accountIdentifier,
-            createdAt: createdAt,
-            generationID: generationID
-        )
-        let compressed = try AES.GCM.open(
-            sealed,
-            using: SymmetricKey(data: archiveKey),
-            authenticating: authenticatedData
-        )
+        let compressed: Data
+        if version == 1 {
+            // Version 1 authenticated only the GCM payload and its digest.
+            compressed = try AES.GCM.open(
+                sealed,
+                using: SymmetricKey(data: archiveKey)
+            )
+        } else {
+            let authenticatedData = try PlanArchiveMetadata.authenticatedData(
+                version: version,
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: createdAt,
+                generationID: generationID
+            )
+            compressed = try AES.GCM.open(
+                sealed,
+                using: SymmetricKey(data: archiveKey),
+                authenticating: authenticatedData
+            )
+        }
         guard compressed.count
             <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize
         else {

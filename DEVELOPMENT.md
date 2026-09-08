@@ -1,5 +1,12 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 BAK908A001 · v1 iCloud 백업 호환
+
+- 실제 iCloud Drive에서 복사한 `2026-08.taptionbackup`, `2026-09.taptionbackup`, `Raw Sensors/2026-09.rawsensorbackup`의 envelope은 모두 version 1이었고, 원본은 `/tmp/BAK908A001.pgwpKC`에 보존했다. 세 파일의 ciphertext SHA256은 각 `payloadDigest`와 일치했다.
+- build 141 이후 코드가 version 2와 AAD를 요구하면서 구형 파일을 읽기 전에 `invalidArchive`로 거부한 것이 화면 오류의 원인이다. version 1은 기존 AES-GCM 방식(추가 authenticated data 없음)으로만 읽고, version 2는 기존 metadata AAD 검증을 계속 적용한다. 키를 우회하거나 파일을 삭제·교체하지 않는다.
+- `SecurityBackupCoreTests` 55/55 PASS·0 FAIL·0 SKIP: 실제 v1 snapshot/raw envelope 생성·digest 검증·복호화 회귀 포함. iOS Debug generic build PASS: `/tmp/BAK908A001.pgwpKC/{focused.xcresult,debug-device.log}`.
+- 사용자의 PIN 없이는 실제 iCloud payload 복호화 성공을 확인할 수 없으므로 원본 데이터 내용과 실제 기기 복원은 별도 게이트다. 성공적인 다음 저장은 현재 v2 형식으로 기록하며 기존 파일 쓰기는 atomic 경로를 따른다.
+
 ## 2026-09-08 INT908A001 · 통합 수정 / build 141
 
 - 소스 commit: `e170ba3`. 구매 비활성·만료 후 테스트 접근 허용은 유지한다. 계약 동의·심사 제출·유료화 재개는 수행하지 않는다.

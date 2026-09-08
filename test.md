@@ -1,5 +1,11 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 BAK908A001 · 구형 백업 호환 회귀
+
+- 실제 iCloud 파일 3건을 읽기 전용 복사했고 모두 version 1·ciphertext SHA256/digest 일치: `/tmp/BAK908A001.pgwpKC`.
+- version 1은 구형 AES-GCM 추가 인증 데이터 없음 경로로 읽고, version 2 AAD 검증은 유지한다. SecurityBackupCoreTests 55/55 PASS·0 SKIP·0 FAIL, iOS Debug generic build PASS.
+- PIN 입력이 필요한 실제 복호화·복원·TestFlight 기기 화면은 아직 미확인이다. 원본 백업은 삭제·덮어쓰지 않았다.
+
 ## 2026-09-08 INT908A001 · build 141 검증
 
 - 소스 `e170ba3`: 전체 1,077 PASS·1 기존 StoreKit SKIP·0 FAIL, 후속 집중 71/71 PASS, 앱·Widget·Watch Debug device build PASS. `/tmp/INT908A001.Cn2d4V`.

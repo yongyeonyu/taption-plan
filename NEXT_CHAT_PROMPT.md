@@ -1,5 +1,10 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 BAK908A001 · 최신 백업 오류 수정
+
+- 실제 iCloud 백업이 version 1인데 앱이 version 2/AAD만 허용해 `백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.`를 표시했다. v1 AES-GCM 무-AAD 읽기를 복구하고 v2 metadata AAD 검증은 유지했다.
+- 원본 복사·ciphertext digest 확인: `/tmp/BAK908A001.pgwpKC`; SecurityBackupCoreTests 55/55 PASS·Debug generic build PASS. 실제 PIN 복호화·iPhone 복원은 별도 게이트다.
+
 ## 2026-09-08 INT908A001 · 최신 진행 정본
 
 - 소스 `e170ba3`, build 141. 전체 1,077 PASS·1 SKIP·0 FAIL, 독립 검토 반영 후 집중 71/71 PASS와 앱·위젯·Watch Debug build PASS. `/tmp/INT908A001.Cn2d4V`.

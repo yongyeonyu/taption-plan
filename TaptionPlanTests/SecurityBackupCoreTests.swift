@@ -2,6 +2,18 @@ import CryptoKit
 import XCTest
 @testable import TaptionPlan
 
+private struct VersionOneArchiveEnvelope: Codable {
+    let version: Int
+    let monthKey: String
+    let accountIdentifier: String
+    let createdAt: Date
+    let encryptedPayload: Data
+    let wrappedPayloadKey: Data
+    let accountWrappedPayloadKey: Data
+    let payloadDigest: Data
+    let generationID: UUID?
+}
+
 @MainActor
 final class SecurityBackupCoreTests: XCTestCase {
     func testBiometricAttemptGateRunsOncePerLockGeneration() {
@@ -1789,6 +1801,47 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
     }
 
+    func testVersionOneSnapshotArchiveStillDecodes() throws {
+        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+            Data(repeating: 4, count: 16)
+        }
+        let archive = try JSONDecoder().decode(
+            PlanMonthlyArchive.self,
+            from: makeVersionOneArchiveData(
+            payload: PlanCloudBackupPayload(snapshot: .empty),
+            monthKey: "2026-09",
+            accountIdentifier: "account-a",
+            createdAt: Date(timeIntervalSince1970: 1_788_629_099)
+            )
+        )
+
+        let decoded = try archive.decodedPayload(
+            pinKeyData: verifier.keyMaterial
+        )
+        assertEmptySnapshot(decoded.snapshot)
+    }
+
+    func testVersionOneRawSensorArchiveStillDecodes() throws {
+        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+            Data(repeating: 4, count: 16)
+        }
+        let archive = try JSONDecoder().decode(
+            PlanRawSensorMonthlyArchive.self,
+            from: makeVersionOneArchiveData(
+            payload: PlanCloudRawSensorPayload(monthKey: "2026-09"),
+            monthKey: "2026-09",
+            accountIdentifier: "account-a",
+            createdAt: Date(timeIntervalSince1970: 1_788_629_099)
+            )
+        )
+
+        let decoded = try archive.decodedPayload(
+            pinKeyData: verifier.keyMaterial
+        )
+        XCTAssertEqual(decoded.monthKey, "2026-09")
+        XCTAssertTrue(decoded.isEmpty)
+    }
+
     func testBackupRouteReducerKeepsEndpointsAndBoundsDenseGPS() {
         let start = Date(timeIntervalSince1970: 1_787_538_400)
         let readings = (0..<70_000).map { index in
@@ -2256,6 +2309,45 @@ final class SecurityBackupCoreTests: XCTestCase {
             biometricAuthenticator: biometric,
             settingsDefaults: defaults
         )
+    }
+
+    private func makeVersionOneArchiveData<Payload: Encodable>(
+        payload: Payload,
+        monthKey: String,
+        accountIdentifier: String,
+        createdAt: Date
+    ) throws -> Data {
+        let key = Data(repeating: 9, count: 32)
+        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+            Data(repeating: 4, count: 16)
+        }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        encoder.outputFormatting = [.sortedKeys]
+        let compressed = TaptionSnapshotCompression.encode(
+            try encoder.encode(payload)
+        )
+        let encrypted = try AES.GCM.seal(
+            compressed,
+            using: SymmetricKey(data: key)
+        ).combined!
+        let wrapped = try AES.GCM.seal(
+            key,
+            using: SymmetricKey(data: verifier.keyMaterial)
+        ).combined!
+        let envelope = VersionOneArchiveEnvelope(
+            version: 1,
+            monthKey: monthKey,
+            accountIdentifier: accountIdentifier,
+            createdAt: createdAt,
+            encryptedPayload: encrypted,
+            wrappedPayloadKey: wrapped,
+            accountWrappedPayloadKey: Data(),
+            payloadDigest: Data(SHA256.hash(data: encrypted)),
+            generationID: nil
+        )
+        let data = try encoder.encode(envelope)
+        return data
     }
 
     private func assertEmptySnapshot(_ snapshot: TaptionDataSnapshot) {
