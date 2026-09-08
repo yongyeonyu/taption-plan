@@ -1,5 +1,42 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-09 REL909A001 · 메인 정리·TestFlight 재개 기준
+
+- 워크트리는 `main`에서 clean이며 기준 commit은 `480d66d`다. `origin/main`과 동일하고 임시 브랜치는 사용하지 않는다.
+- 앱 소스가 반영된 최신 commit은 `226d105`이고 앱/Widget/Watch/Watch Widget build는 `1.0 (144)`다. 이후 `480d66d`는 개발문서 기록만 변경했다.
+- build 144는 Release archive/export·서명·`altool --validate-app`·App Store Connect upload/processing `COMPLETE`·build `VALID`까지 완료했다.
+- `TP Taption Plan 내부 테스트`에 build 144를 연결했고 그룹 화면에서 `1.0 (144) · 테스트 중`, 테스터 화면에서 1명 노출을 readback했다. 이는 TestFlight 클라이언트 설치 증거가 아니다.
+- 대표님 iPhone 14 Pro의 TestFlight 설치 표시는 아직 `1.0 (142)`다. build 144 설치·launch·실제 지도/로그 화면과 설정의 `로그 보내기` 후 iCloud `TaptionLogs` 파일 readback을 다음 채팅에서 확인한다.
+
+### 다음 채팅에 그대로 붙여넣기
+
+```text
+대표님 요청 `REL909A001` 이어서 진행해.
+
+작업 폴더는 `/Users/u_mo_c/Documents/taption plan`, 브랜치는 `main`만 사용한다. 먼저 아래를 읽고 live 상태를 대조해.
+
+1. `AGENTS.md`, `NEXT_CHAT_PROMPT.md`, `temp.md`, `test.md`
+2. `git status --short --branch --untracked-files=all`
+3. `git rev-parse HEAD origin/main` 및 `git ls-remote origin refs/heads/main`
+4. `xcrun devicectl list devices`
+
+현재 기준:
+- HEAD/origin/main: `480d66d`
+- 앱 소스 기준: `226d105`
+- 최신 TestFlight: `1.0 (144)`
+- build 144: upload/processing `COMPLETE`, `VALID`, `TP Taption Plan 내부 테스트` 연결 및 그룹/테스터 화면 노출 확인
+- 실제 TestFlight 클라이언트 설치: 아직 iPhone에 `1.0 (142)`로 표시
+
+남은 순서:
+1. build 144의 TestFlight 실제 설치 provenance·버전·launch를 각각 readback한다. 개발자 설치와 혼동하지 않는다.
+2. 실기기에서 지도 현재 위치/졸라맨 중앙·항상 위·등록 장소 좌표를 확인한다.
+3. 설정에서 `로그 보내기`를 눌러 iCloud `Documents/TaptionLogs` 파일 생성과 비정상 종료 marker/Watch 로그 포함 여부를 readback한다. 기존 백업은 보존한다.
+4. 새 crash 재현 여부를 systemCrashLogs에서 확인하고, 결과를 `temp.md`, `DEVELOPMENT.md`, `test.md`에 기록한다.
+5. 소스 변경이 실제로 생길 때만 CURRENT_PROJECT_VERSION을 올려 새 archive/export/upload한다. 변경이 문서뿐이면 build 144를 중복 업로드하지 않는다.
+
+각 게이트를 source/build, 자동 테스트, ASC processing, Internal 그룹 연결/노출, TestFlight 설치, launch, 실제 화면으로 분리해 보고한다. 완료한 항목만 `temp.md`에서 제거하고, 마지막에 `git diff --check`, clean worktree, HEAD=origin/main을 확인한다.
+```
+
 ## 2026-09-09 CRH909A001 · 크래시 및 진단 로그
 
 - iPhone crash report는 build 140의 `RUNNINGBOARD/0xDEAD10CC` SIGKILL이며 build 142 새 crash report는 미확인이다. `/tmp/CRH909A001`에 원본을 보존했다.
