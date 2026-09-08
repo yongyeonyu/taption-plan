@@ -1,5 +1,13 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 WAK908C001 · 졸라맨 전용 표시층
+
+- 최종 iPhone Debug build·서명·설치·`builtByDeveloper=true`·launch PID `12968`를 확인했다: `/tmp/WAK908C001/final-device-build.log`, `install.json`, `apps.json`, `launch.json`.
+
+- 기존 WAK908B001은 사용자 실화면에서 집과의 앞뒤 전환이 재발했다. 졸라맨을 지도 native annotation 정렬에서 분리했다.
+- 동일 좌표 집 선택·3단계 줌에서도 졸라맨이 지도의 직접 subview 최상단에 남고 발끝 좌표가 일치하는 회귀 및 기존 계층 회귀 3/3 PASS·0 SKIP·0 FAIL: `/tmp/WAK908C001/final-tests.xcresult`.
+- 이 회귀는 UIKit 계층과 좌표 검증이며 실제 사용자 화면의 장시간 겹침/드래그 렌더 확인과 구분한다.
+
 ## 2026-09-08 WAK908B001 · 졸라맨 지도 마커 최상단
 
 - iPhone Debug build·서명·설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12802` 확인: `/tmp/WAK908B001/device-build.log`, `install.json`, `apps.json`, `launch.json`.

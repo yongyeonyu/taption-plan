@@ -1,5 +1,12 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 WAK908C001 집/졸라맨 겹침 재수정
+
+- 최신 아이폰은 이 변경을 포함한 Apple Development Debug `1.0 (140)`이다. 빌드·서명·설치·버전 및 launch PID `12968`를 readback했다: `/tmp/WAK908C001`.
+
+- WAK908B001은 실화면에서 재발했다. 졸라맨을 native annotation 목록에서 제거하고 지도 자체의 전용 subview로 분리했다. 발끝 좌표·기존 60Hz 갱신·검색창/시간표 계층은 유지한다.
+- 같은 좌표 집 선택·3단계 줌·직접 subview 순서·발끝 좌표 및 기존 계층 회귀 3/3과 Simulator Debug build를 통과했다: `/tmp/WAK908C001/final-tests.xcresult`.
+
 ## 2026-09-08 WAK908B001 졸라맨 표시 순서
 
 - 최신 아이폰은 이 수정이 포함된 Apple Development Debug `1.0 (140)`이며 설치·버전·launch PID `12802`를 확인했다: `/tmp/WAK908B001`.

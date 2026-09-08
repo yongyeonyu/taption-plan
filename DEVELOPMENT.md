@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 WAK908C001 · 집/졸라맨 앞뒤 전환 재수정
+
+- 최종 iPhone Debug build·deep/strict codesign·기존 데이터 유지 설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12968` 확인: `/tmp/WAK908C001/final-device-build.log`, `install.json`, `apps.json`, `launch.json`. 사용자 겹침 화면 및 TestFlight 배포 확인은 별도다.
+
+- 대표님이 WAK908B001 설치 후 집 마커와 졸라맨 순서가 여전히 바뀜을 확인했다. 완료 시점에 우선순위를 복구하는 방식만으로는 해결되지 않았다.
+- Apple 졸라맨을 native annotation 목록에서 제거하고 지도 자체의 비상호작용 subview로 분리했다. 집 등 다른 annotation의 내부 정렬과 분리되며, 기존 지도 좌표 변환과 발끝 offset을 한 번만 적용한다. 기존 60Hz camera frame 경로에서 위치를 갱신하고 nil playback·detach에서 제거한다.
+- 같은 좌표의 집 선택 및 거리 300/3,000/30,000에서 최상위 직접 subview·발끝 좌표를 검증했다. 관련 회귀 3/3 PASS·0 SKIP·0 FAIL 및 Simulator Debug build: `/tmp/WAK908C001/final-tests.xcresult`.
+
 ## 2026-09-08 WAK908B001 · 졸라맨을 지도 마커 최상단에 유지
 
 - 아이폰 Debug build·deep/strict codesign·기존 데이터 유지 설치·`builtByDeveloper=true`·launch PID `12802` 확인: `/tmp/WAK908B001`. 실제 겹침/줌 화면과 TestFlight 배포는 별도다.

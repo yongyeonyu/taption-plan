@@ -790,6 +790,30 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testWalkerOverlayStaysOutsideAnnotationOrderingAndKeepsFootCoordinate() {
+        let mapView = MKMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        let coordinate = CLLocationCoordinate2D(latitude: 37.55, longitude: 126.75)
+        let house = MKPointAnnotation()
+        house.coordinate = coordinate
+        mapView.addAnnotation(house)
+        let walker = UIView(frame: CGRect(origin: .zero, size: MapHomeStickmanMarker.size))
+        for distance in [300.0, 3_000.0, 30_000.0] {
+            mapView.setCamera(MKMapCamera(
+                lookingAtCenter: coordinate, fromDistance: distance, pitch: 0, heading: 45
+            ), animated: false)
+            mapView.selectAnnotation(house, animated: false)
+            MapHomeAppleWalkerOverlayLayout.update(walker, coordinate: coordinate, on: mapView)
+            XCTAssertTrue(walker.superview === mapView)
+            XCTAssertTrue(mapView.subviews.last === walker)
+            XCTAssertEqual(mapView.annotations.filter { !($0 is MKUserLocation) }.count, 1)
+            let projected = mapView.convert(coordinate, toPointTo: mapView)
+            XCTAssertEqual(walker.center.x, projected.x, accuracy: 0.001)
+            XCTAssertEqual(walker.frame.maxY, projected.y, accuracy: 0.001)
+            mapView.deselectAnnotation(house, animated: false)
+        }
+    }
+
     func testWeatherTimelineCapsulesAttachFlushToSidebarPanel() {
         let weatherRailWidth: CGFloat = 58
         let timeRailWidth: CGFloat = 58

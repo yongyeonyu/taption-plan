@@ -108,6 +108,23 @@ enum MapHomeAppleAnnotationLayerPriority {
     static let stickman: CGFloat = 100
 }
 
+enum MapHomeAppleWalkerOverlayLayout {
+    @MainActor
+    static func update(_ view: UIView, coordinate: CLLocationCoordinate2D, on mapView: MKMapView) {
+        guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
+        if view.superview !== mapView {
+            mapView.addSubview(view)
+        }
+        let point = mapView.convert(coordinate, toPointTo: mapView)
+        let offset = MapHomeStickmanAnnotationLayout.centerOffset
+        UIView.performWithoutAnimation {
+            view.center = CGPoint(x: point.x + offset.x, y: point.y + offset.y)
+            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
+            mapView.bringSubviewToFront(view)
+        }
+    }
+}
+
 enum MapHomeCameraLayoutMath {
     static let centeredTolerance: CGFloat = 18
 
@@ -13799,6 +13816,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var routePolylines: [String: MKPolyline] = [:]
         private var routeSignatures: [String: String] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
+        private var walkerView: MapHomeAppleHostedAnnotationView?
         private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var observedCameraGestures: [UIGestureRecognizer] = []
         private var lastGestureAttachmentScanUptime = -Double.infinity
@@ -13829,6 +13847,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func detach(from mapView: MKMapView) {
+            walkerView?.removeFromSuperview()
+            walkerView = nil
             for gesture in observedPanGestures {
                 gesture.removeTarget(self, action: #selector(handlePan(_:)))
             }
@@ -14015,17 +14035,6 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 view.isHidden = true
                 view.isAccessibilityElement = false
                 view.canShowCallout = false
-                return view
-            }
-            if let walker = annotation as? MapHomeAppleWalkerAnnotation {
-                let reuseIdentifier = "MapHome.appleWalker"
-                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
-                    as? MapHomeAppleHostedAnnotationView)
-                    ?? MapHomeAppleHostedAnnotationView(
-                        annotation: walker,
-                        reuseIdentifier: reuseIdentifier
-                    )
-                configureWalker(view, annotation: walker)
                 return view
             }
             guard let annotation = annotation as? MapHomeAppleMapAnnotation else {
@@ -14261,9 +14270,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             lastPlaybackSignature = playbackSignature
             lastCentersPlayback = parent.centersPlayback
             guard let playback else {
-                if let walkerAnnotation {
-                    mapView.removeAnnotation(walkerAnnotation)
-                }
+                walkerView?.removeFromSuperview()
+                walkerView = nil
                 walkerAnnotation = nil
                 lastCenteredPlaybackCoordinate = nil
                 lastCenteredPlaybackTargetPoint = nil
@@ -14276,11 +14284,16 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             } else {
                 walker = MapHomeAppleWalkerAnnotation(playback: playback)
                 walkerAnnotation = walker
-                mapView.addAnnotation(walker)
             }
-            if let view = mapView.view(for: walker) as? MapHomeAppleHostedAnnotationView {
-                configureWalker(view, annotation: walker)
+            let view: MapHomeAppleHostedAnnotationView
+            if let walkerView {
+                view = walkerView
+            } else {
+                view = MapHomeAppleHostedAnnotationView(annotation: nil, reuseIdentifier: nil)
+                walkerView = view
             }
+            configureWalker(view, annotation: walker)
+            bringWalkerToFront(in: mapView)
             if !parent.centersPlayback {
                 lastCenteredPlaybackCoordinate = nil
                 lastCenteredPlaybackTargetPoint = nil
@@ -14401,11 +14414,12 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         private func bringWalkerToFront(in mapView: MKMapView) {
             guard let walkerAnnotation,
-                  let view = mapView.view(for: walkerAnnotation) else { return }
-            view.zPriority = .max
-            view.selectedZPriority = .max
-            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
-            view.superview?.bringSubviewToFront(view)
+                  let walkerView else { return }
+            MapHomeAppleWalkerOverlayLayout.update(
+                walkerView,
+                coordinate: walkerAnnotation.coordinate,
+                on: mapView
+            )
         }
 
         private func descriptor(
@@ -14508,6 +14522,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 return
             }
             lastCameraPublishUptime = now
+            bringWalkerToFront(in: mapView)
             let camera = MapCamera(
                 centerCoordinate: mapView.camera.centerCoordinate,
                 distance: max(mapView.camera.altitude, 1),
