@@ -8158,6 +8158,8 @@ final class AppModel {
             archivedReadings = try await sensorService.archivedReadings(
                 in: span
             )
+        } catch is CancellationError {
+            return false
         } catch {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_timeline_read_failed",

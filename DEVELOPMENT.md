@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 CAN908A001 · 위치 기록 취소 팝업 제거
+
+- 아이폰 Debug build·deep/strict codesign·기존 데이터 유지 설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12388`를 확인했다: `/tmp/CAN908A001`. TestFlight 배포본은 별도다.
+
+- `refreshSensorTimeline`이 `archivedReadings`의 `CancellationError`를 실제 읽기 실패와 같은 팝업으로 표시했다. 공통 파일 lock의 취소 검사 보강 뒤 화면에 드러난 경로다.
+- 해당 취소는 별도로 종료하고 기존 오류 상태를 유지한다. 실제 파일 읽기 실패 알림은 유지했다.
+- 실제 센서 archive를 사용한 취소/읽기 실패 구분과 보관 기록 보존 회귀 2/2 PASS·0 SKIP·0 FAIL, Simulator Debug build를 확인했다: `/tmp/CAN908A001/tests.xcresult`.
+
 ## 2026-09-08 LOG908A001 · SQLite 저장 중 백그라운드 종료 보강
 
 - 최종 앱 저장소 회귀 18/18 PASS·0 SKIP·0 FAIL: `/tmp/LOG908A001/repository-r2.xcresult`; DayStore와 합계 37/37 PASS다. 설치 후 crash 목록에 새 TaptionPlan 보고서는 없었으며, 이는 짧은 확인 구간의 결과다.

@@ -1,5 +1,12 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 CAN908A001 취소 오류 팝업 보완
+
+- 최신 아이폰은 이 수정이 포함된 Apple Development Debug `1.0 (140)`이며 설치·버전·launch PID `12388`를 readback했다: `/tmp/CAN908A001`.
+
+- `refreshSensorTimeline`에서 센서 읽기 `CancellationError`를 실제 실패로 표시하던 경로를 분리했다. 취소는 조용히 종료하고 실제 읽기 오류는 계속 알린다.
+- 취소/실패 구분 및 기존 기록 보존 회귀 2/2와 Simulator Debug build를 통과했다: `/tmp/CAN908A001/tests.xcresult`.
+
 ## 2026-09-08 LOG908A001 최신 수정·아이폰 설치
 
 - 최종 앱 저장소 18/18 및 DayStore 19/19로 관련 회귀 총 37/37 PASS·0 SKIP·0 FAIL다. 설치 후 짧은 확인 구간에서 추가 crash report는 없었다.

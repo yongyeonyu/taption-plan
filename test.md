@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 CAN908A001 · 위치 기록 취소 팝업
+
+- iPhone Debug build·서명·설치·`builtByDeveloper=true`·launch PID `12388` 확인: `/tmp/CAN908A001/device-build.log`, `install.json`, `apps.json`, `launch.json`. 실제 사용자 화면 재확인과 TestFlight 배포는 별도다.
+
+- 취소된 센서 읽기는 기존 오류 상태를 덮어쓰지 않고 false로 종료한다. 실제 archive 경로가 파일에 막힌 경우에는 기존 읽기 오류 알림이 표시된다.
+- 관련 Simulator 회귀 2/2 PASS·0 SKIP·0 FAIL, exit 0 및 Debug build: `/tmp/CAN908A001/tests.xcresult`.
+
 ## 2026-09-08 LOG908A001 · 아이폰 저장 중 종료 수정
 
 - 최종 SQLitePlanRepositoryTests는 18/18 PASS·0 SKIP·0 FAIL, exit 0: `/tmp/LOG908A001/repository-r2.xcresult`. 설치·백그라운드·복귀 후 crash 목록의 최신 보고서는 수정 전 13:40 기록 그대로다: `/tmp/LOG908A001/crashes-after.json`.

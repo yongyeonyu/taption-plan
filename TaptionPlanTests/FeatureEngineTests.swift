@@ -9,6 +9,36 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    @MainActor
+    func testSensorTimelineCancellationKeepsErrorButReadFailureIsReported() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: .empty),
+            sensorService: AppleSensorDataService(archive: archive),
+            cloudSyncService: nil
+        )
+        model.userFacingError = "기존 오류"
+        let cancelled = Task { @MainActor in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await model.refreshSensorTimeline()
+        }
+        let cancellationResult = await cancelled.value
+        XCTAssertFalse(cancellationResult)
+        XCTAssertEqual(model.userFacingError, "기존 오류")
+
+        try FileManager.default.removeItem(at: directory)
+        try Data([1]).write(to: directory)
+        model.userFacingError = nil
+        let failureResult = await model.refreshSensorTimeline()
+        XCTAssertFalse(failureResult)
+        XCTAssertTrue(model.userFacingError?.hasPrefix("위치 기록을 읽지 못했습니다.") == true)
+    }
+
     func testLocationUpdatesWaitUntilFreshLocationRequestCompletes() {
         XCTAssertFalse(
             MapHomeUserTrackingPolicy.focusesLocationUpdates(in: .locating)
