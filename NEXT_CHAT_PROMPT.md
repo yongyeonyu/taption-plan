@@ -1,5 +1,14 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-08 INT908A001 · 최신 진행 정본
+
+- 소스 `e170ba3`, build 141. 전체 1,077 PASS·1 SKIP·0 FAIL, 독립 검토 반영 후 집중 71/71 PASS와 앱·위젯·Watch Debug build PASS. `/tmp/INT908A001.Cn2d4V`.
+- ‘전체 설정’ 버튼만 제거하고 다이나믹 아일랜드 축소 화면은 정상 활동 그림/현재 활동명으로 변경했다. Watch 일반 명령 단회 capability·외부 HealthKit 운동 소스 검증도 적용했다. 구매 잠금 해제는 유지한다.
+- PID 12968의 15:02 post-fix DEAD10CC가 raw 읽기 decode/file lock에서 발생해 LOG908B001로 decode 잠금 분리·DB background assertion·취소를 보완했다. BAK907A001 암호화 실패 원인은 별도로 미확정이다.
+- Release archive/export·서명·검증·업로드·처리 PASS, 141 `VALID`. UUID `4a600796-ed30-4c23-9749-d4fb3b0af819`. Internal 그룹 연결(204) 후 API 및 Chrome 그룹 빌드 `1.0 (141)` ‘테스트 중’·테스터 1명 화면까지 확인했다. 테스터의 실제 설치는 아직 140이며 141 설치/실행으로 보고하지 않는다.
+- Chrome 인증 복구 후 유료 계약 ‘신규’와 법인/규정 준수 잔여 항목을 확인했다. 계약·심사·유료화는 건드리지 않는다. BAK907A001·실기기·판매 게이트만 이어서 확인한다.
+- 현재 iPhone/Watch unavailable, iPad connected. 아래 과거 기기 버전/빌드 기록은 역사이며 최신 설치 성공을 의미하지 않는다.
+
 ## 2026-09-08 WAK908C001 집/졸라맨 겹침 재수정
 
 - 최신 아이폰은 이 변경을 포함한 Apple Development Debug `1.0 (140)`이다. 빌드·서명·설치·버전 및 launch PID `12968`를 readback했다: `/tmp/WAK908C001`.

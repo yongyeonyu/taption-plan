@@ -1,5 +1,33 @@
 # Taption Plan 개발 문서
 
+## 2026-09-08 INT908A001 · 통합 수정 / build 141
+
+- 소스 commit: `e170ba3`. 구매 비활성·만료 후 테스트 접근 허용은 유지한다. 계약 동의·심사 제출·유료화 재개는 수행하지 않는다.
+- SET908A001: 설정 내부의 ‘전체 설정’ 버튼과 연결만 제거했다. 데이터 보호·설정 초기화·GPS 메뉴 및 저장 설정은 유지한다.
+- DYN908A001: 센서/계획 Live Activity의 축소 화면에 기존 활동 그림과 현재 활동명을 표시한다. 현재 자동 기록 → 실행 중인 계획(예정 종료 초과 포함) → 확인 중 순서이며, 과거 선택 날짜는 참조하지 않는다. optional 상태 필드로 이전 payload를 읽고 확장/잠금 화면의 기존 내용은 유지한다.
+- LOG908B001: 15:02:01 crash는 14:52:53 시작한 PID 12968의 `RUNNINGBOARD/0xDEAD10CC`다. `RawDeviceDataDayArchive.envelopes → decodedEnvelopes → checksum`에서 파일 lock이 유지되던 증거를 확인했다(`/private/tmp/BAK907A001-live.Fo650k`). raw DB 작업은 기존 background assertion 안에서 잠그고, decode는 잠금 밖에서 수행한다. legacy repair는 다시 잠금·generation 검증을 거치며 취소된 결과는 publish하지 않는다. 이는 BAK907A001의 암호화 실패 원인을 입증한 것이 아니다.
+
+### SEC906P001 보안 수정 결과: fixed (코드·자동 검증)
+
+- 원래 경로: Watch 메시지의 사용자가 정하는 UUID·planID·kind가 시각/100개 중복 검사만 거쳐 계획 변경 handler에 전달됐다. iPhone이 발행한 commandID/planID/kind/24시간 만료에 결합된 토큰을 영속 저장하고 handler 전에 단회 소비한다. 앱 잠금 시 수신과 최종 변경 경계에서 거부하며, 삭제·비공개 payload에서 grant를 폐기한다.
+- Watch는 payload의 대응 grant로 명령을 구성한다. 기존 Watch UI에는 일반 계획 명령 송신 버튼이 없어 새 UI는 만들지 않았다. 활동 확인·센서 전송은 그대로 유지하며, 이전 payload는 optional decode하되 토큰 없는 명령 실행은 허용하지 않는다.
+- HealthKit의 운동 actual·이동 근거·경로 보강에는 공통 소스 검사를 적용했다. Apple·Taption iPhone/Watch만 허용하고 외부 앱 및 유사 bundle 문자열은 거부한다. 원본 HealthKit 저장은 변경하지 않았다. 독립 검토에서 확인한 Taption Watch 연속 건강 추정 allowlist 누락도 보완했다.
+- 변경 경계: `WatchSyncModels.swift`, `WatchConnectivitySupport.swift`, `WatchConnectivityController.swift`, `AppModel.swift`, `AppleIntegrations.swift`, `HealthKitBehaviorProjection.swift` 및 기존 테스트 파일. 별도 프레임워크·판매 정책 변경 없음.
+- 원래 재사용 경로는 단회 소비/잘못된 ID·plan·kind·token/만료/100개 초과 grant 후 재사용·재조회 검증으로 거부됨을 확인했다. 정상 grant의 안정적 갱신·정상 1회 실행, Apple/Taption 소스와 기존 센서/캘린더 동작은 회귀로 확인했다. 실제 Watch 송신·프로세스 강제 종료 직후의 저장 내구성은 별도 실기기 검증이다.
+
+### 검증 및 남은 게이트
+
+- `git diff --check`: PASS. `xcodebuild test -scheme TaptionPlan` 집중 128/128 PASS, 전체 1,078 중 1,077 PASS·1 SKIP·0 FAIL. 기존 StoreKit iOS 26.5 Simulator 제한만 스킵했다. 독립 검토 반영 후 Watch/HealthKit/SensorDayStore 71/71 PASS·0 SKIP·0 FAIL. 각 실행 exit 0.
+- `xcodebuild build -scheme TaptionPlan -configuration Debug -destination 'generic/platform=iOS' -allowProvisioningUpdates`: PASS·exit 0 (앱·Widget·Watch 포함).
+- 증거: `/tmp/INT908A001.Cn2d4V/{focused,full,final-focused}.xcresult`, `debug-device.log`. `ponytail`로 기존 background assertion·아이콘·저장 패턴을 재사용하고 `fix-finding`으로 사전 경계 조사·독립 후보 검토·악성/정상 입력 회귀를 수행했다.
+- BAK907A001: 최신 앱/iCloud 진단 로그와 실패 백업을 읽을 수 없어 암호화/무결성 실패의 직접 원인은 미확정이다. 기존 백업·사용자 데이터를 삭제하거나 교체하지 않았다. 신규 백업 round-trip·손상 거부·복원 실패 보존 회귀는 통과했지만 해당 사용자 백업 복원 성공은 미확인이다.
+- 판매 준비: Pro `READY_TO_SUBMIT`, 앱 1.0 `PREPARE_FOR_SUBMISSION`, review detail 미생성. Chrome 인증 복구 후 비즈니스 화면에서 유료 앱 계약 ‘신규’와 법인 정보/규정 준수 잔여 항목을 확인했다. 계약 동의·심사 제출·유료화 재개는 하지 않았다.
+- 기존 IAP 심사 메모는 체험 상태에서 구매 화면을 열도록 안내하므로 구매 비활성 141의 실제 진입 경로와 다르다. 유료화 재개 시 구매 진입/심사 메모를 함께 갱신하고 상품 조회·구매·복원을 검증해야 한다. 현재 상태만으로 상품 조회 실패의 단일 원인을 확정하지 않는다.
+- Release archive/export 및 altool 검증·업로드 PASS(exit 0). 16:08 업로드 UUID `4a600796-ed30-4c23-9749-d4fb3b0af819`. IPA SHA256 `7409af24c84cceaccc5abae958c446adc71eeea9f3a92e6e994fa008a5a43131`, 앱·Widget·Watch·Watch Widget 모두 141, deep/strict 서명·Production iCloud·beta entitlement 확인.
+- Apple 업로드 처리 `COMPLETE`(오류/경고 없음), build `VALID`. UUID `4a600796-ed30-4c23-9749-d4fb3b0af819`를 Internal 그룹 `b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd`에 추가(204)하고 그룹 API의 141·테스터 1명 `INSTALLED`를 readback했다. TestFlight iOS 화면에서도 141 ‘제출 준비 완료’와 내부 그룹명을 확인했다. 테스터 INSTALLED는 기존 140 설치이며 141 설치 증거가 아니다.
+- Chrome 내부 그룹 빌드 탭에서 `1.0 (141)` ‘테스트 중’, 테스터 탭에서 1명·102개 빌드 및 기존 `1.0 (140)` 설치 상태를 확인했다. TFB907A001의 새 내부 배포 게이트는 141로 완료했으며 클라이언트 설치·구매 검증은 DEV903V001/IAP907A001 잔여 게이트로 유지한다.
+- 현재 iPhone/Watch unavailable, iPad connected이며 TestFlight 클라이언트 설치·실행·터치·장시간 발열·실계정 캘린더 수신은 자동 테스트와 분리한다.
+
 ## 2026-09-08 WAK908C001 · 집/졸라맨 앞뒤 전환 재수정
 
 - 최종 iPhone Debug build·deep/strict codesign·기존 데이터 유지 설치·`1.0 (140)`·`builtByDeveloper=true`·launch PID `12968` 확인: `/tmp/WAK908C001/final-device-build.log`, `install.json`, `apps.json`, `launch.json`. 사용자 겹침 화면 및 TestFlight 배포 확인은 별도다.

@@ -1,5 +1,14 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-08 INT908A001 · build 141 검증
+
+- 소스 `e170ba3`: 전체 1,077 PASS·1 기존 StoreKit SKIP·0 FAIL, 후속 집중 71/71 PASS, 앱·Widget·Watch Debug device build PASS. `/tmp/INT908A001.Cn2d4V`.
+- Release archive/export·서명·altool 검증/업로드 exit 0. 141 `VALID`·Internal 그룹 API 연결/141 readback·Chrome 그룹의 `1.0 (141)` ‘테스트 중’ 및 테스터 1명 화면 노출 PASS. UUID `4a600796-ed30-4c23-9749-d4fb3b0af819`. 테스터 화면은 기존 140 설치를 표시하므로 141 설치/launch는 미확인이다.
+- SET908A001·DYN908A001·SEC906P001·LOG908B001의 코드 변경 및 자동 검증 완료. iPhone/Watch 현재 unavailable이라 새 버전 설치·실행·실제 다이나믹 아일랜드는 아직 미확인이다.
+- TestFlight 후 확인: 업무↔이동 활동 아이콘/문구, 과거 날짜를 열어도 현재 활동 유지, 데이터 보호·초기화/GPS 메뉴 유지, 집/졸라맨 겹침·pinch, 반복 launch/background와 로그 저장.
+- Watch/HealthKit/캘린더: 실제 페어링 전송·토큰 소비 후 중복 무실행, Apple/Taption 운동 유지·외부 운동 자동 판정 제외·원본 보존, 계정 교체·권한 재허용·이동 반복 일정. iPad/TestFlight 실행과 장시간 발열·전력은 별도 게이트다.
+- BAK907A001 사용자 iCloud 백업 실패 원인은 미확정. 기존 파일을 보존하고 재현 동작/진단 로그를 요청했다. 백업 성공으로 보고하지 않는다.
+
 ## 2026-09-08 WAK908C001 · 졸라맨 전용 표시층
 
 - 최종 iPhone Debug build·서명·설치·`builtByDeveloper=true`·launch PID `12968`를 확인했다: `/tmp/WAK908C001/final-device-build.log`, `install.json`, `apps.json`, `launch.json`.
