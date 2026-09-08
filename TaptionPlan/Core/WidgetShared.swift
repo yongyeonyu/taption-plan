@@ -20,6 +20,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
             case majorCategoryID
             case majorCategoryTitle
             case majorCategorySystemImage
+            case compactActivityTitle
+            case compactActivityCategoryID
         }
 
         var title: String
@@ -31,6 +33,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
         var majorCategoryID: String = "activity"
         var majorCategoryTitle: String = "활동"
         var majorCategorySystemImage: String = "sparkles"
+        var compactActivityTitle: String?
+        var compactActivityCategoryID: String?
 
         init(
             title: String,
@@ -41,7 +45,9 @@ struct TaptionActivityAttributes: ActivityAttributes {
             isRunning: Bool,
             majorCategoryID: String = "activity",
             majorCategoryTitle: String = "활동",
-            majorCategorySystemImage: String = "sparkles"
+            majorCategorySystemImage: String = "sparkles",
+            compactActivityTitle: String? = nil,
+            compactActivityCategoryID: String? = nil
         ) {
             self.title = title
             self.categoryID = categoryID
@@ -52,6 +58,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
             self.majorCategoryID = majorCategoryID
             self.majorCategoryTitle = majorCategoryTitle
             self.majorCategorySystemImage = majorCategorySystemImage
+            self.compactActivityTitle = compactActivityTitle
+            self.compactActivityCategoryID = compactActivityCategoryID
         }
 
         init(from decoder: Decoder) throws {
@@ -74,6 +82,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
                 String.self,
                 forKey: .majorCategorySystemImage
             ) ?? "sparkles"
+            self.compactActivityTitle = try container.decodeIfPresent(String.self, forKey: .compactActivityTitle)
+            self.compactActivityCategoryID = try container.decodeIfPresent(String.self, forKey: .compactActivityCategoryID)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -90,6 +100,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
                 majorCategorySystemImage,
                 forKey: .majorCategorySystemImage
             )
+            try container.encodeIfPresent(compactActivityTitle, forKey: .compactActivityTitle)
+            try container.encodeIfPresent(compactActivityCategoryID, forKey: .compactActivityCategoryID)
         }
     }
 
@@ -1325,6 +1337,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var latestHeartRate: Double?
         var heartRateUpdatedAt: Date?
         var sensorHUDUntil: Date?
+        var currentActivityTitle: String?
+        var currentActivityCategoryID: String?
+        var currentActivitySystemImage: String?
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -1352,7 +1367,10 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             isExternalSample: Bool? = nil,
             latestHeartRate: Double? = nil,
             heartRateUpdatedAt: Date? = nil,
-            sensorHUDUntil: Date? = nil
+            sensorHUDUntil: Date? = nil,
+            currentActivityTitle: String? = nil,
+            currentActivityCategoryID: String? = nil,
+            currentActivitySystemImage: String? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -1370,6 +1388,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.latestHeartRate = latestHeartRate
             self.heartRateUpdatedAt = heartRateUpdatedAt
             self.sensorHUDUntil = sensorHUDUntil
+            self.currentActivityTitle = currentActivityTitle
+            self.currentActivityCategoryID = currentActivityCategoryID
+            self.currentActivitySystemImage = currentActivitySystemImage
         }
     }
 

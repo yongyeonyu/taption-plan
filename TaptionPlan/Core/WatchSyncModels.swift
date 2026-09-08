@@ -17,17 +17,39 @@ struct TaptionWatchCommand: Codable, Hashable, Sendable {
     var planID: UUID
     var kind: TaptionWatchCommandKind
     var requestedAt: Date
+    var capabilityToken: UUID?
 
     init(
         id: UUID = UUID(),
         planID: UUID,
         kind: TaptionWatchCommandKind,
-        requestedAt: Date = .now
+        requestedAt: Date = .now,
+        capabilityToken: UUID? = nil
     ) {
         self.id = id
         self.planID = planID
         self.kind = kind
         self.requestedAt = requestedAt
+        self.capabilityToken = capabilityToken
+    }
+}
+
+struct TaptionWatchCommandCapability: Codable, Hashable, Sendable {
+    var commandID: UUID
+    var token: UUID
+    var planID: UUID
+    var kind: TaptionWatchCommandKind
+    var expiresAt: Date
+
+    func accepts(
+        _ command: TaptionWatchCommand,
+        at date: Date
+    ) -> Bool {
+        command.id == commandID
+            && command.planID == planID
+            && command.kind == kind
+            && command.capabilityToken == token
+            && date <= expiresAt
     }
 }
 
@@ -2045,6 +2067,7 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var locationTrackingEnabled: Bool? = nil
     var locationPermissionState: String? = nil
     var activitySuggestion: TaptionWatchActivitySuggestion? = nil
+    var commandCapabilities: [TaptionWatchCommandCapability]? = nil
     var commerceLocked: Bool? = nil
     /// Optional so payloads cached by older iPhone builds continue to decode.
     /// `automatic` is resolved on the receiving Watch using its own locale.
@@ -2388,6 +2411,92 @@ enum TaptionWatchDeviceLocalDefaults {
     static func removeObject(forKey key: String) {
         protectedStore?.removeObject(forKey: key)
         UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
+enum TaptionWatchCommandCapabilityStore {
+    private static let key = "TaptionPlan.watchCommandCapabilities.v1"
+    private static let lock = NSLock()
+
+    static func reconcile(
+        planIDs: Set<UUID>,
+        now: Date,
+        lifetime: TimeInterval = 24 * 3_600,
+        defaults: UserDefaults = UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? .standard
+    ) -> [TaptionWatchCommandCapability] {
+        lock.lock()
+        defer { lock.unlock() }
+        let stored = readUnlocked(defaults: defaults)
+        let current = stored.filter {
+            planIDs.contains($0.planID) && $0.expiresAt > now
+        }
+        var result = current
+        for planID in planIDs.sorted(by: { $0.uuidString < $1.uuidString }) {
+            for kind in TaptionWatchCommandKind.allCases where !result.contains(where: {
+                $0.planID == planID && $0.kind == kind
+            }) {
+                result.append(
+                    TaptionWatchCommandCapability(
+                        commandID: UUID(),
+                        token: UUID(),
+                        planID: planID,
+                        kind: kind,
+                        expiresAt: now.addingTimeInterval(lifetime)
+                    )
+                )
+            }
+        }
+        guard result != stored else { return result }
+        return writeUnlocked(result, defaults: defaults) ? result : current
+    }
+
+    static func consume(
+        _ command: TaptionWatchCommand,
+        at date: Date,
+        defaults: UserDefaults = UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? .standard
+    ) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        var values = readUnlocked(defaults: defaults)
+        guard let index = values.firstIndex(where: {
+            $0.accepts(command, at: date)
+        }) else { return false }
+        values.remove(at: index)
+        return writeUnlocked(values, defaults: defaults)
+    }
+
+    static func clear(
+        defaults: UserDefaults = UserDefaults(
+            suiteName: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? .standard
+    ) {
+        lock.lock()
+        defer { lock.unlock() }
+        defaults.removeObject(forKey: key)
+    }
+
+    private static func readUnlocked(
+        defaults: UserDefaults
+    ) -> [TaptionWatchCommandCapability] {
+        guard let data = defaults.data(forKey: key),
+              let values = try? JSONDecoder().decode(
+                  [TaptionWatchCommandCapability].self,
+                  from: data
+              ) else { return [] }
+        return values
+    }
+
+    private static func writeUnlocked(
+        _ values: [TaptionWatchCommandCapability],
+        defaults: UserDefaults
+    ) -> Bool {
+        guard let data = try? JSONEncoder().encode(values) else { return false }
+        defaults.set(data, forKey: key)
+        return defaults.data(forKey: key) == data
     }
 }
 

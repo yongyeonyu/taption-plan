@@ -909,10 +909,10 @@ actor RawDeviceDataDayArchive {
         guard !envelopes.isEmpty else { return }
         let generation = dataDeletionGeneration
         let events = try events(for: envelopes)
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        try await store.appendUniqueEvents(events)
+        try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            try await self.store.appendUniqueEvents(events)
+        }
     }
 
     func appendForRestore(
@@ -921,46 +921,46 @@ actor RawDeviceDataDayArchive {
         guard !envelopes.isEmpty else { return [] }
         let generation = dataDeletionGeneration
         let events = try events(for: envelopes)
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        let inserted = try await store.appendUniqueEvents(events)
-        return inserted.compactMap(UUID.init(uuidString:))
+        return try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            let inserted = try await self.store.appendUniqueEvents(events)
+            return inserted.compactMap(UUID.init(uuidString:))
+        }
     }
 
     func rollbackRestore(ids: [UUID]) async throws {
         guard !ids.isEmpty else { return }
         let generation = dataDeletionGeneration
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        try await store.deleteEvents(
-            ids: ids.map(\.uuidString),
-            domain: Self.domain
-        )
+        try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            try await self.store.deleteEvents(
+                ids: ids.map(\.uuidString),
+                domain: Self.domain
+            )
+        }
     }
 
     func validateAppend(_ envelopes: [RawDeviceDataEnvelope]) async throws {
         guard !envelopes.isEmpty else { return }
         let generation = dataDeletionGeneration
         let events = try events(for: envelopes)
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        try await store.validateUniqueEvents(events)
+        try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            try await self.store.validateUniqueEvents(events)
+        }
     }
 
     func envelopes(in span: TimeSpan) async throws
         -> [RawDeviceDataEnvelope] {
         let generation = dataDeletionGeneration
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        let events = try await store.events(
-            from: TaptionPlanDayKey(date: span.start),
-            through: TaptionPlanDayKey(date: span.end),
-            domain: Self.domain
-        )
+        let events = try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            return try await self.store.events(
+                from: TaptionPlanDayKey(date: span.start),
+                through: TaptionPlanDayKey(date: span.end),
+                domain: Self.domain
+            )
+        }
         return try await decodedEnvelopes(
             events,
             generation: generation
@@ -971,10 +971,10 @@ actor RawDeviceDataDayArchive {
 
     func allEnvelopes() async throws -> [RawDeviceDataEnvelope] {
         let generation = dataDeletionGeneration
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        let events = try await store.allEvents(domain: Self.domain)
+        let events = try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            return try await self.store.allEvents(domain: Self.domain)
+        }
         return try await decodedEnvelopes(events, generation: generation)
     }
 
@@ -985,6 +985,8 @@ actor RawDeviceDataDayArchive {
         var values: [RawDeviceDataEnvelope] = []
         var repairs: [TaptionPlanDayStore.Event] = []
         for event in events {
+            try Task.checkCancellation()
+            try checkDataGeneration(generation)
             if let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(
                 from: event.payload
             ), let value = try? TaptionPlanCanonicalStorage.decode(
@@ -1014,9 +1016,12 @@ actor RawDeviceDataDayArchive {
             ))
         }
         if !repairs.isEmpty {
+            let repairedEvents = repairs
             do {
-                try checkDataGeneration(generation)
-                try await store.upsertEvents(repairs)
+                try await withProtectedLock { [self] in
+                    try await self.checkDataGeneration(generation)
+                    try await self.store.upsertEvents(repairedEvents)
+                }
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "raw_device_archive_repaired",
                     fields: ["count": String(repairs.count)]
@@ -1029,7 +1034,20 @@ actor RawDeviceDataDayArchive {
                 )
             }
         }
+        try Task.checkCancellation()
+        try checkDataGeneration(generation)
         return values
+    }
+
+    private func withProtectedLock<Value: Sendable>(
+        _ operation: @escaping @Sendable () async throws -> Value
+    ) async throws -> Value {
+        let lockURL = writeLockURL
+        return try await TaptionRepositoryBackgroundExecution.run {
+            let lock = try await TaptionDataFileLock.acquire(url: lockURL)
+            defer { lock.unlock() }
+            return try await operation()
+        }
     }
 
     private func events(
@@ -1063,17 +1081,22 @@ actor RawDeviceDataDayArchive {
 
     func checkpoint() async throws {
         let generation = dataDeletionGeneration
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration(generation)
-        try await store.checkpoint()
+        try await withProtectedLock { [self] in
+            try await self.checkDataGeneration(generation)
+            try await self.store.checkpoint()
+        }
     }
 
     func deleteAll(generation: UInt64? = nil) async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        dataDeletionGeneration = generation
+        let nextGeneration = generation
             ?? TaptionDataDeletionFence.currentGeneration()
+        try await withProtectedLock { [self] in
+            try await self.deleteProtected(generation: nextGeneration)
+        }
+    }
+
+    private func deleteProtected(generation: UInt64) async throws {
+        dataDeletionGeneration = generation
         try await store.deleteEvents(domain: Self.domain)
     }
 

@@ -11,6 +11,28 @@ enum SensorCollectionLiveActivityError: Error, Equatable {
     case unavailable
 }
 
+enum TaptionCurrentActivityPolicy {
+    static func categoryID(
+        actuals: [ActualRecord],
+        plans: [PlanRecord],
+        at date: Date
+    ) -> String? {
+        if let actual = actuals
+            .filter({
+                $0.source.usesAutomaticClassification
+                    && $0.categoryID != "unconfirmed"
+                    && $0.startedAt <= date
+                    && ($0.endedAt.map { date < $0 } ?? true)
+            })
+            .max(by: { $0.startedAt < $1.startedAt }) {
+            return actual.categoryID
+        }
+        return plans.last(where: {
+            $0.status == .running && $0.span.start <= date
+        })?.categoryID
+    }
+}
+
 actor SensorCollectionLiveActivityController {
     static let shared = SensorCollectionLiveActivityController()
 
@@ -31,6 +53,9 @@ actor SensorCollectionLiveActivityController {
         isExternalSample: Bool = false,
         latestHeartRate: Double? = nil,
         heartRateUpdatedAt: Date? = nil,
+        currentActivityTitle: String? = nil,
+        currentActivityCategoryID: String? = nil,
+        currentActivitySystemImage: String? = nil,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
@@ -151,7 +176,10 @@ actor SensorCollectionLiveActivityController {
             isExternalSample: isExternalSample,
             latestHeartRate: latestHeartRate,
             heartRateUpdatedAt: heartRateUpdatedAt,
-            sensorHUDUntil: sensorHUDUntil
+            sensorHUDUntil: sensorHUDUntil,
+            currentActivityTitle: currentActivityTitle,
+            currentActivityCategoryID: currentActivityCategoryID,
+            currentActivitySystemImage: currentActivitySystemImage
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
@@ -216,7 +244,10 @@ actor SensorCollectionLiveActivityController {
             isExternalSample: false,
             latestHeartRate: activity.content.state.latestHeartRate,
             heartRateUpdatedAt: activity.content.state.heartRateUpdatedAt,
-            sensorHUDUntil: activity.content.state.sensorHUDUntil
+            sensorHUDUntil: activity.content.state.sensorHUDUntil,
+            currentActivityTitle: activity.content.state.currentActivityTitle,
+            currentActivityCategoryID: activity.content.state.currentActivityCategoryID,
+            currentActivitySystemImage: activity.content.state.currentActivitySystemImage
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: flatlineUntil),
@@ -306,12 +337,29 @@ actor TaptionLiveActivityController {
         activity = nil
     }
 
+    func updateCompactActivity(title: String, categoryID: String) async {
+        guard let activity = activity ?? Activity<TaptionActivityAttributes>
+            .activities.first(where: { $0.content.state.isRunning }) else { return }
+        self.activity = activity
+        var state = activity.content.state
+        guard state.compactActivityTitle != title
+            || state.compactActivityCategoryID != categoryID else { return }
+        state.compactActivityTitle = title
+        state.compactActivityCategoryID = categoryID
+        await activity.update(ActivityContent(
+            state: state,
+            staleDate: activity.content.staleDate
+        ))
+    }
+
     func start(
         plan: PlanRecord,
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
         majorCategoryTitle: String = "활동",
-        majorCategorySystemImage: String = "sparkles"
+        majorCategorySystemImage: String = "sparkles",
+        compactActivityTitle: String? = nil,
+        compactActivityCategoryID: String? = nil
     ) async throws -> String {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             throw LiveActivityError.unavailable
@@ -333,7 +381,9 @@ actor TaptionLiveActivityController {
             isRunning: true,
             majorCategoryID: majorCategoryID,
             majorCategoryTitle: majorCategoryTitle,
-            majorCategorySystemImage: majorCategorySystemImage
+            majorCategorySystemImage: majorCategorySystemImage,
+            compactActivityTitle: compactActivityTitle,
+            compactActivityCategoryID: compactActivityCategoryID
         )
         let newActivity = try Activity.request(
             attributes: TaptionActivityAttributes(planID: plan.id),
@@ -352,9 +402,15 @@ actor TaptionLiveActivityController {
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
         majorCategoryTitle: String = "활동",
-        majorCategorySystemImage: String = "sparkles"
+        majorCategorySystemImage: String = "sparkles",
+        compactActivityTitle: String? = nil,
+        compactActivityCategoryID: String? = nil
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
+        let compactActivityTitle = compactActivityTitle
+            ?? activity.content.state.compactActivityTitle
+        let compactActivityCategoryID = compactActivityCategoryID
+            ?? activity.content.state.compactActivityCategoryID
         let state = TaptionActivityAttributes.ContentState(
             title: plan.title,
             categoryID: plan.categoryID,
@@ -364,7 +420,9 @@ actor TaptionLiveActivityController {
             isRunning: plan.status == .running,
             majorCategoryID: majorCategoryID,
             majorCategoryTitle: majorCategoryTitle,
-            majorCategorySystemImage: majorCategorySystemImage
+            majorCategorySystemImage: majorCategorySystemImage,
+            compactActivityTitle: compactActivityTitle,
+            compactActivityCategoryID: compactActivityCategoryID
         )
         await activity.update(
             ActivityContent(state: state, staleDate: plan.span.end)
@@ -376,9 +434,15 @@ actor TaptionLiveActivityController {
         catStyle: CatStyle,
         majorCategoryID: String = "activity",
         majorCategoryTitle: String = "활동",
-        majorCategorySystemImage: String = "sparkles"
+        majorCategorySystemImage: String = "sparkles",
+        compactActivityTitle: String? = nil,
+        compactActivityCategoryID: String? = nil
     ) async throws {
         guard let activity else { throw LiveActivityError.missingActivity }
+        let compactActivityTitle = compactActivityTitle
+            ?? activity.content.state.compactActivityTitle
+        let compactActivityCategoryID = compactActivityCategoryID
+            ?? activity.content.state.compactActivityCategoryID
         let finalState = TaptionActivityAttributes.ContentState(
             title: plan.title,
             categoryID: plan.categoryID,
@@ -388,7 +452,9 @@ actor TaptionLiveActivityController {
             isRunning: false,
             majorCategoryID: majorCategoryID,
             majorCategoryTitle: majorCategoryTitle,
-            majorCategorySystemImage: majorCategorySystemImage
+            majorCategorySystemImage: majorCategorySystemImage,
+            compactActivityTitle: compactActivityTitle,
+            compactActivityCategoryID: compactActivityCategoryID
         )
         await activity.end(
             ActivityContent(state: finalState, staleDate: nil),

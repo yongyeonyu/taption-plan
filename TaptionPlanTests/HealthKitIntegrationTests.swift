@@ -4,6 +4,17 @@ import XCTest
 @testable import TaptionPlan
 
 final class HealthKitIntegrationTests: XCTestCase {
+    func testWorkoutSourceAllowsAppleAndTaptionButRejectsExternalOrSpoofedBundles() {
+        for bundle in ["com.apple.Health", "com.apple.health", "com.taption.plan",
+                       "com.taption.plan.watchkitapp"] {
+            XCTAssertTrue(AppleHealthService.isTrustedWorkoutSource(bundle))
+        }
+        for bundle in ["", "com.example.workout", "com.apple.health.fake",
+                       "com.taption.plan.watchkitapp.fake", "Apple Watch"] {
+            XCTAssertFalse(AppleHealthService.isTrustedWorkoutSource(bundle))
+        }
+    }
+
     func testWatchHealthSnapshotRetriesOnlyMissingRawArchive() {
         let capturedAt = Date(timeIntervalSince1970: 1_788_000_000)
         let receivedAt = capturedAt.addingTimeInterval(120)
@@ -451,6 +462,20 @@ final class HealthKitIntegrationTests: XCTestCase {
         XCTAssertTrue(estimate?.evidence.contains {
             $0.contains("baseline median=")
         } == true)
+        let watchRecords = records.map {
+            biometricRecord(
+                identifier: $0.typeIdentifier,
+                at: $0.startDate,
+                value: $0.numericValue!,
+                unit: "count/min",
+                sourceBundleIdentifier: "com.taption.plan.watchkitapp"
+            )
+        }
+        let watchActuals = HealthKitBehaviorProjectionEngine.actuals(
+            from: watchRecords, in: span
+        )
+        XCTAssertEqual(watchActuals.map(\.categoryID), actuals.map(\.categoryID))
+        XCTAssertEqual(watchActuals.map(\.behavior), actuals.map(\.behavior))
     }
 
     func testContinuousBiometricDoesNotProjectWithoutSevenDayBaseline() {

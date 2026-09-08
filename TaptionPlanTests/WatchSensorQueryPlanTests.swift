@@ -275,6 +275,208 @@ final class WatchSensorQueryPlanTests: XCTestCase {
     }
 }
 
+final class WatchCommandCapabilityTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private let suiteName = "TaptionPlanTests.WatchCommandCapability.\(UUID().uuidString)"
+    private lazy var defaults = UserDefaults(suiteName: suiteName)!
+
+    override func setUp() {
+        super.setUp()
+        defaults.removePersistentDomain(
+            forName: suiteName
+        )
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        super.tearDown()
+    }
+
+    private func capability(
+        commandID: UUID,
+        planID: UUID,
+        kind: TaptionWatchCommandKind = .start,
+        expiresAt: Date? = nil
+    ) -> TaptionWatchCommandCapability {
+        TaptionWatchCommandCapability(
+            commandID: commandID,
+            token: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+            planID: planID,
+            kind: kind,
+            expiresAt: expiresAt ?? now.addingTimeInterval(86_400)
+        )
+    }
+
+    func testMissingOrMismatchedCommandCapabilityIsRejected() {
+        let commandID = UUID()
+        let planID = UUID()
+        let capability = capability(commandID: commandID, planID: planID)
+        XCTAssertFalse(
+            capability.accepts(
+                TaptionWatchCommand(
+                    id: commandID,
+                    planID: planID,
+                    kind: .start,
+                    requestedAt: now
+                ),
+                at: now
+            )
+        )
+        XCTAssertFalse(
+            capability.accepts(
+                TaptionWatchCommand(
+                    id: commandID,
+                    planID: UUID(),
+                    kind: .start,
+                    requestedAt: now,
+                    capabilityToken: capability.token
+                ),
+                at: now
+            )
+        )
+        XCTAssertFalse(
+            capability.accepts(
+                TaptionWatchCommand(
+                    id: commandID,
+                    planID: planID,
+                    kind: .complete,
+                    requestedAt: now,
+                    capabilityToken: capability.token
+                ),
+                at: now
+            )
+        )
+    }
+
+    func testCapabilityIsSingleUseByStore() {
+        TaptionWatchCommandCapabilityStore.clear(defaults: defaults)
+        let planID = UUID()
+        let issued = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [planID],
+            now: now,
+            defaults: defaults
+        ).first { $0.planID == planID && $0.kind == .start }!
+        let command = TaptionWatchCommand(
+            id: issued.commandID,
+            planID: planID,
+            kind: .start,
+            requestedAt: now,
+            capabilityToken: issued.token
+        )
+        XCTAssertTrue(
+            TaptionWatchCommandCapabilityStore.consume(
+                command,
+                at: now,
+                defaults: defaults
+            )
+        )
+        XCTAssertFalse(
+            TaptionWatchCommandCapabilityStore.consume(
+                command,
+                at: now,
+                defaults: defaults
+            )
+        )
+        TaptionWatchCommandCapabilityStore.clear(defaults: defaults)
+    }
+
+    func testCapabilityIDsRemainStableAcrossPayloadRefresh() {
+        let planID = UUID()
+        let first = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [planID], now: now, defaults: defaults
+        )
+        let second = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [planID], now: now.addingTimeInterval(60), defaults: defaults
+        )
+        XCTAssertEqual(first, second)
+    }
+
+    func testGrantSurvivesMoreThanOneHundredOtherLiveGrants() {
+        let firstPlan = UUID()
+        let first = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [firstPlan], now: now, defaults: defaults
+        ).first { $0.planID == firstPlan && $0.kind == .start }!
+        let otherPlans = Set((0..<21).map { _ in UUID() })
+        _ = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: otherPlans.union([firstPlan]), now: now, defaults: defaults
+        )
+        let command = TaptionWatchCommand(
+            id: first.commandID,
+            planID: firstPlan,
+            kind: .start,
+            requestedAt: now,
+            capabilityToken: first.token
+        )
+        XCTAssertTrue(
+            TaptionWatchCommandCapabilityStore.consume(
+                command, at: now, defaults: defaults
+            )
+        )
+        let reloaded = UserDefaults(suiteName: suiteName)!
+        _ = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: otherPlans.union([firstPlan]), now: now, defaults: reloaded
+        )
+        XCTAssertFalse(TaptionWatchCommandCapabilityStore.consume(
+            command, at: now, defaults: reloaded
+        ))
+        let replacement = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [firstPlan], now: now, defaults: reloaded
+        ).first!
+        _ = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [], now: now, defaults: reloaded
+        )
+        XCTAssertFalse(TaptionWatchCommandCapabilityStore.consume(
+            TaptionWatchCommand(id: replacement.commandID, planID: firstPlan,
+                kind: replacement.kind, requestedAt: now,
+                capabilityToken: replacement.token),
+            at: now, defaults: reloaded
+        ))
+    }
+
+    func testCapabilityRejectsWrongCommandIDAndToken() {
+        let planID = UUID()
+        let issued = TaptionWatchCommandCapabilityStore.reconcile(
+            planIDs: [planID], now: now, defaults: defaults
+        ).first { $0.planID == planID && $0.kind == .start }!
+        XCTAssertFalse(
+            issued.accepts(
+                TaptionWatchCommand(
+                    id: UUID(), planID: planID, kind: .start,
+                    requestedAt: now, capabilityToken: issued.token
+                ),
+                at: now
+            )
+        )
+        XCTAssertFalse(
+            issued.accepts(
+                TaptionWatchCommand(
+                    id: issued.commandID, planID: planID, kind: .start,
+                    requestedAt: now, capabilityToken: UUID()
+                ),
+                at: now
+            )
+        )
+    }
+
+    func testExpiredCapabilityIsRejected() {
+        let commandID = UUID()
+        let planID = UUID()
+        let capability = capability(
+            commandID: commandID,
+            planID: planID,
+            expiresAt: now.addingTimeInterval(-1)
+        )
+        let command = TaptionWatchCommand(
+            id: commandID,
+            planID: planID,
+            kind: .start,
+            requestedAt: now,
+            capabilityToken: capability.token
+        )
+        XCTAssertFalse(capability.accepts(command, at: now))
+    }
+}
+
 final class WatchDeletionPayloadTests: XCTestCase {
     private let cutoff = Date(timeIntervalSince1970: 1_800_000_000)
 

@@ -9,6 +9,44 @@ import SwiftUI // TEMP-CAT-SHEET
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testCurrentActivityPolicyPrefersCurrentAutomaticAndRunningOvertime() throws {
+        let now = Date()
+        let old = ActualRecord(planID: nil, title: "old", categoryID: "work", startedAt: now.addingTimeInterval(-3 * hour), endedAt: now.addingTimeInterval(-2 * hour), source: .motion)
+        let current = ActualRecord(planID: nil, title: "current", categoryID: "movement", startedAt: now.addingTimeInterval(-hour), source: .motion)
+        let plan = PlanRecord(title: "plan", span: TimeSpan(start: now.addingTimeInterval(-2 * hour), end: now.addingTimeInterval(-hour)), categoryID: "work", status: .running)
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [old, current], plans: [plan], at: now), "movement")
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [old], plans: [plan], at: now), "work")
+        XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [], plans: [], at: now))
+    }
+
+    func testLiveActivityContentStateOptionalFieldsDecodeAndRoundTrip() throws {
+        let now = Date()
+        let sensor = SensorCollectionActivityAttributes.ContentState(startedAt: now, lastSavedAt: nil, collectionKinds: ["location"], isCollecting: true, currentActivityTitle: "이동", currentActivityCategoryID: "movement")
+        let decodedSensor = try JSONDecoder().decode(type(of: sensor), from: JSONEncoder().encode(sensor))
+        XCTAssertEqual(decodedSensor.currentActivityTitle, "이동")
+        let plan = TaptionActivityAttributes.ContentState(title: "업무", categoryID: "work", startedAt: now, endsAt: now.addingTimeInterval(hour), catStyle: "default", isRunning: true, compactActivityTitle: "이동", compactActivityCategoryID: "movement")
+        let decodedPlan = try JSONDecoder().decode(type(of: plan), from: JSONEncoder().encode(plan))
+        XCTAssertEqual(decodedPlan.compactActivityCategoryID, "movement")
+        var oldSensor = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(sensor)
+        ) as? [String: Any])
+        oldSensor.removeValue(forKey: "currentActivityTitle")
+        oldSensor.removeValue(forKey: "currentActivityCategoryID")
+        oldSensor.removeValue(forKey: "currentActivitySystemImage")
+        let legacySensor = try JSONDecoder().decode(type(of: sensor),
+            from: JSONSerialization.data(withJSONObject: oldSensor))
+        XCTAssertNil(legacySensor.currentActivityTitle)
+        var oldPlan = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(plan)
+        ) as? [String: Any])
+        oldPlan.removeValue(forKey: "compactActivityTitle")
+        oldPlan.removeValue(forKey: "compactActivityCategoryID")
+        let legacyPlan = try JSONDecoder().decode(type(of: plan),
+            from: JSONSerialization.data(withJSONObject: oldPlan))
+        XCTAssertNil(legacyPlan.compactActivityCategoryID)
+        XCTAssertEqual(legacyPlan.majorCategoryTitle, plan.majorCategoryTitle)
+    }
+
     @MainActor
     func testSensorTimelineCancellationKeepsErrorButReadFailureIsReported() async throws {
         let directory = FileManager.default.temporaryDirectory

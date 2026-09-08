@@ -970,6 +970,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         commandDefaults.removeObject(forKey: commandDefaultsKey)
         commandDefaults.removeObject(forKey: confirmationDefaultsKey)
         commandDefaults.removeObject(forKey: lastContactDefaultsKey)
+        TaptionWatchCommandCapabilityStore.clear()
     }
 
     func requestWatchDataSyncIfDue() {
@@ -1391,14 +1392,18 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         from envelope: [String: Any],
         receivedAt: Date
     ) -> Bool {
-        guard let data = envelope[TaptionWatchEnvelope.commandKey] as? Data,
+        guard !TaptionExternalPrivacyStore.isLocked,
+              let data = envelope[TaptionWatchEnvelope.commandKey] as? Data,
               data.count <= TaptionWatchEnvelope.commandMaximumBytes,
               let command = try? decoder.decode(
                 TaptionWatchCommand.self,
                 from: data
               ),
               let command = command.retainingData(receivedAt: receivedAt),
-              markAsNew(command.id, key: commandDefaultsKey) else {
+              TaptionWatchCommandCapabilityStore.consume(
+                  command,
+                  at: receivedAt
+              ) else {
             return false
         }
         commandHandler?(command)

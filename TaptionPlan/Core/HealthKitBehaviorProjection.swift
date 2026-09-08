@@ -8,6 +8,7 @@ enum HealthKitBehaviorProjectionEngine {
         "com.apple.Health",
         "com.apple.health",
         "com.taption.plan",
+        "com.taption.plan.watchkitapp",
     ]
 
     static func actuals(

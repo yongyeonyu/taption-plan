@@ -405,6 +405,42 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         }
     }
 
+    func sendCommand(
+        planID: UUID,
+        kind: TaptionWatchCommandKind,
+        at date: Date = .now
+    ) {
+        guard let capability = payload?.commandCapabilities?.first(where: {
+            $0.planID == planID && $0.kind == kind && $0.expiresAt >= date
+        }) else { return }
+        sendCommand(
+            TaptionWatchCommand(
+                id: capability.commandID,
+                planID: planID,
+                kind: kind,
+                requestedAt: date,
+                capabilityToken: capability.token
+            )
+        )
+    }
+
+    private func sendCommand(_ command: TaptionWatchCommand) {
+        guard !isPurgingData,
+              WCSession.isSupported(),
+              let data = try? encoder.encode(command) else {
+            return
+        }
+        let envelope: [String: Any] = [
+            TaptionWatchEnvelope.commandKey: data,
+        ]
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: nil)
+        }
+    }
+
     func sendHealthSnapshot(_ snapshot: TaptionWatchHealthSnapshot) {
         guard !isPurgingData else { return }
         let requestID = activeDataSyncRequestID ?? "none"

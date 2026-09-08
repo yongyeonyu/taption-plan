@@ -917,11 +917,24 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
+    static func isTrustedWorkoutSource(_ bundleIdentifier: String) -> Bool {
+        ["com.apple.Health", "com.apple.health", "com.taption.plan",
+         "com.taption.plan.watchkitapp"].contains(bundleIdentifier)
+    }
+
+    private static func trustedWorkout(_ sample: HKSample) -> HKWorkout? {
+        guard let workout = sample as? HKWorkout,
+              isTrustedWorkoutSource(
+                workout.sourceRevision.source.bundleIdentifier
+              ) else { return nil }
+        return workout
+    }
+
     private func workoutDetails(in span: TimeSpan) async throws -> [HealthActual] {
         let type = HKObjectType.workoutType()
         let samples = try await samples(type: type, span: span)
         return samples.compactMap { sample in
-            guard let workout = sample as? HKWorkout else { return nil }
+            guard let workout = Self.trustedWorkout(sample) else { return nil }
             let distanceType = HKQuantityType.quantityType(
                 forIdentifier: workout.workoutActivityType == .cycling
                     ? .distanceCycling
@@ -959,7 +972,7 @@ final class AppleHealthService: @unchecked Sendable {
         }
     }
 
-    /// 다른 앱과 Apple Watch가 HealthKit에 저장한 운동 경로를 읽어
+    /// 신뢰하는 Apple·Taption 소스의 운동 경로를 읽어
     /// 표본으로 되돌린다. 우리 앱이 듀티사이클 때문에 남기지 못한 구간의
     /// 실제 궤적을 사후에 채우는 유일한 정식 경로다.
     func workoutRouteReadings(
@@ -968,7 +981,7 @@ final class AppleHealthService: @unchecked Sendable {
         let workouts = try await samples(
             type: HKObjectType.workoutType(),
             span: span
-        ).compactMap { $0 as? HKWorkout }
+        ).compactMap(Self.trustedWorkout)
         guard !workouts.isEmpty else { return [] }
 
         var result: [SensorReading] = []
@@ -1072,7 +1085,7 @@ final class AppleHealthService: @unchecked Sendable {
             span: span
         )
         return samples.compactMap { sample in
-            guard let workout = sample as? HKWorkout,
+            guard let workout = Self.trustedWorkout(sample),
                   let mode = workout.workoutActivityType.movementTravelMode,
                   let overlap = TimeSpan(
                     start: workout.startDate,

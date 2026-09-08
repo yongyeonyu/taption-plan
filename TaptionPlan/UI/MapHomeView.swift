@@ -1453,7 +1453,6 @@ struct MapHomeView: View {
     @State private var isAppleWatchMenuExpanded = false
     @State private var isSettingsMenuExpanded = false
     @State private var isGPSLoggingMenuExpanded = false
-    @State private var isSettingsPresented = false
     @State private var isDataProtectionPresented = false
     @State private var isSettingsResetConfirmationPresented = false
     @AppStorage(
@@ -1920,10 +1919,6 @@ struct MapHomeView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isSettingsPresented) {
-            SettingsView(model: model)
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $isCategoryAddPresented) {
             MapHomeCategoryAddSheet(model: model, language: language)
                 .presentationDetents([.height(320)])
@@ -1942,21 +1937,13 @@ struct MapHomeView: View {
             isPresented: $isSettingsResetConfirmationPresented,
             titleVisibility: .visible
         ) {
-            Button(
-                language.text("설정 초기화", "Reset settings"),
-                role: .destructive
-            ) {
+            Button(language.text("설정 초기화", "Reset settings"), role: .destructive) {
                 isMenuOpen = false
                 Task { await model.resetSettingsToDefaults() }
             }
             Button(language.text("취소", "Cancel"), role: .cancel) {}
         } message: {
-            Text(
-                language.text(
-                    "계획과 기록은 삭제되지 않습니다.",
-                    "Your plans and records will not be deleted."
-                )
-            )
+            Text(language.text("계획과 기록은 삭제되지 않습니다.", "Your plans and records will not be deleted."))
         }
         .fullScreenCover(
             item: $sectionEditSelection,
@@ -5155,9 +5142,7 @@ struct MapHomeView: View {
 
     private var settingsMenuItem: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Button {
-                isSettingsMenuExpanded.toggle()
-            } label: {
+            Button { isSettingsMenuExpanded.toggle() } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 20, weight: .semibold))
@@ -5173,55 +5158,13 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.primary)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
-                .background(
-                    Color.tpReferenceRose.opacity(0.08),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
+                .background(Color.tpReferenceRose.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("설정 목록", "Settings list"))
 
             if isSettingsMenuExpanded {
-                Button {
-                    isSettingsPresented = true
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "gearshape.2.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.tpReferenceRose)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("전체 설정", "All Settings"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(
-                                language.text(
-                                    "권한 · Watch 자동 가져오기 · 가속도",
-                                    "Permissions, Watch auto-import, and acceleration"
-                                )
-                            )
-                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(Color.primary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 8)
-                    .background(
-                        Color.tpReferenceRose.opacity(0.055),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("전체 설정 열기", "Open all settings"))
-                .padding(.leading, 12)
-
-                Button {
-                    isDataProtectionPresented = true
-                } label: {
+                Button { isDataProtectionPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "lock.shield.fill")
                             .font(.system(size: 16, weight: .semibold))
@@ -5242,18 +5185,13 @@ struct MapHomeView: View {
                     .foregroundStyle(Color.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 8)
-                    .background(
-                        Color.tpReferenceRose.opacity(0.055),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
+                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("데이터 보호 열기", "Open data protection"))
                 .padding(.leading, 12)
 
-                Button {
-                    isSettingsResetConfirmationPresented = true
-                } label: {
+                Button { isSettingsResetConfirmationPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 16, weight: .semibold))
@@ -5262,12 +5200,7 @@ struct MapHomeView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(language.text("설정 초기화", "Reset settings"))
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(
-                                language.text(
-                                    "화면·연동 설정을 기본값으로 복원",
-                                    "Restore display and integration settings"
-                                )
-                            )
+                            Text(language.text("화면·연동 설정을 기본값으로 복원", "Restore display and integration settings"))
                                 .font(.system(size: 10.5, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
@@ -5279,17 +5212,13 @@ struct MapHomeView: View {
                     .foregroundStyle(Color.primary)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 8)
-                    .background(
-                        Color.tpReferenceRose.opacity(0.055),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
+                    .background(Color.tpReferenceRose.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(language.text("설정 초기화", "Reset settings"))
                 .padding(.leading, 12)
 
-                gpsLoggingMenuItem
-                    .padding(.leading, 12)
+                gpsLoggingMenuItem.padding(.leading, 12)
             }
         }
     }

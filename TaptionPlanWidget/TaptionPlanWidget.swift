@@ -2307,9 +2307,18 @@ struct SensorCollectionLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                SensorCollectionCompactSensorIcon(state: context.state)
+                TaptionLiveActivityStickman(
+                    action: TaptionLiveActivityStickmanAction.resolve(
+                        categoryID: context.state.currentActivityCategoryID ?? "unconfirmed",
+                        title: context.state.currentActivityTitle ?? "확인 중"
+                    )
+                )
+                .frame(width: 20, height: 20)
             } compactTrailing: {
-                SensorCollectionCompactHeartRate(state: context.state)
+                Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .frame(maxWidth: 72)
             } minimal: {
                 EmptyView()
             }
@@ -3587,15 +3596,18 @@ struct TaptionPlanLiveActivity: Widget {
             } compactLeading: {
                 TaptionLiveActivityStickman(
                     action: TaptionLiveActivityStickmanAction.resolve(
-                        categoryID: context.state.majorCategoryID,
-                        title: context.state.majorCategoryTitle
+                        categoryID: context.state.compactActivityCategoryID
+                            ?? context.state.majorCategoryID,
+                        title: context.state.compactActivityTitle
+                            ?? context.state.majorCategoryTitle
                     )
                 )
                 .frame(width: 20, height: 20)
             } compactTrailing: {
-                Text(timerInterval: context.state.startedAt...context.state.endsAt)
-                    .monospacedDigit()
-                    .frame(width: 42)
+                Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .frame(maxWidth: 72)
             } minimal: {
                 TaptionLiveActivityStickman(
                     action: TaptionLiveActivityStickmanAction.resolve(

@@ -3367,6 +3367,11 @@ final class AppModel {
     ) async {
         let controller = SensorCollectionLiveActivityController.shared
         let kinds = sensorCollectionKinds
+        let projection = currentLiveActivityProjection()
+        await liveActivityController.updateCompactActivity(
+            title: projection.title,
+            categoryID: projection.categoryID
+        )
         guard sensorCollectionSessionState == .collecting,
               let sessionID = sensorCollectionSessionID,
               let startedAt = sensorCollectionStartedAt else {
@@ -3393,7 +3398,10 @@ final class AppModel {
             } ?? [],
             isExternalSample: latestSensorReading?.sourceDevice == .appleWatch,
             latestHeartRate: latestHeartRate,
-            heartRateUpdatedAt: latestHeartRateUpdatedAt
+            heartRateUpdatedAt: latestHeartRateUpdatedAt,
+            currentActivityTitle: projection.title,
+            currentActivityCategoryID: projection.categoryID,
+            currentActivitySystemImage: projection.systemImage
         )
     }
 
@@ -6410,6 +6418,31 @@ final class AppModel {
         return (plan.categoryID, title, systemImage)
     }
 
+    private func currentLiveActivityProjection(at date: Date = .now) -> (
+        title: String,
+        categoryID: String,
+        systemImage: String
+    ) {
+        if !TaptionExternalPrivacyStore.isLocked,
+           let categoryID = TaptionCurrentActivityPolicy.categoryID(
+            actuals: snapshot.actuals,
+            plans: snapshot.plans,
+            at: date
+        ) {
+            let systemImage = RecordClassificationCatalog.categories.first {
+                $0.id == categoryID
+            }?.systemImage ?? TimelineRowKind(categoryID: categoryID)?.systemImage
+                ?? "sparkles"
+            let title = TimelineRowKind.title(forCategoryID: categoryID) ?? "활동"
+            return (title, categoryID, systemImage)
+        }
+        return (
+            AppLanguagePreference.text(korean: "확인 중", english: "Checking"),
+            "unconfirmed",
+            "questionmark"
+        )
+    }
+
     func deleteActual(_ actualID: UUID) async {
         guard let actual = snapshot.actuals.first(where: {
             $0.id == actualID
@@ -6768,13 +6801,16 @@ final class AppModel {
         snapshot.plans[index] = result.plan
         snapshot.actuals = result.actuals
         let majorCategory = currentMajorCategory(for: result.plan)
+        let projection = currentLiveActivityProjection()
         do {
             _ = try await liveActivityController.start(
                 plan: result.plan,
                 catStyle: snapshot.settings.catStyle,
                 majorCategoryID: majorCategory.id,
                 majorCategoryTitle: majorCategory.title,
-                majorCategorySystemImage: majorCategory.systemImage
+                majorCategorySystemImage: majorCategory.systemImage,
+                compactActivityTitle: projection.title,
+                compactActivityCategoryID: projection.categoryID
             )
         } catch LiveActivityError.unavailable {
             // The plan timer still works when Live Activities are disabled.
@@ -6820,7 +6856,8 @@ final class AppModel {
     }
 
     private func applyWatchCommand(_ command: TaptionWatchCommand) async {
-        guard acceptsDataMutation(capturedAt: command.requestedAt) else {
+        guard !TaptionExternalPrivacyStore.isLocked,
+              acceptsDataMutation(capturedAt: command.requestedAt) else {
             return
         }
         activeDataMutationCount += 1
@@ -11723,6 +11760,15 @@ final class AppModel {
                     parentID: plan.parentID
                 )
             }
+        let commandCapabilities = hidesSensitiveContent || isCommerceLocked
+            ? []
+            : TaptionWatchCommandCapabilityStore.reconcile(
+                planIDs: Set(watchItems.map(\.id)),
+                now: now
+            )
+        if hidesSensitiveContent || isCommerceLocked {
+            TaptionWatchCommandCapabilityStore.clear()
+        }
         let watchPayload = TaptionWatchPayload(
             generatedAt: now,
             viewportStart: now,
@@ -11756,6 +11802,7 @@ final class AppModel {
                 : pendingWatchActivitySuggestion.flatMap {
                     now.timeIntervalSince($0.endedAt) <= 2 * 3_600 ? $0 : nil
                 },
+            commandCapabilities: commandCapabilities,
             commerceLocked: isCommerceLocked,
             languagePreference: AppLanguagePreference.current.watchPayloadValue
         )

@@ -546,6 +546,45 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(restoredRange, [envelope])
     }
 
+    func testCancelledRawReadReleasesLockAndPreservesEvents() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raw-day-cancelled-read-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let date = Date(timeIntervalSince1970: 1_850_000_000)
+        let first = try RawDeviceDataEnvelope(
+            capturedAt: date,
+            source: .gps,
+            kind: "weather-context",
+            payload: ["temperature": 21]
+        )
+        let archive = try RawDeviceDataDayArchive(
+            databaseURL: directory.appendingPathComponent("raw-day.sqlite")
+        )
+        try await archive.append(first)
+
+        let read = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await archive.allEnvelopes()
+        }
+        do {
+            _ = try await read.value
+            XCTFail("Cancelled raw read unexpectedly completed")
+        } catch is CancellationError {}
+
+        let second = try RawDeviceDataEnvelope(
+            capturedAt: date.addingTimeInterval(1),
+            source: .gps,
+            kind: "weather-context",
+            payload: ["temperature": 22]
+        )
+        try await archive.append(second)
+        let restored = try await archive.allEnvelopes()
+        XCTAssertEqual(
+            restored.map(\.id),
+            [first.id, second.id]
+        )
+    }
+
     func testRawDeviceEnvelopeBatchRejectsDivergentDuplicate() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("raw-day-conflict-batch-\(UUID().uuidString)")
