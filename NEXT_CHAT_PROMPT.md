@@ -2,8 +2,8 @@
 
 ## 2026-09-09 REL909A001 · 메인 정리·TestFlight 재개 기준
 
-- 워크트리는 `main`에서 clean이며 기준 commit은 `f73e9e0`다. `origin/main`과 동일하고 임시 브랜치는 사용하지 않는다.
-- 앱 소스가 반영된 최신 commit은 `226d105`이고 앱/Widget/Watch/Watch Widget build는 `1.0 (144)`다. 이후 `480d66d`는 개발문서 기록만 변경했다.
+- 워크트리는 `main`에서 clean이며 기준 commit은 `18067a0`다. `origin/main`과 동일하고 임시 브랜치는 사용하지 않는다.
+- 앱 소스가 반영된 최신 commit은 `226d105`이고 앱/Widget/Watch/Watch Widget build는 `1.0 (144)`다. 이후 `480d66d`, `f73e9e0`, `18067a0`은 개발문서·재개 프롬프트만 변경했다.
 - build 144는 Release archive/export·서명·`altool --validate-app`·App Store Connect upload/processing `COMPLETE`·build `VALID`까지 완료했다.
 - `TP Taption Plan 내부 테스트`에 build 144를 연결했고 그룹 화면에서 `1.0 (144) · 테스트 중`, 테스터 화면에서 1명 노출을 readback했다. 이는 TestFlight 클라이언트 설치 증거가 아니다.
 - 대표님 iPhone 14 Pro의 TestFlight 설치 표시는 아직 `1.0 (142)`다. build 144 설치·launch·실제 지도/로그 화면과 설정의 `로그 보내기` 후 iCloud `TaptionLogs` 파일 readback을 다음 채팅에서 확인한다.
@@ -21,7 +21,7 @@
 4. `xcrun devicectl list devices`
 
 현재 기준:
-- HEAD/origin/main: `f73e9e0`
+- HEAD/origin/main: `18067a0`
 - 앱 소스 기준: `226d105`
 - 최신 TestFlight: `1.0 (144)`
 - build 144: upload/processing `COMPLETE`, `VALID`, `TP Taption Plan 내부 테스트` 연결 및 그룹/테스터 화면 노출 확인
