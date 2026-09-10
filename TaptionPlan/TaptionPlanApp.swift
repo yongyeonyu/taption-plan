@@ -158,7 +158,7 @@ final class TaptionPlanAppDelegate:
         if session.previousSessionWasUnfinished == true {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "previous_session_unfinished",
-                level: .error,
+                level: .notice,
                 fields: session.previousSessionStartedAt.map {
                     ["started_at": String($0.timeIntervalSince1970)]
                 } ?? [:]

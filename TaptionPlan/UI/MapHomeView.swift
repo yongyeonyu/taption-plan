@@ -4333,6 +4333,11 @@ struct MapHomeView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+
+            Divider()
+                .padding(.vertical, 9)
+
+            appVersionFooter
             }
             .padding(.horizontal, 20)
             .padding(.top, 60)
@@ -4340,6 +4345,22 @@ struct MapHomeView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(MapHomeScrollBounceDisabler())
+    }
+
+    private var appVersionFooter: some View {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "-"
+        let build = info?["CFBundleVersion"] as? String ?? "-"
+        return Text(
+            language.text(
+                "Taption Plan \(version) (빌드 \(build))",
+                "Taption Plan \(version) (Build \(build))"
+            )
+        )
+        .font(.system(size: 11, weight: .medium, design: .rounded))
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
     }
 
     private var categoryMenuItem: some View {
@@ -7204,9 +7225,15 @@ struct MapHomeView: View {
         )
     }
 
-    private func makeMapDayCacheStore() -> TaptionPlanDayStore? {
-        guard let url = try? TaptionLocalDatabaseLocation
+    private func mapDayCacheDatabaseURL() -> URL? {
+        guard let dataURL = try? TaptionLocalDatabaseLocation
             .sharedOrApplicationSupport() else { return nil }
+        return dataURL.deletingLastPathComponent()
+            .appendingPathComponent("taption-map-cache-v1.sqlite")
+    }
+
+    private func makeMapDayCacheStore() -> TaptionPlanDayStore? {
+        guard let url = mapDayCacheDatabaseURL() else { return nil }
         return try? TaptionPlanDayStore(url: url)
     }
 
@@ -7217,8 +7244,7 @@ struct MapHomeView: View {
               visibleMapCenter.longitude.isFinite,
               visibleMapSpan.latitudeDelta.isFinite,
               visibleMapSpan.longitudeDelta.isFinite else { return }
-        guard let databaseURL = try? TaptionLocalDatabaseLocation
-            .sharedOrApplicationSupport() else { return }
+        guard let databaseURL = mapDayCacheDatabaseURL() else { return }
         if mapDayCacheStore == nil {
             mapDayCacheStore = makeMapDayCacheStore()
         }
@@ -9204,7 +9230,17 @@ private struct MapHomeSectionEditSheet: View {
     }
 
     private var categorySelectionMenu: some View {
-        Menu {
+        let title = selectedMovementMode.map {
+            MapHomeMovementEditOption.localizedTitle(
+                for: $0,
+                language: language
+            )
+        } ?? selectedCategory.localizedTitle(language)
+        let systemImage = selectedMovementMode.map {
+            MovementPresentation.symbol(for: $0)
+        } ?? selectedCategory.systemImage
+
+        return Menu {
             ForEach(categories) { category in
                 if category.id == "movement" {
                     Menu {
@@ -9248,19 +9284,26 @@ private struct MapHomeSectionEditSheet: View {
                 }
             }
         } label: {
-            Label(
-                selectedMovementMode.map {
-                    MapHomeMovementEditOption.localizedTitle(
-                        for: $0,
-                        language: language
-                    )
-                } ?? selectedCategory.localizedTitle(language),
-                systemImage: selectedMovementMode.map {
-                    MovementPresentation.symbol(for: $0)
-                } ?? selectedCategory.systemImage
-            )
+            HStack(spacing: 8) {
+                Label(title, systemImage: systemImage)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
             .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
+        .accessibilityLabel(
+            language.text("대분류 수정 \(title)", "Edit category \(title)")
+        )
+        .accessibilityHint(
+            language.text(
+                "탭해서 대분류를 변경합니다.",
+                "Tap to change the category."
+            )
+        )
     }
 
     private func selectCategory(
@@ -10289,6 +10332,37 @@ private struct MapHomeSecuritySheet: View {
                             .buttonStyle(.bordered)
                             .disabled(!hasPIN)
                     }
+                }
+
+                card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
+                    Text(language.text(
+                        "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
+                        "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            Task { await model.exportDiagnosticsToICloud() }
+                        } label: {
+                            Label(
+                                language.text("로그 업로드", "Upload logs"),
+                                systemImage: "icloud.and.arrow.up"
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Color.tpReferenceBlue)
+                        .disabled(model.isExportingDiagnostics)
+
+                        Text(model.diagnosticsExportStatus)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpReferenceBlue)
+                    }
+
+                    Text(model.diagnosticsLatestLogSummary)
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
                 }
 
                 if let message {

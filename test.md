@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-10 TP0910A004 · iCloud 진단 오류·지연 수정 및 TestFlight build 145
+
+- 최신 Plan 진단 readback에서 `previous_session_unfinished` 반복 기록, 부분 iCloud 백업/복구 가능한 legacy reading의 오류 등급, 공유 SQLite와 map cache 대기 지연을 분리해 확인하고 수정했다. map cache는 별도 SQLite로 분리했으며 기존 백업·정본 데이터는 보존했다.
+- 관련 XCTest 108/108 PASS·0 FAIL·0 SKIP, Debug build PASS, Release archive/export 및 `altool --validate-app` PASS. 네 번들 `1.0 (145)`, Delivery UUID `a5a3ba33-8252-4fbb-b7c4-0104d59b7c57`, App Store Connect `VALID`·`APP_STORE_ELIGIBLE`이다.
+- `TP Taption Plan 내부 테스트` 연결 후 API에서 build 145와 내부 테스터 1명(`INSTALLED`)을 readback했다. Chrome 그룹·테스터 화면은 App Store Connect 로그인 화면으로 전환되어 UI readback은 미완료다.
+- 실제 TestFlight 클라이언트 145 설치·launch·터치 및 설정 `로그 보내기` 후 iCloud `TaptionLogs` readback은 실기기 게이트로 남긴다.
+
 ## 2026-09-09 CRH909A001 · 크래시 진단 및 로그 전송
 
 - iPhone 14 Pro crash report readback: build 140, `EXC_CRASH/SIGKILL`, `RUNNINGBOARD/0xDEAD10CC`, 2026-09-08 15:02:01. 현재 build 142 신규 crash report는 없음. 원본 `/tmp/CRH909A001/TaptionPlan-2026-09-08-150201.ips`.

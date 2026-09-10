@@ -1663,7 +1663,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
         if archiveCount > archives.count || skippedByLimit > 0 {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "cloud_backup_files_skipped",
-                level: .error,
+                level: archives.isEmpty ? .error : .notice,
                 fields: [
                     "invalid": String(archiveCount - archives.count),
                     "bounded": String(skippedByLimit),
@@ -1861,7 +1861,7 @@ final class FilePlanCloudRawSensorBackupStore: PlanCloudRawSensorBackupStore {
         if archiveCount > archives.count || skippedByLimit > 0 {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "cloud_raw_backup_files_skipped",
-                level: .error,
+                level: archives.isEmpty ? .error : .notice,
                 fields: [
                     "invalid": String(archiveCount - archives.count),
                     "bounded": String(skippedByLimit),

@@ -1462,7 +1462,9 @@ actor SensorReadingArchive {
             }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_archive_invalid_reading",
-                level: .error,
+                level: recoveryCounts["unavailable", default: 0] > 0
+                    ? .error
+                    : .notice,
                 fields: fields
             )
         }

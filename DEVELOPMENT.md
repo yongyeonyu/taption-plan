@@ -1,5 +1,13 @@
 # Taption Plan 개발 문서
 
+## 2026-09-10 TP0910A004 · iCloud 진단 오류·지연 수정 및 TestFlight build 145
+
+- Plan iCloud Drive에는 월간 백업·raw sensor 파일만 있고 `TaptionLogs` readback은 없었다. 최신 Simulator 진단에서 반복된 `previous_session_unfinished` 3건은 비정상 종료 사실을 숨기지 않되 `.notice`로 낮췄다. 과거 로그의 부분 백업 누락·복구 가능한 legacy reading은 `.notice`, 복구 불가 reading과 후보가 모두 무효인 백업은 `.error`로 남겼다.
+- 날짜 지도 로딩 지연 로그에서 map cache와 공유 `taption-data-v2.sqlite` 대기가 겹치던 경로를 확인했다. 선택적 지도 cache를 별도 `taption-map-cache-v1.sqlite`로 분리해 기존 백업·정본 데이터는 건드리지 않는다.
+- 관련 XCTest 108/108 PASS·0 FAIL·0 SKIP, generic iOS Simulator Debug build PASS. Release archive/export 성공: `/private/tmp/TP0910A004.4Wj1gl/TaptionPlan.xcarchive`, `/private/tmp/TP0910A004.4Wj1gl/Export/TaptionPlan.ipa`; 앱·iOS Widget·Watch 앱·Watch Widget 모두 `1.0 (145)`, Apple Distribution, Production iCloud/TestFlight entitlement, IPA SHA-256 `c67ab9f15f7a32cf6e417da2bd9f6a676c7bb04442667c86ea4d4bad80bf2243`다.
+- `altool --validate-app` 및 업로드 성공. Delivery UUID `a5a3ba33-8252-4fbb-b7c4-0104d59b7c57`, App Store Connect 처리 `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`. `TP Taption Plan 내부 테스트`에 build 145를 연결했고 API에서 그룹 build 105개와 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome App Store Connect는 로그인 화면으로 열려 그룹·테스터 브라우저 UI readback은 미완료다. TestFlight 클라이언트 설치·launch·터치와 실제 기기 `로그 보내기` 후 iCloud `TaptionLogs` readback도 별도 게이트다.
+
 ## 2026-09-09 CRH909A001 · 실기기 크래시 진단 및 iCloud 로그 전송
 
 - iPhone 14 Pro의 systemCrashLogs에서 확인된 TaptionPlan crash report는 `2026-09-08 15:02:01`, build 140, iOS 26.6.1이며 `EXC_CRASH/SIGKILL`, `RUNNINGBOARD/0xDEAD10CC`였다. Swift 예외나 faulting frame이 아니라 iOS 실행 관리자가 종료한 기록이며, 현재 build 142의 새 crash report는 확인되지 않았다. 원본은 `/tmp/CRH909A001/TaptionPlan-2026-09-08-150201.ips`에 보존했다.
