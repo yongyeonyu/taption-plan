@@ -1,5 +1,12 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-10 TP0910A004 · iCloud 진단 오류·지연 수정 및 TestFlight 145
+
+- `main` 최신 커밋은 `6e8b6e3`이며 origin과 일치한다. 앱·iOS Widget·Watch 앱·Watch Widget은 `1.0 (145)`다.
+- 반복 `previous_session_unfinished`와 부분 백업/복구 가능한 legacy reading의 오류 등급을 정리하고, 공유 SQLite와 경합하던 map cache를 별도 DB로 분리했다. 관련 XCTest 108/108, Debug build, Release archive/export, `altool --validate-app`을 통과했다.
+- Delivery UUID `a5a3ba33-8252-4fbb-b7c4-0104d59b7c57`는 App Store Connect `VALID`·`APP_STORE_ELIGIBLE`·`expired=false`다. `TP Taption Plan 내부 테스트` 연결 및 API 그룹 build 145·테스터 1명 readback을 완료했다.
+- Chrome App Store Connect는 로그인 화면이어서 그룹·테스터 브라우저 UI readback은 남아 있다. TestFlight 클라이언트 설치·launch·터치와 실기기 `로그 보내기` 후 iCloud `TaptionLogs` readback도 별도 게이트다.
+
 ## 2026-09-09 REL909A001 · 메인 정리·TestFlight 재개 기준
 
 - 워크트리는 `main`에서 clean이며 `origin/main` 일치는 새 채팅 시작 시 live로 확인한다. 임시 브랜치는 사용하지 않는다.
