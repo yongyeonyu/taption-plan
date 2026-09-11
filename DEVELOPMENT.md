@@ -1,5 +1,14 @@
 # Taption Plan 개발 문서
 
+## 2026-09-11 TP0911B002 · CancellationError 저장 오류 통합 수정 및 TestFlight build 146
+
+- 새 화면의 `센서 기록을 저장하지 못했습니다` 팝업과 TP0911A001의 `변경 내용을 저장하지 못했습니다` 팝업은 iCloud 권한 문제가 아니라 취소된 저장 작업을 실제 저장 실패로 승격하던 공통 경계가 원인이었다. `TaptionLogs-20260910-233858.txt`에서는 `local_persistence_failed`의 `CancellationError`, `route_readings_load_failed`, 장시간 `background_refresh cancelled`가 함께 확인됐다. 사용자가 올린 최신 로그는 현재 Mac의 iCloud 컨테이너에 아직 내려오지 않았고, 컨테이너 상태만 caught-up이었다.
+- `AppModel`의 활동 저장 readback, 공통 `persist()`, 센서 로컬 snapshot 저장에서 `CancellationError`를 정상 취소로 종료하고 실제 오류만 기존 사용자 안내·진단 로그로 남기도록 최소 수정했다. 소스 커밋은 `6fd7326`이며 UI·iCloud 백업 포맷·기존 데이터는 변경하지 않았다.
+- 관련 XCTest 2/2 PASS·0 FAIL·0 SKIP: 활동 편집 즉시 재편집과 저장 취소 무오류 노출 회귀. generic iOS Debug build도 exit 0으로 통과했다.
+- Release archive/export 성공: `/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TP0911B002.WWAQCR1Zh2/TaptionPlan.xcarchive`, `/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TP0911B002.WWAQCR1Zh2/Export/TaptionPlan.ipa`; 네 번들 모두 `1.0 (146)`, IPA SHA-256 `6ae9d0761372eacffb4ca11cb0955b29e70c5bc031979aa773cfb195703583b6`, deep/strict 서명·Production iCloud entitlement 확인.
+- `altool --validate-app` 및 업로드 성공. Delivery UUID `fca81e99-261d-42c7-8bd8-4bed334e6429`는 App Store Connect에서 `VALID`·`expired=false`다. `TP Taption Plan 내부 테스트`에 build 146을 연결했고 API에서 그룹 build 146과 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome App Store Connect 그룹 URL은 현재 `Unauthenticated`여서 브라우저 UI의 build/tester 노출은 확인하지 못했다. `INSTALLED`는 TestFlight 146 설치·실행 증거가 아니며, 실제 TestFlight 클라이언트 설치·launch·터치와 최신 iCloud 로그 readback은 별도 실기기 게이트다.
+
 ## 2026-09-10 TP0910A004 · iCloud 진단 오류·지연 수정 및 TestFlight build 145
 
 - Plan iCloud Drive에는 월간 백업·raw sensor 파일만 있고 `TaptionLogs` readback은 없었다. 최신 Simulator 진단에서 반복된 `previous_session_unfinished` 3건은 비정상 종료 사실을 숨기지 않되 `.notice`로 낮췄다. 과거 로그의 부분 백업 누락·복구 가능한 legacy reading은 `.notice`, 복구 불가 reading과 후보가 모두 무효인 백업은 `.error`로 남겼다.

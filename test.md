@@ -1,5 +1,13 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-11 TP0911B002 · CancellationError 저장 오류 통합 수정 및 TestFlight build 146
+
+- 새 화면의 `센서 기록을 저장하지 못했습니다`와 TP0911A001의 활동 저장 팝업을 함께 수정했다. build 145 iCloud 로그에서 저장 취소가 `local_persistence_failed`로 기록된 원인을 확인했고, 현재 Mac의 iCloud 컨테이너는 caught-up이지만 사용자가 올린 최신 로그 파일은 아직 내려오지 않았다.
+- 활동 저장 readback·공통 저장·센서 snapshot 저장의 `CancellationError`는 사용자 오류로 표시하지 않고, 실제 저장소 오류만 기존 안내·로그로 남긴다. 소스 커밋 `6fd7326`.
+- 회귀 XCTest 2/2 PASS·0 FAIL·0 SKIP, generic iOS Debug build PASS, Release archive/export·deep/strict 서명·Production iCloud entitlement PASS. 네 번들 `1.0 (146)`, IPA SHA-256 `6ae9d0761372eacffb4ca11cb0955b29e70c5bc031979aa773cfb195703583b6`.
+- `altool --validate-app`·업로드 PASS. Delivery UUID `fca81e99-261d-42c7-8bd8-4bed334e6429`, App Store Connect `VALID`·`expired=false`. `TP Taption Plan 내부 테스트`에 연결 후 API에서 build 146과 내부 테스터 1명(`INSTALLED`)을 readback했다.
+- Chrome 그룹 URL은 `Unauthenticated`여서 브라우저 UI build/tester 노출은 미확인이다. 테스터 `INSTALLED`는 146의 TestFlight 설치·launch 증거가 아니다. 실제 TestFlight 클라이언트 설치·launch·터치 및 최신 `TaptionLogs` iCloud readback은 별도 실기기 게이트다.
+
 ## 2026-09-10 TP0910A004 · iCloud 진단 오류·지연 수정 및 TestFlight build 145
 
 - 최신 Plan 진단 readback에서 `previous_session_unfinished` 반복 기록, 부분 iCloud 백업/복구 가능한 legacy reading의 오류 등급, 공유 SQLite와 map cache 대기 지연을 분리해 확인하고 수정했다. map cache는 별도 SQLite로 분리했으며 기존 백업·정본 데이터는 보존했다.
