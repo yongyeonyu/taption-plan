@@ -77,6 +77,50 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(model.userFacingError?.hasPrefix("위치 기록을 읽지 못했습니다.") == true)
     }
 
+    @MainActor
+    func testPersistenceCancellationDoesNotSurfaceAsSaveError() async throws {
+        let day = makeDate(2026, 8, 12)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let travel = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["테스트"],
+            isConfirmed: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.travel = [travel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = CancellationSavePlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let result = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: [travel.id],
+                originalSpan: span,
+                originalOption: phaseOption("movement", title: "이동"),
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("work", title: "업무")
+                )
+            )
+        )
+
+        XCTAssertNil(result)
+        XCTAssertNil(model.userFacingError)
+    }
+
     func testLocationUpdatesWaitUntilFreshLocationRequestCompletes() {
         XCTAssertFalse(
             MapHomeUserTrackingPolicy.focusesLocationUpdates(in: .locating)
@@ -24023,6 +24067,22 @@ private actor RejectingSavePlanRepository: PlanDataRepository {
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         throw RepositoryError.invalidSnapshot
+    }
+}
+
+private actor CancellationSavePlanRepository: PlanDataRepository {
+    private let snapshot: TaptionDataSnapshot
+
+    init(snapshot: TaptionDataSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        snapshot
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        throw CancellationError()
     }
 }
 

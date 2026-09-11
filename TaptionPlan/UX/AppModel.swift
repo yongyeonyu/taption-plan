@@ -2188,6 +2188,8 @@ final class AppModel {
                 )
                 return nil
             }
+        } catch is CancellationError {
+            return nil
         } catch {
             userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
             TaptionPlanDiagnosticsLogger.shared.record(
@@ -12080,6 +12082,8 @@ final class AppModel {
                 }
             }
             return true
+        } catch is CancellationError {
+            return false
         } catch {
             userFacingError = "변경 내용을 저장하지 못했습니다. \(error.localizedDescription)"
             TaptionPlanDiagnosticsLogger.shared.record(
@@ -12408,6 +12412,8 @@ final class AppModel {
                 assignTimestampOnlySnapshot(visibleValue)
             }
             publishWidgetPayload()
+        } catch is CancellationError {
+            return
         } catch {
             userFacingError =
                 "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
