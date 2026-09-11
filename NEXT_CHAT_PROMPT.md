@@ -5,7 +5,7 @@
 - 소스 수정 커밋은 `6fd7326`이며 앱·iOS Widget·Watch 앱·Watch Widget은 `1.0 (146)`이다. 활동 저장 readback·공통 `persist()`·센서 snapshot 저장의 `CancellationError`를 사용자 오류에서 분리했다.
 - 관련 XCTest 2/2, generic iOS Debug build, Release archive/export, `altool --validate-app`, 업로드/처리 `VALID`를 완료했다. Delivery UUID `fca81e99-261d-42c7-8bd8-4bed334e6429`다.
 - `TP Taption Plan 내부 테스트`에 build 146을 연결했고 API 그룹 build·테스터 1명 readback을 완료했다. Chrome 그룹 URL은 `Unauthenticated`여서 브라우저 UI readback은 남아 있다.
-- 사용자가 올린 최신 iCloud 로그는 현재 Mac에 아직 동기화되지 않았다. TestFlight 클라이언트 설치·launch·터치와 새 로그 iCloud readback도 별도 실기기 게이트다.
+- 사용자가 올린 최신 iCloud 로그 `TaptionLogs-20260911-105220.txt`(수정 전 build 145)는 현재 Mac에 동기화되어 readback했다. TestFlight 클라이언트 146 설치·launch·터치와 수정 후 새 로그 iCloud readback은 별도 실기기 게이트다.
 
 ### 다음 채팅에 그대로 붙여넣기
 
@@ -18,7 +18,7 @@
 - 소스 수정 커밋: `6fd7326`
 - 최신 TestFlight: `1.0 (146)`, App Store Connect `VALID`, `TP Taption Plan 내부 테스트` API 연결 완료
 - Chrome 그룹 화면: `Unauthenticated`로 브라우저 UI readback 미완료
-- 실제 TestFlight 클라이언트 146 설치·launch·터치와 새 `TaptionLogs` iCloud readback은 미완료
+- 수정 전 build 145의 최신 `TaptionLogs-20260911-105220.txt`는 readback했지만, 수정 후 build 146 TestFlight 클라이언트 설치·launch·터치와 새 로그 readback은 미완료
 
 남은 게이트만 확인한다. 로그인은 대표님이 직접 처리한 뒤 그룹 빌드·테스터 화면을 readback하고, 실기기에서 TestFlight 146 설치 provenance·버전·launch·저장 취소 팝업 재현 여부·설정 로그 업로드 후 iCloud 파일을 각각 확인한다. 개발자 설치와 TestFlight 설치를 혼동하지 않는다. 완료한 항목만 temp.md에서 제거하고 마지막에 git diff --check, clean worktree, HEAD=origin/main을 확인한다.
 ```

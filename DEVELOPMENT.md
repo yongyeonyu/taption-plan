@@ -2,7 +2,7 @@
 
 ## 2026-09-11 TP0911B002 · CancellationError 저장 오류 통합 수정 및 TestFlight build 146
 
-- 새 화면의 `센서 기록을 저장하지 못했습니다` 팝업과 TP0911A001의 `변경 내용을 저장하지 못했습니다` 팝업은 iCloud 권한 문제가 아니라 취소된 저장 작업을 실제 저장 실패로 승격하던 공통 경계가 원인이었다. `TaptionLogs-20260910-233858.txt`에서는 `local_persistence_failed`의 `CancellationError`, `route_readings_load_failed`, 장시간 `background_refresh cancelled`가 함께 확인됐다. 사용자가 올린 최신 로그는 현재 Mac의 iCloud 컨테이너에 아직 내려오지 않았고, 컨테이너 상태만 caught-up이었다.
+- 새 화면의 `센서 기록을 저장하지 못했습니다` 팝업과 TP0911A001의 `변경 내용을 저장하지 못했습니다` 팝업은 iCloud 권한 문제가 아니라 취소된 저장 작업을 실제 저장 실패로 승격하던 공통 경계가 원인이었다. 사용자가 올린 `TaptionLogs-20260911-105220.txt`(build 145)를 iCloud에서 readback했고, `local_persistence_failed` 4건이 모두 `CancellationError`였으며 `route_readings_load_failed`와 장시간 `background_refresh cancelled`도 함께 확인됐다.
 - `AppModel`의 활동 저장 readback, 공통 `persist()`, 센서 로컬 snapshot 저장에서 `CancellationError`를 정상 취소로 종료하고 실제 오류만 기존 사용자 안내·진단 로그로 남기도록 최소 수정했다. 소스 커밋은 `6fd7326`이며 UI·iCloud 백업 포맷·기존 데이터는 변경하지 않았다.
 - 관련 XCTest 2/2 PASS·0 FAIL·0 SKIP: 활동 편집 즉시 재편집과 저장 취소 무오류 노출 회귀. generic iOS Debug build도 exit 0으로 통과했다.
 - Release archive/export 성공: `/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TP0911B002.WWAQCR1Zh2/TaptionPlan.xcarchive`, `/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TP0911B002.WWAQCR1Zh2/Export/TaptionPlan.ipa`; 네 번들 모두 `1.0 (146)`, IPA SHA-256 `6ae9d0761372eacffb4ca11cb0955b29e70c5bc031979aa773cfb195703583b6`, deep/strict 서명·Production iCloud entitlement 확인.
