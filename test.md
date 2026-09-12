@@ -1,5 +1,21 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-13 TP0913B001 · 통합 후보 검증
+
+- 작업 후보는 앱·Widget·Watch·Watch Widget `1.0 (147)`이다. 최종 앱 회귀는 총 1,098건 중 1,097 PASS·기존 StoreKit 1 SKIP·0 FAIL, `unit-final.xcresult` summary `Passed`로 확인했다. 취소된 로컬 편집 보존·동시 편집·백그라운드 보고서 미실행·preview 무쓰기/삭제 fence·PIN/백업 변경 중 async 커밋 거부·삭제 후 백업 재생성 방지를 포함한다.
+- 패키지 회귀: Core 54, Activity 14, Route 20, umbrella PlanEngine 1 — 총 89 PASS·0 FAIL·0 SKIP, 실행 종료 코드 0. 증거: `build/validation/TP0913B001/package-*.log`.
+- 첫 앱 전체 실행은 XCTest 1,067건(1,065 PASS·1 기존 StoreKit SKIP·1 새 테스트 기대값 실패), Swift Testing 27 PASS였다. 실패는 동일 source의 유효 DB 캐시를 재사용하는 정상 경로에 sensor 재호출 1회를 기대한 테스트이며, preview가 strict cache를 seed하지 않는 직접 검증으로 수정했다. 최초 iOS 다운로드 상태 API 컴파일 실패도 수정했다. 이 실행은 최종 PASS로 계산하지 않는다.
+- 1차 측정: 65,853 synthetic history의 메모리 preview 30회 p95 0.010ms; 30일×1,440 readings 정상 일자 로드 cold p95 24.984ms, warm 0.094ms. 캐시/API 측정이며 실제 화면 frame·실기기 resume p95가 아니다. 운영 로그의 중단 포함 수분 경과와 직접 배수 비교하지 않는다.
+- 최종 동일 측정: memory preview p95 0.005ms, cold 28.821ms, warm 0.092ms. 증거 `unit-final.log`이며 자동 성능 회귀 threshold도 통과했다.
+- generic iOS Debug build PASS(`debug-device.log`). Simulator 147 launch PID `18064` → 지도 9/13에서 9/12로 날짜 전환 → 메뉴 하단 `Taption Plan 1.0 (빌드 147)` → 설정/데이터 보호 `iCloud 로그 업로드`·`로그 업로드` 표시를 AX로 확인했다. 홈으로 background 전환 후 동일 PID `18064`로 복귀해 지도 화면·9/12 상태를 다시 확인했고 오류 팝업은 없었다. 1회 Simulator 확인이며 실기기 30회 검증이나 실제 iCloud 전송 성공을 뜻하지 않는다.
+- 소스 `4631c77` main push, Release archive/export PASS. 네 번들 모두 `1.0 (147)`, exported IPA deep/strict codesign PASS·Production iCloud·beta-reports-active=true·get-task-allow=false. IPA SHA256 `d52d266f16b362d7a0a7a2a9a25606c0f52266d9407312d5b3e1e9f61f36f46a`, 앱/dSYM UUID 일치 `6B86AFEC-5D80-3298-B77B-5DE50B4FE8F0`. archive·Export·로그는 `build/validation/TP0913B001`에 보존한다.
+- iPhone·iPad·Watch는 `devicectl`에서 unavailable. 최신 OS crash/dSYM 대조, TestFlight 클라이언트 147 설치 provenance·launch, 화면 켜기/복귀 30회 및 30분 사용, 날짜 이동·저장/대분류 편집, 새 로그 업로드 후 오류/지연 readback은 미확인이다.
+- 캘린더 계정 교체/재허용·반복 일정, Watch 원본 실수신, 지도 두 손가락 조작·VoiceOver/발열·PIN 기반 실제 iCloud 복원은 기존 요청 ID의 실기기 게이트를 최신 후보로 통합한다. 판매 계약·첫 IAP 연결/심사·유료화는 이번 승인 범위에서 제외한다.
+- Chrome은 초기 로그인 실패 이후 team/Plan 그룹 URL까지 이동했지만 새로고침·직접 재진입에도 AX 본문과 실제 화면이 비어 있다. 확장 탭 접근도 `Debugger unattached`로 실패해 native Chrome으로 재확인했다. API와 별도로 그룹 빌드·테스터 웹 화면 readback이 남아 있으므로 릴리스 완료로 보고하지 않는다.
+- `altool --validate-app` 및 업로드 exit 0, Delivery UUID `43f84236-1f6b-4ba3-9923-5c70ce4fd148`. Apple 처리 `VALID`·`expired=false`, `TP Taption Plan 내부 테스트` API 연결 후 build 147 readback `groupBuildVerified=true`, 테스터 1명 `INSTALLED` 확인. 이는 147 클라이언트 설치 증거가 아니다. `validate.log`/`upload.log`/`internal-readback.log` 보존.
+- 정리: 활성 사용이 없음을 `lsof`·프로세스로 확인한 이전 기본 Plan DerivedData의 `Build/Intermediates.noindex` 1.3GB와 `Index.noindex` 150MB만 삭제했다. 재빌드 가능한 캐시이며 Logs/TestResults/Products·현재 후보·다른 프로젝트·사용자 백업·휴지통은 보존했다.
+- 서명 검증용 IPA 압축 해제 사본 104MB도 `lsof` 확인 후 삭제했다. 원본 IPA·archive·dSYM·검증 로그는 보존해 재생성할 수 있다.
+
 ## 2026-09-11 TP0911B002 · CancellationError 저장 오류 통합 수정 및 TestFlight build 146
 
 - 새 화면의 `센서 기록을 저장하지 못했습니다`와 TP0911A001의 활동 저장 팝업을 함께 수정했다. iCloud에서 사용자가 올린 `TaptionLogs-20260911-105220.txt`(build 145)를 readback했고, 저장 취소가 `local_persistence_failed`로 기록된 원인을 확인했다. `local_persistence_failed` 4건은 모두 `CancellationError`였다.

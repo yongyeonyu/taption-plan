@@ -1,5 +1,19 @@
 # Taption Plan 개발 문서
 
+## 2026-09-13 TP0913B001 · 화면 복귀·저장·일자 조회 구조 개편
+
+- 승인 범위는 `temp.md` 통합 구현과 TestFlight 내부 배포다. 구매 잠금 해제 상태를 유지하고 계약 동의·심사 제출·유료화는 변경하지 않는다.
+- 최신 iCloud `TaptionLogs-20260912-230334.txt`는 build 146이다. 날짜 로딩 최대 230,576ms, snapshot 대기 197,033ms, 센서 읽기 187,664ms, 통합 갱신 420,505ms·actuals 65,853건을 확인했다. 이 경과 시간에는 앱 중단·재개가 섞일 수 있다. `previous_session_unfinished`만으로 watchdog·메모리 종료·DEAD10CC를 확정하지 않는다. 일치하는 최신 OS crash report는 현재 Mac·ASC에서 확보되지 않았다.
+- 로컬 snapshot을 먼저 공개한 뒤 불변 복사본의 정규화를 별도 작업에서 수행한다. 그동안 변경되면 최신 snapshot으로 재시도한다. 센서 갱신은 같은 일자/원본 revision/설정 요청을 합치고 교체·background 취소 후 파생값 반영을 차단한다.
+- 일반 저장은 FIFO 로컬 커밋을 먼저 끝낸다. 접수된 로컬 편집은 호출 화면 task 취소와 수명을 분리하고, 최신 revision이 달라졌으면 오래된 값을 메모리에 다시 대입하거나 rollback하지 않는다. timestamp-only 저장은 전체 이력 비교·정규화를 재실행하지 않는다. background는 raw checkpoint와 강제 로컬 flush만 우선 수행한다.
+- 보고서·CloudKit 후처리는 foreground에서 합쳐 지연 실행한다. 보고서 interval은 동일 timeline revision에서만 적용한다. 원본 센서 저장과 자동 기록 provenance는 기존 경계를 유지한다.
+- 일자 preview API는 bounded last-known 메모리/SQLite materialized row만 읽는다. 날짜·버전·압축/checksum·삭제 generation 검증은 유지하고, stale source/raw 허용은 preview에만 한정한다. normal load 캐시를 오염시키지 않으며 fresh 결과 실패 시 마지막 완전 화면을 보존한다. projection/fingerprint 계산은 메인 스레드 밖으로 옮기고 저장 직후 중복 readback을 제거했다.
+- iCloud 파일 읽기 불가·미다운로드·크기 변화와 JSON/무결성 실패를 분리한다. 최신 다운로드가 준비되지 않은 파일은 다운로드 요청 후 재시도하며, 부분 archive 목록으로 기존 월간 데이터를 덮지 않는다. 후속 정상 readback은 일시적 접근/동기화 상태 추론을 뒷받침하지만 과거 실패 원인의 OS 수준 확정은 아니다.
+- 자동 foreground snapshot 백업의 복호화·병합·인코딩·압축·암호화를 Sendable 입력의 별도 `.utility` 계산으로 분리했다. 파일 접근/최종 쓰기는 MainActor 경계에 유지하고 PIN 변경·백업 삭제 preparation revision·데이터 삭제 generation·이전 월간 archive identity를 커밋 전에 재검증한다. 명시적 raw 전체 백업/복원은 별도 경로이며 비동기화 완료로 보고하지 않는다.
+- 최종 앱 회귀 1,098건: 1,097 PASS·기존 StoreKit 1 SKIP·0 FAIL. 패키지 89/89 PASS. `unit-final.xcresult` summary로 개수를 확인했다. 자동 측정은 memory preview p95 0.005ms, 30일 일자 API cold p95 28.821ms/warm 0.092ms이며 실기기 frame 성능은 아니다.
+- 검증·배포 증거는 `test.md`와 `build/validation/TP0913B001`에 기록한다. 실기기 설치·복귀 30회·30분 동작·새 iCloud 로그·PIN 복원은 자동 테스트와 별도다.
+- 소스 `4631c77` main push, 147 Release archive/export·서명·검증·업로드·Apple `VALID`·Internal API 연결/readback 완료. Chrome Plan 그룹은 빈 페이지여서 웹 빌드/테스터 노출 게이트가 남아 있다. 실기기 unavailable로 실제 충돌 원인 확정·수정 후 재현 검증도 미완료다.
+
 ## 2026-09-11 TP0911B002 · CancellationError 저장 오류 통합 수정 및 TestFlight build 146
 
 - 새 화면의 `센서 기록을 저장하지 못했습니다` 팝업과 TP0911A001의 `변경 내용을 저장하지 못했습니다` 팝업은 iCloud 권한 문제가 아니라 취소된 저장 작업을 실제 저장 실패로 승격하던 공통 경계가 원인이었다. 사용자가 올린 `TaptionLogs-20260911-105220.txt`(build 145)를 iCloud에서 readback했고, `local_persistence_failed` 4건이 모두 `CancellationError`였으며 `route_readings_load_failed`와 장시간 `background_refresh cancelled`도 함께 확인됐다.

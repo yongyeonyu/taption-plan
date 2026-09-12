@@ -1,5 +1,21 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
+## 2026-09-13 TP0913B001 · 통합 구조 개선 / 후보 147
+
+- 소스 `4631c77`을 main에 push했다. 로컬 화면 우선·센서 갱신 합치기/취소·접수된 로컬 편집 FIFO 보존·후처리 분리·bounded 일자 preview·비동기 snapshot 백업 준비와 커밋 재검증을 구현했다. 네 번들은 `1.0 (147)`이다.
+- 최종 앱 회귀 1,097 PASS·기존 StoreKit 1 SKIP·0 FAIL, 패키지 89/89 PASS, generic iOS Debug 및 Release archive PASS. Simulator 날짜 전환·버전/로그 업로드 항목·1회 background/동일 PID 복귀를 확인했다. 증거는 `build/validation/TP0913B001`, 최신 결과는 test.md를 먼저 읽는다.
+- 배포: 147 archive/export·검증·업로드 완료, Delivery UUID `43f84236-1f6b-4ba3-9923-5c70ce4fd148`. Apple `VALID`·Internal API build 147 연결/readback·테스터 1명 확인 완료. Chrome Plan 그룹 URL은 재진입/새로고침해도 빈 페이지여서 웹 빌드·테스터 노출은 미확인이다.
+- iPhone/iPad/Watch unavailable. 실제 build 146 충돌 OS 보고서는 확보되지 않았고, 147의 TestFlight 실기기 설치·30회 복귀/30분 동작·새 iCloud 로그·PIN 복원은 미확인이다. 구매 잠금 해제 유지, 계약·심사·유료화 금지.
+
+### 다음 채팅에 그대로 붙여넣기
+
+```text
+TP0913B001 잔여 게이트 이어서 진행해. 폴더 /Users/u_mo_c/Documents/taption plan, main만 사용한다. AGENTS.md, temp.md, test.md, NEXT_CHAT_PROMPT.md와 현재 git/ASC 상태부터 대조한다.
+소스 4631c77의 구현을 다시 하지 말고 최신 1.0(147) 배포/실기기 게이트만 확인한다. 공유 Xcode 빌드는 studio build_lock.sh로 직렬화하고, 다른 작업의 lock/산출물을 보존한다. Luna만 병렬 사용하며 새 채팅은 필요한 경우에만 만든다.
+App Store Connect Plan 그룹의 빈 페이지 문제를 재확인하고 TP Taption Plan 내부 테스트의 147 빌드·테스터 웹 화면을 readback한다. API 연결은 완료됐으며 웹 화면/클라이언트 설치와 별개다. iPhone 연결 시 충돌 보고서와 해당 버전 dSYM을 대조하고 TestFlight 설치 provenance·화면 복귀/저장·새 iCloud TaptionLogs를 검증한다. OS 보고서 없이 실제 충돌 해결을 단정하지 않는다.
+판매 계약·심사·유료화는 제외하며 구매 잠금 해제 상태를 유지한다. 실제 PIN 복원/Watch·캘린더 수신/터치·발열은 확인된 것만 test.md에 기록하고 완료된 요청만 temp.md에서 제거한다.
+```
+
 ## 2026-09-11 TP0911B002 · 저장 취소 오류 수정 및 TestFlight 146
 
 - 소스 수정 커밋은 `6fd7326`이며 앱·iOS Widget·Watch 앱·Watch Widget은 `1.0 (146)`이다. 활동 저장 readback·공통 `persist()`·센서 snapshot 저장의 `CancellationError`를 사용자 오류에서 분리했다.
