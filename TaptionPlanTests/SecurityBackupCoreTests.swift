@@ -525,6 +525,67 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(restored.sensorReadings.map(\.id), [reading.id])
     }
 
+    func testConsecutiveFullRawBackupsAcceptEquivalentPersistedDates() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawStore = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+
+        let date = Date(timeIntervalSinceReferenceDate: 811012345.000002)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        let reading = SensorReading(timestamp: date, point: point)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let persistedData = try encoder.encode(reading)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let restoredReading = try decoder.decode(
+            SensorReading.self,
+            from: persistedData
+        )
+
+        XCTAssertNotEqual(reading, restoredReading)
+        XCTAssertEqual(persistedData, try encoder.encode(restoredReading))
+
+        _ = try await service.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: PlanCloudRawSensorPayload(
+                monthKey: "ignored",
+                sensorReadings: [reading],
+                createdAt: date
+            ),
+            date: date
+        )
+        let second = try await service.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: PlanCloudRawSensorPayload(
+                monthKey: "ignored",
+                sensorReadings: [reading],
+                createdAt: date.addingTimeInterval(60)
+            ),
+            date: date.addingTimeInterval(60)
+        )
+
+        XCTAssertEqual(rawStore.archives.count, 1)
+        guard case let .available(rawSensors) = try await service
+            .loadLatestBackupPackage().rawSensorState else {
+            return XCTFail("Equivalent raw payload must remain restorable")
+        }
+        XCTAssertEqual(rawSensors.sensorReadings.map(\.id), [reading.id])
+        XCTAssertEqual(second.rawSensors?.monthKey, second.snapshot.monthKey)
+    }
+
     func testCancelledAsyncSnapshotDoesNotCommit() async throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(

@@ -3250,13 +3250,22 @@ final class PlanSecurityBackupService {
         return lhs.payloadDigest.lexicographicallyPrecedes(rhs.payloadDigest)
     }
 
-    private static func mergeRaw<Value: Identifiable & Equatable>(
+    private static func mergeRaw<Value: Identifiable & Equatable & Encodable>(
         _ values: [Value],
         into index: inout [UUID: Value]
     ) throws where Value.ID == UUID {
         for value in values {
             if let existing = index[value.id], existing != value {
-                throw PlanSecurityError.invalidArchive
+                let existingData = try JSONEncoder.taptionPlan.encode(existing)
+                let incomingData = try JSONEncoder.taptionPlan.encode(value)
+                if existingData != incomingData {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "raw_sensor_archive_merge_conflict",
+                        level: .error,
+                        fields: ["record_type": String(describing: Value.self)]
+                    )
+                    throw PlanSecurityError.invalidArchive
+                }
             }
             index[value.id] = value
         }

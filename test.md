@@ -1,5 +1,12 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-13 TP0913D001 · 통합 후보 148
+
+- 네 번들 `1.0 (148)`: 금요일 원본 재조회와 백업 날짜 직렬화 동등성 수정을 통합했다. 최초 `unit.xcresult`와 진단 이벤트 포함 최종 `unit-final.xcresult` 모두 총 1,106건 중 1,105 PASS·기존 StoreKit 1 SKIP·0 FAIL, exit 0. 최종 generic iOS Debug도 PASS·exit 0이다. 증거는 `build/validation/TP0913D001/unit-final.log`, `debug.log`다.
+- 새 로그 `TaptionLogs-20260913-005952.txt`에서 147 raw 포함 자동 백업 17:26:37Z와 수동 17:26:52Z/17:27:03Z의 invalidArchive 실패 종료를 확인했다. 증거 사본은 `build/validation/TP0913D001/diagnostics-before.txt`다. 아래 C002의 종료 로그 미확인 상태를 이 결과로 갱신한다.
+- `testConsecutiveFullRawBackupsAcceptEquivalentPersistedDates`는 날짜 JSON 왕복의 약 0.000000119초 차이를 재현하고, 같은 원본으로 연속 full-raw 월별 백업·복원이 되는지 검증한다. 실제 충돌 거부 테스트도 유지했다. 실제 기기 오류가 이 경로였는지는 아직 미확정이며, 원본/백업·키/PIN은 보존했다.
+- TestFlight 업로드·Internal 그룹/API/웹 노출 및 실제 148 설치 후 금요일 경로·iCloud 백업/복원 확인은 각각 별도 게이트다.
+
 ## 2026-09-13 TP0913C001 · 금요일 기록 누락
 
 - 사용자 iCloud `TaptionLogs-20260913-002628.txt`는 build 147이다. 9/11 원본 GPS 1,687건 조회(17:06:18Z)와 지도 materialization 57건 재사용(17:23/17:26Z)이 동시에 확인됐다. 증거 사본은 `build/validation/TP0913C001/diagnostics-before.txt`, SHA256 `e53ca3ab65a82d819d00feafbe302963cde6deaa50d6f99007cd0477812f2a2c`.
