@@ -6,6 +6,7 @@
 - Date의 reference epoch와 Unix seconds JSON 사이 왕복에서 약 0.000000119초의 정밀도 차이를 재현했다. 같은 UUID의 같은 저장 표현을 엄격 Equatable 비교만으로 거부하던 병합을 수정했다. 값이 다른 경우에만 sorted-key 백업 JSON을 비교하며, 저장 표현이 다른 실제 충돌은 계속 거부한다. 시간 허용 오차나 필드 무시, 기존 기록 덮어쓰기 완화는 하지 않는다.
 - 연속 full-raw 월별 백업 회귀는 첫 백업에서 읽은 날짜와 두 번째 원본 날짜의 불일치를 검증한다. 실제 충돌에는 `raw_sensor_archive_merge_conflict`와 기록 타입만 남겨 기기 실패 경로를 구분한다. PIN·키·UUID·좌표·payload는 로그에 넣지 않는다.
 - 재현한 코드 결함과 실제 기기 오류의 정확한 실패 단계는 별개다. 실제 iCloud 백업·복원 성공과 금요일 화면 복구는 148 설치 후 별도 확인하며, 기존 원본/백업·PIN·키는 변경하지 않았다.
+- 소스 `03365a4`의 최종 앱 회귀 1,105 PASS·기존 StoreKit 1 SKIP·0 FAIL, Debug 및 Release archive/export PASS. TestFlight 148 업로드/처리 VALID·Internal API 연결·웹 빌드/테스터 노출까지 완료했다. 실기기 결과는 test.md의 별도 게이트로 유지한다.
 
 ## 2026-09-13 TP0913C001 · 과거 지도 원본 재조회
 

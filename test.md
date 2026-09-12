@@ -5,7 +5,10 @@
 - 네 번들 `1.0 (148)`: 금요일 원본 재조회와 백업 날짜 직렬화 동등성 수정을 통합했다. 최초 `unit.xcresult`와 진단 이벤트 포함 최종 `unit-final.xcresult` 모두 총 1,106건 중 1,105 PASS·기존 StoreKit 1 SKIP·0 FAIL, exit 0. 최종 generic iOS Debug도 PASS·exit 0이다. 증거는 `build/validation/TP0913D001/unit-final.log`, `debug.log`다.
 - 새 로그 `TaptionLogs-20260913-005952.txt`에서 147 raw 포함 자동 백업 17:26:37Z와 수동 17:26:52Z/17:27:03Z의 invalidArchive 실패 종료를 확인했다. 증거 사본은 `build/validation/TP0913D001/diagnostics-before.txt`다. 아래 C002의 종료 로그 미확인 상태를 이 결과로 갱신한다.
 - `testConsecutiveFullRawBackupsAcceptEquivalentPersistedDates`는 날짜 JSON 왕복의 약 0.000000119초 차이를 재현하고, 같은 원본으로 연속 full-raw 월별 백업·복원이 되는지 검증한다. 실제 충돌 거부 테스트도 유지했다. 실제 기기 오류가 이 경로였는지는 아직 미확정이며, 원본/백업·키/PIN은 보존했다.
-- TestFlight 업로드·Internal 그룹/API/웹 노출 및 실제 148 설치 후 금요일 경로·iCloud 백업/복원 확인은 각각 별도 게이트다.
+- TestFlight 배포 게이트는 완료했다. 실제 148 설치 후 금요일 경로·iCloud 백업/복원 확인은 별도 실기기 게이트다.
+- 소스 `03365a4eb6396f93f4854e79d48f4445b62585c3` main push 후 Release archive/export PASS·exit 0. IPA 네 번들 모두 1.0(148), strict/deep codesign PASS, Production iCloud·beta-reports-active=true·get-task-allow=false 확인. 앱/IPA/dSYM UUID `231C20D4-0678-3AF2-BE58-C42D8D0A3505` 일치. IPA SHA256 `0499a411e1f2ac17c0ecfe3c53d85df19a0a0a2444eaacab7b26854f32300b9d`. 사용 중이 아닌 검증용 압축 해제 복사본만 휴지통으로 옮겼으며 IPA·archive·dSYM·테스트 증거는 보존했다.
+- Apple 사전 검증과 업로드 PASS·exit 0. Delivery UUID `eb429725-dd18-4a40-a21e-123cac2fbcf0`, 2026-09-13 03:41 KST. Apple 처리 `VALID`, `TP Taption Plan 내부 테스트` API build 148 연결/readback 및 테스터 1명 확인 완료. `validate.log`·`upload.log`·`asc-internal.log`에 기록했다.
+- Chrome의 실제 그룹 빌드 화면에서 `1.0 (148)`·`테스트 중`, 테스터 탭에서 내부 테스터 1명·전체 빌드 108개를 확인했다. 테스터의 설치 표시 버전은 여전히 147이며 148 실기기 설치 증거가 아니다. 이전 147 웹 빈 화면 게이트도 해소됐다. 현재 iPhone/iPad/Watch는 devicectl unavailable, 실제 백업/복원·금요일 표시·장시간 복귀 검증은 남아 있다.
 
 ## 2026-09-13 TP0913C001 · 금요일 기록 누락
 
