@@ -1,5 +1,12 @@
 # Taption Plan 개발 문서
 
+## 2026-09-13 TP0913C001 · 과거 지도 원본 재조회
+
+- primary 센서 저장소와 V3 materialized 원본 digest는 별개다. 앱 재실행 후 과거 materialization의 V3 digest가 유효해도 primary 센서 원본이 최신이라는 보장은 없었다. 147 기기 로그에서 금요일 GPS 1,687건과 지도 캐시 57건 불일치를 확인했다.
+- 지도는 기존 bounded preview를 먼저 보여준 뒤 `refreshRawReadings`로 primary 원본을 다시 읽는다. `forceReload`의 센서 재분류 호출과 분리해 즉시 화면 경로를 막지 않는다. 로딩 중 분류 source가 바뀌면 방금 읽은 원본으로 최신 source를 재투영한다.
+- 지도 화살표/달력의 직접 날짜 대입도 선택일 갱신을 예약하도록 `selectedDate`의 실제 일자 변경 경계로 예약을 이동했다. 기존 debounce·foreground 제한은 유지하고 시간표의 중복 예약은 제거했다.
+- 관련 최종 회귀 56/56 PASS·0 FAIL·0 SKIP, Debug generic iOS PASS. 재투영은 화면 반영 직전 동기 1회이며 반복 원본 조회를 하지 않는다. TP0913C002 백업은 최신 수동 작업 종료 로그가 없어 원인 확정 전이며 코드/원본을 변경하지 않았다. 실기기·배포 상태는 test.md에 별도로 기록한다.
+
 ## 2026-09-13 TP0913B001 · 화면 복귀·저장·일자 조회 구조 개편
 
 - 승인 범위는 `temp.md` 통합 구현과 TestFlight 내부 배포다. 구매 잠금 해제 상태를 유지하고 계약 동의·심사 제출·유료화는 변경하지 않는다.

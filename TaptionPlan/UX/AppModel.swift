@@ -615,7 +615,14 @@ final class AppModel {
 
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
-    var selectedDate: Date = .now
+    var selectedDate: Date = .now {
+        didSet {
+            guard !Calendar.autoupdatingCurrent.isDate(
+                oldValue, inSameDayAs: selectedDate
+            ) else { return }
+            scheduleSelectedDateRefresh()
+        }
+    }
     var isAddPlanPresented = false
     var addPlanContext: AddPlanContext = .quick
     var selectedAction: QuickActionItem?
@@ -2449,7 +2456,6 @@ final class AppModel {
             return
         }
         selectedDate = targetDate
-        scheduleSelectedDateRefresh()
     }
 
     /// 기록 탭은 시간표와 배율이 따로다. 원형 시간표를 옆으로 넘길 때는
@@ -2471,7 +2477,6 @@ final class AppModel {
             return
         }
         selectedDate = targetDate
-        scheduleSelectedDateRefresh()
     }
 
     private func canShiftSelectedDate(by direction: Int) -> Bool {
@@ -2484,8 +2489,9 @@ final class AppModel {
     }
 
     func returnToNow() {
+        let wasToday = Calendar.autoupdatingCurrent.isDateInToday(selectedDate)
         selectedDate = .now
-        scheduleSelectedDateRefresh()
+        if wasToday { scheduleSelectedDateRefresh() }
     }
 
     private func scheduleSelectedDateRefresh() {
@@ -4128,6 +4134,7 @@ final class AppModel {
             "integration_refresh_started",
             fields: [
                 "scale": selectedScale.rawValue,
+                "day_start": String(dayStart.timeIntervalSince1970),
                 "current_day": String(includesCurrentDeviceDay),
             ]
         )
@@ -9331,7 +9338,8 @@ final class AppModel {
     /// value, so an async load cannot mix two revisions or rewrite raw data.
     func planDayDataSnapshot(
         for date: Date,
-        forceReload: Bool = true
+        forceReload: Bool = true,
+        refreshRawReadings: Bool = false
     ) async -> PlanDayDataSnapshot {
         let empty = {
             PlanDayDataSnapshot.make(
@@ -9354,7 +9362,7 @@ final class AppModel {
         let source = snapshot
         let sourceRevision = dayProjectionRevision
         if let dayLoadCoordinator {
-            let snapshot = await dayLoadCoordinator.load(
+            let loaded = await dayLoadCoordinator.load(
                 day: date,
                 source: source,
                 sourceRevision: sourceRevision,
@@ -9369,9 +9377,9 @@ final class AppModel {
                         in: self.daySpan(containing: day)
                     )
                 },
-                forceReload: forceReload
+                forceReload: forceReload || refreshRawReadings
             )
-            return acceptsDataMutation() ? snapshot : empty()
+            return acceptsDataMutation() ? loaded : empty()
         }
         let result = await sensorReadingsLoadResult(
             in: daySpan(containing: date)

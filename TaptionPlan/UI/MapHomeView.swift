@@ -2008,7 +2008,8 @@ struct MapHomeView: View {
             guard !Task.isCancelled else { return }
             async let dayData = model.planDayDataSnapshot(
                 for: date,
-                forceReload: false
+                forceReload: false,
+                refreshRawReadings: true
             )
             let dayKey = MapHomeRouteReadingsPolicy.dayKey(for: date)
             if !routeReadingsLoadState.isLoaded(for: date) {
@@ -6963,7 +6964,7 @@ struct MapHomeView: View {
         let dataGeneration = TaptionDataDeletionFence.currentGeneration()
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return }
-        let dayData: PlanDayDataSnapshot
+        var dayData: PlanDayDataSnapshot
         if let preloadedDayData, !forceReload {
             dayData = preloadedDayData
         } else {
@@ -6974,10 +6975,22 @@ struct MapHomeView: View {
         }
         guard !Task.isCancelled,
               TaptionDataDeletionFence.allows(generation: dataGeneration),
-              calendar.isDate(date, inSameDayAs: model.selectedDate),
-              (isPreview || dayData.sourceFingerprint
-                == model.daySourceFingerprint(for: date))
+              calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
+        if !isPreview,
+           dayData.sourceFingerprint != model.daySourceFingerprint(for: date) {
+            // Raw samples remain valid when classification changes during I/O.
+            // Rebase once on the current source without another async read.
+            dayData = PlanDayDataSnapshot.make(
+                date: date,
+                sourceRevision: model.dayProjectionRevision,
+                source: model.snapshot,
+                sensorResult: SensorReadingsLoadResult(
+                    readings: dayData.readings,
+                    isComplete: dayData.isComplete
+                )
+            )
+        }
         if !isPreview, !dayData.isComplete,
            let previous = dayDataSnapshot, previous.isComplete,
            calendar.isDate(previous.day, inSameDayAs: date) {

@@ -1785,6 +1785,89 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testPlanDayLoadCoordinatorForceReloadBypassesMaterializedCacheWhenPrimaryArchiveAdvances() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-primary-archive-advance-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        _ = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+        let primaryArchive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent(
+                "primary-sensor-readings.jsonl"
+            ),
+            dayStoreURL: directory.appendingPathComponent(
+                "primary-sensor.sqlite"
+            )
+        )
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let span = TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(61)
+        )
+        let first = makeReading(date, sequence: 1)
+        let second = makeReading(
+            date.addingTimeInterval(60),
+            sequence: 2
+        )
+        try await primaryArchive.append(first)
+        try await database.save(PlanDayDataSnapshot(
+            day: date,
+            sourceRevision: 1,
+            sourceUpdatedAt: date,
+            actuals: [],
+            places: [],
+            travel: [],
+            readings: [first],
+            isComplete: true
+        ))
+
+        // The primary archive advances independently; V3 has not received
+        // the new reading, so its materialized digest still looks valid.
+        try await primaryArchive.append(second)
+        let primaryReadings = try await primaryArchive.routeReadings(in: span)
+        XCTAssertEqual(primaryReadings, [first, second])
+
+        let coordinator = PlanDayLoadCoordinator(database: database)
+        var sensorLoadCount = 0
+        let cached = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                sensorLoadCount += 1
+                return SensorReadingsLoadResult(
+                    readings: primaryReadings,
+                    isComplete: true
+                )
+            }
+        )
+        XCTAssertEqual(cached.readings, [first])
+        XCTAssertEqual(sensorLoadCount, 0)
+
+        let refreshed = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                sensorLoadCount += 1
+                return SensorReadingsLoadResult(
+                    readings: primaryReadings,
+                    isComplete: true
+                )
+            },
+            forceReload: true
+        )
+        XCTAssertEqual(refreshed.readings, [first, second])
+        XCTAssertEqual(sensorLoadCount, 1)
+    }
+
+    @MainActor
     func testPlanDayLoadCoordinatorKeepsInvalidatedPreviewUntilMemoryPressure() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-cached-invalidation-\(UUID().uuidString)")

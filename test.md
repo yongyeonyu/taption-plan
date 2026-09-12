@@ -1,5 +1,17 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-13 TP0913C001 · 금요일 기록 누락
+
+- 사용자 iCloud `TaptionLogs-20260913-002628.txt`는 build 147이다. 9/11 원본 GPS 1,687건 조회(17:06:18Z)와 지도 materialization 57건 재사용(17:23/17:26Z)이 동시에 확인됐다. 증거 사본은 `build/validation/TP0913C001/diagnostics-before.txt`, SHA256 `e53ca3ab65a82d819d00feafbe302963cde6deaa50d6f99007cd0477812f2a2c`.
+- 지도 날짜 직접 대입의 선택일 갱신 누락을 공통 날짜 observer로 수정했다. 캐시 preview 이후 primary 센서 원본을 재조회하며, 조회 중 source가 바뀌면 원본 캐시를 재사용해 최신 분류로 재투영한다. 센서 재분류는 원본 조회와 분리하고 원본/백업 파일과 UI 배치는 보존했다.
+- `focused.xcresult`: 55 PASS·0 FAIL·0 SKIP. 최종 `final.xcresult`: 56 PASS·0 FAIL·0 SKIP, 실행 exit 0. 선택일 직접 대입·빠른 연속 날짜 변경·같은 날/백그라운드 무갱신 4건, AppModel 원본 갱신 1건, 재투영 시 원본/최신 분류 보존 1건, SensorDayStoreTests 50건(별도 primary 저장소 진전/오래된 materialization 회귀 포함).
+- 최종 Debug generic iOS PASS·exit 0(`debug-final.log`). 재투영은 비동기 재조회 반복 대신 화면 반영 직전 동기 1회로 수행한다. 현재 소스는 147 배포 후 변경본이며 이 수정의 TestFlight 배포·금요일 실제 화면 복구는 아직 미확인이다. 기기는 unavailable이어서 설치/터치 검증으로 계산하지 않는다.
+
+## 2026-09-13 TP0913C002 · 백업 오류 확인 대기
+
+- 새 로그의 수동 백업은 17:26:25Z 시작했고 17:26:28Z에 로그가 전송되어 해당 종료 이벤트가 없다. 구버전 15:35:12Z invalid=2/valid=0을 현재 오류 원인으로 확정하지 않는다. 147 자동 snapshot 백업은 17:14:41Z 성공했다.
+- 읽기 전용 점검에서 snapshot 백업 2개 JSON·파일명/monthKey·크기·ciphertext digest는 정상이다. 실제 GCM 복호화는 키/PIN 없이 검증하지 않았다. 새 실패 로그가 필요하며 백업 소스와 원본 파일은 변경하지 않았다.
+
 ## 2026-09-13 TP0913B001 · 통합 후보 검증
 
 - 작업 후보는 앱·Widget·Watch·Watch Widget `1.0 (147)`이다. 최종 앱 회귀는 총 1,098건 중 1,097 PASS·기존 StoreKit 1 SKIP·0 FAIL, `unit-final.xcresult` summary `Passed`로 확인했다. 취소된 로컬 편집 보존·동시 편집·백그라운드 보고서 미실행·preview 무쓰기/삭제 fence·PIN/백업 변경 중 async 커밋 거부·삭제 후 백업 재생성 방지를 포함한다.

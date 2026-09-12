@@ -2039,6 +2039,194 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testSelectedDateDirectAssignmentRefreshesSelectedDayWhileActive()
+        async {
+        let model = await makeActiveIntegrationModel()
+        let selectedDate = makeDate(2026, 8, 13, 12)
+        defer { TaptionPlanDiagnosticsLogger.shared.clear() }
+
+        model.selectedDate = selectedDate
+
+        let starts = await waitForSelectedDateRefresh(
+            model: model,
+            selectedDate: selectedDate
+        )
+        XCTAssertEqual(starts.count, 1)
+        XCTAssertTrue(
+            starts.contains {
+                $0.contains(
+                    "\"day_start\":\"\(selectedDayStart(selectedDate))\""
+                )
+            }
+        )
+
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testSelectedDateRapidAssignmentsCoalesceToFinalSelectedDay()
+        async {
+        let model = await makeActiveIntegrationModel()
+        let dates = [
+            makeDate(2026, 8, 14, 12),
+            makeDate(2026, 8, 15, 12),
+            makeDate(2026, 8, 16, 12),
+        ]
+        defer { TaptionPlanDiagnosticsLogger.shared.clear() }
+
+        for date in dates {
+            model.selectedDate = date
+        }
+
+        let starts = await waitForSelectedDateRefresh(
+            model: model,
+            selectedDate: dates[2]
+        )
+        XCTAssertEqual(starts.count, 1)
+        XCTAssertTrue(
+            starts.contains {
+                $0.contains(
+                    "\"day_start\":\"\(selectedDayStart(dates[2]))\""
+                )
+            }
+        )
+
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testSelectedDateAssignmentWithinSameCalendarDayDoesNotRefresh()
+        async {
+        let calendar = Calendar.autoupdatingCurrent
+        let selectedDate = makeDate(2026, 8, 17, 12)
+        let model = await makeActiveIntegrationModel(
+            selectedDate: selectedDate
+        )
+        defer { TaptionPlanDiagnosticsLogger.shared.clear() }
+
+        model.selectedDate = calendar.startOfDay(for: selectedDate)
+            .addingTimeInterval(hour)
+        try? await Task.sleep(for: .milliseconds(350))
+
+        XCTAssertTrue(integrationRefreshStartLines().isEmpty)
+
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testSelectedDateAssignmentWhileBackgroundDoesNotRefresh()
+        async {
+        let model = await makeActiveIntegrationModel(
+            selectedDate: makeDate(2026, 8, 18, 12)
+        )
+        defer { TaptionPlanDiagnosticsLogger.shared.clear() }
+
+        await model.sceneEnteredBackground()
+        TaptionPlanDiagnosticsLogger.shared.clear()
+
+        model.selectedDate = makeDate(2026, 8, 19, 12)
+        try? await Task.sleep(for: .milliseconds(350))
+
+        XCTAssertTrue(integrationRefreshStartLines().isEmpty)
+    }
+
+    @MainActor
+    func testPlanDayDataSnapshotRawRefreshReadsNewArchiveSampleWithoutTimelineRefresh()
+        async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "plan-day-raw-refresh-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            TaptionPlanDiagnosticsLogger.shared.clear()
+        }
+        let date = makeDate(2026, 8, 24, 12)
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let sensorService = AppleSensorDataService(archive: archive)
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        TaptionPlanDiagnosticsLogger.shared.clear()
+
+        let reading = SensorReading(
+            timestamp: date.addingTimeInterval(hour),
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 30,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let before = await model.planDayDataSnapshot(
+            for: date,
+            forceReload: false
+        )
+        XCTAssertFalse(before.readings.contains { $0.id == reading.id })
+
+        try await archive.append(
+            reading,
+            now: reading.timestamp.addingTimeInterval(hour)
+        )
+        let after = await model.planDayDataSnapshot(
+            for: date,
+            forceReload: false,
+            refreshRawReadings: true
+        )
+
+        XCTAssertTrue(after.readings.contains { $0.id == reading.id })
+        XCTAssertFalse(
+            TaptionPlanDiagnosticsLogger.shared
+                .combinedLog()
+                .contains("sensor_timeline_refresh_started")
+        )
+    }
+
+    func testMapDayReprojectionKeepsFreshRawWhenClassificationChanges() {
+        let date = makeDate(2026, 9, 11, 12)
+        let reading = SensorReading(timestamp: date)
+        let loaded = PlanDayDataSnapshot.make(
+            date: date,
+            sourceRevision: 1,
+            source: .empty,
+            sensorResult: SensorReadingsLoadResult(
+                readings: [reading], isComplete: true
+            )
+        )
+        var source = TaptionDataSnapshot.empty
+        let actual = ActualRecord(
+            planID: nil, title: "이동", categoryID: "movement",
+            startedAt: date, endedAt: date.addingTimeInterval(hour),
+            source: .motion
+        )
+        source.actuals = [actual]
+        let rebased = PlanDayDataSnapshot.make(
+            date: date,
+            sourceRevision: 2,
+            source: source,
+            sensorResult: SensorReadingsLoadResult(
+                readings: loaded.readings, isComplete: loaded.isComplete
+            )
+        )
+        XCTAssertEqual(rebased.readings, [reading])
+        XCTAssertEqual(rebased.actuals, [actual])
+        XCTAssertTrue(rebased.isComplete)
+        XCTAssertNotEqual(rebased.sourceFingerprint, loaded.sourceFingerprint)
+        XCTAssertEqual(rebased.sourceFingerprint,
+            PlanDayDataSnapshot.sourceFingerprint(date: date, source: source))
+    }
+
+    @MainActor
     func testAutomaticCloudBackupWaitsOneHourAfterSuccessOrAccountFailure() {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
 
@@ -17649,6 +17837,86 @@ final class FeatureEngineTests: XCTestCase {
         snapshot.recordLinks = recordLinks
         snapshot.memos = memos
         return snapshot
+    }
+
+    @MainActor
+    private func makeActiveIntegrationModel(
+        selectedDate: Date = .now
+    ) async -> AppModel {
+        TaptionPlanDiagnosticsLogger.shared.clear()
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.locationEnabled = false
+        stored.settings.healthEnabled = false
+        stored.settings.weatherEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        model.selectedDate = selectedDate
+        await model.sceneBecameActive()
+        await waitForInitialForegroundWorkToSettle(model)
+        TaptionPlanDiagnosticsLogger.shared.clear()
+        return model
+    }
+
+    @MainActor
+    private func waitForInitialForegroundWorkToSettle(
+        _ model: AppModel
+    ) async {
+        let deadline = Date.now.addingTimeInterval(5)
+        while Date.now < deadline {
+            let log = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            if log.contains("integration_refresh_finished"),
+               !model.isRefreshingIntegrations {
+                try? await Task.sleep(for: .milliseconds(50))
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTFail("initial foreground integration refresh did not settle")
+    }
+
+    @MainActor
+    private func waitForSelectedDateRefresh(
+        model: AppModel,
+        selectedDate: Date
+    ) async -> [String] {
+        let expectedDayStart = selectedDayStart(selectedDate)
+        let deadline = Date.now.addingTimeInterval(5)
+        while Date.now < deadline {
+            let log = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            let starts = integrationRefreshStartLines(in: log)
+            if starts.contains(where: {
+                $0.contains("\"day_start\":\"\(expectedDayStart)\"")
+            }),
+                log.contains("integration_refresh_finished"),
+                !model.isRefreshingIntegrations {
+                try? await Task.sleep(for: .milliseconds(100))
+                return integrationRefreshStartLines()
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        return integrationRefreshStartLines()
+    }
+
+    private func integrationRefreshStartLines(
+        in log: String = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+    ) -> [String] {
+        log.split(whereSeparator: \.isNewline).compactMap { line in
+            let value = String(line)
+            return value.contains(
+                "\"event\":\"integration_refresh_started\""
+            ) ? value : nil
+        }
+    }
+
+    private func selectedDayStart(_ date: Date) -> String {
+        String(
+            Calendar.autoupdatingCurrent
+                .startOfDay(for: date)
+                .timeIntervalSince1970
+        )
     }
 
     func testMemoShellMigrationLiftsMemoAndRemovesShellPlan() {
