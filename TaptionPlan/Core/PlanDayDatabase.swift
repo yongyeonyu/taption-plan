@@ -132,6 +132,7 @@ actor PlanDayDatabase {
         sourceFingerprint expectedSourceFingerprint: String? = nil,
         allowStaleSourceFingerprint: Bool = false
     ) async throws -> PlanDayDataSnapshot? {
+        try checkDataGeneration()
         guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker) else {
             return nil
         }
@@ -207,46 +208,52 @@ actor PlanDayDatabase {
                 signpostID: decodeID
             )
         }
-        let payload: PlanDayDatabasePayload
+        let snapshot: PlanDayDataSnapshot
         do {
-            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
-                from: row.payload
+            snapshot = try decodeSnapshot(
+                from: row,
+                for: day,
+                sourceRevision: expectedSourceFingerprint == nil
+                    ? row.sourceRevision
+                    : sourceRevision
             )
-            let decoded = try TaptionPlanCanonicalStorage.decode(
-                PlanDayDatabasePayload.self,
-                from: encoded
-            )
-            guard Calendar.autoupdatingCurrent.isDate(
-                decoded.day,
-                inSameDayAs: day
-            ) else {
-                throw PlanDayDatabaseError.invalidMaterializedDay
-            }
-            payload = decoded
         } catch {
             try await discardMaterializedDayIfCurrent(dayKey, expected: row)
             return nil
         }
-        let snapshot = PlanDayDataSnapshot(
-            day: payload.day,
-            sourceRevision: expectedSourceFingerprint == nil
-                ? row.sourceRevision
-                : sourceRevision,
-            sourceUpdatedAt: payload.sourceUpdatedAt,
-            sourceFingerprint: payload.sourceFingerprint,
-            projectionVersion: row.projectionVersion,
-            actuals: payload.actuals,
-            places: payload.places,
-            travel: payload.travel,
-            readings: payload.readings,
-            isComplete: payload.isComplete
-        )
         if let expectedSourceFingerprint,
            !allowStaleSourceFingerprint,
            snapshot.sourceFingerprint != expectedSourceFingerprint {
             return nil
         }
         return snapshot
+    }
+
+    /// Decodes the last complete materialized day without consulting raw
+    /// digests. This is an explicit stale-preview path: payload, date, and
+    /// projection-version integrity still apply, while raw events may have
+    /// changed since the row was written. It never repairs or deletes rows.
+    func cachedSnapshot(day: Date) async throws -> PlanDayDataSnapshot? {
+        try checkDataGeneration()
+        guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker) else {
+            return nil
+        }
+        let dayKey = TaptionPlanDayKey(date: day)
+        guard let row = try await iPhoneStore.materializedDay(for: dayKey),
+              row.projectionVersion == TaptionPlanV3Store.projectionVersion else {
+            return nil
+        }
+        do {
+            let snapshot = try decodeSnapshot(
+                from: row,
+                for: day,
+                sourceRevision: row.sourceRevision
+            )
+            try checkDataGeneration()
+            return snapshot.isComplete ? snapshot : nil
+        } catch {
+            return nil
+        }
     }
 
     func save(_ snapshot: PlanDayDataSnapshot) async throws {
@@ -258,6 +265,38 @@ actor PlanDayDatabase {
             baseEvents: try rawEvents(for: snapshot),
             additionalIPhoneEvents: [],
             additionalWatchEvents: []
+        )
+    }
+
+    private func decodeSnapshot(
+        from row: TaptionPlanMaterializedDay,
+        for day: Date,
+        sourceRevision: UInt64
+    ) throws -> PlanDayDataSnapshot {
+        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+            from: row.payload
+        )
+        let payload = try TaptionPlanCanonicalStorage.decode(
+            PlanDayDatabasePayload.self,
+            from: encoded
+        )
+        guard Calendar.autoupdatingCurrent.isDate(
+            payload.day,
+            inSameDayAs: day
+        ) else {
+            throw PlanDayDatabaseError.invalidMaterializedDay
+        }
+        return PlanDayDataSnapshot(
+            day: payload.day,
+            sourceRevision: sourceRevision,
+            sourceUpdatedAt: payload.sourceUpdatedAt,
+            sourceFingerprint: payload.sourceFingerprint,
+            projectionVersion: row.projectionVersion,
+            actuals: payload.actuals,
+            places: payload.places,
+            travel: payload.travel,
+            readings: payload.readings,
+            isComplete: payload.isComplete
         )
     }
 
@@ -1252,8 +1291,11 @@ final class PlanDayLoadCoordinator {
 
     private let database: PlanDayDatabase
     private let cacheCapacity: Int
+    private let dataDeletionGeneration: UInt64
     private var cache: [CacheKey: PlanDayDataSnapshot] = [:]
     private var recency: [CacheKey] = []
+    private var lastKnownCache: [TaptionPlanDayKey: PlanDayDataSnapshot] = [:]
+    private var lastKnownRecency: [TaptionPlanDayKey] = []
     private struct InFlightRequest {
         let id: UUID
         let task: Task<PlanDayDataSnapshot, Never>
@@ -1269,6 +1311,7 @@ final class PlanDayLoadCoordinator {
     ) {
         self.database = database
         self.cacheCapacity = max(1, cacheCapacity)
+        self.dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     deinit {
@@ -1276,6 +1319,40 @@ final class PlanDayLoadCoordinator {
         for request in inFlight.values {
             request.task.cancel()
         }
+    }
+
+    /// Returns a complete last-known day for immediate display. This path is
+    /// deliberately read-only: it does not run the sensor loader, reproject,
+    /// save, or seed the normal source-valid cache.
+    func cachedSnapshot(
+        day: Date,
+        source _: TaptionDataSnapshot,
+        sourceRevision _: UInt64
+    ) async -> PlanDayDataSnapshot? {
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else { return nil }
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        let dayKey = TaptionPlanDayKey(date: dayStart)
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else { return nil }
+        if let cached = lastKnownCache[dayKey], cached.isComplete {
+            touchLastKnown(dayKey)
+            return cached
+        }
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else { return nil }
+        let persisted = try? await database.cachedSnapshot(day: dayStart)
+        guard let persisted, persisted.isComplete else {
+            return nil
+        }
+        guard TaptionDataDeletionFence.allows(
+            generation: dataDeletionGeneration
+        ) else { return nil }
+        insertLastKnown(persisted, for: dayKey)
+        return persisted
     }
 
     func load(
@@ -1287,7 +1364,7 @@ final class PlanDayLoadCoordinator {
     ) async -> PlanDayDataSnapshot {
         let loadStartedAt = ProcessInfo.processInfo.systemUptime
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: day)
-        let sourceFingerprint = PlanDayDataSnapshot.sourceFingerprint(
+        let sourceFingerprint = await Self.sourceFingerprint(
             date: dayStart,
             source: source
         )
@@ -1297,7 +1374,7 @@ final class PlanDayLoadCoordinator {
                 ?? "revision:\(sourceRevision)",
             projectionVersion: TaptionPlanV3Store.projectionVersion
         )
-        let pendingForceReload = forceReloadDays.remove(key.day) != nil
+        let pendingForceReload = forceReloadDays.contains(key.day)
         let forceReload = requestedForceReload || pendingForceReload
         func finish(
             _ value: PlanDayDataSnapshot,
@@ -1332,7 +1409,7 @@ final class PlanDayLoadCoordinator {
            let stale = cache[staleKey],
            stale.isComplete {
             let projectionStartedAt = ProcessInfo.processInfo.systemUptime
-            let reprojected = PlanDayDataSnapshot.make(
+            let reprojected = await Self.makeSnapshot(
                 date: dayStart,
                 sourceRevision: sourceRevision,
                 source: source,
@@ -1388,7 +1465,7 @@ final class PlanDayLoadCoordinator {
                 allowStaleSourceFingerprint: true
                ), stale.isComplete {
                 let projectionStartedAt = ProcessInfo.processInfo.systemUptime
-                let reprojected = PlanDayDataSnapshot.make(
+                let reprojected = await Self.makeSnapshot(
                     date: dayStart,
                     sourceRevision: sourceRevision,
                     source: source,
@@ -1421,7 +1498,7 @@ final class PlanDayLoadCoordinator {
             durations["sensor_ms"] = ProcessInfo.processInfo.systemUptime
                 - sensorStartedAt
             let projectionStartedAt = ProcessInfo.processInfo.systemUptime
-            let projected = PlanDayDataSnapshot.make(
+            let projected = await Self.makeSnapshot(
                 date: dayStart,
                 sourceRevision: sourceRevision,
                 source: source,
@@ -1440,17 +1517,6 @@ final class PlanDayLoadCoordinator {
             try? await database.save(projected)
             durations["persistence_ms"] = ProcessInfo.processInfo.systemUptime
                 - persistenceStartedAt
-            if let readBack = try? await database.load(
-                day: dayStart,
-                sourceRevision: sourceRevision,
-                sourceFingerprint: sourceFingerprint
-            ) {
-                return finish(
-                    readBack,
-                    source: "rebuilt_readback",
-                    durations: durations
-                )
-            }
             return finish(
                 projected,
                 source: "rebuilt_memory",
@@ -1469,6 +1535,9 @@ final class PlanDayLoadCoordinator {
         guard !Task.isCancelled else { return result }
         if result.isComplete {
             insert(result, for: key)
+            if pendingForceReload {
+                forceReloadDays.remove(key.day)
+            }
         }
         return result
     }
@@ -1511,7 +1580,7 @@ final class PlanDayLoadCoordinator {
         progress?(0)
         for (index, day) in days.enumerated() {
             guard !Task.isCancelled else { return }
-            let sourceFingerprint = PlanDayDataSnapshot.sourceFingerprint(
+            let sourceFingerprint = await Self.sourceFingerprint(
                 date: day,
                 source: source
             )
@@ -1540,6 +1609,11 @@ final class PlanDayLoadCoordinator {
         forceReloadDays.insert(dayKey)
         let keys = Set(cache.keys.filter { $0.day == dayKey })
             .union(inFlight.keys.filter { $0.day == dayKey })
+        if let latestKey = recency.reversed().first(where: { keys.contains($0) }),
+           let latest = cache[latestKey],
+           latest.isComplete {
+            insertLastKnown(latest, for: dayKey)
+        }
         for key in keys {
             cache.removeValue(forKey: key)
             recency.removeAll { $0 == key }
@@ -1554,6 +1628,8 @@ final class PlanDayLoadCoordinator {
     func handleMemoryPressure() {
         cache.removeAll()
         recency.removeAll()
+        lastKnownCache.removeAll()
+        lastKnownRecency.removeAll()
     }
 
     func invalidateAll() async {
@@ -1566,6 +1642,8 @@ final class PlanDayLoadCoordinator {
         forceReloadDays.removeAll()
         cache.removeAll()
         recency.removeAll()
+        lastKnownCache.removeAll()
+        lastKnownRecency.removeAll()
         await prefetch?.value
         for request in requests { _ = await request.value }
     }
@@ -1583,6 +1661,7 @@ final class PlanDayLoadCoordinator {
     private func insert(_ value: PlanDayDataSnapshot, for key: CacheKey) {
         cache[key] = value
         touch(key)
+        insertLastKnown(value, for: key.day)
         while recency.count > cacheCapacity, let oldest = recency.first {
             recency.removeFirst()
             cache.removeValue(forKey: oldest)
@@ -1592,5 +1671,49 @@ final class PlanDayLoadCoordinator {
     private func touch(_ key: CacheKey) {
         recency.removeAll { $0 == key }
         recency.append(key)
+    }
+
+    private func insertLastKnown(
+        _ value: PlanDayDataSnapshot,
+        for day: TaptionPlanDayKey
+    ) {
+        guard value.isComplete else { return }
+        lastKnownCache[day] = value
+        touchLastKnown(day)
+        while lastKnownRecency.count > cacheCapacity,
+              let oldest = lastKnownRecency.first {
+            lastKnownRecency.removeFirst()
+            lastKnownCache.removeValue(forKey: oldest)
+        }
+    }
+
+    private func touchLastKnown(_ day: TaptionPlanDayKey) {
+        lastKnownRecency.removeAll { $0 == day }
+        lastKnownRecency.append(day)
+    }
+
+    private nonisolated static func sourceFingerprint(
+        date: Date,
+        source: TaptionDataSnapshot
+    ) async -> String? {
+        await Task.detached(priority: nil) {
+            PlanDayDataSnapshot.sourceFingerprint(date: date, source: source)
+        }.value
+    }
+
+    private nonisolated static func makeSnapshot(
+        date: Date,
+        sourceRevision: UInt64,
+        source: TaptionDataSnapshot,
+        sensorResult: SensorReadingsLoadResult
+    ) async -> PlanDayDataSnapshot {
+        await Task.detached(priority: nil) {
+            PlanDayDataSnapshot.make(
+                date: date,
+                sourceRevision: sourceRevision,
+                source: source,
+                sensorResult: sensorResult
+            )
+        }.value
     }
 }

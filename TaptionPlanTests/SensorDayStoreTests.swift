@@ -1641,6 +1641,351 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testPlanDayLoadCoordinatorCachedSnapshotDoesNotWriteOrSeedNormalLoad() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-preview-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        _ = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let stored = PlanDayDataSnapshot(
+            day: date,
+            sourceRevision: 1,
+            sourceUpdatedAt: date,
+            actuals: [],
+            places: [],
+            travel: [],
+            readings: [makeReading(date)],
+            isComplete: true
+        )
+        try await database.save(stored)
+        let store = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent(
+                "taption-plan-iphone-v3.sqlite"
+            ),
+            device: .iPhone
+        )
+        let dayKey = TaptionPlanDayKey(date: date)
+        let beforeRow = try await store.materializedDay(for: dayKey)
+        let before = try XCTUnwrap(beforeRow)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+
+        let preview = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 99
+        )
+
+        XCTAssertEqual(preview?.sourceRevision, 1)
+        XCTAssertEqual(coordinator.cachedDayCount, 0)
+        let afterPreviewRow = try await store.materializedDay(for: dayKey)
+        let afterPreview = try XCTUnwrap(afterPreviewRow)
+        XCTAssertEqual(afterPreview, before)
+
+        var sensorLoadCount = 0
+        let refreshed = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 99,
+            sensorLoader: { _ in
+                sensorLoadCount += 1
+                return SensorReadingsLoadResult(
+                    readings: [],
+                    isComplete: true
+                )
+            }
+        )
+        XCTAssertEqual(sensorLoadCount, 0)
+        XCTAssertEqual(refreshed.sourceRevision, 99)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorCachedSnapshotAllowsStaleRawOnlyForPreview() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-stale-raw-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        _ = try await database.migrateLegacyIfNeeded(
+            source: .empty,
+            sourceRevision: 1,
+            readings: [],
+            watchSummaries: [],
+            rawEnvelopes: []
+        )
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let stored = PlanDayDataSnapshot(
+            day: date,
+            sourceRevision: 1,
+            sourceUpdatedAt: date,
+            actuals: [],
+            places: [],
+            travel: [],
+            readings: [makeReading(date)],
+            isComplete: true
+        )
+        try await database.save(stored)
+        let store = try TaptionPlanV3Store(
+            url: directory.appendingPathComponent(
+                "taption-plan-iphone-v3.sqlite"
+            ),
+            device: .iPhone
+        )
+        let dayKey = TaptionPlanDayKey(date: date)
+        try await store.appendRawEvents([
+            TaptionPlanRawEvent(
+                device: .iPhone,
+                day: dayKey,
+                timestamp: date.addingTimeInterval(1),
+                sequence: 2,
+                id: UUID().uuidString,
+                domain: "cached-preview-test",
+                provenance: ["test"],
+                payload: Data([0x01])
+            ),
+        ])
+        let rowBeforePreviewValue = try await store.materializedDay(for: dayKey)
+        let rowBeforePreview = try XCTUnwrap(rowBeforePreviewValue)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+
+        let preview = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 1
+        )
+        XCTAssertEqual(preview?.readings, stored.readings)
+        let afterPreviewRow = try await store.materializedDay(for: dayKey)
+        let afterPreview = try XCTUnwrap(afterPreviewRow)
+        XCTAssertEqual(afterPreview, rowBeforePreview)
+
+        var sensorLoadCount = 0
+        let refreshed = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                sensorLoadCount += 1
+                return SensorReadingsLoadResult(
+                    readings: [],
+                    isComplete: true
+                )
+            }
+        )
+        XCTAssertEqual(sensorLoadCount, 1)
+        XCTAssertTrue(refreshed.isComplete)
+        XCTAssertTrue(refreshed.readings.isEmpty)
+        let afterRefreshRow = try await store.materializedDay(for: dayKey)
+        let afterRefresh = try XCTUnwrap(afterRefreshRow)
+        XCTAssertNotEqual(afterRefresh.payload, rowBeforePreview.payload)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorKeepsInvalidatedPreviewUntilMemoryPressure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-invalidation-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+        let reading = makeReading(date)
+
+        _ = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(
+                    readings: [reading],
+                    isComplete: true
+                )
+            }
+        )
+        coordinator.invalidate(day: date)
+        try await database.invalidate(day: date)
+
+        let invalidatedPreview = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 1
+        )
+        XCTAssertNotNil(invalidatedPreview)
+        coordinator.handleMemoryPressure()
+        let pressurePreview = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 1
+        )
+        XCTAssertNil(pressurePreview)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorRejectsCachedSnapshotAcrossDeletionGeneration() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-generation-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+
+        _ = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        let beforeGeneration = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 1
+        )
+        XCTAssertNotNil(beforeGeneration)
+
+        let generation = TaptionDataDeletionFence.advance()
+        defer { TaptionDataDeletionFence.finish(generation: generation) }
+        let afterGeneration = await coordinator.cachedSnapshot(
+            day: date,
+            source: .empty,
+            sourceRevision: 1
+        )
+        XCTAssertNil(afterGeneration)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorKeepsInvalidationUntilCanceledLoadSucceeds() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-cancelled-invalidation-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+
+        _ = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        coordinator.invalidate(day: date)
+
+        let started = expectation(description: "sensor reload started")
+        let canceledLoad = Task { @MainActor in
+            await coordinator.load(
+                day: date,
+                source: .empty,
+                sourceRevision: 1,
+                sensorLoader: { _ in
+                    started.fulfill()
+                    do {
+                        try await Task.sleep(for: .seconds(60))
+                    } catch {}
+                    return SensorReadingsLoadResult(
+                        readings: [],
+                        isComplete: true
+                    )
+                }
+            )
+        }
+        await fulfillment(of: [started], timeout: 1)
+        canceledLoad.cancel()
+        _ = await canceledLoad.value
+
+        var retryCount = 0
+        _ = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                retryCount += 1
+                return SensorReadingsLoadResult(
+                    readings: [],
+                    isComplete: true
+                )
+            }
+        )
+        XCTAssertEqual(retryCount, 1)
+    }
+
+    @MainActor
+    func testPlanDayLoadCoordinatorCachedPreviewP95With65853HistoryRecords() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("plan-day-cached-preview-benchmark-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let coordinator = PlanDayLoadCoordinator(database: database)
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+
+        var sensorLoadCount = 0
+        _ = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                sensorLoadCount += 1
+                return SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        sensorLoadCount = 0
+
+        var history = TaptionDataSnapshot.empty
+        history.actuals = (0..<65_853).map { index in
+            let startedAt = date.addingTimeInterval(Double(index))
+            return ActualRecord(
+                id: UUID(),
+                planID: nil,
+                title: "history-\(index)",
+                categoryID: "benchmark",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(1),
+                source: .manual,
+                confidence: .medium,
+                createdAt: startedAt
+            )
+        }
+
+        var elapsedMilliseconds: [Double] = []
+        var returnedCount = 0
+        for _ in 0..<30 {
+            let started = DispatchTime.now().uptimeNanoseconds
+            let preview = await coordinator.cachedSnapshot(
+                day: date,
+                source: history,
+                sourceRevision: 99
+            )
+            let elapsed = DispatchTime.now().uptimeNanoseconds - started
+            elapsedMilliseconds.append(Double(elapsed) / 1_000_000)
+            if preview != nil { returnedCount += 1 }
+        }
+
+        let sorted = elapsedMilliseconds.sorted()
+        let p95Index = max(
+            0,
+            min(
+                sorted.count - 1,
+                Int(ceil(Double(sorted.count) * 0.95)) - 1
+            )
+        )
+        let p95 = sorted[p95Index]
+        let distribution = elapsedMilliseconds
+            .map { String(format: "%.3f", $0) }
+            .joined(separator: ",")
+        let formattedP95 = String(format: "%.3f", p95)
+        print("PLAN_DAY_CACHED_PREVIEW_65853_DISTRIBUTION_MS=\(distribution)")
+        print("PLAN_DAY_CACHED_PREVIEW_65853_P95_MS=\(formattedP95)")
+
+        XCTAssertEqual(returnedCount, 30)
+        XCTAssertEqual(sensorLoadCount, 0)
+    }
+
+    @MainActor
     func testPlanDayLoadCoordinatorUsesBoundedCacheAndEvictsOnPressure() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-coordinator-\(UUID().uuidString)")

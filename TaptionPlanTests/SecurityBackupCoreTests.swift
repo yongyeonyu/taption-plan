@@ -396,6 +396,68 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(try store.allArchives(), [valid])
     }
 
+    func testFileBackupSeparatesUnavailableFilesFromCorruption() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("backup-unavailable-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let snapshotStore = FilePlanCloudBackupStore(root: root)
+        let snapshot = PlanMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([1]),
+            wrappedPayloadKey: Data([2]),
+            accountWrappedPayloadKey: Data([3]),
+            createdAt: Date(timeIntervalSince1970: 1_788_000_000)
+        )
+        try snapshotStore.save(
+            snapshot,
+            at: PlanCloudBackupPath(monthKey: snapshot.monthKey)
+        )
+        let snapshotDirectory = root.appendingPathComponent("Taption Plan")
+        try FileManager.default.createSymbolicLink(
+            at: snapshotDirectory.appendingPathComponent(
+                "2026-09.taptionbackup"
+            ),
+            withDestinationURL: snapshotDirectory.appendingPathComponent(
+                "not-downloaded.taptionbackup"
+            )
+        )
+
+        XCTAssertThrowsError(try snapshotStore.allArchives()) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .accountUnavailable)
+        }
+
+        let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
+        let raw = PlanRawSensorMonthlyArchive(
+            monthKey: "2026-08",
+            accountIdentifier: "account-a",
+            encryptedPayload: Data([4]),
+            wrappedPayloadKey: Data([5]),
+            accountWrappedPayloadKey: Data([6]),
+            createdAt: Date(timeIntervalSince1970: 1_788_000_000)
+        )
+        try rawStore.save(
+            raw,
+            at: PlanCloudRawSensorBackupPath(monthKey: raw.monthKey)
+        )
+        let rawDirectory = snapshotDirectory.appendingPathComponent(
+            "Raw Sensors"
+        )
+        try FileManager.default.createSymbolicLink(
+            at: rawDirectory.appendingPathComponent(
+                "2026-09.rawsensorbackup"
+            ),
+            withDestinationURL: rawDirectory.appendingPathComponent(
+                "not-downloaded.rawsensorbackup"
+            )
+        )
+
+        XCTAssertThrowsError(try rawStore.allArchives()) { error in
+            XCTAssertEqual(error as? PlanSecurityError, .accountUnavailable)
+        }
+    }
+
     func testMonthlyGenerationRecordsSuccessOnlyAfterRawArchiveCompletes() async throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let rawStore = FailOncePlanCloudRawSensorBackupStore()
@@ -461,6 +523,121 @@ final class SecurityBackupCoreTests: XCTestCase {
             return XCTFail("Snapshot-only backup must preserve committed raw data")
         }
         XCTAssertEqual(restored.sensorReadings.map(\.id), [reading.id])
+    }
+
+    func testCancelledAsyncSnapshotDoesNotCommit() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let service = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+
+        let task = Task {
+            try await service.saveMonthlyArchive(
+                PlanCloudBackupPayload(snapshot: .empty),
+                date: Date(timeIntervalSince1970: 1_787_538_400)
+            )
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("Cancelled snapshot must not commit")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertTrue(backupStore.archives.isEmpty)
+    }
+
+    func testAsyncSnapshotDoesNotOverwriteArchiveChangedDuringPreparation()
+        async throws {
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let replacement = PlanMonthlyArchive(
+            monthKey: PlanArchiveSchedule.monthKey(for: date),
+            accountIdentifier: CloudKitPlanCloudRecoveryKeyProvider
+                .privateAccountScope,
+            encryptedPayload: Data([1]),
+            wrappedPayloadKey: Data([2]),
+            accountWrappedPayloadKey: Data([3]),
+            createdAt: date
+        )
+        let backupStore = ArchiveChangesBetweenReadsStore(
+            replacement: replacement
+        )
+        let service = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+
+        do {
+            _ = try await service.saveMonthlyArchive(
+                PlanCloudBackupPayload(snapshot: .empty),
+                date: date
+            )
+            XCTFail("A changed prior archive must cancel the commit")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(backupStore.saveCount, 0)
+    }
+
+    func testAsyncSnapshotCancelsAfterPINChangesWhileKeyIsGated()
+        async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let recoveryKeys = GatedPlanCloudRecoveryKeyProvider()
+        let service = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try service.setPIN("1234")
+
+        let task = Task {
+            try await service.saveMonthlyArchive(
+                PlanCloudBackupPayload(snapshot: .empty),
+                date: Date(timeIntervalSince1970: 1_787_538_400)
+            )
+        }
+        while !recoveryKeys.keyWasRequested {
+            await Task.yield()
+        }
+        try service.setPIN("5678")
+        recoveryKeys.release()
+
+        do {
+            _ = try await task.value
+            XCTFail("A PIN change during preparation must cancel the commit")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertTrue(backupStore.archives.isEmpty)
+    }
+
+    func testAsyncSnapshotCannotRecreateDeletedBackups() async throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let recoveryKeys = GatedPlanCloudRecoveryKeyProvider()
+        let service = makeService(
+            backupStore: backupStore,
+            cloudRecoveryKeyProvider: recoveryKeys
+        )
+        try service.setPIN("1234")
+        let task = Task {
+            try await service.saveMonthlyArchive(
+                PlanCloudBackupPayload(snapshot: .empty),
+                date: Date(timeIntervalSince1970: 1_787_538_400)
+            )
+        }
+        while !recoveryKeys.keyWasRequested { await Task.yield() }
+        try service.deleteAllBackups()
+        recoveryKeys.release()
+        do {
+            _ = try await task.value
+            XCTFail("A pending backup must not recreate deleted archives")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertTrue(backupStore.archives.isEmpty)
     }
 
     func testMonthlyGenerationRestoresRawWhenSnapshotCommitFails()
@@ -2394,6 +2571,55 @@ private final class FailNextPlanCloudBackupStore: PlanCloudBackupStore {
 
     func deleteAll() throws {
         archives.removeAll()
+    }
+}
+
+private final class ArchiveChangesBetweenReadsStore: PlanCloudBackupStore {
+    private let replacement: PlanMonthlyArchive
+    private var readCount = 0
+    private(set) var saveCount = 0
+
+    init(replacement: PlanMonthlyArchive) {
+        self.replacement = replacement
+    }
+
+    func save(
+        _ archive: PlanMonthlyArchive,
+        at path: PlanCloudBackupPath
+    ) throws {
+        saveCount += 1
+    }
+
+    func delete(at path: PlanCloudBackupPath) throws {}
+
+    func latest() throws -> PlanMonthlyArchive? {
+        try allArchives().first
+    }
+
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        readCount += 1
+        return readCount == 1 ? [] : [replacement]
+    }
+
+    func deleteAll() throws {}
+}
+
+@MainActor
+private final class GatedPlanCloudRecoveryKeyProvider:
+    PlanCloudRecoveryKeyProvider {
+    private var continuation: CheckedContinuation<Data, Never>?
+    private(set) var keyWasRequested = false
+
+    func key() async throws -> Data {
+        keyWasRequested = true
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func release() {
+        continuation?.resume(returning: Data(repeating: 9, count: 32))
+        continuation = nil
     }
 }
 

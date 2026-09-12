@@ -1410,16 +1410,19 @@ struct MapHomeRouteReadingsTaskKey: Hashable {
     let day: Date
     let isBootstrapped: Bool
     let rawDataRevision: UInt64
+    let isSceneActive: Bool
 
     init(
         date: Date,
         isBootstrapped: Bool,
         rawDataRevision: UInt64 = 0,
+        isSceneActive: Bool = true,
         calendar: Calendar = .autoupdatingCurrent
     ) {
         day = calendar.startOfDay(for: date)
         self.isBootstrapped = isBootstrapped
         self.rawDataRevision = rawDataRevision
+        self.isSceneActive = isSceneActive
     }
 }
 
@@ -1500,6 +1503,7 @@ struct MapHomeView: View {
     @State private var routeProjection: RouteTimelineProjection?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
     @State private var dayDataSnapshot: PlanDayDataSnapshot?
+    @State private var dayDataIsPreview = false
     @State private var hasDeferredWBSPlaybackRefresh = false
     @State private var routeReadings: [SensorReading] = []
     @State private var routeReadingsLoadState: MapHomeRouteReadingsLoadState = .idle
@@ -1978,12 +1982,30 @@ struct MapHomeView: View {
                 isBootstrapped: model.isBootstrapped,
                 rawDataRevision: Calendar.autoupdatingCurrent.isDateInToday(
                     model.selectedDate
-                ) ? 0 : model.rawDataRevision(for: model.selectedDate)
+                ) ? 0 : model.rawDataRevision(for: model.selectedDate),
+                isSceneActive: scenePhase == .active
             )
         ) {
-            guard model.isBootstrapped else { return }
+            guard model.isBootstrapped, scenePhase == .active else { return }
             let loadStartedAt = ProcessInfo.processInfo.systemUptime
             let date = model.selectedDate
+            if let cached = await model.cachedPlanDayDataSnapshot(for: date) {
+                await refreshRouteReadings(
+                    for: date,
+                    preloadedDayData: cached,
+                    isPreview: true
+                )
+                guard !Task.isCancelled,
+                      Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
+                else { return }
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "map_cached_projection_ready",
+                    fields: ["duration_ms": String(Int((
+                        ProcessInfo.processInfo.systemUptime - loadStartedAt
+                    ) * 1_000))]
+                )
+            }
+            guard !Task.isCancelled else { return }
             async let dayData = model.planDayDataSnapshot(
                 for: date,
                 forceReload: false
@@ -2136,8 +2158,6 @@ struct MapHomeView: View {
                 transitPOIRefreshTask = nil
                 transitPOIRefreshGeneration &+= 1
                 stopDayPlayback(resetProgress: true)
-            } else {
-                Task { await refreshRouteReadings(for: model.selectedDate) }
             }
         }
     }
@@ -6071,8 +6091,8 @@ struct MapHomeView: View {
 
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
-              dayDataSnapshot.sourceFingerprint
-                == model.daySourceFingerprint(for: model.selectedDate),
+              (dayDataIsPreview || dayDataSnapshot.sourceFingerprint
+                == model.daySourceFingerprint(for: model.selectedDate)),
               dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
@@ -6920,7 +6940,8 @@ struct MapHomeView: View {
         for date: Date,
         forceReload: Bool = false,
         preloadedDayData: PlanDayDataSnapshot? = nil,
-        cachedMapDay: MapHomeDayCachePayload? = nil
+        cachedMapDay: MapHomeDayCachePayload? = nil,
+        isPreview: Bool = false
     ) async {
         let viewSignpostID = OSSignpostID(log: Self.dayViewSignpostLog)
         os_signpost(
@@ -6939,6 +6960,7 @@ struct MapHomeView: View {
         }
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
+        let dataGeneration = TaptionDataDeletionFence.currentGeneration()
         guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
         else { return }
         let dayData: PlanDayDataSnapshot
@@ -6951,10 +6973,17 @@ struct MapHomeView: View {
             )
         }
         guard !Task.isCancelled,
+              TaptionDataDeletionFence.allows(generation: dataGeneration),
               calendar.isDate(date, inSameDayAs: model.selectedDate),
-              dayData.sourceFingerprint
-                == model.daySourceFingerprint(for: date)
+              (isPreview || dayData.sourceFingerprint
+                == model.daySourceFingerprint(for: date))
         else { return }
+        if !isPreview, !dayData.isComplete,
+           let previous = dayDataSnapshot, previous.isComplete,
+           calendar.isDate(previous.day, inSameDayAs: date) {
+            routeReadingsLoadState = .failed(dayStart)
+            return
+        }
         var snapshotFields = TaptionPlanDiagnosticsTravelSummary.fields(
             for: dayData.travel
         )
@@ -6965,6 +6994,7 @@ struct MapHomeView: View {
             dayData.sourceUpdatedAt.timeIntervalSince1970
         )
         snapshotFields["is_complete"] = String(dayData.isComplete)
+        snapshotFields["is_preview"] = String(isPreview)
         snapshotFields["readings"] = String(dayData.readings.count)
         snapshotFields["readings_with_point"] = String(
             dayData.readings.filter { $0.point != nil }.count
@@ -6976,17 +7006,25 @@ struct MapHomeView: View {
             fields: snapshotFields
         )
         dayDataSnapshot = dayData
+        dayDataIsPreview = isPreview
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: routeReadings,
             loaded: dayData.readings,
             in: TimeSpan(start: dayStart, end: dayEnd)
         )
-        routeReadingsLoadState = dayData.isComplete
+        routeReadingsLoadState = isPreview ? .loading(dayStart) : dayData.isComplete
             ? .loaded(dayStart)
             : .failed(dayStart)
         if merged != routeReadings {
             routeReadings = merged
             transitBoardingReadingsRevision &+= 1
+        }
+        if isPreview {
+            refreshTimeRailSegments()
+            prepareRouteProjectionReadings()
+            refreshRouteProjection()
+            focusMapIfNeeded()
+            return
         }
         let restoredCachedRoutes = cachedMapDay.map {
             applyMapDayCacheRoutes($0, for: date, dayData: dayData)

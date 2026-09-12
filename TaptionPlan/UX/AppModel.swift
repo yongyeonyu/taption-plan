@@ -638,6 +638,11 @@ final class AppModel {
 
     private(set) var snapshot: TaptionDataSnapshot = .empty {
         didSet {
+            if timestampOnlySnapshotAssignment {
+                timestampOnlySnapshotAssignment = false
+                if oldValue.updatedAt != snapshot.updatedAt { snapshotRevision &+= 1 }
+                return
+            }
             if oldValue == snapshot {
                 timestampOnlySnapshotAssignment = false
                 return
@@ -647,29 +652,30 @@ final class AppModel {
             // Device snapshots are frequent. Keep a separate revision for
             // changes that alter rows, blocks or their detail targets so the
             // Gantt layout cache survives ordinary live collection.
-            let timestampOnly = timestampOnlySnapshotAssignment
-            timestampOnlySnapshotAssignment = false
-            if !timestampOnly {
-                if oldValue.actuals != snapshot.actuals
-                    || oldValue.places != snapshot.places
-                    || oldValue.travel != snapshot.travel {
-                    dayProjectionRevision &+= 1
-                    dayDatabaseMigrationTask?.cancel()
-                }
-                if oldValue.weather != snapshot.weather
-                    || oldValue.plans != snapshot.plans
-                    || oldValue.actuals != snapshot.actuals
-                    || oldValue.travel != snapshot.travel
-                    || oldValue.places != snapshot.places
-                    || oldValue.calendarEvents != snapshot.calendarEvents
-                    || oldValue.photos != snapshot.photos
-                    || oldValue.categories != snapshot.categories
-                    || oldValue.recordLinks != snapshot.recordLinks
-                    || oldValue.memos != snapshot.memos
-                    || oldValue.settings.timelineRowOrder
-                        != snapshot.settings.timelineRowOrder {
-                    timelineRevision &+= 1
-                }
+            if oldValue.actuals != snapshot.actuals
+                || oldValue.places != snapshot.places
+                || oldValue.travel != snapshot.travel {
+                dayProjectionRevision &+= 1
+                needsLocalRecordNormalization = true
+                dayDatabaseMigrationTask?.cancel()
+            }
+            if oldValue.settings.activityCorrections != snapshot.settings.activityCorrections
+                || oldValue.settings.confirmedSleepSpans != snapshot.settings.confirmedSleepSpans {
+                needsLocalRecordNormalization = true
+            }
+            if oldValue.weather != snapshot.weather
+                || oldValue.plans != snapshot.plans
+                || oldValue.actuals != snapshot.actuals
+                || oldValue.travel != snapshot.travel
+                || oldValue.places != snapshot.places
+                || oldValue.calendarEvents != snapshot.calendarEvents
+                || oldValue.photos != snapshot.photos
+                || oldValue.categories != snapshot.categories
+                || oldValue.recordLinks != snapshot.recordLinks
+                || oldValue.memos != snapshot.memos
+                || oldValue.settings.timelineRowOrder
+                    != snapshot.settings.timelineRowOrder {
+                timelineRevision &+= 1
             }
         }
     }
@@ -682,6 +688,7 @@ final class AppModel {
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
+    @ObservationIgnored private var needsLocalRecordNormalization = true
     private(set) var isBootstrapped = false
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
     /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
@@ -911,7 +918,13 @@ final class AppModel {
     @ObservationIgnored private var isDeletingUserData = false
     @ObservationIgnored private var dataDeletionGeneration =
         TaptionDataDeletionFence.currentGeneration()
-    @ObservationIgnored private var isRepositoryWriteActive = false
+    @ObservationIgnored private var repositoryWriteTask: Task<Bool, Error>?
+    @ObservationIgnored private var repositoryWriteSequence: UInt64 = 0
+    @ObservationIgnored private var sensorTimelineTask: Task<Bool, Never>?
+    @ObservationIgnored private var sensorTimelineRequestID: UUID?
+    @ObservationIgnored private var sensorTimelineRequestKey: String?
+    @ObservationIgnored private var postSaveRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var postSaveRefreshRequested = false
     @ObservationIgnored private var activeDataMutationCount = 0
     @ObservationIgnored private var lastWatchHealthSnapshotCapturedAt: Date?
     @ObservationIgnored private var lastWatchHealthSnapshotRawRetryAt: Date?
@@ -937,6 +950,7 @@ final class AppModel {
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
     @ObservationIgnored private var lastReviewArchiveRefreshAt: Date?
+    @ObservationIgnored private var lastReviewArchiveRefreshRevision: UInt64?
     @ObservationIgnored private var pendingWatchActivitySuggestion:
         TaptionWatchActivitySuggestion?
     @ObservationIgnored private var pendingDeviceLocalPersistTask: Task<Void, Never>?
@@ -2161,8 +2175,9 @@ final class AppModel {
             replaceConfirmedSleepSpans(removing: [editedSpan])
         }
 
+        let editRevision = snapshotRevision
         guard await persist() else {
-            snapshot = previous
+            if snapshotRevision == editRevision { snapshot = previous }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "section_edit_save_failed",
                 level: .error,
@@ -2244,12 +2259,15 @@ final class AppModel {
     }
 
     private func applyStoredActivityCorrections() {
-        snapshot.settings.confirmedSleepSpans =
+        let confirmedSleepSpans =
             TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
                 existing: snapshot.settings.confirmedSleepSpans,
                 corrections: snapshot.settings.activityCorrections,
                 actuals: snapshot.actuals
             )
+        if confirmedSleepSpans != snapshot.settings.confirmedSleepSpans {
+            snapshot.settings.confirmedSleepSpans = confirmedSleepSpans
+        }
         var corrected = ActivityCorrectionEngine.applying(
             snapshot.settings.activityCorrections,
             to: snapshot.actuals
@@ -2701,13 +2719,12 @@ final class AppModel {
     }
 
     func bootstrap() async {
-        guard acceptsDataMutation(), !isBootstrapped else {
-            return
-        }
+        guard acceptsDataMutation() else { return }
         if let bootstrapTask {
             await bootstrapTask.value
             return
         }
+        guard !isBootstrapped else { return }
 
         TaptionPlanDiagnosticsLogger.shared.record("bootstrap_started")
         let task = Task { [weak self] in
@@ -2718,34 +2735,33 @@ final class AppModel {
                 try Task.checkCancellation()
                 guard acceptsDataMutation() else { return }
                 repositoryLoadFailed = false
-                source.weather = WeatherTimelineEngine.coalesced(source.weather)
                 let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
                 let originalActuals = source.actuals
                 let originalTravel = source.travel
-                source.actuals = ActivityClassificationLockEngine
-                    .lockingAutomaticClassifications(source.actuals)
-                source.travel = source.travel.map { segment in
-                    var value = segment
-                    value.isClassificationLocked = true
-                    return value
+                // Publish local data before normalization, sensors or cloud work.
+                snapshot = source
+                selectedScale = TimeScale(
+                    timelineLevel: source.settings.startScale
+                ).scheduleEquivalent
+                selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
+                isBootstrapped = true
+                while true {
+                    let revision = snapshotRevision
+                    source = await Task.detached(priority: .userInitiated) { [source] in
+                        var loaded = source
+                        loaded.actuals = ActivityClassificationLockEngine
+                            .lockingAutomaticClassifications(loaded.actuals)
+                        loaded.travel = loaded.travel.map { segment in
+                            var value = segment
+                            value.isClassificationLocked = true
+                            return value
+                        }
+                        return Self.preparedLoadedSnapshot(loaded)
+                    }.value
+                    guard !Task.isCancelled, acceptsDataMutation() else { return }
+                    if revision == snapshotRevision { break }
+                    source = snapshot
                 }
-                source.settings.confirmedSleepSpans =
-                    TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
-                        existing: source.settings.confirmedSleepSpans,
-                        corrections: source.settings.activityCorrections,
-                        actuals: source.actuals
-                    )
-                source.actuals = ActivityCorrectionEngine.applying(
-                    source.settings.activityCorrections,
-                    to: source.actuals
-                )
-                source.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
-                    source.settings.confirmedSleepSpans,
-                    to: source.actuals
-                )
-                // The first visible frame must use the same immutable derived
-                // projection as later date changes. Raw records remain lazy.
-                source = Self.preparedLoadedSnapshot(source)
                 snapshot = source
                 if source.settings.confirmedSleepSpans
                     != originalConfirmedSleepSpans
@@ -2920,6 +2936,7 @@ final class AppModel {
         }
         guard !wasSceneActive else { return }
         scheduleForegroundPreparation()
+        if postSaveRefreshRequested { schedulePostSaveRefresh() }
     }
 
     func handleMemoryPressure() {
@@ -3018,6 +3035,9 @@ final class AppModel {
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        sensorTimelineTask?.cancel()
+        postSaveRefreshTask?.cancel()
+        if postSaveRefreshTask != nil { postSaveRefreshRequested = true }
         selectedDateRefreshGeneration &+= 1
         selectedDateRefreshTask?.cancel()
         selectedDateRefreshTask = nil
@@ -3045,7 +3065,7 @@ final class AppModel {
         if let rawDeviceDataArchive {
             try? await rawDeviceDataArchive.checkpoint()
         }
-        await persist()
+        await persistDeviceLocalSnapshot(force: true)
         await saveCloudBackupOnBackground()
     }
 
@@ -4069,7 +4089,7 @@ final class AppModel {
         force: Bool = false
     ) async {
         await waitForBootstrapPreparation()
-        guard acceptsDataMutation(), !isRefreshingIntegrations else { return }
+        guard !Task.isCancelled, acceptsDataMutation(), !isRefreshingIntegrations else { return }
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
         let calendar = Calendar.autoupdatingCurrent
@@ -4115,10 +4135,12 @@ final class AppModel {
         var calendarRetryForceWide: Bool?
         defer {
             isRefreshingIntegrations = false
-            integrationRefreshGate.commit(
-                key: refreshKey,
-                nowUptime: ProcessInfo.processInfo.systemUptime
-            )
+            if !Task.isCancelled {
+                integrationRefreshGate.commit(
+                    key: refreshKey,
+                    nowUptime: ProcessInfo.processInfo.systemUptime
+                )
+            }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "integration_refresh_finished",
                 fields: [
@@ -4149,6 +4171,7 @@ final class AppModel {
                 photoService.moments(in: span)
             }
         }
+        defer { photoTask?.cancel() }
         if permissionState(for: .calendar).isGranted,
            !settings.selectedCalendarIDs.isEmpty {
             await Task.yield()
@@ -4181,6 +4204,7 @@ final class AppModel {
                 )
             }
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         if settings.healthEnabled {
             do {
                 if try await healthService.authorizationRequestState()
@@ -4197,10 +4221,12 @@ final class AppModel {
             }
             await refreshHealthData(in: healthSpan)
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         let appUsageSpan = selectedScale == .day
             ? refreshSpan
             : currentDeviceDataSpan
         await refreshAppUsageData(in: appUsageSpan)
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         if settings.locationEnabled
             || settings.healthEnabled
             || settings.weatherEnabled
@@ -4213,6 +4239,7 @@ final class AppModel {
                 await refreshSensorTimeline(containing: selectedDate)
             }
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         if let photoTask, let photoSpan {
             replacePhotos(await photoTask.value, in: photoSpan)
         }
@@ -4279,21 +4306,12 @@ final class AppModel {
                 isCloudSyncing = false
                 return
             }
-            let asOf = Date.now
-            var committed = preparedCloudMergedSnapshot(
+            let committed = preparedCloudMergedSnapshot(
                 mergeDeviceLocalData(
                     cloud: cloudValue,
                     local: localDeviceData
                 ),
                 preservingUpdatedAt: localDeviceData.updatedAt
-            )
-            var reportSource = committed
-            reportSource.memos.removeAll {
-                pendingMapMemoIDs.contains($0.id)
-            }
-            committed.yearlyReports = await reviewArchives(
-                for: reportSource,
-                asOf: asOf
             )
             var persisted = committed
             persisted.memos.removeAll {
@@ -4304,7 +4322,6 @@ final class AppModel {
                 expectedRevision: sourceRevision
             ) {
                 assignCommittedCloudSnapshot(committed)
-                lastReviewArchiveRefreshAt = asOf
                 publishWidgetPayload()
             }
         } catch is CancellationError {
@@ -5041,10 +5058,13 @@ final class AppModel {
             sensorAnalysisDebounceTask,
             liveWeatherRefreshTask,
             pendingDeviceLocalPersistTask,
+            postSaveRefreshTask,
             cloudSyncTask,
             dayDatabaseMigrationTask,
         ].compactMap { $0 }
         pendingTasks.forEach { $0.cancel() }
+        let pendingSensorTimeline = sensorTimelineTask
+        pendingSensorTimeline?.cancel()
         bootstrapTask = nil
         bootstrapPreparationTask = nil
         foregroundPreparationTask = nil
@@ -5064,6 +5084,8 @@ final class AppModel {
         pendingSensorAnalysisRevisions.removeAll(keepingCapacity: false)
         liveWeatherRefreshTask = nil
         pendingDeviceLocalPersistTask = nil
+        postSaveRefreshTask = nil
+        postSaveRefreshRequested = false
         cloudSyncTask = nil
         dayDatabaseMigrationTask = nil
         _ = airPodsActivityService.stop(at: deletionCutoff)
@@ -5071,6 +5093,7 @@ final class AppModel {
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
         for task in pendingTasks { await task.value }
+        _ = await pendingSensorTimeline?.value
         while isHealthRefreshRunning || activeDataMutationCount > 0 {
             do {
                 try await Task.sleep(for: .milliseconds(10))
@@ -7957,6 +7980,7 @@ final class AppModel {
               ) else {
             return
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
         let contexts = envelopes
@@ -8021,6 +8045,7 @@ final class AppModel {
         evidence: TimeSpan?,
         inside span: TimeSpan
     ) async {
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         let placeKinds = FrequentPlaceResolutionEngine()
             .kindsByPlaceKey(settings.frequentPlaces)
         let restaurantMealSpans = snapshot.actuals.compactMap { actual -> TimeSpan? in
@@ -8166,15 +8191,39 @@ final class AppModel {
 
     @discardableResult
     func refreshSensorTimeline(containing date: Date? = nil) async -> Bool {
-        guard acceptsDataMutation() else { return false }
-        while isSensorTimelineRefreshing {
-            do {
-                try await Task.sleep(for: .milliseconds(10))
-            } catch {
-                return false
-            }
-            guard acceptsDataMutation() else { return false }
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        let day = Calendar.autoupdatingCurrent.startOfDay(for: date ?? selectedDate)
+        let key = "\(day.timeIntervalSince1970):\(rawDataRevision(for: day)):\(settings.hashValue)"
+        if sensorTimelineRequestKey == key, let sensorTimelineTask {
+            return await sensorTimelineTask.value
         }
+        let previous = sensorTimelineTask
+        previous?.cancel()
+        let requestID = UUID()
+        let task = Task { @MainActor [weak self] in
+            _ = await previous?.value
+            guard let self, !Task.isCancelled else { return false }
+            return await self.performSensorTimelineRefresh(containing: day)
+        }
+        sensorTimelineTask = task
+        sensorTimelineRequestID = requestID
+        sensorTimelineRequestKey = key
+        defer {
+            if sensorTimelineRequestID == requestID {
+                sensorTimelineTask = nil
+                sensorTimelineRequestID = nil
+                sensorTimelineRequestKey = nil
+            }
+        }
+        return await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
+    private func performSensorTimelineRefresh(containing date: Date) async -> Bool {
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         isSensorTimelineRefreshing = true
         activeDataMutationCount += 1
         defer {
@@ -8183,7 +8232,7 @@ final class AppModel {
         }
         let span = TimelineAggregationEngine().interval(
             for: .day,
-            containing: date ?? selectedDate
+            containing: date
         )
         let archivedReadings: [SensorReading]
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -8194,8 +8243,10 @@ final class AppModel {
             ]
         )
         await restoreRawWeather(in: span)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         guard let sensorService else { return true }
         let watchData = await watchSensorTimelineData(in: span)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let watchSummaries = watchData.summaries
         let watchAccelerationSamples = watchData.accelerationSamples
         applyReplayedWatchSummaries(watchSummaries)
@@ -8217,9 +8268,11 @@ final class AppModel {
         }
         // Raw readings stay in the archive. Every downstream algorithm uses
         // a copy whose scalar and route outliers are excluded with provenance.
-        let sensorQuality = TaptionActivityEngineAdapter.qualityProjection(
-            from: archivedReadings
-        )
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        let sensorQuality = await Task.detached(priority: .utility) {
+            TaptionActivityEngineAdapter.qualityProjection(from: archivedReadings)
+        }.value
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let filteredArchivedReadings = sensorQuality.routeReadings
         let sleepSpan = SleepAnalysisEngine.overnightSpan(
             containing: span.start
@@ -8230,6 +8283,7 @@ final class AppModel {
         let sleepReadings = (try? await sensorService.archivedReadings(
             in: sleepSpan
         )) ?? []
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         if Calendar.autoupdatingCurrent.isDate(span.start, inSameDayAs: .now),
            let latest = MapCurrentLocationAnchorPolicy.latestValidReading(
             in: filteredArchivedReadings
@@ -8241,6 +8295,7 @@ final class AppModel {
         }
         let motionActivities =
             (try? await sensorService.motionActivities(in: span)) ?? []
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         TaptionPlanDiagnosticsLogger.shared.record(
             "sensor_timeline_evidence_loaded",
             fields: [
@@ -8254,6 +8309,7 @@ final class AppModel {
         )
         let pedometer =
             try? await sensorService.pedometerSummary(in: span)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let healthKitMovementEvidence: [AppleMovementEvidence]
         if settings.healthEnabled {
             healthKitMovementEvidence =
@@ -8261,6 +8317,7 @@ final class AppModel {
         } else {
             healthKitMovementEvidence = []
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let refreshFingerprint = SensorRefreshFingerprint(
             readingCount: archivedReadings.count,
             latestReadingID: archivedReadings.last?.id,
@@ -8357,6 +8414,7 @@ final class AppModel {
         }
         let iPhonePedometerEvidence =
             await sensorService.pedometerEvidence(for: motionActivities)
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         if !motionActivities.isEmpty {
             let existingAutomatic = snapshot.actuals.filter {
                 $0.source != .motion
@@ -8418,6 +8476,7 @@ final class AppModel {
         }
         let healthMovementEvidence =
             iPhonePedometerEvidence + healthKitMovementEvidence
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let photoLocationReadings = photoBackfillReadings(
             in: span,
             existingReadings: archivedReadings
@@ -8432,6 +8491,7 @@ final class AppModel {
         } else {
             healthRouteReadings = []
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let filteredHealthRouteReadings = TaptionRouteEngineAdapter
             .filteredReadings(
                 from: healthRouteReadings,
@@ -8475,6 +8535,7 @@ final class AppModel {
             readings,
             userTransitLocations: settings.userTransitLocations
         )
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let knownPlaces = snapshot.places
         let knownNames = knownPlaces.reduce(into: [String: String]()) {
             $0[$1.placeKey] = $1.displayName
@@ -8485,6 +8546,7 @@ final class AppModel {
         )
         for index in detectedPlaces.indices
             where detectedPlaces[index].displayName == "자동 감지 장소" {
+            guard !Task.isCancelled, acceptsDataMutation() else { return false }
             guard let point = detectedPlaces[index].point,
                   let name = await placeNameResolver.displayName(
                       latitude: point.latitude,
@@ -8494,6 +8556,7 @@ final class AppModel {
             }
             detectedPlaces[index].displayName = name
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
 
         detectedPlaces = FrequentPlaceResolutionEngine().applying(
             settings.frequentPlaces,
@@ -8651,6 +8714,7 @@ final class AppModel {
             ),
             inside: span
         )
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         applyPlaceActivityRecords(stays: contextStays, inside: span)
         applyChargingInactivitySleepRecords(
             // Sleep inference also consumes motion-only samples that have no
@@ -8685,6 +8749,7 @@ final class AppModel {
                 fallbackReading: latestReadingWithPoint
             )
         }
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
         sensorRefreshFingerprints[span.start] = refreshFingerprint
         return true
     }
@@ -9318,6 +9383,20 @@ final class AppModel {
             source: source,
             sensorResult: result
         )
+    }
+
+    func cachedPlanDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot? {
+        let generation = dataDeletionGeneration
+        guard acceptsDataMutation(), let dayLoadCoordinator else { return nil }
+        let result = await dayLoadCoordinator.cachedSnapshot(
+            day: date,
+            source: snapshot,
+            sourceRevision: dayProjectionRevision
+        )
+        guard generation == dataDeletionGeneration, acceptsDataMutation() else {
+            return nil
+        }
+        return result
     }
 
     private func daySpan(containing date: Date) -> TimeSpan {
@@ -11951,7 +12030,8 @@ final class AppModel {
 
     private func saveToRepository(
         _ value: TaptionDataSnapshot,
-        expectedRevision: UInt64? = nil
+        expectedRevision: UInt64? = nil,
+        requiresCurrentRevision: Bool = true
     ) async throws -> Bool {
         guard hasCurrentDataGeneration else {
             throw RepositoryError.staleGeneration
@@ -11959,22 +12039,31 @@ final class AppModel {
         if let expectedRevision, expectedRevision != snapshotRevision {
             return false
         }
-        while isRepositoryWriteActive {
-            try await Task.sleep(for: .milliseconds(10))
+        try Task.checkCancellation()
+        let previous = repositoryWriteTask
+        let generation = dataDeletionGeneration
+        repositoryWriteSequence &+= 1
+        let sequence = repositoryWriteSequence
+        // A caller disappearing must not discard an accepted local write.
+        let task = Task { @MainActor [self] in
+            _ = await previous?.result
+            guard generation == dataDeletionGeneration,
+                  hasCurrentDataGeneration else {
+                throw RepositoryError.staleGeneration
+            }
+            if requiresCurrentRevision,
+               let expectedRevision, expectedRevision != snapshotRevision {
+                return false
+            }
+            try await repository.save(value)
+            return !requiresCurrentRevision || expectedRevision == nil
+                || expectedRevision == snapshotRevision
         }
-        guard hasCurrentDataGeneration else {
-            throw RepositoryError.staleGeneration
+        repositoryWriteTask = task
+        defer {
+            if repositoryWriteSequence == sequence { repositoryWriteTask = nil }
         }
-        if let expectedRevision, expectedRevision != snapshotRevision {
-            return false
-        }
-        isRepositoryWriteActive = true
-        defer { isRepositoryWriteActive = false }
-        try await repository.save(value)
-        if let expectedRevision, expectedRevision != snapshotRevision {
-            return false
-        }
-        return true
+        return try await task.value
     }
 
     @discardableResult
@@ -11990,9 +12079,7 @@ final class AppModel {
             return false
         }
         do {
-            lockAutomaticClassificationsForPersistence()
-            applyStoredActivityCorrections()
-            await refreshReviewArchives(force: true)
+            normalizeLocalRecordsIfNeeded()
             var value = snapshotForPersistence()
             value.updatedAt = .now
             var visibleValue = value
@@ -12000,75 +12087,13 @@ final class AppModel {
             let sourceRevision = snapshotRevision
             guard try await saveToRepository(
                 value,
-                expectedRevision: sourceRevision
-            ) else { return true }
+                expectedRevision: sourceRevision,
+                requiresCurrentRevision: false
+            ) else { return false }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)
             }
-            let cloudSourceRevision = snapshotRevision
-            if pendingMapMemoIDs.isEmpty,
-               !isDeletingUserData,
-               permissionState(for: .cloud).isGranted,
-               let cloudSyncService {
-                do {
-                    let uploaded = try await cloudSyncService.upload(
-                        Self.cloudPortableSnapshot(value)
-                    )
-                    let localDeviceData = snapshot
-                    let pendingMemos = localDeviceData.memos.filter {
-                        pendingMapMemoIDs.contains($0.id)
-                    }
-                    var committed = preparedCloudMergedSnapshot(
-                        mergeDeviceLocalData(
-                            cloud: uploaded,
-                            local: localDeviceData
-                        ),
-                        preservingUpdatedAt: localDeviceData.updatedAt
-                    )
-                    if !pendingMemos.isEmpty {
-                        let existingIDs = Set(committed.memos.map(\.id))
-                        committed.memos.append(contentsOf: pendingMemos.filter {
-                            !existingIDs.contains($0.id)
-                        })
-                    }
-                    var persisted = committed
-                    persisted.memos.removeAll {
-                        pendingMapMemoIDs.contains($0.id)
-                    }
-                    guard cloudSourceRevision == snapshotRevision,
-                          acceptsDataMutation(),
-                          try await saveToRepository(
-                              persisted,
-                              expectedRevision: cloudSourceRevision
-                          ) else { return true }
-                    assignCommittedCloudSnapshot(committed)
-                } catch {
-                    if CloudKitErrorPolicy.isProductionSchemaUnavailable(error)
-                        || error is RepositoryError
-                            && (error as? RepositoryError)
-                                == .cloudSchemaUnavailable {
-                        snapshot.settings.permissions[.cloud] = .unavailable
-                        cloudUnavailableReason = .schemaMissing
-                        TaptionPlanDiagnosticsLogger.shared.record(
-                            "cloud_upload_schema_unavailable",
-                            level: .error,
-                            fields: CloudKitErrorPolicy.diagnosticFields(for: error)
-                        )
-                        Self.integrationLogger.error(
-                            "CloudKit production schema is unavailable; local save completed"
-                        )
-                    } else {
-                        Self.integrationLogger.error(
-                            "CloudKit upload deferred; local save completed: \(error.localizedDescription, privacy: .public)"
-                        )
-                        TaptionPlanDiagnosticsLogger.shared.record(
-                            "cloud_upload_deferred",
-                            level: .notice,
-                            fields: ["error": String(describing: type(of: error))]
-                        )
-                    }
-                }
-            }
+            schedulePostSaveRefresh()
             publishWidgetPayload()
             if permissionState(for: .notifications).isGranted,
                snapshot.settings.notificationsEnabled {
@@ -12326,6 +12351,7 @@ final class AppModel {
             snapshot.settings.sensorCollectionProfile.interval
         )
         if !force, let lastReviewArchiveRefreshAt,
+           lastReviewArchiveRefreshRevision == timelineRevision,
            asOf.timeIntervalSince(lastReviewArchiveRefreshAt) < interval {
             return
         }
@@ -12337,10 +12363,39 @@ final class AppModel {
                 asOf: asOf
             )
         }.value
-        guard revision == timelineRevision else { return }
+        guard !Task.isCancelled, acceptsDataMutation(),
+              revision == timelineRevision else { return }
         lastReviewArchiveRefreshAt = asOf
+        lastReviewArchiveRefreshRevision = revision
         guard reports != snapshot.yearlyReports else { return }
         snapshot.yearlyReports = reports
+    }
+
+    private func schedulePostSaveRefresh() {
+        postSaveRefreshRequested = true
+        guard isSceneActive, postSaveRefreshTask == nil else { return }
+        postSaveRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.postSaveRefreshTask = nil
+                if self.postSaveRefreshRequested, self.isSceneActive,
+                   self.acceptsDataMutation() {
+                    self.schedulePostSaveRefresh()
+                }
+            }
+            while self.postSaveRefreshRequested, self.isSceneActive,
+                  self.acceptsDataMutation(), !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(1.5)) }
+                catch { return }
+                guard self.isSceneActive, !Task.isCancelled else { return }
+                self.postSaveRefreshRequested = false
+                await self.refreshReviewArchives(force: false)
+                guard self.isSceneActive, !Task.isCancelled else { return }
+                await self.persistDeviceLocalSnapshot()
+                guard self.isSceneActive, !Task.isCancelled else { return }
+                await self.synchronizeCloud(showErrors: false)
+            }
+        }
     }
 
     private func invalidateReviewArchives(
@@ -12372,7 +12427,7 @@ final class AppModel {
         lastReviewArchiveRefreshAt = nil
     }
 
-    private func persistDeviceLocalSnapshot() async {
+    private func persistDeviceLocalSnapshot(force: Bool = false) async {
         guard acceptsDataMutation() else { return }
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
@@ -12387,18 +12442,19 @@ final class AppModel {
         // trigger duplicate disk writes, widget serialization and timeline
         // reload requests. The coalesced change must still reach disk, so a
         // trailing write is scheduled instead of being dropped.
-        if let lastDeviceSnapshotPersistAt,
+        if !force, repositoryWriteTask != nil {
+            scheduleTrailingDeviceLocalPersist()
+            return
+        }
+        if !force, let lastDeviceSnapshotPersistAt,
            Date.now.timeIntervalSince(lastDeviceSnapshotPersistAt) < 1.5 {
             scheduleTrailingDeviceLocalPersist()
             return
         }
         pendingDeviceLocalPersistTask?.cancel()
         pendingDeviceLocalPersistTask = nil
-        lastDeviceSnapshotPersistAt = .now
         do {
-            lockAutomaticClassificationsForPersistence()
-            applyStoredActivityCorrections()
-            await refreshReviewArchives(force: false)
+            normalizeLocalRecordsIfNeeded()
             var value = snapshotForPersistence()
             value.updatedAt = .now
             var visibleValue = value
@@ -12406,13 +12462,16 @@ final class AppModel {
             let sourceRevision = snapshotRevision
             guard try await saveToRepository(
                 value,
-                expectedRevision: sourceRevision
+                expectedRevision: sourceRevision,
+                requiresCurrentRevision: false
             ) else { return }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)
             }
+            lastDeviceSnapshotPersistAt = .now
             publishWidgetPayload()
         } catch is CancellationError {
+            if isSceneActive { scheduleTrailingDeviceLocalPersist() }
             return
         } catch {
             userFacingError =
@@ -12420,14 +12479,23 @@ final class AppModel {
         }
     }
 
-    private func lockAutomaticClassificationsForPersistence() {
-        snapshot.actuals = ActivityClassificationLockEngine
-            .lockingAutomaticClassifications(snapshot.actuals)
-        snapshot.travel = snapshot.travel.map { segment in
-            var value = segment
-            value.isClassificationLocked = true
-            return value
+    private func normalizeLocalRecordsIfNeeded() {
+        guard needsLocalRecordNormalization else { return }
+        if snapshot.actuals.contains(where: {
+            $0.source.usesAutomaticClassification && !$0.isClassificationLocked
+        }) {
+            snapshot.actuals = ActivityClassificationLockEngine
+                .lockingAutomaticClassifications(snapshot.actuals)
         }
+        if snapshot.travel.contains(where: { !$0.isClassificationLocked }) {
+            snapshot.travel = snapshot.travel.map { segment in
+                var value = segment
+                value.isClassificationLocked = true
+                return value
+            }
+        }
+        applyStoredActivityCorrections()
+        needsLocalRecordNormalization = false
     }
 
     private func snapshotForPersistence() -> TaptionDataSnapshot {

@@ -90,9 +90,11 @@ final class FeatureEngineTests: XCTestCase {
             distanceMeters: 1_000,
             confidence: .high,
             evidence: ["테스트"],
-            isConfirmed: true
+            isConfirmed: true,
+            isClassificationLocked: true
         )
         var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
         stored.travel = [travel]
         stored.settings.locationEnabled = false
         stored.settings.weatherEnabled = false
@@ -119,6 +121,217 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertNil(result)
         XCTAssertNil(model.userFacingError)
+    }
+
+    @MainActor
+    func testAcceptedActivityEditSurvivesCallerCancellation() async throws {
+        let day = makeDate(2026, 8, 13)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let travel = TravelSegment(
+            mode: .walking,
+            span: span,
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["테스트"],
+            isConfirmed: true,
+            isClassificationLocked: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
+        stored.travel = [travel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = GatedSavePlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [travel.id],
+            originalSpan: span,
+            originalOption: phaseOption("movement", title: "이동"),
+            mode: .replace(
+                editedSpan: span,
+                option: phaseOption("work", title: "업무")
+            )
+        )
+        let caller = Task { @MainActor in
+            await model.saveActivitySectionEdit(request)
+        }
+
+        await repository.waitForFirstSave()
+        caller.cancel()
+        await repository.releaseFirstSave()
+        _ = await caller.value
+
+        let persisted = try await repository.load()
+        XCTAssertTrue(
+            persisted.actuals.contains {
+                $0.categoryID == "work" && $0.title == "업무"
+            }
+        )
+    }
+
+    @MainActor
+    func testConcurrentAcceptedActivityEditsPreserveLatestSnapshot() async throws {
+        let day = makeDate(2026, 8, 14)
+        let firstSpan = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let secondSpan = TimeSpan(
+            start: day.addingTimeInterval(11 * hour),
+            end: day.addingTimeInterval(12 * hour)
+        )
+        let firstTravel = TravelSegment(
+            mode: .walking,
+            span: firstSpan,
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["첫 번째"],
+            isConfirmed: true,
+            isClassificationLocked: true
+        )
+        let secondTravel = TravelSegment(
+            mode: .cycling,
+            span: secondSpan,
+            distanceMeters: 2_000,
+            confidence: .high,
+            evidence: ["두 번째"],
+            isConfirmed: true,
+            isClassificationLocked: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
+        stored.travel = [firstTravel, secondTravel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = GatedSavePlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let firstRequest = ActivitySectionEditRequest(
+            sourceIDs: [firstTravel.id],
+            originalSpan: firstSpan,
+            originalOption: phaseOption("movement", title: "이동"),
+            mode: .replace(
+                editedSpan: firstSpan,
+                option: phaseOption("work", title: "업무")
+            )
+        )
+        let secondRequest = ActivitySectionEditRequest(
+            sourceIDs: [secondTravel.id],
+            originalSpan: secondSpan,
+            originalOption: phaseOption("movement", title: "이동"),
+            mode: .replace(
+                editedSpan: secondSpan,
+                option: phaseOption("exercise", title: "운동")
+            )
+        )
+        let firstTask = Task { @MainActor in
+            await model.saveActivitySectionEdit(firstRequest)
+        }
+        await repository.waitForFirstSave()
+        let secondTask = Task { @MainActor in
+            await model.saveActivitySectionEdit(secondRequest)
+        }
+
+        await repository.releaseFirstSave()
+        _ = await firstTask.value
+        _ = await secondTask.value
+
+        let persisted = try await repository.load()
+        XCTAssertTrue(
+            persisted.actuals.contains {
+                $0.categoryID == "work" && $0.title == "업무"
+            }
+        )
+        XCTAssertTrue(
+            persisted.actuals.contains {
+                $0.categoryID == "exercise" && $0.title == "운동"
+            }
+        )
+    }
+
+    @MainActor
+    func testSensorLocalSaveCancellationIsQuietButRealFailureSurfaces() async throws {
+        var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+
+        let cancellationModel = AppModel(
+            repository: CancellationSavePlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await cancellationModel.bootstrap()
+        await cancellationModel.refreshEnabledData(
+            persistDeviceSnapshot: true
+        )
+        XCTAssertNil(cancellationModel.userFacingError)
+
+        let failureModel = AppModel(
+            repository: RejectingSavePlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await failureModel.bootstrap()
+        await failureModel.refreshEnabledData(
+            persistDeviceSnapshot: true
+        )
+        XCTAssertTrue(
+            failureModel.userFacingError?.hasPrefix(
+                "센서 기록을 저장하지 못했습니다."
+            ) == true
+        )
+    }
+
+    @MainActor
+    func testBackgroundFlushDoesNotRebuildReviewReports() async throws {
+        let start = makeDate(2026, 8, 15, 9)
+        let actual = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(hour),
+            source: .manual
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
+        stored.actuals = [actual]
+        stored.yearlyReports = []
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        XCTAssertTrue(model.snapshot.yearlyReports.isEmpty)
+
+        await model.sceneEnteredBackground()
+
+        XCTAssertTrue(model.snapshot.yearlyReports.isEmpty)
+        let persisted = try await repository.load()
+        XCTAssertTrue(persisted.yearlyReports.isEmpty)
     }
 
     func testLocationUpdatesWaitUntilFreshLocationRequestCompletes() {
@@ -492,6 +705,22 @@ final class FeatureEngineTests: XCTestCase {
                 date: day,
                 isBootstrapped: true,
                 rawDataRevision: 2,
+                calendar: utcCalendar
+            )
+        )
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                rawDataRevision: 3,
+                isSceneActive: false,
+                calendar: utcCalendar
+            ),
+            MapHomeRouteReadingsTaskKey(
+                date: day,
+                isBootstrapped: true,
+                rawDataRevision: 3,
+                isSceneActive: true,
                 calendar: utcCalendar
             )
         )
@@ -18157,11 +18386,18 @@ final class FeatureEngineTests: XCTestCase {
         )
         let snapshotRevision = model.snapshotRevision
         let dayRevision = model.dayProjectionRevision
+        let timelineRevision = model.timelineRevision
 
+        await model.setCalendarEnabled(false)
+        let firstSaveDayRevision = model.dayProjectionRevision
+        let firstSaveTimelineRevision = model.timelineRevision
         await model.setCalendarEnabled(false)
 
         XCTAssertGreaterThan(model.snapshotRevision, snapshotRevision)
-        XCTAssertEqual(model.dayProjectionRevision, dayRevision)
+        XCTAssertEqual(firstSaveDayRevision, dayRevision)
+        XCTAssertEqual(model.dayProjectionRevision, firstSaveDayRevision)
+        XCTAssertEqual(firstSaveTimelineRevision, timelineRevision)
+        XCTAssertEqual(model.timelineRevision, firstSaveTimelineRevision)
     }
 
     /// 순간을 그리는 표식이 화소보다 얇아지면 안 된다. 붙어 있는 메모는 낱개로
@@ -24061,12 +24297,57 @@ private struct RawArchiveWatchFixture: Codable, Hashable {
 }
 
 private actor RejectingSavePlanRepository: PlanDataRepository {
+    private let snapshot: TaptionDataSnapshot
+
+    init(snapshot: TaptionDataSnapshot = .empty) {
+        self.snapshot = snapshot
+    }
+
     func load() async throws -> TaptionDataSnapshot {
-        .empty
+        snapshot
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         throw RepositoryError.invalidSnapshot
+    }
+}
+
+private actor GatedSavePlanRepository: PlanDataRepository {
+    private var storedSnapshot: TaptionDataSnapshot
+    private var saveCount = 0
+    private var firstSaveWaiter: CheckedContinuation<Void, Never>?
+    private var firstSaveRelease: CheckedContinuation<Void, Never>?
+
+    init(snapshot: TaptionDataSnapshot) {
+        storedSnapshot = snapshot
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        storedSnapshot
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        saveCount += 1
+        firstSaveWaiter?.resume()
+        firstSaveWaiter = nil
+        if saveCount == 1 {
+            await withCheckedContinuation { continuation in
+                firstSaveRelease = continuation
+            }
+        }
+        storedSnapshot = snapshot
+    }
+
+    func waitForFirstSave() async {
+        guard saveCount == 0 else { return }
+        await withCheckedContinuation { continuation in
+            firstSaveWaiter = continuation
+        }
+    }
+
+    func releaseFirstSave() {
+        firstSaveRelease?.resume()
+        firstSaveRelease = nil
     }
 }
 
