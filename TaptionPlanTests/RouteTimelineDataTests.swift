@@ -1236,8 +1236,7 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
-    func testExpectedSubwayRouteUsesRegisteredEndpointsAndCollapsesBridgedDuplicates()
-        throws {
+    func testExpectedSubwayRouteRequiresBoundedGPSGap() {
         let home = FrequentPlace(
             id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
             kind: .home,
@@ -1302,8 +1301,6 @@ final class RouteTimelineDataTests: XCTestCase {
                 isClassificationLocked: true
             )
         }
-        let original = travel
-
         let requests = ExpectedRouteRequestEngine.requests(
             travel: travel,
             places: [from, to],
@@ -1313,14 +1310,7 @@ final class RouteTimelineDataTests: XCTestCase {
             frequentPlaces: [home, company]
         )
 
-        let request = try XCTUnwrap(requests.first)
-        XCTAssertEqual(requests.count, 1)
-        XCTAssertEqual(request.transport, .transit)
-        XCTAssertEqual(request.start, home.point)
-        XCTAssertEqual(request.end, company.point)
-        XCTAssertEqual(request.departureDate, date(10))
-        XCTAssertEqual(request.arrivalDate, date(40))
-        XCTAssertEqual(travel, original)
+        XCTAssertTrue(requests.isEmpty)
     }
 
     func testExpectedRouteRejectsUnconfirmedSegmentWithoutBothRegisteredEndpoints() {
@@ -1374,7 +1364,7 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
-    func testRegisteredEndpointsAlwaysRequestBestExpectedRoadRoute() throws {
+    func testExpectedRouteDoesNotUseRegisteredEndpointsWithoutGPS() {
         let home = FrequentPlace(
             kind: .home,
             point: GeoPoint(
@@ -1418,7 +1408,7 @@ final class RouteTimelineDataTests: XCTestCase {
             isClassificationLocked: true
         )
 
-        let request = try XCTUnwrap(
+        XCTAssertTrue(
             ExpectedRouteRequestEngine.requests(
                 travel: [travel],
                 places: [from, to],
@@ -1426,11 +1416,8 @@ final class RouteTimelineDataTests: XCTestCase {
                 in: TimeSpan(start: date(0), end: date(1_440)),
                 through: date(1_440),
                 frequentPlaces: [home, company]
-            ).first
+            ).isEmpty
         )
-        XCTAssertEqual(request.transport, .automobile)
-        XCTAssertEqual(request.provenance, "explicit-travel-mode")
-        XCTAssertEqual(request.confidence, 1)
     }
 
     func testExpectedRouteSkipsStoredSubwayAndUsesTransitForTrain() throws {
@@ -1510,7 +1497,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(request.confidence, 1)
     }
 
-    func testExpectedRouteSkipsCompletelyRecordedGPS() {
+    func testExpectedRouteSkipsNormalGPSContinuity() {
         let segment = TravelSegment(
             mode: .car,
             span: TimeSpan(start: date(10), end: date(40)),
@@ -1533,7 +1520,7 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
-    func testExpectedRouteCoversOnlyTheMissingGPSGap() throws {
+    func testExpectedRouteUsesLateGPSToBoundOnlyTheMissingGap() throws {
         let segment = TravelSegment(
             mode: .car,
             span: TimeSpan(start: date(10), end: date(100)),
@@ -1543,17 +1530,14 @@ final class RouteTimelineDataTests: XCTestCase {
         )
         let startOfGap = reading(40, latitude: 37.04)
         let endOfGap = reading(100, latitude: 37.10)
+        let continuous = (10..<40).map {
+            reading($0, latitude: 37 + Double($0) / 1_000)
+        }
         let request = try XCTUnwrap(
             ExpectedRouteRequestEngine.requests(
                 travel: [segment],
                 places: [],
-                readings: [
-                    reading(10, latitude: 37.01),
-                    reading(20, latitude: 37.02),
-                    reading(30, latitude: 37.03),
-                    startOfGap,
-                    endOfGap,
-                ],
+                readings: continuous + [startOfGap, endOfGap],
                 in: TimeSpan(start: date(0), end: date(1_440)),
                 through: date(1_440)
             ).first
@@ -1563,6 +1547,208 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(request.arrivalDate, date(100))
         XCTAssertEqual(request.start, startOfGap.point)
         XCTAssertEqual(request.end, endOfGap.point)
+        let filled = (40...100).map {
+            reading($0, latitude: 37 + Double($0) / 1_000)
+        }
+        XCTAssertTrue(ExpectedRouteRequestEngine.requests(
+            travel: [segment], places: [], readings: continuous + filled,
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        ).isEmpty)
+    }
+
+    func testExpectedRouteSkipsStationaryGPSGap() {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 1_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let stationary = [
+            reading(10, latitude: 37),
+            reading(100, latitude: 37),
+        ]
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [],
+                readings: stationary,
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).isEmpty
+        )
+    }
+
+    func testExpectedRouteRequestsEveryBoundedGPSGapWithStableDistinctIDs() {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 30_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        let readings = [
+            reading(10, latitude: 37.00),
+            reading(40, latitude: 37.05),
+            reading(70, latitude: 37.10),
+            reading(100, latitude: 37.15),
+        ]
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: [segment],
+            places: [],
+            readings: readings,
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        ).sorted { $0.departureDate < $1.departureDate }
+        let repeated = ExpectedRouteRequestEngine.requests(
+            travel: [segment],
+            places: [],
+            readings: readings,
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        ).sorted { $0.departureDate < $1.departureDate }
+
+        XCTAssertEqual(requests.count, 3)
+        XCTAssertEqual(requests.map(\.departureDate), [date(10), date(40), date(70)])
+        XCTAssertEqual(requests.map(\.arrivalDate), [date(40), date(70), date(100)])
+        XCTAssertEqual(requests.map(\.id), repeated.map(\.id))
+        XCTAssertEqual(Set(requests.map(\.id)).count, requests.count)
+        XCTAssertTrue(requests.allSatisfy { $0.id != segment.id })
+    }
+
+    func testExpectedRouteGapIDSurvivesPersistedDateRoundTrip() throws {
+        let dates = [
+            Date(timeIntervalSinceReferenceDate: 811012345.000002),
+            Date(timeIntervalSinceReferenceDate: 811014145.000002),
+        ]
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let restored = try decoder.decode([Date].self, from: encoder.encode(dates))
+        XCTAssertNotEqual(dates[0], restored[0])
+        let segmentID = UUID()
+        let point = try XCTUnwrap(reading(10, latitude: 37).point)
+        let original = ExpectedRouteRequest(
+            segmentID: segmentID, mode: .car, transport: .automobile,
+            start: point, end: point,
+            departureDate: dates[0], arrivalDate: dates[1]
+        )
+        let decoded = ExpectedRouteRequest(
+            segmentID: segmentID, mode: .car, transport: .automobile,
+            start: point, end: point,
+            departureDate: restored[0], arrivalDate: restored[1]
+        )
+        XCTAssertEqual(original.id, decoded.id)
+    }
+
+    func testExpectedRouteDoesNotUseLeadingOrTrailingPlaceFallback() {
+        let from = PlaceStay(
+            placeKey: "bounded-from",
+            displayName: "출발",
+            span: TimeSpan(start: date(0), end: date(10)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let to = PlaceStay(
+            placeKey: "bounded-to",
+            displayName: "도착",
+            span: TimeSpan(start: date(100), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.2,
+                longitude: 127.2,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let segment = TravelSegment(
+            fromPlaceID: from.id,
+            toPlaceID: to.id,
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 30_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [from, to],
+                readings: [reading(40, latitude: 37.1)],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).isEmpty
+        )
+    }
+
+    func testExpectedRouteDoesNotTreatEndedTrackingSessionAsGPSFailure() {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 12_000,
+            confidence: .medium,
+            evidence: ["자동차"]
+        )
+        var endedSession = reading(10, latitude: 37)
+        endedSession.trackingSessionEnded = true
+
+        XCTAssertTrue(
+            ExpectedRouteRequestEngine.requests(
+                travel: [segment],
+                places: [],
+                readings: [endedSession, reading(100, latitude: 37.1)],
+                in: TimeSpan(start: date(0), end: date(1_440)),
+                through: date(1_440)
+            ).isEmpty
+        )
+    }
+
+    func testExpectedRouteRejectsStopMarkerWithoutGPS() {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 12_000,
+            confidence: .medium,
+            evidence: []
+        )
+        var stopped = SensorReading(timestamp: date(40))
+        stopped.trackingSessionEnded = true
+        XCTAssertTrue(ExpectedRouteRequestEngine.requests(
+            travel: [segment],
+            places: [],
+            readings: [reading(10, latitude: 37), stopped, reading(100, latitude: 37.1)],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        ).isEmpty)
+    }
+
+    func testExpectedRouteDoesNotOverlapConfirmedTravel() {
+        let span = TimeSpan(start: date(10), end: date(100))
+        let candidate = TravelSegment(
+            mode: .car, span: span, distanceMeters: 12_000,
+            confidence: .medium, evidence: []
+        )
+        let confirmed = TravelSegment(
+            mode: .train, span: span, distanceMeters: 12_000,
+            confidence: .high, evidence: [], isConfirmed: true
+        )
+        XCTAssertTrue(ExpectedRouteRequestEngine.requests(
+            travel: [candidate, confirmed], places: [],
+            readings: [reading(10, latitude: 37), reading(100, latitude: 37.1)],
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        ).isEmpty)
     }
 
     func testExpectedRouteCoversSparseLongDistanceGPSGap() throws {
@@ -1788,7 +1974,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(point?.longitude ?? 0, 127.0005, accuracy: 0.00002)
     }
 
-    func testWBSPlaybackUsesExplicitMovementAndResolvedRoadDistance() throws {
+    func testWBSPlaybackDoesNotUseResolvedRoadDistanceWithoutGPSBoundedGap() {
         let home = PlaceStay(
             placeKey: "home",
             displayName: "집",
@@ -1859,43 +2045,14 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
 
-        let movement = projection.legs.filter { $0.activity == .movement }
-        XCTAssertEqual(movement.map(\.id), [legID])
-        let frame = try XCTUnwrap(
-            projection.frame(at: date(55), preferredForecastLegIDs: [legID])
-        )
-        XCTAssertEqual(frame.legID, legID)
-        XCTAssertEqual(frame.mode, .bus)
-        XCTAssertEqual(frame.coordinate.longitude, 127.0005, accuracy: 0.00002)
-        XCTAssertEqual(frame.direction, .east)
-        XCTAssertEqual(frame.stickmanFrameIndex, 12)
-        let lineCoordinate = try XCTUnwrap(
-            MapHomeExpectedRoutePlaybackMath.coordinate(
-                at: date(55),
-                departureDate: date(10),
-                arrivalDate: date(100),
-                coordinates: roadCoordinates.map {
-                    CLLocationCoordinate2D(
-                        latitude: $0.latitude,
-                        longitude: $0.longitude
-                    )
-                }
-            )
-        )
-        XCTAssertEqual(
-            frame.coordinate.latitude,
-            lineCoordinate.latitude,
-            accuracy: 0.000_001
-        )
-        XCTAssertEqual(
-            frame.coordinate.longitude,
-            lineCoordinate.longitude,
-            accuracy: 0.000_001
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
     }
 
-    func testWBSPlaybackCollapsesTransitivelyOverlappingForecastMovements()
-        throws {
+    func testWBSPlaybackDoesNotForecastOverlappingTravelWithoutGPS() {
         let home = PlaceStay(
             placeKey: "home",
             displayName: "집",
@@ -1977,18 +2134,14 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
 
-        XCTAssertEqual(
-            projection.legs.filter { $0.activity == .movement }.map(\.id),
-            [firstLegID]
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
-        let movement = try XCTUnwrap(
-            projection.legs.first { $0.activity == .movement }
-        )
-        XCTAssertEqual(movement.startDate, date(10))
-        XCTAssertEqual(movement.endDate, date(40))
     }
 
-    func testWBSPlaybackCreatesEvidenceBackedSubwayGapAndKeepsStayCameraAtCenter() throws {
+    func testWBSPlaybackDoesNotForecastSubwayGapWithoutReliableGPS() throws {
         let firstPoint = GeoPoint(
             latitude: 37,
             longitude: 127,
@@ -2041,9 +2194,10 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
 
-        XCTAssertEqual(
-            projection.legs.filter { $0.activity == .movement }.count,
-            1
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
         let stay = try XCTUnwrap(projection.frame(at: date(10)))
         XCTAssertEqual(stay.activity, .stay)
@@ -2056,13 +2210,66 @@ final class RouteTimelineDataTests: XCTestCase {
             0,
             accuracy: 0.5
         )
-        let movementLegID = "movement-gap-\(first.id.uuidString)-\(second.id.uuidString)"
-        let movement = try XCTUnwrap(
-            projection.frame(at: date(50), preferredForecastLegIDs: [movementLegID])
+    }
+
+    func testWBSPlaybackCreatesOnlyGPSBoundedSubwayForecastGap() throws {
+        let first = PlaceStay(
+            placeKey: "gps-subway-first",
+            displayName: "출발",
+            span: TimeSpan(start: date(0), end: date(20)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
         )
-        XCTAssertEqual(movement.activity, .movement)
+        let second = PlaceStay(
+            placeKey: "gps-subway-second",
+            displayName: "도착",
+            span: TimeSpan(start: date(80), end: date(120)),
+            confidence: .high,
+            point: GeoPoint(
+                latitude: 37.2,
+                longitude: 127.2,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let travel = TravelSegment(
+            fromPlaceID: first.id,
+            toPlaceID: second.id,
+            mode: .subway,
+            span: TimeSpan(start: date(20), end: date(80)),
+            distanceMeters: 30_000,
+            confidence: .medium,
+            evidence: ["지하철"],
+            isConfirmed: false,
+            isClassificationLocked: true
+        )
+        let startGPS = reading(20, latitude: 37.05)
+        let endGPS = reading(80, latitude: 37.15)
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [first, second],
+            travel: [travel],
+            readings: [startGPS, endGPS],
+            calendar: calendar
+        )
+
+        let forecast = projection.legs.filter {
+            $0.routePhase == .forecast && $0.activity == .movement
+        }
+        XCTAssertEqual(forecast.count, 1)
+        let movement = try XCTUnwrap(forecast.first)
+        XCTAssertEqual(movement.startDate, date(20))
+        XCTAssertEqual(movement.endDate, date(80))
         XCTAssertEqual(movement.mode, .subway)
-        XCTAssertTrue(movement.legID.hasPrefix("movement-gap-"))
+        XCTAssertEqual(movement.coordinates.first, startGPS.point)
+        XCTAssertEqual(movement.coordinates.last, endGPS.point)
     }
 
     func testMPR905H001RecordedRouteRemovesGeneratedForecastGap() {
@@ -2238,7 +2445,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(projection.legs.filter { $0.activity == .movement }.isEmpty)
     }
 
-    func testWBSPlaybackDoesNotAddGapsCoveredByExplicitMovement() {
+    func testWBSPlaybackDoesNotForecastExplicitMovementWithoutGPS() {
         let first = PlaceStay(
             placeKey: "first",
             displayName: "첫 장소",
@@ -2296,10 +2503,10 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
 
-        XCTAssertEqual(
-            projection.legs.filter { $0.routePhase == .forecast && $0.activity == .movement }
-                .map(\.id),
-            ["movement-\(travel.id.uuidString)"]
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
     }
 
@@ -2531,7 +2738,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertNil(projection.frame(at: date(200)))
     }
 
-    func testWBSPlaybackPrefersDottedForecastLegWhenItIsRendered() throws {
+    func testWBSPlaybackDoesNotUseResolvedRouteWithoutGPSBoundedGap() {
         let home = PlaceStay(
             placeKey: "forecast-home",
             displayName: "출발",
@@ -2586,44 +2793,14 @@ final class RouteTimelineDataTests: XCTestCase {
             calendar: calendar
         )
 
-        let frame = try XCTUnwrap(
-            projection.frame(
-                at: date(25),
-                preferredForecastLegIDs: [legID]
-            )
-        )
-        XCTAssertEqual(frame.legID, legID)
-        XCTAssertEqual(frame.routePhase, .forecast)
-        XCTAssertEqual(frame.activity, .movement)
-        XCTAssertGreaterThan(frame.coordinate.longitude, 127.0001)
-        XCTAssertLessThan(frame.coordinate.latitude, 37.0001)
-
-        let lineCoordinate = try XCTUnwrap(
-            MapHomeExpectedRoutePlaybackMath.coordinate(
-                at: date(25),
-                departureDate: date(10),
-                arrivalDate: date(100),
-                coordinates: routeCoordinates.map {
-                    CLLocationCoordinate2D(
-                        latitude: $0.latitude,
-                        longitude: $0.longitude
-                    )
-                }
-            )
-        )
-        XCTAssertEqual(
-            frame.coordinate.latitude,
-            lineCoordinate.latitude,
-            accuracy: 0.000_001
-        )
-        XCTAssertEqual(
-            frame.coordinate.longitude,
-            lineCoordinate.longitude,
-            accuracy: 0.000_001
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
     }
 
-    func testThursdayWBSPlaybackMovesMonotonicallyWithoutViewRotation() throws {
+    func testThursdayWBSPlaybackDoesNotForecastWithoutGPS() throws {
         let thursday = try XCTUnwrap(
             calendar.date(from: DateComponents(year: 2026, month: 8, day: 27))
         )
@@ -2674,7 +2851,6 @@ final class RouteTimelineDataTests: XCTestCase {
             confidence: .high,
             evidence: ["걷기"]
         )
-        let travelLegID = "movement-\(travel.id.uuidString)"
         let projection = MapHomeWBSPlaybackProjection.make(
             selectedDate: thursday,
             places: [from, to],
@@ -2682,30 +2858,11 @@ final class RouteTimelineDataTests: XCTestCase {
             readings: [],
             calendar: calendar
         )
-        let first = try XCTUnwrap(
-            projection.frame(
-                at: dayStart.addingTimeInterval(10 * 60),
-                preferredForecastLegIDs: [travelLegID]
-            )
+        XCTAssertTrue(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.isEmpty
         )
-        let middle = try XCTUnwrap(
-            projection.frame(
-                at: dayStart.addingTimeInterval(40 * 60),
-                preferredForecastLegIDs: [travelLegID]
-            )
-        )
-        let last = try XCTUnwrap(
-            projection.frame(
-                at: dayStart.addingTimeInterval(70 * 60 - 0.001),
-                preferredForecastLegIDs: [travelLegID]
-            )
-        )
-
-        XCTAssertLessThan(first.coordinate.longitude, middle.coordinate.longitude)
-        XCTAssertLessThan(middle.coordinate.longitude, last.coordinate.longitude)
-        XCTAssertEqual(first.direction, .east)
-        XCTAssertEqual(middle.direction, .east)
-        XCTAssertEqual(last.direction, .east)
     }
 
     func testMPR905H001DensePlaybackFrameLookup() {

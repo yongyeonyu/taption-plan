@@ -415,6 +415,7 @@ private struct MapHomeCachedRouteOverlay: Codable, Sendable {
 
 private struct MapHomeCachedExpectedRouteOverlay: Codable, Sendable {
     let id: UUID
+    let segmentID: UUID
     let modeRawValue: String
     let departureDate: Date
     let arrivalDate: Date
@@ -1564,7 +1565,7 @@ struct MapHomeView: View {
         "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
-    private static let mapCacheAlgorithmKey = "route-document-v4"
+    private static let mapCacheAlgorithmKey = "route-document-v5"
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
@@ -6419,7 +6420,8 @@ struct MapHomeView: View {
         coordinates: [CLLocationCoordinate2D]
     ) -> MapHomeExpectedRouteOverlay {
         MapHomeExpectedRouteOverlay(
-            id: request.segmentID,
+            id: request.id,
+            segmentID: request.segmentID,
             mode: request.mode,
             departureDate: request.departureDate,
             arrivalDate: request.arrivalDate,
@@ -7216,6 +7218,7 @@ struct MapHomeView: View {
             guard coordinates.count >= 2 else { return nil }
             return MapHomeExpectedRouteOverlay(
                 id: overlay.id,
+                segmentID: overlay.segmentID,
                 mode: mode,
                 departureDate: overlay.departureDate,
                 arrivalDate: overlay.arrivalDate,
@@ -7230,7 +7233,9 @@ struct MapHomeView: View {
                 let coordinates = overlay.coordinates.compactMap {
                     cachedCoordinate($0)
                 }
-                guard coordinates.count >= 2 else { return nil }
+                guard !overlay.estimated, coordinates.count >= 2 else {
+                    return nil
+                }
                 return MapHomeSubwayRouteOverlay(
                     id: overlay.id,
                     coordinates: coordinates,
@@ -7399,6 +7404,7 @@ struct MapHomeView: View {
             expected: expectedRouteOverlays.map { overlay in
                 MapHomeCachedExpectedRouteOverlay(
                     id: overlay.id,
+                    segmentID: overlay.segmentID,
                     modeRawValue: overlay.mode.rawValue,
                     departureDate: overlay.departureDate,
                     arrivalDate: overlay.arrivalDate,
@@ -7538,7 +7544,7 @@ struct MapHomeView: View {
         let readings = currentDayReadings
         let completed = Set<UUID>(expectedRouteOverlays.compactMap { overlay in
             guard overlay.departureDate <= timestamp,
-                  let segment = travelByID[overlay.id],
+                  let segment = travelByID[overlay.segmentID],
                   TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
                       for: segment,
                       readings: readings
@@ -7753,6 +7759,7 @@ struct MapHomeView: View {
     private var storedWBSResolvedRoutes: [MapHomeWBSResolvedRoute] {
         (currentDayDataSnapshot?.travel ?? model.snapshot.travel).compactMap { segment in
             guard segment.mode == .subway,
+                  segment.isConfirmed,
                   let route = segment.subwayRoute,
                   SubwayStationCatalog.isValid(route),
                   route.coordinates.count >= 2 else { return nil }
@@ -10917,6 +10924,7 @@ enum MapHomeRouteTimelinePlaybackMath {
 
 private struct MapHomeExpectedRouteOverlay: Identifiable {
     let id: UUID
+    let segmentID: UUID
     let mode: TravelMode
     let departureDate: Date
     let arrivalDate: Date
@@ -10926,12 +10934,14 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
 
     init(
         id: UUID,
+        segmentID: UUID,
         mode: TravelMode,
         departureDate: Date,
         arrivalDate: Date,
         coordinates: [CLLocationCoordinate2D]
     ) {
         self.id = id
+        self.segmentID = segmentID
         self.mode = mode
         self.departureDate = departureDate
         self.arrivalDate = arrivalDate
@@ -10944,6 +10954,7 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
 
     private init(
         id: UUID,
+        segmentID: UUID,
         mode: TravelMode,
         departureDate: Date,
         arrivalDate: Date,
@@ -10952,6 +10963,7 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
         geometrySignature: Int
     ) {
         self.id = id
+        self.segmentID = segmentID
         self.mode = mode
         self.departureDate = departureDate
         self.arrivalDate = arrivalDate
@@ -10986,6 +10998,7 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
         )
         return Self(
             id: id,
+            segmentID: segmentID,
             mode: mode,
             departureDate: departureDate,
             arrivalDate: arrivalDate,
@@ -11173,130 +11186,32 @@ struct MapHomeSubwayRouteOverlay: Identifiable {
 }
 
 enum MapHomeSubwayRouteOverlayEngine {
-    private static let readingMargin: TimeInterval = 2 * 60
-
     static func overlays(
         travel: [TravelSegment],
-        readings: [SensorReading],
+        readings _: [SensorReading],
         day: TimeSpan,
         through cutoff: Date
     ) -> [MapHomeSubwayRouteOverlay] {
         let subwaySegments = travel
-            .filter { $0.mode == .subway && $0.span.intersection(with: day) != nil }
+            .filter {
+                $0.mode == .subway
+                    && $0.isConfirmed
+                    && $0.span.intersection(with: day) != nil
+            }
             .sorted { $0.span.start < $1.span.start }
-        let confirmedSpans = subwaySegments.compactMap { segment -> TimeSpan? in
-            guard segment.isConfirmed,
-                  let route = segment.subwayRoute,
-                  SubwayStationCatalog.isValid(route) else { return nil }
-            return segment.span
-        }
-
         return subwaySegments.compactMap { segment in
-            if segment.isConfirmed,
-               let route = segment.subwayRoute,
-               SubwayStationCatalog.isValid(route) {
-                let points = RouteTimelineDataEngine.confirmedSubwayCoordinates(
-                    for: segment,
-                    through: cutoff
-                )
-                return makeOverlay(
-                    id: segment.id,
-                    points: points,
-                    estimated: false
-                )
-            }
-
-            // A confirmed route is authoritative for an overlapping interval;
-            // do not draw an inferred path on top of it.
-            guard !confirmedSpans.contains(where: {
-                $0.intersection(with: segment.span) != nil
-            }) else { return nil }
-            if let route = segment.subwayRoute,
-               SubwayStationCatalog.isValid(route) {
-                let points = visibleCoordinates(
-                    route.coordinates,
-                    start: segment.span.start,
-                    end: segment.span.end,
-                    through: cutoff
-                )
-                return makeOverlay(
-                    id: segment.id,
-                    points: points,
-                    estimated: true
-                )
-            }
-            let sourceReadings = readings.filter {
-                $0.timestamp >= segment.span.start.addingTimeInterval(-readingMargin)
-                    && $0.timestamp <= segment.span.end.addingTimeInterval(readingMargin)
-            }
-            guard hasSupportingEvidence(in: sourceReadings) else { return nil }
-            let preciseReadings = sourceReadings.filter {
-                $0.locationFixQuality != .approximate
-            }
-            let trajectory = SubwayStationCatalog.coordinateTrajectory(
-                from: preciseReadings
-            ) ?? SubwayStationCatalog.sparseEndpointTrajectory(
-                from: preciseReadings
-            )
-            let route = trajectory?.route
-                ?? SubwayStationCatalog.route(for: sourceReadings)
-            guard let route,
+            guard let route = segment.subwayRoute,
                   SubwayStationCatalog.isValid(route) else { return nil }
-            let points = visibleCoordinates(
-                route.coordinates,
-                start: segment.span.start,
-                end: segment.span.end,
+            let points = RouteTimelineDataEngine.confirmedSubwayCoordinates(
+                for: segment,
                 through: cutoff
             )
             return makeOverlay(
                 id: segment.id,
                 points: points,
-                estimated: true
+                estimated: false
             )
         }
-    }
-
-    private static func hasSupportingEvidence(
-        in readings: [SensorReading]
-    ) -> Bool {
-        guard !readings.isEmpty else { return false }
-        let railRatio = Double(readings.filter(\.matchesRailRoute).count)
-            / Double(readings.count)
-        if railRatio >= 0.25 {
-            return true
-        }
-        if SubwayWiFiSSID.hasContinuousEvidence(
-            readings.map(\.connectedWiFiSSID)
-        ) {
-            return true
-        }
-        let stationNames = Set(
-            readings.compactMap(\.nearbyStationName).map {
-                $0.trimmingCharacters(in: .whitespacesAndNewlines)
-                    .replacingOccurrences(of: "역", with: "")
-            }
-        )
-        return stationNames.count >= 2
-            || readings.filter(\.nearbyStation).count >= 3
-    }
-
-    private static func visibleCoordinates(
-        _ points: [GeoPoint],
-        start: Date,
-        end: Date,
-        through cutoff: Date
-    ) -> [GeoPoint] {
-        guard points.count >= 2, cutoff > start else { return [] }
-        guard cutoff < end, end > start else { return points }
-        let fraction = min(
-            max(cutoff.timeIntervalSince(start) / end.timeIntervalSince(start), 0),
-            1
-        )
-        let lastIndex = max(
-            1,
-            min(points.count - 1, Int(ceil(Double(points.count - 1) * fraction)))
-        )
-        return Array(points.prefix(lastIndex + 1))
     }
 
     private static func makeOverlay(

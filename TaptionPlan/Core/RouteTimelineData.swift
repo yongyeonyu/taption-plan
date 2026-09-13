@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import TaptionPlanEngine
 
 /// The eight categories used by the map and the automatic timeline.  This
@@ -386,9 +387,6 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             in: day,
             calendar: calendar
         )
-        let locationsByID = Dictionary(
-            uniqueKeysWithValues: locations.map { ($0.place.id, $0) }
-        )
 
         var legs = locations.map { location in
             MapHomeWBSPlaybackLeg(
@@ -403,131 +401,37 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
         }
 
-        var explicitPairs = Set<String>()
-        var explicitMovementSpans: [TimeSpan] = []
-        var forecastMovements: [MapHomeWBSPlaybackLeg] = []
-        let orderedTravel = travel.sorted {
-            if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
-            return $0.id.uuidString < $1.id.uuidString
-        }
-        for segment in orderedTravel {
-            guard let overlap = segment.span.intersection(with: day),
-                  overlap.duration > 0 else { continue }
-            let source = segment.fromPlaceID.flatMap { locationsByID[$0] }
-                ?? locations.last { $0.place.span.end <= segment.span.start }
-            let target = segment.toPlaceID.flatMap { locationsByID[$0] }
-                ?? locations.first { $0.place.span.start >= segment.span.end }
-            if TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
-                for: segment,
-                readings: readings
-            ) {
-                if let sourceID = source?.place.id, let targetID = target?.place.id {
-                    explicitPairs.insert(pairKey(sourceID, targetID))
-                }
-                explicitMovementSpans.append(overlap)
-                continue
-            }
-            if segment.isConfirmed {
-                if let sourceID = source?.place.id, let targetID = target?.place.id {
-                    explicitPairs.insert(pairKey(sourceID, targetID))
-                }
-                explicitMovementSpans.append(overlap)
-                continue
-            }
-            let legID = "movement-\(segment.id.uuidString)"
+        let expectedRequests = ExpectedRouteRequestEngine.requests(
+            travel: travel,
+            places: places,
+            readings: readings,
+            in: day,
+            through: dayEnd
+        )
+        let forecastMovements = expectedRequests.compactMap {
+            request -> MapHomeWBSPlaybackLeg? in
+            let legID = "movement-\(request.id.uuidString)"
             let resolved = routesByLegID[legID] ?? []
-            let fallback = [source?.coordinate, target?.coordinate].compactMap { $0 }
             let coordinates = resolved.count >= 2
                 ? resolved
-                : fallback
+                : [request.start, request.end]
             guard coordinates.count >= 2,
-                  distanceMeters(coordinates[0], coordinates[coordinates.count - 1]) > 0.1
-            else { continue }
-            if let sourceID = source?.place.id, let targetID = target?.place.id {
-                explicitPairs.insert(pairKey(sourceID, targetID))
-            }
-            let leg = MapHomeWBSPlaybackLeg(
+                  distanceMeters(
+                      coordinates[0],
+                      coordinates[coordinates.count - 1]
+                  ) > 0.1 else { return nil }
+            return MapHomeWBSPlaybackLeg(
                 id: legID,
-                startDate: overlap.start,
-                endDate: overlap.end,
+                startDate: request.departureDate,
+                endDate: request.arrivalDate,
                 coordinates: coordinates,
                 routePhase: .forecast,
                 activity: .movement,
-                mode: segment.mode,
-                categoryID: "movement",
-                sourcePlaceID: source?.place.id,
-                targetPlaceID: target?.place.id
-            )
-            forecastMovements.append(leg)
-            explicitMovementSpans.append(overlap)
-        }
-
-        for (source, target) in zip(locations, locations.dropFirst()) {
-            guard calendar.isDate(source.place.span.start, inSameDayAs: target.place.span.start),
-                  source.place.span.end < target.place.span.start else { continue }
-            let key = pairKey(source.place.id, target.place.id)
-            guard !explicitPairs.contains(key),
-                  distanceMeters(source.coordinate, target.coordinate) > 0.1 else { continue }
-            let gap = TimeSpan(
-                start: source.place.span.end,
-                end: target.place.span.start
-            )
-            guard !explicitMovementSpans.contains(where: {
-                $0.intersection(with: gap) != nil
-            }), !TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
-                in: gap,
-                readings: readings
-            ) else { continue }
-            let gapReadings = readings.filter {
-                $0.timestamp >= gap.start && $0.timestamp <= gap.end
-            }
-            let preceding = readings
-                .filter {
-                    $0.timestamp <= gap.start
-                        && gap.start.timeIntervalSince($0.timestamp) <= maximumActualGap
-                }
-                .max { $0.timestamp < $1.timestamp }
-            let following = readings
-                .filter {
-                    $0.timestamp >= gap.end
-                        && $0.timestamp.timeIntervalSince(gap.end) <= maximumActualGap
-                }
-                .min { $0.timestamp < $1.timestamp }
-            let inferred = RouteGapInferenceEngine().infer(.init(
-                start: gap.start,
-                end: gap.end,
-                startCoordinate: routeCoordinate(source.coordinate),
-                endCoordinate: routeCoordinate(target.coordinate),
-                samples: TaptionRouteEngineAdapter.samples(from: gapReadings),
-                precedingMode: preceding.map(routeTravelMode) ?? .unknown,
-                followingMode: following.map(routeTravelMode) ?? .unknown,
-                endpointConfidence: min(
-                    endpointConfidence(source),
-                    endpointConfidence(target)
-                )
-            ))
-            guard let mode = inferred.mode.flatMap(travelMode) else { continue }
-            let legID = "movement-gap-\(source.place.id.uuidString)-\(target.place.id.uuidString)"
-            let resolved = routesByLegID[legID] ?? []
-            forecastMovements.append(
-                MapHomeWBSPlaybackLeg(
-                    id: legID,
-                    startDate: gap.start,
-                    endDate: gap.end,
-                    coordinates: resolved.count >= 2
-                        ? resolved
-                        : [source.coordinate, target.coordinate],
-                    routePhase: .forecast,
-                    activity: .movement,
-                    mode: mode,
-                    categoryID: "movement",
-                    sourcePlaceID: source.place.id,
-                    targetPlaceID: target.place.id
-                )
+                mode: request.mode,
+                categoryID: "movement"
             )
         }
-
-        legs.append(contentsOf: deduplicatedForecastMovements(forecastMovements).filter { movement in
+        legs.append(contentsOf: forecastMovements.filter { movement in
             !sleepSpans.contains { sleepSpan in
                 sleepSpan.intersection(
                     with: TimeSpan(
@@ -840,173 +744,6 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         return nil
     }
 
-    private static func routeTravelMode(
-        _ reading: SensorReading
-    ) -> RouteTravelMode {
-        if reading.matchesRailRoute
-            || SubwayWiFiSSID.hasContinuousEvidence(
-                streak: reading.subwayWiFiObservationStreak
-            ) {
-            return .subway
-        }
-        switch reading.motion {
-        case .walking: return .walking
-        case .running: return .running
-        case .cycling: return .cycling
-        case .automotive: return .automotive
-        case .stationary, .unknown: return .unknown
-        }
-    }
-
-    private static func travelMode(
-        _ mode: RouteTravelMode
-    ) -> TravelMode? {
-        switch mode {
-        case .walking: .walking
-        case .running: .running
-        case .cycling: .cycling
-        case .automotive: .car
-        case .privateVehicle: .car
-        case .subway: .subway
-        case .bus: .bus
-        case .train: .train
-        case .airplane: .airplane
-        case .ship: .ship
-        case .unknown: nil
-        }
-    }
-
-    private static func routeCoordinate(
-        _ point: GeoPoint
-    ) -> RouteCoordinate {
-        RouteCoordinate(latitude: point.latitude, longitude: point.longitude)
-    }
-
-    private static func endpointConfidence(
-        _ location: ResolvedLocation
-    ) -> Double {
-        let placeConfidence: Double = switch location.place.confidence {
-        case .high: 1
-        case .medium: 0.75
-        case .low: 0.5
-        }
-        let accuracy = location.coordinate.horizontalAccuracy
-        let accuracyConfidence: Double
-        if !accuracy.isFinite || accuracy < 0 {
-            accuracyConfidence = 0.75
-        } else if accuracy <= 50 {
-            accuracyConfidence = 1
-        } else if accuracy <= 150 {
-            accuracyConfidence = 0.75
-        } else {
-            accuracyConfidence = 0.4
-        }
-        return min(placeConfidence, accuracyConfidence)
-    }
-
-    private static func pairKey(_ source: UUID, _ target: UUID) -> String {
-        "\(source.uuidString.lowercased())->\(target.uuidString.lowercased())"
-    }
-
-    private static func deduplicatedForecastMovements(
-        _ movements: [MapHomeWBSPlaybackLeg]
-    ) -> [MapHomeWBSPlaybackLeg] {
-        let ordered = movements.sorted {
-            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
-            if $0.endDate != $1.endDate { return $0.endDate > $1.endDate }
-            return $0.id < $1.id
-        }
-        var selected: [(leg: MapHomeWBSPlaybackLeg, coverage: TimeSpan)] = []
-        for movement in ordered {
-            let span = TimeSpan(start: movement.startDate, end: movement.endDate)
-            let conflictingIndices = selected.indices.filter { index in
-                selected[index].coverage.intersection(with: span) != nil
-                    && sameMovementEndpoints(selected[index].leg, movement)
-            }
-            guard !conflictingIndices.isEmpty else {
-                selected.append((movement, span))
-                continue
-            }
-
-            var winner = movement
-            var coverage = span
-            for index in conflictingIndices where prefersForecastMovement(
-                selected[index].leg,
-                over: winner
-            ) {
-                winner = selected[index].leg
-            }
-            for index in conflictingIndices {
-                coverage = TimeSpan(
-                    start: min(coverage.start, selected[index].coverage.start),
-                    end: max(coverage.end, selected[index].coverage.end)
-                )
-            }
-            for index in conflictingIndices.reversed() {
-                selected.remove(at: index)
-            }
-            selected.append((winner, coverage))
-        }
-        return selected.map { item in
-            let leg = item.leg
-            guard leg.startDate != item.coverage.start
-                    || leg.endDate != item.coverage.end else {
-                return leg
-            }
-            return MapHomeWBSPlaybackLeg(
-                id: leg.id,
-                startDate: item.coverage.start,
-                endDate: item.coverage.end,
-                coordinates: leg.coordinates,
-                routePhase: leg.routePhase,
-                activity: leg.activity,
-                mode: leg.mode,
-                categoryID: leg.categoryID,
-                sourcePlaceID: leg.sourcePlaceID,
-                targetPlaceID: leg.targetPlaceID
-            )
-        }
-    }
-
-    private static func sameMovementEndpoints(
-        _ lhs: MapHomeWBSPlaybackLeg,
-        _ rhs: MapHomeWBSPlaybackLeg
-    ) -> Bool {
-        if let lhsSource = lhs.sourcePlaceID,
-           let lhsTarget = lhs.targetPlaceID,
-           let rhsSource = rhs.sourcePlaceID,
-           let rhsTarget = rhs.targetPlaceID {
-            return (lhsSource == rhsSource && lhsTarget == rhsTarget)
-                || (lhsSource == rhsTarget && lhsTarget == rhsSource)
-        }
-        guard let lhsStart = lhs.coordinates.first,
-              let lhsEnd = lhs.coordinates.last,
-              let rhsStart = rhs.coordinates.first,
-              let rhsEnd = rhs.coordinates.last else { return false }
-        let sameDirection = distanceMeters(lhsStart, rhsStart) <= 100
-            && distanceMeters(lhsEnd, rhsEnd) <= 100
-        let reverseDirection = distanceMeters(lhsStart, rhsEnd) <= 100
-            && distanceMeters(lhsEnd, rhsStart) <= 100
-        return sameDirection || reverseDirection
-    }
-
-    private static func prefersForecastMovement(
-        _ candidate: MapHomeWBSPlaybackLeg,
-        over current: MapHomeWBSPlaybackLeg
-    ) -> Bool {
-        let candidateIsGap = candidate.id.hasPrefix("movement-gap-")
-        let currentIsGap = current.id.hasPrefix("movement-gap-")
-        if candidateIsGap != currentIsGap { return !candidateIsGap }
-        if candidate.coordinates.count != current.coordinates.count {
-            return candidate.coordinates.count > current.coordinates.count
-        }
-        let candidateDuration = candidate.endDate.timeIntervalSince(candidate.startDate)
-        let currentDuration = current.endDate.timeIntervalSince(current.startDate)
-        if candidateDuration != currentDuration {
-            return candidateDuration > currentDuration
-        }
-        return candidate.id < current.id
-    }
 
     private static func priority(_ leg: MapHomeWBSPlaybackLeg) -> Int {
         if leg.routePhase == .actual { return 3 }
@@ -1122,7 +859,23 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
         self.confidence = min(1, max(0, confidence))
     }
 
-    var id: UUID { segmentID }
+    var id: UUID {
+        var seed = Data("expected-route-gap-v1".utf8)
+        seed.append(contentsOf: segmentID.uuidString.lowercased().utf8)
+        seed.append(0)
+        for date in [departureDate, arrivalDate] {
+            var bits = date.timeIntervalSince1970.bitPattern.bigEndian
+            withUnsafeBytes(of: &bits) { seed.append(contentsOf: $0) }
+        }
+        let digest = Array(SHA256.hash(data: seed).prefix(16))
+        return UUID(uuid: (
+            digest[0], digest[1], digest[2], digest[3],
+            digest[4], digest[5], (digest[6] & 0x0F) | 0x50, digest[7],
+            (digest[8] & 0x3F) | 0x80, digest[9], digest[10], digest[11],
+            digest[12], digest[13], digest[14], digest[15]
+        ))
+    }
+
 }
 
 /// Produces display-only network-route requests. The returned requests never
@@ -1143,55 +896,39 @@ enum ExpectedRouteRequestEngine {
         let end: Date
     }
 
-    private struct Endpoint {
-        let point: GeoPoint
-        let usesRegisteredFrequentPlace: Bool
-    }
-
     private struct RouteGap {
-        let start: Endpoint
-        let end: Endpoint
+        let start: GeoPoint
+        let end: GeoPoint
         let span: TimeSpan
     }
 
     static func requests(
         travel: [TravelSegment],
-        places: [PlaceStay],
+        places _: [PlaceStay],
         readings: [SensorReading],
         in day: TimeSpan,
         through cutoff: Date,
-        frequentPlaces: [FrequentPlace] = []
+        frequentPlaces _: [FrequentPlace] = []
     ) -> [ExpectedRouteRequest] {
-        let placesByID = places.reduce(into: [UUID: PlaceStay]()) {
-            $0[$1.id] = $1
-        }
-        let frequentPointsByKey = frequentPlaces.reduce(
-            into: [String: GeoPoint]()
-        ) { result, place in
-            guard let point = place.point, isValid(point) else { return }
-            result[place.stablePlaceKey] = point
-        }
         let orderedReadings = readings
             .filter { reading in
-                guard let point = reading.point else { return false }
-                return isValid(point)
-                    && reading.timestamp >= day.start
+                reading.timestamp >= day.start
                     && reading.timestamp <= day.end
             }
             .sorted { $0.timestamp < $1.timestamp }
 
         let orderedTravel = deduplicated(travel)
             .sorted { $0.span.start < $1.span.start }
+        let confirmedSpans = travel.filter(\.isConfirmed).map(\.span)
         let candidates: [RequestCandidate] = orderedTravel
-            .compactMap { segment in
+            .flatMap { segment -> [RequestCandidate] in
                 guard segment.span.intersection(with: day) != nil,
                       segment.span.start < cutoff,
                       let transport = transport(for: segment),
-                      !segment.isConfirmed,
-                      !usesStoredSubwayPath(segment) else { return nil }
+                      !segment.isConfirmed else { return [] }
 
                 let visibleEnd = min(segment.span.end, cutoff)
-                guard segment.span.start < visibleEnd else { return nil }
+                guard segment.span.start < visibleEnd else { return [] }
                 let visibleSpan = TimeSpan(
                     start: max(segment.span.start, day.start),
                     end: min(visibleEnd, day.end)
@@ -1200,74 +937,69 @@ enum ExpectedRouteRequestEngine {
                     $0.timestamp >= visibleSpan.start
                         && $0.timestamp <= visibleSpan.end
                 }
-                guard let gap = largestMissingRouteGap(
-                    for: segment,
-                    in: visibleSpan,
-                    readings: readingsInSegment,
-                    placesByID: placesByID,
-                    frequentPointsByKey: frequentPointsByKey
-                ) else { return nil }
-                let start = gap.start
-                let end = gap.end
-                guard distanceMeters(start.point, end.point)
-                        >= minimumRouteDistanceMeters
-                else { return nil }
-                let inference = RouteGapInferenceEngine().infer(.init(
-                    start: gap.span.start,
-                    end: gap.span.end,
-                    startCoordinate: RouteCoordinate(
-                        latitude: start.point.latitude,
-                        longitude: start.point.longitude
-                    ),
-                    endCoordinate: RouteCoordinate(
-                        latitude: end.point.latitude,
-                        longitude: end.point.longitude
-                    ),
-                    samples: TaptionRouteEngineAdapter.samples(
-                        from: readingsInSegment.filter {
-                            reliableLocationReading($0)
-                                && $0.timestamp >= gap.span.start
-                                && $0.timestamp <= gap.span.end
-                        }
-                    ),
-                    precedingMode: adjacentMode(
-                        before: segment,
-                        in: orderedTravel
-                    ),
-                    followingMode: adjacentMode(
-                        after: segment,
-                        in: orderedTravel
-                    ),
-                    explicitMode: routeMode(for: segment.mode),
-                    endpointConfidence: min(
-                        endpointConfidence(start),
-                        endpointConfidence(end)
+                let gaps = missingRouteGaps(readings: readingsInSegment)
+                return gaps.compactMap { gap in
+                    guard distanceMeters(gap.start, gap.end)
+                            >= minimumRouteDistanceMeters,
+                          !confirmedSpans.contains(where: {
+                              ($0.intersection(with: gap.span)?.duration ?? 0) > 0
+                          })
+                    else { return nil }
+                    let inference = RouteGapInferenceEngine().infer(.init(
+                        start: gap.span.start,
+                        end: gap.span.end,
+                        startCoordinate: RouteCoordinate(
+                            latitude: gap.start.latitude,
+                            longitude: gap.start.longitude
+                        ),
+                        endCoordinate: RouteCoordinate(
+                            latitude: gap.end.latitude,
+                            longitude: gap.end.longitude
+                        ),
+                        samples: TaptionRouteEngineAdapter.samples(
+                            from: readingsInSegment.filter {
+                                reliableLocationReading($0)
+                                    && $0.timestamp >= gap.span.start
+                                    && $0.timestamp <= gap.span.end
+                            }
+                        ),
+                        precedingMode: adjacentMode(
+                            before: segment,
+                            in: orderedTravel
+                        ),
+                        followingMode: adjacentMode(
+                            after: segment,
+                            in: orderedTravel
+                        ),
+                        explicitMode: routeMode(for: segment.mode),
+                        endpointConfidence: min(
+                            endpointConfidence(gap.start),
+                            endpointConfidence(gap.end)
+                        )
+                    ))
+                    guard inference.allowsConnection else { return nil }
+                    return RequestCandidate(
+                        segment: segment,
+                        request: ExpectedRouteRequest(
+                            segmentID: segment.id,
+                            mode: segment.mode,
+                            transport: transport,
+                            start: gap.start,
+                            end: gap.end,
+                            departureDate: gap.span.start,
+                            arrivalDate: gap.span.end,
+                            provenance: inference.provenance,
+                            confidence: inference.confidence
+                        )
                     )
-                ))
-                guard inference.allowsConnection else {
-                    return nil
                 }
-                return RequestCandidate(
-                    segment: segment,
-                    request: ExpectedRouteRequest(
-                        segmentID: segment.id,
-                        mode: segment.mode,
-                        transport: transport,
-                        start: start.point,
-                        end: end.point,
-                        departureDate: gap.span.start,
-                        arrivalDate: gap.span.end,
-                        provenance: inference.provenance,
-                        confidence: inference.confidence
-                    )
-                )
             }
-        return deduplicatedRequests(candidates).map(\.request)
-    }
-
-    private static func usesStoredSubwayPath(_ segment: TravelSegment) -> Bool {
-        segment.mode == .subway
-            && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+        return deduplicatedRequests(candidates).map(\.request).sorted {
+            if $0.departureDate != $1.departureDate {
+                return $0.departureDate < $1.departureDate
+            }
+            return $0.id.uuidString < $1.id.uuidString
+        }
     }
 
     private static func transport(
@@ -1321,9 +1053,8 @@ enum ExpectedRouteRequestEngine {
             ?? .unknown
     }
 
-    private static func endpointConfidence(_ endpoint: Endpoint) -> Double {
-        if endpoint.usesRegisteredFrequentPlace { return 1 }
-        let accuracy = endpoint.point.horizontalAccuracy
+    private static func endpointConfidence(_ point: GeoPoint) -> Double {
+        let accuracy = point.horizontalAccuracy
         guard accuracy.isFinite, accuracy >= 0 else { return 0.8 }
         if accuracy <= 20 { return 1 }
         if accuracy <= 100 { return 0.9 }
@@ -1343,53 +1074,28 @@ enum ExpectedRouteRequestEngine {
             && point.horizontalAccuracy <= 150
     }
 
-    private static func largestMissingRouteGap(
-        for segment: TravelSegment,
-        in visibleSpan: TimeSpan,
-        readings: [SensorReading],
-        placesByID: [UUID: PlaceStay],
-        frequentPointsByKey: [String: GeoPoint]
-    ) -> RouteGap? {
-        let observed = readings.filter(reliableLocationReading)
-        let start = visibleSpan.start == segment.span.start
-            ? placeEndpoint(
-                id: segment.fromPlaceID,
-                segment: segment,
-                placesByID: placesByID,
-                frequentPointsByKey: frequentPointsByKey
-            )
-            : nil
-        let end = visibleSpan.end == segment.span.end
-            ? placeEndpoint(
-                id: segment.toPlaceID,
-                segment: segment,
-                placesByID: placesByID,
-                frequentPointsByKey: frequentPointsByKey
-            )
-            : nil
-        guard let first = observed.first, let last = observed.last else {
-            guard let start, let end else { return nil }
-            return RouteGap(start: start, end: end, span: visibleSpan)
-        }
-
+    private static func missingRouteGaps(
+        readings: [SensorReading]
+    ) -> [RouteGap] {
+        let observed = readings
+            .filter(reliableLocationReading)
+            .sorted {
+                if $0.timestamp != $1.timestamp {
+                    return $0.timestamp < $1.timestamp
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+        guard observed.count >= 2 else { return [] }
+        let endedSessions = readings.filter { $0.trackingSessionEnded == true }
+            .map(\.timestamp)
         var gaps: [RouteGap] = []
-        if first.timestamp.timeIntervalSince(visibleSpan.start)
-            > MapHomeWBSPlaybackProjection.maximumActualGap,
-           let start,
-           let point = first.point {
-            gaps.append(RouteGap(
-                start: start,
-                end: Endpoint(
-                    point: point,
-                    usesRegisteredFrequentPlace: false
-                ),
-                span: TimeSpan(start: visibleSpan.start, end: first.timestamp)
-            ))
-        }
         for (lhs, rhs) in zip(observed, observed.dropFirst()) {
             guard let lhsPoint = lhs.point, let rhsPoint = rhs.point else {
                 continue
             }
+            guard !endedSessions.contains(where: {
+                $0 >= lhs.timestamp && $0 < rhs.timestamp
+            }) else { continue }
             let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
             guard duration > MapHomeWBSPlaybackProjection.maximumActualGap
                     || (duration > RouteTimelineDataEngine.sparseConnectionMinimumGap
@@ -1397,58 +1103,12 @@ enum ExpectedRouteRequestEngine {
                             > RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters)
             else { continue }
             gaps.append(RouteGap(
-                start: Endpoint(
-                    point: lhsPoint,
-                    usesRegisteredFrequentPlace: false
-                ),
-                end: Endpoint(
-                    point: rhsPoint,
-                    usesRegisteredFrequentPlace: false
-                ),
+                start: lhsPoint,
+                end: rhsPoint,
                 span: TimeSpan(start: lhs.timestamp, end: rhs.timestamp)
             ))
         }
-        if visibleSpan.end.timeIntervalSince(last.timestamp)
-            > MapHomeWBSPlaybackProjection.maximumActualGap,
-           let end,
-           let point = last.point {
-            gaps.append(RouteGap(
-                start: Endpoint(
-                    point: point,
-                    usesRegisteredFrequentPlace: false
-                ),
-                end: end,
-                span: TimeSpan(start: last.timestamp, end: visibleSpan.end)
-            ))
-        }
-        return gaps.max {
-            $0.span.duration < $1.span.duration
-        }
-    }
-
-    private static func placeEndpoint(
-        id: UUID?,
-        segment: TravelSegment,
-        placesByID: [UUID: PlaceStay],
-        frequentPointsByKey: [String: GeoPoint]
-    ) -> Endpoint? {
-        guard let id, let place = placesByID[id] else { return nil }
-        if segment.isConfirmed,
-           let point = place.point,
-           isValid(point) {
-            return Endpoint(
-                point: point,
-                usesRegisteredFrequentPlace: false
-            )
-        }
-        guard segment.isConfirmed || segment.isClassificationLocked,
-              let point = frequentPointsByKey[place.placeKey] else {
-            return nil
-        }
-        return Endpoint(
-            point: point,
-            usesRegisteredFrequentPlace: true
-        )
+        return gaps
     }
 
     private static func deduplicated(
@@ -1477,66 +1137,21 @@ enum ExpectedRouteRequestEngine {
     private static func deduplicatedRequests(
         _ candidates: [RequestCandidate]
     ) -> [RequestCandidate] {
-        var selected: [(candidate: RequestCandidate, coverage: TimeSpan)] = []
+        var selected: [RequestCandidate] = []
         for candidate in candidates {
-            let candidateSpan = TimeSpan(
-                start: candidate.request.departureDate,
-                end: candidate.request.arrivalDate
-            )
-            let conflictingIndices = selected.indices.filter { index in
-                let current = selected[index]
-                return current.coverage.intersection(with: candidateSpan) != nil
-                    && sameRequestEndpoints(
-                        current.candidate.request,
-                        candidate.request
-                    )
-            }
-            guard !conflictingIndices.isEmpty else {
-                selected.append((candidate, candidateSpan))
+            guard let index = selected.firstIndex(where: {
+                $0.request.departureDate == candidate.request.departureDate
+                    && $0.request.arrivalDate == candidate.request.arrivalDate
+                    && sameRequestEndpoints($0.request, candidate.request)
+            }) else {
+                selected.append(candidate)
                 continue
             }
-
-            var winner = candidate
-            var coverage = candidateSpan
-            for index in conflictingIndices where isRicher(
-                selected[index].candidate.segment,
-                than: winner.segment
-            ) {
-                winner = selected[index].candidate
+            if isRicher(candidate.segment, than: selected[index].segment) {
+                selected[index] = candidate
             }
-            for index in conflictingIndices {
-                coverage = TimeSpan(
-                    start: min(coverage.start, selected[index].coverage.start),
-                    end: max(coverage.end, selected[index].coverage.end)
-                )
-            }
-            for index in conflictingIndices.reversed() {
-                selected.remove(at: index)
-            }
-            selected.append((winner, coverage))
         }
-        return selected.map { item in
-            let candidate = item.candidate
-            let request = candidate.request
-            guard request.departureDate != item.coverage.start
-                    || request.arrivalDate != item.coverage.end else {
-                return candidate
-            }
-            return RequestCandidate(
-                segment: candidate.segment,
-                request: ExpectedRouteRequest(
-                    segmentID: request.segmentID,
-                    mode: request.mode,
-                    transport: request.transport,
-                    start: request.start,
-                    end: request.end,
-                    departureDate: item.coverage.start,
-                    arrivalDate: item.coverage.end,
-                    provenance: request.provenance,
-                    confidence: request.confidence
-                )
-            )
-        }
+        return selected
     }
 
     private static func sameRequestEndpoints(

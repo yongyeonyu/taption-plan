@@ -3488,7 +3488,7 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testSubwayOverlayEngineDrawsEstimatedCatalogPathForGPSGap() {
+    func testSubwayOverlayEngineKeepsOnlyConfirmedCatalogPath() {
         let stations = SubwayStationCatalog.stations
             .filter { $0.coordinate != nil }
         guard let first = stations.first else {
@@ -3534,9 +3534,7 @@ final class TimeScaleTests: XCTestCase {
             through: start.addingTimeInterval(20 * 60)
         )
 
-        XCTAssertEqual(overlays.count, 1)
-        XCTAssertTrue(overlays.first?.estimated == true)
-        XCTAssertGreaterThanOrEqual(overlays.first?.coordinates.count ?? 0, 2)
+        XCTAssertTrue(overlays.isEmpty)
 
         let confirmed = TravelSegment(
             id: segment.id,
@@ -3558,10 +3556,10 @@ final class TimeScaleTests: XCTestCase {
             through: segment.span.end
         )
         XCTAssertEqual(confirmedOverlays.count, 1)
-        XCTAssertFalse(confirmedOverlays[0].estimated)
+        XCTAssertEqual(confirmedOverlays.first?.estimated, false)
     }
 
-    func testSubwayOverlayEngineUsesStoredRouteWhenGPSReadingsAreMissing() {
+    func testSubwayOverlayEngineRejectsUnconfirmedStoredRouteWithoutGPS() {
         let stations = SubwayStationCatalog.stations
             .filter { $0.coordinate != nil }
         guard let first = stations.first else {
@@ -3596,9 +3594,7 @@ final class TimeScaleTests: XCTestCase {
             through: segment.span.end
         )
 
-        XCTAssertEqual(overlays.count, 1)
-        XCTAssertTrue(overlays[0].estimated)
-        XCTAssertGreaterThanOrEqual(overlays[0].coordinates.count, 2)
+        XCTAssertTrue(overlays.isEmpty)
     }
 
     func testMovementEditOptionsUseRequestedOrderAndRestoreStoredMode() {

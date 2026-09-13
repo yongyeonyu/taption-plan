@@ -1,5 +1,16 @@
 # Taption Plan 실기기 검증
 
+## 2026-09-13 TP0913F001 · TestFlight 149 배포
+
+- 대표님 승인으로 TP0913E001 GPS 공백 전용 예상 경로 수정본을 1.0(149)에 통합했다. 앱·Widget·Watch·Watch Widget 버전 149. 최종 전체 앱 회귀 총 1,114건 중 1,113 PASS·기존 StoreKit 1 SKIP·0 FAIL, generic iOS Debug PASS, 각각 exit 0. 증거는 unit.xcresult·unit.log·debug.log다.
+- 증거 폴더: build/validation/TP0913F001. 실제 기기 설치·GPS 공백 표시/재수신 제거·백업과 복귀 안정성은 배포 게이트와 별개다.
+
+## 2026-09-13 TP0913E001 · GPS 공백 전용 예상 경로
+
+- 최종 `build/validation/TP0913E001/unit-final.xcresult`: 총 1,114건, 1,113 PASS·기존 StoreKit 1 SKIP·0 FAIL, 테스트 exit 0. 전체 앱 회귀에 GPS 정상 연속·복수 공백/서로 다른 안정 ID·정차·양 끝 부족·수집 종료(좌표 없는 종료 marker 포함)·확정 이동 중첩·늦은 GPS 유입·날짜 JSON 왕복 ID·WBS 공백 시간·확정 지하철 보존을 포함했다.
+- 첫 `unit.xcresult`는 이전 전체 지하철 예상 경로를 기대한 테스트와 희소 GPS fixture에서 실패했다. 기존 테스트의 잘못된 배열 인덱스 접근으로 테스트 프로세스도 종료됐으며 앱 실기기 충돌 증거가 아니다. 새 계약에 맞게 fixture/검증을 갱신한 최종 전체 실행은 실패 0건이다.
+- 실제 GPS/백업 원본은 변경하지 않았다. 최종 generic iOS Debug PASS·exit 0(`debug.log`). 이 수정의 TestFlight 업로드·실기기 표시 검증은 하지 않았다. 배포된 148과 이번 로컬 변경을 구분한다.
+
 ## 2026-09-13 TP0913D001 · 통합 후보 148
 
 - 네 번들 `1.0 (148)`: 금요일 원본 재조회와 백업 날짜 직렬화 동등성 수정을 통합했다. 최초 `unit.xcresult`와 진단 이벤트 포함 최종 `unit-final.xcresult` 모두 총 1,106건 중 1,105 PASS·기존 StoreKit 1 SKIP·0 FAIL, exit 0. 최종 generic iOS Debug도 PASS·exit 0이다. 증거는 `build/validation/TP0913D001/unit-final.log`, `debug.log`다.

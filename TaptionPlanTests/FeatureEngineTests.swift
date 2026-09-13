@@ -940,7 +940,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(overlays.first).estimated)
     }
 
-    func testMapHomeSubwayOverlayEstimatesUnconfirmedRouteAndHonorsCutoff() throws {
+    func testMapHomeSubwayOverlayDoesNotDrawUnconfirmedWholeRoute() {
         let base = makeDate(2026, 8, 18, 7, 0)
         let readings = [
             (0.0, 37.5248, 126.6744, "가정역"),
@@ -976,9 +976,6 @@ final class FeatureEngineTests: XCTestCase {
             evidence: ["철도 경로"],
             isConfirmed: false
         )
-        let route = try XCTUnwrap(
-            SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"])
-        )
         let day = TimeSpan(
             start: base.addingTimeInterval(-60),
             end: base.addingTimeInterval(31 * 60)
@@ -996,24 +993,8 @@ final class FeatureEngineTests: XCTestCase {
             through: base.addingTimeInterval(31 * 60)
         )
 
-        XCTAssertEqual(partial.count, 1)
-        XCTAssertTrue(try XCTUnwrap(partial.first).estimated)
-        XCTAssertGreaterThan(partial[0].coordinates.count, 1)
-        XCTAssertLessThan(partial[0].coordinates.count, complete[0].coordinates.count)
-        XCTAssertTrue(complete[0].estimated)
-        XCTAssertEqual(complete[0].coordinates.count, route.coordinates.count)
-        for (actual, expected) in zip(
-            complete[0].coordinates,
-            route.coordinates.map {
-                CLLocationCoordinate2D(
-                    latitude: $0.latitude,
-                    longitude: $0.longitude
-                )
-            }
-        ) {
-            XCTAssertEqual(actual.latitude, expected.latitude, accuracy: 0.000001)
-            XCTAssertEqual(actual.longitude, expected.longitude, accuracy: 0.000001)
-        }
+        XCTAssertTrue(partial.isEmpty)
+        XCTAssertTrue(complete.isEmpty)
         XCTAssertEqual(readings.count, 3)
     }
 
@@ -7232,11 +7213,17 @@ final class FeatureEngineTests: XCTestCase {
             day: day,
             through: base.addingTimeInterval(20 * 60)
         )
-        XCTAssertEqual(overlays.count, 1)
-        XCTAssertTrue(overlays[0].estimated)
-        XCTAssertGreaterThanOrEqual(overlays[0].coordinates.count, 2)
-        let firstCoordinate = try XCTUnwrap(overlays[0].coordinates.first)
-        let lastCoordinate = try XCTUnwrap(overlays[0].coordinates.last)
+        XCTAssertTrue(overlays.isEmpty)
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: [segment], places: [], readings: readings,
+            in: day, through: base.addingTimeInterval(20 * 60)
+        )
+        XCTAssertEqual(requests.count, 1)
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(request.departureDate, readings[0].timestamp)
+        XCTAssertEqual(request.arrivalDate, readings[1].timestamp)
+        let firstCoordinate = request.start
+        let lastCoordinate = request.end
         XCTAssertEqual(
             firstCoordinate.latitude,
             37.5248,
