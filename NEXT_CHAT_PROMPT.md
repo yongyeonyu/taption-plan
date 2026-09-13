@@ -1,8 +1,9 @@
 # Taption Plan 새 채팅 재개 프롬프트
 
-## 최신 배포 진행 · TP0913F001 / 후보 149
+## 최신 배포 완료 · TP0913F001 / TestFlight 149
 
-- 대표님이 E001의 TestFlight 빌드업을 승인했다. 149 전체 회귀/Debug → main 커밋/push → archive/export → Apple 업로드/VALID → 기존 Internal 그룹 API·웹 빌드/테스터 노출 순서로 진행한다. 세부 결과는 test.md와 build/validation/TP0913F001을 우선한다.
+- E001 GPS 공백 전용 예상 경로 수정 소스 `c4602ab` main push, 네 번들 1.0(149). 전체 회귀 1,113 PASS·기존 StoreKit 1 SKIP·0 FAIL, Debug·archive/export·Apple 검증/업로드 PASS. Apple VALID·Internal API 연결·웹 `1.0 (149) 테스트 중` 및 테스터 1명 확인 완료. Delivery UUID `56dd19b2-3aa4-4be2-b38f-35d4ebdfa0c4`. 증거는 test.md와 build/validation/TP0913F001.
+- 설치 표시 버전은 148이며 149 클라이언트 설치·GPS 공백/재수신 제거·백업/복귀 실기기 결과는 미확인이다. 다음 작업은 최신 149 설치 후 검증이며 재업로드하지 않는다. 아래 E001 미배포/로컬 변경 안내는 배포 이전 이력이다.
 
 ## 최신 코드 변경 · TP0913E001 / 아직 TestFlight 미배포
 

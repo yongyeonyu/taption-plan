@@ -4,6 +4,9 @@
 
 - 대표님 승인으로 TP0913E001 GPS 공백 전용 예상 경로 수정본을 1.0(149)에 통합했다. 앱·Widget·Watch·Watch Widget 버전 149. 최종 전체 앱 회귀 총 1,114건 중 1,113 PASS·기존 StoreKit 1 SKIP·0 FAIL, generic iOS Debug PASS, 각각 exit 0. 증거는 unit.xcresult·unit.log·debug.log다.
 - 증거 폴더: build/validation/TP0913F001. 실제 기기 설치·GPS 공백 표시/재수신 제거·백업과 복귀 안정성은 배포 게이트와 별개다.
+- 소스 `c4602ab1dd428ef90f458b02f6c6bec36ace1b8a` main push 완료. Release archive/export PASS·exit 0, 네 번들 1.0(149)·IPA strict/deep codesign PASS. Production iCloud, beta-reports-active=true, get-task-allow=false 확인. 앱/IPA/dSYM UUID `E97CFBEB-CBDB-36E9-BCE0-BCF848553542` 일치. IPA SHA256 `ca81b66b1d143e3e1acef0e1ecd1eba369d5e3b094e0e61046f5d396704e4a70`. 사용 중이 아닌 검증용 압축 해제 복사본만 휴지통으로 옮겼으며 IPA/archive/dSYM은 보존했다.
+- Apple 사전 검증·업로드 PASS·exit 0, 2026-09-13 12:35 KST. Delivery UUID `56dd19b2-3aa4-4be2-b38f-35d4ebdfa0c4`. Apple 처리 VALID, 기존 `TP Taption Plan 내부 테스트`에 149 연결/API readback 완료·테스터 1명 확인(asc-internal.log).
+- Chrome 그룹 빌드 화면의 `1.0 (149) 테스트 중`, 테스터 탭 1명·그룹 빌드 109개 노출 확인 완료. 설치 표시 버전은 148이므로 149 클라이언트 설치/실제 GPS 공백 표시·재수신 후 제거는 별도 게이트다. 새 테스터·권한·계약·심사·구매 로직 변경은 없다.
 
 ## 2026-09-13 TP0913E001 · GPS 공백 전용 예상 경로
 
