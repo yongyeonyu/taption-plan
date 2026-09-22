@@ -13,7 +13,7 @@
 - 최종 검증: 패키지 Core 99/99·Activity 33/33·Route 38/38·facade 1/1 PASS(총 171), 앱 전체 1,344 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0. StoreKit 스킵은 iOS 26.5 Simulator의 SKInternalErrorDomain Code 3 제한이다.
 - 최종 iOS·watchOS generic device Debug 빌드 모두 PASS, error/warning/analyzer warning 0. `CODE_SIGNING_ALLOWED=NO` 빌드이므로 서명·실기기 설치 검증을 뜻하지 않는다.
 - 실행 증거: `build/validation/KIR0923A01/TaptionPlanCore-final.log`, `TaptionActivityEngine.log`, `TaptionRouteEngine.log`, `TaptionPlanEngine-final.log`, `app-tests-r3.xcresult`, `ios-debug-r3.xcresult`, `watch-debug-r3.xcresult` 및 각 summary JSON.
-- main 최종 커밋·푸시 readback은 진행 중이며 확인 전까지 `temp.md`의 인수인계 요청을 유지한다.
+- 소스·인수인계 정리 커밋 `881d433b111e8e411e6cd8535e195c8dc79e2dc2`를 main에 푸시한 뒤 HEAD·origin/main·서버 refs/heads/main 일치와 빈 `git status --porcelain=v1`을 확인했다. 이 완료 증거에 따라 `KIR0923A01`을 요청 큐에서 제거했다.
 
 ## HKD0923A01 · HealthKit·계획 저장소의 비일자 snapshot 호환
 
