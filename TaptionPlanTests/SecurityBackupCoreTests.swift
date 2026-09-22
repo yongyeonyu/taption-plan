@@ -229,6 +229,41 @@ final class SecurityBackupCoreTests: XCTestCase {
         }
     }
 
+    /// 기기 이전으로 이번 기기의 키가 기존 달 아카이브를 못 열 때(복호 실패),
+    /// 예전에는 saveMonthlyArchive 가 invalidArchive 로 매번 실패했다. 이제는
+    /// 병합을 건너뛰고 이번 기기 키로 새로 봉인해 저장하고, 그 결과는 이번 기기
+    /// 키로 다시 열려야 한다(BAK0922I01, A안).
+    func testUndecodablePreviousArchiveResavesFreshInsteadOfFailing() throws {
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let date = Date(timeIntervalSince1970: 1_788_100_000)
+
+        // 옛 기기: PIN "1234" 로 이번 달 아카이브를 저장한다.
+        let oldDevice = makeService(backupStore: backupStore)
+        try oldDevice.setPIN("1234")
+        _ = try oldDevice.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date
+        )
+
+        // 새 기기: 같은 백업 저장소를 보지만 PIN(키)이 다르고 계정 복구 키도 없다.
+        let newDevice = makeService(backupStore: backupStore)
+        try newDevice.setPIN("9999")
+
+        // 예전엔 여기서 throw. 이제는 성공해야 한다.
+        let resaved = try newDevice.saveMonthlyArchive(
+            .empty,
+            accountIdentifier: "account-a",
+            date: date.addingTimeInterval(60)
+        )
+        XCTAssertEqual(resaved.accountIdentifier, "account-a")
+
+        // 새로 저장된 아카이브는 이번 기기 키로 다시 열려야 한다(루프 해소).
+        XCTAssertNoThrow(
+            try newDevice.loadLatestBackup(accountIdentifier: "account-a")
+        )
+    }
+
     func testLatestSuccessfulBackupDatePersistsAndUsesArchiveCreatedAt() throws {
         let suiteName = "SecurityBackupCoreTests.latestBackup.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

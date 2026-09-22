@@ -3290,31 +3290,45 @@ private enum PlanMonthlyArchivePreparation {
             guard previousArchive.accountIdentifier == input.accountIdentifier else {
                 throw PlanSecurityError.accountMismatch
             }
-            let existing: PlanCloudBackupPayload
+            let existing: PlanCloudBackupPayload?
             do {
                 existing = try previousArchive.decodedPayload(
                     pinKeyData: input.pinKeyData
                 )
             } catch {
-                guard let accountKeyData = input.accountKeyData else {
-                    throw error
+                if let accountKeyData = input.accountKeyData,
+                   let opened = try? previousArchive.decodedPayload(
+                       accountKeyData: accountKeyData
+                   ) {
+                    existing = opened
+                } else {
+                    // 기기 이전(예: iPhone 14→18)으로 이번 기기의 PIN·계정 키가
+                    // 기존 달 아카이브를 봉인한 키와 달라 복호할 수 없다. 예전에는
+                    // 여기서 invalidArchive 를 던져 백업이 매번 실패했다. 병합을
+                    // 건너뛰고 이번 기기 데이터를 이번 기기 키로 새로 봉인해 저장한다
+                    // (옛 아카이브 내용은 병합되지 않지만 삭제 요청이 아니며,
+                    //  같은 키 문제 계열의 HealthKit 미이관과 동일하게 다룬다).
+                    existing = nil
                 }
-                existing = try previousArchive.decodedPayload(
-                    accountKeyData: accountKeyData
-                )
             }
-            payload = PlanCloudBackupPayload(
-                snapshot: CloudSnapshotRecoveryEngine.merge(
-                    local: input.payload.snapshot,
-                    remote: existing.snapshot
-                ),
-                routePoints: PlanBackupRoutePointReducer.merging(
-                    existing: existing.routePoints,
-                    incoming: input.payload.routePoints
-                ),
-                appLog: input.payload.appLog ?? existing.appLog
-            )
-            inheritedGenerationID = previousArchive.generationID
+            if let existing {
+                payload = PlanCloudBackupPayload(
+                    snapshot: CloudSnapshotRecoveryEngine.merge(
+                        local: input.payload.snapshot,
+                        remote: existing.snapshot
+                    ),
+                    routePoints: PlanBackupRoutePointReducer.merging(
+                        existing: existing.routePoints,
+                        incoming: input.payload.routePoints
+                    ),
+                    appLog: input.payload.appLog ?? existing.appLog
+                )
+                inheritedGenerationID = previousArchive.generationID
+            } else {
+                // 복호 불가 → 병합 없이 새 generation 으로 재시작.
+                payload = input.payload
+                inheritedGenerationID = nil
+            }
         } else {
             payload = input.payload
             inheritedGenerationID = nil
