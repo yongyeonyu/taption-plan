@@ -95,6 +95,20 @@ struct RouteEngineTests {
         ))
     }
 
+    @Test func sparseConnectionBreaksOnImpossibleSpeedWithinShortGap() {
+        // 3분(=180s) 안에 10km 이동 = 약 55.6m/s 초과 → 지상 이동 불가.
+        // gap이 5분 이하라도 끊어야 회사↔집 순간이동 재생 점프가 사라진다.
+        #expect(RouteSparseConnectionPolicy.breaksConnection(
+            gapDuration: 180,
+            distanceMeters: 10_000
+        ))
+        // 같은 3분에 500m(≈2.8m/s)면 정상 이동이라 연결 유지.
+        #expect(!RouteSparseConnectionPolicy.breaksConnection(
+            gapDuration: 180,
+            distanceMeters: 500
+        ))
+    }
+
     @Test func indexInterpolatesInTime() {
         let index = RouteTimeCoordinateIndex(samples: [sample(0, 37), sample(10, 37.001)])
         #expect(abs((index.sample(at: base.addingTimeInterval(5))?.coordinate.latitude ?? 0) - 37.0005) < 0.000001)
