@@ -348,8 +348,13 @@ enum TaptionActivityEngineAdapter {
         asOf: Date = .now,
         createdAt: Date = .now
     ) -> [ActualRecord] {
+        // 집이 등록돼 있어도 보조 조건 3개(집 반경·어두움·충전)를 모두 요구하면
+        // 충전 없이 자거나 화면 꺼짐으로 밝기(어두움)가 미상일 때 절대 성립하지
+        // 않는다. 실기기 로그에서 워치리스 수면이 매 윈도 conditions_or_continuity_not_met
+        // 로 전량 탈락한 원인이라 2개로 낮춘다. 핵심 조건(화면 꺼짐·30분 무사용·
+        // 이동 없음)은 그대로 유지된다.
         let configuration = SleepInferenceConfiguration(
-            minimumSupportingConditions: homePoint == nil ? 2 : 3
+            minimumSupportingConditions: 2
         )
         let ordered = readings
             .filter {
@@ -389,7 +394,12 @@ enum TaptionActivityEngineAdapter {
                 } ?? 0,
                 phoneMoved: moved,
                 distanceFromHomeMeters: distance,
-                ambientIsDark: reading.screenBrightness.map { $0 <= 0.25 },
+                // 화면이 꺼져 있으면 밝기 표본이 없어 nil 이 된다. 이때 어두움을
+                // '미상'으로 두면 보조 조건에서 빠져 무충전 취침이 절대 성립하지
+                // 않았다. 화면 꺼짐 자체를 어두움 근거로 인정한다(밝기 값이 있으면
+                // 그대로 판정).
+                ambientIsDark: reading.screenBrightness.map { $0 <= 0.25 }
+                    ?? (reading.screenIsOn == false ? true : nil),
                 isCharging: reading.powerState?.isCharging == true,
                 userWakeActivity: reading.screenIsOn == true
                     || moved

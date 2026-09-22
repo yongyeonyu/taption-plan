@@ -757,4 +757,88 @@ struct TaptionActivityEngineAdapterTests {
             TimeSpan(start: base.addingTimeInterval(120), end: base.addingTimeInterval(180))
         ])
     }
+
+    // MARK: - Watch-less sleep gate (SLP0922S01)
+
+    private func sleepReading(
+        _ seconds: TimeInterval,
+        screenIsOn: Bool? = false,
+        screenBrightness: Double? = nil,
+        charging: Bool = false,
+        motion: MotionKind = .stationary,
+        stepCount: Int? = 0,
+        homeDistanceLat: Double = 37.5
+    ) -> SensorReading {
+        SensorReading(
+            timestamp: base.addingTimeInterval(seconds),
+            point: GeoPoint(
+                latitude: homeDistanceLat,
+                longitude: 127.0,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            motion: motion,
+            stepCount: stepCount,
+            powerState: charging ? .charging : .unplugged,
+            screenBrightness: screenBrightness,
+            screenIsOn: screenIsOn
+        )
+    }
+
+    /// 화면 꺼짐(밝기 nil)·집에 있음·무충전이면 예전에는 보조조건 3개 요구로
+    /// 워치리스 수면이 절대 성립하지 않았다. 화면 꺼짐을 어두움 근거로 인정하고
+    /// 요구치를 2로 낮춘 뒤에는 수면(source .motion)이 생성돼야 한다.
+    @Test func watchlessSleepFiresWhenScreenOffAtHomeWithoutCharger() {
+        let home = GeoPoint(
+            latitude: 37.5, longitude: 127.0,
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5
+        )
+        let readings = stride(from: 0.0, through: 40 * 60, by: 60).map {
+            sleepReading($0)
+        }
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(45 * 60)
+        )
+        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            homePoint: home,
+            maximumSampleGap: 20 * 60,
+            asOf: base.addingTimeInterval(60 * 60)
+        )
+        #expect(records.contains { $0.categoryID == "sleep" && $0.source == .motion })
+    }
+
+    /// 이동·화면 켜짐이 섞이면 여전히 수면으로 판정하지 않는다(과확정 방지).
+    @Test func watchlessSleepStaysEmptyWhenPhoneIsUsedAndMoving() {
+        let home = GeoPoint(
+            latitude: 37.5, longitude: 127.0,
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5
+        )
+        let readings = stride(from: 0.0, through: 40 * 60, by: 60).map {
+            sleepReading(
+                $0,
+                screenIsOn: true,
+                screenBrightness: 0.8,
+                motion: .walking,
+                stepCount: 30
+            )
+        }
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(45 * 60)
+        )
+        let records = TaptionActivityEngineAdapter.strictSleepActuals(
+            readings: readings,
+            actuals: [],
+            inside: span,
+            homePoint: home,
+            maximumSampleGap: 20 * 60,
+            asOf: base.addingTimeInterval(60 * 60)
+        )
+        #expect(records.isEmpty)
+    }
 }
