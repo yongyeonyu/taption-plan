@@ -7,15 +7,10 @@ let package = Package(
     products: [
         .library(name: "TaptionRouteEngine", targets: ["TaptionRouteEngine"])
     ],
-    dependencies: [
-        .package(path: "../TaptionPlanCore")
-    ],
     targets: [
         .target(
             name: "TaptionRouteEngine",
-            dependencies: [
-                .product(name: "TaptionPlanCore", package: "TaptionPlanCore")
-            ]
+            dependencies: []
         ),
         .testTarget(
             name: "TaptionRouteEngineTests",

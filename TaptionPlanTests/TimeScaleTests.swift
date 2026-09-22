@@ -456,6 +456,83 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertFalse(second.contains { $0.categoryID == "work" })
     }
 
+    func testMapHomeTimeRailMergesAdjacentSourcesAndKeepsTheirIDs() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = makeDate(2026, 9, 1)
+        let first = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: day.addingTimeInterval(9 * 60 * 60),
+            endedAt: day.addingTimeInterval(10 * 60 * 60),
+            source: .manual,
+            manuallyCorrected: true
+        )
+        let second = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: day.addingTimeInterval(10 * 60 * 60),
+            endedAt: day.addingTimeInterval(11 * 60 * 60),
+            source: .manual,
+            manuallyCorrected: true
+        )
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: [first, second],
+            on: day,
+            asOf: day.addingTimeInterval(24 * 60 * 60),
+            calendar: calendar
+        )
+
+        let work = try XCTUnwrap(segments.first { $0.categoryID == "work" })
+        XCTAssertEqual(work.startMinute, 540)
+        XCTAssertEqual(work.endMinute, 660)
+        XCTAssertEqual(
+            work.sourceIDs,
+            [first.id, second.id].sorted { $0.uuidString < $1.uuidString }
+        )
+    }
+
+    func testMapHomeTimeRailDenseCandidateScale() {
+        let day = makeDate(2026, 9, 1)
+        let dayEnd = day.addingTimeInterval(24 * 60 * 60)
+        let actuals = (0..<10_000).map { index in
+            let minute = index % 1_200
+            let second = Double(index / 1_200)
+            let start = day.addingTimeInterval(Double(minute * 60) + second)
+            return ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: start,
+                endedAt: min(dayEnd, start.addingTimeInterval(4 * 60 * 60)),
+                source: .manual,
+                confidence: .high,
+                manuallyCorrected: true
+            )
+        }
+        let clock = ContinuousClock()
+        let startedAt = clock.now
+        let segments = MapHomeTimeRailSegmentEngine.segments(
+            from: actuals,
+            on: day,
+            asOf: dayEnd.addingTimeInterval(60),
+            calendar: Calendar(identifier: .gregorian)
+        )
+        print(
+            "MPC0921A01 rail 10000 candidates: "
+                + String(describing: startedAt.duration(to: clock.now))
+        )
+
+        XCTAssertEqual(segments.first?.startMinute, 0)
+        XCTAssertEqual(segments.last?.endMinute, 1_440)
+        XCTAssertTrue(
+            zip(segments, segments.dropFirst()).allSatisfy {
+                $0.endMinute == $1.startMinute
+            }
+        )
+    }
+
     func testMapRouteDocumentGateCollapses240HzSourceCallbacksIntoOneCommit() {
         let gate = MapHomeRouteDocumentProjectionGate()
 
@@ -1649,6 +1726,18 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(region.center.longitude, 126.4, accuracy: 0.000_001)
         XCTAssertEqual(region.span.latitudeDelta, 0.72, accuracy: 0.000_001)
         XCTAssertEqual(region.span.longitudeDelta, 1.44, accuracy: 0.000_001)
+    }
+
+    func testMapHomeRouteFitKeepsDateLineCrossingRouteNarrow() throws {
+        let region = try XCTUnwrap(
+            MapHomeRouteFitMath.region(for: [
+                CLLocationCoordinate2D(latitude: 10, longitude: 179.9),
+                CLLocationCoordinate2D(latitude: 10, longitude: -179.9),
+            ])
+        )
+
+        XCTAssertLessThan(abs(abs(region.center.longitude) - 180), 0.001)
+        XCTAssertLessThan(region.span.longitudeDelta, 1)
     }
 
     func testMapHomeCurrentGPSDotRequiresAnIPhoneGPSReading() {
@@ -3739,6 +3828,9 @@ final class TimeScaleTests: XCTestCase {
             ),
             120
         )
+    }
+
+    func testMapHomeDayPlaybackDoesNotWrapPastDayEndpoint() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.playbackStartMinute(
                 selectedMinute: 1_440,

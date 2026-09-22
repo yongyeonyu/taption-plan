@@ -227,6 +227,7 @@ actor MigratingPlanRepository: PlanDataRepository {
     private let legacy: any PlanDataRepository
     private var writeTail: Task<Void, Error>?
     private var migrationTask: Task<Void, Error>?
+    private var migrationTaskID: UUID?
 
     init(
         primary: any PlanDataRepository,
@@ -268,6 +269,7 @@ actor MigratingPlanRepository: PlanDataRepository {
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         migrationTask?.cancel()
         migrationTask = nil
+        migrationTaskID = nil
         let previous = writeTail
         let primary = self.primary
         let task = Task<Void, Error> {
@@ -281,6 +283,7 @@ actor MigratingPlanRepository: PlanDataRepository {
     func deleteAll() async throws {
         migrationTask?.cancel()
         migrationTask = nil
+        migrationTaskID = nil
         TaptionDataDeletionFence.beginRepositoryDeletion()
         let previous = writeTail
         let primary = self.primary
@@ -310,6 +313,7 @@ actor MigratingPlanRepository: PlanDataRepository {
         let previous = writeTail
         let primary = self.primary
         let generation = TaptionDataDeletionFence.currentGeneration()
+        let taskID = UUID()
         let task = Task.detached(priority: .utility) {
             if let previous { _ = try? await previous.value }
             // A caller may save a newer snapshot as soon as the legacy value
@@ -321,13 +325,130 @@ actor MigratingPlanRepository: PlanDataRepository {
                   !Task.isCancelled,
                   TaptionDataDeletionFence.allows(generation: generation),
                   current.updatedAt == .distantPast else {
+                await self.finishMigrationTask(id: taskID)
                 return
             }
-            guard !Task.isCancelled else { return }
-            try await primary.save(snapshot)
+            do {
+                guard !Task.isCancelled else {
+                    await self.finishMigrationTask(id: taskID)
+                    return
+                }
+                try await primary.save(snapshot)
+            } catch {
+                await self.finishMigrationTask(id: taskID)
+                throw error
+            }
+            await self.finishMigrationTask(id: taskID)
         }
         writeTail = task
         migrationTask = task
+        migrationTaskID = taskID
+    }
+
+    private func finishMigrationTask(id: UUID) {
+        guard migrationTaskID == id else { return }
+        migrationTask = nil
+        migrationTaskID = nil
+    }
+}
+
+enum PlanRepositoryAvailabilityError: LocalizedError, Equatable, Sendable {
+    case unavailable
+
+    var errorDescription: String? {
+        "기기 저장소를 열 수 없어 변경 내용을 저장하지 않습니다."
+    }
+}
+
+actor UnavailablePlanRepository: PlanDataRepository {
+    func load() async throws -> TaptionDataSnapshot {
+        throw PlanRepositoryAvailabilityError.unavailable
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        throw PlanRepositoryAvailabilityError.unavailable
+    }
+
+    func deleteAll() async throws {
+        throw PlanRepositoryAvailabilityError.unavailable
+    }
+}
+
+struct PlanRepositorySelection {
+    let repository: any PlanDataRepository
+    let source: String
+}
+
+enum PlanRepositoryResolver {
+    static func resolve(
+        appGroupSQLite: (any PlanDataRepository)?,
+        appGroupFile: (any PlanDataRepository)?,
+        applicationSupportSQLite: (any PlanDataRepository)?,
+        applicationSupportFile: (any PlanDataRepository)?
+    ) -> PlanRepositorySelection {
+        let legacy = combinedLegacy(
+            appGroupFile: appGroupFile,
+            applicationSupportFile: applicationSupportFile
+        )
+        if let appGroupSQLite {
+            return selection(
+                primary: appGroupSQLite,
+                legacy: legacy,
+                source: "sqlite-app-group"
+            )
+        }
+        if let applicationSupportSQLite {
+            return selection(
+                primary: applicationSupportSQLite,
+                legacy: legacy,
+                source: "sqlite-application-support"
+            )
+        }
+        if let legacy {
+            return PlanRepositorySelection(
+                repository: legacy,
+                source: appGroupFile == nil
+                    ? "file-application-support"
+                    : "file-app-group"
+            )
+        }
+        return PlanRepositorySelection(
+            repository: UnavailablePlanRepository(),
+            source: "unavailable"
+        )
+    }
+
+    private static func selection(
+        primary: any PlanDataRepository,
+        legacy: (any PlanDataRepository)?,
+        source: String
+    ) -> PlanRepositorySelection {
+        guard let legacy else {
+            return PlanRepositorySelection(
+                repository: primary,
+                source: source
+            )
+        }
+        return PlanRepositorySelection(
+            repository: MigratingPlanRepository(
+                primary: primary,
+                legacy: legacy
+            ),
+            source: source + "+one-time-import"
+        )
+    }
+
+    private static func combinedLegacy(
+        appGroupFile: (any PlanDataRepository)?,
+        applicationSupportFile: (any PlanDataRepository)?
+    ) -> (any PlanDataRepository)? {
+        if let appGroupFile, let applicationSupportFile {
+            return MigratingPlanRepository(
+                primary: appGroupFile,
+                legacy: applicationSupportFile
+            )
+        }
+        return appGroupFile ?? applicationSupportFile
     }
 }
 
@@ -750,7 +871,7 @@ actor SQLitePlanRepository: PlanDataRepository {
     private var dataDeletionGeneration: UInt64
 
     init(databaseURL: URL) throws {
-        self.store = try TaptionPlanDayStore(url: databaseURL)
+        self.store = try TaptionPlanDayStore(url: databaseURL, allowsUndatedSnapshots: true)
         lockURL = databaseURL.appendingPathExtension("lock")
         generationURL = databaseURL.appendingPathExtension("generation")
         deletionPendingURL = databaseURL.appendingPathExtension("deletion-pending")

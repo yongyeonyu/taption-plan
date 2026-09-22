@@ -47,7 +47,6 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000004"
             BuildableName = "TaptionPlanWatch.app"
-            BlueprintName = "TaptionPlanWatch"
             ReferencedContainer = "container:TaptionPlan.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -64,7 +63,6 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000004"
             BuildableName = "TaptionPlanWatch.app"
-            BlueprintName = "TaptionPlanWatch"
             ReferencedContainer = "container:TaptionPlan.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

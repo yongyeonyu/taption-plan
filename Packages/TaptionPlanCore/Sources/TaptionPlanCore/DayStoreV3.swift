@@ -2,6 +2,25 @@ import CSQLite
 import CryptoKit
 import Foundation
 
+private func exactlyEqual(_ lhs: String, _ rhs: String) -> Bool {
+    lhs.utf8.elementsEqual(rhs.utf8)
+}
+
+private func exactBytesPrecede(_ lhs: String, _ rhs: String) -> Bool {
+    lhs.utf8.lexicographicallyPrecedes(rhs.utf8)
+}
+
+private func hashExactBytes(_ value: String, into hasher: inout Hasher) {
+    hasher.combine(value.utf8.count)
+    for byte in value.utf8 {
+        hasher.combine(byte)
+    }
+}
+
+private func containsNUL(_ value: String) -> Bool {
+    value.utf8.contains(0)
+}
+
 public enum TaptionPlanStoreDevice: String, Codable, Hashable, Sendable {
     case iPhone
     case appleWatch
@@ -16,6 +35,28 @@ public struct TaptionPlanRawEvent: Codable, Hashable, Sendable {
     public let domain: String
     public let provenance: [String]
     public let payload: Data
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.device == rhs.device
+            && lhs.day == rhs.day
+            && lhs.timestamp == rhs.timestamp
+            && lhs.sequence == rhs.sequence
+            && exactlyEqual(lhs.id, rhs.id)
+            && exactlyEqual(lhs.domain, rhs.domain)
+            && lhs.provenance == rhs.provenance
+            && lhs.payload == rhs.payload
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(device)
+        hasher.combine(day)
+        hasher.combine(timestamp)
+        hasher.combine(sequence)
+        hashExactBytes(id, into: &hasher)
+        hashExactBytes(domain, into: &hasher)
+        hasher.combine(provenance)
+        hasher.combine(payload)
+    }
 
     public init(
         device: TaptionPlanStoreDevice,
@@ -45,6 +86,112 @@ public struct TaptionPlanRawEventIdentifier: Hashable, Sendable {
     public init(domain: String, id: String) {
         self.domain = domain
         self.id = id
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        exactlyEqual(lhs.domain, rhs.domain)
+            && exactlyEqual(lhs.id, rhs.id)
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hashExactBytes(domain, into: &hasher)
+        hashExactBytes(id, into: &hasher)
+    }
+}
+
+fileprivate struct RawEventPageScanState: Hashable, Sendable {
+    let storeID: UUID
+    let rawEventRevision: UInt64
+    let dataVersion: Int64
+}
+
+public struct TaptionPlanRawEventCursor: Hashable, Sendable {
+    public let day: TaptionPlanDayKey
+    public let timestamp: Date
+    public let sequence: UInt64
+    public let id: String
+    public let domain: String
+    fileprivate let scanState: RawEventPageScanState?
+
+    public init(after event: TaptionPlanRawEvent) {
+        day = event.day
+        timestamp = event.timestamp
+        sequence = event.sequence
+        id = event.id
+        domain = event.domain
+        scanState = nil
+    }
+
+    fileprivate init(
+        after event: TaptionPlanRawEvent,
+        scanState: RawEventPageScanState
+    ) {
+        day = event.day
+        timestamp = event.timestamp
+        sequence = event.sequence
+        id = event.id
+        domain = event.domain
+        self.scanState = scanState
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.day == rhs.day
+            && lhs.timestamp == rhs.timestamp
+            && lhs.sequence == rhs.sequence
+            && exactlyEqual(lhs.id, rhs.id)
+            && exactlyEqual(lhs.domain, rhs.domain)
+            && lhs.scanState == rhs.scanState
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(day)
+        hasher.combine(timestamp)
+        hasher.combine(sequence)
+        hashExactBytes(id, into: &hasher)
+        hashExactBytes(domain, into: &hasher)
+        hasher.combine(scanState)
+    }
+}
+
+public struct TaptionPlanRawEventPage: Sendable {
+    public let events: [TaptionPlanRawEvent]
+    public let nextCursor: TaptionPlanRawEventCursor?
+    public let hasMore: Bool
+
+    public init(
+        events: [TaptionPlanRawEvent],
+        nextCursor: TaptionPlanRawEventCursor?,
+        hasMore: Bool
+    ) {
+        self.events = events
+        self.nextCursor = nextCursor
+        self.hasMore = hasMore
+    }
+}
+
+/// A durable device-to-device message that remains queued until the receiver
+/// confirms that its copy has been persisted.
+public struct TaptionPlanV3OutboxItem: Hashable, Sendable {
+    public let id: String
+    public let kind: String
+    public let payload: Data
+
+    public init(id: String, kind: String, payload: Data) {
+        self.id = id
+        self.kind = kind
+        self.payload = payload
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        exactlyEqual(lhs.id, rhs.id)
+            && exactlyEqual(lhs.kind, rhs.kind)
+            && lhs.payload == rhs.payload
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hashExactBytes(id, into: &hasher)
+        hashExactBytes(kind, into: &hasher)
+        hasher.combine(payload)
     }
 }
 
@@ -112,11 +259,18 @@ public struct TaptionPlanDayDigest: Codable, Hashable, Sendable {
 
 public enum TaptionPlanV3StoreError: Error, Equatable, Sendable {
     case unsupportedSchema(Int)
+    case invalidDay
     case invalidDomain
     case invalidDevice
     case invalidIdentifier
     case integerOverflow
+    case staleRawEventCursor
+    case rawEventPageItemTooLarge(limit: Int)
     case payloadConflict(device: TaptionPlanStoreDevice, domain: String, id: String)
+    case outboxConflict(id: String)
+    case outboxLimitExceeded(limit: Int)
+    case outboxPayloadTooLarge(limit: Int)
+    case outboxByteLimitExceeded(limit: Int)
     case materializationMismatch
     case database(code: Int32, message: String)
     case databaseCorrupt(message: String)
@@ -126,12 +280,19 @@ public enum TaptionPlanV3StoreError: Error, Equatable, Sendable {
 /// The actor owns the connection so a prepared statement is never used across
 /// concurrent callers and the raw table remains the source of truth.
 public actor TaptionPlanV3Store {
+    public static let maximumRawEventPageSize = 1_024
+    public static let defaultRawEventPageBytes = 1 * 1_024 * 1_024
+    public static let maximumRawEventPageBytes = 4 * 1_024 * 1_024
     public static let schemaVersion = 3
     public static let projectionVersion: UInt64 = 1
     static let rawDigestCacheCapacity = 64
+    private static let rawDigestCacheAtomicWriteMarker =
+        "raw_digest_cache_atomic_write_v1"
 
     public let device: TaptionPlanStoreDevice
     private nonisolated(unsafe) var database: OpaquePointer?
+    private let rawEventPageStoreID = UUID()
+    private var rawEventRevision: UInt64 = 0
     private var rawDigestCache: [
         TaptionPlanDayKey: (dataVersion: Int64, digest: TaptionPlanDayDigest)
     ] = [:]
@@ -187,10 +348,20 @@ public actor TaptionPlanV3Store {
     public func appendRawEvents(
         _ events: [TaptionPlanRawEvent]
     ) throws -> Set<TaptionPlanRawEventIdentifier> {
+        try appendRawEvents(events, outboxItems: [])
+    }
+
+    @discardableResult
+    public func appendRawEvents(
+        _ events: [TaptionPlanRawEvent],
+        outboxItems: [TaptionPlanV3OutboxItem]
+    ) throws -> Set<TaptionPlanRawEventIdentifier> {
         try validate(events)
-        guard !events.isEmpty else { return [] }
+        try validate(outboxItems)
+        guard !events.isEmpty || !outboxItems.isEmpty else { return [] }
         let insertedIDs = try withTransaction {
             let insertedIDs = try insertRawEvents(events)
+            try insertOutboxItems(outboxItems)
             let insertedDays = Set(events.lazy.compactMap { event in
                 insertedIDs.contains(
                     .init(domain: event.domain, id: event.id)
@@ -199,6 +370,7 @@ public actor TaptionPlanV3Store {
             try removePersistedRawDigests(for: insertedDays)
             return insertedIDs
         }
+        if !insertedIDs.isEmpty { rawEventRevision &+= 1 }
         let insertedDays = Set(events.lazy.compactMap { event in
             insertedIDs.contains(
                 .init(domain: event.domain, id: event.id)
@@ -210,22 +382,85 @@ public actor TaptionPlanV3Store {
         return insertedIDs
     }
 
+    public func pendingOutboxItems(
+        limit: Int = 50
+    ) throws -> [TaptionPlanV3OutboxItem] {
+        let boundedLimit = min(max(limit, 1), 256)
+        let statement = try prepare(
+            """
+            SELECT id, kind, payload
+            FROM device_outbox
+            WHERE device = ?
+            ORDER BY sequence
+            LIMIT ?;
+            """
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(device.rawValue, to: statement, at: 1)
+        try bind(Int64(boundedLimit), to: statement, at: 2)
+        var items: [TaptionPlanV3OutboxItem] = []
+        while try step(statement) == SQLITE_ROW {
+            guard let id = sqlite3_column_text(statement, 0).map({
+                String(cString: $0)
+            }), let kind = sqlite3_column_text(statement, 1).map({
+                String(cString: $0)
+            }) else {
+                throw TaptionPlanV3StoreError.databaseCorrupt(
+                    message: "Invalid outbox item"
+                )
+            }
+            items.append(
+                TaptionPlanV3OutboxItem(
+                    id: id,
+                    kind: kind,
+                    payload: readData(statement, at: 2)
+                )
+            )
+        }
+        return items
+    }
+
+    public func deleteOutboxItems(ids: [String]) throws {
+        guard ids.allSatisfy({ !$0.isEmpty && !containsNUL($0) }) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        guard !ids.isEmpty else { return }
+        let statement = try prepare(
+            "DELETE FROM device_outbox WHERE device = ? AND id = ?;"
+        )
+        defer { sqlite3_finalize(statement) }
+        try withTransaction {
+            for id in ids {
+                try reset(statement)
+                try bind(device.rawValue, to: statement, at: 1)
+                try bind(id, to: statement, at: 2)
+                guard try step(statement) == SQLITE_DONE else {
+                    throw lastError()
+                }
+            }
+        }
+    }
+
     public func validateRawEventsForAppend(
         _ events: [TaptionPlanRawEvent]
     ) throws {
         try validate(events)
         guard !events.isEmpty else { return }
-        var candidates: [String: TaptionPlanRawEvent] = [:]
+        var candidates: [TaptionPlanRawEventIdentifier: TaptionPlanRawEvent] = [:]
         for event in events {
-            let key = "\(event.domain)|\(event.id)"
-            if let existing = candidates[key], existing != event {
+            let identifier = TaptionPlanRawEventIdentifier(
+                domain: event.domain,
+                id: event.id
+            )
+            if let existing = candidates[identifier],
+               existing != event {
                 throw TaptionPlanV3StoreError.payloadConflict(
                     device: event.device,
                     domain: event.domain,
                     id: event.id
                 )
             }
-            candidates[key] = event
+            candidates[identifier] = event
         }
         let lookup = try prepare(
             """
@@ -257,13 +492,83 @@ public actor TaptionPlanV3Store {
         for day: TaptionPlanDayKey,
         domains: Set<String>
     ) throws {
-        guard !domains.isEmpty, domains.allSatisfy({ !$0.isEmpty }) else {
+        _ = try replaceRawEvents(
+            events,
+            for: day,
+            exactDomains: domains.map { Data($0.utf8) },
+            onlyIfCurrent: nil
+        )
+    }
+
+    public func replaceRawEvents(
+        _ events: [TaptionPlanRawEvent],
+        for day: TaptionPlanDayKey,
+        exactDomains: [String]
+    ) throws {
+        _ = try replaceRawEvents(
+            events,
+            for: day,
+            exactDomains: exactDomains.map { Data($0.utf8) },
+            onlyIfCurrent: nil
+        )
+    }
+
+    @discardableResult
+    public func replaceRawEvents(
+        _ events: [TaptionPlanRawEvent],
+        for day: TaptionPlanDayKey,
+        domains: Set<String>,
+        onlyIfCurrent expectedCurrentEvents: [TaptionPlanRawEvent]
+    ) throws -> Bool {
+        try replaceRawEvents(
+            events,
+            for: day,
+            exactDomains: domains.map { Data($0.utf8) },
+            onlyIfCurrent: Optional(expectedCurrentEvents)
+        )
+    }
+
+    @discardableResult
+    public func replaceRawEvents(
+        _ events: [TaptionPlanRawEvent],
+        for day: TaptionPlanDayKey,
+        exactDomains: [String],
+        onlyIfCurrent expectedCurrentEvents: [TaptionPlanRawEvent]
+    ) throws -> Bool {
+        try replaceRawEvents(
+            events,
+            for: day,
+            exactDomains: exactDomains.map { Data($0.utf8) },
+            onlyIfCurrent: Optional(expectedCurrentEvents)
+        )
+    }
+
+    private func replaceRawEvents(
+        _ events: [TaptionPlanRawEvent],
+        for day: TaptionPlanDayKey,
+        exactDomains: [Data],
+        onlyIfCurrent expectedCurrentEvents: [TaptionPlanRawEvent]?
+    ) throws -> Bool {
+        try validate(day: day)
+        let domains = Set(exactDomains)
+        guard !domains.isEmpty,
+              domains.allSatisfy({ !$0.isEmpty && !$0.contains(0) }) else {
             throw TaptionPlanV3StoreError.invalidDomain
         }
         try validate(events)
-        guard events.allSatisfy({ $0.day == day && domains.contains($0.domain) })
+        guard events.allSatisfy({ event in
+            event.day == day && domains.contains(Data(event.domain.utf8))
+        })
         else {
             throw TaptionPlanV3StoreError.invalidDomain
+        }
+        if let expectedCurrentEvents {
+            try validate(expectedCurrentEvents)
+            guard expectedCurrentEvents.allSatisfy({ event in
+                event.day == day && domains.contains(Data(event.domain.utf8))
+            }) else {
+                throw TaptionPlanV3StoreError.invalidDomain
+            }
         }
         guard let database else { throw lastError() }
         let changeCount = sqlite3_total_changes(database)
@@ -271,28 +576,131 @@ public actor TaptionPlanV3Store {
             "DELETE FROM raw_events WHERE device = ? AND day_key = ? AND domain = ?;"
         )
         defer { sqlite3_finalize(delete) }
+        var didReplace = false
         try withTransaction {
+            if let expectedCurrentEvents {
+                let currentEvents = try rawEvents(for: day).filter { event in
+                    domains.contains(Data(event.domain.utf8))
+                }
+                guard Set(currentEvents) == Set(expectedCurrentEvents) else {
+                    return
+                }
+            }
             try removePersistedRawDigests(for: Set([day]))
-            for domain in domains {
+            let storedDomains = try rawDomains(for: day).map { Data($0.utf8) }.filter { domain in
+                domains.contains(domain)
+            }
+            for domain in Array(domains) + storedDomains {
                 try reset(delete)
                 try bind(device.rawValue, to: delete, at: 1)
                 try bind(Self.dayKey(day), to: delete, at: 2)
-                try bind(domain, to: delete, at: 3)
+                try bindText(domain, to: delete, at: 3)
                 guard try step(delete) == SQLITE_DONE else { throw lastError() }
             }
             _ = try insertRawEvents(events)
+            didReplace = true
         }
-        if sqlite3_total_changes(database) != changeCount {
+        if didReplace { rawEventRevision &+= 1 }
+        if didReplace && sqlite3_total_changes(database) != changeCount {
             removeCachedRawDigest(for: day)
         }
+        return didReplace
     }
 
     private func validate(_ events: [TaptionPlanRawEvent]) throws {
         guard events.allSatisfy({ $0.device == device }) else {
             throw TaptionPlanV3StoreError.invalidDevice
         }
-        guard events.allSatisfy({ !$0.domain.isEmpty && !$0.id.isEmpty }) else {
+        guard events.allSatisfy(\.day.isValidStorageKey) else {
+            throw TaptionPlanV3StoreError.invalidDay
+        }
+        guard events.allSatisfy({ !$0.domain.isEmpty && !containsNUL($0.domain) }) else {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+        guard events.allSatisfy({ !$0.id.isEmpty && !containsNUL($0.id) }) else {
             throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+    }
+
+    private func validate(_ items: [TaptionPlanV3OutboxItem]) throws {
+        guard items.allSatisfy({ !$0.id.isEmpty && !containsNUL($0.id) }) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        guard items.allSatisfy({ !$0.kind.isEmpty && !containsNUL($0.kind) }) else {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+        guard items.allSatisfy({ !$0.payload.isEmpty }) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        guard items.allSatisfy({ $0.payload.count <= 4 * 1_024 * 1_024 }) else {
+            throw TaptionPlanV3StoreError.outboxPayloadTooLarge(
+                limit: 4 * 1_024 * 1_024
+            )
+        }
+    }
+
+    private func validate(day: TaptionPlanDayKey) throws {
+        guard day.isValidStorageKey else {
+            throw TaptionPlanV3StoreError.invalidDay
+        }
+    }
+
+    private func insertOutboxItems(
+        _ items: [TaptionPlanV3OutboxItem]
+    ) throws {
+        guard !items.isEmpty else { return }
+        let insert = try prepare(
+            """
+            INSERT OR IGNORE INTO device_outbox(device, id, kind, payload)
+            VALUES (?, ?, ?, ?);
+            """
+        )
+        let lookup = try prepare(
+            """
+            SELECT kind, payload FROM device_outbox
+            WHERE device = ? AND id = ?;
+            """
+        )
+        defer {
+            sqlite3_finalize(insert)
+            sqlite3_finalize(lookup)
+        }
+        for item in items {
+            try reset(insert)
+            try bind(device.rawValue, to: insert, at: 1)
+            try bind(item.id, to: insert, at: 2)
+            try bind(item.kind, to: insert, at: 3)
+            try bind(item.payload, to: insert, at: 4)
+            guard try step(insert) == SQLITE_DONE else { throw lastError() }
+            guard sqlite3_changes(database) == 0 else { continue }
+
+            try reset(lookup)
+            try bind(device.rawValue, to: lookup, at: 1)
+            try bind(item.id, to: lookup, at: 2)
+            guard try step(lookup) == SQLITE_ROW,
+                  let kind = sqlite3_column_text(lookup, 0).map({
+                      String(cString: $0)
+                  }) else {
+                throw lastError()
+            }
+            guard exactlyEqual(kind, item.kind),
+                  readData(lookup, at: 1) == item.payload else {
+                throw TaptionPlanV3StoreError.outboxConflict(id: item.id)
+            }
+        }
+        let count = try prepare(
+            "SELECT COUNT(*), COALESCE(SUM(length(payload)), 0) FROM device_outbox WHERE device = ?;"
+        )
+        defer { sqlite3_finalize(count) }
+        try bind(device.rawValue, to: count, at: 1)
+        guard try step(count) == SQLITE_ROW else { throw lastError() }
+        if sqlite3_column_int64(count, 0) > 4_096 {
+            throw TaptionPlanV3StoreError.outboxLimitExceeded(limit: 4_096)
+        }
+        if sqlite3_column_int64(count, 1) > 64 * 1_024 * 1_024 {
+            throw TaptionPlanV3StoreError.outboxByteLimitExceeded(
+                limit: 64 * 1_024 * 1_024
+            )
         }
     }
 
@@ -300,13 +708,14 @@ public actor TaptionPlanV3Store {
         ids: [String],
         domain: String
     ) throws {
-        guard !ids.isEmpty else { return }
-        guard !domain.isEmpty else {
+        guard !domain.isEmpty, !containsNUL(domain) else {
             throw TaptionPlanV3StoreError.invalidDomain
         }
-        guard ids.allSatisfy({ !$0.isEmpty }) else {
+        guard ids.allSatisfy({ !$0.isEmpty && !containsNUL($0) }) else {
             throw TaptionPlanV3StoreError.invalidIdentifier
         }
+        guard !ids.isEmpty else { return }
+        guard let database else { throw lastError() }
         let lookup = try prepare(
             "SELECT day_key FROM raw_events WHERE device = ? AND domain = ? AND id = ?;"
         )
@@ -318,8 +727,9 @@ public actor TaptionPlanV3Store {
             sqlite3_finalize(delete)
         }
         var days = Set<TaptionPlanDayKey>()
+        var deletedAny = false
         try withTransaction {
-            for id in Set(ids) {
+            for id in ids {
                 try reset(lookup)
                 try bind(device.rawValue, to: lookup, at: 1)
                 try bind(domain, to: lookup, at: 2)
@@ -332,17 +742,69 @@ public actor TaptionPlanV3Store {
                 }
             }
             try removePersistedRawDigests(for: days)
-            for id in Set(ids) {
+            for id in ids {
                 try reset(delete)
                 try bind(device.rawValue, to: delete, at: 1)
                 try bind(domain, to: delete, at: 2)
                 try bind(id, to: delete, at: 3)
                 guard try step(delete) == SQLITE_DONE else { throw lastError() }
+                if sqlite3_changes(database) > 0 { deletedAny = true }
             }
         }
+        if deletedAny { rawEventRevision &+= 1 }
         for day in days {
             removeCachedRawDigest(for: day)
         }
+    }
+
+    @discardableResult
+    public func removeRawEventsIfUnchanged(
+        _ events: [TaptionPlanRawEvent]
+    ) throws -> Set<TaptionPlanRawEventIdentifier> {
+        try validate(events)
+        guard !events.isEmpty else { return [] }
+        let lookup = try prepare(
+            """
+            SELECT device, day_key, timestamp, sequence, id, domain,
+                   provenance, payload
+            FROM raw_events
+            WHERE device = ? AND domain = ? AND id = ?;
+            """
+        )
+        let delete = try prepare(
+            "DELETE FROM raw_events WHERE device = ? AND domain = ? AND id = ?;"
+        )
+        defer {
+            sqlite3_finalize(lookup)
+            sqlite3_finalize(delete)
+        }
+        var removed = Set<TaptionPlanRawEventIdentifier>()
+        var days = Set<TaptionPlanDayKey>()
+        try withTransaction {
+            for expected in events {
+                try reset(lookup)
+                try bind(device.rawValue, to: lookup, at: 1)
+                try bind(expected.domain, to: lookup, at: 2)
+                try bind(expected.id, to: lookup, at: 3)
+                guard try step(lookup) == SQLITE_ROW,
+                      try readRawEvent(lookup) == expected else { continue }
+
+                try reset(delete)
+                try bind(device.rawValue, to: delete, at: 1)
+                try bind(expected.domain, to: delete, at: 2)
+                try bind(expected.id, to: delete, at: 3)
+                guard try step(delete) == SQLITE_DONE else { throw lastError() }
+                guard sqlite3_changes(database) == 1 else { continue }
+                removed.insert(.init(domain: expected.domain, id: expected.id))
+                days.insert(expected.day)
+            }
+            try removePersistedRawDigests(for: days)
+        }
+        if !removed.isEmpty { rawEventRevision &+= 1 }
+        for day in days {
+            removeCachedRawDigest(for: day)
+        }
+        return removed
     }
 
     private func insertRawEvents(
@@ -408,7 +870,8 @@ public actor TaptionPlanV3Store {
         for day: TaptionPlanDayKey,
         domain: String? = nil
     ) throws -> [TaptionPlanRawEvent] {
-        if let domain, domain.isEmpty {
+        try validate(day: day)
+        if let domain, domain.isEmpty || containsNUL(domain) {
             throw TaptionPlanV3StoreError.invalidDomain
         }
         let statement: OpaquePointer
@@ -446,7 +909,267 @@ public actor TaptionPlanV3Store {
         return result
     }
 
+    /// Returns the newest raw event whose identifier begins with a printable-ASCII prefix.
+    public func latestRawEvent(
+        domain: String,
+        idPrefix: String
+    ) throws -> TaptionPlanRawEvent? {
+        let prefixBytes = Array(idPrefix.utf8)
+        guard !idPrefix.isEmpty,
+              prefixBytes.allSatisfy({ (0x20...0x7e).contains($0) }),
+              let lastByte = prefixBytes.last,
+              lastByte < 0x7f else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        guard !domain.isEmpty, !containsNUL(domain) else {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+
+        var upperBoundBytes = prefixBytes
+        upperBoundBytes[upperBoundBytes.count - 1] += 1
+        let upperBound = String(decoding: upperBoundBytes, as: UTF8.self)
+        let statement = try prepare(
+            """
+            SELECT device, day_key, timestamp, sequence, id, domain,
+                   provenance, payload
+            FROM raw_events
+            WHERE device = ? AND domain = ?
+              AND id COLLATE BINARY >= ? AND id COLLATE BINARY < ?
+            ORDER BY sequence DESC, length(id) DESC, id COLLATE BINARY DESC
+            LIMIT 1;
+            """
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(device.rawValue, to: statement, at: 1)
+        try bind(domain, to: statement, at: 2)
+        try bind(idPrefix, to: statement, at: 3)
+        try bind(upperBound, to: statement, at: 4)
+        guard try step(statement) == SQLITE_ROW else { return nil }
+        return try readRawEvent(statement)
+    }
+
+    /// Returns a byte-bounded page; returned cursors expire after any database write.
+    public func rawEventPage(
+        after cursor: TaptionPlanRawEventCursor? = nil,
+        domain: String? = nil,
+        limit: Int = 256,
+        byteLimit: Int = TaptionPlanV3Store.defaultRawEventPageBytes
+    ) throws -> TaptionPlanRawEventPage {
+        if let domain, domain.isEmpty || containsNUL(domain) {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+        if let cursor,
+           cursor.id.isEmpty || cursor.domain.isEmpty
+            || containsNUL(cursor.id) || containsNUL(cursor.domain) {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        if let cursor { try validate(day: cursor.day) }
+        if let cursor, cursor.sequence > UInt64(Int64.max) {
+            throw TaptionPlanV3StoreError.integerOverflow
+        }
+        if let domain, let cursor,
+           !exactlyEqual(domain, cursor.domain) {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+
+        let pageSize = min(max(limit, 1), Self.maximumRawEventPageSize)
+        let pageByteLimit = min(
+            max(byteLimit, 1),
+            Self.maximumRawEventPageBytes
+        )
+        let cursorClause: String
+        let orderClause: String
+        if domain != nil {
+            cursorClause = cursor == nil
+                ? ""
+                : "AND (day_key, timestamp, sequence, id) > (?, ?, ?, ?)"
+            orderClause = "day_key, timestamp, sequence, id"
+        } else {
+            cursorClause = cursor == nil
+                ? ""
+                : "AND (day_key, timestamp, sequence, id, domain) > (?, ?, ?, ?, ?)"
+            orderClause = "day_key, timestamp, sequence, id, domain"
+        }
+        let domainClause = domain == nil ? "" : "AND domain = ?"
+        let filterClause = "device = ? \(domainClause) \(cursorClause)"
+        func bindFilters(to statement: OpaquePointer) throws -> Int32 {
+            var index: Int32 = 1
+            try bind(device.rawValue, to: statement, at: index)
+            index += 1
+            if let domain {
+                try bind(domain, to: statement, at: index)
+                index += 1
+            }
+            if let cursor {
+                try bind(Self.dayKey(cursor.day), to: statement, at: index)
+                index += 1
+                try bind(
+                    cursor.timestamp.timeIntervalSince1970,
+                    to: statement,
+                    at: index
+                )
+                index += 1
+                try bind(Int64(bitPattern: cursor.sequence), to: statement, at: index)
+                index += 1
+                try bind(cursor.id, to: statement, at: index)
+                index += 1
+                if domain == nil {
+                    try bind(cursor.domain, to: statement, at: index)
+                    index += 1
+                }
+            }
+            return index
+        }
+
+        let scanState = try currentRawEventPageScanState()
+        if let cursorState = cursor?.scanState, cursorState != scanState {
+            throw TaptionPlanV3StoreError.staleRawEventCursor
+        }
+
+        let result = try withReadTransaction {
+            let sizeExpression = """
+                length(CAST(device AS BLOB))
+                + length(CAST(day_key AS BLOB))
+                + length(CAST(id AS BLOB))
+                + length(CAST(domain AS BLOB))
+                + length(provenance) + length(payload) + 64
+                """
+            let sizeStatement = try prepare(
+                """
+                SELECT \(sizeExpression)
+                FROM raw_events
+                WHERE \(filterClause)
+                ORDER BY \(orderClause)
+                LIMIT ?;
+                """
+            )
+            var eventByteSizes: [Int] = []
+            do {
+                defer { sqlite3_finalize(sizeStatement) }
+                let limitIndex = try bindFilters(to: sizeStatement)
+                try bind(Int64(pageSize + 1), to: sizeStatement, at: limitIndex)
+                while try step(sizeStatement) == SQLITE_ROW {
+                    let value = sqlite3_column_int64(sizeStatement, 0)
+                    guard value >= 0, let size = Int(exactly: value) else {
+                        throw TaptionPlanV3StoreError.integerOverflow
+                    }
+                    eventByteSizes.append(size)
+                }
+            }
+
+            var pageBytes = 0
+            var eventCount = 0
+            for eventBytes in eventByteSizes.prefix(pageSize) {
+                guard eventBytes <= pageByteLimit else {
+                    if eventCount == 0 {
+                        throw TaptionPlanV3StoreError.rawEventPageItemTooLarge(
+                            limit: pageByteLimit
+                        )
+                    }
+                    break
+                }
+                guard eventBytes <= pageByteLimit - pageBytes else { break }
+                pageBytes += eventBytes
+                eventCount += 1
+            }
+            let hasMore = eventByteSizes.count > eventCount
+
+            var events: [TaptionPlanRawEvent] = []
+            events.reserveCapacity(eventCount)
+            if eventCount > 0 {
+                let eventStatement = try prepare(
+                    """
+                    SELECT device, day_key, timestamp, sequence, id, domain,
+                           provenance, payload
+                    FROM raw_events
+                    WHERE \(filterClause)
+                    ORDER BY \(orderClause)
+                    LIMIT ?;
+                    """
+                )
+                do {
+                    defer { sqlite3_finalize(eventStatement) }
+                    let limitIndex = try bindFilters(to: eventStatement)
+                    try bind(Int64(eventCount), to: eventStatement, at: limitIndex)
+                    while try step(eventStatement) == SQLITE_ROW {
+                        events.append(try readRawEvent(eventStatement))
+                    }
+                }
+                guard events.count == eventCount else {
+                    throw TaptionPlanV3StoreError.staleRawEventCursor
+                }
+            }
+            return (events, hasMore)
+        }
+        guard try currentRawEventPageScanState() == scanState else {
+            throw TaptionPlanV3StoreError.staleRawEventCursor
+        }
+        return TaptionPlanRawEventPage(
+            events: result.0,
+            nextCursor: result.0.last.map {
+                TaptionPlanRawEventCursor(after: $0, scanState: scanState)
+            },
+            hasMore: result.1
+        )
+    }
+
+    private func rawDomains(for day: TaptionPlanDayKey) throws -> [String] {
+        let statement = try prepare(
+            "SELECT DISTINCT domain FROM raw_events WHERE device = ? AND day_key = ?;"
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(device.rawValue, to: statement, at: 1)
+        try bind(Self.dayKey(day), to: statement, at: 2)
+        var result: [String] = []
+        while try step(statement) == SQLITE_ROW {
+            guard let value = sqlite3_column_text(statement, 0) else {
+                throw TaptionPlanV3StoreError.databaseCorrupt(
+                    message: "Invalid raw event domain"
+                )
+            }
+            let bytes = UnsafeBufferPointer(
+                start: value,
+                count: Int(sqlite3_column_bytes(statement, 0))
+            )
+            let domain = String(decoding: bytes, as: UTF8.self)
+            guard !domain.isEmpty, !containsNUL(domain) else {
+                throw TaptionPlanV3StoreError.databaseCorrupt(
+                    message: "Invalid raw event domain"
+                )
+            }
+            result.append(domain)
+        }
+        return result
+    }
+
+    public func rawEvent(
+        domain: String,
+        id: String
+    ) throws -> TaptionPlanRawEvent? {
+        guard !domain.isEmpty, !containsNUL(domain) else {
+            throw TaptionPlanV3StoreError.invalidDomain
+        }
+        guard !id.isEmpty, !containsNUL(id) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
+        let statement = try prepare(
+            """
+            SELECT device, day_key, timestamp, sequence, id, domain,
+                   provenance, payload
+            FROM raw_events
+            WHERE device = ? AND domain = ? AND id = ?;
+            """
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(device.rawValue, to: statement, at: 1)
+        try bind(domain, to: statement, at: 2)
+        try bind(id, to: statement, at: 3)
+        guard try step(statement) == SQLITE_ROW else { return nil }
+        return try readRawEvent(statement)
+    }
+
     public func rawDigest(for day: TaptionPlanDayKey) throws -> TaptionPlanDayDigest {
+        try validate(day: day)
         let dataVersion = try currentDataVersion()
         if let digest = cachedRawDigest(for: day, dataVersion: dataVersion) {
             return digest
@@ -498,6 +1221,7 @@ public actor TaptionPlanV3Store {
             firstTimestamp = firstTimestamp ?? timestamp
             lastTimestamp = timestamp
         }
+        try reset(statement)
         let digest = TaptionPlanDayDigest(
             device: device,
             day: day,
@@ -506,9 +1230,12 @@ public actor TaptionPlanV3Store {
             lastTimestamp: lastTimestamp,
             sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined()
         )
-        let latestDataVersion = try currentDataVersion()
-        if latestDataVersion == dataVersion {
+        let didPersist = try withTransaction {
+            guard try currentDataVersion() == dataVersion else { return false }
             try persistRawDigest(digest)
+            return true
+        }
+        if didPersist {
             cacheRawDigest(digest, for: day, dataVersion: dataVersion)
         }
         return digest
@@ -524,8 +1251,13 @@ public actor TaptionPlanV3Store {
         let ordered = events.sorted {
             if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
             if $0.sequence != $1.sequence { return $0.sequence < $1.sequence }
-            if $0.id != $1.id { return $0.id < $1.id }
-            return $0.domain < $1.domain
+            if !exactlyEqual($0.id, $1.id) {
+                return exactBytesPrecede($0.id, $1.id)
+            }
+            if !exactlyEqual($0.domain, $1.domain) {
+                return exactBytesPrecede($0.domain, $1.domain)
+            }
+            return false
         }
         var hasher = SHA256()
         for event in ordered {
@@ -549,53 +1281,90 @@ public actor TaptionPlanV3Store {
     }
 
     public func replaceMaterializedDay(_ materialized: TaptionPlanMaterializedDay) throws {
-        guard materialized.device == device else {
+        try withTransaction {
+            try writeMaterializedDay(materialized)
+        }
+    }
+
+    @discardableResult
+    public func replaceMaterializedDay(
+        _ materialized: TaptionPlanMaterializedDay,
+        onlyIfCurrent expected: TaptionPlanMaterializedDay?
+    ) throws -> Bool {
+        guard materialized.device == device,
+              expected == nil
+                || (expected?.device == device
+                    && expected?.day == materialized.day) else {
             throw TaptionPlanV3StoreError.invalidDevice
         }
-        guard !materialized.rawDigest.isEmpty else {
-            throw TaptionPlanV3StoreError.materializationMismatch
-        }
-        guard let rawEventCount = Int64(exactly: materialized.rawEventCount),
-              rawEventCount >= 0 else {
-            throw TaptionPlanV3StoreError.integerOverflow
-        }
-        try withTransaction {
-            try execute(
-                """
-                INSERT INTO day_materialized(
-                    device, day_key, source_revision, projection_version,
-                    generated_at, raw_digest, raw_event_count,
-                    first_timestamp, last_timestamp, payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(device, day_key) DO UPDATE SET
-                    source_revision = excluded.source_revision,
-                    projection_version = excluded.projection_version,
-                    generated_at = excluded.generated_at,
-                    raw_digest = excluded.raw_digest,
-                    raw_event_count = excluded.raw_event_count,
-                    first_timestamp = excluded.first_timestamp,
-                    last_timestamp = excluded.last_timestamp,
-                    payload = excluded.payload;
-                """,
-                binds: { statement in
-                    try self.bind(materialized.device.rawValue, to: statement, at: 1)
-                    try self.bind(Self.dayKey(materialized.day), to: statement, at: 2)
-                    try self.bind(materialized.sourceRevision, to: statement, at: 3)
-                    try self.bind(materialized.projectionVersion, to: statement, at: 4)
-                    try self.bind(materialized.generatedAt.timeIntervalSince1970, to: statement, at: 5)
-                    try self.bind(materialized.rawDigest, to: statement, at: 6)
-                    try self.bind(rawEventCount, to: statement, at: 7)
-                    try self.bind(materialized.firstTimestamp?.timeIntervalSince1970, to: statement, at: 8)
-                    try self.bind(materialized.lastTimestamp?.timeIntervalSince1970, to: statement, at: 9)
-                    try self.bind(materialized.payload, to: statement, at: 10)
+        return try withTransaction {
+            let current = try materializedDay(for: materialized.day)
+            if let expected {
+                guard let current,
+                      Self.matchesMaterializedProjection(current, expected) else {
+                    return false
                 }
-            )
+            } else if current != nil {
+                return false
+            }
+            try writeMaterializedDay(materialized)
+            return true
         }
+    }
+
+    @discardableResult
+    public func restoreMaterializedDay(
+        _ previous: TaptionPlanMaterializedDay?,
+        for day: TaptionPlanDayKey,
+        onlyIfCurrent expected: TaptionPlanMaterializedDay
+    ) throws -> Bool {
+        try validate(day: day)
+        guard expected.device == device, expected.day == day,
+              previous == nil || (previous?.device == device && previous?.day == day) else {
+            throw TaptionPlanV3StoreError.invalidDevice
+        }
+        return try withTransaction {
+            guard let current = try materializedDay(for: day),
+                  Self.matchesMaterializedProjection(current, expected) else {
+                return false
+            }
+            if let previous {
+                try writeMaterializedDay(previous)
+            } else {
+                try removeMaterializedDay(for: day)
+            }
+            return true
+        }
+    }
+
+    private static func matchesMaterializedProjection(
+        _ lhs: TaptionPlanMaterializedDay,
+        _ rhs: TaptionPlanMaterializedDay
+    ) -> Bool {
+        lhs.device == rhs.device
+            && lhs.day == rhs.day
+            && lhs.sourceRevision == rhs.sourceRevision
+            && lhs.projectionVersion == rhs.projectionVersion
+            && lhs.generatedAt.timeIntervalSince1970
+                == rhs.generatedAt.timeIntervalSince1970
+            && lhs.rawDigest == rhs.rawDigest
+            && lhs.rawEventCount == rhs.rawEventCount
+            && sameStoredTimestamp(lhs.firstTimestamp, rhs.firstTimestamp)
+            && sameStoredTimestamp(lhs.lastTimestamp, rhs.lastTimestamp)
+            && lhs.payload == rhs.payload
+    }
+
+    private static func sameStoredTimestamp(
+        _ lhs: Date?,
+        _ rhs: Date?
+    ) -> Bool {
+        lhs?.timeIntervalSince1970 == rhs?.timeIntervalSince1970
     }
 
     public func materializedDay(
         for day: TaptionPlanDayKey
     ) throws -> TaptionPlanMaterializedDay? {
+        try validate(day: day)
         let statement = try prepare(
             """
             SELECT device, day_key, source_revision, projection_version,
@@ -613,6 +1382,7 @@ public actor TaptionPlanV3Store {
     }
 
     public func removeMaterializedDay(for day: TaptionPlanDayKey) throws {
+        try validate(day: day)
         let statement = try prepare(
             "DELETE FROM day_materialized WHERE device = ? AND day_key = ?;"
         )
@@ -622,13 +1392,55 @@ public actor TaptionPlanV3Store {
         guard try step(statement) == SQLITE_DONE else { throw lastError() }
     }
 
-    public func resetForIncompleteMigration(_ key: String) throws {
-        guard !key.isEmpty else { throw TaptionPlanV3StoreError.invalidIdentifier }
-        guard try migrationCompleted(key) == false else { return }
-        try deleteAllData()
+    private func writeMaterializedDay(
+        _ materialized: TaptionPlanMaterializedDay
+    ) throws {
+        guard materialized.device == device else {
+            throw TaptionPlanV3StoreError.invalidDevice
+        }
+        try validate(day: materialized.day)
+        guard !materialized.rawDigest.isEmpty else {
+            throw TaptionPlanV3StoreError.materializationMismatch
+        }
+        guard let rawEventCount = Int64(exactly: materialized.rawEventCount),
+              rawEventCount >= 0 else {
+            throw TaptionPlanV3StoreError.integerOverflow
+        }
+        try execute(
+            """
+            INSERT INTO day_materialized(
+                device, day_key, source_revision, projection_version,
+                generated_at, raw_digest, raw_event_count,
+                first_timestamp, last_timestamp, payload
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(device, day_key) DO UPDATE SET
+                source_revision = excluded.source_revision,
+                projection_version = excluded.projection_version,
+                generated_at = excluded.generated_at,
+                raw_digest = excluded.raw_digest,
+                raw_event_count = excluded.raw_event_count,
+                first_timestamp = excluded.first_timestamp,
+                last_timestamp = excluded.last_timestamp,
+                payload = excluded.payload;
+            """,
+            binds: { statement in
+                try self.bind(materialized.device.rawValue, to: statement, at: 1)
+                try self.bind(Self.dayKey(materialized.day), to: statement, at: 2)
+                try self.bind(materialized.sourceRevision, to: statement, at: 3)
+                try self.bind(materialized.projectionVersion, to: statement, at: 4)
+                try self.bind(materialized.generatedAt.timeIntervalSince1970, to: statement, at: 5)
+                try self.bind(materialized.rawDigest, to: statement, at: 6)
+                try self.bind(rawEventCount, to: statement, at: 7)
+                try self.bind(materialized.firstTimestamp?.timeIntervalSince1970, to: statement, at: 8)
+                try self.bind(materialized.lastTimestamp?.timeIntervalSince1970, to: statement, at: 9)
+                try self.bind(materialized.payload, to: statement, at: 10)
+            }
+        )
     }
 
     public func deleteAllData() throws {
+        guard let database else { throw lastError() }
+        var deletedRawEvents = false
         try withTransaction {
             try execute(
                 "DELETE FROM raw_events WHERE device = ?;",
@@ -636,6 +1448,7 @@ public actor TaptionPlanV3Store {
                     try self.bind(self.device.rawValue, to: statement, at: 1)
                 }
             )
+            deletedRawEvents = sqlite3_changes(database) > 0
             try execute(
                 "DELETE FROM day_materialized WHERE device = ?;",
                 binds: { statement in
@@ -648,7 +1461,14 @@ public actor TaptionPlanV3Store {
                     try self.bind(self.device.rawValue, to: statement, at: 1)
                 }
             )
+            try execute(
+                "DELETE FROM device_outbox WHERE device = ?;",
+                binds: { statement in
+                    try self.bind(self.device.rawValue, to: statement, at: 1)
+                }
+            )
         }
+        if deletedRawEvents { rawEventRevision &+= 1 }
         rawDigestCache.removeAll(keepingCapacity: true)
         rawDigestCacheRecency.removeAll(keepingCapacity: true)
     }
@@ -726,7 +1546,9 @@ public actor TaptionPlanV3Store {
     }
 
     public func markMigrationCompleted(_ key: String, at date: Date = .now) throws -> Bool {
-        guard !key.isEmpty else { throw TaptionPlanV3StoreError.invalidIdentifier }
+        guard !key.isEmpty, !containsNUL(key) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
         try execute(
             "INSERT OR IGNORE INTO migration_markers(key, completed_at) VALUES (?, ?);",
             binds: { statement in
@@ -738,7 +1560,9 @@ public actor TaptionPlanV3Store {
     }
 
     public func migrationCompleted(_ key: String) throws -> Bool {
-        guard !key.isEmpty else { throw TaptionPlanV3StoreError.invalidIdentifier }
+        guard !key.isEmpty, !containsNUL(key) else {
+            throw TaptionPlanV3StoreError.invalidIdentifier
+        }
         let statement = try prepare(
             "SELECT 1 FROM migration_markers WHERE key = ? LIMIT 1;"
         )
@@ -749,7 +1573,7 @@ public actor TaptionPlanV3Store {
 
     private nonisolated static func initializeDatabase(_ database: OpaquePointer) throws {
         try sqliteExecute(database, "PRAGMA busy_timeout=5000;")
-        try sqliteExecute(database, "PRAGMA journal_mode=WAL;")
+        try enableWriteAheadLog(database)
         try sqliteExecute(database, "PRAGMA synchronous=NORMAL;")
         let hasSchemaTable = try sqliteTableExists(database, "schema_meta")
         if hasSchemaTable {
@@ -790,8 +1614,19 @@ public actor TaptionPlanV3Store {
                     sha256 TEXT NOT NULL,
                     PRIMARY KEY(device, day_key)
                 );
+                CREATE TABLE IF NOT EXISTS device_outbox(
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                    device TEXT NOT NULL,
+                    id TEXT NOT NULL,
+                    kind TEXT NOT NULL,
+                    payload BLOB NOT NULL,
+                    UNIQUE(device, id)
+                );
+                CREATE INDEX IF NOT EXISTS device_outbox_device_sequence_index
+                    ON device_outbox(device, sequence);
                 """
             )
+            try Self.clearLegacyRawDigestCache(database)
             try sqliteExecute(database, "PRAGMA optimize;")
             return
         }
@@ -801,6 +1636,14 @@ public actor TaptionPlanV3Store {
         }
         try sqliteExecute(database, "BEGIN IMMEDIATE TRANSACTION;")
         do {
+            if try sqliteTableExists(database, "schema_meta") {
+                try sqliteExecute(database, "ROLLBACK;")
+                try Self.initializeDatabase(database)
+                return
+            }
+            guard try sqliteUserTableCount(database) == 0 else {
+                throw TaptionPlanV3StoreError.unsupportedSchema(0)
+            }
             try sqliteExecute(
                 database,
                 """
@@ -852,6 +1695,16 @@ public actor TaptionPlanV3Store {
                 sha256 TEXT NOT NULL,
                 PRIMARY KEY(device, day_key)
             );
+            CREATE TABLE device_outbox(
+                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+                device TEXT NOT NULL,
+                id TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                UNIQUE(device, id)
+            );
+            CREATE INDEX device_outbox_device_sequence_index
+                ON device_outbox(device, sequence);
             """
             )
             try sqliteExecute(database, "COMMIT;")
@@ -859,7 +1712,69 @@ public actor TaptionPlanV3Store {
             try? sqliteExecute(database, "ROLLBACK;")
             throw error
         }
+        try Self.clearLegacyRawDigestCache(database)
         try sqliteExecute(database, "PRAGMA optimize;")
+    }
+
+    private nonisolated static func enableWriteAheadLog(
+        _ database: OpaquePointer
+    ) throws {
+        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        while true {
+            do {
+                try sqliteExecute(database, "PRAGMA journal_mode=WAL;")
+                return
+            } catch {
+                guard let storeError = error as? TaptionPlanV3StoreError,
+                      case let .database(code, _) = storeError,
+                      code == SQLITE_BUSY,
+                      ProcessInfo.processInfo.systemUptime < deadline else {
+                    throw error
+                }
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+        }
+    }
+
+    private nonisolated static func clearLegacyRawDigestCache(
+        _ database: OpaquePointer
+    ) throws {
+        guard try !hasMigrationMarker(database) else { return }
+        try sqliteExecute(database, "BEGIN IMMEDIATE TRANSACTION;")
+        do {
+            try sqliteExecute(
+                database,
+                """
+                INSERT OR IGNORE INTO migration_markers(key, completed_at)
+                VALUES ('\(Self.rawDigestCacheAtomicWriteMarker)',
+                        CAST(strftime('%s', 'now') AS REAL));
+                """
+            )
+            if sqlite3_changes(database) == 1 {
+                try sqliteExecute(database, "DELETE FROM raw_digest_cache;")
+            }
+            try sqliteExecute(database, "COMMIT;")
+        } catch {
+            try? sqliteExecute(database, "ROLLBACK;")
+            throw error
+        }
+    }
+
+    private nonisolated static func hasMigrationMarker(
+        _ database: OpaquePointer
+    ) throws -> Bool {
+        let statement = try sqlitePrepare(
+            database,
+            "SELECT 1 FROM migration_markers WHERE key = ? LIMIT 1;"
+        )
+        defer { sqlite3_finalize(statement) }
+        try sqliteBind(
+            Self.rawDigestCacheAtomicWriteMarker,
+            to: statement,
+            at: 1,
+            database: database
+        )
+        return try sqliteStep(database, statement) == SQLITE_ROW
     }
 
     private nonisolated static func applyFileProtection(to url: URL) throws {
@@ -1093,6 +2008,28 @@ public actor TaptionPlanV3Store {
         }
     }
 
+    private func withReadTransaction<Result>(
+        _ body: () throws -> Result
+    ) throws -> Result {
+        try execute("BEGIN DEFERRED TRANSACTION;")
+        do {
+            let result = try body()
+            try execute("COMMIT;")
+            return result
+        } catch {
+            _ = try? execute("ROLLBACK;")
+            throw error
+        }
+    }
+
+    private func currentRawEventPageScanState() throws -> RawEventPageScanState {
+        RawEventPageScanState(
+            storeID: rawEventPageStoreID,
+            rawEventRevision: rawEventRevision,
+            dataVersion: try currentDataVersion()
+        )
+    }
+
     private func execute(
         _ sql: String,
         binds: ((OpaquePointer) throws -> Void)? = nil
@@ -1130,6 +2067,22 @@ public actor TaptionPlanV3Store {
         guard sqlite3_bind_text(statement, index, value, -1, Self.sqliteTransient) == SQLITE_OK else {
             throw lastError()
         }
+    }
+
+    private func bindText(_ value: Data, to statement: OpaquePointer, at index: Int32) throws {
+        guard value.count <= Int(Int32.max) else {
+            throw TaptionPlanV3StoreError.integerOverflow
+        }
+        let result = value.withUnsafeBytes { bytes in
+            sqlite3_bind_text(
+                statement,
+                index,
+                bytes.baseAddress?.assumingMemoryBound(to: CChar.self),
+                Int32(value.count),
+                Self.sqliteTransient
+            )
+        }
+        guard result == SQLITE_OK else { throw lastError() }
     }
 
     private func bind(_ value: UInt64, to statement: OpaquePointer, at index: Int32) throws {
@@ -1315,9 +2268,7 @@ public actor TaptionPlanV3Store {
     }
 
     private func parseDayKey(_ value: String) -> TaptionPlanDayKey? {
-        let components = value.split(separator: "-").compactMap { Int($0) }
-        guard components.count == 3 else { return nil }
-        return TaptionPlanDayKey(year: components[0], month: components[1], day: components[2])
+        TaptionPlanDayKey(storageKey: value)
     }
 
     private static func appendCanonical(_ value: String, to hasher: inout SHA256) {

@@ -392,7 +392,21 @@ struct StationaryContextClassifier: Sendable {
                     >= stay.duration * 0.5
             }
             .max { lhs, rhs in
-                (lhs.attendeeCount ?? 0) < (rhs.attendeeCount ?? 0)
+                let leftAttendees = lhs.attendeeCount ?? 0
+                let rightAttendees = rhs.attendeeCount ?? 0
+                if leftAttendees != rightAttendees {
+                    return leftAttendees < rightAttendees
+                }
+                let leftOverlap = lhs.span.intersection(with: stay)?.duration ?? 0
+                let rightOverlap = rhs.span.intersection(with: stay)?.duration ?? 0
+                if leftOverlap != rightOverlap {
+                    return leftOverlap < rightOverlap
+                }
+                if lhs.calendarID != rhs.calendarID {
+                    return lhs.calendarID > rhs.calendarID
+                }
+                if lhs.id != rhs.id { return lhs.id > rhs.id }
+                return lhs.title > rhs.title
             }
     }
 
@@ -733,7 +747,10 @@ enum StationaryContextActualEngine {
     ) -> [PlaceStay] {
         guard stays.count > 1 else { return stays }
         let located = readings
-            .filter { $0.point != nil }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.point != nil
+            }
             .sorted { $0.timestamp < $1.timestamp }
         var result: [PlaceStay] = []
         for stay in stays {
@@ -900,7 +917,10 @@ enum RestaurantMealActualEngine {
         let observed = TimeSpan(start: inside.start, end: min(inside.end, asOf))
         guard observed.duration > 0 else { return [] }
         let ordered = readings
-            .filter { observed.contains($0.timestamp) }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && observed.contains($0.timestamp)
+            }
             .sorted { $0.timestamp < $1.timestamp }
         return restaurants
             .filter {

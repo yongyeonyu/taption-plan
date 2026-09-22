@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import TaptionPlanCore
 #if canImport(CoreML)
 import CoreML
@@ -86,6 +87,496 @@ enum TaptionWatchWorkoutKind: String, Codable, CaseIterable, Sendable {
         case .running: "figure.run"
         case .cycling: "bicycle"
         }
+    }
+}
+
+struct TaptionWatchWorkoutStartGate {
+    struct ResetToken: Hashable {
+        fileprivate let id: UUID
+        fileprivate let generation: UInt64
+    }
+
+    private(set) var generation: UInt64 = 0
+    private var activePurges: Set<UUID> = []
+    private var activeReset: UUID?
+    private var commerceLocked = false
+
+    var allowsAmbientRecording: Bool {
+        activePurges.isEmpty && activeReset == nil
+    }
+
+    var isPurging: Bool { !activePurges.isEmpty }
+
+    mutating func beginStart() -> UInt64? {
+        guard !commerceLocked, activePurges.isEmpty, activeReset == nil else {
+            return nil
+        }
+        return generation
+    }
+
+    func beginHealthSync() -> UInt64? {
+        guard activePurges.isEmpty else { return nil }
+        return generation
+    }
+
+    func accepts(_ generation: UInt64) -> Bool {
+        self.generation == generation
+            && !commerceLocked
+            && activePurges.isEmpty
+            && activeReset == nil
+    }
+
+    mutating func setCommerceLocked(_ locked: Bool) {
+        guard commerceLocked != locked else { return }
+        commerceLocked = locked
+        if activeReset == nil { generation &+= 1 }
+    }
+
+    mutating func beginReset() -> ResetToken? {
+        guard activePurges.isEmpty, activeReset == nil else { return nil }
+        generation &+= 1
+        let id = UUID()
+        activeReset = id
+        return ResetToken(id: id, generation: generation)
+    }
+
+    func accepts(_ token: ResetToken) -> Bool {
+        token.generation == generation
+            && activeReset == token.id
+            && activePurges.isEmpty
+    }
+
+    mutating func finishReset(_ token: ResetToken) -> Bool {
+        guard activeReset == token.id else { return false }
+        activeReset = nil
+        return activePurges.isEmpty && token.generation == generation
+    }
+
+    mutating func beginPurge() -> UUID {
+        generation &+= 1
+        let id = UUID()
+        activePurges.insert(id)
+        return id
+    }
+
+    mutating func endPurge(_ id: UUID) {
+        activePurges.remove(id)
+    }
+}
+
+enum TaptionWatchWorkoutFinishState: Equatable {
+    case idle
+    case finishing
+    case savedWithSample
+    case savedWithoutSample
+    case failedMayHavePersisted
+    case failed
+
+    var mayHavePersistedWorkout: Bool {
+        switch self {
+        case .finishing, .savedWithSample, .savedWithoutSample,
+             .failedMayHavePersisted:
+            true
+        case .idle, .failed:
+            false
+        }
+    }
+
+    static func successfulFinish(sampleAvailable: Bool) -> Self {
+        sampleAvailable ? .savedWithSample : .savedWithoutSample
+    }
+}
+
+enum TaptionWatchWorkoutPurgeIntentStore {
+    private static let key = "TaptionPlan.watchPendingWorkoutPurgeIDs.v1"
+
+    static func pendingIdentifiers(
+        defaults: UserDefaults = .standard
+    ) -> [UUID] {
+        var seen = Set<UUID>()
+        return (defaults.stringArray(forKey: key) ?? []).compactMap {
+            UUID(uuidString: $0)
+        }.filter { seen.insert($0).inserted }
+    }
+
+    static func enqueue(
+        _ identifier: UUID,
+        defaults: UserDefaults = .standard
+    ) {
+        var identifiers = pendingIdentifiers(defaults: defaults)
+        guard !identifiers.contains(identifier) else { return }
+        identifiers.append(identifier)
+        defaults.set(identifiers.map(\.uuidString), forKey: key)
+    }
+
+    static func remove(
+        _ identifier: UUID,
+        defaults: UserDefaults = .standard
+    ) {
+        let identifiers = pendingIdentifiers(defaults: defaults).filter {
+            $0 != identifier
+        }
+        if identifiers.isEmpty {
+            defaults.removeObject(forKey: key)
+        } else {
+            defaults.set(identifiers.map(\.uuidString), forKey: key)
+        }
+    }
+}
+
+@MainActor
+enum TaptionWatchWorkoutPurgeReconciliation {
+    enum Failure: Error {
+        case deletionUnconfirmed
+    }
+
+    static func run(
+        identifiers: [UUID],
+        deleteMatchingWorkout: @MainActor (UUID) async throws -> Int,
+        matchingWorkoutExists: @MainActor (UUID) async throws -> Bool,
+        confirmDeletion: @MainActor (UUID) -> Void
+    ) async throws {
+        for identifier in identifiers {
+            let deletedCount = try await deleteMatchingWorkout(identifier)
+            guard deletedCount >= 0 else {
+                throw Failure.deletionUnconfirmed
+            }
+            if deletedCount == 0 {
+                let stillExists = try await matchingWorkoutExists(identifier)
+                guard !stillExists else {
+                    throw Failure.deletionUnconfirmed
+                }
+            }
+            confirmDeletion(identifier)
+        }
+    }
+}
+
+@MainActor
+enum TaptionWatchPurgeSequence {
+    static func run(
+        deleteDatabase: @MainActor () async throws -> Void,
+        deleteManagerStores: @MainActor () async throws -> Void
+    ) async throws {
+        try await deleteDatabase()
+        try await deleteManagerStores()
+    }
+}
+
+enum TaptionWatchAmbientQueueAdoption {
+    static func removePersistedSummaries(
+        from pending: inout [TaptionWatchSensorSummary],
+        snapshot: Set<TaptionWatchSensorSummary>
+    ) {
+        pending.removeAll {
+            $0.isAmbient == true && snapshot.contains($0)
+        }
+    }
+
+    static func removePersistedChunks(
+        from pending: inout [TaptionWatchAccelerationChunk],
+        snapshot: Set<TaptionWatchAccelerationChunk>
+    ) {
+        pending.removeAll {
+            $0.isAmbient && snapshot.contains($0)
+        }
+    }
+}
+
+enum TaptionWatchAmbientOutboxRetryPolicy {
+    static func shouldRetry(
+        transferFailed: Bool,
+        hasDeliveryID: Bool,
+        sessionIsActivated: Bool,
+        isPurging: Bool
+    ) -> Bool {
+        transferFailed && hasDeliveryID && sessionIsActivated && !isPurging
+    }
+}
+
+enum TaptionWatchAmbientOutboxFlushPolicy {
+    static func shouldContinue(
+        startGeneration: UInt64,
+        currentGeneration: UInt64,
+        isPurging: Bool,
+        isCancelled: Bool
+    ) -> Bool {
+        !isPurging
+            && !isCancelled
+            && startGeneration == currentGeneration
+    }
+}
+
+enum TaptionWatchAmbientAcknowledgementRetryPolicy {
+    static let outboxReadRetryID = "outbox-read"
+    static let initialDelay: TimeInterval = 5
+    static let maximumDelay: TimeInterval = 5 * 60
+
+    static func pendingDeliveryIDs(
+        from items: [TaptionPlanV3OutboxItem]
+    ) -> [String] {
+        items.compactMap { item in
+            guard item.kind == TaptionWatchEnvelope.sensorSummaryKey
+                    || item.kind == TaptionWatchEnvelope.accelerationChunkKey
+            else { return nil }
+            return item.id
+        }
+    }
+
+    @MainActor
+    static func deleteOutboxItem(
+        id: String,
+        delete: @MainActor () async throws -> Void,
+        onFailure: @MainActor (String, any Error) -> Void
+    ) async -> Bool {
+        do {
+            try await delete()
+            return true
+        } catch {
+            onFailure(id, error)
+            return false
+        }
+    }
+
+    static func shouldRetry(
+        retryCount: Int,
+        hasDeliveryID: Bool,
+        sessionIsActivated: Bool,
+        isPurging: Bool
+    ) -> Bool {
+        retryCount >= 0
+            && hasDeliveryID
+            && sessionIsActivated
+            && !isPurging
+    }
+
+    static func delay(retryCount: Int) -> TimeInterval {
+        let exponent = min(max(retryCount, 0), 6)
+        return min(maximumDelay, initialDelay * pow(2, Double(exponent)))
+    }
+
+    static func nextRetryCount(after retryCount: Int) -> Int {
+        retryCount < Int.max ? max(0, retryCount) + 1 : Int.max
+    }
+
+    static func restoredAttempts(from data: Data?) -> [String: Int] {
+        guard let data,
+              let values = try? JSONDecoder().decode([String: Int].self, from: data)
+        else { return [:] }
+        return values.filter {
+            ($0.key.hasPrefix("summary:")
+                || $0.key.hasPrefix("chunk:")
+                || $0.key == outboxReadRetryID)
+                && $0.value >= 0
+        }
+    }
+
+    static func encodedAttempts(_ attempts: [String: Int]) -> Data? {
+        try? JSONEncoder().encode(attempts)
+    }
+}
+
+enum TaptionWatchAmbientOutboxReadFailurePolicy {
+    static func retryIDs(
+        requested: Set<String>?,
+        alreadyTracked: Set<String>
+    ) -> Set<String> {
+        var ids = alreadyTracked.union(requested ?? [])
+        if ids.isEmpty {
+            ids.insert(
+                TaptionWatchAmbientAcknowledgementRetryPolicy.outboxReadRetryID
+            )
+        }
+        return ids
+    }
+}
+
+enum TaptionWatchAmbientSampleDeduplicationPolicy {
+    static func shouldProcess(
+        _ id: UUID,
+        committed: Set<UUID>,
+        seen: inout Set<UUID>
+    ) -> Bool {
+        guard !committed.contains(id) else { return false }
+        return seen.insert(id).inserted
+    }
+
+    static func retainingSampleDates(
+        _ sampleDates: [String: Date],
+        from cutoff: Date
+    ) -> [String: Date] {
+        sampleDates.filter { $0.value >= cutoff }
+    }
+
+    static func uniqueSamples(
+        _ samples: [TaptionWatchAccelerationSample]
+    ) -> [TaptionWatchAccelerationSample] {
+        var seen = Set<UUID>()
+        var unique: [TaptionWatchAccelerationSample] = []
+        for sample in samples {
+            let stableID = sample.isAmbient
+                ? TaptionWatchStableID.ambientAccelerationSample(
+                    capturedAt: sample.capturedAt
+                ) ?? sample.id
+                : sample.id
+            guard seen.insert(stableID).inserted else { continue }
+            var sample = sample
+            if sample.isAmbient { sample.id = stableID }
+            unique.append(sample)
+        }
+        return unique
+    }
+}
+
+enum TaptionWatchDurableSpoolPolicy {
+    static func enqueue(
+        _ summary: TaptionWatchSensorSummary,
+        into pending: inout [TaptionWatchSensorSummary]
+    ) {
+        if let index = pending.firstIndex(where: {
+            $0.rawEventID == summary.rawEventID
+        }) {
+            pending[index] = summary
+        } else {
+            pending.append(summary)
+        }
+        pending.sort {
+            if $0.startedAt == $1.startedAt {
+                return $0.sequence < $1.sequence
+            }
+            return $0.startedAt < $1.startedAt
+        }
+    }
+
+    static func enqueue(
+        _ chunk: TaptionWatchAccelerationChunk,
+        into pending: inout [TaptionWatchAccelerationChunk]
+    ) {
+        if let index = pending.firstIndex(where: { $0.id == chunk.id }) {
+            pending[index] = chunk
+        } else {
+            pending.append(chunk)
+        }
+        pending.sort { $0.endedAt < $1.endedAt }
+    }
+
+    static func enqueue(
+        _ snapshot: TaptionWatchHealthSnapshot,
+        into pending: inout [TaptionWatchHealthSnapshot]
+    ) {
+        if let index = pending.firstIndex(where: {
+            $0.capturedAt == snapshot.capturedAt
+        }) {
+            pending[index] = snapshot
+        } else {
+            pending.append(snapshot)
+        }
+        pending.sort { $0.capturedAt < $1.capturedAt }
+        if pending.count > 20 {
+            pending.removeFirst(pending.count - 20)
+        }
+    }
+
+    static func removingCommitted(
+        _ committed: [TaptionWatchSensorSummary],
+        from pending: [TaptionWatchSensorSummary]
+    ) -> [TaptionWatchSensorSummary] {
+        pending.filter { value in
+            !committed.contains {
+                $0.rawEventID == value.rawEventID && $0 == value
+            }
+        }
+    }
+
+    static func commitForTransfer(
+        _ committed: [TaptionWatchSensorSummary],
+        from pending: inout [TaptionWatchSensorSummary],
+        isCancelled: Bool,
+        isPurging: Bool
+    ) -> Bool {
+        guard !isCancelled, !isPurging else { return false }
+        pending = removingCommitted(committed, from: pending)
+        return true
+    }
+
+    static func removingCommitted(
+        _ committed: [TaptionWatchAccelerationChunk],
+        from pending: [TaptionWatchAccelerationChunk]
+    ) -> [TaptionWatchAccelerationChunk] {
+        pending.filter { value in
+            !committed.contains { $0.id == value.id && $0 == value }
+        }
+    }
+
+    static func commitForTransfer(
+        _ committed: [TaptionWatchAccelerationChunk],
+        from pending: inout [TaptionWatchAccelerationChunk],
+        isCancelled: Bool,
+        isPurging: Bool
+    ) -> Bool {
+        guard !isCancelled, !isPurging else { return false }
+        pending = removingCommitted(committed, from: pending)
+        return true
+    }
+
+    static func removingCommitted(
+        _ committed: [TaptionWatchHealthSnapshot],
+        from pending: [TaptionWatchHealthSnapshot]
+    ) -> [TaptionWatchHealthSnapshot] {
+        pending.filter { value in
+            !committed.contains {
+                $0.capturedAt == value.capturedAt && $0 == value
+            }
+        }
+    }
+
+    static func commitForTransfer(
+        _ committed: [TaptionWatchHealthSnapshot],
+        from pending: inout [TaptionWatchHealthSnapshot],
+        isCancelled: Bool,
+        isPurging: Bool
+    ) -> Bool {
+        guard !isCancelled, !isPurging else { return false }
+        pending = removingCommitted(committed, from: pending)
+        return true
+    }
+}
+
+enum TaptionWatchDurableSpoolCodec {
+    static func encode<Value: Encodable>(_ values: [Value]) -> Data? {
+        try? JSONEncoder().encode(values)
+    }
+
+    static func decode<Value: Decodable>(
+        _ type: [Value].Type,
+        from data: Data?
+    ) -> [Value]? {
+        guard let data else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+}
+
+@MainActor
+final class TaptionWatchWorkoutLifecycleBarrier {
+    private var activeOperations = 0
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func beginOperation() {
+        activeOperations += 1
+    }
+
+    func finishOperation() {
+        precondition(activeOperations > 0)
+        activeOperations -= 1
+        guard activeOperations == 0 else { return }
+        let readyWaiters = waiters
+        waiters.removeAll(keepingCapacity: false)
+        readyWaiters.forEach { $0.resume() }
+    }
+
+    func waitUntilIdle() async {
+        guard activeOperations > 0 else { return }
+        await withCheckedContinuation { waiters.append($0) }
     }
 }
 
@@ -443,6 +934,310 @@ struct TaptionWatchAccelerationSample: Codable, Hashable, Sendable {
     }
 }
 
+struct TaptionWatchAccelerationArchiveAppendIndex: Sendable {
+    private var highestSequenceBySession: [UUID: Int] = [:]
+    private var trackedAmbientSessions = Set<UUID>()
+    private var ambientSequencesBySession: [UUID: Set<Int>] = [:]
+    private var ambientSampleKeys = Set<Int64>()
+    private var ambientSampleKeysBySession: [UUID: Set<Int64>] = [:]
+    private var unscopedAmbientSampleKeys = Set<Int64>()
+    private var unscopedSampleIDs = Set<UUID>()
+
+    mutating func trackAmbientSessions(_ sessionIDs: Set<UUID>) {
+        guard !sessionIDs.isEmpty else { return }
+        for sessionID in trackedAmbientSessions where !sessionIDs.contains(sessionID) {
+            ambientSequencesBySession[sessionID] = nil
+        }
+        trackedAmbientSessions = sessionIDs
+    }
+
+    mutating func insert(_ sample: TaptionWatchAccelerationSample) -> Bool {
+        if sample.isAmbient,
+           let stableKey = TaptionWatchStableID.ambientAccelerationTimestampKey(
+               capturedAt: sample.capturedAt
+            ) {
+            if let sessionID = sample.sessionID {
+                let isNewForSession = ambientSampleKeysBySession[sessionID, default: []]
+                    .insert(stableKey).inserted
+                let isNewAcrossSessions = ambientSampleKeys.insert(stableKey).inserted
+                return isNewForSession
+                    && (isNewAcrossSessions || !trackedAmbientSessions.contains(sessionID))
+            }
+            return unscopedAmbientSampleKeys.insert(stableKey).inserted
+        }
+        guard let sessionID = sample.sessionID else {
+            return unscopedSampleIDs.insert(sample.id).inserted
+        }
+        if sample.isAmbient {
+            guard trackedAmbientSessions.contains(sessionID) else { return true }
+            return ambientSequencesBySession[sessionID, default: []]
+                .insert(sample.sequence).inserted
+        }
+        if let highest = highestSequenceBySession[sessionID],
+           sample.sequence <= highest {
+            return false
+        }
+        highestSequenceBySession[sessionID] = sample.sequence
+        return true
+    }
+}
+
+enum TaptionWatchStableID {
+    static func ambientSummarySequence(
+        capturedAt: Date,
+        anchor: Date,
+        windowDuration: TimeInterval = 10 * 60
+    ) -> Int? {
+        let elapsed = capturedAt.timeIntervalSince(anchor)
+        guard elapsed >= 0, windowDuration.isFinite, windowDuration > 0 else {
+            return nil
+        }
+        let index = floor(elapsed / windowDuration)
+        guard index < Double(Int.max - 1) else { return nil }
+        return Int(index) + 1
+    }
+
+    static func ambientSummaryWindowStart(
+        sequence: Int,
+        anchor: Date,
+        windowDuration: TimeInterval = 10 * 60
+    ) -> Date? {
+        guard sequence > 0, windowDuration.isFinite, windowDuration > 0 else {
+            return nil
+        }
+        let offset = Double(sequence - 1) * windowDuration
+        guard offset.isFinite else { return nil }
+        return anchor.addingTimeInterval(offset)
+    }
+
+    static func ambientSummarySegmentSequence(
+        startedAt: Date,
+        anchor: Date
+    ) -> Int? {
+        ambientAccelerationSequence(capturedAt: startedAt, anchor: anchor)
+    }
+
+    static func ambientAccelerationSequence(
+        capturedAt: Date,
+        anchor: Date
+    ) -> Int? {
+        let elapsed = capturedAt.timeIntervalSince(anchor)
+        guard elapsed >= 0,
+              elapsed < Double(Int.max - 1) / 1_000_000 else {
+            return nil
+        }
+        return Int((elapsed * 1_000_000).rounded(.down)) + 1
+    }
+
+    static func ambientAccelerationSample(sessionID: UUID, sequence: Int) -> UUID {
+        var input = Data()
+        withUnsafeBytes(of: sessionID.uuid) { input.append(contentsOf: $0) }
+        var value = UInt64(bitPattern: Int64(sequence)).bigEndian
+        withUnsafeBytes(of: &value) { input.append(contentsOf: $0) }
+        var bytes = Array(SHA256.hash(data: input).prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
+    static func ambientAccelerationTimestampKey(capturedAt: Date) -> Int64? {
+        let micros = capturedAt.timeIntervalSince1970 * 1_000_000
+        guard micros.isFinite,
+              micros >= Double(Int64.min),
+              micros < Double(Int64.max) else { return nil }
+        return Int64(micros.rounded(.down))
+    }
+
+    static func ambientAccelerationSample(capturedAt: Date) -> UUID? {
+        guard let timestamp = ambientAccelerationTimestampKey(
+            capturedAt: capturedAt
+        ) else { return nil }
+        var value = timestamp.bigEndian
+        var input = Data("ambient-sample-timestamp-v1".utf8)
+        withUnsafeBytes(of: &value) { input.append(contentsOf: $0) }
+        let bytes = Array(SHA256.hash(data: input).prefix(16))
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
+    static func ambientAccelerationChunkID(
+        sessionID: UUID,
+        sequence: Int,
+        revision: Int
+    ) -> UUID {
+        if revision == 0, sequence >= 0, sequence <= Int(UInt32.max) {
+            var bytes = withUnsafeBytes(of: sessionID) { Array($0) }
+            let value = UInt32(truncatingIfNeeded: sequence)
+            bytes[12] = UInt8((value >> 24) & 0xff)
+            bytes[13] = UInt8((value >> 16) & 0xff)
+            bytes[14] = UInt8((value >> 8) & 0xff)
+            bytes[15] = UInt8(value & 0xff)
+            return UUID(uuid: (
+                bytes[0], bytes[1], bytes[2], bytes[3],
+                bytes[4], bytes[5], bytes[6], bytes[7],
+                bytes[8], bytes[9], bytes[10], bytes[11],
+                bytes[12], bytes[13], bytes[14], bytes[15]
+            ))
+        }
+        var input = Data(
+            (revision > 0
+                ? "ambient-chunk-revision-v1"
+                : "ambient-chunk-sequence-v2").utf8
+        )
+        withUnsafeBytes(of: sessionID.uuid) { input.append(contentsOf: $0) }
+        var sequenceValue = Int64(sequence).bigEndian
+        var revisionValue = Int64(revision).bigEndian
+        withUnsafeBytes(of: &sequenceValue) { input.append(contentsOf: $0) }
+        withUnsafeBytes(of: &revisionValue) { input.append(contentsOf: $0) }
+        let bytes = Array(SHA256.hash(data: input).prefix(16))
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+}
+
+enum TaptionWatchAmbientRevisionError: Error {
+    case exhausted
+}
+
+enum TaptionWatchAmbientRevisionPolicy {
+    static func nextSummaryRevision(
+        for summary: TaptionWatchSensorSummary,
+        existing: [TaptionWatchSensorSummary]
+    ) throws -> TaptionWatchSensorSummary? {
+        guard summary.isAmbient == true else { return summary }
+        var candidate = summary
+        candidate.ambientWindowStart =
+            candidate.ambientWindowStart ?? candidate.startedAt
+        let matches = existing.filter {
+            $0.sessionID == candidate.sessionID
+                && $0.sequence == candidate.sequence
+        }
+        if matches.contains(where: {
+            withoutRevision($0) == withoutRevision(candidate)
+        }) {
+            return nil
+        }
+        if existing.contains(where: {
+            $0.isAmbient == true
+                && $0.sessionID != candidate.sessionID
+                && sameAmbientContent($0, candidate)
+        }) {
+            return nil
+        }
+        let latest = matches.compactMap(\.ambientRevision).max() ?? 0
+        guard latest < Int.max else {
+            throw TaptionWatchAmbientRevisionError.exhausted
+        }
+        candidate.ambientRevision = matches.isEmpty ? 0 : latest + 1
+        return candidate
+    }
+
+    static func nextChunkRevision(
+        for chunk: TaptionWatchAccelerationChunk,
+        existing: [TaptionWatchAccelerationChunk],
+        windowStart: Date? = nil
+    ) throws -> TaptionWatchAccelerationChunk? {
+        guard chunk.isAmbient, let sessionID = chunk.sessionID else {
+            return chunk
+        }
+        var candidate = chunk
+        candidate.ambientWindowStart = candidate.ambientWindowStart
+            ?? windowStart
+            ?? candidate.startedAt
+        let previousSampleIDs = Set(
+            existing
+                .filter { $0.isAmbient && $0.sessionID != sessionID }
+                .flatMap(\.samples)
+                .map {
+                    TaptionWatchStableID.ambientAccelerationSample(
+                        capturedAt: $0.capturedAt
+                    ) ?? $0.id
+                }
+        )
+        if !previousSampleIDs.isEmpty {
+            candidate.samples.removeAll { sample in
+                let stableID = TaptionWatchStableID.ambientAccelerationSample(
+                    capturedAt: sample.capturedAt
+                ) ?? sample.id
+                return previousSampleIDs.contains(stableID)
+            }
+            guard let first = candidate.samples.first,
+                  let last = candidate.samples.last else { return nil }
+            candidate.startedAt = first.capturedAt
+            candidate.endedAt = last.capturedAt
+        }
+        let matches = existing.filter {
+            $0.isAmbient
+                && $0.sessionID == sessionID
+                && $0.sequence == candidate.sequence
+        }
+        let baseID = TaptionWatchStableID.ambientAccelerationChunkID(
+            sessionID: sessionID,
+            sequence: candidate.sequence,
+            revision: 0
+        )
+        var normalized = candidate
+        normalized.id = baseID
+        normalized.ambientRevision = nil
+        if matches.contains(where: { value in
+            var value = value
+            value.id = baseID
+            value.ambientRevision = nil
+            return value == normalized
+        }) {
+            return nil
+        }
+        let latest = matches.compactMap(\.ambientRevision).max() ?? 0
+        guard latest < Int.max else {
+            throw TaptionWatchAmbientRevisionError.exhausted
+        }
+        let revision = matches.isEmpty ? 0 : latest + 1
+        candidate.ambientRevision = revision
+        candidate.id = TaptionWatchStableID.ambientAccelerationChunkID(
+            sessionID: sessionID,
+            sequence: candidate.sequence,
+            revision: revision
+        )
+        return candidate
+    }
+
+    private static func withoutRevision(
+        _ summary: TaptionWatchSensorSummary
+    ) -> TaptionWatchSensorSummary {
+        var value = summary
+        value.ambientRevision = nil
+        return value
+    }
+
+    private static func sameAmbientContent(
+        _ lhs: TaptionWatchSensorSummary,
+        _ rhs: TaptionWatchSensorSummary
+    ) -> Bool {
+        var lhs = lhs
+        var rhs = rhs
+        rhs.sessionID = lhs.sessionID
+        rhs.sequence = lhs.sequence
+        lhs.ambientWindowStart = nil
+        rhs.ambientWindowStart = nil
+        lhs.ambientRevision = nil
+        rhs.ambientRevision = nil
+        return lhs == rhs
+    }
+}
+
 /// 하나의 Watch 요약 구간에 대응하는 재전송 가능한 raw 청크.
 struct TaptionWatchAccelerationChunk: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
@@ -454,6 +1249,8 @@ struct TaptionWatchAccelerationChunk: Identifiable, Codable, Hashable, Sendable 
     var isAmbient: Bool
     var schemaVersion: Int
     var samples: [TaptionWatchAccelerationSample]
+    var ambientWindowStart: Date? = nil
+    var ambientRevision: Int? = nil
 
     init(
         id: UUID = UUID(),
@@ -464,7 +1261,9 @@ struct TaptionWatchAccelerationChunk: Identifiable, Codable, Hashable, Sendable 
         isAmbient: Bool = false,
         schemaVersion: Int = 1,
         samples: [TaptionWatchAccelerationSample],
-        isFinal: Bool = false
+        isFinal: Bool = false,
+        ambientWindowStart: Date? = nil,
+        ambientRevision: Int? = nil
     ) {
         self.id = id
         self.sessionID = sessionID
@@ -480,6 +1279,8 @@ struct TaptionWatchAccelerationChunk: Identifiable, Codable, Hashable, Sendable 
             }
             return lhs.sequence < rhs.sequence
         }
+        self.ambientWindowStart = ambientWindowStart
+        self.ambientRevision = ambientRevision
     }
 }
 
@@ -2098,6 +2899,46 @@ struct TaptionWatchSleepSegment: Codable, Hashable, Sendable {
     var isUserEntered: Bool
 }
 
+enum TaptionWatchSleepDuration {
+    private static let asleepStages: Set<String> = [
+        "core",
+        "deep",
+        "rem",
+        "asleepUnspecified",
+    ]
+
+    static func minutes(for segments: [TaptionWatchSleepSegment]) -> Double? {
+        let asleep = segments
+            .filter {
+                asleepStages.contains($0.stage)
+                    && $0.endDate > $0.startDate
+            }
+            .sorted {
+                if $0.startDate != $1.startDate {
+                    return $0.startDate < $1.startDate
+                }
+                return $0.endDate < $1.endDate
+            }
+        guard let first = asleep.first else { return nil }
+
+        var start = first.startDate
+        var end = first.endDate
+        var seconds: TimeInterval = 0
+        for segment in asleep.dropFirst() {
+            if segment.startDate <= end {
+                end = max(end, segment.endDate)
+            } else {
+                seconds += end.timeIntervalSince(start)
+                start = segment.startDate
+                end = segment.endDate
+            }
+        }
+        seconds += end.timeIntervalSince(start)
+        let minutes = seconds / 60
+        return minutes > 0 ? minutes : nil
+    }
+}
+
 struct TaptionWatchSensorVector3: Codable, Hashable, Sendable {
     var x: Double
     var y: Double
@@ -2118,6 +2959,10 @@ struct TaptionWatchLocationPoint: Codable, Hashable, Sendable {
     var verticalAccuracy: Double
     var speedMetersPerSecond: Double?
     var courseDegrees: Double?
+
+    func belongs(toWorkoutStartingAt startDate: Date) -> Bool {
+        capturedAt >= startDate
+    }
 }
 
 /// A cumulative, battery-conscious summary of the sensors collected during an
@@ -2172,9 +3017,19 @@ struct TaptionWatchSensorSummary: Identifiable, Codable, Hashable, Sendable {
     /// Low-power accelerometer capture outside an explicit workout session.
     /// Optional so summaries queued by older Watch builds remain readable.
     var isAmbient: Bool? = nil
+    /// Stable 10-minute source window and its append-only summary revision.
+    /// Nil remains valid for summaries created by older Watch builds.
+    var ambientWindowStart: Date? = nil
+    var ambientRevision: Int? = nil
     /// 직접적인 물방울 센서가 아니라 Watch의 Water Lock 상태다.
     /// 지원되는 수중 센서가 없는 기기에서도 샤워 후보의 보조 근거가 된다.
     var waterLockEnabled: Bool? = nil
+
+    var rawEventID: String {
+        let base = "\(sessionID.uuidString):\(sequence)"
+        guard let ambientRevision, ambientRevision > 0 else { return base }
+        return "\(base):r\(ambientRevision)"
+    }
 }
 
 private let taptionWatchMaximumClockSkew: TimeInterval = 5 * 60
@@ -2309,18 +3164,10 @@ extension TaptionWatchHealthSnapshot {
             return segment.endDate > segment.startDate ? segment : nil
         }
         if sleepSegments != nil {
+            value.sleepMinutes = TaptionWatchSleepDuration.minutes(for: retained)
             value.sleepSegments = Array(
                 retained.suffix(TaptionWatchPayloadLimits.maximumSleepSegments)
             )
-            let sleepMinutes = retained
-                .filter {
-                    ["core", "deep", "rem", "asleepUnspecified"]
-                        .contains($0.stage)
-                }
-                .reduce(0) {
-                    $0 + $1.endDate.timeIntervalSince($1.startDate)
-                } / 60
-            value.sleepMinutes = sleepMinutes > 0 ? sleepMinutes : nil
         } else if cutoff != nil {
             value.sleepMinutes = nil
         }
@@ -2335,11 +3182,55 @@ extension TaptionWatchHealthSnapshot {
     }
 }
 
+enum TaptionWatchDataSyncRequestAdmission: Sendable, Equatable {
+    case accepted(String)
+    case busy(activeRequestID: String, rejectedRequestID: String)
+    case duplicate(String)
+}
+
+struct TaptionWatchDataSyncRequestGate: Sendable {
+    private(set) var activeRequestID: String?
+    private var handledRequestIDs = Set<String>()
+
+    mutating func begin(
+        requestID: String?
+    ) -> TaptionWatchDataSyncRequestAdmission {
+        let resolvedID = requestID ?? UUID().uuidString
+        if let activeRequestID {
+            return .busy(
+                activeRequestID: activeRequestID,
+                rejectedRequestID: resolvedID
+            )
+        }
+        if handledRequestIDs.count >= 100 {
+            handledRequestIDs.removeAll(keepingCapacity: true)
+        }
+        guard handledRequestIDs.insert(resolvedID).inserted else {
+            return .duplicate(resolvedID)
+        }
+        activeRequestID = resolvedID
+        return .accepted(resolvedID)
+    }
+
+    mutating func finish(_ requestID: String) -> Bool {
+        guard activeRequestID == requestID else { return false }
+        activeRequestID = nil
+        return true
+    }
+
+    mutating func reset() {
+        activeRequestID = nil
+        handledRequestIDs.removeAll(keepingCapacity: false)
+    }
+}
+
 enum TaptionWatchEnvelope {
     static let payloadKey = "taption.watch.payload"
     static let commandKey = "taption.watch.command"
     static let sensorSummaryKey = "taption.watch.sensor-summary"
     static let accelerationChunkKey = "taption.watch.acceleration-chunk"
+    static let ambientDeliveryIDKey = "taption.watch.ambient-delivery-id"
+    static let ambientAcknowledgementKey = "taption.watch.ambient-acknowledgement"
     static let healthSnapshotKey = "taption.watch.health-snapshot"
     static let workoutRequestKey = "taption.watch.workout-request"
     static let activityConfirmationKey = "taption.watch.activity-confirmation"
@@ -2609,4 +3500,5 @@ enum TaptionWatchHealthMetadata {
     static let planTitle = "com.taption.plan.planTitle"
     static let categoryID = "com.taption.plan.categoryID"
     static let sensorSessionID = "com.taption.plan.sensorSessionID"
+    static let workoutPurgeIdentifier = "com.taption.plan.workoutPurgeIdentifier"
 }

@@ -316,6 +316,38 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(saved.plans, replacement.plans)
     }
 
+    func testFailedPrimaryMigrationCanRetryOnNextLoad() async throws {
+        var existing = TaptionDataSnapshot.empty
+        existing.updatedAt = Date(timeIntervalSince1970: 1_725_000_000)
+        existing.plans = [
+            PlanRecord(
+                title: "재시도할 기존 기록",
+                span: TimeSpan(
+                    start: existing.updatedAt,
+                    end: existing.updatedAt.addingTimeInterval(60)
+                ),
+                categoryID: "activity"
+            ),
+        ]
+        let primary = FailOncePlanRepository()
+        let repository = MigratingPlanRepository(
+            primary: primary,
+            legacy: InMemoryPlanRepository(snapshot: existing)
+        )
+
+        let first = try await repository.load()
+        XCTAssertEqual(first.plans, existing.plans)
+        await primary.waitUntilSaveAttempted()
+
+        let second = try await repository.load()
+        XCTAssertEqual(second.plans, existing.plans)
+        for _ in 0..<100 {
+            if (try await primary.load()).plans == existing.plans { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("primary migration did not retry after its first save failure")
+    }
+
     func testRoundTripReopenAndCanonicalPayload() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -347,7 +379,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(second.actuals, first.actuals)
         XCTAssertEqual(second.updatedAt, first.updatedAt)
 
-        let store = try TaptionPlanDayStore(url: url)
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
         let rows = try await store.snapshots(
             day: .init(year: 0, month: 0, day: 0)
         )
@@ -369,7 +401,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         try await repository.save(.empty)
         try await repository.save(.empty)
 
-        let store = try TaptionPlanDayStore(url: url)
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
         let snapshot = try await store.snapshot(
             domain: "plan.metadata",
             day: .init(year: 0, month: 0, day: 0)
@@ -390,7 +422,7 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         ]
         let repository = try SQLitePlanRepository(databaseURL: url)
         try await repository.save(value)
-        let store = try TaptionPlanDayStore(url: url)
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
         let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
         let firstPlan = try await store.snapshot(domain: "plan.plans", day: day)
         let firstPlanRevision = try XCTUnwrap(firstPlan?.revision)
@@ -519,6 +551,8 @@ final class SQLitePlanRepositoryTests: XCTestCase {
     }
 
     func testRepositoryRejectsSaveWhileGlobalDeletionFenceIsActive() async throws {
+        let deletionFence = DataDeletionFenceTestFixture()
+        defer { deletionFence.restore() }
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
         let repository = try SQLitePlanRepository(databaseURL: url)
@@ -554,12 +588,81 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         async let secondSave: Void = second.save(.empty)
         _ = try await (firstSave, secondSave)
 
-        let store = try TaptionPlanDayStore(url: url)
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
         let metadata = try await store.snapshot(
             domain: "plan.metadata",
             day: .init(year: 0, month: 0, day: 0)
         )
         XCTAssertEqual(metadata?.revision, 2)
+    }
+
+    func testRepositoryResolverKeepsAppGroupSQLiteWithoutLegacyStores() async throws {
+        var expected = TaptionDataSnapshot.empty
+        expected.updatedAt = Date(timeIntervalSince1970: 1_800_000_000)
+        expected.categories = CategoryCatalog.builtIn
+        let selection = PlanRepositoryResolver.resolve(
+            appGroupSQLite: InMemoryPlanRepository(snapshot: expected),
+            appGroupFile: nil,
+            applicationSupportSQLite: nil,
+            applicationSupportFile: nil
+        )
+
+        let loaded = try await selection.repository.load()
+        XCTAssertEqual(selection.source, "sqlite-app-group")
+        XCTAssertEqual(loaded, expected)
+    }
+
+    func testRepositoryResolverUsesDurableFileWhenSQLiteIsUnavailable() async throws {
+        var expected = TaptionDataSnapshot.empty
+        expected.updatedAt = Date(timeIntervalSince1970: 1_800_000_001)
+        let selection = PlanRepositoryResolver.resolve(
+            appGroupSQLite: nil,
+            appGroupFile: InMemoryPlanRepository(snapshot: expected),
+            applicationSupportSQLite: nil,
+            applicationSupportFile: nil
+        )
+
+        let loaded = try await selection.repository.load()
+        XCTAssertEqual(selection.source, "file-app-group")
+        XCTAssertEqual(loaded, expected)
+    }
+
+    func testRepositoryResolverFailsClosedWhenEveryDurableStoreIsUnavailable() async {
+        let selection = PlanRepositoryResolver.resolve(
+            appGroupSQLite: nil,
+            appGroupFile: nil,
+            applicationSupportSQLite: nil,
+            applicationSupportFile: nil
+        )
+
+        XCTAssertEqual(selection.source, "unavailable")
+        do {
+            _ = try await selection.repository.load()
+            XCTFail("unavailable repository unexpectedly loaded")
+        } catch {
+            XCTAssertEqual(
+                error as? PlanRepositoryAvailabilityError,
+                .unavailable
+            )
+        }
+        do {
+            try await selection.repository.save(.empty)
+            XCTFail("unavailable repository unexpectedly saved")
+        } catch {
+            XCTAssertEqual(
+                error as? PlanRepositoryAvailabilityError,
+                .unavailable
+            )
+        }
+        do {
+            try await selection.repository.deleteAll()
+            XCTFail("unavailable repository unexpectedly deleted")
+        } catch {
+            XCTAssertEqual(
+                error as? PlanRepositoryAvailabilityError,
+                .unavailable
+            )
+        }
     }
 
     private func temporaryURL() -> URL {
@@ -606,5 +709,35 @@ private actor BlockingPlanRepository: PlanDataRepository {
     func releaseSave() {
         pendingSave?.resume()
         pendingSave = nil
+    }
+}
+
+private actor FailOncePlanRepository: PlanDataRepository {
+    private var value = TaptionDataSnapshot.empty
+    private var shouldFailNextSave = true
+    private var saveAttempts = 0
+
+    func load() async throws -> TaptionDataSnapshot {
+        value
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        saveAttempts += 1
+        if shouldFailNextSave {
+            shouldFailNextSave = false
+            throw RepositoryError.cloudPayloadMissing
+        }
+        value = snapshot
+    }
+
+    func deleteAll() async throws {
+        value = .empty
+    }
+
+    func waitUntilSaveAttempted() async {
+        for _ in 0..<100 {
+            if saveAttempts > 0 { return }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
     }
 }

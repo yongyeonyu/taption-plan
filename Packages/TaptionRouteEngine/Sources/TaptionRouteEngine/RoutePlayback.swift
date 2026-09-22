@@ -88,9 +88,20 @@ public struct RoutePlaybackProjection: Hashable, Sendable {
         guard let first = coordinates.first else { return nil }
         guard coordinates.count > 1, totalDistanceMeters > 0 else { return first }
         let target = min(totalDistanceMeters, max(0, distance))
-        guard let upper = cumulativeDistances.firstIndex(where: { $0 >= target }) else {
+        var lowerBound = 0
+        var upperBound = cumulativeDistances.count
+        while lowerBound < upperBound {
+            let midpoint = lowerBound + (upperBound - lowerBound) / 2
+            if cumulativeDistances[midpoint] < target {
+                lowerBound = midpoint + 1
+            } else {
+                upperBound = midpoint
+            }
+        }
+        guard lowerBound < cumulativeDistances.count else {
             return coordinates.last
         }
+        let upper = lowerBound
         guard upper > 0 else { return coordinates[0] }
         let lower = upper - 1
         let span = cumulativeDistances[upper] - cumulativeDistances[lower]
@@ -101,7 +112,11 @@ public struct RoutePlaybackProjection: Hashable, Sendable {
         let end = coordinates[upper]
         return RouteCoordinate(
             latitude: start.latitude + (end.latitude - start.latitude) * fraction,
-            longitude: start.longitude + (end.longitude - start.longitude) * fraction
+            longitude: RouteLongitude.interpolate(
+                from: start.longitude,
+                to: end.longitude,
+                fraction: fraction
+            )
         )
     }
 
@@ -110,7 +125,10 @@ public struct RoutePlaybackProjection: Hashable, Sendable {
         to end: RouteCoordinate
     ) -> RoutePlaybackDirection {
         let latitude = (start.latitude + end.latitude) * .pi / 360
-        let dx = (end.longitude - start.longitude) * cos(latitude)
+        let dx = RouteLongitude.shortestDelta(
+            from: start.longitude,
+            to: end.longitude
+        ) * cos(latitude)
         let dy = end.latitude - start.latitude
         guard dx != 0 || dy != 0 else { return .north }
         let bearing = atan2(dx, dy) * 180 / .pi
@@ -124,7 +142,10 @@ public struct RoutePlaybackProjection: Hashable, Sendable {
     ) -> Double {
         let latitude = (lhs.latitude + rhs.latitude) * .pi / 360
         let metersPerDegree = 111_320.0
-        let dx = (rhs.longitude - lhs.longitude) * metersPerDegree * cos(latitude)
+        let dx = RouteLongitude.shortestDelta(
+            from: lhs.longitude,
+            to: rhs.longitude
+        ) * metersPerDegree * cos(latitude)
         let dy = (rhs.latitude - lhs.latitude) * metersPerDegree
         return (dx * dx + dy * dy).squareRoot()
     }

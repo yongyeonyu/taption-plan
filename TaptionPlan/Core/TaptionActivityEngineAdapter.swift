@@ -183,36 +183,102 @@ enum TaptionActivityEngineAdapter {
         inside span: TimeSpan,
         createdAt: Date = .now
     ) -> [ActualRecord] {
-        let result = classify(
-            readings: readings,
-            travel: travel,
+        do {
+            return try classifiedActivityActuals(
+                readings: readings,
+                travel: travel,
+                corrections: corrections,
+                actuals: actuals,
+                inside: span,
+                createdAt: createdAt,
+                cancellationCheck: {}
+            )
+        } catch {
+            preconditionFailure("Unexpected activity classification cancellation: \(error)")
+        }
+    }
+
+    static func classifiedActivityActuals(
+        readings: [SensorReading],
+        travel: [TravelSegment],
+        corrections: [UUID: ActivityCorrection],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        createdAt: Date = .now,
+        cancellationCheck: @escaping @Sendable () throws -> Void
+    ) throws -> [ActualRecord] {
+        var dayReadings: [SensorReading] = []
+        dayReadings.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if RouteTimelineTimestamp.isValid(reading.timestamp)
+                && reading.timestamp >= span.start
+                && reading.timestamp < span.end {
+                dayReadings.append(reading)
+            }
+        }
+
+        var dayTravel: [TravelSegment] = []
+        dayTravel.reserveCapacity(travel.count)
+        for (index, segment) in travel.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if segment.span.intersection(with: span) != nil {
+                dayTravel.append(segment)
+            }
+        }
+
+        var dayActuals: [ActualRecord] = []
+        dayActuals.reserveCapacity(actuals.count)
+        for (index, actual) in actuals.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if actual.span(asOf: span.end).intersection(with: span) != nil {
+                dayActuals.append(actual)
+            }
+        }
+
+        let result = try classify(
+            readings: dayReadings,
+            travel: dayTravel,
             corrections: corrections,
-            actuals: actuals
+            actuals: dayActuals,
+            cancellationCheck: cancellationCheck
         )
         let activitySpan = ActivityTimeSpan(start: span.start, end: span.end)
-        return result.segments.compactMap { segment in
+        var projected: [ActualRecord] = []
+        projected.reserveCapacity(result.segments.count)
+        for (index, segment) in result.segments.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             guard !segment.isUserConfirmed,
                   segment.span.duration >= 5 * 60,
                   let clipped = segment.span.intersection(activitySpan),
                   clipped.duration >= 5 * 60 else {
-                return nil
+                continue
             }
             let clippedTimeSpan = TimeSpan(start: clipped.start, end: clipped.end)
-            if segment.majorCategoryID == "movement",
-               travel.contains(where: {
-                   $0.span.intersection(with: clippedTimeSpan)?.duration ?? 0
-                       >= min(5 * 60, clippedTimeSpan.duration * 0.5)
-               }) {
-                return nil
+            if segment.majorCategoryID == "movement" {
+                var overlapsTravel = false
+                for (travelIndex, travelSegment) in dayTravel.enumerated() {
+                    if travelIndex.isMultiple(of: 256) { try cancellationCheck() }
+                    if (travelSegment.span.intersection(with: clippedTimeSpan)?.duration ?? 0)
+                        >= min(5 * 60, clippedTimeSpan.duration * 0.5) {
+                        overlapsTravel = true
+                        break
+                    }
+                }
+                if overlapsTravel { continue }
             }
-            if actuals.contains(where: { actual in
-                actual.source.usesAutomaticClassification
-                    && actual.span(asOf: span.end).intersection(with: clippedTimeSpan)?.duration
-                        ?? 0 >= min(5 * 60, clippedTimeSpan.duration * 0.5)
-            }) {
-                return nil
+            var overlapsAutomaticActual = false
+            for (actualIndex, actual) in dayActuals.enumerated() {
+                if actualIndex.isMultiple(of: 256) { try cancellationCheck() }
+                if actual.source.usesAutomaticClassification
+                    && (actual.span(asOf: span.end).intersection(with: clippedTimeSpan)?.duration
+                        ?? 0) >= min(5 * 60, clippedTimeSpan.duration * 0.5) {
+                    overlapsAutomaticActual = true
+                    break
+                }
             }
-            return ActualRecord(
+            if overlapsAutomaticActual { continue }
+            projected.append(ActualRecord(
                 id: segment.id,
                 planID: nil,
                 title: segment.title,
@@ -225,8 +291,10 @@ enum TaptionActivityEngineAdapter {
                 behavior: segment.behavior,
                 evidence: unique(segment.evidence + ["필터링 센서 투영"]),
                 modelVersion: classifiedActivityModelVersion
-            )
+            ))
         }
+        try cancellationCheck()
+        return projected
     }
 
     static func placeActivityActual(
@@ -285,7 +353,8 @@ enum TaptionActivityEngineAdapter {
         )
         let ordered = readings
             .filter {
-                $0.sourceDevice != .appleWatch
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.sourceDevice != .appleWatch
                     && span.contains($0.timestamp)
                     && $0.timestamp <= asOf
             }
@@ -483,10 +552,43 @@ enum TaptionActivityEngineAdapter {
             || summary.meanRotationRateRadiansPerSecond > 0.03
     }
 
+    static func forEachRejectedQualityDecision(
+        _ decisions: [TaptionScalarQualityDecision],
+        cancellationCheck: () throws -> Void,
+        apply: (TaptionScalarQualityDecision) throws -> Void
+    ) rethrows {
+        for (index, decision) in decisions.enumerated() {
+            if index.isMultiple(of: 512) { try cancellationCheck() }
+            guard decision.reason != nil else { continue }
+            try apply(decision)
+        }
+    }
+
     static func qualityProjection(
         from readings: [SensorReading]
     ) -> TaptionSensorQualityProjection {
-        var projected = readings.sorted {
+        qualityProjection(from: readings, cancellationCheck: {})
+    }
+
+    static func qualityProjection(
+        from readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> TaptionSensorQualityProjection {
+        try cancellationCheck()
+        var operationCount = 0
+        var projected: [SensorReading] = []
+        projected.reserveCapacity(readings.count)
+        for reading in readings {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            if RouteTimelineTimestamp.isValid(reading.timestamp) {
+                projected.append(reading)
+            }
+        }
+        projected = try cancellableSort(
+            projected,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        ) {
             if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
             return $0.id.uuidString < $1.id.uuidString
         }
@@ -497,38 +599,55 @@ enum TaptionActivityEngineAdapter {
             label: String,
             range: ClosedRange<Double>,
             minimumDeviation: Double
-        ) {
+        ) throws {
+            try cancellationCheck()
             let filter = TaptionRobustScalarFilter(configuration: .init(
                 physicalRange: range,
                 minimumAbsoluteDeviation: minimumDeviation
             ))
-            let decisions = filter.decisions(for: projected.map { $0[keyPath: keyPath] })
-            for decision in decisions where decision.reason != nil {
+            var values: [Double?] = []
+            values.reserveCapacity(projected.count)
+            for (index, reading) in projected.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                values.append(reading[keyPath: keyPath])
+            }
+            let decisions = try filter.decisions(
+                for: values,
+                cancellationCheck: cancellationCheck
+            )
+            try forEachRejectedQualityDecision(
+                decisions,
+                cancellationCheck: cancellationCheck
+            ) { decision in
                 projected[decision.index][keyPath: keyPath] = nil
                 let reason = decision.reason?.rawValue ?? "unknown"
                 rejectionCounts["\(label).\(reason)", default: 0] += 1
             }
         }
 
-        apply(\.speedMetersPerSecond, label: "speed", range: 0...120, minimumDeviation: 0.25)
-        apply(\.speedAccuracyMetersPerSecond, label: "speedAccuracy", range: 0...60, minimumDeviation: 0.25)
-        apply(\.courseDegrees, label: "course", range: 0...360, minimumDeviation: 1)
-        apply(\.courseAccuracyDegrees, label: "courseAccuracy", range: 0...180, minimumDeviation: 1)
-        apply(\.relativeAltitudeMeters, label: "relativeAltitude", range: -12_000...12_000, minimumDeviation: 0.5)
-        apply(\.pressureKilopascals, label: "pressure", range: 30...120, minimumDeviation: 0.05)
-        apply(\.currentPaceSecondsPerMeter, label: "currentPace", range: 0.05...3_600, minimumDeviation: 0.05)
-        apply(\.currentCadenceStepsPerSecond, label: "cadence", range: 0...5, minimumDeviation: 0.05)
-        apply(\.averageActivePaceSecondsPerMeter, label: "activePace", range: 0.05...3_600, minimumDeviation: 0.05)
-        apply(\.watchAccelerationStandardDeviationG, label: "accelerationStd", range: 0...20, minimumDeviation: 0.02)
-        apply(\.watchAccelerationMeanJerkGPerSecond, label: "accelerationJerk", range: 0...100, minimumDeviation: 0.05)
-        apply(\.behaviorConfidenceScore, label: "behaviorConfidence", range: 0...1, minimumDeviation: 0.02)
+        try apply(\.speedMetersPerSecond, label: "speed", range: 0...120, minimumDeviation: 0.25)
+        try apply(\.speedAccuracyMetersPerSecond, label: "speedAccuracy", range: 0...60, minimumDeviation: 0.25)
+        try apply(\.courseDegrees, label: "course", range: 0...360, minimumDeviation: 1)
+        try apply(\.courseAccuracyDegrees, label: "courseAccuracy", range: 0...180, minimumDeviation: 1)
+        try apply(\.relativeAltitudeMeters, label: "relativeAltitude", range: -12_000...12_000, minimumDeviation: 0.5)
+        try apply(\.pressureKilopascals, label: "pressure", range: 30...120, minimumDeviation: 0.05)
+        try apply(\.currentPaceSecondsPerMeter, label: "currentPace", range: 0.05...3_600, minimumDeviation: 0.05)
+        try apply(\.currentCadenceStepsPerSecond, label: "cadence", range: 0...5, minimumDeviation: 0.05)
+        try apply(\.averageActivePaceSecondsPerMeter, label: "activePace", range: 0.05...3_600, minimumDeviation: 0.05)
+        try apply(\.watchAccelerationStandardDeviationG, label: "accelerationStd", range: 0...20, minimumDeviation: 0.02)
+        try apply(\.watchAccelerationMeanJerkGPerSecond, label: "accelerationJerk", range: 0...100, minimumDeviation: 0.05)
+        try apply(\.behaviorConfidenceScore, label: "behaviorConfidence", range: 0...1, minimumDeviation: 0.02)
 
+        try cancellationCheck()
+        let routeReadings = try TaptionRouteEngineAdapter.filteredReadings(
+            from: projected,
+            includeLowConfidenceBoundaries: false,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
         return TaptionSensorQualityProjection(
             readings: projected,
-            routeReadings: TaptionRouteEngineAdapter.filteredReadings(
-                from: projected,
-                includeLowConfidenceBoundaries: false
-            ),
+            routeReadings: routeReadings,
             rejectionCounts: rejectionCounts
         )
     }
@@ -539,11 +658,39 @@ enum TaptionActivityEngineAdapter {
         corrections: [UUID: ActivityCorrection] = [:],
         actuals: [ActualRecord] = []
     ) -> TaptionActivityClassificationResult {
+        do {
+            return try classify(
+                readings: readings,
+                travel: travel,
+                corrections: corrections,
+                actuals: actuals,
+                cancellationCheck: {}
+            )
+        } catch {
+            preconditionFailure("Unexpected activity classification cancellation: \(error)")
+        }
+    }
+
+    static func classify(
+        readings: [SensorReading],
+        travel: [TravelSegment] = [],
+        corrections: [UUID: ActivityCorrection] = [:],
+        actuals: [ActualRecord] = [],
+        cancellationCheck: @escaping @Sendable () throws -> Void
+    ) throws -> TaptionActivityClassificationResult {
+        try cancellationCheck()
         let overrides = activityOverrides(corrections: corrections, actuals: actuals)
-        let projection = ActivityClassificationProjection(
+        try cancellationCheck()
+        let classifiedEvidence = try evidence(
+            from: readings,
+            travel: travel,
+            cancellationCheck: cancellationCheck
+        )
+        let projection = try ActivityClassificationProjection(
             engine: engine,
-            evidence: evidence(from: readings, travel: travel),
-            overrides: overrides
+            evidence: classifiedEvidence,
+            overrides: overrides,
+            cancellationCheck: cancellationCheck
         )
         return TaptionActivityClassificationResult(state: projection.state)
     }
@@ -552,8 +699,30 @@ enum TaptionActivityEngineAdapter {
         from readings: [SensorReading],
         travel: [TravelSegment] = []
     ) -> [ActivitySensorEvidence] {
-        readings.map { reading in
-            let travelSegment = travel.first { $0.span.contains(reading.timestamp) }
+        do {
+            return try evidence(from: readings, travel: travel, cancellationCheck: {})
+        } catch {
+            preconditionFailure("Unexpected activity evidence cancellation: \(error)")
+        }
+    }
+
+    static func evidence(
+        from readings: [SensorReading],
+        travel: [TravelSegment],
+        cancellationCheck: () throws -> Void
+    ) throws -> [ActivitySensorEvidence] {
+        try cancellationCheck()
+        let travelIndices = try matchingTravelIndices(
+            for: readings,
+            travel: travel,
+            cancellationCheck: cancellationCheck
+        ).indices
+        var result: [ActivitySensorEvidence] = []
+        result.reserveCapacity(readings.count)
+        var operationCount = 0
+        for (readingIndex, reading) in readings.enumerated() {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            let travelSegment = travelIndices[readingIndex].map { travel[$0] }
             let detailHint = travelSegment.map(detailID(for:))
             let accuracy = reading.point?.horizontalAccuracy
             let hasValidCoordinate = reading.point.map { point in
@@ -566,7 +735,7 @@ enum TaptionActivityEngineAdapter {
                 && hasValidCoordinate
                 && accuracy.map { $0.isFinite && (0...150).contains($0) } == true
                 && reading.locationFixQuality != .approximate
-            return ActivitySensorEvidence(
+            result.append(ActivitySensorEvidence(
                 id: reading.id,
                 timestamp: reading.timestamp,
                 motion: motion(for: reading.motion),
@@ -586,7 +755,259 @@ enum TaptionActivityEngineAdapter {
                 evidence: reading.behaviorEvidence ?? [],
                 sequence: reading.sequence,
                 source: reading.sourceDevice == .appleWatch ? .appleWatch : .iPhone
+            ))
+        }
+        try cancellationCheck()
+        return result
+    }
+
+    static func matchingTravelIndices(
+        for readings: [SensorReading],
+        travel: [TravelSegment]
+    ) -> (indices: [Int?], operationCount: Int) {
+        do {
+            return try matchingTravelIndices(
+                for: readings,
+                travel: travel,
+                cancellationCheck: {}
             )
+        } catch {
+            preconditionFailure("Unexpected travel indexing cancellation: \(error)")
+        }
+    }
+
+    static func matchingTravelIndices(
+        for readings: [SensorReading],
+        travel: [TravelSegment],
+        cancellationCheck: () throws -> Void
+    ) throws -> (indices: [Int?], operationCount: Int) {
+        try cancellationCheck()
+        var operationCount = 0
+        guard !readings.isEmpty else { return ([], operationCount) }
+        if travel.isEmpty {
+            var matches: [Int?] = []
+            matches.reserveCapacity(readings.count)
+            for _ in readings.indices {
+                try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+                matches.append(nil)
+            }
+            try cancellationCheck()
+            return (matches, operationCount)
+        }
+
+        var orderedReadings: [Int] = []
+        orderedReadings.reserveCapacity(readings.count)
+        for index in readings.indices {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            if !readings[index].timestamp.timeIntervalSinceReferenceDate.isNaN {
+                orderedReadings.append(index)
+            }
+        }
+        orderedReadings = try cancellableSort(
+            orderedReadings,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        ) { lhs, rhs in
+            let lhsTimestamp = readings[lhs].timestamp
+            let rhsTimestamp = readings[rhs].timestamp
+            if lhsTimestamp != rhsTimestamp { return lhsTimestamp < rhsTimestamp }
+            return lhs < rhs
+        }
+
+        // Date's <= treats NaN as true, so normalize NaN interval edges to infinities.
+        let negativeInfinity = Date(timeIntervalSinceReferenceDate: -.infinity)
+        let positiveInfinity = Date(timeIntervalSinceReferenceDate: .infinity)
+        var intervalStarts: [Date] = []
+        var intervalEnds: [Date] = []
+        intervalStarts.reserveCapacity(travel.count)
+        intervalEnds.reserveCapacity(travel.count)
+        for segment in travel {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            intervalStarts.append(
+                segment.span.start.timeIntervalSinceReferenceDate.isNaN
+                    ? negativeInfinity
+                    : segment.span.start
+            )
+            intervalEnds.append(
+                segment.span.end.timeIntervalSinceReferenceDate.isNaN
+                    ? positiveInfinity
+                    : segment.span.end
+            )
+        }
+        var travelIndices: [Int] = []
+        travelIndices.reserveCapacity(travel.count)
+        for index in travel.indices {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            travelIndices.append(index)
+        }
+        let orderedTravel = try cancellableSort(
+            travelIndices,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        ) { lhs, rhs in
+            if intervalStarts[lhs] != intervalStarts[rhs] {
+                return intervalStarts[lhs] < intervalStarts[rhs]
+            }
+            return lhs < rhs
+        }
+
+        var matches: [Int?] = []
+        matches.reserveCapacity(readings.count)
+        for _ in readings.indices {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            matches.append(nil)
+        }
+        // A NaN reading satisfied both original span comparisons for every interval.
+        for index in readings.indices {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            if readings[index].timestamp.timeIntervalSinceReferenceDate.isNaN {
+                matches[index] = 0
+            }
+        }
+        guard !orderedReadings.isEmpty else {
+            try cancellationCheck()
+            return (matches, operationCount)
+        }
+
+        var active = TravelMatchHeap()
+        var nextTravel = 0
+
+        for readingIndex in orderedReadings {
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+            let timestamp = readings[readingIndex].timestamp
+            while nextTravel < orderedTravel.count {
+                try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+                let travelIndex = orderedTravel[nextTravel]
+                guard intervalStarts[travelIndex] <= timestamp else { break }
+                try active.insert(
+                    travelIndex,
+                    operationCount: &operationCount,
+                    cancellationCheck: cancellationCheck
+                )
+                nextTravel += 1
+            }
+            while let first = active.minimum {
+                try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+                guard intervalEnds[first] < timestamp else { break }
+                try active.removeMinimum(
+                    operationCount: &operationCount,
+                    cancellationCheck: cancellationCheck
+                )
+            }
+            matches[readingIndex] = active.minimum
+            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+        }
+        try cancellationCheck()
+        return (matches, operationCount)
+    }
+
+    private static func recordWork(
+        _ operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows {
+        operationCount += 1
+        if operationCount == 1 || operationCount.isMultiple(of: 256) {
+            try cancellationCheck()
+        }
+    }
+
+    private static func cancellableSort<Element>(
+        _ values: [Element],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void,
+        by areInIncreasingOrder: (Element, Element) -> Bool
+    ) rethrows -> [Element] {
+        guard values.count > 1 else {
+            try cancellationCheck()
+            return values
+        }
+
+        var source = values
+        var destination = values
+        var width = 1
+        while width < values.count {
+            var lower = 0
+            while lower < values.count {
+                let middle = min(lower + width, values.count)
+                let upper = min(middle + width, values.count)
+                var left = lower
+                var right = middle
+                var output = lower
+                while output < upper {
+                    try recordWork(&operationCount, cancellationCheck: cancellationCheck)
+                    if left < middle,
+                       right >= upper || !areInIncreasingOrder(source[right], source[left]) {
+                        destination[output] = source[left]
+                        left += 1
+                    } else {
+                        destination[output] = source[right]
+                        right += 1
+                    }
+                    output += 1
+                }
+                lower = upper
+            }
+            swap(&source, &destination)
+            width = width > values.count / 2 ? values.count : width * 2
+        }
+        try cancellationCheck()
+        return source
+    }
+
+    private struct TravelMatchHeap {
+        private var indices: [Int] = []
+
+        var minimum: Int? { indices.first }
+
+        mutating func insert(
+            _ index: Int,
+            operationCount: inout Int,
+            cancellationCheck: () throws -> Void
+        ) rethrows {
+            indices.append(index)
+            var child = indices.count - 1
+            while child > 0 {
+                let parent = (child - 1) / 2
+                try TaptionActivityEngineAdapter.recordWork(
+                    &operationCount,
+                    cancellationCheck: cancellationCheck
+                )
+                guard indices[parent] > indices[child] else { break }
+                indices.swapAt(parent, child)
+                child = parent
+            }
+        }
+
+        mutating func removeMinimum(
+            operationCount: inout Int,
+            cancellationCheck: () throws -> Void
+        ) rethrows {
+            guard !indices.isEmpty else { return }
+            let last = indices.removeLast()
+            guard !indices.isEmpty else { return }
+            indices[0] = last
+
+            var parent = 0
+            while true {
+                let left = parent * 2 + 1
+                guard left < indices.count else { break }
+                let right = left + 1
+                var child = left
+                if right < indices.count {
+                    try TaptionActivityEngineAdapter.recordWork(
+                        &operationCount,
+                        cancellationCheck: cancellationCheck
+                    )
+                    if indices[right] < indices[left] { child = right }
+                }
+                try TaptionActivityEngineAdapter.recordWork(
+                    &operationCount,
+                    cancellationCheck: cancellationCheck
+                )
+                guard indices[parent] > indices[child] else { break }
+                indices.swapAt(parent, child)
+                parent = child
+            }
         }
     }
 
@@ -1038,6 +1459,80 @@ enum TaptionActivityEngineAdapter {
     }
 }
 
+private struct ActivityClassificationIntervalIndex<Value> {
+    private struct Entry {
+        let value: Value
+        let span: TimeSpan
+        let inputOrder: Int
+    }
+
+    private let entries: [Entry]
+    private let prefixMaximumEnds: [Date]
+
+    init(
+        _ values: [(inputOrder: Int, value: Value)],
+        span: (Value) -> TimeSpan
+    ) {
+        entries = values
+            .map { value in
+                Entry(
+                    value: value.value,
+                    span: span(value.value),
+                    inputOrder: value.inputOrder
+                )
+            }
+            .sorted {
+                if $0.span.start != $1.span.start {
+                    return $0.span.start < $1.span.start
+                }
+                return $0.inputOrder < $1.inputOrder
+            }
+
+        var latestEnd = Date.distantPast
+        prefixMaximumEnds = entries.map { entry in
+            latestEnd = max(latestEnd, entry.span.end)
+            return latestEnd
+        }
+    }
+
+    func forEachCandidate(
+        overlapping span: TimeSpan,
+        inspectionCount: inout Int?,
+        _ body: (Value, Int) -> Void
+    ) {
+        guard span.start < span.end, !entries.isEmpty else { return }
+
+        var lower = 0
+        var upper = prefixMaximumEnds.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if prefixMaximumEnds[middle] > span.start {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        let firstCandidate = lower
+
+        upper = entries.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if entries[middle].span.start < span.end {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+
+        for entry in entries[firstCandidate..<lower] {
+            inspectionCount? += 1
+            body(entry.value, entry.inputOrder)
+        }
+    }
+}
+
 /// Makes automatic major-category decisions durable without touching the
 /// sensor archive. A refresh may produce a new span or more evidence, but a
 /// stored automatic record keeps its previous category unless a registered
@@ -1047,14 +1542,28 @@ enum ActivityClassificationLockEngine {
     static func lockingAutomaticClassifications(
         _ actuals: [ActualRecord]
     ) -> [ActualRecord] {
-        actuals.map { actual in
+        lockingAutomaticClassifications(actuals, cancellationCheck: {})
+    }
+
+    static func lockingAutomaticClassifications(
+        _ actuals: [ActualRecord],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [ActualRecord] {
+        try cancellationCheck()
+        var locked: [ActualRecord] = []
+        locked.reserveCapacity(actuals.count)
+        for (index, actual) in actuals.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             guard actual.source.usesAutomaticClassification else {
-                return actual
+                locked.append(actual)
+                continue
             }
             var value = actual
             value.isClassificationLocked = true
-            return value
+            locked.append(value)
         }
+        try cancellationCheck()
+        return locked
     }
 
     static func mergingLockedClassifications(
@@ -1062,25 +1571,77 @@ enum ActivityClassificationLockEngine {
         fresh: [ActualRecord],
         inside: TimeSpan
     ) -> [ActualRecord] {
+        var inspectionCount: Int? = nil
+        return mergingLockedClassifications(
+            existing: existing,
+            fresh: fresh,
+            inside: inside,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func mergingLockedClassifications(
+        existing: [ActualRecord],
+        fresh: [ActualRecord],
+        inside: TimeSpan,
+        candidateInspectionCount: inout Int
+    ) -> [ActualRecord] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = mergingLockedClassifications(
+            existing: existing,
+            fresh: fresh,
+            inside: inside,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount ?? candidateInspectionCount
+        return result
+    }
+
+    private static func mergingLockedClassifications(
+        existing: [ActualRecord],
+        fresh: [ActualRecord],
+        inside: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> [ActualRecord] {
         let locked = existing.filter { actual in
             actual.isClassificationLocked
                 && actual.source.usesAutomaticClassification
                 && actual.span(asOf: inside.end).intersection(with: inside) != nil
         }
+        var groupedLocked: [String: [(inputOrder: Int, value: ActualRecord)]] = [:]
+        for (inputOrder, actual) in locked.enumerated() {
+            groupedLocked[actual.source.rawValue, default: []].append(
+                (inputOrder, actual)
+            )
+        }
+        let indexes = groupedLocked.mapValues { values in
+            ActivityClassificationIntervalIndex(values, span: classificationSpan)
+        }
+        var matchedLockedIndices = Set<Int>()
         var merged = fresh.map { candidate in
             guard candidate.source.usesAutomaticClassification else {
                 return candidate
             }
             var value = candidate
             value.isClassificationLocked = true
-            let candidates = locked.filter { previous in
-                previous.source == candidate.source
-                    && overlapRatio(previous, candidate) >= 0.2
+            var bestMatch: (record: ActualRecord, overlap: TimeInterval, inputOrder: Int)?
+            indexes[candidate.source.rawValue]?.forEachCandidate(
+                overlapping: classificationSpan(candidate),
+                inspectionCount: &inspectionCount
+            ) { previous, inputOrder in
+                guard overlapRatio(previous, candidate) >= 0.2 else { return }
+                matchedLockedIndices.insert(inputOrder)
+                let overlap = overlapDuration(previous, candidate)
+                if bestMatch == nil
+                    || overlap > bestMatch!.overlap
+                    || (
+                        overlap == bestMatch!.overlap
+                            && inputOrder < bestMatch!.inputOrder
+                    ) {
+                    bestMatch = (previous, overlap, inputOrder)
+                }
             }
-            guard let previous = candidates.max(by: {
-                overlapDuration($0, candidate)
-                    < overlapDuration($1, candidate)
-            }) else {
+            guard let previous = bestMatch?.record else {
                 return value
             }
             guard !shouldAdoptFreshDestinationClassification(
@@ -1097,11 +1658,8 @@ enum ActivityClassificationLockEngine {
             }
             return value
         }
-        let retained = locked.filter { previous in
-            !fresh.contains { candidate in
-                candidate.source == previous.source
-                    && overlapRatio(previous, candidate) >= 0.2
-            }
+        let retained = locked.enumerated().compactMap { inputOrder, previous in
+            matchedLockedIndices.contains(inputOrder) ? nil : previous
         }
         merged.append(contentsOf: retained)
         return merged.sorted {
@@ -1143,19 +1701,69 @@ enum ActivityClassificationLockEngine {
         fresh: [TravelSegment],
         inside: TimeSpan
     ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return mergingLockedTravel(
+            existing: existing,
+            fresh: fresh,
+            inside: inside,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func mergingLockedTravel(
+        existing: [TravelSegment],
+        fresh: [TravelSegment],
+        inside: TimeSpan,
+        candidateInspectionCount: inout Int
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = mergingLockedTravel(
+            existing: existing,
+            fresh: fresh,
+            inside: inside,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount ?? candidateInspectionCount
+        return result
+    }
+
+    private static func mergingLockedTravel(
+        existing: [TravelSegment],
+        fresh: [TravelSegment],
+        inside: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> [TravelSegment] {
         let locked = existing.filter {
             $0.isClassificationLocked
                 && $0.span.intersection(with: inside) != nil
         }
+        let index = ActivityClassificationIntervalIndex(
+            locked.enumerated().map { ($0.offset, $0.element) },
+            span: \TravelSegment.span
+        )
+        var matchedLockedIndices = Set<Int>()
         var merged = fresh.map { candidate in
             var value = candidate
-            let matches = locked.filter {
-                overlapRatio($0.span, candidate.span) >= 0.2
+            var bestMatch: (segment: TravelSegment, overlap: TimeInterval, inputOrder: Int)?
+            index.forEachCandidate(
+                overlapping: candidate.span,
+                inspectionCount: &inspectionCount
+            ) { previous, inputOrder in
+                guard overlapRatio(previous.span, candidate.span) >= 0.2 else {
+                    return
+                }
+                matchedLockedIndices.insert(inputOrder)
+                let overlap = overlapDuration(previous.span, candidate.span)
+                if bestMatch == nil
+                    || overlap > bestMatch!.overlap
+                    || (
+                        overlap == bestMatch!.overlap
+                            && inputOrder < bestMatch!.inputOrder
+                    ) {
+                    bestMatch = (previous, overlap, inputOrder)
+                }
             }
-            guard let previous = matches.max(by: {
-                overlapDuration($0.span, candidate.span)
-                    < overlapDuration($1.span, candidate.span)
-            }) else {
+            guard let previous = bestMatch?.segment else {
                 value.isClassificationLocked = true
                 return value
             }
@@ -1174,13 +1782,13 @@ enum ActivityClassificationLockEngine {
             value.isClassificationLocked = true
             return value
         }
-        let retained = locked.filter { previous in
+        let retained = locked.enumerated().compactMap { inputOrder, previous in
             let validatedSubway = previous.mode != .subway
                 || previous.isConfirmed
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
-            return validatedSubway && !fresh.contains {
-                overlapRatio(previous.span, $0.span) >= 0.2
-            }
+            return validatedSubway && !matchedLockedIndices.contains(inputOrder)
+                ? previous
+                : nil
         }
         merged.append(contentsOf: retained)
         return merged.sorted {
@@ -1195,14 +1803,8 @@ enum ActivityClassificationLockEngine {
         _ lhs: ActualRecord,
         _ rhs: ActualRecord
     ) -> Double {
-        let lhsSpan = TimeSpan(
-            start: lhs.startedAt,
-            end: lhs.endedAt ?? lhs.startedAt.addingTimeInterval(1)
-        )
-        let rhsSpan = TimeSpan(
-            start: rhs.startedAt,
-            end: rhs.endedAt ?? rhs.startedAt.addingTimeInterval(1)
-        )
+        let lhsSpan = classificationSpan(lhs)
+        let rhsSpan = classificationSpan(rhs)
         return overlapDuration(lhsSpan, rhsSpan)
             / max(1, min(lhsSpan.duration, rhsSpan.duration))
     }
@@ -1211,15 +1813,14 @@ enum ActivityClassificationLockEngine {
         _ lhs: ActualRecord,
         _ rhs: ActualRecord
     ) -> TimeInterval {
-        let lhsSpan = TimeSpan(
-            start: lhs.startedAt,
-            end: lhs.endedAt ?? lhs.startedAt.addingTimeInterval(1)
+        overlapDuration(classificationSpan(lhs), classificationSpan(rhs))
+    }
+
+    private static func classificationSpan(_ actual: ActualRecord) -> TimeSpan {
+        TimeSpan(
+            start: actual.startedAt,
+            end: actual.endedAt ?? actual.startedAt.addingTimeInterval(1)
         )
-        let rhsSpan = TimeSpan(
-            start: rhs.startedAt,
-            end: rhs.endedAt ?? rhs.startedAt.addingTimeInterval(1)
-        )
-        return overlapDuration(lhsSpan, rhsSpan)
     }
 
     private static func overlapDuration(

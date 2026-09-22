@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import MapKit
+import TaptionPlanEngine
 
 private let scheduleLabelColumnWidth: CGFloat = 64
 private let ganttTableLineColor = Color.tpLine.opacity(0.30)
@@ -45,19 +46,56 @@ struct RouteMapViewport {
         minimumLatitudeDelta: CLLocationDegrees = 0.005,
         minimumLongitudeDelta: CLLocationDegrees = 0.005
     ) -> MKCoordinateRegion? {
+        region(
+            for: [coordinates],
+            viewport: viewport,
+            padding: padding,
+            minimumLatitudeDelta: minimumLatitudeDelta,
+            minimumLongitudeDelta: minimumLongitudeDelta
+        )
+    }
+
+    static func region(
+        for paths: [[CLLocationCoordinate2D]],
+        viewport: CGSize,
+        padding: Padding,
+        minimumLatitudeDelta: CLLocationDegrees = 0.005,
+        minimumLongitudeDelta: CLLocationDegrees = 0.005
+    ) -> MKCoordinateRegion? {
         var minLatitude = Double.infinity
         var maxLatitude = -Double.infinity
-        var minLongitude = Double.infinity
-        var maxLongitude = -Double.infinity
+        var longitudes: [Double] = []
 
-        for coordinate in coordinates where CLLocationCoordinate2DIsValid(coordinate) {
-            minLatitude = min(minLatitude, coordinate.latitude)
-            maxLatitude = max(maxLatitude, coordinate.latitude)
-            minLongitude = min(minLongitude, coordinate.longitude)
-            maxLongitude = max(maxLongitude, coordinate.longitude)
+        for path in paths {
+            for coordinate in path where CLLocationCoordinate2DIsValid(coordinate) {
+                minLatitude = min(minLatitude, coordinate.latitude)
+                maxLatitude = max(maxLatitude, coordinate.latitude)
+                let longitude = (
+                    coordinate.longitude.truncatingRemainder(dividingBy: 360) + 360
+                ).truncatingRemainder(dividingBy: 360)
+                longitudes.append(longitude)
+            }
         }
 
-        guard minLatitude <= maxLatitude else { return nil }
+        guard minLatitude <= maxLatitude, !longitudes.isEmpty else { return nil }
+        longitudes.sort()
+        var largestGap = -Double.infinity
+        var minLongitude = longitudes[0]
+        var maxLongitude = longitudes[0]
+        for index in longitudes.indices {
+            let current = longitudes[index]
+            let next = index + 1 < longitudes.count
+                ? longitudes[index + 1]
+                : longitudes[0] + 360
+            let gap = next - current
+            guard gap > largestGap else { continue }
+            largestGap = gap
+            minLongitude = next.truncatingRemainder(dividingBy: 360)
+            maxLongitude = current
+            if maxLongitude < minLongitude {
+                maxLongitude += 360
+            }
+        }
         return region(
             fromLatitudes: (minLatitude, maxLatitude),
             longitudes: (minLongitude, maxLongitude),
@@ -89,7 +127,9 @@ struct RouteMapViewport {
         let availableWidth = max(1, width - horizontalPadding)
         let availableHeight = max(1, height - verticalPadding)
         let centerLatitude = (latitudes.0 + latitudes.1) / 2
-        let centerLongitude = (longitudes.0 + longitudes.1) / 2
+        let centerLongitude = RouteTimelineLongitude.normalized(
+            (longitudes.0 + longitudes.1) / 2
+        )
         let longitudeScale = max(
             0.15,
             abs(cos(centerLatitude * .pi / 180))
@@ -2744,31 +2784,24 @@ enum RoutePolylineDecimator {
 
     private typealias PlanarPoint = (x: Double, y: Double)
 
-    /// Douglas–Peucker. 양 끝점은 항상 남고, 결과가 상한을 넘으면 허용
-    /// 오차를 두 배씩 키워 다시 줄인다.
+    /// 핵심 경로 엔진의 bounded simplifier를 사용해 양 끝점과 큰 굴곡을
+    /// 보존하면서 렌더링 점 수를 제한한다.
     static func decimate(
         _ coordinates: [CLLocationCoordinate2D],
         toleranceMeters: Double = defaultToleranceMeters,
         limit: Int = defaultLimit
     ) -> [CLLocationCoordinate2D] {
         guard coordinates.count > 2 else { return coordinates }
-        // Douglas–Peucker는 톱니처럼 줄일 것이 없는 경로에서 점 수의
-        // 제곱에 가깝게 느려진다. 실내에서 튀는 좌표가 그런 모양이라
-        // 먼저 상한의 네 배까지 고르게 솎아 계산량을 묶어 둔다.
-        let source = coordinates.count > limit * 4
-            ? uniformlySampled(coordinates, limit: limit * 4)
-            : coordinates
-        var tolerance = max(0, toleranceMeters)
-        var result = simplify(source, toleranceMeters: tolerance)
-        var attempts = 0
-        while result.count > limit, attempts < 8 {
-            tolerance = tolerance > 0 ? tolerance * 2 : 1
-            result = simplify(source, toleranceMeters: tolerance)
-            attempts += 1
+        let routePoints = coordinates.map {
+            RouteCoordinate(latitude: $0.latitude, longitude: $0.longitude)
         }
-        return result.count > limit
-            ? uniformlySampled(result, limit: limit)
-            : result
+        return RoutePathSimplifier.simplify(
+            routePoints,
+            toleranceMeters: toleranceMeters,
+            maximumCount: max(2, limit)
+        ).map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
     }
 
     /// 최소 간격보다 촘촘한 점을 걷어 낸다. 마지막 점은 도착 지점이라
@@ -2784,7 +2817,10 @@ enum RoutePolylineDecimator {
         result.reserveCapacity(coordinates.count)
         for coordinate in coordinates.dropFirst() {
             let previous = result[result.count - 1]
-            let dx = (coordinate.longitude - previous.longitude) * scale.longitude
+            let dx = RouteTimelineLongitude.shortestDelta(
+                from: previous.longitude,
+                to: coordinate.longitude
+            ) * scale.longitude
             let dy = (coordinate.latitude - previous.latitude) * scale.latitude
             if dx * dx + dy * dy >= squaredMinimum {
                 result.append(coordinate)
@@ -2809,7 +2845,10 @@ enum RoutePolylineDecimator {
         let origin = first
         func project(_ value: CLLocationCoordinate2D) -> PlanarPoint {
             (
-                x: (value.longitude - origin.longitude) * scale.longitude,
+                x: RouteTimelineLongitude.shortestDelta(
+                    from: origin.longitude,
+                    to: value.longitude
+                ) * scale.longitude,
                 y: (value.latitude - origin.latitude) * scale.latitude
             )
         }
@@ -2845,49 +2884,6 @@ enum RoutePolylineDecimator {
         )
     }
 
-    private static func simplify(
-        _ coordinates: [CLLocationCoordinate2D],
-        toleranceMeters: Double
-    ) -> [CLLocationCoordinate2D] {
-        guard coordinates.count > 2, toleranceMeters > 0 else {
-            return coordinates
-        }
-        let origin = coordinates[0]
-        let scale = planarScale(at: origin.latitude)
-        let points: [PlanarPoint] = coordinates.map {
-            (
-                x: ($0.longitude - origin.longitude) * scale.longitude,
-                y: ($0.latitude - origin.latitude) * scale.latitude
-            )
-        }
-        var keep = [Bool](repeating: false, count: points.count)
-        keep[0] = true
-        keep[points.count - 1] = true
-        let squaredTolerance = toleranceMeters * toleranceMeters
-        var stack: [(Int, Int)] = [(0, points.count - 1)]
-        while let (first, last) = stack.popLast() {
-            guard last > first + 1 else { continue }
-            var farthest = first
-            var farthestDistance = -1.0
-            for index in (first + 1)..<last {
-                let distance = squaredDistance(
-                    points[index],
-                    from: points[first],
-                    to: points[last]
-                )
-                if distance > farthestDistance {
-                    farthestDistance = distance
-                    farthest = index
-                }
-            }
-            guard farthestDistance > squaredTolerance else { continue }
-            keep[farthest] = true
-            stack.append((first, farthest))
-            stack.append((farthest, last))
-        }
-        return zip(coordinates, keep).compactMap { $1 ? $0 : nil }
-    }
-
     private static func squaredDistance(
         _ point: PlanarPoint,
         from start: PlanarPoint,
@@ -2909,21 +2905,6 @@ enum RoutePolylineDecimator {
         return ex * ex + ey * ey
     }
 
-    private static func uniformlySampled(
-        _ values: [CLLocationCoordinate2D],
-        limit: Int
-    ) -> [CLLocationCoordinate2D] {
-        guard limit >= 2, values.count > limit else { return values }
-        let step = Double(values.count - 1) / Double(limit - 1)
-        return (0..<limit).map { index in
-            values[
-                min(
-                    values.count - 1,
-                    Int((Double(index) * step).rounded())
-                )
-            ]
-        }
-    }
 }
 
 private struct RecordRelationshipView: View {
@@ -6442,27 +6423,9 @@ private struct TimelineDetailPanel: View {
     }
 
     private func periodRouteRegion() -> MKCoordinateRegion? {
-        var minLatitude = Double.infinity
-        var maxLatitude = -Double.infinity
-        var minLongitude = Double.infinity
-        var maxLongitude = -Double.infinity
-        func extend(_ values: [CLLocationCoordinate2D]) {
-            for value in values {
-                guard CLLocationCoordinate2DIsValid(value) else { continue }
-                minLatitude = min(minLatitude, value.latitude)
-                maxLatitude = max(maxLatitude, value.latitude)
-                minLongitude = min(minLongitude, value.longitude)
-                maxLongitude = max(maxLongitude, value.longitude)
-            }
-        }
-        extend(displayedRouteCoordinates)
-        for segment in dimmedRouteSegments {
-            extend(coordinates(for: segment))
-        }
-        guard minLatitude <= maxLatitude else { return nil }
-        return RouteMapViewport.region(
-            fromLatitudes: (minLatitude, maxLatitude),
-            longitudes: (minLongitude, maxLongitude),
+        RouteMapViewport.region(
+            for: [displayedRouteCoordinates]
+                + dimmedRouteSegments.map { coordinates(for: $0) },
             viewport: resolvedRouteMapViewportSize,
             padding: .timeline
         )

@@ -35,7 +35,9 @@ enum TaptionRouteEngineAdapter {
         selectedDate: Date? = nil
     ) -> TaptionRouteDisplaySnapshot {
         let log = displayRoute(from: readings)
-        let index = RouteTimeCoordinateIndex(samples: log.segments.flatMap(\.pathSamples))
+        let index = RouteTimeCoordinateIndex(
+            segments: log.segments.map(\.pathSamples)
+        )
         return TaptionRouteDisplaySnapshot(
             log: log,
             selectedCoordinate: selectedDate.flatMap(index.sample(at:))?.coordinate,
@@ -47,31 +49,75 @@ enum TaptionRouteEngineAdapter {
         RouteLoggerRouteFilter().filter(samples(from: readings))
     }
 
+    static func displayRoute(
+        from readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> RouteLog {
+        try RouteLoggerRouteFilter().filter(
+            samples(from: readings, cancellationCheck: cancellationCheck),
+            cancellationCheck: cancellationCheck
+        )
+    }
+
     static func filteredReadings(
         from readings: [SensorReading],
         includeLowConfidenceBoundaries: Bool = true
     ) -> [SensorReading] {
-        let originals = Dictionary(grouping: readings, by: \.id)
-            .compactMapValues { values in
-                values.min(by: preferredOriginalReading)
-            }
-        let segments = displayRoute(from: readings).segments
-        var result: [SensorReading] = []
-        for index in segments.indices {
-            let segment = segments[index]
-            let samples = (
-                segment.pathSamples
-                    + (includeLowConfidenceBoundaries
-                        ? segment.boundarySamples
-                        : [])
-            ).sorted {
-                if $0.timestamp != $1.timestamp {
-                    return $0.timestamp < $1.timestamp
+        filteredReadings(
+            from: readings,
+            includeLowConfidenceBoundaries: includeLowConfidenceBoundaries,
+            cancellationCheck: {}
+        )
+    }
+
+    static func filteredReadings(
+        from readings: [SensorReading],
+        includeLowConfidenceBoundaries: Bool = true,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try cancellationCheck()
+        var originals: [UUID: SensorReading] = [:]
+        originals.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if let current = originals[reading.id] {
+                if preferredOriginalReading(reading, current) {
+                    originals[reading.id] = reading
                 }
-                return $0.id.uuidString < $1.id.uuidString
+            } else {
+                originals[reading.id] = reading
             }
-            var derived = samples.compactMap { sample -> SensorReading? in
-                guard var reading = originals[sample.id] else { return nil }
+        }
+        let segments = try displayRoute(
+            from: readings,
+            cancellationCheck: cancellationCheck
+        ).segments
+        var result: [SensorReading] = []
+        result.reserveCapacity(readings.count)
+        for index in segments.indices {
+            if index.isMultiple(of: 64) { try cancellationCheck() }
+            let segment = segments[index]
+            var samples = segment.pathSamples
+            if includeLowConfidenceBoundaries {
+                samples.append(contentsOf: segment.boundarySamples)
+            }
+            try cancellationCheck()
+            samples = try RouteTimelineCancellableSort.sorted(
+                samples,
+                by: { lhs, rhs in
+                    if lhs.timestamp != rhs.timestamp {
+                        return lhs.timestamp < rhs.timestamp
+                    }
+                    return lhs.id.uuidString < rhs.id.uuidString
+                },
+                cancellationCheck: cancellationCheck
+            )
+            try cancellationCheck()
+            var derived: [SensorReading] = []
+            derived.reserveCapacity(samples.count)
+            for (sampleIndex, sample) in samples.enumerated() {
+                if sampleIndex.isMultiple(of: 256) { try cancellationCheck() }
+                guard var reading = originals[sample.id] else { continue }
                 reading.point = GeoPoint(
                     latitude: sample.coordinate.latitude,
                     longitude: sample.coordinate.longitude,
@@ -79,7 +125,7 @@ enum TaptionRouteEngineAdapter {
                     horizontalAccuracy: sample.horizontalAccuracyMeters,
                     verticalAccuracy: reading.point?.verticalAccuracy ?? -1
                 )
-                return reading
+                derived.append(reading)
             }
             if index < segments.index(before: segments.endIndex),
                !derived.isEmpty {
@@ -87,22 +133,55 @@ enum TaptionRouteEngineAdapter {
             }
             result.append(contentsOf: derived)
         }
+        try cancellationCheck()
         var seen = Set<UUID>()
-        return result
-            .filter { seen.insert($0.id).inserted }
-            .sorted {
-                if $0.timestamp != $1.timestamp {
-                    return $0.timestamp < $1.timestamp
+        var unique: [SensorReading] = []
+        unique.reserveCapacity(result.count)
+        for (index, reading) in result.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if seen.insert(reading.id).inserted { unique.append(reading) }
+        }
+        try cancellationCheck()
+        unique = try sortedReadings(
+            unique,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
+        return unique
+    }
+
+    static func sortedReadings(
+        _ readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try RouteTimelineCancellableSort.sorted(
+            readings,
+            by: { lhs, rhs in
+                if lhs.timestamp != rhs.timestamp {
+                    return lhs.timestamp < rhs.timestamp
                 }
-                return $0.id.uuidString < $1.id.uuidString
-            }
+                return lhs.id.uuidString < rhs.id.uuidString
+            },
+            cancellationCheck: cancellationCheck
+        )
     }
 
     static func samples(from readings: [SensorReading]) -> [RouteSample] {
-        readings.compactMap { reading in
-            guard let point = reading.point else { return nil }
+        samples(from: readings, cancellationCheck: {})
+    }
+
+    static func samples(
+        from readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RouteSample] {
+        try cancellationCheck()
+        var result: [RouteSample] = []
+        result.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard let point = reading.point else { continue }
             let mode = routeMode(for: reading)
-            return RouteSample(
+            result.append(RouteSample(
                 id: reading.id,
                 timestamp: reading.timestamp,
                 coordinate: RouteCoordinate(latitude: point.latitude, longitude: point.longitude),
@@ -113,8 +192,10 @@ enum TaptionRouteEngineAdapter {
                 mode: mode,
                 isApproximate: reading.locationFixQuality == .approximate
                     || !reading.gpsAvailable
-            )
+            ))
         }
+        try cancellationCheck()
+        return result
     }
 
     static func coordinate(
@@ -122,13 +203,19 @@ enum TaptionRouteEngineAdapter {
         readings: [SensorReading]
     ) -> RouteCoordinate? {
         let log = displayRoute(from: readings)
-        return RouteTimeCoordinateIndex(samples: log.segments.flatMap(\.pathSamples))
+        return RouteTimeCoordinateIndex(
+            segments: log.segments.map(\.pathSamples)
+        )
             .sample(at: date)?.coordinate
     }
 
     static func movingMinuteRanges(from readings: [SensorReading]) -> [TaptionRouteMinuteRange] {
         let ordered = readings
-            .filter { $0.point != nil && $0.motion.isMovement }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.point != nil
+                    && $0.motion.isMovement
+            }
             .sorted { $0.timestamp < $1.timestamp }
         guard let first = ordered.first else { return [] }
         var result: [TaptionRouteMinuteRange] = []
@@ -149,9 +236,11 @@ enum TaptionRouteEngineAdapter {
         at date: Date,
         readings: [SensorReading]
     ) -> TaptionRoutePlaybackInput {
-        let reading = readings.min {
+        let reading = RouteTimelineTimestamp.isValid(date)
+            ? readings.filter { RouteTimelineTimestamp.isValid($0.timestamp) }.min {
             abs($0.timestamp.timeIntervalSince(date)) < abs($1.timestamp.timeIntervalSince(date))
-        }
+            }
+            : nil
         return TaptionRoutePlaybackInput(
             currentSpeedMetersPerSecond: max(0, reading?.speedMetersPerSecond ?? 0),
             movementDetected: reading?.motion.isMovement == true
@@ -203,10 +292,13 @@ enum TaptionRouteEngineAdapter {
         in span: TimeSpan,
         readings: [SensorReading]
     ) -> Bool {
-        let maximumGap: TimeInterval = 15 * 60
+        guard RouteTimelineTimestamp.isValid(span.start),
+              RouteTimelineTimestamp.isValid(span.end) else { return false }
+        let maximumGap = RouteSparseConnectionPolicy.maximumGapDuration
         let route = readings
             .filter { reading in
-                guard reading.timestamp >= span.start,
+                guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                      reading.timestamp >= span.start,
                       reading.timestamp <= span.end,
                       reading.gpsAvailable,
                       reading.locationFixQuality != .approximate,
@@ -233,13 +325,21 @@ enum TaptionRouteEngineAdapter {
         return zip(route, route.dropFirst()).allSatisfy {
             let duration = $1.timestamp.timeIntervalSince($0.timestamp)
             guard duration <= maximumGap else { return false }
-            guard duration > RouteTimelineDataEngine.sparseConnectionMinimumGap,
-                  let lhs = $0.point,
-                  let rhs = $1.point else { return true }
-            return coordinateDistance(
-                RouteCoordinate(latitude: lhs.latitude, longitude: lhs.longitude),
-                RouteCoordinate(latitude: rhs.latitude, longitude: rhs.longitude)
-            ) <= RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters
+            let distanceMeters: Double?
+            if duration > RouteSparseConnectionPolicy.minimumSparseGapDuration,
+               let lhs = $0.point,
+               let rhs = $1.point {
+                distanceMeters = coordinateDistance(
+                    RouteCoordinate(latitude: lhs.latitude, longitude: lhs.longitude),
+                    RouteCoordinate(latitude: rhs.latitude, longitude: rhs.longitude)
+                )
+            } else {
+                distanceMeters = nil
+            }
+            return !RouteSparseConnectionPolicy.breaksConnection(
+                gapDuration: duration,
+                distanceMeters: distanceMeters
+            )
         }
     }
 
@@ -340,7 +440,10 @@ enum TaptionRouteEngineAdapter {
     private static func coordinateDistance(_ lhs: RouteCoordinate, _ rhs: RouteCoordinate) -> Double {
         let latitude = (lhs.latitude + rhs.latitude) * .pi / 360
         let north = (rhs.latitude - lhs.latitude) * 111_320
-        let east = (rhs.longitude - lhs.longitude) * 111_320 * cos(latitude)
+        let east = RouteTimelineLongitude.shortestDelta(
+            from: lhs.longitude,
+            to: rhs.longitude
+        ) * 111_320 * cos(latitude)
         return hypot(north, east)
     }
 }

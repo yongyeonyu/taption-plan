@@ -51,8 +51,10 @@ struct TaptionPlanWatchApp: App {
                 connectivity?.finishDataSyncRequest(requestID)
             }
         }
-        connectivity.onPurgeRequest = { [weak workout] in
-            await workout?.deleteAllLocalData() ?? false
+        connectivity.onPurgeRequest = { [weak workout] deleteWatchDatabase in
+            await workout?.deleteAllLocalData(
+                deleteWatchDatabase: deleteWatchDatabase
+            ) ?? false
         }
         connectivity.onWorkoutRequest = {
             [weak connectivity, weak workout] request in

@@ -1,5 +1,304 @@
 # Taption Plan 개발 문서
 
+## 2026-09-21 · legacy migration과 transit POI refresh
+
+- `LFR0921A01`: legacy JSONL 파일 미존재만 빈 입력으로 처리한다. 권한/I/O 읽기 오류는 migration 완료 marker 전에 전파해 원본을 복구한 뒤 재시도할 수 있게 했다.
+- `RVR0921A01`: transit POI 검색은 bootstrap 완료 및 active scene에서만 예약하고, resolver 완료 뒤에도 active 상태를 확인해 백그라운드 결과 게시를 막는다. UI 배치는 바꾸지 않았다.
+- `MCR0921A01`: materialized rollback 비교는 SQLite `REAL`에 저장된 Unix seconds 표현끼리 수행한다. Foundation `Date` reference-date 왕복에서 내부 Double이 1 ULP 달라져 CAS가 실패하던 경계를 회귀 테스트로 고정했다.
+- `DVT0921A01`: Device Hub에서 iPhone 14 Pro/iOS 27.0에 로컬 Debug build 149를 설치·실행했다. map/timeline 화면이 렌더링됐고 `testPlanDayDatabaseRemovesMaterializationInvalidatedDuringCommit` 실기기 XCTest가 1/1 통과했다. 상세는 `test.md`; 장시간 background CPU/watchdog soak 및 TestFlight 검증은 하지 않았다.
+- `MPC0921A01`: 날짜 레일의 중첩 후보 탐색을 우선순위 heap sweep으로 바꾸고, 병합 출처 ID는 accumulator에서 모아 결과 생성 때 한 번만 정렬한다. 날짜 세대 변경은 stale 읽기 결과를 차단하며, day snapshot 재기반은 이미 정규화된 원본 표본을 재사용해 취소 가능한 utility worker에서 처리한다. UI 배치·저장 계약은 바꾸지 않았다.
+
+## 2026-09-21 · review fixes and latest device readback
+
+- `MIG0921B01`, `INI0921B01`, `RCE0921B01`, `GEO0921B01`, `HKD0921B01`, `WPI0921B01`, `HCR0921B01`, `WAM0921B01`: corrected Watch migration/live event identity, concurrent SQLite cold-open initialization, corrupt materialized-row cleanup races, latest route-input invalidation, HealthKit sync/delete ordering and cursor compatibility, idempotent Watch workout purge, and bounded ambient sample-ID retention. Core/Activity/Route/PlanEngine SwiftPM suites pass 157/157; focused app/Watch XCTest coverage remains separate.
+- Concurrent V3 cold open initially surfaced `SQLITE_BUSY` while enabling WAL. Added a bounded retry for `PRAGMA journal_mode=WAL` only; the cold-open regression and full Core suite then passed.
+- `DVI0921B01`: the earlier check could only launch the installed 1.0 (149) build because Device Hub CUA failed with `failed to write kernel assets`; direct input and current-checkout inclusion were unverified then. The later `DHB0921C01` run built, installed, and directly exercised the current checkout; see `test.md`.
+- `DHB0921C01`: current-source iPhone 14 Pro/iOS 27.2 Debug build and Device Hub date/play input smoke passed. Date moved 9/21→9/22→9/21; Play/Pause toggled and the app remained foreground. The shared App Group path stayed the same; the app-specific container UUID changed, so private-container continuity is unverified. No data erase or TestFlight upload was performed.
+
+## 2026-09-21 API0921A01 · umbrella engine facade
+
+- 항상 `"1"`만 반환하던 `TaptionPlanEngine.version`과 고정값 assertion을 제거하고 Core·Activity·Route의 re-export 경계만 유지했다. Facade consumer test target은 umbrella package만 의존한다.
+- Facade SwiftPM test 1/1 PASS; iPhone 14 Pro/iOS 27.2 Debug build exit 0. `test.md`에 검증 기록을 남겼다.
+
+## 2026-09-21 WPD0921A01 · locked HealthKit workout purge
+
+- Apple documents `finishWorkout()` returning `(nil, nil)` as a successful save whose `HKWorkout` object is unavailable while the device is locked ([finishWorkout](https://developer.apple.com/documentation/healthkit/hkworkoutbuilder/finishworkout%28completion%3A%29)). Each Watch workout now carries a generated purge UUID in custom HealthKit metadata. A purge overlapping finish persists that ID before waiting; reconciliation deletes only workouts matching that metadata and requires `deleteObjects` to report at least one deleted sample ([deleteObjects](https://developer.apple.com/documentation/healthkit/hkhealthstore/deleteobjects%28of%3Apredicate%3Awithcompletion%3A%29)). Zero/error retains the intent for retry; a non-nil finish result still deletes the exact returned object.
+- `WatchWorkoutStartGateTests` 9/9 PASS on iPhone 17 Pro/iOS 26.5 (`build/validation/WPD0921A01-watchworkout-class-r1.xcresult`); generic watchOS Simulator Debug build PASS, zero warnings (`build/validation/WPD0921A01-watch-build-r1.xcresult`). Locked-device HealthKit deletion and paired-Watch/Device Hub input remain unverified.
+
+## 2026-09-21 WPI0921B01 · idempotent locked-workout purge retry
+
+- After a successful zero-count `deleteObjects` retry, query HealthKit with the exact purge UUID. Remove the durable intent only when that app-owned workout is absent; an existing match or query error leaves it queued. `testLockedFinishWithoutSampleKeepsPurgeIntentUntilDeletionIsConfirmed` passes 1/1 (`build/validation/WPI0921B01/watch-purge-intent-final.xcresult`). Physical Watch HealthKit deletion remains unverified.
+
+## 2026-09-22 WOF0922R01 / WFF0922R01 · Watch purge interleavings
+
+- Ambient outbox flush now owns its in-flight task. Purge invalidates its generation, cancels and awaits the flush before deleting the database, and the flush rechecks that generation before processing results and before every reliable transfer.
+- A `finishWorkout()` error after an uncertain HealthKit save transitions to `failedMayHavePersisted`; the generated purge UUID remains durable until reconciliation confirms deletion. A genuinely pre-save failure still removes the unused intent.
+- `WatchSensorQueryPlanTests` 45/45 and generic watchOS Simulator Debug build pass. Paired Watch transfer, forced-process restart recovery, and physical HealthKit deletion remain separate runtime gates.
+
+## 2026-09-22 REV0921A01 · Activity/Route adapter integration
+
+- Current iOS app integration XCTest for `RouteTimelineDataTests`, `TaptionActivityEngineAdapterTests`, and `TaptionRouteEngineAdapterTests` passed 132/132 on the iPhone 17 Pro iOS 26.5 validation simulator: `build/validation/REV0921A01/adapters-route-current-r2.xcresult`. This covers the cancellation-aware Activity evidence/quality paths, route adapter merge cancellation, playback lower-bound behavior, and route timeline projection. It does not close MapKit/device-only, raw-restore, Plan-day rollback, or Watch paired-device gates.
+- The current Debug product used for this run includes the embedded Watch target; generic watchOS Debug and iOS Debug builds also pass. No UI layout or storage contract was changed for this verification.
+
+## 2026-09-22 REV0922A01 · storage concurrency follow-up
+
+- `PlanDayDatabase.load()` now holds the day write fence while reading the materialized row, both raw digests, validating the projection, and repairing a bad row. Materialized replacement uses an existing-row CAS so an older projection cannot overwrite a newer writer. The Core package CAS regression and Plan-day cancellation/rollback regressions pass.
+- `TaptionPlanDayLRUCache` now single-flights same-key misses and rejects late loader results after an explicit insert/remove. The full TaptionPlanCore suite passes 94/94, including the new concurrent-loader regression.
+- `MigratingPlanRepository` clears only the completed migration task that owns its request ID, including failure/cancellation. A failed primary migration now retries on the next load in the same process; the iOS regression passes 4/4 with no test/runtime warnings. The only build warning remains the pre-existing `AppleIntegrations.swift:4494` `@preconcurrency` warning.
+
+## 2026-09-20 BUG1909R01 · build 149 iPhone watchdog/CPU and background file lock
+
+- iPhone 14 Pro/iOS 26.6.2 TestFlight build 149의 9/17 3건·9/18 2건 crash report는 모두 `FRONTBOARD/0x8BADF00D` 30초 scene-update watchdog이다. Crash thermal state는 nominal이며 app/dSYM UUID `e97cfbeb-cbdb-36e9-bce0-bcf848553542`가 일치한다. 심볼화한 9/18 21:36 main-thread stack은 `RouteTimelineDataEngine.category(at:in:through:)`가 각 sample/segment마다 전체 actuals를 filter하고 winner를 찾는 경로다. 9/17 3건 및 9/18 22:58 stack은 `ActivityClassificationEngine.classification(for:overrides:)`의 샘플별 전체 override filter/sort, comparator 내 반복 `UUID.uuidString` 생성 경로다. 예외는 앱 배열 범위 오류가 아니라 OS watchdog SIGKILL이다.
+- CPU resource report 8건(9/18 21:27·21:49·22:05, 9/19 15:13·15:25·15:30·15:37·15:43)은 비전면/사용자 idle 상태에서 48 CPU초/49–55초, 87–99% CPU를 기록했다. 9/18 초반 두 건은 activity classifier, 22:05는 expected-route/WBS projection 및 sleep span 계산, 9/19 다섯 건은 live route/WBS refresh와 일부 review archive/persist 경로를 가리킨다. 9/20 CPU report는 없지만, 같은 날 00:15:54에는 별도 Plan crash report가 확인됐다.
+- `BKG0920A01`: build 149의 새 report는 `EXC_CRASH/SIGKILL`, `RUNNINGBOARD/0xDEAD10CC`이며 dSYM UUID `e97cfbeb-cbdb-36e9-bce0-bcf848553542`와 일치한다. `sceneEnteredBackground → saveCloudBackupOnBackground → cloudRawSensorPayload → SensorReadingArchive.readings/loadEvents/decodeReadings` 호출 중 worker가 `DeviceMotionSnapshot` 등을 decode하고, 해당 메서드의 바깥 `defer`까지 shared App Group `TaptionDataFileLock`을 계속 보유했다. 이는 decoder 예외나 이전 `0x8BADF00D` watchdog이 아니라 background suspension 시 파일 잠금을 놓지 못한 종료다. iCloud raw backup이 월초부터 누적된 센서 기록을 한 번에 읽는 경로라 데이터가 많을수록 잠금 보유 구간이 길어졌다.
+- classifier override를 한 번 정규화해 우선순위 heap sweep으로 조회하고 tie-break는 UUID 바이트 비교로 바꿨다. route category도 선택일 actuals에서 interval index를 만들고 sample/segment 조회를 binary search로 교체했다. 분류 계산/병합은 utility detached 작업으로 옮기고 취소·오래된 revision 결과를 버린다. MapHomeView는 inactive scene에서 live/expected route 및 WBS 파생 계산을 취소·차단하고, expected route 갱신을 100ms 합친다. 센서 원본·저장 계약·UI 배치는 유지했다.
+- 일반 센서/raw archive 조회는 iOS background assertion 아래에서 SQLite event snapshot을 잠근 뒤 canonical payload decode를 lock 밖에서 128-event async batch로 수행하고, batch 경계에서 cancellation·deletion generation을 확인한다. 최초 legacy migration도 legacy/raw/tracking decode·정규화를 lock 밖에서 수행하고 256-event 단위 idempotent SQLite transaction과 최종 marker commit만 잠근다. 각 batch는 cancellation·deletion generation·migration marker를 확인하며 동시 migration도 중복 제거된다. legacy repair는 원본 event 비교 및 삭제 generation 검증 후 다시 잠근다. 일자 memory reprojection은 per-day invalidation generation과 DB write-lock 안의 commit guard로 무효화된 projection의 materialized 저장을 막는다. Watch sleep 총시간은 보낼 segment 목록의 2,000개 상한을 적용하기 전에 전체 보존 구간에서 계산한다.
+- `BKU0920A01`: raw archive 저장소의 `accountUnavailable`은 손상 상태로 변환하지 않고 복원 package 로딩까지 전달한다. iCloud 파일 미다운로드·일시 접근 실패는 부분 복원이 적용되지 않아 재시도 가능하며, 손상 archive는 기존 snapshot-only 결과를 유지한다.
+- `QCP0920R01`: detached sensor quality projection의 취소를 scalar filter와 route adapter/filter 루프까지 전달하고 256개 단위로 확인한다. 취소는 scalar robust filter와 route filtering 내부에서 각각 검증했다.
+- `RSE0920R01`: stale day projection이 invalidation 후 남기던 append-only sensor raw event를 exact-event CAS rollback으로 제거한다. 같은 키가 바뀐 동시 writer row는 삭제하지 않는다.
+- `DNL0920R01`/`DHE0920R01`: legacy SQLite key의 embedded NUL을 domain, id, snapshot, map, metadata/migration key 경계에서 거부하고, snapshot equality/hash는 SQLite BINARY domain과 동일한 UTF-8 byte identity를 사용한다.
+- `CAS0920R01`: materialized rollback CAS가 generatedAt·firstTimestamp·lastTimestamp까지 모든 저장 열을 비교한다.
+- `WRS0920A02`: commerce lock 변경은 이미 진행 중인 workout teardown reset token을 무효화하지 않는다. `WPD0920A01`: purge 중 HealthKit에 저장된 workout은 삭제 완료까지 추적하고 삭제 실패 시 purge를 실패시킨다. HealthKit 실기기 삭제 검증은 미완료다.
+- `RCL0920A03`: file-backed raw archive restore는 1 MiB FileHandle read와 1 MiB base64 decode chunk 사이, JSON payload scan 중 65,536자 간격으로 cancellation을 확인한다. JSONEncoder의 escaped slash와 v1 archive 형식을 유지한다. `SecurityBackupCoreTests` 80/80 PASS (`build/validation/RCL0920A03-security-backup-full-final.xcresult`).
+- 관련 검증: TaptionPlanCore 69/69, route/activity adapter와 Watch gate 및 stale-save iPhone Simulator 33/33 PASS (`build/validation/WPD0920A01-watch-cleanup-regressions.xcresult`); watchOS Simulator Debug build exit 0.
+- 현재 통합 검증: TaptionPlan iPhone 17 Pro Simulator 1,168 PASS·1 SKIP·0 FAIL (`build/validation/BUG1909R01-full-current.xcresult`); skip은 iOS 26.5 StoreKitTest `SKInternalErrorDomain Code 3`. SwiftPM packages Core/Activity/Route/PlanEngine은 69/69·19/19·25/25·1/1 PASS.
+- `xcodebuild analyze -project TaptionPlan.xcodeproj -scheme TaptionPlan -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO`: exit 0. 기존 사용자 변경인 `AppleIntegrations.swift:4470`의 `@preconcurrency AVAudioPlayerDelegate` 무효 경고 1건만 출력되어 해당 파일은 수정하지 않았다.
+- `RTE0920A01`: route time-coordinate index가 필터링된 route segment 경계를 유지해 15분 초과 GPS 공백을 보간하지 않는다. 비정렬 segment는 시작 시각으로 정규화하고 겹치는 구간의 전체 마지막 시각도 올바르게 clamp한다. RouteEngine package 23/23, app adapter 12/12, generic iOS Debug build exit 0.
+- `WCH0920A01`: Watch 로컬 전체 삭제가 운동 시작 도중 실행되면 purge generation으로 대기 중인 시작을 무효화하고, 삭제 중 새 시작을 막는다. HealthKit 권한·collection·metadata await 뒤마다 세대를 확인하며 concurrent purge도 모두 끝날 때까지 차단한다. gate XCTest 2/2, generic watchOS Simulator build PASS.
+- `WCE0920A01`: iPhone `systemCrashLogs`에서 WatchOS 26.6 build 149 종료 보고서 7건(최신 9/20 11:18:16)을 확인했다. 모두 `EXC_BREAKPOINT/SIGTRAP`, app/dSYM UUID `9f183f95-a2de-3306-b09f-f77c51112a04` 일치, utility queue의 동일한 `WatchConnectivityController.requestSync()` error callback에서 발생했다. 11:02·11:18 보고서도 exact build-149 dSYM으로 `closure #1 in WatchConnectivityController.requestSync() +120`에 심볼화됐다. iPhone에 설치된 앱은 여전히 build 149이므로 두 보고서는 수정 전 Watch 바이너리의 반복이며 수정본 런타임 검증은 아니다. 해당 one-way `sendMessage` callback은 source에서 제거했고, generic watchOS Simulator Debug build는 PASS·exit 0.
+- `WST0920A01`/`WCH0920R01`: workout start가 `beginCollection`/`addMetadata`에서 await 중 purge가 시작되면 늦게 끝난 HealthKit 세션을 정리하지 못할 수 있었다. stop/reset도 sensor·HealthKit await 뒤 오래된 결과로 상태를 비우거나 오류를 게시하고, 설정 동기화가 purge 중 주변기록을 다시 arm할 수 있었다. start/stop/reset은 gate로 직렬화하고 각 await 뒤 generation을 확인하며, stale start의 해당 session/builder만 end/discard하고 모든 ambient refresh는 purge/reset 중 거부한다. 후속 리뷰에서 purge가 start/stop teardown과 동시에 공용 HealthKit 객체를 end/discard하는 경합, reset 중 도착한 `didFailWithError` callback 누락을 추가로 확인했다. lifecycle barrier로 purge가 진행 중 teardown 완료를 기다리게 하고, reset 중 실패 callback은 최종 오류로 보존한다. `SecurityBackupCoreTests` 77개와 `WatchWorkoutStartGateTests` 7개, 총 84/84 PASS (`build/validation/WCR0920B01/regression.xcresult`). 페어링 Watch 런타임 검증은 미완료.
+- `PGR0920A01`: 리뷰에서 manager가 Watch acceleration/ambient archive를 삭제한 뒤 controller가 fallible SQLite purge를 하던 순서를 확인했다. DB purge가 실패해도 원본이 사라지고 ambient outbox가 재전송될 수 있었다. 모든 producer/writer를 정지한 뒤 SQLite purge를 먼저 수행하고, 성공한 경우에만 manager archive/메모리 상태를 지우도록 단일 purge 흐름을 재배치했다. 실패 뒤 outbox 자동 재전송은 중단한다. SQLite 실패 시 manager stores 보존 XCTest 포함 Watch deletion payload suite 14/14 PASS (`build/validation/PGR0920A01/purge-related-tests.xcresult`); 테스트 실행에서 iOS/embedded Watch Debug target이 빌드됐다. 실제 HealthKit/페어링 Watch purge는 미검증이다.
+- `LQA0920A01`: legacy ambient 배열을 SQLite outbox에 snapshot 저장하는 동안 추가된 항목까지 제거하던 경쟁을 고쳤다. 성공한 snapshot과 정확히 같은 값만 legacy 큐에서 빼고 이후 도착·수정된 값은 남긴다. 공용 제거 함수가 Watch controller에서 호출되며 회귀 XCTest 1/1 PASS (`build/validation/LQA0920A01/ambient-adoption.xcresult`).
+- `RTA0920A01`: ambient `transferUserInfo` 실패 callback만, delivery ID·활성 세션·비-purge 조건에서 지연 outbox flush를 예약하도록 했다. 성공이나 ACK 대기 상태에서는 재전송하지 않는다. retry eligibility XCTest를 포함한 Watch shared-model test 2/2 PASS (`build/validation/LQA0920A01/ambient-policies.xcresult`); 실물 Watch 재시도는 별도 확인 대기다.
+- `LCK0920A01`: commerce lock 전환이 workout start generation도 무효화하도록 했다. `applySettings`가 await 전에 gate를 갱신하고 권한·collection·metadata await 뒤의 기존 generation guard가 대기 중 잠긴 시작을 폐기한다. 잠금 대기 회귀 포함 Watch gate·sensor suite 70/70 PASS, generic watchOS Simulator Debug build PASS·exit 0.
+- `ORD0920A01`: Watch acceleration flush append task를 enqueue 순서대로 연결하고 취소된 대기 task는 파일 쓰기를 건너뛴다. 따라서 기존 bounded per-session sequence watermark가 더 높은 batch를 먼저 기록해 앞 batch를 버리는 경합을 막는다. 역순 chunk file 저장·재로딩 회귀 포함 SensorDayStore/gate suite 70/70 PASS; generic watchOS Simulator Debug build PASS·exit 0. 페어링 Watch runtime 검증은 별도 게이트다.
+- `WCF0920A01`: 오래된 `HKWorkoutSession` 실패 callback이 뒤늦게 `reset()`을 호출해 새 운동을 지울 수 있었다. callback 객체와 현재 session의 identity를 확인하고, reset에서 session·builder delegate를 해제한다. generic watchOS Simulator Debug build PASS; 실제 HealthKit 지연 callback 재현은 Watch에서 미확인.
+- `WLP0920A01`: MainActor로 지연된 CoreLocation callback은 현재 운동 시각을 검사하지 않아 이전 운동 좌표가 새 운동 경로에 섞일 수 있었다. 현재 운동 시작 시각보다 오래된 위치를 거부하는 정책을 적용하고, 이전 운동 위치 배제 XCTest를 추가했다.
+- `WAD0920A01`: iPhone 저장 실패 시 ambient recorder watermark가 그대로라 같은 session/sequence 표본이 재생된다. Watch의 월별 JSONL append는 세션별 최대 sequence를 재구성해 이미 쓴 표본을 건너뛰고, write 실패 시 index를 무효화해 다음 시도에서 파일 상태를 다시 읽는다. 중복 drain XCTest와 watchOS Debug build로 확인했다.
+- `WDR0920A01`: pending ambient session으로 재조회할 때 표본 ordinal을 1부터 다시 매기던 문제를 고쳤다. sequence를 고정 query anchor(`highWater` 또는 `armedAt`)와 sample timestamp에서 계산하고, JSONL append index는 재시도 session의 실제 sequence 집합으로 중복을 제거해 더 낮은 새 sequence도 저장한다. workout session은 기존 단조 sequence 규칙을 유지한다. iPhone Simulator 24/24, index regression 2/2, generic watchOS Simulator Debug build PASS.
+- `WPC0920A01` (실물 연동 검증 대기): ambient raw event와 immutable delivery payload를 SQLite outbox에 함께 기록하고 iPhone durable 저장 ACK까지 재전송한다. 10분 summary revision·변경된 chunk ID 및 iPhone stable-sample merge로 늦은 표본을 보존한다. ACK와 페이지 flush가 겹칠 때 후속 flush 요청을 보존한다. Core 73/73, iPhone Simulator 집중 회귀 30/30, generic watchOS Debug build PASS (`build/validation/WPC0920A01`); 실제 Watch↔iPhone 비활성·재시작·ACK 연결 검증은 미완료다.
+- `WCR0920A01`: 레거시 Watch archive의 restore receipt는 이전 전체 청크 배열을 저장한다. restore가 repository 저장을 await하는 동안 새 Watch 청크가 추가되면 실패 rollback이 그 새 기록까지 지울 수 있었다. actor 안에서 restore를 commit/rollback까지 추적하고, 동시 기록은 정상 저장한 뒤 ID와 최신 보존시각으로 요약해 실패 시 이전 상태에 합친다. 동시 read와 추가 restore는 transaction 종료까지 대기한다. `SensorDayStoreTests` 61/61 PASS (`build/validation/WCR0920A01/sensor-day-tests-final4.xcresult`).
+- `APP0920A01`: incremental activity append에서 마지막 sample을 override가 여러 span으로 나누면 prior tail과 rebuilt tail의 경계가 어긋나 마지막 fragment를 중복 추가할 수 있었다. 마지막 evidence 시각을 prior final segment가 포함하지 않는 경우 full classification으로 fallback한다. 경계 split 회귀 포함 Activity package 19/19 PASS.
+- `BMS0920A01`: cloud raw backup 수집이 sensor/envelope/Watch archive 읽기 오류를 빈 데이터로 숨기고, 기존 snapshot의 raw generation이 사라진 경우에도 incoming payload로 새 세대를 만들 수 있었다. read 실패를 전파하고 committed raw marker의 generation이 없으면 저장을 거부한다. 누락 archive 이후 비어 있지 않은 replacement 거부 회귀 포함 `SecurityBackupCoreTests` 74/74 PASS (`build/validation/WCR0920A01/security-backup-final.xcresult`).
+- `RST0920A01`: raw 복원은 월별 암호문을 하나씩 처리하고, file-backed store의 파일 read/envelope decode 및 payload decrypt/decompress/Codable decode/ID merge를 MainActor 밖에서 실행한다. archive 경계 cancellation은 그대로 전파한다. 최신 `SecurityBackupCoreTests`+Watch gate 통합 회귀는 84/84 PASS (`build/validation/RST0920A01/stream-io-final2.xcresult`). 단일 월 v1/v2 blob peak, 전체 merge result 집적, `AppModel.applyCloudBackup` preflight/rollback 비용은 남아 있어 v3 chunk/staging/commit 설계가 필요하다. 이는 iPhone watchdog/CPU stack의 직접 원인이 아니다.
+- `RVA0920R01`: 호출처가 없는 `AppModel.reviewArchives(for:asOf:)` private wrapper를 제거했다. 유일한 실제 경로 `refreshReviewArchives`는 이미 detached utility 계산과 revision 검사·반영을 직접 수행하므로 중복 wrapper만 정리했으며 동작은 바뀌지 않았다. 관련 archive/recovery XCTest 5/5 PASS (`build/validation/RVA0920R01/review-archive-suite.xcresult`).
+- `RAC0920R01`: scene background 진입은 `postSaveRefreshTask`를 취소하지만, 그 안에서 await하던 detached review archive 계산에는 취소를 전달하지 않아 stale 결과 반영은 막더라도 background CPU 작업이 끝까지 돌 수 있었다. detached task 취소 handler와 일별 소스 분배·archive 날짜 루프의 cancellation checkpoint를 추가했다. source hierarchy와 report 값은 변경하지 않으며 revision/scene guard도 유지한다. 관련 archive/recovery 및 취소 회귀 6/6 PASS (`build/validation/RAC0920R01/archive-cancellation.xcresult`).
+- `QCP0920R01`: source audit에서 `sensorTimelineTask`의 취소가 독립 `Task.detached` 안의 센서 scalar quality 계산까지 전달되지 않는 것을 확인했다. detached worker에 cancellation handler를 연결하고 scalar 입력/결정 루프를 256개 단위로 취소 확인한다. 동기 `qualityProjection(from:)` 계약과 출력은 유지한다. scalar 단계 테스트는 통과했지만 `RouteLoggerRouteFilter`의 현재 동기 실행과 정렬은 중간 취소가 불가능해 한 번 시작된 route projection은 반환까지 계속될 수 있다. 이 경로는 제공된 OS report의 직접 심볼 스택 원인으로 확인된 것은 아니며, 물리 iPhone post-fix CPU 로그도 아직 없다.
+- `RIX0920A01`: `RouteTimeCoordinateIndex.sample(at:)`가 segment 전체를 선형 순회하던 부분을 start upper-bound와 prefix-maximum end lower-bound로 바꿔 O(log S) interval 조회로 만들었다. 중첩·정렬되지 않은 segment와 gap `nil` 계약을 보존한다. RouteEngine tests 24/24 및 generic iOS Debug build PASS·exit 0.
+- `BGC0920A01`: monthly raw backup은 generation별 불변 파일을 먼저 기록하고, v3 snapshot에는 raw archive 존재 marker를 authenticated metadata에 포함한다. 이전 raw 파일과 legacy 고정 경로를 읽기 호환으로 보존하고, 복원은 snapshot generation과 일치하는 파일만 쓴다. marker가 가리키는 raw archive를 아직 읽을 수 없으면 부분 복원 대신 retryable `accountUnavailable`을 반환한다. v1/v2 metadata 인증은 바뀌지 않는다.
+- `DPR0920A01`: day projection commit이 freshness 취소 뒤 stale raw 이벤트만 남기던 경로를 보강했다. 교체 전 projection을 보존하고, 저장된 현재 값이 stale projection과 정확히 일치할 때만 transaction 안에서 이전 projection으로 CAS 복구해 신규 writer 값을 덮지 않는다.
+- `SRP0920A01`: 센서 raw-event repair는 decode 전 원본 event와 저장 시점 event가 동일할 때만 SQLite transaction 안에서 조건부 upsert한다. decode 동안 같은 ID에 기록된 최신 payload는 복구 데이터가 덮지 않는다.
+- `MIG0920A01`: legacy raw 이벤트 여러 건이 신규 import ID와 충돌할 때 첫 충돌만 지우고 한 번 재시도하던 migration을, 서로 다른 legacy provenance 충돌을 반복 해결하는 방식으로 보강했다. 같은 충돌 재발은 무한 재시도 없이 실패한다. 복수 충돌 import·unmarked 기록 보존 XCTest와 materialized rollback의 stale writer 보호 CAS 회귀를 추가했다. 취소 테스트는 raw archive 읽기가 파일 잠금 대기 중 취소된 뒤 잠금을 해제하고 기록을 보존하는지 확인한다.
+- `TST0920A01`: `SensorReadingArchive`와 `RawDeviceDataDayArchive` decode를 128-event async batch로 나누고 batch 사이 actor yield, cancellation/deletion-generation 재검사를 적용했다. 2,346 legacy readings 및 300 raw envelopes의 multi-batch read/repair, stale generation rejection을 검증했다. 정확히 batch 중간에 삭제를 실행하는 결정적 회귀는 아직 없다.
+- `MLK0920A01`: 최초 sensor migration의 legacy/raw/tracking source decode·event encode를 shared lock 밖으로 옮겼다. 256-event idempotent SQLite batch와 completion marker를 잠금 안에서 처리하고 매 batch마다 cancellation·deletion generation을 검사한다. 동시 640-event migration 10회 반복 및 backup/sensor 통합 회귀로 검증했다. full source aggregation의 peak memory와 exact mid-decode deletion test는 별도 항목이다.
+- `REF0920A01`: 동작·패키지 버전과 무관하게 항상 `"1"`을 반환하던 테스트 전용 `TaptionPlanEngine.version` API를 제거하고 umbrella re-export smoke test만 유지한다.
+- `GEN0920A01`: 같은 달의 최신 스냅샷에 이미 커밋된 raw archive가 있고 새 월간 generation에 raw 샘플이 없으면 기존 데이터를 보존해 새 generation ID로 다시 묶는다. 새 스냅샷 저장 실패 시 이전 raw archive를 되돌린다. AppModel 진단도 빈 데이터를 저장했다고 기록하지 않는다.
+- `COR0920A01`: raw backup set에서 malformed, 크기 초과/거부 또는 120개 제한으로 누락된 파일이 있으면 일부 월만 `.available`로 복원하지 않고 archive set을 invalid로 처리해 snapshot-only 경로로 제한한다. Snapshot archive의 기존 누락 파일 복구 동작은 유지한다.
+- 인접 리뷰에서 sampleCount 중복, 요청 span 밖 센서 근거, migration 광역 삭제, source 변경 reprojection 미저장, Watch 주변 센서 재시도 ID, 운동 시작 중복/실패 cleanup, HealthKit 조회 오류 성공 오판정, 겹친 수면 시간 중복 합산을 수정했다. 독립 검토 `REV1909R01`은 watchdog 변경에서 수정이 필요한 회귀를 찾지 못했다. package 검토 `PKGA0920R1`은 현재 추가로 안전하게 추출할 경계가 없다고 판단했다. Activity/Route target에서 실제 import가 없던 PlanCore 의존성만 제거했다. `RST0920A01` 복원에서 ciphertext 전량 보유와 동기 decode/merge의 MainActor 점유는 줄였으나, 월 단위 v1/v2 단일 blob과 전체 merge 결과는 여전히 메모리에 올라간다. v1/v2 호환 v3 청크 인증·압축과 로컬 stage/전체 검증/bounded commit/rollback이 함께 필요한 저장 계약 확장이라 별도 구현 항목으로 남긴다. 이는 확인된 iPhone watchdog/CPU stack의 원인은 아니다.
+- `DGD0920A01`/`EVK0920A01`: raw digest 스캔 후 별도 autocommit 저장 전 다른 SQLite connection이 event/cache를 갱신하면 stale digest가 다시 저장될 수 있어, version 재확인과 cache 저장을 `BEGIN IMMEDIATE` transaction으로 묶고 기존 파생 cache는 1회 무효화한다. Batch identity는 구분자 결합 문자열 대신 domain→id tuple로 비교한다. Core package XCTest 57/57 PASS, generic iOS Debug build PASS·exit 0.
+- raw backup 복원 보강 `BKU0920A01`/`GEN0920A01`/`COR0920A01`: `SecurityBackupCoreTests` 64 PASS·0 FAIL (`build/validation/BKU0920A01/security-backup-suite.xcresult`), generic iOS Debug build PASS·exit 0. 수정본은 실기기에 설치하지 않았다.
+- 검증: cooperative decode/migration 변경 후 전체 iPhone 17 Pro Simulator suite 1,142 PASS·기존 StoreKit 1 SKIP·0 FAIL (`build/validation/MLK0920A01-full-retry.xcresult`; StoreKitTest `SKInternalErrorDomain Code 3`만 스킵). `SensorDayStoreTests` 57/57, combined `SecurityBackupCoreTests`+`SensorDayStoreTests` 130/130 및 concurrent migration 10/10도 PASS다. Core 60/60, Activity 17/17, Route 24/24, PlanEngine umbrella 1/1 PASS. 추가로 Activity classifier의 512개 중첩·만료 override 전 구간을 naive priority reference와 비교하는 XCTest를 넣고 package 18/18 PASS를 확인했다. 현재 소스 generic iOS device Debug exit 0 및 `.app` 산출물은 `build/validation/TST0920A01-cooperative-DD/Build/Products/Debug-iphoneos/TaptionPlan.app`이다. iOS Simulator Debug·`analyze`·watchOS Simulator Debug 및 Watch start gate 2/2도 PASS다.
+- 수정본의 실제 iPhone 설치/실행·장시간 CPU 및 post-fix OS log는 별도 기기 게이트다. 현재 기기 설치본은 TestFlight build 149이며 이번 local 수정은 미설치다. TestFlight 업로드·설치는 하지 않았다.
+
+## 2026-09-22 CPU0922A01 · iOS 27.2 CPU report provenance와 post-fix readback
+
+- `TaptionPlan.cpu_resource-2026-09-22-080234.ips`는 iPhone 14 Pro/iOS 27.2에서 08:00:59–08:02:31 KST 동안 전면 앱이 90초 CPU/92초, 98%를 사용한 보고서다. 앱은 1.0 (149)이지만 loader UUID `2F36B41C-34A7-3E71-A53B-B117730689BE`가 현재 로컬 Debug loader와 같아 새 TestFlight Release 재발로 분류하지 않는다.
+- 보고서 시작은 Device Hub 9/9 화면 재실행 시각과 정확히 일치하고, 08:01 캡처에는 `Taption Plan 645 ms` microhang이 보인다. 이 실행은 10,000 actual 재생 baseline p95 882.187ms가 확인된 actual-index 수정 전이다. 따라서 보고서는 재생 tick마다 actual을 다시 정렬하던 기존 경로의 현장 증거이며, 09:51 이후 적용한 `RouteTimelineDataEngine.ActualIndex` 수정 뒤 재발 증거가 아니다.
+- 수정본은 같은 기기에서 p95 25.023ms, 전체 `RouteTimelineDataTests` 94/94를 통과했다. 최신 앱을 데이터 삭제 없이 재설치한 뒤 180초 생존과 신규 TaptionPlan CPU/Hang report 없음도 readback했다. 11:10 KST 추가 조회에서도 앱 PID 1217·위젯 PID 1218이 실행 중이고 TaptionPlan OS report는 기존 9/21 HangTracer와 08:02 CPU report뿐이다.
+- iOS 27 Instruments 장시간 recording은 1.3초 뒤 채널 disconnect 또는 Xcode 내부 assertion으로 trace가 무효화되어 정량 근거에서 제외했다. 정확한 9/9 장시간 재생과 9/20 file-lock 동일 workload는 별도 미완료 게이트로 유지한다.
+
+## 2026-09-22 STO0922D01 · 영구 저장소 선택 fail-closed
+
+- `AppModel.init`은 app-group SQLite가 열려도 legacy 파일 저장소 하나가 실패하면 정상 SQLite를 버릴 수 있었고, 모든 SQLite가 실패해도 파일 저장소가 열리면 이를 사용하지 못하는 조합이 있었다. 모든 durable 저장소가 실패하면 live 앱에서 `InMemoryPlanRepository`로 내려가 저장된 것처럼 보인 변경이 재실행 후 사라질 수 있었다.
+- `PlanRepositoryResolver`가 app-group SQLite, application-support SQLite, durable 파일 저장소 순으로 한 번만 선택하고, legacy 저장소가 없더라도 정상 SQLite를 유지한다. durable 저장소가 하나도 없으면 load/save/delete가 명시적으로 실패하는 `UnavailablePlanRepository`를 선택한다. Preview와 테스트의 명시적 repository 주입은 유지한다.
+- iPhone 17 Pro/iOS 26.5 Simulator에서 정상 app-group SQLite 유지, SQLite 실패 시 durable 파일 fallback, 모든 저장소 실패 시 fail-closed 회귀 3/3 PASS·실패/스킵/runtime warning 0: `build/validation/STO0922D01-repository-failclosed-r2.xcresult`. 전체 앱과 테스트 타깃 컴파일도 성공했고 build error/warning/analyzer warning은 0이다.
+
+## 2026-09-22 RPF0922D01 · DLF0922D01 · 백업 삭제-fence 정리
+
+- raw sensor restore 비동기 경계 뒤 연속 실행되던 동일 preparation-fence 검사를 하나 제거했다. 비동기 작업 전후의 취소·PIN·삭제-generation 검사는 그대로 유지한다.
+- legacy raw 저장 도중 데이터 삭제 generation이 전진하면 방금 쓴 파일도 제거한다. 일반 Task 취소에서는 기존 merged legacy 파일을 보존한다. 월간 generation의 snapshot commit 직전 삭제가 시작되면 이미 stale인 snapshot을 다시 읽지 않고 고유 staged raw 파일을 제거한다.
+- 관련 경계 5/5 통과 후 `SecurityBackupCoreTests` 전체 직렬 97/97 PASS·실패/스킵/runtime warning 0: `build/validation/RPF0922D01/security-backup-focused-r4.xcresult`, `build/validation/RPF0922D01/security-backup-full-serial-r5.xcresult`. 재빌드 error/warning/analyzer warning은 0이다.
+- 같은 checkout은 iPhoneOS 27.0 SDK의 generic iOS Debug 빌드·서명·embedded iPhone/Watch/widget 검증까지 성공했고 error/warning/analyzer warning은 0이다: `build/validation/REV0922D01/current-ios27-device-build.xcresult`.
+
+## 2026-09-22 STF0922D02 · 저장소 load 실패 후 편집 fail-closed
+
+- durable 저장소 load 실패 뒤 `persist()`만 거부하고 먼저 바뀐 메모리 snapshot을 남기던 경로를 막았다. bootstrap이 만든 안전한 fallback snapshot을 유지하고, 공통 mutation gate와 snapshot backstop이 이후 계획·설정 변경을 즉시 거부한다.
+- 최초 backstop은 `@Observable` didSet 안에서 무조건 재할당해 재귀 SIGSEGV를 냈다: `build/validation/STF0922D02-repository-load-failclosed.xcresult`. 내부 복원 중임을 표시하는 guard를 추가한 뒤 단독 회귀 1/1과 기존 저장 취소·실패 회귀를 포함한 4/4가 통과했다: `build/validation/STF0922D02-repository-load-failclosed-r2.xcresult`, `build/validation/STF0922D02-repository-load-failclosed-regression-r3.xcresult`. 실패·스킵·runtime warning은 0이다.
+- 최종 checkout의 iPhoneOS 27.0 SDK generic iOS Debug 빌드·서명·embedded iPhone/Watch/widget 검증이 성공했고 error/warning/analyzer warning은 0이다: `build/validation/STF0922D02-current-ios27-device-build.xcresult`.
+
+## 2026-09-22 SRA0922D03 · PDR0922D04 · WSG0922D05 전체 회귀 안정화
+
+- 센서 분석 회귀를 실제 active scene에서 실행하고 `AppleSensorDataService`에 기존 append 주입과 대칭인 archive-read loader를 추가했다. 열린 SQLite 디렉터리를 삭제하던 실패 주입을 결정적 loader 오류로 바꿔 pending day·retry 계약은 유지하면서 libsqlite API 위반을 제거했다.
+- Plan-day 동시 복구 테스트는 load가 write lock 안에서 materialized row를 읽는 현재 계약에 맞춰, lock 해제 전 설치된 valid row를 snapshot으로 반환하고 row를 보존함을 검증한다.
+- Watch 재시작 테스트는 삭제 cutoff를 격리해 이전 테스트 상태가 5분 전 payload를 정상 폐기하지 않게 했다. ACK 전 snapshot commit 계약은 그대로 검증한다.
+- 관련 focused 5/5와 Watch 반복 5/5가 통과했다: `build/validation/SRA0922D03-focused-r1.xcresult`, `build/validation/WSG0922D05-watch-gate-r2.xcresult`. 최종 전체 앱 회귀는 1,301 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/SRA0922D03-full-app-r3.xcresult`.
+- 최종 checkout의 iPhoneOS 27.0 SDK generic iOS Debug 빌드·서명·embedded iPhone/Watch/widget 검증이 성공했고 error/warning/analyzer warning은 0이다: `build/validation/SRA0922D03-current-ios27-device-build.xcresult`.
+
+## 2026-09-22 IOS0922D06 · 최신 checkout iOS 27 물리 기기 검증
+
+- iPhoneOS 27.0 SDK로 빌드된 signed Debug 1.0 (149)을 iPhone 14 Pro/iOS 27.2에 앱·사용자 데이터 삭제 없이 교체 설치했다. 앱의 최소 지원 버전은 iOS 18.0을 유지하며, iOS 27 전용으로 deployment target을 올리지는 않았다.
+- 설치·foreground launch 뒤 15초와 45초 readback에서 앱 PID 1698과 widget PID 1699가 동일하게 생존했다. 지도·9월 22일·시간축·날씨·재생 화면은 오류 팝업 없이 렌더링됐다: `build/validation/IOS0922D06/device-install.json`, `device-launch.json`, `device-process-readback-45s.json`, `device-after-45s.png`.
+- WBS 공항 endpoint 항공 판정과 9월 9일 인천국제공항→수완나품 구간의 `비행기` 저장·재설치 readback은 선행 `I27A092201` 근거를 유지한다. 이번 검증은 최신 전체 회귀 안정화 뒤 설치·실행 smoke이며 TestFlight 업로드는 하지 않았다.
+
+## 2026-09-22 REV0922E01 · iOS 27 정적 분석·패키지 경계 재검증
+
+- 현재 checkout을 iPhoneOS 27.0 generic device 대상으로 `xcodebuild analyze`해 analyzer warning 0·error 0으로 통과했다: `build/validation/REV0922E01/ios27-static-analyze.xcresult`. 유일한 일반 warning은 제품 소스가 아니라 Xcode의 `StoreKitTest.framework` 헤더가 iOS 18부터 deprecated된 `SKPaymentTransactionState`를 선언한 SDK 경고다.
+- 현재 Swift Package 테스트는 TaptionPlanCore 94/94, TaptionActivityEngine 28/28, TaptionRouteEngine 38/38, TaptionPlanEngine facade 1/1로 모두 통과했다: `build/validation/REV0922E01/PlanCore.log`, `ActivityEngine.log`, `RouteEngine.log`, `PlanEngine.log`.
+- 앱 소스가 하위 Route engine을 직접 import하지 않는 package facade 경계 검사도 통과했다: `scripts/check-app-engine-import-boundary.sh`. 자동 분석은 통과했지만 대규모 diff의 후속 수동 감사는 `temp.md`에서 계속 추적한다.
+
+## 2026-09-22 RRL0922E02 · repository load 실패 후 자동 복구
+
+- durable repository load가 한 번 실패하면 편집을 막는 fail-closed 상태가 `bootstrap()` 재진입까지 차단해, 일시적 파일 보호·접근 오류가 풀려도 앱 재실행 전에는 회복하지 못하던 경로를 수정했다.
+- 삭제 generation·commerce·전체 삭제 gate는 그대로 유지하고 repository read만 다시 시도한다. 성공 전에는 fallback snapshot과 편집 차단을 유지하며, 성공하면 durable snapshot을 먼저 복원한 뒤 mutation을 재허용한다. 실패 중 `addPlan`은 되돌린 계획 ID를 성공처럼 반환하지 않고 `nil`을 반환한다.
+- focused 2/2와 저장 취소·동시 편집을 포함한 6/6이 통과했다: `build/validation/RRL0922E02/repository-retry-r1.xcresult`, `repository-persistence-regression-r2.xcresult`. 최종 전체 앱 회귀는 1,302 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `full-app-r3.xcresult`.
+- iPhoneOS 27.0 SDK generic iOS Debug 빌드·서명·embedded Watch/widget 검증도 error/warning/analyzer warning 0으로 통과했다: `current-ios27-device-build-r4.xcresult`.
+- 같은 산출물을 iPhone 14 Pro/iOS 27.2에 사용자 데이터 삭제 없이 교체 설치·foreground launch했고 15초 뒤 앱 PID 1778·widget PID 1779와 지도·시간축 화면을 확인했다: `device-install.json`, `device-launch.json`, `device-process-15s.json`, `device-after-15s.png`.
+
+## 2026-09-22 MFG0922E03 · fail-closed 편집 성공값 일치
+
+- repository load 실패 중 snapshot은 되돌아가지만 메모·지도 메모·사용자 행동분류·대분류·스티커·사용자 교통 위치·자주가는 곳 제안 API가 성공 ID나 `true`를 반환하던 경로를 막았다. 각 사용자 편집 진입점은 공통 mutation gate를 먼저 검사해 저장 불가 상태에서 `nil` 또는 `false`를 반환하며, 지도 메모 draft ID와 자주가는 곳 제안 같은 비-snapshot 상태도 바꾸지 않는다.
+- 저장소 실패 차단과 복구 후 편집 재허용 focused 2/2, 전체 앱 1,302 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0: `build/validation/MFG0922E03/mutation-gate-focused-r1.xcresult`, `full-app-r2.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드는 error/warning/analyzer warning 0으로 통과했다: `current-ios27-device-build-r3.xcresult`. 동일 산출물을 iPhone 14 Pro/iOS 27.2에 사용자 데이터 삭제 없이 설치·실행해 15초 뒤 앱 PID 1790·widget PID 1791과 지도·9월 22일·시간축 화면을 확인했다: `device-install.json`, `device-process-15s.json`, `device-after-15s.png`.
+
+## 2026-09-22 WCA0922E04 · WatchConnectivity 선활성화
+
+- Watch `prepare()`는 캐시와 durable retry 상태를 복원한 직후 `WCSession` delegate를 등록·활성화한다. legacy ambient 큐의 SQLite 이관은 이어지는 main-actor task에서 수행하고, 완료 후 활성 세션 flush를 다시 호출한다. 따라서 느리거나 실패한 이관이 백그라운드 수신 준비를 막지 않으며 기존 큐는 이관 성공 전까지 제거되지 않는다.
+- `WatchSensorQueryPlanTests` 47/47 PASS·실패/스킵/runtime warning 0: `build/validation/WCA0922E04/watch-connectivity-regression-r1.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증 PASS, error/warning/analyzer warning 0: `build/validation/WCA0922E04/current-ios27-device-build-r2.xcresult`. paired Watch가 없어 실제 백그라운드 수신은 `WSD0922A01` 기기 게이트로 유지한다.
+
+## 2026-09-22 BIO0922E05 · 생체보호 fallback 덮어쓰기 차단
+
+- repository 첫 load 실패 뒤 생체보호 저장이 빈 fallback snapshot을 보호 archive에 쓰지 않도록, cloud backup과 같은 mutation gate를 저장소 접근보다 먼저 적용했다. 차단 시 `CancellationError`를 반환하며 보호 저장소를 열지 않는다.
+- 저장소 실패 차단과 복구 focused 2/2 PASS·실패/스킵/runtime warning 0: `build/validation/BIO0922E05/biometric-failclosed-r1.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증 PASS, error/warning/analyzer warning 0: `build/validation/BIO0922E05/current-ios27-device-build-r1.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터 삭제 없이 설치·실행했고 15초 뒤 app/widget PID 1845/1846 및 정상 지도 화면을 확인했다. Xcode Device Hub에서도 같은 iPhone 14 Pro/iOS 27.2와 실행 화면을 readback했다: `device-install.json`, `device-processes-15s.json`, `device-after-15s.png`, `device-hub-window.png`.
+
+## 2026-09-22 HKD0922E06 · HealthKit 전체 snapshot 삭제 동기화
+
+- `HKDocumentQuery`와 사용자 약물 전체 snapshot이 이전 UUID cursor 대비 추가·갱신·삭제를 같은 reconciliation 경계에서 계산한다. CDA 문서는 event delta와 sync state를 원자 적용하며, 손상 cursor는 빈 snapshot으로 덮지 않고 오류로 남겨 재시도한다. 수정 전부터 cursor에 없던 과거 삭제 문서는 소급 탐지하지 않는다.
+- iPhone 17 Pro/iOS 26.5 Simulator `HealthKitIntegrationTests` 30/30 PASS·실패/스킵/runtime warning 0: `build/validation/HKD0922E06/healthkit-integration-r1.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증 PASS, error/warning/analyzer warning 0: `build/validation/HKD0922E06/current-ios27-device-build-r1.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터 삭제 없이 설치·실행했고 15초 뒤 app/widget PID 1860/1861과 정상 지도 화면을 확인했다. 실제 Health 앱의 CDA 삭제 재현은 대표 데이터와 Health 권한이 필요해 별도 기기 게이트로 남긴다.
+
+## 2026-09-22 HKC0922E07 · HealthKit checkpoint fail-closed
+
+- 저장된 history cursor와 `HKQueryAnchor`가 decode되지 않으면 최초 동기화로 되돌리지 않고 명시 오류를 기록한다. legacy Date cursor 호환은 유지하며 기존 cursor·표본·추가/삭제 통계를 그대로 보존해 복구 후 재시도할 수 있다.
+- 손상 history cursor의 전체 재수집 차단과 손상 anchor의 초기화 차단 focused 2/2 PASS. 전체 `HealthKitIntegrationTests` 32/32 PASS·실패/스킵/runtime warning 0: `build/validation/HKC0922E07/cursor-failclosed-focused-r2.xcresult`, `healthkit-integration-r3.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증 PASS, error/warning/analyzer warning 0: `build/validation/HKC0922E07/current-ios27-device-build-r4.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터 삭제 없이 최신 Debug 1.0 (149)을 설치·실행했고 15초 뒤 app/widget PID 1878/1880 및 정상 지도 화면을 확인했다.
+
+## 2026-09-22 ACT0922E08 · Activity 증분 상태 엔진 호환
+
+- `ActivityClassificationState`가 생성 시점의 taxonomy와 engine configuration을 직렬화한다. `append`는 같은 엔진 상태에서만 tail 빠른 경로를 사용하고, 앱 업데이트 전 상태·구형 payload·수동 생성 상태는 현재 엔진으로 전체 재분류해 evidence와 segment span/sampleCount가 갈라지지 않게 한다.
+- 서로 다른 유효 taxonomy 상태와 identity 필드가 없는 legacy Codable 상태 회귀를 포함해 TaptionActivityEngine 30/30 PASS. iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증도 error/warning/analyzer warning 0으로 통과했다: `build/validation/ACT0922E08/current-ios27-device-build-r1.xcresult`.
+- iPhone 14 Pro/iOS 27.2에 앱·사용자 데이터를 삭제하지 않고 최신 Debug 1.0 (149)을 교체 설치·실행했다. 15초 뒤 app/widget PID 1956/1957이 생존했고 Device Hub에서 정상 지도·9월 22일·시간축 화면을 확인했다. taxonomy 교체 자체는 package 회귀가 검증하며 Device Hub smoke는 legacy 사용자 데이터의 launch 호환만 확인한다.
+
+## 2026-09-22 RFP0922E09 · 리뷰 보관 지문 생성 fail-closed
+
+- `ReviewReportArchiveEngine`의 source fingerprint JSON 인코딩이 실패할 때 SHA-256 빈 해시로 대체하던 경로를 제거했다. NaN/Infinity 등 직렬화할 수 없는 원본은 기존 `refreshed` 오류 경계로 전파되어 오래된 일·월·연 리뷰 archive를 정상 캐시처럼 재사용하거나 새 archive를 게시하지 않는다.
+- 빈 해시를 가진 기존 archive와 NaN 날씨 원본을 조합한 수정 전 재현은 실패했고, 수정 뒤 해당 회귀와 일·월·연 재생성·취소·과거 일 백업 보존 5/5가 통과했다: `build/validation/RFP0922E09/fingerprint-failclosed-r2.xcresult`, `review-archive-regression-r4.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증은 error/warning 0으로 통과했다: `build/validation/RFP0922E09/current-ios27-device-build-r5.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)을 교체 설치·실행했고 15초 뒤 app/widget PID 1992/1993과 Device Hub의 정상 지도·9월 22일·시간축 화면을 확인했다. 비정상 숫자 주입 자체는 물리 사용자 데이터를 훼손하지 않고 simulator 회귀로 검증했다.
+
+## 2026-09-22 PDS0922E10 · 지도 day snapshot 현재성 fail-closed
+
+- 지도 화면의 day snapshot 현재성 판정을 `PlanDayDataSnapshot.matchesCurrentSource`로 모았다. source revision이 같으면 즉시 허용하고, revision이 다르면 두 fingerprint가 모두 존재하며 같은 경우에만 기존 snapshot을 재사용한다. 따라서 canonical 64MiB 상한 초과로 fingerprint가 둘 다 nil인 상태가 `nil == nil`로 오래된 일자 투영을 통과하지 않는다.
+- 64MiB 초과 일자 원본과 서로 다른 revision을 사용한 수정 전 회귀가 `XCTAssertFalse`로 결함을 재현했고, 수정 뒤 단독 1/1 및 fingerprint·reprojection 인접 회귀 3/3이 통과했다: `build/validation/PDS0922E10/nil-fingerprint-currentness-r3.xcresult`, `day-snapshot-regression-r5.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증은 error/warning 0으로 통과했다: `build/validation/PDS0922E10/current-ios27-device-build-r6.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)을 교체 설치·실행했고 15초 뒤 app/widget PID 2127/2128과 Device Hub의 정상 지도·시간축 화면을 확인했다.
+
+## 2026-09-22 AST0922E11 · Activity persisted-state tail 복구
+
+- 같은 engine identity를 가진 persisted state라도 마지막 segment 분류와 마지막 evidence의 현재 엔진 재분류가 다르면 증분 tail을 조립하지 않고 전체 evidence를 재분류한다. 손상·부분 저장 state의 stale category/span/sampleCount가 append 뒤 유지되지 않는다.
+- 걷기 evidence에 수면 segment를 주입한 수정 전 회귀가 incremental/full 불일치를 검출했고, 수정 뒤 단독 1/1 및 TaptionActivityEngine 전체 31/31이 통과했다: `build/validation/AST0922E11/stale-segment-r1.log`, `stale-segment-r2.log`, `ActivityEngine-full-r3.log`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증은 error/warning 0으로 통과했다: `build/validation/AST0922E11/current-ios27-device-build-r4.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)을 교체 설치·실행했고 15초 뒤 app/widget PID 2150/2151과 Device Hub의 정상 지도·시간축 화면을 확인했다.
+
+## 2026-09-22 HQR0922E12 · HealthKit 장기 record overlap 조회
+
+- 고정 7일 lookback을 제거하고 저장된 HealthKit record의 최대 duration을 SQLite metadata로 단조 증가 유지한다. 조회는 이 duration만큼만 과거 day를 읽은 뒤 실제 interval intersection을 적용해, 7일보다 오래 시작된 record도 현재 일자와 겹치면 반환한다.
+- metadata가 없는 기존 DB는 HealthKit event domain을 한 번 스캔해 최대 duration을 backfill하고 이후 bounded query를 사용한다. 삭제는 최대값을 줄이지 않아 stale underestimate를 만들지 않으며 전체 데이터 삭제는 DayStore metadata도 함께 제거한다.
+- 30일 span 수정 전 회귀가 누락을 검출했고, 신규 저장·legacy backfill 2/2 및 `HealthKitIntegrationTests` 전체 34/34가 통과했다: `build/validation/HQR0922E12/long-span-query-r1.xcresult`, `long-span-query-r3.xcresult`, `healthkit-integration-r4.xcresult`.
+- iPhoneOS 27.0 SDK generic Debug 빌드·서명·embedded Watch/widget 검증은 error/warning 0으로 통과했다: `build/validation/HQR0922E12/current-ios27-device-build-r5.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)을 교체 설치·실행했고 15초 뒤 app/widget PID 2176/2178과 Device Hub의 정상 지도·시간축 화면을 확인했다.
+
+## 2026-09-22 KCR0922E13 · Cloud recovery key fallback 보존
+
+- CloudKit에서 기존 복구 키를 읽거나 새 키 저장을 확인한 경로는 먼저 로컬 Keychain에 키를 저장한 뒤에만 legacy iCloud Drive fallback을 삭제한다. Keychain 저장이 실패하면 오류를 전파하고 기존 fallback 키를 남겨 다음 오프라인 복원 가능성을 보존한다.
+- 수정 전 회귀는 Keychain 쓰기 실패가 무시되고 fallback이 삭제되는 것을 검출했다. 수정 후 실패 시 보존·성공 시 이전 정리 2건과 `SecurityBackupCoreTests` 99/99가 통과했다: `build/validation/KCR0922E13/keychain-preservation-prefx-r1.xcresult`, `keychain-preservation-r2.xcresult`, `security-backup-r3.xcresult`.
+- 전체 회귀 1,312건은 1,311 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/KCR0922E13/full-app-r5.xcresult`. iPhoneOS 27.0 SDK 물리 기기 Debug 빌드·서명·embedded Watch/widget 검증도 warning/error 0으로 통과했다: `current-ios27-device-build-r4.xcresult`.
+- iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)를 교체 설치·전면 실행했다. 15초 뒤 app/widget PID 2197/2198이 생존했고 Device Hub에서 선택 기기 iOS 27.2와 정상 지도·9월 22일·시간축 화면을 확인했다: `device-install.json`, `device-launch.json`, `device-apps.json`, `device-processes-15s.json`, `device-hub-iphone.png`.
+
+## 2026-09-22 PCC0922E14 · Plan-day projection 취소 전파
+
+- `PlanDayLoadCoordinator`의 source fingerprint와 snapshot projection detached worker에 부모 취소를 전달하고, source filter·readings projection·정렬·fingerprint 계산에 협력적 cancellation checkpoint를 적용했다. 취소 시 무거운 빈 snapshot을 다시 계산하지 않고 비완료 snapshot을 반환해 cache·DB 저장을 막는다.
+- 수정 전 회귀는 cancellation closure가 한 번도 호출되지 않는 것을 검출했다. 수정 후 직접 취소와 sensor load 직후 부모 취소 회귀 2/2, `SensorDayStoreTests` 기존 전체 86/86, 앱 전체 1,314건 중 1,313 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/PCC0922E14/prefix-r1.xcresult`, `cancellation-r4.xcresult`, `sensor-day-r3.xcresult`, `full-app-r5.xcresult`.
+- iPhoneOS 27.0 SDK 물리 기기 Debug 빌드·서명·embedded Watch/widget 검증은 warning/error 0으로 통과했다: `current-ios27-device-build-r6.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)를 교체 설치·실행했으며, 15초 뒤 app/widget PID 2231/2232와 Device Hub의 정상 9월 22일 지도·시간축 화면을 확인했다: `device-install.json`, `device-launch.json`, `device-apps.json`, `device-processes-15s.json`, `device-hub-iphone.png`.
+
+## 2026-09-22 MSM0922E15 · 앱 로드 migration 선형화·취소 전파
+
+- `MemoShellPlanMigration`이 plan마다 전체 actual/link를 재검색하던 O(plans × (actuals + links)) 경로를 actual 참조 ID와 link node ID의 단일 Set 인덱스로 교체했다. 메모와 계획 결과는 로컬 배열에서 완성한 뒤 마지막에 함께 반영해 취소 시 원본 snapshot을 변경하지 않는다.
+- bootstrap/deep link/reset의 snapshot 정규화를 공용 detached worker로 합치고 부모 취소를 전달했다. repeat plan dedup, legacy memo migration, record relationship 정규화, 자동 분류 잠금의 대량 루프에도 cancellation checkpoint를 적용했다.
+- 취소·기존 strict migration·앱 load 회귀 8/8, 최종 소스 전체 1,316건 중 1,315 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/MSM0922E15/memo-bootstrap-r9.xcresult`, `full-app-r10.xcresult`. 수정 전 회귀 시도 2회는 XCTest runner가 시작되지 않아 결과 근거에서 제외했다.
+- iPhoneOS 27.0 SDK 물리 기기 Debug 빌드·서명·embedded Watch/widget 검증은 warning/error 0으로 통과했다: `current-ios27-device-build-r11.xcresult`. iPhone 14 Pro/iOS 27.2에 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)를 교체 설치·실행했으며, 15초 뒤 app/widget PID 2281/2282와 Device Hub의 정상 9월 22일 지도·시간축 화면을 확인했다: `device-install-current.json`, `device-launch-current.json`, `device-apps-current.json`, `device-processes-current-15s.json`, `device-hub-iphone-current.png`.
+
+## 2026-09-22 ALM0922E16 · 자동 분류 잠금 병합 interval index
+
+- 활동·이동 잠금 병합이 fresh마다 locked 전체를 검색하고 retained 판정에서 다시 역검색하던 O(locked×fresh) 경로를 시작 시각 정렬·prefix maximum end interval index로 교체했다. 활동은 source별 index를 사용하고, 20% overlap·최대 겹침·동률 시 기존 입력순 우선·지하철 검증 규칙은 유지한다.
+- 신규 대량 비겹침·동률 회귀와 기존 잠금 회귀 7/7, `FeatureEngineTests` 611건 중 610 PASS·기존 StoreKit 1 SKIP, 전체 앱 1,319건 중 1,318 PASS·1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/ALM0922E16/focused-r1.xcresult`, `feature-engine-r2.xcresult`, `full-app-r3.xcresult`.
+- iPhoneOS 27.0 SDK에서 iPhone 14 Pro/iOS 27.2 대상 Debug 빌드·서명·embedded Watch/widget 검증은 warning/error/analyzer warning 0으로 통과했다: `ios27-device-build-r4.xcresult`. 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)를 교체 설치·실행했으며 15초 뒤 app/widget PID 2306/2307과 Device Hub의 정상 9월 22일 지도·시간축 화면을 확인했다: `device-install-r5.json`, `device-launch-r5.json`, `device-processes-15s-r5.json`, `device-app-r5.json`, `iphone-current-r5.png`, `device-hub-iphone-current-r6.png`.
+
+## 2026-09-22 BRI0922E17 · 백업 fallback endpoint index
+
+- `PlanBackupRouteFallbackEngine`이 ID 없는 travel마다 전체 places를 출발·도착 후보로 두 번 검색하던 O(travel×places) 경로를 종료·시작 시각 정렬 endpoint index의 binary lookup으로 교체했다. 명시적 place ID와 지하철 좌표 우선, 2시간 경계, 동일 시각 첫 입력 우선 규칙은 유지한다.
+- 동률·1,000개 대량 입력과 기존 fallback 회귀 8/8, `SecurityBackupCoreTests` 101/101, 전체 앱 1,321건 중 1,320 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0이다: `build/validation/BRI0922E17/focused-r1.xcresult`, `security-backup-r2.xcresult`, `full-app-r3.xcresult`.
+- iPhoneOS 27.0 SDK에서 iPhone 14 Pro/iOS 27.2 대상 Debug 빌드·서명·embedded Watch/widget 검증은 warning/error/analyzer warning 0이다: `ios27-device-build-r4.xcresult`. 사용자 데이터를 삭제하지 않고 Debug 1.0 (149)를 교체 설치·실행했으며 15초 뒤 app/widget PID 2343/2345와 Device Hub의 정상 9월 22일 지도·시간축 화면을 확인했다: `device-install-r5.json`, `device-launch-r5.json`, `device-processes-15s-r5.json`, `device-app-r5.json`, `iphone-current-r5.png`, `device-hub-current-r5.png`.
+
+## 2026-09-22 MRI0922E18 · 이동 구간 evidence index
+
+- `MovementRouteBuilder`가 장소 쌍마다 전체 센서 배열을 세 번, HealthKit 근거를 한 번 반복 순회하던 `O(stays × evidence)` 경로를 timestamp binary range와 interval overlap index로 교체했다.
+- 기존 센서 입력 순서, 시작·종료 경계 포함, HealthKit strict overlap, Taption WBS 공항 endpoint 비행 판정은 보존했다. 1,000개 장소·센서·HealthKit 비겹침 입력은 대규모 후보 조회 상한 회귀로 고정했다.
+- 실행 경계는 앱 센서 모델과 WBS endpoint 정책을 함께 사용하므로 추가 Swift Package 분리 없이 app Core에 유지했다.
+
+## 2026-09-22 SRI0922E19 · SensorFusion 공용 시간 인덱스
+
+- 이동 구간 전용이던 timestamp/interval lookup을 `SensorEvidenceTimeIndex`로 공용화해 층 보정, 자주 가는 장소, 층 이동, 지하철 후보, Apple 모션 병합이 장소·구간마다 전체 센서 배열을 다시 훑던 `O(spans × evidence)` 경로를 제거했다.
+- 센서 조회의 시작·종료 포함, 원래 입력 순서와 HealthKit strict overlap을 보존한다. 공용 index는 앱 내부 센서·Health 모델에 결합되므로 별도 Swift Package 공개 API로 확장하지 않고 app Core 내부 라이브러리 경계로 유지한다.
+- 1,000개 비겹침 조회 상한과 기존 층·장소·지하철·모션 회귀를 포함해 집중 8/8, `FeatureEngineTests` 614 PASS·기존 StoreKit 1 SKIP, 전체 앱 1,324 PASS·1 SKIP·0 FAIL·runtime warning 0을 확인했다.
+
+## 2026-09-22 MAI0922E20 · Apple 모션 기록 sweep index
+
+- `AppleDeviceGroundTruthEngine.applyingMotionHistory`가 센서 표본마다 모든 모션 구간을 역검색하던 `O(readings × activities)` 경로를 시작 시각 정렬과 최신 시작 우선 max-heap sweep으로 교체했다.
+- 시작·종료 시각 포함, unknown 무시, 기존 모션 보존, 원본 불변을 유지한다. 같은 시작 시각의 겹친 구간은 후입력을 우선해 결과를 결정적으로 만들고 동일 시각 센서도 입력 순서를 유지한다.
+- 이 투영은 앱의 `SensorReading`·`MotionActivityRecord`를 직접 갱신하는 내부 경계라 별도 공개 Package로 옮기지 않았다. 1,000×1,000 비겹침 조회 상한, 전체 기능·앱 회귀와 iOS 27.2 실기기 실행을 통과했다.
+
+## 2026-09-22 MFI0922E21 · 모션 계열 보정 시간 인덱스
+
+- `AppleDeviceGroundTruthEngine.enforcingMotionFamily`가 보행 계열 이동 조각마다 모든 자동차 모션 구간과 센서 표본을 재검색하던 `O(segments × (activities + readings))` 경로를 자동차 겹침 prefix integral과 `SensorEvidenceTimeIndex` 조회로 교체했다.
+- 겹친 자동차 구간의 중복 duration 합산, 센서 시작·종료 경계 포함, 분당 20걸음 임계값과 원본 불변을 유지한다. 1,000개 이동 조각의 비겹침 조회를 bounded work 회귀로 고정했다.
+- 앱 내부 센서·모션 모델에 결합된 보정 경계라 별도 공개 Package로 옮기지 않았다. 집중 4/4, `FeatureEngineTests` 618 PASS·기존 StoreKit 1 SKIP, 전체 앱 1,328 PASS·1 SKIP·0 FAIL·runtime warning 0과 iOS 27.2 실기기 실행을 통과했다.
+
+## 2026-09-22 STI0922E22 · 이동 병합 체류 interval index
+
+- `AppleDeviceGroundTruthEngine.coalescingTravel`이 병합 후보 이동마다 전체 체류를 다시 훑던 `O(segments × stays)` 경로를 체류 시작 시각과 prefix maximum 종료 시각을 사용하는 binary lookup으로 교체했다.
+- 정확히 180초인 체류 겹침, 짧은 체류 제외, 비정렬 입력과 기존 이동 병합 결과를 보존한다. 1,000개 이동·체류의 비겹침 조회를 bounded work 회귀로 고정했다.
+- 앱 내부 `PlaceStay`·`TravelSegment` 정책에 결합된 경계라 별도 공개 Package로 옮기지 않았다. 집중 4/4와 `FeatureEngineTests` 620 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0, iOS 27.2 실기기 실행을 통과했다.
+
+## 2026-09-22 AAI0922E23 · 모션 실제기록 중복 interval index
+
+- `MotionActivityActualEngine.records`가 병합된 모션 구간마다 모든 기존 HealthKit·Apple Watch·장소 기록을 다시 훑던 `O(activities × existing)` 경로를 정지용·이동용 interval index의 binary candidate lookup으로 교체했다.
+- 활동 길이의 50% 또는 30초 중 작은 겹침 임계값, 정확한 임계 경계, HealthKit/Watch 우선과 장소 문맥이 정지에만 우선하는 규칙을 보존한다. 1,000개 모션·기존 기록의 비겹침 조회를 bounded work 회귀로 고정했다.
+- 앱 내부 `ActualRecord`·`MotionActivityRecord` 정책에 결합된 경계라 별도 공개 Package로 옮기지 않았다. 집중 4/4와 `FeatureEngineTests` 622 PASS·기존 StoreKit 1 SKIP·0 FAIL·runtime warning 0, iOS 27.2 실기기 실행을 통과했다.
+
+## 2026-09-22 MTI0922E24 · 이동 병합 공용 interval index
+
+- 앱 내부 `TimeSpanValueIndex`를 추출해 `MotionActivityActualEngine`과 `AppleDeviceGroundTruthEngine.mergingTravel`이 공유한다. strict overlap, 입력 순서, 최대 겹침 동률 시 첫 GPS, GPS > Watch > motion 우선순위와 원본 불변을 유지한다. 앱 모델에 결합된 경계라 공개 Swift Package API로 올리지 않았다.
+- GPS·지하철·Watch·Core Motion 이동 후보는 interval index로 제한하고 센서·HealthKit 증거는 기존 `SensorEvidenceTimeIndex`를 공유한다. 비겹침 1,000×1,000 입력의 후보 검사 상한을 회귀로 고정했다.
+- 집중 회귀 9/9와 `FeatureEngineTests` 629건 중 628 PASS·기존 StoreKit 1 SKIP·0 FAIL·xcresult runtime warning 0. iPhoneOS 27.0 SDK 물리 기기 Debug 빌드·deep/strict 서명·embedded Watch/widget 검증도 error/warning/analyzer warning 0으로 통과했다. 상세 증거는 `test.md`와 `build/validation/MTI0922E24/`에 기록했다.
+
+## 2026-09-22 HPT0922A01 · backup diagnostics scan off MainActor
+
+- iPhone 14 Pro build 149의 9/21 HangTracer는 launch 중 `cloudBackupPayload`가 diagnostics 파일을 읽고 개인 건강 필드를 redaction하느라 main runloop를 586ms 점유한 짧은 hang을 기록했다. 이 보고서는 30초 watchdog과 별개이며 현재 9/22 binary에서 재현됐다는 뜻은 아니다.
+- `combinedLog`, redaction, backup snapshot/route/payload 구성은 utility detached task에서 수행한다. `DiagnosticsLogSupportTests` 10/10 PASS (`build/validation/HPT0922A01/DiagnosticsLogSupport-final.xcresult`), generic iOS Debug build exit 0. 최신 수정본의 물리 기기 OS-log readback은 BUG1909R01 기기 게이트로 남는다.
+
+## 2026-09-20 DCE0920A01 · 미사용 route/timeline 코드 정리
+
+- 호출처 없는 `DurationAxisText`, `FeatureSettingsStore`, `SensorCollectionLiveActivityError`, `WidgetActionService`, `RouteTimelineRenderProjection`, `RouteElement`/`RouteTimelineEngine`, `MovementCorrectionStore`를 제거했다. `GPSLoggerRouteFilter` wrapper는 삭제하고 기존 경계/정확도 테스트를 `TaptionRouteEngineAdapter.filteredReadings`에 직접 연결했다. production 호출처가 없던 speed-gradient 구현과 테스트도 제거해 지도 UI 동작은 바꾸지 않았다.
+- `AppFeatureSettings`의 repository 저장/복원 경로와 문서상 향후 ML handoff 계약인 `WatchBehaviorTrainingSample`은 보존했다. RouteTimelineDataTests 76/76 PASS (`build/validation/DCE0920A01/RouteTimelineData-retry.xcresult`), generic iOS Debug build PASS·exit 0 (`build/validation/DCE0920A01/DerivedData`).
+
 ## 2026-09-13 TP0913F001 · GPS 공백 수정 149 배포
 
 - E001 수정본 소스 `c4602ab` main push 및 네 번들 1.0(149) 배포 완료. 전체 회귀 1,113 PASS·기존 StoreKit 1 SKIP·0 FAIL, Debug·archive/export PASS. Apple VALID, 기존 Internal API 연결·웹 빌드/테스터 노출 확인 완료. 실제 설치/동작은 test.md의 별도 게이트로 유지한다.
@@ -950,3 +1249,14 @@ App Store Connect의 Paid Apps Agreement는 `신규` 상태이며 법인 정보 
 - HealthKit 원본 import와 provenance는 그대로 보존하고, 자동 행동·생체 추정에는 `com.apple.Health`, `com.apple.health`, `com.taption.plan` source만 사용하도록 제한했다. 사용자 입력 기록은 source와 관계없이 명시적 기록으로 보존한다.
 - 다른 앱 source의 연속 심박·에너지·생체값이 자동 활동으로 투영되지 않는 회귀를 추가했다.
 - `HealthKitIntegrationTests` 21/21 통과: `/private/tmp/SEC906P002-health-derived/Logs/Test/Test-TaptionPlan-2026.09.06_14-46-36-+0900.xcresult`.
+
+## 2026-09-22 RSC0922C01 클라우드 복원 동시 변경 보호
+
+- `AppModel.applyCloudBackup`가 첫 비동기 작업 전에 원본 snapshot과 revision을 캡처하고, 복원 중 로컬 권한·교통 설정은 해당 snapshot에서 가져오도록 했다. 저장은 캡처한 revision을 조건으로 수행하며, 진행 중 로컬 변경으로 commit이 거절되면 삽입한 raw sensor receipt를 되돌리고 복원 snapshot을 게시하지 않는다.
+- 저장소 commit을 멈춘 동안 로컬 메모를 추가하는 회귀에서 복원은 `.unchanged`를 반환하고 로컬 메모는 앱 snapshot·저장소에 남으며 복원 reading은 삭제됨을 확인했다. iOS 26.5 iPhone 17 Pro Simulator 1/1 통과: `build/validation/RSC0922C01-final.xcresult`.
+
+## 2026-09-22 BGR0922C01 · WPR0922C01 백업·Watch purge 경합
+
+- 월 raw backup 생성은 snapshot commit이 취소/실패하면 현재 snapshot의 generation 참조를 다시 읽은 뒤에만 staged raw를 삭제한다. 참조 여부 readback이 실패하면 snapshot/raw 한 쌍을 보존한다. commit 후 cancellation, rollback-save 실패, snapshot readback 실패, commit 전 cancellation 회귀가 통과했다.
+- Watch manual HealthKit sync는 purge 중 새 admission을 거부하고 ambient drain 뒤 시작 generation을 재검사한다. periodic health-sync restart도 purge 중 차단한다. 회귀는 purge 전 대기 요청·purge 중 신규 요청·purge 후 신규 요청을 확인한다.
+- 복원 동시성·백업 3경로·Watch gate 총 5개 XCTest가 iOS 26.5 iPhone 17 Pro Simulator에서 통과했다: `build/validation/WPR0922C01-final2.xcresult`.

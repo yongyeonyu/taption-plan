@@ -4,10 +4,215 @@ import CoreLocation
 import StoreKit
 import StoreKitTest
 import SwiftUI // TEMP-CAT-SHEET
+import TaptionPlanCore
 @testable import TaptionPlan
+
+private final class ClassificationRevisionAdvanceGate: @unchecked Sendable {
+    private let fence: ActivityClassificationRevisionFence
+    private let advanceAtCheckpoint: Int
+    private let lock = NSLock()
+    private var checkpoints = 0
+
+    init(fence: ActivityClassificationRevisionFence, advanceAtCheckpoint: Int) {
+        self.fence = fence
+        self.advanceAtCheckpoint = advanceAtCheckpoint
+    }
+
+    func check(_ expectedRevision: UInt64) throws {
+        lock.lock()
+        checkpoints += 1
+        let shouldAdvance = checkpoints == advanceAtCheckpoint
+        lock.unlock()
+        if shouldAdvance { fence.advance(to: expectedRevision &+ 1) }
+        try fence.check(expectedRevision)
+    }
+}
 
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
+
+    func testActivityClassificationResultOrderingUsesStartThenExactID() throws {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
+        let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000020")!
+        let first = ActualRecord(
+            id: firstID,
+            planID: nil,
+            title: "first",
+            categoryID: "activity",
+            startedAt: start,
+            source: .motion
+        )
+        let second = ActualRecord(
+            id: secondID,
+            planID: nil,
+            title: "second",
+            categoryID: "activity",
+            startedAt: start,
+            source: .motion
+        )
+        let later = ActualRecord(
+            planID: nil,
+            title: "later",
+            categoryID: "activity",
+            startedAt: start.addingTimeInterval(1),
+            source: .motion
+        )
+
+        let ordered = try ActivityClassificationRecordOrdering.sorted(
+            [later, second, first],
+            cancellationCheck: {}
+        )
+
+        XCTAssertEqual(ordered.map(\.id), [firstID, secondID, later.id])
+    }
+
+    @MainActor
+    func testActivityClassificationRetryReturnsClassificationFromLatestTravel()
+        async {
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(10 * 60))
+        let latestTravel = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: ["test"]
+        )
+        let readings = (0...9).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index * 60)),
+                motion: .stationary,
+                behavior: "subway",
+                behaviorConfidenceScore: 0.9,
+                behaviorEvidence: ["Watch"],
+                sourceDevice: .appleWatch
+            )
+        }
+        var snapshot = TaptionDataSnapshot.empty
+        var revision: UInt64 = 1
+        var attempts = 0
+        var firstAttemptClassification: [ActualRecord]?
+        var committedRevision: UInt64?
+        var committedClassification: [ActualRecord]?
+
+        let applied = await ActivityClassificationRetry.apply(
+            capture: {
+                ActivityClassificationSourceSnapshot(
+                    revision: revision,
+                    snapshot: snapshot
+                )
+            },
+            currentRevision: { revision },
+            classify: { source -> [ActualRecord]? in
+                attempts += 1
+                let result = TaptionActivityEngineAdapter.classifiedActivityActuals(
+                    readings: readings,
+                    travel: source.travel,
+                    corrections: source.corrections,
+                    actuals: source.actuals,
+                    inside: span,
+                    createdAt: start
+                )
+                if attempts == 1 {
+                    firstAttemptClassification = result
+                    snapshot.travel = [latestTravel]
+                    revision = 2
+                }
+                return result
+            },
+            commit: { source, result in
+                committedRevision = source.revision
+                committedClassification = result
+            }
+        )
+
+        let latestClassification = TaptionActivityEngineAdapter.classifiedActivityActuals(
+            readings: readings,
+            travel: [latestTravel],
+            corrections: [:],
+            actuals: [],
+            inside: span,
+            createdAt: start
+        )
+        XCTAssertTrue(applied)
+        XCTAssertEqual(attempts, 2)
+        XCTAssertEqual(firstAttemptClassification?.first?.categoryID, "activity")
+        XCTAssertEqual(committedRevision, 2)
+        XCTAssertEqual(committedClassification, latestClassification)
+        XCTAssertTrue(committedClassification?.isEmpty == true)
+        XCTAssertEqual(
+            TaptionActivityEngineAdapter.classify(
+                readings: readings,
+                travel: [latestTravel]
+            ).segments.first?.majorCategoryID,
+            "movement"
+        )
+    }
+
+    @MainActor
+    func testActivityClassificationRetryCancelsStaleFusionAndCommitsLatestRevision()
+        async {
+        let start = Date(timeIntervalSince1970: 1_800_100_000)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(8_000))
+        let readings = (0..<4_096).reversed().map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(TimeInterval(index)),
+                motion: .walking,
+                behavior: "walking"
+            )
+        }
+        let revisionFence = ActivityClassificationRevisionFence(1)
+        let firstAttemptGate = ClassificationRevisionAdvanceGate(
+            fence: revisionFence,
+            advanceAtCheckpoint: 40
+        )
+        var attempts = 0
+        var committedRevision: UInt64?
+
+        let applied = await ActivityClassificationRetry.apply(
+            capture: {
+                ActivityClassificationSourceSnapshot(
+                    revision: revisionFence.currentRevision,
+                    snapshot: .empty
+                )
+            },
+            currentRevision: { revisionFence.currentRevision },
+            classify: { source -> [ActualRecord]? in
+                attempts += 1
+                let isFirstAttempt = attempts == 1
+                do {
+                    return try TaptionActivityEngineAdapter.classifiedActivityActuals(
+                        readings: readings,
+                        travel: source.travel,
+                        corrections: source.corrections,
+                        actuals: source.actuals,
+                        inside: span,
+                        createdAt: start,
+                        cancellationCheck: {
+                            try Task.checkCancellation()
+                            if isFirstAttempt {
+                                try firstAttemptGate.check(source.revision)
+                            } else {
+                                try revisionFence.check(source.revision)
+                            }
+                        }
+                    )
+                } catch is CancellationError {
+                    return nil
+                } catch {
+                    return nil
+                }
+            },
+            commit: { source, _ in
+                committedRevision = source.revision
+            }
+        )
+
+        XCTAssertTrue(applied)
+        XCTAssertEqual(attempts, 2)
+        XCTAssertEqual(committedRevision, 2)
+    }
 
     func testCurrentActivityPolicyPrefersCurrentAutomaticAndRunningOvertime() throws {
         let now = Date()
@@ -57,7 +262,12 @@ final class FeatureEngineTests: XCTestCase {
         )
         let model = AppModel(
             repository: InMemoryPlanRepository(snapshot: .empty),
-            sensorService: AppleSensorDataService(archive: archive),
+            sensorService: AppleSensorDataService(
+                archive: archive,
+                archivedReadingsLoader: { _ in
+                    throw CocoaError(.fileReadCorruptFile)
+                }
+            ),
             cloudSyncService: nil
         )
         model.userFacingError = "기존 오류"
@@ -69,8 +279,6 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(cancellationResult)
         XCTAssertEqual(model.userFacingError, "기존 오류")
 
-        try FileManager.default.removeItem(at: directory)
-        try Data([1]).write(to: directory)
         model.userFacingError = nil
         let failureResult = await model.refreshSensorTimeline()
         XCTAssertFalse(failureResult)
@@ -121,6 +329,141 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertNil(result)
         XCTAssertNil(model.userFacingError)
+    }
+
+    @MainActor
+    func testRepositoryLoadFailureRejectsInMemoryEdits() async {
+        let model = AppModel(
+            repository: UnavailablePlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        let fallback = model.snapshot
+        let revision = model.snapshotRevision
+
+        let planID = model.addPlan(
+            title: "저장되지 않을 계획",
+            categoryID: "activity",
+            startAt: .now,
+            duration: 3_600
+        )
+        let blockedPoint = GeoPoint(
+            latitude: 37.5,
+            longitude: 126.9,
+            altitude: 20,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 10
+        )
+        XCTAssertFalse(model.addMapUserActivityCategory(
+            title: "저장되지 않을 행동",
+            systemImage: "gamecontroller.fill",
+            hex: "#29A383"
+        ))
+        XCTAssertNil(model.addMemo(
+            text: "저장되지 않을 메모",
+            kind: .idea,
+            categoryID: "activity",
+            on: .now
+        ))
+        XCTAssertNil(model.addMapMemo(
+            text: "저장되지 않을 지도 메모",
+            kind: .idea,
+            mapPoint: blockedPoint,
+            occurredAt: .now,
+            shouldPersist: false
+        ))
+        XCTAssertNil(model.addCustomCategory(
+            name: "저장되지 않을 대분류",
+            icon: .memo,
+            lightHex: "#29A383"
+        ))
+        XCTAssertNil(model.addMapSticker(
+            title: "저장되지 않을 스티커",
+            placement: .map,
+            point: blockedPoint,
+            planID: nil,
+            occurredAt: .now
+        ))
+        XCTAssertNil(model.addUserTransitLocation(
+            name: "저장되지 않을 공항",
+            kind: .airport,
+            latitude: blockedPoint.latitude,
+            longitude: blockedPoint.longitude
+        ))
+        model.setReduceMotion(!fallback.settings.reduceMotion)
+
+        XCTAssertNil(planID)
+        XCTAssertEqual(model.snapshot, fallback)
+        XCTAssertEqual(model.snapshotRevision, revision)
+        XCTAssertTrue(
+            model.userFacingError?.hasPrefix(
+                "저장된 데이터를 불러오지 못했습니다."
+            ) == true
+        )
+        do {
+            try await model.protectCurrentDataWithBiometrics()
+            XCTFail("Fallback snapshot must not replace biometric data")
+        } catch is CancellationError {
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    @MainActor
+    func testRepositoryLoadFailureRetriesAfterRepositoryRecovers() async {
+        let storedPlan = PlanRecord(
+            title: "저장된 계획",
+            span: TimeSpan(
+                start: Date(timeIntervalSince1970: 1_800_000_000),
+                end: Date(timeIntervalSince1970: 1_800_003_600)
+            ),
+            categoryID: "work"
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.categories = CategoryCatalog.builtIn
+        stored.plans = [storedPlan]
+        stored.updatedAt = Date(timeIntervalSince1970: 1_800_003_600)
+        let repository = RecoveringLoadPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+
+        await model.bootstrap()
+        XCTAssertFalse(model.snapshot.plans.contains { $0.id == storedPlan.id })
+        XCTAssertNil(
+            model.addPlan(
+                title: "차단된 계획",
+                categoryID: "activity",
+                startAt: .now,
+                duration: 3_600
+            )
+        )
+
+        await model.bootstrap()
+
+        XCTAssertTrue(model.snapshot.plans.contains { $0.id == storedPlan.id })
+        XCTAssertFalse(
+            model.userFacingError?.hasPrefix(
+                "저장된 데이터를 불러오지 못했습니다."
+            ) == true
+        )
+        XCTAssertNotNil(
+            model.addPlan(
+                title: "복구 뒤 계획",
+                categoryID: "activity",
+                startAt: .now,
+                duration: 3_600
+            )
+        )
+        XCTAssertNotNil(model.addMemo(
+            text: "복구 뒤 메모",
+            kind: .idea,
+            categoryID: "activity",
+            on: .now
+        ))
     }
 
     @MainActor
@@ -380,7 +723,8 @@ final class FeatureEngineTests: XCTestCase {
             cloudSyncService: nil,
             registersHealthBackgroundHandler: false
         )
-        await model.bootstrap()
+        await model.sceneBecameActive()
+        await waitForInitialForegroundWorkToSettle(model)
         let persistedBefore = try await repository.load().updatedAt
         let calendar = Calendar.autoupdatingCurrent
         let firstDay = calendar.date(
@@ -437,6 +781,7 @@ final class FeatureEngineTests: XCTestCase {
             2
         )
         XCTAssertGreaterThan(persistedAfter, persistedBefore)
+        await model.sceneEnteredBackground()
     }
 
     @MainActor
@@ -456,7 +801,12 @@ final class FeatureEngineTests: XCTestCase {
             fileURL: archiveDirectory.appendingPathComponent("readings.jsonl"),
             dayStoreURL: archiveDirectory.appendingPathComponent("data.sqlite")
         )
-        let sensorService = AppleSensorDataService(archive: archive)
+        let sensorService = AppleSensorDataService(
+            archive: archive,
+            archivedReadingsLoader: { _ in
+                throw CocoaError(.fileReadCorruptFile)
+            }
+        )
         var stored = TaptionDataSnapshot.empty
         stored.settings.locationEnabled = false
         stored.settings.weatherEnabled = false
@@ -467,9 +817,8 @@ final class FeatureEngineTests: XCTestCase {
             cloudSyncService: nil,
             registersHealthBackgroundHandler: false
         )
-        await model.bootstrap()
-        try FileManager.default.removeItem(at: archiveDirectory)
-        try Data().write(to: archiveDirectory)
+        await model.sceneBecameActive()
+        await waitForInitialForegroundWorkToSettle(model)
         TaptionPlanDiagnosticsLogger.shared.clear()
 
         sensorService.onReadingsPersisted?([
@@ -491,6 +840,7 @@ final class FeatureEngineTests: XCTestCase {
         }
         XCTAssertTrue(log.contains("sensor_timeline_read_failed"))
         XCTAssertTrue(log.contains("sensor_analysis_retry_scheduled"))
+        await model.sceneEnteredBackground()
     }
 
     @MainActor
@@ -726,6 +1076,27 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testTransitPOIRefreshRequiresBootstrappedActiveScene() {
+        XCTAssertFalse(
+            MapHomeTransitPOIRefreshPolicy.canStart(
+                isBootstrapped: false,
+                isSceneActive: true
+            )
+        )
+        XCTAssertFalse(
+            MapHomeTransitPOIRefreshPolicy.canStart(
+                isBootstrapped: true,
+                isSceneActive: false
+            )
+        )
+        XCTAssertTrue(
+            MapHomeTransitPOIRefreshPolicy.canStart(
+                isBootstrapped: true,
+                isSceneActive: true
+            )
+        )
+    }
+
     func testMapDayCacheFingerprintRejectsChangedRawReadings() {
         let date = makeDate(2026, 8, 25, 8)
         let first = SensorReading(id: UUID(), timestamp: date)
@@ -795,6 +1166,69 @@ final class FeatureEngineTests: XCTestCase {
                 date: day,
                 source: changedElsewhere,
                 calendar: utcCalendar
+            )
+        )
+    }
+
+    func testMapDaySnapshotRejectsDifferentRevisionWhenFingerprintsAreUnavailable() {
+        let day = makeDate(2026, 8, 25)
+        var source = TaptionDataSnapshot.empty
+        source.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: String(
+                    repeating: "x",
+                    count: TaptionPlanCanonicalStorage.maximumUncompressedSize + 1
+                ),
+                categoryID: "work",
+                startedAt: day.addingTimeInterval(hour),
+                endedAt: day.addingTimeInterval(2 * hour),
+                source: .manual
+            ),
+        ]
+        let stale = PlanDayDataSnapshot.make(
+            date: day,
+            sourceRevision: 1,
+            source: source,
+            sensorResult: SensorReadingsLoadResult(
+                readings: [],
+                isComplete: true
+            ),
+            calendar: utcCalendar
+        )
+        let currentFingerprint = PlanDayDataSnapshot.sourceFingerprint(
+            date: day,
+            source: source,
+            calendar: utcCalendar
+        )
+
+        XCTAssertNil(stale.sourceFingerprint)
+        XCTAssertNil(currentFingerprint)
+        XCTAssertTrue(
+            stale.matchesCurrentSource(revision: 1, fingerprint: nil)
+        )
+        XCTAssertFalse(
+            stale.matchesCurrentSource(
+                revision: 2,
+                fingerprint: currentFingerprint
+            )
+        )
+
+        let valid = PlanDayDataSnapshot.make(
+            date: day,
+            sourceRevision: 1,
+            source: .empty,
+            sensorResult: SensorReadingsLoadResult(
+                readings: [],
+                isComplete: true
+            ),
+            calendar: utcCalendar
+        )
+        XCTAssertNotNil(valid.sourceFingerprint)
+        XCTAssertTrue(
+            valid.matchesCurrentSource(
+                revision: 2,
+                fingerprint: valid.sourceFingerprint
             )
         )
     }
@@ -2112,6 +2546,70 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground()
+        async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "sensor-analysis-foreground-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        defer {
+            try? FileManager.default.removeItem(at: directory)
+            TaptionPlanDiagnosticsLogger.shared.clear()
+        }
+
+        let date = Date.now
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let sensorService = AppleSensorDataService(archive: archive)
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.locationEnabled = false
+        stored.settings.healthEnabled = false
+        stored.settings.weatherEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false,
+            sensorAnalysisDebounceDelay: .milliseconds(300)
+        )
+
+        await model.sceneBecameActive()
+        try await Task.sleep(for: .milliseconds(200))
+        TaptionPlanDiagnosticsLogger.shared.clear()
+        try await sensorService.recordExternalReadings([
+            SensorReading(timestamp: date),
+        ])
+        try await Task.sleep(for: .milliseconds(40))
+        await model.sceneEnteredBackground()
+
+        try await sensorService.recordExternalReadings([
+            SensorReading(timestamp: date.addingTimeInterval(60)),
+            SensorReading(timestamp: date.addingTimeInterval(120)),
+        ])
+        try await Task.sleep(for: .milliseconds(450))
+        XCTAssertTrue(sensorAnalysisBatchStartLines().isEmpty)
+        XCTAssertTrue(
+            sensorTimelineRefreshStartLines().isEmpty,
+            sensorTimelineRefreshStartLines().joined(separator: "\n")
+        )
+
+        await model.sceneBecameActive()
+        let starts = await waitForSensorAnalysisBatch()
+        XCTAssertEqual(
+            starts.count,
+            1,
+            TaptionPlanDiagnosticsLogger.shared.combinedLog()
+        )
+        XCTAssertTrue(starts.first?.contains("\"days\":\"1\"") == true)
+        try await Task.sleep(for: .milliseconds(700))
+        XCTAssertEqual(sensorAnalysisBatchStartLines().count, 1)
+
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
     func testPlanDayDataSnapshotRawRefreshReadsNewArchiveSampleWithoutTimelineRefresh()
         async throws {
         let directory = FileManager.default.temporaryDirectory
@@ -2191,13 +2689,12 @@ final class FeatureEngineTests: XCTestCase {
             source: .motion
         )
         source.actuals = [actual]
-        let rebased = PlanDayDataSnapshot.make(
+        let rebased = PlanDayDataSnapshot.rebase(
+            from: loaded,
             date: date,
             sourceRevision: 2,
             source: source,
-            sensorResult: SensorReadingsLoadResult(
-                readings: loaded.readings, isComplete: loaded.isComplete
-            )
+            cancellationCheck: {}
         )
         XCTAssertEqual(rebased.readings, [reading])
         XCTAssertEqual(rebased.actuals, [actual])
@@ -2205,6 +2702,47 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNotEqual(rebased.sourceFingerprint, loaded.sourceFingerprint)
         XCTAssertEqual(rebased.sourceFingerprint,
             PlanDayDataSnapshot.sourceFingerprint(date: date, source: source))
+    }
+
+    func testMapDayRebaseChecksCancellationDuringFingerprintSort() {
+        let date = makeDate(2026, 9, 11, 12)
+        let reading = SensorReading(timestamp: date)
+        let previous = PlanDayDataSnapshot.make(
+            date: date,
+            sourceRevision: 1,
+            source: .empty,
+            sensorResult: SensorReadingsLoadResult(
+                readings: [reading], isComplete: true
+            )
+        )
+        var source = TaptionDataSnapshot.empty
+        source.actuals = (0..<1_024).map { index in
+            ActualRecord(
+                planID: nil,
+                title: "업무 \(index)",
+                categoryID: "work",
+                startedAt: date.addingTimeInterval(Double(index)),
+                endedAt: date.addingTimeInterval(Double(index + 1)),
+                source: .manual
+            )
+        }
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try PlanDayDataSnapshot.rebase(
+                from: previous,
+                date: date,
+                sourceRevision: 2,
+                source: source,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 11 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 11)
     }
 
     @MainActor
@@ -2236,6 +2774,123 @@ final class FeatureEngineTests: XCTestCase {
             latestSuccessfulBackupDate: nil,
             retryAfter: now
         ))
+    }
+
+    @MainActor
+    func testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration()
+        async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("incomplete-cloud-backup-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let suiteName = "TaptionPlanTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let rawBackupStore = InMemoryPlanCloudRawSensorBackupStore()
+        let backupService = PlanSecurityBackupService(
+            credentialStore: InMemoryPlanCredentialStore(),
+            backupStore: backupStore,
+            rawSensorBackupStore: rawBackupStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider(),
+            settingsDefaults: defaults
+        )
+        try backupService.setPIN("1234")
+        var backupSettings = backupService.settings
+        backupSettings.cloudBackupEnabled = true
+        try backupService.setAppLockSettings(backupSettings)
+
+        let date = Date.now
+        let span = PlanBackupRoutePointReducer.backupSpan(containing: date)
+        let committedReading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 30,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+        let committedGeneration = try await backupService.saveMonthlyGeneration(
+            PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: PlanCloudRawSensorPayload(
+                monthKey: PlanArchiveSchedule.monthKey(for: date),
+                sensorReadings: [committedReading],
+                createdAt: date
+            ),
+            date: date
+        )
+
+        let sensorDatabaseURL = root.appendingPathComponent("sensor.sqlite")
+        let sensorStore = try TaptionPlanDayStore(url: sensorDatabaseURL)
+        let invalidID = UUID()
+        try await sensorStore.appendEvents([
+            .init(
+                day: TaptionPlanDayKey(date: date),
+                timestamp: date,
+                sequence: 0,
+                id: invalidID.uuidString,
+                domain: "sensor-reading",
+                payload: Data([0])
+            ),
+        ])
+        _ = try await sensorStore.markMigrationCompleted(
+            "sensor-reading-v1-to-day-store-v2"
+        )
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: root.appendingPathComponent("readings.jsonl"),
+            dayStoreURL: sensorDatabaseURL
+        )
+        let sensorLoad = try await sensorArchive.readingsLoadResult(in: span)
+        XCTAssertFalse(sensorLoad.isComplete)
+
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: .empty),
+            sensorService: AppleSensorDataService(archive: sensorArchive),
+            cloudSyncService: nil,
+            securityBackupService: backupService,
+            rawDeviceDataArchive: try RawDeviceDataDayArchive(
+                databaseURL: root.appendingPathComponent("raw.sqlite")
+            ),
+            appleWatchDataReceiptStore: AppleWatchDataReceiptStore(
+                defaults: defaults
+            ),
+            registersHealthBackgroundHandler: false,
+            dayDatabase: try PlanDayDatabase(
+                directory: root.appendingPathComponent("day-data")
+            ),
+            watchSensorArchive: AppleWatchSensorActivityArchive(
+                fileURL: root.appendingPathComponent("watch/summaries.json")
+            )
+        )
+
+        do {
+            try await model.saveCloudBackupNow()
+            XCTFail("An incomplete raw sensor archive must not be committed.")
+        } catch {
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+
+        XCTAssertEqual(try backupStore.latest(), committedGeneration.snapshot)
+        XCTAssertEqual(
+            try rawBackupStore.load(
+                monthKey: committedGeneration.snapshot.monthKey,
+                generationID: committedGeneration.generationID
+            ),
+            committedGeneration.rawSensors
+        )
+        XCTAssertEqual(try rawBackupStore.allArchives().count, 1)
+        XCTAssertEqual(
+            backupService.status.latestSuccessfulBackupDate,
+            date
+        )
     }
 
     func testCloudSnapshotKeepsExternalCalendarDataOnDevice() {
@@ -2524,6 +3179,38 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRouteMapViewportFitsShortDateLineCrossingRoute() throws {
+        let region = try XCTUnwrap(
+            RouteMapViewport.region(
+                for: [
+                    CLLocationCoordinate2D(latitude: 10, longitude: 179.9),
+                    CLLocationCoordinate2D(latitude: 10, longitude: -179.9),
+                ],
+                viewport: CGSize(width: 390, height: 216),
+                padding: .timeline
+            )
+        )
+
+        XCTAssertLessThan(abs(abs(region.center.longitude) - 180), 0.001)
+        XCTAssertLessThan(region.span.longitudeDelta, 1)
+    }
+
+    func testRouteMapViewportUsesMinimumCircularRangeAcrossDistantPaths() throws {
+        let region = try XCTUnwrap(
+            RouteMapViewport.region(
+                for: [
+                    [CLLocationCoordinate2D(latitude: 10, longitude: 0)],
+                    [CLLocationCoordinate2D(latitude: 10, longitude: 179.9)],
+                    [CLLocationCoordinate2D(latitude: 10, longitude: -179.9)],
+                ],
+                viewport: CGSize(width: 390, height: 216),
+                padding: .timeline
+            )
+        )
+
+        XCTAssertLessThan(region.span.longitudeDelta, 220)
+    }
+
     func testRouteContextKeepsEveryTripInOrderAndCapsTheLongestOnes() {
         let day = makeDate(2026, 8, 1)
         let span = TimeSpan(start: day, end: day.addingTimeInterval(24 * hour))
@@ -2675,6 +3362,33 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(simplified.last?.latitude, zigzag.last?.latitude)
     }
 
+    func testRouteDecimationPreservesSharpDetourBetweenUniformSamples() {
+        let detourIndex = 1_233
+        let detour = CLLocationCoordinate2D(latitude: 37.51, longitude: 127 + Double(detourIndex) * 0.00001)
+        let dense = (0..<5_000).map { index in
+            index == detourIndex
+                ? detour
+                : CLLocationCoordinate2D(
+                    latitude: 37.5,
+                    longitude: 127 + Double(index) * 0.00001
+                )
+        }
+
+        let simplified = RoutePolylineDecimator.decimate(
+            dense,
+            toleranceMeters: 5,
+            limit: 400
+        )
+
+        XCTAssertLessThanOrEqual(simplified.count, 400)
+        XCTAssertTrue(
+            simplified.contains {
+                $0.latitude == detour.latitude && $0.longitude == detour.longitude
+            },
+            "a sharp detour between uniform sampling slots must remain in the route"
+        )
+    }
+
     func testRouteSpacingDropsStandingJitterButKeepsArrival() {
         var points = [CLLocationCoordinate2D](
             repeating: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0),
@@ -2706,6 +3420,28 @@ final class FeatureEngineTests: XCTestCase {
         ) ?? 0
         XCTAssertEqual(offLine, 100, accuracy: 5)
         XCTAssertNil(RoutePolylineDecimator.distanceMeters(from: line[0], to: []))
+    }
+
+    func testRoutePolylineGeometryUsesShortestLongitudeAcrossDateLine() throws {
+        let line = [
+            CLLocationCoordinate2D(latitude: 10, longitude: 179.9),
+            CLLocationCoordinate2D(latitude: 10, longitude: 180),
+            CLLocationCoordinate2D(latitude: 10, longitude: -179.9),
+        ]
+        let simplified = RoutePolylineDecimator.decimate(
+            line,
+            toleranceMeters: 10,
+            limit: 10
+        )
+        let distance = try XCTUnwrap(
+            RoutePolylineDecimator.distanceMeters(
+                from: CLLocationCoordinate2D(latitude: 10, longitude: 180),
+                to: [line[0], line[2]]
+            )
+        )
+
+        XCTAssertEqual(simplified.count, 2)
+        XCTAssertLessThan(distance, 1)
     }
 
     /// 굽은 길을 1m 간격으로 찍은 뒤 GPS 흔들림을 얹은 경로.
@@ -4160,7 +4896,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(report.actualDuration, hour)
     }
 
-    func testReviewArchiveStoresDailyWeeklyAndMonthlyDataInsideYear() {
+    func testReviewArchiveStoresDailyWeeklyAndMonthlyDataInsideYear() throws {
         let first = makeDate(2026, 1, 2, 9)
         let second = makeDate(2026, 1, 8, 10)
         let asOf = makeDate(2026, 1, 11, 12)
@@ -4184,7 +4920,7 @@ final class FeatureEngineTests: XCTestCase {
             ),
         ]
 
-        let archives = ReviewReportArchiveEngine.refreshed(
+        let archives = try ReviewReportArchiveEngine.refreshed(
             snapshot: snapshot,
             asOf: asOf,
             calendar: utcCalendar
@@ -4199,7 +4935,41 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testChangingDailyDataRebuildsMonthAndYear() {
+    func testReviewArchiveRefreshChecksCancellationDuringLongSourceSpan() {
+        let start = makeDate(2026, 1, 1)
+        let end = makeDate(2030, 1, 1)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: start,
+                endedAt: end,
+                source: .manual
+            )
+        ]
+        var cancellationChecks = 0
+
+        XCTAssertThrowsError(
+            try ReviewReportArchiveEngine.refreshed(
+                snapshot: snapshot,
+                asOf: end,
+                calendar: utcCalendar,
+                cancellationCheck: {
+                    cancellationChecks += 1
+                    if cancellationChecks == 20 {
+                        throw CancellationError()
+                    }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(cancellationChecks, 20)
+    }
+
+    func testChangingDailyDataRebuildsMonthAndYear() throws {
         let start = makeDate(2026, 2, 3, 9)
         let asOf = makeDate(2026, 2, 4)
         let id = UUID()
@@ -4215,7 +4985,7 @@ final class FeatureEngineTests: XCTestCase {
                 source: .manual
             )
         ]
-        let original = ReviewReportArchiveEngine.refreshed(
+        let original = try ReviewReportArchiveEngine.refreshed(
             snapshot: snapshot,
             asOf: asOf,
             calendar: utcCalendar
@@ -4223,7 +4993,7 @@ final class FeatureEngineTests: XCTestCase {
         snapshot.yearlyReports = original
         snapshot.actuals[0].endedAt = start.addingTimeInterval(3 * hour)
 
-        let updated = ReviewReportArchiveEngine.refreshed(
+        let updated = try ReviewReportArchiveEngine.refreshed(
             snapshot: snapshot,
             asOf: asOf,
             calendar: utcCalendar
@@ -4254,7 +5024,48 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testHistoricalDailyBackupSurvivesMissingLocalSource() {
+    func testReviewArchiveFingerprintRejectsUnencodableSourceInsteadOfReusingCache()
+        throws
+    {
+        let start = makeDate(2026, 2, 3, 9)
+        let asOf = makeDate(2026, 2, 4)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(hour),
+                source: .manual
+            )
+        ]
+        snapshot.yearlyReports = try ReviewReportArchiveEngine.refreshed(
+            snapshot: snapshot,
+            asOf: asOf,
+            calendar: utcCalendar
+        )
+        snapshot.yearlyReports[0].days[0].sourceFingerprint =
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        snapshot.weather = [
+            WeatherContext(
+                observedAt: start,
+                condition: "invalid",
+                symbolName: "questionmark",
+                temperatureCelsius: .nan
+            )
+        ]
+
+        XCTAssertThrowsError(
+            try ReviewReportArchiveEngine.refreshed(
+                snapshot: snapshot,
+                asOf: asOf,
+                calendar: utcCalendar
+            )
+        )
+    }
+
+    func testHistoricalDailyBackupSurvivesMissingLocalSource() throws {
         let start = makeDate(2026, 2, 10, 9)
         let firstAsOf = makeDate(2026, 2, 11)
         var snapshot = TaptionDataSnapshot.empty
@@ -4268,14 +5079,14 @@ final class FeatureEngineTests: XCTestCase {
                 source: .manual
             )
         ]
-        snapshot.yearlyReports = ReviewReportArchiveEngine.refreshed(
+        snapshot.yearlyReports = try ReviewReportArchiveEngine.refreshed(
             snapshot: snapshot,
             asOf: firstAsOf,
             calendar: utcCalendar
         )
         snapshot.actuals = []
 
-        let recovered = ReviewReportArchiveEngine.refreshed(
+        let recovered = try ReviewReportArchiveEngine.refreshed(
             snapshot: snapshot,
             asOf: makeDate(2026, 2, 12),
             calendar: utcCalendar
@@ -4288,7 +5099,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testCloudRecoveryMergesDifferentDailyReportsInSameYear() {
+    func testCloudRecoveryMergesDifferentDailyReportsInSameYear() throws {
         let first = makeDate(2026, 3, 2, 9)
         let second = makeDate(2026, 3, 8, 10)
         let asOf = makeDate(2026, 3, 10)
@@ -4304,7 +5115,7 @@ final class FeatureEngineTests: XCTestCase {
                 source: .manual
             )
         ]
-        local.yearlyReports = ReviewReportArchiveEngine.refreshed(
+        local.yearlyReports = try ReviewReportArchiveEngine.refreshed(
             snapshot: local,
             asOf: asOf,
             calendar: utcCalendar
@@ -4321,7 +5132,7 @@ final class FeatureEngineTests: XCTestCase {
                 source: .manual
             )
         ]
-        remote.yearlyReports = ReviewReportArchiveEngine.refreshed(
+        remote.yearlyReports = try ReviewReportArchiveEngine.refreshed(
             snapshot: remote,
             asOf: asOf,
             calendar: utcCalendar
@@ -4796,6 +5607,99 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testTravelModeTiesPreferConservativeStableEvidenceOrder() {
+        let base = makeDate(2026, 8, 10, 9, 0)
+        let motionReadings = [
+            SensorReading(
+                timestamp: base,
+                speedMetersPerSecond: 1,
+                motion: .automotive,
+                motionConfidence: .high
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(2 * 60),
+                speedMetersPerSecond: 1,
+                motion: .stationary,
+                motionConfidence: .high
+            ),
+        ]
+        let classifier = TravelModeClassifier()
+        let motionForward = classifier.classify(readings: motionReadings)
+        let motionReverse = classifier.classify(
+            readings: Array(motionReadings.reversed())
+        )
+
+        XCTAssertEqual(motionForward.mode, .walking)
+        XCTAssertEqual(motionReverse.mode, motionForward.mode)
+
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(2 * 60))
+        let workoutEvidence = [
+            AppleMovementEvidence(
+                span: span,
+                source: .iPhone,
+                kind: .workout,
+                workoutMode: .walking,
+                sourceName: "iPhone"
+            ),
+            AppleMovementEvidence(
+                span: span,
+                source: .iPhone,
+                kind: .workout,
+                workoutMode: .running,
+                sourceName: "iPhone"
+            ),
+        ]
+        let workoutForward = classifier.classify(
+            readings: [],
+            inside: span,
+            healthEvidence: workoutEvidence
+        )
+        let workoutReverse = classifier.classify(
+            readings: [],
+            inside: span,
+            healthEvidence: Array(workoutEvidence.reversed())
+        )
+
+        XCTAssertEqual(workoutForward.mode, .walking)
+        XCTAssertEqual(workoutReverse.mode, workoutForward.mode)
+    }
+
+    func testAppleWatchWorkoutTiesUseStableTravelModeOrder() {
+        let start = makeDate(2026, 8, 10, 9, 0)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(5 * 60))
+        let evidence = [
+            AppleMovementEvidence(
+                span: span,
+                source: .appleWatch,
+                kind: .workout,
+                workoutMode: .walking,
+                sourceName: "Apple Watch"
+            ),
+            AppleMovementEvidence(
+                span: span,
+                source: .appleWatch,
+                kind: .workout,
+                workoutMode: .running,
+                sourceName: "Apple Watch"
+            ),
+        ]
+        let classifier = TravelModeClassifier()
+        let forward = classifier.classify(
+            readings: [],
+            inside: span,
+            healthEvidence: evidence
+        )
+        let reversed = classifier.classify(
+            readings: [],
+            inside: span,
+            healthEvidence: Array(evidence.reversed())
+        )
+
+        XCTAssertEqual(forward.mode, .walking)
+        XCTAssertEqual(forward.confidence, .high)
+        XCTAssertEqual(reversed, forward)
+    }
+
     func testChargingInactivityBecomesSleepOnlyAfterOneHourWithoutWatch() {
         let start = makeDate(2026, 8, 9, 14, 0)
         let readings = (0...4).map { index in
@@ -5093,6 +5997,90 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(result[0].isClassificationLocked)
     }
 
+    func testLockedClassificationMergePreservesFirstMaximumOverlap() {
+        let start = makeDate(2026, 8, 12, 9, 0)
+        let first = ActualRecord(
+            planID: nil,
+            title: "첫 분류",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(20 * 60),
+            source: .motion,
+            isClassificationLocked: true
+        )
+        let second = ActualRecord(
+            planID: nil,
+            title: "두 번째 분류",
+            categoryID: "hobby",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(20 * 60),
+            source: .motion,
+            isClassificationLocked: true
+        )
+        let fresh = ActualRecord(
+            planID: nil,
+            title: "새 분류",
+            categoryID: "activity",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(20 * 60),
+            source: .motion
+        )
+
+        let result = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [first, second],
+            fresh: [fresh],
+            inside: TimeSpan(start: start, end: start.addingTimeInterval(hour))
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].categoryID, first.categoryID)
+        XCTAssertEqual(result[0].title, first.title)
+    }
+
+    func testLockedClassificationMergeBoundsDisjointCandidateInspection() {
+        let start = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let locked = (0..<count).map { index in
+            let itemStart = start.addingTimeInterval(Double(index) * 60)
+            return ActualRecord(
+                planID: nil,
+                title: "기존 \(index)",
+                categoryID: "activity",
+                startedAt: itemStart,
+                endedAt: itemStart.addingTimeInterval(30),
+                source: .motion,
+                isClassificationLocked: true
+            )
+        }
+        let fresh = (0..<count).map { index in
+            let itemStart = start.addingTimeInterval(
+                7 * 24 * hour + Double(index) * 60
+            )
+            return ActualRecord(
+                planID: nil,
+                title: "신규 \(index)",
+                categoryID: "movement",
+                startedAt: itemStart,
+                endedAt: itemStart.addingTimeInterval(30),
+                source: .motion
+            )
+        }
+        var candidateInspectionCount = 0
+
+        let result = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: locked,
+            fresh: fresh,
+            inside: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(8 * 24 * hour)
+            ),
+            candidateInspectionCount: &candidateInspectionCount
+        )
+
+        XCTAssertEqual(result.count, count * 2)
+        XCTAssertLessThan(candidateInspectionCount, count * count / 20)
+    }
+
     func testSubwayModeRemainsLockedAcrossRefresh() {
         let start = makeDate(2026, 8, 12, 10, 0)
         let old = TravelSegment(
@@ -5124,6 +6112,55 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result[0].mode, .subway)
         XCTAssertTrue(result[0].isClassificationLocked)
+    }
+
+    func testLockedTravelMergeBoundsDisjointCandidateInspection() {
+        let start = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let locked = (0..<count).map { index in
+            let itemStart = start.addingTimeInterval(Double(index) * 60)
+            return TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: itemStart,
+                    end: itemStart.addingTimeInterval(30)
+                ),
+                distanceMeters: 50,
+                confidence: .high,
+                evidence: ["기존"],
+                isConfirmed: true,
+                isClassificationLocked: true
+            )
+        }
+        let fresh = (0..<count).map { index in
+            let itemStart = start.addingTimeInterval(
+                7 * 24 * hour + Double(index) * 60
+            )
+            return TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: itemStart,
+                    end: itemStart.addingTimeInterval(30)
+                ),
+                distanceMeters: 50,
+                confidence: .high,
+                evidence: ["신규"]
+            )
+        }
+        var candidateInspectionCount = 0
+
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(
+            existing: locked,
+            fresh: fresh,
+            inside: TimeSpan(
+                start: start,
+                end: start.addingTimeInterval(8 * 24 * hour)
+            ),
+            candidateInspectionCount: &candidateInspectionCount
+        )
+
+        XCTAssertEqual(result.count, count * 2)
+        XCTAssertLessThan(candidateInspectionCount, count * count / 20)
     }
 
     func testUnvalidatedLockedSubwayIsReevaluatedFromFreshTravel() {
@@ -5584,6 +6621,117 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(withoutDuplicate.contains { $0.title == "걷기" })
     }
 
+    func testMotionActivityActualsTreatExactOverlapThresholdAsCovered() {
+        let base = makeDate(2026, 8, 1, 8)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let activity = MotionActivityRecord(
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(40)
+            ),
+            motion: .walking,
+            confidence: .high
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(20),
+            endedAt: base.addingTimeInterval(60),
+            source: .appleWatch
+        )
+
+        let records = MotionActivityActualEngine.records(
+            from: [activity],
+            existing: [workout],
+            inside: span
+        )
+
+        XCTAssertTrue(records.isEmpty)
+    }
+
+    func testMotionActivityActualsKeepsTouchingExistingRecordOutsideOverlap() {
+        let base = makeDate(2026, 8, 1, 8)
+        let activity = MotionActivityRecord(
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(40)
+            ),
+            motion: .walking,
+            confidence: .high
+        )
+        let workout = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "exercise",
+            startedAt: base.addingTimeInterval(40),
+            endedAt: base.addingTimeInterval(80),
+            source: .appleWatch
+        )
+
+        let records = MotionActivityActualEngine.records(
+            from: [activity],
+            existing: [workout],
+            inside: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(2 * 60)
+            )
+        )
+
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].title, "걷기")
+        XCTAssertEqual(records[0].source, .motion)
+        XCTAssertEqual(records[0].startedAt, base)
+        XCTAssertEqual(records[0].endedAt, base.addingTimeInterval(40))
+    }
+
+    func testMotionActivityActualsBoundDisjointExistingRecordInspection() {
+        let base = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let activities = (0..<count).map { index in
+            let start = base.addingTimeInterval(TimeInterval(index * 5 * 60))
+            return MotionActivityRecord(
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(2 * 60)
+                ),
+                motion: .walking,
+                confidence: .high
+            )
+        }
+        let existing = (0..<count).map { index in
+            let start = base.addingTimeInterval(
+                30 * 24 * hour + TimeInterval(index * 5 * 60)
+            )
+            return ActualRecord(
+                planID: nil,
+                title: "걷기",
+                categoryID: "exercise",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(2 * 60),
+                source: .appleWatch
+            )
+        }
+        let inside = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(40 * 24 * hour)
+        )
+        var inspectionCount = 0
+
+        let records = MotionActivityActualEngine.records(
+            from: activities,
+            existing: existing,
+            inside: inside,
+            candidateInspectionCount: &inspectionCount
+        )
+
+        XCTAssertEqual(records.count, count)
+        XCTAssertLessThan(inspectionCount, count * count / 10)
+    }
+
     func testIPhoneStepIncreaseSeparatesWalkingFromAutomotiveMotion() {
         let base = makeDate(2026, 7, 30, 9, 0)
         let span = TimeSpan(
@@ -5934,6 +7082,97 @@ final class FeatureEngineTests: XCTestCase {
                 from: corrections
             ).isEmpty
         )
+    }
+
+    func testMovementCorrectionTieUsesStableIDRegardlessOfInputOrder() throws {
+        let base = makeDate(2026, 8, 10, 9, 0)
+        let start = base
+        let end = base.addingTimeInterval(hour)
+        let span = TimeSpan(start: start, end: end)
+        let places = [
+            PlaceStay(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000010")!,
+                placeKey: "home",
+                displayName: "집",
+                span: TimeSpan(start: start.addingTimeInterval(-hour), end: start),
+                confidence: .high
+            ),
+            PlaceStay(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000020")!,
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(start: end, end: end.addingTimeInterval(hour)),
+                confidence: .high
+            ),
+        ]
+        let segment = TravelSegment(
+            fromPlaceID: places[0].id,
+            toPlaceID: places[1].id,
+            mode: .walking,
+            span: span,
+            distanceMeters: 5_000,
+            confidence: .low,
+            evidence: []
+        )
+        let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let corrections = [
+            TravelModeCorrection(
+                id: firstID,
+                fromPlaceKey: "home",
+                toPlaceKey: "office",
+                span: span,
+                mode: .car,
+                inferredMode: .walking,
+                inferredConfidence: .low,
+                updatedAt: base
+            ),
+            TravelModeCorrection(
+                id: secondID,
+                fromPlaceKey: "home",
+                toPlaceKey: "office",
+                span: span,
+                mode: .subway,
+                inferredMode: .walking,
+                inferredConfidence: .low,
+                updatedAt: base
+            ),
+        ]
+        let reversed = Array(corrections.reversed())
+
+        let forwardApplied = try XCTUnwrap(
+            MovementCorrectionEngine.applying(
+                corrections,
+                to: [segment],
+                places: places
+            ).first
+        )
+        let reversedApplied = try XCTUnwrap(
+            MovementCorrectionEngine.applying(
+                reversed,
+                to: [segment],
+                places: places
+            ).first
+        )
+        XCTAssertEqual(forwardApplied.mode, .car)
+        XCTAssertEqual(reversedApplied.mode, forwardApplied.mode)
+        XCTAssertEqual(
+            MovementCorrectionEngine.correction(
+                for: segment,
+                places: places,
+                in: reversed
+            )?.id,
+            firstID
+        )
+
+        for input in [corrections, reversed] {
+            let remaining = MovementCorrectionEngine.removingCorrection(
+                for: segment,
+                places: places,
+                from: input
+            )
+            XCTAssertEqual(remaining.map(\.id), [secondID])
+        }
     }
 
     func testAdjacentSimilarTravelSegmentsAreGrouped() throws {
@@ -7517,6 +8756,38 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(readings[0].point)
     }
 
+    func testSubwayStationOrderingIgnoresInvalidTimestamps() {
+        let first = SensorReading(
+            timestamp: makeDate(2026, 8, 18, 7, 0),
+            nearbyStation: true,
+            nearbyStationName: "검암역",
+            matchesRailRoute: true
+        )
+        let second = SensorReading(
+            timestamp: makeDate(2026, 8, 18, 7, 1),
+            nearbyStation: true,
+            nearbyStationName: "마곡나루역",
+            matchesRailRoute: true
+        )
+        let invalid = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: 1e100),
+            nearbyStation: true,
+            nearbyStationName: "검암역",
+            matchesRailRoute: true
+        )
+        let valid = [first, second]
+
+        XCTAssertEqual(
+            SubwayStationCatalog.stationNames(from: [first, second, invalid]),
+            SubwayStationCatalog.stationNames(from: valid)
+        )
+        XCTAssertEqual(
+            SubwayStationCatalog.temporaryLocations(from: [first, second, invalid])
+                .map(\.stationName),
+            SubwayStationCatalog.temporaryLocations(from: valid).map(\.stationName)
+        )
+    }
+
     func testRealtimeMapProjectionIgnoresApproximateGPSFixes() {
         let timestamp = makeDate(2026, 8, 18, 7, 1)
         let readings = [
@@ -7574,6 +8845,188 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testRealtimeMapProjectionInterpolatesAcrossDateLine() throws {
+        let timestamp = makeDate(2026, 8, 18, 7, 30)
+        func reading(_ offset: TimeInterval, longitude: Double) -> SensorReading {
+            SensorReading(
+                timestamp: timestamp.addingTimeInterval(offset),
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: longitude,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+
+        let projection = try XCTUnwrap(
+            RealtimeSensorMapProjection.project(
+                readings: [
+                    reading(-60, longitude: 179.9),
+                    reading(60, longitude: -179.9),
+                ],
+                at: timestamp
+            )
+        )
+
+        XCTAssertLessThan(abs(abs(projection.point.longitude) - 180), 0.001)
+    }
+
+    func testTravelModeClassifierIgnoresInvalidTimestampBeforeSorting() {
+        let valid = SensorReading(
+            timestamp: makeDate(2026, 8, 18, 7, 30),
+            motion: .walking,
+            motionConfidence: .medium
+        )
+        let invalidWatchHint = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: .nan),
+            motion: .automotive,
+            motionConfidence: .high,
+            behavior: WatchBehaviorKind.automotive.rawValue,
+            behaviorConfidenceScore: 0.95,
+            sourceDevice: .appleWatch
+        )
+
+        let expected = TravelModeClassifier().classify(readings: [valid])
+        let actual = TravelModeClassifier().classify(
+            readings: [invalidWatchHint, valid]
+        )
+
+        XCTAssertEqual(actual, expected)
+    }
+
+    func testSensorEvidenceTimeIndexPreservesFilterSemantics() {
+        let start = makeDate(2026, 8, 18, 9)
+        let end = start.addingTimeInterval(60)
+        let span = TimeSpan(start: start, end: end)
+        let middle = SensorReading(
+            timestamp: start.addingTimeInterval(30),
+            motion: .walking
+        )
+        let atEnd = SensorReading(timestamp: end, motion: .automotive)
+        let before = SensorReading(
+            timestamp: start.addingTimeInterval(-1),
+            motion: .stationary
+        )
+        let atStart = SensorReading(timestamp: start, motion: .cycling)
+        let after = SensorReading(
+            timestamp: end.addingTimeInterval(1),
+            motion: .running
+        )
+        let invalid = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: .nan),
+            motion: .unknown
+        )
+        func evidence(
+            _ name: String,
+            _ evidenceStart: Date,
+            _ evidenceEnd: Date
+        ) -> AppleMovementEvidence {
+            AppleMovementEvidence(
+                span: TimeSpan(start: evidenceStart, end: evidenceEnd),
+                source: .iPhone,
+                kind: .steps,
+                stepCount: 1,
+                sourceName: name
+            )
+        }
+        let healthEvidence = [
+            evidence(
+                "late overlap",
+                start.addingTimeInterval(45),
+                end.addingTimeInterval(30)
+            ),
+            evidence(
+                "touches start",
+                start.addingTimeInterval(-30),
+                start
+            ),
+            evidence(
+                "early overlap",
+                start.addingTimeInterval(-30),
+                start.addingTimeInterval(15)
+            ),
+            evidence(
+                "touches end",
+                end,
+                end.addingTimeInterval(30)
+            ),
+            evidence(
+                "zero duration",
+                start.addingTimeInterval(20),
+                start.addingTimeInterval(20)
+            ),
+        ]
+        let index = SensorEvidenceTimeIndex(
+            readings: [middle, atEnd, before, atStart, after, invalid],
+            healthEvidence: healthEvidence
+        )
+
+        XCTAssertEqual(
+            index.readings(in: span).map(\.id),
+            [middle.id, atEnd.id, atStart.id]
+        )
+        XCTAssertEqual(
+            index.healthEvidence(overlapping: span).map(\.sourceName),
+            ["late overlap", "early overlap"]
+        )
+    }
+
+    func testSensorEvidenceTimeIndexBoundsDisjointInspection() {
+        let start = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let readings = (0..<count).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(
+                    30 * 24 * hour + Double(index) * 60
+                )
+            )
+        }
+        let healthEvidence = (0..<count).map { index in
+            let evidenceStart = start.addingTimeInterval(
+                60 * 24 * hour + Double(index) * 60
+            )
+            return AppleMovementEvidence(
+                span: TimeSpan(
+                    start: evidenceStart,
+                    end: evidenceStart.addingTimeInterval(30)
+                ),
+                source: .iPhone,
+                kind: .steps,
+                stepCount: 1,
+                sourceName: "Health"
+            )
+        }
+        let index = SensorEvidenceTimeIndex(
+            readings: readings,
+            healthEvidence: healthEvidence
+        )
+        var inspectionCount = 0
+
+        for offset in 0..<count {
+            let queryStart = start.addingTimeInterval(Double(offset) * 60)
+            let span = TimeSpan(
+                start: queryStart,
+                end: queryStart.addingTimeInterval(30)
+            )
+            XCTAssertTrue(
+                index.readings(
+                    in: span,
+                    candidateInspectionCount: &inspectionCount
+                ).isEmpty
+            )
+            XCTAssertTrue(
+                index.healthEvidence(
+                    overlapping: span,
+                    candidateInspectionCount: &inspectionCount
+                ).isEmpty
+            )
+        }
+
+        XCTAssertLessThan(inspectionCount, count * count / 10)
+    }
+
     func testMovementRouteBuilderSkipsGapWithoutSensorOrHealthEvidence() {
         let start = makeDate(2026, 8, 18, 9)
         let stays = [
@@ -7605,6 +9058,206 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMovementRouteBuilderPreservesReadingOrderAndInclusiveBoundaries() {
+        let start = makeDate(2026, 8, 18, 9)
+        let movementStart = start.addingTimeInterval(30 * 60)
+        let stays = [
+            PlaceStay(
+                placeKey: "home",
+                displayName: "집",
+                span: TimeSpan(start: start, end: movementStart),
+                confidence: .high
+            ),
+            PlaceStay(
+                placeKey: "office",
+                displayName: "회사",
+                span: TimeSpan(
+                    start: start.addingTimeInterval(60 * 60),
+                    end: start.addingTimeInterval(90 * 60)
+                ),
+                confidence: .high
+            ),
+        ]
+        func point(_ longitude: Double) -> GeoPoint {
+            GeoPoint(
+                latitude: 0,
+                longitude: longitude,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        }
+        let readings = [
+            SensorReading(
+                timestamp: start.addingTimeInterval(45 * 60),
+                point: point(0.002),
+                motion: .walking,
+                motionConfidence: .high
+            ),
+            SensorReading(
+                timestamp: movementStart,
+                point: point(0),
+                motion: .walking,
+                motionConfidence: .high,
+                nearAirport: true
+            ),
+            SensorReading(
+                timestamp: start.addingTimeInterval(40 * 60),
+                point: point(0.001),
+                motion: .walking,
+                motionConfidence: .high
+            ),
+        ]
+
+        let result = MovementRouteBuilder().build(
+            stays: stays,
+            readings: readings
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].mode, .airplane)
+        XCTAssertGreaterThan(result[0].distanceMeters, 300)
+    }
+
+    func testMovementRouteBuilderBoundsDisjointEvidenceInspection() {
+        let start = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let stays = (0..<count).map { index in
+            let stayStart = start.addingTimeInterval(Double(index) * 60)
+            return PlaceStay(
+                placeKey: "place-\(index)",
+                displayName: "장소 \(index)",
+                span: TimeSpan(
+                    start: stayStart,
+                    end: stayStart.addingTimeInterval(30)
+                ),
+                confidence: .high
+            )
+        }
+        let readings = (0..<count).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(
+                    30 * 24 * hour + Double(index) * 60
+                ),
+                motion: .walking,
+                motionConfidence: .high
+            )
+        }
+        let healthEvidence = (0..<count).map { index in
+            let evidenceStart = start.addingTimeInterval(
+                60 * 24 * hour + Double(index) * 60
+            )
+            return AppleMovementEvidence(
+                span: TimeSpan(
+                    start: evidenceStart,
+                    end: evidenceStart.addingTimeInterval(30)
+                ),
+                source: .iPhone,
+                kind: .steps,
+                stepCount: 10,
+                sourceName: "Health"
+            )
+        }
+        var candidateInspectionCount = 0
+
+        let result = MovementRouteBuilder().build(
+            stays: stays,
+            readings: readings,
+            healthEvidence: healthEvidence,
+            candidateInspectionCount: &candidateInspectionCount
+        )
+
+        XCTAssertTrue(result.isEmpty)
+        XCTAssertLessThan(candidateInspectionCount, count * count / 10)
+    }
+
+    func testMovementRouteBuilderAppliesWBSAirportEndpointWithoutFlightGPS() {
+        let start = makeDate(2026, 9, 9, 9)
+        let origin = GeoPoint(
+            latitude: 37.4602,
+            longitude: 126.4407,
+            altitude: 0,
+            horizontalAccuracy: 20,
+            verticalAccuracy: 20
+        )
+        let destination = GeoPoint(
+            latitude: 13.6900,
+            longitude: 100.7501,
+            altitude: 0,
+            horizontalAccuracy: 20,
+            verticalAccuracy: 20
+        )
+        let stays = [
+            PlaceStay(
+                placeKey: "icn",
+                displayName: "인천국제공항",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(30 * 60)
+                ),
+                confidence: .high,
+                point: origin
+            ),
+            PlaceStay(
+                placeKey: "bkk",
+                displayName: "Suvarnabhumi Airport",
+                span: TimeSpan(
+                    start: start.addingTimeInterval(8 * 60 * 60),
+                    end: start.addingTimeInterval(8 * 60 * 60 + 30 * 60)
+                ),
+                confidence: .high,
+                point: destination
+            ),
+        ]
+
+        let result = MovementRouteBuilder().build(
+            stays: stays,
+            readings: []
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.mode, .airplane)
+        XCTAssertEqual(
+            result.first?.evidence,
+            ["WBS 항공 이동 규칙: 공항 endpoint"]
+        )
+        XCTAssertGreaterThan(result.first?.distanceMeters ?? 0, 3_000_000)
+        XCTAssertFalse(result.first?.isConfirmed ?? true)
+    }
+
+    func testWBSMovementTransportPolicyKeepsPortBeforeAirport() {
+        let start = makeDate(2026, 9, 9, 9)
+        let stays = [
+            PlaceStay(
+                placeKey: "airport-marina",
+                displayName: "Airport Marina",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(30 * 60)
+                ),
+                confidence: .high
+            ),
+            PlaceStay(
+                placeKey: "destination",
+                displayName: "도착지",
+                span: TimeSpan(
+                    start: start.addingTimeInterval(60 * 60),
+                    end: start.addingTimeInterval(90 * 60)
+                ),
+                confidence: .high
+            ),
+        ]
+
+        XCTAssertEqual(
+            WBSMovementTransportPolicy.recommendedMode(
+                from: stays[0],
+                to: stays[1]
+            ),
+            .ship
+        )
+    }
+
+    @MainActor
     func testAppleTransportEnrichmentPersistsConfirmedMagongnaruGeomamGajeongJourney() async throws {
         let base = makeDate(2026, 8, 18, 20, 22)
         let samples: [(Double, Double, Double)] = [
@@ -7657,6 +9310,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.subwayRoute?.stops.last?.stationName, "가정")
     }
 
+    @MainActor
     func testAppleTransportEnrichmentDoesNotPromoteTwoRoadEndpoints() async {
         let base = makeDate(2026, 8, 18, 20, 22)
         let readings = [
@@ -7692,6 +9346,26 @@ final class FeatureEngineTests: XCTestCase {
         let enriched = await service.enriching(readings)
 
         XCTAssertFalse(enriched.contains(where: \.matchesRailRoute))
+    }
+
+    func testAppleTransportContextUsesItsOwnTransitSearchRadius() {
+        let transitContext = AppleTransportContext(
+            subwayStationName: "역",
+            busStopName: "정류장"
+        )
+
+        let busRange = transitContext.propagated(toDistanceFromAnchor: 140)
+        XCTAssertEqual(busRange?.busStopName, "정류장")
+        XCTAssertEqual(busRange?.subwayStationName, "역")
+
+        let stationOnlyRange = transitContext.propagated(
+            toDistanceFromAnchor: 300
+        )
+        XCTAssertNil(stationOnlyRange?.busStopName)
+        XCTAssertEqual(stationOnlyRange?.subwayStationName, "역")
+
+        XCTAssertNil(transitContext.propagated(toDistanceFromAnchor: 451))
+        XCTAssertNil(transitContext.propagated(toDistanceFromAnchor: .infinity))
     }
 
     func testStationJourneyDoesNotConfirmBeforeDestinationExit() {
@@ -7992,6 +9666,91 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.mode, .walking)
     }
 
+    func testEnforcingMotionFamilyPreservesOverlappingActivityDurationSum() {
+        let base = makeDate(2026, 8, 4, 9, 26)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(10 * 60))
+        let cycling = TravelSegment(
+            mode: .cycling,
+            span: span,
+            distanceMeters: 2_000,
+            confidence: .medium,
+            evidence: ["자전거 속도대"]
+        )
+        let activities = [
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(3 * 60)
+                ),
+                motion: .automotive,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(2 * 60),
+                    end: base.addingTimeInterval(5 * 60)
+                ),
+                motion: .automotive,
+                confidence: .high
+            ),
+        ]
+
+        let result = AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+            [cycling],
+            activities: activities,
+            readings: [
+                SensorReading(timestamp: span.start, stepCount: 10),
+                SensorReading(timestamp: span.end, stepCount: 12),
+            ]
+        )
+
+        XCTAssertEqual(result.first?.mode, .car)
+    }
+
+    func testEnforcingMotionFamilyBoundsDisjointEvidenceInspection() {
+        let base = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let segments = (0..<count).map { index in
+            let start = base.addingTimeInterval(TimeInterval(index * 5 * 60))
+            return TravelSegment(
+                mode: .cycling,
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(2 * 60)
+                ),
+                distanceMeters: 500,
+                confidence: .medium,
+                evidence: ["자전거 속도대"]
+            )
+        }
+        let activities = segments.map { segment in
+            MotionActivityRecord(
+                span: segment.span,
+                motion: .automotive,
+                confidence: .high
+            )
+        }
+        let readings = (0..<count).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(
+                    30 * 24 * hour + TimeInterval(index * 60)
+                ),
+                stepCount: index
+            )
+        }
+        var inspectionCount = 0
+
+        let result = AppleDeviceGroundTruthEngine.enforcingMotionFamily(
+            segments,
+            activities: activities,
+            readings: readings,
+            candidateInspectionCount: &inspectionCount
+        )
+
+        XCTAssertTrue(result.allSatisfy { $0.mode == .car })
+        XCTAssertLessThan(inspectionCount, count * count / 10)
+    }
+
     func testResolvingOverlapsKeepsOneSegmentPerMoment() {
         let base = makeDate(2026, 8, 4, 9, 24)
         let long = TravelSegment(
@@ -8213,6 +9972,103 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(merged.count, 2)
+    }
+
+    func testCoalescingTravelTreatsExactThreeMinuteOverlapAsInterruption() {
+        let base = makeDate(2026, 8, 4, 11, 40)
+        let segments = [
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(2 * 60)
+                ),
+                distanceMeters: 100,
+                confidence: .medium,
+                evidence: ["GPS"]
+            ),
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(6 * 60),
+                    end: base.addingTimeInterval(8 * 60)
+                ),
+                distanceMeters: 100,
+                confidence: .medium,
+                evidence: ["GPS"]
+            ),
+        ]
+        let stays = [
+            PlaceStay(
+                placeKey: "short-decoy",
+                displayName: "짧은 체류",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(2 * 60),
+                    end: base.addingTimeInterval(4 * 60)
+                ),
+                confidence: .medium
+            ),
+            PlaceStay(
+                placeKey: "exact-boundary",
+                displayName: "경계 체류",
+                span: TimeSpan(
+                    start: base.addingTimeInterval(2.5 * 60),
+                    end: base.addingTimeInterval(5.5 * 60)
+                ),
+                confidence: .high
+            ),
+        ].reversed()
+
+        let merged = AppleDeviceGroundTruthEngine.coalescingTravel(
+            segments,
+            stays: Array(stays),
+            maximumGap: 6 * 60
+        )
+
+        XCTAssertEqual(merged, segments)
+    }
+
+    func testCoalescingTravelBoundsDisjointStayInspection() {
+        let base = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let segments = (0..<count).map { index in
+            let start = base.addingTimeInterval(TimeInterval(index * 6 * 60))
+            return TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(2 * 60)
+                ),
+                distanceMeters: 100,
+                confidence: .medium,
+                evidence: ["GPS"]
+            )
+        }
+        let stays = (0..<count).map { index in
+            let start = base.addingTimeInterval(
+                30 * 24 * hour + TimeInterval(index * 5 * 60)
+            )
+            return PlaceStay(
+                placeKey: "future-\(index)",
+                displayName: "미래 체류",
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(3 * 60)
+                ),
+                confidence: .high
+            )
+        }
+        var inspectionCount = 0
+
+        let merged = AppleDeviceGroundTruthEngine.coalescingTravel(
+            segments,
+            stays: stays,
+            maximumGap: 5 * 60,
+            candidateInspectionCount: &inspectionCount
+        )
+
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertLessThan(inspectionCount, count * count / 10)
     }
 
     func testHomeFloorCalibrationRejectsFarAwayLocation() {
@@ -10035,6 +11891,105 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(readings, sourceReadings)
     }
 
+    func testAppleDeviceMotionHistoryUsesLatestInclusiveActivity() {
+        let base = makeDate(2026, 7, 30, 9, 0)
+        let readings = [30, 0, 21, 10, 20, 31].map { minute in
+            SensorReading(
+                timestamp: base.addingTimeInterval(TimeInterval(minute * 60)),
+                motion: .automotive,
+                motionConfidence: .low
+            )
+        }
+        let activities = [
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base,
+                    end: base.addingTimeInterval(30 * 60)
+                ),
+                motion: .walking,
+                confidence: .medium
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(10 * 60),
+                    end: base.addingTimeInterval(20 * 60)
+                ),
+                motion: .running,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(15 * 60),
+                    end: base.addingTimeInterval(25 * 60)
+                ),
+                motion: .unknown,
+                confidence: .high
+            ),
+            MotionActivityRecord(
+                span: TimeSpan(
+                    start: base.addingTimeInterval(10 * 60),
+                    end: base.addingTimeInterval(20 * 60)
+                ),
+                motion: .cycling,
+                confidence: .medium
+            ),
+        ]
+        let sourceReadings = readings
+
+        let result = AppleDeviceGroundTruthEngine.applyingMotionHistory(
+            to: readings,
+            activities: activities
+        )
+
+        XCTAssertEqual(
+            result.map(\.motion),
+            [.walking, .cycling, .cycling, .walking, .walking, .automotive]
+        )
+        XCTAssertEqual(
+            result.map(\.timestamp),
+            [0, 10, 20, 21, 30, 31].map {
+                base.addingTimeInterval(TimeInterval($0 * 60))
+            }
+        )
+        XCTAssertEqual(result[1].motionConfidence, .medium)
+        XCTAssertEqual(readings, sourceReadings)
+    }
+
+    func testAppleDeviceMotionHistoryBoundsDisjointInspection() {
+        let base = makeDate(2026, 7, 1, 0, 0)
+        let count = 1_000
+        let readings = (0..<count).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(TimeInterval(index * 60)),
+                motion: .stationary,
+                motionConfidence: .low
+            )
+        }
+        let activities = (0..<count).map { index in
+            let start = base.addingTimeInterval(
+                30 * 24 * hour + TimeInterval(index * 60)
+            )
+            return MotionActivityRecord(
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(30)
+                ),
+                motion: .walking,
+                confidence: .high
+            )
+        }
+        var inspectionCount = 0
+
+        let result = AppleDeviceGroundTruthEngine.applyingMotionHistory(
+            to: readings,
+            activities: activities,
+            candidateInspectionCount: &inspectionCount
+        )
+
+        XCTAssertEqual(result, readings)
+        XCTAssertLessThan(inspectionCount, count * count / 10)
+    }
+
     func testPlanDayDataSnapshotLoadsOneNormalizedDayWithoutMutatingSource() {
         let base = makeDate(2026, 7, 30, 0, 0)
         let id = UUID()
@@ -10153,6 +12108,202 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result, [gps])
     }
 
+    func testMergingTravelPreservesPrimaryThenWatchPriority() {
+        let base = makeDate(2026, 8, 1, 9, 0)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let watchWorkout = AppleMovementEvidence(
+            span: span,
+            source: .appleWatch,
+            kind: .workout,
+            workoutMode: .walking,
+            distanceMeters: 800,
+            sourceName: "Apple Watch"
+        )
+        let motion = MotionActivityRecord(
+            span: span,
+            motion: .automotive,
+            confidence: .high
+        )
+
+        let watchWins = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [],
+            motionActivities: [motion],
+            pedometer: nil,
+            healthEvidence: [watchWorkout]
+        )
+
+        XCTAssertEqual(watchWins.count, 1)
+        XCTAssertEqual(watchWins[0].mode, .walking)
+        XCTAssertTrue(watchWins[0].evidence.contains("Apple Watch 운동 기록"))
+
+        let gps = TravelSegment(
+            mode: .car,
+            span: span,
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let primaryWins = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [gps],
+            motionActivities: [motion],
+            pedometer: nil,
+            healthEvidence: [watchWorkout]
+        )
+
+        XCTAssertEqual(primaryWins, [gps])
+    }
+
+    func testMergingTravelKeepsTouchingSourcesSeparateAtStrictBoundary() {
+        let base = makeDate(2026, 8, 1, 9, 0)
+        let gps = TravelSegment(
+            mode: .car,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(10 * 60)
+            ),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: ["GPS"]
+        )
+        let watchWorkout = AppleMovementEvidence(
+            span: TimeSpan(
+                start: base.addingTimeInterval(10 * 60),
+                end: base.addingTimeInterval(20 * 60)
+            ),
+            source: .appleWatch,
+            kind: .workout,
+            workoutMode: .walking,
+            distanceMeters: 800,
+            sourceName: "Apple Watch"
+        )
+        let motion = MotionActivityRecord(
+            span: TimeSpan(
+                start: base.addingTimeInterval(20 * 60),
+                end: base.addingTimeInterval(30 * 60)
+            ),
+            motion: .walking,
+            confidence: .high
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [gps],
+            motionActivities: [motion],
+            pedometer: nil,
+            healthEvidence: [watchWorkout]
+        )
+
+        XCTAssertEqual(result.map(\.mode), [.car, .walking, .walking])
+        XCTAssertEqual(
+            result.map(\.span),
+            [gps.span, watchWorkout.span, motion.span]
+        )
+    }
+
+    func testTimeSpanValueIndexPreservesInputOrderAndStrictBoundaries() {
+        let base = makeDate(2026, 8, 1, 9, 0)
+        let first = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(10),
+                end: base.addingTimeInterval(20)
+            ),
+            distanceMeters: 10,
+            confidence: .high,
+            evidence: ["first"]
+        )
+        let second = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(15)
+            ),
+            distanceMeters: 15,
+            confidence: .high,
+            evidence: ["second"]
+        )
+        let ending = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base,
+                end: base.addingTimeInterval(12)
+            ),
+            distanceMeters: 12,
+            confidence: .high,
+            evidence: ["ending"]
+        )
+        let touching = TravelSegment(
+            mode: .walking,
+            span: TimeSpan(
+                start: base.addingTimeInterval(20),
+                end: base.addingTimeInterval(30)
+            ),
+            distanceMeters: 10,
+            confidence: .high,
+            evidence: ["touching"]
+        )
+        let index = TimeSpanValueIndex(
+            [first, second, ending, touching]
+        ) { $0.span }
+        var inspectionCount: Int? = 0
+
+        let values = index.values(
+            overlapping: TimeSpan(
+                start: base.addingTimeInterval(12),
+                end: base.addingTimeInterval(20)
+            ),
+            inspectionCount: &inspectionCount
+        )
+
+        XCTAssertEqual(values, [first, second])
+        XCTAssertFalse(values.contains(ending))
+        XCTAssertFalse(values.contains(touching))
+    }
+
+    func testMergingTravelBoundsDisjointSegmentInspection() {
+        let base = makeDate(2026, 8, 1, 0, 0)
+        let count = 1_000
+        let gpsSegments = (0..<count).map { index in
+            let start = base.addingTimeInterval(TimeInterval(index * 5 * 60))
+            return TravelSegment(
+                mode: .car,
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(2 * 60)
+                ),
+                distanceMeters: 1_000,
+                confidence: .high,
+                evidence: ["GPS"]
+            )
+        }
+        let motionActivities = (0..<count).map { index in
+            let start = base.addingTimeInterval(
+                30 * 24 * hour + TimeInterval(index * 5 * 60)
+            )
+            return MotionActivityRecord(
+                span: TimeSpan(
+                    start: start,
+                    end: start.addingTimeInterval(2 * 60)
+                ),
+                motion: .walking,
+                confidence: .high
+            )
+        }
+        var inspectionCount = 0
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: gpsSegments,
+            motionActivities: motionActivities,
+            pedometer: nil,
+            candidateInspectionCount: &inspectionCount
+        )
+
+        XCTAssertEqual(result.count, count * 2)
+        XCTAssertLessThan(inspectionCount, count * count / 10)
+    }
+
     func testMergingTravelRetainsStableSubwayWhenNextRefreshDropsCandidate() throws {
         let base = makeDate(2026, 8, 11, 9, 35)
         let span = TimeSpan(
@@ -10191,6 +12342,59 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(result.map(\.mode), [.subway])
         XCTAssertEqual(result.first?.subwayRoute?.transferStationNames, ["검암"])
+    }
+
+    func testMergingTravelKeepsFirstGPSOnEqualSubwayOverlap() throws {
+        let base = makeDate(2026, 8, 11, 9, 35)
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(45 * 60)
+        )
+        let firstFrom = UUID()
+        let firstTo = UUID()
+        let secondFrom = UUID()
+        let secondTo = UUID()
+        let first = TravelSegment(
+            fromPlaceID: firstFrom,
+            toPlaceID: firstTo,
+            mode: .car,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["first GPS"]
+        )
+        let second = TravelSegment(
+            fromPlaceID: secondFrom,
+            toPlaceID: secondTo,
+            mode: .car,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["second GPS"]
+        )
+        let subway = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .high,
+            evidence: ["원본 GPS 철도 궤적 복원"],
+            subwayRoute: try XCTUnwrap(
+                SubwayStationCatalog.route(
+                    for: ["가정역", "검암역", "마곡나루역"]
+                )
+            )
+        )
+
+        let result = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [first, second],
+            motionActivities: [],
+            pedometer: nil,
+            preservedSubwaySegments: [subway]
+        )
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].fromPlaceID, firstFrom)
+        XCTAssertEqual(result[0].toPlaceID, firstTo)
     }
 
     func testMergingTravelRetainsLockedMediumSubwayWhenCluesDisappear() throws {
@@ -11360,6 +13564,46 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPlaceAndWalkingLocationsChooseLowerFloorOnVoteTies() {
+        let base = makeDate(2026, 7, 30, 18)
+        let point = GeoPoint(
+            latitude: 37.5,
+            longitude: 127,
+            altitude: 30,
+            horizontalAccuracy: 8,
+            verticalAccuracy: 5
+        )
+        let readings = [2, 1, 2, 1].enumerated().map { index, floor in
+            SensorReading(
+                timestamp: base.addingTimeInterval(TimeInterval(index * 20)),
+                point: point,
+                motion: .walking,
+                systemFloor: floor,
+                trackingSessionID: UUID(uuidString: "00000000-0000-0000-0000-000000000001"),
+                trackingKind: .walking,
+                sourceDevice: .iPhone
+            )
+        }
+
+        let placeDetector = PlaceDetectionEngine(minimumDwell: 30)
+        XCTAssertEqual(
+            placeDetector.detectStays(readings: readings).first?.floor,
+            1
+        )
+        XCTAssertEqual(
+            placeDetector.detectStays(readings: Array(readings.reversed()))
+                .first?.floor,
+            1
+        )
+
+        XCTAssertEqual(WalkingLocationEngine().build(readings: readings).first?.floor, 1)
+        XCTAssertEqual(
+            WalkingLocationEngine().build(readings: Array(readings.reversed()))
+                .first?.floor,
+            1
+        )
+    }
+
     func testPlaceDetectionDoesNotBridgeAnUnobservedDay() {
         let base = makeDate(2026, 7, 30)
         let point = GeoPoint(
@@ -11732,24 +13976,7 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testWidgetSnapshotAndCatMotion() {
-        let base = makeDate(2026, 7, 30, 12, 0)
-        let plan = PlanRecord(
-            title: "현재 계획",
-            span: TimeSpan(
-                start: base.addingTimeInterval(-hour),
-                end: base.addingTimeInterval(hour)
-            ),
-            categoryID: "project"
-        )
-        let snapshot = WidgetSnapshotFactory.make(
-            plans: [plan],
-            now: base,
-            catStyle: .calico,
-            hideSensitiveContent: true
-        )
-        XCTAssertTrue(snapshot.catIsRunning)
-        XCTAssertTrue(snapshot.availableActions.isEmpty)
+    func testCatMotionRespectsReduceMotion() {
         XCTAssertEqual(
             CatMotionPolicy.resolve(
                 style: .white,
@@ -16472,6 +18699,44 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(inference.confidence, .medium)
     }
 
+    func testStationaryContextSelectsSameCalendarEventRegardlessOfInputOrder() {
+        let start = makeDate(2026, 8, 4, 10, 0)
+        let end = start.addingTimeInterval(hour)
+        var meal = makeContextEvent(
+            title: "점심",
+            start: start,
+            end: end,
+            attendeeCount: 3
+        )
+        meal.id = "a-meal"
+        var meeting = makeContextEvent(
+            title: "주간 회의",
+            start: start,
+            end: end,
+            attendeeCount: 3
+        )
+        meeting.id = "z-meeting"
+        let classifier = StationaryContextClassifier()
+
+        func classify(_ events: [CalendarRecord]) -> StationaryContextInference {
+            classifier.classify(
+                StationaryContextInput(
+                    stay: makeContextStay(start: start, end: end),
+                    calendarEvents: events,
+                    calendar: utcCalendar,
+                    now: end
+                )
+            )
+        }
+
+        let forward = classify([meeting, meal])
+        let reversed = classify([meal, meeting])
+
+        XCTAssertEqual(forward, reversed)
+        XCTAssertEqual(forward.kind, .mealPlace)
+        XCTAssertTrue(forward.evidence.contains("식사 일정 '점심'"))
+    }
+
     func testStationaryContextCompanyPlaceOnWeekdayBecomesWork() {
         let start = makeDate(2026, 8, 4, 10, 0)
         let end = start.addingTimeInterval(2 * hour)
@@ -17898,6 +20163,42 @@ final class FeatureEngineTests: XCTestCase {
         }
     }
 
+    private func sensorTimelineRefreshStartLines(
+        in log: String = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+    ) -> [String] {
+        log.split(whereSeparator: \.isNewline).compactMap { line in
+            let value = String(line)
+            return value.contains(
+                "\"event\":\"sensor_timeline_refresh_started\""
+            ) ? value : nil
+        }
+    }
+
+    @MainActor
+    private func waitForSensorAnalysisBatch() async -> [String] {
+        let deadline = Date.now.addingTimeInterval(5)
+        while Date.now < deadline {
+            let starts = sensorAnalysisBatchStartLines()
+            if !starts.isEmpty {
+                try? await Task.sleep(for: .milliseconds(100))
+                return sensorAnalysisBatchStartLines()
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        return sensorAnalysisBatchStartLines()
+    }
+
+    private func sensorAnalysisBatchStartLines(
+        in log: String = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+    ) -> [String] {
+        log.split(whereSeparator: \.isNewline).compactMap { line in
+            let value = String(line)
+            return value.contains(
+                "\"event\":\"sensor_analysis_batch_started\""
+            ) ? value : nil
+        }
+    }
+
     private func selectedDayStart(_ date: Date) -> String {
         String(
             Calendar.autoupdatingCurrent
@@ -18015,6 +20316,60 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMemoShellMigrationCancellationLeavesSnapshotUnchanged() {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        var snapshot = makeSnapshot(
+            plans: (0..<1_024).map { index in
+                makeMemoShellPlan(
+                    categoryName: "활동 \(index)",
+                    start: start.addingTimeInterval(TimeInterval(index * 60))
+                )
+            }
+        )
+        let original = snapshot
+        var cancellationChecks = 0
+
+        XCTAssertThrowsError(try MemoShellPlanMigration.apply(
+            to: &snapshot,
+            cancellationCheck: {
+                cancellationChecks += 1
+                throw CancellationError()
+            }
+        )) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(cancellationChecks, 1)
+        XCTAssertEqual(snapshot, original)
+    }
+
+    func testLoadedSnapshotPreparationCancelsDuringPlanNormalization() {
+        let start = makeDate(2026, 8, 4, 9, 30)
+        let snapshot = makeSnapshot(
+            plans: (0..<1_024).map { index in
+                PlanRecord(
+                    title: "계획 \(index)",
+                    span: TimeSpan(
+                        start: start.addingTimeInterval(TimeInterval(index * 60)),
+                        end: start.addingTimeInterval(TimeInterval((index + 1) * 60))
+                    ),
+                    categoryID: "activity"
+                )
+            }
+        )
+        var cancellationChecks = 0
+
+        XCTAssertThrowsError(try AppModel.preparedLoadedSnapshot(
+            snapshot,
+            cancellationCheck: {
+                cancellationChecks += 1
+                if cancellationChecks == 3 { throw CancellationError() }
+            }
+        )) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(cancellationChecks, 3)
+    }
+
     @MainActor
     func testSavingCategoryMemoCreatesNoPlan() async {
         let repository = InMemoryPlanRepository()
@@ -18033,6 +20388,108 @@ final class FeatureEngineTests: XCTestCase {
         let saved = model.memos(forCategoryID: "activity", on: day)
         XCTAssertEqual(saved.map(\.text), ["무릎 상태 확인"])
         XCTAssertNil(saved.first?.planID)
+    }
+
+    @MainActor
+    func testCloudRestoreReadingPreparationCancelsDuringInvalidReadingCompaction() {
+        let readings = (0..<1_024).map { index in
+            SensorReading(
+                timestamp: index.isMultiple(of: 2)
+                    ? Date(timeIntervalSince1970: TimeInterval(index))
+                    : Date(timeIntervalSince1970: .nan)
+            )
+        }
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try CloudRestoreReadingPreparation.validAndSorted(readings) {
+                checks += 1
+                if checks == 4 { throw CancellationError() }
+            }
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 4)
+    }
+
+    @MainActor
+    func testCloudRestorePropagatesCancellationBeforeApplyingSnapshot() async {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let original = model.snapshot
+        let task = Task { @MainActor in
+            try await model.applyCloudBackup(
+                PlanCloudBackupPayload(snapshot: .empty)
+            )
+        }
+        task.cancel()
+
+        do {
+            _ = try await task.value
+            XCTFail("A cancelled restore must not be reported as successful")
+        } catch is CancellationError {
+            // Expected: cancellation is a failed restore, not a partial result.
+        } catch {
+            XCTFail("Unexpected restore error: \(error)")
+        }
+        XCTAssertEqual(model.snapshot, original)
+    }
+
+    @MainActor
+    func testCloudRestorePropagatesCancellationErrorFromRawPreflight() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-preflight-cancel-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("sensor.sqlite")
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("legacy.jsonl"),
+            dayStoreURL: databaseURL,
+            beforeValidateAppend: {
+                throw CancellationError()
+            }
+        )
+        let sensorService = AppleSensorDataService(archive: archive)
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let original = model.snapshot
+        let date = Date(timeIntervalSince1970: 1_850_000_000)
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        do {
+            _ = try await model.applyCloudBackup(
+                PlanCloudBackupRestorePackage(
+                    backup: PlanCloudBackupPayload(snapshot: .empty),
+                    rawSensorState: .available(PlanCloudRawSensorPayload(
+                        monthKey: "2028-08",
+                        sensorReadings: [reading],
+                        envelopes: [],
+                        createdAt: date
+                    ))
+                )
+            )
+            XCTFail("A raw preflight cancellation error must propagate")
+        } catch is CancellationError {
+            // Expected: raw preflight cancellation must not become `.unchanged`.
+        } catch {
+            XCTFail("Unexpected restore error: \(error)")
+        }
+        XCTAssertEqual(model.snapshot, original)
     }
 
     @MainActor
@@ -18183,8 +20640,12 @@ final class FeatureEngineTests: XCTestCase {
             kind: "weather-context",
             payload: weather
         )
+        let routePoint = try XCTUnwrap(PlanBackupRoutePoint(reading))
         let restored = PlanCloudBackupRestorePackage(
-            backup: PlanCloudBackupPayload(snapshot: .empty),
+            backup: PlanCloudBackupPayload(
+                snapshot: .empty,
+                routePoints: [routePoint]
+            ),
             rawSensorState: .available(
                 PlanCloudRawSensorPayload(
                     monthKey: "2026-08",
@@ -18284,6 +20745,88 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testCloudRestoreDoesNotReplaceConcurrentLocalSnapshotEdit() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-revision-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let date = Date(timeIntervalSince1970: 1_850_000_000)
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorService = AppleSensorDataService(
+            archive: try SensorReadingArchive(
+                fileURL: directory.appendingPathComponent("legacy.jsonl"),
+                dayStoreURL: databaseURL
+            )
+        )
+        let repository = GatedSavePlanRepository(snapshot: .empty)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        var backupSnapshot = TaptionDataSnapshot.empty
+        backupSnapshot.plans = [PlanRecord(
+            title: "복원 계획",
+            span: TimeSpan(
+                start: date,
+                end: date.addingTimeInterval(hour)
+            ),
+            categoryID: "activity"
+        )]
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        let restoreTask = Task { @MainActor in
+            try await model.applyCloudBackup(
+                PlanCloudBackupRestorePackage(
+                    backup: PlanCloudBackupPayload(snapshot: backupSnapshot),
+                    rawSensorState: .available(PlanCloudRawSensorPayload(
+                        monthKey: "2028-08",
+                        sensorReadings: [reading],
+                        createdAt: date
+                    ))
+                )
+            )
+        }
+
+        await repository.waitForFirstSave()
+        let memoID = try XCTUnwrap(
+            model.addMemo(
+                text: "복원 중 작성한 메모",
+                kind: .idea,
+                categoryID: "activity",
+                on: date
+            )
+        )
+        await repository.releaseFirstSave()
+
+        let restoreResult = try await restoreTask.value
+        XCTAssertEqual(restoreResult, .unchanged)
+        await repository.waitForSaveCount(2)
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        XCTAssertNotNil(model.snapshot.memos.first { $0.id == memoID })
+        let persisted = try await repository.load()
+        XCTAssertTrue(persisted.plans.isEmpty)
+        XCTAssertNotNil(persisted.memos.first { $0.id == memoID })
+        let rawReadings = try await sensorService.archivedReadings(in: TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(1)
+        ))
+        XCTAssertFalse(rawReadings.contains { $0.id == reading.id })
+    }
+
+    @MainActor
     func testCloudRestoreKeepsSnapshotWhenSensorRawMergeFails() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("cloud-restore-conflict-\(UUID().uuidString)")
@@ -18349,6 +20892,54 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result, .unchanged)
         XCTAssertEqual(model.snapshot.plans.map(\.title), ["기존 기록"])
         XCTAssertEqual(persisted.plans.map(\.title), ["기존 기록"])
+    }
+
+    @MainActor
+    func testCloudRestoreRejectsConflictingRouteAndRawSensorReadingIDs() async throws {
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let routeReading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        var conflictingReading = routeReading
+        conflictingReading.point?.latitude = 37.6
+        let routePoint = try XCTUnwrap(PlanBackupRoutePoint(routeReading))
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let original = model.snapshot
+
+        do {
+            _ = try await model.applyCloudBackup(
+                PlanCloudBackupRestorePackage(
+                    backup: PlanCloudBackupPayload(
+                        snapshot: .empty,
+                        routePoints: [routePoint]
+                    ),
+                    rawSensorState: .available(
+                        PlanCloudRawSensorPayload(
+                            monthKey: "2026-08",
+                            sensorReadings: [conflictingReading],
+                            createdAt: date
+                        )
+                    )
+                )
+            )
+            XCTFail("Conflicting copies of a reading must reject the archive")
+        } catch {
+            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+        }
+
+        XCTAssertEqual(model.snapshot, original)
     }
 
     @MainActor
@@ -21870,6 +24461,87 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(suggestion?.suggestedName)
     }
 
+    func testUnregisteredPlaceSuggestionTieUsesStableIDRegardlessOfInputOrder() {
+        let base = makeDate(2026, 8, 1, 10)
+        let stays = [0.0, 2.0, 4.0].flatMap { offset in
+            [
+                makeVisitStay(
+                    latitude: 37.5000,
+                    longitude: 127,
+                    start: base.addingTimeInterval(offset * 86_400)
+                ),
+                makeVisitStay(
+                    latitude: 37.5100,
+                    longitude: 127,
+                    start: base.addingTimeInterval(offset * 86_400)
+                ),
+            ]
+        }
+        let engine = UnregisteredPlaceSuggestionEngine()
+        let now = base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        let forward = engine.suggestion(
+            places: stays,
+            frequentPlaces: [],
+            dismissed: [],
+            now: now
+        )
+        let reversed = engine.suggestion(
+            places: Array(stays.reversed()),
+            frequentPlaces: [],
+            dismissed: [],
+            now: now
+        )
+
+        XCTAssertEqual(forward?.id, "suggested-37.5000,127.0000")
+        XCTAssertEqual(reversed?.id, forward?.id)
+        XCTAssertEqual(forward?.visitCount, 3)
+    }
+
+    func testUnregisteredPlaceClustersEquidistantStayByStableOrder() {
+        let base = makeDate(2026, 8, 1, 10)
+        let stays = [
+            makeVisitStay(latitude: 37.5000, longitude: 127, start: base),
+            makeVisitStay(
+                latitude: 37.5012,
+                longitude: 127,
+                start: base
+            ),
+            makeVisitStay(
+                latitude: 37.5000,
+                longitude: 127,
+                start: base.addingTimeInterval(2 * 86_400)
+            ),
+            makeVisitStay(
+                latitude: 37.5012,
+                longitude: 127,
+                start: base.addingTimeInterval(2 * 86_400)
+            ),
+            makeVisitStay(
+                latitude: 37.5006,
+                longitude: 127,
+                start: base.addingTimeInterval(4 * 86_400)
+            ),
+        ]
+        let now = base.addingTimeInterval(4 * 86_400 + 2 * 3_600)
+        let engine = UnregisteredPlaceSuggestionEngine()
+        let forward = engine.suggestion(
+            places: stays,
+            frequentPlaces: [],
+            dismissed: [],
+            now: now
+        )
+        let reversed = engine.suggestion(
+            places: Array(stays.reversed()),
+            frequentPlaces: [],
+            dismissed: [],
+            now: now
+        )
+
+        XCTAssertEqual(forward?.id, "suggested-37.5002,127.0000")
+        XCTAssertEqual(reversed?.id, forward?.id)
+        XCTAssertEqual(forward?.visitCount, 3)
+    }
+
     /// 한 달에 열 번이면, 어느 한 주도 세 번에 못 미쳐도 조건을 넘긴다.
     func testUnregisteredPlaceSuggestionTriggersOnTenMonthlyVisitsWithNoWeeklyRun() {
         let base = makeDate(2026, 7, 1, 10)
@@ -24567,11 +27239,33 @@ private actor RejectingSavePlanRepository: PlanDataRepository {
     }
 }
 
+private actor RecoveringLoadPlanRepository: PlanDataRepository {
+    private var snapshot: TaptionDataSnapshot
+    private var shouldFailNextLoad = true
+
+    init(snapshot: TaptionDataSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        if shouldFailNextLoad {
+            shouldFailNextLoad = false
+            throw PlanRepositoryAvailabilityError.unavailable
+        }
+        return snapshot
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        self.snapshot = snapshot
+    }
+}
+
 private actor GatedSavePlanRepository: PlanDataRepository {
     private var storedSnapshot: TaptionDataSnapshot
     private var saveCount = 0
     private var firstSaveWaiter: CheckedContinuation<Void, Never>?
     private var firstSaveRelease: CheckedContinuation<Void, Never>?
+    private var saveCountWaiters: [Int: CheckedContinuation<Void, Never>] = [:]
 
     init(snapshot: TaptionDataSnapshot) {
         storedSnapshot = snapshot
@@ -24583,6 +27277,10 @@ private actor GatedSavePlanRepository: PlanDataRepository {
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         saveCount += 1
+        let readyTargets = saveCountWaiters.keys.filter { $0 <= saveCount }
+        for target in readyTargets {
+            saveCountWaiters.removeValue(forKey: target)?.resume()
+        }
         firstSaveWaiter?.resume()
         firstSaveWaiter = nil
         if saveCount == 1 {
@@ -24603,6 +27301,13 @@ private actor GatedSavePlanRepository: PlanDataRepository {
     func releaseFirstSave() {
         firstSaveRelease?.resume()
         firstSaveRelease = nil
+    }
+
+    func waitForSaveCount(_ target: Int) async {
+        guard saveCount < target else { return }
+        await withCheckedContinuation { continuation in
+            saveCountWaiters[target] = continuation
+        }
     }
 }
 

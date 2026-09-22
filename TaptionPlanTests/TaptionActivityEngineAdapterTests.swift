@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 import TaptionActivityEngine
+import TaptionPlanCore
 @testable import TaptionPlan
 
 struct TaptionActivityEngineAdapterTests {
@@ -22,6 +23,30 @@ struct TaptionActivityEngineAdapterTests {
         )
     }
 
+    private func travelSegment(
+        _ mode: TravelMode,
+        _ start: TimeInterval,
+        _ end: TimeInterval
+    ) -> TravelSegment {
+        travelSegment(
+            mode,
+            span: TimeSpan(
+                start: base.addingTimeInterval(start),
+                end: base.addingTimeInterval(end)
+            )
+        )
+    }
+
+    private func travelSegment(_ mode: TravelMode, span: TimeSpan) -> TravelSegment {
+        TravelSegment(
+            mode: mode,
+            span: span,
+            distanceMeters: 0,
+            confidence: .high,
+            evidence: []
+        )
+    }
+
     @Test func mapsDetailedAndMajorActivityTaxonomy() {
         let result = TaptionActivityEngineAdapter.classify(
             readings: [reading(0, motion: .walking)],
@@ -30,6 +55,48 @@ struct TaptionActivityEngineAdapterTests {
         #expect(result.segments.first?.detailID == "movement.walking")
         #expect(result.segments.first?.majorCategoryID == "movement")
         #expect(result.majorCategoryIDs == ["movement"])
+    }
+
+    @Test func classifiedActivityUsesOnlyReadingsInsideRequestedSpan() {
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let outsideBefore = SensorReading(
+            timestamp: base.addingTimeInterval(-0.5),
+            motion: .walking,
+            gpsAvailable: false,
+            behavior: "walking",
+            behaviorConfidenceScore: 0.1,
+            behaviorEvidence: ["outside-before"]
+        )
+        let outsideAtEnd = SensorReading(
+            timestamp: span.end,
+            motion: .walking,
+            gpsAvailable: false,
+            behavior: "walking",
+            behaviorConfidenceScore: 0.1,
+            behaviorEvidence: ["outside-at-end"]
+        )
+        let readings = [outsideBefore]
+            + (0...9).map { reading(Double($0 * 60), motion: .walking, behavior: "walking") }
+            + [reading(599, motion: .walking, behavior: "walking")]
+            + [outsideAtEnd]
+
+        let actuals = TaptionActivityEngineAdapter.classifiedActivityActuals(
+            readings: readings,
+            travel: [],
+            corrections: [:],
+            actuals: [],
+            inside: span,
+            createdAt: base
+        )
+
+        #expect(actuals.count == 1)
+        #expect(actuals.first?.startedAt == span.start)
+        #expect(actuals.first?.confidence.rawValue == "high")
+        #expect(actuals.first?.evidence.contains("outside-before") == false)
+        #expect(actuals.first?.evidence.contains("outside-at-end") == false)
     }
 
     @Test func watchAndIPhoneEvidenceIsCombinedBeforeMajorProjection() {
@@ -64,6 +131,140 @@ struct TaptionActivityEngineAdapterTests {
             travel: [travel]
         )
         #expect(withTravel.segments.first?.detailID == "movement.subway")
+    }
+
+    @Test func evidenceTravelLookupPreservesFirstMatchAndInclusiveBoundaries() {
+        let travel = [
+            travelSegment(.subway, 0, 10),
+            travelSegment(.bus, 5, 15),
+            travelSegment(.walking, 10, 20),
+            travelSegment(
+                .running,
+                span: TimeSpan(
+                    start: Date(timeIntervalSinceReferenceDate: .nan),
+                    end: base.addingTimeInterval(30)
+                )
+            ),
+            travelSegment(
+                .cycling,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(30),
+                    end: Date(timeIntervalSinceReferenceDate: .nan)
+                )
+            )
+        ]
+        let invalidTimestamp = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: .nan)
+        )
+        let readings = [
+            reading(15),
+            reading(0),
+            reading(10),
+            reading(-1),
+            reading(20),
+            reading(21),
+            reading(31),
+            invalidTimestamp
+        ]
+
+        let evidence = TaptionActivityEngineAdapter.evidence(
+            from: readings,
+            travel: travel
+        )
+        let indexedMatches = TaptionActivityEngineAdapter.matchingTravelIndices(
+            for: readings,
+            travel: travel
+        )
+        let referenceMatches = readings.map { reading in
+            travel.firstIndex { $0.span.contains(reading.timestamp) }
+        }
+
+        #expect(evidence.map(\.id) == readings.map(\.id))
+        #expect(indexedMatches.indices == referenceMatches)
+        #expect(evidence.map(\.detailHint) == [
+            "movement.bus",
+            "movement.subway",
+            "movement.subway",
+            "movement.running",
+            "movement.walking",
+            "movement.running",
+            "movement.cycling",
+            "movement.subway"
+        ])
+        #expect(evidence.map(\.categoryHint) == [
+            "movement", "movement", "movement", "movement",
+            "movement", "movement", "movement", "movement"
+        ])
+    }
+
+    @Test func evidenceTravelLookupWorkIsBoundedForDenseDay() {
+        let travel = (0..<4_000).reversed().map { index in
+            travelSegment(.walking, TimeInterval(index), 10_000)
+        }
+        let readings = (0..<8_000).map { reading(TimeInterval($0) * 0.5) }
+            + [reading(10_001)]
+
+        let result = TaptionActivityEngineAdapter.matchingTravelIndices(
+            for: readings,
+            travel: travel
+        )
+
+        #expect(result.indices.count == readings.count)
+        #expect(result.indices.first == 3_999)
+        #expect(result.indices[readings.count - 2] == 0)
+        #expect(result.indices[readings.count - 1] == nil)
+        #expect(result.operationCount < (readings.count + travel.count) * 30)
+    }
+
+    @Test func evidenceGenerationPropagatesCancellationDuringReadingProjection() {
+        let readings = (0..<1_024).map { reading(TimeInterval($0)) }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            _ = try TaptionActivityEngineAdapter.evidence(
+                from: readings,
+                travel: [],
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 9 { throw CancellationError() }
+                }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected evidence error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 9)
+    }
+
+    @Test func travelIndexSortPropagatesCancellationWithinBoundedWork() {
+        let readings = [reading(0)]
+        let travel = (0..<4_096).reversed().map { index in
+            travelSegment(.walking, TimeInterval(index), 10_000)
+        }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            _ = try TaptionActivityEngineAdapter.matchingTravelIndices(
+                for: readings,
+                travel: travel,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 36 { throw CancellationError() }
+                }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected travel indexing error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 36)
     }
 
     @Test func missingLocationQualityIsNotAutomaticallyPrecise() {
@@ -122,6 +323,80 @@ struct TaptionActivityEngineAdapterTests {
         #expect(projection.readings[3].speedMetersPerSecond == nil)
         #expect(projection.rejectionCounts["speed.isolatedOutlier"] == 1)
         #expect(!projection.routeReadings.isEmpty)
+    }
+
+    @Test func qualityProjectionDropsInvalidTimestampsBeforeOrdering() {
+        let valid = (0..<7).map { index in
+            SensorReading(
+                timestamp: base.addingTimeInterval(TimeInterval(index)),
+                speedMetersPerSecond: 1,
+                gpsAvailable: false
+            )
+        }
+        let invalid = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: .nan),
+            speedMetersPerSecond: 90,
+            gpsAvailable: false
+        )
+
+        let projection = TaptionActivityEngineAdapter.qualityProjection(
+            from: [invalid] + valid
+        )
+
+        #expect(projection.readings.map(\.id) == valid.map(\.id))
+    }
+
+    @Test func qualityProjectionPropagatesCancellationDuringSort() {
+        let readings = (0..<1_024).map { reading(TimeInterval($0)) }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            _ = try TaptionActivityEngineAdapter.qualityProjection(
+                from: readings,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 9 { throw CancellationError() }
+                }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected projection error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 9)
+    }
+
+    @Test func qualityDecisionScanChecksCancellationWithoutRejections() {
+        let decisions = (0..<1_024).map {
+            TaptionScalarQualityDecision(
+                index: $0,
+                acceptedValue: 1,
+                reason: nil
+            )
+        }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            try TaptionActivityEngineAdapter.forEachRejectedQualityDecision(
+                decisions,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 2 { throw CancellationError() }
+                },
+                apply: { _ in Issue.record("No decision should be rejected") }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected quality decision error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 2)
     }
 
     @Test func dataTrustSeparatesRawPreciseSupportingAndExpectedRecords() {

@@ -24,18 +24,6 @@ enum DurationText {
     }
 }
 
-/// 막대 그림의 세로 눈금. 눈금 자리가 좁아 한 시간이 넘으면 시간만 적고,
-/// 그 아래는 분으로 적는다.
-enum DurationAxisText {
-    static func korean(hours: Double) -> String {
-        let minutes = Int((hours * 60).rounded())
-        if minutes == 0 { return "0" }
-        if minutes < 60 { return "\(minutes)분" }
-        if minutes % 60 == 0 { return "\(minutes / 60)시간" }
-        return DurationText.korean(Double(minutes) * 60)
-    }
-}
-
 /// 자동 기록은 `activity` 하나에 걸음·수면·이동이 섞여 들어온다. 어느 줄에
 /// 묶을지 판단하는 규칙을 화면마다 따로 두면 시간표와 기록이 어긋나므로
 /// 한 곳에서만 정한다.
@@ -535,10 +523,17 @@ enum ReviewReportArchiveEngine {
     static func refreshed(
         snapshot: TaptionDataSnapshot,
         asOf: Date = .now,
-        calendar: Calendar = .autoupdatingCurrent
-    ) -> [YearlyReviewArchive] {
+        calendar: Calendar = .autoupdatingCurrent,
+        cancellationCheck: () throws -> Void = { try Task.checkCancellation() }
+    ) throws -> [YearlyReviewArchive] {
+        try cancellationCheck()
         let today = calendar.startOfDay(for: asOf)
-        var sources = sourcesByDay(snapshot: snapshot, asOf: asOf, calendar: calendar)
+        var sources = try sourcesByDay(
+            snapshot: snapshot,
+            asOf: asOf,
+            calendar: calendar,
+            cancellationCheck: cancellationCheck
+        )
         sources[today, default: .empty].categories = snapshot.categories
 
         let existingDays = Dictionary(
@@ -550,7 +545,8 @@ enum ReviewReportArchiveEngine {
             $0 <= today
         }
         let review = ReviewEngine(calendar: calendar)
-        let days = dayStarts.sorted().compactMap { dayStart -> DailyReviewArchive? in
+        let days = try dayStarts.sorted().compactMap { dayStart -> DailyReviewArchive? in
+            try cancellationCheck()
             guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             else { return nil }
             let span = TimeSpan(start: dayStart, end: dayEnd)
@@ -560,7 +556,7 @@ enum ReviewReportArchiveEngine {
             source.categories = snapshot.categories
             source.frequentPlaces = snapshot.settings.frequentPlaces
             source.sort()
-            let fingerprint = fingerprint(source, effectiveEnd: effectiveEnd)
+            let fingerprint = try fingerprint(source, effectiveEnd: effectiveEnd)
             if let existing = existingDays[dayStart],
                existing.sourceFingerprint == fingerprint {
                 return existing
@@ -628,37 +624,55 @@ enum ReviewReportArchiveEngine {
             )
         }
 
-        return Dictionary(grouping: days) {
+        try cancellationCheck()
+        let daysByYear = Dictionary(grouping: days) {
             calendar.dateInterval(of: .year, for: $0.span.start)?.start
                 ?? $0.span.start
-        }.keys.sorted().compactMap { start in
+        }
+        var archives: [YearlyReviewArchive] = []
+        for start in daysByYear.keys.sorted() {
+            try cancellationCheck()
             guard let interval = calendar.dateInterval(of: .year, for: start)
-            else { return nil }
+            else { continue }
             let span = TimeSpan(start: interval.start, end: interval.end)
-            return ReviewArchiveHierarchy.year(
+            archives.append(ReviewArchiveHierarchy.year(
                 span: span,
-                days: days.filter { span.contains($0.span.start) },
+                days: daysByYear[start] ?? [],
                 asOf: asOf,
                 calendar: calendar
-            )
+            ))
         }
+        return archives
     }
 
     private static func sourcesByDay(
         snapshot: TaptionDataSnapshot,
         asOf: Date,
-        calendar: Calendar
-    ) -> [Date: DailyReviewSource] {
+        calendar: Calendar,
+        cancellationCheck: () throws -> Void
+    ) throws -> [Date: DailyReviewSource] {
         var result: [Date: DailyReviewSource] = [:]
         for plan in snapshot.plans {
-            distribute(plan.span, asOf: asOf, calendar: calendar) { day, span in
+            try cancellationCheck()
+            try distribute(
+                plan.span,
+                asOf: asOf,
+                calendar: calendar,
+                cancellationCheck: cancellationCheck
+            ) { day, span in
                 var value = plan
                 value.span = span
                 result[day, default: .empty].plans.append(value)
             }
         }
         for actual in snapshot.actuals {
-            distribute(actual.span(asOf: asOf), asOf: asOf, calendar: calendar) {
+            try cancellationCheck()
+            try distribute(
+                actual.span(asOf: asOf),
+                asOf: asOf,
+                calendar: calendar,
+                cancellationCheck: cancellationCheck
+            ) {
                 day, span in
                 var value = actual
                 value.startedAt = span.start
@@ -667,35 +681,56 @@ enum ReviewReportArchiveEngine {
             }
         }
         for event in snapshot.calendarEvents {
-            distribute(event.span, asOf: asOf, calendar: calendar) { day, span in
+            try cancellationCheck()
+            try distribute(
+                event.span,
+                asOf: asOf,
+                calendar: calendar,
+                cancellationCheck: cancellationCheck
+            ) { day, span in
                 var value = event
                 value.span = span
                 result[day, default: .empty].calendarEvents.append(value)
             }
         }
         for place in snapshot.places {
-            distribute(place.span, asOf: asOf, calendar: calendar) { day, span in
+            try cancellationCheck()
+            try distribute(
+                place.span,
+                asOf: asOf,
+                calendar: calendar,
+                cancellationCheck: cancellationCheck
+            ) { day, span in
                 var value = place
                 value.span = span
                 result[day, default: .empty].places.append(value)
             }
         }
         for travel in snapshot.travel {
-            distribute(travel.span, asOf: asOf, calendar: calendar) { day, span in
+            try cancellationCheck()
+            try distribute(
+                travel.span,
+                asOf: asOf,
+                calendar: calendar,
+                cancellationCheck: cancellationCheck
+            ) { day, span in
                 var value = travel
                 value.span = span
                 result[day, default: .empty].travel.append(value)
             }
         }
         for memo in snapshot.memos where memo.occurredAt <= asOf {
+            try cancellationCheck()
             result[calendar.startOfDay(for: memo.occurredAt), default: .empty]
                 .memos.append(memo)
         }
         for weather in snapshot.weather where weather.observedAt <= asOf {
+            try cancellationCheck()
             result[calendar.startOfDay(for: weather.observedAt), default: .empty]
                 .weather.append(weather)
         }
         for photo in snapshot.photos where photo.capturedAt <= asOf {
+            try cancellationCheck()
             result[calendar.startOfDay(for: photo.capturedAt), default: .empty]
                 .photos.append(photo)
         }
@@ -706,12 +741,14 @@ enum ReviewReportArchiveEngine {
         _ source: TimeSpan,
         asOf: Date,
         calendar: Calendar,
+        cancellationCheck: () throws -> Void,
         body: (Date, TimeSpan) -> Void
-    ) {
+    ) throws {
         let end = min(source.end, asOf)
         guard end > source.start else { return }
         var day = calendar.startOfDay(for: source.start)
         while day < end {
+            try cancellationCheck()
             guard let next = calendar.date(byAdding: .day, value: 1, to: day)
             else { break }
             if let clipped = TimeSpan(start: source.start, end: end)
@@ -725,7 +762,7 @@ enum ReviewReportArchiveEngine {
     private static func fingerprint(
         _ source: DailyReviewSource,
         effectiveEnd: Date
-    ) -> String {
+    ) throws -> String {
         let minute = Date(
             timeIntervalSince1970: floor(effectiveEnd.timeIntervalSince1970 / 60) * 60
         )
@@ -733,7 +770,7 @@ enum ReviewReportArchiveEngine {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         encoder.dateEncodingStrategy = .millisecondsSince1970
-        let data = (try? encoder.encode(payload)) ?? Data()
+        let data = try encoder.encode(payload)
         return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 

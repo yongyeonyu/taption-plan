@@ -80,57 +80,111 @@ public struct RouteLoggerRouteFilter: Sendable {
         filterWithReport(input).log
     }
 
+    public func filter(
+        _ input: [RouteSample],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> RouteLog {
+        try filterWithReport(
+            input,
+            cancellationCheck: cancellationCheck
+        ).log
+    }
+
     public func filterWithReport(_ input: [RouteSample]) -> RouteFilterResult {
+        filterWithReport(input, cancellationCheck: {})
+    }
+
+    public func filterWithReport(
+        _ input: [RouteSample],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> RouteFilterResult {
+        try cancellationCheck()
         var decisions: [RouteSampleDecision] = []
-        let coordinateValid = input.filter { sample in
+        var coordinateValid: [RouteSample] = []
+        coordinateValid.reserveCapacity(input.count)
+        for (index, sample) in input.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard RouteTimestamp.isValid(sample.timestamp) else { continue }
             guard sample.isUsable else {
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .invalidCoordinate))
-                return false
+                continue
             }
             guard sample.horizontalAccuracyMeters.isFinite,
                   sample.horizontalAccuracyMeters >= 0,
                   sample.horizontalAccuracyMeters <= configuration.maximumAccuracyForBoundaryMeters else {
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .invalidAccuracy))
-                return false
+                continue
             }
-            return true
+            coordinateValid.append(sample)
         }
-        let normalized = Self.normalizeDuplicates(coordinateValid)
-        let selectedIDs = Set(normalized.map(\.id))
-        decisions += coordinateValid.compactMap { sample in
-            selectedIDs.contains(sample.id) ? nil : RouteSampleDecision(
+        let normalized = try Self.normalizeDuplicates(
+            coordinateValid,
+            cancellationCheck: cancellationCheck
+        )
+        var selectedIDs = Set<UUID>()
+        selectedIDs.reserveCapacity(normalized.count)
+        for (index, sample) in normalized.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            selectedIDs.insert(sample.id)
+        }
+        for (index, sample) in coordinateValid.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard !selectedIDs.contains(sample.id) else { continue }
+            decisions.append(.init(
                 id: sample.id,
                 timestamp: sample.timestamp,
                 reason: .duplicate
-            )
+            ))
         }
         guard !normalized.isEmpty else {
+            try cancellationCheck()
+            let orderedDecisions = try RouteCancellableSort.sorted(
+                decisions,
+                by: Self.decisionOrder,
+                cancellationCheck: cancellationCheck
+            )
+            try cancellationCheck()
             return .init(
                 log: RouteLog(segments: [], normalizedSamples: []),
-                decisions: decisions.sorted(by: Self.decisionOrder)
+                decisions: orderedDecisions
             )
         }
 
-        let boundaries = boundarySamples(from: normalized)
-        let boundaryIDs = Set(boundaries.map(\.id))
-        decisions += normalized.filter { !$0.isPrecisePathSample(configuration) }.map {
-            .init(
-                id: $0.id,
-                timestamp: $0.timestamp,
-                reason: boundaryIDs.contains($0.id)
-                    ? .lowConfidenceBoundary
-                    : .lowConfidenceSuppressed
-            )
+        let boundaries = try boundarySamples(
+            from: normalized,
+            cancellationCheck: cancellationCheck
+        )
+        var boundaryIDs = Set<UUID>()
+        boundaryIDs.reserveCapacity(boundaries.count)
+        for (index, sample) in boundaries.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            boundaryIDs.insert(sample.id)
+        }
+        var precise: [RouteSample] = []
+        precise.reserveCapacity(normalized.count)
+        for (index, sample) in normalized.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if sample.isPrecisePathSample(configuration) {
+                precise.append(sample)
+            } else {
+                decisions.append(.init(
+                    id: sample.id,
+                    timestamp: sample.timestamp,
+                    reason: boundaryIDs.contains(sample.id)
+                        ? .lowConfidenceBoundary
+                        : .lowConfidenceSuppressed
+                ))
+            }
         }
 
-        let precise = normalized.filter { $0.isPrecisePathSample(configuration) }
         var segments: [MutableSegment] = []
         var current = MutableSegment()
         var lastAccepted: RouteSample?
         var lastOutput: RouteSample?
         var kalman = Kalman2D()
 
-        for sample in precise {
+        for (index, sample) in precise.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             if let previous = lastAccepted,
                sample.timestamp.timeIntervalSince(previous.timestamp) > configuration.segmentGap {
                 if !current.path.isEmpty { segments.append(current) }
@@ -201,35 +255,84 @@ public struct RouteLoggerRouteFilter: Sendable {
         }
         if !current.path.isEmpty { segments.append(current) }
 
+        let routeSegments = try attach(
+            boundaries: boundaries,
+            to: segments,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
+        let orderedDecisions = try RouteCancellableSort.sorted(
+            decisions,
+            by: Self.decisionOrder,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
         return .init(
             log: RouteLog(
-                segments: attach(boundaries: boundaries, to: segments),
+                segments: routeSegments,
                 normalizedSamples: normalized
             ),
-            decisions: decisions.sorted(by: Self.decisionOrder)
+            decisions: orderedDecisions
         )
     }
 
     public static func normalizeDuplicates(_ samples: [RouteSample]) -> [RouteSample] {
-        let sorted = samples.sorted { lhs, rhs in
-            if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
-            return tieBreak(lhs, rhs)
+        normalizeDuplicates(samples, cancellationCheck: {})
+    }
+
+    public static func normalizeDuplicates(
+        _ samples: [RouteSample],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RouteSample] {
+        try cancellationCheck()
+        var finiteSamples: [RouteSample] = []
+        finiteSamples.reserveCapacity(samples.count)
+        for (index, sample) in samples.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if RouteTimestamp.isValid(sample.timestamp) {
+                finiteSamples.append(sample)
+            }
         }
+        let sorted = try RouteCancellableSort.sorted(
+            finiteSamples,
+            by: { lhs, rhs in
+                if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
+                return tieBreak(lhs, rhs)
+            },
+            cancellationCheck: cancellationCheck
+        )
         var result: [RouteSample] = []
         var index = 0
         while index < sorted.count {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             var end = index + 1
-            while end < sorted.count, sorted[end].timestamp == sorted[index].timestamp { end += 1 }
-            if let selected = sorted[index..<end].min(by: tieBreak) { result.append(selected) }
+            while end < sorted.count, sorted[end].timestamp == sorted[index].timestamp {
+                if end.isMultiple(of: 256) { try cancellationCheck() }
+                end += 1
+            }
+            var selected = sorted[index]
+            for candidateIndex in (index + 1)..<end {
+                if candidateIndex.isMultiple(of: 256) {
+                    try cancellationCheck()
+                }
+                let candidate = sorted[candidateIndex]
+                if tieBreak(candidate, selected) { selected = candidate }
+            }
+            result.append(selected)
             index = end
         }
+        try cancellationCheck()
         return result
     }
 
-    private func boundarySamples(from normalized: [RouteSample]) -> [RouteSample] {
+    private func boundarySamples(
+        from normalized: [RouteSample],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RouteSample] {
         var result: [RouteSample] = []
         var index = 0
         while index < normalized.count {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             guard !normalized[index].isPrecisePathSample(configuration) else {
                 index += 1
                 continue
@@ -237,18 +340,22 @@ public struct RouteLoggerRouteFilter: Sendable {
             let start = index
             while index < normalized.count,
                   !normalized[index].isPrecisePathSample(configuration) {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
                 index += 1
             }
             result.append(normalized[start])
             if index - 1 > start { result.append(normalized[index - 1]) }
         }
+        try cancellationCheck()
         return result
     }
 
     private func attach(
         boundaries: [RouteSample],
-        to segments: [MutableSegment]
-    ) -> [RouteSegment] {
+        to segments: [MutableSegment],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RouteSegment] {
+        try cancellationCheck()
         guard !segments.isEmpty else {
             guard let first = boundaries.first, let last = boundaries.last else { return [] }
             return [RouteSegment(
@@ -262,18 +369,47 @@ public struct RouteLoggerRouteFilter: Sendable {
             )]
         }
         var assigned = Array(repeating: [RouteSample](), count: segments.count)
-        for boundary in boundaries {
-            let index = segments.indices.min { lhs, rhs in
-                distance(from: boundary.timestamp, to: segments[lhs])
-                    < distance(from: boundary.timestamp, to: segments[rhs])
-            } ?? 0
-            assigned[index].append(boundary)
+        var nearestIndex = 0
+        var comparisonCount = 0
+        for (boundaryIndex, boundary) in boundaries.enumerated() {
+            if boundaryIndex.isMultiple(of: 64) { try cancellationCheck() }
+            while nearestIndex + 1 < segments.count {
+                comparisonCount += 1
+                if comparisonCount.isMultiple(of: 256) {
+                    try cancellationCheck()
+                }
+                let currentDistance = distance(
+                    from: boundary.timestamp,
+                    to: segments[nearestIndex]
+                )
+                let nextDistance = distance(
+                    from: boundary.timestamp,
+                    to: segments[nearestIndex + 1]
+                )
+                guard nextDistance < currentDistance else { break }
+                nearestIndex += 1
+            }
+            assigned[nearestIndex].append(boundary)
         }
-        return segments.indices.map { index in
+        var result: [RouteSegment] = []
+        result.reserveCapacity(segments.count)
+        for index in segments.indices {
+            if index.isMultiple(of: 64) { try cancellationCheck() }
             let segment = segments[index]
-            let boundary = assigned[index].sorted(by: Self.sampleOrder)
-            let sources = (segment.sources + boundary).sorted(by: Self.sampleOrder)
-            return RouteSegment(
+            try cancellationCheck()
+            let boundary = try RouteCancellableSort.sorted(
+                assigned[index],
+                by: Self.sampleOrder,
+                cancellationCheck: cancellationCheck
+            )
+            try cancellationCheck()
+            let sources = try RouteCancellableSort.sorted(
+                segment.sources + boundary,
+                by: Self.sampleOrder,
+                cancellationCheck: cancellationCheck
+            )
+            try cancellationCheck()
+            result.append(RouteSegment(
                 start: sources.first?.timestamp ?? segment.path[0].timestamp,
                 end: sources.last?.timestamp ?? segment.path[segment.path.count - 1].timestamp,
                 mode: sources.first(where: { $0.mode != .unknown })?.mode ?? .unknown,
@@ -283,8 +419,10 @@ public struct RouteLoggerRouteFilter: Sendable {
                 isNewSegment: segment.isNewSegment || index > 0,
                 isLowConfidence: !boundary.isEmpty,
                 subwayEvidence: nil
-            )
+            ))
         }
+        try cancellationCheck()
+        return result
     }
 
     private func distance(from timestamp: Date, to segment: MutableSegment) -> TimeInterval {
@@ -360,18 +498,36 @@ private enum Geo {
     static func distance(_ lhs: RouteCoordinate, _ rhs: RouteCoordinate) -> Double {
         let latitude = (lhs.latitude + rhs.latitude) * .pi / 360
         let north = (rhs.latitude - lhs.latitude) * metersPerDegree
-        let east = (rhs.longitude - lhs.longitude) * metersPerDegree * cos(latitude)
+        let east = RouteLongitude.shortestDelta(
+            from: lhs.longitude,
+            to: rhs.longitude
+        ) * metersPerDegree * cos(latitude)
         return hypot(north, east)
     }
 
-    static func project(_ coordinate: RouteCoordinate, latitude: Double) -> (x: Double, y: Double) {
-        (coordinate.longitude * metersPerDegree * cos(latitude * .pi / 180), coordinate.latitude * metersPerDegree)
+    static func project(
+        _ coordinate: RouteCoordinate,
+        latitude: Double,
+        originLongitude: Double
+    ) -> (x: Double, y: Double) {
+        (
+            RouteLongitude.shortestDelta(from: originLongitude, to: coordinate.longitude)
+                * metersPerDegree * cos(latitude * .pi / 180),
+            coordinate.latitude * metersPerDegree
+        )
     }
 
-    static func unproject(_ point: (x: Double, y: Double), latitude: Double) -> RouteCoordinate {
+    static func unproject(
+        _ point: (x: Double, y: Double),
+        latitude: Double,
+        originLongitude: Double
+    ) -> RouteCoordinate {
         RouteCoordinate(
             latitude: point.y / metersPerDegree,
-            longitude: point.x / (metersPerDegree * cos(latitude * .pi / 180))
+            longitude: RouteLongitude.normalized(
+                originLongitude
+                    + point.x / (metersPerDegree * cos(latitude * .pi / 180))
+            )
         )
     }
 }
@@ -383,6 +539,7 @@ private struct Kalman2D {
     private var velocityVariance = 25.0
     private var timestamp: Date?
     private var latitude = 0.0
+    private var longitude = 0.0
 
     init(initial: RouteSample? = nil) {
         if let initial { initialize(initial) }
@@ -397,7 +554,11 @@ private struct Kalman2D {
             initialize(measurement)
             return measurement
         }
-        let point = Geo.project(measurement.coordinate, latitude: latitude)
+        let point = Geo.project(
+            measurement.coordinate,
+            latitude: latitude,
+            originLongitude: longitude
+        )
         let dt = max(0.001, measurement.timestamp.timeIntervalSince(timestamp ?? measurement.timestamp))
         var current = state!
         current.x += current.vx * dt
@@ -437,7 +598,11 @@ private struct Kalman2D {
         return RouteSample(
             id: measurement.id,
             timestamp: measurement.timestamp,
-            coordinate: Geo.unproject((current.x, current.y), latitude: latitude),
+            coordinate: Geo.unproject(
+                (current.x, current.y),
+                latitude: latitude,
+                originLongitude: longitude
+            ),
             horizontalAccuracyMeters: max(measurement.horizontalAccuracyMeters, sqrt(positionVariance)),
             speedMetersPerSecond: measurement.speedMetersPerSecond,
             speedAccuracyMetersPerSecond: measurement.speedAccuracyMetersPerSecond,
@@ -449,7 +614,12 @@ private struct Kalman2D {
 
     private mutating func initialize(_ measurement: RouteSample) {
         latitude = measurement.coordinate.latitude
-        let point = Geo.project(measurement.coordinate, latitude: latitude)
+        longitude = measurement.coordinate.longitude
+        let point = Geo.project(
+            measurement.coordinate,
+            latitude: latitude,
+            originLongitude: longitude
+        )
         state = (point.x, point.y, 0, 0)
         positionVariance = max(25, measurement.horizontalAccuracyMeters * measurement.horizontalAccuracyMeters)
         positionVelocityCovariance = 0

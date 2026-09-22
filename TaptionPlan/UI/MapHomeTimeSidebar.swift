@@ -484,6 +484,42 @@ struct MapHomeTimeSidebarRailSnapshot: Equatable, Sendable {
 /// Produces one winning automatic category for every minute in a day.  It
 /// derives a presentation copy only; source records remain untouched.
 enum MapHomeTimeRailSegmentEngine {
+    private struct SegmentAccumulator {
+        let startMinute: Int
+        var endMinute: Int
+        let categoryID: String
+        let title: String
+        let behavior: String?
+        let mergeKey: String
+        var sourceIDs: Set<UUID>
+
+        init(_ segment: MapHomeTimeRailSegment) {
+            startMinute = segment.startMinute
+            endMinute = segment.endMinute
+            categoryID = segment.categoryID
+            title = segment.title
+            behavior = segment.behavior
+            mergeKey = MapHomeTimeRailSegmentEngine.mergeKey(for: segment)
+            sourceIDs = Set(segment.sourceIDs)
+        }
+
+        mutating func append(_ segment: MapHomeTimeRailSegment) {
+            endMinute = segment.endMinute
+            sourceIDs.formUnion(segment.sourceIDs)
+        }
+
+        func segment() -> MapHomeTimeRailSegment {
+            MapHomeTimeRailSegment(
+                startMinute: startMinute,
+                endMinute: endMinute,
+                categoryID: categoryID,
+                title: title,
+                behavior: behavior,
+                sourceIDs: Array(sourceIDs)
+            )
+        }
+    }
+
     private struct Candidate {
         let startMinute: Int
         let endMinute: Int
@@ -606,12 +642,22 @@ enum MapHomeTimeRailSegmentEngine {
         let boundaries = Set(
             candidates.flatMap { [$0.startMinute, $0.endMinute] } + [0, 1_440]
         ).sorted()
-        var result: [MapHomeTimeRailSegment] = []
+        var startsByMinute = Array(repeating: [Int](), count: 1_441)
+        for (index, candidate) in candidates.enumerated() {
+            startsByMinute[candidate.startMinute].append(index)
+        }
+        var active: [Int] = []
+        var result: [SegmentAccumulator] = []
 
         for (start, end) in zip(boundaries, boundaries.dropFirst()) where start < end {
-            let winner = candidates
-                .filter { $0.startMinute <= start && $0.endMinute >= end }
-                .max(by: { isHigherPriority($1, than: $0) })
+            for candidateIndex in startsByMinute[start] {
+                push(candidateIndex, into: &active, candidates: candidates)
+            }
+            while let candidateIndex = active.first,
+                  candidates[candidateIndex].endMinute <= start {
+                popHighest(from: &active, candidates: candidates)
+            }
+            let winner = active.first.map { candidates[$0] }
             let next = MapHomeTimeRailSegment(
                 startMinute: start,
                 endMinute: end,
@@ -622,7 +668,8 @@ enum MapHomeTimeRailSegmentEngine {
             )
             append(next, to: &result)
         }
-        return result.isEmpty ? [.wholeDayUnconfirmed] : result
+        let segments = result.map { $0.segment() }
+        return segments.isEmpty ? [.wholeDayUnconfirmed] : segments
     }
 
     private static func candidate(
@@ -715,26 +762,15 @@ enum MapHomeTimeRailSegmentEngine {
 
     private static func append(
         _ segment: MapHomeTimeRailSegment,
-        to result: inout [MapHomeTimeRailSegment]
+        to result: inout [SegmentAccumulator]
     ) {
-        guard let previous = result.last,
-              previous.endMinute == segment.startMinute,
-              mergeKey(for: previous) == mergeKey(for: segment)
-        else {
-            result.append(segment)
-            return
+        if let previous = result.last,
+           previous.endMinute == segment.startMinute,
+           previous.mergeKey == mergeKey(for: segment) {
+            result[result.count - 1].append(segment)
+        } else {
+            result.append(SegmentAccumulator(segment))
         }
-        result.removeLast()
-        result.append(
-            MapHomeTimeRailSegment(
-                startMinute: previous.startMinute,
-                endMinute: segment.endMinute,
-                categoryID: previous.categoryID,
-                title: previous.title,
-                behavior: previous.behavior,
-                sourceIDs: previous.sourceIDs + segment.sourceIDs
-            )
-        )
     }
 
     private static func mergeKey(
@@ -776,6 +812,70 @@ enum MapHomeTimeRailSegmentEngine {
             return lhs.createdAt > rhs.createdAt
         }
         return lhs.tieBreaker > rhs.tieBreaker
+    }
+
+    private static func isHigherPriority(
+        _ lhs: Int,
+        than rhs: Int,
+        candidates: [Candidate]
+    ) -> Bool {
+        let left = candidates[lhs]
+        let right = candidates[rhs]
+        if isHigherPriority(left, than: right) { return true }
+        if isHigherPriority(right, than: left) { return false }
+        return lhs < rhs
+    }
+
+    private static func push(
+        _ candidateIndex: Int,
+        into heap: inout [Int],
+        candidates: [Candidate]
+    ) {
+        heap.append(candidateIndex)
+        var child = heap.count - 1
+        while child > 0 {
+            let parent = (child - 1) / 2
+            guard isHigherPriority(
+                heap[child],
+                than: heap[parent],
+                candidates: candidates
+            ) else { break }
+            heap.swapAt(child, parent)
+            child = parent
+        }
+    }
+
+    private static func popHighest(
+        from heap: inout [Int],
+        candidates: [Candidate]
+    ) {
+        guard !heap.isEmpty else { return }
+        guard heap.count > 1 else {
+            heap.removeLast()
+            return
+        }
+        heap[0] = heap.removeLast()
+        var parent = 0
+        while true {
+            let left = parent * 2 + 1
+            guard left < heap.count else { return }
+            let right = left + 1
+            let child = right < heap.count
+                && isHigherPriority(
+                    heap[right],
+                    than: heap[left],
+                    candidates: candidates
+                )
+                ? right
+                : left
+            guard isHigherPriority(
+                heap[child],
+                than: heap[parent],
+                candidates: candidates
+            ) else { return }
+            heap.swapAt(parent, child)
+            parent = child
+        }
     }
 
     private static func confidenceRank(_ confidence: ConfidenceLevel) -> Int {

@@ -75,6 +75,326 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testMapRouteReadingsPreparationPreservesSourceCountsAndDayFilter() throws {
+        let inDay = reading(10, latitude: 37)
+        var outsideDay = reading(1_450, latitude: 37.1)
+        outsideDay.sourceDevice = .appleWatch
+
+        let prepared = try MapHomeRouteReadingsPreparation.prepare(
+            routeReadings: [inDay],
+            liveReadings: [outsideDay],
+            latestReading: nil,
+            dayStart: date(0),
+            dayEnd: date(1_440),
+            cancellationCheck: {}
+        )
+
+        XCTAssertEqual(prepared.sourceCount, 2)
+        XCTAssertEqual(prepared.watchSourceCount, 1)
+        XCTAssertEqual(prepared.filteredCount, prepared.normalized.count)
+    }
+
+    func testRouteReadingsPreparationSignatureChangesWhenLatestCoordinateChanges() {
+        let id = UUID()
+        let first = reading(10, latitude: 37, id: id)
+        let moved = reading(10, latitude: 37.1, id: id)
+
+        XCTAssertEqual(first.id, moved.id)
+        XCTAssertEqual(first.timestamp, moved.timestamp)
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(first),
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(moved)
+        )
+    }
+
+    func testRouteReadingsPreparationSignatureTracksSessionEnd() {
+        let id = UUID()
+        var active = reading(10, latitude: 37, id: id)
+        var ended = active
+        ended.trackingSessionEnded = true
+
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(active),
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(ended)
+        )
+        active.trackingSessionEnded = false
+        XCTAssertEqual(
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(active),
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                reading(10, latitude: 37, id: id)
+            )
+        )
+    }
+
+    func testRouteReadingsPreparationSignatureTracksApproximateAccuracyBoundary()
+        throws {
+        let id = UUID()
+        let timestamp = date(10)
+        let accepted = SensorReading(
+            id: id,
+            timestamp: timestamp,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 999,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+        let rejected = SensorReading(
+            id: id,
+            timestamp: timestamp,
+            point: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 1_001,
+                verticalAccuracy: 5
+            ),
+            locationFixQuality: .approximate,
+            gpsAvailable: false
+        )
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(accepted),
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(rejected)
+        )
+        var precise = accepted
+        precise.gpsAvailable = true
+        precise.locationFixQuality = .precise
+        XCTAssertNotEqual(
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(accepted),
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(precise)
+        )
+
+        let acceptedPreparation = try MapHomeRouteReadingsPreparation.prepare(
+            routeReadings: [],
+            liveReadings: [],
+            latestReading: accepted,
+            dayStart: date(0),
+            dayEnd: date(1_440),
+            cancellationCheck: {}
+        )
+        let rejectedPreparation = try MapHomeRouteReadingsPreparation.prepare(
+            routeReadings: [],
+            liveReadings: [],
+            latestReading: rejected,
+            dayStart: date(0),
+            dayEnd: date(1_440),
+            cancellationCheck: {}
+        )
+        XCTAssertEqual(acceptedPreparation.normalized.map(\.id), [id])
+        XCTAssertTrue(rejectedPreparation.normalized.isEmpty)
+    }
+
+    func testMapRouteReadingsPreparationPropagatesCancellation() {
+        let readings = (0..<1_024).map {
+            reading($0, latitude: 37 + Double($0) * 0.00001)
+        }
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try MapHomeRouteReadingsPreparation.prepare(
+                routeReadings: readings,
+                liveReadings: [],
+                latestReading: nil,
+                dayStart: date(0),
+                dayEnd: date(1_440),
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 5 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 5)
+    }
+
+    func testRouteTimelineCancellableSortChecksCancellationDuringMerge() {
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try RouteTimelineCancellableSort.sorted(
+                Array((0..<4_096).reversed()),
+                by: { $0 < $1 },
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 4 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 4)
+    }
+
+    func testRouteTimelineCancellableSortKeepsStableOrder() {
+        let values = [
+            (key: 2, order: 0),
+            (key: 1, order: 1),
+            (key: 2, order: 2),
+            (key: 1, order: 3),
+        ]
+        let sorted = RouteTimelineCancellableSort.sorted(
+            values,
+            by: { $0.key < $1.key },
+            cancellationCheck: {}
+        )
+
+        XCTAssertEqual(sorted.map { $0.order }, [1, 3, 0, 2])
+    }
+
+    func testDateResetRejectsPreparedReadingsFromPreviousGeneration() async throws {
+        var generation = MapHomeRouteReadingsPreparationGeneration()
+        let previousGeneration = generation.advance()
+        let activeGeneration = generation.advance()
+        let latest = reading(10, latitude: 37)
+        let dayStart = date(0)
+        let dayEnd = date(1_440)
+        let worker = Task.detached(priority: .utility) {
+            try await Task.sleep(nanoseconds: 20_000_000)
+            return try MapHomeRouteReadingsPreparation.prepare(
+                routeReadings: [latest],
+                liveReadings: [],
+                latestReading: nil,
+                dayStart: dayStart,
+                dayEnd: dayEnd,
+                cancellationCheck: { try Task.checkCancellation() }
+            )
+        }
+
+        let prepared = try await worker.value
+
+        XCTAssertEqual(prepared.normalized.map(\.id), [latest.id])
+        XCTAssertFalse(generation.accepts(previousGeneration))
+        XCTAssertTrue(generation.accepts(activeGeneration))
+    }
+
+    func testRouteNormalizationRejectsNonFiniteTimestampsBeforeGrouping() {
+        let valid = reading(5, latitude: 37)
+        let invalid = SensorReading(
+            timestamp: Date(timeIntervalSince1970: .nan),
+            point: valid.point
+        )
+
+        let normalized = RouteTimelineDataEngine.normalizedDisplayReadings([
+            invalid,
+            valid,
+        ])
+
+        XCTAssertEqual(normalized.map(\.id), [valid.id])
+    }
+
+    func testRoutePlaybackInterpolationUsesShortestLongitudeAcrossDateline() throws {
+        let start = date(0)
+        let first = SensorReading(
+            timestamp: start,
+            point: GeoPoint(
+                latitude: 10,
+                longitude: 179.9,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let last = SensorReading(
+            timestamp: start.addingTimeInterval(10 * 60),
+            point: GeoPoint(
+                latitude: 10,
+                longitude: -179.9,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            )
+        )
+        let readings = RouteTimelineDataEngine.normalizedReadings([first, last])
+
+        let marker = try XCTUnwrap(
+            RouteTimelineDataEngine.playbackCoordinate(
+                at: start.addingTimeInterval(5 * 60),
+                inNormalizedReadings: readings
+            )
+        )
+        let segment = RouteTimelineSegment(
+            id: "dateline",
+            start: start,
+            end: last.timestamp,
+            category: .movement,
+            colorHex: RouteTimelineCategory.movement.colorHex,
+            opacity: 1,
+            coordinates: [first.point!, last.point!],
+            speedMetersPerSecond: nil,
+            confirmedSubwayTravelID: nil
+        )
+        let routeMarker = try XCTUnwrap(
+            MapHomeRouteTimelinePlaybackMath.coordinate(
+                at: start.addingTimeInterval(5 * 60),
+                in: [segment]
+            )
+        )
+
+        XCTAssertLessThan(abs(abs(marker.longitude) - 180), 0.001)
+        XCTAssertLessThan(abs(abs(routeMarker.longitude) - 180), 0.001)
+    }
+
+    func testDisplayReadingsKeepsSharpDeviationUnderMaximumCount() {
+        let deviationIndex = 1_234
+        let start = date(0)
+        let readings = (0..<10_000).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(TimeInterval(index)),
+                point: GeoPoint(
+                    latitude: index == deviationIndex ? 0.02 : 0,
+                    longitude: 127 + Double(index) * 0.00001,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+
+        let displayed = RouteTimelineDataEngine.displayReadings(
+            from: readings,
+            maximumCount: 8
+        )
+
+        XCTAssertLessThanOrEqual(displayed.count, 8)
+        XCTAssertTrue(displayed.contains { $0.id == readings[deviationIndex].id })
+    }
+
+    func testDisplayReadingsPropagatesCancellationDuringRDP() {
+        let start = date(0)
+        let readings = (0..<10_000).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(TimeInterval(index)),
+                point: GeoPoint(
+                    latitude: Double(index % 2) * 0.0001,
+                    longitude: 127 + Double(index) * 0.00001,
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5
+                )
+            )
+        }
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try RouteTimelineDataEngine.displayReadings(
+                from: readings,
+                maximumCount: 8,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 123 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 123)
+    }
+
     func testTransitBoardingRefreshPolicyLimitsLiveUpdatesAndBucketsCutoff() {
         let start = date(60)
 
@@ -179,6 +499,50 @@ final class RouteTimelineDataTests: XCTestCase {
             accuracy: 0.0001
         )
         XCTAssertEqual(originalActuals, [activity, work])
+    }
+
+    func testProjectScopesCategoryIndexToSelectedDay() {
+        let previousDay = (0..<1_000).map { offset in
+            let start = -1_440 + offset
+            return ActualRecord(
+                planID: nil,
+                title: "이전 기록",
+                categoryID: "sleep",
+                startedAt: date(start),
+                endedAt: date(start + 1),
+                source: .motion
+            )
+        }
+        let activity = ActualRecord(
+            planID: nil,
+            title: "활동",
+            categoryID: "activity",
+            startedAt: date(0),
+            endedAt: date(10),
+            source: .motion
+        )
+        let work = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: date(10),
+            endedAt: date(20),
+            source: .location
+        )
+
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: date(0),
+            throughMinute: 20,
+            actuals: previousDay + [work, activity],
+            readings: [
+                reading(0, latitude: 37),
+                reading(10, latitude: 38),
+                reading(20, latitude: 39),
+            ],
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.segments.map(\.category), [.activity, .work])
     }
 
     func testNormalizedReadingsRemoveDuplicateTimestampAndPreferAccuratePoint() throws {
@@ -612,6 +976,83 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testConfirmedSubwayIntervalIndexPreservesPrecedenceWithBoundedLookups() {
+        let route = SubwayRoutePath(
+            stops: [
+                SubwayRouteStop(
+                    lineName: "공항철도",
+                    order: 0,
+                    stationName: "출발",
+                    latitude: 37,
+                    longitude: 127
+                ),
+                SubwayRouteStop(
+                    lineName: "공항철도",
+                    order: 1,
+                    stationName: "도착",
+                    latitude: 37.01,
+                    longitude: 127
+                ),
+            ],
+            lineNames: ["공항철도"],
+            transferStationNames: []
+        )
+        var travel = (0..<512).map { index in
+            TravelSegment(
+                mode: .subway,
+                span: TimeSpan(start: date(index), end: date(index + 600)),
+                distanceMeters: 1_000,
+                confidence: .high,
+                evidence: [],
+                isConfirmed: true,
+                subwayRoute: route
+            )
+        }
+        let firstTie = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: date(1_000), end: date(1_800)),
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: [],
+            isConfirmed: true,
+            subwayRoute: route
+        )
+        let secondTie = TravelSegment(
+            mode: .subway,
+            span: firstTie.span,
+            distanceMeters: 1_000,
+            confidence: .high,
+            evidence: [],
+            isConfirmed: true,
+            subwayRoute: route
+        )
+        travel.append(contentsOf: [firstTie, secondTie])
+        let index = RouteConfirmedSubwayIntervalIndex(travel: travel)
+
+        for minute in [0, 200, 500, 700, 1_000, 1_200, 1_500, 1_800, 2_000] {
+            let instant = date(minute)
+            let expected = travel
+                .filter { RouteConfirmedSubwayIntervalIndex.isConfirmedSubway($0) }
+                .filter { $0.span.contains(instant) }
+                .max { $0.span.start < $1.span.start }
+            XCTAssertEqual(
+                index.segment(at: instant)?.id,
+                expected?.id,
+                "minute \(minute)"
+            )
+        }
+        XCTAssertEqual(index.segment(at: date(1_200))?.id, firstTie.id)
+
+        var operationCount = 0
+        for minute in 0..<1_800 {
+            _ = index.segment(
+                at: date(minute),
+                operationCount: &operationCount
+            )
+        }
+        XCTAssertLessThan(operationCount, 1_800 * 30)
+    }
+
     func testUnconfirmedSubwayKeepsGPSRoute() {
         let route = SubwayRoutePath(
             stops: [
@@ -859,7 +1300,149 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertLessThan(markerElapsed, 0.2)
     }
 
-    func testGPSLoggerRouteFilterRemovesDriftAndImpossibleJumpWithoutMutatingRawReadings() {
+    func testMPR0921C01PlaybackActualIndexP95StaysWithinRefreshBudget() {
+        let start = date(0)
+        let actuals = (0..<10_000).map { index in
+            let minute = index % 1_440
+            let offset = Double(index / 1_440) / 100
+            let startedAt = start.addingTimeInterval(
+                Double(minute * 60) + offset
+            )
+            return ActualRecord(
+                planID: nil,
+                title: "자동 기록",
+                categoryID: index.isMultiple(of: 2) ? "work" : "activity",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(15 * 60),
+                source: .motion,
+                confidence: .high
+            )
+        }
+        let actualIndex = RouteTimelineDataEngine.actualIndex(
+            selectedDate: start,
+            actuals: actuals,
+            calendar: calendar
+        )
+        var durations: [Double] = []
+        durations.reserveCapacity(40)
+        var resolved = 0
+
+        for iteration in 0..<41 {
+            let cutoff = start.addingTimeInterval(
+                Double((720 + iteration) * 60)
+            )
+            let startedAt = ProcessInfo.processInfo.systemUptime
+            let projection = RouteTimelineDataEngine.project(
+                selectedDate: start,
+                through: cutoff,
+                actuals: actuals,
+                actualIndex: actualIndex,
+                readings: [],
+                readingsAreNormalized: true,
+                calendar: calendar
+            )
+            let elapsed = ProcessInfo.processInfo.systemUptime - startedAt
+            if iteration > 0 { durations.append(elapsed) }
+            if projection.selectedCategory != nil { resolved += 1 }
+        }
+
+        let sorted = durations.sorted()
+        let p95 = sorted[Int(Double(sorted.count - 1) * 0.95)]
+        print(
+            "MPR0921C01 actual-index p95 ms: "
+                + String(format: "%.3f", p95 * 1_000)
+        )
+        XCTAssertEqual(resolved, 41)
+        XCTAssertLessThan(
+            p95,
+            MapHomeDayPlaybackMath.routeProjectionInterval
+        )
+
+        let options = XCTMeasureOptions()
+        options.iterationCount = 5
+        var measuredResolved = 0
+        measure(metrics: [XCTCPUMetric()], options: options) {
+            measuredResolved = 0
+            for iteration in 0..<4 {
+                let projection = RouteTimelineDataEngine.project(
+                    selectedDate: start,
+                    through: start.addingTimeInterval(
+                        Double((780 + iteration) * 60)
+                    ),
+                    actuals: actuals,
+                    actualIndex: actualIndex,
+                    readings: [],
+                    readingsAreNormalized: true,
+                    calendar: calendar
+                )
+                if projection.selectedCategory != nil {
+                    measuredResolved += 1
+                }
+            }
+        }
+        XCTAssertEqual(measuredResolved, 4)
+    }
+
+    func testMPR0921C01CachedActualIndexMatchesDirectProjection() {
+        let start = date(0)
+        let actuals = [
+            ActualRecord(
+                planID: nil,
+                title: "활동",
+                categoryID: "activity",
+                startedAt: date(-10),
+                endedAt: date(15),
+                source: .motion
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "업무",
+                categoryID: "work",
+                startedAt: date(15),
+                endedAt: date(45),
+                source: .location
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "운동",
+                categoryID: "exercise",
+                startedAt: date(45),
+                endedAt: nil,
+                source: .healthKit
+            ),
+        ]
+        let readings = [
+            reading(0, latitude: 37),
+            reading(20, latitude: 37.01),
+            reading(50, latitude: 37.02),
+        ]
+        let actualIndex = RouteTimelineDataEngine.actualIndex(
+            selectedDate: start,
+            actuals: actuals,
+            calendar: calendar
+        )
+
+        for minute in [0, 10, 15, 30, 45, 60, 1_440] {
+            let direct = RouteTimelineDataEngine.project(
+                selectedDate: start,
+                throughMinute: minute,
+                actuals: actuals,
+                readings: readings,
+                calendar: calendar
+            )
+            let cached = RouteTimelineDataEngine.project(
+                selectedDate: start,
+                throughMinute: minute,
+                actuals: actuals,
+                actualIndex: actualIndex,
+                readings: readings,
+                calendar: calendar
+            )
+            XCTAssertEqual(cached, direct, "minute \(minute)")
+        }
+    }
+
+    func testFilteredRouteReadingsRemoveDriftAndImpossibleJumpWithoutMutatingRawReadings() {
         let start = date(0)
         func sample(
             _ seconds: TimeInterval,
@@ -891,7 +1474,7 @@ final class RouteTimelineDataTests: XCTestCase {
         ]
         let original = readings
 
-        let filtered = GPSLoggerRouteFilter.filter(readings)
+        let filtered = TaptionRouteEngineAdapter.filteredReadings(from: readings)
 
         XCTAssertEqual(readings, original)
         XCTAssertEqual(
@@ -906,7 +1489,61 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(filtered[1].trackingSessionEnded == true)
     }
 
-    func testGPSLoggerRouteFilterBoundsAccuracyAndIsDeterministic() {
+    func testNormalizedReadingsPreserveSessionEndAcrossEqualTimestampOrders() {
+        let timestamp = date(10)
+        let open = reading(
+            10,
+            latitude: 37,
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        )
+        var ended = reading(
+            10,
+            latitude: 37.1,
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        )
+        ended.trackingSessionEnded = true
+        XCTAssertEqual(open.timestamp, timestamp)
+        XCTAssertEqual(ended.timestamp, timestamp)
+
+        let firstOrder = RouteTimelineDataEngine.normalizedDisplayReadings(
+            [open, ended],
+            cancellationCheck: {}
+        )
+        let reversedOrder = RouteTimelineDataEngine.normalizedDisplayReadings(
+            [ended, open],
+            cancellationCheck: {}
+        )
+
+        XCTAssertEqual(firstOrder.count, 1)
+        XCTAssertEqual(reversedOrder.count, 1)
+        XCTAssertTrue(firstOrder[0].trackingSessionEnded == true)
+        XCTAssertTrue(reversedOrder[0].trackingSessionEnded == true)
+        XCTAssertEqual(firstOrder[0].id, reversedOrder[0].id)
+        XCTAssertEqual(firstOrder[0].point, reversedOrder[0].point)
+    }
+
+    func testEqualTimestampSessionEndPreventsProjectionSegmentAcrossNextGPS() {
+        var ended = reading(10, latitude: 37)
+        ended.trackingSessionEnded = true
+        let next = reading(20, latitude: 37.1)
+
+        for readings in [[ended, next], [next, ended]] {
+            let projection = RouteTimelineDataEngine.project(
+                selectedDate: date(0),
+                through: date(30),
+                actuals: [],
+                readings: readings,
+                calendar: calendar
+            )
+
+            XCTAssertTrue(
+                projection.segments.isEmpty,
+                "ended route reading must prevent interpolation to the next GPS"
+            )
+        }
+    }
+
+    func testFilteredRouteReadingsBoundAccuracyAndAreDeterministic() {
         let start = date(0)
         func sample(
             _ seconds: TimeInterval,
@@ -950,8 +1587,8 @@ final class RouteTimelineDataTests: XCTestCase {
             ),
         ]
 
-        let first = GPSLoggerRouteFilter.filter(readings)
-        let second = GPSLoggerRouteFilter.filter(readings)
+        let first = TaptionRouteEngineAdapter.filteredReadings(from: readings)
+        let second = TaptionRouteEngineAdapter.filteredReadings(from: readings)
 
         XCTAssertEqual(first, second)
         XCTAssertEqual(first.map(\.id.uuidString), [
@@ -961,7 +1598,7 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(first.allSatisfy { $0.point?.horizontalAccuracy ?? .infinity <= 1_000 })
     }
 
-    func testGPSLoggerRouteFilterStartsNewSegmentAfterLongGap() {
+    func testFilteredRouteReadingsStartNewSegmentAfterLongGap() {
         let start = date(0)
         let readings = [
             SensorReading(
@@ -989,12 +1626,12 @@ final class RouteTimelineDataTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            GPSLoggerRouteFilter.filter(readings).map(\.id),
+            TaptionRouteEngineAdapter.filteredReadings(from: readings).map(\.id),
             readings.map(\.id)
         )
     }
 
-    func testGPSLoggerRouteFilterKeepsOnlyLowConfidenceRunBoundaries() {
+    func testFilteredRouteReadingsKeepOnlyLowConfidenceRunBoundaries() {
         let start = date(0)
         func sample(
             _ seconds: TimeInterval,
@@ -1049,7 +1686,7 @@ final class RouteTimelineDataTests: XCTestCase {
             ),
         ]
 
-        let filtered = GPSLoggerRouteFilter.filter(readings)
+        let filtered = TaptionRouteEngineAdapter.filteredReadings(from: readings)
 
         XCTAssertTrue(filtered.contains { $0.id == readings[1].id })
         XCTAssertTrue(filtered.contains { $0.id == readings[3].id })
@@ -1618,6 +2255,145 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertTrue(requests.allSatisfy { $0.id != segment.id })
     }
 
+    func testExpectedRouteRequestWorkDoesNotRescanAllReadingsPerTravelSegment() {
+        var travel: [TravelSegment] = []
+        var readings: [SensorReading] = (0..<8_000).map { _ in
+            SensorReading(timestamp: date(25))
+        }
+        for index in 0..<40 {
+            let startMinute = index * 30
+            let latitude = 37 + Double(index) * 0.01
+            travel.append(TravelSegment(
+                mode: .car,
+                span: TimeSpan(
+                    start: date(startMinute),
+                    end: date(startMinute + 20)
+                ),
+                distanceMeters: 1_000,
+                confidence: .medium,
+                evidence: []
+            ))
+            readings.append(reading(startMinute, latitude: latitude))
+            readings.append(reading(startMinute + 20, latitude: latitude + 0.005))
+        }
+        for index in 0..<400 {
+            let startMinute = (index / 10) * 30 + 20
+            let start = date(startMinute).addingTimeInterval(
+                TimeInterval(1 + (index % 10) * 2)
+            )
+            travel.append(TravelSegment(
+                mode: .train,
+                span: TimeSpan(start: start, end: start.addingTimeInterval(1)),
+                distanceMeters: 500,
+                confidence: .high,
+                evidence: [],
+                isConfirmed: true
+            ))
+        }
+
+        var operationCount = 0
+        let requests = ExpectedRouteRequestEngine.requests(
+            travel: travel,
+            places: [],
+            readings: readings,
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440),
+            frequentPlaces: [],
+            operationCount: &operationCount
+        )
+
+        XCTAssertEqual(requests.count, 40)
+        XCTAssertLessThan(
+            operationCount,
+            readings.count * 3 + travel.count * 3
+        )
+    }
+
+    func testExpectedRouteRequestCancellationStopsReadingSortBeforeIndexBuild() {
+        let dayStart = date(0)
+        let readings = (0..<8_192).reversed().map { index in
+            SensorReading(
+                timestamp: dayStart.addingTimeInterval(Double(index) / 10)
+            )
+        }
+        var cancellationChecks = 0
+        var operationCount = 0
+
+        XCTAssertThrowsError(
+            try ExpectedRouteRequestEngine.requests(
+                travel: [],
+                places: [],
+                readings: readings,
+                in: TimeSpan(start: dayStart, end: date(1_440)),
+                through: date(1_440),
+                frequentPlaces: [],
+                operationCount: &operationCount,
+                cancellationCheck: {
+                    cancellationChecks += 1
+                    if cancellationChecks == 110 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+
+        XCTAssertEqual(cancellationChecks, 110)
+        XCTAssertEqual(operationCount, readings.count)
+    }
+
+    func testWBSProjectionUsesProvidedExpectedRouteRequests() throws {
+        let segment = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: date(10), end: date(100)),
+            distanceMeters: 10_000,
+            confidence: .medium,
+            evidence: []
+        )
+        let readings = [
+            reading(10, latitude: 37),
+            reading(100, latitude: 37.1),
+        ]
+        let generatedRequests = ExpectedRouteRequestEngine.requests(
+            travel: [segment],
+            places: [],
+            readings: readings,
+            in: TimeSpan(start: date(0), end: date(1_440)),
+            through: date(1_440)
+        )
+        let generatedRequest = try XCTUnwrap(generatedRequests.first)
+        let withoutRequests = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [segment],
+            readings: readings,
+            expectedRouteRequests: [],
+            calendar: calendar
+        )
+        let computedProjection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [segment],
+            readings: readings,
+            calendar: calendar
+        )
+        let withRequests = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [segment],
+            readings: readings,
+            expectedRouteRequests: generatedRequests,
+            calendar: calendar
+        )
+
+        XCTAssertFalse(withoutRequests.legs.contains {
+            $0.routePhase == .forecast && $0.activity == .movement
+        })
+        XCTAssertTrue(withRequests.legs.contains {
+            $0.id == "movement-\(generatedRequest.id.uuidString)"
+        })
+        XCTAssertEqual(withRequests, computedProjection)
+    }
+
     func testExpectedRouteGapIDSurvivesPersistedDateRoundTrip() throws {
         let dates = [
             Date(timeIntervalSinceReferenceDate: 811012345.000002),
@@ -1871,41 +2647,6 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(speeds.count, 2)
         XCTAssertGreaterThan(speeds[0], 0)
         XCTAssertGreaterThan(speeds[1], speeds[0])
-    }
-
-    func testRouteSpeedGradientUsesVisibleRouteRange() {
-        let speeds = [1.0, 5.0, 10.0]
-
-        XCTAssertEqual(
-            RouteSpeedGradient.normalized(
-                speedMetersPerSecond: 1,
-                in: speeds
-            ),
-            0
-        )
-        XCTAssertEqual(
-            RouteSpeedGradient.normalized(
-                speedMetersPerSecond: 10,
-                in: speeds
-            ),
-            1
-        )
-        XCTAssertNotEqual(
-            RouteSpeedGradient.colorHex(
-                speedMetersPerSecond: 1,
-                in: speeds
-            ),
-            RouteSpeedGradient.colorHex(
-                speedMetersPerSecond: 10,
-                in: speeds
-            )
-        )
-        XCTAssertNil(
-            RouteSpeedGradient.colorHex(
-                speedMetersPerSecond: nil,
-                in: speeds
-            )
-        )
     }
 
     func testAppleRouteFallbackKeepsPreferredTransportFirst() {

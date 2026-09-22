@@ -96,7 +96,11 @@ public struct RouteGapInferenceEngine: Sendable {
         }
 
         let evidenceModes = input.samples
-            .filter { $0.timestamp >= input.start && $0.timestamp <= input.end }
+            .filter {
+                RouteTimestamp.isValid($0.timestamp)
+                    && $0.timestamp >= input.start
+                    && $0.timestamp <= input.end
+            }
             .map(\.mode)
             .filter { $0 != .unknown }
         if let mode = strongest(evidenceModes),
@@ -124,7 +128,10 @@ public struct RouteGapInferenceEngine: Sendable {
         let counts = Dictionary(grouping: modes, by: { $0 }).mapValues(\.count)
         return counts.max { lhs, rhs in
             if lhs.value != rhs.value { return lhs.value < rhs.value }
-            return priority(lhs.key) < priority(rhs.key)
+            let lhsPriority = priority(lhs.key)
+            let rhsPriority = priority(rhs.key)
+            if lhsPriority != rhsPriority { return lhsPriority < rhsPriority }
+            return lhs.key.rawValue > rhs.key.rawValue
         }?.key
     }
 
@@ -164,7 +171,10 @@ public struct RouteGapInferenceEngine: Sendable {
     ) -> Double {
         let latitude = (lhs.latitude + rhs.latitude) * .pi / 360
         let north = (rhs.latitude - lhs.latitude) * 111_320
-        let east = (rhs.longitude - lhs.longitude) * 111_320 * cos(latitude)
+        let east = RouteLongitude.shortestDelta(
+            from: lhs.longitude,
+            to: rhs.longitude
+        ) * 111_320 * cos(latitude)
         return hypot(north, east)
     }
 }

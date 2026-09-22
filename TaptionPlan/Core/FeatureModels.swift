@@ -3611,24 +3611,6 @@ enum WidgetAction: String, Codable, CaseIterable, Sendable {
     case stopCurrentActivity
 }
 
-struct WidgetTimelineItem: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID
-    var title: String
-    var span: TimeSpan
-    var categoryID: String
-    var isCurrent: Bool
-}
-
-struct WidgetSnapshot: Codable, Hashable, Sendable {
-    var generatedAt: Date
-    var viewport: TimeSpan
-    var items: [WidgetTimelineItem]
-    var availableActions: [WidgetAction]
-    var catStyle: CatStyle
-    var catIsRunning: Bool
-    var hidesSensitiveContent: Bool
-}
-
 struct MapUserActivityCategory: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var title: String

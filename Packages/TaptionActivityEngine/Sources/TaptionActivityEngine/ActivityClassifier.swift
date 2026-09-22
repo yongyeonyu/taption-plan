@@ -1,5 +1,49 @@
 import Foundation
 
+enum ActivityClassificationWorkPhase: Equatable, Sendable {
+    case normalization
+    case sorting
+    case deduplication
+    case segmentConstruction
+}
+
+private struct ActivityClassificationCheckpoints {
+    private let checkCancellation: @Sendable (ActivityClassificationWorkPhase) throws -> Void
+    private var normalizationOperations = 0
+    private var sortingOperations = 0
+    private var deduplicationOperations = 0
+    private var segmentConstructionOperations = 0
+
+    init(checkCancellation: @escaping @Sendable (ActivityClassificationWorkPhase) throws -> Void) {
+        self.checkCancellation = checkCancellation
+    }
+
+    mutating func step(_ phase: ActivityClassificationWorkPhase) throws {
+        let operation: Int
+        switch phase {
+        case .normalization:
+            normalizationOperations += 1
+            operation = normalizationOperations
+        case .sorting:
+            sortingOperations += 1
+            operation = sortingOperations
+        case .deduplication:
+            deduplicationOperations += 1
+            operation = deduplicationOperations
+        case .segmentConstruction:
+            segmentConstructionOperations += 1
+            operation = segmentConstructionOperations
+        }
+        if operation == 1 || operation.isMultiple(of: 256) {
+            try checkCancellation(phase)
+        }
+    }
+
+    func check(_ phase: ActivityClassificationWorkPhase) throws {
+        try checkCancellation(phase)
+    }
+}
+
 public struct ActivityEngineConfiguration: Codable, Hashable, Sendable {
     public var maximumGap: TimeInterval
     public var defaultSampleDuration: TimeInterval
@@ -30,11 +74,37 @@ public struct ActivityClassificationEngine: Sendable {
         _ evidence: [ActivitySensorEvidence],
         overrides: [ActivityClassificationOverride] = []
     ) -> ActivityClassificationState {
-        let normalized = normalize(evidence)
+        do {
+            return try classifyState(
+                evidence,
+                overrides: overrides,
+                cancellationCheck: { _ in }
+            )
+        } catch {
+            preconditionFailure("Unexpected activity classification failure: \(error)")
+        }
+    }
+
+    func classifyState(
+        _ evidence: [ActivitySensorEvidence],
+        overrides: [ActivityClassificationOverride],
+        cancellationCheck: @escaping @Sendable (ActivityClassificationWorkPhase) throws -> Void
+    ) throws -> ActivityClassificationState {
+        var checkpoints = ActivityClassificationCheckpoints(checkCancellation: cancellationCheck)
+        try checkpoints.check(.normalization)
+        let normalized = try normalize(evidence, checkpoints: &checkpoints)
+        let activeOverrides = try normalizedOverrides(overrides, checkpoints: &checkpoints)
+        let segments = try buildSegments(
+            normalized,
+            overrides: activeOverrides,
+            checkpoints: &checkpoints
+        )
+        try checkpoints.check(.segmentConstruction)
         return ActivityClassificationState(
             evidence: normalized,
-            overrides: normalizedOverrides(overrides),
-            segments: buildSegments(normalized, overrides: overrides)
+            overrides: activeOverrides,
+            segments: segments,
+            engineIdentity: engineIdentity
         )
     }
 
@@ -46,14 +116,44 @@ public struct ActivityClassificationEngine: Sendable {
         to state: ActivityClassificationState,
         overrides: [ActivityClassificationOverride]? = nil
     ) -> ActivityClassificationState {
-        let activeOverrides = normalizedOverrides(overrides ?? state.overrides)
-        let newEvidence = normalize(appended)
+        do {
+            return try append(
+                appended,
+                to: state,
+                overrides: overrides,
+                cancellationCheck: { _ in }
+            )
+        } catch {
+            preconditionFailure("Unexpected activity append failure: \(error)")
+        }
+    }
+
+    func append(
+        _ appended: [ActivitySensorEvidence],
+        to state: ActivityClassificationState,
+        overrides: [ActivityClassificationOverride]?,
+        cancellationCheck: @escaping @Sendable (ActivityClassificationWorkPhase) throws -> Void
+    ) throws -> ActivityClassificationState {
+        var checkpoints = ActivityClassificationCheckpoints(checkCancellation: cancellationCheck)
+        try checkpoints.check(.normalization)
+        let activeOverrides = try normalizedOverrides(
+            overrides ?? state.overrides,
+            checkpoints: &checkpoints
+        )
+        let newEvidence = try normalize(appended, checkpoints: &checkpoints)
         if let lastEvidence = state.evidence.last,
            let firstNew = newEvidence.first,
            firstNew.timestamp > lastEvidence.timestamp,
            activeOverrides == state.overrides,
-           let previousLast = state.segments.last {
-            let tail = buildSegments([lastEvidence] + newEvidence, overrides: activeOverrides)
+           state.engineIdentity == engineIdentity,
+           let previousLast = state.segments.last,
+           previousLast.span.start <= lastEvidence.timestamp,
+           lastEvidence.timestamp < previousLast.span.end {
+            let tail = try buildSegments(
+                [lastEvidence] + newEvidence,
+                overrides: activeOverrides,
+                checkpoints: &checkpoints
+            )
             guard let firstTail = tail.first else { return state }
             let prefix = Array(state.segments.dropLast())
             let nextSegments: [ActivitySegment]
@@ -81,11 +181,24 @@ public struct ActivityClassificationEngine: Sendable {
                 )
                 nextSegments = prefix + [merged] + Array(tail.dropFirst())
             } else {
-                nextSegments = state.segments + Array(tail.dropFirst())
+                return try classifyState(
+                    state.evidence + appended,
+                    overrides: activeOverrides,
+                    cancellationCheck: cancellationCheck
+                )
             }
-            return ActivityClassificationState(evidence: state.evidence + newEvidence, overrides: activeOverrides, segments: nextSegments)
+            return ActivityClassificationState(
+                evidence: state.evidence + newEvidence,
+                overrides: activeOverrides,
+                segments: nextSegments,
+                engineIdentity: engineIdentity
+            )
         }
-        return classifyState(state.evidence + appended, overrides: activeOverrides)
+        return try classifyState(
+            state.evidence + appended,
+            overrides: activeOverrides,
+            cancellationCheck: cancellationCheck
+        )
     }
 
     public func reclassifyTail(
@@ -97,37 +210,139 @@ public struct ActivityClassificationEngine: Sendable {
     }
 
     public func normalize(_ evidence: [ActivitySensorEvidence]) -> [ActivitySensorEvidence] {
-        let ordered = evidence.sorted(by: isEarlier)
+        do {
+            var checkpoints = ActivityClassificationCheckpoints { _ in }
+            try checkpoints.check(.normalization)
+            return try normalize(evidence, checkpoints: &checkpoints)
+        } catch {
+            preconditionFailure("Unexpected activity normalization failure: \(error)")
+        }
+    }
+
+    private func normalize(
+        _ evidence: [ActivitySensorEvidence],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [ActivitySensorEvidence] {
+        var valid: [ActivitySensorEvidence] = []
+        valid.reserveCapacity(evidence.count)
+        for sample in evidence {
+            try checkpoints.step(.normalization)
+            if ActivityTimestamp.isValid(sample.timestamp) {
+                valid.append(sample)
+            }
+        }
+        let ordered = try cancellableSort(
+            valid,
+            by: isEarlier,
+            phase: .sorting,
+            checkpoints: &checkpoints
+        )
         var result: [ActivitySensorEvidence] = []
+        result.reserveCapacity(ordered.count)
         var index = 0
         while index < ordered.count {
+            try checkpoints.step(.deduplication)
             let timestamp = ordered[index].timestamp
             var end = index + 1
-            while end < ordered.count && ordered[end].timestamp == timestamp { end += 1 }
-            if let first = ordered[index..<end].first {
-                let selected = ordered[index..<end].dropFirst().reduce(first) { current, candidate in
-                    betterDuplicate(candidate, current) ? candidate : current
+            var selected = ordered[index]
+            while end < ordered.count && ordered[end].timestamp == timestamp {
+                try checkpoints.step(.deduplication)
+                if betterDuplicate(ordered[end], selected) {
+                    selected = ordered[end]
                 }
-                result.append(selected)
+                end += 1
             }
+            result.append(selected)
             index = end
         }
+        try checkpoints.check(.deduplication)
         return result
+    }
+
+    private func cancellableSort<Element>(
+        _ values: [Element],
+        by areInIncreasingOrder: (Element, Element) -> Bool,
+        phase: ActivityClassificationWorkPhase,
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [Element] {
+        // Standard-library sorting cannot observe cancellation while it runs.
+        guard values.count > 1 else {
+            try checkpoints.check(phase)
+            return values
+        }
+
+        var source = values
+        var destination = values
+        var width = 1
+        while width < values.count {
+            var lower = 0
+            while lower < values.count {
+                let middle = min(lower + width, values.count)
+                let upper = min(middle + width, values.count)
+                var left = lower
+                var right = middle
+                var output = lower
+                while output < upper {
+                    try checkpoints.step(phase)
+                    if left < middle,
+                       right >= upper || !areInIncreasingOrder(source[right], source[left]) {
+                        destination[output] = source[left]
+                        left += 1
+                    } else {
+                        destination[output] = source[right]
+                        right += 1
+                    }
+                    output += 1
+                }
+                lower = upper
+            }
+            swap(&source, &destination)
+            width = width > values.count / 2 ? values.count : width * 2
+        }
+        try checkpoints.check(phase)
+        return source
     }
 
     private func buildSegments(
         _ evidence: [ActivitySensorEvidence],
-        overrides: [ActivityClassificationOverride]
-    ) -> [ActivitySegment] {
+        overrides: [ActivityClassificationOverride],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [ActivitySegment] {
         guard !evidence.isEmpty else { return [] }
         var raw: [RawSegment] = []
         var current: RawSegment?
+        var nextOverride = 0
+        var activeOverrideHeap: [Int] = []
         for index in evidence.indices {
+            try checkpoints.step(.segmentConstruction)
             let sample = evidence[index]
             let next = evidence.indices.contains(index + 1) ? evidence[index + 1] : nil
             let sampleEnd = next.map { min($0.timestamp, sample.timestamp.addingTimeInterval(configuration.defaultSampleDuration)) }
                 ?? sample.timestamp.addingTimeInterval(configuration.defaultSampleDuration)
-            let classification = classification(for: sample, overrides: overrides)
+            while nextOverride < overrides.count,
+                  overrides[nextOverride].span.start <= sample.timestamp {
+                try checkpoints.step(.segmentConstruction)
+                try pushOverride(
+                    nextOverride,
+                    into: &activeOverrideHeap,
+                    overrides: overrides,
+                    checkpoints: &checkpoints
+                )
+                nextOverride += 1
+            }
+            while let winner = activeOverrideHeap.first,
+                  overrides[winner].span.end <= sample.timestamp {
+                try checkpoints.step(.segmentConstruction)
+                _ = try popOverride(
+                    from: &activeOverrideHeap,
+                    overrides: overrides,
+                    checkpoints: &checkpoints
+                )
+            }
+            let classification = classification(
+                for: sample,
+                override: activeOverrideHeap.first.map { overrides[$0] }
+            )
             let canJoin = current.map {
                 $0.classification == classification
                     && sample.timestamp.timeIntervalSince($0.span.end) <= configuration.maximumGap
@@ -141,24 +356,28 @@ public struct ActivityClassificationEngine: Sendable {
         }
         if let current { raw.append(current) }
 
-        var segments = raw.map(makeSegment)
-        if !overrides.isEmpty {
-            segments = applyOverrides(segments, overrides: overrides)
+        var segments: [ActivitySegment] = []
+        segments.reserveCapacity(raw.count)
+        for value in raw {
+            try checkpoints.step(.segmentConstruction)
+            segments.append(makeSegment(value))
         }
-        return mergeAdjacent(segments)
+        if !overrides.isEmpty {
+            segments = try applyOverrides(
+                segments,
+                overrides: overrides,
+                evidence: evidence,
+                checkpoints: &checkpoints
+            )
+        }
+        return try mergeAdjacent(segments, checkpoints: &checkpoints)
     }
 
     private func classification(
         for sample: ActivitySensorEvidence,
-        overrides: [ActivityClassificationOverride]
+        override: ActivityClassificationOverride?
     ) -> Classification {
-        let active = overrides.filter { $0.span.start <= sample.timestamp && sample.timestamp < $0.span.end }
-            .sorted { lhs, rhs in
-                if lhs.isSleep != rhs.isSleep { return lhs.isSleep }
-                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
-                return lhs.id.uuidString < rhs.id.uuidString
-            }
-        if let override = active.first {
+        if let override {
             return Classification(
                 majorID: override.majorCategoryID,
                 detailID: override.detailID ?? defaultDetailID(for: override.majorCategoryID),
@@ -174,14 +393,29 @@ public struct ActivityClassificationEngine: Sendable {
             )
         }
 
-        let text = ([sample.categoryHint, sample.detailHint, sample.behaviorHint] + sample.evidence)
-            .compactMap { $0?.lowercased() }.joined(separator: " ")
-        if containsAny(text, ["sleep", "수면", "취침", "낮잠", "core", "deep", "rem"]) {
-            let behavior = containsAny(text, ["deep", "깊은"]) ? "deep" : containsAny(text, ["rem"]) ? "rem" : "core"
+        let signals = ([sample.categoryHint, sample.detailHint, sample.behaviorHint] + sample.evidence)
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        let hasSleepContext = signals.contains {
+            containsAny($0, ["sleep", "수면", "취침", "낮잠"])
+        }
+        let hasBareSleepStage = signals.contains { ["core", "deep", "rem"].contains($0) }
+        if hasSleepContext || hasBareSleepStage {
+            let behavior: String
+            if signals.contains(where: { $0 == "deep" || (hasSleepContext && containsAny($0, ["deep", "깊은"])) }) {
+                behavior = "deep"
+            } else if signals.contains(where: { $0 == "rem" || (hasSleepContext && $0.contains("rem")) }) {
+                behavior = "rem"
+            } else {
+                behavior = "core"
+            }
             return automatic(major: "sleep", detail: "sleep.\(behavior)", behavior: behavior, sample: sample, evidence: "수면 센서 근거")
         }
         if let detail = sample.detailHint.flatMap({ taxonomy.detail(for: $0) }) {
             return automatic(major: majorID(for: detail.id), detail: detail.id, behavior: detail.behavior, sample: sample, evidence: "상세 활동 힌트")
+        }
+        if sample.categoryHint == "movement",
+           let motionClassification = preciseMotionClassification(for: sample) {
+            return motionClassification
         }
         if let category = sample.categoryHint, taxonomy.major(for: category) != nil {
             return automatic(major: category, detail: defaultDetailID(for: category), behavior: taxonomy.detail(for: defaultDetailID(for: category))?.behavior ?? category, sample: sample, evidence: "대분류 활동 힌트")
@@ -191,69 +425,279 @@ public struct ActivityClassificationEngine: Sendable {
                 return automatic(major: majorID(for: detail.id), detail: detail.id, behavior: detail.behavior, sample: sample, evidence: "센서 행동 근거")
             }
         }
-        switch sample.motion {
-        case .walking: return automatic(major: "movement", detail: "movement.walking", behavior: "walking", sample: sample, evidence: "Core Motion 보행")
-        case .running: return automatic(major: "movement", detail: "movement.running", behavior: "running", sample: sample, evidence: "Core Motion 달리기")
-        case .cycling: return automatic(major: "movement", detail: "movement.cycling", behavior: "cycling", sample: sample, evidence: "Core Motion 자전거")
-        case .automotive: return automatic(major: "movement", detail: "movement.car", behavior: "automotive", sample: sample, evidence: "Core Motion 차량")
-        case .stationary, .unknown:
-            if let speed = sample.speedMetersPerSecond {
-                if speed >= 8 { return automatic(major: "movement", detail: "movement.car", behavior: "automotive", sample: sample, evidence: "속도 근거") }
-                if speed >= 1 { return automatic(major: "movement", detail: "movement.walking", behavior: "walking", sample: sample, evidence: "속도 근거") }
-            }
-            return automatic(major: "activity", detail: "activity.rest", behavior: "stationary", sample: sample, evidence: "정지 센서 근거")
+        if let motionClassification = preciseMotionClassification(for: sample) {
+            return motionClassification
         }
+        if let speed = sample.speedMetersPerSecond {
+            if speed >= 8 { return automatic(major: "movement", detail: "movement.car", behavior: "automotive", sample: sample, evidence: "속도 근거") }
+            if speed >= 1 { return automatic(major: "movement", detail: "movement.walking", behavior: "walking", sample: sample, evidence: "속도 근거") }
+        }
+        return automatic(major: "activity", detail: "activity.rest", behavior: "stationary", sample: sample, evidence: "정지 센서 근거")
+    }
+
+    private func preciseMotionClassification(
+        for sample: ActivitySensorEvidence
+    ) -> Classification? {
+        switch sample.motion {
+        case .walking:
+            return automatic(
+                major: "movement",
+                detail: "movement.walking",
+                behavior: "walking",
+                sample: sample,
+                evidence: "Core Motion 보행"
+            )
+        case .running:
+            return automatic(
+                major: "movement",
+                detail: "movement.running",
+                behavior: "running",
+                sample: sample,
+                evidence: "Core Motion 달리기"
+            )
+        case .cycling:
+            return automatic(
+                major: "movement",
+                detail: "movement.cycling",
+                behavior: "cycling",
+                sample: sample,
+                evidence: "Core Motion 자전거"
+            )
+        case .automotive:
+            return automatic(
+                major: "movement",
+                detail: "movement.car",
+                behavior: "automotive",
+                sample: sample,
+                evidence: "Core Motion 차량"
+            )
+        case .stationary, .unknown:
+            return nil
+        }
+    }
+
+    private func pushOverride(
+        _ index: Int,
+        into heap: inout [Int],
+        overrides: [ActivityClassificationOverride],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws {
+        heap.append(index)
+        var child = heap.count - 1
+        while child > 0 {
+            try checkpoints.step(.segmentConstruction)
+            let parent = (child - 1) / 2
+            guard hasHigherPriority(
+                overrides[heap[child]],
+                than: overrides[heap[parent]]
+            ) else { break }
+            heap.swapAt(child, parent)
+            child = parent
+        }
+    }
+
+    private func popOverride(
+        from heap: inout [Int],
+        overrides: [ActivityClassificationOverride],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> Int? {
+        guard let first = heap.first else { return nil }
+        let last = heap.removeLast()
+        guard !heap.isEmpty else { return first }
+        heap[0] = last
+        var parent = 0
+        while true {
+            try checkpoints.step(.segmentConstruction)
+            let left = parent * 2 + 1
+            guard left < heap.count else { break }
+            let right = left + 1
+            var highest = left
+            if right < heap.count,
+               hasHigherPriority(
+                   overrides[heap[right]],
+                   than: overrides[heap[left]]
+               ) {
+                highest = right
+            }
+            guard hasHigherPriority(
+                overrides[heap[highest]],
+                than: overrides[heap[parent]]
+            ) else { break }
+            heap.swapAt(parent, highest)
+            parent = highest
+        }
+        return first
+    }
+
+    private func hasHigherPriority(
+        _ lhs: ActivityClassificationOverride,
+        than rhs: ActivityClassificationOverride
+    ) -> Bool {
+        if lhs.isSleep != rhs.isSleep { return lhs.isSleep }
+        if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+        return ActivityUUIDOrder.precedes(lhs.id, rhs.id)
     }
 
     private func automatic(major: String, detail: String, behavior: String, sample: ActivitySensorEvidence, evidence: String) -> Classification {
         Classification(majorID: major, detailID: detail, title: taxonomy.detail(for: detail)?.title ?? taxonomy.major(for: major)?.title ?? "활동", behavior: behavior, confidence: sample.confidence ?? (sample.isPreciseLocation ? 0.8 : 0.55), evidence: [evidence] + sample.evidence, confirmed: false)
     }
 
-    private func applyOverrides(_ segments: [ActivitySegment], overrides: [ActivityClassificationOverride]) -> [ActivitySegment] {
-        segments.flatMap { segment in
-            let relevant = overrides.filter { $0.span.intersects(segment.span) }
-                .sorted { lhs, rhs in if lhs.isSleep != rhs.isSleep { return lhs.isSleep }; return lhs.updatedAt > rhs.updatedAt }
-            guard !relevant.isEmpty else { return [segment] }
-            var cuts = Set([segment.span.start, segment.span.end])
-            for override in relevant { cuts.insert(max(segment.span.start, override.span.start)); cuts.insert(min(segment.span.end, override.span.end)) }
-            let points = cuts.sorted()
-            return (0..<(points.count - 1)).compactMap { index in
-                let span = ActivityTimeSpan(start: points[index], end: points[index + 1])
-                guard span.duration > 0 else { return nil }
-                let midpoint = span.start.addingTimeInterval(span.duration / 2)
-                if let override = relevant.first(where: { $0.span.start <= midpoint && midpoint < $0.span.end }) {
-                    let c = classification(for: ActivitySensorEvidence(timestamp: midpoint), overrides: [override])
-                    return ActivitySegment(
-                        id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"),
-                        span: span,
-                        majorCategoryID: c.majorID,
-                        detailID: c.detailID,
-                        title: c.title,
-                        behavior: c.behavior,
-                        confidence: c.confidence,
-                        evidence: c.evidence,
-                        sampleCount: segment.sampleCount,
-                        isUserConfirmed: c.confirmed,
-                        provenance: .init(
-                            tier: c.confirmed ? .groundTruth : .expected,
-                            status: c.confirmed
-                                ? .userCorrected
-                                : ActivityAutomaticConfirmation.status(for: c.confidence),
-                            source: c.confirmed ? "user-correction" : "classification-lock",
-                            evidence: c.evidence,
-                            confidence: c.confidence,
-                            span: span
-                        )
+    private func applyOverrides(
+        _ segments: [ActivitySegment],
+        overrides: [ActivityClassificationOverride],
+        evidence: [ActivitySensorEvidence],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [ActivitySegment] {
+        var result: [ActivitySegment] = []
+        result.reserveCapacity(segments.count)
+        var nextOverride = 0
+        var activeOverrides: [Int] = []
+
+        for segment in segments {
+            try checkpoints.step(.segmentConstruction)
+            var cursor = segment.span.start
+            while cursor < segment.span.end {
+                try checkpoints.step(.segmentConstruction)
+                while nextOverride < overrides.count,
+                      overrides[nextOverride].span.start <= cursor {
+                    try checkpoints.step(.segmentConstruction)
+                    try pushOverride(
+                        nextOverride,
+                        into: &activeOverrides,
+                        overrides: overrides,
+                        checkpoints: &checkpoints
+                    )
+                    nextOverride += 1
+                }
+                while let winner = activeOverrides.first,
+                      overrides[winner].span.end <= cursor {
+                    try checkpoints.step(.segmentConstruction)
+                    _ = try popOverride(
+                        from: &activeOverrides,
+                        overrides: overrides,
+                        checkpoints: &checkpoints
                     )
                 }
-                return ActivitySegment(id: stableID(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)"), span: span, majorCategoryID: segment.majorCategoryID, detailID: segment.detailID, title: segment.title, behavior: segment.behavior, confidence: segment.confidence, evidence: segment.evidence, sampleCount: segment.sampleCount, isUserConfirmed: segment.isUserConfirmed, provenance: segment.provenance)
+
+                var boundary = segment.span.end
+                if nextOverride < overrides.count {
+                    boundary = min(boundary, overrides[nextOverride].span.start)
+                }
+                if let winner = activeOverrides.first {
+                    boundary = min(boundary, overrides[winner].span.end)
+                }
+                guard boundary > cursor else { break }
+
+                let span = ActivityTimeSpan(start: cursor, end: boundary)
+                if span.start == segment.span.start,
+                   span.end == segment.span.end,
+                   activeOverrides.isEmpty {
+                    result.append(segment)
+                } else {
+                    result.append(overriddenSegment(
+                        segment,
+                        span: span,
+                        override: activeOverrides.first.map { overrides[$0] },
+                        evidence: evidence
+                    ))
+                }
+                cursor = boundary
             }
         }
+        return result
     }
 
-    private func mergeAdjacent(_ segments: [ActivitySegment]) -> [ActivitySegment] {
+    private func overriddenSegment(
+        _ segment: ActivitySegment,
+        span: ActivityTimeSpan,
+        override: ActivityClassificationOverride?,
+        evidence: [ActivitySensorEvidence]
+    ) -> ActivitySegment {
+        let id = ActivityStableID.uuid(seed: "\(segment.id.uuidString)|\(span.start.timeIntervalSince1970)")
+        let sampleCount = sampleCount(in: span, evidence: evidence)
+        guard let override else {
+            return ActivitySegment(
+                id: id,
+                span: span,
+                majorCategoryID: segment.majorCategoryID,
+                detailID: segment.detailID,
+                title: segment.title,
+                behavior: segment.behavior,
+                confidence: segment.confidence,
+                evidence: segment.evidence,
+                sampleCount: sampleCount,
+                isUserConfirmed: segment.isUserConfirmed,
+                provenance: .init(
+                    tier: segment.provenance.tier,
+                    status: segment.provenance.status,
+                    source: segment.provenance.source,
+                    evidence: segment.provenance.evidence,
+                    confidence: segment.provenance.confidence,
+                    span: span
+                )
+            )
+        }
+
+        let midpoint = span.start.addingTimeInterval(span.duration / 2)
+        let classification = classification(
+            for: ActivitySensorEvidence(timestamp: midpoint),
+            override: override
+        )
+        return ActivitySegment(
+            id: id,
+            span: span,
+            majorCategoryID: classification.majorID,
+            detailID: classification.detailID,
+            title: classification.title,
+            behavior: classification.behavior,
+            confidence: classification.confidence,
+            evidence: classification.evidence,
+            sampleCount: sampleCount,
+            isUserConfirmed: classification.confirmed,
+            provenance: .init(
+                tier: classification.confirmed ? .groundTruth : .expected,
+                status: classification.confirmed
+                    ? .userCorrected
+                    : ActivityAutomaticConfirmation.status(for: classification.confidence),
+                source: classification.confirmed ? "user-correction" : "classification-lock",
+                evidence: classification.evidence,
+                confidence: classification.confidence,
+                span: span
+            )
+        )
+    }
+
+    private func sampleCount(
+        in span: ActivityTimeSpan,
+        evidence: [ActivitySensorEvidence]
+    ) -> Int {
+        lowerBound(span.end, in: evidence) - lowerBound(span.start, in: evidence)
+    }
+
+    private func lowerBound(
+        _ timestamp: Date,
+        in evidence: [ActivitySensorEvidence]
+    ) -> Int {
+        var lower = 0
+        var upper = evidence.count
+        while lower < upper {
+            let middle = (lower + upper) / 2
+            if evidence[middle].timestamp < timestamp {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        return lower
+    }
+
+    private func mergeAdjacent(
+        _ segments: [ActivitySegment],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [ActivitySegment] {
         var result: [ActivitySegment] = []
         for segment in segments {
+            try checkpoints.step(.segmentConstruction)
             guard let last = result.last,
                   last.majorCategoryID == segment.majorCategoryID,
                   last.detailID == segment.detailID,
@@ -265,11 +709,32 @@ public struct ActivityClassificationEngine: Sendable {
     }
 
     private func makeSegment(_ raw: RawSegment) -> ActivitySegment {
-        ActivitySegment(id: stableID(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed, provenance: .init(tier: raw.classification.confirmed ? .groundTruth : .expected, status: raw.classification.confirmed ? .userCorrected : ActivityAutomaticConfirmation.status(for: raw.confidence), source: raw.classification.confirmed ? "user-correction" : "activity-classifier-v1", evidence: raw.evidence, confidence: raw.confidence, span: raw.span))
+        ActivitySegment(id: ActivityStableID.uuid(seed: raw.firstID.uuidString), span: raw.span, majorCategoryID: raw.classification.majorID, detailID: raw.classification.detailID, title: raw.classification.title, behavior: raw.classification.behavior, confidence: raw.confidence, evidence: raw.evidence, sampleCount: raw.sampleCount, isUserConfirmed: raw.classification.confirmed, provenance: .init(tier: raw.classification.confirmed ? .groundTruth : .expected, status: raw.classification.confirmed ? .userCorrected : ActivityAutomaticConfirmation.status(for: raw.confidence), source: raw.classification.confirmed ? "user-correction" : "activity-classifier-v1", evidence: raw.evidence, confidence: raw.confidence, span: raw.span))
     }
 
-    private func normalizedOverrides(_ overrides: [ActivityClassificationOverride]) -> [ActivityClassificationOverride] {
-        overrides.sorted { lhs, rhs in if lhs.span.start != rhs.span.start { return lhs.span.start < rhs.span.start }; return lhs.id.uuidString < rhs.id.uuidString }
+    private func normalizedOverrides(
+        _ overrides: [ActivityClassificationOverride],
+        checkpoints: inout ActivityClassificationCheckpoints
+    ) throws -> [ActivityClassificationOverride] {
+        var valid: [ActivityClassificationOverride] = []
+        valid.reserveCapacity(overrides.count)
+        for override in overrides {
+            try checkpoints.step(.normalization)
+            if ActivityTimestamp.isValid(override.span.start),
+               ActivityTimestamp.isValid(override.span.end),
+               ActivityTimestamp.isValid(override.updatedAt) {
+                valid.append(override)
+            }
+        }
+        return try cancellableSort(
+            valid,
+            by: {
+                if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
+                return ActivityUUIDOrder.precedes($0.id, $1.id)
+            },
+            phase: .sorting,
+            checkpoints: &checkpoints
+        )
     }
 
     private func defaultDetailID(for majorID: String) -> String {
@@ -291,9 +756,16 @@ public struct ActivityClassificationEngine: Sendable {
             && lhs.isUserConfirmed == rhs.isUserConfirmed
     }
 
+    private var engineIdentity: ActivityClassificationEngineIdentity {
+        ActivityClassificationEngineIdentity(
+            taxonomy: taxonomy,
+            configuration: configuration
+        )
+    }
+
     private func isEarlier(_ lhs: ActivitySensorEvidence, _ rhs: ActivitySensorEvidence) -> Bool {
         if lhs.timestamp != rhs.timestamp { return lhs.timestamp < rhs.timestamp }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return ActivityUUIDOrder.precedes(lhs.id, rhs.id)
     }
 
     private func betterDuplicate(_ lhs: ActivitySensorEvidence, _ rhs: ActivitySensorEvidence) -> Bool {
@@ -302,18 +774,20 @@ public struct ActivityClassificationEngine: Sendable {
         let rightAccuracy = rhs.horizontalAccuracyMeters.map { $0.isFinite ? $0 : .greatestFiniteMagnitude } ?? .greatestFiniteMagnitude
         if leftAccuracy != rightAccuracy { return leftAccuracy < rightAccuracy }
         if lhs.sequence != rhs.sequence { return (lhs.sequence ?? Int.min) > (rhs.sequence ?? Int.min) }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return ActivityUUIDOrder.precedes(lhs.id, rhs.id)
     }
+}
 
-    private func stableID(seed: String) -> UUID {
-        var h1: UInt64 = 0xcbf29ce484222325
-        var h2: UInt64 = 0x9e3779b185ebca87
-        for byte in seed.utf8 { h1 = (h1 ^ UInt64(byte)) &* 0x100000001b3; h2 = (h2 ^ UInt64(byte)) &* 0x9e3779b185ebca87 }
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for index in 0..<8 { bytes[index] = UInt8((h1 >> UInt64(index * 8)) & 0xff); bytes[index + 8] = UInt8((h2 >> UInt64(index * 8)) & 0xff) }
-        bytes[6] = (bytes[6] & 0x0f) | 0x50
-        bytes[8] = (bytes[8] & 0x3f) | 0x80
-        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
+enum ActivityUUIDOrder {
+    static func precedes(_ lhs: UUID, _ rhs: UUID) -> Bool {
+        withUnsafeBytes(of: lhs.uuid) { lhsBytes in
+            withUnsafeBytes(of: rhs.uuid) { rhsBytes in
+                for index in 0..<16 where lhsBytes[index] != rhsBytes[index] {
+                    return lhsBytes[index] < rhsBytes[index]
+                }
+                return false
+            }
+        }
     }
 }
 

@@ -1736,6 +1736,24 @@ enum MemoShellPlanMigration {
         actuals: [ActualRecord],
         recordLinks: [RecordLink]
     ) -> Bool {
+        let referencedRecordIDs = Set(actuals.flatMap {
+            [$0.planID, $0.routineID].compactMap { $0 }
+        })
+        let referencedNodeIDs = Set(recordLinks.flatMap {
+            [$0.fromNodeID, $0.toNodeID]
+        })
+        return isShell(
+            plan,
+            referencedRecordIDs: referencedRecordIDs,
+            referencedNodeIDs: referencedNodeIDs
+        )
+    }
+
+    private static func isShell(
+        _ plan: PlanRecord,
+        referencedRecordIDs: Set<UUID>,
+        referencedNodeIDs: Set<String>
+    ) -> Bool {
         guard plan.title.hasPrefix(titlePrefix),
               plan.title.count > titlePrefix.count,
               abs(plan.span.duration - shellDuration) < 0.5,
@@ -1752,49 +1770,84 @@ enum MemoShellPlanMigration {
             return false
         }
         // A placeholder was never started, completed or linked to anything.
-        guard !actuals.contains(where: {
-            $0.planID == plan.id || $0.routineID == plan.id
-        }) else {
+        guard !referencedRecordIDs.contains(plan.id) else {
             return false
         }
-        let nodeIDs: Set<String> = [
-            "action.\(plan.id.uuidString)",
-            "routine.\(plan.id.uuidString)",
-        ]
-        return !recordLinks.contains {
-            nodeIDs.contains($0.fromNodeID) || nodeIDs.contains($0.toNodeID)
-        }
+        return !referencedNodeIDs.contains("action.\(plan.id.uuidString)")
+            && !referencedNodeIDs.contains("routine.\(plan.id.uuidString)")
     }
 
     /// Idempotent: once the placeholders are gone a second run finds nothing.
     static func apply(to snapshot: inout TaptionDataSnapshot) {
-        let shells = snapshot.plans.filter {
-            isShell(
-                $0,
-                actuals: snapshot.actuals,
-                recordLinks: snapshot.recordLinks
-            )
-        }
-        guard !shells.isEmpty else { return }
-        let shellsByID = Dictionary(
-            shells.map { ($0.id, $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        snapshot.memos = snapshot.memos.map { memo in
-            guard let planID = memo.planID,
-                  let shell = shellsByID[planID] else {
-                return memo
+        apply(to: &snapshot, cancellationCheck: {})
+    }
+
+    static func apply(
+        to snapshot: inout TaptionDataSnapshot,
+        cancellationCheck: () throws -> Void
+    ) rethrows {
+        try cancellationCheck()
+        var referencedRecordIDs = Set<UUID>()
+        referencedRecordIDs.reserveCapacity(snapshot.actuals.count)
+        for (index, actual) in snapshot.actuals.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if let planID = actual.planID {
+                referencedRecordIDs.insert(planID)
             }
-            var lifted = memo
-            lifted.planID = nil
-            if lifted.targetID == "plan.\(planID.uuidString)" {
-                lifted.targetID = nil
+            if let routineID = actual.routineID {
+                referencedRecordIDs.insert(routineID)
             }
-            lifted.categoryID = memo.categoryID ?? shell.categoryID
-            lifted.occurredAt = shell.span.start
-            return lifted
         }
-        snapshot.plans.removeAll { shellsByID[$0.id] != nil }
+
+        try cancellationCheck()
+        var referencedNodeIDs = Set<String>()
+        referencedNodeIDs.reserveCapacity(snapshot.recordLinks.count * 2)
+        for (index, link) in snapshot.recordLinks.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            referencedNodeIDs.insert(link.fromNodeID)
+            referencedNodeIDs.insert(link.toNodeID)
+        }
+
+        try cancellationCheck()
+        var shellsByID: [UUID: PlanRecord] = [:]
+        for (index, plan) in snapshot.plans.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard isShell(
+                plan,
+                referencedRecordIDs: referencedRecordIDs,
+                referencedNodeIDs: referencedNodeIDs
+            ) else { continue }
+            shellsByID[plan.id] = plan
+        }
+        try cancellationCheck()
+        guard !shellsByID.isEmpty else { return }
+
+        try cancellationCheck()
+        var memos = snapshot.memos
+        for index in memos.indices {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard let planID = memos[index].planID,
+                  let shell = shellsByID[planID] else { continue }
+            memos[index].planID = nil
+            if memos[index].targetID == "plan.\(planID.uuidString)" {
+                memos[index].targetID = nil
+            }
+            memos[index].categoryID = memos[index].categoryID
+                ?? shell.categoryID
+            memos[index].occurredAt = shell.span.start
+        }
+
+        try cancellationCheck()
+        var plans: [PlanRecord] = []
+        plans.reserveCapacity(snapshot.plans.count - shellsByID.count)
+        for (index, plan) in snapshot.plans.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if shellsByID[plan.id] == nil { plans.append(plan) }
+        }
+
+        try cancellationCheck()
+        snapshot.memos = memos
+        snapshot.plans = plans
     }
 }
 
@@ -3037,41 +3090,5 @@ enum TimelineCoordinateMapper {
         )
         value.followsCurrentTime = true
         return value
-    }
-}
-
-enum WidgetSnapshotFactory {
-    static func make(
-        plans: [PlanRecord],
-        now: Date,
-        catStyle: CatStyle,
-        hideSensitiveContent: Bool,
-        horizon: TimeInterval = 4 * 3_600
-    ) -> WidgetSnapshot {
-        let viewport = TimeSpan(
-            start: now.addingTimeInterval(-horizon / 2),
-            end: now.addingTimeInterval(horizon / 2)
-        )
-        let visiblePlans = plans
-            .filter { $0.span.intersection(with: viewport) != nil && $0.status != .skipped }
-            .sorted { $0.span.start < $1.span.start }
-        let items = visiblePlans.map { plan in
-            WidgetTimelineItem(
-                id: plan.id,
-                title: plan.title,
-                span: plan.span,
-                categoryID: plan.categoryID,
-                isCurrent: plan.span.contains(now) && plan.status != .completed
-            )
-        }
-        return WidgetSnapshot(
-            generatedAt: now,
-            viewport: viewport,
-            items: items,
-            availableActions: [],
-            catStyle: catStyle,
-            catIsRunning: items.contains(where: \.isCurrent),
-            hidesSensitiveContent: hideSensitiveContent
-        )
     }
 }

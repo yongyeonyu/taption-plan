@@ -58,6 +58,8 @@
 		A10000000000000000000028 /* PlanEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000025 /* PlanEditorSheet.swift */; };
 		A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000026 /* PhotoClusterSheet.swift */; };
 		A1000000000000000000002A /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
+		A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
+		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
@@ -262,6 +264,7 @@
 		F10000000000000000000027 /* TaptionPlanDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000028 /* TaptionPlanWidgetDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidgetDebug.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000029 /* WatchSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
+		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
@@ -518,6 +521,7 @@
 				F10000000000000000000061 /* RecordSummaryEngine.swift */,
 				F10000000000000000000023 /* StoreKitSupport.swift */,
 				F10000000000000000000091 /* Products.storekit */,
+				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
@@ -902,6 +906,7 @@
 				A10000000000000000000028 /* PlanEditorSheet.swift in Sources */,
 				A10000000000000000000029 /* PhotoClusterSheet.swift in Sources */,
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
+				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
 				A10000000000000000000032 /* PhotoGalleryView.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
@@ -972,6 +977,7 @@
 				A1000000000000000000002D /* WatchConnectivityController.swift in Sources */,
 				A1000000000000000000002E /* WatchWorkoutManager.swift in Sources */,
 				A10000000000000000000070 /* WatchAmbientSensorRecorder.swift in Sources */,
+				A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A10000000000000000000073 /* WatchSensorQueryPlan.swift in Sources */,
 				A10000000000000000000074 /* WatchObjCExceptionCatcher.m in Sources */,
 				A1000000000000000000002F /* ContentView.swift in Sources */,

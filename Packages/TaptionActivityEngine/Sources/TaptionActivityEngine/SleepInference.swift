@@ -80,7 +80,9 @@ public struct SleepInferenceEngine: Sendable {
     }
 
     public func infer(_ samples: [SleepRuleSample]) -> SleepInferenceResult {
-        let ordered = samples.sorted { $0.timestamp < $1.timestamp }
+        let ordered = samples
+            .filter { ActivityTimestamp.isValid($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
         guard let last = ordered.last else { return .init(state: .insufficientEvidence, confidence: 0) }
         if last.wakeConditionsMet(configuration: configuration) {
             return makeResult(state: .wakeCandidate, samples: ordered, confidence: 0.9, evidence: ["화면 사용", "이동 또는 사용자 활동", "수면 보조 조건 해제"])

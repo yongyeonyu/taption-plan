@@ -43,6 +43,20 @@ enum WatchSensorQueryPlan {
         return stored
     }
 
+    static func restoredArmedAt(
+        stored: Date?,
+        armedUntil: Date?,
+        recordingDuration: TimeInterval
+    ) -> Date? {
+        if let stored { return stored }
+        guard let armedUntil,
+              recordingDuration.isFinite,
+              recordingDuration > 0 else {
+            return nil
+        }
+        return armedUntil.addingTimeInterval(-recordingDuration)
+    }
+
     /// 실제로 던져도 되는 조회 목록. 하나도 없으면 이번 실행은 조회하지
     /// 않는다.
     ///
@@ -67,7 +81,15 @@ enum WatchSensorQueryPlan {
             armedAt,
             now.addingTimeInterval(-retentionSpan + retentionMargin)
         )
-        var cursor = max(sanitizedHighWater(highWater, now: now) ?? floor, floor)
+        let committed = sanitizedHighWater(highWater, now: now)
+        if let committed,
+           end.timeIntervalSince(committed) < minimumSpan {
+            return []
+        }
+        var cursor = max(
+            committed?.addingTimeInterval(-availabilityLag) ?? floor,
+            floor
+        )
         // 뒤집힌 범위, 같은 시각, 창 하나도 못 채우는 범위는 만들지 않는다.
         guard end > cursor, end.timeIntervalSince(cursor) >= minimumSpan else {
             return []

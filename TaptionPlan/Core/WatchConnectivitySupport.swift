@@ -4,8 +4,16 @@ import WatchConnectivity
 
 actor AppleWatchSensorActivityArchive {
     struct AccelerationRestoreReceipt: Sendable {
+        fileprivate let id: UUID
         let previous: [TaptionWatchAccelerationChunk]
+        fileprivate let insertedIDs: Set<UUID>
         let fileExisted: Bool
+    }
+
+    private struct PendingAccelerationRestore {
+        let receipt: AccelerationRestoreReceipt
+        var concurrentIDs: Set<UUID> = []
+        var lastConcurrentWriteAt: Date?
     }
 
     private enum Error: Swift.Error {
@@ -18,6 +26,9 @@ actor AppleWatchSensorActivityArchive {
     private let retentionInterval: TimeInterval
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private var pendingAccelerationRestore: PendingAccelerationRestore?
+    private var accelerationRestoreWaiters:
+        [UUID: CheckedContinuation<Void, any Swift.Error>] = [:]
 
     init(
         fileURL: URL,
@@ -58,16 +69,26 @@ actor AppleWatchSensorActivityArchive {
         now: Date = .now
     ) throws {
         var values = try load()
-        if let existing = values.first(where: {
+        if let index = values.firstIndex(where: {
             $0.sessionID == summary.sessionID
                 && $0.sequence == summary.sequence
         }) {
-            guard existing == summary else {
+            let existingRevision = values[index].ambientRevision ?? 0
+            let revision = summary.ambientRevision ?? 0
+            guard revision > existingRevision else {
+                if revision == existingRevision, values[index] != summary {
+                    throw Error.conflictingSensorSummary
+                }
+                return
+            }
+            guard summary.isAmbient == true,
+                  values[index].isAmbient == true else {
                 throw Error.conflictingSensorSummary
             }
-            return
+            values[index] = summary
+        } else {
+            values.append(summary)
         }
-        values.append(summary)
         let cutoff = now.addingTimeInterval(-retentionInterval)
         values.removeAll { $0.endedAt < cutoff }
         values.sort {
@@ -114,27 +135,41 @@ actor AppleWatchSensorActivityArchive {
         now: Date = .now
     ) throws {
         var values = try loadAccelerationChunks()
-        if let existing = values.first(where: { $0.id == chunk.id }) {
-            guard existing == chunk else {
-                throw Error.conflictingAccelerationChunk
+        let changed = try insertAccelerationChunk(
+            chunk,
+            into: &values,
+            now: now
+        )
+        if changed {
+            try writeAccelerationChunks(values)
+        }
+        guard var pending = pendingAccelerationRestore else { return }
+        if changed {
+            pending.lastConcurrentWriteAt = max(
+                pending.lastConcurrentWriteAt ?? now,
+                now
+            )
+            let currentIDs = Set(values.map(\.id))
+            pending.concurrentIDs.formIntersection(currentIDs)
+            if currentIDs.contains(chunk.id) {
+                pending.concurrentIDs.insert(chunk.id)
             }
-            return
+        } else if pending.receipt.insertedIDs.contains(chunk.id) {
+            pending.concurrentIDs.insert(chunk.id)
+            pending.lastConcurrentWriteAt = max(
+                pending.lastConcurrentWriteAt ?? now,
+                now
+            )
         }
-        values.append(chunk)
-        let cutoff = now.addingTimeInterval(-retentionInterval)
-        values.removeAll { $0.endedAt < cutoff }
-        values.sort { $0.endedAt < $1.endedAt }
-        if values.count > 10_000 {
-            values.removeFirst(values.count - 10_000)
-        }
-        try writeAccelerationChunks(values)
+        pendingAccelerationRestore = pending
     }
 
     func recordForRestore(
         _ chunks: [TaptionWatchAccelerationChunk],
         now: Date = .now
-    ) throws -> AccelerationRestoreReceipt? {
+    ) async throws -> AccelerationRestoreReceipt? {
         guard !chunks.isEmpty else { return nil }
+        try await waitForAccelerationRestore()
         let previous = try loadAccelerationChunks()
         let stored = Dictionary(
             previous.map { ($0.id, $0) },
@@ -160,20 +195,46 @@ actor AppleWatchSensorActivityArchive {
             values.removeFirst(values.count - 10_000)
         }
         let receipt = AccelerationRestoreReceipt(
+            id: UUID(),
             previous: previous,
+            insertedIDs: Set(inserted.map(\.id)),
             fileExisted: FileManager.default.fileExists(
                 atPath: accelerationFileURL.path
             )
         )
         try writeAccelerationChunks(values)
+        pendingAccelerationRestore = PendingAccelerationRestore(
+            receipt: receipt
+        )
         return receipt
     }
 
     func rollbackAccelerationRestore(
         _ receipt: AccelerationRestoreReceipt
     ) throws {
-        if receipt.fileExisted {
-            try writeAccelerationChunks(receipt.previous)
+        guard let pending = pendingAccelerationRestore,
+              pending.receipt.id == receipt.id else { return }
+        defer { finishAccelerationRestore(receipt) }
+        var values = receipt.previous
+        if let lastWriteAt = pending.lastConcurrentWriteAt {
+            let concurrent = try loadAccelerationChunks().filter {
+                pending.concurrentIDs.contains($0.id)
+            }
+            values.append(contentsOf: concurrent)
+            let cutoff = lastWriteAt.addingTimeInterval(-retentionInterval)
+            values.removeAll { $0.endedAt < cutoff }
+            values.sort {
+                if $0.endedAt != $1.endedAt {
+                    return $0.endedAt < $1.endedAt
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            if values.count > 10_000 {
+                values.removeFirst(values.count - 10_000)
+            }
+        }
+        if receipt.fileExisted || !values.isEmpty {
+            try writeAccelerationChunks(values)
         } else if FileManager.default.fileExists(
             atPath: accelerationFileURL.path
         ) {
@@ -181,9 +242,14 @@ actor AppleWatchSensorActivityArchive {
         }
     }
 
+    func commitAccelerationRestore(_ receipt: AccelerationRestoreReceipt) {
+        finishAccelerationRestore(receipt)
+    }
+
     func validateAppend(
         _ chunks: [TaptionWatchAccelerationChunk]
-    ) throws {
+    ) async throws {
+        try await waitForAccelerationRestore()
         let stored = Dictionary(
             try loadAccelerationChunks().map { ($0.id, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -200,9 +266,10 @@ actor AppleWatchSensorActivityArchive {
         }
     }
 
-    func accelerationChunks(in span: TimeSpan) throws
+    func accelerationChunks(in span: TimeSpan) async throws
         -> [TaptionWatchAccelerationChunk] {
-        try loadAccelerationChunks()
+        try await waitForAccelerationRestore()
+        return try loadAccelerationChunks()
             .filter {
                 TimeSpan(start: $0.startedAt, end: $0.endedAt)
                     .intersection(with: span) != nil
@@ -215,9 +282,10 @@ actor AppleWatchSensorActivityArchive {
             }
     }
 
-    func allAccelerationChunks() throws
+    func allAccelerationChunks() async throws
         -> [TaptionWatchAccelerationChunk] {
-        try loadAccelerationChunks().sorted {
+        try await waitForAccelerationRestore()
+        return try loadAccelerationChunks().sorted {
             if $0.startedAt != $1.startedAt {
                 return $0.startedAt < $1.startedAt
             }
@@ -225,15 +293,24 @@ actor AppleWatchSensorActivityArchive {
         }
     }
 
-    func accelerationSamples(in span: TimeSpan) throws
+    func accelerationSamples(in span: TimeSpan) async throws
         -> [TaptionWatchAccelerationSample] {
-        try accelerationChunks(in: span)
+        try await waitForAccelerationRestore()
+        let samples = try loadAccelerationChunks()
+            .filter {
+                TimeSpan(start: $0.startedAt, end: $0.endedAt)
+                    .intersection(with: span) != nil
+            }
+            .sorted {
+                if $0.startedAt != $1.startedAt {
+                    return $0.startedAt < $1.startedAt
+                }
+                return $0.sequence < $1.sequence
+            }
             .flatMap(\.samples)
             .filter { span.contains($0.capturedAt) }
-            .reduce(into: [UUID: TaptionWatchAccelerationSample]()) {
-                $0[$1.id] = $1
-            }
-            .values
+        return TaptionWatchAmbientSampleDeduplicationPolicy
+            .uniqueSamples(samples)
             .sorted {
                 if $0.capturedAt == $1.capturedAt {
                     return $0.sequence < $1.sequence
@@ -242,7 +319,8 @@ actor AppleWatchSensorActivityArchive {
             }
     }
 
-    func deleteAll() throws {
+    func deleteAll() async throws {
+        try await waitForAccelerationRestore()
         for url in [fileURL, accelerationFileURL]
         where FileManager.default.fileExists(atPath: url.path) {
             try FileManager.default.removeItem(at: url)
@@ -268,6 +346,64 @@ actor AppleWatchSensorActivityArchive {
             [TaptionWatchAccelerationChunk].self,
             from: Data(contentsOf: accelerationFileURL)
         )
+    }
+
+    private func insertAccelerationChunk(
+        _ chunk: TaptionWatchAccelerationChunk,
+        into values: inout [TaptionWatchAccelerationChunk],
+        now: Date
+    ) throws -> Bool {
+        if let existing = values.first(where: { $0.id == chunk.id }) {
+            guard existing == chunk else {
+                throw Error.conflictingAccelerationChunk
+            }
+            return false
+        }
+        values.append(chunk)
+        let cutoff = now.addingTimeInterval(-retentionInterval)
+        values.removeAll { $0.endedAt < cutoff }
+        values.sort { $0.endedAt < $1.endedAt }
+        if values.count > 10_000 {
+            values.removeFirst(values.count - 10_000)
+        }
+        return true
+    }
+
+    private func waitForAccelerationRestore() async throws {
+        while pendingAccelerationRestore != nil {
+            try Task.checkCancellation()
+            let waiterID = UUID()
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation {
+                    (continuation: CheckedContinuation<Void, any Swift.Error>) in
+                    guard pendingAccelerationRestore != nil else {
+                        continuation.resume()
+                        return
+                    }
+                    accelerationRestoreWaiters[waiterID] = continuation
+                }
+            } onCancel: {
+                Task { await self.cancelAccelerationRestoreWaiter(waiterID) }
+            }
+        }
+        try Task.checkCancellation()
+    }
+
+    private func cancelAccelerationRestoreWaiter(_ id: UUID) {
+        accelerationRestoreWaiters.removeValue(forKey: id)?
+            .resume(throwing: CancellationError())
+    }
+
+    private func finishAccelerationRestore(
+        _ receipt: AccelerationRestoreReceipt
+    ) {
+        guard pendingAccelerationRestore?.receipt.id == receipt.id else {
+            return
+        }
+        pendingAccelerationRestore = nil
+        let waiters = Array(accelerationRestoreWaiters.values)
+        accelerationRestoreWaiters.removeAll(keepingCapacity: false)
+        waiters.forEach { $0.resume() }
     }
 
     private func writeAccelerationChunks(
@@ -660,9 +796,10 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var latestPayloadData: Data?
     private var commandHandler: (@Sendable (TaptionWatchCommand) -> Void)?
     private var sensorSummaryHandler:
-        (@Sendable (TaptionWatchSensorSummary, Date, String?) -> Void)?
+        (@Sendable (TaptionWatchSensorSummary, Date, String?, String?) -> Void)?
     private var accelerationChunkHandler:
-        (@Sendable (TaptionWatchAccelerationChunk, Date, String?) -> Void)?
+        (@Sendable (TaptionWatchAccelerationChunk, Date, String?, String?) -> Void)?
+    var onAmbientAcknowledgementRequested: (@Sendable (String) -> Void)?
     private var healthSnapshotHandler:
         (@Sendable (TaptionWatchHealthSnapshot, Date, String?) -> Void)?
     /// 워치가 보낸 "맞아요 / 아니에요" 응답. AppModel이 별도로 연결한다.
@@ -685,13 +822,15 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
             onSensorSummary: @escaping @Sendable (
                 TaptionWatchSensorSummary,
                 Date,
+                String?,
                 String?
             ) -> Void,
             onAccelerationChunk: @escaping @Sendable (
                 TaptionWatchAccelerationChunk,
                 Date,
+                String?,
                 String?
-            ) -> Void = { _, _, _ in },
+            ) -> Void = { _, _, _, _ in },
             onHealthSnapshot: @escaping @Sendable (
                 TaptionWatchHealthSnapshot,
                 Date,
@@ -734,6 +873,19 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         session.delegate = self
         session.activate()
         statusHandler?(connectionState(for: session))
+    }
+
+    func acknowledgeAmbientDelivery(_ id: String) {
+        guard id.hasPrefix("summary:") || id.hasPrefix("chunk:") else {
+            return
+        }
+        onAmbientAcknowledgementRequested?(id)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        session.transferUserInfo([
+            TaptionWatchEnvelope.ambientAcknowledgementKey: id,
+        ])
     }
 
     func update(payload: TaptionWatchPayload) throws {
@@ -1113,6 +1265,9 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         let requestID = envelope[
             TaptionWatchEnvelope.dataSyncRequestIDKey
         ] as? String
+        let ambientDeliveryID = envelope[
+            TaptionWatchEnvelope.ambientDeliveryIDKey
+        ] as? String
         var envelopeFields: [String: String] = [
             "transport": transport,
             "keys": envelope.keys.sorted().joined(separator: ","),
@@ -1203,7 +1358,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                 )
                 // Live and reliable delivery can contain the same summary.
                 // Persistence is idempotent, so forwarding both avoids loss.
-                sensorSummaryHandler?(summary, receivedAt, requestID)
+                sensorSummaryHandler?(
+                    summary,
+                    receivedAt,
+                    requestID,
+                    ambientDeliveryID
+                )
                 latestWatchDataAt = max(
                     latestWatchDataAt ?? summary.endedAt,
                     summary.endedAt
@@ -1248,7 +1408,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                         requestID.map { ["request_id": $0] } ?? [:]
                     ) { _, new in new }
                 )
-                accelerationChunkHandler?(chunk, receivedAt, requestID)
+                accelerationChunkHandler?(
+                    chunk,
+                    receivedAt,
+                    requestID,
+                    ambientDeliveryID
+                )
                 latestWatchDataAt = max(
                     latestWatchDataAt ?? chunk.endedAt,
                     chunk.endedAt

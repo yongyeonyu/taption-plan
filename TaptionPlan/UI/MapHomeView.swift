@@ -463,6 +463,15 @@ enum MapHomeTransitBoardingRefreshPolicy {
     }
 }
 
+enum MapHomeTransitPOIRefreshPolicy {
+    static func canStart(
+        isBootstrapped: Bool,
+        isSceneActive: Bool
+    ) -> Bool {
+        isBootstrapped && isSceneActive
+    }
+}
+
 struct MapHomeDayCacheReadingsFingerprint: Codable, Equatable, Sendable {
     let count: Int
     let firstID: UUID?
@@ -583,6 +592,7 @@ private struct MapHomeRouteCoordinateBounds {
     var maxLatitude = -CLLocationDegrees.greatestFiniteMagnitude
     var minLongitude = CLLocationDegrees.greatestFiniteMagnitude
     var maxLongitude = -CLLocationDegrees.greatestFiniteMagnitude
+    private var longitudeOrigin: CLLocationDegrees?
 
     var isEmpty: Bool {
         minLatitude == CLLocationDegrees.greatestFiniteMagnitude
@@ -595,8 +605,14 @@ private struct MapHomeRouteCoordinateBounds {
             }
             minLatitude = min(minLatitude, coordinate.latitude)
             maxLatitude = max(maxLatitude, coordinate.latitude)
-            minLongitude = min(minLongitude, coordinate.longitude)
-            maxLongitude = max(maxLongitude, coordinate.longitude)
+            let origin = longitudeOrigin ?? coordinate.longitude
+            longitudeOrigin = origin
+            let longitude = origin + RouteTimelineLongitude.shortestDelta(
+                from: origin,
+                to: coordinate.longitude
+            )
+            minLongitude = min(minLongitude, longitude)
+            maxLongitude = max(maxLongitude, longitude)
         }
     }
 }
@@ -616,19 +632,27 @@ enum MapHomeRouteFitMath {
         }
         guard !valid.isEmpty else { return nil }
         let latitudes = valid.map(\.latitude)
-        let longitudes = valid.map(\.longitude)
         let latitudeDelta = max(
             minimumLatitudeDelta,
             (latitudes.max()! - latitudes.min()!) * padding
         )
+        let origin = valid[0].longitude
+        let unwrappedLongitudes = valid.map {
+            origin + RouteTimelineLongitude.shortestDelta(
+                from: origin,
+                to: $0.longitude
+            )
+        }
         let longitudeDelta = max(
             minimumLongitudeDelta,
-            (longitudes.max()! - longitudes.min()!) * padding
+            (unwrappedLongitudes.max()! - unwrappedLongitudes.min()!) * padding
         )
         return MKCoordinateRegion(
             center: CLLocationCoordinate2D(
                 latitude: (latitudes.max()! + latitudes.min()!) / 2,
-                longitude: (longitudes.max()! + longitudes.min()!) / 2
+                longitude: RouteTimelineLongitude.normalized(
+                    (unwrappedLongitudes.max()! + unwrappedLongitudes.min()!) / 2
+                )
             ),
             span: MKCoordinateSpan(
                 latitudeDelta: latitudeDelta,
@@ -1352,10 +1376,12 @@ enum MapHomeRouteReadingsPolicy {
         in span: TimeSpan
     ) -> [SensorReading] {
         var readingsByID: [UUID: SensorReading] = [:]
-        for reading in existing where span.contains(reading.timestamp) {
+        for reading in existing where RouteTimelineTimestamp.isValid(reading.timestamp)
+            && span.contains(reading.timestamp) {
             readingsByID[reading.id] = reading
         }
-        for reading in loaded where span.contains(reading.timestamp) {
+        for reading in loaded where RouteTimelineTimestamp.isValid(reading.timestamp)
+            && span.contains(reading.timestamp) {
             readingsByID[reading.id] = reading
         }
         return readingsByID.values.sorted {
@@ -1427,6 +1453,140 @@ struct MapHomeRouteReadingsTaskKey: Hashable {
     }
 }
 
+struct MapHomePreparedRouteReadings: Sendable {
+    let normalized: [SensorReading]
+    let display: [SensorReading]
+    let sourceCount: Int
+    let filteredCount: Int
+    let watchSourceCount: Int
+    let readingsWithPointCount: Int
+    let railMatchCount: Int
+    let stationNameCount: Int
+}
+
+enum MapHomeRouteReadingsPreparation {
+    static func latestRouteInputSignature(
+        _ reading: SensorReading?
+    ) -> String {
+        guard let reading else { return "none" }
+        let point = reading.point.map {
+            [
+                String($0.latitude),
+                String($0.longitude),
+                String($0.altitude),
+                String($0.horizontalAccuracy),
+                String($0.verticalAccuracy),
+            ].joined(separator: ",")
+        } ?? "none"
+        return [
+            reading.id.uuidString,
+            String(reading.timestamp.timeIntervalSinceReferenceDate),
+            point,
+            reading.gpsAvailable ? "gps" : "approximate",
+            reading.locationFixQuality?.rawValue ?? "unspecified",
+            reading.speedMetersPerSecond.map { String($0) } ?? "none",
+            reading.speedAccuracyMetersPerSecond.map { String($0) } ?? "none",
+            reading.courseDegrees.map { String($0) } ?? "none",
+            reading.courseAccuracyDegrees.map { String($0) } ?? "none",
+            reading.motion.rawValue,
+            reading.sequence.map { String($0) } ?? "none",
+            reading.sourceDevice?.rawValue ?? "none",
+            reading.trackingSessionEnded == true
+                ? "session-ended"
+                : "session-open",
+        ].joined(separator: "|")
+    }
+
+    static func prepare(
+        routeReadings: [SensorReading],
+        liveReadings: [SensorReading],
+        latestReading: SensorReading?,
+        dayStart: Date,
+        dayEnd: Date,
+        cancellationCheck: () throws -> Void
+    ) throws -> MapHomePreparedRouteReadings {
+        try cancellationCheck()
+        let sourceCount = routeReadings.count + liveReadings.count
+            + (latestReading == nil ? 0 : 1)
+        var dayReadings: [SensorReading] = []
+        dayReadings.reserveCapacity(sourceCount)
+        var watchSourceCount = 0
+        for readings in [routeReadings, liveReadings] {
+            for (index, reading) in readings.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                if reading.sourceDevice == .appleWatch {
+                    watchSourceCount += 1
+                }
+                guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                      reading.timestamp >= dayStart,
+                      reading.timestamp < dayEnd else { continue }
+                dayReadings.append(reading)
+            }
+        }
+        if let latestReading {
+            if latestReading.sourceDevice == .appleWatch {
+                watchSourceCount += 1
+            }
+            if RouteTimelineTimestamp.isValid(latestReading.timestamp),
+               latestReading.timestamp >= dayStart,
+               latestReading.timestamp < dayEnd {
+                dayReadings.append(latestReading)
+            }
+        }
+        let filtered = try TaptionRouteEngineAdapter.filteredReadings(
+            from: dayReadings,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
+        let normalized = try RouteTimelineDataEngine
+            .normalizedDisplayReadings(
+                filtered,
+                cancellationCheck: cancellationCheck
+            )
+        try cancellationCheck()
+        let display = try RouteTimelineDataEngine.displayReadings(
+            from: normalized,
+            cancellationCheck: cancellationCheck
+        )
+        try cancellationCheck()
+
+        var readingsWithPointCount = 0
+        var railMatchCount = 0
+        var stationNames = Set<String>()
+        for (index, reading) in normalized.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if reading.point != nil { readingsWithPointCount += 1 }
+            if reading.matchesRailRoute { railMatchCount += 1 }
+            if let name = reading.nearbyStationName { stationNames.insert(name) }
+        }
+        try cancellationCheck()
+        return MapHomePreparedRouteReadings(
+            normalized: normalized,
+            display: display,
+            sourceCount: sourceCount,
+            filteredCount: filtered.count,
+            watchSourceCount: watchSourceCount,
+            readingsWithPointCount: readingsWithPointCount,
+            railMatchCount: railMatchCount,
+            stationNameCount: stationNames.count
+        )
+    }
+}
+
+struct MapHomeRouteReadingsPreparationGeneration: Sendable {
+    private(set) var currentID = UUID()
+
+    @discardableResult
+    mutating func advance() -> UUID {
+        currentID = UUID()
+        return currentID
+    }
+
+    func accepts(_ preparationID: UUID) -> Bool {
+        currentID == preparationID
+    }
+}
+
 @MainActor
 struct MapHomeView: View {
     private static let dayViewSignpostLog = OSLog(
@@ -1474,6 +1634,9 @@ struct MapHomeView: View {
     private var userTrackingModeRawValue = MapHomeUserTrackingMode.idle.rawValue
     @State private var currentLocationRequestTask: Task<Void, Never>?
     @State private var initialLocationRequestTask: Task<Void, Never>?
+    @State private var routeReadingsPreparationTask: Task<Void, Never>?
+    @State private var routeReadingsPreparationGeneration =
+        MapHomeRouteReadingsPreparationGeneration()
     @State private var hasAppliedInitialLocation = false
     @State private var hasAppliedInitialMapFocus = false
     @State private var hasCancelledInitialLocationFocus = false
@@ -1502,6 +1665,7 @@ struct MapHomeView: View {
         .wholeDayUnconfirmed,
     ]
     @State private var routeProjection: RouteTimelineProjection?
+    @State private var routeActualIndex: RouteTimelineDataEngine.ActualIndex?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
     @State private var dayDataSnapshot: PlanDayDataSnapshot?
     @State private var dayDataIsPreview = false
@@ -1521,6 +1685,9 @@ struct MapHomeView: View {
     @State private var pendingForecastRouteState: MapHomeForecastRouteState?
     @State private var expectedRouteCache: [ExpectedRouteRequest: [CLLocationCoordinate2D]] = [:]
     @State private var expectedRouteRefreshTask: Task<Void, Never>?
+    @State private var expectedRouteRefreshGeneration: UInt64 = 0
+    @State private var wbsExpectedRouteRequests: [ExpectedRouteRequest] = []
+    @State private var wbsExpectedRouteRequestsInputKey: MapHomeExpectedRouteInputKey?
     @State private var liveRouteProjectionRefreshTask: Task<Void, Never>?
     @State private var visibleMapSpan = MKCoordinateSpan(
         latitudeDelta: 0.025,
@@ -1960,7 +2127,14 @@ struct MapHomeView: View {
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
+        .onAppear {
+            prepareRouteProjectionReadings()
+        }
         .onDisappear {
+            routeReadingsPreparationTask?.cancel()
+            routeReadingsPreparationTask = nil
+            routeReadingsPreparationGeneration.advance()
+            lastPreparedRouteReadingsSignature = nil
             currentLocationRequestTask?.cancel()
             currentLocationRequestTask = nil
             initialLocationRequestTask?.cancel()
@@ -1969,6 +2143,7 @@ struct MapHomeView: View {
             mapSearchTask = nil
             expectedRouteRefreshTask?.cancel()
             expectedRouteRefreshTask = nil
+            expectedRouteRefreshGeneration &+= 1
             liveRouteProjectionRefreshTask?.cancel()
             liveRouteProjectionRefreshTask = nil
             transitPOIRefreshTask?.cancel()
@@ -2052,7 +2227,11 @@ struct MapHomeView: View {
             )
             applyInitialMapFocusIfNeeded()
         }
-        .onChange(of: model.latestSensorReading?.point) { _, _ in
+        .onChange(
+            of: MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                model.latestSensorReading
+            )
+        ) { _, _ in
             guard Calendar.autoupdatingCurrent.isDateInToday(
                 model.selectedDate
             ) else { return }
@@ -2062,10 +2241,10 @@ struct MapHomeView: View {
                 scheduleTransitPOIRefresh()
             }
             scheduleLiveRouteProjectionRefresh()
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
-            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.weather) { _, weather in
             cachedWeatherContexts = MapHomeWeatherDisplayCache.merged(
@@ -2114,23 +2293,29 @@ struct MapHomeView: View {
         }
         .onChange(of: model.snapshot.actuals) { _, _ in
             dayDataSnapshot = nil
+            routeActualIndex = nil
             refreshTimeRailSegments()
             requestRouteProjectionRefresh()
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.sleepSessions) { _, _ in
             requestRouteProjectionRefresh(preparingReadings: true)
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.settings.confirmedSleepSpans) { _, _ in
             requestRouteProjectionRefresh()
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.travel) { _, _ in
             dayDataSnapshot = nil
+            routeActualIndex = nil
             refreshTimeRailSegments()
             requestRouteProjectionRefresh(preparingReadings: true)
             scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.snapshot.places) { _, _ in
             dayDataSnapshot = nil
+            routeActualIndex = nil
             requestWBSPlaybackProjectionRefresh()
             scheduleExpectedRouteRefresh()
         }
@@ -2153,13 +2338,35 @@ struct MapHomeView: View {
                 scheduleTransitPOIRefresh()
             }
             scheduleLiveRouteProjectionRefresh()
+            scheduleExpectedRouteRefresh()
+        }
+        .onChange(of: model.liveRouteState.lastUpdatedAt) { _, _ in
+            guard Calendar.autoupdatingCurrent.isDateInToday(
+                model.selectedDate
+            ) else { return }
+            prepareRouteProjectionReadings()
+            scheduleLiveRouteProjectionRefresh()
+            scheduleExpectedRouteRefresh()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
+                routeReadingsPreparationTask?.cancel()
+                routeReadingsPreparationTask = nil
+                routeReadingsPreparationGeneration.advance()
+                lastPreparedRouteReadingsSignature = nil
+                liveRouteProjectionRefreshTask?.cancel()
+                liveRouteProjectionRefreshTask = nil
+                expectedRouteRefreshTask?.cancel()
+                expectedRouteRefreshTask = nil
+                expectedRouteRefreshGeneration &+= 1
+                pendingForecastRouteState = nil
+                routeDocumentProjectionGate.reset()
                 transitPOIRefreshTask?.cancel()
                 transitPOIRefreshTask = nil
                 transitPOIRefreshGeneration &+= 1
                 stopDayPlayback(resetProgress: true)
+            } else {
+                prepareRouteProjectionReadings()
             }
         }
     }
@@ -3772,9 +3979,6 @@ struct MapHomeView: View {
 
     private func startDayPlayback() {
         dayPlaybackTask?.cancel()
-        if (selectedTimelineMinute ?? 0) >= MapHomeTimeSidebarMath.fullDayMinutes {
-            selectedTimelineMinute = 0
-        }
         let currentDate = Date.now
         let playbackEndMinute = MapHomeDayPlaybackMath.playbackEndMinute(
             for: model.selectedDate,
@@ -3921,7 +4125,8 @@ struct MapHomeView: View {
     ) -> [MapHomePlaybackMovementRange] {
         let ordered = readings
             .filter {
-                $0.timestamp >= dayStart
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.timestamp >= dayStart
                     && $0.timestamp < dayEnd
                     && $0.point != nil
                     && $0.motion.isMovement
@@ -5858,7 +6063,10 @@ struct MapHomeView: View {
                 + model.liveRouteState.readings
                 + (model.latestSensorReading.map { [$0] } ?? [])
         )
-        .filter { seen.insert($0.id).inserted }
+        .filter {
+            RouteTimelineTimestamp.isValid($0.timestamp)
+                && seen.insert($0.id).inserted
+        }
         .sorted { $0.timestamp < $1.timestamp }
     }
 
@@ -6057,7 +6265,11 @@ struct MapHomeView: View {
     }
 
     private func resetDayScopedMapState(for date: Date) {
+        routeReadingsPreparationTask?.cancel()
+        routeReadingsPreparationTask = nil
+        routeReadingsPreparationGeneration.advance()
         dayDataSnapshot = nil
+        routeActualIndex = nil
         routeReadings = []
         normalizedRouteReadings = []
         historicalPlaybackReadings = []
@@ -6074,6 +6286,9 @@ struct MapHomeView: View {
         expectedRouteCache.removeAll(keepingCapacity: true)
         expectedRouteRefreshTask?.cancel()
         expectedRouteRefreshTask = nil
+        expectedRouteRefreshGeneration &+= 1
+        wbsExpectedRouteRequests = []
+        wbsExpectedRouteRequestsInputKey = nil
         liveRouteProjectionRefreshTask?.cancel()
         liveRouteProjectionRefreshTask = nil
         nearbyTransitPlaces = []
@@ -6093,8 +6308,13 @@ struct MapHomeView: View {
 
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
-              (dayDataIsPreview || dayDataSnapshot.sourceFingerprint
-                == model.daySourceFingerprint(for: model.selectedDate)),
+              (dayDataIsPreview
+                || dayDataSnapshot.matchesCurrentSource(
+                    revision: model.dayProjectionRevision,
+                    fingerprint: model.daySourceFingerprint(
+                        for: model.selectedDate
+                    )
+                )),
               dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
@@ -6205,48 +6425,177 @@ struct MapHomeView: View {
     }
 
     private func scheduleExpectedRouteRefresh() {
+        expectedRouteRefreshGeneration &+= 1
+        let refreshGeneration = expectedRouteRefreshGeneration
+        if pendingForecastRouteState != nil {
+            pendingForecastRouteState = nil
+        }
         expectedRouteRefreshTask?.cancel()
+        guard scenePhase == .active else {
+            expectedRouteRefreshTask = nil
+            return
+        }
         expectedRouteRefreshTask = Task { @MainActor in
-            defer { expectedRouteRefreshTask = nil }
-            await refreshExpectedRouteOverlays()
+            do {
+                try await Task.sleep(nanoseconds: 100_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled,
+                  scenePhase == .active,
+                  refreshGeneration == expectedRouteRefreshGeneration else {
+                return
+            }
+            await refreshExpectedRouteOverlays(generation: refreshGeneration)
+            guard !Task.isCancelled,
+                  refreshGeneration == expectedRouteRefreshGeneration else {
+                return
+            }
+            expectedRouteRefreshTask = nil
         }
     }
 
-    private func refreshExpectedRouteOverlays() async {
+    private func currentExpectedRouteInputKey() -> MapHomeExpectedRouteInputKey {
         let calendar = Calendar.autoupdatingCurrent
         let selectedDay = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: selectedDay)
             ?? selectedDay.addingTimeInterval(24 * 60 * 60)
-        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
-        let places = currentDayDataSnapshot?.places ?? model.snapshot.places
-        let requests = ExpectedRouteRequestEngine.requests(
-            travel: travel,
-            places: places,
-            readings: normalizedRouteReadings,
-            in: TimeSpan(start: selectedDay, end: dayEnd),
-            through: dayEnd,
-            frequentPlaces: model.settings.frequentPlaces
+        let dayData = currentDayDataSnapshot
+        let liveReadings = model.liveRouteState.readings
+        let latestReading = model.latestSensorReading
+        return MapHomeExpectedRouteInputKey(
+            selectedDay: selectedDay,
+            dayEnd: dayEnd,
+            dayProjectionRevision: model.dayProjectionRevision,
+            daySourceRevision: dayData?.sourceRevision,
+            daySourceUpdatedAt: dayData?.sourceUpdatedAt,
+            daySourceFingerprint: dayData?.sourceFingerprint,
+            isPreview: dayDataIsPreview,
+            readingsPreparationID: routeReadingsPreparationGeneration.currentID,
+            normalizedReadings: MapHomeDayCacheReadingsFingerprint(
+                readings: normalizedRouteReadings
+            ),
+            normalizedLastRouteInputSignature:
+                MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                    normalizedRouteReadings.last
+                ),
+            liveReadings: MapHomeDayCacheReadingsFingerprint(
+                readings: liveReadings
+            ),
+            liveLastUpdatedAt: model.liveRouteState.lastUpdatedAt,
+            liveLastRouteInputSignature:
+                MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                    liveReadings.last
+                ),
+            latestRouteInputSignature:
+                MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                    latestReading
+                )
         )
+    }
+
+    private func isCurrentExpectedRouteRefresh(
+        generation: UInt64,
+        inputKey: MapHomeExpectedRouteInputKey
+    ) -> Bool {
+        !Task.isCancelled
+            && scenePhase == .active
+            && generation == expectedRouteRefreshGeneration
+            && inputKey == currentExpectedRouteInputKey()
+    }
+
+    private func refreshExpectedRouteOverlays(generation: UInt64) async {
+        guard scenePhase == .active, !Task.isCancelled,
+              generation == expectedRouteRefreshGeneration else { return }
+        let inputKey = currentExpectedRouteInputKey()
+        let selectedDay = inputKey.selectedDay
+        let dayEnd = inputKey.dayEnd
+        let dayData = currentDayDataSnapshot
+        let travel = dayData?.travel ?? model.snapshot.travel
+        let placesCount = (dayData?.places ?? model.snapshot.places).count
+        let normalizedReadings = normalizedRouteReadings
+        let playbackReadings = currentDayReadings
+        let day = TimeSpan(start: selectedDay, end: dayEnd)
+        let worker = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            var overlayOperationCount = 0
+            let overlayRequests = ExpectedRouteRequestEngine.requests(
+                travel: travel,
+                places: [],
+                readings: normalizedReadings,
+                in: day,
+                through: dayEnd,
+                frequentPlaces: [],
+                operationCount: &overlayOperationCount
+            )
+            try Task.checkCancellation()
+            var playbackOperationCount = 0
+            let playbackRequests = ExpectedRouteRequestEngine.requests(
+                travel: travel,
+                places: [],
+                readings: playbackReadings,
+                in: day,
+                through: dayEnd,
+                frequentPlaces: [],
+                operationCount: &playbackOperationCount
+            )
+            try Task.checkCancellation()
+            return MapHomeExpectedRouteRequestBatch(
+                overlayRequests: overlayRequests,
+                playbackRequests: playbackRequests,
+                overlayOperationCount: overlayOperationCount,
+                playbackOperationCount: playbackOperationCount,
+                readingsWithPointCount: normalizedReadings.reduce(into: 0) {
+                    if $1.point != nil { $0 += 1 }
+                },
+                unconfirmedTravelCount: travel.reduce(into: 0) {
+                    if !$1.isConfirmed { $0 += 1 }
+                }
+            )
+        }
+        let batch: MapHomeExpectedRouteRequestBatch
+        do {
+            batch = try await withTaskCancellationHandler(
+                operation: { try await worker.value },
+                onCancel: { worker.cancel() }
+            )
+        } catch {
+            worker.cancel()
+            return
+        }
+        guard isCurrentExpectedRouteRefresh(
+            generation: generation,
+            inputKey: inputKey
+        ) else { return }
+        if wbsExpectedRouteRequests != batch.playbackRequests {
+            wbsExpectedRouteRequests = batch.playbackRequests
+        }
+        if wbsExpectedRouteRequestsInputKey != inputKey {
+            wbsExpectedRouteRequestsInputKey = inputKey
+        }
         TaptionPlanDiagnosticsLogger.shared.record(
             "expected_route_requests_built",
             fields: expectedRouteRequestDiagnostics(
-                requests: requests,
-                travel: travel,
-                places: places,
-                readings: normalizedRouteReadings,
+                requests: batch.overlayRequests,
+                travelCount: travel.count,
+                unconfirmedTravelCount: batch.unconfirmedTravelCount,
+                placesCount: placesCount,
+                readingsCount: normalizedReadings.count,
+                readingsWithPointCount: batch.readingsWithPointCount,
                 dayStart: selectedDay,
-                dayEnd: dayEnd
+                dayEnd: dayEnd,
+                operationCount: batch.overlayOperationCount,
+                playbackOperationCount: batch.playbackOperationCount
             )
         )
-        guard !Task.isCancelled,
-              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
-        else { return }
         if expectedRouteCache.count > 128 {
             expectedRouteCache.removeAll(keepingCapacity: true)
         }
 
         let limitedRequests = Array(
-            requests.prefix(MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes)
+            batch.overlayRequests.prefix(
+                MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+            )
         )
         let fallbackExpected = limitedRequests.map {
             expectedRouteOverlay(for: $0, coordinates: [
@@ -6262,7 +6611,8 @@ struct MapHomeView: View {
         }
         let fallbackProjection = makeWBSPlaybackProjection(
             expected: fallbackExpected,
-            generated: []
+            generated: [],
+            expectedRouteRequests: batch.playbackRequests
         )
         let excludedLegIDs = Set(
             fallbackExpected.map { "movement-\($0.id.uuidString)" }
@@ -6290,18 +6640,27 @@ struct MapHomeView: View {
         _ = applyForecastRouteState(
             MapHomeForecastRouteState(
                 expected: fallbackExpected,
-                generated: fallbackGenerated
+                generated: fallbackGenerated,
+                refreshGeneration: generation,
+                inputKey: inputKey
             )
         )
 
         var resolvedExpected: [MapHomeExpectedRouteOverlay] = []
         for request in limitedRequests {
-            guard !Task.isCancelled else { return }
+            guard isCurrentExpectedRouteRefresh(
+                generation: generation,
+                inputKey: inputKey
+            ) else { return }
             let coordinates: [CLLocationCoordinate2D]
             if let cached = expectedRouteCache[request], cached.count >= 2 {
                 coordinates = cached
             } else {
                 let resolved = await mapKitRouteCoordinates(for: request)
+                guard isCurrentExpectedRouteRefresh(
+                    generation: generation,
+                    inputKey: inputKey
+                ) else { return }
                 if resolved.count >= 2 {
                     expectedRouteCache[request] = resolved
                     coordinates = resolved
@@ -6322,13 +6681,15 @@ struct MapHomeView: View {
                 expectedRouteOverlay(for: request, coordinates: coordinates)
             )
         }
-        guard !Task.isCancelled,
-              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
-        else { return }
+        guard isCurrentExpectedRouteRefresh(
+            generation: generation,
+            inputKey: inputKey
+        ) else { return }
 
         let resolvedProjection = makeWBSPlaybackProjection(
             expected: resolvedExpected,
-            generated: []
+            generated: [],
+            expectedRouteRequests: batch.playbackRequests
         )
         var resolvedGenerated = Array(
             generatedWBSRouteOverlays(
@@ -6358,16 +6719,24 @@ struct MapHomeView: View {
         )
         var networkResolvedCount = 0
         for index in resolvedGenerated.indices {
-            guard !Task.isCancelled else { return }
+            guard isCurrentExpectedRouteRefresh(
+                generation: generation,
+                inputKey: inputKey
+            ) else { return }
             guard let transport = wbsRouteTransport(for: resolvedGenerated[index].mode),
                   let start = resolvedGenerated[index].coordinates.first,
                   let end = resolvedGenerated[index].coordinates.last else { continue }
-            if let coordinates = await MapHomeAppleRouteResolver.shared.resolve(
+            let coordinates = await MapHomeAppleRouteResolver.shared.resolve(
                 start: start,
                 end: end,
                 transport: transport,
                 departureDate: resolvedGenerated[index].departureDate
-            ), coordinates.count >= 2 {
+            )
+            guard isCurrentExpectedRouteRefresh(
+                generation: generation,
+                inputKey: inputKey
+            ) else { return }
+            if let coordinates, coordinates.count >= 2 {
                 resolvedGenerated[index] = MapHomeWBSGeneratedRouteOverlay(
                     id: resolvedGenerated[index].id,
                     mode: resolvedGenerated[index].mode,
@@ -6395,13 +6764,16 @@ struct MapHomeView: View {
             generated: resolvedGenerated,
             excludedLegIDs: resolvedExcludedLegIDs
         )
-        guard !Task.isCancelled,
-              calendar.isDate(selectedDay, inSameDayAs: model.selectedDate)
-        else { return }
+        guard isCurrentExpectedRouteRefresh(
+            generation: generation,
+            inputKey: inputKey
+        ) else { return }
         let didApply = applyForecastRouteState(
             MapHomeForecastRouteState(
                 expected: resolvedExpected,
-                generated: resolvedGenerated
+                generated: resolvedGenerated,
+                refreshGeneration: generation,
+                inputKey: inputKey
             )
         )
         guard didApply else { return }
@@ -6455,25 +6827,26 @@ struct MapHomeView: View {
 
     private func expectedRouteRequestDiagnostics(
         requests: [ExpectedRouteRequest],
-        travel: [TravelSegment],
-        places: [PlaceStay],
-        readings: [SensorReading],
+        travelCount: Int,
+        unconfirmedTravelCount: Int,
+        placesCount: Int,
+        readingsCount: Int,
+        readingsWithPointCount: Int,
         dayStart: Date,
-        dayEnd: Date
+        dayEnd: Date,
+        operationCount: Int,
+        playbackOperationCount: Int
     ) -> [String: String] {
         let requestModes = Dictionary(grouping: requests, by: \.mode)
         let requestSegmentIDs = Set(requests.map(\.segmentID))
-        let unconfirmedTravel = travel.filter { !$0.isConfirmed }
         return [
             "day_start": String(dayStart.timeIntervalSince1970),
             "day_end": String(dayEnd.timeIntervalSince1970),
-            "travel_segments": String(travel.count),
-            "unconfirmed_travel_segments": String(unconfirmedTravel.count),
-            "places": String(places.count),
-            "readings": String(readings.count),
-            "readings_with_point": String(
-                readings.filter { $0.point != nil }.count
-            ),
+            "travel_segments": String(travelCount),
+            "unconfirmed_travel_segments": String(unconfirmedTravelCount),
+            "places": String(placesCount),
+            "readings": String(readingsCount),
+            "readings_with_point": String(readingsWithPointCount),
             "request_count": String(requests.count),
             "request_unique_segment_count": String(requestSegmentIDs.count),
             "request_duplicate_segment_count": String(
@@ -6484,6 +6857,8 @@ struct MapHomeView: View {
                 return "\(mode.rawValue)=\(count)"
             }.joined(separator: ","),
             "route_cache_count": String(expectedRouteCache.count),
+            "request_operations": String(operationCount),
+            "playback_request_operations": String(playbackOperationCount),
         ]
     }
 
@@ -6595,6 +6970,10 @@ struct MapHomeView: View {
     private func applyForecastRouteState(
         _ state: MapHomeForecastRouteState
     ) -> Bool {
+        guard state.refreshGeneration == expectedRouteRefreshGeneration,
+              state.inputKey == currentExpectedRouteInputKey() else {
+            return false
+        }
         guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             pendingForecastRouteState = state
             hasDeferredWBSPlaybackRefresh = true
@@ -6980,18 +7359,16 @@ struct MapHomeView: View {
               calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
         if !isPreview,
-           dayData.sourceFingerprint != model.daySourceFingerprint(for: date) {
-            // Raw samples remain valid when classification changes during I/O.
-            // Rebase once on the current source without another async read.
-            dayData = PlanDayDataSnapshot.make(
-                date: date,
-                sourceRevision: model.dayProjectionRevision,
-                source: model.snapshot,
-                sensorResult: SensorReadingsLoadResult(
-                    readings: dayData.readings,
-                    isComplete: dayData.isComplete
-                )
-            )
+           dayData.sourceRevision != model.dayProjectionRevision {
+            guard let rebased = await model.rebasePlanDayDataSnapshot(
+                from: dayData,
+                for: date
+            ) else { return }
+            guard !Task.isCancelled,
+                  TaptionDataDeletionFence.allows(generation: dataGeneration),
+                  calendar.isDate(date, inSameDayAs: model.selectedDate)
+            else { return }
+            dayData = rebased
         }
         if !isPreview, !dayData.isComplete,
            let previous = dayDataSnapshot, previous.isComplete,
@@ -7021,6 +7398,7 @@ struct MapHomeView: View {
             fields: snapshotFields
         )
         dayDataSnapshot = dayData
+        routeActualIndex = nil
         dayDataIsPreview = isPreview
         let merged = MapHomeRouteReadingsPolicy.merging(
             existing: routeReadings,
@@ -7074,7 +7452,10 @@ struct MapHomeView: View {
     }
 
     private func scheduleTransitPOIRefresh() {
-        guard model.isBootstrapped else { return }
+        guard MapHomeTransitPOIRefreshPolicy.canStart(
+            isBootstrapped: model.isBootstrapped,
+            isSceneActive: scenePhase == .active
+        ) else { return }
         let dataGeneration = TaptionDataDeletionFence.currentGeneration()
         guard TaptionDataDeletionFence.allows(
             generation: dataGeneration
@@ -7095,6 +7476,7 @@ struct MapHomeView: View {
             )
             guard !Task.isCancelled,
                   generation == transitPOIRefreshGeneration,
+                  scenePhase == .active,
                   TaptionDataDeletionFence.allows(
                     generation: dataGeneration
                   ),
@@ -7502,6 +7884,7 @@ struct MapHomeView: View {
     private func requestRouteProjectionRefresh(
         preparingReadings: Bool = false
     ) {
+        guard scenePhase == .active else { return }
         guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             routeDocumentProjectionGate.deferRefresh(
                 preparingReadings: preparingReadings
@@ -7517,12 +7900,17 @@ struct MapHomeView: View {
 
     private func scheduleLiveRouteProjectionRefresh() {
         liveRouteProjectionRefreshTask?.cancel()
+        guard scenePhase == .active else {
+            liveRouteProjectionRefreshTask = nil
+            return
+        }
         liveRouteProjectionRefreshTask = Task { @MainActor in
             do {
                 try await Task.sleep(nanoseconds: 100_000_000)
             } catch {
                 return
             }
+            guard !Task.isCancelled, scenePhase == .active else { return }
             mapRenderCache.invalidateRouteData()
             requestRouteProjectionRefresh(preparingReadings: true)
             if let timestamp = [
@@ -7575,9 +7963,19 @@ struct MapHomeView: View {
 
     @discardableResult
     private func refreshRouteProjection() -> RouteTimelineProjection? {
+        guard scenePhase == .active else { return nil }
         mapRenderCache.invalidateRouteData()
         let calendar = Calendar.autoupdatingCurrent
         let dayData = currentDayDataSnapshot
+        let actuals = dayData?.actuals ?? model.snapshot.actuals
+        let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
+            selectedDate: model.selectedDate,
+            actuals: actuals,
+            calendar: calendar
+        )
+        if routeActualIndex == nil {
+            routeActualIndex = actualIndex
+        }
         let timelineDate = routeTimelineDate
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
@@ -7591,7 +7989,8 @@ struct MapHomeView: View {
             selectedDate: model.selectedDate,
             through: projectionDate,
             selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
-            actuals: dayData?.actuals ?? model.snapshot.actuals,
+            actuals: actuals,
+            actualIndex: actualIndex,
             travel: dayData?.travel ?? model.snapshot.travel,
             readings: displayRouteReadings,
             readingsAreNormalized: true,
@@ -7610,6 +8009,7 @@ struct MapHomeView: View {
     }
 
     private func prepareRouteProjectionReadings() {
+        guard scenePhase == .active else { return }
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
@@ -7629,59 +8029,81 @@ struct MapHomeView: View {
             model.latestSensorReading.map {
                 String($0.timestamp.timeIntervalSinceReferenceDate)
             } ?? "none",
+            MapHomeRouteReadingsPreparation.latestRouteInputSignature(
+                model.latestSensorReading
+            ),
         ].joined(separator: "|")
         guard preparationSignature != lastPreparedRouteReadingsSignature else {
-            requestWBSPlaybackProjectionRefresh()
+            if routeReadingsPreparationTask == nil {
+                requestWBSPlaybackProjectionRefresh()
+            }
             return
         }
         lastPreparedRouteReadingsSignature = preparationSignature
-        let sourceReadings = routeReadings
-            + model.liveRouteState.readings
-            + (model.latestSensorReading.map { [$0] } ?? [])
-        let dayReadings = sourceReadings.filter {
-            $0.timestamp >= dayStart && $0.timestamp < dayEnd
+        routeReadingsPreparationTask?.cancel()
+        let preparationID = routeReadingsPreparationGeneration.advance()
+        let routeReadingsSnapshot = routeReadings
+        let liveReadingsSnapshot = model.liveRouteState.readings
+        let latestReading = model.latestSensorReading
+        routeReadingsPreparationTask = Task { @MainActor in
+            let worker = Task.detached(priority: .utility) {
+                try MapHomeRouteReadingsPreparation.prepare(
+                    routeReadings: routeReadingsSnapshot,
+                    liveReadings: liveReadingsSnapshot,
+                    latestReading: latestReading,
+                    dayStart: dayStart,
+                    dayEnd: dayEnd,
+                    cancellationCheck: { try Task.checkCancellation() }
+                )
+            }
+            let prepared: MapHomePreparedRouteReadings
+            do {
+                prepared = try await withTaskCancellationHandler(
+                    operation: { try await worker.value },
+                    onCancel: { worker.cancel() }
+                )
+            } catch {
+                worker.cancel()
+                guard routeReadingsPreparationGeneration.accepts(preparationID) else {
+                    return
+                }
+                routeReadingsPreparationTask = nil
+                lastPreparedRouteReadingsSignature = nil
+                return
+            }
+            guard !Task.isCancelled,
+                  routeReadingsPreparationGeneration.accepts(preparationID),
+                  lastPreparedRouteReadingsSignature == preparationSignature,
+                  scenePhase == .active else { return }
+            normalizedRouteReadings = prepared.normalized
+            historicalPlaybackReadings = prepared.normalized
+            displayRouteReadings = prepared.display
+            routeReadingsPreparationTask = nil
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "map_route_readings_prepared",
+                fields: [
+                    "day_start": String(dayStart.timeIntervalSince1970),
+                    "source_readings": String(prepared.sourceCount),
+                    "filtered_readings": String(prepared.filteredCount),
+                    "normalized_readings": String(prepared.normalized.count),
+                    "display_readings": String(prepared.display.count),
+                    "watch_source_readings": String(prepared.watchSourceCount),
+                    "readings_with_point": String(prepared.readingsWithPointCount),
+                    "readings_rail_match": String(prepared.railMatchCount),
+                    "readings_station_name": String(prepared.stationNameCount),
+                ]
+            )
+            requestRouteProjectionRefresh()
+            requestWBSPlaybackProjectionRefresh()
+            scheduleExpectedRouteRefresh()
         }
-        let filteredRouteReadings = TaptionRouteEngineAdapter
-            .filteredReadings(from: dayReadings)
-        let normalized = RouteTimelineDataEngine
-            .normalizedDisplayReadings(filteredRouteReadings)
-        normalizedRouteReadings = normalized
-        historicalPlaybackReadings = normalized
-        displayRouteReadings = RouteTimelineDataEngine.displayReadings(
-            from: normalizedRouteReadings
-        )
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "map_route_readings_prepared",
-            fields: [
-                "day_start": String(dayStart.timeIntervalSince1970),
-                "source_readings": String(sourceReadings.count),
-                "filtered_readings": String(filteredRouteReadings.count),
-                "normalized_readings": String(normalizedRouteReadings.count),
-                "display_readings": String(displayRouteReadings.count),
-                "watch_source_readings": String(
-                    sourceReadings.filter {
-                        $0.sourceDevice == .appleWatch
-                    }.count
-                ),
-                "readings_with_point": String(
-                    normalizedRouteReadings.filter { $0.point != nil }.count
-                ),
-                "readings_rail_match": String(
-                    normalizedRouteReadings.filter(\.matchesRailRoute).count
-                ),
-                "readings_station_name": String(
-                    Set(
-                        normalizedRouteReadings.compactMap(
-                            \.nearbyStationName
-                        )
-                    ).count
-                ),
-            ]
-        )
-        requestWBSPlaybackProjectionRefresh()
     }
 
     private func requestWBSPlaybackProjectionRefresh() {
+        guard scenePhase == .active else {
+            hasDeferredWBSPlaybackRefresh = true
+            return
+        }
         guard !isTimelineInteractionActive || isDayPlaybackRunning else {
             hasDeferredWBSPlaybackRefresh = true
             return
@@ -7693,7 +8115,9 @@ struct MapHomeView: View {
         if let pendingForecastRouteState {
             self.pendingForecastRouteState = nil
             hasDeferredWBSPlaybackRefresh = false
-            _ = applyForecastRouteState(pendingForecastRouteState)
+            if !applyForecastRouteState(pendingForecastRouteState) {
+                refreshWBSPlaybackProjection()
+            }
             return
         }
         guard hasDeferredWBSPlaybackRefresh else { return }
@@ -7702,6 +8126,11 @@ struct MapHomeView: View {
     }
 
     private func refreshWBSPlaybackProjection() {
+        guard scenePhase == .active else {
+            hasDeferredWBSPlaybackRefresh = true
+            return
+        }
+        hasDeferredWBSPlaybackRefresh = false
         var next = makeWBSPlaybackProjection(
             expected: expectedRouteOverlays,
             generated: wbsGeneratedRouteOverlays
@@ -7729,9 +8158,14 @@ struct MapHomeView: View {
 
     private func makeWBSPlaybackProjection(
         expected: [MapHomeExpectedRouteOverlay],
-        generated: [MapHomeWBSGeneratedRouteOverlay]
+        generated: [MapHomeWBSGeneratedRouteOverlay],
+        expectedRouteRequests: [ExpectedRouteRequest]? = nil
     ) -> MapHomeWBSPlaybackProjection {
         let dayData = currentDayDataSnapshot
+        let playbackRequests = expectedRouteRequests
+            ?? (wbsExpectedRouteRequestsInputKey == currentExpectedRouteInputKey()
+                ? wbsExpectedRouteRequests
+                : [])
         let expectedRoutes = expected.map { overlay in
             MapHomeWBSResolvedRoute(
                 legID: "movement-\(overlay.id.uuidString)",
@@ -7749,6 +8183,7 @@ struct MapHomeView: View {
             places: dayData?.places ?? model.snapshot.places,
             travel: dayData?.travel ?? model.snapshot.travel,
             readings: currentDayReadings,
+            expectedRouteRequests: playbackRequests,
             resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes,
             actuals: dayData?.actuals ?? model.snapshot.actuals,
             confirmedSleepSpans: model.settings.confirmedSleepSpans,
@@ -10830,8 +11265,11 @@ enum MapHomeExpectedRoutePlaybackMath {
                 return CLLocationCoordinate2D(
                     latitude: coordinates[index].latitude
                         + (next.latitude - coordinates[index].latitude) * ratio,
-                    longitude: coordinates[index].longitude
-                        + (next.longitude - coordinates[index].longitude) * ratio
+                    longitude: RouteTimelineLongitude.interpolate(
+                        from: coordinates[index].longitude,
+                        to: next.longitude,
+                        fraction: ratio
+                    )
                 )
             }
             traversed += length
@@ -10898,7 +11336,11 @@ enum MapHomeRouteTimelinePlaybackMath {
                 let ratio = min(max((target - traversed) / length, 0), 1)
                 return GeoPoint(
                     latitude: blend(first: points[index].latitude, second: next.latitude, ratio: ratio),
-                    longitude: blend(first: points[index].longitude, second: next.longitude, ratio: ratio),
+                    longitude: RouteTimelineLongitude.interpolate(
+                        from: points[index].longitude,
+                        to: next.longitude,
+                        fraction: ratio
+                    ),
                     altitude: blend(first: points[index].altitude, second: next.altitude, ratio: ratio),
                     horizontalAccuracy: blend(first: points[index].horizontalAccuracy, second: next.horizontalAccuracy, ratio: ratio),
                     verticalAccuracy: blend(first: points[index].verticalAccuracy, second: next.verticalAccuracy, ratio: ratio)
@@ -11063,8 +11505,11 @@ private struct MapHomeExpectedRouteOverlay: Identifiable {
                     CLLocationCoordinate2D(
                         latitude: coordinates[index].latitude
                             + (next.latitude - coordinates[index].latitude) * ratio,
-                        longitude: coordinates[index].longitude
-                            + (next.longitude - coordinates[index].longitude) * ratio
+                        longitude: RouteTimelineLongitude.interpolate(
+                            from: coordinates[index].longitude,
+                            to: next.longitude,
+                            fraction: ratio
+                        )
                     )
                 )
                 resultLengths.append(length * ratio)
@@ -11162,9 +11607,37 @@ private struct MapHomeWBSGeneratedRouteOverlay: Identifiable {
     }
 }
 
+private struct MapHomeExpectedRouteRequestBatch: Sendable {
+    let overlayRequests: [ExpectedRouteRequest]
+    let playbackRequests: [ExpectedRouteRequest]
+    let overlayOperationCount: Int
+    let playbackOperationCount: Int
+    let readingsWithPointCount: Int
+    let unconfirmedTravelCount: Int
+}
+
+private struct MapHomeExpectedRouteInputKey: Equatable, Sendable {
+    let selectedDay: Date
+    let dayEnd: Date
+    let dayProjectionRevision: UInt64
+    let daySourceRevision: UInt64?
+    let daySourceUpdatedAt: Date?
+    let daySourceFingerprint: String?
+    let isPreview: Bool
+    let readingsPreparationID: UUID
+    let normalizedReadings: MapHomeDayCacheReadingsFingerprint
+    let normalizedLastRouteInputSignature: String
+    let liveReadings: MapHomeDayCacheReadingsFingerprint
+    let liveLastUpdatedAt: Date?
+    let liveLastRouteInputSignature: String
+    let latestRouteInputSignature: String
+}
+
 private struct MapHomeForecastRouteState {
     let expected: [MapHomeExpectedRouteOverlay]
     let generated: [MapHomeWBSGeneratedRouteOverlay]
+    let refreshGeneration: UInt64
+    let inputKey: MapHomeExpectedRouteInputKey
 }
 
 struct MapHomeSubwayRouteOverlay: Identifiable {
@@ -13401,24 +13874,14 @@ enum MapHomeApplePlaybackMath {
             segmentLengths: segmentLengths
         ) else { return 0 }
         if !sameLocation(currentCoordinate, lookAhead) {
-            return stableHeading(
-                MapHomeVectorNavigationMath.bearing(
-                    from: currentCoordinate,
-                    to: lookAhead
-                )
-            )
+            return stableHeading(bearing(from: currentCoordinate, to: lookAhead))
         }
         let lookBehind = MapHomeExpectedRoutePlaybackMath.coordinate(
             atProgress: max(0, progress - lookAheadProgress),
             coordinates: coordinates,
             segmentLengths: segmentLengths
         ) ?? currentCoordinate
-        return stableHeading(
-            MapHomeVectorNavigationMath.bearing(
-                from: lookBehind,
-                to: currentCoordinate
-            )
-        )
+        return stableHeading(bearing(from: lookBehind, to: currentCoordinate))
     }
 
     static func stableHeading(_ heading: CLLocationDirection) -> CLLocationDirection {
@@ -13436,7 +13899,8 @@ enum MapHomeApplePlaybackMath {
     ) -> CLLocationDirection? {
         let points = readings
             .compactMap { reading -> (Date, CLLocationCoordinate2D)? in
-                guard let point = reading.point,
+                guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                      let point = reading.point,
                       point.latitude.isFinite,
                       point.longitude.isFinite,
                       (-90...90).contains(point.latitude),
@@ -13456,11 +13920,11 @@ enum MapHomeApplePlaybackMath {
            before.1.latitude != after.1.latitude
                 || before.1.longitude != after.1.longitude {
             return stableHeading(
-                MapHomeVectorNavigationMath.bearing(from: before.1, to: after.1)
+                bearing(from: before.1, to: after.1)
             )
         }
         return stableHeading(
-            MapHomeVectorNavigationMath.bearing(
+            bearing(
                 from: points[points.count - 2].1,
                 to: points[points.count - 1].1
             )
@@ -13471,7 +13935,25 @@ enum MapHomeApplePlaybackMath {
         _ lhs: CLLocationCoordinate2D,
         _ rhs: CLLocationCoordinate2D
     ) -> Bool {
-        lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+        lhs.latitude == rhs.latitude
+            && RouteTimelineLongitude.shortestDelta(
+                from: lhs.longitude,
+                to: rhs.longitude
+            ) == 0
+    }
+
+    private static func bearing(
+        from start: CLLocationCoordinate2D,
+        to end: CLLocationCoordinate2D
+    ) -> CLLocationDirection {
+        let adjustedEnd = CLLocationCoordinate2D(
+            latitude: end.latitude,
+            longitude: start.longitude + RouteTimelineLongitude.shortestDelta(
+                from: start.longitude,
+                to: end.longitude
+            )
+        )
+        return MapHomeVectorNavigationMath.bearing(from: start, to: adjustedEnd)
     }
 
     private static func distance(

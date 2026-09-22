@@ -155,10 +155,16 @@ public enum TaptionPlanCanonicalStorage {
 
 /// Bounded in-memory day cache. Values are loaded only on demand and evicted least-recently-used first.
 public actor TaptionPlanDayLRUCache<Key: Hashable & Sendable, Value: Sendable> {
+    private struct InFlightRequest {
+        let id: UUID
+        let task: Task<Value?, Error>
+    }
+
     public let capacity: Int
     private var values: [Key: Value] = [:]
     private var recency: [Key] = []
     private var loader: (@Sendable (Key) async throws -> Value?)?
+    private var inFlight: [Key: InFlightRequest] = [:]
 
     public init(capacity: Int, loader: (@Sendable (Key) async throws -> Value?)? = nil) {
         precondition(capacity > 0)
@@ -168,20 +174,55 @@ public actor TaptionPlanDayLRUCache<Key: Hashable & Sendable, Value: Sendable> {
 
     public func value(for key: Key) async throws -> Value? {
         if let value = values[key] { touch(key); return value }
-        guard let loaded = try await loader?(key) else { return nil }
-        insert(loaded, for: key)
-        return loaded
+        if let request = inFlight[key] {
+            let loaded = try await request.task.value
+            if inFlight[key]?.id != request.id {
+                return values[key]
+            }
+            return values[key] ?? loaded
+        }
+        guard let loader else { return nil }
+        let requestID = UUID()
+        let task = Task<Value?, Error> {
+            try await loader(key)
+        }
+        inFlight[key] = InFlightRequest(id: requestID, task: task)
+        do {
+            let loaded = try await task.value
+            guard inFlight[key]?.id == requestID else {
+                return values[key]
+            }
+            inFlight.removeValue(forKey: key)
+            guard let loaded else { return nil }
+            insert(loaded, for: key)
+            return loaded
+        } catch {
+            if inFlight[key]?.id == requestID {
+                inFlight.removeValue(forKey: key)
+            }
+            throw error
+        }
     }
 
     public func insert(_ value: Value, for key: Key) {
+        inFlight.removeValue(forKey: key)
         values[key] = value; touch(key)
         while recency.count > capacity, let oldest = recency.first {
             recency.removeFirst(); values.removeValue(forKey: oldest)
         }
     }
 
-    public func remove(_ key: Key) { values.removeValue(forKey: key); recency.removeAll { $0 == key } }
-    public func removeAll() { values.removeAll(); recency.removeAll() }
+    public func remove(_ key: Key) {
+        values.removeValue(forKey: key)
+        recency.removeAll { $0 == key }
+        inFlight.removeValue(forKey: key)
+    }
+
+    public func removeAll() {
+        values.removeAll()
+        recency.removeAll()
+        inFlight.removeAll()
+    }
     public func handleMemoryPressure() { removeAll() }
     public var count: Int { values.count }
 

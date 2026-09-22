@@ -57,19 +57,38 @@ public struct TaptionRobustScalarFilter: Sendable {
     }
 
     public func decisions(for values: [Double?]) -> [TaptionScalarQualityDecision] {
-        let physical = values.map(physicalDecision)
-        return values.indices.map { index in
+        decisions(for: values, cancellationCheck: {})
+    }
+
+    public func decisions(
+        for values: [Double?],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [TaptionScalarQualityDecision] {
+        var physical: [(value: Double?, reason: TaptionScalarQualityReason?)] = []
+        physical.reserveCapacity(values.count)
+        for (index, value) in values.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            physical.append(physicalDecision(value))
+        }
+
+        var decisions: [TaptionScalarQualityDecision] = []
+        decisions.reserveCapacity(values.count)
+        for index in values.indices {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             if let rejection = physical[index].reason {
-                return .init(index: index, acceptedValue: nil, reason: rejection)
+                decisions.append(.init(index: index, acceptedValue: nil, reason: rejection))
+                continue
             }
             guard let value = physical[index].value else {
-                return .init(index: index, acceptedValue: nil, reason: nil)
+                decisions.append(.init(index: index, acceptedValue: nil, reason: nil))
+                continue
             }
             let lower = max(values.startIndex, index - configuration.windowRadius)
             let upper = min(values.endIndex, index + configuration.windowRadius + 1)
             let window = physical[lower..<upper].compactMap(\.value).sorted()
             guard window.count >= configuration.minimumWindowSampleCount else {
-                return .init(index: index, acceptedValue: value, reason: nil)
+                decisions.append(.init(index: index, acceptedValue: value, reason: nil))
+                continue
             }
             let median = Self.median(window)
             let deviations = window.map { abs($0 - median) }.sorted()
@@ -78,10 +97,13 @@ public struct TaptionRobustScalarFilter: Sendable {
             let score = abs(value - median) / scale
             if score > configuration.modifiedZScoreThreshold,
                !hasCoherentNeighbor(at: index, value: value, physical: physical) {
-                return .init(index: index, acceptedValue: nil, reason: .isolatedOutlier)
+                decisions.append(.init(index: index, acceptedValue: nil, reason: .isolatedOutlier))
+                continue
             }
-            return .init(index: index, acceptedValue: value, reason: nil)
+            decisions.append(.init(index: index, acceptedValue: value, reason: nil))
         }
+        try cancellationCheck()
+        return decisions
     }
 
     public func filteredValues(_ values: [Double?]) -> [Double?] {

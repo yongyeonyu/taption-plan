@@ -20,6 +20,34 @@ public struct TaptionPlanDayKey: Codable, Comparable, Hashable, Sendable {
         )
     }
 
+    /// The textual SQLite key is fixed-width and must sort lexicographically
+    /// in the same order as the components. The bounds are calendar-neutral;
+    /// calendars with a thirteenth month remain representable.
+    public var isValidStorageKey: Bool {
+        (1...9_999).contains(year)
+            && (1...13).contains(month)
+            && (1...31).contains(day)
+    }
+
+    public init?(storageKey: String) {
+        let bytes = Array(storageKey.utf8)
+        guard bytes.count == 10,
+              bytes[4] == 45,
+              bytes[7] == 45,
+              bytes.enumerated().allSatisfy({ index, byte in
+                  index == 4 || index == 7 || (48...57).contains(byte)
+              }) else {
+            return nil
+        }
+        guard let year = Int(String(decoding: bytes[0..<4], as: UTF8.self)),
+              let month = Int(String(decoding: bytes[5..<7], as: UTF8.self)),
+              let day = Int(String(decoding: bytes[8..<10], as: UTF8.self)) else {
+            return nil
+        }
+        self.init(year: year, month: month, day: day)
+        guard isValidStorageKey else { return nil }
+    }
+
     public static func < (lhs: Self, rhs: Self) -> Bool {
         (lhs.year, lhs.month, lhs.day) < (rhs.year, rhs.month, rhs.day)
     }

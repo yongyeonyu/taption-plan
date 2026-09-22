@@ -73,6 +73,24 @@ final class StorageContractsTests: XCTestCase {
         XCTAssertEqual(decisions[0].acceptedValue, 1)
     }
 
+    func testRobustScalarFilterChecksCancellationDuringLargeInputs() {
+        let filter = TaptionRobustScalarFilter()
+        var checks = 0
+
+        XCTAssertThrowsError(
+            try filter.decisions(
+                for: Array(repeating: 1.0, count: 1_024),
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 3 { throw CancellationError() }
+                }
+            )
+        ) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertEqual(checks, 3)
+    }
+
     func testRobustScalarFilterRejectsSpikeButKeepsCoherentTransition() {
         let filter = TaptionRobustScalarFilter(configuration: .init(
             windowRadius: 3,
@@ -99,6 +117,39 @@ final class StorageContractsTests: XCTestCase {
         let cleared = await cache.count
         XCTAssertEqual(cleared, 0)
     }
+
+    func testBoundedCacheSingleFlightsAndDropsLateLoaderResults() async throws {
+        let gate = CacheLoaderGate()
+        let cache = TaptionPlanDayLRUCache<String, Int>(capacity: 2) { _ in
+            await gate.load()
+        }
+        let first = Task { try await cache.value(for: "same") }
+        await gate.waitForCallCount(1)
+        let second = Task { try await cache.value(for: "same") }
+        let calls = await gate.calls
+        XCTAssertEqual(calls, 1)
+        await gate.release(7)
+        let firstValue = try await first.value
+        let secondValue = try await second.value
+        let cachedValue = try await cache.value(for: "same")
+        XCTAssertEqual(firstValue, 7)
+        XCTAssertEqual(secondValue, 7)
+        XCTAssertEqual(cachedValue, 7)
+
+        let lateGate = CacheLoaderGate()
+        let lateCache = TaptionPlanDayLRUCache<String, Int>(capacity: 2) { _ in
+            await lateGate.load()
+        }
+        let late = Task { try await lateCache.value(for: "same") }
+        await lateGate.waitForCallCount(1)
+        await lateCache.insert(9, for: "same")
+        await lateGate.release(7)
+        let lateValue = try await late.value
+        let lateCachedValue = try await lateCache.value(for: "same")
+        XCTAssertEqual(lateValue, 9)
+        XCTAssertEqual(lateCachedValue, 9)
+    }
+
     func testEnvelopeSeparatesV2StorageDomains() throws {
         let memo = try TaptionPlanMemoRecord(
             occurredAt: Date(timeIntervalSince1970: 100),
@@ -261,5 +312,29 @@ final class StorageContractsTests: XCTestCase {
         let json = String(decoding: try JSONEncoder().encode(media), as: UTF8.self)
         XCTAssertFalse(json.contains("originalData"))
         XCTAssertFalse(json.contains("originalURL"))
+    }
+}
+
+private actor CacheLoaderGate {
+    private(set) var calls = 0
+    private var pending: [CheckedContinuation<Int, Never>] = []
+
+    func load() async -> Int {
+        calls += 1
+        return await withCheckedContinuation { continuation in
+            pending.append(continuation)
+        }
+    }
+
+    func waitForCallCount(_ expected: Int) async {
+        while calls < expected {
+            await Task.yield()
+        }
+    }
+
+    func release(_ value: Int) {
+        let continuations = pending
+        pending.removeAll()
+        continuations.forEach { $0.resume(returning: value) }
     }
 }

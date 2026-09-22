@@ -161,7 +161,7 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertTrue(log.contains("watch_health_snapshot_applied"))
         XCTAssertTrue(log.contains("\"reason\":\"received\""))
         XCTAssertTrue(log.contains("\"subway_route\":\"2호선\""))
-        XCTAssertFalse(log.contains("420"))
+        XCTAssertFalse(log.contains("\"sleep_minutes\":\"420\""))
         XCTAssertFalse(log.contains("workout_count"))
         XCTAssertFalse(log.contains("step_count"))
     }

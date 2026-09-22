@@ -1,5 +1,13 @@
 import Foundation
 
+enum RouteTimestamp {
+    static func isValid(_ date: Date) -> Bool {
+        date.timeIntervalSinceReferenceDate.isFinite
+            && date >= .distantPast
+            && date <= .distantFuture
+    }
+}
+
 public struct RouteCoordinate: Codable, Hashable, Sendable {
     public let latitude: Double
     public let longitude: Double

@@ -20,7 +20,24 @@ struct PlanDayDatabaseMigrationReport: Equatable, Sendable {
     let exactDigestDayCount: Int
 }
 
+struct PlanDayMigrationRange: Sendable {
+    let firstDay: Date
+    var lastDay: Date
+
+    static func nextDay(
+        after day: Date,
+        through lastDay: Date,
+        advance: (Date) -> Date?
+    ) throws -> Date {
+        guard let next = advance(day), next > day, next <= lastDay else {
+            throw PlanDayDatabaseMigrationError.invalidDateRange
+        }
+        return next
+    }
+}
+
 private enum PlanDayDatabaseMigrationError: LocalizedError {
+    case invalidDateRange
     case rawDigestMismatch(
         day: TaptionPlanDayKey,
         device: TaptionPlanStoreDevice,
@@ -29,6 +46,8 @@ private enum PlanDayDatabaseMigrationError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .invalidDateRange:
+            return "Legacy migration date range could not be enumerated completely."
         case let .rawDigestMismatch(day, device, reason):
             return String(
                 format: "Raw digest mismatch: %@ %04d-%02d-%02d %@",
@@ -133,6 +152,8 @@ actor PlanDayDatabase {
         allowStaleSourceFingerprint: Bool = false
     ) async throws -> PlanDayDataSnapshot? {
         try checkDataGeneration()
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
         guard try await iPhoneStore.migrationCompleted(Self.legacyMigrationMarker) else {
             return nil
         }
@@ -177,8 +198,6 @@ actor PlanDayDatabase {
             iPhoneDigest: iPhoneDigest,
             watchDigest: watchDigest
         ) else {
-            let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-            defer { lock.unlock() }
             try checkDataGeneration()
             if let current = try await iPhoneStore.materializedDay(for: dayKey) {
                 let currentIPhoneDigest = try await iPhoneStore.rawDigest(for: dayKey)
@@ -257,14 +276,23 @@ actor PlanDayDatabase {
     }
 
     func save(_ snapshot: PlanDayDataSnapshot) async throws {
+        try await save(snapshot, ifCurrent: { true })
+    }
+
+    func save(
+        _ snapshot: PlanDayDataSnapshot,
+        ifCurrent: @escaping @MainActor @Sendable () -> Bool
+    ) async throws {
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration()
+        guard await ifCurrent() else { throw CancellationError() }
         try await save(
             snapshot,
             baseEvents: try rawEvents(for: snapshot),
             additionalIPhoneEvents: [],
-            additionalWatchEvents: []
+            additionalWatchEvents: [],
+            ifCurrent: ifCurrent
         )
     }
 
@@ -321,7 +349,7 @@ actor PlanDayDatabase {
         guard try await requiresLegacyMigration() else { return nil }
 
         let calendar = Calendar.autoupdatingCurrent
-        let days = migrationDays(
+        let dayRanges = try migrationDayRanges(
             source: source,
             readings: readings,
             watchSummaries: watchSummaries,
@@ -333,99 +361,136 @@ actor PlanDayDatabase {
             TaptionPlanDayKey(date: $0.capturedAt, calendar: calendar)
         }
         let watchSummariesByDay = Dictionary(grouping: watchSummaries) {
-            TaptionPlanDayKey(date: $0.endedAt, calendar: calendar)
+            TaptionPlanDayKey(
+                date: $0.ambientWindowStart ?? $0.endedAt,
+                calendar: calendar
+            )
         }
         let watchChunksByDay = Dictionary(grouping: watchAccelerationChunks) {
-            TaptionPlanDayKey(date: $0.endedAt, calendar: calendar)
+            TaptionPlanDayKey(
+                date: $0.ambientWindowStart ?? $0.endedAt,
+                calendar: calendar
+            )
         }
         func importAndValidate() async throws -> PlanDayDatabaseMigrationReport {
             var iPhoneEventCount = 0
             var watchEventCount = 0
             var exactDigestDayCount = 0
-            for dayKey in days {
-                guard !Task.isCancelled,
-                      let day = calendar.date(
-                        from: DateComponents(
-                            year: dayKey.year,
-                            month: dayKey.month,
-                            day: dayKey.day
-                        )
-                      ) else { throw CancellationError() }
-                let dayStart = calendar.startOfDay(for: day)
-                let snapshot = PlanDayDataSnapshot.make(
-                    date: dayStart,
-                    sourceRevision: sourceRevision,
-                    source: source,
-                    sensorResult: SensorReadingsLoadResult(
-                        readings: readings,
-                        isComplete: true
-                    ),
-                    calendar: calendar
-                )
-                let baseEvents = try rawEvents(for: snapshot)
-                let extras = try migrationEvents(
-                    rawEnvelopes: rawEnvelopesByDay[dayKey] ?? [],
-                    watchSummaries: watchSummariesByDay[dayKey] ?? [],
-                    watchAccelerationChunks: watchChunksByDay[dayKey] ?? [],
-                    day: dayKey
-                )
-                let expectedIPhone = baseEvents.iPhone + extras.iPhone
-                let expectedWatch = baseEvents.watch + extras.watch
-                try await save(
-                    snapshot,
-                    baseEvents: baseEvents,
-                    additionalIPhoneEvents: extras.iPhone,
-                    additionalWatchEvents: extras.watch
-                )
-                try checkDataGeneration()
+            var dayCount = 0
+            for range in dayRanges {
+                var dayStart = range.firstDay
+                while true {
+                    guard !Task.isCancelled else { throw CancellationError() }
+                    let dayKey = TaptionPlanDayKey(
+                        date: dayStart,
+                        calendar: calendar
+                    )
+                    let snapshot = PlanDayDataSnapshot.make(
+                        date: dayStart,
+                        sourceRevision: sourceRevision,
+                        source: source,
+                        sensorResult: SensorReadingsLoadResult(
+                            readings: readings,
+                            isComplete: true
+                        ),
+                        calendar: calendar
+                    )
+                    let baseEvents = try rawEvents(for: snapshot)
+                    let extras = try migrationEvents(
+                        rawEnvelopes: rawEnvelopesByDay[dayKey] ?? [],
+                        watchSummaries: watchSummariesByDay[dayKey] ?? [],
+                        watchAccelerationChunks: watchChunksByDay[dayKey] ?? [],
+                        day: dayKey
+                    )
+                    let expectedIPhone = baseEvents.iPhone + extras.iPhone
+                    let expectedWatch = baseEvents.watch + extras.watch
+                    try await save(
+                        snapshot,
+                        baseEvents: baseEvents,
+                        additionalIPhoneEvents: extras.iPhone,
+                        additionalWatchEvents: extras.watch
+                    )
+                    try checkDataGeneration()
 
-                let actualIPhone = try await iPhoneStore.rawEvents(for: dayKey)
-                let actualWatch = try await watchStore.rawEvents(for: dayKey)
-                try validate(
-                    expected: expectedIPhone,
-                    actual: actualIPhone,
-                    day: dayKey,
-                    device: .iPhone,
-                    exactDigestDayCount: &exactDigestDayCount
-                )
-                try validate(
-                    expected: expectedWatch,
-                    actual: actualWatch,
-                    day: dayKey,
-                    device: .appleWatch,
-                    exactDigestDayCount: &exactDigestDayCount
-                )
-                iPhoneEventCount += actualIPhone.count
-                watchEventCount += actualWatch.count
+                    let actualIPhone = try await iPhoneStore.rawEvents(for: dayKey)
+                    let actualWatch = try await watchStore.rawEvents(for: dayKey)
+                    try validate(
+                        expected: expectedIPhone,
+                        actual: actualIPhone,
+                        day: dayKey,
+                        device: .iPhone,
+                        exactDigestDayCount: &exactDigestDayCount
+                    )
+                    try validate(
+                        expected: expectedWatch,
+                        actual: actualWatch,
+                        day: dayKey,
+                        device: .appleWatch,
+                        exactDigestDayCount: &exactDigestDayCount
+                    )
+                    iPhoneEventCount += actualIPhone.count
+                    watchEventCount += actualWatch.count
+                    dayCount += 1
+                    if dayStart >= range.lastDay { break }
+                    dayStart = try PlanDayMigrationRange.nextDay(
+                        after: dayStart,
+                        through: range.lastDay
+                    ) { day in
+                        guard let next = calendar.date(
+                            byAdding: .day,
+                            value: 1,
+                            to: day
+                        ) else { return nil }
+                        return calendar.startOfDay(for: next)
+                    }
+                }
             }
             return PlanDayDatabaseMigrationReport(
-                dayCount: days.count,
+                dayCount: dayCount,
                 iPhoneEventCount: iPhoneEventCount,
                 watchEventCount: watchEventCount,
                 exactDigestDayCount: exactDigestDayCount
             )
         }
 
-        let report: PlanDayDatabaseMigrationReport
-        do {
-            report = try await importAndValidate()
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            try await iPhoneStore.resetForIncompleteMigration(
-                Self.legacyMigrationMarker
-            )
-            try await watchStore.resetForIncompleteMigration(
-                Self.legacyMigrationMarker
-            )
-            do {
-                report = try await importAndValidate()
-            } catch is CancellationError {
-                throw CancellationError()
-            } catch {
-                throw error
+        func importResolvingLegacyConflicts()
+            async throws -> PlanDayDatabaseMigrationReport {
+            var resolvedConflicts: [
+                TaptionPlanStoreDevice: Set<TaptionPlanRawEventIdentifier>
+            ] = [:]
+            while true {
+                do {
+                    return try await importAndValidate()
+                } catch let error as TaptionPlanV3StoreError {
+                    guard case let .payloadConflict(device, domain, id) = error
+                    else {
+                        throw error
+                    }
+                    let store = device == .iPhone ? iPhoneStore : watchStore
+                    guard domain == "raw-device-data",
+                          let existing = try await store.rawEvent(
+                            domain: domain,
+                            id: id
+                          ),
+                          existing.provenance.contains("legacy:raw-device-data")
+                    else {
+                        throw error
+                    }
+                    var deviceConflicts = resolvedConflicts[device, default: []]
+                    guard deviceConflicts.insert(
+                        TaptionPlanRawEventIdentifier(
+                            domain: domain,
+                            id: id
+                        )
+                    ).inserted else {
+                        throw error
+                    }
+                    resolvedConflicts[device] = deviceConflicts
+                    try await store.deleteRawEvents(ids: [id], domain: domain)
+                }
             }
         }
+        let report = try await importResolvingLegacyConflicts()
 
         guard !Task.isCancelled else { throw CancellationError() }
         try checkDataGeneration()
@@ -442,7 +507,8 @@ actor PlanDayDatabase {
             watch: [TaptionPlanRawEvent]
         ),
         additionalIPhoneEvents: [TaptionPlanRawEvent],
-        additionalWatchEvents: [TaptionPlanRawEvent]
+        additionalWatchEvents: [TaptionPlanRawEvent],
+        ifCurrent: @escaping @MainActor @Sendable () -> Bool = { true }
     ) async throws {
         let encodeID = OSSignpostID(log: Self.signpostLog)
         os_signpost(
@@ -477,50 +543,166 @@ actor PlanDayDatabase {
         let projectionEvents = iPhoneEvents.filter {
             Self.projectionDomains.contains($0.domain)
         }
-        try await iPhoneStore.appendRawEvents(
-            iPhoneEvents.filter { !Self.projectionDomains.contains($0.domain) }
-        )
-        try await iPhoneStore.replaceRawEvents(
-            projectionEvents,
-            for: dayKey,
-            domains: Self.projectionDomains
-        )
-        try await watchStore.appendRawEvents(
-            events.watch + additionalWatchEvents
-        )
-        let iPhoneDigest = try await iPhoneStore.rawDigest(
+        let nonProjectionEvents = iPhoneEvents.filter {
+            !Self.projectionDomains.contains($0.domain)
+        }
+        let previousProjectionEvents = try await iPhoneStore.rawEvents(
+            for: dayKey
+        ).filter { Self.projectionDomains.contains($0.domain) }
+        let previousMaterializedDay = try await iPhoneStore.materializedDay(
             for: dayKey
         )
-        let watchDigest = try await watchStore.rawDigest(
-            for: dayKey
-        )
-        let combinedDigest = Self.combinedDigest(
-            iPhone: iPhoneDigest,
-            watch: watchDigest
-        )
-        let firstTimestamp = [
-            iPhoneDigest.firstTimestamp,
-            watchDigest.firstTimestamp,
-        ].compactMap { $0 }.min()
-        let lastTimestamp = [
-            iPhoneDigest.lastTimestamp,
-            watchDigest.lastTimestamp,
-        ].compactMap { $0 }.max()
-        let row = TaptionPlanMaterializedDay(
-            device: .iPhone,
-            day: TaptionPlanDayKey(date: snapshot.day),
-            sourceRevision: snapshot.sourceRevision,
-            projectionVersion: TaptionPlanV3Store.projectionVersion,
-            rawDigest: combinedDigest,
-            rawEventCount: iPhoneDigest.eventCount + watchDigest.eventCount,
-            firstTimestamp: firstTimestamp,
-            lastTimestamp: lastTimestamp,
-            payload: materializedPayload
-        )
-        try await iPhoneStore.replaceMaterializedDay(row)
-        Self.logger.debug(
-            "Materialized day saved: day=\(row.day.year)-\(row.day.month)-\(row.day.day, privacy: .public), events=\(row.rawEventCount, privacy: .public)"
-        )
+        let watchEvents = events.watch + additionalWatchEvents
+        var wasInvalidated = false
+        guard !Task.isCancelled, await ifCurrent() else {
+            throw CancellationError()
+        }
+        var appendedNonProjectionIDs = Set<TaptionPlanRawEventIdentifier>()
+        var appendedWatchIDs = Set<TaptionPlanRawEventIdentifier>()
+        do {
+            appendedNonProjectionIDs = try await iPhoneStore.appendRawEvents(
+                nonProjectionEvents
+            )
+            guard !Task.isCancelled, await ifCurrent() else {
+                wasInvalidated = true
+                throw CancellationError()
+            }
+            try await iPhoneStore.replaceRawEvents(
+                projectionEvents,
+                for: dayKey,
+                domains: Self.projectionDomains
+            )
+            guard !Task.isCancelled, await ifCurrent() else {
+                wasInvalidated = true
+                throw CancellationError()
+            }
+            appendedWatchIDs = try await watchStore.appendRawEvents(
+                watchEvents
+            )
+            guard !Task.isCancelled, await ifCurrent() else {
+                wasInvalidated = true
+                throw CancellationError()
+            }
+            let iPhoneDigest = try await iPhoneStore.rawDigest(
+                for: dayKey
+            )
+            let watchDigest = try await watchStore.rawDigest(
+                for: dayKey
+            )
+            let combinedDigest = Self.combinedDigest(
+                iPhone: iPhoneDigest,
+                watch: watchDigest
+            )
+            let firstTimestamp = [
+                iPhoneDigest.firstTimestamp,
+                watchDigest.firstTimestamp,
+            ].compactMap { $0 }.min()
+            let lastTimestamp = [
+                iPhoneDigest.lastTimestamp,
+                watchDigest.lastTimestamp,
+            ].compactMap { $0 }.max()
+            let row = TaptionPlanMaterializedDay(
+                device: .iPhone,
+                day: TaptionPlanDayKey(date: snapshot.day),
+                sourceRevision: snapshot.sourceRevision,
+                projectionVersion: TaptionPlanV3Store.projectionVersion,
+                rawDigest: combinedDigest,
+                rawEventCount: iPhoneDigest.eventCount + watchDigest.eventCount,
+                firstTimestamp: firstTimestamp,
+                lastTimestamp: lastTimestamp,
+                payload: materializedPayload
+            )
+            guard !Task.isCancelled, await ifCurrent() else {
+                wasInvalidated = true
+                throw CancellationError()
+            }
+            let replaced = try await iPhoneStore.replaceMaterializedDay(
+                row,
+                onlyIfCurrent: previousMaterializedDay
+            )
+            guard replaced else {
+                wasInvalidated = true
+                throw CancellationError()
+            }
+            do {
+                guard !Task.isCancelled, await ifCurrent() else {
+                    wasInvalidated = true
+                    throw CancellationError()
+                }
+            } catch {
+                let restored = try await iPhoneStore.restoreMaterializedDay(
+                    previousMaterializedDay,
+                    for: dayKey,
+                    onlyIfCurrent: row
+                )
+                if !restored {
+                    Self.logger.notice(
+                        "Skipped stale materialized rollback because the day changed: \(dayKey.year)-\(dayKey.month)-\(dayKey.day, privacy: .public)"
+                    )
+                }
+                throw error
+            }
+            Self.logger.debug(
+                "Materialized day saved: day=\(row.day.year)-\(row.day.month)-\(row.day.day, privacy: .public), events=\(row.rawEventCount, privacy: .public)"
+            )
+        } catch {
+            if wasInvalidated {
+                let insertedEvents = nonProjectionEvents.filter { event in
+                    appendedNonProjectionIDs.contains(
+                        .init(domain: event.domain, id: event.id)
+                    )
+                }
+                if !insertedEvents.isEmpty {
+                    do {
+                        _ = try await iPhoneStore.removeRawEventsIfUnchanged(
+                            insertedEvents
+                        )
+                    } catch {
+                        Self.logger.error(
+                            "Stale raw event rollback failed: \(dayKey.year)-\(dayKey.month)-\(dayKey.day, privacy: .public)"
+                        )
+                    }
+                }
+            }
+            if wasInvalidated {
+                let insertedEvents = watchEvents.filter { event in
+                    appendedWatchIDs.contains(
+                        .init(domain: event.domain, id: event.id)
+                    )
+                }
+                if !insertedEvents.isEmpty {
+                    do {
+                        _ = try await watchStore.removeRawEventsIfUnchanged(
+                            insertedEvents
+                        )
+                    } catch {
+                        Self.logger.error(
+                            "Stale Watch raw event rollback failed: \(dayKey.year)-\(dayKey.month)-\(dayKey.day, privacy: .public)"
+                        )
+                    }
+                }
+            }
+            if projectionEvents != previousProjectionEvents {
+                do {
+                    let restored = try await iPhoneStore.replaceRawEvents(
+                        previousProjectionEvents,
+                        for: dayKey,
+                        domains: Self.projectionDomains,
+                        onlyIfCurrent: projectionEvents
+                    )
+                    if !restored {
+                        Self.logger.notice(
+                            "Skipped stale projection rollback because raw events changed: \(dayKey.year)-\(dayKey.month)-\(dayKey.day, privacy: .public)"
+                        )
+                    }
+                } catch {
+                    Self.logger.error(
+                        "Stale projection rollback failed: \(dayKey.year)-\(dayKey.month)-\(dayKey.day, privacy: .public)"
+                    )
+                }
+            }
+            throw error
+        }
     }
 
     /// Persists the Watch raw summary in the Watch store and in the iPhone
@@ -530,36 +712,12 @@ actor PlanDayDatabase {
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration()
-        let payload = TaptionPlanCanonicalStorage.envelope(
-            for: try TaptionPlanCanonicalStorage.encode(summary)
-        )
-        let day = TaptionPlanDayKey(date: summary.endedAt)
-        let id = "\(summary.sessionID.uuidString):\(summary.sequence)"
-        let watchEvent = TaptionPlanRawEvent(
-            device: .appleWatch,
-            day: day,
-            timestamp: summary.endedAt,
-            sequence: UInt64(max(0, summary.sequence)),
-            id: id,
-            domain: "watch-sensor-summary",
-            provenance: Self.watchSummaryProvenance,
-            payload: payload
-        )
-        let mergedEvent = TaptionPlanRawEvent(
-            device: .iPhone,
-            day: day,
-            timestamp: summary.endedAt,
-            sequence: UInt64(max(0, summary.sequence)),
-            id: id,
-            domain: "watch-sensor-summary",
-            provenance: Self.watchSummaryProvenance + ["merge:iPhone"],
-            payload: payload
-        )
-        let watchIDs = try await watchStore.appendRawEvents([watchEvent])
+        let events = try Self.watchSummaryEvents(for: summary)
+        let watchIDs = try await watchStore.appendRawEvents([events.watch])
         try checkDataGeneration()
-        let iPhoneIDs = try await iPhoneStore.appendRawEvents([mergedEvent])
+        let iPhoneIDs = try await iPhoneStore.appendRawEvents([events.iPhone])
         if !watchIDs.isEmpty || !iPhoneIDs.isEmpty {
-            try await iPhoneStore.removeMaterializedDay(for: day)
+            try await iPhoneStore.removeMaterializedDay(for: events.watch.day)
         }
     }
 
@@ -597,16 +755,22 @@ actor PlanDayDatabase {
                     TaptionWatchSensorSummary.self,
                     from: encoded
                 )
-                return TimeSpan(
-                    start: summary.startedAt,
-                    end: summary.endedAt
-                ).intersection(with: span) == nil ? nil : summary
+                return summary
             })
         }
-        var seen = Set<String>()
-        return values
+        var latestByWindow: [String: TaptionWatchSensorSummary] = [:]
+        for value in values {
+            let key = "\(value.sessionID.uuidString):\(value.sequence)"
+            let currentRevision = latestByWindow[key]?.ambientRevision ?? 0
+            let revision = value.ambientRevision ?? 0
+            if latestByWindow[key] == nil || revision > currentRevision {
+                latestByWindow[key] = value
+            }
+        }
+        return latestByWindow.values
             .filter {
-                seen.insert("\($0.sessionID.uuidString):\($0.sequence)").inserted
+                TimeSpan(start: $0.startedAt, end: $0.endedAt)
+                    .intersection(with: span) != nil
             }
             .sorted {
                 if $0.startedAt != $1.startedAt {
@@ -614,6 +778,42 @@ actor PlanDayDatabase {
                 }
                 return $0.sequence < $1.sequence
             }
+    }
+
+    func latestWatchSummary(
+        for sessionID: UUID
+    ) async throws -> TaptionWatchSensorSummary? {
+        let idPrefix = "\(sessionID.uuidString):"
+        let events = [
+            try await iPhoneStore.latestRawEvent(
+                domain: "watch-sensor-summary",
+                idPrefix: idPrefix
+            ),
+            try await watchStore.latestRawEvent(
+                domain: "watch-sensor-summary",
+                idPrefix: idPrefix
+            ),
+        ]
+        var latest: TaptionWatchSensorSummary?
+        for event in events.compactMap({ $0 }) {
+            let encoded = try TaptionPlanCanonicalStorage.encodedPayload(
+                from: event.payload
+            )
+            let summary = try TaptionPlanCanonicalStorage.decode(
+                TaptionWatchSensorSummary.self,
+                from: encoded
+            )
+            guard summary.sessionID == sessionID else { continue }
+            if let latest {
+                let isLater = summary.sequence > latest.sequence
+                    || (summary.sequence == latest.sequence
+                        && (summary.ambientRevision ?? 0)
+                            > (latest.ambientRevision ?? 0))
+                guard isLater else { continue }
+            }
+            latest = summary
+        }
+        return latest
     }
 
     func recordWatchAccelerationChunk(
@@ -729,13 +929,46 @@ actor PlanDayDatabase {
         }
     }
 
+    private static func watchSummaryEvents(
+        for summary: TaptionWatchSensorSummary
+    ) throws -> (watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent) {
+        let payload = TaptionPlanCanonicalStorage.envelope(
+            for: try TaptionPlanCanonicalStorage.encode(summary)
+        )
+        let eventDate = summary.ambientWindowStart ?? summary.endedAt
+        let day = TaptionPlanDayKey(date: eventDate)
+        let sequence = UInt64(max(0, summary.sequence))
+        let watchEvent = TaptionPlanRawEvent(
+            device: .appleWatch,
+            day: day,
+            timestamp: eventDate,
+            sequence: sequence,
+            id: summary.rawEventID,
+            domain: "watch-sensor-summary",
+            provenance: Self.watchSummaryProvenance,
+            payload: payload
+        )
+        let mergedEvent = TaptionPlanRawEvent(
+            device: .iPhone,
+            day: day,
+            timestamp: eventDate,
+            sequence: sequence,
+            id: summary.rawEventID,
+            domain: "watch-sensor-summary",
+            provenance: Self.watchSummaryProvenance + ["merge:iPhone"],
+            payload: payload
+        )
+        return (watchEvent, mergedEvent)
+    }
+
     private static func watchAccelerationEvents(
         for chunk: TaptionWatchAccelerationChunk
     ) throws -> (watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent) {
         let payload = TaptionPlanCanonicalStorage.envelope(
             for: try TaptionPlanCanonicalStorage.encode(chunk)
         )
-        let day = TaptionPlanDayKey(date: chunk.endedAt)
+        let eventDate = chunk.ambientWindowStart ?? chunk.endedAt
+        let day = TaptionPlanDayKey(date: eventDate)
         let id = chunk.id.uuidString
         let sequence = UInt64(max(0, chunk.sequence))
         let provenance = [
@@ -746,7 +979,7 @@ actor PlanDayDatabase {
         let watchEvent = TaptionPlanRawEvent(
             device: .appleWatch,
             day: day,
-            timestamp: chunk.endedAt,
+            timestamp: eventDate,
             sequence: sequence,
             id: id,
             domain: "watch-acceleration",
@@ -756,7 +989,7 @@ actor PlanDayDatabase {
         let mergedEvent = TaptionPlanRawEvent(
             device: .iPhone,
             day: day,
-            timestamp: chunk.endedAt,
+            timestamp: eventDate,
             sequence: sequence,
             id: id,
             domain: "watch-acceleration",
@@ -868,12 +1101,17 @@ actor PlanDayDatabase {
         _ day: TaptionPlanDayKey,
         expected: TaptionPlanMaterializedDay?
     ) async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
         try checkDataGeneration()
         if let expected {
             guard let current = try await iPhoneStore.materializedDay(for: day),
                   current == expected else { return }
+        } else {
+            do {
+                _ = try await iPhoneStore.materializedDay(for: day)
+                return
+            } catch let error as TaptionPlanV3StoreError {
+                guard case .databaseCorrupt = error else { throw error }
+            }
         }
         try await iPhoneStore.removeMaterializedDay(for: day)
     }
@@ -910,52 +1148,98 @@ actor PlanDayDatabase {
         )
     }
 
-    private func migrationDays(
+    func migrationDayRanges(
         source: TaptionDataSnapshot,
         readings: [SensorReading],
         watchSummaries: [TaptionWatchSensorSummary],
         watchAccelerationChunks: [TaptionWatchAccelerationChunk],
         rawEnvelopes: [RawDeviceDataEnvelope],
         calendar: Calendar
-    ) -> [TaptionPlanDayKey] {
-        var keys = Set<TaptionPlanDayKey>()
+    ) throws -> [PlanDayMigrationRange] {
+        var ranges: [PlanDayMigrationRange] = []
 
-        func add(_ date: Date) {
-            keys.insert(TaptionPlanDayKey(date: date, calendar: calendar))
+        func startOfDay(_ date: Date) throws -> Date {
+            guard date.timeIntervalSince1970.isFinite else {
+                throw PlanDayDatabaseMigrationError.invalidDateRange
+            }
+            let day = calendar.startOfDay(for: date)
+            guard day.timeIntervalSince1970.isFinite else {
+                throw PlanDayDatabaseMigrationError.invalidDateRange
+            }
+            return day
         }
 
-        func addRange(start: Date, end: Date) {
-            let first = calendar.startOfDay(for: start)
+        func add(_ date: Date) throws {
+            let day = try startOfDay(date)
+            ranges.append(PlanDayMigrationRange(firstDay: day, lastDay: day))
+        }
+
+        func addRange(start: Date, end: Date) throws {
+            let first = try startOfDay(start)
+            guard end.timeIntervalSince1970.isFinite else {
+                throw PlanDayDatabaseMigrationError.invalidDateRange
+            }
             guard end > start else {
-                add(first)
+                ranges.append(PlanDayMigrationRange(firstDay: first, lastDay: first))
                 return
             }
-            var day = first
-            while day < end {
-                add(day)
-                guard let next = calendar.date(byAdding: .day, value: 1, to: day),
-                      next > day else { break }
-                day = next
+            let endDay = try startOfDay(end)
+            let last: Date
+            if endDay == end {
+                guard let previous = calendar.date(
+                    byAdding: .day,
+                    value: -1,
+                    to: endDay
+                ), previous < endDay else {
+                    throw PlanDayDatabaseMigrationError.invalidDateRange
+                }
+                last = try startOfDay(previous)
+            } else {
+                last = endDay
             }
+            guard last >= first else {
+                throw PlanDayDatabaseMigrationError.invalidDateRange
+            }
+            ranges.append(PlanDayMigrationRange(firstDay: first, lastDay: last))
         }
 
         for actual in source.actuals {
-            addRange(
+            try addRange(
                 start: actual.startedAt,
                 end: actual.endedAt ?? actual.startedAt.addingTimeInterval(1)
             )
         }
         for place in source.places {
-            addRange(start: place.span.start, end: place.span.end)
+            try addRange(start: place.span.start, end: place.span.end)
         }
         for travel in source.travel {
-            addRange(start: travel.span.start, end: travel.span.end)
+            try addRange(start: travel.span.start, end: travel.span.end)
         }
-        readings.forEach { add($0.timestamp) }
-        watchSummaries.forEach { add($0.endedAt) }
-        watchAccelerationChunks.forEach { add($0.endedAt) }
-        rawEnvelopes.forEach { add($0.capturedAt) }
-        return keys.sorted()
+        for reading in readings { try add(reading.timestamp) }
+        for summary in watchSummaries {
+            try add(summary.ambientWindowStart ?? summary.endedAt)
+        }
+        for chunk in watchAccelerationChunks {
+            try add(chunk.ambientWindowStart ?? chunk.endedAt)
+        }
+        for envelope in rawEnvelopes { try add(envelope.capturedAt) }
+
+        ranges.sort {
+            if $0.firstDay != $1.firstDay { return $0.firstDay < $1.firstDay }
+            return $0.lastDay < $1.lastDay
+        }
+        var merged: [PlanDayMigrationRange] = []
+        for range in ranges {
+            guard let last = merged.last,
+                  range.firstDay <= last.lastDay else {
+                merged.append(range)
+                continue
+            }
+            if range.lastDay > last.lastDay {
+                merged[merged.count - 1].lastDay = range.lastDay
+            }
+        }
+        return merged
     }
 
     private func migrationEvents(
@@ -1008,64 +1292,14 @@ actor PlanDayDatabase {
             }
         }
         for summary in watchSummaries {
-            let payload = TaptionPlanCanonicalStorage.envelope(
-                for: try TaptionPlanCanonicalStorage.encode(summary)
-            )
-            let id = "\(summary.sessionID.uuidString):\(summary.sequence)"
-            let sequence = UInt64(max(0, summary.sequence))
-            let watchEvent = TaptionPlanRawEvent(
-                device: .appleWatch,
-                day: day,
-                timestamp: summary.endedAt,
-                sequence: sequence,
-                id: id,
-                domain: "watch-sensor-summary",
-                provenance: Self.watchSummaryProvenance,
-                payload: payload
-            )
-            let iPhoneEvent = TaptionPlanRawEvent(
-                device: .iPhone,
-                day: day,
-                timestamp: summary.endedAt,
-                sequence: sequence,
-                id: id,
-                domain: "watch-sensor-summary",
-                provenance: Self.watchSummaryProvenance + ["merge:iPhone"],
-                payload: payload
-            )
-            watch.append(watchEvent)
-            iPhone.append(iPhoneEvent)
+            let events = try Self.watchSummaryEvents(for: summary)
+            watch.append(events.watch)
+            iPhone.append(events.iPhone)
         }
         for chunk in watchAccelerationChunks {
-            let payload = TaptionPlanCanonicalStorage.envelope(
-                for: try TaptionPlanCanonicalStorage.encode(chunk)
-            )
-            let sequence = UInt64(max(0, chunk.sequence))
-            let provenance = [
-                "source-device:appleWatch",
-                "source:WatchAcceleration",
-                "derived:downsampled-accelerometer-v1",
-            ]
-            watch.append(TaptionPlanRawEvent(
-                device: .appleWatch,
-                day: day,
-                timestamp: chunk.endedAt,
-                sequence: sequence,
-                id: chunk.id.uuidString,
-                domain: "watch-acceleration",
-                provenance: provenance,
-                payload: payload
-            ))
-            iPhone.append(TaptionPlanRawEvent(
-                device: .iPhone,
-                day: day,
-                timestamp: chunk.endedAt,
-                sequence: sequence,
-                id: chunk.id.uuidString,
-                domain: "watch-acceleration",
-                provenance: provenance + ["merge:iPhone"],
-                payload: payload
-            ))
+            let events = try Self.watchAccelerationEvents(for: chunk)
+            watch.append(events.watch)
+            iPhone.append(events.iPhone)
         }
         return (iPhone, watch)
     }
@@ -1292,10 +1526,12 @@ final class PlanDayLoadCoordinator {
     private let database: PlanDayDatabase
     private let cacheCapacity: Int
     private let dataDeletionGeneration: UInt64
+    private let afterDatabaseCacheRead: (@Sendable () async -> Void)?
     private var cache: [CacheKey: PlanDayDataSnapshot] = [:]
     private var recency: [CacheKey] = []
     private var lastKnownCache: [TaptionPlanDayKey: PlanDayDataSnapshot] = [:]
     private var lastKnownRecency: [TaptionPlanDayKey] = []
+    private var cacheReadInFlight: Set<CacheKey> = []
     private struct InFlightRequest {
         let id: UUID
         let task: Task<PlanDayDataSnapshot, Never>
@@ -1304,14 +1540,17 @@ final class PlanDayLoadCoordinator {
     private var inFlight: [CacheKey: InFlightRequest] = [:]
     private var prefetchTask: Task<Void, Never>?
     private var forceReloadDays: Set<TaptionPlanDayKey> = []
+    private var dayInvalidationGenerations: [TaptionPlanDayKey: UInt64] = [:]
 
     init(
         database: PlanDayDatabase,
-        cacheCapacity: Int = 42
+        cacheCapacity: Int = 42,
+        afterDatabaseCacheRead: (@Sendable () async -> Void)? = nil
     ) {
         self.database = database
         self.cacheCapacity = max(1, cacheCapacity)
         self.dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
+        self.afterDatabaseCacheRead = afterDatabaseCacheRead
     }
 
     deinit {
@@ -1364,12 +1603,21 @@ final class PlanDayLoadCoordinator {
     ) async -> PlanDayDataSnapshot {
         let loadStartedAt = ProcessInfo.processInfo.systemUptime
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        let dayKey = TaptionPlanDayKey(date: dayStart)
+        let invalidationGeneration = dayInvalidationGenerations[dayKey, default: 0]
         let sourceFingerprint = await Self.sourceFingerprint(
             date: dayStart,
             source: source
         )
+        guard !Task.isCancelled else {
+            return PlanDayDataSnapshot.incomplete(
+                date: dayStart,
+                sourceRevision: sourceRevision,
+                source: source
+            )
+        }
         let key = CacheKey(
-            day: TaptionPlanDayKey(date: dayStart),
+            day: dayKey,
             sourceFingerprint: sourceFingerprint
                 ?? "revision:\(sourceRevision)",
             projectionVersion: TaptionPlanV3Store.projectionVersion
@@ -1418,6 +1666,60 @@ final class PlanDayLoadCoordinator {
                     isComplete: true
                 )
             )
+            guard !Task.isCancelled else {
+                return finish(
+                    reprojected,
+                    source: "reprojected_memory_raw_cancelled",
+                    durations: [
+                        "projection_ms": ProcessInfo.processInfo.systemUptime
+                            - projectionStartedAt,
+                    ]
+                )
+            }
+            guard dayInvalidationGenerations[key.day, default: 0]
+                    == invalidationGeneration else {
+                return await load(
+                    day: day,
+                    source: source,
+                    sourceRevision: sourceRevision,
+                    sensorLoader: sensorLoader,
+                    forceReload: true
+                )
+            }
+            if !Task.isCancelled, reprojected.isComplete {
+                try? await database.save(
+                    reprojected,
+                    ifCurrent: { [weak self] in
+                        guard let self else { return false }
+                        return !Task.isCancelled
+                            && self.dayInvalidationGenerations[key.day, default: 0]
+                                == invalidationGeneration
+                    }
+                )
+                guard !Task.isCancelled else {
+                    return finish(
+                        reprojected,
+                        source: "reprojected_memory_raw_cancelled",
+                        durations: [
+                            "projection_ms": ProcessInfo.processInfo.systemUptime
+                                - projectionStartedAt,
+                        ]
+                    )
+                }
+                guard dayInvalidationGenerations[key.day, default: 0]
+                        == invalidationGeneration else {
+                    return await load(
+                        day: day,
+                        source: source,
+                        sourceRevision: sourceRevision,
+                        sensorLoader: sensorLoader,
+                        forceReload: true
+                    )
+                }
+                if !Task.isCancelled {
+                    insert(reprojected, for: key)
+                }
+            }
             return finish(
                 reprojected,
                 source: "reprojected_memory_raw",
@@ -1437,22 +1739,58 @@ final class PlanDayLoadCoordinator {
         }
 
         let database = self.database
-        let task = Task { @MainActor [source, database, forceReload] in
+        if !forceReload { cacheReadInFlight.insert(key) }
+        let task = Task { @MainActor [self, source, database, forceReload] in
+            let isCurrent: @MainActor @Sendable () -> Bool = { [weak self] in
+                guard let self else { return false }
+                return !Task.isCancelled
+                    && self.dayInvalidationGenerations[key.day, default: 0]
+                        == invalidationGeneration
+            }
             let databaseStartedAt = ProcessInfo.processInfo.systemUptime
-            if !forceReload,
-               let cached = try? await database.load(
-                day: dayStart,
-                sourceRevision: sourceRevision,
-                sourceFingerprint: sourceFingerprint
-               ), cached.isComplete {
-                return finish(
-                    cached,
-                    source: "database_cache",
-                    durations: [
-                        "database_ms": ProcessInfo.processInfo.systemUptime
-                            - databaseStartedAt,
-                    ]
+            if !forceReload {
+                let cached = try? await database.load(
+                    day: dayStart,
+                    sourceRevision: sourceRevision,
+                    sourceFingerprint: sourceFingerprint
                 )
+                await afterDatabaseCacheRead?()
+                cacheReadInFlight.remove(key)
+                let databaseDuration = ProcessInfo.processInfo.systemUptime
+                    - databaseStartedAt
+                if Task.isCancelled {
+                    let cancelled = PlanDayDataSnapshot.incomplete(
+                        date: dayStart,
+                        sourceRevision: sourceRevision,
+                        source: source
+                    )
+                    return finish(
+                        cancelled,
+                        source: "database_cache_cancelled",
+                        durations: ["database_ms": databaseDuration]
+                    )
+                }
+                let wasInvalidated = dayInvalidationGenerations[key.day, default: 0]
+                    != invalidationGeneration
+                if wasInvalidated {
+                    let retry = Task { @MainActor [self, source] in
+                        await self.load(
+                            day: day,
+                            source: source,
+                            sourceRevision: sourceRevision,
+                            sensorLoader: sensorLoader,
+                            forceReload: true
+                        )
+                    }
+                    return await retry.value
+                }
+                if let cached, cached.isComplete {
+                    return finish(
+                        cached,
+                        source: "database_cache",
+                        durations: ["database_ms": databaseDuration]
+                    )
+                }
             }
             let databaseDuration = ProcessInfo.processInfo.systemUptime
                 - databaseStartedAt
@@ -1484,9 +1822,29 @@ final class PlanDayLoadCoordinator {
                     )
                 }
                 let persistenceStartedAt = ProcessInfo.processInfo.systemUptime
-                try? await database.save(reprojected)
+                try? await database.save(
+                    reprojected,
+                    ifCurrent: isCurrent
+                )
                 durations["persistence_ms"] = ProcessInfo.processInfo
                     .systemUptime - persistenceStartedAt
+                guard !Task.isCancelled else {
+                    return finish(
+                        reprojected,
+                        source: "reprojected_database_raw_cancelled",
+                        durations: durations
+                    )
+                }
+                guard dayInvalidationGenerations[key.day, default: 0]
+                        == invalidationGeneration else {
+                    return await self.load(
+                        day: day,
+                        source: source,
+                        sourceRevision: sourceRevision,
+                        sensorLoader: sensorLoader,
+                        forceReload: true
+                    )
+                }
                 return finish(
                     reprojected,
                     source: "reprojected_database_raw",
@@ -1514,9 +1872,29 @@ final class PlanDayLoadCoordinator {
                 )
             }
             let persistenceStartedAt = ProcessInfo.processInfo.systemUptime
-            try? await database.save(projected)
+            try? await database.save(
+                projected,
+                ifCurrent: isCurrent
+            )
             durations["persistence_ms"] = ProcessInfo.processInfo.systemUptime
                 - persistenceStartedAt
+            guard !Task.isCancelled else {
+                return finish(
+                    projected,
+                    source: "rebuilt_memory_cancelled",
+                    durations: durations
+                )
+            }
+            guard dayInvalidationGenerations[key.day, default: 0]
+                    == invalidationGeneration else {
+                return await self.load(
+                    day: day,
+                    source: source,
+                    sourceRevision: sourceRevision,
+                    sensorLoader: sensorLoader,
+                    forceReload: true
+                )
+            }
             return finish(
                 projected,
                 source: "rebuilt_memory",
@@ -1584,6 +1962,7 @@ final class PlanDayLoadCoordinator {
                 date: day,
                 source: source
             )
+            guard !Task.isCancelled else { return }
             let key = CacheKey(
                 day: TaptionPlanDayKey(date: day),
                 sourceFingerprint: sourceFingerprint
@@ -1606,6 +1985,7 @@ final class PlanDayLoadCoordinator {
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)
+        dayInvalidationGenerations[dayKey, default: 0] &+= 1
         forceReloadDays.insert(dayKey)
         let keys = Set(cache.keys.filter { $0.day == dayKey })
             .union(inFlight.keys.filter { $0.day == dayKey })
@@ -1617,7 +1997,9 @@ final class PlanDayLoadCoordinator {
         for key in keys {
             cache.removeValue(forKey: key)
             recency.removeAll { $0 == key }
-            inFlight[key]?.task.cancel()
+            if !cacheReadInFlight.contains(key) {
+                inFlight[key]?.task.cancel()
+            }
             inFlight.removeValue(forKey: key)
         }
         // The next load bypasses the materialized row and replaces it only
@@ -1635,6 +2017,9 @@ final class PlanDayLoadCoordinator {
     func invalidateAll() async {
         let prefetch = prefetchTask
         let requests = inFlight.values.map(\.task)
+        for day in Set(cache.keys.map(\.day) + inFlight.keys.map(\.day)) {
+            dayInvalidationGenerations[day, default: 0] &+= 1
+        }
         prefetch?.cancel()
         prefetchTask = nil
         requests.forEach { $0.cancel() }
@@ -1696,9 +2081,18 @@ final class PlanDayLoadCoordinator {
         date: Date,
         source: TaptionDataSnapshot
     ) async -> String? {
-        await Task.detached(priority: nil) {
-            PlanDayDataSnapshot.sourceFingerprint(date: date, source: source)
-        }.value
+        let worker = Task.detached(priority: nil) {
+            try PlanDayDataSnapshot.sourceFingerprint(
+                date: date,
+                source: source,
+                cancellationCheck: { try Task.checkCancellation() }
+            )
+        }
+        return await withTaskCancellationHandler(operation: {
+            try? await worker.value
+        }, onCancel: {
+            worker.cancel()
+        })
     }
 
     private nonisolated static func makeSnapshot(
@@ -1707,13 +2101,27 @@ final class PlanDayLoadCoordinator {
         source: TaptionDataSnapshot,
         sensorResult: SensorReadingsLoadResult
     ) async -> PlanDayDataSnapshot {
-        await Task.detached(priority: nil) {
-            PlanDayDataSnapshot.make(
+        let worker = Task.detached(priority: nil) {
+            try PlanDayDataSnapshot.make(
                 date: date,
                 sourceRevision: sourceRevision,
                 source: source,
-                sensorResult: sensorResult
+                sensorResult: sensorResult,
+                cancellationCheck: { try Task.checkCancellation() }
             )
-        }.value
+        }
+        return await withTaskCancellationHandler(operation: {
+            do {
+                return try await worker.value
+            } catch {
+                return PlanDayDataSnapshot.incomplete(
+                    date: date,
+                    sourceRevision: sourceRevision,
+                    source: source
+                )
+            }
+        }, onCancel: {
+            worker.cancel()
+        })
     }
 }

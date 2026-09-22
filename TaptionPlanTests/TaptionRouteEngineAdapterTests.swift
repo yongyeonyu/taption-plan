@@ -9,13 +9,14 @@ struct TaptionRouteEngineAdapterTests {
     private func reading(
         _ seconds: TimeInterval,
         latitude: Double,
+        longitude: Double = 126,
         motion: MotionKind = .walking,
         accuracy: Double = 5,
         sequence: Int? = nil
     ) -> SensorReading {
         SensorReading(
             timestamp: base.addingTimeInterval(seconds),
-            point: GeoPoint(latitude: latitude, longitude: 126, altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: -1),
+            point: GeoPoint(latitude: latitude, longitude: longitude, altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: -1),
             motion: motion,
             sequence: sequence
         )
@@ -31,6 +32,25 @@ struct TaptionRouteEngineAdapterTests {
         #expect(abs((snapshot.selectedCoordinate?.latitude ?? 0) - 37.0005) < 0.000_01)
     }
 
+    @Test func selectedCoordinateIsNilInsideRecordedRouteGap() {
+        let values = [
+            reading(0, latitude: 37),
+            reading(901, latitude: 37.01),
+        ]
+        let dateInGap = base.addingTimeInterval(450)
+        let snapshot = TaptionRouteEngineAdapter.displaySnapshot(
+            readings: values,
+            selectedDate: dateInGap
+        )
+
+        #expect(snapshot.log.segments.count == 2)
+        #expect(snapshot.selectedCoordinate == nil)
+        #expect(TaptionRouteEngineAdapter.coordinate(
+            at: dateInGap,
+            readings: values
+        ) == nil)
+    }
+
     @Test func exposesMovementRangesAndQuarterRatePlayback() {
         let values = [
             reading(0, latitude: 37),
@@ -43,6 +63,40 @@ struct TaptionRouteEngineAdapterTests {
             at: base.addingTimeInterval(60), readings: values
         )
         #expect(playback.rateMetersPerSecond == 0)
+    }
+
+    @Test func completeRouteMeasuresTheShortDatelineDistance() {
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(10 * 60)
+        )
+        let values = [
+            reading(0, latitude: 37.5, longitude: 179.998),
+            reading(10 * 60, latitude: 37.5, longitude: -179.998),
+        ]
+
+        #expect(TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
+            in: span,
+            readings: values
+        ))
+    }
+
+    @Test func movementRangesAndPlaybackIgnoreInvalidTimestamps() {
+        let valid = reading(60, latitude: 37.001)
+        let invalid = SensorReading(
+            timestamp: Date(timeIntervalSinceReferenceDate: .nan),
+            point: GeoPoint(latitude: 37, longitude: 126, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+            speedMetersPerSecond: 20,
+            motion: .automotive
+        )
+        let validRanges = TaptionRouteEngineAdapter.movingMinuteRanges(from: [valid])
+        #expect(TaptionRouteEngineAdapter.movingMinuteRanges(from: [invalid, valid]) == validRanges)
+        let playback = TaptionRouteEngineAdapter.playbackInput(
+            at: base.addingTimeInterval(60),
+            readings: [invalid, valid]
+        )
+        #expect(playback.currentSpeedMetersPerSecond == 0)
+        #expect(playback.movementDetected)
     }
 
     @Test func duplicateIDKeepsPreciseOriginalPayload() {
@@ -83,6 +137,56 @@ struct TaptionRouteEngineAdapterTests {
         #expect(filtered.count == 1)
         #expect(filtered.first?.gpsAvailable == true)
         #expect(filtered.first?.locationFixQuality == .precise)
+    }
+
+    @Test func filteredReadingsPropagatesCancellationIntoRouteFiltering() {
+        let values = (0..<1_024).map {
+            reading(Double($0), latitude: 37 + Double($0) * 0.00001)
+        }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            _ = try TaptionRouteEngineAdapter.filteredReadings(
+                from: values,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 14 { throw CancellationError() }
+                }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected route filtering error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 14)
+    }
+
+    @Test func sortedReadingsPropagatesCancellationDuringMerge() {
+        let values = (0..<4_096).reversed().map {
+            reading(Double($0), latitude: 37 + Double($0) * 0.00001)
+        }
+        var checks = 0
+        var didCancel = false
+
+        do {
+            _ = try TaptionRouteEngineAdapter.sortedReadings(
+                values,
+                cancellationCheck: {
+                    checks += 1
+                    if checks == 2 { throw CancellationError() }
+                }
+            )
+        } catch is CancellationError {
+            didCancel = true
+        } catch {
+            Issue.record("Unexpected reading sort error: \(error)")
+        }
+
+        #expect(didCancel)
+        #expect(checks == 2)
     }
 
     @Test func invalidPreciseDuplicateDoesNotOverrideValidApproximatePayload() {

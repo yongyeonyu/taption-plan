@@ -120,11 +120,11 @@ final class BiometricProtectedSnapshotStore {
 
     init(
         archiveURL: URL,
-        keychain: BiometricDataProtectionKeychain = .init(),
+        keychain: BiometricDataProtectionKeychain? = nil,
         fileManager: FileManager = .default
     ) {
         self.archiveURL = archiveURL
-        self.keychain = keychain
+        self.keychain = keychain ?? BiometricDataProtectionKeychain()
         self.fileManager = fileManager
     }
 

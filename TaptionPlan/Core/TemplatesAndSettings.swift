@@ -420,29 +420,3 @@ struct CategoryDeletionResult: Sendable {
     var plans: [PlanRecord]
     var actuals: [ActualRecord]
 }
-
-
-actor FeatureSettingsStore {
-    private let defaults: UserDefaults
-    private let key = "taption.feature-settings.v1"
-
-    init(suiteName: String? = nil) {
-        self.defaults = suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
-    }
-
-    func load() -> AppFeatureSettings {
-        guard let data = defaults.data(forKey: key),
-              let value = try? JSONDecoder().decode(AppFeatureSettings.self, from: data) else {
-            return .defaults
-        }
-        return value
-    }
-
-    func save(_ settings: AppFeatureSettings) throws {
-        defaults.set(try JSONEncoder().encode(settings), forKey: key)
-    }
-
-    func reset() {
-        defaults.removeObject(forKey: key)
-    }
-}

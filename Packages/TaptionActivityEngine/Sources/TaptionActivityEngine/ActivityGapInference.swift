@@ -88,12 +88,18 @@ public struct ActivityGapInferenceEngine: Sendable {
     }
 
     public func infer(_ input: ActivityGapInferenceInput) -> [ActivityGapInferenceSegment] {
-        guard input.span.duration > 0,
+        guard ActivityTimestamp.isValid(input.span.start),
+              ActivityTimestamp.isValid(input.span.end),
+              input.span.duration > 0,
               input.span.duration <= configuration.maximumInferenceDuration else {
             return []
         }
         let evidence = input.evidence
-            .filter { input.span.start <= $0.timestamp && $0.timestamp < input.span.end }
+            .filter {
+                ActivityTimestamp.isValid($0.timestamp)
+                    && input.span.start <= $0.timestamp
+                    && $0.timestamp < input.span.end
+            }
             .sorted { $0.timestamp < $1.timestamp }
         if evidence.isEmpty {
             return bridgeMatchingAnchors(input)

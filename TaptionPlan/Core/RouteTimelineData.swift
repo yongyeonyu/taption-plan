@@ -2,6 +2,244 @@ import Foundation
 import CryptoKit
 import TaptionPlanEngine
 
+enum RouteTimelineLongitude {
+    static func normalized(_ longitude: Double) -> Double {
+        let wrapped = (longitude + 180).truncatingRemainder(dividingBy: 360)
+        return (wrapped < 0 ? wrapped + 360 : wrapped) - 180
+    }
+
+    static func shortestDelta(from start: Double, to end: Double) -> Double {
+        let delta = (end - start).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { return delta - 360 }
+        if delta < -180 { return delta + 360 }
+        return delta
+    }
+
+    static func interpolate(from start: Double, to end: Double, fraction: Double) -> Double {
+        let delta = shortestDelta(from: start, to: end)
+        let longitude = start + delta * fraction
+        if (-180...180).contains(start),
+           (-180...180).contains(end),
+           (-180...180).contains(longitude),
+           delta == end - start {
+            return longitude
+        }
+        return normalized(longitude)
+    }
+}
+
+enum RouteTimelineTimestamp {
+    static func isValid(_ date: Date) -> Bool {
+        date.timeIntervalSinceReferenceDate.isFinite
+            && date >= .distantPast
+            && date <= .distantFuture
+    }
+}
+
+struct RouteConfirmedSubwayIntervalIndex {
+    private struct Entry {
+        let segment: TravelSegment
+        let inputOrder: Int
+    }
+
+    let segments: [TravelSegment]
+    private let leafCount: Int
+    private let maximumEndTree: [Date?]
+
+    init(travel: [TravelSegment]) {
+        var entries: [Entry] = []
+        entries.reserveCapacity(travel.count)
+        for (inputOrder, segment) in travel.enumerated()
+        where Self.isConfirmedSubway(segment) {
+            entries.append(Entry(segment: segment, inputOrder: inputOrder))
+        }
+        entries.sort {
+            if $0.segment.span.start != $1.segment.span.start {
+                return $0.segment.span.start < $1.segment.span.start
+            }
+            return $0.inputOrder > $1.inputOrder
+        }
+        segments = entries.map(\.segment)
+
+        var leafCount = 1
+        while leafCount < entries.count { leafCount *= 2 }
+        self.leafCount = leafCount
+        var maximumEndTree = Array<Date?>(
+            repeating: nil,
+            count: leafCount * 2
+        )
+        for (index, entry) in entries.enumerated() {
+            maximumEndTree[leafCount + index] = entry.segment.span.end
+        }
+        if leafCount > 1 {
+            for node in stride(from: leafCount - 1, through: 1, by: -1) {
+                maximumEndTree[node] = Self.later(
+                    maximumEndTree[node * 2],
+                    maximumEndTree[node * 2 + 1]
+                )
+            }
+        }
+        self.maximumEndTree = maximumEndTree
+    }
+
+    func segment(at date: Date) -> TravelSegment? {
+        var operationCount: Int? = nil
+        return segment(at: date, operationCount: &operationCount)
+    }
+
+    func segment(
+        at date: Date,
+        operationCount: inout Int
+    ) -> TravelSegment? {
+        var recordedOperations: Int? = 0
+        let result = segment(at: date, operationCount: &recordedOperations)
+        operationCount += recordedOperations ?? 0
+        return result
+    }
+
+    static func isConfirmedSubway(_ segment: TravelSegment) -> Bool {
+        segment.mode == .subway
+            && segment.isConfirmed
+            && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+    }
+
+    private func segment(
+        at date: Date,
+        operationCount: inout Int?
+    ) -> TravelSegment? {
+        var lower = 0
+        var upper = segments.count
+        while lower < upper {
+            operationCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if segments[middle].span.start <= date {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        guard lower > 0,
+              let index = rightmostContainingIndex(
+                  in: 1,
+                  lower: 0,
+                  upper: leafCount,
+                  before: lower,
+                  date: date,
+                  operationCount: &operationCount
+              ) else { return nil }
+        return segments[index]
+    }
+
+    private func rightmostContainingIndex(
+        in node: Int,
+        lower: Int,
+        upper: Int,
+        before limit: Int,
+        date: Date,
+        operationCount: inout Int?
+    ) -> Int? {
+        operationCount? += 1
+        guard lower < limit,
+              maximumEndTree[node].map({ $0 >= date }) == true else {
+            return nil
+        }
+        guard upper - lower > 1 else {
+            return lower < segments.count ? lower : nil
+        }
+        let middle = lower + (upper - lower) / 2
+        if middle < limit,
+           let index = rightmostContainingIndex(
+               in: node * 2 + 1,
+               lower: middle,
+               upper: upper,
+               before: limit,
+               date: date,
+               operationCount: &operationCount
+           ) {
+            return index
+        }
+        return rightmostContainingIndex(
+            in: node * 2,
+            lower: lower,
+            upper: middle,
+            before: limit,
+            date: date,
+            operationCount: &operationCount
+        )
+    }
+
+    private static func later(_ lhs: Date?, _ rhs: Date?) -> Date? {
+        guard let lhs else { return rhs }
+        guard let rhs else { return lhs }
+        return max(lhs, rhs)
+    }
+}
+
+enum RouteTimelineCancellableSort {
+    static func collect<Values: Sequence>(
+        _ values: Values,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Values.Element] {
+        try cancellationCheck()
+        var result: [Values.Element] = []
+        result.reserveCapacity(values.underestimatedCount)
+        for (index, value) in values.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            result.append(value)
+        }
+        return result
+    }
+
+    static func sorted<Element>(
+        _ values: [Element],
+        by precedes: (Element, Element) -> Bool,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Element] {
+        try cancellationCheck()
+        let count = values.count
+        guard count > 1 else { return values }
+
+        var source = try collect(
+            values,
+            cancellationCheck: cancellationCheck
+        )
+        var destination = try collect(
+            source,
+            cancellationCheck: cancellationCheck
+        )
+        var width = 1
+        var operations = 0
+        while width < count {
+            var start = 0
+            while start < count {
+                let middle = start + min(width, count - start)
+                let end = middle + min(width, count - middle)
+                var left = start
+                var right = middle
+                var output = start
+                while output < end {
+                    operations += 1
+                    if operations.isMultiple(of: 256) { try cancellationCheck() }
+                    if left < middle,
+                       right == end || !precedes(source[right], source[left]) {
+                        destination[output] = source[left]
+                        left += 1
+                    } else {
+                        destination[output] = source[right]
+                        right += 1
+                    }
+                    output += 1
+                }
+                start = end
+            }
+            swap(&source, &destination)
+            width = width > count / 2 ? count : width * 2
+        }
+        try cancellationCheck()
+        return source
+    }
+}
+
 /// The eight categories used by the map and the automatic timeline.  This
 /// palette is a data contract; UI layers can turn the hex value into a Color.
 enum RouteTimelineCategory: String, CaseIterable, Hashable, Sendable {
@@ -56,59 +294,6 @@ struct RouteTimelineSegment: Identifiable, Hashable, Sendable {
     /// It is nil when an interval has no measurable movement.
     let speedMetersPerSecond: Double?
     let confirmedSubwayTravelID: UUID?
-}
-
-/// Maps observed movement speeds to a stable cool-to-warm route palette.
-/// The range is calculated from the visible route, so a walking route and a
-/// driving route each use the full gradient without changing stored readings.
-enum RouteSpeedGradient {
-    private static let stops: [(position: Double, red: Double, green: Double, blue: Double)] = [
-        (0.0, 37 / 255, 99 / 255, 235 / 255),       // blue
-        (0.5, 20 / 255, 184 / 255, 166 / 255),      // teal
-        (0.78, 249 / 255, 115 / 255, 22 / 255),     // orange
-        (1.0, 220 / 255, 38 / 255, 38 / 255),       // red
-    ]
-
-    static func normalized(
-        speedMetersPerSecond speed: Double?,
-        in speeds: [Double]
-    ) -> Double? {
-        guard let speed, speed.isFinite, speed >= 0 else { return nil }
-        let finite = speeds.filter { $0.isFinite && $0 >= 0 }
-        guard let minimum = finite.min(),
-              let maximum = finite.max() else { return nil }
-        let range = maximum - minimum
-        guard range > 0.001 else { return 0.5 }
-        return min(1, max(0, (speed - minimum) / range))
-    }
-
-    static func colorHex(
-        speedMetersPerSecond speed: Double?,
-        in speeds: [Double]
-    ) -> String? {
-        guard let normalized = normalized(
-            speedMetersPerSecond: speed,
-            in: speeds
-        ) else { return nil }
-        let lowerIndex = stops.lastIndex { $0.position <= normalized } ?? 0
-        let upperIndex = min(stops.count - 1, lowerIndex + 1)
-        let lower = stops[lowerIndex]
-        let upper = stops[upperIndex]
-        let interval = upper.position - lower.position
-        let ratio = interval > 0
-            ? (normalized - lower.position) / interval
-            : 0
-        func blend(_ lhs: Double, _ rhs: Double) -> Int {
-            let value = lhs + (rhs - lhs) * ratio
-            return Int((value * 255.0).rounded())
-        }
-        return String(
-            format: "#%02X%02X%02X",
-            blend(lower.red, upper.red),
-            blend(lower.green, upper.green),
-            blend(lower.blue, upper.blue)
-        )
-    }
 }
 
 struct RouteTimelineProjection: Hashable, Sendable {
@@ -170,7 +355,8 @@ enum MapHomeSleepLocationPolicy {
     ) -> [MapHomeSleepLocationAnchor] {
         let ordered = readings
             .compactMap { reading -> (Date, GeoPoint)? in
-                guard let point = reading.point, isValid(point) else {
+                guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                      let point = reading.point, isValid(point) else {
                     return nil
                 }
                 return (reading.timestamp, point)
@@ -358,6 +544,7 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         places: [PlaceStay],
         travel: [TravelSegment],
         readings: [SensorReading],
+        expectedRouteRequests: [ExpectedRouteRequest]? = nil,
         resolvedRoutes: [MapHomeWBSResolvedRoute] = [],
         actuals: [ActualRecord] = [],
         confirmedSleepSpans: [TimeSpan] = [],
@@ -401,13 +588,14 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             )
         }
 
-        let expectedRequests = ExpectedRouteRequestEngine.requests(
-            travel: travel,
-            places: places,
-            readings: readings,
-            in: day,
-            through: dayEnd
-        )
+        let expectedRequests = expectedRouteRequests
+            ?? ExpectedRouteRequestEngine.requests(
+                travel: travel,
+                places: places,
+                readings: readings,
+                in: day,
+                through: dayEnd
+            )
         let forecastMovements = expectedRequests.compactMap {
             request -> MapHomeWBSPlaybackLeg? in
             let legID = "movement-\(request.id.uuidString)"
@@ -444,7 +632,8 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
 
         let trace = readings
             .compactMap { reading -> (SensorReading, GeoPoint)? in
-                guard reading.timestamp >= dayStart,
+                guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                      reading.timestamp >= dayStart,
                       reading.timestamp < dayEnd,
                       let point = reading.point,
                       reading.gpsAvailable,
@@ -466,11 +655,15 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             guard duration > 0,
                   duration <= maximumActualGap,
                   source.0.trackingSessionEnded != true,
-                  calendar.isDate(source.0.timestamp, inSameDayAs: target.0.timestamp),
-                  distanceMeters(source.1, target.1) > 0.1,
-                  !(duration > RouteTimelineDataEngine.sparseConnectionMinimumGap
-                    && distanceMeters(source.1, target.1)
-                        > RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters),
+                  calendar.isDate(source.0.timestamp, inSameDayAs: target.0.timestamp) else {
+                continue
+            }
+            let distance = distanceMeters(source.1, target.1)
+            guard distance > 0.1,
+                  !RouteSparseConnectionPolicy.breaksConnection(
+                    gapDuration: duration,
+                    distanceMeters: distance
+                  ),
                   !sleepSpans.contains(where: { sleepSpan in
                       sleepSpan.intersection(
                           with: TimeSpan(
@@ -647,7 +840,10 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         to end: GeoPoint
     ) -> MapHomeWBSPlaybackDirection {
         let radians = atan2(
-            (end.longitude - start.longitude)
+            RouteTimelineLongitude.shortestDelta(
+                from: start.longitude,
+                to: end.longitude
+            )
                 * cos((start.latitude + end.latitude) * .pi / 360),
             end.latitude - start.latitude
         )
@@ -662,7 +858,10 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         let firstLatitude = lhs.latitude * .pi / 180
         let secondLatitude = rhs.latitude * .pi / 180
         let latitudeDelta = (rhs.latitude - lhs.latitude) * .pi / 180
-        let longitudeDelta = (rhs.longitude - lhs.longitude) * .pi / 180
+        let longitudeDelta = RouteTimelineLongitude.shortestDelta(
+            from: lhs.longitude,
+            to: rhs.longitude
+        ) * .pi / 180
         let value = sin(latitudeDelta / 2) * sin(latitudeDelta / 2)
             + cos(firstLatitude) * cos(secondLatitude)
             * sin(longitudeDelta / 2) * sin(longitudeDelta / 2)
@@ -765,7 +964,11 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         let value = min(1, max(0, ratio))
         return GeoPoint(
             latitude: start.latitude + (end.latitude - start.latitude) * value,
-            longitude: start.longitude + (end.longitude - start.longitude) * value,
+            longitude: RouteTimelineLongitude.interpolate(
+                from: start.longitude,
+                to: end.longitude,
+                fraction: value
+            ),
             altitude: start.altitude + (end.altitude - start.altitude) * value,
             horizontalAccuracy: max(start.horizontalAccuracy, end.horizontalAccuracy),
             verticalAccuracy: max(start.verticalAccuracy, end.verticalAccuracy)
@@ -774,7 +977,10 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
 
     private static func sameLocation(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Bool {
         abs(lhs.latitude - rhs.latitude) < 0.000_000_1
-            && abs(lhs.longitude - rhs.longitude) < 0.000_000_1
+            && abs(RouteTimelineLongitude.shortestDelta(
+                from: lhs.longitude,
+                to: rhs.longitude
+            )) < 0.000_000_1
     }
 
     private static let zeroPoint = GeoPoint(
@@ -784,39 +990,6 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         horizontalAccuracy: -1,
         verticalAccuracy: -1
     )
-}
-
-/// Projects an immutable route snapshot into the current visible window.
-/// This is intentionally display-only: archived readings and segments remain
-/// untouched while a viewport is panned or zoomed.
-enum RouteTimelineRenderProjection {
-    static func segments(
-        _ source: [RouteTimelineSegment],
-        in span: TimeSpan
-    ) -> [RouteTimelineSegment] {
-        source.compactMap { segment in
-            guard let overlap = segmentSpan(segment).intersection(with: span),
-                  overlap.duration > 0 else { return nil }
-            guard overlap.start != segment.start || overlap.end != segment.end else {
-                return segment
-            }
-            return RouteTimelineSegment(
-                id: segment.id,
-                start: overlap.start,
-                end: overlap.end,
-                category: segment.category,
-                colorHex: segment.colorHex,
-                opacity: segment.opacity,
-                coordinates: segment.coordinates,
-                speedMetersPerSecond: segment.speedMetersPerSecond,
-                confirmedSubwayTravelID: segment.confirmedSubwayTravelID
-            )
-        }
-    }
-
-    private static func segmentSpan(_ segment: RouteTimelineSegment) -> TimeSpan {
-        TimeSpan(start: segment.start, end: segment.end)
-    }
 }
 
 enum ExpectedRouteTransport: String, Hashable, Sendable {
@@ -878,6 +1051,168 @@ struct ExpectedRouteRequest: Identifiable, Hashable, Sendable {
 
 }
 
+struct ExpectedRouteRequestReadingIndex {
+    private let readings: [SensorReading]
+
+    init(orderedReadings: [SensorReading]) {
+        readings = orderedReadings
+    }
+
+    func readings(
+        in span: TimeSpan,
+        operationCount: inout Int
+    ) -> ArraySlice<SensorReading> {
+        let lower = lowerBound(span.start, operationCount: &operationCount)
+        let upper = upperBound(span.end, operationCount: &operationCount)
+        return readings[lower..<upper]
+    }
+
+    private func lowerBound(
+        _ timestamp: Date,
+        operationCount: inout Int
+    ) -> Int {
+        var lower = 0
+        var upper = readings.count
+        while lower < upper {
+            operationCount += 1
+            let middle = lower + (upper - lower) / 2
+            if readings[middle].timestamp < timestamp {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        return lower
+    }
+
+    private func upperBound(
+        _ timestamp: Date,
+        operationCount: inout Int
+    ) -> Int {
+        var lower = 0
+        var upper = readings.count
+        while lower < upper {
+            operationCount += 1
+            let middle = lower + (upper - lower) / 2
+            if readings[middle].timestamp <= timestamp {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        return lower
+    }
+}
+
+struct ExpectedRouteRequestConfirmedSpanIndex {
+    private let spans: [TimeSpan]
+
+    init(
+        _ source: [TimeSpan],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows {
+        var valid: [TimeSpan] = []
+        valid.reserveCapacity(source.count)
+        for (index, span) in source.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            if span.duration > 0 { valid.append(span) }
+        }
+        let ordered = try RouteTimelineCancellableSort.sorted(
+            valid,
+            by: { $0.start < $1.start },
+            cancellationCheck: cancellationCheck
+        )
+        var merged: [TimeSpan] = []
+        merged.reserveCapacity(ordered.count)
+        for (index, span) in ordered.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            if let last = merged.last, span.start <= last.end {
+                merged[merged.count - 1] = TimeSpan(
+                    start: last.start,
+                    end: max(last.end, span.end)
+                )
+            } else {
+                merged.append(span)
+            }
+        }
+        spans = merged
+    }
+
+    func overlapsPositiveDuration(
+        _ span: TimeSpan,
+        operationCount: inout Int
+    ) -> Bool {
+        guard span.start < span.end else { return false }
+        var lower = 0
+        var upper = spans.count
+        while lower < upper {
+            operationCount += 1
+            let middle = lower + (upper - lower) / 2
+            if spans[middle].end <= span.start {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        guard lower < spans.count else { return false }
+        operationCount += 1
+        return spans[lower].start < span.end
+    }
+}
+
+private struct ExpectedRouteRequestSessionEndIndex {
+    private let timestamps: [Date]
+
+    init(
+        orderedReadings: [SensorReading],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows {
+        var ended: [Date] = []
+        for (index, reading) in orderedReadings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            if reading.trackingSessionEnded == true {
+                ended.append(reading.timestamp)
+            }
+        }
+        try cancellationCheck()
+        timestamps = ended
+    }
+
+    func contains(
+        from start: Date,
+        before end: Date,
+        operationCount: inout Int
+    ) -> Bool {
+        guard start < end else { return false }
+        let lower = lowerBound(start, operationCount: &operationCount)
+        let upper = lowerBound(end, operationCount: &operationCount)
+        return lower < upper
+    }
+
+    private func lowerBound(
+        _ timestamp: Date,
+        operationCount: inout Int
+    ) -> Int {
+        var lower = 0
+        var upper = timestamps.count
+        while lower < upper {
+            operationCount += 1
+            let middle = lower + (upper - lower) / 2
+            if timestamps[middle] < timestamp {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        return lower
+    }
+}
+
 /// Produces display-only network-route requests. The returned requests never
 /// replace archived GPS points or mutate classified travel segments.
 enum ExpectedRouteRequestEngine {
@@ -896,10 +1231,203 @@ enum ExpectedRouteRequestEngine {
         let end: Date
     }
 
+    private struct RequestTimeKey: Hashable {
+        let departureDate: Date
+        let arrivalDate: Date
+    }
+
     private struct RouteGap {
         let start: GeoPoint
         let end: GeoPoint
         let span: TimeSpan
+    }
+
+    private struct AdjacentTravelCandidate {
+        let id: UUID
+        let mode: RouteTravelMode
+        let start: Date
+        let end: Date
+        let order: Int
+    }
+
+    private struct AdjacentTravelChoices {
+        private(set) var first: AdjacentTravelCandidate?
+        private(set) var second: AdjacentTravelCandidate?
+
+        mutating func include(
+            _ candidate: AdjacentTravelCandidate,
+            precedes: (AdjacentTravelCandidate, AdjacentTravelCandidate) -> Bool
+        ) {
+            if let first, first.id == candidate.id {
+                if precedes(candidate, first) { self.first = candidate }
+                return
+            }
+            if let second, second.id == candidate.id {
+                guard precedes(candidate, second) else { return }
+                if let first, precedes(candidate, first) {
+                    self.second = first
+                    self.first = candidate
+                } else {
+                    self.second = candidate
+                }
+                return
+            }
+            if let first, precedes(candidate, first) {
+                second = first
+                self.first = candidate
+            } else if second == nil || precedes(candidate, second!) {
+                second = candidate
+            }
+        }
+
+        func best(excluding id: UUID) -> AdjacentTravelCandidate? {
+            guard let first else { return nil }
+            return first.id == id ? second : first
+        }
+    }
+
+    private struct TravelAdjacencyIndex {
+        private let previousByEnd: [AdjacentTravelCandidate]
+        private let previousChoices: [AdjacentTravelChoices]
+        private let followingByStart: [AdjacentTravelCandidate]
+        private let followingChoices: [AdjacentTravelChoices]
+
+        init(
+            orderedTravel: [TravelSegment],
+            operationCount: inout Int,
+            cancellationCheck: () throws -> Void
+        ) rethrows {
+            var candidates: [AdjacentTravelCandidate] = []
+            candidates.reserveCapacity(orderedTravel.count)
+            for (index, segment) in orderedTravel.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                operationCount += 1
+                candidates.append(AdjacentTravelCandidate(
+                    id: segment.id,
+                    mode: routeMode(for: segment.mode),
+                    start: segment.span.start,
+                    end: segment.span.end,
+                    order: index
+                ))
+            }
+            let previousByEnd = try RouteTimelineCancellableSort.sorted(
+                candidates,
+                by: {
+                    if $0.end != $1.end { return $0.end < $1.end }
+                    return $0.order < $1.order
+                },
+                cancellationCheck: cancellationCheck
+            )
+
+            var previous = AdjacentTravelChoices()
+            var prefix: [AdjacentTravelChoices] = []
+            prefix.reserveCapacity(previousByEnd.count)
+            for (index, candidate) in previousByEnd.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                operationCount += 1
+                previous.include(candidate, precedes: Self.precedesPrevious)
+                prefix.append(previous)
+            }
+
+            var following = AdjacentTravelChoices()
+            var suffix = Array(
+                repeating: AdjacentTravelChoices(),
+                count: candidates.count
+            )
+            for (processed, index) in candidates.indices.reversed().enumerated() {
+                if processed.isMultiple(of: 256) { try cancellationCheck() }
+                operationCount += 1
+                following.include(candidates[index], precedes: Self.precedesFollowing)
+                suffix[index] = following
+            }
+            try cancellationCheck()
+            self.previousByEnd = previousByEnd
+            self.previousChoices = prefix
+            self.followingByStart = candidates
+            followingChoices = suffix
+        }
+
+        func before(
+            _ segment: TravelSegment,
+            operationCount: inout Int
+        ) -> RouteTravelMode {
+            let limit = upperBoundEnd(
+                segment.span.start,
+                operationCount: &operationCount
+            )
+            operationCount += 1
+            guard limit > 0,
+                  let candidate = previousChoices[limit - 1]
+                    .best(excluding: segment.id) else { return .unknown }
+            return candidate.mode
+        }
+
+        func after(
+            _ segment: TravelSegment,
+            operationCount: inout Int
+        ) -> RouteTravelMode {
+            let index = lowerBoundStart(
+                segment.span.end,
+                operationCount: &operationCount
+            )
+            operationCount += 1
+            guard index < followingChoices.count,
+                  let candidate = followingChoices[index]
+                    .best(excluding: segment.id) else { return .unknown }
+            return candidate.mode
+        }
+
+        private func upperBoundEnd(
+            _ date: Date,
+            operationCount: inout Int
+        ) -> Int {
+            var lower = 0
+            var upper = previousByEnd.count
+            while lower < upper {
+                operationCount += 1
+                let middle = lower + (upper - lower) / 2
+                if previousByEnd[middle].end <= date {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            return lower
+        }
+
+        private func lowerBoundStart(
+            _ date: Date,
+            operationCount: inout Int
+        ) -> Int {
+            var lower = 0
+            var upper = followingChoices.count
+            while lower < upper {
+                operationCount += 1
+                let middle = lower + (upper - lower) / 2
+                if followingByStart[middle].start < date {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            return lower
+        }
+
+        private static func precedesPrevious(
+            _ lhs: AdjacentTravelCandidate,
+            _ rhs: AdjacentTravelCandidate
+        ) -> Bool {
+            if lhs.end != rhs.end { return lhs.end > rhs.end }
+            return lhs.order < rhs.order
+        }
+
+        private static func precedesFollowing(
+            _ lhs: AdjacentTravelCandidate,
+            _ rhs: AdjacentTravelCandidate
+        ) -> Bool {
+            if lhs.start != rhs.start { return lhs.start < rhs.start }
+            return lhs.order < rhs.order
+        }
     }
 
     static func requests(
@@ -910,96 +1438,227 @@ enum ExpectedRouteRequestEngine {
         through cutoff: Date,
         frequentPlaces _: [FrequentPlace] = []
     ) -> [ExpectedRouteRequest] {
-        let orderedReadings = readings
-            .filter { reading in
-                reading.timestamp >= day.start
-                    && reading.timestamp <= day.end
-            }
-            .sorted { $0.timestamp < $1.timestamp }
+        var ignoredOperationCount = 0
+        return requests(
+            travel: travel,
+            places: [],
+            readings: readings,
+            in: day,
+            through: cutoff,
+            frequentPlaces: [],
+            operationCount: &ignoredOperationCount
+        )
+    }
 
-        let orderedTravel = deduplicated(travel)
-            .sorted { $0.span.start < $1.span.start }
-        let confirmedSpans = travel.filter(\.isConfirmed).map(\.span)
-        let candidates: [RequestCandidate] = orderedTravel
-            .flatMap { segment -> [RequestCandidate] in
-                guard segment.span.intersection(with: day) != nil,
-                      segment.span.start < cutoff,
-                      let transport = transport(for: segment),
-                      !segment.isConfirmed else { return [] }
+    static func requests(
+        travel: [TravelSegment],
+        places _: [PlaceStay],
+        readings: [SensorReading],
+        in day: TimeSpan,
+        through cutoff: Date,
+        frequentPlaces _: [FrequentPlace],
+        operationCount: inout Int
+    ) -> [ExpectedRouteRequest] {
+        (try? requests(
+            travel: travel,
+            places: [],
+            readings: readings,
+            in: day,
+            through: cutoff,
+            frequentPlaces: [],
+            operationCount: &operationCount,
+            cancellationCheck: { try Task.checkCancellation() }
+        )) ?? []
+    }
 
-                let visibleEnd = min(segment.span.end, cutoff)
-                guard segment.span.start < visibleEnd else { return [] }
-                let visibleSpan = TimeSpan(
-                    start: max(segment.span.start, day.start),
-                    end: min(visibleEnd, day.end)
-                )
-                let readingsInSegment = orderedReadings.filter {
-                    $0.timestamp >= visibleSpan.start
-                        && $0.timestamp <= visibleSpan.end
-                }
-                let gaps = missingRouteGaps(readings: readingsInSegment)
-                return gaps.compactMap { gap in
-                    guard distanceMeters(gap.start, gap.end)
-                            >= minimumRouteDistanceMeters,
-                          !confirmedSpans.contains(where: {
-                              ($0.intersection(with: gap.span)?.duration ?? 0) > 0
-                          })
-                    else { return nil }
-                    let inference = RouteGapInferenceEngine().infer(.init(
-                        start: gap.span.start,
-                        end: gap.span.end,
-                        startCoordinate: RouteCoordinate(
-                            latitude: gap.start.latitude,
-                            longitude: gap.start.longitude
-                        ),
-                        endCoordinate: RouteCoordinate(
-                            latitude: gap.end.latitude,
-                            longitude: gap.end.longitude
-                        ),
-                        samples: TaptionRouteEngineAdapter.samples(
-                            from: readingsInSegment.filter {
-                                reliableLocationReading($0)
-                                    && $0.timestamp >= gap.span.start
-                                    && $0.timestamp <= gap.span.end
-                            }
-                        ),
-                        precedingMode: adjacentMode(
-                            before: segment,
-                            in: orderedTravel
-                        ),
-                        followingMode: adjacentMode(
-                            after: segment,
-                            in: orderedTravel
-                        ),
-                        explicitMode: routeMode(for: segment.mode),
-                        endpointConfidence: min(
-                            endpointConfidence(gap.start),
-                            endpointConfidence(gap.end)
-                        )
-                    ))
-                    guard inference.allowsConnection else { return nil }
-                    return RequestCandidate(
-                        segment: segment,
-                        request: ExpectedRouteRequest(
-                            segmentID: segment.id,
-                            mode: segment.mode,
-                            transport: transport,
-                            start: gap.start,
-                            end: gap.end,
-                            departureDate: gap.span.start,
-                            arrivalDate: gap.span.end,
-                            provenance: inference.provenance,
-                            confidence: inference.confidence
-                        )
-                    )
-                }
-            }
-        return deduplicatedRequests(candidates).map(\.request).sorted {
-            if $0.departureDate != $1.departureDate {
-                return $0.departureDate < $1.departureDate
-            }
-            return $0.id.uuidString < $1.id.uuidString
+    static func requests(
+        travel: [TravelSegment],
+        places _: [PlaceStay],
+        readings: [SensorReading],
+        in day: TimeSpan,
+        through cutoff: Date,
+        frequentPlaces _: [FrequentPlace],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) throws -> [ExpectedRouteRequest] {
+        operationCount = 0
+        try cancellationCheck()
+        var filteredReadings: [SensorReading] = []
+        filteredReadings.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                  reading.timestamp >= day.start,
+                  reading.timestamp <= day.end else { continue }
+            filteredReadings.append(reading)
         }
+        try cancellationCheck()
+        let orderedReadings = try RouteTimelineCancellableSort.sorted(
+            filteredReadings,
+            by: {
+                if $0.timestamp != $1.timestamp {
+                    return $0.timestamp < $1.timestamp
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            },
+            cancellationCheck: cancellationCheck
+        )
+        let readingIndex = ExpectedRouteRequestReadingIndex(
+            orderedReadings: orderedReadings
+        )
+        let sessionEndIndex = try ExpectedRouteRequestSessionEndIndex(
+            orderedReadings: orderedReadings,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        )
+
+        let uniqueTravel = try deduplicated(
+            travel,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        )
+        let orderedTravel = try RouteTimelineCancellableSort.sorted(
+            uniqueTravel,
+            by: { $0.span.start < $1.span.start },
+            cancellationCheck: cancellationCheck
+        )
+        var confirmedSourceSpans: [TimeSpan] = []
+        confirmedSourceSpans.reserveCapacity(travel.count)
+        for (index, segment) in travel.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            if segment.isConfirmed {
+                confirmedSourceSpans.append(segment.span)
+            }
+        }
+        let confirmedSpans = try ExpectedRouteRequestConfirmedSpanIndex(
+            confirmedSourceSpans,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        )
+        let adjacentTravel = try TravelAdjacencyIndex(
+            orderedTravel: orderedTravel,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        )
+        var candidates: [RequestCandidate] = []
+
+        for (index, segment) in orderedTravel.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            guard segment.span.intersection(with: day) != nil,
+                  segment.span.start < cutoff,
+                  let transport = transport(for: segment),
+                  !segment.isConfirmed else { continue }
+
+            let visibleEnd = min(segment.span.end, cutoff)
+            guard segment.span.start < visibleEnd else { continue }
+            let visibleSpan = TimeSpan(
+                start: max(segment.span.start, day.start),
+                end: min(visibleEnd, day.end)
+            )
+            let readingsInSegment = readingIndex.readings(
+                in: visibleSpan,
+                operationCount: &operationCount
+            )
+            let gaps = try missingRouteGaps(
+                readings: readingsInSegment,
+                sessionEndIndex: sessionEndIndex,
+                operationCount: &operationCount,
+                cancellationCheck: cancellationCheck
+            )
+            guard !gaps.isEmpty else { continue }
+            let precedingMode = adjacentTravel.before(
+                segment,
+                operationCount: &operationCount
+            )
+            let followingMode = adjacentTravel.after(
+                segment,
+                operationCount: &operationCount
+            )
+
+            for gap in gaps {
+                try cancellationCheck()
+                operationCount += 1
+                guard distanceMeters(gap.start, gap.end)
+                        >= minimumRouteDistanceMeters,
+                      !confirmedSpans.overlapsPositiveDuration(
+                        gap.span,
+                        operationCount: &operationCount
+                      ) else { continue }
+                let gapReadings = readingIndex.readings(
+                    in: gap.span,
+                    operationCount: &operationCount
+                )
+                var samples: [SensorReading] = []
+                samples.reserveCapacity(gapReadings.count)
+                for (index, reading) in gapReadings.enumerated() {
+                    if index.isMultiple(of: 256) { try cancellationCheck() }
+                    operationCount += 1
+                    if reliableLocationReading(reading) { samples.append(reading) }
+                }
+                let inference = RouteGapInferenceEngine().infer(.init(
+                    start: gap.span.start,
+                    end: gap.span.end,
+                    startCoordinate: RouteCoordinate(
+                        latitude: gap.start.latitude,
+                        longitude: gap.start.longitude
+                    ),
+                    endCoordinate: RouteCoordinate(
+                        latitude: gap.end.latitude,
+                        longitude: gap.end.longitude
+                    ),
+                    samples: try TaptionRouteEngineAdapter.samples(
+                        from: samples,
+                        cancellationCheck: cancellationCheck
+                    ),
+                    precedingMode: precedingMode,
+                    followingMode: followingMode,
+                    explicitMode: routeMode(for: segment.mode),
+                    endpointConfidence: min(
+                        endpointConfidence(gap.start),
+                        endpointConfidence(gap.end)
+                    )
+                ))
+                guard inference.allowsConnection else { continue }
+                candidates.append(RequestCandidate(
+                    segment: segment,
+                    request: ExpectedRouteRequest(
+                        segmentID: segment.id,
+                        mode: segment.mode,
+                        transport: transport,
+                        start: gap.start,
+                        end: gap.end,
+                        departureDate: gap.span.start,
+                        arrivalDate: gap.span.end,
+                        provenance: inference.provenance,
+                        confidence: inference.confidence
+                    )
+                ))
+            }
+        }
+        let uniqueCandidates = try deduplicatedRequests(
+            candidates,
+            operationCount: &operationCount,
+            cancellationCheck: cancellationCheck
+        )
+        var requests: [ExpectedRouteRequest] = []
+        requests.reserveCapacity(uniqueCandidates.count)
+        for (index, candidate) in uniqueCandidates.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            requests.append(candidate.request)
+        }
+        return try RouteTimelineCancellableSort.sorted(
+            requests,
+            by: {
+                if $0.departureDate != $1.departureDate {
+                    return $0.departureDate < $1.departureDate
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            },
+            cancellationCheck: cancellationCheck
+        )
     }
 
     private static func transport(
@@ -1031,28 +1690,6 @@ enum ExpectedRouteRequestEngine {
         }
     }
 
-    private static func adjacentMode(
-        before segment: TravelSegment,
-        in travel: [TravelSegment]
-    ) -> RouteTravelMode {
-        travel
-            .filter { $0.id != segment.id && $0.span.end <= segment.span.start }
-            .max { $0.span.end < $1.span.end }
-            .map { routeMode(for: $0.mode) }
-            ?? .unknown
-    }
-
-    private static func adjacentMode(
-        after segment: TravelSegment,
-        in travel: [TravelSegment]
-    ) -> RouteTravelMode {
-        travel
-            .filter { $0.id != segment.id && $0.span.start >= segment.span.end }
-            .min { $0.span.start < $1.span.start }
-            .map { routeMode(for: $0.mode) }
-            ?? .unknown
-    }
-
     private static func endpointConfidence(_ point: GeoPoint) -> Double {
         let accuracy = point.horizontalAccuracy
         guard accuracy.isFinite, accuracy >= 0 else { return 0.8 }
@@ -1075,32 +1712,45 @@ enum ExpectedRouteRequestEngine {
     }
 
     private static func missingRouteGaps(
-        readings: [SensorReading]
-    ) -> [RouteGap] {
-        let observed = readings
-            .filter(reliableLocationReading)
-            .sorted {
-                if $0.timestamp != $1.timestamp {
-                    return $0.timestamp < $1.timestamp
-                }
-                return $0.id.uuidString < $1.id.uuidString
+        readings: ArraySlice<SensorReading>,
+        sessionEndIndex: ExpectedRouteRequestSessionEndIndex,
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RouteGap] {
+        var observed: [SensorReading] = []
+        observed.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
+            if RouteTimelineTimestamp.isValid(reading.timestamp),
+               reliableLocationReading(reading) {
+                observed.append(reading)
             }
+        }
         guard observed.count >= 2 else { return [] }
-        let endedSessions = readings.filter { $0.trackingSessionEnded == true }
-            .map(\.timestamp)
         var gaps: [RouteGap] = []
-        for (lhs, rhs) in zip(observed, observed.dropFirst()) {
+        for index in 0..<(observed.count - 1) {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            let lhs = observed[index]
+            let rhs = observed[index + 1]
+            operationCount += 1
             guard let lhsPoint = lhs.point, let rhsPoint = rhs.point else {
                 continue
             }
-            guard !endedSessions.contains(where: {
-                $0 >= lhs.timestamp && $0 < rhs.timestamp
-            }) else { continue }
+            guard !sessionEndIndex.contains(
+                from: lhs.timestamp,
+                before: rhs.timestamp,
+                operationCount: &operationCount
+            ) else { continue }
             let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
             guard duration > MapHomeWBSPlaybackProjection.maximumActualGap
-                    || (duration > RouteTimelineDataEngine.sparseConnectionMinimumGap
-                        && distanceMeters(lhsPoint, rhsPoint)
-                            > RouteTimelineDataEngine.sparseConnectionMaximumDistanceMeters)
+                    || RouteSparseConnectionPolicy.breaksConnection(
+                        gapDuration: duration,
+                        distanceMeters: duration
+                                > RouteSparseConnectionPolicy.minimumSparseGapDuration
+                            ? distanceMeters(lhsPoint, rhsPoint)
+                            : nil
+                    )
             else { continue }
             gaps.append(RouteGap(
                 start: lhsPoint,
@@ -1112,10 +1762,14 @@ enum ExpectedRouteRequestEngine {
     }
 
     private static func deduplicated(
-        _ travel: [TravelSegment]
-    ) -> [TravelSegment] {
+        _ travel: [TravelSegment],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [TravelSegment] {
         var selected: [DuplicateKey: TravelSegment] = [:]
-        for segment in travel {
+        for (index, segment) in travel.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            operationCount += 1
             let key = DuplicateKey(
                 fromPlaceID: segment.fromPlaceID,
                 toPlaceID: segment.toPlaceID,
@@ -1131,19 +1785,43 @@ enum ExpectedRouteRequestEngine {
                 selected[key] = segment
             }
         }
-        return Array(selected.values)
+        var result: [TravelSegment] = []
+        result.reserveCapacity(selected.count)
+        for (index, segment) in selected.values.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            result.append(segment)
+        }
+        return result
     }
 
     private static func deduplicatedRequests(
-        _ candidates: [RequestCandidate]
-    ) -> [RequestCandidate] {
+        _ candidates: [RequestCandidate],
+        operationCount: inout Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [RequestCandidate] {
         var selected: [RequestCandidate] = []
+        var indicesByTime: [RequestTimeKey: [Int]] = [:]
         for candidate in candidates {
-            guard let index = selected.firstIndex(where: {
-                $0.request.departureDate == candidate.request.departureDate
-                    && $0.request.arrivalDate == candidate.request.arrivalDate
-                    && sameRequestEndpoints($0.request, candidate.request)
-            }) else {
+            operationCount += 1
+            if operationCount.isMultiple(of: 256) { try cancellationCheck() }
+            let key = RequestTimeKey(
+                departureDate: candidate.request.departureDate,
+                arrivalDate: candidate.request.arrivalDate
+            )
+            var matchingIndex: Int?
+            for index in indicesByTime[key, default: []] {
+                operationCount += 1
+                if operationCount.isMultiple(of: 256) { try cancellationCheck() }
+                if sameRequestEndpoints(
+                    selected[index].request,
+                    candidate.request
+                ) {
+                    matchingIndex = index
+                    break
+                }
+            }
+            guard let index = matchingIndex else {
+                indicesByTime[key, default: []].append(selected.count)
                 selected.append(candidate)
                 continue
             }
@@ -1203,22 +1881,68 @@ enum ExpectedRouteRequestEngine {
     }
 }
 
-/// Reduces raw location observations to a deterministic, display-only track.
-/// The source readings remain untouched and are still the archive of record.
-enum GPSLoggerRouteFilter {
-    static func filter(_ readings: [SensorReading]) -> [SensorReading] {
-        TaptionRouteEngineAdapter.filteredReadings(from: readings)
-    }
-}
-
 /// Builds a display-only route from archived and live sensor readings.  It
 /// never writes to either input collection or changes an `ActualRecord`.
 enum RouteTimelineDataEngine {
     static let maximumInterpolationGap: TimeInterval = 15 * 60
-    static let sparseConnectionMinimumGap: TimeInterval = 5 * 60
-    static let sparseConnectionMaximumDistanceMeters: Double = 1_000
     static let maximumDisplayReadingCount = 4_096
     static let maximumApproximateDisplayAccuracy: Double = 1_000
+
+    struct ActualIndex {
+        fileprivate let dayStart: Date
+        fileprivate let dayEnd: Date
+        fileprivate let dayActuals: [ActualRecord]
+        fileprivate let automatic: [ActualRecord]
+        fileprivate let categories: CategoryIndex
+
+        fileprivate init(
+            selectedDate: Date,
+            actuals: [ActualRecord],
+            calendar: Calendar
+        ) {
+            let resolvedDayStart = calendar.startOfDay(for: selectedDate)
+            let resolvedDayEnd = calendar.date(
+                byAdding: .day,
+                value: 1,
+                to: resolvedDayStart
+            ) ?? resolvedDayStart.addingTimeInterval(24 * 60 * 60)
+            let resolvedDayActuals = actuals.filter { actual in
+                actual.startedAt < resolvedDayEnd
+                    && (actual.endedAt.map { $0 > resolvedDayStart } ?? true)
+            }
+            let daySpan = TimeSpan(
+                start: resolvedDayStart,
+                end: resolvedDayEnd
+            )
+            let resolvedAutomatic = RouteTimelineDataEngine.automaticRecords(
+                resolvedDayActuals,
+                intersecting: daySpan,
+                through: resolvedDayEnd
+            )
+            let resolvedCategories = CategoryIndex(
+                actuals: resolvedAutomatic,
+                dayStart: resolvedDayStart,
+                cutoff: resolvedDayEnd
+            )
+            dayStart = resolvedDayStart
+            dayEnd = resolvedDayEnd
+            dayActuals = resolvedDayActuals
+            automatic = resolvedAutomatic
+            categories = resolvedCategories
+        }
+    }
+
+    static func actualIndex(
+        selectedDate: Date,
+        actuals: [ActualRecord],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> ActualIndex {
+        ActualIndex(
+            selectedDate: selectedDate,
+            actuals: actuals,
+            calendar: calendar
+        )
+    }
 
     private struct DisplayMeterPoint {
         var east: Double
@@ -1230,6 +1954,7 @@ enum RouteTimelineDataEngine {
         through timelineDate: Date? = nil,
         selectedSpan: TimeSpan? = nil,
         actuals: [ActualRecord],
+        actualIndex cachedActualIndex: ActualIndex? = nil,
         travel: [TravelSegment] = [],
         readings: [SensorReading],
         liveReadings: [SensorReading] = [],
@@ -1245,16 +1970,36 @@ enum RouteTimelineDataEngine {
         let requestedCutoff = timelineDate ?? dayEnd
         let cutoff = min(dayEnd, max(dayStart, requestedCutoff))
         let daySpan = TimeSpan(start: dayStart, end: dayEnd)
+        let actualIndex: ActualIndex
+        if let cachedActualIndex,
+           cachedActualIndex.dayStart == dayStart,
+           cachedActualIndex.dayEnd == dayEnd {
+            actualIndex = cachedActualIndex
+        } else {
+            actualIndex = ActualIndex(
+                selectedDate: selectedDate,
+                actuals: actuals,
+                calendar: calendar
+            )
+        }
+        let dayActuals = actualIndex.dayActuals.filter {
+            $0.startedAt <= cutoff
+        }
         let automatic = automaticRecords(
-            actuals,
+            actualIndex.automatic,
             intersecting: daySpan,
             through: cutoff
+        )
+        let categoryIndex = actualIndex.categories
+        let confirmedSubwayIndex = RouteConfirmedSubwayIntervalIndex(
+            travel: travel
         )
         let combinedReadings = readings + liveReadings
         let allDayReadings = (readingsAreNormalized
             ? combinedReadings
             : normalizedReadings(combinedReadings)).filter {
-            $0.timestamp >= dayStart && $0.timestamp < dayEnd
+            RouteTimelineTimestamp.isValid($0.timestamp)
+                && $0.timestamp >= dayStart && $0.timestamp < dayEnd
         }
         let coordinateIndex = CoordinateIndex(
             readings: allDayReadings,
@@ -1262,7 +2007,7 @@ enum RouteTimelineDataEngine {
             filtersSparseConnections: filtersSparseRouteConnections
         )
         let sleepSpans = MapHomeSleepLocationPolicy.spans(
-            actuals: actuals,
+            actuals: dayActuals,
             confirmedSleepSpans: confirmedSleepSpans,
             sleepSessions: sleepSessions,
             in: daySpan,
@@ -1284,11 +2029,11 @@ enum RouteTimelineDataEngine {
                 id: reading.id,
                 timestamp: reading.timestamp,
                 point: point,
-                category: category(at: reading.timestamp, in: automatic, through: cutoff)
+                category: categoryIndex.category(at: reading.timestamp)
             )
         }
         let selectedCategory = timelineDate.map { _ in
-            category(at: cutoff, in: automatic, through: cutoff)
+            categoryIndex.category(at: cutoff)
         }
         let coordinateAtCutoff: GeoPoint?
         if let sleepAnchor = MapHomeSleepLocationPolicy.contains(
@@ -1299,7 +2044,7 @@ enum RouteTimelineDataEngine {
         } else {
             coordinateAtCutoff = confirmedSubwayCoordinate(
                 at: cutoff,
-                in: travel
+                index: confirmedSubwayIndex
             ) ?? coordinateIndex.playbackCoordinate(
                 at: cutoff,
                 sleepAnchors: sleepAnchors
@@ -1309,7 +2054,8 @@ enum RouteTimelineDataEngine {
             samples: samples,
             coordinateIndex: coordinateIndex,
             actuals: automatic,
-            travel: travel,
+            categoryIndex: categoryIndex,
+            confirmedSubwayIndex: confirmedSubwayIndex,
             cutoff: cutoff,
             selectedCategory: selectedCategory,
             selectedSpan: selectedSpan,
@@ -1331,6 +2077,7 @@ enum RouteTimelineDataEngine {
         throughMinute minute: Int?,
         selectedSpan: TimeSpan? = nil,
         actuals: [ActualRecord],
+        actualIndex: ActualIndex? = nil,
         travel: [TravelSegment] = [],
         readings: [SensorReading],
         liveReadings: [SensorReading] = [],
@@ -1352,6 +2099,7 @@ enum RouteTimelineDataEngine {
             through: cutoff,
             selectedSpan: selectedSpan,
             actuals: actuals,
+            actualIndex: actualIndex,
             travel: travel,
             readings: readings,
             liveReadings: liveReadings,
@@ -1384,34 +2132,90 @@ enum RouteTimelineDataEngine {
     static func normalizedReadings(
         _ readings: [SensorReading]
     ) -> [SensorReading] {
-        normalizedReadings(readings, includesApproximateLocations: false)
+        normalizedReadings(
+            readings,
+            includesApproximateLocations: false,
+            cancellationCheck: {}
+        )
+    }
+
+    static func normalizedReadings(
+        _ readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try normalizedReadings(
+            readings,
+            includesApproximateLocations: false,
+            cancellationCheck: cancellationCheck
+        )
     }
 
     static func normalizedDisplayReadings(
         _ readings: [SensorReading]
     ) -> [SensorReading] {
-        normalizedReadings(readings, includesApproximateLocations: true)
+        normalizedReadings(
+            readings,
+            includesApproximateLocations: true,
+            cancellationCheck: {}
+        )
+    }
+
+    static func normalizedDisplayReadings(
+        _ readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try normalizedReadings(
+            readings,
+            includesApproximateLocations: true,
+            cancellationCheck: cancellationCheck
+        )
     }
 
     private static func normalizedReadings(
         _ readings: [SensorReading],
-        includesApproximateLocations: Bool
-    ) -> [SensorReading] {
-        let candidates = readings.filter {
-            validPoint(
-                from: $0,
-                includesApproximateLocations: includesApproximateLocations
-            ) != nil
-        }
-        let grouped = Dictionary(grouping: candidates, by: \.timestamp)
-        return grouped.values
-            .compactMap { $0.min(by: preferredReading) }
-            .sorted {
-                if $0.timestamp != $1.timestamp {
-                    return $0.timestamp < $1.timestamp
+        includesApproximateLocations: Bool,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try cancellationCheck()
+        var preferredByTimestamp: [Date: SensorReading] = [:]
+        preferredByTimestamp.reserveCapacity(readings.count)
+        for (index, reading) in readings.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                  validPoint(
+                    from: reading,
+                    includesApproximateLocations: includesApproximateLocations
+                  ) != nil else { continue }
+            if let current = preferredByTimestamp[reading.timestamp] {
+                let selected = preferredReading(reading, current)
+                    ? reading
+                    : current
+                if reading.trackingSessionEnded == true
+                    || current.trackingSessionEnded == true {
+                    var merged = selected
+                    merged.trackingSessionEnded = true
+                    preferredByTimestamp[reading.timestamp] = merged
+                } else {
+                    preferredByTimestamp[reading.timestamp] = selected
                 }
-                return $0.id.uuidString < $1.id.uuidString
+            } else {
+                preferredByTimestamp[reading.timestamp] = reading
             }
+        }
+        var preferred: [SensorReading] = []
+        preferred.reserveCapacity(preferredByTimestamp.count)
+        for (index, reading) in preferredByTimestamp.values.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            preferred.append(reading)
+        }
+        return try RouteTimelineCancellableSort.sorted(
+            preferred,
+            by: {
+                if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
+                return $0.id.uuidString < $1.id.uuidString
+            },
+            cancellationCheck: cancellationCheck
+        )
     }
 
     static func playbackCoordinate(
@@ -1481,23 +2285,47 @@ enum RouteTimelineDataEngine {
         from normalizedReadings: [SensorReading],
         maximumCount: Int = maximumDisplayReadingCount
     ) -> [SensorReading] {
+        displayReadings(
+            from: normalizedReadings,
+            maximumCount: maximumCount,
+            cancellationCheck: {}
+        )
+    }
+
+    static func displayReadings(
+        from normalizedReadings: [SensorReading],
+        maximumCount: Int = maximumDisplayReadingCount,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [SensorReading] {
+        try cancellationCheck()
         let maximumCount = max(2, maximumCount)
         guard normalizedReadings.count > maximumCount else {
             return normalizedReadings
         }
 
-        let reduced = reducedDisplayIndices(
+        let reduced = try reducedDisplayIndices(
             normalizedReadings,
-            maximumCount: maximumCount
+            maximumCount: maximumCount,
+            cancellationCheck: cancellationCheck
         )
         let indices: [Int]
         if reduced.count > maximumCount {
-            indices = evenlySampledIndices(reduced, count: maximumCount)
+            indices = try evenlySampledIndices(
+                reduced,
+                count: maximumCount,
+                cancellationCheck: cancellationCheck
+            )
         } else {
-            var selected = Set(reduced)
+            var selected = Set<Int>()
+            selected.reserveCapacity(reduced.count)
+            for (offset, index) in reduced.enumerated() {
+                if offset.isMultiple(of: 256) { try cancellationCheck() }
+                selected.insert(index)
+            }
             let lastIndex = normalizedReadings.count - 1
             let scale = Double(lastIndex) / Double(maximumCount - 1)
             for outputIndex in 0..<maximumCount where selected.count < maximumCount {
+                if outputIndex.isMultiple(of: 256) { try cancellationCheck() }
                 selected.insert(
                     min(
                         lastIndex,
@@ -1506,84 +2334,143 @@ enum RouteTimelineDataEngine {
                 )
             }
             if selected.count < maximumCount {
-                for index in normalizedReadings.indices {
+                for (offset, index) in normalizedReadings.indices.enumerated() {
+                    if offset.isMultiple(of: 256) { try cancellationCheck() }
                     guard selected.count < maximumCount else { break }
                     selected.insert(index)
                 }
             }
-            indices = selected.sorted()
+            indices = try RouteTimelineCancellableSort.sorted(
+                try RouteTimelineCancellableSort.collect(
+                    selected,
+                    cancellationCheck: cancellationCheck
+                ),
+                by: <,
+                cancellationCheck: cancellationCheck
+            )
         }
-        return indices.map { normalizedReadings[$0] }
+        var result: [SensorReading] = []
+        result.reserveCapacity(indices.count)
+        for (offset, index) in indices.enumerated() {
+            if offset.isMultiple(of: 256) { try cancellationCheck() }
+            result.append(normalizedReadings[index])
+        }
+        return result
     }
 
     private static func segmentAwareDisplayIndices(
         _ readings: [SensorReading],
-        epsilon: Double
-    ) -> [Int] {
+        epsilon: Double,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Int] {
+        try cancellationCheck()
         guard readings.count > 1 else { return readings.indices.map { $0 } }
         var result: [Int] = []
         var segmentStart = 0
         for index in 1..<readings.count {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             if startsNewDisplaySegment(
                 after: readings[index - 1],
                 before: readings[index]
             ) {
-                result.append(contentsOf: rdpIndices(
+                result.append(contentsOf: try rdpIndices(
                     readings,
                     lower: segmentStart,
                     upper: index - 1,
-                    epsilon: epsilon
+                    epsilon: epsilon,
+                    cancellationCheck: cancellationCheck
                 ))
                 segmentStart = index
             }
         }
-        result.append(contentsOf: rdpIndices(
+        result.append(contentsOf: try rdpIndices(
             readings,
             lower: segmentStart,
             upper: readings.count - 1,
-            epsilon: epsilon
+            epsilon: epsilon,
+            cancellationCheck: cancellationCheck
         ))
         return result
     }
 
     private static func reducedDisplayIndices(
         _ readings: [SensorReading],
-        maximumCount: Int
-    ) -> [Int] {
-        let mandatory = mandatoryDisplayIndices(readings)
-        func selected(at epsilon: Double) -> Set<Int> {
-            Set(segmentAwareDisplayIndices(readings, epsilon: epsilon))
-                .union(mandatory)
+        maximumCount: Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Int] {
+        let mandatory = try mandatoryDisplayIndices(
+            readings,
+            cancellationCheck: cancellationCheck
+        )
+        func selected(at epsilon: Double) throws -> Set<Int> {
+            let indices = try segmentAwareDisplayIndices(
+                readings,
+                epsilon: epsilon,
+                cancellationCheck: cancellationCheck
+            )
+            var selected = Set<Int>()
+            selected.reserveCapacity(mandatory.count + indices.count)
+            for (index, value) in mandatory.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                selected.insert(value)
+            }
+            for (index, value) in indices.enumerated() {
+                if index.isMultiple(of: 256) { try cancellationCheck() }
+                selected.insert(value)
+            }
+            return selected
         }
 
         var high = 4.0
-        while selected(at: high).count > maximumCount, high < 1_000_000 {
+        var highSelection = try selected(at: high)
+        while highSelection.count > maximumCount, high < 1_000_000 {
+            try cancellationCheck()
             high *= 2
+            highSelection = try selected(at: high)
         }
-        if selected(at: high).count > maximumCount {
-            return mandatory.sorted()
+        if highSelection.count > maximumCount {
+            return try RouteTimelineCancellableSort.sorted(
+                try RouteTimelineCancellableSort.collect(
+                    mandatory,
+                    cancellationCheck: cancellationCheck
+                ),
+                by: <,
+                cancellationCheck: cancellationCheck
+            )
         }
 
         var low = 0.0
         for _ in 0..<24 {
+            try cancellationCheck()
             let middle = (low + high) / 2
-            if selected(at: middle).count > maximumCount {
+            if try selected(at: middle).count > maximumCount {
                 low = middle
             } else {
                 high = middle
             }
         }
-        return selected(at: high).sorted()
+        highSelection = try selected(at: high)
+        return try RouteTimelineCancellableSort.sorted(
+            try RouteTimelineCancellableSort.collect(
+                highSelection,
+                cancellationCheck: cancellationCheck
+            ),
+            by: <,
+            cancellationCheck: cancellationCheck
+        )
     }
 
     private static func mandatoryDisplayIndices(
-        _ readings: [SensorReading]
-    ) -> Set<Int> {
+        _ readings: [SensorReading],
+        cancellationCheck: () throws -> Void
+    ) rethrows -> Set<Int> {
+        try cancellationCheck()
         guard !readings.isEmpty else { return [] }
         var result: Set<Int> = [readings.startIndex, readings.index(before: readings.endIndex)]
         guard readings.count > 2 else { return result }
 
         for index in 1..<readings.count {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             if startsNewDisplaySegment(
                 after: readings[index - 1],
                 before: readings[index]
@@ -1594,6 +2481,7 @@ enum RouteTimelineDataEngine {
         }
 
         for index in 1..<(readings.count - 1) {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
             guard let previous = readings[index - 1].point,
                   let current = readings[index].point,
                   let next = readings[index + 1].point else { continue }
@@ -1624,32 +2512,45 @@ enum RouteTimelineDataEngine {
         let gap = current.timestamp.timeIntervalSince(previous.timestamp)
         guard gap > 0 else { return true }
         if gap > maximumInterpolationGap { return true }
-        return gap > sparseConnectionMinimumGap
-            && distanceMeters(previousPoint, currentPoint)
-                > sparseConnectionMaximumDistanceMeters
+        return RouteSparseConnectionPolicy.breaksConnection(
+            gapDuration: gap,
+            distanceMeters: gap
+                    > RouteSparseConnectionPolicy.minimumSparseGapDuration
+                ? distanceMeters(previousPoint, currentPoint)
+                : nil
+        )
     }
 
     private static func rdpIndices(
         _ readings: [SensorReading],
         lower: Int,
         upper: Int,
-        epsilon: Double = 4
-    ) -> [Int] {
+        epsilon: Double = 4,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Int] {
+        try cancellationCheck()
         guard upper >= lower else { return [] }
         guard upper > lower else { return [lower] }
         let origin = readings[lower].point
-        let coordinates = (lower...upper).map { index in
-            displayMeterPoint(readings[index].point, origin: origin)
+        var coordinates: [DisplayMeterPoint] = []
+        coordinates.reserveCapacity(upper - lower + 1)
+        for (offset, index) in (lower...upper).enumerated() {
+            if offset.isMultiple(of: 256) { try cancellationCheck() }
+            coordinates.append(displayMeterPoint(readings[index].point, origin: origin))
         }
         var retained = Set([lower, upper])
         var stack: [(start: Int, end: Int)] = [(0, upper - lower)]
+        var comparisons = 0
         while let pair = stack.popLast() {
+            if stack.count.isMultiple(of: 64) { try cancellationCheck() }
             guard pair.end - pair.start > 1 else { continue }
             let start = coordinates[pair.start]
             let end = coordinates[pair.end]
             var farthestOffset = -1
             var farthestDistance = epsilon
             for offset in (pair.start + 1)..<pair.end {
+                comparisons += 1
+                if comparisons.isMultiple(of: 256) { try cancellationCheck() }
                 let distance = perpendicularDistance(
                     coordinates[offset],
                     from: start,
@@ -1665,7 +2566,14 @@ enum RouteTimelineDataEngine {
             stack.append((pair.start, farthestOffset))
             stack.append((farthestOffset, pair.end))
         }
-        return retained.sorted()
+        return try RouteTimelineCancellableSort.sorted(
+            try RouteTimelineCancellableSort.collect(
+                retained,
+                cancellationCheck: cancellationCheck
+            ),
+            by: <,
+            cancellationCheck: cancellationCheck
+        )
     }
 
     private static func displayMeterPoint(
@@ -1681,7 +2589,10 @@ enum RouteTimelineDataEngine {
             111_412.84 * cos(origin.latitude * .pi / 180)
         )
         return DisplayMeterPoint(
-            east: (point.longitude - origin.longitude) * longitudeScale,
+            east: RouteTimelineLongitude.shortestDelta(
+                from: origin.longitude,
+                to: point.longitude
+            ) * longitudeScale,
             north: (point.latitude - origin.latitude) * latitudeScale
         )
     }
@@ -1706,13 +2617,19 @@ enum RouteTimelineDataEngine {
 
     private static func evenlySampledIndices(
         _ indices: [Int],
-        count: Int
-    ) -> [Int] {
+        count: Int,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> [Int] {
+        try cancellationCheck()
         guard count > 1, indices.count > count else { return indices }
         let scale = Double(indices.count - 1) / Double(count - 1)
-        return (0..<count).map { outputIndex in
-            indices[Int((Double(outputIndex) * scale).rounded())]
+        var result: [Int] = []
+        result.reserveCapacity(count)
+        for outputIndex in 0..<count {
+            if outputIndex.isMultiple(of: 256) { try cancellationCheck() }
+            result.append(indices[Int((Double(outputIndex) * scale).rounded())])
         }
+        return result
     }
 
     private static func automaticRecords(
@@ -1735,23 +2652,117 @@ enum RouteTimelineDataEngine {
         }
     }
 
-    private static func category(
-        at date: Date,
-        in actuals: [ActualRecord],
-        through cutoff: Date
-    ) -> RouteTimelineCategory {
-        let candidates = actuals.filter { actual in
-            guard actual.startedAt <= date else { return false }
-            if let endedAt = actual.endedAt {
-                return date < endedAt
+    fileprivate struct CategoryIndex {
+        private let boundaries: [Date]
+        private let categories: [RouteTimelineCategory]
+
+        init(actuals: [ActualRecord], dayStart: Date, cutoff: Date) {
+            let starts = actuals.indices.sorted {
+                let left = actuals[$0]
+                let right = actuals[$1]
+                if left.startedAt != right.startedAt {
+                    return left.startedAt < right.startedAt
+                }
+                return left.id.uuidString < right.id.uuidString
             }
-            return date <= cutoff
+            var points = [dayStart, cutoff]
+            for actual in actuals where actual.startedAt <= cutoff {
+                points.append(max(dayStart, actual.startedAt))
+                points.append(max(
+                    dayStart,
+                    min(cutoff, actual.endedAt ?? cutoff)
+                ))
+            }
+            boundaries = Array(Set(points)).sorted()
+
+            var heap: [Int] = []
+            var nextStart = 0
+            var builtCategories: [RouteTimelineCategory] = []
+            for date in boundaries {
+                while nextStart < starts.count,
+                      actuals[starts[nextStart]].startedAt <= date {
+                    Self.push(starts[nextStart], into: &heap, actuals: actuals)
+                    nextStart += 1
+                }
+                while let winner = heap.first,
+                      actuals[winner].endedAt.map({ $0 <= date }) == true {
+                    _ = Self.pop(from: &heap, actuals: actuals)
+                }
+                if let winner = heap.first {
+                    builtCategories.append(.resolve(
+                        RecordAnalysisCategoryPolicy.categoryID(
+                            for: actuals[winner]
+                        )
+                    ))
+                } else {
+                    builtCategories.append(.unconfirmed)
+                }
+            }
+            categories = builtCategories
         }
-        guard let winner = candidates.max(by: { lowerPriority($0, than: $1) })
-        else { return .unconfirmed }
-        return RouteTimelineCategory.resolve(
-            RecordAnalysisCategoryPolicy.categoryID(for: winner)
-        )
+
+        func category(at date: Date) -> RouteTimelineCategory {
+            var lower = 0
+            var upper = boundaries.count
+            while lower < upper {
+                let middle = (lower + upper) / 2
+                if boundaries[middle] <= date {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            return lower == 0 ? .unconfirmed : categories[lower - 1]
+        }
+
+        private static func push(
+            _ index: Int,
+            into heap: inout [Int],
+            actuals: [ActualRecord]
+        ) {
+            heap.append(index)
+            var child = heap.count - 1
+            while child > 0 {
+                let parent = (child - 1) / 2
+                guard RouteTimelineDataEngine.lowerPriority(
+                    actuals[heap[parent]],
+                    than: actuals[heap[child]]
+                ) else { break }
+                heap.swapAt(parent, child)
+                child = parent
+            }
+        }
+
+        private static func pop(
+            from heap: inout [Int],
+            actuals: [ActualRecord]
+        ) -> Int? {
+            guard let first = heap.first else { return nil }
+            let last = heap.removeLast()
+            guard !heap.isEmpty else { return first }
+            heap[0] = last
+            var parent = 0
+            while true {
+                let left = parent * 2 + 1
+                guard left < heap.count else { break }
+                let right = left + 1
+                var highest = left
+                if right < heap.count,
+                   RouteTimelineDataEngine.lowerPriority(
+                       actuals[heap[left]],
+                       than: actuals[heap[right]]
+                   ) {
+                    highest = right
+                }
+                guard RouteTimelineDataEngine.lowerPriority(
+                    actuals[heap[parent]],
+                    than: actuals[heap[highest]]
+                ) else { break }
+                heap.swapAt(parent, highest)
+                parent = highest
+            }
+            return first
+        }
     }
 
     private static func lowerPriority(
@@ -1845,9 +2856,13 @@ enum RouteTimelineDataEngine {
                     if before.endsSegment
                         || gap > maximumInterpolationGap
                         || (filtersSparseConnections
-                            && gap > sparseConnectionMinimumGap
-                            && distanceMeters(before.point, after.point)
-                                > sparseConnectionMaximumDistanceMeters) {
+                            && RouteSparseConnectionPolicy.breaksConnection(
+                                gapDuration: gap,
+                                distanceMeters: gap
+                                        > RouteSparseConnectionPolicy.minimumSparseGapDuration
+                                    ? distanceMeters(before.point, after.point)
+                                    : nil
+                            )) {
                         return false
                     }
                 }
@@ -1950,7 +2965,11 @@ enum RouteTimelineDataEngine {
         func blend(_ a: Double, _ b: Double) -> Double { a + (b - a) * t }
         return GeoPoint(
             latitude: blend(lhs.latitude, rhs.latitude),
-            longitude: blend(lhs.longitude, rhs.longitude),
+            longitude: RouteTimelineLongitude.interpolate(
+                from: lhs.longitude,
+                to: rhs.longitude,
+                fraction: t
+            ),
             altitude: blendFinite(lhs.altitude, rhs.altitude, ratio: t, fallback: 0),
             horizontalAccuracy: mergedAccuracy(
                 lhs.horizontalAccuracy,
@@ -1986,7 +3005,7 @@ enum RouteTimelineDataEngine {
         for segment: TravelSegment,
         through cutoff: Date
     ) -> [GeoPoint] {
-        guard isConfirmedSubway(segment),
+        guard RouteConfirmedSubwayIntervalIndex.isConfirmedSubway(segment),
               let coordinates = segment.subwayRoute?.coordinates,
               let first = coordinates.first,
               cutoff >= segment.span.start else { return [] }
@@ -2025,40 +3044,20 @@ enum RouteTimelineDataEngine {
 
     private static func confirmedSubwayCoordinate(
         at date: Date,
-        in travel: [TravelSegment]
+        index: RouteConfirmedSubwayIntervalIndex
     ) -> GeoPoint? {
-        guard let segment = confirmedSubwaySegment(at: date, in: travel) else {
+        guard let segment = index.segment(at: date) else {
             return nil
         }
         return confirmedSubwayCoordinates(for: segment, through: date).last
-    }
-
-    private static func confirmedSubwaySegments(
-        in travel: [TravelSegment]
-    ) -> [TravelSegment] {
-        travel.filter(isConfirmedSubway)
-    }
-
-    private static func confirmedSubwaySegment(
-        at date: Date,
-        in travel: [TravelSegment]
-    ) -> TravelSegment? {
-        confirmedSubwaySegments(in: travel)
-            .filter { $0.span.contains(date) }
-            .max { $0.span.start < $1.span.start }
-    }
-
-    private static func isConfirmedSubway(_ segment: TravelSegment) -> Bool {
-        segment.mode == .subway
-            && segment.isConfirmed
-            && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
     }
 
     private static func makeSegments(
         samples: [RouteTimelineSample],
         coordinateIndex: CoordinateIndex,
         actuals: [ActualRecord],
-        travel: [TravelSegment],
+        categoryIndex: CategoryIndex,
+        confirmedSubwayIndex: RouteConfirmedSubwayIntervalIndex,
         cutoff: Date,
         selectedCategory: RouteTimelineCategory?,
         selectedSpan: TimeSpan?,
@@ -2072,7 +3071,7 @@ enum RouteTimelineDataEngine {
                     [actual.startedAt, actual.endedAt ?? cutoff]
                 }
                 + sleepSpans.flatMap { [$0.start, $0.end] }
-                + confirmedSubwaySegments(in: travel).flatMap {
+                + confirmedSubwayIndex.segments.flatMap {
                     [$0.span.start, $0.span.end]
                 }
         ).filter { $0 > first.timestamp && $0 < cutoff }
@@ -2100,15 +3099,9 @@ enum RouteTimelineDataEngine {
             let endPoint = sleepAnchor ?? resolvedEnd
             guard
                   !sameLocation(startPoint, endPoint) else { continue }
-            let category = category(
-                at: midpoint,
-                in: actuals,
-                through: cutoff
-            )
-            let confirmedSubwayTravelID = confirmedSubwaySegment(
-                at: midpoint,
-                in: travel
-            )?.id
+            let category = categoryIndex.category(at: midpoint)
+            let confirmedSubwayTravelID = confirmedSubwayIndex
+                .segment(at: midpoint)?.id
             let speedMetersPerSecond = measuredSpeed(
                 from: startPoint,
                 to: endPoint,
@@ -2269,6 +3262,10 @@ enum RouteTimelineDataEngine {
 
     private static func sameLocation(_ lhs: GeoPoint?, _ rhs: GeoPoint?) -> Bool {
         guard let lhs, let rhs else { return false }
-        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+        return lhs.latitude == rhs.latitude
+            && RouteTimelineLongitude.shortestDelta(
+                from: lhs.longitude,
+                to: rhs.longitude
+            ) == 0
     }
 }

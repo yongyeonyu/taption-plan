@@ -10,6 +10,19 @@ final class CoreEngineContractsTests: XCTestCase {
         XCTAssertLessThan(earlier, later)
     }
 
+    func testStorageDayKeyRejectsSentinelsAndNonCanonicalText() {
+        XCTAssertTrue(TaptionPlanDayKey(year: 2026, month: 9, day: 22).isValidStorageKey)
+        XCTAssertFalse(TaptionPlanDayKey(year: 0, month: 0, day: 0).isValidStorageKey)
+        XCTAssertFalse(TaptionPlanDayKey(year: 10_000, month: 1, day: 1).isValidStorageKey)
+        XCTAssertNil(TaptionPlanDayKey(storageKey: "-001-01-01"))
+        XCTAssertNil(TaptionPlanDayKey(storageKey: "10000-01-01"))
+        XCTAssertNil(TaptionPlanDayKey(storageKey: "2026-9-22"))
+        XCTAssertEqual(
+            TaptionPlanDayKey(storageKey: "2026-09-22"),
+            TaptionPlanDayKey(year: 2026, month: 9, day: 22)
+        )
+    }
+
     func testTimestampIndexUsesBoundsForDayQueries() {
         let start = Date(timeIntervalSince1970: 100)
         let index = TaptionPlanTimestampIndex(

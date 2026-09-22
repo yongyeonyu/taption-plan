@@ -531,6 +531,31 @@ private final class HealthObserverCompletion: @unchecked Sendable {
     }
 }
 
+struct HealthKitObservedChangeQueue: Sendable, Equatable {
+    private var pending: Set<String> = []
+
+    var isEmpty: Bool { pending.isEmpty }
+
+    mutating func mark(_ identifier: String) {
+        pending.insert(identifier)
+    }
+
+    mutating func take() -> Set<String>? {
+        guard !pending.isEmpty else { return nil }
+        let identifiers = pending
+        pending.removeAll()
+        return identifiers
+    }
+
+    mutating func requeue(_ identifiers: Set<String>) {
+        pending.formUnion(identifiers)
+    }
+
+    mutating func removeAll() {
+        pending.removeAll()
+    }
+}
+
 final class AppleHealthService: @unchecked Sendable {
     static let shared = AppleHealthService()
     private static let maximumRouteLocations = 20_000
@@ -584,7 +609,7 @@ final class AppleHealthService: @unchecked Sendable {
     private let importCoordinator: HealthKitImportCoordinator
     private let observerLock = NSLock()
     private var observerQueries: [HKObserverQuery] = []
-    private var pendingObservedTypeIdentifiers = Set<String>()
+    private var observedChangeQueue = HealthKitObservedChangeQueue()
     private var lastBroadSynchronizationAt: Date?
 
     init(
@@ -748,9 +773,14 @@ final class AppleHealthService: @unchecked Sendable {
         var overview: HealthKitSyncOverview
         switch firstScope {
         case let .types(identifiers):
-            overview = try await importCoordinator.synchronizeChanges(
-                typeIdentifiers: identifiers
-            )
+            do {
+                overview = try await importCoordinator.synchronizeChanges(
+                    typeIdentifiers: identifiers
+                )
+            } catch {
+                requeueObservedTypeIdentifiers(identifiers)
+                throw error
+            }
         case .broad:
             do {
                 overview = try await importCoordinator.synchronizeChanges()
@@ -762,9 +792,14 @@ final class AppleHealthService: @unchecked Sendable {
             overview = try await importCoordinator.overview()
         }
         while let identifiers = takePendingObservedTypeIdentifiers() {
-            overview = try await importCoordinator.synchronizeChanges(
-                typeIdentifiers: identifiers
-            )
+            do {
+                overview = try await importCoordinator.synchronizeChanges(
+                    typeIdentifiers: identifiers
+                )
+            } catch {
+                requeueObservedTypeIdentifiers(identifiers)
+                throw error
+            }
         }
         return overview
     }
@@ -1266,13 +1301,20 @@ final class AppleHealthService: @unchecked Sendable {
 
     private func markObservedChange(_ typeIdentifier: String) {
         observerLock.lock()
-        pendingObservedTypeIdentifiers.insert(typeIdentifier)
+        observedChangeQueue.mark(typeIdentifier)
         observerLock.unlock()
     }
 
     private func clearPendingObservedChanges() {
         observerLock.lock()
-        pendingObservedTypeIdentifiers.removeAll()
+        observedChangeQueue.removeAll()
+        observerLock.unlock()
+    }
+
+    private func requeueObservedTypeIdentifiers(_ identifiers: Set<String>) {
+        guard !identifiers.isEmpty else { return }
+        observerLock.lock()
+        observedChangeQueue.requeue(identifiers)
         observerLock.unlock()
     }
 
@@ -1285,9 +1327,7 @@ final class AppleHealthService: @unchecked Sendable {
     private func nextChangeSyncScope(now: Date = .now) -> ChangeSyncScope {
         observerLock.lock()
         defer { observerLock.unlock() }
-        if !pendingObservedTypeIdentifiers.isEmpty {
-            let identifiers = pendingObservedTypeIdentifiers
-            pendingObservedTypeIdentifiers.removeAll()
+        if let identifiers = observedChangeQueue.take() {
             return .types(identifiers)
         }
         if let lastBroadSynchronizationAt,
@@ -1302,10 +1342,7 @@ final class AppleHealthService: @unchecked Sendable {
     private func takePendingObservedTypeIdentifiers() -> Set<String>? {
         observerLock.lock()
         defer { observerLock.unlock() }
-        guard !pendingObservedTypeIdentifiers.isEmpty else { return nil }
-        let identifiers = pendingObservedTypeIdentifiers
-        pendingObservedTypeIdentifiers.removeAll()
-        return identifiers
+        return observedChangeQueue.take()
     }
 
     private func setBackgroundDelivery(
@@ -3912,19 +3949,47 @@ actor PlaceNameResolver {
 }
 
 struct AppleTransportContext: Hashable, Sendable {
+    static let subwayMatchRadiusMeters = 450.0
+    static let busStopMatchRadiusMeters = 140.0
+    static let roadEvidenceRadiusMeters = 1_500.0
+
     var subwayStationName: String?
     var busStopName: String?
     var isOnRoad = false
 
     var isNearSubwayStation: Bool { subwayStationName != nil }
     var isNearBusStop: Bool { busStopName != nil }
+
+    func propagated(toDistanceFromAnchor distance: Double) -> Self? {
+        guard distance.isFinite, distance >= 0 else { return nil }
+        let subway = distance <= Self.subwayMatchRadiusMeters
+            ? subwayStationName
+            : nil
+        let bus = distance <= Self.busStopMatchRadiusMeters
+            ? busStopName
+            : nil
+        let road = isOnRoad && distance <= Self.roadEvidenceRadiusMeters
+        guard subway != nil || bus != nil || road else { return nil }
+        return Self(
+            subwayStationName: subway,
+            busStopName: bus,
+            isOnRoad: road
+        )
+    }
 }
 
 @MainActor
 final class AppleTransportContextService {
     /// Bump when persisted raw sensor readings need a fresh transport
     /// enrichment pass even if their archive fingerprint is unchanged.
-    static let enrichmentModelVersion = 4
+    static let enrichmentModelVersion = 5
+
+    /// Apple 지하철 POI 검색 반경(450m)과 사내 역 카탈로그 매칭 반경을
+    /// 일치시킨다. 두 값이 어긋나면 Apple은 역을 찾았는데 카탈로그는
+    /// 못 찾는 구간이 생겨 `nearbyStationName`이 영구히 비고, 그 결과
+    /// 지하철 증거(`SubwayRouteEvidence`)가 한 번도 만들어지지 않는다.
+    private static let stationMatchRadiusMeters =
+        AppleTransportContext.subwayMatchRadiusMeters
 
     private struct CacheEntry {
         let context: AppleTransportContext
@@ -3944,7 +4009,7 @@ final class AppleTransportContextService {
             guard let point = userEnriched[index].point,
                   SubwayStationCatalog.nearest(
                       to: point,
-                      maximumDistanceMeters: 220
+                      maximumDistanceMeters: Self.stationMatchRadiusMeters
                   ) != nil else { return false }
             let reading = userEnriched[index]
             return reading.motion != .stationary
@@ -3957,7 +4022,7 @@ final class AppleTransportContextService {
             return userEnriched[index].motion == .automotive
                 || (userEnriched[index].speedMetersPerSecond ?? 0) >= 3
         }
-        guard candidates.count >= 2 || staticOnly.count >= 2 else {
+        guard candidates.count >= 1 || staticOnly.count >= 1 else {
             return deterministicStationJourneyEnrichment(
                 userEnriched.map(refiningStaticStation)
             )
@@ -3984,19 +4049,21 @@ final class AppleTransportContextService {
                   let match = resolved.min(by: {
                       distanceMeters(point, $0.0) < distanceMeters(point, $1.0)
                   }),
-                  distanceMeters(point, match.0) <= 1_500 else {
+                  let context = match.1.propagated(
+                      toDistanceFromAnchor: distanceMeters(point, match.0)
+                  ) else {
                 return reading
             }
             var value = reading
             value.nearbyStation = value.nearbyStation
-                || match.1.isNearSubwayStation
-                || match.1.isNearBusStop
-            if let stationName = match.1.subwayStationName
-                ?? match.1.busStopName {
+                || context.isNearSubwayStation
+                || context.isNearBusStop
+            if let stationName = context.subwayStationName
+                ?? context.busStopName {
                 value.nearbyStationName = stationName
             }
             value.matchesPublicTransitRoute =
-                value.matchesPublicTransitRoute || match.1.isNearBusStop
+                value.matchesPublicTransitRoute || context.isNearBusStop
             // MapKit 검색이 누락되거나 역 이름을 잘못 붙여도, 공식 역
             // 카탈로그의 좌표를 마지막 보정으로 사용한다. 버스 정류장
             // 표본은 철도 역으로 승격하지 않는다.
@@ -4009,7 +4076,7 @@ final class AppleTransportContextService {
                 value.nearbyStationName = station.stationName
                 value.matchesRailRoute = true
             }
-            if match.1.isOnRoad {
+            if context.isOnRoad {
                 var evidence = value.behaviorEvidence ?? []
                 if !evidence.contains("Apple 지도 도로 인접") {
                     evidence.append("Apple 지도 도로 인접")
@@ -4105,7 +4172,7 @@ final class AppleTransportContextService {
         guard let point = reading.point,
               let station = SubwayStationCatalog.nearest(
                   to: point,
-                  maximumDistanceMeters: 220
+                  maximumDistanceMeters: Self.stationMatchRadiusMeters
               ) else { return reading }
         guard reading.motion != .stationary
             || (reading.speedMetersPerSecond ?? 0) >= 1
@@ -4127,12 +4194,12 @@ final class AppleTransportContextService {
         async let subway = nearbyName(
             query: "지하철역",
             point: point,
-            radius: 450
+            radius: Self.stationMatchRadiusMeters
         )
         async let bus = nearbyName(
             query: "버스정류장",
             point: point,
-            radius: 140
+            radius: AppleTransportContext.busStopMatchRadiusMeters
         )
         async let road = isOnRoad(point)
         let value = await AppleTransportContext(
@@ -4461,7 +4528,7 @@ enum VoiceMemoRecordingError: LocalizedError {
 }
 
 @MainActor
-final class VoiceMemoPlayer: NSObject, @preconcurrency AVAudioPlayerDelegate {
+final class VoiceMemoPlayer: NSObject, AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     var onFinish: (() -> Void)?
 

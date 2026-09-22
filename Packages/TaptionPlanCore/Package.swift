@@ -18,12 +18,11 @@ let package = Package(
         ),
         .target(
             name: "TaptionPlanCore",
-            dependencies: ["CSQLite"],
-            linkerSettings: [.linkedLibrary("sqlite3")]
+            dependencies: ["CSQLite"]
         ),
         .testTarget(
             name: "TaptionPlanCoreTests",
-            dependencies: ["TaptionPlanCore"]
+            dependencies: ["TaptionPlanCore", "CSQLite"]
         )
     ]
 )

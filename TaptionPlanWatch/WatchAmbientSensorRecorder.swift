@@ -19,6 +19,7 @@ struct WatchAmbientDrainResult: Sendable {
     var summaries: [TaptionWatchSensorSummary] = []
     var archiveSamples: [WatchAmbientArchiveSample] = []
     var pendingHighWater: Date? = nil
+    var pendingSampleDates: [String: Date] = [:]
 }
 
 /// 배경 기록이 실제로 살아 있는지. 워치 화면과 위젯이 같은 값을 본다.
@@ -65,6 +66,10 @@ actor WatchAmbientSensorRecorder {
     private let failureCountKey = "TaptionPlan.watchSensorRecorderDrainFailures"
     private let retryAfterKey = "TaptionPlan.watchSensorRecorderRetryAfter"
     private let pendingSessionKey = "TaptionPlan.watchSensorRecorderPendingSession"
+    private let committedSampleDatesKey =
+        "TaptionPlan.watchSensorRecorderCommittedSampleDates"
+    private let pendingSampleDatesKey =
+        "TaptionPlan.watchSensorRecorderPendingSampleDates"
     private lazy var recorder = CMSensorRecorder()
 
     init(defaults: UserDefaults = .standard) {
@@ -94,6 +99,8 @@ actor WatchAmbientSensorRecorder {
         defaults.removeObject(forKey: failureCountKey)
         defaults.removeObject(forKey: retryAfterKey)
         defaults.removeObject(forKey: pendingSessionKey)
+        defaults.removeObject(forKey: committedSampleDatesKey)
+        defaults.removeObject(forKey: pendingSampleDatesKey)
     }
 
     /// 앱이 실행될 때마다 API가 허용하는 가장 먼 미래까지 기록을 다시 건다.
@@ -108,9 +115,20 @@ actor WatchAmbientSensorRecorder {
             )
             return
         }
+        let armedUntil = defaults.object(forKey: armedUntilKey) as? Date
+        let storedArmedAt = defaults.object(forKey: armedAtKey) as? Date
+        if storedArmedAt == nil,
+           let armedAt = WatchSensorQueryPlan.restoredArmedAt(
+               stored: nil,
+               armedUntil: armedUntil,
+               recordingDuration: Self.maximumRecordingDuration
+           ) {
+            // 구버전 무장 시각은 새 종료 시각으로 덮기 전에 복구한다.
+            defaults.set(armedAt, forKey: armedAtKey)
+        }
         if !Self.shouldArm(
             now: now,
-            armedUntil: defaults.object(forKey: armedUntilKey) as? Date
+            armedUntil: armedUntil
         ) {
             WatchLaunchDiagnostics.mark("ambient arm reused")
             return
@@ -150,9 +168,12 @@ actor WatchAmbientSensorRecorder {
             defaults.object(forKey: highWaterKey) as? Date,
             now: now
         )
+        let armedAt = armedAt()
+        let pendingSessionID = defaults.string(forKey: pendingSessionKey)
+            .flatMap(UUID.init(uuidString:))
         let windows = WatchSensorQueryPlan.windows(
             now: now,
-            armedAt: armedAt(),
+            armedAt: armedAt,
             highWater: highWater
         )
         guard !windows.isEmpty else {
@@ -162,15 +183,20 @@ actor WatchAmbientSensorRecorder {
         WatchLaunchDiagnostics.mark("ambient drain windows=\(windows.count)")
 
         let recorder = self.recorder
-        let sessionID: UUID
-        if let stored = defaults.string(forKey: pendingSessionKey)
-            .flatMap(UUID.init(uuidString:)) {
-            sessionID = stored
-        } else {
-            sessionID = UUID()
+        let sessionID = pendingSessionID ?? UUID()
+        if pendingSessionID == nil {
             defaults.set(sessionID.uuidString, forKey: pendingSessionKey)
         }
-        var pipeline = WatchAmbientBehaviorPipeline(sessionID: sessionID)
+        let committedSampleDates = defaults.dictionary(
+            forKey: committedSampleDatesKey
+        ) as? [String: Date] ?? [:]
+        var pipeline = WatchAmbientBehaviorPipeline(
+            sessionID: sessionID,
+            sequenceAnchor: armedAt ?? windows[0].start,
+            committedSampleIDs: Set(
+                committedSampleDates.keys.compactMap(UUID.init(uuidString:))
+            )
+        )
         var ledger = WatchSensorDrainLedger(highWater: highWater)
 
         for window in windows {
@@ -188,6 +214,11 @@ actor WatchAmbientSensorRecorder {
                     }
                 }
                 ledger.succeeded(window)
+                pipeline.pruneSampleHistory(
+                    keepingFrom: window.end.addingTimeInterval(
+                        -(WatchSensorQueryPlan.availabilityLag + 60)
+                    )
+                )
                 defaults.removeObject(forKey: failureCountKey)
                 defaults.removeObject(forKey: retryAfterKey)
             } catch {
@@ -205,6 +236,11 @@ actor WatchAmbientSensorRecorder {
         // SQLite의 idempotent raw event insert가 중복을 막는다.
         var result = pipeline.finish()
         result.pendingHighWater = ledger.highWater
+        if result.pendingSampleDates.isEmpty {
+            defaults.removeObject(forKey: pendingSampleDatesKey)
+        } else {
+            defaults.set(result.pendingSampleDates, forKey: pendingSampleDatesKey)
+        }
         WatchLaunchDiagnostics.mark(
             "ambient drain complete summaries=\(result.summaries.count) samples=\(result.archiveSamples.count) failures=\(ledger.failureCount)"
         )
@@ -217,15 +253,31 @@ actor WatchAmbientSensorRecorder {
             defaults.object(forKey: highWaterKey) as? Date,
             now: now
         )
-        defaults.set(max(current ?? highWater, highWater), forKey: highWaterKey)
-        defaults.removeObject(forKey: pendingSessionKey)
+        let committedHighWater = max(current ?? highWater, highWater)
+        var committedSamples = defaults.dictionary(
+            forKey: committedSampleDatesKey
+        ) as? [String: Date] ?? [:]
+        let pendingSamples = defaults.dictionary(
+            forKey: pendingSampleDatesKey
+        ) as? [String: Date] ?? [:]
+        pendingSamples.forEach { committedSamples[$0.key] = $0.value }
+        let overlapFloor = committedHighWater.addingTimeInterval(
+            -(WatchSensorQueryPlan.availabilityLag + 60)
+        )
+        committedSamples = committedSamples.filter { $0.value >= overlapFloor }
+        if committedSamples.isEmpty {
+            defaults.removeObject(forKey: committedSampleDatesKey)
+        } else {
+            defaults.set(committedSamples, forKey: committedSampleDatesKey)
+        }
+        defaults.removeObject(forKey: pendingSampleDatesKey)
+        defaults.set(committedHighWater, forKey: highWaterKey)
     }
 
     /// 기록을 처음 건 시각. 이보다 앞은 표본이 존재할 수 없다.
     private func armedAt() -> Date? {
-        if let stored = defaults.object(forKey: armedAtKey) as? Date {
-            return stored
-        }
+        let stored = defaults.object(forKey: armedAtKey) as? Date
+        if let stored { return stored }
         // 이 키가 생기기 전 빌드에서 이미 기록을 걸어둔 기기. 무장 종료
         // 시각에서 창 길이를 빼면 마지막으로 건 시각이 나온다. 첫 무장보다
         // 늦은 값이라 조회 범위가 좁아질 뿐 앞서 나가지 않는다.
@@ -233,7 +285,11 @@ actor WatchAmbientSensorRecorder {
         else {
             return nil
         }
-        let derived = armedUntil.addingTimeInterval(-Self.maximumRecordingDuration)
+        guard let derived = WatchSensorQueryPlan.restoredArmedAt(
+            stored: nil,
+            armedUntil: armedUntil,
+            recordingDuration: Self.maximumRecordingDuration
+        ) else { return nil }
         defaults.set(derived, forKey: armedAtKey)
         return derived
     }
@@ -271,59 +327,71 @@ actor WatchAmbientSensorRecorder {
 /// 그대로 태워 `TaptionWatchSensorSummary`를 만든다.
 private struct WatchAmbientBehaviorPipeline {
     /// 원본 4개를 평균해 12.5Hz로 낮춘다. 2.56초 창에 32표본이 남아
-    /// 분석기의 최소 8표본·자기상관 최소 12표본 조건을 넉넉히 넘기고,
-    /// 상자 평균이 값싼 안티에일리어싱 역할을 한다. 12시간치를 통째로
-    /// 배열에 담지 않고 창 두 개 분량만 들고 흐르므로 메모리는 킬로바이트
-    /// 수준에 머문다.
+    /// 분석기의 최소 8표본·자기상관 최소 12표본 조건을 넘고, 상자 평균이
+    /// 값싼 안티에일리어싱 역할을 한다. Sample ID 기록은 30분 query 성공
+    /// 때마다 4분 재조회 overlap만 남겨 전체 3일 조회에 비례해 커지지 않는다.
     private static let downsampleFactor = 4
-    /// 요약 하나가 담는 시간. 12시간 배수를 한 번에 비워도 요약 수가
-    /// 72개를 넘지 않는다.
-    private static let summaryChunkDuration: TimeInterval = 10 * 60
     /// 아카이브는 학습용 참고 자료라 원본 밀도가 필요 없다. 5초 간격이면
     /// 하루 약 1.7만 줄로, 예전 듀티 사이클(균형 기준 하루 4.3만 줄)보다
     /// 오히려 작다.
     private static let archiveInterval: TimeInterval = 5
-    private static let maximumSegmentsPerSummary = 240
     /// 손목을 벗었거나 기록이 끊긴 구간을 하나의 창으로 잇지 않는다.
     private static let maximumSampleGap: TimeInterval = 5
 
     let sessionID: UUID
-    private(set) var latestSampleDate: Date?
+    private let sequenceAnchor: Date
+    private let committedSampleIDs: Set<UUID>
 
     private var result = WatchAmbientDrainResult()
+    private var summaryAccumulator: WatchAmbientSummaryAccumulator
 
     private var blockCount = 0
     private var blockX = 0.0
     private var blockY = 0.0
     private var blockZ = 0.0
     private var blockStart: Date?
+    private var latestRawSampleDate: Date?
 
-    private var samples: [WatchMotionSample] = []
-    private var nextWindowEnd: Date?
-    private var segments: [WatchBehaviorSegment] = []
-    private var lastSegmentKind: WatchBehaviorKind?
-    private var lastSegmentConfidence = 0.0
     private var lastArchivedAt: Date?
+    private var seenSampleIDs = Set<UUID>()
 
-    private var sequence = 0
-    private var chunkStart: Date?
-    private var chunkEnd: Date?
-    private var count = 0
-    private var sumX = 0.0
-    private var sumY = 0.0
-    private var sumZ = 0.0
-    private var peak = 0.0
-    private var magnitudeMean = 0.0
-    private var magnitudeM2 = 0.0
-    private var jerkSum = 0.0
-    private var previousMagnitude: Double?
-    private var previousMagnitudeAt: Date?
-
-    init(sessionID: UUID) {
+    init(
+        sessionID: UUID,
+        sequenceAnchor: Date,
+        committedSampleIDs: Set<UUID>
+    ) {
         self.sessionID = sessionID
+        self.sequenceAnchor = sequenceAnchor
+        self.committedSampleIDs = committedSampleIDs
+        self.summaryAccumulator = WatchAmbientSummaryAccumulator(
+            sessionID: sessionID,
+            sequenceAnchor: sequenceAnchor
+        )
+    }
+
+    mutating func pruneSampleHistory(keepingFrom cutoff: Date) {
+        result.pendingSampleDates =
+            TaptionWatchAmbientSampleDeduplicationPolicy.retainingSampleDates(
+                result.pendingSampleDates,
+                from: cutoff
+            )
+        seenSampleIDs = committedSampleIDs.union(
+            result.pendingSampleDates.keys.compactMap(UUID.init(uuidString:))
+        )
     }
 
     mutating func ingest(_ data: CMRecordedAccelerometerData) {
+        if let latestRawSampleDate,
+           data.startDate.timeIntervalSince(latestRawSampleDate)
+                > Self.maximumSampleGap {
+            blockCount = 0
+            blockX = 0
+            blockY = 0
+            blockZ = 0
+            blockStart = nil
+            summaryAccumulator.resetAfterSampleGap()
+        }
+        latestRawSampleDate = data.startDate
         if blockStart == nil { blockStart = data.startDate }
         blockX += data.acceleration.x
         blockY += data.acceleration.y
@@ -346,7 +414,7 @@ private struct WatchAmbientBehaviorPipeline {
     }
 
     mutating func finish() -> WatchAmbientDrainResult {
-        closeChunk(isFinal: true)
+        result.summaries = summaryAccumulator.finish()
         return result
     }
 
@@ -354,269 +422,41 @@ private struct WatchAmbientBehaviorPipeline {
         _ vector: TaptionWatchSensorVector3,
         capturedAt: Date
     ) {
-        if let latestSampleDate,
-           capturedAt.timeIntervalSince(latestSampleDate) > Self.maximumSampleGap {
-            closeChunk(isFinal: false)
-            samples.removeAll(keepingCapacity: true)
-            nextWindowEnd = nil
-        } else if let chunkStart,
-                  capturedAt.timeIntervalSince(chunkStart)
-                    >= Self.summaryChunkDuration {
-            closeChunk(isFinal: false)
-        }
-        latestSampleDate = capturedAt
-        if chunkStart == nil { chunkStart = capturedAt }
-        chunkEnd = capturedAt
-        accumulate(vector, capturedAt: capturedAt)
+        guard let summaryWindow = WatchAmbientSummaryAccumulator.summaryWindow(
+            capturedAt: capturedAt,
+            anchor: sequenceAnchor
+        ), let sampleID = TaptionWatchStableID.ambientAccelerationSample(
+            capturedAt: capturedAt
+        ) else { return }
+        guard TaptionWatchAmbientSampleDeduplicationPolicy.shouldProcess(
+            sampleID,
+            committed: committedSampleIDs,
+            seen: &seenSampleIDs
+        ) else { return }
+        result.pendingSampleDates[sampleID.uuidString] = capturedAt
+        summaryAccumulator.append(
+            vector,
+            capturedAt: capturedAt,
+            summaryWindow: summaryWindow
+        )
         if lastArchivedAt == nil
             || capturedAt.timeIntervalSince(lastArchivedAt ?? capturedAt)
                 >= Self.archiveInterval {
-            lastArchivedAt = capturedAt
-            result.archiveSamples.append(
-                WatchAmbientArchiveSample(
-                    id: UUID(),
-                    sessionID: sessionID,
-                    sequence: sequence + 1,
-                    capturedAt: capturedAt,
-                    acceleration: vector
-                )
-            )
-        }
-        samples.append(
-            WatchMotionSample(
+            if let archiveSequence = TaptionWatchStableID.ambientAccelerationSequence(
                 capturedAt: capturedAt,
-                acceleration: vector,
-                rotationRate: nil,
-                gravity: nil
-            )
-        )
-        analyzeWindows(at: capturedAt)
-    }
-
-    private mutating func accumulate(
-        _ vector: TaptionWatchSensorVector3,
-        capturedAt: Date
-    ) {
-        sumX += vector.x
-        sumY += vector.y
-        sumZ += vector.z
-        count += 1
-        let magnitude = sqrt(
-            vector.x * vector.x + vector.y * vector.y + vector.z * vector.z
-        )
-        peak = max(peak, magnitude)
-        let delta = magnitude - magnitudeMean
-        magnitudeMean += delta / Double(count)
-        magnitudeM2 += delta * (magnitude - magnitudeMean)
-        if let previousMagnitude, let previousMagnitudeAt {
-            let elapsed = max(0.01, capturedAt.timeIntervalSince(previousMagnitudeAt))
-            jerkSum += abs(magnitude - previousMagnitude) / elapsed
-        }
-        previousMagnitude = magnitude
-        previousMagnitudeAt = capturedAt
-    }
-
-    private mutating func analyzeWindows(at capturedAt: Date) {
-        if nextWindowEnd == nil {
-            nextWindowEnd = capturedAt.addingTimeInterval(
-                WatchBehaviorWindowAnalyzer.windowDuration
-            )
-        }
-        var advancedWindow = false
-        while let windowEnd = nextWindowEnd, capturedAt >= windowEnd {
-            advancedWindow = true
-            let windowStart = windowEnd.addingTimeInterval(
-                -WatchBehaviorWindowAnalyzer.windowDuration
-            )
-            let window = samples.filter {
-                $0.capturedAt >= windowStart && $0.capturedAt <= windowEnd
-            }
-            if let features = WatchBehaviorWindowAnalyzer.features(from: window) {
-                // 기록기는 가속도만 남기므로 걸음·층수·GPS 근거가 없다.
-                // 분류기는 누락 신호를 이미 옵셔널로 다룬다.
-                let inference = WatchBehaviorClassifier.classifyWindow(
-                    features,
-                    context: WatchBehaviorInput(
-                        workoutKind: nil,
-                        duration: features.duration,
-                        accelerometerSampleCount: features.sampleCount,
-                        accelerometerStandardDeviationG:
-                            features.accelerationStandardDeviationG,
-                        accelerometerMeanJerkGPerSecond:
-                            features.jerkRMSGPerSecond,
-                        gpsAvailable: false,
-                        gpsLossRatio: 1,
-                        accelerationBodyRMSG: features.bodyAccelerationRMSG,
-                        accelerationZeroCrossingRateHz:
-                            features.zeroCrossingRateHz,
-                        dominantMotionFrequencyHz: features.dominantFrequencyHz,
-                        gyroscopeRMSG: features.gyroscopeRMSGPerSecond,
-                        posturePitchRadians: features.posturePitchRadians,
-                        postureRollRadians: features.postureRollRadians
+                anchor: sequenceAnchor
+            ) {
+                lastArchivedAt = capturedAt
+                result.archiveSamples.append(
+                    WatchAmbientArchiveSample(
+                        id: sampleID,
+                        sessionID: sessionID,
+                        sequence: archiveSequence,
+                        capturedAt: capturedAt,
+                        acceleration: vector
                     )
                 )
-                appendSegment(
-                    inference,
-                    startedAt: features.startedAt,
-                    endedAt: features.endedAt
-                )
             }
-            nextWindowEnd = windowEnd.addingTimeInterval(
-                WatchBehaviorWindowAnalyzer.strideDuration
-            )
         }
-        guard advancedWindow else { return }
-        let cutoff = (nextWindowEnd ?? capturedAt).addingTimeInterval(
-            -WatchBehaviorWindowAnalyzer.windowDuration * 2
-        )
-        samples.removeAll { $0.capturedAt < cutoff }
-    }
-
-    private mutating func appendSegment(
-        _ inference: WatchBehaviorInference,
-        startedAt: Date,
-        endedAt: Date
-    ) {
-        var stable = inference
-        if let lastSegmentKind,
-           lastSegmentKind != inference.kind,
-           inference.confidenceScore < lastSegmentConfidence + 0.08 {
-            stable = WatchBehaviorInference(
-                kind: lastSegmentKind,
-                confidenceScore: lastSegmentConfidence,
-                evidence: inference.evidence + ["시간적 안정화"],
-                modelVersion: inference.modelVersion
-            )
-        }
-        lastSegmentKind = stable.kind
-        lastSegmentConfidence = stable.confidenceScore
-        if let index = segments.indices.last,
-           segments[index].behavior == stable.kind,
-           startedAt.timeIntervalSince(segments[index].endedAt)
-            <= WatchBehaviorWindowAnalyzer.strideDuration * 1.5 {
-            segments[index].endedAt = max(segments[index].endedAt, endedAt)
-            segments[index].confidenceScore = max(
-                segments[index].confidenceScore,
-                stable.confidenceScore
-            )
-            segments[index].evidence = Array(
-                Set(segments[index].evidence + stable.evidence)
-            ).sorted()
-            return
-        }
-        segments.append(
-            WatchBehaviorSegment(
-                startedAt: startedAt,
-                endedAt: endedAt,
-                behavior: stable.kind,
-                confidenceScore: stable.confidenceScore,
-                evidence: stable.evidence,
-                modelVersion: stable.modelVersion
-            )
-        )
-    }
-
-    private mutating func closeChunk(isFinal: Bool) {
-        defer { resetChunk() }
-        guard count > 0, let startedAt = chunkStart, let endedAt = chunkEnd else {
-            return
-        }
-        sequence += 1
-        let standardDeviation = count > 1
-            ? sqrt(max(0, magnitudeM2) / Double(count - 1))
-            : nil
-        let meanJerk = count > 1 ? jerkSum / Double(count - 1) : nil
-        let input = WatchBehaviorInput(
-            workoutKind: nil,
-            duration: max(1, endedAt.timeIntervalSince(startedAt)),
-            accelerometerSampleCount: count,
-            accelerometerStandardDeviationG: standardDeviation,
-            accelerometerMeanJerkGPerSecond: meanJerk,
-            peakAccelerationG: peak,
-            gpsAvailable: false,
-            gpsLossRatio: 1
-        )
-        let behavior = WatchBehaviorClassifier.aggregate(
-            trimmedSegments,
-            fallback: WatchBehaviorClassifier.classify(input)
-        )
-        result.summaries.append(
-            TaptionWatchSensorSummary(
-                sessionID: sessionID,
-                sequence: sequence,
-                // 주변 기록에는 운동 종류가 없다. 예전 듀티 사이클 경로와
-                // 같은 자리표시자를 유지해 iPhone 쪽 해석을 바꾸지 않는다.
-                workoutKind: .walking,
-                linkedPlanID: nil,
-                linkedPlanTitle: nil,
-                linkedCategoryID: nil,
-                startedAt: startedAt,
-                endedAt: max(startedAt, endedAt),
-                isFinal: isFinal,
-                accelerometerSampleCount: count,
-                accelerometerAverageG: TaptionWatchSensorVector3(
-                    x: sumX / Double(count),
-                    y: sumY / Double(count),
-                    z: sumZ / Double(count)
-                ),
-                peakAccelerationG: peak,
-                accelerometerStandardDeviationG: standardDeviation,
-                accelerometerMeanJerkGPerSecond: meanJerk,
-                gyroscopeSampleCount: 0,
-                gyroscopeAverageRadiansPerSecond: nil,
-                peakRotationRateRadiansPerSecond: nil,
-                gravity: nil,
-                userAccelerationG: nil,
-                rotationRateRadiansPerSecond: nil,
-                attitudeRadians: nil,
-                relativeAltitudeMeters: nil,
-                pressureKilopascals: nil,
-                stepCount: nil,
-                distanceMeters: nil,
-                floorsAscended: nil,
-                floorsDescended: nil,
-                latestHeartRate: nil,
-                averageHeartRate: nil,
-                maximumHeartRate: nil,
-                activeEnergyKilocalories: nil,
-                routePoints: nil,
-                behavior: behavior.kind,
-                behaviorConfidenceScore: behavior.confidenceScore,
-                behaviorEvidence: behavior.evidence,
-                behaviorModelVersion: behavior.modelVersion,
-                behaviorSegments: trimmedSegments,
-                isAmbient: true
-            )
-        )
-    }
-
-    /// 10분 창이 잘게 흔들리면 세그먼트가 수백 개까지 늘 수 있다.
-    /// WatchConnectivity 전송 크기를 지키기 위해 짧은 것부터 버린다.
-    private var trimmedSegments: [WatchBehaviorSegment] {
-        guard segments.count > Self.maximumSegmentsPerSummary else {
-            return segments
-        }
-        return segments
-            .sorted { $0.duration > $1.duration }
-            .prefix(Self.maximumSegmentsPerSummary)
-            .sorted { $0.startedAt < $1.startedAt }
-    }
-
-    private mutating func resetChunk() {
-        chunkStart = nil
-        chunkEnd = nil
-        count = 0
-        sumX = 0
-        sumY = 0
-        sumZ = 0
-        peak = 0
-        magnitudeMean = 0
-        magnitudeM2 = 0
-        jerkSum = 0
-        previousMagnitude = nil
-        previousMagnitudeAt = nil
-        segments.removeAll(keepingCapacity: true)
-        lastSegmentKind = nil
-        lastSegmentConfidence = 0
     }
 }

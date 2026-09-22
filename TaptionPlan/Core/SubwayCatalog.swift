@@ -7,6 +7,12 @@ import Foundation
 enum SubwayStationCatalog {
     private static let maximumStationSampleGap: TimeInterval = 30 * 60
 
+    private static func orderedReadings(_ readings: [SensorReading]) -> [SensorReading] {
+        readings
+            .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
     struct Station: Hashable, Sendable {
         let lineName: String
         let order: Int
@@ -176,7 +182,7 @@ enum SubwayStationCatalog {
 
     static func stationNames(from readings: [SensorReading]) -> [String] {
         var names: [String] = []
-        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+        for reading in orderedReadings(readings) {
             var name: String?
             if reading.matchesRailRoute {
                 name = reading.nearbyStationName
@@ -209,7 +215,7 @@ enum SubwayStationCatalog {
         from readings: [SensorReading],
         route: SubwayRoutePath? = nil
     ) -> [TemporaryLocation] {
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = orderedReadings(readings)
         let resolvedRoute = route ?? {
             let names = stationNames(from: ordered)
             guard names.count >= 2 else { return nil }
@@ -268,7 +274,7 @@ enum SubwayStationCatalog {
         guard !stations.isEmpty else { return [] }
 
         var names: [String] = []
-        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+        for reading in orderedReadings(readings) {
             guard let point = reliableGPSPoint(from: reading) else { continue }
             guard let location = stations.min(by: {
                 distanceMeters(point, $0.point) < distanceMeters(point, $1.point)
@@ -335,7 +341,7 @@ enum SubwayStationCatalog {
         route: SubwayRoutePath,
         maximumDistanceMeters: Double = 450
     ) -> StationStopPattern {
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = orderedReadings(readings)
         guard !ordered.isEmpty else {
             return StationStopPattern(
                 observedStationNames: [],
@@ -396,7 +402,7 @@ enum SubwayStationCatalog {
         minimumStayDuration: TimeInterval = 5 * 60,
         exitDistanceMeters: Double = 50
     ) -> StationJourney? {
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = orderedReadings(readings)
         let samples: [StationPointSample] = ordered.compactMap { reading in
             guard let point = reliableGPSPoint(from: reading) else {
                 return nil
@@ -680,7 +686,7 @@ enum SubwayStationCatalog {
             timestamp: Date,
             point: GeoPoint
         )] = []
-        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+        for reading in orderedReadings(readings) {
             guard let point = reliableGPSPoint(from: reading),
                   let station = nearest(
                       to: point,

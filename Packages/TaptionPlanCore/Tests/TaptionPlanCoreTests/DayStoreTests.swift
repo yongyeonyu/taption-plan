@@ -187,7 +187,10 @@ final class DayStoreTests: XCTestCase {
             domain: "sensor-reading"
         )
 
-        XCTAssertEqual(healthIDs, ["healthkit:known"])
+        XCTAssertEqual(
+            healthIDs,
+            Set(["healthkit:known"])
+        )
         XCTAssertTrue(sensorIDs.isEmpty)
     }
 
@@ -235,7 +238,7 @@ final class DayStoreTests: XCTestCase {
         XCTAssertTrue(eventsBeforeAppend.isEmpty)
         let inserted = try await store.appendUniqueEvents([first])
         let duplicate = try await store.appendUniqueEvents([first])
-        XCTAssertEqual(inserted, [first.id])
+        XCTAssertEqual(inserted, Set([first.id]))
         XCTAssertTrue(duplicate.isEmpty)
         do {
             try await store.validateUniqueEvents([
@@ -337,6 +340,282 @@ final class DayStoreTests: XCTestCase {
             domain: "healthkit-sample"
         )
         XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testConditionalRepairDoesNotOverwriteConcurrentEventUpdate() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 25)
+        let timestamp = Date(timeIntervalSince1970: 10)
+        let original = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: timestamp,
+            sequence: 1,
+            id: "sensor-1",
+            domain: "sensor-reading",
+            payload: Data([1])
+        )
+        try await store.appendEvents([original])
+
+        let concurrentUpdate = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: timestamp,
+            sequence: 1,
+            id: "sensor-1",
+            domain: "sensor-reading",
+            payload: Data([2])
+        )
+        try await store.upsertEvents([concurrentUpdate])
+        let repaired = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: timestamp,
+            sequence: 1,
+            id: "sensor-1",
+            domain: "sensor-reading",
+            payload: Data([3])
+        )
+
+        let updatedIDs = try await store.upsertEvents(
+            [repaired],
+            onlyIfUnchangedFrom: [original]
+        )
+        let persisted = try await store.allEvents(domain: "sensor-reading")
+
+        XCTAssertTrue(updatedIDs.isEmpty)
+        XCTAssertEqual(persisted, [concurrentUpdate])
+    }
+
+    func testSQLiteEventIdentityPreservesCanonicalStringVariants() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 20)
+        let timestamp = Date(timeIntervalSince1970: 10)
+        let composed = "\u{00E9}"
+        let decomposed = "e\u{0301}"
+        func event(id: String, domain: String = "sensor-reading", payload: UInt8 = 1)
+            -> TaptionPlanDayStore.Event {
+            .init(
+                day: day,
+                timestamp: timestamp,
+                sequence: 1,
+                id: id,
+                domain: domain,
+                payload: Data([payload])
+            )
+        }
+        let originals = [event(id: composed), event(id: decomposed)]
+
+        try await store.validateUniqueEvents(originals)
+        let inserted = try await store.appendUniqueEventIdentifiers(originals)
+        let existing = try await store.existingEventIdentifiers(
+            [composed, decomposed],
+            domain: "sensor-reading"
+        )
+        do {
+            _ = try await store.appendUniqueEvents(originals)
+            XCTFail("String Set compatibility API must reject ambiguous IDs")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidIdentifier)
+        }
+        do {
+            _ = try await store.existingEventIDs(
+                [composed, decomposed],
+                domain: "sensor-reading"
+            )
+            XCTFail("String Set compatibility API must reject ambiguous IDs")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidIdentifier)
+        }
+        let repairs = originals.map {
+            event(id: $0.id, payload: 2)
+        }
+        let updated = try await store.upsertEvents(
+            repairs,
+            onlyIfUnchangedFrom: originals
+        )
+
+        XCTAssertNotEqual(Data(composed.utf8), Data(decomposed.utf8))
+        XCTAssertEqual(Set(originals).count, 2)
+        XCTAssertEqual(inserted, Set(originals.map { .init($0.id) }))
+        XCTAssertEqual(existing, Set(originals.map { .init($0.id) }))
+        XCTAssertEqual(updated, Set(originals.map { .init($0.id) }))
+        let repairedEvents = try await store.allEvents(domain: "sensor-reading")
+        XCTAssertEqual(Set(repairedEvents), Set(repairs))
+
+        let composedDomain = event(id: "same-id", domain: composed)
+        try await store.appendEvents([composedDomain])
+        do {
+            try await store.validateUniqueEvents([
+                event(id: "same-id", domain: decomposed),
+            ])
+            XCTFail("Canonical variants of a SQLite domain must conflict")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .eventConflict(id: "same-id"))
+        }
+
+        try await store.deleteEvents(
+            ids: [composed, decomposed],
+            domain: "sensor-reading"
+        )
+        let remainingIDs = try await store.existingEventIdentifiers(
+            [composed, decomposed],
+            domain: "sensor-reading"
+        )
+        XCTAssertTrue(remainingIDs.isEmpty)
+    }
+
+    func testStringSetReturnAPIsRemainSourceCompatible() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 20)
+        let event = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: Date(timeIntervalSince1970: 10),
+            sequence: 1,
+            id: "sensor-1",
+            domain: "sensor-reading",
+            payload: Data([1])
+        )
+
+        let inserted: Set<String> = try await store.appendUniqueEvents([event])
+        let existing: Set<String> = try await store.existingEventIDs(
+            [event.id],
+            domain: event.domain
+        )
+        let exact: Set<TaptionPlanDayStore.EventIdentifier> =
+            try await store.existingEventIdentifiers([event.id], domain: event.domain)
+
+        XCTAssertEqual(inserted, Set([event.id]))
+        XCTAssertEqual(existing, Set([event.id]))
+        XCTAssertEqual(
+            exact,
+            Set([TaptionPlanDayStore.EventIdentifier(event.id)])
+        )
+    }
+
+    func testSnapshotIdentityMatchesSQLiteByteExactDomainKeys() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 20)
+        let composed = "\u{00E9}"
+        let decomposed = "e\u{0301}"
+        let snapshots = [composed, decomposed].map {
+            TaptionPlanDayStore.Snapshot(
+                domain: $0,
+                day: day,
+                revision: 1,
+                updatedAt: Date(timeIntervalSince1970: 10),
+                payload: Data([1])
+            )
+        }
+
+        try await store.saveSnapshots(snapshots)
+        let loaded = try await store.snapshots(day: day)
+
+        XCTAssertEqual(Set(snapshots).count, 2)
+        XCTAssertEqual(Set(loaded), Set(snapshots))
+    }
+
+    func testLegacyStoreRejectsEmbeddedNULAtTextIdentityBoundaries() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 20)
+        let valid = TaptionPlanDayStore.Event(
+            day: day,
+            timestamp: Date(timeIntervalSince1970: 10),
+            sequence: 1,
+            id: "gps-1",
+            domain: "sensor-reading",
+            payload: Data([1])
+        )
+
+        do {
+            try await store.appendEvents([.init(
+                day: day,
+                timestamp: valid.timestamp,
+                sequence: valid.sequence,
+                id: "gps-1\u{0000}alias",
+                domain: valid.domain,
+                payload: valid.payload
+            )])
+            XCTFail("Embedded NUL identifiers must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidIdentifier)
+        }
+        do {
+            try await store.appendEvents([.init(
+                day: day,
+                timestamp: valid.timestamp,
+                sequence: valid.sequence,
+                id: valid.id,
+                domain: "sensor\u{0000}alias",
+                payload: valid.payload
+            )])
+            XCTFail("Embedded NUL domains must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDomain)
+        }
+        try await store.appendEvents([valid])
+
+        do {
+            _ = try await store.existingEventIDs(["gps-1\u{0000}alias"], domain: valid.domain)
+            XCTFail("Embedded NUL lookup identifiers must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidIdentifier)
+        }
+        do {
+            try await store.deleteEvents(ids: ["gps-1\u{0000}alias"], domain: valid.domain)
+            XCTFail("Embedded NUL delete identifiers must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidIdentifier)
+        }
+        do {
+            try await store.saveSnapshots([.init(
+                domain: "snapshot\u{0000}alias",
+                day: day,
+                revision: 1,
+                updatedAt: valid.timestamp,
+                payload: Data([1])
+            )])
+            XCTFail("Embedded NUL snapshot domains must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDomain)
+        }
+        do {
+            _ = try await store.saveMapDayDocument(
+                day: day,
+                algorithmKey: "algorithm\u{0000}alias",
+                styleKey: "style",
+                payload: Data([1])
+            )
+            XCTFail("Embedded NUL map keys must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDomain)
+        }
+        let validMigrationMarker = try await store.markMigrationCompleted("migration")
+        XCTAssertTrue(validMigrationMarker)
+        do {
+            _ = try await store.markMigrationCompleted("migration\u{0000}alias")
+            XCTFail("Embedded NUL migration keys must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidMigrationKey)
+        }
+        do {
+            _ = try await store.migrationCompleted("migration\u{0000}alias")
+            XCTFail("Embedded NUL migration lookups must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidMigrationKey)
+        }
+        let migrationRemainsCompleted = try await store.migrationCompleted("migration")
+        XCTAssertTrue(migrationRemainsCompleted)
+
+        let persisted = try await store.allEvents(domain: valid.domain)
+        XCTAssertEqual(persisted, [valid])
     }
 
     func testEventDeltaAndCursorSnapshotCommitTogether() async throws {
@@ -446,6 +725,155 @@ final class DayStoreTests: XCTestCase {
             styleKey: "standard"
         )
         XCTAssertNil(differentStyle)
+    }
+
+    func testMapDayCacheIdentityDoesNotCollideOnSeparators() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 25)
+        let firstPayload = Data("algorithm-with-separator".utf8)
+        let secondPayload = Data("style-with-separator".utf8)
+
+        let first = try await store.saveMapDayDocument(
+            day: day,
+            algorithmKey: "route:v1",
+            styleKey: "simple",
+            payload: firstPayload
+        )
+        let second = try await store.saveMapDayDocument(
+            day: day,
+            algorithmKey: "route",
+            styleKey: "v1:simple",
+            payload: secondPayload
+        )
+
+        XCTAssertEqual(first.revision, 1)
+        XCTAssertEqual(second.revision, 1)
+        let loadedFirst = try await store.mapDayDocument(
+            day: day,
+            algorithmKey: "route:v1",
+            styleKey: "simple"
+        )
+        let loadedSecond = try await store.mapDayDocument(
+            day: day,
+            algorithmKey: "route",
+            styleKey: "v1:simple"
+        )
+        XCTAssertEqual(loadedFirst?.payload, firstPayload)
+        XCTAssertEqual(loadedSecond?.payload, secondPayload)
+    }
+
+    func testMapDayCacheIdentityPreservesCanonicalStringVariants() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 25)
+        let composed = "\u{00E9}"
+        let decomposed = "e\u{0301}"
+        let firstKey = TaptionPlanMapDayCacheKey(
+            day: day,
+            algorithmKey: composed,
+            styleKey: "simple"
+        )
+        let secondKey = TaptionPlanMapDayCacheKey(
+            day: day,
+            algorithmKey: decomposed,
+            styleKey: "simple"
+        )
+
+        XCTAssertNotEqual(firstKey, secondKey)
+        XCTAssertEqual(Set([firstKey, secondKey]).count, 2)
+        try await store.saveMapDayDocument(
+            day: day,
+            algorithmKey: composed,
+            styleKey: "simple",
+            payload: Data("composed".utf8)
+        )
+        try await store.saveMapDayDocument(
+            day: day,
+            algorithmKey: decomposed,
+            styleKey: "simple",
+            payload: Data("decomposed".utf8)
+        )
+
+        let first = try await store.mapDayDocument(
+            day: day,
+            algorithmKey: composed,
+            styleKey: "simple"
+        )
+        let second = try await store.mapDayDocument(
+            day: day,
+            algorithmKey: decomposed,
+            styleKey: "simple"
+        )
+        XCTAssertEqual(first?.payload, Data("composed".utf8))
+        XCTAssertEqual(second?.payload, Data("decomposed".utf8))
+    }
+
+    func testMapDayRevisionsAreAtomicAcrossStoreConnections() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let firstStore = try TaptionPlanDayStore(url: url)
+        let secondStore = try TaptionPlanDayStore(url: url)
+        var observer: OpaquePointer?
+        XCTAssertEqual(
+            sqlite3_open_v2(
+                url.path,
+                &observer,
+                SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
+                nil
+            ),
+            SQLITE_OK
+        )
+        guard let observer else {
+            return XCTFail("Unable to open SQLite write-lock fixture")
+        }
+        defer { sqlite3_close(observer) }
+        XCTAssertEqual(
+            sqlite3_exec(observer, "BEGIN IMMEDIATE;", nil, nil, nil),
+            SQLITE_OK
+        )
+
+        let day = TaptionPlanDayKey(year: 2026, month: 8, day: 25)
+        let firstWrite = Task {
+            try await firstStore.saveMapDayDocument(
+                day: day,
+                algorithmKey: "route-v1",
+                styleKey: "simple",
+                payload: Data("first".utf8)
+            )
+        }
+        let secondWrite = Task {
+            try await secondStore.saveMapDayDocument(
+                day: day,
+                algorithmKey: "route-v1",
+                styleKey: "simple",
+                payload: Data("second".utf8)
+            )
+        }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(
+            sqlite3_exec(observer, "COMMIT;", nil, nil, nil),
+            SQLITE_OK
+        )
+
+        let firstDocument = try await firstWrite.value
+        let secondDocument = try await secondWrite.value
+        XCTAssertEqual(
+            Set([firstDocument.revision, secondDocument.revision]),
+            Set([UInt64(1), 2])
+        )
+        let stored = try await firstStore.mapDayDocument(
+            day: day,
+            algorithmKey: "route-v1",
+            styleKey: "simple"
+        )
+        XCTAssertEqual(stored?.revision, 2)
+        let newestDocument = firstDocument.revision > secondDocument.revision
+            ? firstDocument
+            : secondDocument
+        XCTAssertEqual(stored?.payload, newestDocument.payload)
     }
 
     func testCodableMapDayDocumentUsesCanonicalEnvelope() async throws {
@@ -587,6 +1015,100 @@ final class DayStoreTests: XCTestCase {
 
         let restored = try await store.snapshot(domain: "sensor", day: day)
         XCTAssertEqual(restored?.payload, Data("first".utf8))
+    }
+
+    func testStorageRejectsInvalidDayKeyBeforeWriting() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let invalidDay = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+
+        do {
+            try await store.saveSnapshot(.init(
+                domain: "plan",
+                day: invalidDay,
+                revision: 1,
+                updatedAt: .now,
+                payload: Data([1])
+            ))
+            XCTFail("Invalid storage day keys must be rejected")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDay)
+        }
+    }
+
+    func testUndatedSnapshotOptInPreservesLegacyStateAndAtomicEventDeltaAfterReopen() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        let undated = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 23)
+        var legacy: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &legacy, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(legacy) }
+        XCTAssertEqual(sqlite3_exec(legacy, """
+            INSERT INTO snapshots(domain, day_key, revision, updated_at, payload)
+            VALUES ('sync', '0000-00-00', 7, 0, X'01');
+            """, nil, nil, nil), SQLITE_OK)
+
+        let previous = try await store.snapshot(domain: "sync", day: undated)
+        XCTAssertEqual(previous?.revision, 7)
+        XCTAssertEqual(previous?.payload, Data([1]))
+        let timestamp = Date(timeIntervalSince1970: 1_790_000_000)
+        let event = TaptionPlanDayStore.Event(
+            day: day, timestamp: timestamp, sequence: 0, id: "sample", domain: "samples", payload: Data([3])
+        )
+        let next = TaptionPlanDayStore.Snapshot(
+            domain: "sync", day: undated, revision: 8, updatedAt: timestamp, payload: Data([2])
+        )
+        try await store.applyEventDelta(
+            upserting: [event], deletingIDs: [], domain: "samples", snapshots: [next]
+        )
+        let reopened = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        let snapshots = try await reopened.snapshots(day: undated)
+        let events = try await reopened.events(from: day, through: day, domain: "samples")
+        XCTAssertEqual(snapshots, [next])
+        XCTAssertEqual(events, [event])
+
+        let strictStore = try TaptionPlanDayStore(url: url)
+        do {
+            _ = try await strictStore.snapshot(domain: "sync", day: undated)
+            XCTFail("Undated state requires explicit opt-in")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDay)
+        }
+    }
+
+    func testUndatedSnapshotOptInStillRejectsInvalidDaysForEventsAndMaps() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        let undated = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+        do {
+            try await store.appendEvents([.init(
+                day: undated, timestamp: .now, sequence: 0, id: "sample", domain: "samples", payload: Data([1])
+            )])
+            XCTFail("An undated checkpoint must not make invalid events valid")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDay)
+        }
+        do {
+            _ = try await store.saveMapDayDocument(
+                day: undated, algorithmKey: "test", styleKey: "test", payload: Data([1])
+            )
+            XCTFail("Map projections require real dates")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDay)
+        }
+        do {
+            try await store.saveSnapshot(.init(
+                domain: "sync", day: .init(year: 0, month: 1, day: 1),
+                revision: 1, updatedAt: .now, payload: Data([1])
+            ))
+            XCTFail("Only the exact legacy state sentinel is allowed")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .invalidDay)
+        }
     }
 
     private func temporaryURL() -> URL {

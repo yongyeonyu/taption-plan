@@ -1419,7 +1419,10 @@ struct InferenceDetailView: View {
             routeReadings,
             in: daySpan
         )
-            .filter { group.span.contains($0.timestamp) }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && group.span.contains($0.timestamp)
+            }
             .sorted { $0.timestamp < $1.timestamp }
             .compactMap(\.point)
             .filter { $0.horizontalAccuracy <= 200 }

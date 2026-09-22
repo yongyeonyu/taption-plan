@@ -199,13 +199,15 @@ public actor HealthKitImportStore {
 
     private static let stateDomainPrefix = "healthkit.sync-state."
     private static let stateDay = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+    private static let maximumRecordDurationMetadataKey =
+        "healthkit.maximum-record-duration-v1"
 
     private let dayStore: TaptionPlanDayStore
     private let writeLockURL: URL
     private var dataDeletionGeneration: UInt64
 
     public init(databaseURL: URL) throws {
-        dayStore = try TaptionPlanDayStore(url: databaseURL)
+        dayStore = try TaptionPlanDayStore(url: databaseURL, allowsUndatedSnapshots: true)
         writeLockURL = databaseURL.appendingPathExtension("lock")
         dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
@@ -250,6 +252,7 @@ public actor HealthKitImportStore {
         let events = try uniqueRecords.map { record in
             try makeEvent(for: record)
         }
+        try await updateMaximumRecordDuration(for: uniqueRecords)
         try checkDataGeneration(generation)
         try await dayStore.upsertEvents(events)
         return events.count
@@ -270,11 +273,11 @@ public actor HealthKitImportStore {
         let byEventID = ids.reduce(into: [String: UUID]()) {
             $0[HealthKitSampleRecord.eventID(for: $1)] = $1
         }
-        let existing = try await dayStore.existingEventIDs(
+        let existing = try await dayStore.existingEventIdentifiers(
             Array(byEventID.keys),
             domain: Self.eventDomain
         )
-        return Set(existing.compactMap { byEventID[$0] })
+        return Set(existing.compactMap { byEventID[$0.rawValue] })
     }
 
     public func apply(
@@ -291,6 +294,7 @@ public actor HealthKitImportStore {
             $0[$1.uuid] = $1
         }.values
         let events = try uniqueRecords.map(makeEvent)
+        try await updateMaximumRecordDuration(for: uniqueRecords)
         let domain = Self.stateDomain(for: state.typeIdentifier)
         let currentRevision = try await dayStore.snapshot(
             domain: domain,
@@ -318,7 +322,8 @@ public actor HealthKitImportStore {
 
     public func records(from start: Date, through end: Date) async throws -> [HealthKitSampleRecord] {
         guard start <= end else { throw HealthKitImportStoreError.invalidDateRange }
-        let queryStart = start.addingTimeInterval(-7 * 86_400)
+        let maximumDuration = try await maximumRecordDuration()
+        let queryStart = start.addingTimeInterval(-maximumDuration)
         let events = try await dayStore.events(
             from: TaptionPlanDayKey(date: queryStart),
             through: TaptionPlanDayKey(date: end),
@@ -393,6 +398,62 @@ public actor HealthKitImportStore {
               TaptionDataDeletionFence.allows(generation: generation) else {
             throw CancellationError()
         }
+    }
+
+    private func updateMaximumRecordDuration(
+        for records: some Collection<HealthKitSampleRecord>
+    ) async throws {
+        guard let candidate = records.lazy
+            .compactMap(Self.recordDuration)
+            .max() else { return }
+        let current = try await maximumRecordDurationHoldingLock()
+        guard candidate > current else { return }
+        try await dayStore.setMetadata(
+            String(candidate),
+            forKey: Self.maximumRecordDurationMetadataKey
+        )
+    }
+
+    private func maximumRecordDuration() async throws -> TimeInterval {
+        if let stored = try await storedMaximumRecordDuration() {
+            return stored
+        }
+        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
+        defer { lock.unlock() }
+        return try await maximumRecordDurationHoldingLock()
+    }
+
+    private func maximumRecordDurationHoldingLock() async throws -> TimeInterval {
+        if let stored = try await storedMaximumRecordDuration() {
+            return stored
+        }
+        let events = try await dayStore.allEvents(domain: Self.eventDomain)
+        var maximum: TimeInterval = 0
+        for event in events {
+            let record = try decodeRecord(from: event.payload)
+            maximum = max(maximum, Self.recordDuration(record) ?? 0)
+        }
+        try await dayStore.setMetadata(
+            String(maximum),
+            forKey: Self.maximumRecordDurationMetadataKey
+        )
+        return maximum
+    }
+
+    private func storedMaximumRecordDuration() async throws -> TimeInterval? {
+        guard let value = try await dayStore.metadata(
+            forKey: Self.maximumRecordDurationMetadataKey
+        ), let duration = TimeInterval(value), duration.isFinite,
+              duration >= 0 else { return nil }
+        return duration
+    }
+
+    private static func recordDuration(
+        _ record: HealthKitSampleRecord
+    ) -> TimeInterval? {
+        let duration = record.endDate.timeIntervalSince(record.startDate)
+        guard duration.isFinite, duration >= 0 else { return nil }
+        return duration
     }
 
     private func makeEvent(for record: HealthKitSampleRecord) throws -> TaptionPlanDayStore.Event {

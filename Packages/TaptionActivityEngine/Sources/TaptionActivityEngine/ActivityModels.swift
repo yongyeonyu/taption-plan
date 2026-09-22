@@ -22,6 +22,13 @@ public enum ActivityStableID {
     }
 }
 
+enum ActivityTimestamp {
+    static func isValid(_ value: Date) -> Bool {
+        let timestamp = value.timeIntervalSinceReferenceDate
+        return timestamp.isFinite && value >= .distantPast && value <= .distantFuture
+    }
+}
+
 public enum ActivityMotion: String, Codable, CaseIterable, Hashable, Sendable {
     case stationary
     case walking
@@ -325,10 +332,16 @@ public struct ActivitySegment: Codable, Hashable, Sendable, Identifiable {
     }
 }
 
+struct ActivityClassificationEngineIdentity: Codable, Hashable, Sendable {
+    let taxonomy: ActivityTaxonomy
+    let configuration: ActivityEngineConfiguration
+}
+
 public struct ActivityClassificationState: Codable, Hashable, Sendable {
     public let evidence: [ActivitySensorEvidence]
     public let overrides: [ActivityClassificationOverride]
     public let segments: [ActivitySegment]
+    let engineIdentity: ActivityClassificationEngineIdentity?
 
     public init(
         evidence: [ActivitySensorEvidence],
@@ -338,5 +351,18 @@ public struct ActivityClassificationState: Codable, Hashable, Sendable {
         self.evidence = evidence
         self.overrides = overrides
         self.segments = segments
+        engineIdentity = nil
+    }
+
+    init(
+        evidence: [ActivitySensorEvidence],
+        overrides: [ActivityClassificationOverride],
+        segments: [ActivitySegment],
+        engineIdentity: ActivityClassificationEngineIdentity
+    ) {
+        self.evidence = evidence
+        self.overrides = overrides
+        self.segments = segments
+        self.engineIdentity = engineIdentity
     }
 }

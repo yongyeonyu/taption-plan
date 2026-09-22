@@ -18,8 +18,10 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
         at timestamp: Date,
         temporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
     ) -> Self? {
+        guard RouteTimelineTimestamp.isValid(timestamp) else { return nil }
         let ordered = readings.filter { reading in
-            guard reading.gpsAvailable,
+            guard RouteTimelineTimestamp.isValid(reading.timestamp),
+                  reading.gpsAvailable,
                   reading.locationFixQuality != .approximate,
                   let point = reading.point,
                   point.latitude.isFinite,
@@ -52,7 +54,9 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
                 )
             }
         }
-        if let fallback = temporaryLocations.min(by: {
+        if let fallback = temporaryLocations.filter({
+            RouteTimelineTimestamp.isValid($0.timestamp)
+        }).min(by: {
             abs($0.timestamp.timeIntervalSince(timestamp))
                 < abs($1.timestamp.timeIntervalSince(timestamp))
         }), abs(fallback.timestamp.timeIntervalSince(timestamp))
@@ -70,7 +74,11 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
         let f = min(1, max(0, fraction))
         return GeoPoint(
             latitude: start.latitude + (end.latitude - start.latitude) * f,
-            longitude: start.longitude + (end.longitude - start.longitude) * f,
+            longitude: RouteTimelineLongitude.interpolate(
+                from: start.longitude,
+                to: end.longitude,
+                fraction: f
+            ),
             altitude: start.altitude + (end.altitude - start.altitude) * f,
             horizontalAccuracy: max(start.horizontalAccuracy, end.horizontalAccuracy),
             verticalAccuracy: max(start.verticalAccuracy, end.verticalAccuracy)
@@ -94,7 +102,10 @@ struct TravelModeClassifier: Sendable {
                 evidence: ["사용자 교정"]
             )
         }
-        guard !readings.isEmpty || !healthEvidence.isEmpty else {
+        let validReadings = readings.filter {
+            RouteTimelineTimestamp.isValid($0.timestamp)
+        }
+        guard !validReadings.isEmpty || !healthEvidence.isEmpty else {
             return MovementInference(
                 mode: .walking,
                 confidence: .low,
@@ -103,7 +114,7 @@ struct TravelModeClassifier: Sendable {
             )
         }
 
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = validReadings.sorted { $0.timestamp < $1.timestamp }
         let inferenceSpan = requestedSpan ?? sensorSpan(for: ordered)
         if let watchWorkout = authoritativeWatchWorkout(
             in: inferenceSpan,
@@ -168,7 +179,15 @@ struct TravelModeClassifier: Sendable {
             )
         }
         let dominantMotionEntry = motionScores.max {
-            $0.value < $1.value
+            if $0.value != $1.value {
+                return $0.value < $1.value
+            }
+            let leftPriority = motionTiePriority($0.key)
+            let rightPriority = motionTiePriority($1.key)
+            if leftPriority != rightPriority {
+                return leftPriority > rightPriority
+            }
+            return $0.key.rawValue > $1.key.rawValue
         }
         let dominantMotion = dominantMotionEntry?.key ?? .unknown
         let dominantMotionWeight = min(
@@ -829,7 +848,14 @@ struct TravelModeClassifier: Sendable {
             )
         }
 
-        let ranked = candidates.sorted { $0.value.0 > $1.value.0 }
+        let ranked = candidates.sorted {
+            if $0.value.0 != $1.value.0 {
+                return $0.value.0 > $1.value.0
+            }
+            let leftOrder = TravelMode.allCases.firstIndex(of: $0.key) ?? Int.max
+            let rightOrder = TravelMode.allCases.firstIndex(of: $1.key) ?? Int.max
+            return leftOrder < rightOrder
+        }
         let winner = ranked.first
             ?? (.walking, (0.2, ["기본 저신뢰 보행 후보"]))
         let runnerUpScore = ranked.dropFirst().first?.value.0 ?? 0
@@ -857,6 +883,16 @@ struct TravelModeClassifier: Sendable {
             evidence: Array(Set(winnerEvidence)).sorted(),
             subwayRoute: subwayRoute
         )
+    }
+
+    private func motionTiePriority(_ motion: MotionKind) -> Int {
+        switch motion {
+        case .stationary, .unknown: 0
+        case .walking: 1
+        case .running: 2
+        case .cycling: 3
+        case .automotive: 4
+        }
     }
 
     private func ratio(
@@ -927,7 +963,9 @@ struct TravelModeClassifier: Sendable {
     }
 
     private func stationAltitudeDropSignal(_ readings: [SensorReading]) -> Bool {
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = readings
+            .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
         for pair in zip(ordered, ordered.dropFirst()) {
             let first = pair.0
             let second = pair.1
@@ -973,7 +1011,10 @@ struct TravelModeClassifier: Sendable {
     }
 
     private func speedSeries(for readings: [SensorReading]) -> [Double] {
-        var values = readings.compactMap { reading -> Double? in
+        let validReadings = readings.filter {
+            RouteTimelineTimestamp.isValid($0.timestamp)
+        }
+        var values = validReadings.compactMap { reading -> Double? in
             guard reading.gpsAvailable,
                   reading.locationFixQuality != .approximate else {
                 return nil
@@ -1005,7 +1046,7 @@ struct TravelModeClassifier: Sendable {
             return speed
         }
 
-        let pointReadings = readings
+        let pointReadings = validReadings
             .filter { reading in
                 guard reading.gpsAvailable,
                       reading.locationFixQuality != .approximate,
@@ -1170,7 +1211,18 @@ struct TravelModeClassifier: Sendable {
             .filter {
                 $0.1 >= 60 && $0.1 / span.duration >= 0.5
             }
-            .max { $0.1 < $1.1 }?
+            .max {
+                if $0.1 != $1.1 {
+                    return $0.1 < $1.1
+                }
+                let leftOrder = TravelMode.allCases.firstIndex(
+                    of: $0.0.workoutMode ?? .walking
+                ) ?? Int.max
+                let rightOrder = TravelMode.allCases.firstIndex(
+                    of: $1.0.workoutMode ?? .walking
+                ) ?? Int.max
+                return leftOrder > rightOrder
+            }?
             .0
     }
 
@@ -1353,7 +1405,9 @@ struct FloorEstimator: Sendable {
         baselineFloor: Int?,
         floorHeightMeters: Double? = nil
     ) -> FloorTransition? {
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let ordered = readings
+            .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
+            .sorted { $0.timestamp < $1.timestamp }
         guard let first = ordered.first, let last = ordered.last,
               first.timestamp < last.timestamp else {
             return nil
@@ -1568,14 +1622,20 @@ enum HealthRouteMergeEngine {
         _ routeReadings: [SensorReading],
         into existing: [SensorReading]
     ) -> [SensorReading] {
-        guard !routeReadings.isEmpty else { return [] }
+        let validRouteReadings = routeReadings.filter {
+            RouteTimelineTimestamp.isValid($0.timestamp)
+        }
+        guard !validRouteReadings.isEmpty else { return [] }
         let existingTimes = existing
-            .filter { $0.point != nil }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.point != nil
+            }
             .map(\.timestamp)
             .sorted()
         var accepted: [Date] = []
         var result: [SensorReading] = []
-        for reading in routeReadings.sorted(by: {
+        for reading in validRouteReadings.sorted(by: {
             $0.timestamp < $1.timestamp
         }) {
             guard !hasNeighbor(reading.timestamp, in: existingTimes),
@@ -1655,7 +1715,8 @@ struct FloorCalibrationEngine: Sendable {
     ) -> CalibratedAltitudeEstimate? {
         let usable = readings
             .filter { reading in
-                reading.point != nil
+                RouteTimelineTimestamp.isValid(reading.timestamp)
+                    && reading.point != nil
                     && (reading.relativeAltitudeMeters != nil
                         || reading.pressureKilopascals != nil
                         || reading.point?.altitude.isFinite == true)
@@ -1847,11 +1908,11 @@ struct FloorCalibrationEngine: Sendable {
         guard let calibration, calibration.isCaptured else {
             return places
         }
+        let readingIndex = SensorEvidenceTimeIndex(readings: readings)
         return places.map { place in
-            guard let reading = readings
-                .filter({ place.span.contains($0.timestamp) })
-                .sorted(by: { $0.timestamp < $1.timestamp })
-                .first,
+            guard let reading = readingIndex.readings(in: place.span).min(
+                by: { $0.timestamp < $1.timestamp }
+            ),
                   let estimate = estimate(
                     reading: reading,
                     calibration: calibration
@@ -1904,6 +1965,7 @@ struct FrequentPlaceResolutionEngine: Sendable {
             $0.point != nil && $0.isAutomaticRecordingEnabled
         }
         guard !candidates.isEmpty else { return detectedPlaces }
+        let readingIndex = SensorEvidenceTimeIndex(readings: readings)
 
         return detectedPlaces.map { place in
             guard let point = place.point,
@@ -1929,9 +1991,8 @@ struct FrequentPlaceResolutionEngine: Sendable {
             updated.displayName = match.name
             updated.buildingName = match.name
 
-            let anchor = readings
-                .filter { place.span.contains($0.timestamp) }
-                .min { $0.timestamp < $1.timestamp }
+            let placeReadings = readingIndex.readings(in: place.span)
+            let anchor = placeReadings.min { $0.timestamp < $1.timestamp }
             // 층수는 이 관측에서 파생된다. 표본은 7일 뒤 지워지므로 근거가
             // 된 숫자를 기록 옆에 남겨 둔다. 이번 새로고침에 표본이 없다면
             // 이미 적어 둔 근거를 지우지 않는다.
@@ -1953,9 +2014,7 @@ struct FrequentPlaceResolutionEngine: Sendable {
                 updated.confidence = .high
             } else if let calibration = match.floorCalibration,
                       let estimate = FloorCalibrationEngine().estimate(
-                          readings: readings.filter {
-                              place.span.contains($0.timestamp)
-                          },
+                          readings: placeReadings,
                           calibration: calibration
                       ) {
                 updated.floor = estimate.floor
@@ -1977,7 +2036,7 @@ struct FrequentPlaceResolutionEngine: Sendable {
     ) -> [PlaceStay] {
         guard let calibration = place.floorCalibration else { return places }
         let key = place.stablePlaceKey
-        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let readingIndex = SensorEvidenceTimeIndex(readings: readings)
         let engine = FloorCalibrationEngine()
         return places.map { stay in
             guard stay.placeKey == key else { return stay }
@@ -1988,27 +2047,26 @@ struct FrequentPlaceResolutionEngine: Sendable {
                     at: stay.point ?? place.point,
                     calibration: calibration
                 )
-            } else if ordered.contains(where: {
-                stay.span.contains($0.timestamp)
-            }) {
-                estimate = engine.estimate(
-                    readings: ordered.filter {
-                        stay.span.contains($0.timestamp)
-                    },
-                    calibration: calibration
-                )
-            } else if let point = stay.point,
-                      point.altitude.isFinite {
-                // 예전 기록도 대표 GPS 고도는 자체 보관한다. 기압 원본이
-                // 만료됐더라도 이 낮은 신뢰도의 근거로 현재 보정값을 다시
-                // 적용할 수 있으며, 저장된 좌표와 원본 센서는 바꾸지 않는다.
-                estimate = engine.estimate(
-                    evidence: FloorEvidence(measuredAt: stay.span.start),
-                    at: point,
-                    calibration: calibration
-                )
             } else {
-                estimate = nil
+                let stayReadings = readingIndex.readings(in: stay.span)
+                if !stayReadings.isEmpty {
+                    estimate = engine.estimate(
+                        readings: stayReadings,
+                        calibration: calibration
+                    )
+                } else if let point = stay.point,
+                          point.altitude.isFinite {
+                    // 예전 기록도 대표 GPS 고도는 자체 보관한다. 기압 원본이
+                    // 만료됐더라도 이 낮은 신뢰도의 근거로 현재 보정값을 다시
+                    // 적용할 수 있으며, 저장된 좌표와 원본 센서는 바꾸지 않는다.
+                    estimate = engine.estimate(
+                        evidence: FloorEvidence(measuredAt: stay.span.start),
+                        at: point,
+                        calibration: calibration
+                    )
+                } else {
+                    estimate = nil
+                }
             }
             guard let estimate else { return stay }
             var updated = stay
@@ -2132,7 +2190,13 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
             now: now
         )
         .max {
-            ($0.visitCount, $0.lastVisitedAt) < ($1.visitCount, $1.lastVisitedAt)
+            if $0.visitCount != $1.visitCount {
+                return $0.visitCount < $1.visitCount
+            }
+            if $0.lastVisitedAt != $1.lastVisitedAt {
+                return $0.lastVisitedAt < $1.lastVisitedAt
+            }
+            return $0.id > $1.id
         }
     }
 
@@ -2151,7 +2215,15 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
                     && $0.span.end > cutoff
                     && $0.span.start <= now
             }
-            .sorted { $0.span.start < $1.span.start }
+            .sorted {
+                if $0.span.start != $1.span.start {
+                    return $0.span.start < $1.span.start
+                }
+                if $0.placeKey != $1.placeKey {
+                    return $0.placeKey < $1.placeKey
+                }
+                return $0.id.uuidString < $1.id.uuidString
+            }
         guard !candidates.isEmpty else { return [] }
 
         return clusters(of: candidates)
@@ -2182,7 +2254,12 @@ struct UnregisteredPlaceSuggestionEngine: Sendable {
             let nearest = result.indices
                 .map { ($0, distanceMeters(result[$0].center, point)) }
                 .filter { $0.1 <= clusterRadiusMeters }
-                .min { $0.1 < $1.1 }?
+                .min {
+                    if $0.1 != $1.1 {
+                        return $0.1 < $1.1
+                    }
+                    return $0.0 < $1.0
+                }?
                 .0
             if let nearest {
                 result[nearest].stays.append(stay)
@@ -2335,13 +2412,12 @@ struct FloorTimelineEngine: Sendable {
         var floorByPlaceKey = knownFloorMap(knownPlaces)
         var resolvedPlaces: [PlaceStay] = []
         var transitions: [FloorTransition] = []
+        let readingIndex = SensorEvidenceTimeIndex(readings: readings)
 
         for var place in detectedPlaces.sorted(by: {
             $0.span.start < $1.span.start
         }) {
-            let relevant = readings.filter {
-                place.span.contains($0.timestamp)
-            }
+            let relevant = readingIndex.readings(in: place.span)
             let baselineFloor =
                 place.floor ?? floorByPlaceKey[place.placeKey]
             guard var transition = estimator.estimate(
@@ -2459,7 +2535,10 @@ struct PlaceDetectionEngine: Sendable {
         knownNames: [String: String] = [:]
     ) -> [PlaceStay] {
         let sorted = readings
-            .filter { $0.point != nil }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.point != nil
+            }
             .sorted { $0.timestamp < $1.timestamp }
         guard !sorted.isEmpty else { return [] }
 
@@ -2493,7 +2572,7 @@ struct PlaceDetectionEngine: Sendable {
             let span = TimeSpan(start: first.timestamp, end: last.timestamp)
             guard span.duration >= minimumDwell else { return nil }
             let key = placeKey(for: point)
-            let floor = stableFloor(in: group)
+            let floor = stableSystemFloor(in: group)
             let displayName = knownNames[key]
                 ?? (floor.map { "장소 · \($0)층 추정" } ?? "자동 감지 장소")
             let accuracy = group.map { $0.point?.horizontalAccuracy ?? 100 }.reduce(0, +)
@@ -2522,19 +2601,87 @@ struct PlaceDetectionEngine: Sendable {
         )
     }
 
-    private func stableFloor(in readings: [SensorReading]) -> Int? {
-        let counts = Dictionary(grouping: readings.compactMap(\.systemFloor), by: { $0 })
-        return counts.max { $0.value.count < $1.value.count }?.key
-    }
-
     private func placeKey(for point: GeoPoint) -> String {
         String(format: "%.4f,%.4f", point.latitude, point.longitude)
     }
 }
 
+private func stableSystemFloor(in readings: [SensorReading]) -> Int? {
+    let counts = Dictionary(grouping: readings.compactMap(\.systemFloor), by: { $0 })
+    return counts.max { lhs, rhs in
+        if lhs.value.count != rhs.value.count {
+            return lhs.value.count < rhs.value.count
+        }
+        return lhs.key > rhs.key
+    }?.key
+}
+
 enum TransitBoardingCandidateEngine {
     static let minimumDwell: TimeInterval = 3 * 60
     static let maximumSampleGap: TimeInterval = 5 * 60
+
+    private struct ReadingSpatialIndex {
+        private struct Bucket: Hashable {
+            let latitude: Int
+            let longitude: Int
+        }
+
+        private static let bucketDegrees = 0.001
+        private let readings: [SensorReading]
+        private let buckets: [Bucket: [Int]]
+
+        init(readings: [SensorReading]) {
+            self.readings = readings
+            var values: [Bucket: [Int]] = [:]
+            values.reserveCapacity(readings.count)
+            for (index, reading) in readings.enumerated() {
+                guard let point = reading.point else { continue }
+                let bucket = Bucket(
+                    latitude: Self.bucket(for: point.latitude),
+                    longitude: Self.bucket(for: point.longitude)
+                )
+                values[bucket, default: []].append(index)
+            }
+            buckets = values
+        }
+
+        func matchingIndices(for place: TransitBoardingPlace) -> [Int] {
+            let radius = max(0, place.radiusMeters)
+            let latitudeMetersPerDegree = 110_000.0
+            let latitudeDelta = radius / latitudeMetersPerDegree
+            let radians = place.point.latitude * .pi / 180
+            let longitudeMetersPerDegree = latitudeMetersPerDegree
+                * max(abs(cos(radians)), 0.000001)
+            let longitudeDelta = radius / longitudeMetersPerDegree
+            let minimumLatitude = max(-90, place.point.latitude - latitudeDelta)
+            let maximumLatitude = min(90, place.point.latitude + latitudeDelta)
+            let minimumLongitude = max(-180, place.point.longitude - longitudeDelta)
+            let maximumLongitude = min(180, place.point.longitude + longitudeDelta)
+            let lowerLatitude = Self.bucket(for: minimumLatitude)
+            let upperLatitude = Self.bucket(for: maximumLatitude)
+            let lowerLongitude = Self.bucket(for: minimumLongitude)
+            let upperLongitude = Self.bucket(for: maximumLongitude)
+
+            var candidates: [Int] = []
+            for latitude in lowerLatitude...upperLatitude {
+                for longitude in lowerLongitude...upperLongitude {
+                    candidates.append(contentsOf: buckets[Bucket(
+                        latitude: latitude,
+                        longitude: longitude
+                    )] ?? [])
+                }
+            }
+            candidates.sort()
+            return candidates.filter { index in
+                guard let point = readings[index].point else { return false }
+                return distanceMeters(point, place.point) <= radius
+            }
+        }
+
+        private static func bucket(for coordinate: Double) -> Int {
+            Int(floor(coordinate / bucketDegrees))
+        }
+    }
 
     static func candidates(
         readings: [SensorReading],
@@ -2551,6 +2698,9 @@ enum TransitBoardingCandidateEngine {
 
         let availableReadings = uniqueReadings(readings)
             .filter { reading in
+                guard RouteTimelineTimestamp.isValid(reading.timestamp) else {
+                    return false
+                }
                 guard let through else { return true }
                 return reading.timestamp <= through
             }
@@ -2558,6 +2708,11 @@ enum TransitBoardingCandidateEngine {
         let orderedReadings = availableReadings
             .filter(isUsableReading)
         guard !orderedReadings.isEmpty else { return [] }
+        let availableReadingIndex = SensorEvidenceTimeIndex(
+            readings: availableReadings
+        )
+        let spatialIndex = ReadingSpatialIndex(readings: orderedReadings)
+        let travelIndex = TimeSpanValueIndex(travel) { $0.span }
         let places = mergedPlaces(
             registeredLocations: registeredLocations,
             nearbyPlaces: nearbyPlaces,
@@ -2571,26 +2726,23 @@ enum TransitBoardingCandidateEngine {
         for place in places {
             var groups: [[SensorReading]] = []
             var current: [SensorReading] = []
-            for reading in orderedReadings {
-                guard let point = reading.point,
-                      distanceMeters(point, place.point) <= place.radiusMeters else {
-                    if !current.isEmpty {
-                        groups.append(current)
-                        current = []
-                    }
-                    continue
-                }
+            var previousIndex: Int?
+            for index in spatialIndex.matchingIndices(for: place) {
+                let reading = orderedReadings[index]
                 guard let last = current.last else {
                     current = [reading]
+                    previousIndex = index
                     continue
                 }
                 let gap = reading.timestamp.timeIntervalSince(last.timestamp)
-                if gap > maximumSampleGap {
+                if previousIndex.map({ index != $0 + 1 }) == true
+                    || gap > maximumSampleGap {
                     groups.append(current)
                     current = [reading]
                 } else {
                     current.append(reading)
                 }
+                previousIndex = index
             }
             if !current.isEmpty { groups.append(current) }
 
@@ -2602,11 +2754,14 @@ enum TransitBoardingCandidateEngine {
                 }
                 let span = TimeSpan(start: first.timestamp, end: last.timestamp)
                 guard span.duration >= minimumDwell else { continue }
-                let relatedTravel = relatedTravelSegments(to: span, in: travel)
+                let relatedTravel = relatedTravelSegments(
+                    to: span,
+                    index: travelIndex
+                )
                     .filter {
                         qualifiesForBoardingReview(
                             $0,
-                            readings: availableReadings,
+                            readingIndex: availableReadingIndex,
                             through: through
                         )
                     }
@@ -2616,7 +2771,7 @@ enum TransitBoardingCandidateEngine {
                             for: place,
                             dwell: span,
                             travel: relatedTravel,
-                            readings: availableReadings
+                            readingIndex: availableReadingIndex
                         ) else {
                     continue
                 }
@@ -2760,7 +2915,7 @@ enum TransitBoardingCandidateEngine {
         for place: TransitBoardingPlace,
         dwell: TimeSpan,
         travel: [TravelSegment],
-        readings: [SensorReading]
+        readingIndex: SensorEvidenceTimeIndex
     ) -> Bool {
         if travel.contains(where: { $0.mode == .subway || $0.mode == .train }) {
             return true
@@ -2783,9 +2938,7 @@ enum TransitBoardingCandidateEngine {
                 lastTravel.span.end.addingTimeInterval(5 * 60)
             )
         )
-        let contextReadings = readings.filter {
-            $0.timestamp >= context.start && $0.timestamp <= context.end
-        }
+        let contextReadings = readingIndex.readings(in: context)
         let railMatchCount = contextReadings.filter(\.matchesRailRoute).count
         let railRatio = contextReadings.isEmpty
             ? 0
@@ -2865,9 +3018,16 @@ enum TransitBoardingCandidateEngine {
 
     private static func relatedTravelSegments(
         to span: TimeSpan,
-        in travel: [TravelSegment]
+        index: TimeSpanValueIndex<TravelSegment>
     ) -> [TravelSegment] {
-        let after = travel
+        let afterWindow = TimeSpan(
+            start: span.end.addingTimeInterval(-2 * 60),
+            end: span.end.addingTimeInterval(30 * 60 + 0.001)
+        )
+        let after = indexedTravelSegments(
+            overlapping: afterWindow,
+            index: index
+        )
             .filter { segment in
                 let gap = segment.span.start.timeIntervalSince(span.end)
                 return gap >= -2 * 60 && gap <= 30 * 60
@@ -2879,26 +3039,37 @@ enum TransitBoardingCandidateEngine {
             start: span.start.addingTimeInterval(-2 * 60),
             end: span.end.addingTimeInterval(30 * 60)
         )
-        return travel
-            .filter { $0.span.intersection(with: expanded) != nil }
+        return indexedTravelSegments(overlapping: expanded, index: index)
             .sorted { $0.span.start < $1.span.start }
+    }
+
+    private static func indexedTravelSegments(
+        overlapping span: TimeSpan,
+        index: TimeSpanValueIndex<TravelSegment>
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return index.values(
+            overlapping: span,
+            inspectionCount: &inspectionCount
+        )
     }
 
     private static func qualifiesForBoardingReview(
         _ segment: TravelSegment,
-        readings: [SensorReading],
+        readingIndex: SensorEvidenceTimeIndex,
         through: Date?
     ) -> Bool {
+        let segmentReadings = readingIndex.readings(in: segment.span)
         guard !segment.isConfirmed,
               through.map({ segment.span.end <= $0 }) ?? true,
               segment.span.duration > 0,
               isPoweredTravel(segment.mode),
-              hasMovementEvidence(segment, readings: readings) else {
+              hasMovementEvidence(segment, readings: segmentReadings) else {
             return false
         }
         let routeComplete = TaptionRouteEngineAdapter.hasCompleteRecordedRoute(
             for: segment,
-            readings: readings
+            readings: segmentReadings
         )
         if segment.confidence == .high && routeComplete {
             return false
@@ -2997,7 +3168,8 @@ struct WalkingLocationEngine: Sendable {
     func build(readings: [SensorReading]) -> [PlaceStay] {
         let sorted = readings
             .filter {
-                $0.trackingKind == .walking
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.trackingKind == .walking
                     && $0.point != nil
                     && $0.gpsAvailable
                     && $0.locationFixQuality != .approximate
@@ -3052,7 +3224,7 @@ struct WalkingLocationEngine: Sendable {
             return PlaceStay(
                 placeKey: "walking:\(placeKey(for: point))",
                 displayName: "확인된 위치",
-                floor: stableFloor(in: group),
+                floor: stableSystemFloor(in: group),
                 span: TimeSpan(start: first.timestamp, end: last.timestamp),
                 confidence: ConfidenceLevel(
                     score: accuracy <= 30 ? 0.95 : 0.78
@@ -3078,13 +3250,285 @@ struct WalkingLocationEngine: Sendable {
         )
     }
 
-    private func stableFloor(in readings: [SensorReading]) -> Int? {
-        let counts = Dictionary(grouping: readings.compactMap(\.systemFloor), by: { $0 })
-        return counts.max { $0.value.count < $1.value.count }?.key
-    }
-
     private func placeKey(for point: GeoPoint) -> String {
         String(format: "%.4f,%.4f", point.latitude, point.longitude)
+    }
+}
+
+struct TimeSpanValueIndex<Value: Sendable>: Sendable {
+    private struct Entry: Sendable {
+        let value: Value
+        let span: TimeSpan
+        let inputOrder: Int
+    }
+
+    private let entries: [Entry]
+    private let prefixMaximumEnds: [Date]
+
+    init(_ values: [Value], span: (Value) -> TimeSpan) {
+        entries = values.enumerated().compactMap { inputOrder, value in
+            let valueSpan = span(value)
+            guard valueSpan.duration > 0,
+                  RouteTimelineTimestamp.isValid(valueSpan.start),
+                  RouteTimelineTimestamp.isValid(valueSpan.end) else {
+                return nil
+            }
+            return Entry(
+                value: value,
+                span: valueSpan,
+                inputOrder: inputOrder
+            )
+        }.sorted { lhs, rhs in
+            if lhs.span.start != rhs.span.start {
+                return lhs.span.start < rhs.span.start
+            }
+            return lhs.inputOrder < rhs.inputOrder
+        }
+
+        var latestEnd = Date.distantPast
+        prefixMaximumEnds = entries.map { entry in
+            latestEnd = max(latestEnd, entry.span.end)
+            return latestEnd
+        }
+    }
+
+    func values(
+        overlapping span: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> [Value] {
+        let range = candidateRange(
+            overlapping: span,
+            inspectionCount: &inspectionCount
+        )
+        var matches = entries[range].filter { entry in
+            inspectionCount? += 1
+            return entry.span.intersection(with: span) != nil
+        }
+        matches.sort { $0.inputOrder < $1.inputOrder }
+        return matches.map(\.value)
+    }
+
+    func contains(
+        overlapping span: TimeSpan,
+        inspectionCount: inout Int?,
+        where predicate: (Value, TimeSpan) -> Bool
+    ) -> Bool {
+        let range = candidateRange(
+            overlapping: span,
+            inspectionCount: &inspectionCount
+        )
+        for entry in entries[range] {
+            inspectionCount? += 1
+            guard let overlap = entry.span.intersection(with: span) else {
+                continue
+            }
+            if predicate(entry.value, overlap) { return true }
+        }
+        return false
+    }
+
+    private func candidateRange(
+        overlapping span: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> Range<Int> {
+        guard span.duration > 0,
+              RouteTimelineTimestamp.isValid(span.start),
+              RouteTimelineTimestamp.isValid(span.end),
+              !entries.isEmpty else { return 0..<0 }
+
+        var lower = 0
+        var upper = prefixMaximumEnds.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if prefixMaximumEnds[middle] > span.start {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        let first = lower
+
+        upper = entries.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if entries[middle].span.start < span.end {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        return first..<lower
+    }
+}
+
+struct SensorEvidenceTimeIndex: Sendable {
+    private struct ReadingEntry: Sendable {
+        let reading: SensorReading
+        let inputOrder: Int
+    }
+
+    private struct HealthEntry: Sendable {
+        let evidence: AppleMovementEvidence
+        let inputOrder: Int
+    }
+
+    private let readings: [ReadingEntry]
+    private let healthEntries: [HealthEntry]
+    private let healthPrefixMaximumEnds: [Date]
+
+    init(
+        readings: [SensorReading],
+        healthEvidence: [AppleMovementEvidence] = []
+    ) {
+        self.readings = readings.enumerated().compactMap { inputOrder, reading in
+            guard RouteTimelineTimestamp.isValid(reading.timestamp) else {
+                return nil
+            }
+            return ReadingEntry(reading: reading, inputOrder: inputOrder)
+        }.sorted {
+            if $0.reading.timestamp != $1.reading.timestamp {
+                return $0.reading.timestamp < $1.reading.timestamp
+            }
+            return $0.inputOrder < $1.inputOrder
+        }
+
+        healthEntries = healthEvidence.enumerated().compactMap {
+            inputOrder, evidence in
+            guard RouteTimelineTimestamp.isValid(evidence.span.start),
+                  RouteTimelineTimestamp.isValid(evidence.span.end),
+                  evidence.span.duration > 0 else {
+                return nil
+            }
+            return HealthEntry(evidence: evidence, inputOrder: inputOrder)
+        }.sorted {
+            if $0.evidence.span.start != $1.evidence.span.start {
+                return $0.evidence.span.start < $1.evidence.span.start
+            }
+            return $0.inputOrder < $1.inputOrder
+        }
+
+        var latestEnd = Date.distantPast
+        healthPrefixMaximumEnds = healthEntries.map { entry in
+            latestEnd = max(latestEnd, entry.evidence.span.end)
+            return latestEnd
+        }
+    }
+
+    func readings(in span: TimeSpan) -> [SensorReading] {
+        var inspectionCount: Int? = nil
+        return readings(in: span, inspectionCount: &inspectionCount)
+    }
+
+    func readings(
+        in span: TimeSpan,
+        candidateInspectionCount: inout Int
+    ) -> [SensorReading] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = readings(
+            in: span,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    func readings(
+        in span: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> [SensorReading] {
+        var lower = 0
+        var upper = readings.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if readings[middle].reading.timestamp < span.start {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+        let first = lower
+
+        upper = readings.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if readings[middle].reading.timestamp <= span.end {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+
+        var matches = Array(readings[first..<lower])
+        inspectionCount? += matches.count
+        matches.sort { $0.inputOrder < $1.inputOrder }
+        return matches.map(\.reading)
+    }
+
+    func healthEvidence(
+        overlapping span: TimeSpan
+    ) -> [AppleMovementEvidence] {
+        var inspectionCount: Int? = nil
+        return healthEvidence(
+            overlapping: span,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    func healthEvidence(
+        overlapping span: TimeSpan,
+        candidateInspectionCount: inout Int
+    ) -> [AppleMovementEvidence] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = healthEvidence(
+            overlapping: span,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    func healthEvidence(
+        overlapping span: TimeSpan,
+        inspectionCount: inout Int?
+    ) -> [AppleMovementEvidence] {
+        guard span.duration > 0, !healthEntries.isEmpty else { return [] }
+
+        var lower = 0
+        var upper = healthPrefixMaximumEnds.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if healthPrefixMaximumEnds[middle] > span.start {
+                upper = middle
+            } else {
+                lower = middle + 1
+            }
+        }
+        let first = lower
+
+        upper = healthEntries.count
+        while lower < upper {
+            inspectionCount? += 1
+            let middle = lower + (upper - lower) / 2
+            if healthEntries[middle].evidence.span.start < span.end {
+                lower = middle + 1
+            } else {
+                upper = middle
+            }
+        }
+
+        var matches = healthEntries[first..<lower].filter { entry in
+            inspectionCount? += 1
+            return entry.evidence.span.intersection(with: span) != nil
+        }
+        matches.sort { $0.inputOrder < $1.inputOrder }
+        return matches.map(\.evidence)
     }
 }
 
@@ -3098,34 +3542,115 @@ struct MovementRouteBuilder: Sendable {
         correctedModes: [String: TravelMode] = [:],
         userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return build(
+            stays: stays,
+            readings: readings,
+            healthEvidence: healthEvidence,
+            correctedModes: correctedModes,
+            userTransitLocations: userTransitLocations,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    func build(
+        stays: [PlaceStay],
+        readings: [SensorReading],
+        healthEvidence: [AppleMovementEvidence] = [],
+        correctedModes: [String: TravelMode] = [:],
+        userTransitLocations: [UserTransitLocation] = [],
+        candidateInspectionCount: inout Int
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = build(
+            stays: stays,
+            readings: readings,
+            healthEvidence: healthEvidence,
+            correctedModes: correctedModes,
+            userTransitLocations: userTransitLocations,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private func build(
+        stays: [PlaceStay],
+        readings: [SensorReading],
+        healthEvidence: [AppleMovementEvidence],
+        correctedModes: [String: TravelMode],
+        userTransitLocations: [UserTransitLocation],
+        inspectionCount: inout Int?
+    ) -> [TravelSegment] {
         let orderedStays = stays.sorted { $0.span.start < $1.span.start }
         guard orderedStays.count >= 2 else { return [] }
+        let evidenceIndex = SensorEvidenceTimeIndex(
+            readings: readings,
+            healthEvidence: healthEvidence
+        )
 
         return zip(orderedStays, orderedStays.dropFirst()).compactMap { from, to in
             guard from.placeKey != to.placeKey else { return nil }
             let span = TimeSpan(start: from.span.end, end: to.span.start)
             guard span.duration > 0 else { return nil }
-            let segmentReadings = readings.filter {
-                span.contains($0.timestamp)
-            }
+            let segmentReadings = evidenceIndex.readings(
+                in: span,
+                inspectionCount: &inspectionCount
+            )
+            let originReadings = evidenceIndex.readings(
+                in: from.span,
+                inspectionCount: &inspectionCount
+            )
+            let destinationReadings = evidenceIndex.readings(
+                in: to.span,
+                inspectionCount: &inspectionCount
+            )
             let signature = "\(from.placeKey)->\(to.placeKey)"
-            let segmentHealthEvidence = healthEvidence.filter {
-                $0.span.intersection(with: span) != nil
-            }
+            let segmentHealthEvidence = evidenceIndex.healthEvidence(
+                overlapping: span,
+                inspectionCount: &inspectionCount
+            )
             let correctedMode = correctedModes[signature]
+            let wbsMode = correctedMode == nil
+                ? WBSMovementTransportPolicy.recommendedMode(
+                    from: from,
+                    to: to,
+                    originReadings: originReadings,
+                    destinationReadings: destinationReadings
+                )
+                : nil
             guard !segmentReadings.isEmpty
                     || !segmentHealthEvidence.isEmpty
-                    || correctedMode != nil else {
+                    || correctedMode != nil
+                    || wbsMode != nil else {
                 return nil
             }
-            let inference = classifier.classify(
+            let inference = wbsMode.map {
+                MovementInference(
+                    mode: $0,
+                    confidence: .high,
+                    score: 0.95,
+                    evidence: [$0 == .airplane
+                        ? "WBS 항공 이동 규칙: 공항 endpoint"
+                        : "WBS 이동 규칙: 항구 endpoint"]
+                )
+            } ?? classifier.classify(
                 readings: segmentReadings,
                 inside: span,
                 healthEvidence: segmentHealthEvidence,
                 correctedMode: correctedMode,
                 userTransitLocations: userTransitLocations
             )
-            let distance = pathDistance(segmentReadings.compactMap(\.point))
+            let sensorDistance = pathDistance(segmentReadings.compactMap(\.point))
+            let endpointDistance = from.point.flatMap { origin in
+                to.point.map { destination in
+                    distanceMeters(origin, destination)
+                }
+            } ?? 0
+            let distance = sensorDistance > 0
+                ? sensorDistance
+                : (wbsMode != nil ? endpointDistance : 0)
             return TravelSegment(
                 fromPlaceID: from.id,
                 toPlaceID: to.id,
@@ -3143,6 +3668,63 @@ struct MovementRouteBuilder: Sendable {
     private func pathDistance(_ points: [GeoPoint]) -> Double {
         zip(points, points.dropFirst()).reduce(0) {
             $0 + distanceMeters($1.0, $1.1)
+        }
+    }
+}
+
+/// Taption WBS와 같은 endpoint 기반 이동 판정이다. 비행 중에는 GPS가
+/// 비어 있을 수 있으므로 중간 센서 표본이 없어도 장소 메타데이터와 출발·
+/// 도착 시점의 지도 보강값만으로 항공 구간을 만든다. 원본 표본은 수정하지
+/// 않는다.
+enum WBSMovementTransportPolicy {
+    static func recommendedMode(
+        from origin: PlaceStay,
+        to destination: PlaceStay,
+        originReadings: [SensorReading] = [],
+        destinationReadings: [SensorReading] = []
+    ) -> TravelMode? {
+        let originMetadata = metadata(for: origin)
+        let destinationMetadata = metadata(for: destination)
+        let isPort = containsPort(originMetadata)
+            || containsPort(destinationMetadata)
+            || originReadings.contains(where: \.nearPort)
+            || destinationReadings.contains(where: \.nearPort)
+        if isPort {
+            return .ship
+        }
+
+        let isAirport = containsAirport(originMetadata)
+            || containsAirport(destinationMetadata)
+            || originReadings.contains(where: \.nearAirport)
+            || destinationReadings.contains(where: \.nearAirport)
+        return isAirport ? .airplane : nil
+    }
+
+    private static func metadata(for stay: PlaceStay) -> String {
+        [stay.placeKey, stay.displayName, stay.buildingName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .lowercased()
+    }
+
+    private static func containsAirport(_ metadata: String) -> Bool {
+        [
+            "airport",
+            "공항",
+            "incheon international",
+            "인천공항",
+            "인천국제공항",
+            "icn",
+            "suvarnabhumi",
+            "수완나품",
+            "수바르나부미",
+            "bkk",
+        ].contains { metadata.contains($0) }
+    }
+
+    private static func containsPort(_ metadata: String) -> Bool {
+        ["marina", "ferry", "항구", "선착장"].contains {
+            metadata.contains($0)
         }
     }
 }
@@ -3189,6 +3771,21 @@ enum SubwayTravelSegmentEngine {
                 userTransitLocations: userTransitLocations
             )
         }
+        return segments(
+            from: SensorEvidenceTimeIndex(readings: readings),
+            within: candidateSpans,
+            maximumReadingGap: maximumReadingGap,
+            userTransitLocations: userTransitLocations
+        )
+    }
+
+    static func segments(
+        from readingIndex: SensorEvidenceTimeIndex,
+        within candidateSpans: [TimeSpan],
+        maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
+        userTransitLocations: [UserTransitLocation] = []
+    ) -> [TravelSegment] {
+        guard !candidateSpans.isEmpty else { return [] }
         let maximumGap = maximumReadingGap.isFinite
             ? max(0, maximumReadingGap)
             : defaultMaximumReadingGap
@@ -3198,7 +3795,7 @@ enum SubwayTravelSegmentEngine {
                 end: span.end.addingTimeInterval(10 * 60)
             )
             return groups(
-                from: readings.filter { context.contains($0.timestamp) },
+                from: readingIndex.readings(in: context),
                 maximumGap: maximumGap
             )
         }
@@ -3330,7 +3927,9 @@ enum SubwayTravelSegmentEngine {
         maximumGap: TimeInterval
     ) -> [[SensorReading]] {
         var result: [[SensorReading]] = []
-        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+        for reading in readings
+            .filter({ RouteTimelineTimestamp.isValid($0.timestamp) })
+            .sorted(by: { $0.timestamp < $1.timestamp }) {
             guard var current = result.popLast() else {
                 result.append([reading])
                 continue
@@ -3546,7 +4145,10 @@ enum MovementCorrectionEngine {
             }
             .max {
                 if $0.1 == $1.1 {
-                    return $0.0.updatedAt < $1.0.updatedAt
+                    if $0.0.updatedAt != $1.0.updatedAt {
+                        return $0.0.updatedAt < $1.0.updatedAt
+                    }
+                    return $0.0.id.uuidString > $1.0.id.uuidString
                 }
                 return $0.1 < $1.1
             }?
@@ -3610,6 +4212,153 @@ enum MovementCorrectionEngine {
 /// Taption's own in-app estimates. Plans and user-entered records are retained;
 /// only records from the same Apple source are replaced.
 enum AppleDeviceGroundTruthEngine {
+    private struct MotionActivityEntry: Sendable {
+        let activity: MotionActivityRecord
+        let inputOrder: Int
+    }
+
+    private struct MotionReadingEntry: Sendable {
+        let reading: SensorReading
+        let inputOrder: Int
+    }
+
+    private struct AutomotiveActivityDurationIndex: Sendable {
+        private struct Point: Sendable {
+            let timestamp: Date
+            let accumulatedDuration: TimeInterval
+            let activeCount: Int
+        }
+
+        private let points: [Point]
+
+        init(activities: [MotionActivityRecord]) {
+            var deltas: [Date: Int] = [:]
+            for activity in activities where activity.motion == .automotive {
+                guard RouteTimelineTimestamp.isValid(activity.span.start),
+                      RouteTimelineTimestamp.isValid(activity.span.end),
+                      activity.span.duration > 0 else {
+                    continue
+                }
+                deltas[activity.span.start, default: 0] += 1
+                deltas[activity.span.end, default: 0] -= 1
+            }
+
+            var accumulatedDuration: TimeInterval = 0
+            var activeCount = 0
+            var previousTimestamp: Date?
+            points = deltas.keys.sorted().map { timestamp in
+                if let previousTimestamp {
+                    accumulatedDuration += TimeInterval(activeCount)
+                        * timestamp.timeIntervalSince(previousTimestamp)
+                }
+                activeCount += deltas[timestamp, default: 0]
+                previousTimestamp = timestamp
+                return Point(
+                    timestamp: timestamp,
+                    accumulatedDuration: accumulatedDuration,
+                    activeCount: activeCount
+                )
+            }
+        }
+
+        func overlapDuration(
+            in span: TimeSpan,
+            inspectionCount: inout Int?
+        ) -> TimeInterval {
+            guard span.duration > 0,
+                  RouteTimelineTimestamp.isValid(span.start),
+                  RouteTimelineTimestamp.isValid(span.end) else {
+                return 0
+            }
+            return max(
+                0,
+                integral(at: span.end, inspectionCount: &inspectionCount)
+                    - integral(at: span.start, inspectionCount: &inspectionCount)
+            )
+        }
+
+        private func integral(
+            at timestamp: Date,
+            inspectionCount: inout Int?
+        ) -> TimeInterval {
+            var lower = 0
+            var upper = points.count
+            while lower < upper {
+                inspectionCount? += 1
+                let middle = lower + (upper - lower) / 2
+                if points[middle].timestamp <= timestamp {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            guard lower > 0 else { return 0 }
+            let point = points[lower - 1]
+            return point.accumulatedDuration
+                + TimeInterval(point.activeCount)
+                    * timestamp.timeIntervalSince(point.timestamp)
+        }
+    }
+
+    private struct StayInterruptionIndex: Sendable {
+        private static let minimumOverlap: TimeInterval = 3 * 60
+
+        private struct Entry: Sendable {
+            let start: Date
+            let end: Date
+        }
+
+        private let entries: [Entry]
+        private let prefixMaximumEnds: [Date]
+
+        init(stays: [PlaceStay]) {
+            entries = stays.compactMap { stay in
+                guard stay.span.duration >= Self.minimumOverlap else {
+                    return nil
+                }
+                return Entry(start: stay.span.start, end: stay.span.end)
+            }.sorted { lhs, rhs in
+                if lhs.start != rhs.start { return lhs.start < rhs.start }
+                return lhs.end < rhs.end
+            }
+
+            var latestEnd = Date.distantPast
+            prefixMaximumEnds = entries.map { entry in
+                latestEnd = max(latestEnd, entry.end)
+                return latestEnd
+            }
+        }
+
+        func containsInterruption(
+            in gap: TimeSpan,
+            inspectionCount: inout Int?
+        ) -> Bool {
+            guard gap.duration >= Self.minimumOverlap,
+                  !entries.isEmpty else {
+                return false
+            }
+            let latestStart = gap.end.addingTimeInterval(
+                -Self.minimumOverlap
+            )
+            let earliestEnd = gap.start.addingTimeInterval(
+                Self.minimumOverlap
+            )
+            var lower = 0
+            var upper = entries.count
+            while lower < upper {
+                inspectionCount? += 1
+                let middle = lower + (upper - lower) / 2
+                if entries[middle].start <= latestStart {
+                    lower = middle + 1
+                } else {
+                    upper = middle
+                }
+            }
+            guard lower > 0 else { return false }
+            return prefixMaximumEnds[lower - 1] >= earliestEnd
+        }
+    }
+
     /// Projects Apple's device history onto a new array. The archived iPhone
     /// and Watch readings remain the immutable ground truth and are never
     /// rewritten by this reconciliation step.
@@ -3617,23 +4366,172 @@ enum AppleDeviceGroundTruthEngine {
         to readings: [SensorReading],
         activities: [MotionActivityRecord]
     ) -> [SensorReading] {
-        let orderedActivities = activities.sorted {
-            $0.span.start < $1.span.start
-        }
-        return readings
-            .map { reading in
-                guard let activity = orderedActivities.last(where: {
-                    $0.motion != .unknown
-                        && $0.span.contains(reading.timestamp)
-                }) else {
-                    return reading
-                }
-                var value = reading
-                value.motion = activity.motion
-                value.motionConfidence = activity.confidence
-                return value
+        var inspectionCount: Int? = nil
+        return applyingMotionHistory(
+            to: readings,
+            activities: activities,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func applyingMotionHistory(
+        to readings: [SensorReading],
+        activities: [MotionActivityRecord],
+        candidateInspectionCount: inout Int
+    ) -> [SensorReading] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = applyingMotionHistory(
+            to: readings,
+            activities: activities,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private static func applyingMotionHistory(
+        to readings: [SensorReading],
+        activities: [MotionActivityRecord],
+        inspectionCount: inout Int?
+    ) -> [SensorReading] {
+        let orderedReadings: [MotionReadingEntry] = readings.enumerated().compactMap {
+            inputOrder, reading -> MotionReadingEntry? in
+            guard RouteTimelineTimestamp.isValid(reading.timestamp) else {
+                return nil
             }
-            .sorted { $0.timestamp < $1.timestamp }
+            return MotionReadingEntry(
+                reading: reading,
+                inputOrder: inputOrder
+            )
+        }.sorted {
+            if $0.reading.timestamp != $1.reading.timestamp {
+                return $0.reading.timestamp < $1.reading.timestamp
+            }
+            return $0.inputOrder < $1.inputOrder
+        }
+        let orderedActivities: [MotionActivityEntry] = activities.enumerated().compactMap {
+            inputOrder, activity -> MotionActivityEntry? in
+            guard activity.motion != .unknown,
+                  RouteTimelineTimestamp.isValid(activity.span.start),
+                  RouteTimelineTimestamp.isValid(activity.span.end) else {
+                return nil
+            }
+            return MotionActivityEntry(
+                activity: activity,
+                inputOrder: inputOrder
+            )
+        }.sorted {
+            if $0.activity.span.start != $1.activity.span.start {
+                return $0.activity.span.start < $1.activity.span.start
+            }
+            return $0.inputOrder < $1.inputOrder
+        }
+
+        var nextActivity = 0
+        var activeHeap: [Int] = []
+        return orderedReadings.map { entry in
+            while nextActivity < orderedActivities.count {
+                inspectionCount? += 1
+                guard orderedActivities[nextActivity].activity.span.start
+                        <= entry.reading.timestamp else {
+                    break
+                }
+                pushMotionActivity(
+                    nextActivity,
+                    into: &activeHeap,
+                    activities: orderedActivities,
+                    inspectionCount: &inspectionCount
+                )
+                nextActivity += 1
+            }
+            while let winner = activeHeap.first {
+                inspectionCount? += 1
+                guard orderedActivities[winner].activity.span.end
+                        < entry.reading.timestamp else {
+                    break
+                }
+                _ = popMotionActivity(
+                    from: &activeHeap,
+                    activities: orderedActivities,
+                    inspectionCount: &inspectionCount
+                )
+            }
+            guard let winner = activeHeap.first else {
+                return entry.reading
+            }
+            var value = entry.reading
+            let activity = orderedActivities[winner].activity
+            value.motion = activity.motion
+            value.motionConfidence = activity.confidence
+            return value
+        }
+    }
+
+    private static func pushMotionActivity(
+        _ index: Int,
+        into heap: inout [Int],
+        activities: [MotionActivityEntry],
+        inspectionCount: inout Int?
+    ) {
+        heap.append(index)
+        var child = heap.count - 1
+        while child > 0 {
+            let parent = (child - 1) / 2
+            inspectionCount? += 1
+            guard motionActivity(
+                activities[heap[child]],
+                outranks: activities[heap[parent]]
+            ) else { return }
+            heap.swapAt(child, parent)
+            child = parent
+        }
+    }
+
+    @discardableResult
+    private static func popMotionActivity(
+        from heap: inout [Int],
+        activities: [MotionActivityEntry],
+        inspectionCount: inout Int?
+    ) -> Int? {
+        guard let first = heap.first else { return nil }
+        let last = heap.removeLast()
+        guard !heap.isEmpty else { return first }
+        heap[0] = last
+        var parent = 0
+        while true {
+            let left = parent * 2 + 1
+            guard left < heap.count else { break }
+            let right = left + 1
+            var highest = left
+            if right < heap.count {
+                inspectionCount? += 1
+                if motionActivity(
+                    activities[heap[right]],
+                    outranks: activities[heap[left]]
+                ) {
+                    highest = right
+                }
+            }
+            inspectionCount? += 1
+            guard motionActivity(
+                activities[heap[highest]],
+                outranks: activities[heap[parent]]
+            ) else { break }
+            heap.swapAt(parent, highest)
+            parent = highest
+        }
+        return first
+    }
+
+    private static func motionActivity(
+        _ lhs: MotionActivityEntry,
+        outranks rhs: MotionActivityEntry
+    ) -> Bool {
+        if lhs.activity.span.start != rhs.activity.span.start {
+            return lhs.activity.span.start > rhs.activity.span.start
+        }
+        return lhs.inputOrder > rhs.inputOrder
     }
 
     static func mergingTravel(
@@ -3645,10 +4543,73 @@ enum AppleDeviceGroundTruthEngine {
         preservedSubwaySegments: [TravelSegment] = [],
         userTransitLocations: [UserTransitLocation] = []
     ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return mergingTravel(
+            gpsSegments: gpsSegments,
+            motionActivities: motionActivities,
+            pedometer: pedometer,
+            healthEvidence: healthEvidence,
+            readings: readings,
+            preservedSubwaySegments: preservedSubwaySegments,
+            userTransitLocations: userTransitLocations,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func mergingTravel(
+        gpsSegments: [TravelSegment],
+        motionActivities: [MotionActivityRecord],
+        pedometer: PedometerSummary?,
+        healthEvidence: [AppleMovementEvidence] = [],
+        readings: [SensorReading] = [],
+        preservedSubwaySegments: [TravelSegment] = [],
+        userTransitLocations: [UserTransitLocation] = [],
+        candidateInspectionCount: inout Int
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = mergingTravel(
+            gpsSegments: gpsSegments,
+            motionActivities: motionActivities,
+            pedometer: pedometer,
+            healthEvidence: healthEvidence,
+            readings: readings,
+            preservedSubwaySegments: preservedSubwaySegments,
+            userTransitLocations: userTransitLocations,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private static func mergingTravel(
+        gpsSegments: [TravelSegment],
+        motionActivities: [MotionActivityRecord],
+        pedometer: PedometerSummary?,
+        healthEvidence: [AppleMovementEvidence],
+        readings: [SensorReading],
+        preservedSubwaySegments: [TravelSegment],
+        userTransitLocations: [UserTransitLocation],
+        inspectionCount: inout Int?
+    ) -> [TravelSegment] {
+        inspectionCount? += gpsSegments.count
+            + motionActivities.count
+            + healthEvidence.count
+            + readings.count
+            + preservedSubwaySegments.count
         let candidateSpans = gpsSegments.map(\.span)
-        let detectedSubwaySegments = SubwayTravelSegmentEngine
-            .segments(
+        let gpsIndex = TimeSpanValueIndex(gpsSegments) { $0.span }
+        let evidenceIndex = SensorEvidenceTimeIndex(
+            readings: readings,
+            healthEvidence: healthEvidence
+        )
+        let detectedSubwaySegments = candidateSpans.isEmpty
+            ? SubwayTravelSegmentEngine.segments(
                 from: readings,
+                userTransitLocations: userTransitLocations
+            )
+            : SubwayTravelSegmentEngine.segments(
+                from: evidenceIndex,
                 within: candidateSpans,
                 userTransitLocations: userTransitLocations
             )
@@ -3657,7 +4618,11 @@ enum AppleDeviceGroundTruthEngine {
             preserved: preservedSubwaySegments
         )
             .map { segment in
-                guard let matched = gpsSegments
+                guard let matched = gpsIndex
+                    .values(
+                        overlapping: segment.span,
+                        inspectionCount: &inspectionCount
+                    )
                     .filter({ overlappingEnough($0.span, segment.span) })
                     .max(by: {
                         overlapDuration($0.span, segment.span)
@@ -3674,11 +4639,18 @@ enum AppleDeviceGroundTruthEngine {
                 }
                 return value
             }
+        let trajectorySubwayIndex = TimeSpanValueIndex(
+            trajectorySubwaySegments
+        ) { $0.span }
         let primarySegments = gpsSegments.filter { gps in
-            !trajectorySubwaySegments.contains {
-                subwayDisplaces($0, gps)
+            !trajectorySubwayIndex.contains(
+                overlapping: gps.span,
+                inspectionCount: &inspectionCount
+            ) { subway, _ in
+                subwayDisplaces(subway, gps)
             }
         } + trajectorySubwaySegments
+        let primaryIndex = TimeSpanValueIndex(primarySegments) { $0.span }
         let watchSegments = healthEvidence
             .filter {
                 $0.source == .appleWatch
@@ -3687,8 +4659,11 @@ enum AppleDeviceGroundTruthEngine {
                     && $0.span.duration >= 60
             }
             .filter { workout in
-                !primarySegments.contains {
-                    $0.span.intersection(with: workout.span) != nil
+                !primaryIndex.contains(
+                    overlapping: workout.span,
+                    inspectionCount: &inspectionCount
+                ) { _, _ in
+                    true
                 }
             }
             .map { workout in
@@ -3703,14 +4678,21 @@ enum AppleDeviceGroundTruthEngine {
                     ]
                 )
             }
+        let watchIndex = TimeSpanValueIndex(watchSegments) { $0.span }
         let candidates = motionActivities
             .filter { $0.span.duration >= 60 }
             .filter { activity in
-                !primarySegments.contains {
-                    $0.span.intersection(with: activity.span) != nil
+                !primaryIndex.contains(
+                    overlapping: activity.span,
+                    inspectionCount: &inspectionCount
+                ) { _, _ in
+                    true
                 }
-                    && !watchSegments.contains {
-                        $0.span.intersection(with: activity.span) != nil
+                    && !watchIndex.contains(
+                        overlapping: activity.span,
+                        inspectionCount: &inspectionCount
+                    ) { _, _ in
+                        true
                     }
             }
             .compactMap { activity -> (MotionActivityRecord, MovementInference)? in
@@ -3719,9 +4701,10 @@ enum AppleDeviceGroundTruthEngine {
                 }
                 // 구간 안의 실제 표본을 함께 넘겨야 분류기가 속도를 볼 수 있다.
                 // 모션 라벨만 주면 차량 이동도 보행으로 남는다.
-                let inside = readings.filter {
-                    activity.span.contains($0.timestamp)
-                }
+                let inside = evidenceIndex.readings(
+                    in: activity.span,
+                    inspectionCount: &inspectionCount
+                )
                 let context = inside.isEmpty
                     ? [
                         SensorReading(
@@ -3735,7 +4718,10 @@ enum AppleDeviceGroundTruthEngine {
                 let inference = TravelModeClassifier().classify(
                     readings: context,
                     inside: activity.span,
-                    healthEvidence: healthEvidence,
+                    healthEvidence: evidenceIndex.healthEvidence(
+                        overlapping: activity.span,
+                        inspectionCount: &inspectionCount
+                    ),
                     userTransitLocations: userTransitLocations
                 )
                 return (activity, inference)
@@ -3883,19 +4869,60 @@ enum AppleDeviceGroundTruthEngine {
         activities: [MotionActivityRecord],
         readings: [SensorReading]
     ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return enforcingMotionFamily(
+            segments,
+            activities: activities,
+            readings: readings,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func enforcingMotionFamily(
+        _ segments: [TravelSegment],
+        activities: [MotionActivityRecord],
+        readings: [SensorReading],
+        candidateInspectionCount: inout Int
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = enforcingMotionFamily(
+            segments,
+            activities: activities,
+            readings: readings,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private static func enforcingMotionFamily(
+        _ segments: [TravelSegment],
+        activities: [MotionActivityRecord],
+        readings: [SensorReading],
+        inspectionCount: inout Int?
+    ) -> [TravelSegment] {
         let pedestrianModes: Set<TravelMode> = [.walking, .running, .cycling]
+        inspectionCount? += activities.count + readings.count
+        let automotiveIndex = AutomotiveActivityDurationIndex(
+            activities: activities
+        )
+        let readingIndex = SensorEvidenceTimeIndex(readings: readings)
         return segments.map { segment in
             guard pedestrianModes.contains(segment.mode) else { return segment }
-            let automotive = activities
-                .filter { $0.motion == .automotive }
-                .compactMap { $0.span.intersection(with: segment.span)?.duration }
-                .reduce(0, +)
+            let automotive = automotiveIndex.overlapDuration(
+                in: segment.span,
+                inspectionCount: &inspectionCount
+            )
             guard automotive >= segment.span.duration * 0.6,
                   segment.span.duration >= 120 else {
                 return segment
             }
-            let steps = readings
-                .filter { segment.span.contains($0.timestamp) }
+            let steps = readingIndex
+                .readings(
+                    in: segment.span,
+                    inspectionCount: &inspectionCount
+                )
                 .compactMap(\.stepCount)
             let stepDelta = (steps.max() ?? 0) - (steps.min() ?? 0)
             let minutes = max(1, segment.span.duration / 60)
@@ -3996,20 +5023,54 @@ enum AppleDeviceGroundTruthEngine {
         stays: [PlaceStay],
         maximumGap: TimeInterval
     ) -> [TravelSegment] {
+        var inspectionCount: Int? = nil
+        return coalescingTravel(
+            segments,
+            stays: stays,
+            maximumGap: maximumGap,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func coalescingTravel(
+        _ segments: [TravelSegment],
+        stays: [PlaceStay],
+        maximumGap: TimeInterval,
+        candidateInspectionCount: inout Int
+    ) -> [TravelSegment] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = coalescingTravel(
+            segments,
+            stays: stays,
+            maximumGap: maximumGap,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private static func coalescingTravel(
+        _ segments: [TravelSegment],
+        stays: [PlaceStay],
+        maximumGap: TimeInterval,
+        inspectionCount: inout Int?
+    ) -> [TravelSegment] {
+        inspectionCount? += stays.count
+        let stayIndex = StayInterruptionIndex(stays: stays)
         var result: [TravelSegment] = []
         for segment in segments.sorted(by: { $0.span.start < $1.span.start }) {
             guard var last = result.last,
                   last.mode == segment.mode,
                   segment.span.start.timeIntervalSince(last.span.end)
                       <= maximumGap,
-                  !stays.contains(where: { stay in
-                      let gap = TimeSpan(
+                  !stayIndex.containsInterruption(
+                      in: TimeSpan(
                           start: last.span.end,
                           end: segment.span.start
-                      )
-                      let overlap = stay.span.intersection(with: gap)
-                      return (overlap?.duration ?? 0) >= 180
-                  }) else {
+                      ),
+                      inspectionCount: &inspectionCount
+                  ) else {
                 result.append(segment)
                 continue
             }
@@ -4359,7 +5420,11 @@ enum ChargingInactivitySleepEngine {
         let observed = TimeSpan(start: span.start, end: min(span.end, asOf))
         guard observed.duration >= minimumDuration else { return [] }
         let samples = readings
-            .filter { observed.contains($0.timestamp) && isInactiveCharging($0) }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && observed.contains($0.timestamp)
+                    && isInactiveCharging($0)
+            }
             .sorted { $0.timestamp < $1.timestamp }
         guard samples.count >= 3 else { return [] }
 
@@ -4481,7 +5546,10 @@ enum PhoneSleepWakeEngine {
         asOf: Date = .now
     ) -> PhoneSleepWakeStatus {
         let ordered = readings
-            .filter { $0.timestamp <= asOf }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && $0.timestamp <= asOf
+            }
             .sorted { $0.timestamp < $1.timestamp }
         var state = InferenceState()
         for (index, reading) in ordered.enumerated() {
@@ -4501,7 +5569,11 @@ enum PhoneSleepWakeEngine {
     ) -> [ActualRecord] {
         guard !watchAvailable else { return [] }
         let observed = readings
-            .filter { span.contains($0.timestamp) && $0.timestamp <= asOf }
+            .filter {
+                RouteTimelineTimestamp.isValid($0.timestamp)
+                    && span.contains($0.timestamp)
+                    && $0.timestamp <= asOf
+            }
             .sorted { $0.timestamp < $1.timestamp }
         guard observed.count >= 2 else { return [] }
 
@@ -4780,32 +5852,120 @@ enum PhoneSleepFallbackEngine {
 /// covers the same interval, so the activity lane never shows two copies of
 /// one workout.
 enum MotionActivityActualEngine {
+    private struct CompetingActualIndexes: Sendable {
+        private let stationary: TimeSpanValueIndex<TimeSpan>
+        private let movement: TimeSpanValueIndex<TimeSpan>
+
+        init(existing: [ActualRecord], asOf: Date) {
+            var stationarySpans: [TimeSpan] = []
+            var movementSpans: [TimeSpan] = []
+            stationarySpans.reserveCapacity(existing.count)
+            movementSpans.reserveCapacity(existing.count)
+
+            for actual in existing {
+                let span = actual.span(asOf: asOf)
+                guard span.duration > 0 else { continue }
+                if MotionActivityActualEngine.isCompetingAutomaticRecord(
+                    actual,
+                    against: .stationary
+                ) {
+                    stationarySpans.append(span)
+                }
+                if MotionActivityActualEngine.isCompetingAutomaticRecord(
+                    actual,
+                    against: .walking
+                ) {
+                    movementSpans.append(span)
+                }
+            }
+            stationary = TimeSpanValueIndex(stationarySpans) { $0 }
+            movement = TimeSpanValueIndex(movementSpans) { $0 }
+        }
+
+        func containsOverlap(
+            with span: TimeSpan,
+            minimumDuration: TimeInterval,
+            motion: MotionKind,
+            inspectionCount: inout Int?
+        ) -> Bool {
+            let index = motion == .stationary ? stationary : movement
+            guard span.duration >= minimumDuration,
+                  minimumDuration > 0 else {
+                return false
+            }
+            return index.contains(
+                overlapping: span,
+                inspectionCount: &inspectionCount
+            ) { _, overlap in
+                overlap.duration >= minimumDuration
+            }
+        }
+    }
+
     static func records(
         from activities: [MotionActivityRecord],
         existing: [ActualRecord],
         inside: TimeSpan,
         minimumDuration: TimeInterval = 30
     ) -> [ActualRecord] {
-        merged(activities, inside: inside)
+        var inspectionCount: Int? = nil
+        return records(
+            from: activities,
+            existing: existing,
+            inside: inside,
+            minimumDuration: minimumDuration,
+            inspectionCount: &inspectionCount
+        )
+    }
+
+    static func records(
+        from activities: [MotionActivityRecord],
+        existing: [ActualRecord],
+        inside: TimeSpan,
+        minimumDuration: TimeInterval = 30,
+        candidateInspectionCount: inout Int
+    ) -> [ActualRecord] {
+        var inspectionCount: Int? = candidateInspectionCount
+        let result = records(
+            from: activities,
+            existing: existing,
+            inside: inside,
+            minimumDuration: minimumDuration,
+            inspectionCount: &inspectionCount
+        )
+        candidateInspectionCount = inspectionCount
+            ?? candidateInspectionCount
+        return result
+    }
+
+    private static func records(
+        from activities: [MotionActivityRecord],
+        existing: [ActualRecord],
+        inside: TimeSpan,
+        minimumDuration: TimeInterval,
+        inspectionCount: inout Int?
+    ) -> [ActualRecord] {
+        let mergedActivities = merged(activities, inside: inside)
             .filter { $0.span.duration >= minimumDuration }
-            .compactMap { activity in
+        guard !mergedActivities.isEmpty else { return [] }
+        inspectionCount? += existing.count
+        let existingIndex = CompetingActualIndexes(
+            existing: existing,
+            asOf: inside.end
+        )
+        return mergedActivities.compactMap { activity in
                 guard let title = activity.motion.activityTitle else {
                     return nil
                 }
-                let covered = existing.contains { actual in
-                    guard isCompetingAutomaticRecord(
-                              actual,
-                              against: activity.motion
-                          ),
-                          let overlap = actual.span(asOf: inside.end)
-                              .intersection(with: activity.span) else {
-                        return false
-                    }
-                    return overlap.duration >= min(
+                let covered = existingIndex.containsOverlap(
+                    with: activity.span,
+                    minimumDuration: min(
                         activity.span.duration * 0.5,
                         30
-                    )
-                }
+                    ),
+                    motion: activity.motion,
+                    inspectionCount: &inspectionCount
+                )
                 guard !covered else { return nil }
                 return ActualRecord(
                     id: stableID(for: activity),
@@ -4917,92 +6077,6 @@ enum MotionActivityActualEngine {
             bytes[8], bytes[9], bytes[10], bytes[11],
             bytes[12], bytes[13], bytes[14], bytes[15]
         ))
-    }
-}
-
-enum RouteElement: Identifiable, Hashable, Sendable {
-    case place(PlaceStay)
-    case travel(TravelSegment)
-    case floor(FloorTransition)
-
-    var id: String {
-        switch self {
-        case .place(let value): "place-\(value.id.uuidString)"
-        case .travel(let value): "travel-\(value.id.uuidString)"
-        case .floor(let value): "floor-\(value.id.uuidString)"
-        }
-    }
-
-    var span: TimeSpan {
-        switch self {
-        case .place(let value): value.span
-        case .travel(let value): value.span
-        case .floor(let value): value.span
-        }
-    }
-}
-
-enum RouteTimelineEngine {
-    static func orderedElements(
-        places: [PlaceStay],
-        travel: [TravelSegment],
-        floors: [FloorTransition]
-    ) -> [RouteElement] {
-        (
-            places.map(RouteElement.place)
-                + travel.map(RouteElement.travel)
-                + floors.map(RouteElement.floor)
-        )
-        .sorted { $0.span.start < $1.span.start }
-    }
-
-    static func horizontalRange(
-        of element: RouteElement,
-        viewport: TimelineViewport
-    ) -> ClosedRange<Double> {
-        let lower = TimelineCoordinateMapper.fraction(
-            for: element.span.start,
-            in: viewport
-        )
-        let upper = TimelineCoordinateMapper.fraction(
-            for: element.span.end,
-            in: viewport
-        )
-        return lower...upper
-    }
-
-    static func currentElement(
-        at date: Date,
-        elements: [RouteElement]
-    ) -> RouteElement? {
-        elements.first { $0.span.contains(date) }
-    }
-}
-
-actor MovementCorrectionStore {
-    private var corrections: [String: TravelMode]
-
-    init(corrections: [String: TravelMode] = [:]) {
-        self.corrections = corrections
-    }
-
-    func correctedMode(
-        from placeKey: String,
-        to nextPlaceKey: String
-    ) -> TravelMode? {
-        corrections["\(placeKey)->\(nextPlaceKey)"]
-    }
-
-    func set(
-        _ mode: TravelMode,
-        from placeKey: String,
-        to nextPlaceKey: String
-    ) {
-        corrections["\(placeKey)->\(nextPlaceKey)"] = mode
-    }
-
-    func all() -> [String: TravelMode] {
-        corrections
     }
 }
 

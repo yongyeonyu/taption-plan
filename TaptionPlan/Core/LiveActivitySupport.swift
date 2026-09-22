@@ -7,10 +7,6 @@ enum LiveActivityError: Error, Equatable {
     case missingActivity
 }
 
-enum SensorCollectionLiveActivityError: Error, Equatable {
-    case unavailable
-}
-
 enum TaptionCurrentActivityPolicy {
     static func categoryID(
         actuals: [ActualRecord],
@@ -465,54 +461,5 @@ actor TaptionLiveActivityController {
 
     func activeID() -> String? {
         activity?.id
-    }
-}
-
-actor WidgetActionService {
-    private let repository: any PlanDataRepository
-
-    init(repository: any PlanDataRepository) {
-        self.repository = repository
-    }
-
-    @discardableResult
-    func perform(
-        _ action: WidgetAction,
-        planID: UUID,
-        at date: Date = .now
-    ) async throws -> TaptionDataSnapshot {
-        var snapshot = try await repository.load()
-        guard let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            throw PlanningError.missingPlan(planID)
-        }
-        let plan = snapshot.plans[planIndex]
-
-        switch action {
-        case .complete, .stopCurrentActivity:
-            let result = QuickActionEngine.complete(
-                plan: plan,
-                actuals: snapshot.actuals,
-                at: date,
-                copyPlannedDurationWhenMissing: false
-            )
-            snapshot.plans[planIndex] = result.plan
-            snapshot.actuals = result.actuals
-        case .postponeThirtyMinutes:
-            snapshot.plans[planIndex] = try QuickActionEngine.postpone(plan: plan)
-        case .moveToNextFreeTime:
-            let occupied = snapshot.plans
-                .filter { $0.id != planID && $0.status != .skipped }
-                .map(\.span)
-                + snapshot.calendarEvents.map(\.span)
-            snapshot.plans[planIndex] = try QuickActionEngine.moveToNextFreeTime(
-                plan: plan,
-                occupied: occupied,
-                after: date
-            )
-        }
-
-        snapshot.updatedAt = date
-        try await repository.save(snapshot)
-        return snapshot
     }
 }
