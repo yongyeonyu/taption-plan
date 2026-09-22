@@ -17,3 +17,7 @@ Package.resolved
 # Local configuration
 *.local.xcconfig
 Secrets.xcconfig
+
+# Local AI tool settings and memory
+.codex/
+.workbuddy-ai/
