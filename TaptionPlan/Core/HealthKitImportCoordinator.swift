@@ -1198,6 +1198,13 @@ actor HealthKitImportCoordinator {
         from start: Date,
         through end: Date
     ) async throws -> [HKActivitySummary] {
+        // 유효하지 않은 범위(역전/비유한/미래 시작)를 예측 가능한 Swift
+        // 오류로 걸러 HealthKit 이 NSException 을 던지기 전에 차단한다.
+        guard start.timeIntervalSince1970.isFinite,
+              end.timeIntervalSince1970.isFinite,
+              start <= end else {
+            return []
+        }
         let predicate = Self.activitySummaryPredicate(
             from: start,
             through: end,
@@ -1213,16 +1220,25 @@ actor HealthKitImportCoordinator {
         through end: Date,
         calendar: Calendar
     ) -> NSPredicate {
-        var startComponents = calendar.dateComponents(
-            [.era, .year, .month, .day],
+        // HKQuery.predicateForActivitySummaries 는 넘긴 DateComponents 의
+        // calendar 가 명시적 timeZone 을 가져야 하고, era 등 과도한 필드가
+        // 들어가면 특정 로캘에서 NSInvalidArgumentException 을 던져 앱을
+        // abort 시킨다(백그라운드 임포트 중 크래시). 고정 timeZone 의
+        // 그레고리력 + year/month/day 만으로 구성해 예외를 피한다.
+        var safeCalendar = Calendar(identifier: .gregorian)
+        safeCalendar.timeZone = calendar.timeZone
+        var startComponents = safeCalendar.dateComponents(
+            [.year, .month, .day],
             from: start
         )
-        startComponents.calendar = calendar
-        var endComponents = calendar.dateComponents(
-            [.era, .year, .month, .day],
+        startComponents.calendar = safeCalendar
+        startComponents.timeZone = calendar.timeZone
+        var endComponents = safeCalendar.dateComponents(
+            [.year, .month, .day],
             from: end
         )
-        endComponents.calendar = calendar
+        endComponents.calendar = safeCalendar
+        endComponents.timeZone = calendar.timeZone
         return HKQuery.predicate(
             forActivitySummariesBetweenStart: startComponents,
             end: endComponents
