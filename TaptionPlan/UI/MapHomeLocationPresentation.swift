@@ -78,6 +78,22 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
         }
     }
 
+    /// RPG 탐험 테마의 랜드마크 아이콘. 집=오두막, 회사=길드 성,
+    /// 학교=지식의 탑, 학원=마법 연구소, 운동=훈련장, 취미=공연장,
+    /// 식당=주점. 지도 배지에서 판타지 느낌을 준다.
+    var rpgSystemImage: String {
+        switch self {
+        case .home: "tent.fill"
+        case .company: "building.columns.fill"
+        case .school: "books.vertical.fill"
+        case .academy: "wand.and.stars"
+        case .exercise: "figure.strengthtraining.traditional"
+        case .hobby: "theatermasks.fill"
+        case .restaurant: "fork.knife"
+        case .user: "flag.fill"
+        }
+    }
+
     var tint: Color {
         switch self {
         case .home: Color.tpPastelButter
@@ -100,7 +116,7 @@ struct MapHomeLocationThumbnail: View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                 .fill(destination.tint.opacity(0.14))
-            Image(systemName: destination.systemImage)
+            Image(systemName: destination.rpgSystemImage)
                 .font(.system(size: size * 0.42, weight: .semibold))
                 .foregroundStyle(Color.tpInk)
         }

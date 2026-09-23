@@ -1975,6 +1975,11 @@ struct MapHomeView: View {
 
             VStack(spacing: 0) {
                 header
+                if !isMenuOpen, !isMapSearchFocused {
+                    questHUD
+                        .padding(.top, 6)
+                        .transition(.opacity)
+                }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Layout.horizontalInset)
@@ -3537,6 +3542,77 @@ struct MapHomeView: View {
             presentLocationAddition(at: coordinate)
         case .memo:
             addMapMemo(at: coordinate)
+        }
+    }
+
+    private struct QuestStats: Equatable {
+        var distanceMeters: Double
+        var placeCount: Int
+        var activityKinds: Int
+    }
+
+    private var questStats: QuestStats {
+        let snap = currentDayDataSnapshot
+        let travel = snap?.travel ?? model.snapshot.travel
+        let places = snap?.places ?? model.snapshot.places
+        let actuals = snap?.actuals ?? model.snapshot.actuals
+        let distance = travel.reduce(0) { $0 + max(0, $1.distanceMeters) }
+        let kinds = Set(
+            actuals.compactMap { actual -> String? in
+                let root = actual.categoryID
+                    .lowercased()
+                    .split(separator: ".", maxSplits: 1)
+                    .first
+                    .map(String.init)
+                return root
+            }
+        )
+        return QuestStats(
+            distanceMeters: distance,
+            placeCount: places.count,
+            activityKinds: kinds.count
+        )
+    }
+
+    /// 하루를 "탐험 일지"로 보여주는 RPG HUD. 이동 거리(발자국),
+    /// 방문 장소(깃발), 활동 종류(뱃지)를 두루마리 톤 캡슐로 요약한다.
+    private var questHUD: some View {
+        let stats = questStats
+        let km = stats.distanceMeters / 1000
+        let distanceText = km >= 1
+            ? String(format: "%.1fkm", km)
+            : String(format: "%.0fm", stats.distanceMeters)
+        return HStack(spacing: 12) {
+            questChip(icon: "pawprint.fill", value: distanceText)
+            questChip(icon: "flag.fill", value: "\(stats.placeCount)")
+            questChip(icon: "rosette", value: "\(stats.activityKinds)")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(
+            Color.tpSurface.opacity(0.94),
+            in: Capsule()
+        )
+        .overlay { Capsule().stroke(Color.tpLine.opacity(0.9), lineWidth: 1) }
+        .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            language.text(
+                "오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종",
+                "Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities"
+            )
+        )
+    }
+
+    private func questChip(icon: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color.tpAccent)
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .monospacedDigit()
         }
     }
 
