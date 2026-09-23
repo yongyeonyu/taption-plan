@@ -1645,6 +1645,7 @@ struct MapHomeView: View {
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
     @State private var selectedMarkerInfo: MapHomeMarkerInfoKind?
+    @State private var fogOfWarEnabled = true
     @State private var isLongPressMenuPresented = false
     @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
     @State private var requestingPermission: RequiredPermission?
@@ -3240,6 +3241,7 @@ struct MapHomeView: View {
         stickmanPoint: CGPoint?
     ) -> some View {
         ZStack {
+            fogOfWarOverlay(viewport: viewport)
             ForEach(pawprintWaypoints) { waypoint in
                 if let point = vectorPoint(
                     in: viewport,
@@ -3498,7 +3500,54 @@ struct MapHomeView: View {
         .clipped()
     }
 
-    private var vectorDisplayedMarkerID: String { "displayed-location" }
+    /// 스타크래프트식 안개 탐험(fog of war). 지도 전체를 어둡게 덮고,
+    /// 내가 이동한 경로(발자국 waypoint)와 현재 위치·랜드마크 주변만
+    /// 원형으로 걷어내 "탐험한 곳만 밝은" 느낌을 준다. destinationOut
+    /// 블렌드로 구멍을 뚫으므로 아래 지도 타일이 그 자리에서만 드러난다.
+    @ViewBuilder
+    private func fogOfWarOverlay(viewport: MapHomeVectorViewport?) -> some View {
+        if fogOfWarEnabled, let viewport {
+            let revealRadius: CGFloat = 78
+            ZStack {
+                Rectangle().fill(Color.black.opacity(0.55))
+                // 걷어낼 지점: 발자국 궤적 + 현재 위치 + 장소 마커.
+                ForEach(pawprintWaypoints) { wp in
+                    if let pt = vectorPoint(in: viewport, for: vectorPawprintMarkerID(wp.index)) {
+                        Circle()
+                            .fill(Color.black)
+                            .frame(width: revealRadius, height: revealRadius)
+                            .blur(radius: 22)
+                            .position(pt)
+                            .blendMode(.destinationOut)
+                    }
+                }
+                if let pt = viewport.markerPoints[vectorDisplayedMarkerID] {
+                    Circle()
+                        .fill(Color.black)
+                        .frame(width: revealRadius * 1.4, height: revealRadius * 1.4)
+                        .blur(radius: 26)
+                        .position(pt)
+                        .blendMode(.destinationOut)
+                }
+                ForEach(placeAnnotations) { place in
+                    if let pt = vectorPoint(in: viewport, for: vectorPlaceMarkerID(place.id)) {
+                        Circle()
+                            .fill(Color.black)
+                            .frame(width: revealRadius, height: revealRadius)
+                            .blur(radius: 22)
+                            .position(pt)
+                            .blendMode(.destinationOut)
+                    }
+                }
+            }
+            .compositingGroup()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .transition(.opacity)
+        }
+    }
+
+        private var vectorDisplayedMarkerID: String { "displayed-location" }
     private var vectorSearchMarkerID: String { "search-location" }
 
     private func vectorTemporaryMarkerID(_ id: UUID) -> String {
@@ -5513,6 +5562,17 @@ struct MapHomeView: View {
                 .accessibilityLabel(
                     language.text("지도 스타일 선택", "Choose map style")
                 )
+
+                Toggle(isOn: $fogOfWarEnabled) {
+                    Label(
+                        language.text("안개 탐험", "Fog of Exploration"),
+                        systemImage: "cloud.fog.fill"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpAccent)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
 
                 Toggle(
                     isOn: Binding(
