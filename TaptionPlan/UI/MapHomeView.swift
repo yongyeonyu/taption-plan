@@ -3926,6 +3926,7 @@ struct MapHomeView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
             }
+            .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
             .onGeometryChange(
                 for: CGRect.self,
                 of: { proxy in
@@ -3998,10 +3999,11 @@ struct MapHomeView: View {
                     width: MapHomeSearchLayoutMath.playbackVisualSize,
                     height: MapHomeSearchLayoutMath.playbackVisualSize
                 )
-                .background(Color.white.opacity(0.96), in: Circle())
+                .background(Color.tpSurface.opacity(0.96), in: Circle())
                 .overlay {
-                    Circle().stroke(Color.tpPastelGray.opacity(0.65), lineWidth: 1)
+                    Circle().stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
                 }
+                .shadow(color: Color.black.opacity(0.07), radius: 9, y: 3)
                 .frame(
                     width: MapHomeSearchLayoutMath.playbackTouchSize,
                     height: MapHomeSearchLayoutMath.playbackTouchSize
@@ -4827,8 +4829,9 @@ struct MapHomeView: View {
 
             appVersionFooter
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 60)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .padding(.top, 18)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
