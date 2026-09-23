@@ -179,14 +179,37 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .movement, .walking, .car, .subway,
              .privateVehicle, .bus, .ship, .airplane, .cycling:
             return .walking
-        case .sleeping: return .sleeping
-        case .eating: return .eating
-        // 업무/수업: 소품(노트북·책) 위에서 그루밍. 소품은 마커에서 오버레이.
-        case .computer, .reading: return .grooming
-        // 취미: 놀이 동작을 다양하게
+        // 수면: 잠자기 위주로, 가끔 하품/꾹꾹이로 뒤척임 표현
+        case .sleeping:
+            let rest: [TaptionCatAnimationAction] = [
+                .sleeping, .sleeping, .sleeping, .yawning,
+                .sleeping, .kneading, .sleeping, .yawning,
+            ]
+            return rest[abs(seed) % rest.count]
+        // 식사: 먹기 위주로 가끔 그루밍
+        case .eating:
+            let meal: [TaptionCatAnimationAction] = [
+                .eating, .eating, .eating, .grooming, .eating, .sitting,
+            ]
+            return meal[abs(seed) % meal.count]
+        // 업무: 소품(노트북) 위에서 앉기·그루밍·꾹꾹이 번갈아
+        case .computer:
+            let work: [TaptionCatAnimationAction] = [
+                .grooming, .sitting, .kneading, .grooming, .yawning, .sitting,
+            ]
+            return work[abs(seed) % work.count]
+        // 수업: 책 앞에서 앉기·그루밍·하품
+        case .reading:
+            let study: [TaptionCatAnimationAction] = [
+                .grooming, .sitting, .yawning, .grooming, .sitting, .kneading,
+            ]
+            return study[abs(seed) % study.count]
+        // 취미: 놀이 동작을 최대한 다양하게
         case .hobby:
-            let play: [TaptionCatAnimationAction] =
-                [.ballPlay, .fishingPlay, .stretching, .kneading]
+            let play: [TaptionCatAnimationAction] = [
+                .ballPlay, .fishingPlay, .stretching, .kneading,
+                .ballPlay, .startled, .fishingPlay, .stretching,
+            ]
             return play[abs(seed) % play.count]
         // 운동: 활발한 동작 16종을 랜덤(중복 포함)으로 번갈아
         case .exercise:
@@ -194,15 +217,22 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
                 .running, .ballPlay, .fishingPlay, .stretching,
                 .kneading, .running, .ballPlay, .stretching,
                 .fishingPlay, .running, .kneading, .ballPlay,
-                .stretching, .running, .fishingPlay, .ballPlay,
+                .stretching, .running, .fishingPlay, .startled,
             ]
             return workout[abs(seed) % workout.count]
-        // 활동: 그루밍(몸단장)
+        // 활동: 그루밍 위주로 앉기·스트레칭·하품 섞어 자연스럽게
         case .activity:
-            return .grooming
+            let idle: [TaptionCatAnimationAction] = [
+                .grooming, .sitting, .stretching, .grooming,
+                .yawning, .kneading, .grooming, .sitting,
+            ]
+            return idle[abs(seed) % idle.count]
         // 미확인: 갸우뚱·놀람 (물음표는 마커에서 오버레이)
         case .unconfirmed:
-            return .startled
+            let puzzled: [TaptionCatAnimationAction] = [
+                .startled, .sitting, .startled, .yawning,
+            ]
+            return puzzled[abs(seed) % puzzled.count]
         }
     }
 

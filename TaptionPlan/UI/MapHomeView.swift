@@ -3301,17 +3301,20 @@ struct MapHomeView: View {
                         anchor: MapHomePlaceAnnotationLayout.vectorAnchor
                     ) {
                         if place.destination == .user {
-                            Button {
-                                selectedUserLocation = .frequentPlace(place.id)
-                            } label: {
-                                MapHomePlacePin(
-                                    name: place.name,
-                                    floor: place.floor,
-                                    destination: place.destination
-                                )
-                                .fixedSize()
-                            }
-                            .buttonStyle(.plain)
+                            MapHomePlacePin(
+                                name: place.name,
+                                floor: place.floor,
+                                destination: place.destination
+                            )
+                            .fixedSize()
+                            // simultaneousGesture: 탭으로 사용자 위치 메뉴를 열되
+                            // 지도 팬·핀치줌은 랜드마크 위에서도 그대로 통과.
+                            .simultaneousGesture(
+                                TapGesture().onEnded {
+                                    selectedUserLocation = .frequentPlace(place.id)
+                                }
+                            )
+                            .accessibilityAddTraits(.isButton)
                             .accessibilityLabel(
                                 language.text(
                                     place.name + " 사용자 위치 메뉴",
@@ -3325,7 +3328,13 @@ struct MapHomeView: View {
                                 destination: place.destination
                             )
                             .fixedSize()
-                            .allowsHitTesting(false)
+                            // 탭하면 랜드마크 설명 창. 지도 제스처는 통과.
+                            .simultaneousGesture(
+                                TapGesture().onEnded {
+                                    selectedMarkerInfo = .landmark(place.destination)
+                                }
+                            )
+                            .accessibilityAddTraits(.isButton)
                             .accessibilityLabel(
                                 language.text(
                                     "\(place.name), 레벨 \(place.floor ?? 1)",
@@ -15345,7 +15354,7 @@ struct MapHomeMarkerInfoSheet: View {
 
     private var title: String {
         switch kind {
-        case .cat(let a): language.text("탐험가 고양이 · \(a.title)", "Explorer Cat · \(a.title)")
+        case .cat(let a): language.text("화랑이 · \(a.title)", "Hwarang · \(a.title)")
         case .pawprint: language.text("발자국 흔적", "Pawprint Trail")
         case .landmark(let d): language.text("랜드마크 · \(d.koreanName)", "Landmark · \(d.englishName)")
         case .flag: language.text("점령 깃발", "Conquered Flag")
@@ -15356,7 +15365,7 @@ struct MapHomeMarkerInfoSheet: View {
         switch kind {
         case .cat:
             language.text(
-                "지금 내 위치와 활동을 나타내는 탐험가 고양이입니다. 걷기·뛰기·수면·업무 등 활동에 따라 동작이 바뀌고, 이동 속도가 빠를수록 더 다이나믹하게 질주합니다.",
+                "탐험가 고양이 화랑이입니다. 지금 내 위치와 활동을 나타내며, 걷기·뛰기·수면·업무 등 활동에 따라 동작이 바뀌고, 이동 속도가 빠를수록 더 다이나믹하게 질주합니다.",
                 "Your explorer cat showing your current location and activity. Its motion changes with what you're doing, and the faster you move the more dynamically it dashes."
             )
         case .pawprint:
