@@ -139,6 +139,21 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// 지도 배지의 흰 고양이 스프라이트로 매핑한다. 졸라맨 동작을 고양이
+    /// 동작으로 옮겨 같은 상황(이동·업무·수면 등)에서 어울리는 포즈를 쓴다.
+    var catAction: TaptionCatAnimationAction {
+        switch self {
+        case .running, .exercise: .running
+        case .movement, .walking, .car, .subway,
+             .privateVehicle, .bus, .ship, .airplane, .cycling: .walking
+        case .sleeping: .sleeping
+        case .eating: .eating
+        case .hobby: .ballPlay
+        case .computer, .reading: .sitting
+        case .activity, .unconfirmed: .sitting
+        }
+    }
+
     var animatesPresentation: Bool {
         switch self {
         case .computer, .reading, .hobby, .eating:
@@ -608,23 +623,22 @@ struct MapHomeStickmanMarker: View {
                 paused: isStatic || animationPhase != nil
             )
         ) { context in
-            Canvas { canvas, size in
-                MapHomeStickmanRenderer.draw(
-                    context: &canvas,
-                    size: size,
-                    action: action,
-                    phase: isStatic
-                        ? 0
-                        : animationPhase
-                            ?? MapHomeStickmanAnimationEngine.phase(
-                                at: context.date,
-                                reducesMotion: false
-                            )
-                )
-            }
+            let phase = isStatic
+                ? 0
+                : animationPhase
+                    ?? MapHomeStickmanAnimationEngine.phase(
+                        at: context.date,
+                        reducesMotion: false
+                    )
+            TaptionCatAtlasSprite(
+                style: "white",
+                action: action.catAction,
+                frame: phase
+            )
+            .scaleEffect(0.92)
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .background(Color(hex: "#FCF9F4").opacity(0.96), in: Circle())
+        .background(Color(hex: "#FBF6EA").opacity(0.96), in: Circle())
         .overlay { Circle().stroke(routePhase.color.opacity(0.90), lineWidth: 1.25) }
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
@@ -645,17 +659,14 @@ struct MapHomeStickmanGlyph: View {
                 paused: isStatic
             )
         ) { context in
-            Canvas { canvas, canvasSize in
-                MapHomeStickmanRenderer.draw(
-                    context: &canvas,
-                    size: canvasSize,
-                    action: action,
-                    phase: MapHomeStickmanAnimationEngine.phase(
-                        at: context.date,
-                        reducesMotion: isStatic
-                    )
+            TaptionCatAtlasSprite(
+                style: "white",
+                action: action.catAction,
+                frame: MapHomeStickmanAnimationEngine.phase(
+                    at: context.date,
+                    reducesMotion: isStatic
                 )
-            }
+            )
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)

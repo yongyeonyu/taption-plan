@@ -10,6 +10,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     case contrast
     case pastel
     case casual
+    case rpg
 
     static let sourceURL = "https://tiles.openfreemap.org/planet"
     static let glyphsURL = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf"
@@ -23,6 +24,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "#030A11"
         case .pastel: "#FFF7F4"
         case .casual: "#FFF8EC"
+        case .rpg: "#ECDFC0"
         }
     }
 
@@ -33,6 +35,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "#0E3546"
         case .pastel: "#DCEEFF"
         case .casual: "#BFE8F0"
+        case .rpg: "#A7CFD4"
         }
     }
 
@@ -43,6 +46,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "#102B38"
         case .pastel: "#E5F3E4"
         case .casual: "#DDF2D2"
+        case .rpg: "#DCCB9E"
         }
     }
 
@@ -53,6 +57,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "#A9B4BE"
         case .pastel: "#DCCFEB"
         case .casual: "#F1D0B4"
+        case .rpg: "#CBAE7C"
         }
     }
 
@@ -62,6 +67,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .light, .pastel: "#FFFFFF"
         case .contrast: "#15262D"
         case .casual: "#FFFDF7"
+        case .rpg: "#F3E7C8"
         }
     }
 
@@ -72,6 +78,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "#7FFFE8"
         case .pastel: "#80CFC2"
         case .casual: "#F2A37F"
+        case .rpg: "#9A7B4A"
         }
     }
 
@@ -82,10 +89,49 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .contrast: "Taption Vector Contrast"
         case .pastel: "Taption Vector Pastel"
         case .casual: "Taption Vector Casual"
+        case .rpg: "Taption Vector RPG"
         }
     }
 
     private var casualLandLayersJSON: String {
+        if self == .rpg {
+            return #"""
+            ,
+            {
+              "id": "rpg-landcover",
+              "type": "fill",
+              "source": "openmaptiles",
+              "source-layer": "landcover",
+              "filter": ["in", "class", "wood", "grass", "scrub"],
+              "paint": {
+                "fill-color": "#B7C08A",
+                "fill-opacity": 0.62
+              }
+            },
+            {
+              "id": "rpg-park",
+              "type": "fill",
+              "source": "openmaptiles",
+              "source-layer": "park",
+              "paint": {
+                "fill-color": "#A6BE7C",
+                "fill-opacity": 0.7
+              }
+            },
+            {
+              "id": "rpg-coastline",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "water",
+              "layout": { "line-cap": "round", "line-join": "round" },
+              "paint": {
+                "line-color": "#6E5B3E",
+                "line-opacity": 0.55,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 12, 1.6, 16, 3.2]
+              }
+            }
+            """#
+        }
         guard self == .casual else { return "" }
         return #"""
         ,
@@ -114,6 +160,24 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     }
 
     private var casualBuildingLayersJSON: String {
+        if self == .rpg {
+            return #"""
+            ,
+            {
+              "id": "rpg-building-outline",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "building",
+              "minzoom": 13,
+              "layout": { "line-cap": "round", "line-join": "round" },
+              "paint": {
+                "line-color": "#8A6A3E",
+                "line-opacity": 0.5,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.4, 17, 1.4]
+              }
+            }
+            """#
+        }
         guard self == .casual else { return "" }
         return #"""
         ,
@@ -134,6 +198,116 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     }
 
     private var casualOverlayLayersJSON: String {
+        if self == .rpg {
+            return #"""
+            ,
+            {
+              "id": "rpg-waterway",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "waterway",
+              "minzoom": 8,
+              "layout": { "line-cap": "round", "line-join": "round" },
+              "paint": {
+                "line-color": "#6FA6B0",
+                "line-opacity": 0.8,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 2.6]
+              }
+            },
+            {
+              "id": "rpg-place-marker",
+              "type": "circle",
+              "source": "openmaptiles",
+              "source-layer": "place",
+              "minzoom": 5,
+              "filter": ["in", "class", "city", "town", "village"],
+              "paint": {
+                "circle-color": "#C65D4D",
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 2.6, 10, 4.0, 14, 5.8],
+                "circle-stroke-color": "#ECDFC0",
+                "circle-stroke-width": 1.6
+              }
+            },
+            {
+              "id": "rpg-poi-marker",
+              "type": "circle",
+              "source": "openmaptiles",
+              "source-layer": "poi",
+              "minzoom": 13,
+              "filter": ["in", "class", "cafe", "restaurant", "bakery", "shop", "supermarket"],
+              "paint": {
+                "circle-color": "#8A6A3E",
+                "circle-opacity": 0.7,
+                "circle-radius": 3.2,
+                "circle-stroke-color": "#ECDFC0",
+                "circle-stroke-width": 1
+              }
+            },
+            {
+              "id": "rpg-place-label",
+              "type": "symbol",
+              "source": "openmaptiles",
+              "source-layer": "place",
+              "minzoom": 5,
+              "filter": ["in", "class", "city", "town", "village", "suburb", "neighbourhood"],
+              "layout": {
+                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+                "text-font": ["Noto Sans Regular"],
+                "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10, 10, 13, 14, 17],
+                "text-max-width": 8,
+                "text-padding": 4,
+                "text-allow-overlap": false,
+                "text-ignore-placement": false
+              },
+              "paint": {
+                "text-color": "#5A4A2E",
+                "text-halo-color": "#ECDFC0",
+                "text-halo-width": 2.2,
+                "text-halo-blur": 0.15
+              }
+            },
+            {
+              "id": "rpg-road-label",
+              "type": "symbol",
+              "source": "openmaptiles",
+              "source-layer": "transportation_name",
+              "minzoom": 12,
+              "layout": {
+                "symbol-placement": "line",
+                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+                "text-font": ["Noto Sans Regular"],
+                "text-size": ["interpolate", ["linear"], ["zoom"], 12, 9, 16, 12],
+                "text-padding": 3,
+                "text-max-angle": 30,
+                "text-keep-upright": true
+              },
+              "paint": {
+                "text-color": "#6E5B3E",
+                "text-halo-color": "#ECDFC0",
+                "text-halo-width": 1.8,
+                "text-halo-blur": 0.1
+              }
+            },
+            {
+              "id": "rpg-water-label",
+              "type": "symbol",
+              "source": "openmaptiles",
+              "source-layer": "water_name",
+              "minzoom": 10,
+              "layout": {
+                "text-field": ["coalesce", ["get", "name:ko"], ["get", "name:en"], ["get", "name"]],
+                "text-font": ["Noto Sans Regular"],
+                "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 14],
+                "text-padding": 4
+              },
+              "paint": {
+                "text-color": "#4A7C86",
+                "text-halo-color": "#A7CFD4",
+                "text-halo-width": 1.8
+              }
+            }
+            """#
+        }
         guard self == .casual else { return "" }
         return #"""
         ,
@@ -352,6 +526,7 @@ extension MapDisplayStyle {
         case .mapLibreContrast: .contrast
         case .mapLibrePastel: .pastel
         case .mapLibreCasual: .casual
+        case .mapLibreRPG: .rpg
         case .standard, .simplified, .hybrid, .imagery: nil
         }
     }

@@ -2373,10 +2373,14 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var map: some View {
-        // WBS runtime is Apple MapKit. Keep the vector renderer available for
-        // decoding old settings and future compatibility, but never expose it
-        // as the Plan map execution path.
-        mapKitMap
+        // 지도 provider가 OpenFreeMap(벡터, RPG 등)이면 무료 벡터 렌더러를 쓰고,
+        // Apple 스타일이면 기존 MapKit 경로를 유지한다. 경로 재생·마커는 벡터
+        // 렌더러도 지원한다(MapHomeVectorRoute/Marker).
+        if let vectorStyle = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle {
+            vectorMap(style: vectorStyle)
+        } else {
+            mapKitMap
+        }
     }
 
     private var mapStickersOnMap: [MapSticker] {
@@ -3772,6 +3776,7 @@ struct MapHomeView: View {
         case .mapLibreContrast: language.text("벡터 고대비", "Vector Contrast")
         case .mapLibrePastel: language.text("벡터 파스텔", "Vector Pastel")
         case .mapLibreCasual: language.text("벡터 캐주얼", "Vector Casual")
+        case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         }
     }
 
@@ -3786,6 +3791,7 @@ struct MapHomeView: View {
         case .mapLibreContrast: "circle.lefthalf.filled"
         case .mapLibrePastel: "paintpalette.fill"
         case .mapLibreCasual: "sparkles"
+        case .mapLibreRPG: "map.circle.fill"
         }
     }
 
@@ -4485,8 +4491,12 @@ struct MapHomeView: View {
                     height: max(0, menuHeight - menuTop),
                     alignment: .top
                 )
-                .background(.regularMaterial)
+                .background(Color.tpSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
+                }
                 .padding(.top, menuTop)
                 .shadow(color: Color.black.opacity(0.18), radius: 22, x: 8, y: 0)
             }
@@ -4551,7 +4561,7 @@ struct MapHomeView: View {
             HStack(spacing: 7) {
                 Image(systemName: "map.fill")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.tpReferenceBlue)
+                    .foregroundStyle(Color.tpAccent)
                 Text(
                     currentCoordinate == nil
                         ? language.text("위치 기록을 기다리는 중", "Waiting for location")
@@ -4598,7 +4608,7 @@ struct MapHomeView: View {
                 HStack(spacing: 13) {
                     Image(systemName: "paintpalette.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpReferenceMint)
+                        .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text("행동 분류", "Activity categories"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -4607,11 +4617,11 @@ struct MapHomeView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
                 .background(
-                    Color.tpReferenceMint.opacity(0.08),
+                    Color.tpInk.opacity(0.05),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                 )
             }
@@ -4820,7 +4830,7 @@ struct MapHomeView: View {
                 HStack(spacing: 13) {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpReferenceBlue)
+                        .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text("위치", "Location"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -4829,11 +4839,11 @@ struct MapHomeView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
-                    Color.tpReferenceBlue.opacity(0.08),
+                    Color.tpInk.opacity(0.05),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                 )
             }
@@ -5141,7 +5151,7 @@ struct MapHomeView: View {
             HStack(spacing: 13) {
                 Image(systemName: "globe")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.tpReferenceBlue)
+                    .foregroundStyle(Color.tpAccent)
                     .frame(width: 24)
                 Text(language.text("언어", "Language"))
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -5153,11 +5163,11 @@ struct MapHomeView: View {
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            .foregroundStyle(Color.primary)
+            .foregroundStyle(Color.tpInk)
             .padding(.vertical, 9)
             .padding(.horizontal, 12)
             .background(
-                Color.tpReferenceBlue.opacity(0.07),
+                Color.tpInk.opacity(0.05),
                 in: RoundedRectangle(cornerRadius: 12)
             )
         }
@@ -5185,7 +5195,7 @@ struct MapHomeView: View {
                 HStack(spacing: 13) {
                     Image(systemName: "note.text")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpReferenceGold)
+                        .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text("메모", "Memos"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -5194,11 +5204,11 @@ struct MapHomeView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
-                    Color.tpPastelButter.opacity(0.16),
+                    Color.tpInk.opacity(0.05),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                 )
             }
@@ -5289,7 +5299,7 @@ struct MapHomeView: View {
                 HStack(spacing: 13) {
                     Image(systemName: "square.3.layers.3d")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpReferenceBlue)
+                        .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text("표시", "Display"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -5298,11 +5308,11 @@ struct MapHomeView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(
-                    Color.tpReferenceBlue.opacity(0.08),
+                    Color.tpInk.opacity(0.05),
                     in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                 )
             }
@@ -5394,7 +5404,7 @@ struct MapHomeView: View {
                 HStack(spacing: 13) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpReferenceRose)
+                        .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text("설정", "Settings"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -5403,10 +5413,10 @@ struct MapHomeView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
-                .background(Color.tpReferenceRose.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("설정 목록", "Settings list"))
@@ -5473,7 +5483,7 @@ struct MapHomeView: View {
 
     private var appleWatchMenuItem: some View {
         let state = model.appleWatchConnectionState
-        let tint = Color.tpMovementDark
+        let tint = Color.tpAccent
         return VStack(alignment: .leading, spacing: 5) {
             Button {
                 model.refreshAppleWatchConnectionState()
@@ -5503,11 +5513,11 @@ struct MapHomeView: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.secondary)
                 }
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 12)
                 .padding(.horizontal, 12)
                 .background(
-                    tint.opacity(0.08),
+                    Color.tpInk.opacity(0.05),
                     in: RoundedRectangle(cornerRadius: 12)
                 )
             }
@@ -5741,7 +5751,7 @@ struct MapHomeView: View {
                 systemImage: "sensor.fill"
             )
             .font(.system(size: 14, weight: .semibold, design: .rounded))
-            .foregroundStyle(Color.tpReferenceRose)
+            .foregroundStyle(Color.tpAccent)
 
             Text(
                 language.text(
@@ -5780,7 +5790,7 @@ struct MapHomeView: View {
                     .padding(.horizontal, 9)
                     .frame(minHeight: 36)
                     .background(
-                        Color.white.opacity(0.78),
+                        Color.tpSurface.opacity(0.9),
                         in: RoundedRectangle(cornerRadius: 9, style: .continuous)
                     )
                 }
@@ -5799,7 +5809,7 @@ struct MapHomeView: View {
         }
         .padding(12)
         .background(
-            Color.tpReferenceRose.opacity(0.09),
+            Color.tpInk.opacity(0.05),
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
         .accessibilityElement(children: .contain)
@@ -6006,12 +6016,12 @@ struct MapHomeView: View {
                 Text(title)
                     .font(.system(size: 16, weight: isSelected ? .bold : .medium, design: .rounded))
                 Spacer()
-                if isSelected { Circle().fill(Color.blue).frame(width: 6, height: 6) }
+                if isSelected { Circle().fill(Color.tpAccent).frame(width: 6, height: 6) }
             }
-            .foregroundStyle(isSelected ? Color.tpReferenceBlue : Color.primary)
+            .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk)
             .padding(.vertical, 15)
             .padding(.horizontal, 12)
-            .background(isSelected ? Color.tpReferenceBlue.opacity(0.10) : .clear, in: RoundedRectangle(cornerRadius: 12))
+            .background(isSelected ? Color.tpAccent.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
     }

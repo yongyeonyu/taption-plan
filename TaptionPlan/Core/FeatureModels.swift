@@ -3633,6 +3633,7 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case mapLibreContrast
     case mapLibrePastel
     case mapLibreCasual
+    case mapLibreRPG
 
     init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
@@ -3699,6 +3700,7 @@ extension MapDisplayStyle {
     ]
 
     static let openFreeMapStyles: [Self] = [
+        .mapLibreRPG,
         .mapLibreCasual,
         .mapLibrePastel,
         .mapLibreLight,
@@ -3714,7 +3716,8 @@ extension MapDisplayStyle {
              .mapLibreLight,
              .mapLibreContrast,
              .mapLibrePastel,
-             .mapLibreCasual:
+             .mapLibreCasual,
+             .mapLibreRPG:
             .openFreeMap
         }
     }
@@ -3733,7 +3736,7 @@ extension MapDisplayStyle {
         }
     }
 
-    var runtimeStyle: Self { .standard }
+    var runtimeStyle: Self { self }
 }
 
 enum MapUserActivityIconCatalog {
@@ -3782,13 +3785,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// categories. Missing values intentionally keep the shared defaults.
     var mapCategoryColors: [String: String]
     var mapUserActivityCategories: [MapUserActivityCategory]
-    var mapDisplayStyle: MapDisplayStyle {
-        didSet {
-            if mapDisplayStyle != .standard {
-                mapDisplayStyle = .standard
-            }
-        }
-    }
+    // RPG 판타지 지도(무료 OpenFreeMap 벡터)를 기본으로 쓴다. 예전에는 벡터
+    // 재생 경로가 준비되지 않아 항상 .standard(Apple)로 되돌렸으나, 이제
+    // 벡터 스타일 선택을 허용한다. 알 수 없는 값만 안전값으로 보정.
+    var mapDisplayStyle: MapDisplayStyle
     var mapMemoDisplayFilter: MapMemoDisplayFilter
     var watchAccelerationProfile: TaptionWatchAccelerationProfile
     var watchDataSyncProfile: TaptionWatchDataSyncProfile
@@ -3834,7 +3834,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         gpsLoggingPreferences: .standard,
         mapCategoryColors: [:],
         mapUserActivityCategories: [],
-        mapDisplayStyle: .standard,
+        mapDisplayStyle: .mapLibreRPG,
         mapMemoDisplayFilter: .all,
         watchAccelerationProfile: .off,
         watchDataSyncProfile: .off,

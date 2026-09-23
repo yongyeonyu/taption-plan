@@ -25,20 +25,21 @@ extension Font {
 extension Color {
     // Tokyo postcard palette: a cool sky, warm paper and soft botanical
     // accents keep the timeline calm without lowering text contrast.
-    static let tpInk = Color(red: 38 / 255, green: 54 / 255, blue: 75 / 255)
-    static let tpSecondary = Color(red: 104 / 255, green: 120 / 255, blue: 139 / 255)
-    static let tpBackground = Color(red: 247 / 255, green: 246 / 255, blue: 244 / 255)
-    static let tpSurface = Color(red: 255 / 255, green: 253 / 255, blue: 248 / 255)
+    // RA 웜 양피지: RPG 양피지 지도와 통일. 크림 배경·세피아 잉크·테라코타 액센트.
+    static let tpInk = Color(red: 62 / 255, green: 51 / 255, blue: 32 / 255)
+    static let tpSecondary = Color(red: 122 / 255, green: 108 / 255, blue: 80 / 255)
+    static let tpBackground = Color(red: 243 / 255, green: 234 / 255, blue: 214 / 255)
+    static let tpSurface = Color(red: 251 / 255, green: 246 / 255, blue: 234 / 255)
     static let tpSurfaceBlue = Color(red: 241 / 255, green: 248 / 255, blue: 252 / 255)
     static let tpSurfacePink = Color(red: 255 / 255, green: 242 / 255, blue: 245 / 255)
     static let tpSurfaceSage = Color(red: 241 / 255, green: 248 / 255, blue: 240 / 255)
     static let tpSurfaceLavender = Color(red: 247 / 255, green: 243 / 255, blue: 251 / 255)
     static let tpSurfaceCream = Color(red: 255 / 255, green: 249 / 255, blue: 236 / 255)
     static let tpSky = Color(red: 185 / 255, green: 221 / 255, blue: 237 / 255)
-    static let tpLine = Color(red: 221 / 255, green: 231 / 255, blue: 235 / 255)
+    static let tpLine = Color(red: 227 / 255, green: 214 / 255, blue: 184 / 255)
     static let tpHoliday = Color(red: 0.86, green: 0.27, blue: 0.30)
     static let tpSaturday = Color(red: 0.24, green: 0.47, blue: 0.77)
-    static let tpAccent = Color(red: 0.21, green: 0.57, blue: 0.70)
+    static let tpAccent = Color(red: 198 / 255, green: 93 / 255, blue: 77 / 255)
 
     // The original product guide's ten-color set, softened by the postcard
     // surfaces above. Map Home uses these as accents rather than repainting
@@ -186,21 +187,22 @@ enum CanonicalCategoryPalette {
 }
 
 enum MapHomePastelPalette {
+    // RA 웜 양피지: 지도 톤에 맞춰 채도를 낮춘 어스톤 카테고리 색.
     static let hexes: [String: String] = [
-        "activity": "#73C9A6",
-        "work": "#7EA7E6",
-        "study": "#6CC9D8",
-        "hobby": "#A78BD2",
-        "sleep": "#7D82C9",
-        "movement": "#E9985F",
-        "eating": "#E4C25D",
-        "exercise": "#E5869D",
-        "health": "#C66FB5",
-        "unconfirmed": "#AAB5C3",
+        "activity": "#5B8C6E",
+        "work": "#4A6FA5",
+        "study": "#5B8C6E",
+        "hobby": "#8A6BA8",
+        "sleep": "#6B6FA8",
+        "movement": "#C67A3E",
+        "eating": "#C99A3E",
+        "exercise": "#C25548",
+        "health": "#B0588F",
+        "unconfirmed": "#A89468",
     ]
 
     static func hex(_ id: String) -> String {
-        hexes[id] ?? hexes["activity"] ?? "#8FD9C5"
+        hexes[id] ?? hexes["activity"] ?? "#5B8C6E"
     }
 
     static func color(_ id: String) -> Color {
