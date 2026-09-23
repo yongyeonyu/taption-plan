@@ -659,48 +659,156 @@ enum MapHomeStickmanRoutePhase {
     }
 }
 
+/// 이동 속도를 30km/h 구간으로 나눠 고양이 동작·표정·이펙트를 바꾼다.
+/// 동작만 보고 속도를 가늠할 수 있게, 구간이 오를수록 걷기→뛰기→질주→
+/// (피카츄처럼) 번개 질주로 변한다.
+enum MapHomeSpeedTier: Int, CaseIterable, Sendable {
+    case idle       // 정지/미세 이동
+    case strolling  // 0-10km/h 우아하게 걷기
+    case walking    // 10-30
+    case jogging    // 30-60 걷기→뛰기 전환
+    case running    // 60-90 매우 빠르게
+    case flying     // 90-120 거의 날아가듯
+    case pikachu    // 120+ 번개 질주
+
+    static func tier(forMetersPerSecond mps: Double?) -> MapHomeSpeedTier {
+        guard let mps, mps > 0 else { return .idle }
+        let kmh = mps * 3.6
+        switch kmh {
+        case ..<0.8: return .idle
+        case ..<10: return .strolling
+        case ..<30: return .walking
+        case ..<60: return .jogging
+        case ..<90: return .running
+        case ..<120: return .flying
+        default: return .pikachu
+        }
+    }
+
+    /// 이 구간에서 쓸 고양이 동작.
+    var catAction: TaptionCatAnimationAction {
+        switch self {
+        case .idle: return .sitting
+        case .strolling: return .walking
+        case .walking: return .walking
+        case .jogging: return .running
+        case .running: return .running
+        case .flying: return .running
+        case .pikachu: return .running
+        }
+    }
+
+    /// 스프라이트 프레임 진행 배속. 빠를수록 다리가 더 빨리 움직인다.
+    var frameRateMultiplier: Double {
+        switch self {
+        case .idle: return 1
+        case .strolling: return 0.8
+        case .walking: return 1.1
+        case .jogging: return 1.6
+        case .running: return 2.2
+        case .flying: return 3.0
+        case .pikachu: return 4.0
+        }
+    }
+
+    /// 진행 방향으로 기울이는 각도(질주감).
+    var leanDegrees: Double {
+        switch self {
+        case .idle, .strolling, .walking: return 0
+        case .jogging: return 6
+        case .running: return 12
+        case .flying: return 20
+        case .pikachu: return 26
+        }
+    }
+
+    /// 뒤로 끌리는 스피드 라인 개수(0=없음).
+    var speedLines: Int {
+        switch self {
+        case .idle, .strolling, .walking: return 0
+        case .jogging: return 2
+        case .running: return 3
+        case .flying: return 4
+        case .pikachu: return 5
+        }
+    }
+
+    var isPikachu: Bool { self == .pikachu }
+}
+
 struct MapHomeStickmanMarker: View {
     static let size = CGSize(width: 36, height: 36)
 
     let action: MapHomeStickmanAction
     var animationPhase: Int? = nil
     var routePhase: MapHomeStickmanRoutePhase = .actual
+    var speedMetersPerSecond: Double? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
+        let tier = action.isMoving
+            ? MapHomeSpeedTier.tier(forMetersPerSecond: speedMetersPerSecond)
+            : .idle
         TimelineView(
             .animation(
                 minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
                 paused: isStatic || animationPhase != nil
             )
         ) { context in
-            let phase = isStatic
+            let basePhase = isStatic
                 ? 0
                 : animationPhase
                     ?? MapHomeStickmanAnimationEngine.phase(
                         at: context.date,
                         reducesMotion: false
                     )
-            // 운동·취미는 몇 초마다 동작을 바꿔 다양하게 보이도록 시간 기반
-            // 시드를 준다. 그 외 동작은 seed 무관하게 고정.
+            // 속도 구간이 높을수록 프레임을 더 빨리 넘겨 다리가 빠르게 보인다.
+            let phase = action.isMoving && animationPhase == nil
+                ? Int(Double(basePhase) * tier.frameRateMultiplier)
+                : basePhase
             let seed = Int(context.date.timeIntervalSinceReferenceDate / 4)
+            // 이동 중이면 속도 구간 동작, 정지면 활동별 다양한 동작.
+            let catAction = action.isMoving
+                ? tier.catAction
+                : action.catAction(seed: seed)
             ZStack {
+                // 스피드 라인 — 빠를수록 뒤로 더 많이 끌린다.
+                if tier.speedLines > 0 {
+                    HStack(spacing: 1.5) {
+                        ForEach(0..<tier.speedLines, id: \.self) { i in
+                            Capsule()
+                                .fill(
+                                    (tier.isPikachu ? Color.yellow : Color.tpAccent)
+                                        .opacity(0.55 - Double(i) * 0.08)
+                                )
+                                .frame(width: 6 + CGFloat(i) * 2, height: 1.6)
+                        }
+                    }
+                    .offset(x: -Self.size.width * 0.5)
+                }
                 TaptionCatAtlasSprite(
                     style: "white",
-                    action: action.catAction(seed: seed),
+                    action: catAction,
                     frame: phase
                 )
                 .scaleEffect(0.92)
-                // 업무=노트북, 수업=책 소품을 발밑에 겹쳐 그린다.
+                .rotationEffect(.degrees(tier.leanDegrees))
+                // 피카츄 구간 — 번개 스파크.
+                if tier.isPikachu {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(.yellow)
+                        .shadow(color: .orange.opacity(0.8), radius: 2)
+                        .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.26)
+                }
                 if let prop = action.propSymbol {
                     Image(systemName: prop)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.tpInk.opacity(0.85))
                         .offset(y: Self.size.height * 0.30)
                 }
-                // 미확인: 갸우뚱하는 고양이 위에 물음표.
                 if action == .unconfirmed {
                     Image(systemName: "questionmark")
                         .font(.system(size: 13, weight: .heavy))
@@ -710,8 +818,16 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .background(Color(hex: "#FBF6EA").opacity(0.96), in: Circle())
-        .overlay { Circle().stroke(routePhase.color.opacity(0.90), lineWidth: 1.25) }
+        .background(
+            (tier.isPikachu ? Color.yellow.opacity(0.16) : Color(hex: "#FBF6EA").opacity(0.96)),
+            in: Circle()
+        )
+        .overlay {
+            Circle().stroke(
+                tier.isPikachu ? Color.yellow.opacity(0.9) : routePhase.color.opacity(0.90),
+                lineWidth: tier.isPikachu ? 1.6 : 1.25
+            )
+        }
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
     }

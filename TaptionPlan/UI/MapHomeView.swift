@@ -3424,7 +3424,8 @@ struct MapHomeView: View {
                     animationPhase: appleMapPlayback?.stickmanAnimationPhase,
                     routePhase: appleMapPlayback?.phase == .forecast
                         ? .forecast
-                        : .actual
+                        : .actual,
+                    speedMetersPerSecond: displayedSpeedMetersPerSecond
                     )
                     .position(
                         x: point.x
@@ -7342,6 +7343,23 @@ struct MapHomeView: View {
         return calendar.isDateInToday(model.selectedDate)
             ? MapHomeTransitBoardingRefreshPolicy.cutoffBucket(.now)
             : calendar.startOfDay(for: model.selectedDate)
+    }
+
+    /// 마커 고양이가 속도 구간을 표현할 수 있도록 현재 표시 지점의 속도를
+    /// m/s로 추정한다. 재생 중이면 현재 leg의 이동 세그먼트 속도(거리/시간),
+    /// 실시간이면 최신 센서 속도를 쓴다. 정지/미확정이면 nil.
+    private var displayedSpeedMetersPerSecond: Double? {
+        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
+        let date = displayedLocationDate
+        if let segment = travel
+            .filter({ $0.span.contains(date) })
+            .max(by: { $0.span.start < $1.span.start }) {
+            let dur = max(1, segment.span.end.timeIntervalSince(segment.span.start))
+            if segment.distanceMeters > 0 {
+                return segment.distanceMeters / dur
+            }
+        }
+        return model.latestSensorReading?.speedMetersPerSecond
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
@@ -14173,6 +14191,7 @@ private final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
     var label: String
     var phase: MapHomeAppleRoutePhase
     var stickmanAnimationPhase: Int?
+    var speedMetersPerSecond: Double?
 
     init(playback: MapHomeApplePlayback) {
         coordinate = playback.coordinate
@@ -14951,7 +14970,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         animationPhase: annotation.stickmanAnimationPhase,
                         routePhase: annotation.phase == .forecast
                             ? .forecast
-                            : .actual
+                            : .actual,
+                        speedMetersPerSecond: annotation.speedMetersPerSecond
                     )
                 ),
                 size: MapHomeStickmanMarker.size,
