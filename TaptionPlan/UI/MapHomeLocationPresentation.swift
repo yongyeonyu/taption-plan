@@ -155,24 +155,61 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
-    /// 지도 배지의 흰 고양이 스프라이트로 매핑한다. 졸라맨 동작을 고양이
+    /// 업무=노트북, 수업=책 소품을 마커에 오버레이한다. 그 외는 없음.
+    var propSymbol: String? {
+        switch self {
+        case .computer: "laptopcomputer"
+        case .reading: "book.fill"
+        default: nil
+        }
+    }
+
+        /// 지도 배지의 흰 고양이 스프라이트로 매핑한다. 졸라맨 동작을 고양이
     /// 동작으로 옮겨 같은 상황(이동·업무·수면 등)에서 어울리는 포즈를 쓴다.
     var catAction: TaptionCatAnimationAction {
+        catAction(seed: 0)
+    }
+
+    /// 정지 상태 카테고리도 살아 움직이도록 다양한 고양이 동작으로 매핑한다.
+    /// `seed`(위치·시간 기반)로 여러 동작을 안정적으로 골라, 운동 등은
+    /// 낚시대·공놀이·스트레칭·꾹꾹이 등을 번갈아 보여준다.
+    func catAction(seed: Int) -> TaptionCatAnimationAction {
         switch self {
-        case .running, .exercise: .running
+        case .running: return .running
         case .movement, .walking, .car, .subway,
-             .privateVehicle, .bus, .ship, .airplane, .cycling: .walking
-        case .sleeping: .sleeping
-        case .eating: .eating
-        case .hobby: .ballPlay
-        case .computer, .reading: .sitting
-        case .activity, .unconfirmed: .sitting
+             .privateVehicle, .bus, .ship, .airplane, .cycling:
+            return .walking
+        case .sleeping: return .sleeping
+        case .eating: return .eating
+        // 업무/수업: 소품(노트북·책) 위에서 그루밍. 소품은 마커에서 오버레이.
+        case .computer, .reading: return .grooming
+        // 취미: 놀이 동작을 다양하게
+        case .hobby:
+            let play: [TaptionCatAnimationAction] =
+                [.ballPlay, .fishingPlay, .stretching, .kneading]
+            return play[abs(seed) % play.count]
+        // 운동: 활발한 동작 16종을 랜덤(중복 포함)으로 번갈아
+        case .exercise:
+            let workout: [TaptionCatAnimationAction] = [
+                .running, .ballPlay, .fishingPlay, .stretching,
+                .kneading, .running, .ballPlay, .stretching,
+                .fishingPlay, .running, .kneading, .ballPlay,
+                .stretching, .running, .fishingPlay, .ballPlay,
+            ]
+            return workout[abs(seed) % workout.count]
+        // 활동: 그루밍(몸단장)
+        case .activity:
+            return .grooming
+        // 미확인: 갸우뚱·놀람 (물음표는 마커에서 오버레이)
+        case .unconfirmed:
+            return .startled
         }
     }
 
     var animatesPresentation: Bool {
         switch self {
-        case .computer, .reading, .hobby, .eating:
+        case .computer, .reading, .hobby, .eating,
+             .activity, .exercise, .unconfirmed:
             true
         default:
             isMoving
@@ -646,12 +683,31 @@ struct MapHomeStickmanMarker: View {
                         at: context.date,
                         reducesMotion: false
                     )
-            TaptionCatAtlasSprite(
-                style: "white",
-                action: action.catAction,
-                frame: phase
-            )
-            .scaleEffect(0.92)
+            // 운동·취미는 몇 초마다 동작을 바꿔 다양하게 보이도록 시간 기반
+            // 시드를 준다. 그 외 동작은 seed 무관하게 고정.
+            let seed = Int(context.date.timeIntervalSinceReferenceDate / 4)
+            ZStack {
+                TaptionCatAtlasSprite(
+                    style: "white",
+                    action: action.catAction(seed: seed),
+                    frame: phase
+                )
+                .scaleEffect(0.92)
+                // 업무=노트북, 수업=책 소품을 발밑에 겹쳐 그린다.
+                if let prop = action.propSymbol {
+                    Image(systemName: prop)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.tpInk.opacity(0.85))
+                        .offset(y: Self.size.height * 0.30)
+                }
+                // 미확인: 갸우뚱하는 고양이 위에 물음표.
+                if action == .unconfirmed {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: 13, weight: .heavy))
+                        .foregroundStyle(Color.tpAccent)
+                        .offset(x: Self.size.width * 0.26, y: -Self.size.height * 0.30)
+                }
+            }
         }
         .frame(width: Self.size.width, height: Self.size.height)
         .background(Color(hex: "#FBF6EA").opacity(0.96), in: Circle())
