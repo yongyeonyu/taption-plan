@@ -7206,8 +7206,21 @@ struct MapHomeView: View {
         ) {
             return .sleeping
         }
-        if let mode = wbsPlaybackFrame?.mode {
-            return MapHomeStickmanActionResolver.action(for: mode)
+        if let frame = wbsPlaybackFrame {
+            switch frame.activity {
+            case .movement:
+                if let mode = frame.mode {
+                    return MapHomeStickmanActionResolver.action(for: mode)
+                }
+                return .movement
+            case .stay:
+                if let categoryID = frame.categoryID {
+                    return MapHomeStickmanActionResolver.action(
+                        for: categoryID,
+                        label: ""
+                    )
+                }
+            }
         }
         if let activeExpectedRoute {
             return MapHomeStickmanActionResolver.action(for: activeExpectedRoute.mode)
