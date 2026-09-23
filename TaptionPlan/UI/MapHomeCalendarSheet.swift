@@ -49,10 +49,12 @@ struct MapHomeCalendarSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 18)
         }
-        .frame(maxWidth: 390)
-        .background(Color.white)
-        .presentationDetents([.height(410)])
+        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Color.tpBackground)
+        .presentationDetents([.height(430)])
         .presentationDragIndicator(.visible)
+        .presentationBackground(Color.tpBackground)
     }
 
     private var header: some View {
