@@ -3459,8 +3459,13 @@ struct MapHomeView: View {
                             + MapHomeStickmanAnnotationLayout.centerOffset.y
                     )
                     .zIndex(MapHomeLayerPriority.stickman)
-                    .contentShape(Circle())
-                    .onTapGesture { selectedMarkerInfo = .cat(displayedStickmanAction) }
+                    // 탭은 상세창을 열되, simultaneousGesture 라서 지도 팬·핀치
+                    // 줌 제스처를 가로채지 않는다(고양이 위에서도 지도 이동/확대 가능).
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
+                            selectedMarkerInfo = .cat(displayedStickmanAction)
+                        }
+                    )
                     .accessibilityElement(children: .ignore)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(
