@@ -5325,22 +5325,32 @@ struct MapHomeView: View {
                     .padding(.top, 6)
                     .padding(.horizontal, 12)
 
-                HStack(spacing: 10) {
-                    Image(systemName: "map.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(width: 22)
-                    Text(language.text("WBS 지도 · Apple", "WBS map · Apple"))
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    Spacer()
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
+                Picker(
+                    selection: Binding(
+                        get: { model.settings.mapDisplayStyle },
+                        set: { model.setMapDisplayStyle($0) }
+                    )
+                ) {
+                    ForEach(MapDisplayStyle.allCases, id: \.self) { style in
+                        Label(
+                            mapStyleTitle(style),
+                            systemImage: mapStyleSystemImage(style)
+                        )
+                        .tag(style)
+                    }
+                } label: {
+                    Label(
+                        language.text("지도 스타일", "Map style"),
+                        systemImage: "map.fill"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
-                .foregroundStyle(Color.primary)
+                .pickerStyle(.menu)
+                .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
-                .accessibilityElement(children: .combine)
                 .accessibilityLabel(
-                    language.text("지도 스타일 WBS 지도 Apple 고정", "Map style fixed to WBS Apple")
+                    language.text("지도 스타일 선택", "Choose map style")
                 )
 
                 Toggle(
