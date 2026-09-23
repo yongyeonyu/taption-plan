@@ -1971,7 +1971,7 @@ struct MapHomeView: View {
 
             if isMenuOpen {
                 menu
-                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
 
@@ -1982,6 +1982,12 @@ struct MapHomeView: View {
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.top, 2)
             .zIndex(MapHomeLayerPriority.header)
+
+            if !isMenuOpen {
+                mapSideRail
+                    .zIndex(MapHomeLayerPriority.header)
+                    .transition(.opacity)
+            }
 
             if !isMenuOpen, !isMapSearchFocused, !hasMapSearchResults {
                 VStack(spacing: 0) {
@@ -4756,9 +4762,79 @@ struct MapHomeView: View {
         updateUserCenterState(using: proxy)
     }
 
+    private struct SideRailItem: Identifiable {
+        let id: String
+        let icon: String
+        let label: String
+        let open: () -> Void
+    }
+
+    private var sideRailItems: [SideRailItem] {
+        [
+            SideRailItem(id: "location", icon: "mappin.and.ellipse", label: language.text("위치","Location")) {
+                openMenuSection { isLocationMenuExpanded = true }
+            },
+            SideRailItem(id: "category", icon: "paintpalette.fill", label: language.text("행동 분류","Categories")) {
+                openMenuSection { isCategoryMenuExpanded = true }
+            },
+            SideRailItem(id: "display", icon: "square.3.layers.3d", label: language.text("표시","Display")) {
+                openMenuSection { isDisplayMenuExpanded = true }
+            },
+            SideRailItem(id: "memo", icon: "note.text", label: language.text("메모","Memos")) {
+                openMenuSection { isStickerMenuExpanded = true }
+            },
+            SideRailItem(id: "settings", icon: "gearshape.fill", label: language.text("설정","Settings")) {
+                openMenuSection { isSettingsMenuExpanded = true }
+            },
+        ]
+    }
+
+    private func openMenuSection(_ expand: () -> Void) {
+        expand()
+        withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
+    }
+
+    /// 오른쪽에 항상 표시되는 얇은 아이콘 레일(ㄱ 거울상). 상단바와 같은
+    /// 크림 톤으로 이어지며, 아이콘을 누르면 해당 메뉴 섹션이 펼쳐진다.
+    private var mapSideRail: some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
+            } label: {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .frame(width: 40, height: 40)
+            }
+            .accessibilityLabel(language.text("메뉴 열기","Open menu"))
+
+            Divider().frame(width: 22)
+
+            ForEach(sideRailItems) { item in
+                Button(action: item.open) {
+                    Image(systemName: item.icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(width: 40, height: 40)
+                }
+                .accessibilityLabel(item.label)
+            }
+        }
+        .padding(.vertical, 8)
+        .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.07), radius: 9, y: 3)
+        .padding(.trailing, Layout.horizontalInset)
+        .padding(.top, Layout.headerVisibleHeight + 16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    }
+
     private var menu: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .topTrailing) {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea(edges: .top)
                     .contentShape(Rectangle())
@@ -4782,7 +4858,9 @@ struct MapHomeView: View {
                         .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
                 }
                 .padding(.top, menuTop)
-                .shadow(color: Color.black.opacity(0.18), radius: 22, x: 8, y: 0)
+                // 오른쪽 상시 아이콘 레일(48pt)을 위한 여백을 둔다.
+                .padding(.trailing, 52)
+                .shadow(color: Color.black.opacity(0.18), radius: 22, x: -8, y: 0)
             }
         }
     }
