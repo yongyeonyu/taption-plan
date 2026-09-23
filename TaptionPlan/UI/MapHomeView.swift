@@ -1644,6 +1644,7 @@ struct MapHomeView: View {
     @State private var mapSearchResults: [MapHomeSearchResult] = []
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
+    @State private var selectedMarkerInfo: MapHomeMarkerInfoKind?
     @State private var isLongPressMenuPresented = false
     @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
     @State private var requestingPermission: RequiredPermission?
@@ -1975,16 +1976,33 @@ struct MapHomeView: View {
 
             VStack(spacing: 0) {
                 header
-                if !isMenuOpen, !isMapSearchFocused {
-                    questHUD
-                        .padding(.top, 6)
-                        .transition(.opacity)
-                }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Layout.horizontalInset)
             .padding(.top, 2)
             .zIndex(MapHomeLayerPriority.header)
+
+            if !isMenuOpen, !isMapSearchFocused, !hasMapSearchResults {
+                VStack(spacing: 0) {
+                    Color.clear
+                        .frame(
+                            height: (searchFieldFrame.maxY > 0
+                                ? searchFieldFrame.maxY
+                                : Layout.headerVisibleHeight + 8 + 42) + 10
+                        )
+                        .allowsHitTesting(false)
+                    HStack {
+                        Spacer(minLength: 0)
+                        questHUD
+                        Spacer(minLength: 0)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, Layout.horizontalInset)
+                .padding(.top, 2)
+                .transition(.opacity)
+                .zIndex(MapHomeLayerPriority.header)
+            }
         }
         .coordinateSpace(name: "mapHomeViewport")
         .ignoresSafeArea(.container, edges: .bottom)
@@ -2005,6 +2023,11 @@ struct MapHomeView: View {
             }
         )
         .preferredColorScheme(.light)
+        .sheet(item: $selectedMarkerInfo) { info in
+            MapHomeMarkerInfoSheet(kind: info, language: language)
+                .presentationDetents([.height(320), .medium])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
                 selectedDate: $model.selectedDate,
@@ -3434,10 +3457,12 @@ struct MapHomeView: View {
                             + MapHomeStickmanAnnotationLayout.centerOffset.y
                     )
                     .zIndex(MapHomeLayerPriority.stickman)
-                    .allowsHitTesting(false)
+                    .contentShape(Circle())
+                    .onTapGesture { selectedMarkerInfo = .cat(displayedStickmanAction) }
                     .accessibilityElement(children: .ignore)
+                    .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(
-                        "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)"
+                        "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title), \(language.text("설명 보기","Show info"))"
                     )
             }
 
@@ -3652,10 +3677,7 @@ struct MapHomeView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
-        .background(
-            Color.tpSurface.opacity(0.94),
-            in: Capsule()
-        )
+        .background(Color.tpSurface, in: Capsule())
         .overlay { Capsule().stroke(Color.tpLine.opacity(0.9), lineWidth: 1) }
         .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
         .accessibilityElement(children: .combine)
@@ -15196,5 +15218,97 @@ private extension UIColor {
         let green = CGFloat((integer >> 8) & 0xFF) / 255
         let blue = CGFloat(integer & 0xFF) / 255
         self.init(red: red, green: green, blue: blue, alpha: 1)
+    }
+}
+
+
+// MARK: - RPG marker info
+
+/// 지도 위 마커를 탭했을 때 그 의미를 설명하는 상세 창의 종류.
+enum MapHomeMarkerInfoKind: Identifiable, Hashable {
+    case cat(MapHomeStickmanAction)
+    case pawprint
+    case landmark(MapHomeLocationDestination)
+    case flag
+
+    var id: String {
+        switch self {
+        case .cat(let a): "cat-\(a.rawValue)"
+        case .pawprint: "pawprint"
+        case .landmark(let d): "landmark-\(d.rawValue)"
+        case .flag: "flag"
+        }
+    }
+}
+
+struct MapHomeMarkerInfoSheet: View {
+    let kind: MapHomeMarkerInfoKind
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(Color.tpAccent)
+                    .frame(width: 52, height: 52)
+                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                Text(title)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+            }
+            Text(detail)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.tpBackground)
+    }
+
+    private var symbol: String {
+        switch kind {
+        case .cat: "pawprint.circle.fill"
+        case .pawprint: "pawprint.fill"
+        case .landmark(let d): d.rpgSystemImage
+        case .flag: "flag.fill"
+        }
+    }
+
+    private var title: String {
+        switch kind {
+        case .cat(let a): language.text("탐험가 고양이 · \(a.title)", "Explorer Cat · \(a.title)")
+        case .pawprint: language.text("발자국 흔적", "Pawprint Trail")
+        case .landmark(let d): language.text("랜드마크 · \(d.koreanName)", "Landmark · \(d.englishName)")
+        case .flag: language.text("점령 깃발", "Conquered Flag")
+        }
+    }
+
+    private var detail: String {
+        switch kind {
+        case .cat:
+            language.text(
+                "지금 내 위치와 활동을 나타내는 탐험가 고양이입니다. 걷기·뛰기·수면·업무 등 활동에 따라 동작이 바뀌고, 이동 속도가 빠를수록 더 다이나믹하게 질주합니다.",
+                "Your explorer cat showing your current location and activity. Its motion changes with what you're doing, and the faster you move the more dynamically it dashes."
+            )
+        case .pawprint:
+            language.text(
+                "오늘 이동한 경로에 찍힌 고양이 발자국입니다. 발자국을 따라가면 하루 동안 탐험한 길을 되짚어볼 수 있어요.",
+                "Cat pawprints stamped along today's route. Follow them to retrace the path you explored."
+            )
+        case .landmark:
+            language.text(
+                "자주 방문하는 장소가 판타지 랜드마크로 표시됩니다. 집=오두막, 회사=길드 성, 학교=지식의 탑처럼 각 장소가 고유한 건물로 나타납니다. Lv 배지는 층수입니다.",
+                "Frequently visited places appear as fantasy landmarks — home as a lodge, work as a guild castle, school as a tower. The Lv badge is the floor."
+            )
+        case .flag:
+            language.text(
+                "방문해서 '점령'한 장소에 꽂히는 깃발입니다. 새로운 곳을 방문할수록 더 많은 깃발이 모입니다.",
+                "A flag planted on a place you've visited and 'conquered'. Visit new places to collect more."
+            )
+        }
     }
 }
