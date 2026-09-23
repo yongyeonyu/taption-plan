@@ -95,15 +95,17 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
     }
 
     var tint: Color {
+        // 판타지 양피지 지도와 어울리는 어스톤. 집=따뜻한 테라코타,
+        // 회사=세이지 그린 등 지도 팔레트와 조화.
         switch self {
-        case .home: Color.tpPastelButter
-        case .company: Color.tpPastelSky
-        case .school: Color.tpPastelMint
-        case .academy: Color.tpPastelLavender
-        case .exercise: Color.tpPastelRose
-        case .hobby: Color.tpPastelLavender
-        case .restaurant: Color.tpPastelButter
-        case .user: Color.tpPastelRose
+        case .home: Color(hex: "#C67A3E")     // 오두막 — 따뜻한 흙갈색
+        case .company: Color(hex: "#4A6FA5")  // 길드 성 — 차분한 청록빛 파랑
+        case .school: Color(hex: "#5B8C6E")   // 지식의 탑 — 세이지 그린
+        case .academy: Color(hex: "#8A6BA8")  // 마법 연구소 — 자수정
+        case .exercise: Color(hex: "#C25548") // 훈련장 — 벽돌 레드
+        case .hobby: Color(hex: "#C99A3E")    // 공연장 — 황금
+        case .restaurant: Color(hex: "#B0588F") // 주점 — 자두빛
+        case .user: Color(hex: "#C65D4D")     // 깃발 — 테라코타
         }
     }
 }
@@ -118,7 +120,7 @@ struct MapHomeLocationThumbnail: View {
                 .fill(destination.tint.opacity(0.14))
             Image(systemName: destination.rpgSystemImage)
                 .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(Color.tpInk)
+                .foregroundStyle(destination.tint)
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)

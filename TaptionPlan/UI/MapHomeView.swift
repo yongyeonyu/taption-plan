@@ -3743,11 +3743,20 @@ struct MapHomeView: View {
         .background(Color.tpSurface, in: Capsule())
         .overlay { Capsule().stroke(Color.tpLine.opacity(0.9), lineWidth: 1) }
         .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+        .contentShape(Capsule())
+        .onTapGesture {
+            selectedMarkerInfo = .expedition(
+                distanceText: distanceText,
+                placeCount: stats.placeCount,
+                activityKinds: stats.activityKinds
+            )
+        }
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(
             language.text(
-                "오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종",
-                "Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities"
+                "오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종, 상세 보기",
+                "Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities, show details"
             )
         )
     }
@@ -15304,6 +15313,7 @@ enum MapHomeMarkerInfoKind: Identifiable, Hashable {
     case pawprint
     case landmark(MapHomeLocationDestination)
     case flag
+    case expedition(distanceText: String, placeCount: Int, activityKinds: Int)
 
     var id: String {
         switch self {
@@ -15311,6 +15321,7 @@ enum MapHomeMarkerInfoKind: Identifiable, Hashable {
         case .pawprint: "pawprint"
         case .landmark(let d): "landmark-\(d.rawValue)"
         case .flag: "flag"
+        case .expedition(let d, let p, let a): "expedition-\(d)-\(p)-\(a)"
         }
     }
 }
@@ -15349,6 +15360,7 @@ struct MapHomeMarkerInfoSheet: View {
         case .pawprint: "pawprint.fill"
         case .landmark(let d): d.rpgSystemImage
         case .flag: "flag.fill"
+        case .expedition: "scroll.fill"
         }
     }
 
@@ -15358,6 +15370,7 @@ struct MapHomeMarkerInfoSheet: View {
         case .pawprint: language.text("발자국 흔적", "Pawprint Trail")
         case .landmark(let d): language.text("랜드마크 · \(d.koreanName)", "Landmark · \(d.englishName)")
         case .flag: language.text("점령 깃발", "Conquered Flag")
+        case .expedition: language.text("오늘의 탐험 일지", "Today's Expedition Log")
         }
     }
 
@@ -15382,6 +15395,11 @@ struct MapHomeMarkerInfoSheet: View {
             language.text(
                 "방문해서 '점령'한 장소에 꽂히는 깃발입니다. 새로운 곳을 방문할수록 더 많은 깃발이 모입니다.",
                 "A flag planted on a place you've visited and 'conquered'. Visit new places to collect more."
+            )
+        case .expedition(let d, let p, let a):
+            language.text(
+                "오늘 화랑이의 탐험 기록입니다.\n\n🐾 이동 거리: \(d)\n🚩 방문 장소: \(p)곳\n🎖️ 활동 종류: \(a)종\n\n더 멀리 이동하고 새로운 장소를 방문할수록 탐험 기록이 늘어납니다.",
+                "Hwarang's expedition log for today.\n\n🐾 Distance: \(d)\n🚩 Places: \(p)\n🎖️ Activities: \(a)\n\nTravel farther and visit new places to grow your log."
             )
         }
     }
