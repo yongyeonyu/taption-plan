@@ -1959,9 +1959,6 @@ struct MapHomeView: View {
                     .allowsHitTesting(false)
                 HStack(alignment: .top, spacing: 0) {
                     mapSearchBar
-                    Spacer(minLength: 0)
-                    dayPlaybackButton
-                    .padding(.leading, MapHomeSearchLayoutMath.itemSpacing)
                 }
             }
             .padding(.horizontal, Layout.horizontalInset)
@@ -3851,6 +3848,21 @@ struct MapHomeView: View {
             }
             .accessibilityLabel(language.text("날짜 선택", "Choose date"))
 
+            // 하루 재생 버튼을 상단바 안으로 합쳐 한 줄로 통일한다.
+            Button {
+                toggleDayPlayback()
+            } label: {
+                Image(systemName: isDayPlaybackRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 42, height: Layout.headerHitTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                isDayPlaybackRunning
+                    ? language.text("하루 재생 일시 정지", "Pause day playback")
+                    : language.text("하루 재생", "Play day")
+            )
         }
         .foregroundStyle(ink)
         .padding(.horizontal, 7)
