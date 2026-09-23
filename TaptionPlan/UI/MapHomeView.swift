@@ -3196,6 +3196,14 @@ struct MapHomeView: View {
                 )
             )
         }
+        for waypoint in pawprintWaypoints {
+            markers.append(
+                MapHomeVectorMarker(
+                    id: vectorPawprintMarkerID(waypoint.index),
+                    coordinate: waypoint.coordinate
+                )
+            )
+        }
         return markers
     }
 
@@ -3209,6 +3217,21 @@ struct MapHomeView: View {
         stickmanPoint: CGPoint?
     ) -> some View {
         ZStack {
+            ForEach(pawprintWaypoints) { waypoint in
+                if let point = vectorPoint(
+                    in: viewport,
+                    for: vectorPawprintMarkerID(waypoint.index)
+                ) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .center) {
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.tpAccent.opacity(0.55))
+                            .rotationEffect(.degrees(waypoint.angle))
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
             ForEach(temporaryLocationAnnotations) { location in
                 if let point = vectorPoint(
                     in: viewport,
@@ -3454,6 +3477,45 @@ struct MapHomeView: View {
 
     private func vectorTemporaryMarkerID(_ id: UUID) -> String {
         "temporary-\(id.uuidString)"
+    }
+
+    private struct PawprintWaypoint: Identifiable {
+        let index: Int
+        let coordinate: CLLocationCoordinate2D
+        let angle: Double
+        var id: Int { index }
+    }
+
+    /// 이동 경로를 고양이 발자국 스탬프로 게임화한다. 표시 중인 과거
+    /// 경로 좌표를 일정 간격으로 뽑아 발자국을 찍고, 진행 방향으로
+    /// 회전시켜 "탐험한 길" 느낌을 준다. 성능을 위해 최대 40개로 제한한다.
+    private var pawprintWaypoints: [PawprintWaypoint] {
+        let coords = vectorHistoricalRoutes.flatMap { $0.coordinates }
+        guard coords.count >= 2 else { return [] }
+        let maxStamps = 40
+        let stride = max(1, coords.count / maxStamps)
+        var result: [PawprintWaypoint] = []
+        var i = 0
+        while i < coords.count {
+            let c = coords[i]
+            let nextIndex = min(coords.count - 1, i + stride)
+            let n = coords[nextIndex]
+            let dLon = n.longitude - c.longitude
+            let dLat = n.latitude - c.latitude
+            let angle = (dLon == 0 && dLat == 0)
+                ? 0
+                : atan2(dLon, dLat) * 180 / .pi
+            result.append(
+                PawprintWaypoint(index: result.count, coordinate: c, angle: angle)
+            )
+            if result.count >= maxStamps { break }
+            i += stride
+        }
+        return result
+    }
+
+    private func vectorPawprintMarkerID(_ index: Int) -> String {
+        "pawprint-\(index)"
     }
 
     private func vectorPlaceMarkerID(_ id: UUID) -> String {
