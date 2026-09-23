@@ -3579,26 +3579,44 @@ struct MapHomeView: View {
     /// 경로 좌표를 일정 간격으로 뽑아 발자국을 찍고, 진행 방향으로
     /// 회전시켜 "탐험한 길" 느낌을 준다. 성능을 위해 최대 40개로 제한한다.
     private var pawprintWaypoints: [PawprintWaypoint] {
-        let coords = vectorHistoricalRoutes.flatMap { $0.coordinates }
-        guard coords.count >= 2 else { return [] }
-        let maxStamps = 40
-        let stride = max(1, coords.count / maxStamps)
+        // 발자국은 이동 경로마다(세그먼트마다) 연속으로 찍는다. 예전에는 모든
+        // 세그먼트를 flatMap 으로 이어붙인 뒤 전역 stride 로 샘플링해, 세그먼트
+        // 경계에서 발자국이 건너뛰어 "끊어져" 보였다. 이제 각 세그먼트를 지도
+        // 상의 좌표 간격 기준으로 촘촘히(≈일정 거리마다) 찍어 트레일이 이어진다.
+        let segments = vectorHistoricalRoutes.map(\.coordinates).filter { $0.count >= 2 }
+        guard !segments.isEmpty else { return [] }
+        // 대략적인 좌표 간격(도 단위). 위도 1도≈111km 이므로 0.00035도≈40m.
+        let spacingDegrees = 0.00035
+        let hardCap = 220
         var result: [PawprintWaypoint] = []
-        var i = 0
-        while i < coords.count {
-            let c = coords[i]
-            let nextIndex = min(coords.count - 1, i + stride)
-            let n = coords[nextIndex]
-            let dLon = n.longitude - c.longitude
-            let dLat = n.latitude - c.latitude
-            let angle = (dLon == 0 && dLat == 0)
-                ? 0
-                : atan2(dLon, dLat) * 180 / .pi
-            result.append(
-                PawprintWaypoint(index: result.count, coordinate: c, angle: angle)
-            )
-            if result.count >= maxStamps { break }
-            i += stride
+        for coords in segments {
+            var accum = 0.0
+            var placedFirst = false
+            for i in 0..<coords.count {
+                let c = coords[i]
+                if i > 0 {
+                    let prev = coords[i - 1]
+                    let dLon = c.longitude - prev.longitude
+                    let dLat = c.latitude - prev.latitude
+                    accum += (dLon * dLon + dLat * dLat).squareRoot()
+                }
+                let atEnd = i == coords.count - 1
+                if placedFirst && accum < spacingDegrees && !atEnd { continue }
+                accum = 0
+                placedFirst = true
+                let nextIndex = min(coords.count - 1, i + 1)
+                let n = coords[nextIndex]
+                let a = (n.longitude - c.longitude == 0 && n.latitude - c.latitude == 0)
+                    ? (i > 0
+                        ? atan2(c.longitude - coords[i - 1].longitude,
+                                c.latitude - coords[i - 1].latitude) * 180 / .pi
+                        : 0)
+                    : atan2(n.longitude - c.longitude, n.latitude - c.latitude) * 180 / .pi
+                result.append(
+                    PawprintWaypoint(index: result.count, coordinate: c, angle: a)
+                )
+                if result.count >= hardCap { return result }
+            }
         }
         return result
     }
