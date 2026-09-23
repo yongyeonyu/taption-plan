@@ -1957,8 +1957,11 @@ struct MapHomeView: View {
                 Color.clear
                     .frame(height: Layout.headerVisibleHeight + 8)
                     .allowsHitTesting(false)
-                HStack(alignment: .top, spacing: 0) {
-                    mapSearchBar
+                if isMapSearchFocused || hasMapSearchResults || !mapSearchText.isEmpty || selectedSearchPin != nil {
+                    HStack(alignment: .top, spacing: 0) {
+                        mapSearchBar
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .padding(.horizontal, Layout.horizontalInset)
@@ -4626,6 +4629,22 @@ struct MapHomeView: View {
             locationStateLabel = language.text("현재 위치 따라가기", "Following")
         }
         return VStack(spacing: Layout.mapControlSpacing) {
+            // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isMapSearchFocused = true
+                }
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                    .background(Color.tpSurface.opacity(0.96), in: Circle())
+                    .overlay { Circle().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
+                    .shadow(color: .black.opacity(0.07), radius: 9, y: 3)
+            }
+            .accessibilityLabel(language.text("장소 검색", "Search places"))
+
             Button {
                 requestAndFollowUserLocation(using: proxy)
             } label: {
