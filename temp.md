@@ -2,6 +2,59 @@
 
 2026-09-23 기준입니다. 완료한 구현과 상세 이력은 Git 이력에 보존했으며, 아래 항목은 실제 증거 또는 설계 선택이 남아 있어 유지합니다. 빌드·자동 회귀 통과만으로 실기기 항목을 닫지 않습니다.
 
+## ACC0923W01 · 정확도 3종 실측대조 (집→회사→집, 지하철, LG사이언스파크)
+
+정답 동선 확정: 9/22 실제 = 집→회사→집, 이동수단 지하철. 회사 = 서울 강서구 마곡중앙10로 10, LG사이언스파크.
+
+### 1. 회사 위치 복구 (원인·절차 확정)
+- 근본원인: `FrequentPlace.defaults`는 `.company`를 `point=nil`(미등록)로만 시드한다. 회사 좌표는 소스가 아니라 **기기 앱 설정(SQLite/UserDefaults)** 에 저장 → 폰 교체로 유실. **소스 편집으로 복구 불가**, 앱 데이터 또는 앱 내 등록으로만 복구.
+- 지오코딩(Nominatim): LG 사이언스파크 = **위도 37.5625500, 경도 126.8274380** (실제 등록은 앱이 CLGeocoder/Apple Maps DB로 재해석, 반경 120m면 캠퍼스 포함).
+- 복구 절차(앱 내): 설정 → 자주 가는 장소 → 회사 → 위치 지정. 코드 API = `AppModel.setFrequentPlaceLocation(placeID, latitude:37.5625500, longitude:126.8274380, floor:?)` (radius 기본 120m, `setMapLocation` 경유).
+- 결정 필요: 회사 캠퍼스가 넓어(여러 동) 반경 120m로 부족할 수 있음 → 반경 상향(예 250~400m) 검토.
+
+### 2. 워치리스 수면 감지 (코드 검증 결과)
+- 파이프라인: `PhoneSleepFallbackEngine`가 `PhoneSleepWakeEngine`(화면꺼짐+어두움+무활동, **충전 무관**) + `ChargingInactivitySleepEngine`(**충전 필수**) 병합, HealthKit 수면과 겹치면 제외. watchAvailable 시 둘 다 빈배열.
+- `PhoneSleepWakeEngine.isSleepSignal`: `inactive && screenOff && dark`. brightness 없으면 screenOff로 폴백(이미 SLP0922S01에서 보강). inactive = motion `.stationary` 또는 `.unknown`+엄격 임계.
+- 검증 결론: 워치 없이(충전 없이도) 화면기반 폴백이 동작하도록 설계됨. **아키텍처는 정상.** 9/22 미확인은 알고리즘 부재가 아니라 입력(연속 stationary+dark run) 부족이 원인일 가능성 → raw 데이터로 확정 필요.
+
+### 3. 9/22 raw 추출 의존성 (블로커)
+- iPhone 18 Pro(00008160-000E195A1140000A) **현재 미연결**(연결된 건 시뮬만). 앱그룹 컨테이너는 devicectl 접근불가(error 7000) 확정.
+- 유일 경로 = **앱 내 진단 내보내기**(`AppModel.exportDiagnostics` → Files/공유) 후 파일 전달. 이전 추출본 `Packages/TaptionLogs-*.txt`는 현재 없음(정리됨).
+- 암호화 페이로드(.taptionbackup, iCloud PIN AES-GCM)는 복호 안 함 — 구조만 참조.
+
+## WRK0922D01 · 회사 체류인데 '업무(근무)' 미표시
+
+- 증상: 2026-09-22 회사에 있었는데도 업무 자동 기록 없음. (회사·집 자주가는 곳 등록됨)
+- **로그 확정(9/22 진단 패키지 TaptionLogs-20260923-014921)**: `sensor_activity_classification_completed` 61회 전부 `fresh=0, persisted=0` — 그날 정지-문맥 분류가 **하나도 생성되지 않았다**. 즉 `.work` 이전에 분류 입력(체류) 자체가 비었다. 코드상 `.work`는 `placeKind==.company`일 때만 부여되고(`StationaryContextClassifier`), placeKind는 `FrequentPlaceResolutionEngine.applying`의 3게이트(isAutomaticRecordingEnabled / distance≤radiusMeters 120m / dwell≥minimumDwell) 통과 시에만 붙는다.
+- 근본 원인: 9/22 회사 체류가 `.company`로 해석되지 않아 분류 파이프라인에 stationary-context 입력이 없었다(fresh=0). GPS0922J01과 **동일 뿌리**(장소 해석).
+- 남은 확정: 회사 등록 좌표·반경 vs 9/22 대표 체류 좌표 거리, autoRecording 플래그, dwell. (분류 fresh=0의 직접 사유가 place 미매칭인지 stay 자체 부재인지 place-resolution 이벤트로 최종 확정 필요.)
+
+## GPS0922J01 · 위치가 회사↔집으로 점프 — 코드 수정 완료, 실기기 검증 대기
+
+- 로그 확정(9/22): 점프는 forecast가 아니라 **actual 이동 leg**(projection_actual_movement_count=890, forecast_same_endpoint_pairs=0). source=1608→937 축소 뒤 회사↔집 reading쌍이 sparse-connection을 통과해 직선 leg로 연결됨.
+- 원인: `RouteSparseConnectionPolicy.breaksConnection`이 gap>5분 AND 거리>1km 일 때만 끊어, gap이 5분 이하인 원거리 튐은 연결됨.
+- 수정 완료: 불가능속도(>55m/s) 규칙 추가로 gap 무관 차단. RouteEngine 39/39 PASS(+1 신규). 상세: test.md GPS0922J01.
+- 남은 것(실기기): iPhone 18에서 9/22 같은 날 재생 시 점프 사라짐 확인.
+
+## SLP0922S01 · 수면 미확인 (워치리스 알고리즘 존재) — 코드 수정 완료, 실기기 검증 대기
+
+- 로그 확정(9/22): `sleep_inference_completed` 61회 전부 `reason=conditions_or_continuity_not_met` — 워치리스 경로가 매 윈도 실행됐으나 보조조건 게이트 전량 탈락.
+- 수정 완료: `strictSleepActuals`에서 homePoint 있을 때 요구치 3→2, 화면 꺼짐(밝기 nil)을 어두움 근거로 인정. 공유 엔진·기본 config 불변. 패키지 33/33 + 앱 어댑터 26/26 PASS(회귀 2건 신규). 서명 빌드 iPhone 18 설치 완료. 상세: test.md SLP0922S01.
+- 남은 것(실기기): 오늘 밤 서명 빌드로 취침 후 다음날 수면 표시 확인. HealthKit 수면이 iPhone14에 묶여 안 넘어온 경우는 별개(소스 기기 연결).
+
+## BAK0922I01 · iCloud 백업 "무결성 통과 못했다" — 코드 수정 완료(A안), 실기기 검증 대기
+
+- 로그 확정(9/22): `icloud_backup_automatic` 반복 실패(error_code 4 invalidArchive / 6 accountUnavailable), 동시각 `cloud_account_status` 전부 authorized. 기기 이전 키 불일치가 원인.
+- 원인: `prepare`가 같은 달 기존 아카이브를 병합하려 PIN키→계정키 복호 시도, 둘 다 실패 시 invalidArchive throw.
+- 수정 완료(A안): 두 키 복호 실패 시 병합 건너뛰고 이번 기기 키로 새로 봉인해 저장(스키마 불변, 복구 가능 데이터 손실 없음). accountMismatch·load 무결성 검증 불변. SecurityBackupCore 103/103 PASS(신규 회귀 포함). 상세: test.md BAK0922I01.
+- 남은 것(실기기): 대표님 PIN 입력 후 iCloud 백업 성공 전환 확인.
+
+## 공통 원인 요약 (로그 확정)
+
+- WRK·GPS는 **장소 해석(FrequentPlaceResolutionEngine.applying)** 을 공유: 9/22 분류 fresh=0 + forecast 점프쌍 0이 이를 뒷받침(문제는 place→분류 입력 부재, 그리고 actual leg 열). 가설(공통 원인=장소 등록/분류)은 **분류 입력 부재 쪽으로 확정**, 단 GPS 점프의 직접 트리거는 forecast가 아니라 actual leg 연결이라는 점에서 부분 반증됨.
+- SLP는 별개 축(워치리스 게이트 과도 + HK 이전기기 종속). BAK도 이전기기 키 종속 계열.
+- 로그로 미확정 잔여: place-resolution 이벤트(회사 매칭 거리 vs radius), sparse-connection 임계 대조, strict vs fallback 분기(rich-field 로그).
+
 ## BUG1909R01 · CPU0922A01 · 실제 watchdog/CPU/file-lock 재현
 
 - 원인: 배포 149 OS 보고서에서 반복 분류/경로 전체 스캔에 의한 watchdog·CPU 점유, 별도로 background raw decode 중 App Group 잠금으로 인한 `0xDEAD10CC`를 확인했다.

@@ -1662,6 +1662,7 @@ struct MapHomeView: View {
     @State private var mapSearchCompleter = MapHomeSearchCompleter()
     @State private var mapSearchRequestID = UUID()
     @FocusState private var isMapSearchFocused: Bool
+    @State private var isSearchExpanded = false
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
     @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
         .wholeDayUnconfirmed,
@@ -1957,7 +1958,7 @@ struct MapHomeView: View {
                 Color.clear
                     .frame(height: Layout.headerVisibleHeight + 8)
                     .allowsHitTesting(false)
-                if isMapSearchFocused || hasMapSearchResults || !mapSearchText.isEmpty || selectedSearchPin != nil {
+                if isSearchExpanded || isMapSearchFocused || hasMapSearchResults || !mapSearchText.isEmpty || selectedSearchPin != nil {
                     HStack(alignment: .top, spacing: 0) {
                         mapSearchBar
                     }
@@ -2551,6 +2552,12 @@ struct MapHomeView: View {
 
     private var usesVectorRoadMap: Bool {
         false
+    }
+
+    /// Map Home이 실제로 MapLibre 벡터 렌더러로 그려지는지(= Apple 스타일이 아님).
+    /// 카메라 이동 명령 경로를 실제 렌더 엔진에 맞춰 고르는 데 쓴다.
+    private var rendersVectorMap: Bool {
+        model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle != nil
     }
 
     private var vectorMapContentInsets: UIEdgeInsets {
@@ -3694,6 +3701,7 @@ struct MapHomeView: View {
     private func presentMapLongPressMenu(at coordinate: CLLocationCoordinate2D) {
         mapSearchResults = []
         isMapSearchFocused = false
+        isSearchExpanded = false
         pendingLongPressCoordinate = coordinate
         isLongPressMenuPresented = true
     }
@@ -3701,6 +3709,7 @@ struct MapHomeView: View {
     private func presentLocationAddition(at coordinate: CLLocationCoordinate2D) {
         mapSearchResults = []
         isMapSearchFocused = false
+        isSearchExpanded = false
         selectedSearchPin = MapHomeSearchResult(
             title: language.text("사용자 지점", "User location"),
             subtitle: language.text("지도에서 선택한 위치", "Long-pressed map location"),
@@ -3924,10 +3933,15 @@ struct MapHomeView: View {
                 }
                 .onChange(of: isMapSearchFocused) { _, focused in
                     if focused {
+                        isSearchExpanded = true
                         mapSearchCompleter.update(
                             query: mapSearchText,
                             region: mapSearchRegion
                         )
+                    } else if mapSearchText.isEmpty
+                        && mapSearchResults.isEmpty
+                        && selectedSearchPin == nil {
+                        isSearchExpanded = false
                     }
                 }
                 if !mapSearchText.isEmpty || !mapSearchResults.isEmpty || selectedSearchPin != nil {
@@ -4118,6 +4132,7 @@ struct MapHomeView: View {
                 || !mapSearchCompleter.results.isEmpty
         else { return }
         isMapSearchFocused = false
+        isSearchExpanded = false
         mapSearchResults = []
         mapSearchCompleter.clear()
         UIApplication.shared.sendAction(
@@ -4144,6 +4159,7 @@ struct MapHomeView: View {
         selectedSearchPin = nil
         isSearchPinMenuPresented = false
         isMapSearchFocused = false
+        isSearchExpanded = false
         UIApplication.shared.sendAction(
             #selector(UIResponder.resignFirstResponder),
             to: nil,
@@ -4212,6 +4228,7 @@ struct MapHomeView: View {
         mapSearchResults = []
         mapSearchCompleter.clear()
         isMapSearchFocused = false
+        isSearchExpanded = false
         mapSearchText = result.title
     }
 
@@ -4638,6 +4655,10 @@ struct MapHomeView: View {
             // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
+                    isSearchExpanded = true
+                }
+                // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
+                DispatchQueue.main.async {
                     isMapSearchFocused = true
                 }
             } label: {
@@ -8980,7 +9001,7 @@ struct MapHomeView: View {
             return
         }
 
-        if preservesCamera, !usesVectorRoadMap {
+        if preservesCamera, !rendersVectorMap {
             if let heading {
                 requestAppleMapHeading(heading, centeredAt: coordinate)
             } else {
@@ -9031,7 +9052,7 @@ struct MapHomeView: View {
                 )
             ))
         }
-        if !usesVectorRoadMap {
+        if !rendersVectorMap {
             if let heading {
                 requestAppleMapHeading(heading, centeredAt: coordinate)
             } else {
@@ -12329,7 +12350,7 @@ private struct MapHomeLocationButtonIcon: View {
     let state: MapHomeLocationButtonState
     let showsGPSDot: Bool
 
-    private let dotColor = Color.tpPastelRose
+    private let dotColor = Color(hex: "#E5352B")
 
     private var targetColor: Color {
         switch state {
