@@ -1647,6 +1647,7 @@ struct MapHomeView: View {
     @State private var selectedMarkerInfo: MapHomeMarkerInfoKind?
     @State private var fogOfWarEnabled = true
     @State private var isLongPressMenuPresented = false
+    @State private var isDaySummaryPresented = false
     @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
     @State private var requestingPermission: RequiredPermission?
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
@@ -2035,6 +2036,15 @@ struct MapHomeView: View {
             MapHomeMarkerInfoSheet(kind: info, language: language)
                 .presentationDetents([.height(320), .medium])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isDaySummaryPresented) {
+            MapHomeDaySummarySheet(
+                date: model.selectedDate,
+                categories: daySummaryCategories,
+                language: language
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
@@ -3758,6 +3768,51 @@ struct MapHomeView: View {
         )
     }
 
+    /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
+    /// 원본(actuals)은 그대로 두고 파생 집계만 만든다. 비중은 관측된 총 시간
+    /// 대비로 계산해 합이 100%가 되게 한다.
+    private var daySummaryCategories: [MapHomeDaySummaryEntry] {
+        let snap = currentDayDataSnapshot
+        let actuals = snap?.actuals ?? model.snapshot.actuals
+        let travel = snap?.travel ?? model.snapshot.travel
+        let stays = snap?.places ?? model.snapshot.places
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
+            model.snapshot.settings.frequentPlaces
+        )
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(24 * 60 * 60)
+        let phases = DayPhaseEngine.completePhases(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: TimeSpan(start: start, end: end),
+            asOf: .now
+        )
+        let durations = DayPhaseEngine.categoryDurations(phases, scope: .canonical)
+        let total = durations.reduce(0) { $0 + max(0, $1.actual) }
+        guard total > 0 else { return [] }
+        return durations
+            .filter { $0.actual > 0 }
+            .map { duration in
+                let presentation = MapHomeSidebarMajorCategory.presentation(
+                    for: duration.categoryID,
+                    categoryColors: model.settings.mapCategoryColors
+                )
+                return MapHomeDaySummaryEntry(
+                    id: duration.categoryID,
+                    title: presentation.localizedTitle(language),
+                    systemImage: presentation.systemImage,
+                    tint: presentation.tint,
+                    seconds: duration.actual,
+                    ratio: duration.actual / total
+                )
+            }
+            .sorted { $0.seconds > $1.seconds }
+    }
+
     /// 하루를 "탐험 일지"로 보여주는 RPG HUD. 이동 거리(발자국),
     /// 방문 장소(깃발), 활동 종류(뱃지)를 두루마리 톤 캡슐로 요약한다.
     private var questHUD: some View {
@@ -4792,6 +4847,9 @@ struct MapHomeView: View {
 
     private var sideRailItems: [SideRailItem] {
         [
+            SideRailItem(id: "summary", icon: "chart.pie.fill", label: language.text("하루 요약","Day summary")) {
+                isDaySummaryPresented = true
+            },
             SideRailItem(id: "location", icon: "mappin.and.ellipse", label: language.text("위치","Location")) {
                 openMenuSection { isLocationMenuExpanded = true }
             },
@@ -15553,5 +15611,111 @@ struct MapHomeMarkerInfoSheet: View {
                 "Hwarang's expedition log for today.\n\n🐾 Distance: \(d)\n🚩 Places: \(p)\n🎖️ Activities: \(a)\n\nTravel farther and visit new places to grow your log."
             )
         }
+    }
+}
+
+/// 하루 요약 시트의 한 줄(대분류 하나). 세부 기록에서 파생한 값만 담는다.
+struct MapHomeDaySummaryEntry: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let seconds: TimeInterval
+    let ratio: Double
+}
+
+/// 지도에서 여는 하루 대분류 요약. 세부 활동은 건드리지 않고, 대분류별
+/// 소요 시간과 비중만 막대로 보여준다.
+struct MapHomeDaySummarySheet: View {
+    let date: Date
+    let categories: [MapHomeDaySummaryEntry]
+    let language: MapHomeLanguage
+
+    private var totalSeconds: TimeInterval {
+        categories.reduce(0) { $0 + $1.seconds }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(language.text("하루 요약", "Day Summary"))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Text(dateText)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+
+            if categories.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "chart.pie")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                    Text(language.text("이 날의 기록이 아직 없습니다", "No records for this day yet"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 160)
+            } else {
+                Text(
+                    language.text(
+                        "총 \(DurationText.korean(totalSeconds)) 기록",
+                        "\(DurationText.korean(totalSeconds)) recorded"
+                    )
+                )
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        ForEach(categories) { entry in
+                            row(entry)
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.tpBackground)
+    }
+
+    private func row(_ entry: MapHomeDaySummaryEntry) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Image(systemName: entry.systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(entry.tint)
+                    .frame(width: 24)
+                Text(entry.title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                Text("\(Int((entry.ratio * 100).rounded()))%")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Text(DurationText.korean(entry.seconds))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(entry.tint.opacity(0.16))
+                    Capsule()
+                        .fill(entry.tint)
+                        .frame(width: max(4, proxy.size.width * entry.ratio))
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private var dateText: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language == .english ? "en_US" : "ko_KR")
+        formatter.dateFormat = language == .english ? "EEE, MMM d" : "M월 d일 EEEE"
+        return formatter.string(from: date)
     }
 }
