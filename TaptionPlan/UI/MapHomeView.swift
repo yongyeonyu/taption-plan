@@ -3791,23 +3791,54 @@ struct MapHomeView: View {
             in: TimeSpan(start: start, end: end),
             asOf: .now
         )
-        let durations = DayPhaseEngine.categoryDurations(phases, scope: .canonical)
-        let total = durations.reduce(0) { $0 + max(0, $1.actual) }
+        var totalsByID: [String: TimeInterval] = [:]
+        for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) {
+            guard entry.actual > 0 else { continue }
+            totalsByID[entry.categoryID, default: 0] += entry.actual
+        }
+        // 식사는 대분류 phase에 없어 '활동'에 흡수된다. 활동 구간과 식사
+        // 기록(원본 actuals)의 겹치는 시간만큼을 활동에서 떼어 '식사'로 옮긴다.
+        // 총합·이동·수면 집계는 그대로 두고 세부 원본도 건드리지 않는다.
+        let eatingSpans = actuals
+            .filter { RecordAnalysisCategoryPolicy.categoryID(for: $0) == "eating" }
+            .map { $0.span(asOf: .now) }
+        if !eatingSpans.isEmpty {
+            let activityPhaseSpans = phases
+                .filter { RecordAnalysisCategoryPolicy.canonicalPhase($0.phase).rawValue == "activity" }
+                .map(\.span)
+            var eatingSeconds: TimeInterval = 0
+            for phaseSpan in activityPhaseSpans {
+                for eating in eatingSpans {
+                    if let overlap = phaseSpan.intersection(with: eating) {
+                        eatingSeconds += overlap.duration
+                    }
+                }
+            }
+            let movedSeconds = min(eatingSeconds, totalsByID["activity"] ?? 0)
+            if movedSeconds > 0 {
+                totalsByID["activity", default: 0] -= movedSeconds
+                totalsByID["eating", default: 0] += movedSeconds
+                if (totalsByID["activity"] ?? 0) <= 0 {
+                    totalsByID["activity"] = nil
+                }
+            }
+        }
+        let total = totalsByID.values.reduce(0) { $0 + max(0, $1) }
         guard total > 0 else { return [] }
-        return durations
-            .filter { $0.actual > 0 }
-            .map { duration in
+        return totalsByID
+            .filter { $0.value > 0 }
+            .map { id, seconds in
                 let presentation = MapHomeSidebarMajorCategory.presentation(
-                    for: duration.categoryID,
+                    for: id,
                     categoryColors: model.settings.mapCategoryColors
                 )
                 return MapHomeDaySummaryEntry(
-                    id: duration.categoryID,
+                    id: id,
                     title: presentation.localizedTitle(language),
                     systemImage: presentation.systemImage,
                     tint: presentation.tint,
-                    seconds: duration.actual,
-                    ratio: duration.actual / total
+                    seconds: seconds,
+                    ratio: seconds / total
                 )
             }
             .sorted { $0.seconds > $1.seconds }
