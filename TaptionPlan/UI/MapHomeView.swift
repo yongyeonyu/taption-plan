@@ -1971,7 +1971,7 @@ struct MapHomeView: View {
 
             if isMenuOpen {
                 menu
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
 
@@ -4834,7 +4834,7 @@ struct MapHomeView: View {
 
     private var menu: some View {
         GeometryReader { proxy in
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .topLeading) {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea(edges: .top)
                     .contentShape(Rectangle())
@@ -4858,9 +4858,9 @@ struct MapHomeView: View {
                         .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
                 }
                 .padding(.top, menuTop)
-                // 오른쪽 상시 아이콘 레일(48pt)을 위한 여백을 둔다.
-                .padding(.trailing, 52)
-                .shadow(color: Color.black.opacity(0.18), radius: 22, x: -8, y: 0)
+                // 왼쪽 가장자리에서 펼쳐져 오른쪽 시간 사이드바를 가리지 않는다.
+                .padding(.leading, Layout.horizontalInset)
+                .shadow(color: Color.black.opacity(0.18), radius: 22, x: 8, y: 0)
             }
         }
     }
