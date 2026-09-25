@@ -3806,14 +3806,17 @@ struct MapHomeView: View {
             let activityPhaseSpans = phases
                 .filter { RecordAnalysisCategoryPolicy.canonicalPhase($0.phase).rawValue == "activity" }
                 .map(\.span)
-            var eatingSeconds: TimeInterval = 0
+            // 겹치는 식사 기록·인접 활동 phase가 같은 초를 두 번 세지 않도록,
+            // 활동∩식사 교집합 구간을 모아 union으로 병합한 뒤 합산한다.
+            var overlaps: [TimeSpan] = []
             for phaseSpan in activityPhaseSpans {
                 for eating in eatingSpans {
                     if let overlap = phaseSpan.intersection(with: eating) {
-                        eatingSeconds += overlap.duration
+                        overlaps.append(overlap)
                     }
                 }
             }
+            let eatingSeconds = Self.unionDuration(overlaps)
             let movedSeconds = min(eatingSeconds, totalsByID["activity"] ?? 0)
             if movedSeconds > 0 {
                 totalsByID["activity", default: 0] -= movedSeconds
@@ -3842,6 +3845,24 @@ struct MapHomeView: View {
                 )
             }
             .sorted { $0.seconds > $1.seconds }
+    }
+
+    /// 겹치는 구간을 병합해 총 소요 시간을 반환한다(같은 초 중복 계산 방지).
+    private static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
+        let ordered = spans
+            .filter { $0.duration > 0 }
+            .sorted { $0.start < $1.start }
+        guard var current = ordered.first else { return 0 }
+        var total: TimeInterval = 0
+        for span in ordered.dropFirst() {
+            if span.start <= current.end {
+                current.end = max(current.end, span.end)
+            } else {
+                total += current.duration
+                current = span
+            }
+        }
+        return total + current.duration
     }
 
     /// 하루를 "탐험 일지"로 보여주는 RPG HUD. 이동 거리(발자국),
