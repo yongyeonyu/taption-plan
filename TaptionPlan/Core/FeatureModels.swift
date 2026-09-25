@@ -443,7 +443,31 @@ enum TravelMode: String, Codable, CaseIterable, Sendable {
 /// their classifier evidence contains the actual mode.  Keeping the mapping
 /// here prevents the timeline and 기록 화면 from choosing different icons.
 enum MovementPresentation {
+    // TimeRail 세그먼트가 후보마다 키워드배열×contains를 반복하던 것을 캐시로
+    // 없앤다(CRS0925W01). 순수 함수라 입력이 같으면 결과도 같다.
+    private static let modeCacheLock = NSLock()
+    nonisolated(unsafe) private static var modeCache: [String: TravelMode?] = [:]
+
+    private static func modeCacheKey(_ actual: ActualRecord) -> String {
+        "\(actual.id.uuidString)|\(actual.title)|\(actual.behavior ?? "")|\(actual.evidence.joined(separator: ","))"
+    }
+
     static func mode(for actual: ActualRecord) -> TravelMode? {
+        let key = modeCacheKey(actual)
+        modeCacheLock.lock()
+        if let cached = modeCache[key] {
+            modeCacheLock.unlock()
+            return cached
+        }
+        modeCacheLock.unlock()
+        let result = _computeMode(for: actual)
+        modeCacheLock.lock()
+        modeCache[key] = result
+        modeCacheLock.unlock()
+        return result
+    }
+
+    private static func _computeMode(for actual: ActualRecord) -> TravelMode? {
         if let behavior = actual.behavior.flatMap(WatchBehaviorKind.init(rawValue:)) {
             switch behavior {
             case .walking: return .walking

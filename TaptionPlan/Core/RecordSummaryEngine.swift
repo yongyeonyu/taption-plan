@@ -70,6 +70,17 @@ enum ActualRecordCategoryResolver {
 /// `categoryID`, 제목, 근거는 바꾸지 않고, 저장 기록을 분석·표시할 때만 이
 /// 일과 → 상세활동 계층으로 정규화한다.
 enum RecordAnalysisCategoryPolicy {
+    // 같은 레코드를 한 화면 갱신에서 여러 엔진이 반복 분류하던 것을 없앤다.
+    // 분류는 순수 함수(입력: title/behavior/categoryID/evidence)이므로 그
+    // 입력이 그대로면 결과도 같다. 뷰 body 경로에서 하루 actuals × 수십
+    // 키워드 contains가 재실행돼 watchdog(36초)을 넘기던 CRS0925W01의 뿌리.
+    private static let cacheLock = NSLock()
+    nonisolated(unsafe) private static var categoryCache: [String: String] = [:]
+
+    private static func cacheKey(_ actual: ActualRecord) -> String {
+        "\(actual.id.uuidString)|\(actual.title)|\(actual.behavior ?? "")|\(actual.categoryID)|\(actual.evidence.joined(separator: ","))"
+    }
+
     static var categoryIDs: [String] {
         RecordClassificationCatalog.categoryIDs
     }
@@ -102,7 +113,23 @@ enum RecordAnalysisCategoryPolicy {
 
     /// 자동 기록을 여덟 개 상위 분류 중 하나로만 분석한다. 기록 자체는
     /// 호출자에게 돌려주지 않고, 이 값만 합계·고리·범례의 열쇠로 쓴다.
+    /// 분류 결과는 레코드 입력 기준으로 캐시한다(CRS0925W01).
     static func categoryID(for actual: ActualRecord) -> String {
+        let key = cacheKey(actual)
+        cacheLock.lock()
+        if let cached = categoryCache[key] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+        let result = _computeCategoryID(for: actual)
+        cacheLock.lock()
+        categoryCache[key] = result
+        cacheLock.unlock()
+        return result
+    }
+
+    private static func _computeCategoryID(for actual: ActualRecord) -> String {
         if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
             || actual.behavior == "unconfirmed-activity"
             || actual.behavior == "unconfirmed-movement"
