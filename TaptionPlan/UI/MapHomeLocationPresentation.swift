@@ -273,7 +273,67 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
 }
 
 enum MapHomeStickmanActionResolver {
+    // 재생/렌더마다 actuals·travel·places·readings 전량을 순회하던 것을
+    // 결과 캐시로 줄인다(CRS0925W01). date는 초 단위로 뭉치고, 입력이
+    // 바뀌면 count/마지막 식별자가 달라져 자연 무효화된다.
+    private static let actionCacheLock = NSLock()
+    nonisolated(unsafe) private static var actionCache: [String: MapHomeStickmanAction] = [:]
+
+    private static func actionCacheKey(
+        date: Date,
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        places: [PlaceStay],
+        readings: [SensorReading],
+        sleepSessions: [SleepSession]
+    ) -> String {
+        let sec = Int(date.timeIntervalSinceReferenceDate)
+        let a = "\(actuals.count):\(actuals.last?.id.uuidString ?? "")"
+        let t = "\(travel.count):\(travel.last?.span.start.timeIntervalSinceReferenceDate ?? 0)"
+        let p = "\(places.count):\(places.last?.span.start.timeIntervalSinceReferenceDate ?? 0)"
+        let r = "\(readings.count):\(readings.last?.timestamp.timeIntervalSinceReferenceDate ?? 0)"
+        return "\(sec)|\(a)|\(t)|\(p)|\(r)|\(sleepSessions.count)"
+    }
+
     static func action(
+        at date: Date,
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        places: [PlaceStay],
+        frequentPlaces: [FrequentPlace],
+        readings: [SensorReading] = [],
+        sleepSessions: [SleepSession] = []
+    ) -> MapHomeStickmanAction {
+        let key = actionCacheKey(
+            date: date,
+            actuals: actuals,
+            travel: travel,
+            places: places,
+            readings: readings,
+            sleepSessions: sleepSessions
+        )
+        actionCacheLock.lock()
+        if let cached = actionCache[key] {
+            actionCacheLock.unlock()
+            return cached
+        }
+        actionCacheLock.unlock()
+        let result = _computeAction(
+            at: date,
+            actuals: actuals,
+            travel: travel,
+            places: places,
+            frequentPlaces: frequentPlaces,
+            readings: readings,
+            sleepSessions: sleepSessions
+        )
+        actionCacheLock.lock()
+        actionCache[key] = result
+        actionCacheLock.unlock()
+        return result
+    }
+
+    private static func _computeAction(
         at date: Date,
         actuals: [ActualRecord],
         travel: [TravelSegment],
