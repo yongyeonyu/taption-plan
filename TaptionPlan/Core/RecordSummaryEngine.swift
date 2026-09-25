@@ -22,6 +22,19 @@ enum DurationText {
     static func koreanAtLeastAMinute(_ interval: TimeInterval) -> String {
         interval > 0 && interval < 60 ? "1분 미만" : korean(interval)
     }
+
+    static func english(_ interval: TimeInterval) -> String {
+        let totalMinutes = max(0, Int(interval / 60))
+        let hours = totalMinutes / 60
+        let minutes = totalMinutes % 60
+        if hours == 0 { return "\(minutes)m" }
+        if minutes == 0 { return "\(hours)h" }
+        return "\(hours)h \(minutes)m"
+    }
+
+    static func localized(_ interval: TimeInterval, english useEnglish: Bool) -> String {
+        useEnglish ? english(interval) : korean(interval)
+    }
 }
 
 /// 자동 기록은 `activity` 하나에 걸음·수면·이동이 섞여 들어온다. 어느 줄에

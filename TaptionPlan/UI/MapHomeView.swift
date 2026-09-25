@@ -15712,7 +15712,7 @@ struct MapHomeDaySummarySheet: View {
                 Text(
                     language.text(
                         "총 \(DurationText.korean(totalSeconds)) 기록",
-                        "\(DurationText.korean(totalSeconds)) recorded"
+                        "\(DurationText.english(totalSeconds)) recorded"
                     )
                 )
                 .font(.system(size: 13, weight: .semibold))
@@ -15747,7 +15747,7 @@ struct MapHomeDaySummarySheet: View {
                 Text("\(Int((entry.ratio * 100).rounded()))%")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
-                Text(DurationText.korean(entry.seconds))
+                Text(DurationText.localized(entry.seconds, english: language == .english))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
