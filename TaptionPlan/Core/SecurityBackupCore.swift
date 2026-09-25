@@ -753,6 +753,12 @@ enum PlanCloudRawSensorEnvelopeReducer {
     }
 }
 
+enum PlanCloudRawSensorRetention {
+    /// Newest generations kept per month for raw-sensor backups; older
+    /// generations of the same month are pruned after each successful save.
+    static let maximumGenerationsPerMonth = 10
+}
+
 struct PlanCloudRawSensorBackupPath: Equatable, Sendable {
     let monthKey: String
     let generationID: UUID?
@@ -2611,6 +2617,10 @@ final class FilePlanCloudRawSensorBackupStore:
             to: destination,
             options: [.atomic, .completeFileProtection]
         )
+        try? retainNewestGenerations(
+            forMonthKey: path.monthKey,
+            keep: PlanCloudRawSensorRetention.maximumGenerationsPerMonth
+        )
     }
 
     func delete(at path: PlanCloudRawSensorBackupPath) throws {
@@ -2619,6 +2629,46 @@ final class FilePlanCloudRawSensorBackupStore:
         }
         guard fileManager.fileExists(atPath: destination.path) else { return }
         try fileManager.removeItem(at: destination)
+    }
+
+    /// Keeps the newest `keep` generation files for one month and removes the
+    /// rest. Only touches UUID-suffixed generations of the given month; the
+    /// legacy generation-less file and every other month are left intact.
+    private func retainNewestGenerations(
+        forMonthKey monthKey: String,
+        keep: Int
+    ) throws {
+        guard keep > 0 else { return }
+        let directory = root.appendingPathComponent(
+            "Taption Plan/Raw Sensors",
+            isDirectory: true
+        )
+        let files = try fileManager.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ).filter { file in
+            guard file.pathExtension == "rawsensorbackup" else { return false }
+            let stem = file.deletingPathExtension().lastPathComponent
+            guard let separator = stem.lastIndex(of: ".") else { return false }
+            guard UUID(
+                uuidString: String(stem[stem.index(after: separator)...])
+            ) != nil else { return false }
+            return String(stem[..<separator]) == monthKey
+        }
+        guard files.count > keep else { return }
+        let sorted = files.sorted {
+            let lhs = try? $0.resourceValues(
+                forKeys: [.contentModificationDateKey]
+            ).contentModificationDate
+            let rhs = try? $1.resourceValues(
+                forKeys: [.contentModificationDateKey]
+            ).contentModificationDate
+            return (lhs ?? .distantPast) > (rhs ?? .distantPast)
+        }
+        for file in sorted.dropFirst(keep) {
+            try? fileManager.removeItem(at: file)
+        }
     }
 
     func latest() throws -> PlanRawSensorMonthlyArchive? {
