@@ -8490,6 +8490,22 @@ struct MapHomeView: View {
             calendar: calendar
         )
         let overlays = makeTimelineRouteOverlays(next)
+        let droppedSubway = next.segments.filter { $0.confirmedSubwayTravelID != nil }.count
+        let droppedShort = next.segments.filter {
+            $0.confirmedSubwayTravelID == nil && $0.coordinates.count < 2
+        }.count
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "fmap_route_projection",
+            fields: [
+                "segment_count": String(next.segments.count),
+                "overlay_count": String(overlays.count),
+                "overlay_coordinate_total": String(overlays.reduce(0) { $0 + $1.coordinates.count }),
+                "dropped_subway_confirmed": String(droppedSubway),
+                "dropped_short": String(droppedShort),
+                "playback_running": String(isDayPlaybackRunning),
+                "selected_minute": selectedTimelineMinute.map(String.init) ?? "none",
+            ]
+        )
         guard routeProjection != next
             || timelineRouteOverlays.map(\.id) != overlays.map(\.id)
         else { return next }
