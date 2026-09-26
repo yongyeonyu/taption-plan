@@ -1751,6 +1751,8 @@ struct MapHomeView: View {
         static let timeRailTopMargin: CGFloat = 18
         static let topOverlayFallbackHeight: CGFloat = 104
         static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
+        // 플로팅 독은 시간축·중앙 위젯과 겹치지 않도록 더 아래(엄지 영역)에 둔다.
+        static let dockBottomMargin: CGFloat = 30
         static let menuMinimumWidth: CGFloat = 260
         static let menuMaximumWidth: CGFloat = 300
 
@@ -2691,7 +2693,7 @@ struct MapHomeView: View {
             if !isMenuOpen {
                 mapControls(proxy: nil)
                     .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, Layout.overlayBottomMargin)
+                    .padding(.bottom, Layout.dockBottomMargin)
                     .onGeometryChange(
                         for: CGRect.self,
                         of: { geometry in
@@ -2781,7 +2783,7 @@ struct MapHomeView: View {
             if !isMenuOpen {
                 mapControls(proxy: nil)
                     .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, Layout.overlayBottomMargin)
+                    .padding(.bottom, Layout.dockBottomMargin)
                     .onGeometryChange(
                         for: CGRect.self,
                         of: { geometry in
