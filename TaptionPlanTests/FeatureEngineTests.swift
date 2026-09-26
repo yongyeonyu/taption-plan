@@ -27528,3 +27528,107 @@ final class CategoryCacheBenchmarkTests: XCTestCase {
         )
     }
 }
+
+// MARK: - HomesteadHexEngine (GAME0926R03 · 탐험지 개척)
+
+final class HomesteadHexEngineTests: XCTestCase {
+    private let home = CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780)
+
+    func testCoordinateRoundTripReturnsSameHex() {
+        // 임의 hex 중심 좌표 → hex 로 되돌리면 동일해야 한다.
+        for hex in [HexCoord(0, 0), HexCoord(2, -1), HexCoord(-3, 2), HexCoord(1, 3)] {
+            let center = HomesteadHexEngine.center(of: hex, home: home)
+            let back = HomesteadHexEngine.hex(for: center, home: home)
+            XCTAssertEqual(back, hex, "hex 좌표 왕복 불일치: \(hex) → \(back)")
+        }
+    }
+
+    func testRingsCountMatchesHexFormula() {
+        // 반경 R ring 안의 hex 수 = 1 + 3R(R+1).
+        XCTAssertEqual(HomesteadHexEngine.hexes(withinRings: 0).count, 1)
+        XCTAssertEqual(HomesteadHexEngine.hexes(withinRings: 1).count, 7)
+        XCTAssertEqual(HomesteadHexEngine.hexes(withinRings: 2).count, 19)
+        XCTAssertEqual(HomesteadHexEngine.hexes(withinRings: 3).count, 37)
+    }
+
+    func testCompletionThreshold() {
+        let complete = HomesteadHexEngine.completion(unconfirmedSeconds: 120, observedSeconds: 86_400)
+        XCTAssertTrue(complete.isComplete, "미확인 2분은 관용(5분) 내라 완주")
+        let incomplete = HomesteadHexEngine.completion(unconfirmedSeconds: 3_600, observedSeconds: 86_400)
+        XCTAssertFalse(incomplete.isComplete, "미확인 1시간은 미완주")
+        XCTAssertEqual(incomplete.confirmedRatio, (86_400 - 3_600) / 86_400, accuracy: 0.0001)
+    }
+
+    func testStreakContinuesOnConsecutiveCompletions() {
+        var state = HomesteadState.empty
+        let cal = Calendar.current
+        let day1 = cal.date(from: DateComponents(year: 2026, month: 9, day: 20))!
+        let day2 = cal.date(from: DateComponents(year: 2026, month: 9, day: 21))!
+        let day3 = cal.date(from: DateComponents(year: 2026, month: 9, day: 22))!
+        let full = HomesteadHexEngine.completion(unconfirmedSeconds: 0, observedSeconds: 86_400)
+
+        for (i, day) in [day1, day2, day3].enumerated() {
+            let r = HomesteadHexEngine.settleDay(
+                state, dayKey: .make(day, calendar: cal), completion: full,
+                distanceMeters: 5_000, placeCount: 3, activityKinds: 4, calendar: cal
+            )
+            state = r.state
+            XCTAssertEqual(state.currentStreak, i + 1, "연속 완주 스트릭 증가 실패")
+        }
+        XCTAssertEqual(state.bestStreak, 3)
+        XCTAssertTrue(state.coins > 0)
+    }
+
+    func testStreakResetsOnMissedDay() {
+        var state = HomesteadState.empty
+        let cal = Calendar.current
+        let day1 = cal.date(from: DateComponents(year: 2026, month: 9, day: 20))!
+        let day3 = cal.date(from: DateComponents(year: 2026, month: 9, day: 22))! // 21 건너뜀
+        let full = HomesteadHexEngine.completion(unconfirmedSeconds: 0, observedSeconds: 86_400)
+        state = HomesteadHexEngine.settleDay(state, dayKey: .make(day1, calendar: cal), completion: full, distanceMeters: 1_000, placeCount: 1, activityKinds: 1, calendar: cal).state
+        state = HomesteadHexEngine.settleDay(state, dayKey: .make(day3, calendar: cal), completion: full, distanceMeters: 1_000, placeCount: 1, activityKinds: 1, calendar: cal).state
+        XCTAssertEqual(state.currentStreak, 1, "하루 건너뛰면 스트릭 재시작")
+    }
+
+    func testNoDoubleRewardSameDay() {
+        var state = HomesteadState.empty
+        let day = Date()
+        let full = HomesteadHexEngine.completion(unconfirmedSeconds: 0, observedSeconds: 86_400)
+        let r1 = HomesteadHexEngine.settleDay(state, dayKey: .make(day), completion: full, distanceMeters: 5_000, placeCount: 3, activityKinds: 4)
+        state = r1.state
+        let coinsAfterFirst = state.coins
+        let r2 = HomesteadHexEngine.settleDay(state, dayKey: .make(day), completion: full, distanceMeters: 5_000, placeCount: 3, activityKinds: 4)
+        XCTAssertEqual(r2.reward.totalCoins, 0, "같은 날 재정산은 0 지급")
+        XCTAssertEqual(r2.state.coins, coinsAfterFirst, "코인 이중지급 없음")
+    }
+
+    func testClearRequiresAdjacencyAndCoins() {
+        var state = HomesteadState.empty // 집(0,0) 보유, 코인 0
+        // 코인 부족 → 실패
+        let broke = HomesteadHexEngine.clear(state, hex: HexCoord(1, 0))
+        XCTAssertFalse(broke.ok)
+        XCTAssertEqual(broke.reason, .insufficientCoins(HexBiome.meadow.clearCost))
+        // 코인 지급 후 인접 hex 개간 성공
+        state.coins = 100
+        let ok = HomesteadHexEngine.clear(state, hex: HexCoord(1, 0))
+        XCTAssertTrue(ok.ok)
+        XCTAssertTrue(ok.state.owns(HexCoord(1, 0)))
+        XCTAssertEqual(ok.state.biome(at: HexCoord(1, 0)), .meadow)
+        // 비인접 hex 는 실패
+        let far = HomesteadHexEngine.clear(ok.state, hex: HexCoord(5, 5))
+        XCTAssertFalse(far.ok)
+        XCTAssertEqual(far.reason, .notAdjacent)
+    }
+
+    func testStatePersistsThroughCodable() throws {
+        var state = HomesteadState.empty
+        state.coins = 42
+        state.currentStreak = 3
+        state.ownedHexes.insert(HexCoord(1, 0))
+        state.hexBiomes[HexCoord(1, 0).storageKey] = .forest
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(HomesteadState.self, from: data)
+        XCTAssertEqual(decoded, state, "게임 상태 Codable 왕복 불일치")
+        XCTAssertEqual(decoded.biome(at: HexCoord(1, 0)), .forest)
+    }
+}

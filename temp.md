@@ -101,26 +101,76 @@
 - 원인: rawEventPage에 cursor revision·read transaction·행/바이트 제한을 넣었지만 v1/v2 월 단일 AES-GCM/LZFSE/Codable blob의 전체 decode, merge/preflight 결과 집적 및 V3 day 단일 payload는 메모리 상한이 없다. 64MiB 저장 제한도 인코딩 뒤 검사이므로 peak 상한이 아니다.
 - 선택 1: V3 계약을 유지하며 streaming 입력과 사전 day/row cap을 적용하고 초과일은 완료 marker 없이 안전 중단한다.
 - 선택 2: V4에서 readings를 bounded rows/pages로 분리하고 load/query/migration 계약을 함께 변경한다.
+- **결정(2026-09-25): 선택 2(V4 분리) 채택.** readings를 bounded rows/pages로 분리한 V4 포맷을 신설하고 load/query/migration 계약을 함께 변경한다. incremental GCM(청크 인증/압축) 선행. peak memory 상한을 페이지 크기로 보장.
+- 착수 계획(검증 가능 세션에서): ①V4 스키마 정의(rawEventPage bounded rows, 청크별 GCM tag) ②v1/v2/v3→V4 마이그레이션 1회 변환 ③load/query를 페이지 커서로 전환 ④rollback recovery journal. 앱타깃 컴파일·SecurityBackupCore 회귀 필수(현 세션 샌드박스 제약으로 미검증 착수 금지).
 - 복원 추가 선택: v3 청크 인증/압축, 보호된 SQLite stage와 ID unique index, 검증 후 bounded commit·rollback recovery journal, 손상 raw의 snapshot-only 부분 복원 및 앱 재실행 복구 보장 범위. 구버전 strict streaming에는 검토된 incremental GCM 구현이 선행돼야 한다.
-- 검증 기준: 기존 v1/v2 fixture·원본 보존, malformed/conflict/cancel/retry, commit/rollback 복구와 실제 peak memory. 선택 전에 스키마를 바꾸지 않는다.
+- 검증 기준: 기존 v1/v2 fixture·원본 보존, malformed/conflict/cancel/retry, commit/rollback 복구와 실제 peak memory.
 
 ## BKC0920A01 · 다중 기기 백업 원자성 선택
 
 - 원인: iCloud 파일의 이전 값 비교는 서버 CAS가 아니어서 두 기기가 같은 월 snapshot을 덮어쓰면 한쪽 raw generation이 복원에서 빠질 수 있다.
 - 후보: 불변 snapshot/raw generation과 CloudKit change-tag manifest CAS, 충돌 시 재병합. Production schema·오프라인 재시도·혼합 버전 계약이 필요한 별도 확장이다.
-- 검증 기준: 두 기기 경합·중단·재시도·구버전 복원. 설계 선택 전 보류한다.
+- **결정(2026-09-25): 채택 — CloudKit change-tag manifest CAS.** 불변 snapshot/raw generation을 두고 CloudKit change-tag로 서버측 원자성(CAS)을 확보, 충돌 시 재병합. V4(RST/MIG)와 백업 포맷이 얽히므로 함께 설계.
+- 착수 계획: ①generation을 불변 immutable로 봉인(덮어쓰기 금지) ②CloudKit manifest에 change-tag CAS ③충돌 감지 시 두 기기 generation 재병합 ④오프라인 재시도·혼합 버전 계약. 두 기기 경합·중단·재시도·구버전 복원 회귀 필수.
+- 검증 기준: 두 기기 경합·중단·재시도·구버전 복원.
 
 ## BRT0920A01 · 백업 generation 보존 정책 선택
 
 - 원인: 성공한 raw 백업과 실패한 staged 파일의 generation/orphan이 누적될 수 있다. 정상 복원은 committed snapshot의 정확한 generation을 직접 읽으며 enumeration cap과 구분된다.
-- 후보/검증: offline 기기·동기화 중 이전 snapshot 참조를 고려한 보존 수와 정리 시점을 먼저 선택하고 참조된 파일의 보존·삭제 실패/재시도를 검증한다. 임의로 오래된 백업을 삭제하지 않는다.
+- **결정(2026-09-25): 최근 10개 generation 보존.** committed snapshot이 참조하는 generation은 무조건 보존하고, 그 외 성공 raw·실패 staged는 최신 10개까지만 유지, 초과분 정리. offline 기기가 참조 중인 generation은 삭제 대상에서 제외.
+- 착수 계획: ①`DiagnosticsLogSupport.retainNewestPackages` 패턴을 백업 아카이브에 적용(SecurityBackupCore) ②committed/referenced generation 보호 필터 선적용 후 limit=10 ③삭제 실패·재시도 처리. 임의로 참조된 파일 삭제 금지.
+- 검증 기준: 참조된 파일 보존, 10개 초과 정리, offline 기기 참조·삭제 실패/재시도.
 
 ## PKG0920A01 · App Group 소유 경계 선택
 
-- 원인: 공개 Core API가 앱 전용 App Group ID를 소유하고 여러 host target이 이에 의존한다.
-- 후보/검증: host에서 ID/컨테이너 URL을 주입할지 선택한 뒤, 실제 identifier와 저장 위치를 유지하면서 앱·Watch·위젯·패키지 회귀를 확인한다.
+- 원인: 공개 Core API가 앱 전용 App Group ID(`TaptionPlanSharedContainer.appGroupIdentifier`)를 소유하고 앱·Watch·위젯·언어설정 등 8+ 파일이 이에 의존한다.
+- **결정(2026-09-25): host 주입 방식으로 변경.** Core는 App Group ID/컨테이너 URL을 host가 주입하도록 경계를 바꾼다. 실제 identifier·저장 위치는 그대로 유지(데이터 경로 불변)해 기존 사용자 데이터 유실 방지.
+- 착수 계획: ①Core에 `AppGroupProviding` 주입 지점 정의(기본값=현 identifier로 fallback) ②`TaptionPlanSharedContainer`/`TaptionWidgetSharedStore`/`AppLanguagePreference` 참조를 주입 경로로 통일 ③앱·Watch·위젯 타깃에서 동일 ID 주입. **데이터 경로가 절대 바뀌지 않음을 회귀로 증명**한 뒤에만 머지.
+- 검증 기준: 실제 identifier·저장 위치 유지, 앱·Watch·위젯·패키지 회귀, 기존 컨테이너 데이터 접근 연속성.
 
 ## IAP905G002 · IAP907A001 · 판매 작업 보류
 
 - 현재 결정: 구매 잠금 해제와 내부 테스트를 유지한다. Paid Apps Agreement, 판매정보, IAP 심사 연결·심사 제출·유료화·실제 구매/복원은 별도 재개 요청 전까지 실행하지 않는다.
 - 검증 기준: 재개 시 현재 계약·권한·StoreKit 상태와 실제 구매/복원을 확인한다. 과거 READY_TO_SUBMIT 또는 로컬 메모는 현재 판매 가능/실행 승인 증거가 아니다.
+
+## UIUX0926M · Taption Plan UI/UX·게임요소 개편 (8건, 2026-09-26 요청)
+
+작업 전 관련 코드 정독 완료: 메뉴(`MapHomeView.body`/`header`/`menu`/`sidebarContent`/`mapSideRail`), 화랑이(`MapHomeStickmanAction.catAction(seed:)`, `displayedStickmanAction`), 발자국(`pawprintWaypoints`/`fogOfWarOverlay`), 판타지 지도 경로(`MapHomeVectorMap.installRouteLayers`/`setShape`, `historicalRoutes`), 장소 아이콘(`MapHomeLocationDestination.rpgSystemImage`/`tint`, `MapHomeLocationThumbnail`), HUD(`questHUD`/`questStats`/`questChip`).
+
+### MENU0926L01 · 메뉴 위치·해제 복구
+- 증상: 메인 메뉴가 오른쪽에 나오고 사라지지 않음.
+- 원인: `menu`(좌측 드로어)는 이미 왼쪽 상단 햄버거(`header` 버튼, `isMenuOpen`)로 열림. 그러나 별도의 **`mapSideRail`**(우측 `.topTrailing`, 항상 표시되는 아이콘 레일)이 오른쪽에 상주 → "오른쪽 메뉴가 안 사라짐"의 정체.
+- 해결: `mapSideRail`(우측 상시 아이콘 레일)을 body에서 제거. 좌측 상단 햄버거→`menu` 드로어 방식만 남긴다. 레일의 진입점(요약/위치/분류/표시/메모/설정)은 `sidebarContent`에 이미 있으므로 기능 손실 없음.
+
+### MENU0926S02 · 메뉴 UI/UX 단순화
+- `sidebarContent` 섹션(위치/분류/표시/메모/설정 등)을 심플하게 정리. 요청 범위=메뉴 리스트 간결화. 세부 항목 정리 기준은 인터뷰로 확정.
+
+### GAME0926R03 · RPG 게임 요소 = "탐험지 개척(Homestead)" (2026-09-26 확정)
+- 컨셉: 집 중심 육각(hex) 격자. 하루 완성 시 보상(코인)으로 인접 hex 개간·꾸미기. fog-of-war·발자국·판타지 타일·랜드마크·화랑이 기존 자산 재사용.
+- **하루 완성 판정(확정)**: `ReviewCoverageEngine.unconfirmedRecords(actuals:in:asOf:)`가 그 날 관측 span에서 빈 gap을 "unconfirmed"로 채움 → 반환 총 duration이 임계 이하(≈0, 관용 5분)면 "완주". 원본 불변, 순수 파생.
+- **보상 정책(확정)**: 부분 보상 기본(매일 questStats 비례 소량) + 완주 보너스(미확인0 시 배수) + 스트릭 배수(연속 완주). 매일 열 동기 확보.
+- **저장 구조(확정)**: 신규 `HomesteadState`(Codable) — coins:Int, ownedHexes:Set<HexCoord>, hexDecor:[HexCoord:HexBiome], completedDays:Set<DayKey>, streak:Int, bestStreak:Int, lastRewardedDay. 파생 게임상태이므로 센서/기록 원본과 분리 저장(UserDefaults JSON, App Group 컨테이너). 자동기록·백업 스키마 불변.
+- **hex 좌표계(확정)**: axial(q,r) pointy-top. 집 좌표 원점, 평면 근사 투영(위도 보정). hex 한 변 기본 120m. 뷰포트 내 hex만 렌더(bounded).
+- **렌더 통합 훅(확정)**: vectorMapAnnotationOverlay(SwiftUI ZStack, viewport 투영) 최하단에 hex 레이어. hex 중심을 MapHomeVectorMarker로 추가→viewport.markerPoints[id]로 화면좌표 획득(기존 투영 재사용, 신규 MapLibre 코드 없음). 성능: hex 지오메트리 캐시, 60Hz 게이트(CRS0925W01 교훈).
+- **엔진 격리(확정)**: 순수 HomesteadHexEngine(Core, 매크로 비의존)로 좌표변환·완성판정·보상계산 분리 → 이 세션 단위테스트 가능.
+- MVP: 1)집중심 hex격자+fog 렌더 2)완주판정+코인+스트릭 3)코인으로 인접 hex 개간(안개→초원) 4)자주가는장소 hex 랜드마크 자동 발견.
+- UI 8건 통합: fog-of-war를 hex화(PICO0926I07 정합), HUD(HUD0926M08)에 코인·스트릭 지표, 메뉴(MENU0926S02)에 개척 진입점.
+
+### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작
+- 메뉴에 표시되는 화랑이가 대분류별로 각기 다른 동작으로 모두 움직이도록. `catAction(seed:)`가 이미 대분류별 다양 동작 매핑 보유 → 메뉴에 대분류 목록별 화랑이 미리보기를 각 catAction 애니메이션으로 렌더.
+
+### PAW0926T05 · 재생 발자국 트레일 복구
+- 증상: 재생 시 발자국이 안 나옴.
+- 원인 후보: `pawprintWaypoints`가 `vectorHistoricalRoutes`에서 파생. 재생 중 historical route가 비거나, 발자국 마커가 벡터맵에 emit 안 됨. 근본 진단 필요(2회 이상 실패 시 표면패치 금지).
+
+### FMAP0926R06 · 판타지 지도 이동 경로 표시
+- 증상: 판타지(벡터)맵에서 이동 경로 안 보임.
+- 원인 후보: `MapHomeVectorMap.installRouteLayers`의 historical/active 라인 레이어에 `setShape` route feed가 비거나 스타일 미적용. PAW0926T05와 동일 뿌리(historicalRoutes 공급) 가능.
+
+### PICO0926I07 · 장소 아이콘 게임화(배경 제거)
+- 집·회사·학교·취미·식당 등 지정 장소 아이콘을 판타지 스타일로, **배경 없이**. `rpgSystemImage`/`tint`는 이미 RPG 테마. `MapHomeLocationThumbnail`·지도 마커의 `RoundedRectangle` 배경 제거하고 심볼만.
+
+### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합
+- 하루 요약(`isDaySummaryPresented` 시트)을 중앙 상단 `questHUD`에 합침. HUD 탭→요약 확장 또는 HUD에 요약 지표 인라인. 통합 형태는 인터뷰로 확정.
+
+- 공통 검증: 각 변경 후 시뮬레이터 빌드·UI 확인. 기존 동작은 명시 요청 외 보존(규칙 11). 앱타깃 빌드는 `-disable-sandbox -skipPackagePluginValidation`로 이 세션 검증 가능(CRS0925W01에서 확인).
