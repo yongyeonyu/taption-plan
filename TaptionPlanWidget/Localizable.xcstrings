@@ -2,6 +2,7 @@
   "sourceLanguage" : "ko",
   "strings" : {
     "!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -121,6 +122,7 @@
       }
     },
     "z" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -131,6 +133,7 @@
       }
     },
     "zZ" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
