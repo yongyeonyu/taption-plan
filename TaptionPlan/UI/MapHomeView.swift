@@ -1822,6 +1822,16 @@ struct MapHomeView: View {
             || hasMapSearchResults
     }
 
+    /// 검색 오버레이가 실제로 열려 있어 지도 탭으로 닫아야 하는 상태.
+    /// 이게 아닐 때는 지도에 탭 제스처를 붙이지 않아 지도 팬·핀치와 경합하지 않는다.
+    private var isSearchDismissable: Bool {
+        isSearchExpanded
+            || isMapSearchFocused
+            || hasMapSearchResults
+            || !mapSearchText.isEmpty
+            || selectedSearchPin != nil
+    }
+
     private var hasMapSearchResults: Bool {
         !mapSearchResults.isEmpty || !mapSearchCompleter.results.isEmpty
     }
@@ -2610,7 +2620,8 @@ struct MapHomeView: View {
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
                 dismissMapSearchOverlay()
-            }
+            },
+            including: isSearchDismissable ? .all : .subviews
         )
         .task {
             applyInitialLocationIfAvailable(using: nil)
@@ -2733,7 +2744,8 @@ struct MapHomeView: View {
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
                 dismissMapSearchOverlay()
-            }
+            },
+            including: isSearchDismissable ? .all : .subviews
         )
         .task {
             applyInitialLocationIfAvailable(using: nil)
@@ -4823,11 +4835,6 @@ struct MapHomeView: View {
             }
             .shadow(color: .black.opacity(0.09), radius: 9, y: 3)
         }
-        .simultaneousGesture(
-            SpatialTapGesture().onEnded { _ in
-                dismissMapSearchOverlay()
-            }
-        )
     }
 
     private func mapZoomButton(
