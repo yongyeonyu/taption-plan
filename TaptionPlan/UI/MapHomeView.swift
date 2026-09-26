@@ -3927,6 +3927,14 @@ struct MapHomeView: View {
 
     private var header: some View {
         HStack(spacing: 3) {
+            Button {
+                isCalendarPresented = true
+            } label: {
+                MapHomeCalendarGlyph(date: model.selectedDate, language: language)
+                    .frame(width: 42, height: Layout.headerHitTarget)
+            }
+            .accessibilityLabel(language.text("날짜 선택", "Choose date"))
+
             headerDateButton("chevron.backward.2", amount: -7)
             headerDateButton("chevron.left", amount: -1)
 
@@ -3946,14 +3954,6 @@ struct MapHomeView: View {
 
             headerDateButton("chevron.right", amount: 1)
             headerDateButton("chevron.forward.2", amount: 7)
-
-            Button {
-                isCalendarPresented = true
-            } label: {
-                MapHomeCalendarGlyph(date: model.selectedDate, language: language)
-                    .frame(width: 42, height: Layout.headerHitTarget)
-            }
-            .accessibilityLabel(language.text("날짜 선택", "Choose date"))
 
             // 하루 재생 버튼을 상단바 안으로 합쳐 한 줄로 통일한다.
             Button {
