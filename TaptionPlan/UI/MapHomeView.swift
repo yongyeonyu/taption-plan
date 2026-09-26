@@ -3499,13 +3499,12 @@ struct MapHomeView: View {
                             + MapHomeStickmanAnnotationLayout.centerOffset.y
                     )
                     .zIndex(MapHomeLayerPriority.stickman)
-                    // 탭은 상세창을 열되, simultaneousGesture 라서 지도 팬·핀치
-                    // 줌 제스처를 가로채지 않는다(고양이 위에서도 지도 이동/확대 가능).
-                    .simultaneousGesture(
-                        TapGesture().onEnded {
-                            selectedMarkerInfo = .cat(displayedStickmanAction)
-                        }
-                    )
+                    // 화랑이 위에서도 지도 팬·핀치줌이 최우선이 되도록 마커는
+                    // 히트테스트에서 제외한다(다른 마커와 동일). UIKit 지도 위의
+                    // SwiftUI simultaneousGesture는 드래그를 지도로 흘려보내지
+                    // 못해 고양이 주변 터치를 삼켰다. 상세는 중앙 상단 탐험 HUD로
+                    // 연다.
+                    .allowsHitTesting(false)
                     .accessibilityElement(children: .ignore)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(
