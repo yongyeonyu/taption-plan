@@ -3909,36 +3909,6 @@ struct MapHomeView: View {
 
     private var header: some View {
         HStack(spacing: 3) {
-            Button {
-                if !isMenuOpen {
-                    isLocationMenuExpanded = false
-                    isUserLocationsMenuExpanded = false
-                    isCategoryMenuExpanded = false
-                    isDisplayMenuExpanded = false
-                    isSettingsMenuExpanded = false
-                    isGPSLoggingMenuExpanded = false
-                }
-                isMenuOpen.toggle()
-            } label: {
-                Group {
-                    if isMenuOpen {
-                        Image(systemName: "xmark")
-                            .font(.system(size: Layout.headerIcon, weight: .medium))
-                    } else {
-                        Image("MapHomeMainMenu")
-                            .resizable()
-                            .scaledToFit()
-                            .padding(10)
-                    }
-                }
-                .frame(width: 42, height: Layout.headerHitTarget)
-            }
-            .accessibilityLabel(
-                isMenuOpen
-                    ? language.text("메뉴 닫기", "Close menu")
-                    : language.text("메뉴 열기", "Open menu")
-            )
-
             headerDateButton("chevron.backward.2", amount: -7)
             headerDateButton("chevron.left", amount: -1)
 
@@ -4752,7 +4722,26 @@ struct MapHomeView: View {
         case .following:
             locationStateLabel = language.text("현재 위치 따라가기", "Following")
         }
-        return VStack(spacing: Layout.mapControlSpacing) {
+        return VStack(spacing: 10) {
+            // A안 플로팅 독: 설정(메뉴)·검색·현위치·나침반을 하나의 둥근 패널로 묶는다.
+            VStack(spacing: Layout.mapControlSpacing) {
+                // 상단바에서 옮겨온 메인 메뉴(설정) 진입점. 누르면 좌측 드로어를 연다.
+                Button {
+                    isLocationMenuExpanded = false
+                    isUserLocationsMenuExpanded = false
+                    isCategoryMenuExpanded = false
+                    isDisplayMenuExpanded = false
+                    isSettingsMenuExpanded = false
+                    isGPSLoggingMenuExpanded = false
+                    withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
+                } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.tpInk)
+                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                }
+                .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
+
             // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -4767,9 +4756,6 @@ struct MapHomeView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    .background(Color.tpSurface.opacity(0.96), in: Circle())
-                    .overlay { Circle().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
-                    .shadow(color: .black.opacity(0.07), radius: 9, y: 3)
             }
             .accessibilityLabel(language.text("장소 검색", "Search places"))
 
@@ -4781,7 +4767,6 @@ struct MapHomeView: View {
                     showsGPSDot: hasConfirmedCurrentGPS
                 )
                     .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    .background(Color.white.opacity(0.94), in: Circle())
             }
             .accessibilityLabel(language.text("현재 위치", "Current location"))
             .accessibilityValue(locationStateLabel)
@@ -4802,7 +4787,6 @@ struct MapHomeView: View {
                                 value: compassRotationDegrees
                             )
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        .background(Color.white.opacity(0.94), in: Circle())
                         .allowsHitTesting(false)
                 }
                 .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
@@ -4814,13 +4798,30 @@ struct MapHomeView: View {
                         .font(.system(size: Layout.mapControlIcon, weight: .bold))
                         .foregroundStyle(Color.tpPastelRose)
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        .background(Color.white.opacity(0.94), in: Circle())
                 }
                 .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
+            }
+            .padding(.vertical, 6)
+            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.09), radius: 9, y: 3)
 
-            mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
-            mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
+            // 줌 ±는 별도 소형 pill 로 분리한다.
+            VStack(spacing: Layout.mapControlSpacing) {
+                mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
+                mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
+            }
+            .padding(.vertical, 6)
+            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous)
+                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.09), radius: 9, y: 3)
         }
         .simultaneousGesture(
             SpatialTapGesture().onEnded { _ in
@@ -4841,7 +4842,6 @@ struct MapHomeView: View {
                 .font(.system(size: Layout.mapControlIcon, weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                .background(Color.white.opacity(0.94), in: Circle())
         }
         .accessibilityLabel(
             direction > 0
