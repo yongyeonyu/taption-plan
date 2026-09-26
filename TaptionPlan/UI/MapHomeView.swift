@@ -1602,6 +1602,9 @@ struct MapHomeView: View {
     @State private var mapCameraRevision = 0
     @State private var appleViewportCommand: MapHomeAppleViewportCommand?
     @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
+    @StateObject private var homesteadStore = HomesteadStore()
+    @State private var homesteadCameraCenter: CLLocationCoordinate2D?
+    @State private var homesteadSpanMeters: Double = 0
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
@@ -3251,6 +3254,16 @@ struct MapHomeView: View {
                 )
             )
         }
+        if let home = homesteadHomeCoordinate {
+            for hex in homesteadVisibleHexes {
+                markers.append(
+                    MapHomeVectorMarker(
+                        id: homesteadHexMarkerID(hex),
+                        coordinate: HomesteadHexEngine.center(of: hex, home: home)
+                    )
+                )
+            }
+        }
         return markers
     }
 
@@ -3264,6 +3277,7 @@ struct MapHomeView: View {
         stickmanPoint: CGPoint?
     ) -> some View {
         ZStack {
+            homesteadHexOverlay(viewport: viewport)
             fogOfWarOverlay(viewport: viewport)
             ForEach(pawprintWaypoints) { waypoint in
                 if let point = vectorPoint(
@@ -3648,6 +3662,119 @@ struct MapHomeView: View {
         "pawprint-\(index)"
     }
 
+    // MARK: - Homestead 육각 격자 (GAME0926R03)
+
+    /// 집(자주가는 장소 .home) 좌표. 격자 원점. 미등록이면 nil → 격자 미표시.
+    private var homesteadHomeCoordinate: CLLocationCoordinate2D? {
+        guard let point = model.settings.frequentPlaces
+            .first(where: { $0.kind == .home })?.point,
+              isValid(point) else { return nil }
+        return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+    }
+
+    /// 화면에 그릴 후보 hex. 저장된 카메라 중심/줌 기준으로 근처 hex만(bounded)
+    /// 생성해 성능을 지킨다. markers 목록과 overlay가 같은 집합을 쓰도록 단일 소스.
+    private var homesteadVisibleHexes: [HexCoord] {
+        guard let home = homesteadHomeCoordinate,
+              let center = homesteadCameraCenter else { return [] }
+        let spanMeters = homesteadSpanMeters > 0 ? homesteadSpanMeters : 1_000
+        let rings = min(4, max(1, Int((spanMeters / HomesteadHexEngine.hexEdgeMeters / 2).rounded(.up))))
+        let centerHex = HomesteadHexEngine.hex(for: center, home: home)
+        return HomesteadHexEngine.hexes(withinRings: rings)
+            .map { HexCoord(centerHex.q + $0.q, centerHex.r + $0.r) }
+    }
+
+    private func homesteadHexMarkerID(_ hex: HexCoord) -> String {
+        "hex-\(hex.q)_\(hex.r)"
+    }
+
+    /// 육각 격자 외곽선 오버레이(얇은 선). 보유=바이옴 색, 개간가능(인접)=악센트,
+    /// 미개척(안개)=흐린 점선. 채우지 않아 지도 가독성을 해치지 않는다. 화면좌표는
+    /// 기존 viewport 투영(markerPoints)을 재사용하고, hex 픽셀 반경은 인접 hex
+    /// 중심 간 화면 거리로 도출한다(신규 지도 수학 없음).
+    @ViewBuilder
+    private func homesteadHexOverlay(viewport: MapHomeVectorViewport?) -> some View {
+        if homesteadEnabled, let viewport, homesteadHomeCoordinate != nil {
+            let hexes = homesteadVisibleHexes
+            Canvas { context, _ in
+                for hex in hexes {
+                    guard let center = viewport.markerPoints[homesteadHexMarkerID(hex)]
+                    else { continue }
+                    // 픽셀 반경: 이웃 hex 중심이 투영돼 있으면 그 거리로, 없으면 span 근사.
+                    let radius = homesteadHexPixelRadius(hex, center: center, viewport: viewport)
+                    guard radius > 4, radius < 400 else { continue }
+                    let path = homesteadHexPath(center: center, radius: radius)
+                    let owned = homesteadStore.owns(hex)
+                    let clearable = homesteadStore.canClear(hex)
+                    let biome = homesteadStore.biome(at: hex)
+                    let color = owned
+                        ? homesteadBiomeColor(biome)
+                        : (clearable ? Color.tpAccent : Color.tpInk)
+                    let opacity = owned ? 0.55 : (clearable ? 0.42 : 0.14)
+                    let dash: [CGFloat] = owned ? [] : (clearable ? [5, 3] : [2, 4])
+                    context.stroke(
+                        path,
+                        with: .color(color.opacity(opacity)),
+                        style: StrokeStyle(lineWidth: owned ? 1.6 : 1.0, lineJoin: .round, dash: dash)
+                    )
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .transition(.opacity)
+        }
+    }
+
+    /// hex 픽셀 반경: 우측 이웃 hex 중심이 투영돼 있으면 그 화면 거리를 쓰고,
+    /// 없으면 현재 span 대비 hex 크기 비율로 근사한다.
+    private func homesteadHexPixelRadius(
+        _ hex: HexCoord,
+        center: CGPoint,
+        viewport: MapHomeVectorViewport
+    ) -> CGFloat {
+        let neighbor = HexCoord(hex.q + 1, hex.r)
+        if let np = viewport.markerPoints[homesteadHexMarkerID(neighbor)] {
+            let d = hypot(np.x - center.x, np.y - center.y)
+            // 인접 중심 거리 = sqrt(3)*size(pointy-top). 반경(코너까지)=size.
+            return max(1, d / 3.0.squareRoot())
+        }
+        // 근사: hex 지름(2*edge) / span(m) * 화면폭(대략 span.markerPoints 기준 불가 → 고정 추정).
+        let spanMeters = viewport.span.latitudeDelta * 111_000
+        guard spanMeters > 0 else { return 0 }
+        let screenH: CGFloat = 700
+        return CGFloat(HomesteadHexEngine.hexEdgeMeters / spanMeters) * screenH
+    }
+
+    /// pointy-top 육각형 경로(코너 6개). 상단 꼭짓점부터 60°씩.
+    private func homesteadHexPath(center: CGPoint, radius: CGFloat) -> Path {
+        var path = Path()
+        for i in 0..<6 {
+            let angle = Double(i) * .pi / 3 - .pi / 2 // pointy-top: 위쪽 꼭짓점부터
+            let p = CGPoint(
+                x: center.x + radius * cos(angle),
+                y: center.y + radius * sin(angle)
+            )
+            if i == 0 { path.move(to: p) } else { path.addLine(to: p) }
+        }
+        path.closeSubpath()
+        return path
+    }
+
+    private func homesteadBiomeColor(_ biome: HexBiome) -> Color {
+        switch biome {
+        case .fog: Color.tpInk
+        case .meadow: Color(hex: "#5B8C6E")
+        case .forest: Color(hex: "#3F6B4A")
+        case .water: Color(hex: "#4A6FA5")
+        case .mountain: Color(hex: "#8A7A66")
+        }
+    }
+
+    /// 격자 표시 스위치. 집 미등록이거나 사용자가 끄면 미표시(기본 on).
+    private var homesteadEnabled: Bool {
+        homesteadHomeCoordinate != nil
+    }
+
     private func vectorPlaceMarkerID(_ id: UUID) -> String {
         "place-\(id.uuidString)"
     }
@@ -3681,6 +3808,19 @@ struct MapHomeView: View {
     ) {
         let now = ProcessInfo.processInfo.systemUptime
         vectorMapViewportStore.update(viewport)
+        if homesteadHomeCoordinate != nil {
+            let span = viewport.span.latitudeDelta * 111_000
+            let c = viewport.center
+            let moved = homesteadCameraCenter.map {
+                abs($0.latitude - c.latitude) > 0.0005
+                    || abs($0.longitude - c.longitude) > 0.0005
+            } ?? true
+            let zoomed = abs(homesteadSpanMeters - span) > span * 0.2
+            if moved || zoomed {
+                homesteadCameraCenter = c
+                homesteadSpanMeters = span
+            }
+        }
         let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
         if let displayedPoint {
             vectorMapViewportStore.updateStickmanPoint(
