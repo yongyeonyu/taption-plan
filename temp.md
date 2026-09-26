@@ -143,23 +143,22 @@
 ### PAW0926T05 · 재생 발자국 [코드완료·실기기검증대기]
 - 근본원인: pawprintWaypoints가 timelineRouteOverlays.dropLast()만 사용 → 1-leg 날/재생중 leg 발자국 누락. 전체 overlay로 변경(652b54c). 실기기: 이동기록 있는 날 재생 시 발자국 확인.
 
-### FMAP0926R06 · 판타지 지도 이동 경로 [진단중]
+### FMAP0926R06 · 판타지 지도 이동 경로 [진단 계측 완료·실기기 로그 대기]
 - 벡터맵은 historical(dropLast)+active(last) 라인 레이어로 그림. 1-leg 날은 active로 표시됨. "안 보임"이 데이터(projection 비어있음)인지 렌더인지 실기기 repro 필요 — blind patch 금지(규칙). PAW 수정과 동일 뿌리(overlays 공급) 가능.
+- 진단 계측 완료(커밋 7fddb72): makeRouteProjection→overlay 변환 지점에 `fmap_route_projection` 로그 추가(segment_count·overlay_count·overlay_coordinate_total·dropped_subway_confirmed·dropped_short·playback_running·selected_minute). 앱타깃 빌드 통과. 다음 실기기 로그로 데이터 부재 vs 렌더 문제 확정 후 근본 수정.
 
-### PICO0926I07 · 장소 아이콘 게임화(배경제거) [완료]
-- MapHomePlacePin에서 흰 카드 배경 제거, rpgSystemImage+tint 심볼만(흰 글로우+옅은 그림자). 커밋 652b54c.
+### MENU0926S02 · 메뉴 UI/UX 단순화 [대기 — 대표님 결정 선행]
+- sidebarContent 정리. **단순화 수준·범위가 주관적 UI 결정이라 착수 보류.** 규칙11(UI 임의수정 금지)에 따라 어떤 항목을 접거나 제거·묶을지 대표님 확정 필요.
 
-### MENU0926S02 · 메뉴 UI/UX 단순화 [대기]
-- sidebarContent 정리. 착수 전 단순화 수준 확정 필요.
-
-### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합 [대기]
-- questHUD에 하루요약 통합. 방식(탭 확장/인라인) 확정 필요.
+### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합 [대기 — 대표님 결정 선행]
+- questHUD에 하루요약 통합. **방식(탭 확장/인라인/시트)이 주관적 UI 결정이라 착수 보류.** 규칙11에 따라 통합 방식 대표님 확정 필요.
 
 ### GAME0926R03 · RPG 게임 요소 (방향 재검토)
 - 2026-09-26: "탐험지 개척(Homestead)" 육각 격자 시안을 구현했으나 대표님이 "육각형 이상하다"며 **원복 지시** → 관련 코드 전량 제거(엔진/store/렌더/HUD코인/개간/테스트, pbxproj·temp 되돌림). 커밋 728c94b·b7d8963·8686101·bd92ce7 무효화.
 - 남은 방향: 육각 격자 방식은 폐기. RPG 요소는 다른 형태로 재설계 필요(스트릭/레벨/업적 등). 재개 시 인터뷰로 방향 확정.
 
-### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작 [대기]
+### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작 [완료]
 - 메뉴에 표시되는 화랑이가 대분류별로 각기 다른 동작으로 모두 움직이도록. `catAction(seed:)`가 이미 대분류별 다양 동작 매핑 보유 → 메뉴에 대분류 목록별 화랑이 미리보기를 각 catAction 애니메이션으로 렌더.
+- 구현(커밋 79c514f): categoryMenuItem은 이미 MapHomeSidebarMajorCategory.all()을 순회하며 MapHomeStickmanGlyph를 렌더했으나, glyph가 `action.catAction`(seed=0 고정)을 써서 카테고리마다 단일 포즈만 반복했다. MapHomeStickmanGlyph를 시간 기반 seed(2.4초 주기 + 카테고리별 case 인덱스 위상 오프셋)로 `catAction(seed:)`를 호출하도록 변경 → 각 대분류가 자기 동작 배열을 다양하게 순환, 여러 화랑이가 동시에 같은 포즈로 겹치지 않음. reduceMotion/저휘도/비애니메이션 카테고리는 정적 유지. 앱타깃 빌드 통과.
 
 - 공통 검증: 각 변경 후 시뮬레이터 빌드·UI 확인. 기존 동작은 명시 요청 외 보존(규칙 11). 앱타깃 빌드는 `-disable-sandbox -skipPackagePluginValidation`로 이 세션 검증 가능(CRS0925W01에서 확인).
