@@ -4934,14 +4934,14 @@ struct MapHomeView: View {
     private var sidebarContent: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Image("MapHomeHomeIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 48, height: 44)
+                    .frame(width: 46, height: 42)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("오늘의 기록", "Today's Record"))
                         .font(.system(size: 21, weight: .bold, design: .rounded))
                     Text(language.text("자동으로 남은 하루의 기록", "Today's activity, automatically recorded"))
@@ -4951,12 +4951,14 @@ struct MapHomeView: View {
                 Spacer()
                 Button { isMenuOpen = false } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .bold))
-                        .frame(width: 40, height: 40)
-                        .background(Color.black.opacity(0.06), in: Circle())
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.tpInk.opacity(0.6))
+                        .frame(width: 36, height: 36)
+                        .background(Color.tpInk.opacity(0.06), in: Circle())
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.bottom, 18)
+            .padding(.bottom, 20)
 
             if !sensorCollectionPermissionGate.sensorCollectionReady {
                 sensorPermissionCard
@@ -4986,10 +4988,10 @@ struct MapHomeView: View {
             Divider()
                 .padding(.vertical, 9)
 
-            HStack(spacing: 7) {
-                Image(systemName: "map.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.tpAccent)
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(currentCoordinate == nil ? Color.tpInk.opacity(0.3) : Color.tpAccent)
+                    .frame(width: 7, height: 7)
                 Text(
                     currentCoordinate == nil
                         ? language.text("위치 기록을 기다리는 중", "Waiting for location")
@@ -4998,6 +5000,10 @@ struct MapHomeView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.tpInk.opacity(0.04), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
 
             Divider()
                 .padding(.vertical, 9)
@@ -6459,19 +6465,25 @@ struct MapHomeView: View {
     @ViewBuilder
     private func menuItem(_ icon: String, _ title: String, isSelected: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 13) {
+            HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .frame(width: 24)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk.opacity(0.55))
+                    .frame(width: 26, alignment: .center)
                 Text(title)
                     .font(.system(size: 16, weight: isSelected ? .bold : .medium, design: .rounded))
-                Spacer()
-                if isSelected { Circle().fill(Color.tpAccent).frame(width: 6, height: 6) }
+                    .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.tpInk.opacity(0.28))
             }
-            .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk)
-            .padding(.vertical, 15)
-            .padding(.horizontal, 12)
-            .background(isSelected ? Color.tpAccent.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.vertical, 13)
+            .padding(.horizontal, 13)
+            .background(
+                isSelected ? Color.tpAccent.opacity(0.12) : .clear,
+                in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+            )
         }
         .buttonStyle(.plain)
     }
