@@ -82,8 +82,6 @@
 		A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003A /* TimelineBlockStyleViews.swift */; };
 		A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
 		A10000000000000000000061 /* RecordSummaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000061 /* RecordSummaryEngine.swift */; };
-		A100000000000000000000A1 /* HomesteadHexEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000A1 /* HomesteadHexEngine.swift */; };
-		A100000000000000000000A2 /* HomesteadStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000A2 /* HomesteadStore.swift */; };
 		A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000003B /* WidgetPayloadFactory.swift */; };
 		A1000000000000000000003D /* WatchSyncModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000029 /* WatchSyncModels.swift */; };
 		A10000000000000000000040 /* CatAnimationShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000040 /* CatAnimationShared.swift */; };
@@ -289,8 +287,6 @@
 		F1000000000000000000003A /* TimelineBlockStyleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineBlockStyleViews.swift; sourceTree = "<group>"; };
 		F1000000000000000000003B /* WidgetPayloadFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPayloadFactory.swift; sourceTree = "<group>"; };
 		F10000000000000000000061 /* RecordSummaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordSummaryEngine.swift; sourceTree = "<group>"; };
-		F100000000000000000000A1 /* HomesteadHexEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomesteadHexEngine.swift; sourceTree = "<group>"; };
-		F100000000000000000000A2 /* HomesteadStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomesteadStore.swift; sourceTree = "<group>"; };
 		F10000000000000000000040 /* CatAnimationShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatAnimationShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000041 /* ScreenTimeUsageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeUsageService.swift; sourceTree = "<group>"; };
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
@@ -523,8 +519,6 @@
 				F1000000000000000000001F /* WidgetShared.swift */,
 				F1000000000000000000003B /* WidgetPayloadFactory.swift */,
 				F10000000000000000000061 /* RecordSummaryEngine.swift */,
-				F100000000000000000000A1 /* HomesteadHexEngine.swift */,
-				F100000000000000000000A2 /* HomesteadStore.swift */,
 				F10000000000000000000023 /* StoreKitSupport.swift */,
 				F10000000000000000000091 /* Products.storekit */,
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
@@ -919,8 +913,6 @@
 				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
 				A1000000000000000000003B /* WidgetPayloadFactory.swift in Sources */,
 				A10000000000000000000061 /* RecordSummaryEngine.swift in Sources */,
-				A100000000000000000000A1 /* HomesteadHexEngine.swift in Sources */,
-				A100000000000000000000A2 /* HomesteadStore.swift in Sources */,
 				A10000000000000000000072 /* WatchSensorQueryPlan.swift in Sources */,
 				A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */,
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,

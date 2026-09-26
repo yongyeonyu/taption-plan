@@ -1602,9 +1602,6 @@ struct MapHomeView: View {
     @State private var mapCameraRevision = 0
     @State private var appleViewportCommand: MapHomeAppleViewportCommand?
     @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
-    @StateObject private var homesteadStore = HomesteadStore()
-    @State private var homesteadCameraCenter: CLLocationCoordinate2D?
-    @State private var homesteadSpanMeters: Double = 0
     @State private var isMenuOpen = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
@@ -1988,12 +1985,6 @@ struct MapHomeView: View {
             .padding(.top, 2)
             .zIndex(MapHomeLayerPriority.header)
 
-            if !isMenuOpen {
-                mapSideRail
-                    .zIndex(MapHomeLayerPriority.header)
-                    .transition(.opacity)
-            }
-
             if !isMenuOpen, !isMapSearchFocused, !hasMapSearchResults {
                 VStack(spacing: 0) {
                     Color.clear
@@ -2178,9 +2169,6 @@ struct MapHomeView: View {
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .onAppear {
             prepareRouteProjectionReadings()
-            #if DEBUG
-            homesteadStore.seedDemoIfRequested()
-            #endif
         }
         .onDisappear {
             routeReadingsPreparationTask?.cancel()
@@ -2297,7 +2285,6 @@ struct MapHomeView: View {
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
-            settleHomesteadDay()
         }
         .onChange(of: model.snapshot.weather) { _, weather in
             cachedWeatherContexts = MapHomeWeatherDisplayCache.merged(
@@ -2350,7 +2337,6 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
             requestRouteProjectionRefresh()
             scheduleExpectedRouteRefresh()
-            settleHomesteadDay()
         }
         .onChange(of: model.sleepSessions) { _, _ in
             requestRouteProjectionRefresh(preparingReadings: true)
@@ -3259,16 +3245,6 @@ struct MapHomeView: View {
                 )
             )
         }
-        if let home = homesteadHomeCoordinate {
-            for hex in homesteadVisibleHexes {
-                markers.append(
-                    MapHomeVectorMarker(
-                        id: homesteadHexMarkerID(hex),
-                        coordinate: HomesteadHexEngine.center(of: hex, home: home)
-                    )
-                )
-            }
-        }
         return markers
     }
 
@@ -3282,7 +3258,6 @@ struct MapHomeView: View {
         stickmanPoint: CGPoint?
     ) -> some View {
         ZStack {
-            homesteadHexOverlay(viewport: viewport)
             fogOfWarOverlay(viewport: viewport)
             ForEach(pawprintWaypoints) { waypoint in
                 if let point = vectorPoint(
@@ -3667,155 +3642,6 @@ struct MapHomeView: View {
         "pawprint-\(index)"
     }
 
-    // MARK: - Homestead 육각 격자 (GAME0926R03)
-
-    /// 집(자주가는 장소 .home) 좌표. 격자 원점. 미등록이면 nil → 격자 미표시.
-    private var homesteadHomeCoordinate: CLLocationCoordinate2D? {
-        if let point = model.settings.frequentPlaces
-            .first(where: { $0.kind == .home })?.point,
-           isValid(point) {
-            return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-        }
-        #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-homesteadDemo") {
-            return homesteadCameraCenter ?? CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780)
-        }
-        #endif
-        return nil
-    }
-
-    /// 화면에 그릴 후보 hex. 저장된 카메라 중심/줌 기준으로 근처 hex만(bounded)
-    /// 생성해 성능을 지킨다. markers 목록과 overlay가 같은 집합을 쓰도록 단일 소스.
-    private var homesteadVisibleHexes: [HexCoord] {
-        guard let home = homesteadHomeCoordinate,
-              let center = homesteadCameraCenter else { return [] }
-        let spanMeters = homesteadSpanMeters > 0 ? homesteadSpanMeters : 1_000
-        let rings = min(4, max(1, Int((spanMeters / HomesteadHexEngine.hexEdgeMeters / 2).rounded(.up))))
-        let centerHex = HomesteadHexEngine.hex(for: center, home: home)
-        return HomesteadHexEngine.hexes(withinRings: rings)
-            .map { HexCoord(centerHex.q + $0.q, centerHex.r + $0.r) }
-    }
-
-    private func homesteadHexMarkerID(_ hex: HexCoord) -> String {
-        "hex-\(hex.q)_\(hex.r)"
-    }
-
-    /// 육각 격자 외곽선 오버레이(얇은 선). 보유=바이옴 색, 개간가능(인접)=악센트,
-    /// 미개척(안개)=흐린 점선. 채우지 않아 지도 가독성을 해치지 않는다. 화면좌표는
-    /// 기존 viewport 투영(markerPoints)을 재사용하고, hex 픽셀 반경은 인접 hex
-    /// 중심 간 화면 거리로 도출한다(신규 지도 수학 없음).
-    @ViewBuilder
-    private func homesteadHexOverlay(viewport: MapHomeVectorViewport?) -> some View {
-        if homesteadEnabled, let viewport, homesteadHomeCoordinate != nil {
-            let hexes = homesteadVisibleHexes
-            Canvas { context, _ in
-                for hex in hexes {
-                    guard let center = viewport.markerPoints[homesteadHexMarkerID(hex)]
-                    else { continue }
-                    // 픽셀 반경: 이웃 hex 중심이 투영돼 있으면 그 거리로, 없으면 span 근사.
-                    let radius = homesteadHexPixelRadius(hex, center: center, viewport: viewport)
-                    guard radius > 4, radius < 400 else { continue }
-                    let path = homesteadHexPath(center: center, radius: radius)
-                    let owned = homesteadStore.owns(hex)
-                    let clearable = homesteadStore.canClear(hex)
-                    let biome = homesteadStore.biome(at: hex)
-                    let color = owned
-                        ? homesteadBiomeColor(biome)
-                        : (clearable ? Color.tpAccent : Color.tpInk)
-                    let opacity = owned ? 0.55 : (clearable ? 0.42 : 0.14)
-                    let dash: [CGFloat] = owned ? [] : (clearable ? [5, 3] : [2, 4])
-                    context.stroke(
-                        path,
-                        with: .color(color.opacity(opacity)),
-                        style: StrokeStyle(lineWidth: owned ? 1.6 : 1.0, lineJoin: .round, dash: dash)
-                    )
-                }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .transition(.opacity)
-            .overlay {
-                // 개간 탭 레이어: 클릭이 '개간 가능' hex 중심 근처면 코인으로 개간한다.
-                // 그 외 위치의 탭은 무시돼 지도 제스처로 통과한다(map 조작 보존).
-                Color.clear
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(
-                        SpatialTapGesture().onEnded { value in
-                            handleHomesteadTap(at: value.location, viewport: viewport)
-                        }
-                    )
-            }
-        }
-    }
-
-    /// 탭 위치에서 가장 가까운 '개간 가능' hex 를 찾아 코인으로 개간한다.
-    /// 근처(반경 내)에 개간 가능 hex 가 없으면 아무것도 하지 않는다.
-    private func handleHomesteadTap(at point: CGPoint, viewport: MapHomeVectorViewport) {
-        var best: (hex: HexCoord, dist: CGFloat)?
-        for hex in homesteadVisibleHexes where homesteadStore.canClear(hex) {
-            guard let center = viewport.markerPoints[homesteadHexMarkerID(hex)] else { continue }
-            let radius = homesteadHexPixelRadius(hex, center: center, viewport: viewport)
-            let d = hypot(point.x - center.x, point.y - center.y)
-            if d <= radius, best == nil || d < best!.dist {
-                best = (hex, d)
-            }
-        }
-        guard let target = best else { return }
-        if homesteadStore.clear(hex: target.hex) {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-    }
-
-    /// hex 픽셀 반경: 우측 이웃 hex 중심이 투영돼 있으면 그 화면 거리를 쓰고,
-    /// 없으면 현재 span 대비 hex 크기 비율로 근사한다.
-    private func homesteadHexPixelRadius(
-        _ hex: HexCoord,
-        center: CGPoint,
-        viewport: MapHomeVectorViewport
-    ) -> CGFloat {
-        let neighbor = HexCoord(hex.q + 1, hex.r)
-        if let np = viewport.markerPoints[homesteadHexMarkerID(neighbor)] {
-            let d = hypot(np.x - center.x, np.y - center.y)
-            // 인접 중심 거리 = sqrt(3)*size(pointy-top). 반경(코너까지)=size.
-            return max(1, d / 3.0.squareRoot())
-        }
-        // 근사: hex 지름(2*edge) / span(m) * 화면폭(대략 span.markerPoints 기준 불가 → 고정 추정).
-        let spanMeters = viewport.span.latitudeDelta * 111_000
-        guard spanMeters > 0 else { return 0 }
-        let screenH: CGFloat = 700
-        return CGFloat(HomesteadHexEngine.hexEdgeMeters / spanMeters) * screenH
-    }
-
-    /// pointy-top 육각형 경로(코너 6개). 상단 꼭짓점부터 60°씩.
-    private func homesteadHexPath(center: CGPoint, radius: CGFloat) -> Path {
-        var path = Path()
-        for i in 0..<6 {
-            let angle = Double(i) * .pi / 3 - .pi / 2 // pointy-top: 위쪽 꼭짓점부터
-            let p = CGPoint(
-                x: center.x + radius * cos(angle),
-                y: center.y + radius * sin(angle)
-            )
-            if i == 0 { path.move(to: p) } else { path.addLine(to: p) }
-        }
-        path.closeSubpath()
-        return path
-    }
-
-    private func homesteadBiomeColor(_ biome: HexBiome) -> Color {
-        switch biome {
-        case .fog: Color.tpInk
-        case .meadow: Color(hex: "#5B8C6E")
-        case .forest: Color(hex: "#3F6B4A")
-        case .water: Color(hex: "#4A6FA5")
-        case .mountain: Color(hex: "#8A7A66")
-        }
-    }
-
-    /// 격자 표시 스위치. 집 미등록이거나 사용자가 끄면 미표시(기본 on).
-    private var homesteadEnabled: Bool {
-        homesteadHomeCoordinate != nil
-    }
-
     private func vectorPlaceMarkerID(_ id: UUID) -> String {
         "place-\(id.uuidString)"
     }
@@ -3849,19 +3675,6 @@ struct MapHomeView: View {
     ) {
         let now = ProcessInfo.processInfo.systemUptime
         vectorMapViewportStore.update(viewport)
-        if homesteadHomeCoordinate != nil {
-            let span = viewport.span.latitudeDelta * 111_000
-            let c = viewport.center
-            let moved = homesteadCameraCenter.map {
-                abs($0.latitude - c.latitude) > 0.0005
-                    || abs($0.longitude - c.longitude) > 0.0005
-            } ?? true
-            let zoomed = abs(homesteadSpanMeters - span) > span * 0.2
-            if moved || zoomed {
-                homesteadCameraCenter = c
-                homesteadSpanMeters = span
-            }
-        }
         let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
         if let displayedPoint {
             vectorMapViewportStore.updateStickmanPoint(
@@ -3947,52 +3760,6 @@ struct MapHomeView: View {
             placeCount: places.count,
             activityKinds: kinds.count
         )
-    }
-
-    // MARK: - Homestead 하루 완주 판정·정산 (GAME0926R03)
-
-    /// 그 날 관측 구간에서 미확인(gap) 총 시간을 계산해 완주 여부를 낸다.
-    /// `ReviewCoverageEngine`가 원본을 건드리지 않고 gap을 채운다.
-    private var homesteadDayCompletion: HomesteadDayCompletion {
-        let snap = currentDayDataSnapshot
-        let actuals = snap?.actuals ?? model.snapshot.actuals
-        let calendar = Calendar.autoupdatingCurrent
-        let start = calendar.startOfDay(for: model.selectedDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: start)
-            ?? start.addingTimeInterval(86_400)
-        let end = calendar.isDateInToday(model.selectedDate) ? min(.now, dayEnd) : dayEnd
-        guard end > start else {
-            return HomesteadDayCompletion(isComplete: false, unconfirmedSeconds: 0, observedSeconds: 0)
-        }
-        let span = TimeSpan(start: start, end: end)
-        let unconfirmed = ReviewCoverageEngine.unconfirmedRecords(
-            actuals: actuals, in: [span], asOf: .now
-        )
-        let unconfirmedSeconds = unconfirmed.reduce(0.0) {
-            $0 + $1.span(asOf: .now).duration
-        }
-        return HomesteadHexEngine.completion(
-            unconfirmedSeconds: unconfirmedSeconds,
-            observedSeconds: end.timeIntervalSince(start)
-        )
-    }
-
-    /// 선택된 날을 정산해 코인·스트릭을 갱신한다(같은 날 중복지급은 store가 차단).
-    private func settleHomesteadDay() {
-        guard let home = homesteadHomeCoordinate else { return }
-        let stats = questStats
-        homesteadStore.settleDay(
-            date: model.selectedDate,
-            completion: homesteadDayCompletion,
-            distanceMeters: stats.distanceMeters,
-            placeCount: stats.placeCount,
-            activityKinds: stats.activityKinds
-        )
-        // Step 4: 자주 가는 장소가 놓인 hex 를 무료로 발견(마을에 랜드마크 등장).
-        let placeHexes = placeAnnotations.map {
-            HomesteadHexEngine.hex(for: $0.coordinate, home: home)
-        }
-        homesteadStore.discoverPlaceHexes(placeHexes)
     }
 
     /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
@@ -4104,13 +3871,6 @@ struct MapHomeView: View {
             questChip(icon: "pawprint.fill", value: distanceText)
             questChip(icon: "flag.fill", value: "\(stats.placeCount)")
             questChip(icon: "rosette", value: "\(stats.activityKinds)")
-            if homesteadEnabled {
-                Divider().frame(height: 16)
-                questChip(icon: "hexagon.fill", value: "\(homesteadStore.coins)")
-                if homesteadStore.streak > 0 {
-                    questChip(icon: "flame.fill", value: "\(homesteadStore.streak)")
-                }
-            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
@@ -5122,79 +4882,6 @@ struct MapHomeView: View {
             )
         ))
         updateUserCenterState(using: proxy)
-    }
-
-    private struct SideRailItem: Identifiable {
-        let id: String
-        let icon: String
-        let label: String
-        let open: () -> Void
-    }
-
-    private var sideRailItems: [SideRailItem] {
-        [
-            SideRailItem(id: "summary", icon: "chart.pie.fill", label: language.text("하루 요약","Day summary")) {
-                isDaySummaryPresented = true
-            },
-            SideRailItem(id: "location", icon: "mappin.and.ellipse", label: language.text("위치","Location")) {
-                openMenuSection { isLocationMenuExpanded = true }
-            },
-            SideRailItem(id: "category", icon: "paintpalette.fill", label: language.text("행동 분류","Categories")) {
-                openMenuSection { isCategoryMenuExpanded = true }
-            },
-            SideRailItem(id: "display", icon: "square.3.layers.3d", label: language.text("표시","Display")) {
-                openMenuSection { isDisplayMenuExpanded = true }
-            },
-            SideRailItem(id: "memo", icon: "note.text", label: language.text("메모","Memos")) {
-                openMenuSection { isStickerMenuExpanded = true }
-            },
-            SideRailItem(id: "settings", icon: "gearshape.fill", label: language.text("설정","Settings")) {
-                openMenuSection { isSettingsMenuExpanded = true }
-            },
-        ]
-    }
-
-    private func openMenuSection(_ expand: () -> Void) {
-        expand()
-        withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
-    }
-
-    /// 오른쪽에 항상 표시되는 얇은 아이콘 레일(ㄱ 거울상). 상단바와 같은
-    /// 크림 톤으로 이어지며, 아이콘을 누르면 해당 메뉴 섹션이 펼쳐진다.
-    private var mapSideRail: some View {
-        VStack(spacing: 10) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .frame(width: 40, height: 40)
-            }
-            .accessibilityLabel(language.text("메뉴 열기","Open menu"))
-
-            Divider().frame(width: 22)
-
-            ForEach(sideRailItems) { item in
-                Button(action: item.open) {
-                    Image(systemName: item.icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 40, height: 40)
-                }
-                .accessibilityLabel(item.label)
-            }
-        }
-        .padding(.vertical, 8)
-        .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.07), radius: 9, y: 3)
-        .padding(.trailing, Layout.horizontalInset)
-        .padding(.top, Layout.headerVisibleHeight + 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
     }
 
     private var menu: some View {

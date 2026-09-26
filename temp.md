@@ -145,18 +145,9 @@
 ### MENU0926S02 · 메뉴 UI/UX 단순화
 - `sidebarContent` 섹션(위치/분류/표시/메모/설정 등)을 심플하게 정리. 요청 범위=메뉴 리스트 간결화. 세부 항목 정리 기준은 인터뷰로 확정.
 
-### GAME0926R03 · RPG 게임 요소 = "탐험지 개척(Homestead)" (2026-09-26 확정)
-- 컨셉: 집 중심 육각(hex) 격자. 하루 완성 시 보상(코인)으로 인접 hex 개간·꾸미기. fog-of-war·발자국·판타지 타일·랜드마크·화랑이 기존 자산 재사용.
-- **하루 완성 판정(확정)**: `ReviewCoverageEngine.unconfirmedRecords(actuals:in:asOf:)`가 그 날 관측 span에서 빈 gap을 "unconfirmed"로 채움 → 반환 총 duration이 임계 이하(≈0, 관용 5분)면 "완주". 원본 불변, 순수 파생.
-- **보상 정책(확정)**: 부분 보상 기본(매일 questStats 비례 소량) + 완주 보너스(미확인0 시 배수) + 스트릭 배수(연속 완주). 매일 열 동기 확보.
-- **저장 구조(확정)**: 신규 `HomesteadState`(Codable) — coins:Int, ownedHexes:Set<HexCoord>, hexDecor:[HexCoord:HexBiome], completedDays:Set<DayKey>, streak:Int, bestStreak:Int, lastRewardedDay. 파생 게임상태이므로 센서/기록 원본과 분리 저장(UserDefaults JSON, App Group 컨테이너). 자동기록·백업 스키마 불변.
-- **hex 좌표계(확정)**: axial(q,r) pointy-top. 집 좌표 원점, 평면 근사 투영(위도 보정). hex 한 변 기본 120m. 뷰포트 내 hex만 렌더(bounded).
-- **렌더 통합 훅(확정)**: vectorMapAnnotationOverlay(SwiftUI ZStack, viewport 투영) 최하단에 hex 레이어. hex 중심을 MapHomeVectorMarker로 추가→viewport.markerPoints[id]로 화면좌표 획득(기존 투영 재사용, 신규 MapLibre 코드 없음). 성능: hex 지오메트리 캐시, 60Hz 게이트(CRS0925W01 교훈).
-- **엔진 격리(확정)**: 순수 HomesteadHexEngine(Core, 매크로 비의존)로 좌표변환·완성판정·보상계산 분리 → 이 세션 단위테스트 가능.
-- MVP: 1)집중심 hex격자+fog 렌더 2)완주판정+코인+스트릭 3)코인으로 인접 hex 개간(안개→초원) 4)자주가는장소 hex 랜드마크 자동 발견.
-- **구현 상태(2026-09-26)**: MVP 1~4 코드 완료·시뮬 빌드 SUCCEEDED. 커밋 728c94b(엔진+store+8테스트), b7d8963(hex 외곽선 렌더), 8686101(정산·HUD코인/스트릭·개간탭·장소발견). 엔진 단위테스트 8건 PASS. HUD 코인칩(⬡) 시뮬 렌더 확인.
-- **남은 검증(실기기/실데이터)**: 집 등록된 실제 사용자에서 격자·개간 탭·완주 스트릭 UX 확인(온보딩·홈 미등록 시뮬에선 격자 미표시가 정상). 파일시스템 동기 그룹 아님 → 신규 파일 pbxproj 수동등록 필요(적용 완료).
-- UI 8건 통합: fog-of-war를 hex화(PICO0926I07 정합), HUD(HUD0926M08)에 코인·스트릭 지표, 메뉴(MENU0926S02)에 개척 진입점.
+### GAME0926R03 · RPG 게임 요소 (방향 재검토)
+- 2026-09-26: "탐험지 개척(Homestead)" 육각 격자 시안을 구현했으나 대표님이 "육각형 이상하다"며 **원복 지시** → 관련 코드 전량 제거(엔진/store/렌더/HUD코인/개간/테스트, pbxproj·temp 되돌림). 커밋 728c94b·b7d8963·8686101·bd92ce7 무효화.
+- 남은 방향: 육각 격자 방식은 폐기. RPG 요소는 다른 형태로 재설계 필요(스트릭/레벨/업적 등). 재개 시 인터뷰로 방향 확정.
 
 ### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작
 - 메뉴에 표시되는 화랑이가 대분류별로 각기 다른 동작으로 모두 움직이도록. `catAction(seed:)`가 이미 대분류별 다양 동작 매핑 보유 → 메뉴에 대분류 목록별 화랑이 미리보기를 각 catAction 애니메이션으로 렌더.
