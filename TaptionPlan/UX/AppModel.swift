@@ -4534,18 +4534,26 @@ final class AppModel {
                 "health_authorization_completed",
                 fields: ["granted": String(granted)]
             )
+            await persist()
+            // 권한 결과가 확정되면 UI(온보딩 등)는 즉시 진행돼야 한다. 전체 건강
+            // 이력 동기화는 실기기에서 수초~수십초 걸릴 수 있어, 여기서 await하면
+            // 온보딩 버튼이 그동안 잠긴다. 무거운 동기화는 백그라운드로 돌린다.
+            isRefreshingIntegrations = false
             if granted {
                 snapshot.settings.watchDataSyncProfile = watchDataSyncProfile
-                await synchronizeHealthHistory(showErrors: true)
-                await refreshHealthData()
-                await configureHealthBackgroundDeliveryIfNeeded(
-                    showErrors: true
-                )
-                startForegroundHealthRefreshIfNeeded()
-                publishWatchPayload()
-                requestWatchDataSync(source: "health_authorization")
+                Task { @MainActor in
+                    await synchronizeHealthHistory(showErrors: true)
+                    await refreshHealthData()
+                    await configureHealthBackgroundDeliveryIfNeeded(
+                        showErrors: true
+                    )
+                    startForegroundHealthRefreshIfNeeded()
+                    publishWatchPayload()
+                    requestWatchDataSync(source: "health_authorization")
+                    await persist()
+                }
             }
-            await persist()
+            return
         } catch {
             snapshot.settings.healthEnabled = false
             snapshot.settings.permissions[.health] = .denied
