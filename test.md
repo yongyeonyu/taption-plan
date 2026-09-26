@@ -2,6 +2,26 @@
 
 현재 실행 근거만 간결하게 유지합니다. 이전 상세 개발·검증 기록은 Git 이력에 보존했습니다. `build/validation/`은 로컬 증거이며 Git에 포함되지 않습니다.
 
+## HOF0926A01 · Kiro → Codex UI 인계 확인 (2026-09-26)
+
+- `AGENTS.md`, 최신 `temp.md`, 관련 `test.md`, `CODEX_HANDOFF.md` 및 Git 이력을 대조했다. 기존 CODEX_HANDOFF.md의 35커밋·빌드 156·push 지시는 과거 스냅샷이며 이번 실행 지시로 사용하지 않았다.
+- 시작 당시 main HEAD는 `1e283ec08e6d9d3588fe75272511f060e2330f42`, origin/main과 서버 main은 `07e848f24c1d103037666d72a2ab8cd5b93771d6`이었다. `git rev-list --left-right --count origin/main...HEAD` 결과 `0 58`로 전체 미push 58개를 확인했다. 전달된 UI 커밋 목록은 그 일부였다.
+- 인계 확인 중 다른 작업에서 `520075e`·`c5e9dbb` 커밋이 추가됐다. 이후 HEAD·origin/main·`git ls-remote --exit-code origin refs/heads/main`의 서버 main이 모두 `c5e9dbbe39f8f5e43ee2a47a8cf43971d911d57b`로 일치했고 비교 결과는 `0 0`이었다. 따라서 최종 확인 기준 미push 커밋은 0개다. 이 세션에서 커밋·push를 실행한 것은 아니다.
+- 시작 당시 앱·위젯의 `Localizable.xcstrings`, temp.md·test.md가 수정됐고 `.kiro/`, CODEX_HANDOFF.md가 미추적이었다. 기존 작업은 되돌리지 않았다. 다른 작업에서 해당 변경을 커밋했고, 이번 세션의 후속 변경 범위는 temp.md·test.md 인계 기록이다.
+- `TaptionPlan.xcodeproj/project.pbxproj`의 `CURRENT_PROJECT_VERSION` 8곳은 모두 157이다. 이는 소스 설정 확인이며 기기 설치본이나 TestFlight 상태 확인은 아니다. `git diff 1e283ec..HEAD -- TaptionPlan/UI/MapHomeView.swift TaptionPlan.xcodeproj/project.pbxproj`는 비어 있어 동시 커밋에서 두 파일이 바뀌지 않았음을 확인했다.
+- `MapHomeView.swift` 소스 대조: historical=`timelineRouteOverlays.dropLast()`, active=`last`, 발자국 입력은 전체 overlays다. `makeTimelineRouteOverlays`는 확정 지하철과 유효좌표 2개 미만을 제외한다. `fmap_route_projection`의 `dropped_short`는 유효성 검사 전 좌표 수를 세므로 필터 후 부족한 경우를 전부 집계하지 못한다. FMAP 원인은 아직 확정하지 않았다.
+- FMAP0926R06·PAW0926T05 실기기 확인, HUD0926M08 통합 방식·지표 결정은 열린 상태다. 전달된 시간 카드 높이·화랑이 직접 탭·최신 UI 실기기 확인을 각각 TIM0926C01·CAT0926T01·UIV0926A01로 temp.md에 기록했다. 기존 완료 표시 항목의 구현은 반복하지 않았다.
+- 문서 변경의 `git diff --check -- temp.md test.md`를 통과했다. 확인을 마친 HOF0926A01만 temp.md에서 제거하고 실기기·설계 대기 항목은 유지했다.
+- 제한: 이 세션에서 앱 소스 변경·새 빌드·테스트·설치·실기기 영상 판독·ASC 조회는 수행하지 않았다. 기능 검증을 완료했다고 보고하지 않는다.
+
+## SEP0926A01 · TaptionPlan 인계 프로토콜 및 main 정리 (2026-09-26)
+
+- 대상 변경은 `temp.md`, `test.md`, 신규 `CODEX_HANDOFF_20260926.md` 세 파일이다. ShotGuide 및 앱 소스는 수정하지 않았다.
+- `git diff --check` 통과. 앱·위젯 `Localizable.xcstrings` JSON 파싱 통과. 시작 시 `HEAD`/`origin/main`/서버 main은 `c5e9dbb`, ahead/behind `0/0`이었다.
+- 기존 인계가 지목한 `build/validation/GIT0926P01/build-final.log`는 존재하지 않았다. 대신 고정 DerivedData `build/ArchiveDD`로 Debug 빌드를 실행해 `build/validation/GIT0926P01/build-sep0926a01.log`에서 `** BUILD SUCCEEDED **`, 종료 코드 0을 확인했다. 매크로 검증 스킵 및 `-Xfrontend -disable-sandbox` 플래그를 사용했다.
+- 앱 소스 변경이 없는 문서 정리이므로 단위 테스트와 실기기 검증은 실행하지 않았다. 기존 UI·센서·백업의 실기기 대기 상태는 temp.md에서 유지한다.
+- 이 항목의 push 및 clean readback은 커밋 후 최종 기록한다.
+
 ## BAK0922I01 · 백업 복호 실패 시 새 아카이브 재봉인 (2026-09-23, A안)
 
 - 로그 확정(9/22): `icloud_backup_automatic` 반복 실패 — error_code 4(invalidArchive)/6(accountUnavailable), 동시각 `cloud_account_status`는 전부 authorized. 계정은 정상, 기기 이전 키 불일치가 원인.
