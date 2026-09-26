@@ -3614,7 +3614,12 @@ struct MapHomeView: View {
         // 세그먼트를 flatMap 으로 이어붙인 뒤 전역 stride 로 샘플링해, 세그먼트
         // 경계에서 발자국이 건너뛰어 "끊어져" 보였다. 이제 각 세그먼트를 지도
         // 상의 좌표 간격 기준으로 촘촘히(≈일정 거리마다) 찍어 트레일이 이어진다.
-        let segments = vectorHistoricalRoutes.map(\.coordinates).filter { $0.count >= 2 }
+        // 발자국은 전체 이동 경로(활성 leg 포함)에서 찍는다. 예전엔 vectorHistoricalRoutes
+        // (=dropLast)만 써서, leg 가 1개뿐인 날이나 지금 재생 중인 마지막 leg 에는 발자국이
+        // 전혀 안 나왔다(PAW0926T05). 이제 timelineRouteOverlays 전체를 쓴다.
+        let segments = timelineRouteOverlays
+            .map(\.coordinates)
+            .filter { $0.count >= 2 }
         guard !segments.isEmpty else { return [] }
         // 대략적인 좌표 간격(도 단위). 위도 1도≈111km 이므로 0.00035도≈40m.
         let spacingDegrees = 0.00035
@@ -12260,10 +12265,14 @@ private struct MapHomePlacePin: View {
         VStack(spacing: 5) {
             MapHomeMarkerLabel(title: name, color: destination.tint)
 
-            MapHomeLocationThumbnail(destination: destination, size: 48)
-                .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .shadow(color: .black.opacity(0.13), radius: 6, y: 3)
+            // 배경 없는 게임 스타일 랜드마크 아이콘. 판타지 지도 위에 심볼만 얹되,
+            // 가독성을 위해 옅은 그림자·흰 외곽선만 준다(카드 배경 없음).
+            Image(systemName: destination.rpgSystemImage)
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(destination.tint)
+                .shadow(color: .white.opacity(0.9), radius: 1.5)
+                .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+                .frame(width: 48, height: 48)
 
             Text("Lv.\(floor ?? 1)")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
