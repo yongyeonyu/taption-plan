@@ -91,4 +91,5 @@
 - `TaptionPlanTests/FeatureEngineTests.swift`: `MapHomeTimeRailCardTests`, `MapHomeGrowthPolicyTests` 실행 성공. 로그: `build/validation/HME0926A01/feature-tests-final.log` (`** TEST SUCCEEDED **`).
 - 앱 Debug 빌드 성공: `build/validation/HME0926A01/app-debug-build-final.log` (`** BUILD SUCCEEDED **`), 고정 `build/ArchiveDD`, `-skipPackagePluginValidation`, `-disable-sandbox` 사용. `git diff --check` 통과.
 - 미완료: 주간 보상 선택·땅 직접 연결 배치·화랑이 액세서리 보관함 UI, 실사용 가능한 세계 랜드마크 카탈로그/아트, 전년도 집 열람. 이 기능은 현재 데이터 정책/기본 그림 단계에 머물러 있다. iPhone 실기기 UI/일자 경계 검증도 하지 않았다.
-- 이번 변경은 커밋·push·설치·TestFlight 배포하지 않았다.
+- 첫 검증 기록 시점에는 커밋·push·설치 전이었다. 이후 `f90a7d4` (`HME0926A01: add daily home growth foundation`)를 `main`에 push했고, 서버 `refs/heads/main` readback도 `f90a7d4c13323724c3fb2f20e699283b10a1d10e`였다.
+- 서명된 Debug 앱(build 157, bundle `com.taption.plan`)을 iPhone 11 Pro `00008030-001628201AD2802E`, iPhone 18 Pro Max `00008160-000E195A1140000A`, iPad Pro 12.9-inch 6세대 `00008112-000964980E45401E`에 설치했다. 각 기기 `devicectl device info apps` readback에서 앱과 build 157 노출을 확인했다. 이 확인은 설치만 입증하며 실행·UI 기능 검증은 아니다. TestFlight 배포는 하지 않았다.
