@@ -1999,22 +1999,15 @@ struct MapHomeView: View {
 
             if !isMenuOpen, !isMapSearchFocused, !hasMapSearchResults {
                 VStack(spacing: 0) {
-                    Color.clear
-                        .frame(
-                            height: (searchFieldFrame.maxY > 0
-                                ? searchFieldFrame.maxY
-                                : Layout.headerVisibleHeight + 8 + 42) + 10
-                        )
-                        .allowsHitTesting(false)
+                    Spacer(minLength: 0)
                     HStack {
                         Spacer(minLength: 0)
                         questHUD
                         Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
+                    .padding(.bottom, Layout.overlayBottomMargin + 8)
                 }
                 .padding(.horizontal, Layout.horizontalInset)
-                .padding(.top, 2)
                 .transition(.opacity)
                 .zIndex(MapHomeLayerPriority.header)
             }
@@ -4613,6 +4606,19 @@ struct MapHomeView: View {
                     timeRailWidth: Layout.timeRailWidth
                 )
                 ZStack(alignment: .topLeading) {
+                    // 우측 시간 사이드바를 왼쪽 메뉴 드로어처럼 둥근 카드로 감싼다.
+                    // 레이아웃에 영향을 주지 않도록 배경 레이어로만 깔고, 보이는
+                    // 레일 폭(timeRailWidth)에 맞춰 오른쪽 끝에 정렬한다.
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.tpSurface.opacity(0.94))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
+                        }
+                        .shadow(color: Color.black.opacity(0.08), radius: 10, x: -2, y: 2)
+                        .frame(width: Layout.timeRailWidth)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .allowsHitTesting(false)
                     if model.settings.weatherSidebarVisible {
                         MapHomeWeatherSidebar(
                             date: model.selectedDate,
