@@ -2178,6 +2178,9 @@ struct MapHomeView: View {
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .onAppear {
             prepareRouteProjectionReadings()
+            #if DEBUG
+            homesteadStore.seedDemoIfRequested()
+            #endif
         }
         .onDisappear {
             routeReadingsPreparationTask?.cancel()
@@ -2294,6 +2297,7 @@ struct MapHomeView: View {
         }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
+            settleHomesteadDay()
         }
         .onChange(of: model.snapshot.weather) { _, weather in
             cachedWeatherContexts = MapHomeWeatherDisplayCache.merged(
@@ -2346,6 +2350,7 @@ struct MapHomeView: View {
             refreshTimeRailSegments()
             requestRouteProjectionRefresh()
             scheduleExpectedRouteRefresh()
+            settleHomesteadDay()
         }
         .onChange(of: model.sleepSessions) { _, _ in
             requestRouteProjectionRefresh(preparingReadings: true)
@@ -3666,10 +3671,17 @@ struct MapHomeView: View {
 
     /// 집(자주가는 장소 .home) 좌표. 격자 원점. 미등록이면 nil → 격자 미표시.
     private var homesteadHomeCoordinate: CLLocationCoordinate2D? {
-        guard let point = model.settings.frequentPlaces
+        if let point = model.settings.frequentPlaces
             .first(where: { $0.kind == .home })?.point,
-              isValid(point) else { return nil }
-        return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+           isValid(point) {
+            return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+        }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-homesteadDemo") {
+            return homesteadCameraCenter ?? CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780)
+        }
+        #endif
+        return nil
     }
 
     /// 화면에 그릴 후보 hex. 저장된 카메라 중심/줌 기준으로 근처 hex만(bounded)
@@ -3722,6 +3734,35 @@ struct MapHomeView: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
             .transition(.opacity)
+            .overlay {
+                // 개간 탭 레이어: 클릭이 '개간 가능' hex 중심 근처면 코인으로 개간한다.
+                // 그 외 위치의 탭은 무시돼 지도 제스처로 통과한다(map 조작 보존).
+                Color.clear
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(
+                        SpatialTapGesture().onEnded { value in
+                            handleHomesteadTap(at: value.location, viewport: viewport)
+                        }
+                    )
+            }
+        }
+    }
+
+    /// 탭 위치에서 가장 가까운 '개간 가능' hex 를 찾아 코인으로 개간한다.
+    /// 근처(반경 내)에 개간 가능 hex 가 없으면 아무것도 하지 않는다.
+    private func handleHomesteadTap(at point: CGPoint, viewport: MapHomeVectorViewport) {
+        var best: (hex: HexCoord, dist: CGFloat)?
+        for hex in homesteadVisibleHexes where homesteadStore.canClear(hex) {
+            guard let center = viewport.markerPoints[homesteadHexMarkerID(hex)] else { continue }
+            let radius = homesteadHexPixelRadius(hex, center: center, viewport: viewport)
+            let d = hypot(point.x - center.x, point.y - center.y)
+            if d <= radius, best == nil || d < best!.dist {
+                best = (hex, d)
+            }
+        }
+        guard let target = best else { return }
+        if homesteadStore.clear(hex: target.hex) {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
     }
 
@@ -3908,6 +3949,52 @@ struct MapHomeView: View {
         )
     }
 
+    // MARK: - Homestead 하루 완주 판정·정산 (GAME0926R03)
+
+    /// 그 날 관측 구간에서 미확인(gap) 총 시간을 계산해 완주 여부를 낸다.
+    /// `ReviewCoverageEngine`가 원본을 건드리지 않고 gap을 채운다.
+    private var homesteadDayCompletion: HomesteadDayCompletion {
+        let snap = currentDayDataSnapshot
+        let actuals = snap?.actuals ?? model.snapshot.actuals
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+        let end = calendar.isDateInToday(model.selectedDate) ? min(.now, dayEnd) : dayEnd
+        guard end > start else {
+            return HomesteadDayCompletion(isComplete: false, unconfirmedSeconds: 0, observedSeconds: 0)
+        }
+        let span = TimeSpan(start: start, end: end)
+        let unconfirmed = ReviewCoverageEngine.unconfirmedRecords(
+            actuals: actuals, in: [span], asOf: .now
+        )
+        let unconfirmedSeconds = unconfirmed.reduce(0.0) {
+            $0 + $1.span(asOf: .now).duration
+        }
+        return HomesteadHexEngine.completion(
+            unconfirmedSeconds: unconfirmedSeconds,
+            observedSeconds: end.timeIntervalSince(start)
+        )
+    }
+
+    /// 선택된 날을 정산해 코인·스트릭을 갱신한다(같은 날 중복지급은 store가 차단).
+    private func settleHomesteadDay() {
+        guard let home = homesteadHomeCoordinate else { return }
+        let stats = questStats
+        homesteadStore.settleDay(
+            date: model.selectedDate,
+            completion: homesteadDayCompletion,
+            distanceMeters: stats.distanceMeters,
+            placeCount: stats.placeCount,
+            activityKinds: stats.activityKinds
+        )
+        // Step 4: 자주 가는 장소가 놓인 hex 를 무료로 발견(마을에 랜드마크 등장).
+        let placeHexes = placeAnnotations.map {
+            HomesteadHexEngine.hex(for: $0.coordinate, home: home)
+        }
+        homesteadStore.discoverPlaceHexes(placeHexes)
+    }
+
     /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
     /// 원본(actuals)은 그대로 두고 파생 집계만 만든다. 비중은 관측된 총 시간
     /// 대비로 계산해 합이 100%가 되게 한다.
@@ -4017,6 +4104,13 @@ struct MapHomeView: View {
             questChip(icon: "pawprint.fill", value: distanceText)
             questChip(icon: "flag.fill", value: "\(stats.placeCount)")
             questChip(icon: "rosette", value: "\(stats.activityKinds)")
+            if homesteadEnabled {
+                Divider().frame(height: 16)
+                questChip(icon: "hexagon.fill", value: "\(homesteadStore.coins)")
+                if homesteadStore.streak > 0 {
+                    questChip(icon: "flame.fill", value: "\(homesteadStore.streak)")
+                }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)

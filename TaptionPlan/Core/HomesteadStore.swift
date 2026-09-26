@@ -81,6 +81,25 @@ final class HomesteadStore: ObservableObject {
         return true
     }
 
+    /// 자주 가는 장소가 놓인 hex 를 무료로 "발견"(개간)한다. 실제 방문 장소가
+    /// 자동으로 마을에 나타나 배치를 유도한다(Step 4). 이미 보유한 hex 는 건너뛴다.
+    @discardableResult
+    func discoverPlaceHexes(_ hexes: [HexCoord]) -> Int {
+        var changed = 0
+        var next = state
+        for hex in hexes where !next.owns(hex) {
+            next.ownedHexes.insert(hex)
+            if next.hexBiomes[hex.storageKey] == nil {
+                next.hexBiomes[hex.storageKey] = .meadow
+            }
+            changed += 1
+        }
+        guard changed > 0 else { return 0 }
+        state = next
+        persist()
+        return changed
+    }
+
     // MARK: - 조회
 
     var coins: Int { state.coins }
@@ -96,6 +115,23 @@ final class HomesteadStore: ObservableObject {
     #if DEBUG
     func resetForTesting() {
         state = .empty
+        persist()
+    }
+
+    /// 시뮬레이터 시각검증용 시드(런치 인자 -homesteadDemo). 코인·개간·완주일을 넣어
+    /// 격자 렌더를 확인한다. DEBUG 전용.
+    func seedDemoIfRequested() {
+        guard ProcessInfo.processInfo.arguments.contains("-homesteadDemo") else { return }
+        var s = HomesteadState.empty
+        s.coins = 50
+        s.currentStreak = 3
+        s.bestStreak = 5
+        for hex in [HexCoord(1, 0), HexCoord(0, 1), HexCoord(-1, 1), HexCoord(1, -1)] {
+            s.ownedHexes.insert(hex)
+            s.hexBiomes[hex.storageKey] = .meadow
+        }
+        s.hexBiomes[HexCoord(0, 1).storageKey] = .forest
+        state = s
         persist()
     }
     #endif
