@@ -20,7 +20,8 @@
 - `git diff --check` 통과. 앱·위젯 `Localizable.xcstrings` JSON 파싱 통과. 시작 시 `HEAD`/`origin/main`/서버 main은 `c5e9dbb`, ahead/behind `0/0`이었다.
 - 기존 인계가 지목한 `build/validation/GIT0926P01/build-final.log`는 존재하지 않았다. 대신 고정 DerivedData `build/ArchiveDD`로 Debug 빌드를 실행해 `build/validation/GIT0926P01/build-sep0926a01.log`에서 `** BUILD SUCCEEDED **`, 종료 코드 0을 확인했다. 매크로 검증 스킵 및 `-Xfrontend -disable-sandbox` 플래그를 사용했다.
 - 앱 소스 변경이 없는 문서 정리이므로 단위 테스트와 실기기 검증은 실행하지 않았다. 기존 UI·센서·백업의 실기기 대기 상태는 temp.md에서 유지한다.
-- 이 항목의 push 및 clean readback은 커밋 후 최종 기록한다.
+- 커밋 `3cf1717` push 성공: `c5e9dbb..3cf1717 main -> main`. `git ls-remote origin refs/heads/main`의 readback은 `3cf1717ea03ebc2f453759ca1fb38847e3899bb2`다.
+- push 뒤에 이 검증 기록을 정리하면서 생긴 후속 기록 커밋도 별도 push하고, 최종 HEAD·원격 main·워크트리 상태를 다시 확인한다.
 
 ## BAK0922I01 · 백업 복호 실패 시 새 아카이브 재봉인 (2026-09-23, A안)
 
