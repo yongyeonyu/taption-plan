@@ -939,9 +939,15 @@ struct MapHomeStickmanGlyph: View {
                 paused: isStatic
             )
         ) { context in
+            // CATM0926A04: 대분류마다 자기 동작 배열을 시간에 따라 순환시켜
+            // 각기 다른 동작으로 움직이게 한다. 카테고리별 위상 오프셋으로
+            // 같은 화면의 화랑이들이 동시에 같은 포즈로 겹치지 않게 한다.
+            let cyclingAction = isStatic
+                ? action.catAction
+                : action.catAction(seed: MapHomeStickmanGlyph.actionSeed(at: context.date, for: action))
             TaptionCatAtlasSprite(
                 style: "white",
-                action: action.catAction,
+                action: cyclingAction,
                 frame: MapHomeStickmanAnimationEngine.phase(
                     at: context.date,
                     reducesMotion: isStatic
@@ -950,6 +956,14 @@ struct MapHomeStickmanGlyph: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
+    }
+
+    /// 동작 하나를 약 2.4초 유지한 뒤 다음 동작으로 넘어가고, 카테고리별
+    /// 위상 오프셋을 더해 여러 화랑이가 동시에 같은 포즈가 되지 않게 한다.
+    private static func actionSeed(at date: Date, for action: MapHomeStickmanAction) -> Int {
+        let step = Int(date.timeIntervalSinceReferenceDate / 2.4)
+        let offset = MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0
+        return step + offset
     }
 }
 
