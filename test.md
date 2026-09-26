@@ -82,3 +82,13 @@
 - 런타임 `.kiro/settings/.kirocrew-cli-settings.lock`은 파일 유지 후 `.git/info/exclude`로 로컬 제외. 그 외 기존 변경 파일은 커밋 대상으로 보존.
 - 산출물: `/Users/u_mo_c/Documents/taption plan/build/validation/GIT0926P01/`; 실기기 기능 검증은 수행하지 않음.
 - 최종 앱타깃 빌드: `build/validation/GIT0926P01/build-final.log`의 BUILD SUCCEEDED, 종료 0 확인. push 및 원격 HEAD/clean readback은 같은 폴더 `git-readback.txt`에 기록.
+
+## HME0926A01 · 집 성장·HUD·시간축 부분 구현 검증 (2026-09-26)
+
+- `TaptionPlan/UI/MapHomeView.swift`: 로컬 날짜별 실제 기록/미확인 조건, 하루 +1 성장·연속일/주간 보상 데이터, 연도 archive, 집 레벨 핀과 2월 29일 표시, 하루요약 시트 걸음 수 반영. 앱 활성 복귀 시 오늘 상태를 재평가하고, 현재 시각 이후의 미완성 시간축 구간은 달성 대상에서 제외한다.
+- `TaptionPlan/UI/MapHomeTimeSidebar.swift`: 선택 시각 ±1시간만 감싸는 라운드 카드 프레임 및 경계 클리핑.
+- `TaptionPlan/Assets.xcassets/HomeEvolution001.imageset`…`HomeEvolution366.imageset`: 366개 기본 SVG 성장 그림. Contents.json 참조 및 SVG 파싱 366/366 통과. 이는 국가별 랜드마크 변형의 완성이 아니다.
+- `TaptionPlanTests/FeatureEngineTests.swift`: `MapHomeTimeRailCardTests`, `MapHomeGrowthPolicyTests` 실행 성공. 로그: `build/validation/HME0926A01/feature-tests-final.log` (`** TEST SUCCEEDED **`).
+- 앱 Debug 빌드 성공: `build/validation/HME0926A01/app-debug-build-final.log` (`** BUILD SUCCEEDED **`), 고정 `build/ArchiveDD`, `-skipPackagePluginValidation`, `-disable-sandbox` 사용. `git diff --check` 통과.
+- 미완료: 주간 보상 선택·땅 직접 연결 배치·화랑이 액세서리 보관함 UI, 실사용 가능한 세계 랜드마크 카탈로그/아트, 전년도 집 열람. 이 기능은 현재 데이터 정책/기본 그림 단계에 머물러 있다. iPhone 실기기 UI/일자 경계 검증도 하지 않았다.
+- 이번 변경은 커밋·push·설치·TestFlight 배포하지 않았다.

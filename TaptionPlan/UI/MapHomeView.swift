@@ -1587,6 +1587,190 @@ struct MapHomeRouteReadingsPreparationGeneration: Sendable {
     }
 }
 
+struct MapHomeGrowthSeason: Codable, Equatable {
+    var year: Int
+    var level = 1
+    var streak = 0
+    var lastClosedDay: String?
+    var pendingDay: String?
+    var pendingDayQualified = false
+    var pendingWeeklyRewards = 0
+    var chosenEvolutions: [String] = []
+    var landPlots: [String] = []
+    var accessories: [String] = []
+    var equippedAccessory: String?
+}
+
+struct MapHomeGrowthHistory: Codable, Equatable {
+    var season: MapHomeGrowthSeason
+    var archives: [MapHomeGrowthSeason] = []
+
+    static func initial(for date: Date, calendar: Calendar = Calendar(identifier: .gregorian)) -> Self {
+        Self(season: MapHomeGrowthSeason(year: calendar.component(.year, from: date)))
+    }
+}
+
+enum MapHomeGrowthPolicy {
+    static let storageKey = "taption.mapHome.growth.v1"
+
+    static var localCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    static func qualifies(actualCount: Int, unconfirmedCount: Int) -> Bool {
+        actualCount > 0 && unconfirmedCount == 0
+    }
+
+    static func maximumLevel(year: Int, timeZone: TimeZone = .autoupdatingCurrent) -> Int {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = timeZone
+        components.year = year
+        components.month = 7
+        components.day = 1
+        guard let date = calendar.date(from: components),
+              let days = calendar.range(of: .day, in: .year, for: date)?.count else {
+            return 365
+        }
+        return days
+    }
+
+    static func artworkName(level: Int) -> String {
+        let paddedLevel = String(
+            format: "%03d",
+            locale: Locale(identifier: "en_US_POSIX"),
+            min(max(level, 1), 366)
+        )
+        return "HomeEvolution\(paddedLevel)"
+    }
+
+    static func isLeapDay(_ date: Date, calendar: Calendar) -> Bool {
+        let components = calendar.dateComponents([.month, .day], from: date)
+        return components.month == 2 && components.day == 29
+    }
+
+    static func dayKey(_ date: Date, calendar: Calendar) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            locale: Locale(identifier: "en_US_POSIX"),
+            parts.year ?? 0,
+            parts.month ?? 0,
+            parts.day ?? 0
+        )
+    }
+
+    static func date(for key: String, calendar: Calendar) -> Date? {
+        let parts = key.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(
+            year: parts[0], month: parts[1], day: parts[2]
+        ))
+    }
+
+    static func closePendingDay(
+        in history: inout MapHomeGrowthHistory,
+        asOf now: Date,
+        calendar: Calendar
+    ) {
+        let today = calendar.startOfDay(for: now)
+        guard let key = history.season.pendingDay,
+              let pendingDate = date(for: key, calendar: calendar),
+              calendar.startOfDay(for: pendingDate) < today else { return }
+        closeDay(
+            key: key,
+            date: pendingDate,
+            qualified: history.season.pendingDayQualified,
+            in: &history,
+            calendar: calendar
+        )
+        history.season.pendingDay = nil
+        history.season.pendingDayQualified = false
+    }
+
+    static func observeCurrentDay(
+        in history: inout MapHomeGrowthHistory,
+        date: Date,
+        qualified: Bool,
+        calendar: Calendar
+    ) {
+        let year = calendar.component(.year, from: date)
+        advanceSeason(in: &history, to: year)
+        let key = dayKey(date, calendar: calendar)
+        history.season.pendingDay = key
+        history.season.pendingDayQualified = qualified
+    }
+
+    @discardableResult
+    static func redeemWeeklyReward(
+        evolutionID: String,
+        landPlotID: String,
+        accessoryID: String,
+        in history: inout MapHomeGrowthHistory
+    ) -> Bool {
+        guard history.season.pendingWeeklyRewards > 0,
+              !evolutionID.isEmpty,
+              !landPlotID.isEmpty,
+              !accessoryID.isEmpty else { return false }
+        history.season.pendingWeeklyRewards -= 1
+        history.season.chosenEvolutions.append(evolutionID)
+        history.season.landPlots.append(landPlotID)
+        if !history.season.accessories.contains(accessoryID) {
+            history.season.accessories.append(accessoryID)
+        }
+        return true
+    }
+
+    @discardableResult
+    static func equipAccessory(
+        _ accessoryID: String,
+        in season: inout MapHomeGrowthSeason
+    ) -> Bool {
+        guard season.accessories.contains(accessoryID) else { return false }
+        season.equippedAccessory = accessoryID
+        return true
+    }
+
+    private static func closeDay(
+        key: String,
+        date: Date,
+        qualified: Bool,
+        in history: inout MapHomeGrowthHistory,
+        calendar: Calendar
+    ) {
+        advanceSeason(in: &history, to: calendar.component(.year, from: date))
+        guard history.season.lastClosedDay != key else { return }
+        let previousDay = calendar.date(byAdding: .day, value: -1, to: date)
+            .map { dayKey($0, calendar: calendar) }
+        if history.season.lastClosedDay != previousDay {
+            history.season.streak = 0
+        }
+        if qualified {
+            history.season.level = min(
+                maximumLevel(year: history.season.year, timeZone: calendar.timeZone),
+                history.season.level + 1
+            )
+            history.season.streak += 1
+            if history.season.streak.isMultiple(of: 7) {
+                history.season.pendingWeeklyRewards += 1
+            }
+        } else {
+            history.season.streak = 0
+        }
+        history.season.lastClosedDay = key
+    }
+
+    private static func advanceSeason(in history: inout MapHomeGrowthHistory, to year: Int) {
+        guard year > history.season.year else { return }
+        history.archives.append(history.season)
+        history.season = MapHomeGrowthSeason(year: year)
+    }
+}
+
 @MainActor
 struct MapHomeView: View {
     private static let dayViewSignpostLog = OSLog(
@@ -1623,6 +1807,8 @@ struct MapHomeView: View {
         AppLanguagePreference.sharedDefaultsKey,
         store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
+    @AppStorage(MapHomeGrowthPolicy.storageKey)
+    private var homeGrowthData = Data()
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var headingMonitor = MapHomeHeadingMonitor()
     @State private var selectedScope: TimeScale = .day
@@ -2040,6 +2226,7 @@ struct MapHomeView: View {
             MapHomeDaySummarySheet(
                 date: model.selectedDate,
                 categories: daySummaryCategories,
+                stepCount: dayStepCount,
                 language: language
             )
             .presentationDetents([.medium, .large])
@@ -2174,6 +2361,13 @@ struct MapHomeView: View {
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .onAppear {
             prepareRouteProjectionReadings()
+            refreshHomeGrowth(at: .now)
+        }
+        .onChange(of: model.snapshotRevision) { _, _ in
+            refreshHomeGrowth(at: .now)
+        }
+        .onChange(of: model.selectedDate) { _, _ in
+            refreshHomeGrowth(at: .now)
         }
         .onDisappear {
             routeReadingsPreparationTask?.cancel()
@@ -2411,6 +2605,7 @@ struct MapHomeView: View {
                 transitPOIRefreshGeneration &+= 1
                 stopDayPlayback(resetProgress: true)
             } else {
+                refreshHomeGrowth(at: .now)
                 prepareRouteProjectionReadings()
             }
         }
@@ -3328,7 +3523,9 @@ struct MapHomeView: View {
                             MapHomePlacePin(
                                 name: place.name,
                                 floor: place.floor,
-                                destination: place.destination
+                                destination: place.destination,
+                                growthLevel: place.growthLevel,
+                                isLeapDay: place.isLeapDay
                             )
                             .fixedSize()
                             // simultaneousGesture: 탭으로 사용자 위치 메뉴를 열되
@@ -3349,7 +3546,9 @@ struct MapHomeView: View {
                             MapHomePlacePin(
                                 name: place.name,
                                 floor: place.floor,
-                                destination: place.destination
+                                destination: place.destination,
+                                growthLevel: place.growthLevel,
+                                isLeapDay: place.isLeapDay
                             )
                             .fixedSize()
                             // 탭하면 랜드마크 설명 창. 지도 제스처는 통과.
@@ -3773,6 +3972,74 @@ struct MapHomeView: View {
         )
     }
 
+    private var homeGrowthHistory: MapHomeGrowthHistory {
+        guard let decoded = try? JSONDecoder().decode(
+            MapHomeGrowthHistory.self,
+            from: homeGrowthData
+        ) else {
+            return .initial(for: .now)
+        }
+        return decoded
+    }
+
+    private func refreshHomeGrowth(at now: Date) {
+        var history = homeGrowthHistory
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: now,
+            calendar: calendar
+        )
+        if calendar.isDate(model.selectedDate, inSameDayAs: now) {
+            let start = calendar.startOfDay(for: now)
+            let end = calendar.date(byAdding: .day, value: 1, to: start)
+                ?? start.addingTimeInterval(24 * 60 * 60)
+            let sourceActuals = currentDayDataSnapshot?.actuals
+                ?? model.snapshot.actuals
+            let sourceTravel = currentDayDataSnapshot?.travel
+                ?? model.snapshot.travel
+            let records = sourceActuals.filter { actual in
+                let span = actual.span(asOf: now)
+                return span.start < end && start < span.end
+            }
+            let daySegments = MapHomeTimeRailSegmentEngine.segments(
+                from: sourceActuals,
+                travel: sourceTravel,
+                on: now,
+                asOf: now,
+                calendar: calendar
+            )
+            let unconfirmedCount = daySegments.filter {
+                $0.categoryID == "unconfirmed"
+            }.count
+            let actualCount = records.filter {
+                RecordAnalysisCategoryPolicy.categoryID(for: $0) != "unconfirmed"
+            }.count
+            let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
+            let currentMinute = (nowComponents.hour ?? 0) * 60
+                + (nowComponents.minute ?? 0)
+            let dayIsComplete = daySegments.allSatisfy {
+                $0.endMinute <= currentMinute
+            }
+            MapHomeGrowthPolicy.observeCurrentDay(
+                in: &history,
+                date: now,
+                qualified: dayIsComplete && MapHomeGrowthPolicy.qualifies(
+                    actualCount: actualCount,
+                    unconfirmedCount: unconfirmedCount
+                ),
+                calendar: calendar
+            )
+        }
+        guard let encoded = try? JSONEncoder().encode(history),
+              encoded != homeGrowthData else { return }
+        homeGrowthData = encoded
+    }
+
+    private var dayStepCount: Int? {
+        currentDayReadings.compactMap(\.stepCount).filter { $0 > 0 }.max()
+    }
+
     /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
     /// 원본(actuals)은 그대로 두고 파생 집계만 만든다. 비중은 관측된 총 시간
     /// 대비로 계산해 합이 100%가 되게 한다.
@@ -3879,6 +4146,16 @@ struct MapHomeView: View {
             ? String(format: "%.1fkm", km)
             : String(format: "%.0fm", stats.distanceMeters)
         return HStack(spacing: 12) {
+            HStack(spacing: 4) {
+                Image(MapHomeGrowthPolicy.artworkName(level: homeGrowthHistory.season.level))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 20)
+                Text("Lv.\(homeGrowthHistory.season.level)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .monospacedDigit()
+            }
             questChip(icon: "pawprint.fill", value: distanceText)
             questChip(icon: "flag.fill", value: "\(stats.placeCount)")
             questChip(icon: "rosette", value: "\(stats.activityKinds)")
@@ -3890,18 +4167,14 @@ struct MapHomeView: View {
         .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
         .contentShape(Capsule())
         .onTapGesture {
-            selectedMarkerInfo = .expedition(
-                distanceText: distanceText,
-                placeCount: stats.placeCount,
-                activityKinds: stats.activityKinds
-            )
+            isDaySummaryPresented = true
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(
             language.text(
-                "오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종, 상세 보기",
-                "Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities, show details"
+                "집 레벨 \(homeGrowthHistory.season.level). 오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종, 하루 요약 보기",
+                "Home level \(homeGrowthHistory.season.level). Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities, show day summary"
             )
         )
     }
@@ -4605,10 +4878,15 @@ struct MapHomeView: View {
                     weatherRailWidth: Layout.weatherRailWidth,
                     timeRailWidth: Layout.timeRailWidth
                 )
+                let selectedTimeCard = MapHomeTimeSidebarMath.selectedTimeCardFrame(
+                    availableHeight: railHeight,
+                    selectedMinute: minute,
+                    visibleStartMinute: timeSidebarVisibleStartMinute,
+                    visibleDurationMinutes: timeSidebarVisibleDurationMinutes
+                )
+                let timeRailTop = max(0, proxy.size.height - railHeight)
                 ZStack(alignment: .topLeading) {
-                    // 우측 시간 사이드바를 왼쪽 메뉴 드로어처럼 둥근 카드로 감싼다.
-                    // 레이아웃에 영향을 주지 않도록 배경 레이어로만 깔고, 보이는
-                    // 레일 폭(timeRailWidth)에 맞춰 오른쪽 끝에 정렬한다.
+                    // 선택 시각 주변만 강조하고 레일 전체 조작 영역은 유지한다.
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(Color.tpSurface.opacity(0.94))
                         .overlay {
@@ -4616,8 +4894,11 @@ struct MapHomeView: View {
                                 .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
                         }
                         .shadow(color: Color.black.opacity(0.08), radius: 10, x: -2, y: 2)
-                        .frame(width: Layout.timeRailWidth)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                        .frame(width: Layout.timeRailWidth, height: selectedTimeCard.height)
+                        .position(
+                            x: proxy.size.width - Layout.timeRailWidth / 2,
+                            y: timeRailTop + selectedTimeCard.midY
+                        )
                         .allowsHitTesting(false)
                     if model.settings.weatherSidebarVisible {
                         MapHomeWeatherSidebar(
@@ -4706,6 +4987,9 @@ struct MapHomeView: View {
                             y: min(max(y, 14), railHeight - 14)
                         )
                     }
+                }
+                .onChange(of: timeline.date) { _, date in
+                    refreshHomeGrowth(at: date)
                 }
                 .frame(
                     width: timeSidebarInteractionWidth,
@@ -6503,6 +6787,13 @@ struct MapHomeView: View {
                 name: displayedFrequentPlaceName(place),
                 floor: place.floor,
                 destination: destination,
+                growthLevel: destination == .home
+                    ? homeGrowthHistory.season.level
+                    : nil,
+                isLeapDay: MapHomeGrowthPolicy.isLeapDay(
+                    model.selectedDate,
+                    calendar: MapHomeGrowthPolicy.localCalendar
+                ),
                 coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
             )
         }
@@ -12279,6 +12570,8 @@ private struct MapHomePlaceAnnotation: Identifiable {
     let name: String
     let floor: Int?
     let destination: MapHomeLocationDestination
+    let growthLevel: Int?
+    let isLeapDay: Bool
     let coordinate: CLLocationCoordinate2D
 }
 
@@ -12293,6 +12586,8 @@ private struct MapHomePlacePin: View {
     let name: String
     let floor: Int?
     let destination: MapHomeLocationDestination
+    var growthLevel: Int? = nil
+    var isLeapDay = false
 
     var body: some View {
         VStack(spacing: 5) {
@@ -12300,14 +12595,32 @@ private struct MapHomePlacePin: View {
 
             // 배경 없는 게임 스타일 랜드마크 아이콘. 판타지 지도 위에 심볼만 얹되,
             // 가독성을 위해 옅은 그림자·흰 외곽선만 준다(카드 배경 없음).
-            Image(systemName: destination.rpgSystemImage)
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(destination.tint)
-                .shadow(color: .white.opacity(0.9), radius: 1.5)
-                .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
-                .frame(width: 48, height: 48)
+            if destination == .home, let growthLevel {
+                Image(MapHomeGrowthPolicy.artworkName(level: growthLevel))
+                    .resizable()
+                    .scaledToFit()
+                    .shadow(color: .white.opacity(0.9), radius: 1.5)
+                    .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+                    .frame(width: 48, height: 48)
+                    .overlay(alignment: .topTrailing) {
+                        if isLeapDay {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 11, weight: .black))
+                                .foregroundStyle(Color(hex: "#E3B54A"))
+                                .shadow(color: .white, radius: 1.5)
+                                .offset(x: 2, y: -1)
+                        }
+                    }
+            } else {
+                Image(systemName: destination.rpgSystemImage)
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(destination.tint)
+                    .shadow(color: .white.opacity(0.9), radius: 1.5)
+                    .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+                    .frame(width: 48, height: 48)
+            }
 
-            Text("Lv.\(floor ?? 1)")
+            Text("Lv.\(growthLevel ?? floor ?? 1)")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
@@ -12315,7 +12628,7 @@ private struct MapHomePlacePin: View {
                 .background(.white, in: Capsule())
                 .shadow(color: .black.opacity(0.10), radius: 5, y: 2)
         }
-        .accessibilityLabel("\(name), 레벨 \(floor ?? 1)")
+        .accessibilityLabel("\(name), 레벨 \(growthLevel ?? floor ?? 1)")
     }
 }
 
@@ -15414,7 +15727,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         MapHomePlacePin(
                             name: place.name,
                             floor: place.floor,
-                            destination: place.destination
+                            destination: place.destination,
+                            growthLevel: place.growthLevel,
+                            isLeapDay: place.isLeapDay
                         )
                         .fixedSize()
                     ),
@@ -15653,6 +15968,7 @@ struct MapHomeDaySummaryEntry: Identifiable, Hashable {
 struct MapHomeDaySummarySheet: View {
     let date: Date
     let categories: [MapHomeDaySummaryEntry]
+    let stepCount: Int?
     let language: MapHomeLanguage
 
     private var totalSeconds: TimeInterval {
@@ -15667,7 +15983,22 @@ struct MapHomeDaySummarySheet: View {
                     .foregroundStyle(Color.tpInk)
                 Text(dateText)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.tpSecondary)
+                .foregroundStyle(Color.tpSecondary)
+            }
+
+            if let stepCount {
+                HStack(spacing: 8) {
+                    Image(systemName: "figure.walk")
+                        .foregroundStyle(Color.tpAccent)
+                    Text(language.text("걸음 수", "Steps"))
+                        .foregroundStyle(Color.tpSecondary)
+                    Spacer()
+                    Text(stepCount.formatted())
+                        .fontWeight(.bold)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.tpInk)
+                }
+                .font(.system(size: 14, weight: .medium))
             }
 
             if categories.isEmpty {

@@ -2069,6 +2069,29 @@ enum MapHomeTimeSidebarMath {
     static let handleRailGap: CGFloat = 4
     static let weatherDockGap: CGFloat = 0
 
+    static func selectedTimeCardFrame(
+        availableHeight: CGFloat,
+        selectedMinute: Int,
+        visibleStartMinute: Int,
+        visibleDurationMinutes: Int,
+        verticalInset: CGFloat = 14
+    ) -> CGRect {
+        let height = max(0, availableHeight)
+        let inset = min(max(0, verticalInset), height / 2)
+        let trackHeight = max(1, height - inset * 2)
+        let window = visibleWindow(
+            startMinute: visibleStartMinute,
+            durationMinutes: visibleDurationMinutes,
+            centerMinute: selectedMinute
+        )
+        let center = min(max(selectedMinute, 0), fullDayMinutes - 1)
+        let start = max(window.lowerBound, center - 60)
+        let end = min(window.upperBound, center + 60)
+        let top = inset + trackHeight * position(minute: start, window: window)
+        let bottom = inset + trackHeight * position(minute: end, window: window)
+        return CGRect(x: 0, y: top, width: 0, height: max(1, bottom - top))
+    }
+
     static func totalWidth(railWidth: CGFloat) -> CGFloat {
         handleLaneWidth + railWidth
     }

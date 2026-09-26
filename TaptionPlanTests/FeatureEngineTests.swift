@@ -27528,3 +27528,220 @@ final class CategoryCacheBenchmarkTests: XCTestCase {
         )
     }
 }
+
+final class MapHomeTimeRailCardTests: XCTestCase {
+    func testSelectedCardHighlightsTwoHoursOnFullDayRail() {
+        let frame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
+            availableHeight: 1_000,
+            selectedMinute: 720,
+            visibleStartMinute: 0,
+            visibleDurationMinutes: 1_440
+        )
+
+        XCTAssertEqual(frame.height, 81, accuracy: 0.1)
+        XCTAssertEqual(frame.midY, 500, accuracy: 0.1)
+    }
+
+    func testSelectedCardClipsAtDayBoundaryAndVisibleWindow() {
+        let dayBoundaryFrame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
+            availableHeight: 1_000,
+            selectedMinute: 0,
+            visibleStartMinute: 0,
+            visibleDurationMinutes: 1_440
+        )
+        let zoomedFrame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
+            availableHeight: 1_000,
+            selectedMinute: 600,
+            visibleStartMinute: 570,
+            visibleDurationMinutes: 60
+        )
+
+        XCTAssertEqual(dayBoundaryFrame.height, 40.5, accuracy: 0.1)
+        XCTAssertEqual(zoomedFrame.height, 972, accuracy: 0.1)
+    }
+}
+
+final class MapHomeGrowthPolicyTests: XCTestCase {
+    private var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }
+
+    private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    func testDailyEligibilityRequiresActualAndNoUnconfirmedRecords() {
+        XCTAssertTrue(MapHomeGrowthPolicy.qualifies(actualCount: 1, unconfirmedCount: 0))
+        XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 0, unconfirmedCount: 0))
+        XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 2, unconfirmedCount: 1))
+    }
+
+    func testClosedIncompleteDayStaysUnqualifiedDespiteLaterObservation() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 1, 1),
+            qualified: false,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 1, 2),
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 1, 1),
+            qualified: true,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 1, 3),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(history.season.level, 1)
+        XCTAssertEqual(history.season.streak, 0)
+    }
+
+    func testSevenConsecutiveCompletedDaysCreateOneWeeklyReward() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        for offset in 0..<7 {
+            let day = calendar.date(byAdding: .day, value: offset, to: date(2026, 1, 1))!
+            MapHomeGrowthPolicy.observeCurrentDay(
+                in: &history,
+                date: day,
+                qualified: true,
+                calendar: calendar
+            )
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
+            MapHomeGrowthPolicy.closePendingDay(
+                in: &history,
+                asOf: nextDay,
+                calendar: calendar
+            )
+        }
+
+        XCTAssertEqual(history.season.level, 8)
+        XCTAssertEqual(history.season.streak, 7)
+        XCTAssertEqual(history.season.pendingWeeklyRewards, 1)
+    }
+
+    func testMissedDayBreaksStreakAndDuplicateCloseDoesNotAwardTwice() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        for offset in 0..<3 {
+            let day = calendar.date(byAdding: .day, value: offset, to: date(2026, 1, 1))!
+            MapHomeGrowthPolicy.observeCurrentDay(
+                in: &history,
+                date: day,
+                qualified: true,
+                calendar: calendar
+            )
+            MapHomeGrowthPolicy.closePendingDay(
+                in: &history,
+                asOf: calendar.date(byAdding: .day, value: 1, to: day)!,
+                calendar: calendar
+            )
+        }
+        let missedDay = date(2026, 1, 4)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: missedDay,
+            qualified: false,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 1, 5),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(history.season.level, 4)
+        XCTAssertEqual(history.season.streak, 0)
+        XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
+    }
+
+    func testYearLimitsLeapMarkAndArtworkNames() {
+        XCTAssertEqual(MapHomeGrowthPolicy.maximumLevel(year: 2024, timeZone: calendar.timeZone), 366)
+        XCTAssertEqual(MapHomeGrowthPolicy.maximumLevel(year: 2025, timeZone: calendar.timeZone), 365)
+        XCTAssertEqual(MapHomeGrowthPolicy.artworkName(level: 0), "HomeEvolution001")
+        XCTAssertEqual(MapHomeGrowthPolicy.artworkName(level: 367), "HomeEvolution366")
+        XCTAssertTrue(MapHomeGrowthPolicy.isLeapDay(date(2024, 2, 29), calendar: calendar))
+        XCTAssertFalse(MapHomeGrowthPolicy.isLeapDay(date(2025, 2, 28), calendar: calendar))
+    }
+
+    func testAll366EvolutionIllustrationsArePackaged() {
+        for level in 1...366 {
+            let name = MapHomeGrowthPolicy.artworkName(level: level)
+            XCTAssertNotNil(
+                UIImage(named: name, in: Bundle.main, with: nil),
+                "Missing bundled illustration: \(name)"
+            )
+        }
+    }
+
+    func testYearChangeArchivesPreviousHouseAndStartsAtLevelOne() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 12, 31), calendar: calendar)
+        history.season.level = 88
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2027, 1, 1),
+            qualified: false,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(history.archives.map(\.year), [2026])
+        XCTAssertEqual(history.archives.first?.level, 88)
+        XCTAssertEqual(history.season.year, 2027)
+        XCTAssertEqual(history.season.level, 1)
+    }
+
+    func testClosedIncompleteDayCannotBeRequalifiedRetroactively() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 1, 1),
+            qualified: false,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 1, 2),
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 1, 1),
+            qualified: true,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 1, 3),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(history.season.level, 1)
+        XCTAssertEqual(history.season.streak, 0)
+    }
+
+    func testWeeklyRewardUnlocksAndEquipsAccessory() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        history.season.pendingWeeklyRewards = 1
+
+        XCTAssertTrue(MapHomeGrowthPolicy.redeemWeeklyReward(
+            evolutionID: "world.landmark.001",
+            landPlotID: "plot.001",
+            accessoryID: "cat.accessory.001",
+            in: &history
+        ))
+        XCTAssertFalse(MapHomeGrowthPolicy.equipAccessory("locked", in: &history.season))
+        XCTAssertTrue(MapHomeGrowthPolicy.equipAccessory("cat.accessory.001", in: &history.season))
+        XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
+        XCTAssertEqual(history.season.landPlots, ["plot.001"])
+        XCTAssertEqual(history.season.equippedAccessory, "cat.accessory.001")
+    }
+}
