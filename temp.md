@@ -163,3 +163,8 @@
 - 구현(커밋 79c514f): categoryMenuItem은 이미 MapHomeSidebarMajorCategory.all()을 순회하며 MapHomeStickmanGlyph를 렌더했으나, glyph가 `action.catAction`(seed=0 고정)을 써서 카테고리마다 단일 포즈만 반복했다. MapHomeStickmanGlyph를 시간 기반 seed(2.4초 주기 + 카테고리별 case 인덱스 위상 오프셋)로 `catAction(seed:)`를 호출하도록 변경 → 각 대분류가 자기 동작 배열을 다양하게 순환, 여러 화랑이가 동시에 같은 포즈로 겹치지 않음. reduceMotion/저휘도/비애니메이션 카테고리는 정적 유지. 앱타깃 빌드 통과.
 
 - 공통 검증: 각 변경 후 시뮬레이터 빌드·UI 확인. 기존 동작은 명시 요청 외 보존(규칙 11). 앱타깃 빌드는 `-disable-sandbox -skipPackagePluginValidation`로 이 세션 검증 가능(CRS0925W01에서 확인).
+
+## HOF0926A01 · UI 작업 인계 확인
+- 원인: 전달된 UI 인계 내용과 기존 CODEX_HANDOFF.md의 기준 시점이 달라 현재 커밋·변경·열린 항목 대조가 필요하다.
+- 해결: temp.md·Git 이력·관련 소스를 읽어 현재 상태를 확인하고 test.md에 근거를 남긴다. 이번 범위는 인계 확인이며 기능 구현·push·배포는 진행하지 않는다.
+- 검증 기준: HEAD·origin/main 및 서버 main 대조, 기존 변경 보존, FMAP·PAW 실기기 검증과 HUD 등 결정 대기 항목을 완료로 처리하지 않음.
