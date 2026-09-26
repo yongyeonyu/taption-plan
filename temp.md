@@ -137,33 +137,29 @@
 
 작업 전 관련 코드 정독 완료: 메뉴(`MapHomeView.body`/`header`/`menu`/`sidebarContent`/`mapSideRail`), 화랑이(`MapHomeStickmanAction.catAction(seed:)`, `displayedStickmanAction`), 발자국(`pawprintWaypoints`/`fogOfWarOverlay`), 판타지 지도 경로(`MapHomeVectorMap.installRouteLayers`/`setShape`, `historicalRoutes`), 장소 아이콘(`MapHomeLocationDestination.rpgSystemImage`/`tint`, `MapHomeLocationThumbnail`), HUD(`questHUD`/`questStats`/`questChip`).
 
-### MENU0926L01 · 메뉴 위치·해제 복구
-- 증상: 메인 메뉴가 오른쪽에 나오고 사라지지 않음.
-- 원인: `menu`(좌측 드로어)는 이미 왼쪽 상단 햄버거(`header` 버튼, `isMenuOpen`)로 열림. 그러나 별도의 **`mapSideRail`**(우측 `.topTrailing`, 항상 표시되는 아이콘 레일)이 오른쪽에 상주 → "오른쪽 메뉴가 안 사라짐"의 정체.
-- 해결: `mapSideRail`(우측 상시 아이콘 레일)을 body에서 제거. 좌측 상단 햄버거→`menu` 드로어 방식만 남긴다. 레일의 진입점(요약/위치/분류/표시/메모/설정)은 `sidebarContent`에 이미 있으므로 기능 손실 없음.
+### MENU0926L01 · 메뉴 위치·해제 복구 [완료]
+- 우측 상시 사이드레일(mapSideRail) 삭제, 상단 햄버거 삭제 → 좌하단 플로팅 독의 설정 아이콘으로 메뉴 드로어 오픈. 커밋 740e168·542b297.
 
-### MENU0926S02 · 메뉴 UI/UX 단순화
-- `sidebarContent` 섹션(위치/분류/표시/메모/설정 등)을 심플하게 정리. 요청 범위=메뉴 리스트 간결화. 세부 항목 정리 기준은 인터뷰로 확정.
+### PAW0926T05 · 재생 발자국 [코드완료·실기기검증대기]
+- 근본원인: pawprintWaypoints가 timelineRouteOverlays.dropLast()만 사용 → 1-leg 날/재생중 leg 발자국 누락. 전체 overlay로 변경(652b54c). 실기기: 이동기록 있는 날 재생 시 발자국 확인.
+
+### FMAP0926R06 · 판타지 지도 이동 경로 [진단중]
+- 벡터맵은 historical(dropLast)+active(last) 라인 레이어로 그림. 1-leg 날은 active로 표시됨. "안 보임"이 데이터(projection 비어있음)인지 렌더인지 실기기 repro 필요 — blind patch 금지(규칙). PAW 수정과 동일 뿌리(overlays 공급) 가능.
+
+### PICO0926I07 · 장소 아이콘 게임화(배경제거) [완료]
+- MapHomePlacePin에서 흰 카드 배경 제거, rpgSystemImage+tint 심볼만(흰 글로우+옅은 그림자). 커밋 652b54c.
+
+### MENU0926S02 · 메뉴 UI/UX 단순화 [대기]
+- sidebarContent 정리. 착수 전 단순화 수준 확정 필요.
+
+### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합 [대기]
+- questHUD에 하루요약 통합. 방식(탭 확장/인라인) 확정 필요.
 
 ### GAME0926R03 · RPG 게임 요소 (방향 재검토)
 - 2026-09-26: "탐험지 개척(Homestead)" 육각 격자 시안을 구현했으나 대표님이 "육각형 이상하다"며 **원복 지시** → 관련 코드 전량 제거(엔진/store/렌더/HUD코인/개간/테스트, pbxproj·temp 되돌림). 커밋 728c94b·b7d8963·8686101·bd92ce7 무효화.
 - 남은 방향: 육각 격자 방식은 폐기. RPG 요소는 다른 형태로 재설계 필요(스트릭/레벨/업적 등). 재개 시 인터뷰로 방향 확정.
 
-### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작
+### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작 [대기]
 - 메뉴에 표시되는 화랑이가 대분류별로 각기 다른 동작으로 모두 움직이도록. `catAction(seed:)`가 이미 대분류별 다양 동작 매핑 보유 → 메뉴에 대분류 목록별 화랑이 미리보기를 각 catAction 애니메이션으로 렌더.
-
-### PAW0926T05 · 재생 발자국 트레일 복구
-- 증상: 재생 시 발자국이 안 나옴.
-- 원인 후보: `pawprintWaypoints`가 `vectorHistoricalRoutes`에서 파생. 재생 중 historical route가 비거나, 발자국 마커가 벡터맵에 emit 안 됨. 근본 진단 필요(2회 이상 실패 시 표면패치 금지).
-
-### FMAP0926R06 · 판타지 지도 이동 경로 표시
-- 증상: 판타지(벡터)맵에서 이동 경로 안 보임.
-- 원인 후보: `MapHomeVectorMap.installRouteLayers`의 historical/active 라인 레이어에 `setShape` route feed가 비거나 스타일 미적용. PAW0926T05와 동일 뿌리(historicalRoutes 공급) 가능.
-
-### PICO0926I07 · 장소 아이콘 게임화(배경 제거)
-- 집·회사·학교·취미·식당 등 지정 장소 아이콘을 판타지 스타일로, **배경 없이**. `rpgSystemImage`/`tint`는 이미 RPG 테마. `MapHomeLocationThumbnail`·지도 마커의 `RoundedRectangle` 배경 제거하고 심볼만.
-
-### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합
-- 하루 요약(`isDaySummaryPresented` 시트)을 중앙 상단 `questHUD`에 합침. HUD 탭→요약 확장 또는 HUD에 요약 지표 인라인. 통합 형태는 인터뷰로 확정.
 
 - 공통 검증: 각 변경 후 시뮬레이터 빌드·UI 확인. 기존 동작은 명시 요청 외 보존(규칙 11). 앱타깃 빌드는 `-disable-sandbox -skipPackagePluginValidation`로 이 세션 검증 가능(CRS0925W01에서 확인).
