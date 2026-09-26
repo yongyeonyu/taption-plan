@@ -154,6 +154,8 @@
 - **렌더 통합 훅(확정)**: vectorMapAnnotationOverlay(SwiftUI ZStack, viewport 투영) 최하단에 hex 레이어. hex 중심을 MapHomeVectorMarker로 추가→viewport.markerPoints[id]로 화면좌표 획득(기존 투영 재사용, 신규 MapLibre 코드 없음). 성능: hex 지오메트리 캐시, 60Hz 게이트(CRS0925W01 교훈).
 - **엔진 격리(확정)**: 순수 HomesteadHexEngine(Core, 매크로 비의존)로 좌표변환·완성판정·보상계산 분리 → 이 세션 단위테스트 가능.
 - MVP: 1)집중심 hex격자+fog 렌더 2)완주판정+코인+스트릭 3)코인으로 인접 hex 개간(안개→초원) 4)자주가는장소 hex 랜드마크 자동 발견.
+- **구현 상태(2026-09-26)**: MVP 1~4 코드 완료·시뮬 빌드 SUCCEEDED. 커밋 728c94b(엔진+store+8테스트), b7d8963(hex 외곽선 렌더), 8686101(정산·HUD코인/스트릭·개간탭·장소발견). 엔진 단위테스트 8건 PASS. HUD 코인칩(⬡) 시뮬 렌더 확인.
+- **남은 검증(실기기/실데이터)**: 집 등록된 실제 사용자에서 격자·개간 탭·완주 스트릭 UX 확인(온보딩·홈 미등록 시뮬에선 격자 미표시가 정상). 파일시스템 동기 그룹 아님 → 신규 파일 pbxproj 수동등록 필요(적용 완료).
 - UI 8건 통합: fog-of-war를 hex화(PICO0926I07 정합), HUD(HUD0926M08)에 코인·스트릭 지표, 메뉴(MENU0926S02)에 개척 진입점.
 
 ### CATM0926A04 · 메인 메뉴 화랑이 대분류별 동작
