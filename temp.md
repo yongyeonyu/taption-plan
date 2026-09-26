@@ -147,8 +147,9 @@
 - 벡터맵은 historical(dropLast)+active(last) 라인 레이어로 그림. 1-leg 날은 active로 표시됨. "안 보임"이 데이터(projection 비어있음)인지 렌더인지 실기기 repro 필요 — blind patch 금지(규칙). PAW 수정과 동일 뿌리(overlays 공급) 가능.
 - 진단 계측 완료(커밋 7fddb72): makeRouteProjection→overlay 변환 지점에 `fmap_route_projection` 로그 추가(segment_count·overlay_count·overlay_coordinate_total·dropped_subway_confirmed·dropped_short·playback_running·selected_minute). 앱타깃 빌드 통과. 다음 실기기 로그로 데이터 부재 vs 렌더 문제 확정 후 근본 수정.
 
-### MENU0926S02 · 메뉴 UI/UX 단순화 [대기 — 대표님 결정 선행]
-- sidebarContent 정리. **단순화 수준·범위가 주관적 UI 결정이라 착수 보류.** 규칙11(UI 임의수정 금지)에 따라 어떤 항목을 접거나 제거·묶을지 대표님 확정 필요.
+### MENU0926S02 · 메뉴 UI/UX 단순화 [완료 — 비주얼 정리]
+- 대표님 결정: (c) 비주얼만 정리(항목 구성·동작 불변). 커밋 5fef990.
+- menuItem: 아이콘 크기 20→18·색을 미사용시 tpInk 55% 뮤트로 통일해 아이콘 열 정돈, 우측에 chevron.right 어포던스 추가, 세로 리듬 15→13·모서리 13 연속곡선. sidebarContent 헤더: 홈아이콘 48→46·타이틀 간격 정리·닫기 버튼 tpInk 톤 통일. 위치기록 상태를 dot+텍스트 pill(tpInk 4% 배경)로 정돈. 항목 7개·Pro·푸터 구성 그대로, 액션 불변(규칙11).
 
 ### HUD0926M08 · 하루 요약을 중앙 상단 이동거리 HUD에 통합 [대기 — 대표님 결정 선행]
 - questHUD에 하루요약 통합. **방식(탭 확장/인라인/시트)이 주관적 UI 결정이라 착수 보류.** 규칙11에 따라 통합 방식 대표님 확정 필요.
