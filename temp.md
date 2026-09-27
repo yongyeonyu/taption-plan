@@ -1,12 +1,5 @@
 # 남은 요청
 
-## TF0927A001 · main 정리·push 및 TestFlight 업로드
-
-- 원인: 승인된 Map UI·집 성장·백업 V4 관련 변경과 랜드마크 에셋이 아직 커밋되지 않았고, App Store 배포용 새 빌드가 필요하다.
-- 해결: 변경 및 기존 사용자 작업을 대조하고 앱/패키지 검증 후 main에 커밋·push한다. 새 TestFlight 빌드를 archive/export/upload하고 `TP Taption Plan 내부 테스트` 그룹 연결과 그룹 화면의 빌드 노출을 readback한다.
-- 검증 기준: 관련 테스트와 Release archive 성공, 원격 main이 로컬 커밋과 일치, App Store Connect 처리 상태가 제출 준비 완료이며 내부 그룹 화면에 해당 빌드가 표시된다. 미완료 백업 V4 구조와 실기기 기능은 완료로 추정하지 않는다.
-- 진행: App Store Connect 최신 빌드 157 확인 후 158을 설정했다. Core 테스트 100개 통과. 앱 전체 테스트는 13개 실패와 시뮬레이터 앱 실행 오류가 발생해 결과가 불완전하다. 원인과 범위는 `test.md`에 기록하며 이 요청은 push·TestFlight readback이 끝날 때까지 열린다.
-
 ## 실행 세션 · 2026-09-26
 
 - 승인 추가(2026-09-27): MAP0927F01 — Map Home의 드래그·핀치 반응 지연을 Taption WBS 지도 수준으로 개선한다. [코드·회귀·Debug 빌드·iPhone 11 Pro 설치 완료 / 실기기 체감 확인 대기]
