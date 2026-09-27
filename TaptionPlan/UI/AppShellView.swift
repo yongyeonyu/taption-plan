@@ -999,10 +999,28 @@ private struct PermissionOnboardingStep: Identifiable {
     var id: String { feature.rawValue }
 }
 
+struct PermissionOnboardingProgress: Equatable {
+    private(set) var index: Int
+
+    init(index: Int = 0) {
+        self.index = max(0, index)
+    }
+
+    mutating func completeRequest(_ didComplete: Bool) {
+        guard didComplete else { return }
+        index += 1
+    }
+
+    mutating func skipCurrentStep() {
+        index += 1
+    }
+}
+
 struct PermissionOnboardingSheet: View {
     @Bindable var model: AppModel
-    @State private var index = 0
+    @State private var progress = PermissionOnboardingProgress()
     @State private var isRequesting = false
+    @State private var requestError: String?
     @State private var skipped: Set<String> = []
 
     private static let steps: [PermissionOnboardingStep] = [
@@ -1034,10 +1052,12 @@ struct PermissionOnboardingSheet: View {
 
     init(model: AppModel, initialFeature: PermissionFeature? = nil) {
         self.model = model
-        _index = State(
-            initialValue: initialFeature.flatMap { feature in
-                Self.steps.firstIndex { $0.feature == feature }
-            } ?? 0
+        _progress = State(
+            initialValue: PermissionOnboardingProgress(
+                index: initialFeature.flatMap { feature in
+                    Self.steps.firstIndex { $0.feature == feature }
+                } ?? 0
+            )
         )
     }
 
@@ -1089,14 +1109,14 @@ struct PermissionOnboardingSheet: View {
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.tpInk)
-                    .disabled(isRequesting)
+                    .disabled(isRequesting || model.isRequestingPermission)
                 Button("전체 건너뛰기") { finish() }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.tpSecondary)
-                    .disabled(isRequesting)
+                    .disabled(isRequesting || model.isRequestingPermission)
                 Spacer(minLength: 4)
-                Text("\(index + 1) / \(Self.steps.count)")
+                Text("\(progress.index + 1) / \(Self.steps.count)")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -1110,7 +1130,7 @@ struct PermissionOnboardingSheet: View {
         _ step: PermissionOnboardingStep,
         offset: Int
     ) -> some View {
-        let isCurrent = offset == index
+        let isCurrent = offset == progress.index
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 9) {
                 Image(systemName: step.icon)
@@ -1145,14 +1165,21 @@ struct PermissionOnboardingSheet: View {
                     .tint(Color.tpInk)
                     Button("건너뛰기") {
                         skipped.insert(step.id)
-                        advance()
+                        requestError = nil
+                        progress.skipCurrentStep()
                     }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.tpSecondary)
                 }
-                .disabled(model.isRefreshingIntegrations)
+                .disabled(isRequesting || model.isRequestingPermission)
                 .padding(.leading, 38)
+                if let requestError {
+                    Text(requestError)
+                        .font(.taption(size: 8))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(.leading, 38)
+                }
             }
         }
         .padding(12)
@@ -1165,10 +1192,10 @@ struct PermissionOnboardingSheet: View {
                     lineWidth: 1
                 )
         )
-        .opacity(offset > index ? 0.5 : 1)
+        .opacity(offset > progress.index ? 0.5 : 1)
     }
 
-    private var isFinished: Bool { index >= Self.steps.count }
+    private var isFinished: Bool { progress.index >= Self.steps.count }
 
     private func stateText(_ step: PermissionOnboardingStep) -> String {
         if skipped.contains(step.id) { return "나중에" }
@@ -1182,19 +1209,32 @@ struct PermissionOnboardingSheet: View {
     }
 
     private func request(_ step: PermissionOnboardingStep) async {
+        guard !isRequesting else { return }
+        isRequesting = true
+        let didComplete = await requestPermission(for: step)
+        progress.completeRequest(didComplete)
+        if didComplete {
+            requestError = nil
+            // 시트가 떠 있는 동안에는 루트 경고창이 뜨지 않는다. 결과는 각 줄의
+            // 상태 문구로 보여주고 안내 문구는 지운다.
+            model.clearError()
+        } else {
+            requestError = "요청을 완료하지 못했습니다. 다시 시도해 주세요."
+        }
+        isRequesting = false
+    }
+
+    private func requestPermission(
+        for step: PermissionOnboardingStep
+    ) async -> Bool {
         switch step.feature {
         case .location: await model.enableLocationCollection()
         case .health: await model.requestHealth()
         case .calendar: await model.requestCalendar()
-        case .photos: break
         case .notifications: await model.requestNotifications()
-        case .appUsage: break
-        default: break
+        case .photos, .appUsage: false
+        default: false
         }
-        // 시트가 떠 있는 동안에는 루트 경고창이 뜨지 않는다. 결과는 각 줄의
-        // 상태 문구로 보여주고 안내 문구는 지운다.
-        model.clearError()
-        advance()
     }
 
     /// 남은 권한을 순서대로 한 번에 요청한다. 시스템 권한창은 한 번에 하나만
@@ -1203,16 +1243,21 @@ struct PermissionOnboardingSheet: View {
         guard !isRequesting else { return }
         isRequesting = true
         Task {
-            while index < Self.steps.count {
-                await request(Self.steps[index])
+            while progress.index < Self.steps.count {
+                let didComplete = await requestPermission(
+                    for: Self.steps[progress.index]
+                )
+                progress.completeRequest(didComplete)
+                if didComplete {
+                    requestError = nil
+                    model.clearError()
+                } else {
+                    requestError = "요청을 완료하지 못했습니다. 다시 시도해 주세요."
+                    break
+                }
             }
             isRequesting = false
         }
-    }
-
-    private func advance() {
-        guard index < Self.steps.count else { return }
-        index += 1
     }
 
     private func finish() {

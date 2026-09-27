@@ -75,6 +75,143 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(visible.first?.endMinute, 570)
     }
 
+    func testUnconfirmedReviewAvailabilityIgnoresFutureAndConfirmedIntervals() {
+        let day = makeDate(2026, 9, 27)
+        let now = day.addingTimeInterval(9 * 3_600 + 30 * 60)
+        let confirmed = MapHomeTimeRailSegment(
+            startMinute: 480,
+            endMinute: 540,
+            categoryID: "work",
+            title: "업무"
+        )
+        let futureGap = MapHomeTimeRailSegment(
+            startMinute: 600,
+            endMinute: 660,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let pastGap = MapHomeTimeRailSegment(
+            startMinute: 480,
+            endMinute: 600,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+
+        XCTAssertFalse(
+            MapHomeUnconfirmedReviewPolicy.hasSegments(
+                from: [confirmed], for: day, asOf: now
+            )
+        )
+        XCTAssertFalse(
+            MapHomeUnconfirmedReviewPolicy.hasSegments(
+                from: [futureGap], for: day, asOf: now
+            )
+        )
+        XCTAssertTrue(
+            MapHomeUnconfirmedReviewPolicy.hasSegments(
+                from: [pastGap], for: day, asOf: now
+            )
+        )
+        XCTAssertFalse(
+            MapHomeUnconfirmedReviewPolicy.hasSegments(
+                from: [pastGap], for: makeDate(2026, 9, 28), asOf: now
+            )
+        )
+    }
+
+    func testUnconfirmedReviewTargetShowsAndSelectsOnlyItsSegment() {
+        let day = makeDate(2026, 9, 27)
+        let now = day.addingTimeInterval(10 * 3_600 + 30 * 60)
+        let firstGap = MapHomeTimeRailSegment(
+            startMinute: 8 * 60,
+            endMinute: 9 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let selectedGap = MapHomeTimeRailSegment(
+            startMinute: 9 * 60 + 30,
+            endMinute: 11 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인",
+            sourceIDs: [UUID()]
+        )
+        let futureGap = MapHomeTimeRailSegment(
+            startMinute: 12 * 60,
+            endMinute: 13 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let confirmed = MapHomeTimeRailSegment(
+            startMinute: 9 * 60,
+            endMinute: 9 * 60 + 30,
+            categoryID: "work",
+            title: "업무"
+        )
+        let allTargets = MapHomeUnconfirmedReviewPolicy.reviewTargets(
+            from: [futureGap, confirmed, selectedGap, firstGap],
+            focusingOn: nil,
+            for: day,
+            asOf: now,
+            calendar: Calendar(identifier: .gregorian)
+        )
+        let selectedTargets = MapHomeUnconfirmedReviewPolicy.reviewTargets(
+            from: [futureGap, confirmed, selectedGap, firstGap],
+            focusingOn: selectedGap,
+            for: day,
+            asOf: now,
+            calendar: Calendar(identifier: .gregorian)
+        )
+
+        XCTAssertEqual(allTargets.map(\.startMinute), [480, 570])
+        XCTAssertEqual(allTargets.map(\.endMinute), [540, 630])
+        XCTAssertEqual(selectedTargets, [allTargets[1]])
+        XCTAssertEqual(selectedTargets.first?.sourceIDs, selectedGap.sourceIDs)
+    }
+
+    func testUnconfirmedReviewMarkersStayInRailAndSeparateNearbySegments() {
+        let segments = [
+            MapHomeTimeRailSegment(
+                startMinute: 60,
+                endMinute: 75,
+                categoryID: "unconfirmed",
+                title: "미확인"
+            ),
+            MapHomeTimeRailSegment(
+                startMinute: 76,
+                endMinute: 90,
+                categoryID: "unconfirmed",
+                title: "미확인"
+            ),
+            MapHomeTimeRailSegment(
+                startMinute: 91,
+                endMinute: 105,
+                categoryID: "unconfirmed",
+                title: "미확인"
+            )
+        ]
+        let trackHeight: CGFloat = 720
+        let centers = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: segments,
+            window: 0...1_440,
+            trackHeight: trackHeight
+        )
+        let orderedCenters = segments.compactMap { centers[$0.id] }
+
+        XCTAssertEqual(orderedCenters.count, segments.count)
+        XCTAssertTrue(orderedCenters.allSatisfy {
+            $0 >= MapHomeTimeSidebarMath.verticalInset
+                + MapHomeTimeSidebarMath.reviewMarkerHitHeight / 2
+                && $0 <= MapHomeTimeSidebarMath.verticalInset + trackHeight
+                    - MapHomeTimeSidebarMath.reviewMarkerHitHeight / 2
+        })
+        for pair in zip(orderedCenters, orderedCenters.dropFirst()) {
+            XCTAssertGreaterThanOrEqual(
+                pair.1 - pair.0,
+                MapHomeTimeSidebarMath.reviewMarkerHitHeight
+            )
+        }
+    }
+
     func testUnconfirmedReviewOffersTodayAndPreviousSevenDays() {
         let dates = MapHomeUnconfirmedReviewPolicy.recentDates(asOf: makeDate(2026, 9, 27, 15))
         XCTAssertEqual(dates.count, 8)
@@ -839,7 +976,7 @@ final class TimeScaleTests: XCTestCase {
                 from: viewportBase,
                 translation: translation,
                 trackHeight: 600,
-                verticalInset: 14,
+                verticalInset: MapHomeTimeSidebarMath.verticalInset,
                 maxMinute: 1_439,
                 sensitivity: MapHomeTimeSidebarMath.standardDragSensitivity
             )
@@ -900,7 +1037,7 @@ final class TimeScaleTests: XCTestCase {
     }
 
     func testMapHomeOverlayUsesSharedBottomMarginAndUniformControlSpacing() {
-        XCTAssertEqual(MapHomeOverlayLayoutMath.sharedBottomMargin, 76)
+        XCTAssertEqual(MapHomeOverlayLayoutMath.sharedBottomMargin, 48)
         XCTAssertEqual(MapHomeOverlayLayoutMath.controlSize, 44)
         XCTAssertEqual(MapHomeOverlayLayoutMath.controlSpacing, 9)
         XCTAssertEqual(
@@ -919,6 +1056,34 @@ final class TimeScaleTests: XCTestCase {
             MapHomeOverlayLayoutMath.railHeight(availableHeight: 460),
             460
         )
+    }
+
+    func testTimeSidebarUsesItsOwnExpandedTopAndBottomMargins() {
+        let sidebar = MapHomeOverlayLayoutMath.timeSidebarFrame(
+            viewportHeight: 844,
+            topOverlayHeight: 100
+        )
+        let mapControls = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: 844,
+            topInset: 146,
+            bottomInset: MapHomeOverlayLayoutMath.sharedBottomMargin
+        )
+        let largeScreenSidebar = MapHomeOverlayLayoutMath.timeSidebarFrame(
+            viewportHeight: 1_400,
+            topOverlayHeight: 100
+        )
+
+        XCTAssertEqual(sidebar.minY, 120)
+        XCTAssertEqual(sidebar.maxY, 812)
+        XCTAssertLessThan(sidebar.minY, mapControls.minY)
+        XCTAssertGreaterThan(sidebar.maxY, mapControls.maxY)
+        XCTAssertEqual(largeScreenSidebar.height, 1_248)
+        XCTAssertEqual(largeScreenSidebar.maxY, 1_368)
+        XCTAssertEqual(
+            MapHomeOverlayLayoutMath.timeSidebarHeight(availableHeight: 1_400),
+            1_400
+        )
+        XCTAssertEqual(MapHomeTimeSidebarMath.verticalInset, 20)
     }
 
     func testMapSearchUsesMenuEdgeAndClampsForCompactScreens() {
@@ -1046,9 +1211,13 @@ final class TimeScaleTests: XCTestCase {
             weatherRailWidth: weatherRailWidth,
             timeRailWidth: timeRailWidth
         )
+        let itemWidth = MapHomeWeatherRailLayout.itemWidth(railWidth: weatherRailWidth)
         let weatherItemRightX = originX
-            + weatherRailWidth
-            - MapHomeWeatherRailAlignmentMath.itemTrailingInset
+            + MapHomeWeatherRailLayout.itemCenterX(
+                railWidth: weatherRailWidth,
+                itemWidth: itemWidth
+            )
+            + itemWidth / 2
 
         XCTAssertEqual(
             weatherItemRightX,
@@ -1061,7 +1230,7 @@ final class TimeScaleTests: XCTestCase {
     func testSidebarSelectionHandleUsesApprovedWhiteAndDeepPinkStyle() {
         XCTAssertEqual(MapHomeTimeSidebarStyle.deepPinkHex, "#D94772")
         XCTAssertEqual(MapHomeTimeSidebarStyle.handleFontSize, 12)
-        XCTAssertEqual(MapHomeTimeSidebarStyle.handleCornerRadius, 4)
+        XCTAssertEqual(MapHomeTimeSidebarStyle.handleCornerRadius, 18)
     }
 
     func testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps() {
@@ -1376,15 +1545,6 @@ final class TimeScaleTests: XCTestCase {
                     "minute labels overlap at \(duration) minutes"
                 )
             } else {
-                if duration == MapHomeTimeSidebarMath.fullDayMinutes {
-                    let labels = MapHomeTimeSidebarMath.visibleHourLabels(
-                        window: window,
-                        durationMinutes: duration,
-                        trackHeight: trackHeight
-                    )
-                    XCTAssertEqual(labels, Array(0...24))
-                    continue
-                }
                 let labels = MapHomeTimeSidebarMath.visibleHourLabels(
                     window: window,
                     durationMinutes: duration,
@@ -1407,14 +1567,32 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
-    func testFullDayTimelineShowsEveryHourOnCompactRail() {
-        let labels = MapHomeTimeSidebarMath.visibleHourLabels(
+    func testFullDayTimelineSpacesHourLabelsOnCompactRail() {
+        let compactLabels = MapHomeTimeSidebarMath.visibleHourLabels(
             window: 0...MapHomeTimeSidebarMath.fullDayMinutes,
             durationMinutes: MapHomeTimeSidebarMath.fullDayMinutes,
             trackHeight: 192
         )
+        let tallLabels = MapHomeTimeSidebarMath.visibleHourLabels(
+            window: 0...MapHomeTimeSidebarMath.fullDayMinutes,
+            durationMinutes: MapHomeTimeSidebarMath.fullDayMinutes,
+            trackHeight: 720
+        )
 
-        XCTAssertEqual(labels, Array(0...24))
+        XCTAssertEqual(compactLabels, Array(stride(from: 0, through: 24, by: 3)))
+        XCTAssertEqual(tallLabels, Array(0...24))
+        let compactPositions = compactLabels.map {
+            MapHomeTimeSidebarMath.position(
+                minute: $0 * 60,
+                window: 0...MapHomeTimeSidebarMath.fullDayMinutes
+            ) * 192
+        }
+        XCTAssertTrue(
+            zip(compactPositions, compactPositions.dropFirst())
+                .allSatisfy {
+                    $1 - $0 >= MapHomeTimeSidebarMath.minimumRulerLabelSpacing
+                }
+        )
     }
 
     func testSidebarSelectionTimeBlockFitsTheExistingRailWidth() {
@@ -1999,6 +2177,39 @@ final class TimeScaleTests: XCTestCase {
             isFallback: false
         )
         XCTAssertFalse(MapHomeWeatherDisplayPolicy.isComplete(invalidAirQuality))
+    }
+
+    func testWeatherTimelineDimsForecastsAndScalesWidgetsToEightyPercent() {
+        let observedAt = makeDate(2026, 8, 23, 11)
+        let current = WeatherContext(
+            observedAt: observedAt,
+            isForecast: false,
+            condition: "맑음",
+            symbolName: "sun.max.fill",
+            temperatureCelsius: 26
+        )
+        let future = WeatherContext(
+            observedAt: observedAt.addingTimeInterval(3_600),
+            isForecast: true,
+            condition: "구름",
+            symbolName: "cloud.fill",
+            temperatureCelsius: 24
+        )
+
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: current), 1)
+        XCTAssertEqual(
+            MapHomeWeatherDisplayPolicy.opacity(for: future),
+            MapHomeWeatherDisplayPolicy.forecastOpacity
+        )
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.forecastOpacity, 0.58)
+        XCTAssertEqual(MapHomeWeatherRailLayout.widgetScale, 0.8)
+        XCTAssertEqual(
+            MapHomeWeatherRailLayout.itemWidth(railWidth: 62),
+            48,
+            accuracy: 0.001
+        )
+        XCTAssertEqual(MapHomeWeatherRailLayout.itemHeight, 22.4, accuracy: 0.001)
+        XCTAssertEqual(MapHomeWeatherRailLayout.scaled(13), 10.4, accuracy: 0.001)
     }
 
     func testMapHomeWeatherKeepsThePreviousValueUntilTheNextObservation() throws {
@@ -2867,18 +3078,18 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(
-                y: 14,
+                y: MapHomeTimeSidebarMath.verticalInset,
                 trackHeight: 300,
-                verticalInset: 14,
+                verticalInset: MapHomeTimeSidebarMath.verticalInset,
                 maxMinute: 1_439
             ),
             0
         )
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(
-                y: 164,
+                y: 170,
                 trackHeight: 300,
-                verticalInset: 14,
+                verticalInset: MapHomeTimeSidebarMath.verticalInset,
                 maxMinute: 1_439
             ),
             720
@@ -2887,7 +3098,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeTimeSidebarMath.minuteByLocation(
                 y: 400,
                 trackHeight: 300,
-                verticalInset: 14,
+                verticalInset: MapHomeTimeSidebarMath.verticalInset,
                 maxMinute: 618
             ),
             618
@@ -3660,16 +3871,16 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(mapView.camera.pitch, pitch, accuracy: 0.000_001)
     }
 
-    func testMapDisplayStyleNormalizesPersistedAndMissingValuesToWBSApple() throws {
+    func testMapDisplayStylePreservesPersistedSelectionAndDefaultsToRPGMap() throws {
         var settings = AppFeatureSettings.defaults
         settings.mapDisplayStyle = .hybrid
-        XCTAssertEqual(settings.mapDisplayStyle, .standard)
+        XCTAssertEqual(settings.mapDisplayStyle, .hybrid)
         XCTAssertEqual(
             try JSONDecoder().decode(
                 AppFeatureSettings.self,
                 from: JSONEncoder().encode(settings)
             ).mapDisplayStyle,
-            .standard
+            .hybrid
         )
 
         var object = try XCTUnwrap(
@@ -3683,17 +3894,17 @@ final class TimeScaleTests: XCTestCase {
                 AppFeatureSettings.self,
                 from: JSONSerialization.data(withJSONObject: object)
             ).mapDisplayStyle,
-            .standard
+            .mapLibreRPG
         )
 
         settings.mapDisplayStyle = .mapLibreCasual
-        XCTAssertEqual(settings.mapDisplayStyle, .standard)
+        XCTAssertEqual(settings.mapDisplayStyle, .mapLibreCasual)
         XCTAssertEqual(
             try JSONDecoder().decode(
                 AppFeatureSettings.self,
                 from: JSONEncoder().encode(settings)
             ).mapDisplayStyle,
-            .standard
+            .mapLibreCasual
         )
     }
 
@@ -3710,6 +3921,7 @@ final class TimeScaleTests: XCTestCase {
                 .mapLibreContrast,
                 .mapLibrePastel,
                 .mapLibreCasual,
+                .mapLibreRPG,
             ]
         )
         for style in MapDisplayStyle.allCases {
@@ -4416,7 +4628,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
         XCTAssertEqual(
             MapHomeVectorStyle.allCases,
-            [.night, .light, .contrast, .pastel, .casual]
+            [.night, .light, .contrast, .pastel, .casual, .rpg]
         )
 
         let baseLayerIDs = [
@@ -4437,8 +4649,10 @@ final class TimeScaleTests: XCTestCase {
             let source = try XCTUnwrap(sources["openmaptiles"] as? [String: Any])
             let layers = try XCTUnwrap(object["layers"] as? [[String: Any]])
             let layerIDs = layers.compactMap { $0["id"] as? String }
-            let expectedLayerIDs = style == .casual
-                ? [
+            let expectedLayerIDs: [String]
+            switch style {
+            case .casual:
+                expectedLayerIDs = [
                     "background",
                     "water",
                     "landuse",
@@ -4456,7 +4670,28 @@ final class TimeScaleTests: XCTestCase {
                     "casual-water-label",
                     "casual-park-label",
                 ]
-                : baseLayerIDs
+            case .rpg:
+                expectedLayerIDs = [
+                    "background",
+                    "water",
+                    "landuse",
+                    "rpg-landcover",
+                    "rpg-park",
+                    "rpg-coastline",
+                    "building",
+                    "rpg-building-outline",
+                    "road-casing",
+                    "road",
+                    "rpg-waterway",
+                    "rpg-place-marker",
+                    "rpg-poi-marker",
+                    "rpg-place-label",
+                    "rpg-road-label",
+                    "rpg-water-label",
+                ]
+            default:
+                expectedLayerIDs = baseLayerIDs
+            }
 
             XCTAssertEqual(object["version"] as? Int, 8, style.rawValue)
             XCTAssertEqual(
@@ -4476,7 +4711,7 @@ final class TimeScaleTests: XCTestCase {
             XCTAssertEqual(layerIDs, expectedLayerIDs, style.rawValue)
             XCTAssertEqual(
                 layers.contains { $0["type"] as? String == "symbol" },
-                style == .casual,
+                style == .casual || style == .rpg,
                 style.rawValue
             )
 
@@ -4538,6 +4773,7 @@ final class TimeScaleTests: XCTestCase {
             MapDisplayStyle.mapLibreCasual.mapHomeVectorStyle,
             .casual
         )
+        XCTAssertEqual(MapDisplayStyle.mapLibreRPG.mapHomeVectorStyle, .rpg)
 
         for style in [
             MapDisplayStyle.standard,
@@ -4549,7 +4785,7 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
-    func testLegacyMapStylesRemainDecodableButRuntimeIsWBSApple() {
+    func testMapStylesRemainDecodableAndRuntimePreservesSelection() {
         XCTAssertEqual(
             MapDisplayStyle.appleStyles,
             [.standard, .simplified, .hybrid, .imagery]
@@ -4557,6 +4793,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapDisplayStyle.openFreeMapStyles,
             [
+                .mapLibreRPG,
                 .mapLibreCasual,
                 .mapLibrePastel,
                 .mapLibreLight,
@@ -4568,7 +4805,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapDisplayStyle.mapLibreCasual.provider, .openFreeMap)
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .openFreeMap),
-            .standard
+            .mapLibreRPG
         )
         XCTAssertEqual(
             MapDisplayStyle.defaultStyle(for: .apple),
@@ -4576,7 +4813,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(MapDisplayStyle.standard.runtimeStyle, .standard)
         for style in MapDisplayStyle.allCases {
-            XCTAssertEqual(style.runtimeStyle, .standard)
+            XCTAssertEqual(style.runtimeStyle, style)
         }
     }
 

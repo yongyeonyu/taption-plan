@@ -64,6 +64,11 @@ private final class SensorStreamProbe: @unchecked Sendable {
     }
 }
 
+@MainActor
+private final class SensorReadingBuffer {
+    var values: [SensorReading] = []
+}
+
 private final class SensorAppendProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var _attempts = 0
@@ -559,6 +564,100 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testForegroundLiveLocationPolicyRequiresActiveEnabledGrantedCollection() {
+        XCTAssertTrue(ForegroundLiveLocationPolicy.shouldTrack(
+            sceneIsActive: true,
+            locationCollectionEnabled: true,
+            hasLocationPermission: true
+        ))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.shouldTrack(
+            sceneIsActive: false,
+            locationCollectionEnabled: true,
+            hasLocationPermission: true
+        ))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.shouldTrack(
+            sceneIsActive: true,
+            locationCollectionEnabled: false,
+            hasLocationPermission: true
+        ))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.shouldTrack(
+            sceneIsActive: true,
+            locationCollectionEnabled: true,
+            hasLocationPermission: false
+        ))
+
+        let timestamp = Date.now
+        XCTAssertTrue(ForegroundLiveLocationPolicy.isNewFix(
+            timestamp,
+            after: nil
+        ))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.isNewFix(
+            timestamp,
+            after: timestamp
+        ))
+    }
+
+    @MainActor
+    func testForegroundLiveLocationEmitsNewFixesInsideNormalSamplingInterval() async {
+        let collector = AppleSensorCollector()
+        collector.setForegroundLiveLocationTrackingEnabled(true)
+        var configuration = SensorCollectionConfiguration.standard
+        configuration.minimumEmissionInterval = 300
+        let stream = collector.readings(configuration: configuration)
+        let received = SensorReadingBuffer()
+        let consumer = Task { @MainActor in
+            for await reading in stream {
+                received.values.append(reading)
+            }
+        }
+        defer {
+            consumer.cancel()
+            collector.stop()
+        }
+
+        func sendFix(latitude: Double, timestamp: Date) {
+            collector.locationManager(
+                CLLocationManager(),
+                didUpdateLocations: [CLLocation(
+                    coordinate: CLLocationCoordinate2D(
+                        latitude: latitude,
+                        longitude: 126.8
+                    ),
+                    altitude: 0,
+                    horizontalAccuracy: 5,
+                    verticalAccuracy: 5,
+                    course: -1,
+                    speed: -1,
+                    timestamp: timestamp
+                )]
+            )
+        }
+
+        let firstTimestamp = Date.now
+        sendFix(latitude: 37.5, timestamp: firstTimestamp)
+        for _ in 0..<20 where received.values.isEmpty {
+            await Task.yield()
+        }
+
+        try? await Task.sleep(for: .milliseconds(550))
+        sendFix(latitude: 37.5001, timestamp: .now)
+        for _ in 0..<20 where received.values.filter({
+            $0.point?.latitude == 37.5001
+        }).isEmpty {
+            await Task.yield()
+        }
+
+        let fixes = received.values.filter {
+            $0.point?.latitude == 37.5 || $0.point?.latitude == 37.5001
+        }
+        XCTAssertEqual(
+            fixes.compactMap { $0.point?.latitude },
+            [37.5, 37.5001]
+        )
+        XCTAssertEqual(fixes.first?.timestamp, firstTimestamp)
+    }
+
+    @MainActor
     func testCollectorOldStreamTerminationDoesNotStopReplacement() async {
         let collector = AppleSensorCollector()
         let oldStream = collector.readings(configuration: .standard)
@@ -627,6 +726,47 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(appendProbe.attempts, 2)
         let restored = try await archive.allReadings()
         XCTAssertEqual(restored.map(\.id), [reading.id])
+    }
+
+    @MainActor
+    func testForegroundLiveLocationPersistsEachRoutePointWithoutBatchDelay() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sensor-live-location-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let stream = SensorStreamProbe()
+        let service = AppleSensorDataService(
+            archive: archive,
+            streamFactory: { _ in stream.makeStream() }
+        )
+        service.setForegroundLiveLocationTrackingEnabled(true)
+        service.startCollection()
+
+        let first = makeReading(Date(timeIntervalSince1970: 1_820_000_000))
+        stream.yield(first)
+        let firstPersisted = await service.waitForPersistedReading(
+            after: 0,
+            timeout: 1
+        )
+        XCTAssertTrue(firstPersisted)
+
+        let persistedCount = service.persistenceToken()
+        let second = makeReading(
+            first.timestamp.addingTimeInterval(1),
+            sequence: 2
+        )
+        stream.yield(second)
+        let secondPersisted = await service.waitForPersistedReading(
+            after: persistedCount,
+            timeout: 1
+        )
+        XCTAssertTrue(secondPersisted)
+        await service.stopCollectionAndWait()
+
+        let archived = try await archive.allReadings()
+        XCTAssertEqual(archived.map(\.id), [first.id, second.id])
     }
 
     @MainActor

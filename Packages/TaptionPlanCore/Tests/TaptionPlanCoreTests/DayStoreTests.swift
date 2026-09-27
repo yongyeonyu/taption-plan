@@ -1,9 +1,48 @@
 import Foundation
 import CSQLite
+import Darwin
 import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testExclusiveFileAccessIsNonblockingAndReleasesOnThrow() async throws {
+        struct IntentionalFailure: Error {}
+
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let lockURL = url.appendingPathExtension("lock")
+        let store = try TaptionPlanDayStore(url: url)
+        let descriptor = Darwin.open(
+            lockURL.path,
+            O_CREAT | O_RDWR,
+            S_IRUSR | S_IWUSR
+        )
+        XCTAssertGreaterThanOrEqual(descriptor, 0)
+        defer { Darwin.close(descriptor) }
+        XCTAssertEqual(flock(descriptor, LOCK_EX | LOCK_NB), 0)
+
+        do {
+            _ = try await store.withExclusiveFileAccess(at: lockURL) { _ in true }
+            XCTFail("Contended file locks must fail without suspending")
+        } catch let error as TaptionPlanDayStoreError {
+            XCTAssertEqual(error, .exclusiveFileLockBusy)
+        }
+
+        XCTAssertEqual(flock(descriptor, LOCK_UN), 0)
+        do {
+            _ = try await store.withExclusiveFileAccess(at: lockURL) { _ in
+                throw IntentionalFailure()
+            }
+            XCTFail("The fixture operation should throw")
+        } catch is IntentionalFailure {}
+
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 27)
+        let snapshots = try await store.withExclusiveFileAccess(at: lockURL) {
+            try $0.snapshots(day: day)
+        }
+        XCTAssertTrue(snapshots.isEmpty)
+    }
+
     func testCancellationDuringSnapshotTransactionRollsBackAndAllowsRetry() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -1118,7 +1157,7 @@ final class DayStoreTests: XCTestCase {
     }
 
     private func removeDatabase(at url: URL) {
-        for suffix in ["", "-wal", "-shm"] {
+        for suffix in ["", "-wal", "-shm", ".lock"] {
             try? FileManager.default.removeItem(atPath: url.path + suffix)
         }
     }

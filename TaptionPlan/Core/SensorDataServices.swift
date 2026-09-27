@@ -1900,6 +1900,7 @@ final class AppleSensorDataService {
     private var collectionGeneration = 0
     private var isCollectionStreamLive = false
     private var isDataDeletionActive = false
+    private var isForegroundLiveLocationTrackingEnabled = false
     private var persistedReadingCount = 0
     private var lastPersistedReadingAt: Date?
     private var pendingReadings: [SensorReading] = []
@@ -1982,6 +1983,12 @@ final class AppleSensorDataService {
         collector.requestImmediateSample()
     }
 
+    func setForegroundLiveLocationTrackingEnabled(_ enabled: Bool) {
+        guard isForegroundLiveLocationTrackingEnabled != enabled else { return }
+        isForegroundLiveLocationTrackingEnabled = enabled
+        collector.setForegroundLiveLocationTrackingEnabled(enabled)
+    }
+
     func startCollection(
         configuration: SensorCollectionConfiguration = .standard
     ) {
@@ -1995,6 +2002,8 @@ final class AppleSensorDataService {
            activeConfiguration == configuration {
             return
         }
+        let resumeForegroundLocationTracking =
+            isForegroundLiveLocationTrackingEnabled
         let previousCollectionTask = collectionTask
         stopCollection()
         let previousFlushTask = trailingFlushTask
@@ -2013,6 +2022,9 @@ final class AppleSensorDataService {
                     configuration.allowsBackgroundLocation
                 ),
             ]
+        )
+        setForegroundLiveLocationTrackingEnabled(
+            resumeForegroundLocationTracking
         )
         let stream = streamFactory?(configuration)
             ?? collector.readings(configuration: configuration)
@@ -2078,6 +2090,8 @@ final class AppleSensorDataService {
     }
 
     func stopCollection() {
+        isForegroundLiveLocationTrackingEnabled = false
+        collector.setForegroundLiveLocationTrackingEnabled(false)
         let generation = collectionGeneration
         let activeTask = collectionTask
         let activeFlushTask = pendingFlushTask
@@ -2136,6 +2150,8 @@ final class AppleSensorDataService {
         guard inFlightReadings.isEmpty else { return true }
         if lastFlushedCollectionGeneration != generation
             || pendingReadings.count >= Self.persistenceBatchSize
+            || (isForegroundLiveLocationTrackingEnabled
+                && reading.point != nil)
             || reading.trackingSessionEnded == true {
             return await flushPendingReadings(generation: generation)
         }
@@ -2170,6 +2186,8 @@ final class AppleSensorDataService {
               collectionGeneration == generation,
               !pendingReadings.isEmpty else { return saved }
         if pendingReadings.count >= Self.persistenceBatchSize
+            || (isForegroundLiveLocationTrackingEnabled
+                && pendingReadings.contains(where: { $0.point != nil }))
             || pendingReadings.contains(where: { $0.trackingSessionEnded == true }) {
             return await flushPendingReadings(generation: generation)
         }

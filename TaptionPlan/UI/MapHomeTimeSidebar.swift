@@ -11,6 +11,12 @@ private func mapHomeWeatherSymbolColor(
 }
 
 enum MapHomeWeatherDisplayPolicy {
+    static let forecastOpacity = 0.58
+
+    static func opacity(for context: WeatherContext) -> Double {
+        context.isForecast == true ? forecastOpacity : 1
+    }
+
     static func isComplete(_ context: WeatherContext) -> Bool {
         guard context.fetchedAt != nil,
               context.isStale != true,
@@ -105,6 +111,20 @@ enum MapHomeTimeSidebarStyle {
 
 enum MapHomeWeatherRailLayout {
     static let minimumItemSpacing: CGFloat = 32
+    static let widgetScale: CGFloat = 0.8
+    static let itemHeight: CGFloat = 28 * widgetScale
+
+    static func scaled(_ value: CGFloat) -> CGFloat {
+        value * widgetScale
+    }
+
+    static func itemWidth(railWidth: CGFloat) -> CGFloat {
+        max(0, railWidth - 2) * widgetScale
+    }
+
+    static func itemCenterX(railWidth: CGFloat, itemWidth: CGFloat) -> CGFloat {
+        railWidth - MapHomeWeatherRailAlignmentMath.itemTrailingInset - itemWidth / 2
+    }
 
     static func visibleIndices(
         yPositions: [CGFloat],
@@ -409,6 +429,40 @@ enum MapHomeUnconfirmedReviewPolicy {
                     ? $0.endMinute < $1.endMinute
                     : $0.startMinute < $1.startMinute
             }
+    }
+
+    static func reviewTargets(
+        from segments: [MapHomeTimeRailSegment],
+        focusingOn focusedSegment: MapHomeTimeRailSegment?,
+        for date: Date,
+        asOf now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeTimeRailSegment] {
+        let candidates = focusedSegment.map { [$0] } ?? segments
+        return Self.segments(
+            from: candidates,
+            for: date,
+            asOf: now,
+            calendar: calendar
+        )
+    }
+
+    static func hasSegments(
+        from segments: [MapHomeTimeRailSegment],
+        for date: Date,
+        asOf now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Bool {
+        let dayStart = calendar.startOfDay(for: date)
+        let today = calendar.startOfDay(for: now)
+        guard dayStart <= today else { return false }
+        let latestMinute = dayStart == today
+            ? min(1_440, max(0, Int(now.timeIntervalSince(dayStart) / 60)))
+            : 1_440
+        return segments.contains {
+            $0.categoryID == "unconfirmed"
+                && $0.startMinute < min($0.endMinute, latestMinute)
+        }
     }
 
     static func midpointMinute(for segment: MapHomeTimeRailSegment) -> Int {
@@ -1010,7 +1064,7 @@ struct MapHomeTimeSidebar: View {
     var onViewportChanged: ((Int, Int) -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
-    var onUnconfirmedReview: (() -> Void)?
+    var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
 
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
@@ -1029,7 +1083,7 @@ struct MapHomeTimeSidebar: View {
     private let trailingInteractionWidth: CGFloat
     // Keep the numeric rail visibly separated from both the map header and
     // the bottom ad boundary while preserving the same minute-to-pixel scale.
-    private let verticalInset: CGFloat = 14
+    private let verticalInset = MapHomeTimeSidebarMath.verticalInset
     private let activeRailWidth = MapHomeTimeSidebarMath.activeRailWidth
     // Reserve the leading tick length inside the numeric gutter so labels do
     // not sit on top of ruler marks at the tighter zoom steps.
@@ -1061,7 +1115,7 @@ struct MapHomeTimeSidebar: View {
         onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
-        onUnconfirmedReview: (() -> Void)? = nil
+        onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
@@ -1098,6 +1152,19 @@ struct MapHomeTimeSidebar: View {
                 centerMinute: minute
             )
             let visibleSegments = railSnapshot.visibleSegments(in: visibleWindow)
+            let reviewableVisibleSegments =
+                MapHomeUnconfirmedReviewPolicy.reviewTargets(
+                    from: visibleSegments,
+                    focusingOn: nil,
+                    for: date
+                )
+            let reviewMarkerCenters =
+                MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+                    segments: reviewableVisibleSegments,
+                    window: visibleWindow,
+                    trackHeight: trackHeight,
+                    verticalInset: verticalInset
+                )
             let selectedY = isViewportInteraction
                 ? verticalInset + trackHeight / 2
                 : verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
@@ -1378,23 +1445,45 @@ struct MapHomeTimeSidebar: View {
                         .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
                 }
 
-                Button {
-                    onUnconfirmedReview?()
-                } label: {
-                    Image(systemName: "questionmark")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpInk)
-                        .frame(width: 26, height: 26)
-                        .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
-                        .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                ForEach(reviewableVisibleSegments) { segment in
+                    let start = max(
+                        segment.startMinute,
+                        visibleWindow.lowerBound
+                    )
+                    let end = min(segment.endMinute, visibleWindow.upperBound)
+                    if start < end {
+                        Button {
+                            onUnconfirmedReview?(segment)
+                        } label: {
+                            Image(systemName: "questionmark")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.tpInk)
+                                .frame(width: 26, height: 26)
+                                .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
+                                .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
+                                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                                .frame(
+                                    width: MapHomeTimeSidebarMath.reviewMarkerHitHeight,
+                                    height: MapHomeTimeSidebarMath.reviewMarkerHitHeight
+                                )
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(
+                            "미확인 구간 \(timeLabel(for: start))–\(timeLabel(for: end)) 입력"
+                        )
+                        .position(
+                            x: railOriginX - 16,
+                            y: reviewMarkerCenters[segment.id]
+                                ?? verticalInset + trackHeight
+                                    * MapHomeTimeSidebarMath.position(
+                                        minute: (start + end) / 2,
+                                        window: visibleWindow
+                                    )
+                        )
+                        .zIndex(4)
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("미확인 활동 확인")
-                .position(x: railOriginX - 16, y: 48)
-                .zIndex(4)
 
             }
             .frame(
@@ -1905,6 +1994,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     let date: Date
     let segments: [MapHomeTimeRailSegment]
+    let focusedSegment: MapHomeTimeRailSegment?
     let recentDates: [Date]
     let language: MapHomeLanguage
     let onDateSelect: (Date) -> Void
@@ -1920,35 +2010,41 @@ struct MapHomeUnconfirmedReviewSheet: View {
     }
 
     private var unconfirmedSegments: [MapHomeTimeRailSegment] {
-        MapHomeUnconfirmedReviewPolicy.segments(from: segments, for: date)
+        MapHomeUnconfirmedReviewPolicy.reviewTargets(
+            from: segments,
+            focusingOn: focusedSegment,
+            for: date
+        )
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(recentDates, id: \.self) { day in
-                            let selected = Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: date)
-                            Button {
-                                onDateSelect(day)
-                            } label: {
-                                Text(day.formatted(.dateTime.month().day()))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(selected ? Color.white : Color.tpInk)
-                                    .padding(.horizontal, 12)
-                                    .frame(minHeight: 34)
-                                    .background(
-                                        selected ? Color.tpAccent : Color.tpSurface,
-                                        in: Capsule()
-                                    )
+                if !recentDates.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(recentDates, id: \.self) { day in
+                                let selected = Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: date)
+                                Button {
+                                    onDateSelect(day)
+                                } label: {
+                                    Text(day.formatted(.dateTime.month().day()))
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(selected ? Color.white : Color.tpInk)
+                                        .padding(.horizontal, 12)
+                                        .frame(minHeight: 34)
+                                        .background(
+                                            selected ? Color.tpAccent : Color.tpSurface,
+                                            in: Capsule()
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(savingSegmentID != nil)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(savingSegmentID != nil)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
                 }
                 if !unconfirmedSegments.isEmpty {
                     Text(language.text(
@@ -2008,7 +2104,11 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                                 saveFailedSegmentID = nil
                                                 Task { @MainActor in
                                                     let saved = await onQuickConfirm(segment, category)
-                                                    if !saved { saveFailedSegmentID = segment.id }
+                                                    if !saved {
+                                                        saveFailedSegmentID = segment.id
+                                                    } else if focusedSegment != nil {
+                                                        dismiss()
+                                                    }
                                                     savingSegmentID = nil
                                                 }
                                             } label: {
@@ -2073,7 +2173,7 @@ struct MapHomeWeatherSidebar: View {
     let visibleDurationMinutes: Int
 
     private let railWidth: CGFloat = 62
-    private let verticalInset: CGFloat = 14
+    private let verticalInset = MapHomeTimeSidebarMath.verticalInset
 
     private struct Entry: Identifiable {
         let context: WeatherContext
@@ -2129,7 +2229,9 @@ struct MapHomeWeatherSidebar: View {
                     let endMinute = min(entry.endMinute, window.upperBound)
                     let y = yPositions[index]
                     if startMinute < endMinute, visibleIndices.contains(index) {
-                        let itemWidth = railWidth - 2
+                        let itemWidth = MapHomeWeatherRailLayout.itemWidth(
+                            railWidth: railWidth
+                        )
                         let isSelected = index == selectedIndex
                         let isCurrent = index == currentIndex
                         let entryMinute = min(
@@ -2137,21 +2239,31 @@ struct MapHomeWeatherSidebar: View {
                             MapHomeTimeSidebarMath.fullDayMinutes
                         )
 
-                        HStack(spacing: 4) {
+                        HStack(spacing: MapHomeWeatherRailLayout.scaled(4)) {
                             Image(systemName: entry.context.symbolName)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(
+                                    size: MapHomeWeatherRailLayout.scaled(13),
+                                    weight: .semibold
+                                ))
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(
                                     mapHomeWeatherSymbolColor(entry.context, component: .primary),
                                     mapHomeWeatherSymbolColor(entry.context, component: .secondary)
                                 )
                             Text("\(Int(entry.context.temperatureCelsius.rounded()))°")
-                                .font(.system(size: 10, weight: isSelected ? .bold : .semibold, design: .rounded))
+                                .font(.system(
+                                    size: MapHomeWeatherRailLayout.scaled(10),
+                                    weight: isSelected ? .bold : .semibold,
+                                    design: .rounded
+                                ))
                                 .monospacedDigit()
                                 .foregroundStyle(isSelected || isCurrent ? Color.tpAccent : Color.tpInk)
                         }
-                        .padding(.horizontal, 8)
-                        .frame(width: itemWidth, height: 28)
+                        .padding(.horizontal, MapHomeWeatherRailLayout.scaled(8))
+                        .frame(
+                            width: itemWidth,
+                            height: MapHomeWeatherRailLayout.itemHeight
+                        )
                         .background(
                             Color.tpSurface.opacity(0.96),
                             in: Capsule()
@@ -2160,11 +2272,24 @@ struct MapHomeWeatherSidebar: View {
                             Capsule()
                                 .stroke(
                                     isSelected ? Color.tpPastelRose : Color.tpLine.opacity(0.8),
-                                    lineWidth: isSelected ? 1.2 : 0.8
+                                    lineWidth: MapHomeWeatherRailLayout.scaled(
+                                        isSelected ? 1.2 : 0.8
+                                    )
                                 )
                         }
-                        .shadow(color: .black.opacity(0.10), radius: 3, y: 1)
-                        .position(x: railWidth / 2, y: y)
+                        .shadow(
+                            color: .black.opacity(0.10),
+                            radius: MapHomeWeatherRailLayout.scaled(3),
+                            y: MapHomeWeatherRailLayout.scaled(1)
+                        )
+                        .opacity(MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
+                        .position(
+                            x: MapHomeWeatherRailLayout.itemCenterX(
+                                railWidth: railWidth,
+                                itemWidth: itemWidth
+                            ),
+                            y: y
+                        )
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
@@ -2177,7 +2302,15 @@ struct MapHomeWeatherSidebar: View {
                         .accessibilityValue(
                             isSelected
                                 ? language.text("선택된 시간", "Selected time")
-                                : language.text("예보 시간 구간", "Forecast interval")
+                                : entry.context.isForecast == true
+                                    ? language.text(
+                                        "미래 예보 · 비활성",
+                                        "Future forecast · inactive"
+                                    )
+                                    : language.text(
+                                        "관측된 날씨 · 활성",
+                                        "Observed weather · active"
+                                    )
                         )
                     }
                 }
@@ -2221,14 +2354,16 @@ struct MapHomeWeatherSidebar: View {
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
+    static let verticalInset: CGFloat = 20
+    static let reviewMarkerHitHeight: CGFloat = 44
     static let standardDragSensitivity: CGFloat = 1.6
     static let precisionDragSensitivity: CGFloat = 0.25
     static let edgeScrollPointsPerSecond: CGFloat = 192
     static let rulerNumericColumnWidth: CGFloat = 32
     static let rulerLabelTrailingInset: CGFloat = 6
     static let rulerTickWidth: CGFloat = 6
-    static let rulerHourColumnWidth: CGFloat = 16
-    static let rulerMinuteColumnWidth: CGFloat = 16
+    static let rulerHourColumnWidth: CGFloat = 12
+    static let rulerMinuteColumnWidth: CGFloat = 12
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 24
     static let selectionTimeBlockWidth: CGFloat = 44
@@ -2249,7 +2384,7 @@ enum MapHomeTimeSidebarMath {
         selectedMinute: Int,
         visibleStartMinute: Int,
         visibleDurationMinutes: Int,
-        verticalInset: CGFloat = 14
+        verticalInset: CGFloat = MapHomeTimeSidebarMath.verticalInset
     ) -> CGRect {
         let height = max(0, availableHeight)
         let inset = min(max(0, verticalInset), height / 2)
@@ -2355,7 +2490,7 @@ enum MapHomeTimeSidebarMath {
     }
 
     static func rulerColumnWidth(durationMinutes: Int) -> CGFloat {
-        min(17, max(16, ceil(rulerFontSize(durationMinutes: durationMinutes) * 1.2)))
+        min(12, max(10, ceil(rulerFontSize(durationMinutes: durationMinutes) * 1.2)))
     }
 
     static func minimumRulerLabelSpacing(durationMinutes: Int) -> CGFloat {
@@ -2434,6 +2569,50 @@ enum MapHomeTimeSidebarMath {
         return min(max(CGFloat(minute - window.lowerBound) / CGFloat(span), 0), 1)
     }
 
+    static func unconfirmedReviewMarkerCenters(
+        segments: [MapHomeTimeRailSegment],
+        window: ClosedRange<Int>,
+        trackHeight: CGFloat,
+        verticalInset: CGFloat = MapHomeTimeSidebarMath.verticalInset,
+        markerHeight: CGFloat = MapHomeTimeSidebarMath.reviewMarkerHitHeight
+    ) -> [String: CGFloat] {
+        let visible = segments.compactMap { segment -> (id: String, minute: Int)? in
+            let start = max(segment.startMinute, window.lowerBound)
+            let end = min(segment.endMinute, window.upperBound)
+            guard start < end else { return nil }
+            return (segment.id, (start + end) / 2)
+        }
+        guard !visible.isEmpty else { return [:] }
+
+        let height = max(0, trackHeight)
+        let halfMarker = min(max(0, markerHeight), height) / 2
+        let lowerCenter = verticalInset + halfMarker
+        let upperCenter = verticalInset + height - halfMarker
+        let spacing = visible.count > 1
+            ? min(max(0, markerHeight), (upperCenter - lowerCenter) / CGFloat(visible.count - 1))
+            : 0
+        var centers = visible.map { item in
+            min(
+                max(
+                    verticalInset + height * position(minute: item.minute, window: window),
+                    lowerCenter
+                ),
+                upperCenter
+            )
+        }
+
+        if centers.count > 1 {
+            for index in 1..<centers.count {
+                centers[index] = max(centers[index], centers[index - 1] + spacing)
+            }
+            for index in stride(from: centers.count - 2, through: 0, by: -1) {
+                centers[index] = min(centers[index], centers[index + 1] - spacing)
+            }
+        }
+
+        return Dictionary(uniqueKeysWithValues: zip(visible.map(\.id), centers))
+    }
+
     static func spanFraction(start: Int, end: Int, window: ClosedRange<Int>) -> CGFloat {
         position(minute: end, window: window) - position(minute: start, window: window)
     }
@@ -2451,7 +2630,6 @@ enum MapHomeTimeSidebarMath {
     ) -> [Int] {
         let hours = visibleHours(window: window)
         guard hours.count > 1 else { return hours }
-        if durationMinutes >= fullDayMinutes { return hours }
         let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
         let pointsPerHour = max(trackHeight, 1) * 60 / duration
         let step = max(

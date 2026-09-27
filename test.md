@@ -2,6 +2,66 @@
 
 현재 실행 근거만 간결하게 유지합니다. 이전 상세 개발·검증 기록은 Git 이력에 보존했습니다. `build/validation/`은 로컬 증거이며 Git에 포함되지 않습니다.
 
+## BKM0928A01 · raw 구버전 전환·불변 파일 공개·manifest 참조 (2026-09-28)
+
+- `saveMonthlyGeneration`이 snapshot-only 백업에도 존재하지 않는 raw generation을 발행하던 결함을 수정했다. manifest는 실제 저장된 raw 세대만 참조하며, raw 입력 없이 이전 raw를 보존하는 경우도 회귀로 확인했다.
+- `FilePlanCloudRawSensorBackupStore.save`의 generation 덮어쓰기를 막고 snapshot/raw가 같은 불변 파일 writer를 사용하게 했다. complete-protection staging에 기록·fsync한 뒤 같은 디렉터리의 최종 경로에 덮어쓰기 없이 원자적으로 공개한다. 동일 바이트 재시도는 성공, 다른 내용·경로/세대 불일치는 거부한다. protection 실패 시 최종 파일이 생기지 않고 staging이 정리됨을 확인했다.
+- V1·V2·V3 snapshot/raw 파일을 실제 file store에 시드해 다음 백업의 V4 전환, legacy 원본 바이트 보존, 서비스 재생성 후 복원, 다음 V4 저장을 각각 확인했다. 현재 월의 다음 백업 경로 검증이며 과거 월 일괄 migration/복원 recovery journal의 완료 근거는 아니다.
+- 백업 회귀 **122/122 통과, 실패 0, 건너뜀 0**. 결과 `build/validation/BKM0928A01/backup-tests-03.xcresult`, 로그 `backup-tests-03.log`, summary `backup-tests-03-summary.json`. 최초 실행은 기존 손상 fixture가 저장 API로 불변 세대를 덮어쓰려다 1건 실패해 직접 디스크 손상 주입으로 고쳤다. 두 번째 실행은 새 fixture의 현재 시각 JSON 왕복 정밀도 비교 1건 실패로 고정 시각을 사용했다. 두 실패 로그도 보존했다.
+- generic iOS Debug 빌드 성공: `build/validation/BKM0928A01/ios-debug-01.log`. `git diff --check` 통과. 동작 변경은 백업 앱 코드로 한정돼 기존 Core/package 결과를 재사용했다. 선행 전체 앱 1,412 통과/1 건너뜀은 ALLT0927A1의 이전 실행이며 이번 테스트 수와 합산하지 않는다.
+- 제한: 이번 후속 빌드는 기기에 재설치하지 않았다. 실기기/iCloud Drive/CloudKit Development 동작, DB/file bounded streaming, 보호된 SQLite 복원 staging/recovery journal, 강제 종료로 남은 staging 정리는 미확인·미완료다. push·TestFlight 업로드를 실행하지 않았으며 전체 ALLT0927A1은 계속 열린 상태다.
+
+## ALLT0927A1 · 저장소 잠금·HealthKit 온보딩 1차 수정 (2026-09-27)
+
+- `SQLitePlanRepository`의 load/save/delete는 `TaptionPlanDayStore` actor의 동기 격리 클로저에서 flock과 SQLite 작업을 마치고 결과 row만 반환한다. 잠금 경합 시에는 잠금을 잡지 않은 채 비동기 재시도하며, snapshot Codable 디코딩도 잠금 해제 후 수행한다. deletion marker와 generation 갱신은 여전히 SQLite 삭제와 같은 잠금 임계 구역에 있다. 파일 snapshot 저장 경로도 동기 임계 구역으로 바꿨다.
+- `testSQLiteRepositoryRetriesFileLockWithoutHoldingItAcrossSuspension`: 외부 잠금 점유 중 load 취소 응답, 잠금 해제 후 저장소 재접근을 검사해 통과했다. `testExclusiveFileAccessIsNonblockingAndReleasesOnThrow` 포함 TaptionPlanCore 101/101 통과. 로그: `build/validation/ALLT0927A1/core-tests-final.log`, `focused-app-tests.log`.
+- HealthKit·캘린더·알림·위치 등 권한 요청 전용 상태를 통합 데이터 refresh 상태에서 분리했다. 온보딩 진행 모델은 요청 완료 시에만 다음 단계로 이동하며 실패한 “모두 허용”은 해당 단계에서 멈춘다. `testPermissionOnboardingDoesNotAdvanceWhenRequestDidNotComplete` 통과.
+- iOS Simulator 앱 테스트 2/2 통과 (`** TEST SUCCEEDED **`), test 빌드 완료. 로그에 SDK StoreKit 헤더의 기존 deprecated 경고 1건이 있으나 앱 소스 오류는 없다. `git diff --check` 통과.
+- 기존 전체 앱 테스트에서 실패한 16개를 개별 재실행해 16/16 통과했다. 실제 수정은 스틱맨 action cache가 destination/sleep input을 키에 누락한 문제였고, 나머지는 최신 RPG 지도·시간 레일·영어 카탈로그 동작에 맞춰 회귀 기대를 갱신했다. `build/validation/ALLT0927A1/failure-regressions-01.log`, `failure-regressions-01.xcresult`.
+- V4 snapshot 파일은 timestamped immutable generation으로 저장하고 raw generation ID와 snapshot ID를 분리해 CloudKit Development manifest에 각각 기록한다. 같은 월의 snapshot은 parent ID를 보존해 같은 parent에서 갈라진 generation을 복원 시 병합한다. 순차 snapshot은 최신 내용이 조상보다 우선해 설정이 되돌아가지 않는다. 저장 후 readback과 삭제 generation 검사도 유지한다.
+- 새 manifest·immutable 경로·동일 월 동시 세대 병합 3/3, 그 뒤 SecurityBackupCore 전체 113/113 통과. 로그: `snapshot-generation-tests-01.log`, `security-backup-suite-02.log`; 결과 `snapshot-generation-tests-01.xcresult`, `security-backup-suite-02.xcresult`. 기존 manifest JSON decode 호환과 snapshot 덮어쓰기 거부도 포함한다.
+- 전체 앱 테스트를 새 iPhone 17 Pro 시뮬레이터(iOS 26.5)에서 직렬 실행해 **1,412 통과·1 건너뜀·실패 0(총 1,413)**을 확인했다. 과거 전체 테스트 실패 16건도 이 결과에 포함되어 통과했다. 유일한 건너뜀은 `testStoreKitProductPurchaseEntitlementAndRestore`; iOS 26.5 StoreKitTest의 `SKInternalErrorDomain Code 3`로 실행되지 않았다. IAP 판매 작업은 계속 보류한다. 기존 검증 시뮬레이터에서는 테스트 번들 설치 경로가 사라져 케이스 시작 전 실패했으므로, 그 결과는 테스트 실패로 세지 않고 새 시뮬레이터에서 재실행했다. 최종 결과 `build/validation/ALLT0927A1/app-tests-full-final2.xcresult`, 로그 `app-tests-full-final2.log`.
+- V1·V2·V3 snapshot archive를 다음 저장 시 V4 immutable generation으로 전환하면서 구버전 원본을 남기는 회귀 3/3 통과. 로그 `legacy-migration-final.log`, 결과 `legacy-migration-final.xcresult`. V4 snapshot paging은 source payload 전체와 암호화 frame을 여전히 메모리에 둔다.
+- V3 raw archive 복호 뒤 같은 payload를 V4로 재봉인하고 기존 generation 파일을 남기는 집중 회귀 1/1 통과. 로그 `legacy-raw-v3-reseal.log`, 결과 `legacy-raw-v3-reseal.xcresult`. 이 테스트는 다음 저장 경로와 원본 보존을 확인하지만 DB cursor streaming·복원 staging을 검증하지 않는다.
+- App Store Connect API readback에서 기존 1.0(159)이 `VALID`임을 확인했다. 다음 번호 160으로 앱·위젯·Watch·Watch 위젯의 Debug/Release `CURRENT_PROJECT_VERSION` 8곳과 네 개 Info.plist의 `CFBundleVersion`을 맞췄다. 최종 iOS 및 Watch generic Debug 빌드가 모두 성공했고, 산출물의 네 번들 ID에서 1.0(160)을 각각 읽었다. 로그 `ios-debug-final.log`, `watch-debug-final.log`.
+- 서명된 Debug 1.0(160)을 iPhone 11 Pro·iPhone 18 Pro Max·iPad Pro에 설치했다. iPhone 18과 iPad `devicectl` 앱 목록 readback은 160이다. iPhone 11 설치 명령은 성공했으나 이후 앱 목록 조회가 timeout 내 응답하지 않아 기기 버전 readback은 대기한다. Watch 직접 설치는 연결 터널 생성 timeout으로 실패했다. 설치본을 실행하거나 화면을 조작하지 않아 실기기 기능 검증은 아니다. 설치 로그 `install-iphone11.log`, `install-iphone18.log`, `install-ipad.log`, `install-watch.log`.
+- TestFlight 160 업로드는 아직 하지 않았다. 앱 실행 후 권한 화면·GPS·UI·백업·Watch 계정 연동을 사용자가 확인할 수 있도록 실기기 검증을 대기한다.
+- 한 번의 사용자 실기기 세션에서 확인할 체크리스트를 `build/validation/ALLT0927A1/device-session-checklist.md`에 준비하고 Codex 패널에 열었다. 체크 결과는 아직 입력되지 않았으며 어느 기능도 설치만으로 통과 처리하지 않는다.
+- README, AGENTS, DEVELOPMENT, 활성 인계 진입점과 지원·개인정보 문서를 대조했다. AGENTS/DEVELOPMENT에 네 번들 `CFBundleVersion` 산출물 readback과 Watch Debug 명령을 명시해 번호 불일치 재작업을 막고, README·지원 문서는 이미 짧은 진입점 구조라 유지했다. 날짜가 붙은 보관 인계문은 역사 자료로 남겼다. 최종 문서·소스 `git diff --check` 통과.
+- iPhone 11 실기기 재설치·시작·백그라운드 복귀와 새 충돌 로그, HealthKit 권한 화면 전환은 아직 확인하지 않아 CRAS270927/HK270927A1은 열린 상태다.
+
+## CRAS270927 · iPhone 11 Pro 충돌 보고서 분석 (2026-09-27)
+
+- iPhone 11 Pro (iPhone12,3, iOS 26.7/23H24)에서 iOS의 “Taption Plan 앱이 충돌함” 안내와 현재 화면을 확인했다: `build/validation/CRAS270927/iphone11-current-screen.png`. 공유 버튼은 누르지 않고 기기의 시스템 충돌 로그를 로컬로 복사했다.
+- 기기에서 가져온 세 보고서 모두 `EXC_CRASH(SIGKILL)`, `RUNNINGBOARD` 종료 코드 `3735883980` (`0xDEAD10CC`)다. 21:27:31과 21:28:20 보고서는 1.0(158), 21:29:19 보고서는 1.0(159)에서 났다. 원본: `build/validation/CRAS270927/TaptionPlan-2026-09-27-212731.ips`, `TaptionPlan-2026-09-27-212820.ips`, `TaptionPlan-2026-09-27-212919.ips`. 같은 종료가 158에서 이미 발생해 159 설치 시간 초과가 최초 원인은 아니다.
+- 159 보고서의 동시 실행 cooperative 스레드는 `AppModel.bootstrap()` → `MigratingPlanRepository.load()` → `SQLitePlanRepository.load()` → `loadFromStore()` / snapshot decode → `PlaceStay.init(from:)` → `TimeSpan.init(from:)`에 있었다. `TaptionPlan/Core/PlanRepository.swift`의 `load()`는 `.lock` 파일 flock을 잡은 뒤 `defer`로 해제하며, 그 사이 `await loadFromStore()`와 Codable 디코딩이 실행된다. 시작 호출은 `TaptionPlan/UX/AppModel.swift`의 `bootstrap()`에서 확인했다.
+- Apple은 `0xDEAD10CC`를 앱이 정지 중 파일 또는 SQLite 데이터베이스 잠금을 보유해 OS가 종료한 경우로 설명한다: [Apple EXC_CRASH (SIGKILL) 문서](https://developer.apple.com/documentation/xcode/sigkill?language=objc). 보고서의 `RUNNINGBOARD` 종료와 시작 로드 스택, 코드의 flock 범위가 서로 일치하므로 시작 로드 잠금 유지가 강하게 의심되는 원인이다. 정확히 어느 잠금이 종료 조건을 유발했는지는 보고서만으로 확정할 수 없어 수정·재현이 남아 있다.
+- 진단 범위에는 코드 수정, 테스트, 빌드가 포함되지 않았다. `temp.md`의 CRAS270927은 잠금 범위 수정과 동시 읽기/쓰기 회귀 테스트, iPhone 11 시작·백그라운드 복귀 후 새 보고서 확인 전까지 열린 상태다.
+
+## INST270927 · iPhone 11/18 Debug 앱 설치 (2026-09-27)
+
+- 현재 서명된 로컬 Debug 앱 `com.taption.plan` 1.0(159)을 iPhone 11 Pro (iPhone12,3, iOS 26.7)와 iPhone 18 Pro Max (iPhone19,7, iOS 27.2)에 설치했다. TestFlight 업로드·배포는 하지 않았다.
+- iPhone 11 Pro는 시작 전 1.0(158)이었다. 설치 명령은 120초 시간 제한을 반환했지만 설치 후 기기 앱 목록에서 1.0(159)을 읽어 확인했다. 로그: `build/validation/INST270927/iphone11-install.log`.
+- iPhone 18 Pro Max 설치 명령은 성공했다. 설치 후 두 기기의 앱 목록에서 `com.taption.plan` 1.0(159)을 확인했다. 로그: `build/validation/INST270927/iphone18-install.log` 및 `iphone11-install.log`.
+- 제한: 앱을 실행하거나 화면·기능 동작을 확인하지 않았다. 설치 및 버전 readback은 기능 검증을 뜻하지 않는다.
+
+## MARG270927 · 오른쪽 시간 레일 화면 높이·내부 여백 (2026-09-27)
+
+- 오른쪽 시간 레일의 720pt 최대 높이 제한을 없애 상단 날짜 헤더 아래 20pt부터 하단 32pt 여백까지 화면 가용 높이를 사용한다. 활동 구간·시간 라벨의 공통 트랙 위아래 여백은 10pt에서 20pt로 늘렸다.
+- 짧은 화면에서는 시간 라벨 행 간격이 최소 24pt가 되도록 전체 보기의 시각 라벨 일부를 생략한다. 충분히 긴 레일에서는 00–24시 라벨을 모두 표시한다.
+- 시뮬레이터 회귀 7개 통과: `testTimeSidebarUsesItsOwnExpandedTopAndBottomMargins`, `testMapHomeTimeSidebarTapMapsAndClampsToVisibleRail`, `testFullDayTimelineSpacesHourLabelsOnCompactRail`, `testTimeSidebarHourLabelsKeepAnInnerTrailingMargin`, `testExpandedSidebarRulerSeparatesHourAndMinuteLabels`, `testWeatherTimelineCapsulesAttachFlushToSidebarPanel`, `testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps`. 최종 근거: `build/validation/MARG270927/layout-tests-final2.log` 및 `layout-tests-final2.xcresult` (`** TEST SUCCEEDED **`).
+- 첫 테스트 실행에서는 중앙 탭 좌표가 기존 10pt inset 기준(160pt)이라 새 20pt inset에서 720분 대신 672분으로 매핑됐다. 중앙 좌표를 170pt로 갱신한 뒤 최종 선택 테스트 전부 통과했다. 초기 결과는 `build/validation/MARG270927/layout-tests.log`에 보존했다.
+- generic iOS Debug 빌드 통과: `build/validation/MARG270927/debug-build-final.log` (`** BUILD SUCCEEDED **`). 최종 `git diff --check` 통과.
+- 제한: 시뮬레이터 수학·레이아웃 테스트로 실제 iPhone별 화면 캡처나 터치 체감까지 확인하지 않았다.
+
+## UN270927B1 · 미확인 세그먼트별 빠른 입력 (2026-09-27)
+
+- 오른쪽 시간 레일의 공용 `?` 버튼을 없애고, 현재 표시 영역에 있는 입력 가능한 각 미확인 세그먼트 옆에 버튼을 배치했다. 가까운 버튼은 시간순을 유지하며 44pt 터치 영역이 가능한 범위에서 겹치지 않도록 조정한다. 오늘의 미래 구간은 표시 대상에서 제외한다.
+- 각 버튼은 해당 구간 하나만 시트에 전달한다. 날짜 선택을 숨기고 해당 구간만 입력·저장하며, 빠른 저장 성공 시 시트를 닫는다.
+- 시뮬레이터 회귀 7개 통과: `testUnconfirmedReviewTargetShowsAndSelectsOnlyItsSegment`, `testUnconfirmedReviewMarkersStayInRailAndSeparateNearbySegments`, `testUnconfirmedReviewIncludesOnlySortedUnconfirmedIntervals`, `testUnconfirmedReviewClipsTodayAtCurrentMinute`, `testUnconfirmedReviewAvailabilityIgnoresFutureAndConfirmedIntervals`, `testQuickConfirmedIntervalDisappearsFromUnconfirmedReview`, `testPartialUnconfirmedEditPreservesSourceOutsideSelectedSpan`. 근거: `build/validation/UN270927B1/final/focused-tests.log` 및 `focused-tests.xcresult` (`** TEST SUCCEEDED **`).
+- generic iOS Debug 빌드 통과: `build/validation/UN270927B1/final/debug-build.log` (`** BUILD SUCCEEDED **`). `git diff --check` 통과.
+- 제한: 실기기 화면에서 모든 구간 버튼의 위치·개별 터치·저장 결과는 확인하지 않았다. 빌드와 시뮬레이터 테스트만으로 실기기 기능을 판정하지 않는다.
+
 ## RST0920A01 · V4 snapshot/raw pages·CloudKit manifest CAS 부분 구현 (2026-09-27)
 
 - 월 snapshot과 raw archive 쓰기를 V4 페이지 frame으로 전환했다. 기본 한도는 256행/1MiB, 하드 상한은 1,024행/4MiB이며 페이지별 압축·GCM 인증과 metadata/page-index AAD를 적용했다. V1–V3 decoder 호환은 보존했다.
@@ -284,3 +344,59 @@
 - 최종 archive `build/ArchiveDD/Archives/TaptionPlan-159-final.xcarchive`가 `ARCHIVE SUCCEEDED`, `build/validation/TFL0927C01/export-final.log`에 `Upload succeeded`, `Uploaded TaptionPlan`, `EXPORT SUCCEEDED`가 기록됐다. 첫 실패와 수정 근거는 같은 폴더의 `export.log`, `archive-final.log`에 보존했다.
 - App Store Connect API에서 빌드 ID `d5a86231-c08b-4dc2-859f-5d00211b1020`, 버전 159, `processingState=VALID`를 확인한 뒤 `TP Taption Plan 내부 테스트` 그룹에 연결했다. 그룹 빌드 화면에서 `1.0 (159) 내부`가 `테스트 중`으로 표시되고, 그룹에 테스터 1명·빌드 118개가 표시됨을 확인했다.
 - 이번 배포는 설치·실기기 기능 검증을 대신하지 않는다. 앞선 전체 앱 테스트의 미해결 실패 13개도 통과로 처리하지 않았다.
+
+## D270927A01 · 개발 문서 정합성·작업 문맥 절약 (2026-09-27)
+
+- `README.md`를 짧은 시작점으로 바꾸고, 개발 규칙은 `AGENTS.md`, 구조·명령은 새 `DEVELOPMENT.md`, 상태·근거는 기존 `temp.md`·`test.md`의 요청 ID 구간에서 읽도록 나눴다.
+- Codex/Kiro의 활성 인계문은 각각 5줄로 줄였다. 과거 Codex 9/25 push 문서와 Kiro 9/23 상세 인계문은 원문 본문을 날짜가 명시된 보관본으로 옮기고, 보관 안내를 덧붙였다. Codex 9/26 인계에도 오래된 상태를 따르지 말라는 표시를 추가했다. `PRIVACY.md`, `SUPPORT.md`, 기존 미완료 요청과 검증 기록은 변경하지 않았다.
+- 12개 Markdown 문서의 로컬 링크·끝 공백·충돌 표시를 확인해 통과했다. `git diff --check`도 통과했다. `xcodebuild -list`에서 `TaptionPlan` scheme과 대상 프로젝트를 확인하고 개발 안내의 소스 경로를 현재 저장소와 대조했다.
+- 이 변경은 문서 전용이므로 앱 테스트·빌드는 실행하지 않았다. 문서 명령은 예시이며 실제 동작 변경 시 관련 테스트와 Debug 빌드를 별도로 실행한다.
+
+## HK270927A1 · 첫 실행 HealthKit 허용 후 온보딩 정체 확인 (2026-09-27)
+
+- `AppShellView`에서 현재 단계의 `허용하기`·`건너뛰기` 두 버튼은 `model.isRefreshingIntegrations`에 함께 비활성화되지만, 하단 `모두 허용`은 `isRequesting`만 검사한다.
+- 첫 활성화는 지연 foreground refresh를 예약한다. `refreshEnabledData`도 같은 `isRefreshingIntegrations`를 켠다. 그 사이 `requestHealth`는 무표시로 반환할 수 있고, 온보딩 `request(_:)`는 요청이 실제 수행됐는지와 무관하게 `advance()`를 호출한다. 따라서 첨부 화면처럼 개별 버튼이 비활성화되고 하단 전체 허용만 동작하는 경로가 코드상 가능하며, 전체 허용 경로는 권한 요청을 건너뛴 채 넘어갈 수도 있다.
+- 기존 `FeatureEngineTests`에는 온보딩 표시 조건 테스트는 있지만 이 화면의 버튼 잠금·요청 진행 중 전환 테스트는 없다. 스크린샷의 희미한 버튼과 코드의 비활성화 조건이 일치한다. 단, 기기 로그나 실행 중 상태를 받지 않아 해당 캡처 순간 어떤 refresh가 잠금을 잡았는지까지는 확인하지 못했다.
+- 소스는 수정하지 않았고 앱 테스트·빌드는 실행하지 않았다. 수정과 동적 검증은 `temp.md` HK270927A1에 열린 항목으로 남겼다.
+- 사용자가 로그 업로드를 알린 뒤 현재 대화 첨부와 `~/Downloads` 최상위 파일을 재확인했다. 확인된 것은 이미지와 화면 녹화뿐이며 `.log`, `.ips`, `.crash` 진단 파일은 없어 로그 기반 재현 원인은 여전히 확인하지 못했다.
+
+## UI270927A1 · 오른쪽 시간축 여백·미확인 입력 버튼 (2026-09-27)
+
+- 시간축만 상단 20pt·하단 32pt 여백으로 확장하고 눈금 안쪽 여백을 10pt로 줄였다. 지도 조작 버튼 레일은 기존 위치를 유지한다. `?` 버튼은 시간축 하단으로 옮겼으며, 선택 날짜에서 현재까지 입력할 미확인 구간이 있을 때만 활성화된다.
+- 신규 테스트 2개 통과: `testTimeSidebarUsesItsOwnExpandedTopAndBottomMargins`, `testUnconfirmedReviewAvailabilityIgnoresFutureAndConfirmedIntervals`. 기존 회귀 테스트 5개 통과: 미확인 구간 정렬, 오늘 현재 시각 자르기, 빠른 확정 후 목록 제거, 시간축 탭 매핑, 고주사율 드래그 결과 일치. 7개 선택 테스트 결과는 `build/validation/UI270927A1/final-tests.log`에 있다.
+- iOS generic Debug 빌드 `BUILD SUCCEEDED`; `git diff --check` 통과. 최종 빌드 로그는 `build/validation/UI270927A1/debug-build-final.log`다.
+- 시뮬레이터 단위 테스트는 통과했지만 실기기에서 간격·터치와 저장 동작은 확인하지 않았다. 해당 확인은 `temp.md` UI270927A1에 열린 상태로 둔다.
+
+## GPS270927A · 포그라운드 실시간 현재 위치·이동 경로 (2026-09-27)
+
+- 원인은 기본 위치 수집이 선택된 GPS 간격마다 짧은 표본 창을 열고 닫아, 앱을 켜 두어도 지속적인 `didUpdateLocations` 흐름이 없던 점이다. 지도는 이미 저장된 현재 위치와 `liveRouteState`를 그리므로 수집 간격이 화면 갱신을 제한했다.
+- 위치 기록이 켜져 있고 위치 권한이 허용된 동안 앱이 active이면 Core Location을 정밀도 우선, 5m 이동 간격으로 유지한다. 중복 fix는 건너뛰고 0.5초보다 자주 저장하지 않는다. 새 위치를 SQLite 보관소에 즉시 기록한 뒤 기존 persisted-reading 콜백으로 현재 핀과 경로를 갱신한다. 앱이 background로 가면 포그라운드 모드를 끄고 기존 듀티사이클/Always 권한 기반 수집 정책을 사용한다. 새 Always 권한 요청은 추가하지 않았다.
+- 새 회귀 테스트 3개 통과: 활성 화면·설정·권한 게이트, 5분 표본 간격 중 연속 위치 fix 출력, 포그라운드 경로점 즉시 저장. 기존 collector stream 교체 테스트 1개와 `testLiveRouteRequiresPreciseAvailableGPS` 1개도 통과했다. 총 5개 선택 테스트 실패·건너뜀 0건이며 로그·xcresult는 `build/validation/GPS270927A/` 아래에 있다.
+- generic iOS Debug 빌드 성공: `build/validation/GPS270927A/debug-build.log`; `git diff --check` 통과. 시뮬레이터에서 자동 검증했으며 실제 기기 GPS·화면 경로·백그라운드 전환은 확인하지 않았다. 이동 경로 선은 기존 정책상 정밀 GPS fix를 요구한다. 실기기 확인은 `temp.md` GPS270927A에 남겼다.
+
+## HOM270927A · 집 마커 탭으로 레벨 플로팅 카드 열기 (2026-09-27)
+
+- 집 레벨·오늘 상태 카드를 기본 숨김 처리하고 집 그림 중앙 탭으로 열고 닫게 했다. 숨겨진 카드가 공간을 계속 차지해 집 핀의 좌표가 열릴 때 이동하지 않는다. 화랑이가 집에 있을 때는 집 아이콘 탭과 화랑이 탭 영역을 분리해 기존 화랑이 상세 진입을 보존했다. VoiceOver에는 성장 정보 표시/숨김 동작을 제공한다.
+- 회귀 테스트 2개 통과: `testCatTapRoutingAcceptsOnlyTapsInsideMarkerBounds`, `testHomeIconTapRoutingSeparatesHouseFromHomeCat`. 로그 `build/validation/HOM270927A/tap-routing-final.log`, 결과 `build/validation/HOM270927A/tap-routing-final.xcresult`.
+- generic iOS Debug 빌드 `BUILD SUCCEEDED`: `build/validation/HOM270927A/debug-build-final.log`. `git diff --check` 통과.
+- 시뮬레이터에서 탭 라우팅 단위 테스트만 실행했다. 기본 카드 가시성·열기/닫기·지도 팬/핀치와 화랑이 상세 탭의 실제 화면 동작은 실기기에서 추가 확인 전이며 `temp.md`에 대기로 남겼다.
+
+## WTH270927B · 현재 날씨 강조·미래 예보 흐리게·위젯 20% 축소 (2026-09-27)
+
+- 관측 날씨(`isForecast != true`)는 불투명도 100%, 미래 예보(`isForecast == true`)는 58%로 표시하고 예보의 접근성 값을 비활성 상태로 알린다. 날씨 캡슐은 기존 60×28pt에서 48×22.4pt로, 내부 아이콘·기온·간격·테두리·그림자도 80%로 줄였다. 축소 후에도 캡슐 우측과 시간 레일 간격은 기존 4pt 정렬을 유지한다.
+- 회귀 테스트 5개 통과: `testWeatherTimelineDimsForecastsAndScalesWidgetsToEightyPercent`, `testWeatherTimelineCapsulesAttachFlushToSidebarPanel`, `testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps`, `testMapHomeWeatherCollapsesConcurrentLocationStreamsForDisplay`, `testMapHomeWeatherPrefersObservedOverSameSignatureForecast`. 로그 `build/validation/WTH270927B/final-tests.log`, 결과 `build/validation/WTH270927B/final-tests.xcresult`.
+- generic iOS Debug 빌드 `BUILD SUCCEEDED`: `build/validation/WTH270927B/debug-build.log`. `git diff --check` 통과.
+- 시뮬레이터에서 정책·정렬 단위 테스트만 실행했다. 실제 화면에서 축소된 글자 가독성과 현재/미래 대비는 별도 화면 확인 전이라 `temp.md`에 대기 중이다.
+
+## UR270927A1 · 왼쪽 하단 실행취소/다시실행 (2026-09-27)
+
+- 지도 왼쪽 조작 레일의 줌 버튼 아래에 실행취소·다시실행을 세로로 추가했다. 가능한 이력이 없으면 흐리게 표시하고 누를 수 없게 한다. 실행 중 최대 40개의 사용자 일정·수동 활동 편집 이력을 유지하며, 자동 센서 원본은 되돌리지 않는다. 새 편집은 다시실행 이력을 지운다.
+- 선택 테스트 3개 통과, 실패·건너뜀 0건: `testActivityEditUndoRedoPreservesAutomaticRecordsAndClearsRedo`(활동 변경 왕복, HealthKit 기록 보존, 새 편집 뒤 다시실행 무효화), `testUserPlanUndoRedo`(사용자 계획 추가 왕복), 기존 `testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit`. 로그·xcresult는 `build/validation/UR270927A1/final-tests.log`, `final-tests.xcresult`에 있다. 첫 컴파일 시 테스트의 `XCTUnwrap`에 `try` 누락이 확인되어 수정한 뒤 최종 테스트를 재실행해 통과했다.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/UR270927A1/final-debug-build.log`. `git diff --check` 통과.
+- 테스트는 시뮬레이터에서 실행했다. 이번 빌드는 iPhone에 설치하지 않았고, 실제 화면에서 왼쪽 하단 위치·터치감은 확인하지 않았다. 이 화면 확인은 `temp.md`에 대기로 남긴다.
+
+## IN270927A1 · iPhone 18 Pro Max 현재 작업본 설치 (2026-09-27)
+
+- 현재 연결된 실기기는 iPhone 18 Pro Max(`iPhone19,7`, UDID `00008160-000E195A1140000A`), iOS 27.2로 확인했다. 기기 정보 readback은 `build/validation/IN270927A1/device-details.txt` 및 `.json`에 있다.
+- 최신 generic iOS Debug 산출물 `com.taption.plan` 1.0/159를 기기에 설치했다. `devicectl` 설치 성공 로그·JSON은 `build/validation/IN270927A1/install.log`, `install.json`; 앱 목록 readback에서 `Taption Plan · com.taption.plan · 1.0 · 159`를 확인했다: `readback.txt`, `readback.json`.
+- 사용 요청은 설치였으므로 앱을 실행하거나 화면 기능을 판정하지 않았다. 설치와 readback은 날씨/UI 기기 검증을 의미하지 않는다.

@@ -64,17 +64,14 @@ final class LocalizationCatalogTests: XCTestCase {
 
     private func formatTypes(in value: String) -> [String] {
         let expression = try! NSRegularExpression(
-            pattern: #"%(?:\d+\$)?(?:lld|ld|d|llu|lu|u|@|f)"#
+            pattern: #"%(\d+\$)?(?:\.\d+)?(lld|ld|d|llu|lu|u|@|f)"#
         )
         let range = NSRange(value.startIndex..., in: value)
         return expression.matches(in: value, range: range).compactMap { match in
-            guard let range = Range(match.range, in: value) else { return nil }
-            return value[range]
-                .replacingOccurrences(
-                    of: #"%\d+\$"#,
-                    with: "%",
-                    options: .regularExpression
-                )
+            guard let typeRange = Range(match.range(at: 2), in: value) else {
+                return nil
+            }
+            return String(value[typeRange])
         }
     }
 }

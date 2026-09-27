@@ -61,6 +61,45 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
+        let homeLocation = CGPoint(x: 100, y: 200)
+        let houseCenter = CGPoint(
+            x: homeLocation.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
+            y: homeLocation.y + MapHomeCatTapRouting.homeImageCenterOffset.y
+        )
+        let catCenter = MapHomeCatTapRouting.markerPoint(
+            locationPoint: homeLocation,
+            isAtHome: true
+        )
+
+        XCTAssertTrue(
+            MapHomeCatTapRouting.isHomeIconTap(
+                tapPoint: houseCenter,
+                locationPoint: homeLocation
+            )
+        )
+        XCTAssertFalse(
+            MapHomeCatTapRouting.isHomeIconTap(
+                tapPoint: catCenter,
+                locationPoint: homeLocation
+            )
+        )
+        XCTAssertFalse(
+            MapHomeCatTapRouting.shouldPresentCatDetails(
+                tapPoint: houseCenter,
+                locationPoint: homeLocation,
+                isAtHome: true
+            )
+        )
+        XCTAssertTrue(
+            MapHomeCatTapRouting.shouldPresentCatDetails(
+                tapPoint: catCenter,
+                locationPoint: homeLocation,
+                isAtHome: true
+            )
+        )
+    }
+
     func testActivityClassificationResultOrderingUsesStartThenExactID() throws {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
@@ -3111,6 +3150,143 @@ final class FeatureEngineTests: XCTestCase {
             }.map(\.categoryID),
             ["work"]
         )
+    }
+
+    @MainActor
+    func testActivityEditUndoRedoPreservesAutomaticRecordsAndClearsRedo()
+        async throws {
+        let day = makeDate(2026, 8, 12)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let automatic = ActualRecord(
+            planID: nil,
+            title: "걷기",
+            categoryID: "movement",
+            startedAt: day.addingTimeInterval(7 * hour),
+            endedAt: day.addingTimeInterval(8 * hour),
+            source: .healthKit,
+            evidence: ["HealthKit"]
+        )
+        let travel = TravelSegment(
+            mode: .subway,
+            span: span,
+            distanceMeters: 12_000,
+            confidence: .high,
+            evidence: ["GPS"],
+            isConfirmed: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = day
+        stored.actuals = [automatic]
+        stored.travel = [travel]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let result = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: [travel.id],
+                originalSpan: span,
+                originalOption: phaseOption("movement", title: "지하철 탑승"),
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("eating", title: "식사")
+                )
+            )
+        )
+        XCTAssertNotNil(result)
+        XCTAssertTrue(model.canUndo)
+        XCTAssertFalse(model.canRedo)
+
+        model.undoLastUserEdit()
+        XCTAssertFalse(model.snapshot.actuals.contains {
+            $0.source == .manual && $0.categoryID == "eating"
+        })
+        XCTAssertTrue(model.snapshot.actuals.contains { $0.id == automatic.id })
+        XCTAssertTrue(model.canRedo)
+
+        model.redoLastUserEdit()
+        XCTAssertTrue(model.snapshot.actuals.contains {
+            $0.source == .manual && $0.categoryID == "eating"
+        })
+        XCTAssertTrue(model.snapshot.actuals.contains { $0.id == automatic.id })
+        XCTAssertTrue(model.canUndo)
+        XCTAssertFalse(model.canRedo)
+
+        let currentRail = MapHomeTimeRailSegmentEngine.segments(
+            from: model.snapshot.actuals,
+            travel: model.snapshot.travel,
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+        let currentSegment = try XCTUnwrap(
+            MapHomeTimeRailSegmentEngine.segment(
+                at: 9 * 60 + 30,
+                in: currentRail
+            )
+        )
+        let nextResult = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: currentSegment.sourceIDs,
+                originalSpan: span,
+                originalOption: phaseOption("eating", title: "식사"),
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("exercise", title: "운동")
+                )
+            )
+        )
+        XCTAssertNotNil(nextResult)
+        XCTAssertFalse(model.canRedo)
+        XCTAssertTrue(model.snapshot.actuals.contains {
+            $0.source == .manual && $0.categoryID == "exercise"
+        })
+        XCTAssertTrue(model.snapshot.actuals.contains { $0.id == automatic.id })
+    }
+
+    @MainActor
+    func testUserPlanUndoRedo() async throws {
+        let day = makeDate(2026, 8, 12)
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = day
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: stored),
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let planID = model.addPlan(
+            title: "집중 작업",
+            categoryID: "work",
+            startAt: day.addingTimeInterval(9 * hour),
+            duration: hour
+        )
+        let savedID = try XCTUnwrap(planID)
+        XCTAssertTrue(model.canUndo)
+        model.undoLastUserEdit()
+        XCTAssertFalse(model.snapshot.plans.contains { $0.id == savedID })
+        XCTAssertTrue(model.canRedo)
+        model.redoLastUserEdit()
+        XCTAssertEqual(
+            model.snapshot.plans.first(where: { $0.id == savedID })?.title,
+            "집중 작업"
+        )
+        XCTAssertTrue(model.canUndo)
+        XCTAssertFalse(model.canRedo)
     }
 
     func testPlayheadMapUsesOnlyMovementContainingExactPlayheadTime() {
@@ -17737,6 +17913,19 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(model.isPermissionOnboardingPresented)
     }
 
+    func testPermissionOnboardingDoesNotAdvanceWhenRequestDidNotComplete() {
+        var progress = PermissionOnboardingProgress(index: 1)
+
+        progress.completeRequest(false)
+        XCTAssertEqual(progress.index, 1)
+
+        progress.completeRequest(true)
+        XCTAssertEqual(progress.index, 2)
+
+        progress.skipCurrentStep()
+        XCTAssertEqual(progress.index, 3)
+    }
+
     @MainActor
     func testPermissionOnboardingStaysHiddenWhenAllStepsAreGranted() async {
         var snapshot = TaptionDataSnapshot.empty
@@ -27682,7 +27871,7 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 1_440
         )
 
-        XCTAssertEqual(frame.height, 81, accuracy: 0.1)
+        XCTAssertEqual(frame.height, 80, accuracy: 0.1)
         XCTAssertEqual(frame.midY, 500, accuracy: 0.1)
     }
 
@@ -27700,8 +27889,8 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 60
         )
 
-        XCTAssertEqual(dayBoundaryFrame.height, 40.5, accuracy: 0.1)
-        XCTAssertEqual(zoomedFrame.height, 972, accuracy: 0.1)
+        XCTAssertEqual(dayBoundaryFrame.height, 40, accuracy: 0.1)
+        XCTAssertEqual(zoomedFrame.height, 960, accuracy: 0.1)
     }
 }
 

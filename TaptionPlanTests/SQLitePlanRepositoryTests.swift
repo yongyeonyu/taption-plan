@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import XCTest
 @testable import TaptionPlan
 import TaptionPlanCore
@@ -445,6 +446,36 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         let value = try await repository.load()
 
         XCTAssertEqual(value, .empty)
+    }
+
+    func testSQLiteRepositoryRetriesFileLockWithoutHoldingItAcrossSuspension()
+        async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        let lockURL = url.appendingPathExtension("lock")
+        let descriptor = Darwin.open(
+            lockURL.path,
+            O_CREAT | O_RDWR,
+            S_IRUSR | S_IWUSR
+        )
+        XCTAssertGreaterThanOrEqual(descriptor, 0)
+        defer { Darwin.close(descriptor) }
+        XCTAssertEqual(flock(descriptor, LOCK_EX), 0)
+
+        let blockedLoad = Task { try await repository.load() }
+        try await Task.sleep(for: .milliseconds(30))
+        blockedLoad.cancel()
+        do {
+            _ = try await blockedLoad.value
+            XCTFail("A load waiting for the file lock ignored cancellation")
+        } catch is CancellationError {
+            // Lock contention is retried asynchronously outside the lock.
+        }
+
+        XCTAssertEqual(flock(descriptor, LOCK_UN), 0)
+        let recovered = try await repository.load()
+        XCTAssertEqual(recovered, .empty)
     }
 
     func testRepositoryCreatedBeforeDeletionCannotRestoreStaleData() async throws {

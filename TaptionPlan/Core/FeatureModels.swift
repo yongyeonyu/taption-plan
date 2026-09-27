@@ -213,6 +213,7 @@ enum RecordClassificationCatalog {
             category("movement", "이동", "figure.walk.motion"),
             category("eating", "식사", "fork.knife"),
             category("exercise", "운동", "figure.strengthtraining.traditional"),
+            category("health", "건강관리", "heart.text.square.fill"),
             category("unconfirmed", "미확인", "questionmark.circle.fill"),
         ]
     )
@@ -3756,7 +3757,7 @@ extension MapDisplayStyle {
     static func defaultStyle(for provider: MapDisplayProvider) -> Self {
         switch provider {
         case .apple: .standard
-        case .openFreeMap: .standard
+        case .openFreeMap: .mapLibreRPG
         }
     }
 

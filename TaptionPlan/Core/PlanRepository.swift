@@ -46,6 +46,10 @@ enum TaptionRepositoryBackgroundExecution {
 }
 
 final class TaptionDataFileLock: @unchecked Sendable {
+    enum AcquireError: Error {
+        case busy
+    }
+
     private var descriptor: Int32
 
     private init(url: URL) throws {
@@ -63,23 +67,39 @@ final class TaptionDataFileLock: @unchecked Sendable {
         }
     }
 
-    static func acquire(url: URL) async throws -> TaptionDataFileLock {
-        try Task.checkCancellation()
+    static func acquireIfAvailable(url: URL) throws -> TaptionDataFileLock {
         let lock = try TaptionDataFileLock(url: url)
-        while flock(lock.descriptor, LOCK_EX | LOCK_NB) != 0 {
+        guard flock(lock.descriptor, LOCK_EX | LOCK_NB) != 0 else {
+            return lock
+        }
+        do {
             let code = errno
-            guard code == EWOULDBLOCK || code == EAGAIN else {
-                lock.unlock()
-                throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+            lock.unlock()
+            if code == EWOULDBLOCK || code == EAGAIN {
+                throw AcquireError.busy
             }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+        }
+    }
+
+    static func acquire(url: URL) async throws -> TaptionDataFileLock {
+        while true {
+            try Task.checkCancellation()
             do {
+                return try acquireIfAvailable(url: url)
+            } catch AcquireError.busy {
                 try await Task.sleep(for: .milliseconds(10))
-            } catch {
-                lock.unlock()
-                throw error
             }
         }
-        return lock
+    }
+
+    static func withLock<Value>(
+        url: URL,
+        _ operation: () throws -> Value
+    ) throws -> Value {
+        let lock = try acquireIfAvailable(url: url)
+        defer { lock.unlock() }
+        return try operation()
     }
 
     func unlock() {
@@ -694,8 +714,10 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
-        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-        defer { lock.unlock() }
+        try await withLockRetry { try loadLocked() }
+    }
+
+    private func loadLocked() throws -> TaptionDataSnapshot {
         if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
             let recoveredGeneration = TaptionRepositoryDeletionMarker.recoveredGeneration(
                 at: deletionPendingURL,
@@ -754,44 +776,44 @@ actor FilePlanRepository: PlanDataRepository {
         do {
             let json = try encoder.encode(value)
             let data = TaptionSnapshotCompression.encode(json)
-            let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-            defer { lock.unlock() }
-            guard fileGeneration == readGeneration(),
-                  TaptionDataDeletionFence.allows(
-                    generation: dataDeletionGeneration
-                  ) else {
-                throw RepositoryError.staleGeneration
-            }
-            try FileManager.default.createDirectory(
-                at: fileURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            // Keep the last valid generation. Never replace this backup from
-            // a file that no longer decodes.
-            if FileManager.default.fileExists(atPath: fileURL.path),
-               (try? loadSnapshot(at: fileURL)) != nil {
-                let previous = try Data(contentsOf: fileURL)
-                try previous.write(
-                    to: backupURL,
+            try await withLockRetry {
+                guard fileGeneration == readGeneration(),
+                      TaptionDataDeletionFence.allows(
+                        generation: dataDeletionGeneration
+                      ) else {
+                    throw RepositoryError.staleGeneration
+                }
+                try FileManager.default.createDirectory(
+                    at: fileURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                // Keep the last valid generation. Never replace this backup from
+                // a file that no longer decodes.
+                if FileManager.default.fileExists(atPath: fileURL.path),
+                   (try? loadSnapshot(at: fileURL)) != nil {
+                    let previous = try Data(contentsOf: fileURL)
+                    try previous.write(
+                        to: backupURL,
+                        options: [
+                            .atomic,
+                            .completeFileProtectionUntilFirstUserAuthentication,
+                        ]
+                    )
+                }
+                guard fileGeneration == readGeneration(),
+                      TaptionDataDeletionFence.allows(
+                        generation: dataDeletionGeneration
+                      ) else {
+                    throw RepositoryError.staleGeneration
+                }
+                try data.write(
+                    to: fileURL,
                     options: [
                         .atomic,
                         .completeFileProtectionUntilFirstUserAuthentication,
                     ]
                 )
             }
-            guard fileGeneration == readGeneration(),
-                  TaptionDataDeletionFence.allows(
-                    generation: dataDeletionGeneration
-                  ) else {
-                throw RepositoryError.staleGeneration
-            }
-            try data.write(
-                to: fileURL,
-                options: [
-                    .atomic,
-                    .completeFileProtectionUntilFirstUserAuthentication,
-                ]
-            )
             Self.logger.notice(
                 "Repository save: storage=\(self.storageLabel, privacy: .public), bytes=\(data.count, privacy: .public), jsonBytes=\(json.count, privacy: .public), updated=\(value.updatedAt.timeIntervalSince1970, privacy: .public), plans=\(value.plans.count, privacy: .public), actuals=\(value.actuals.count, privacy: .public), places=\(value.places.count, privacy: .public), travel=\(value.travel.count, privacy: .public)"
             )
@@ -804,29 +826,45 @@ actor FilePlanRepository: PlanDataRepository {
     }
 
     func deleteAll() async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-        defer { lock.unlock() }
-        let current = readGeneration()
-        guard current < UInt64.max else {
-            throw RepositoryError.staleGeneration
+        try await withLockRetry {
+            let current = readGeneration()
+            guard current < UInt64.max else {
+                throw RepositoryError.staleGeneration
+            }
+            fileGeneration = current + 1
+            try TaptionRepositoryDeletionMarker.write(
+                generation: fileGeneration,
+                to: deletionPendingURL
+            )
+            try Data(String(fileGeneration).utf8).write(
+                to: generationURL,
+                options: .atomic
+            )
+            dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.removeItem(at: fileURL)
+            }
+            if FileManager.default.fileExists(atPath: backupURL.path) {
+                try FileManager.default.removeItem(at: backupURL)
+            }
+            try FileManager.default.removeItem(at: deletionPendingURL)
         }
-        fileGeneration = current + 1
-        try TaptionRepositoryDeletionMarker.write(
-            generation: fileGeneration,
-            to: deletionPendingURL
-        )
-        try Data(String(fileGeneration).utf8).write(
-            to: generationURL,
-            options: .atomic
-        )
-        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            try FileManager.default.removeItem(at: fileURL)
+    }
+
+    private func withLockRetry<Value>(
+        _ operation: () throws -> Value
+    ) async throws -> Value {
+        while true {
+            try Task.checkCancellation()
+            do {
+                return try TaptionDataFileLock.withLock(
+                    url: lockURL,
+                    operation
+                )
+            } catch TaptionDataFileLock.AcquireError.busy {
+                try await Task.sleep(for: .milliseconds(10))
+            }
         }
-        if FileManager.default.fileExists(atPath: backupURL.path) {
-            try FileManager.default.removeItem(at: backupURL)
-        }
-        try FileManager.default.removeItem(at: deletionPendingURL)
     }
 
     private func readGeneration() -> UInt64 {
@@ -861,6 +899,21 @@ actor FilePlanRepository: PlanDataRepository {
 actor SQLitePlanRepository: PlanDataRepository {
     private static let metadataDomain = "plan.metadata"
     private static let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+
+    private struct LoadedRows: Sendable {
+        let generation: UInt64
+        let rows: [TaptionPlanDayStore.Snapshot]
+    }
+
+    private struct SavedRows: Sendable {
+        let generation: UInt64
+        let nextRevision: UInt64
+    }
+
+    private struct DeletedRows: Sendable {
+        let generation: UInt64
+        let deletionGeneration: UInt64
+    }
 
     private let store: TaptionPlanDayStore
     private let lockURL: URL
@@ -914,23 +967,34 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
-        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-        defer { lock.unlock() }
-        if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
-            let recoveredGeneration = TaptionRepositoryDeletionMarker.recoveredGeneration(
-                at: deletionPendingURL,
-                current: readGeneration()
+        let generationURL = self.generationURL
+        let deletionPendingURL = self.deletionPendingURL
+        let loaded = try await withStoreLockRetry { store in
+            if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
+                let recoveredGeneration =
+                    TaptionRepositoryDeletionMarker.recoveredGeneration(
+                        at: deletionPendingURL,
+                        current: Self.readGeneration(at: generationURL)
+                    )
+                try store.deleteAllContent()
+                try Data(String(recoveredGeneration).utf8).write(
+                    to: generationURL,
+                    options: .atomic
+                )
+                try FileManager.default.removeItem(at: deletionPendingURL)
+            }
+            return LoadedRows(
+                generation: Self.readGeneration(at: generationURL),
+                rows: try store.snapshots(day: Self.day)
             )
-            try await store.deleteAllContent()
-            try Data(String(recoveredGeneration).utf8).write(
-                to: generationURL,
-                options: .atomic
-            )
-            try FileManager.default.removeItem(at: deletionPendingURL)
-            nextRevision = 0
         }
-        observedGeneration = readGeneration()
-        return try await loadFromStore()
+        observedGeneration = loaded.generation
+        nextRevision = max(
+            nextRevision,
+            loaded.rows.map(\.revision).max() ?? 0
+        )
+        guard !loaded.rows.isEmpty else { return .empty }
+        return try snapshot(from: loaded.rows)
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
@@ -962,52 +1026,61 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     private func saveProtected(_ encodedDomains: [(String, Data, Bool)]) async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-        defer { lock.unlock() }
-        let generation = readGeneration()
-        guard observedGeneration == nil || observedGeneration == generation else {
-            throw RepositoryError.staleGeneration
-        }
-        guard TaptionDataDeletionFence.allows(
-            generation: dataDeletionGeneration
-        ) else {
-            throw RepositoryError.staleGeneration
-        }
-        observedGeneration = generation
-        let existingRows = try await store.snapshots(day: Self.day)
-        let rowsByDomain = Dictionary(
-            uniqueKeysWithValues: existingRows.map { ($0.domain, $0) }
-        )
-        let revisions = Dictionary(
-            uniqueKeysWithValues: existingRows.map { ($0.domain, $0.revision) }
-        )
-        nextRevision = max(
-            nextRevision,
-            existingRows.map(\.revision).max() ?? 0
-        )
-        guard nextRevision < UInt64(Int64.max) else {
-            throw TaptionPlanDayStoreError.revisionOverflow
-        }
-        nextRevision += 1
-        var writes: [TaptionPlanDayStore.Snapshot] = []
-
-        for (domain, payload, force) in encodedDomains {
-            try append(
-                domain: domain,
-                payload: payload,
-                existingPayload: rowsByDomain[domain]?.payload,
-                force: force,
-                revisions: revisions,
-                to: &writes
+        let expectedGeneration = observedGeneration
+        let currentNextRevision = nextRevision
+        let deletionGeneration = dataDeletionGeneration
+        let generationURL = self.generationURL
+        let saved = try await withStoreLockRetry { store in
+            let generation = Self.readGeneration(at: generationURL)
+            guard expectedGeneration == nil || expectedGeneration == generation,
+                  TaptionDataDeletionFence.allows(
+                    generation: deletionGeneration
+                  ) else {
+                throw RepositoryError.staleGeneration
+            }
+            let existingRows = try store.snapshots(day: Self.day)
+            let rowsByDomain = Dictionary(
+                uniqueKeysWithValues: existingRows.map { ($0.domain, $0) }
             )
+            let revisions = Dictionary(
+                uniqueKeysWithValues: existingRows.map { ($0.domain, $0.revision) }
+            )
+            var revision = max(
+                currentNextRevision,
+                existingRows.map(\.revision).max() ?? 0
+            )
+            guard revision < UInt64(Int64.max) else {
+                throw TaptionPlanDayStoreError.revisionOverflow
+            }
+            revision += 1
+            var writes: [TaptionPlanDayStore.Snapshot] = []
+            for (domain, payload, force) in encodedDomains {
+                guard force || payload != rowsByDomain[domain]?.payload else {
+                    continue
+                }
+                guard revision > (revisions[domain] ?? 0) else {
+                    throw TaptionPlanDayStoreError.revisionOverflow
+                }
+                writes.append(
+                    .init(
+                        domain: domain,
+                        day: Self.day,
+                        revision: revision,
+                        updatedAt: .now,
+                        payload: payload
+                    )
+                )
+            }
+            guard TaptionDataDeletionFence.allows(
+                generation: deletionGeneration
+            ) else {
+                throw RepositoryError.staleGeneration
+            }
+            try store.saveSnapshots(writes)
+            return SavedRows(generation: generation, nextRevision: revision)
         }
-        guard !writes.isEmpty else { return }
-        guard TaptionDataDeletionFence.allows(
-            generation: dataDeletionGeneration
-        ) else {
-            throw RepositoryError.staleGeneration
-        }
-        try await store.saveSnapshots(writes)
+        observedGeneration = saved.generation
+        nextRevision = saved.nextRevision
     }
 
     func deleteAll() async throws {
@@ -1017,23 +1090,29 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     private func deleteAllProtected() async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: lockURL)
-        defer { lock.unlock() }
-        let current = readGeneration()
-        guard current < UInt64.max else {
-            throw TaptionPlanDayStoreError.revisionOverflow
+        let generationURL = self.generationURL
+        let deletionPendingURL = self.deletionPendingURL
+        let deleted = try await withStoreLockRetry { store in
+            let current = Self.readGeneration(at: generationURL)
+            guard current < UInt64.max else {
+                throw TaptionPlanDayStoreError.revisionOverflow
+            }
+            let next = current + 1
+            try TaptionRepositoryDeletionMarker.write(
+                generation: next,
+                to: deletionPendingURL
+            )
+            try Data(String(next).utf8).write(to: generationURL, options: .atomic)
+            try store.deleteAllContent()
+            try FileManager.default.removeItem(at: deletionPendingURL)
+            return DeletedRows(
+                generation: next,
+                deletionGeneration: TaptionDataDeletionFence.currentGeneration()
+            )
         }
-        let next = current + 1
-        try TaptionRepositoryDeletionMarker.write(
-            generation: next,
-            to: deletionPendingURL
-        )
-        try Data(String(next).utf8).write(to: generationURL, options: .atomic)
-        try await store.deleteAllContent()
         nextRevision = 0
-        observedGeneration = next
-        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
-        try FileManager.default.removeItem(at: deletionPendingURL)
+        observedGeneration = deleted.generation
+        dataDeletionGeneration = deleted.deletionGeneration
     }
 
     private func readGeneration() -> UInt64 {
@@ -1047,17 +1126,25 @@ actor SQLitePlanRepository: PlanDataRepository {
         return generation
     }
 
+    private func withStoreLockRetry<Value: Sendable>(
+        _ operation: @Sendable (isolated TaptionPlanDayStore) throws -> Value
+    ) async throws -> Value {
+        while true {
+            try Task.checkCancellation()
+            do {
+                return try await store.withExclusiveFileAccess(
+                    at: lockURL,
+                    operation
+                )
+            } catch TaptionPlanDayStoreError.exclusiveFileLockBusy {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+        }
+    }
+
     private struct Metadata: Codable, Equatable, Sendable {
         let schemaVersion: Int
         let updatedAt: Date
-    }
-
-    private func loadFromStore() async throws -> TaptionDataSnapshot {
-        let rows = try await store.snapshots(day: Self.day)
-        guard !rows.isEmpty else { return .empty }
-        let value = try snapshot(from: rows)
-        nextRevision = max(nextRevision, rows.map(\.revision).max() ?? 0)
-        return value
     }
 
     private func snapshot(
@@ -1113,29 +1200,6 @@ actor SQLitePlanRepository: PlanDataRepository {
         )
     }
 
-    private func append(
-        domain: String,
-        payload: Data,
-        existingPayload: Data?,
-        force: Bool = false,
-        revisions: [String: UInt64],
-        to writes: inout [TaptionPlanDayStore.Snapshot]
-    ) throws {
-        guard force || payload != existingPayload else { return }
-        let currentRevision = revisions[domain] ?? 0
-        guard nextRevision > currentRevision else {
-            throw TaptionPlanDayStoreError.revisionOverflow
-        }
-        writes.append(
-            .init(
-                domain: domain,
-                day: Self.day,
-                revision: nextRevision,
-                updatedAt: .now,
-                payload: payload
-            )
-        )
-    }
 }
 #endif
 

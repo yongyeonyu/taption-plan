@@ -1,5 +1,59 @@
 # 남은 요청
 
+## ALLT0927A1 · temp.md 전체 미완료 요청 실행 [진행]
+- 원인: 열린 요청에 iPhone 11의 `0xDEAD10CC` 충돌, HealthKit 온보딩 잠금, 과거 앱 테스트 13건 실패, 저장·백업·동기화 미완성, 다수 실기기 검증 대기가 함께 남아 있다. 기존 코드는 이미 구현·검증된 작업과 미완료 작업이 혼재한다.
+- 해결: 현재 코드·Git·요청별 증거를 대조해 중복 구현을 피하고, 먼저 충돌/온보딩/회귀 실패를 해결한 뒤 저장·백업 및 기능 검증을 진행한다. iAP 보류, CloudKit Development 전용, 회사 반경 120m, 손상 raw 조각만 제외하는 복원 정책을 유지한다. 사용자 변경을 보존하고 새 브랜치를 만들지 않는다.
+- 검증 기준: 관련 단위·패키지 테스트, 기존 13개 실패 포함 앱 회귀, iOS Debug/Watch 빌드, 연결 기기 실증과 사용자 동행 계정 검증을 각각 근거로 남긴다. 성공한 변경만 main에 반영하고 새 내부 TestFlight 빌드의 처리·그룹·테스터 노출을 확인한다. 실제 증거가 없는 항목은 열린 상태로 유지한다.
+- 현재 상태(2026-09-28): 선행 전체 앱 회귀 1,412 통과/1 건너뜀/0 실패(총 1,413), iOS·Watch Debug 1.0(160) 빌드와 네 산출물 번들 번호 검증을 마쳤다. iPhone 11/18/iPad 설치 성공, iPhone18·iPad 160 readback 성공. iPhone11 설치는 성공했으나 앱 목록 readback timeout, Watch 직접 설치는 네트워크 터널 실패다. 앱은 어느 기기에서도 실행하지 않아 실기기 기능 검증·main 반영·TestFlight 160 업로드는 대기한다.
+- 후속 검증(BKM0928A01): 구버전 raw 전환·불변 세대 쓰기·manifest raw 참조를 보강하고 백업 회귀 122/122 및 iOS Debug 빌드를 통과했다. 이 후속 빌드는 아직 기기에 재설치하지 않았다. 전체 실행은 아래 streaming/journal·CloudKit·실기기 기준이 남아 진행 중이다.
+- 실기기 한 세션 확인표: `build/validation/ALLT0927A1/device-session-checklist.md`. 사용자가 직접 기기 조작·PIN 입력 후 비민감 통과/실패 결과를 전달해야 충돌·권한·GPS·화면·백업·Watch 항목을 판정할 수 있다.
+
+## CRAS270927 · iPhone 11 Pro Taption Plan 충돌 [잠금 범위 수정·자동 회귀 통과 / iPhone 11 검증 대기]
+- 관찰: iOS 충돌 공유 안내와 3개 보고서를 확인했다. 1.0(158)에서 21:27:31·21:28:20, 1.0(159)에서 21:29:19에 모두 `EXC_CRASH(SIGKILL)`, `RUNNINGBOARD 0xDEAD10CC`로 종료됐다.
+- 원인: 최신 보고서의 동시 실행 스택이 `AppModel.bootstrap()`의 저장소 시작 로드 → `SQLitePlanRepository.load()` → snapshot 디코딩 → `PlaceStay.init(from:)` / `TimeSpan.init(from:)`에 걸려 있다. 해당 코드에서 `.lock` 파일의 `flock`은 `loadFromStore()`를 `await`하고 Codable 디코딩을 마칠 때까지 유지된다. Apple은 `0xDEAD10CC`를 앱이 정지 중 파일 또는 SQLite 잠금을 보유해 시스템이 종료한 경우로 정의한다. 따라서 시작 로드 중 잠금 유지가 원인으로 강하게 특정됐지만, 보고서 자체는 정확히 어떤 잠금을 가리켰는지 밝히지 않으므로 코드 수정과 재현으로 확인해야 한다.
+- 해결·검증 기준: snapshot 일관성을 보장하면서 파일 잠금을 동기 SQLite 임계 구역으로 제한한다. 삭제 marker·generation을 같은 임계 구역에 두고 snapshot row 반환 후 디코딩한다. 저장소 잠금 경합 회귀와 앱 시작 Debug를 확인했다. iPhone 11 실기기 시작/백그라운드 복귀 및 새 충돌 보고서 확인은 남아 있다.
+
+## MARG270927 · 오른쪽 시간 레일 화면 높이·내부 여백 [코드·테스트·빌드 완료 / 실기기 화면 확인 대기]
+- 원인: 시간축 사이드바 높이가 720pt로 제한되고 내부 활동 막대·시간 라벨 트랙의 위아래 여백은 10pt다. 짧은 레일에서는 24시간 라벨도 모든 시간대를 표시해 텍스트 간격이 부족할 수 있다.
+- 해결: 기기 화면에서 상단 헤더와 하단 여백을 제외한 가용 높이까지 시간축을 늘리고, 활동 구간·시간 라벨 트랙의 위아래 여백을 10pt에서 20pt로 두 배 확대한다. 짧은 레일에서는 시간 라벨을 건너뛰어 최소 행 간격을 유지한다.
+- 검증: 큰 화면의 가용 높이·짧은 레일의 라벨 간격·내부 여백·시간 매핑 회귀 테스트 7개와 generic iOS Debug 빌드를 통과했다. 근거는 `test.md`와 `build/validation/MARG270927/`이다. 실기기 해상도별 실제 배치 확인은 대기한다.
+
+## UN270927B1 · 미확인 세그먼트별 빠른 입력 [코드·테스트·빌드 완료 / 실기기 화면 확인 대기]
+- 원인: 오른쪽 시간축 하단의 공용 `?` 버튼은 목록 전체로 연결돼 입력하려는 미확인 구간을 다시 골라야 하고, 버튼도 실제 구간과 떨어져 있다.
+- 해결: 입력 가능한 각 미확인 세그먼트 옆에 `?` 버튼을 표시한다. 버튼을 누르면 해당 세그먼트만 빠른 입력 시트에 전달해 그 구간만 저장하도록 하고, 오늘의 미래 구간에는 버튼을 표시하지 않는다. 가까운 구간의 44pt 터치 영역은 순서를 유지하며 겹치지 않도록 벌린다.
+- 검증: 대상 구간 선택·촘촘한 버튼 배치·오늘 현재 시각 자르기·해당 건만 표시/저장 회귀 테스트 7개와 generic iOS Debug 빌드를 통과했다. 근거는 `test.md`와 `build/validation/UN270927B1/final/`이다. 실기기에서 버튼 위치·개별 터치·저장을 확인하기 전까지 대기한다.
+
+## UR270927A1 · 왼쪽 하단 실행취소/다시실행 [코드·테스트·빌드 완료 / 실기기 화면 확인 대기]
+- 원인: 지도 왼쪽 레일에는 메뉴·위치·줌 조작만 있고, 선택 날짜의 일정·활동을 편집해도 되돌릴 변경 이력이 없다.
+- 해결: 지도 왼쪽 하단 줌 레일 아래에 세로 버튼을 두고, 사용자 계획 추가·수정·이동·길이 조절과 수동 활동 입력·분류·시간 교정의 최근 40개 이력을 되돌리고 재적용한다. 새 편집은 다시실행 이력을 지운다. 자동 센서 원본·외부 동기화 변경은 이력에 저장하지 않는다.
+- 검증: 활동·계획 실행취소/다시실행, HealthKit 기록 보존, 새 편집 뒤 다시실행 무효화, 기존 미확인 구간 재편집 테스트 및 generic iOS Debug 빌드를 통과했다. 근거는 `test.md` 및 `build/validation/UR270927A1/`이다. iPhone 설치는 하지 않았으며, 실제 화면의 좌측 하단 배치와 터치감 확인 전까지 이 항목을 유지한다.
+
+## WTH270927B · 현재 날씨 강조·미래 예보 흐리게·위젯 20% 축소 [코드·테스트·빌드 완료 / 화면 확인 대기]
+- 원인: 시간축 날씨 캡슐의 관측값과 미래 예보가 같은 불투명도·크기로 표시된다.
+- 해결: `WeatherContext.isForecast`가 미래 예보인 항목은 불투명도 58%와 비활성 접근성 값으로 표시하고 관측된 날씨는 100% 활성 표시한다. 캡슐 폭·높이·아이콘·기온 글꼴·간격·테두리·그림자를 80%로 줄이며, 작아진 캡슐도 시간 레일과 기존 간격을 유지한다.
+- 검증: 관측/예보 상태, 80% 크기, 사이드바 밀착 정렬·선택 시간 겹침, 관측값/예보 병합 회귀 테스트 5개 및 generic iOS Debug 빌드 통과. 근거는 `test.md` WTH270927B. 실제 화면에서 현재·미래 구분과 작은 글자 판독성은 확인 전까지 대기한다.
+
+## HOM270927A · 집 마커 탭으로 레벨 플로팅 카드 열기 [코드·테스트·빌드 완료 / 실기기 확인 대기]
+- 원인: 집 레벨·오늘 상태·진행 카드가 `MapHomePlacePin`에서 상시 표시되고, 집 마커의 탭 동작과 연결돼 있지 않다.
+- 해결: 카드를 기본 숨김으로 두고 집 그림의 중앙 탭으로 표시/숨김을 전환한다. 숨김 상태에도 레이아웃 공간은 유지해 지도 위 집 위치가 움직이지 않게 하고, 카드 내부의 하루 요약 버튼과 성장 상세 펼침은 유지한다. 집 그림을 눌렀을 때 화랑이 상세가 함께 열리지 않도록 탭 영역을 나눴다.
+- 검증: 화랑이 기존 탭 경계와 집 아이콘/화랑이 탭 분리 테스트 2개 및 generic iOS Debug 빌드 통과. 상세 근거는 `test.md` HOM270927A. 실제 기기에서 기본 숨김·열기/닫기, 지도 드래그, 화랑이 상세 탭을 확인하기 전까지 대기한다.
+
+## GPS270927A · 포그라운드 실시간 현재 위치·이동 경로 [코드·테스트·빌드 완료 / 실기기 확인 대기]
+- 원인: 기본 위치 수집은 설정된 표본 창만 열고 분 단위 간격으로 GPS를 중지한다. 지도는 저장된 읽기를 표시하므로 앱을 열어 둬도 현재 위치와 경로가 연속 갱신되지 않는다.
+- 해결: 위치 기록이 켜져 있고 권한이 허용된 동안 앱이 활성 상태일 때만 정밀 위치 업데이트를 유지하고, 새 GPS fix를 원본으로 저장한 뒤 현재 위치·경로 표시를 갱신한다. 앱이 비활성화되면 기존 센서 및 Always 권한 기반 백그라운드 정책으로 돌아가며 Always 권한을 새로 요구하지 않는다.
+- 검증: 포그라운드 모드에서 서로 다른 GPS fix가 저전력 표본 간격에 막히지 않고 저장·경로 입력되는 회귀 테스트, 기존 센서/지도 회귀 테스트, iOS Debug 빌드를 실행한다. 실제 위치 권한·이동 경로 표시와 백그라운드 복귀는 기기에서 별도 확인한다.
+
+## UI270927A1 · 오른쪽 시간축 여백과 미확인 입력 버튼 [코드·테스트·빌드 완료 / 실기기 확인 대기]
+- 원인: 오른쪽 시간축은 지도 조작 레일과 같은 상·하단 프레임을 쓰고, 내부 눈금은 14pt 안쪽에 배치된다. 기존 `?` 버튼은 상단에 고정되어 있으며 선택 날짜에 미확인 구간이 없어도 활성화된다.
+- 해결: 왼쪽 조작 레일은 유지하고 오른쪽 시간축의 바깥 여백을 위 20pt·아래 32pt로 따로 설정했다. 눈금 여백은 10pt로 줄였다. `?`를 하단으로 옮기고 선택 날짜에 입력 가능한 미확인 구간이 있을 때만 활성화한다.
+- 검증: 여백·미확인 구간 상태 단위 테스트 2개와 미확인 입력·시간 매핑 회귀 테스트 5개 통과, iOS Debug 빌드 성공. 근거는 `test.md` UI270927A1. 실기기 화면 간격·터치·저장은 대기한다.
+
+## HK270927A1 · 첫 실행 HealthKit 전체 허용 후 온보딩 정체 [권한 상태 분리·자동 회귀 통과 / 실기기 검증 대기]
+- 관찰: 첫 실행 권한 화면 2/4에서 건강 데이터를 허용한 뒤 다음 단계로 넘어가지 않고, 하단 `모두 허용`을 눌러야 진행된다고 보고됐다.
+- 확인된 원인 경로: 첫 활성화 뒤 지연 foreground refresh가 실행되고 `refreshEnabledData`가 공유 `isRefreshingIntegrations`를 켠다. 온보딩의 개별 허용·건너뛰기 버튼은 이 전체 데이터 갱신 플래그로 비활성화되지만 하단 `모두 허용`은 별도 `isRequesting`만 확인한다. `requestHealth`도 같은 플래그가 켜져 있으면 조용히 반환하며 화면 코드는 요청 결과와 무관하게 단계를 넘긴다.
+- 해결: 권한 요청용 `isRequestingPermission` 상태를 데이터 refresh 상태와 분리하고, HealthKit·캘린더·알림 요청의 완료 결과를 온보딩에 돌려준다. 실패·중복 호출은 현재 단계에 머물고, 모두 허용은 실패 지점에서 멈춘다. 건너뛰기는 계속 가능하며 시스템 거부 응답은 완료된 요청으로 처리한다.
+- 검증: 요청 실패 시 진행하지 않는 progress 회귀와 앱 Debug 테스트 통과. iPhone에서 HealthKit 시스템 창 이후 다음 단계 도달 여부, 거부·건너뛰기, 모두 허용을 직접 확인한다.
+
 ## REV0927C01 · 빠른 입력 원본 보존·자정 정산·버튼 터치 영역 [코드·테스트·빌드 완료 / 실기기 확인 대기]
 - 원인: 일부 구간 편집에서 sourceID의 수동 기록 전체를 제거하고, 소급 보상 실패 시 미정산 날짜의 변경도 저장하지 않는다. 미확인 버튼의 터치 영역은 26pt다.
 - 해결: 편집 범위 밖의 수동 기록 조각을 보존하고, 날짜 정산은 보상 여부와 무관하게 저장하며, 버튼의 시각 크기는 유지하고 터치 영역을 넓힌다.
@@ -222,14 +276,19 @@
 - **결정(2026-09-25): 선택 2(V4 분리) 채택.** readings를 bounded rows/pages로 분리한 V4 포맷을 신설하고 load/query/migration 계약을 함께 변경한다. incremental GCM(청크 인증/압축) 선행. peak memory 상한을 페이지 크기로 보장.
 - 부분 구현(2026-09-26): raw 복원 시 계정 키 복호에 실패한 월 archive만 격리하고 정상 월 raw는 유지한다. 전 월 손상은 `.invalidArchive`, 월 간 중복 ID 충돌은 기존처럼 fail closed. 회귀 3건 통과(`test.md` RST0920A01).
 - 부분 구현(2026-09-27): raw와 월 snapshot 쓰기를 V4 페이지 frame으로 바꾸고 페이지마다 압축·GCM 인증 및 metadata/page-index AAD를 적용했다. 기본 256행/1MiB, 하드 1,024행/4MiB 제한이며 V1–V3 decode는 유지한다. 인증이 실패한 raw 페이지는 건너뛰며 유효 페이지가 남으면 그 기록을 복원한다. snapshot page 손상은 전체 snapshot 복원을 거부한다.
-- 남은 구현: DB cursor/file 기반 end-to-end bounded streaming, v1/v2/v3→V4 1회 자동 migration, snapshot/raw restore용 보호된 SQLite staging 및 crash recovery journal. 현 V4 page codec은 완성된 source model과 전체 encrypted frame을 메모리에 둔다. 구버전 원본은 migration 성공·복구 검증 전 보존한다.
+- 추가 구현(2026-09-27): 월 snapshot을 timestamp가 있는 불변 파일 generation으로 저장하고, snapshot generation ID와 raw generation ID를 분리해 manifest CAS로 각각 기록한다. parent generation은 같은 월의 동시 sibling만 복원 시 병합하도록 한다. 저장 후 readback과 기존 snapshot 보존 회귀를 추가했다. SecurityBackupCore 113/113과 동시 세대·manifest 집중 회귀 3/3 통과(`test.md` ALLT0927A1).
+- 검증 보강(2026-09-28): V1·V2·V3 월 snapshot의 다음 저장 시 V4 전환 회귀 3/3(ALLT0927A1), 커밋된 V1·V2·V3 raw의 다음 백업 시 V4 전환·파일 원본 보존·서비스 재시작 후 복원 회귀 3/3(BKM0928A01)을 통과했다. 다음 백업은 현재 V4 세대를 사용하며 legacy 원본을 다시 쓰지 않는다. 과거 모든 월의 일괄 migration이나 재시작 journal을 입증한 것은 아니다.
+- 부분 구현(BKM0928A01): snapshot/raw 불변 세대 파일을 complete-protection staging에 기록·fsync한 뒤 원자적으로 공개한다. 같은 세대는 동일 바이트 재시도만 허용하고, 다른 내용이나 raw 경로/세대 불일치를 거부한다. 쓰기 실패 시 staging 정리 회귀도 통과했다. 이 파일 쓰기 staging은 아래 SQLite 복원 staging과 다르다.
+- 남은 구현: DB cursor/file 기반 end-to-end bounded streaming, 과거 월까지 포함한 1회 migration·재실행 처리, snapshot/raw restore용 보호된 SQLite staging 및 crash recovery journal. 현 V4 page codec은 완성된 source model과 전체 encrypted frame을 메모리에 둔다. 구버전 원본은 보존한다.
 - 복원 추가 선택: v3 청크 인증/압축, 보호된 SQLite stage와 ID unique index, 검증 후 bounded commit·rollback recovery journal, 손상 raw의 snapshot-only 부분 복원 및 앱 재실행 복구 보장 범위. 구버전 strict streaming에는 검토된 incremental GCM 구현이 선행돼야 한다.
 - 검증 기준: 기존 v1/v2 fixture·원본 보존, malformed/conflict/cancel/retry, commit/rollback 복구와 실제 peak memory.
 
 ## BKC0920A01 · 다중 기기 백업 원자성 선택
 
 - 부분 구현(2026-09-27): 개발 빌드 전용 CloudKit manifest actor가 device/month별 generation 참조를 병합하며 CKRecord change-tag conflict 시 최대 3회 재시도한다. 오프라인 pending manifest를 로컬 보호 파일에 보존하고 다음 시작/백업에서 재시도한다. Production 경로는 비활성이다.
-- 남은 구현: snapshot을 포함한 모든 generation의 불변 저장·manifest commit 순서 원자화, 충돌 시 두 기기 snapshot/raw 본문 재병합 후 새 generation 봉인, offline device 참조·재시도 정책 통합. 실제 CloudKit Development 두 기기 경합은 검증 전이다.
+- 추가 구현(2026-09-27): 불변 snapshot generation과 별도 snapshot/raw manifest reference를 추가하고 CAS merge의 구버전 manifest decode 호환을 검사했다. 충돌 body remerge는 restore 시 같은 parent sibling을 병합한다.
+- 보강(BKM0928A01): snapshot-only 백업의 존재하지 않는 raw generation 발행을 제거했다. 새 raw 저장과 기존 raw 보존 백업은 실제 커밋된 raw 참조를 발행하며, 세 경우의 publisher 회귀를 통과했다. 실서비스 CAS 경합을 검증한 것은 아니다.
+- 남은 구현: CAS 충돌 중 remote generation 본문을 다시 읽고 새 merged generation으로 봉인하는 서버 동기 재병합과 실제 CloudKit Development 두 기기 경합. 현재 merge는 복원 시점이며 CloudKit 실계정 동기화 증거가 아니다.
 
 - 원인: iCloud 파일의 이전 값 비교는 서버 CAS가 아니어서 두 기기가 같은 월 snapshot을 덮어쓰면 한쪽 raw generation이 복원에서 빠질 수 있다.
 - 후보: 불변 snapshot/raw generation과 CloudKit change-tag manifest CAS, 충돌 시 재병합. Production schema·오프라인 재시도·혼합 버전 계약이 필요한 별도 확장이다.
@@ -240,7 +299,7 @@
 ## BRT0920A01 · 백업 generation 보존 정책 선택
 
 - 부분 구현(2026-09-27): manifest reference와 로컬 committed snapshot reference를 보호하고, 월별 unreferenced raw archive는 최근 10개를 유지한다. 삭제 오류는 무시하지 않고 호출자에게 반환한다. `test.md` RST0920A01 retention 회귀 참조.
-- 남은 구현: CloudKit에 아직 접속하지 못한 offline device의 참조 generation 보호를 포함해 snapshot/raw 통합 pruning 및 삭제 실패 재시도 정책을 검증한다.
+- 남은 구현: CloudKit에 아직 접속하지 못한 offline device의 참조 generation 보호를 포함해 snapshot/raw 통합 pruning 및 삭제 실패 재시도 정책을 검증한다. Snapshot immutable file pruning은 아직 하지 않으며, 복원 파일 enumeration은 bounded count/byte limit를 유지한다.
 
 - 원인: 성공한 raw 백업과 실패한 staged 파일의 generation/orphan이 누적될 수 있다. 정상 복원은 committed snapshot의 정확한 generation을 직접 읽으며 enumeration cap과 구분된다.
 - **결정(2026-09-25): 최근 10개 generation 보존.** committed snapshot이 참조하는 generation은 무조건 보존하고, 그 외 성공 raw·실패 staged는 최신 10개까지만 유지, 초과분 정리. offline 기기가 참조 중인 generation은 삭제 대상에서 제외.
@@ -281,9 +340,9 @@
 - 대표님 결정: (c) 비주얼만 정리(항목 구성·동작 불변). 커밋 5fef990.
 - menuItem: 아이콘 크기 20→18·색을 미사용시 tpInk 55% 뮤트로 통일해 아이콘 열 정돈, 우측에 chevron.right 어포던스 추가, 세로 리듬 15→13·모서리 13 연속곡선. sidebarContent 헤더: 홈아이콘 48→46·타이틀 간격 정리·닫기 버튼 tpInk 톤 통일. 위치기록 상태를 dot+텍스트 pill(tpInk 4% 배경)로 정돈. 항목 7개·Pro·푸터 구성 그대로, 액션 불변(규칙11).
 
-### HUD0926M08 · 하루 요약을 탐험 HUD에 통합 [대기 — 대표님 결정 선행]
-- 결정(2026-09-26): 기존 하루 요약 시트를 열며, 걸음 수를 추가한다. 기존 탐험 칩은 유지한다.
-- 현재 HUD 위치는 1e283ec에서 하단으로 이동했다. 화면 위치 변경과 통합을 구분한다.
+### HUD0926M08 · 하루 요약·걸음 수 접근 [결정·코드·테스트 완료 / 집 마커 UX로 대체]
+- 결정(2026-09-26): 기존 하루 요약을 열고 걸음 수를 포함한다. 이후 SBR0926A01에서 하단 탐험 HUD를 집 마커 성장 카드로 대체했으므로, 별도 탐험 칩 유지 요구는 최신 UI 결정으로 대체됐다.
+- 현재 집 레벨 영역이 기존 하루 요약 시트를 열고 시트는 걸음 수를 표시한다. 자동 회귀·iOS Debug 빌드는 DYS0927A01 기록에 있다. 실제 집 레벨 탭·시트 표시는 DYS0927A01의 실기기 확인 한 번으로 추적한다.
 
 ### GAME0926R03 · RPG 게임 요소 (방향 재검토)
 - 2026-09-26: "탐험지 개척(Homestead)" 육각 격자 시안을 구현했으나 대표님이 "육각형 이상하다"며 **원복 지시** → 관련 코드 전량 제거(엔진/store/렌더/HUD코인/개간/테스트, pbxproj·temp 되돌림). 커밋 728c94b·b7d8963·8686101·bd92ce7 무효화.

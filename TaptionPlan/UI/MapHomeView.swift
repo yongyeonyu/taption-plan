@@ -187,6 +187,7 @@ enum MapHomeLongPressRoutingMath {
 
 enum MapHomeCatTapRouting {
     static let hitRadius: CGFloat = 36
+    static let homeIconHitRadius: CGFloat = 18
     static let homeImageCenterOffset = CGPoint(x: 0, y: 30)
     static let catOffsetInHomeImage = CGPoint(x: 23, y: 10)
     static let homeMarkerOffset = CGPoint(
@@ -203,9 +204,40 @@ enum MapHomeCatTapRouting {
         )
     }
 
-    static func contains(tapPoint: CGPoint, markerPoint: CGPoint) -> Bool {
+    static func contains(
+        tapPoint: CGPoint,
+        markerPoint: CGPoint,
+        radius: CGFloat = hitRadius
+    ) -> Bool {
         hypot(tapPoint.x - markerPoint.x, tapPoint.y - markerPoint.y)
-            <= hitRadius
+            <= radius
+    }
+
+    static func isHomeIconTap(tapPoint: CGPoint, locationPoint: CGPoint) -> Bool {
+        let homeIconPoint = CGPoint(
+            x: locationPoint.x + homeImageCenterOffset.x,
+            y: locationPoint.y + homeImageCenterOffset.y
+        )
+        return contains(
+            tapPoint: tapPoint,
+            markerPoint: homeIconPoint,
+            radius: homeIconHitRadius
+        )
+    }
+
+    static func shouldPresentCatDetails(
+        tapPoint: CGPoint,
+        locationPoint: CGPoint,
+        isAtHome: Bool
+    ) -> Bool {
+        guard !isAtHome || !isHomeIconTap(
+            tapPoint: tapPoint,
+            locationPoint: locationPoint
+        ) else { return false }
+        return contains(
+            tapPoint: tapPoint,
+            markerPoint: markerPoint(locationPoint: locationPoint, isAtHome: isAtHome)
+        )
     }
 }
 
@@ -812,6 +844,29 @@ enum MapHomeOverlayLayoutMath {
             width: 0,
             height: railHeight
         )
+    }
+
+    static func timeSidebarFrame(
+        viewportHeight: CGFloat,
+        topOverlayHeight: CGFloat,
+        topMargin: CGFloat = 20,
+        bottomMargin: CGFloat = 32
+    ) -> CGRect {
+        let height = max(0, viewportHeight)
+        let top = min(max(0, topOverlayHeight + topMargin), height)
+        let bottom = min(max(0, bottomMargin), height - top)
+        let availableHeight = height - top - bottom
+        let railHeight = timeSidebarHeight(availableHeight: availableHeight)
+        return CGRect(
+            x: 0,
+            y: top + availableHeight - railHeight,
+            width: 0,
+            height: railHeight
+        )
+    }
+
+    static func timeSidebarHeight(availableHeight: CGFloat) -> CGFloat {
+        max(0, availableHeight)
     }
 
     static func railHeight(availableHeight: CGFloat) -> CGFloat {
@@ -2096,6 +2151,7 @@ struct MapHomeView: View {
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isUnconfirmedReviewPresented = false
+    @State private var focusedUnconfirmedReviewSegment: MapHomeTimeRailSegment?
     @State private var pendingUnconfirmedEditMinute: Int?
     @State private var isMapCenteredOnUser = false
     @SceneStorage("MapHome.userTrackingMode")
@@ -2650,6 +2706,7 @@ struct MapHomeView: View {
         .sheet(
             isPresented: $isUnconfirmedReviewPresented,
             onDismiss: {
+                focusedUnconfirmedReviewSegment = nil
                 guard let minute = pendingUnconfirmedEditMinute else { return }
                 pendingUnconfirmedEditMinute = nil
                 Task { @MainActor in
@@ -2661,7 +2718,10 @@ struct MapHomeView: View {
             MapHomeUnconfirmedReviewSheet(
                 date: model.selectedDate,
                 segments: timeRailSegments,
-                recentDates: MapHomeUnconfirmedReviewPolicy.recentDates(),
+                focusedSegment: focusedUnconfirmedReviewSegment,
+                recentDates: focusedUnconfirmedReviewSegment == nil
+                    ? MapHomeUnconfirmedReviewPolicy.recentDates()
+                    : [],
                 language: language,
                 onDateSelect: { day in
                     guard !Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) else { return }
@@ -3780,12 +3840,10 @@ struct MapHomeView: View {
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
         guard let stickmanPoint = vectorMapViewportStore.stickmanPoint
                 ?? displayedStickmanViewportPoint,
-              MapHomeCatTapRouting.contains(
+              MapHomeCatTapRouting.shouldPresentCatDetails(
                   tapPoint: tapPoint,
-                  markerPoint: MapHomeCatTapRouting.markerPoint(
-                      locationPoint: stickmanPoint,
-                      isAtHome: isDisplayedCatAtHome
-                  )
+                  locationPoint: stickmanPoint,
+                  isAtHome: isDisplayedCatAtHome
               ) else { return }
         selectedMarkerInfo = .cat(displayedStickmanAction)
     }
@@ -5191,6 +5249,14 @@ struct MapHomeView: View {
             topInset: topOverlayHeight + Layout.timeRailTopMargin,
             bottomInset: Layout.overlayBottomMargin
         )
+        let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
+            viewportHeight: viewportSize.height,
+            topOverlayHeight: topOverlayHeight
+        )
+        let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
+            railWidth: Layout.timeRailWidth,
+            trailingInteractionWidth: Layout.horizontalInset
+        )
         return HStack(alignment: .top, spacing: 0) {
             mapControls(proxy: nil, railHeight: frame.height)
                 .onGeometryChange(
@@ -5204,24 +5270,23 @@ struct MapHomeView: View {
                     }
                 )
             Spacer(minLength: 0)
-            currentTimeRail
-                .frame(
-                    width: MapHomeTimeSidebarMath.interactionWidth(
-                        railWidth: Layout.timeRailWidth,
-                        trailingInteractionWidth: Layout.horizontalInset
-                    ),
-                    height: frame.height
-                )
+            Color.clear
+                .frame(width: timeSidebarWidth, height: frame.height)
         }
         .padding(.leading, Layout.horizontalInset)
         .frame(maxWidth: .infinity)
         .frame(height: frame.height)
+        .overlay(alignment: .topTrailing) {
+            currentTimeRail
+                .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
+                .offset(y: timeSidebarFrame.minY - frame.minY)
+        }
         .position(x: viewportSize.width / 2, y: frame.midY)
     }
 
     private var currentTimeRail: some View {
         GeometryReader { proxy in
-            let railHeight = MapHomeOverlayLayoutMath.railHeight(
+            let railHeight = MapHomeOverlayLayoutMath.timeSidebarHeight(
                 availableHeight: proxy.size.height
             )
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
@@ -5316,7 +5381,8 @@ struct MapHomeView: View {
                         onSectionEdit: { selectedMinute in
                             openSectionEditor(at: selectedMinute)
                         },
-                        onUnconfirmedReview: {
+                        onUnconfirmedReview: { segment in
+                            focusedUnconfirmedReviewSegment = segment
                             isUnconfirmedReviewPresented = true
                         }
                     )
@@ -5328,11 +5394,15 @@ struct MapHomeView: View {
                             centerMinute: effectiveTimelineMinute
                         )
                         let minute = minuteOfDay(for: sticker.occurredAt)
-                        let trackHeight = max(1, railHeight - 28)
-                        let y = 14 + trackHeight * MapHomeTimeSidebarMath.position(
-                            minute: minute,
-                            window: window
+                        let trackHeight = max(
+                            1,
+                            railHeight - MapHomeTimeSidebarMath.verticalInset * 2
                         )
+                        let y = MapHomeTimeSidebarMath.verticalInset
+                            + trackHeight * MapHomeTimeSidebarMath.position(
+                                minute: minute,
+                                window: window
+                            )
                         Button {
                             selectedMapStickerEditor = .sticker(sticker.id)
                         } label: {
@@ -5353,7 +5423,10 @@ struct MapHomeView: View {
                         )
                         .position(
                             x: MapHomeTimeSidebarMath.handleLaneWidth + 8,
-                            y: min(max(y, 14), railHeight - 14)
+                            y: min(
+                                max(y, MapHomeTimeSidebarMath.verticalInset),
+                                railHeight - MapHomeTimeSidebarMath.verticalInset
+                            )
                         )
                     }
                 }
@@ -5492,6 +5565,42 @@ struct MapHomeView: View {
             VStack(spacing: 0) {
                 mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
                 mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
+            }
+            .background(Color.tpSurface.opacity(0.92), in: Capsule())
+            .overlay {
+                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
+            }
+
+            VStack(spacing: 0) {
+                Button {
+                    model.undoLastUserEdit()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                        .foregroundStyle(
+                            model.canUndo
+                                ? Color.tpInk
+                                : Color.tpSecondary.opacity(0.48)
+                        )
+                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                }
+                .accessibilityLabel(language.text("실행취소", "Undo"))
+                .disabled(!model.canUndo)
+
+                Button {
+                    model.redoLastUserEdit()
+                } label: {
+                    Image(systemName: "arrow.uturn.forward")
+                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                        .foregroundStyle(
+                            model.canRedo
+                                ? Color.tpInk
+                                : Color.tpSecondary.opacity(0.48)
+                        )
+                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                }
+                .accessibilityLabel(language.text("다시실행", "Redo"))
+                .disabled(!model.canRedo)
             }
             .background(Color.tpSurface.opacity(0.92), in: Capsule())
             .overlay {
@@ -7449,8 +7558,9 @@ struct MapHomeView: View {
             travel: dayData?.travel ?? model.snapshot.travel,
             on: model.selectedDate
         )
-        guard next != timeRailSegments else { return }
-        timeRailSegments = next
+        if next != timeRailSegments {
+            timeRailSegments = next
+        }
     }
 
     private func resetDayScopedMapState(for date: Date) {
@@ -13030,30 +13140,19 @@ private struct MapHomePlacePin: View {
     var equippedAccessoryID: String? = nil
     var onOpenDaySummary: (() -> Void)? = nil
     @State private var isGrowthSummaryExpanded = false
+    @State private var isGrowthCalloutVisible = false
 
     var body: some View {
         VStack(spacing: 5) {
             if destination == .home, let growthLevel {
                 homeGrowthCallout(level: growthLevel)
+                    .opacity(isGrowthCalloutVisible ? 1 : 0)
+                    .allowsHitTesting(isGrowthCalloutVisible)
+                    .accessibilityHidden(!isGrowthCalloutVisible)
                 if showsCatAtHome {
                     homeCatMarker(level: growthLevel)
                 } else {
-                    Image(MapHomeGrowthPolicy.artworkName(level: growthLevel))
-                        .resizable()
-                        .scaledToFit()
-                        .shadow(color: .white.opacity(0.9), radius: 1.5)
-                        .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
-                        .frame(width: 48, height: 48)
-                        .overlay(alignment: .topTrailing) {
-                            if isLeapDay {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 11, weight: .black))
-                                    .foregroundStyle(Color(hex: "#E3B54A"))
-                                    .shadow(color: .white, radius: 1.5)
-                                    .offset(x: 2, y: -1)
-                            }
-                        }
-                        .allowsHitTesting(false)
+                    homeMarkerArtwork(level: growthLevel)
                 }
             } else {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
@@ -13078,6 +13177,50 @@ private struct MapHomePlacePin: View {
                 ? "집 레벨 \(growthLevel ?? 1), \(growthStatus ?? "하루 요약 보기")"
                 : "\(name), 레벨 \(floor ?? 1)"
         )
+    }
+
+    private func homeMarkerArtwork(level: Int) -> some View {
+        Image(MapHomeGrowthPolicy.artworkName(level: level))
+            .resizable()
+            .scaledToFit()
+            .shadow(color: .white.opacity(0.9), radius: 1.5)
+            .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+            .frame(width: 48, height: 48)
+            .contentShape(Rectangle())
+            .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48)))
+            .accessibilityElement()
+            .accessibilityLabel(isGrowthCalloutVisible ? "집 성장 정보 숨기기" : "집 성장 정보 보기")
+            .accessibilityHint("집 그림을 눌러 레벨과 오늘 상태를 표시합니다")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggleGrowthCallout() }
+            .overlay(alignment: .topTrailing) {
+                if isLeapDay {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Color(hex: "#E3B54A"))
+                        .shadow(color: .white, radius: 1.5)
+                        .offset(x: 2, y: -1)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private func homeIconTapGesture(markerSize: CGSize) -> some Gesture {
+        SpatialTapGesture(coordinateSpace: .local)
+            .onEnded { tap in
+                guard MapHomeCatTapRouting.contains(
+                    tapPoint: tap.location,
+                    markerPoint: CGPoint(x: markerSize.width / 2, y: markerSize.height / 2),
+                    radius: MapHomeCatTapRouting.homeIconHitRadius
+                ) else { return }
+                toggleGrowthCallout()
+            }
+    }
+
+    private func toggleGrowthCallout() {
+        withAnimation(.easeInOut(duration: 0.18)) {
+            isGrowthCalloutVisible.toggle()
+        }
     }
 
     private func homeGrowthCallout(level: Int) -> some View {
@@ -13187,7 +13330,13 @@ private struct MapHomePlacePin: View {
             }
         }
         .frame(width: 78, height: 78)
-        .allowsHitTesting(false)
+        .contentShape(Rectangle())
+        .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 78, height: 78)))
+        .accessibilityElement()
+        .accessibilityLabel(isGrowthCalloutVisible ? "집 성장 정보 숨기기" : "집 성장 정보 보기")
+        .accessibilityHint("집 그림을 눌러 레벨과 오늘 상태를 표시합니다")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { toggleGrowthCallout() }
     }
 }
 

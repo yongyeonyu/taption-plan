@@ -1079,6 +1079,256 @@ enum PlanCloudBackupRestoreResult: Equatable {
     case unchanged
 }
 
+private struct AppModelHistoryChange<Value: Hashable> {
+    let id: UUID
+    let before: Value?
+    let after: Value?
+}
+
+private struct AppModelHistoryEntry {
+    let plans: [AppModelHistoryChange<PlanRecord>]
+    let manualActuals: [AppModelHistoryChange<ActualRecord>]
+    let corrections: [AppModelHistoryChange<ActivityCorrection>]
+    let addedLabels: Set<String>
+    let removedLabels: Set<String>
+    let addedSleepSpans: Set<TimeSpan>
+    let removedSleepSpans: Set<TimeSpan>
+    let addedSuppressedIDs: Set<UUID>
+    let removedSuppressedIDs: Set<UUID>
+
+    var isEmpty: Bool {
+        plans.isEmpty && manualActuals.isEmpty && corrections.isEmpty
+            && addedLabels.isEmpty && removedLabels.isEmpty
+            && addedSleepSpans.isEmpty && removedSleepSpans.isEmpty
+            && addedSuppressedIDs.isEmpty && removedSuppressedIDs.isEmpty
+    }
+
+    static func difference(
+        from before: TaptionDataSnapshot,
+        to after: TaptionDataSnapshot
+    ) -> Self {
+        let planOrigins: (PlanRecord) -> Bool = {
+            $0.origin == .user || $0.origin == .repeatRule
+        }
+        let manualRecords: (ActualRecord) -> Bool = { $0.source == .manual }
+        let oldLabels = Set(before.settings.customActivityLabels)
+        let newLabels = Set(after.settings.customActivityLabels)
+        let oldSleepSpans = Set(before.settings.confirmedSleepSpans)
+        let newSleepSpans = Set(after.settings.confirmedSleepSpans)
+
+        return Self(
+            plans: changes(
+                from: before.plans,
+                to: after.plans,
+                id: \.id,
+                include: planOrigins
+            ),
+            manualActuals: changes(
+                from: before.actuals,
+                to: after.actuals,
+                id: \.id,
+                include: manualRecords
+            ),
+            corrections: dictionaryChanges(
+                from: before.settings.activityCorrections,
+                to: after.settings.activityCorrections
+            ),
+            addedLabels: newLabels.subtracting(oldLabels),
+            removedLabels: oldLabels.subtracting(newLabels),
+            addedSleepSpans: newSleepSpans.subtracting(oldSleepSpans),
+            removedSleepSpans: oldSleepSpans.subtracting(newSleepSpans),
+            addedSuppressedIDs: after.settings.suppressedActualIDs
+                .subtracting(before.settings.suppressedActualIDs),
+            removedSuppressedIDs: before.settings.suppressedActualIDs
+                .subtracting(after.settings.suppressedActualIDs)
+        )
+    }
+
+    func applying(
+        to source: TaptionDataSnapshot,
+        undo: Bool
+    ) -> TaptionDataSnapshot? {
+        var result = source
+        guard Self.apply(plans, to: &result.plans, id: \.id, undo: undo),
+              Self.apply(
+                manualActuals,
+                to: &result.actuals,
+                id: \.id,
+                undo: undo
+              ) else {
+            return nil
+        }
+
+        for change in corrections {
+            let expected = undo ? change.after : change.before
+            guard result.settings.activityCorrections[change.id] == expected
+            else { return nil }
+        }
+        for change in corrections {
+            let replacement = undo ? change.before : change.after
+            result.settings.activityCorrections[change.id] = replacement
+        }
+
+        let labelsToAdd = undo ? removedLabels : addedLabels
+        let labelsToRemove = undo ? addedLabels : removedLabels
+        result.settings.customActivityLabels = Self.applyingSetChanges(
+            to: result.settings.customActivityLabels,
+            adding: labelsToAdd,
+            removing: labelsToRemove
+        )
+
+        let spansToAdd = undo ? removedSleepSpans : addedSleepSpans
+        let spansToRemove = undo ? addedSleepSpans : removedSleepSpans
+        result.settings.confirmedSleepSpans = Self.applyingSetChanges(
+            to: result.settings.confirmedSleepSpans,
+            adding: spansToAdd,
+            removing: spansToRemove
+        ).sorted { $0.start < $1.start }
+
+        let suppressedToAdd = undo ? removedSuppressedIDs : addedSuppressedIDs
+        let suppressedToRemove = undo ? addedSuppressedIDs : removedSuppressedIDs
+        result.settings.suppressedActualIDs.formUnion(suppressedToAdd)
+        result.settings.suppressedActualIDs.subtract(suppressedToRemove)
+        if !corrections.isEmpty {
+            result.actuals = ActivityCorrectionEngine.applying(
+                result.settings.activityCorrections,
+                to: result.actuals
+            ).sorted { $0.startedAt < $1.startedAt }
+        } else if !manualActuals.isEmpty {
+            result.actuals.sort { $0.startedAt < $1.startedAt }
+        }
+        result.plans.sort { $0.span.start < $1.span.start }
+        return result
+    }
+
+    func mergingPlanChanges(with next: Self) -> Self? {
+        guard !plans.isEmpty,
+              manualActuals.isEmpty, next.manualActuals.isEmpty,
+              corrections.isEmpty, next.corrections.isEmpty,
+              addedLabels.isEmpty, next.addedLabels.isEmpty,
+              removedLabels.isEmpty, next.removedLabels.isEmpty,
+              addedSleepSpans.isEmpty, next.addedSleepSpans.isEmpty,
+              removedSleepSpans.isEmpty, next.removedSleepSpans.isEmpty,
+              addedSuppressedIDs.isEmpty, next.addedSuppressedIDs.isEmpty,
+              removedSuppressedIDs.isEmpty, next.removedSuppressedIDs.isEmpty,
+              Set(plans.map(\.id)) == Set(next.plans.map(\.id)) else {
+            return nil
+        }
+        let nextByID = Dictionary(uniqueKeysWithValues: next.plans.map {
+            ($0.id, $0)
+        })
+        let combined = plans.compactMap { first -> AppModelHistoryChange<PlanRecord>? in
+            guard let latest = nextByID[first.id],
+                  first.before != latest.after else { return nil }
+            return AppModelHistoryChange(
+                id: first.id,
+                before: first.before,
+                after: latest.after
+            )
+        }
+        guard !combined.isEmpty else { return nil }
+        return Self(
+            plans: combined,
+            manualActuals: [],
+            corrections: [],
+            addedLabels: [],
+            removedLabels: [],
+            addedSleepSpans: [],
+            removedSleepSpans: [],
+            addedSuppressedIDs: [],
+            removedSuppressedIDs: []
+        )
+    }
+
+    private static func changes<Value: Hashable>(
+        from before: [Value],
+        to after: [Value],
+        id: KeyPath<Value, UUID>,
+        include: (Value) -> Bool
+    ) -> [AppModelHistoryChange<Value>] {
+        let oldByID = Dictionary(
+            before.filter(include).map { ($0[keyPath: id], $0) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+        let newByID = Dictionary(
+            after.filter(include).map { ($0[keyPath: id], $0) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+        return Set(oldByID.keys).union(newByID.keys)
+            .sorted { $0.uuidString < $1.uuidString }
+            .compactMap { id in
+                let old = oldByID[id]
+                let new = newByID[id]
+                guard old != new else { return nil }
+                return AppModelHistoryChange(id: id, before: old, after: new)
+            }
+    }
+
+    private static func dictionaryChanges<Value: Hashable>(
+        from before: [UUID: Value],
+        to after: [UUID: Value]
+    ) -> [AppModelHistoryChange<Value>] {
+        Set(before.keys).union(after.keys)
+            .sorted { $0.uuidString < $1.uuidString }
+            .compactMap { id in
+                let old = before[id]
+                let new = after[id]
+                guard old != new else { return nil }
+                return AppModelHistoryChange(id: id, before: old, after: new)
+            }
+    }
+
+    private static func apply<Value: Hashable>(
+        _ changes: [AppModelHistoryChange<Value>],
+        to values: inout [Value],
+        id: KeyPath<Value, UUID>,
+        undo: Bool
+    ) -> Bool {
+        var currentByID: [UUID: Value] = [:]
+        for value in values {
+            currentByID[value[keyPath: id]] = value
+        }
+        for change in changes {
+            let expected = undo ? change.after : change.before
+            guard currentByID[change.id] == expected else { return false }
+        }
+        for change in changes {
+            let replacement = undo ? change.before : change.after
+            if let index = values.firstIndex(where: {
+                $0[keyPath: id] == change.id
+            }) {
+                if let replacement {
+                    values[index] = replacement
+                } else {
+                    values.remove(at: index)
+                }
+            } else if let replacement {
+                values.append(replacement)
+            }
+        }
+        return true
+    }
+
+    private static func applyingSetChanges<Value: Hashable>(
+        to values: [Value],
+        adding: Set<Value>,
+        removing: Set<Value>
+    ) -> [Value] {
+        var result = values.filter { !removing.contains($0) }
+        for value in adding where !result.contains(value) {
+            result.append(value)
+        }
+        return result
+    }
+}
+
+private struct AppModelHistoryItem {
+    let id = UUID()
+    let entry: AppModelHistoryEntry
+    let coalescingKey: String?
+    var recordedAt: Date
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -1196,6 +1446,10 @@ final class AppModel {
         }
     }
     @ObservationIgnored private(set) var snapshotRevision: UInt64 = 0
+    private(set) var canUndo = false
+    private(set) var canRedo = false
+    @ObservationIgnored private var userEditUndoHistory: [AppModelHistoryItem] = []
+    @ObservationIgnored private var userEditRedoHistory: [AppModelHistoryItem] = []
     @ObservationIgnored private let activityClassificationRevisionFence =
         ActivityClassificationRevisionFence()
     @ObservationIgnored private(set) var dayProjectionRevision: UInt64 = 0
@@ -1215,6 +1469,7 @@ final class AppModel {
     @ObservationIgnored private var repositoryLoadFailed = false
     @ObservationIgnored private var pendingMapMemoIDs = Set<UUID>()
     private(set) var isRefreshingIntegrations = false
+    private(set) var isRequestingPermission = false
     private(set) var isSensorCollecting = false
     private(set) var sensorStorageErrorDescription: String?
     private(set) var sensorCollectionSessionState: SensorCollectionSessionState =
@@ -2521,6 +2776,90 @@ final class AppModel {
             .validate()
     }
 
+    func undoLastUserEdit() {
+        guard let item = userEditUndoHistory.last else { return }
+        guard let restored = item.entry.applying(to: snapshot, undo: true) else {
+            userEditUndoHistory.removeLast()
+            synchronizeUserEditHistoryAvailability()
+            userFacingError = "동기화된 변경과 충돌해 실행취소하지 못했습니다."
+            return
+        }
+        guard restored != snapshot else { return }
+        snapshot = restored
+        userEditUndoHistory.removeLast()
+        userEditRedoHistory.append(item)
+        synchronizeUserEditHistoryAvailability()
+        Task { await persist() }
+    }
+
+    func redoLastUserEdit() {
+        guard let item = userEditRedoHistory.last else { return }
+        guard let reapplied = item.entry.applying(to: snapshot, undo: false) else {
+            userEditRedoHistory.removeLast()
+            synchronizeUserEditHistoryAvailability()
+            userFacingError = "동기화된 변경과 충돌해 다시실행하지 못했습니다."
+            return
+        }
+        guard reapplied != snapshot else { return }
+        snapshot = reapplied
+        userEditRedoHistory.removeLast()
+        userEditUndoHistory.append(item)
+        synchronizeUserEditHistoryAvailability()
+        Task { await persist() }
+    }
+
+    private func recordUserEdit(
+        from before: TaptionDataSnapshot,
+        coalescingKey: String? = nil
+    ) {
+        let entry = AppModelHistoryEntry.difference(from: before, to: snapshot)
+        guard !entry.isEmpty else { return }
+        let now = Date.now
+        if let coalescingKey,
+           let previous = userEditUndoHistory.last,
+           previous.coalescingKey == coalescingKey,
+           now.timeIntervalSince(previous.recordedAt) <= 1.2 {
+            userEditUndoHistory.removeLast()
+            if let merged = previous.entry.mergingPlanChanges(with: entry) {
+                userEditUndoHistory.append(
+                    AppModelHistoryItem(
+                        entry: merged,
+                        coalescingKey: coalescingKey,
+                        recordedAt: now
+                    )
+                )
+            }
+            userEditRedoHistory.removeAll()
+            synchronizeUserEditHistoryAvailability()
+            return
+        }
+        userEditUndoHistory.append(
+            AppModelHistoryItem(
+                entry: entry,
+                coalescingKey: coalescingKey,
+                recordedAt: now
+            )
+        )
+        if userEditUndoHistory.count > 40 {
+            userEditUndoHistory.removeFirst(
+                userEditUndoHistory.count - 40
+            )
+        }
+        userEditRedoHistory.removeAll()
+        synchronizeUserEditHistoryAvailability()
+    }
+
+    private func clearUserEditRedoHistory() {
+        guard !userEditRedoHistory.isEmpty else { return }
+        userEditRedoHistory.removeAll()
+        synchronizeUserEditHistoryAvailability()
+    }
+
+    private func synchronizeUserEditHistoryAvailability() {
+        canUndo = !userEditUndoHistory.isEmpty
+        canRedo = !userEditRedoHistory.isEmpty
+    }
+
     /// 자동 기록의 원본은 보존하고, 시간표와 상세 화면에 표시할 활동만
     /// 사용자가 교정한다. 교정표는 기록 ID로 저장되어 다음 센서 갱신에도
     /// 같은 결과를 복원한다.
@@ -2533,6 +2872,7 @@ final class AppModel {
         }) else {
             return
         }
+        let previous = snapshot
         let previousSpan = actual.endedAt.map {
             TimeSpan(start: actual.startedAt, end: $0)
         }
@@ -2560,6 +2900,7 @@ final class AppModel {
             replaceConfirmedSleepSpans(adding: [previousSpan])
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        recordUserEdit(from: previous)
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
@@ -2580,6 +2921,7 @@ final class AppModel {
         guard endAt > startAt,
               let actual = snapshot.actuals.first(where: { $0.id == actualID })
         else { return }
+        let previous = snapshot
         let previousSpan = actual.endedAt.map {
             TimeSpan(start: actual.startedAt, end: $0)
         }
@@ -2608,6 +2950,7 @@ final class AppModel {
             )
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        recordUserEdit(from: previous)
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_span_correction_applied",
@@ -2637,6 +2980,7 @@ final class AppModel {
               }) else {
             return
         }
+        let previous = snapshot
         let wasConfirmedSleep = actual.modelVersion
             == TaptionActivityEngineAdapter.confirmedSleepModelVersion
 
@@ -2704,6 +3048,7 @@ final class AppModel {
             storeConfirmedSleepSpan(TimeSpan(start: startAt, end: endAt))
         }
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        recordUserEdit(from: previous)
         await persist()
         TaptionPlanDiagnosticsLogger.shared.record(
             "activity_correction_applied",
@@ -2743,6 +3088,7 @@ final class AppModel {
                 && actual.endedAt == span.end
         }
         guard !alreadySaved else { return }
+        let previous = snapshot
         if option.isCustom {
             snapshot.settings.customActivityLabels =
                 AppFeatureSettings.normalizedActivityLabels(
@@ -2768,6 +3114,7 @@ final class AppModel {
         if option.categoryID == "sleep" {
             storeConfirmedSleepSpan(span)
         }
+        recordUserEdit(from: previous)
         await persist()
     }
 
@@ -2871,6 +3218,7 @@ final class AppModel {
                 "selected_end": String(selectedSpan.end.timeIntervalSince1970),
             ]
         )
+        recordUserEdit(from: previous)
         return ActivitySectionEditSaveResult(
             recordIDs: records.map(\.id),
             selectedSpan: selectedSpan
@@ -3672,6 +4020,7 @@ final class AppModel {
             }
         }
         await bootstrap()
+        updateForegroundLiveLocationTracking()
         if isAppLocked {
             await concealExternalSurfaces()
         } else {
@@ -3713,6 +4062,7 @@ final class AppModel {
                   self.foregroundPreparationGeneration == generation else {
                 return
             }
+            self.updateForegroundLiveLocationTracking()
 
             await self.applyPendingLocationTrackingRequest()
             await self.hydrateLatestMapLocationAnchor()
@@ -3781,6 +4131,7 @@ final class AppModel {
 
     func sceneEnteredBackground() async {
         isSceneActive = false
+        updateForegroundLiveLocationTracking()
         sensorTimelineTask?.cancel()
         cancelSensorAnalysisUntilForeground()
         postSaveRefreshTask?.cancel()
@@ -4405,9 +4756,9 @@ final class AppModel {
     func requestAppUsageAuthorization(
         openSettingsIfNeeded: Bool = true
     ) async {
-        guard !isRefreshingIntegrations else { return }
-        isRefreshingIntegrations = true
-        defer { isRefreshingIntegrations = false }
+        guard !isRequestingPermission else { return }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         do {
             if screenTimeUsageService.authorizationState != .approved {
                 try await screenTimeUsageService.requestAuthorization()
@@ -4439,8 +4790,9 @@ final class AppModel {
     }
 
     func requestPhotos() async {
-        guard !isRefreshingIntegrations else { return }
-        isRefreshingIntegrations = true
+        guard !isRequestingPermission else { return }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         let state = await photoService.requestAccess()
         snapshot.settings.permissions[.photos] = state
         snapshot.settings.showsPhotos = state.isGranted
@@ -4448,7 +4800,6 @@ final class AppModel {
             refreshPhotos()
         }
         await persist()
-        isRefreshingIntegrations = false
     }
 
     func setPhotosEnabled(_ enabled: Bool) async {
@@ -4462,14 +4813,15 @@ final class AppModel {
         await persist()
     }
 
-    func requestCalendar() async {
-        guard !isRefreshingIntegrations else { return }
-        isRefreshingIntegrations = true
-        defer { isRefreshingIntegrations = false }
+    @discardableResult
+    func requestCalendar() async -> Bool {
+        guard !isRequestingPermission else { return false }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         if calendarService.permissionState() == .denied {
             snapshot.settings.permissions[.calendar] = .denied
             openSystemSettings()
-            return
+            return true
         }
         do {
             let granted = try await calendarService.requestFullAccess()
@@ -4492,6 +4844,7 @@ final class AppModel {
                 calendarStoreRefreshRequiresWide = false
             }
             await persist()
+            return true
         } catch {
             let state = calendarService.permissionState()
             snapshot.settings.permissions[.calendar] = state
@@ -4502,6 +4855,7 @@ final class AppModel {
                 calendarStoreRefreshRequiresWide = false
             }
             userFacingError = "캘린더를 연결하지 못했습니다. \(error.localizedDescription)"
+            return false
         }
     }
 
@@ -4518,9 +4872,11 @@ final class AppModel {
         await persist()
     }
 
-    func requestHealth() async {
-        guard !isRefreshingIntegrations else { return }
-        isRefreshingIntegrations = true
+    @discardableResult
+    func requestHealth() async -> Bool {
+        guard !isRequestingPermission else { return false }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         TaptionPlanDiagnosticsLogger.shared.record(
             "health_authorization_requested",
             fields: [
@@ -4547,10 +4903,8 @@ final class AppModel {
                 fields: ["granted": String(granted)]
             )
             await persist()
-            // 권한 결과가 확정되면 UI(온보딩 등)는 즉시 진행돼야 한다. 전체 건강
-            // 이력 동기화는 실기기에서 수초~수십초 걸릴 수 있어, 여기서 await하면
-            // 온보딩 버튼이 그동안 잠긴다. 무거운 동기화는 백그라운드로 돌린다.
-            isRefreshingIntegrations = false
+            // 권한 응답은 배경 데이터 새로고침 상태와 별도로 완료 처리한다.
+            // 전체 이력 동기화는 길어질 수 있어 백그라운드에서 진행한다.
             if granted {
                 snapshot.settings.watchDataSyncProfile = watchDataSyncProfile
                 Task { @MainActor in
@@ -4565,7 +4919,7 @@ final class AppModel {
                     await persist()
                 }
             }
-            return
+            return true
         } catch {
             snapshot.settings.healthEnabled = false
             snapshot.settings.permissions[.health] = .denied
@@ -4575,8 +4929,8 @@ final class AppModel {
                 fields: TaptionDiagnosticError.fields(for: error)
             )
             userFacingError = "건강 데이터를 연결하지 못했습니다. \(error.localizedDescription)"
+            return false
         }
-        isRefreshingIntegrations = false
     }
 
     func setHealthEnabled(_ enabled: Bool) async {
@@ -4645,9 +4999,11 @@ final class AppModel {
         }
     }
 
-    func requestNotifications() async {
-        guard !isRefreshingIntegrations else { return }
-        isRefreshingIntegrations = true
+    @discardableResult
+    func requestNotifications() async -> Bool {
+        guard !isRequestingPermission else { return false }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         do {
             let state = try await notificationScheduler.requestPermission()
             snapshot.settings.permissions[.notifications] = state
@@ -4658,14 +5014,15 @@ final class AppModel {
                 )
             }
             await persist()
+            return true
         } catch {
             snapshot.settings.permissions[.notifications] =
                 await notificationScheduler.authorizationState()
             snapshot.settings.notificationsEnabled = false
             userFacingError =
                 "계획 알림을 켜지 못했습니다. \(error.localizedDescription)"
+            return false
         }
-        isRefreshingIntegrations = false
     }
 
     func setNotificationsEnabled(_ enabled: Bool) async {
@@ -4678,13 +5035,17 @@ final class AppModel {
         await persist()
     }
 
-    func enableLocationCollection(always: Bool = true) async {
+    @discardableResult
+    func enableLocationCollection(always: Bool = true) async -> Bool {
+        guard !isRequestingPermission else { return false }
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
         guard let sensorService else {
             snapshot.settings.permissions[.location] = .unavailable
             userFacingError = sensorStorageErrorDescription == nil
                 ? "이 기기에서는 위치·동작 센서를 사용할 수 없습니다."
                 : "센서 저장소를 열지 못해 위치 기록을 시작할 수 없습니다. 진단 로그를 확인해주세요."
-            return
+            return false
         }
 
         sensorAvailability = await sensorService.hardwareAvailability()
@@ -4696,7 +5057,7 @@ final class AppModel {
         if status == .notDetermined {
             sensorService.requestLocationPermission(always: false)
             for _ in 0..<120 where status == .notDetermined {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else { return false }
                 try? await Task.sleep(for: .milliseconds(100))
                 status = sensorService.locationAuthorizationStatus()
             }
@@ -4704,7 +5065,7 @@ final class AppModel {
         if always, status == .authorizedWhenInUse {
             sensorService.requestLocationPermission(always: true)
             for _ in 0..<120 where status == .authorizedWhenInUse {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else { return false }
                 try? await Task.sleep(for: .milliseconds(100))
                 status = sensorService.locationAuthorizationStatus()
             }
@@ -4721,6 +5082,7 @@ final class AppModel {
             )
         snapshot.settings.backgroundPreciseLocationEnabled =
             allowsBackgroundLocation
+        updateForegroundLiveLocationTracking()
 
         if refreshed.isGranted {
             sensorService.startCollection(configuration: sensorCollectionConfiguration(
@@ -4739,6 +5101,7 @@ final class AppModel {
         }
         publishWatchPayload()
         await persist()
+        return true
     }
 
     @discardableResult
@@ -4833,6 +5196,7 @@ final class AppModel {
         isSensorCollecting = false
         snapshot.settings.locationEnabled = false
         snapshot.settings.backgroundPreciseLocationEnabled = false
+        updateForegroundLiveLocationTracking()
         publishWatchPayload()
         await persist()
     }
@@ -6604,6 +6968,7 @@ final class AppModel {
                 repeatRules: cleanedRepeatRules
             )
         }
+        let previous = snapshot
         snapshot.plans.append(plan)
         if plan.parentID == nil,
            let rules = plan.repeatRules {
@@ -6612,6 +6977,7 @@ final class AppModel {
             )
         }
         snapshot.plans.sort { $0.span.start < $1.span.start }
+        recordUserEdit(from: previous)
         Task { await persist() }
         return plan.id
     }
@@ -6696,9 +7062,11 @@ final class AppModel {
                 )
                 try PlanHierarchy.validate(candidate)
             }
+            let previous = snapshot
             snapshot.plans = candidate.sorted {
                 $0.span.start < $1.span.start
             }
+            recordUserEdit(from: previous)
             Task { await persist() }
         } catch PlanningError.parentCycle {
             userFacingError = "계획을 자기 하위 루틴 안으로 옮길 수 없습니다."
@@ -7100,6 +7468,7 @@ final class AppModel {
         }) else {
             return
         }
+        clearUserEditRedoHistory()
         let descendants = (try? PlanHierarchy.descendants(
             of: planID,
             in: snapshot.plans
@@ -7247,6 +7616,7 @@ final class AppModel {
             return
         }
 
+        clearUserEditRedoHistory()
         invalidateReviewArchives(spans: [actual.span()])
         snapshot.settings.suppressedActualIDs.insert(actualID)
         snapshot.actuals.removeAll { $0.id == actualID }
@@ -7337,6 +7707,7 @@ final class AppModel {
             let appliedDelta = moved.span.start.timeIntervalSince(
                 snapshot.plans[index].span.start
             )
+            let previous = snapshot
             snapshot.plans[index] = moved
             for descendant in descendants {
                 guard let childIndex = snapshot.plans.firstIndex(where: {
@@ -7350,6 +7721,10 @@ final class AppModel {
                 )
             }
             snapshot.plans.sort { $0.span.start < $1.span.start }
+            recordUserEdit(
+                from: previous,
+                coalescingKey: "plan:\(planID.uuidString)"
+            )
             Task { await persist() }
         } catch PlanningError.fixedPlan {
             userFacingError = "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다."
@@ -7396,7 +7771,12 @@ final class AppModel {
             }) else {
                 throw PlanningError.childOutsideParent
             }
+            let previous = snapshot
             snapshot.plans[index] = resized
+            recordUserEdit(
+                from: previous,
+                coalescingKey: "plan:\(planID.uuidString)"
+            )
             Task { await persist() }
         } catch PlanningError.childOutsideParent {
             userFacingError =
@@ -12016,6 +12396,7 @@ final class AppModel {
         guard settings.locationEnabled,
               permissionState(for: .location).isGranted,
               let sensorService else {
+            updateForegroundLiveLocationTracking()
             isSensorCollecting = false
             sensorBackgroundCoordinator.cancel()
             syncSensorBackgroundState()
@@ -12032,6 +12413,7 @@ final class AppModel {
             profile: settings.sensorCollectionProfile,
             allowsBackgroundLocation: allowsBackgroundLocation
         ))
+        updateForegroundLiveLocationTracking()
         isSensorCollecting = true
         if sensorBackgroundCoordinator.lastWakeReason == nil {
             receiveSensorWake(.foregroundResume)
@@ -12039,6 +12421,16 @@ final class AppModel {
             syncSensorBackgroundState()
         }
         reconcileBackgroundSensorSession()
+    }
+
+    private func updateForegroundLiveLocationTracking() {
+        let enabled = ForegroundLiveLocationPolicy.shouldTrack(
+            sceneIsActive: isSceneActive,
+            locationCollectionEnabled: settings.locationEnabled,
+            hasLocationPermission:
+                permissionState(for: .location).isGranted
+        )
+        sensorService?.setForegroundLiveLocationTrackingEnabled(enabled)
     }
 
     private func reconcileBackgroundSensorSession(at date: Date = .now) {

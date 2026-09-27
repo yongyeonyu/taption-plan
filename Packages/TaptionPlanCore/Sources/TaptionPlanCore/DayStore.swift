@@ -1,5 +1,51 @@
 import Foundation
 import CSQLite
+import Darwin
+
+private final class TaptionPlanDayStoreFileLock {
+    private var descriptor: Int32
+
+    init(url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let descriptor = Darwin.open(
+            url.path,
+            O_CREAT | O_RDWR,
+            S_IRUSR | S_IWUSR
+        )
+        guard descriptor >= 0 else {
+            throw TaptionPlanDayStoreError.database(
+                code: errno,
+                message: String(cString: strerror(errno))
+            )
+        }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
+            let code = errno
+            Darwin.close(descriptor)
+            if code == EWOULDBLOCK || code == EAGAIN {
+                throw TaptionPlanDayStoreError.exclusiveFileLockBusy
+            }
+            throw TaptionPlanDayStoreError.database(
+                code: code,
+                message: String(cString: strerror(code))
+            )
+        }
+        self.descriptor = descriptor
+    }
+
+    func unlock() {
+        guard descriptor >= 0 else { return }
+        flock(descriptor, LOCK_UN)
+        Darwin.close(descriptor)
+        descriptor = -1
+    }
+
+    deinit {
+        unlock()
+    }
+}
 
 private func exactlyEqual(_ lhs: String, _ rhs: String) -> Bool {
     lhs.utf8.elementsEqual(rhs.utf8)
@@ -18,6 +64,7 @@ public enum TaptionPlanDayStoreError: Error, Equatable, Sendable {
     case invalidIdentifier
     case invalidMetadataKey
     case invalidMigrationKey
+    case exclusiveFileLockBusy
     case eventConflict(id: String)
     case revisionOverflow
     case database(code: Int32, message: String)
@@ -226,6 +273,19 @@ public actor TaptionPlanDayStore {
             database = nil
             throw error
         }
+    }
+
+    /// Runs synchronous store work while holding a nonblocking cross-process lock.
+    /// The closure is actor-isolated and synchronous, so the lock cannot survive
+    /// an actor suspension or an awaited operation.
+    public func withExclusiveFileAccess<Value: Sendable>(
+        at lockURL: URL,
+        _ operation: @Sendable (isolated TaptionPlanDayStore) throws -> Value
+    ) throws -> Value {
+        let lock = try TaptionPlanDayStoreFileLock(url: lockURL)
+        defer { lock.unlock() }
+        try Task.checkCancellation()
+        return try operation(self)
     }
 
     deinit {

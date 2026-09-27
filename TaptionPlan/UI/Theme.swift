@@ -191,7 +191,7 @@ enum MapHomePastelPalette {
     static let hexes: [String: String] = [
         "activity": "#5B8C6E",
         "work": "#4A6FA5",
-        "study": "#5B8C6E",
+        "study": "#4E8FA3",
         "hobby": "#8A6BA8",
         "sleep": "#6B6FA8",
         "movement": "#C67A3E",

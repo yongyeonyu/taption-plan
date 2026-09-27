@@ -2546,6 +2546,24 @@ private struct DeviceMotionAccumulator {
 }
 
 @MainActor
+enum ForegroundLiveLocationPolicy {
+    static let distanceFilterMeters: CLLocationDistance = 5
+    static let minimumEmissionInterval: TimeInterval = 0.5
+
+    static func shouldTrack(
+        sceneIsActive: Bool,
+        locationCollectionEnabled: Bool,
+        hasLocationPermission: Bool
+    ) -> Bool {
+        sceneIsActive && locationCollectionEnabled && hasLocationPermission
+    }
+
+    static func isNewFix(_ timestamp: Date, after previous: Date?) -> Bool {
+        previous.map { timestamp > $0 } ?? true
+    }
+}
+
+@MainActor
 final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     private let activityManager = CMMotionActivityManager()
@@ -2568,6 +2586,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var sensorStreamGeneration: UInt64 = 0
     private var lastEmissionAt: Date?
     private var lastPersistedLocationTimestamp: Date?
+    private var lastForegroundLocationTimestamp: Date?
+    private var lastForegroundLocationEmissionAt: Date?
     private var latestLocation: CLLocation?
     private var latestPreciseLocation: CLLocation?
     private var lastBackgroundWakeLocation: CLLocation?
@@ -2592,6 +2612,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var activeTrackingSession: TrackingSession?
     private var activeTrackingPreferences = GPSLoggingPreferences.standard
     private var trackingStreamsAreContinuous = false
+    private var isForegroundLiveLocationTrackingEnabled = false
     private var trackingSequence = 0
     /// nil이 아니면 층 보정용 표본을 모으는 중이다.
     private var altitudeBurstSamples: [AltitudeBurstSample]?
@@ -2676,6 +2697,23 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         restartSamplingTask()
     }
 
+    func setForegroundLiveLocationTrackingEnabled(_ enabled: Bool) {
+        guard isForegroundLiveLocationTrackingEnabled != enabled else { return }
+        isForegroundLiveLocationTrackingEnabled = enabled
+        lastForegroundLocationTimestamp = nil
+        lastForegroundLocationEmissionAt = nil
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "foreground_live_location_tracking",
+            fields: ["enabled": String(enabled)]
+        )
+        guard isCollecting else { return }
+        applyLocationPolicy(isMoving: enabled || latestMotion != .stationary)
+        if !enabled, !shouldKeepHardwareStreamsActive {
+            stopHardwareStreams()
+        }
+        restartSamplingTask()
+    }
+
     func readings(highAccuracyDuringMovement: Bool = true) -> AsyncStream<SensorReading> {
         var configuration = SensorCollectionConfiguration.standard
         configuration.highAccuracyDuringMovement = highAccuracyDuringMovement
@@ -2705,6 +2743,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
 
     func stop() {
         readingStreamGeneration &+= 1
+        isForegroundLiveLocationTrackingEnabled = false
         samplingTask?.cancel()
         samplingTask = nil
         cancelMovementCandidate()
@@ -2712,13 +2751,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         stationaryStopTask = nil
         backgroundWakeTask?.cancel()
         backgroundWakeTask = nil
-        stopHardwareStreams()
+        stopHardwareStreams(forceLocationStop: true)
         locationManager.stopMonitoringVisits()
         locationManager.stopMonitoringSignificantLocationChanges()
         locationManager.allowsBackgroundLocationUpdates = false
         isCollecting = false
         isLocationDenied = false
         lastPersistedLocationTimestamp = nil
+        lastForegroundLocationTimestamp = nil
+        lastForegroundLocationEmissionAt = nil
         lastEmissionAt = nil
         latestLocation = nil
         latestPreciseLocation = nil
@@ -2879,9 +2920,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
               !isLocationDenied else {
             return
         }
-        if configuration.minimumEmissionInterval <= 1
-            || (activeTrackingSession != nil
-                && trackingStreamsAreContinuous) {
+        if shouldKeepHardwareStreamsActive {
             startHardwareStreams()
             return
         }
@@ -3148,11 +3187,15 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
     }
 
-    private func stopHardwareStreams() {
+    private func stopHardwareStreams(forceLocationStop: Bool = false) {
         sensorStreamGeneration &+= 1
-        locationManager.stopUpdatingLocation()
-        locationManager.allowsBackgroundLocationUpdates = false
-        locationManager.showsBackgroundLocationIndicator = false
+        if forceLocationStop
+            || !isCollecting
+            || !isForegroundLiveLocationTrackingEnabled {
+            locationManager.stopUpdatingLocation()
+            locationManager.allowsBackgroundLocationUpdates = false
+            locationManager.showsBackgroundLocationIndicator = false
+        }
         activityManager.stopActivityUpdates()
         deviceMotionManager.stopDeviceMotionUpdates()
         altimeter.stopRelativeAltitudeUpdates()
@@ -3246,7 +3289,22 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 batch: validLocations
             )
         }
-        if activeTrackingSession?.wasAutomaticallyDetected == true {
+        if isForegroundLiveLocationTrackingEnabled {
+            guard ForegroundLiveLocationPolicy.isNewFix(
+                newestLocation.timestamp,
+                after: lastForegroundLocationTimestamp
+            ),
+            lastForegroundLocationEmissionAt.map({
+                Date.now.timeIntervalSince($0)
+                    >= ForegroundLiveLocationPolicy.minimumEmissionInterval
+            }) ?? true else { return }
+            emit(
+                force: true,
+                allowManualTrackingSample: true,
+                foregroundLiveLocationUpdate: true
+            )
+            lastForegroundLocationTimestamp = newestLocation.timestamp
+        } else if activeTrackingSession?.wasAutomaticallyDetected == true {
             emit(force: true)
         } else if activeTrackingSession?.wasAutomaticallyDetected == false,
                   trackingStreamsAreContinuous {
@@ -3410,7 +3468,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private func emit(
         force: Bool = false,
         completedSession: TrackingSession? = nil,
-        allowManualTrackingSample: Bool = false
+        allowManualTrackingSample: Bool = false,
+        foregroundLiveLocationUpdate: Bool = false
     ) {
         guard isCollecting, continuation != nil else { return }
         refreshConnectedWiFiIfNeeded()
@@ -3420,29 +3479,37 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             return
         }
         let now = Date.now
-        if force,
-           completedSession == nil,
-           activeTrackingSession?.wasAutomaticallyDetected == true,
-           let lastEmissionAt,
-           now.timeIntervalSince(lastEmissionAt)
-                < max(
-                    TrackingSessionPolicy.automaticEmissionThrottleInterval,
-                    activeEmissionInterval
-                ) {
-            return
-        }
-        if !force,
-           let lastEmissionAt,
-           now.timeIntervalSince(lastEmissionAt)
-                < max(0.25, activeEmissionInterval) {
-            return
-        }
-        if force,
-           completedSession == nil,
-           activeTrackingSession?.wasAutomaticallyDetected == false,
-           let lastEmissionAt,
-           now.timeIntervalSince(lastEmissionAt) < activeEmissionInterval {
-            return
+        if foregroundLiveLocationUpdate {
+            if let lastForegroundLocationEmissionAt,
+               now.timeIntervalSince(lastForegroundLocationEmissionAt)
+                    < ForegroundLiveLocationPolicy.minimumEmissionInterval {
+                return
+            }
+        } else {
+            if force,
+               completedSession == nil,
+               activeTrackingSession?.wasAutomaticallyDetected == true,
+               let lastEmissionAt,
+               now.timeIntervalSince(lastEmissionAt)
+                    < max(
+                        TrackingSessionPolicy.automaticEmissionThrottleInterval,
+                        activeEmissionInterval
+                    ) {
+                return
+            }
+            if !force,
+               let lastEmissionAt,
+               now.timeIntervalSince(lastEmissionAt)
+                    < max(0.25, activeEmissionInterval) {
+                return
+            }
+            if force,
+               completedSession == nil,
+               activeTrackingSession?.wasAutomaticallyDetected == false,
+               let lastEmissionAt,
+               now.timeIntervalSince(lastEmissionAt) < activeEmissionInterval {
+                return
+            }
         }
         let location = latestLocation
         if activeTrackingSession != nil,
@@ -3521,6 +3588,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 trackingSessionEnded: completedSession != nil
             )
         )
+        if foregroundLiveLocationUpdate {
+            lastForegroundLocationEmissionAt = now
+        }
         deviceMotionAccumulator.reset()
     }
 
@@ -3717,7 +3787,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         if activeTrackingSession != nil {
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
             locationManager.distanceFilter =
-                TrackingSessionPolicy.activeDistanceFilterMeters
+                isForegroundLiveLocationTrackingEnabled
+                    ? ForegroundLiveLocationPolicy.distanceFilterMeters
+                    : TrackingSessionPolicy.activeDistanceFilterMeters
             locationManager.activityType = latestMotion == .automotive
                 || (latestLocation?.speed ?? 0) >= 5
                 ? .automotiveNavigation
@@ -3726,6 +3798,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             return
         }
         locationManager.activityType = .other
+        if isForegroundLiveLocationTrackingEnabled {
+            locationManager.desiredAccuracy = kCLLocationAccuracyBest
+            locationManager.distanceFilter =
+                ForegroundLiveLocationPolicy.distanceFilterMeters
+            locationManager.pausesLocationUpdatesAutomatically = false
+            return
+        }
         switch configuration.profile {
         case .batterySaver:
             locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
@@ -3751,6 +3830,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         return activeTrackingSession == nil
             ? configuration.minimumEmissionInterval
             : activeTrackingPreferences.interval
+    }
+
+    private var shouldKeepHardwareStreamsActive: Bool {
+        isForegroundLiveLocationTrackingEnabled
+            || configuration.minimumEmissionInterval <= 1
+            || (activeTrackingSession != nil && trackingStreamsAreContinuous)
     }
 
     private static func locationFixQuality(

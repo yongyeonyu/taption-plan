@@ -244,25 +244,38 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
 
 enum MapHomeStickmanActionResolver {
     // 재생/렌더마다 actuals·travel·places·readings 전량을 순회하던 것을
-    // 결과 캐시로 줄인다(CRS0925W01). date는 초 단위로 뭉치고, 입력이
-    // 바뀌면 count/마지막 식별자가 달라져 자연 무효화된다.
+    // 결과 캐시로 줄인다(CRS0925W01). 전체 입력의 fingerprint로 서로 다른
+    // 내용이 같은 개수·마지막 ID를 가진 경우에도 잘못 재사용하지 않는다.
     private static let actionCacheLock = NSLock()
-    nonisolated(unsafe) private static var actionCache: [String: MapHomeStickmanAction] = [:]
+    private struct ActionCacheKey: Hashable {
+        let date: Date
+        let inputFingerprint: Int
+    }
+
+    private static let actionCacheLimit = 128
+    nonisolated(unsafe) private static var actionCache:
+        [ActionCacheKey: MapHomeStickmanAction] = [:]
 
     private static func actionCacheKey(
         date: Date,
         actuals: [ActualRecord],
         travel: [TravelSegment],
         places: [PlaceStay],
+        frequentPlaces: [FrequentPlace],
         readings: [SensorReading],
         sleepSessions: [SleepSession]
-    ) -> String {
-        let sec = Int(date.timeIntervalSinceReferenceDate)
-        let a = "\(actuals.count):\(actuals.last?.id.uuidString ?? "")"
-        let t = "\(travel.count):\(travel.last?.span.start.timeIntervalSinceReferenceDate ?? 0)"
-        let p = "\(places.count):\(places.last?.span.start.timeIntervalSinceReferenceDate ?? 0)"
-        let r = "\(readings.count):\(readings.last?.timestamp.timeIntervalSinceReferenceDate ?? 0)"
-        return "\(sec)|\(a)|\(t)|\(p)|\(r)|\(sleepSessions.count)"
+    ) -> ActionCacheKey {
+        var hasher = Hasher()
+        hasher.combine(actuals)
+        hasher.combine(travel)
+        hasher.combine(places)
+        hasher.combine(frequentPlaces)
+        hasher.combine(readings)
+        hasher.combine(sleepSessions)
+        return ActionCacheKey(
+            date: date,
+            inputFingerprint: hasher.finalize()
+        )
     }
 
     static func action(
@@ -279,6 +292,7 @@ enum MapHomeStickmanActionResolver {
             actuals: actuals,
             travel: travel,
             places: places,
+            frequentPlaces: frequentPlaces,
             readings: readings,
             sleepSessions: sleepSessions
         )
@@ -298,6 +312,9 @@ enum MapHomeStickmanActionResolver {
             sleepSessions: sleepSessions
         )
         actionCacheLock.lock()
+        if actionCache.count >= actionCacheLimit {
+            actionCache.removeAll(keepingCapacity: true)
+        }
         actionCache[key] = result
         actionCacheLock.unlock()
         return result

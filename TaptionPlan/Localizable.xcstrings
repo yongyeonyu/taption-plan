@@ -137,6 +137,12 @@
     },
     "%@ · %@, %@" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$@, %3$@"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "new",
