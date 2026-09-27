@@ -891,9 +891,41 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testWalkerViewportUpdatesDoNotRestackMapSubviews() {
+        let mapView = MKMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+        let coordinate = CLLocationCoordinate2D(latitude: 37.55, longitude: 126.75)
+        let walker = UIView(frame: CGRect(origin: .zero, size: MapHomeStickmanMarker.size))
+
+        MapHomeAppleWalkerOverlayLayout.update(walker, coordinate: coordinate, on: mapView)
+        let mapKitSubview = UIView(frame: .zero)
+        mapView.addSubview(mapKitSubview)
+        let newTopSubview = mapView.subviews.last
+        mapView.setRegion(
+            MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 37.56, longitude: 126.76),
+                latitudinalMeters: 800,
+                longitudinalMeters: 800
+            ),
+            animated: false
+        )
+
+        MapHomeAppleWalkerOverlayLayout.update(walker, coordinate: coordinate, on: mapView)
+
+        XCTAssertTrue(mapView.subviews.last === newTopSubview)
+        XCTAssertEqual(walker.layer.zPosition, MapHomeAppleAnnotationLayerPriority.stickman)
+        let projected = mapView.convert(coordinate, toPointTo: mapView)
+        XCTAssertEqual(walker.center.x, projected.x, accuracy: 0.001)
+        XCTAssertEqual(
+            walker.frame.maxY,
+            projected.y,
+            accuracy: 0.001
+        )
+    }
+
     func testWeatherTimelineCapsulesAttachFlushToSidebarPanel() {
-        let weatherRailWidth: CGFloat = 58
-        let timeRailWidth: CGFloat = 58
+        let weatherRailWidth: CGFloat = 62
+        let timeRailWidth: CGFloat = 44
         let originX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
             weatherRailWidth: weatherRailWidth,
             timeRailWidth: timeRailWidth
@@ -907,7 +939,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeTimeSidebarMath.handleLaneWidth
                 - MapHomeTimeSidebarMath.weatherDockGap
         )
-        XCTAssertEqual(MapHomeTimeSidebarMath.weatherDockGap, 0)
+        XCTAssertEqual(MapHomeTimeSidebarMath.weatherDockGap, 4)
     }
 
     func testSidebarSelectionHandleUsesApprovedWhiteAndDeepPinkStyle() {
@@ -918,12 +950,12 @@ final class TimeScaleTests: XCTestCase {
 
     func testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps() {
         let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
-            weatherRailWidth: 58,
-            timeRailWidth: 58
+            weatherRailWidth: 62,
+            timeRailWidth: 44
         )
         XCTAssertEqual(
-            weatherOriginX + 58 / 2,
-            weatherOriginX + 29
+            weatherOriginX + 62 / 2,
+            weatherOriginX + 31
         )
     }
 
@@ -1228,6 +1260,15 @@ final class TimeScaleTests: XCTestCase {
                     "minute labels overlap at \(duration) minutes"
                 )
             } else {
+                if duration == MapHomeTimeSidebarMath.fullDayMinutes {
+                    let labels = MapHomeTimeSidebarMath.visibleHourLabels(
+                        window: window,
+                        durationMinutes: duration,
+                        trackHeight: trackHeight
+                    )
+                    XCTAssertEqual(labels, Array(0...24))
+                    continue
+                }
                 let labels = MapHomeTimeSidebarMath.visibleHourLabels(
                     window: window,
                     durationMinutes: duration,
@@ -1250,22 +1291,33 @@ final class TimeScaleTests: XCTestCase {
         }
     }
 
+    func testFullDayTimelineShowsEveryHourOnCompactRail() {
+        let labels = MapHomeTimeSidebarMath.visibleHourLabels(
+            window: 0...MapHomeTimeSidebarMath.fullDayMinutes,
+            durationMinutes: MapHomeTimeSidebarMath.fullDayMinutes,
+            trackHeight: 192
+        )
+
+        XCTAssertEqual(labels, Array(0...24))
+    }
+
     func testSidebarSelectionTimeBlockFitsTheExistingRailWidth() {
-        let railWidth: CGFloat = 58
+        let railWidth: CGFloat = 44
+        let activeRailWidth = MapHomeTimeSidebarMath.activeRailWidth
         let trackX = railWidth
             - MapHomeTimeSidebarMath.rulerNumericColumnWidth
-            - 12 / 2
+            - activeRailWidth / 2
             - 1
         let center = MapHomeTimeSidebarMath.selectionTimeBlockCenterX(
             railWidth: railWidth,
             trackX: trackX,
-            activeRailWidth: 12
+            activeRailWidth: activeRailWidth
         )
         let halfWidth = MapHomeTimeSidebarMath.selectionTimeBlockWidth / 2
 
         XCTAssertGreaterThanOrEqual(center - halfWidth, 0)
         XCTAssertLessThanOrEqual(center + halfWidth, railWidth)
-        XCTAssertEqual(center, 30)
+        XCTAssertEqual(center, 22)
     }
 
     func testSidebarHandleLaneContainsExpandedHitAreaWithoutRailOverlap() {
@@ -1796,21 +1848,6 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(region.center.longitude, center.longitude, accuracy: 0.000_001)
         XCTAssertEqual(region.span.latitudeDelta, span.latitudeDelta, accuracy: 0.000_001)
         XCTAssertEqual(region.span.longitudeDelta, span.longitudeDelta, accuracy: 0.000_001)
-    }
-
-    func testWeatherBackgroundSelectionTakesPriorityOverCurrentState() {
-        XCTAssertEqual(
-            MapHomeWeatherBackgroundKind.resolve(isSelected: true, isCurrent: true),
-            .selected
-        )
-        XCTAssertEqual(
-            MapHomeWeatherBackgroundKind.resolve(isSelected: false, isCurrent: true),
-            .current
-        )
-        XCTAssertEqual(
-            MapHomeWeatherBackgroundKind.resolve(isSelected: false, isCurrent: false),
-            .normal
-        )
     }
 
     func testMapHomeWeatherDisplayRequiresACompleteFetchedContext() {
@@ -2963,7 +3000,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertLessThanOrEqual(leadingFrame.maxX, trailingFrame.minX)
         XCTAssertGreaterThanOrEqual(leadingFrame.minX, 0)
         XCTAssertLessThanOrEqual(trailingFrame.maxX, 127)
-        XCTAssertEqual(MapHomeTimeSidebarMath.selectionTimeBlockWidth, 56)
+        XCTAssertEqual(MapHomeTimeSidebarMath.selectionTimeBlockWidth, 44)
         XCTAssertGreaterThan(
             MapHomeTimeSidebarMath.selectionTimeBlockHitWidth,
             MapHomeTimeSidebarMath.selectionTimeBlockWidth

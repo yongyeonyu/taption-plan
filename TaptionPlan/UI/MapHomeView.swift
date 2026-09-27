@@ -114,13 +114,13 @@ enum MapHomeAppleWalkerOverlayLayout {
         guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
         if view.superview !== mapView {
             mapView.addSubview(view)
+            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
+            mapView.bringSubviewToFront(view)
         }
         let point = mapView.convert(coordinate, toPointTo: mapView)
         let offset = MapHomeStickmanAnnotationLayout.centerOffset
         UIView.performWithoutAnimation {
             view.center = CGPoint(x: point.x + offset.x, y: point.y + offset.y)
-            view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.stickman
-            mapView.bringSubviewToFront(view)
         }
     }
 }
@@ -182,6 +182,30 @@ enum MapHomeLongPressRoutingMath {
             dx: -exclusionPadding,
             dy: -exclusionPadding
         ).contains(point)
+    }
+}
+
+enum MapHomeCatTapRouting {
+    static let hitRadius: CGFloat = 36
+    static let homeImageCenterOffset = CGPoint(x: 0, y: 30)
+    static let catOffsetInHomeImage = CGPoint(x: 23, y: 10)
+    static let homeMarkerOffset = CGPoint(
+        x: homeImageCenterOffset.x + catOffsetInHomeImage.x,
+        y: homeImageCenterOffset.y + catOffsetInHomeImage.y
+    )
+    static let roamingMarkerOffset = MapHomeStickmanAnnotationLayout.centerOffset
+
+    static func markerPoint(locationPoint: CGPoint, isAtHome: Bool) -> CGPoint {
+        let offset = isAtHome ? homeMarkerOffset : roamingMarkerOffset
+        return CGPoint(
+            x: locationPoint.x + offset.x,
+            y: locationPoint.y + offset.y
+        )
+    }
+
+    static func contains(tapPoint: CGPoint, markerPoint: CGPoint) -> Bool {
+        hypot(tapPoint.x - markerPoint.x, tapPoint.y - markerPoint.y)
+            <= hitRadius
     }
 }
 
@@ -769,8 +793,26 @@ private final class MapHomeMapRenderCache {
 enum MapHomeOverlayLayoutMath {
     static let controlSize: CGFloat = 44
     static let controlSpacing: CGFloat = 9
-    static let sharedBottomMargin: CGFloat = 76
+    static let sharedBottomMargin: CGFloat = 48
     static let maximumRailHeight: CGFloat = 680
+
+    static func alignedRailFrame(
+        viewportHeight: CGFloat,
+        topInset: CGFloat,
+        bottomInset: CGFloat
+    ) -> CGRect {
+        let height = max(0, viewportHeight)
+        let top = min(max(0, topInset), height)
+        let bottom = min(max(0, bottomInset), height - top)
+        let availableHeight = height - top - bottom
+        let railHeight = min(maximumRailHeight, availableHeight)
+        return CGRect(
+            x: 0,
+            y: top + availableHeight - railHeight,
+            width: 0,
+            height: railHeight
+        )
+    }
 
     static func railHeight(availableHeight: CGFloat) -> CGFloat {
         min(maximumRailHeight, max(0, availableHeight))
@@ -1286,6 +1328,27 @@ enum MapHomeStickmanAnnotationLayout {
     static let centerOffset = CGPoint(x: 0, y: -18)
 }
 
+enum MapHomePresencePolicy {
+    static func isAtHome(
+        current: CLLocationCoordinate2D,
+        home: CLLocationCoordinate2D,
+        radiusMeters: CLLocationDistance
+    ) -> Bool {
+        guard valid(current), valid(home), radiusMeters.isFinite,
+              radiusMeters >= 0 else { return false }
+        return CLLocation(latitude: current.latitude, longitude: current.longitude)
+            .distance(from: CLLocation(latitude: home.latitude, longitude: home.longitude))
+            <= radiusMeters
+    }
+
+    private static func valid(_ coordinate: CLLocationCoordinate2D) -> Bool {
+        coordinate.latitude.isFinite
+            && coordinate.longitude.isFinite
+            && (-90...90).contains(coordinate.latitude)
+            && (-180...180).contains(coordinate.longitude)
+    }
+}
+
 enum MapHomePlaybackCameraPolicy {
     static func allowsAutomaticFit(
         isPlaybackRunning: Bool,
@@ -1599,6 +1662,105 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var landPlots: [String] = []
     var accessories: [String] = []
     var equippedAccessory: String?
+    var landPlotPlacements: [MapHomeGrowthPlotPlacement]?
+}
+
+struct MapHomeGrowthPlotPlacement: Codable, Equatable, Identifiable {
+    let plotID: String
+    let x: Int
+    let y: Int
+
+    var id: String { plotID }
+}
+
+struct MapHomeLandmarkCandidate: Identifiable, Equatable {
+    let id: String
+    let country: String
+    let name: String
+    let englishName: String
+    let category: String
+    let systemImage: String
+
+    var artworkName: String {
+        "Landmark_" + id.replacingOccurrences(of: ".", with: "_")
+    }
+
+    var accessoryID: String { "cat.accessory.\(id)" }
+}
+
+enum MapHomeLandmarkCatalog {
+    static let candidates: [MapHomeLandmarkCandidate] = [
+        .init(id: "kr.gyeongbokgung", country: "대한민국", name: "경복궁", englishName: "Gyeongbokgung", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "kr.bulguksa", country: "대한민국", name: "불국사", englishName: "Bulguksa", category: "문화", systemImage: "building.2.fill"),
+        .init(id: "kr.seongsan", country: "대한민국", name: "성산일출봉", englishName: "Seongsan Ilchulbong", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "kr.haeundae", country: "대한민국", name: "해운대", englishName: "Haeundae", category: "자연", systemImage: "water.waves"),
+        .init(id: "kr.hahoe", country: "대한민국", name: "하회마을", englishName: "Hahoe Folk Village", category: "문화", systemImage: "house.lodge.fill"),
+        .init(id: "jp.fuji", country: "일본", name: "후지산", englishName: "Mount Fuji", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "jp.himeji", country: "일본", name: "히메지성", englishName: "Himeji Castle", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "jp.fushimi", country: "일본", name: "후시미 이나리", englishName: "Fushimi Inari", category: "문화", systemImage: "torii.gate.fill"),
+        .init(id: "jp.itsukushima", country: "일본", name: "이쓰쿠시마 신사", englishName: "Itsukushima Shrine", category: "문화", systemImage: "water.waves"),
+        .init(id: "jp.arashiyama", country: "일본", name: "아라시야마", englishName: "Arashiyama", category: "자연", systemImage: "leaf.fill"),
+        .init(id: "us.liberty", country: "미국", name: "자유의 여신상", englishName: "Statue of Liberty", category: "건축", systemImage: "figure.stand"),
+        .init(id: "us.grandcanyon", country: "미국", name: "그랜드 캐니언", englishName: "Grand Canyon", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "us.golden_gate", country: "미국", name: "금문교", englishName: "Golden Gate Bridge", category: "건축", systemImage: "bridge.fill"),
+        .init(id: "us.yosemite", country: "미국", name: "요세미티", englishName: "Yosemite", category: "자연", systemImage: "waterfall.fill"),
+        .init(id: "us.mount_rushmore", country: "미국", name: "러시모어산", englishName: "Mount Rushmore", category: "문화", systemImage: "mountain.2.fill"),
+        .init(id: "gb.bigben", country: "영국", name: "빅벤", englishName: "Big Ben", category: "건축", systemImage: "clock.fill"),
+        .init(id: "gb.stonehenge", country: "영국", name: "스톤헨지", englishName: "Stonehenge", category: "문화", systemImage: "circle.hexagongrid.fill"),
+        .init(id: "gb.edinburgh", country: "영국", name: "에든버러성", englishName: "Edinburgh Castle", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "gb.lake_district", country: "영국", name: "레이크 디스트릭트", englishName: "Lake District", category: "자연", systemImage: "water.waves"),
+        .init(id: "gb.tower_bridge", country: "영국", name: "타워 브리지", englishName: "Tower Bridge", category: "건축", systemImage: "bridge.fill"),
+        .init(id: "fr.eiffel", country: "프랑스", name: "에펠탑", englishName: "Eiffel Tower", category: "건축", systemImage: "tower.fill"),
+        .init(id: "fr.mont_saint_michel", country: "프랑스", name: "몽생미셸", englishName: "Mont-Saint-Michel", category: "문화", systemImage: "building.columns.fill"),
+        .init(id: "fr.louvre", country: "프랑스", name: "루브르 박물관", englishName: "Louvre Museum", category: "문화", systemImage: "building.columns.fill"),
+        .init(id: "fr.versailles", country: "프랑스", name: "베르사유 궁전", englishName: "Palace of Versailles", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "fr.alps", country: "프랑스", name: "프랑스 알프스", englishName: "French Alps", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "it.colosseum", country: "이탈리아", name: "콜로세움", englishName: "Colosseum", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "it.venice", country: "이탈리아", name: "베네치아", englishName: "Venice", category: "문화", systemImage: "water.waves"),
+        .init(id: "it.pisa", country: "이탈리아", name: "피사의 사탑", englishName: "Leaning Tower of Pisa", category: "건축", systemImage: "building.fill"),
+        .init(id: "it.dolomites", country: "이탈리아", name: "돌로미티", englishName: "Dolomites", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "it.amalfi", country: "이탈리아", name: "아말피 해안", englishName: "Amalfi Coast", category: "자연", systemImage: "water.waves"),
+        .init(id: "cn.great_wall", country: "중국", name: "만리장성", englishName: "Great Wall", category: "건축", systemImage: "wall.3.fill"),
+        .init(id: "cn.forbidden_city", country: "중국", name: "자금성", englishName: "Forbidden City", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "cn.zhangjiajie", country: "중국", name: "장자제", englishName: "Zhangjiajie", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "cn.terracotta", country: "중국", name: "병마용", englishName: "Terracotta Army", category: "문화", systemImage: "figure.stand"),
+        .init(id: "cn.li_river", country: "중국", name: "리강", englishName: "Li River", category: "자연", systemImage: "water.waves"),
+        .init(id: "es.sagrada", country: "스페인", name: "사그라다 파밀리아", englishName: "Sagrada Família", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "es.alhambra", country: "스페인", name: "알람브라", englishName: "Alhambra", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "es.park_guell", country: "스페인", name: "구엘 공원", englishName: "Park Güell", category: "문화", systemImage: "leaf.fill"),
+        .init(id: "es.camino", country: "스페인", name: "산티아고 순례길", englishName: "Camino de Santiago", category: "문화", systemImage: "figure.walk"),
+        .init(id: "es.teide", country: "스페인", name: "테이데산", englishName: "Mount Teide", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "th.grand_palace", country: "태국", name: "왕궁", englishName: "Grand Palace", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "th.phiphi", country: "태국", name: "피피섬", englishName: "Phi Phi Islands", category: "자연", systemImage: "water.waves"),
+        .init(id: "th.ayutthaya", country: "태국", name: "아유타야", englishName: "Ayutthaya", category: "문화", systemImage: "building.columns.fill"),
+        .init(id: "th.doi_inthanon", country: "태국", name: "도이인타논", englishName: "Doi Inthanon", category: "자연", systemImage: "mountain.2.fill"),
+        .init(id: "th.wat_arun", country: "태국", name: "왓 아룬", englishName: "Wat Arun", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "au.opera", country: "호주", name: "시드니 오페라 하우스", englishName: "Sydney Opera House", category: "건축", systemImage: "building.columns.fill"),
+        .init(id: "au.great_barrier", country: "호주", name: "그레이트 배리어 리프", englishName: "Great Barrier Reef", category: "자연", systemImage: "water.waves"),
+        .init(id: "au.uluru", country: "호주", name: "울루루", englishName: "Uluru", category: "문화", systemImage: "mountain.2.fill"),
+        .init(id: "au.twelve_apostles", country: "호주", name: "12사도 바위", englishName: "Twelve Apostles", category: "자연", systemImage: "water.waves"),
+        .init(id: "au.harbour_bridge", country: "호주", name: "시드니 하버 브리지", englishName: "Sydney Harbour Bridge", category: "건축", systemImage: "bridge.fill"),
+    ]
+
+    static func weeklyChoices(for season: MapHomeGrowthSeason) -> [MapHomeLandmarkCandidate] {
+        guard !candidates.isEmpty else { return [] }
+        let start = (season.year &+ season.chosenEvolutions.count * 3) % candidates.count
+        return (0..<min(3, candidates.count)).map {
+            candidates[(start + $0) % candidates.count]
+        }
+    }
+}
+
+enum MapHomeGrowthAccessoryCatalog {
+    private static let symbols = [
+        "crown.fill", "sparkles", "leaf.fill", "sun.max.fill", "flower.fill",
+    ]
+
+    static func symbol(for accessoryID: String?) -> String? {
+        guard let accessoryID, !accessoryID.isEmpty else { return nil }
+        let index = accessoryID.utf8.reduce(0) { ($0 + Int($1)) % symbols.count }
+        return symbols[index]
+    }
 }
 
 struct MapHomeGrowthHistory: Codable, Equatable {
@@ -1733,6 +1895,36 @@ enum MapHomeGrowthPolicy {
         guard season.accessories.contains(accessoryID) else { return false }
         season.equippedAccessory = accessoryID
         return true
+    }
+
+    @discardableResult
+    static func placeLandPlot(
+        _ plotID: String,
+        in season: inout MapHomeGrowthSeason
+    ) -> Bool {
+        guard season.landPlots.contains(plotID) else { return false }
+        var placements = season.landPlotPlacements ?? []
+        guard !placements.contains(where: { $0.plotID == plotID }) else {
+            return false
+        }
+        if placements.isEmpty {
+            placements.append(.init(plotID: plotID, x: 0, y: 0))
+            season.landPlotPlacements = placements
+            return true
+        }
+        let occupied = Set(placements.map { "\($0.x),\($0.y)" })
+        let directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+        for anchor in placements.reversed() {
+            for (dx, dy) in directions {
+                let x = anchor.x + dx
+                let y = anchor.y + dy
+                guard !occupied.contains("\(x),\(y)") else { continue }
+                placements.append(.init(plotID: plotID, x: x, y: y))
+                season.landPlotPlacements = placements
+                return true
+            }
+        }
+        return false
     }
 
     private static func closeDay(
@@ -1932,13 +2124,11 @@ struct MapHomeView: View {
         static let mapControlSize = MapHomeOverlayLayoutMath.controlSize
         static let mapControlIcon: CGFloat = 15
         static let mapControlSpacing = MapHomeOverlayLayoutMath.controlSpacing
-        static let timeRailWidth: CGFloat = 58
-        static let weatherRailWidth: CGFloat = 58
-        static let timeRailTopMargin: CGFloat = 18
+        static let timeRailWidth: CGFloat = 44
+        static let weatherRailWidth: CGFloat = 62
+        static let timeRailTopMargin: CGFloat = 46
         static let topOverlayFallbackHeight: CGFloat = 104
         static let overlayBottomMargin = MapHomeOverlayLayoutMath.sharedBottomMargin
-        // 플로팅 독은 시간축·중앙 위젯과 겹치지 않도록 더 아래(엄지 영역)에 둔다.
-        static let dockBottomMargin: CGFloat = 30
         static let menuMinimumWidth: CGFloat = 260
         static let menuMaximumWidth: CGFloat = 300
 
@@ -2129,13 +2319,7 @@ struct MapHomeView: View {
                 .ignoresSafeArea()
                 .zIndex(MapHomeLayerPriority.map)
 
-            if !isMenuOpen {
-                currentTimeRail
-                    .padding(.top, topOverlayHeight + Layout.timeRailTopMargin)
-                    .padding(.bottom, Layout.overlayBottomMargin)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                    .zIndex(MapHomeLayerPriority.sidebar)
-            }
+            mapSideRails
 
             if isDayDataLoading {
                 HStack(spacing: 6) {
@@ -2183,20 +2367,6 @@ struct MapHomeView: View {
             .padding(.top, 2)
             .zIndex(MapHomeLayerPriority.header)
 
-            if !isMenuOpen, !isMapSearchFocused, !hasMapSearchResults {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    HStack {
-                        Spacer(minLength: 0)
-                        questHUD
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.bottom, Layout.overlayBottomMargin + 8)
-                }
-                .padding(.horizontal, Layout.horizontalInset)
-                .transition(.opacity)
-                .zIndex(MapHomeLayerPriority.header)
-            }
         }
         .coordinateSpace(name: "mapHomeViewport")
         .ignoresSafeArea(.container, edges: .bottom)
@@ -2227,6 +2397,7 @@ struct MapHomeView: View {
                 date: model.selectedDate,
                 categories: daySummaryCategories,
                 stepCount: dayStepCount,
+                growthData: $homeGrowthData,
                 language: language
             )
             .presentationDetents([.medium, .large])
@@ -2808,9 +2979,11 @@ struct MapHomeView: View {
             }
         }
         .simultaneousGesture(
-            SpatialTapGesture().onEnded { _ in
-                dismissMapSearchOverlay()
-            },
+            SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
+                .onEnded { tap in
+                    presentCatDetailsIfTapped(at: tap.location)
+                    dismissMapSearchOverlay()
+                },
             including: isSearchDismissable ? .all : .subviews
         )
         .task {
@@ -2877,23 +3050,6 @@ struct MapHomeView: View {
             ) else { return }
             focusDisplayedLocation(using: nil)
         }
-        .overlay(alignment: .bottomLeading) {
-            if !isMenuOpen {
-                mapControls(proxy: nil)
-                    .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, Layout.dockBottomMargin)
-                    .onGeometryChange(
-                        for: CGRect.self,
-                        of: { geometry in
-                            geometry.frame(in: .named("mapHomeViewport"))
-                        },
-                        action: { frame in
-                            guard mapControlsFrame != frame else { return }
-                            mapControlsFrame = frame
-                        }
-                    )
-            }
-        }
     }
 
 
@@ -2932,9 +3088,11 @@ struct MapHomeView: View {
             onAnnotationSelected: handleAppleMapAnnotation
         )
         .simultaneousGesture(
-            SpatialTapGesture().onEnded { _ in
-                dismissMapSearchOverlay()
-            },
+            SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
+                .onEnded { tap in
+                    presentCatDetailsIfTapped(at: tap.location)
+                    dismissMapSearchOverlay()
+                },
             including: isSearchDismissable ? .all : .subviews
         )
         .task {
@@ -2966,23 +3124,6 @@ struct MapHomeView: View {
                 in: userTrackingMode
             ) else { return }
             focusDisplayedLocation(using: nil)
-        }
-        .overlay(alignment: .bottomLeading) {
-            if !isMenuOpen {
-                mapControls(proxy: nil)
-                    .padding(.leading, Layout.horizontalInset)
-                    .padding(.bottom, Layout.dockBottomMargin)
-                    .onGeometryChange(
-                        for: CGRect.self,
-                        of: { geometry in
-                            geometry.frame(in: .named("mapHomeViewport"))
-                        },
-                        action: { frame in
-                            guard mapControlsFrame != frame else { return }
-                            mapControlsFrame = frame
-                        }
-                    )
-            }
         }
     }
 
@@ -3234,7 +3375,8 @@ struct MapHomeView: View {
     }
 
     private var appleMapPlayback: MapHomeApplePlayback? {
-        guard let coordinate = displayedLocationCoordinate else { return nil }
+        guard !isDisplayedCatAtHome,
+              let coordinate = displayedLocationCoordinate else { return nil }
         let heading: CLLocationDirection
         let phase: MapHomeAppleRoutePhase
         let animationPhase: Int?
@@ -3288,6 +3430,7 @@ struct MapHomeView: View {
             accessibilityLabel: "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)",
             phase: phase,
             followsUserLocation: selectedTimelineMinute == nil,
+            equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
             stickmanAnimationPhase: selectedTimelineMinute == nil
                 ? nil
                 : animationPhase
@@ -3299,6 +3442,10 @@ struct MapHomeView: View {
         case .temporary:
             break
         case .place(let place):
+            if place.destination == .home {
+                isDaySummaryPresented = true
+                return
+            }
             guard place.destination == .user else { return }
             selectedUserLocation = .frequentPlace(place.id)
         case .transit(let place):
@@ -3454,6 +3601,19 @@ struct MapHomeView: View {
         appleMapPlayback?.headingDegrees ?? 0
     }
 
+    private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
+        guard let stickmanPoint = vectorMapViewportStore.stickmanPoint
+                ?? displayedStickmanViewportPoint,
+              MapHomeCatTapRouting.contains(
+                  tapPoint: tapPoint,
+                  markerPoint: MapHomeCatTapRouting.markerPoint(
+                      locationPoint: stickmanPoint,
+                      isAtHome: isDisplayedCatAtHome
+                  )
+              ) else { return }
+        selectedMarkerInfo = .cat(displayedStickmanAction)
+    }
+
     private func vectorMapAnnotationOverlay(
         style: MapHomeVectorStyle,
         viewport: MapHomeVectorViewport?,
@@ -3525,7 +3685,14 @@ struct MapHomeView: View {
                                 floor: place.floor,
                                 destination: place.destination,
                                 growthLevel: place.growthLevel,
-                                isLeapDay: place.isLeapDay
+                                isLeapDay: place.isLeapDay,
+                                growthStatus: place.growthStatus,
+                                isGrowthQualifiedToday: place.isGrowthQualifiedToday,
+                                growthStreak: place.growthStreak,
+                                pendingWeeklyRewards: place.pendingWeeklyRewards,
+                                showsCatAtHome: place.isCatAtHome,
+                                catAction: place.catAction,
+                                equippedAccessoryID: place.equippedAccessoryID
                             )
                             .fixedSize()
                             // simultaneousGesture: 탭으로 사용자 위치 메뉴를 열되
@@ -3543,27 +3710,53 @@ struct MapHomeView: View {
                                 )
                             )
                         } else {
-                            MapHomePlacePin(
-                                name: place.name,
-                                floor: place.floor,
-                                destination: place.destination,
-                                growthLevel: place.growthLevel,
-                                isLeapDay: place.isLeapDay
-                            )
-                            .fixedSize()
-                            // 탭하면 랜드마크 설명 창. 지도 제스처는 통과.
-                            .simultaneousGesture(
-                                TapGesture().onEnded {
-                                    selectedMarkerInfo = .landmark(place.destination)
-                                }
-                            )
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityLabel(
-                                language.text(
-                                    "\(place.name), 레벨 \(place.floor ?? 1)",
-                                    "\(place.name), level \(place.floor ?? 1)"
+                            if place.destination == .home {
+                                MapHomePlacePin(
+                                    name: place.name,
+                                    floor: place.floor,
+                                    destination: place.destination,
+                                    growthLevel: place.growthLevel,
+                                    isLeapDay: place.isLeapDay,
+                                    growthStatus: place.growthStatus,
+                                    isGrowthQualifiedToday: place.isGrowthQualifiedToday,
+                                    growthStreak: place.growthStreak,
+                                    pendingWeeklyRewards: place.pendingWeeklyRewards,
+                                    showsCatAtHome: place.isCatAtHome,
+                                    catAction: place.catAction,
+                                    equippedAccessoryID: place.equippedAccessoryID,
+                                    onOpenDaySummary: { isDaySummaryPresented = true }
                                 )
-                            )
+                                .fixedSize()
+                                .accessibilityAddTraits(.isButton)
+                            } else {
+                                MapHomePlacePin(
+                                    name: place.name,
+                                    floor: place.floor,
+                                    destination: place.destination,
+                                    growthLevel: place.growthLevel,
+                                    isLeapDay: place.isLeapDay,
+                                    growthStatus: place.growthStatus,
+                                    isGrowthQualifiedToday: place.isGrowthQualifiedToday,
+                                    growthStreak: place.growthStreak,
+                                    pendingWeeklyRewards: place.pendingWeeklyRewards,
+                                    showsCatAtHome: place.isCatAtHome,
+                                    catAction: place.catAction,
+                                    equippedAccessoryID: place.equippedAccessoryID
+                                )
+                                .fixedSize()
+                                .simultaneousGesture(
+                                    TapGesture().onEnded {
+                                        selectedMarkerInfo = .landmark(place.destination)
+                                    }
+                                )
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityLabel(
+                                    language.text(
+                                        "\(place.name), 레벨 \(place.floor ?? 1)",
+                                        "\(place.name), level \(place.floor ?? 1)"
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -3664,6 +3857,7 @@ struct MapHomeView: View {
             }
 
             if selectedTimelineMinute != nil,
+               !isDisplayedCatAtHome,
                let point = vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
                 MapHomeVectorPlayerMarker(
                     heading: vectorPlayerHeading,
@@ -3675,6 +3869,7 @@ struct MapHomeView: View {
             }
 
             if displayedLocationCoordinate != nil,
+               !isDisplayedCatAtHome,
                let point = stickmanPoint {
                 MapHomeStickmanMarker(
                     action: displayedStickmanAction,
@@ -3682,7 +3877,8 @@ struct MapHomeView: View {
                     routePhase: appleMapPlayback?.phase == .forecast
                         ? .forecast
                         : .actual,
-                    speedMetersPerSecond: displayedSpeedMetersPerSecond
+                    speedMetersPerSecond: displayedSpeedMetersPerSecond,
+                    equippedAccessoryID: homeGrowthHistory.season.equippedAccessory
                     )
                     .position(
                         x: point.x
@@ -3943,35 +4139,6 @@ struct MapHomeView: View {
         }
     }
 
-    private struct QuestStats: Equatable {
-        var distanceMeters: Double
-        var placeCount: Int
-        var activityKinds: Int
-    }
-
-    private var questStats: QuestStats {
-        let snap = currentDayDataSnapshot
-        let travel = snap?.travel ?? model.snapshot.travel
-        let places = snap?.places ?? model.snapshot.places
-        let actuals = snap?.actuals ?? model.snapshot.actuals
-        let distance = travel.reduce(0) { $0 + max(0, $1.distanceMeters) }
-        let kinds = Set(
-            actuals.compactMap { actual -> String? in
-                let root = actual.categoryID
-                    .lowercased()
-                    .split(separator: ".", maxSplits: 1)
-                    .first
-                    .map(String.init)
-                return root
-            }
-        )
-        return QuestStats(
-            distanceMeters: distance,
-            placeCount: places.count,
-            activityKinds: kinds.count
-        )
-    }
-
     private var homeGrowthHistory: MapHomeGrowthHistory {
         guard let decoded = try? JSONDecoder().decode(
             MapHomeGrowthHistory.self,
@@ -4135,60 +4302,6 @@ struct MapHomeView: View {
             }
         }
         return total + current.duration
-    }
-
-    /// 하루를 "탐험 일지"로 보여주는 RPG HUD. 이동 거리(발자국),
-    /// 방문 장소(깃발), 활동 종류(뱃지)를 두루마리 톤 캡슐로 요약한다.
-    private var questHUD: some View {
-        let stats = questStats
-        let km = stats.distanceMeters / 1000
-        let distanceText = km >= 1
-            ? String(format: "%.1fkm", km)
-            : String(format: "%.0fm", stats.distanceMeters)
-        return HStack(spacing: 12) {
-            HStack(spacing: 4) {
-                Image(MapHomeGrowthPolicy.artworkName(level: homeGrowthHistory.season.level))
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 20)
-                Text("Lv.\(homeGrowthHistory.season.level)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpInk)
-                    .monospacedDigit()
-            }
-            questChip(icon: "pawprint.fill", value: distanceText)
-            questChip(icon: "flag.fill", value: "\(stats.placeCount)")
-            questChip(icon: "rosette", value: "\(stats.activityKinds)")
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(Color.tpSurface, in: Capsule())
-        .overlay { Capsule().stroke(Color.tpLine.opacity(0.9), lineWidth: 1) }
-        .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
-        .contentShape(Capsule())
-        .onTapGesture {
-            isDaySummaryPresented = true
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(
-            language.text(
-                "집 레벨 \(homeGrowthHistory.season.level). 오늘의 탐험 " + distanceText + ", 방문 \(stats.placeCount)곳, 활동 \(stats.activityKinds)종, 하루 요약 보기",
-                "Home level \(homeGrowthHistory.season.level). Today's expedition " + distanceText + ", \(stats.placeCount) places, \(stats.activityKinds) activities, show day summary"
-            )
-        )
-    }
-
-    private func questChip(icon: String, value: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.tpAccent)
-            Text(value)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.tpInk)
-                .monospacedDigit()
-        }
     }
 
     private var header: some View {
@@ -4862,6 +4975,50 @@ struct MapHomeView: View {
         }
     }
 
+    @ViewBuilder
+    private var mapSideRails: some View {
+        if !isMenuOpen {
+            GeometryReader { proxy in
+                mapSideRailsContent(viewportSize: proxy.size)
+            }
+            .zIndex(MapHomeLayerPriority.sidebar)
+        }
+    }
+
+    private func mapSideRailsContent(viewportSize: CGSize) -> some View {
+        let frame = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: viewportSize.height,
+            topInset: topOverlayHeight + Layout.timeRailTopMargin,
+            bottomInset: Layout.overlayBottomMargin
+        )
+        return HStack(alignment: .top, spacing: 0) {
+            mapControls(proxy: nil, railHeight: frame.height)
+                .onGeometryChange(
+                    for: CGRect.self,
+                    of: { geometry in
+                        geometry.frame(in: .named("mapHomeViewport"))
+                    },
+                    action: { frame in
+                        guard mapControlsFrame != frame else { return }
+                        mapControlsFrame = frame
+                    }
+                )
+            Spacer(minLength: 0)
+            currentTimeRail
+                .frame(
+                    width: MapHomeTimeSidebarMath.interactionWidth(
+                        railWidth: Layout.timeRailWidth,
+                        trailingInteractionWidth: Layout.horizontalInset
+                    ),
+                    height: frame.height
+                )
+        }
+        .padding(.leading, Layout.horizontalInset)
+        .frame(maxWidth: .infinity)
+        .frame(height: frame.height)
+        .position(x: viewportSize.width / 2, y: frame.midY)
+    }
+
     private var currentTimeRail: some View {
         GeometryReader { proxy in
             let railHeight = MapHomeOverlayLayoutMath.railHeight(
@@ -4884,20 +5041,28 @@ struct MapHomeView: View {
                     visibleStartMinute: timeSidebarVisibleStartMinute,
                     visibleDurationMinutes: timeSidebarVisibleDurationMinutes
                 )
+                let selectedCardHeight = min(railHeight, selectedTimeCard.height)
+                let selectedCardCenterY = min(
+                    max(selectedTimeCard.midY, selectedCardHeight / 2),
+                    railHeight - selectedCardHeight / 2
+                )
                 let timeRailTop = max(0, proxy.size.height - railHeight)
                 ZStack(alignment: .topLeading) {
-                    // 선택 시각 주변만 강조하고 레일 전체 조작 영역은 유지한다.
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.tpSurface.opacity(0.94))
+                    Capsule()
+                        .fill(Color.tpAccent.opacity(0.07))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
+                            Capsule()
+                                .stroke(Color.tpAccent.opacity(0.20), lineWidth: 0.8)
                         }
-                        .shadow(color: Color.black.opacity(0.08), radius: 10, x: -2, y: 2)
-                        .frame(width: Layout.timeRailWidth, height: selectedTimeCard.height)
+                        .frame(
+                            width: Layout.timeRailWidth - 12,
+                            height: selectedCardHeight
+                        )
                         .position(
-                            x: proxy.size.width - Layout.timeRailWidth / 2,
-                            y: timeRailTop + selectedTimeCard.midY
+                            x: proxy.size.width
+                                - Layout.horizontalInset
+                                - (Layout.timeRailWidth - 12) / 2,
+                            y: timeRailTop + selectedCardCenterY
                         )
                         .allowsHitTesting(false)
                     if model.settings.weatherSidebarVisible {
@@ -4913,6 +5078,7 @@ struct MapHomeView: View {
                             visibleDurationMinutes: weatherVisibleDurationMinutes
                         )
                         .offset(x: weatherOriginX)
+                        .allowsHitTesting(false)
                     }
                     MapHomeTimeSidebar(
                         date: model.selectedDate,
@@ -5013,7 +5179,10 @@ struct MapHomeView: View {
         .frame(maxHeight: .infinity, alignment: .trailing)
     }
 
-    private func mapControls(proxy: MapProxy?) -> some View {
+    private func mapControls(
+        proxy: MapProxy?,
+        railHeight: CGFloat
+    ) -> some View {
         let locationState = MapHomeLocationButtonState.resolve(
             hasLocation: displayedLocationCoordinate != nil,
             trackingMode: userTrackingMode,
@@ -5031,8 +5200,9 @@ struct MapHomeView: View {
             locationStateLabel = language.text("현재 위치 따라가기", "Following")
         }
         return VStack(spacing: 10) {
-            // A안 플로팅 독: 설정(메뉴)·검색·현위치·나침반을 하나의 둥근 패널로 묶는다.
-            VStack(spacing: Layout.mapControlSpacing) {
+            Spacer(minLength: 0)
+
+            VStack(spacing: 2) {
                 // 상단바에서 옮겨온 메인 메뉴(설정) 진입점. 누르면 좌측 드로어를 연다.
                 Button {
                     isLocationMenuExpanded = false
@@ -5110,27 +5280,24 @@ struct MapHomeView: View {
                 .accessibilityLabel(language.text("나침반 표시", "Show compass"))
             }
             }
-            .padding(.vertical, 6)
-            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous))
+            .padding(.vertical, 4)
+            .background(Color.tpSurface.opacity(0.92), in: Capsule())
             .overlay {
-                RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous)
-                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
             }
-            .shadow(color: .black.opacity(0.09), radius: 9, y: 3)
 
-            // 줌 ±는 별도 소형 pill 로 분리한다.
-            VStack(spacing: Layout.mapControlSpacing) {
+            VStack(spacing: 0) {
                 mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
                 mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
             }
-            .padding(.vertical, 6)
-            .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous))
+            .background(Color.tpSurface.opacity(0.92), in: Capsule())
             .overlay {
-                RoundedRectangle(cornerRadius: Layout.mapControlSize / 2 + 6, style: .continuous)
-                    .stroke(Color.tpLine.opacity(0.78), lineWidth: 1)
+                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
             }
-            .shadow(color: .black.opacity(0.09), radius: 9, y: 3)
         }
+        .padding(.bottom, 4)
+        .frame(width: Layout.timeRailWidth, height: railHeight)
+        .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
 
     private func mapZoomButton(
@@ -6794,9 +6961,60 @@ struct MapHomeView: View {
                     model.selectedDate,
                     calendar: MapHomeGrowthPolicy.localCalendar
                 ),
+                growthStatus: destination == .home
+                    ? homeGrowthMarkerStatus
+                    : nil,
+                isGrowthQualifiedToday: destination == .home
+                    && isHomeGrowthQualifiedToday,
+                growthStreak: destination == .home
+                    ? homeGrowthHistory.season.streak
+                    : 0,
+                pendingWeeklyRewards: destination == .home
+                    ? homeGrowthHistory.season.pendingWeeklyRewards
+                    : 0,
+                isCatAtHome: destination == .home && isDisplayedCatAtHome,
+                catAction: displayedStickmanAction,
+                equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
                 coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
             )
         }
+    }
+
+    private var isDisplayedCatAtHome: Bool {
+        guard let current = displayedLocationCoordinate,
+              let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
+              let point = home.point else { return false }
+        return MapHomePresencePolicy.isAtHome(
+            current: current,
+            home: CLLocationCoordinate2D(
+                latitude: point.latitude,
+                longitude: point.longitude
+            ),
+            radiusMeters: home.radiusMeters
+        )
+    }
+
+    private var homeGrowthMarkerStatus: String {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        let history = homeGrowthHistory
+        let today = Date.now
+        guard calendar.isDate(model.selectedDate, inSameDayAs: today),
+              history.season.pendingDay
+                == MapHomeGrowthPolicy.dayKey(today, calendar: calendar),
+              history.season.pendingDayQualified else {
+            return language.text("오늘 기록을 쌓아보세요", "Build today's log")
+        }
+        return language.text("오늘 성장 조건 충족", "Today's growth goal met")
+    }
+
+    private var isHomeGrowthQualifiedToday: Bool {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        let today = Date.now
+        let history = homeGrowthHistory
+        return calendar.isDate(model.selectedDate, inSameDayAs: today)
+            && history.season.pendingDay
+                == MapHomeGrowthPolicy.dayKey(today, calendar: calendar)
+            && history.season.pendingDayQualified
     }
 
     private func displayedFrequentPlaceName(_ place: FrequentPlace) -> String {
@@ -9639,6 +9857,11 @@ struct MapHomeView: View {
         _ frame: MapHomeCameraFrame,
         locationPoint: CGPoint?
     ) {
+        if let locationPoint {
+            submitDisplayedStickmanViewportPoint(locationPoint)
+        } else if displayedLocationCoordinate == nil {
+            displayedStickmanViewportPoint = nil
+        }
         if visibleMapCamera != frame.camera {
             visibleMapCamera = frame.camera
         }
@@ -12572,6 +12795,13 @@ private struct MapHomePlaceAnnotation: Identifiable {
     let destination: MapHomeLocationDestination
     let growthLevel: Int?
     let isLeapDay: Bool
+    let growthStatus: String?
+    let isGrowthQualifiedToday: Bool
+    let growthStreak: Int
+    let pendingWeeklyRewards: Int
+    let isCatAtHome: Bool
+    let catAction: MapHomeStickmanAction
+    let equippedAccessoryID: String?
     let coordinate: CLLocationCoordinate2D
 }
 
@@ -12588,47 +12818,173 @@ private struct MapHomePlacePin: View {
     let destination: MapHomeLocationDestination
     var growthLevel: Int? = nil
     var isLeapDay = false
+    var growthStatus: String? = nil
+    var isGrowthQualifiedToday = false
+    var growthStreak = 0
+    var pendingWeeklyRewards = 0
+    var showsCatAtHome = false
+    var catAction: MapHomeStickmanAction = .activity
+    var equippedAccessoryID: String? = nil
+    var onOpenDaySummary: (() -> Void)? = nil
+    @State private var isGrowthSummaryExpanded = false
 
     var body: some View {
         VStack(spacing: 5) {
-            MapHomeMarkerLabel(title: name, color: destination.tint)
-
-            // 배경 없는 게임 스타일 랜드마크 아이콘. 판타지 지도 위에 심볼만 얹되,
-            // 가독성을 위해 옅은 그림자·흰 외곽선만 준다(카드 배경 없음).
             if destination == .home, let growthLevel {
-                Image(MapHomeGrowthPolicy.artworkName(level: growthLevel))
-                    .resizable()
-                    .scaledToFit()
-                    .shadow(color: .white.opacity(0.9), radius: 1.5)
-                    .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
-                    .frame(width: 48, height: 48)
-                    .overlay(alignment: .topTrailing) {
-                        if isLeapDay {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 11, weight: .black))
-                                .foregroundStyle(Color(hex: "#E3B54A"))
-                                .shadow(color: .white, radius: 1.5)
-                                .offset(x: 2, y: -1)
+                homeGrowthCallout(level: growthLevel)
+                if showsCatAtHome {
+                    homeCatMarker(level: growthLevel)
+                } else {
+                    Image(MapHomeGrowthPolicy.artworkName(level: growthLevel))
+                        .resizable()
+                        .scaledToFit()
+                        .shadow(color: .white.opacity(0.9), radius: 1.5)
+                        .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+                        .frame(width: 48, height: 48)
+                        .overlay(alignment: .topTrailing) {
+                            if isLeapDay {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 11, weight: .black))
+                                    .foregroundStyle(Color(hex: "#E3B54A"))
+                                    .shadow(color: .white, radius: 1.5)
+                                    .offset(x: 2, y: -1)
+                            }
                         }
-                    }
+                        .allowsHitTesting(false)
+                }
             } else {
+                MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
                     .font(.system(size: 30, weight: .semibold))
                     .foregroundStyle(destination.tint)
                     .shadow(color: .white.opacity(0.9), radius: 1.5)
                     .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
                     .frame(width: 48, height: 48)
+                Text("Lv.\(floor ?? 1)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(.white, in: Capsule())
+                    .shadow(color: .black.opacity(0.10), radius: 5, y: 2)
             }
-
-            Text("Lv.\(growthLevel ?? floor ?? 1)")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.tpInk)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(.white, in: Capsule())
-                .shadow(color: .black.opacity(0.10), radius: 5, y: 2)
         }
-        .accessibilityLabel("\(name), 레벨 \(growthLevel ?? floor ?? 1)")
+        .accessibilityElement(children: destination == .home ? .contain : .ignore)
+        .accessibilityLabel(
+            destination == .home
+                ? "집 레벨 \(growthLevel ?? 1), \(growthStatus ?? "하루 요약 보기")"
+                : "\(name), 레벨 \(floor ?? 1)"
+        )
+    }
+
+    private func homeGrowthCallout(level: Int) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Button {
+                    onOpenDaySummary?()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.tpAccent)
+                        Text("Lv.\(level)")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                            .monospacedDigit()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("집 레벨 \(level) · 오늘 하루 요약 열기")
+                .accessibilityHint("하단에서 오늘 하루 요약을 엽니다")
+                Spacer(minLength: 2)
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        isGrowthSummaryExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isGrowthSummaryExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isGrowthSummaryExpanded ? "집 성장 요약 접기" : "집 성장 요약 펼치기")
+            }
+            Text(growthStatus ?? "")
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .foregroundStyle(isGrowthQualifiedToday ? Color.tpAccent : Color.tpSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.tpLine.opacity(0.55))
+                    if isGrowthQualifiedToday {
+                        Capsule()
+                            .fill(Color.tpPastelMint)
+                            .frame(width: proxy.size.width)
+                    }
+                }
+            }
+            .frame(height: 3)
+            if isGrowthSummaryExpanded {
+                HStack(spacing: 8) {
+                    Label("연속 \(growthStreak)일", systemImage: "flame.fill")
+                    Label("보상 \(pendingWeeklyRewards)", systemImage: "gift.fill")
+                }
+                .font(.system(size: 8, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            }
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 7)
+        .frame(width: isGrowthSummaryExpanded ? 150 : 126)
+        .background {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.tpSurface.opacity(0.98))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
+        }
+        .shadow(color: .black.opacity(0.13), radius: 5, y: 2)
+    }
+
+    private func homeCatMarker(level: Int) -> some View {
+        ZStack {
+            Image(MapHomeGrowthPolicy.artworkName(level: level))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 74, height: 74)
+                .shadow(color: .white.opacity(0.85), radius: 1.5)
+                .shadow(color: .black.opacity(0.20), radius: 3, y: 1)
+            MapHomeStickmanGlyph(action: catAction, size: 20)
+                .offset(
+                    x: MapHomeCatTapRouting.catOffsetInHomeImage.x,
+                    y: MapHomeCatTapRouting.catOffsetInHomeImage.y
+                )
+            if let accessory = MapHomeGrowthAccessoryCatalog.symbol(
+                for: equippedAccessoryID
+            ) {
+                Image(systemName: accessory)
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(Color(hex: "#D94772"))
+                    .shadow(color: .white, radius: 1.5)
+                    .offset(x: 25, y: -16)
+            }
+            if isLeapDay {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(Color(hex: "#E3B54A"))
+                    .shadow(color: .white, radius: 1.5)
+                    .offset(x: -20, y: -11)
+            }
+        }
+        .frame(width: 78, height: 78)
+        .allowsHitTesting(false)
     }
 }
 
@@ -14620,6 +14976,7 @@ private struct MapHomeApplePlayback {
     let accessibilityLabel: String
     let phase: MapHomeAppleRoutePhase
     let followsUserLocation: Bool
+    let equippedAccessoryID: String?
     let stickmanAnimationPhase: Int?
 }
 
@@ -14843,6 +15200,7 @@ private final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
     var phase: MapHomeAppleRoutePhase
     var stickmanAnimationPhase: Int?
     var speedMetersPerSecond: Double?
+    var equippedAccessoryID: String?
 
     init(playback: MapHomeApplePlayback) {
         coordinate = playback.coordinate
@@ -14851,6 +15209,7 @@ private final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
         label = playback.accessibilityLabel
         phase = playback.phase
         stickmanAnimationPhase = playback.stickmanAnimationPhase
+        equippedAccessoryID = playback.equippedAccessoryID
         super.init()
     }
 
@@ -14866,6 +15225,7 @@ private final class MapHomeAppleWalkerAnnotation: NSObject, MKAnnotation {
         label = playback.accessibilityLabel
         phase = playback.phase
         stickmanAnimationPhase = playback.stickmanAnimationPhase
+        equippedAccessoryID = playback.equippedAccessoryID
     }
 }
 
@@ -15164,10 +15524,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             force: Bool = false
         ) {
             let now = ProcessInfo.processInfo.systemUptime
-            guard force
-                    || observedPanGestures.isEmpty
-                    || observedCameraGestures.isEmpty
-                    || now - lastGestureAttachmentScanUptime >= 1 else {
+            guard force || now - lastGestureAttachmentScanUptime >= 1 else {
                 return
             }
             lastGestureAttachmentScanUptime = now
@@ -15217,7 +15574,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             updateRoutes(in: mapView)
             updateAnnotations(in: mapView)
             updateWalker(in: mapView)
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
@@ -15273,36 +15630,13 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             publishCameraFrame(from: mapView, isFinal: false)
         }
 
-        func mapView(
-            _ mapView: MKMapView,
-            regionWillChangeAnimated animated: Bool
-        ) {
-            refreshGestureAttachments(in: mapView, force: true)
-            var hasCameraGesture = false
-            var hasSingleFingerPan = false
-            for view in allSubviews(in: mapView) {
-                for gesture in view.gestureRecognizers ?? []
-                where gesture.state == .began || gesture.state == .changed {
-                    if gesture is UIPinchGestureRecognizer
-                        || gesture is UIRotationGestureRecognizer {
-                        hasCameraGesture = true
-                    }
-                    if let pan = gesture as? UIPanGestureRecognizer,
-                       pan.numberOfTouches <= 1 {
-                        hasSingleFingerPan = true
-                    }
-                }
-            }
-            if hasCameraGesture {
-                parent.onUserCameraGesture()
-            }
-            if hasSingleFingerPan {
-                parent.onSingleFingerPanBegan()
-            }
+        func mapView(_: MKMapView, regionWillChangeAnimated _: Bool) {
+            // Pan/pinch callbacks are observed directly. Walking every MapKit
+            // subview here competes with the gesture's first camera frames.
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
             publishCameraFrame(from: mapView, isFinal: true)
         }
 
@@ -15351,7 +15685,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 parent.onAnnotationSelected(annotation.kind)
             }
             mapView.deselectAnnotation(annotation, animated: false)
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
         }
 
         func mapView(
@@ -15564,7 +15898,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 walkerView = view
             }
             configureWalker(view, annotation: walker)
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
             if !parent.centersPlayback {
                 lastCenteredPlaybackCoordinate = nil
                 lastCenteredPlaybackTargetPoint = nil
@@ -15622,7 +15956,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         routePhase: annotation.phase == .forecast
                             ? .forecast
                             : .actual,
-                        speedMetersPerSecond: annotation.speedMetersPerSecond
+                        speedMetersPerSecond: annotation.speedMetersPerSecond,
+                        equippedAccessoryID: annotation.equippedAccessoryID
                     )
                 ),
                 size: MapHomeStickmanMarker.size,
@@ -15681,10 +16016,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
                 }
             }
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
         }
 
-        private func bringWalkerToFront(in mapView: MKMapView) {
+        private func updateWalkerPosition(in mapView: MKMapView) {
             guard let walkerAnnotation,
                   let walkerView else { return }
             MapHomeAppleWalkerOverlayLayout.update(
@@ -15729,7 +16064,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                             floor: place.floor,
                             destination: place.destination,
                             growthLevel: place.growthLevel,
-                            isLeapDay: place.isLeapDay
+                            isLeapDay: place.isLeapDay,
+                            growthStatus: place.growthStatus,
+                            isGrowthQualifiedToday: place.isGrowthQualifiedToday,
+                            growthStreak: place.growthStreak,
+                            pendingWeeklyRewards: place.pendingWeeklyRewards,
+                            showsCatAtHome: place.isCatAtHome,
+                            catAction: place.catAction,
+                            equippedAccessoryID: place.equippedAccessoryID
                         )
                         .fixedSize()
                     ),
@@ -15796,7 +16138,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 return
             }
             lastCameraPublishUptime = now
-            bringWalkerToFront(in: mapView)
+            updateWalkerPosition(in: mapView)
             let camera = MapCamera(
                 centerCoordinate: mapView.camera.centerCoordinate,
                 distance: max(mapView.camera.altitude, 1),
@@ -15807,8 +16149,21 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 camera: camera,
                 region: mapView.region
             )
-            let locationPoint = walkerAnnotation.map {
-                mapView.convert($0.coordinate, toPointTo: mapView)
+            let displayedCoordinate = walkerAnnotation?.coordinate
+                ?? parent.annotations.first(where: { annotation in
+                    guard case .place(let place) = annotation.kind else {
+                        return false
+                    }
+                    return place.destination == .home
+                })?.coordinate
+                ?? parent.annotations.first(where: { annotation in
+                    guard case .place(let place) = annotation.kind else {
+                        return false
+                    }
+                    return place.destination == .user
+                })?.coordinate
+            let locationPoint = displayedCoordinate.map {
+                mapView.convert($0, toPointTo: mapView)
             }
             parent.onCameraFrame(frame, locationPoint, isFinal)
         }
@@ -15969,7 +16324,9 @@ struct MapHomeDaySummarySheet: View {
     let date: Date
     let categories: [MapHomeDaySummaryEntry]
     let stepCount: Int?
+    @Binding var growthData: Data
     let language: MapHomeLanguage
+    @State private var isGrowthPresented = false
 
     private var totalSeconds: TimeInterval {
         categories.reduce(0) { $0 + $1.seconds }
@@ -15984,6 +16341,24 @@ struct MapHomeDaySummarySheet: View {
                 Text(dateText)
                     .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
+                HStack {
+                    Spacer()
+                    Button {
+                        isGrowthPresented = true
+                    } label: {
+                        Label(
+                            language.text("집 성장", "Home growth"),
+                            systemImage: "house.and.flag.fill"
+                        )
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.tpAccent.opacity(0.10), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(language.text("주간 보상과 집 성장 기록을 엽니다", "Opens weekly rewards and your house history"))
+                }
             }
 
             if let stepCount {
@@ -16034,6 +16409,14 @@ struct MapHomeDaySummarySheet: View {
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.tpBackground)
+        .sheet(isPresented: $isGrowthPresented) {
+            MapHomeGrowthSheet(
+                growthData: $growthData,
+                language: language
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     private func row(_ entry: MapHomeDaySummaryEntry) -> some View {
@@ -16072,5 +16455,326 @@ struct MapHomeDaySummarySheet: View {
         formatter.locale = Locale(identifier: language == .english ? "en_US" : "ko_KR")
         formatter.dateFormat = language == .english ? "EEE, MMM d" : "M월 d일 EEEE"
         return formatter.string(from: date)
+    }
+}
+
+private struct MapHomeGrowthSheet: View {
+    @Binding var growthData: Data
+    let language: MapHomeLanguage
+
+    private var history: MapHomeGrowthHistory {
+        (try? JSONDecoder().decode(MapHomeGrowthHistory.self, from: growthData))
+            ?? .initial(for: .now)
+    }
+
+    private var season: MapHomeGrowthSeason { history.season }
+    private var placements: [MapHomeGrowthPlotPlacement] {
+        season.landPlotPlacements ?? []
+    }
+    private var unplacedPlots: [String] {
+        season.landPlots.filter { id in !placements.contains(where: { $0.plotID == id }) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    seasonProgress
+                    weeklyRewardSection
+                    landSection
+                    accessorySection
+                    archiveSection
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 18)
+            }
+        }
+        .background(Color.tpBackground)
+    }
+
+    private var header: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "house.and.flag.fill")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(Color.tpAccent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(language.text("우리 집 성장", "Home growth"))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Text("\(season.year) · Lv.\(season.level)")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            Spacer()
+            if season.pendingWeeklyRewards > 0 {
+                Text(language.text("보상 \(season.pendingWeeklyRewards)", "Rewards \(season.pendingWeeklyRewards)"))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpAccent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(Color.tpAccent.opacity(0.10), in: Capsule())
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color.tpSurface)
+    }
+
+    private var seasonProgress: some View {
+        HStack(spacing: 14) {
+            Image(MapHomeGrowthPolicy.artworkName(level: season.level))
+                .resizable()
+                .scaledToFit()
+                .frame(width: 68, height: 68)
+                .padding(8)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            VStack(alignment: .leading, spacing: 7) {
+                Text(language.text("올해의 집", "This year's home"))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Text(language.text("Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))", "Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))"))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                ProgressView(value: Double(season.level), total: Double(MapHomeGrowthPolicy.maximumLevel(year: season.year)))
+                    .tint(Color.tpPastelMint)
+                Text(language.text("연속 달성 \(season.streak)일", "\(season.streak)-day streak"))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+        }
+        .padding(14)
+        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var weeklyRewardSection: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            sectionTitle(
+                language.text("주간 진화 선택", "Weekly evolution"),
+                subtitle: language.text("7일 연속 달성 보상 · 하나를 골라요", "7-day streak reward · choose one")
+            )
+            if season.pendingWeeklyRewards > 0 {
+                ForEach(MapHomeLandmarkCatalog.weeklyChoices(for: season)) { candidate in
+                    Button {
+                        claim(candidate)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(candidate.artworkName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 44, height: 44)
+                                .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(displayName(candidate))
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.tpInk)
+                                Text("\(countryName(candidate.country)) · \(categoryName(candidate.category))")
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.tpSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        .padding(11)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                Text(language.text("다음 보상까지 연속 \(max(0, 7 - season.streak))일 남았어요.", "\(max(0, 7 - season.streak)) consecutive days until your next reward."))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+    }
+
+    private var landSection: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            sectionTitle(
+                language.text("연결된 땅", "Connected land"),
+                subtitle: language.text("보상을 받아 집 주변에 한 칸씩 이어 붙여요", "Place each earned plot beside your home or another plot")
+            )
+            if placements.isEmpty {
+                Text(language.text("첫 주간 보상을 받으면 땅 조각이 생겨요.", "Your first weekly reward will add a land plot."))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                    ForEach(placements) { placement in
+                        VStack(spacing: 4) {
+                            Image(systemName: "leaf.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.tpAccent)
+                            Text("\(placement.x),\(placement.y)")
+                                .font(.system(size: 9, weight: .medium, design: .rounded).monospacedDigit())
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .background(Color.tpPastelMint.opacity(0.32), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityLabel(language.text("연결된 땅 조각", "Connected plot"))
+                    }
+                }
+            }
+            ForEach(unplacedPlots, id: \.self) { plotID in
+                Button {
+                    place(plotID)
+                } label: {
+                    Label(language.text("땅 조각 연결하기", "Place land plot"), systemImage: "arrow.up.right.square")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(language.text("기존 땅과 변을 맞대도록 배치합니다", "Connects the plot beside your existing land"))
+            }
+        }
+    }
+
+    private var accessorySection: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            sectionTitle(
+                language.text("화랑이 액세서리", "Hwarang accessories"),
+                subtitle: language.text("주간 진화 보상으로 모아 착용해요", "Collect and equip accessories from weekly rewards")
+            )
+            if season.accessories.isEmpty {
+                Text(language.text("아직 모은 액세서리가 없어요.", "No accessories collected yet."))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                ForEach(season.accessories, id: \.self) { accessoryID in
+                    Button {
+                        equip(accessoryID)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(Color.tpAccent)
+                            Text(accessoryName(accessoryID))
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.tpInk)
+                            Spacer()
+                            if season.equippedAccessory == accessoryID {
+                                Text(language.text("착용 중", "Equipped"))
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.tpAccent)
+                            }
+                        }
+                        .padding(12)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var archiveSection: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            sectionTitle(
+                language.text("지난해의 집", "Past homes"),
+                subtitle: language.text("매년 새 모닥불에서 시작하고 이전 집은 보관해요", "Each year starts at the campfire; past homes stay saved")
+            )
+            if history.archives.isEmpty {
+                Text(language.text("아직 보관된 집이 없어요.", "No archived homes yet."))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            } else {
+                ForEach(history.archives.reversed(), id: \.year) { archive in
+                    HStack(spacing: 10) {
+                        Image(MapHomeGrowthPolicy.artworkName(level: archive.level))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 42, height: 42)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(archive.year)")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.tpInk)
+                            Text("Lv.\(archive.level) · \(archive.chosenEvolutions.count) \(language.text("진화", "evolutions"))")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        Spacer()
+                        Text("\(archive.landPlots.count) \(language.text("땅", "plots"))")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    .padding(10)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+            }
+        }
+    }
+
+    private func sectionTitle(_ title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+            Text(subtitle)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+        }
+    }
+
+    private func claim(_ candidate: MapHomeLandmarkCandidate) {
+        var updated = history
+        let plotID = "plot.\(UUID().uuidString)"
+        guard MapHomeGrowthPolicy.redeemWeeklyReward(
+            evolutionID: candidate.id,
+            landPlotID: plotID,
+            accessoryID: candidate.accessoryID,
+            in: &updated
+        ) else { return }
+        save(updated)
+    }
+
+    private func place(_ plotID: String) {
+        var updated = history
+        guard MapHomeGrowthPolicy.placeLandPlot(plotID, in: &updated.season) else { return }
+        save(updated)
+    }
+
+    private func equip(_ accessoryID: String) {
+        var updated = history
+        guard MapHomeGrowthPolicy.equipAccessory(accessoryID, in: &updated.season) else { return }
+        save(updated)
+    }
+
+    private func save(_ history: MapHomeGrowthHistory) {
+        guard let encoded = try? JSONEncoder().encode(history) else { return }
+        growthData = encoded
+    }
+
+    private func displayName(_ candidate: MapHomeLandmarkCandidate) -> String {
+        language == .english ? candidate.englishName : candidate.name
+    }
+
+    private func countryName(_ korean: String) -> String {
+        guard language == .english else { return korean }
+        return [
+            "대한민국": "South Korea", "일본": "Japan", "미국": "United States",
+            "영국": "United Kingdom", "프랑스": "France", "이탈리아": "Italy",
+            "중국": "China", "스페인": "Spain", "태국": "Thailand", "호주": "Australia",
+        ][korean] ?? korean
+    }
+
+    private func categoryName(_ category: String) -> String {
+        guard language == .english else { return category }
+        return ["건축": "Architecture", "자연": "Nature", "문화": "Culture"][category] ?? category
+    }
+
+    private func accessoryName(_ accessoryID: String) -> String {
+        guard let candidate = MapHomeLandmarkCatalog.candidates.first(where: { $0.accessoryID == accessoryID }) else {
+            return language.text("화랑이 장식", "Hwarang accessory")
+        }
+        return language.text("\(candidate.name) 테마 장식", "\(candidate.englishName) charm")
     }
 }

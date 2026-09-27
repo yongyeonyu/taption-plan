@@ -754,8 +754,8 @@ enum PlanCloudRawSensorEnvelopeReducer {
 }
 
 enum PlanCloudRawSensorRetention {
-    /// Newest generations kept per month for raw-sensor backups; older
-    /// generations of the same month are pruned after each successful save.
+    /// Target retention after committed and offline-device references are
+    /// available to the pruning layer.
     static let maximumGenerationsPerMonth = 10
 }
 
@@ -1047,8 +1047,432 @@ enum PlanArchiveMetadata {
     }
 }
 
+private enum PlanSnapshotArchiveSection: UInt8, CaseIterable {
+    case header = 0
+    case plans
+    case actuals
+    case recordLinks
+    case memos
+    case stickers
+    case categories
+    case photos
+    case calendarEvents
+    case weather
+    case places
+    case travel
+    case floorTransitions
+    case yearlyReports
+    case routePoints
+}
+
+private struct PlanSnapshotArchiveHeader: Codable {
+    let schemaVersion: Int
+    let updatedAt: Date
+    let settings: AppFeatureSettings
+    let appLog: String?
+}
+
+private struct PlanSnapshotArchivePage {
+    let section: PlanSnapshotArchiveSection
+    let ordinal: Int
+    let encodedRows: Data
+
+    var encodedData: Data {
+        var data = Data([section.rawValue])
+        var littleEndianOrdinal = UInt32(ordinal).littleEndian
+        withUnsafeBytes(of: &littleEndianOrdinal) {
+            data.append(contentsOf: $0)
+        }
+        data.append(encodedRows)
+        return data
+    }
+
+    init(
+        section: PlanSnapshotArchiveSection,
+        ordinal: Int,
+        encodedRows: Data
+    ) {
+        self.section = section
+        self.ordinal = ordinal
+        self.encodedRows = encodedRows
+    }
+
+    init(data: Data) throws {
+        guard data.count >= 5,
+              let section = PlanSnapshotArchiveSection(rawValue: data[0]) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let ordinal = (0..<4).reduce(UInt32.zero) { result, offset in
+            result | (UInt32(data[offset + 1]) << (offset * 8))
+        }
+        guard let ordinal = Int(exactly: ordinal) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        self.section = section
+        self.ordinal = ordinal
+        encodedRows = data.subdata(in: 5..<data.count)
+    }
+}
+
+private enum PlanSnapshotArchivePageCodec {
+    static let maximumRows = 256
+    static let maximumBytes = 1 * 1_024 * 1_024
+    static let hardMaximumRows = 1_024
+    static let hardMaximumBytes = 4 * 1_024 * 1_024
+
+    static func encryptedFrame(
+        for payload: PlanCloudBackupPayload,
+        archiveKey: Data,
+        monthKey: String,
+        accountIdentifier: String,
+        createdAt: Date,
+        hasRawSensorArchive: Bool?,
+        generationID: UUID?
+    ) throws -> Data {
+        let pageCount = try forEachPage(of: payload) { _ in }
+        var frame = try PlanSnapshotArchiveFrame(pageCount: pageCount)
+        var totalBytes = 0
+        _ = try forEachPage(of: payload) { page in
+            let pageData = page.encodedData
+            guard pageData.count <= hardMaximumBytes,
+                  totalBytes <= TaptionSnapshotCompression
+                    .maximumRawSensorUncompressedSize - pageData.count else {
+                throw PlanSecurityError.invalidArchive
+            }
+            totalBytes += pageData.count
+            let compressed = TaptionSnapshotCompression.encode(pageData)
+            let authenticatedData = try authenticatedData(
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: createdAt,
+                hasRawSensorArchive: hasRawSensorArchive,
+                generationID: generationID,
+                pageIndex: frame.appendedCount,
+                pageCount: pageCount
+            )
+            let sealed = try AES.GCM.seal(
+                compressed,
+                using: SymmetricKey(data: archiveKey),
+                authenticating: authenticatedData
+            )
+            guard let combined = sealed.combined else {
+                throw PlanSecurityError.invalidArchive
+            }
+            try frame.append(combined)
+        }
+        guard frame.appendedCount == pageCount else {
+            throw PlanSecurityError.invalidArchive
+        }
+        return frame.encodedData
+    }
+
+    static func decodedPayload(
+        from data: Data,
+        archiveKey: Data,
+        monthKey: String,
+        accountIdentifier: String,
+        createdAt: Date,
+        hasRawSensorArchive: Bool?,
+        generationID: UUID?
+    ) throws -> PlanCloudBackupPayload {
+        let frame = try PlanSnapshotArchiveFrame(data: data)
+        let key = SymmetricKey(data: archiveKey)
+        var header: PlanSnapshotArchiveHeader?
+        var rowsBySection: [PlanSnapshotArchiveSection: [(Int, Data)]] = [:]
+        var totalBytes = 0
+        for index in 0..<frame.count {
+            let sealed = try AES.GCM.SealedBox(combined: frame.page(at: index))
+            let aad = try authenticatedData(
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: createdAt,
+                hasRawSensorArchive: hasRawSensorArchive,
+                generationID: generationID,
+                pageIndex: index,
+                pageCount: frame.count
+            )
+            let compressed = try AES.GCM.open(
+                sealed,
+                using: key,
+                authenticating: aad
+            )
+            let pageData = try TaptionSnapshotCompression.decodeChecked(
+                compressed,
+                maximumSize: hardMaximumBytes
+            )
+            guard totalBytes <= TaptionSnapshotCompression
+                .maximumRawSensorUncompressedSize - pageData.count else {
+                throw PlanSecurityError.invalidArchive
+            }
+            totalBytes += pageData.count
+            let page = try PlanSnapshotArchivePage(data: pageData)
+            if page.section == .header {
+                guard header == nil, page.ordinal == 0 else {
+                    throw PlanSecurityError.invalidArchive
+                }
+                header = try JSONDecoder.taptionPlan.decode(
+                    PlanSnapshotArchiveHeader.self,
+                    from: page.encodedRows
+                )
+            } else {
+                rowsBySection[page.section, default: []].append(
+                    (page.ordinal, page.encodedRows)
+                )
+            }
+        }
+        guard let header else { throw PlanSecurityError.invalidArchive }
+
+        func decodeRows<Value: Decodable>(
+            _ type: Value.Type,
+            for section: PlanSnapshotArchiveSection
+        ) throws -> [Value] {
+            let pages = (rowsBySection[section] ?? []).sorted {
+                $0.0 < $1.0
+            }
+            guard pages.enumerated().allSatisfy({ $0.offset == $0.element.0 }) else {
+                throw PlanSecurityError.invalidArchive
+            }
+            return try pages.reduce(into: []) { result, page in
+                result.append(contentsOf: try JSONDecoder.taptionPlan.decode(
+                    [Value].self,
+                    from: page.1
+                ))
+            }
+        }
+
+        let snapshot = TaptionDataSnapshot(
+            schemaVersion: header.schemaVersion,
+            updatedAt: header.updatedAt,
+            plans: try decodeRows(PlanRecord.self, for: .plans),
+            actuals: try decodeRows(ActualRecord.self, for: .actuals),
+            recordLinks: try decodeRows(RecordLink.self, for: .recordLinks),
+            memos: try decodeRows(ActionMemo.self, for: .memos),
+            stickers: try decodeRows(MapSticker.self, for: .stickers),
+            categories: try decodeRows(CategoryDefinition.self, for: .categories),
+            photos: try decodeRows(PhotoMoment.self, for: .photos),
+            calendarEvents: try decodeRows(CalendarRecord.self, for: .calendarEvents),
+            weather: try decodeRows(WeatherContext.self, for: .weather),
+            places: try decodeRows(PlaceStay.self, for: .places),
+            travel: try decodeRows(TravelSegment.self, for: .travel),
+            floorTransitions: try decodeRows(FloorTransition.self, for: .floorTransitions),
+            yearlyReports: try decodeRows(YearlyReviewArchive.self, for: .yearlyReports),
+            settings: header.settings
+        )
+        return PlanCloudBackupPayload(
+            snapshot: snapshot,
+            routePoints: try decodeRows(PlanBackupRoutePoint.self, for: .routePoints),
+            appLog: header.appLog
+        )
+    }
+
+    private static func forEachPage(
+        of payload: PlanCloudBackupPayload,
+        visit: (PlanSnapshotArchivePage) throws -> Void
+    ) throws -> Int {
+        let encoder = JSONEncoder.taptionPlan
+        var pageCount = 0
+
+        func appendHeader() throws {
+            let header = PlanSnapshotArchiveHeader(
+                schemaVersion: payload.snapshot.schemaVersion,
+                updatedAt: payload.snapshot.updatedAt,
+                settings: payload.snapshot.settings,
+                appLog: payload.appLog
+            )
+            try visit(
+                PlanSnapshotArchivePage(
+                    section: .header,
+                    ordinal: 0,
+                    encodedRows: try encoder.encode(header)
+                )
+            )
+            pageCount += 1
+        }
+
+        func appendSection<Value: Encodable>(
+            _ values: [Value],
+            section: PlanSnapshotArchiveSection
+        ) throws {
+            var pendingRows: [Data] = []
+            var pendingByteCount = 2
+            var ordinal = 0
+            func flush() throws {
+                guard !pendingRows.isEmpty else { return }
+                var rows = Data(capacity: pendingByteCount)
+                rows.append(0x5B)
+                for (index, encodedRow) in pendingRows.enumerated() {
+                    if index > 0 { rows.append(0x2C) }
+                    rows.append(encodedRow)
+                }
+                rows.append(0x5D)
+                try visit(
+                    PlanSnapshotArchivePage(
+                        section: section,
+                        ordinal: ordinal,
+                        encodedRows: rows
+                    )
+                )
+                pendingRows.removeAll(keepingCapacity: true)
+                pendingByteCount = 2
+                ordinal += 1
+                pageCount += 1
+            }
+            for value in values {
+                let encodedRow = try encoder.encode(value)
+                let separatorBytes = pendingRows.isEmpty ? 0 : 1
+                let candidateCount = pendingRows.count + 1
+                let candidateBytes = pendingByteCount
+                    + separatorBytes + encodedRow.count
+                if !pendingRows.isEmpty
+                    && (candidateCount > maximumRows
+                        || candidateBytes > maximumBytes) {
+                    try flush()
+                }
+                let singleSize = encodedRow.count + 2
+                guard singleSize <= hardMaximumBytes else {
+                    throw PlanSecurityError.invalidArchive
+                }
+                pendingRows.append(encodedRow)
+                pendingByteCount += (pendingRows.count == 1 ? 0 : 1)
+                    + encodedRow.count
+            }
+            try flush()
+        }
+
+        try appendHeader()
+        try appendSection(payload.snapshot.plans, section: .plans)
+        try appendSection(payload.snapshot.actuals, section: .actuals)
+        try appendSection(payload.snapshot.recordLinks, section: .recordLinks)
+        try appendSection(payload.snapshot.memos, section: .memos)
+        try appendSection(payload.snapshot.stickers, section: .stickers)
+        try appendSection(payload.snapshot.categories, section: .categories)
+        try appendSection(payload.snapshot.photos, section: .photos)
+        try appendSection(payload.snapshot.calendarEvents, section: .calendarEvents)
+        try appendSection(payload.snapshot.weather, section: .weather)
+        try appendSection(payload.snapshot.places, section: .places)
+        try appendSection(payload.snapshot.travel, section: .travel)
+        try appendSection(payload.snapshot.floorTransitions, section: .floorTransitions)
+        try appendSection(payload.snapshot.yearlyReports, section: .yearlyReports)
+        try appendSection(payload.routePoints, section: .routePoints)
+        return pageCount
+    }
+
+    private static func authenticatedData(
+        monthKey: String,
+        accountIdentifier: String,
+        createdAt: Date,
+        hasRawSensorArchive: Bool?,
+        generationID: UUID?,
+        pageIndex: Int,
+        pageCount: Int
+    ) throws -> Data {
+        var data = try PlanArchiveMetadata.authenticatedData(
+            version: PlanMonthlyArchive.currentVersion,
+            monthKey: monthKey,
+            accountIdentifier: accountIdentifier,
+            createdAt: createdAt,
+            generationID: generationID,
+            hasRawSensorArchive: hasRawSensorArchive
+        )
+        for value in [UInt64(pageIndex), UInt64(pageCount)] {
+            var littleEndianValue = value.littleEndian
+            withUnsafeBytes(of: &littleEndianValue) {
+                data.append(contentsOf: $0)
+            }
+        }
+        return data
+    }
+}
+
+private struct PlanSnapshotArchiveFrame {
+    private static let magic: [UInt8] = [0x54, 0x50, 0x53, 0x34]
+    private static let maximumPageCount = 16_384
+    private var data: Data
+    private let ranges: [Range<Int>]
+    private let expectedPageCount: Int
+    private(set) var appendedCount: Int
+
+    var count: Int { expectedPageCount }
+    var encodedData: Data { data }
+
+    init(pageCount: Int) throws {
+        guard (1...Self.maximumPageCount).contains(pageCount),
+              let value = UInt32(exactly: pageCount) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        data = Data(Self.magic)
+        Self.append(value, to: &data)
+        ranges = []
+        expectedPageCount = pageCount
+        appendedCount = 0
+    }
+
+    init(data: Data) throws {
+        guard data.count >= 8,
+              Array(data.prefix(4)) == Self.magic else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let pageCount = Int(Self.readUInt32(data, at: 4))
+        guard (1...Self.maximumPageCount).contains(pageCount) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var offset = 8
+        var ranges: [Range<Int>] = []
+        ranges.reserveCapacity(pageCount)
+        for _ in 0..<pageCount {
+            guard offset <= data.count - 4 else {
+                throw PlanSecurityError.invalidArchive
+            }
+            let length = Int(Self.readUInt32(data, at: offset))
+            offset += 4
+            guard length > 0, length <= data.count - offset else {
+                throw PlanSecurityError.invalidArchive
+            }
+            ranges.append(offset..<(offset + length))
+            offset += length
+        }
+        guard offset == data.count else {
+            throw PlanSecurityError.invalidArchive
+        }
+        self.data = data
+        self.ranges = ranges
+        expectedPageCount = pageCount
+        appendedCount = pageCount
+    }
+
+    mutating func append(_ page: Data) throws {
+        guard appendedCount < expectedPageCount, page.count > 0,
+              let length = UInt32(exactly: page.count) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        Self.append(length, to: &data)
+        data.append(page)
+        appendedCount += 1
+    }
+
+    func page(at index: Int) throws -> Data {
+        guard ranges.indices.contains(index) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        return data.subdata(in: ranges[index])
+    }
+
+    private static func readUInt32(_ data: Data, at offset: Int) -> UInt32 {
+        (0..<4).reduce(UInt32.zero) { result, index in
+            result | (UInt32(data[offset + index]) << (index * 8))
+        }
+    }
+
+    private static func append(_ value: UInt32, to data: inout Data) {
+        var littleEndianValue = value.littleEndian
+        withUnsafeBytes(of: &littleEndianValue) {
+            data.append(contentsOf: $0)
+        }
+    }
+}
+
 struct PlanMonthlyArchive: Codable, Equatable, Sendable {
-    static let currentVersion = 3
+    static let currentVersion = 4
     let version: Int
     let monthKey: String
     let accountIdentifier: String
@@ -1087,7 +1511,8 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
         accountKeyData: Data? = nil
     ) throws -> PlanCloudBackupPayload {
         guard (1...Self.currentVersion).contains(version),
-              payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
+              version == Self.currentVersion
+                || payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
         var archiveKeys: [Data] = []
@@ -1114,6 +1539,17 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
     private func decodePayload(
         archiveKey: Data
     ) throws -> PlanCloudBackupPayload {
+        if version == Self.currentVersion {
+            return try PlanSnapshotArchivePageCodec.decodedPayload(
+                from: encryptedPayload,
+                archiveKey: archiveKey,
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: createdAt,
+                hasRawSensorArchive: hasRawSensorArchive,
+                generationID: generationID
+            )
+        }
         let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
         let compressed: Data
         if version == 1 {
@@ -1179,7 +1615,7 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
 }
 
 struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
-    static let currentVersion = 2
+    static let currentVersion = 4
 
     let version: Int
     let monthKey: String
@@ -1250,8 +1686,9 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
         cancellationCheck: () throws -> Void = {}
     ) throws -> PlanCloudRawSensorPayload {
         try cancellationCheck()
-        guard version == 1 || version == Self.currentVersion,
-              payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
+        guard (1...Self.currentVersion).contains(version),
+              version == Self.currentVersion
+                || payloadDigest == Data(SHA256.hash(data: encryptedPayload)) else {
             throw PlanSecurityError.invalidArchive
         }
         try cancellationCheck()
@@ -1307,6 +1744,12 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
         cancellationCheck: () throws -> Void
     ) throws -> PlanCloudRawSensorPayload {
         try cancellationCheck()
+        if version == 4 {
+            return try decodePagedPayload(
+                archiveKey: archiveKey,
+                cancellationCheck: cancellationCheck
+            )
+        }
         let sealed = try AES.GCM.SealedBox(combined: encryptedPayload)
         let compressed: Data
         if version == 1 {
@@ -1357,10 +1800,317 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
         return payload
     }
 
+    private func decodePagedPayload(
+        archiveKey: Data,
+        cancellationCheck: () throws -> Void
+    ) throws -> PlanCloudRawSensorPayload {
+        let framing = try PlanRawSensorPageFrame(data: encryptedPayload)
+        var pages: [PlanCloudRawSensorPage] = []
+        pages.reserveCapacity(framing.pageCount)
+        var totalUncompressedBytes = 0
+        let key = SymmetricKey(data: archiveKey)
+        for index in 0..<framing.pageCount {
+            try cancellationCheck()
+            do {
+                let sealed = try AES.GCM.SealedBox(
+                    combined: framing.page(at: index)
+                )
+                let authenticatedData = try Self.pageAuthenticatedData(
+                    monthKey: monthKey,
+                    accountIdentifier: accountIdentifier,
+                    createdAt: createdAt,
+                    generationID: generationID,
+                    pageIndex: index,
+                    pageCount: framing.pageCount
+                )
+                let compressed = try AES.GCM.open(
+                    sealed,
+                    using: key,
+                    authenticating: authenticatedData
+                )
+                try cancellationCheck()
+                let encoded = try TaptionSnapshotCompression.decodeChecked(
+                    compressed,
+                    maximumSize: PlanCloudRawSensorPageCodec.hardMaximumBytes
+                )
+                guard encoded.count
+                    <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize
+                        - totalUncompressedBytes else {
+                    throw PlanSecurityError.invalidArchive
+                }
+                let decoded = try JSONDecoder.taptionPlan.decode(
+                    PlanCloudRawSensorPage.self,
+                    from: encoded
+                )
+                guard decoded.index == index,
+                      decoded.rowCount
+                        <= PlanCloudRawSensorPageCodec.hardMaximumRows else {
+                    throw PlanSecurityError.invalidArchive
+                }
+                totalUncompressedBytes += encoded.count
+                pages.append(
+                    PlanCloudRawSensorPage(
+                        index: pages.count,
+                        items: decoded.items
+                    )
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "raw_sensor_archive_page_skipped",
+                    level: .error,
+                    fields: [
+                        "month_key": monthKey,
+                        "page_index": String(index),
+                    ]
+                )
+            }
+        }
+        guard !pages.isEmpty else { throw PlanSecurityError.invalidArchive }
+        try cancellationCheck()
+        return try PlanCloudRawSensorPageCodec.payload(
+            from: pages,
+            monthKey: monthKey,
+            createdAt: createdAt
+        )
+    }
+
+    static func pageAuthenticatedData(
+        version: Int = currentVersion,
+        monthKey: String,
+        accountIdentifier: String,
+        createdAt: Date,
+        generationID: UUID?,
+        pageIndex: Int,
+        pageCount: Int
+    ) throws -> Data {
+        var data = try PlanArchiveMetadata.authenticatedData(
+            version: version,
+            monthKey: monthKey,
+            accountIdentifier: accountIdentifier,
+            createdAt: createdAt,
+            generationID: generationID
+        )
+        for value in [UInt64(pageIndex), UInt64(pageCount)] {
+            var littleEndianValue = value.littleEndian
+            withUnsafeBytes(of: &littleEndianValue) {
+                data.append(contentsOf: $0)
+            }
+        }
+        return data
+    }
+
     private static func openKey(_ wrapped: Data, with keyData: Data) throws -> Data {
         guard keyData.count == 32 else { throw PlanSecurityError.invalidArchive }
         let sealed = try AES.GCM.SealedBox(combined: wrapped)
         return try AES.GCM.open(sealed, using: SymmetricKey(data: keyData))
+    }
+}
+
+enum PlanCloudRawSensorPageItem: Codable, Equatable, Sendable {
+    case sensorReading(SensorReading)
+    case envelope(RawDeviceDataEnvelope)
+    case watchAcceleration(TaptionWatchAccelerationChunk)
+}
+
+struct PlanCloudRawSensorPage: Codable, Equatable, Sendable {
+    let index: Int
+    let items: [PlanCloudRawSensorPageItem]
+
+    var rowCount: Int { items.count }
+}
+
+enum PlanCloudRawSensorPageCodec {
+    static let defaultMaximumRows = 256
+    static let defaultMaximumBytes = 1 * 1_024 * 1_024
+    static let hardMaximumRows = 1_024
+    static let hardMaximumBytes = 4 * 1_024 * 1_024
+
+    static func pages(
+        from payload: PlanCloudRawSensorPayload,
+        maximumRows: Int = defaultMaximumRows,
+        maximumBytes: Int = defaultMaximumBytes,
+        encoder: JSONEncoder = .taptionPlan
+    ) throws -> [PlanCloudRawSensorPage] {
+        var result: [PlanCloudRawSensorPage] = []
+        _ = try forEachPage(
+            from: payload,
+            maximumRows: maximumRows,
+            maximumBytes: maximumBytes,
+            encoder: encoder
+        ) { result.append($0) }
+        return result
+    }
+
+    @discardableResult
+    static func forEachPage(
+        from payload: PlanCloudRawSensorPayload,
+        maximumRows: Int = defaultMaximumRows,
+        maximumBytes: Int = defaultMaximumBytes,
+        encoder: JSONEncoder = .taptionPlan,
+        visit: (PlanCloudRawSensorPage) throws -> Void
+    ) throws -> Int {
+        let rowLimit = min(max(maximumRows, 1), hardMaximumRows)
+        let byteLimit = min(max(maximumBytes, 1), hardMaximumBytes)
+        var pending: [PlanCloudRawSensorPageItem] = []
+        var nextIndex = 0
+
+        func encodedPage(_ items: [PlanCloudRawSensorPageItem], index: Int) throws -> (PlanCloudRawSensorPage, Int) {
+            let page = PlanCloudRawSensorPage(index: index, items: items)
+            return (page, try encoder.encode(page).count)
+        }
+
+        func flush() throws {
+            guard !pending.isEmpty else { return }
+            try visit(PlanCloudRawSensorPage(index: nextIndex, items: pending))
+            nextIndex += 1
+            pending.removeAll(keepingCapacity: true)
+        }
+
+        func append(_ item: PlanCloudRawSensorPageItem) throws {
+            var candidate = pending
+            candidate.append(item)
+            let (_, candidateBytes) = try encodedPage(candidate, index: nextIndex)
+            if !pending.isEmpty,
+               candidate.count > rowLimit || candidateBytes > byteLimit {
+                try flush()
+                candidate = [item]
+            }
+            let (_, singlePageBytes) = try encodedPage(candidate, index: nextIndex)
+            guard candidate.count <= hardMaximumRows,
+                  singlePageBytes <= hardMaximumBytes else {
+                throw TaptionPlanV3StoreError.rawEventPageItemTooLarge(
+                    limit: hardMaximumBytes
+                )
+            }
+            pending = candidate
+        }
+
+        for reading in payload.sensorReadings {
+            try append(.sensorReading(reading))
+        }
+        for envelope in payload.envelopes {
+            try append(.envelope(envelope))
+        }
+        for chunk in payload.watchAccelerationChunks ?? [] {
+            try append(.watchAcceleration(chunk))
+        }
+        try flush()
+        return nextIndex
+    }
+
+    static func payload(
+        from pages: [PlanCloudRawSensorPage],
+        monthKey: String,
+        createdAt: Date
+    ) throws -> PlanCloudRawSensorPayload {
+        let ordered = pages.sorted { $0.index < $1.index }
+        guard ordered.enumerated().allSatisfy({ offset, page in
+            page.index == offset && page.rowCount <= hardMaximumRows
+        }) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var readings: [SensorReading] = []
+        var envelopes: [RawDeviceDataEnvelope] = []
+        var chunks: [TaptionWatchAccelerationChunk] = []
+        for page in ordered {
+            for item in page.items {
+                switch item {
+                case let .sensorReading(value): readings.append(value)
+                case let .envelope(value): envelopes.append(value)
+                case let .watchAcceleration(value): chunks.append(value)
+                }
+            }
+        }
+        return PlanCloudRawSensorPayload(
+            monthKey: monthKey,
+            sensorReadings: readings,
+            envelopes: envelopes,
+            watchAccelerationChunks: chunks,
+            createdAt: createdAt
+        )
+    }
+}
+
+private struct PlanRawSensorPageFrame {
+    private static let magic: [UInt8] = [0x54, 0x50, 0x50, 0x34]
+    private static let maximumPageCount = 4_096
+    private var data: Data
+    private let ranges: [Range<Int>]
+
+    var pageCount: Int { ranges.count }
+    var encodedData: Data { data }
+
+    init(pageCount: Int) throws {
+        guard (0...Self.maximumPageCount).contains(pageCount),
+              let count = UInt32(exactly: pageCount) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var data = Data(Self.magic)
+        Self.append(count, to: &data)
+        self.data = data
+        self.ranges = []
+    }
+
+    mutating func append(_ page: Data) throws {
+        guard !page.isEmpty,
+              let length = UInt32(exactly: page.count) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        Self.append(length, to: &data)
+        data.append(page)
+    }
+
+    init(data: Data) throws {
+        guard data.count >= 8,
+              data.prefix(4).elementsEqual(Self.magic) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let count = Int(Self.readUInt32(data, at: 4))
+        guard count <= Self.maximumPageCount else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var cursor = 8
+        var ranges: [Range<Int>] = []
+        ranges.reserveCapacity(count)
+        for _ in 0..<count {
+            guard cursor <= data.count - 4 else {
+                throw PlanSecurityError.invalidArchive
+            }
+            let length = Int(Self.readUInt32(data, at: cursor))
+            cursor += 4
+            guard length > 0,
+                  length <= data.count - cursor else {
+                throw PlanSecurityError.invalidArchive
+            }
+            ranges.append(cursor..<(cursor + length))
+            cursor += length
+        }
+        guard cursor == data.count else {
+            throw PlanSecurityError.invalidArchive
+        }
+        self.data = data
+        self.ranges = ranges
+    }
+
+    func page(at index: Int) throws -> Data {
+        guard ranges.indices.contains(index) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        return data.subdata(in: ranges[index])
+    }
+
+    private static func append(_ value: UInt32, to data: inout Data) {
+        var value = value.littleEndian
+        withUnsafeBytes(of: &value) { data.append(contentsOf: $0) }
+    }
+
+    private static func readUInt32(_ data: Data, at index: Int) -> UInt32 {
+        UInt32(data[index])
+            | UInt32(data[index + 1]) << 8
+            | UInt32(data[index + 2]) << 16
+            | UInt32(data[index + 3]) << 24
     }
 }
 
@@ -1717,6 +2467,279 @@ protocol PlanCloudAccountKeyProvider: AnyObject {
 @MainActor
 protocol PlanCloudRecoveryKeyProvider: AnyObject {
     func key() async throws -> Data
+}
+
+struct PlanCloudBackupManifest: Codable, Equatable, Sendable {
+    static let currentVersion = 1
+
+    let version: Int
+    var generationsByDevice: [String: [String: [UUID]]]
+
+    init(generationsByDevice: [String: [String: [UUID]]] = [:]) {
+        version = Self.currentVersion
+        self.generationsByDevice = generationsByDevice
+    }
+
+    mutating func record(
+        deviceID: String,
+        monthKey: String,
+        generationID: UUID
+    ) throws {
+        guard !deviceID.isEmpty, deviceID.utf8.count <= 128,
+              Self.isValidMonthKey(monthKey) else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var byMonth = generationsByDevice[deviceID, default: [:]]
+        var generations = byMonth[monthKey, default: []]
+        if !generations.contains(generationID) {
+            generations.append(generationID)
+        }
+        generations.sort { $0.uuidString < $1.uuidString }
+        byMonth[monthKey] = generations
+        generationsByDevice[deviceID] = byMonth
+        guard isWithinBounds else { throw PlanSecurityError.invalidArchive }
+    }
+
+    func merging(_ other: Self) throws -> Self {
+        guard version == Self.currentVersion,
+              other.version == Self.currentVersion,
+              isWithinBounds, other.isWithinBounds else {
+            throw PlanSecurityError.invalidArchive
+        }
+        var merged = self
+        for (deviceID, months) in other.generationsByDevice {
+            guard !deviceID.isEmpty, deviceID.utf8.count <= 128 else {
+                throw PlanSecurityError.invalidArchive
+            }
+            for (monthKey, generationIDs) in months {
+                guard Self.isValidMonthKey(monthKey) else {
+                    throw PlanSecurityError.invalidArchive
+                }
+                for generationID in generationIDs {
+                    try merged.record(
+                        deviceID: deviceID,
+                        monthKey: monthKey,
+                        generationID: generationID
+                    )
+                }
+            }
+        }
+        return merged
+    }
+
+    func referencedGenerations(monthKey: String) -> Set<UUID> {
+        Set(generationsByDevice.values.compactMap { $0[monthKey] }.flatMap { $0 })
+    }
+
+    var isWithinBounds: Bool {
+        guard generationsByDevice.count <= 64 else { return false }
+        var referenceCount = 0
+        for (deviceID, months) in generationsByDevice {
+            guard !deviceID.isEmpty, deviceID.utf8.count <= 128,
+                  months.count <= 240 else { return false }
+            for (monthKey, generations) in months {
+                guard Self.isValidMonthKey(monthKey),
+                      Set(generations).count == generations.count else {
+                    return false
+                }
+                referenceCount += generations.count
+                guard referenceCount <= 20_000 else { return false }
+            }
+        }
+        return true
+    }
+
+    private static func isValidMonthKey(_ value: String) -> Bool {
+        let parts = value.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              parts[0].count == 4,
+              let year = Int(parts[0]), year > 0,
+              parts[1].count == 2,
+              let month = Int(parts[1]) else { return false }
+        return (1...12).contains(month)
+    }
+}
+
+protocol PlanCloudBackupManifestPublishing: Sendable {
+    func publish(monthKey: String, generationID: UUID) async throws
+        -> PlanCloudBackupManifest
+    func retryPending() async throws -> PlanCloudBackupManifest?
+}
+
+actor CloudKitPlanBackupManifestSyncService:
+    PlanCloudBackupManifestPublishing {
+    private static let recordType = "TaptionBackupManifest"
+    private static let recordName = "taption-backup-manifest-v1"
+    private static let dataField = "manifestData"
+    private static let maximumManifestBytes = 512 * 1_024
+    private static let maximumRetries = 3
+
+    private let container: CKContainer
+    private let database: CKDatabase
+    private let fileManager: FileManager
+    private let pendingURL: URL
+    private let deviceID: String
+
+    nonisolated static func automatic() -> CloudKitPlanBackupManifestSyncService? {
+#if DEBUG && !targetEnvironment(simulator)
+        let fileManager = FileManager.default
+        guard let support = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else { return nil }
+        let defaults = UserDefaults.standard
+        let key = "TaptionPlan.backup-manifest-device-id-v1"
+        let deviceID: String
+        if let saved = defaults.string(forKey: key), !saved.isEmpty {
+            deviceID = saved
+        } else {
+            deviceID = UUID().uuidString
+            defaults.set(deviceID, forKey: key)
+        }
+        return CloudKitPlanBackupManifestSyncService(
+            container: CKContainer(identifier: "iCloud.com.taption.plan"),
+            pendingURL: support
+                .appendingPathComponent("Taption Plan", isDirectory: true)
+                .appendingPathComponent("backup-manifest.pending"),
+            deviceID: deviceID,
+            fileManager: fileManager
+        )
+#else
+        return nil
+#endif
+    }
+
+    init(
+        container: CKContainer,
+        pendingURL: URL,
+        deviceID: String,
+        fileManager: FileManager = .default
+    ) {
+        self.container = container
+        self.database = container.privateCloudDatabase
+        self.pendingURL = pendingURL
+        self.deviceID = deviceID
+        self.fileManager = fileManager
+    }
+
+    func publish(
+        monthKey: String,
+        generationID: UUID
+    ) async throws -> PlanCloudBackupManifest {
+        var pending = try readPending()
+        try pending.record(
+            deviceID: deviceID,
+            monthKey: monthKey,
+            generationID: generationID
+        )
+        try writePending(pending)
+        return try await synchronize(pending)
+    }
+
+    func retryPending() async throws -> PlanCloudBackupManifest? {
+        guard fileManager.fileExists(atPath: pendingURL.path) else { return nil }
+        return try await synchronize(readPending())
+    }
+
+    private func synchronize(
+        _ local: PlanCloudBackupManifest
+    ) async throws -> PlanCloudBackupManifest {
+        let recordID = CKRecord.ID(recordName: Self.recordName)
+        var record = try await fetch(recordID)
+        for attempt in 0...Self.maximumRetries {
+            let remote = try manifest(from: record)
+            let merged = try remote.merging(local)
+            let encoded = try JSONEncoder.taptionPlan.encode(merged)
+            guard encoded.count <= Self.maximumManifestBytes else {
+                throw PlanSecurityError.invalidArchive
+            }
+            let target = record ?? CKRecord(
+                recordType: Self.recordType,
+                recordID: recordID
+            )
+            target[Self.dataField] = encoded as CKRecordValue
+            target["updatedAt"] = Date.now as CKRecordValue
+            do {
+                _ = try await database.save(target)
+                try writePending(merged)
+                return merged
+            } catch {
+                guard CloudKitErrorPolicy.isRecordConflict(error),
+                      attempt < Self.maximumRetries else {
+                    throw error
+                }
+                let serverRecord = CloudKitErrorPolicy.serverRecord(in: error)
+                try await Task.sleep(
+                    for: .milliseconds(50 * (1 << (attempt - 1)))
+                )
+                if let serverRecord {
+                    record = serverRecord
+                } else {
+                    record = try await fetch(recordID)
+                }
+            }
+        }
+        throw PlanSecurityError.accountUnavailable
+    }
+
+    private func fetch(_ recordID: CKRecord.ID) async throws -> CKRecord? {
+        do {
+            return try await database.record(for: recordID)
+        } catch let error as CKError where error.code == .unknownItem {
+            return nil
+        }
+    }
+
+    private func manifest(from record: CKRecord?) throws -> PlanCloudBackupManifest {
+        guard let record else { return PlanCloudBackupManifest() }
+        guard let data = record[Self.dataField] as? Data,
+              data.count <= Self.maximumManifestBytes else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let manifest = try JSONDecoder.taptionPlan.decode(
+            PlanCloudBackupManifest.self,
+            from: data
+        )
+        guard manifest.version == PlanCloudBackupManifest.currentVersion,
+              manifest.isWithinBounds else {
+            throw PlanSecurityError.invalidArchive
+        }
+        return manifest
+    }
+
+    private func readPending() throws -> PlanCloudBackupManifest {
+        guard fileManager.fileExists(atPath: pendingURL.path) else {
+            return PlanCloudBackupManifest()
+        }
+        let data = try Data(contentsOf: pendingURL)
+        guard data.count <= Self.maximumManifestBytes else {
+            throw PlanSecurityError.invalidArchive
+        }
+        let manifest = try JSONDecoder.taptionPlan.decode(
+            PlanCloudBackupManifest.self,
+            from: data
+        )
+        guard manifest.version == PlanCloudBackupManifest.currentVersion,
+              manifest.isWithinBounds else {
+            throw PlanSecurityError.invalidArchive
+        }
+        return manifest
+    }
+
+    private func writePending(_ manifest: PlanCloudBackupManifest) throws {
+        let data = try JSONEncoder.taptionPlan.encode(manifest)
+        guard data.count <= Self.maximumManifestBytes else {
+            throw PlanSecurityError.invalidArchive
+        }
+        try fileManager.createDirectory(
+            at: pendingURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try data.write(
+            to: pendingURL,
+            options: [.atomic, .completeFileProtection]
+        )
+    }
 }
 
 private struct PlanCloudRecoveryKeyEnvelope: Codable {
@@ -2536,10 +3559,19 @@ protocol PlanCloudRawSensorBackupStore: AnyObject {
         generationID: UUID?,
         byteBudget: PlanCloudArchiveRestoreByteBudget
     ) async throws -> PlanRawSensorMonthlyArchive?
+    func retainGenerations(
+        referencedByMonth: [String: Set<UUID>],
+        unreferencedLimitPerMonth: Int
+    ) throws
     func deleteAll() throws
 }
 
 extension PlanCloudRawSensorBackupStore {
+    func retainGenerations(
+        referencedByMonth: [String: Set<UUID>],
+        unreferencedLimitPerMonth: Int
+    ) throws { }
+
     func allArchives() throws -> [PlanRawSensorMonthlyArchive] {
         try latest().map { [$0] } ?? []
     }
@@ -2617,10 +3649,6 @@ final class FilePlanCloudRawSensorBackupStore:
             to: destination,
             options: [.atomic, .completeFileProtection]
         )
-        try? retainNewestGenerations(
-            forMonthKey: path.monthKey,
-            keep: PlanCloudRawSensorRetention.maximumGenerationsPerMonth
-        )
     }
 
     func delete(at path: PlanCloudRawSensorBackupPath) throws {
@@ -2631,43 +3659,36 @@ final class FilePlanCloudRawSensorBackupStore:
         try fileManager.removeItem(at: destination)
     }
 
-    /// Keeps the newest `keep` generation files for one month and removes the
-    /// rest. Only touches UUID-suffixed generations of the given month; the
-    /// legacy generation-less file and every other month are left intact.
-    private func retainNewestGenerations(
-        forMonthKey monthKey: String,
-        keep: Int
+    func retainGenerations(
+        referencedByMonth: [String: Set<UUID>],
+        unreferencedLimitPerMonth: Int
     ) throws {
-        guard keep > 0 else { return }
-        let directory = root.appendingPathComponent(
-            "Taption Plan/Raw Sensors",
-            isDirectory: true
+        let keep = max(unreferencedLimitPerMonth, 0)
+        let archivesByMonth = Dictionary(
+            grouping: try allArchives().filter { $0.generationID != nil },
+            by: \.monthKey
         )
-        let files = try fileManager.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ).filter { file in
-            guard file.pathExtension == "rawsensorbackup" else { return false }
-            let stem = file.deletingPathExtension().lastPathComponent
-            guard let separator = stem.lastIndex(of: ".") else { return false }
-            guard UUID(
-                uuidString: String(stem[stem.index(after: separator)...])
-            ) != nil else { return false }
-            return String(stem[..<separator]) == monthKey
-        }
-        guard files.count > keep else { return }
-        let sorted = files.sorted {
-            let lhs = try? $0.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            let rhs = try? $1.resourceValues(
-                forKeys: [.contentModificationDateKey]
-            ).contentModificationDate
-            return (lhs ?? .distantPast) > (rhs ?? .distantPast)
-        }
-        for file in sorted.dropFirst(keep) {
-            try? fileManager.removeItem(at: file)
+        for (monthKey, archives) in archivesByMonth {
+            let referenced = referencedByMonth[monthKey, default: []]
+            let unreferenced = archives.filter {
+                guard let generationID = $0.generationID else { return false }
+                return !referenced.contains(generationID)
+            }.sorted {
+                if $0.createdAt != $1.createdAt {
+                    return $0.createdAt > $1.createdAt
+                }
+                return ($0.generationID?.uuidString ?? "")
+                    > ($1.generationID?.uuidString ?? "")
+            }
+            for archive in unreferenced.dropFirst(keep) {
+                guard let generationID = archive.generationID else { continue }
+                try delete(
+                    at: PlanCloudRawSensorBackupPath(
+                        monthKey: monthKey,
+                        generationID: generationID
+                    )
+                )
+            }
         }
     }
 
@@ -3049,6 +4070,16 @@ final class UbiquitousPlanCloudRawSensorBackupStore:
         )
     }
 
+    func retainGenerations(
+        referencedByMonth: [String: Set<UUID>],
+        unreferencedLimitPerMonth: Int
+    ) throws {
+        try fileStore().retainGenerations(
+            referencedByMonth: referencedByMonth,
+            unreferencedLimitPerMonth: unreferencedLimitPerMonth
+        )
+    }
+
     func deleteAll() throws {
         try fileStore().deleteAll()
     }
@@ -3227,6 +4258,8 @@ private struct PlanCloudRawSensorPayloadBuffer<
 
 private struct PlanRawSensorAccountKeyFallbackNeeded: Error, Sendable {}
 
+private struct PlanRawSensorArchiveDecodeFailure: Error, Sendable {}
+
 private struct PlanRawSensorRecoveryKeyLookupFailure: Error, Sendable {
     let underlying: any Error
 }
@@ -3237,6 +4270,7 @@ private actor PlanRawSensorRestoreAccumulator {
     private var chunks = PlanCloudRawSensorPayloadBuffer<TaptionWatchAccelerationChunk>()
     private var latestMonthKey: String?
     private var latestCreatedAt: Date?
+    private var skippedInvalidArchive = false
 
     func append(
         _ archive: PlanRawSensorMonthlyArchive,
@@ -3254,7 +4288,9 @@ private actor PlanRawSensorRestoreAccumulator {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            guard accountKeyData == nil else { throw error }
+            guard accountKeyData == nil else {
+                throw PlanRawSensorArchiveDecodeFailure()
+            }
             throw PlanRawSensorAccountKeyFallbackNeeded()
         }
         try Task.checkCancellation()
@@ -3265,9 +4301,13 @@ private actor PlanRawSensorRestoreAccumulator {
         latestCreatedAt = payload.createdAt
     }
 
+    func skipInvalidArchive() {
+        skippedInvalidArchive = true
+    }
+
     func restoreState() -> PlanCloudRawSensorRestoreState {
         guard let latestMonthKey, let latestCreatedAt else {
-            return .unavailable
+            return skippedInvalidArchive ? .invalidArchive : .unavailable
         }
         let sensorReadings = readings.takeValues()
         let rawEnvelopes = envelopes.takeValues()
@@ -3384,31 +4424,17 @@ private enum PlanMonthlyArchivePreparation {
             inheritedGenerationID = nil
         }
 
-        let encoded = try JSONEncoder.taptionPlan.encode(payload)
-        guard encoded.count
-            <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize
-        else {
-            throw TaptionSnapshotCompressionError.uncompressedSizeExceedsLimit(
-                actual: UInt64(encoded.count),
-                maximum: TaptionSnapshotCompression.maximumRawSensorUncompressedSize
-            )
-        }
-        let compressed = TaptionSnapshotCompression.encode(encoded)
         let archiveKey = try PlanArchiveCrypto.randomKey()
         let archiveGenerationID = input.generationID ?? inheritedGenerationID
-        let authenticatedData = try PlanArchiveMetadata.authenticatedData(
-            version: PlanMonthlyArchive.currentVersion,
+        let encryptedPayload = try PlanSnapshotArchivePageCodec.encryptedFrame(
+            for: payload,
+            archiveKey: archiveKey,
             monthKey: input.monthKey,
             accountIdentifier: input.accountIdentifier,
             createdAt: input.date,
-            generationID: archiveGenerationID,
-            hasRawSensorArchive: input.hasRawSensorArchive
+            hasRawSensorArchive: input.hasRawSensorArchive,
+            generationID: archiveGenerationID
         )
-        let encryptedPayload = try AES.GCM.seal(
-            compressed,
-            using: SymmetricKey(data: archiveKey),
-            authenticating: authenticatedData
-        ).combined ?? { throw PlanSecurityError.invalidArchive }()
         let wrappedPayloadKey = try AES.GCM.seal(
             archiveKey,
             using: SymmetricKey(data: input.pinKeyData)
@@ -3445,6 +4471,7 @@ final class PlanSecurityBackupService {
     private let rawSensorBackupStore: PlanCloudRawSensorBackupStore
     private let accountKeyProvider: PlanCloudAccountKeyProvider
     private let cloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider?
+    private let manifestPublisher: PlanCloudBackupManifestPublishing?
     private let biometricAuthenticator: PlanLocalBiometricAuthenticator
     private let settingsDefaults: UserDefaults
     private let settingsKey = "TaptionPlan.security.app-lock-settings-v1"
@@ -3471,6 +4498,7 @@ final class PlanSecurityBackupService {
             InMemoryPlanCloudRawSensorBackupStore(),
         accountKeyProvider: PlanCloudAccountKeyProvider = InMemoryPlanCloudAccountKeyProvider(),
         cloudRecoveryKeyProvider: PlanCloudRecoveryKeyProvider? = nil,
+        manifestPublisher: PlanCloudBackupManifestPublishing? = nil,
         biometricAuthenticator: PlanLocalBiometricAuthenticator = SystemPlanLocalBiometricAuthenticator(),
         settingsDefaults: UserDefaults = .standard
     ) {
@@ -3479,6 +4507,7 @@ final class PlanSecurityBackupService {
         self.rawSensorBackupStore = rawSensorBackupStore
         self.accountKeyProvider = accountKeyProvider
         self.cloudRecoveryKeyProvider = cloudRecoveryKeyProvider
+        self.manifestPublisher = manifestPublisher
         self.biometricAuthenticator = biometricAuthenticator
         self.settingsDefaults = settingsDefaults
         if let data = try? credentialStore.read() {
@@ -3499,6 +4528,19 @@ final class PlanSecurityBackupService {
         self.latestSuccessfulBackupDate = settingsDefaults.object(
             forKey: latestSuccessfulBackupDateKey
         ) as? Date
+        if let manifestPublisher {
+            Task {
+                do {
+                    _ = try await manifestPublisher.retryPending()
+                } catch {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "backup_manifest_retry_pending",
+                        level: .notice,
+                        fields: CloudKitErrorPolicy.diagnosticFields(for: error)
+                    )
+                }
+            }
+        }
     }
 
     static func applicationSupport(fileManager: FileManager = .default) throws -> PlanSecurityBackupService {
@@ -3515,7 +4557,8 @@ final class PlanSecurityBackupService {
         return PlanSecurityBackupService(
             backupStore: backupStore,
             rawSensorBackupStore: rawSensorBackupStore,
-            cloudRecoveryKeyProvider: CloudKitPlanCloudRecoveryKeyProvider()
+            cloudRecoveryKeyProvider: CloudKitPlanCloudRecoveryKeyProvider(),
+            manifestPublisher: CloudKitPlanBackupManifestSyncService.automatic()
         )
 #endif
     }
@@ -3890,6 +4933,10 @@ final class PlanSecurityBackupService {
             throw error
         }
         recordSuccessfulBackup(at: date)
+        publishBackupManifest(
+            monthKey: snapshotArchive.monthKey,
+            generationID: generationID
+        )
         return PlanCloudBackupGeneration(
             snapshot: snapshotArchive,
             rawSensors: rawSave,
@@ -4145,8 +5192,61 @@ final class PlanSecurityBackupService {
         }
         if recordsSuccessfulBackup {
             recordSuccessfulBackup(at: archive.createdAt)
+            if let generationID = archive.generationID {
+                publishBackupManifest(
+                    monthKey: archive.monthKey,
+                    generationID: generationID
+                )
+            }
         }
         return archive
+    }
+
+    private func publishBackupManifest(
+        monthKey: String,
+        generationID: UUID
+    ) {
+        guard let manifestPublisher else { return }
+        let backupStore = self.backupStore
+        let rawSensorBackupStore = self.rawSensorBackupStore
+        Task {
+            do {
+                let manifest = try await manifestPublisher.publish(
+                    monthKey: monthKey,
+                    generationID: generationID
+                )
+                var references: [String: Set<UUID>] = [:]
+                for deviceMonths in manifest.generationsByDevice.values {
+                    for (referencedMonth, generations) in deviceMonths {
+                        references[referencedMonth, default: []]
+                            .formUnion(generations)
+                    }
+                }
+                for snapshot in try backupStore.allArchives()
+                where snapshot.hasRawSensorArchive != false {
+                    if let snapshotGeneration = snapshot.generationID {
+                        references[snapshot.monthKey, default: []]
+                            .insert(snapshotGeneration)
+                    }
+                }
+                try rawSensorBackupStore.retainGenerations(
+                    referencedByMonth: references,
+                    unreferencedLimitPerMonth:
+                        PlanCloudRawSensorRetention.maximumGenerationsPerMonth
+                )
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "backup_manifest_cas_failed_pending_retry",
+                    level: .notice,
+                    fields: [
+                        "month_key": monthKey,
+                        "generation_id": generationID.uuidString,
+                    ].merging(
+                        CloudKitErrorPolicy.diagnosticFields(for: error)
+                    ) { current, _ in current }
+                )
+            }
+        }
     }
 
     private func saveRawSensorArchive(
@@ -4175,41 +5275,54 @@ final class PlanSecurityBackupService {
             pinKeyData: verifier.keyMaterial,
             accountKeyData: accountKey
         )
-        let encoded = try JSONEncoder.taptionPlan.encode(payload)
-        guard encoded.count
-            <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize
-        else {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "raw_sensor_archive_encode_rejected",
-                level: .error,
-                fields: [
-                    "month_key": monthKey,
-                    "encoded_bytes": String(encoded.count),
-                    "maximum_bytes": String(
-                        TaptionSnapshotCompression
-                            .maximumRawSensorUncompressedSize
-                    ),
-                ]
-            )
-            throw PlanSecurityError.invalidArchive
-        }
-        let compressed = TaptionSnapshotCompression.encode(
-            encoded,
-            maximumSize: TaptionSnapshotCompression.maximumRawSensorUncompressedSize
-        )
         let archiveKey = try PlanArchiveCrypto.randomKey()
-        let authenticatedData = try PlanArchiveMetadata.authenticatedData(
-            version: PlanRawSensorMonthlyArchive.currentVersion,
-            monthKey: monthKey,
-            accountIdentifier: accountIdentifier,
-            createdAt: date,
-            generationID: generationID
-        )
-        let encryptedPayload = try AES.GCM.seal(
-            compressed,
-            using: SymmetricKey(data: archiveKey),
-            authenticating: authenticatedData
-        ).combined ?? { throw PlanSecurityError.invalidArchive }()
+        let pageCount = try PlanCloudRawSensorPageCodec.forEachPage(
+            from: payload
+        ) { _ in }
+        var pageFrame = try PlanRawSensorPageFrame(pageCount: pageCount)
+        var totalUncompressedBytes = 0
+        let archiveSymmetricKey = SymmetricKey(data: archiveKey)
+        _ = try PlanCloudRawSensorPageCodec.forEachPage(
+            from: payload
+        ) { page in
+            try Task.checkCancellation()
+            let encoded = try JSONEncoder.taptionPlan.encode(page)
+            guard encoded.count <= PlanCloudRawSensorPageCodec.hardMaximumBytes,
+                  encoded.count <= TaptionSnapshotCompression.maximumRawSensorUncompressedSize - totalUncompressedBytes else {
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "raw_sensor_archive_page_rejected",
+                    level: .error,
+                    fields: [
+                        "month_key": monthKey,
+                        "page_index": String(page.index),
+                        "page_bytes": String(encoded.count),
+                    ]
+                )
+                throw PlanSecurityError.invalidArchive
+            }
+            totalUncompressedBytes += encoded.count
+            let compressed = TaptionSnapshotCompression.encode(
+                encoded,
+                maximumSize: PlanCloudRawSensorPageCodec.hardMaximumBytes
+            )
+            let authenticatedData = try PlanRawSensorMonthlyArchive.pageAuthenticatedData(
+                monthKey: monthKey,
+                accountIdentifier: accountIdentifier,
+                createdAt: date,
+                generationID: generationID,
+                pageIndex: page.index,
+                pageCount: pageCount
+            )
+            guard let combined = try AES.GCM.seal(
+                compressed,
+                using: archiveSymmetricKey,
+                authenticating: authenticatedData
+            ).combined else {
+                throw PlanSecurityError.invalidArchive
+            }
+            try pageFrame.append(combined)
+        }
+        let encryptedPayload = pageFrame.encodedData
         let pinKey = SymmetricKey(data: verifier.keyMaterial)
         let wrappedPayloadKey = try AES.GCM.seal(
             archiveKey,
@@ -4707,12 +5820,20 @@ final class PlanSecurityBackupService {
                         )
                     }
                     try checkRestorePreparation(preparationFence)
-                    try await accumulator.append(
-                        archive,
-                        pinKeyData: pinKeyData,
-                        accountKeyData: accountKey
-                    )
-                    resolvedAccountKeyData = accountKey
+                    do {
+                        try await accumulator.append(
+                            archive,
+                            pinKeyData: pinKeyData,
+                            accountKeyData: accountKey
+                        )
+                        resolvedAccountKeyData = accountKey
+                    } catch is PlanRawSensorArchiveDecodeFailure {
+                        await accumulator.skipInvalidArchive()
+                        Self.recordSkippedRawArchive(archive)
+                    }
+                } catch is PlanRawSensorArchiveDecodeFailure {
+                    await accumulator.skipInvalidArchive()
+                    Self.recordSkippedRawArchive(archive)
                 }
                 try checkRestorePreparation(preparationFence)
             }
@@ -4741,6 +5862,19 @@ final class PlanSecurityBackupService {
             return false
         }
         return rawArchive.generationID == snapshot.generationID
+    }
+
+    private static func recordSkippedRawArchive(
+        _ archive: PlanRawSensorMonthlyArchive
+    ) {
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "raw_sensor_archive_skipped_during_restore",
+            level: .error,
+            fields: [
+                "month_key": archive.monthKey,
+                "generation_id": archive.generationID?.uuidString ?? "legacy",
+            ]
+        )
     }
 
     private static func archivePrecedes(

@@ -3,6 +3,37 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class CoreEngineContractsTests: XCTestCase {
+    func testSharedContainerUsesHostProviderAndPreservesDefaultIdentifier() {
+        defer { TaptionPlanSharedContainer.resetProvider() }
+        XCTAssertEqual(
+            TaptionPlanSharedContainer.appGroupIdentifier,
+            "group.com.taption.plan"
+        )
+
+        TaptionPlanSharedContainer.configure(
+            provider: FixedTaptionPlanAppGroupProvider(
+                identifier: "group.example.host"
+            )
+        )
+        XCTAssertEqual(
+            TaptionPlanSharedContainer.appGroupIdentifier,
+            "group.example.host"
+        )
+        TaptionPlanSharedContainer.configure(
+            provider: FixedTaptionPlanAppGroupProvider(identifier: "")
+        )
+        XCTAssertEqual(
+            TaptionPlanSharedContainer.appGroupIdentifier,
+            "group.example.host"
+        )
+
+        TaptionPlanSharedContainer.resetProvider()
+        XCTAssertEqual(
+            TaptionPlanSharedContainer.appGroupIdentifier,
+            "group.com.taption.plan"
+        )
+    }
+
     func testDayKeySortsChronologically() {
         let earlier = TaptionPlanDayKey(year: 2026, month: 8, day: 24)
         let later = TaptionPlanDayKey(year: 2026, month: 8, day: 25)

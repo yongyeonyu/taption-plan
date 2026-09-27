@@ -2,10 +2,19 @@ import ActivityKit
 import AppIntents
 import OSLog
 import SwiftUI
+import TaptionPlanCore
 import WidgetKit
 
 @main
 struct TaptionPlanWidgetBundle: WidgetBundle {
+    init() {
+        TaptionPlanSharedContainer.configure(
+            provider: FixedTaptionPlanAppGroupProvider(
+                identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
+            )
+        )
+    }
+
     var body: some Widget {
         TaptionScheduleWidget()
         TaptionPlanLiveActivity()

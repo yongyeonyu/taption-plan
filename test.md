@@ -2,6 +2,32 @@
 
 현재 실행 근거만 간결하게 유지합니다. 이전 상세 개발·검증 기록은 Git 이력에 보존했습니다. `build/validation/`은 로컬 증거이며 Git에 포함되지 않습니다.
 
+## RST0920A01 · V4 snapshot/raw pages·CloudKit manifest CAS 부분 구현 (2026-09-27)
+
+- 월 snapshot과 raw archive 쓰기를 V4 페이지 frame으로 전환했다. 기본 한도는 256행/1MiB, 하드 상한은 1,024행/4MiB이며 페이지별 압축·GCM 인증과 metadata/page-index AAD를 적용했다. V1–V3 decoder 호환은 보존했다.
+- V4는 페이지별 GCM tag를 각각 검증한다. 한 페이지 인증이 실패하면 해당 페이지를 건너뛰고 남은 페이지의 정상 기록을 복원하며, 유효 페이지가 없으면 archive 오류를 반환한다. 회귀 `testRawSensorV4RestoreSkipsOneCorruptPage`가 300개 중 손상되지 않은 256개 복원을 확인한다.
+- Snapshot V4는 각 자료형과 route point를 별도 256행/1MiB 페이지로 분리한다. `testSnapshotV4PagesRoundTripAcrossRoutePointBoundary`에서 300개 route point 페이지 경계 왕복 및 페이지 변조 거부를 확인했다. 저장 원본 모델과 전체 암호화 frame은 메모리에 남으므로 end-to-end memory bound는 아직 보장되지 않는다.
+- 개발 빌드에서만 CloudKit manifest actor를 사용한다. device/month generation 참조를 merge하고 change-tag 충돌은 최대 3회 재시도한다. 오프라인 pending 참조는 로컬 보호 파일에 보존한다. retention은 manifest 및 snapshot 참조를 보호하고 미참조 raw generation을 월별 10개 유지한다. Production CloudKit 경로는 비활성이다.
+- SecurityBackupCore 111/111 통과, 실패 0: `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_06-10-31-+0900.xcresult` (`** TEST SUCCEEDED **`). 손상 페이지 집중 테스트와 snapshot V4 targeted tests도 통과: `build/validation/RST0920A01/raw-partial-restore-test.log`, `v4-page-and-generation-tests.log`, `v4-page-targeted-final.log`. 앱 iOS Debug 빌드 통과: `build/validation/RST0920A01/app-debug-v4-pages-final.log` (`** BUILD SUCCEEDED **`). `git diff --check` 통과.
+- 미완료: DB cursor/file 기반 bounded streaming, V1–V3 자동 1회 migration, 보호된 SQLite staging/recovery journal, snapshot immutable generation 및 기기 간 payload 재병합, 실제 CloudKit Development 기기 경합. 시뮬레이터 테스트는 CloudKit 실서비스 검증을 뜻하지 않는다.
+
+## CAT0926T01 · UIV0926A01 실기기 녹화 판독 (2026-09-27)
+
+- 사용자가 제공한 카메라롤 저장 원본 `/Users/u_mo_c/Downloads/ScreenRecording_09-27-2026 03-59-48_1.MP4`를 판독했다(19.606초, 1126×2436, 60fps). 판독 프레임은 `build/validation/RST0927A01/video-frames/half/`에 보관했다.
+- 화랑이·모닥불 마커가 화면에 있는 상태에서 지도가 여러 차례 이동하고, 상세 도로 수준에서 인천·김포권까지 줌 아웃되는 화면 변화를 확인했다. 이 영상 범위에서 마커 주변 지도 팬·핀치줌 통과는 확인됐다.
+- 시간축의 00–24 시간 라벨과 활동 색상 스트립, 날씨 아이콘·기온 캡슐을 확인했다. 왼쪽 메뉴와 줌 컨트롤의 하단은 오른쪽 시간 레일 하단과 거의 같은 선에 놓였다.
+- 집 상태 콜아웃과 Lv.1 캠프파이어·화랑이 마커는 표시됐다. 화랑이 정지 탭으로 `.cat` 상세 시트가 열리는 장면, 레벨 캡슐 탭으로 하루 요약이 열리는 장면은 영상에서 확인되지 않았다. 따라서 CAT0926T01의 직접 탭과 DYS0927A01의 요약 탭은 미완료로 유지한다.
+- FMAP0926R06 경로 재생·진단 로그, PAW0926T05 발자국, 성장 보상 선택 반영도 이 영상만으로 판정하지 않았다.
+
+## MAP0927F01 · Map Home 터치·카메라 반응 개선 (2026-09-27)
+
+- 원인: MapKit 카메라 시작 delegate가 지도 내부 전체 뷰·제스처를 재귀 순회했고, 가시 영역 프레임마다 화랑이 오버레이의 z 위치를 재설정하고 맨 앞으로 재배치했다. MapKit 네이티브 pan/pinch와 메인 스레드 작업이 경쟁했다.
+- 수정: 카메라 시작 시 재귀 검색을 제거하고 제스처 연결 스캔은 최대 초당 1회로 제한했다. 화랑이 오버레이의 레이어 승격은 처음 붙을 때만 수행하고, 이동 중에는 좌표 추적만 유지한다.
+- 회귀 2개 통과: `testWalkerViewportUpdatesDoNotRestackMapSubviews`, `testWalkerOverlayStaysOutsideAnnotationOrderingAndKeepsFootCoordinate`. 결과 `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_04-16-13-+0900.xcresult` (`** TEST SUCCEEDED **`).
+- iOS Debug 빌드 통과: `build/validation/MAP0927F01/build.log` (`** BUILD SUCCEEDED **`). `git diff --check` 통과.
+- 서명된 Debug 빌드를 iPhone 11 Pro `00008030-001628201AD2802E`에 설치·실행했다. `devicectl` 앱 목록에서 `com.taption.plan` 1.0/157 readback 완료: `build/validation/MAP0927F01/iphone11-readback.txt`.
+- 제한: 설치·실행만으로 손가락 입력 체감은 검증되지 않았다. 실제 드래그·핀치 반응은 카메라롤 저장 영상으로 재확인해야 하며, 그 전에는 기능 통과로 처리하지 않는다.
+
 ## HOF0926A01 · Kiro → Codex UI 인계 확인 (2026-09-26)
 
 - `AGENTS.md`, 최신 `temp.md`, 관련 `test.md`, `CODEX_HANDOFF.md` 및 Git 이력을 대조했다. 기존 CODEX_HANDOFF.md의 35커밋·빌드 156·push 지시는 과거 스냅샷이며 이번 실행 지시로 사용하지 않았다.
@@ -93,3 +119,133 @@
 - 미완료: 주간 보상 선택·땅 직접 연결 배치·화랑이 액세서리 보관함 UI, 실사용 가능한 세계 랜드마크 카탈로그/아트, 전년도 집 열람. 이 기능은 현재 데이터 정책/기본 그림 단계에 머물러 있다. iPhone 실기기 UI/일자 경계 검증도 하지 않았다.
 - 첫 검증 기록 시점에는 커밋·push·설치 전이었다. 이후 `f90a7d4` (`HME0926A01: add daily home growth foundation`)를 `main`에 push했고, 서버 `refs/heads/main` readback도 `f90a7d4c13323724c3fb2f20e699283b10a1d10e`였다.
 - 서명된 Debug 앱(build 157, bundle `com.taption.plan`)을 iPhone 11 Pro `00008030-001628201AD2802E`, iPhone 18 Pro Max `00008160-000E195A1140000A`, iPad Pro 12.9-inch 6세대 `00008112-000964980E45401E`에 설치했다. 각 기기 `devicectl device info apps` readback에서 앱과 build 157 노출을 확인했다. 이 확인은 설치만 입증하며 실행·UI 기능 검증은 아니다. TestFlight 배포는 하지 않았다.
+
+## SBR0926A01 · 좌우 사이드바 및 홈 성장 콜아웃 (2026-09-26)
+
+- 선택 시안의 하단 탐험 HUD를 제거했다. 홈 마커에 레벨·오늘 성장 상태 콜아웃을 표시하고, 마커 탭으로 하루 요약 시트를 연다.
+- 지도 왼쪽 조작 독과 오른쪽 시간축을 공통 뷰포트 프레임에 배치해 시작·끝 높이를 맞췄다. 왼쪽 버튼과 줌을 한 레일 안에서 위·아래로 나누고, 오른쪽 시간축과 크림 종이 표면·테두리·라운드를 통일했다.
+- `TaptionPlanTests/MapHomeTimeRailCardTests` 통과: `build/validation/SBR0926A01/rail-tests.log` (`** TEST SUCCEEDED **`). 화면 높이 812·1024pt에서 공통 시작/끝선과 680pt 최대 높이를 검사했다.
+- iOS generic Debug 빌드 통과: `build/validation/SBR0926A01/app-debug-build.log` (`** BUILD SUCCEEDED **`). `git diff --check` 통과.
+- 시뮬레이터 미리보기: `build/validation/SBR0926A01/simulator-preview.png`. 좌우 사이드바 상·하단 정렬 및 하단 HUD 제거를 확인했다. 시뮬레이터에는 저장된 집 위치가 없어 집 성장 콜아웃은 화면에서 직접 확인하지 못했다. 실기기 저장 영상과 제스처 확인은 남아 있다.
+- 변경은 커밋·push·실기기 설치하지 않았다.
+
+## RST0920A01 · 손상 raw 월 건너뛰기 (2026-09-26)
+
+- `PlanRawSensorRestoreAccumulator`는 계정 키로 복호 시도한 raw archive의 decode 실패를 월 단위로 격리한다. 해당 월은 건너뛰며 정상 월 payload를 유지하고, 모든 raw가 손상된 경우에는 `.invalidArchive`를 보고한다.
+- 서로 다른 월에 정상 raw와 손상 raw가 있을 때 정상 센서 ID만 복원되는 테스트를 추가했다. 단일 손상 raw는 `.invalidArchive`, 월간 중복 ID 충돌은 기존처럼 전체 raw 복원을 거부한다.
+- 대상 테스트 3개 통과: `testRawRestoreSkipsOneCorruptMonthAndKeepsValidMonths`, `testRawRestoreRejectsAValidArchiveSetWithCorruptMonth`, `testRawRestoreRejectsConflictingIDsAcrossMonths`.
+- 실행: `xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan -destination 'platform=iOS Simulator,id=5484EA8D-B979-498B-9BA8-6A4AEFFC9B8B' -derivedDataPath build/ArchiveDD -skipPackagePluginValidation COMPILER_INDEX_STORE_ENABLE=NO OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'`와 위 세 `-only-testing` 필터. 결과 `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.26_23-00-10-+0900.xcresult`, `** TEST SUCCEEDED **`.
+- V4 청크 포맷·마이그레이션·CloudKit CAS·세대 보존은 아직 구현/검증 전이다.
+
+## HME0926A01 · 주간 집 성장 UI·랜드마크 카탈로그 (2026-09-26)
+
+- 하루 요약에서 집 성장 화면으로 진입하는 버튼을 연결했다. 화면에는 연간 단계 그림/레벨/연속일, 보상 후보 3개 선택, 보상 땅 연결 배치, 화랑이 액세서리 보관·착용, 전년도 집 보관 내역이 표시된다.
+- 한국·일본·미국·영국·프랑스·이탈리아·중국·스페인·태국·호주 각 5개씩 총 50개 후보를 구성했다. 땅 배치 저장은 optional 필드로 추가해 기존 저장 JSON과 호환되게 했다.
+- `MapHomeGrowthPolicyTests` 통과(11개): 기존 성장/366개 리소스 검증에 더해 10개국×5 후보, 주간 후보 3개, 연결 땅 중복 방지/인접성을 확인했다. 로그 `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.26_23-07-47-+0900.xcresult`.
+- 화랑이 액세서리는 인벤토리에서 착용/해제하고 지도 마커에도 표시되도록 연결했다. 저장 호환 테스트에서 새 땅 배치 필드 없이 저장된 구버전 시즌 JSON을 정상 decode하는 것을 확인했다.
+- 최종 관련 회귀 재실행: `MapHomeGrowthPolicyTests` 12개와 raw 복원 3개 통과. 로그 `build/validation/HME0926A01/combined-regressions-final.log`, 결과 `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.26_23-20-08-+0900.xcresult`.
+- generic iOS Debug 빌드 통과: `build/validation/HME0926A01/app-debug-final.log` (`** BUILD SUCCEEDED **`). 이 빌드와 App Group 주입 반영본을 iPhone 11 Pro·iPhone 18 Pro Max·iPad Pro에 설치했고 각 기기에서 `com.taption.plan` 버전 1.0 / 빌드 157을 readback했다. 설치는 UI 기능 검증이 아니다.
+- 아직 남음: 실기기 레이아웃/보상 경험 확인. 과거 집은 연도·레벨·진화/땅 요약으로 열람 가능하며 별도 집 화면은 없다.
+- 2026-09-27 에셋 재검증: 랜드마크 후보 50개 모두 고유 image set과 파일 참조를 가지며, 50개 SVG XML 파싱 오류가 없었다. 기존 366단계 집 그림은 보존되어 있다.
+
+## PKG0920A01 · App Group host 주입
+
+- Core에 `TaptionPlanAppGroupProviding`, 고정 provider, 동기화된 주입 API를 추가했다. 앱·Watch·iPhone 위젯·Watch 위젯의 초기화에서 기존 `group.com.taption.plan`을 host가 주입하며, Core는 기본값 fallback을 유지한다. `TaptionPlanDeviceLocalStorage`도 공통 주입 식별자로 컨테이너를 찾는다.
+- package contract 테스트에서 provider 변경, 빈 식별자 무시, reset 후 기존 기본 ID 회귀를 통과했다. 명령 `swift test --package-path Packages/TaptionPlanCore --scratch-path build/validation/PKG0920A01/core-tests --filter CoreEngineContractsTests/testSharedContainerUsesHostProviderAndPreservesDefaultIdentifier`.
+- 전체 Core package 100/100 통과: `build/validation/PKG0920A01/core-tests-final.log`. 앱 generic Debug 빌드 통과. 최종 설치본은 위 HME 기록의 세 기기 readback에 포함.
+- 아직 남음: Watch/Widget 실제 프로세스별 App Group 데이터 연속성과 기존 컨테이너 파일 readback 실기기 검증.
+
+## BRT0920A01 · generation 정리의 참조 안전성 (2026-09-26)
+
+- 코드 검토에서 File raw store가 같은 달 generation 파일을 수정 시각 기준 최근 10개로 pruning하면서 snapshot의 committed ID나 다른 기기의 offline 참조를 조회하지 않는 점을 확인했다. 삭제 오류도 `try?`로 무시했다.
+- 참조를 확인할 CloudKit manifest가 아직 없으므로 자동 pruning을 제거해 저장된 generation을 보존한다. 정리 정책은 참조 목록을 제공하는 CAS manifest 구현 뒤 다시 연결해야 한다.
+- 12개 raw generation을 저장한 뒤 모두 남는 것, committed generation 보존, 손상 월 일부 복원 회귀 통과. 로그 `build/validation/HME0926A01/backup-safety-regressions-final.log`, 결과 `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.26_23-27-19-+0900.xcresult`.
+- 최근 10개 제한·offline 참조 확인·삭제 실패 재시도는 미완료다.
+
+## OVL0926U01 · 집 성장 콜아웃과 화랑이 마커 겹침 (2026-09-26)
+
+- 제공된 실기기 캡처(`/Users/u_mo_c/Downloads/스크린샷, 2026-09-26 오후 11.25.49.png`)에서 집 성장 카드의 오늘 상태가 화랑이 마커에 가려지는 것을 확인했다. `MapHomePlacePin`에서 카드만 위로 42pt 이동했다. 마커, 지도 제스처, 레일 프레임은 바꾸지 않았다.
+- `git diff --check` 통과. 앱 Debug 빌드 `build/validation/OVL0926U01/app-debug.log`: `** BUILD SUCCEEDED **`.
+- 해당 빌드를 iPhone 11 Pro `00008030-001628201AD2802E`, iPhone 18 Pro Max `00008160-000E195A1140000A`, iPad Pro 12.9-inch 6세대 `00008112-000964980E45401E`에 설치했다. `devicectl device info apps`에서 세 기기 모두 `com.taption.plan` 버전 1.0 / 빌드 157을 readback했다.
+- 제공 캡처는 수정 전 화면이며, 수정 후 화랑이·상태 문구 가시성과 지도 제스처는 실제 기기 화면/저장 영상으로 재확인해야 한다. 설치 성공만으로 UI 검증을 통과 처리하지 않는다.
+
+## MUI0926D01 · 지도 홈 좌우 메뉴·통합 집 마커 디자인 시안 (2026-09-26)
+
+- 제공된 실기기 지도 캡처를 참조해 별도 이미지 시안 5개를 생성했다. 왼쪽 독은 짧은 세로형, 하단 가로형, 2×2 압축형 등으로 나누고, 우측 시간 레일과 일체형 집·화랑이 이미지를 각 시안에 반영했다.
+- 생성 파일: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-22014dda-1366-4bd0-8e5e-4fe4b9287477.png`, `exec-4b86347d-336c-4d6c-9176-10f0295247af.png`, `exec-ddcea126-843b-45b4-b74e-f68ab709cf8b.png`, `exec-21e25b2e-34aa-480f-9398-ad7436eaa53e.png`, `exec-ff79150a-f068-4596-8ac4-82d9511cc3b3.png`.
+- 시안 이미지 자체는 코드 반영이나 실기기 검증이 아니다. 사용자가 선택한 조합의 구현·검증 내역은 아래 기록한다.
+
+## MUI0926D01 · 선택 시안 구현 및 검증 (2026-09-27)
+
+- 사용자가 시안 2의 우측 레일과 시안 4의 왼쪽 메뉴·집/화랑이 구성 조합을 선택했고, 추가로 좌우 레일 높이를 맞추고 아래로 이동하도록 요청했다. 통합 검토 이미지: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-55ee3e14-ac51-47e7-8370-383ee257c2df.png`; 높이 맞춤 보정 시안: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-86bf3272-951e-41f3-a02b-3b1916f66030.png`.
+- 공통 레일을 28pt 아래로 이동하되 높이는 유지했다. 우측 레일의 바깥 여백을 줄여 화면 오른쪽에 붙이고, 배경 숫자 트랙을 둥근 실루엣으로 클립했다. 선택 시간 표시는 좁은 캡슐 형태로 바꿨다.
+- 집 위치의 사용자 설정 반경 안에 표시 위치가 들어오면 집 안에 작은 흰 고양이를 합성하고, 별도 고양이 마커와 플레이어 방향 화살표를 숨긴다. 집 밖에서는 기존 성장 아트와 별도 화랑이를 유지한다. 기존 액세서리·윤달 표시는 통합 마커에서도 보존한다.
+- 신규 `MapHomePresencePolicyTests` 2개와 `MapHomeTimeRailCardTests` 4개, 기존 `MapHomeGrowthPolicyTests`를 실행해 통과했다. 로그 `build/validation/MUI0926D01/ui-tests.log`; xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_00-17-41-+0900.xcresult`.
+- Generic iOS Debug 빌드 통과: `build/validation/MUI0926D01/app-debug.log` (`** BUILD SUCCEEDED **`). 동일 빌드를 iPhone 11 Pro `00008030-001628201AD2802E`, iPhone 18 Pro Max `00008160-000E195A1140000A`, iPad Pro 12.9-inch 6세대 `00008112-000964980E45401E`에 설치했다. 세 기기 모두 `com.taption.plan` 버전 1.0 / 빌드 157 readback.
+- 아직 실제 실행 화면·지도 팬/핀치·집 반경 합성 상태를 카메라롤 저장 영상으로 확인하지 않았다. 설치만으로 기능 검증을 완료 처리하지 않는다.
+
+## MUI0927A02 · 선택 시안과 실 UI 일치 보정 (2026-09-27)
+
+- 선택 시안의 왼쪽 압축 메뉴와 분리 줌을 지도 하단에 배치하고, 집 안 화랑이 통합 마커를 기존 `MapHomeHouseMarker` 그림으로 구성하도록 수정했다.
+- `MapHomeTimeRailCardTests`, `MapHomePresencePolicyTests`, `MapHomeGrowthPolicyTests` 통과. 로그 `build/validation/MUI0927A02/ui-tests.log`; xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_00-37-56-+0900.xcresult`.
+- Generic iOS Debug 빌드 통과: `build/validation/MUI0927A02/app-debug.log`. 해당 산출물을 iPhone 11 Pro `00008030-001628201AD2802E`에 설치·실행했고 `devicectl`에서 `com.taption.plan` 버전 1.0/빌드 157을 readback했다.
+- 실기기 화면과 지도 제스처는 별도 증거 대기이며, 빌드·설치만으로 완료 처리하지 않는다.
+
+## MAP0927T03 · 집 성장 그림 정합 및 지도 드래그 (2026-09-27)
+
+- 집 안 마커 배경을 고정 집 이미지에서 `MapHomeGrowthPolicy.artworkName(level:)`이 반환하는 동일 연도 단계 그림으로 바꾸고 화랑이를 합성했다. 집 위치 마커의 hit-testing을 꺼 UIKit 지도가 집/고양이 영역에서 직접 드래그를 받을 수 있게 했다.
+- `MapHomeGrowthPolicyTests`, `MapHomeTimeRailCardTests`, `MapHomePresencePolicyTests` 통과(총 18개). 로그 `build/validation/MAP0927T03/ui-tests.log`; xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_00-47-52-+0900.xcresult`.
+- 앱 Debug 빌드 통과: `build/validation/MAP0927T03/app-debug.log`. 산출물을 iPhone 11 Pro `00008030-001628201AD2802E`에 설치·실행했고 `com.taption.plan` 버전 1.0/빌드 157을 readback했다.
+- 수정 화면·팬/핀치 동작은 아직 실제 기기 카메라롤 저장 증거로 확인하지 않았다. 사이드바 시안은 선택 전이므로 코드 반영하지 않았다.
+- 사이드바 이미지 시안(최근 캡처를 참조): `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-1a505b1a-8c2e-40fe-a219-26c034d99860.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-7a2aaf6a-8278-44be-84e3-4d38d0cd4efb.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-e67e30f5-51de-4424-992d-3942c1f73116.png`.
+- 사용자가 2안을 고르며 활동 카테고리 색상 세그먼트가 보여야 한다고 보정 요청했다. 지속 시간에 비례한 연속 색상 구간이 있는 수정 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-3679919c-2b7b-42eb-bf32-114a6d2f6615.png` 생성. 최종 시안 확인 후 구현한다.
+- 후속으로 왼쪽 메뉴의 4개 조작(메뉴·검색·현재 위치·방향)과 아래 분리형 확대/축소 전체를 유지하도록 요청해 최종 검토 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-70032c3e-37d8-4364-b2c9-357c4ed8822d.png`를 생성했다. 구현 전 최종 확인 대기.
+- 좌우 사이드바 하단 위치와 화면 아래 여백을 동일하게 하고 오른쪽 시간축을 아래로 연장하도록 추가 요청받아 시안 `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f6b3f2d7-b50e-4eba-9e06-6743ab3098c6.png`로 보정했다. 구현 전 최종 확인 대기.
+
+## WTH0927A05 · 시간축 왼쪽 날씨 시안 5개 (2026-09-27)
+
+- 매시간 00–24 표시, 활동 색상 세그먼트, 전체 좌측 조작 버튼, 좌우 같은 하단 여백을 유지하며 날씨 레이아웃 다섯 안을 생성했다. 최종 선택 전 코드는 변경하지 않았다.
+- 시안 순서: `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-d20af15e-a2e2-469e-a231-af615941d298.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-0775b59d-fca1-4b6d-ba64-c325e04bc308.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-af7d62a2-06e3-4601-bb9f-eeff12be9445.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-f8da4268-2ce0-4861-a18d-c26fbe66b7ed.png`, `/Users/u_mo_c/.codex/generated_images/01a0dd4c-fef3-72b2-b39e-e5c1f14ab959/exec-6b9a9ece-7d54-4956-9914-f0eecc3d844e.png`.
+- 사용자가 3안을 선택해 날씨 셀을 카드 없는 세로형 기호·기온으로 바꾸고 날씨 항목 사이 최소 간격을 확보했다. 전체 하루 보기 시간 눈금은 00–24 매시간 모두 표시한다. 활동 색상 띠, 전체 왼쪽 조작 메뉴, 좌우 레일 정렬은 유지했다.
+- 자동 테스트 22개 통과: `build/validation/WTH0927A05/tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_01-39-16-+0900.xcresult`. iOS Debug 빌드 성공: `build/validation/WTH0927A05/build.log`.
+- iPhone 11 Pro `00008030-001628201AD2802E` 설치·실행 완료, `com.taption.plan` 버전 1.0/빌드 157 readback: `build/validation/WTH0927A05/install.log`. 기기 화면 캡처·카메라롤 영상은 아직 판독하지 않아 시각 기능 검증은 대기한다.
+
+## WTH0927A06 · 날씨 전용 레일 / HSM0927A06 · 집 성장 요약 펼침 (2026-09-27)
+
+- 3안 적용: 지도 위 작은 날씨 텍스트 대신 시간 레일에 붙는 크림색 세로 레일에 예보 시각·아이콘·기온을 정렬했다. 예보가 비어 있으면 선택 시간 위치에 `날씨 없음`을 표시한다. 레일 행은 최소 44pt 간격을 확보하고, 기존 활동 색 띠·매시간 눈금은 유지했다.
+- 집 요약은 화랑이가 집에 있을 때도 집 그림 위에 표시한다. 기본 캡슐은 레벨·오늘 상태·진행을 보여주며, 캡슐을 누르면 연속일과 대기 주간 보상이 펼쳐진다. 지도 드래그를 위해 집 그림과 화랑이 이미지 자체의 hit-testing은 끈다.
+- 관련 테스트 20개 통과: `build/validation/WTH0927A06-tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_02-10-01-+0900.xcresult`. 앱 iOS Debug 빌드 성공: `build/validation/WTH0927A06-build.log`.
+- iPhone 11 Pro `00008030-001628201AD2802E`에 설치·실행했고 앱 `com.taption.plan` 1.0/157 readback: `build/validation/WTH0927A06-install.log`. 실제 화면 가독성, 요약 펼침, 지도 드래그는 카메라롤 저장 화면/영상 판독 전까지 미검증이다.
+
+## DYS0927A01 · 레벨 버튼이 하루 요약을 하단에서 열기 (2026-09-27)
+
+- 집 성장 캡슐의 집 아이콘·레벨 영역을 누르면 기존 `MapHomeDaySummarySheet`를 표시하도록 연결했다. 펼침 화살표는 연속일·주간 보상 요약을 열고 닫는다.
+- 관련 회귀 테스트 18개 통과: `build/validation/DYS0927A01/tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_02-14-27-+0900.xcresult`. 앱 iOS Debug 빌드 성공: `build/validation/DYS0927A01/build.log`.
+- iPhone 11 Pro `00008030-001628201AD2802E` 설치·실행, `com.taption.plan` 1.0/157 readback: `build/validation/DYS0927A01/install.log`. 실제 레벨 탭 후 하단 시트 표시 여부는 카메라롤 증거로 확인 대기.
+
+## SBW0927A01 · 시간 사이드바·날씨 배치 참고 시안 적용 (2026-09-27)
+
+- 긴 날씨 패널을 제거하고 시간 레일 왼쪽에 아이콘·기온 가로 캡슐을 예보 시각 높이로 표시했다. 캡슐 폭은 60pt, 시간 레일은 44pt로 줄였다. 기존 활동 색상 띠, 매시간 00–24 눈금, 선택 시간 표시는 보존했고 왼쪽 메뉴·좌우 하단 정렬은 변경하지 않았다.
+- 회귀 테스트 5개 통과: `build/validation/SBW0927A01/targeted-tests.log` (`testWeatherTimelineCapsulesAttachFlushToSidebarPanel`, `testWeatherTimelineKeepsItsCenterWhenPlayheadOverlaps`, `testWeatherRailKeepsTheSelectedValueWithoutStackingLabels`, `testSidebarSelectionTimeBlockFitsTheExistingRailWidth`, `testSidebarHandleLaneContainsExpandedHitAreaWithoutRailOverlap`). xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_02-39-38-+0900.xcresult`.
+- 앱 generic iOS Debug 빌드 성공: `build/validation/SBW0927A01/build.log`. 빌드 후 수정된 미사용 좌표 계산도 제거했으며 재빌드에서 경고 없이 통과했다.
+- 전체 `TimeScaleTests` 실행에서 sidebar 스타일 상수, ruler 폭/선택 시간 폭, 지도 스타일 및 기존 하단 정렬 등 이 요청 바깥 실패가 발생해 실행을 중단했다. 변경에 직접 대응하는 세 테스트는 별도 실행해 모두 통과했다. 중단 로그: `build/validation/SBW0927A01/test.log`.
+- 실기기 설치·실행은 완료했으나 실제 화면을 카메라롤 저장 파일로 판독하지 않았다. 캡슐 판독성과 겹침은 해당 증거 확인 전까지 대기한다.
+- 요청된 iPhone 11 Pro `00008030-001628201AD2802E`에 위 빌드를 설치·실행했고, `devicectl`에서 `com.taption.plan` 버전 1.0 / 빌드 157 readback을 확인했다. 기록 `build/validation/SBW0927A01/install.log`.
+- 설치본 화면을 캡처해 `build/validation/SBW0927A01/device-screen.png`에서 가로 날씨 캡슐, 활동 색상 띠, 매시간 눈금, 선택 시간 캡슐 간 간격 및 좌우 하단 정렬을 확인했다. 이는 직접 기기 screenshot이며, 프로젝트 기준의 카메라롤 저장 영상 판독과는 구분한다.
+
+## 전체 temp 실행 · 2026-09-27 진행 기록
+
+- 화랑이 지도 탭은 `SpatialTapGesture` 좌표를 현재 화랑이 중심점과 비교해 반경 36pt 안 정지 탭에서 기존 `.cat` 상세를 연다. 드래그/핀치 핸들러는 변경하지 않았다. 기하 경계 회귀 테스트 `testCatTapRoutingAcceptsOnlyTapsInsideMarkerBounds` 통과: `build/validation/RST0927A01/test-cat-tap.log`.
+- 집 성장 주간 후보 50개에 각기 별도 SVG 에셋을 생성하고 후보 카드에 연결했다. 366단계 SVG는 수정하지 않았다. SVG XML parse 통과, asset 포함 앱 Debug 빌드 성공: `build/validation/RST0927A01/build-landmark-assets.log`.
+- 백업 V4/CloudKit CAS는 아직 구현하지 않았다. 현 구조는 월 archive 전체 payload 단일 AES-GCM, iCloud 파일 저장이며 raw 조회 page cursor만 256행·1MiB 기본 제한을 제공한다. staging/recovery journal 및 offline/referenced-generation-aware CloudKit manifest가 없어 기존 복원·혼합 버전 계약을 더 설계 중이다. 기존 Core 테스트 baseline 100/100은 `build/validation/RST0927A01/core-tests.log`에 있다.
+- 최종 변경 화랑이 집/이동 좌표 경계 테스트 통과: `build/validation/RST0927A01/test-growth-cat-assets-final.log`. 후보 50개/국가당 5개 및 에셋 이름 회귀 테스트 통과: `build/validation/RST0927A01/test-landmark-catalog.log`. 최신 generic iOS Debug 빌드 성공: `build/validation/RST0927A01/build-final.log`.
+- 전체 진행 중 재실행한 지도 오버레이 카메라 갱신 회귀와 화랑이 좌표 탭 회귀가 통과했다. `build/validation/RST0927A01/open-items-regression.log`; 랜드마크 국가·후보 회귀도 개별 재실행 통과했다. `build/validation/RST0927A01/test-landmark-catalog-final.log`.
+- build 157을 iPhone 11 Pro·iPhone 18 Pro Max·iPad Pro에 설치하고 `com.taption.plan` 1.0/157을 readback했다. 로그: `build/validation/RST0927A01/install-iphone11.log`, `install-iphone18.log`, `install-ipad.log` 및 해당 `readback-*.txt`. 설치본 화면·제스처는 카메라롤 영상 검증 전이라 미판정이다.
+- 실기기 기능, 카메라롤 영상, Watch/App Group 연속성, GPS·수면·백업·캘린더·장시간 사용은 판정하지 않았다.
+# TF0927A001 · main push 및 TestFlight 빌드 (2026-09-27)
+
+- App Store Connect API readback에서 앱 `com.taption.plan`의 최신 처리 완료 빌드는 157이었다. 새 TestFlight 빌드 중복을 피하려고 앱·Widget·Watch 타깃 `CURRENT_PROJECT_VERSION`을 158로 올렸다.
+- `swift test --package-path Packages/TaptionPlanCore`: 100/100 통과. 기존 백업 회귀 111개 통과 근거는 `build/validation/RST0920A01/security-backup-regressions-final.log`에 보존돼 있다.
+- 이번 전체 앱 시뮬레이터 테스트 시도에서 13개 테스트 실패가 기록됐고, 시뮬레이터가 앱을 다시 시작하지 못한 뒤 진단 수집이 정지해 결과 번들이 완성되지 않았다. 로그: `build/validation/TF0927A001/app-tests.log`. 실패: `MapHomeStickmanTests.testDestinationActionsUseCompanySchoolAndRestaurantSemantics`, `MapHomeStickmanTests.testIPhoneOnlySleepDoesNotClaimAppleWatchPriority`, `TimeScaleTests.testExpandedSidebarRulerLabelsStartAfterTickColumn`, `TimeScaleTests.testLegacyMapStylesRemainDecodableButRuntimeIsWBSApple`, `TimeScaleTests.testMapDisplayStyleIncludesSimplifiedAndUnknownValuesFallback`, `TimeScaleTests.testMapDisplayStyleNormalizesPersistedAndMissingValuesToWBSApple`, `TimeScaleTests.testMapHomeOverlayUsesSharedBottomMarginAndUniformControlSpacing`, `TimeScaleTests.testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers`, `TimeScaleTests.testSidebarRulerFontStaysFixedAcrossAllZoomSteps`, `TimeScaleTests.testSidebarSelectionHandleUsesApprovedWhiteAndDeepPinkStyle`, `LocalizationCatalogTests.testEveryCatalogKeyHasAnEnglishValue`, `FeatureEngineTests.testMapHomePastelPaletteKeepsCategoriesVisuallySeparated`, `FeatureEngineTests.testMapHomeSidebarUsesDistinctMajorCategoryVisuals`. 이 실패들은 통과로 처리하지 않는다.
+- 랜드마크 에셋 검증 스크립트에서 10개국 50개 asset catalog와 SVG XML 50개가 모두 유효했다. `git diff --check`도 통과했다.
+- Release archive·push·TestFlight 처리 및 `TP Taption Plan 내부 테스트` 그룹 연결/그룹 화면 노출은 이 기록 시점에서 미실행이다.

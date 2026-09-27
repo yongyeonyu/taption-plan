@@ -10,35 +10,6 @@ private func mapHomeWeatherSymbolColor(
     return Color(red: color.red, green: color.green, blue: color.blue)
 }
 
-private func mapHomeAirQualityColor(_ weather: WeatherContext) -> Color {
-    guard let grade = weather.airQuality?.overallGrade else {
-        return Color(hex: "#64748B")
-    }
-    switch grade {
-    case .good: return Color(hex: "#2E9B72")
-    case .moderate: return Color(hex: "#C3942E")
-    case .bad: return Color(hex: "#DD6B3D")
-    case .veryBad: return Color(hex: "#C44767")
-    }
-}
-
-private func mapHomeWeatherTextColor(
-    _ weather: WeatherContext,
-    isCurrent: Bool,
-    isSelected: Bool
-) -> Color {
-    if isSelected { return .tpPastelRose }
-    guard isCurrent, let grade = weather.airQuality?.overallGrade else {
-        return mapHomeAirQualityColor(weather)
-    }
-    return grade == .moderate ? Color(hex: "#111827") : .white
-}
-
-private func mapHomeWeatherCurrentBackground(_ weather: WeatherContext) -> Color? {
-    guard weather.airQuality?.overallGrade != nil else { return nil }
-    return mapHomeAirQualityColor(weather).opacity(0.9)
-}
-
 enum MapHomeWeatherDisplayPolicy {
     static func isComplete(_ context: WeatherContext) -> Bool {
         guard context.fetchedAt != nil,
@@ -118,45 +89,22 @@ enum MapHomeTimeSidebarViewportProjection {
 }
 
 enum MapHomeTimeSidebarStyle {
-    static let panelBackground = Color.white
-    static let panelBorder = Color.tpPastelGray.opacity(0.72)
-    static let numericColumnBackground = Color.white
-    static let trackBackground = Color.tpPastelGray.opacity(0.34)
-    static let handleBackground = Color.white
+    static let panelBackground = Color.tpSurface.opacity(0.88)
+    static let panelBorder = Color.tpLine.opacity(0.64)
+    static let numericColumnBackground = Color.tpSurface.opacity(0.92)
+    static let trackBackground = Color.tpBackground.opacity(0.62)
+    static let handleBackground = Color.tpSurfaceCream
     static let deepPinkHex = "#D94772"
     static let handleForeground = Color(hex: deepPinkHex)
     static let handleBorder = Color(hex: deepPinkHex)
     static let handleFontSize: CGFloat = 12
     static let handleFontWeight: Font.Weight = .semibold
     static let handleFontDesign: Font.Design = .rounded
-    static let handleCornerRadius: CGFloat = 4
-}
-
-enum MapHomeWeatherBackgroundKind: Equatable {
-    case selected
-    case current
-    case normal
-
-    static func resolve(isSelected: Bool, isCurrent: Bool) -> Self {
-        if isSelected { return .selected }
-        if isCurrent { return .current }
-        return .normal
-    }
-
-    var color: Color {
-        switch self {
-        case .selected:
-            MapHomeTimeSidebarStyle.numericColumnBackground
-        case .current:
-            Color.tpWeather.opacity(0.28)
-        case .normal:
-            .clear
-        }
-    }
+    static let handleCornerRadius: CGFloat = 18
 }
 
 enum MapHomeWeatherRailLayout {
-    static let minimumItemSpacing: CGFloat = 30
+    static let minimumItemSpacing: CGFloat = 32
 
     static func visibleIndices(
         yPositions: [CGFloat],
@@ -1036,7 +984,7 @@ struct MapHomeTimeSidebar: View {
     // Keep the numeric rail visibly separated from both the map header and
     // the bottom ad boundary while preserving the same minute-to-pixel scale.
     private let verticalInset: CGFloat = 14
-    private let activeRailWidth: CGFloat = 12
+    private let activeRailWidth = MapHomeTimeSidebarMath.activeRailWidth
     // Reserve the leading tick length inside the numeric gutter so labels do
     // not sit on top of ruler marks at the tighter zoom steps.
     private let numericColumnWidth = MapHomeTimeSidebarMath.rulerNumericColumnWidth
@@ -1061,7 +1009,7 @@ struct MapHomeTimeSidebar: View {
         categoryColors: [String: String] = [:],
         zoomResetToken: Int = 0,
         zoomStepToken: Int = 0,
-        railWidth: CGFloat = 58,
+        railWidth: CGFloat = 44,
         maximumSelectableMinute: Int? = nil,
         trailingInteractionWidth: CGFloat = 0,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
@@ -1075,7 +1023,7 @@ struct MapHomeTimeSidebar: View {
         self.categoryColors = categoryColors
         self.zoomResetToken = zoomResetToken
         self.zoomStepToken = zoomStepToken
-        self.railWidth = max(58, railWidth)
+        self.railWidth = max(44, railWidth)
         self.maximumSelectableMinute = maximumSelectableMinute
         self.trailingInteractionWidth = max(0, trailingInteractionWidth)
         self.onViewportChanged = onViewportChanged
@@ -1118,7 +1066,7 @@ struct MapHomeTimeSidebar: View {
 
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(MapHomeTimeSidebarStyle.panelBackground)
                         .frame(width: railWidth, height: railHeight)
                         .position(
@@ -1126,7 +1074,7 @@ struct MapHomeTimeSidebar: View {
                             y: railHeight / 2
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
                                 .stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1)
                                 .frame(width: railWidth, height: railHeight)
                                 .position(
@@ -1335,6 +1283,18 @@ struct MapHomeTimeSidebar: View {
                     height: railHeight,
                     alignment: .topLeading
                 )
+                .mask(alignment: .leading) {
+                    HStack(spacing: 0) {
+                        Rectangle().frame(width: railOriginX)
+                        RoundedRectangle(
+                            cornerRadius: 22,
+                            style: .continuous
+                        )
+                        .frame(width: railWidth)
+                        Rectangle().frame(width: trailingInteractionWidth)
+                    }
+                    .frame(height: railHeight)
+                }
 
                 if trailingInteractionWidth > 0 {
                     Rectangle()
@@ -1496,7 +1456,7 @@ struct MapHomeTimeSidebar: View {
             .foregroundStyle(MapHomeTimeSidebarStyle.handleForeground)
             .frame(
                 width: MapHomeTimeSidebarMath.selectionTimeBlockWidth,
-                height: 40
+                height: 36
             )
             .background(
                 MapHomeTimeSidebarStyle.handleBackground,
@@ -1878,7 +1838,7 @@ struct MapHomeWeatherSidebar: View {
     let visibleStartMinute: Int
     let visibleDurationMinutes: Int
 
-    private let railWidth: CGFloat = 58
+    private let railWidth: CGFloat = 62
     private let verticalInset: CGFloat = 14
 
     private struct Entry: Identifiable {
@@ -1933,77 +1893,57 @@ struct MapHomeWeatherSidebar: View {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                     let startMinute = max(entry.startMinute, window.lowerBound)
                     let endMinute = min(entry.endMinute, window.upperBound)
-                    let start = MapHomeTimeSidebarMath.position(
-                        minute: startMinute,
-                        window: window
-                    )
-                    let end = MapHomeTimeSidebarMath.position(
-                        minute: endMinute,
-                        window: window
-                    )
                     let y = yPositions[index]
-                    let height = max(2, trackHeight * (end - start))
                     if startMinute < endMinute, visibleIndices.contains(index) {
                         let itemWidth = railWidth - 2
-                        let itemHeight = max(22, min(30, height + 8))
                         let isSelected = index == selectedIndex
                         let isCurrent = index == currentIndex
+                        let entryMinute = min(
+                            max((entry.startMinute + entry.endMinute) / 2, 0),
+                            MapHomeTimeSidebarMath.fullDayMinutes
+                        )
 
-                        HStack(spacing: 2) {
+                        HStack(spacing: 4) {
                             Image(systemName: entry.context.symbolName)
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(
                                     mapHomeWeatherSymbolColor(entry.context, component: .primary),
                                     mapHomeWeatherSymbolColor(entry.context, component: .secondary)
                                 )
-                                .frame(width: 20)
-                                Text("\(Int(entry.context.temperatureCelsius.rounded()))°C")
-                                .font(.system(size: 9, weight: isSelected ? .bold : .medium, design: .rounded))
+                            Text("\(Int(entry.context.temperatureCelsius.rounded()))°")
+                                .font(.system(size: 10, weight: isSelected ? .bold : .semibold, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(
-                                    mapHomeWeatherTextColor(
-                                        entry.context,
-                                        isCurrent: isCurrent,
-                                        isSelected: isSelected
-                                    )
-                                )
+                                .foregroundStyle(isSelected || isCurrent ? Color.tpAccent : Color.tpInk)
                         }
-                        .padding(.horizontal, 3)
-                        .frame(width: itemWidth, height: itemHeight)
+                        .padding(.horizontal, 8)
+                        .frame(width: itemWidth, height: 28)
                         .background(
-                            mapHomeWeatherCurrentBackground(entry.context).map {
-                                isCurrent && !isSelected ? $0 :
-                                    MapHomeWeatherBackgroundKind.resolve(
-                                        isSelected: isSelected,
-                                        isCurrent: isCurrent
-                                    ).color
-                            } ?? MapHomeWeatherBackgroundKind.resolve(
-                                isSelected: isSelected,
-                                isCurrent: isCurrent
-                            ).color,
-                            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            Color.tpSurface.opacity(0.96),
+                            in: Capsule()
                         )
                         .overlay {
-                            if isSelected {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .stroke(Color.tpPastelRose, lineWidth: 1.5)
-                            }
+                            Capsule()
+                                .stroke(
+                                    isSelected ? Color.tpPastelRose : Color.tpLine.opacity(0.8),
+                                    lineWidth: isSelected ? 1.2 : 0.8
+                                )
                         }
+                        .shadow(color: .black.opacity(0.10), radius: 3, y: 1)
                         .position(x: railWidth / 2, y: y)
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(
                             language.text(
-                                "날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도"
+                                "\(entryMinute / 60)시 날씨 \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded()))도"
                                     + (entry.context.airQuality.map { ", 미세먼지 \($0.overallGrade.displayName)" } ?? ""),
-                                "Weather \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded())) degrees Celsius"
+                                "\(entryMinute / 60):00 weather: \(entry.context.condition), \(Int(entry.context.temperatureCelsius.rounded())) degrees Celsius"
                                     + (entry.context.airQuality.map { ", air quality \($0.overallGrade.displayName)" } ?? "")
                             )
                         )
                         .accessibilityValue(
                             isSelected
                                 ? language.text("선택된 시간", "Selected time")
-                                : language.text("시간 구간", "Time interval")
+                                : language.text("예보 시간 구간", "Forecast interval")
                         )
                     }
                 }
@@ -2050,13 +1990,13 @@ enum MapHomeTimeSidebarMath {
     static let standardDragSensitivity: CGFloat = 1.6
     static let precisionDragSensitivity: CGFloat = 0.25
     static let edgeScrollPointsPerSecond: CGFloat = 192
-    static let rulerNumericColumnWidth: CGFloat = 44
-    static let rulerTickWidth: CGFloat = 8
+    static let rulerNumericColumnWidth: CGFloat = 32
+    static let rulerTickWidth: CGFloat = 6
     static let rulerHourColumnWidth: CGFloat = 16
     static let rulerMinuteColumnWidth: CGFloat = 16
     static let rulerColumnSpacing: CGFloat = 2
     static let minimumRulerLabelSpacing: CGFloat = 24
-    static let selectionTimeBlockWidth: CGFloat = 56
+    static let selectionTimeBlockWidth: CGFloat = 44
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale
@@ -2064,10 +2004,10 @@ enum MapHomeTimeSidebarMath {
     static let handleDragHitHeight: CGFloat = 88
     static let trailingHandleDragHitHeight: CGFloat = handleDragHitHeight * 1.5
     static let handleLaneWidth: CGFloat = 69
-    static let activeRailWidth: CGFloat = 12
+    static let activeRailWidth: CGFloat = 7
     static let handleVisualSize = CGSize(width: 44, height: 44)
     static let handleRailGap: CGFloat = 4
-    static let weatherDockGap: CGFloat = 0
+    static let weatherDockGap: CGFloat = 4
 
     static func selectedTimeCardFrame(
         availableHeight: CGFloat,
@@ -2267,6 +2207,7 @@ enum MapHomeTimeSidebarMath {
     ) -> [Int] {
         let hours = visibleHours(window: window)
         guard hours.count > 1 else { return hours }
+        if durationMinutes >= fullDayMinutes { return hours }
         let duration = CGFloat(min(max(durationMinutes, 60), fullDayMinutes))
         let pointsPerHour = max(trackHeight, 1) * 60 / duration
         let step = max(

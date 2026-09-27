@@ -1,8 +1,17 @@
 import SwiftUI
+import TaptionPlanCore
 import WidgetKit
 
 @main
 struct TaptionPlanWatchWidgetBundle: WidgetBundle {
+    init() {
+        TaptionPlanSharedContainer.configure(
+            provider: FixedTaptionPlanAppGroupProvider(
+                identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
+            )
+        )
+    }
+
     var body: some Widget {
         TaptionWatchStatusWidget()
     }

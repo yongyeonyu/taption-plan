@@ -835,6 +835,7 @@ struct MapHomeStickmanMarker: View {
     var animationPhase: Int? = nil
     var routePhase: MapHomeStickmanRoutePhase = .actual
     var speedMetersPerSecond: Double? = nil
+    var equippedAccessoryID: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
@@ -887,6 +888,15 @@ struct MapHomeStickmanMarker: View {
                 )
                 .scaleEffect(0.92)
                 .rotationEffect(.degrees(tier.leanDegrees))
+                if let accessorySymbol = MapHomeGrowthAccessoryCatalog.symbol(
+                    for: equippedAccessoryID
+                ) {
+                    Image(systemName: accessorySymbol)
+                        .font(.system(size: 9, weight: .black))
+                        .foregroundStyle(Color(hex: "#D94772"))
+                        .shadow(color: .white.opacity(0.95), radius: 1.5)
+                        .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.34)
+                }
                 // 피카츄 구간 — 번개 스파크.
                 if tier.isPikachu {
                     Image(systemName: "bolt.fill")

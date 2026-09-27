@@ -33,6 +33,14 @@ struct TaptionPlanApp: App {
     @UIApplicationDelegateAdaptor(TaptionPlanAppDelegate.self)
     private var appDelegate
 
+    init() {
+        TaptionPlanSharedContainer.configure(
+            provider: FixedTaptionPlanAppGroupProvider(
+                identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
+            )
+        )
+    }
+
     var body: some Scene {
         WindowGroup {
             AppShellView()

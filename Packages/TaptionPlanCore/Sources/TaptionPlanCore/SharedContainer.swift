@@ -1,7 +1,49 @@
 import Foundation
 
+public protocol TaptionPlanAppGroupProviding: Sendable {
+    var identifier: String { get }
+}
+
+public struct FixedTaptionPlanAppGroupProvider: TaptionPlanAppGroupProviding {
+    public let identifier: String
+
+    public init(identifier: String) {
+        self.identifier = identifier
+    }
+}
+
 public enum TaptionPlanSharedContainer {
-    public static let appGroupIdentifier = "group.com.taption.plan"
+    public static let defaultAppGroupIdentifier = "group.com.taption.plan"
+
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var provider: (any TaptionPlanAppGroupProviding)?
+
+    public static var appGroupIdentifier: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return provider?.identifier ?? defaultAppGroupIdentifier
+    }
+
+    public static func configure(provider: any TaptionPlanAppGroupProviding) {
+        guard !provider.identifier.isEmpty else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        self.provider = provider
+    }
+
+    public static func resetProvider() {
+        lock.lock()
+        defer { lock.unlock() }
+        provider = nil
+    }
+
+    public static func containerURL(
+        fileManager: FileManager = .default
+    ) -> URL? {
+        fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        )
+    }
 }
 
 public enum TaptionPlanDeviceLocalStorage {
@@ -9,9 +51,8 @@ public enum TaptionPlanDeviceLocalStorage {
         fileManager: FileManager = .default
     ) {
         var roots: [URL] = []
-        if let group = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier:
-                TaptionPlanSharedContainer.appGroupIdentifier
+        if let group = TaptionPlanSharedContainer.containerURL(
+            fileManager: fileManager
         ) {
             roots.append(group)
         }

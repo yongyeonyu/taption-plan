@@ -31,6 +31,36 @@ private final class ClassificationRevisionAdvanceGate: @unchecked Sendable {
 final class FeatureEngineTests: XCTestCase {
     private let hour: TimeInterval = 3_600
 
+    func testCatTapRoutingAcceptsOnlyTapsInsideMarkerBounds() {
+        let marker = CGPoint(x: 100, y: 200)
+        XCTAssertTrue(
+            MapHomeCatTapRouting.contains(
+                tapPoint: CGPoint(x: 120, y: 200),
+                markerPoint: marker
+            )
+        )
+        XCTAssertFalse(
+            MapHomeCatTapRouting.contains(
+                tapPoint: CGPoint(x: 137, y: 200),
+                markerPoint: marker
+            )
+        )
+        XCTAssertEqual(
+            MapHomeCatTapRouting.markerPoint(
+                locationPoint: marker,
+                isAtHome: true
+            ),
+            CGPoint(x: 123, y: 240)
+        )
+        XCTAssertEqual(
+            MapHomeCatTapRouting.markerPoint(
+                locationPoint: marker,
+                isAtHome: false
+            ),
+            CGPoint(x: 100, y: 182)
+        )
+    }
+
     func testActivityClassificationResultOrderingUsesStartThenExactID() throws {
         let start = Date(timeIntervalSince1970: 1_800_000_000)
         let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
@@ -27530,6 +27560,42 @@ final class CategoryCacheBenchmarkTests: XCTestCase {
 }
 
 final class MapHomeTimeRailCardTests: XCTestCase {
+    func testSideRailsShareTopAndBottomAcrossViewportSizes() {
+        let compactFrame = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: 812,
+            topInset: 90,
+            bottomInset: 76
+        )
+        let tallFrame = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: 1_024,
+            topInset: 90,
+            bottomInset: 76
+        )
+
+        XCTAssertEqual(compactFrame.minY, 90, accuracy: 0.1)
+        XCTAssertEqual(compactFrame.maxY, 736, accuracy: 0.1)
+        XCTAssertEqual(tallFrame.height, 680, accuracy: 0.1)
+        XCTAssertEqual(tallFrame.minY, 268, accuracy: 0.1)
+        XCTAssertEqual(tallFrame.maxY, 948, accuracy: 0.1)
+    }
+
+    func testSideRailsMoveDownTogetherWithoutChangingTheirHeight() {
+        let previous = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: 812,
+            topInset: 90,
+            bottomInset: 76
+        )
+        let lowered = MapHomeOverlayLayoutMath.alignedRailFrame(
+            viewportHeight: 812,
+            topInset: 118,
+            bottomInset: 48
+        )
+
+        XCTAssertEqual(lowered.height, previous.height, accuracy: 0.1)
+        XCTAssertEqual(lowered.minY, previous.minY + 28, accuracy: 0.1)
+        XCTAssertEqual(lowered.maxY, previous.maxY + 28, accuracy: 0.1)
+    }
+
     func testSelectedCardHighlightsTwoHoursOnFullDayRail() {
         let frame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
             availableHeight: 1_000,
@@ -27558,6 +27624,75 @@ final class MapHomeTimeRailCardTests: XCTestCase {
 
         XCTAssertEqual(dayBoundaryFrame.height, 40.5, accuracy: 0.1)
         XCTAssertEqual(zoomedFrame.height, 972, accuracy: 0.1)
+    }
+}
+
+final class MapHomeWeatherRailLayoutTests: XCTestCase {
+    func testWeatherRowsKeepSelectedEntryAndAvoidVerticalOverlap() {
+        let visible = MapHomeWeatherRailLayout.visibleIndices(
+            yPositions: [100, 130, 181],
+            candidateIndices: [0, 1, 2],
+            priorityIndices: [1]
+        )
+
+        XCTAssertEqual(visible, [1, 2])
+        XCTAssertTrue(visible.contains(1))
+    }
+
+    func testUnboxedWeatherItemsKeepMinimumSpacing() {
+        let positions = [100, 130, 166, 203].map(CGFloat.init)
+        let visible = MapHomeWeatherRailLayout.visibleIndices(
+            yPositions: positions,
+            candidateIndices: Array(positions.indices),
+            priorityIndices: []
+        )
+        let visiblePositions = visible.sorted().map { positions[$0] }
+
+        XCTAssertTrue(
+            zip(visiblePositions, visiblePositions.dropFirst()).allSatisfy {
+                $1 - $0 >= MapHomeWeatherRailLayout.minimumItemSpacing
+            }
+        )
+    }
+}
+
+final class MapHomePresencePolicyTests: XCTestCase {
+    func testHomePresenceUsesConfiguredRadius() {
+        let home = CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0)
+        let nearby = CLLocationCoordinate2D(latitude: 37.5005, longitude: 127.0)
+        let outside = CLLocationCoordinate2D(latitude: 37.503, longitude: 127.0)
+
+        XCTAssertTrue(
+            MapHomePresencePolicy.isAtHome(
+                current: nearby,
+                home: home,
+                radiusMeters: 120
+            )
+        )
+        XCTAssertFalse(
+            MapHomePresencePolicy.isAtHome(
+                current: outside,
+                home: home,
+                radiusMeters: 120
+            )
+        )
+    }
+
+    func testHomePresenceRejectsInvalidCoordinatesAndRadius() {
+        XCTAssertFalse(
+            MapHomePresencePolicy.isAtHome(
+                current: CLLocationCoordinate2D(latitude: 91, longitude: 0),
+                home: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                radiusMeters: 120
+            )
+        )
+        XCTAssertFalse(
+            MapHomePresencePolicy.isAtHome(
+                current: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                home: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                radiusMeters: -1
+            )
+        )
     }
 }
 
@@ -27743,5 +27878,79 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
         XCTAssertEqual(history.season.landPlots, ["plot.001"])
         XCTAssertEqual(history.season.equippedAccessory, "cat.accessory.001")
+    }
+
+    func testLandmarkCatalogHasFiveChoicesForEachInitialCountry() {
+        let grouped = Dictionary(grouping: MapHomeLandmarkCatalog.candidates, by: \.country)
+
+        XCTAssertEqual(grouped.count, 10)
+        XCTAssertTrue(grouped.values.allSatisfy { $0.count == 5 })
+        XCTAssertEqual(MapHomeLandmarkCatalog.candidates.count, 50)
+        XCTAssertEqual(
+            Set(MapHomeLandmarkCatalog.candidates.map(\.artworkName)).count,
+            50
+        )
+        XCTAssertTrue(MapHomeLandmarkCatalog.candidates.allSatisfy {
+            $0.artworkName.hasPrefix("Landmark_")
+        })
+        let choices = MapHomeLandmarkCatalog.weeklyChoices(
+            for: MapHomeGrowthSeason(year: 2026)
+        )
+        XCTAssertEqual(choices.count, 3)
+        XCTAssertEqual(Set(choices.map(\.id)).count, 3)
+        XCTAssertEqual(
+            MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.kr.gyeongbokgung"),
+            MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.kr.gyeongbokgung")
+        )
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.symbol(for: nil))
+    }
+
+    func testOlderGrowthSeasonDecodesWithoutPlotPlacementField() throws {
+        var season = MapHomeGrowthSeason(year: 2025)
+        season.landPlotPlacements = [
+            .init(plotID: "plot.saved", x: 0, y: 0),
+        ]
+        let encoded = try JSONEncoder().encode(season)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "landPlotPlacements")
+        let olderData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(
+            MapHomeGrowthSeason.self,
+            from: olderData
+        )
+
+        XCTAssertNil(decoded.landPlotPlacements)
+        XCTAssertEqual(decoded.year, 2025)
+    }
+
+    func testEarnedLandPlotsCanBePlacedAsConnectedTiles() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
+        history.season.pendingWeeklyRewards = 2
+        XCTAssertTrue(MapHomeGrowthPolicy.redeemWeeklyReward(
+            evolutionID: "kr.gyeongbokgung",
+            landPlotID: "plot.one",
+            accessoryID: "cat.accessory.kr.gyeongbokgung",
+            in: &history
+        ))
+        XCTAssertTrue(MapHomeGrowthPolicy.redeemWeeklyReward(
+            evolutionID: "jp.fuji",
+            landPlotID: "plot.two",
+            accessoryID: "cat.accessory.jp.fuji",
+            in: &history
+        ))
+
+        XCTAssertTrue(MapHomeGrowthPolicy.placeLandPlot("plot.one", in: &history.season))
+        XCTAssertTrue(MapHomeGrowthPolicy.placeLandPlot("plot.two", in: &history.season))
+        XCTAssertFalse(MapHomeGrowthPolicy.placeLandPlot("plot.two", in: &history.season))
+
+        let positions = try! XCTUnwrap(history.season.landPlotPlacements)
+        XCTAssertEqual(positions.count, 2)
+        XCTAssertEqual(
+            abs(positions[0].x - positions[1].x) + abs(positions[0].y - positions[1].y),
+            1
+        )
     }
 }
