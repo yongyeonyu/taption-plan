@@ -2966,6 +2966,59 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testPartialUnconfirmedEditPreservesSourceOutsideSelectedSpan() async throws {
+        let day = makeDate(2026, 8, 12)
+        let source = ActualRecord(
+            planID: nil,
+            title: "미확인",
+            categoryID: "unconfirmed",
+            startedAt: day.addingTimeInterval(9 * hour),
+            endedAt: day.addingTimeInterval(12 * hour),
+            source: .manual,
+            behavior: "unconfirmed-gap",
+            manuallyCorrected: true
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.actuals = [source]
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        let selected = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        let result = await model.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: [source.id],
+                originalSpan: selected,
+                originalOption: phaseOption("unconfirmed", title: "미확인"),
+                mode: .replace(
+                    editedSpan: selected,
+                    option: phaseOption("work", title: "업무")
+                )
+            )
+        )
+        XCTAssertNotNil(result)
+        let saved = try await repository.load()
+        XCTAssertTrue(saved.actuals.contains {
+            $0.categoryID == "work" && $0.startedAt == selected.start
+                && $0.endedAt == selected.end
+        })
+        XCTAssertTrue(saved.actuals.contains {
+            $0.categoryID == "unconfirmed" && $0.startedAt == selected.end
+                && $0.endedAt == source.endedAt
+        })
+    }
+
+    @MainActor
     func testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit()
         async throws {
         let day = makeDate(2026, 8, 12)
@@ -26176,7 +26229,32 @@ final class MapHomeStickmanTests: XCTestCase {
         let actions: [MapHomeStickmanAction] = [.computer, .eating, .reading, .hobby]
         XCTAssertTrue(actions.allSatisfy(\.animatesPresentation))
         XCTAssertTrue(actions.allSatisfy { !$0.isMoving })
-        XCTAssertFalse(MapHomeStickmanAction.sleeping.animatesPresentation)
+        XCTAssertTrue(MapHomeStickmanAction.sleeping.animatesPresentation)
+    }
+
+    func testCatActivityScenesUseRequestedActionsAndQuarterSpeed() {
+        XCTAssertEqual(MapHomeStickmanAction.computer.propSymbol, "desktopcomputer")
+        XCTAssertEqual(MapHomeStickmanAction.reading.propSymbol, "book.fill")
+        for seed in 0..<12 {
+            XCTAssertEqual(MapHomeStickmanAction.computer.catAction(seed: seed), .walking)
+            XCTAssertEqual(MapHomeStickmanAction.reading.catAction(seed: seed), .walking)
+            XCTAssertEqual(MapHomeStickmanAction.exercise.catAction(seed: seed), .running)
+            XCTAssertEqual(MapHomeStickmanAction.sleeping.catAction(seed: seed), .sleeping)
+            XCTAssertEqual(MapHomeStickmanAction.unconfirmed.catAction(seed: seed), .startled)
+        }
+        XCTAssertEqual(Set([0, 6, 12, 18].map { MapHomeCatActivityMotion.hobbyNote(for: $0) }).count, 4)
+        XCTAssertEqual(
+            MapHomeStickmanAnimationEngine.catFrameDuration,
+            MapHomeStickmanAnimationEngine.frameDuration * 4
+        )
+        let epoch = Date(timeIntervalSinceReferenceDate: 0)
+        XCTAssertEqual(MapHomeStickmanAnimationEngine.catPhase(at: epoch), 0)
+        XCTAssertEqual(
+            MapHomeStickmanAnimationEngine.catPhase(
+                at: epoch.addingTimeInterval(MapHomeStickmanAnimationEngine.catFrameDuration)
+            ),
+            1
+        )
     }
 
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {
@@ -27711,6 +27789,146 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertTrue(MapHomeGrowthPolicy.qualifies(actualCount: 1, unconfirmedCount: 0))
         XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 0, unconfirmedCount: 0))
         XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 2, unconfirmedCount: 1))
+    }
+
+    func testCompletedDayRequiresFullCoverageAndAtLeastOneActual() {
+        let start = date(2026, 9, 20)
+        let end = date(2026, 9, 21)
+        let complete = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: end,
+            source: .manual,
+            manuallyCorrected: true
+        )
+        XCTAssertTrue(MapHomeGrowthPolicy.qualifiesDay(
+            actuals: [complete], travel: [], on: start, asOf: end, calendar: calendar
+        ))
+        let partial = ActualRecord(
+            planID: nil,
+            title: "업무",
+            categoryID: "work",
+            startedAt: start,
+            endedAt: start.addingTimeInterval(12 * 3_600),
+            source: .manual,
+            manuallyCorrected: true
+        )
+        XCTAssertFalse(MapHomeGrowthPolicy.qualifiesDay(
+            actuals: [partial], travel: [], on: start, asOf: end, calendar: calendar
+        ))
+    }
+
+    func testRecentCompletedDayOnlyAddsOneHouseLevel() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 9, 20), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 9, 20),
+            qualified: false,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history,
+            asOf: date(2026, 9, 21),
+            calendar: calendar
+        )
+        XCTAssertTrue(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 20),
+            asOf: date(2026, 9, 27),
+            qualified: true,
+            calendar: calendar
+        ))
+        XCTAssertFalse(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 20),
+            asOf: date(2026, 9, 27),
+            qualified: true,
+            calendar: calendar
+        ))
+        XCTAssertEqual(history.season.level, 2)
+        XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
+        XCTAssertTrue(history.season.accessories.isEmpty)
+        XCTAssertEqual(history.season.streak, 0)
+    }
+
+    func testPendingDaySettlesEvenWhenRecentCompletionIsNotAwarded() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 9, 26), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history,
+            date: date(2026, 9, 26),
+            qualified: true,
+            calendar: calendar
+        )
+        MapHomeGrowthPolicy.settleAndAwardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 20),
+            asOf: date(2026, 9, 27),
+            qualified: false,
+            calendar: calendar
+        )
+        XCTAssertNil(history.season.pendingDay)
+        XCTAssertEqual(history.season.lastClosedDay, "2026-09-26")
+        XCTAssertEqual(history.season.level, 2)
+        XCTAssertEqual(history.season.recentCompletionRewardedDays, ["2026-09-26"])
+    }
+
+    func testOrdinaryDailyRewardCannotBeClaimedAgainAsRecentCompletion() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 9, 20), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history, date: date(2026, 9, 20), qualified: true, calendar: calendar
+        )
+        MapHomeGrowthPolicy.closePendingDay(
+            in: &history, asOf: date(2026, 9, 21), calendar: calendar
+        )
+        XCTAssertFalse(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 20),
+            asOf: date(2026, 9, 27),
+            qualified: true,
+            calendar: calendar
+        ))
+        XCTAssertEqual(history.season.level, 2)
+    }
+
+    func testRecentCompletionAcrossNewYearLevelsArchivedHouseOnly() {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 12, 31), calendar: calendar)
+        MapHomeGrowthPolicy.observeCurrentDay(
+            in: &history, date: date(2027, 1, 1), qualified: false, calendar: calendar
+        )
+        XCTAssertTrue(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 12, 31),
+            asOf: date(2027, 1, 3),
+            qualified: true,
+            calendar: calendar
+        ))
+        XCTAssertEqual(history.archives.first?.level, 2)
+        XCTAssertEqual(history.season.level, 1)
+        XCTAssertTrue(history.archives.first?.accessories.isEmpty == true)
+    }
+
+    func testRecentCompletionRejectsOlderThanSevenDaysAndPreservesLegacyHistory() throws {
+        var history = MapHomeGrowthHistory.initial(for: date(2026, 9, 1), calendar: calendar)
+        let encoded = try JSONEncoder().encode(history)
+        history = try JSONDecoder().decode(MapHomeGrowthHistory.self, from: encoded)
+        XCTAssertNil(history.season.recentCompletionRewardedDays)
+        XCTAssertFalse(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 19),
+            asOf: date(2026, 9, 27),
+            qualified: true,
+            calendar: calendar
+        ))
+        XCTAssertFalse(MapHomeGrowthPolicy.awardRecentCompletion(
+            in: &history,
+            day: date(2026, 9, 26),
+            asOf: date(2026, 9, 27),
+            qualified: false,
+            calendar: calendar
+        ))
+        XCTAssertEqual(history.season.level, 1)
     }
 
     func testClosedIncompleteDayStaysUnqualifiedDespiteLaterObservation() {

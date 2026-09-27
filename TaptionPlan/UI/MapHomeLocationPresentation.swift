@@ -160,7 +160,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     /// 업무=노트북, 수업=책 소품을 마커에 오버레이한다. 그 외는 없음.
     var propSymbol: String? {
         switch self {
-        case .computer: "laptopcomputer"
+        case .computer: "desktopcomputer"
         case .reading: "book.fill"
         default: nil
         }
@@ -181,31 +181,14 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .movement, .walking, .car, .subway,
              .privateVehicle, .bus, .ship, .airplane, .cycling:
             return .walking
-        // 수면: 잠자기 위주로, 가끔 하품/꾹꾹이로 뒤척임 표현
-        case .sleeping:
-            let rest: [TaptionCatAnimationAction] = [
-                .sleeping, .sleeping, .sleeping, .yawning,
-                .sleeping, .kneading, .sleeping, .yawning,
-            ]
-            return rest[abs(seed) % rest.count]
+        case .sleeping: return .sleeping
         // 식사: 먹기 위주로 가끔 그루밍
         case .eating:
             let meal: [TaptionCatAnimationAction] = [
                 .eating, .eating, .eating, .grooming, .eating, .sitting,
             ]
             return meal[abs(seed) % meal.count]
-        // 업무: 소품(노트북) 위에서 앉기·그루밍·꾹꾹이 번갈아
-        case .computer:
-            let work: [TaptionCatAnimationAction] = [
-                .grooming, .sitting, .kneading, .grooming, .yawning, .sitting,
-            ]
-            return work[abs(seed) % work.count]
-        // 수업: 책 앞에서 앉기·그루밍·하품
-        case .reading:
-            let study: [TaptionCatAnimationAction] = [
-                .grooming, .sitting, .yawning, .grooming, .sitting, .kneading,
-            ]
-            return study[abs(seed) % study.count]
+        case .computer, .reading: return .walking
         // 취미: 놀이 동작을 최대한 다양하게
         case .hobby:
             let play: [TaptionCatAnimationAction] = [
@@ -213,15 +196,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
                 .ballPlay, .startled, .fishingPlay, .stretching,
             ]
             return play[abs(seed) % play.count]
-        // 운동: 활발한 동작 16종을 랜덤(중복 포함)으로 번갈아
-        case .exercise:
-            let workout: [TaptionCatAnimationAction] = [
-                .running, .ballPlay, .fishingPlay, .stretching,
-                .kneading, .running, .ballPlay, .stretching,
-                .fishingPlay, .running, .kneading, .ballPlay,
-                .stretching, .running, .fishingPlay, .startled,
-            ]
-            return workout[abs(seed) % workout.count]
+        case .exercise: return .running
         // 활동: 그루밍 위주로 앉기·스트레칭·하품 섞어 자연스럽게
         case .activity:
             let idle: [TaptionCatAnimationAction] = [
@@ -229,18 +204,13 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
                 .yawning, .kneading, .grooming, .sitting,
             ]
             return idle[abs(seed) % idle.count]
-        // 미확인: 갸우뚱·놀람 (물음표는 마커에서 오버레이)
-        case .unconfirmed:
-            let puzzled: [TaptionCatAnimationAction] = [
-                .startled, .sitting, .startled, .yawning,
-            ]
-            return puzzled[abs(seed) % puzzled.count]
+        case .unconfirmed: return .startled
         }
     }
 
     var animatesPresentation: Bool {
         switch self {
-        case .computer, .reading, .hobby, .eating,
+        case .computer, .reading, .hobby, .sleeping, .eating,
              .activity, .exercise, .unconfirmed:
             true
         default:
@@ -701,11 +671,19 @@ enum MapHomeStickmanActionResolver {
 
 enum MapHomeStickmanAnimationEngine {
     static let frameDuration = TaptionLiveActivityStickmanAnimation.frameDuration
+    static let catFrameDuration = frameDuration * 4
     static let phaseCount = TaptionLiveActivityStickmanAnimation.frameCount
 
     static func phase(at date: Date, reducesMotion: Bool = false) -> Int {
         TaptionLiveActivityStickmanAnimation.frameIndex(
             at: date.timeIntervalSinceReferenceDate,
+            isAnimating: !reducesMotion
+        )
+    }
+
+    static func catPhase(at date: Date, reducesMotion: Bool = false) -> Int {
+        TaptionLiveActivityStickmanAnimation.frameIndex(
+            at: date.timeIntervalSinceReferenceDate / 4,
             isAnimating: !reducesMotion
         )
     }
@@ -729,6 +707,78 @@ enum MapHomeStickmanAnimationEngine {
 
     static func pulse(for phase: Int) -> Double {
         (oscillation(for: phase) + 1) / 2
+    }
+}
+
+enum MapHomeCatActivityMotion {
+    static func hobbyNote(for phase: Int) -> String {
+        let notes = ["♪", "♫", "♬", "♩"]
+        let step = phase / 6
+        return notes[((step % notes.count) + notes.count) % notes.count]
+    }
+}
+
+private struct MapHomeCatActivityScene: View {
+    let action: MapHomeStickmanAction
+    let catAction: TaptionCatAnimationAction
+    let phase: Int
+    let size: CGFloat
+    let reducesMotion: Bool
+    var leanDegrees = 0.0
+
+    private var wave: CGFloat {
+        reducesMotion ? 0 : CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
+    }
+
+    var body: some View {
+        ZStack {
+            if action == .exercise {
+                Circle()
+                    .stroke(Color.tpSecondary.opacity(0.75), lineWidth: 2)
+                    .overlay {
+                        ForEach(0..<3, id: \.self) { spoke in
+                            Capsule()
+                                .fill(Color.tpSecondary.opacity(0.55))
+                                .frame(width: size * 0.72, height: 1)
+                                .rotationEffect(.degrees(Double(spoke) * 60))
+                        }
+                        .rotationEffect(.degrees(reducesMotion ? 0 : Double(phase) * 60))
+                    }
+                    .frame(width: size * 0.80, height: size * 0.80)
+            }
+            if let prop = action.propSymbol {
+                Image(systemName: prop)
+                    .font(.system(size: size * 0.34, weight: .semibold))
+                    .foregroundStyle(Color.tpInk.opacity(0.80))
+                    .offset(x: size * 0.19, y: size * 0.21)
+            }
+            TaptionCatAtlasSprite(style: "white", action: catAction, frame: phase)
+                .scaleEffect(action == .exercise ? 0.70 : action == .sleeping ? 0.84 + 0.04 * wave : 0.88)
+                .offset(
+                    x: action == .computer || action == .reading ? wave * size * 0.11 : 0,
+                    y: action == .computer || action == .reading ? -size * 0.08 : 0
+                )
+                .rotationEffect(.degrees(action == .unconfirmed ? Double(wave) * 9 : leanDegrees))
+            if action == .unconfirmed {
+                Text("?")
+                    .font(.system(size: size * 0.38, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.tpAccent)
+                    .offset(x: size * 0.29, y: -size * 0.31)
+            }
+            if action == .hobby {
+                Text(MapHomeCatActivityMotion.hobbyNote(for: phase))
+                    .font(.system(size: size * 0.43, weight: .bold))
+                    .foregroundStyle(Color.tpAccent)
+                    .offset(x: size * 0.30, y: -size * 0.28)
+            }
+            if action == .sleeping {
+                Text("Zzz")
+                    .font(.system(size: size * 0.30, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .offset(x: size * 0.24, y: -size * 0.32 - wave * 2)
+            }
+        }
+        .frame(width: size, height: size)
     }
 }
 
@@ -846,14 +896,14 @@ struct MapHomeStickmanMarker: View {
             : .idle
         TimelineView(
             .animation(
-                minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
+                minimumInterval: MapHomeStickmanAnimationEngine.catFrameDuration,
                 paused: isStatic || animationPhase != nil
             )
         ) { context in
             let basePhase = isStatic
                 ? 0
-                : animationPhase
-                    ?? MapHomeStickmanAnimationEngine.phase(
+                : animationPhase.map { $0 / 4 }
+                    ?? MapHomeStickmanAnimationEngine.catPhase(
                         at: context.date,
                         reducesMotion: false
                     )
@@ -861,7 +911,7 @@ struct MapHomeStickmanMarker: View {
             let phase = action.isMoving && animationPhase == nil
                 ? Int(Double(basePhase) * tier.frameRateMultiplier)
                 : basePhase
-            let seed = Int(context.date.timeIntervalSinceReferenceDate / 4)
+            let seed = Int(context.date.timeIntervalSinceReferenceDate / 16)
             // 이동 중이면 속도 구간 동작, 정지면 활동별 다양한 동작.
             let catAction = action.isMoving
                 ? tier.catAction
@@ -881,13 +931,14 @@ struct MapHomeStickmanMarker: View {
                     }
                     .offset(x: -Self.size.width * 0.5)
                 }
-                TaptionCatAtlasSprite(
-                    style: "white",
-                    action: catAction,
-                    frame: phase
+                MapHomeCatActivityScene(
+                    action: action,
+                    catAction: catAction,
+                    phase: phase,
+                    size: Self.size.width,
+                    reducesMotion: isStatic,
+                    leanDegrees: tier.leanDegrees
                 )
-                .scaleEffect(0.92)
-                .rotationEffect(.degrees(tier.leanDegrees))
                 if let accessorySymbol = MapHomeGrowthAccessoryCatalog.symbol(
                     for: equippedAccessoryID
                 ) {
@@ -904,18 +955,6 @@ struct MapHomeStickmanMarker: View {
                         .foregroundStyle(.yellow)
                         .shadow(color: .orange.opacity(0.8), radius: 2)
                         .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.26)
-                }
-                if let prop = action.propSymbol {
-                    Image(systemName: prop)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.tpInk.opacity(0.85))
-                        .offset(y: Self.size.height * 0.30)
-                }
-                if action == .unconfirmed {
-                    Image(systemName: "questionmark")
-                        .font(.system(size: 13, weight: .heavy))
-                        .foregroundStyle(Color.tpAccent)
-                        .offset(x: Self.size.width * 0.26, y: -Self.size.height * 0.30)
                 }
             }
         }
@@ -945,7 +984,7 @@ struct MapHomeStickmanGlyph: View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
         TimelineView(
             .animation(
-                minimumInterval: MapHomeStickmanAnimationEngine.frameDuration,
+                minimumInterval: MapHomeStickmanAnimationEngine.catFrameDuration,
                 paused: isStatic
             )
         ) { context in
@@ -955,23 +994,25 @@ struct MapHomeStickmanGlyph: View {
             let cyclingAction = isStatic
                 ? action.catAction
                 : action.catAction(seed: MapHomeStickmanGlyph.actionSeed(at: context.date, for: action))
-            TaptionCatAtlasSprite(
-                style: "white",
-                action: cyclingAction,
-                frame: MapHomeStickmanAnimationEngine.phase(
+            MapHomeCatActivityScene(
+                action: action,
+                catAction: cyclingAction,
+                phase: MapHomeStickmanAnimationEngine.catPhase(
                     at: context.date,
                     reducesMotion: isStatic
-                )
+                ),
+                size: size,
+                reducesMotion: isStatic
             )
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
 
-    /// 동작 하나를 약 2.4초 유지한 뒤 다음 동작으로 넘어가고, 카테고리별
+    /// 동작 하나를 약 9.6초 유지한 뒤 다음 동작으로 넘어가고, 카테고리별
     /// 위상 오프셋을 더해 여러 화랑이가 동시에 같은 포즈가 되지 않게 한다.
     private static func actionSeed(at date: Date, for action: MapHomeStickmanAction) -> Int {
-        let step = Int(date.timeIntervalSinceReferenceDate / 2.4)
+        let step = Int(date.timeIntervalSinceReferenceDate / 9.6)
         let offset = MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0
         return step + offset
     }

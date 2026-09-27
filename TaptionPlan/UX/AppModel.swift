@@ -2788,10 +2788,22 @@ final class AppModel {
 
         let previous = snapshot
         let sourceIDs = Set(request.sourceIDs)
+        let preservedPieces = snapshot.actuals
+            .filter {
+                sourceIDs.contains($0.id)
+                    && ActivitySectionOverrideEngine.isEditableOverride($0)
+            }
+            .flatMap {
+                ActivitySectionOverrideEngine.outsidePieces(
+                    of: $0,
+                    replacing: request.originalSpan
+                )
+            }
         snapshot.actuals.removeAll { actual in
             sourceIDs.contains(actual.id)
                 && ActivitySectionOverrideEngine.isEditableOverride(actual)
         }
+        snapshot.actuals.append(contentsOf: preservedPieces)
         snapshot.actuals.append(contentsOf: records)
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
         for option in editedOptions(in: request.mode) where option.isCustom {
@@ -2826,7 +2838,7 @@ final class AppModel {
             let expectedRecords = records.filter {
                 !replacedByConfirmedSleep.contains($0)
             }
-            guard expectedRecords.allSatisfy({ storedIDs.contains($0.id) }) else {
+            guard (expectedRecords + preservedPieces).allSatisfy({ storedIDs.contains($0.id) }) else {
                 userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "section_edit_save_failed",

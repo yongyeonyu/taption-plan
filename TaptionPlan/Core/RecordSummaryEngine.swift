@@ -1203,6 +1203,27 @@ enum ActivitySectionOverrideEngine {
         actual.source == .manual && actual.manuallyCorrected
     }
 
+    static func outsidePieces(
+        of actual: ActualRecord,
+        replacing span: TimeSpan
+    ) -> [ActualRecord] {
+        guard let end = actual.endedAt else { return [] }
+        var pieces: [ActualRecord] = []
+        if actual.startedAt < span.start {
+            var before = actual
+            before.id = UUID()
+            before.endedAt = min(end, span.start)
+            if before.startedAt < min(end, span.start) { pieces.append(before) }
+        }
+        if span.end < end {
+            var after = actual
+            after.id = UUID()
+            after.startedAt = max(actual.startedAt, span.end)
+            if after.startedAt < end { pieces.append(after) }
+        }
+        return pieces
+    }
+
     private static func coveragePieces(
         original: TimeSpan,
         middle: TimeSpan,

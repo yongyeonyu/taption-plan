@@ -371,6 +371,51 @@ struct MapHomeTimeRailSegment: Identifiable, Hashable {
     )
 }
 
+enum MapHomeUnconfirmedReviewPolicy {
+    static func recentDates(asOf now: Date = .now, calendar: Calendar = .autoupdatingCurrent) -> [Date] {
+        let today = calendar.startOfDay(for: now)
+        return (0...7).reversed().compactMap {
+            calendar.date(byAdding: .day, value: -$0, to: today)
+        }
+    }
+
+    static func segments(
+        from segments: [MapHomeTimeRailSegment],
+        for date: Date,
+        asOf now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeTimeRailSegment] {
+        let dayStart = calendar.startOfDay(for: date)
+        let today = calendar.startOfDay(for: now)
+        guard dayStart <= today else { return [] }
+        let latestMinute = dayStart == today
+            ? min(1_440, max(0, Int(now.timeIntervalSince(dayStart) / 60)))
+            : 1_440
+        return segments
+            .filter { $0.categoryID == "unconfirmed" && $0.startMinute < latestMinute }
+            .map {
+                MapHomeTimeRailSegment(
+                    startMinute: $0.startMinute,
+                    endMinute: min($0.endMinute, latestMinute),
+                    categoryID: $0.categoryID,
+                    title: $0.title,
+                    behavior: $0.behavior,
+                    sourceIDs: $0.sourceIDs
+                )
+            }
+            .filter { $0.startMinute < $0.endMinute }
+            .sorted {
+                $0.startMinute == $1.startMinute
+                    ? $0.endMinute < $1.endMinute
+                    : $0.startMinute < $1.startMinute
+            }
+    }
+
+    static func midpointMinute(for segment: MapHomeTimeRailSegment) -> Int {
+        (segment.startMinute + segment.endMinute) / 2
+    }
+}
+
 /// Keeps the rail input immutable while a gesture is rendering. A prefix
 /// maximum-end index avoids scanning off-screen records for every frame while
 /// retaining long intervals that overlap the visible window.
@@ -965,6 +1010,7 @@ struct MapHomeTimeSidebar: View {
     var onViewportChanged: ((Int, Int) -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
+    var onUnconfirmedReview: (() -> Void)?
 
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
@@ -1014,7 +1060,8 @@ struct MapHomeTimeSidebar: View {
         trailingInteractionWidth: CGFloat = 0,
         onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
-        onSectionEdit: ((Int) -> Void)? = nil
+        onSectionEdit: ((Int) -> Void)? = nil,
+        onUnconfirmedReview: (() -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
@@ -1029,6 +1076,7 @@ struct MapHomeTimeSidebar: View {
         self.onViewportChanged = onViewportChanged
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
+        self.onUnconfirmedReview = onUnconfirmedReview
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
         )
@@ -1228,7 +1276,11 @@ struct MapHomeTimeSidebar: View {
                         .lineLimit(1)
                         .frame(width: numericColumnWidth, alignment: .trailing)
                         .position(
-                            x: railOriginX + railWidth - numericColumnWidth / 2,
+                            x: MapHomeTimeSidebarMath.rulerLabelCenterX(
+                                railOriginX: railOriginX,
+                                railWidth: railWidth,
+                                numericColumnWidth: numericColumnWidth
+                            ),
                             y: y
                         )
                         .allowsHitTesting(false)
@@ -1258,6 +1310,7 @@ struct MapHomeTimeSidebar: View {
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
                                 .frame(width: 20, alignment: .trailing)
+                                .offset(x: -MapHomeTimeSidebarMath.rulerLabelTrailingInset)
                         }
                         .frame(width: numericColumnWidth, alignment: .leading)
                         .position(
@@ -1324,6 +1377,24 @@ struct MapHomeTimeSidebar: View {
                         .accessibilityLabel("시간 선택")
                         .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
                 }
+
+                Button {
+                    onUnconfirmedReview?()
+                } label: {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                        .frame(width: 26, height: 26)
+                        .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
+                        .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
+                        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("미확인 활동 확인")
+                .position(x: railOriginX - 16, y: 48)
+                .zIndex(4)
 
             }
             .frame(
@@ -1830,6 +1901,169 @@ struct MapHomeTimeRulerRow: Identifiable, Equatable, Sendable {
     var id: Int { minute }
 }
 
+struct MapHomeUnconfirmedReviewSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let date: Date
+    let segments: [MapHomeTimeRailSegment]
+    let recentDates: [Date]
+    let language: MapHomeLanguage
+    let onDateSelect: (Date) -> Void
+    let onSelect: (MapHomeTimeRailSegment) -> Void
+    let onQuickConfirm: (MapHomeTimeRailSegment, MapHomeSidebarMajorCategory) async -> Bool
+    @State private var savingSegmentID: String?
+    @State private var saveFailedSegmentID: String?
+
+    private var quickCategories: [MapHomeSidebarMajorCategory] {
+        let ids = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
+        let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
+        return ids.compactMap { byID[$0] }
+    }
+
+    private var unconfirmedSegments: [MapHomeTimeRailSegment] {
+        MapHomeUnconfirmedReviewPolicy.segments(from: segments, for: date)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(recentDates, id: \.self) { day in
+                            let selected = Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: date)
+                            Button {
+                                onDateSelect(day)
+                            } label: {
+                                Text(day.formatted(.dateTime.month().day()))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(selected ? Color.white : Color.tpInk)
+                                    .padding(.horizontal, 12)
+                                    .frame(minHeight: 34)
+                                    .background(
+                                        selected ? Color.tpAccent : Color.tpSurface,
+                                        in: Capsule()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(savingSegmentID != nil)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                if !unconfirmedSegments.isEmpty {
+                    Text(language.text(
+                        "활동을 누르면 바로 저장됩니다. 시간을 누르면 자세히 편집할 수 있습니다.",
+                        "Tap an activity to save it, or tap the time to edit details."
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 6)
+                }
+                Group {
+                    if unconfirmedSegments.isEmpty {
+                        ContentUnavailableView(
+                            language.text("미확인 구간이 없습니다", "No unconfirmed intervals"),
+                            systemImage: "checkmark.circle",
+                            description: Text(language.text(
+                                "이날의 활동이 모두 확인되었습니다.",
+                                "All activity for this day is confirmed."
+                            ))
+                        )
+                    } else {
+                        List(unconfirmedSegments) { segment in
+                            VStack(alignment: .leading, spacing: 10) {
+                                Button {
+                                    onSelect(segment)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "questionmark.circle.fill")
+                                            .foregroundStyle(Color.tpSecondary)
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("\(time(segment.startMinute))–\(time(segment.endMinute))")
+                                                .font(.headline.monospacedDigit())
+                                                .foregroundStyle(Color.tpInk)
+                                            Text(language.text(
+                                                "\(duration(segment.endMinute - segment.startMinute)) 미확인",
+                                                "\(duration(segment.endMinute - segment.startMinute)) unconfirmed"
+                                            ))
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.tpSecondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundStyle(Color.tpSecondary.opacity(0.7))
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint(language.text("시간을 자세히 편집합니다", "Edit this time interval"))
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 7) {
+                                        ForEach(quickCategories) { category in
+                                            Button {
+                                                guard savingSegmentID == nil else { return }
+                                                savingSegmentID = segment.id
+                                                saveFailedSegmentID = nil
+                                                Task { @MainActor in
+                                                    let saved = await onQuickConfirm(segment, category)
+                                                    if !saved { saveFailedSegmentID = segment.id }
+                                                    savingSegmentID = nil
+                                                }
+                                            } label: {
+                                                Label(category.localizedTitle(language), systemImage: category.systemImage)
+                                                    .font(.caption.weight(.semibold))
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 8)
+                                                    .background(category.tint.opacity(0.18), in: Capsule())
+                                            }
+                                            .buttonStyle(.plain)
+                                            .disabled(savingSegmentID != nil)
+                                        }
+                                    }
+                                }
+                                if saveFailedSegmentID == segment.id {
+                                    Text(language.text(
+                                        "저장하지 못했습니다. 다시 시도해 주세요.",
+                                        "Could not save. Please try again."
+                                    ))
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                }
+                            }
+                            .padding(.vertical, 6)
+                        }
+                        .listStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle(language.text("미확인 활동", "Unconfirmed activity"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(language.text("닫기", "Close")) { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func time(_ minute: Int) -> String {
+        String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+
+    private func duration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if language == .english {
+            if hours == 0 { return "\(remainder)m" }
+            return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
+        }
+        if hours == 0 { return "\(remainder)분" }
+        return remainder == 0 ? "\(hours)시간" : "\(hours)시간 \(remainder)분"
+    }
+}
+
 struct MapHomeWeatherSidebar: View {
     let date: Date
     let contexts: [WeatherContext]
@@ -1991,6 +2225,7 @@ enum MapHomeTimeSidebarMath {
     static let precisionDragSensitivity: CGFloat = 0.25
     static let edgeScrollPointsPerSecond: CGFloat = 192
     static let rulerNumericColumnWidth: CGFloat = 32
+    static let rulerLabelTrailingInset: CGFloat = 6
     static let rulerTickWidth: CGFloat = 6
     static let rulerHourColumnWidth: CGFloat = 16
     static let rulerMinuteColumnWidth: CGFloat = 16
@@ -2034,6 +2269,15 @@ enum MapHomeTimeSidebarMath {
 
     static func totalWidth(railWidth: CGFloat) -> CGFloat {
         handleLaneWidth + railWidth
+    }
+
+    static func rulerLabelCenterX(
+        railOriginX: CGFloat,
+        railWidth: CGFloat,
+        numericColumnWidth: CGFloat,
+        trailingInset: CGFloat = rulerLabelTrailingInset
+    ) -> CGFloat {
+        railOriginX + railWidth - numericColumnWidth / 2 - max(0, trailingInset)
     }
 
     static func interactionWidth(

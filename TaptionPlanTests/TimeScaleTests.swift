@@ -20,6 +20,122 @@ final class TimeScaleTests: XCTestCase {
         )!
     }
 
+    func testUnconfirmedReviewIncludesOnlySortedUnconfirmedIntervals() {
+        let confirmed = MapHomeTimeRailSegment(
+            startMinute: 120,
+            endMinute: 180,
+            categoryID: "work",
+            title: "업무"
+        )
+        let laterGap = MapHomeTimeRailSegment(
+            startMinute: 300,
+            endMinute: 360,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let earlierGap = MapHomeTimeRailSegment(
+            startMinute: 60,
+            endMinute: 90,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+
+        XCTAssertEqual(
+            MapHomeUnconfirmedReviewPolicy.segments(
+                from: [laterGap, confirmed, earlierGap],
+                for: makeDate(2026, 9, 26),
+                asOf: makeDate(2026, 9, 27)
+            ),
+            [earlierGap, laterGap]
+        )
+        XCTAssertEqual(MapHomeUnconfirmedReviewPolicy.midpointMinute(for: earlierGap), 75)
+    }
+
+    func testUnconfirmedReviewClipsTodayAtCurrentMinute() {
+        let day = makeDate(2026, 9, 27)
+        let now = day.addingTimeInterval(9 * 3_600 + 30 * 60)
+        let gap = MapHomeTimeRailSegment(
+            startMinute: 8 * 60,
+            endMinute: 12 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let future = MapHomeTimeRailSegment(
+            startMinute: 10 * 60,
+            endMinute: 11 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+
+        let visible = MapHomeUnconfirmedReviewPolicy.segments(
+            from: [future, gap], for: day, asOf: now
+        )
+        XCTAssertEqual(visible.count, 1)
+        XCTAssertEqual(visible.first?.startMinute, 480)
+        XCTAssertEqual(visible.first?.endMinute, 570)
+    }
+
+    func testUnconfirmedReviewOffersTodayAndPreviousSevenDays() {
+        let dates = MapHomeUnconfirmedReviewPolicy.recentDates(asOf: makeDate(2026, 9, 27, 15))
+        XCTAssertEqual(dates.count, 8)
+        XCTAssertEqual(dates.first, makeDate(2026, 9, 20))
+        XCTAssertEqual(dates.last, makeDate(2026, 9, 27))
+    }
+
+    func testQuickConfirmedIntervalDisappearsFromUnconfirmedReview() {
+        let day = makeDate(2026, 9, 26)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * 3_600),
+            end: day.addingTimeInterval(10 * 3_600)
+        )
+        let work = MapHomeSidebarMajorCategory.presentation(for: "work")
+        let option = ActivityCorrectionOption(
+            id: "phase.work",
+            title: work.title,
+            behavior: nil,
+            categoryID: work.id,
+            systemImage: work.systemImage,
+            isAutomatic: false,
+            isCustom: false
+        )
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [],
+            originalSpan: span,
+            originalOption: ActivitySectionOverrideEngine.unconfirmedOption,
+            mode: .replace(editedSpan: span, option: option)
+        )
+        let records = ActivitySectionOverrideEngine.records(for: request)
+        let rail = MapHomeTimeRailSegmentEngine.segments(
+            from: records,
+            on: day,
+            asOf: day.addingTimeInterval(86_400)
+        )
+        let remaining = MapHomeUnconfirmedReviewPolicy.segments(
+            from: rail,
+            for: day,
+            asOf: day.addingTimeInterval(86_400)
+        )
+
+        XCTAssertEqual(records.map(\.categoryID), ["work"])
+        XCTAssertTrue(remaining.allSatisfy { $0.endMinute <= 540 || $0.startMinute >= 600 })
+    }
+
+    func testTimeSidebarHourLabelsKeepAnInnerTrailingMargin() {
+        let defaultCenter = MapHomeTimeSidebarMath.rulerLabelCenterX(
+            railOriginX: 69,
+            railWidth: 44,
+            numericColumnWidth: 32,
+            trailingInset: 0
+        )
+        let insetCenter = MapHomeTimeSidebarMath.rulerLabelCenterX(
+            railOriginX: 69,
+            railWidth: 44,
+            numericColumnWidth: 32
+        )
+
+        XCTAssertEqual(defaultCenter - insetCenter, 6)
+    }
+
     func testEveryScaleHasAxisLabels() {
         for scale in TimeScale.allCases {
             XCTAssertFalse(scale.axisLabels.isEmpty)

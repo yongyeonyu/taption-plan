@@ -253,3 +253,27 @@
 - 배포 프로파일이 없어 App Store Connect API로 App/Widget/Watch/Watch Widget의 App Store 프로파일을 만들고 수동 배포 서명에 사용했다. API key 인증을 Xcode export에 전달해야 했으며 인증 정보는 저장소에 기록하지 않았다.
 - Xcode archive 경고: MapLibre.framework의 dSYM UUID `19E85E5A-837A-3278-87A6-FA63D4B799E5`가 포함되지 않아 해당 프레임워크 crash symbolication은 제한될 수 있다. 업로드와 Apple 처리에는 영향이 없었다.
 - 전체 앱 테스트는 위 13개 실패 및 시뮬레이터 재실행/진단 수집 오류로 완주하지 못했다. 이 실패들은 해결·통과 처리하지 않았고 별도 재검토가 필요하다. Core 100/100과 보존된 SecurityBackupCore 111/111 결과만 통과 근거로 남긴다.
+
+## UNQ0927A001 · 미확인 활동 빠른 입력 및 시간 눈금 inset (2026-09-27)
+
+- 오른쪽 시간 사이드바의 `?` 버튼을 추가해 미확인 시간 구간만 시간순으로 확인한다. 구간을 누르면 목록 시트를 닫고 기존 활동 구간 편집기로 연결한다. 확인할 구간이 없으면 완료 안내를 표시한다.
+- 시간 레일의 숫자 눈금에 6pt 안쪽 여백을 적용했다. 분 단위 눈금 위치와 활동 색상 레일은 유지했다.
+- 회귀 테스트 2개 통과: 미확인 구간 필터/정렬 및 중앙 분 선택, 사이드바 숫자 inset. 실행 로그 `build/validation/UNQ0927A001/targeted-tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_15-20-08-+0900.xcresult`.
+- generic iOS Debug 빌드 성공: `build/validation/UNQ0927A001/debug-build.log`. `git diff --check` 통과.
+- 실기기 시각 판독은 하지 않았다. `?` 버튼 위치와 시트 전환 체감은 기기 화면으로 별도 확인이 필요하다.
+
+## UNQ0927B01 · HME0927B02 · CAT0927B03–CAT0927B08 (2026-09-27)
+
+- 미확인 목록에서 최근 7일 전부터 오늘까지 날짜를 바로 이동하고, 각 구간의 활동 칩을 눌러 기존 `ActivitySectionEditRequest` 저장 경로로 즉시 입력한다. 오늘의 미래 구간은 목록에 내지 않으며, 저장 실패는 행 안에 표시한다. 시간 행을 누르면 기존 상세 편집기로 이동한다.
+- 최근 7일의 미완료일은 전체 구간을 확인한 직후 날짜당 한 번만 해당 연도의 집 레벨을 올린다. 소급 보상은 연속 달성·주간 후보·땅·화랑이 액세서리를 지급하지 않는다. 연말 완료는 이전 연도 집 archive에 적용한다. 정상 일일 달성과 소급 달성의 중복 지급을 막는다.
+- 화랑이 재생 간격을 기존의 약 4배로 늘렸다. 미확인은 갸웃·물음표, 업무는 모니터 앞 왕복, 공부는 책 앞 왕복, 취미는 순환 음표, 수면은 호흡·Zzz, 운동은 회전하는 캣휠과 달리기 포즈를 표시한다. 지도 마커와 작은 글리프에 같은 표현을 사용한다.
+- 관련 23개 테스트 통과: `build/validation/MULT0927B01/targeted-tests-final.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_15-43-54-+0900.xcresult`. 날짜 경계, 중복 보상, 액세서리 미지급, 구형 성장 데이터 디코딩, 미확인 구간 입력 후 목록 제외, 카테고리 동작·속도를 확인했다.
+- 지난 날짜 보상 시 미정산 날짜의 실제 기록을 다시 판정하도록 마무리한 뒤 집 성장 정책 17개를 재실행해 통과했다: `build/validation/MULT0927B01/growth-final.log`.
+- 앱 generic iOS Debug 빌드 성공: `build/validation/MULT0927B01/debug-build.log`. `git diff --check` 통과. 시뮬레이터 실행 화면 `build/validation/MULT0927B01/simulator-home.png`에서 오른쪽 `?` 진입점과 시간 눈금의 배치를 확인했다.
+- 실제 기기에서 빠른 입력 저장·집 레벨 보상 readback·화랑이 동작 속도 및 표현은 아직 판독하지 않았다. 시뮬레이터 홈 화면 캡처는 이 검증을 대체하지 않는다.
+## REV0927C01 · 빠른 입력 원본 보존·자정 정산·버튼 터치 영역 (2026-09-27)
+
+- 부분 편집에서 선택 범위 바깥의 수동 기록을 별도 조각으로 남기고, 저장소 재조회 시 해당 조각까지 확인하도록 수정했다. 소급 보상이 거절돼도 먼저 수행한 미정산 날짜의 정산 결과를 저장한다. `?` 버튼의 표시 원형은 26pt로 유지하고 실제 터치 영역은 44pt로 확대했다.
+- 회귀 테스트 2개 통과: 원본 미확인 기록의 편집 범위 밖 보존과 보상 거절 시 자정 정산. 로그 `build/validation/REV0927C01/targeted-tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_16-35-37-+0900.xcresult`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/REV0927C01/debug-build.log`. `git diff --check` 통과.
+- 실기기에서 빠른 입력 저장 결과와 버튼 터치감은 확인하지 않았으므로 `temp.md`의 검증 대기로 유지한다.

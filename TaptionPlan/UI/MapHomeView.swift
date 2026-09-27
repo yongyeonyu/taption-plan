@@ -1663,6 +1663,7 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var accessories: [String] = []
     var equippedAccessory: String?
     var landPlotPlacements: [MapHomeGrowthPlotPlacement]?
+    var recentCompletionRewardedDays: [String]?
 }
 
 struct MapHomeGrowthPlotPlacement: Codable, Equatable, Identifiable {
@@ -1785,6 +1786,31 @@ enum MapHomeGrowthPolicy {
         actualCount > 0 && unconfirmedCount == 0
     }
 
+    static func qualifiesDay(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        on date: Date,
+        asOf now: Date,
+        calendar: Calendar
+    ) -> Bool {
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+        let actualCount = actuals.filter {
+            let span = $0.span(asOf: now)
+            return span.start < end && start < span.end
+                && RecordAnalysisCategoryPolicy.categoryID(for: $0) != "unconfirmed"
+        }.count
+        let unconfirmedCount = MapHomeTimeRailSegmentEngine.segments(
+            from: actuals,
+            travel: travel,
+            on: date,
+            asOf: now,
+            calendar: calendar
+        ).filter { $0.categoryID == "unconfirmed" }.count
+        return qualifies(actualCount: actualCount, unconfirmedCount: unconfirmedCount)
+    }
+
     static func maximumLevel(year: Int, timeZone: TimeZone = .autoupdatingCurrent) -> Int {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
@@ -1865,6 +1891,63 @@ enum MapHomeGrowthPolicy {
         let key = dayKey(date, calendar: calendar)
         history.season.pendingDay = key
         history.season.pendingDayQualified = qualified
+    }
+
+    @discardableResult
+    static func awardRecentCompletion(
+        in history: inout MapHomeGrowthHistory,
+        day: Date,
+        asOf now: Date,
+        qualified: Bool,
+        calendar: Calendar
+    ) -> Bool {
+        let dayStart = calendar.startOfDay(for: day)
+        let today = calendar.startOfDay(for: now)
+        guard qualified,
+              let distance = calendar.dateComponents([.day], from: dayStart, to: today).day,
+              (1...7).contains(distance) else { return false }
+        let key = dayKey(day, calendar: calendar)
+        let year = calendar.component(.year, from: day)
+        if history.season.year == year {
+            return awardRecentCompletion(key: key, in: &history.season, calendar: calendar)
+        }
+        guard let index = history.archives.firstIndex(where: { $0.year == year }) else {
+            return false
+        }
+        return awardRecentCompletion(key: key, in: &history.archives[index], calendar: calendar)
+    }
+
+    static func settleAndAwardRecentCompletion(
+        in history: inout MapHomeGrowthHistory,
+        day: Date,
+        asOf now: Date,
+        qualified: Bool,
+        calendar: Calendar
+    ) {
+        closePendingDay(in: &history, asOf: now, calendar: calendar)
+        awardRecentCompletion(
+            in: &history,
+            day: day,
+            asOf: now,
+            qualified: qualified,
+            calendar: calendar
+        )
+    }
+
+    private static func awardRecentCompletion(
+        key: String,
+        in season: inout MapHomeGrowthSeason,
+        calendar: Calendar
+    ) -> Bool {
+        var rewardedDays = season.recentCompletionRewardedDays ?? []
+        guard !rewardedDays.contains(key) else { return false }
+        rewardedDays.append(key)
+        season.recentCompletionRewardedDays = rewardedDays
+        season.level = min(
+            maximumLevel(year: season.year, timeZone: calendar.timeZone),
+            season.level + 1
+        )
+        return true
     }
 
     @discardableResult
@@ -1950,6 +2033,11 @@ enum MapHomeGrowthPolicy {
             if history.season.streak.isMultiple(of: 7) {
                 history.season.pendingWeeklyRewards += 1
             }
+            var rewardedDays = history.season.recentCompletionRewardedDays ?? []
+            if !rewardedDays.contains(key) {
+                rewardedDays.append(key)
+                history.season.recentCompletionRewardedDays = rewardedDays
+            }
         } else {
             history.season.streak = 0
         }
@@ -2007,6 +2095,8 @@ struct MapHomeView: View {
     @State private var selectedTimelineMinute: Int?
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
+    @State private var isUnconfirmedReviewPresented = false
+    @State private var pendingUnconfirmedEditMinute: Int?
     @State private var isMapCenteredOnUser = false
     @SceneStorage("MapHome.userTrackingMode")
     private var userTrackingModeRawValue = MapHomeUserTrackingMode.idle.rawValue
@@ -2261,8 +2351,58 @@ struct MapHomeView: View {
                     max(0, Int(midpoint.timeIntervalSince(dayStart) / 60))
                 )
                 isTimelineSelectionPinned = true
+                if selection.segment.categoryID == "unconfirmed" {
+                    rewardRecentCompletedDay(selection.date)
+                }
             }
         )
+    }
+
+    private func quickConfirmUnconfirmed(
+        _ segment: MapHomeTimeRailSegment,
+        as category: MapHomeSidebarMajorCategory
+    ) async -> Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let selectedDay = model.selectedDate
+        let startOfDay = calendar.startOfDay(for: selectedDay)
+        guard segment.categoryID == "unconfirmed",
+              segment.startMinute < segment.endMinute,
+              let start = calendar.date(byAdding: .minute, value: segment.startMinute, to: startOfDay),
+              let end = calendar.date(byAdding: .minute, value: segment.endMinute, to: startOfDay)
+        else { return false }
+        let original = ActivityCorrectionOption(
+            id: "phase.unconfirmed",
+            title: segment.title,
+            behavior: segment.behavior,
+            categoryID: "unconfirmed",
+            systemImage: "questionmark",
+            isAutomatic: false,
+            isCustom: false
+        )
+        let choice = ActivityCorrectionOption(
+            id: "phase.\(category.id)",
+            title: category.title,
+            behavior: nil,
+            categoryID: category.id,
+            systemImage: category.systemImage,
+            isAutomatic: false,
+            isCustom: false
+        )
+        let span = TimeSpan(start: start, end: end)
+        let request = ActivitySectionEditRequest(
+            sourceIDs: segment.sourceIDs,
+            originalSpan: span,
+            originalOption: original,
+            mode: .replace(editedSpan: span, option: choice)
+        )
+        guard await model.saveActivitySectionEdit(request) != nil else { return false }
+        refreshTimeRailSegments()
+        if calendar.isDate(model.selectedDate, inSameDayAs: selectedDay) {
+            selectedTimelineMinute = MapHomeUnconfirmedReviewPolicy.midpointMinute(for: segment)
+            isTimelineSelectionPinned = true
+        }
+        rewardRecentCompletedDay(selectedDay)
+        return true
     }
 
     private func locationDestinationSheet(
@@ -2507,6 +2647,39 @@ struct MapHomeView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(
+            isPresented: $isUnconfirmedReviewPresented,
+            onDismiss: {
+                guard let minute = pendingUnconfirmedEditMinute else { return }
+                pendingUnconfirmedEditMinute = nil
+                Task { @MainActor in
+                    await Task.yield()
+                    openSectionEditor(at: minute)
+                }
+            }
+        ) {
+            MapHomeUnconfirmedReviewSheet(
+                date: model.selectedDate,
+                segments: timeRailSegments,
+                recentDates: MapHomeUnconfirmedReviewPolicy.recentDates(),
+                language: language,
+                onDateSelect: { day in
+                    guard !Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) else { return }
+                    model.selectedDate = day
+                    refreshTimeRailSegments()
+                },
+                onSelect: { segment in
+                    pendingUnconfirmedEditMinute = MapHomeUnconfirmedReviewPolicy
+                        .midpointMinute(for: segment)
+                    isUnconfirmedReviewPresented = false
+                },
+                onQuickConfirm: { segment, category in
+                    await quickConfirmUnconfirmed(segment, as: category)
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .confirmationDialog(
             language.text("설정을 기본값으로 초기화할까요?", "Reset settings to defaults?"),
             isPresented: $isSettingsResetConfirmationPresented,
@@ -2536,6 +2709,9 @@ struct MapHomeView: View {
         }
         .onChange(of: model.snapshotRevision) { _, _ in
             refreshHomeGrowth(at: .now)
+        }
+        .onChange(of: model.isBootstrapped) { _, isReady in
+            if isReady { refreshHomeGrowth(at: .now) }
         }
         .onChange(of: model.selectedDate) { _, _ in
             refreshHomeGrowth(at: .now)
@@ -4150,54 +4326,78 @@ struct MapHomeView: View {
     }
 
     private func refreshHomeGrowth(at now: Date) {
+        guard model.isBootstrapped else { return }
         var history = homeGrowthHistory
         let calendar = MapHomeGrowthPolicy.localCalendar
+        if let key = history.season.pendingDay,
+           let day = MapHomeGrowthPolicy.date(for: key, calendar: calendar),
+           calendar.startOfDay(for: day) < calendar.startOfDay(for: now) {
+            history.season.pendingDayQualified = MapHomeGrowthPolicy.qualifiesDay(
+                actuals: model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                on: day,
+                asOf: now,
+                calendar: calendar
+            )
+        }
         MapHomeGrowthPolicy.closePendingDay(
             in: &history,
             asOf: now,
             calendar: calendar
         )
         if calendar.isDate(model.selectedDate, inSameDayAs: now) {
-            let start = calendar.startOfDay(for: now)
-            let end = calendar.date(byAdding: .day, value: 1, to: start)
-                ?? start.addingTimeInterval(24 * 60 * 60)
             let sourceActuals = currentDayDataSnapshot?.actuals
                 ?? model.snapshot.actuals
             let sourceTravel = currentDayDataSnapshot?.travel
                 ?? model.snapshot.travel
-            let records = sourceActuals.filter { actual in
-                let span = actual.span(asOf: now)
-                return span.start < end && start < span.end
-            }
-            let daySegments = MapHomeTimeRailSegmentEngine.segments(
-                from: sourceActuals,
-                travel: sourceTravel,
-                on: now,
-                asOf: now,
-                calendar: calendar
-            )
-            let unconfirmedCount = daySegments.filter {
-                $0.categoryID == "unconfirmed"
-            }.count
-            let actualCount = records.filter {
-                RecordAnalysisCategoryPolicy.categoryID(for: $0) != "unconfirmed"
-            }.count
-            let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
-            let currentMinute = (nowComponents.hour ?? 0) * 60
-                + (nowComponents.minute ?? 0)
-            let dayIsComplete = daySegments.allSatisfy {
-                $0.endMinute <= currentMinute
-            }
             MapHomeGrowthPolicy.observeCurrentDay(
                 in: &history,
                 date: now,
-                qualified: dayIsComplete && MapHomeGrowthPolicy.qualifies(
-                    actualCount: actualCount,
-                    unconfirmedCount: unconfirmedCount
+                qualified: MapHomeGrowthPolicy.qualifiesDay(
+                    actuals: sourceActuals,
+                    travel: sourceTravel,
+                    on: now,
+                    asOf: now,
+                    calendar: calendar
                 ),
                 calendar: calendar
             )
         }
+        guard let encoded = try? JSONEncoder().encode(history),
+              encoded != homeGrowthData else { return }
+        homeGrowthData = encoded
+    }
+
+    private func rewardRecentCompletedDay(_ day: Date, asOf now: Date = .now) {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        let dayData = currentDayDataSnapshot
+        let actuals = dayData?.actuals ?? model.snapshot.actuals
+        let travel = dayData?.travel ?? model.snapshot.travel
+        var history = homeGrowthHistory
+        if let key = history.season.pendingDay,
+           let pendingDate = MapHomeGrowthPolicy.date(for: key, calendar: calendar),
+           calendar.startOfDay(for: pendingDate) < calendar.startOfDay(for: now) {
+            history.season.pendingDayQualified = MapHomeGrowthPolicy.qualifiesDay(
+                actuals: model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                on: pendingDate,
+                asOf: now,
+                calendar: calendar
+            )
+        }
+        MapHomeGrowthPolicy.settleAndAwardRecentCompletion(
+            in: &history,
+            day: day,
+            asOf: now,
+            qualified: MapHomeGrowthPolicy.qualifiesDay(
+                actuals: actuals,
+                travel: travel,
+                on: day,
+                asOf: now,
+                calendar: calendar
+            ),
+            calendar: calendar
+        )
         guard let encoded = try? JSONEncoder().encode(history),
               encoded != homeGrowthData else { return }
         homeGrowthData = encoded
@@ -5115,6 +5315,9 @@ struct MapHomeView: View {
                         },
                         onSectionEdit: { selectedMinute in
                             openSectionEditor(at: selectedMinute)
+                        },
+                        onUnconfirmedReview: {
+                            isUnconfirmedReviewPresented = true
                         }
                     )
 
