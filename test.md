@@ -1,5 +1,16 @@
 # 검증 기록
 
+## ALLT0927A1 · main push·TestFlight 160 제출 및 2대 기기 확인 시도 (2026-09-28)
+
+- `main` 커밋 `d85addc1ac71aa2cc85c4169d75a3d338177b976` (`Complete map, onboarding, and backup improvements`)을 push했고 원격 `origin/main`과 HEAD가 일치하며 워크트리는 clean이었다.
+- App Store Connect 전체 빌드 135개를 확인했다. 최고 빌드는 159 (`VALID`), 160은 없었고, `TP Taption Plan 내부 테스트` 그룹은 내부 그룹이며 테스터 1명이 등록돼 있었다.
+- 최신 `main`에서 iOS Release archive 성공: `build/validation/ALLT0927A1/archive-160.log`, `TaptionPlan160.xcarchive`; 앱 번들 `com.taption.plan`, 버전 `1.0(160)` 확인. App Store Connect export 성공, IPA 47 MB: `build/validation/ALLT0927A1/export-160.log`, `export-160/TaptionPlan.ipa`.
+- `altool --upload-app`는 오류 없이 업로드 성공, Delivery UUID `a40c7d53-56ae-429f-9ec8-14afdb85f529`; 증거 `build/validation/ALLT0927A1/upload-160.log`.
+- 확인 제한: 업로드 후 여러 차례 ASC REST 조회에서 160이 인덱스되지 않았고 내부 그룹 빌드 목록에는 기존 159가 최신으로 남아 있었다. `altool --build-status`는 응답을 끝내지 못했다. 따라서 처리 완료·그룹 연결·테스터 노출은 미확인이다.
+- iPhone 11 Pro (`00008030-001628201AD2802E`) 및 iPhone 18 Pro Max (`00008160-000E195A1140000A`)는 USB 연결 상태이나 TestFlight에서 160을 내려받을 수 있는 단계가 아니었다. `devicectl` 앱 인벤토리 조회도 응답 지연으로 중단되어 두 기기의 설치/버전은 확인하지 못했다. TestFlight 설치 완료로 처리하지 않는다.
+- 이전 검증 로그나 기기에 남아 있을 수 있는 160의 직접 개발 설치 결과를 TestFlight 다운로드 증거와 혼동하지 않는다. 전체 ALLT0927A1과 배포/기기 단계는 계속 열린 상태다.
+
+
 현재 실행 근거만 간결하게 유지합니다. 이전 상세 개발·검증 기록은 Git 이력에 보존했습니다. `build/validation/`은 로컬 증거이며 Git에 포함되지 않습니다.
 
 ## BKM0928A01 · raw 구버전 전환·불변 파일 공개·manifest 참조 (2026-09-28)
