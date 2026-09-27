@@ -277,3 +277,10 @@
 - 회귀 테스트 2개 통과: 원본 미확인 기록의 편집 범위 밖 보존과 보상 거절 시 자정 정산. 로그 `build/validation/REV0927C01/targeted-tests.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.27_16-35-37-+0900.xcresult`.
 - generic iOS Debug `BUILD SUCCEEDED`: `build/validation/REV0927C01/debug-build.log`. `git diff --check` 통과.
 - 실기기에서 빠른 입력 저장 결과와 버튼 터치감은 확인하지 않았으므로 `temp.md`의 검증 대기로 유지한다.
+
+## TFL0927C01 · main push 및 TestFlight 159 (2026-09-27)
+
+- 지도 UI·빠른 입력·성장 보상 변경을 `0e1977e`로, 앱·Widget·Watch·Watch Widget의 Info.plist 빌드 번호 159 정정을 `6cb630e`로 main에 커밋·push했다. 첫 archive는 프로젝트 설정만 159이고 Info.plist가 158이라 업로드가 중복 번호로 거절됐다. 네 Info.plist를 수정한 최종 archive의 앱·Widget·Watch 번들 번호가 159임을 확인했다.
+- 최종 archive `build/ArchiveDD/Archives/TaptionPlan-159-final.xcarchive`가 `ARCHIVE SUCCEEDED`, `build/validation/TFL0927C01/export-final.log`에 `Upload succeeded`, `Uploaded TaptionPlan`, `EXPORT SUCCEEDED`가 기록됐다. 첫 실패와 수정 근거는 같은 폴더의 `export.log`, `archive-final.log`에 보존했다.
+- App Store Connect API에서 빌드 ID `d5a86231-c08b-4dc2-859f-5d00211b1020`, 버전 159, `processingState=VALID`를 확인한 뒤 `TP Taption Plan 내부 테스트` 그룹에 연결했다. 그룹 빌드 화면에서 `1.0 (159) 내부`가 `테스트 중`으로 표시되고, 그룹에 테스터 1명·빌드 118개가 표시됨을 확인했다.
+- 이번 배포는 설치·실기기 기능 검증을 대신하지 않는다. 앞선 전체 앱 테스트의 미해결 실패 13개도 통과로 처리하지 않았다.
