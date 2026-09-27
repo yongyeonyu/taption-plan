@@ -1,5 +1,14 @@
 # 검증 기록
 
+## ALLT0927A1 · iPhone 11 Pro build 160 기기 확인 시도 (2026-09-28)
+
+- 대상 기기 정보: iPhone 11 Pro (`iPhone12,3`), iOS 26.7 (23H24), paired·wired, Developer Mode enabled. readback: `build/validation/ALLT0927A1/iphone11-details-current.json`.
+- 최신 소스의 Release archive 앱(`com.taption.plan`, 1.0/160)을 CoreDevice가 저장소 경로에서 열지 못해 첫 설치 시도는 sandbox bookmark 오류로 실패했다. archive 제품을 `/tmp/taption-iphone11-160/TaptionPlan.app`로 복사한 뒤 재설치했고, `devicectl`이 `App installed` 및 성공 JSON (`outcome=success`, database sequence 2984)을 반환했다. 근거: `iphone11-install-160-success.log/json`.
+- 앱 프로세스 실행, 실행 프로세스 목록, 앱 번들 목록 readback은 각각 15–20초 후 CoreDevice timeout이었다. 새 `0xDEAD10CC` 로그 확인용 system crash-log 복사도 CoreDevice에서 응답이 오지 않아 중단했다. 관련 로그: `iphone11-launch-160-retry.log/json`, `iphone11-processes-after-launch.log/json`, `iphone11-apps-readback-160.log/json`, 기존 시도 `iphone11-launch-160.log`, `iphone11-launch-start-stopped.log`.
+- 따라서 성공 판정은 1.0/160 앱 설치까지만이다. 앱 시작·백그라운드 복귀·Crash 재발·HealthKit 온보딩·지도/시간 레일·미확인 구간 저장·Undo/Redo·집 카드·실기기 GPS·날씨 표시 등 UI와 센서 결과는 확인하지 못했다. 사용자가 조작/증거를 주지 않은 기능은 통과 처리하지 않는다.
+- 요청 ID의 자동 테스트·Debug/Release 빌드 근거는 기존 각 섹션에 유지한다. 설치 이후 UI/센서 실증은 ALLT0927A1 및 연결된 항목에서 계속 대기한다.
+
+
 ## ALLT0927A1 · main push·TestFlight 160 제출 및 2대 기기 확인 시도 (2026-09-28)
 
 - `main` 커밋 `d85addc1ac71aa2cc85c4169d75a3d338177b976` (`Complete map, onboarding, and backup improvements`)을 push했고 원격 `origin/main`과 HEAD가 일치하며 워크트리는 clean이었다.

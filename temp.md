@@ -6,7 +6,7 @@
 - 검증 기준: 관련 단위·패키지 테스트, 기존 13개 실패 포함 앱 회귀, iOS Debug/Watch 빌드, 연결 기기 실증과 사용자 동행 계정 검증을 각각 근거로 남긴다. 성공한 변경만 main에 반영하고 새 내부 TestFlight 빌드의 처리·그룹·테스터 노출을 확인한다. 실제 증거가 없는 항목은 열린 상태로 유지한다.
 - 현재 상태(2026-09-28): 선행 전체 앱 회귀 1,412 통과/1 건너뜀/0 실패(총 1,413), iOS·Watch Debug 1.0(160) 빌드와 네 산출물 번들 번호 검증을 마쳤다. iPhone 11/18/iPad 설치 성공, iPhone18·iPad 160 readback 성공. iPhone11 설치는 성공했으나 앱 목록 readback timeout, Watch 직접 설치는 네트워크 터널 실패다. 앱은 어느 기기에서도 실행하지 않아 실기기 기능 검증·main 반영·TestFlight 160 업로드는 대기한다.
 - 후속 검증(BKM0928A01): 구버전 raw 전환·불변 세대 쓰기·manifest raw 참조를 보강하고 백업 회귀 122/122 및 iOS Debug 빌드를 통과했다. 이 후속 빌드는 아직 기기에 재설치하지 않았다. 전체 실행은 아래 streaming/journal·CloudKit·실기기 기준이 남아 진행 중이다.
-- 실기기 한 세션 확인표: `build/validation/ALLT0927A1/device-session-checklist.md`. 사용자가 직접 기기 조작·PIN 입력 후 비민감 통과/실패 결과를 전달해야 충돌·권한·GPS·화면·백업·Watch 항목을 판정할 수 있다.
+- iPhone 11 실기기 세션(2026-09-28): 1.0(160) 재설치는 성공. 원격 앱 실행·목록 readback·crash-log 복사는 CoreDevice timeout. 터치 조작이 필요한 UI/권한/GPS/저장 확인, PIN·계정 필요 backup/Watch/캘린더, 실제 이동·수면 데이터는 확인 대기한다. 상세: `test.md`의 `iPhone 11 Pro build 160 기기 확인 시도`. 기존 확인표 `build/validation/ALLT0927A1/device-session-checklist.md` 참조.
 
 ## CRAS270927 · iPhone 11 Pro Taption Plan 충돌 [잠금 범위 수정·자동 회귀 통과 / iPhone 11 검증 대기]
 - 관찰: iOS 충돌 공유 안내와 3개 보고서를 확인했다. 1.0(158)에서 21:27:31·21:28:20, 1.0(159)에서 21:29:19에 모두 `EXC_CRASH(SIGKILL)`, `RUNNINGBOARD 0xDEAD10CC`로 종료됐다.
