@@ -130,6 +130,54 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testQuestionMarkMarkersOnlyExistForActualVisibleUnconfirmedActivity() {
+        let day = makeDate(2026, 9, 27)
+        let now = day.addingTimeInterval(12 * 3_600)
+        let confirmed = MapHomeTimeRailSegment(
+            startMinute: 60,
+            endMinute: 120,
+            categoryID: "work",
+            title: "업무"
+        )
+        let gap = MapHomeTimeRailSegment(
+            startMinute: 180,
+            endMinute: 240,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+        let futureGap = MapHomeTimeRailSegment(
+            startMinute: 13 * 60,
+            endMinute: 14 * 60,
+            categoryID: "unconfirmed",
+            title: "미확인"
+        )
+
+        XCTAssertTrue(
+            MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+                from: [], in: 0...1_440, for: day, asOf: now
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+                from: [confirmed], in: 0...1_440, for: day, asOf: now
+            ).isEmpty
+        )
+        XCTAssertEqual(
+            MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+                from: [confirmed, futureGap, gap],
+                in: 150...250,
+                for: day,
+                asOf: now
+            ),
+            [gap]
+        )
+        XCTAssertTrue(
+            MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+                from: [gap], in: 250...300, for: day, asOf: now
+            ).isEmpty
+        )
+    }
+
     func testUnconfirmedReviewTargetShowsAndSelectsOnlyItsSegment() {
         let day = makeDate(2026, 9, 27)
         let now = day.addingTimeInterval(10 * 3_600 + 30 * 60)

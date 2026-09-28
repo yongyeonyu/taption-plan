@@ -447,6 +447,25 @@ enum MapHomeUnconfirmedReviewPolicy {
         )
     }
 
+    static func visibleReviewTargets(
+        from segments: [MapHomeTimeRailSegment],
+        in window: ClosedRange<Int>,
+        for date: Date,
+        asOf now: Date = .now,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomeTimeRailSegment] {
+        reviewTargets(
+            from: segments,
+            focusingOn: nil,
+            for: date,
+            asOf: now,
+            calendar: calendar
+        ).filter {
+            max($0.startMinute, window.lowerBound)
+                < min($0.endMinute, window.upperBound)
+        }
+    }
+
     static func hasSegments(
         from segments: [MapHomeTimeRailSegment],
         for date: Date,
@@ -1153,9 +1172,9 @@ struct MapHomeTimeSidebar: View {
             )
             let visibleSegments = railSnapshot.visibleSegments(in: visibleWindow)
             let reviewableVisibleSegments =
-                MapHomeUnconfirmedReviewPolicy.reviewTargets(
-                    from: visibleSegments,
-                    focusingOn: nil,
+                MapHomeUnconfirmedReviewPolicy.visibleReviewTargets(
+                    from: segments,
+                    in: visibleWindow,
                     for: date
                 )
             let reviewMarkerCenters =

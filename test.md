@@ -1,5 +1,12 @@
 # 검증 기록
 
+## QMRK0928A1 · 미확인 `?` 마커 조건부 표시 (2026-09-28)
+
+- `MapHomeTimeSidebarRailSnapshot`은 표시용 입력이 비면 하루 전체 `.wholeDayUnconfirmed` 구간을 합성한다. 이전 `?` 계산은 이 표시 snapshot에서 시작해 원본 구간이 없는 날에도 마커를 만들 수 있었다.
+- 마커는 이제 실제 입력 `segments`에서 날짜 정책과 현재 보이는 시간 범위를 적용해 만든다. 빈 원본, 확정 구간만 있는 날, 현재 날짜의 미래 구간, 화면에 보이지 않는 구간은 마커 대상이 아니다. 시간 레일의 표시용 합성 구간은 기존 동작대로 유지한다.
+- `TimeScaleTests.testQuestionMarkMarkersOnlyExistForActualVisibleUnconfirmedActivity` 통과(1/1): 빈 입력·확정만·미래·화면 밖에서 0개, 실제 보이는 미확인 구간만 반환. 결과 `build/validation/QMRK0928A1/questionmark-focused.xcresult`, 로그 `questionmark-focused.log`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/QMRK0928A1/ios-debug.log`; `git diff --check` 통과. 실기기에서 두 상태 화면을 보기 전까지 기기 검증은 대기한다.
+
 ## ALLT0927A1 · iPhone 11 Pro current Debug 160 실행 확인 (2026-09-28)
 
 - 현재 소스에서 빌드한 signed Debug 앱을 연결된 iPhone 11 Pro (`iPhone12,3`, iOS 26.7/23H24)에 update-in-place 설치했다. 기존 앱 데이터를 초기화하지 않았다. `devicectl` 설치 성공 로그/JSON: `build/validation/ALLT0927A1/iphone11-session-20260928/install-debug-160.log/json`; 앱 목록 readback은 `com.taption.plan`, version 1.0, build 160.
