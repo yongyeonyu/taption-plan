@@ -17,17 +17,17 @@
 
 ## ALLT0927A1 · temp.md 전체 미완료 요청 실행 [진행]
 - 원인: 열린 요청에 iPhone 11의 `0xDEAD10CC` 충돌, HealthKit 온보딩 잠금, 과거 앱 테스트 13건 실패, 저장·백업·동기화 미완성, 다수 실기기 검증 대기가 함께 남아 있다. 기존 코드는 이미 구현·검증된 작업과 미완료 작업이 혼재한다.
-- 해결: 현재 코드·Git·요청별 증거를 대조해 중복 구현을 피하고, 먼저 충돌/온보딩/회귀 실패를 해결한 뒤 저장·백업 및 기능 검증을 진행한다. iAP 보류, CloudKit Development 전용, 회사 반경 120m, 손상 raw 조각만 제외하는 복원 정책을 유지한다. 사용자 변경을 보존하고 새 브랜치를 만들지 않는다.
+- 해결: 현재 코드·Git·요청별 증거를 대조해 중복 구현을 피하고, 먼저 충돌/온보딩/회귀 실패를 해결한 뒤 저장·백업 및 기능 검증을 진행한다. iAP 보류, 개발 빌드 CloudKit Development, 사용자가 허용한 내부 TestFlight CloudKit Production, 회사 반경 120m, 손상 raw 조각만 제외하는 복원 정책을 유지한다. 사용자 변경을 보존하고 새 브랜치를 만들지 않는다.
 - 검증 기준: 관련 단위·패키지 테스트, 기존 13개 실패 포함 앱 회귀, iOS Debug/Watch 빌드, 연결 기기 실증과 사용자 동행 계정 검증을 각각 근거로 남긴다. 성공한 변경만 main에 반영하고 새 내부 TestFlight 빌드의 처리·그룹·테스터 노출을 확인한다. 실제 증거가 없는 항목은 열린 상태로 유지한다.
-- 현재 상태(2026-09-28): 최신 전체 앱 회귀 1,421 통과/1 건너뜀/0 실패(총 1,422), Core/Route/Activity/Plan 패키지 회귀와 iOS·Watch Debug 1.0(161) 빌드가 통과했다. StoreKitTest 건너뜀은 별도 강제 재실행에서 iOS 26.5 `SKInternalErrorDomain Code 3`으로 실패함을 확인해 환경 보호 skip을 유지한다. iPhone 11 Pro에 Debug 1.0(160), iPad Pro에 Debug 1.0(160)을 실행해 화면을 확인했다. iPhone 18은 대표님이 최신 TestFlight 161 화면 녹화·진단 로그를 제공하면 분석한다. Watch 직접 설치는 네트워크 터널 실패다.
+- 현재 상태(2026-09-28): 최신 전체 앱 회귀 1,421 통과/1 건너뜀/0 실패(총 1,422), Core/Route/Activity/Plan 패키지 회귀와 iOS·Watch Debug 1.0(161) 빌드가 통과했다. StoreKitTest 건너뜀은 단독 재실행에서 iOS 26.5 `SKInternalErrorDomain Code 3` 및 상품 load nil로 실패함을 확인해 환경 보호 skip을 유지한다. iPhone 11 Pro와 iPad Pro에서 Debug 1.0(160)을 실행해 화면을 확인했다. TestFlight 1.0(161)은 `VALID`, 내부 그룹 연결, 테스터 1명을 API로 확인했다. iPhone 18은 대표님이 161 화면 녹화·진단 로그를 제공하면 분석한다. Watch 직접 설치는 네트워크 터널 실패다.
 - 후속 검증(BKM0928A01): 구버전 raw 전환·불변 세대 쓰기·manifest raw 참조를 보강하고 백업 회귀 122/122 및 iOS Debug 빌드를 통과했다. 이 후속 빌드는 아직 기기에 재설치하지 않았다. 전체 실행은 아래 streaming/journal·CloudKit·실기기 기준이 남아 진행 중이다.
 - iPhone 11 실기기 세션(2026-09-28): current Debug 1.0(160) 설치·앱 실행·지도 화면 및 프로세스 확인 완료. 시작 뒤 확인한 crash-log 목록에는 과거 9/27 보고서만 있고 새 Taption report가 없다. 이는 실행 직후 crash가 없었다는 범위만 확인하며, 백그라운드 복귀 반복은 미확인이다. UI 터치/저장, GPS 이동, PIN·계정 필요 백업/Watch/캘린더, 실제 수면 데이터는 확인 대기한다. 상세: `test.md`의 `ALLT0927A1 · iPhone 11 Pro current Debug 160 실행 확인` 및 업데이트된 `build/validation/ALLT0927A1/device-session-checklist.md` 참조.
 
-## TF0928B161 · 자동 검증 변경분 내부 TestFlight 빌드 [진행]
+## TF0928B161 · 자동 검증 변경분 내부 TestFlight 빌드 [API 검증 완료 / 그룹 화면 확인 대기]
 - 원인: 최신 요청 반영 UI/GPS/장소 연출 변경이 자동 테스트·Debug 빌드는 통과했으나 대표 기기에서 실행 가능한 최신 TestFlight 빌드에 포함되지 않았다.
 - 환경 결정: 사용자가 2026-09-28 CloudKit Production 사용을 허용했다. TestFlight export는 Production entitlement를 포함해야 하며 IAP/공개 제출은 하지 않는다.
-- 현재 상태: 161 Release archive와 Production TestFlight IPA export 성공, 산출물 네 제품 build 161 및 앱 CloudKit Production entitlement readback 완료. 업로드 성공(Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`); App Store Connect build 목록 인덱스·처리·내부 그룹 노출은 대기 중이다.
-- 검증 기준: 업로드 `VALID`, 그룹 화면 빌드 및 테스터 노출 확인. 대표님 iPhone 18 화면·로그 확인은 별도 증거로 판정한다.
+- 현재 상태: 161 Release archive/Production IPA 및 업로드 성공(Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`). API readback으로 처리 `VALID`, `TP Taption Plan 내부 테스트` 연결, 테스터 1명 확인. 결과 `build/validation/ALLT0927A1/testflight-161-readback.json`. App Store Connect 웹 UI는 로그인 실패로 화면 검증 불가.
+- 남음: 사용자의 App Store Connect 그룹 화면 readback 및 대표님 iPhone 18 설치·화면/로그 검증.
 
 
 ## CRAS270927 · iPhone 11 Pro Taption Plan 충돌 [잠금 범위 수정·자동 회귀 통과 / iPhone 11 검증 대기]
@@ -307,7 +307,7 @@
 
 ## BKC0920A01 · 다중 기기 백업 원자성 선택
 
-- 부분 구현(2026-09-27): 개발 빌드 전용 CloudKit manifest actor가 device/month별 generation 참조를 병합하며 CKRecord change-tag conflict 시 최대 3회 재시도한다. 오프라인 pending manifest를 로컬 보호 파일에 보존하고 다음 시작/백업에서 재시도한다. Production 경로는 비활성이다.
+- 부분 구현(2026-09-27): CloudKit manifest actor가 device/month별 generation 참조를 병합하며 CKRecord change-tag conflict 시 최대 3회 재시도한다. 오프라인 pending manifest를 로컬 보호 파일에 보존하고 다음 시작/백업에서 재시도한다. Debug 설치는 Development, TestFlight는 사용자의 허용에 따라 Production CloudKit을 쓴다.
 - 추가 구현(2026-09-27): 불변 snapshot generation과 별도 snapshot/raw manifest reference를 추가하고 CAS merge의 구버전 manifest decode 호환을 검사했다. 충돌 body remerge는 restore 시 같은 parent sibling을 병합한다.
 - 보강(BKM0928A01): snapshot-only 백업의 존재하지 않는 raw generation 발행을 제거했다. 새 raw 저장과 기존 raw 보존 백업은 실제 커밋된 raw 참조를 발행하며, 세 경우의 publisher 회귀를 통과했다. 실서비스 CAS 경합을 검증한 것은 아니다.
 - 남은 구현: CAS 충돌 중 remote generation 본문을 다시 읽고 새 merged generation으로 봉인하는 서버 동기 재병합과 실제 CloudKit Development 두 기기 경합. 현재 merge는 복원 시점이며 CloudKit 실계정 동기화 증거가 아니다.

@@ -36,6 +36,8 @@
 - 업로드 전까지 TestFlight Processing/그룹 연결 여부는 미확인이다. 공개 App Store 제출은 하지 않는다.
 - iOS Debug 1.0(161) `BUILD SUCCEEDED`: `build/validation/ALLT0927A1/ios-debug-161-final.log`; Watch Debug 1.0(161) `BUILD SUCCEEDED`: `watch-debug-161-final.log`. Debug 앱·iPhone widget·Watch app 번들의 `CFBundleVersion`도 모두 161.
 - `altool --upload-app` 성공, Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`; 로그 `upload-161.log`. 최초 `altool --build-status` 조회가 응답하지 않아 중단했다. 즉시 App Store Connect API 목록 readback에는 161이 아직 나타나지 않았고, 그룹 연결/테스터 노출도 미확인이다. 공개 App Store 제출은 하지 않았다.
+- 후속 App Store Connect API readback에서 빌드 161 `VALID`, `TP Taption Plan 내부 테스트` 내부 그룹 `buildAttached=true`, 테스터 수 1을 확인했다. 검증 결과 `build/validation/ALLT0927A1/testflight-161-readback.json`. App Store Connect 웹 UI는 `authResult=FAILED` 로그인 화면을 반환해 그룹 화면 캡처는 확보하지 못했다.
+- 커밋 `3709724` (`Implement timeline, GPS, and location presentation updates`)를 `main`에 push했다. 빌드 161은 해당 커밋의 1.0(161) Release archive에서 업로드됐다.
 
 ## ALLT0927A1 · iPhone 11 Pro build 160 기기 확인 시도 (2026-09-28)
 
