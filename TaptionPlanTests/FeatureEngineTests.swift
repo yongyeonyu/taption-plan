@@ -26090,8 +26090,11 @@ final class MapHomeStickmanTests: XCTestCase {
                 places: [companyStay],
                 frequentPlaces: [company]
             ),
-            .computer
+            .company
         )
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "work", label: "업무"), .computer)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "work", label: "회사"), .company)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "company", label: "Work"), .company)
 
         let school = FrequentPlace(kind: .school, name: "학교", point: point)
         let schoolStay = PlaceStay(
@@ -26110,8 +26113,11 @@ final class MapHomeStickmanTests: XCTestCase {
                 places: [schoolStay],
                 frequentPlaces: [school]
             ),
-            .reading
+            .school
         )
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "study", label: "수업"), .reading)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "study", label: "학교"), .school)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "school", label: "Study"), .school)
 
         let restaurant = FrequentPlace(
             kind: .restaurant,
@@ -26422,9 +26428,16 @@ final class MapHomeStickmanTests: XCTestCase {
     }
 
     func testCatActivityScenesUseRequestedActionsAndQuarterSpeed() {
-        XCTAssertEqual(MapHomeStickmanAction.computer.propSymbol, "desktopcomputer")
-        XCTAssertEqual(MapHomeStickmanAction.reading.propSymbol, "book.fill")
+        XCTAssertEqual(MapHomeStickmanAction.company.propSymbol, "desktopcomputer")
+        XCTAssertEqual(MapHomeStickmanAction.school.propSymbol, "book.fill")
+        XCTAssertEqual(MapHomeStickmanAction.company.catAccessory, .tie)
+        XCTAssertEqual(MapHomeStickmanAction.school.catAccessory, .glasses)
+        XCTAssertNil(MapHomeStickmanAction.computer.catAccessory)
+        XCTAssertNil(MapHomeStickmanAction.reading.catAccessory)
+        XCTAssertNil(MapHomeStickmanAction.activity.catAccessory)
         for seed in 0..<12 {
+            XCTAssertEqual(MapHomeStickmanAction.company.catAction(seed: seed), .sitting)
+            XCTAssertEqual(MapHomeStickmanAction.school.catAction(seed: seed), .sitting)
             XCTAssertEqual(MapHomeStickmanAction.computer.catAction(seed: seed), .walking)
             XCTAssertEqual(MapHomeStickmanAction.reading.catAction(seed: seed), .walking)
             XCTAssertEqual(MapHomeStickmanAction.exercise.catAction(seed: seed), .running)
@@ -26698,7 +26711,9 @@ final class MapHomeStickmanTests: XCTestCase {
         let majorCategories: [(String, String, MapHomeStickmanAction)] = [
             ("activity", "활동", .activity),
             ("work", "업무", .computer),
+            ("work", "회사", .company),
             ("study", "수업", .reading),
+            ("study", "학교", .school),
             ("hobby", "취미", .hobby),
             ("sleep", "수면", .sleeping),
             ("movement", "이동", .movement),
@@ -26731,9 +26746,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 18)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 18)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 18)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 20)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 20)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 20)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

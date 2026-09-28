@@ -4,6 +4,17 @@ import XCTest
 @testable import TaptionPlan
 
 final class TimeScaleTests: XCTestCase {
+    func testUnconfirmedQuickCategoriesFitInTwoOrderedRows() {
+        let ids = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
+        let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
+        let categories = ids.compactMap { byID[$0] }
+        let rows = MapHomeUnconfirmedQuickCategoryLayout.rows(from: categories)
+
+        XCTAssertEqual(rows.count, 2)
+        XCTAssertTrue(rows.allSatisfy { $0.count == 4 })
+        XCTAssertEqual(rows.flatMap { $0 }.map(\.id), ids)
+    }
+
     private func makeDate(
         _ year: Int,
         _ month: Int,

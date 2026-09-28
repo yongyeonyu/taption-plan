@@ -1990,6 +1990,18 @@ struct MapHomeTimeRulerRow: Identifiable, Equatable, Sendable {
     var id: Int { minute }
 }
 
+enum MapHomeUnconfirmedQuickCategoryLayout {
+    static let columnCount = 4
+
+    static func rows(
+        from categories: [MapHomeSidebarMajorCategory]
+    ) -> [[MapHomeSidebarMajorCategory]] {
+        stride(from: 0, to: categories.count, by: columnCount).map { start in
+            Array(categories[start..<min(start + columnCount, categories.count)])
+        }
+    }
+}
+
 struct MapHomeUnconfirmedReviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     let date: Date
@@ -2007,6 +2019,10 @@ struct MapHomeUnconfirmedReviewSheet: View {
         let ids = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
         let byID = Dictionary(uniqueKeysWithValues: MapHomeSidebarMajorCategory.all.map { ($0.id, $0) })
         return ids.compactMap { byID[$0] }
+    }
+
+    private var quickCategoryRows: [[MapHomeSidebarMajorCategory]] {
+        MapHomeUnconfirmedQuickCategoryLayout.rows(from: quickCategories)
     }
 
     private var unconfirmedSegments: [MapHomeTimeRailSegment] {
@@ -2095,31 +2111,34 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityHint(language.text("시간을 자세히 편집합니다", "Edit this time interval"))
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 7) {
-                                        ForEach(quickCategories) { category in
-                                            Button {
-                                                guard savingSegmentID == nil else { return }
-                                                savingSegmentID = segment.id
-                                                saveFailedSegmentID = nil
-                                                Task { @MainActor in
-                                                    let saved = await onQuickConfirm(segment, category)
-                                                    if !saved {
-                                                        saveFailedSegmentID = segment.id
-                                                    } else if focusedSegment != nil {
-                                                        dismiss()
+                                VStack(spacing: 6) {
+                                    ForEach(Array(quickCategoryRows.enumerated()), id: \.offset) { _, row in
+                                        HStack(spacing: 6) {
+                                            ForEach(row) { category in
+                                                Button {
+                                                    guard savingSegmentID == nil else { return }
+                                                    savingSegmentID = segment.id
+                                                    saveFailedSegmentID = nil
+                                                    Task { @MainActor in
+                                                        let saved = await onQuickConfirm(segment, category)
+                                                        if !saved {
+                                                            saveFailedSegmentID = segment.id
+                                                        } else if focusedSegment != nil {
+                                                            dismiss()
+                                                        }
+                                                        savingSegmentID = nil
                                                     }
-                                                    savingSegmentID = nil
+                                                } label: {
+                                                    Label(category.localizedTitle(language), systemImage: category.systemImage)
+                                                        .font(.system(size: 11, weight: .semibold))
+                                                        .lineLimit(1)
+                                                        .minimumScaleFactor(0.72)
+                                                        .frame(maxWidth: .infinity, minHeight: 36)
+                                                        .background(category.tint.opacity(0.18), in: Capsule())
                                                 }
-                                            } label: {
-                                                Label(category.localizedTitle(language), systemImage: category.systemImage)
-                                                    .font(.caption.weight(.semibold))
-                                                    .padding(.horizontal, 10)
-                                                    .padding(.vertical, 8)
-                                                    .background(category.tint.opacity(0.18), in: Capsule())
+                                                .buttonStyle(.plain)
+                                                .disabled(savingSegmentID != nil)
                                             }
-                                            .buttonStyle(.plain)
-                                            .disabled(savingSegmentID != nil)
                                         }
                                     }
                                 }

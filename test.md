@@ -1,5 +1,42 @@
 # 검증 기록
 
+## ALLT0927A1 · iPhone 11 Pro current Debug 160 실행 확인 (2026-09-28)
+
+- 현재 소스에서 빌드한 signed Debug 앱을 연결된 iPhone 11 Pro (`iPhone12,3`, iOS 26.7/23H24)에 update-in-place 설치했다. 기존 앱 데이터를 초기화하지 않았다. `devicectl` 설치 성공 로그/JSON: `build/validation/ALLT0927A1/iphone11-session-20260928/install-debug-160.log/json`; 앱 목록 readback은 `com.taption.plan`, version 1.0, build 160.
+- 앱 실행 명령 성공 후 settled screenshot에서 지도 홈, 날짜 헤더, 오른쪽 시간 레일/날씨, 집·불·고양이 마커 및 왼쪽 Undo/Redo가 보인다: `build/validation/ALLT0927A1/iphone11-session-20260928/debug-settled.png`. 기기 프로세스 목록에서 `TaptionPlan` 프로세스가 확인됐다. 첫 실행 직후의 전환 애니메이션 캡처는 `debug-after-launch.png`이며 판정에는 사용하지 않았다.
+- 실행 전후 시스템 crash-log 목록에 새 Taption Plan 항목이 없고 기존 9/27 보고서 3건만 보였다. 이는 짧은 시작·화면 확인에서 새 충돌이 관찰되지 않았다는 근거이며, 장시간 백그라운드 복귀 안정성이나 0xDEAD10CC 재발 부재를 입증하지 않는다.
+- 화면상 Undo/Redo 컨트롤 존재는 확인했지만 조작/기록 변경/복구는 하지 않았다. HealthKit 온보딩, 터치, 빠른 입력 저장, GPS 이동·회색 예측 경로, 회사·학교 고양이, 집 탭, 날씨 상태, 백업/계정/캘린더/Watch/수면은 미검증이다. 따라서 연결된 요청은 열린 상태다.
+
+- 같은 current Debug 1.0(160)을 iPad Pro 12.9-inch (6th gen, iPad14,6)에 update-in-place 설치하고 앱 실행 및 화면 캡처를 완료했다 (`build/validation/ALLT0927A1/ipad-session-20260928/`). 화면은 온보딩 1/4의 위치·이동 단계다. 앱 설치 당시 권한 상태를 관찰했을 뿐, 버튼을 누르거나 권한을 변경하지 않았다. iPad readback은 시작·온보딩 표시까지만 확인한다.
+- iPhone 18 Pro Max는 현재 연결 목록에서 `unavailable`이므로 current Debug 설치/로그 수집을 하지 못했다. 대표님 제공 영상·로그 분석을 기다린다.
+
+## ALLT0927A1 · 최신 자동 검증 요약 (2026-09-28)
+
+- 현재 작업 트리에서 앱 전체 테스트 **1,421 통과, 1 건너뜀, 0 실패 (총 1,422)**. 유일한 skip은 `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`; iOS 26.5 StoreKitTest가 `SKInternalErrorDomain Code 3`으로 시작되지 않았다. 원본 `build/validation/ALLT0927A1/app-tests-current-20260928.log` 및 `.xcresult`.
+- Swift package 테스트: TaptionPlanCore 101/101, TaptionRouteEngine 39건 통과, TaptionActivityEngine 33/33, TaptionPlanEngine 1/1. 로그는 `package-core-20260928.log`, `package-route-20260928.log`, `package-activity-20260928.log`, `package-plan-20260928.log`.
+- generic iOS Debug 및 Watch Debug 빌드 모두 성공. 로그 `ios-debug-current-20260928.log`, `watch-debug-current-20260928.log`. 전체 앱 테스트에는 GPS gap 보간·2행 카테고리 회귀가 포함됐다.
+
+## TF0928B161 · TestFlight/CloudKit 환경 제약 확인 (2026-09-28)
+
+- App Store Connect API build 목록에서 최고 번호 1.0(160), 상태 `VALID`를 확인했다. `altool --build-status`에서도 delivery UUID `a40c7d53-56ae-429f-9ec8-14afdb85f529`의 160 `VALID`를 재확인했다. API 응답은 `build-status-160-recheck.json`에 보관했다.
+- 161 archive를 생성하고 archive 내 앱 `com.taption.plan`, iPhone 위젯, Watch 앱 번들이 모두 build 161인지 확인했다. `archive-161.log`, `TaptionPlan161.xcarchive`.
+- 기존 export options의 `iCloudContainerEnvironment=Production`은 현재 승인된 Development-only 조건에 맞지 않았다. 이를 `Development`로 변경해 `app-store-connect` export를 시도했으나 Xcode가 `value "Development" is not allowed`로 거부했다. `export-161.log`, `export-161/ExportOptions.plist`.
+- Apple 설명에 따르면 TestFlight로 배포하는 앱은 CloudKit Development 환경을 사용할 수 없으며 Production만 사용한다: [Apple Testing Your CloudKit App](https://developer.apple.com/library/archive/documentation/DataManagement/Conceptual/CloudKitQuickStart/TestingYourApp/TestingYourApp.html), [CKContainer](https://developer.apple.com/documentation/cloudkit/ckcontainer?language=_3). 사용자가 이후 Production 사용을 명시 허용했다. `Development` export는 실패했지만 `Production` export는 성공했고 exported app entitlement readback이 Production이다. Internal-only option을 적용했고, 업로드·처리·그룹 검증은 후속 상태다.
+
+## SK0928B001 · StoreKitTest 건너뜀 단독 재검증 (2026-09-28)
+
+- `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`의 iOS 26.5 simulator skip을 단독 검증 목적으로 일시 우회해 실제 테스트를 시작했다. `SKTestSession` 초기화·상품 identifier 설정부터 `SKInternalErrorDomain Code 3`이 재발했고, 이후 `StoreProductPresentation`이 nil이라 `XCTUnwrap` 실패했다. 1개 실행·1개 실패. 로그 `build/validation/SK0928B001-storekit-test-rerun-20260928.log`; xctest stdout/stderr는 result bundle staging 안에 저장된다.
+- 실패 원인은 앱 구매 entitlement assertion 전에 StoreKitTest session이 configuration/transaction override를 설정하지 못한 테스트 런타임 오류다. SKTestSession 정리 호출도 같은 Code 3을 반환했다. 실제 상품 로드가 없어 구매/복원 로직 결과는 검증하지 못했다.
+- 이전의 iOS 26.5 환경 보호 skip을 테스트 소스에 복구했다. 판매/IAP 동작을 바꾸지 않았고 실제 구매도 하지 않았다. 다른 iOS 런타임이나 physical-device StoreKit configuration으로 실행하기 전까지 skip은 유지한다.
+
+## TF0928B161 · TestFlight 1.0(161) Production 내부 빌드 생성 (2026-09-28)
+
+- 최신 앱 소스의 Release archive 성공: `build/validation/ALLT0927A1/archive-161.log`, `TaptionPlan161.xcarchive`. archive 앱/위젯/Watch 앱 번들의 `CFBundleVersion`은 모두 161.
+- Development CloudKit export를 Xcode가 거부한 뒤 사용자가 Production을 허용했다. `testFlightInternalTestingOnly=true`, `iCloudContainerEnvironment=Production`으로 export 성공. IPA `build/validation/ALLT0927A1/export-161-production/TaptionPlan.ipa` (47 MB); 앱·iPhone widget·Watch app·Watch widget 네 번들 1.0(161), 앱 서명 entitlement Production을 확인했다. export 로그 `export-161-production.log`.
+- 업로드 전까지 TestFlight Processing/그룹 연결 여부는 미확인이다. 공개 App Store 제출은 하지 않는다.
+- iOS Debug 1.0(161) `BUILD SUCCEEDED`: `build/validation/ALLT0927A1/ios-debug-161-final.log`; Watch Debug 1.0(161) `BUILD SUCCEEDED`: `watch-debug-161-final.log`. Debug 앱·iPhone widget·Watch app 번들의 `CFBundleVersion`도 모두 161.
+- `altool --upload-app` 성공, Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`; 로그 `upload-161.log`. 최초 `altool --build-status` 조회가 응답하지 않아 중단했다. 즉시 App Store Connect API 목록 readback에는 161이 아직 나타나지 않았고, 그룹 연결/테스터 노출도 미확인이다. 공개 App Store 제출은 하지 않았다.
+
 ## ALLT0927A1 · iPhone 11 Pro build 160 기기 확인 시도 (2026-09-28)
 
 - 대상 기기 정보: iPhone 11 Pro (`iPhone12,3`), iOS 26.7 (23H24), paired·wired, Developer Mode enabled. readback: `build/validation/ALLT0927A1/iphone11-details-current.json`.
@@ -420,3 +457,26 @@
 - 현재 연결된 실기기는 iPhone 18 Pro Max(`iPhone19,7`, UDID `00008160-000E195A1140000A`), iOS 27.2로 확인했다. 기기 정보 readback은 `build/validation/IN270927A1/device-details.txt` 및 `.json`에 있다.
 - 최신 generic iOS Debug 산출물 `com.taption.plan` 1.0/159를 기기에 설치했다. `devicectl` 설치 성공 로그·JSON은 `build/validation/IN270927A1/install.log`, `install.json`; 앱 목록 readback에서 `Taption Plan · com.taption.plan · 1.0 · 159`를 확인했다: `readback.txt`, `readback.json`.
 - 사용 요청은 설치였으므로 앱을 실행하거나 화면 기능을 판정하지 않았다. 설치와 readback은 날씨/UI 기기 검증을 의미하지 않는다.
+
+## CAT0928A01 · 회사 넥타이 업무 포즈·학교 안경 학습 포즈 (2026-09-28)
+
+- `MapHomeStickmanAction`에 실제 등록 장소 전용 `.company`/`.school` 표현 상태를 추가했다. resolver는 회사 체류를 회사 업무, 학교 체류를 학교 학습으로 구분하고, 앱 사이드바의 work/study 라벨에서도 회사/학교가 명시될 때만 전용 표현을 선택한다. 일반 업무·수업 카테고리, 독서, 학원은 기존 표현을 유지한다.
+- 전용 회사/학교 화랑이는 각각 앉은 포즈로 모니터/책 앞 좌우 움직임을 유지하고, 지도 마커에서만 넥타이/안경 overlay를 표시한다. 다른 고양이 마커와 실제 활동 분류·저장 데이터는 변경하지 않았다.
+- `MapHomeStickmanTests` 집중 회귀 3개 통과(실패 0, 건너뜀 0): `testCatActivityScenesUseRequestedActionsAndQuarterSpeed`, `testDestinationActionsUseCompanySchoolAndRestaurantSemantics`, `testMapStickmanResolvesMajorCategoryBeforeActivityDetail`. 최종 결과 `build/validation/CAT0928A01/cat-focused-tests-final4.xcresult` 3/3 통과(실패·건너뜀 0), 로그 `cat-focused-tests-final4.log`. 중간 실행에서 발견된 일반 업무 포즈 회귀와 resolver category alias 문제를 수정한 뒤 이 결과로 확인했다. 첫 실행에서 드러난 상태 수·일반 걷기 기대값 차이는 전용 회사/학교로 수정 후 재검증했다.
+- 최종 generic iOS Debug `BUILD SUCCEEDED`: `build/validation/CAT0928A01/ios-debug-build-final.log`. `git diff --check` 통과.
+- 실기기 화면 캡처는 하지 않았다. 실제 회사/학교 체류 데이터에서 넥타이·안경 및 모니터·책 포즈가 보이는지는 기기 확인 전까지 `temp.md`에 대기한다.
+
+## UIX0928A01 · 미확인 활동 대분류 2행 전체 표시 (2026-09-28)
+
+- 빠른 입력 대분류 8개를 기존 순서대로 4열×2행으로 배치했다. 버튼별 즉시 저장 동작·색상은 유지했다.
+- `TimeScaleTests.testUnconfirmedQuickCategoriesFitInTwoOrderedRows` 통과(1/1): `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.28_10-38-38-+0900.xcresult`; 같은 실행에 GPS 집중 테스트가 포함됐다.
+- generic iOS Debug 빌드는 `build/validation/GPSX0928A1/ios-debug-build-final.log`에서 성공했다. `git diff --check` 통과.
+- 실기기 화면은 아직 확인하지 않아 좁은 화면에서의 시각적 겹침/터치감은 `temp.md`에 대기한다.
+
+## GPSX0928A1 · GPS 공백의 회색 예상 발자국 (2026-09-28)
+
+- 지도에만 제한된 GPS 공백 보간을 추가했다. 정규화된 시간순 route readings에서 서로 이웃한 두 기록이 모두 정밀 iPhone GPS fix일 때만 같은 날 45초~5분, 25~600m, 정확도 각 50m 이하, 평균 이동속도 3m/s 이하 구간을 선형 보간한다. 최대 24개 보간 좌표를 약 25m 간격으로 만든다.
+- 보간 좌표는 `SensorReading`이나 저장소에 기록하지 않는다. 기존 실측 발자국은 청록색으로 유지하고 예측 발자국만 회색으로 렌더링한다. GPS 외 기록을 건너뛰어 앞뒤를 잇지 않고, Watch·종료 세션·장시간/장거리/부정확 구간은 생략한다.
+- `RouteTimelineDataTests.testGPSGapPredictionAddsOnlyBoundedDisplayCoordinates`와 `testGPSGapPredictionRejectsLongInaccurateAndWatchGaps`, `TimeScaleTests.testUnconfirmedQuickCategoriesFitInTwoOrderedRows`가 모두 통과(3/3, 실패/건너뜀 0). 실행 로그 `build/validation/GPSX0928A1/focused-tests-final2.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.28_10-38-38-+0900.xcresult`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/GPSX0928A1/ios-debug-build-final.log`; `git diff --check` 통과.
+- 실기기에서 실제 GPS 공백 구간을 재현한 화면은 아직 확인하지 않았다. 예측은 지도 표시용 직선 보간이며 실제 도로·실제 이동 경로를 보장하지 않으므로 화면 확인 전에는 기능의 기기 검증을 완료 처리하지 않는다.

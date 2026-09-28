@@ -1522,6 +1522,89 @@ enum MapHomeRouteReadingsPolicy {
     }
 }
 
+struct MapHomePredictedRouteCoordinate: Equatable, Sendable {
+    let latitude: Double
+    let longitude: Double
+}
+
+enum MapHomeGPSGapPredictionPolicy {
+    static let minimumGap: TimeInterval = 45
+    static let maximumGap: TimeInterval = 5 * 60
+    static let maximumDistanceMeters = 600.0
+    static let maximumEndpointAccuracyMeters = 50.0
+    static let maximumAverageSpeedMetersPerSecond = 3.0
+    static let sampleSpacingMeters = 25.0
+    static let maximumSamplesPerGap = 24
+
+    static func predictedCoordinates(
+        from readings: [SensorReading],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [[MapHomePredictedRouteCoordinate]] {
+        let ordered = readings.filter {
+            RouteTimelineTimestamp.isValid($0.timestamp)
+        }.sorted {
+            if $0.timestamp == $1.timestamp {
+                return $0.id.uuidString < $1.id.uuidString
+            }
+            return $0.timestamp < $1.timestamp
+        }
+
+        return zip(ordered, ordered.dropFirst()).compactMap { pair in
+            let (start, end) = pair
+            guard Self.isEligibleFix(start), Self.isEligibleFix(end),
+                  let startPoint = start.point,
+                  let endPoint = end.point else { return nil }
+            let duration = end.timestamp.timeIntervalSince(start.timestamp)
+            guard duration >= minimumGap,
+                  duration <= maximumGap,
+                  calendar.isDate(start.timestamp, inSameDayAs: end.timestamp) else {
+                return nil
+            }
+            let distance = CLLocation(
+                latitude: startPoint.latitude,
+                longitude: startPoint.longitude
+            ).distance(from: CLLocation(
+                latitude: endPoint.latitude,
+                longitude: endPoint.longitude
+            ))
+            guard distance >= sampleSpacingMeters,
+                  distance <= maximumDistanceMeters,
+                  distance / duration <= maximumAverageSpeedMetersPerSecond else {
+                return nil
+            }
+            let sampleCount = min(
+                maximumSamplesPerGap,
+                max(1, Int(ceil(distance / sampleSpacingMeters)) - 1)
+            )
+            return (1...sampleCount).map { index in
+                let fraction = Double(index) / Double(sampleCount + 1)
+                return MapHomePredictedRouteCoordinate(
+                    latitude: startPoint.latitude
+                        + (endPoint.latitude - startPoint.latitude) * fraction,
+                    longitude: startPoint.longitude
+                        + (endPoint.longitude - startPoint.longitude) * fraction
+                )
+            }
+        }
+    }
+
+    private static func isEligibleFix(_ reading: SensorReading) -> Bool {
+        guard reading.gpsAvailable,
+              reading.locationFixQuality != .approximate,
+              reading.sourceDevice != .appleWatch,
+              reading.trackingSessionEnded != true,
+              let point = reading.point,
+              point.latitude.isFinite, (-90...90).contains(point.latitude),
+              point.longitude.isFinite, (-180...180).contains(point.longitude),
+              point.horizontalAccuracy.isFinite,
+              point.horizontalAccuracy >= 0,
+              point.horizontalAccuracy <= maximumEndpointAccuracyMeters else {
+            return false
+        }
+        return true
+    }
+}
+
 enum MapHomeRouteReadingsLoadState: Equatable {
     case idle
     case loading(Date)
@@ -3863,7 +3946,11 @@ struct MapHomeView: View {
                     MapHomeProjectedAnnotation(point: point, anchor: .center) {
                         Image(systemName: "pawprint.fill")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color.tpAccent.opacity(0.55))
+                            .foregroundStyle(
+                                waypoint.isPredicted
+                                    ? Color.gray.opacity(0.68)
+                                    : Color.tpAccent.opacity(0.55)
+                            )
                             .rotationEffect(.degrees(waypoint.angle))
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
@@ -4224,6 +4311,7 @@ struct MapHomeView: View {
         let index: Int
         let coordinate: CLLocationCoordinate2D
         let angle: Double
+        let isPredicted: Bool
         var id: Int { index }
     }
 
@@ -4241,12 +4329,11 @@ struct MapHomeView: View {
         let segments = timelineRouteOverlays
             .map(\.coordinates)
             .filter { $0.count >= 2 }
-        guard !segments.isEmpty else { return [] }
         // 대략적인 좌표 간격(도 단위). 위도 1도≈111km 이므로 0.00035도≈40m.
         let spacingDegrees = 0.00035
         let hardCap = 220
         var result: [PawprintWaypoint] = []
-        for coords in segments {
+        routeSegments: for coords in segments {
             var accum = 0.0
             var placedFirst = false
             for i in 0..<coords.count {
@@ -4270,7 +4357,40 @@ struct MapHomeView: View {
                         : 0)
                     : atan2(n.longitude - c.longitude, n.latitude - c.latitude) * 180 / .pi
                 result.append(
-                    PawprintWaypoint(index: result.count, coordinate: c, angle: a)
+                    PawprintWaypoint(
+                        index: result.count,
+                        coordinate: c,
+                        angle: a,
+                        isPredicted: false
+                    )
+                )
+                if result.count >= hardCap - MapHomeGPSGapPredictionPolicy.maximumSamplesPerGap {
+                    break routeSegments
+                }
+            }
+        }
+        let predictedSegments = MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+            from: normalizedRouteReadings
+        )
+        for coordinates in predictedSegments {
+            let points = coordinates.map {
+                CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+            }
+            for index in points.indices {
+                let point = points[index]
+                let previous = points[max(0, index - 1)]
+                let next = points[min(points.count - 1, index + 1)]
+                let angle = atan2(
+                    next.longitude - previous.longitude,
+                    next.latitude - previous.latitude
+                ) * 180 / .pi
+                result.append(
+                    PawprintWaypoint(
+                        index: result.count,
+                        coordinate: point,
+                        angle: angle,
+                        isPredicted: true
+                    )
                 )
                 if result.count >= hardCap { return result }
             }

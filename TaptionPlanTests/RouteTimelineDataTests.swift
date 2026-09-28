@@ -107,6 +107,58 @@ final class RouteTimelineDataTests: XCTestCase {
         )
     }
 
+    func testGPSGapPredictionAddsOnlyBoundedDisplayCoordinates() {
+        let start = reading(0, latitude: 37)
+        let end = reading(2, latitude: 37.0015)
+        let originals = [start, end]
+
+        let predictions = MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+            from: originals,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(predictions.count, 1)
+        XCTAssertFalse(predictions[0].isEmpty)
+        XCTAssertGreaterThan(predictions[0].first?.latitude ?? 0, 37)
+        XCTAssertLessThan(predictions[0].last?.latitude ?? 90, 37.0015)
+        XCTAssertEqual(originals, [start, end], "prediction must not mutate sensor source readings")
+    }
+
+    func testGPSGapPredictionRejectsLongInaccurateAndWatchGaps() {
+        let first = reading(0, latitude: 37)
+        let longGap = reading(8, latitude: 37.0015)
+        var inaccurate = reading(2, latitude: 37.0015, accuracy: 80)
+        var watch = reading(2, latitude: 37.0015)
+        watch.sourceDevice = .appleWatch
+
+        XCTAssertTrue(
+            MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+                from: [first, longGap],
+                calendar: calendar
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+                from: [first, inaccurate],
+                calendar: calendar
+            ).isEmpty
+        )
+        XCTAssertTrue(
+            MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+                from: [first, watch],
+                calendar: calendar
+            ).isEmpty
+        )
+
+        inaccurate.trackingSessionEnded = true
+        XCTAssertTrue(
+            MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+                from: [first, inaccurate],
+                calendar: calendar
+            ).isEmpty
+        )
+    }
+
     func testRouteReadingsPreparationSignatureTracksSessionEnd() {
         let id = UUID()
         var active = reading(10, latitude: 37, id: id)

@@ -130,6 +130,8 @@ struct MapHomeLocationThumbnail: View {
 enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case activity
     case computer
+    case company
+    case school
     case reading
     case hobby
     case sleeping
@@ -157,11 +159,19 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
-    /// 업무=노트북, 수업=책 소품을 마커에 오버레이한다. 그 외는 없음.
+    /// 회사/업무는 모니터, 학교/수업은 책 소품을 마커에 오버레이한다.
     var propSymbol: String? {
         switch self {
-        case .computer: "desktopcomputer"
-        case .reading: "book.fill"
+        case .computer, .company: "desktopcomputer"
+        case .reading, .school: "book.fill"
+        default: nil
+        }
+    }
+
+    var catAccessory: MapHomeCatWorkAccessory? {
+        switch self {
+        case .company: .tie
+        case .school: .glasses
         default: nil
         }
     }
@@ -189,6 +199,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
             ]
             return meal[abs(seed) % meal.count]
         case .computer, .reading: return .walking
+        case .company, .school: return .sitting
         // 취미: 놀이 동작을 최대한 다양하게
         case .hobby:
             let play: [TaptionCatAnimationAction] = [
@@ -210,7 +221,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
 
     var animatesPresentation: Bool {
         switch self {
-        case .computer, .reading, .hobby, .sleeping, .eating,
+        case .computer, .company, .school, .reading, .hobby, .sleeping, .eating,
              .activity, .exercise, .unconfirmed:
             true
         default:
@@ -222,6 +233,8 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         switch self {
         case .activity: "활동"
         case .computer: "업무"
+        case .company: "회사 업무"
+        case .school: "학교 학습"
         case .reading: "수업"
         case .hobby: "취미"
         case .sleeping: "수면"
@@ -240,6 +253,11 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .cycling: "자전거"
         }
     }
+}
+
+enum MapHomeCatWorkAccessory: Equatable, Sendable {
+    case tie
+    case glasses
 }
 
 enum MapHomeStickmanActionResolver {
@@ -451,10 +469,20 @@ enum MapHomeStickmanActionResolver {
     ) -> MapHomeStickmanAction {
         let category = categoryID.lowercased()
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        let value = "\(category) \(label)".lowercased()
+        if categoryRoot == "company" || value.contains("company") { return .company }
+        if categoryRoot == "school" || value.contains("school") { return .school }
         if let action = majorCategoryAction(for: categoryRoot) {
+            if categoryRoot == "work", value.contains("회사") { return .company }
+            if categoryRoot == "study", value.contains("학교") { return .school }
             return action
         }
-        let value = "\(category) \(label)".lowercased()
+        if categoryRoot == "work", value.contains("회사") {
+            return .company
+        }
+        if categoryRoot == "study", value.contains("학교") {
+            return .school
+        }
         let detailMappings: [(String, MapHomeStickmanAction)] = [
             ("movement.walking", .walking),
             ("movement.running", .running),
@@ -619,8 +647,9 @@ enum MapHomeStickmanActionResolver {
             $0.stablePlaceKey == place.placeKey
         }) {
             switch frequent.kind {
-            case .company: return .computer
-            case .school, .academy: return .reading
+            case .company: return .company
+            case .school: return .school
+            case .academy: return .reading
             case .restaurant: return .eating
             case .home, .custom: return .activity
             case .hobby: return .hobby
@@ -632,8 +661,10 @@ enum MapHomeStickmanActionResolver {
             .compactMap { $0 }
             .joined(separator: " ")
             .lowercased()
-        if contains(text, ["회사", "근무", "work"]) { return .computer }
-        if contains(text, ["학교", "학원", "school"]) { return .reading }
+        if contains(text, ["회사"]) { return .company }
+        if contains(text, ["학교", "school"]) { return .school }
+        if contains(text, ["근무", "work"]) { return .computer }
+        if contains(text, ["학원", "academy"]) { return .reading }
         if contains(text, ["식당", "restaurant", "meal"]) { return .eating }
         if contains(text, ["취미", "hobby"]) { return .hobby }
         return .activity
@@ -772,10 +803,17 @@ private struct MapHomeCatActivityScene: View {
             TaptionCatAtlasSprite(style: "white", action: catAction, frame: phase)
                 .scaleEffect(action == .exercise ? 0.70 : action == .sleeping ? 0.84 + 0.04 * wave : 0.88)
                 .offset(
-                    x: action == .computer || action == .reading ? wave * size * 0.11 : 0,
-                    y: action == .computer || action == .reading ? -size * 0.08 : 0
+                    x: action == .computer || action == .company || action == .school || action == .reading
+                        ? wave * size * 0.11
+                        : 0,
+                    y: action == .computer || action == .company || action == .school || action == .reading
+                        ? -size * 0.08
+                        : 0
                 )
                 .rotationEffect(.degrees(action == .unconfirmed ? Double(wave) * 9 : leanDegrees))
+            if let accessory = action.catAccessory {
+                catWorkAccessory(accessory)
+            }
             if action == .unconfirmed {
                 Text("?")
                     .font(.system(size: size * 0.38, weight: .heavy, design: .rounded))
@@ -796,6 +834,26 @@ private struct MapHomeCatActivityScene: View {
             }
         }
         .frame(width: size, height: size)
+    }
+
+    @ViewBuilder
+    private func catWorkAccessory(_ accessory: MapHomeCatWorkAccessory) -> some View {
+        switch accessory {
+        case .tie:
+            Image(systemName: "tie.fill")
+                .font(.system(size: size * 0.21, weight: .black))
+                .foregroundStyle(Color(hex: "#C74D57"))
+                .shadow(color: .white.opacity(0.95), radius: 1)
+                .offset(x: -size * 0.02, y: size * 0.12)
+                .accessibilityHidden(true)
+        case .glasses:
+            Image(systemName: "eyeglasses")
+                .font(.system(size: size * 0.25, weight: .bold))
+                .foregroundStyle(Color(hex: "#493B35"))
+                .shadow(color: .white.opacity(0.95), radius: 1)
+                .offset(x: 0, y: -size * 0.16)
+                .accessibilityHidden(true)
+        }
     }
 }
 
@@ -1096,9 +1154,9 @@ private enum MapHomeStickmanRenderer {
         switch action {
         case .activity:
             drawActivity(&context, canvas: canvas, phase: phase)
-        case .computer:
+        case .computer, .company:
             drawComputer(&context, canvas: canvas, phase: phase)
-        case .reading:
+        case .school, .reading:
             drawReading(&context, canvas: canvas, phase: phase)
         case .hobby:
             drawHobby(&context, canvas: canvas, phase: phase)
@@ -1482,7 +1540,7 @@ private enum MapHomeStickmanRenderer {
                 color: markColor,
                 width: 1.2
             )
-        case .activity, .computer, .reading, .hobby, .eating, .exercise:
+        case .activity, .computer, .company, .school, .reading, .hobby, .eating, .exercise:
             stroke(
                 &context,
                 [canvas.point(4, 34 + slow * 2), canvas.point(10, 34 + slow * 2)],

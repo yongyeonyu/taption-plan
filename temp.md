@@ -1,12 +1,34 @@
 # 남은 요청
 
+## UIX0928A01 · 미확인 활동 대분류 2행 전체 표시 [코드·회귀·Debug 빌드 완료 / 실기기 화면 확인 대기]
+- 원인: 미확인 활동 각 구간의 8개 빠른 대분류 칩을 가로 스크롤 한 줄로 배치해 좁은 iPhone 화면에서 일부가 잘려 보인다.
+- 해결: 칩을 4열×2행 그리드로 바꿔 모든 대분류가 구간마다 한 화면에 나타나게 한다. 순서·색상·즉시 저장 동작은 유지하고 폭이 좁을 때도 라벨과 터치 영역이 겹치지 않게 한다.
+- 검증: 8개가 순서대로 4개씩 두 행에 나뉘는 테스트, generic iOS Debug 빌드, `git diff --check` 통과. 실기기 화면 판정은 설치 후 별도 기록한다.
+
+## GPSX0928A1 · GPS 공백 구간 회색 예상 경로·발자국 연결 [코드·회귀·Debug 빌드 완료 / 실기기 확인 대기]
+- 원인: 저장 GPS fix 사이 간격이 크면 실제 경로 선·발자국이 끊겨 보인다. 공백 구간 보간 표시가 없어 시각적 단절과 이동 연속성이 드러나지 않는다.
+- 해결: 경로 정규화된 시간순 iPhone GPS fix 중 이웃한 두 점 사이에서만 같은 날·45초~5분·정확도 ≤50m·거리 25~600m·평균 속도 ≤3m/s 조건의 제한 직선 보간 점을 만든다. 예측 발자국은 실측과 구분되도록 회색으로 표시하고 추정 좌표는 센서 원본·기록 정본에 저장하지 않는다. 정규화된 부정확/비GPS/Watch 중간 기록, 세션 종료, 장거리·장시간 간격은 연결하지 않는다.
+- 검증: 허용 구간 보간, 원본 점 불변, 장시간·부정확·Watch·세션 종료 제외 테스트, generic iOS Debug 빌드, `git diff --check` 통과. 실기기 GPS 공백 화면은 별도 판정한다.
+
+## CAT0928A01 · 회사 넥타이 업무 포즈·학교 안경 학습 포즈 [코드·회귀·Debug 빌드 완료 / 실기기 화면 확인 대기]
+- 원인: 회사/학교 장소는 업무·수업과 같은 포즈로 합쳐져 지도 고양이가 걷기만 하고, 회사/학교를 구별하는 소품이 없다.
+- 해결: 실제 `.company` 장소에는 모니터 앞에 앉아 넥타이를 맨 고양이, `.school` 장소에는 책 앞에 앉아 안경을 쓴 고양이를 표시한다. 일반 업무·독서 및 학원은 기존 표시를 유지한다.
+- 검증: 회사/학교 장소 및 카테고리 분류·포즈·장식 집중 회귀와 generic iOS Debug 빌드. 지도 화면 실기기 캡처에서 두 연출이 각각 확인되기 전에는 실기기 항목으로 대기한다.
+
 ## ALLT0927A1 · temp.md 전체 미완료 요청 실행 [진행]
 - 원인: 열린 요청에 iPhone 11의 `0xDEAD10CC` 충돌, HealthKit 온보딩 잠금, 과거 앱 테스트 13건 실패, 저장·백업·동기화 미완성, 다수 실기기 검증 대기가 함께 남아 있다. 기존 코드는 이미 구현·검증된 작업과 미완료 작업이 혼재한다.
 - 해결: 현재 코드·Git·요청별 증거를 대조해 중복 구현을 피하고, 먼저 충돌/온보딩/회귀 실패를 해결한 뒤 저장·백업 및 기능 검증을 진행한다. iAP 보류, CloudKit Development 전용, 회사 반경 120m, 손상 raw 조각만 제외하는 복원 정책을 유지한다. 사용자 변경을 보존하고 새 브랜치를 만들지 않는다.
 - 검증 기준: 관련 단위·패키지 테스트, 기존 13개 실패 포함 앱 회귀, iOS Debug/Watch 빌드, 연결 기기 실증과 사용자 동행 계정 검증을 각각 근거로 남긴다. 성공한 변경만 main에 반영하고 새 내부 TestFlight 빌드의 처리·그룹·테스터 노출을 확인한다. 실제 증거가 없는 항목은 열린 상태로 유지한다.
-- 현재 상태(2026-09-28): 선행 전체 앱 회귀 1,412 통과/1 건너뜀/0 실패(총 1,413), iOS·Watch Debug 1.0(160) 빌드와 네 산출물 번들 번호 검증을 마쳤다. iPhone 11/18/iPad 설치 성공, iPhone18·iPad 160 readback 성공. iPhone11 설치는 성공했으나 앱 목록 readback timeout, Watch 직접 설치는 네트워크 터널 실패다. 앱은 어느 기기에서도 실행하지 않아 실기기 기능 검증·main 반영·TestFlight 160 업로드는 대기한다.
+- 현재 상태(2026-09-28): 최신 전체 앱 회귀 1,421 통과/1 건너뜀/0 실패(총 1,422), Core/Route/Activity/Plan 패키지 회귀와 iOS·Watch Debug 1.0(161) 빌드가 통과했다. StoreKitTest 건너뜀은 별도 강제 재실행에서 iOS 26.5 `SKInternalErrorDomain Code 3`으로 실패함을 확인해 환경 보호 skip을 유지한다. iPhone 11 Pro에 Debug 1.0(160), iPad Pro에 Debug 1.0(160)을 실행해 화면을 확인했다. iPhone 18은 대표님이 최신 TestFlight 161 화면 녹화·진단 로그를 제공하면 분석한다. Watch 직접 설치는 네트워크 터널 실패다.
 - 후속 검증(BKM0928A01): 구버전 raw 전환·불변 세대 쓰기·manifest raw 참조를 보강하고 백업 회귀 122/122 및 iOS Debug 빌드를 통과했다. 이 후속 빌드는 아직 기기에 재설치하지 않았다. 전체 실행은 아래 streaming/journal·CloudKit·실기기 기준이 남아 진행 중이다.
-- iPhone 11 실기기 세션(2026-09-28): 1.0(160) 재설치는 성공. 원격 앱 실행·목록 readback·crash-log 복사는 CoreDevice timeout. 터치 조작이 필요한 UI/권한/GPS/저장 확인, PIN·계정 필요 backup/Watch/캘린더, 실제 이동·수면 데이터는 확인 대기한다. 상세: `test.md`의 `iPhone 11 Pro build 160 기기 확인 시도`. 기존 확인표 `build/validation/ALLT0927A1/device-session-checklist.md` 참조.
+- iPhone 11 실기기 세션(2026-09-28): current Debug 1.0(160) 설치·앱 실행·지도 화면 및 프로세스 확인 완료. 시작 뒤 확인한 crash-log 목록에는 과거 9/27 보고서만 있고 새 Taption report가 없다. 이는 실행 직후 crash가 없었다는 범위만 확인하며, 백그라운드 복귀 반복은 미확인이다. UI 터치/저장, GPS 이동, PIN·계정 필요 백업/Watch/캘린더, 실제 수면 데이터는 확인 대기한다. 상세: `test.md`의 `ALLT0927A1 · iPhone 11 Pro current Debug 160 실행 확인` 및 업데이트된 `build/validation/ALLT0927A1/device-session-checklist.md` 참조.
+
+## TF0928B161 · 자동 검증 변경분 내부 TestFlight 빌드 [진행]
+- 원인: 최신 요청 반영 UI/GPS/장소 연출 변경이 자동 테스트·Debug 빌드는 통과했으나 대표 기기에서 실행 가능한 최신 TestFlight 빌드에 포함되지 않았다.
+- 환경 결정: 사용자가 2026-09-28 CloudKit Production 사용을 허용했다. TestFlight export는 Production entitlement를 포함해야 하며 IAP/공개 제출은 하지 않는다.
+- 현재 상태: 161 Release archive와 Production TestFlight IPA export 성공, 산출물 네 제품 build 161 및 앱 CloudKit Production entitlement readback 완료. 업로드 성공(Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`); App Store Connect build 목록 인덱스·처리·내부 그룹 노출은 대기 중이다.
+- 검증 기준: 업로드 `VALID`, 그룹 화면 빌드 및 테스터 노출 확인. 대표님 iPhone 18 화면·로그 확인은 별도 증거로 판정한다.
+
 
 ## CRAS270927 · iPhone 11 Pro Taption Plan 충돌 [잠금 범위 수정·자동 회귀 통과 / iPhone 11 검증 대기]
 - 관찰: iOS 충돌 공유 안내와 3개 보고서를 확인했다. 1.0(158)에서 21:27:31·21:28:20, 1.0(159)에서 21:29:19에 모두 `EXC_CRASH(SIGKILL)`, `RUNNINGBOARD 0xDEAD10CC`로 종료됐다.
