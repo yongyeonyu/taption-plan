@@ -1,6 +1,6 @@
 # 남은 요청
 
-## QMRK0928A1 · 미확인 `?` 마커를 실제 미확인 활동에만 표시 [코드·회귀·Debug 완료 / 기기 화면 확인 대기]
+## QMRK0928A1 · 미확인 `?` 마커를 실제 미확인 활동에만 표시 [코드·회귀·Debug·iPhone 11 설치/실행 완료 / 화면 확인 대기]
 - 원인: 시간 레일은 표시용 snapshot이 입력 구간이 비어 있으면 하루 전체를 `.wholeDayUnconfirmed`로 합성한다. 마커도 그 snapshot에서 계산되어 실제 미확인 구간이 없는 날에도 `?`가 보일 수 있다.
 - 해결: 마커 대상은 합성 표시 snapshot이 아니라 원본 활동 구간에서 계산한다. 실제 미확인 활동이 있고 현재 날짜/보이는 레일 영역에 걸칠 때만 해당 구간 옆에 `?`를 표시한다.
 - 검증 기준: 빈 입력·확정 활동만 있을 때 마커 없음, 실제 미확인 구간만 마커 대상, 오늘의 미래 및 화면 밖 구간 제외 테스트와 generic iOS Debug 빌드를 통과한다.
@@ -35,7 +35,7 @@
 - 현재 상태: 161 Release archive/Production IPA 및 업로드 성공(Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`). API readback으로 처리 `VALID`, `TP Taption Plan 내부 테스트` 연결, 테스터 1명 확인. 결과 `build/validation/ALLT0927A1/testflight-161-readback.json`. App Store Connect 웹 UI는 로그인 실패로 화면 검증 불가.
 - 남음: 사용자의 App Store Connect 그룹 화면 readback 및 대표님 iPhone 18 설치·화면/로그 검증.
 
-## TF0928B162 · 실제 미확인 활동 조건부 `?` 내부 검증 빌드 [업로드·VALID·내부 그룹 API 확인 완료 / 그룹 화면·기기 확인 대기]
+## TF0928B162 · 실제 미확인 활동 조건부 `?` 내부 검증 빌드 [업로드·VALID·내부 그룹 API·iPhone 11 설치/실행 완료 / 그룹 화면·화면 확인 대기]
 - 원인: 161은 합성 하루 전체 미확인 표시 구간에서도 `?` 마커를 보이는 결함을 포함한다.
 - 해결: QMRK0928A1 수정과 회귀를 main에 반영하고 build 162로 TestFlight 내부 검증본을 만든다. 앱·위젯·Watch 네 번들 번호를 일치시킨다.
 - 검증 기준: 전체 관련 회귀, iOS/Watch Debug, Release archive, 네 번들 build 162, 업로드 `VALID`, 내부 그룹 연결 및 테스터 노출을 확인한다. Production CloudKit은 사용자가 허용한 내부 배포로 제한하고 공개 제출/IAP는 제외한다.

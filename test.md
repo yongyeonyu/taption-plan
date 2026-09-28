@@ -5,7 +5,8 @@
 - QMRK0928A1 포함 main 커밋 `25322bb` 푸시 완료. 빌드 162로 앱·Widget·Watch·Watch Widget 버전을 맞췄다. IPA 내부 네 번들의 `CFBundleVersion` 모두 162.
 - iOS Debug 및 Watch Debug 빌드 통과. Release archive 및 Production CloudKit entitlement 포함 IPA export 통과.
 - App Store Connect 업로드 성공, Delivery UUID `46a8ee1e-cded-4fcf-aef7-4b06c89a3cd3`; 처리 상태 `VALID`. `TP Taption Plan 내부 테스트` 그룹 연결 후 API readback에서 빌드 노출과 테스터 1명을 확인했다. 근거 `build/validation/TF0928B162/testflight-readback.json`; archive/export/upload 로그는 같은 경로.
-- App Store Connect 웹 그룹 화면과 대표 기기에서 실제 `?` 표시/숨김 동작은 아직 확인하지 않았다. QMRK0928A1 및 TF0928B162는 해당 확인이 끝날 때까지 열린 상태로 둔다.
+- iPhone 11 Pro에 build 162 설치 및 실행 성공. 기기의 앱 목록에서 버전 1.0 (162), 실행 프로세스 PID 2688을 확인했다. 요약 `build/validation/TF0928B162/iphone-device-readback.json`; 원본 devicectl 결과는 같은 폴더. iPhone 18 Pro Max는 현재 `unavailable`.
+- App Store Connect 웹 그룹 화면과 기기 화면에서 실제 `?` 표시/숨김 동작은 아직 확인하지 않았다. iPhone 11은 실행까지만 확인했으며 QMRK0928A1 및 TF0928B162는 해당 확인이 끝날 때까지 열린 상태로 둔다.
 
 ## QMRK0928A1 · 미확인 `?` 마커 조건부 표시 (2026-09-28)
 
