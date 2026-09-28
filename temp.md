@@ -35,7 +35,7 @@
 - 현재 상태: 161 Release archive/Production IPA 및 업로드 성공(Delivery UUID `84e88d1b-9cb6-4545-9939-c68ee91ef642`). API readback으로 처리 `VALID`, `TP Taption Plan 내부 테스트` 연결, 테스터 1명 확인. 결과 `build/validation/ALLT0927A1/testflight-161-readback.json`. App Store Connect 웹 UI는 로그인 실패로 화면 검증 불가.
 - 남음: 사용자의 App Store Connect 그룹 화면 readback 및 대표님 iPhone 18 설치·화면/로그 검증.
 
-## TF0928B162 · 실제 미확인 활동 조건부 `?` 내부 검증 빌드 [진행]
+## TF0928B162 · 실제 미확인 활동 조건부 `?` 내부 검증 빌드 [업로드·VALID·내부 그룹 API 확인 완료 / 그룹 화면·기기 확인 대기]
 - 원인: 161은 합성 하루 전체 미확인 표시 구간에서도 `?` 마커를 보이는 결함을 포함한다.
 - 해결: QMRK0928A1 수정과 회귀를 main에 반영하고 build 162로 TestFlight 내부 검증본을 만든다. 앱·위젯·Watch 네 번들 번호를 일치시킨다.
 - 검증 기준: 전체 관련 회귀, iOS/Watch Debug, Release archive, 네 번들 build 162, 업로드 `VALID`, 내부 그룹 연결 및 테스터 노출을 확인한다. Production CloudKit은 사용자가 허용한 내부 배포로 제한하고 공개 제출/IAP는 제외한다.
