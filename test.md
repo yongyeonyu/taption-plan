@@ -4,7 +4,12 @@
 
 - 배포 전 App Store Connect API readback에서 최근 빌드 162 `VALID`, 최고 번호 162를 확인했다. 기록 `build/validation/TFL0928C01/asc-builds-before.json`.
 - 앱 전체 테스트: **1,427 통과, 1 건너뜀, 0 실패 (총 1,428)**. 건너뜀은 `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`이며 iOS 26.5 StoreKitTest 환경 보호 항목이다. 구매/IAP를 검증하지 않았다. `build/validation/TFL0928C01/app-tests.xcresult`, `app-tests.log`.
-- 366개 `HomeEvolution` SVG 모두 고유, 인접 레벨 365쌍 차이 확인. `CURRENT_PROJECT_VERSION` 8개 설정 및 앱·iPhone Widget·Watch·Watch Widget `CFBundleVersion`을 163으로 맞췄다. 테스트 플라이트 Release archive·처리·내부 그룹 결과는 이어서 기록한다.
+- 366개 `HomeEvolution` SVG 모두 고유, 인접 레벨 365쌍 차이 확인. `CURRENT_PROJECT_VERSION` 8개 설정 및 앱·iPhone Widget·Watch·Watch Widget `CFBundleVersion`을 163으로 맞췄다.
+- 커밋 `a4cdab4030b8f9dd6e6f1d804ccb71a83527f22f` (`Polish map activity visuals and daily home evolution`)을 `main`에 만들고 `origin/main`에 push했다. 직후 워크트리는 clean이고 local/remote HEAD가 같다.
+- 해당 커밋에서 Release archive와 App Store Connect internal-only Production export에 성공했다. archive와 IPA의 앱·iPhone 위젯·Watch 앱·Watch 위젯 네 번들 모두 1.0(163), IPA 서명 entitlement `iCloudContainerEnvironment=Production`. archive/export 로그와 IPA는 `build/validation/TFL0928C01/`에 있다.
+- iOS generic Debug 빌드 `BUILD SUCCEEDED`: `build/validation/TFL0928C01/ios-debug.log`.
+- `altool --upload-app` 업로드 성공, Delivery UUID `bd7a8004-7df6-478c-a63e-d606ed4be1ad`. `altool --build-status`와 App Store Connect API에서 build 163 `VALID`, `INTERNAL_ONLY`를 확인하고 `TP Taption Plan 내부 테스트` 그룹에 연결했다. 최종 그룹 API readback에서 build attached와 테스터 1명을 확인했다: `build/validation/TFL0928C01/testflight-readback.json`. App Store Connect 웹 페이지는 `authResult=FAILED` 로그인 화면을 반환해 화면 캡처는 불가했다.
+- 최종 검증 기록을 포함한 문서 커밋은 후속 main 커밋으로 push한다. 공개 제출/IAP는 수행하지 않았다.
 
 ## UNCF0928A1 · 미확인 입력 대분류 확정 유지 (2026-09-28)
 

@@ -1,11 +1,12 @@
 # 남은 요청
 
-## TFL0928C01 · 검증된 워크트리 main 반영 및 내부 TestFlight 빌드 [진행]
+## TFL0928C01 · 검증된 워크트리 main 반영 및 내부 TestFlight 빌드 [완료]
 - 원인: main에 최근 기능 수정과 Lv.1–366 성장 아트가 검증된 상태로 남아 있지만 미커밋이며, 배포 중인 1.0(162)에는 반영되지 않았다.
 - 해결: 기존 main 작업을 보존해 관련 요청을 한 커밋으로 기록·푸시하고, 앱·Widget·Watch·Watch Widget 빌드 번호를 App Store Connect의 다음 번호로 올린 뒤 내부 TestFlight에 배포한다.
 - 검증 기준: 현재 dirty 변경의 전체 테스트·Debug/Release archive 성공, 네 제품 번들 번호 일치, clean main과 origin 동기화, 업로드 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹의 빌드와 테스터 노출 확인. 공개 제출/IAP는 하지 않는다.
 - 제한: 실기기 기능 검증 대기 항목은 TestFlight 업로드로 완료 처리하지 않는다.
 - 상태: App Store Connect API에서 최신 1.0(162) `VALID`, 최고 빌드 번호 162를 확인했다. `CURRENT_PROJECT_VERSION` 8개 설정과 앱·Widget·Watch·Watch Widget Info.plist 4개를 163으로 맞췄다. 전체 앱 테스트는 1,427 통과·1 건너뜀·0 실패이며, 건너뜀은 기존 iOS 26.5 StoreKitTest 보호 항목이다. 자세한 결과는 `test.md`의 TFL0928C01 참조.
+- 완료: 커밋 `a4cdab4030b8f9dd6e6f1d804ccb71a83527f22f`를 `origin/main`에 push하고 현재 소스에서 1.0(163) Release archive/export·iOS Debug를 통과했다. 업로드 UUID `bd7a8004-7df6-478c-a63e-d606ed4be1ad`, 처리 `VALID`, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명을 API readback으로 확인했다. App Store Connect 웹은 `authResult=FAILED`라 그룹 화면은 접근할 수 없었다. 공개 제출/IAP는 실행하지 않았다.
 
 ## M1280928A1 · Lv.1–28 첫 달 성장 에셋 재구성 [완료]
 - 원인: Lv.1–7의 불→쉼터→집 도입은 분명하지만, 첫 생성 규칙에서 완성 집 이후 첫 달에도 한 층 집이 오래 유지되어 초기 28일 성장 폭이 약하다.
