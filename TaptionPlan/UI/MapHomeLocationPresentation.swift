@@ -95,17 +95,17 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
     }
 
     var tint: Color {
-        // 판타지 양피지 지도와 어울리는 어스톤. 집=따뜻한 테라코타,
-        // 회사=세이지 그린 등 지도 팔레트와 조화.
+        // Low-chroma terrain colors keep every registered landmark in the
+        // same parchment-map palette while preserving category distinction.
         switch self {
-        case .home: Color(hex: "#C67A3E")     // 오두막 — 따뜻한 흙갈색
-        case .company: Color(hex: "#4A6FA5")  // 길드 성 — 차분한 청록빛 파랑
-        case .school: Color(hex: "#5B8C6E")   // 지식의 탑 — 세이지 그린
-        case .academy: Color(hex: "#8A6BA8")  // 마법 연구소 — 자수정
-        case .exercise: Color(hex: "#C25548") // 훈련장 — 벽돌 레드
-        case .hobby: Color(hex: "#C99A3E")    // 공연장 — 황금
-        case .restaurant: Color(hex: "#B0588F") // 주점 — 자두빛
-        case .user: Color(hex: "#C65D4D")     // 깃발 — 테라코타
+        case .home: Color(hex: "#976744")
+        case .company: Color(hex: "#65745E")
+        case .school: Color(hex: "#7B6C55")
+        case .academy: Color(hex: "#796D82")
+        case .exercise: Color(hex: "#A75F4A")
+        case .hobby: Color(hex: "#987F4D")
+        case .restaurant: Color(hex: "#A56347")
+        case .user: Color(hex: "#756E5B")
         }
     }
 }
@@ -159,12 +159,37 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
-    /// 회사/업무는 모니터, 학교/수업은 책 소품을 마커에 오버레이한다.
-    var propSymbol: String? {
+    var sceneBackgroundSymbol: String {
         switch self {
+        case .activity: "house.fill"
         case .computer, .company: "desktopcomputer"
-        case .reading, .school: "book.fill"
-        default: nil
+        case .school, .reading: "books.vertical.fill"
+        case .hobby: "sparkles"
+        case .sleeping: "bed.double.fill"
+        case .movement, .walking, .running, .cycling: "figure.walk"
+        case .eating: "fork.knife"
+        case .exercise: "dumbbell.fill"
+        case .unconfirmed: "questionmark"
+        case .car, .privateVehicle: "car.fill"
+        case .subway: "tram.fill"
+        case .bus: "bus.fill"
+        case .ship: "water.waves"
+        case .airplane: "airplane"
+        }
+    }
+
+    var sceneBackgroundTintHex: String {
+        switch self {
+        case .activity: "#C67A3E"
+        case .computer, .company: "#4A6FA5"
+        case .school, .reading: "#5B8C6E"
+        case .hobby: "#C99A3E"
+        case .sleeping: "#777FA8"
+        case .movement, .walking, .running, .cycling: "#71A393"
+        case .eating: "#D28B57"
+        case .exercise: "#C25548"
+        case .unconfirmed: "#8A8174"
+        case .car, .subway, .privateVehicle, .bus, .ship, .airplane: "#6887A7"
         }
     }
 
@@ -766,6 +791,50 @@ enum MapHomeCatActivityMotion {
     }
 }
 
+enum MapHomeCatSceneSizing {
+    static let spriteWidth: CGFloat = 52
+    static let spriteWidthToCanvasRatio: CGFloat = 0.86
+
+    static func spriteScale(forCanvasSize size: CGFloat) -> CGFloat {
+        guard size.isFinite, size > 0 else { return 0 }
+        return size * spriteWidthToCanvasRatio / spriteWidth
+    }
+}
+
+private struct MapHomeCatSceneBackdrop: View {
+    let action: MapHomeStickmanAction
+    let size: CGFloat
+
+    private var tint: Color { Color(hex: action.sceneBackgroundTintHex) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [tint.opacity(0.22), Color.tpSurface.opacity(0.96)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            Circle()
+                .stroke(tint.opacity(0.34), lineWidth: size * 0.035)
+                .padding(size * 0.07)
+            Image(systemName: action.sceneBackgroundSymbol)
+                .font(.system(size: size * 0.43, weight: .semibold))
+                .foregroundStyle(tint.opacity(0.28))
+                .offset(x: size * 0.19, y: -size * 0.17)
+            Capsule()
+                .fill(tint.opacity(0.38))
+                .frame(width: size * 0.62, height: max(1, size * 0.04))
+                .offset(y: size * 0.31)
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+}
+
 private struct MapHomeCatActivityScene: View {
     let action: MapHomeStickmanAction
     let catAction: TaptionCatAnimationAction
@@ -780,6 +849,7 @@ private struct MapHomeCatActivityScene: View {
 
     var body: some View {
         ZStack {
+            MapHomeCatSceneBackdrop(action: action, size: size)
             if action == .exercise {
                 Circle()
                     .stroke(Color.tpSecondary.opacity(0.75), lineWidth: 2)
@@ -794,21 +864,15 @@ private struct MapHomeCatActivityScene: View {
                     }
                     .frame(width: size * 0.80, height: size * 0.80)
             }
-            if let prop = action.propSymbol {
-                Image(systemName: prop)
-                    .font(.system(size: size * 0.34, weight: .semibold))
-                    .foregroundStyle(Color.tpInk.opacity(0.80))
-                    .offset(x: size * 0.19, y: size * 0.21)
-            }
             TaptionCatAtlasSprite(style: "white", action: catAction, frame: phase)
-                .scaleEffect(action == .exercise ? 0.70 : action == .sleeping ? 0.84 + 0.04 * wave : 0.88)
+                .scaleEffect(MapHomeCatSceneSizing.spriteScale(forCanvasSize: size))
                 .offset(
                     x: action == .computer || action == .company || action == .school || action == .reading
                         ? wave * size * 0.11
                         : 0,
                     y: action == .computer || action == .company || action == .school || action == .reading
-                        ? -size * 0.08
-                        : 0
+                        ? size * 0.12
+                        : size * 0.10
                 )
                 .rotationEffect(.degrees(action == .unconfirmed ? Double(wave) * 9 : leanDegrees))
             if let accessory = action.catAccessory {
@@ -834,6 +898,7 @@ private struct MapHomeCatActivityScene: View {
             }
         }
         .frame(width: size, height: size)
+        .clipShape(Circle())
     }
 
     @ViewBuilder

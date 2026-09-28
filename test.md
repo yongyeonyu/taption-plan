@@ -1,5 +1,49 @@
 # 검증 기록
 
+## TFL0928C01 · main 반영 및 TestFlight 163 (2026-09-28)
+
+- 배포 전 App Store Connect API readback에서 최근 빌드 162 `VALID`, 최고 번호 162를 확인했다. 기록 `build/validation/TFL0928C01/asc-builds-before.json`.
+- 앱 전체 테스트: **1,427 통과, 1 건너뜀, 0 실패 (총 1,428)**. 건너뜀은 `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`이며 iOS 26.5 StoreKitTest 환경 보호 항목이다. 구매/IAP를 검증하지 않았다. `build/validation/TFL0928C01/app-tests.xcresult`, `app-tests.log`.
+- 366개 `HomeEvolution` SVG 모두 고유, 인접 레벨 365쌍 차이 확인. `CURRENT_PROJECT_VERSION` 8개 설정 및 앱·iPhone Widget·Watch·Watch Widget `CFBundleVersion`을 163으로 맞췄다. 테스트 플라이트 Release archive·처리·내부 그룹 결과는 이어서 기록한다.
+
+## UNCF0928A1 · 미확인 입력 대분류 확정 유지 (2026-09-28)
+
+- 앱 부팅 전 레일을 `.wholeDayUnconfirmed`로 임시 채우던 부모 상태와 빈 `MapHomeTimeSidebarRailSnapshot`의 fallback을 제거했다. `model.isBootstrapped` 전에는 레일·현재 활동 표시를 비우고 시간 편집 및 미확인 입력 콜백을 막는다. 데이터 로드 완료 후 실제 미확인 구간은 이전 정책대로 표시한다.
+- 미확인 공백에서 업무 대분류를 저장한 뒤 같은 repository로 `AppModel`을 새로 만들고 다시 부팅하는 테스트에서 업무 분류가 유지됐다. 이후 같은 시간에 겹치는 HealthKit 자동 활동을 추가해도 수동 확정 분류가 우선하며 확인 대상에서 빠진다.
+- 요청 회귀 6종 통과: `FeatureEngineTests.testConfirmedUnconfirmedCategorySurvivesReloadAndLateAutomaticRecord`, `testActivitySectionSaveOverridesTravelAndSupportsImmediateReedit`, `testPartialUnconfirmedEditPreservesSourceOutsideSelectedSpan`, `TimeScaleTests.testMapHomeSidebarRailSnapshotIndexesOnlyVisibleIntervals`, `testQuestionMarkMarkersOnlyExistForActualVisibleUnconfirmedActivity`, `testQuickConfirmedIntervalDisappearsFromUnconfirmedReview`. 결과 `build/validation/UNCF0928A1/app-tests.xcresult`, `app-regressions.xcresult`, `unconfirmed-review.xcresult`; 모든 실행 `TEST SUCCEEDED`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/UNCF0928A1/ios-debug.log`. `git diff --check` 통과.
+- iPhone 11 Pro에 Debug 1.0(162)을 설치하고 실행했다. 첫 화면 캡처 `build/validation/UNCF0928A1/iphone11-startup.png`에서는 로딩용 가짜 `?`가 보이지 않았다. 재실행 명령의 첫 두 캡처는 검은 화면이었고, 프로세스를 종료한 뒤 새로 실행하자 지도가 표시됐다(`iphone11-relaunch-fresh.png`). 이 캡처에는 13:50 선택 시각 옆에 실제 미확인 마커가 하나 나타났지만, 그 구간이 사용자가 이전에 확정한 바로 그 구간인지는 화면 자료만으로 식별할 수 없다. 따라서 해당 구간의 실기기 저장·재진입 확인은 미완료다.
+
+## LOC0928A01 · 등록 장소 마커 지도 팔레트 통일 (2026-09-28)
+
+- 집·회사·학교·학원·운동·취미·식당·사용자 장소의 색을 저채도 어스톤으로 바꿨다. 지도 랜드마크 기호는 모두 크림 표면·지도 라인 테두리·갈색 계열 그림자가 있는 같은 크기의 배지로 표시한다. 집 그림에도 은은한 크림 배경과 지도 테두리를 적용했다. 라벨과 위치 목록 썸네일은 같은 장소 강조색을 쓴다.
+- `FeatureEngineTests.testRegisteredLocationTintsUseDistinctParchmentMapColors`, `testMapHomeLocationHierarchyKeepsConfiguredAndUserDestinationsDistinct`, `testRegisteredPlaceIconCenterMatchesStoredCoordinate`, `testCatTapRoutingAcceptsOnlyTapsInsideMarkerBounds` 통과(4/4). 결과 `build/validation/LOC0928A01/app-tests.xcresult`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/LOC0928A01/ios-debug.log`; `git diff --check` 통과. 실기기 지도 화면은 미확인이다.
+
+## BAK0928A01 · 수동 백업을 자동 설정과 분리 (2026-09-28)
+
+- `FeatureEngineTests.testManualCloudBackupWorksWhenAutomaticBackupIsDisabled` 및 `testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration` 통과(2/2): 월별 자동 백업 off + PIN 상태에서 수동 저장은 성공하고, 센서 raw archive가 불완전하면 이전 세대와 raw 자료를 보존한다. `build/validation/BAK0928A01/app-tests-retry.xcresult`.
+- `SecurityBackupCoreTests.testCloudBackupAndAppLockRequirePIN` 통과(1/1). 수동 generation 저장도 PIN이 없으면 `.pinRequiredForCloudBackup`로 거부한다. `build/validation/BAK0928A01/pin-guard-tests.xcresult`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/TRN0928A01/build.log`; `git diff --check` 통과. 실제 iCloud 계정으로의 백업과 기기 설정 화면은 미검증이다.
+
+## TRN0928A01 · 기차 이동에서 지하철 카탈로그 경로 생성 (2026-09-28)
+
+- `.train` 이동 시간 안의 센서 표본에서 지하철 카탈로그 경로가 유효하게 복원될 때 지도에 추정 스타일 경로를 표시한다. 현재 재생 시점 이후 표본은 사용하지 않고, 역 순서/노선 증거가 부족하면 경로를 만들지 않는다. 경로 복원 엔진은 유효한 카탈로그 노선이 붙은 `.train` 추론도 지하철 세그먼트로 정규화한다. 복원된 지도 캐시는 첫 렌더에서 최신 센서 기반 추정 경로를 다시 계산한다.
+- `FeatureEngineTests.testTrainMovementDrawsEstimatedSubwayCatalogRouteOnlyWithRailEvidence`, `testSparseRailEndpointsRestoreSubwayWithoutRoadFalsePositive`, `testMapHomeSubwayOverlayDoesNotDrawUnconfirmedWholeRoute`, `testRailEndpointsBridgeThirtyMinuteGPSGapOnlyOnCatalogRoute` 통과(4/4). 결과 `build/validation/TRN0928A01/app-tests.xcresult`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/TRN0928A01/build.log`; `git diff --check` 통과. 실기기 지도 표시는 아직 미확인이다.
+
+## CBG0928A01 · 화랑이 장면 배경·크기 통일 (2026-09-28)
+
+- 지도 고양이 20개 동작마다 배경 아이콘과 의미 색상을 연결했다. 회사·학교·수면·식사·운동·취미·이동·교통 등 각 상황의 심볼을 낮은 대비로 장면 뒤에 배치하고 장면 캔버스 안에서 원형 클립한다.
+- 동작별 개별 스케일(운동·수면 포함)을 없애고 캔버스 폭의 86%로 공통 크기 비율을 사용한다. 30·36·42pt 크기 및 0/무한 입력 경계 검사 포함.
+- `MapHomeStickmanTests.testCatSceneBackgroundCoversEveryActionWithConsistentSpriteScale` 통과. 최종 `focused-verified.xcresult`, 로그 `build/validation/CBG0928A01/focused-verified.log`.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/CBG0928A01/ios-debug-final.log`; `git diff --check` 통과. 전체 동작의 실제 지도 화면은 아직 기기에서 확인하지 않아 `temp.md`에 대기로 남긴다.
+
+## WPL0928A01 · 현재·예보 날씨 알약 배경 (2026-09-28)
+
+- 현재 관측 배경은 순백색, 미래 예보 배경은 불투명 `tpSurface`로 지정하고 두 배경 모두 alpha 1로 렌더한다. 예보 아이콘·온도 텍스트만 기존 비활성 표시 opacity 0.58을 유지한다.
+- `TimeScaleTests.testWeatherTimelineDimsForecastsAndScalesWidgetsToEightyPercent` 통과. 같은 결과 번들에서 배경 스타일·불투명도 assertion 확인. generic iOS Debug와 `git diff --check` 통과.
+
 ## TF0928B162 · `?` 조건부 표시 TestFlight 162 (2026-09-28)
 
 - QMRK0928A1 포함 main 커밋 `25322bb` 푸시 완료. 빌드 162로 앱·Widget·Watch·Watch Widget 버전을 맞췄다. IPA 내부 네 번들의 `CFBundleVersion` 모두 162.
@@ -30,6 +74,16 @@
 - 현재 작업 트리에서 앱 전체 테스트 **1,421 통과, 1 건너뜀, 0 실패 (총 1,422)**. 유일한 skip은 `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`; iOS 26.5 StoreKitTest가 `SKInternalErrorDomain Code 3`으로 시작되지 않았다. 원본 `build/validation/ALLT0927A1/app-tests-current-20260928.log` 및 `.xcresult`.
 - Swift package 테스트: TaptionPlanCore 101/101, TaptionRouteEngine 39건 통과, TaptionActivityEngine 33/33, TaptionPlanEngine 1/1. 로그는 `package-core-20260928.log`, `package-route-20260928.log`, `package-activity-20260928.log`, `package-plan-20260928.log`.
 - generic iOS Debug 및 Watch Debug 빌드 모두 성공. 로그 `ios-debug-current-20260928.log`, `watch-debug-current-20260928.log`. 전체 앱 테스트에는 GPS gap 보간·2행 카테고리 회귀가 포함됐다.
+
+## ALLT0927A1 · 전체 앱 회귀·현재 Debug 기기 실행 (2026-09-28)
+
+- 현재 수정 작업 트리 전체 앱 테스트 **1,427 통과, 1 건너뜀, 0 실패 (총 1,428)**. StoreKit 상품 구매/복원 테스트 1건은 iOS 26.5의 기존 시뮬레이터 환경 보호 skip이며, 별도 판매 검증으로 계산하지 않았다. 과거 실패 13건은 이번 전체 실행에서 재현되지 않았다. 결과 `build/validation/ALLT0927A1/current/app-tests.xcresult`, 로그 `app-tests.log`.
+- TaptionPlanCore 101/101, TaptionRouteEngine 39/39, TaptionActivityEngine 33/33, TaptionPlanEngine 1/1 통과. 출력 로그는 `build/validation/ALLT0927A1/current/*-package.log`.
+- generic iOS Debug 및 Watch·Watch Widget Debug 빌드 모두 `BUILD SUCCEEDED`: `build/validation/ALLT0927A1/current/ios-debug.log`, `watch-debug.log`. 앱·iPhone Widget·Watch 앱·Watch Widget 산출물의 bundle ID와 build 162를 각각 확인했다.
+- 현재 소스 Debug 1.0(162)을 iPhone 11 Pro에 update-in-place 설치·실행했다. 캡처 `build/validation/ALLT0927A1/current/iphone11-after-launch.png`에는 지도 홈, 집·화랑이, 시간축, 날씨 및 Undo/Redo 컨트롤이 보인다. 터치/저장·실제 이동은 검증하지 않았다.
+- 같은 Debug 1.0(162)을 iPad Pro에 설치·실행했다. 캡처 `build/validation/ALLT0927A1/current/ipad-after-load.png`는 온보딩 1/4 위치 단계다. 권한 버튼을 누르지 않았으므로 온보딩 진행 검증은 미완료다. iPhone 18 Pro Max는 연결할 수 없어 실기기 검증을 못 했다.
+- `git diff --check` 통과. 4개 Swift package 테스트를 동시에 별도 빌드하려던 후속 실행은 디스크 부족으로 실패했다. 이 재실행 실패를 테스트 실패나 통과로 계산하지 않으며, 앞서 완료된 package 결과는 별도 출력으로 통과 확인했다. 임시 package scratch 폴더만 제거해 여유 공간을 회복했다.
+- 실기기 캡처 `build/validation/ALLT0927A1/current/iphone11-after-relaunches.png`에서 오른쪽 시간축이 헤더 아래부터 하단 콘텐츠 영역까지 확장되고 00–24 시간 라벨 및 활동 구간이 서로 겹치지 않는 것을 확인했다. MARG270927 실기기 화면 기준을 통과했다. 짧은 레일의 조작 간격은 회귀 테스트 기준으로 확인했다.
 
 ## TF0928B161 · TestFlight/CloudKit 환경 제약 확인 (2026-09-28)
 
@@ -497,3 +551,50 @@
 - `RouteTimelineDataTests.testGPSGapPredictionAddsOnlyBoundedDisplayCoordinates`와 `testGPSGapPredictionRejectsLongInaccurateAndWatchGaps`, `TimeScaleTests.testUnconfirmedQuickCategoriesFitInTwoOrderedRows`가 모두 통과(3/3, 실패/건너뜀 0). 실행 로그 `build/validation/GPSX0928A1/focused-tests-final2.log`, xcresult `build/ArchiveDD/Logs/Test/Test-TaptionPlan-2026.09.28_10-38-38-+0900.xcresult`.
 - generic iOS Debug `BUILD SUCCEEDED`: `build/validation/GPSX0928A1/ios-debug-build-final.log`; `git diff --check` 통과.
 - 실기기에서 실제 GPS 공백 구간을 재현한 화면은 아직 확인하지 않았다. 예측은 지도 표시용 직선 보간이며 실제 도로·실제 이동 경로를 보장하지 않으므로 화면 확인 전에는 기능의 기기 검증을 완료 처리하지 않는다.
+
+## DINA0928A1 · Dynamic Island 현재 대분류 화랑이·활동명 표시 (2026-09-28)
+
+- 현재 구현이 요청을 이미 충족한다. 센서 수집 Live Activity와 활동 타이머 Live Activity 모두 compactLeading에서 현재 대분류 ID/이름으로 화랑이 동작을 선택하고, compactTrailing에서 같은 현재 활동명을 표시한다. 예를 들어 `movement` 상태에서는 왼쪽이 이동 동작으로 애니메이션되고 오른쪽은 `이동`이다. 실제 현재 활동 projection은 시작 상태에 전달되며 센서 수집 reconciliation 때 갱신된다. 따라서 소스 변경은 하지 않았다.
+- `FeatureEngineTests.testLiveActivityContentStateOptionalFieldsDecodeAndRoundTrip` 1/1 통과, `MapHomeStickmanTests.testLiveActivityStickmanResolvesEveryMajorCategory` 1/1 통과. 각각의 xcresult/log는 `build/validation/DINA0928A1/compact-tests.xcresult`, `compact-tests.log`, `category-action-test-verified.xcresult`, `category-action-test-verified.log`에 있다. 첫 resolver 실행은 잘못 지정한 test class로 인해 0건이었으며 성공 근거에 포함하지 않는다.
+- 위젯 extension을 포함한 generic iOS Debug `BUILD SUCCEEDED`: `build/validation/DINA0928A1/ios-debug-build.log`. `git diff --check` 통과.
+- 실기기 Dynamic Island 캡처는 이번에 확인하지 않았다. 자동 테스트·빌드는 통과했으나 실제 기기의 표시 결과까지 검증한 것은 아니다.
+
+## RPL0928A01 · 9월 24일 기록 재생에서 화랑이·이동 경로 누락 조사 (2026-09-28)
+
+- iCloud 앱 컨테이너의 최신 로그 `TaptionLogs-20260928-123536.txt`에서 9월 24일의 날짜 snapshot 3건을 집계했다. 완료된 snapshot은 `readings=0`, `readings_with_point=0`, `travel=0`, `subway_segment_count=0`, `subway_route_count=0`이었다. 같은 시점 `fmap_route_projection`도 `segment_count=0`, `overlay_count=0`, `overlay_coordinate_total=0`, `dropped_short=0`, `dropped_subway_confirmed=0`으로 끝났고 날짜 로드는 완료됐다.
+- 진단은 저장된 활동 항목의 존재와 별개로, 해당 날짜 지도 재생에 공급된 GPS/이동 원본이 없어서 화랑이 좌표와 이동 경로가 생성되지 않았음을 보여준다. 렌더러가 생성된 경로를 누락한 증거는 없다. 이 로그만으로 사용자가 말한 활동 기록 자체의 원본/건수까지 확인할 수는 없다. 원본 위치·건강 데이터는 출력하지 않았다.
+- 판정: 현재 증거 기준 데이터 부재로 설명되므로 코드 결함으로 오판하지 않고 조사 요청을 닫는다. GPS가 저장된 9월 24일 기록이 있다고 확인되는 별도 증거가 생기면 새 조사로 연다. 9월 24일 화면을 직접 조작해 캡처한 것은 아니므로 실기기 UI 확인을 완료로 주장하지 않는다.
+
+## HGR0928A01 · 집 성장 초반 단계·투명 마커 크기 (2026-09-28)
+
+- Lv.1 모닥불은 그대로 두고 Lv.2 야영 흔적, Lv.3 천막, Lv.4 개방형 비가림막, Lv.5 목재 골조, Lv.6 지붕을 얹는 오두막, Lv.7 첫 완성 집으로 SVG를 교체했다. 하루 한 단계 성장, 기존 `HomeEvolution001...366` 이름과 연도별 365/366 단계는 보존했다.
+- 지도 집 아이콘의 흰색 광륜·크림색 원판·테두리를 제거했다. 투명 여백이 있는 SVG 캔버스는 48pt로 유지해 실제 집 그림이 약 34pt로 보이며 `MapHomeStickmanMarker.size` 36pt에 가깝게 맞춘다. 집 안 화랑이 합성 그림도 같은 48pt 집 크기를 쓰고, 집 상세 탭의 18pt 반경과 48pt 터치 프레임은 유지했다.
+- 성장 정책 테스트 18/18 통과(`testAll366EvolutionIllustrationsArePackaged` 포함). 집 아이콘·화랑이 탭 분리 회귀 1/1 통과. 결과 `build/validation/HGR0928A01/growth-policy-tests.xcresult`, `growth-tests.xcresult`; 최초 잘못된 테스트 클래스 경로로 실행해 0건 나온 결과는 성공 근거에 포함하지 않는다.
+- generic iOS Debug `BUILD SUCCEEDED`: `build/validation/HGR0928A01/ios-debug.log`. 첫 7개 SVG와 366개 전체 SVG·이미지 세트 존재 및 XML 파싱을 검사했고, `git diff --check` 통과했다. 별도 에셋 미리보기로 Lv.2/3/4/5/6/7 그림을 육안 확인했다.
+- 이번 Debug 변경본은 iPhone에 설치하지 않았다. 지도 화면에서 흰색 배경 제거, 화랑이 대비 크기 및 실제 보이는 크기는 기기 캡처 전이라 `temp.md`에 확인 대기로 남긴다.
+
+## HGV0928A01 · 연간 집 성장 경로와 에셋 구조 조사 (2026-09-28)
+
+- 구현을 읽어보면 집 그림은 분기하지 않는다. `artworkName(level:)`가 현재 시즌 레벨과 `HomeEvolutionNNN`을 직접 연결하고, 실제 일 기록이 있고 미확인 구간이 0인 날짜를 닫을 때 하루 최대 +1, 현지 연도의 365/366에서 상한을 둔다. 해가 바뀌면 이전 시즌을 archive하고 Lv.1부터 새로 시작한다.
+- 별도 분기는 7일 연속마다 생기는 주간 보상이다. 50개 랜드마크 후보(10개국×5개) 중 3개를 보여 주고 하나를 고르면 진화 후보 ID·연결 배치용 땅 조각·액세서리 ID를 보관한다. 땅 배치와 액세서리 착용은 각각 별도 동작이며, 이 선택은 `HomeEvolution` 그림의 레벨/경로를 변경하지 않는다.
+- 자산 검사는 366개 SVG와 카탈로그가 전부 존재하고 파싱됨을 확인했다. SVG의 `Lv.숫자` 텍스트만 정규화해 본문을 문자열 비교하면 총 178개 패턴이며, Lv.8–366은 359개 레벨에 171개 패턴이다. 일부 본문이 반복되며 최장 반복 그룹은 14레벨이다. 이는 SVG 문자열의 정확한 본문 중복 측정이지, 사람 눈에 비슷해 보이는 모양을 합산한 수는 아니다. 별도 랜드마크 에셋은 50개다.
+- 레벨 1–7을 한 줄 성장, 매주 보상 선택을 옆 분기로 나타낸 경로도 SVG/PNG를 생성하고 화면으로 확인했다: `build/validation/HGV0928A01/home-growth-path.svg`, `home-growth-path-preview.svg.png`. 원본 코드 파일을 바꾸지 않는 조사·시각화 작업이다.
+- SVG 파싱/카탈로그 수와 카운트 검사 통과, `git diff --check` 통과.
+- 후속 화면 요청: Lv.8–14의 실제 SVG 7개를 동일한 96×96 viewBox로 나란히 배치한 연락 시트를 생성·육안 확인했다. 파일은 `build/validation/HGV0928A01/levels-8-14-contact.svg`와 `levels-8-14-contact.svg.png`에 있다. 이 구간은 모두 완성된 집이며, 화단·관목·나무·높이 등의 작은 장식 차이가 주 변화다.
+
+## M1280928A1 · Lv.1–28 첫 달 성장 에셋 재구성 (2026-09-28)
+
+- `scripts/generate_home_evolution_artwork.py`의 층수 규칙을 조정했다. 기존 Lv.1–7 도입 그림은 유지하고, Lv.8–14는 1층, Lv.15–21은 2층, Lv.22–28은 3층으로 구성한다. 이후에는 12주 단위로 층이 추가되어 기존 최대 8층 상한을 유지한다. 각 레벨에는 7일 팔레트 순환과 날짜별 주변 소품/강조 요소가 적용된다.
+- 48pt 마커 비율 연락 시트를 렌더링해 Lv.1–14와 Lv.15–28의 단계별 실루엣 및 일별 팔레트·장식 변화를 육안 확인했다: `build/validation/M1280928A1/lv1-14.svg.png`, `lv15-28.svg.png` (편집 가능한 SVG 원본도 같은 폴더).
+- `PYTHONDONTWRITEBYTECODE=1 python3 scripts/generate_home_evolution_artwork.py --check`: 366개 SVG 본문 모두 고유, 365개 연속 레벨 쌍 모두 다름, 카탈로그 검증 통과.
+- `MapHomeGrowthPolicyTests` 18/18 통과, 실패·건너뜀 0: `build/validation/M1280928A1/growth-tests.xcresult`, 로그 `growth-tests.log` (iPhone 17 Pro, iOS 26.5 시뮬레이터).
+- iOS generic Debug 빌드 성공: `build/validation/M1280928A1/ios-debug.log`. `git diff --check` 통과.
+- 테스트는 성장 정책과 번들 에셋을 검증한다. 실제 iPhone 지도에서 업데이트된 집 그림이 표시되는 장면은 아직 촬영하지 않았다.
+
+## DLY0928A01 · 매일 눈에 띄는 집 성장 변화 (2026-09-28)
+
+- `scripts/generate_home_evolution_artwork.py`를 추가해 기존 Lv.1–7 소개 그림을 보존하고 Lv.8–366을 결정론적으로 생성한다. 일별 7색 지붕/벽 팔레트와 큰 주변 장식을 바꾸며 건물 층과 실루엣을 키운다. 층 간격은 M1280928A1에서 첫 4주 주 1층, 이후 12주 1층으로 조정했다. 기존 `HomeEvolutionNNN` 파일명·96×96 투명 SVG viewBox·레벨 직접 매핑은 유지했다.
+- `python3 scripts/generate_home_evolution_artwork.py --check`: 366/366 SVG XML 유효, `Lv.N` 레벨 문구를 제외한 그림 본문 고유 366/366, 인접 레벨 차이 365/365. `--write`로 결과를 재생성하고 다시 `--check`를 통과했다.
+- `MapHomeGrowthPolicyTests` 18/18 통과(366개 에셋 bundle 포함): `build/validation/DLY0928A01/growth-tests.xcresult`, 로그 `growth-tests.log`. iOS generic Debug `BUILD SUCCEEDED`: `build/validation/DLY0928A01/ios-debug.log`. `git diff --check` 통과.
+- Lv.8–21 연락 시트를 48pt 지도 마커 비율로 렌더링해 색·장식 변화와 15레벨부터의 주간 건축 변화가 읽히는지 육안 확인했다: `build/validation/DLY0928A01/daily-evolution-contact.svg.png`; 편집 가능한 원본은 `daily-evolution-contact.svg`.
+- 시각화 수치는 SVG 본문 구조 고유성 검사와 연락 시트 육안 확인 기준이다. 실제 iPhone 지도에 업데이트 에셋이 표시되는 장면은 촬영하지 않았다. HGV0928A01의 178 패턴 수치는 DLY 변경 전의 과거 스냅샷이다.

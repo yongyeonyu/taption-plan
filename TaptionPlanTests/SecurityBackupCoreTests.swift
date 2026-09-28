@@ -134,11 +134,23 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertFalse(verifier.matches("1235"))
     }
 
-    func testCloudBackupAndAppLockRequirePIN() throws {
+    func testCloudBackupAndAppLockRequirePIN() async throws {
         let service = makeService()
         XCTAssertFalse(service.status.hasPIN)
         XCTAssertThrowsError(try service.saveMonthlyArchive(.empty, accountIdentifier: "account-a")) { error in
             XCTAssertEqual(error as? PlanSecurityError, .pinRequiredForCloudBackup)
+        }
+        do {
+            _ = try await service.saveMonthlyGeneration(
+                PlanCloudBackupPayload(snapshot: .empty),
+                rawSensorPayload: nil
+            )
+            XCTFail("Manual cloud backup must still require a PIN.")
+        } catch {
+            XCTAssertEqual(
+                error as? PlanSecurityError,
+                .pinRequiredForCloudBackup
+            )
         }
         XCTAssertThrowsError(
             try service.setAppLockSettings(

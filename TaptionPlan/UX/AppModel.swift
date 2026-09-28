@@ -2143,9 +2143,6 @@ final class AppModel {
             guard let securityBackupService else {
                 throw PlanSecurityError.accountUnavailable
             }
-            guard securityStatus.settings.cloudBackupEnabled else {
-                throw PlanSecurityError.pinRequiredForCloudBackup
-            }
             let date = Date.now
             let payload = await cloudBackupPayload(now: date)
             guard acceptsDataMutation() else { throw CancellationError() }

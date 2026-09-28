@@ -1501,6 +1501,120 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(readings.count, 3)
     }
 
+    func testTrainMovementDrawsEstimatedSubwayCatalogRouteOnlyWithRailEvidence()
+        throws {
+        let base = makeDate(2026, 8, 18, 7, 0)
+        let readings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.5248,
+                    longitude: 126.6744,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "가정역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5667,
+                    longitude: 126.8273,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "마곡나루역",
+                matchesRailRoute: true
+            ),
+        ]
+        let span = TimeSpan(
+            start: base,
+            end: base.addingTimeInterval(20 * 60)
+        )
+        let train = TravelSegment(
+            mode: .train,
+            span: span,
+            distanceMeters: 18_000,
+            confidence: .medium,
+            evidence: ["철도 탑승"]
+        )
+        let day = TimeSpan(
+            start: base.addingTimeInterval(-60),
+            end: base.addingTimeInterval(30 * 60)
+        )
+
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [train],
+            readings: readings,
+            day: day,
+            through: base.addingTimeInterval(20 * 60)
+        )
+
+        let overlay = try XCTUnwrap(overlays.first)
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertEqual(overlay.id, train.id)
+        XCTAssertTrue(overlay.estimated)
+        XCTAssertGreaterThanOrEqual(overlay.coordinates.count, 2)
+
+        let unrelatedReadings = [
+            SensorReading(
+                timestamp: base,
+                point: GeoPoint(
+                    latitude: 37.4,
+                    longitude: 126.4,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "등록되지 않은 출발역",
+                matchesRailRoute: true
+            ),
+            SensorReading(
+                timestamp: base.addingTimeInterval(20 * 60),
+                point: GeoPoint(
+                    latitude: 37.5,
+                    longitude: 126.5,
+                    altitude: 20,
+                    horizontalAccuracy: 12,
+                    verticalAccuracy: 8
+                ),
+                speedMetersPerSecond: 12,
+                motion: .automotive,
+                motionConfidence: .high,
+                nearbyStation: true,
+                nearbyStationName: "등록되지 않은 도착역",
+                matchesRailRoute: true
+            ),
+        ]
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [train],
+            readings: unrelatedReadings,
+            day: day,
+            through: base.addingTimeInterval(20 * 60)
+        ).isEmpty)
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(
+            travel: [train],
+            readings: readings,
+            day: day,
+            through: base.addingTimeInterval(10 * 60)
+        ).isEmpty)
+    }
+
     func testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories() {
         let phaseTitles = RecordAnalysisCategoryPolicy.options
             .filter(RecordAnalysisCategoryPolicy.isPhaseOption)
@@ -2112,6 +2226,18 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(MapHomeLocationDestination.exercise.placeKind, .exercise)
         XCTAssertEqual(MapHomeLocationDestination.hobby.placeKind, .hobby)
         XCTAssertNil(MapHomeLocationDestination.user.placeKind)
+    }
+
+    func testRegisteredLocationTintsUseDistinctParchmentMapColors() {
+        let colors = MapHomeLocationDestination.allCases.map {
+            $0.tint.hexRGBString
+        }
+
+        XCTAssertEqual(colors, [
+            "#976744", "#65745E", "#7B6C55", "#796D82",
+            "#A75F4A", "#987F4D", "#A56347", "#756E5B",
+        ])
+        XCTAssertEqual(Set(colors).count, MapHomeLocationDestination.allCases.count)
     }
 
     func testCanonicalAnalysisDoesNotMutateStoredRecord() {
@@ -2846,6 +2972,69 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testManualCloudBackupWorksWhenAutomaticBackupIsDisabled()
+        async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("manual-cloud-backup-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(
+            at: root,
+            withIntermediateDirectories: true
+        )
+        let suiteName = "TaptionPlanTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let backupStore = InMemoryPlanCloudBackupStore()
+        let backupService = PlanSecurityBackupService(
+            credentialStore: InMemoryPlanCredentialStore(),
+            backupStore: backupStore,
+            rawSensorBackupStore: InMemoryPlanCloudRawSensorBackupStore(),
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider(),
+            settingsDefaults: defaults
+        )
+        try backupService.setPIN("1234")
+        var backupSettings = backupService.settings
+        backupSettings.cloudBackupEnabled = false
+        try backupService.setAppLockSettings(backupSettings)
+
+        let sensorDatabaseURL = root.appendingPathComponent("sensor.sqlite")
+        let sensorStore = try TaptionPlanDayStore(url: sensorDatabaseURL)
+        _ = try await sensorStore.markMigrationCompleted(
+            "sensor-reading-v1-to-day-store-v2"
+        )
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: root.appendingPathComponent("readings.jsonl"),
+            dayStoreURL: sensorDatabaseURL
+        )
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: .empty),
+            sensorService: AppleSensorDataService(archive: sensorArchive),
+            cloudSyncService: nil,
+            securityBackupService: backupService,
+            rawDeviceDataArchive: try RawDeviceDataDayArchive(
+                databaseURL: root.appendingPathComponent("raw.sqlite")
+            ),
+            appleWatchDataReceiptStore: AppleWatchDataReceiptStore(
+                defaults: defaults
+            ),
+            registersHealthBackgroundHandler: false,
+            dayDatabase: try PlanDayDatabase(
+                directory: root.appendingPathComponent("day-data")
+            ),
+            watchSensorArchive: AppleWatchSensorActivityArchive(
+                fileURL: root.appendingPathComponent("watch/summaries.json")
+            )
+        )
+
+        try await model.saveCloudBackupNow()
+
+        XCTAssertFalse(backupService.settings.cloudBackupEnabled)
+        XCTAssertNotNil(try backupStore.latest())
+        XCTAssertNotNil(backupService.status.latestSuccessfulBackupDate)
+    }
+
+    @MainActor
     func testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration()
         async throws {
         let root = FileManager.default.temporaryDirectory
@@ -2870,7 +3059,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         try backupService.setPIN("1234")
         var backupSettings = backupService.settings
-        backupSettings.cloudBackupEnabled = true
+        backupSettings.cloudBackupEnabled = false
         try backupService.setAppLockSettings(backupSettings)
 
         let date = Date.now
@@ -3054,6 +3243,77 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(saved.actuals.contains {
             $0.categoryID == "unconfirmed" && $0.startedAt == selected.end
                 && $0.endedAt == source.endedAt
+        })
+    }
+
+    @MainActor
+    func testConfirmedUnconfirmedCategorySurvivesReloadAndLateAutomaticRecord()
+        async throws {
+        let day = makeDate(2026, 8, 12)
+        let span = TimeSpan(
+            start: day.addingTimeInterval(9 * hour),
+            end: day.addingTimeInterval(10 * hour)
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.settings.locationEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.healthEnabled = false
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let firstModel = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await firstModel.bootstrap()
+
+        let save = await firstModel.saveActivitySectionEdit(
+            ActivitySectionEditRequest(
+                sourceIDs: [],
+                originalSpan: span,
+                originalOption: ActivitySectionOverrideEngine.unconfirmedOption,
+                mode: .replace(
+                    editedSpan: span,
+                    option: phaseOption("work", title: "업무")
+                )
+            )
+        )
+        XCTAssertNotNil(save)
+
+        let reopenedModel = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await reopenedModel.bootstrap()
+        let lateAutomatic = ActualRecord(
+            planID: nil,
+            title: "자동 활동",
+            categoryID: "activity",
+            startedAt: day.addingTimeInterval(9.25 * hour),
+            endedAt: day.addingTimeInterval(9.75 * hour),
+            source: .healthKit,
+            confidence: .high,
+            evidence: ["HealthKit"]
+        )
+        let rail = MapHomeTimeRailSegmentEngine.segments(
+            from: reopenedModel.snapshot.actuals + [lateAutomatic],
+            travel: reopenedModel.snapshot.travel,
+            on: day,
+            asOf: day.addingTimeInterval(24 * hour),
+            calendar: utcCalendar
+        )
+
+        XCTAssertEqual(
+            MapHomeTimeRailSegmentEngine.segment(
+                at: 9 * 60 + 30,
+                in: rail
+            )?.categoryID,
+            "work"
+        )
+        XCTAssertFalse(rail.contains {
+            $0.categoryID == "unconfirmed"
+                && $0.startMinute < 10 * 60
+                && $0.endMinute > 9 * 60
         })
     }
 
@@ -26428,8 +26688,8 @@ final class MapHomeStickmanTests: XCTestCase {
     }
 
     func testCatActivityScenesUseRequestedActionsAndQuarterSpeed() {
-        XCTAssertEqual(MapHomeStickmanAction.company.propSymbol, "desktopcomputer")
-        XCTAssertEqual(MapHomeStickmanAction.school.propSymbol, "book.fill")
+        XCTAssertEqual(MapHomeStickmanAction.company.sceneBackgroundSymbol, "desktopcomputer")
+        XCTAssertEqual(MapHomeStickmanAction.school.sceneBackgroundSymbol, "books.vertical.fill")
         XCTAssertEqual(MapHomeStickmanAction.company.catAccessory, .tie)
         XCTAssertEqual(MapHomeStickmanAction.school.catAccessory, .glasses)
         XCTAssertNil(MapHomeStickmanAction.computer.catAccessory)
@@ -26457,6 +26717,33 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             1
         )
+    }
+
+    func testCatSceneBackgroundCoversEveryActionWithConsistentSpriteScale() {
+        XCTAssertEqual(
+            MapHomeStickmanAction.allCases.count,
+            MapHomeStickmanAction.allCases.filter {
+                !$0.sceneBackgroundSymbol.isEmpty && !$0.sceneBackgroundTintHex.isEmpty
+            }.count
+        )
+        XCTAssertEqual(MapHomeStickmanAction.company.sceneBackgroundSymbol, "desktopcomputer")
+        XCTAssertEqual(MapHomeStickmanAction.school.sceneBackgroundSymbol, "books.vertical.fill")
+        XCTAssertEqual(MapHomeStickmanAction.sleeping.sceneBackgroundSymbol, "bed.double.fill")
+        XCTAssertEqual(MapHomeStickmanAction.ship.sceneBackgroundSymbol, "water.waves")
+
+        for size: CGFloat in [30, 36, 42] {
+            let displayedWidthRatio =
+                MapHomeCatSceneSizing.spriteWidth
+                    * MapHomeCatSceneSizing.spriteScale(forCanvasSize: size)
+                    / size
+            XCTAssertEqual(
+                displayedWidthRatio,
+                MapHomeCatSceneSizing.spriteWidthToCanvasRatio,
+                accuracy: 0.001
+            )
+        }
+        XCTAssertEqual(MapHomeCatSceneSizing.spriteScale(forCanvasSize: 0), 0)
+        XCTAssertEqual(MapHomeCatSceneSizing.spriteScale(forCanvasSize: .infinity), 0)
     }
 
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {

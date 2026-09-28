@@ -12,6 +12,23 @@ private func mapHomeWeatherSymbolColor(
 
 enum MapHomeWeatherDisplayPolicy {
     static let forecastOpacity = 0.58
+    static let pillBackgroundOpacity = 1.0
+
+    enum PillBackgroundStyle: Equatable {
+        case currentWhite
+        case forecastOpaque
+
+        var color: Color {
+            switch self {
+            case .currentWhite: .white
+            case .forecastOpaque: .tpSurface
+            }
+        }
+    }
+
+    static func pillBackgroundStyle(for context: WeatherContext) -> PillBackgroundStyle {
+        context.isForecast == true ? .forecastOpaque : .currentWhite
+    }
 
     static func opacity(for context: WeatherContext) -> Double {
         context.isForecast == true ? forecastOpacity : 1
@@ -497,17 +514,15 @@ struct MapHomeTimeSidebarRailSnapshot: Equatable, Sendable {
     private let maximumEnds: [Int]
 
     init(_ segments: [MapHomeTimeRailSegment]) {
-        let normalized = segments.isEmpty
-            ? [.wholeDayUnconfirmed]
-            : segments.sorted {
-                if $0.startMinute != $1.startMinute {
-                    return $0.startMinute < $1.startMinute
-                }
-                if $0.endMinute != $1.endMinute {
-                    return $0.endMinute < $1.endMinute
-                }
-                return $0.id < $1.id
+        let normalized = segments.sorted {
+            if $0.startMinute != $1.startMinute {
+                return $0.startMinute < $1.startMinute
             }
+            if $0.endMinute != $1.endMinute {
+                return $0.endMinute < $1.endMinute
+            }
+            return $0.id < $1.id
+        }
         self.segments = normalized
         var maximumEnd = 0
         self.maximumEnds = normalized.map {
@@ -2297,13 +2312,16 @@ struct MapHomeWeatherSidebar: View {
                                 .monospacedDigit()
                                 .foregroundStyle(isSelected || isCurrent ? Color.tpAccent : Color.tpInk)
                         }
+                        .opacity(MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
                         .padding(.horizontal, MapHomeWeatherRailLayout.scaled(8))
                         .frame(
                             width: itemWidth,
                             height: MapHomeWeatherRailLayout.itemHeight
                         )
                         .background(
-                            Color.tpSurface.opacity(0.96),
+                            MapHomeWeatherDisplayPolicy
+                                .pillBackgroundStyle(for: entry.context).color
+                                .opacity(MapHomeWeatherDisplayPolicy.pillBackgroundOpacity),
                             in: Capsule()
                         )
                         .overlay {
@@ -2320,7 +2338,6 @@ struct MapHomeWeatherSidebar: View {
                             radius: MapHomeWeatherRailLayout.scaled(3),
                             y: MapHomeWeatherRailLayout.scaled(1)
                         )
-                        .opacity(MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
                         .position(
                             x: MapHomeWeatherRailLayout.itemCenterX(
                                 railWidth: railWidth,

@@ -3886,19 +3886,25 @@ enum SubwayTravelSegmentEngine {
                 inside: span,
                 userTransitLocations: userTransitLocations
             )
-            guard inference.mode == .subway else { continue }
+            guard inference.mode == .subway || inference.mode == .train else {
+                continue
+            }
             guard let route = inference.subwayRoute
                 ?? stationJourney?.route
-                ?? trajectory?.route else {
+                ?? trajectory?.route,
+                  SubwayStationCatalog.isValid(route) else {
                 continue
             }
             let sparseEndpointEvidence = trajectory?.isSparseEndpointTrajectory == true
                 ? ["철도 지도 신호·출발역·도착역 복원"]
                 : []
             let stationStateEvidence = stationJourney?.evidence ?? []
-            let routeSourceEvidence = trajectory == nil
+            var routeSourceEvidence = trajectory == nil
                 ? ["역 체류 상태로 지하철 구간 확정"]
                 : ["원본 GPS 철도 궤적 복원"]
+            if inference.mode == .train {
+                routeSourceEvidence.append("철도 탑승을 지하철 카탈로그 경로로 변환")
+            }
             result.append(TravelSegment(
                 mode: .subway,
                 span: span,

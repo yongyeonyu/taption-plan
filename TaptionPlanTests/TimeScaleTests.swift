@@ -718,7 +718,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(
             MapHomeTimeSidebarRailSnapshot([])
                 .visibleSegments(in: 0...1_440),
-            [.wholeDayUnconfirmed]
+            []
         )
     }
 
@@ -2260,6 +2260,15 @@ final class TimeScaleTests: XCTestCase {
             MapHomeWeatherDisplayPolicy.opacity(for: future),
             MapHomeWeatherDisplayPolicy.forecastOpacity
         )
+        XCTAssertEqual(
+            MapHomeWeatherDisplayPolicy.pillBackgroundStyle(for: current),
+            .currentWhite
+        )
+        XCTAssertEqual(
+            MapHomeWeatherDisplayPolicy.pillBackgroundStyle(for: future),
+            .forecastOpaque
+        )
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillBackgroundOpacity, 1)
         XCTAssertEqual(MapHomeWeatherDisplayPolicy.forecastOpacity, 0.58)
         XCTAssertEqual(MapHomeWeatherRailLayout.widgetScale, 0.8)
         XCTAssertEqual(

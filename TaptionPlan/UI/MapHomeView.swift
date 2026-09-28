@@ -762,8 +762,11 @@ private final class MapHomeMapRenderCache {
         minute: Int,
         overlays: [MapHomeSubwayRouteOverlay]
     ) {
-        subwayRouteDay = day
-        subwayRouteMinute = minute
+        // The persisted map cache contains confirmed routes only. Leave its
+        // key unset so the first render recomputes train-derived estimates
+        // from the current sensor readings as well.
+        subwayRouteDay = nil
+        subwayRouteMinute = nil
         subwayRouteOverlays = overlays
         routeBounds = nil
     }
@@ -2272,9 +2275,7 @@ struct MapHomeView: View {
     @FocusState private var isMapSearchFocused: Bool
     @State private var isSearchExpanded = false
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
-    @State private var timeRailSegments: [MapHomeTimeRailSegment] = [
-        .wholeDayUnconfirmed,
-    ]
+    @State private var timeRailSegments: [MapHomeTimeRailSegment] = []
     @State private var routeProjection: RouteTimelineProjection?
     @State private var routeActualIndex: RouteTimelineDataEngine.ActualIndex?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
@@ -2375,7 +2376,7 @@ struct MapHomeView: View {
         self._proAccess = Bindable(proAccess)
         self.onInitialDataReady = onInitialDataReady
         _selectedScope = State(initialValue: .day)
-        _timeRailSegments = State(initialValue: [.wholeDayUnconfirmed])
+        _timeRailSegments = State(initialValue: [])
         _cachedWeatherContexts = State(
             initialValue: MapHomeWeatherTimelineMath.coalescedDisplayContexts(
                 model.snapshot.weather.filter(MapHomeWeatherDisplayPolicy.isComplete)
@@ -2501,6 +2502,7 @@ struct MapHomeView: View {
         _ segment: MapHomeTimeRailSegment,
         as category: MapHomeSidebarMajorCategory
     ) async -> Bool {
+        guard model.isBootstrapped else { return false }
         let calendar = Calendar.autoupdatingCurrent
         let selectedDay = model.selectedDate
         let startOfDay = calendar.startOfDay(for: selectedDay)
@@ -5476,7 +5478,9 @@ struct MapHomeView: View {
                                 selectedTimelineMinute = minute
                             }
                         ),
-                        activity: currentActivity(at: minute),
+                        activity: model.isBootstrapped
+                            ? currentActivity(at: minute)
+                            : nil,
                         segments: timeRailSegments,
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
@@ -5499,9 +5503,11 @@ struct MapHomeView: View {
                             }
                         },
                         onSectionEdit: { selectedMinute in
+                            guard model.isBootstrapped else { return }
                             openSectionEditor(at: selectedMinute)
                         },
                         onUnconfirmedReview: { segment in
+                            guard model.isBootstrapped else { return }
                             focusedUnconfirmedReviewSegment = segment
                             isUnconfirmedReviewPresented = true
                         }
@@ -7672,6 +7678,12 @@ struct MapHomeView: View {
     }
 
     private func refreshTimeRailSegments() {
+        guard model.isBootstrapped else {
+            if !timeRailSegments.isEmpty {
+                timeRailSegments = []
+            }
+            return
+        }
         let dayData = currentDayDataSnapshot
         let next = MapHomeTimeRailSegmentEngine.segments(
             from: dayData?.actuals ?? model.snapshot.actuals,
@@ -7712,11 +7724,13 @@ struct MapHomeView: View {
         liveRouteProjectionRefreshTask = nil
         nearbyTransitPlaces = []
         hasDeferredWBSPlaybackRefresh = false
-        timeRailSegments = MapHomeTimeRailSegmentEngine.segments(
-            from: model.snapshot.actuals,
-            travel: model.snapshot.travel,
-            on: date
-        )
+        timeRailSegments = model.isBootstrapped
+            ? MapHomeTimeRailSegmentEngine.segments(
+                from: model.snapshot.actuals,
+                travel: model.snapshot.travel,
+                on: date
+            )
+            : []
         timeSidebarVisibleStartMinute = 0
         timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
         zoomResetToken += 1
@@ -7788,6 +7802,7 @@ struct MapHomeView: View {
     }
 
     private func openSectionEditor(at minute: Int) {
+        guard model.isBootstrapped else { return }
         stopDayPlayback(resetProgress: true)
         let segment = MapHomeTimeRailSegmentEngine.segment(
             at: minute,
@@ -12290,7 +12305,7 @@ private struct MapHomeSecuritySheet: View {
                     HStack(spacing: 10) {
                         Button(language.text("지금 백업", "Back up now")) { saveBackup() }
                             .buttonStyle(.bordered)
-                            .disabled(!security.settings.cloudBackupEnabled)
+                            .disabled(!hasPIN)
                         Button(language.text("백업 불러오기", "Restore backup")) { prepareRestore() }
                             .buttonStyle(.bordered)
                             .disabled(!hasPIN)
@@ -13131,7 +13146,7 @@ struct MapHomeSubwayRouteOverlay: Identifiable {
 enum MapHomeSubwayRouteOverlayEngine {
     static func overlays(
         travel: [TravelSegment],
-        readings _: [SensorReading],
+        readings: [SensorReading],
         day: TimeSpan,
         through cutoff: Date
     ) -> [MapHomeSubwayRouteOverlay] {
@@ -13142,7 +13157,8 @@ enum MapHomeSubwayRouteOverlayEngine {
                     && $0.span.intersection(with: day) != nil
             }
             .sorted { $0.span.start < $1.span.start }
-        return subwaySegments.compactMap { segment in
+        let confirmed = subwaySegments.compactMap {
+            segment -> MapHomeSubwayRouteOverlay? in
             guard let route = segment.subwayRoute,
                   SubwayStationCatalog.isValid(route) else { return nil }
             let points = RouteTimelineDataEngine.confirmedSubwayCoordinates(
@@ -13155,6 +13171,48 @@ enum MapHomeSubwayRouteOverlayEngine {
                 estimated: false
             )
         }
+
+        let trainSegments = travel
+            .filter {
+                $0.mode == .train
+                    && $0.span.start <= cutoff
+                    && $0.span.intersection(with: day) != nil
+            }
+            .sorted { $0.span.start < $1.span.start }
+        guard !trainSegments.isEmpty else { return confirmed }
+
+        let observedReadings = readings.filter { $0.timestamp <= cutoff }
+        let inferredSubway = SubwayTravelSegmentEngine.segments(
+            from: observedReadings,
+            within: trainSegments.map(\.span)
+        )
+        let estimated = trainSegments.compactMap { train -> MapHomeSubwayRouteOverlay? in
+            guard !subwaySegments.contains(where: {
+                hasSubstantialOverlap($0.span, train.span)
+            }),
+                  let inferred = inferredSubway
+                    .filter({ hasSubstantialOverlap($0.span, train.span) })
+                    .max(by: { $0.span.duration < $1.span.duration }),
+                  let route = inferred.subwayRoute,
+                  SubwayStationCatalog.isValid(route) else {
+                return nil
+            }
+            return makeOverlay(
+                id: train.id,
+                points: route.coordinates,
+                estimated: true
+            )
+        }
+        return confirmed + estimated
+    }
+
+    private static func hasSubstantialOverlap(
+        _ lhs: TimeSpan,
+        _ rhs: TimeSpan
+    ) -> Bool {
+        guard let overlap = lhs.intersection(with: rhs) else { return false }
+        let shorter = max(1, min(lhs.duration, rhs.duration))
+        return overlap.duration / shorter >= 0.5
     }
 
     private static func makeOverlay(
@@ -13277,18 +13335,26 @@ private struct MapHomePlacePin: View {
             } else {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
-                    .font(.system(size: 30, weight: .semibold))
+                    .font(.system(size: 23, weight: .semibold))
                     .foregroundStyle(destination.tint)
-                    .shadow(color: .white.opacity(0.9), radius: 1.5)
-                    .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
                     .frame(width: 48, height: 48)
+                    .background(
+                        Color.tpSurface.opacity(0.98),
+                        in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .stroke(Color.tpLine.opacity(0.95), lineWidth: 1)
+                    }
+                    .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
                 Text("Lv.\(floor ?? 1)")
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(.white, in: Capsule())
-                    .shadow(color: .black.opacity(0.10), radius: 5, y: 2)
+                    .background(Color.tpSurface.opacity(0.98), in: Capsule())
+                    .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
+                    .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
             }
         }
         .accessibilityElement(children: destination == .home ? .contain : .ignore)
@@ -13303,8 +13369,8 @@ private struct MapHomePlacePin: View {
         Image(MapHomeGrowthPolicy.artworkName(level: level))
             .resizable()
             .scaledToFit()
-            .shadow(color: .white.opacity(0.9), radius: 1.5)
-            .shadow(color: .black.opacity(0.28), radius: 3, y: 1)
+            .frame(width: 48, height: 48)
+            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
             .frame(width: 48, height: 48)
             .contentShape(Rectangle())
             .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48)))
@@ -13424,8 +13490,7 @@ private struct MapHomePlacePin: View {
             Image(MapHomeGrowthPolicy.artworkName(level: level))
                 .resizable()
                 .scaledToFit()
-                .frame(width: 74, height: 74)
-                .shadow(color: .white.opacity(0.85), radius: 1.5)
+                .frame(width: 48, height: 48)
                 .shadow(color: .black.opacity(0.20), radius: 3, y: 1)
             MapHomeStickmanGlyph(action: catAction, size: 20)
                 .offset(
@@ -13873,9 +13938,11 @@ private struct MapHomeMarkerLabel: View {
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 13)
             .padding(.vertical, 7)
-            .background(.white, in: Capsule())
-            .overlay { Capsule().stroke(color.opacity(0.45), lineWidth: 1) }
-            .shadow(color: .black.opacity(0.10), radius: 6, y: 3)
+            .background(Color.tpSurface.opacity(0.98), in: Capsule())
+            .overlay {
+                Capsule().stroke(color.opacity(0.42), lineWidth: 1)
+            }
+            .shadow(color: Color.tpInk.opacity(0.13), radius: 5, y: 2)
     }
 }
 
