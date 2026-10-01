@@ -1,5 +1,10 @@
 # 남은 요청
 
+## TFL1001B01 · main 후속 내부 TestFlight 빌드업 [진행]
+- 원인: main 커밋·push 후 새 TestFlight 빌드를 요청했다.
+- 해결: ASC 최신 번호를 조회해 다음 번호로 네 번들을 통일하고 main 기준 Release archive·internal-only export·업로드한다.
+- 검증: 동작 코드가164와 같으면 유효 테스트를 재사용하고 최종 네 번들 번호·서명·처리 완료·내부 그룹 연결·빌드/테스터 노출을 확인한다. 기존 실기기 미검증 항목은 유지한다.
+
 ## TFL1001A01 · 최신 수정 내부 TestFlight 배포 [그룹 화면 확인 대기]
 - 현재: 1.0(164) archive/export/Debug 및 네 번들 번호 확인, 업로드·VALID·IN_BETA_TESTING·내부 그룹 연결·테스터1명 API 확인 완료. App Store Connect 로그인 전 그룹 화면 확인은 대기. 회사 실기기 기능은 사용자 로그로 별도 판정한다.
 - 원인: 현재 수정은 개발 설치본에만 반영됐으며 회사에서 TestFlight로 검증할 새 빌드가 필요하다.
