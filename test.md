@@ -3,7 +3,7 @@
 ## GIT1001A01 · TestFlight164 수정 main 커밋·push (2026-10-01)
 
 - 현재 변경29개 파일의 앱·package·회귀 테스트·빌드164 설정과 검증 문서를 기존 작업 그대로 반영한다. TestFlight164 archive 생성 시 소스 hash와 현재 동작 코드가 일치한다. 기존 테스트·Debug·Release 검증은 TFL1001A01/STR1001A01 근거를 재사용했고 문서/커밋 작업으로 앱 테스트를 반복하지 않았다.
-- 커밋 전 `git diff --check` 성공. origin/main을 fetch한 뒤 HEAD와 차이0/0 확인. main에 커밋·push 후 local/remote HEAD 일치와 tracked/untracked clean을 최종 확인한다. 실기기 기능·백업 PIN·그룹 화면 확인 대기 항목은 그대로 유지한다.
+- 커밋 전 `git diff --check` 성공. origin/main을 fetch한 뒤 HEAD와 차이0/0 확인. 구현 커밋 `dbbeed60088b2a67e1f0ab3f897f02ede7267463`을 main에 생성·push했다. `git ls-remote`의 원격 main과 local/origin HEAD가 같고 `git status --porcelain=v1` 출력이 비어 tracked/untracked clean을 확인했다. 실기기 기능·백업 PIN·그룹 화면 확인 대기 항목은 그대로 유지한다.
 
 ## TFL1001A01 · 회사 검증용 내부 TestFlight164 배포 (2026-10-01)
 
