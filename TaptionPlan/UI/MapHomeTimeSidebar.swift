@@ -448,6 +448,19 @@ enum MapHomeUnconfirmedReviewPolicy {
             }
     }
 
+    static func nextSegment(
+        after confirmed: MapHomeTimeRailSegment,
+        in candidates: [MapHomeTimeRailSegment]
+    ) -> MapHomeTimeRailSegment? {
+        let remaining = candidates.filter {
+            $0.categoryID == "unconfirmed"
+                && !($0.startMinute == confirmed.startMinute
+                    && $0.endMinute == confirmed.endMinute)
+        }.sorted { $0.startMinute < $1.startMinute }
+        return remaining.first { $0.startMinute >= confirmed.endMinute }
+            ?? remaining.first
+    }
+
     static func reviewTargets(
         from segments: [MapHomeTimeRailSegment],
         focusingOn focusedSegment: MapHomeTimeRailSegment?,
@@ -2048,6 +2061,9 @@ struct MapHomeUnconfirmedReviewSheet: View {
     let onQuickConfirm: (MapHomeTimeRailSegment, MapHomeSidebarMajorCategory) async -> Bool
     @State private var savingSegmentID: String?
     @State private var saveFailedSegmentID: String?
+    @State private var hasAdvanced = false
+    @State private var nextFocusedSegment: MapHomeTimeRailSegment?
+    @State private var confirmedSegmentIDs: Set<String> = []
 
     private var quickCategories: [MapHomeSidebarMajorCategory] {
         let ids = ["work", "study", "sleep", "eating", "movement", "exercise", "hobby", "activity"]
@@ -2060,9 +2076,10 @@ struct MapHomeUnconfirmedReviewSheet: View {
     }
 
     private var unconfirmedSegments: [MapHomeTimeRailSegment] {
-        MapHomeUnconfirmedReviewPolicy.reviewTargets(
-            from: segments,
-            focusingOn: focusedSegment,
+        if hasAdvanced, nextFocusedSegment == nil { return [] }
+        return MapHomeUnconfirmedReviewPolicy.reviewTargets(
+            from: segments.filter { !confirmedSegmentIDs.contains($0.id) },
+            focusingOn: hasAdvanced ? nextFocusedSegment : focusedSegment,
             for: date
         )
     }
@@ -2076,6 +2093,10 @@ struct MapHomeUnconfirmedReviewSheet: View {
                             ForEach(recentDates, id: \.self) { day in
                                 let selected = Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: date)
                                 Button {
+                                    hasAdvanced = false
+                                    nextFocusedSegment = nil
+                                    confirmedSegmentIDs.removeAll()
+                                    saveFailedSegmentID = nil
                                     onDateSelect(day)
                                 } label: {
                                     Text(day.formatted(.dateTime.month().day()))
@@ -2153,12 +2174,21 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                                     guard savingSegmentID == nil else { return }
                                                     savingSegmentID = segment.id
                                                     saveFailedSegmentID = nil
+                                                    let candidates = MapHomeUnconfirmedReviewPolicy.segments(
+                                                        from: segments,
+                                                        for: date
+                                                    ).filter { !confirmedSegmentIDs.contains($0.id) }
                                                     Task { @MainActor in
                                                         let saved = await onQuickConfirm(segment, category)
                                                         if !saved {
                                                             saveFailedSegmentID = segment.id
-                                                        } else if focusedSegment != nil {
-                                                            dismiss()
+                                                        } else {
+                                                            confirmedSegmentIDs.insert(segment.id)
+                                                            nextFocusedSegment = MapHomeUnconfirmedReviewPolicy.nextSegment(
+                                                                after: segment,
+                                                                in: candidates
+                                                            )
+                                                            hasAdvanced = true
                                                         }
                                                         savingSegmentID = nil
                                                     }
@@ -2196,9 +2226,11 @@ struct MapHomeUnconfirmedReviewSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(language.text("닫기", "Close")) { dismiss() }
+                        .disabled(savingSegmentID != nil)
                 }
             }
         }
+        .interactiveDismissDisabled()
     }
 
     private func time(_ minute: Int) -> String {

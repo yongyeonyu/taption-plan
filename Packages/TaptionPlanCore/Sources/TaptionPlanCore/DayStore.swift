@@ -169,7 +169,7 @@ public actor TaptionPlanDayStore {
         }
     }
 
-    public struct Event: Hashable, Sendable {
+    public struct Event: Codable, Hashable, Sendable {
         public let day: TaptionPlanDayKey
         public let timestamp: Date
         public let sequence: UInt64
@@ -494,7 +494,7 @@ public actor TaptionPlanDayStore {
 
     @discardableResult
     public func appendUniqueEventIdentifiers(
-        _ events: [Event]
+        _ events: [Event], restoreSessionID: UUID? = nil
     ) throws -> Set<EventIdentifier> {
         guard !events.isEmpty else { return [] }
         let insert = try prepare(Self.uniqueEventInsertSQL)
@@ -514,6 +514,14 @@ public actor TaptionPlanDayStore {
                 }
                 guard sqlite3_changes(database) == 0 else {
                     insertedIDs.insert(EventIdentifier(event.id))
+                    if let restoreSessionID {
+                        let receipt = try prepare("INSERT INTO restore_receipts(session,id,event) VALUES(?,?,?);")
+                        defer { sqlite3_finalize(receipt) }
+                        try bind(restoreSessionID.uuidString, to: receipt, at: 1)
+                        try bind(event.id, to: receipt, at: 2)
+                        try bind(JSONEncoder().encode(event), to: receipt, at: 3)
+                        guard try step(receipt) == SQLITE_DONE else { throw lastError() }
+                    }
                     continue
                 }
                 try reset(lookup)
@@ -525,6 +533,47 @@ public actor TaptionPlanDayStore {
             }
         }
         return insertedIDs
+    }
+
+    /// Receipts and inserted records share the same SQLite transaction.
+    /// A process exit cannot leave an inserted restore record without a receipt.
+    public func finishRestoreSession(_ sessionID: UUID, committed: Bool) throws {
+        try withTransaction {
+            if !committed {
+                while true {
+                    let page = try prepare("SELECT event FROM restore_receipts WHERE session=? LIMIT 256;")
+                    var events: [Event] = []
+                    do {
+                        defer { sqlite3_finalize(page) }
+                        try bind(sessionID.uuidString, to: page, at: 1)
+                        while try step(page) == SQLITE_ROW {
+                            events.append(try JSONDecoder().decode(Event.self, from: readData(page, at: 0)))
+                        }
+                    }
+                    if events.isEmpty { break }
+                    for event in events {
+                        let lookup = try prepare(Self.eventLookupSQL)
+                        defer { sqlite3_finalize(lookup) }
+                        try bind(event.id, to: lookup, at: 1)
+                        if try step(lookup) == SQLITE_ROW, try readEvent(lookup) == event {
+                            let delete = try prepare("DELETE FROM events WHERE id=?;")
+                            defer { sqlite3_finalize(delete) }
+                            try bind(event.id, to: delete, at: 1)
+                            guard try step(delete) == SQLITE_DONE else { throw lastError() }
+                        }
+                        let receipt = try prepare("DELETE FROM restore_receipts WHERE session=? AND id=?;")
+                        defer { sqlite3_finalize(receipt) }
+                        try bind(sessionID.uuidString, to: receipt, at: 1)
+                        try bind(event.id, to: receipt, at: 2)
+                        guard try step(receipt) == SQLITE_DONE else { throw lastError() }
+                    }
+                }
+            }
+            let clear = try prepare("DELETE FROM restore_receipts WHERE session=?;")
+            defer { sqlite3_finalize(clear) }
+            try bind(sessionID.uuidString, to: clear, at: 1)
+            guard try step(clear) == SQLITE_DONE else { throw lastError() }
+        }
     }
 
     public func validateUniqueEvents(_ events: [Event]) throws {
@@ -673,6 +722,7 @@ public actor TaptionPlanDayStore {
         try withTransaction {
             try execute("DELETE FROM snapshots;")
             try execute("DELETE FROM events;")
+            try execute("DELETE FROM restore_receipts;")
             try execute("DELETE FROM metadata;")
         }
     }
@@ -851,6 +901,10 @@ public actor TaptionPlanDayStore {
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT NOT NULL PRIMARY KEY,
                 value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS restore_receipts (
+                session TEXT NOT NULL, id TEXT NOT NULL, event BLOB NOT NULL,
+                PRIMARY KEY(session,id)
             );
             CREATE TABLE IF NOT EXISTS migration_markers (
                 key TEXT NOT NULL PRIMARY KEY,

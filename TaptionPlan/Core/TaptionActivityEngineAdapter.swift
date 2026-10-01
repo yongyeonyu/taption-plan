@@ -1847,3 +1847,31 @@ enum ActivityClassificationLockEngine {
         overlapDuration(lhs, rhs) / max(1, min(lhs.duration, rhs.duration))
     }
 }
+
+/// Replaces this projection's automatic rows without letting its previous output block regeneration.
+enum PlaceActivityRefreshEngine {
+    static func merge(existing: [ActualRecord], candidates: [ActualRecord],
+        inside span: TimeSpan, suppressedIDs: Set<UUID> = []) -> [ActualRecord] {
+        let protectedIDs = Set(existing.filter {
+            $0.modelVersion == "place-activity-v1" && $0.manuallyCorrected
+        }.map(\.id))
+        let blockers = existing.filter {
+            $0.source.usesAutomaticClassification
+                && ($0.modelVersion != "place-activity-v1" || $0.manuallyCorrected)
+                && ($0.categoryID != "unconfirmed" || $0.manuallyCorrected)
+                && $0.span(asOf: span.end).intersection(with: span) != nil
+        }
+        let fresh = candidates.filter { candidate in
+            let candidateSpan = candidate.span(asOf: span.end)
+            return !protectedIDs.contains(candidate.id) && !suppressedIDs.contains(candidate.id)
+                && !blockers.contains {
+                    ($0.span(asOf: span.end).intersection(with: candidateSpan)?.duration ?? 0)
+                        >= candidateSpan.duration * 0.5
+                }
+        }
+        return existing.filter {
+            $0.modelVersion != "place-activity-v1" || protectedIDs.contains($0.id)
+                || $0.span(asOf: span.end).intersection(with: span) == nil
+        } + fresh
+    }
+}

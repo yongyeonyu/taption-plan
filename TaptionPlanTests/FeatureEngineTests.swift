@@ -21359,6 +21359,88 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testStagedCloudRestoreDoesNotReplaceConcurrentLocalSnapshotEdit() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-revision-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let date = Date(timeIntervalSince1970: 1_850_000_000)
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorService = AppleSensorDataService(
+            archive: try SensorReadingArchive(
+                fileURL: directory.appendingPathComponent("legacy.jsonl"),
+                dayStoreURL: databaseURL
+            )
+        )
+        let repository = GatedSavePlanRepository(snapshot: .empty)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+
+        var backupSnapshot = TaptionDataSnapshot.empty
+        backupSnapshot.plans = [PlanRecord(
+            title: "복원 계획",
+            span: TimeSpan(
+                start: date,
+                end: date.addingTimeInterval(hour)
+            ),
+            categoryID: "activity"
+        )]
+        let reading = SensorReading(
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            ),
+            sourceDevice: .iPhone
+        )
+        let stage = try PlanRawRestoreStage(url: directory.appendingPathComponent("stage.sqlite"))
+        try stage.transaction { try stage.append(.init(index: 0, items: [.sensorReading(reading)])) }
+        let staged = PlanStagedRawRestore(stage: stage)
+
+        let restoreTask = Task { @MainActor in
+            try await model.applyCloudBackup(
+                PlanCloudBackupRestorePackage(
+                    backup: PlanCloudBackupPayload(snapshot: backupSnapshot),
+                    rawSensorState: .staged(staged)
+                )
+            )
+        }
+
+        await repository.waitForFirstSave()
+        let memoID = try XCTUnwrap(
+            model.addMemo(
+                text: "복원 중 작성한 메모",
+                kind: .idea,
+                categoryID: "activity",
+                on: date
+            )
+        )
+        await repository.releaseFirstSave()
+
+        let restoreResult = try await restoreTask.value
+        XCTAssertEqual(restoreResult, .unchanged)
+        await repository.waitForSaveCount(2)
+
+        XCTAssertTrue(model.snapshot.plans.isEmpty)
+        XCTAssertNotNil(model.snapshot.memos.first { $0.id == memoID })
+        let persisted = try await repository.load()
+        XCTAssertTrue(persisted.plans.isEmpty)
+        XCTAssertNotNil(persisted.memos.first { $0.id == memoID })
+        let rawReadings = try await sensorService.archivedReadings(in: TimeSpan(
+            start: date.addingTimeInterval(-1),
+            end: date.addingTimeInterval(1)
+        ))
+        XCTAssertFalse(rawReadings.contains { $0.id == reading.id })
+    }
+
+    @MainActor
     func testCloudRestoreKeepsSnapshotWhenSensorRawMergeFails() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("cloud-restore-conflict-\(UUID().uuidString)")
@@ -21417,6 +21499,74 @@ final class FeatureEngineTests: XCTestCase {
                     sensorReadings: [conflictingReading],
                     createdAt: date
                 ))
+            )
+        )
+
+        let persisted = try await repository.load()
+        XCTAssertEqual(result, .unchanged)
+        XCTAssertEqual(model.snapshot.plans.map(\.title), ["기존 기록"])
+        XCTAssertEqual(persisted.plans.map(\.title), ["기존 기록"])
+    }
+
+    @MainActor
+    func testStagedCloudRestoreKeepsSnapshotWhenSensorRawMergeFails() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cloud-restore-conflict-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("restore.sqlite")
+        let sensorArchive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("legacy.jsonl"),
+            dayStoreURL: databaseURL
+        )
+        let sensorService = AppleSensorDataService(archive: sensorArchive)
+        let readingID = UUID()
+        let date = Date(timeIntervalSince1970: 1_787_538_400)
+        let storedReading = SensorReading(
+            id: readingID,
+            timestamp: date,
+            point: GeoPoint(
+                latitude: 37.5,
+                longitude: 126.9,
+                altitude: 20,
+                horizontalAccuracy: 8,
+                verticalAccuracy: 10
+            )
+        )
+        try await sensorService.recordExternalReadings([storedReading])
+        var original = TaptionDataSnapshot.empty
+        original.plans = [PlanRecord(
+            title: "기존 기록",
+            span: TimeSpan(
+                start: date,
+                end: date.addingTimeInterval(hour)
+            ),
+            categoryID: "activity"
+        )]
+        let repository = InMemoryPlanRepository(snapshot: original)
+        let model = AppModel(
+            repository: repository,
+            sensorService: sensorService,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        var replacement = TaptionDataSnapshot.empty
+        replacement.plans = [PlanRecord(
+            title: "복원 기록",
+            span: original.plans[0].span,
+            categoryID: "activity"
+        )]
+        var conflictingReading = storedReading
+        conflictingReading.point?.latitude = 37.6
+
+        let stage = try PlanRawRestoreStage(url: directory.appendingPathComponent("stage.sqlite"))
+        try stage.transaction { try stage.append(.init(index: 0, items: [.sensorReading(conflictingReading)])) }
+        let staged = PlanStagedRawRestore(stage: stage)
+
+        let result = try await model.applyCloudBackup(
+            PlanCloudBackupRestorePackage(
+                backup: PlanCloudBackupPayload(snapshot: replacement),
+                rawSensorState: .staged(staged)
             )
         )
 

@@ -1039,16 +1039,20 @@ actor RawDeviceDataDayArchive {
     }
 
     func appendForRestore(
-        _ envelopes: [RawDeviceDataEnvelope]
+        _ envelopes: [RawDeviceDataEnvelope], restoreSessionID: UUID? = nil
     ) async throws -> [UUID] {
         guard !envelopes.isEmpty else { return [] }
         let generation = dataDeletionGeneration
         let events = try events(for: envelopes)
         return try await withProtectedLock { [self] in
             try await self.checkDataGeneration(generation)
-            let inserted = try await self.store.appendUniqueEventIdentifiers(events)
+            let inserted = try await self.store.appendUniqueEventIdentifiers(events, restoreSessionID: restoreSessionID)
             return inserted.compactMap { UUID(uuidString: $0.rawValue) }
         }
+    }
+
+    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
+        try await store.finishRestoreSession(id, committed: committed)
     }
 
     func rollbackRestore(ids: [UUID]) async throws {
@@ -1350,7 +1354,7 @@ actor SensorReadingArchive {
         _ = now
     }
 
-    func appendForRestore(_ readings: [SensorReading]) async throws -> [UUID] {
+    func appendForRestore(_ readings: [SensorReading], restoreSessionID: UUID? = nil) async throws -> [UUID] {
         guard !readings.isEmpty else { return [] }
         let generation = dataDeletionGeneration
         try await ensureMigrated(generation: generation)
@@ -1359,9 +1363,16 @@ actor SensorReadingArchive {
         try checkDataGeneration(generation)
         guard let dayStore else { throw Error.dayStoreUnavailable }
         let inserted = try await dayStore.appendUniqueEventIdentifiers(
-            events(for: readings)
+            events(for: readings), restoreSessionID: restoreSessionID
         )
         return inserted.compactMap { UUID(uuidString: $0.rawValue) }
+    }
+
+    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
+        let generation = dataDeletionGeneration
+        try await ensureMigrated(generation: generation)
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await dayStore.finishRestoreSession(id, committed: committed)
     }
 
     func rollbackRestore(ids: [UUID]) async throws {
@@ -2371,12 +2382,16 @@ final class AppleSensorDataService {
     }
 
     func recordExternalReadingsForRestore(
-        _ readings: [SensorReading]
+        _ readings: [SensorReading], restoreSessionID: UUID? = nil
     ) async throws -> [UUID] {
         guard !isDataDeletionActive else { throw CancellationError() }
         return try await archive.appendForRestore(
-            readings.sorted { $0.timestamp < $1.timestamp }
+            readings.sorted { $0.timestamp < $1.timestamp }, restoreSessionID: restoreSessionID
         )
+    }
+
+    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
+        try await archive.finishRestoreSession(id, committed: committed)
     }
 
     func rollbackExternalReadingsRestore(ids: [UUID]) async throws {

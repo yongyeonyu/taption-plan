@@ -3740,6 +3740,51 @@ enum SubwayTravelSegmentEngine {
     static let defaultMaximumReadingGap: TimeInterval = 18 * 60
     private static let railEndpointMaximumReadingGap: TimeInterval = 30 * 60
 
+    static func confirmedRoute(
+        for segment: TravelSegment,
+        readingIndex: SensorEvidenceTimeIndex
+    ) -> TravelSegment? {
+        guard segment.mode == .subway, segment.isConfirmed else { return nil }
+        if segment.subwayRoute.map(SubwayStationCatalog.isValid) == true { return segment }
+        let context = TimeSpan(start: segment.span.start.addingTimeInterval(-2 * 60),
+            end: segment.span.end.addingTimeInterval(2 * 60))
+        var groups: [[SensorReading]] = []
+        var current: [SensorReading] = []
+        let ordered = readingIndex.readings(in: context).sorted { $0.timestamp < $1.timestamp }
+        for reading in ordered {
+            if reading.trackingSessionEnded == true || reading.sourceDevice == .appleWatch {
+                if !current.isEmpty { groups.append(current) }
+                current = []
+                continue
+            }
+            if let last = current.last,
+               (reading.timestamp.timeIntervalSince(last.timestamp) > railEndpointMaximumReadingGap
+                || (last.trackingSessionID != nil && reading.trackingSessionID != nil
+                    && last.trackingSessionID != reading.trackingSessionID)) {
+                groups.append(current)
+                current = []
+            }
+            current.append(reading)
+        }
+        if !current.isEmpty { groups.append(current) }
+        let candidates = groups.compactMap { group -> TravelSegment? in
+            let journey = SubwayStationCatalog.stationJourney(from: group)
+            // User boarding confirmation supplies the rail evidence required for sparse endpoints.
+            let trajectory = SubwayStationCatalog.coordinateTrajectory(from: group)
+                ?? SubwayStationCatalog.sparseEndpointTrajectory(from: group)
+            guard let route = journey?.route ?? trajectory?.route,
+                  SubwayStationCatalog.isValid(route),
+                  let observedSpan = journey?.span ?? trajectory?.span,
+                  let overlap = observedSpan.intersection(with: segment.span),
+                  overlap.duration / max(1, observedSpan.duration) >= 0.5 else { return nil }
+            var value = segment
+            value.subwayRoute = route
+            value.span = overlap
+            return value
+        }
+        return candidates.max { $0.span.duration < $1.span.duration }
+    }
+
     static func segments(
         from readings: [SensorReading],
         maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
@@ -3961,6 +4006,10 @@ enum SubwayTravelSegmentEngine {
         _ next: SensorReading,
         maximumGap: TimeInterval
     ) -> Bool {
+        guard previous.trackingSessionEnded != true, next.trackingSessionEnded != true,
+              previous.sourceDevice != .appleWatch, next.sourceDevice != .appleWatch else { return false }
+        if let previousID = previous.trackingSessionID,
+           let nextID = next.trackingSessionID, previousID != nextID { return false }
         let gap = next.timestamp.timeIntervalSince(previous.timestamp)
         if gap <= maximumGap { return true }
         guard maximumGap == defaultMaximumReadingGap,

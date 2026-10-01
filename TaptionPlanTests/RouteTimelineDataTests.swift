@@ -3,6 +3,73 @@ import XCTest
 @testable import TaptionPlan
 
 final class RouteTimelineDataTests: XCTestCase {
+    func testGPSGapFootprintsUsePlaybackCutoffInsteadOfWholeDay() {
+        let readings = [reading(60, latitude: 37), reading(62, latitude: 37.0015),
+            reading(120, latitude: 37.002), reading(122, latitude: 37.0035)]
+        XCTAssertTrue(MapHomeGPSGapPredictionPolicy.predictedCoordinates(from: readings,
+            through: date(0), calendar: calendar).isEmpty)
+        XCTAssertTrue(MapHomeGPSGapPredictionPolicy.predictedCoordinates(from: readings,
+            through: date(61), calendar: calendar).isEmpty)
+        let first = MapHomeGPSGapPredictionPolicy.predictedCoordinates(from: readings,
+            through: date(62), calendar: calendar)
+        XCTAssertEqual(first.count, 1)
+        XCTAssertTrue(first.flatMap { $0 }.allSatisfy { $0.latitude < 37.0015 })
+        XCTAssertEqual(MapHomeGPSGapPredictionPolicy.predictedCoordinates(from: readings,
+            through: date(123), calendar: calendar).count, 2)
+    }
+
+    func testRailFootprintsAtMidnightHideFutureAndPreviousDayGeometry() throws {
+        var (segment, readings) = confirmedSubwayFixture()
+        segment.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        let day = TimeSpan(start: date(0), end: date(1440))
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: readings,
+            day: day, through: day.start).isEmpty)
+        segment.span = TimeSpan(start: date(-30), end: date(30))
+        readings = []
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: readings,
+            day: day, through: day.start).isEmpty)
+        let after = MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: [],
+            day: day, through: date(15))
+        let start = try XCTUnwrap(after.first?.coordinates.first)
+        let midnight = try XCTUnwrap(RouteTimelineDataEngine.confirmedSubwayCoordinates(for: segment,
+            through: day.start).last)
+        XCTAssertEqual(start.latitude, midnight.latitude, accuracy: 0.000001)
+        XCTAssertEqual(start.longitude, midnight.longitude, accuracy: 0.000001)
+    }
+
+    func testUserConfirmedSleepBeatsOldSensorLabelAndCategoryCache() throws {
+        var actual = ActualRecord(planID: nil, title: "수면", categoryID: "sleep",
+            startedAt: date(0), endedAt: date(60), source: .location,
+            behavior: StationaryContextKind.homeRest.rawValue)
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: actual), "activity")
+        actual.manuallyCorrected = true
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: actual), "sleep")
+        let restored = try JSONDecoder().decode(ActualRecord.self, from: JSONEncoder().encode(actual))
+        let rails = MapHomeTimeRailSegmentEngine.segments(from: [restored], on: date(0),
+            asOf: date(1440), calendar: calendar)
+        XCTAssertEqual(MapHomeTimeRailSegmentEngine.segment(at: 30, in: rails)?.categoryID, "sleep")
+        actual.source = .manual
+        actual.manuallyCorrected = false
+        XCTAssertEqual(RecordAnalysisCategoryPolicy.categoryID(for: actual), "sleep")
+    }
+
+    func testRebasedDayPreviewKeepsNewSleepOverOldActivity() {
+        var source = TaptionDataSnapshot.empty
+        source.actuals = [ActualRecord(planID: nil, title: "활동", categoryID: "activity",
+            startedAt: date(0), endedAt: date(60), source: .location)]
+        let raw = SensorReadingsLoadResult(readings: [reading(0, latitude: 37)], isComplete: true)
+        let old = PlanDayDataSnapshot.make(date: date(0), sourceRevision: 1, source: source,
+            sensorResult: raw, calendar: calendar)
+        source.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            [TimeSpan(start: date(0), end: date(60))], to: source.actuals)
+        let fresh = PlanDayDataSnapshot.make(date: date(0), sourceRevision: 2, source: source,
+            sensorResult: raw, calendar: calendar)
+        XCTAssertFalse(old.matchesCurrentSource(revision: 2, fingerprint: fresh.sourceFingerprint))
+        let rails = MapHomeTimeRailSegmentEngine.segments(from: fresh.actuals, on: date(0),
+            asOf: date(1440), calendar: calendar)
+        XCTAssertEqual(MapHomeTimeRailSegmentEngine.segment(at: 30, in: rails)?.categoryID, "sleep")
+        XCTAssertEqual(fresh.readings, old.readings)
+    }
     private var calendar: Calendar {
         var value = Calendar(identifier: .gregorian)
         value.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -34,6 +101,44 @@ final class RouteTimelineDataTests: XCTestCase {
                 verticalAccuracy: 5
             )
         )
+    }
+
+    func testCompanyWorkSurvivesRepeatedPlaceRefreshAndUnconfirmedOverlap() throws {
+        let span = TimeSpan(start: date(10), end: date(40))
+        let stay = PlaceStay(placeKey: "company", displayName: "회사", span: span,
+            confidence: .high, point: reading(10, latitude: 37).point)
+        let work = try XCTUnwrap(TaptionActivityEngineAdapter.placeActivityActual(
+            for: stay, registeredKind: .company, inside: span))
+        let unknown = ActualRecord(planID: nil, title: "미확인", categoryID: "unconfirmed",
+            startedAt: span.start, endedAt: span.end, source: .location)
+        let first = PlaceActivityRefreshEngine.merge(existing: [unknown], candidates: [work], inside: span)
+        let second = PlaceActivityRefreshEngine.merge(existing: first, candidates: [work], inside: span)
+        XCTAssertEqual(second.filter { $0.categoryID == "work" }.map(\.id), [work.id])
+        XCTAssertTrue(second.contains { $0.id == unknown.id })
+    }
+
+    func testPlaceRefreshPreservesManualCorrectionAndSuppression() throws {
+        let span = TimeSpan(start: date(10), end: date(40))
+        let stay = PlaceStay(placeKey: "company", displayName: "회사", span: span,
+            confidence: .high, point: reading(10, latitude: 37).point)
+        let candidate = try XCTUnwrap(TaptionActivityEngineAdapter.placeActivityActual(
+            for: stay, registeredKind: .company, inside: span))
+        var corrected = candidate
+        corrected.manuallyCorrected = true
+        corrected.categoryID = "meal"
+        let merged = PlaceActivityRefreshEngine.merge(existing: [corrected], candidates: [candidate], inside: span)
+        XCTAssertEqual(merged.map(\.categoryID), ["meal"])
+        XCTAssertTrue(PlaceActivityRefreshEngine.merge(existing: [], candidates: [candidate],
+            inside: span, suppressedIDs: [candidate.id]).isEmpty)
+    }
+
+    func testTodayRawExportFiltersDayWithoutChangingSensorOriginals() {
+        let source = [reading(-1, latitude: 37), reading(0, latitude: 37.1),
+            reading(1439, latitude: 37.2), reading(1440, latitude: 37.3)]
+        let exported = TodaySensorRawExport.readings(source, on: date(500), calendar: calendar)
+        XCTAssertEqual(exported, Array(source[1...2]))
+        XCTAssertEqual(source.count, 4)
+        XCTAssertEqual(source[0].timestamp, date(-1))
     }
 
     func testMapRouteRefreshDoesNotEraseSameDayCachedReadingsOnEmptyLoad() {
@@ -122,6 +227,188 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertGreaterThan(predictions[0].first?.latitude ?? 0, 37)
         XCTAssertLessThan(predictions[0].last?.latitude ?? 90, 37.0015)
         XCTAssertEqual(originals, [start, end], "prediction must not mutate sensor source readings")
+    }
+
+    func testGPSGapPredictionBridgesMissingFixWithoutCrossingSessionEnd() {
+        let start = reading(0, latitude: 37)
+        var missing = reading(1, latitude: 37)
+        missing.point = nil
+        missing.gpsAvailable = false
+        let end = reading(2, latitude: 37.0015)
+        XCTAssertEqual(MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+            from: [start, missing, end], calendar: calendar).count, 1)
+        missing.trackingSessionEnded = true
+        XCTAssertTrue(MapHomeGPSGapPredictionPolicy.predictedCoordinates(
+            from: [start, missing, end], calendar: calendar).isEmpty)
+    }
+
+    func testPredictedRailFootprintsFollowLongBentRouteAndStayBounded() {
+        let route = [
+            CLLocationCoordinate2D(latitude: 37, longitude: 127),
+            CLLocationCoordinate2D(latitude: 37.02, longitude: 127),
+            CLLocationCoordinate2D(latitude: 37.02, longitude: 127.02),
+        ]
+        let points = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: route)
+        XCTAssertEqual(points.count, MapHomeGPSGapPredictionPolicy.maximumSamplesPerGap)
+        XCTAssertEqual(points.first?.latitude, 37)
+        XCTAssertEqual(points.last?.longitude, 127.02)
+        XCTAssertTrue(points.dropFirst().dropLast().allSatisfy {
+            abs($0.longitude - 127) < 0.000001 || abs($0.latitude - 37.02) < 0.000001
+        }, "footprints follow the vetted rail polyline, not a direct chord")
+        XCTAssertTrue(MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: []).isEmpty)
+        XCTAssertTrue(MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: [
+            route[0], CLLocationCoordinate2D(latitude: 100, longitude: 127)
+        ]).isEmpty)
+    }
+
+    private func confirmedSubwayFixture() -> (TravelSegment, [SensorReading]) {
+        let start = date(420)
+        let readings = [(37.5248, 126.6744), (37.5667, 126.8273)].enumerated().map { index, point in
+            SensorReading(timestamp: start.addingTimeInterval(Double(index) * 15 * 60),
+                point: GeoPoint(latitude: point.0, longitude: point.1, altitude: 0,
+                    horizontalAccuracy: 10, verticalAccuracy: 10), locationFixQuality: .precise)
+        }
+        let segment = TravelSegment(mode: .subway,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(15 * 60)),
+            distanceMeters: 12_000, confidence: .high, evidence: ["사용자 확인"], isConfirmed: true)
+        return (segment, readings)
+    }
+
+    func testConfirmedBoardingRecoversSparseCatalogRouteAndGrayFootprints() throws {
+        let (segment, readings) = confirmedSubwayFixture()
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: readings,
+            day: TimeSpan(start: date(0), end: date(1440)), through: segment.span.end)
+        let overlay = try XCTUnwrap(overlays.first)
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertFalse(overlay.estimated, "mode is confirmed; geometry is still inferred")
+        let footprints = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: overlays)
+        XCTAssertEqual(footprints.count, 1, "confirmed overlays must remain gray paw inputs")
+        XCTAssertGreaterThan(footprints[0].count, 1)
+        XCTAssertNil(segment.subwayRoute, "projection must not rewrite the user's record")
+        let recovered = try XCTUnwrap(SubwayTravelSegmentEngine.confirmedRoute(for: segment,
+            readingIndex: SensorEvidenceTimeIndex(readings: readings)))
+        XCTAssertEqual(recovered.id, segment.id)
+        XCTAssertTrue(recovered.isConfirmed)
+        XCTAssertTrue(SubwayStationCatalog.isValid(try XCTUnwrap(recovered.subwayRoute)))
+    }
+
+    func testConfirmedBoardingDoesNotInventRouteWithoutArrivalOrAfterCutoff() {
+        let (segment, readings) = confirmedSubwayFixture()
+        let day = TimeSpan(start: date(0), end: date(1440))
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: [],
+            day: day, through: segment.span.end).isEmpty)
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: readings,
+            day: day, through: segment.span.start.addingTimeInterval(5 * 60)).isEmpty)
+        var unconfirmed = segment
+        unconfirmed.isConfirmed = false
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [unconfirmed], readings: readings,
+            day: day, through: segment.span.end).isEmpty)
+    }
+
+    func testConfirmedBoardingCannotBridgeSessionEndOrLongUnobservedGap() {
+        var (segment, readings) = confirmedSubwayFixture()
+        var marker = SensorReading(timestamp: segment.span.start.addingTimeInterval(5 * 60),
+            gpsAvailable: false)
+        marker.trackingSessionEnded = true
+        XCTAssertNil(SubwayTravelSegmentEngine.confirmedRoute(for: segment,
+            readingIndex: SensorEvidenceTimeIndex(readings: readings + [marker])))
+        readings[0].trackingSessionID = UUID()
+        readings[1].trackingSessionID = UUID()
+        readings[0].matchesRailRoute = true
+        readings[1].matchesRailRoute = true
+        readings[0].speedMetersPerSecond = 12
+        readings[1].speedMetersPerSecond = 12
+        XCTAssertTrue(MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: readings,
+            day: TimeSpan(start: date(0), end: date(1440)), through: segment.span.end).isEmpty)
+        readings[0].trackingSessionID = nil
+        readings[1].trackingSessionID = nil
+        readings[1].timestamp = readings[0].timestamp.addingTimeInterval(40 * 60)
+        segment.span.end = readings[1].timestamp
+        XCTAssertNil(SubwayTravelSegmentEngine.confirmedRoute(for: segment,
+            readingIndex: SensorEvidenceTimeIndex(readings: readings)))
+    }
+
+    func testConfirmedStoredRouteKeepsPawsAndClipsPlayback() throws {
+        var (segment, _) = confirmedSubwayFixture()
+        segment.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        let halfway = segment.span.start.addingTimeInterval(segment.span.duration / 2)
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(travel: [segment], readings: [],
+            day: TimeSpan(start: date(0), end: date(1440)), through: halfway)
+        XCTAssertEqual(overlays.count, 1)
+        XCTAssertFalse(MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: overlays).isEmpty)
+        let endpoint = try XCTUnwrap(overlays.first?.coordinates.last)
+        let destination = try XCTUnwrap(segment.subwayRoute?.coordinates.last)
+        XCTAssertGreaterThan(CLLocation(latitude: endpoint.latitude, longitude: endpoint.longitude)
+            .distance(from: CLLocation(latitude: destination.latitude, longitude: destination.longitude)), 100)
+    }
+
+    func testFragmentedTrainIntervalsDoNotExhaustPawBudgetWithDuplicateRoute() {
+        let (segment, endpoints) = confirmedSubwayFixture()
+        var readings = endpoints
+        for index in readings.indices {
+            readings[index].matchesRailRoute = true
+            readings[index].nearbyStation = true
+            readings[index].speedMetersPerSecond = 12
+        }
+        var trains = [TravelSegment]()
+        for minute in [0, 3, 6, 9, 12] {
+            trains.append(TravelSegment(mode: .train,
+                span: TimeSpan(start: segment.span.start.addingTimeInterval(Double(minute) * 60),
+                    end: segment.span.start.addingTimeInterval(Double(minute + 3) * 60)),
+                distanceMeters: 2_000, confidence: .medium, evidence: ["철도 신호"]))
+        }
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(travel: trains, readings: readings,
+            day: TimeSpan(start: date(0), end: date(1440)), through: segment.span.end)
+        XCTAssertEqual(overlays.count, 1, "multiple movement fragments share one inferred rail geometry")
+        XCTAssertTrue(overlays.first?.estimated == true)
+        XCTAssertLessThanOrEqual(MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: overlays)
+            .reduce(0) { $0 + $1.count }, MapHomeGPSGapPredictionPolicy.maximumSamplesPerGap)
+    }
+
+    func testShortConfirmedSubwayFragmentDoesNotHideLongerInferredJourney() throws {
+        let (segment, endpoints) = confirmedSubwayFixture()
+        var readings = endpoints
+        for index in readings.indices {
+            readings[index].matchesRailRoute = true
+            readings[index].nearbyStation = true
+            readings[index].speedMetersPerSecond = 12
+        }
+        var train = segment
+        train.mode = .train
+        train.isConfirmed = false
+        var fragment = segment
+        fragment.id = UUID()
+        fragment.span.end = fragment.span.start.addingTimeInterval(3 * 60)
+        let overlays = MapHomeSubwayRouteOverlayEngine.overlays(travel: [train, fragment], readings: readings,
+            day: TimeSpan(start: date(0), end: date(1440)), through: segment.span.end)
+        XCTAssertEqual(overlays.count, 1)
+        let endpoint = try XCTUnwrap(overlays.first?.coordinates.last)
+        let arrival = try XCTUnwrap(readings.last?.point)
+        XCTAssertLessThan(CLLocation(latitude: endpoint.latitude, longitude: endpoint.longitude)
+            .distance(from: CLLocation(latitude: arrival.latitude, longitude: arrival.longitude)), 50)
+
+        fragment.span = segment.span
+        let confirmedOnly = MapHomeSubwayRouteOverlayEngine.overlays(travel: [fragment], readings: readings,
+            day: TimeSpan(start: date(0), end: date(1440)), through: segment.span.end)
+        XCTAssertEqual(confirmedOnly.count, 1, "the recovered confirmed route replaces its identical estimate")
+        XCTAssertFalse(MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: confirmedOnly).isEmpty)
+    }
+
+    func testRailPawBudgetKeepsEveryJourneyInsteadOfDroppingLastRoute() {
+        let overlays = (0..<5).map { index in
+            MapHomeSubwayRouteOverlay(id: UUID(), coordinates: [
+                CLLocationCoordinate2D(latitude: 37 + Double(index) * 0.01, longitude: 127),
+                CLLocationCoordinate2D(latitude: 37 + Double(index) * 0.01, longitude: 127.1),
+            ], estimated: index != 0)
+        }
+        let paths = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: overlays)
+        XCTAssertEqual(paths.count, 5)
+        XCTAssertEqual(paths.reduce(0) { $0 + $1.count }, 96)
+        for (overlay, path) in zip(overlays, paths) {
+            XCTAssertEqual(path.first?.latitude, overlay.coordinates.first?.latitude)
+            XCTAssertEqual(path.last?.longitude, overlay.coordinates.last?.longitude)
+            XCTAssertGreaterThan(path.count, 1)
+        }
     }
 
     func testGPSGapPredictionRejectsLongInaccurateAndWatchGaps() {

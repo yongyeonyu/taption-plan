@@ -2125,9 +2125,273 @@ final class AppModel {
         return recovered
     }
 
+    #if DEBUG
+    @ObservationIgnored private var hasRunCloudBackupVerification = false
+    @ObservationIgnored private var hasRunSubwayRouteVerification = false
+
+    func runRequestedSubwayRouteVerification() async {
+        let verifiesCompany = ProcessInfo.processInfo.arguments.contains("--verify-company-activity")
+        guard (ProcessInfo.processInfo.arguments.contains("--verify-subway-routes") || verifiesCompany),
+              !isAppLocked, !hasRunSubwayRouteVerification else { return }
+        hasRunSubwayRouteVerification = true
+        do {
+            guard let service = securityBackupService else { throw PlanSecurityError.accountUnavailable }
+            let package = try await service.loadLatestBackupPackage(rewrapRecoveredArchive: false)
+            guard !isAppLocked else { throw CancellationError() }
+            guard case .available(let raw) = package.rawSensorState else { throw PlanSecurityError.invalidArchive }
+            var historicalRead: PlanDayDataSnapshot?
+            var currentRead: PlanDayDataSnapshot?
+            if verifiesCompany {
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+                let historicalDate = calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!
+                async let historical = planDayDataSnapshot(for: historicalDate,
+                    forceReload: false, refreshRawReadings: true)
+                async let current = planDayDataSnapshot(for: .now,
+                    forceReload: false, refreshRawReadings: true)
+                (historicalRead, currentRead) = await (historical, current)
+            }
+            let stored = snapshot
+            let backup = package.backup.snapshot
+            let historicalEvidence = historicalRead
+            let currentEvidence = currentRead
+            let reports = await Task.detached(priority: .utility) { () -> [[String: String]] in
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+                let start = calendar.date(from: DateComponents(year: 2026, month: 9, day: 30))!
+                let day = TimeSpan(start: start, end: start.addingTimeInterval(24 * 60 * 60))
+                let readings = raw.sensorReadings.filter { day.contains($0.timestamp) }
+                let sources: [(String, TaptionDataSnapshot)] = [("device", stored), ("backup", backup)]
+                return sources.map { entry -> [String: String] in
+                    let (source, snapshot) = entry
+                    let travel = snapshot.travel.filter { $0.span.intersection(with: day) != nil }
+                    let overlays = MapHomeSubwayRouteOverlayEngine.overlays(travel: travel,
+                        readings: readings, day: day, through: day.end)
+                    let confirmed = travel.filter { $0.mode == .subway && $0.isConfirmed }
+                    let missing = confirmed.filter { $0.subwayRoute.map(SubwayStationCatalog.isValid) != true }
+                    let oldEligible = overlays.filter(\.estimated)
+                    let footprints = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: overlays)
+                    let oldPawCount = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: oldEligible)
+                        .reduce(0) { $0 + $1.count }
+                    let recoveredCount = missing.filter { segment in
+                        overlays.contains { $0.id == segment.id }
+                    }.count
+                    var report = ["source": source, "day": "2026-09-30"]
+                    report["raw_count"] = String(readings.count)
+                    report["midnight_gap_paw_count"] = String(MapHomeGPSGapPredictionPolicy
+                        .predictedCoordinates(from: readings, through: day.start, calendar: calendar)
+                        .reduce(0) { $0 + $1.count })
+                    report["whole_day_gap_paw_count"] = String(MapHomeGPSGapPredictionPolicy
+                        .predictedCoordinates(from: readings, calendar: calendar)
+                        .reduce(0) { $0 + $1.count })
+                    report["midnight_rail_overlay_count"] = String(MapHomeSubwayRouteOverlayEngine
+                        .overlays(travel: travel, readings: readings, day: day, through: day.start).count)
+                    let manualSleep = snapshot.actuals.filter {
+                        $0.categoryID == "sleep" && ($0.manuallyCorrected || $0.source == .manual)
+                            && TimeSpan(start: $0.startedAt, end: $0.endedAt ?? day.end)
+                                .intersection(with: day) != nil
+                    }
+                    report["confirmed_sleep_count"] = String(manualSleep.count)
+                    report["confirmed_sleep_category_mismatch_count"] = String(manualSleep.filter {
+                        RecordAnalysisCategoryPolicy.categoryID(for: $0) != "sleep"
+                    }.count)
+                    report["travel_count"] = String(travel.count)
+                    report["confirmed_subway_count"] = String(confirmed.count)
+                    report["confirmed_missing_route_count"] = String(missing.count)
+                    report["overlay_count"] = String(overlays.count)
+                    report["old_filter_eligible_count"] = String(oldEligible.count)
+                    report["old_filter_paw_count"] = String(oldPawCount)
+                    report["new_paw_count"] = String(footprints.reduce(0) { $0 + $1.count })
+                    report["recovered_missing_route_count"] = String(recoveredCount)
+                    report["unresolved_missing_route_count"] = String(missing.count - recoveredCount)
+                    report["unique_geometry_count"] = String(Set(overlays.map(\.geometrySignature)).count)
+                    if verifiesCompany {
+                        let companies = snapshot.settings.frequentPlaces.filter { $0.kind == .company && $0.point != nil }
+                        let detected = PlaceDetectionEngine().detectStays(readings: readings)
+                        let resolved = FrequentPlaceResolutionEngine().applying(snapshot.settings.frequentPlaces,
+                            to: detected, readings: readings)
+                        let kinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(snapshot.settings.frequentPlaces)
+                        let companyStays = resolved.filter { kinds[$0.placeKey] == .company }
+                        let candidates = resolved.compactMap {
+                            TaptionActivityEngineAdapter.placeActivityActual(for: $0,
+                                registeredKind: kinds[$0.placeKey], inside: day)
+                        }
+                        let merged = PlaceActivityRefreshEngine.merge(existing: snapshot.actuals,
+                            candidates: candidates, inside: day, suppressedIDs: snapshot.settings.suppressedActualIDs)
+                        let repeated = PlaceActivityRefreshEngine.merge(existing: merged,
+                            candidates: candidates, inside: day, suppressedIDs: snapshot.settings.suppressedActualIDs)
+                        let work = merged.filter { $0.categoryID == "work" && $0.span(asOf: day.end).intersection(with: day) != nil }
+                        let repeatedWork = repeated.filter { $0.categoryID == "work" && $0.span(asOf: day.end).intersection(with: day) != nil }
+                        report["registered_company_count"] = String(companies.count)
+                        report["automatic_company_count"] = String(companies.filter(\.isAutomaticRecordingEnabled).count)
+                        report["company_radius_120_count"] = String(companies.filter { $0.radiusMeters == 120 }.count)
+                        report["company_radius_fix_count"] = String(readings.filter { reading in
+                            guard reading.gpsAvailable, let point = reading.point else { return false }
+                            return companies.contains { place in
+                                guard let anchor = place.point else { return false }
+                                return distanceMeters(point, anchor) <= place.radiusMeters
+                            }
+                        }.count)
+                        report["detected_stay_count"] = String(detected.count)
+                        report["company_stay_count"] = String(companyStays.count)
+                        report["company_stay_minutes"] = String(Int(companyStays.reduce(0) { $0 + $1.span.duration } / 60))
+                        report["work_candidate_count"] = String(candidates.filter { $0.categoryID == "work" }.count)
+                        report["merged_work_count"] = String(work.count)
+                        report["repeated_work_count"] = String(repeatedWork.count)
+                        report["repeated_work_ids_equal"] = String(Set(work.map(\.id)) == Set(repeatedWork.map(\.id)))
+                        let workCandidates = candidates.filter { $0.categoryID == "work" }
+                        report["work_candidates_covered_count"] = String(workCandidates.filter { candidate in
+                            work.contains { existing in
+                                (existing.span(asOf: day.end).intersection(with: candidate.span(asOf: day.end))?.duration ?? 0)
+                                    >= candidate.span(asOf: day.end).duration * 0.5
+                            }
+                        }.count)
+                        for (index, candidate) in workCandidates.enumerated() {
+                            let prefix = "work_candidate_\(index)_"
+                            let blockers = snapshot.actuals.filter { existing in
+                                existing.source.usesAutomaticClassification
+                                    && (existing.modelVersion != "place-activity-v1" || existing.manuallyCorrected)
+                                    && (existing.categoryID != "unconfirmed" || existing.manuallyCorrected)
+                                    && (existing.span(asOf: day.end).intersection(with: candidate.span(asOf: day.end))?.duration ?? 0)
+                                        >= candidate.span(asOf: day.end).duration * 0.5
+                            }
+                            report[prefix + "start_minute"] = String(Int(candidate.startedAt.timeIntervalSince(start) / 60))
+                            report[prefix + "end_minute"] = String(Int((candidate.endedAt ?? day.end).timeIntervalSince(start) / 60))
+                            report[prefix + "suppressed"] = String(snapshot.settings.suppressedActualIDs.contains(candidate.id))
+                            report[prefix + "blocker_work_count"] = String(blockers.filter { $0.categoryID == "work" }.count)
+                            report[prefix + "blocker_manual_count"] = String(blockers.filter(\.manuallyCorrected).count)
+                            report[prefix + "blocker_other_category_count"] = String(blockers.filter { $0.categoryID != "work" }.count)
+                        }
+                        if let historicalEvidence, let currentEvidence {
+                            report["historical_read_complete"] = String(historicalEvidence.isComplete)
+                            report["historical_read_count"] = String(historicalEvidence.readings.count)
+                            report["current_read_complete"] = String(currentEvidence.isComplete)
+                            report["current_read_count"] = String(currentEvidence.readings.count)
+                        }
+                        let projection = RouteTimelineDataEngine.project(selectedDate: start, through: day.end,
+                            actuals: snapshot.actuals, travel: travel, readings: readings, calendar: calendar)
+                        report["route_projection_segment_count"] = String(projection.segments.count)
+                        report["route_projection_coordinate_count"] = String(projection.segments.reduce(0) { $0 + $1.coordinates.count })
+                    }
+                    for (index, segment) in missing.enumerated() {
+                        let context = TimeSpan(start: segment.span.start.addingTimeInterval(-2 * 60),
+                            end: segment.span.end.addingTimeInterval(2 * 60))
+                        let inside = readings.filter { context.contains($0.timestamp) }
+                        let prefix = "missing_\(index)_"
+                        report[prefix + "start_minute"] = String(Int(segment.span.start.timeIntervalSince(start) / 60))
+                        report[prefix + "end_minute"] = String(Int(segment.span.end.timeIntervalSince(start) / 60))
+                        report[prefix + "context_count"] = String(inside.count)
+                        report[prefix + "station_fix_count"] = String(inside.filter { reading in
+                            guard reading.gpsAvailable, let point = reading.point else { return false }
+                            return SubwayStationCatalog.nearest(to: point, maximumDistanceMeters: 220) != nil
+                        }.count)
+                        report[prefix + "sparse_route_available"] = String(SubwayStationCatalog.sparseEndpointTrajectory(from: inside) != nil)
+                        report[prefix + "strict_route_available"] = String(SubwayStationCatalog.coordinateTrajectory(from: inside) != nil)
+                    }
+                    return report
+                }
+            }.value
+            guard !isAppLocked else { throw CancellationError() }
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TaptionPlanSubwayVerification", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let requestID = verifiesCompany ? "COP1001A01" : "SUB1001A01"
+            try encoder.encode(reports).write(to: directory.appendingPathComponent("\(requestID)-\(UUID()).json"),
+                options: [.atomic, .completeFileProtection])
+            TaptionPlanDiagnosticsLogger.shared.record("subway_route_verification_finished",
+                fields: ["sources": String(reports.count)])
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record("subway_route_verification_failed", level: .error,
+                fields: ["error_type": String(reflecting: type(of: error))])
+        }
+    }
+
+    func runRequestedCloudBackupVerification() async {
+        let streamsRaw = ProcessInfo.processInfo.arguments.contains("--verify-streamed-backup")
+        guard (ProcessInfo.processInfo.arguments.contains("--verify-cloud-backups") || streamsRaw),
+              !isAppLocked, !hasRunCloudBackupVerification else { return }
+        hasRunCloudBackupVerification = true
+        var reports: [PlanCloudBackupVerificationReport] = []
+        do {
+            guard let service = securityBackupService else { throw PlanSecurityError.accountUnavailable }
+            for month in try service.cloudBackupMonthsForVerification() {
+                guard !isAppLocked else { throw CancellationError() }
+                reports.append(await service.verifyCloudBackup(monthKey: month))
+            }
+            var preflight = PlanCloudBackupVerificationReport()
+            preflight.monthKey = "all-months"
+            preflight.stage = "restore_preflight"
+            do {
+                let package = try await service.loadLatestBackupPackage(rewrapRecoveredArchive: false, streamRaw: streamsRaw)
+                preflight.actualCount = package.backup.snapshot.actuals.count
+                preflight.unreadableSnapshotArchiveCount = package.unreadableSnapshotArchiveCount
+                switch package.rawSensorState {
+                case .available(let payload):
+                    preflight.hasRawArchive = true
+                    preflight.sensorReadingCount = payload.sensorReadings.count
+                    preflight.envelopeCount = payload.envelopes.count
+                    preflight.verified = true
+                case .unavailable:
+                    preflight.verified = !reports.contains(where: \.hasRawArchive)
+                case .staged(let stage):
+                    var cursor: Int64 = 0
+                    preflight.stagedPageCount = 0
+                    preflight.maximumPageRows = 0
+                    preflight.watchAccelerationChunkCount = 0
+                    while let page = try await stage.page(after: cursor) {
+                        preflight.stagedPageCount! += 1
+                        preflight.maximumPageRows = max(preflight.maximumPageRows!, page.items.count)
+                        for item in page.items {
+                            switch item {
+                            case .sensorReading: preflight.sensorReadingCount += 1
+                            case .envelope: preflight.envelopeCount += 1
+                            case .watchAcceleration: preflight.watchAccelerationChunkCount! += 1
+                            }
+                        }
+                        cursor = page.cursor
+                    }
+                    preflight.hasRawArchive = true
+                    preflight.verified = true
+                case .invalidArchive:
+                    preflight.errorType = "invalidArchive"
+                }
+                if preflight.verified { preflight.stage = "restore_preflight_verified" }
+            } catch {
+                preflight.errorType = (error as? PlanSecurityError).map { String(describing: $0) }
+                    ?? String(reflecting: type(of: error))
+            }
+            reports.append(preflight)
+        } catch {
+            var report = PlanCloudBackupVerificationReport()
+            report.errorType = (error as? PlanSecurityError).map { String(describing: $0) }
+                ?? String(reflecting: type(of: error))
+            reports.append(report)
+        }
+        do {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TaptionPlanBackupVerification", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appendingPathComponent("\(streamsRaw ? "STR1001A01" : "BVD1001A01")-\(UUID()).json")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.sortedKeys, .prettyPrinted]
+            try encoder.encode(reports).write(to: url,
+                options: [.atomic, .completeFileProtection])
+            TaptionPlanDiagnosticsLogger.shared.record("cloud_backup_verification_finished",
+                fields: ["months": String(reports.count),
+                    "verified": String(reports.filter(\.verified).count)])
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record("cloud_backup_verification_report_failed",
+                level: .error, fields: ["error_type": String(reflecting: type(of: error))])
+        }
+    }
+    #endif
+
     func loadCloudBackup() async throws -> PlanCloudBackupRestorePackage {
         guard let securityBackupService else { throw PlanSecurityError.archiveNotFound }
-        let recovered = try await securityBackupService.loadLatestBackupPackage()
+        let recovered = try await securityBackupService.loadLatestBackupPackage(streamRaw: true)
         securityStatus = securityBackupService.status
         return recovered
     }
@@ -2140,6 +2404,12 @@ final class AppModel {
         let operation = logger.beginOperation("icloud_backup_manual")
         var appLogBytes = 0
         do {
+            if let securityBackupService {
+                let migration = try await securityBackupService.migrateLegacyMonthlyArchives()
+                logger.record("legacy_backup_migration_finished", fields: [
+                    "converted_months": String(migration.convertedMonths),
+                    "unreadable_months": String(migration.skippedUnreadableMonths)])
+            }
             guard let securityBackupService else {
                 throw PlanSecurityError.accountUnavailable
             }
@@ -2178,6 +2448,73 @@ final class AppModel {
         }
     }
 
+    private func processStagedRawRestore(_ stage: PlanStagedRawRestore,
+        sessionID: UUID?) async throws -> Set<Date> {
+        var cursor: Int64 = 0
+        var dates: Set<Date> = []
+        let calendar = Calendar.autoupdatingCurrent
+        while let page = try await stage.page(after: cursor) {
+            try Task.checkCancellation()
+            var readings: [SensorReading] = []
+            var envelopes: [RawDeviceDataEnvelope] = []
+            var chunks: [TaptionWatchAccelerationChunk] = []
+            for item in page.items {
+                switch item {
+                case .sensorReading(let value): readings.append(value)
+                case .envelope(let value): envelopes.append(value)
+                case .watchAcceleration(let value): chunks.append(value)
+                }
+            }
+            readings = try CloudRestoreReadingPreparation.validAndSorted(readings,
+                cancellationCheck: { try Task.checkCancellation() })
+            if !readings.isEmpty {
+                guard let sensorService else { throw PlanSecurityError.archiveNotFound }
+                if let sessionID { _ = try await sensorService.recordExternalReadingsForRestore(readings, restoreSessionID: sessionID) }
+                else { try await sensorService.validateExternalReadings(readings) }
+                dates.formUnion(readings.map { calendar.startOfDay(for: $0.timestamp) })
+            }
+            if !envelopes.isEmpty {
+                guard let rawDeviceDataArchive else { throw PlanSecurityError.archiveNotFound }
+                if let sessionID { _ = try await rawDeviceDataArchive.appendForRestore(envelopes, restoreSessionID: sessionID) }
+                else { try await rawDeviceDataArchive.validateAppend(envelopes) }
+                dates.formUnion(envelopes.map { calendar.startOfDay(for: $0.capturedAt) })
+            }
+            if !chunks.isEmpty {
+                guard let dayDatabase else { throw PlanSecurityError.archiveNotFound }
+                if let sessionID { _ = try await dayDatabase.recordWatchAccelerationChunksForRestore(chunks, restoreSessionID: sessionID) }
+                else { try await dayDatabase.validateWatchAccelerationChunks(chunks) }
+                dates.formUnion(chunks.flatMap { [calendar.startOfDay(for: $0.startedAt), calendar.startOfDay(for: $0.endedAt)] })
+            }
+            cursor = page.cursor
+        }
+        return dates
+    }
+
+    private func finishCloudRestoreSession(_ id: UUID, committed: Bool, requiredStores: Set<String> = []) async throws {
+        guard !requiredStores.contains("sensor") || sensorService != nil,
+              !requiredStores.contains("envelope") || rawDeviceDataArchive != nil,
+              !requiredStores.contains("watch") || dayDatabase != nil else {
+            throw PlanSecurityError.archiveNotFound
+        }
+        if let sensorService { try await sensorService.finishRestoreSession(id, committed: committed) }
+        if let rawDeviceDataArchive { try await rawDeviceDataArchive.finishRestoreSession(id, committed: committed) }
+        if let dayDatabase { try await dayDatabase.finishRestoreSession(id, committed: committed) }
+    }
+
+    private func recoverCloudRestoreJournal(snapshot stored: TaptionDataSnapshot? = nil) async throws {
+        let journal = try PlanCloudRestoreJournal.applicationSupport()
+        guard let pending = try journal.pending() else { return }
+        let persisted: TaptionDataSnapshot
+        if let stored { persisted = stored } else { persisted = try await repository.load() }
+        let committed = try journal.matches(pending, snapshot: persisted)
+        let required = pending.dataGeneration == nil || pending.dataGeneration == TaptionDataDeletionFence.currentGeneration()
+            ? pending.requiredStores ?? [] : []
+        try await finishCloudRestoreSession(pending.id, committed: committed, requiredStores: required)
+        try journal.finish(pending.id)
+        TaptionPlanDiagnosticsLogger.shared.record("cloud_restore_journal_recovered",
+            fields: ["committed": String(committed)])
+    }
+
     func applyCloudBackup(
         _ restored: PlanCloudBackupPayload
     ) async throws -> PlanCloudBackupRestoreResult {
@@ -2199,14 +2536,21 @@ final class AppModel {
         let sourceRevision = snapshotRevision
         let backup = restored.backup
         let rawSensorPayload: PlanCloudRawSensorPayload?
+        let rawStage: PlanStagedRawRestore?
         var result = PlanCloudBackupRestoreResult.complete
         switch restored.rawSensorState {
         case .unavailable:
             rawSensorPayload = nil
+            rawStage = nil
         case .available(let payload):
             rawSensorPayload = payload
+            rawStage = nil
+        case .staged(let stage):
+            rawSensorPayload = nil
+            rawStage = stage
         case .invalidArchive:
             rawSensorPayload = nil
+            rawStage = nil
             result = .snapshotOnly
             TaptionPlanDiagnosticsLogger.shared.record(
                 "icloud_backup_restore_raw_archive_invalid",
@@ -2303,14 +2647,20 @@ final class AppModel {
         value.settings.cloudResetAt = .now
         value.updatedAt = .now
 
+        var stagedDates: Set<Date> = []
         do {
+            if let rawStage {
+                try await rawStage.appendRouteReadings(restoredReadings)
+                stagedDates = try await processStagedRawRestore(rawStage, sessionID: nil)
+            }
             if !restoredReadings.isEmpty {
                 guard let sensorService else {
                     throw PlanSecurityError.archiveNotFound
                 }
-                try await sensorService.validateExternalReadings(
-                    restoredReadings
-                )
+                for offset in stride(from: 0, to: restoredReadings.count, by: 256) {
+                    try Task.checkCancellation()
+                    try await sensorService.validateExternalReadings(Array(restoredReadings[offset..<min(offset + 256, restoredReadings.count)]))
+                }
                 try Task.checkCancellation()
             }
             if let envelopes = rawSensorPayload?.envelopes,
@@ -2318,7 +2668,10 @@ final class AppModel {
                 guard let rawDeviceDataArchive else {
                     throw PlanSecurityError.archiveNotFound
                 }
-                try await rawDeviceDataArchive.validateAppend(envelopes)
+                for offset in stride(from: 0, to: envelopes.count, by: 256) {
+                    try Task.checkCancellation()
+                    try await rawDeviceDataArchive.validateAppend(Array(envelopes[offset..<min(offset + 256, envelopes.count)]))
+                }
                 try Task.checkCancellation()
             }
             if let chunks = rawSensorPayload?.watchAccelerationChunks,
@@ -2345,30 +2698,46 @@ final class AppModel {
         }
 
         guard sourceRevision == snapshotRevision else { return .unchanged }
-        var sensorReadingIDs: [UUID] = []
-        var envelopeIDs: [UUID] = []
-        var watchReceipt: PlanDayDatabase.WatchAccelerationRestoreReceipt?
+        let restoreJournal = try PlanCloudRestoreJournal.applicationSupport()
+        var requiredStores: Set<String> = []
+        if !restoredReadings.isEmpty || (rawStage != nil && sensorService != nil) { requiredStores.insert("sensor") }
+        if rawSensorPayload?.envelopes.isEmpty == false || (rawStage != nil && rawDeviceDataArchive != nil) { requiredStores.insert("envelope") }
+        if (rawSensorPayload?.watchAccelerationChunks?.isEmpty == false && dayDatabase != nil)
+            || (rawStage != nil && dayDatabase != nil) { requiredStores.insert("watch") }
+        let restoreSessionID = try restoreJournal.begin(target: value, requiredStores: requiredStores)
         var legacyWatchReceipt:
             AppleWatchSensorActivityArchive.AccelerationRestoreReceipt?
         do {
             try Task.checkCancellation()
+            if let rawStage { _ = try await processStagedRawRestore(rawStage, sessionID: restoreSessionID) }
             if !restoredReadings.isEmpty, let sensorService {
-                sensorReadingIDs = try await sensorService
-                    .recordExternalReadingsForRestore(restoredReadings)
+                for offset in stride(from: 0, to: restoredReadings.count, by: 256) {
+                    try Task.checkCancellation()
+                    _ = try await sensorService.recordExternalReadingsForRestore(
+                        Array(restoredReadings[offset..<min(offset + 256, restoredReadings.count)]),
+                        restoreSessionID: restoreSessionID)
+                }
                 try Task.checkCancellation()
             }
             if let envelopes = rawSensorPayload?.envelopes,
                !envelopes.isEmpty, let rawDeviceDataArchive {
-                envelopeIDs = try await rawDeviceDataArchive.appendForRestore(
-                    envelopes
-                )
+                for offset in stride(from: 0, to: envelopes.count, by: 256) {
+                    try Task.checkCancellation()
+                    _ = try await rawDeviceDataArchive.appendForRestore(
+                        Array(envelopes[offset..<min(offset + 256, envelopes.count)]),
+                        restoreSessionID: restoreSessionID)
+                }
                 try Task.checkCancellation()
             }
             if let chunks = rawSensorPayload?.watchAccelerationChunks,
                !chunks.isEmpty {
                 if let dayDatabase {
-                    watchReceipt = try await dayDatabase
-                        .recordWatchAccelerationChunksForRestore(chunks)
+                    for offset in stride(from: 0, to: chunks.count, by: 256) {
+                        try Task.checkCancellation()
+                        _ = try await dayDatabase.recordWatchAccelerationChunksForRestore(
+                            Array(chunks[offset..<min(offset + 256, chunks.count)]),
+                            restoreSessionID: restoreSessionID)
+                    }
                 } else if let watchSensorArchive {
                     legacyWatchReceipt = try await watchSensorArchive
                         .recordForRestore(chunks)
@@ -2378,10 +2747,9 @@ final class AppModel {
         } catch {
             let mergeError = error
             do {
+                try await recoverCloudRestoreJournal()
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: sensorReadingIDs,
-                    envelopeIDs: envelopeIDs,
-                    watchReceipt: watchReceipt,
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
                     legacyWatchReceipt: legacyWatchReceipt
                 )
             } catch {
@@ -2413,10 +2781,9 @@ final class AppModel {
         } catch {
             let saveError = error
             do {
+                try await recoverCloudRestoreJournal()
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: sensorReadingIDs,
-                    envelopeIDs: envelopeIDs,
-                    watchReceipt: watchReceipt,
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
                     legacyWatchReceipt: legacyWatchReceipt
                 )
             } catch {
@@ -2436,10 +2803,10 @@ final class AppModel {
         }
         guard didCommit else {
             do {
+                try await finishCloudRestoreSession(restoreSessionID, committed: false, requiredStores: requiredStores)
+                try restoreJournal.finish(restoreSessionID)
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: sensorReadingIDs,
-                    envelopeIDs: envelopeIDs,
-                    watchReceipt: watchReceipt,
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
                     legacyWatchReceipt: legacyWatchReceipt
                 )
             } catch {
@@ -2456,6 +2823,9 @@ final class AppModel {
             )
             return .unchanged
         }
+        try await finishCloudRestoreSession(restoreSessionID, committed: true, requiredStores: requiredStores)
+        try restoreJournal.finish(restoreSessionID)
+        invalidateRawDays(Array(stagedDates))
         invalidateRawDays(
             restoredReadings.map(\.timestamp)
                 + (rawSensorPayload?.envelopes ?? []).map(\.capturedAt)
@@ -2489,7 +2859,7 @@ final class AppModel {
                             calendar.startOfDay(for: $0.endedAt),
                         ]
                     }
-        ).sorted()
+        ).union(stagedDates).sorted()
         for date in restoredAnalysisDates {
             await refreshSensorTimeline(containing: date)
         }
@@ -3812,6 +4182,7 @@ final class AppModel {
             defer { bootstrapTask = nil }
             do {
                 var source = try await repository.load()
+                try await recoverCloudRestoreJournal(snapshot: source)
                 try Task.checkCancellation()
                 guard allowsRepositoryLoadAttempt() else { return }
                 repositoryLoadFailed = false
@@ -6002,6 +6373,22 @@ final class AppModel {
 
     func refreshWidgetNow() {
         publishWidgetPayload()
+    }
+
+    func exportTodaySensorRawURL() async throws -> URL {
+        let now = Date.now
+        let day = await planDayDataSnapshot(for: now, forceReload: true, refreshRawReadings: true)
+        let readings = TodaySensorRawExport.readings(day.readings, on: now)
+        let payload = TodaySensorRawExport(day: day.day, isComplete: day.isComplete,
+            readings: readings, travel: day.travel)
+        return try await Task.detached(priority: .utility) {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("TaptionPlanRawExport", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = directory.appendingPathComponent("Taption-Today-Raw-\(UUID().uuidString).json")
+            try JSONEncoder().encode(payload).write(to: url, options: [.atomic, .completeFileProtection])
+            return url
+        }.value
     }
 
     func exportSnapshotURL() throws -> URL {
@@ -9529,37 +9916,13 @@ final class AppModel {
     ) {
         let kinds = FrequentPlaceResolutionEngine()
             .kindsByPlaceKey(settings.frequentPlaces)
-        let protectedIDs = Set(snapshot.actuals.compactMap { actual -> UUID? in
-            guard actual.modelVersion == "place-activity-v1",
-                  actual.manuallyCorrected else { return nil }
-            return actual.id
-        })
-        let existingAutomatic = snapshot.actuals.filter {
-            $0.source.usesAutomaticClassification
-                && $0.span(asOf: span.end).intersection(with: span) != nil
-                && !protectedIDs.contains($0.id)
-        }
-        let fresh = stays.compactMap { stay in
+        let candidates = stays.compactMap { stay in
             TaptionActivityEngineAdapter.placeActivityActual(
-                for: stay,
-                registeredKind: kinds[stay.placeKey],
-                inside: span
-            )
-        }.filter { candidate in
-            let candidateSpan = candidate.span(asOf: span.end)
-            return !protectedIDs.contains(candidate.id)
-                && !existingAutomatic.contains { actual in
-                    (actual.span(asOf: span.end).intersection(with: candidateSpan)?.duration
-                        ?? 0) >= candidateSpan.duration * 0.5
-                }
-                && !snapshot.settings.suppressedActualIDs.contains(candidate.id)
+                for: stay, registeredKind: kinds[stay.placeKey], inside: span)
         }
-        snapshot.actuals.removeAll { actual in
-            actual.modelVersion == "place-activity-v1"
-                && !protectedIDs.contains(actual.id)
-                && actual.span(asOf: span.end).intersection(with: span) != nil
-        }
-        snapshot.actuals.append(contentsOf: fresh)
+        snapshot.actuals = PlaceActivityRefreshEngine.merge(
+            existing: snapshot.actuals, candidates: candidates, inside: span,
+            suppressedIDs: snapshot.settings.suppressedActualIDs)
         snapshot.actuals.sort {
             if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
             return $0.id.uuidString < $1.id.uuidString
@@ -14244,5 +14607,19 @@ private extension CatCoat {
 private extension String {
     var nilIfEmpty: String? {
         isEmpty ? nil : self
+    }
+}
+
+struct TodaySensorRawExport: Codable, Sendable {
+    let day: Date
+    let isComplete: Bool
+    let readings: [SensorReading]
+    let travel: [TravelSegment]
+
+    static func readings(_ source: [SensorReading], on date: Date,
+        calendar: Calendar = .autoupdatingCurrent) -> [SensorReading] {
+        let start = calendar.startOfDay(for: date)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        return source.filter { $0.timestamp >= start && $0.timestamp < end }
     }
 }

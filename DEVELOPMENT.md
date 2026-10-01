@@ -23,6 +23,10 @@
 - `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. `SecurityBackupCore` 백업 포맷의 legacy read 경로는 별도 계약이므로 포맷 작업 때 구분해 확인하세요.
 - 백업 포맷·암호화·체크섬·세대 참조를 바꾸기 전에는 현재 구현과 요청 기록을 확인합니다. 읽기 호환·복원·rollback 기준 없이 기존 백업을 제거하거나 변환하지 않습니다.
 
+- 앱의 복원 메뉴는 `loadLatestBackupPackage(streamRaw: true)`로 V4 raw 암호문을 파일 페이지로 읽고 `PlanStagedRawRestore`의 SQLite cursor를 최대 256행/기본 1MiB씩 소비합니다. 단일 항목은 하드 4MiB 제한입니다. 기존 `.available(payload)`는 호환·진단 경로이며 전체 배열을 반환합니다.
+- `RestoreStaging/restore-journal.sqlite`에는 target snapshot digest·세션·필요 저장소·삭제 generation을 기록합니다. 원본 삽입과 `restore_receipts`/`raw_restore_receipts`는 같은 SQLite 트랜잭션입니다. bootstrap은 snapshot 공개 전에 pending 복원을 확정하거나 동일한 신규 원본만 rollback하며, 필요한 저장소가 없으면 journal을 지우지 않습니다. 원본 DB·App Group 경로·facade는 바꾸지 않습니다.
+- 과거 snapshot에 연결된 V1–V3 월은 수동 백업에서 보호된 migration journal을 사용해 V4 불변 세대로 변환하며 원본을 유지합니다. raw-only legacy 월, V1–V3 단일 GCM의 strict streaming, 실제 peak memory는 아직 별도 미완료 기준입니다. CloudKit은 Debug Development만 자동 활성화되며, CAS의 본문 재병합·pending 참조·보존 정책은 실제 두 기기 검증과 구분합니다.
+
 ## 검증 명령
 
 현재 scheme과 target은 프로젝트에서 확인합니다.

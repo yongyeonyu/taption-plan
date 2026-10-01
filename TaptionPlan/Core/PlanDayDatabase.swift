@@ -842,7 +842,7 @@ actor PlanDayDatabase {
     }
 
     func recordWatchAccelerationChunksForRestore(
-        _ chunks: [TaptionWatchAccelerationChunk]
+        _ chunks: [TaptionWatchAccelerationChunk], restoreSessionID: UUID? = nil
     ) async throws -> WatchAccelerationRestoreReceipt {
         guard !chunks.isEmpty else {
             return WatchAccelerationRestoreReceipt(
@@ -854,8 +854,13 @@ actor PlanDayDatabase {
         defer { lock.unlock() }
         try checkDataGeneration()
         return try await appendWatchAccelerationEvents(
-            chunks.map { try Self.watchAccelerationEvents(for: $0) }
+            chunks.map { try Self.watchAccelerationEvents(for: $0) }, restoreSessionID: restoreSessionID
         )
+    }
+
+    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
+        try await iPhoneStore.finishRestoreSession(id, committed: committed)
+        try await watchStore.finishRestoreSession(id, committed: committed)
     }
 
     func rollbackWatchAccelerationRestore(
@@ -899,15 +904,15 @@ actor PlanDayDatabase {
     }
 
     private func appendWatchAccelerationEvents(
-        _ events: [(watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent)]
+        _ events: [(watch: TaptionPlanRawEvent, iPhone: TaptionPlanRawEvent)], restoreSessionID: UUID? = nil
     ) async throws -> WatchAccelerationRestoreReceipt {
         let watchIDs = try await watchStore.appendRawEvents(
-            events.map(\.watch)
+            events.map(\.watch), outboxItems: [], restoreSessionID: restoreSessionID
         )
         do {
             try checkDataGeneration()
             let iPhoneIDs = try await iPhoneStore.appendRawEvents(
-                events.map(\.iPhone)
+                events.map(\.iPhone), outboxItems: [], restoreSessionID: restoreSessionID
             )
             return WatchAccelerationRestoreReceipt(
                 watchEventIDs: watchIDs.map(\.id),
@@ -1535,6 +1540,7 @@ final class PlanDayLoadCoordinator {
     private struct InFlightRequest {
         let id: UUID
         let task: Task<PlanDayDataSnapshot, Never>
+        let forceReload: Bool
     }
 
     private var inFlight: [CacheKey: InFlightRequest] = [:]
@@ -1731,7 +1737,7 @@ final class PlanDayLoadCoordinator {
         }
         cancelRequests(except: key)
         if let existing = inFlight[key] {
-            if !forceReload {
+            if !forceReload || existing.forceReload {
                 return await existing.task.value
             }
             existing.task.cancel()
@@ -1901,7 +1907,7 @@ final class PlanDayLoadCoordinator {
                 durations: durations
             )
         }
-        let request = InFlightRequest(id: UUID(), task: task)
+        let request = InFlightRequest(id: UUID(), task: task, forceReload: forceReload)
         inFlight[key] = request
         let result = await withTaskCancellationHandler(operation: {
             await task.value
@@ -2036,7 +2042,7 @@ final class PlanDayLoadCoordinator {
     var cachedDayCount: Int { cache.count }
 
     private func cancelRequests(except key: CacheKey) {
-        let requests = inFlight.filter { $0.key != key }
+        let requests = inFlight.filter { $0.key.day == key.day && $0.key != key }
         for (otherKey, request) in requests {
             request.task.cancel()
             inFlight.removeValue(forKey: otherKey)

@@ -592,9 +592,15 @@ enum MapHomeRouteGeometrySignature {
     }
 }
 
-struct MapHomeVectorMarker {
+struct MapHomeVectorMarker: Equatable {
     let id: String
     let coordinate: CLLocationCoordinate2D
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+            && lhs.coordinate.latitude == rhs.coordinate.latitude
+            && lhs.coordinate.longitude == rhs.coordinate.longitude
+    }
 }
 
 struct MapHomeVectorViewport: Equatable {
@@ -695,8 +701,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var styleIsLoaded = false
         private var lastCameraRevision = Int.min
         private var lastContentSignature = ""
+        private var lastProjectedMarkers: [MapHomeVectorMarker] = []
+        private var lastProjectionBounds = CGRect.zero
         private var lastHeading: CLLocationDirection?
         private var lastHeadingCoordinate: CLLocationCoordinate2D?
+        private var viewportSampleCount = 0
+        private var maximumViewportProjectionMS: Double = 0
+        private var maximumViewportFrameGapMS: Double = 0
         private var lastViewportPublishUptime: TimeInterval = 0
         private var pendingViewport:
             (viewport: MapHomeVectorViewport, force: Bool)?
@@ -751,7 +762,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 + parent.subwayRoutes.map(\.signature)
             ).joined(separator: "#")
             guard signature != lastContentSignature else {
-                publishViewport(from: mapView, force: false)
+                if lastProjectedMarkers != parent.markers || lastProjectionBounds != mapView.bounds {
+                    publishViewport(from: mapView, force: true)
+                }
                 return
             }
             lastContentSignature = signature
@@ -1076,7 +1089,14 @@ struct MapHomeVectorMap: UIViewRepresentable {
             guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
             let now = ProcessInfo.processInfo.systemUptime
             guard force || now - lastViewportPublishUptime >= 1.0 / 60.0 else { return }
+            if viewportSampleCount > 0 {
+                maximumViewportFrameGapMS = max(maximumViewportFrameGapMS,
+                    (now - lastViewportPublishUptime) * 1_000)
+            }
+            viewportSampleCount += 1
             lastViewportPublishUptime = now
+            lastProjectedMarkers = parent.markers
+            lastProjectionBounds = mapView.bounds
             let bounds = mapView.visibleCoordinateBounds
             let span = MLNCoordinateBoundsGetCoordinateSpan(bounds)
             let points = Dictionary(
@@ -1099,6 +1119,22 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 pitch: camera.pitch,
                 markerPoints: points
             )
+            maximumViewportProjectionMS = max(maximumViewportProjectionMS,
+                (ProcessInfo.processInfo.systemUptime - now) * 1_000)
+            if force {
+                if viewportSampleCount > 1 {
+                    TaptionPlanDiagnosticsLogger.shared.record("map_viewport_performance", fields: [
+                        "renderer": "vector",
+                        "sample_count": String(viewportSampleCount),
+                        "marker_count": String(parent.markers.count),
+                        "max_projection_ms": String(format: "%.2f", maximumViewportProjectionMS),
+                        "max_frame_gap_ms": String(format: "%.2f", maximumViewportFrameGapMS),
+                    ])
+                }
+                viewportSampleCount = 0
+                maximumViewportProjectionMS = 0
+                maximumViewportFrameGapMS = 0
+            }
             if let pendingViewport {
                 self.pendingViewport = (
                     viewport,

@@ -283,6 +283,20 @@ struct SettingsView: View {
                                     "데이터 파일을 만들지 못했습니다."
                             }
                         }
+                        settingsRow(
+                            icon: "location.square",
+                            title: "오늘 센서 원본 내보내기",
+                            subtitle: "오늘 위치·이동 센서 원본을 별도 JSON 파일로 공유",
+                            value: ""
+                        ) {
+                            Task {
+                                do {
+                                    sharedExport = ShareableURL(url: try await model.exportTodaySensorRawURL())
+                                } catch {
+                                    model.userFacingError = "오늘 원본 파일을 만들지 못했습니다."
+                                }
+                            }
+                        }
                         VStack(alignment: .leading, spacing: 4) {
                             settingsRow(
                                 icon: "icloud.and.arrow.up",

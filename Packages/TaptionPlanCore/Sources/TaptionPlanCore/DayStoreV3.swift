@@ -354,7 +354,8 @@ public actor TaptionPlanV3Store {
     @discardableResult
     public func appendRawEvents(
         _ events: [TaptionPlanRawEvent],
-        outboxItems: [TaptionPlanV3OutboxItem]
+        outboxItems: [TaptionPlanV3OutboxItem],
+        restoreSessionID: UUID? = nil
     ) throws -> Set<TaptionPlanRawEventIdentifier> {
         try validate(events)
         try validate(outboxItems)
@@ -362,6 +363,18 @@ public actor TaptionPlanV3Store {
         let insertedIDs = try withTransaction {
             let insertedIDs = try insertRawEvents(events)
             try insertOutboxItems(outboxItems)
+            if let restoreSessionID {
+                for event in events where insertedIDs.contains(.init(domain: event.domain, id: event.id)) {
+                    let receipt = try prepare("INSERT INTO raw_restore_receipts(device,session,domain,id,event) VALUES(?,?,?,?,?);")
+                    defer { sqlite3_finalize(receipt) }
+                    try bind(device.rawValue, to: receipt, at: 1)
+                    try bind(restoreSessionID.uuidString, to: receipt, at: 2)
+                    try bind(event.domain, to: receipt, at: 3)
+                    try bind(event.id, to: receipt, at: 4)
+                    try bind(JSONEncoder().encode(event), to: receipt, at: 5)
+                    guard try step(receipt) == SQLITE_DONE else { throw lastError() }
+                }
+            }
             let insertedDays = Set(events.lazy.compactMap { event in
                 insertedIDs.contains(
                     .init(domain: event.domain, id: event.id)
@@ -380,6 +393,59 @@ public actor TaptionPlanV3Store {
             removeCachedRawDigest(for: day)
         }
         return insertedIDs
+    }
+
+    public func finishRestoreSession(_ sessionID: UUID, committed: Bool) throws {
+        let changedDays = try withTransaction { () throws -> Set<TaptionPlanDayKey> in
+            var changed: Set<TaptionPlanDayKey> = []
+            if !committed {
+                while true {
+                    let page = try prepare("SELECT event FROM raw_restore_receipts WHERE device=? AND session=? LIMIT 256;")
+                    var events: [TaptionPlanRawEvent] = []
+                    do {
+                        defer { sqlite3_finalize(page) }
+                        try bind(device.rawValue, to: page, at: 1)
+                        try bind(sessionID.uuidString, to: page, at: 2)
+                        while try step(page) == SQLITE_ROW {
+                            events.append(try JSONDecoder().decode(TaptionPlanRawEvent.self, from: readData(page, at: 0)))
+                        }
+                    }
+                    if events.isEmpty { break }
+                    for event in events {
+                        let lookup = try prepare("SELECT device,day_key,timestamp,sequence,id,domain,provenance,payload FROM raw_events WHERE device=? AND domain=? AND id=?;")
+                        defer { sqlite3_finalize(lookup) }
+                        try bind(device.rawValue, to: lookup, at: 1)
+                        try bind(event.domain, to: lookup, at: 2)
+                        try bind(event.id, to: lookup, at: 3)
+                        if try step(lookup) == SQLITE_ROW, try readRawEvent(lookup) == event {
+                            let delete = try prepare("DELETE FROM raw_events WHERE device=? AND domain=? AND id=?;")
+                            defer { sqlite3_finalize(delete) }
+                            try bind(device.rawValue, to: delete, at: 1)
+                            try bind(event.domain, to: delete, at: 2)
+                            try bind(event.id, to: delete, at: 3)
+                            guard try step(delete) == SQLITE_DONE else { throw lastError() }
+                            changed.insert(event.day)
+                        }
+                        let receipt = try prepare("DELETE FROM raw_restore_receipts WHERE device=? AND session=? AND domain=? AND id=?;")
+                        defer { sqlite3_finalize(receipt) }
+                        try bind(device.rawValue, to: receipt, at: 1)
+                        try bind(sessionID.uuidString, to: receipt, at: 2)
+                        try bind(event.domain, to: receipt, at: 3)
+                        try bind(event.id, to: receipt, at: 4)
+                        guard try step(receipt) == SQLITE_DONE else { throw lastError() }
+                    }
+                }
+            }
+            let clear = try prepare("DELETE FROM raw_restore_receipts WHERE device=? AND session=?;")
+            defer { sqlite3_finalize(clear) }
+            try bind(device.rawValue, to: clear, at: 1)
+            try bind(sessionID.uuidString, to: clear, at: 2)
+            guard try step(clear) == SQLITE_DONE else { throw lastError() }
+            try removePersistedRawDigests(for: changed)
+            return changed
+        }
+        if !changedDays.isEmpty { rawEventRevision &+= 1 }
+        for day in changedDays { removeCachedRawDigest(for: day) }
     }
 
     public func pendingOutboxItems(
@@ -1449,6 +1515,9 @@ public actor TaptionPlanV3Store {
                 }
             )
             deletedRawEvents = sqlite3_changes(database) > 0
+            try execute("DELETE FROM raw_restore_receipts WHERE device=?;", binds: { statement in
+                try self.bind(self.device.rawValue, to: statement, at: 1)
+            })
             try execute(
                 "DELETE FROM day_materialized WHERE device = ?;",
                 binds: { statement in
@@ -1601,6 +1670,11 @@ public actor TaptionPlanV3Store {
             try sqliteExecute(
                 database,
                 """
+                CREATE TABLE IF NOT EXISTS raw_restore_receipts(
+                    device TEXT NOT NULL, session TEXT NOT NULL, domain TEXT NOT NULL,
+                    id TEXT NOT NULL, event BLOB NOT NULL,
+                    PRIMARY KEY(device,session,domain,id)
+                );
                 CREATE TABLE IF NOT EXISTS migration_markers(
                     key TEXT NOT NULL PRIMARY KEY,
                     completed_at REAL NOT NULL
@@ -1682,6 +1756,11 @@ public actor TaptionPlanV3Store {
             );
             CREATE INDEX day_materialized_day_index
                 ON day_materialized(device, day_key);
+            CREATE TABLE raw_restore_receipts(
+                device TEXT NOT NULL, session TEXT NOT NULL, domain TEXT NOT NULL,
+                id TEXT NOT NULL, event BLOB NOT NULL,
+                PRIMARY KEY(device,session,domain,id)
+            );
             CREATE TABLE migration_markers(
                 key TEXT NOT NULL PRIMARY KEY,
                 completed_at REAL NOT NULL

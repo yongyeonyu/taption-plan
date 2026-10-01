@@ -1,5 +1,102 @@
 # 검증 기록
 
+## GIT1001A01 · TestFlight164 수정 main 커밋·push (2026-10-01)
+
+- 현재 변경29개 파일의 앱·package·회귀 테스트·빌드164 설정과 검증 문서를 기존 작업 그대로 반영한다. TestFlight164 archive 생성 시 소스 hash와 현재 동작 코드가 일치한다. 기존 테스트·Debug·Release 검증은 TFL1001A01/STR1001A01 근거를 재사용했고 문서/커밋 작업으로 앱 테스트를 반복하지 않았다.
+- 커밋 전 `git diff --check` 성공. origin/main을 fetch한 뒤 HEAD와 차이0/0 확인. main에 커밋·push 후 local/remote HEAD 일치와 tracked/untracked clean을 최종 확인한다. 실기기 기능·백업 PIN·그룹 화면 확인 대기 항목은 그대로 유지한다.
+
+## TFL1001A01 · 회사 검증용 내부 TestFlight164 배포 (2026-10-01)
+
+- 시작: main `48b8efd`, origin/main과 같으며 기존 미커밋 변경29개 파일을 보존했다. ASC 최신 빌드163 VALID, 다음 번호164, 내부 그룹 `TP Taption Plan 내부 테스트`와 테스터1명을 readback했다 (`build/validation/TFL1001A01/builds-before.json`, `groups-before.json`, `testers-before.json`).
+- 기존 유효 검증 재사용: STR1001A01 전체 앱 xcresult1,462통과/0실패/1건너뜀(XCTest1,420+Swift Testing42), Core103통과, 마지막 관련869통과/1건너뜀과 Debug 성공. StoreKit 건너뜀은 통과가 아니다. 실기기 백업 PIN 요구/복원·서버 경합 검증 대기는 남긴다.
+- 빌드 설정8곳과 네 Info.plist를164로 맞췄다. internal-only export를 사용한다. TestFlight 서명은 Production entitlement를 사용하지만 Release의 CloudKit manifest 동기화 자동 생성은 계속 비활성이다. 기존 iCloud Drive 파일 백업은 유지한다.
+- Release archive·internal-only export·generic iOS Debug 성공 (`archive.log`, `export.log`, `debug.log`). archive/IPA/Debug 네 번들 모두1.0(164)을 확인했다 (`archive-bundles.json`, `ipa-bundles.json`, `debug-bundles.json`). IPA 서명은 Production/get-task-allow=false이며 Release manifest 자동 동기화는 비활성이다.
+- 10:33 KST 업로드 성공, Delivery UUID `ad5807cb-b9dd-4eca-9767-adf588adbe07` (`upload.log`). 최초 ASC readback에는164가 없었으나 후속 조회에서 VALID/READY_FOR_BETA_TESTING을 확인했다 (`processing-04.json`).
+- 내부 그룹 연결 후 최종 ASC readback은 **1.0(164), VALID, IN_BETA_TESTING**, `TP Taption Plan 내부 테스트` 내부 그룹 **buildAttached=true, 테스터1명**이다 (`testflight-readback.json`, `build-final.json`, `group-builds.json`). 한국어 테스트 안내를164에 등록했다 (`beta-test-notes.json`).
+- 제한: API 처리·그룹/테스터 노출은 확인했지만 App Store Connect 브라우저는 로그인 화면이므로 **그룹 화면 검증은 대기**다. 실제 TestFlight 다운로드와 회사 기능 검증은 사용자 확인 전이다. 소스 hash를 보존했고 실제 실행과 diff 검사에 오류가 없었다. 기존 미커밋 변경을 보존했으며 이번 요청에서는 commit/push를 수행하지 않았다.
+
+## STR1001A01 · 저장·백업 staging·복구·migration·CAS 구현 (2026-10-01)
+
+- 구현: V4 raw ciphertext를 보호 파일에서 페이지 단위로 읽고 SQLite staging에 중복 검증하며 저장한다. 앱은 streamRaw 경로로 최대256행/기본1MiB 페이지를 처리한다(단일행 상한4MiB). 기존 facade·저장 경로·원본 백업을 보존했다.
+- 복구: 보호 restore journal과 SQLite 삽입 영수증을 같은 트랜잭션으로 기록하고 재시작 시 commit/rollback을 판정한다. rollback은 이번 복원에서 삽입했고 이후 바뀌지 않은 행만 제거한다. 삭제/PIN 변경 generation fence로 오래된 준비 작업의 재저장을 차단한다.
+- migration/CAS: snapshot에 연결된 V1–V3 월 백업을 새 immutable V4 generation으로 한 번 변환하며 원본과 재시도 journal을 보존한다. Development manifest 경합은 참조 body를 검증·병합·재봉인한 뒤 CAS 재시도한다. 오프라인/미확인 snapshot 참조를 보수적으로 보존하며 Production은 비활성이다.
+- 최종 검증: 전체 앱 xcresult 집계 **1,462통과·0실패·1건너뜀** (`app-validated.xcresult`, `app-summary.json`; XCTest 로그는1,420통과/1건너뜀이고 Swift Testing 추가42개 포함), Core **103통과·0실패** (`core-validated.log`). 마지막 generation fence 추가 후 관련 suite **869통과·0실패·1건너뜀** (`fence-final.xcresult`, `fence-final.log`), generic iOS Debug 성공 (`debug-fence-final.log`). StoreKit 구매 테스트의 시뮬레이터 SKInternalErrorDomain Code3 건너뜀은 통과가 아니다. 모든 경로는 `build/validation/STR1001A01/` 아래에 있다.
+- 회귀: staging 재개/중복 충돌/취소 rollback, journal 재개, historical V1–V3 1회 변환 및 원본 보존, fork manifest body 재병합·멱등성, V4 파일 페이지1500건, 오프라인 참조 보존·삭제 실패 재시도, SQLite receipt 재시작·사용자 수정/초기화 보호를 검증했다. 초기 fixture·임시 snapshot commit·schema cold-open 경쟁·migration timestamp·컴파일 실패 로그도 보존하고 수정 후 재검증했다.
+- iPhone11 10:13 KST: Debug1.0(163) 설치·실행 성공 (`iphone11-install.json`, `iphone11-launch.json`). 읽기 전용 `--verify-streamed-backup` 결과는 **pinRequiredForCloudBackup / verified=false** (`iphone11-report.json`). PIN 등록/입력 전 백업 복호화·페이지 읽기·복원 준비는 미검증이다. 원본 기록 복원/교체/백업 재봉인은 실행하지 않았다. iPhone18의 앞선 설치는 개발 연결 오류4016으로 실패했고 성공으로 계산하지 않는다.
+- 남은 기준: raw만 있는 legacy 월 변환, legacy 단일 GCM의 엄격한 incremental 메모리 상한, 실제 대용량 peak memory, 실제 Development 서버 두 기기 CAS/오프라인 연동, App Group Widget/Watch readback, 단계별 강제 종료와 실기기 복원. SQLite를 사용하지 않는 legacy Watch fallback의 rollback은 아직 메모리 경로다. 미확인 snapshot orphan은 보존하므로 완전한 정리 완료를 주장하지 않는다. STR/RST/MIG/BKC/BRT/PKG 관련 열린 항목은 유지한다. push·TestFlight는 이번 실행에서 하지 않았다.
+
+## CUT1001A01 / SLP1001A01 · 자정 회색 발바닥·확정 수면 표시 수정 (2026-10-01)
+
+- 원인: 보행 GPS 공백 발바닥이 하루 전체 표본을 사용해 재생 cutoff 이후의 공백도 표시했다. 전날에서 이어지는 확정 철도 좌표도 당일 시작으로 잘리지 않았다. 분류 정책은 사용자 확정 category보다 기존 sensor behavior를 먼저 적용했고, 캐시 키에는 수동 교정 여부/소스가 없었다. 미리보기 day snapshot은 revision/fingerprint 검증을 우회했다.
+- 수정: GPS 공백은 표시 시각 이하 표본으로 생성하고 자정 철도 overlay는 비운다. 전날 철도 prefix는 당일 시작 좌표부터 표시한다. 지도 캐시 v7 갱신. 수동/사용자 교정 대분류를 우선하고 해당 상태를 분류 캐시 키에 넣는다. 미리보기에도 현재 source 검증과 rebase를 적용해 새 수면을 오래된 활동으로 대체하지 않는다. 원본·사용자 기록·백업은 삭제/복원하지 않았다.
+- 새 회귀 4개: 자정/중간/완료 GPS cutoff, 전날→당일 철도 경계, 같은 ID 수면 교정 후 캐시/JSON 재독해/사이드바, 오래된 day preview와 새 확정 수면·raw 보존. 모두 통과.
+- 최종 검증: RouteTimelineDataTests114 + TimeScaleTests170 + FeatureEngineTests639 = **922 통과·0 실패·1 건너뜀**. StoreKit 구매 테스트는 iOS26.5 시뮬레이터 SKInternalErrorDomain Code3으로 건너뛰었으며 통과로 계산하지 않는다. `build/validation/CUT1001A01/recheck-tests.xcresult`, `test-summary.json`. generic iOS Debug 성공(`debug-final.log`), diff 검사 성공.
+- 중간 결과 보존: 첫 테스트는 923실행/1건너뜀/한 테스트의 assertion2개 실패. 이동 중복 제거 fixture에서 수동 확정 category가 activity인데 센서 walking으로 movement를 기대했다. 새 사용자 확정 우선 계약에 맞춰 해당 fixture를 movement로 확정하도록 바꾼 후 전체 관련 suite를 재검증했다. 진단 집계 추가 빌드의 ActualRecord.span 참조 컴파일 오류도 수정했으며 `debug-evidence.log`를 보존했다.
+- iPhone18 09:13 KST: 최종 Debug1.0(163) 설치·실행 success(`install.json`, `launch.json`). 기기 내부에서 기존 9/30 위치 백업 원본1,426개로 같은 함수를 실행했다. 전체 날짜 공백 발바닥5개였던 입력에서 **00:00 공백 발바닥0개·철도 overlay0개**; 완료 시 철도 발바닥96개는 유지. 현재 기기의 확정 수면1건은 category mismatch0건. 백업에는 확정 수면0건이므로 백업 수면 결과를 기기 저장 검증으로 주장하지 않는다. 집계는 `iphone18-report.json`; 좌표·PIN·키·건강/일정 원문은 내보내지 않았다.
+- 제한: 저장된 수면의 분류 함수와 사이드바 회귀는 확인했으나 현재 기기의 화면 픽셀/터치·재진입 화면은 사용자 확인 전이다. temp 항목은 화면 확인 대기로 유지한다. 이전 전체 앱 테스트 실패/건너뜀을 이 검증으로 완료 처리하지 않았다. commit/push/TestFlight는 수행하지 않았다.
+
+## COP1001A01 · 실제 9/30 회사 업무 읽기 전용 검증 (2026-10-01)
+
+- 같은 최종 기기 집계에서 등록 회사1개·반경120m·반경 내 표본235개·체류2개/563분·업무 후보2개를 확인했다. 기기 업무1개가 두 후보 모두 50% 이상 덮어 새 업무 중복 생성을 막았으며, 수동/다른 분류 blocker0개·억제false였다. 반복 병합 후 업무1개·ID 동일true. 백업은 업무2개로 생성되고 반복2개·ID 동일true. 후보2→기기 업무1은 업무 누락이 아니라 기존 업무에 대한 중복 제거였다.
+- 과거 날짜/현재 날짜를 동시 읽은 결과 complete가 둘 다true(각1,433/109개). 근거 `build/validation/CUT1001A01/iphone18-report.json`; 이전 회사 기초 검증은 `build/validation/COP1001A01/`에 보존. 진단 자체로 기록 복원/편집/백업 재봉인은 하지 않았다. 앱 정상 실행 중 snapshot은 갱신될 수 있으므로 예전 travel 수치와 같은 입력의 전후 비교로 주장하지 않는다.
+- 코드·집계 검증 완료, 회사 현장 체류와 실제 지도/사이드바 화면은 별도 확인 대기.
+
+## SUB1001A01 · 지하철 탑승 확정 후 회색 노선 발바닥 (2026-10-01)
+
+- 최종 검증: RouteTimelineDataTests·TimeScaleTests 전체 및 관련 FeatureEngineTests 51개를 함께 실행하여 **331 통과·0 실패·0 건너뜀** (`route-tests-balanced.xcresult`, `test-summary-final.json`). generic iOS Debug 성공(`debug-balanced.log`), diff 검사 성공. 최종 소스 hash는 `source-hashes-final.txt`에 보존했다.
+- 최종 iPhone18 검증(10/1 01:55 KST): 설치·실행 success(`install-balanced.json`, `launch-balanced.json`). `iphone18-final-report.json`에서 실제 9/30 위치 원본1,426개로 기기 경로5개/고유 지오메트리5개/회색 발바닥96개, 백업 경로4개/고유4개/96개를 재현했다. 5개 경로를 균등 배분해 뒤쪽 노선도 입력에 유지되는 것은 회귀로 함께 확인했다. 이는 기기 안의 동일 노선/발바닥 함수 실행 근거이며 화면 픽셀·터치 검증을 의미하지 않는다.
+- 확정 노선이 비어 있던 짧은 조각4개 중2개는 경로 입력에 연결됐고2개는 개별 구간 근거가 부족해 임의 복구하지 않았다. 전체 관측 철도 노선을 짧은 조각 때문에 제외하는 조건은 제거했으므로, 개별 조각의 미복구와 전체 추정 경로 생성 결과를 구분한다. 원본·확정 활동·iCloud 파일을 교체하지 않았고 push/TestFlight 배포는 수행하지 않았다.
+- 시작: main `48b8efd`, origin/main과 동일하나 기존 미커밋 수정이 있었다. 기존 수정·자료·브랜치를 보존했다.
+- 결함: 회색 발바닥이 estimated overlay만 사용해 확정 노선을 제외했다. 저장 노선이 없는 확정 subway에는 역 근거 재계산이 없었고, 짧은 확정 조각이 겹치면 더 긴 추정 철도 노선도 숨겼다. train 조각마다 같은 노선을 복제해 표시 한도를 낭비했다.
+- 수정: 관측 역·정밀 GPS와 유효한 카탈로그 노선으로 확정 구간을 표시용 복구한다. 확정 모드는 보존하고 추정 좌표는 회색으로 표시한다. 전체 철도 노선의 부분 확정 제외를 제거하고 동일 노선을 중복 생성하지 않는다. 96개 철도 발바닥 자리를 노선별 배분하여 뒤쪽 경로가 앞쪽 경로 때문에 사라지지 않게 한다. 지도 파생 캐시는 v6로 갱신했다.
+- 시간·안전 경계: cutoff 이후 표본을 사용하지 않고, 수집 종료·다른 수집 세션·Watch 소스·30분 초과 미관측 공백을 넘어 확정 경로를 복구하지 않는다. 출발·도착 근거가 부족한 단일 역 체류에는 임의의 노선을 만들지 않는다. 추정은 화면 파생값이며 사용자 확정/센서 원본을 수정하지 않는다.
+- 중간 검증에서 비시간순 입력의 종료 marker를 놓치는 결함을 발견해 정렬로 수정했다. 이후 조각 중복 및 세션 경계 회귀를 보강했다. 첫 컴파일 실패(진단 dictionary 타입 추론)와 중간 실패 기록은 그대로 보존한다. 중간 성공은 330 통과·0 실패·0 건너뜀(`route-tests-complete.xcresult`); 표시 자리 배분 변경 후 최종 재검증을 별도로 기록한다.
+- 실제 원본: Debug 전용 `--verify-subway-routes`로 정상 앱 잠금 해제 후 기존 기기 자격 증명을 내부에서 사용했다. `loadLatestBackupPackage(rewrapRecoveredArchive:false)`의 9/30 위치 원본 1,426개와 기기/백업 snapshot으로 같은 노선·발바닥 함수를 읽기 전용 재현했다. 진단 파일에는 개수·시간 범위·판정 여부만 있고 좌표·역 이름·키·PIN·건강/일정 원문은 없다. 기록 복원/수동 활동 변경/백업 재봉인은 호출하지 않았다.
+- 실제 조사(`iphone18-probe-report.json`, `iphone18-diagnosis-report.json`, `iphone18-verified-report.json`): 백업의 기존 조각별 추정은 overlay18개이나 지오메트리는4개였다. 중복 제거 후 4개로 줄었다. 기기 상태는 재현 중 여행36→37/확정 지하철2→5로 갱신되어 시점 간 숫자를 동일 입력의 전후 비교로 주장하지 않는다. 최종 배분 전 기기 경로5개에서 발바닥 후보120개를 확인해, 전체 경로에 배분하는 보정을 추가했다. 남은 미복구 조각은 전체 추정 노선과 별개이며 근거 없는 단일 조각을 확정 경로로 둔갑시키지 않는다.
+- 검증 산출물은 `build/validation/SUB1001A01/`. 실제 화면 표시/터치는 자동 원본 재현·빌드·설치와 구분하며 사용자 화면 확인 전 temp.md에 유지한다.
+
+## BVD1001A01 · 실제 백업 기기 복호·엄격 페이지 검증 (2026-10-01)
+
+- 최종 실기기 읽기 전용 복원 준비(10/1 01:11 KST): 기기 잠금 때문에 첫 launch가 거부됐으나 이후 재시도 success를 확인했다. `iphone18-preflight-final-verification.json`에서 9·10월 모두 strict verified, 8월 PIN/계정 key unwrap false, 전체 `restore_preflight_verified=true`, 활동50건/raw5104건/envelope232개/제외 snapshot1개를 읽었다. 실제 사용자 자료로 BKR의 과거 월 실패 분리까지 검증한 결과다. `rewrapRecoveredArchive=false`로 archive 재봉인을 수행하지 않았고 applyCloudBackup/현재 기록 교체는 호출하지 않았다. 최신 iCloud snapshot/raw 경로·생성 시각은 그대로였다.
+- 사용자 디버깅 요청에 따라 기존 기기 자격 증명을 내부에서만 사용하는 읽기 전용 검증을 추가했다. snapshot checksum·키 열기·AEAD·압축/내용 decode와 raw generation 참조·checksum·모든 페이지 AEAD/내용 decode를 검증한다. raw `allowsPartialRecovery=false`로 손상 페이지를 성공에서 제외하지 않는다. 기존 실제 복원의 부분 복구 기본값은 유지했다.
+- Debug 전용 `--verify-cloud-backups` 실행은 앱 잠금이 해제된 상태에서만 1회 수행한다. tmp 보고서에는 월/시각/참조 ID/단계/개수/키 일치 여부만 기록한다. PIN·키·좌표·건강·일정 원문을 외부로 꺼내지 않는다. 실제 기록 교체는 호출하지 않는다.
+- iPhone18 첫 실기기 검증 00:52, 키 단계 재검증 00:58: 9월 최신 snapshot 활동50건/raw5094건/envelope231개와 10/1 00:33 신규 snapshot 활동50건/raw10건/envelope1개 모두 `verified=true`. 현재 PIN으로 payload key를 열었고 raw는 손상 페이지 건너뜀 없는 전체 검증을 통과했다. 두 보고서 `build/validation/BVD1001A01/device-verification.json`, `iphone18-key-verification.json`.
+- 8월 snapshot은 `snapshot_key_unwrap`, `invalidArchive`, `pinKeyMatches=false`, `accountKeyMatches=false`였다. 현재 iPhone18의 두 키로 보관된 payload key를 열 수 없는 상태를 확인했다. 이 사실만으로 payload 파일 자체의 손상이라고 단정하지 않는다. BKR1001A01에서 수정한 이전 월 실패와 최신 정상 월 복원 분리 경로에 해당한다. 원본은 보존한다.
+- iPhone11 설치·검증 실행은 성공했으나 PIN 미등록 `pinRequiredForCloudBackup`로 월별 검증과 전체 preflight 모두 진행하지 못했다 (`iphone11-preflight-verification.json`). 새 PIN을 임의로 등록하거나 기존 자격 증명을 초기화하지 않았다. 이전 파일 복호 가능 기기로 판정하지 않는다.
+- SecurityBackupCoreTests 전체 128 passed / 0 failed / 0 skipped (`backup-verification-fixed.xcresult`, `test-summary.json`). 키 구분 추가 후 관련3개 통과 (`key-stage-tests.xcresult`), 읽기 전용 복원 준비 플래그 추가 후 관련4개 통과 (`readonly-preflight-tests.xcresult`, `preflight-summary.json`). 초기 빌드/테스트는 파일 전용 JSONEncoder 접근 보호 오류로 컴파일 실패했고 로컬 보고서 encoder로 수정했다. 실패 로그도 보존했다.
+- 최종 generic iOS Debug 성공 (`debug-preflight.log`), diff 검사 통과. 두 기기에 Debug 1.0(163) 설치 성공. 공개 UI의 기본 복원 동작을 유지하고 `rewrapRecoveredArchive=false`일 때만 준비 과정의 archive 재봉인을 끄도록 했다. 해당 회귀에서 과거/현재 archive 사전 전체가 변하지 않음을 확인했다.
+- 처음 전체 preflight launch는 기기 Locked로 실패했고 사용자에게 잠금 해제를 요청했다. 이후 `iphone18-preflight-resume-launch.json` success와 위 최종 보고서를 확보했다. 실제 데이터 교체나 8월 복호는 수행/성공한 것으로 보고하지 않는다. 본 디버깅·읽기 전용 검증 요청은 완료이며 실제 DB 복원 관련 다른 ID를 완료로 확대하지 않는다. push/TestFlight 업로드는 수행하지 않았다.
+
+## BKR1001A01 · 월별 백업 키 혼합·이전 archive 실패 분리 (2026-10-01)
+
+- 실제 복원 준비 추가 검증은 BVD1001A01 참조: 현재 키로 8월 snapshot key를 열 수 없지만 9·10월은 strict decode 성공. 수정된 전체 준비도 활동50/raw5104/envelope232·제외 snapshot1로 성공했다. 실제 기록을 교체하는 적용 단계는 이번 디버깅에서 실행하지 않았다.
+- 실제 저장 추가 확인(10/1 00:33:31 KST): 사용자가 백업 완료를 보고했고 iCloud에 신규 10월 snapshot `2A6324EF-A8E1-4C76-B634-CEAB7FAD7963`와 raw generation `985AEBD5-19F5-459D-8A38-54157DF735E9` 파일 두 개가 도착했다. 둘 다 version4이며 encrypted payload SHA256/digest, month/account scope, snapshot→raw generation 참조가 모두 일치한다. 이전 00:08 snapshot/raw도 보존됐다. BKR 설치·실행(00:21~00:22) 이후 신규 저장 성공 근거다. 메타데이터·검증만 `build/validation/BKR1001A01/icloud-backup-003331-confirmed.json`에 보존했다. 사용자 PIN/키를 읽지 않았으며 AEAD 복호/실제 복원/과거 월 병합 성공까지 확인한 것은 아니다.
+- 사용자 무결성 오류 재발 보고를 받았다. iCloud latest는 여전히 9/30 23:44 로그이며 신규 snapshot/raw의 encrypted payload SHA256은 저장된 digest와 일치한다(DAY0930A01 추가 업로드 검증 참조). 이 사실은 AEAD 복호·페이지 내용 검증 성공을 의미하지 않는다. 기기 fallback 진단 로그 복사도 파일 부재 오류였고, 실제 이번 오류가 저장/복원/자동 처리 중 어느 단계인지는 새 근거 대기다.
+- 코드에서 재현한 결함: restore가 선택된 전체 월 snapshot을 throwing map으로 읽어 과거 월의 키 불일치 하나가 정상 최신 파일도 막았다. PIN 실패 후 account-only 재시도는 현재 PIN으로만 읽히는 최신 파일과 계정 키로 읽히는 과거 파일의 혼합도 실패시켰다.
+- 수정: 최신 snapshot을 먼저 검증하며 최신 실패는 계속 오류로 처리한다. 이전 archive는 PIN·계정 키를 파일별로 함께 시도하고 둘 다 실패한 파일만 제외한다. 계정 불일치·취소는 제외하지 않는다. package에 제외한 snapshot 수를 담고 기존 복원 확인 화면에서 이전 파일 제외/원본 보존을 안내한다. 기존 archive는 삭제하거나 덮어쓰지 않는다. raw의 기존 부분 복원 정책과 generation/deletion fence는 유지했다.
+- 저장에도 `icloud_backup_generation_stage`의 recovery_key → previous_snapshot → raw_archive → snapshot_archive → committed 단계를 추가했다. PIN/키/좌표/건강/일정 원문은 기록하지 않는다. 기존 `invalidArchive` 문구만 바꿔 성공처럼 표시하지 않았다.
+- 최종 SecurityBackupCoreTests 전체 **126 passed / 0 failed / 0 skipped**, `build/validation/BKR1001A01/backup-complete.xcresult`, `backup-complete-summary.json`. 새 회귀는 이전 월 키 불일치와 원본 불변, PIN/계정 혼합 월 복원, 최신 손상 파일 복원 거부를 확인한다. 초기 검증은 fixture에서 private API 인자를 사용한 컴파일 오류, 이어 최신 손상본을 다른 경로/동일 시각으로 넣어 정상 파일이 선택된 기대값 오류(125 통과/1 실패)가 있었다. fixture를 실제 최신 시각·generation으로 보정했으며 실패 산출물은 보존했다.
+- iOS Debug 최종 `BUILD SUCCEEDED` (`debug-final.log`), diff 검사 통과. iPhone18 Debug 1.0(163) 설치·실행 각각 success (`install.json`, `launch.json`). 빌드 번호 변경·push·TestFlight 업로드·실제 기기 기록 복원은 수행하지 않았다.
+- 남음: 실제 새 iCloud 저장은 위 추가 확인으로 완료. 과거 월 키 혼합 복원 및 실패 당시 정확한 단계는 실제 복원/진단 로그 근거 전까지 대기한다. temp.md 유지.
+
+## DAY0930A01 · 9/30 경로 소실·회사 업무 재계산 수정 (2026-10-01)
+
+- 업로드 후 추가 확인(10/1): iCloud latest.json은 `TaptionLogs-20260930-234421.txt`(9/30 23:44 KST)를 가리킨다. 이전 업로드 이후 23:39:48 및 23:41:02에도 `CancellationError` → incomplete_projection → raw0/travel0/places0 → 재생 경로0이 재현됐다. 수정본 설치 완료는 10/1 00:03:04, 실행은 00:03:25이므로 이번 파일은 수정 전 증거다. 수정 후 재발/해결 판정으로 사용하지 않는다. 신규 snapshot/raw backup encrypted payload checksum은 둘 다 일치하나, 평문 센서 원본이나 회사 체류 근거를 확보한 것으로 처리하지 않는다. 메타데이터·필요 이벤트만 `build/validation/DAY0930A01/icloud-upload-234421-review.json`에 보존했다.
+- 9/30 iCloud 진단 로그 `TaptionLogs-20260930-233407.txt`의 관련 이벤트를 확인했다. 21:58 KST 완전 snapshot(raw1396/travel17), 이후 읽기 취소와 빈 불완전 projection, 23:12경 정상 재생성(raw1414/travel18), 23:31경 `CancellationError` 이후 raw0/travel0/places0 및 지도 경로0으로 전환됐다. 원본 삭제 증거가 아니라 취소/불완전 읽기가 화면을 덮는 경로다.
+- day coordinator는 다른 날짜의 읽기를 취소하지 않고, 같은 키의 진행 중 강제 읽기를 공유한다. 취소/불완전 읽기 때 지도는 마지막 완전 snapshot을 preview로 유지하며 현재 source revision으로 재투영해 사용자 수정도 보존한다. 삭제 generation fence와 취소 검사는 유지했다. `map_incomplete_reload_kept_preview`는 개수만 기록한다.
+- 회사 업무의 별도 코드 결함: 이전 `place-activity-v1` 자동 기록이 새 후보를 overlap blocker로 막고, 뒤이어 이전 기록을 제거했다. 갱신 엔진에서 자기 이전 자동 결과와 자동 미확인은 blocker에서 제외했다. 사용자 수정·suppressed ID·다른 확정 자동 활동은 보존한다. 회사 반경/최소 체류 조건은 변경하지 않았다.
+- `SensorDayStoreTests` + `RouteTimelineDataTests`: 196 passed / 0 failed / 0 skipped. 새 회귀는 독립 날짜 동시 읽기, 강제 읽기 합치기, 회사 업무 반복 갱신/미확인 overlap, 사용자 수정·억제 보존을 확인한다. 기존 취소·삭제 fence·캐시 관련 검증도 포함한다. `build/validation/DAY0930A01/regression.xcresult`, `test-summary.json`.
+- 최종 iOS Debug `BUILD SUCCEEDED` (`debug-final.log`), `git diff --check` 통과. iPhone18 Debug 1.0(163) 설치·실행 성공 (`install.json`, `launch.json`). 기존 자료 보존, push/TestFlight 배포는 수행하지 않았다.
+- 제한: 9/30 실제 센서 원본 export를 아직 확보하지 못했고 기기 tmp export 목록 읽기도 실패했다. 실제 회사 체류 및 수정 후 9/30 화면의 경로/업무 표시를 확인한 것으로 처리하지 않는다. 이 기준은 temp.md에 유지한다. 과거 전체 앱 테스트 실패 해결로 확대 해석하지 않는다.
+
+## CRAS0930A1 · iPhone 18 Pro Max 1.0(163) 충돌 보고서 분석 (2026-09-30)
+
+- 기기에서 `systemCrashLogs` 도메인을 읽어 `Retired/TaptionPlan-2026-09-30-141604.ips`를 새로 복사했다. 보고서 메타데이터는 `com.taption.plan`, TestFlight 1.0(163), iPhone 18 Pro Max (`iPhone19,7`), iOS 27.2 (24B5089g), 2026-09-30 14:16:04 KST와 일치한다. 설치 앱 목록도 1.0(163)으로 확인했다. 파일 및 기기 readback: `build/validation/CRAS0930A1/`.
+- 종료는 `EXC_CRASH (SIGKILL)`, `FRONTBOARD` code `0x8BADF00D`, `scene-update watchdog transgression`이다. 앱은 `ProcessVisibility: Background`, `ProcessState: Running`이었고 scene update의 실제 시간 allowance 10초를 소진했다. 보고서상 application CPU 10.201초, thermal state nominal. 따라서 기존 iPhone 11 파일 잠금 `0xDEAD10CC`나 메모리 jetsam과는 다른 종류의 종료다. Apple은 `0x8badf00d`를 watchdog 종료로, `scene-update`를 메인 스레드 UI 업데이트 제한 초과로 설명한다: [watchdog termination codes](https://developer.apple.com/documentation/xcode/sigkill?language=objc), [addressing watchdog terminations](https://developer.apple.com/documentation/xcode/addressing-watchdog-terminations?changes=_1).
+- Triggered thread 0은 `com.apple.main-thread`; 앞부분이 `Hasher.combine(bytes:)` → `UUID.hash(into:)` → TaptionPlan 이미지 프레임 8개 → SwiftUI `AG::Graph::UpdateStack::update()` / `AG::Subgraph::update()`로 이어진다. 이 시점에 메인 스레드가 SwiftUI AttributeGraph 갱신 중이었던 것은 확정이다. 지도/시간축 갱신은 코드상 후보지만, UUID hashing은 그 스냅샷의 호출 위치일 뿐 과도한 UUID 수나 특정 SwiftUI view가 원인이라는 증거는 아니다.
+- 앱 이미지 UUID `227B98A5-DE75-3F63-9FEA-D1797BA72491`. App Store Connect API에서 build 163의 `includesSymbols=true`와 `dSYMUrl=null`을 readback했다(`asc-build-dsyms.json`). 현재 source로 Release dSYM build는 성공했지만 로컬 앱 UUID `8623F483-F0B9-3D16-9A9A-26A397EBA448`로 달라 crash report의 앱 프레임 offset을 심볼화할 수 없었다(`symbol-build.log`). 정확한 앱 함수명은 일치하는 dSYM/archive를 얻기 전까지 미확정이다.
+- 앱 소스 수정이나 기능 테스트는 하지 않았다. 분석 중 생성한 현재 Release symbol build는 `BUILD SUCCEEDED`이며 단지 심볼 일치 시도를 위한 산출물이다.
+
 ## TFL0928C01 · main 반영 및 TestFlight 163 (2026-09-28)
 
 - 배포 전 App Store Connect API readback에서 최근 빌드 162 `VALID`, 최고 번호 162를 확인했다. 기록 `build/validation/TFL0928C01/asc-builds-before.json`.
@@ -603,3 +700,62 @@
 - `MapHomeGrowthPolicyTests` 18/18 통과(366개 에셋 bundle 포함): `build/validation/DLY0928A01/growth-tests.xcresult`, 로그 `growth-tests.log`. iOS generic Debug `BUILD SUCCEEDED`: `build/validation/DLY0928A01/ios-debug.log`. `git diff --check` 통과.
 - Lv.8–21 연락 시트를 48pt 지도 마커 비율로 렌더링해 색·장식 변화와 15레벨부터의 주간 건축 변화가 읽히는지 육안 확인했다: `build/validation/DLY0928A01/daily-evolution-contact.svg.png`; 편집 가능한 원본은 `daily-evolution-contact.svg`.
 - 시각화 수치는 SVG 본문 구조 고유성 검사와 연락 시트 육안 확인 기준이다. 실제 iPhone 지도에 업데이트 에셋이 표시되는 장면은 촬영하지 않았다. HGV0928A01의 178 패턴 수치는 DLY 변경 전의 과거 스냅샷이다.
+
+
+## WDT0930A01 · iPhone 18 watchdog 방어 수정 · 2026-09-30
+- CRAS0930A1의 `scene-update / 0x8BADF00D` 종료를 기준으로 방어 수정했다. 당시 앱 UUID와 일치하는 dSYM이 없어 특정 함수 원인이 확정됐다고 보고하지 않는다.
+- `MapHomeView`의 지도·레일·마커 콘텐츠는 background에서 생성하지 않는다. 성장·시간축·탑승 후보 갱신은 active에서만 실행한다. 센서 수집/저장 모델은 변경하지 않았다.
+- 실제 기록/이동/장소 배열을 SwiftUI `onChange`로 각각 비교하던 경로를 기존 `dayProjectionRevision` 변경 하나로 합쳤다. 모델의 해당 revision은 actuals/places/travel 변경 때 증가하는 것을 확인했다. 복귀 시 성장·시간축·탑승 후보·예상 경로를 다시 갱신하며 기존 날짜 로드 task는 활성 상태를 키로 최신 원본을 다시 읽는다.
+- iOS generic Debug 최종 빌드 성공: `build/validation/WDT0930A01/debug-final.log`. 관련 RouteTimelineDataTests/TimeScaleTests 첫 실행 267 통과·0 실패·0 건너뜀: `map-tests.xcresult`. 최종 소스 재검증도 `map-final.xcresult`에서 267 통과·0 실패·0 건너뜀이다. `map-final-summary.json`에 실제 결과를 보존했다. `git diff --check`도 통과했다.
+- 제한: iPhone 18 실기기 장시간 실행/백그라운드 복귀·메모리/충돌 재발 검증은 아직 하지 않았다. 단위 테스트와 빌드만으로 watchdog 해소를 확정하지 않으며 temp.md 항목을 열린 상태로 유지한다. 설치·배포·push는 이번 수정 요청에서 실행하지 않았다.
+
+## INS0930A01 · iPhone 18 수정본 설치 · 2026-09-30
+- WDT0930A01 최종 Debug 빌드 산출물을 연결된 iPhone 18 Pro Max에 설치했다. 설치 결과 success, `com.taption.plan` readback은 1.0(163), builtByDeveloper=true이다. TestFlight 새 배포가 아닌 로컬 Debug 설치본이다.
+- 앱 실행 결과 success, PID 3505. 삭제/데이터 초기화는 실행하지 않았다. 근거: `build/validation/INS0930A01/install.json`, `apps.json`, `launch.json`.
+- 설치/실행만 검증했으며 장시간 background/복귀 시 watchdog 재발 여부와 실제 데이터 동작은 WDT0930A01에서 열린 상태로 유지한다.
+
+## SEQ0930A01 · 미확인 활동 연속 입력 · 2026-09-30
+- 대분류 빠른 저장 성공 후 `dismiss()`하던 처리를 제거했다. 다음 시간순 미확인 구간 한 건으로 이동하며 뒤쪽이 없으면 앞쪽 남은 구간부터 이어간다. 확인한 ID는 세션에서 제외하고 마지막 구간 뒤에는 완료 화면을 유지한다. 날짜를 바꾸면 연속 입력 상태를 초기화한다.
+- 저장 실패는 현재 구간/오류 메시지를 유지한다. 저장 중에는 버튼/닫기를 잠그고, 아래로 스와이프해서 닫기는 막았다. 기존 시간 상세 편집 전환은 유지한다.
+- 다음 구간·시간순 정렬·앞쪽 순환·확정 활동 제외·마지막/빈 목록 테스트를 추가했다. TimeScaleTests 170 통과·0 실패·0 건너뜀: `build/validation/SEQ0930A01/review-tests.xcresult`, `review-summary.json`.
+- generic iOS Debug 빌드 성공: `build/validation/SEQ0930A01/debug-build.log`. `git diff --check` 통과.
+- 제한: 실제 iPhone에서 연속 탭/저장/마지막 완료 화면은 아직 확인하지 않았다. 이번 변경을 기기에 설치하거나 배포하지 않았다.
+
+## PAN0930A01 · 벡터 지도 드래그 지연 개선 · 2026-09-30
+- 코드 경로에서 확인한 부하: MapLibre viewport 60Hz 갱신 → 부모 readback 15Hz → MapHomeView 경로/마커 재구성. unchanged content에서도 viewport를 재발행하여 반복 갱신이 가능했다. 안개는 최대 220개의 개별 Circle+blur+destinationOut 노드였고 발바닥 경로도 overlay body에서 재계산했다. 실기기 지연량/단일 최악 원인은 아직 측정하지 않았다.
+- 지도/마커 위치 전달은 기존 60Hz 제한을 유지하고 부모 중심/줌 readback은 이동 종료 시에만 수행한다. 발바닥·장소 입력은 부모 렌더 시 캡처하여 viewport 변경에서 원본 경로를 재샘플링하지 않는다. 안개는 offscreen 포인트를 제외하는 단일 Canvas의 radialGradient+destinationOut으로 변경했다. 가장자리 부드러움은 기존 개별 blur와 정확히 같은 픽셀이 아니므로 기기 화면 확인이 필요하다.
+- unchanged route/marker/bounds는 viewport를 재발행하지 않는다. 마커 좌표/ID 및 뷰 크기가 바뀌면 재투영하여 신규 센서/마커 표시가 누락되지 않게 했다. 위치 추적을 멈춘 뒤 compass heading이 카메라를 재중앙화하지 않도록 vector followsHeading을 추적 상태와 함께 검사한다.
+- `map_viewport_performance` 로그를 이동 종료 시 집계한다: renderer, sample_count, marker_count, max_projection_ms, max_frame_gap_ms. 좌표·장소 이름·센서 원문은 포함하지 않는다. max_projection_ms는 마커 투영 비용이고 max_frame_gap_ms는 viewport callback 간격이며 전체 터치 지연/실제 GPU fps 측정값은 아니다.
+- 240Hz 입력 480회 동안 부모 중간 readback 없음·최종 readback 및 최종 화랑이 위치 즉시 반영 회귀를 검증했다. 첫 관련 테스트 268 통과·0 실패·0 건너뜀 (`map-tests.xcresult`); 최종 마커 보완 소스도 `map-final.xcresult`에서 268 통과·0 실패·0 건너뜀이고 실제 요약은 `map-final-summary.json`에 보존했다. 최종 generic iOS Debug 빌드 성공 (`debug-final.log`), diff 검사 통과.
+- 제한: 수정 범위는 기본 벡터 지도 렌더러이며 Apple 지도 UIKit 카메라 readback은 변경하지 않았다. iPhone 18 실제 드래그 체감/안개 대비/장시간 로그는 확인 전이다. 설치·push·배포는 하지 않았다.
+
+## RAIL0930A1 · 지하철 GPS 단절 예상 발자국 · 2026-09-30
+- iPhone18 appDataContainer와 App Group 파일 목록에서 앱 센서 DB를 확인하지 못했다. appDataContainer의 sqlite는 HTTP 저장소뿐이고 group 루트에는 Library만 노출됐다. 앱 실행 후 재조회도 동일했다. 파일 조회 증거는 `build/validation/RAIL0930A1/device-sqlite-list.log`, `source-launch.log`. 이 결과만으로 원본이 삭제/없다고 판단하지 않는다.
+- iCloud Taption Plan Raw Sensors/2026-09.rawsensorbackup 파일의 수정 시각은 2026-09-05이며 오늘 원본 근거로 사용하지 않았다. 오늘 로우 데이터는 아직 가져오지 못했고 실제 탑승 재현 검증은 미완료다.
+- 확인한 소스 결함: 보행 GPS 보간 제한(5분/600m/3m/s)은 철도 구간을 제외하며 GPS 없음 중간 표본이 정상 GPS 양 끝점의 인접 쌍을 끊는다. 지하철 estimated overlay와 이미 생성한 철도 예상 경로는 발바닥 입력에 연결하지 않았다.
+- 수정: 보행 제한은 유지하고 신뢰 가능한 양 끝점을 연결하되 Watch/세션 종료 경계는 건너지 않는다. 지하철 estimated overlay 및 cutoff까지 보이는 기존 예상 train/subway 경로를 경로 길이 기준으로 샘플링해 회색 발바닥으로 연결했다. 미래 전체 경로는 사용하지 않는다. 전체 발바닥 220개 상한 내에서 예상 경로에 최대96개의 표시 예산을 예약한다. 저장소/자동 판정/사용자 확정 기록은 변경하지 않는다.
+- 신규 회귀: GPS 없음 중간 표본 연결과 종료 경계 차단, 600m를 넘는 굽은 철도 경로가 직선 대신 원래 polyline을 따라 샘플링됨, 유효하지 않은 좌표 거절/빈 경로/샘플 상한. 관련 RouteTimelineDataTests 100 통과·0 실패·0 건너뜀 (`rail-tests.xcresult`, `rail-summary.json`). generic iOS Debug 성공 (`debug-build.log`), diff 검사 통과.
+- 제한: 합성 회귀와 빌드 검증이며 오늘 실제 raw/지하철 탑승/기기 화면의 회색 발바닥 표시를 통과 처리하지 않는다. 기기 잠금 해제·앱 실행 상태 확인을 사용자에게 요청했으며 원본 확보 후 해당 구간으로 재검증해야 한다. 이번 변경의 설치/배포는 하지 않았다.
+
+## REXP0930A1 · 오늘 원본 로컬 내보내기와 iPhone18 설치 · 2026-09-30
+- 잠금 해제 후 재조회 및 직접 지정한 DB 복사에서 CoreDevice error 11007: App Group 루트 DB가 허용 디렉터리 Library/Documents/tmp 밖이라 접근 제한됨을 확인했다 (`RAIL0930A1/unlocked-db-copy.log`). 원본 부재로 판단하지 않으며 직접 DB 접근을 더 시도하지 않았다.
+- 앱의 정상 day snapshot 읽기로 오늘 원본 센서 readings·travel·day·isComplete를 별도 JSON으로 내보내는 `오늘 센서 원본 내보내기` 설정 버튼을 추가했다. temp/TaptionPlanRawExport에 고유 이름·complete file protection으로 기록하고 공유 메뉴를 표시한다. 원본/기존 파일을 삭제하지 않으며 일반 로그·자동 외부 전송에는 포함하지 않는다. JSON 생성은 utility detached 작업에서 수행한다.
+- 날짜 경계 필터·원본 유지 테스트를 추가했다. RouteTimelineDataTests 101 통과·0 실패·0 건너뜀 (`build/validation/REXP0930A1/export-tests.xcresult`, `export-summary.json`), generic iOS Debug 성공 (`debug-build.log`), diff 검사 통과.
+- 수정본을 iPhone18에 설치하고 앱 실행 success를 확인했다 (`install.json`, `launch.json`). 이 설치본은 WDT0930A01/SEQ0930A01/PAN0930A01/RAIL0930A1/REXP0930A1 변경을 포함한다. App Store/TestFlight 새 배포나 데이터 초기화는 하지 않았다.
+- 남음: 사용자가 설정에서 오늘 원본 내보내기를 실행해야 실제 파일을 확보할 수 있다. 확보 후 오늘 지하철 구간 재현·예상 발바닥 결과를 RAIL0930A1에 기록한다. 설치/실행/합성 테스트만으로 실제 raw 검증을 완료 처리하지 않는다.
+
+## BFX0930A01 · iCloud 신규 백업 무결성 오류 방어 · 2026-09-30
+- 실제 iCloud 9월 legacy snapshot(version3, hasRawSensorArchive=true)와 raw(version1)의 encryptedPayload SHA256을 payloadDigest와 대조해 둘 모두 일치함을 확인했다. snapshot의 계정 scope도 현재 private scope와 일치했다. 파일을 변경/삭제하지 않았다. PIN/계정 복호키는 읽지 않았으므로 사용자 실패의 정확한 복호 단계는 실제 재시도 로그 전까지 미확정이다. 최신 23:14 로그에는 해당 수동 백업 실행 이벤트가 없었다.
+- 재현된 결함: 새 기기의 PIN/계정 키로 기존 raw를 열 수 없으면 monthly generation 저장이 중단된다. snapshot 준비 경로는 이미 별도 새 백업을 허용하는데 raw 경로는 그대로 실패하는 비대칭이다.
+- 수정: nonempty 신규 raw가 있는 immutable generation 저장만 이전 복호 불가 raw를 미병합 상태로 보존하고 새 데이터로 별도 암호화 generation을 만든다. legacy 동일 파일 덮어쓰기 경로는 여전히 실패한다. 신규 raw가 없고 기존 committed raw가 있으면 재암호화 실패 시 기존 raw 참조를 유지한다. 계정 불일치/파일 부재/취소/ID 충돌은 계속 오류로 처리한다.
+- 재사용한 기존 raw는 새 snapshot commit 실패/삭제 fence 처리에서 삭제하지 않는다. 화면은 현재 데이터 저장 성공과 이전 원본 미병합·원본 보존을 구분해 안내한다. `raw_backup_previous_preserved_unmerged` / `raw_backup_previous_reference_preserved` 단계 로그를 추가했으며 키·PIN·좌표·센서 원문은 기록하지 않는다.
+- 회귀: 서로 다른 PIN/복구키에서 snapshot-only 기존 raw 참조 보존 → 새 raw generation 저장 → 새키 복구 성공 및 이전 archive/원본 데이터 불변을 검증했다. 첫 실행은 기존 122 통과·신규1 실패였고, 새 테스트의 GPS 없는 샘플이 raw 아카이브에서 제외돼 원본 archive가 nil인 fixture 오류였다. 유효한 GPS 입력으로 보정했다. 최종 전체 SecurityBackupCoreTests 123 통과·0 실패·0 건너뜀 (`build/validation/BFX0930A01/backup-complete.xcresult`, `backup-complete-summary.json`). 이전 실패 결과는 별도 backup-tests.xcresult에 보존했다.
+- 최종 generic iOS Debug 빌드 성공 (`debug-final.log`), diff 검사 통과. iPhone18 설치·실행 success (`install.json`, `launch.json`). 다른 미커밋 변경을 보존하고 push/TestFlight 배포는 하지 않았다.
+- 남음: 사용자 실제 계정에서 지금 백업을 다시 실행해 새 generation/iCloud 저장 결과 및 단계 로그를 확인한다. 설치·합성 테스트만으로 실제 iCloud 기능을 완료 처리하지 않는다. 오늘 지하철 raw 검증(RAIL0930A1)은 별도로 계속 대기한다.
+
+## BUI0930A01 · 백업 진행/완료 피드백 · 2026-09-30
+- 백업 클릭 즉시 isBackingUp=true, 이전 피드백 제거, 진행 spinner와 버튼 문구 `백업 중입니다` 표시. 백업/복원 중복 입력은 비활성화한다. 저장 성공은 `백업완료`이며 이전 raw 미병합 안내는 아래 별도 문단으로 보존한다. 실패는 실제 오류를 표시하고 defer로 진행 상태를 해제한다.
+- 백업 핵심 동작은 변경하지 않았다. 이전 BFX0930A01 전체 123건 통과 근거를 재사용하고 관련 새기기/기존 raw 보존 회귀 1건을 실행해 1 통과·0 실패·0 건너뜀 (`build/validation/BUI0930A01/backup-test.xcresult`, `backup-summary.json`). 최종 generic iOS Debug 성공 (`debug-final.log`), diff 검사 통과.
+- 사용자 실제 재시도는 `현재 데이터는 백업했습니다` 성공 안내를 확인했다고 보고했다. iCloud에서 생성 시각 2026-09-30 23:34의 신규 snapshot/raw version4 파일 두 개를 확인했다. encryptedPayload SHA256이 두 payloadDigest와 각각 일치하고 snapshot generationID와 raw generationID가 일치한다. 원본 9월 legacy snapshot/raw 파일도 남아 있다. 이는 BFX0930A01의 실제 신규 iCloud 저장 성공 근거이며 이전 raw를 복호/병합했다고 주장하지 않는다.
+- BUI 진행/완료 표시 자체의 실제 화면은 사용자 확인 전이므로 열린 상태로 유지한다. 오늘 raw 재현/회색 발바닥 검증도 별도 대기한다.
+- BUI0930A01 수정본 iPhone18 설치·실행 success (`install.json`, `launch.json`). TestFlight 업로드/초기화는 하지 않았다.

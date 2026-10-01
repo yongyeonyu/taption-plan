@@ -5,6 +5,29 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testRestoreReceiptReopenRollbackPreservesExistingAndLaterChanges() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 30)
+        func event(_ id: String, _ payload: UInt8 = 1) -> TaptionPlanDayStore.Event {
+            .init(day: day, timestamp: Date(timeIntervalSince1970: 10), sequence: 1,
+                id: id, domain: "sensor-reading", payload: Data([payload]))
+        }
+        let session = UUID()
+        do {
+            let store = try TaptionPlanDayStore(url: url)
+            try await store.appendUniqueEvents([event("original")])
+            try await store.appendUniqueEventIdentifiers([event("original"), event("added"), event("changed")],
+                restoreSessionID: session)
+            try await store.upsertEvents([event("changed", 2)])
+        }
+        let restarted = try TaptionPlanDayStore(url: url)
+        try await restarted.finishRestoreSession(session, committed: false)
+        let surviving = try await restarted.events(from: day, through: day)
+        XCTAssertEqual(Set(surviving.map(\.id)), ["original", "changed"])
+        XCTAssertEqual(surviving.first { $0.id == "changed" }?.payload, Data([2]))
+    }
+
     func testExclusiveFileAccessIsNonblockingAndReleasesOnThrow() async throws {
         struct IntentionalFailure: Error {}
 

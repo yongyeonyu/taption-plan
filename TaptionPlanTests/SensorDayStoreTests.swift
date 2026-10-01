@@ -5284,6 +5284,62 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testConcurrentDayLoadsDoNotCancelEachOther() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-independent-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        let first = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: { _ in
+                    await gate.pauseOnce()
+                    return SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true)
+                }, forceReload: true)
+        }
+        await gate.waitUntilPaused()
+        let second = await coordinator.load(day: date.addingTimeInterval(86_400),
+            source: .empty, sourceRevision: 1,
+            sensorLoader: { _ in SensorReadingsLoadResult(readings: [], isComplete: true) }, forceReload: true)
+        await gate.resume()
+        let result = await first.value
+        XCTAssertTrue(result.isComplete)
+        XCTAssertEqual(result.readings.count, 1)
+        XCTAssertTrue(second.isComplete)
+    }
+
+    @MainActor
+    func testConcurrentForcedDayLoadsShareSensorRead() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-forced-shared-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        var loadCount = 0
+        let loader: (Date) async -> SensorReadingsLoadResult = { _ in
+            loadCount += 1
+            await gate.pauseOnce()
+            return SensorReadingsLoadResult(readings: [], isComplete: true)
+        }
+        let first = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: loader, forceReload: true)
+        }
+        await gate.waitUntilPaused()
+        let second = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: loader, forceReload: true)
+        }
+        await Task.yield()
+        await gate.resume()
+        let a = await first.value
+        let b = await second.value
+        XCTAssertTrue(a.isComplete)
+        XCTAssertTrue(b.isComplete)
+        XCTAssertEqual(loadCount, 1)
+    }
+
+    @MainActor
     func testPlanDayLoadCoordinatorRetriesIncompleteLoads() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-incomplete-\(UUID().uuidString)")

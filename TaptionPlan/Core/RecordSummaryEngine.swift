@@ -78,7 +78,7 @@ enum RecordAnalysisCategoryPolicy {
     nonisolated(unsafe) private static var categoryCache: [String: String] = [:]
 
     private static func cacheKey(_ actual: ActualRecord) -> String {
-        "\(actual.id.uuidString)|\(actual.title)|\(actual.behavior ?? "")|\(actual.categoryID)|\(actual.evidence.joined(separator: ","))"
+        "\(actual.id.uuidString)|\(actual.title)|\(actual.behavior ?? "")|\(actual.categoryID)|\(actual.source)|\(actual.manuallyCorrected)|\(actual.evidence.joined(separator: ","))"
     }
 
     static var categoryIDs: [String] {
@@ -130,6 +130,10 @@ enum RecordAnalysisCategoryPolicy {
     }
 
     private static func _computeCategoryID(for actual: ActualRecord) -> String {
+        if (actual.manuallyCorrected || actual.source == .manual),
+           categoryIDs.contains(actual.categoryID) {
+            return actual.categoryID
+        }
         if actual.categoryID == ReviewCoverageEngine.unconfirmedCategoryID
             || actual.behavior == "unconfirmed-activity"
             || actual.behavior == "unconfirmed-movement"

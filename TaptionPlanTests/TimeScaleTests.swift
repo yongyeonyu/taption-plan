@@ -178,6 +178,22 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testContinuousUnconfirmedReviewAdvancesWrapsAndFinishes() {
+        let first = MapHomeTimeRailSegment(startMinute: 60, endMinute: 90,
+            categoryID: "unconfirmed", title: "미확인")
+        let second = MapHomeTimeRailSegment(startMinute: 120, endMinute: 150,
+            categoryID: "unconfirmed", title: "미확인")
+        let confirmed = MapHomeTimeRailSegment(startMinute: 100, endMinute: 110,
+            categoryID: "work", title: "업무")
+        XCTAssertEqual(MapHomeUnconfirmedReviewPolicy.nextSegment(
+            after: first, in: [second, confirmed, first]), second)
+        XCTAssertEqual(MapHomeUnconfirmedReviewPolicy.nextSegment(
+            after: second, in: [second, confirmed, first]), first)
+        XCTAssertNil(MapHomeUnconfirmedReviewPolicy.nextSegment(
+            after: first, in: [confirmed, first]))
+        XCTAssertNil(MapHomeUnconfirmedReviewPolicy.nextSegment(after: first, in: []))
+    }
+
     func testUnconfirmedReviewTargetShowsAndSelectsOnlyItsSegment() {
         let day = makeDate(2026, 9, 27)
         let now = day.addingTimeInterval(10 * 3_600 + 30 * 60)
@@ -981,33 +997,13 @@ final class TimeScaleTests: XCTestCase {
     }
 
     @MainActor
-    func testVectorViewportStoreLimitsParentReadbackAndFlushesFinalPoint() {
+    func testVectorViewportStoreDefersParentReadbackUntilFinalPoint() {
         let store = MapHomeVectorViewportStore()
-
-        XCTAssertTrue(
-            store.shouldPublishParentReadback(
-                nowUptime: 1,
-                isFinal: false
-            )
-        )
-        XCTAssertFalse(
-            store.shouldPublishParentReadback(
-                nowUptime: 1.01,
-                isFinal: false
-            )
-        )
-        XCTAssertTrue(
-            store.shouldPublishParentReadback(
-                nowUptime: 1.07,
-                isFinal: false
-            )
-        )
-        XCTAssertTrue(
-            store.shouldPublishParentReadback(
-                nowUptime: 1.071,
-                isFinal: true
-            )
-        )
+        for sample in 0..<480 {
+            XCTAssertFalse(store.shouldPublishParentReadback(
+                nowUptime: Double(sample) / 240, isFinal: false))
+        }
+        XCTAssertTrue(store.shouldPublishParentReadback(nowUptime: 2, isFinal: true))
 
         let initial = CGPoint(x: 100, y: 200)
         let latest = CGPoint(x: 120, y: 240)
@@ -1959,7 +1955,7 @@ final class TimeScaleTests: XCTestCase {
                 id: id,
                 planID: nil,
                 title: "걷기 탑승",
-                categoryID: "activity",
+                categoryID: manuallyCorrected ? "movement" : "activity",
                 startedAt: start,
                 endedAt: end,
                 source: source,

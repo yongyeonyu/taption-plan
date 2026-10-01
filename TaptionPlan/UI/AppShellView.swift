@@ -71,6 +71,20 @@ struct AppShellView: View {
         .preferredColorScheme(.light)
         .task {
             await performInitialLaunchPreparation()
+            #if DEBUG
+            await model.runRequestedCloudBackupVerification()
+            await model.runRequestedSubwayRouteVerification()
+            #endif
+        }
+        .onChange(of: model.isAppLocked) { _, locked in
+            #if DEBUG
+            if !locked, isSecurityStateReady {
+                Task {
+                    await model.runRequestedCloudBackupVerification()
+                    await model.runRequestedSubwayRouteVerification()
+                }
+            }
+            #endif
         }
         .onOpenURL { url in
             handleOpenURL(url)

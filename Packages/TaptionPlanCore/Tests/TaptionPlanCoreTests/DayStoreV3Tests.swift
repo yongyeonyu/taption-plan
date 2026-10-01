@@ -19,6 +19,37 @@ private actor ConcurrentOpenBarrier {
 }
 
 final class DayStoreV3Tests: XCTestCase {
+    func testRestoreReceiptReopenRollbackAndCommitPreserveOriginals() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let day = TaptionPlanDayKey(year: 2026, month: 9, day: 30)
+        let original = event(day: day, id: "original", timestamp: 10)
+        let added = event(day: day, id: "added", timestamp: 20)
+        let session = UUID()
+        do {
+            let store = try TaptionPlanV3Store(url: url, device: .iPhone)
+            try await store.appendRawEvents([original])
+            try await store.appendRawEvents([original, added], outboxItems: [], restoreSessionID: session)
+        }
+        let restarted = try TaptionPlanV3Store(url: url, device: .iPhone)
+        try await restarted.finishRestoreSession(session, committed: false)
+        let rolledBack = try await restarted.rawEvents(for: day)
+        XCTAssertEqual(rolledBack, [original])
+        try await restarted.appendRawEvents([added], outboxItems: [], restoreSessionID: session)
+        try await restarted.finishRestoreSession(session, committed: true)
+        try await restarted.finishRestoreSession(session, committed: false)
+        let committed = try await restarted.rawEvents(for: day)
+        XCTAssertEqual(committed, [original, added])
+        let resetSession = UUID()
+        let resetEvent = event(day: day, id: "reset", timestamp: 30)
+        try await restarted.appendRawEvents([resetEvent], outboxItems: [], restoreSessionID: resetSession)
+        try await restarted.deleteAllData()
+        try await restarted.appendRawEvents([resetEvent])
+        try await restarted.finishRestoreSession(resetSession, committed: false)
+        let afterReset = try await restarted.rawEvents(for: day)
+        XCTAssertEqual(afterReset, [resetEvent])
+    }
+
     func testConcurrentColdOpensInitializeOneV3Schema() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
