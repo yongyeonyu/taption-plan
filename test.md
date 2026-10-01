@@ -1,11 +1,22 @@
 # 검증 기록
 
+## TFL1001B01 · main 후속 내부 TestFlight165 (2026-10-01)
+
+- 시작: main `ba33080`, origin/main과 같고 워크트리 clean. ASC 최고 번호164 VALID를 확인해165를 선택했다. 빌드 설정8곳/네 Info.plist 번호를165로 변경하고 main 커밋 `baf26ea501467120b3c6d080d91fedd7f4c9c69e` 생성·push 후 해당 소스로 archive했다.
+- 기능 소스 hash가164의 검증된 코드와 같으므로 STR1001A01의 전체 앱 xcresult1,462통과/0실패/1건너뜀, Core103통과와 마지막 관련869통과/1건너뜀을 재사용했다. 새 기능 수정이나 StoreKit/실기기 기능 통과 판정을 하지 않았다.
+- Release archive/internal-only export/generic iOS Debug 성공. archive·IPA·Debug의 앱/iPhone Widget/Watch/Watch Widget 네 번들 모두1.0(165)을 readback했다. IPA는 Production 서명/get-task-allow=false. Release CloudKit manifest 자동 생성은 계속 비활성이다. 증거 `build/validation/TFL1001B01/`의 `archive.log`, `export.log`, `debug.log`, `*-bundles.json`, `ipa-entitlements.plist`, `source-hashes.json`.
+- 16:11 KST 업로드 성공, Delivery UUID `e19df96b-637c-4106-ab47-a1657d218b28` (`upload.log`). 최초 ASC readback에는165가 없었으나 최종 API에서 **VALID, IN_BETA_TESTING, 내부 그룹 연결=true, 테스터1명**을 확인했다 (`processing-final.json`, `build-final.json`, `testflight-readback.json`).
+- 실제 `TP Taption Plan 내부 테스트` 그룹 화면에서 **1.0(165) 내부·테스트 중·1명의 테스터**를 읽고 캡처했다 (`group-165.jpg`). 기존164의 화면 검증도 완료했다 (`group-164.jpg`). 한국어 테스트 안내는 기존 locale이 있어 생성409 후 기존 항목을 PATCH해 성공했다 (`beta-test-notes.json`).
+- diff 검사 성공, 기능 코드 hash는 archive 생성 이후에도 일치. 배포 완료 기준을 충족해 TFL1001B01을 temp에서 제거한다. 실제 회사 기능·특정 기기 다운로드·백업 PIN/복원 검증은 이 배포 결과로 통과 처리하지 않는다. 기존 원본과 열린 요청을 보존한다. 최종 문서 커밋을 main에 push하고 원격 일치/clean을 확인한다.
+
 ## GIT1001A01 · TestFlight164 수정 main 커밋·push (2026-10-01)
 
 - 현재 변경29개 파일의 앱·package·회귀 테스트·빌드164 설정과 검증 문서를 기존 작업 그대로 반영한다. TestFlight164 archive 생성 시 소스 hash와 현재 동작 코드가 일치한다. 기존 테스트·Debug·Release 검증은 TFL1001A01/STR1001A01 근거를 재사용했고 문서/커밋 작업으로 앱 테스트를 반복하지 않았다.
 - 커밋 전 `git diff --check` 성공. origin/main을 fetch한 뒤 HEAD와 차이0/0 확인. 구현 커밋 `dbbeed60088b2a67e1f0ab3f897f02ede7267463`을 main에 생성·push했다. `git ls-remote`의 원격 main과 local/origin HEAD가 같고 `git status --porcelain=v1` 출력이 비어 tracked/untracked clean을 확인했다. 실기기 기능·백업 PIN·그룹 화면 확인 대기 항목은 그대로 유지한다.
 
 ## TFL1001A01 · 회사 검증용 내부 TestFlight164 배포 (2026-10-01)
+
+- 후속 화면 검증: TFL1001B01 실행 중 로그인 연결 후 실제 내부 그룹 화면에서 **1명의 테스터, 1.0(164) 내부, 테스트 중**을 읽었다. 테스터 목록에는164 설치됨도 노출됐으나 특정 iPhone의 설치로 단정하지 않는다. 화면 `build/validation/TFL1001B01/group-164.jpg`. 배포의 그룹 화면 대기 기준을 충족해 TFL1001A01만 temp에서 제거했다. 기존 실기기 기능 검증은 별도다.
 
 - 시작: main `48b8efd`, origin/main과 같으며 기존 미커밋 변경29개 파일을 보존했다. ASC 최신 빌드163 VALID, 다음 번호164, 내부 그룹 `TP Taption Plan 내부 테스트`와 테스터1명을 readback했다 (`build/validation/TFL1001A01/builds-before.json`, `groups-before.json`, `testers-before.json`).
 - 기존 유효 검증 재사용: STR1001A01 전체 앱 xcresult1,462통과/0실패/1건너뜀(XCTest1,420+Swift Testing42), Core103통과, 마지막 관련869통과/1건너뜀과 Debug 성공. StoreKit 건너뜀은 통과가 아니다. 실기기 백업 PIN 요구/복원·서버 경합 검증 대기는 남긴다.

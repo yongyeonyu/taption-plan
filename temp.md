@@ -1,16 +1,5 @@
 # 남은 요청
 
-## TFL1001B01 · main 후속 내부 TestFlight 빌드업 [진행]
-- 원인: main 커밋·push 후 새 TestFlight 빌드를 요청했다.
-- 해결: ASC 최신 번호를 조회해 다음 번호로 네 번들을 통일하고 main 기준 Release archive·internal-only export·업로드한다.
-- 검증: 동작 코드가164와 같으면 유효 테스트를 재사용하고 최종 네 번들 번호·서명·처리 완료·내부 그룹 연결·빌드/테스터 노출을 확인한다. 기존 실기기 미검증 항목은 유지한다.
-
-## TFL1001A01 · 최신 수정 내부 TestFlight 배포 [그룹 화면 확인 대기]
-- 현재: 1.0(164) archive/export/Debug 및 네 번들 번호 확인, 업로드·VALID·IN_BETA_TESTING·내부 그룹 연결·테스터1명 API 확인 완료. App Store Connect 로그인 전 그룹 화면 확인은 대기. 회사 실기기 기능은 사용자 로그로 별도 판정한다.
-- 원인: 현재 수정은 개발 설치본에만 반영됐으며 회사에서 TestFlight로 검증할 새 빌드가 필요하다.
-- 해결: ASC 최고 번호를 확인하고 네 제품 빌드 번호를 통일해 Release archive·internal-only export·업로드한다.
-- 검증: 기존 테스트 근거 재사용, 최종 Debug/Release 및 네 번들 번호, 처리 완료·내부 그룹 연결·빌드/테스터 노출. PIN/실기기 기능 검증 대기는 그대로 유지한다.
-
 ## STR1001A01 · 저장·백업 구조 잔여 구현 실행 [진행]
 - 현재: 보호 file/SQLite staging·durable receipt/journal·snapshot 연결 legacy migration·Development CAS body 재병합을 구현했다. 앱 xcresult1462통과/1건너뜀(XCTest1420+Swift Testing42), Core103통과, 마지막 관련869통과/1건너뜀, Debug 성공. iPhone11 설치·실행 완료이나 백업 PIN 미등록으로 읽기 검증 대기(`test.md` STR1001A01). raw-only legacy·legacy incremental GCM·실제 peak memory·서버 경합/실기기 복원·legacy Watch fallback 복구는 미완료다.
 - 원인: V4 codec은 페이지를 사용하지만 복원 accumulator와 앱 commit은 전체 배열·메모리 rollback에 의존한다. 과거 월 migration journal, end-to-end streaming, 원격 CAS 재봉인과 offline 참조 보호의 완료 근거가 없다.
