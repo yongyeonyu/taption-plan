@@ -1,11 +1,15 @@
 # 검증 기록
 
-## REL1002A02 · main 반영·내부 TestFlight167 준비 (2026-10-02)
+## REL1002A02 · main 반영·내부 TestFlight167 (2026-10-02)
 
 - 시작 main9c525b2, fetch 후 origin/main과 일치했다. 미커밋 변경29개 파일은 DYN1001A01/B01·DYN1002C01·MAP1002D01·OPT1002A01·LCK1002B01 및 이전166 배포 기록에 연결되어 보존한다. 삭제/초기화/새 브랜치를 수행하지 않는다.
 - ASC 최신 목록의 최고166 VALID를 읽고167을 선택했다(`build/validation/REL1002A02/builds-before.json`). `CURRENT_PROJECT_VERSION`8개 설정과 앱·Widget·Watch·Watch Widget의 원본 Info.plist4개를167로 맞췄다. 사용자 요청에 따라 main 커밋·push와 내부 배포를 진행한다.
 - 기존 유효한 전체 앱1,472통과/0실패/1건너뜀, 최종 관련268통과, package184통과, 화랑이 회귀3통과를 재사용했다. 시작 시 OPT runtime10개 및 LCK3개 파일의 SHA256은 검증 후 같았다. staged diff 검사에서 새 파일2개의 끝 빈 줄을 발견해 정리했으며 내용 동일성과 전후 hash를 `whitespace-adjustments.json`에 기록했다. 새167 최종 iOS Debug BUILD SUCCEEDED(`debug-final.log`) 및 산출물 네 번들1.0(167) 확인(`debug-bundles.json`). import 경계·staged diff 검사 성공. Release 기준 소스/설정119개 파일 hash를 저장했다(`source-hashes.json`).
-- archive/업로드/처리/그룹 화면은 진행 중이며 아직 완료로 판정하지 않는다. 실제 기능·실기기 성능 검증 대기는 별도다. App Store Connect 웹 로그인 요청 후 독립적인 커밋/빌드 작업을 계속한다.
+- 코드 커밋a9c23dd를 origin/main에 push한 뒤 main/origin/main 동일·워크트리 clean을 확인했다(`pre-archive-git.json`). 이 소스로 Release archive와 내부 전용 export가 성공했고 archive 서명 검증 및 archive/IPA 네 번들1.0(167) 확인을 마쳤다(`archive.log`, `export.log`, `archive-signature.log`, `archive-bundles.json`, `ipa-bundles.json`). 소스/설정119개 hash도 일치했다.
+- 19:42 KST에 업로드 성공을 확인했다(`upload.log`, Delivery UUID `c009e32e-0647-4a2a-bf6f-912befc443d0`). 첫 ASC 조회에서는167이 아직 목록에 등록되지 않아 처리 완료·그룹 연결/화면 확인은 대기다(`processing-01.json`). App Store Connect 웹 세션은 로그인 요청 중이다. 실제 기능·실기기 성능 검증 대기는 별도다.
+- 목록 등록 지연을 조사해 공식 BuildUpload API에서1.0(167) `PROCESSING`·오류0·경고0을 확인했다(`delivery-api-01.json`). 19:52 KST 후속 조회는 `COMPLETE`·빌드`VALID`·`INTERNAL_ONLY`를 반환했다(`delivery-api-02.json`). altool 조회도 exit0으로 정상 종료되어 `VALID`를 반환했다(`delivery-status-01.log`); 중지하려던 시점에는 이미 종료되어 실제 중지한 프로세스가 없었다(`delivery-status-01-stop.json`). 업로드 취소/재업로드는 하지 않았다.
+- 최종 API에서1.0(167) **VALID·IN_BETA_TESTING·INTERNAL_ONLY**를 확인했다. `TP Taption Plan 내부 테스트` 연결, 그룹 빌드 목록의167 포함, 테스터1명, 한국어 테스트 안내 저장도 확인했다(`build-final.json`, `group-attach.json`, `group-builds.json`, `testers-final.json`, `beta-test-notes.json`, `deployment-api-summary.json`). 빌드ID는 `c009e32e-0647-4a2a-bf6f-912befc443d0`이다. LCK1002B01·OPT1002A01·MAP1002D01·DYN1002C01 구현은 이제167에 포함되어 있다.
+- 제한: App Store Connect 웹 세션은 Apple 계정 로그인 화면이고 사용자 로그인 응답이 없어 실제 그룹 화면의 빌드/테스터 노출은 확인하지 못했다. 내부 업로드/처리/배포는 완료했지만 프로젝트의 전체 배포 기준은 미충족이므로 REL1002A02를 temp에 유지한다. 실제 기능·실기기 성능 대기도 유지한다. 배포 기록 반영 후 main/origin/main·실제 원격 hash 일치와 clean의 최종 근거는 `build/validation/REL1002A02/final-git.json`을 기준으로 판정한다.
 
 ## LCK1002B01 · 잠금 화면 하단 현재 활동 화랑이 (2026-10-02)
 
