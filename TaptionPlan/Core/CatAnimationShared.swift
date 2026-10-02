@@ -347,7 +347,7 @@ struct TaptionCatAtlasSprite: View {
     let action: TaptionCatAnimationAction
     let frame: Int
 
-    private var actionIndex: Int {
+    var actionIndex: Int {
         switch action {
         case .walking: 0
         case .running: 1
@@ -364,7 +364,7 @@ struct TaptionCatAtlasSprite: View {
         }
     }
 
-    private var assetName: String {
+    var assetName: String {
         switch style.lowercased() {
         case "white", "흰색 고양이": "TaptionCatAtlasWhite"
         case "mackerel", "고등어 고양이": "TaptionCatAtlasMackerel"
@@ -395,3 +395,40 @@ struct TaptionCatAtlasSprite: View {
             }
     }
 }
+
+#if canImport(UIKit)
+import UIKit
+
+/// Live Activity receives a flattened, bounded bitmap rather than a clipped atlas tree.
+@MainActor
+enum TaptionCatAtlasBitmap {
+    private static let cache: NSCache<NSString, UIImage> = {
+        let result = NSCache<NSString, UIImage>()
+        result.countLimit = 72
+        result.totalCostLimit = 1_024 * 1_024
+        return result
+    }()
+
+    static func image(style: String, action: TaptionCatAnimationAction, frame: Int) -> UIImage? {
+        let sprite = TaptionCatAtlasSprite(style: style, action: action, frame: frame)
+        let normalizedFrame = ((frame % 6) + 6) % 6
+        let key = "\(sprite.assetName)-\(sprite.actionIndex)-\(normalizedFrame)" as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let atlas = UIImage(named: sprite.assetName)?.cgImage else { return nil }
+        let width = atlas.width / 6
+        let height = atlas.height / 12
+        guard width > 0, height > 0,
+              let cropped = atlas.cropping(to: CGRect(x: normalizedFrame * width,
+                  y: sprite.actionIndex * height, width: width, height: height)) else { return nil }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        format.opaque = false
+        format.preferredRange = .standard
+        let result = UIGraphicsImageRenderer(size: CGSize(width: 52, height: 32), format: format).image { _ in
+            UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: 52, height: 32))
+        }
+        cache.setObject(result, forKey: key, cost: 104 * 64 * 4)
+        return result
+    }
+}
+#endif

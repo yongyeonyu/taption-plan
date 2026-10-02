@@ -1,82 +1,31 @@
 import Foundation
+import TaptionPlanCore
 
 /// High-frequency timeline gestures may arrive faster than the display can
 /// present them. Keep the latest sample for the gesture end, but only publish
 /// intermediate state at the display cadence.
-enum TimelineInteractionFrameGate {
-    static let maximumInputRate: Double = 240
-    static let inputInterval = 1 / maximumInputRate
-    static let maximumRenderRate: Double = 60
-    static let minimumInterval = 1 / maximumRenderRate
-
-    static func shouldRender(
-        lastUptime: inout TimeInterval,
-        nowUptime: TimeInterval,
-        force: Bool = false,
-        minimumInterval: TimeInterval = Self.minimumInterval
-    ) -> Bool {
-        if lastUptime == 0 {
-            lastUptime = nowUptime == 0
-                ? .leastNonzeroMagnitude
-                : nowUptime
-            return true
-        }
-        guard force || nowUptime - lastUptime >= max(0, minimumInterval) else {
-            return false
-        }
-        lastUptime = nowUptime
-        return true
-    }
-}
+typealias TimelineInteractionFrameGate = TaptionInputFrameGate
 
 /// Keeps a timeline editor's latest gesture projection separate from the
 /// presentation projection. Input can arrive at 240Hz; SwiftUI receives at
 /// most the display-budgeted projections, plus the final gesture state.
 final class TimelineNLEProjection<State: Equatable & Sendable> {
-    private(set) var latestState: State?
-    private(set) var renderedState: State?
-    private var lastRenderUptime: TimeInterval = 0
+    private var projection = TaptionLatestValueProjection<State>()
+    var latestState: State? { projection.latestValue }
+    var renderedState: State? { projection.renderedValue }
 
-    func begin(with state: State) {
-        latestState = state
-        renderedState = state
-        lastRenderUptime = 0
+    func begin(with state: State) { projection.begin(with: state) }
+    func synchronize(with state: State) { projection.synchronize(with: state) }
+
+    func submit(_ state: State, nowUptime: TimeInterval, force: Bool = false) -> State? {
+        projection.submit(state, at: nowUptime, isFinal: force)
     }
 
-    func synchronize(with state: State) {
-        latestState = state
-        renderedState = state
+    func finish(with state: State, nowUptime: TimeInterval) -> State? {
+        projection.submit(state, at: nowUptime, isFinal: true)
     }
 
-    func submit(
-        _ state: State,
-        nowUptime: TimeInterval,
-        force: Bool = false
-    ) -> State? {
-        latestState = state
-        guard TimelineInteractionFrameGate.shouldRender(
-            lastUptime: &lastRenderUptime,
-            nowUptime: nowUptime,
-            force: force
-        ), renderedState != state else {
-            return nil
-        }
-        renderedState = state
-        return state
-    }
-
-    func finish(
-        with state: State,
-        nowUptime: TimeInterval
-    ) -> State? {
-        submit(state, nowUptime: nowUptime, force: true)
-    }
-
-    func reset() {
-        latestState = nil
-        renderedState = nil
-        lastRenderUptime = 0
-    }
+    func reset() { projection.reset() }
 }
 
 struct MapHomeTimeSidebarNLEState: Equatable, Sendable {

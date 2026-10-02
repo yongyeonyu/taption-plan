@@ -293,10 +293,9 @@ public actor TaptionPlanV3Store {
     private nonisolated(unsafe) var database: OpaquePointer?
     private let rawEventPageStoreID = UUID()
     private var rawEventRevision: UInt64 = 0
-    private var rawDigestCache: [
-        TaptionPlanDayKey: (dataVersion: Int64, digest: TaptionPlanDayDigest)
-    ] = [:]
-    private var rawDigestCacheRecency: [TaptionPlanDayKey] = []
+    private var rawDigestCache = TaptionBoundedCache<
+        TaptionPlanDayKey, (dataVersion: Int64, digest: TaptionPlanDayDigest)
+    >(capacity: rawDigestCacheCapacity)
     var rawDigestCacheCount: Int { rawDigestCache.count }
 
     public init(url: URL, device: TaptionPlanStoreDevice) throws {
@@ -1539,7 +1538,6 @@ public actor TaptionPlanV3Store {
         }
         if deletedRawEvents { rawEventRevision &+= 1 }
         rawDigestCache.removeAll(keepingCapacity: true)
-        rawDigestCacheRecency.removeAll(keepingCapacity: true)
     }
 
     public func allDays() throws -> [TaptionPlanDayKey] {
@@ -2295,13 +2293,11 @@ public actor TaptionPlanV3Store {
         for day: TaptionPlanDayKey,
         dataVersion: Int64
     ) -> TaptionPlanDayDigest? {
-        guard let cached = rawDigestCache[day],
+        guard let cached = rawDigestCache.value(for: day),
               cached.dataVersion == dataVersion else {
             removeCachedRawDigest(for: day)
             return nil
         }
-        rawDigestCacheRecency.removeAll { $0 == day }
-        rawDigestCacheRecency.append(day)
         return cached.digest
     }
 
@@ -2310,17 +2306,11 @@ public actor TaptionPlanV3Store {
         for day: TaptionPlanDayKey,
         dataVersion: Int64
     ) {
-        rawDigestCache[day] = (dataVersion, digest)
-        rawDigestCacheRecency.removeAll { $0 == day }
-        rawDigestCacheRecency.append(day)
-        if rawDigestCacheRecency.count > Self.rawDigestCacheCapacity {
-            rawDigestCache.removeValue(forKey: rawDigestCacheRecency.removeFirst())
-        }
+        rawDigestCache.insert((dataVersion, digest), for: day)
     }
 
     private func removeCachedRawDigest(for day: TaptionPlanDayKey) {
-        rawDigestCache.removeValue(forKey: day)
-        rawDigestCacheRecency.removeAll { $0 == day }
+        rawDigestCache.removeValue(for: day)
     }
 
     private func readUInt64(_ value: Int64) throws -> UInt64 {

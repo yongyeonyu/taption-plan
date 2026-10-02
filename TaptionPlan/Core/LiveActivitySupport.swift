@@ -11,17 +11,42 @@ enum TaptionCurrentActivityPolicy {
     static func categoryID(
         actuals: [ActualRecord],
         plans: [PlanRecord],
-        at date: Date
+        at date: Date,
+        latestSavedAt: Date? = nil,
+        latestReading: SensorReading? = nil
     ) -> String? {
+        let freshSample = latestSavedAt.flatMap { sample in
+            sample <= date && date.timeIntervalSince(sample) <= 90 ? sample : nil
+        }
         if let actual = actuals
-            .filter({
-                $0.source.usesAutomaticClassification
-                    && $0.categoryID != "unconfirmed"
-                    && $0.startedAt <= date
-                    && ($0.endedAt.map { date < $0 } ?? true)
+            .filter({ actual in
+                let active = actual.startedAt <= date
+                    && (actual.endedAt.map { date < $0 } ?? true)
+                let observed = freshSample.map { sample in
+                    actual.source.usesAutomaticClassification && !actual.manuallyCorrected
+                        && actual.startedAt <= sample
+                        && actual.endedAt.map { sample <= $0 } == true
+                } ?? false
+                return active || observed
             })
-            .max(by: { $0.startedAt < $1.startedAt }) {
-            return actual.categoryID
+            .max(by: {
+                let leftConfirmed = $0.manuallyCorrected || $0.source == .manual
+                let rightConfirmed = $1.manuallyCorrected || $1.source == .manual
+                if leftConfirmed != rightConfirmed { return !leftConfirmed }
+                if $0.startedAt != $1.startedAt { return $0.startedAt < $1.startedAt }
+                return $0.id.uuidString < $1.id.uuidString
+            }) {
+            let category = RecordAnalysisCategoryPolicy.categoryID(for: actual)
+            if category == "movement", actual.source.usesAutomaticClassification,
+               !actual.manuallyCorrected, let sample = latestReading,
+               let savedAt = freshSample, sample.timestamp <= savedAt,
+               sample.timestamp > actual.startedAt,
+               date.timeIntervalSince(sample.timestamp) <= 90,
+               sample.motion == .stationary, sample.motionConfidence == .high,
+               sample.speedMetersPerSecond.map({ $0.isFinite && ($0 < 0 || $0 <= 0.5) }) ?? true {
+                return "activity"
+            }
+            return category
         }
         return plans.last(where: {
             $0.status == .running && $0.span.start <= date
@@ -52,6 +77,7 @@ actor SensorCollectionLiveActivityController {
         currentActivityTitle: String? = nil,
         currentActivityCategoryID: String? = nil,
         currentActivitySystemImage: String? = nil,
+        currentActivityCatStyle: String? = nil,
         now: Date = .now
     ) async throws -> String? {
         await recoverAndRemoveDuplicates(
@@ -175,7 +201,9 @@ actor SensorCollectionLiveActivityController {
             sensorHUDUntil: sensorHUDUntil,
             currentActivityTitle: currentActivityTitle,
             currentActivityCategoryID: currentActivityCategoryID,
-            currentActivitySystemImage: currentActivitySystemImage
+            currentActivitySystemImage: currentActivitySystemImage,
+            currentActivityCatStyle: currentActivityCatStyle,
+            currentActivityFrame: hasNewSample ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6 : previousState?.currentActivityFrame ?? 0
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt
@@ -333,15 +361,17 @@ actor TaptionLiveActivityController {
         activity = nil
     }
 
-    func updateCompactActivity(title: String, categoryID: String) async {
+    func updateCompactActivity(title: String, categoryID: String, animationFrame: Int? = nil) async {
         guard let activity = activity ?? Activity<TaptionActivityAttributes>
             .activities.first(where: { $0.content.state.isRunning }) else { return }
         self.activity = activity
         var state = activity.content.state
         guard state.compactActivityTitle != title
-            || state.compactActivityCategoryID != categoryID else { return }
+            || state.compactActivityCategoryID != categoryID
+            || state.compactAnimationFrame != animationFrame else { return }
         state.compactActivityTitle = title
         state.compactActivityCategoryID = categoryID
+        state.compactAnimationFrame = animationFrame
         await activity.update(ActivityContent(
             state: state,
             staleDate: activity.content.staleDate

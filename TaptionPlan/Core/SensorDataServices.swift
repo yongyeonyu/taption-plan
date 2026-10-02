@@ -138,8 +138,7 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
     private let flushDelay: TimeInterval
     private var archiveGeneration: UInt64 = 0
     private var scheduledMonths = Set<String>()
-    private var monthEnvelopeCache: [String: [RawDeviceDataEnvelope]] = [:]
-    private var monthEnvelopeCacheOrder: [String] = []
+    private var monthEnvelopeCache = TaptionBoundedCache<String, [RawDeviceDataEnvelope]>(capacity: monthEnvelopeCacheLimit)
     private static let monthEnvelopeCacheLimit = 2
 
     init(
@@ -360,27 +359,15 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
     private func cachedEnvelopes(
         for monthKey: String
     ) -> [RawDeviceDataEnvelope]? {
-        guard let cached = monthEnvelopeCache[monthKey] else { return nil }
-        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
-        monthEnvelopeCacheOrder.append(monthKey)
-        return cached
+        monthEnvelopeCache.value(for: monthKey)
     }
 
-    private func cache(
-        _ envelopes: [RawDeviceDataEnvelope],
-        for monthKey: String
-    ) {
-        monthEnvelopeCache[monthKey] = envelopes
-        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
-        monthEnvelopeCacheOrder.append(monthKey)
-        while monthEnvelopeCacheOrder.count > Self.monthEnvelopeCacheLimit {
-            monthEnvelopeCache[monthEnvelopeCacheOrder.removeFirst()] = nil
-        }
+    private func cache(_ envelopes: [RawDeviceDataEnvelope], for monthKey: String) {
+        monthEnvelopeCache.insert(envelopes, for: monthKey)
     }
 
     private func invalidateCachedMonth(_ monthKey: String) {
-        monthEnvelopeCache[monthKey] = nil
-        monthEnvelopeCacheOrder.removeAll { $0 == monthKey }
+        monthEnvelopeCache.removeValue(for: monthKey)
     }
 
     func flushPendingWrites() throws {
@@ -508,7 +495,6 @@ final class RawDeviceDataMonthlyArchive: @unchecked Sendable {
         archiveGeneration &+= 1
         scheduledMonths.removeAll()
         monthEnvelopeCache.removeAll()
-        monthEnvelopeCacheOrder.removeAll()
         if FileManager.default.fileExists(atPath: rootDirectory.path) {
             try FileManager.default.removeItem(at: rootDirectory)
         }

@@ -628,6 +628,50 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    func testDuplicateCameraAndSubpixelMarkerSamplesDoNotDelayChangedPan() {
+        let center = CLLocationCoordinate2D(latitude: 37, longitude: 127)
+        let region = MKCoordinateRegion(center: center,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
+        let frame = MapHomeCameraFrame(camera: MapCamera(centerCoordinate: center, distance: 1_000), region: region)
+        let next = MapHomeCameraFrame(camera: MapCamera(centerCoordinate: center, distance: 900), region: region)
+        let camera = MapHomeCameraFrameProjection()
+        XCTAssertEqual(camera.submit(frame, nowUptime: 1), frame)
+        XCTAssertNil(camera.submit(frame, nowUptime: 1.02))
+        XCTAssertEqual(camera.submit(next, nowUptime: 1.024), next)
+        let marker = MapHomeStickmanViewportProjection()
+        XCTAssertEqual(marker.submit(.zero, nowUptime: 1), .zero)
+        XCTAssertNil(marker.submit(CGPoint(x: 0.1, y: 0.1), nowUptime: 1.02))
+        XCTAssertEqual(marker.submit(CGPoint(x: 2, y: 2), nowUptime: 1.024), CGPoint(x: 2, y: 2))
+    }
+
+    func testTimelineDuplicateInputDoesNotDelayChangedTouch() {
+        let projection = TimelineNLEProjection<Int>()
+        XCTAssertEqual(projection.submit(1, nowUptime: 1), 1)
+        XCTAssertNil(projection.submit(1, nowUptime: 1.02))
+        XCTAssertEqual(projection.submit(2, nowUptime: 1.024), 2)
+        XCTAssertEqual(projection.finish(with: 3, nowUptime: 1.025), 3)
+    }
+
+    func testMapContentKeyDistinguishesLayerGeometryAndAppearance() {
+        let coordinate = CLLocationCoordinate2D(latitude: 37, longitude: 127)
+        let route = MapHomeVectorRoute(id: "route#|", coordinates: [coordinate],
+            geometrySignature: 1, colorHex: "#ffffff", opacity: 1)
+        let base = MapHomeVectorContentKey(historical: [route.contentKey], active: nil,
+            expected: [], subway: [])
+        XCTAssertEqual(base, MapHomeVectorContentKey(historical: [route.contentKey], active: nil,
+            expected: [], subway: []))
+        XCTAssertNotEqual(base, MapHomeVectorContentKey(historical: [], active: route.contentKey,
+            expected: [], subway: []))
+        for changed in [
+            MapHomeVectorRouteContentKey(id: route.id, geometrySignature: 2, colorHex: "#ffffff", opacity: 1),
+            MapHomeVectorRouteContentKey(id: route.id, geometrySignature: 1, colorHex: "#000000", opacity: 1),
+            MapHomeVectorRouteContentKey(id: route.id, geometrySignature: 1, colorHex: "#ffffff", opacity: 0.5)
+        ] {
+            XCTAssertNotEqual(base, MapHomeVectorContentKey(historical: [changed], active: nil,
+                expected: [], subway: []))
+        }
+    }
+
     func testTimelineNLEProjectionCoalesces240HzInputAndFlushesLatestState() {
         let projection = TimelineNLEProjection<Int>()
         projection.begin(with: 0)

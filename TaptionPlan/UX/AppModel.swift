@@ -1,4 +1,5 @@
 import Foundation
+@preconcurrency import ActivityKit
 import CoreLocation
 import Observation
 import OSLog
@@ -6,38 +7,6 @@ import UIKit
 import WidgetKit
 import TaptionPlanCore
 
-struct SensorReadingsLoadResult: Equatable, Sendable {
-    let readings: [SensorReading]
-    let isComplete: Bool
-    let watchSummaries: [TaptionWatchSensorSummary]
-    let watchAccelerationChunks: [TaptionWatchAccelerationChunk]
-
-    init(
-        readings: [SensorReading],
-        isComplete: Bool,
-        watchSummaries: [TaptionWatchSensorSummary] = [],
-        watchAccelerationChunks: [TaptionWatchAccelerationChunk] = []
-    ) {
-        self.readings = readings
-        self.isComplete = isComplete
-        self.watchSummaries = watchSummaries
-        self.watchAccelerationChunks = watchAccelerationChunks
-    }
-
-    var watchAccelerationSamples: [TaptionWatchAccelerationSample] {
-        Dictionary(
-            watchAccelerationChunks
-                .flatMap(\.samples)
-                .map { ($0.id, $0) },
-            uniquingKeysWith: { first, _ in first }
-        ).values.sorted {
-            if $0.capturedAt == $1.capturedAt {
-                return $0.sequence < $1.sequence
-            }
-            return $0.capturedAt < $1.capturedAt
-        }
-    }
-}
 
 private struct WatchSensorTimelineData: Sendable {
     let summaries: [TaptionWatchSensorSummary]
@@ -179,413 +148,6 @@ enum ActivityClassificationRetry {
 /// visible presentation from that snapshot. Plan follows the same boundary
 /// for a map day: persisted iPhone/Watch data is read once, then day-scoped
 /// arrays are derived without changing the source snapshot or raw readings.
-struct PlanDayDataSnapshot: Equatable, Sendable {
-    private struct SourceFingerprintPayload: Encodable {
-        let actuals: [ActualRecord]
-        let places: [PlaceStay]
-        let travel: [TravelSegment]
-    }
-
-    let day: Date
-    let sourceRevision: UInt64
-    let projectionVersion: UInt64
-    let sourceUpdatedAt: Date
-    let sourceFingerprint: String?
-    let actuals: [ActualRecord]
-    let places: [PlaceStay]
-    let travel: [TravelSegment]
-    let readings: [SensorReading]
-    let isComplete: Bool
-
-    var dataTrustProjection: TaptionDataTrustProjection {
-        TaptionActivityEngineAdapter.dataTrustProjection(
-            readings: readings,
-            actuals: actuals,
-            places: places,
-            travel: travel
-        )
-    }
-
-    init(
-        day: Date,
-        sourceRevision: UInt64,
-        sourceUpdatedAt: Date,
-        sourceFingerprint: String? = nil,
-        projectionVersion: UInt64 = TaptionPlanV3Store.projectionVersion,
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment],
-        readings: [SensorReading],
-        isComplete: Bool
-    ) {
-        self.day = day
-        self.sourceRevision = sourceRevision
-        self.projectionVersion = projectionVersion
-        self.sourceUpdatedAt = sourceUpdatedAt
-        self.sourceFingerprint = sourceFingerprint ?? Self.sourceFingerprint(
-            actuals: actuals,
-            places: places,
-            travel: travel
-        )
-        self.actuals = actuals
-        self.places = places
-        self.travel = travel
-        self.readings = Self.uniqueReadings(readings)
-        self.isComplete = isComplete
-    }
-
-    private init(
-        preparedDay day: Date,
-        sourceRevision: UInt64,
-        sourceUpdatedAt: Date,
-        sourceFingerprint: String?,
-        projectionVersion: UInt64,
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment],
-        readings: [SensorReading],
-        isComplete: Bool
-    ) {
-        self.day = day
-        self.sourceRevision = sourceRevision
-        self.projectionVersion = projectionVersion
-        self.sourceUpdatedAt = sourceUpdatedAt
-        self.sourceFingerprint = sourceFingerprint
-        self.actuals = actuals
-        self.places = places
-        self.travel = travel
-        self.readings = readings
-        self.isComplete = isComplete
-    }
-
-    func matchesCurrentSource(
-        revision: UInt64,
-        fingerprint: String?
-    ) -> Bool {
-        if sourceRevision == revision { return true }
-        guard let sourceFingerprint, let fingerprint else { return false }
-        return sourceFingerprint == fingerprint
-    }
-
-    static func make(
-        date: Date,
-        sourceRevision: UInt64,
-        source: TaptionDataSnapshot,
-        sensorResult: SensorReadingsLoadResult,
-        calendar: Calendar = .autoupdatingCurrent
-    ) -> Self {
-        make(
-            date: date,
-            sourceRevision: sourceRevision,
-            source: source,
-            sensorResult: sensorResult,
-            calendar: calendar,
-            cancellationCheck: {}
-        )
-    }
-
-    static func make(
-        date: Date,
-        sourceRevision: UInt64,
-        source: TaptionDataSnapshot,
-        sensorResult: SensorReadingsLoadResult,
-        calendar: Calendar = .autoupdatingCurrent,
-        cancellationCheck: () throws -> Void
-    ) rethrows -> Self {
-        try cancellationCheck()
-        let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let day = TimeSpan(start: dayStart, end: dayEnd)
-        let records = try sourceRecords(
-            in: day,
-            source: source,
-            dayEnd: dayEnd,
-            cancellationCheck: cancellationCheck
-        )
-        try cancellationCheck()
-        var readings: [SensorReading] = []
-        readings.reserveCapacity(sensorResult.readings.count)
-        for (index, reading) in sensorResult.readings.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            guard reading.timestamp >= dayStart,
-                  reading.timestamp < dayEnd else { continue }
-            readings.append(reading)
-        }
-        let fingerprint = try sourceFingerprint(
-            actuals: records.actuals,
-            places: records.places,
-            travel: records.travel,
-            cancellationCheck: cancellationCheck
-        )
-        let uniqueReadings = try uniqueReadings(
-            readings,
-            cancellationCheck: cancellationCheck
-        )
-        try cancellationCheck()
-        return Self(
-            preparedDay: dayStart,
-            sourceRevision: sourceRevision,
-            sourceUpdatedAt: source.updatedAt,
-            sourceFingerprint: fingerprint,
-            projectionVersion: TaptionPlanV3Store.projectionVersion,
-            actuals: records.actuals,
-            places: records.places,
-            travel: records.travel,
-            readings: uniqueReadings,
-            isComplete: sensorResult.isComplete
-        )
-    }
-
-    static func incomplete(
-        date: Date,
-        sourceRevision: UInt64,
-        source: TaptionDataSnapshot,
-        calendar: Calendar = .autoupdatingCurrent
-    ) -> Self {
-        Self(
-            preparedDay: calendar.startOfDay(for: date),
-            sourceRevision: sourceRevision,
-            sourceUpdatedAt: source.updatedAt,
-            sourceFingerprint: nil,
-            projectionVersion: TaptionPlanV3Store.projectionVersion,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: false
-        )
-    }
-
-    static func rebase(
-        from previous: Self,
-        date: Date,
-        sourceRevision: UInt64,
-        source: TaptionDataSnapshot,
-        calendar: Calendar = .autoupdatingCurrent,
-        cancellationCheck: () throws -> Void
-    ) rethrows -> Self {
-        let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let records = try sourceRecords(
-            in: TimeSpan(start: dayStart, end: dayEnd),
-            source: source,
-            dayEnd: dayEnd,
-            cancellationCheck: cancellationCheck
-        )
-        try cancellationCheck()
-        var readings: [SensorReading] = []
-        readings.reserveCapacity(previous.readings.count)
-        for (index, reading) in previous.readings.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            guard reading.timestamp >= dayStart,
-                  reading.timestamp < dayEnd else { continue }
-            readings.append(reading)
-        }
-        let fingerprint = try sourceFingerprint(
-            actuals: records.actuals,
-            places: records.places,
-            travel: records.travel,
-            cancellationCheck: cancellationCheck
-        )
-        try cancellationCheck()
-        return Self(
-            preparedDay: dayStart,
-            sourceRevision: sourceRevision,
-            sourceUpdatedAt: source.updatedAt,
-            sourceFingerprint: fingerprint,
-            projectionVersion: TaptionPlanV3Store.projectionVersion,
-            actuals: records.actuals,
-            places: records.places,
-            travel: records.travel,
-            readings: readings,
-            isComplete: previous.isComplete
-        )
-    }
-
-    static func sourceFingerprint(
-        date: Date,
-        source: TaptionDataSnapshot,
-        calendar: Calendar = .autoupdatingCurrent
-    ) -> String? {
-        sourceFingerprint(
-            date: date,
-            source: source,
-            calendar: calendar,
-            cancellationCheck: {}
-        )
-    }
-
-    static func sourceFingerprint(
-        date: Date,
-        source: TaptionDataSnapshot,
-        calendar: Calendar = .autoupdatingCurrent,
-        cancellationCheck: () throws -> Void
-    ) rethrows -> String? {
-        try cancellationCheck()
-        let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let records = try sourceRecords(
-            in: TimeSpan(start: dayStart, end: dayEnd),
-            source: source,
-            dayEnd: dayEnd,
-            cancellationCheck: cancellationCheck
-        )
-        return try sourceFingerprint(
-            actuals: records.actuals,
-            places: records.places,
-            travel: records.travel,
-            cancellationCheck: cancellationCheck
-        )
-    }
-
-    private static func sourceRecords(
-        in day: TimeSpan,
-        source: TaptionDataSnapshot,
-        dayEnd: Date
-    ) -> (
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment]
-    ) {
-        (
-            source.actuals.filter {
-                TimeSpan(
-                    start: $0.startedAt,
-                    end: max($0.startedAt, $0.endedAt ?? dayEnd)
-                ).intersection(with: day) != nil
-            },
-            source.places.filter { $0.span.intersection(with: day) != nil },
-            source.travel.filter { $0.span.intersection(with: day) != nil }
-        )
-    }
-
-    private static func sourceRecords(
-        in day: TimeSpan,
-        source: TaptionDataSnapshot,
-        dayEnd: Date,
-        cancellationCheck: () throws -> Void
-    ) rethrows -> (
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment]
-    ) {
-        try cancellationCheck()
-        var actuals: [ActualRecord] = []
-        actuals.reserveCapacity(source.actuals.count)
-        for (index, actual) in source.actuals.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            guard TimeSpan(
-                start: actual.startedAt,
-                end: max(actual.startedAt, actual.endedAt ?? dayEnd)
-            ).intersection(with: day) != nil else { continue }
-            actuals.append(actual)
-        }
-
-        try cancellationCheck()
-        var places: [PlaceStay] = []
-        places.reserveCapacity(source.places.count)
-        for (index, place) in source.places.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            guard place.span.intersection(with: day) != nil else { continue }
-            places.append(place)
-        }
-
-        try cancellationCheck()
-        var travel: [TravelSegment] = []
-        travel.reserveCapacity(source.travel.count)
-        for (index, segment) in source.travel.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            guard segment.span.intersection(with: day) != nil else { continue }
-            travel.append(segment)
-        }
-        return (actuals, places, travel)
-    }
-
-    private static func sourceFingerprint(
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment]
-    ) -> String? {
-        try? TaptionPlanCanonicalStorage.encode(
-            SourceFingerprintPayload(
-                actuals: actuals.sorted { $0.id.uuidString < $1.id.uuidString },
-                places: places.sorted { $0.id.uuidString < $1.id.uuidString },
-                travel: travel.sorted { $0.id.uuidString < $1.id.uuidString }
-            ),
-            compress: false
-        ).checksum
-    }
-
-    private static func sourceFingerprint(
-        actuals: [ActualRecord],
-        places: [PlaceStay],
-        travel: [TravelSegment],
-        cancellationCheck: () throws -> Void
-    ) rethrows -> String? {
-        let orderedActuals = try RouteTimelineCancellableSort.sorted(
-            actuals,
-            by: { $0.id.uuidString < $1.id.uuidString },
-            cancellationCheck: cancellationCheck
-        )
-        let orderedPlaces = try RouteTimelineCancellableSort.sorted(
-            places,
-            by: { $0.id.uuidString < $1.id.uuidString },
-            cancellationCheck: cancellationCheck
-        )
-        let orderedTravel = try RouteTimelineCancellableSort.sorted(
-            travel,
-            by: { $0.id.uuidString < $1.id.uuidString },
-            cancellationCheck: cancellationCheck
-        )
-        try cancellationCheck()
-        let fingerprint = try? TaptionPlanCanonicalStorage.encode(
-            SourceFingerprintPayload(
-                actuals: orderedActuals,
-                places: orderedPlaces,
-                travel: orderedTravel
-            ),
-            compress: false
-        ).checksum
-        try cancellationCheck()
-        return fingerprint
-    }
-
-    private static func uniqueReadings(
-        _ readings: [SensorReading]
-    ) -> [SensorReading] {
-        uniqueReadings(readings, cancellationCheck: {})
-    }
-
-    private static func uniqueReadings(
-        _ readings: [SensorReading],
-        cancellationCheck: () throws -> Void
-    ) rethrows -> [SensorReading] {
-        try cancellationCheck()
-        var byID: [UUID: SensorReading] = [:]
-        byID.reserveCapacity(readings.count)
-        for (index, reading) in readings.enumerated() {
-            if index.isMultiple(of: 256) { try cancellationCheck() }
-            byID[reading.id] = reading
-        }
-        try cancellationCheck()
-        return try RouteTimelineCancellableSort.sorted(
-            Array(byID.values),
-            by: {
-            if $0.timestamp != $1.timestamp {
-                return $0.timestamp < $1.timestamp
-            }
-            if $0.sequence != $1.sequence {
-                return ($0.sequence ?? .max) < ($1.sequence ?? .max)
-            }
-            return $0.id.uuidString < $1.id.uuidString
-            },
-            cancellationCheck: cancellationCheck
-        )
-    }
-}
 
 enum MapCurrentLocationAnchorPolicy {
     static let maximumAge: TimeInterval = 5 * 60
@@ -1455,8 +1017,9 @@ final class AppModel {
     @ObservationIgnored private(set) var dayProjectionRevision: UInt64 = 0
     private(set) var rawDayRevisionSignal: UInt64 = 0
     @ObservationIgnored private var rawDayRevisions: [Date: UInt64] = [:]
-    @ObservationIgnored private var daySourceFingerprintCache:
-        [Date: (revision: UInt64, value: String?)] = [:]
+    @ObservationIgnored private var daySourceFingerprintCache = TaptionBoundedCache<
+        Date, (revision: UInt64, value: String?)
+    >(capacity: 42)
     @ObservationIgnored private(set) var timelineRevision: UInt64 = 0
     private(set) var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored private var timestampOnlySnapshotAssignment = false
@@ -2127,6 +1690,43 @@ final class AppModel {
 
     #if DEBUG
     @ObservationIgnored private var hasRunCloudBackupVerification = false
+    @ObservationIgnored private var hasRunCurrentIslandVerification = false
+
+    private func recordRequestedCurrentIslandVerification() {
+#if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("--verify-current-island"),
+              !hasRunCurrentIslandVerification, !isAppLocked,
+              let reading = latestSensorReading else { return }
+        let projection = currentLiveActivityProjection()
+        let published = Activity<SensorCollectionActivityAttributes>.activities.first {
+            $0.attributes.sessionID == sensorCollectionSessionID
+        }?.content.state
+        let action = TaptionLiveActivityCatPolicy.action(categoryID: projection.categoryID, title: projection.title)
+        let bitmap = TaptionCatAtlasBitmap.image(style: settings.catStyle.rawValue, action: action, frame: published?.currentActivityFrame ?? 0)
+        let report: [String: Any] = [
+            "projectionCategoryID": projection.categoryID,
+            "publishedCategoryID": published?.currentActivityCategoryID ?? "none",
+            "publishedMatchesProjection": published?.currentActivityCategoryID == projection.categoryID,
+            "latestMotion": reading.motion.rawValue,
+            "motionConfidence": reading.motionConfidence.rawValue,
+            "sampleAgeSeconds": Date.now.timeIntervalSince(reading.timestamp),
+            "appBitmapAvailable": bitmap != nil,
+            "bitmapWidth": bitmap?.size.width ?? 0,
+            "bitmapHeight": bitmap?.size.height ?? 0,
+            "frame": published?.currentActivityFrame ?? 0,
+        ]
+        do {
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TaptionPlanIslandVerification", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let data = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: directory.appendingPathComponent("DYN1001B01-\(UUID().uuidString).json"), options: .atomic)
+            hasRunCurrentIslandVerification = true
+        } catch {
+            Self.integrationLogger.error("Island verification metadata write failed")
+        }
+#endif
+    }
+
     @ObservationIgnored private var hasRunSubwayRouteVerification = false
 
     func runRequestedSubwayRouteVerification() async {
@@ -4859,7 +4459,8 @@ final class AppModel {
         let projection = currentLiveActivityProjection()
         await liveActivityController.updateCompactActivity(
             title: projection.title,
-            categoryID: projection.categoryID
+            categoryID: projection.categoryID,
+            animationFrame: sensorSaveToken % 6
         )
         guard sensorCollectionSessionState == .collecting,
               let sessionID = sensorCollectionSessionID,
@@ -4890,8 +4491,12 @@ final class AppModel {
             heartRateUpdatedAt: latestHeartRateUpdatedAt,
             currentActivityTitle: projection.title,
             currentActivityCategoryID: projection.categoryID,
-            currentActivitySystemImage: projection.systemImage
+            currentActivitySystemImage: projection.systemImage,
+            currentActivityCatStyle: settings.catStyle.rawValue
         )
+        #if DEBUG
+        recordRequestedCurrentIslandVerification()
+        #endif
     }
 
     private var sensorCollectionKinds: [String] {
@@ -7974,7 +7579,9 @@ final class AppModel {
            let categoryID = TaptionCurrentActivityPolicy.categoryID(
             actuals: snapshot.actuals,
             plans: snapshot.plans,
-            at: date
+            at: date,
+            latestSavedAt: lastSensorSavedAt,
+            latestReading: latestSensorReading
         ) {
             let systemImage = RecordClassificationCatalog.categories.first {
                 $0.id == categoryID
@@ -11247,10 +10854,12 @@ final class AppModel {
         let source = snapshot
         let sourceRevision = dayProjectionRevision
         if let dayLoadCoordinator {
+            let fingerprint = await cachedDayFingerprint(for: date, source: source, revision: sourceRevision)
             let loaded = await dayLoadCoordinator.load(
                 day: date,
                 source: source,
                 sourceRevision: sourceRevision,
+                sourceFingerprint: fingerprint,
                 sensorLoader: { [weak self] day in
                     guard let self else {
                         return SensorReadingsLoadResult(
@@ -11341,19 +10950,35 @@ final class AppModel {
 
     func daySourceFingerprint(for date: Date) -> String? {
         let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
-        if let cached = daySourceFingerprintCache[day],
+        if let cached = daySourceFingerprintCache.value(for: day),
            cached.revision == dayProjectionRevision {
             return cached.value
-        }
-        if daySourceFingerprintCache[day] == nil,
-           daySourceFingerprintCache.count >= 42 {
-            daySourceFingerprintCache.removeAll(keepingCapacity: true)
         }
         let value = PlanDayDataSnapshot.sourceFingerprint(
             date: day,
             source: snapshot
         )
-        daySourceFingerprintCache[day] = (dayProjectionRevision, value)
+        daySourceFingerprintCache.insert((dayProjectionRevision, value), for: day)
+        return value
+    }
+
+    private func cachedDayFingerprint(
+        for date: Date, source: TaptionDataSnapshot, revision: UInt64
+    ) async -> String? {
+        let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        if let cached = daySourceFingerprintCache.value(for: day), cached.revision == revision {
+            return cached.value
+        }
+        let worker = Task.detached(priority: .userInitiated) {
+            try PlanDayDataSnapshot.sourceFingerprint(date: day, source: source,
+                cancellationCheck: { try Task.checkCancellation() })
+        }
+        let value = await withTaskCancellationHandler(operation: {
+            try? await worker.value
+        }, onCancel: { worker.cancel() })
+        if !Task.isCancelled, revision == dayProjectionRevision {
+            daySourceFingerprintCache.insert((revision, value), for: day)
+        }
         return value
     }
 
@@ -14060,6 +13685,7 @@ final class AppModel {
             }
             schedulePostSaveRefresh()
             publishWidgetPayload()
+            await reconcileSensorCollectionLiveActivity(isForeground: isSceneActive)
             if permissionState(for: .notifications).isGranted,
                snapshot.settings.notificationsEnabled {
                 do {

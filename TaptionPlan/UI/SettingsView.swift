@@ -1418,12 +1418,12 @@ struct SettingsView: View {
             iconBackground: Color.tpSurfaceCream,
             iconColor: Color.tpReferenceRose,
             title: "지도 스타일",
-            subtitle: "WBS 지도 · Apple 지도만 사용",
-            value: "WBS · Apple",
+            subtitle: "RPG 지도 · 다른 스타일은 추후 제공",
+            value: "RPG",
             valueIsOn: false
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("지도 스타일, WBS 지도, Apple만 사용")
+        .accessibilityLabel("지도 스타일, RPG 지도만 사용")
     }
 
     private func settingsToggleRow(

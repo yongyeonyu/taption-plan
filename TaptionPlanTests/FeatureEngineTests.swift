@@ -293,6 +293,84 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [], plans: [], at: now))
     }
 
+    func testCurrentIslandUsesConfirmedAndSharedCategoryWithTimeBoundaries() {
+        let now = Date()
+        let automatic = ActualRecord(planID: nil, title: "걷기", categoryID: "activity", startedAt: now.addingTimeInterval(-60), source: .motion)
+        let sleep = ActualRecord(planID: nil, title: "수면", categoryID: "sleep", startedAt: now.addingTimeInterval(-120), endedAt: now.addingTimeInterval(60), source: .manual)
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [automatic], plans: [], at: now), "movement")
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [sleep, automatic], plans: [], at: now), "sleep")
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [automatic, sleep], plans: [], at: now), "sleep")
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [sleep, automatic], plans: [], at: now.addingTimeInterval(60)), "movement")
+        XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [sleep], plans: [], at: now.addingTimeInterval(-121)))
+    }
+
+    func testIslandClosedSensorProjectionUsesFreshSavedSampleAndExpires() {
+        let now = Date()
+        let sampleDate = now.addingTimeInterval(-5)
+        let walking = ActualRecord(planID: nil, title: "걷기", categoryID: "activity", startedAt: now.addingTimeInterval(-60), endedAt: sampleDate, source: .motion)
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [walking], plans: [], at: now, latestSavedAt: sampleDate), "movement")
+        let older = ActualRecord(planID: nil, title: "업무", categoryID: "work", startedAt: now.addingTimeInterval(-600), source: .motion)
+        XCTAssertEqual(TaptionCurrentActivityPolicy.categoryID(actuals: [older, walking], plans: [], at: now, latestSavedAt: sampleDate), "movement")
+        XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [walking], plans: [], at: sampleDate.addingTimeInterval(91), latestSavedAt: sampleDate))
+        let manual = ActualRecord(planID: nil, title: "수면", categoryID: "sleep", startedAt: now.addingTimeInterval(-60), endedAt: sampleDate, source: .manual)
+        XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [manual], plans: [], at: now, latestSavedAt: sampleDate))
+        XCTAssertNil(TaptionCurrentActivityPolicy.categoryID(actuals: [walking], plans: [], at: now, latestSavedAt: now.addingTimeInterval(1)))
+    }
+
+    func testIslandStopsAutomaticMovementOnlyWithFreshPersistedStrongStationaryEvidence() {
+        let now = Date()
+        let moving = ActualRecord(planID: nil, title: "걷기", categoryID: "movement", startedAt: now.addingTimeInterval(-600), source: .motion)
+        var reading = SensorReading(timestamp: now.addingTimeInterval(-1), speedMetersPerSecond: 0, motion: .stationary, motionConfidence: .high)
+        let savedAt = reading.timestamp
+        func resolve(_ record: ActualRecord, _ sample: SensorReading) -> String? {
+            TaptionCurrentActivityPolicy.categoryID(actuals: [record], plans: [], at: now, latestSavedAt: savedAt, latestReading: sample)
+        }
+        XCTAssertEqual(resolve(moving, reading), "activity")
+        var confirmed = moving
+        confirmed.manuallyCorrected = true
+        XCTAssertEqual(resolve(confirmed, reading), "movement")
+        reading.speedMetersPerSecond = 8
+        XCTAssertEqual(resolve(moving, reading), "movement")
+        reading.speedMetersPerSecond = 0
+        reading.motionConfidence = .low
+        XCTAssertEqual(resolve(moving, reading), "movement")
+        reading.motionConfidence = .high
+        reading.timestamp = now.addingTimeInterval(-100)
+        XCTAssertEqual(resolve(moving, reading), "movement")
+        reading.timestamp = now
+        XCTAssertEqual(resolve(moving, reading), "movement")
+    }
+
+    @MainActor
+    func testLiveActivityBitmapIsSmallNonemptyAndUsesDifferentMotionFrames() throws {
+        let walking = try XCTUnwrap(TaptionCatAtlasBitmap.image(style: "white", action: .walking, frame: 0))
+        let next = try XCTUnwrap(TaptionCatAtlasBitmap.image(style: "white", action: .walking, frame: 1))
+        let sleep = try XCTUnwrap(TaptionCatAtlasBitmap.image(style: "white", action: .sleeping, frame: 0))
+        XCTAssertEqual(walking.size.width, 52)
+        XCTAssertEqual(walking.size.height, 32)
+        XCTAssertNotEqual(walking.pngData(), next.pngData())
+        XCTAssertNotEqual(walking.pngData(), sleep.pngData())
+        XCTAssertTrue(walking === TaptionCatAtlasBitmap.image(style: "white", action: .walking, frame: 6))
+    }
+
+    func testIslandCatKeepsCurrentSemanticPoseAndExplicitMovementDetails() throws {
+        let expected: [(String, TaptionCatAnimationAction)] = [("sleep", .sleeping), ("eating", .eating), ("movement", .walking), ("movement.running", .running), ("work", .kneading), ("study", .kneading), ("unconfirmed", .startled)]
+        for (category, action) in expected {
+            XCTAssertEqual(TaptionLiveActivityCatPolicy.action(categoryID: category, title: ""), action)
+            let pose = TaptionCatAnimationEngine.pose(from: action.rawValue, progress: 0.5, phase: 0, facesLeft: false, tailSwing: 0, headTiltDegrees: 0)
+            XCTAssertEqual(pose.action, action)
+        }
+        var state = SensorCollectionActivityAttributes.ContentState(startedAt: .now, lastSavedAt: nil, collectionKinds: [], isCollecting: true)
+        state.currentActivityCatStyle = "white"
+        state.currentActivityFrame = 5
+        XCTAssertEqual(try JSONDecoder().decode(type(of: state), from: JSONEncoder().encode(state)).currentActivityCatStyle, "white")
+        XCTAssertEqual(try JSONDecoder().decode(type(of: state), from: JSONEncoder().encode(state)).currentActivityFrame, 5)
+        var oldPayload = try JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as! [String: Any]
+        oldPayload.removeValue(forKey: "currentActivityFrame")
+        oldPayload.removeValue(forKey: "currentActivityCatStyle")
+        XCTAssertNil(try JSONDecoder().decode(type(of: state), from: JSONSerialization.data(withJSONObject: oldPayload)).currentActivityFrame)
+    }
+
     func testLiveActivityContentStateOptionalFieldsDecodeAndRoundTrip() throws {
         let now = Date()
         let sensor = SensorCollectionActivityAttributes.ContentState(startedAt: now, lastSavedAt: nil, collectionKinds: ["location"], isCollecting: true, currentActivityTitle: "이동", currentActivityCategoryID: "movement")

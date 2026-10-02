@@ -1,5 +1,53 @@
 # 남은 요청
 
+## REL1002A02 · main 커밋·푸시·내부 TestFlight 빌드업 [진행]
+- 원인: 현재 main의 Island/지도/잠금 화면/DB·터치 최적화 변경이 미커밋이며 기존 TestFlight166에는 최신 변경 일부가 없다.
+- 해결: 기존 요청과 소스·검증 근거를 대조해 보존하고 main 커밋·푸시, ASC 최신 번호 조회 후 다음 빌드로 archive·내부 업로드한다. 배포 기록까지 커밋·푸시하여 워크트리를 clean으로 만든다.
+- 검증: 현재 코드와 기존 유효한 테스트/빌드 근거 일치, diff/import 경계, 최종 앱·Widget·Watch·Watch Widget 빌드 번호 일치, main/origin/main 일치와 clean. 처리 완료·내부 그룹 연결·그룹 화면의 빌드/테스터 노출을 확인한다. 실제 기능 검증 대기는 유지한다.
+
+## LCK1002B01 · 잠금 화면 하단에 현재 활동 화랑이 [실기기 화면 확인 대기]
+- 현재: sensor/plan 잠금 카드에 Island와 동일한 현재 화랑이52×40pt 연결. 기존 회귀3통과·0실패·0건너뜀·위젯 포함 Debug 성공. 실제 잠금 화면은 미검증이며 TestFlight166 미포함(`test.md` LCK1002B01).
+- 원인: 첨부 잠금 화면의 센서 Live Activity 왼쪽 이미지가 회색 사각형으로 보인다. Island와 잠금 화면의 이미지 렌더링 경로를 대조한다.
+- 해결: 현재 활동의 분류·스타일·프레임을 Island와 같은 작은 화랑이 bitmap 뷰에 연결한다. 센서 수집 상태와 최근 저장 표시는 보존한다.
+- 검증: 활동 상태/이미지 회귀, 위젯 포함 iOS Debug 빌드, diff 검사. 실제 잠금 화면의 이미지·활동 전환·잘림은 별도 확인한다.
+
+## OPT1002A01 · 전체 코드 검토·실행/DB/터치 비용 개선 [실기기 성능 확인 대기]
+- 현재: DB 반복 읽기1회·공통 bounded 캐시/입력 라이브러리·일자/지도 정책 파일 분리 구현. Simulator 콜드 p95 41.9→21.4ms. 전체 앱1,472통과/0실패/1건너뜀, 최종 관련268통과·package184통과·Debug/Release 성공. 실기기 체감/배터리/peak memory는 미검증, TestFlight166 미포함(`test.md` OPT1002A01).
+- 원인: 대형 AppModel/지도/시간표와 일자 저장 경로의 반복 계산·조회·고빈도 입력을 검토해야 한다. 기존 수정과 저장 계약을 보존한다.
+- 해결: 전체 소스 구조/의존성/반복 연산 검토 후 근거 있는 병목 개선, 순수 재사용 로직은 기존 Swift Package 라이브러리로 분리한다. 실행시간·메모리·배터리/빌드 비용을 줄이고 외부 유료 서비스는 추가하지 않는다.
+- 검증: 변경 전후 재현 가능한 CPU/조회/입력 측정, 데이터 동등성·generation/취소/종료 입력 회귀, 관련 package/앱 테스트·Debug·import 경계. 실제 기기 체감/배터리는 별도 증거로 판정한다.
+
+## MAP1002D01 · 시작 지도 비율·화랑이 중앙·스타일 제한 [실기기 화면 확인 대기]
+- 현재: 지도 테스트170통과·최종Debug 성공. 시작3000m/중앙·RPG만 활성 구현, 실제 화면 비율은 검증 대기. TestFlight166 미포함(`test.md` MAP1002D01).
+- 원인: 경로 fit과 캐시 카메라 복원이 시작 확대값을 바꾸고 현재 위치 목표는 overlay 보정 위치다.
+- 해결: 시작 카메라3000m·화랑이 좌표 중심, 화면 중앙 목표, RPG 지도만 활성. 저장된 다른 스타일 원본은 보존한다. 첨부 확대비는 지리적 거리 표시가 없어 근사한다.
+- 검증: 시작 카메라 정책·스타일 제한 회귀/Debug/diff, 실제 화면 비율·위치 확인 대기.
+
+## DYN1002C01 · Island 화랑이 확대 [실기기 확인 대기]
+- 현재: compact 폭60% 확대·minimal 확대, 관련 회귀1통과·Debug 성공. 실제 화면 검증 대기이며 TestFlight166에는 미포함.
+- 원인: compact20pt 영역에서52:32 이미지가 축소돼 실제 캐릭터가 작다.
+- 해결: sensor/plan compact32×26pt, minimal26×26pt로 같은 비율 유지 확대.
+- 검증: 관련 테스트·Debug 빌드 및 diff 검사, 실제 기기 가독성·잘림은 확인 대기.
+
+## TFL1002A01 · Island 수정 내부 TestFlight 빌드업 [그룹 화면 로그인 대기]
+- 현재:1.0(166) 업로드·VALID·IN_BETA_TESTING·내부 그룹 연결·테스터1명 API 확인. 테스트645통과/1건너뜀·Release/Debug 성공·네 번들166. 실제 그룹 화면은 웹 로그인 대기(`test.md` TFL1002A01).
+- 원인: DYN1001A01/B01 수정은 직접 Debug 설치본에만 있고 기존 TestFlight165에는 없다.
+- 발견: Release에서 Debug 전용 Island 진단 호출의 조건부 컴파일 누락. 호출도 DEBUG 범위로 제한하며 재검증한다.
+- 해결: ASC 다음 번호 조회 후 현재 수정본 Release archive·내부 업로드·그룹 연결한다.
+- 검증: 관련 테스트/Debug 근거 재사용, 네 번들 번호·Release 산출물 확인, 처리 완료와 내부 그룹 화면의 빌드·테스터 노출. 실기기 기능 대기는 유지한다.
+
+## DYN1001B01 · 이동 잔류 상태·Island 회색 아이콘 수정 [실기기 화면 확인 대기]
+- 현재: 관련645통과/0실패/1건너뜀·최종Debug 성공. iPhone18 설치·실행 및 projection/published 미확인 상태 일치·앱 bitmap 생성 확인. 실제 이동 종료 전환/Island 아이콘 화면은 미검증(`test.md` DYN1001B01).
+- 원인: 실기기 스크린샷에서 이동 종료 후 이동이 남고 atlas 아이콘이 회색 사각형으로 표시됐다. 이전 수정은 실기기 표시 기준을 충족하지 못했다.
+- 해결: 저장된 최신 고신뢰 정지 관측과 자동 이동 projection 충돌을 처리하고 Island에는 atlas 전체 클리핑 대신 작은 단일 프레임 bitmap을 전달한다.
+- 검증: 사용자 확정 보호/정지·속도·시각 신뢰 경계, 실제 bitmap 생성·프레임 차이, 관련 테스트/Debug 및 iPhone18 설치·진단. 실제 화면은 별도 확인한다.
+
+## DYN1001A01 · 현재 활동과 Dynamic Island 화랑이 일치 [실기기 확인 대기]
+- 현재: 공통 분류/사용자 확정 우선·최근 저장 샘플90초 판정·변경 시 재동기화·현재 화랑이 atlas/프레임 연결 완료. 관련643통과/0실패/1건너뜀, 최종Debug 성공. iPhone18 수정 Debug1.0(165) 설치·실행 완료(INS1001B01). 실제 Island 화면/동작은 미검증. 무한 애니메이션은 iOS 제한이 있으므로 센서 갱신 프레임으로 구현했다(`test.md` DYN1001A01).
+- 원인: Live Activity가 자동 기록의 원시 category만 사용하고 사용자 확정/공통 분류를 제외한다. UI 갱신이 센서 저장 이벤트에 편중되며 compact/minimal/expanded가 다른 상태와 사람 그림을 사용한다.
+- 해결: 공통 활동 분류·사용자 확정 우선, 현재 상태 변경 후 Live Activity 재동기화, 모든 Island 영역에 같은 상태의 화랑이 고양이 동작을 사용한다.
+- 검증: 수동 수면/센서 walking/겹침/시간 경계 회귀, 현재 상태별 고양이 pose 매핑, 관련 테스트와 Debug. 실제 Island 표시/애니메이션은 iOS 스케줄링과 실기기 로그로 별도 판정한다.
+
 ## STR1001A01 · 저장·백업 구조 잔여 구현 실행 [진행]
 - 현재: 보호 file/SQLite staging·durable receipt/journal·snapshot 연결 legacy migration·Development CAS body 재병합을 구현했다. 앱 xcresult1462통과/1건너뜀(XCTest1420+Swift Testing42), Core103통과, 마지막 관련869통과/1건너뜀, Debug 성공. iPhone11 설치·실행 완료이나 백업 PIN 미등록으로 읽기 검증 대기(`test.md` STR1001A01). raw-only legacy·legacy incremental GCM·실제 peak memory·서버 경합/실기기 복원·legacy Watch fallback 복구는 미완료다.
 - 원인: V4 codec은 페이지를 사용하지만 복원 accumulator와 앱 commit은 전체 배열·메모리 rollback에 의존한다. 과거 월 migration journal, end-to-end streaming, 원격 CAS 재봉인과 offline 참조 보호의 완료 근거가 없다.

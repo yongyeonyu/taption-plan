@@ -556,14 +556,24 @@ struct MapHomeVectorRoute {
     let colorHex: String
     let opacity: Double
 
-    var signature: String {
-        return [
-            id,
-            String(geometrySignature),
-            colorHex,
-            String(opacity),
-        ].joined(separator: "|")
+    var contentKey: MapHomeVectorRouteContentKey {
+        MapHomeVectorRouteContentKey(id: id, geometrySignature: geometrySignature,
+            colorHex: colorHex, opacity: opacity)
     }
+}
+
+struct MapHomeVectorRouteContentKey: Equatable {
+    let id: String
+    let geometrySignature: Int
+    let colorHex: String
+    let opacity: Double
+}
+
+struct MapHomeVectorContentKey: Equatable {
+    let historical: [MapHomeVectorRouteContentKey]
+    let active: MapHomeVectorRouteContentKey?
+    let expected: [MapHomeVectorRouteContentKey]
+    let subway: [MapHomeVectorRouteContentKey]
 }
 
 enum MapHomeRouteGeometrySignature {
@@ -700,7 +710,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private weak var mapView: MLNMapView?
         private var styleIsLoaded = false
         private var lastCameraRevision = Int.min
-        private var lastContentSignature = ""
+        private var lastContentSignature: MapHomeVectorContentKey?
         private var lastProjectedMarkers: [MapHomeVectorMarker] = []
         private var lastProjectionBounds = CGRect.zero
         private var lastHeading: CLLocationDirection?
@@ -755,12 +765,12 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         func updateContent(in mapView: MLNMapView) {
             guard styleIsLoaded else { return }
-            let signature = (
-                parent.historicalRoutes.map(\.signature)
-                + [parent.activeRoute?.signature ?? "-"]
-                + parent.expectedRoutes.map(\.signature)
-                + parent.subwayRoutes.map(\.signature)
-            ).joined(separator: "#")
+            let signature = MapHomeVectorContentKey(
+                historical: parent.historicalRoutes.map(\.contentKey),
+                active: parent.activeRoute?.contentKey,
+                expected: parent.expectedRoutes.map(\.contentKey),
+                subway: parent.subwayRoutes.map(\.contentKey)
+            )
             guard signature != lastContentSignature else {
                 if lastProjectedMarkers != parent.markers || lastProjectionBounds != mapView.bounds {
                     publishViewport(from: mapView, force: true)
@@ -869,7 +879,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
             styleIsLoaded = true
             installRouteLayers(in: style)
-            lastContentSignature = ""
+            lastContentSignature = nil
             updateContent(in: mapView)
             applyCameraCommandIfNeeded(to: mapView)
             attachPanGestures(in: mapView)

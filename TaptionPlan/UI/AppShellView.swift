@@ -138,6 +138,13 @@ struct AppShellView: View {
         .onChange(of: model.sensorCollectionSessionID) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
+        .onChange(of: model.snapshot.updatedAt) { _, _ in
+            Task { await reconcileSensorLiveActivity() }
+        }
+        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+            guard scenePhase == .active else { return }
+            Task { await reconcileSensorLiveActivity() }
+        }
         .onChange(of: model.lastSensorSavedAt) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }

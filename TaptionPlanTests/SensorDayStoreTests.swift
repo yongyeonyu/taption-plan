@@ -4744,6 +4744,55 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(loadCount, 2)
     }
 
+    func testDaySnapshotOrderedFastPathAndUnorderedDuplicatesPreserveLastValue() {
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let readings = (0..<1_440).map { makeReading(date.addingTimeInterval(Double($0))) }
+        let ordered = PlanDayDataSnapshot.make(date: date, sourceRevision: 1, source: .empty,
+            sensorResult: SensorReadingsLoadResult(readings: readings, isComplete: true))
+        XCTAssertEqual(ordered.readings, readings)
+        var replacement = readings[0]
+        replacement.motionConfidence = .low
+        var shuffled = Array(readings.reversed())
+        shuffled.append(replacement)
+        let result = PlanDayDataSnapshot.make(date: date, sourceRevision: 1, source: .empty,
+            sensorResult: SensorReadingsLoadResult(readings: shuffled, isComplete: true))
+        XCTAssertEqual(result.readings.count, readings.count)
+        XCTAssertEqual(result.readings[0], replacement)
+        XCTAssertEqual(Array(result.readings.dropFirst()), Array(readings.dropFirst()))
+    }
+
+    @MainActor
+    func testReprojectionUsesOneMaterializedReadAndPreservesRaw() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("single-day-read-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try PlanDayDatabase(directory: directory)
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        _ = try await database.migrateLegacyIfNeeded(source: .empty, sourceRevision: 1,
+            readings: [], watchSummaries: [], rawEnvelopes: [])
+        let readings = (0..<1_440).map { makeReading(date.addingTimeInterval(Double($0))) }
+        try await database.save(PlanDayDataSnapshot.make(date: date, sourceRevision: 1,
+            source: .empty, sensorResult: SensorReadingsLoadResult(readings: readings, isComplete: true)))
+        var source = TaptionDataSnapshot.empty
+        source.actuals = [ActualRecord(planID: nil, title: "확정 활동", categoryID: "work",
+            startedAt: date, endedAt: date.addingTimeInterval(60), source: .manual)]
+        let before = await database.materializedLoadCount
+        let coordinator = PlanDayLoadCoordinator(database: database)
+        var sensorLoads = 0
+        let result = await coordinator.load(day: date, source: source, sourceRevision: 2,
+            sensorLoader: { _ in
+                sensorLoads += 1
+                return SensorReadingsLoadResult(readings: [], isComplete: false)
+            })
+        let count = await database.materializedLoadCount - before
+        XCTAssertEqual(count, 1)
+        XCTAssertEqual(sensorLoads, 0)
+        XCTAssertEqual(result.readings, readings)
+        XCTAssertEqual(result.actuals, source.actuals)
+        XCTAssertTrue(result.isComplete)
+        print("REPROJECT_MATERIALIZED_READS=\(count)")
+    }
+
     @MainActor
     func testPlanDayLoadCoordinatorReprojectsPersistedRawWhenSourceChanges() async throws {
         let directory = FileManager.default.temporaryDirectory

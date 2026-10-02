@@ -1,5 +1,74 @@
 # 검증 기록
 
+## REL1002A02 · main 반영·내부 TestFlight167 준비 (2026-10-02)
+
+- 시작 main9c525b2, fetch 후 origin/main과 일치했다. 미커밋 변경29개 파일은 DYN1001A01/B01·DYN1002C01·MAP1002D01·OPT1002A01·LCK1002B01 및 이전166 배포 기록에 연결되어 보존한다. 삭제/초기화/새 브랜치를 수행하지 않는다.
+- ASC 최신 목록의 최고166 VALID를 읽고167을 선택했다(`build/validation/REL1002A02/builds-before.json`). `CURRENT_PROJECT_VERSION`8개 설정과 앱·Widget·Watch·Watch Widget의 원본 Info.plist4개를167로 맞췄다. 사용자 요청에 따라 main 커밋·push와 내부 배포를 진행한다.
+- 기존 유효한 전체 앱1,472통과/0실패/1건너뜀, 최종 관련268통과, package184통과, 화랑이 회귀3통과를 재사용했다. 시작 시 OPT runtime10개 및 LCK3개 파일의 SHA256은 검증 후 같았다. staged diff 검사에서 새 파일2개의 끝 빈 줄을 발견해 정리했으며 내용 동일성과 전후 hash를 `whitespace-adjustments.json`에 기록했다. 새167 최종 iOS Debug BUILD SUCCEEDED(`debug-final.log`) 및 산출물 네 번들1.0(167) 확인(`debug-bundles.json`). import 경계·staged diff 검사 성공. Release 기준 소스/설정119개 파일 hash를 저장했다(`source-hashes.json`).
+- archive/업로드/처리/그룹 화면은 진행 중이며 아직 완료로 판정하지 않는다. 실제 기능·실기기 성능 검증 대기는 별도다. App Store Connect 웹 로그인 요청 후 독립적인 커밋/빌드 작업을 계속한다.
+
+## LCK1002B01 · 잠금 화면 하단 현재 활동 화랑이 (2026-10-02)
+
+- 첨부의 센서 카드 왼쪽은 `SensorCollectionLockScreenView`에서 고정 `SensorCollectionAppIcon`을 사용했다. 이를 Island와 같은 `TaptionLiveActivityCat`으로 바꿔 현재 활동 분류·스타일·프레임을 전달하고52×40pt 영역에서 원본 비율을 유지한다. 앱 아이콘의 회색 표시 자체는 기기 로그로 확정하지 않았으며 해당 고정 이미지 경로를 대체했다.
+- 계획 Live Activity 잠금 카드도 이전 사람 그림 대신 같은 화랑이 뷰와 현재 활동명으로 연결했다. 센서 카드의 수집 문구·센서 종류·최근 저장, 계획 카드의 계획 제목·시간·종료 기능은 보존했다. VoiceOver에도 현재 활동명을 포함한다. Reduce Motion/화면 어두움에서 정지 프레임을 쓰는 기존 정책을 재사용하며 지속 애니메이션을 새로 요구하지 않는다.
+- 기존 bitmap 생성/프레임 차이·활동별 동작 정책·optional 상태 호환 회귀3개 통과·0실패·0건너뜀(`build/validation/LCK1002B01/activity.xcresult`, `activity-summary.json`). 위젯 포함 iOS Debug/Release BUILD SUCCEEDED(`debug.log`, `release.log`). 프레임 크기를 그대로 반복하는 새 테스트는 만들지 않았다.
+- 실제 iPhone 잠금 화면의 화랑이·활동 전환·가독성/잘림은 미검증이며 temp에 남긴다. 설치/업로드를 수행하지 않았고 기존 TestFlight166에는 이 변경이 없다.
+
+## OPT1002A01 · 코드 검토·DB/캐시/터치 비용 개선 (2026-10-02)
+
+- 전체 제품 소스의 구조/import·반복 연산/입력/SQLite 위치 지도를 만들고 일자 DB, AppModel projection, 원본 캐시, 지도·시간축 입력을 직접 검토했다. 검토 범위/판단은 `build/validation/OPT1002A01/code-review.md`, 파일 지도는 `code-inventory-final.json`이다. 모든148k줄의 의미 검토 또는 모든 잠재 결함 해결을 주장하지 않는다.
+- 서로 다른 source에서 동일 materialized 일자를 두 번 읽던 경로를1회로 합쳤다. 검증된 complete raw를 재사용하고 source fingerprint의 동일 revision 캐시·취소 가능한 계산을 사용한다. 원본 정렬의 기존 UUID 순서를 바이트 비교로 보존하며 이미 정렬된 원본은 복제/재정렬을 생략한다. 삭제 generation·원본 digest·취소·강제 갱신·다른 DB 연결 무효화와 중복 ID 마지막 값 보존 회귀를 확인했다.
+- 공통 bounded cache·UUID 순서·60Hz 입력 projection을 기존 TaptionPlanCore 라이브러리에 넣었다. 일자/원본 digest/월 캐시 제한42/64/2를 유지하고 조회 때마다 recency 배열을 훑던 작업을 제거했다. 동일 값/지도 좌표는 다음 입력의 갱신 예산을 소비하지 않으며240Hz 입력의 최종값을 종료 시 즉시 반영한다. 지도 경로 갱신 비교에서 문자열 조합을 값 key로 바꿨다.
+- 일자 값 모델은 `PlanDayDataSnapshot.swift`, 지도 입력/카메라 정책은 `MapHomeInteractionPolicy.swift`로 분리했다. UIKit/MapKit/ActivityKit은 앱에 두고 기존 facade·SQLite 스키마/payload·App Group 경로·백업 읽기 계약을 유지했다. DEVELOPMENT에 탐색 위치와 비용 판단/검증 명령을 추가했다.
+- 같은 Simulator fixture의 일자 콜드 조회 p95: baseline41.897875ms → 최종 관련 회귀21.375583ms, warm0.089292ms →0.060958ms. 전체 테스트 실행 중 콜드19.861625ms도 관측했다. Release host 캐시10만 hit microbenchmark는3.89625ms →1.246042ms. `performance-comparison.json`에 원자료 경로별 값을 보존했다. 단일 실행·fixture 측정이며 실기기 앱 시작/배터리·peak memory 개선 수치로 해석하지 않는다.
+- 전체 앱1,472통과·0실패·1건너뜀(`app-full.xcresult`, `app-summary.json`); StoreKitTest의SKInternalErrorDomain Code3인 구매/복원1건은 통과가 아니다. 최종 파일 분리/추가 회귀를 포함한 관련 앱268통과·0실패·0건너뜀(`app-refactor-complete.xcresult`). Core111·Activity33·Route39·facade1 통과(`core-complete.log`, `activity.log`, `route.log`, `engine.log`). iOS Debug/Release BUILD SUCCEEDED(`debug-complete.log`, `release-complete.log`), import 경계·diff 성공. 최종 검증 시점의 runtime10개 파일 SHA256이 동일함을 확인했다.
+- 최초 Release 캐시 측정은 패키지 제네릭 호출 비용으로 느려져 작은 함수의 특수화를 적용하고 재측정했다. 최초 파일 분리 실행은 PBX 소스 등록 누락으로 실패했으며 등록 후 별도268개 회귀/빌드로 해결했다. 이전 실패 로그는 덮어쓰지 않았다. 기존 SecurityBackupCore의 캡처 경고2곳은 남아 있다.
+- 실기기 체감·배터리/peak memory는 증거가 없어 temp에 검증 대기로 남긴다. 기존 미완료 복원/Watch/계정 항목을 완료 처리하지 않는다. 새 유료 서비스/외부 dependency·설치·commit/push·TestFlight 업로드는 수행하지 않았으며 기존 TestFlight166에는 이 최적화가 없다.
+
+## MAP1002D01 · 시작 카메라·중앙·RPG 스타일 제한 (2026-10-02)
+
+- 시작 화면은 route fit/캐시 카메라 복원에 따라 축척이 달랐다. 최초 화랑이 표시 좌표(없으면 현재 좌표)를 중심으로3000m 카메라를 적용하고, 초기 위치 요청 결과도 같은 경로를 사용한다. 캐시는 파생 경로를 읽되 카메라를 덮어쓰지 않는다. 사용자 드래그/재생 중 자동 초점 변경은 차단한다. 사용자가 직접 선택하는 전체 경로 맞춤 기능은 유지한다.
+- 현재 위치 목표점은 화면 중앙, 지도 엔진 contentInset도0으로 통일했다. RPG 렌더러를 사용하고 메뉴의 다른 스타일은 disabled로 남겼다. 이전 스타일 데이터/enum/에셋을 삭제하거나 저장값을 일괄 변경하지 않았다. 설정 안내도 현재 제공되는 RPG에 맞췄다.
+- TimeScaleTests170통과·0실패·0건너뜀(`build/validation/MAP1002D01/tests.xcresult`, `tests.log`), 마지막 여백 조정 포함 iOS Debug BUILD SUCCEEDED(`debug-centered.log`), diff 검사 성공. 크기 상수를 그대로 반복하는 테스트는 추가하지 않았다.
+- 첨부 이미지에는 거리/카메라 메타데이터가 없으므로3000m는 근사값이다. 실제 시작 화면의 비율·화랑이 중앙과 기기별 잘림은 확인 대기. 새 설치/업로드/commit/push는 수행하지 않았으며 TestFlight166에는 미포함이다.
+
+## DYN1002C01 · Island 화랑이 아이콘 확대 (2026-10-02)
+
+- 첨부 화면에서 고양이 아이콘 실제 표시를 확인했다. 이전 회색 사각형 증상은 이 화면에는 없으나 활동 전환 정확도/전체 상태는 이 이미지로 통과 처리하지 않는다.
+- sensor와 plan의 compact leading을20×20에서32×26pt로 확대했다.52:32 이미지 비율을 유지하므로 표시 이미지 폭은60% 커진다. minimal은18×18에서26×26pt로 확대했다. 큰 atlas 대신 작은 bitmap 경로를 유지하고 clipping/scaleEffect는 추가하지 않았다.
+- 관련 bitmap 회귀1통과·0실패·0건너뜀(`build/validation/DYN1002C01/tests.xcresult`, `tests.log`), iOS Debug BUILD SUCCEEDED(`debug.log`), git diff --check 성공. 프레임 크기 변경을 그대로 반복하는 테스트는 추가하지 않았다.
+- 실제 기기 확대 후 가독성/잘림 확인은 대기다. 이 변경은 이미 업로드된TestFlight166에 포함되지 않는다. 새 업로드/설치/commit/push는 수행하지 않았다.
+
+## TFL1002A01 · Island 수정 내부 TestFlight166 (2026-10-02)
+
+- 시작 main9c525b2, origin/main과 일치. 기존 DYN1001A01/B01 미커밋 변경을 보존하여 포함했다. ASC 최고165 VALID 확인 후166을 선택했다. 코드/문서 변경은 아직 미커밋이며 push하지 않았다.
+- Release 첫 archive에서 Debug 전용 진단 함수의 무조건 호출로 컴파일 실패. 호출을 DEBUG 조건으로 제한한 뒤 archive-final 성공. 회귀 재실행 **645통과·0실패·1건너뜀(총646)**, Debug 성공. 건너뜀과 실제 Island 기능은 통과로 처리하지 않는다.
+- 내부 전용 export 성공. archive/IPA/Debug의 앱·Widget·Watch·Watch Widget 네 번들1.0(166) 확인. source hash 일치와 diff 검사 성공. 증거 `build/validation/TFL1002A01/`.
+- 14:20 KST 업로드 성공. Delivery UUID/빌드ID `8c075df3-a864-4e0b-9df1-ae01e835a537`. 최종 API **VALID·IN_BETA_TESTING**, `TP Taption Plan 내부 테스트` 연결 및166 그룹 목록 포함, 테스터1명을 확인했다(`processing-03.json`, `build-final.json`, `group-attach.json`, `group-builds.json`, `testers-final.json`). 한국어 테스트 안내도 저장했다.
+- 제한: 실제 그룹 화면은 App Store Connect 웹 세션 만료로 로그인 대기다. 업로드/처리/내부 배포는 완료했지만 프로젝트의 전체 배포 완료 기준은 미충족이므로 TFL1002A01을 temp에 유지한다. DYN1001A01/B01 실제 화면 검증 대기도 유지한다.
+
+## DYN1001B01 · 이동 잔류·Island 회색 아이콘 수정 (2026-10-01)
+
+- 사용자 화면에서 이전 DYN1001A01의 이동 잔류·회색 사각형 문제가 확인됐다. 자동 이동을 최신 저장된 고신뢰 정지 관측으로만 활동 상태로 보완한다. 사용자 확정/수동 기록, 빠른 속도, 낮은 신뢰도, 오래된/미저장 관측은 변경하지 않는다. 원본 기록은 수정하지 않는다.
+- Island 이미지 경로를 큰 atlas의 GeometryReader/offset/clip 조합에서 52×32pt 단일 프레임 bitmap으로 변경했다. 프레임 캐시를 제한하고 누락 시 고양이 symbol을 사용한다. 실제 bitmap 생성·걷기 프레임 차이·수면 이미지 차이와 상태 판정 경계를 회귀 테스트했다.
+- 최종 FeatureEngineTests **645통과·0실패·1건너뜀(총646)**, generic iOS Debug **BUILD SUCCEEDED**. StoreKit 건너뜀은 통과가 아니다. 증거 `build/validation/DYN1001B01/tests-final.xcresult`, `tests-final.log`, `debug-final.log`.
+- iPhone18에 Debug1.0(165) 수정본 설치·실행 성공(`install.json`, `launch.json`). 읽기 진단에서 샘플 나이0.035초, motion unknown/high, 앱 projection과 ActivityKit published 모두 unconfirmed로 일치, 앱 bitmap 생성52×32 확인(`iphone18-report.json`). 진단에는 위치/건강/일정 원문을 기록하지 않았다.
+- 제한: 이 기기 진단은 실행 직후 미확인 상태의 전달 일치만 입증한다. 정지 전환 실상황과 위젯 프로세스의 실제 아이콘 렌더링은 사용자 화면 확인 대기다. 기존 TestFlight165에는 미포함이며 commit/push/재배포하지 않았다. DYN1001A01/B01을 완료 처리하지 않는다.
+
+## INS1001B01 · iPhone18 DYN1001A01 수정본 설치 (2026-10-01)
+
+- 현재 DYN1001A01 소스 hash 일치 및 Debug 빌드 성공을 재사용했다. iPhone18 Pro Max `00008160-000E195A1140000A`에 `com.taption.plan` Debug1.0(165) 설치·실행 모두 성공했다. 증거 `build/validation/INS1001B01/install.json`, `install.log`, `launch.json`, `launch.log`.
+- 앱 삭제/기록 초기화/백업 복원은 호출하지 않았다. 이는 DYN 수정이 포함된 직접 개발 설치본이며 기존 TestFlight165와 버전 번호만 같고 코드가 다르다. TestFlight 재배포는 수행하지 않았다. 실제 Island 화면·상태 전환·프레임 움직임은 DYN1001A01의 사용자 확인 대기로 유지한다.
+
+## DYN1001A01 · 현재 활동과 Dynamic Island 화랑이 동기화 (2026-10-01)
+
+- 원인: Live Activity의 별도 policy는 사용자 확정/수동 기록을 제외하고 자동 기록의 원시 category만 읽었다. 종료 시각이 마지막 저장 샘플인 자동 구간은 wall-clock 현재 시각과 비교해 선택하지 못했다. compact/minimal/expanded가 서로 다른 상태를 읽고 사람 그림 또는 항상 걷는 고양이를 사용했다. 센서 저장 이외 상태 변경의 즉시 갱신 경로도 빠져 있었다.
+- 수정: 현재 구간의 사용자 확정을 우선하고 `RecordAnalysisCategoryPolicy`와 같은 분류를 사용한다. 최근90초 이내 저장 샘플이 속한 자동 구간을 현재 후보에 포함해 더 오래된 열린 자동 구간보다 최신 관측을 선택한다. 종료된 수동 구간·미래 샘플·오래된 센서 관측은 이 보완 경로로 연장하지 않는다. raw/사용자 기록 자체를 수정하지 않는다.
+- 갱신: 저장 확정 직후 및 snapshot timestamp 변경, 전경30초 시간 경계 확인 시 동기화한다. UI body에서 전체 actuals 분류를 반복하는 computed category onChange는 사용하지 않는다. 기존 센서/백그라운드 갱신을 유지하며 plan compact와 sensor state에 호환 optional 프레임을 전달한다. 프레임은 실제 센서 저장 갱신에 맞춰 진행하고 수집 없는 새 샘플을 꾸며내지 않는다.
+- 화면: Island compact/minimal/expanded는 같은 현재 category/title의 공유 화랑이 atlas를 사용한다. 수면/식사/이동/운동/취미/업무/수업/미확인 동작, 선택한 고양이 style, 업무 모니터/수업 책 표시를 연결했다. 수업은 grooming 대신 앞발 kneading 프레임+책을 사용한다. 고정52×32 atlas를 영역 크기에 맞춰 축소해20×20 표시가 잘리지 않게 한다. 확대 영역의 별도 항상 걷는 고양이는 제거했다.
+- 검증: FeatureEngineTests 전체 **643통과·0실패·1건너뜀(총644)** (`tests-complete.xcresult`, `test-summary.json`). 추가 회귀3개는 수동 확정과 공통 분류/순서·시간 경계, 새 센서 구간/90초 만료·종료 수동/미래 관측, 동작 매핑·optional 필드 이전 JSON 호환을 확인한다. StoreKit 시뮬레이터 건너뜀은 통과가 아니다. generic iOS Debug **BUILD SUCCEEDED** (`debug-complete.log`), diff 검사 성공, 최종 source hash 보존. 앞선 중간 검증 결과도 덮어쓰지 않았다. 증거는 `build/validation/DYN1001A01/`.
+- 제한: 실제 iPhone Island 화면/위젯 프로세스의 상태 전환·프레임 움직임은 아직 미검증이다. Live Activity는 앱/ActivityKit 상태 갱신을 사용하며 시스템 애니메이션은 최대2초 제한이 있어12fps 무한 TimelineView에 의존하지 않는다. Apple 문서: https://developer.apple.com/documentation/activitykit/displaying-live-data-with-live-activities , https://developer.apple.com/design/human-interface-guidelines/live-activities . 이 수정은 기존 TestFlight165에 미포함이며 새 배포·기기 설치·commit/push는 이번 요청에서 수행하지 않았다.
+
 ## TFL1001B01 · main 후속 내부 TestFlight165 (2026-10-01)
 
 - 시작: main `ba33080`, origin/main과 같고 워크트리 clean. ASC 최고 번호164 VALID를 확인해165를 선택했다. 빌드 설정8곳/네 Info.plist 번호를165로 변경하고 main 커밋 `baf26ea501467120b3c6d080d91fedd7f4c9c69e` 생성·push 후 해당 소스로 archive했다.

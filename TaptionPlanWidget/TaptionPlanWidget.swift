@@ -2289,12 +2289,12 @@ struct SensorCollectionLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    TaptionPlanAppIcon()
+                    TaptionLiveActivityCat(categoryID: context.state.currentActivityCategoryID ?? "unconfirmed", title: context.state.currentActivityTitle ?? "확인 중", style: context.state.currentActivityCatStyle ?? "white", frame: context.state.currentActivityFrame ?? 0)
                         .frame(width: 28, height: 28)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
+                        Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
                             .font(.headline)
                             .foregroundStyle(.white)
                         Text(sensorCollectionKinds(context.state.collectionKinds))
@@ -2316,20 +2316,21 @@ struct SensorCollectionLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                TaptionLiveActivityStickman(
-                    action: TaptionLiveActivityStickmanAction.resolve(
-                        categoryID: context.state.currentActivityCategoryID ?? "unconfirmed",
-                        title: context.state.currentActivityTitle ?? "확인 중"
-                    )
+                TaptionLiveActivityCat(
+                    categoryID: context.state.currentActivityCategoryID ?? "unconfirmed",
+                    title: context.state.currentActivityTitle ?? "확인 중",
+                    style: context.state.currentActivityCatStyle ?? "white",
+                    frame: context.state.currentActivityFrame ?? 0
                 )
-                .frame(width: 20, height: 20)
+                .frame(width: 32, height: 26)
             } compactTrailing: {
                 Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
                     .frame(maxWidth: 72)
             } minimal: {
-                EmptyView()
+                TaptionLiveActivityCat(categoryID: context.state.currentActivityCategoryID ?? "unconfirmed", title: context.state.currentActivityTitle ?? "확인 중", style: context.state.currentActivityCatStyle ?? "white", frame: context.state.currentActivityFrame ?? 0)
+                    .frame(width: 26, height: 26)
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
         }
@@ -2382,8 +2383,13 @@ private struct SensorCollectionLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            TaptionPlanAppIcon()
-                .frame(width: 38, height: 29)
+            TaptionLiveActivityCat(
+                categoryID: context.state.currentActivityCategoryID ?? "unconfirmed",
+                title: context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"),
+                style: context.state.currentActivityCatStyle ?? "white",
+                frame: context.state.currentActivityFrame ?? 0
+            )
+            .frame(width: 52, height: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
@@ -2721,7 +2727,8 @@ private func sensorCollectionAccessibilityLabel(
     case .hidden:
         status = widgetText("센서 수집 종료", "Sensor collection ended")
     }
-    return "\(status), \(kinds)"
+    let activityTitle = state.currentActivityTitle ?? widgetText("확인 중", "Checking")
+    return "\(activityTitle), \(status), \(kinds)"
 }
 
 private struct SensorCollectionSavedAtView: View {
@@ -2763,6 +2770,40 @@ private func sensorCollectionKinds(_ kinds: [String]) -> String {
 
 private func widgetText(_ korean: String, _ english: String) -> String {
     AppLanguagePreference.text(korean: korean, english: english)
+}
+
+private struct TaptionLiveActivityCat: View {
+    let categoryID: String
+    let title: String
+    var style: String = "white"
+    var frame: Int = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isLuminanceReduced) private var dimmed
+
+    var body: some View {
+        let action = TaptionLiveActivityCatPolicy.action(categoryID: categoryID, title: title)
+        Group {
+            if let bitmap = TaptionCatAtlasBitmap.image(style: style, action: action, frame: reduceMotion || dimmed ? 0 : frame) {
+                Image(uiImage: bitmap)
+                    .renderingMode(.original)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: "cat.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(.white)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if categoryID == "work" || categoryID == "study" {
+                Image(systemName: categoryID == "work" ? "desktopcomputer" : "book.closed.fill")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .accessibilityLabel("화랑이 \(title)")
+    }
 }
 
 private struct TaptionLiveActivityStickman: View {
@@ -3558,23 +3599,21 @@ struct TaptionPlanLiveActivity: Widget {
             DynamicIsland {
             DynamicIslandExpandedRegion(.leading) {
                 VStack(alignment: .leading, spacing: 4) {
-                    TaptionLiveActivityStickman(
-                        action: TaptionLiveActivityStickmanAction.resolve(
-                            categoryID: context.state.majorCategoryID,
-                            title: context.state.majorCategoryTitle
-                        )
+                    TaptionLiveActivityCat(
+                        categoryID: context.state.compactActivityCategoryID ?? context.state.majorCategoryID,
+                        title: context.state.compactActivityTitle ?? context.state.majorCategoryTitle,
+                        style: context.state.catStyle,
+                        frame: context.state.compactAnimationFrame ?? 0
                     )
                     .frame(width: 30, height: 27)
-                    Text(context.state.majorCategoryTitle)
+                    Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
                         .font(.caption2)
                         .foregroundStyle(Color(red: 0.90, green: 0.90, blue: 0.92))
                         .lineLimit(1)
-                    WidgetCat(style: context.state.catStyle)
-                        .frame(width: 30, height: 21)
                 }
             }
             DynamicIslandExpandedRegion(.center) {
-                Text(context.state.title)
+                Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
                     .font(.headline)
                         .lineLimit(1)
                         .foregroundStyle(.white)
@@ -3603,28 +3642,26 @@ struct TaptionPlanLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                TaptionLiveActivityStickman(
-                    action: TaptionLiveActivityStickmanAction.resolve(
-                        categoryID: context.state.compactActivityCategoryID
-                            ?? context.state.majorCategoryID,
-                        title: context.state.compactActivityTitle
-                            ?? context.state.majorCategoryTitle
-                    )
+                TaptionLiveActivityCat(
+                    categoryID: context.state.compactActivityCategoryID ?? context.state.majorCategoryID,
+                    title: context.state.compactActivityTitle ?? context.state.majorCategoryTitle,
+                    style: context.state.catStyle,
+                    frame: context.state.compactAnimationFrame ?? 0
                 )
-                .frame(width: 20, height: 20)
+                .frame(width: 32, height: 26)
             } compactTrailing: {
                 Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
                     .frame(maxWidth: 72)
             } minimal: {
-                TaptionLiveActivityStickman(
-                    action: TaptionLiveActivityStickmanAction.resolve(
-                        categoryID: context.state.majorCategoryID,
-                        title: context.state.majorCategoryTitle
+                TaptionLiveActivityCat(
+                        categoryID: context.state.compactActivityCategoryID ?? context.state.majorCategoryID,
+                        title: context.state.compactActivityTitle ?? context.state.majorCategoryTitle,
+                        style: context.state.catStyle,
+                        frame: context.state.compactAnimationFrame ?? 0
                     )
-                )
-                .frame(width: 18, height: 18)
+                .frame(width: 26, height: 26)
             }
             .keylineTint(Color(red: 0.48, green: 0.37, blue: 0.65))
         }
@@ -3637,11 +3674,16 @@ private struct TaptionLiveActivityLockScreenView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                TaptionLiveActivityStickman(action: resolvedAction)
-                    .frame(width: 38, height: 38)
+                TaptionLiveActivityCat(
+                    categoryID: context.state.compactActivityCategoryID ?? context.state.majorCategoryID,
+                    title: context.state.compactActivityTitle ?? context.state.majorCategoryTitle,
+                    style: context.state.catStyle,
+                    frame: context.state.compactAnimationFrame ?? 0
+                )
+                .frame(width: 52, height: 40)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(context.state.majorCategoryTitle)
+                    Text(context.state.compactActivityTitle ?? context.state.majorCategoryTitle)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color(red: 0.87, green: 0.87, blue: 0.88))
                         .lineLimit(1)
@@ -3697,13 +3739,6 @@ private struct TaptionLiveActivityLockScreenView: View {
                 string:
                     "taptionplan://plan/\(context.attributes.planID.uuidString)"
             )
-        )
-    }
-
-    private var resolvedAction: TaptionLiveActivityStickmanAction {
-        TaptionLiveActivityStickmanAction.resolve(
-            categoryID: context.state.majorCategoryID,
-            title: context.state.majorCategoryTitle
         )
     }
 

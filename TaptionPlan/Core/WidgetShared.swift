@@ -22,6 +22,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             case majorCategorySystemImage
             case compactActivityTitle
             case compactActivityCategoryID
+            case compactAnimationFrame
         }
 
         var title: String
@@ -35,6 +36,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
         var majorCategorySystemImage: String = "sparkles"
         var compactActivityTitle: String?
         var compactActivityCategoryID: String?
+        var compactAnimationFrame: Int?
 
         init(
             title: String,
@@ -47,7 +49,8 @@ struct TaptionActivityAttributes: ActivityAttributes {
             majorCategoryTitle: String = "활동",
             majorCategorySystemImage: String = "sparkles",
             compactActivityTitle: String? = nil,
-            compactActivityCategoryID: String? = nil
+            compactActivityCategoryID: String? = nil,
+            compactAnimationFrame: Int? = nil
         ) {
             self.title = title
             self.categoryID = categoryID
@@ -60,6 +63,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             self.majorCategorySystemImage = majorCategorySystemImage
             self.compactActivityTitle = compactActivityTitle
             self.compactActivityCategoryID = compactActivityCategoryID
+            self.compactAnimationFrame = compactAnimationFrame
         }
 
         init(from decoder: Decoder) throws {
@@ -84,6 +88,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             ) ?? "sparkles"
             self.compactActivityTitle = try container.decodeIfPresent(String.self, forKey: .compactActivityTitle)
             self.compactActivityCategoryID = try container.decodeIfPresent(String.self, forKey: .compactActivityCategoryID)
+            self.compactAnimationFrame = try container.decodeIfPresent(Int.self, forKey: .compactAnimationFrame)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -102,6 +107,7 @@ struct TaptionActivityAttributes: ActivityAttributes {
             )
             try container.encodeIfPresent(compactActivityTitle, forKey: .compactActivityTitle)
             try container.encodeIfPresent(compactActivityCategoryID, forKey: .compactActivityCategoryID)
+            try container.encodeIfPresent(compactAnimationFrame, forKey: .compactAnimationFrame)
         }
     }
 
@@ -157,6 +163,13 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
     static func resolve(categoryID: String, title: String) -> Self {
         let category = categoryID.lowercased().replacingOccurrences(of: " ", with: "")
         let categoryRoot = category.split(separator: ".", maxSplits: 1).first.map(String.init) ?? category
+        if categoryRoot == "movement", category.contains(".") {
+            let detail = String(category.split(separator: ".", maxSplits: 1)[1])
+            let details: [String: Self] = ["walking": .walking, "running": .running,
+                "car": .car, "subway": .subway, "privatevehicle": .privateVehicle,
+                "bus": .bus, "ship": .ship, "airplane": .airplane, "cycling": .cycling]
+            if let action = details[detail] { return action }
+        }
         switch categoryRoot {
         case "activity": return .activity
         case "computer", "work": return .computer
@@ -220,6 +233,22 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
         case .ship: "배"
         case .airplane: "비행기"
         case .cycling: "자전거"
+        }
+    }
+}
+
+enum TaptionLiveActivityCatPolicy {
+    static func action(categoryID: String, title: String) -> TaptionCatAnimationAction {
+        switch TaptionLiveActivityStickmanAction.resolve(categoryID: categoryID, title: title) {
+        case .sleeping: .sleeping
+        case .eating: .eating
+        case .running, .exercise: .running
+        case .movement, .walking: .walking
+        case .hobby: .ballPlay
+        case .computer: .kneading
+        case .reading: .kneading
+        case .unconfirmed: .startled
+        default: .sitting
         }
     }
 }
@@ -1340,6 +1369,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var currentActivityTitle: String?
         var currentActivityCategoryID: String?
         var currentActivitySystemImage: String?
+        var currentActivityCatStyle: String?
+        var currentActivityFrame: Int?
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -1370,7 +1401,9 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             sensorHUDUntil: Date? = nil,
             currentActivityTitle: String? = nil,
             currentActivityCategoryID: String? = nil,
-            currentActivitySystemImage: String? = nil
+            currentActivitySystemImage: String? = nil,
+            currentActivityCatStyle: String? = nil,
+            currentActivityFrame: Int? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -1391,6 +1424,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.currentActivityTitle = currentActivityTitle
             self.currentActivityCategoryID = currentActivityCategoryID
             self.currentActivitySystemImage = currentActivitySystemImage
+            self.currentActivityCatStyle = currentActivityCatStyle
+            self.currentActivityFrame = currentActivityFrame
         }
     }
 
