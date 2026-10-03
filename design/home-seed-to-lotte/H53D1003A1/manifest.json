@@ -1,0 +1,968 @@
+{
+  "requestID": "H53D1003A1",
+  "assetCount": 53,
+  "weekLengthDays": 7,
+  "yearDaysSupported": [
+    365,
+    366
+  ],
+  "style": "warm outlined RPG vector icons",
+  "deliveryScope": "53 weekly keyframes; daily variants planned, not generated or integrated",
+  "background": "transparent",
+  "start": "seed",
+  "end": "stylized Lotte World Tower",
+  "authoringMethod": "repo-native SVG icon system extended with deterministic editable geometry; PNG exported with Sharp",
+  "architectureReference": "https://www.kpf.com/project/lotte-world-tower",
+  "dailyTransition": "Build new outlines, walls, leaves or floors in seven distinct structural steps; do not crossfade or only recolor. Day 7 previews 90% of the next weekly shape so the next week never resets progress.",
+  "stages": [
+    {
+      "week": 1,
+      "name": "씨앗",
+      "dayStart": 1,
+      "dayEnd": 7,
+      "svg": "weeks/week-01-stage-01.svg",
+      "png": "weeks/week-01-stage-01.png",
+      "nextWeekTarget": "새싹",
+      "dailyVariationPlan": [
+        "씨앗 기준형",
+        "새싹 새 구조 15% 성장",
+        "새싹 새 구조 30% 성장",
+        "새싹 새 구조 45% 성장",
+        "새싹 새 구조 60% 성장",
+        "새싹 새 구조 75% 성장",
+        "새싹 새 구조 90% 성장; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 2,
+      "name": "새싹",
+      "dayStart": 8,
+      "dayEnd": 14,
+      "svg": "weeks/week-02-stage-02.svg",
+      "png": "weeks/week-02-stage-02.png",
+      "nextWeekTarget": "묘목",
+      "dailyVariationPlan": [
+        "새싹 기준형",
+        "묘목 새 구조 15% 성장",
+        "묘목 새 구조 30% 성장",
+        "묘목 새 구조 45% 성장",
+        "묘목 새 구조 60% 성장",
+        "묘목 새 구조 75% 성장",
+        "묘목 새 구조 90% 성장; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 3,
+      "name": "묘목",
+      "dayStart": 15,
+      "dayEnd": 21,
+      "svg": "weeks/week-03-stage-03.svg",
+      "png": "weeks/week-03-stage-03.png",
+      "nextWeekTarget": "작은 나무",
+      "dailyVariationPlan": [
+        "묘목 기준형",
+        "작은 나무 새 구조 15% 성장",
+        "작은 나무 새 구조 30% 성장",
+        "작은 나무 새 구조 45% 성장",
+        "작은 나무 새 구조 60% 성장",
+        "작은 나무 새 구조 75% 성장",
+        "작은 나무 새 구조 90% 성장; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 4,
+      "name": "작은 나무",
+      "dayStart": 22,
+      "dayEnd": 28,
+      "svg": "weeks/week-04-stage-04.svg",
+      "png": "weeks/week-04-stage-04.png",
+      "nextWeekTarget": "큰 나무",
+      "dailyVariationPlan": [
+        "작은 나무 기준형",
+        "큰 나무 새 구조 15% 성장",
+        "큰 나무 새 구조 30% 성장",
+        "큰 나무 새 구조 45% 성장",
+        "큰 나무 새 구조 60% 성장",
+        "큰 나무 새 구조 75% 성장",
+        "큰 나무 새 구조 90% 성장; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 5,
+      "name": "큰 나무",
+      "dayStart": 29,
+      "dayEnd": 35,
+      "svg": "weeks/week-05-stage-05.svg",
+      "png": "weeks/week-05-stage-05.png",
+      "nextWeekTarget": "돌 모닥불",
+      "dailyVariationPlan": [
+        "큰 나무 기준형",
+        "돌 모닥불 새 구조 15% 시공",
+        "돌 모닥불 새 구조 30% 시공",
+        "돌 모닥불 새 구조 45% 시공",
+        "돌 모닥불 새 구조 60% 시공",
+        "돌 모닥불 새 구조 75% 시공",
+        "돌 모닥불 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 6,
+      "name": "돌 모닥불",
+      "dayStart": 36,
+      "dayEnd": 42,
+      "svg": "weeks/week-06-stage-06.svg",
+      "png": "weeks/week-06-stage-06.png",
+      "nextWeekTarget": "동굴집",
+      "dailyVariationPlan": [
+        "돌 모닥불 기준형",
+        "동굴집 새 구조 15% 시공",
+        "동굴집 새 구조 30% 시공",
+        "동굴집 새 구조 45% 시공",
+        "동굴집 새 구조 60% 시공",
+        "동굴집 새 구조 75% 시공",
+        "동굴집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 7,
+      "name": "동굴집",
+      "dayStart": 43,
+      "dayEnd": 49,
+      "svg": "weeks/week-07-stage-07.svg",
+      "png": "weeks/week-07-stage-07.png",
+      "nextWeekTarget": "나무 사이 해먹",
+      "dailyVariationPlan": [
+        "동굴집 기준형",
+        "나무 사이 해먹 새 구조 15% 시공",
+        "나무 사이 해먹 새 구조 30% 시공",
+        "나무 사이 해먹 새 구조 45% 시공",
+        "나무 사이 해먹 새 구조 60% 시공",
+        "나무 사이 해먹 새 구조 75% 시공",
+        "나무 사이 해먹 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 8,
+      "name": "나무 사이 해먹",
+      "dayStart": 50,
+      "dayEnd": 56,
+      "svg": "weeks/week-08-stage-08.svg",
+      "png": "weeks/week-08-stage-08.png",
+      "nextWeekTarget": "이글루",
+      "dailyVariationPlan": [
+        "나무 사이 해먹 기준형",
+        "이글루 새 구조 15% 시공",
+        "이글루 새 구조 30% 시공",
+        "이글루 새 구조 45% 시공",
+        "이글루 새 구조 60% 시공",
+        "이글루 새 구조 75% 시공",
+        "이글루 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 9,
+      "name": "이글루",
+      "dayStart": 57,
+      "dayEnd": 63,
+      "svg": "weeks/week-09-stage-09.svg",
+      "png": "weeks/week-09-stage-09.png",
+      "nextWeekTarget": "가지 움막",
+      "dailyVariationPlan": [
+        "이글루 기준형",
+        "가지 움막 새 구조 15% 시공",
+        "가지 움막 새 구조 30% 시공",
+        "가지 움막 새 구조 45% 시공",
+        "가지 움막 새 구조 60% 시공",
+        "가지 움막 새 구조 75% 시공",
+        "가지 움막 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 10,
+      "name": "가지 움막",
+      "dayStart": 64,
+      "dayEnd": 70,
+      "svg": "weeks/week-10-stage-10.svg",
+      "png": "weeks/week-10-stage-10.png",
+      "nextWeekTarget": "흙집",
+      "dailyVariationPlan": [
+        "가지 움막 기준형",
+        "흙집 새 구조 15% 시공",
+        "흙집 새 구조 30% 시공",
+        "흙집 새 구조 45% 시공",
+        "흙집 새 구조 60% 시공",
+        "흙집 새 구조 75% 시공",
+        "흙집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 11,
+      "name": "흙집",
+      "dayStart": 71,
+      "dayEnd": 77,
+      "svg": "weeks/week-11-stage-11.svg",
+      "png": "weeks/week-11-stage-11.png",
+      "nextWeekTarget": "천막 텐트",
+      "dailyVariationPlan": [
+        "흙집 기준형",
+        "천막 텐트 새 구조 15% 시공",
+        "천막 텐트 새 구조 30% 시공",
+        "천막 텐트 새 구조 45% 시공",
+        "천막 텐트 새 구조 60% 시공",
+        "천막 텐트 새 구조 75% 시공",
+        "천막 텐트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 12,
+      "name": "천막 텐트",
+      "dayStart": 78,
+      "dayEnd": 84,
+      "svg": "weeks/week-12-stage-12.svg",
+      "png": "weeks/week-12-stage-12.png",
+      "nextWeekTarget": "유르트",
+      "dailyVariationPlan": [
+        "천막 텐트 기준형",
+        "유르트 새 구조 15% 시공",
+        "유르트 새 구조 30% 시공",
+        "유르트 새 구조 45% 시공",
+        "유르트 새 구조 60% 시공",
+        "유르트 새 구조 75% 시공",
+        "유르트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 13,
+      "name": "유르트",
+      "dayStart": 85,
+      "dayEnd": 91,
+      "svg": "weeks/week-13-stage-13.svg",
+      "png": "weeks/week-13-stage-13.png",
+      "nextWeekTarget": "초가집",
+      "dailyVariationPlan": [
+        "유르트 기준형",
+        "초가집 새 구조 15% 시공",
+        "초가집 새 구조 30% 시공",
+        "초가집 새 구조 45% 시공",
+        "초가집 새 구조 60% 시공",
+        "초가집 새 구조 75% 시공",
+        "초가집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 14,
+      "name": "초가집",
+      "dayStart": 92,
+      "dayEnd": 98,
+      "svg": "weeks/week-14-stage-14.svg",
+      "png": "weeks/week-14-stage-14.png",
+      "nextWeekTarget": "원형 돌집",
+      "dailyVariationPlan": [
+        "초가집 기준형",
+        "원형 돌집 새 구조 15% 시공",
+        "원형 돌집 새 구조 30% 시공",
+        "원형 돌집 새 구조 45% 시공",
+        "원형 돌집 새 구조 60% 시공",
+        "원형 돌집 새 구조 75% 시공",
+        "원형 돌집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 15,
+      "name": "원형 돌집",
+      "dayStart": 99,
+      "dayEnd": 105,
+      "svg": "weeks/week-15-stage-15.svg",
+      "png": "weeks/week-15-stage-15.png",
+      "nextWeekTarget": "기와집",
+      "dailyVariationPlan": [
+        "원형 돌집 기준형",
+        "기와집 새 구조 15% 시공",
+        "기와집 새 구조 30% 시공",
+        "기와집 새 구조 45% 시공",
+        "기와집 새 구조 60% 시공",
+        "기와집 새 구조 75% 시공",
+        "기와집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 16,
+      "name": "기와집",
+      "dayStart": 106,
+      "dayEnd": 112,
+      "svg": "weeks/week-16-stage-16.svg",
+      "png": "weeks/week-16-stage-16.png",
+      "nextWeekTarget": "마차집",
+      "dailyVariationPlan": [
+        "기와집 기준형",
+        "마차집 새 구조 15% 시공",
+        "마차집 새 구조 30% 시공",
+        "마차집 새 구조 45% 시공",
+        "마차집 새 구조 60% 시공",
+        "마차집 새 구조 75% 시공",
+        "마차집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 17,
+      "name": "마차집",
+      "dayStart": 113,
+      "dayEnd": 119,
+      "svg": "weeks/week-17-stage-17.svg",
+      "png": "weeks/week-17-stage-17.png",
+      "nextWeekTarget": "ㄱ자 한옥",
+      "dailyVariationPlan": [
+        "마차집 기준형",
+        "ㄱ자 한옥 새 구조 15% 시공",
+        "ㄱ자 한옥 새 구조 30% 시공",
+        "ㄱ자 한옥 새 구조 45% 시공",
+        "ㄱ자 한옥 새 구조 60% 시공",
+        "ㄱ자 한옥 새 구조 75% 시공",
+        "ㄱ자 한옥 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 18,
+      "name": "ㄱ자 한옥",
+      "dayStart": 120,
+      "dayEnd": 126,
+      "svg": "weeks/week-18-stage-18.svg",
+      "png": "weeks/week-18-stage-18.png",
+      "nextWeekTarget": "일본 마치야",
+      "dailyVariationPlan": [
+        "ㄱ자 한옥 기준형",
+        "일본 마치야 새 구조 15% 시공",
+        "일본 마치야 새 구조 30% 시공",
+        "일본 마치야 새 구조 45% 시공",
+        "일본 마치야 새 구조 60% 시공",
+        "일본 마치야 새 구조 75% 시공",
+        "일본 마치야 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 19,
+      "name": "일본 마치야",
+      "dayStart": 127,
+      "dayEnd": 133,
+      "svg": "weeks/week-19-stage-19.svg",
+      "png": "weeks/week-19-stage-19.png",
+      "nextWeekTarget": "통나무집",
+      "dailyVariationPlan": [
+        "일본 마치야 기준형",
+        "통나무집 새 구조 15% 시공",
+        "통나무집 새 구조 30% 시공",
+        "통나무집 새 구조 45% 시공",
+        "통나무집 새 구조 60% 시공",
+        "통나무집 새 구조 75% 시공",
+        "통나무집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 20,
+      "name": "통나무집",
+      "dayStart": 134,
+      "dayEnd": 140,
+      "svg": "weeks/week-20-stage-20.svg",
+      "png": "weeks/week-20-stage-20.png",
+      "nextWeekTarget": "트리하우스",
+      "dailyVariationPlan": [
+        "통나무집 기준형",
+        "트리하우스 새 구조 15% 시공",
+        "트리하우스 새 구조 30% 시공",
+        "트리하우스 새 구조 45% 시공",
+        "트리하우스 새 구조 60% 시공",
+        "트리하우스 새 구조 75% 시공",
+        "트리하우스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 21,
+      "name": "트리하우스",
+      "dayStart": 141,
+      "dayEnd": 147,
+      "svg": "weeks/week-21-stage-21.svg",
+      "png": "weeks/week-21-stage-21.png",
+      "nextWeekTarget": "삼각 A프레임",
+      "dailyVariationPlan": [
+        "트리하우스 기준형",
+        "삼각 A프레임 새 구조 15% 시공",
+        "삼각 A프레임 새 구조 30% 시공",
+        "삼각 A프레임 새 구조 45% 시공",
+        "삼각 A프레임 새 구조 60% 시공",
+        "삼각 A프레임 새 구조 75% 시공",
+        "삼각 A프레임 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 22,
+      "name": "삼각 A프레임",
+      "dayStart": 148,
+      "dayEnd": 154,
+      "svg": "weeks/week-22-stage-22.svg",
+      "png": "weeks/week-22-stage-22.png",
+      "nextWeekTarget": "산장 샬레",
+      "dailyVariationPlan": [
+        "삼각 A프레임 기준형",
+        "산장 샬레 새 구조 15% 시공",
+        "산장 샬레 새 구조 30% 시공",
+        "산장 샬레 새 구조 45% 시공",
+        "산장 샬레 새 구조 60% 시공",
+        "산장 샬레 새 구조 75% 시공",
+        "산장 샬레 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 23,
+      "name": "산장 샬레",
+      "dayStart": 155,
+      "dayEnd": 161,
+      "svg": "weeks/week-23-stage-23.svg",
+      "png": "weeks/week-23-stage-23.png",
+      "nextWeekTarget": "수상가옥",
+      "dailyVariationPlan": [
+        "산장 샬레 기준형",
+        "수상가옥 새 구조 15% 시공",
+        "수상가옥 새 구조 30% 시공",
+        "수상가옥 새 구조 45% 시공",
+        "수상가옥 새 구조 60% 시공",
+        "수상가옥 새 구조 75% 시공",
+        "수상가옥 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 24,
+      "name": "수상가옥",
+      "dayStart": 162,
+      "dayEnd": 168,
+      "svg": "weeks/week-24-stage-24.svg",
+      "png": "weeks/week-24-stage-24.png",
+      "nextWeekTarget": "하우스보트",
+      "dailyVariationPlan": [
+        "수상가옥 기준형",
+        "하우스보트 새 구조 15% 시공",
+        "하우스보트 새 구조 30% 시공",
+        "하우스보트 새 구조 45% 시공",
+        "하우스보트 새 구조 60% 시공",
+        "하우스보트 새 구조 75% 시공",
+        "하우스보트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 25,
+      "name": "하우스보트",
+      "dayStart": 169,
+      "dayEnd": 175,
+      "svg": "weeks/week-25-stage-25.svg",
+      "png": "weeks/week-25-stage-25.png",
+      "nextWeekTarget": "벽돌 단층집",
+      "dailyVariationPlan": [
+        "하우스보트 기준형",
+        "벽돌 단층집 새 구조 15% 시공",
+        "벽돌 단층집 새 구조 30% 시공",
+        "벽돌 단층집 새 구조 45% 시공",
+        "벽돌 단층집 새 구조 60% 시공",
+        "벽돌 단층집 새 구조 75% 시공",
+        "벽돌 단층집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 26,
+      "name": "벽돌 단층집",
+      "dayStart": 176,
+      "dayEnd": 182,
+      "svg": "weeks/week-26-stage-26.svg",
+      "png": "weeks/week-26-stage-26.png",
+      "nextWeekTarget": "돔하우스",
+      "dailyVariationPlan": [
+        "벽돌 단층집 기준형",
+        "돔하우스 새 구조 15% 시공",
+        "돔하우스 새 구조 30% 시공",
+        "돔하우스 새 구조 45% 시공",
+        "돔하우스 새 구조 60% 시공",
+        "돔하우스 새 구조 75% 시공",
+        "돔하우스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 27,
+      "name": "돔하우스",
+      "dayStart": 183,
+      "dayEnd": 189,
+      "svg": "weeks/week-27-stage-27.svg",
+      "png": "weeks/week-27-stage-27.png",
+      "nextWeekTarget": "2층 주택",
+      "dailyVariationPlan": [
+        "돔하우스 기준형",
+        "2층 주택 새 구조 15% 시공",
+        "2층 주택 새 구조 30% 시공",
+        "2층 주택 새 구조 45% 시공",
+        "2층 주택 새 구조 60% 시공",
+        "2층 주택 새 구조 75% 시공",
+        "2층 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 28,
+      "name": "2층 주택",
+      "dayStart": 190,
+      "dayEnd": 196,
+      "svg": "weeks/week-28-stage-28.svg",
+      "png": "weeks/week-28-stage-28.png",
+      "nextWeekTarget": "풍차 주택",
+      "dailyVariationPlan": [
+        "2층 주택 기준형",
+        "풍차 주택 새 구조 15% 시공",
+        "풍차 주택 새 구조 30% 시공",
+        "풍차 주택 새 구조 45% 시공",
+        "풍차 주택 새 구조 60% 시공",
+        "풍차 주택 새 구조 75% 시공",
+        "풍차 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 29,
+      "name": "풍차 주택",
+      "dayStart": 197,
+      "dayEnd": 203,
+      "svg": "weeks/week-29-stage-29.svg",
+      "png": "weeks/week-29-stage-29.png",
+      "nextWeekTarget": "지중해 주택",
+      "dailyVariationPlan": [
+        "풍차 주택 기준형",
+        "지중해 주택 새 구조 15% 시공",
+        "지중해 주택 새 구조 30% 시공",
+        "지중해 주택 새 구조 45% 시공",
+        "지중해 주택 새 구조 60% 시공",
+        "지중해 주택 새 구조 75% 시공",
+        "지중해 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 30,
+      "name": "지중해 주택",
+      "dayStart": 204,
+      "dayEnd": 210,
+      "svg": "weeks/week-30-stage-30.svg",
+      "png": "weeks/week-30-stage-30.png",
+      "nextWeekTarget": "튜더 주택",
+      "dailyVariationPlan": [
+        "지중해 주택 기준형",
+        "튜더 주택 새 구조 15% 시공",
+        "튜더 주택 새 구조 30% 시공",
+        "튜더 주택 새 구조 45% 시공",
+        "튜더 주택 새 구조 60% 시공",
+        "튜더 주택 새 구조 75% 시공",
+        "튜더 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 31,
+      "name": "튜더 주택",
+      "dayStart": 211,
+      "dayEnd": 217,
+      "svg": "weeks/week-31-stage-31.svg",
+      "png": "weeks/week-31-stage-31.png",
+      "nextWeekTarget": "컨테이너 주택",
+      "dailyVariationPlan": [
+        "튜더 주택 기준형",
+        "컨테이너 주택 새 구조 15% 시공",
+        "컨테이너 주택 새 구조 30% 시공",
+        "컨테이너 주택 새 구조 45% 시공",
+        "컨테이너 주택 새 구조 60% 시공",
+        "컨테이너 주택 새 구조 75% 시공",
+        "컨테이너 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 32,
+      "name": "컨테이너 주택",
+      "dayStart": 218,
+      "dayEnd": 224,
+      "svg": "weeks/week-32-stage-32.svg",
+      "png": "weeks/week-32-stage-32.png",
+      "nextWeekTarget": "바우하우스 주택",
+      "dailyVariationPlan": [
+        "컨테이너 주택 기준형",
+        "바우하우스 주택 새 구조 15% 시공",
+        "바우하우스 주택 새 구조 30% 시공",
+        "바우하우스 주택 새 구조 45% 시공",
+        "바우하우스 주택 새 구조 60% 시공",
+        "바우하우스 주택 새 구조 75% 시공",
+        "바우하우스 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 33,
+      "name": "바우하우스 주택",
+      "dayStart": 225,
+      "dayEnd": 231,
+      "svg": "weeks/week-33-stage-33.svg",
+      "png": "weeks/week-33-stage-33.png",
+      "nextWeekTarget": "정원 주택",
+      "dailyVariationPlan": [
+        "바우하우스 주택 기준형",
+        "정원 주택 새 구조 15% 시공",
+        "정원 주택 새 구조 30% 시공",
+        "정원 주택 새 구조 45% 시공",
+        "정원 주택 새 구조 60% 시공",
+        "정원 주택 새 구조 75% 시공",
+        "정원 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 34,
+      "name": "정원 주택",
+      "dayStart": 232,
+      "dayEnd": 238,
+      "svg": "weeks/week-34-stage-34.svg",
+      "png": "weeks/week-34-stage-34.png",
+      "nextWeekTarget": "온실 주택",
+      "dailyVariationPlan": [
+        "정원 주택 기준형",
+        "온실 주택 새 구조 15% 시공",
+        "온실 주택 새 구조 30% 시공",
+        "온실 주택 새 구조 45% 시공",
+        "온실 주택 새 구조 60% 시공",
+        "온실 주택 새 구조 75% 시공",
+        "온실 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 35,
+      "name": "온실 주택",
+      "dayStart": 239,
+      "dayEnd": 245,
+      "svg": "weeks/week-35-stage-35.svg",
+      "png": "weeks/week-35-stage-35.png",
+      "nextWeekTarget": "정원 저택",
+      "dailyVariationPlan": [
+        "온실 주택 기준형",
+        "정원 저택 새 구조 15% 시공",
+        "정원 저택 새 구조 30% 시공",
+        "정원 저택 새 구조 45% 시공",
+        "정원 저택 새 구조 60% 시공",
+        "정원 저택 새 구조 75% 시공",
+        "정원 저택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 36,
+      "name": "정원 저택",
+      "dayStart": 246,
+      "dayEnd": 252,
+      "svg": "weeks/week-36-stage-36.svg",
+      "png": "weeks/week-36-stage-36.png",
+      "nextWeekTarget": "연립 타운하우스",
+      "dailyVariationPlan": [
+        "정원 저택 기준형",
+        "연립 타운하우스 새 구조 15% 시공",
+        "연립 타운하우스 새 구조 30% 시공",
+        "연립 타운하우스 새 구조 45% 시공",
+        "연립 타운하우스 새 구조 60% 시공",
+        "연립 타운하우스 새 구조 75% 시공",
+        "연립 타운하우스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 37,
+      "name": "연립 타운하우스",
+      "dayStart": 253,
+      "dayEnd": 259,
+      "svg": "weeks/week-37-stage-37.svg",
+      "png": "weeks/week-37-stage-37.png",
+      "nextWeekTarget": "고딕 저택",
+      "dailyVariationPlan": [
+        "연립 타운하우스 기준형",
+        "고딕 저택 새 구조 15% 시공",
+        "고딕 저택 새 구조 30% 시공",
+        "고딕 저택 새 구조 45% 시공",
+        "고딕 저택 새 구조 60% 시공",
+        "고딕 저택 새 구조 75% 시공",
+        "고딕 저택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 38,
+      "name": "고딕 저택",
+      "dayStart": 260,
+      "dayEnd": 266,
+      "svg": "weeks/week-38-stage-38.svg",
+      "png": "weeks/week-38-stage-38.png",
+      "nextWeekTarget": "아르누보 빌라",
+      "dailyVariationPlan": [
+        "고딕 저택 기준형",
+        "아르누보 빌라 새 구조 15% 시공",
+        "아르누보 빌라 새 구조 30% 시공",
+        "아르누보 빌라 새 구조 45% 시공",
+        "아르누보 빌라 새 구조 60% 시공",
+        "아르누보 빌라 새 구조 75% 시공",
+        "아르누보 빌라 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 39,
+      "name": "아르누보 빌라",
+      "dayStart": 267,
+      "dayEnd": 273,
+      "svg": "weeks/week-39-stage-39.svg",
+      "png": "weeks/week-39-stage-39.png",
+      "nextWeekTarget": "아르데코 빌딩",
+      "dailyVariationPlan": [
+        "아르누보 빌라 기준형",
+        "아르데코 빌딩 새 구조 15% 시공",
+        "아르데코 빌딩 새 구조 30% 시공",
+        "아르데코 빌딩 새 구조 45% 시공",
+        "아르데코 빌딩 새 구조 60% 시공",
+        "아르데코 빌딩 새 구조 75% 시공",
+        "아르데코 빌딩 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 40,
+      "name": "아르데코 빌딩",
+      "dayStart": 274,
+      "dayEnd": 280,
+      "svg": "weeks/week-40-stage-40.svg",
+      "png": "weeks/week-40-stage-40.png",
+      "nextWeekTarget": "저층 아파트",
+      "dailyVariationPlan": [
+        "아르데코 빌딩 기준형",
+        "저층 아파트 새 구조 15% 시공",
+        "저층 아파트 새 구조 30% 시공",
+        "저층 아파트 새 구조 45% 시공",
+        "저층 아파트 새 구조 60% 시공",
+        "저층 아파트 새 구조 75% 시공",
+        "저층 아파트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 41,
+      "name": "저층 아파트",
+      "dayStart": 281,
+      "dayEnd": 287,
+      "svg": "weeks/week-41-stage-41.svg",
+      "png": "weeks/week-41-stage-41.png",
+      "nextWeekTarget": "브루탈리즘 아파트",
+      "dailyVariationPlan": [
+        "저층 아파트 기준형",
+        "브루탈리즘 아파트 새 구조 15% 시공",
+        "브루탈리즘 아파트 새 구조 30% 시공",
+        "브루탈리즘 아파트 새 구조 45% 시공",
+        "브루탈리즘 아파트 새 구조 60% 시공",
+        "브루탈리즘 아파트 새 구조 75% 시공",
+        "브루탈리즘 아파트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 42,
+      "name": "브루탈리즘 아파트",
+      "dayStart": 288,
+      "dayEnd": 294,
+      "svg": "weeks/week-42-stage-42.svg",
+      "png": "weeks/week-42-stage-42.png",
+      "nextWeekTarget": "공원 아파트",
+      "dailyVariationPlan": [
+        "브루탈리즘 아파트 기준형",
+        "공원 아파트 새 구조 15% 시공",
+        "공원 아파트 새 구조 30% 시공",
+        "공원 아파트 새 구조 45% 시공",
+        "공원 아파트 새 구조 60% 시공",
+        "공원 아파트 새 구조 75% 시공",
+        "공원 아파트 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 43,
+      "name": "공원 아파트",
+      "dayStart": 295,
+      "dayEnd": 301,
+      "svg": "weeks/week-43-stage-43.svg",
+      "png": "weeks/week-43-stage-43.png",
+      "nextWeekTarget": "고층 오피스",
+      "dailyVariationPlan": [
+        "공원 아파트 기준형",
+        "고층 오피스 새 구조 15% 시공",
+        "고층 오피스 새 구조 30% 시공",
+        "고층 오피스 새 구조 45% 시공",
+        "고층 오피스 새 구조 60% 시공",
+        "고층 오피스 새 구조 75% 시공",
+        "고층 오피스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 44,
+      "name": "고층 오피스",
+      "dayStart": 302,
+      "dayEnd": 308,
+      "svg": "weeks/week-44-stage-44.svg",
+      "png": "weeks/week-44-stage-44.png",
+      "nextWeekTarget": "유리 고층 건물",
+      "dailyVariationPlan": [
+        "고층 오피스 기준형",
+        "유리 고층 건물 새 구조 15% 시공",
+        "유리 고층 건물 새 구조 30% 시공",
+        "유리 고층 건물 새 구조 45% 시공",
+        "유리 고층 건물 새 구조 60% 시공",
+        "유리 고층 건물 새 구조 75% 시공",
+        "유리 고층 건물 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 45,
+      "name": "유리 고층 건물",
+      "dayStart": 309,
+      "dayEnd": 315,
+      "svg": "weeks/week-45-stage-45.svg",
+      "png": "weeks/week-45-stage-45.png",
+      "nextWeekTarget": "나선형 타워",
+      "dailyVariationPlan": [
+        "유리 고층 건물 기준형",
+        "나선형 타워 새 구조 15% 시공",
+        "나선형 타워 새 구조 30% 시공",
+        "나선형 타워 새 구조 45% 시공",
+        "나선형 타워 새 구조 60% 시공",
+        "나선형 타워 새 구조 75% 시공",
+        "나선형 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 46,
+      "name": "나선형 타워",
+      "dayStart": 316,
+      "dayEnd": 322,
+      "svg": "weeks/week-46-stage-46.svg",
+      "png": "weeks/week-46-stage-46.png",
+      "nextWeekTarget": "계단식 타워",
+      "dailyVariationPlan": [
+        "나선형 타워 기준형",
+        "계단식 타워 새 구조 15% 시공",
+        "계단식 타워 새 구조 30% 시공",
+        "계단식 타워 새 구조 45% 시공",
+        "계단식 타워 새 구조 60% 시공",
+        "계단식 타워 새 구조 75% 시공",
+        "계단식 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 47,
+      "name": "계단식 타워",
+      "dayStart": 323,
+      "dayEnd": 329,
+      "svg": "weeks/week-47-stage-47.svg",
+      "png": "weeks/week-47-stage-47.png",
+      "nextWeekTarget": "랜드마크 고층",
+      "dailyVariationPlan": [
+        "계단식 타워 기준형",
+        "랜드마크 고층 새 구조 15% 시공",
+        "랜드마크 고층 새 구조 30% 시공",
+        "랜드마크 고층 새 구조 45% 시공",
+        "랜드마크 고층 새 구조 60% 시공",
+        "랜드마크 고층 새 구조 75% 시공",
+        "랜드마크 고층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 48,
+      "name": "랜드마크 고층",
+      "dayStart": 330,
+      "dayEnd": 336,
+      "svg": "weeks/week-48-stage-48.svg",
+      "png": "weeks/week-48-stage-48.png",
+      "nextWeekTarget": "롯데 타워 실루엣",
+      "dailyVariationPlan": [
+        "랜드마크 고층 기준형",
+        "롯데 타워 실루엣 새 구조 15% 시공",
+        "롯데 타워 실루엣 새 구조 30% 시공",
+        "롯데 타워 실루엣 새 구조 45% 시공",
+        "롯데 타워 실루엣 새 구조 60% 시공",
+        "롯데 타워 실루엣 새 구조 75% 시공",
+        "롯데 타워 실루엣 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 49,
+      "name": "롯데 타워 실루엣",
+      "dayStart": 337,
+      "dayEnd": 343,
+      "svg": "weeks/week-49-stage-49.svg",
+      "png": "weeks/week-49-stage-49.png",
+      "nextWeekTarget": "롯데 타워 왕관",
+      "dailyVariationPlan": [
+        "롯데 타워 실루엣 기준형",
+        "롯데 타워 왕관 새 구조 15% 시공",
+        "롯데 타워 왕관 새 구조 30% 시공",
+        "롯데 타워 왕관 새 구조 45% 시공",
+        "롯데 타워 왕관 새 구조 60% 시공",
+        "롯데 타워 왕관 새 구조 75% 시공",
+        "롯데 타워 왕관 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 50,
+      "name": "롯데 타워 왕관",
+      "dayStart": 344,
+      "dayEnd": 350,
+      "svg": "weeks/week-50-stage-50.svg",
+      "png": "weeks/week-50-stage-50.png",
+      "nextWeekTarget": "롯데 타워 포디엄",
+      "dailyVariationPlan": [
+        "롯데 타워 왕관 기준형",
+        "롯데 타워 포디엄 새 구조 15% 시공",
+        "롯데 타워 포디엄 새 구조 30% 시공",
+        "롯데 타워 포디엄 새 구조 45% 시공",
+        "롯데 타워 포디엄 새 구조 60% 시공",
+        "롯데 타워 포디엄 새 구조 75% 시공",
+        "롯데 타워 포디엄 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 51,
+      "name": "롯데 타워 포디엄",
+      "dayStart": 351,
+      "dayEnd": 357,
+      "svg": "weeks/week-51-stage-51.svg",
+      "png": "weeks/week-51-stage-51.png",
+      "nextWeekTarget": "롯데 타워 광장",
+      "dailyVariationPlan": [
+        "롯데 타워 포디엄 기준형",
+        "롯데 타워 광장 새 구조 15% 시공",
+        "롯데 타워 광장 새 구조 30% 시공",
+        "롯데 타워 광장 새 구조 45% 시공",
+        "롯데 타워 광장 새 구조 60% 시공",
+        "롯데 타워 광장 새 구조 75% 시공",
+        "롯데 타워 광장 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 52,
+      "name": "롯데 타워 광장",
+      "dayStart": 358,
+      "dayEnd": 364,
+      "svg": "weeks/week-52-stage-52.svg",
+      "png": "weeks/week-52-stage-52.png",
+      "nextWeekTarget": "롯데월드타워",
+      "dailyVariationPlan": [
+        "롯데 타워 광장 기준형",
+        "롯데월드타워 새 구조 15% 시공",
+        "롯데월드타워 새 구조 30% 시공",
+        "롯데월드타워 새 구조 45% 시공",
+        "롯데월드타워 새 구조 60% 시공",
+        "롯데월드타워 새 구조 75% 시공",
+        "롯데월드타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 53,
+      "name": "롯데월드타워",
+      "dayStart": 365,
+      "dayEnd": 366,
+      "svg": "weeks/week-53-stage-53.svg",
+      "png": "weeks/week-53-stage-53.png",
+      "nextWeekTarget": "롯데월드타워",
+      "dailyVariationPlan": [
+        "롯데월드타워 완성형",
+        "윤년 마지막 날: 현관 캐노피·정원 확장"
+      ]
+    }
+  ]
+}

@@ -14,6 +14,10 @@ Package.resolved
 # macOS
 .DS_Store
 
+# Python generated cache
+__pycache__/
+*.py[cod]
+
 # Local configuration
 *.local.xcconfig
 Secrets.xcconfig

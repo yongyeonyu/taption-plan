@@ -523,6 +523,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         WatchLaunchDiagnostics.mark(
             "manual data sync begin id=\(id) profile=\(dataSyncProfile.rawValue) scene_ready=\(isSceneReadyForCapture)"
         )
+        cachedSlowHealthSnapshot = nil
+        async let healthSync: Void = requestHealthSnapshot(
+            expectedGeneration: syncGeneration
+        )
         refreshAmbientRecording(allowBeforeSceneReady: true)
         await ambientDrainTask?.value
         guard workoutStartGate.accepts(syncGeneration) else {
@@ -534,8 +538,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         WatchLaunchDiagnostics.mark(
             "manual data sync ambient complete id=\(id)"
         )
-        cachedSlowHealthSnapshot = nil
-        await requestHealthSnapshot()
+        await healthSync
         WatchLaunchDiagnostics.mark(
             "manual data sync end id=\(id)"
         )
@@ -1079,7 +1082,10 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    private func requestHealthSnapshot() async {
+    private func requestHealthSnapshot(expectedGeneration: UInt64? = nil) async {
+        guard !Task.isCancelled else { return }
+        if let expectedGeneration,
+           !workoutStartGate.accepts(expectedGeneration) { return }
         let task: Task<Void, Never>
         let generation: UInt64
         if let healthSnapshotTask {

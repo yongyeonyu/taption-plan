@@ -307,6 +307,43 @@ enum TaptionWatchAmbientOutboxFlushPolicy {
     }
 }
 
+struct TaptionWatchAmbientLiveDeliveryGate {
+    static let maximumPending = 4
+    static let maximumPayloadBytes = 32 * 1_024
+    static let retryInterval: TimeInterval = 10
+
+    private var pending: [String: TimeInterval] = [:]
+
+    mutating func reserve(
+        id: String,
+        payloadBytes: Int,
+        isReachable: Bool,
+        now: TimeInterval
+    ) -> Bool {
+        guard isReachable, now.isFinite, now >= 0,
+              id.hasPrefix("summary:") || id.hasPrefix("chunk:"),
+              payloadBytes > 0, payloadBytes <= Self.maximumPayloadBytes else {
+            return false
+        }
+        pending = pending.filter {
+            now >= $0.value && now - $0.value < Self.retryInterval
+        }
+        guard pending[id] == nil, pending.count < Self.maximumPending else {
+            return false
+        }
+        pending[id] = now
+        return true
+    }
+
+    mutating func acknowledge(_ id: String) {
+        pending[id] = nil
+    }
+
+    mutating func reset() {
+        pending.removeAll(keepingCapacity: false)
+    }
+}
+
 enum TaptionWatchAmbientAcknowledgementRetryPolicy {
     static let outboxReadRetryID = "outbox-read"
     static let initialDelay: TimeInterval = 5

@@ -1,0 +1,968 @@
+{
+  "requestID": "H53A1003B1",
+  "assetCount": 53,
+  "weekLengthDays": 7,
+  "yearDaysSupported": [
+    365,
+    366
+  ],
+  "style": "warm outlined RPG vector icons",
+  "deliveryScope": "53 weekly keyframes; daily variants planned, not generated or integrated",
+  "background": "transparent",
+  "start": "seed",
+  "end": "stylized Lotte World Tower",
+  "authoringMethod": "repo-native SVG icon system extended with deterministic editable geometry; PNG exported with Sharp",
+  "architectureReference": "https://www.kpf.com/project/lotte-world-tower",
+  "dailyTransition": "Build new outlines, walls, leaves or floors in seven distinct structural steps; do not crossfade or only recolor. Day 7 previews 90% of the next weekly shape so the next week never resets progress.",
+  "stages": [
+    {
+      "week": 1,
+      "name": "작은 씨앗",
+      "dayStart": 1,
+      "dayEnd": 7,
+      "svg": "weeks/week-01-seed.svg",
+      "png": "weeks/week-01-seed.png",
+      "nextWeekTarget": "깨어난 씨앗",
+      "dailyVariationPlan": [
+        "작은 씨앗 기준형",
+        "깨어난 씨앗 새 구조 15% 시공",
+        "깨어난 씨앗 새 구조 30% 시공",
+        "깨어난 씨앗 새 구조 45% 시공",
+        "깨어난 씨앗 새 구조 60% 시공",
+        "깨어난 씨앗 새 구조 75% 시공",
+        "깨어난 씨앗 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 2,
+      "name": "깨어난 씨앗",
+      "dayStart": 8,
+      "dayEnd": 14,
+      "svg": "weeks/week-02-cracked-seed.svg",
+      "png": "weeks/week-02-cracked-seed.png",
+      "nextWeekTarget": "첫 뿌리",
+      "dailyVariationPlan": [
+        "깨어난 씨앗 기준형",
+        "첫 뿌리 새 구조 15% 시공",
+        "첫 뿌리 새 구조 30% 시공",
+        "첫 뿌리 새 구조 45% 시공",
+        "첫 뿌리 새 구조 60% 시공",
+        "첫 뿌리 새 구조 75% 시공",
+        "첫 뿌리 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 3,
+      "name": "첫 뿌리",
+      "dayStart": 15,
+      "dayEnd": 21,
+      "svg": "weeks/week-03-root.svg",
+      "png": "weeks/week-03-root.png",
+      "nextWeekTarget": "첫 새싹",
+      "dailyVariationPlan": [
+        "첫 뿌리 기준형",
+        "첫 새싹 새 구조 15% 시공",
+        "첫 새싹 새 구조 30% 시공",
+        "첫 새싹 새 구조 45% 시공",
+        "첫 새싹 새 구조 60% 시공",
+        "첫 새싹 새 구조 75% 시공",
+        "첫 새싹 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 4,
+      "name": "첫 새싹",
+      "dayStart": 22,
+      "dayEnd": 28,
+      "svg": "weeks/week-04-first-shoot.svg",
+      "png": "weeks/week-04-first-shoot.png",
+      "nextWeekTarget": "두 잎 새싹",
+      "dailyVariationPlan": [
+        "첫 새싹 기준형",
+        "두 잎 새싹 새 구조 15% 시공",
+        "두 잎 새싹 새 구조 30% 시공",
+        "두 잎 새싹 새 구조 45% 시공",
+        "두 잎 새싹 새 구조 60% 시공",
+        "두 잎 새싹 새 구조 75% 시공",
+        "두 잎 새싹 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 5,
+      "name": "두 잎 새싹",
+      "dayStart": 29,
+      "dayEnd": 35,
+      "svg": "weeks/week-05-two-leaves.svg",
+      "png": "weeks/week-05-two-leaves.png",
+      "nextWeekTarget": "네 잎 새싹",
+      "dailyVariationPlan": [
+        "두 잎 새싹 기준형",
+        "네 잎 새싹 새 구조 15% 시공",
+        "네 잎 새싹 새 구조 30% 시공",
+        "네 잎 새싹 새 구조 45% 시공",
+        "네 잎 새싹 새 구조 60% 시공",
+        "네 잎 새싹 새 구조 75% 시공",
+        "네 잎 새싹 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 6,
+      "name": "네 잎 새싹",
+      "dayStart": 36,
+      "dayEnd": 42,
+      "svg": "weeks/week-06-four-leaves.svg",
+      "png": "weeks/week-06-four-leaves.png",
+      "nextWeekTarget": "어린 묘목",
+      "dailyVariationPlan": [
+        "네 잎 새싹 기준형",
+        "어린 묘목 새 구조 15% 시공",
+        "어린 묘목 새 구조 30% 시공",
+        "어린 묘목 새 구조 45% 시공",
+        "어린 묘목 새 구조 60% 시공",
+        "어린 묘목 새 구조 75% 시공",
+        "어린 묘목 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 7,
+      "name": "어린 묘목",
+      "dayStart": 43,
+      "dayEnd": 49,
+      "svg": "weeks/week-07-young-sapling.svg",
+      "png": "weeks/week-07-young-sapling.png",
+      "nextWeekTarget": "튼튼한 묘목",
+      "dailyVariationPlan": [
+        "어린 묘목 기준형",
+        "튼튼한 묘목 새 구조 15% 시공",
+        "튼튼한 묘목 새 구조 30% 시공",
+        "튼튼한 묘목 새 구조 45% 시공",
+        "튼튼한 묘목 새 구조 60% 시공",
+        "튼튼한 묘목 새 구조 75% 시공",
+        "튼튼한 묘목 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 8,
+      "name": "튼튼한 묘목",
+      "dayStart": 50,
+      "dayEnd": 56,
+      "svg": "weeks/week-08-sapling.svg",
+      "png": "weeks/week-08-sapling.png",
+      "nextWeekTarget": "작은 나무",
+      "dailyVariationPlan": [
+        "튼튼한 묘목 기준형",
+        "작은 나무 새 구조 15% 시공",
+        "작은 나무 새 구조 30% 시공",
+        "작은 나무 새 구조 45% 시공",
+        "작은 나무 새 구조 60% 시공",
+        "작은 나무 새 구조 75% 시공",
+        "작은 나무 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 9,
+      "name": "작은 나무",
+      "dayStart": 57,
+      "dayEnd": 63,
+      "svg": "weeks/week-09-young-tree.svg",
+      "png": "weeks/week-09-young-tree.png",
+      "nextWeekTarget": "풍성한 나무",
+      "dailyVariationPlan": [
+        "작은 나무 기준형",
+        "풍성한 나무 새 구조 15% 시공",
+        "풍성한 나무 새 구조 30% 시공",
+        "풍성한 나무 새 구조 45% 시공",
+        "풍성한 나무 새 구조 60% 시공",
+        "풍성한 나무 새 구조 75% 시공",
+        "풍성한 나무 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 10,
+      "name": "풍성한 나무",
+      "dayStart": 64,
+      "dayEnd": 70,
+      "svg": "weeks/week-10-full-tree.svg",
+      "png": "weeks/week-10-full-tree.png",
+      "nextWeekTarget": "나무 위 발판",
+      "dailyVariationPlan": [
+        "풍성한 나무 기준형",
+        "나무 위 발판 새 구조 15% 시공",
+        "나무 위 발판 새 구조 30% 시공",
+        "나무 위 발판 새 구조 45% 시공",
+        "나무 위 발판 새 구조 60% 시공",
+        "나무 위 발판 새 구조 75% 시공",
+        "나무 위 발판 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 11,
+      "name": "나무 위 발판",
+      "dayStart": 71,
+      "dayEnd": 77,
+      "svg": "weeks/week-11-tree-platform.svg",
+      "png": "weeks/week-11-tree-platform.png",
+      "nextWeekTarget": "나무 속 작은 방",
+      "dailyVariationPlan": [
+        "나무 위 발판 기준형",
+        "나무 속 작은 방 새 구조 15% 시공",
+        "나무 속 작은 방 새 구조 30% 시공",
+        "나무 속 작은 방 새 구조 45% 시공",
+        "나무 속 작은 방 새 구조 60% 시공",
+        "나무 속 작은 방 새 구조 75% 시공",
+        "나무 속 작은 방 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 12,
+      "name": "나무 속 작은 방",
+      "dayStart": 78,
+      "dayEnd": 84,
+      "svg": "weeks/week-12-tree-room.svg",
+      "png": "weeks/week-12-tree-room.png",
+      "nextWeekTarget": "첫 나무집",
+      "dailyVariationPlan": [
+        "나무 속 작은 방 기준형",
+        "첫 나무집 새 구조 15% 시공",
+        "첫 나무집 새 구조 30% 시공",
+        "첫 나무집 새 구조 45% 시공",
+        "첫 나무집 새 구조 60% 시공",
+        "첫 나무집 새 구조 75% 시공",
+        "첫 나무집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 13,
+      "name": "첫 나무집",
+      "dayStart": 85,
+      "dayEnd": 91,
+      "svg": "weeks/week-13-tree-house.svg",
+      "png": "weeks/week-13-tree-house.png",
+      "nextWeekTarget": "발코니 나무집",
+      "dailyVariationPlan": [
+        "첫 나무집 기준형",
+        "발코니 나무집 새 구조 15% 시공",
+        "발코니 나무집 새 구조 30% 시공",
+        "발코니 나무집 새 구조 45% 시공",
+        "발코니 나무집 새 구조 60% 시공",
+        "발코니 나무집 새 구조 75% 시공",
+        "발코니 나무집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 14,
+      "name": "발코니 나무집",
+      "dayStart": 92,
+      "dayEnd": 98,
+      "svg": "weeks/week-14-tree-balcony.svg",
+      "png": "weeks/week-14-tree-balcony.png",
+      "nextWeekTarget": "통나무 오두막",
+      "dailyVariationPlan": [
+        "발코니 나무집 기준형",
+        "통나무 오두막 새 구조 15% 시공",
+        "통나무 오두막 새 구조 30% 시공",
+        "통나무 오두막 새 구조 45% 시공",
+        "통나무 오두막 새 구조 60% 시공",
+        "통나무 오두막 새 구조 75% 시공",
+        "통나무 오두막 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 15,
+      "name": "통나무 오두막",
+      "dayStart": 99,
+      "dayEnd": 105,
+      "svg": "weeks/week-15-wood-cabin.svg",
+      "png": "weeks/week-15-wood-cabin.png",
+      "nextWeekTarget": "돌담 집",
+      "dailyVariationPlan": [
+        "통나무 오두막 기준형",
+        "돌담 집 새 구조 15% 시공",
+        "돌담 집 새 구조 30% 시공",
+        "돌담 집 새 구조 45% 시공",
+        "돌담 집 새 구조 60% 시공",
+        "돌담 집 새 구조 75% 시공",
+        "돌담 집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 16,
+      "name": "돌담 집",
+      "dayStart": 106,
+      "dayEnd": 112,
+      "svg": "weeks/week-16-stone-cottage.svg",
+      "png": "weeks/week-16-stone-cottage.png",
+      "nextWeekTarget": "벽돌 집",
+      "dailyVariationPlan": [
+        "돌담 집 기준형",
+        "벽돌 집 새 구조 15% 시공",
+        "벽돌 집 새 구조 30% 시공",
+        "벽돌 집 새 구조 45% 시공",
+        "벽돌 집 새 구조 60% 시공",
+        "벽돌 집 새 구조 75% 시공",
+        "벽돌 집 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 17,
+      "name": "벽돌 집",
+      "dayStart": 113,
+      "dayEnd": 119,
+      "svg": "weeks/week-17-brick-home.svg",
+      "png": "weeks/week-17-brick-home.png",
+      "nextWeekTarget": "2층 주택",
+      "dailyVariationPlan": [
+        "벽돌 집 기준형",
+        "2층 주택 새 구조 15% 시공",
+        "2층 주택 새 구조 30% 시공",
+        "2층 주택 새 구조 45% 시공",
+        "2층 주택 새 구조 60% 시공",
+        "2층 주택 새 구조 75% 시공",
+        "2층 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 18,
+      "name": "2층 주택",
+      "dayStart": 120,
+      "dayEnd": 126,
+      "svg": "weeks/week-18-two-storeys.svg",
+      "png": "weeks/week-18-two-storeys.png",
+      "nextWeekTarget": "3층 주택",
+      "dailyVariationPlan": [
+        "2층 주택 기준형",
+        "3층 주택 새 구조 15% 시공",
+        "3층 주택 새 구조 30% 시공",
+        "3층 주택 새 구조 45% 시공",
+        "3층 주택 새 구조 60% 시공",
+        "3층 주택 새 구조 75% 시공",
+        "3층 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 19,
+      "name": "3층 주택",
+      "dayStart": 127,
+      "dayEnd": 133,
+      "svg": "weeks/week-19-three-storeys.svg",
+      "png": "weeks/week-19-three-storeys.png",
+      "nextWeekTarget": "도시형 주택",
+      "dailyVariationPlan": [
+        "3층 주택 기준형",
+        "도시형 주택 새 구조 15% 시공",
+        "도시형 주택 새 구조 30% 시공",
+        "도시형 주택 새 구조 45% 시공",
+        "도시형 주택 새 구조 60% 시공",
+        "도시형 주택 새 구조 75% 시공",
+        "도시형 주택 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 20,
+      "name": "도시형 주택",
+      "dayStart": 134,
+      "dayEnd": 140,
+      "svg": "weeks/week-20-town-house.svg",
+      "png": "weeks/week-20-town-house.png",
+      "nextWeekTarget": "작은 주택 단지",
+      "dailyVariationPlan": [
+        "도시형 주택 기준형",
+        "작은 주택 단지 새 구조 15% 시공",
+        "작은 주택 단지 새 구조 30% 시공",
+        "작은 주택 단지 새 구조 45% 시공",
+        "작은 주택 단지 새 구조 60% 시공",
+        "작은 주택 단지 새 구조 75% 시공",
+        "작은 주택 단지 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 21,
+      "name": "작은 주택 단지",
+      "dayStart": 141,
+      "dayEnd": 147,
+      "svg": "weeks/week-21-twin-houses.svg",
+      "png": "weeks/week-21-twin-houses.png",
+      "nextWeekTarget": "상가 건물",
+      "dailyVariationPlan": [
+        "작은 주택 단지 기준형",
+        "상가 건물 새 구조 15% 시공",
+        "상가 건물 새 구조 30% 시공",
+        "상가 건물 새 구조 45% 시공",
+        "상가 건물 새 구조 60% 시공",
+        "상가 건물 새 구조 75% 시공",
+        "상가 건물 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 22,
+      "name": "상가 건물",
+      "dayStart": 148,
+      "dayEnd": 154,
+      "svg": "weeks/week-22-corner-block.svg",
+      "png": "weeks/week-22-corner-block.png",
+      "nextWeekTarget": "벽돌 빌딩",
+      "dailyVariationPlan": [
+        "상가 건물 기준형",
+        "벽돌 빌딩 새 구조 15% 시공",
+        "벽돌 빌딩 새 구조 30% 시공",
+        "벽돌 빌딩 새 구조 45% 시공",
+        "벽돌 빌딩 새 구조 60% 시공",
+        "벽돌 빌딩 새 구조 75% 시공",
+        "벽돌 빌딩 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 23,
+      "name": "벽돌 빌딩",
+      "dayStart": 155,
+      "dayEnd": 161,
+      "svg": "weeks/week-23-brick-block.svg",
+      "png": "weeks/week-23-brick-block.png",
+      "nextWeekTarget": "현대식 빌딩",
+      "dailyVariationPlan": [
+        "벽돌 빌딩 기준형",
+        "현대식 빌딩 새 구조 15% 시공",
+        "현대식 빌딩 새 구조 30% 시공",
+        "현대식 빌딩 새 구조 45% 시공",
+        "현대식 빌딩 새 구조 60% 시공",
+        "현대식 빌딩 새 구조 75% 시공",
+        "현대식 빌딩 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 24,
+      "name": "현대식 빌딩",
+      "dayStart": 162,
+      "dayEnd": 168,
+      "svg": "weeks/week-24-modern-block.svg",
+      "png": "weeks/week-24-modern-block.png",
+      "nextWeekTarget": "작은 오피스",
+      "dailyVariationPlan": [
+        "현대식 빌딩 기준형",
+        "작은 오피스 새 구조 15% 시공",
+        "작은 오피스 새 구조 30% 시공",
+        "작은 오피스 새 구조 45% 시공",
+        "작은 오피스 새 구조 60% 시공",
+        "작은 오피스 새 구조 75% 시공",
+        "작은 오피스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 25,
+      "name": "작은 오피스",
+      "dayStart": 169,
+      "dayEnd": 175,
+      "svg": "weeks/week-25-office.svg",
+      "png": "weeks/week-25-office.png",
+      "nextWeekTarget": "확장 오피스",
+      "dailyVariationPlan": [
+        "작은 오피스 기준형",
+        "확장 오피스 새 구조 15% 시공",
+        "확장 오피스 새 구조 30% 시공",
+        "확장 오피스 새 구조 45% 시공",
+        "확장 오피스 새 구조 60% 시공",
+        "확장 오피스 새 구조 75% 시공",
+        "확장 오피스 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 26,
+      "name": "확장 오피스",
+      "dayStart": 176,
+      "dayEnd": 182,
+      "svg": "weeks/week-26-office-annex.svg",
+      "png": "weeks/week-26-office-annex.png",
+      "nextWeekTarget": "유리 빌딩",
+      "dailyVariationPlan": [
+        "확장 오피스 기준형",
+        "유리 빌딩 새 구조 15% 시공",
+        "유리 빌딩 새 구조 30% 시공",
+        "유리 빌딩 새 구조 45% 시공",
+        "유리 빌딩 새 구조 60% 시공",
+        "유리 빌딩 새 구조 75% 시공",
+        "유리 빌딩 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 27,
+      "name": "유리 빌딩",
+      "dayStart": 183,
+      "dayEnd": 189,
+      "svg": "weeks/week-27-glass-block.svg",
+      "png": "weeks/week-27-glass-block.png",
+      "nextWeekTarget": "높아진 유리 빌딩",
+      "dailyVariationPlan": [
+        "유리 빌딩 기준형",
+        "높아진 유리 빌딩 새 구조 15% 시공",
+        "높아진 유리 빌딩 새 구조 30% 시공",
+        "높아진 유리 빌딩 새 구조 45% 시공",
+        "높아진 유리 빌딩 새 구조 60% 시공",
+        "높아진 유리 빌딩 새 구조 75% 시공",
+        "높아진 유리 빌딩 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 28,
+      "name": "높아진 유리 빌딩",
+      "dayStart": 190,
+      "dayEnd": 196,
+      "svg": "weeks/week-28-glass-highrise.svg",
+      "png": "weeks/week-28-glass-highrise.png",
+      "nextWeekTarget": "테라스 타워",
+      "dailyVariationPlan": [
+        "높아진 유리 빌딩 기준형",
+        "테라스 타워 새 구조 15% 시공",
+        "테라스 타워 새 구조 30% 시공",
+        "테라스 타워 새 구조 45% 시공",
+        "테라스 타워 새 구조 60% 시공",
+        "테라스 타워 새 구조 75% 시공",
+        "테라스 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 29,
+      "name": "테라스 타워",
+      "dayStart": 197,
+      "dayEnd": 203,
+      "svg": "weeks/week-29-terraced-tower.svg",
+      "png": "weeks/week-29-terraced-tower.png",
+      "nextWeekTarget": "도심 타워",
+      "dailyVariationPlan": [
+        "테라스 타워 기준형",
+        "도심 타워 새 구조 15% 시공",
+        "도심 타워 새 구조 30% 시공",
+        "도심 타워 새 구조 45% 시공",
+        "도심 타워 새 구조 60% 시공",
+        "도심 타워 새 구조 75% 시공",
+        "도심 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 30,
+      "name": "도심 타워",
+      "dayStart": 204,
+      "dayEnd": 210,
+      "svg": "weeks/week-30-city-tower.svg",
+      "png": "weeks/week-30-city-tower.png",
+      "nextWeekTarget": "스카이라인",
+      "dailyVariationPlan": [
+        "도심 타워 기준형",
+        "스카이라인 새 구조 15% 시공",
+        "스카이라인 새 구조 30% 시공",
+        "스카이라인 새 구조 45% 시공",
+        "스카이라인 새 구조 60% 시공",
+        "스카이라인 새 구조 75% 시공",
+        "스카이라인 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 31,
+      "name": "스카이라인",
+      "dayStart": 211,
+      "dayEnd": 217,
+      "svg": "weeks/week-31-skyline.svg",
+      "png": "weeks/week-31-skyline.png",
+      "nextWeekTarget": "복합 타워",
+      "dailyVariationPlan": [
+        "스카이라인 기준형",
+        "복합 타워 새 구조 15% 시공",
+        "복합 타워 새 구조 30% 시공",
+        "복합 타워 새 구조 45% 시공",
+        "복합 타워 새 구조 60% 시공",
+        "복합 타워 새 구조 75% 시공",
+        "복합 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 32,
+      "name": "복합 타워",
+      "dayStart": 218,
+      "dayEnd": 224,
+      "svg": "weeks/week-32-mixed-use.svg",
+      "png": "weeks/week-32-mixed-use.png",
+      "nextWeekTarget": "고층 타워",
+      "dailyVariationPlan": [
+        "복합 타워 기준형",
+        "고층 타워 새 구조 15% 시공",
+        "고층 타워 새 구조 30% 시공",
+        "고층 타워 새 구조 45% 시공",
+        "고층 타워 새 구조 60% 시공",
+        "고층 타워 새 구조 75% 시공",
+        "고층 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 33,
+      "name": "고층 타워",
+      "dayStart": 225,
+      "dayEnd": 231,
+      "svg": "weeks/week-33-high-rise.svg",
+      "png": "weeks/week-33-high-rise.png",
+      "nextWeekTarget": "가늘어진 타워",
+      "dailyVariationPlan": [
+        "고층 타워 기준형",
+        "가늘어진 타워 새 구조 15% 시공",
+        "가늘어진 타워 새 구조 30% 시공",
+        "가늘어진 타워 새 구조 45% 시공",
+        "가늘어진 타워 새 구조 60% 시공",
+        "가늘어진 타워 새 구조 75% 시공",
+        "가늘어진 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 34,
+      "name": "가늘어진 타워",
+      "dayStart": 232,
+      "dayEnd": 238,
+      "svg": "weeks/week-34-slender-tower.svg",
+      "png": "weeks/week-34-slender-tower.png",
+      "nextWeekTarget": "상승하는 타워",
+      "dailyVariationPlan": [
+        "가늘어진 타워 기준형",
+        "상승하는 타워 새 구조 15% 시공",
+        "상승하는 타워 새 구조 30% 시공",
+        "상승하는 타워 새 구조 45% 시공",
+        "상승하는 타워 새 구조 60% 시공",
+        "상승하는 타워 새 구조 75% 시공",
+        "상승하는 타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 35,
+      "name": "상승하는 타워",
+      "dayStart": 239,
+      "dayEnd": 245,
+      "svg": "weeks/week-35-tapered-tower.svg",
+      "png": "weeks/week-35-tapered-tower.png",
+      "nextWeekTarget": "초고층 코어",
+      "dailyVariationPlan": [
+        "상승하는 타워 기준형",
+        "초고층 코어 새 구조 15% 시공",
+        "초고층 코어 새 구조 30% 시공",
+        "초고층 코어 새 구조 45% 시공",
+        "초고층 코어 새 구조 60% 시공",
+        "초고층 코어 새 구조 75% 시공",
+        "초고층 코어 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 36,
+      "name": "초고층 코어",
+      "dayStart": 246,
+      "dayEnd": 252,
+      "svg": "weeks/week-36-core-76.svg",
+      "png": "weeks/week-36-core-76.png",
+      "nextWeekTarget": "철골 84층",
+      "dailyVariationPlan": [
+        "초고층 코어 기준형",
+        "철골 84층 새 구조 15% 시공",
+        "철골 84층 새 구조 30% 시공",
+        "철골 84층 새 구조 45% 시공",
+        "철골 84층 새 구조 60% 시공",
+        "철골 84층 새 구조 75% 시공",
+        "철골 84층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 37,
+      "name": "철골 84층",
+      "dayStart": 253,
+      "dayEnd": 259,
+      "svg": "weeks/week-37-frame-84.svg",
+      "png": "weeks/week-37-frame-84.png",
+      "nextWeekTarget": "철골 92층",
+      "dailyVariationPlan": [
+        "철골 84층 기준형",
+        "철골 92층 새 구조 15% 시공",
+        "철골 92층 새 구조 30% 시공",
+        "철골 92층 새 구조 45% 시공",
+        "철골 92층 새 구조 60% 시공",
+        "철골 92층 새 구조 75% 시공",
+        "철골 92층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 38,
+      "name": "철골 92층",
+      "dayStart": 260,
+      "dayEnd": 266,
+      "svg": "weeks/week-38-frame-92.svg",
+      "png": "weeks/week-38-frame-92.png",
+      "nextWeekTarget": "철골 100층",
+      "dailyVariationPlan": [
+        "철골 92층 기준형",
+        "철골 100층 새 구조 15% 시공",
+        "철골 100층 새 구조 30% 시공",
+        "철골 100층 새 구조 45% 시공",
+        "철골 100층 새 구조 60% 시공",
+        "철골 100층 새 구조 75% 시공",
+        "철골 100층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 39,
+      "name": "철골 100층",
+      "dayStart": 267,
+      "dayEnd": 273,
+      "svg": "weeks/week-39-frame-100.svg",
+      "png": "weeks/week-39-frame-100.png",
+      "nextWeekTarget": "철골 108층",
+      "dailyVariationPlan": [
+        "철골 100층 기준형",
+        "철골 108층 새 구조 15% 시공",
+        "철골 108층 새 구조 30% 시공",
+        "철골 108층 새 구조 45% 시공",
+        "철골 108층 새 구조 60% 시공",
+        "철골 108층 새 구조 75% 시공",
+        "철골 108층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 40,
+      "name": "철골 108층",
+      "dayStart": 274,
+      "dayEnd": 280,
+      "svg": "weeks/week-40-frame-108.svg",
+      "png": "weeks/week-40-frame-108.png",
+      "nextWeekTarget": "철골 116층",
+      "dailyVariationPlan": [
+        "철골 108층 기준형",
+        "철골 116층 새 구조 15% 시공",
+        "철골 116층 새 구조 30% 시공",
+        "철골 116층 새 구조 45% 시공",
+        "철골 116층 새 구조 60% 시공",
+        "철골 116층 새 구조 75% 시공",
+        "철골 116층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 41,
+      "name": "철골 116층",
+      "dayStart": 281,
+      "dayEnd": 287,
+      "svg": "weeks/week-41-frame-116.svg",
+      "png": "weeks/week-41-frame-116.png",
+      "nextWeekTarget": "철골 정상 도달",
+      "dailyVariationPlan": [
+        "철골 116층 기준형",
+        "철골 정상 도달 새 구조 15% 시공",
+        "철골 정상 도달 새 구조 30% 시공",
+        "철골 정상 도달 새 구조 45% 시공",
+        "철골 정상 도달 새 구조 60% 시공",
+        "철골 정상 도달 새 구조 75% 시공",
+        "철골 정상 도달 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 42,
+      "name": "철골 정상 도달",
+      "dayStart": 288,
+      "dayEnd": 294,
+      "svg": "weeks/week-42-frame-123.svg",
+      "png": "weeks/week-42-frame-123.png",
+      "nextWeekTarget": "아래층 유리 외벽",
+      "dailyVariationPlan": [
+        "철골 정상 도달 기준형",
+        "아래층 유리 외벽 새 구조 15% 시공",
+        "아래층 유리 외벽 새 구조 30% 시공",
+        "아래층 유리 외벽 새 구조 45% 시공",
+        "아래층 유리 외벽 새 구조 60% 시공",
+        "아래층 유리 외벽 새 구조 75% 시공",
+        "아래층 유리 외벽 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 43,
+      "name": "아래층 유리 외벽",
+      "dayStart": 295,
+      "dayEnd": 301,
+      "svg": "weeks/week-43-lower-glass.svg",
+      "png": "weeks/week-43-lower-glass.png",
+      "nextWeekTarget": "중층 유리 외벽",
+      "dailyVariationPlan": [
+        "아래층 유리 외벽 기준형",
+        "중층 유리 외벽 새 구조 15% 시공",
+        "중층 유리 외벽 새 구조 30% 시공",
+        "중층 유리 외벽 새 구조 45% 시공",
+        "중층 유리 외벽 새 구조 60% 시공",
+        "중층 유리 외벽 새 구조 75% 시공",
+        "중층 유리 외벽 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 44,
+      "name": "중층 유리 외벽",
+      "dayStart": 302,
+      "dayEnd": 308,
+      "svg": "weeks/week-44-middle-glass.svg",
+      "png": "weeks/week-44-middle-glass.png",
+      "nextWeekTarget": "전체 유리 외벽",
+      "dailyVariationPlan": [
+        "중층 유리 외벽 기준형",
+        "전체 유리 외벽 새 구조 15% 시공",
+        "전체 유리 외벽 새 구조 30% 시공",
+        "전체 유리 외벽 새 구조 45% 시공",
+        "전체 유리 외벽 새 구조 60% 시공",
+        "전체 유리 외벽 새 구조 75% 시공",
+        "전체 유리 외벽 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 45,
+      "name": "전체 유리 외벽",
+      "dayStart": 309,
+      "dayEnd": 315,
+      "svg": "weeks/week-45-full-glass.svg",
+      "png": "weeks/week-45-full-glass.png",
+      "nextWeekTarget": "첫 왕관 곡선",
+      "dailyVariationPlan": [
+        "전체 유리 외벽 기준형",
+        "첫 왕관 곡선 새 구조 15% 시공",
+        "첫 왕관 곡선 새 구조 30% 시공",
+        "첫 왕관 곡선 새 구조 45% 시공",
+        "첫 왕관 곡선 새 구조 60% 시공",
+        "첫 왕관 곡선 새 구조 75% 시공",
+        "첫 왕관 곡선 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 46,
+      "name": "첫 왕관 곡선",
+      "dayStart": 316,
+      "dayEnd": 322,
+      "svg": "weeks/week-46-first-crown.svg",
+      "png": "weeks/week-46-first-crown.png",
+      "nextWeekTarget": "두 갈래 왕관",
+      "dailyVariationPlan": [
+        "첫 왕관 곡선 기준형",
+        "두 갈래 왕관 새 구조 15% 시공",
+        "두 갈래 왕관 새 구조 30% 시공",
+        "두 갈래 왕관 새 구조 45% 시공",
+        "두 갈래 왕관 새 구조 60% 시공",
+        "두 갈래 왕관 새 구조 75% 시공",
+        "두 갈래 왕관 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 47,
+      "name": "두 갈래 왕관",
+      "dayStart": 323,
+      "dayEnd": 329,
+      "svg": "weeks/week-47-split-crown.svg",
+      "png": "weeks/week-47-split-crown.png",
+      "nextWeekTarget": "완성된 타워 외관",
+      "dailyVariationPlan": [
+        "두 갈래 왕관 기준형",
+        "완성된 타워 외관 새 구조 15% 시공",
+        "완성된 타워 외관 새 구조 30% 시공",
+        "완성된 타워 외관 새 구조 45% 시공",
+        "완성된 타워 외관 새 구조 60% 시공",
+        "완성된 타워 외관 새 구조 75% 시공",
+        "완성된 타워 외관 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 48,
+      "name": "완성된 타워 외관",
+      "dayStart": 330,
+      "dayEnd": 336,
+      "svg": "weeks/week-48-finished-tower.svg",
+      "png": "weeks/week-48-finished-tower.png",
+      "nextWeekTarget": "타워 앞 포디엄",
+      "dailyVariationPlan": [
+        "완성된 타워 외관 기준형",
+        "타워 앞 포디엄 새 구조 15% 시공",
+        "타워 앞 포디엄 새 구조 30% 시공",
+        "타워 앞 포디엄 새 구조 45% 시공",
+        "타워 앞 포디엄 새 구조 60% 시공",
+        "타워 앞 포디엄 새 구조 75% 시공",
+        "타워 앞 포디엄 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 49,
+      "name": "타워 앞 포디엄",
+      "dayStart": 337,
+      "dayEnd": 343,
+      "svg": "weeks/week-49-podium.svg",
+      "png": "weeks/week-49-podium.png",
+      "nextWeekTarget": "포디엄 옥상 정원",
+      "dailyVariationPlan": [
+        "타워 앞 포디엄 기준형",
+        "포디엄 옥상 정원 새 구조 15% 시공",
+        "포디엄 옥상 정원 새 구조 30% 시공",
+        "포디엄 옥상 정원 새 구조 45% 시공",
+        "포디엄 옥상 정원 새 구조 60% 시공",
+        "포디엄 옥상 정원 새 구조 75% 시공",
+        "포디엄 옥상 정원 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 50,
+      "name": "포디엄 옥상 정원",
+      "dayStart": 344,
+      "dayEnd": 350,
+      "svg": "weeks/week-50-roof-garden.svg",
+      "png": "weeks/week-50-roof-garden.png",
+      "nextWeekTarget": "타워 광장",
+      "dailyVariationPlan": [
+        "포디엄 옥상 정원 기준형",
+        "타워 광장 새 구조 15% 시공",
+        "타워 광장 새 구조 30% 시공",
+        "타워 광장 새 구조 45% 시공",
+        "타워 광장 새 구조 60% 시공",
+        "타워 광장 새 구조 75% 시공",
+        "타워 광장 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 51,
+      "name": "타워 광장",
+      "dayStart": 351,
+      "dayEnd": 357,
+      "svg": "weeks/week-51-plaza.svg",
+      "png": "weeks/week-51-plaza.png",
+      "nextWeekTarget": "빛나는 전망층",
+      "dailyVariationPlan": [
+        "타워 광장 기준형",
+        "빛나는 전망층 새 구조 15% 시공",
+        "빛나는 전망층 새 구조 30% 시공",
+        "빛나는 전망층 새 구조 45% 시공",
+        "빛나는 전망층 새 구조 60% 시공",
+        "빛나는 전망층 새 구조 75% 시공",
+        "빛나는 전망층 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 52,
+      "name": "빛나는 전망층",
+      "dayStart": 358,
+      "dayEnd": 364,
+      "svg": "weeks/week-52-illuminated-crown.svg",
+      "png": "weeks/week-52-illuminated-crown.png",
+      "nextWeekTarget": "롯데월드타워",
+      "dailyVariationPlan": [
+        "빛나는 전망층 기준형",
+        "롯데월드타워 새 구조 15% 시공",
+        "롯데월드타워 새 구조 30% 시공",
+        "롯데월드타워 새 구조 45% 시공",
+        "롯데월드타워 새 구조 60% 시공",
+        "롯데월드타워 새 구조 75% 시공",
+        "롯데월드타워 새 구조 90% 시공; 다음 주 첫날에 완성"
+      ]
+    },
+    {
+      "week": 53,
+      "name": "롯데월드타워",
+      "dayStart": 365,
+      "dayEnd": 366,
+      "svg": "weeks/week-53-lotte-world-tower.svg",
+      "png": "weeks/week-53-lotte-world-tower.png",
+      "nextWeekTarget": "롯데월드타워",
+      "dailyVariationPlan": [
+        "롯데월드타워 완성형",
+        "윤년 마지막 날: 현관 캐노피·정원 확장"
+      ]
+    }
+  ]
+}

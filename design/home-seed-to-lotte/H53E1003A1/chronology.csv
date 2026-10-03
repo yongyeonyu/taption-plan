@@ -1,0 +1,54 @@
+﻿week,name,region,representative_period,sort_year,source,date_basis
+1,씨앗,자연,도입,,,thematic prologue
+2,새싹,자연,도입,,,thematic prologue
+3,큰 나무,자연,도입,,,thematic prologue
+4,모닥불,야영,비연대 도입,,,thematic prologue
+5,동굴 거처,야영,비연대 도입,,,thematic prologue
+6,해먹,야영,비연대 도입,,,thematic prologue
+7,가지 움막,야영,비연대 도입,,,thematic prologue
+8,차탈회위크 흙집,튀르키예,기원전7천년대,-7000,https://whc.unesco.org/en/list/1405,selected representative period; not origin date
+9,스카라브레이 돌집,스코틀랜드,기원전3천년대,-3000,https://whc.unesco.org/en/list/514/,selected representative period; not origin date
+10,이집트 피라미드,이집트,기원전26세기,-2600,,selected representative period; not origin date
+11,우르 지구라트,이라크,기원전21세기,-2100,,selected representative period; not origin date
+12,미노스 궁전,그리스 크레타,기원전17세기,-1700,,selected representative period; not origin date
+13,그리스 신전,그리스,기원전5세기,-450,,selected representative period; not origin date
+14,로마 판테온,이탈리아,2세기,125,,selected representative period; not origin date
+15,비잔틴 돔,튀르키예,6세기,537,,selected representative period; not origin date
+16,호류지 목탑,일본,7–8세기,700,https://whc.unesco.org/en/list/660,selected representative period; not origin date
+17,마야 계단 신전,멕시코,8세기 대표,750,,selected representative period; not origin date
+18,이슬람 아치 궁전,서아시아,8–9세기,800,,selected representative period; not origin date
+19,바이킹 롱하우스,북유럽,9–10세기,900,,selected representative period; not origin date
+20,로마네스크 석조,서유럽,11세기,1050,,selected representative period; not origin date
+21,앙코르 사원,캄보디아,12세기,1150,,selected representative period; not origin date
+22,고딕 대성당,프랑스,12–13세기,1200,https://www.metmuseum.org/fr/essays/gothic-art,selected representative period; not origin date
+23,절벽 푸에블로,미국 남서부,13세기,1250,https://www.nps.gov/meve/learn/historyculture/cliff_dwellings_home.htm,selected representative period; not origin date
+24,짐바브웨 석조 성곽,짐바브웨,11–15세기 중 대표,1300,https://whc.unesco.org/en/list/364,selected representative period; not origin date
+25,조선 한옥,한국,조선 초기 대표,1400,,selected representative period; not origin date
+26,르네상스 팔라초,이탈리아,15세기,1450,https://www.metmuseum.org/fr/essays/architecture-in-renaissance-italy,selected representative period; not origin date
+27,푸젠 토루,중국,15–20세기 중 대표,1500,https://whc.unesco.org/en/list/1113,selected representative period; not origin date
+28,튜더 목조 주택,영국,16세기,1550,,selected representative period; not origin date
+29,시밤 흙탑 주택,예멘,16세기 대표,1600,https://whc.unesco.org/en/list/192,selected representative period; not origin date
+30,무굴 돔 궁전,인도,17세기,1630,,selected representative period; not origin date
+31,일본 성곽,일본,17세기 대표,1630,https://whc.unesco.org/en/list/661,selected representative period; not origin date
+32,바로크 궁전,프랑스,17세기,1660,,selected representative period; not origin date
+33,네덜란드 운하집,네덜란드,17세기,1680,,selected representative period; not origin date
+34,로코코 저택,중부 유럽,18세기,1750,,selected representative period; not origin date
+35,신고전주의 저택,유럽,18–19세기,1800,,selected representative period; not origin date
+36,러시아 목조 주택,러시아,19세기 대표,1850,,selected representative period; not origin date
+37,빅토리아 주택,영국,19세기,1870,,selected representative period; not origin date
+38,시카고 철골 빌딩,미국,19세기 말,1890,,selected representative period; not origin date
+39,아르누보 빌라,벨기에,1900년 전후,1900,https://www.metmuseum.org/ja/essays/art-nouveau,selected representative period; not origin date
+40,프레리 주택,미국,20세기 초,1910,,selected representative period; not origin date
+41,바우하우스,독일,1926 대표,1926,https://bauhaus-dessau.de/en/venues/bauhaus-building/,selected representative period; not origin date
+42,아르데코 빌딩,미국,1930년대,1930,,selected representative period; not origin date
+43,국제주의 유리 건물,미국,1950년대,1950,,selected representative period; not origin date
+44,브루탈리즘,영국,1960년대,1960,,selected representative period; not origin date
+45,메타볼리즘 캡슐,일본,1972 대표,1972,,selected representative period; not origin date
+46,시드니 오페라하우스,호주,1973,1973,https://whc.unesco.org/en/list/166,selected representative period; not origin date
+47,포스트모던 빌딩,미국,1980년대,1984,,selected representative period; not origin date
+48,하이테크 빌딩,영국,1980년대,1986,,selected representative period; not origin date
+49,빌바오 곡면 건축,스페인,1997,1997,https://www.guggenheim-bilbao.eus/en/the-building,selected representative period; not origin date
+50,타이베이101,대만,2004,2004,https://www.taipei-101.com.tw/tw//corporate/about,selected representative period; not origin date
+51,부르즈 칼리파,아랍에미리트,2010,2010,https://www.som.com/projects/burj-khalifa/,selected representative period; not origin date
+52,상하이타워,중국,2015,2015,https://www.gensler.com/projects/shanghai-tower,selected representative period; not origin date
+53,롯데월드타워,한국,2017,2017,https://www.kpf.com/news/lotte-world-tower-opens-in-seoul,selected representative period; not origin date

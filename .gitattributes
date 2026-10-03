@@ -1,0 +1,2 @@
+# Preserve exported CSV line endings and validate other whitespace normally.
+design/home-seed-to-lotte/**/*.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

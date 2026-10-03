@@ -28745,14 +28745,57 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertFalse(MapHomeGrowthPolicy.isLeapDay(date(2025, 2, 28), calendar: calendar))
     }
 
+    @MainActor
     func testAll366EvolutionIllustrationsArePackaged() {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        format.preferredRange = .standard
+        let size = CGSize(width: 48, height: 48)
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        var pixels = Set<Data>()
+        var thumbnails: [UIImage] = []
         for level in 1...366 {
-            let name = MapHomeGrowthPolicy.artworkName(level: level)
-            XCTAssertNotNil(
-                UIImage(named: name, in: Bundle.main, with: nil),
-                "Missing bundled illustration: \(name)"
-            )
+            autoreleasepool {
+                let name = MapHomeGrowthPolicy.artworkName(level: level)
+                guard let image = UIImage(named: name, in: Bundle.main, with: nil) else {
+                    XCTFail("Missing bundled illustration: \(name)")
+                    return
+                }
+                XCTAssertEqual(image.size, CGSize(width: 128, height: 128), name)
+                let thumbnail = renderer.image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: size))
+                }
+                guard let data = thumbnail.cgImage?.dataProvider?.data else {
+                    XCTFail("Cannot render bundled illustration: \(name)")
+                    return
+                }
+                XCTAssertTrue(pixels.insert(data as Data).inserted, "Duplicate 48pt artwork: \(name)")
+                thumbnails.append(thumbnail)
+            }
         }
+        XCTAssertEqual(thumbnails.count, 366)
+        let columns = 16
+        let tile = CGSize(width: 64, height: 72)
+        let reviewSize = CGSize(width: tile.width * CGFloat(columns), height: tile.height * 23)
+        let review = UIGraphicsImageRenderer(size: reviewSize, format: format).image { _ in
+            UIColor.white.setFill()
+            UIRectFill(CGRect(origin: .zero, size: reviewSize))
+            for (index, thumbnail) in thumbnails.enumerated() {
+                let x = CGFloat(index % columns) * tile.width
+                let y = CGFloat(index / columns) * tile.height
+                thumbnail.draw(at: CGPoint(x: x + 8, y: y + 4))
+                let label = "Lv.\(index + 1)" as NSString
+                label.draw(at: CGPoint(x: x + 8, y: y + 54), withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 9),
+                    .foregroundColor: UIColor.darkGray
+                ])
+            }
+        }
+        let attachment = XCTAttachment(image: review)
+        attachment.name = "HomeEvolution366-Bundled-48pt"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     func testYearChangeArchivesPreviousHouseAndStartsAtLevelOne() {

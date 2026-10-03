@@ -1,5 +1,36 @@
 # 검증 기록
 
+## REL1003A01 · main 반영·내부 TestFlight168 (2026-10-03)
+
+- 시작: main HEAD·fetch 후 origin/main·실제 원격 main은 모두 c441beaa0b72c31d590bb02157caf24a42d78f6d였다. 토요일 표시·Watch 수신 개선·세계 건축 366개 자산·관련 기록·디자인 자료와 기존 Kiro 파일3개 삭제 변경을 보존하여 사용자 요청 범위로 반영한다. 새 브랜치/초기화/파일 삭제는 수행하지 않았다.
+- 버전: ASC 최신 빌드 목록의 최고167 VALID를 확인하고168을 선택했다. CURRENT_PROJECT_VERSION8개 설정과 앱·Widget·Watch·Watch Widget 원본 Info.plist4개를168로 맞췄다(`builds-before.json`, `source-build-versions.json`). 근거 경로는 `build/validation/REL1003A01/`이다.
+- 검증 재사용: Watch 소스/테스트5개 hash와 성장 SVG366개 hash가 해당 최종 검증과 동일하고, 상단 날짜 수정 diff도 기존 토요일 우선 분기뿐임을 확인했다. Watch 관련58개·성장 관련18개·달력 정책1개 모두0실패·0건너뜀인 실제 요약을 대조해 재사용했다(`validation-reuse.json`). 새 전체 테스트나 실기기 기능 통과로 표시하지 않는다.
+- 최종168 iOS·Watch generic Debug 모두 BUILD SUCCEEDED·exit0. iOS 앱에 포함된 네 제품 번들 모두1.0(168) 확인(`ios-debug.log`, `watch-debug.log`, `debug-bundles.json`). 성장 자산 대조·import 경계·staged diff 검사도 성공했다. 배포 기준 소스/설정1,071개 hash를 저장했다(`source-hashes.json`).
+- 자료: 이전 시안과 승인본·배포 ZIP을 포함한 디자인2,907개 파일(98,899,733바이트)을 보존하여 함께 반영한다. Python 자동 캐시만 .gitignore에 제외하며 지우지 않았다. 디자인 CSV의 의도된 CRLF를 .gitattributes의 cr-at-eol로 선언하여 내용/바이트를 그대로 보존하고 다른 공백 검사는 유지했다. 최초 CSV 진단은 `staged-diff.log`, 최종 무진단은 `staged-diff-final.log`이다.
+- 현재 단계: 검증된 변경을 main 커밋·push 후 해당 소스로 Release archive/export·서명 확인·내부 TestFlight 업로드/처리/그룹 화면 확인을 진행한다. 실제 기기 설치·화면/Watch 수신 속도·기능/성능은 별도 미확인으로 유지하고 IAP/공개 제출은 보류한다.
+
+## WCH1003A01 · Apple Watch 데이터 수신 지연 개선 (2026-10-03)
+
+- 코드에서 확인한 지연 경로: Watch ambient outbox는 reachable 상태에서도 transferUserInfo만 예약했고, 이미 백그라운드 전송 중인 항목을 건너뛰었다. iPhone의 저장 확정 ACK도 transferUserInfo만 사용하며 Watch live-message delegate에는 ACK 소비가 없었다. 수동 syncNow는 전체 ambient drain 완료 후에야 독립적인 HealthKit 조회를 시작했다. 이 세 경로와 시작 소스 hash는 `build/validation/WCH1003A01/investigation.json`에 기록했다. 사용자 기기의 지연 시간이나 모든 지연의 단일 원인을 실측한 결과는 아니다.
+- 변경: durable outbox·기존 reliable 전송을 유지하고 reachable 때 ambient 요약/가속도 원본의 즉시 전송을 추가했다. 이미 reliable 큐에 있는 항목도 즉시 경로를 사용할 수 있다. 공유 gate는 ACK 대기4개, payload32KiB, 재시도10초를 적용하며 ACK 유실·기기 uptime 역전·purge reset을 처리한다. 큰 항목/연결 끊김/즉시 전송 실패는 기존 reliable 큐에 남는다. iPhone 저장 성공 후 ACK 호출 위치는 유지하고 ACK의 즉시 전달·Watch 수신 처리를 추가했다. ACK 소비와 outbox 삭제 성공 후에 다음 항목을 보낸다.
+- 수동 건강 조회는 ambient drain과 함께 시작한다. 기존 삭제/설정 generation을 전달하여 대기 중 시작되는 오래된 건강 조회를 차단하고, 전체 동기화 종료는 두 경로의 완료를 모두 기다린다. 기존 HealthKit 원본·출처, SQLite/payload 스키마, App Group 경로, 삭제 fence와 재전송/중복 저장 계약을 유지한다. CMSensorRecorder의 기존 조회 가용성 대기180초는 변경하지 않았다.
+- 관련 회귀 **58통과·0실패·0건너뜀**: WatchSensorQueryPlanTests 전체(신규4개 포함)와 실제 저장/ACK·같은 버전 재수신·fallback·재시작 high-water·revision 역전·가속도 중복/순서 역전 테스트6개. 신규 fixture는 12개 backlog를 ACK 라운드3회/라운드당4개로 전달하며 중복 예약·ACK 유실 재시도·크기/연결 경계·reset을 검증했다. xcresult의 실제 요약은 `watch-sync-tests.xcresult`, `test-summary.json`, 실행 로그는 `tests.log`이다. fixture 전달 수는 실제 기기 전송 시간 측정이 아니다.
+- 최종 iOS generic Debug와 Watch generic Debug 모두 BUILD SUCCEEDED·exit0(`ios-debug.log`, `watch-debug.log`). iOS 산출물의 앱·Widget·Watch·Watch Widget 네 번들1.0(167) 확인(`ios-bundles.json`), import 경계·diff 검사 통과. 기존 SecurityBackupCore weak 캡처 경고2곳은 그대로다. 최종 소스 hash는 `source-hashes-after.json`, 검증 요약은 `validation-summary.json`에 저장한다.
+- 제한: 변경된 iPhone·Watch 수정본의 설치 및 실제 수신 시간/백그라운드 체감/배터리는 미검증이므로 temp에 실기기 조건을 유지한다. 로컬 Debug167은 이번 변경을 포함하며 기존 TestFlight167 배포 소스와 구분한다. 재업로드·커밋·push는 수행하지 않았다. 시작 시 있던 상단 토요일 수정·문서 변경·Kiro 파일3개 삭제 상태를 보존했다.
+
+## SAT1003A01 · 상단 토요일 파란색 표시 (2026-10-03)
+
+- 상단 날짜/요일의 dateColor가 공휴일을 우선하여 개천절과 겹친 2026-10-03 토요일에 빨간색을 반환했다. 토요일 분기를 공휴일 분기 앞에 두어 상단 날짜와 요일에 기존 파란색 tpSaturday를 적용한다. 일요일/다른 공휴일/평일 규칙은 유지한다.
+- 기존 TimeScaleTests/testMapHomeCalendarDayStyleUsesHolidayAndWeekendColors 1통과·0실패·0건너뜀(xcresult 요약 확인). 앱 generic iOS Debug BUILD SUCCEEDED·exit0, diff 검사 통과. 근거: `build/validation/SAT1003A01/`의 `tests.log`, `date-colors.xcresult`, `test-summary.json`, `debug.log`.
+- 제한: 이 회귀는 기존 달력 주말/공휴일 정책 검증이며 상단 화면의 시각 검증은 아니다. 이번 수정본은 실기기에 재설치하지 않았다. 시작 시 존재한 문서 변경과 Kiro 파일3개의 삭제 상태를 보존했으며 커밋/push는 수행하지 않았다. 구현/회귀/Debug 기준 충족으로 temp 항목을 제거했다.
+
+## INS1002A01 · iPhone11·18 최신167 설치 (2026-10-02)
+
+- 사용자 요청에 따라 iPhone11 Pro와 iPhone18 Pro Max에 기존 앱 삭제 없이 직접 Debug1.0(167)을 업데이트 설치했다. 시작 main c441bea·기존 문서2개 변경을 보존했다. 배포 검증 소스/설정119개 hash 변화0, 기존 최종 Debug 산출물 앱·Widget·Watch·Watch Widget 네 번들1.0(167), codesign deep/strict 검증 성공으로 기존 빌드/테스트 근거를 재사용했다.
+- 설치 전 devicectl 조회: iPhone11 1.0(163), iPhone18 1.0(167). 두 기기 install app 명령 exit0 및 JSON outcome success·com.taption.plan을 확인했고, 설치 후 각각 다시 조회하여 두 기기 모두1.0(167)을 확인했다.
+- 근거: `build/validation/INS1002A01/artifact-check.json`, `signature.log`, 각 `iphone11/iphone18-before.json`, `-install.json`, `-install.log`, `-after.json`. 새 실행 폴더를 사용해 기존 결과를 덮어쓰지 않았다. 완료 기준을 충족해 temp 항목을 제거했다.
+- 제한: 직접 설치한 Debug 빌드이며 TestFlight 다운로드 실행 결과가 아니다. 앱 실행·실제 화면/센서/저장/기능/성능 검증은 이번 요청에서 수행하지 않았다. 기존 실기기 기능 검증 대기는 유지한다. 앱 코드 변경·새 빌드·커밋·push는 수행하지 않았다.
+
 ## REL1002A02 · main 반영·내부 TestFlight167 (2026-10-02)
 
 - 시작 main9c525b2, fetch 후 origin/main과 일치했다. 미커밋 변경29개 파일은 DYN1001A01/B01·DYN1002C01·MAP1002D01·OPT1002A01·LCK1002B01 및 이전166 배포 기록에 연결되어 보존한다. 삭제/초기화/새 브랜치를 수행하지 않는다.
@@ -9,7 +40,10 @@
 - 19:42 KST에 업로드 성공을 확인했다(`upload.log`, Delivery UUID `c009e32e-0647-4a2a-bf6f-912befc443d0`). 첫 ASC 조회에서는167이 아직 목록에 등록되지 않아 처리 완료·그룹 연결/화면 확인은 대기다(`processing-01.json`). App Store Connect 웹 세션은 로그인 요청 중이다. 실제 기능·실기기 성능 검증 대기는 별도다.
 - 목록 등록 지연을 조사해 공식 BuildUpload API에서1.0(167) `PROCESSING`·오류0·경고0을 확인했다(`delivery-api-01.json`). 19:52 KST 후속 조회는 `COMPLETE`·빌드`VALID`·`INTERNAL_ONLY`를 반환했다(`delivery-api-02.json`). altool 조회도 exit0으로 정상 종료되어 `VALID`를 반환했다(`delivery-status-01.log`); 중지하려던 시점에는 이미 종료되어 실제 중지한 프로세스가 없었다(`delivery-status-01-stop.json`). 업로드 취소/재업로드는 하지 않았다.
 - 최종 API에서1.0(167) **VALID·IN_BETA_TESTING·INTERNAL_ONLY**를 확인했다. `TP Taption Plan 내부 테스트` 연결, 그룹 빌드 목록의167 포함, 테스터1명, 한국어 테스트 안내 저장도 확인했다(`build-final.json`, `group-attach.json`, `group-builds.json`, `testers-final.json`, `beta-test-notes.json`, `deployment-api-summary.json`). 빌드ID는 `c009e32e-0647-4a2a-bf6f-912befc443d0`이다. LCK1002B01·OPT1002A01·MAP1002D01·DYN1002C01 구현은 이제167에 포함되어 있다.
-- 제한: App Store Connect 웹 세션은 Apple 계정 로그인 화면이고 사용자 로그인 응답이 없어 실제 그룹 화면의 빌드/테스터 노출은 확인하지 못했다. 내부 업로드/처리/배포는 완료했지만 프로젝트의 전체 배포 기준은 미충족이므로 REL1002A02를 temp에 유지한다. 실제 기능·실기기 성능 대기도 유지한다. 배포 기록 반영 후 main/origin/main·실제 원격 hash 일치와 clean의 최종 근거는 `build/validation/REL1002A02/final-git.json`을 기준으로 판정한다.
+- 당시 제한: App Store Connect 웹 세션은 Apple 계정 로그인 화면이고 사용자 로그인 응답이 없어 실제 그룹 화면의 빌드/테스터 노출은 확인하지 못했다. 내부 업로드/처리/배포는 완료했지만 프로젝트의 전체 배포 기준은 미충족이므로 REL1002A02를 temp에 유지했다. 실제 기능·실기기 성능 대기도 유지했다. 배포 기록 반영 후 main/origin/main·실제 원격 hash 일치와 clean의 근거는 `build/validation/REL1002A02/final-git.json`이다.
+- 2026-10-02 23:37 KST 후속 확인: 시작 시 main HEAD·origin/main·`git ls-remote origin refs/heads/main`이 모두 `c441beaa0b72c31d590bb02157caf24a42d78f6d`이고 워크트리는 clean이었다. 현재 App Store Connect 웹 로그인이 유효하여 Taption Plan(6797370230)의 `TP Taption Plan 내부 테스트` 그룹을 직접 읽었다. 그룹 헤더는 테스터1명, 빌드 탭의 1.0(167) 내부 행은 **테스트 중**, 해당 행 링크의 빌드ID는 `c009e32e-0647-4a2a-bf6f-912befc443d0`이었다. 테스터 탭도 1명과 **설치됨 1.0(167)**·2026년10월2일을 표시했다.
+- 화면 근거는 `build/validation/REL1002A02/group-screen-2026-10-02T14-37-34-811Z/`의 `testers.jpg`, `builds.jpg`, `summary.json`에 새로 저장했다. 기존 근거를 덮어쓰지 않았다. 남은 그룹 화면 검증 조건을 충족하여 REL1002A02를 temp에서 제거했다. 웹의 설치 상태는 관찰 결과이며 이번 작업에서 새 업로드·실기기 설치·기능/성능 검증은 수행하지 않았다. LCK1002B01·DYN1002C01·MAP1002D01·OPT1002A01의 실기기 대기와 IAP/공개 제출 보류를 유지한다.
+- 이번 후속 변경은 temp.md·test.md의 로컬 검증 기록뿐이다. 앱 코드 변경이 없어 기존 테스트/빌드 근거를 재사용하며 앱 테스트·빌드를 다시 실행하지 않았다. 새 커밋·push는 수행하지 않았다. 문서 diff 및 최종 Git 상태는 같은 화면 근거 폴더의 `record-validation.json`에 기록한다.
 
 ## LCK1002B01 · 잠금 화면 하단 현재 활동 화랑이 (2026-10-02)
 
@@ -843,3 +877,73 @@
 - 사용자 실제 재시도는 `현재 데이터는 백업했습니다` 성공 안내를 확인했다고 보고했다. iCloud에서 생성 시각 2026-09-30 23:34의 신규 snapshot/raw version4 파일 두 개를 확인했다. encryptedPayload SHA256이 두 payloadDigest와 각각 일치하고 snapshot generationID와 raw generationID가 일치한다. 원본 9월 legacy snapshot/raw 파일도 남아 있다. 이는 BFX0930A01의 실제 신규 iCloud 저장 성공 근거이며 이전 raw를 복호/병합했다고 주장하지 않는다.
 - BUI 진행/완료 표시 자체의 실제 화면은 사용자 확인 전이므로 열린 상태로 유지한다. 오늘 raw 재현/회색 발바닥 검증도 별도 대기한다.
 - BUI0930A01 수정본 iPhone18 설치·실행 success (`install.json`, `launch.json`). TestFlight 업로드/초기화는 하지 않았다.
+
+
+## H53A1003B1 · 집 성장 주간 이미지53장 · 건축 양식 v2 (2026-10-03)
+- 요청: 주간 이미지53장을 먼저 제작. 최신 지시의 나무→초가집→기와집→주택→정원 주택→빌라→아파트→고층 순서를 반영하고 씨앗 시작·롯데월드타워 끝을 유지했다.
+- 산출물: `design/home-seed-to-lotte/H53A1003B1/v2/`. SVG53개·투명 PNG512×512 53개, 전체/48px 검토 시트, manifest/CSV, ZIP. 기존 SVG 시스템을 확장해 편집 가능한 벡터로 제작했으며 앱 자산은 변경하지 않았다. 첫 시안도 보존했다.
+- 검증: SVG XML53개 정상, 본문 해시53개 고유, PNG53개 RGBA·512×512·투명 모서리/알파0–255 확인. 48px 인접52쌍 모두 차이 있음(채널차35 초과 픽셀 최소54). 전체 시트와48px 시트를 시각 확인했고 초가/기와 지붕·층수·정원·동 배치 및 타워 형상을 확인했다. 수치 차이는 사용자 체감 검증을 대신하지 않는다.
+- 근거: `build/validation/H53A1003B1/v2-assets-validation.json`. 최초 시안 검증 파일은 보존했다.
+- 제한: 일별 세부 변화는 manifest의 제작 계획만 있다. 실제365/366개 일별 이미지, 앱 적용, 실기기 화면 검증은 수행하지 않았다. 앱 밖 디자인 산출물만 변경하여 추가 앱 테스트/Debug 빌드는 실행하지 않았다.
+
+
+## H53C1003A1 · 모닥불·해먹·움막 및 다양한 주거 양식53장 (2026-10-03)
+- 결과: 연간53주 틀을 유지하며 자연5단계, 모닥불/해먹/움막/텐트8단계, 초가·한옥6단계, 다양한 단독/정원/연립주택18단계, 빌라·아파트6단계, 고층5단계, 롯데 타워5단계로 재구성했다. A프레임·샬레·수상가옥·고상식·풍차·지중해·튜더·중정·타운하우스 실루엣을 추가했다.
+- 산출물: `design/home-seed-to-lotte/H53C1003A1/weekly-53-v3.zip`, SVG53개·투명PNG53개(512×512), 전체/48px 시트, manifest/CSV. 이전 시안과 기존 앱 자산은 보존했다.
+- 검증: 전체 시트 시각 확인. SVG XML53개 정상·본문53개 고유, PNG53개 RGBA/512×512/투명 모서리 확인.48px 인접52쌍 모두 렌더 차이 있음(채널 차35 초과 최소54픽셀). 근거 `build/validation/H53C1003A1/assets-validation.json`. 픽셀 차이는 사용자 체감 통과를 의미하지 않는다.
+- 제한: 일별 변화는 제작 계획만 존재하며 실제365/366개 일별 자산·앱 적용·실기기 확인은 미수행. 앱 밖 디자인 변경이므로 앱 테스트/Debug 빌드는 추가 실행하지 않았다.
+
+
+## H53D1003A1 · 추가 건축 양식 v4 (2026-10-03)
+- 결과:53주 구성 중 반복 변형20개를 동굴·이글루·흙집·유르트·원형 돌집·마차·마치야·트리하우스·하우스보트·돔·컨테이너·바우하우스·온실·고딕·아르누보·아르데코·브루탈리즘·나선형·계단식 양식 등으로 교체했다. 건축 특징을 단순화한 창작 SVG 아이콘이다.
+- 산출물: `design/home-seed-to-lotte/H53D1003A1/weekly-53-v4.zip`. SVG53개·투명PNG512×512 53개, 전체/48px 미리보기, 단계CSV/manifest. 기존 시안·앱 자산 보존.
+- 검증: 전체 시트 및 최종48px 시각 확인. SVG XML53개 정상·본문53개 고유, PNG53개 RGBA/512×512/투명 모서리 확인. 인접48px52쌍 모두 차이(채널차35 초과 최소85픽셀). 근거 `build/validation/H53D1003A1/assets-validation.json`. 픽셀 수치는 사용자 체감 검증과 구분한다. git diff --check 성공.
+- 제한: 일별 이미지는 계획만 있고365/366개 실제 일별 자산·앱 연결·실기기 확인은 미수행. 앱 밖 디자인 산출물 변경으로 앱 테스트/Debug 빌드 추가 실행 없음.
+
+
+## H53E1003A1 · 세계 건축 대표 시기순53단계 (2026-10-03)
+- 결과:1–7주는 자연·야영 비연대 도입,8–53주는 신석기→고대→중세→근대→현대의 대표 시기순으로 재구성.46개 건축 단계의 sortYear 비감소 확인. 지역·대표시기·날짜 기준을 manifest/chronology/README에 기록했다. 양식 최초 발생순 또는 모든 정확한 연대의 학술 검증을 주장하지 않는다.
+- 마지막 롯데타워 반복5단계를 제거하고 빌바오·타이베이101·부르즈 칼리파·상하이타워·롯데월드타워로 교체. 신전·궁전·성곽·박물관 포함 창작 아이콘이며 정밀 역사 재현은 아니다. 비잔틴 도입에 후대 미나레트를 넣지 않고 반돔으로 수정, 일본 목탑/성곽과 고대 신전/신고전주의도 전체 비율·벽체를 구분했다.
+- 근거:UNESCO/Met/NPS 및 건축가·운영기관 자료로 주요 대표 양식·시기 확인. 링크와 선택 기준은 산출물README/chronology.csv. 일부 대표 세기는 디자인 편집 기준이다.
+- 산출물:`design/home-seed-to-lotte/H53E1003A1/weekly-53-v5.zip`,SVG53·투명PNG512×512 53개, 지역/시기가 붙은 전체/48px 시트,CSV/JSON. 이전시안·기존앱자산 보존.
+- 검증:SVG XML53개 정상,SVG53개·디코딩PNG53개·이름53개 모두 고유, 투명 모서리·RGBA/크기 정상.53개 전체1,378쌍을48px에서 비교하여 동일 이미지0쌍,채널차35초과 최소219픽셀. 최종48px 시각 확인. 같은 바닥/화풍과 실제 공통 건축 요소는 유지하며 픽셀 비교가 체감 평가를 대체하지 않는다.근거`build/validation/H53E1003A1/assets-validation.json`.git diff --check 성공.
+- 제한:실제365/366개 일별이미지·앱적용·실기기 확인 미수행. 앱밖 디자인 수정으로 앱테스트/Debug빌드 추가실행 없음.
+
+
+## D3561003A1 · 세계 건축 일별 세부 이미지356장 (2026-10-03)
+- 결과: 최신 요청 총356장으로 제작. 이전365/366일과 수량 차이를 선택 질문으로 안내했으며 별도 답변이 없어 최신 명시 수량을 적용했다. 확정53종을 모두 유지해38단계7일+15단계6일로 배분했다. 따라서 모든 단계를7일로 고정하거나365일 전체를 덮는 자산이라고 주장하지 않는다.
+- 실제 이미지: `design/home-seed-to-lotte/D3561003A1/daily/`의SVG356개·투명PNG512×512 356개. 씨앗 균열/뿌리, 새싹/수관 성장, 모닥불/해먹/움막 구조, 지역 양식에 맞춘 기단/계단·별채·문루·입면/회랑·마당·현관/차양을 그렸다. 날짜/이름/색만 바꾼 복제나 crossfade를 사용하지 않는다. 건축 원형의 지역/대표시기 순서는H53E1003A1을 재사용하며 세부 증축은 창작 표현이다.
+- 배포 파일:PNG전용`daily-356-png.zip`(실제PNG 정확히356개;CSV/JSON/README/오프라인 날짜별index.html 포함), 별도SVG원본`daily-356-svg.zip`(SVG 정확히356개). 전체 단계 비교 시트·48px 시트·7개분할 검토 페이지·표본 시트 제공. 이전 주간 시안 및앱카탈로그 보존.
+- 검증:SVG XML356개 정상,SVG356개·디코딩PNG356개·48px이미지356개 각각 고유.1–356일 누락/중복0,단계53개 커버. 전PNG RGBA512×512·투명모서리/알파0–255·캔버스 경계 잘림없음 확인. 인접355쌍을48px premultipliedRGBA로 비교하여 채널차35초과 최소53픽셀(모든쌍50픽셀이상).7개 분할페이지에서 전체53종 일별 변형 시각 확인, 최종 회랑/곡면/캡슐 수정 표본 추가 확인. 숫자 차이는 실제 기기 체감 판정을 대신하지 않는다.
+- 제작 중 검수: 초기 가림/작은 변화 및RGBA계산int16범위 문제를 수정했다. first/second/third-pass 기록은 중간 실패/비최종이며 판정 근거는`build/validation/D3561003A1/daily-assets-delivery.json`, `packaging-validation.json`, `delivery-summary.json`이다. 기본Python의PIL미설치로 추가검수1회실패 후 제공된Python런타임에서 재실행 성공. 최종ZIP무결성/포맷수량 확인,뷰어JS구문확인,git diff --check 성공.
+- 제한: 현재 산출물 제작 완료이며 앱 연결·기기 설치·실기기화면 기능판정은 수행하지 않았다. 앱밖 디자인/제작도구 변경으로 앱테스트/Debug빌드는 추가실행하지 않았다. 기록된 대표시기/양식은 정밀역사복원 또는 모든기원의연대검증이 아니다.
+
+
+## D3661003A1 · 366개 수량 정정/날짜 매핑 확인 (2026-10-03)
+- 정정: 직전D3561003A1은356개였음을 사용자에게 명확히 알렸고366개 세트를별도생성했다.356개기존세트보존.신규산출물`design/home-seed-to-lotte/D3661003A1/`.
+- 날짜:1–52단계각7일(총364일),53단계는365·366일2장.1–366일 연속/누락/중복0,53단계순서유지.마지막2일은롯데타워기준형/현관·마당확장형으로다르다.
+- 결과:실제SVG366개·투명PNG512×512 366개.각형식ZIP(`daily-366-png.zip`, `daily-366-svg.zip`)에도해당포맷정확히366개/무결성정상.오프라인뷰어/CSV/JSON도366개로수정했다.
+- 검증:SVG XML·디코딩PNG·48px이미지각366개고유,RGBA/크기/투명모서리정상,캔버스경계잘림0.연속365쌍48px premultipliedRGBA차이각50픽셀이상(채널차35초과최소53픽셀).7일로복원된씨앗초기단계2쌍의미세차이를뿌리/새가지/잎으로보강한뒤재검수성공.초기실패는`daily-assets-validation.json`,최종근거는`daily-assets-final.json`·`delivery-summary.json`.첫8단계/마지막5단계시각확인.뷰어JS구문확인·git diff --check 성공.
+- 앱현재상태확인:MapHomeGrowthPolicy.artworkName(level:)이기존HomeEvolutionNNN을선택하고기록확인/일마감조건에서season.level을증가한다(`MapHomeView.swift`1558/1687/1769/16684부근).현재새366개이미지연결이나달력날짜자동교체는수행하지않았으며매일앱화면이바뀐다고판정하지않는다.
+- 범위/제한:산출물수량·매핑정정및현재동작확인만수행.앱코드/카탈로그미변경으로앱테스트/Debug빌드추가없음.기기설치/실기기검증없음.365개자료를사용하는평년은D001–D365의자산목록이며실제달력선택정책은아직앱미구현이다.
+
+
+## D3X61003A1 · 3일마다 세계 건축이 바뀌는 366장 (2026-10-03)
+- 결과: 366장을 122단계 × 정확히 3일로 다시 구성했다. 자연·야영 10종 뒤 세계 건축 112종을 선택한 대표 시기순으로 배치했다. 피라미드·카르나크·히타이트 성문·페르세폴리스·야흐찰·원형극장·산치·페트라·콜로세움·보로부두르·프람바난·계단우물·스타브 교회·사헬 모스크·알람브라·천단·잉카·트룰리·카스바·포탈라·바람탑·팔레·루마가당·에펠탑·카사 바트요·아인슈타인탑·크라이슬러·낙수장·롱샹·구겐하임·아비타67·퐁피두·루브르·페트로나스·온실·국가체육장·마리나베이·CCTV·샤드·헤이다르·보스코·빈하이 등의 다른 본체를 추가했다. 마지막 D364–D366은 롯데월드타워다.
+- 제작: 저장소의 기존 RPG SVG 시스템을 확장했다. 76개 새 주제(자연/야영 포함)와 기존 승인 46개 건축 형태를 사용하고, 본체 성장에 건물별 지붕·첨탑·열주·성문·건물 동·테라스·캡슐·외피·정원을 다르게 그렸다. 색·날짜만 바꾼 복제와 crossfade는 사용하지 않았다. 이전 53단계와 D3561003A1/D3661003A1 시안 및 기존 앱 자산은 보존했다.
+- 산출물: `design/home-seed-to-lotte/D3X61003A1/`의 SVG 366개·투명 RGBA PNG 512×512 366개, 122종 전체 128px/48px 미리보기, 전체 일별 11개 분할 페이지를 각각 128px/48px로 제공했다. CSV/manifest는 D001–D366 연속, 단계마다 3개 파일과 실제 일별 변화 설명을 담는다. PNG ZIP에 날짜 슬라이더·단계 선택·3일 비교·전체 미리보기의 오프라인 `index.html`을 포함했다.
+- 최종 자산 검증: SVG XML 366개 정상, SVG·디코딩 PNG·48px 이미지 각각 366개 고유. 전 이미지 RGBA/크기/투명 배경 정상, 캔버스 경계 잘림 0. 122개 고유 단계명·각 3일·날짜 누락/중복 0·112개 대표 연도 비감소 확인. 48px premultiplied RGBA(int32), 최대 채널차 35 초과 기준으로 인접 365쌍 모두 최소 54픽셀 차이. 이 중 건물 전환 121쌍은 최소 327픽셀 차이 및 알파 윤곽 최소 158픽셀 차이. 완성형 122종 전체 7,381쌍에 동일 이미지 0쌍. 근거 `build/validation/D3X61003A1/final-assets.json`.
+- 시각 검수: 전체 122종 시트와 128px 분할 페이지 11개에서 모든 366장을 확인했고, 최종 48px 페이지 03/05/07/10에서 보강·보정된 원형극장·보로부두르·성문·풍차·온실·현대 건축을 추가 확인했다. 최초 약한 일별 2쌍(41/31픽셀)은 카스바 돌출 성문과 풍차 작업실로 보강했다. 보로부두르의 기단/스투파 연결과 온실·상하이타워 외피 선이 경계를 벗어나는 부분도 보정했다. 최초 `first-pass.json`은 실패한 중간 결과이며 최종 통과 근거와 구분한다. 수치는 실제 기기의 체감 평가를 대신하지 않는다.
+- 패키징 검증: `daily-366-three-day-png.zip`(7,326,125바이트)은 PNG 파일 총 366개, `daily-366-three-day-svg.zip`(420,741바이트)은 SVG 파일 총 366개다. 전체 미리보기를 HTML에 포함하여 ZIP의 PNG 수량을 늘리지 않았다. 두 ZIP의 CRC·각 파일 원본 일치·manifest 일치 확인. CSV/HTML 366개 매핑, 모든 이미지 참조, 포함된 전체 SVG 미리보기 정상. 제작 Python 6개 구문 파싱, 뷰어 JS 및 렌더러 JS의 Node 구문 확인, `git diff --check` 성공. 근거 `packaging-final.json`과 `delivery-summary.json`. 이전 `packaging-validation.json`은 미리보기 PNG가 별도 포함된 중간 패키지 결과로 최종 ZIP 해시와 구분한다.
+- 연대 자료: UNESCO·CTBUH·건축가/운영기관의 주요 자료와 선택 기준을 `references.md`/README에 남겼다. 크라이슬러는 1930년, 헤이다르는 2012년 개장, 마리나베이는 설계사 자료의 2011년으로 확인·정정했다. 전통 양식은 선정한 대표 시기이며 모든 기원/연대의 학술 검증 또는 정밀 복원이 아니다. 일별 확장은 게임용 창작 표현이고 같은 해의 월·일 순서는 주장하지 않는다.
+- 범위/제한: 이번 요청은 이미지 제작과 매핑이며 이 세트를 앱 코드/Assets.xcassets에 연결하거나 기기 설치하지 않았다. 실제 달력 자동 교체·기기 화면 검증은 미수행이다. 앱 동작 코드를 바꾸지 않아 추가 앱 테스트/Debug 빌드는 실행하지 않았다. Watch 실기기 확인 등 다른 미완료 요청은 그대로 남긴다.
+
+
+## LV3661003A · 새 세계 건축 366장을 앱 레벨에 연결 (2026-10-03)
+- 결과: D3X61003A1의 승인된 366개 SVG를 `HomeEvolution001...366`에 정확히 매핑했다. Lv.1–3 씨앗, 4–6 새싹처럼 매 레벨 다른 세부 이미지이고 3레벨마다 주제가 바뀐다. 자연/야영 10종과 세계 건축 112종, 마지막 Lv.364–366 롯데월드타워다. 지도 집·성장 상세·지난 시즌의 기존 `MapHomeGrowthPolicy.artworkName(level:)` 경로가 같은 새 자산을 사용한다.
+- 보존: 저장된 레벨·성장 자격/중복 보상 방지·주간 보상·평년 365/윤년 366 상한·연말 보관 정책과 데이터 스키마는 바꾸지 않았다. 자동 달력 일차로 레벨을 덮어쓰지 않는다. 기존 SVG 366개·Contents.json 366개·이전 생성 스크립트는 `build/validation/LV3661003A/original-home-evolution.zip`에 보관했고 CRC 확인했다. 사용자/다른 요청의 기존 변경도 보존했다.
+- 구현/매핑: `scripts/home_evolution_artwork_manifest.json`에 레벨/3단계 매핑·원본/앱 자산 SHA-256을 기록했다. 이전 반복형 생성 스크립트의 `--write`/`--check`를 승인된 세트 설치/해시 대조로 갱신하여 과거 그림으로 재생성되지 않게 했다. 전체 366개 자산/고유 본문·122개 주제·연속 레벨 및 Contents 참조/vector representation을 확인했다. 초기 512px 원본 그대로 적용 결과는 `source-mapping.json`, 최종은 `source-mapping-native128.json`이다.
+- 자산 크기: 512px 기본 크기는 기기 산출물에서 512/1024/1536px 래스터를 생성해 성장 자산에 49,804,748바이트를 사용했다. 내부 도형/viewBox/벡터 표현을 유지하며 앱 기준 크기를 128pt로 맞췄다. 최종 128/256/384px 래스터와 벡터, 366개 고유 이름/1,464개 rendition이 포함됐다. 성장 자산 SizeOnDisk 합은 9,538,015바이트로 80.85% 감소, 전체 앱 Assets.car는 18,085,720바이트. 설치/전송 압축 크기·실기기 메모리/배터리/시작 속도 개선을 측정한 결과는 아니다.
+- 최종 회귀/렌더: MapHomeGrowthPolicyTests 18개 통과·0실패·0건너뜀. 기존 패키징 테스트를 실제 번들 UIImage 366개·128pt 크기·48pt 렌더·중복 검사와 전체 검토 이미지 첨부로 보강했다. 366개 렌더 그림을 시각 확인했고, 최종 렌더 검토 PNG가 512px 초기 적용본과 바이트 단위로 동일함을 확인했다. 흰 배경에서 각 아이콘 영역만 따로 비교해 366개 고유·연속 365쌍 모두 차이(채널차 35 초과 최소 29픽셀), 건물 전환 121쌍 최소 320픽셀. 제작 원본의 투명 RGBA 차이 기준/54픽셀 결과와 다른 배경·렌더 조건으로 구분한다. 실제 지도/기기 체감 판정을 대신하지 않는다.
+- 최종 빌드/근거: generic iOS Debug 성공, `assetutil`로 최종 기기용 Assets.car에 HomeEvolution001–366 모두 포함됨을 확인했다. `growth-native128-tests.xcresult`, `growth-native128-tests-summary.json`, `ios-native128-debug-build.log`, `device-native128-asset-info.json`, `integration-native128-summary.json`, `bundled-home-levels-native128-48pt.png`가 최종 근거다. 512px 초기 적용의 테스트 18개/Debug 성공 및 `integration-summary.json`도 중간 기록으로 보존했다. 최종 자산 `--check`, `git diff --check` 성공.
+- 범위/제한: 레벨 이미지 반영·관련 검증 완료로 이 요청만 temp에서 제거했다. 이번 수정본의 iPhone11/18 설치·실기기 지도/성장 상세 확인·TestFlight 업로드는 수행하지 않았다. 이전 설치/167 배포 상태와 이번 검증을 합쳐서 완료 처리하지 않는다. 다른 미완료 요청은 남긴다.

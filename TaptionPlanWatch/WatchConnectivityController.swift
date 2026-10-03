@@ -64,6 +64,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var ambientOutboxFlushRequested = false
     private var ambientOutboxFlushTask: Task<Void, Never>?
     private var ambientOutboxFlushGeneration: UInt64 = 0
+    private var ambientLiveDeliveryGate = TaptionWatchAmbientLiveDeliveryGate()
     private var ambientOutboxRetryTask: Task<Void, Never>?
     private var ambientOutboxRetryID: UUID?
     private var ambientOutboxRetryAttempts: [String: Int] = [:]
@@ -644,6 +645,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         _ session: WCSession,
         didReceiveMessage message: [String: Any]
     ) {
+        let ambientAcknowledgement = message[
+            TaptionWatchEnvelope.ambientAcknowledgementKey
+        ] as? String
         let data = message[TaptionWatchEnvelope.payloadKey] as? Data
         let workoutData = message[
             TaptionWatchEnvelope.workoutRequestKey
@@ -668,6 +672,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
             "envelope received transport=live_message keys=\(message.keys.sorted().joined(separator: ",")) request_id=\(dataSyncRequestID ?? "none") data_sync=\(dataSyncRequested)"
         )
         Task { @MainActor [weak self] in
+            if let ambientAcknowledgement {
+                await self?.acknowledgeAmbientDelivery(ambientAcknowledgement)
+            }
             if let data { self?.apply(data: data) }
             if let workoutData { self?.applyWorkoutRequest(data: workoutData) }
             if dataSyncRequested {
@@ -881,6 +888,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
 
     private func executePurge() async -> Bool {
         isPurgingData = true
+        ambientLiveDeliveryGate.reset()
         defer {
             isPurgingData = false
         }
@@ -1006,7 +1014,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                         ] as? String
                     }
                 )
-                for item in items where !outstandingIDs.contains(item.id) {
+                for item in items {
                     guard self.canContinueAmbientOutboxFlush(generation),
                           session.activationState == .activated else {
                         return
@@ -1022,10 +1030,31 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                         envelope[TaptionWatchEnvelope.dataSyncRequestIDKey] =
                             requestID
                     }
-                    session.transferUserInfo(envelope)
-                    WatchLaunchDiagnostics.mark(
-                        "ambient outbox transfer scheduled id=\(item.id) kind=\(item.kind)"
-                    )
+                    if !outstandingIDs.contains(item.id) {
+                        session.transferUserInfo(envelope)
+                        WatchLaunchDiagnostics.mark(
+                            "ambient outbox transfer scheduled id=\(item.id) kind=\(item.kind)"
+                        )
+                    }
+                    if self.ambientLiveDeliveryGate.reserve(
+                        id: item.id,
+                        payloadBytes: item.payload.count,
+                        isReachable: session.isReachable,
+                        now: ProcessInfo.processInfo.systemUptime
+                    ) {
+                        session.sendMessage(
+                            envelope,
+                            replyHandler: nil,
+                            errorHandler: { error in
+                                WatchLaunchDiagnostics.mark(
+                                    "ambient live transfer failed code=\((error as NSError).code)"
+                                )
+                            }
+                        )
+                        WatchLaunchDiagnostics.mark(
+                            "ambient live transfer scheduled bytes=\(item.payload.count)"
+                        )
+                    }
                 }
             } catch {
                 guard self.canContinueAmbientOutboxFlush(generation) else {
@@ -1142,6 +1171,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
                 }
             )
         guard deleted else { return }
+        ambientLiveDeliveryGate.acknowledge(id)
         ambientOutboxRetryAttempts[id] = nil
         persistAmbientOutboxRetryAttempts()
         if ambientOutboxRetryAttempts.isEmpty {

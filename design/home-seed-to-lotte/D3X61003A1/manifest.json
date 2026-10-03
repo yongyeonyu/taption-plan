@@ -1,0 +1,7582 @@
+{
+  "requestID": "D3X61003A1",
+  "assetCount": 366,
+  "stageCount": 122,
+  "stageLengths": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "width": 512,
+  "height": 512,
+  "background": "transparent",
+  "appIntegrated": false,
+  "authoringMethod": "Editable native SVG geometry; Sharp PNG export. No generative image service.",
+  "chronologyPolicy": "10 thematic nature/camping subjects, followed by 112 world architecture subjects in selected representative year order. Vernacular dates are curatorial periods, not first occurrences; silhouettes are stylized game illustrations, not reconstructions.",
+  "dailyPolicy": "The subject changes every three days. Main volume, roof, wings, columns, facade or context changes inside each three-day subject; no date labels or crossfades in artwork.",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "씨앗",
+      "region": "자연",
+      "year": null,
+      "kind": "seed",
+      "arg": 0,
+      "dayStart": 1,
+      "dayEnd": 3,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "씨앗 껍질",
+        "껍질이 갈라지고 뿌리가 뻗음",
+        "줄기와 큰 두 잎이 올라옴"
+      ]
+    },
+    {
+      "stage": 2,
+      "name": "새싹",
+      "region": "자연",
+      "year": null,
+      "kind": "sprout",
+      "arg": 0,
+      "dayStart": 4,
+      "dayEnd": 6,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "두 잎 새싹",
+        "줄기가 길어지고 네 잎",
+        "더 긴 줄기와 여섯 잎"
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "묘목",
+      "region": "자연",
+      "year": null,
+      "kind": "sapling",
+      "arg": 0,
+      "dayStart": 7,
+      "dayEnd": 9,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "가느다란 줄기와 두 쌍 수관",
+        "가지와 세 쌍 수관",
+        "큰 줄기와 네 쌍 수관"
+      ]
+    },
+    {
+      "stage": 4,
+      "name": "큰 나무",
+      "region": "자연",
+      "year": null,
+      "kind": "tree",
+      "arg": 0,
+      "dayStart": 10,
+      "dayEnd": 12,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "줄기와 양쪽 수관",
+        "윗 수관·오른쪽 가지 확장",
+        "아랫 수관·뿌리까지 큰 나무"
+      ]
+    },
+    {
+      "stage": 5,
+      "name": "모닥불",
+      "region": "야영",
+      "year": null,
+      "kind": "fire",
+      "arg": 0,
+      "dayStart": 13,
+      "dayEnd": 15,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "장작과 작은 불꽃",
+        "큰 불꽃과 돌 화덕",
+        "가로 받침대와 조리 냄비"
+      ]
+    },
+    {
+      "stage": 6,
+      "name": "동굴 거처",
+      "region": "야영",
+      "year": null,
+      "kind": "cave",
+      "arg": 0,
+      "dayStart": 16,
+      "dayEnd": 18,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "바위와 깊은 동굴 입구",
+        "입구 바위와 외벽 돌출",
+        "목재 차양과 입구 발판"
+      ]
+    },
+    {
+      "stage": 7,
+      "name": "해먹",
+      "region": "야영",
+      "year": null,
+      "kind": "hammock",
+      "arg": 0,
+      "dayStart": 19,
+      "dayEnd": 21,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "기둥과 해먹",
+        "양쪽 나무 지붕·깊은 해먹",
+        "큰 차양·해먹 쿠션"
+      ]
+    },
+    {
+      "stage": 8,
+      "name": "가지 움막",
+      "region": "야영",
+      "year": null,
+      "kind": "hut",
+      "arg": 0,
+      "dayStart": 22,
+      "dayEnd": 24,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "가지 지붕과 움막 입구",
+        "지붕 높이·양쪽 지지 구조",
+        "앞 차양·지지 기둥·계단"
+      ]
+    },
+    {
+      "stage": 9,
+      "name": "유르트",
+      "region": "중앙아시아·도입",
+      "year": null,
+      "kind": "yurt",
+      "arg": 0,
+      "dayStart": 25,
+      "dayEnd": 27,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "돔 텐트와 문",
+        "큰 천막·넓은 벽 무늬",
+        "띠 장식·입구 차양·발판"
+      ]
+    },
+    {
+      "stage": 10,
+      "name": "수상 움막",
+      "region": "열대 지역·도입",
+      "year": null,
+      "kind": "stilts",
+      "arg": 0,
+      "dayStart": 28,
+      "dayEnd": 30,
+      "dateBasis": "thematic prologue",
+      "dailyChanges": [
+        "기둥 위 초가지붕",
+        "수상 데크·큰 창",
+        "사다리와 물가 갈대"
+      ]
+    },
+    {
+      "stage": 11,
+      "name": "차탈회위크 흙집",
+      "region": "튀르키예",
+      "year": -7000,
+      "kind": "base",
+      "arg": 8,
+      "dayStart": 31,
+      "dayEnd": 33,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "차탈회위크 흙집 초기 본체",
+        "본체 성장·흙집 증축 1차",
+        "완성 본체·흙집 증축 2차"
+      ]
+    },
+    {
+      "stage": 12,
+      "name": "레펜스키비르 거처",
+      "region": "세르비아",
+      "year": -6000,
+      "kind": "trapezoid",
+      "arg": 0,
+      "dayStart": 34,
+      "dayEnd": 36,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "사다리꼴 거처와 박공",
+        "측벽·안쪽 화덕",
+        "전면 석벽과 계단"
+      ]
+    },
+    {
+      "stage": 13,
+      "name": "신석기 롱하우스",
+      "region": "중부 유럽",
+      "year": -5000,
+      "kind": "longhouse",
+      "arg": 0,
+      "dayStart": 37,
+      "dayEnd": 39,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "길게 이어진 초가",
+        "큰 창·목재 벽 띠",
+        "앞쪽 별채 박공·계단"
+      ]
+    },
+    {
+      "stage": 14,
+      "name": "스카라브레이 돌집",
+      "region": "스코틀랜드",
+      "year": -3000,
+      "kind": "base",
+      "arg": 9,
+      "dayStart": 40,
+      "dayEnd": 42,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "스카라브레이 돌집 초기 본체",
+        "본체 성장·돌벽 구획 1차",
+        "완성 본체·돌벽 구획 2차"
+      ]
+    },
+    {
+      "stage": 15,
+      "name": "스위스 호상 가옥",
+      "region": "스위스",
+      "year": -2800,
+      "kind": "pilehouse",
+      "arg": 0,
+      "dayStart": 43,
+      "dayEnd": 45,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "물 위 기둥과 큰 박공",
+        "긴 데크·양쪽 창",
+        "수변 사다리·갈대"
+      ]
+    },
+    {
+      "stage": 16,
+      "name": "이집트 피라미드",
+      "region": "이집트",
+      "year": -2600,
+      "kind": "base",
+      "arg": 10,
+      "dayStart": 46,
+      "dayEnd": 48,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "이집트 피라미드 초기 본체",
+        "본체 성장·작은 피라미드·오벨리스크 1차",
+        "완성 본체·작은 피라미드·오벨리스크 2차"
+      ]
+    },
+    {
+      "stage": 17,
+      "name": "인더스 벽돌 거처",
+      "region": "파키스탄",
+      "year": -2500,
+      "kind": "indus",
+      "arg": 0,
+      "dayStart": 49,
+      "dayEnd": 51,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "벽돌집 본체",
+        "옥상층·측면 증축",
+        "오른쪽 벽체·수로"
+      ]
+    },
+    {
+      "stage": 18,
+      "name": "우르 지구라트",
+      "region": "이라크",
+      "year": -2100,
+      "kind": "base",
+      "arg": 11,
+      "dayStart": 52,
+      "dayEnd": 54,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "우르 지구라트 초기 본체",
+        "본체 성장·계단·기단 1차",
+        "완성 본체·계단·기단 2차"
+      ]
+    },
+    {
+      "stage": 19,
+      "name": "미노스 궁전",
+      "region": "그리스 크레타",
+      "year": -1700,
+      "kind": "base",
+      "arg": 12,
+      "dayStart": 55,
+      "dayEnd": 57,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "미노스 궁전 초기 본체",
+        "본체 성장·궁전 열주 1차",
+        "완성 본체·궁전 열주 2차"
+      ]
+    },
+    {
+      "stage": 20,
+      "name": "카르나크 열주전",
+      "region": "이집트",
+      "year": -1500,
+      "kind": "pylon",
+      "arg": 0,
+      "dayStart": 58,
+      "dayEnd": 60,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "사다리꼴 쌍탑 성문",
+        "앞쪽 열주",
+        "오벨리스크·넓은 기단"
+      ]
+    },
+    {
+      "stage": 21,
+      "name": "히타이트 성문",
+      "region": "튀르키예",
+      "year": -1400,
+      "kind": "liongate",
+      "arg": 0,
+      "dayStart": 61,
+      "dayEnd": 63,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "석벽과 큰 아치",
+        "양쪽 사자 모양 석상",
+        "성벽 상부 요철·기단"
+      ]
+    },
+    {
+      "stage": 22,
+      "name": "아시리아 궁전",
+      "region": "이라크",
+      "year": -700,
+      "kind": "assyrian",
+      "arg": 0,
+      "dayStart": 64,
+      "dayEnd": 66,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "평지붕 궁전과 아치",
+        "양쪽 날개 수호상 표현",
+        "상부 요철·계단"
+      ]
+    },
+    {
+      "stage": 23,
+      "name": "페르세폴리스",
+      "region": "이란",
+      "year": -500,
+      "kind": "persian",
+      "arg": 0,
+      "dayStart": 67,
+      "dayEnd": 69,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "동물 장식 기둥과 기단",
+        "상부 보·옆 석벽",
+        "전면 열주와 긴 보"
+      ]
+    },
+    {
+      "stage": 24,
+      "name": "그리스 신전",
+      "region": "그리스",
+      "year": -450,
+      "kind": "base",
+      "arg": 13,
+      "dayStart": 70,
+      "dayEnd": 72,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "그리스 신전 초기 본체",
+        "본체 성장·신전 열주 1차",
+        "완성 본체·신전 열주 2차"
+      ]
+    },
+    {
+      "stage": 25,
+      "name": "야흐찰 빙고",
+      "region": "이란",
+      "year": -400,
+      "kind": "icehouse",
+      "arg": 0,
+      "dayStart": 73,
+      "dayEnd": 75,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "원뿔 빙고와 둥근 띠",
+        "왼쪽 입구 건물",
+        "물 저장부와 환기탑"
+      ]
+    },
+    {
+      "stage": 26,
+      "name": "그리스 원형극장",
+      "region": "그리스",
+      "year": -350,
+      "kind": "theatre",
+      "arg": 0,
+      "dayStart": 76,
+      "dayEnd": 78,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "원형극장 바닥과 첫 객석",
+        "두 번째 객석·무대 열주",
+        "세 번째 객석·무대 박공"
+      ]
+    },
+    {
+      "stage": 27,
+      "name": "산치 스투파",
+      "region": "인도",
+      "year": -250,
+      "kind": "stupa",
+      "arg": 0,
+      "dayStart": 79,
+      "dayEnd": 81,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "반구 스투파",
+        "왼쪽 토라나 문",
+        "오른쪽 문·중앙 계단"
+      ]
+    },
+    {
+      "stage": 28,
+      "name": "페트라 암벽 신전",
+      "region": "요르단",
+      "year": 50,
+      "kind": "petra",
+      "arg": 0,
+      "dayStart": 82,
+      "dayEnd": 84,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "암벽과 아래 열주",
+        "상층 열주·중앙 둥근 지붕",
+        "깊은 중앙 입구·석조 계단"
+      ]
+    },
+    {
+      "stage": 29,
+      "name": "콜로세움",
+      "region": "이탈리아",
+      "year": 80,
+      "kind": "colosseum",
+      "arg": 0,
+      "dayStart": 85,
+      "dayEnd": 87,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "낮은 원형 아케이드",
+        "상층 아케이드·수평 띠",
+        "높은 외벽·열린 상부 윤곽"
+      ]
+    },
+    {
+      "stage": 30,
+      "name": "로마 판테온",
+      "region": "이탈리아",
+      "year": 125,
+      "kind": "base",
+      "arg": 14,
+      "dayStart": 88,
+      "dayEnd": 90,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "로마 판테온 초기 본체",
+        "본체 성장·포르티코 열주 1차",
+        "완성 본체·포르티코 열주 2차"
+      ]
+    },
+    {
+      "stage": 31,
+      "name": "푸에블로 구덩이집",
+      "region": "미국 남서부",
+      "year": 300,
+      "kind": "pithouse",
+      "arg": 0,
+      "dayStart": 91,
+      "dayEnd": 93,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "땅속 거처와 입구",
+        "박공 지붕·경사 사다리",
+        "입구 차양·앞 발판"
+      ]
+    },
+    {
+      "stage": 32,
+      "name": "비잔틴 돔",
+      "region": "튀르키예",
+      "year": 537,
+      "kind": "base",
+      "arg": 15,
+      "dayStart": 94,
+      "dayEnd": 96,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "비잔틴 돔 초기 본체",
+        "본체 성장·양쪽 작은 돔 1차",
+        "완성 본체·양쪽 작은 돔 2차"
+      ]
+    },
+    {
+      "stage": 33,
+      "name": "호류지 목탑",
+      "region": "일본",
+      "year": 700,
+      "kind": "base",
+      "arg": 16,
+      "dayStart": 97,
+      "dayEnd": 99,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "호류지 목탑 초기 본체",
+        "본체 성장·양쪽 기와 누각 1차",
+        "완성 본체·양쪽 기와 누각 2차"
+      ]
+    },
+    {
+      "stage": 34,
+      "name": "마야 계단 신전",
+      "region": "멕시코",
+      "year": 750,
+      "kind": "base",
+      "arg": 17,
+      "dayStart": 100,
+      "dayEnd": 102,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "마야 계단 신전 초기 본체",
+        "본체 성장·계단·옆 신전 1차",
+        "완성 본체·계단·옆 신전 2차"
+      ]
+    },
+    {
+      "stage": 35,
+      "name": "이슬람 아치 궁전",
+      "region": "서아시아",
+      "year": 800,
+      "kind": "base",
+      "arg": 18,
+      "dayStart": 103,
+      "dayEnd": 105,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "이슬람 아치 궁전 초기 본체",
+        "본체 성장·양쪽 아치·돔 1차",
+        "완성 본체·양쪽 아치·돔 2차"
+      ]
+    },
+    {
+      "stage": 36,
+      "name": "보로부두르",
+      "region": "인도네시아",
+      "year": 825,
+      "kind": "borobudur",
+      "arg": 0,
+      "dayStart": 106,
+      "dayEnd": 108,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "세 층 기단과 작은 스투파",
+        "네 층 기단·추가 스투파",
+        "다섯 층 기단·중앙 계단"
+      ]
+    },
+    {
+      "stage": 37,
+      "name": "수상 장옥",
+      "region": "동남아시아",
+      "year": 850,
+      "kind": "longstilts",
+      "arg": 0,
+      "dayStart": 109,
+      "dayEnd": 111,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "긴 수상 주택과 기둥",
+        "긴 데크·난간",
+        "출입 지붕·사다리·갈대"
+      ]
+    },
+    {
+      "stage": 38,
+      "name": "바이킹 롱하우스",
+      "region": "북유럽",
+      "year": 900,
+      "kind": "base",
+      "arg": 19,
+      "dayStart": 112,
+      "dayEnd": 114,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "바이킹 롱하우스 초기 본체",
+        "본체 성장·초가지붕·입구 박공 1차",
+        "완성 본체·초가지붕·입구 박공 2차"
+      ]
+    },
+    {
+      "stage": 39,
+      "name": "프람바난",
+      "region": "인도네시아",
+      "year": 950,
+      "kind": "prambanan",
+      "arg": 0,
+      "dayStart": 115,
+      "dayEnd": 117,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "중앙 첨탑 사원",
+        "왼쪽 첨탑",
+        "오른쪽 첨탑·큰 기단"
+      ]
+    },
+    {
+      "stage": 40,
+      "name": "누비아 돔 주택",
+      "region": "수단",
+      "year": 1000,
+      "kind": "nubian",
+      "arg": 0,
+      "dayStart": 118,
+      "dayEnd": 120,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "주 돔과 녹색 벽",
+        "오른쪽 푸른 돔",
+        "왼쪽 흙빛 돔·벽 장식"
+      ]
+    },
+    {
+      "stage": 41,
+      "name": "로마네스크 석조",
+      "region": "서유럽",
+      "year": 1050,
+      "kind": "base",
+      "arg": 20,
+      "dayStart": 121,
+      "dayEnd": 123,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "로마네스크 석조 초기 본체",
+        "본체 성장·측면 석탑 1차",
+        "완성 본체·측면 석탑 2차"
+      ]
+    },
+    {
+      "stage": 42,
+      "name": "라니키바브 계단우물",
+      "region": "인도",
+      "year": 1060,
+      "kind": "stepwell",
+      "arg": 0,
+      "dayStart": 124,
+      "dayEnd": 126,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "낮은 계단우물",
+        "깊은 계단·왼쪽 열주",
+        "더 깊은 계단·오른쪽 지붕"
+      ]
+    },
+    {
+      "stage": 43,
+      "name": "노르웨이 스타브 교회",
+      "region": "노르웨이",
+      "year": 1100,
+      "kind": "stave",
+      "arg": 0,
+      "dayStart": 127,
+      "dayEnd": 129,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "중앙 교회와 높은 지붕",
+        "넓은 아래 지붕·벽체",
+        "꼭대기 탑·창·계단"
+      ]
+    },
+    {
+      "stage": 44,
+      "name": "앙코르 사원",
+      "region": "캄보디아",
+      "year": 1150,
+      "kind": "base",
+      "arg": 21,
+      "dayStart": 130,
+      "dayEnd": 132,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "앙코르 사원 초기 본체",
+        "본체 성장·양쪽 사원 지붕 1차",
+        "완성 본체·양쪽 사원 지붕 2차"
+      ]
+    },
+    {
+      "stage": 45,
+      "name": "고딕 대성당",
+      "region": "프랑스",
+      "year": 1200,
+      "kind": "base",
+      "arg": 22,
+      "dayStart": 133,
+      "dayEnd": 135,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "고딕 대성당 초기 본체",
+        "본체 성장·양쪽 고딕 첨탑 1차",
+        "완성 본체·양쪽 고딕 첨탑 2차"
+      ]
+    },
+    {
+      "stage": 46,
+      "name": "절벽 푸에블로",
+      "region": "미국 남서부",
+      "year": 1250,
+      "kind": "base",
+      "arg": 23,
+      "dayStart": 136,
+      "dayEnd": 138,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "절벽 푸에블로 초기 본체",
+        "본체 성장·추가 흙집·사다리 1차",
+        "완성 본체·추가 흙집·사다리 2차"
+      ]
+    },
+    {
+      "stage": 47,
+      "name": "짐바브웨 석조 성곽",
+      "region": "짐바브웨",
+      "year": 1300,
+      "kind": "base",
+      "arg": 24,
+      "dayStart": 139,
+      "dayEnd": 141,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "짐바브웨 석조 성곽 초기 본체",
+        "본체 성장·옆 성벽·원뿔 탑 1차",
+        "완성 본체·옆 성벽·원뿔 탑 2차"
+      ]
+    },
+    {
+      "stage": 48,
+      "name": "사헬 흙 모스크 양식",
+      "region": "말리",
+      "year": 1320,
+      "kind": "mudmosque",
+      "arg": 0,
+      "dayStart": 142,
+      "dayEnd": 144,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "첫 흙탑과 연결 벽",
+        "두 번째 흙탑",
+        "세 번째 흙탑·벽 요철·계단"
+      ]
+    },
+    {
+      "stage": 49,
+      "name": "알람브라 궁전",
+      "region": "스페인",
+      "year": 1350,
+      "kind": "alhambra",
+      "arg": 0,
+      "dayStart": 145,
+      "dayEnd": 147,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "네 아치가 있는 회랑",
+        "양쪽 궁전 탑",
+        "중앙 연못·분수·정원"
+      ]
+    },
+    {
+      "stage": 50,
+      "name": "티베트 산지 주택",
+      "region": "중국 티베트",
+      "year": 1380,
+      "kind": "tibethouse",
+      "arg": 0,
+      "dayStart": 148,
+      "dayEnd": 150,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "경사진 흰 벽과 창",
+        "옥상층과 작은 창",
+        "양쪽 흰 벽 증축"
+      ]
+    },
+    {
+      "stage": 51,
+      "name": "조선 한옥",
+      "region": "한국",
+      "year": 1400,
+      "kind": "base",
+      "arg": 25,
+      "dayStart": 151,
+      "dayEnd": 153,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "조선 한옥 초기 본체",
+        "본체 성장·양쪽 한옥채 1차",
+        "완성 본체·양쪽 한옥채 2차"
+      ]
+    },
+    {
+      "stage": 52,
+      "name": "천단 기년전 양식",
+      "region": "중국",
+      "year": 1420,
+      "kind": "tiantan",
+      "arg": 0,
+      "dayStart": 154,
+      "dayEnd": 156,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "원형 기단·아래 푸른 지붕",
+        "두 번째 원형층과 지붕",
+        "세 번째 지붕·기둥·계단"
+      ]
+    },
+    {
+      "stage": 53,
+      "name": "잉카 석조 가옥",
+      "region": "페루",
+      "year": 1440,
+      "kind": "inca",
+      "arg": 0,
+      "dayStart": 157,
+      "dayEnd": 159,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "경사진 돌벽과 초가",
+        "왼쪽 석조 구획·큰 창",
+        "오른쪽 가옥과 박공"
+      ]
+    },
+    {
+      "stage": 54,
+      "name": "르네상스 팔라초",
+      "region": "이탈리아",
+      "year": 1450,
+      "kind": "base",
+      "arg": 26,
+      "dayStart": 160,
+      "dayEnd": 162,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "르네상스 팔라초 초기 본체",
+        "본체 성장·옆 궁전 건물 1차",
+        "완성 본체·옆 궁전 건물 2차"
+      ]
+    },
+    {
+      "stage": 55,
+      "name": "푸젠 토루",
+      "region": "중국",
+      "year": 1500,
+      "kind": "base",
+      "arg": 27,
+      "dayStart": 163,
+      "dayEnd": 165,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "푸젠 토루 초기 본체",
+        "본체 성장·원형 지붕·안마당 건물 1차",
+        "완성 본체·원형 지붕·안마당 건물 2차"
+      ]
+    },
+    {
+      "stage": 56,
+      "name": "이탈리아 트룰리",
+      "region": "이탈리아",
+      "year": 1520,
+      "kind": "trulli",
+      "arg": 0,
+      "dayStart": 166,
+      "dayEnd": 168,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "큰 원뿔 지붕 집",
+        "왼쪽 작은 원뿔 집",
+        "오른쪽 원뿔 집·기단"
+      ]
+    },
+    {
+      "stage": 57,
+      "name": "튜더 목조 주택",
+      "region": "영국",
+      "year": 1550,
+      "kind": "base",
+      "arg": 28,
+      "dayStart": 169,
+      "dayEnd": 171,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "튜더 목조 주택 초기 본체",
+        "본체 성장·양쪽 목조 박공 1차",
+        "완성 본체·양쪽 목조 박공 2차"
+      ]
+    },
+    {
+      "stage": 58,
+      "name": "모로코 카스바",
+      "region": "모로코",
+      "year": 1580,
+      "kind": "kasbah",
+      "arg": 0,
+      "dayStart": 172,
+      "dayEnd": 174,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "흙 성곽과 첫 모서리 탑",
+        "둘째 탑·성벽 요철",
+        "큰 돌출 성문·앞 계단"
+      ]
+    },
+    {
+      "stage": 59,
+      "name": "시밤 흙탑 주택",
+      "region": "예멘",
+      "year": 1600,
+      "kind": "base",
+      "arg": 29,
+      "dayStart": 175,
+      "dayEnd": 177,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "시밤 흙탑 주택 초기 본체",
+        "본체 성장·추가 흙탑 1차",
+        "완성 본체·추가 흙탑 2차"
+      ]
+    },
+    {
+      "stage": 60,
+      "name": "오스만 목조 주택",
+      "region": "튀르키예",
+      "year": 1610,
+      "kind": "ottomanhouse",
+      "arg": 0,
+      "dayStart": 178,
+      "dayEnd": 180,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "튀어나온 위층과 창",
+        "왼쪽 돌출 목재 창실",
+        "오른쪽 창실·기단"
+      ]
+    },
+    {
+      "stage": 61,
+      "name": "이맘 모스크",
+      "region": "이란",
+      "year": 1620,
+      "kind": "iwans",
+      "arg": 0,
+      "dayStart": 181,
+      "dayEnd": 183,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "높은 푸른 이완과 첫 탑",
+        "둘째 탑·문 상부 무늬",
+        "옆 돔·입구 건물·계단"
+      ]
+    },
+    {
+      "stage": 62,
+      "name": "무굴 돔 궁전",
+      "region": "인도",
+      "year": 1630,
+      "kind": "base",
+      "arg": 30,
+      "dayStart": 184,
+      "dayEnd": 186,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "무굴 돔 궁전 초기 본체",
+        "본체 성장·양쪽 돔·수면 1차",
+        "완성 본체·양쪽 돔·수면 2차"
+      ]
+    },
+    {
+      "stage": 63,
+      "name": "일본 성곽",
+      "region": "일본",
+      "year": 1630,
+      "kind": "base",
+      "arg": 31,
+      "dayStart": 187,
+      "dayEnd": 189,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "일본 성곽 초기 본체",
+        "본체 성장·양쪽 기와 누각 1차",
+        "완성 본체·양쪽 기와 누각 2차"
+      ]
+    },
+    {
+      "stage": 64,
+      "name": "루마니아 목조 교회",
+      "region": "루마니아",
+      "year": 1640,
+      "kind": "woodchurch",
+      "arg": 0,
+      "dayStart": 190,
+      "dayEnd": 192,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "긴 교회와 가파른 목탑",
+        "상부 창·첨탑",
+        "오른쪽 박공·계단"
+      ]
+    },
+    {
+      "stage": 65,
+      "name": "포르투갈 타일 주택",
+      "region": "포르투갈",
+      "year": 1650,
+      "kind": "azulejo",
+      "arg": 0,
+      "dayStart": 193,
+      "dayEnd": 195,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "흰 박공 집",
+        "푸른 타일 문양·층 띠",
+        "왼쪽 돌출부·큰 입구"
+      ]
+    },
+    {
+      "stage": 66,
+      "name": "바로크 궁전",
+      "region": "프랑스",
+      "year": 1660,
+      "kind": "base",
+      "arg": 32,
+      "dayStart": 196,
+      "dayEnd": 198,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "바로크 궁전 초기 본체",
+        "본체 성장·궁전의 날개 건물 1차",
+        "완성 본체·궁전의 날개 건물 2차"
+      ]
+    },
+    {
+      "stage": 67,
+      "name": "네덜란드 운하집",
+      "region": "네덜란드",
+      "year": 1680,
+      "kind": "base",
+      "arg": 33,
+      "dayStart": 199,
+      "dayEnd": 201,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "네덜란드 운하집 초기 본체",
+        "본체 성장·운하·돌다리 1차",
+        "완성 본체·운하·돌다리 2차"
+      ]
+    },
+    {
+      "stage": 68,
+      "name": "포탈라 궁전",
+      "region": "중국 티베트",
+      "year": 1690,
+      "kind": "potala",
+      "arg": 0,
+      "dayStart": 202,
+      "dayEnd": 204,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "흰 기단과 붉은 중심부",
+        "외벽 창·앞 계단",
+        "높은 지붕·옆 누각"
+      ]
+    },
+    {
+      "stage": 69,
+      "name": "조선 누각",
+      "region": "한국",
+      "year": 1700,
+      "kind": "pavilion",
+      "arg": 0,
+      "dayStart": 205,
+      "dayEnd": 207,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "물가 누각과 지붕",
+        "목재 난간",
+        "상층 누각·추가 지붕"
+      ]
+    },
+    {
+      "stage": 70,
+      "name": "페르시아 바람탑",
+      "region": "이란",
+      "year": 1710,
+      "kind": "windtower",
+      "arg": 0,
+      "dayStart": 208,
+      "dayEnd": 210,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "큰 바람탑과 돔",
+        "왼쪽 아케이드",
+        "오른쪽 작은 바람탑·연못"
+      ]
+    },
+    {
+      "stage": 71,
+      "name": "케이프더치 주택",
+      "region": "남아프리카공화국",
+      "year": 1720,
+      "kind": "capedutch",
+      "arg": 0,
+      "dayStart": 211,
+      "dayEnd": 213,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "곡선 박공과 긴 집",
+        "원형 창·굴뚝",
+        "오른쪽 초가지붕 건물"
+      ]
+    },
+    {
+      "stage": 72,
+      "name": "교토 마치야",
+      "region": "일본",
+      "year": 1730,
+      "kind": "machiya",
+      "arg": 0,
+      "dayStart": 214,
+      "dayEnd": 216,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "긴 목재 격자 집",
+        "아래 기와지붕·격자 벽",
+        "천 차양·입구 등·계단"
+      ]
+    },
+    {
+      "stage": 73,
+      "name": "부탄 궁전 양식",
+      "region": "부탄",
+      "year": 1740,
+      "kind": "dzong",
+      "arg": 0,
+      "dayStart": 217,
+      "dayEnd": 219,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "중앙 궁전과 경사진 벽",
+        "양쪽 탑과 지붕",
+        "상부 누각·중앙 입구"
+      ]
+    },
+    {
+      "stage": 74,
+      "name": "로코코 저택",
+      "region": "중부 유럽",
+      "year": 1750,
+      "kind": "base",
+      "arg": 34,
+      "dayStart": 220,
+      "dayEnd": 222,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "로코코 저택 초기 본체",
+        "본체 성장·양쪽 곡선 박공 1차",
+        "완성 본체·양쪽 곡선 박공 2차"
+      ]
+    },
+    {
+      "stage": 75,
+      "name": "폴리네시아 팔레",
+      "region": "사모아",
+      "year": 1760,
+      "kind": "fale",
+      "arg": 0,
+      "dayStart": 223,
+      "dayEnd": 225,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "열린 기둥과 둥근 지붕",
+        "넓은 지붕 띠·바닥",
+        "실내 가구·계단·수변 식물"
+      ]
+    },
+    {
+      "stage": 76,
+      "name": "유럽 풍차 주택",
+      "region": "네덜란드",
+      "year": 1780,
+      "kind": "windmill",
+      "arg": 0,
+      "dayStart": 226,
+      "dayEnd": 228,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "풍차탑과 두 날개",
+        "세 번째 날개·옆 작업실",
+        "네 날개·둘레 데크"
+      ]
+    },
+    {
+      "stage": 77,
+      "name": "신고전주의 저택",
+      "region": "유럽",
+      "year": 1800,
+      "kind": "base",
+      "arg": 35,
+      "dayStart": 229,
+      "dayEnd": 231,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "신고전주의 저택 초기 본체",
+        "본체 성장·양쪽 고전식 날개 1차",
+        "완성 본체·양쪽 고전식 날개 2차"
+      ]
+    },
+    {
+      "stage": 78,
+      "name": "인도네시아 루마가당",
+      "region": "인도네시아",
+      "year": 1810,
+      "kind": "rumah",
+      "arg": 0,
+      "dayStart": 232,
+      "dayEnd": 234,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "양 끝이 치솟는 지붕",
+        "안쪽 뿔 지붕·데크",
+        "중앙 큰 뿔 지붕·계단"
+      ]
+    },
+    {
+      "stage": 79,
+      "name": "가쇼즈쿠리 주택",
+      "region": "일본",
+      "year": 1820,
+      "kind": "gassho",
+      "arg": 0,
+      "dayStart": 235,
+      "dayEnd": 237,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "가파른 초가와 벽",
+        "큰 지붕 창·지붕 살",
+        "앞쪽 초가 증축·기단"
+      ]
+    },
+    {
+      "stage": 80,
+      "name": "러시아 목조 주택",
+      "region": "러시아",
+      "year": 1850,
+      "kind": "base",
+      "arg": 36,
+      "dayStart": 238,
+      "dayEnd": 240,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "러시아 목조 주택 초기 본체",
+        "본체 성장·목조 박공 증축 1차",
+        "완성 본체·목조 박공 증축 2차"
+      ]
+    },
+    {
+      "stage": 81,
+      "name": "뉴올리언스 갤러리 주택",
+      "region": "미국",
+      "year": 1860,
+      "kind": "galleryhouse",
+      "arg": 0,
+      "dayStart": 241,
+      "dayEnd": 243,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "두 층 긴 주택",
+        "위층 갤러리·아래 기둥",
+        "아래 난간·긴 차양"
+      ]
+    },
+    {
+      "stage": 82,
+      "name": "빅토리아 주택",
+      "region": "영국",
+      "year": 1870,
+      "kind": "base",
+      "arg": 37,
+      "dayStart": 244,
+      "dayEnd": 246,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "빅토리아 주택 초기 본체",
+        "본체 성장·측면 박공 증축 1차",
+        "완성 본체·측면 박공 증축 2차"
+      ]
+    },
+    {
+      "stage": 83,
+      "name": "파리 맨사드 주택",
+      "region": "프랑스",
+      "year": 1880,
+      "kind": "mansard",
+      "arg": 0,
+      "dayStart": 247,
+      "dayEnd": 249,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "맨사드 지붕과 두 층",
+        "세 개 돌출 지붕 창",
+        "양쪽 증축·중앙 입구"
+      ]
+    },
+    {
+      "stage": 84,
+      "name": "에펠탑",
+      "region": "프랑스",
+      "year": 1889,
+      "kind": "eiffel",
+      "arg": 0,
+      "dayStart": 250,
+      "dayEnd": 252,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "격자 철탑의 큰 윤곽",
+        "철골 대각선·네 기단",
+        "상층 전망대·분수 정원"
+      ]
+    },
+    {
+      "stage": 85,
+      "name": "시카고 철골 빌딩",
+      "region": "미국",
+      "year": 1890,
+      "kind": "base",
+      "arg": 38,
+      "dayStart": 253,
+      "dayEnd": 255,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "시카고 철골 빌딩 초기 본체",
+        "본체 성장·높이가 다른 건물 동 1차",
+        "완성 본체·높이가 다른 건물 동 2차"
+      ]
+    },
+    {
+      "stage": 86,
+      "name": "아르누보 빌라",
+      "region": "벨기에",
+      "year": 1900,
+      "kind": "base",
+      "arg": 39,
+      "dayStart": 256,
+      "dayEnd": 258,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "아르누보 빌라 초기 본체",
+        "본체 성장·양쪽 주택 증축 1차",
+        "완성 본체·양쪽 주택 증축 2차"
+      ]
+    },
+    {
+      "stage": 87,
+      "name": "카사 바트요",
+      "region": "스페인",
+      "year": 1905,
+      "kind": "batllo",
+      "arg": 0,
+      "dayStart": 259,
+      "dayEnd": 261,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "물결 지붕과 창",
+        "곡선 발코니·왼쪽 탑",
+        "물결 1층 창·상부 십자"
+      ]
+    },
+    {
+      "stage": 88,
+      "name": "프레리 주택",
+      "region": "미국",
+      "year": 1910,
+      "kind": "base",
+      "arg": 40,
+      "dayStart": 262,
+      "dayEnd": 264,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "프레리 주택 초기 본체",
+        "본체 성장·긴 돌출 지붕·굴뚝 1차",
+        "완성 본체·긴 돌출 지붕·굴뚝 2차"
+      ]
+    },
+    {
+      "stage": 89,
+      "name": "아인슈타인탑",
+      "region": "독일",
+      "year": 1921,
+      "kind": "expressionist",
+      "arg": 0,
+      "dayStart": 265,
+      "dayEnd": 267,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "곡선 천문대와 돔",
+        "중앙 창·둥근 하부",
+        "넓은 곡선 입구와 계단"
+      ]
+    },
+    {
+      "stage": 90,
+      "name": "바우하우스",
+      "region": "독일",
+      "year": 1926,
+      "kind": "base",
+      "arg": 41,
+      "dayStart": 268,
+      "dayEnd": 270,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "바우하우스 초기 본체",
+        "본체 성장·큰 유리 구획·흰 건물 동 1차",
+        "완성 본체·큰 유리 구획·흰 건물 동 2차"
+      ]
+    },
+    {
+      "stage": 91,
+      "name": "아르데코 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "kind": "base",
+      "arg": 42,
+      "dayStart": 271,
+      "dayEnd": 273,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "아르데코 빌딩 초기 본체",
+        "본체 성장·단차 기단 건물 1차",
+        "완성 본체·단차 기단 건물 2차"
+      ]
+    },
+    {
+      "stage": 92,
+      "name": "크라이슬러 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "kind": "chrysler",
+      "arg": 0,
+      "dayStart": 274,
+      "dayEnd": 276,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "단차 타워와 금속 왕관",
+        "측면 단차·독수리 장식 표현",
+        "넓은 기단·왕관 장식"
+      ]
+    },
+    {
+      "stage": 93,
+      "name": "낙수장",
+      "region": "미국",
+      "year": 1939,
+      "kind": "fallingwater",
+      "arg": 0,
+      "dayStart": 277,
+      "dayEnd": 279,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "석조 중심과 긴 아래 테라스",
+        "중간 유리층·돌출 테라스",
+        "위층 테라스·아래 폭포"
+      ]
+    },
+    {
+      "stage": 94,
+      "name": "멕시코 색채 주택",
+      "region": "멕시코",
+      "year": 1945,
+      "kind": "barragan",
+      "arg": 0,
+      "dayStart": 280,
+      "dayEnd": 282,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "높은 흙빛 벽·붉은 낮은 벽",
+        "노란 구획·푸른 높은 벽",
+        "수면·붉은 세로 벽"
+      ]
+    },
+    {
+      "stage": 95,
+      "name": "국제주의 유리 건물",
+      "region": "미국",
+      "year": 1950,
+      "kind": "base",
+      "arg": 43,
+      "dayStart": 283,
+      "dayEnd": 285,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "국제주의 유리 건물 초기 본체",
+        "본체 성장·높이가 다른 유리 동 1차",
+        "완성 본체·높이가 다른 유리 동 2차"
+      ]
+    },
+    {
+      "stage": 96,
+      "name": "롱샹 성당",
+      "region": "프랑스",
+      "year": 1955,
+      "kind": "ronchamp",
+      "arg": 0,
+      "dayStart": 286,
+      "dayEnd": 288,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "흰 본당·짙은 곡선 지붕",
+        "왼쪽 곡선 탑",
+        "오른쪽 높은 탑·작은 창"
+      ]
+    },
+    {
+      "stage": 97,
+      "name": "뉴욕 구겐하임",
+      "region": "미국",
+      "year": 1959,
+      "kind": "guggenheimny",
+      "arg": 0,
+      "dayStart": 289,
+      "dayEnd": 291,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "뒤집힌 원뿔과 첫 띠",
+        "두 번째 띠·옆 건물",
+        "세 번째 띠·긴 출입층"
+      ]
+    },
+    {
+      "stage": 98,
+      "name": "브루탈리즘",
+      "region": "영국",
+      "year": 1960,
+      "kind": "base",
+      "arg": 44,
+      "dayStart": 292,
+      "dayEnd": 294,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "브루탈리즘 초기 본체",
+        "본체 성장·큰 콘크리트 블록 1차",
+        "완성 본체·큰 콘크리트 블록 2차"
+      ]
+    },
+    {
+      "stage": 99,
+      "name": "아비타67",
+      "region": "캐나다",
+      "year": 1967,
+      "kind": "habitat",
+      "arg": 0,
+      "dayStart": 295,
+      "dayEnd": 297,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "세 개 겹친 주거 블록",
+        "여섯 블록",
+        "아홉 블록·옥상 정원"
+      ]
+    },
+    {
+      "stage": 100,
+      "name": "메타볼리즘 캡슐",
+      "region": "일본",
+      "year": 1972,
+      "kind": "base",
+      "arg": 45,
+      "dayStart": 298,
+      "dayEnd": 300,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "메타볼리즘 캡슐 초기 본체",
+        "본체 성장·추가 주거 캡슐 1차",
+        "완성 본체·추가 주거 캡슐 2차"
+      ]
+    },
+    {
+      "stage": 101,
+      "name": "시드니 오페라하우스",
+      "region": "호주",
+      "year": 1973,
+      "kind": "base",
+      "arg": 46,
+      "dayStart": 301,
+      "dayEnd": 303,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "시드니 오페라하우스 초기 본체",
+        "본체 성장·추가 조개껍질 지붕 1차",
+        "완성 본체·추가 조개껍질 지붕 2차"
+      ]
+    },
+    {
+      "stage": 102,
+      "name": "지오데식 돔",
+      "region": "미국",
+      "year": 1975,
+      "kind": "geodesic",
+      "arg": 0,
+      "dayStart": 304,
+      "dayEnd": 306,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "돔과 방사형 격자",
+        "높은 돔·중앙 격자",
+        "최종 격자·유리 출입구"
+      ]
+    },
+    {
+      "stage": 103,
+      "name": "퐁피두센터",
+      "region": "프랑스",
+      "year": 1977,
+      "kind": "pompidou",
+      "arg": 0,
+      "dayStart": 307,
+      "dayEnd": 309,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "외부 철골과 유리층",
+        "붉은 경사 통로·녹색 설비",
+        "푸른 외부 배관·기단"
+      ]
+    },
+    {
+      "stage": 104,
+      "name": "포스트모던 빌딩",
+      "region": "미국",
+      "year": 1984,
+      "kind": "base",
+      "arg": 47,
+      "dayStart": 310,
+      "dayEnd": 312,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "포스트모던 빌딩 초기 본체",
+        "본체 성장·단차 기단 건물 1차",
+        "완성 본체·단차 기단 건물 2차"
+      ]
+    },
+    {
+      "stage": 105,
+      "name": "하이테크 빌딩",
+      "region": "영국",
+      "year": 1986,
+      "kind": "base",
+      "arg": 48,
+      "dayStart": 313,
+      "dayEnd": 315,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "하이테크 빌딩 초기 본체",
+        "본체 성장·추가 유리 동 1차",
+        "완성 본체·추가 유리 동 2차"
+      ]
+    },
+    {
+      "stage": 106,
+      "name": "루브르 유리 피라미드",
+      "region": "프랑스",
+      "year": 1989,
+      "kind": "louvre",
+      "arg": 0,
+      "dayStart": 316,
+      "dayEnd": 318,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "큰 유리 피라미드",
+        "왼쪽 작은 피라미드",
+        "오른쪽 피라미드·물가"
+      ]
+    },
+    {
+      "stage": 107,
+      "name": "댄싱하우스",
+      "region": "체코",
+      "year": 1996,
+      "kind": "dancing",
+      "arg": 0,
+      "dayStart": 319,
+      "dayEnd": 321,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "휘어진 유리 탑과 옆 탑",
+        "곡선 유리 격자·위 지붕",
+        "측면 받침 구조·출입층"
+      ]
+    },
+    {
+      "stage": 108,
+      "name": "빌바오 곡면 건축",
+      "region": "스페인",
+      "year": 1997,
+      "kind": "base",
+      "arg": 49,
+      "dayStart": 322,
+      "dayEnd": 324,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "빌바오 곡면 건축 초기 본체",
+        "본체 성장·추가 금속 곡면 1차",
+        "완성 본체·추가 금속 곡면 2차"
+      ]
+    },
+    {
+      "stage": 109,
+      "name": "페트로나스 트윈타워",
+      "region": "말레이시아",
+      "year": 1998,
+      "kind": "petronas",
+      "arg": 0,
+      "dayStart": 325,
+      "dayEnd": 327,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "쌍둥이 첨탑",
+        "두 타워를 잇는 스카이브리지",
+        "넓은 기단·낮은 돔"
+      ]
+    },
+    {
+      "stage": 110,
+      "name": "부르즈 알 아랍",
+      "region": "아랍에미리트",
+      "year": 1999,
+      "kind": "sailtower",
+      "arg": 0,
+      "dayStart": 328,
+      "dayEnd": 330,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "큰 돛과 유리 면",
+        "상부 헬리패드·수평 프레임",
+        "바다 위 진입 다리·출입층"
+      ]
+    },
+    {
+      "stage": 111,
+      "name": "에덴 프로젝트 온실",
+      "region": "영국",
+      "year": 2001,
+      "kind": "biomes",
+      "arg": 0,
+      "dayStart": 331,
+      "dayEnd": 333,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "큰 온실 한 동",
+        "왼쪽 온실",
+        "오른쪽 온실·정원 입구"
+      ]
+    },
+    {
+      "stage": 112,
+      "name": "타이베이101",
+      "region": "대만",
+      "year": 2004,
+      "kind": "base",
+      "arg": 50,
+      "dayStart": 334,
+      "dayEnd": 336,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "타이베이101 초기 본체",
+        "본체 성장·고층 기단·진입 건물 1차",
+        "완성 본체·고층 기단·진입 건물 2차"
+      ]
+    },
+    {
+      "stage": 113,
+      "name": "베이징 국가체육장",
+      "region": "중국",
+      "year": 2008,
+      "kind": "birdnest",
+      "arg": 0,
+      "dayStart": 337,
+      "dayEnd": 339,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "타원 경기장과 첫 교차 구조",
+        "추가 사선 외피",
+        "촘촘한 입체 외피·입구 기단"
+      ]
+    },
+    {
+      "stage": 114,
+      "name": "부르즈 칼리파",
+      "region": "아랍에미리트",
+      "year": 2010,
+      "kind": "base",
+      "arg": 51,
+      "dayStart": 340,
+      "dayEnd": 342,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "부르즈 칼리파 초기 본체",
+        "본체 성장·고층 기단·진입 건물 1차",
+        "완성 본체·고층 기단·진입 건물 2차"
+      ]
+    },
+    {
+      "stage": 115,
+      "name": "마리나베이샌즈",
+      "region": "싱가포르",
+      "year": 2011,
+      "kind": "marinabay",
+      "arg": 0,
+      "dayStart": 343,
+      "dayEnd": 345,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "세 타워와 긴 스카이파크",
+        "옥상 정원·수영장",
+        "곡선 아래 건물·물가"
+      ]
+    },
+    {
+      "stage": 116,
+      "name": "CCTV 본사",
+      "region": "중국",
+      "year": 2012,
+      "kind": "cctv",
+      "arg": 0,
+      "dayStart": 346,
+      "dayEnd": 348,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "닫힌 고리형 본체",
+        "외벽 격자·사선 철골",
+        "양쪽 하부 진입 건물"
+      ]
+    },
+    {
+      "stage": 117,
+      "name": "런던 샤드",
+      "region": "영국",
+      "year": 2012,
+      "kind": "shard",
+      "arg": 0,
+      "dayStart": 349,
+      "dayEnd": 351,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "날카로운 유리 조각 타워",
+        "양쪽 낮은 유리 조각",
+        "기단 건물·앞 계단"
+      ]
+    },
+    {
+      "stage": 118,
+      "name": "헤이다르 알리예프 센터",
+      "region": "아제르바이잔",
+      "year": 2012,
+      "kind": "heydar",
+      "arg": 0,
+      "dayStart": 352,
+      "dayEnd": 354,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "긴 파도 지붕과 유리 면",
+        "왼쪽 큰 곡면",
+        "연속 곡면 기단·패널 선"
+      ]
+    },
+    {
+      "stage": 119,
+      "name": "보스코 베르티칼레",
+      "region": "이탈리아",
+      "year": 2014,
+      "kind": "bosco",
+      "arg": 0,
+      "dayStart": 355,
+      "dayEnd": 357,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "두 개 직사각형 타워·첫 식재",
+        "중층 발코니와 나무",
+        "하층 발코니·옥상 나무"
+      ]
+    },
+    {
+      "stage": 120,
+      "name": "상하이타워",
+      "region": "중국",
+      "year": 2015,
+      "kind": "base",
+      "arg": 52,
+      "dayStart": 358,
+      "dayEnd": 360,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "상하이타워 초기 본체",
+        "본체 성장·고층 기단·진입 건물 1차",
+        "완성 본체·고층 기단·진입 건물 2차"
+      ]
+    },
+    {
+      "stage": 121,
+      "name": "톈진 빈하이 도서관",
+      "region": "중국",
+      "year": 2017,
+      "kind": "libraryeye",
+      "arg": 0,
+      "dayStart": 361,
+      "dayEnd": 363,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "반원형 도서관과 중앙 구체",
+        "곡선 벽과 선반",
+        "더 많은 선반·입구 기단"
+      ]
+    },
+    {
+      "stage": 122,
+      "name": "롯데월드타워",
+      "region": "한국",
+      "year": 2017,
+      "kind": "base",
+      "arg": 53,
+      "dayStart": 364,
+      "dayEnd": 366,
+      "dateBasis": "selected representative period, not origin date",
+      "dailyChanges": [
+        "롯데월드타워 초기 본체",
+        "본체 성장·고층 기단·진입 건물 1차",
+        "완성 본체·고층 기단·진입 건물 2차"
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "day": 1,
+      "stage": 1,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "씨앗",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "씨앗 껍질"
+      ],
+      "svg": "daily/day-001-stage-001-seed-00-detail-1.svg",
+      "png": "daily/day-001-stage-001-seed-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 2,
+      "stage": 1,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "씨앗",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "껍질이 갈라지고 뿌리가 뻗음"
+      ],
+      "svg": "daily/day-002-stage-001-seed-00-detail-2.svg",
+      "png": "daily/day-002-stage-001-seed-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 3,
+      "stage": 1,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "씨앗",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "줄기와 큰 두 잎이 올라옴"
+      ],
+      "svg": "daily/day-003-stage-001-seed-00-detail-3.svg",
+      "png": "daily/day-003-stage-001-seed-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 4,
+      "stage": 2,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "새싹",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "두 잎 새싹"
+      ],
+      "svg": "daily/day-004-stage-002-sprout-00-detail-1.svg",
+      "png": "daily/day-004-stage-002-sprout-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 5,
+      "stage": 2,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "새싹",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "줄기가 길어지고 네 잎"
+      ],
+      "svg": "daily/day-005-stage-002-sprout-00-detail-2.svg",
+      "png": "daily/day-005-stage-002-sprout-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 6,
+      "stage": 2,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "새싹",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "더 긴 줄기와 여섯 잎"
+      ],
+      "svg": "daily/day-006-stage-002-sprout-00-detail-3.svg",
+      "png": "daily/day-006-stage-002-sprout-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 7,
+      "stage": 3,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "묘목",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "가느다란 줄기와 두 쌍 수관"
+      ],
+      "svg": "daily/day-007-stage-003-sapling-00-detail-1.svg",
+      "png": "daily/day-007-stage-003-sapling-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 8,
+      "stage": 3,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "묘목",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "가지와 세 쌍 수관"
+      ],
+      "svg": "daily/day-008-stage-003-sapling-00-detail-2.svg",
+      "png": "daily/day-008-stage-003-sapling-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 9,
+      "stage": 3,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "묘목",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "큰 줄기와 네 쌍 수관"
+      ],
+      "svg": "daily/day-009-stage-003-sapling-00-detail-3.svg",
+      "png": "daily/day-009-stage-003-sapling-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 10,
+      "stage": 4,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "큰 나무",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "줄기와 양쪽 수관"
+      ],
+      "svg": "daily/day-010-stage-004-tree-00-detail-1.svg",
+      "png": "daily/day-010-stage-004-tree-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 11,
+      "stage": 4,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "큰 나무",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "윗 수관·오른쪽 가지 확장"
+      ],
+      "svg": "daily/day-011-stage-004-tree-00-detail-2.svg",
+      "png": "daily/day-011-stage-004-tree-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 12,
+      "stage": 4,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "큰 나무",
+      "region": "자연",
+      "year": null,
+      "changes": [
+        "아랫 수관·뿌리까지 큰 나무"
+      ],
+      "svg": "daily/day-012-stage-004-tree-00-detail-3.svg",
+      "png": "daily/day-012-stage-004-tree-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 13,
+      "stage": 5,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "모닥불",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "장작과 작은 불꽃"
+      ],
+      "svg": "daily/day-013-stage-005-fire-00-detail-1.svg",
+      "png": "daily/day-013-stage-005-fire-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 14,
+      "stage": 5,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "모닥불",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "큰 불꽃과 돌 화덕"
+      ],
+      "svg": "daily/day-014-stage-005-fire-00-detail-2.svg",
+      "png": "daily/day-014-stage-005-fire-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 15,
+      "stage": 5,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "모닥불",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "가로 받침대와 조리 냄비"
+      ],
+      "svg": "daily/day-015-stage-005-fire-00-detail-3.svg",
+      "png": "daily/day-015-stage-005-fire-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 16,
+      "stage": 6,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "동굴 거처",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "바위와 깊은 동굴 입구"
+      ],
+      "svg": "daily/day-016-stage-006-cave-00-detail-1.svg",
+      "png": "daily/day-016-stage-006-cave-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 17,
+      "stage": 6,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "동굴 거처",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "입구 바위와 외벽 돌출"
+      ],
+      "svg": "daily/day-017-stage-006-cave-00-detail-2.svg",
+      "png": "daily/day-017-stage-006-cave-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 18,
+      "stage": 6,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "동굴 거처",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "목재 차양과 입구 발판"
+      ],
+      "svg": "daily/day-018-stage-006-cave-00-detail-3.svg",
+      "png": "daily/day-018-stage-006-cave-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 19,
+      "stage": 7,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "해먹",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "기둥과 해먹"
+      ],
+      "svg": "daily/day-019-stage-007-hammock-00-detail-1.svg",
+      "png": "daily/day-019-stage-007-hammock-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 20,
+      "stage": 7,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "해먹",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "양쪽 나무 지붕·깊은 해먹"
+      ],
+      "svg": "daily/day-020-stage-007-hammock-00-detail-2.svg",
+      "png": "daily/day-020-stage-007-hammock-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 21,
+      "stage": 7,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "해먹",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "큰 차양·해먹 쿠션"
+      ],
+      "svg": "daily/day-021-stage-007-hammock-00-detail-3.svg",
+      "png": "daily/day-021-stage-007-hammock-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 22,
+      "stage": 8,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "가지 움막",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "가지 지붕과 움막 입구"
+      ],
+      "svg": "daily/day-022-stage-008-hut-00-detail-1.svg",
+      "png": "daily/day-022-stage-008-hut-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 23,
+      "stage": 8,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "가지 움막",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "지붕 높이·양쪽 지지 구조"
+      ],
+      "svg": "daily/day-023-stage-008-hut-00-detail-2.svg",
+      "png": "daily/day-023-stage-008-hut-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 24,
+      "stage": 8,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "가지 움막",
+      "region": "야영",
+      "year": null,
+      "changes": [
+        "앞 차양·지지 기둥·계단"
+      ],
+      "svg": "daily/day-024-stage-008-hut-00-detail-3.svg",
+      "png": "daily/day-024-stage-008-hut-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 25,
+      "stage": 9,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "유르트",
+      "region": "중앙아시아·도입",
+      "year": null,
+      "changes": [
+        "돔 텐트와 문"
+      ],
+      "svg": "daily/day-025-stage-009-yurt-00-detail-1.svg",
+      "png": "daily/day-025-stage-009-yurt-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 26,
+      "stage": 9,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "유르트",
+      "region": "중앙아시아·도입",
+      "year": null,
+      "changes": [
+        "큰 천막·넓은 벽 무늬"
+      ],
+      "svg": "daily/day-026-stage-009-yurt-00-detail-2.svg",
+      "png": "daily/day-026-stage-009-yurt-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 27,
+      "stage": 9,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "유르트",
+      "region": "중앙아시아·도입",
+      "year": null,
+      "changes": [
+        "띠 장식·입구 차양·발판"
+      ],
+      "svg": "daily/day-027-stage-009-yurt-00-detail-3.svg",
+      "png": "daily/day-027-stage-009-yurt-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 28,
+      "stage": 10,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "수상 움막",
+      "region": "열대 지역·도입",
+      "year": null,
+      "changes": [
+        "기둥 위 초가지붕"
+      ],
+      "svg": "daily/day-028-stage-010-stilts-00-detail-1.svg",
+      "png": "daily/day-028-stage-010-stilts-00-detail-1.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 29,
+      "stage": 10,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "수상 움막",
+      "region": "열대 지역·도입",
+      "year": null,
+      "changes": [
+        "수상 데크·큰 창"
+      ],
+      "svg": "daily/day-029-stage-010-stilts-00-detail-2.svg",
+      "png": "daily/day-029-stage-010-stilts-00-detail-2.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 30,
+      "stage": 10,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "수상 움막",
+      "region": "열대 지역·도입",
+      "year": null,
+      "changes": [
+        "사다리와 물가 갈대"
+      ],
+      "svg": "daily/day-030-stage-010-stilts-00-detail-3.svg",
+      "png": "daily/day-030-stage-010-stilts-00-detail-3.png",
+      "representativePeriod": "자연·야영 도입"
+    },
+    {
+      "day": 31,
+      "stage": 11,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "차탈회위크 흙집",
+      "region": "튀르키예",
+      "year": -7000,
+      "changes": [
+        "차탈회위크 흙집 초기 본체"
+      ],
+      "svg": "daily/day-031-stage-011-base-08-detail-1.svg",
+      "png": "daily/day-031-stage-011-base-08-detail-1.png",
+      "representativePeriod": "기원전 7000년 대표 시기"
+    },
+    {
+      "day": 32,
+      "stage": 11,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "차탈회위크 흙집",
+      "region": "튀르키예",
+      "year": -7000,
+      "changes": [
+        "본체 성장·흙집 증축 1차"
+      ],
+      "svg": "daily/day-032-stage-011-base-08-detail-2.svg",
+      "png": "daily/day-032-stage-011-base-08-detail-2.png",
+      "representativePeriod": "기원전 7000년 대표 시기"
+    },
+    {
+      "day": 33,
+      "stage": 11,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "차탈회위크 흙집",
+      "region": "튀르키예",
+      "year": -7000,
+      "changes": [
+        "완성 본체·흙집 증축 2차"
+      ],
+      "svg": "daily/day-033-stage-011-base-08-detail-3.svg",
+      "png": "daily/day-033-stage-011-base-08-detail-3.png",
+      "representativePeriod": "기원전 7000년 대표 시기"
+    },
+    {
+      "day": 34,
+      "stage": 12,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "레펜스키비르 거처",
+      "region": "세르비아",
+      "year": -6000,
+      "changes": [
+        "사다리꼴 거처와 박공"
+      ],
+      "svg": "daily/day-034-stage-012-trapezoid-00-detail-1.svg",
+      "png": "daily/day-034-stage-012-trapezoid-00-detail-1.png",
+      "representativePeriod": "기원전 6000년 대표 시기"
+    },
+    {
+      "day": 35,
+      "stage": 12,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "레펜스키비르 거처",
+      "region": "세르비아",
+      "year": -6000,
+      "changes": [
+        "측벽·안쪽 화덕"
+      ],
+      "svg": "daily/day-035-stage-012-trapezoid-00-detail-2.svg",
+      "png": "daily/day-035-stage-012-trapezoid-00-detail-2.png",
+      "representativePeriod": "기원전 6000년 대표 시기"
+    },
+    {
+      "day": 36,
+      "stage": 12,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "레펜스키비르 거처",
+      "region": "세르비아",
+      "year": -6000,
+      "changes": [
+        "전면 석벽과 계단"
+      ],
+      "svg": "daily/day-036-stage-012-trapezoid-00-detail-3.svg",
+      "png": "daily/day-036-stage-012-trapezoid-00-detail-3.png",
+      "representativePeriod": "기원전 6000년 대표 시기"
+    },
+    {
+      "day": 37,
+      "stage": 13,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "신석기 롱하우스",
+      "region": "중부 유럽",
+      "year": -5000,
+      "changes": [
+        "길게 이어진 초가"
+      ],
+      "svg": "daily/day-037-stage-013-longhouse-00-detail-1.svg",
+      "png": "daily/day-037-stage-013-longhouse-00-detail-1.png",
+      "representativePeriod": "기원전 5000년 대표 시기"
+    },
+    {
+      "day": 38,
+      "stage": 13,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "신석기 롱하우스",
+      "region": "중부 유럽",
+      "year": -5000,
+      "changes": [
+        "큰 창·목재 벽 띠"
+      ],
+      "svg": "daily/day-038-stage-013-longhouse-00-detail-2.svg",
+      "png": "daily/day-038-stage-013-longhouse-00-detail-2.png",
+      "representativePeriod": "기원전 5000년 대표 시기"
+    },
+    {
+      "day": 39,
+      "stage": 13,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "신석기 롱하우스",
+      "region": "중부 유럽",
+      "year": -5000,
+      "changes": [
+        "앞쪽 별채 박공·계단"
+      ],
+      "svg": "daily/day-039-stage-013-longhouse-00-detail-3.svg",
+      "png": "daily/day-039-stage-013-longhouse-00-detail-3.png",
+      "representativePeriod": "기원전 5000년 대표 시기"
+    },
+    {
+      "day": 40,
+      "stage": 14,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "스카라브레이 돌집",
+      "region": "스코틀랜드",
+      "year": -3000,
+      "changes": [
+        "스카라브레이 돌집 초기 본체"
+      ],
+      "svg": "daily/day-040-stage-014-base-09-detail-1.svg",
+      "png": "daily/day-040-stage-014-base-09-detail-1.png",
+      "representativePeriod": "기원전 3000년 대표 시기"
+    },
+    {
+      "day": 41,
+      "stage": 14,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "스카라브레이 돌집",
+      "region": "스코틀랜드",
+      "year": -3000,
+      "changes": [
+        "본체 성장·돌벽 구획 1차"
+      ],
+      "svg": "daily/day-041-stage-014-base-09-detail-2.svg",
+      "png": "daily/day-041-stage-014-base-09-detail-2.png",
+      "representativePeriod": "기원전 3000년 대표 시기"
+    },
+    {
+      "day": 42,
+      "stage": 14,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "스카라브레이 돌집",
+      "region": "스코틀랜드",
+      "year": -3000,
+      "changes": [
+        "완성 본체·돌벽 구획 2차"
+      ],
+      "svg": "daily/day-042-stage-014-base-09-detail-3.svg",
+      "png": "daily/day-042-stage-014-base-09-detail-3.png",
+      "representativePeriod": "기원전 3000년 대표 시기"
+    },
+    {
+      "day": 43,
+      "stage": 15,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "스위스 호상 가옥",
+      "region": "스위스",
+      "year": -2800,
+      "changes": [
+        "물 위 기둥과 큰 박공"
+      ],
+      "svg": "daily/day-043-stage-015-pilehouse-00-detail-1.svg",
+      "png": "daily/day-043-stage-015-pilehouse-00-detail-1.png",
+      "representativePeriod": "기원전 2800년 대표 시기"
+    },
+    {
+      "day": 44,
+      "stage": 15,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "스위스 호상 가옥",
+      "region": "스위스",
+      "year": -2800,
+      "changes": [
+        "긴 데크·양쪽 창"
+      ],
+      "svg": "daily/day-044-stage-015-pilehouse-00-detail-2.svg",
+      "png": "daily/day-044-stage-015-pilehouse-00-detail-2.png",
+      "representativePeriod": "기원전 2800년 대표 시기"
+    },
+    {
+      "day": 45,
+      "stage": 15,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "스위스 호상 가옥",
+      "region": "스위스",
+      "year": -2800,
+      "changes": [
+        "수변 사다리·갈대"
+      ],
+      "svg": "daily/day-045-stage-015-pilehouse-00-detail-3.svg",
+      "png": "daily/day-045-stage-015-pilehouse-00-detail-3.png",
+      "representativePeriod": "기원전 2800년 대표 시기"
+    },
+    {
+      "day": 46,
+      "stage": 16,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "이집트 피라미드",
+      "region": "이집트",
+      "year": -2600,
+      "changes": [
+        "이집트 피라미드 초기 본체"
+      ],
+      "svg": "daily/day-046-stage-016-base-10-detail-1.svg",
+      "png": "daily/day-046-stage-016-base-10-detail-1.png",
+      "representativePeriod": "기원전 2600년 대표 시기"
+    },
+    {
+      "day": 47,
+      "stage": 16,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "이집트 피라미드",
+      "region": "이집트",
+      "year": -2600,
+      "changes": [
+        "본체 성장·작은 피라미드·오벨리스크 1차"
+      ],
+      "svg": "daily/day-047-stage-016-base-10-detail-2.svg",
+      "png": "daily/day-047-stage-016-base-10-detail-2.png",
+      "representativePeriod": "기원전 2600년 대표 시기"
+    },
+    {
+      "day": 48,
+      "stage": 16,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "이집트 피라미드",
+      "region": "이집트",
+      "year": -2600,
+      "changes": [
+        "완성 본체·작은 피라미드·오벨리스크 2차"
+      ],
+      "svg": "daily/day-048-stage-016-base-10-detail-3.svg",
+      "png": "daily/day-048-stage-016-base-10-detail-3.png",
+      "representativePeriod": "기원전 2600년 대표 시기"
+    },
+    {
+      "day": 49,
+      "stage": 17,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "인더스 벽돌 거처",
+      "region": "파키스탄",
+      "year": -2500,
+      "changes": [
+        "벽돌집 본체"
+      ],
+      "svg": "daily/day-049-stage-017-indus-00-detail-1.svg",
+      "png": "daily/day-049-stage-017-indus-00-detail-1.png",
+      "representativePeriod": "기원전 2500년 대표 시기"
+    },
+    {
+      "day": 50,
+      "stage": 17,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "인더스 벽돌 거처",
+      "region": "파키스탄",
+      "year": -2500,
+      "changes": [
+        "옥상층·측면 증축"
+      ],
+      "svg": "daily/day-050-stage-017-indus-00-detail-2.svg",
+      "png": "daily/day-050-stage-017-indus-00-detail-2.png",
+      "representativePeriod": "기원전 2500년 대표 시기"
+    },
+    {
+      "day": 51,
+      "stage": 17,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "인더스 벽돌 거처",
+      "region": "파키스탄",
+      "year": -2500,
+      "changes": [
+        "오른쪽 벽체·수로"
+      ],
+      "svg": "daily/day-051-stage-017-indus-00-detail-3.svg",
+      "png": "daily/day-051-stage-017-indus-00-detail-3.png",
+      "representativePeriod": "기원전 2500년 대표 시기"
+    },
+    {
+      "day": 52,
+      "stage": 18,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "우르 지구라트",
+      "region": "이라크",
+      "year": -2100,
+      "changes": [
+        "우르 지구라트 초기 본체"
+      ],
+      "svg": "daily/day-052-stage-018-base-11-detail-1.svg",
+      "png": "daily/day-052-stage-018-base-11-detail-1.png",
+      "representativePeriod": "기원전 2100년 대표 시기"
+    },
+    {
+      "day": 53,
+      "stage": 18,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "우르 지구라트",
+      "region": "이라크",
+      "year": -2100,
+      "changes": [
+        "본체 성장·계단·기단 1차"
+      ],
+      "svg": "daily/day-053-stage-018-base-11-detail-2.svg",
+      "png": "daily/day-053-stage-018-base-11-detail-2.png",
+      "representativePeriod": "기원전 2100년 대표 시기"
+    },
+    {
+      "day": 54,
+      "stage": 18,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "우르 지구라트",
+      "region": "이라크",
+      "year": -2100,
+      "changes": [
+        "완성 본체·계단·기단 2차"
+      ],
+      "svg": "daily/day-054-stage-018-base-11-detail-3.svg",
+      "png": "daily/day-054-stage-018-base-11-detail-3.png",
+      "representativePeriod": "기원전 2100년 대표 시기"
+    },
+    {
+      "day": 55,
+      "stage": 19,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "미노스 궁전",
+      "region": "그리스 크레타",
+      "year": -1700,
+      "changes": [
+        "미노스 궁전 초기 본체"
+      ],
+      "svg": "daily/day-055-stage-019-base-12-detail-1.svg",
+      "png": "daily/day-055-stage-019-base-12-detail-1.png",
+      "representativePeriod": "기원전 1700년 대표 시기"
+    },
+    {
+      "day": 56,
+      "stage": 19,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "미노스 궁전",
+      "region": "그리스 크레타",
+      "year": -1700,
+      "changes": [
+        "본체 성장·궁전 열주 1차"
+      ],
+      "svg": "daily/day-056-stage-019-base-12-detail-2.svg",
+      "png": "daily/day-056-stage-019-base-12-detail-2.png",
+      "representativePeriod": "기원전 1700년 대표 시기"
+    },
+    {
+      "day": 57,
+      "stage": 19,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "미노스 궁전",
+      "region": "그리스 크레타",
+      "year": -1700,
+      "changes": [
+        "완성 본체·궁전 열주 2차"
+      ],
+      "svg": "daily/day-057-stage-019-base-12-detail-3.svg",
+      "png": "daily/day-057-stage-019-base-12-detail-3.png",
+      "representativePeriod": "기원전 1700년 대표 시기"
+    },
+    {
+      "day": 58,
+      "stage": 20,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "카르나크 열주전",
+      "region": "이집트",
+      "year": -1500,
+      "changes": [
+        "사다리꼴 쌍탑 성문"
+      ],
+      "svg": "daily/day-058-stage-020-pylon-00-detail-1.svg",
+      "png": "daily/day-058-stage-020-pylon-00-detail-1.png",
+      "representativePeriod": "기원전 1500년 대표 시기"
+    },
+    {
+      "day": 59,
+      "stage": 20,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "카르나크 열주전",
+      "region": "이집트",
+      "year": -1500,
+      "changes": [
+        "앞쪽 열주"
+      ],
+      "svg": "daily/day-059-stage-020-pylon-00-detail-2.svg",
+      "png": "daily/day-059-stage-020-pylon-00-detail-2.png",
+      "representativePeriod": "기원전 1500년 대표 시기"
+    },
+    {
+      "day": 60,
+      "stage": 20,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "카르나크 열주전",
+      "region": "이집트",
+      "year": -1500,
+      "changes": [
+        "오벨리스크·넓은 기단"
+      ],
+      "svg": "daily/day-060-stage-020-pylon-00-detail-3.svg",
+      "png": "daily/day-060-stage-020-pylon-00-detail-3.png",
+      "representativePeriod": "기원전 1500년 대표 시기"
+    },
+    {
+      "day": 61,
+      "stage": 21,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "히타이트 성문",
+      "region": "튀르키예",
+      "year": -1400,
+      "changes": [
+        "석벽과 큰 아치"
+      ],
+      "svg": "daily/day-061-stage-021-liongate-00-detail-1.svg",
+      "png": "daily/day-061-stage-021-liongate-00-detail-1.png",
+      "representativePeriod": "기원전 1400년 대표 시기"
+    },
+    {
+      "day": 62,
+      "stage": 21,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "히타이트 성문",
+      "region": "튀르키예",
+      "year": -1400,
+      "changes": [
+        "양쪽 사자 모양 석상"
+      ],
+      "svg": "daily/day-062-stage-021-liongate-00-detail-2.svg",
+      "png": "daily/day-062-stage-021-liongate-00-detail-2.png",
+      "representativePeriod": "기원전 1400년 대표 시기"
+    },
+    {
+      "day": 63,
+      "stage": 21,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "히타이트 성문",
+      "region": "튀르키예",
+      "year": -1400,
+      "changes": [
+        "성벽 상부 요철·기단"
+      ],
+      "svg": "daily/day-063-stage-021-liongate-00-detail-3.svg",
+      "png": "daily/day-063-stage-021-liongate-00-detail-3.png",
+      "representativePeriod": "기원전 1400년 대표 시기"
+    },
+    {
+      "day": 64,
+      "stage": 22,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "아시리아 궁전",
+      "region": "이라크",
+      "year": -700,
+      "changes": [
+        "평지붕 궁전과 아치"
+      ],
+      "svg": "daily/day-064-stage-022-assyrian-00-detail-1.svg",
+      "png": "daily/day-064-stage-022-assyrian-00-detail-1.png",
+      "representativePeriod": "기원전 700년 대표 시기"
+    },
+    {
+      "day": 65,
+      "stage": 22,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "아시리아 궁전",
+      "region": "이라크",
+      "year": -700,
+      "changes": [
+        "양쪽 날개 수호상 표현"
+      ],
+      "svg": "daily/day-065-stage-022-assyrian-00-detail-2.svg",
+      "png": "daily/day-065-stage-022-assyrian-00-detail-2.png",
+      "representativePeriod": "기원전 700년 대표 시기"
+    },
+    {
+      "day": 66,
+      "stage": 22,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "아시리아 궁전",
+      "region": "이라크",
+      "year": -700,
+      "changes": [
+        "상부 요철·계단"
+      ],
+      "svg": "daily/day-066-stage-022-assyrian-00-detail-3.svg",
+      "png": "daily/day-066-stage-022-assyrian-00-detail-3.png",
+      "representativePeriod": "기원전 700년 대표 시기"
+    },
+    {
+      "day": 67,
+      "stage": 23,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "페르세폴리스",
+      "region": "이란",
+      "year": -500,
+      "changes": [
+        "동물 장식 기둥과 기단"
+      ],
+      "svg": "daily/day-067-stage-023-persian-00-detail-1.svg",
+      "png": "daily/day-067-stage-023-persian-00-detail-1.png",
+      "representativePeriod": "기원전 500년 대표 시기"
+    },
+    {
+      "day": 68,
+      "stage": 23,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "페르세폴리스",
+      "region": "이란",
+      "year": -500,
+      "changes": [
+        "상부 보·옆 석벽"
+      ],
+      "svg": "daily/day-068-stage-023-persian-00-detail-2.svg",
+      "png": "daily/day-068-stage-023-persian-00-detail-2.png",
+      "representativePeriod": "기원전 500년 대표 시기"
+    },
+    {
+      "day": 69,
+      "stage": 23,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "페르세폴리스",
+      "region": "이란",
+      "year": -500,
+      "changes": [
+        "전면 열주와 긴 보"
+      ],
+      "svg": "daily/day-069-stage-023-persian-00-detail-3.svg",
+      "png": "daily/day-069-stage-023-persian-00-detail-3.png",
+      "representativePeriod": "기원전 500년 대표 시기"
+    },
+    {
+      "day": 70,
+      "stage": 24,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "그리스 신전",
+      "region": "그리스",
+      "year": -450,
+      "changes": [
+        "그리스 신전 초기 본체"
+      ],
+      "svg": "daily/day-070-stage-024-base-13-detail-1.svg",
+      "png": "daily/day-070-stage-024-base-13-detail-1.png",
+      "representativePeriod": "기원전 450년 대표 시기"
+    },
+    {
+      "day": 71,
+      "stage": 24,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "그리스 신전",
+      "region": "그리스",
+      "year": -450,
+      "changes": [
+        "본체 성장·신전 열주 1차"
+      ],
+      "svg": "daily/day-071-stage-024-base-13-detail-2.svg",
+      "png": "daily/day-071-stage-024-base-13-detail-2.png",
+      "representativePeriod": "기원전 450년 대표 시기"
+    },
+    {
+      "day": 72,
+      "stage": 24,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "그리스 신전",
+      "region": "그리스",
+      "year": -450,
+      "changes": [
+        "완성 본체·신전 열주 2차"
+      ],
+      "svg": "daily/day-072-stage-024-base-13-detail-3.svg",
+      "png": "daily/day-072-stage-024-base-13-detail-3.png",
+      "representativePeriod": "기원전 450년 대표 시기"
+    },
+    {
+      "day": 73,
+      "stage": 25,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "야흐찰 빙고",
+      "region": "이란",
+      "year": -400,
+      "changes": [
+        "원뿔 빙고와 둥근 띠"
+      ],
+      "svg": "daily/day-073-stage-025-icehouse-00-detail-1.svg",
+      "png": "daily/day-073-stage-025-icehouse-00-detail-1.png",
+      "representativePeriod": "기원전 400년 대표 시기"
+    },
+    {
+      "day": 74,
+      "stage": 25,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "야흐찰 빙고",
+      "region": "이란",
+      "year": -400,
+      "changes": [
+        "왼쪽 입구 건물"
+      ],
+      "svg": "daily/day-074-stage-025-icehouse-00-detail-2.svg",
+      "png": "daily/day-074-stage-025-icehouse-00-detail-2.png",
+      "representativePeriod": "기원전 400년 대표 시기"
+    },
+    {
+      "day": 75,
+      "stage": 25,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "야흐찰 빙고",
+      "region": "이란",
+      "year": -400,
+      "changes": [
+        "물 저장부와 환기탑"
+      ],
+      "svg": "daily/day-075-stage-025-icehouse-00-detail-3.svg",
+      "png": "daily/day-075-stage-025-icehouse-00-detail-3.png",
+      "representativePeriod": "기원전 400년 대표 시기"
+    },
+    {
+      "day": 76,
+      "stage": 26,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "그리스 원형극장",
+      "region": "그리스",
+      "year": -350,
+      "changes": [
+        "원형극장 바닥과 첫 객석"
+      ],
+      "svg": "daily/day-076-stage-026-theatre-00-detail-1.svg",
+      "png": "daily/day-076-stage-026-theatre-00-detail-1.png",
+      "representativePeriod": "기원전 350년 대표 시기"
+    },
+    {
+      "day": 77,
+      "stage": 26,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "그리스 원형극장",
+      "region": "그리스",
+      "year": -350,
+      "changes": [
+        "두 번째 객석·무대 열주"
+      ],
+      "svg": "daily/day-077-stage-026-theatre-00-detail-2.svg",
+      "png": "daily/day-077-stage-026-theatre-00-detail-2.png",
+      "representativePeriod": "기원전 350년 대표 시기"
+    },
+    {
+      "day": 78,
+      "stage": 26,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "그리스 원형극장",
+      "region": "그리스",
+      "year": -350,
+      "changes": [
+        "세 번째 객석·무대 박공"
+      ],
+      "svg": "daily/day-078-stage-026-theatre-00-detail-3.svg",
+      "png": "daily/day-078-stage-026-theatre-00-detail-3.png",
+      "representativePeriod": "기원전 350년 대표 시기"
+    },
+    {
+      "day": 79,
+      "stage": 27,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "산치 스투파",
+      "region": "인도",
+      "year": -250,
+      "changes": [
+        "반구 스투파"
+      ],
+      "svg": "daily/day-079-stage-027-stupa-00-detail-1.svg",
+      "png": "daily/day-079-stage-027-stupa-00-detail-1.png",
+      "representativePeriod": "기원전 250년 대표 시기"
+    },
+    {
+      "day": 80,
+      "stage": 27,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "산치 스투파",
+      "region": "인도",
+      "year": -250,
+      "changes": [
+        "왼쪽 토라나 문"
+      ],
+      "svg": "daily/day-080-stage-027-stupa-00-detail-2.svg",
+      "png": "daily/day-080-stage-027-stupa-00-detail-2.png",
+      "representativePeriod": "기원전 250년 대표 시기"
+    },
+    {
+      "day": 81,
+      "stage": 27,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "산치 스투파",
+      "region": "인도",
+      "year": -250,
+      "changes": [
+        "오른쪽 문·중앙 계단"
+      ],
+      "svg": "daily/day-081-stage-027-stupa-00-detail-3.svg",
+      "png": "daily/day-081-stage-027-stupa-00-detail-3.png",
+      "representativePeriod": "기원전 250년 대표 시기"
+    },
+    {
+      "day": 82,
+      "stage": 28,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "페트라 암벽 신전",
+      "region": "요르단",
+      "year": 50,
+      "changes": [
+        "암벽과 아래 열주"
+      ],
+      "svg": "daily/day-082-stage-028-petra-00-detail-1.svg",
+      "png": "daily/day-082-stage-028-petra-00-detail-1.png",
+      "representativePeriod": "50년 대표 시기"
+    },
+    {
+      "day": 83,
+      "stage": 28,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "페트라 암벽 신전",
+      "region": "요르단",
+      "year": 50,
+      "changes": [
+        "상층 열주·중앙 둥근 지붕"
+      ],
+      "svg": "daily/day-083-stage-028-petra-00-detail-2.svg",
+      "png": "daily/day-083-stage-028-petra-00-detail-2.png",
+      "representativePeriod": "50년 대표 시기"
+    },
+    {
+      "day": 84,
+      "stage": 28,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "페트라 암벽 신전",
+      "region": "요르단",
+      "year": 50,
+      "changes": [
+        "깊은 중앙 입구·석조 계단"
+      ],
+      "svg": "daily/day-084-stage-028-petra-00-detail-3.svg",
+      "png": "daily/day-084-stage-028-petra-00-detail-3.png",
+      "representativePeriod": "50년 대표 시기"
+    },
+    {
+      "day": 85,
+      "stage": 29,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "콜로세움",
+      "region": "이탈리아",
+      "year": 80,
+      "changes": [
+        "낮은 원형 아케이드"
+      ],
+      "svg": "daily/day-085-stage-029-colosseum-00-detail-1.svg",
+      "png": "daily/day-085-stage-029-colosseum-00-detail-1.png",
+      "representativePeriod": "80년 대표 시기"
+    },
+    {
+      "day": 86,
+      "stage": 29,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "콜로세움",
+      "region": "이탈리아",
+      "year": 80,
+      "changes": [
+        "상층 아케이드·수평 띠"
+      ],
+      "svg": "daily/day-086-stage-029-colosseum-00-detail-2.svg",
+      "png": "daily/day-086-stage-029-colosseum-00-detail-2.png",
+      "representativePeriod": "80년 대표 시기"
+    },
+    {
+      "day": 87,
+      "stage": 29,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "콜로세움",
+      "region": "이탈리아",
+      "year": 80,
+      "changes": [
+        "높은 외벽·열린 상부 윤곽"
+      ],
+      "svg": "daily/day-087-stage-029-colosseum-00-detail-3.svg",
+      "png": "daily/day-087-stage-029-colosseum-00-detail-3.png",
+      "representativePeriod": "80년 대표 시기"
+    },
+    {
+      "day": 88,
+      "stage": 30,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "로마 판테온",
+      "region": "이탈리아",
+      "year": 125,
+      "changes": [
+        "로마 판테온 초기 본체"
+      ],
+      "svg": "daily/day-088-stage-030-base-14-detail-1.svg",
+      "png": "daily/day-088-stage-030-base-14-detail-1.png",
+      "representativePeriod": "125년 대표 시기"
+    },
+    {
+      "day": 89,
+      "stage": 30,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "로마 판테온",
+      "region": "이탈리아",
+      "year": 125,
+      "changes": [
+        "본체 성장·포르티코 열주 1차"
+      ],
+      "svg": "daily/day-089-stage-030-base-14-detail-2.svg",
+      "png": "daily/day-089-stage-030-base-14-detail-2.png",
+      "representativePeriod": "125년 대표 시기"
+    },
+    {
+      "day": 90,
+      "stage": 30,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "로마 판테온",
+      "region": "이탈리아",
+      "year": 125,
+      "changes": [
+        "완성 본체·포르티코 열주 2차"
+      ],
+      "svg": "daily/day-090-stage-030-base-14-detail-3.svg",
+      "png": "daily/day-090-stage-030-base-14-detail-3.png",
+      "representativePeriod": "125년 대표 시기"
+    },
+    {
+      "day": 91,
+      "stage": 31,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "푸에블로 구덩이집",
+      "region": "미국 남서부",
+      "year": 300,
+      "changes": [
+        "땅속 거처와 입구"
+      ],
+      "svg": "daily/day-091-stage-031-pithouse-00-detail-1.svg",
+      "png": "daily/day-091-stage-031-pithouse-00-detail-1.png",
+      "representativePeriod": "300년 대표 시기"
+    },
+    {
+      "day": 92,
+      "stage": 31,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "푸에블로 구덩이집",
+      "region": "미국 남서부",
+      "year": 300,
+      "changes": [
+        "박공 지붕·경사 사다리"
+      ],
+      "svg": "daily/day-092-stage-031-pithouse-00-detail-2.svg",
+      "png": "daily/day-092-stage-031-pithouse-00-detail-2.png",
+      "representativePeriod": "300년 대표 시기"
+    },
+    {
+      "day": 93,
+      "stage": 31,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "푸에블로 구덩이집",
+      "region": "미국 남서부",
+      "year": 300,
+      "changes": [
+        "입구 차양·앞 발판"
+      ],
+      "svg": "daily/day-093-stage-031-pithouse-00-detail-3.svg",
+      "png": "daily/day-093-stage-031-pithouse-00-detail-3.png",
+      "representativePeriod": "300년 대표 시기"
+    },
+    {
+      "day": 94,
+      "stage": 32,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "비잔틴 돔",
+      "region": "튀르키예",
+      "year": 537,
+      "changes": [
+        "비잔틴 돔 초기 본체"
+      ],
+      "svg": "daily/day-094-stage-032-base-15-detail-1.svg",
+      "png": "daily/day-094-stage-032-base-15-detail-1.png",
+      "representativePeriod": "537년 대표 시기"
+    },
+    {
+      "day": 95,
+      "stage": 32,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "비잔틴 돔",
+      "region": "튀르키예",
+      "year": 537,
+      "changes": [
+        "본체 성장·양쪽 작은 돔 1차"
+      ],
+      "svg": "daily/day-095-stage-032-base-15-detail-2.svg",
+      "png": "daily/day-095-stage-032-base-15-detail-2.png",
+      "representativePeriod": "537년 대표 시기"
+    },
+    {
+      "day": 96,
+      "stage": 32,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "비잔틴 돔",
+      "region": "튀르키예",
+      "year": 537,
+      "changes": [
+        "완성 본체·양쪽 작은 돔 2차"
+      ],
+      "svg": "daily/day-096-stage-032-base-15-detail-3.svg",
+      "png": "daily/day-096-stage-032-base-15-detail-3.png",
+      "representativePeriod": "537년 대표 시기"
+    },
+    {
+      "day": 97,
+      "stage": 33,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "호류지 목탑",
+      "region": "일본",
+      "year": 700,
+      "changes": [
+        "호류지 목탑 초기 본체"
+      ],
+      "svg": "daily/day-097-stage-033-base-16-detail-1.svg",
+      "png": "daily/day-097-stage-033-base-16-detail-1.png",
+      "representativePeriod": "700년 대표 시기"
+    },
+    {
+      "day": 98,
+      "stage": 33,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "호류지 목탑",
+      "region": "일본",
+      "year": 700,
+      "changes": [
+        "본체 성장·양쪽 기와 누각 1차"
+      ],
+      "svg": "daily/day-098-stage-033-base-16-detail-2.svg",
+      "png": "daily/day-098-stage-033-base-16-detail-2.png",
+      "representativePeriod": "700년 대표 시기"
+    },
+    {
+      "day": 99,
+      "stage": 33,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "호류지 목탑",
+      "region": "일본",
+      "year": 700,
+      "changes": [
+        "완성 본체·양쪽 기와 누각 2차"
+      ],
+      "svg": "daily/day-099-stage-033-base-16-detail-3.svg",
+      "png": "daily/day-099-stage-033-base-16-detail-3.png",
+      "representativePeriod": "700년 대표 시기"
+    },
+    {
+      "day": 100,
+      "stage": 34,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "마야 계단 신전",
+      "region": "멕시코",
+      "year": 750,
+      "changes": [
+        "마야 계단 신전 초기 본체"
+      ],
+      "svg": "daily/day-100-stage-034-base-17-detail-1.svg",
+      "png": "daily/day-100-stage-034-base-17-detail-1.png",
+      "representativePeriod": "750년 대표 시기"
+    },
+    {
+      "day": 101,
+      "stage": 34,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "마야 계단 신전",
+      "region": "멕시코",
+      "year": 750,
+      "changes": [
+        "본체 성장·계단·옆 신전 1차"
+      ],
+      "svg": "daily/day-101-stage-034-base-17-detail-2.svg",
+      "png": "daily/day-101-stage-034-base-17-detail-2.png",
+      "representativePeriod": "750년 대표 시기"
+    },
+    {
+      "day": 102,
+      "stage": 34,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "마야 계단 신전",
+      "region": "멕시코",
+      "year": 750,
+      "changes": [
+        "완성 본체·계단·옆 신전 2차"
+      ],
+      "svg": "daily/day-102-stage-034-base-17-detail-3.svg",
+      "png": "daily/day-102-stage-034-base-17-detail-3.png",
+      "representativePeriod": "750년 대표 시기"
+    },
+    {
+      "day": 103,
+      "stage": 35,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "이슬람 아치 궁전",
+      "region": "서아시아",
+      "year": 800,
+      "changes": [
+        "이슬람 아치 궁전 초기 본체"
+      ],
+      "svg": "daily/day-103-stage-035-base-18-detail-1.svg",
+      "png": "daily/day-103-stage-035-base-18-detail-1.png",
+      "representativePeriod": "800년 대표 시기"
+    },
+    {
+      "day": 104,
+      "stage": 35,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "이슬람 아치 궁전",
+      "region": "서아시아",
+      "year": 800,
+      "changes": [
+        "본체 성장·양쪽 아치·돔 1차"
+      ],
+      "svg": "daily/day-104-stage-035-base-18-detail-2.svg",
+      "png": "daily/day-104-stage-035-base-18-detail-2.png",
+      "representativePeriod": "800년 대표 시기"
+    },
+    {
+      "day": 105,
+      "stage": 35,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "이슬람 아치 궁전",
+      "region": "서아시아",
+      "year": 800,
+      "changes": [
+        "완성 본체·양쪽 아치·돔 2차"
+      ],
+      "svg": "daily/day-105-stage-035-base-18-detail-3.svg",
+      "png": "daily/day-105-stage-035-base-18-detail-3.png",
+      "representativePeriod": "800년 대표 시기"
+    },
+    {
+      "day": 106,
+      "stage": 36,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "보로부두르",
+      "region": "인도네시아",
+      "year": 825,
+      "changes": [
+        "세 층 기단과 작은 스투파"
+      ],
+      "svg": "daily/day-106-stage-036-borobudur-00-detail-1.svg",
+      "png": "daily/day-106-stage-036-borobudur-00-detail-1.png",
+      "representativePeriod": "825년 대표 시기"
+    },
+    {
+      "day": 107,
+      "stage": 36,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "보로부두르",
+      "region": "인도네시아",
+      "year": 825,
+      "changes": [
+        "네 층 기단·추가 스투파"
+      ],
+      "svg": "daily/day-107-stage-036-borobudur-00-detail-2.svg",
+      "png": "daily/day-107-stage-036-borobudur-00-detail-2.png",
+      "representativePeriod": "825년 대표 시기"
+    },
+    {
+      "day": 108,
+      "stage": 36,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "보로부두르",
+      "region": "인도네시아",
+      "year": 825,
+      "changes": [
+        "다섯 층 기단·중앙 계단"
+      ],
+      "svg": "daily/day-108-stage-036-borobudur-00-detail-3.svg",
+      "png": "daily/day-108-stage-036-borobudur-00-detail-3.png",
+      "representativePeriod": "825년 대표 시기"
+    },
+    {
+      "day": 109,
+      "stage": 37,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "수상 장옥",
+      "region": "동남아시아",
+      "year": 850,
+      "changes": [
+        "긴 수상 주택과 기둥"
+      ],
+      "svg": "daily/day-109-stage-037-longstilts-00-detail-1.svg",
+      "png": "daily/day-109-stage-037-longstilts-00-detail-1.png",
+      "representativePeriod": "850년 대표 시기"
+    },
+    {
+      "day": 110,
+      "stage": 37,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "수상 장옥",
+      "region": "동남아시아",
+      "year": 850,
+      "changes": [
+        "긴 데크·난간"
+      ],
+      "svg": "daily/day-110-stage-037-longstilts-00-detail-2.svg",
+      "png": "daily/day-110-stage-037-longstilts-00-detail-2.png",
+      "representativePeriod": "850년 대표 시기"
+    },
+    {
+      "day": 111,
+      "stage": 37,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "수상 장옥",
+      "region": "동남아시아",
+      "year": 850,
+      "changes": [
+        "출입 지붕·사다리·갈대"
+      ],
+      "svg": "daily/day-111-stage-037-longstilts-00-detail-3.svg",
+      "png": "daily/day-111-stage-037-longstilts-00-detail-3.png",
+      "representativePeriod": "850년 대표 시기"
+    },
+    {
+      "day": 112,
+      "stage": 38,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "바이킹 롱하우스",
+      "region": "북유럽",
+      "year": 900,
+      "changes": [
+        "바이킹 롱하우스 초기 본체"
+      ],
+      "svg": "daily/day-112-stage-038-base-19-detail-1.svg",
+      "png": "daily/day-112-stage-038-base-19-detail-1.png",
+      "representativePeriod": "900년 대표 시기"
+    },
+    {
+      "day": 113,
+      "stage": 38,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "바이킹 롱하우스",
+      "region": "북유럽",
+      "year": 900,
+      "changes": [
+        "본체 성장·초가지붕·입구 박공 1차"
+      ],
+      "svg": "daily/day-113-stage-038-base-19-detail-2.svg",
+      "png": "daily/day-113-stage-038-base-19-detail-2.png",
+      "representativePeriod": "900년 대표 시기"
+    },
+    {
+      "day": 114,
+      "stage": 38,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "바이킹 롱하우스",
+      "region": "북유럽",
+      "year": 900,
+      "changes": [
+        "완성 본체·초가지붕·입구 박공 2차"
+      ],
+      "svg": "daily/day-114-stage-038-base-19-detail-3.svg",
+      "png": "daily/day-114-stage-038-base-19-detail-3.png",
+      "representativePeriod": "900년 대표 시기"
+    },
+    {
+      "day": 115,
+      "stage": 39,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "프람바난",
+      "region": "인도네시아",
+      "year": 950,
+      "changes": [
+        "중앙 첨탑 사원"
+      ],
+      "svg": "daily/day-115-stage-039-prambanan-00-detail-1.svg",
+      "png": "daily/day-115-stage-039-prambanan-00-detail-1.png",
+      "representativePeriod": "950년 대표 시기"
+    },
+    {
+      "day": 116,
+      "stage": 39,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "프람바난",
+      "region": "인도네시아",
+      "year": 950,
+      "changes": [
+        "왼쪽 첨탑"
+      ],
+      "svg": "daily/day-116-stage-039-prambanan-00-detail-2.svg",
+      "png": "daily/day-116-stage-039-prambanan-00-detail-2.png",
+      "representativePeriod": "950년 대표 시기"
+    },
+    {
+      "day": 117,
+      "stage": 39,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "프람바난",
+      "region": "인도네시아",
+      "year": 950,
+      "changes": [
+        "오른쪽 첨탑·큰 기단"
+      ],
+      "svg": "daily/day-117-stage-039-prambanan-00-detail-3.svg",
+      "png": "daily/day-117-stage-039-prambanan-00-detail-3.png",
+      "representativePeriod": "950년 대표 시기"
+    },
+    {
+      "day": 118,
+      "stage": 40,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "누비아 돔 주택",
+      "region": "수단",
+      "year": 1000,
+      "changes": [
+        "주 돔과 녹색 벽"
+      ],
+      "svg": "daily/day-118-stage-040-nubian-00-detail-1.svg",
+      "png": "daily/day-118-stage-040-nubian-00-detail-1.png",
+      "representativePeriod": "1000년 대표 시기"
+    },
+    {
+      "day": 119,
+      "stage": 40,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "누비아 돔 주택",
+      "region": "수단",
+      "year": 1000,
+      "changes": [
+        "오른쪽 푸른 돔"
+      ],
+      "svg": "daily/day-119-stage-040-nubian-00-detail-2.svg",
+      "png": "daily/day-119-stage-040-nubian-00-detail-2.png",
+      "representativePeriod": "1000년 대표 시기"
+    },
+    {
+      "day": 120,
+      "stage": 40,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "누비아 돔 주택",
+      "region": "수단",
+      "year": 1000,
+      "changes": [
+        "왼쪽 흙빛 돔·벽 장식"
+      ],
+      "svg": "daily/day-120-stage-040-nubian-00-detail-3.svg",
+      "png": "daily/day-120-stage-040-nubian-00-detail-3.png",
+      "representativePeriod": "1000년 대표 시기"
+    },
+    {
+      "day": 121,
+      "stage": 41,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "로마네스크 석조",
+      "region": "서유럽",
+      "year": 1050,
+      "changes": [
+        "로마네스크 석조 초기 본체"
+      ],
+      "svg": "daily/day-121-stage-041-base-20-detail-1.svg",
+      "png": "daily/day-121-stage-041-base-20-detail-1.png",
+      "representativePeriod": "1050년 대표 시기"
+    },
+    {
+      "day": 122,
+      "stage": 41,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "로마네스크 석조",
+      "region": "서유럽",
+      "year": 1050,
+      "changes": [
+        "본체 성장·측면 석탑 1차"
+      ],
+      "svg": "daily/day-122-stage-041-base-20-detail-2.svg",
+      "png": "daily/day-122-stage-041-base-20-detail-2.png",
+      "representativePeriod": "1050년 대표 시기"
+    },
+    {
+      "day": 123,
+      "stage": 41,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "로마네스크 석조",
+      "region": "서유럽",
+      "year": 1050,
+      "changes": [
+        "완성 본체·측면 석탑 2차"
+      ],
+      "svg": "daily/day-123-stage-041-base-20-detail-3.svg",
+      "png": "daily/day-123-stage-041-base-20-detail-3.png",
+      "representativePeriod": "1050년 대표 시기"
+    },
+    {
+      "day": 124,
+      "stage": 42,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "라니키바브 계단우물",
+      "region": "인도",
+      "year": 1060,
+      "changes": [
+        "낮은 계단우물"
+      ],
+      "svg": "daily/day-124-stage-042-stepwell-00-detail-1.svg",
+      "png": "daily/day-124-stage-042-stepwell-00-detail-1.png",
+      "representativePeriod": "1060년 대표 시기"
+    },
+    {
+      "day": 125,
+      "stage": 42,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "라니키바브 계단우물",
+      "region": "인도",
+      "year": 1060,
+      "changes": [
+        "깊은 계단·왼쪽 열주"
+      ],
+      "svg": "daily/day-125-stage-042-stepwell-00-detail-2.svg",
+      "png": "daily/day-125-stage-042-stepwell-00-detail-2.png",
+      "representativePeriod": "1060년 대표 시기"
+    },
+    {
+      "day": 126,
+      "stage": 42,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "라니키바브 계단우물",
+      "region": "인도",
+      "year": 1060,
+      "changes": [
+        "더 깊은 계단·오른쪽 지붕"
+      ],
+      "svg": "daily/day-126-stage-042-stepwell-00-detail-3.svg",
+      "png": "daily/day-126-stage-042-stepwell-00-detail-3.png",
+      "representativePeriod": "1060년 대표 시기"
+    },
+    {
+      "day": 127,
+      "stage": 43,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "노르웨이 스타브 교회",
+      "region": "노르웨이",
+      "year": 1100,
+      "changes": [
+        "중앙 교회와 높은 지붕"
+      ],
+      "svg": "daily/day-127-stage-043-stave-00-detail-1.svg",
+      "png": "daily/day-127-stage-043-stave-00-detail-1.png",
+      "representativePeriod": "1100년 대표 시기"
+    },
+    {
+      "day": 128,
+      "stage": 43,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "노르웨이 스타브 교회",
+      "region": "노르웨이",
+      "year": 1100,
+      "changes": [
+        "넓은 아래 지붕·벽체"
+      ],
+      "svg": "daily/day-128-stage-043-stave-00-detail-2.svg",
+      "png": "daily/day-128-stage-043-stave-00-detail-2.png",
+      "representativePeriod": "1100년 대표 시기"
+    },
+    {
+      "day": 129,
+      "stage": 43,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "노르웨이 스타브 교회",
+      "region": "노르웨이",
+      "year": 1100,
+      "changes": [
+        "꼭대기 탑·창·계단"
+      ],
+      "svg": "daily/day-129-stage-043-stave-00-detail-3.svg",
+      "png": "daily/day-129-stage-043-stave-00-detail-3.png",
+      "representativePeriod": "1100년 대표 시기"
+    },
+    {
+      "day": 130,
+      "stage": 44,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "앙코르 사원",
+      "region": "캄보디아",
+      "year": 1150,
+      "changes": [
+        "앙코르 사원 초기 본체"
+      ],
+      "svg": "daily/day-130-stage-044-base-21-detail-1.svg",
+      "png": "daily/day-130-stage-044-base-21-detail-1.png",
+      "representativePeriod": "1150년 대표 시기"
+    },
+    {
+      "day": 131,
+      "stage": 44,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "앙코르 사원",
+      "region": "캄보디아",
+      "year": 1150,
+      "changes": [
+        "본체 성장·양쪽 사원 지붕 1차"
+      ],
+      "svg": "daily/day-131-stage-044-base-21-detail-2.svg",
+      "png": "daily/day-131-stage-044-base-21-detail-2.png",
+      "representativePeriod": "1150년 대표 시기"
+    },
+    {
+      "day": 132,
+      "stage": 44,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "앙코르 사원",
+      "region": "캄보디아",
+      "year": 1150,
+      "changes": [
+        "완성 본체·양쪽 사원 지붕 2차"
+      ],
+      "svg": "daily/day-132-stage-044-base-21-detail-3.svg",
+      "png": "daily/day-132-stage-044-base-21-detail-3.png",
+      "representativePeriod": "1150년 대표 시기"
+    },
+    {
+      "day": 133,
+      "stage": 45,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "고딕 대성당",
+      "region": "프랑스",
+      "year": 1200,
+      "changes": [
+        "고딕 대성당 초기 본체"
+      ],
+      "svg": "daily/day-133-stage-045-base-22-detail-1.svg",
+      "png": "daily/day-133-stage-045-base-22-detail-1.png",
+      "representativePeriod": "1200년 대표 시기"
+    },
+    {
+      "day": 134,
+      "stage": 45,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "고딕 대성당",
+      "region": "프랑스",
+      "year": 1200,
+      "changes": [
+        "본체 성장·양쪽 고딕 첨탑 1차"
+      ],
+      "svg": "daily/day-134-stage-045-base-22-detail-2.svg",
+      "png": "daily/day-134-stage-045-base-22-detail-2.png",
+      "representativePeriod": "1200년 대표 시기"
+    },
+    {
+      "day": 135,
+      "stage": 45,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "고딕 대성당",
+      "region": "프랑스",
+      "year": 1200,
+      "changes": [
+        "완성 본체·양쪽 고딕 첨탑 2차"
+      ],
+      "svg": "daily/day-135-stage-045-base-22-detail-3.svg",
+      "png": "daily/day-135-stage-045-base-22-detail-3.png",
+      "representativePeriod": "1200년 대표 시기"
+    },
+    {
+      "day": 136,
+      "stage": 46,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "절벽 푸에블로",
+      "region": "미국 남서부",
+      "year": 1250,
+      "changes": [
+        "절벽 푸에블로 초기 본체"
+      ],
+      "svg": "daily/day-136-stage-046-base-23-detail-1.svg",
+      "png": "daily/day-136-stage-046-base-23-detail-1.png",
+      "representativePeriod": "1250년 대표 시기"
+    },
+    {
+      "day": 137,
+      "stage": 46,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "절벽 푸에블로",
+      "region": "미국 남서부",
+      "year": 1250,
+      "changes": [
+        "본체 성장·추가 흙집·사다리 1차"
+      ],
+      "svg": "daily/day-137-stage-046-base-23-detail-2.svg",
+      "png": "daily/day-137-stage-046-base-23-detail-2.png",
+      "representativePeriod": "1250년 대표 시기"
+    },
+    {
+      "day": 138,
+      "stage": 46,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "절벽 푸에블로",
+      "region": "미국 남서부",
+      "year": 1250,
+      "changes": [
+        "완성 본체·추가 흙집·사다리 2차"
+      ],
+      "svg": "daily/day-138-stage-046-base-23-detail-3.svg",
+      "png": "daily/day-138-stage-046-base-23-detail-3.png",
+      "representativePeriod": "1250년 대표 시기"
+    },
+    {
+      "day": 139,
+      "stage": 47,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "짐바브웨 석조 성곽",
+      "region": "짐바브웨",
+      "year": 1300,
+      "changes": [
+        "짐바브웨 석조 성곽 초기 본체"
+      ],
+      "svg": "daily/day-139-stage-047-base-24-detail-1.svg",
+      "png": "daily/day-139-stage-047-base-24-detail-1.png",
+      "representativePeriod": "1300년 대표 시기"
+    },
+    {
+      "day": 140,
+      "stage": 47,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "짐바브웨 석조 성곽",
+      "region": "짐바브웨",
+      "year": 1300,
+      "changes": [
+        "본체 성장·옆 성벽·원뿔 탑 1차"
+      ],
+      "svg": "daily/day-140-stage-047-base-24-detail-2.svg",
+      "png": "daily/day-140-stage-047-base-24-detail-2.png",
+      "representativePeriod": "1300년 대표 시기"
+    },
+    {
+      "day": 141,
+      "stage": 47,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "짐바브웨 석조 성곽",
+      "region": "짐바브웨",
+      "year": 1300,
+      "changes": [
+        "완성 본체·옆 성벽·원뿔 탑 2차"
+      ],
+      "svg": "daily/day-141-stage-047-base-24-detail-3.svg",
+      "png": "daily/day-141-stage-047-base-24-detail-3.png",
+      "representativePeriod": "1300년 대표 시기"
+    },
+    {
+      "day": 142,
+      "stage": 48,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "사헬 흙 모스크 양식",
+      "region": "말리",
+      "year": 1320,
+      "changes": [
+        "첫 흙탑과 연결 벽"
+      ],
+      "svg": "daily/day-142-stage-048-mudmosque-00-detail-1.svg",
+      "png": "daily/day-142-stage-048-mudmosque-00-detail-1.png",
+      "representativePeriod": "1320년 대표 시기"
+    },
+    {
+      "day": 143,
+      "stage": 48,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "사헬 흙 모스크 양식",
+      "region": "말리",
+      "year": 1320,
+      "changes": [
+        "두 번째 흙탑"
+      ],
+      "svg": "daily/day-143-stage-048-mudmosque-00-detail-2.svg",
+      "png": "daily/day-143-stage-048-mudmosque-00-detail-2.png",
+      "representativePeriod": "1320년 대표 시기"
+    },
+    {
+      "day": 144,
+      "stage": 48,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "사헬 흙 모스크 양식",
+      "region": "말리",
+      "year": 1320,
+      "changes": [
+        "세 번째 흙탑·벽 요철·계단"
+      ],
+      "svg": "daily/day-144-stage-048-mudmosque-00-detail-3.svg",
+      "png": "daily/day-144-stage-048-mudmosque-00-detail-3.png",
+      "representativePeriod": "1320년 대표 시기"
+    },
+    {
+      "day": 145,
+      "stage": 49,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "알람브라 궁전",
+      "region": "스페인",
+      "year": 1350,
+      "changes": [
+        "네 아치가 있는 회랑"
+      ],
+      "svg": "daily/day-145-stage-049-alhambra-00-detail-1.svg",
+      "png": "daily/day-145-stage-049-alhambra-00-detail-1.png",
+      "representativePeriod": "1350년 대표 시기"
+    },
+    {
+      "day": 146,
+      "stage": 49,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "알람브라 궁전",
+      "region": "스페인",
+      "year": 1350,
+      "changes": [
+        "양쪽 궁전 탑"
+      ],
+      "svg": "daily/day-146-stage-049-alhambra-00-detail-2.svg",
+      "png": "daily/day-146-stage-049-alhambra-00-detail-2.png",
+      "representativePeriod": "1350년 대표 시기"
+    },
+    {
+      "day": 147,
+      "stage": 49,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "알람브라 궁전",
+      "region": "스페인",
+      "year": 1350,
+      "changes": [
+        "중앙 연못·분수·정원"
+      ],
+      "svg": "daily/day-147-stage-049-alhambra-00-detail-3.svg",
+      "png": "daily/day-147-stage-049-alhambra-00-detail-3.png",
+      "representativePeriod": "1350년 대표 시기"
+    },
+    {
+      "day": 148,
+      "stage": 50,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "티베트 산지 주택",
+      "region": "중국 티베트",
+      "year": 1380,
+      "changes": [
+        "경사진 흰 벽과 창"
+      ],
+      "svg": "daily/day-148-stage-050-tibethouse-00-detail-1.svg",
+      "png": "daily/day-148-stage-050-tibethouse-00-detail-1.png",
+      "representativePeriod": "1380년 대표 시기"
+    },
+    {
+      "day": 149,
+      "stage": 50,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "티베트 산지 주택",
+      "region": "중국 티베트",
+      "year": 1380,
+      "changes": [
+        "옥상층과 작은 창"
+      ],
+      "svg": "daily/day-149-stage-050-tibethouse-00-detail-2.svg",
+      "png": "daily/day-149-stage-050-tibethouse-00-detail-2.png",
+      "representativePeriod": "1380년 대표 시기"
+    },
+    {
+      "day": 150,
+      "stage": 50,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "티베트 산지 주택",
+      "region": "중국 티베트",
+      "year": 1380,
+      "changes": [
+        "양쪽 흰 벽 증축"
+      ],
+      "svg": "daily/day-150-stage-050-tibethouse-00-detail-3.svg",
+      "png": "daily/day-150-stage-050-tibethouse-00-detail-3.png",
+      "representativePeriod": "1380년 대표 시기"
+    },
+    {
+      "day": 151,
+      "stage": 51,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "조선 한옥",
+      "region": "한국",
+      "year": 1400,
+      "changes": [
+        "조선 한옥 초기 본체"
+      ],
+      "svg": "daily/day-151-stage-051-base-25-detail-1.svg",
+      "png": "daily/day-151-stage-051-base-25-detail-1.png",
+      "representativePeriod": "1400년 대표 시기"
+    },
+    {
+      "day": 152,
+      "stage": 51,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "조선 한옥",
+      "region": "한국",
+      "year": 1400,
+      "changes": [
+        "본체 성장·양쪽 한옥채 1차"
+      ],
+      "svg": "daily/day-152-stage-051-base-25-detail-2.svg",
+      "png": "daily/day-152-stage-051-base-25-detail-2.png",
+      "representativePeriod": "1400년 대표 시기"
+    },
+    {
+      "day": 153,
+      "stage": 51,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "조선 한옥",
+      "region": "한국",
+      "year": 1400,
+      "changes": [
+        "완성 본체·양쪽 한옥채 2차"
+      ],
+      "svg": "daily/day-153-stage-051-base-25-detail-3.svg",
+      "png": "daily/day-153-stage-051-base-25-detail-3.png",
+      "representativePeriod": "1400년 대표 시기"
+    },
+    {
+      "day": 154,
+      "stage": 52,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "천단 기년전 양식",
+      "region": "중국",
+      "year": 1420,
+      "changes": [
+        "원형 기단·아래 푸른 지붕"
+      ],
+      "svg": "daily/day-154-stage-052-tiantan-00-detail-1.svg",
+      "png": "daily/day-154-stage-052-tiantan-00-detail-1.png",
+      "representativePeriod": "1420년 대표 시기"
+    },
+    {
+      "day": 155,
+      "stage": 52,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "천단 기년전 양식",
+      "region": "중국",
+      "year": 1420,
+      "changes": [
+        "두 번째 원형층과 지붕"
+      ],
+      "svg": "daily/day-155-stage-052-tiantan-00-detail-2.svg",
+      "png": "daily/day-155-stage-052-tiantan-00-detail-2.png",
+      "representativePeriod": "1420년 대표 시기"
+    },
+    {
+      "day": 156,
+      "stage": 52,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "천단 기년전 양식",
+      "region": "중국",
+      "year": 1420,
+      "changes": [
+        "세 번째 지붕·기둥·계단"
+      ],
+      "svg": "daily/day-156-stage-052-tiantan-00-detail-3.svg",
+      "png": "daily/day-156-stage-052-tiantan-00-detail-3.png",
+      "representativePeriod": "1420년 대표 시기"
+    },
+    {
+      "day": 157,
+      "stage": 53,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "잉카 석조 가옥",
+      "region": "페루",
+      "year": 1440,
+      "changes": [
+        "경사진 돌벽과 초가"
+      ],
+      "svg": "daily/day-157-stage-053-inca-00-detail-1.svg",
+      "png": "daily/day-157-stage-053-inca-00-detail-1.png",
+      "representativePeriod": "1440년 대표 시기"
+    },
+    {
+      "day": 158,
+      "stage": 53,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "잉카 석조 가옥",
+      "region": "페루",
+      "year": 1440,
+      "changes": [
+        "왼쪽 석조 구획·큰 창"
+      ],
+      "svg": "daily/day-158-stage-053-inca-00-detail-2.svg",
+      "png": "daily/day-158-stage-053-inca-00-detail-2.png",
+      "representativePeriod": "1440년 대표 시기"
+    },
+    {
+      "day": 159,
+      "stage": 53,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "잉카 석조 가옥",
+      "region": "페루",
+      "year": 1440,
+      "changes": [
+        "오른쪽 가옥과 박공"
+      ],
+      "svg": "daily/day-159-stage-053-inca-00-detail-3.svg",
+      "png": "daily/day-159-stage-053-inca-00-detail-3.png",
+      "representativePeriod": "1440년 대표 시기"
+    },
+    {
+      "day": 160,
+      "stage": 54,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "르네상스 팔라초",
+      "region": "이탈리아",
+      "year": 1450,
+      "changes": [
+        "르네상스 팔라초 초기 본체"
+      ],
+      "svg": "daily/day-160-stage-054-base-26-detail-1.svg",
+      "png": "daily/day-160-stage-054-base-26-detail-1.png",
+      "representativePeriod": "1450년 대표 시기"
+    },
+    {
+      "day": 161,
+      "stage": 54,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "르네상스 팔라초",
+      "region": "이탈리아",
+      "year": 1450,
+      "changes": [
+        "본체 성장·옆 궁전 건물 1차"
+      ],
+      "svg": "daily/day-161-stage-054-base-26-detail-2.svg",
+      "png": "daily/day-161-stage-054-base-26-detail-2.png",
+      "representativePeriod": "1450년 대표 시기"
+    },
+    {
+      "day": 162,
+      "stage": 54,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "르네상스 팔라초",
+      "region": "이탈리아",
+      "year": 1450,
+      "changes": [
+        "완성 본체·옆 궁전 건물 2차"
+      ],
+      "svg": "daily/day-162-stage-054-base-26-detail-3.svg",
+      "png": "daily/day-162-stage-054-base-26-detail-3.png",
+      "representativePeriod": "1450년 대표 시기"
+    },
+    {
+      "day": 163,
+      "stage": 55,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "푸젠 토루",
+      "region": "중국",
+      "year": 1500,
+      "changes": [
+        "푸젠 토루 초기 본체"
+      ],
+      "svg": "daily/day-163-stage-055-base-27-detail-1.svg",
+      "png": "daily/day-163-stage-055-base-27-detail-1.png",
+      "representativePeriod": "1500년 대표 시기"
+    },
+    {
+      "day": 164,
+      "stage": 55,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "푸젠 토루",
+      "region": "중국",
+      "year": 1500,
+      "changes": [
+        "본체 성장·원형 지붕·안마당 건물 1차"
+      ],
+      "svg": "daily/day-164-stage-055-base-27-detail-2.svg",
+      "png": "daily/day-164-stage-055-base-27-detail-2.png",
+      "representativePeriod": "1500년 대표 시기"
+    },
+    {
+      "day": 165,
+      "stage": 55,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "푸젠 토루",
+      "region": "중국",
+      "year": 1500,
+      "changes": [
+        "완성 본체·원형 지붕·안마당 건물 2차"
+      ],
+      "svg": "daily/day-165-stage-055-base-27-detail-3.svg",
+      "png": "daily/day-165-stage-055-base-27-detail-3.png",
+      "representativePeriod": "1500년 대표 시기"
+    },
+    {
+      "day": 166,
+      "stage": 56,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "이탈리아 트룰리",
+      "region": "이탈리아",
+      "year": 1520,
+      "changes": [
+        "큰 원뿔 지붕 집"
+      ],
+      "svg": "daily/day-166-stage-056-trulli-00-detail-1.svg",
+      "png": "daily/day-166-stage-056-trulli-00-detail-1.png",
+      "representativePeriod": "1520년 대표 시기"
+    },
+    {
+      "day": 167,
+      "stage": 56,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "이탈리아 트룰리",
+      "region": "이탈리아",
+      "year": 1520,
+      "changes": [
+        "왼쪽 작은 원뿔 집"
+      ],
+      "svg": "daily/day-167-stage-056-trulli-00-detail-2.svg",
+      "png": "daily/day-167-stage-056-trulli-00-detail-2.png",
+      "representativePeriod": "1520년 대표 시기"
+    },
+    {
+      "day": 168,
+      "stage": 56,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "이탈리아 트룰리",
+      "region": "이탈리아",
+      "year": 1520,
+      "changes": [
+        "오른쪽 원뿔 집·기단"
+      ],
+      "svg": "daily/day-168-stage-056-trulli-00-detail-3.svg",
+      "png": "daily/day-168-stage-056-trulli-00-detail-3.png",
+      "representativePeriod": "1520년 대표 시기"
+    },
+    {
+      "day": 169,
+      "stage": 57,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "튜더 목조 주택",
+      "region": "영국",
+      "year": 1550,
+      "changes": [
+        "튜더 목조 주택 초기 본체"
+      ],
+      "svg": "daily/day-169-stage-057-base-28-detail-1.svg",
+      "png": "daily/day-169-stage-057-base-28-detail-1.png",
+      "representativePeriod": "1550년 대표 시기"
+    },
+    {
+      "day": 170,
+      "stage": 57,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "튜더 목조 주택",
+      "region": "영국",
+      "year": 1550,
+      "changes": [
+        "본체 성장·양쪽 목조 박공 1차"
+      ],
+      "svg": "daily/day-170-stage-057-base-28-detail-2.svg",
+      "png": "daily/day-170-stage-057-base-28-detail-2.png",
+      "representativePeriod": "1550년 대표 시기"
+    },
+    {
+      "day": 171,
+      "stage": 57,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "튜더 목조 주택",
+      "region": "영국",
+      "year": 1550,
+      "changes": [
+        "완성 본체·양쪽 목조 박공 2차"
+      ],
+      "svg": "daily/day-171-stage-057-base-28-detail-3.svg",
+      "png": "daily/day-171-stage-057-base-28-detail-3.png",
+      "representativePeriod": "1550년 대표 시기"
+    },
+    {
+      "day": 172,
+      "stage": 58,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "모로코 카스바",
+      "region": "모로코",
+      "year": 1580,
+      "changes": [
+        "흙 성곽과 첫 모서리 탑"
+      ],
+      "svg": "daily/day-172-stage-058-kasbah-00-detail-1.svg",
+      "png": "daily/day-172-stage-058-kasbah-00-detail-1.png",
+      "representativePeriod": "1580년 대표 시기"
+    },
+    {
+      "day": 173,
+      "stage": 58,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "모로코 카스바",
+      "region": "모로코",
+      "year": 1580,
+      "changes": [
+        "둘째 탑·성벽 요철"
+      ],
+      "svg": "daily/day-173-stage-058-kasbah-00-detail-2.svg",
+      "png": "daily/day-173-stage-058-kasbah-00-detail-2.png",
+      "representativePeriod": "1580년 대표 시기"
+    },
+    {
+      "day": 174,
+      "stage": 58,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "모로코 카스바",
+      "region": "모로코",
+      "year": 1580,
+      "changes": [
+        "큰 돌출 성문·앞 계단"
+      ],
+      "svg": "daily/day-174-stage-058-kasbah-00-detail-3.svg",
+      "png": "daily/day-174-stage-058-kasbah-00-detail-3.png",
+      "representativePeriod": "1580년 대표 시기"
+    },
+    {
+      "day": 175,
+      "stage": 59,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "시밤 흙탑 주택",
+      "region": "예멘",
+      "year": 1600,
+      "changes": [
+        "시밤 흙탑 주택 초기 본체"
+      ],
+      "svg": "daily/day-175-stage-059-base-29-detail-1.svg",
+      "png": "daily/day-175-stage-059-base-29-detail-1.png",
+      "representativePeriod": "1600년 대표 시기"
+    },
+    {
+      "day": 176,
+      "stage": 59,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "시밤 흙탑 주택",
+      "region": "예멘",
+      "year": 1600,
+      "changes": [
+        "본체 성장·추가 흙탑 1차"
+      ],
+      "svg": "daily/day-176-stage-059-base-29-detail-2.svg",
+      "png": "daily/day-176-stage-059-base-29-detail-2.png",
+      "representativePeriod": "1600년 대표 시기"
+    },
+    {
+      "day": 177,
+      "stage": 59,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "시밤 흙탑 주택",
+      "region": "예멘",
+      "year": 1600,
+      "changes": [
+        "완성 본체·추가 흙탑 2차"
+      ],
+      "svg": "daily/day-177-stage-059-base-29-detail-3.svg",
+      "png": "daily/day-177-stage-059-base-29-detail-3.png",
+      "representativePeriod": "1600년 대표 시기"
+    },
+    {
+      "day": 178,
+      "stage": 60,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "오스만 목조 주택",
+      "region": "튀르키예",
+      "year": 1610,
+      "changes": [
+        "튀어나온 위층과 창"
+      ],
+      "svg": "daily/day-178-stage-060-ottomanhouse-00-detail-1.svg",
+      "png": "daily/day-178-stage-060-ottomanhouse-00-detail-1.png",
+      "representativePeriod": "1610년 대표 시기"
+    },
+    {
+      "day": 179,
+      "stage": 60,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "오스만 목조 주택",
+      "region": "튀르키예",
+      "year": 1610,
+      "changes": [
+        "왼쪽 돌출 목재 창실"
+      ],
+      "svg": "daily/day-179-stage-060-ottomanhouse-00-detail-2.svg",
+      "png": "daily/day-179-stage-060-ottomanhouse-00-detail-2.png",
+      "representativePeriod": "1610년 대표 시기"
+    },
+    {
+      "day": 180,
+      "stage": 60,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "오스만 목조 주택",
+      "region": "튀르키예",
+      "year": 1610,
+      "changes": [
+        "오른쪽 창실·기단"
+      ],
+      "svg": "daily/day-180-stage-060-ottomanhouse-00-detail-3.svg",
+      "png": "daily/day-180-stage-060-ottomanhouse-00-detail-3.png",
+      "representativePeriod": "1610년 대표 시기"
+    },
+    {
+      "day": 181,
+      "stage": 61,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "이맘 모스크",
+      "region": "이란",
+      "year": 1620,
+      "changes": [
+        "높은 푸른 이완과 첫 탑"
+      ],
+      "svg": "daily/day-181-stage-061-iwans-00-detail-1.svg",
+      "png": "daily/day-181-stage-061-iwans-00-detail-1.png",
+      "representativePeriod": "1620년 대표 시기"
+    },
+    {
+      "day": 182,
+      "stage": 61,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "이맘 모스크",
+      "region": "이란",
+      "year": 1620,
+      "changes": [
+        "둘째 탑·문 상부 무늬"
+      ],
+      "svg": "daily/day-182-stage-061-iwans-00-detail-2.svg",
+      "png": "daily/day-182-stage-061-iwans-00-detail-2.png",
+      "representativePeriod": "1620년 대표 시기"
+    },
+    {
+      "day": 183,
+      "stage": 61,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "이맘 모스크",
+      "region": "이란",
+      "year": 1620,
+      "changes": [
+        "옆 돔·입구 건물·계단"
+      ],
+      "svg": "daily/day-183-stage-061-iwans-00-detail-3.svg",
+      "png": "daily/day-183-stage-061-iwans-00-detail-3.png",
+      "representativePeriod": "1620년 대표 시기"
+    },
+    {
+      "day": 184,
+      "stage": 62,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "무굴 돔 궁전",
+      "region": "인도",
+      "year": 1630,
+      "changes": [
+        "무굴 돔 궁전 초기 본체"
+      ],
+      "svg": "daily/day-184-stage-062-base-30-detail-1.svg",
+      "png": "daily/day-184-stage-062-base-30-detail-1.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 185,
+      "stage": 62,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "무굴 돔 궁전",
+      "region": "인도",
+      "year": 1630,
+      "changes": [
+        "본체 성장·양쪽 돔·수면 1차"
+      ],
+      "svg": "daily/day-185-stage-062-base-30-detail-2.svg",
+      "png": "daily/day-185-stage-062-base-30-detail-2.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 186,
+      "stage": 62,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "무굴 돔 궁전",
+      "region": "인도",
+      "year": 1630,
+      "changes": [
+        "완성 본체·양쪽 돔·수면 2차"
+      ],
+      "svg": "daily/day-186-stage-062-base-30-detail-3.svg",
+      "png": "daily/day-186-stage-062-base-30-detail-3.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 187,
+      "stage": 63,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "일본 성곽",
+      "region": "일본",
+      "year": 1630,
+      "changes": [
+        "일본 성곽 초기 본체"
+      ],
+      "svg": "daily/day-187-stage-063-base-31-detail-1.svg",
+      "png": "daily/day-187-stage-063-base-31-detail-1.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 188,
+      "stage": 63,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "일본 성곽",
+      "region": "일본",
+      "year": 1630,
+      "changes": [
+        "본체 성장·양쪽 기와 누각 1차"
+      ],
+      "svg": "daily/day-188-stage-063-base-31-detail-2.svg",
+      "png": "daily/day-188-stage-063-base-31-detail-2.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 189,
+      "stage": 63,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "일본 성곽",
+      "region": "일본",
+      "year": 1630,
+      "changes": [
+        "완성 본체·양쪽 기와 누각 2차"
+      ],
+      "svg": "daily/day-189-stage-063-base-31-detail-3.svg",
+      "png": "daily/day-189-stage-063-base-31-detail-3.png",
+      "representativePeriod": "1630년 대표 시기"
+    },
+    {
+      "day": 190,
+      "stage": 64,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "루마니아 목조 교회",
+      "region": "루마니아",
+      "year": 1640,
+      "changes": [
+        "긴 교회와 가파른 목탑"
+      ],
+      "svg": "daily/day-190-stage-064-woodchurch-00-detail-1.svg",
+      "png": "daily/day-190-stage-064-woodchurch-00-detail-1.png",
+      "representativePeriod": "1640년 대표 시기"
+    },
+    {
+      "day": 191,
+      "stage": 64,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "루마니아 목조 교회",
+      "region": "루마니아",
+      "year": 1640,
+      "changes": [
+        "상부 창·첨탑"
+      ],
+      "svg": "daily/day-191-stage-064-woodchurch-00-detail-2.svg",
+      "png": "daily/day-191-stage-064-woodchurch-00-detail-2.png",
+      "representativePeriod": "1640년 대표 시기"
+    },
+    {
+      "day": 192,
+      "stage": 64,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "루마니아 목조 교회",
+      "region": "루마니아",
+      "year": 1640,
+      "changes": [
+        "오른쪽 박공·계단"
+      ],
+      "svg": "daily/day-192-stage-064-woodchurch-00-detail-3.svg",
+      "png": "daily/day-192-stage-064-woodchurch-00-detail-3.png",
+      "representativePeriod": "1640년 대표 시기"
+    },
+    {
+      "day": 193,
+      "stage": 65,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "포르투갈 타일 주택",
+      "region": "포르투갈",
+      "year": 1650,
+      "changes": [
+        "흰 박공 집"
+      ],
+      "svg": "daily/day-193-stage-065-azulejo-00-detail-1.svg",
+      "png": "daily/day-193-stage-065-azulejo-00-detail-1.png",
+      "representativePeriod": "1650년 대표 시기"
+    },
+    {
+      "day": 194,
+      "stage": 65,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "포르투갈 타일 주택",
+      "region": "포르투갈",
+      "year": 1650,
+      "changes": [
+        "푸른 타일 문양·층 띠"
+      ],
+      "svg": "daily/day-194-stage-065-azulejo-00-detail-2.svg",
+      "png": "daily/day-194-stage-065-azulejo-00-detail-2.png",
+      "representativePeriod": "1650년 대표 시기"
+    },
+    {
+      "day": 195,
+      "stage": 65,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "포르투갈 타일 주택",
+      "region": "포르투갈",
+      "year": 1650,
+      "changes": [
+        "왼쪽 돌출부·큰 입구"
+      ],
+      "svg": "daily/day-195-stage-065-azulejo-00-detail-3.svg",
+      "png": "daily/day-195-stage-065-azulejo-00-detail-3.png",
+      "representativePeriod": "1650년 대표 시기"
+    },
+    {
+      "day": 196,
+      "stage": 66,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "바로크 궁전",
+      "region": "프랑스",
+      "year": 1660,
+      "changes": [
+        "바로크 궁전 초기 본체"
+      ],
+      "svg": "daily/day-196-stage-066-base-32-detail-1.svg",
+      "png": "daily/day-196-stage-066-base-32-detail-1.png",
+      "representativePeriod": "1660년 대표 시기"
+    },
+    {
+      "day": 197,
+      "stage": 66,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "바로크 궁전",
+      "region": "프랑스",
+      "year": 1660,
+      "changes": [
+        "본체 성장·궁전의 날개 건물 1차"
+      ],
+      "svg": "daily/day-197-stage-066-base-32-detail-2.svg",
+      "png": "daily/day-197-stage-066-base-32-detail-2.png",
+      "representativePeriod": "1660년 대표 시기"
+    },
+    {
+      "day": 198,
+      "stage": 66,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "바로크 궁전",
+      "region": "프랑스",
+      "year": 1660,
+      "changes": [
+        "완성 본체·궁전의 날개 건물 2차"
+      ],
+      "svg": "daily/day-198-stage-066-base-32-detail-3.svg",
+      "png": "daily/day-198-stage-066-base-32-detail-3.png",
+      "representativePeriod": "1660년 대표 시기"
+    },
+    {
+      "day": 199,
+      "stage": 67,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "네덜란드 운하집",
+      "region": "네덜란드",
+      "year": 1680,
+      "changes": [
+        "네덜란드 운하집 초기 본체"
+      ],
+      "svg": "daily/day-199-stage-067-base-33-detail-1.svg",
+      "png": "daily/day-199-stage-067-base-33-detail-1.png",
+      "representativePeriod": "1680년 대표 시기"
+    },
+    {
+      "day": 200,
+      "stage": 67,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "네덜란드 운하집",
+      "region": "네덜란드",
+      "year": 1680,
+      "changes": [
+        "본체 성장·운하·돌다리 1차"
+      ],
+      "svg": "daily/day-200-stage-067-base-33-detail-2.svg",
+      "png": "daily/day-200-stage-067-base-33-detail-2.png",
+      "representativePeriod": "1680년 대표 시기"
+    },
+    {
+      "day": 201,
+      "stage": 67,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "네덜란드 운하집",
+      "region": "네덜란드",
+      "year": 1680,
+      "changes": [
+        "완성 본체·운하·돌다리 2차"
+      ],
+      "svg": "daily/day-201-stage-067-base-33-detail-3.svg",
+      "png": "daily/day-201-stage-067-base-33-detail-3.png",
+      "representativePeriod": "1680년 대표 시기"
+    },
+    {
+      "day": 202,
+      "stage": 68,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "포탈라 궁전",
+      "region": "중국 티베트",
+      "year": 1690,
+      "changes": [
+        "흰 기단과 붉은 중심부"
+      ],
+      "svg": "daily/day-202-stage-068-potala-00-detail-1.svg",
+      "png": "daily/day-202-stage-068-potala-00-detail-1.png",
+      "representativePeriod": "1690년 대표 시기"
+    },
+    {
+      "day": 203,
+      "stage": 68,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "포탈라 궁전",
+      "region": "중국 티베트",
+      "year": 1690,
+      "changes": [
+        "외벽 창·앞 계단"
+      ],
+      "svg": "daily/day-203-stage-068-potala-00-detail-2.svg",
+      "png": "daily/day-203-stage-068-potala-00-detail-2.png",
+      "representativePeriod": "1690년 대표 시기"
+    },
+    {
+      "day": 204,
+      "stage": 68,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "포탈라 궁전",
+      "region": "중국 티베트",
+      "year": 1690,
+      "changes": [
+        "높은 지붕·옆 누각"
+      ],
+      "svg": "daily/day-204-stage-068-potala-00-detail-3.svg",
+      "png": "daily/day-204-stage-068-potala-00-detail-3.png",
+      "representativePeriod": "1690년 대표 시기"
+    },
+    {
+      "day": 205,
+      "stage": 69,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "조선 누각",
+      "region": "한국",
+      "year": 1700,
+      "changes": [
+        "물가 누각과 지붕"
+      ],
+      "svg": "daily/day-205-stage-069-pavilion-00-detail-1.svg",
+      "png": "daily/day-205-stage-069-pavilion-00-detail-1.png",
+      "representativePeriod": "1700년 대표 시기"
+    },
+    {
+      "day": 206,
+      "stage": 69,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "조선 누각",
+      "region": "한국",
+      "year": 1700,
+      "changes": [
+        "목재 난간"
+      ],
+      "svg": "daily/day-206-stage-069-pavilion-00-detail-2.svg",
+      "png": "daily/day-206-stage-069-pavilion-00-detail-2.png",
+      "representativePeriod": "1700년 대표 시기"
+    },
+    {
+      "day": 207,
+      "stage": 69,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "조선 누각",
+      "region": "한국",
+      "year": 1700,
+      "changes": [
+        "상층 누각·추가 지붕"
+      ],
+      "svg": "daily/day-207-stage-069-pavilion-00-detail-3.svg",
+      "png": "daily/day-207-stage-069-pavilion-00-detail-3.png",
+      "representativePeriod": "1700년 대표 시기"
+    },
+    {
+      "day": 208,
+      "stage": 70,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "페르시아 바람탑",
+      "region": "이란",
+      "year": 1710,
+      "changes": [
+        "큰 바람탑과 돔"
+      ],
+      "svg": "daily/day-208-stage-070-windtower-00-detail-1.svg",
+      "png": "daily/day-208-stage-070-windtower-00-detail-1.png",
+      "representativePeriod": "1710년 대표 시기"
+    },
+    {
+      "day": 209,
+      "stage": 70,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "페르시아 바람탑",
+      "region": "이란",
+      "year": 1710,
+      "changes": [
+        "왼쪽 아케이드"
+      ],
+      "svg": "daily/day-209-stage-070-windtower-00-detail-2.svg",
+      "png": "daily/day-209-stage-070-windtower-00-detail-2.png",
+      "representativePeriod": "1710년 대표 시기"
+    },
+    {
+      "day": 210,
+      "stage": 70,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "페르시아 바람탑",
+      "region": "이란",
+      "year": 1710,
+      "changes": [
+        "오른쪽 작은 바람탑·연못"
+      ],
+      "svg": "daily/day-210-stage-070-windtower-00-detail-3.svg",
+      "png": "daily/day-210-stage-070-windtower-00-detail-3.png",
+      "representativePeriod": "1710년 대표 시기"
+    },
+    {
+      "day": 211,
+      "stage": 71,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "케이프더치 주택",
+      "region": "남아프리카공화국",
+      "year": 1720,
+      "changes": [
+        "곡선 박공과 긴 집"
+      ],
+      "svg": "daily/day-211-stage-071-capedutch-00-detail-1.svg",
+      "png": "daily/day-211-stage-071-capedutch-00-detail-1.png",
+      "representativePeriod": "1720년 대표 시기"
+    },
+    {
+      "day": 212,
+      "stage": 71,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "케이프더치 주택",
+      "region": "남아프리카공화국",
+      "year": 1720,
+      "changes": [
+        "원형 창·굴뚝"
+      ],
+      "svg": "daily/day-212-stage-071-capedutch-00-detail-2.svg",
+      "png": "daily/day-212-stage-071-capedutch-00-detail-2.png",
+      "representativePeriod": "1720년 대표 시기"
+    },
+    {
+      "day": 213,
+      "stage": 71,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "케이프더치 주택",
+      "region": "남아프리카공화국",
+      "year": 1720,
+      "changes": [
+        "오른쪽 초가지붕 건물"
+      ],
+      "svg": "daily/day-213-stage-071-capedutch-00-detail-3.svg",
+      "png": "daily/day-213-stage-071-capedutch-00-detail-3.png",
+      "representativePeriod": "1720년 대표 시기"
+    },
+    {
+      "day": 214,
+      "stage": 72,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "교토 마치야",
+      "region": "일본",
+      "year": 1730,
+      "changes": [
+        "긴 목재 격자 집"
+      ],
+      "svg": "daily/day-214-stage-072-machiya-00-detail-1.svg",
+      "png": "daily/day-214-stage-072-machiya-00-detail-1.png",
+      "representativePeriod": "1730년 대표 시기"
+    },
+    {
+      "day": 215,
+      "stage": 72,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "교토 마치야",
+      "region": "일본",
+      "year": 1730,
+      "changes": [
+        "아래 기와지붕·격자 벽"
+      ],
+      "svg": "daily/day-215-stage-072-machiya-00-detail-2.svg",
+      "png": "daily/day-215-stage-072-machiya-00-detail-2.png",
+      "representativePeriod": "1730년 대표 시기"
+    },
+    {
+      "day": 216,
+      "stage": 72,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "교토 마치야",
+      "region": "일본",
+      "year": 1730,
+      "changes": [
+        "천 차양·입구 등·계단"
+      ],
+      "svg": "daily/day-216-stage-072-machiya-00-detail-3.svg",
+      "png": "daily/day-216-stage-072-machiya-00-detail-3.png",
+      "representativePeriod": "1730년 대표 시기"
+    },
+    {
+      "day": 217,
+      "stage": 73,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "부탄 궁전 양식",
+      "region": "부탄",
+      "year": 1740,
+      "changes": [
+        "중앙 궁전과 경사진 벽"
+      ],
+      "svg": "daily/day-217-stage-073-dzong-00-detail-1.svg",
+      "png": "daily/day-217-stage-073-dzong-00-detail-1.png",
+      "representativePeriod": "1740년 대표 시기"
+    },
+    {
+      "day": 218,
+      "stage": 73,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "부탄 궁전 양식",
+      "region": "부탄",
+      "year": 1740,
+      "changes": [
+        "양쪽 탑과 지붕"
+      ],
+      "svg": "daily/day-218-stage-073-dzong-00-detail-2.svg",
+      "png": "daily/day-218-stage-073-dzong-00-detail-2.png",
+      "representativePeriod": "1740년 대표 시기"
+    },
+    {
+      "day": 219,
+      "stage": 73,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "부탄 궁전 양식",
+      "region": "부탄",
+      "year": 1740,
+      "changes": [
+        "상부 누각·중앙 입구"
+      ],
+      "svg": "daily/day-219-stage-073-dzong-00-detail-3.svg",
+      "png": "daily/day-219-stage-073-dzong-00-detail-3.png",
+      "representativePeriod": "1740년 대표 시기"
+    },
+    {
+      "day": 220,
+      "stage": 74,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "로코코 저택",
+      "region": "중부 유럽",
+      "year": 1750,
+      "changes": [
+        "로코코 저택 초기 본체"
+      ],
+      "svg": "daily/day-220-stage-074-base-34-detail-1.svg",
+      "png": "daily/day-220-stage-074-base-34-detail-1.png",
+      "representativePeriod": "1750년 대표 시기"
+    },
+    {
+      "day": 221,
+      "stage": 74,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "로코코 저택",
+      "region": "중부 유럽",
+      "year": 1750,
+      "changes": [
+        "본체 성장·양쪽 곡선 박공 1차"
+      ],
+      "svg": "daily/day-221-stage-074-base-34-detail-2.svg",
+      "png": "daily/day-221-stage-074-base-34-detail-2.png",
+      "representativePeriod": "1750년 대표 시기"
+    },
+    {
+      "day": 222,
+      "stage": 74,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "로코코 저택",
+      "region": "중부 유럽",
+      "year": 1750,
+      "changes": [
+        "완성 본체·양쪽 곡선 박공 2차"
+      ],
+      "svg": "daily/day-222-stage-074-base-34-detail-3.svg",
+      "png": "daily/day-222-stage-074-base-34-detail-3.png",
+      "representativePeriod": "1750년 대표 시기"
+    },
+    {
+      "day": 223,
+      "stage": 75,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "폴리네시아 팔레",
+      "region": "사모아",
+      "year": 1760,
+      "changes": [
+        "열린 기둥과 둥근 지붕"
+      ],
+      "svg": "daily/day-223-stage-075-fale-00-detail-1.svg",
+      "png": "daily/day-223-stage-075-fale-00-detail-1.png",
+      "representativePeriod": "1760년 대표 시기"
+    },
+    {
+      "day": 224,
+      "stage": 75,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "폴리네시아 팔레",
+      "region": "사모아",
+      "year": 1760,
+      "changes": [
+        "넓은 지붕 띠·바닥"
+      ],
+      "svg": "daily/day-224-stage-075-fale-00-detail-2.svg",
+      "png": "daily/day-224-stage-075-fale-00-detail-2.png",
+      "representativePeriod": "1760년 대표 시기"
+    },
+    {
+      "day": 225,
+      "stage": 75,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "폴리네시아 팔레",
+      "region": "사모아",
+      "year": 1760,
+      "changes": [
+        "실내 가구·계단·수변 식물"
+      ],
+      "svg": "daily/day-225-stage-075-fale-00-detail-3.svg",
+      "png": "daily/day-225-stage-075-fale-00-detail-3.png",
+      "representativePeriod": "1760년 대표 시기"
+    },
+    {
+      "day": 226,
+      "stage": 76,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "유럽 풍차 주택",
+      "region": "네덜란드",
+      "year": 1780,
+      "changes": [
+        "풍차탑과 두 날개"
+      ],
+      "svg": "daily/day-226-stage-076-windmill-00-detail-1.svg",
+      "png": "daily/day-226-stage-076-windmill-00-detail-1.png",
+      "representativePeriod": "1780년 대표 시기"
+    },
+    {
+      "day": 227,
+      "stage": 76,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "유럽 풍차 주택",
+      "region": "네덜란드",
+      "year": 1780,
+      "changes": [
+        "세 번째 날개·옆 작업실"
+      ],
+      "svg": "daily/day-227-stage-076-windmill-00-detail-2.svg",
+      "png": "daily/day-227-stage-076-windmill-00-detail-2.png",
+      "representativePeriod": "1780년 대표 시기"
+    },
+    {
+      "day": 228,
+      "stage": 76,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "유럽 풍차 주택",
+      "region": "네덜란드",
+      "year": 1780,
+      "changes": [
+        "네 날개·둘레 데크"
+      ],
+      "svg": "daily/day-228-stage-076-windmill-00-detail-3.svg",
+      "png": "daily/day-228-stage-076-windmill-00-detail-3.png",
+      "representativePeriod": "1780년 대표 시기"
+    },
+    {
+      "day": 229,
+      "stage": 77,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "신고전주의 저택",
+      "region": "유럽",
+      "year": 1800,
+      "changes": [
+        "신고전주의 저택 초기 본체"
+      ],
+      "svg": "daily/day-229-stage-077-base-35-detail-1.svg",
+      "png": "daily/day-229-stage-077-base-35-detail-1.png",
+      "representativePeriod": "1800년 대표 시기"
+    },
+    {
+      "day": 230,
+      "stage": 77,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "신고전주의 저택",
+      "region": "유럽",
+      "year": 1800,
+      "changes": [
+        "본체 성장·양쪽 고전식 날개 1차"
+      ],
+      "svg": "daily/day-230-stage-077-base-35-detail-2.svg",
+      "png": "daily/day-230-stage-077-base-35-detail-2.png",
+      "representativePeriod": "1800년 대표 시기"
+    },
+    {
+      "day": 231,
+      "stage": 77,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "신고전주의 저택",
+      "region": "유럽",
+      "year": 1800,
+      "changes": [
+        "완성 본체·양쪽 고전식 날개 2차"
+      ],
+      "svg": "daily/day-231-stage-077-base-35-detail-3.svg",
+      "png": "daily/day-231-stage-077-base-35-detail-3.png",
+      "representativePeriod": "1800년 대표 시기"
+    },
+    {
+      "day": 232,
+      "stage": 78,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "인도네시아 루마가당",
+      "region": "인도네시아",
+      "year": 1810,
+      "changes": [
+        "양 끝이 치솟는 지붕"
+      ],
+      "svg": "daily/day-232-stage-078-rumah-00-detail-1.svg",
+      "png": "daily/day-232-stage-078-rumah-00-detail-1.png",
+      "representativePeriod": "1810년 대표 시기"
+    },
+    {
+      "day": 233,
+      "stage": 78,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "인도네시아 루마가당",
+      "region": "인도네시아",
+      "year": 1810,
+      "changes": [
+        "안쪽 뿔 지붕·데크"
+      ],
+      "svg": "daily/day-233-stage-078-rumah-00-detail-2.svg",
+      "png": "daily/day-233-stage-078-rumah-00-detail-2.png",
+      "representativePeriod": "1810년 대표 시기"
+    },
+    {
+      "day": 234,
+      "stage": 78,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "인도네시아 루마가당",
+      "region": "인도네시아",
+      "year": 1810,
+      "changes": [
+        "중앙 큰 뿔 지붕·계단"
+      ],
+      "svg": "daily/day-234-stage-078-rumah-00-detail-3.svg",
+      "png": "daily/day-234-stage-078-rumah-00-detail-3.png",
+      "representativePeriod": "1810년 대표 시기"
+    },
+    {
+      "day": 235,
+      "stage": 79,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "가쇼즈쿠리 주택",
+      "region": "일본",
+      "year": 1820,
+      "changes": [
+        "가파른 초가와 벽"
+      ],
+      "svg": "daily/day-235-stage-079-gassho-00-detail-1.svg",
+      "png": "daily/day-235-stage-079-gassho-00-detail-1.png",
+      "representativePeriod": "1820년 대표 시기"
+    },
+    {
+      "day": 236,
+      "stage": 79,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "가쇼즈쿠리 주택",
+      "region": "일본",
+      "year": 1820,
+      "changes": [
+        "큰 지붕 창·지붕 살"
+      ],
+      "svg": "daily/day-236-stage-079-gassho-00-detail-2.svg",
+      "png": "daily/day-236-stage-079-gassho-00-detail-2.png",
+      "representativePeriod": "1820년 대표 시기"
+    },
+    {
+      "day": 237,
+      "stage": 79,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "가쇼즈쿠리 주택",
+      "region": "일본",
+      "year": 1820,
+      "changes": [
+        "앞쪽 초가 증축·기단"
+      ],
+      "svg": "daily/day-237-stage-079-gassho-00-detail-3.svg",
+      "png": "daily/day-237-stage-079-gassho-00-detail-3.png",
+      "representativePeriod": "1820년 대표 시기"
+    },
+    {
+      "day": 238,
+      "stage": 80,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "러시아 목조 주택",
+      "region": "러시아",
+      "year": 1850,
+      "changes": [
+        "러시아 목조 주택 초기 본체"
+      ],
+      "svg": "daily/day-238-stage-080-base-36-detail-1.svg",
+      "png": "daily/day-238-stage-080-base-36-detail-1.png",
+      "representativePeriod": "1850년 대표 시기"
+    },
+    {
+      "day": 239,
+      "stage": 80,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "러시아 목조 주택",
+      "region": "러시아",
+      "year": 1850,
+      "changes": [
+        "본체 성장·목조 박공 증축 1차"
+      ],
+      "svg": "daily/day-239-stage-080-base-36-detail-2.svg",
+      "png": "daily/day-239-stage-080-base-36-detail-2.png",
+      "representativePeriod": "1850년 대표 시기"
+    },
+    {
+      "day": 240,
+      "stage": 80,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "러시아 목조 주택",
+      "region": "러시아",
+      "year": 1850,
+      "changes": [
+        "완성 본체·목조 박공 증축 2차"
+      ],
+      "svg": "daily/day-240-stage-080-base-36-detail-3.svg",
+      "png": "daily/day-240-stage-080-base-36-detail-3.png",
+      "representativePeriod": "1850년 대표 시기"
+    },
+    {
+      "day": 241,
+      "stage": 81,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "뉴올리언스 갤러리 주택",
+      "region": "미국",
+      "year": 1860,
+      "changes": [
+        "두 층 긴 주택"
+      ],
+      "svg": "daily/day-241-stage-081-galleryhouse-00-detail-1.svg",
+      "png": "daily/day-241-stage-081-galleryhouse-00-detail-1.png",
+      "representativePeriod": "1860년 대표 시기"
+    },
+    {
+      "day": 242,
+      "stage": 81,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "뉴올리언스 갤러리 주택",
+      "region": "미국",
+      "year": 1860,
+      "changes": [
+        "위층 갤러리·아래 기둥"
+      ],
+      "svg": "daily/day-242-stage-081-galleryhouse-00-detail-2.svg",
+      "png": "daily/day-242-stage-081-galleryhouse-00-detail-2.png",
+      "representativePeriod": "1860년 대표 시기"
+    },
+    {
+      "day": 243,
+      "stage": 81,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "뉴올리언스 갤러리 주택",
+      "region": "미국",
+      "year": 1860,
+      "changes": [
+        "아래 난간·긴 차양"
+      ],
+      "svg": "daily/day-243-stage-081-galleryhouse-00-detail-3.svg",
+      "png": "daily/day-243-stage-081-galleryhouse-00-detail-3.png",
+      "representativePeriod": "1860년 대표 시기"
+    },
+    {
+      "day": 244,
+      "stage": 82,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "빅토리아 주택",
+      "region": "영국",
+      "year": 1870,
+      "changes": [
+        "빅토리아 주택 초기 본체"
+      ],
+      "svg": "daily/day-244-stage-082-base-37-detail-1.svg",
+      "png": "daily/day-244-stage-082-base-37-detail-1.png",
+      "representativePeriod": "1870년 대표 시기"
+    },
+    {
+      "day": 245,
+      "stage": 82,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "빅토리아 주택",
+      "region": "영국",
+      "year": 1870,
+      "changes": [
+        "본체 성장·측면 박공 증축 1차"
+      ],
+      "svg": "daily/day-245-stage-082-base-37-detail-2.svg",
+      "png": "daily/day-245-stage-082-base-37-detail-2.png",
+      "representativePeriod": "1870년 대표 시기"
+    },
+    {
+      "day": 246,
+      "stage": 82,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "빅토리아 주택",
+      "region": "영국",
+      "year": 1870,
+      "changes": [
+        "완성 본체·측면 박공 증축 2차"
+      ],
+      "svg": "daily/day-246-stage-082-base-37-detail-3.svg",
+      "png": "daily/day-246-stage-082-base-37-detail-3.png",
+      "representativePeriod": "1870년 대표 시기"
+    },
+    {
+      "day": 247,
+      "stage": 83,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "파리 맨사드 주택",
+      "region": "프랑스",
+      "year": 1880,
+      "changes": [
+        "맨사드 지붕과 두 층"
+      ],
+      "svg": "daily/day-247-stage-083-mansard-00-detail-1.svg",
+      "png": "daily/day-247-stage-083-mansard-00-detail-1.png",
+      "representativePeriod": "1880년 대표 시기"
+    },
+    {
+      "day": 248,
+      "stage": 83,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "파리 맨사드 주택",
+      "region": "프랑스",
+      "year": 1880,
+      "changes": [
+        "세 개 돌출 지붕 창"
+      ],
+      "svg": "daily/day-248-stage-083-mansard-00-detail-2.svg",
+      "png": "daily/day-248-stage-083-mansard-00-detail-2.png",
+      "representativePeriod": "1880년 대표 시기"
+    },
+    {
+      "day": 249,
+      "stage": 83,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "파리 맨사드 주택",
+      "region": "프랑스",
+      "year": 1880,
+      "changes": [
+        "양쪽 증축·중앙 입구"
+      ],
+      "svg": "daily/day-249-stage-083-mansard-00-detail-3.svg",
+      "png": "daily/day-249-stage-083-mansard-00-detail-3.png",
+      "representativePeriod": "1880년 대표 시기"
+    },
+    {
+      "day": 250,
+      "stage": 84,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "에펠탑",
+      "region": "프랑스",
+      "year": 1889,
+      "changes": [
+        "격자 철탑의 큰 윤곽"
+      ],
+      "svg": "daily/day-250-stage-084-eiffel-00-detail-1.svg",
+      "png": "daily/day-250-stage-084-eiffel-00-detail-1.png",
+      "representativePeriod": "1889년 대표 시기"
+    },
+    {
+      "day": 251,
+      "stage": 84,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "에펠탑",
+      "region": "프랑스",
+      "year": 1889,
+      "changes": [
+        "철골 대각선·네 기단"
+      ],
+      "svg": "daily/day-251-stage-084-eiffel-00-detail-2.svg",
+      "png": "daily/day-251-stage-084-eiffel-00-detail-2.png",
+      "representativePeriod": "1889년 대표 시기"
+    },
+    {
+      "day": 252,
+      "stage": 84,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "에펠탑",
+      "region": "프랑스",
+      "year": 1889,
+      "changes": [
+        "상층 전망대·분수 정원"
+      ],
+      "svg": "daily/day-252-stage-084-eiffel-00-detail-3.svg",
+      "png": "daily/day-252-stage-084-eiffel-00-detail-3.png",
+      "representativePeriod": "1889년 대표 시기"
+    },
+    {
+      "day": 253,
+      "stage": 85,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "시카고 철골 빌딩",
+      "region": "미국",
+      "year": 1890,
+      "changes": [
+        "시카고 철골 빌딩 초기 본체"
+      ],
+      "svg": "daily/day-253-stage-085-base-38-detail-1.svg",
+      "png": "daily/day-253-stage-085-base-38-detail-1.png",
+      "representativePeriod": "1890년 대표 시기"
+    },
+    {
+      "day": 254,
+      "stage": 85,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "시카고 철골 빌딩",
+      "region": "미국",
+      "year": 1890,
+      "changes": [
+        "본체 성장·높이가 다른 건물 동 1차"
+      ],
+      "svg": "daily/day-254-stage-085-base-38-detail-2.svg",
+      "png": "daily/day-254-stage-085-base-38-detail-2.png",
+      "representativePeriod": "1890년 대표 시기"
+    },
+    {
+      "day": 255,
+      "stage": 85,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "시카고 철골 빌딩",
+      "region": "미국",
+      "year": 1890,
+      "changes": [
+        "완성 본체·높이가 다른 건물 동 2차"
+      ],
+      "svg": "daily/day-255-stage-085-base-38-detail-3.svg",
+      "png": "daily/day-255-stage-085-base-38-detail-3.png",
+      "representativePeriod": "1890년 대표 시기"
+    },
+    {
+      "day": 256,
+      "stage": 86,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "아르누보 빌라",
+      "region": "벨기에",
+      "year": 1900,
+      "changes": [
+        "아르누보 빌라 초기 본체"
+      ],
+      "svg": "daily/day-256-stage-086-base-39-detail-1.svg",
+      "png": "daily/day-256-stage-086-base-39-detail-1.png",
+      "representativePeriod": "1900년 대표 시기"
+    },
+    {
+      "day": 257,
+      "stage": 86,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "아르누보 빌라",
+      "region": "벨기에",
+      "year": 1900,
+      "changes": [
+        "본체 성장·양쪽 주택 증축 1차"
+      ],
+      "svg": "daily/day-257-stage-086-base-39-detail-2.svg",
+      "png": "daily/day-257-stage-086-base-39-detail-2.png",
+      "representativePeriod": "1900년 대표 시기"
+    },
+    {
+      "day": 258,
+      "stage": 86,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "아르누보 빌라",
+      "region": "벨기에",
+      "year": 1900,
+      "changes": [
+        "완성 본체·양쪽 주택 증축 2차"
+      ],
+      "svg": "daily/day-258-stage-086-base-39-detail-3.svg",
+      "png": "daily/day-258-stage-086-base-39-detail-3.png",
+      "representativePeriod": "1900년 대표 시기"
+    },
+    {
+      "day": 259,
+      "stage": 87,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "카사 바트요",
+      "region": "스페인",
+      "year": 1905,
+      "changes": [
+        "물결 지붕과 창"
+      ],
+      "svg": "daily/day-259-stage-087-batllo-00-detail-1.svg",
+      "png": "daily/day-259-stage-087-batllo-00-detail-1.png",
+      "representativePeriod": "1905년 대표 시기"
+    },
+    {
+      "day": 260,
+      "stage": 87,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "카사 바트요",
+      "region": "스페인",
+      "year": 1905,
+      "changes": [
+        "곡선 발코니·왼쪽 탑"
+      ],
+      "svg": "daily/day-260-stage-087-batllo-00-detail-2.svg",
+      "png": "daily/day-260-stage-087-batllo-00-detail-2.png",
+      "representativePeriod": "1905년 대표 시기"
+    },
+    {
+      "day": 261,
+      "stage": 87,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "카사 바트요",
+      "region": "스페인",
+      "year": 1905,
+      "changes": [
+        "물결 1층 창·상부 십자"
+      ],
+      "svg": "daily/day-261-stage-087-batllo-00-detail-3.svg",
+      "png": "daily/day-261-stage-087-batllo-00-detail-3.png",
+      "representativePeriod": "1905년 대표 시기"
+    },
+    {
+      "day": 262,
+      "stage": 88,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "프레리 주택",
+      "region": "미국",
+      "year": 1910,
+      "changes": [
+        "프레리 주택 초기 본체"
+      ],
+      "svg": "daily/day-262-stage-088-base-40-detail-1.svg",
+      "png": "daily/day-262-stage-088-base-40-detail-1.png",
+      "representativePeriod": "1910년 대표 시기"
+    },
+    {
+      "day": 263,
+      "stage": 88,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "프레리 주택",
+      "region": "미국",
+      "year": 1910,
+      "changes": [
+        "본체 성장·긴 돌출 지붕·굴뚝 1차"
+      ],
+      "svg": "daily/day-263-stage-088-base-40-detail-2.svg",
+      "png": "daily/day-263-stage-088-base-40-detail-2.png",
+      "representativePeriod": "1910년 대표 시기"
+    },
+    {
+      "day": 264,
+      "stage": 88,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "프레리 주택",
+      "region": "미국",
+      "year": 1910,
+      "changes": [
+        "완성 본체·긴 돌출 지붕·굴뚝 2차"
+      ],
+      "svg": "daily/day-264-stage-088-base-40-detail-3.svg",
+      "png": "daily/day-264-stage-088-base-40-detail-3.png",
+      "representativePeriod": "1910년 대표 시기"
+    },
+    {
+      "day": 265,
+      "stage": 89,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "아인슈타인탑",
+      "region": "독일",
+      "year": 1921,
+      "changes": [
+        "곡선 천문대와 돔"
+      ],
+      "svg": "daily/day-265-stage-089-expressionist-00-detail-1.svg",
+      "png": "daily/day-265-stage-089-expressionist-00-detail-1.png",
+      "representativePeriod": "1921년 대표 시기"
+    },
+    {
+      "day": 266,
+      "stage": 89,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "아인슈타인탑",
+      "region": "독일",
+      "year": 1921,
+      "changes": [
+        "중앙 창·둥근 하부"
+      ],
+      "svg": "daily/day-266-stage-089-expressionist-00-detail-2.svg",
+      "png": "daily/day-266-stage-089-expressionist-00-detail-2.png",
+      "representativePeriod": "1921년 대표 시기"
+    },
+    {
+      "day": 267,
+      "stage": 89,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "아인슈타인탑",
+      "region": "독일",
+      "year": 1921,
+      "changes": [
+        "넓은 곡선 입구와 계단"
+      ],
+      "svg": "daily/day-267-stage-089-expressionist-00-detail-3.svg",
+      "png": "daily/day-267-stage-089-expressionist-00-detail-3.png",
+      "representativePeriod": "1921년 대표 시기"
+    },
+    {
+      "day": 268,
+      "stage": 90,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "바우하우스",
+      "region": "독일",
+      "year": 1926,
+      "changes": [
+        "바우하우스 초기 본체"
+      ],
+      "svg": "daily/day-268-stage-090-base-41-detail-1.svg",
+      "png": "daily/day-268-stage-090-base-41-detail-1.png",
+      "representativePeriod": "1926년 대표 시기"
+    },
+    {
+      "day": 269,
+      "stage": 90,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "바우하우스",
+      "region": "독일",
+      "year": 1926,
+      "changes": [
+        "본체 성장·큰 유리 구획·흰 건물 동 1차"
+      ],
+      "svg": "daily/day-269-stage-090-base-41-detail-2.svg",
+      "png": "daily/day-269-stage-090-base-41-detail-2.png",
+      "representativePeriod": "1926년 대표 시기"
+    },
+    {
+      "day": 270,
+      "stage": 90,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "바우하우스",
+      "region": "독일",
+      "year": 1926,
+      "changes": [
+        "완성 본체·큰 유리 구획·흰 건물 동 2차"
+      ],
+      "svg": "daily/day-270-stage-090-base-41-detail-3.svg",
+      "png": "daily/day-270-stage-090-base-41-detail-3.png",
+      "representativePeriod": "1926년 대표 시기"
+    },
+    {
+      "day": 271,
+      "stage": 91,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "아르데코 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "아르데코 빌딩 초기 본체"
+      ],
+      "svg": "daily/day-271-stage-091-base-42-detail-1.svg",
+      "png": "daily/day-271-stage-091-base-42-detail-1.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 272,
+      "stage": 91,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "아르데코 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "본체 성장·단차 기단 건물 1차"
+      ],
+      "svg": "daily/day-272-stage-091-base-42-detail-2.svg",
+      "png": "daily/day-272-stage-091-base-42-detail-2.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 273,
+      "stage": 91,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "아르데코 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "완성 본체·단차 기단 건물 2차"
+      ],
+      "svg": "daily/day-273-stage-091-base-42-detail-3.svg",
+      "png": "daily/day-273-stage-091-base-42-detail-3.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 274,
+      "stage": 92,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "크라이슬러 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "단차 타워와 금속 왕관"
+      ],
+      "svg": "daily/day-274-stage-092-chrysler-00-detail-1.svg",
+      "png": "daily/day-274-stage-092-chrysler-00-detail-1.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 275,
+      "stage": 92,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "크라이슬러 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "측면 단차·독수리 장식 표현"
+      ],
+      "svg": "daily/day-275-stage-092-chrysler-00-detail-2.svg",
+      "png": "daily/day-275-stage-092-chrysler-00-detail-2.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 276,
+      "stage": 92,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "크라이슬러 빌딩",
+      "region": "미국",
+      "year": 1930,
+      "changes": [
+        "넓은 기단·왕관 장식"
+      ],
+      "svg": "daily/day-276-stage-092-chrysler-00-detail-3.svg",
+      "png": "daily/day-276-stage-092-chrysler-00-detail-3.png",
+      "representativePeriod": "1930년 대표 시기"
+    },
+    {
+      "day": 277,
+      "stage": 93,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "낙수장",
+      "region": "미국",
+      "year": 1939,
+      "changes": [
+        "석조 중심과 긴 아래 테라스"
+      ],
+      "svg": "daily/day-277-stage-093-fallingwater-00-detail-1.svg",
+      "png": "daily/day-277-stage-093-fallingwater-00-detail-1.png",
+      "representativePeriod": "1939년 대표 시기"
+    },
+    {
+      "day": 278,
+      "stage": 93,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "낙수장",
+      "region": "미국",
+      "year": 1939,
+      "changes": [
+        "중간 유리층·돌출 테라스"
+      ],
+      "svg": "daily/day-278-stage-093-fallingwater-00-detail-2.svg",
+      "png": "daily/day-278-stage-093-fallingwater-00-detail-2.png",
+      "representativePeriod": "1939년 대표 시기"
+    },
+    {
+      "day": 279,
+      "stage": 93,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "낙수장",
+      "region": "미국",
+      "year": 1939,
+      "changes": [
+        "위층 테라스·아래 폭포"
+      ],
+      "svg": "daily/day-279-stage-093-fallingwater-00-detail-3.svg",
+      "png": "daily/day-279-stage-093-fallingwater-00-detail-3.png",
+      "representativePeriod": "1939년 대표 시기"
+    },
+    {
+      "day": 280,
+      "stage": 94,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "멕시코 색채 주택",
+      "region": "멕시코",
+      "year": 1945,
+      "changes": [
+        "높은 흙빛 벽·붉은 낮은 벽"
+      ],
+      "svg": "daily/day-280-stage-094-barragan-00-detail-1.svg",
+      "png": "daily/day-280-stage-094-barragan-00-detail-1.png",
+      "representativePeriod": "1945년 대표 시기"
+    },
+    {
+      "day": 281,
+      "stage": 94,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "멕시코 색채 주택",
+      "region": "멕시코",
+      "year": 1945,
+      "changes": [
+        "노란 구획·푸른 높은 벽"
+      ],
+      "svg": "daily/day-281-stage-094-barragan-00-detail-2.svg",
+      "png": "daily/day-281-stage-094-barragan-00-detail-2.png",
+      "representativePeriod": "1945년 대표 시기"
+    },
+    {
+      "day": 282,
+      "stage": 94,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "멕시코 색채 주택",
+      "region": "멕시코",
+      "year": 1945,
+      "changes": [
+        "수면·붉은 세로 벽"
+      ],
+      "svg": "daily/day-282-stage-094-barragan-00-detail-3.svg",
+      "png": "daily/day-282-stage-094-barragan-00-detail-3.png",
+      "representativePeriod": "1945년 대표 시기"
+    },
+    {
+      "day": 283,
+      "stage": 95,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "국제주의 유리 건물",
+      "region": "미국",
+      "year": 1950,
+      "changes": [
+        "국제주의 유리 건물 초기 본체"
+      ],
+      "svg": "daily/day-283-stage-095-base-43-detail-1.svg",
+      "png": "daily/day-283-stage-095-base-43-detail-1.png",
+      "representativePeriod": "1950년 대표 시기"
+    },
+    {
+      "day": 284,
+      "stage": 95,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "국제주의 유리 건물",
+      "region": "미국",
+      "year": 1950,
+      "changes": [
+        "본체 성장·높이가 다른 유리 동 1차"
+      ],
+      "svg": "daily/day-284-stage-095-base-43-detail-2.svg",
+      "png": "daily/day-284-stage-095-base-43-detail-2.png",
+      "representativePeriod": "1950년 대표 시기"
+    },
+    {
+      "day": 285,
+      "stage": 95,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "국제주의 유리 건물",
+      "region": "미국",
+      "year": 1950,
+      "changes": [
+        "완성 본체·높이가 다른 유리 동 2차"
+      ],
+      "svg": "daily/day-285-stage-095-base-43-detail-3.svg",
+      "png": "daily/day-285-stage-095-base-43-detail-3.png",
+      "representativePeriod": "1950년 대표 시기"
+    },
+    {
+      "day": 286,
+      "stage": 96,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "롱샹 성당",
+      "region": "프랑스",
+      "year": 1955,
+      "changes": [
+        "흰 본당·짙은 곡선 지붕"
+      ],
+      "svg": "daily/day-286-stage-096-ronchamp-00-detail-1.svg",
+      "png": "daily/day-286-stage-096-ronchamp-00-detail-1.png",
+      "representativePeriod": "1955년 대표 시기"
+    },
+    {
+      "day": 287,
+      "stage": 96,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "롱샹 성당",
+      "region": "프랑스",
+      "year": 1955,
+      "changes": [
+        "왼쪽 곡선 탑"
+      ],
+      "svg": "daily/day-287-stage-096-ronchamp-00-detail-2.svg",
+      "png": "daily/day-287-stage-096-ronchamp-00-detail-2.png",
+      "representativePeriod": "1955년 대표 시기"
+    },
+    {
+      "day": 288,
+      "stage": 96,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "롱샹 성당",
+      "region": "프랑스",
+      "year": 1955,
+      "changes": [
+        "오른쪽 높은 탑·작은 창"
+      ],
+      "svg": "daily/day-288-stage-096-ronchamp-00-detail-3.svg",
+      "png": "daily/day-288-stage-096-ronchamp-00-detail-3.png",
+      "representativePeriod": "1955년 대표 시기"
+    },
+    {
+      "day": 289,
+      "stage": 97,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "뉴욕 구겐하임",
+      "region": "미국",
+      "year": 1959,
+      "changes": [
+        "뒤집힌 원뿔과 첫 띠"
+      ],
+      "svg": "daily/day-289-stage-097-guggenheimny-00-detail-1.svg",
+      "png": "daily/day-289-stage-097-guggenheimny-00-detail-1.png",
+      "representativePeriod": "1959년 대표 시기"
+    },
+    {
+      "day": 290,
+      "stage": 97,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "뉴욕 구겐하임",
+      "region": "미국",
+      "year": 1959,
+      "changes": [
+        "두 번째 띠·옆 건물"
+      ],
+      "svg": "daily/day-290-stage-097-guggenheimny-00-detail-2.svg",
+      "png": "daily/day-290-stage-097-guggenheimny-00-detail-2.png",
+      "representativePeriod": "1959년 대표 시기"
+    },
+    {
+      "day": 291,
+      "stage": 97,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "뉴욕 구겐하임",
+      "region": "미국",
+      "year": 1959,
+      "changes": [
+        "세 번째 띠·긴 출입층"
+      ],
+      "svg": "daily/day-291-stage-097-guggenheimny-00-detail-3.svg",
+      "png": "daily/day-291-stage-097-guggenheimny-00-detail-3.png",
+      "representativePeriod": "1959년 대표 시기"
+    },
+    {
+      "day": 292,
+      "stage": 98,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "브루탈리즘",
+      "region": "영국",
+      "year": 1960,
+      "changes": [
+        "브루탈리즘 초기 본체"
+      ],
+      "svg": "daily/day-292-stage-098-base-44-detail-1.svg",
+      "png": "daily/day-292-stage-098-base-44-detail-1.png",
+      "representativePeriod": "1960년 대표 시기"
+    },
+    {
+      "day": 293,
+      "stage": 98,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "브루탈리즘",
+      "region": "영국",
+      "year": 1960,
+      "changes": [
+        "본체 성장·큰 콘크리트 블록 1차"
+      ],
+      "svg": "daily/day-293-stage-098-base-44-detail-2.svg",
+      "png": "daily/day-293-stage-098-base-44-detail-2.png",
+      "representativePeriod": "1960년 대표 시기"
+    },
+    {
+      "day": 294,
+      "stage": 98,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "브루탈리즘",
+      "region": "영국",
+      "year": 1960,
+      "changes": [
+        "완성 본체·큰 콘크리트 블록 2차"
+      ],
+      "svg": "daily/day-294-stage-098-base-44-detail-3.svg",
+      "png": "daily/day-294-stage-098-base-44-detail-3.png",
+      "representativePeriod": "1960년 대표 시기"
+    },
+    {
+      "day": 295,
+      "stage": 99,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "아비타67",
+      "region": "캐나다",
+      "year": 1967,
+      "changes": [
+        "세 개 겹친 주거 블록"
+      ],
+      "svg": "daily/day-295-stage-099-habitat-00-detail-1.svg",
+      "png": "daily/day-295-stage-099-habitat-00-detail-1.png",
+      "representativePeriod": "1967년 대표 시기"
+    },
+    {
+      "day": 296,
+      "stage": 99,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "아비타67",
+      "region": "캐나다",
+      "year": 1967,
+      "changes": [
+        "여섯 블록"
+      ],
+      "svg": "daily/day-296-stage-099-habitat-00-detail-2.svg",
+      "png": "daily/day-296-stage-099-habitat-00-detail-2.png",
+      "representativePeriod": "1967년 대표 시기"
+    },
+    {
+      "day": 297,
+      "stage": 99,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "아비타67",
+      "region": "캐나다",
+      "year": 1967,
+      "changes": [
+        "아홉 블록·옥상 정원"
+      ],
+      "svg": "daily/day-297-stage-099-habitat-00-detail-3.svg",
+      "png": "daily/day-297-stage-099-habitat-00-detail-3.png",
+      "representativePeriod": "1967년 대표 시기"
+    },
+    {
+      "day": 298,
+      "stage": 100,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "메타볼리즘 캡슐",
+      "region": "일본",
+      "year": 1972,
+      "changes": [
+        "메타볼리즘 캡슐 초기 본체"
+      ],
+      "svg": "daily/day-298-stage-100-base-45-detail-1.svg",
+      "png": "daily/day-298-stage-100-base-45-detail-1.png",
+      "representativePeriod": "1972년 대표 시기"
+    },
+    {
+      "day": 299,
+      "stage": 100,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "메타볼리즘 캡슐",
+      "region": "일본",
+      "year": 1972,
+      "changes": [
+        "본체 성장·추가 주거 캡슐 1차"
+      ],
+      "svg": "daily/day-299-stage-100-base-45-detail-2.svg",
+      "png": "daily/day-299-stage-100-base-45-detail-2.png",
+      "representativePeriod": "1972년 대표 시기"
+    },
+    {
+      "day": 300,
+      "stage": 100,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "메타볼리즘 캡슐",
+      "region": "일본",
+      "year": 1972,
+      "changes": [
+        "완성 본체·추가 주거 캡슐 2차"
+      ],
+      "svg": "daily/day-300-stage-100-base-45-detail-3.svg",
+      "png": "daily/day-300-stage-100-base-45-detail-3.png",
+      "representativePeriod": "1972년 대표 시기"
+    },
+    {
+      "day": 301,
+      "stage": 101,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "시드니 오페라하우스",
+      "region": "호주",
+      "year": 1973,
+      "changes": [
+        "시드니 오페라하우스 초기 본체"
+      ],
+      "svg": "daily/day-301-stage-101-base-46-detail-1.svg",
+      "png": "daily/day-301-stage-101-base-46-detail-1.png",
+      "representativePeriod": "1973년 대표 시기"
+    },
+    {
+      "day": 302,
+      "stage": 101,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "시드니 오페라하우스",
+      "region": "호주",
+      "year": 1973,
+      "changes": [
+        "본체 성장·추가 조개껍질 지붕 1차"
+      ],
+      "svg": "daily/day-302-stage-101-base-46-detail-2.svg",
+      "png": "daily/day-302-stage-101-base-46-detail-2.png",
+      "representativePeriod": "1973년 대표 시기"
+    },
+    {
+      "day": 303,
+      "stage": 101,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "시드니 오페라하우스",
+      "region": "호주",
+      "year": 1973,
+      "changes": [
+        "완성 본체·추가 조개껍질 지붕 2차"
+      ],
+      "svg": "daily/day-303-stage-101-base-46-detail-3.svg",
+      "png": "daily/day-303-stage-101-base-46-detail-3.png",
+      "representativePeriod": "1973년 대표 시기"
+    },
+    {
+      "day": 304,
+      "stage": 102,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "지오데식 돔",
+      "region": "미국",
+      "year": 1975,
+      "changes": [
+        "돔과 방사형 격자"
+      ],
+      "svg": "daily/day-304-stage-102-geodesic-00-detail-1.svg",
+      "png": "daily/day-304-stage-102-geodesic-00-detail-1.png",
+      "representativePeriod": "1975년 대표 시기"
+    },
+    {
+      "day": 305,
+      "stage": 102,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "지오데식 돔",
+      "region": "미국",
+      "year": 1975,
+      "changes": [
+        "높은 돔·중앙 격자"
+      ],
+      "svg": "daily/day-305-stage-102-geodesic-00-detail-2.svg",
+      "png": "daily/day-305-stage-102-geodesic-00-detail-2.png",
+      "representativePeriod": "1975년 대표 시기"
+    },
+    {
+      "day": 306,
+      "stage": 102,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "지오데식 돔",
+      "region": "미국",
+      "year": 1975,
+      "changes": [
+        "최종 격자·유리 출입구"
+      ],
+      "svg": "daily/day-306-stage-102-geodesic-00-detail-3.svg",
+      "png": "daily/day-306-stage-102-geodesic-00-detail-3.png",
+      "representativePeriod": "1975년 대표 시기"
+    },
+    {
+      "day": 307,
+      "stage": 103,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "퐁피두센터",
+      "region": "프랑스",
+      "year": 1977,
+      "changes": [
+        "외부 철골과 유리층"
+      ],
+      "svg": "daily/day-307-stage-103-pompidou-00-detail-1.svg",
+      "png": "daily/day-307-stage-103-pompidou-00-detail-1.png",
+      "representativePeriod": "1977년 대표 시기"
+    },
+    {
+      "day": 308,
+      "stage": 103,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "퐁피두센터",
+      "region": "프랑스",
+      "year": 1977,
+      "changes": [
+        "붉은 경사 통로·녹색 설비"
+      ],
+      "svg": "daily/day-308-stage-103-pompidou-00-detail-2.svg",
+      "png": "daily/day-308-stage-103-pompidou-00-detail-2.png",
+      "representativePeriod": "1977년 대표 시기"
+    },
+    {
+      "day": 309,
+      "stage": 103,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "퐁피두센터",
+      "region": "프랑스",
+      "year": 1977,
+      "changes": [
+        "푸른 외부 배관·기단"
+      ],
+      "svg": "daily/day-309-stage-103-pompidou-00-detail-3.svg",
+      "png": "daily/day-309-stage-103-pompidou-00-detail-3.png",
+      "representativePeriod": "1977년 대표 시기"
+    },
+    {
+      "day": 310,
+      "stage": 104,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "포스트모던 빌딩",
+      "region": "미국",
+      "year": 1984,
+      "changes": [
+        "포스트모던 빌딩 초기 본체"
+      ],
+      "svg": "daily/day-310-stage-104-base-47-detail-1.svg",
+      "png": "daily/day-310-stage-104-base-47-detail-1.png",
+      "representativePeriod": "1984년 대표 시기"
+    },
+    {
+      "day": 311,
+      "stage": 104,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "포스트모던 빌딩",
+      "region": "미국",
+      "year": 1984,
+      "changes": [
+        "본체 성장·단차 기단 건물 1차"
+      ],
+      "svg": "daily/day-311-stage-104-base-47-detail-2.svg",
+      "png": "daily/day-311-stage-104-base-47-detail-2.png",
+      "representativePeriod": "1984년 대표 시기"
+    },
+    {
+      "day": 312,
+      "stage": 104,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "포스트모던 빌딩",
+      "region": "미국",
+      "year": 1984,
+      "changes": [
+        "완성 본체·단차 기단 건물 2차"
+      ],
+      "svg": "daily/day-312-stage-104-base-47-detail-3.svg",
+      "png": "daily/day-312-stage-104-base-47-detail-3.png",
+      "representativePeriod": "1984년 대표 시기"
+    },
+    {
+      "day": 313,
+      "stage": 105,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "하이테크 빌딩",
+      "region": "영국",
+      "year": 1986,
+      "changes": [
+        "하이테크 빌딩 초기 본체"
+      ],
+      "svg": "daily/day-313-stage-105-base-48-detail-1.svg",
+      "png": "daily/day-313-stage-105-base-48-detail-1.png",
+      "representativePeriod": "1986년 대표 시기"
+    },
+    {
+      "day": 314,
+      "stage": 105,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "하이테크 빌딩",
+      "region": "영국",
+      "year": 1986,
+      "changes": [
+        "본체 성장·추가 유리 동 1차"
+      ],
+      "svg": "daily/day-314-stage-105-base-48-detail-2.svg",
+      "png": "daily/day-314-stage-105-base-48-detail-2.png",
+      "representativePeriod": "1986년 대표 시기"
+    },
+    {
+      "day": 315,
+      "stage": 105,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "하이테크 빌딩",
+      "region": "영국",
+      "year": 1986,
+      "changes": [
+        "완성 본체·추가 유리 동 2차"
+      ],
+      "svg": "daily/day-315-stage-105-base-48-detail-3.svg",
+      "png": "daily/day-315-stage-105-base-48-detail-3.png",
+      "representativePeriod": "1986년 대표 시기"
+    },
+    {
+      "day": 316,
+      "stage": 106,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "루브르 유리 피라미드",
+      "region": "프랑스",
+      "year": 1989,
+      "changes": [
+        "큰 유리 피라미드"
+      ],
+      "svg": "daily/day-316-stage-106-louvre-00-detail-1.svg",
+      "png": "daily/day-316-stage-106-louvre-00-detail-1.png",
+      "representativePeriod": "1989년 대표 시기"
+    },
+    {
+      "day": 317,
+      "stage": 106,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "루브르 유리 피라미드",
+      "region": "프랑스",
+      "year": 1989,
+      "changes": [
+        "왼쪽 작은 피라미드"
+      ],
+      "svg": "daily/day-317-stage-106-louvre-00-detail-2.svg",
+      "png": "daily/day-317-stage-106-louvre-00-detail-2.png",
+      "representativePeriod": "1989년 대표 시기"
+    },
+    {
+      "day": 318,
+      "stage": 106,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "루브르 유리 피라미드",
+      "region": "프랑스",
+      "year": 1989,
+      "changes": [
+        "오른쪽 피라미드·물가"
+      ],
+      "svg": "daily/day-318-stage-106-louvre-00-detail-3.svg",
+      "png": "daily/day-318-stage-106-louvre-00-detail-3.png",
+      "representativePeriod": "1989년 대표 시기"
+    },
+    {
+      "day": 319,
+      "stage": 107,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "댄싱하우스",
+      "region": "체코",
+      "year": 1996,
+      "changes": [
+        "휘어진 유리 탑과 옆 탑"
+      ],
+      "svg": "daily/day-319-stage-107-dancing-00-detail-1.svg",
+      "png": "daily/day-319-stage-107-dancing-00-detail-1.png",
+      "representativePeriod": "1996년 대표 시기"
+    },
+    {
+      "day": 320,
+      "stage": 107,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "댄싱하우스",
+      "region": "체코",
+      "year": 1996,
+      "changes": [
+        "곡선 유리 격자·위 지붕"
+      ],
+      "svg": "daily/day-320-stage-107-dancing-00-detail-2.svg",
+      "png": "daily/day-320-stage-107-dancing-00-detail-2.png",
+      "representativePeriod": "1996년 대표 시기"
+    },
+    {
+      "day": 321,
+      "stage": 107,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "댄싱하우스",
+      "region": "체코",
+      "year": 1996,
+      "changes": [
+        "측면 받침 구조·출입층"
+      ],
+      "svg": "daily/day-321-stage-107-dancing-00-detail-3.svg",
+      "png": "daily/day-321-stage-107-dancing-00-detail-3.png",
+      "representativePeriod": "1996년 대표 시기"
+    },
+    {
+      "day": 322,
+      "stage": 108,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "빌바오 곡면 건축",
+      "region": "스페인",
+      "year": 1997,
+      "changes": [
+        "빌바오 곡면 건축 초기 본체"
+      ],
+      "svg": "daily/day-322-stage-108-base-49-detail-1.svg",
+      "png": "daily/day-322-stage-108-base-49-detail-1.png",
+      "representativePeriod": "1997년 대표 시기"
+    },
+    {
+      "day": 323,
+      "stage": 108,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "빌바오 곡면 건축",
+      "region": "스페인",
+      "year": 1997,
+      "changes": [
+        "본체 성장·추가 금속 곡면 1차"
+      ],
+      "svg": "daily/day-323-stage-108-base-49-detail-2.svg",
+      "png": "daily/day-323-stage-108-base-49-detail-2.png",
+      "representativePeriod": "1997년 대표 시기"
+    },
+    {
+      "day": 324,
+      "stage": 108,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "빌바오 곡면 건축",
+      "region": "스페인",
+      "year": 1997,
+      "changes": [
+        "완성 본체·추가 금속 곡면 2차"
+      ],
+      "svg": "daily/day-324-stage-108-base-49-detail-3.svg",
+      "png": "daily/day-324-stage-108-base-49-detail-3.png",
+      "representativePeriod": "1997년 대표 시기"
+    },
+    {
+      "day": 325,
+      "stage": 109,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "페트로나스 트윈타워",
+      "region": "말레이시아",
+      "year": 1998,
+      "changes": [
+        "쌍둥이 첨탑"
+      ],
+      "svg": "daily/day-325-stage-109-petronas-00-detail-1.svg",
+      "png": "daily/day-325-stage-109-petronas-00-detail-1.png",
+      "representativePeriod": "1998년 대표 시기"
+    },
+    {
+      "day": 326,
+      "stage": 109,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "페트로나스 트윈타워",
+      "region": "말레이시아",
+      "year": 1998,
+      "changes": [
+        "두 타워를 잇는 스카이브리지"
+      ],
+      "svg": "daily/day-326-stage-109-petronas-00-detail-2.svg",
+      "png": "daily/day-326-stage-109-petronas-00-detail-2.png",
+      "representativePeriod": "1998년 대표 시기"
+    },
+    {
+      "day": 327,
+      "stage": 109,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "페트로나스 트윈타워",
+      "region": "말레이시아",
+      "year": 1998,
+      "changes": [
+        "넓은 기단·낮은 돔"
+      ],
+      "svg": "daily/day-327-stage-109-petronas-00-detail-3.svg",
+      "png": "daily/day-327-stage-109-petronas-00-detail-3.png",
+      "representativePeriod": "1998년 대표 시기"
+    },
+    {
+      "day": 328,
+      "stage": 110,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "부르즈 알 아랍",
+      "region": "아랍에미리트",
+      "year": 1999,
+      "changes": [
+        "큰 돛과 유리 면"
+      ],
+      "svg": "daily/day-328-stage-110-sailtower-00-detail-1.svg",
+      "png": "daily/day-328-stage-110-sailtower-00-detail-1.png",
+      "representativePeriod": "1999년 대표 시기"
+    },
+    {
+      "day": 329,
+      "stage": 110,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "부르즈 알 아랍",
+      "region": "아랍에미리트",
+      "year": 1999,
+      "changes": [
+        "상부 헬리패드·수평 프레임"
+      ],
+      "svg": "daily/day-329-stage-110-sailtower-00-detail-2.svg",
+      "png": "daily/day-329-stage-110-sailtower-00-detail-2.png",
+      "representativePeriod": "1999년 대표 시기"
+    },
+    {
+      "day": 330,
+      "stage": 110,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "부르즈 알 아랍",
+      "region": "아랍에미리트",
+      "year": 1999,
+      "changes": [
+        "바다 위 진입 다리·출입층"
+      ],
+      "svg": "daily/day-330-stage-110-sailtower-00-detail-3.svg",
+      "png": "daily/day-330-stage-110-sailtower-00-detail-3.png",
+      "representativePeriod": "1999년 대표 시기"
+    },
+    {
+      "day": 331,
+      "stage": 111,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "에덴 프로젝트 온실",
+      "region": "영국",
+      "year": 2001,
+      "changes": [
+        "큰 온실 한 동"
+      ],
+      "svg": "daily/day-331-stage-111-biomes-00-detail-1.svg",
+      "png": "daily/day-331-stage-111-biomes-00-detail-1.png",
+      "representativePeriod": "2001년 대표 시기"
+    },
+    {
+      "day": 332,
+      "stage": 111,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "에덴 프로젝트 온실",
+      "region": "영국",
+      "year": 2001,
+      "changes": [
+        "왼쪽 온실"
+      ],
+      "svg": "daily/day-332-stage-111-biomes-00-detail-2.svg",
+      "png": "daily/day-332-stage-111-biomes-00-detail-2.png",
+      "representativePeriod": "2001년 대표 시기"
+    },
+    {
+      "day": 333,
+      "stage": 111,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "에덴 프로젝트 온실",
+      "region": "영국",
+      "year": 2001,
+      "changes": [
+        "오른쪽 온실·정원 입구"
+      ],
+      "svg": "daily/day-333-stage-111-biomes-00-detail-3.svg",
+      "png": "daily/day-333-stage-111-biomes-00-detail-3.png",
+      "representativePeriod": "2001년 대표 시기"
+    },
+    {
+      "day": 334,
+      "stage": 112,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "타이베이101",
+      "region": "대만",
+      "year": 2004,
+      "changes": [
+        "타이베이101 초기 본체"
+      ],
+      "svg": "daily/day-334-stage-112-base-50-detail-1.svg",
+      "png": "daily/day-334-stage-112-base-50-detail-1.png",
+      "representativePeriod": "2004년 대표 시기"
+    },
+    {
+      "day": 335,
+      "stage": 112,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "타이베이101",
+      "region": "대만",
+      "year": 2004,
+      "changes": [
+        "본체 성장·고층 기단·진입 건물 1차"
+      ],
+      "svg": "daily/day-335-stage-112-base-50-detail-2.svg",
+      "png": "daily/day-335-stage-112-base-50-detail-2.png",
+      "representativePeriod": "2004년 대표 시기"
+    },
+    {
+      "day": 336,
+      "stage": 112,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "타이베이101",
+      "region": "대만",
+      "year": 2004,
+      "changes": [
+        "완성 본체·고층 기단·진입 건물 2차"
+      ],
+      "svg": "daily/day-336-stage-112-base-50-detail-3.svg",
+      "png": "daily/day-336-stage-112-base-50-detail-3.png",
+      "representativePeriod": "2004년 대표 시기"
+    },
+    {
+      "day": 337,
+      "stage": 113,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "베이징 국가체육장",
+      "region": "중국",
+      "year": 2008,
+      "changes": [
+        "타원 경기장과 첫 교차 구조"
+      ],
+      "svg": "daily/day-337-stage-113-birdnest-00-detail-1.svg",
+      "png": "daily/day-337-stage-113-birdnest-00-detail-1.png",
+      "representativePeriod": "2008년 대표 시기"
+    },
+    {
+      "day": 338,
+      "stage": 113,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "베이징 국가체육장",
+      "region": "중국",
+      "year": 2008,
+      "changes": [
+        "추가 사선 외피"
+      ],
+      "svg": "daily/day-338-stage-113-birdnest-00-detail-2.svg",
+      "png": "daily/day-338-stage-113-birdnest-00-detail-2.png",
+      "representativePeriod": "2008년 대표 시기"
+    },
+    {
+      "day": 339,
+      "stage": 113,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "베이징 국가체육장",
+      "region": "중국",
+      "year": 2008,
+      "changes": [
+        "촘촘한 입체 외피·입구 기단"
+      ],
+      "svg": "daily/day-339-stage-113-birdnest-00-detail-3.svg",
+      "png": "daily/day-339-stage-113-birdnest-00-detail-3.png",
+      "representativePeriod": "2008년 대표 시기"
+    },
+    {
+      "day": 340,
+      "stage": 114,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "부르즈 칼리파",
+      "region": "아랍에미리트",
+      "year": 2010,
+      "changes": [
+        "부르즈 칼리파 초기 본체"
+      ],
+      "svg": "daily/day-340-stage-114-base-51-detail-1.svg",
+      "png": "daily/day-340-stage-114-base-51-detail-1.png",
+      "representativePeriod": "2010년 대표 시기"
+    },
+    {
+      "day": 341,
+      "stage": 114,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "부르즈 칼리파",
+      "region": "아랍에미리트",
+      "year": 2010,
+      "changes": [
+        "본체 성장·고층 기단·진입 건물 1차"
+      ],
+      "svg": "daily/day-341-stage-114-base-51-detail-2.svg",
+      "png": "daily/day-341-stage-114-base-51-detail-2.png",
+      "representativePeriod": "2010년 대표 시기"
+    },
+    {
+      "day": 342,
+      "stage": 114,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "부르즈 칼리파",
+      "region": "아랍에미리트",
+      "year": 2010,
+      "changes": [
+        "완성 본체·고층 기단·진입 건물 2차"
+      ],
+      "svg": "daily/day-342-stage-114-base-51-detail-3.svg",
+      "png": "daily/day-342-stage-114-base-51-detail-3.png",
+      "representativePeriod": "2010년 대표 시기"
+    },
+    {
+      "day": 343,
+      "stage": 115,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "마리나베이샌즈",
+      "region": "싱가포르",
+      "year": 2011,
+      "changes": [
+        "세 타워와 긴 스카이파크"
+      ],
+      "svg": "daily/day-343-stage-115-marinabay-00-detail-1.svg",
+      "png": "daily/day-343-stage-115-marinabay-00-detail-1.png",
+      "representativePeriod": "2011년 대표 시기"
+    },
+    {
+      "day": 344,
+      "stage": 115,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "마리나베이샌즈",
+      "region": "싱가포르",
+      "year": 2011,
+      "changes": [
+        "옥상 정원·수영장"
+      ],
+      "svg": "daily/day-344-stage-115-marinabay-00-detail-2.svg",
+      "png": "daily/day-344-stage-115-marinabay-00-detail-2.png",
+      "representativePeriod": "2011년 대표 시기"
+    },
+    {
+      "day": 345,
+      "stage": 115,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "마리나베이샌즈",
+      "region": "싱가포르",
+      "year": 2011,
+      "changes": [
+        "곡선 아래 건물·물가"
+      ],
+      "svg": "daily/day-345-stage-115-marinabay-00-detail-3.svg",
+      "png": "daily/day-345-stage-115-marinabay-00-detail-3.png",
+      "representativePeriod": "2011년 대표 시기"
+    },
+    {
+      "day": 346,
+      "stage": 116,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "CCTV 본사",
+      "region": "중국",
+      "year": 2012,
+      "changes": [
+        "닫힌 고리형 본체"
+      ],
+      "svg": "daily/day-346-stage-116-cctv-00-detail-1.svg",
+      "png": "daily/day-346-stage-116-cctv-00-detail-1.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 347,
+      "stage": 116,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "CCTV 본사",
+      "region": "중국",
+      "year": 2012,
+      "changes": [
+        "외벽 격자·사선 철골"
+      ],
+      "svg": "daily/day-347-stage-116-cctv-00-detail-2.svg",
+      "png": "daily/day-347-stage-116-cctv-00-detail-2.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 348,
+      "stage": 116,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "CCTV 본사",
+      "region": "중국",
+      "year": 2012,
+      "changes": [
+        "양쪽 하부 진입 건물"
+      ],
+      "svg": "daily/day-348-stage-116-cctv-00-detail-3.svg",
+      "png": "daily/day-348-stage-116-cctv-00-detail-3.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 349,
+      "stage": 117,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "런던 샤드",
+      "region": "영국",
+      "year": 2012,
+      "changes": [
+        "날카로운 유리 조각 타워"
+      ],
+      "svg": "daily/day-349-stage-117-shard-00-detail-1.svg",
+      "png": "daily/day-349-stage-117-shard-00-detail-1.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 350,
+      "stage": 117,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "런던 샤드",
+      "region": "영국",
+      "year": 2012,
+      "changes": [
+        "양쪽 낮은 유리 조각"
+      ],
+      "svg": "daily/day-350-stage-117-shard-00-detail-2.svg",
+      "png": "daily/day-350-stage-117-shard-00-detail-2.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 351,
+      "stage": 117,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "런던 샤드",
+      "region": "영국",
+      "year": 2012,
+      "changes": [
+        "기단 건물·앞 계단"
+      ],
+      "svg": "daily/day-351-stage-117-shard-00-detail-3.svg",
+      "png": "daily/day-351-stage-117-shard-00-detail-3.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 352,
+      "stage": 118,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "헤이다르 알리예프 센터",
+      "region": "아제르바이잔",
+      "year": 2012,
+      "changes": [
+        "긴 파도 지붕과 유리 면"
+      ],
+      "svg": "daily/day-352-stage-118-heydar-00-detail-1.svg",
+      "png": "daily/day-352-stage-118-heydar-00-detail-1.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 353,
+      "stage": 118,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "헤이다르 알리예프 센터",
+      "region": "아제르바이잔",
+      "year": 2012,
+      "changes": [
+        "왼쪽 큰 곡면"
+      ],
+      "svg": "daily/day-353-stage-118-heydar-00-detail-2.svg",
+      "png": "daily/day-353-stage-118-heydar-00-detail-2.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 354,
+      "stage": 118,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "헤이다르 알리예프 센터",
+      "region": "아제르바이잔",
+      "year": 2012,
+      "changes": [
+        "연속 곡면 기단·패널 선"
+      ],
+      "svg": "daily/day-354-stage-118-heydar-00-detail-3.svg",
+      "png": "daily/day-354-stage-118-heydar-00-detail-3.png",
+      "representativePeriod": "2012년 대표 시기"
+    },
+    {
+      "day": 355,
+      "stage": 119,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "보스코 베르티칼레",
+      "region": "이탈리아",
+      "year": 2014,
+      "changes": [
+        "두 개 직사각형 타워·첫 식재"
+      ],
+      "svg": "daily/day-355-stage-119-bosco-00-detail-1.svg",
+      "png": "daily/day-355-stage-119-bosco-00-detail-1.png",
+      "representativePeriod": "2014년 대표 시기"
+    },
+    {
+      "day": 356,
+      "stage": 119,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "보스코 베르티칼레",
+      "region": "이탈리아",
+      "year": 2014,
+      "changes": [
+        "중층 발코니와 나무"
+      ],
+      "svg": "daily/day-356-stage-119-bosco-00-detail-2.svg",
+      "png": "daily/day-356-stage-119-bosco-00-detail-2.png",
+      "representativePeriod": "2014년 대표 시기"
+    },
+    {
+      "day": 357,
+      "stage": 119,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "보스코 베르티칼레",
+      "region": "이탈리아",
+      "year": 2014,
+      "changes": [
+        "하층 발코니·옥상 나무"
+      ],
+      "svg": "daily/day-357-stage-119-bosco-00-detail-3.svg",
+      "png": "daily/day-357-stage-119-bosco-00-detail-3.png",
+      "representativePeriod": "2014년 대표 시기"
+    },
+    {
+      "day": 358,
+      "stage": 120,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "상하이타워",
+      "region": "중국",
+      "year": 2015,
+      "changes": [
+        "상하이타워 초기 본체"
+      ],
+      "svg": "daily/day-358-stage-120-base-52-detail-1.svg",
+      "png": "daily/day-358-stage-120-base-52-detail-1.png",
+      "representativePeriod": "2015년 대표 시기"
+    },
+    {
+      "day": 359,
+      "stage": 120,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "상하이타워",
+      "region": "중국",
+      "year": 2015,
+      "changes": [
+        "본체 성장·고층 기단·진입 건물 1차"
+      ],
+      "svg": "daily/day-359-stage-120-base-52-detail-2.svg",
+      "png": "daily/day-359-stage-120-base-52-detail-2.png",
+      "representativePeriod": "2015년 대표 시기"
+    },
+    {
+      "day": 360,
+      "stage": 120,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "상하이타워",
+      "region": "중국",
+      "year": 2015,
+      "changes": [
+        "완성 본체·고층 기단·진입 건물 2차"
+      ],
+      "svg": "daily/day-360-stage-120-base-52-detail-3.svg",
+      "png": "daily/day-360-stage-120-base-52-detail-3.png",
+      "representativePeriod": "2015년 대표 시기"
+    },
+    {
+      "day": 361,
+      "stage": 121,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "톈진 빈하이 도서관",
+      "region": "중국",
+      "year": 2017,
+      "changes": [
+        "반원형 도서관과 중앙 구체"
+      ],
+      "svg": "daily/day-361-stage-121-libraryeye-00-detail-1.svg",
+      "png": "daily/day-361-stage-121-libraryeye-00-detail-1.png",
+      "representativePeriod": "2017년 대표 시기"
+    },
+    {
+      "day": 362,
+      "stage": 121,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "톈진 빈하이 도서관",
+      "region": "중국",
+      "year": 2017,
+      "changes": [
+        "곡선 벽과 선반"
+      ],
+      "svg": "daily/day-362-stage-121-libraryeye-00-detail-2.svg",
+      "png": "daily/day-362-stage-121-libraryeye-00-detail-2.png",
+      "representativePeriod": "2017년 대표 시기"
+    },
+    {
+      "day": 363,
+      "stage": 121,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "톈진 빈하이 도서관",
+      "region": "중국",
+      "year": 2017,
+      "changes": [
+        "더 많은 선반·입구 기단"
+      ],
+      "svg": "daily/day-363-stage-121-libraryeye-00-detail-3.svg",
+      "png": "daily/day-363-stage-121-libraryeye-00-detail-3.png",
+      "representativePeriod": "2017년 대표 시기"
+    },
+    {
+      "day": 364,
+      "stage": 122,
+      "detail": 1,
+      "daysInStage": 3,
+      "name": "롯데월드타워",
+      "region": "한국",
+      "year": 2017,
+      "changes": [
+        "롯데월드타워 초기 본체"
+      ],
+      "svg": "daily/day-364-stage-122-base-53-detail-1.svg",
+      "png": "daily/day-364-stage-122-base-53-detail-1.png",
+      "representativePeriod": "2017년 대표 시기"
+    },
+    {
+      "day": 365,
+      "stage": 122,
+      "detail": 2,
+      "daysInStage": 3,
+      "name": "롯데월드타워",
+      "region": "한국",
+      "year": 2017,
+      "changes": [
+        "본체 성장·고층 기단·진입 건물 1차"
+      ],
+      "svg": "daily/day-365-stage-122-base-53-detail-2.svg",
+      "png": "daily/day-365-stage-122-base-53-detail-2.png",
+      "representativePeriod": "2017년 대표 시기"
+    },
+    {
+      "day": 366,
+      "stage": 122,
+      "detail": 3,
+      "daysInStage": 3,
+      "name": "롯데월드타워",
+      "region": "한국",
+      "year": 2017,
+      "changes": [
+        "완성 본체·고층 기단·진입 건물 2차"
+      ],
+      "svg": "daily/day-366-stage-122-base-53-detail-3.svg",
+      "png": "daily/day-366-stage-122-base-53-detail-3.png",
+      "representativePeriod": "2017년 대표 시기"
+    }
+  ]
+}

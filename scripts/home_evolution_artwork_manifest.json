@@ -1,0 +1,3675 @@
+{
+  "requestID": "LV3661003A",
+  "sourceRequestID": "D3X61003A1",
+  "sourceDirectory": "design/home-seed-to-lotte/D3X61003A1",
+  "assetCount": 366,
+  "stageCount": 122,
+  "daysInStage": 3,
+  "width": 128,
+  "height": 128,
+  "entries": [
+    {
+      "level": 1,
+      "stage": 1,
+      "detail": 1,
+      "name": "씨앗",
+      "assetName": "HomeEvolution001",
+      "sourceSVG": "daily/day-001-stage-001-seed-00-detail-1.svg",
+      "sha256": "5e1e90769c58d433d2260df06679b4e7d90bf86f95b74e3b5ab61a3750443710",
+      "sourceSHA256": "f3dc3e4a9a36b813ffe9d804136fba03ccdd10d142ef0db567e58ff61f0b3f14"
+    },
+    {
+      "level": 2,
+      "stage": 1,
+      "detail": 2,
+      "name": "씨앗",
+      "assetName": "HomeEvolution002",
+      "sourceSVG": "daily/day-002-stage-001-seed-00-detail-2.svg",
+      "sha256": "512bfc0dda1e57af0f6f9a9631539d664d5011eb7be34102349ba5b9b0fb43c1",
+      "sourceSHA256": "50329efb818a6a6ed73cea7deab3f1015b40d501ac4781e803486685c35f8de7"
+    },
+    {
+      "level": 3,
+      "stage": 1,
+      "detail": 3,
+      "name": "씨앗",
+      "assetName": "HomeEvolution003",
+      "sourceSVG": "daily/day-003-stage-001-seed-00-detail-3.svg",
+      "sha256": "bf3661abf2d6838f1611918af9b51e6c76c7f6fb883c2dbcdab21102428c6b39",
+      "sourceSHA256": "954b41c26f47fc219be8b6b74b768d940393916d4752f50934e47ed7948106dc"
+    },
+    {
+      "level": 4,
+      "stage": 2,
+      "detail": 1,
+      "name": "새싹",
+      "assetName": "HomeEvolution004",
+      "sourceSVG": "daily/day-004-stage-002-sprout-00-detail-1.svg",
+      "sha256": "894ba7fbbd99406b4683905a96e22f1662d80c88ee59f58e96b5207979f72a01",
+      "sourceSHA256": "57ef303a8bcd386ec15fe037bb2084c12d8b62e0c2f5c436537ef1f680c3ce6c"
+    },
+    {
+      "level": 5,
+      "stage": 2,
+      "detail": 2,
+      "name": "새싹",
+      "assetName": "HomeEvolution005",
+      "sourceSVG": "daily/day-005-stage-002-sprout-00-detail-2.svg",
+      "sha256": "ce3711b740906e3a0e2828e482656c2cf61517cfa89c7e69176e7ad4e4d6a327",
+      "sourceSHA256": "29cc86e2dbe8f95a3fe83a6be28879fa4afbd732d0595bac7e09d316b2f1becb"
+    },
+    {
+      "level": 6,
+      "stage": 2,
+      "detail": 3,
+      "name": "새싹",
+      "assetName": "HomeEvolution006",
+      "sourceSVG": "daily/day-006-stage-002-sprout-00-detail-3.svg",
+      "sha256": "2081a681156ce99d5222dd4734872c897dd2847efbec4a194adb90be894757e5",
+      "sourceSHA256": "2455580a704cb8934523d353579156231e84285cc34349c5835714e1119b6a41"
+    },
+    {
+      "level": 7,
+      "stage": 3,
+      "detail": 1,
+      "name": "묘목",
+      "assetName": "HomeEvolution007",
+      "sourceSVG": "daily/day-007-stage-003-sapling-00-detail-1.svg",
+      "sha256": "80b1b0f9758fa5f3863874af4d600608699f6666dc8df296e8a4a6c4affda42e",
+      "sourceSHA256": "fe76f99ffa6da00d5b475cdc631bb874e98183de9a628ea5e92de3e90ac77c68"
+    },
+    {
+      "level": 8,
+      "stage": 3,
+      "detail": 2,
+      "name": "묘목",
+      "assetName": "HomeEvolution008",
+      "sourceSVG": "daily/day-008-stage-003-sapling-00-detail-2.svg",
+      "sha256": "3ced186f69b97340525e6ef9c27b912372605891e4fd1e246017306461537c22",
+      "sourceSHA256": "cc51e2d62f9bba1112bd8f6f1436491f5ea3b4b6dff3ecfc7fe6c1cedd826273"
+    },
+    {
+      "level": 9,
+      "stage": 3,
+      "detail": 3,
+      "name": "묘목",
+      "assetName": "HomeEvolution009",
+      "sourceSVG": "daily/day-009-stage-003-sapling-00-detail-3.svg",
+      "sha256": "93015eb2f4fa3a44746226b3a3695337202b6c6c17d66bfb69970c9bd56dd1df",
+      "sourceSHA256": "978502d7581c02ef3b312f03d1ac5e60eddb5216470f31738462a6af6c6a47e1"
+    },
+    {
+      "level": 10,
+      "stage": 4,
+      "detail": 1,
+      "name": "큰 나무",
+      "assetName": "HomeEvolution010",
+      "sourceSVG": "daily/day-010-stage-004-tree-00-detail-1.svg",
+      "sha256": "2d022d73b219bae5487d3a41b11f4a4c5fa70dba7103046493bec674f15665ca",
+      "sourceSHA256": "d6a150903260e21a4175ed66390d709afb5ced356a897f3e53ffce814cb1a9e9"
+    },
+    {
+      "level": 11,
+      "stage": 4,
+      "detail": 2,
+      "name": "큰 나무",
+      "assetName": "HomeEvolution011",
+      "sourceSVG": "daily/day-011-stage-004-tree-00-detail-2.svg",
+      "sha256": "6bf30bdd64502d09ea84628f6883f2f2fd71622f7033aa0e9d699e4a22a858d8",
+      "sourceSHA256": "91d213c34a3363d3b7156c2d4b2d05d6596205cb699be725ac1734931d4f80b7"
+    },
+    {
+      "level": 12,
+      "stage": 4,
+      "detail": 3,
+      "name": "큰 나무",
+      "assetName": "HomeEvolution012",
+      "sourceSVG": "daily/day-012-stage-004-tree-00-detail-3.svg",
+      "sha256": "1f0e4b60e34de67c4f941d80e8fc7dd0f19c04bc263239d376a1c3cc12ce17c6",
+      "sourceSHA256": "b3c38cd56a56440f12dc8aca71c72049337f1d305df780e725e19e7695caf734"
+    },
+    {
+      "level": 13,
+      "stage": 5,
+      "detail": 1,
+      "name": "모닥불",
+      "assetName": "HomeEvolution013",
+      "sourceSVG": "daily/day-013-stage-005-fire-00-detail-1.svg",
+      "sha256": "ee4cf72e535b9805e04fce5480a408447658a9b5cc25090ea2e57e14c41d8cef",
+      "sourceSHA256": "f82ba3e193baa6eadbdc588377ac776123af3223b2fe1b1c49e2455274926db0"
+    },
+    {
+      "level": 14,
+      "stage": 5,
+      "detail": 2,
+      "name": "모닥불",
+      "assetName": "HomeEvolution014",
+      "sourceSVG": "daily/day-014-stage-005-fire-00-detail-2.svg",
+      "sha256": "9c434996b211c91465d2cbb130e9d23c37d7a76c3583ea3dd2e642ce5ff43f77",
+      "sourceSHA256": "0d8caff88e2f3d52098786c12a8ef17a2b4512b795e2f043c467a88af3d28b19"
+    },
+    {
+      "level": 15,
+      "stage": 5,
+      "detail": 3,
+      "name": "모닥불",
+      "assetName": "HomeEvolution015",
+      "sourceSVG": "daily/day-015-stage-005-fire-00-detail-3.svg",
+      "sha256": "73696ce7052d0e5978d375a12224e6aa42841dd9c1291f812e4ae333490882fd",
+      "sourceSHA256": "4623f6b00d3f9c68c34a39fc5ade9adf213a826680bf4ed63a973f9f45a5bbb0"
+    },
+    {
+      "level": 16,
+      "stage": 6,
+      "detail": 1,
+      "name": "동굴 거처",
+      "assetName": "HomeEvolution016",
+      "sourceSVG": "daily/day-016-stage-006-cave-00-detail-1.svg",
+      "sha256": "147aa2b3e1f9f5eb6e6713e370b468e44db0d638c8f1b92ad1ee8fea6f21ae70",
+      "sourceSHA256": "d6ace484fdf2a6165df15734433217255a0706491b51f63714f31138437f6f2d"
+    },
+    {
+      "level": 17,
+      "stage": 6,
+      "detail": 2,
+      "name": "동굴 거처",
+      "assetName": "HomeEvolution017",
+      "sourceSVG": "daily/day-017-stage-006-cave-00-detail-2.svg",
+      "sha256": "31f6ca87fe4062a793acee541a38dd3f2ab2f91fb5b875ccf961d2970f6abb68",
+      "sourceSHA256": "fd073e6449a0b8261396dc507ddc33d32e8722fcfe9761788e3c428c7825a5cd"
+    },
+    {
+      "level": 18,
+      "stage": 6,
+      "detail": 3,
+      "name": "동굴 거처",
+      "assetName": "HomeEvolution018",
+      "sourceSVG": "daily/day-018-stage-006-cave-00-detail-3.svg",
+      "sha256": "b3afa1c6ba109f5b75c216f6c3f9a1e6e5ab0882f0a29978f01e996a96f144d0",
+      "sourceSHA256": "798005fba89281b6df5ab9ce35820a52fa5525fd92c4958d5eee92a8f54bfe9b"
+    },
+    {
+      "level": 19,
+      "stage": 7,
+      "detail": 1,
+      "name": "해먹",
+      "assetName": "HomeEvolution019",
+      "sourceSVG": "daily/day-019-stage-007-hammock-00-detail-1.svg",
+      "sha256": "9011a6d8b8e283629057ee137d2378e7bd5ba617c8ea28912e5ce5c24d9a14d9",
+      "sourceSHA256": "1f561aea51f9eeb48a3bf4a99857091147b9b79e22a56300154ae0e0f768df17"
+    },
+    {
+      "level": 20,
+      "stage": 7,
+      "detail": 2,
+      "name": "해먹",
+      "assetName": "HomeEvolution020",
+      "sourceSVG": "daily/day-020-stage-007-hammock-00-detail-2.svg",
+      "sha256": "9f848b3475c55a59f3c60669111a7103c447da9bc76c07b11a2faeccca73198e",
+      "sourceSHA256": "069db7de2dd558423112b64f801c3dc5646113affc1cf89c9e089575df8e6642"
+    },
+    {
+      "level": 21,
+      "stage": 7,
+      "detail": 3,
+      "name": "해먹",
+      "assetName": "HomeEvolution021",
+      "sourceSVG": "daily/day-021-stage-007-hammock-00-detail-3.svg",
+      "sha256": "667b77efb68c481dfee5a08edd5203d4ea5081cccc536d700e6a338681797728",
+      "sourceSHA256": "37012f32df1092fe6663270ed83ce94d524aabe6e5aa2b4ca371c42c2af22d48"
+    },
+    {
+      "level": 22,
+      "stage": 8,
+      "detail": 1,
+      "name": "가지 움막",
+      "assetName": "HomeEvolution022",
+      "sourceSVG": "daily/day-022-stage-008-hut-00-detail-1.svg",
+      "sha256": "87fe5722f684fe89e18b345527904c357e27da617683774b7c7540948a17592f",
+      "sourceSHA256": "aae56dcf3cda093859a9c22f08d2848617a58b036e11111df3cc7b0bbdc171ec"
+    },
+    {
+      "level": 23,
+      "stage": 8,
+      "detail": 2,
+      "name": "가지 움막",
+      "assetName": "HomeEvolution023",
+      "sourceSVG": "daily/day-023-stage-008-hut-00-detail-2.svg",
+      "sha256": "ad4d1aad895405a5fb5c4567c9dd75bf0463fe523e19f25d188ff502a59603f7",
+      "sourceSHA256": "6d5e5d1be49fc1a7ae1658caf4d18f3b61a72096d3b06905e96d9929b437146b"
+    },
+    {
+      "level": 24,
+      "stage": 8,
+      "detail": 3,
+      "name": "가지 움막",
+      "assetName": "HomeEvolution024",
+      "sourceSVG": "daily/day-024-stage-008-hut-00-detail-3.svg",
+      "sha256": "c58389dab315374e9943e2a8123b06cf1cde7fd71885efb05f02d02a73a91de2",
+      "sourceSHA256": "a4a7c39ec6b104917369f567859aa26f20c488a3b347452282bd25c6be723242"
+    },
+    {
+      "level": 25,
+      "stage": 9,
+      "detail": 1,
+      "name": "유르트",
+      "assetName": "HomeEvolution025",
+      "sourceSVG": "daily/day-025-stage-009-yurt-00-detail-1.svg",
+      "sha256": "29b40eaa0668bae6c5dfb226cae412db0351d63acbbcc329825c2a8666cdb630",
+      "sourceSHA256": "eee1d313390a0370f9cac367bf173c07b0e35d023eb7eb3c284ce475547e4384"
+    },
+    {
+      "level": 26,
+      "stage": 9,
+      "detail": 2,
+      "name": "유르트",
+      "assetName": "HomeEvolution026",
+      "sourceSVG": "daily/day-026-stage-009-yurt-00-detail-2.svg",
+      "sha256": "6f2ff7fb21daa30549a0b945b331e79c6f1880d397bb6a823848e72483169be4",
+      "sourceSHA256": "a0d294701b72ade788f8aa91cd173ffae685f2cbd4646b728d90b79a0d7efae0"
+    },
+    {
+      "level": 27,
+      "stage": 9,
+      "detail": 3,
+      "name": "유르트",
+      "assetName": "HomeEvolution027",
+      "sourceSVG": "daily/day-027-stage-009-yurt-00-detail-3.svg",
+      "sha256": "4efb00682225fa813edff73220e816bb81f776cc999a603f372798433e5678ee",
+      "sourceSHA256": "6878266e64fda3cfeca77003ef27482e1b66fe286e8f8030db6c6265daa3b138"
+    },
+    {
+      "level": 28,
+      "stage": 10,
+      "detail": 1,
+      "name": "수상 움막",
+      "assetName": "HomeEvolution028",
+      "sourceSVG": "daily/day-028-stage-010-stilts-00-detail-1.svg",
+      "sha256": "2fd6246b3c87aa90297d26b1a0e679de41266a05f42626939a6fd7616f0a7488",
+      "sourceSHA256": "8acd277381f4a3e93ff877dc8ef6b2acd413a2977633233bd5df83e6a1c8e704"
+    },
+    {
+      "level": 29,
+      "stage": 10,
+      "detail": 2,
+      "name": "수상 움막",
+      "assetName": "HomeEvolution029",
+      "sourceSVG": "daily/day-029-stage-010-stilts-00-detail-2.svg",
+      "sha256": "58415ddcdc92336a3d69fe5f15806b46019aadc38f07c04edae19808f923bdda",
+      "sourceSHA256": "04dbcc91d17b2245d5f7692e44dac190e239aa00c31c6bc7cc0efb97ffe8c82f"
+    },
+    {
+      "level": 30,
+      "stage": 10,
+      "detail": 3,
+      "name": "수상 움막",
+      "assetName": "HomeEvolution030",
+      "sourceSVG": "daily/day-030-stage-010-stilts-00-detail-3.svg",
+      "sha256": "0f56e2b6b843c85099aec2a9ada061dff286e51056fb6dbad4d492d3832189a2",
+      "sourceSHA256": "bbbf5f12c7f8b03c6ab95b35f596577c6ccc6320b080c4d25064c6e964219221"
+    },
+    {
+      "level": 31,
+      "stage": 11,
+      "detail": 1,
+      "name": "차탈회위크 흙집",
+      "assetName": "HomeEvolution031",
+      "sourceSVG": "daily/day-031-stage-011-base-08-detail-1.svg",
+      "sha256": "b6f5ed2363d74a83469c083a6eb843db4ab92445a677a53fc9f3d192815d5743",
+      "sourceSHA256": "c9ea66209dacfb6404f7301832ab592044197bc384f31607da33491a7cd4d7e6"
+    },
+    {
+      "level": 32,
+      "stage": 11,
+      "detail": 2,
+      "name": "차탈회위크 흙집",
+      "assetName": "HomeEvolution032",
+      "sourceSVG": "daily/day-032-stage-011-base-08-detail-2.svg",
+      "sha256": "a0a04d3dc9d5f491b8a5a8040fe190a15c4221b1517a78f9b12d94c6d67d8759",
+      "sourceSHA256": "cf2b6118b49ddd26f728a0237b485ecfeaab440feb38e55a28cd9393b13c22b4"
+    },
+    {
+      "level": 33,
+      "stage": 11,
+      "detail": 3,
+      "name": "차탈회위크 흙집",
+      "assetName": "HomeEvolution033",
+      "sourceSVG": "daily/day-033-stage-011-base-08-detail-3.svg",
+      "sha256": "96b471e96f5c1f253a77d6905fbed6d96b6e2b4da22a5333e3c263c1891b1f65",
+      "sourceSHA256": "0daa4fbfbfab9cfa1459721afd4e20566e843acaa74ec9391ab9d26e5395a58b"
+    },
+    {
+      "level": 34,
+      "stage": 12,
+      "detail": 1,
+      "name": "레펜스키비르 거처",
+      "assetName": "HomeEvolution034",
+      "sourceSVG": "daily/day-034-stage-012-trapezoid-00-detail-1.svg",
+      "sha256": "dde7ec1d382d53068cd19b1e079c693da42e9bc7d9f02f8e502776d38bca7035",
+      "sourceSHA256": "964b3c2d128656a9a8cae60deef41f71616b13a8f6815e91dfa7c4affd26f558"
+    },
+    {
+      "level": 35,
+      "stage": 12,
+      "detail": 2,
+      "name": "레펜스키비르 거처",
+      "assetName": "HomeEvolution035",
+      "sourceSVG": "daily/day-035-stage-012-trapezoid-00-detail-2.svg",
+      "sha256": "40e966b562b598a3e9687d180e762629c59065d190a6f5ffacdd0a83f0ea74e3",
+      "sourceSHA256": "c9960b899e9d493d8dea334d40bc4356406faf169f6c3a4fd8639f039ce10b55"
+    },
+    {
+      "level": 36,
+      "stage": 12,
+      "detail": 3,
+      "name": "레펜스키비르 거처",
+      "assetName": "HomeEvolution036",
+      "sourceSVG": "daily/day-036-stage-012-trapezoid-00-detail-3.svg",
+      "sha256": "be635f6b2c58d8ae1f62d9b801ab4950858be9326e84ea930636bc485cc1540e",
+      "sourceSHA256": "43ed66c6131a14d24a86731a13821cd48191f1d085dcef73785e0347c252d34a"
+    },
+    {
+      "level": 37,
+      "stage": 13,
+      "detail": 1,
+      "name": "신석기 롱하우스",
+      "assetName": "HomeEvolution037",
+      "sourceSVG": "daily/day-037-stage-013-longhouse-00-detail-1.svg",
+      "sha256": "269f73e7072d02b43a77f905e9f22dd903ef074d5ce75fd764a7ca22fbf03304",
+      "sourceSHA256": "941f6bdb3fea70f2fedab74949a251a97ddccf09c097505b1d9ad9dfc75ca8de"
+    },
+    {
+      "level": 38,
+      "stage": 13,
+      "detail": 2,
+      "name": "신석기 롱하우스",
+      "assetName": "HomeEvolution038",
+      "sourceSVG": "daily/day-038-stage-013-longhouse-00-detail-2.svg",
+      "sha256": "2cd0294d510c8a5779d98bf76faa546f34dc6f9d6f5b59c5b77ca870b2fd2397",
+      "sourceSHA256": "d3f080eac347f643b2b5e6c3f7c3a6b50070a3069cf210f8f87722036a7dfad9"
+    },
+    {
+      "level": 39,
+      "stage": 13,
+      "detail": 3,
+      "name": "신석기 롱하우스",
+      "assetName": "HomeEvolution039",
+      "sourceSVG": "daily/day-039-stage-013-longhouse-00-detail-3.svg",
+      "sha256": "b5516a3eaaa92a06fcc4c39426d5106fee6c85ec7c4682419c2438b5c9f30e92",
+      "sourceSHA256": "29761bbeaafde77b9f7ad8a8c413e5e55c58dcdd55ac426e9e3489b4e8eda7bf"
+    },
+    {
+      "level": 40,
+      "stage": 14,
+      "detail": 1,
+      "name": "스카라브레이 돌집",
+      "assetName": "HomeEvolution040",
+      "sourceSVG": "daily/day-040-stage-014-base-09-detail-1.svg",
+      "sha256": "dc4d5f31262c04fb4c48566cabce893d432b68fafb6221f4c43a67e1242c55ec",
+      "sourceSHA256": "b598f48e89fb2ab1c342e412bd86401d95a5d9c3f8511e3d7a6d34ee98c39072"
+    },
+    {
+      "level": 41,
+      "stage": 14,
+      "detail": 2,
+      "name": "스카라브레이 돌집",
+      "assetName": "HomeEvolution041",
+      "sourceSVG": "daily/day-041-stage-014-base-09-detail-2.svg",
+      "sha256": "2c055b943cbc73328926101d349fc73f5f07b494d624103b1f264836a0d77dbc",
+      "sourceSHA256": "29bc6673b8f53db838411f0b9f401a8f19d198fbada7ccb6cd8d6d7493fc81f5"
+    },
+    {
+      "level": 42,
+      "stage": 14,
+      "detail": 3,
+      "name": "스카라브레이 돌집",
+      "assetName": "HomeEvolution042",
+      "sourceSVG": "daily/day-042-stage-014-base-09-detail-3.svg",
+      "sha256": "6788cbb6dd49d904dffcac0ebdff078eb19ce930de999bb07d458b090477d5ac",
+      "sourceSHA256": "ccda9bae8b4d9a9adea18995270fdf45b3f48d9c173290c1836743ee229a2c76"
+    },
+    {
+      "level": 43,
+      "stage": 15,
+      "detail": 1,
+      "name": "스위스 호상 가옥",
+      "assetName": "HomeEvolution043",
+      "sourceSVG": "daily/day-043-stage-015-pilehouse-00-detail-1.svg",
+      "sha256": "c1726fe6cfe465aa7e65b4c64ceed8d9c76acadc7ed98865d5d69a13aacd3f52",
+      "sourceSHA256": "0280c610955415d7b8f174a1004be880df7f7d519c85d038a9c2337ef9ea710e"
+    },
+    {
+      "level": 44,
+      "stage": 15,
+      "detail": 2,
+      "name": "스위스 호상 가옥",
+      "assetName": "HomeEvolution044",
+      "sourceSVG": "daily/day-044-stage-015-pilehouse-00-detail-2.svg",
+      "sha256": "99f18f80d0371d1436ef9cf152c7df421d58acf2d6a11907f5802d7e4edcb8b2",
+      "sourceSHA256": "ed38f82f5e86f7fab9ef37321d009603a0b740f06c7dcd730e28bc867f21fb60"
+    },
+    {
+      "level": 45,
+      "stage": 15,
+      "detail": 3,
+      "name": "스위스 호상 가옥",
+      "assetName": "HomeEvolution045",
+      "sourceSVG": "daily/day-045-stage-015-pilehouse-00-detail-3.svg",
+      "sha256": "5e108501e7863fc1d7a08f4d8bad3928f89af3d57f3e4f270bbe83703b5564eb",
+      "sourceSHA256": "9b6378d93de0c28580f07217d15146d690ec38e4f6184598e699e3e825dbb91d"
+    },
+    {
+      "level": 46,
+      "stage": 16,
+      "detail": 1,
+      "name": "이집트 피라미드",
+      "assetName": "HomeEvolution046",
+      "sourceSVG": "daily/day-046-stage-016-base-10-detail-1.svg",
+      "sha256": "70799386f0f98c465253d69960b63b17eeb4fce4bab6945204f161337a93d9f1",
+      "sourceSHA256": "3fbcf8222fc124c6c86105478c32f2bee841b935a012a87615d5766e35ca162b"
+    },
+    {
+      "level": 47,
+      "stage": 16,
+      "detail": 2,
+      "name": "이집트 피라미드",
+      "assetName": "HomeEvolution047",
+      "sourceSVG": "daily/day-047-stage-016-base-10-detail-2.svg",
+      "sha256": "7eb64b0b550528061a4f2ed57539cb56d19dd21852e85e83f78c7ffb20c17080",
+      "sourceSHA256": "0dd2a217059d1ca3bbbe098831236e98af2ef02b2a48cffc6a9c45bc370d7043"
+    },
+    {
+      "level": 48,
+      "stage": 16,
+      "detail": 3,
+      "name": "이집트 피라미드",
+      "assetName": "HomeEvolution048",
+      "sourceSVG": "daily/day-048-stage-016-base-10-detail-3.svg",
+      "sha256": "76ddb8be0983d6d1b2cbfe8aa532f91ede0a600a43b2b0f3a7db668648ef7fe8",
+      "sourceSHA256": "383632ed218a6294f63553e6f971ef44fad4bd577f46a6ad70bceb528687c0a7"
+    },
+    {
+      "level": 49,
+      "stage": 17,
+      "detail": 1,
+      "name": "인더스 벽돌 거처",
+      "assetName": "HomeEvolution049",
+      "sourceSVG": "daily/day-049-stage-017-indus-00-detail-1.svg",
+      "sha256": "5a01d7a1bf645539d7cfbabb507f7bde0a5c7bf136e8d36f03631ae4c90f0a14",
+      "sourceSHA256": "f42aee45f7f604667387d509bd72eae31523f4e802523c9695ad045eafa50e7b"
+    },
+    {
+      "level": 50,
+      "stage": 17,
+      "detail": 2,
+      "name": "인더스 벽돌 거처",
+      "assetName": "HomeEvolution050",
+      "sourceSVG": "daily/day-050-stage-017-indus-00-detail-2.svg",
+      "sha256": "d4a51ad92589c0602148b4dadabb74170c4fb9a058083967a36129706aba9cf5",
+      "sourceSHA256": "d0c91864165f3732f15e85a0d430a608ebb6b8ccc9c55128899b5ef872dc31a3"
+    },
+    {
+      "level": 51,
+      "stage": 17,
+      "detail": 3,
+      "name": "인더스 벽돌 거처",
+      "assetName": "HomeEvolution051",
+      "sourceSVG": "daily/day-051-stage-017-indus-00-detail-3.svg",
+      "sha256": "f01ed053293dc2e13bdf865b83f0c825a5933aae0b8f7ea034ea27724e41b4ce",
+      "sourceSHA256": "0b77bf34f67dba21315b2bbda3c5143025ce0ac29c71ac75131ec80b0e238b8e"
+    },
+    {
+      "level": 52,
+      "stage": 18,
+      "detail": 1,
+      "name": "우르 지구라트",
+      "assetName": "HomeEvolution052",
+      "sourceSVG": "daily/day-052-stage-018-base-11-detail-1.svg",
+      "sha256": "6a46daec3804b0089156c5ce86ccb2c9cdc0e82407a4aaadbdf3544b2d7201cf",
+      "sourceSHA256": "a590a9823fdd9fda0e2cbbe02be54c395770ae607dea56038fe8812746630cbf"
+    },
+    {
+      "level": 53,
+      "stage": 18,
+      "detail": 2,
+      "name": "우르 지구라트",
+      "assetName": "HomeEvolution053",
+      "sourceSVG": "daily/day-053-stage-018-base-11-detail-2.svg",
+      "sha256": "4ad1efceda909459c2e3df9600240ccbdc73ef320a31c865a91f03910633230b",
+      "sourceSHA256": "d2dcb7c94e4fdbf1d5dd03fa4df57aea8155d5589cf98aa44710586eb9143286"
+    },
+    {
+      "level": 54,
+      "stage": 18,
+      "detail": 3,
+      "name": "우르 지구라트",
+      "assetName": "HomeEvolution054",
+      "sourceSVG": "daily/day-054-stage-018-base-11-detail-3.svg",
+      "sha256": "8a489c73fde9c77f0626d7d175e12443e231521ed867566166e3056e0c1f72f1",
+      "sourceSHA256": "7e71d2648b0d7881fcc1f3431c5d40bfc77838714ba24d1cb3c5179c6a39d03a"
+    },
+    {
+      "level": 55,
+      "stage": 19,
+      "detail": 1,
+      "name": "미노스 궁전",
+      "assetName": "HomeEvolution055",
+      "sourceSVG": "daily/day-055-stage-019-base-12-detail-1.svg",
+      "sha256": "9f69ab7cd463595fe6711b23657c92532e314851a2c5f10c65c715082ec512e7",
+      "sourceSHA256": "0b2148870a06290fcb7a61901ba5de80e5a4f20ae2d9875b89cc35e21f1b653e"
+    },
+    {
+      "level": 56,
+      "stage": 19,
+      "detail": 2,
+      "name": "미노스 궁전",
+      "assetName": "HomeEvolution056",
+      "sourceSVG": "daily/day-056-stage-019-base-12-detail-2.svg",
+      "sha256": "ce292239deeb3614cffad7d874595b10b07b5e4a08ac44fd1186596737a78af9",
+      "sourceSHA256": "dcea45931ba6f13d6de39f112d6a0190ec8d8f615728483e9411cfcfe127ed0f"
+    },
+    {
+      "level": 57,
+      "stage": 19,
+      "detail": 3,
+      "name": "미노스 궁전",
+      "assetName": "HomeEvolution057",
+      "sourceSVG": "daily/day-057-stage-019-base-12-detail-3.svg",
+      "sha256": "a4e361efda9a8413cd43562702c62d9218111047f8885224c0d0a3be5157acd8",
+      "sourceSHA256": "d9825d651a5d6024df7e08fc8e3537b50430725dd487ffcd4722bb8e45d69632"
+    },
+    {
+      "level": 58,
+      "stage": 20,
+      "detail": 1,
+      "name": "카르나크 열주전",
+      "assetName": "HomeEvolution058",
+      "sourceSVG": "daily/day-058-stage-020-pylon-00-detail-1.svg",
+      "sha256": "0cd00b8486856434b5de3656887f15f0a419a0a90b05164d481ee135c70ff4d1",
+      "sourceSHA256": "cd453f9db14f38fe64d41e1e5a330872c2cd85981664974fea95cd66209fd456"
+    },
+    {
+      "level": 59,
+      "stage": 20,
+      "detail": 2,
+      "name": "카르나크 열주전",
+      "assetName": "HomeEvolution059",
+      "sourceSVG": "daily/day-059-stage-020-pylon-00-detail-2.svg",
+      "sha256": "da85dc0a023c01ed7cc0dc004e47898575e292c5f38658baf2b6aa222b3ce2df",
+      "sourceSHA256": "15f1e3ca70873f23a8ecfaff3829324f8da78f92e36193cb6abf72305cc26d3b"
+    },
+    {
+      "level": 60,
+      "stage": 20,
+      "detail": 3,
+      "name": "카르나크 열주전",
+      "assetName": "HomeEvolution060",
+      "sourceSVG": "daily/day-060-stage-020-pylon-00-detail-3.svg",
+      "sha256": "6649d7afc488dc8b1ddb237d0b3d4cee9cf696df208e4c01da290424e2a75130",
+      "sourceSHA256": "28f110027e2f09d98ca10d7ed63b6d7442b02a9540a54d837d3b7ffe253bf4d0"
+    },
+    {
+      "level": 61,
+      "stage": 21,
+      "detail": 1,
+      "name": "히타이트 성문",
+      "assetName": "HomeEvolution061",
+      "sourceSVG": "daily/day-061-stage-021-liongate-00-detail-1.svg",
+      "sha256": "307bbfb33e766b55bd82039763d407105bc856cee5db8bc2a831ec98e9891e59",
+      "sourceSHA256": "30ed3dd001f9c3f79f161bc4206dc3a5c68350d3576381fccae10d1efa6bf346"
+    },
+    {
+      "level": 62,
+      "stage": 21,
+      "detail": 2,
+      "name": "히타이트 성문",
+      "assetName": "HomeEvolution062",
+      "sourceSVG": "daily/day-062-stage-021-liongate-00-detail-2.svg",
+      "sha256": "6380f111660ca2f8746c7f6531937bdfa8ab3cde73e852e986e654218997fa26",
+      "sourceSHA256": "8a9e4f4242681c9a5cba039b9f3ca5554e690b26e90d628663a6dff03a3b55dc"
+    },
+    {
+      "level": 63,
+      "stage": 21,
+      "detail": 3,
+      "name": "히타이트 성문",
+      "assetName": "HomeEvolution063",
+      "sourceSVG": "daily/day-063-stage-021-liongate-00-detail-3.svg",
+      "sha256": "af0615caa59942d3182cbeb4c6d681246a4e82108aeb10c36b1fd01e102a501f",
+      "sourceSHA256": "9642183f4fc19152e56e31ada90d3ccbaaa7a855c57cc5c9561f39a594fe5d5e"
+    },
+    {
+      "level": 64,
+      "stage": 22,
+      "detail": 1,
+      "name": "아시리아 궁전",
+      "assetName": "HomeEvolution064",
+      "sourceSVG": "daily/day-064-stage-022-assyrian-00-detail-1.svg",
+      "sha256": "6cd7dec91ed4d8f946dc1939899999ac94884c0f1f6bc417c393765d38234e09",
+      "sourceSHA256": "44361d4a8a8c37a511f1ca9ba12060079c4f3cebee6e58843b940d32a77ffa34"
+    },
+    {
+      "level": 65,
+      "stage": 22,
+      "detail": 2,
+      "name": "아시리아 궁전",
+      "assetName": "HomeEvolution065",
+      "sourceSVG": "daily/day-065-stage-022-assyrian-00-detail-2.svg",
+      "sha256": "2bc0ed29664bea1e5004b232d46a1b26fc24726b4f916eeaf805ed0a1d78370b",
+      "sourceSHA256": "64e3c35cfdbe9afa941902d23be034faea7818a1c5bc26e930ac17788f9fbffd"
+    },
+    {
+      "level": 66,
+      "stage": 22,
+      "detail": 3,
+      "name": "아시리아 궁전",
+      "assetName": "HomeEvolution066",
+      "sourceSVG": "daily/day-066-stage-022-assyrian-00-detail-3.svg",
+      "sha256": "9815203e1b2cfbb8908760a00281fd55ebcc4cad8ae811add35c8a50cd74315f",
+      "sourceSHA256": "d6abc95f79ae26cea472f5f280bf6baf9bc4cd072226a41736722a8285affab1"
+    },
+    {
+      "level": 67,
+      "stage": 23,
+      "detail": 1,
+      "name": "페르세폴리스",
+      "assetName": "HomeEvolution067",
+      "sourceSVG": "daily/day-067-stage-023-persian-00-detail-1.svg",
+      "sha256": "2b96eef98572f235c9a0e14d0cde1a9640fa412a03e6e164c7f33ef947bad149",
+      "sourceSHA256": "5a6150fa3e7496489db892fa62af3a7ff018d0b6ba5529aa6886a92c1937a74f"
+    },
+    {
+      "level": 68,
+      "stage": 23,
+      "detail": 2,
+      "name": "페르세폴리스",
+      "assetName": "HomeEvolution068",
+      "sourceSVG": "daily/day-068-stage-023-persian-00-detail-2.svg",
+      "sha256": "d92d9d29f43a80ef32453bd8fb297295a5c90fb66dc6477cb30f6ea616315b12",
+      "sourceSHA256": "54632c037653a4eb8711c821fe3129ba2f56e92b364f078dd67b2a34db67ed5c"
+    },
+    {
+      "level": 69,
+      "stage": 23,
+      "detail": 3,
+      "name": "페르세폴리스",
+      "assetName": "HomeEvolution069",
+      "sourceSVG": "daily/day-069-stage-023-persian-00-detail-3.svg",
+      "sha256": "987d0080b4757ea14bcd4092ee929cd875d36ff06f083ef039af9d6fc1e6aef6",
+      "sourceSHA256": "d28e0c35f7a625f683cec81687aea1c1b72a6ea2a945c4241b83e6e8fb0d4bf4"
+    },
+    {
+      "level": 70,
+      "stage": 24,
+      "detail": 1,
+      "name": "그리스 신전",
+      "assetName": "HomeEvolution070",
+      "sourceSVG": "daily/day-070-stage-024-base-13-detail-1.svg",
+      "sha256": "7740c70e1875842ddc320c7b94724825ff4751b6c5a92b57a330fb29f2b2cf7a",
+      "sourceSHA256": "415d1313809bf483bfebe5722c6e89fe61b57b68bea5d86f7bf05c9026fa096f"
+    },
+    {
+      "level": 71,
+      "stage": 24,
+      "detail": 2,
+      "name": "그리스 신전",
+      "assetName": "HomeEvolution071",
+      "sourceSVG": "daily/day-071-stage-024-base-13-detail-2.svg",
+      "sha256": "5571056cb9bbddd008fe5b598441a0a26b77c309fe34de83040eb15d99a8aa79",
+      "sourceSHA256": "10c46b2ee1ec36a6b2fafd18b4c91732467160f5fc8a191b65130a67ee28cbf7"
+    },
+    {
+      "level": 72,
+      "stage": 24,
+      "detail": 3,
+      "name": "그리스 신전",
+      "assetName": "HomeEvolution072",
+      "sourceSVG": "daily/day-072-stage-024-base-13-detail-3.svg",
+      "sha256": "1734ae3b152583a46bbb75df8ce718d2ddf98b77d2fb36cb8c267e8418f06e10",
+      "sourceSHA256": "70419dafaeba8957266b6b394b6b0d71dc5c7c1acbaf978bbc2278da622b527a"
+    },
+    {
+      "level": 73,
+      "stage": 25,
+      "detail": 1,
+      "name": "야흐찰 빙고",
+      "assetName": "HomeEvolution073",
+      "sourceSVG": "daily/day-073-stage-025-icehouse-00-detail-1.svg",
+      "sha256": "1a6ec740ed1219f48a54512138945e693f39a9132fe0696cbd5aa7787302b64f",
+      "sourceSHA256": "222985e4616fb7282c5db86b3a7e86d6d014ddb9a9f2d57f829a249d8cdf4827"
+    },
+    {
+      "level": 74,
+      "stage": 25,
+      "detail": 2,
+      "name": "야흐찰 빙고",
+      "assetName": "HomeEvolution074",
+      "sourceSVG": "daily/day-074-stage-025-icehouse-00-detail-2.svg",
+      "sha256": "65e2b8f64f135dde7dc4226842d93cae928d8ebb46f8fbd01c3acb266bc8d518",
+      "sourceSHA256": "545980497bbf075373204454d36ab91a5a3200af17e303ad54531089e36865b4"
+    },
+    {
+      "level": 75,
+      "stage": 25,
+      "detail": 3,
+      "name": "야흐찰 빙고",
+      "assetName": "HomeEvolution075",
+      "sourceSVG": "daily/day-075-stage-025-icehouse-00-detail-3.svg",
+      "sha256": "b8e42c600594082459489820dcb0c582a5cd39841c34622679f9eb743e15b3e8",
+      "sourceSHA256": "ba4e6afd6c2fff0461568dccb3ab7be2bc84946e1436a5d05f46d5c2fe36ba1a"
+    },
+    {
+      "level": 76,
+      "stage": 26,
+      "detail": 1,
+      "name": "그리스 원형극장",
+      "assetName": "HomeEvolution076",
+      "sourceSVG": "daily/day-076-stage-026-theatre-00-detail-1.svg",
+      "sha256": "38db54354d6cb54ef6e5a73ca90bf5674d772c2e8fd58cae583f054918e43e27",
+      "sourceSHA256": "af205fb9f2e76325d36f2b0d22434953e70827e707755274093b6046989cb55f"
+    },
+    {
+      "level": 77,
+      "stage": 26,
+      "detail": 2,
+      "name": "그리스 원형극장",
+      "assetName": "HomeEvolution077",
+      "sourceSVG": "daily/day-077-stage-026-theatre-00-detail-2.svg",
+      "sha256": "6cbab5b6f3f55b33389670e8b38d8331b29513cfc19fe492865a1e588e951ed0",
+      "sourceSHA256": "e3cfcbd62fa5441184c099e42c98eb7ae7db449b0ee1e90c8c2ed1e4a35250c3"
+    },
+    {
+      "level": 78,
+      "stage": 26,
+      "detail": 3,
+      "name": "그리스 원형극장",
+      "assetName": "HomeEvolution078",
+      "sourceSVG": "daily/day-078-stage-026-theatre-00-detail-3.svg",
+      "sha256": "115c3873ee06d8aba87760c8938fde846de4b0d50205ba6b072e10fff7c0b72f",
+      "sourceSHA256": "fb4a0c146aa312775229bcbd4ce579756222e43284d35ac2ba2b23471d1e86f9"
+    },
+    {
+      "level": 79,
+      "stage": 27,
+      "detail": 1,
+      "name": "산치 스투파",
+      "assetName": "HomeEvolution079",
+      "sourceSVG": "daily/day-079-stage-027-stupa-00-detail-1.svg",
+      "sha256": "da4afd232a5dab7f038fea10bddfee92d457f5024b5e2d71ffdcbc4d6cacd31c",
+      "sourceSHA256": "2b4e52c332907ac23ac1270101e1fc2282e589206c12278b4ad172ffe5c307bf"
+    },
+    {
+      "level": 80,
+      "stage": 27,
+      "detail": 2,
+      "name": "산치 스투파",
+      "assetName": "HomeEvolution080",
+      "sourceSVG": "daily/day-080-stage-027-stupa-00-detail-2.svg",
+      "sha256": "afd0e0999ba3f112b915dc66c7b751dba94604d018eb8e04edd214baf265b471",
+      "sourceSHA256": "c30603da071a841db42e4e6f342246f895d14070190c162099b0733fe4fdfbb3"
+    },
+    {
+      "level": 81,
+      "stage": 27,
+      "detail": 3,
+      "name": "산치 스투파",
+      "assetName": "HomeEvolution081",
+      "sourceSVG": "daily/day-081-stage-027-stupa-00-detail-3.svg",
+      "sha256": "e8c7c5805db914410ab99b2d16d6a0f64c72cb3f918fad4f86dc99adaf48949c",
+      "sourceSHA256": "12d7ca3de39ee73aa5ab0364b5c8bbf9adec84fb1963fedf9a969eb51f888050"
+    },
+    {
+      "level": 82,
+      "stage": 28,
+      "detail": 1,
+      "name": "페트라 암벽 신전",
+      "assetName": "HomeEvolution082",
+      "sourceSVG": "daily/day-082-stage-028-petra-00-detail-1.svg",
+      "sha256": "1bc3b0ca565949102b20bf08b20de9e12f0e9e860a49d0b35b6be2c9a62daf59",
+      "sourceSHA256": "f62a51e9a2f27897dd56125b98b0aab9e9504b2a01a02edb967fa1683ebb5d30"
+    },
+    {
+      "level": 83,
+      "stage": 28,
+      "detail": 2,
+      "name": "페트라 암벽 신전",
+      "assetName": "HomeEvolution083",
+      "sourceSVG": "daily/day-083-stage-028-petra-00-detail-2.svg",
+      "sha256": "24af588e76eab8024d90d249f43cb07e0ac73a778cff4c1eb9c8ae3c68250645",
+      "sourceSHA256": "1a614c0ac6ba92e3af79c1c4710ad447e396146c41155497bddafbaf5313922a"
+    },
+    {
+      "level": 84,
+      "stage": 28,
+      "detail": 3,
+      "name": "페트라 암벽 신전",
+      "assetName": "HomeEvolution084",
+      "sourceSVG": "daily/day-084-stage-028-petra-00-detail-3.svg",
+      "sha256": "9cefa7589bff112b90f994e70e43289fa5a327888452fabd4d4eb87301b67b11",
+      "sourceSHA256": "a1131f07e683df004851929e5b1005a64efd8990b83a679dda0e659fcd1c3059"
+    },
+    {
+      "level": 85,
+      "stage": 29,
+      "detail": 1,
+      "name": "콜로세움",
+      "assetName": "HomeEvolution085",
+      "sourceSVG": "daily/day-085-stage-029-colosseum-00-detail-1.svg",
+      "sha256": "b04e7b9a79342c759fc5ec4bdfe9a1b1a85131cd36d6d5ae63a9046cf434787c",
+      "sourceSHA256": "84af58ea0a5509062bf656c33ae3261af074a8379f721a3ca24525a2f957c65a"
+    },
+    {
+      "level": 86,
+      "stage": 29,
+      "detail": 2,
+      "name": "콜로세움",
+      "assetName": "HomeEvolution086",
+      "sourceSVG": "daily/day-086-stage-029-colosseum-00-detail-2.svg",
+      "sha256": "a03935e72aabb8fd823c57fd4b6e5890fafd01ca8997e47605331185685fdeb1",
+      "sourceSHA256": "8a91115f55800b113a96f4e49df39ed58dc3237d458bec861d2d84ff3591ae0b"
+    },
+    {
+      "level": 87,
+      "stage": 29,
+      "detail": 3,
+      "name": "콜로세움",
+      "assetName": "HomeEvolution087",
+      "sourceSVG": "daily/day-087-stage-029-colosseum-00-detail-3.svg",
+      "sha256": "302930f678f3faf04bbbf3b0c8cf82626f783856a5bbe919edff5c5618ef838c",
+      "sourceSHA256": "c2674ea3a1df0216de8e170e7e8c8cd0b1aaf215e6d6b4f150b884887e659532"
+    },
+    {
+      "level": 88,
+      "stage": 30,
+      "detail": 1,
+      "name": "로마 판테온",
+      "assetName": "HomeEvolution088",
+      "sourceSVG": "daily/day-088-stage-030-base-14-detail-1.svg",
+      "sha256": "b36b8bd0e1bfe684a4c2451d76d192baca4adbba6c5f2ff514850ea5d798bb60",
+      "sourceSHA256": "7a2df39ff5d57922e80d150c452ebc5c82710656343d4e4d67aa9ab3660c63e7"
+    },
+    {
+      "level": 89,
+      "stage": 30,
+      "detail": 2,
+      "name": "로마 판테온",
+      "assetName": "HomeEvolution089",
+      "sourceSVG": "daily/day-089-stage-030-base-14-detail-2.svg",
+      "sha256": "571fa952334f63a9a59f426e00b93028dd8bb45dcf9a71d278ac3b6f5c686b4f",
+      "sourceSHA256": "4e7ad02511bf708a008c164e61ddb66e377ea45d025026212a448a370cb4c5fc"
+    },
+    {
+      "level": 90,
+      "stage": 30,
+      "detail": 3,
+      "name": "로마 판테온",
+      "assetName": "HomeEvolution090",
+      "sourceSVG": "daily/day-090-stage-030-base-14-detail-3.svg",
+      "sha256": "67c8d3f7202344ea12c77c47e0e4ea51953f9d0920dcf00340d23ebc61923dee",
+      "sourceSHA256": "b6fb4ec5dd988434e28c5fd05ce14be1c6be7e5c754a0c3af14158b4646032f9"
+    },
+    {
+      "level": 91,
+      "stage": 31,
+      "detail": 1,
+      "name": "푸에블로 구덩이집",
+      "assetName": "HomeEvolution091",
+      "sourceSVG": "daily/day-091-stage-031-pithouse-00-detail-1.svg",
+      "sha256": "571cb199f78ece6cc5cc5fd5a88bf5bceb987cc009419b0b76ed8eb2bab03037",
+      "sourceSHA256": "afdd64e643c763468b69f6405b44d26d5d44d2cacda38ce363c0e67aec7b2d5e"
+    },
+    {
+      "level": 92,
+      "stage": 31,
+      "detail": 2,
+      "name": "푸에블로 구덩이집",
+      "assetName": "HomeEvolution092",
+      "sourceSVG": "daily/day-092-stage-031-pithouse-00-detail-2.svg",
+      "sha256": "b4d45abc19231b5cb0ef783d4491e1aa791250503dd70ad088e6fc283d19de8b",
+      "sourceSHA256": "720368f6270265e4138b86129b406e86ff98561201afc216519cb6851e50ffbb"
+    },
+    {
+      "level": 93,
+      "stage": 31,
+      "detail": 3,
+      "name": "푸에블로 구덩이집",
+      "assetName": "HomeEvolution093",
+      "sourceSVG": "daily/day-093-stage-031-pithouse-00-detail-3.svg",
+      "sha256": "a238201b8fad1ae836b3e590644dec61206df9f90bee24c05710995fc7390b3b",
+      "sourceSHA256": "2557b8dec57cf9526436f30668dc6dea4e2502ea50796099e04240d9e7f5bf4b"
+    },
+    {
+      "level": 94,
+      "stage": 32,
+      "detail": 1,
+      "name": "비잔틴 돔",
+      "assetName": "HomeEvolution094",
+      "sourceSVG": "daily/day-094-stage-032-base-15-detail-1.svg",
+      "sha256": "2250d19d14c30c38b7366016dd177480f6ff54d880a869234b95c81ea382459b",
+      "sourceSHA256": "6cbf93d3a274a59af210da5cb83cb633a6dcbe85ba8c6254345a99f7093f7c11"
+    },
+    {
+      "level": 95,
+      "stage": 32,
+      "detail": 2,
+      "name": "비잔틴 돔",
+      "assetName": "HomeEvolution095",
+      "sourceSVG": "daily/day-095-stage-032-base-15-detail-2.svg",
+      "sha256": "34ea90418473c5a94af46150c6f22d2fe69e123beca514f8678895ab15629e92",
+      "sourceSHA256": "e201d56d21e4892764446bc26b20449d4dfc3535e886ff1007ba40e92460d0e6"
+    },
+    {
+      "level": 96,
+      "stage": 32,
+      "detail": 3,
+      "name": "비잔틴 돔",
+      "assetName": "HomeEvolution096",
+      "sourceSVG": "daily/day-096-stage-032-base-15-detail-3.svg",
+      "sha256": "6998b1365bab229d07e22312413f4eb9f27a6bb527dbabcfe70c2854f77767e9",
+      "sourceSHA256": "76997ed1ed7715bfea7883911707809cb0e0b82b3bda31921d502489f51c1d3d"
+    },
+    {
+      "level": 97,
+      "stage": 33,
+      "detail": 1,
+      "name": "호류지 목탑",
+      "assetName": "HomeEvolution097",
+      "sourceSVG": "daily/day-097-stage-033-base-16-detail-1.svg",
+      "sha256": "f740e1607772dcc432d9d3046081da0b099d1fc1be214f57e1b52d2dec473fe9",
+      "sourceSHA256": "f5442c227a1289d7f96b71d227d014bad77c4bdeb3e356d55bdd29182cc66dab"
+    },
+    {
+      "level": 98,
+      "stage": 33,
+      "detail": 2,
+      "name": "호류지 목탑",
+      "assetName": "HomeEvolution098",
+      "sourceSVG": "daily/day-098-stage-033-base-16-detail-2.svg",
+      "sha256": "efe5aff52ef8817cc5037d1a8e0ed0bc6b8c095ab13e5459267122ce6eb8ac9f",
+      "sourceSHA256": "0f0623f4860c4af3ad58e4abfd45a4764350c0240786d4ca39bf867ab8f2eaa2"
+    },
+    {
+      "level": 99,
+      "stage": 33,
+      "detail": 3,
+      "name": "호류지 목탑",
+      "assetName": "HomeEvolution099",
+      "sourceSVG": "daily/day-099-stage-033-base-16-detail-3.svg",
+      "sha256": "2299f2ebb490c97ef7e91edfead2a65f063eef68f43e655e2212aded85998938",
+      "sourceSHA256": "d80901ec8fe8d73af3b708e55ea8350b18ac3a83edc4cb158fd958550cb19fcd"
+    },
+    {
+      "level": 100,
+      "stage": 34,
+      "detail": 1,
+      "name": "마야 계단 신전",
+      "assetName": "HomeEvolution100",
+      "sourceSVG": "daily/day-100-stage-034-base-17-detail-1.svg",
+      "sha256": "a8ac78d5da840f01e423127bcb95e5d11be23d7f311d9c863ed0f67b0b922e2f",
+      "sourceSHA256": "254922369d1d2808061c617d814cf065b21f5b36e9d7b96ef7c33feae7099d94"
+    },
+    {
+      "level": 101,
+      "stage": 34,
+      "detail": 2,
+      "name": "마야 계단 신전",
+      "assetName": "HomeEvolution101",
+      "sourceSVG": "daily/day-101-stage-034-base-17-detail-2.svg",
+      "sha256": "cb1dcf44b62e33e7eea58cfd1c8ff03081a96d596845970c44fa98e9f10e548a",
+      "sourceSHA256": "d7cf5adfba1b17ca4eb9b8038db02e02064e8210b8f29b20ca5fac2d0102189a"
+    },
+    {
+      "level": 102,
+      "stage": 34,
+      "detail": 3,
+      "name": "마야 계단 신전",
+      "assetName": "HomeEvolution102",
+      "sourceSVG": "daily/day-102-stage-034-base-17-detail-3.svg",
+      "sha256": "99c4c13ae9580e163e0b0d7f53971818a2b9005f6c652ebf0f6a48b97a57507b",
+      "sourceSHA256": "792f31b77c5a599c888f39421774704fd289d0fe460fccecabb0a1a9f82aadfe"
+    },
+    {
+      "level": 103,
+      "stage": 35,
+      "detail": 1,
+      "name": "이슬람 아치 궁전",
+      "assetName": "HomeEvolution103",
+      "sourceSVG": "daily/day-103-stage-035-base-18-detail-1.svg",
+      "sha256": "1ab9bd5726bf9a7c52432a3458f2452affb5f71c6eb0f87a0c532bb4896bc0b7",
+      "sourceSHA256": "93c1382d4b2a4367d56a3a8f6d05a11b666f4cbf3d18570a9584bb4b22b36db6"
+    },
+    {
+      "level": 104,
+      "stage": 35,
+      "detail": 2,
+      "name": "이슬람 아치 궁전",
+      "assetName": "HomeEvolution104",
+      "sourceSVG": "daily/day-104-stage-035-base-18-detail-2.svg",
+      "sha256": "1cf74d80b50467ad2acd7176cc92e49333b62c545472f2c91a4725f621f2feca",
+      "sourceSHA256": "687075820e6beee5a523fbc81299528a2f6d6093ff2d3e6755e610b81f1c6556"
+    },
+    {
+      "level": 105,
+      "stage": 35,
+      "detail": 3,
+      "name": "이슬람 아치 궁전",
+      "assetName": "HomeEvolution105",
+      "sourceSVG": "daily/day-105-stage-035-base-18-detail-3.svg",
+      "sha256": "b41efa5e894b9274efb35c3faf1631155b1440c19102ad43b95bfcaa3dec4787",
+      "sourceSHA256": "560f5ab6d055a11ad040c1a51ef8a884d1518471d2becc3b3ede540ca361963a"
+    },
+    {
+      "level": 106,
+      "stage": 36,
+      "detail": 1,
+      "name": "보로부두르",
+      "assetName": "HomeEvolution106",
+      "sourceSVG": "daily/day-106-stage-036-borobudur-00-detail-1.svg",
+      "sha256": "31a2653c0a09f2fc1a52445f36af41d9c972d67797c32baf5874402cf09a022f",
+      "sourceSHA256": "60100b8cda3390503178790d0f7c77be0f9efa7b372509370ba2fcca30f2f95f"
+    },
+    {
+      "level": 107,
+      "stage": 36,
+      "detail": 2,
+      "name": "보로부두르",
+      "assetName": "HomeEvolution107",
+      "sourceSVG": "daily/day-107-stage-036-borobudur-00-detail-2.svg",
+      "sha256": "d2ef3208d0c94d2e95b08f6aae40e1ec313d7082e1f2ec9752abae9d21a2d51e",
+      "sourceSHA256": "39643e6d05000863cddd457d1f00ad499117acf13f2383e934a0bcd4262fe3d7"
+    },
+    {
+      "level": 108,
+      "stage": 36,
+      "detail": 3,
+      "name": "보로부두르",
+      "assetName": "HomeEvolution108",
+      "sourceSVG": "daily/day-108-stage-036-borobudur-00-detail-3.svg",
+      "sha256": "db0393cb3986cab3d5c552f5838962833f9171a495c139f577e1b559d7ade34a",
+      "sourceSHA256": "eb2a8619659140a029a713c641a1a065437f6f5a0ae0084b8b39523cd061e078"
+    },
+    {
+      "level": 109,
+      "stage": 37,
+      "detail": 1,
+      "name": "수상 장옥",
+      "assetName": "HomeEvolution109",
+      "sourceSVG": "daily/day-109-stage-037-longstilts-00-detail-1.svg",
+      "sha256": "4cdd975fc9ffbd31d6a8aebd74f4e59b7ac6d4b82e1b0470265e93fa184a2a7d",
+      "sourceSHA256": "9d92d5ab5f6102576e29d006d9945eed8019ac2561fcac759c7b1af93a3e26f3"
+    },
+    {
+      "level": 110,
+      "stage": 37,
+      "detail": 2,
+      "name": "수상 장옥",
+      "assetName": "HomeEvolution110",
+      "sourceSVG": "daily/day-110-stage-037-longstilts-00-detail-2.svg",
+      "sha256": "90e357ed6349544ce16f446d3880c459838aeb3cb9bea7b23ab124db8ca6026f",
+      "sourceSHA256": "77e04bc24fc3d1fbf98d227169b4056123fde3eee5fe5c3b3bc7a30ad9d247e9"
+    },
+    {
+      "level": 111,
+      "stage": 37,
+      "detail": 3,
+      "name": "수상 장옥",
+      "assetName": "HomeEvolution111",
+      "sourceSVG": "daily/day-111-stage-037-longstilts-00-detail-3.svg",
+      "sha256": "c1839f9f9553e571261bf2983725860bd7e6b2f2070d379f90277e931c104199",
+      "sourceSHA256": "92b36ca020849e312363c56ae0e4bd225f0b36d41f19f00b7e990ac5195620dc"
+    },
+    {
+      "level": 112,
+      "stage": 38,
+      "detail": 1,
+      "name": "바이킹 롱하우스",
+      "assetName": "HomeEvolution112",
+      "sourceSVG": "daily/day-112-stage-038-base-19-detail-1.svg",
+      "sha256": "48421aa5840a22ee538c69ebf105a2380a8fedb9bebb8c82e504f44ee7d1bb1d",
+      "sourceSHA256": "a994f0e506a8dfbd25e76f0a6b310ed0eb193c76870be28de3ad0a3c3fc51d06"
+    },
+    {
+      "level": 113,
+      "stage": 38,
+      "detail": 2,
+      "name": "바이킹 롱하우스",
+      "assetName": "HomeEvolution113",
+      "sourceSVG": "daily/day-113-stage-038-base-19-detail-2.svg",
+      "sha256": "3008a09f0c45c9102bb2d78de8bdc7029100a2ffeb3521a2389a4163cf3cd098",
+      "sourceSHA256": "edfbbacd1b7838589eca4a3e794e9f7ba94168b83a926c656f7122903aba065c"
+    },
+    {
+      "level": 114,
+      "stage": 38,
+      "detail": 3,
+      "name": "바이킹 롱하우스",
+      "assetName": "HomeEvolution114",
+      "sourceSVG": "daily/day-114-stage-038-base-19-detail-3.svg",
+      "sha256": "3eff4d8be660cc1d03fdf2270482d04f61f9cd7ea7770e68a25a754c22527dab",
+      "sourceSHA256": "124bcd15d982ee66d50283684c1b02841b176e729862c8c12a708fa1864c84d4"
+    },
+    {
+      "level": 115,
+      "stage": 39,
+      "detail": 1,
+      "name": "프람바난",
+      "assetName": "HomeEvolution115",
+      "sourceSVG": "daily/day-115-stage-039-prambanan-00-detail-1.svg",
+      "sha256": "0f91da71ad99e6919ab78ec79f68bee525c4baca47c0b4565d45040862a5b9d2",
+      "sourceSHA256": "feaeaa2bb2ba7dc4de2f72ed8653f014ebf9c22f0a1be4955e2ca8558a4e322b"
+    },
+    {
+      "level": 116,
+      "stage": 39,
+      "detail": 2,
+      "name": "프람바난",
+      "assetName": "HomeEvolution116",
+      "sourceSVG": "daily/day-116-stage-039-prambanan-00-detail-2.svg",
+      "sha256": "a3ae123a55b1fb449866dd6100b3c67db36a4eff72715b32125d020bac97fb25",
+      "sourceSHA256": "1a2f424c59befd25fc96f3c43c9d565688928ea15d98cc14d826a9759bf49702"
+    },
+    {
+      "level": 117,
+      "stage": 39,
+      "detail": 3,
+      "name": "프람바난",
+      "assetName": "HomeEvolution117",
+      "sourceSVG": "daily/day-117-stage-039-prambanan-00-detail-3.svg",
+      "sha256": "482588546b9ca28884dd397925f1b37e091c4ad89aa3af3e389bbb26173b63b0",
+      "sourceSHA256": "7885bcd4a8495b3cf407dfd9313cb74279a1f8d468c33991acb8b5335b5aa40e"
+    },
+    {
+      "level": 118,
+      "stage": 40,
+      "detail": 1,
+      "name": "누비아 돔 주택",
+      "assetName": "HomeEvolution118",
+      "sourceSVG": "daily/day-118-stage-040-nubian-00-detail-1.svg",
+      "sha256": "c99151f7967281669b50863fce76a411c741403f26aa37866eed900257537a0e",
+      "sourceSHA256": "874b70f995db737e82af25065c6fc0ac6e61d42833ea2bb7b152c643dc972f0f"
+    },
+    {
+      "level": 119,
+      "stage": 40,
+      "detail": 2,
+      "name": "누비아 돔 주택",
+      "assetName": "HomeEvolution119",
+      "sourceSVG": "daily/day-119-stage-040-nubian-00-detail-2.svg",
+      "sha256": "430ceea045dcf96385a088e0abd287aecf709cdf48d4be906ee22fca085c8708",
+      "sourceSHA256": "60b8fd518725c38226063b1a9c0ce29089caedb9b1e583d6e70c56896647246c"
+    },
+    {
+      "level": 120,
+      "stage": 40,
+      "detail": 3,
+      "name": "누비아 돔 주택",
+      "assetName": "HomeEvolution120",
+      "sourceSVG": "daily/day-120-stage-040-nubian-00-detail-3.svg",
+      "sha256": "173760e0a1f2520b7cd5548443b3120367190db0ffd182d1ea7c47f067f9ee1d",
+      "sourceSHA256": "19214fc409f6fdc963e31521e840fda9c0f8fe4adee391f64c7db50542c082be"
+    },
+    {
+      "level": 121,
+      "stage": 41,
+      "detail": 1,
+      "name": "로마네스크 석조",
+      "assetName": "HomeEvolution121",
+      "sourceSVG": "daily/day-121-stage-041-base-20-detail-1.svg",
+      "sha256": "94eb3131e33713e84d86a064b7e27d47838d97412f5ae29ba14907851baed2ca",
+      "sourceSHA256": "45dcc81c28f3d2b44c8d1bc524e55a55d0b0d2771d2ed2cabc7710bcf3a1492e"
+    },
+    {
+      "level": 122,
+      "stage": 41,
+      "detail": 2,
+      "name": "로마네스크 석조",
+      "assetName": "HomeEvolution122",
+      "sourceSVG": "daily/day-122-stage-041-base-20-detail-2.svg",
+      "sha256": "a6c1ab9b4ab327f11c7eeb6316d10d90e4d6f431df2c605717cc90165944953d",
+      "sourceSHA256": "ec2f750bd0b42a43b1ab97d52cfd8743b01894a346880c338cc4dc71bb11d734"
+    },
+    {
+      "level": 123,
+      "stage": 41,
+      "detail": 3,
+      "name": "로마네스크 석조",
+      "assetName": "HomeEvolution123",
+      "sourceSVG": "daily/day-123-stage-041-base-20-detail-3.svg",
+      "sha256": "fe32b740ecf15da81737a3f40c7abc0dc70f67c2ee90cadd6032811fb83ce847",
+      "sourceSHA256": "661fffe371e71ad6ea57184e2c474367135a613c49ed87cf31d92bac7e29411d"
+    },
+    {
+      "level": 124,
+      "stage": 42,
+      "detail": 1,
+      "name": "라니키바브 계단우물",
+      "assetName": "HomeEvolution124",
+      "sourceSVG": "daily/day-124-stage-042-stepwell-00-detail-1.svg",
+      "sha256": "0734896920cc2fcce596cd3bce58fb12bd294e1cc5bed3e14dbf7318286fc111",
+      "sourceSHA256": "5a4d5017d1e62e31f9dd2416e44d73220c87d434315882df6c99d08073bc092a"
+    },
+    {
+      "level": 125,
+      "stage": 42,
+      "detail": 2,
+      "name": "라니키바브 계단우물",
+      "assetName": "HomeEvolution125",
+      "sourceSVG": "daily/day-125-stage-042-stepwell-00-detail-2.svg",
+      "sha256": "4ea07ba3791e14a988be1dcc1341ec5405aa4ffd2c987d9bd4b6073da227b85f",
+      "sourceSHA256": "906a21bc38df0d621684a6cb4dfb69e33b4313a7cf5a1b66c303ce9c422c2136"
+    },
+    {
+      "level": 126,
+      "stage": 42,
+      "detail": 3,
+      "name": "라니키바브 계단우물",
+      "assetName": "HomeEvolution126",
+      "sourceSVG": "daily/day-126-stage-042-stepwell-00-detail-3.svg",
+      "sha256": "bd4a27b84ccdd8c9fef98803dfdb0481c6620de891c62d5ca734c39663595471",
+      "sourceSHA256": "9df418881890f42ef4b69b6aa622a8474b66b227b3ff5c5f98f1ffd98a9acad9"
+    },
+    {
+      "level": 127,
+      "stage": 43,
+      "detail": 1,
+      "name": "노르웨이 스타브 교회",
+      "assetName": "HomeEvolution127",
+      "sourceSVG": "daily/day-127-stage-043-stave-00-detail-1.svg",
+      "sha256": "9a92ac91c79dc22be6a3e40bc6c3e0e305e8035afcbc9cdfc69066db3727a62f",
+      "sourceSHA256": "24aacd22394e03ab1e92b57ffb25308c719a1bc2e2f86e5e5c4fa23b8da87081"
+    },
+    {
+      "level": 128,
+      "stage": 43,
+      "detail": 2,
+      "name": "노르웨이 스타브 교회",
+      "assetName": "HomeEvolution128",
+      "sourceSVG": "daily/day-128-stage-043-stave-00-detail-2.svg",
+      "sha256": "7adbb35b7966846b7649c25cddb10617417f2d24167a2e594d65abcfca7519b2",
+      "sourceSHA256": "8eb512e31379601b2b270df2960b41bd01cf5c5a0813e5c82c330fd21422be12"
+    },
+    {
+      "level": 129,
+      "stage": 43,
+      "detail": 3,
+      "name": "노르웨이 스타브 교회",
+      "assetName": "HomeEvolution129",
+      "sourceSVG": "daily/day-129-stage-043-stave-00-detail-3.svg",
+      "sha256": "7e9903cae4560bc50b102ea41b5017a4a7a387de3a9849c252a4265bd05797d2",
+      "sourceSHA256": "6763133c0bbe895c8a762bd848d811a885d85b9627b99cdfe40c4db954ce4445"
+    },
+    {
+      "level": 130,
+      "stage": 44,
+      "detail": 1,
+      "name": "앙코르 사원",
+      "assetName": "HomeEvolution130",
+      "sourceSVG": "daily/day-130-stage-044-base-21-detail-1.svg",
+      "sha256": "6ec42acb2e69b252e0166b610bb065cc0cfdd142c1775db390701f5cfe1d6d2b",
+      "sourceSHA256": "d6c50893fd3465f9d65398b2e081e9d8b9d2b6ee79def75b578551a43fc76fbe"
+    },
+    {
+      "level": 131,
+      "stage": 44,
+      "detail": 2,
+      "name": "앙코르 사원",
+      "assetName": "HomeEvolution131",
+      "sourceSVG": "daily/day-131-stage-044-base-21-detail-2.svg",
+      "sha256": "f13f504ea66269aa1fbecec8cdacaed3003e3080b2bd0b0a159133943587c408",
+      "sourceSHA256": "4179deb6964241d8b6e83a0267326f43f13d4de68b976bcaa375426c298b79de"
+    },
+    {
+      "level": 132,
+      "stage": 44,
+      "detail": 3,
+      "name": "앙코르 사원",
+      "assetName": "HomeEvolution132",
+      "sourceSVG": "daily/day-132-stage-044-base-21-detail-3.svg",
+      "sha256": "87f32b237d4bbaaae247bd078b7fa94e3fdcbccb17635798b39d688fd7ebb96f",
+      "sourceSHA256": "b25fe576facaea418069b8d59a4469948aebd9d9f36c57c8f939dec4f07f697d"
+    },
+    {
+      "level": 133,
+      "stage": 45,
+      "detail": 1,
+      "name": "고딕 대성당",
+      "assetName": "HomeEvolution133",
+      "sourceSVG": "daily/day-133-stage-045-base-22-detail-1.svg",
+      "sha256": "6b9dc5bc3e5e0b17918a833bd0855b87bcc6ab74aebe824587227a21f3db119b",
+      "sourceSHA256": "e6714fe294febbb57f397291decd86718d76e6ea38ade0fd537bf00bcfb37446"
+    },
+    {
+      "level": 134,
+      "stage": 45,
+      "detail": 2,
+      "name": "고딕 대성당",
+      "assetName": "HomeEvolution134",
+      "sourceSVG": "daily/day-134-stage-045-base-22-detail-2.svg",
+      "sha256": "cd0f9b305e44088589cefa61f7289d3c5d6ed1a26b1de404913dd15e320801e6",
+      "sourceSHA256": "b0c9d0e2a6040829459bd15521c00af3b6288219923822f43c2e51ca94a39537"
+    },
+    {
+      "level": 135,
+      "stage": 45,
+      "detail": 3,
+      "name": "고딕 대성당",
+      "assetName": "HomeEvolution135",
+      "sourceSVG": "daily/day-135-stage-045-base-22-detail-3.svg",
+      "sha256": "6907c3eea0f7e41613c17fa9cc826de50c533b4f008ca375fb2631be29c02a05",
+      "sourceSHA256": "896f51efb79dc78d1469fb9ee2ab39fbe5d8d374e5dc33b0b547d43723378a40"
+    },
+    {
+      "level": 136,
+      "stage": 46,
+      "detail": 1,
+      "name": "절벽 푸에블로",
+      "assetName": "HomeEvolution136",
+      "sourceSVG": "daily/day-136-stage-046-base-23-detail-1.svg",
+      "sha256": "041388f912351be3543ab85ef4c53af85650cc1e821b6551d1f4841d15c7c766",
+      "sourceSHA256": "eed7d045179f7ff5b75fbf9b5358132708f616a5b159c95382e74948e9734ec3"
+    },
+    {
+      "level": 137,
+      "stage": 46,
+      "detail": 2,
+      "name": "절벽 푸에블로",
+      "assetName": "HomeEvolution137",
+      "sourceSVG": "daily/day-137-stage-046-base-23-detail-2.svg",
+      "sha256": "a2937342fc4fd1f9b8321c0ac4733f2f7f121bf9cdc9d2455d6b4d89fd02b265",
+      "sourceSHA256": "a2cd83bf5356bca3b1f142815723b2246a97f8d9887d664b838e54fa3ad06820"
+    },
+    {
+      "level": 138,
+      "stage": 46,
+      "detail": 3,
+      "name": "절벽 푸에블로",
+      "assetName": "HomeEvolution138",
+      "sourceSVG": "daily/day-138-stage-046-base-23-detail-3.svg",
+      "sha256": "f0785df352b7945e6ee3d7d1eece2fe66a6b731a87b3adfe4dd7834a4954b845",
+      "sourceSHA256": "cbbbf041acc164e9b6cc706f63cd3aa3fac3e572f1c0498afc948a1eaece4c23"
+    },
+    {
+      "level": 139,
+      "stage": 47,
+      "detail": 1,
+      "name": "짐바브웨 석조 성곽",
+      "assetName": "HomeEvolution139",
+      "sourceSVG": "daily/day-139-stage-047-base-24-detail-1.svg",
+      "sha256": "e1e3a66776e6ca6d7d577f975b31c43d9d787f5e1b2b76e8a3a42be56fefce2a",
+      "sourceSHA256": "0ac3b6ecc2658d1f12d102a5de14ce1dbc5b0082e7ac36cbac61591b0c4b15c4"
+    },
+    {
+      "level": 140,
+      "stage": 47,
+      "detail": 2,
+      "name": "짐바브웨 석조 성곽",
+      "assetName": "HomeEvolution140",
+      "sourceSVG": "daily/day-140-stage-047-base-24-detail-2.svg",
+      "sha256": "7cb015af58ab2a1e0bc12017fe2749525a87a1c8ae5c75ca5d36b1ed3960970c",
+      "sourceSHA256": "fae2f267576ef4204992aca01d602a52608f9384e9507b206b1e26e46d3f0516"
+    },
+    {
+      "level": 141,
+      "stage": 47,
+      "detail": 3,
+      "name": "짐바브웨 석조 성곽",
+      "assetName": "HomeEvolution141",
+      "sourceSVG": "daily/day-141-stage-047-base-24-detail-3.svg",
+      "sha256": "e441210def19f249d05b93842e3dde4ed7ff6dd845d2efb26bf681c87b0009b0",
+      "sourceSHA256": "8ff3a8c8dbab6d50203ed539aaddd349322bc4368a965bf7d04e73c5cf28847e"
+    },
+    {
+      "level": 142,
+      "stage": 48,
+      "detail": 1,
+      "name": "사헬 흙 모스크 양식",
+      "assetName": "HomeEvolution142",
+      "sourceSVG": "daily/day-142-stage-048-mudmosque-00-detail-1.svg",
+      "sha256": "fef12ffa9bcabcef3417fe0ea944203b843bcafc33c97f7826cfb6ad2c205a8d",
+      "sourceSHA256": "182e2f11b61040290a81f41ce0f4822165c49edfd779ea59652d1ff04ca8cbe1"
+    },
+    {
+      "level": 143,
+      "stage": 48,
+      "detail": 2,
+      "name": "사헬 흙 모스크 양식",
+      "assetName": "HomeEvolution143",
+      "sourceSVG": "daily/day-143-stage-048-mudmosque-00-detail-2.svg",
+      "sha256": "98be4557d0506538c9271ef7e56be30558605ebb639192dd928cb43630c9010f",
+      "sourceSHA256": "e12ebe8dbb3ac9f6de5111ebf552a2d292fafdfc750bbec3b0e98d8422349e3f"
+    },
+    {
+      "level": 144,
+      "stage": 48,
+      "detail": 3,
+      "name": "사헬 흙 모스크 양식",
+      "assetName": "HomeEvolution144",
+      "sourceSVG": "daily/day-144-stage-048-mudmosque-00-detail-3.svg",
+      "sha256": "595a38aa381be520443fa0f3f43bf4e695546dffd6a6d32f896efc0836a828d2",
+      "sourceSHA256": "47881e5abc41acf1f85410a8bf500b3bdb4b6af70de1f438bcbd70b14bdbf5d1"
+    },
+    {
+      "level": 145,
+      "stage": 49,
+      "detail": 1,
+      "name": "알람브라 궁전",
+      "assetName": "HomeEvolution145",
+      "sourceSVG": "daily/day-145-stage-049-alhambra-00-detail-1.svg",
+      "sha256": "af22d616394be57bc07a066fe88f5ed5049adee235810b9e095bd51fb5b27e0f",
+      "sourceSHA256": "fa7fb44f103851d8af48835ea60690cb991c7b91908629794e8375f1d4969403"
+    },
+    {
+      "level": 146,
+      "stage": 49,
+      "detail": 2,
+      "name": "알람브라 궁전",
+      "assetName": "HomeEvolution146",
+      "sourceSVG": "daily/day-146-stage-049-alhambra-00-detail-2.svg",
+      "sha256": "2beee61a45db98eff9a51edd57e56647fc59a478611020b2c6507381aa304327",
+      "sourceSHA256": "967ac2614c752977a5793f9c274cdf70da1e20a34ca571ab0817124064bb7149"
+    },
+    {
+      "level": 147,
+      "stage": 49,
+      "detail": 3,
+      "name": "알람브라 궁전",
+      "assetName": "HomeEvolution147",
+      "sourceSVG": "daily/day-147-stage-049-alhambra-00-detail-3.svg",
+      "sha256": "7e5ca986edc13b4da3440b765196d32ead1adca2c6cd768238a9cda629ed28b1",
+      "sourceSHA256": "9bf16d52f249393b94d7d9b8536389b53adfc6358f552f1813d84917c8dd9b49"
+    },
+    {
+      "level": 148,
+      "stage": 50,
+      "detail": 1,
+      "name": "티베트 산지 주택",
+      "assetName": "HomeEvolution148",
+      "sourceSVG": "daily/day-148-stage-050-tibethouse-00-detail-1.svg",
+      "sha256": "13cae9fa3063fb986d9cdb642cb3383722209f79d0377d8d7d8abd2290c6d797",
+      "sourceSHA256": "781160077592a071b96f229ce1297de6f804886f10548d9cf9f845d23028f356"
+    },
+    {
+      "level": 149,
+      "stage": 50,
+      "detail": 2,
+      "name": "티베트 산지 주택",
+      "assetName": "HomeEvolution149",
+      "sourceSVG": "daily/day-149-stage-050-tibethouse-00-detail-2.svg",
+      "sha256": "081ef60df1e34601f139e10156b50fcb98d5d2bc6453e92bc7d455b535e3c759",
+      "sourceSHA256": "e4d6b64746b88cf3c03093a87d7f0df724fd749f6c63604120bba8ada01777df"
+    },
+    {
+      "level": 150,
+      "stage": 50,
+      "detail": 3,
+      "name": "티베트 산지 주택",
+      "assetName": "HomeEvolution150",
+      "sourceSVG": "daily/day-150-stage-050-tibethouse-00-detail-3.svg",
+      "sha256": "8a4b4e5e7f5a49329c7e0d702491fb055b0373301b631493bf71939f4e7541ae",
+      "sourceSHA256": "fce8bb9fc0fc428be6f00dd1e30c100d7558c1bbba1aca4d80d18d2920914dde"
+    },
+    {
+      "level": 151,
+      "stage": 51,
+      "detail": 1,
+      "name": "조선 한옥",
+      "assetName": "HomeEvolution151",
+      "sourceSVG": "daily/day-151-stage-051-base-25-detail-1.svg",
+      "sha256": "e316051da77c18ec786a8ab771398ba8a133727fe46c4793d3c2a6e09c8dea5b",
+      "sourceSHA256": "36aa389ea2c90bdbd10d2f66853ac964026978c15c127d4bd2d637d820a3f58c"
+    },
+    {
+      "level": 152,
+      "stage": 51,
+      "detail": 2,
+      "name": "조선 한옥",
+      "assetName": "HomeEvolution152",
+      "sourceSVG": "daily/day-152-stage-051-base-25-detail-2.svg",
+      "sha256": "c0ac8d5cc1e4f3f158da516f0adaaeb4af26060614ced86056719943ead79174",
+      "sourceSHA256": "4269aeec1e9b7ecd6621154a690a19c7b9d32daf2ff08e25039f20de75ab5205"
+    },
+    {
+      "level": 153,
+      "stage": 51,
+      "detail": 3,
+      "name": "조선 한옥",
+      "assetName": "HomeEvolution153",
+      "sourceSVG": "daily/day-153-stage-051-base-25-detail-3.svg",
+      "sha256": "cf74ef4670fc0135fd4d69aedfd4d2a804237369084a5b42421af0f4724ce731",
+      "sourceSHA256": "d8027680441d7a9fae2867c9446228452b0f29bb5d019bae7f3cb9886c6ce811"
+    },
+    {
+      "level": 154,
+      "stage": 52,
+      "detail": 1,
+      "name": "천단 기년전 양식",
+      "assetName": "HomeEvolution154",
+      "sourceSVG": "daily/day-154-stage-052-tiantan-00-detail-1.svg",
+      "sha256": "717dc315106502906b7b9c73456b0f072a5cf7a14e0c87cdcb4088a3ffe83bae",
+      "sourceSHA256": "cb2a526dd20f83d170e1851c489fc75766934253648bf7c303d45920a1b8564a"
+    },
+    {
+      "level": 155,
+      "stage": 52,
+      "detail": 2,
+      "name": "천단 기년전 양식",
+      "assetName": "HomeEvolution155",
+      "sourceSVG": "daily/day-155-stage-052-tiantan-00-detail-2.svg",
+      "sha256": "06da40127db7dbbb0f3159e47f9e63eb134c41ab1cec5a9d705c5b8f35026b64",
+      "sourceSHA256": "9a6501ed234466a7c5ef4f239a8cac54e409ada741454fda123d21672db2fe46"
+    },
+    {
+      "level": 156,
+      "stage": 52,
+      "detail": 3,
+      "name": "천단 기년전 양식",
+      "assetName": "HomeEvolution156",
+      "sourceSVG": "daily/day-156-stage-052-tiantan-00-detail-3.svg",
+      "sha256": "81a350519377e755c33f19dcac7480e6c90669da5e145a4fc9b5f305e8b0f790",
+      "sourceSHA256": "4069a76dd74bb364128842985f08f90e73a17fe1f1e6860c05fbbe0f31a34cfa"
+    },
+    {
+      "level": 157,
+      "stage": 53,
+      "detail": 1,
+      "name": "잉카 석조 가옥",
+      "assetName": "HomeEvolution157",
+      "sourceSVG": "daily/day-157-stage-053-inca-00-detail-1.svg",
+      "sha256": "dd339256fbcc974c80ae38a12f10662847a8e700e7377fb61efff17fe94cab4a",
+      "sourceSHA256": "6850257a948d75a63f091def5bdbeb84351832275263794889722e72ddaa3fd9"
+    },
+    {
+      "level": 158,
+      "stage": 53,
+      "detail": 2,
+      "name": "잉카 석조 가옥",
+      "assetName": "HomeEvolution158",
+      "sourceSVG": "daily/day-158-stage-053-inca-00-detail-2.svg",
+      "sha256": "f3df844078a1540de8eba20f0d800fc6e41cade2aa0f78d03af049025e503b42",
+      "sourceSHA256": "efdfeee98bff30cfefc53ca073aa3a4ae175dfa1fd14d9cf5cbdc8029a1165ec"
+    },
+    {
+      "level": 159,
+      "stage": 53,
+      "detail": 3,
+      "name": "잉카 석조 가옥",
+      "assetName": "HomeEvolution159",
+      "sourceSVG": "daily/day-159-stage-053-inca-00-detail-3.svg",
+      "sha256": "322a844e004678030b9284720746aa79db1d94b00b82c24dbb562b0d17c5d151",
+      "sourceSHA256": "3569c3ae8f0429a5b82284a0712dc41b78575626d280cc4be927d2b7b878f1d3"
+    },
+    {
+      "level": 160,
+      "stage": 54,
+      "detail": 1,
+      "name": "르네상스 팔라초",
+      "assetName": "HomeEvolution160",
+      "sourceSVG": "daily/day-160-stage-054-base-26-detail-1.svg",
+      "sha256": "73d19ff8ade951b251f4d30b394caa7da1d939140c46e767ecd108dd71836d92",
+      "sourceSHA256": "badd400dacc5386441e69fad60d9e42537aa067fab921dd3a94e77816497615a"
+    },
+    {
+      "level": 161,
+      "stage": 54,
+      "detail": 2,
+      "name": "르네상스 팔라초",
+      "assetName": "HomeEvolution161",
+      "sourceSVG": "daily/day-161-stage-054-base-26-detail-2.svg",
+      "sha256": "3f1cf3bcf855f4b469ef21a40cc800693fcb6a39a2e35e826fe978c833b9ff86",
+      "sourceSHA256": "e28aa4b96707788c079f6915d1dbb56b6dfe028909585f5976217b8b989ffa18"
+    },
+    {
+      "level": 162,
+      "stage": 54,
+      "detail": 3,
+      "name": "르네상스 팔라초",
+      "assetName": "HomeEvolution162",
+      "sourceSVG": "daily/day-162-stage-054-base-26-detail-3.svg",
+      "sha256": "a918c37d95e6a7e939f287c3dbe539fcb0023cc8ec2681b6e6b601c1f839099e",
+      "sourceSHA256": "dc1ba29c146df29a367cb09ddff9a1865314634acec9d11d47de1063ec69d391"
+    },
+    {
+      "level": 163,
+      "stage": 55,
+      "detail": 1,
+      "name": "푸젠 토루",
+      "assetName": "HomeEvolution163",
+      "sourceSVG": "daily/day-163-stage-055-base-27-detail-1.svg",
+      "sha256": "9668ab2de3d32da5fc55cdd0438c737bf455f4f380a92e74b87190e5ecdabb1f",
+      "sourceSHA256": "e9f14308cc198c102f7c17b0a14800930e96ca414a9d72f62050985140125328"
+    },
+    {
+      "level": 164,
+      "stage": 55,
+      "detail": 2,
+      "name": "푸젠 토루",
+      "assetName": "HomeEvolution164",
+      "sourceSVG": "daily/day-164-stage-055-base-27-detail-2.svg",
+      "sha256": "31ebf7eb90c0a3e859cebd527c9f1c98ccdee95def24e84fc9ccdeb0cd3e34fd",
+      "sourceSHA256": "14b393bf85643f59bc95e1189fe91a4c81afba2ed1d1fdae2d35a917f1c74173"
+    },
+    {
+      "level": 165,
+      "stage": 55,
+      "detail": 3,
+      "name": "푸젠 토루",
+      "assetName": "HomeEvolution165",
+      "sourceSVG": "daily/day-165-stage-055-base-27-detail-3.svg",
+      "sha256": "267dbba18e68390f845de3653250fea0bd786d67690eef6c3787957255f8785a",
+      "sourceSHA256": "31de64f4bb08824502ed61dc008fee39329cbf15ab38895413f3b82a5266cfe5"
+    },
+    {
+      "level": 166,
+      "stage": 56,
+      "detail": 1,
+      "name": "이탈리아 트룰리",
+      "assetName": "HomeEvolution166",
+      "sourceSVG": "daily/day-166-stage-056-trulli-00-detail-1.svg",
+      "sha256": "a7e11548974c75398bd6c3194ed69db4ad35b5742bb3b1ea839afbf294900bc2",
+      "sourceSHA256": "71a2a89514f5f2edd9704cd85da79ca204a4502c722337bf260e7b4fcaf064ae"
+    },
+    {
+      "level": 167,
+      "stage": 56,
+      "detail": 2,
+      "name": "이탈리아 트룰리",
+      "assetName": "HomeEvolution167",
+      "sourceSVG": "daily/day-167-stage-056-trulli-00-detail-2.svg",
+      "sha256": "34ca5ecfb9311eec468053d4567bac995739238abb877445766a8e97619205f3",
+      "sourceSHA256": "b80f0436646164d1b79e85524995162d1f5a11ac8ca081720cb0b636b934af04"
+    },
+    {
+      "level": 168,
+      "stage": 56,
+      "detail": 3,
+      "name": "이탈리아 트룰리",
+      "assetName": "HomeEvolution168",
+      "sourceSVG": "daily/day-168-stage-056-trulli-00-detail-3.svg",
+      "sha256": "12cfa8bd2620b25f539e91718b9c2195329504e249f817eb5b4335c3bb697e33",
+      "sourceSHA256": "fe51f5b3339e6d38033065655829156814fe82db4ccc0105d41385143813a125"
+    },
+    {
+      "level": 169,
+      "stage": 57,
+      "detail": 1,
+      "name": "튜더 목조 주택",
+      "assetName": "HomeEvolution169",
+      "sourceSVG": "daily/day-169-stage-057-base-28-detail-1.svg",
+      "sha256": "cf0cfc49d680b0023cc4405955b4e3d0436ded680843f9483b1b6e602dc68dfc",
+      "sourceSHA256": "980af59536b77ed9995ad4a34175ef1be99db2800eefd6b053b030e6a006b146"
+    },
+    {
+      "level": 170,
+      "stage": 57,
+      "detail": 2,
+      "name": "튜더 목조 주택",
+      "assetName": "HomeEvolution170",
+      "sourceSVG": "daily/day-170-stage-057-base-28-detail-2.svg",
+      "sha256": "eb21c09f19a6aa98b3b63f2444b8e60d5b3562675d2b63b6caaf477108b308f7",
+      "sourceSHA256": "6d32c6a211c05925fa34a4a96324e35e8e465212a504829db1caaae2da15ee03"
+    },
+    {
+      "level": 171,
+      "stage": 57,
+      "detail": 3,
+      "name": "튜더 목조 주택",
+      "assetName": "HomeEvolution171",
+      "sourceSVG": "daily/day-171-stage-057-base-28-detail-3.svg",
+      "sha256": "10f5f39de021dbe7d7b08f6fd6573d6d720697774e7a1ae6a0479ef7a13e543b",
+      "sourceSHA256": "da4f846f8439c21bbb18a2c491e4b60e228ed1aedea8d8cef97a3c701079cb1f"
+    },
+    {
+      "level": 172,
+      "stage": 58,
+      "detail": 1,
+      "name": "모로코 카스바",
+      "assetName": "HomeEvolution172",
+      "sourceSVG": "daily/day-172-stage-058-kasbah-00-detail-1.svg",
+      "sha256": "9777c057fc6f11ab05bc138d34300cc277a363b2e331ac2be02edb693f8ff9b0",
+      "sourceSHA256": "bea73d2ec39a2f435dfa7e0d8769a041d20fc7c6fdc0de859a4bbd6c9243fc6e"
+    },
+    {
+      "level": 173,
+      "stage": 58,
+      "detail": 2,
+      "name": "모로코 카스바",
+      "assetName": "HomeEvolution173",
+      "sourceSVG": "daily/day-173-stage-058-kasbah-00-detail-2.svg",
+      "sha256": "01e9d9e6e211084b5540f8a2fe7e6ab9814f2b33a68e1f173f33bd9cf694f904",
+      "sourceSHA256": "825afcf45ac6e1099dac41cb7769a54a6fd78a4f221499c448539b09ac9e377c"
+    },
+    {
+      "level": 174,
+      "stage": 58,
+      "detail": 3,
+      "name": "모로코 카스바",
+      "assetName": "HomeEvolution174",
+      "sourceSVG": "daily/day-174-stage-058-kasbah-00-detail-3.svg",
+      "sha256": "10f4215c231bea7a14cb3c7af62b7e61f15ff0376b4cff9b0d11be72a4ea7444",
+      "sourceSHA256": "abf7a567d72458432df50586b516509de444f21e2c07d9c1bb3507a6152ec044"
+    },
+    {
+      "level": 175,
+      "stage": 59,
+      "detail": 1,
+      "name": "시밤 흙탑 주택",
+      "assetName": "HomeEvolution175",
+      "sourceSVG": "daily/day-175-stage-059-base-29-detail-1.svg",
+      "sha256": "ab6e8361136928332647586ff485cb926cb5c847bbdd3c7230cd5ecee8a60b96",
+      "sourceSHA256": "db1103f9dc2729c2b494229a4e20dd1d94239d0b73d1b572daaba22915eda22a"
+    },
+    {
+      "level": 176,
+      "stage": 59,
+      "detail": 2,
+      "name": "시밤 흙탑 주택",
+      "assetName": "HomeEvolution176",
+      "sourceSVG": "daily/day-176-stage-059-base-29-detail-2.svg",
+      "sha256": "5005897dc6e4c91bf87cda9d4d9e3eb13c9d654c3a8ef45a6f3368168541152c",
+      "sourceSHA256": "33a0b8e90b19f962d7d6b2b75ce72398d83f3d8130914ca357fdb46932c0bf59"
+    },
+    {
+      "level": 177,
+      "stage": 59,
+      "detail": 3,
+      "name": "시밤 흙탑 주택",
+      "assetName": "HomeEvolution177",
+      "sourceSVG": "daily/day-177-stage-059-base-29-detail-3.svg",
+      "sha256": "6e2c1a5b06bff2113e4b10dc50c961b32400ddab695da14c130ed9b6abe0d32f",
+      "sourceSHA256": "5752ce5b116f654b854ab210dcef7d379944bfe545abae9b806544a02b179426"
+    },
+    {
+      "level": 178,
+      "stage": 60,
+      "detail": 1,
+      "name": "오스만 목조 주택",
+      "assetName": "HomeEvolution178",
+      "sourceSVG": "daily/day-178-stage-060-ottomanhouse-00-detail-1.svg",
+      "sha256": "dd4a60420dcf384cd9c20a527453540778187d66a11655b3358d1fd54d3a5ea2",
+      "sourceSHA256": "c1f017a9ba638f4be705e71a124d88f7844f4de3ef4491d09cd0039980d84cce"
+    },
+    {
+      "level": 179,
+      "stage": 60,
+      "detail": 2,
+      "name": "오스만 목조 주택",
+      "assetName": "HomeEvolution179",
+      "sourceSVG": "daily/day-179-stage-060-ottomanhouse-00-detail-2.svg",
+      "sha256": "07b443a82dc0da3414244f2197232a856bc4b648bee434ff9cf56729b60f8da8",
+      "sourceSHA256": "9b94022fb3cf3fc820488353aba6b5f504b8c535a390d76d7d5d1ff28681a5ad"
+    },
+    {
+      "level": 180,
+      "stage": 60,
+      "detail": 3,
+      "name": "오스만 목조 주택",
+      "assetName": "HomeEvolution180",
+      "sourceSVG": "daily/day-180-stage-060-ottomanhouse-00-detail-3.svg",
+      "sha256": "f450d065e4446508a57dbcfd535101dac5d47e039de57446b4ba85e607679545",
+      "sourceSHA256": "adeb9fb8e4538b8383bfebe0cc22df25530d7d0952f7c3945d896eab565f10a2"
+    },
+    {
+      "level": 181,
+      "stage": 61,
+      "detail": 1,
+      "name": "이맘 모스크",
+      "assetName": "HomeEvolution181",
+      "sourceSVG": "daily/day-181-stage-061-iwans-00-detail-1.svg",
+      "sha256": "bb031fe06ce7d0997d853a776e831bb48d8aee102ffc3d09dbaef3820a1cee2d",
+      "sourceSHA256": "ee261775b9d05ec69a30a4e79ce7c033200a4a12b02cd941c3adb16d996e591a"
+    },
+    {
+      "level": 182,
+      "stage": 61,
+      "detail": 2,
+      "name": "이맘 모스크",
+      "assetName": "HomeEvolution182",
+      "sourceSVG": "daily/day-182-stage-061-iwans-00-detail-2.svg",
+      "sha256": "a5df33376f493fe230d8daab93d9a2044b0c591ee89d0d3d317c98167dcd0972",
+      "sourceSHA256": "0a6976d344fdeafeb89537ac0f57c84eb85e805dbb544852ea738ebb2d8fd5a5"
+    },
+    {
+      "level": 183,
+      "stage": 61,
+      "detail": 3,
+      "name": "이맘 모스크",
+      "assetName": "HomeEvolution183",
+      "sourceSVG": "daily/day-183-stage-061-iwans-00-detail-3.svg",
+      "sha256": "4d92f3044e70a9c43f85068e96d209d35dd29fe7c56c7d1dd9cfec31508b4444",
+      "sourceSHA256": "f6054ce88a7dd797138dc9ed85499a23e780ddc11e071b1b0200b31e131b3053"
+    },
+    {
+      "level": 184,
+      "stage": 62,
+      "detail": 1,
+      "name": "무굴 돔 궁전",
+      "assetName": "HomeEvolution184",
+      "sourceSVG": "daily/day-184-stage-062-base-30-detail-1.svg",
+      "sha256": "d2afaa4d96603c6a3ce011795adadb14609c952a25ee151e6c8bd89297d3dd3c",
+      "sourceSHA256": "f32684cf38d2570c6482dc3ca1773e5e280c7cd7d9851a7a9cc13e34ddead525"
+    },
+    {
+      "level": 185,
+      "stage": 62,
+      "detail": 2,
+      "name": "무굴 돔 궁전",
+      "assetName": "HomeEvolution185",
+      "sourceSVG": "daily/day-185-stage-062-base-30-detail-2.svg",
+      "sha256": "32f1437c3d41ed401c5f821890e2534b7442c5ebe6df0515794e99f259863112",
+      "sourceSHA256": "698a5468f004263e9a7565894ff0e9b94f20685b7e824b996fe6e7b11888db0c"
+    },
+    {
+      "level": 186,
+      "stage": 62,
+      "detail": 3,
+      "name": "무굴 돔 궁전",
+      "assetName": "HomeEvolution186",
+      "sourceSVG": "daily/day-186-stage-062-base-30-detail-3.svg",
+      "sha256": "3217338dde661e7ae94726907e9c38f12ba14baec149039c9a21f7676ef31fa5",
+      "sourceSHA256": "8c66d29bddc57389c94ccea09174e80d09571d0993167b5c62f430912bda5cd0"
+    },
+    {
+      "level": 187,
+      "stage": 63,
+      "detail": 1,
+      "name": "일본 성곽",
+      "assetName": "HomeEvolution187",
+      "sourceSVG": "daily/day-187-stage-063-base-31-detail-1.svg",
+      "sha256": "216b141ffed088f656fe6226ac61d0b372b8f67eb02758a1513811ef52e0acdc",
+      "sourceSHA256": "e33b7d38c163cd7718900b649be9d70f5cc0171870c981123613d05ab637fd27"
+    },
+    {
+      "level": 188,
+      "stage": 63,
+      "detail": 2,
+      "name": "일본 성곽",
+      "assetName": "HomeEvolution188",
+      "sourceSVG": "daily/day-188-stage-063-base-31-detail-2.svg",
+      "sha256": "1845fea3520f8331e13f250c614b37fd2e403c808f522ddba1b8fbcf5e2753b2",
+      "sourceSHA256": "cfdc91416d05c6216f8412ed9f7d36e0513b1bb632bca7112e07433e145b7b86"
+    },
+    {
+      "level": 189,
+      "stage": 63,
+      "detail": 3,
+      "name": "일본 성곽",
+      "assetName": "HomeEvolution189",
+      "sourceSVG": "daily/day-189-stage-063-base-31-detail-3.svg",
+      "sha256": "5fbf4dd963654aaf62e861bd0440997ca8073447935bd07f6d728950d94ca7ae",
+      "sourceSHA256": "407eebeb1601414b6ed012e8318fe5b62a8f1b09dbfabb5f4c896ba9d0ab8734"
+    },
+    {
+      "level": 190,
+      "stage": 64,
+      "detail": 1,
+      "name": "루마니아 목조 교회",
+      "assetName": "HomeEvolution190",
+      "sourceSVG": "daily/day-190-stage-064-woodchurch-00-detail-1.svg",
+      "sha256": "95a5d162844e630fc89184ed498cbf0089a979535a3ebcb77570d19214fe50c2",
+      "sourceSHA256": "71011b465ec6d3b8c09697f0755ecda3259f86c031af19d67f63e5d7d6208adf"
+    },
+    {
+      "level": 191,
+      "stage": 64,
+      "detail": 2,
+      "name": "루마니아 목조 교회",
+      "assetName": "HomeEvolution191",
+      "sourceSVG": "daily/day-191-stage-064-woodchurch-00-detail-2.svg",
+      "sha256": "2c061aec2ef95617d1fa2307e4c2bf34adc7786089f6bb2b00d8a7549353d2b1",
+      "sourceSHA256": "d8b241ee71cac7bcd417687e3cbc422bef47fbccc5ca7e88556c7bade82058af"
+    },
+    {
+      "level": 192,
+      "stage": 64,
+      "detail": 3,
+      "name": "루마니아 목조 교회",
+      "assetName": "HomeEvolution192",
+      "sourceSVG": "daily/day-192-stage-064-woodchurch-00-detail-3.svg",
+      "sha256": "00bd1324279fdf897e91f4abcb0476e5051853ee479dcf77449e2dece37b8c4e",
+      "sourceSHA256": "ea50b77d1be4e353ffb96699c0dd251182236dc803070910be517234ef2d0d79"
+    },
+    {
+      "level": 193,
+      "stage": 65,
+      "detail": 1,
+      "name": "포르투갈 타일 주택",
+      "assetName": "HomeEvolution193",
+      "sourceSVG": "daily/day-193-stage-065-azulejo-00-detail-1.svg",
+      "sha256": "3ed53529979ca18b9f74daa356d2fb957646c6a7761b814b14dbac2bb233de60",
+      "sourceSHA256": "e4f4bcac70afa4ca45899405d01aefb164d95f480c3ad49edf5fc3b9e4836a7d"
+    },
+    {
+      "level": 194,
+      "stage": 65,
+      "detail": 2,
+      "name": "포르투갈 타일 주택",
+      "assetName": "HomeEvolution194",
+      "sourceSVG": "daily/day-194-stage-065-azulejo-00-detail-2.svg",
+      "sha256": "8c660c1a780e9a22c6e0eef7d2a4ab056eef2971e062a8ecd3be6dabea55521a",
+      "sourceSHA256": "e1f9096f563241659602c8a1a4c4342872d7b6607facbfccf02f491b02cc4b2b"
+    },
+    {
+      "level": 195,
+      "stage": 65,
+      "detail": 3,
+      "name": "포르투갈 타일 주택",
+      "assetName": "HomeEvolution195",
+      "sourceSVG": "daily/day-195-stage-065-azulejo-00-detail-3.svg",
+      "sha256": "294a41aa1f661ce6831fd5879a866c874d2b20996b7fe363e17d8e8c1d538151",
+      "sourceSHA256": "a8ae2370e0940d1aba0b46c737a1a9cc2c07797c269f10f373ac2c91492a9f57"
+    },
+    {
+      "level": 196,
+      "stage": 66,
+      "detail": 1,
+      "name": "바로크 궁전",
+      "assetName": "HomeEvolution196",
+      "sourceSVG": "daily/day-196-stage-066-base-32-detail-1.svg",
+      "sha256": "5299633e33694fe338ea6cddef0e2c1fbd3f182c901408bc1e25016b908d2a62",
+      "sourceSHA256": "b68dbf21b17157568a09a0e52217d62448cef658ad17988ed4721ef824c21648"
+    },
+    {
+      "level": 197,
+      "stage": 66,
+      "detail": 2,
+      "name": "바로크 궁전",
+      "assetName": "HomeEvolution197",
+      "sourceSVG": "daily/day-197-stage-066-base-32-detail-2.svg",
+      "sha256": "aa14d2a384e4e4599470452ea5ee4e7f6e6eeabb24a9e266a9b5b4f9cbaf18ad",
+      "sourceSHA256": "156119300bbb73e27977b3ca0025059f4b36f2dce7913e4512e4967ac078c84f"
+    },
+    {
+      "level": 198,
+      "stage": 66,
+      "detail": 3,
+      "name": "바로크 궁전",
+      "assetName": "HomeEvolution198",
+      "sourceSVG": "daily/day-198-stage-066-base-32-detail-3.svg",
+      "sha256": "ed5b69c785f14b73538c6487aa697b605cf5a6fe4a5a200e45075610d1be5e69",
+      "sourceSHA256": "26a1701fa9e111c2de4c090ea4b4b2d64cc2d5401a4dcc6692dc37b4c9d3388b"
+    },
+    {
+      "level": 199,
+      "stage": 67,
+      "detail": 1,
+      "name": "네덜란드 운하집",
+      "assetName": "HomeEvolution199",
+      "sourceSVG": "daily/day-199-stage-067-base-33-detail-1.svg",
+      "sha256": "a3fd4979473f729b636e9d45b8058e9a6358690a062d96af83f5c5a11efd8f8f",
+      "sourceSHA256": "ab018081932c87986172b984a6653135e39d43c3d8a59dc06f1d549bf18a8d8d"
+    },
+    {
+      "level": 200,
+      "stage": 67,
+      "detail": 2,
+      "name": "네덜란드 운하집",
+      "assetName": "HomeEvolution200",
+      "sourceSVG": "daily/day-200-stage-067-base-33-detail-2.svg",
+      "sha256": "91fe7a6f08a287818d35fcc40495e876b515bb00466cfda44beb1254777049a2",
+      "sourceSHA256": "8a2585d1a543f62f931f89dca988fe5082e543012875968e5bb7f38e8e532593"
+    },
+    {
+      "level": 201,
+      "stage": 67,
+      "detail": 3,
+      "name": "네덜란드 운하집",
+      "assetName": "HomeEvolution201",
+      "sourceSVG": "daily/day-201-stage-067-base-33-detail-3.svg",
+      "sha256": "f25a54010d2e3fa467af53c29fe52b1907800bfe8b5b36efdaa259563351c0c9",
+      "sourceSHA256": "ca2c4bba6bbd7b289e7ec9f76ca177cf92ae13a208e0b1fe68414490511345bb"
+    },
+    {
+      "level": 202,
+      "stage": 68,
+      "detail": 1,
+      "name": "포탈라 궁전",
+      "assetName": "HomeEvolution202",
+      "sourceSVG": "daily/day-202-stage-068-potala-00-detail-1.svg",
+      "sha256": "e13d1740be809e5e10e80b1da0c16386fff339fb384eea122b13addab4f16aab",
+      "sourceSHA256": "3d72c9cb6a075a6ad65745da7e124ff8641a870f51ca99e9b75480b56af70f51"
+    },
+    {
+      "level": 203,
+      "stage": 68,
+      "detail": 2,
+      "name": "포탈라 궁전",
+      "assetName": "HomeEvolution203",
+      "sourceSVG": "daily/day-203-stage-068-potala-00-detail-2.svg",
+      "sha256": "b80342d798ccbbadb9e7b0f350e984dbb9101051f6ef6d80e4e56b2613304235",
+      "sourceSHA256": "ddfbbe2b69acecdfaf9f2324b3f178214734cb90ca5c33f3708509f2023e0cdd"
+    },
+    {
+      "level": 204,
+      "stage": 68,
+      "detail": 3,
+      "name": "포탈라 궁전",
+      "assetName": "HomeEvolution204",
+      "sourceSVG": "daily/day-204-stage-068-potala-00-detail-3.svg",
+      "sha256": "303a6371fe9046560ae4c44083be1e57151559d640d4b19a2c9909f69b713db3",
+      "sourceSHA256": "0243c6b0cb3db4fd066f7b7e4b39ffff6edecb31ed0ce8c47e4d98201bfdbce1"
+    },
+    {
+      "level": 205,
+      "stage": 69,
+      "detail": 1,
+      "name": "조선 누각",
+      "assetName": "HomeEvolution205",
+      "sourceSVG": "daily/day-205-stage-069-pavilion-00-detail-1.svg",
+      "sha256": "3677a581352a9161c870b23b83d3f221b1946b09592cb935ff24fde7ea6aa0d2",
+      "sourceSHA256": "6c10f68b6a8ebf4d63d0133aa18b831737ad5b494992dd01798200621c7fcfa3"
+    },
+    {
+      "level": 206,
+      "stage": 69,
+      "detail": 2,
+      "name": "조선 누각",
+      "assetName": "HomeEvolution206",
+      "sourceSVG": "daily/day-206-stage-069-pavilion-00-detail-2.svg",
+      "sha256": "79e77263b1b078c51fd414fc53331b7776180179b350380720bc673c0bac78cd",
+      "sourceSHA256": "547a9313b462162263d3710d74327cb833c37fac1af3012b042613796802d760"
+    },
+    {
+      "level": 207,
+      "stage": 69,
+      "detail": 3,
+      "name": "조선 누각",
+      "assetName": "HomeEvolution207",
+      "sourceSVG": "daily/day-207-stage-069-pavilion-00-detail-3.svg",
+      "sha256": "be7f149b1d88c2bbdf8e4ef58abc7d8dbb06b02a0092e37d87d7784a0253a8fe",
+      "sourceSHA256": "fffd886c0da1683b17f7145c59e81bce4d630336a1d829e2d77e71648003deb3"
+    },
+    {
+      "level": 208,
+      "stage": 70,
+      "detail": 1,
+      "name": "페르시아 바람탑",
+      "assetName": "HomeEvolution208",
+      "sourceSVG": "daily/day-208-stage-070-windtower-00-detail-1.svg",
+      "sha256": "d30e10d232917843796d462884c0a69e90014a282d65d8a060442f654a9b3fb6",
+      "sourceSHA256": "80071d0253f5c9fabca4114a769366cb105012a32e139f03b1e3376c62573a67"
+    },
+    {
+      "level": 209,
+      "stage": 70,
+      "detail": 2,
+      "name": "페르시아 바람탑",
+      "assetName": "HomeEvolution209",
+      "sourceSVG": "daily/day-209-stage-070-windtower-00-detail-2.svg",
+      "sha256": "09e6daed21b83a01d1e2ae71f77803a311afe362cf76a6dfcc12015abca6991b",
+      "sourceSHA256": "f64da794c19556e3a7d365622b96864e09e168a8bc0d1925cef32ef748ae5c99"
+    },
+    {
+      "level": 210,
+      "stage": 70,
+      "detail": 3,
+      "name": "페르시아 바람탑",
+      "assetName": "HomeEvolution210",
+      "sourceSVG": "daily/day-210-stage-070-windtower-00-detail-3.svg",
+      "sha256": "6dd3b4bb575a516d2371cc4dfe4ed6eef3fd80360524630d070bc9c7ce0c5967",
+      "sourceSHA256": "049a55ab82c8d4835bcee58e5bfc7e0894cbb16d1fd735f5699c125cab0bdc58"
+    },
+    {
+      "level": 211,
+      "stage": 71,
+      "detail": 1,
+      "name": "케이프더치 주택",
+      "assetName": "HomeEvolution211",
+      "sourceSVG": "daily/day-211-stage-071-capedutch-00-detail-1.svg",
+      "sha256": "ba8576b009b449762488c423b0edff7bd0cbdacb9da24854f3a598b4bf86d5b1",
+      "sourceSHA256": "6ab950283b320e728af22b884b6260614b7b58627dd050e9a4575e1adb45db15"
+    },
+    {
+      "level": 212,
+      "stage": 71,
+      "detail": 2,
+      "name": "케이프더치 주택",
+      "assetName": "HomeEvolution212",
+      "sourceSVG": "daily/day-212-stage-071-capedutch-00-detail-2.svg",
+      "sha256": "4ac3bc0bc30896969d8a84501e14e04c9744db02db7106e5f14409e373e1d876",
+      "sourceSHA256": "779ea88358a1a54dace079f1db5bf3ce2a2d89526c5fa4eb2b5e07e131a98109"
+    },
+    {
+      "level": 213,
+      "stage": 71,
+      "detail": 3,
+      "name": "케이프더치 주택",
+      "assetName": "HomeEvolution213",
+      "sourceSVG": "daily/day-213-stage-071-capedutch-00-detail-3.svg",
+      "sha256": "0f6c2e71c74c032c0633c590eaaced5c13198e7b216b2b478d54593b205e4e51",
+      "sourceSHA256": "109d1d0f8b464e78226275a77ddd817de622c5548e4650349779e525020bc090"
+    },
+    {
+      "level": 214,
+      "stage": 72,
+      "detail": 1,
+      "name": "교토 마치야",
+      "assetName": "HomeEvolution214",
+      "sourceSVG": "daily/day-214-stage-072-machiya-00-detail-1.svg",
+      "sha256": "0a708dafd2270440484de719a415314223eeaf5154b41047f2e0e61ae2cc5686",
+      "sourceSHA256": "c03800374d1aae511233dc9403c76b750edb215ed9fc7650b2678c3a47c328bf"
+    },
+    {
+      "level": 215,
+      "stage": 72,
+      "detail": 2,
+      "name": "교토 마치야",
+      "assetName": "HomeEvolution215",
+      "sourceSVG": "daily/day-215-stage-072-machiya-00-detail-2.svg",
+      "sha256": "fcd8c18ee44ba0b83de38937cfc664974da95ea4abe88dc3beb83646dc4c13cd",
+      "sourceSHA256": "f95b5773b6f064f60b08ee58141acba9ed4819c1870281a0a36c53b4ad9c565a"
+    },
+    {
+      "level": 216,
+      "stage": 72,
+      "detail": 3,
+      "name": "교토 마치야",
+      "assetName": "HomeEvolution216",
+      "sourceSVG": "daily/day-216-stage-072-machiya-00-detail-3.svg",
+      "sha256": "3634d33883cefc71f234dcd68a81f3109407f6b58625d1e673e9b8c390a66994",
+      "sourceSHA256": "491b4712c92b2fbe49dbe4f2db419cf81b931df9f99870f42046098794f08e9c"
+    },
+    {
+      "level": 217,
+      "stage": 73,
+      "detail": 1,
+      "name": "부탄 궁전 양식",
+      "assetName": "HomeEvolution217",
+      "sourceSVG": "daily/day-217-stage-073-dzong-00-detail-1.svg",
+      "sha256": "d8a312b804b4662066fa9e0a9199a688dd737062d966b99e4997f059366c1106",
+      "sourceSHA256": "10a46ff74acd6b257dab200f16fb4beac652e49c2ea64be4f35dc92d0cbefee8"
+    },
+    {
+      "level": 218,
+      "stage": 73,
+      "detail": 2,
+      "name": "부탄 궁전 양식",
+      "assetName": "HomeEvolution218",
+      "sourceSVG": "daily/day-218-stage-073-dzong-00-detail-2.svg",
+      "sha256": "7eab260e9af5b1c850b3cffd8e2ed6bd3ce57f1f9e80ad525c77da016e7c854a",
+      "sourceSHA256": "5b8eaff846e053fcacb9fb6522cfc82e18f0b2e50097425377b526a7a2fe7bac"
+    },
+    {
+      "level": 219,
+      "stage": 73,
+      "detail": 3,
+      "name": "부탄 궁전 양식",
+      "assetName": "HomeEvolution219",
+      "sourceSVG": "daily/day-219-stage-073-dzong-00-detail-3.svg",
+      "sha256": "f273b641aee619422e5eb85d2650de5a84e7d30619c83fed235c4ede6dff121b",
+      "sourceSHA256": "0cbffb7cbb5c7c9b2453c0d0cf3d9d5e223356e93451b598351f05022ee89811"
+    },
+    {
+      "level": 220,
+      "stage": 74,
+      "detail": 1,
+      "name": "로코코 저택",
+      "assetName": "HomeEvolution220",
+      "sourceSVG": "daily/day-220-stage-074-base-34-detail-1.svg",
+      "sha256": "43cf68f23be17cac2f22afd77e7cd9efff9c4be2a139f6c225956c2d4cc5c6df",
+      "sourceSHA256": "4d50cf7aa794f01b8627f8a52c716a5158d433801ccfc76cf8b645851b9c0446"
+    },
+    {
+      "level": 221,
+      "stage": 74,
+      "detail": 2,
+      "name": "로코코 저택",
+      "assetName": "HomeEvolution221",
+      "sourceSVG": "daily/day-221-stage-074-base-34-detail-2.svg",
+      "sha256": "2d554e540d5369b7bd6077402b32226a1ebbdc4e95f3f0a29ce048474dc96af3",
+      "sourceSHA256": "f0b7957cde4fe57596f97d365cab8c39537d75e019ad0eca346b0d6357c516f5"
+    },
+    {
+      "level": 222,
+      "stage": 74,
+      "detail": 3,
+      "name": "로코코 저택",
+      "assetName": "HomeEvolution222",
+      "sourceSVG": "daily/day-222-stage-074-base-34-detail-3.svg",
+      "sha256": "05dda5fe29f781ce415930c6cbcb2b4ca7486563f07d10d3da09d144936625f6",
+      "sourceSHA256": "38af194ea36fa8604cd761f8016a705e9504fcac374c791eef5fc40a2f66ec6c"
+    },
+    {
+      "level": 223,
+      "stage": 75,
+      "detail": 1,
+      "name": "폴리네시아 팔레",
+      "assetName": "HomeEvolution223",
+      "sourceSVG": "daily/day-223-stage-075-fale-00-detail-1.svg",
+      "sha256": "3bd77db8ecdbe189124277bfa4545d76e3ad54548710ab960ed9c4c9077ae20d",
+      "sourceSHA256": "1cf9a7bc2a4a3a4f18ba072ab769ae3d779013741b34bfabbca163fab2f56fee"
+    },
+    {
+      "level": 224,
+      "stage": 75,
+      "detail": 2,
+      "name": "폴리네시아 팔레",
+      "assetName": "HomeEvolution224",
+      "sourceSVG": "daily/day-224-stage-075-fale-00-detail-2.svg",
+      "sha256": "8fdf2ed0bf9d8cad7e12ab171490750fe6b71d17e45af2a0605728405d8178c0",
+      "sourceSHA256": "672098df932c5c9058a04042c174ca6d34e2e8385d475a8629dd3437c25f7d2a"
+    },
+    {
+      "level": 225,
+      "stage": 75,
+      "detail": 3,
+      "name": "폴리네시아 팔레",
+      "assetName": "HomeEvolution225",
+      "sourceSVG": "daily/day-225-stage-075-fale-00-detail-3.svg",
+      "sha256": "6877725c2b7bb2b01bf5b721eba8ac4438444047ecbced9881b02fb9e935b180",
+      "sourceSHA256": "7a3c8dfb737d997381a176e7e32de05a4a8586e1cfbb8217fc7e360b9e062978"
+    },
+    {
+      "level": 226,
+      "stage": 76,
+      "detail": 1,
+      "name": "유럽 풍차 주택",
+      "assetName": "HomeEvolution226",
+      "sourceSVG": "daily/day-226-stage-076-windmill-00-detail-1.svg",
+      "sha256": "09f56ddf2efe940a89b83aa8cc3211ac70c09b840f1a0d98d287836c41b74390",
+      "sourceSHA256": "3a21556c73bb022fb05be0da5146f42944421b0f3fa65cce709051e76dd4dc00"
+    },
+    {
+      "level": 227,
+      "stage": 76,
+      "detail": 2,
+      "name": "유럽 풍차 주택",
+      "assetName": "HomeEvolution227",
+      "sourceSVG": "daily/day-227-stage-076-windmill-00-detail-2.svg",
+      "sha256": "f64207452e2953e9fd7ba93af35e792ac31fc0254294f3c07db8a79e811c4ef8",
+      "sourceSHA256": "d378448f15bdf48ceb91f2ec8b8e20884b1d7b7c459b9402c614cb2d02fe8abe"
+    },
+    {
+      "level": 228,
+      "stage": 76,
+      "detail": 3,
+      "name": "유럽 풍차 주택",
+      "assetName": "HomeEvolution228",
+      "sourceSVG": "daily/day-228-stage-076-windmill-00-detail-3.svg",
+      "sha256": "d90e229ab27698c31c103efe5cc847e442eeb7f5847ee045cad36b7ba74e1a43",
+      "sourceSHA256": "f03adf338f60d1cabcd6ee6595009abc10caccd459c3c42be26691ac2fea903f"
+    },
+    {
+      "level": 229,
+      "stage": 77,
+      "detail": 1,
+      "name": "신고전주의 저택",
+      "assetName": "HomeEvolution229",
+      "sourceSVG": "daily/day-229-stage-077-base-35-detail-1.svg",
+      "sha256": "7fc234e1a8b9aa95c237a504477c325fd0994fd618641df6d9f57aaf64db951f",
+      "sourceSHA256": "523283e159a2570929574bd45ef7ca638958a397b14a1408478168006751843c"
+    },
+    {
+      "level": 230,
+      "stage": 77,
+      "detail": 2,
+      "name": "신고전주의 저택",
+      "assetName": "HomeEvolution230",
+      "sourceSVG": "daily/day-230-stage-077-base-35-detail-2.svg",
+      "sha256": "9dd20c8db709c9d8e852a849954b7b2406a80c13200cc72b6855c229a5f7dc8d",
+      "sourceSHA256": "1e4ac9759a12892fabf4782347b4e7488c475e331a10f78d1073b8759c014b59"
+    },
+    {
+      "level": 231,
+      "stage": 77,
+      "detail": 3,
+      "name": "신고전주의 저택",
+      "assetName": "HomeEvolution231",
+      "sourceSVG": "daily/day-231-stage-077-base-35-detail-3.svg",
+      "sha256": "6bb218055430c1321c2669285591554aa80693b9aecd927dd0091b0769728cac",
+      "sourceSHA256": "35fe858c4ad841659b4b4aeeaf5e10c85856c6e926c9ed55e0f68434b44e43ba"
+    },
+    {
+      "level": 232,
+      "stage": 78,
+      "detail": 1,
+      "name": "인도네시아 루마가당",
+      "assetName": "HomeEvolution232",
+      "sourceSVG": "daily/day-232-stage-078-rumah-00-detail-1.svg",
+      "sha256": "2c055eae6d913cbd56151a90975958c9646e93147c565916ecbb11464849c568",
+      "sourceSHA256": "2b5f6f1cae8102d9783a0dbd3dd21b2d0897b32c9a631caed27dc411d4917899"
+    },
+    {
+      "level": 233,
+      "stage": 78,
+      "detail": 2,
+      "name": "인도네시아 루마가당",
+      "assetName": "HomeEvolution233",
+      "sourceSVG": "daily/day-233-stage-078-rumah-00-detail-2.svg",
+      "sha256": "3774889b2085263a368f8ce8c0fe6258b3f85ffc41c1c9d2517a00acdbe98061",
+      "sourceSHA256": "f2f797efda1b8db5b8ccf7115cf40a0697356f507fd82ef9320c100ebef85d42"
+    },
+    {
+      "level": 234,
+      "stage": 78,
+      "detail": 3,
+      "name": "인도네시아 루마가당",
+      "assetName": "HomeEvolution234",
+      "sourceSVG": "daily/day-234-stage-078-rumah-00-detail-3.svg",
+      "sha256": "f0564bcd3653d2db858d345e7939606f573bf5e5b0e8297974867c250b637cdd",
+      "sourceSHA256": "0c07ff6169128c1daa918f528eac642b60ebe81f112563f9db2ef1ea0cbf56c7"
+    },
+    {
+      "level": 235,
+      "stage": 79,
+      "detail": 1,
+      "name": "가쇼즈쿠리 주택",
+      "assetName": "HomeEvolution235",
+      "sourceSVG": "daily/day-235-stage-079-gassho-00-detail-1.svg",
+      "sha256": "5718bef8fb79e44acaf3ed0b5d4a69d6d66ccc99f20313e70f10c93f6beb8417",
+      "sourceSHA256": "1889b0aed5715d89559b6ad633af439cfd3ffd1dfcaa08b957a0bf82bfdd479a"
+    },
+    {
+      "level": 236,
+      "stage": 79,
+      "detail": 2,
+      "name": "가쇼즈쿠리 주택",
+      "assetName": "HomeEvolution236",
+      "sourceSVG": "daily/day-236-stage-079-gassho-00-detail-2.svg",
+      "sha256": "940389918ce80d768cdcc326684440970a491c91b30d09f98cde6be0042b1621",
+      "sourceSHA256": "13c70cc1d22641db706c7977962f537e94183884ae52e9ae96b5496702fc83eb"
+    },
+    {
+      "level": 237,
+      "stage": 79,
+      "detail": 3,
+      "name": "가쇼즈쿠리 주택",
+      "assetName": "HomeEvolution237",
+      "sourceSVG": "daily/day-237-stage-079-gassho-00-detail-3.svg",
+      "sha256": "aa2978c2e4a2a5a819165f237940ed3550f5ab9778dc606924396875e4be3549",
+      "sourceSHA256": "3ab84869c08f91c7cd07753a8f0d5deb7dce9b457087dddf225713919d2cd8e4"
+    },
+    {
+      "level": 238,
+      "stage": 80,
+      "detail": 1,
+      "name": "러시아 목조 주택",
+      "assetName": "HomeEvolution238",
+      "sourceSVG": "daily/day-238-stage-080-base-36-detail-1.svg",
+      "sha256": "16f885608bfd75b22b33765c2ba6ee0062c3adea833cfc5c93dd6953d869f049",
+      "sourceSHA256": "29d6c9d160eb8f137c43442772cd1426e9bd94cd93995181848ef13aa82d8edb"
+    },
+    {
+      "level": 239,
+      "stage": 80,
+      "detail": 2,
+      "name": "러시아 목조 주택",
+      "assetName": "HomeEvolution239",
+      "sourceSVG": "daily/day-239-stage-080-base-36-detail-2.svg",
+      "sha256": "a11b01531fc3d8d8d61afb5c306e07e93a26528dd90455f066756f67359a2652",
+      "sourceSHA256": "9c9bda43f5d3edb71494731f480422f40b20185dc42811d2d7a66a21b0a24577"
+    },
+    {
+      "level": 240,
+      "stage": 80,
+      "detail": 3,
+      "name": "러시아 목조 주택",
+      "assetName": "HomeEvolution240",
+      "sourceSVG": "daily/day-240-stage-080-base-36-detail-3.svg",
+      "sha256": "6a55f4ec5165b304e6df6bbf7590c1f36341e89b792a6ca40603fb4f4c1d820f",
+      "sourceSHA256": "848655882ecf6f3084fe2221cdf094048051a68e20fdc9304f56c3df703116e6"
+    },
+    {
+      "level": 241,
+      "stage": 81,
+      "detail": 1,
+      "name": "뉴올리언스 갤러리 주택",
+      "assetName": "HomeEvolution241",
+      "sourceSVG": "daily/day-241-stage-081-galleryhouse-00-detail-1.svg",
+      "sha256": "ffd346cae8a82c40dfa7ae8570fc89b7f812375c919024c40eba405a14091b37",
+      "sourceSHA256": "752fad0312d46660681ed7d20ae611137e3d1c0da76965e6710284986cd9e8c8"
+    },
+    {
+      "level": 242,
+      "stage": 81,
+      "detail": 2,
+      "name": "뉴올리언스 갤러리 주택",
+      "assetName": "HomeEvolution242",
+      "sourceSVG": "daily/day-242-stage-081-galleryhouse-00-detail-2.svg",
+      "sha256": "299477821893bd4c2f4bc123740bf57026b98721e081c8854e86f705b0d5d557",
+      "sourceSHA256": "66b72046ef94005b74b146458307f65f0045efec8b8b95929e960b338f804854"
+    },
+    {
+      "level": 243,
+      "stage": 81,
+      "detail": 3,
+      "name": "뉴올리언스 갤러리 주택",
+      "assetName": "HomeEvolution243",
+      "sourceSVG": "daily/day-243-stage-081-galleryhouse-00-detail-3.svg",
+      "sha256": "4a5e87301bfea9718d19eeebb3fa1e744b42d999430cfff5f8432843b13eff65",
+      "sourceSHA256": "50534fbd37ec98bd802a14ba10bfa7a038de75e7b1737a004f8d9ce0facf8a45"
+    },
+    {
+      "level": 244,
+      "stage": 82,
+      "detail": 1,
+      "name": "빅토리아 주택",
+      "assetName": "HomeEvolution244",
+      "sourceSVG": "daily/day-244-stage-082-base-37-detail-1.svg",
+      "sha256": "e6744717d168dbe4f38034d5fecb2a211dcc56aae721a911b8d20d95722f1142",
+      "sourceSHA256": "de49258c8d673eef11fffdad88bc2725b9fca925ba131780321befc52c814cd3"
+    },
+    {
+      "level": 245,
+      "stage": 82,
+      "detail": 2,
+      "name": "빅토리아 주택",
+      "assetName": "HomeEvolution245",
+      "sourceSVG": "daily/day-245-stage-082-base-37-detail-2.svg",
+      "sha256": "5a2380e520286401f6a253b6d8729148a340971c08e4569be36a8c9c02f7dfe0",
+      "sourceSHA256": "38d40b918326250c0ba7cf78cfbb9ea279c31e34245fca77f458ee9b8028191a"
+    },
+    {
+      "level": 246,
+      "stage": 82,
+      "detail": 3,
+      "name": "빅토리아 주택",
+      "assetName": "HomeEvolution246",
+      "sourceSVG": "daily/day-246-stage-082-base-37-detail-3.svg",
+      "sha256": "d894bbf1ae290159db332ca6df4e2cb25e420ee9dc3c18844d1876060a8ecd97",
+      "sourceSHA256": "f7bec9d5505ebbd33b3310f13f85db71aee42fc573f95ff1a17ee565583fd9a7"
+    },
+    {
+      "level": 247,
+      "stage": 83,
+      "detail": 1,
+      "name": "파리 맨사드 주택",
+      "assetName": "HomeEvolution247",
+      "sourceSVG": "daily/day-247-stage-083-mansard-00-detail-1.svg",
+      "sha256": "795561f017a17cef968e98468d7980e1ea2fed4687618286963e744351a08fb4",
+      "sourceSHA256": "55614889c3f0951402d61ea8b6b6450d4d974313a60fd79514ea52943a40a852"
+    },
+    {
+      "level": 248,
+      "stage": 83,
+      "detail": 2,
+      "name": "파리 맨사드 주택",
+      "assetName": "HomeEvolution248",
+      "sourceSVG": "daily/day-248-stage-083-mansard-00-detail-2.svg",
+      "sha256": "228e50953c7136d4596432eae7a9bb94512805204cc44eb68bf8934320a23ef1",
+      "sourceSHA256": "3aa3fe968e9f01c7a1a250d40cd706156afbdac36e9a7764ee40724f2b6b2fd9"
+    },
+    {
+      "level": 249,
+      "stage": 83,
+      "detail": 3,
+      "name": "파리 맨사드 주택",
+      "assetName": "HomeEvolution249",
+      "sourceSVG": "daily/day-249-stage-083-mansard-00-detail-3.svg",
+      "sha256": "ed13451ae59ccb6c91bf6e32edb2c3344355f1bd7064e9e8f9669df5ea607dbb",
+      "sourceSHA256": "9dfac57cc768ae0ec64c8891ea14d90afb44dfecd0765428c1fb4a45d13cbde6"
+    },
+    {
+      "level": 250,
+      "stage": 84,
+      "detail": 1,
+      "name": "에펠탑",
+      "assetName": "HomeEvolution250",
+      "sourceSVG": "daily/day-250-stage-084-eiffel-00-detail-1.svg",
+      "sha256": "065d69f90e6d9f196b476fa1d9462b04024d656de730104784920f9a522466a3",
+      "sourceSHA256": "0fdbcc3bc202670b17da65d09860c2afb6c446b0235fcc6b47ec5255a93d415f"
+    },
+    {
+      "level": 251,
+      "stage": 84,
+      "detail": 2,
+      "name": "에펠탑",
+      "assetName": "HomeEvolution251",
+      "sourceSVG": "daily/day-251-stage-084-eiffel-00-detail-2.svg",
+      "sha256": "7d0901bf2e8e0255927727906904d40e143248d489d2268dba5f6b1b1e6af490",
+      "sourceSHA256": "a00261d153254ae7b4a650a71de0cdbee23c911aab88d84e7195b0670ea84993"
+    },
+    {
+      "level": 252,
+      "stage": 84,
+      "detail": 3,
+      "name": "에펠탑",
+      "assetName": "HomeEvolution252",
+      "sourceSVG": "daily/day-252-stage-084-eiffel-00-detail-3.svg",
+      "sha256": "7f135382481ac7906ff3fea2373517af1ff90b353ec7b39b63c985d803ddeb55",
+      "sourceSHA256": "de3043a71bc203824ca8c0781bc484a0062e554c60633927b6e869e6aca9ae32"
+    },
+    {
+      "level": 253,
+      "stage": 85,
+      "detail": 1,
+      "name": "시카고 철골 빌딩",
+      "assetName": "HomeEvolution253",
+      "sourceSVG": "daily/day-253-stage-085-base-38-detail-1.svg",
+      "sha256": "2a4160280a2a62b947f765245b097532add29a44fd289fbeffdda62fb890f139",
+      "sourceSHA256": "0cef29a49f10a469abaf3dff931527c77e6b527050965b7bf466666c78d16c22"
+    },
+    {
+      "level": 254,
+      "stage": 85,
+      "detail": 2,
+      "name": "시카고 철골 빌딩",
+      "assetName": "HomeEvolution254",
+      "sourceSVG": "daily/day-254-stage-085-base-38-detail-2.svg",
+      "sha256": "e7cefe1166e63e53a0e70d4c35f87bc834ed8fe4b01d30b80384a2a5ea37dae5",
+      "sourceSHA256": "c9b48c52af742d3e1aa5b951ec5f00a74678711d6cc7b0a01c881c270c82c93a"
+    },
+    {
+      "level": 255,
+      "stage": 85,
+      "detail": 3,
+      "name": "시카고 철골 빌딩",
+      "assetName": "HomeEvolution255",
+      "sourceSVG": "daily/day-255-stage-085-base-38-detail-3.svg",
+      "sha256": "84ac5e5e4c15d38a5a2ca73ea9a23ea71153aef4714891b7199c258923beb1ae",
+      "sourceSHA256": "6b326b66255b09457abdca29e9bee376bd695f2c36c8360537478f0c0c80f381"
+    },
+    {
+      "level": 256,
+      "stage": 86,
+      "detail": 1,
+      "name": "아르누보 빌라",
+      "assetName": "HomeEvolution256",
+      "sourceSVG": "daily/day-256-stage-086-base-39-detail-1.svg",
+      "sha256": "a278a9d345099b18b6aa6ac2dd8aa5595d2dace37fdcbec09caa0a13a27463e7",
+      "sourceSHA256": "4728b2dc7fd56a97fc08634468da0b03373807ce9989288b84237f854f4429d2"
+    },
+    {
+      "level": 257,
+      "stage": 86,
+      "detail": 2,
+      "name": "아르누보 빌라",
+      "assetName": "HomeEvolution257",
+      "sourceSVG": "daily/day-257-stage-086-base-39-detail-2.svg",
+      "sha256": "d62208ec4d4fd85dd5ff768fca9b13a65b61695d1525cd748dce3ffa0d2e6e6d",
+      "sourceSHA256": "4dd701e1ab89d67f2c52b3693b9bcd4d23856ba0297cfdf79745151167e6da74"
+    },
+    {
+      "level": 258,
+      "stage": 86,
+      "detail": 3,
+      "name": "아르누보 빌라",
+      "assetName": "HomeEvolution258",
+      "sourceSVG": "daily/day-258-stage-086-base-39-detail-3.svg",
+      "sha256": "90ef58fddcf222b2b038144d78d5c2cb563155b65d2f285a11b22b4d1f3ec3ad",
+      "sourceSHA256": "bc19eccde608c25ee2d4f2e3b80e7b35cdc6abd9cdd9fa19bc1faa8c52d762cd"
+    },
+    {
+      "level": 259,
+      "stage": 87,
+      "detail": 1,
+      "name": "카사 바트요",
+      "assetName": "HomeEvolution259",
+      "sourceSVG": "daily/day-259-stage-087-batllo-00-detail-1.svg",
+      "sha256": "1e9a631bdee9e6277c7912f9314efa9ee55f9d23d6295bf0907ce97555544d03",
+      "sourceSHA256": "e5958d9d7c3edb18254a7be2d7c616d6e9d51273764fb493da1b07671df2496f"
+    },
+    {
+      "level": 260,
+      "stage": 87,
+      "detail": 2,
+      "name": "카사 바트요",
+      "assetName": "HomeEvolution260",
+      "sourceSVG": "daily/day-260-stage-087-batllo-00-detail-2.svg",
+      "sha256": "007a8bc394e017b9083ceaacd15e48b54838d03d5b122feb84dc0c642e9ebb6c",
+      "sourceSHA256": "32575741ae8f11fd3223483e681a6adcd3950170123e768efa19d10619d4aa5c"
+    },
+    {
+      "level": 261,
+      "stage": 87,
+      "detail": 3,
+      "name": "카사 바트요",
+      "assetName": "HomeEvolution261",
+      "sourceSVG": "daily/day-261-stage-087-batllo-00-detail-3.svg",
+      "sha256": "64d320837c73c48d9f091ad8231c60736692a3953fdfeea6eb92c5db4e29160a",
+      "sourceSHA256": "3bf3e62128f1eddcfbb522d60d43d7220be8dab71be08f02c2a339b43c18f5fe"
+    },
+    {
+      "level": 262,
+      "stage": 88,
+      "detail": 1,
+      "name": "프레리 주택",
+      "assetName": "HomeEvolution262",
+      "sourceSVG": "daily/day-262-stage-088-base-40-detail-1.svg",
+      "sha256": "984f35c7b2e87ffc0306d08ecb3beed90928ffa7462cf4fe74dce4ca8c3ce02e",
+      "sourceSHA256": "5ee272e0006a64c6962fbff205c2325d6498ebb693a7e43cb7e0cd4b3f4fbd46"
+    },
+    {
+      "level": 263,
+      "stage": 88,
+      "detail": 2,
+      "name": "프레리 주택",
+      "assetName": "HomeEvolution263",
+      "sourceSVG": "daily/day-263-stage-088-base-40-detail-2.svg",
+      "sha256": "01daf8e9c42b7a4eeaeaea447ce534fd309b75aacf8dd575f0cc9ddbfdfd963d",
+      "sourceSHA256": "b5a0e70688a8d1f49975779670ee96da55a9581bfcbc8533cf88bbb0b93aa6cb"
+    },
+    {
+      "level": 264,
+      "stage": 88,
+      "detail": 3,
+      "name": "프레리 주택",
+      "assetName": "HomeEvolution264",
+      "sourceSVG": "daily/day-264-stage-088-base-40-detail-3.svg",
+      "sha256": "20e2993c00a71bb7bcdd5f9cc533cfd6a4ade8d7449c84eb63ba478eb94d6b46",
+      "sourceSHA256": "987bee2ac81c0a8832b1f71cf272a9e52b222e0bc3a1aee5771513cdf1a04a37"
+    },
+    {
+      "level": 265,
+      "stage": 89,
+      "detail": 1,
+      "name": "아인슈타인탑",
+      "assetName": "HomeEvolution265",
+      "sourceSVG": "daily/day-265-stage-089-expressionist-00-detail-1.svg",
+      "sha256": "0b340deae017e7553d6d92f11b3da96f4b7423709a236cd979a88c28bc7c1abb",
+      "sourceSHA256": "c33fdaca35e11e3e46290b05c262cc13cd480ea925857f9592bd9fa5bcadbb4f"
+    },
+    {
+      "level": 266,
+      "stage": 89,
+      "detail": 2,
+      "name": "아인슈타인탑",
+      "assetName": "HomeEvolution266",
+      "sourceSVG": "daily/day-266-stage-089-expressionist-00-detail-2.svg",
+      "sha256": "a7e20f52df3a6f6f37dba4908cb9b0016d62036090a515be997ee557e99d2bd6",
+      "sourceSHA256": "e1b866889733dbaff4852dc0a8cfee299b9bdb2c9a4b8f3d51305145ce78fb5c"
+    },
+    {
+      "level": 267,
+      "stage": 89,
+      "detail": 3,
+      "name": "아인슈타인탑",
+      "assetName": "HomeEvolution267",
+      "sourceSVG": "daily/day-267-stage-089-expressionist-00-detail-3.svg",
+      "sha256": "1f3e589bbf9b3efb81577c9713b1687eb867d8366e15f6690436b93cec12300d",
+      "sourceSHA256": "dedf1a452a3a516e05366087aca83be85ee2cd11e8468467c456858fb607e719"
+    },
+    {
+      "level": 268,
+      "stage": 90,
+      "detail": 1,
+      "name": "바우하우스",
+      "assetName": "HomeEvolution268",
+      "sourceSVG": "daily/day-268-stage-090-base-41-detail-1.svg",
+      "sha256": "d97a79c8a8eb9d6cf3706e2c1f473a9e1cf75bc57db1ea2f521a223f02705aa1",
+      "sourceSHA256": "6c06e4493c96e0526352d6003e5aaf6db045b78a3215219083a7b78a3b061112"
+    },
+    {
+      "level": 269,
+      "stage": 90,
+      "detail": 2,
+      "name": "바우하우스",
+      "assetName": "HomeEvolution269",
+      "sourceSVG": "daily/day-269-stage-090-base-41-detail-2.svg",
+      "sha256": "6eba8563d227e136d1d64ad3dedff04e724c1a0a92564cef0c768d6104908e01",
+      "sourceSHA256": "46acf7118086d485720fa8f52bce88e541b6740d328a91803ff36177e9da91ef"
+    },
+    {
+      "level": 270,
+      "stage": 90,
+      "detail": 3,
+      "name": "바우하우스",
+      "assetName": "HomeEvolution270",
+      "sourceSVG": "daily/day-270-stage-090-base-41-detail-3.svg",
+      "sha256": "0ab2c06da231c4cad5616491493808e3e7bf8e2c510fa91168c41cfde159c7c7",
+      "sourceSHA256": "0b117d71ebb96d7791b34f8888ea434fccf3d105f1a11b1eb48fe75d688b422a"
+    },
+    {
+      "level": 271,
+      "stage": 91,
+      "detail": 1,
+      "name": "아르데코 빌딩",
+      "assetName": "HomeEvolution271",
+      "sourceSVG": "daily/day-271-stage-091-base-42-detail-1.svg",
+      "sha256": "d6569279cb17ab49011b7d7822882014b81560b8528d090937cb2cfc6f3d0ff0",
+      "sourceSHA256": "74f02da9fe1e63b34ef76874c71dc84c58655d53b27888bb64e918a33df77911"
+    },
+    {
+      "level": 272,
+      "stage": 91,
+      "detail": 2,
+      "name": "아르데코 빌딩",
+      "assetName": "HomeEvolution272",
+      "sourceSVG": "daily/day-272-stage-091-base-42-detail-2.svg",
+      "sha256": "7febe5ada2d40552bfc193d65983e58c333bd1a7b151b6e1493745431927f3e4",
+      "sourceSHA256": "be98a4951e3e33652cd59e9d16d41514a753bfb53f1e4200fef2481e2151850f"
+    },
+    {
+      "level": 273,
+      "stage": 91,
+      "detail": 3,
+      "name": "아르데코 빌딩",
+      "assetName": "HomeEvolution273",
+      "sourceSVG": "daily/day-273-stage-091-base-42-detail-3.svg",
+      "sha256": "5f99c899c20c8f7e3a1295640c4a55882c2cf35b496940fb89e0cb80f7392390",
+      "sourceSHA256": "df2c9796e24731b4ab5da85b5c183e5f0c328ea3f8578c9bf8a835ce483468b4"
+    },
+    {
+      "level": 274,
+      "stage": 92,
+      "detail": 1,
+      "name": "크라이슬러 빌딩",
+      "assetName": "HomeEvolution274",
+      "sourceSVG": "daily/day-274-stage-092-chrysler-00-detail-1.svg",
+      "sha256": "69f64bbf0431213e9fc78f6c6b3d5be0499259b0e5b95e469dbf23aa5f89afed",
+      "sourceSHA256": "3dab8cdc2f037d21805d1eb8824eb3e09a1ce0a3a32a476b79398d7e68a8f760"
+    },
+    {
+      "level": 275,
+      "stage": 92,
+      "detail": 2,
+      "name": "크라이슬러 빌딩",
+      "assetName": "HomeEvolution275",
+      "sourceSVG": "daily/day-275-stage-092-chrysler-00-detail-2.svg",
+      "sha256": "28778f2392803a6c0d68aee873dd569295eb0d901d1ac0099988c32f12b90bef",
+      "sourceSHA256": "ee0a024a660d1c0455c9449566b12fc266e50a454b1381329657334652cc56ac"
+    },
+    {
+      "level": 276,
+      "stage": 92,
+      "detail": 3,
+      "name": "크라이슬러 빌딩",
+      "assetName": "HomeEvolution276",
+      "sourceSVG": "daily/day-276-stage-092-chrysler-00-detail-3.svg",
+      "sha256": "aaeb3dbb794271fe5b0197185b755117f199854d80d61b856fc072a8a66740d4",
+      "sourceSHA256": "c5a6be380997f3c9306b438e3a24985a4c9db242d609849753b9d75f62b3499d"
+    },
+    {
+      "level": 277,
+      "stage": 93,
+      "detail": 1,
+      "name": "낙수장",
+      "assetName": "HomeEvolution277",
+      "sourceSVG": "daily/day-277-stage-093-fallingwater-00-detail-1.svg",
+      "sha256": "fd79f9ec9360d7d98b16af0d614d3a51043ccb7866c1135914b6e65019aaf407",
+      "sourceSHA256": "ba7606b8d1b7a126ced445a6a03d4f99c761988f84d0692e260f5afdf61763c4"
+    },
+    {
+      "level": 278,
+      "stage": 93,
+      "detail": 2,
+      "name": "낙수장",
+      "assetName": "HomeEvolution278",
+      "sourceSVG": "daily/day-278-stage-093-fallingwater-00-detail-2.svg",
+      "sha256": "f9126ebcb80ae5e57aed358e34b6514f72c34596e9a2f8d31c21a3b2e8b15c49",
+      "sourceSHA256": "5da28e3d1d6a13fea71e03b0746b4fe3da2c1fdc608fee66a31a5b99d288e26a"
+    },
+    {
+      "level": 279,
+      "stage": 93,
+      "detail": 3,
+      "name": "낙수장",
+      "assetName": "HomeEvolution279",
+      "sourceSVG": "daily/day-279-stage-093-fallingwater-00-detail-3.svg",
+      "sha256": "aa0a8dfb4c78d926c284b2289e8328042b2067821cbeb34af2438822d6bb5186",
+      "sourceSHA256": "a846225c5c9059b314791e22e94c89db61ab0e69bc96cc21c090b2713cfdcbc1"
+    },
+    {
+      "level": 280,
+      "stage": 94,
+      "detail": 1,
+      "name": "멕시코 색채 주택",
+      "assetName": "HomeEvolution280",
+      "sourceSVG": "daily/day-280-stage-094-barragan-00-detail-1.svg",
+      "sha256": "36b0372f272fbedf40ad2f15e8e220e9cb316d64f424947758f0ccb321a4358f",
+      "sourceSHA256": "c35801f4fd988003950cf7637e65e05f53b9ef5ed826bb6961c0522f31d0069d"
+    },
+    {
+      "level": 281,
+      "stage": 94,
+      "detail": 2,
+      "name": "멕시코 색채 주택",
+      "assetName": "HomeEvolution281",
+      "sourceSVG": "daily/day-281-stage-094-barragan-00-detail-2.svg",
+      "sha256": "217d4ea135665ee5308439bdba9261df0c72c324e3c169854bde851909ab1391",
+      "sourceSHA256": "db935b4f8e2f0c7d4c1b3dc7ccb3eeaff668398328e6d36c7ce71a587b040cf4"
+    },
+    {
+      "level": 282,
+      "stage": 94,
+      "detail": 3,
+      "name": "멕시코 색채 주택",
+      "assetName": "HomeEvolution282",
+      "sourceSVG": "daily/day-282-stage-094-barragan-00-detail-3.svg",
+      "sha256": "616b15740d6cdbbd59b4956f0a6d17d6a0e306caa7e2be21e546aa65340d1de2",
+      "sourceSHA256": "d75f01c228ba6844aa2c1a2d940404c89272b636ce4c593f01f40745f55fd6bb"
+    },
+    {
+      "level": 283,
+      "stage": 95,
+      "detail": 1,
+      "name": "국제주의 유리 건물",
+      "assetName": "HomeEvolution283",
+      "sourceSVG": "daily/day-283-stage-095-base-43-detail-1.svg",
+      "sha256": "1c17f7e193129929ab678cbd298fd1c15f86295aae5b3d89b65caa97b489434a",
+      "sourceSHA256": "0a281fac117d6aff4affb9fbb67c267097c5c5fead83e7bfc0f8e16c5dd3ab56"
+    },
+    {
+      "level": 284,
+      "stage": 95,
+      "detail": 2,
+      "name": "국제주의 유리 건물",
+      "assetName": "HomeEvolution284",
+      "sourceSVG": "daily/day-284-stage-095-base-43-detail-2.svg",
+      "sha256": "498b59533e63680521b682648aacd52175d244a648ac084baa8db3f15d293dc8",
+      "sourceSHA256": "ff02fb757ebe3163d0e4f51acd746b4a7f061c5967fed9c14c9847c202aba181"
+    },
+    {
+      "level": 285,
+      "stage": 95,
+      "detail": 3,
+      "name": "국제주의 유리 건물",
+      "assetName": "HomeEvolution285",
+      "sourceSVG": "daily/day-285-stage-095-base-43-detail-3.svg",
+      "sha256": "4a1257e1c1d2bcd4065435137c7e346dcd3915ebf95536bf0b6118626ba62d0d",
+      "sourceSHA256": "483390cc62db159cef26134d8061b8e5161ead7191c6e76c79cdaa0c4bd65b86"
+    },
+    {
+      "level": 286,
+      "stage": 96,
+      "detail": 1,
+      "name": "롱샹 성당",
+      "assetName": "HomeEvolution286",
+      "sourceSVG": "daily/day-286-stage-096-ronchamp-00-detail-1.svg",
+      "sha256": "999d3814687694631287700f045e589b277a19ae73d28e1d8642b739c1561de1",
+      "sourceSHA256": "0eae2f0ba7a3e7d902035a348228b9914383f14afe3d22144c983e34d9433d04"
+    },
+    {
+      "level": 287,
+      "stage": 96,
+      "detail": 2,
+      "name": "롱샹 성당",
+      "assetName": "HomeEvolution287",
+      "sourceSVG": "daily/day-287-stage-096-ronchamp-00-detail-2.svg",
+      "sha256": "050f3818303ae489932329239fa24e67b988de5f96e05eaff151a3171a5e713b",
+      "sourceSHA256": "f85444e17e00ecfb64b7cc3061e54f48ead5026535cc1c7c06b2f9ee6bb6dddb"
+    },
+    {
+      "level": 288,
+      "stage": 96,
+      "detail": 3,
+      "name": "롱샹 성당",
+      "assetName": "HomeEvolution288",
+      "sourceSVG": "daily/day-288-stage-096-ronchamp-00-detail-3.svg",
+      "sha256": "7a0784aad064e95777619c552cef8096f57b223ecff2c88c25dc42d9f2a107ce",
+      "sourceSHA256": "6c35aa6555a9c717c5f98140242c35e7d2baa8a24a9cf5009062bda29034dfe9"
+    },
+    {
+      "level": 289,
+      "stage": 97,
+      "detail": 1,
+      "name": "뉴욕 구겐하임",
+      "assetName": "HomeEvolution289",
+      "sourceSVG": "daily/day-289-stage-097-guggenheimny-00-detail-1.svg",
+      "sha256": "b435400a3ec15e99cc52495c32f722e68fcec7f3ea3e7e97175d9534b4bfdbb7",
+      "sourceSHA256": "77afedc6a4f4c221b94c8b1f1c2754fd34f1c55981cfa924d36a43798ab9e426"
+    },
+    {
+      "level": 290,
+      "stage": 97,
+      "detail": 2,
+      "name": "뉴욕 구겐하임",
+      "assetName": "HomeEvolution290",
+      "sourceSVG": "daily/day-290-stage-097-guggenheimny-00-detail-2.svg",
+      "sha256": "da7a6ca3f246994a4b754f25aa258e1193353b40fd66525a63286288f5ffe36a",
+      "sourceSHA256": "6c81571bfd22b98c2f80fc076e27d949b8eb7d8fe6cd2681eeeb538e3689a913"
+    },
+    {
+      "level": 291,
+      "stage": 97,
+      "detail": 3,
+      "name": "뉴욕 구겐하임",
+      "assetName": "HomeEvolution291",
+      "sourceSVG": "daily/day-291-stage-097-guggenheimny-00-detail-3.svg",
+      "sha256": "9a6f180f7aa5d8f52249ef818ce01b188eac124173455d4e4b4599d7876e558a",
+      "sourceSHA256": "a46c757784c23b4e3e860868c2729cc9cb5f2e64cc97ee59c3bb3d3923e08c11"
+    },
+    {
+      "level": 292,
+      "stage": 98,
+      "detail": 1,
+      "name": "브루탈리즘",
+      "assetName": "HomeEvolution292",
+      "sourceSVG": "daily/day-292-stage-098-base-44-detail-1.svg",
+      "sha256": "049fdf6adc95ca3528e4ca214659dee191056bbecadce4f24a9bb389a2002194",
+      "sourceSHA256": "221abbd9684639d18b43906bf234ea39e0007a99d7e70ab7db30dccf3594083d"
+    },
+    {
+      "level": 293,
+      "stage": 98,
+      "detail": 2,
+      "name": "브루탈리즘",
+      "assetName": "HomeEvolution293",
+      "sourceSVG": "daily/day-293-stage-098-base-44-detail-2.svg",
+      "sha256": "080b488569bad1cfd5a984c8cd554c422dd94830b0dcb7eb283bbf1b7dc63376",
+      "sourceSHA256": "af2023c038edace5ddd23da481243403f4e1fb3e914f3379fbdb7973a4dd352c"
+    },
+    {
+      "level": 294,
+      "stage": 98,
+      "detail": 3,
+      "name": "브루탈리즘",
+      "assetName": "HomeEvolution294",
+      "sourceSVG": "daily/day-294-stage-098-base-44-detail-3.svg",
+      "sha256": "903b676370e609bf71b80d9244f9a8ec30fbde2ab9da78a7cd9b4aa369530705",
+      "sourceSHA256": "7927c1c8013ffd105878fe0d914090f632b120238ad13a6121f16b26d6ce2a69"
+    },
+    {
+      "level": 295,
+      "stage": 99,
+      "detail": 1,
+      "name": "아비타67",
+      "assetName": "HomeEvolution295",
+      "sourceSVG": "daily/day-295-stage-099-habitat-00-detail-1.svg",
+      "sha256": "97d0d652beb81eb2ca9b473e4b17d047c84f2e50e9bba4cc33c04664f4b2ecec",
+      "sourceSHA256": "06b71cf62cce1f15e8b9ebe034eb924e84d72d244d15cea10d2329898333d029"
+    },
+    {
+      "level": 296,
+      "stage": 99,
+      "detail": 2,
+      "name": "아비타67",
+      "assetName": "HomeEvolution296",
+      "sourceSVG": "daily/day-296-stage-099-habitat-00-detail-2.svg",
+      "sha256": "d023c4bf93000ad1decab7c7300b26ffe75a78abf86cd31de0054e085b70bcff",
+      "sourceSHA256": "b669edb51143c4372e5576b166e26384fc71c1ff65d4bf29b4378836d457eb90"
+    },
+    {
+      "level": 297,
+      "stage": 99,
+      "detail": 3,
+      "name": "아비타67",
+      "assetName": "HomeEvolution297",
+      "sourceSVG": "daily/day-297-stage-099-habitat-00-detail-3.svg",
+      "sha256": "b652dc2ce9f3c43cf8328e6341d71853bfe27e69bb92df02520ec814c4b1d247",
+      "sourceSHA256": "a4d63501e3dec315daaf09d9c22e07dcde123d38d360dca6b02f1d70c46bde28"
+    },
+    {
+      "level": 298,
+      "stage": 100,
+      "detail": 1,
+      "name": "메타볼리즘 캡슐",
+      "assetName": "HomeEvolution298",
+      "sourceSVG": "daily/day-298-stage-100-base-45-detail-1.svg",
+      "sha256": "8861b35277fafa2ae59e3555523edbc1ebc416fb1ea08c6a4e9ea5a7031e85d6",
+      "sourceSHA256": "7d3aa468c7ab3e2f52ddee343306127f0a06ca3c5aaf45522cba80a234de4fb2"
+    },
+    {
+      "level": 299,
+      "stage": 100,
+      "detail": 2,
+      "name": "메타볼리즘 캡슐",
+      "assetName": "HomeEvolution299",
+      "sourceSVG": "daily/day-299-stage-100-base-45-detail-2.svg",
+      "sha256": "4c2b803f26ef47ac3b1e5d53cf156b2976c1621b543b2c1e1d4b313e0460610c",
+      "sourceSHA256": "77665a1f0f604b15dd0ec9da5fde69489c9ed43566ab7bf811a3c594d31fd2c0"
+    },
+    {
+      "level": 300,
+      "stage": 100,
+      "detail": 3,
+      "name": "메타볼리즘 캡슐",
+      "assetName": "HomeEvolution300",
+      "sourceSVG": "daily/day-300-stage-100-base-45-detail-3.svg",
+      "sha256": "ead828bc6dfc2635511a32d28e55297a15e7321a212a16418fbab6c923d03c2f",
+      "sourceSHA256": "bc0c318f315ec9936d699e54645edd6ad952d08cb2135c6745c3e88812aa0200"
+    },
+    {
+      "level": 301,
+      "stage": 101,
+      "detail": 1,
+      "name": "시드니 오페라하우스",
+      "assetName": "HomeEvolution301",
+      "sourceSVG": "daily/day-301-stage-101-base-46-detail-1.svg",
+      "sha256": "bb4d61abedb1ab340dd6193afdf33d691e29ea6cdae6961fa5dbd48e44fe5641",
+      "sourceSHA256": "7a15bc2671b07ae0e0b294433198ff1de1a0a813dff14b538a1443ef646cd86a"
+    },
+    {
+      "level": 302,
+      "stage": 101,
+      "detail": 2,
+      "name": "시드니 오페라하우스",
+      "assetName": "HomeEvolution302",
+      "sourceSVG": "daily/day-302-stage-101-base-46-detail-2.svg",
+      "sha256": "8aa1606942d4f4c66d471f693c27c469c733c20fa59a693fa716c9f1cc12c64a",
+      "sourceSHA256": "9fd79c4691d6552f1695e08d2012a771f072d712750f7aa039c330c256f8e96e"
+    },
+    {
+      "level": 303,
+      "stage": 101,
+      "detail": 3,
+      "name": "시드니 오페라하우스",
+      "assetName": "HomeEvolution303",
+      "sourceSVG": "daily/day-303-stage-101-base-46-detail-3.svg",
+      "sha256": "5d82c35e6bab3583a5da93e72aaf419d0e74b7e5f28b647ed0be7aa17fac3e1e",
+      "sourceSHA256": "d74a4cac24c54630224a055ea2236be0028fef00936a1b08c86ea89982788e14"
+    },
+    {
+      "level": 304,
+      "stage": 102,
+      "detail": 1,
+      "name": "지오데식 돔",
+      "assetName": "HomeEvolution304",
+      "sourceSVG": "daily/day-304-stage-102-geodesic-00-detail-1.svg",
+      "sha256": "cffd5769842dc83f30f7ce3db97201587ec0fc9422cf0d3cb238de90a5318467",
+      "sourceSHA256": "ba2a2a71a5eff0aa3236be4195baaf23d92a58c58ae6a1675176e002a2e024e1"
+    },
+    {
+      "level": 305,
+      "stage": 102,
+      "detail": 2,
+      "name": "지오데식 돔",
+      "assetName": "HomeEvolution305",
+      "sourceSVG": "daily/day-305-stage-102-geodesic-00-detail-2.svg",
+      "sha256": "8dae71817fc990a5aa7eade5a6971549452abd905b0e9ddbb1beb28e666667d0",
+      "sourceSHA256": "1e951dc0d1ed1043da4b0f1287b7e6318d945ac73373c6147e119e7218c221a4"
+    },
+    {
+      "level": 306,
+      "stage": 102,
+      "detail": 3,
+      "name": "지오데식 돔",
+      "assetName": "HomeEvolution306",
+      "sourceSVG": "daily/day-306-stage-102-geodesic-00-detail-3.svg",
+      "sha256": "475bc0f2173439cc2f88f68aa7160a00d5e742935a5e52faccc88752ff01c360",
+      "sourceSHA256": "4371343e9a5fa1ac5683be1c11a0aab5766500a9b6e242ebfabb0ecc86f4c92c"
+    },
+    {
+      "level": 307,
+      "stage": 103,
+      "detail": 1,
+      "name": "퐁피두센터",
+      "assetName": "HomeEvolution307",
+      "sourceSVG": "daily/day-307-stage-103-pompidou-00-detail-1.svg",
+      "sha256": "21ab550e47d255150b53d3e1d99711a8b94dcdfa0c758223d00036f0a5e990f3",
+      "sourceSHA256": "f44dc9aad61fe4cc21be9212af6c2a59a0d796417d80a1b9806068671fbf2b3a"
+    },
+    {
+      "level": 308,
+      "stage": 103,
+      "detail": 2,
+      "name": "퐁피두센터",
+      "assetName": "HomeEvolution308",
+      "sourceSVG": "daily/day-308-stage-103-pompidou-00-detail-2.svg",
+      "sha256": "a9e8bd662b2190db5301fc6633b08069d1d0a49cca87d5f738427be38aa3f8cb",
+      "sourceSHA256": "01b20733de98504d0a7fc266aff4e66b90b8326c040f4d6906c897e0a475a435"
+    },
+    {
+      "level": 309,
+      "stage": 103,
+      "detail": 3,
+      "name": "퐁피두센터",
+      "assetName": "HomeEvolution309",
+      "sourceSVG": "daily/day-309-stage-103-pompidou-00-detail-3.svg",
+      "sha256": "3fed1494c70706a05fe5f3ac46d82a79461c96cf31d1c61fb05d660b853e1b61",
+      "sourceSHA256": "4fb2ef778fede70e6d83af3299de1438b4ea910269d18a2c4df22e0a94927617"
+    },
+    {
+      "level": 310,
+      "stage": 104,
+      "detail": 1,
+      "name": "포스트모던 빌딩",
+      "assetName": "HomeEvolution310",
+      "sourceSVG": "daily/day-310-stage-104-base-47-detail-1.svg",
+      "sha256": "7e8e908e7104606d40754b690d27042101087d530a8d94ecb8e06f6daaf9ae31",
+      "sourceSHA256": "64553175cba6a371a8332409f68a06dcd6ea1a835c11aaa5267ded10efe1f5f6"
+    },
+    {
+      "level": 311,
+      "stage": 104,
+      "detail": 2,
+      "name": "포스트모던 빌딩",
+      "assetName": "HomeEvolution311",
+      "sourceSVG": "daily/day-311-stage-104-base-47-detail-2.svg",
+      "sha256": "9d86e422005623a6bd3b04e9b3f111b7765bf99c94b39bd08c8ce01f55562915",
+      "sourceSHA256": "623473377fe9bff3b5a4d2e1e54401d5c271252f13a32df0f34bb1dccd604085"
+    },
+    {
+      "level": 312,
+      "stage": 104,
+      "detail": 3,
+      "name": "포스트모던 빌딩",
+      "assetName": "HomeEvolution312",
+      "sourceSVG": "daily/day-312-stage-104-base-47-detail-3.svg",
+      "sha256": "56ae90863a7f61d9061c2be0c76196a5dedc9a57a8aa0900c6b353eacadbad97",
+      "sourceSHA256": "89d1db72644c55c76940b9e5c3ec274382846e1db98b6a039e4cff72b4562fa3"
+    },
+    {
+      "level": 313,
+      "stage": 105,
+      "detail": 1,
+      "name": "하이테크 빌딩",
+      "assetName": "HomeEvolution313",
+      "sourceSVG": "daily/day-313-stage-105-base-48-detail-1.svg",
+      "sha256": "b7528ac1c86a1d8bb35abe692207f3362c5187b90d7329f30b6b2b29f0e890c2",
+      "sourceSHA256": "50e98cb4475c80b941018b7b674ed7b700b640db1a009c6c62dd118eeea9135f"
+    },
+    {
+      "level": 314,
+      "stage": 105,
+      "detail": 2,
+      "name": "하이테크 빌딩",
+      "assetName": "HomeEvolution314",
+      "sourceSVG": "daily/day-314-stage-105-base-48-detail-2.svg",
+      "sha256": "5317b4513a0da60e81e7314224cc6cd73d42d57b5a6b601fdcf57f61aa3d9c28",
+      "sourceSHA256": "f0a3dcd161779cbbdde77b177ec876ad732bea52070e7566660b3c941c4a1300"
+    },
+    {
+      "level": 315,
+      "stage": 105,
+      "detail": 3,
+      "name": "하이테크 빌딩",
+      "assetName": "HomeEvolution315",
+      "sourceSVG": "daily/day-315-stage-105-base-48-detail-3.svg",
+      "sha256": "c762d754172ff87e6994fc5fb31bcd7eb82913f7b164183f7b4304ae0acbb3e5",
+      "sourceSHA256": "39dde2b1865c144c3e3ef906e1eb617317639717e19f3e3ea899d8c1f0d55a8d"
+    },
+    {
+      "level": 316,
+      "stage": 106,
+      "detail": 1,
+      "name": "루브르 유리 피라미드",
+      "assetName": "HomeEvolution316",
+      "sourceSVG": "daily/day-316-stage-106-louvre-00-detail-1.svg",
+      "sha256": "4b1cae09aea0474551c77c4c66d287bd17aef844864c42391d45bcd061cfd5d8",
+      "sourceSHA256": "151c7ad28ada784589c935237e2c48c3803441b7dc27f3fb2c56f1f5736094da"
+    },
+    {
+      "level": 317,
+      "stage": 106,
+      "detail": 2,
+      "name": "루브르 유리 피라미드",
+      "assetName": "HomeEvolution317",
+      "sourceSVG": "daily/day-317-stage-106-louvre-00-detail-2.svg",
+      "sha256": "4358c54b7345a49b1e93782df7a45ec1370b6f31735f6dead8c441be017a2bc4",
+      "sourceSHA256": "25d4ec5364624d8f56eba81c509e0bf1c81998e676474d10a6b36b4e30359c47"
+    },
+    {
+      "level": 318,
+      "stage": 106,
+      "detail": 3,
+      "name": "루브르 유리 피라미드",
+      "assetName": "HomeEvolution318",
+      "sourceSVG": "daily/day-318-stage-106-louvre-00-detail-3.svg",
+      "sha256": "2db63832d914c016e2ef371af2565706a0addee369222e306ccab672e39d04b9",
+      "sourceSHA256": "d4a838821ad1b38b6a597fc9922a0d16bf57838fddabbcc97555711818260cf3"
+    },
+    {
+      "level": 319,
+      "stage": 107,
+      "detail": 1,
+      "name": "댄싱하우스",
+      "assetName": "HomeEvolution319",
+      "sourceSVG": "daily/day-319-stage-107-dancing-00-detail-1.svg",
+      "sha256": "c6a92084144ef2ea2665619120363a480fd8b577fe4730c15fc78febe9671ef3",
+      "sourceSHA256": "63a3d11ae6da692bc7dacbe28ebef72bf89eaaa905a42f7d668e24badc0c80ab"
+    },
+    {
+      "level": 320,
+      "stage": 107,
+      "detail": 2,
+      "name": "댄싱하우스",
+      "assetName": "HomeEvolution320",
+      "sourceSVG": "daily/day-320-stage-107-dancing-00-detail-2.svg",
+      "sha256": "b9f9b576dbbc913f18d20615fb46668c6984ce6b18e29b5fd7eb0d6b3c610778",
+      "sourceSHA256": "5a9f04235d1bf7ac61a7a72fde3cd8c37182b46f2314d0a560d980a2495d49e9"
+    },
+    {
+      "level": 321,
+      "stage": 107,
+      "detail": 3,
+      "name": "댄싱하우스",
+      "assetName": "HomeEvolution321",
+      "sourceSVG": "daily/day-321-stage-107-dancing-00-detail-3.svg",
+      "sha256": "ba38b90fe84f8be38236b17058b7bbd3fdba9450a09d3e4d985034fe97996e40",
+      "sourceSHA256": "0661f0378ff46d4b8c47a4e85983d5ccf5474a5b05111ed7d5e62bd550069695"
+    },
+    {
+      "level": 322,
+      "stage": 108,
+      "detail": 1,
+      "name": "빌바오 곡면 건축",
+      "assetName": "HomeEvolution322",
+      "sourceSVG": "daily/day-322-stage-108-base-49-detail-1.svg",
+      "sha256": "979e27e6a15c5a10d4184264b8d9ed054b3ef5c72375123d67baa95129fc238f",
+      "sourceSHA256": "ab9428dd3af7ea89a5705404d79b262f3a523f6b352cff318ae24800c5f97b99"
+    },
+    {
+      "level": 323,
+      "stage": 108,
+      "detail": 2,
+      "name": "빌바오 곡면 건축",
+      "assetName": "HomeEvolution323",
+      "sourceSVG": "daily/day-323-stage-108-base-49-detail-2.svg",
+      "sha256": "fed90745147187f4fa0173e229b296ec3feb0b991082bc8aade08dafe9701cee",
+      "sourceSHA256": "61718000b40f2e0072e4bc7a043bf209d1a5bf007dff2999fd3b1416b10d07e1"
+    },
+    {
+      "level": 324,
+      "stage": 108,
+      "detail": 3,
+      "name": "빌바오 곡면 건축",
+      "assetName": "HomeEvolution324",
+      "sourceSVG": "daily/day-324-stage-108-base-49-detail-3.svg",
+      "sha256": "27e673738021b6d7235d5a67db90cf9ede2efb1c38399a7cab94c5341cc8a586",
+      "sourceSHA256": "897c65feec7f976310407a023d32a36e21eaa2af26a1c0a63ab23ebcd0442d02"
+    },
+    {
+      "level": 325,
+      "stage": 109,
+      "detail": 1,
+      "name": "페트로나스 트윈타워",
+      "assetName": "HomeEvolution325",
+      "sourceSVG": "daily/day-325-stage-109-petronas-00-detail-1.svg",
+      "sha256": "49c2b99e5506e388c00d6def25fb61cb524841b11ee7cf2fae82fd3c1ab6c1a5",
+      "sourceSHA256": "3883efad04debcc17515b07a46ddec3007e9b123cc6d8d171b27cc1b989109da"
+    },
+    {
+      "level": 326,
+      "stage": 109,
+      "detail": 2,
+      "name": "페트로나스 트윈타워",
+      "assetName": "HomeEvolution326",
+      "sourceSVG": "daily/day-326-stage-109-petronas-00-detail-2.svg",
+      "sha256": "76d18e6046481963423f8af3ebae26e01d71021d2b1a55a81c12efa4abc5460c",
+      "sourceSHA256": "01c64b145032a4a5b0c8114b7b4e0edd016ee2a7911a7c6c82e4a6490d9802c9"
+    },
+    {
+      "level": 327,
+      "stage": 109,
+      "detail": 3,
+      "name": "페트로나스 트윈타워",
+      "assetName": "HomeEvolution327",
+      "sourceSVG": "daily/day-327-stage-109-petronas-00-detail-3.svg",
+      "sha256": "b46f321b1e5fb52abcf4abeb71e818d73464ec8840724195300b35142440056b",
+      "sourceSHA256": "2f19d9563df297662024d05d0dcb871b198003b4647ed6b8be0dd8b232c74c40"
+    },
+    {
+      "level": 328,
+      "stage": 110,
+      "detail": 1,
+      "name": "부르즈 알 아랍",
+      "assetName": "HomeEvolution328",
+      "sourceSVG": "daily/day-328-stage-110-sailtower-00-detail-1.svg",
+      "sha256": "bbb82aaf1c1eeb66c0146af6c0096817b245dcfc9013035976a712f94afd02f8",
+      "sourceSHA256": "05abbf4a4610d7be518d95c7ae4823ba09bcf4b6ca90d3adac862f5b1101e821"
+    },
+    {
+      "level": 329,
+      "stage": 110,
+      "detail": 2,
+      "name": "부르즈 알 아랍",
+      "assetName": "HomeEvolution329",
+      "sourceSVG": "daily/day-329-stage-110-sailtower-00-detail-2.svg",
+      "sha256": "af5f8bf1ed562eea43e9ef3af4b9c3489f74d0526f237c028cbc3691d37674c3",
+      "sourceSHA256": "0f4b9996be87ea1a7a11a8e5818bbeca98e8a1b6f7f78d289e10672fa22b7b02"
+    },
+    {
+      "level": 330,
+      "stage": 110,
+      "detail": 3,
+      "name": "부르즈 알 아랍",
+      "assetName": "HomeEvolution330",
+      "sourceSVG": "daily/day-330-stage-110-sailtower-00-detail-3.svg",
+      "sha256": "e5047209ea35e02eaf3a8e34239fa02aae642f3c5d295dc1ed8fa83cb0708744",
+      "sourceSHA256": "3c3e06a532ff55c8cfa6bde3a8e2d03d284f4785bb3a6b24ece0a1d2f8b2013f"
+    },
+    {
+      "level": 331,
+      "stage": 111,
+      "detail": 1,
+      "name": "에덴 프로젝트 온실",
+      "assetName": "HomeEvolution331",
+      "sourceSVG": "daily/day-331-stage-111-biomes-00-detail-1.svg",
+      "sha256": "22d9e249764d2c2efb3bb57789a5b0d882c5bbca96cfc6e1e2214c0a2d5ddece",
+      "sourceSHA256": "23e2ad2e8c306220eb9b03a95d29d7fac9050abc9b4e1243ff8955196958f388"
+    },
+    {
+      "level": 332,
+      "stage": 111,
+      "detail": 2,
+      "name": "에덴 프로젝트 온실",
+      "assetName": "HomeEvolution332",
+      "sourceSVG": "daily/day-332-stage-111-biomes-00-detail-2.svg",
+      "sha256": "e0da9e5124a193a82e5bcc55b6fe04e6df9891acaa4a9109af8f54db8f3291f8",
+      "sourceSHA256": "4f0366064dac25a30baa718af028cfd31240e70aaa8c09962c9ec8e38af73c56"
+    },
+    {
+      "level": 333,
+      "stage": 111,
+      "detail": 3,
+      "name": "에덴 프로젝트 온실",
+      "assetName": "HomeEvolution333",
+      "sourceSVG": "daily/day-333-stage-111-biomes-00-detail-3.svg",
+      "sha256": "1222a9bfa55cdbbfd08b345c4db1d2898a49dfa786c9dbb58c2ce228a99e8a2a",
+      "sourceSHA256": "d4295cde817e834df9b60eab618fa648e21b456b36f3af50f5959cc3bccd4a72"
+    },
+    {
+      "level": 334,
+      "stage": 112,
+      "detail": 1,
+      "name": "타이베이101",
+      "assetName": "HomeEvolution334",
+      "sourceSVG": "daily/day-334-stage-112-base-50-detail-1.svg",
+      "sha256": "fb832bda2ac6040d91b11958facebb941599d8f4f3e7d79bb48cbb7cc9f2e9f8",
+      "sourceSHA256": "f8918f67e81b00c128fce8ad14880d80ea90b143fe501c23ff8ac69cd71ef453"
+    },
+    {
+      "level": 335,
+      "stage": 112,
+      "detail": 2,
+      "name": "타이베이101",
+      "assetName": "HomeEvolution335",
+      "sourceSVG": "daily/day-335-stage-112-base-50-detail-2.svg",
+      "sha256": "45db7df4c680625242cf37f02b8857959e9b680e881e003d5bd35380cbd068f2",
+      "sourceSHA256": "137e6853440a881a8f4a8a88df1b994f7a3218f22f852314fe6367a2355e4f0d"
+    },
+    {
+      "level": 336,
+      "stage": 112,
+      "detail": 3,
+      "name": "타이베이101",
+      "assetName": "HomeEvolution336",
+      "sourceSVG": "daily/day-336-stage-112-base-50-detail-3.svg",
+      "sha256": "032ab268b7d87d7257f61536a58c066a07cfe06021c90aaf075dc5a1f5da16d8",
+      "sourceSHA256": "f2e2fa0362f33751abcb30f98d6ea49eaa14d7a20f5baf091ca8ba5c982bf1e8"
+    },
+    {
+      "level": 337,
+      "stage": 113,
+      "detail": 1,
+      "name": "베이징 국가체육장",
+      "assetName": "HomeEvolution337",
+      "sourceSVG": "daily/day-337-stage-113-birdnest-00-detail-1.svg",
+      "sha256": "b0a9f534e63c62c646dfa263c376d7240825142d6ed9e70ce5ba5d83eb21a1b4",
+      "sourceSHA256": "7d5576653bb2d161d60c4eefd4e595dd844270f2dcc720a4d571bec37793a23e"
+    },
+    {
+      "level": 338,
+      "stage": 113,
+      "detail": 2,
+      "name": "베이징 국가체육장",
+      "assetName": "HomeEvolution338",
+      "sourceSVG": "daily/day-338-stage-113-birdnest-00-detail-2.svg",
+      "sha256": "f8c40569ad1673b68afcbb896d53e4f5126b5f1d945854ae6f260c98b1d661fd",
+      "sourceSHA256": "df5ffe0c14116277bae1942872a3ef9c8096dcca2841db0cd698f2ca5f62dcf3"
+    },
+    {
+      "level": 339,
+      "stage": 113,
+      "detail": 3,
+      "name": "베이징 국가체육장",
+      "assetName": "HomeEvolution339",
+      "sourceSVG": "daily/day-339-stage-113-birdnest-00-detail-3.svg",
+      "sha256": "ba6318a552be9cd0d3afe83d7b6da88d0312090870ea35a368f53286a18e49f4",
+      "sourceSHA256": "081e74155ebde261f133cb573df38c96f94400e28d62f0fa8a79276fda3bc743"
+    },
+    {
+      "level": 340,
+      "stage": 114,
+      "detail": 1,
+      "name": "부르즈 칼리파",
+      "assetName": "HomeEvolution340",
+      "sourceSVG": "daily/day-340-stage-114-base-51-detail-1.svg",
+      "sha256": "147f9a9f31c3e7f27fc6991d6ec8403d2e7d1e2781080e31b0823f476428b011",
+      "sourceSHA256": "370950f02352c9faf2d3c1157e9263b3e8824db287f90598f21d7382856be872"
+    },
+    {
+      "level": 341,
+      "stage": 114,
+      "detail": 2,
+      "name": "부르즈 칼리파",
+      "assetName": "HomeEvolution341",
+      "sourceSVG": "daily/day-341-stage-114-base-51-detail-2.svg",
+      "sha256": "480511472a3f07af277640ed9558269478e7bbb6f1cd2a759149357daea699ce",
+      "sourceSHA256": "14824475d7fef46f78605d73fba0e90515b760f0687e0f514b1d05eb847762db"
+    },
+    {
+      "level": 342,
+      "stage": 114,
+      "detail": 3,
+      "name": "부르즈 칼리파",
+      "assetName": "HomeEvolution342",
+      "sourceSVG": "daily/day-342-stage-114-base-51-detail-3.svg",
+      "sha256": "2369acba89fd5f494f44a64db00234edfa9bc59057101a69be65b8824bf4cd01",
+      "sourceSHA256": "f099a038c80ca2ca0613aba29d5ebafc66f941c4d14005c0219a64642c81f8c8"
+    },
+    {
+      "level": 343,
+      "stage": 115,
+      "detail": 1,
+      "name": "마리나베이샌즈",
+      "assetName": "HomeEvolution343",
+      "sourceSVG": "daily/day-343-stage-115-marinabay-00-detail-1.svg",
+      "sha256": "5a3f07724fba1ab923a4017df686ee6c25746ce837675dd1796e743ae5f13b22",
+      "sourceSHA256": "86eeabf6dd4158e8673b4d8fc14abf27c702611f0b176751cce7ed8d6412193f"
+    },
+    {
+      "level": 344,
+      "stage": 115,
+      "detail": 2,
+      "name": "마리나베이샌즈",
+      "assetName": "HomeEvolution344",
+      "sourceSVG": "daily/day-344-stage-115-marinabay-00-detail-2.svg",
+      "sha256": "2398f2a4eea31d9e6be591b2d1793bd8da0518d51afc6233b84a55f4696d717f",
+      "sourceSHA256": "c16bec5b2aac5671b822924f4bf118535dbd69e9f69deefa2e109f091b9b91d7"
+    },
+    {
+      "level": 345,
+      "stage": 115,
+      "detail": 3,
+      "name": "마리나베이샌즈",
+      "assetName": "HomeEvolution345",
+      "sourceSVG": "daily/day-345-stage-115-marinabay-00-detail-3.svg",
+      "sha256": "d541d3d1577cfcd30c036b948dcdaf5f506eddc18203a39a0e5b1d10e39ba755",
+      "sourceSHA256": "507434bd036eea2a12c64af60b5b94258a8f2bdc26c4d291e37a2bfb4a1253cc"
+    },
+    {
+      "level": 346,
+      "stage": 116,
+      "detail": 1,
+      "name": "CCTV 본사",
+      "assetName": "HomeEvolution346",
+      "sourceSVG": "daily/day-346-stage-116-cctv-00-detail-1.svg",
+      "sha256": "b61a77a724a8f20d91f5c625d8ef08daf4e638fb201b8c2f2c1fe228830a616d",
+      "sourceSHA256": "aa90cc7e494b9f09ee17b64ca8dcf4adf854d14a422a229a25a132b116c72da2"
+    },
+    {
+      "level": 347,
+      "stage": 116,
+      "detail": 2,
+      "name": "CCTV 본사",
+      "assetName": "HomeEvolution347",
+      "sourceSVG": "daily/day-347-stage-116-cctv-00-detail-2.svg",
+      "sha256": "232c2658e8d8cd5f95c321acb06946687260aa65867da8f5d9885e7f7441a393",
+      "sourceSHA256": "25e047ce57cbb341e7f46ec63e4f855c22158c6a9bf2b61a0b0e4e4eba7f87bb"
+    },
+    {
+      "level": 348,
+      "stage": 116,
+      "detail": 3,
+      "name": "CCTV 본사",
+      "assetName": "HomeEvolution348",
+      "sourceSVG": "daily/day-348-stage-116-cctv-00-detail-3.svg",
+      "sha256": "42ee9475fe58b970dd5641311f4ba3c67742ad649fb2a62dcb34f2ce34dbbdbc",
+      "sourceSHA256": "1b81f0817b3b79890ef44c19bbec02fd9323c0de715d7774fac80a4fa8b97c4e"
+    },
+    {
+      "level": 349,
+      "stage": 117,
+      "detail": 1,
+      "name": "런던 샤드",
+      "assetName": "HomeEvolution349",
+      "sourceSVG": "daily/day-349-stage-117-shard-00-detail-1.svg",
+      "sha256": "79e73a05d7a88415e5eff7f00bc1fec591f55956b231f0ad2b4e2ab3a08450eb",
+      "sourceSHA256": "46838abd47b3c2e9e555154f4c725c752bce7a3850c88536811e378790d80aaf"
+    },
+    {
+      "level": 350,
+      "stage": 117,
+      "detail": 2,
+      "name": "런던 샤드",
+      "assetName": "HomeEvolution350",
+      "sourceSVG": "daily/day-350-stage-117-shard-00-detail-2.svg",
+      "sha256": "1658f05c751d7617cc3fd7babb634ee3e8eb25414c7c39270ae5e1991cb5c7b2",
+      "sourceSHA256": "403797e48c44015cf507001751b8cf99084a9123ae1ac9883170a6cf1d1cf606"
+    },
+    {
+      "level": 351,
+      "stage": 117,
+      "detail": 3,
+      "name": "런던 샤드",
+      "assetName": "HomeEvolution351",
+      "sourceSVG": "daily/day-351-stage-117-shard-00-detail-3.svg",
+      "sha256": "ed2547531af3a22989d59d375093aa985af52243e43adc0fe08963ce6b5e2d6d",
+      "sourceSHA256": "ff4b9cc68f745123a6fcb0f9b4f435e1c54ae7d51f2466f05dad68943ac4bdcf"
+    },
+    {
+      "level": 352,
+      "stage": 118,
+      "detail": 1,
+      "name": "헤이다르 알리예프 센터",
+      "assetName": "HomeEvolution352",
+      "sourceSVG": "daily/day-352-stage-118-heydar-00-detail-1.svg",
+      "sha256": "0656b49a51a437f8239742533f3b63b658ea7efb0d956024315527ff2bbbeacb",
+      "sourceSHA256": "03a6120f4dd9c51bd661fe6731d6ada21174761409ed2ac8d6c472a4f114d501"
+    },
+    {
+      "level": 353,
+      "stage": 118,
+      "detail": 2,
+      "name": "헤이다르 알리예프 센터",
+      "assetName": "HomeEvolution353",
+      "sourceSVG": "daily/day-353-stage-118-heydar-00-detail-2.svg",
+      "sha256": "bd13b894891bb22731958ef5e8339bf1b580bb4659e5cb09be867f6932d3038f",
+      "sourceSHA256": "fb2c5e02178d95ff95d2cc0223b3757c6af8465af70dff61073189b561d76eca"
+    },
+    {
+      "level": 354,
+      "stage": 118,
+      "detail": 3,
+      "name": "헤이다르 알리예프 센터",
+      "assetName": "HomeEvolution354",
+      "sourceSVG": "daily/day-354-stage-118-heydar-00-detail-3.svg",
+      "sha256": "09f5e99ec71be7b5def6a37aea5ab3efdc5731759a3e40efeb0f196bfb083889",
+      "sourceSHA256": "ec9b0b887d6f71fcc3d32ad9a23c933731d24a856d4e5566444ce6e988139ac4"
+    },
+    {
+      "level": 355,
+      "stage": 119,
+      "detail": 1,
+      "name": "보스코 베르티칼레",
+      "assetName": "HomeEvolution355",
+      "sourceSVG": "daily/day-355-stage-119-bosco-00-detail-1.svg",
+      "sha256": "ae57f31f5ca05ac11ffeb911276e66afa57ad50a1dfd762e1402f73074b9509a",
+      "sourceSHA256": "e9e22939eb29d05292385457048f64c1726bede2a71cb66b1dbc6f055fe21d7b"
+    },
+    {
+      "level": 356,
+      "stage": 119,
+      "detail": 2,
+      "name": "보스코 베르티칼레",
+      "assetName": "HomeEvolution356",
+      "sourceSVG": "daily/day-356-stage-119-bosco-00-detail-2.svg",
+      "sha256": "b6e18ecff7b280824d49273ca7edad1fb3782bbe04a6041918cfc69a4e257a94",
+      "sourceSHA256": "3698c5718af2327e00f45609a86f07fab0ece780d72d326c37c74a138e471b6a"
+    },
+    {
+      "level": 357,
+      "stage": 119,
+      "detail": 3,
+      "name": "보스코 베르티칼레",
+      "assetName": "HomeEvolution357",
+      "sourceSVG": "daily/day-357-stage-119-bosco-00-detail-3.svg",
+      "sha256": "ad1d5691e0e0814e54dcbf384cb4ae9862bc0e1adf6899d5b8f0d12ee8dccc96",
+      "sourceSHA256": "79a4ce18a76d207ae49bf6076924f1bae3accf52a51f6a2cca654be6a9724ff9"
+    },
+    {
+      "level": 358,
+      "stage": 120,
+      "detail": 1,
+      "name": "상하이타워",
+      "assetName": "HomeEvolution358",
+      "sourceSVG": "daily/day-358-stage-120-base-52-detail-1.svg",
+      "sha256": "8fdc7d2b400e4a429541a121dd693f3e465bfa56ecb4c8d752ff8676424246e1",
+      "sourceSHA256": "6011fe64deaadb4d8de7b91f6f4c609a6977289d537a72bdbbd9e07b947714e2"
+    },
+    {
+      "level": 359,
+      "stage": 120,
+      "detail": 2,
+      "name": "상하이타워",
+      "assetName": "HomeEvolution359",
+      "sourceSVG": "daily/day-359-stage-120-base-52-detail-2.svg",
+      "sha256": "4c2b12fbd0a513fa89e6a3db95c55a2c3f3e6c73c74ceca3f4b63aff0b4bb8c1",
+      "sourceSHA256": "b53f8b5583abd9304fd5b424f233a235475ecb0957b911fdb639f1b35645233d"
+    },
+    {
+      "level": 360,
+      "stage": 120,
+      "detail": 3,
+      "name": "상하이타워",
+      "assetName": "HomeEvolution360",
+      "sourceSVG": "daily/day-360-stage-120-base-52-detail-3.svg",
+      "sha256": "a4766a7c0cf2bb27d379c8872200aee431af8374c6d0198689b55bdc3be8fad9",
+      "sourceSHA256": "95351d67baa644757a2fa654b23fa9d186d030d4c1f1ffbb1b3c7d6f652f2e03"
+    },
+    {
+      "level": 361,
+      "stage": 121,
+      "detail": 1,
+      "name": "톈진 빈하이 도서관",
+      "assetName": "HomeEvolution361",
+      "sourceSVG": "daily/day-361-stage-121-libraryeye-00-detail-1.svg",
+      "sha256": "b6bee85015860cfa33f2bf1789d0113ce95ef3d5ceab9b488060a615dd5bb9d2",
+      "sourceSHA256": "e1c61b583194a302ab0bd130d2006d0c780dfe334fb505d8cc2269eb2a4eb45e"
+    },
+    {
+      "level": 362,
+      "stage": 121,
+      "detail": 2,
+      "name": "톈진 빈하이 도서관",
+      "assetName": "HomeEvolution362",
+      "sourceSVG": "daily/day-362-stage-121-libraryeye-00-detail-2.svg",
+      "sha256": "744c16b3d6e11a2ba6bb2ebe04df3cce624ce7f3ef36cfd272fc6c169c912dac",
+      "sourceSHA256": "264fa9ed8c78fb6c6acc3b3736896fa8412e846fa5e4edc9babb4074cc2f7592"
+    },
+    {
+      "level": 363,
+      "stage": 121,
+      "detail": 3,
+      "name": "톈진 빈하이 도서관",
+      "assetName": "HomeEvolution363",
+      "sourceSVG": "daily/day-363-stage-121-libraryeye-00-detail-3.svg",
+      "sha256": "85e32285eaf39e4576558d50ac4adea68edad532623489293d457315333d429f",
+      "sourceSHA256": "0eadda4304e58e0c52aa991ac57848ce50888b666dee8f4781a316ca03bb15c1"
+    },
+    {
+      "level": 364,
+      "stage": 122,
+      "detail": 1,
+      "name": "롯데월드타워",
+      "assetName": "HomeEvolution364",
+      "sourceSVG": "daily/day-364-stage-122-base-53-detail-1.svg",
+      "sha256": "5528e4960dc8c244781daad2611fe76d3cf56f8bef30b7b8046cb4ca7818d6ea",
+      "sourceSHA256": "107470cfea8c05056a19cca9fa2d0984e340e378f4f3aeadb5b616eb1d43c0ea"
+    },
+    {
+      "level": 365,
+      "stage": 122,
+      "detail": 2,
+      "name": "롯데월드타워",
+      "assetName": "HomeEvolution365",
+      "sourceSVG": "daily/day-365-stage-122-base-53-detail-2.svg",
+      "sha256": "f277d0e4fbd5e04d40520e47e2c7189dab19aa171c12c9270e24420994ed7fb5",
+      "sourceSHA256": "8bb212ee4590cecde815b161608c62b0e9c292a5e9b5a52d018b38884a6cdaf9"
+    },
+    {
+      "level": 366,
+      "stage": 122,
+      "detail": 3,
+      "name": "롯데월드타워",
+      "assetName": "HomeEvolution366",
+      "sourceSVG": "daily/day-366-stage-122-base-53-detail-3.svg",
+      "sha256": "79fab967d00fd51611abf3aa0c5e9c598d6c91367eb1ed0abc6ccda6bb9e0fcf",
+      "sourceSHA256": "c6c210a70d8a2d0077acfc87262c005e357b7aa04ee5850539255c7899602181"
+    }
+  ],
+  "sourceWidth": 512,
+  "sourceHeight": 512,
+  "sizingPolicy": "128pt vector artboard with unchanged 128-unit geometry; preserves-vector-representation supports larger views."
+}

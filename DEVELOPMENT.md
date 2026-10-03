@@ -42,6 +42,8 @@
 
 ## 검증 명령
 
+집 성장 그림은 `HomeEvolution001...366` 자산명과 기존 저장 레벨을 유지합니다. `scripts/home_evolution_artwork_manifest.json`이 승인한 122종 × 3레벨 원본 해시와 매핑을 기록합니다. `python3 scripts/generate_home_evolution_artwork.py --check`로 현재 자산을 대조하고, `--write`는 manifest에 지정된 디자인 원본을 기존 자산에 반영합니다. 512px 출력 원본의 내부 도형/viewBox를 유지하며 앱 벡터 기준 크기는 128pt, vector representation은 보존합니다. 성장·보상 회귀와 실제 번들 그림의 48pt 렌더 검사는 `MapHomeGrowthPolicyTests`에 있습니다.
+
 현재 scheme과 target은 프로젝트에서 확인합니다.
 
 ```sh

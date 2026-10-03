@@ -1,0 +1,426 @@
+[
+  {
+    "week": 1,
+    "name": "씨앗",
+    "region": "자연",
+    "sortYear": null,
+    "representativePeriod": "도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 2,
+    "name": "새싹",
+    "region": "자연",
+    "sortYear": null,
+    "representativePeriod": "도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 3,
+    "name": "큰 나무",
+    "region": "자연",
+    "sortYear": null,
+    "representativePeriod": "도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 4,
+    "name": "모닥불",
+    "region": "야영",
+    "sortYear": null,
+    "representativePeriod": "비연대 도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 5,
+    "name": "동굴 거처",
+    "region": "야영",
+    "sortYear": null,
+    "representativePeriod": "비연대 도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 6,
+    "name": "해먹",
+    "region": "야영",
+    "sortYear": null,
+    "representativePeriod": "비연대 도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 7,
+    "name": "가지 움막",
+    "region": "야영",
+    "sortYear": null,
+    "representativePeriod": "비연대 도입",
+    "dateBasis": "thematic prologue"
+  },
+  {
+    "week": 8,
+    "name": "차탈회위크 흙집",
+    "region": "튀르키예",
+    "sortYear": -7000,
+    "representativePeriod": "기원전7천년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 9,
+    "name": "스카라브레이 돌집",
+    "region": "스코틀랜드",
+    "sortYear": -3000,
+    "representativePeriod": "기원전3천년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 10,
+    "name": "이집트 피라미드",
+    "region": "이집트",
+    "sortYear": -2600,
+    "representativePeriod": "기원전26세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 11,
+    "name": "우르 지구라트",
+    "region": "이라크",
+    "sortYear": -2100,
+    "representativePeriod": "기원전21세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 12,
+    "name": "미노스 궁전",
+    "region": "그리스 크레타",
+    "sortYear": -1700,
+    "representativePeriod": "기원전17세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 13,
+    "name": "그리스 신전",
+    "region": "그리스",
+    "sortYear": -450,
+    "representativePeriod": "기원전5세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 14,
+    "name": "로마 판테온",
+    "region": "이탈리아",
+    "sortYear": 125,
+    "representativePeriod": "2세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 15,
+    "name": "비잔틴 돔",
+    "region": "튀르키예",
+    "sortYear": 537,
+    "representativePeriod": "6세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 16,
+    "name": "호류지 목탑",
+    "region": "일본",
+    "sortYear": 700,
+    "representativePeriod": "7–8세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 17,
+    "name": "마야 계단 신전",
+    "region": "멕시코",
+    "sortYear": 750,
+    "representativePeriod": "8세기 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 18,
+    "name": "이슬람 아치 궁전",
+    "region": "서아시아",
+    "sortYear": 800,
+    "representativePeriod": "8–9세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 19,
+    "name": "바이킹 롱하우스",
+    "region": "북유럽",
+    "sortYear": 900,
+    "representativePeriod": "9–10세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 20,
+    "name": "로마네스크 석조",
+    "region": "서유럽",
+    "sortYear": 1050,
+    "representativePeriod": "11세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 21,
+    "name": "앙코르 사원",
+    "region": "캄보디아",
+    "sortYear": 1150,
+    "representativePeriod": "12세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 22,
+    "name": "고딕 대성당",
+    "region": "프랑스",
+    "sortYear": 1200,
+    "representativePeriod": "12–13세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 23,
+    "name": "절벽 푸에블로",
+    "region": "미국 남서부",
+    "sortYear": 1250,
+    "representativePeriod": "13세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 24,
+    "name": "짐바브웨 석조 성곽",
+    "region": "짐바브웨",
+    "sortYear": 1300,
+    "representativePeriod": "11–15세기 중 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 25,
+    "name": "조선 한옥",
+    "region": "한국",
+    "sortYear": 1400,
+    "representativePeriod": "조선 초기 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 26,
+    "name": "르네상스 팔라초",
+    "region": "이탈리아",
+    "sortYear": 1450,
+    "representativePeriod": "15세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 27,
+    "name": "푸젠 토루",
+    "region": "중국",
+    "sortYear": 1500,
+    "representativePeriod": "15–20세기 중 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 28,
+    "name": "튜더 목조 주택",
+    "region": "영국",
+    "sortYear": 1550,
+    "representativePeriod": "16세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 29,
+    "name": "시밤 흙탑 주택",
+    "region": "예멘",
+    "sortYear": 1600,
+    "representativePeriod": "16세기 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 30,
+    "name": "무굴 돔 궁전",
+    "region": "인도",
+    "sortYear": 1630,
+    "representativePeriod": "17세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 31,
+    "name": "일본 성곽",
+    "region": "일본",
+    "sortYear": 1630,
+    "representativePeriod": "17세기 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 32,
+    "name": "바로크 궁전",
+    "region": "프랑스",
+    "sortYear": 1660,
+    "representativePeriod": "17세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 33,
+    "name": "네덜란드 운하집",
+    "region": "네덜란드",
+    "sortYear": 1680,
+    "representativePeriod": "17세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 34,
+    "name": "로코코 저택",
+    "region": "중부 유럽",
+    "sortYear": 1750,
+    "representativePeriod": "18세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 35,
+    "name": "신고전주의 저택",
+    "region": "유럽",
+    "sortYear": 1800,
+    "representativePeriod": "18–19세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 36,
+    "name": "러시아 목조 주택",
+    "region": "러시아",
+    "sortYear": 1850,
+    "representativePeriod": "19세기 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 37,
+    "name": "빅토리아 주택",
+    "region": "영국",
+    "sortYear": 1870,
+    "representativePeriod": "19세기",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 38,
+    "name": "시카고 철골 빌딩",
+    "region": "미국",
+    "sortYear": 1890,
+    "representativePeriod": "19세기 말",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 39,
+    "name": "아르누보 빌라",
+    "region": "벨기에",
+    "sortYear": 1900,
+    "representativePeriod": "1900년 전후",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 40,
+    "name": "프레리 주택",
+    "region": "미국",
+    "sortYear": 1910,
+    "representativePeriod": "20세기 초",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 41,
+    "name": "바우하우스",
+    "region": "독일",
+    "sortYear": 1926,
+    "representativePeriod": "1926 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 42,
+    "name": "아르데코 빌딩",
+    "region": "미국",
+    "sortYear": 1930,
+    "representativePeriod": "1930년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 43,
+    "name": "국제주의 유리 건물",
+    "region": "미국",
+    "sortYear": 1950,
+    "representativePeriod": "1950년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 44,
+    "name": "브루탈리즘",
+    "region": "영국",
+    "sortYear": 1960,
+    "representativePeriod": "1960년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 45,
+    "name": "메타볼리즘 캡슐",
+    "region": "일본",
+    "sortYear": 1972,
+    "representativePeriod": "1972 대표",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 46,
+    "name": "시드니 오페라하우스",
+    "region": "호주",
+    "sortYear": 1973,
+    "representativePeriod": "1973",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 47,
+    "name": "포스트모던 빌딩",
+    "region": "미국",
+    "sortYear": 1984,
+    "representativePeriod": "1980년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 48,
+    "name": "하이테크 빌딩",
+    "region": "영국",
+    "sortYear": 1986,
+    "representativePeriod": "1980년대",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 49,
+    "name": "빌바오 곡면 건축",
+    "region": "스페인",
+    "sortYear": 1997,
+    "representativePeriod": "1997",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 50,
+    "name": "타이베이101",
+    "region": "대만",
+    "sortYear": 2004,
+    "representativePeriod": "2004",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 51,
+    "name": "부르즈 칼리파",
+    "region": "아랍에미리트",
+    "sortYear": 2010,
+    "representativePeriod": "2010",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 52,
+    "name": "상하이타워",
+    "region": "중국",
+    "sortYear": 2015,
+    "representativePeriod": "2015",
+    "dateBasis": "selected representative period; not origin date"
+  },
+  {
+    "week": 53,
+    "name": "롯데월드타워",
+    "region": "한국",
+    "sortYear": 2017,
+    "representativePeriod": "2017",
+    "dateBasis": "selected representative period; not origin date"
+  }
+]

@@ -1,0 +1,367 @@
+﻿day,stage,day_in_stage,name,region,representative_year,daily_change,png,svg
+1,1,1,씨앗,자연,,씨앗 껍질,daily/day-001-stage-001-seed-00-detail-1.png,daily/day-001-stage-001-seed-00-detail-1.svg
+2,1,2,씨앗,자연,,껍질이 갈라지고 뿌리가 뻗음,daily/day-002-stage-001-seed-00-detail-2.png,daily/day-002-stage-001-seed-00-detail-2.svg
+3,1,3,씨앗,자연,,줄기와 큰 두 잎이 올라옴,daily/day-003-stage-001-seed-00-detail-3.png,daily/day-003-stage-001-seed-00-detail-3.svg
+4,2,1,새싹,자연,,두 잎 새싹,daily/day-004-stage-002-sprout-00-detail-1.png,daily/day-004-stage-002-sprout-00-detail-1.svg
+5,2,2,새싹,자연,,줄기가 길어지고 네 잎,daily/day-005-stage-002-sprout-00-detail-2.png,daily/day-005-stage-002-sprout-00-detail-2.svg
+6,2,3,새싹,자연,,더 긴 줄기와 여섯 잎,daily/day-006-stage-002-sprout-00-detail-3.png,daily/day-006-stage-002-sprout-00-detail-3.svg
+7,3,1,묘목,자연,,가느다란 줄기와 두 쌍 수관,daily/day-007-stage-003-sapling-00-detail-1.png,daily/day-007-stage-003-sapling-00-detail-1.svg
+8,3,2,묘목,자연,,가지와 세 쌍 수관,daily/day-008-stage-003-sapling-00-detail-2.png,daily/day-008-stage-003-sapling-00-detail-2.svg
+9,3,3,묘목,자연,,큰 줄기와 네 쌍 수관,daily/day-009-stage-003-sapling-00-detail-3.png,daily/day-009-stage-003-sapling-00-detail-3.svg
+10,4,1,큰 나무,자연,,줄기와 양쪽 수관,daily/day-010-stage-004-tree-00-detail-1.png,daily/day-010-stage-004-tree-00-detail-1.svg
+11,4,2,큰 나무,자연,,윗 수관·오른쪽 가지 확장,daily/day-011-stage-004-tree-00-detail-2.png,daily/day-011-stage-004-tree-00-detail-2.svg
+12,4,3,큰 나무,자연,,아랫 수관·뿌리까지 큰 나무,daily/day-012-stage-004-tree-00-detail-3.png,daily/day-012-stage-004-tree-00-detail-3.svg
+13,5,1,모닥불,야영,,장작과 작은 불꽃,daily/day-013-stage-005-fire-00-detail-1.png,daily/day-013-stage-005-fire-00-detail-1.svg
+14,5,2,모닥불,야영,,큰 불꽃과 돌 화덕,daily/day-014-stage-005-fire-00-detail-2.png,daily/day-014-stage-005-fire-00-detail-2.svg
+15,5,3,모닥불,야영,,가로 받침대와 조리 냄비,daily/day-015-stage-005-fire-00-detail-3.png,daily/day-015-stage-005-fire-00-detail-3.svg
+16,6,1,동굴 거처,야영,,바위와 깊은 동굴 입구,daily/day-016-stage-006-cave-00-detail-1.png,daily/day-016-stage-006-cave-00-detail-1.svg
+17,6,2,동굴 거처,야영,,입구 바위와 외벽 돌출,daily/day-017-stage-006-cave-00-detail-2.png,daily/day-017-stage-006-cave-00-detail-2.svg
+18,6,3,동굴 거처,야영,,목재 차양과 입구 발판,daily/day-018-stage-006-cave-00-detail-3.png,daily/day-018-stage-006-cave-00-detail-3.svg
+19,7,1,해먹,야영,,기둥과 해먹,daily/day-019-stage-007-hammock-00-detail-1.png,daily/day-019-stage-007-hammock-00-detail-1.svg
+20,7,2,해먹,야영,,양쪽 나무 지붕·깊은 해먹,daily/day-020-stage-007-hammock-00-detail-2.png,daily/day-020-stage-007-hammock-00-detail-2.svg
+21,7,3,해먹,야영,,큰 차양·해먹 쿠션,daily/day-021-stage-007-hammock-00-detail-3.png,daily/day-021-stage-007-hammock-00-detail-3.svg
+22,8,1,가지 움막,야영,,가지 지붕과 움막 입구,daily/day-022-stage-008-hut-00-detail-1.png,daily/day-022-stage-008-hut-00-detail-1.svg
+23,8,2,가지 움막,야영,,지붕 높이·양쪽 지지 구조,daily/day-023-stage-008-hut-00-detail-2.png,daily/day-023-stage-008-hut-00-detail-2.svg
+24,8,3,가지 움막,야영,,앞 차양·지지 기둥·계단,daily/day-024-stage-008-hut-00-detail-3.png,daily/day-024-stage-008-hut-00-detail-3.svg
+25,9,1,유르트,중앙아시아·도입,,돔 텐트와 문,daily/day-025-stage-009-yurt-00-detail-1.png,daily/day-025-stage-009-yurt-00-detail-1.svg
+26,9,2,유르트,중앙아시아·도입,,큰 천막·넓은 벽 무늬,daily/day-026-stage-009-yurt-00-detail-2.png,daily/day-026-stage-009-yurt-00-detail-2.svg
+27,9,3,유르트,중앙아시아·도입,,띠 장식·입구 차양·발판,daily/day-027-stage-009-yurt-00-detail-3.png,daily/day-027-stage-009-yurt-00-detail-3.svg
+28,10,1,수상 움막,열대 지역·도입,,기둥 위 초가지붕,daily/day-028-stage-010-stilts-00-detail-1.png,daily/day-028-stage-010-stilts-00-detail-1.svg
+29,10,2,수상 움막,열대 지역·도입,,수상 데크·큰 창,daily/day-029-stage-010-stilts-00-detail-2.png,daily/day-029-stage-010-stilts-00-detail-2.svg
+30,10,3,수상 움막,열대 지역·도입,,사다리와 물가 갈대,daily/day-030-stage-010-stilts-00-detail-3.png,daily/day-030-stage-010-stilts-00-detail-3.svg
+31,11,1,차탈회위크 흙집,튀르키예,-7000,차탈회위크 흙집 초기 본체,daily/day-031-stage-011-base-08-detail-1.png,daily/day-031-stage-011-base-08-detail-1.svg
+32,11,2,차탈회위크 흙집,튀르키예,-7000,본체 성장·흙집 증축 1차,daily/day-032-stage-011-base-08-detail-2.png,daily/day-032-stage-011-base-08-detail-2.svg
+33,11,3,차탈회위크 흙집,튀르키예,-7000,완성 본체·흙집 증축 2차,daily/day-033-stage-011-base-08-detail-3.png,daily/day-033-stage-011-base-08-detail-3.svg
+34,12,1,레펜스키비르 거처,세르비아,-6000,사다리꼴 거처와 박공,daily/day-034-stage-012-trapezoid-00-detail-1.png,daily/day-034-stage-012-trapezoid-00-detail-1.svg
+35,12,2,레펜스키비르 거처,세르비아,-6000,측벽·안쪽 화덕,daily/day-035-stage-012-trapezoid-00-detail-2.png,daily/day-035-stage-012-trapezoid-00-detail-2.svg
+36,12,3,레펜스키비르 거처,세르비아,-6000,전면 석벽과 계단,daily/day-036-stage-012-trapezoid-00-detail-3.png,daily/day-036-stage-012-trapezoid-00-detail-3.svg
+37,13,1,신석기 롱하우스,중부 유럽,-5000,길게 이어진 초가,daily/day-037-stage-013-longhouse-00-detail-1.png,daily/day-037-stage-013-longhouse-00-detail-1.svg
+38,13,2,신석기 롱하우스,중부 유럽,-5000,큰 창·목재 벽 띠,daily/day-038-stage-013-longhouse-00-detail-2.png,daily/day-038-stage-013-longhouse-00-detail-2.svg
+39,13,3,신석기 롱하우스,중부 유럽,-5000,앞쪽 별채 박공·계단,daily/day-039-stage-013-longhouse-00-detail-3.png,daily/day-039-stage-013-longhouse-00-detail-3.svg
+40,14,1,스카라브레이 돌집,스코틀랜드,-3000,스카라브레이 돌집 초기 본체,daily/day-040-stage-014-base-09-detail-1.png,daily/day-040-stage-014-base-09-detail-1.svg
+41,14,2,스카라브레이 돌집,스코틀랜드,-3000,본체 성장·돌벽 구획 1차,daily/day-041-stage-014-base-09-detail-2.png,daily/day-041-stage-014-base-09-detail-2.svg
+42,14,3,스카라브레이 돌집,스코틀랜드,-3000,완성 본체·돌벽 구획 2차,daily/day-042-stage-014-base-09-detail-3.png,daily/day-042-stage-014-base-09-detail-3.svg
+43,15,1,스위스 호상 가옥,스위스,-2800,물 위 기둥과 큰 박공,daily/day-043-stage-015-pilehouse-00-detail-1.png,daily/day-043-stage-015-pilehouse-00-detail-1.svg
+44,15,2,스위스 호상 가옥,스위스,-2800,긴 데크·양쪽 창,daily/day-044-stage-015-pilehouse-00-detail-2.png,daily/day-044-stage-015-pilehouse-00-detail-2.svg
+45,15,3,스위스 호상 가옥,스위스,-2800,수변 사다리·갈대,daily/day-045-stage-015-pilehouse-00-detail-3.png,daily/day-045-stage-015-pilehouse-00-detail-3.svg
+46,16,1,이집트 피라미드,이집트,-2600,이집트 피라미드 초기 본체,daily/day-046-stage-016-base-10-detail-1.png,daily/day-046-stage-016-base-10-detail-1.svg
+47,16,2,이집트 피라미드,이집트,-2600,본체 성장·작은 피라미드·오벨리스크 1차,daily/day-047-stage-016-base-10-detail-2.png,daily/day-047-stage-016-base-10-detail-2.svg
+48,16,3,이집트 피라미드,이집트,-2600,완성 본체·작은 피라미드·오벨리스크 2차,daily/day-048-stage-016-base-10-detail-3.png,daily/day-048-stage-016-base-10-detail-3.svg
+49,17,1,인더스 벽돌 거처,파키스탄,-2500,벽돌집 본체,daily/day-049-stage-017-indus-00-detail-1.png,daily/day-049-stage-017-indus-00-detail-1.svg
+50,17,2,인더스 벽돌 거처,파키스탄,-2500,옥상층·측면 증축,daily/day-050-stage-017-indus-00-detail-2.png,daily/day-050-stage-017-indus-00-detail-2.svg
+51,17,3,인더스 벽돌 거처,파키스탄,-2500,오른쪽 벽체·수로,daily/day-051-stage-017-indus-00-detail-3.png,daily/day-051-stage-017-indus-00-detail-3.svg
+52,18,1,우르 지구라트,이라크,-2100,우르 지구라트 초기 본체,daily/day-052-stage-018-base-11-detail-1.png,daily/day-052-stage-018-base-11-detail-1.svg
+53,18,2,우르 지구라트,이라크,-2100,본체 성장·계단·기단 1차,daily/day-053-stage-018-base-11-detail-2.png,daily/day-053-stage-018-base-11-detail-2.svg
+54,18,3,우르 지구라트,이라크,-2100,완성 본체·계단·기단 2차,daily/day-054-stage-018-base-11-detail-3.png,daily/day-054-stage-018-base-11-detail-3.svg
+55,19,1,미노스 궁전,그리스 크레타,-1700,미노스 궁전 초기 본체,daily/day-055-stage-019-base-12-detail-1.png,daily/day-055-stage-019-base-12-detail-1.svg
+56,19,2,미노스 궁전,그리스 크레타,-1700,본체 성장·궁전 열주 1차,daily/day-056-stage-019-base-12-detail-2.png,daily/day-056-stage-019-base-12-detail-2.svg
+57,19,3,미노스 궁전,그리스 크레타,-1700,완성 본체·궁전 열주 2차,daily/day-057-stage-019-base-12-detail-3.png,daily/day-057-stage-019-base-12-detail-3.svg
+58,20,1,카르나크 열주전,이집트,-1500,사다리꼴 쌍탑 성문,daily/day-058-stage-020-pylon-00-detail-1.png,daily/day-058-stage-020-pylon-00-detail-1.svg
+59,20,2,카르나크 열주전,이집트,-1500,앞쪽 열주,daily/day-059-stage-020-pylon-00-detail-2.png,daily/day-059-stage-020-pylon-00-detail-2.svg
+60,20,3,카르나크 열주전,이집트,-1500,오벨리스크·넓은 기단,daily/day-060-stage-020-pylon-00-detail-3.png,daily/day-060-stage-020-pylon-00-detail-3.svg
+61,21,1,히타이트 성문,튀르키예,-1400,석벽과 큰 아치,daily/day-061-stage-021-liongate-00-detail-1.png,daily/day-061-stage-021-liongate-00-detail-1.svg
+62,21,2,히타이트 성문,튀르키예,-1400,양쪽 사자 모양 석상,daily/day-062-stage-021-liongate-00-detail-2.png,daily/day-062-stage-021-liongate-00-detail-2.svg
+63,21,3,히타이트 성문,튀르키예,-1400,성벽 상부 요철·기단,daily/day-063-stage-021-liongate-00-detail-3.png,daily/day-063-stage-021-liongate-00-detail-3.svg
+64,22,1,아시리아 궁전,이라크,-700,평지붕 궁전과 아치,daily/day-064-stage-022-assyrian-00-detail-1.png,daily/day-064-stage-022-assyrian-00-detail-1.svg
+65,22,2,아시리아 궁전,이라크,-700,양쪽 날개 수호상 표현,daily/day-065-stage-022-assyrian-00-detail-2.png,daily/day-065-stage-022-assyrian-00-detail-2.svg
+66,22,3,아시리아 궁전,이라크,-700,상부 요철·계단,daily/day-066-stage-022-assyrian-00-detail-3.png,daily/day-066-stage-022-assyrian-00-detail-3.svg
+67,23,1,페르세폴리스,이란,-500,동물 장식 기둥과 기단,daily/day-067-stage-023-persian-00-detail-1.png,daily/day-067-stage-023-persian-00-detail-1.svg
+68,23,2,페르세폴리스,이란,-500,상부 보·옆 석벽,daily/day-068-stage-023-persian-00-detail-2.png,daily/day-068-stage-023-persian-00-detail-2.svg
+69,23,3,페르세폴리스,이란,-500,전면 열주와 긴 보,daily/day-069-stage-023-persian-00-detail-3.png,daily/day-069-stage-023-persian-00-detail-3.svg
+70,24,1,그리스 신전,그리스,-450,그리스 신전 초기 본체,daily/day-070-stage-024-base-13-detail-1.png,daily/day-070-stage-024-base-13-detail-1.svg
+71,24,2,그리스 신전,그리스,-450,본체 성장·신전 열주 1차,daily/day-071-stage-024-base-13-detail-2.png,daily/day-071-stage-024-base-13-detail-2.svg
+72,24,3,그리스 신전,그리스,-450,완성 본체·신전 열주 2차,daily/day-072-stage-024-base-13-detail-3.png,daily/day-072-stage-024-base-13-detail-3.svg
+73,25,1,야흐찰 빙고,이란,-400,원뿔 빙고와 둥근 띠,daily/day-073-stage-025-icehouse-00-detail-1.png,daily/day-073-stage-025-icehouse-00-detail-1.svg
+74,25,2,야흐찰 빙고,이란,-400,왼쪽 입구 건물,daily/day-074-stage-025-icehouse-00-detail-2.png,daily/day-074-stage-025-icehouse-00-detail-2.svg
+75,25,3,야흐찰 빙고,이란,-400,물 저장부와 환기탑,daily/day-075-stage-025-icehouse-00-detail-3.png,daily/day-075-stage-025-icehouse-00-detail-3.svg
+76,26,1,그리스 원형극장,그리스,-350,원형극장 바닥과 첫 객석,daily/day-076-stage-026-theatre-00-detail-1.png,daily/day-076-stage-026-theatre-00-detail-1.svg
+77,26,2,그리스 원형극장,그리스,-350,두 번째 객석·무대 열주,daily/day-077-stage-026-theatre-00-detail-2.png,daily/day-077-stage-026-theatre-00-detail-2.svg
+78,26,3,그리스 원형극장,그리스,-350,세 번째 객석·무대 박공,daily/day-078-stage-026-theatre-00-detail-3.png,daily/day-078-stage-026-theatre-00-detail-3.svg
+79,27,1,산치 스투파,인도,-250,반구 스투파,daily/day-079-stage-027-stupa-00-detail-1.png,daily/day-079-stage-027-stupa-00-detail-1.svg
+80,27,2,산치 스투파,인도,-250,왼쪽 토라나 문,daily/day-080-stage-027-stupa-00-detail-2.png,daily/day-080-stage-027-stupa-00-detail-2.svg
+81,27,3,산치 스투파,인도,-250,오른쪽 문·중앙 계단,daily/day-081-stage-027-stupa-00-detail-3.png,daily/day-081-stage-027-stupa-00-detail-3.svg
+82,28,1,페트라 암벽 신전,요르단,50,암벽과 아래 열주,daily/day-082-stage-028-petra-00-detail-1.png,daily/day-082-stage-028-petra-00-detail-1.svg
+83,28,2,페트라 암벽 신전,요르단,50,상층 열주·중앙 둥근 지붕,daily/day-083-stage-028-petra-00-detail-2.png,daily/day-083-stage-028-petra-00-detail-2.svg
+84,28,3,페트라 암벽 신전,요르단,50,깊은 중앙 입구·석조 계단,daily/day-084-stage-028-petra-00-detail-3.png,daily/day-084-stage-028-petra-00-detail-3.svg
+85,29,1,콜로세움,이탈리아,80,낮은 원형 아케이드,daily/day-085-stage-029-colosseum-00-detail-1.png,daily/day-085-stage-029-colosseum-00-detail-1.svg
+86,29,2,콜로세움,이탈리아,80,상층 아케이드·수평 띠,daily/day-086-stage-029-colosseum-00-detail-2.png,daily/day-086-stage-029-colosseum-00-detail-2.svg
+87,29,3,콜로세움,이탈리아,80,높은 외벽·열린 상부 윤곽,daily/day-087-stage-029-colosseum-00-detail-3.png,daily/day-087-stage-029-colosseum-00-detail-3.svg
+88,30,1,로마 판테온,이탈리아,125,로마 판테온 초기 본체,daily/day-088-stage-030-base-14-detail-1.png,daily/day-088-stage-030-base-14-detail-1.svg
+89,30,2,로마 판테온,이탈리아,125,본체 성장·포르티코 열주 1차,daily/day-089-stage-030-base-14-detail-2.png,daily/day-089-stage-030-base-14-detail-2.svg
+90,30,3,로마 판테온,이탈리아,125,완성 본체·포르티코 열주 2차,daily/day-090-stage-030-base-14-detail-3.png,daily/day-090-stage-030-base-14-detail-3.svg
+91,31,1,푸에블로 구덩이집,미국 남서부,300,땅속 거처와 입구,daily/day-091-stage-031-pithouse-00-detail-1.png,daily/day-091-stage-031-pithouse-00-detail-1.svg
+92,31,2,푸에블로 구덩이집,미국 남서부,300,박공 지붕·경사 사다리,daily/day-092-stage-031-pithouse-00-detail-2.png,daily/day-092-stage-031-pithouse-00-detail-2.svg
+93,31,3,푸에블로 구덩이집,미국 남서부,300,입구 차양·앞 발판,daily/day-093-stage-031-pithouse-00-detail-3.png,daily/day-093-stage-031-pithouse-00-detail-3.svg
+94,32,1,비잔틴 돔,튀르키예,537,비잔틴 돔 초기 본체,daily/day-094-stage-032-base-15-detail-1.png,daily/day-094-stage-032-base-15-detail-1.svg
+95,32,2,비잔틴 돔,튀르키예,537,본체 성장·양쪽 작은 돔 1차,daily/day-095-stage-032-base-15-detail-2.png,daily/day-095-stage-032-base-15-detail-2.svg
+96,32,3,비잔틴 돔,튀르키예,537,완성 본체·양쪽 작은 돔 2차,daily/day-096-stage-032-base-15-detail-3.png,daily/day-096-stage-032-base-15-detail-3.svg
+97,33,1,호류지 목탑,일본,700,호류지 목탑 초기 본체,daily/day-097-stage-033-base-16-detail-1.png,daily/day-097-stage-033-base-16-detail-1.svg
+98,33,2,호류지 목탑,일본,700,본체 성장·양쪽 기와 누각 1차,daily/day-098-stage-033-base-16-detail-2.png,daily/day-098-stage-033-base-16-detail-2.svg
+99,33,3,호류지 목탑,일본,700,완성 본체·양쪽 기와 누각 2차,daily/day-099-stage-033-base-16-detail-3.png,daily/day-099-stage-033-base-16-detail-3.svg
+100,34,1,마야 계단 신전,멕시코,750,마야 계단 신전 초기 본체,daily/day-100-stage-034-base-17-detail-1.png,daily/day-100-stage-034-base-17-detail-1.svg
+101,34,2,마야 계단 신전,멕시코,750,본체 성장·계단·옆 신전 1차,daily/day-101-stage-034-base-17-detail-2.png,daily/day-101-stage-034-base-17-detail-2.svg
+102,34,3,마야 계단 신전,멕시코,750,완성 본체·계단·옆 신전 2차,daily/day-102-stage-034-base-17-detail-3.png,daily/day-102-stage-034-base-17-detail-3.svg
+103,35,1,이슬람 아치 궁전,서아시아,800,이슬람 아치 궁전 초기 본체,daily/day-103-stage-035-base-18-detail-1.png,daily/day-103-stage-035-base-18-detail-1.svg
+104,35,2,이슬람 아치 궁전,서아시아,800,본체 성장·양쪽 아치·돔 1차,daily/day-104-stage-035-base-18-detail-2.png,daily/day-104-stage-035-base-18-detail-2.svg
+105,35,3,이슬람 아치 궁전,서아시아,800,완성 본체·양쪽 아치·돔 2차,daily/day-105-stage-035-base-18-detail-3.png,daily/day-105-stage-035-base-18-detail-3.svg
+106,36,1,보로부두르,인도네시아,825,세 층 기단과 작은 스투파,daily/day-106-stage-036-borobudur-00-detail-1.png,daily/day-106-stage-036-borobudur-00-detail-1.svg
+107,36,2,보로부두르,인도네시아,825,네 층 기단·추가 스투파,daily/day-107-stage-036-borobudur-00-detail-2.png,daily/day-107-stage-036-borobudur-00-detail-2.svg
+108,36,3,보로부두르,인도네시아,825,다섯 층 기단·중앙 계단,daily/day-108-stage-036-borobudur-00-detail-3.png,daily/day-108-stage-036-borobudur-00-detail-3.svg
+109,37,1,수상 장옥,동남아시아,850,긴 수상 주택과 기둥,daily/day-109-stage-037-longstilts-00-detail-1.png,daily/day-109-stage-037-longstilts-00-detail-1.svg
+110,37,2,수상 장옥,동남아시아,850,긴 데크·난간,daily/day-110-stage-037-longstilts-00-detail-2.png,daily/day-110-stage-037-longstilts-00-detail-2.svg
+111,37,3,수상 장옥,동남아시아,850,출입 지붕·사다리·갈대,daily/day-111-stage-037-longstilts-00-detail-3.png,daily/day-111-stage-037-longstilts-00-detail-3.svg
+112,38,1,바이킹 롱하우스,북유럽,900,바이킹 롱하우스 초기 본체,daily/day-112-stage-038-base-19-detail-1.png,daily/day-112-stage-038-base-19-detail-1.svg
+113,38,2,바이킹 롱하우스,북유럽,900,본체 성장·초가지붕·입구 박공 1차,daily/day-113-stage-038-base-19-detail-2.png,daily/day-113-stage-038-base-19-detail-2.svg
+114,38,3,바이킹 롱하우스,북유럽,900,완성 본체·초가지붕·입구 박공 2차,daily/day-114-stage-038-base-19-detail-3.png,daily/day-114-stage-038-base-19-detail-3.svg
+115,39,1,프람바난,인도네시아,950,중앙 첨탑 사원,daily/day-115-stage-039-prambanan-00-detail-1.png,daily/day-115-stage-039-prambanan-00-detail-1.svg
+116,39,2,프람바난,인도네시아,950,왼쪽 첨탑,daily/day-116-stage-039-prambanan-00-detail-2.png,daily/day-116-stage-039-prambanan-00-detail-2.svg
+117,39,3,프람바난,인도네시아,950,오른쪽 첨탑·큰 기단,daily/day-117-stage-039-prambanan-00-detail-3.png,daily/day-117-stage-039-prambanan-00-detail-3.svg
+118,40,1,누비아 돔 주택,수단,1000,주 돔과 녹색 벽,daily/day-118-stage-040-nubian-00-detail-1.png,daily/day-118-stage-040-nubian-00-detail-1.svg
+119,40,2,누비아 돔 주택,수단,1000,오른쪽 푸른 돔,daily/day-119-stage-040-nubian-00-detail-2.png,daily/day-119-stage-040-nubian-00-detail-2.svg
+120,40,3,누비아 돔 주택,수단,1000,왼쪽 흙빛 돔·벽 장식,daily/day-120-stage-040-nubian-00-detail-3.png,daily/day-120-stage-040-nubian-00-detail-3.svg
+121,41,1,로마네스크 석조,서유럽,1050,로마네스크 석조 초기 본체,daily/day-121-stage-041-base-20-detail-1.png,daily/day-121-stage-041-base-20-detail-1.svg
+122,41,2,로마네스크 석조,서유럽,1050,본체 성장·측면 석탑 1차,daily/day-122-stage-041-base-20-detail-2.png,daily/day-122-stage-041-base-20-detail-2.svg
+123,41,3,로마네스크 석조,서유럽,1050,완성 본체·측면 석탑 2차,daily/day-123-stage-041-base-20-detail-3.png,daily/day-123-stage-041-base-20-detail-3.svg
+124,42,1,라니키바브 계단우물,인도,1060,낮은 계단우물,daily/day-124-stage-042-stepwell-00-detail-1.png,daily/day-124-stage-042-stepwell-00-detail-1.svg
+125,42,2,라니키바브 계단우물,인도,1060,깊은 계단·왼쪽 열주,daily/day-125-stage-042-stepwell-00-detail-2.png,daily/day-125-stage-042-stepwell-00-detail-2.svg
+126,42,3,라니키바브 계단우물,인도,1060,더 깊은 계단·오른쪽 지붕,daily/day-126-stage-042-stepwell-00-detail-3.png,daily/day-126-stage-042-stepwell-00-detail-3.svg
+127,43,1,노르웨이 스타브 교회,노르웨이,1100,중앙 교회와 높은 지붕,daily/day-127-stage-043-stave-00-detail-1.png,daily/day-127-stage-043-stave-00-detail-1.svg
+128,43,2,노르웨이 스타브 교회,노르웨이,1100,넓은 아래 지붕·벽체,daily/day-128-stage-043-stave-00-detail-2.png,daily/day-128-stage-043-stave-00-detail-2.svg
+129,43,3,노르웨이 스타브 교회,노르웨이,1100,꼭대기 탑·창·계단,daily/day-129-stage-043-stave-00-detail-3.png,daily/day-129-stage-043-stave-00-detail-3.svg
+130,44,1,앙코르 사원,캄보디아,1150,앙코르 사원 초기 본체,daily/day-130-stage-044-base-21-detail-1.png,daily/day-130-stage-044-base-21-detail-1.svg
+131,44,2,앙코르 사원,캄보디아,1150,본체 성장·양쪽 사원 지붕 1차,daily/day-131-stage-044-base-21-detail-2.png,daily/day-131-stage-044-base-21-detail-2.svg
+132,44,3,앙코르 사원,캄보디아,1150,완성 본체·양쪽 사원 지붕 2차,daily/day-132-stage-044-base-21-detail-3.png,daily/day-132-stage-044-base-21-detail-3.svg
+133,45,1,고딕 대성당,프랑스,1200,고딕 대성당 초기 본체,daily/day-133-stage-045-base-22-detail-1.png,daily/day-133-stage-045-base-22-detail-1.svg
+134,45,2,고딕 대성당,프랑스,1200,본체 성장·양쪽 고딕 첨탑 1차,daily/day-134-stage-045-base-22-detail-2.png,daily/day-134-stage-045-base-22-detail-2.svg
+135,45,3,고딕 대성당,프랑스,1200,완성 본체·양쪽 고딕 첨탑 2차,daily/day-135-stage-045-base-22-detail-3.png,daily/day-135-stage-045-base-22-detail-3.svg
+136,46,1,절벽 푸에블로,미국 남서부,1250,절벽 푸에블로 초기 본체,daily/day-136-stage-046-base-23-detail-1.png,daily/day-136-stage-046-base-23-detail-1.svg
+137,46,2,절벽 푸에블로,미국 남서부,1250,본체 성장·추가 흙집·사다리 1차,daily/day-137-stage-046-base-23-detail-2.png,daily/day-137-stage-046-base-23-detail-2.svg
+138,46,3,절벽 푸에블로,미국 남서부,1250,완성 본체·추가 흙집·사다리 2차,daily/day-138-stage-046-base-23-detail-3.png,daily/day-138-stage-046-base-23-detail-3.svg
+139,47,1,짐바브웨 석조 성곽,짐바브웨,1300,짐바브웨 석조 성곽 초기 본체,daily/day-139-stage-047-base-24-detail-1.png,daily/day-139-stage-047-base-24-detail-1.svg
+140,47,2,짐바브웨 석조 성곽,짐바브웨,1300,본체 성장·옆 성벽·원뿔 탑 1차,daily/day-140-stage-047-base-24-detail-2.png,daily/day-140-stage-047-base-24-detail-2.svg
+141,47,3,짐바브웨 석조 성곽,짐바브웨,1300,완성 본체·옆 성벽·원뿔 탑 2차,daily/day-141-stage-047-base-24-detail-3.png,daily/day-141-stage-047-base-24-detail-3.svg
+142,48,1,사헬 흙 모스크 양식,말리,1320,첫 흙탑과 연결 벽,daily/day-142-stage-048-mudmosque-00-detail-1.png,daily/day-142-stage-048-mudmosque-00-detail-1.svg
+143,48,2,사헬 흙 모스크 양식,말리,1320,두 번째 흙탑,daily/day-143-stage-048-mudmosque-00-detail-2.png,daily/day-143-stage-048-mudmosque-00-detail-2.svg
+144,48,3,사헬 흙 모스크 양식,말리,1320,세 번째 흙탑·벽 요철·계단,daily/day-144-stage-048-mudmosque-00-detail-3.png,daily/day-144-stage-048-mudmosque-00-detail-3.svg
+145,49,1,알람브라 궁전,스페인,1350,네 아치가 있는 회랑,daily/day-145-stage-049-alhambra-00-detail-1.png,daily/day-145-stage-049-alhambra-00-detail-1.svg
+146,49,2,알람브라 궁전,스페인,1350,양쪽 궁전 탑,daily/day-146-stage-049-alhambra-00-detail-2.png,daily/day-146-stage-049-alhambra-00-detail-2.svg
+147,49,3,알람브라 궁전,스페인,1350,중앙 연못·분수·정원,daily/day-147-stage-049-alhambra-00-detail-3.png,daily/day-147-stage-049-alhambra-00-detail-3.svg
+148,50,1,티베트 산지 주택,중국 티베트,1380,경사진 흰 벽과 창,daily/day-148-stage-050-tibethouse-00-detail-1.png,daily/day-148-stage-050-tibethouse-00-detail-1.svg
+149,50,2,티베트 산지 주택,중국 티베트,1380,옥상층과 작은 창,daily/day-149-stage-050-tibethouse-00-detail-2.png,daily/day-149-stage-050-tibethouse-00-detail-2.svg
+150,50,3,티베트 산지 주택,중국 티베트,1380,양쪽 흰 벽 증축,daily/day-150-stage-050-tibethouse-00-detail-3.png,daily/day-150-stage-050-tibethouse-00-detail-3.svg
+151,51,1,조선 한옥,한국,1400,조선 한옥 초기 본체,daily/day-151-stage-051-base-25-detail-1.png,daily/day-151-stage-051-base-25-detail-1.svg
+152,51,2,조선 한옥,한국,1400,본체 성장·양쪽 한옥채 1차,daily/day-152-stage-051-base-25-detail-2.png,daily/day-152-stage-051-base-25-detail-2.svg
+153,51,3,조선 한옥,한국,1400,완성 본체·양쪽 한옥채 2차,daily/day-153-stage-051-base-25-detail-3.png,daily/day-153-stage-051-base-25-detail-3.svg
+154,52,1,천단 기년전 양식,중국,1420,원형 기단·아래 푸른 지붕,daily/day-154-stage-052-tiantan-00-detail-1.png,daily/day-154-stage-052-tiantan-00-detail-1.svg
+155,52,2,천단 기년전 양식,중국,1420,두 번째 원형층과 지붕,daily/day-155-stage-052-tiantan-00-detail-2.png,daily/day-155-stage-052-tiantan-00-detail-2.svg
+156,52,3,천단 기년전 양식,중국,1420,세 번째 지붕·기둥·계단,daily/day-156-stage-052-tiantan-00-detail-3.png,daily/day-156-stage-052-tiantan-00-detail-3.svg
+157,53,1,잉카 석조 가옥,페루,1440,경사진 돌벽과 초가,daily/day-157-stage-053-inca-00-detail-1.png,daily/day-157-stage-053-inca-00-detail-1.svg
+158,53,2,잉카 석조 가옥,페루,1440,왼쪽 석조 구획·큰 창,daily/day-158-stage-053-inca-00-detail-2.png,daily/day-158-stage-053-inca-00-detail-2.svg
+159,53,3,잉카 석조 가옥,페루,1440,오른쪽 가옥과 박공,daily/day-159-stage-053-inca-00-detail-3.png,daily/day-159-stage-053-inca-00-detail-3.svg
+160,54,1,르네상스 팔라초,이탈리아,1450,르네상스 팔라초 초기 본체,daily/day-160-stage-054-base-26-detail-1.png,daily/day-160-stage-054-base-26-detail-1.svg
+161,54,2,르네상스 팔라초,이탈리아,1450,본체 성장·옆 궁전 건물 1차,daily/day-161-stage-054-base-26-detail-2.png,daily/day-161-stage-054-base-26-detail-2.svg
+162,54,3,르네상스 팔라초,이탈리아,1450,완성 본체·옆 궁전 건물 2차,daily/day-162-stage-054-base-26-detail-3.png,daily/day-162-stage-054-base-26-detail-3.svg
+163,55,1,푸젠 토루,중국,1500,푸젠 토루 초기 본체,daily/day-163-stage-055-base-27-detail-1.png,daily/day-163-stage-055-base-27-detail-1.svg
+164,55,2,푸젠 토루,중국,1500,본체 성장·원형 지붕·안마당 건물 1차,daily/day-164-stage-055-base-27-detail-2.png,daily/day-164-stage-055-base-27-detail-2.svg
+165,55,3,푸젠 토루,중국,1500,완성 본체·원형 지붕·안마당 건물 2차,daily/day-165-stage-055-base-27-detail-3.png,daily/day-165-stage-055-base-27-detail-3.svg
+166,56,1,이탈리아 트룰리,이탈리아,1520,큰 원뿔 지붕 집,daily/day-166-stage-056-trulli-00-detail-1.png,daily/day-166-stage-056-trulli-00-detail-1.svg
+167,56,2,이탈리아 트룰리,이탈리아,1520,왼쪽 작은 원뿔 집,daily/day-167-stage-056-trulli-00-detail-2.png,daily/day-167-stage-056-trulli-00-detail-2.svg
+168,56,3,이탈리아 트룰리,이탈리아,1520,오른쪽 원뿔 집·기단,daily/day-168-stage-056-trulli-00-detail-3.png,daily/day-168-stage-056-trulli-00-detail-3.svg
+169,57,1,튜더 목조 주택,영국,1550,튜더 목조 주택 초기 본체,daily/day-169-stage-057-base-28-detail-1.png,daily/day-169-stage-057-base-28-detail-1.svg
+170,57,2,튜더 목조 주택,영국,1550,본체 성장·양쪽 목조 박공 1차,daily/day-170-stage-057-base-28-detail-2.png,daily/day-170-stage-057-base-28-detail-2.svg
+171,57,3,튜더 목조 주택,영국,1550,완성 본체·양쪽 목조 박공 2차,daily/day-171-stage-057-base-28-detail-3.png,daily/day-171-stage-057-base-28-detail-3.svg
+172,58,1,모로코 카스바,모로코,1580,흙 성곽과 첫 모서리 탑,daily/day-172-stage-058-kasbah-00-detail-1.png,daily/day-172-stage-058-kasbah-00-detail-1.svg
+173,58,2,모로코 카스바,모로코,1580,둘째 탑·성벽 요철,daily/day-173-stage-058-kasbah-00-detail-2.png,daily/day-173-stage-058-kasbah-00-detail-2.svg
+174,58,3,모로코 카스바,모로코,1580,큰 돌출 성문·앞 계단,daily/day-174-stage-058-kasbah-00-detail-3.png,daily/day-174-stage-058-kasbah-00-detail-3.svg
+175,59,1,시밤 흙탑 주택,예멘,1600,시밤 흙탑 주택 초기 본체,daily/day-175-stage-059-base-29-detail-1.png,daily/day-175-stage-059-base-29-detail-1.svg
+176,59,2,시밤 흙탑 주택,예멘,1600,본체 성장·추가 흙탑 1차,daily/day-176-stage-059-base-29-detail-2.png,daily/day-176-stage-059-base-29-detail-2.svg
+177,59,3,시밤 흙탑 주택,예멘,1600,완성 본체·추가 흙탑 2차,daily/day-177-stage-059-base-29-detail-3.png,daily/day-177-stage-059-base-29-detail-3.svg
+178,60,1,오스만 목조 주택,튀르키예,1610,튀어나온 위층과 창,daily/day-178-stage-060-ottomanhouse-00-detail-1.png,daily/day-178-stage-060-ottomanhouse-00-detail-1.svg
+179,60,2,오스만 목조 주택,튀르키예,1610,왼쪽 돌출 목재 창실,daily/day-179-stage-060-ottomanhouse-00-detail-2.png,daily/day-179-stage-060-ottomanhouse-00-detail-2.svg
+180,60,3,오스만 목조 주택,튀르키예,1610,오른쪽 창실·기단,daily/day-180-stage-060-ottomanhouse-00-detail-3.png,daily/day-180-stage-060-ottomanhouse-00-detail-3.svg
+181,61,1,이맘 모스크,이란,1620,높은 푸른 이완과 첫 탑,daily/day-181-stage-061-iwans-00-detail-1.png,daily/day-181-stage-061-iwans-00-detail-1.svg
+182,61,2,이맘 모스크,이란,1620,둘째 탑·문 상부 무늬,daily/day-182-stage-061-iwans-00-detail-2.png,daily/day-182-stage-061-iwans-00-detail-2.svg
+183,61,3,이맘 모스크,이란,1620,옆 돔·입구 건물·계단,daily/day-183-stage-061-iwans-00-detail-3.png,daily/day-183-stage-061-iwans-00-detail-3.svg
+184,62,1,무굴 돔 궁전,인도,1630,무굴 돔 궁전 초기 본체,daily/day-184-stage-062-base-30-detail-1.png,daily/day-184-stage-062-base-30-detail-1.svg
+185,62,2,무굴 돔 궁전,인도,1630,본체 성장·양쪽 돔·수면 1차,daily/day-185-stage-062-base-30-detail-2.png,daily/day-185-stage-062-base-30-detail-2.svg
+186,62,3,무굴 돔 궁전,인도,1630,완성 본체·양쪽 돔·수면 2차,daily/day-186-stage-062-base-30-detail-3.png,daily/day-186-stage-062-base-30-detail-3.svg
+187,63,1,일본 성곽,일본,1630,일본 성곽 초기 본체,daily/day-187-stage-063-base-31-detail-1.png,daily/day-187-stage-063-base-31-detail-1.svg
+188,63,2,일본 성곽,일본,1630,본체 성장·양쪽 기와 누각 1차,daily/day-188-stage-063-base-31-detail-2.png,daily/day-188-stage-063-base-31-detail-2.svg
+189,63,3,일본 성곽,일본,1630,완성 본체·양쪽 기와 누각 2차,daily/day-189-stage-063-base-31-detail-3.png,daily/day-189-stage-063-base-31-detail-3.svg
+190,64,1,루마니아 목조 교회,루마니아,1640,긴 교회와 가파른 목탑,daily/day-190-stage-064-woodchurch-00-detail-1.png,daily/day-190-stage-064-woodchurch-00-detail-1.svg
+191,64,2,루마니아 목조 교회,루마니아,1640,상부 창·첨탑,daily/day-191-stage-064-woodchurch-00-detail-2.png,daily/day-191-stage-064-woodchurch-00-detail-2.svg
+192,64,3,루마니아 목조 교회,루마니아,1640,오른쪽 박공·계단,daily/day-192-stage-064-woodchurch-00-detail-3.png,daily/day-192-stage-064-woodchurch-00-detail-3.svg
+193,65,1,포르투갈 타일 주택,포르투갈,1650,흰 박공 집,daily/day-193-stage-065-azulejo-00-detail-1.png,daily/day-193-stage-065-azulejo-00-detail-1.svg
+194,65,2,포르투갈 타일 주택,포르투갈,1650,푸른 타일 문양·층 띠,daily/day-194-stage-065-azulejo-00-detail-2.png,daily/day-194-stage-065-azulejo-00-detail-2.svg
+195,65,3,포르투갈 타일 주택,포르투갈,1650,왼쪽 돌출부·큰 입구,daily/day-195-stage-065-azulejo-00-detail-3.png,daily/day-195-stage-065-azulejo-00-detail-3.svg
+196,66,1,바로크 궁전,프랑스,1660,바로크 궁전 초기 본체,daily/day-196-stage-066-base-32-detail-1.png,daily/day-196-stage-066-base-32-detail-1.svg
+197,66,2,바로크 궁전,프랑스,1660,본체 성장·궁전의 날개 건물 1차,daily/day-197-stage-066-base-32-detail-2.png,daily/day-197-stage-066-base-32-detail-2.svg
+198,66,3,바로크 궁전,프랑스,1660,완성 본체·궁전의 날개 건물 2차,daily/day-198-stage-066-base-32-detail-3.png,daily/day-198-stage-066-base-32-detail-3.svg
+199,67,1,네덜란드 운하집,네덜란드,1680,네덜란드 운하집 초기 본체,daily/day-199-stage-067-base-33-detail-1.png,daily/day-199-stage-067-base-33-detail-1.svg
+200,67,2,네덜란드 운하집,네덜란드,1680,본체 성장·운하·돌다리 1차,daily/day-200-stage-067-base-33-detail-2.png,daily/day-200-stage-067-base-33-detail-2.svg
+201,67,3,네덜란드 운하집,네덜란드,1680,완성 본체·운하·돌다리 2차,daily/day-201-stage-067-base-33-detail-3.png,daily/day-201-stage-067-base-33-detail-3.svg
+202,68,1,포탈라 궁전,중국 티베트,1690,흰 기단과 붉은 중심부,daily/day-202-stage-068-potala-00-detail-1.png,daily/day-202-stage-068-potala-00-detail-1.svg
+203,68,2,포탈라 궁전,중국 티베트,1690,외벽 창·앞 계단,daily/day-203-stage-068-potala-00-detail-2.png,daily/day-203-stage-068-potala-00-detail-2.svg
+204,68,3,포탈라 궁전,중국 티베트,1690,높은 지붕·옆 누각,daily/day-204-stage-068-potala-00-detail-3.png,daily/day-204-stage-068-potala-00-detail-3.svg
+205,69,1,조선 누각,한국,1700,물가 누각과 지붕,daily/day-205-stage-069-pavilion-00-detail-1.png,daily/day-205-stage-069-pavilion-00-detail-1.svg
+206,69,2,조선 누각,한국,1700,목재 난간,daily/day-206-stage-069-pavilion-00-detail-2.png,daily/day-206-stage-069-pavilion-00-detail-2.svg
+207,69,3,조선 누각,한국,1700,상층 누각·추가 지붕,daily/day-207-stage-069-pavilion-00-detail-3.png,daily/day-207-stage-069-pavilion-00-detail-3.svg
+208,70,1,페르시아 바람탑,이란,1710,큰 바람탑과 돔,daily/day-208-stage-070-windtower-00-detail-1.png,daily/day-208-stage-070-windtower-00-detail-1.svg
+209,70,2,페르시아 바람탑,이란,1710,왼쪽 아케이드,daily/day-209-stage-070-windtower-00-detail-2.png,daily/day-209-stage-070-windtower-00-detail-2.svg
+210,70,3,페르시아 바람탑,이란,1710,오른쪽 작은 바람탑·연못,daily/day-210-stage-070-windtower-00-detail-3.png,daily/day-210-stage-070-windtower-00-detail-3.svg
+211,71,1,케이프더치 주택,남아프리카공화국,1720,곡선 박공과 긴 집,daily/day-211-stage-071-capedutch-00-detail-1.png,daily/day-211-stage-071-capedutch-00-detail-1.svg
+212,71,2,케이프더치 주택,남아프리카공화국,1720,원형 창·굴뚝,daily/day-212-stage-071-capedutch-00-detail-2.png,daily/day-212-stage-071-capedutch-00-detail-2.svg
+213,71,3,케이프더치 주택,남아프리카공화국,1720,오른쪽 초가지붕 건물,daily/day-213-stage-071-capedutch-00-detail-3.png,daily/day-213-stage-071-capedutch-00-detail-3.svg
+214,72,1,교토 마치야,일본,1730,긴 목재 격자 집,daily/day-214-stage-072-machiya-00-detail-1.png,daily/day-214-stage-072-machiya-00-detail-1.svg
+215,72,2,교토 마치야,일본,1730,아래 기와지붕·격자 벽,daily/day-215-stage-072-machiya-00-detail-2.png,daily/day-215-stage-072-machiya-00-detail-2.svg
+216,72,3,교토 마치야,일본,1730,천 차양·입구 등·계단,daily/day-216-stage-072-machiya-00-detail-3.png,daily/day-216-stage-072-machiya-00-detail-3.svg
+217,73,1,부탄 궁전 양식,부탄,1740,중앙 궁전과 경사진 벽,daily/day-217-stage-073-dzong-00-detail-1.png,daily/day-217-stage-073-dzong-00-detail-1.svg
+218,73,2,부탄 궁전 양식,부탄,1740,양쪽 탑과 지붕,daily/day-218-stage-073-dzong-00-detail-2.png,daily/day-218-stage-073-dzong-00-detail-2.svg
+219,73,3,부탄 궁전 양식,부탄,1740,상부 누각·중앙 입구,daily/day-219-stage-073-dzong-00-detail-3.png,daily/day-219-stage-073-dzong-00-detail-3.svg
+220,74,1,로코코 저택,중부 유럽,1750,로코코 저택 초기 본체,daily/day-220-stage-074-base-34-detail-1.png,daily/day-220-stage-074-base-34-detail-1.svg
+221,74,2,로코코 저택,중부 유럽,1750,본체 성장·양쪽 곡선 박공 1차,daily/day-221-stage-074-base-34-detail-2.png,daily/day-221-stage-074-base-34-detail-2.svg
+222,74,3,로코코 저택,중부 유럽,1750,완성 본체·양쪽 곡선 박공 2차,daily/day-222-stage-074-base-34-detail-3.png,daily/day-222-stage-074-base-34-detail-3.svg
+223,75,1,폴리네시아 팔레,사모아,1760,열린 기둥과 둥근 지붕,daily/day-223-stage-075-fale-00-detail-1.png,daily/day-223-stage-075-fale-00-detail-1.svg
+224,75,2,폴리네시아 팔레,사모아,1760,넓은 지붕 띠·바닥,daily/day-224-stage-075-fale-00-detail-2.png,daily/day-224-stage-075-fale-00-detail-2.svg
+225,75,3,폴리네시아 팔레,사모아,1760,실내 가구·계단·수변 식물,daily/day-225-stage-075-fale-00-detail-3.png,daily/day-225-stage-075-fale-00-detail-3.svg
+226,76,1,유럽 풍차 주택,네덜란드,1780,풍차탑과 두 날개,daily/day-226-stage-076-windmill-00-detail-1.png,daily/day-226-stage-076-windmill-00-detail-1.svg
+227,76,2,유럽 풍차 주택,네덜란드,1780,세 번째 날개·옆 작업실,daily/day-227-stage-076-windmill-00-detail-2.png,daily/day-227-stage-076-windmill-00-detail-2.svg
+228,76,3,유럽 풍차 주택,네덜란드,1780,네 날개·둘레 데크,daily/day-228-stage-076-windmill-00-detail-3.png,daily/day-228-stage-076-windmill-00-detail-3.svg
+229,77,1,신고전주의 저택,유럽,1800,신고전주의 저택 초기 본체,daily/day-229-stage-077-base-35-detail-1.png,daily/day-229-stage-077-base-35-detail-1.svg
+230,77,2,신고전주의 저택,유럽,1800,본체 성장·양쪽 고전식 날개 1차,daily/day-230-stage-077-base-35-detail-2.png,daily/day-230-stage-077-base-35-detail-2.svg
+231,77,3,신고전주의 저택,유럽,1800,완성 본체·양쪽 고전식 날개 2차,daily/day-231-stage-077-base-35-detail-3.png,daily/day-231-stage-077-base-35-detail-3.svg
+232,78,1,인도네시아 루마가당,인도네시아,1810,양 끝이 치솟는 지붕,daily/day-232-stage-078-rumah-00-detail-1.png,daily/day-232-stage-078-rumah-00-detail-1.svg
+233,78,2,인도네시아 루마가당,인도네시아,1810,안쪽 뿔 지붕·데크,daily/day-233-stage-078-rumah-00-detail-2.png,daily/day-233-stage-078-rumah-00-detail-2.svg
+234,78,3,인도네시아 루마가당,인도네시아,1810,중앙 큰 뿔 지붕·계단,daily/day-234-stage-078-rumah-00-detail-3.png,daily/day-234-stage-078-rumah-00-detail-3.svg
+235,79,1,가쇼즈쿠리 주택,일본,1820,가파른 초가와 벽,daily/day-235-stage-079-gassho-00-detail-1.png,daily/day-235-stage-079-gassho-00-detail-1.svg
+236,79,2,가쇼즈쿠리 주택,일본,1820,큰 지붕 창·지붕 살,daily/day-236-stage-079-gassho-00-detail-2.png,daily/day-236-stage-079-gassho-00-detail-2.svg
+237,79,3,가쇼즈쿠리 주택,일본,1820,앞쪽 초가 증축·기단,daily/day-237-stage-079-gassho-00-detail-3.png,daily/day-237-stage-079-gassho-00-detail-3.svg
+238,80,1,러시아 목조 주택,러시아,1850,러시아 목조 주택 초기 본체,daily/day-238-stage-080-base-36-detail-1.png,daily/day-238-stage-080-base-36-detail-1.svg
+239,80,2,러시아 목조 주택,러시아,1850,본체 성장·목조 박공 증축 1차,daily/day-239-stage-080-base-36-detail-2.png,daily/day-239-stage-080-base-36-detail-2.svg
+240,80,3,러시아 목조 주택,러시아,1850,완성 본체·목조 박공 증축 2차,daily/day-240-stage-080-base-36-detail-3.png,daily/day-240-stage-080-base-36-detail-3.svg
+241,81,1,뉴올리언스 갤러리 주택,미국,1860,두 층 긴 주택,daily/day-241-stage-081-galleryhouse-00-detail-1.png,daily/day-241-stage-081-galleryhouse-00-detail-1.svg
+242,81,2,뉴올리언스 갤러리 주택,미국,1860,위층 갤러리·아래 기둥,daily/day-242-stage-081-galleryhouse-00-detail-2.png,daily/day-242-stage-081-galleryhouse-00-detail-2.svg
+243,81,3,뉴올리언스 갤러리 주택,미국,1860,아래 난간·긴 차양,daily/day-243-stage-081-galleryhouse-00-detail-3.png,daily/day-243-stage-081-galleryhouse-00-detail-3.svg
+244,82,1,빅토리아 주택,영국,1870,빅토리아 주택 초기 본체,daily/day-244-stage-082-base-37-detail-1.png,daily/day-244-stage-082-base-37-detail-1.svg
+245,82,2,빅토리아 주택,영국,1870,본체 성장·측면 박공 증축 1차,daily/day-245-stage-082-base-37-detail-2.png,daily/day-245-stage-082-base-37-detail-2.svg
+246,82,3,빅토리아 주택,영국,1870,완성 본체·측면 박공 증축 2차,daily/day-246-stage-082-base-37-detail-3.png,daily/day-246-stage-082-base-37-detail-3.svg
+247,83,1,파리 맨사드 주택,프랑스,1880,맨사드 지붕과 두 층,daily/day-247-stage-083-mansard-00-detail-1.png,daily/day-247-stage-083-mansard-00-detail-1.svg
+248,83,2,파리 맨사드 주택,프랑스,1880,세 개 돌출 지붕 창,daily/day-248-stage-083-mansard-00-detail-2.png,daily/day-248-stage-083-mansard-00-detail-2.svg
+249,83,3,파리 맨사드 주택,프랑스,1880,양쪽 증축·중앙 입구,daily/day-249-stage-083-mansard-00-detail-3.png,daily/day-249-stage-083-mansard-00-detail-3.svg
+250,84,1,에펠탑,프랑스,1889,격자 철탑의 큰 윤곽,daily/day-250-stage-084-eiffel-00-detail-1.png,daily/day-250-stage-084-eiffel-00-detail-1.svg
+251,84,2,에펠탑,프랑스,1889,철골 대각선·네 기단,daily/day-251-stage-084-eiffel-00-detail-2.png,daily/day-251-stage-084-eiffel-00-detail-2.svg
+252,84,3,에펠탑,프랑스,1889,상층 전망대·분수 정원,daily/day-252-stage-084-eiffel-00-detail-3.png,daily/day-252-stage-084-eiffel-00-detail-3.svg
+253,85,1,시카고 철골 빌딩,미국,1890,시카고 철골 빌딩 초기 본체,daily/day-253-stage-085-base-38-detail-1.png,daily/day-253-stage-085-base-38-detail-1.svg
+254,85,2,시카고 철골 빌딩,미국,1890,본체 성장·높이가 다른 건물 동 1차,daily/day-254-stage-085-base-38-detail-2.png,daily/day-254-stage-085-base-38-detail-2.svg
+255,85,3,시카고 철골 빌딩,미국,1890,완성 본체·높이가 다른 건물 동 2차,daily/day-255-stage-085-base-38-detail-3.png,daily/day-255-stage-085-base-38-detail-3.svg
+256,86,1,아르누보 빌라,벨기에,1900,아르누보 빌라 초기 본체,daily/day-256-stage-086-base-39-detail-1.png,daily/day-256-stage-086-base-39-detail-1.svg
+257,86,2,아르누보 빌라,벨기에,1900,본체 성장·양쪽 주택 증축 1차,daily/day-257-stage-086-base-39-detail-2.png,daily/day-257-stage-086-base-39-detail-2.svg
+258,86,3,아르누보 빌라,벨기에,1900,완성 본체·양쪽 주택 증축 2차,daily/day-258-stage-086-base-39-detail-3.png,daily/day-258-stage-086-base-39-detail-3.svg
+259,87,1,카사 바트요,스페인,1905,물결 지붕과 창,daily/day-259-stage-087-batllo-00-detail-1.png,daily/day-259-stage-087-batllo-00-detail-1.svg
+260,87,2,카사 바트요,스페인,1905,곡선 발코니·왼쪽 탑,daily/day-260-stage-087-batllo-00-detail-2.png,daily/day-260-stage-087-batllo-00-detail-2.svg
+261,87,3,카사 바트요,스페인,1905,물결 1층 창·상부 십자,daily/day-261-stage-087-batllo-00-detail-3.png,daily/day-261-stage-087-batllo-00-detail-3.svg
+262,88,1,프레리 주택,미국,1910,프레리 주택 초기 본체,daily/day-262-stage-088-base-40-detail-1.png,daily/day-262-stage-088-base-40-detail-1.svg
+263,88,2,프레리 주택,미국,1910,본체 성장·긴 돌출 지붕·굴뚝 1차,daily/day-263-stage-088-base-40-detail-2.png,daily/day-263-stage-088-base-40-detail-2.svg
+264,88,3,프레리 주택,미국,1910,완성 본체·긴 돌출 지붕·굴뚝 2차,daily/day-264-stage-088-base-40-detail-3.png,daily/day-264-stage-088-base-40-detail-3.svg
+265,89,1,아인슈타인탑,독일,1921,곡선 천문대와 돔,daily/day-265-stage-089-expressionist-00-detail-1.png,daily/day-265-stage-089-expressionist-00-detail-1.svg
+266,89,2,아인슈타인탑,독일,1921,중앙 창·둥근 하부,daily/day-266-stage-089-expressionist-00-detail-2.png,daily/day-266-stage-089-expressionist-00-detail-2.svg
+267,89,3,아인슈타인탑,독일,1921,넓은 곡선 입구와 계단,daily/day-267-stage-089-expressionist-00-detail-3.png,daily/day-267-stage-089-expressionist-00-detail-3.svg
+268,90,1,바우하우스,독일,1926,바우하우스 초기 본체,daily/day-268-stage-090-base-41-detail-1.png,daily/day-268-stage-090-base-41-detail-1.svg
+269,90,2,바우하우스,독일,1926,본체 성장·큰 유리 구획·흰 건물 동 1차,daily/day-269-stage-090-base-41-detail-2.png,daily/day-269-stage-090-base-41-detail-2.svg
+270,90,3,바우하우스,독일,1926,완성 본체·큰 유리 구획·흰 건물 동 2차,daily/day-270-stage-090-base-41-detail-3.png,daily/day-270-stage-090-base-41-detail-3.svg
+271,91,1,아르데코 빌딩,미국,1930,아르데코 빌딩 초기 본체,daily/day-271-stage-091-base-42-detail-1.png,daily/day-271-stage-091-base-42-detail-1.svg
+272,91,2,아르데코 빌딩,미국,1930,본체 성장·단차 기단 건물 1차,daily/day-272-stage-091-base-42-detail-2.png,daily/day-272-stage-091-base-42-detail-2.svg
+273,91,3,아르데코 빌딩,미국,1930,완성 본체·단차 기단 건물 2차,daily/day-273-stage-091-base-42-detail-3.png,daily/day-273-stage-091-base-42-detail-3.svg
+274,92,1,크라이슬러 빌딩,미국,1930,단차 타워와 금속 왕관,daily/day-274-stage-092-chrysler-00-detail-1.png,daily/day-274-stage-092-chrysler-00-detail-1.svg
+275,92,2,크라이슬러 빌딩,미국,1930,측면 단차·독수리 장식 표현,daily/day-275-stage-092-chrysler-00-detail-2.png,daily/day-275-stage-092-chrysler-00-detail-2.svg
+276,92,3,크라이슬러 빌딩,미국,1930,넓은 기단·왕관 장식,daily/day-276-stage-092-chrysler-00-detail-3.png,daily/day-276-stage-092-chrysler-00-detail-3.svg
+277,93,1,낙수장,미국,1939,석조 중심과 긴 아래 테라스,daily/day-277-stage-093-fallingwater-00-detail-1.png,daily/day-277-stage-093-fallingwater-00-detail-1.svg
+278,93,2,낙수장,미국,1939,중간 유리층·돌출 테라스,daily/day-278-stage-093-fallingwater-00-detail-2.png,daily/day-278-stage-093-fallingwater-00-detail-2.svg
+279,93,3,낙수장,미국,1939,위층 테라스·아래 폭포,daily/day-279-stage-093-fallingwater-00-detail-3.png,daily/day-279-stage-093-fallingwater-00-detail-3.svg
+280,94,1,멕시코 색채 주택,멕시코,1945,높은 흙빛 벽·붉은 낮은 벽,daily/day-280-stage-094-barragan-00-detail-1.png,daily/day-280-stage-094-barragan-00-detail-1.svg
+281,94,2,멕시코 색채 주택,멕시코,1945,노란 구획·푸른 높은 벽,daily/day-281-stage-094-barragan-00-detail-2.png,daily/day-281-stage-094-barragan-00-detail-2.svg
+282,94,3,멕시코 색채 주택,멕시코,1945,수면·붉은 세로 벽,daily/day-282-stage-094-barragan-00-detail-3.png,daily/day-282-stage-094-barragan-00-detail-3.svg
+283,95,1,국제주의 유리 건물,미국,1950,국제주의 유리 건물 초기 본체,daily/day-283-stage-095-base-43-detail-1.png,daily/day-283-stage-095-base-43-detail-1.svg
+284,95,2,국제주의 유리 건물,미국,1950,본체 성장·높이가 다른 유리 동 1차,daily/day-284-stage-095-base-43-detail-2.png,daily/day-284-stage-095-base-43-detail-2.svg
+285,95,3,국제주의 유리 건물,미국,1950,완성 본체·높이가 다른 유리 동 2차,daily/day-285-stage-095-base-43-detail-3.png,daily/day-285-stage-095-base-43-detail-3.svg
+286,96,1,롱샹 성당,프랑스,1955,흰 본당·짙은 곡선 지붕,daily/day-286-stage-096-ronchamp-00-detail-1.png,daily/day-286-stage-096-ronchamp-00-detail-1.svg
+287,96,2,롱샹 성당,프랑스,1955,왼쪽 곡선 탑,daily/day-287-stage-096-ronchamp-00-detail-2.png,daily/day-287-stage-096-ronchamp-00-detail-2.svg
+288,96,3,롱샹 성당,프랑스,1955,오른쪽 높은 탑·작은 창,daily/day-288-stage-096-ronchamp-00-detail-3.png,daily/day-288-stage-096-ronchamp-00-detail-3.svg
+289,97,1,뉴욕 구겐하임,미국,1959,뒤집힌 원뿔과 첫 띠,daily/day-289-stage-097-guggenheimny-00-detail-1.png,daily/day-289-stage-097-guggenheimny-00-detail-1.svg
+290,97,2,뉴욕 구겐하임,미국,1959,두 번째 띠·옆 건물,daily/day-290-stage-097-guggenheimny-00-detail-2.png,daily/day-290-stage-097-guggenheimny-00-detail-2.svg
+291,97,3,뉴욕 구겐하임,미국,1959,세 번째 띠·긴 출입층,daily/day-291-stage-097-guggenheimny-00-detail-3.png,daily/day-291-stage-097-guggenheimny-00-detail-3.svg
+292,98,1,브루탈리즘,영국,1960,브루탈리즘 초기 본체,daily/day-292-stage-098-base-44-detail-1.png,daily/day-292-stage-098-base-44-detail-1.svg
+293,98,2,브루탈리즘,영국,1960,본체 성장·큰 콘크리트 블록 1차,daily/day-293-stage-098-base-44-detail-2.png,daily/day-293-stage-098-base-44-detail-2.svg
+294,98,3,브루탈리즘,영국,1960,완성 본체·큰 콘크리트 블록 2차,daily/day-294-stage-098-base-44-detail-3.png,daily/day-294-stage-098-base-44-detail-3.svg
+295,99,1,아비타67,캐나다,1967,세 개 겹친 주거 블록,daily/day-295-stage-099-habitat-00-detail-1.png,daily/day-295-stage-099-habitat-00-detail-1.svg
+296,99,2,아비타67,캐나다,1967,여섯 블록,daily/day-296-stage-099-habitat-00-detail-2.png,daily/day-296-stage-099-habitat-00-detail-2.svg
+297,99,3,아비타67,캐나다,1967,아홉 블록·옥상 정원,daily/day-297-stage-099-habitat-00-detail-3.png,daily/day-297-stage-099-habitat-00-detail-3.svg
+298,100,1,메타볼리즘 캡슐,일본,1972,메타볼리즘 캡슐 초기 본체,daily/day-298-stage-100-base-45-detail-1.png,daily/day-298-stage-100-base-45-detail-1.svg
+299,100,2,메타볼리즘 캡슐,일본,1972,본체 성장·추가 주거 캡슐 1차,daily/day-299-stage-100-base-45-detail-2.png,daily/day-299-stage-100-base-45-detail-2.svg
+300,100,3,메타볼리즘 캡슐,일본,1972,완성 본체·추가 주거 캡슐 2차,daily/day-300-stage-100-base-45-detail-3.png,daily/day-300-stage-100-base-45-detail-3.svg
+301,101,1,시드니 오페라하우스,호주,1973,시드니 오페라하우스 초기 본체,daily/day-301-stage-101-base-46-detail-1.png,daily/day-301-stage-101-base-46-detail-1.svg
+302,101,2,시드니 오페라하우스,호주,1973,본체 성장·추가 조개껍질 지붕 1차,daily/day-302-stage-101-base-46-detail-2.png,daily/day-302-stage-101-base-46-detail-2.svg
+303,101,3,시드니 오페라하우스,호주,1973,완성 본체·추가 조개껍질 지붕 2차,daily/day-303-stage-101-base-46-detail-3.png,daily/day-303-stage-101-base-46-detail-3.svg
+304,102,1,지오데식 돔,미국,1975,돔과 방사형 격자,daily/day-304-stage-102-geodesic-00-detail-1.png,daily/day-304-stage-102-geodesic-00-detail-1.svg
+305,102,2,지오데식 돔,미국,1975,높은 돔·중앙 격자,daily/day-305-stage-102-geodesic-00-detail-2.png,daily/day-305-stage-102-geodesic-00-detail-2.svg
+306,102,3,지오데식 돔,미국,1975,최종 격자·유리 출입구,daily/day-306-stage-102-geodesic-00-detail-3.png,daily/day-306-stage-102-geodesic-00-detail-3.svg
+307,103,1,퐁피두센터,프랑스,1977,외부 철골과 유리층,daily/day-307-stage-103-pompidou-00-detail-1.png,daily/day-307-stage-103-pompidou-00-detail-1.svg
+308,103,2,퐁피두센터,프랑스,1977,붉은 경사 통로·녹색 설비,daily/day-308-stage-103-pompidou-00-detail-2.png,daily/day-308-stage-103-pompidou-00-detail-2.svg
+309,103,3,퐁피두센터,프랑스,1977,푸른 외부 배관·기단,daily/day-309-stage-103-pompidou-00-detail-3.png,daily/day-309-stage-103-pompidou-00-detail-3.svg
+310,104,1,포스트모던 빌딩,미국,1984,포스트모던 빌딩 초기 본체,daily/day-310-stage-104-base-47-detail-1.png,daily/day-310-stage-104-base-47-detail-1.svg
+311,104,2,포스트모던 빌딩,미국,1984,본체 성장·단차 기단 건물 1차,daily/day-311-stage-104-base-47-detail-2.png,daily/day-311-stage-104-base-47-detail-2.svg
+312,104,3,포스트모던 빌딩,미국,1984,완성 본체·단차 기단 건물 2차,daily/day-312-stage-104-base-47-detail-3.png,daily/day-312-stage-104-base-47-detail-3.svg
+313,105,1,하이테크 빌딩,영국,1986,하이테크 빌딩 초기 본체,daily/day-313-stage-105-base-48-detail-1.png,daily/day-313-stage-105-base-48-detail-1.svg
+314,105,2,하이테크 빌딩,영국,1986,본체 성장·추가 유리 동 1차,daily/day-314-stage-105-base-48-detail-2.png,daily/day-314-stage-105-base-48-detail-2.svg
+315,105,3,하이테크 빌딩,영국,1986,완성 본체·추가 유리 동 2차,daily/day-315-stage-105-base-48-detail-3.png,daily/day-315-stage-105-base-48-detail-3.svg
+316,106,1,루브르 유리 피라미드,프랑스,1989,큰 유리 피라미드,daily/day-316-stage-106-louvre-00-detail-1.png,daily/day-316-stage-106-louvre-00-detail-1.svg
+317,106,2,루브르 유리 피라미드,프랑스,1989,왼쪽 작은 피라미드,daily/day-317-stage-106-louvre-00-detail-2.png,daily/day-317-stage-106-louvre-00-detail-2.svg
+318,106,3,루브르 유리 피라미드,프랑스,1989,오른쪽 피라미드·물가,daily/day-318-stage-106-louvre-00-detail-3.png,daily/day-318-stage-106-louvre-00-detail-3.svg
+319,107,1,댄싱하우스,체코,1996,휘어진 유리 탑과 옆 탑,daily/day-319-stage-107-dancing-00-detail-1.png,daily/day-319-stage-107-dancing-00-detail-1.svg
+320,107,2,댄싱하우스,체코,1996,곡선 유리 격자·위 지붕,daily/day-320-stage-107-dancing-00-detail-2.png,daily/day-320-stage-107-dancing-00-detail-2.svg
+321,107,3,댄싱하우스,체코,1996,측면 받침 구조·출입층,daily/day-321-stage-107-dancing-00-detail-3.png,daily/day-321-stage-107-dancing-00-detail-3.svg
+322,108,1,빌바오 곡면 건축,스페인,1997,빌바오 곡면 건축 초기 본체,daily/day-322-stage-108-base-49-detail-1.png,daily/day-322-stage-108-base-49-detail-1.svg
+323,108,2,빌바오 곡면 건축,스페인,1997,본체 성장·추가 금속 곡면 1차,daily/day-323-stage-108-base-49-detail-2.png,daily/day-323-stage-108-base-49-detail-2.svg
+324,108,3,빌바오 곡면 건축,스페인,1997,완성 본체·추가 금속 곡면 2차,daily/day-324-stage-108-base-49-detail-3.png,daily/day-324-stage-108-base-49-detail-3.svg
+325,109,1,페트로나스 트윈타워,말레이시아,1998,쌍둥이 첨탑,daily/day-325-stage-109-petronas-00-detail-1.png,daily/day-325-stage-109-petronas-00-detail-1.svg
+326,109,2,페트로나스 트윈타워,말레이시아,1998,두 타워를 잇는 스카이브리지,daily/day-326-stage-109-petronas-00-detail-2.png,daily/day-326-stage-109-petronas-00-detail-2.svg
+327,109,3,페트로나스 트윈타워,말레이시아,1998,넓은 기단·낮은 돔,daily/day-327-stage-109-petronas-00-detail-3.png,daily/day-327-stage-109-petronas-00-detail-3.svg
+328,110,1,부르즈 알 아랍,아랍에미리트,1999,큰 돛과 유리 면,daily/day-328-stage-110-sailtower-00-detail-1.png,daily/day-328-stage-110-sailtower-00-detail-1.svg
+329,110,2,부르즈 알 아랍,아랍에미리트,1999,상부 헬리패드·수평 프레임,daily/day-329-stage-110-sailtower-00-detail-2.png,daily/day-329-stage-110-sailtower-00-detail-2.svg
+330,110,3,부르즈 알 아랍,아랍에미리트,1999,바다 위 진입 다리·출입층,daily/day-330-stage-110-sailtower-00-detail-3.png,daily/day-330-stage-110-sailtower-00-detail-3.svg
+331,111,1,에덴 프로젝트 온실,영국,2001,큰 온실 한 동,daily/day-331-stage-111-biomes-00-detail-1.png,daily/day-331-stage-111-biomes-00-detail-1.svg
+332,111,2,에덴 프로젝트 온실,영국,2001,왼쪽 온실,daily/day-332-stage-111-biomes-00-detail-2.png,daily/day-332-stage-111-biomes-00-detail-2.svg
+333,111,3,에덴 프로젝트 온실,영국,2001,오른쪽 온실·정원 입구,daily/day-333-stage-111-biomes-00-detail-3.png,daily/day-333-stage-111-biomes-00-detail-3.svg
+334,112,1,타이베이101,대만,2004,타이베이101 초기 본체,daily/day-334-stage-112-base-50-detail-1.png,daily/day-334-stage-112-base-50-detail-1.svg
+335,112,2,타이베이101,대만,2004,본체 성장·고층 기단·진입 건물 1차,daily/day-335-stage-112-base-50-detail-2.png,daily/day-335-stage-112-base-50-detail-2.svg
+336,112,3,타이베이101,대만,2004,완성 본체·고층 기단·진입 건물 2차,daily/day-336-stage-112-base-50-detail-3.png,daily/day-336-stage-112-base-50-detail-3.svg
+337,113,1,베이징 국가체육장,중국,2008,타원 경기장과 첫 교차 구조,daily/day-337-stage-113-birdnest-00-detail-1.png,daily/day-337-stage-113-birdnest-00-detail-1.svg
+338,113,2,베이징 국가체육장,중국,2008,추가 사선 외피,daily/day-338-stage-113-birdnest-00-detail-2.png,daily/day-338-stage-113-birdnest-00-detail-2.svg
+339,113,3,베이징 국가체육장,중국,2008,촘촘한 입체 외피·입구 기단,daily/day-339-stage-113-birdnest-00-detail-3.png,daily/day-339-stage-113-birdnest-00-detail-3.svg
+340,114,1,부르즈 칼리파,아랍에미리트,2010,부르즈 칼리파 초기 본체,daily/day-340-stage-114-base-51-detail-1.png,daily/day-340-stage-114-base-51-detail-1.svg
+341,114,2,부르즈 칼리파,아랍에미리트,2010,본체 성장·고층 기단·진입 건물 1차,daily/day-341-stage-114-base-51-detail-2.png,daily/day-341-stage-114-base-51-detail-2.svg
+342,114,3,부르즈 칼리파,아랍에미리트,2010,완성 본체·고층 기단·진입 건물 2차,daily/day-342-stage-114-base-51-detail-3.png,daily/day-342-stage-114-base-51-detail-3.svg
+343,115,1,마리나베이샌즈,싱가포르,2011,세 타워와 긴 스카이파크,daily/day-343-stage-115-marinabay-00-detail-1.png,daily/day-343-stage-115-marinabay-00-detail-1.svg
+344,115,2,마리나베이샌즈,싱가포르,2011,옥상 정원·수영장,daily/day-344-stage-115-marinabay-00-detail-2.png,daily/day-344-stage-115-marinabay-00-detail-2.svg
+345,115,3,마리나베이샌즈,싱가포르,2011,곡선 아래 건물·물가,daily/day-345-stage-115-marinabay-00-detail-3.png,daily/day-345-stage-115-marinabay-00-detail-3.svg
+346,116,1,CCTV 본사,중국,2012,닫힌 고리형 본체,daily/day-346-stage-116-cctv-00-detail-1.png,daily/day-346-stage-116-cctv-00-detail-1.svg
+347,116,2,CCTV 본사,중국,2012,외벽 격자·사선 철골,daily/day-347-stage-116-cctv-00-detail-2.png,daily/day-347-stage-116-cctv-00-detail-2.svg
+348,116,3,CCTV 본사,중국,2012,양쪽 하부 진입 건물,daily/day-348-stage-116-cctv-00-detail-3.png,daily/day-348-stage-116-cctv-00-detail-3.svg
+349,117,1,런던 샤드,영국,2012,날카로운 유리 조각 타워,daily/day-349-stage-117-shard-00-detail-1.png,daily/day-349-stage-117-shard-00-detail-1.svg
+350,117,2,런던 샤드,영국,2012,양쪽 낮은 유리 조각,daily/day-350-stage-117-shard-00-detail-2.png,daily/day-350-stage-117-shard-00-detail-2.svg
+351,117,3,런던 샤드,영국,2012,기단 건물·앞 계단,daily/day-351-stage-117-shard-00-detail-3.png,daily/day-351-stage-117-shard-00-detail-3.svg
+352,118,1,헤이다르 알리예프 센터,아제르바이잔,2012,긴 파도 지붕과 유리 면,daily/day-352-stage-118-heydar-00-detail-1.png,daily/day-352-stage-118-heydar-00-detail-1.svg
+353,118,2,헤이다르 알리예프 센터,아제르바이잔,2012,왼쪽 큰 곡면,daily/day-353-stage-118-heydar-00-detail-2.png,daily/day-353-stage-118-heydar-00-detail-2.svg
+354,118,3,헤이다르 알리예프 센터,아제르바이잔,2012,연속 곡면 기단·패널 선,daily/day-354-stage-118-heydar-00-detail-3.png,daily/day-354-stage-118-heydar-00-detail-3.svg
+355,119,1,보스코 베르티칼레,이탈리아,2014,두 개 직사각형 타워·첫 식재,daily/day-355-stage-119-bosco-00-detail-1.png,daily/day-355-stage-119-bosco-00-detail-1.svg
+356,119,2,보스코 베르티칼레,이탈리아,2014,중층 발코니와 나무,daily/day-356-stage-119-bosco-00-detail-2.png,daily/day-356-stage-119-bosco-00-detail-2.svg
+357,119,3,보스코 베르티칼레,이탈리아,2014,하층 발코니·옥상 나무,daily/day-357-stage-119-bosco-00-detail-3.png,daily/day-357-stage-119-bosco-00-detail-3.svg
+358,120,1,상하이타워,중국,2015,상하이타워 초기 본체,daily/day-358-stage-120-base-52-detail-1.png,daily/day-358-stage-120-base-52-detail-1.svg
+359,120,2,상하이타워,중국,2015,본체 성장·고층 기단·진입 건물 1차,daily/day-359-stage-120-base-52-detail-2.png,daily/day-359-stage-120-base-52-detail-2.svg
+360,120,3,상하이타워,중국,2015,완성 본체·고층 기단·진입 건물 2차,daily/day-360-stage-120-base-52-detail-3.png,daily/day-360-stage-120-base-52-detail-3.svg
+361,121,1,톈진 빈하이 도서관,중국,2017,반원형 도서관과 중앙 구체,daily/day-361-stage-121-libraryeye-00-detail-1.png,daily/day-361-stage-121-libraryeye-00-detail-1.svg
+362,121,2,톈진 빈하이 도서관,중국,2017,곡선 벽과 선반,daily/day-362-stage-121-libraryeye-00-detail-2.png,daily/day-362-stage-121-libraryeye-00-detail-2.svg
+363,121,3,톈진 빈하이 도서관,중국,2017,더 많은 선반·입구 기단,daily/day-363-stage-121-libraryeye-00-detail-3.png,daily/day-363-stage-121-libraryeye-00-detail-3.svg
+364,122,1,롯데월드타워,한국,2017,롯데월드타워 초기 본체,daily/day-364-stage-122-base-53-detail-1.png,daily/day-364-stage-122-base-53-detail-1.svg
+365,122,2,롯데월드타워,한국,2017,본체 성장·고층 기단·진입 건물 1차,daily/day-365-stage-122-base-53-detail-2.png,daily/day-365-stage-122-base-53-detail-2.svg
+366,122,3,롯데월드타워,한국,2017,완성 본체·고층 기단·진입 건물 2차,daily/day-366-stage-122-base-53-detail-3.png,daily/day-366-stage-122-base-53-detail-3.svg

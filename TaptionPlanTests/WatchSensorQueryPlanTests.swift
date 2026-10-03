@@ -67,6 +67,84 @@ private final class PurgeState {
 final class WatchSensorQueryPlanTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
+    func testAmbientLiveDeliveryBoundsBacklogAndAdvancesAfterSavedAcknowledgement() {
+        var gate = TaptionWatchAmbientLiveDeliveryGate()
+        var backlog = (0..<12).map { "summary:\($0)" }
+        var delivered: [String] = []
+        for _ in 0..<3 {
+            let scheduled = backlog.filter {
+                gate.reserve(id: $0, payloadBytes: 1_024, isReachable: true, now: 100)
+            }
+            XCTAssertEqual(scheduled.count, 4)
+            XCTAssertFalse(gate.reserve(
+                id: scheduled[0], payloadBytes: 1_024, isReachable: true, now: 100
+            ))
+            scheduled.forEach { gate.acknowledge($0) }
+            let acknowledged = Set(scheduled)
+            backlog.removeAll { acknowledged.contains($0) }
+            delivered.append(contentsOf: scheduled)
+        }
+        XCTAssertTrue(backlog.isEmpty)
+        XCTAssertEqual(Set(delivered).count, 12)
+    }
+
+    func testAmbientLiveDeliveryRetriesLostAcknowledgementWithoutUnboundedQueue() {
+        var gate = TaptionWatchAmbientLiveDeliveryGate()
+        for index in 0..<4 {
+            XCTAssertTrue(gate.reserve(
+                id: "chunk:\(index)", payloadBytes: 100, isReachable: true, now: 100
+            ))
+        }
+        gate.acknowledge("chunk:unknown")
+        XCTAssertFalse(gate.reserve(
+            id: "chunk:next", payloadBytes: 100, isReachable: true, now: 109
+        ))
+        XCTAssertTrue(gate.reserve(
+            id: "chunk:0", payloadBytes: 100, isReachable: true,
+            now: 100 + TaptionWatchAmbientLiveDeliveryGate.retryInterval
+        ))
+        XCTAssertFalse(gate.reserve(
+            id: "chunk:0", payloadBytes: 100, isReachable: true, now: 110
+        ))
+    }
+
+    func testAmbientLiveDeliveryLeavesDisconnectedAndLargePayloadsForReliableTransport() {
+        var gate = TaptionWatchAmbientLiveDeliveryGate()
+        XCTAssertFalse(gate.reserve(
+            id: "summary:offline", payloadBytes: 100, isReachable: false, now: 100
+        ))
+        for bytes in [0, -1, TaptionWatchAmbientLiveDeliveryGate.maximumPayloadBytes + 1] {
+            XCTAssertFalse(gate.reserve(
+                id: "chunk:large", payloadBytes: bytes, isReachable: true, now: 100
+            ))
+        }
+        XCTAssertFalse(gate.reserve(
+            id: "unknown:1", payloadBytes: 100, isReachable: true, now: 100
+        ))
+        XCTAssertFalse(gate.reserve(
+            id: "summary:invalid", payloadBytes: 100, isReachable: true, now: .nan
+        ))
+        XCTAssertTrue(gate.reserve(
+            id: "chunk:boundary",
+            payloadBytes: TaptionWatchAmbientLiveDeliveryGate.maximumPayloadBytes,
+            isReachable: true, now: 100
+        ))
+    }
+
+    func testAmbientLiveDeliveryResetAndUptimeRollbackReleaseStaleReservations() {
+        var gate = TaptionWatchAmbientLiveDeliveryGate()
+        XCTAssertTrue(gate.reserve(
+            id: "summary:1", payloadBytes: 100, isReachable: true, now: 100
+        ))
+        gate.reset()
+        XCTAssertTrue(gate.reserve(
+            id: "summary:1", payloadBytes: 100, isReachable: true, now: 100
+        ))
+        XCTAssertTrue(gate.reserve(
+            id: "summary:1", payloadBytes: 100, isReachable: true, now: 10
+        ))
+    }
+
     func testDataSyncRequestGateKeepsActiveRequestIDStable() {
         var gate = TaptionWatchDataSyncRequestGate()
 

@@ -883,9 +883,19 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
         guard session.activationState == .activated else { return }
-        session.transferUserInfo([
+        let envelope: [String: Any] = [
             TaptionWatchEnvelope.ambientAcknowledgementKey: id,
-        ])
+        ]
+        session.transferUserInfo(envelope)
+        if session.isReachable {
+            session.sendMessage(envelope, replyHandler: nil, errorHandler: { error in
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "watch_ambient_live_ack_failed",
+                    level: .notice,
+                    fields: ["code": String((error as NSError).code)]
+                )
+            })
+        }
     }
 
     func update(payload: TaptionWatchPayload) throws {

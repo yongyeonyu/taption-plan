@@ -9449,10 +9449,10 @@ struct MapHomeView: View {
     }
 
     private func dateColor(weekday: Int) -> Color {
+        if weekday == 7 { return .tpSaturday }
         if TimelineAxisGrid.koreanHolidayName(on: model.selectedDate) != nil || weekday == 1 {
             return .tpHoliday
         }
-        if weekday == 7 { return .tpSaturday }
         return ink
     }
 
