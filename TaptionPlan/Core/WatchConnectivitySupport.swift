@@ -810,6 +810,12 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
     private var statusHandler: (@Sendable (AppleWatchConnectionState) -> Void)?
     private var dataSyncLiveFailureHandler: (@Sendable (String) -> Void)?
 
+    var isWatchPaired: Bool {
+        guard WCSession.isSupported() else { return false }
+        let session = WCSession.default
+        return session.activationState == .activated && session.isPaired
+    }
+
     override init() {
         commandDefaults = UserDefaults(
             suiteName: TaptionPlanSharedContainer.appGroupIdentifier

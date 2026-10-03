@@ -1,5 +1,49 @@
 # 검증 기록
 
+## REL1004A01 · HealthKit 최소 범위·Watch 앱 제외 TestFlight169 · 2026-10-04
+- 시작: main HEAD/origin/main/실제 원격 a4d1910 일치. 기존 집 흰색50% 육각형 배경과 WHK1004A01·HKS1004A01 변경/기록을 보존하여 새 배포를 진행한다.
+- 버전: ASC 최신168 VALID를 확인하여169 선택. project build 설정8개 및 앱·Widget·보존된 Watch·Watch Widget 원본 Info.plist4개 모두169. 현재 사용자의 Watch 앱 제외 지시에 따라 iPhone 최종 배포 산출물은 앱/Widget 두 개, Watch 디렉터리 없음으로 검증한다.
+- 현재 검증: HKS1004A01 검증 대상8개 소스 hash 모두 동일하여 Core117통과/0실패/0건너뜀 재사용. 신규 iOS generic Debug169 성공, 앱/Widget1.0(169)·Watch 미포함 확인. 성장366자산 원본 대조·import 경계·diff 검사 통과. Simulator runtime/device0 유지, 앱 XCTest·건강 권한/실제 Watch 수신은 미검증이다. 이후 Release·업로드·처리·기존 그룹/웹 확인 결과를 추가한다.
+- 근거: build/validation/REL1004A01/builds-before.json, validation-reuse.json, source-build-versions.json, ios-debug.log, debug-bundles.json, artwork-check.log, import-boundary.log.
+
+
+## HKS1004A01 · HealthKit 최소 읽기·수집 범위 · 2026-10-04
+- 결과: TaptionHealthReadScope를 운동·수면·심박·걸음·걷기/달리기 거리·자전거 거리·활동 에너지·운동 경로의8개로 제한했다. HealthKit 권한 요청·observer·전체/증분 원본 import가 같은 allowlist를 사용한다. 영양·투약·임상·시력·혈당·월경·특성·활동 요약 신규 수집/시력 별도 권한 요청과 마음챙김 직접 조회는 하지 않는다. 전체 타입 카탈로그와 기존 저장 원본은 삭제하지 않아 과거 기록/백업 해석은 유지한다.
+- 목적: NSHealthShareUsageDescription에 운동/수면 시간표 표시 및 심박/걸음/거리/에너지/운동 경로로 활동 기록·이동 지도를 보완한다는 실제 목적을 적었다. toShare는 계속 빈 집합이다. NSHealthUpdateUsageDescription은 읽기 전용이며 건강 기록을 저장/수정하지 않는다는 문구로 변경했다. 임상 사용 목적 key와 Debug/Release health-records entitlement는 제거했고 최종 서명 entitlement에도 없음을 확인했다.
+- 앱 열기: WHK1004A01의 immediate 조회에서15분 broad cache를 우회하여8개 허용 유형을 즉시 증분 조회한다. 별도 Watch 앱은 포함하지 않으며 실제 Watch→iPhone 동기화는 Apple 관리 범위다.
+- 검증: 허용 범위·불필요한 민감 기록 배제 신규2개 포함 Core117통과/0실패/0건너뜀. scope-audit8종 모두 카탈로그와 일치, 임상/투약/문서/특성/활동 요약 import 호출 제거·시력 권한 함수 제거 확인. import 경계·plist lint·diff check 통과. 최종 generic iOS Debug 성공(debug-build-confirmed.log), 앱/Widget1.0(168), Watch 미포함, deep strict 서명 성공. 초기 debug-build.log은 새 Core 타입의 import 누락으로 컴파일 실패했고 명시적 import 추가 후 성공했다. 실패 기록은 유지한다.
+- 제한: iOS 앱 XCTest는 Simulator runtime/device0으로 미실행이다. 실제 권한 화면·Watch 수신·속도·심사 통과는 검증하지 않았다. 기존 승인 범위는 iOS 건강 앱에 남을 수 있으나 앱의 신규 조회는8개 유형으로 제한된다. 심사 제출/건강 권한 초기화·기기 설치·commit/push/TestFlight 업로드는 수행하지 않았다. 현재 내부 TestFlight168은 이번 변경을 포함하지 않는다.
+- 근거: build/validation/HKS1004A01/core-tests.log, scope-audit.json, debug-build-confirmed.log, import-boundary.log, bundle-verification.json, signed-entitlements.plist, signature-verification.log, source-hashes.json. 권한 목적 문구 기준: https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data .
+
+
+## WHK1004A01 · Watch 앱 없이 iPhone HealthKit 수신 · 2026-10-04
+- 결과: iPhone target에서 Watch 앱 embed phase와 target dependency를 해제했다. 기존 Watch 소스/독립 target, SQLite·App Group·센서 provenance와 legacy 수신 호환 코드는 보존했다. 새 배포 제품은 iPhone 앱과 iPhone Widget이며 Watch 앱 설치·메시지 응답은 건강 조회 조건이 아니다.
+- 활성화: bootstrap 후 앱 foreground 진입과 잠금 해제에서 즉시 별도 HealthKit 조회 task를 시작한다. WCSession 활성화 후 페어링 상태만 초기 권한 요청 조건으로 사용한다. 건강 연결이 켜져 있으면 Watch 미페어링 상태에서도 이미 iPhone에 저장된 건강 데이터를 조회한다. task 중복/잠금 상태를 차단하고 기존 느린 통합 조회의 중복 건강 pass를 생략했다. 승인 후 즉시 조회하고 전체 이력 동기화·observer·기존 주기 갱신은 유지한다.
+- UI/제어: 설정과 지도에서 Watch 앱 설치, 실시간 Watch 센서 수신, 1/5/15분 가져오기 간격·legacy receipt 표시를 제거했다. 수동 가져오기도 HealthKit을 조회한다. iPhone 운동 시작/종료에서 별도 Watch 운동 앱 기동 명령을 제거했다. 기존 집 marker 흰색 50% 육각형 배경 두 경로는 보존했다.
+- 검증: 초기 페어링 권한 요청·명시적 건강 끄기 후 재요청 방지·미페어링 시 기존 건강 조회·미페어링 첫 실행 네 정책 테스트 통과. macOS TaptionPlanCore 전체115통과/0실패/0건너뜀(신규4 포함). package import 경계와 git diff --check, pbxproj lint 통과.
+- 빌드: 최초 기존 build/ArchiveDD 실행은 이전 정리로 MapLibre XCFramework cache가 없어 실패했다(debug-build.log). 요청 전용 DeviceDD에서 고정 패키지를 정상 해석·다운로드하여 재실행했고 최종 debug-build-map-confirmed.log에서 generic iOS Debug 성공. 최종 앱/Widget1.0(168), app/Watch 디렉터리 없음, deep strict codesign 검증 성공. Watch 소스 변경이 없어 Watch 빌드는 실행하지 않았다. Simulator runtime/device를 설치·생성하지 않았다.
+- 제한: iOS 앱 XCTest는 사용자의 Simulator 정리 이후 runtime/device0으로 실행하지 않았다. Core 테스트·Debug 성공은 실제 Watch 건강 읽기 승인을 받은 데이터 수신이나 소요시간 검증이 아니다. Watch→iPhone 건강 동기화는 Apple이 관리하며 HealthKit은 읽기 거절 여부를 앱에 공개하지 않는다. 권한 요청 완료를 모든 데이터 유형 읽기 승인으로 해석하지 않는다. 실제 페어링/권한/수신은 WHK1004A01 temp에 유지한다. WCH1003A01 기존 companion 경로 검증은 요구 변경으로 구분하고 기존 속도 미검증은 유지한다.
+- 배포: commit/push/TestFlight 업로드·기기 설치 없음. 현재 배포168에는 이 변경이 아직 없고 로컬 Debug168만 새 소스를 포함한다. ShotGuide와 기존 Release/IPA/디자인 자료는 변경하지 않았다.
+- 근거: build/validation/WHK1004A01/validation-summary.json, policy-tests.log, core-regression.log, import-boundary.log, debug-build-map-confirmed.log, bundle-verification.json, debug-signature.log, source-hashes.json, simulator-devices.json, simulator-runtimes.json. Apple 공식 문서: https://developer.apple.com/documentation/watchconnectivity/wcsession/ispaired 및 https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data .
+
+
+## SIM1003D01 · TaptionPlan 시뮬레이터 파일 정리 (2026-10-03)
+
+- 결과: 삭제 대상165개 경로·추정 할당 크기4,275,453,952바이트(3.982GiB)를 삭제했고 실행 오류0·대상 잔여0이다. 시뮬레이터 앱/Watch 제품·중간 산출물·module map/stat cache, simulator 전용 WDT0930Tests 출력, 시뮬레이터 빌드에 사용한 프로젝트 임시 컴파일/테스트 캐시, 결과 번들67개·시뮬레이터 실행 로그·XCTest 내보내기 그림, simulator 아키텍처가 포함된 다운로드 바이너리 의존성 캐시를 정리했다. APFS 공유 블록과 다른 작업의 정리가 있어 이 크기를 실제 디스크 여유 증가로 간주하지 않는다.
+- 근거: `build/validation/SIM1003D01/`의 `deletion-manifest.json`, `deletion-results.json`, `additional-deletion-manifest-final.json`, `additional-deletion-results.json`, `cleanup-summary.json`. 삭제 범위는 기존 ShotGuide 보호 지시와 현재 저장소 문맥에 따라 TaptionPlan으로 한정했다. Mac 전체 포함 여부를 질문했으나 응답 없이 다른 프로젝트/공용 Xcode SDK 삭제로 확대하지 않았다.
+- 검증 기록: 삭제 전67개 xcresult의 실제 요약을 모두 추출했다(추출 실패0). `retained-test-summaries/`와 원본 경로→요약 경로·통과/실패/건너뜀 값을 기록한 `test-summary-inventory.json`에 남겼다. 과거 실패/건너뜀도 그대로 보존했으며 이번 정리를 새 테스트 통과로 처리하지 않는다. 기존 test.md에 연결된 Simulator xcresult·해당 실행 로그·내보내기 그림은 사용자 삭제 요청으로 제거됐으므로 재확인은 보존된 요약과 매핑을 사용한다. 원본 첨부/전체 xcresult 재조회는 더 이상 가능하지 않다.
+- 보존: 시작 시 미커밋 집 육각형 변경·앱 소스/자산·프로젝트/성장 manifest, 실기기 Debug 앱, Release168 archive/IPA·배포 증거, 의존성 소스 checkout을 보존했다. 보호 파일12개 SHA-256이 전후 같고 실기기 Debug 앱·Release archive 앱의 codesign deep/strict 검증도 전후 성공했다(`protected-file-hashes.json`, `debug-signature-before/after.log`, `archive-signature-before/after.log`). 의존성의 바이너리 캐시는 재빌드 때 필요에 따라 다시 내려받는다.
+- 전역 상태: 처음 Mac 장치4대가 보였으나 소유 확인 재조회 전에 장치/런타임 목록이0개로 바뀌었다. 이 작업에서는 전역 장치/런타임 삭제 명령을 실행하지 않았고 변경 주체는 확인할 수 없다(`devices-before.json`, `external-state-observation.json`). 최종 조회도 장치0·런타임0이다(`devices-final.json`, `runtimes-final.json`). CoreSimulator 임시 BackgroundDelete 할당 크기는0으로 확인됐다.
+- 최종 확인: 명시한 삭제 대상, 프로젝트의 이름으로 식별되는 Simulator 출력/패키지 출력, 직접 연결된 결과 번들과 Simulator 호출 로그의 잔여가 모두0이다. 파일을 재생성하는 앱/Simulator 빌드·테스트·설치를 실행하지 않았다. 앱 동작 코드 변경·추가 커밋·push·배포도 수행하지 않았다. 정리 기준 충족으로 SIM1003D01만 temp에서 제거하고 기존 기기/배포 확인 대기는 유지한다.
+
+## HBG1003A01 · 집 아이콘 흰색 육각형 50% 배경 (2026-10-03)
+
+- 결과: 지도 집 그림 뒤에 `hexagon.fill` 흰색·불투명도0.5·56×56pt 배경을 적용했다. 일반 집 표시와 화랑이가 집에 있는 표시 모두 같은 배경을 사용하며 배경은 터치/접근성 대상에서 제외했다. 집 그림 자체는48×48pt·기존 선명도이고 기존 화랑이/장식/윤일 별/탭 영역을 유지한다.
+- 범위: MapHomePlacePin의 공통 배경10줄과 두 사용 위치만 추가했다. 이 추가를 제거하면 시작 HEAD a4d1910의 MapHomeView.swift와 정확히 같아지는 대조를 통과했다. 성장 상세 카드/시즌 보관 화면과 성장·저장 정책, 승인된366개 SVG 자산은 변경하지 않았고 원본 해시 검사를 통과했다. 근거는 `build/validation/HBG1003A01/implementation.json`, `source-scope-verification.json`, `artwork-check.log`이다.
+- 관련 기존 회귀 **20통과·0실패·0건너뜀**: MapHomeGrowthPolicyTests18개(실제 번들366개/48pt 렌더 검증 포함)와 FeatureEngineTests의 집/화랑이 탭 분리·마커 탭 경계2개. 초기 보조 탭 선택자는 잘못된 클래스명으로 지정되어 실행되지 않았고 성장18개만 실제 통과했다. 클래스명을 바로잡아 별도 결과 번들에서2개가 실제 통과한 후 합산했다(`home-background-tests.xcresult`, `growth-test-summary.json`, `home-tap-tests.xcresult`, `tap-test-summary.json`, `test-selection-correction.json`).
+- 최종 generic iOS Debug BUILD SUCCEEDED·exit0, 산출물 네 제품 번들 모두1.0(168), import 경계·diff 검사 통과(`ios-debug.log`, `debug-bundles.json`, `import-boundary.log`, `validation-summary.json`). 새 테스트 파일은 만들지 않았다. 기존 테스트는 성장/자산/탭 정책 검증이며 육각형의 실제 지도 화면이나 픽셀 불투명도 측정을 대신하지 않는다.
+- 제한: 구현/관련 회귀/Debug 기준 충족으로 이 요청만 temp에서 제거한다. 실제 기기 지도 시각 확인·새 설치·커밋·push·TestFlight 배포는 이번 요청에서 수행하지 않았다. 이 수정이 포함된 로컬 Debug168과 앞서 배포한 TestFlight168(코드027464b)을 구분한다. REL1003A01의 웹 로그인/그룹 화면 대기와 다른 실기기 검증 조건은 유지한다.
+
 ## REL1003A01 · main 반영·내부 TestFlight168 (2026-10-03)
 
 - 시작: main HEAD·fetch 후 origin/main·실제 원격 main은 모두 c441beaa0b72c31d590bb02157caf24a42d78f6d였다. 토요일 표시·Watch 수신 개선·세계 건축 366개 자산·관련 기록·디자인 자료와 기존 Kiro 파일3개 삭제 변경을 보존하여 사용자 요청 범위로 반영한다. 새 브랜치/초기화/파일 삭제는 수행하지 않았다.

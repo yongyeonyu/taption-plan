@@ -427,7 +427,7 @@ struct SettingsView: View {
                 icon: "applewatch",
                 iconBackground: Color(red: 0.91, green: 0.92, blue: 0.95),
                 iconColor: Color.tpInk,
-                title: "Apple Watch 앱",
+                title: "Apple Watch 건강 데이터",
                 subtitle: model.appleWatchCompanionRow.subtitle,
                 value: model.appleWatchCompanionRow.value
             ) {
@@ -439,9 +439,6 @@ struct SettingsView: View {
                     .foregroundStyle(Color.tpSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 37)
-            }
-            if let launchReport = model.watchLaunchReport {
-                watchLaunchReportView(launchReport)
             }
         }
     }
@@ -1131,107 +1128,25 @@ struct SettingsView: View {
     }
 
     private var watchDataSyncRow: some View {
-        VStack(spacing: 7) {
-            HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.taption(size: 13))
-                    .foregroundStyle(Color.tpMovementDark)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        Color.tpMovement,
-                        in: RoundedRectangle(cornerRadius: 7)
-                    )
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Apple Watch 데이터 가져오기")
-                        .font(
-                            .taption(
-                                size: SettingsTypography.rowTitle,
-                                weight: .bold
-                            )
-                        )
-                        .foregroundStyle(Color.tpInk)
-                    Text(model.settings.watchDataSyncProfile.subtitle)
-                        .font(.taption(size: SettingsTypography.rowSubtitle))
-                        .foregroundStyle(Color.tpSecondary)
-                }
-
-                Spacer(minLength: 4)
-                Text(model.settings.watchDataSyncProfile.displayName)
-                    .font(
-                        .taption(
-                            size: SettingsTypography.value,
-                            weight: .bold
-                        )
-                    )
-                    .foregroundStyle(Color.tpMovementDark)
-            }
-
-            Slider(
-                value: Binding(
-                    get: {
-                        Double(model.settings.watchDataSyncProfile.rawValue)
-                    },
-                    set: { value in
-                        guard let profile = TaptionWatchDataSyncProfile(
-                            rawValue: Int(value.rounded())
-                        ) else { return }
-                        model.setWatchDataSyncProfile(profile)
-                    }
-                ),
-                in: 0...3,
-                step: 1
-            )
-            .tint(Color.tpMovementDark)
-            .accessibilityLabel("Apple Watch 데이터 가져오기 간격")
-            .accessibilityValue(model.settings.watchDataSyncProfile.subtitle)
-
+        VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text("iPhone 설정 자동 반영 · 건강·활동·가속도")
-                    .font(.taption(size: SettingsTypography.footnote))
-                    .foregroundStyle(Color.tpSecondary)
+                Text("Apple Watch 데이터 가져오기")
+                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
                 Spacer()
                 Button("지금 가져오기") {
                     model.requestWatchDataSync()
                 }
-                .font(.taption(size: SettingsTypography.footnote, weight: .bold))
-                .foregroundStyle(Color.tpMovementDark)
+                .disabled(!model.settings.healthEnabled)
             }
-
-            Text(
-                model.appleWatchLastDataReceivedAt.map { receivedAt in
-                    "최근 수신 시각 · \(receivedAt.formatted(date: .abbreviated, time: .shortened))"
-                } ?? "최근 수신 시각 없음"
-            )
-            .font(.taption(size: SettingsTypography.footnote))
-            .foregroundStyle(Color.tpSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let status = model.appleWatchDataSyncRequestStatus {
-                Text(watchDataSyncStatusText(status))
+            Text("앱을 열면 바로 조회 · 건강·운동·수면")
+                .font(.taption(size: SettingsTypography.rowSubtitle))
+                .foregroundStyle(Color.tpSecondary)
+            Text("iPhone 건강 앱에 동기화된 데이터를 읽습니다. 별도 Watch 앱이나 가져오기 간격 설정은 필요하지 않습니다.")
                 .font(.taption(size: SettingsTypography.footnote))
-                .foregroundStyle(
-                    status == .pending
-                        ? Color.tpMovementDark
-                        : Color.tpSecondary
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            HStack {
-                watchProfileLabel("끔", alignment: .leading)
-                watchProfileLabel("15분", alignment: .center)
-                watchProfileLabel("5분", alignment: .center)
-                watchProfileLabel("1분", alignment: .trailing)
-            }
+                .foregroundStyle(Color.tpSecondary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
-                .frame(height: 0.5)
-        }
     }
 
     private func watchDataSyncStatusText(

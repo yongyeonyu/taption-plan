@@ -6432,231 +6432,47 @@ struct MapHomeView: View {
     }
 
     private var appleWatchMenuItem: some View {
-        let state = model.appleWatchConnectionState
-        let tint = Color.tpAccent
-        return VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 8) {
             Button {
                 model.refreshAppleWatchConnectionState()
                 isAppleWatchMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "applewatch")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(tint)
-                        .frame(width: 24)
+                        .foregroundStyle(Color.tpAccent)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(language.text("Apple Watch 데이터", "Apple Watch data"))
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        Text(appleWatchMenuSubtitle)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(language.text("앱을 열면 건강 데이터 조회", "Read health data on app open"))
+                            .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text(appleWatchMenuValue(for: state))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(tint)
-                    Image(
-                        systemName: isAppleWatchMenuExpanded
-                            ? "chevron.up"
-                            : "chevron.down"
-                    )
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    Image(systemName: isAppleWatchMenuExpanded ? "chevron.up" : "chevron.down")
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 12)
-                .background(
-                    Color.tpInk.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 12)
-                )
+                .padding(12)
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(
-                language.text(
-                    "Apple Watch 데이터 상태",
-                    "Apple Watch data status"
-                )
-            )
-            .accessibilityValue(appleWatchMenuSubtitle)
-
             if isAppleWatchMenuExpanded {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(appleWatchMenuDescription(for: state))
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    if !hasRecentAppleWatchData
-                        || model.appleWatchReceivedDataKinds.isEmpty {
-                        Text(
-                            language.text(
-                                "최근 수신된 데이터 항목 없음",
-                                "No data types received recently"
-                            )
-                        )
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                Text(language.text(
+                    "별도 Watch 앱 없이 iPhone 건강 앱에 동기화된 운동·심박·수면 데이터를 읽습니다. 최초 연결 시 건강 읽기 권한을 승인해 주세요. Watch에서 iPhone으로 아직 동기화되지 않은 데이터는 도착 후 반영됩니다.",
+                    "Read workouts, heart rate, and sleep synced to iPhone Health without a Watch app. Approve health read access when first connecting. Data appears after Apple Watch syncs it to iPhone."
+                ))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                Button(language.text("지금 가져오기", "Import now")) {
+                    if model.settings.healthEnabled {
+                        model.requestWatchDataSync(source: "map_watch_card")
                     } else {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(language.text("최근 수신 항목", "Recently received"))
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundStyle(tint)
-                            ForEach(
-                                model.appleWatchReceivedDataKinds.sorted {
-                                    $0.rawValue < $1.rawValue
-                                },
-                                id: \.self
-                            ) { kind in
-                                Label(
-                                    appleWatchDataKindTitle(kind),
-                                    systemImage: "checkmark.circle.fill"
-                                )
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.primary)
-                            }
-                        }
-                    }
-
-                    Text(
-                        model.appleWatchLastDataReceivedAt.map { receivedAt in
-                            language.text(
-                                "최근 수신 시각 · \(receivedAt.formatted(date: .abbreviated, time: .shortened))",
-                                "Latest received · \(receivedAt.formatted(date: .abbreviated, time: .shortened))"
-                            )
-                        } ?? language.text(
-                            "최근 수신 시각 없음",
-                            "No data received yet"
-                        )
-                    )
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-
-                    if let requestedAt = model.appleWatchDataSyncRequestedAt {
-                        Text(
-                            language.text(
-                                "수신 요청됨 · \(requestedAt.formatted(date: .abbreviated, time: .shortened))",
-                                "Sync requested · \(requestedAt.formatted(date: .abbreviated, time: .shortened))"
-                            )
-                        )
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(tint)
-                    }
-
-                    HStack(spacing: 8) {
-                        Text(
-                            language.text(
-                                "가져오기: \(model.settings.watchDataSyncProfile.localizedSubtitle(AppLanguagePreference.resolve(rawValue: languageRawValue)))",
-                                "Import: \(model.settings.watchDataSyncProfile.localizedSubtitle(AppLanguagePreference.resolve(rawValue: languageRawValue)))"
-                            )
-                        )
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        Spacer(minLength: 0)
-                        Button(language.text("지금 가져오기", "Import now")) {
-                            model.requestWatchDataSync(source: "map_watch_card")
-                            model.refreshAppleWatchConnectionState()
-                        }
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(tint)
+                        Task { await model.requestHealth() }
                     }
                 }
-                .padding(.vertical, 9)
-                .padding(.horizontal, 12)
-                .background(
-                    tint.opacity(0.045),
-                    in: RoundedRectangle(cornerRadius: 10)
-                )
-                .padding(.leading, 12)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color.tpAccent)
             }
-        }
-    }
-
-    private var appleWatchMenuSubtitle: String {
-        switch model.appleWatchConnectionState {
-        case .unsupported:
-            language.text("이 기기에서 사용할 수 없음", "Unavailable on this device")
-        case .notPaired:
-            language.text("Apple Watch 미페어링", "Apple Watch not paired")
-        case .appNotInstalled:
-            language.text("워치 앱 설치 필요", "Watch app needs installation")
-        case .noRecentData:
-            language.text("최근 15분 내 데이터 없음", "No data in the last 15 min")
-        case .background:
-            language.text("최근 데이터 · 백그라운드 수신", "Recent data · background")
-        case .reachable:
-            language.text("최근 데이터 · 실시간 수신", "Recent data · live")
-        }
-    }
-
-    private var hasRecentAppleWatchData: Bool {
-        guard let receivedAt = model.appleWatchLastDataReceivedAt else {
-            return false
-        }
-        let age = Date.now.timeIntervalSince(receivedAt)
-        return age >= 0
-            && age <= AppleWatchConnectionPolicy.recentContactWindow
-    }
-
-    private func appleWatchMenuValue(
-        for state: AppleWatchConnectionState
-    ) -> String {
-        switch state {
-        case .unsupported: language.text("사용 불가", "Unavailable")
-        case .notPaired: language.text("미페어링", "Not paired")
-        case .appNotInstalled: language.text("설치 필요", "Install")
-        case .noRecentData: language.text("수신 대기", "Waiting")
-        case .background: language.text("연결됨", "Connected")
-        case .reachable: language.text("실시간", "Live")
-        }
-    }
-
-    private func appleWatchMenuDescription(
-        for state: AppleWatchConnectionState
-    ) -> String {
-        switch state {
-        case .unsupported:
-            language.text(
-                "이 기기에서는 Apple Watch 데이터를 사용할 수 없습니다.",
-                "Apple Watch data is unavailable on this device."
-            )
-        case .notPaired:
-            language.text(
-                "Apple Watch를 연결하면 손목 움직임·심박수·운동 정보를 더 수집합니다.",
-                "Pairing Apple Watch adds wrist motion, heart-rate, and workout data."
-            )
-        case .appNotInstalled:
-            language.text(
-                "연결된 Apple Watch에 앱을 설치하면 손목 센서 데이터를 더 수집합니다.",
-                "Install the app on the paired Apple Watch to collect more wrist-sensor data."
-            )
-        case .noRecentData:
-            language.text(
-                "최근 15분 내 실제 센서·건강 데이터가 없어 수신을 기다리는 중입니다.",
-                "No sensor or health data arrived in the last 15 minutes."
-            )
-        case .background, .reachable:
-            language.text(
-                "Apple Watch가 있어 iPhone만으로 얻기 어려운 손목 센서 정보를 더 수집합니다.",
-                "Apple Watch adds wrist-sensor data that iPhone cannot collect alone."
-            )
-        }
-    }
-
-    private func appleWatchDataKindTitle(
-        _ kind: AppleWatchDataKind
-    ) -> String {
-        switch kind {
-        case .motion:
-            language.text("손목 움직임·가속도", "Wrist motion and acceleration")
-        case .heartRate:
-            language.text("심박수", "Heart rate")
-        case .route:
-            language.text("워치 이동 경로", "Watch route")
-        case .activity:
-            language.text("운동·행동", "Workout and behavior")
-        case .health:
-            language.text("활동·수면 건강 데이터", "Activity and sleep health data")
         }
     }
 
@@ -12990,6 +12806,7 @@ private struct MapHomePlacePin: View {
             .scaledToFit()
             .frame(width: 48, height: 48)
             .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+            .background { homeMarkerBackground }
             .frame(width: 48, height: 48)
             .contentShape(Rectangle())
             .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48)))
@@ -13008,6 +12825,16 @@ private struct MapHomePlacePin: View {
                         .allowsHitTesting(false)
                 }
             }
+    }
+
+    private var homeMarkerBackground: some View {
+        Image(systemName: "hexagon.fill")
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(Color.white.opacity(0.5))
+            .frame(width: 56, height: 56)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private func homeIconTapGesture(markerSize: CGSize) -> some Gesture {
@@ -13111,6 +12938,7 @@ private struct MapHomePlacePin: View {
                 .scaledToFit()
                 .frame(width: 48, height: 48)
                 .shadow(color: .black.opacity(0.20), radius: 3, y: 1)
+                .background { homeMarkerBackground }
             MapHomeStickmanGlyph(action: catAction, size: 20)
                 .offset(
                     x: MapHomeCatTapRouting.catOffsetInHomeImage.x,

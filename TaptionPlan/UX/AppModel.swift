@@ -1660,6 +1660,7 @@ final class AppModel {
         try securityBackupService.unlock(withPIN: pin)
         securityStatus = securityBackupService.status
         setExternalPrivacyLocked(false)
+        scheduleWatchHealthRefresh()
     }
 
     func unlockAppWithBiometrics() async throws {
@@ -1667,6 +1668,7 @@ final class AppModel {
         try await securityBackupService.unlockWithBiometrics()
         securityStatus = securityBackupService.status
         setExternalPrivacyLocked(false)
+        scheduleWatchHealthRefresh()
     }
 
     func recoverBackup(accountIdentifier: String, newPIN: String) throws -> TaptionDataSnapshot {
@@ -3998,6 +4000,7 @@ final class AppModel {
         if !pendingSensorAnalysisRevisions.isEmpty {
             startSensorAnalysis(immediately: false)
         }
+        scheduleWatchHealthRefresh()
         scheduleForegroundPreparation()
         if postSaveRefreshRequested { schedulePostSaveRefresh() }
     }
@@ -4336,7 +4339,8 @@ final class AppModel {
             await self.refreshEnabledData(
                 includesCurrentDeviceDay: true,
                 dataSpan: self.currentDeviceDataSpan,
-                healthSpan: self.startupHealthSpan
+                healthSpan: self.startupHealthSpan,
+                includesHealth: false
             )
             self.lastForegroundRefreshAt = .now
             self.foregroundRefreshTask = nil
@@ -4392,7 +4396,6 @@ final class AppModel {
         await waitForBootstrapPreparation()
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
-        watchConnectivityService.requestWatchDataSyncIfDue()
         let samplingWindow = settings.sensorCollectionProfile.samplingWindowDuration
         let sensorService = self.sensorService
         let persistenceToken = sensorService?.persistenceToken() ?? 0
@@ -4881,6 +4884,7 @@ final class AppModel {
             if granted {
                 snapshot.settings.watchDataSyncProfile = watchDataSyncProfile
                 Task { @MainActor in
+                    await refreshHealthData(in: startupHealthSpan, forceRawSync: true)
                     await synchronizeHealthHistory(showErrors: true)
                     await refreshHealthData()
                     await configureHealthBackgroundDeliveryIfNeeded(
@@ -4888,7 +4892,6 @@ final class AppModel {
                     )
                     startForegroundHealthRefreshIfNeeded()
                     publishWatchPayload()
-                    requestWatchDataSync(source: "health_authorization")
                     await persist()
                 }
             }
@@ -5178,6 +5181,7 @@ final class AppModel {
         includesCurrentDeviceDay: Bool = false,
         dataSpan: TimeSpan? = nil,
         healthSpan: TimeSpan? = nil,
+        includesHealth: Bool = true,
         persistDeviceSnapshot: Bool = true,
         force: Bool = false
     ) async {
@@ -5299,7 +5303,7 @@ final class AppModel {
             }
         }
         guard !Task.isCancelled, acceptsDataMutation() else { return }
-        if settings.healthEnabled {
+        if includesHealth && settings.healthEnabled {
             do {
                 if try await healthService.authorizationRequestState()
                     == .notDetermined {
@@ -5683,55 +5687,42 @@ final class AppModel {
     }
 
     func requestWatchDataSync(source: String = "settings_button") {
-        let requestedAt = Date.now
-        let requestID = UUID().uuidString
-        let logger = TaptionPlanDiagnosticsLogger.shared
-        logger.record(
-            "watch_data_sync_button_tapped",
-            fields: [
-                "request_id": requestID,
-                "source": source,
-                "connection_state": appleWatchConnectionState.rawValue,
-                "data_sync_profile": String(
-                    snapshot.settings.watchDataSyncProfile.rawValue
-                ),
-                "pending_before": String(
-                    appleWatchDataSyncRequestedAt != nil
-                ),
-            ]
-        )
-        let requested = watchConnectivityService.requestWatchDataSync(
-            requestID: requestID
-        )
-        appleWatchDataSyncRequestedAt = requested ? requestedAt : nil
-        appleWatchDataSyncRequestID = requested ? requestID : nil
-        appleWatchDataSyncRequestStatus = requested ? .pending : .rejected
-        if requested {
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(15))
-                guard let self,
-                      self.appleWatchDataSyncRequestID == requestID,
-                      self.appleWatchDataSyncRequestStatus == .pending else {
-                    return
-                }
-                self.appleWatchDataSyncRequestStatus = .noResponse
-                logger.record(
-                    "watch_data_sync_response_timeout",
-                    level: .notice,
-                    fields: ["request_id": requestID]
+        scheduleWatchHealthRefresh()
+    }
+
+    @ObservationIgnored private var watchHealthRefreshTask: Task<Void, Never>?
+
+    private func scheduleWatchHealthRefresh() {
+        guard isBootstrapped, isSceneActive, !isAppLocked, watchHealthRefreshTask == nil else { return }
+        watchHealthRefreshTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.watchHealthRefreshTask = nil }
+            let action = TaptionWatchHealthLaunchPolicy.action(
+                isPaired: self.watchConnectivityService.isWatchPaired,
+                healthEnabled: self.settings.healthEnabled,
+                hasRequestedAuthorization: UserDefaults.standard.bool(
+                    forKey: Self.healthAuthorizationRequestedKey
                 )
+            )
+            guard self.isSceneActive, !self.isAppLocked else { return }
+            switch action {
+            case .requestAuthorization:
+                await self.requestHealth()
+            case .refresh:
+                do {
+                    if try await self.healthService.authorizationRequestState() == .notDetermined {
+                        await self.requestHealth()
+                        return
+                    }
+                } catch {
+                    // Already connected HealthKit remains queryable if request-status lookup fails.
+                }
+                await self.refreshHealthData(in: self.startupHealthSpan, showErrors: false, forceRawSync: true)
+                await self.persistDeviceLocalSnapshot()
+            case .none:
+                break
             }
         }
-        logger.record(
-            "watch_data_sync_button_result",
-            fields: [
-                "request_id": requestID,
-                "accepted": String(requested),
-                "pending_after": String(
-                    appleWatchDataSyncRequestedAt != nil
-                ),
-            ]
-        )
     }
 
     private func applyAppleWatchDataSyncLiveFailure(requestID: String) {
@@ -5750,10 +5741,10 @@ final class AppModel {
         refreshWatchLaunchReport()
     }
 
-    /// 워치는 나중에 페어링될 수도, 앱이 나중에 설치될 수도 있다. 세션이
-    /// 상태를 알릴 때마다 여기로 들어와 안내가 따라 바뀐다.
+    /// 페어링 완료 이벤트에서도 HealthKit 연결을 확인한다.
     func applyAppleWatchConnectionState(_ state: AppleWatchConnectionState) {
         let changed = appleWatchConnectionState != state
+        scheduleWatchHealthRefresh()
         if changed {
             appleWatchConnectionState = state
             // Reachability is not part of the Watch payload itself. Reset the
@@ -5773,16 +5764,16 @@ final class AppModel {
 
     /// 지금 보여 줄 첫 실행 안내. 없으면 아무것도 띄우지 않는다.
     var appleWatchOnboardingPrompt: AppleWatchOnboardingPrompt? {
-        AppleWatchOnboarding.prompt(
-            for: appleWatchConnectionState,
-            dismissed: dismissedAppleWatchPrompts,
-            hasSeenWatchAppInstalled: hasSeenWatchAppInstalled
-        )
+        nil
     }
 
-    /// 설정에 늘 남는 워치 앱 줄.
+    /// Watch 앱 설치와 무관한 HealthKit 수신 안내.
     var appleWatchCompanionRow: AppleWatchCompanionRow {
-        AppleWatchOnboarding.companionRow(for: appleWatchConnectionState)
+        AppleWatchCompanionRow(
+            subtitle: "iPhone 건강 앱에 동기화된 Watch 데이터를 가져옵니다",
+            value: settings.healthEnabled ? "건강 연결" : "권한 필요",
+            detail: "별도 Watch 앱 없이 앱을 열면 조회합니다. Watch에서 iPhone으로 동기화되는 시점에 따라 최신 데이터가 늦게 도착할 수 있습니다."
+        )
     }
 
     /// 한 번 닫으면 그 안내는 다시 뜨지 않는다.
@@ -5836,21 +5827,7 @@ final class AppModel {
             readings: [],
             lastUpdatedAt: .now
         )
-        try? watchConnectivityService.requestWorkout(
-            TaptionWatchWorkoutRequest(
-                sessionID: session.id,
-                action: .start,
-                kind: kind == .running ? .running : .walking,
-                linkedPlanID: linkedPlanID
-            )
-        )
-        do {
-            _ = try await healthService.startWatchWorkout(kind: kind)
-        } catch {
-            Self.integrationLogger.info(
-                "Watch workout wake was unavailable: \(error.localizedDescription, privacy: .public)"
-            )
-        }
+
     }
 
     func stopTracking() async {
@@ -5876,14 +5853,6 @@ final class AppModel {
         )
         TrackingSessionRecoveryStore.clear()
         lastTrackingSessionRecoveryPersistAt = nil
-        try? watchConnectivityService.requestWorkout(
-            TaptionWatchWorkoutRequest(
-                sessionID: completed.id,
-                action: .stop,
-                kind: completed.kind == .running ? .running : .walking,
-                linkedPlanID: completed.linkedPlanID
-            )
-        )
         activeTrackingSession = nil
         trackingSessionWasRecovered = false
         liveRouteState.session = nil
@@ -12036,7 +12005,8 @@ final class AppModel {
 
     private func refreshHealthData(
         in requestedSpan: TimeSpan? = nil,
-        showErrors: Bool = true
+        showErrors: Bool = true,
+        forceRawSync: Bool = false
     ) async {
         guard acceptsDataMutation(), !isHealthRefreshRunning else { return }
         isHealthRefreshRunning = true
@@ -12055,7 +12025,7 @@ final class AppModel {
         do {
             do {
                 healthSyncOverview = try await healthService
-                    .synchronizeChanges()
+                    .synchronizeChanges(force: forceRawSync)
             } catch {
                 Self.integrationLogger.error(
                     "HealthKit incremental raw sync failed: \(error.localizedDescription, privacy: .public)"

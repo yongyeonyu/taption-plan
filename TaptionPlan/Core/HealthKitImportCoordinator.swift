@@ -1,6 +1,7 @@
 import CoreLocation
 import Foundation
 import HealthKit
+import TaptionPlanCore
 
 struct HealthKitImportDeltaCounts: Equatable {
     let added: Int
@@ -317,23 +318,6 @@ actor HealthKitImportCoordinator {
             )
         }
 
-        try await importWhenAvailable(
-            typeIdentifier: HealthKitTypeCatalog.documents.first?.identifier
-        ) { try await importDocuments() }
-        try await importWhenAvailable(
-            typeIdentifier: "HKDataTypeIdentifierUserAnnotatedMedicationConcept"
-        ) {
-            try await importUserAnnotatedMedications()
-        }
-        try await importWhenAvailable { try await importCharacteristics() }
-        try await importWhenAvailable(
-            typeIdentifier: "HKActivitySummaryTypeIdentifier"
-        ) {
-            try await importActivitySummaries(
-                from: earliestPermittedSampleDate(),
-                through: .now
-            )
-        }
         try Task.checkCancellation()
         return try await importStore.overview()
     }
@@ -413,33 +397,13 @@ actor HealthKitImportCoordinator {
                 try await importStore.saveSyncState(state)
             }
         }
-        if includeAncillary {
-            try await importWhenAvailable(
-                typeIdentifier: HealthKitTypeCatalog.documents.first?.identifier
-            ) { try await importDocuments() }
-            try await importWhenAvailable(
-                typeIdentifier: "HKDataTypeIdentifierUserAnnotatedMedicationConcept"
-            ) {
-                try await importUserAnnotatedMedications()
-            }
-            try await importWhenAvailable { try await importCharacteristics() }
-            try await importWhenAvailable(
-                typeIdentifier: "HKActivitySummaryTypeIdentifier"
-            ) {
-                try await importActivitySummaries(
-                    from: calendar.date(byAdding: .day, value: -31, to: .now)
-                        ?? Date(timeIntervalSinceNow: -31 * 86_400),
-                    through: .now
-                )
-            }
-        }
         try Task.checkCancellation()
         return try await importStore.overview()
     }
 
     private func sampleDescriptors() -> [HealthKitTypeDescriptor] {
         HealthKitTypeCatalog.observableDescriptors.filter { descriptor in
-            !descriptor.isClinical || healthStore.supportsHealthRecords()
+            TaptionHealthReadScope.identifiers.contains(descriptor.identifier)
         }
     }
 

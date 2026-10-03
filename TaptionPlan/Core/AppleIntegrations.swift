@@ -5,6 +5,7 @@ import CoreMotion
 import EventKit
 import Foundation
 import HealthKit
+import TaptionPlanCore
 import MediaPlayer
 import MapKit
 import NetworkExtension
@@ -466,7 +467,7 @@ enum HealthRefreshPolicy {
     static let backgroundObservedTypeIdentifiers: Set<String> = [
         HKObjectType.workoutType().identifier,
         HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
-        HKCategoryTypeIdentifier.mindfulSession.rawValue,
+        HKQuantityTypeIdentifier.heartRate.rawValue,
         HKQuantityTypeIdentifier.stepCount.rawValue,
     ]
 }
@@ -641,9 +642,6 @@ final class AppleHealthService: @unchecked Sendable {
                 }
             }
         }
-        if completed {
-            _ = try? await requestVisionPrescriptionReadAccess()
-        }
         return completed
     }
 
@@ -748,14 +746,11 @@ final class AppleHealthService: @unchecked Sendable {
     func actuals(in span: TimeSpan) async throws -> [ActualRecord] {
         async let workouts = workoutActuals(in: span)
         async let sessions = sleepSessions(in: span)
-        async let mindful = mindfulSessionActuals(in: span)
-        return try await workouts + sleepActuals(from: sessions) + mindful
+        return try await workouts + sleepActuals(from: sessions)
     }
 
     func nonSleepActuals(in span: TimeSpan) async throws -> [ActualRecord] {
-        async let workouts = workoutActuals(in: span)
-        async let mindful = mindfulSessionActuals(in: span)
-        return try await workouts + mindful
+        try await workoutActuals(in: span)
     }
 
     func synchronizeFullHistory(
@@ -768,8 +763,9 @@ final class AppleHealthService: @unchecked Sendable {
         return overview
     }
 
-    func synchronizeChanges() async throws -> HealthKitSyncOverview {
-        let firstScope = nextChangeSyncScope()
+    func synchronizeChanges(force: Bool = false) async throws -> HealthKitSyncOverview {
+        if force { setLastBroadSynchronizationAt(nil) }
+        let firstScope = force ? ChangeSyncScope.broad : nextChangeSyncScope()
         var overview: HealthKitSyncOverview
         switch firstScope {
         case let .types(identifiers):
@@ -1256,40 +1252,15 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     private func readTypes() -> [HKObjectType] {
-        HealthKitTypeCatalog.standardAuthorizationObjectTypes().filter { type in
-            guard let descriptor = HealthKitTypeCatalog.descriptor(
-                for: type.identifier
-            ) else {
-                return false
-            }
-            return !descriptor.isClinical || store.supportsHealthRecords()
-        }
-    }
-
-    private func requestVisionPrescriptionReadAccess() async throws -> Bool {
-        let type = HKObjectType.visionPrescriptionType()
-        return try await withCheckedThrowingContinuation { continuation in
-            store.requestPerObjectReadAuthorization(
-                for: type,
-                predicate: nil
-            ) { success, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: success)
-                }
-            }
-        }
+        HealthKitTypeCatalog.all.filter {
+            TaptionHealthReadScope.identifiers.contains($0.identifier)
+        }.compactMap(HealthKitTypeCatalog.readObjectType(for:))
     }
 
     private func observedSampleTypes() -> [HKSampleType] {
-        HealthKitTypeCatalog.observableDescriptors.filter { descriptor in
-            HealthRefreshPolicy.backgroundObservedTypeIdentifiers.contains(
-                descriptor.identifier
-            )
-                && descriptor.backgroundEligible
-                && (!descriptor.isClinical
-                    || store.supportsHealthRecords())
+        HealthKitTypeCatalog.observableDescriptors.filter {
+            TaptionHealthReadScope.identifiers.contains($0.identifier)
+                && $0.backgroundEligible
         }.compactMap(HealthKitTypeCatalog.observableSampleType(for:))
     }
 
