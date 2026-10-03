@@ -4,6 +4,12 @@
 - 시작: main HEAD/origin/main/실제 원격 a4d1910 일치. 기존 집 흰색50% 육각형 배경과 WHK1004A01·HKS1004A01 변경/기록을 보존하여 새 배포를 진행한다.
 - 버전: ASC 최신168 VALID를 확인하여169 선택. project build 설정8개 및 앱·Widget·보존된 Watch·Watch Widget 원본 Info.plist4개 모두169. 현재 사용자의 Watch 앱 제외 지시에 따라 iPhone 최종 배포 산출물은 앱/Widget 두 개, Watch 디렉터리 없음으로 검증한다.
 - 현재 검증: HKS1004A01 검증 대상8개 소스 hash 모두 동일하여 Core117통과/0실패/0건너뜀 재사용. 신규 iOS generic Debug169 성공, 앱/Widget1.0(169)·Watch 미포함 확인. 성장366자산 원본 대조·import 경계·diff 검사 통과. Simulator runtime/device0 유지, 앱 XCTest·건강 권한/실제 Watch 수신은 미검증이다. 이후 Release·업로드·처리·기존 그룹/웹 확인 결과를 추가한다.
+- 코드: 1fe06ab89a8eef6d2631730c3a4fc491adf7437b main commit/push 성공. archive 시작 직전 clean, 저장한 소스/설정1,075개 hash는 archive 후에도 동일하다.
+- Release: archive/export 성공, archive 및 IPA deep strict 서명 검증 성공. 앱/Widget 두 번들1.0(169), Watch 폴더 없음, 최종 임상 health-records entitlement 및 임상 목적 key 없음. 기존 SecurityBackupCore 캡처 경고2곳은 유지한다. IPA42,072,768바이트, SHA2564608fb21b882d6c61078606a9fbe25998c24714396d6df8e5d1be033a423e543.
+- 업로드: 직전 ASC에169 미존재 확인 후 altool1회 업로드 성공·exit0. 전달ID90924a58-f2b2-42dc-a15a-62ea4adde888. 첫 BuildUpload 조회는 PROCESSING·오류0·경고0. 재업로드하지 않는다.
+- 내부 배포: BuildUpload COMPLETE·오류0·경고0, build169 VALID·INTERNAL_ONLY 확인 후 기존 TP Taption Plan 내부 테스트 그룹에 연결했다. 최종 IN_BETA_TESTING, 그룹 목록169, 테스터1명, 한국어 안내 재조회 저장 일치 확인(deployment-api-summary.json, build-final.json, group-builds.json, testers-final-summary.json, beta-test-notes-final.json).
+- 웹 제한: Chrome5331254에서 App Store Connect 실제 상세 URL은 Apple 계정 이메일/전화번호 로그인 화면으로 이동했다. 사용자 직접 인증을 요청했고 최종 재확인에서도 같은 화면이다. 실제 그룹의 빌드·테스터 노출은 아직 확인하지 못하여 REL1004A01은 temp에 유지한다. API 확인을 웹 화면 확인으로 대체하지 않는다(web-confirmation-pending.json).
+- 실기기/범위: 이 배포에서는 새 기기 설치/건강 권한 승인/Watch 수신 속도를 확인하지 않았다. WHK1004A01·HKS1004A01 실제 기기 조건과 기존 미완료 항목, IAP/공개 심사 제출 보류를 유지한다. 기록 commit/push 후 HEAD·origin/main·실제 원격 main 일치와 clean은 final-git.json으로 확인한다.
 - 근거: build/validation/REL1004A01/builds-before.json, validation-reuse.json, source-build-versions.json, ios-debug.log, debug-bundles.json, artwork-check.log, import-boundary.log.
 
 

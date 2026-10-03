@@ -1,18 +1,19 @@
 # 남은 요청
 
-## REL1004A01 · main 반영·HealthKit 최소 수집 TestFlight
+## REL1004A01 · main 반영·HealthKit 최소 수집 TestFlight [169 내부 배포 완료 / 웹 그룹 화면 확인 대기]
+- 현재: 코드1fe06ab main push, iOS Debug·Release archive/export·서명·앱/Widget1.0(169)·Watch 미포함 확인 완료. TestFlight169 VALID·INTERNAL_ONLY·IN_BETA_TESTING, 내부 그룹 목록169·테스터1명·한국어 안내는 API로 확인했다. Chrome 로그인 대기로 실제 그룹 화면은 미확인이다(test.md REL1004A01). 재업로드하지 않는다.
 - 원인: 사용자가 다음 진행을 요청했다. WHK1004A01/HKS1004A01과 집 육각형 배경은 로컬 변경이며 기존 TestFlight168에 포함되지 않았다.
 - 해결: 현 소스와 유효 검증을 대조하고 main 커밋·push 후 새 번호로 Debug/Release·서명·버전·Watch 미포함을 검증하여 기존 내부 TestFlight 그룹에 배포한다. 원본 네 제품 설정은 같은 번호를 유지하되 사용자 지시에 따라 iPhone 배포 산출물은 앱/Widget 두 개로 확인한다.
 - 검증: Core 회귀 유효성, 최종 Debug·archive/export·서명/번호, 업로드 처리·기존 내부 그룹 빌드/테스터 실제 화면, main 원격 일치·clean. 실기기 건강 권한·수신은 별도 미완료로 유지하며 Simulator 생성·IAP/공개 심사 제출은 하지 않는다. 근거 build/validation/REL1004A01/.
 
 ## HKS1004A01 · HealthKit 최소 수집 범위 [구현·Core117·iOS Debug 완료 / 실기기 권한 화면 확인 대기]
-- 현재: 최소8종 권한/import/observer, 목적 문구와 임상 entitlement 정리 완료. Core117통과, iOS Debug·최종 서명 entitlement 확인 완료. 실제 권한 화면·Watch 수신 및 심사는 미검증이며 배포하지 않았다(test.md HKS1004A01).
+- 현재: 최소8종 권한/import/observer, 목적 문구와 임상 entitlement 정리 완료. Core117통과, iOS Debug·최종 서명 entitlement 확인 완료. 실제 권한 화면·Watch 수신 및 심사는 미검증이다. 수정본은 내부 TestFlight169에 포함됐다(test.md HKS1004A01, REL1004A01).
 - 원인: 건강 권한이 영양·투약·임상·시력 등 전체 카탈로그를 요청하고 가져오며 실제 기능보다 범위가 넓다.
 - 해결: 운동·수면·심박·걸음·운동 거리/에너지·운동 경로로 권한과 import/observer를 함께 제한하고 목적 문구와 임상 entitlement를 정리한다. 기존 저장 원본은 삭제하지 않는다.
 - 검증: 허용 목록 회귀, 관련 Core 회귀, iOS Debug·서명·최종 권한 설정 확인. 실기기 권한 화면과 심사 결과는 별도 검증한다. 근거 build/validation/HKS1004A01/.
 
 ## WHK1004A01 · Watch 앱 없이 건강 데이터 수신 [구현·Core 회귀·iOS Debug 완료 / 실기기 권한·수신 확인 대기]
-- 현재: Core115통과·0실패·0건너뜀, iOS Debug·서명·앱 내 Watch 미포함 검증 완료. 앱 XCTest는 runtime/device0으로 미실행이다. 실제 페어링·사용자 건강 승인·Watch 데이터 수신과 체감 속도는 대표의 화면/로그로 확인 대기다. 배포되지 않았다(test.md WHK1004A01).
+- 현재: Core115통과·0실패·0건너뜀, iOS Debug·서명·앱 내 Watch 미포함 검증 완료. 앱 XCTest는 runtime/device0으로 미실행이다. 실제 페어링·사용자 건강 승인·Watch 데이터 수신과 체감 속도는 대표의 화면/로그로 확인 대기다. 수정본은 내부 TestFlight169에 포함됐다(test.md WHK1004A01, REL1004A01).
 - 원인: 별도 Watch 앱 전송·설치 상태를 요구하는 기존 경로가 사용자 요구와 다르다.
 - 해결: iPhone HealthKit을 정본 수신 경로로 사용하고 페어링 시 건강 권한을 요청하며 앱 활성화마다 즉시 증분 조회한다. iPhone 제품에서 Watch 앱 임베딩을 해제하고 기존 원본·출처와 소스는 보존한다.
 - 검증: 연결/권한/활성화 정책 회귀, iOS Debug 빌드, Watch 제품 미포함 확인. 실제 권한 승인·Watch에서 iPhone으로 동기화된 데이터 수신은 실기기 근거로 구분한다. 시뮬레이터 재생성 없이 가능한 검증을 수행한다. 근거: build/validation/WHK1004A01/.
