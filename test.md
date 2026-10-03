@@ -7,7 +7,13 @@
 - 검증 재사용: Watch 소스/테스트5개 hash와 성장 SVG366개 hash가 해당 최종 검증과 동일하고, 상단 날짜 수정 diff도 기존 토요일 우선 분기뿐임을 확인했다. Watch 관련58개·성장 관련18개·달력 정책1개 모두0실패·0건너뜀인 실제 요약을 대조해 재사용했다(`validation-reuse.json`). 새 전체 테스트나 실기기 기능 통과로 표시하지 않는다.
 - 최종168 iOS·Watch generic Debug 모두 BUILD SUCCEEDED·exit0. iOS 앱에 포함된 네 제품 번들 모두1.0(168) 확인(`ios-debug.log`, `watch-debug.log`, `debug-bundles.json`). 성장 자산 대조·import 경계·staged diff 검사도 성공했다. 배포 기준 소스/설정1,071개 hash를 저장했다(`source-hashes.json`).
 - 자료: 이전 시안과 승인본·배포 ZIP을 포함한 디자인2,907개 파일(98,899,733바이트)을 보존하여 함께 반영한다. Python 자동 캐시만 .gitignore에 제외하며 지우지 않았다. 디자인 CSV의 의도된 CRLF를 .gitattributes의 cr-at-eol로 선언하여 내용/바이트를 그대로 보존하고 다른 공백 검사는 유지했다. 최초 CSV 진단은 `staged-diff.log`, 최종 무진단은 `staged-diff-final.log`이다.
-- 현재 단계: 검증된 변경을 main 커밋·push 후 해당 소스로 Release archive/export·서명 확인·내부 TestFlight 업로드/처리/그룹 화면 확인을 진행한다. 실제 기기 설치·화면/Watch 수신 속도·기능/성능은 별도 미확인으로 유지하고 IAP/공개 제출은 보류한다.
+- 코드 커밋027464b를 origin/main에 push했다. HEAD·origin/main·실제 원격 main의 동일 hash와 워크트리 clean을 확인한 뒤 해당 소스로 Release archive/export를 수행했다(`code-commit.log`, `code-push.log`, `pre-archive-git.json`).
+- Release archive/export 모두 성공·exit0이며 archive/IPA 각각 codesign deep·strict 검증에 성공했다. archive와 최종 IPA의 네 제품 번들 모두1.0(168), IPA56,659,328바이트·CRC 정상·내부 테스트 전용 옵션을 확인했다(`archive.log`, `export.log`, `archive-signature.log`, `ipa-signature.log`, `archive-bundles.json`, `ipa-bundles.json`, `ipa-metadata.json`). Release 성장 자산은366개 고유 이름/1,464개 rendition·9,538,015바이트이며 소스/설정1,071개 hash도 일치했다(`release-asset-summary.json`). 기존 SecurityBackupCore 캡처 경고2곳은 남아 있다.
+- 업로드 직전 ASC에168이 없는 것을 재확인하고 altool로1회 업로드했다. UPLOAD SUCCEEDED·exit0, 전달ID ee3ce0a4-5f3b-4131-b74a-6bf7a2b5cbf7(`pre-upload-builds.json`, `upload.log`, `upload-summary.json`). 최초 BuildUpload API 결과는 PROCESSING·오류0·경고0이다(`processing-01.json`).
+- 최종 API: BuildUpload COMPLETE·오류0·경고0, 빌드1.0(168) VALID·INTERNAL_ONLY를 확인했다(`processing-03.json`). 한국어 테스트 안내 저장 후 기존 `TP Taption Plan 내부 테스트` 그룹에 연결했고 최종 빌드는 IN_BETA_TESTING이다. 그룹 빌드 목록의168·테스터1명·한국어 안내 재조회도 확인했다(`build-final.json`, `group-attach.json`, `group-builds.json`, `testers-final-summary.json`, `beta-test-notes-final.json`, `deployment-api-summary.json`). 코드027464b의 토요일 표시·Watch 수정·세계 건축366개 자산이 이 빌드에 포함된다.
+- API 조회 제한/재시도: 처리 직후 테스트 안내의 첫 GET은 HTTP409로 실패했다. 변경 요청 전 단계였으며 같은 조회 재시도는 정상 종료했다. 이후 안내 저장/그룹 연결과 최종 재조회 모두 성공했다(`initial-beta-notes-read-retry.json`). 실패를 앱 테스트 통과로 합치거나 업로드를 다시 실행하지 않았다.
+- 남은 조건: 웹 앱 목록은 기존 세션 화면을 보였으나 실제 TestFlight 상세 접근/갱신에서 Apple 계정 로그인으로 이동했고 인증 만료가 확인됐다. 사용자 지시인 "PIN과 필요한 인증 입력은 사용자가 직접 합니다"에 따라 열려 있는 Chrome 탭에서 직접 로그인을 요청했으며 최종 관찰도 이메일/전화번호 로그인 화면이다(`web-confirmation-pending.json`). 내부 업로드/처리/그룹 배포는 API로 확인했으나 실제 그룹의 빌드/테스터 노출 조건은 미충족이므로 REL1003A01을 temp에 유지한다.
+- 실기기/범위: 이번168의 iPhone11/18·Watch 새 설치/다운로드·화면/Watch 실제 수신 시간·기능/성능 검증은 수행하지 않았다. 기존 기기 기능 대기와 IAP/공개 제출 보류를 유지한다. 배포 기록까지 main에 반영한 뒤 HEAD·origin/main·실제 원격 main 일치·워크트리 clean을 확인하는 최종 근거는 `final-git.json`이다.
 
 ## WCH1003A01 · Apple Watch 데이터 수신 지연 개선 (2026-10-03)
 

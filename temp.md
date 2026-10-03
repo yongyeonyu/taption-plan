@@ -1,12 +1,13 @@
 # 남은 요청
 
-## REL1003A01 · main 커밋·push·TestFlight 빌드업 [진행 중]
+## REL1003A01 · main 커밋·push·TestFlight 빌드업 [내부 배포 완료 / 웹 그룹 화면 확인 대기]
+- 현재: 코드027464b main push·최종 iOS/Watch Debug·Release archive/export·archive/IPA 서명과 네 번들1.0(168) 확인 완료. TestFlight168 VALID·IN_BETA_TESTING·INTERNAL_ONLY, 기존 내부 그룹 연결/목록·테스터1명·한국어 안내는 API로 확인했다. 웹 상세 페이지는 로그인 만료 상태로 사용자 직접 인증 대기이며 실제 그룹 화면만 미확인이다(`test.md` REL1003A01). 168 재업로드는 하지 않는다.
 - 원인: 토요일 표시·Watch 수신 개선·세계 건축 성장 366개 자산과 관련 기록이 아직 로컬 변경이며 현재 빌드는 167이다. 사용자가 워크트리 정리, main 커밋·push 및 TestFlight 새 빌드 배포를 요청했다.
 - 해결: 현재 원격/변경과 유효한 검증을 대조하고 기존 자료·삭제 변경을 보존하여 main에 반영한다. ASC 최신 번호 확인 후 네 제품 버전을 올리고 Debug·Release archive/export·서명/번호를 검증하여 내부 TestFlight에 업로드한다. 처리 완료·기존 내부 그룹 연결·실제 그룹 화면을 확인하고 배포 기록도 커밋·push한다.
 - 검증: 관련 기존 테스트의 현재 소스 유효성, 최종 Debug/Release 성공, 앱·Widget·Watch·Watch Widget 버전 일치, 업로드/처리/내부 그룹 빌드·테스터 노출, 실제 원격 main과 HEAD 일치·워크트리 clean. 근거는 build/validation/REL1003A01/에 새로 남기며 실기기 기능/성능 대기와 IAP/공개 제출 보류는 유지한다.
 
 ## WCH1003A01 · Apple Watch 데이터 수신 지연 개선 [수정·회귀·빌드 완료 / 실기기 속도 확인 대기]
-- 현재: ambient 원본/저장 ACK에 제한된 즉시 전송을 추가하고 수동 건강 조회를 센서 drain과 병행한다. 관련58통과·0실패·0건너뜀, iOS·Watch Debug 성공. 수정본 기기 설치와 실제 수신 시간은 미확인이다(`test.md` WCH1003A01).
+- 현재: ambient 원본/저장 ACK에 제한된 즉시 전송을 추가하고 수동 건강 조회를 센서 drain과 병행한다. 관련58통과·0실패·0건너뜀, iOS·Watch Debug 성공. 수정본은 내부 TestFlight168에 포함됐다. 수정본 기기 설치와 실제 수신 시간은 미확인이다(`test.md` WCH1003A01, REL1003A01).
 - 원인: 사용자가 Watch 데이터 수신이 느리다고 보고했다. 전송 스케줄·수신/저장·앱 갱신의 실제 지연 원인을 확인한다.
 - 해결: 증거 있는 병목을 수정하며 센서 원본·provenance·삭제 generation·재전송/중복 방지·저장 확정 후 ACK 계약을 보존한다.
 - 검증: 지연 원인 재현과 관련 동기화/저장 회귀, iOS·Watch Debug 빌드, diff/import 경계. 로그는 build/validation/WCH1003A01/에 새로 남기고 실기기 수신 속도는 실제 증거로 구분한다.
