@@ -243,7 +243,7 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(selectedTargets.first?.sourceIDs, selectedGap.sourceIDs)
     }
 
-    func testUnconfirmedReviewMarkersStayInRailAndSeparateNearbySegments() {
+    func testUnconfirmedReviewMarkersKeepExactMidpointsWhenNearby() throws {
         let segments = [
             MapHomeTimeRailSegment(
                 startMinute: 60,
@@ -273,18 +273,68 @@ final class TimeScaleTests: XCTestCase {
         let orderedCenters = segments.compactMap { centers[$0.id] }
 
         XCTAssertEqual(orderedCenters.count, segments.count)
-        XCTAssertTrue(orderedCenters.allSatisfy {
-            $0 >= MapHomeTimeSidebarMath.verticalInset
-                + MapHomeTimeSidebarMath.reviewMarkerHitHeight / 2
-                && $0 <= MapHomeTimeSidebarMath.verticalInset + trackHeight
-                    - MapHomeTimeSidebarMath.reviewMarkerHitHeight / 2
-        })
-        for pair in zip(orderedCenters, orderedCenters.dropFirst()) {
-            XCTAssertGreaterThanOrEqual(
-                pair.1 - pair.0,
-                MapHomeTimeSidebarMath.reviewMarkerHitHeight
+        let expectedOffsets: [CGFloat] = [33.75, 41.5, 49]
+        for (segment, offset) in zip(segments, expectedOffsets) {
+            XCTAssertEqual(
+                try XCTUnwrap(centers[segment.id]),
+                MapHomeTimeSidebarMath.verticalInset + offset,
+                accuracy: 0.0001
             )
         }
+        XCTAssertLessThan(orderedCenters[1] - orderedCenters[0],
+                          MapHomeTimeSidebarMath.reviewMarkerHitHeight)
+    }
+
+    func testUnconfirmedReviewMarkersKeepDayBoundaryPositions() throws {
+        let first = MapHomeTimeRailSegment(startMinute: 0, endMinute: 1,
+                                          categoryID: "unconfirmed", title: "미확인")
+        let last = MapHomeTimeRailSegment(startMinute: 1_439, endMinute: 1_440,
+                                         categoryID: "unconfirmed", title: "미확인")
+        let centers = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: [first, last], window: 0...1_440,
+            trackHeight: 720, verticalInset: 10
+        )
+        XCTAssertEqual(try XCTUnwrap(centers[first.id]), 10.25, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(centers[last.id]), 729.75, accuracy: 0.0001)
+    }
+
+    func testUnconfirmedReviewMarkersUseClippedFractionalMidpointsWhenZoomed() throws {
+        let segments = [
+            MapHomeTimeRailSegment(startMinute: 590, endMinute: 605,
+                                   categoryID: "unconfirmed", title: "미확인"),
+            MapHomeTimeRailSegment(startMinute: 601, endMinute: 602,
+                                   categoryID: "unconfirmed", title: "미확인"),
+            MapHomeTimeRailSegment(startMinute: 658, endMinute: 700,
+                                   categoryID: "unconfirmed", title: "미확인"),
+            MapHomeTimeRailSegment(startMinute: 590, endMinute: 600,
+                                   categoryID: "unconfirmed", title: "미확인")
+        ]
+        let centers = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: segments, window: 600...660, trackHeight: 600, verticalInset: 12
+        )
+        XCTAssertEqual(centers.count, 3)
+        XCTAssertEqual(try XCTUnwrap(centers[segments[0].id]), 37, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(centers[segments[1].id]), 27, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(centers[segments[2].id]), 602, accuracy: 0.0001)
+        XCTAssertNil(centers[segments[3].id])
+    }
+
+    func testUnconfirmedReviewMarkersAllowIdenticalCentersInAnyInputOrder() throws {
+        let first = MapHomeTimeRailSegment(startMinute: 603, endMinute: 607,
+                                          categoryID: "unconfirmed", title: "미확인")
+        let second = MapHomeTimeRailSegment(startMinute: 604, endMinute: 606,
+                                           categoryID: "unconfirmed", title: "미확인")
+        let centers = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: [first, second], window: 600...660,
+            trackHeight: 600, verticalInset: 12
+        )
+        let reversedCenters = MapHomeTimeSidebarMath.unconfirmedReviewMarkerCenters(
+            segments: [second, first], window: 600...660,
+            trackHeight: 600, verticalInset: 12
+        )
+        XCTAssertEqual(try XCTUnwrap(centers[first.id]), 62, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(centers[second.id]), 62, accuracy: 0.0001)
+        XCTAssertEqual(centers, reversedCenters)
     }
 
     func testUnconfirmedReviewOffersTodayAndPreviousSevenDays() {

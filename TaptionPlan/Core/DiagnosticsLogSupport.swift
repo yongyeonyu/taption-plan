@@ -237,6 +237,8 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     private let primaryDirectoryURL: URL
     private let fallbackDirectoryURL: URL?
     private let maximumBytes: Int
+    private let appVersion: String
+    private let buildNumber: String
     private let queue = DispatchQueue(
         label: "com.taption.plan.diagnostics",
         qos: .utility
@@ -251,10 +253,18 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
         directoryURL: URL? = nil,
         fallbackDirectoryURL: URL? = nil,
         maximumBytes: Int = 1_000_000,
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        appVersion: String? = nil,
+        buildNumber: String? = nil
     ) {
         self.fileManager = fileManager
         self.maximumBytes = max(8_000, maximumBytes)
+        self.appVersion = appVersion
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? "unknown"
+        self.buildNumber = buildNumber
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+            ?? "unknown"
         let directories = Self.defaultDirectories(fileManager: fileManager)
         self.primaryDirectoryURL = directoryURL ?? directories.primary
         self.fallbackDirectoryURL = fallbackDirectoryURL ?? directories.fallback
@@ -416,6 +426,8 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     ) throws -> Data {
         let entry: [String: Any] = [
             "timestamp": ISO8601DateFormatter().string(from: .now),
+            "app_version": appVersion,
+            "build": buildNumber,
             "level": level.rawValue,
             "event": event,
             "fields": fields,

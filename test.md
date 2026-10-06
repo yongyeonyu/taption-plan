@@ -1,5 +1,40 @@
 # 검증 기록
 
+## REL1006B01 · 물음표 위치·개별 버전 로그 TestFlight171 · 2026-10-06
+- 준비: 실제 원격main a05a8fd와 로컬이 일치하고 ASC 최신170 VALID·INTERNAL_ONLY/171 미존재를 확인하여171을 선택했다. project build 설정8곳과 앱/Widget/보존된 독립 Watch/Watch Widget 원본 Info.plist4개의 번호를1.0(171)로 맞췄다. iPhone 제품은 Watch 앱을 추가하지 않는다.
+- 검증 재사용: UNP1006A01의TimeScale176개, LOG1006D01의Diagnostics11개, MAP1006F01의합성 진단1개가 각각 실패·건너뜀0이며 검증 대상 Swift 소스 해시가 현재와 일치하여188개 통과 근거를 재사용한다. import 경계와 git diff --check도 통과했다(prior-validation-summary.json, prior-validation-reuse.json, source-build-versions.json).
+- 포함 범위: 미확인 물음표의 겹침 회피 이동 제거/정확한 구간 중앙과 모든 새 진단 이벤트의app_version/build 기록이다. MAP1006F01의지도/저장 구조 개선은 분석·개선책과 진단 fixture만 추가했고 성능 개선 구현을 이번 빌드에 포함한 것으로 처리하지 않는다. 실기기 위치·터치·시작/지도 성능 검증은 별도 미완료 조건을 유지한다.
+- 진행: 코드main commit/push 후 generic Debug·Release archive/export·서명·산출물 번호/dSYM 대조,1회 업로드·처리·내부 그룹API/실제 웹 확인을 이어간다. 아직 업로드·실기기 설치/기능 통과를 확인하지 않았다. 근거 build/validation/REL1006B01/.
+
+## UNP1006A01 · 미확인 물음표의 정확한 시간 위치 · 2026-10-06
+- 시작: main a05a8fd/origin/main 일치. 기존 LOG1006D01 버전 기록·MAP1006F01 진단 테스트·temp/test 변경을 보존했다. 제공된 이미지는 읽어 확인했으며 원본을 복사·수정하지 않았다(placement-evidence.json의 경로/해시).
+- 원인: unconfirmedReviewMarkerCenters의44pt 최소 간격을 만드는 전방/후방 이동과 half-hit-height 상하 clamp가 시간상 중앙과 다른 위치를 만들었다. 구간 중앙을 정수 분으로 나누던 방식도 확대 화면에서 반분 오차를 만들었다.
+- 변경: 겹침 회피와 경계 이동을 제거했다. 표시 중인 구간의 start/end 위치 평균을 계산하는 segmentCenterPosition을 구간 막대·물음표 좌표에 함께 사용한다. 따라서 인접하거나 중앙이 같은 물음표도 원래 시간 위치에 유지한다. 미확인 표시 조건·sourceIDs/구간 전달·44pt 터치 영역·날씨 배치·편집/저장 동작은 유지한다.
+- 검증: TimeScaleTests176개 통과·0실패·0건너뜀·exit0/xcresult Passed. 기존 간격 강제 테스트를 정확한 좌표 회귀로 바꾸고00:00/24:00 가까운1분 구간,60분 확대창의 경계 clipping과 반분 중앙, 같은 중앙의 겹침 및 입력 순서 독립성3개 회귀를 추가했다. 관련 기존 시간 선택·드래그·확대·실제 미확인 조건/연속 입력 회귀도 통과했다(time-scale-tests-summary.json).
+- 빌드: generic iOS Debug BUILD SUCCEEDED/exit0. 검증 시점과 최종 제품/관련 테스트5개 소스 해시가 일치하며 git diff --check 통과. 이전 LOG1006D01 및 MAP1006F01의 소스가 그대로여서 유효한 검증을 재사용했다(source-confirmation.json, prior-validation-reuse.json).
+- 정리: 이번 테스트/빌드에서 재생성한 build/ArchiveDD1294.2MiB를 검증 후 삭제했다. 검증 로그/xcresult와 기존169·170 배포 산출물은 보존했으며 배포 파일5개의 바이트 수/SHA-256이 정리 전후 일치했다(cache-cleanup.json).
+- 완료/제한: 로컬 구현·단위 좌표/회귀·Debug 완료. 새 커밋/push·배포·설치 또는 실기기 화면 확인은 하지 않았다. 사용자 대표의 배포 후 화면 확인은 temp에 유지한다. 근거 build/validation/UNP1006A01/.
+
+## CLN1006F01 · 이번 검증에서 재생성한 빌드 캐시 정리 · 2026-10-06
+- LOG1006D01의11개 테스트/generic Debug 및 MAP1006F01의1개 측정이 완료된 뒤 이번에 생성한 build/ArchiveDD1283.87MiB를 정리했다. 글로벌 xcodebuild가 있어 첫 사전 확인에서는 삭제하지 않았으며, 프로세스 cwd/derivedDataPath 메타데이터로 현재 저장소/캐시를 쓰지 않는 것을 확인한 뒤 지정 캐시만 정리했다. 다른 실행의 파일·빌드·기기에는 작업하지 않았다.
+- 결과: 지정 경로 없음,169 원본 IPA·170 IPA·170 archive 앱 바이너리와 앱/Widget dSYM5개 파일의 삭제 전후 바이트 수/SHA-256 일치. 새 테스트/Debug 로그·xcresult·진단 요약/측정·사용자 원본 및 배포 archive는 보존했다. 근거 build/validation/CLN1006F01/cleanup.json 및 targeted-build-preflight.json.
+
+## MAP1006F01 · 170 최신 로그·지도 지연 근본 원인 분석 · 2026-10-06
+- 시작 상태: main a05a8fd, origin/main과 일치, 워크트리 clean. 사용자도 사용 빌드를1.0(170)으로 확인했다. 지정된 iCloud.com.taption.plan/Documents/TaptionLogs의 최신 파일은 TaptionLogs-20261006-153239.txt(1,383,852바이트)이며 헤더는1.0(170)/iOS27.2다. 과거 이벤트가 섞인 전체 파일을170 실행으로 간주하지 않고 마지막 initial_launch_started인15:29:36부터15:32:39까지의 세션만 분석했다. 원문 로그는 복사하지 않고 비용·개수·오류 타입만 허용한 JSON을 보존했다(latest-log-analysis.json).
+- 실기기 비용: 시작 시 actuals524,938건, 내보내기 시524,954건. 로컬 bootstrap2453ms, 첫 decode2358.78ms, initial_launch_ready4328ms. 해당 세션의 전체 DB 조회5회 모두 reused_snapshot=false, decode2166.09~2576.89ms·합계11661.38ms다. 활동 저장4회의 시작/완료 시각 차이는 각7/8/8/7초이고 각 완료와 전체 readback이 일치한다. 이 차이는 초 단위·비동기 logger 시각의 상관관계이며 별도 저장 signpost 측정은 아니다.
+- 지도/센서 비용: map_date_load_finished15687ms, snapshot_wait13328ms. day snapshot은 sensor7657ms·전체8875ms이고 route_readings_load_failed의 타입은 CancellationError, 이후 incomplete projection/readings0이다. integration refresh21928ms도 기록됐다. viewport 보고14개 중8개의 최대 callback 간격이130~210ms이고 마커 투영 최고0.04ms, 마커4~7개/경로 좌표0~9개였다. callback 간격에는 종료·애니메이션·정지 구간이 섞이므로 GPU fps나 순수 터치 지연으로 바꾸어 해석하지 않는다. 센서 취소의 호출 원인·메인 actor와GPU 시간 분담·170 최고 메모리는 이 로그만으로 확정하지 않는다.
+- 지도 구조 원인: MapHomeView:2463에서 dayProjectionRevision 변경 시 dayDataSnapshot/actualIndex를 비우지만 오늘 날짜 load task key의 raw revision은0이며 dayProjectionRevision을 포함하지 않는다. 추가 날짜 로드 없이 displayedStickmanAction:8064 등이 전체 snapshot으로 돌아간다. viewport overlay:3538/3790/3802는 위치 갱신마다 화랑이 동작 및 appleMapPlayback을 다시 계산한다. MapHomeStickmanActionResolver:332는 캐시 조회 전에 전체 actuals를 filter하고 hasAppleWatchConfirmedSleep:444도 별도 순회를 한다. MapHomeView/LocationPresentation/InteractionPolicy/AppModel/PlanRepository/PlanDayDatabase는 배포 main a05a8fd와 바이트 일치하므로 실제170 경로를 조사한 것이다(source-findings-and-plan.json).
+- 저장 구조 원인: saveActivitySectionEdit:3152의 저장 후 전체 repository.load readback이 반복된다. SQLitePlanRepository:1173의 save 후 remember는 loadStamps=nil이며 load:1041의 재사용 조건을 충족하지 못한다. 따라서 기존 PER1006C01의 동일 DB 반복 조회 개선이 저장 뒤 조회에 적용되지 않은 사실을 코드와5회 miss 로그로 확인했다. checksum/세대/외부 저장 검사를 생략하는 수정은 제안하지 않는다.
+- 합성 측정: 실제 개수와 같은524,954개(과거524,953개+현재1개)의 Debug Simulator fixture에서 수면 우선 확인+활동 판정8회를5번 반복했다. 같은 시각·동일 입력으로 캐시가 준비된 조건에서도 전체 이력 입력1782.91ms/8회, 필요한 날짜 입력1개는0.01389ms/8회였다. 결과는 모두 동일한.eating이다. 신규 진단 테스트1개 통과·0실패·0건너뜀(action-cost-debug.xcresult, summary/log/source-hashes). 이 값은 합성 CPU 경로의 비용이며 실제 지도 한 프레임·Release·기기 개선 수치가 아니다.
+- 개선 순서: (1) 날짜 revision에 맞춘 불변 지도 문서를 비동기로 갱신하고 action/playback/heading/text를 한 번 계산하여 viewport에서는 좌표만 이동, 지도 제스처 중 파생 route 작업 합치기. (2) 저장 트랜잭션의 실제 row stamp/확정 snapshot을 재사용하거나 변경 ID/영역만 검증하여 전체 재decode 제거. (3) 잠금·복원 journal/삭제 generation을 보존하면서 settings/오늘 일자 우선 로드, 나머지 이력은 필요할 때 읽기. (4) 센서 분석을 메인 actor 밖에서 준비하고 batch별 한 번 공개하며 읽기 취소와 수집 재시작 수명 분리. 원본/provenance/SQLite·백업/Unicode·외부 writer/삭제/취소 보호를 유지한다. 카메라만 이동할 때 전체 이력 순회0회, 같은52만 건의 Release·실기기 시작/저장/드래그와 최고 메모리 재측정이 적용 후 기준이다.
+- 완료/제한: 요청한 로그·구조 분석 및 구체적 개선책은 완료했다. 성능 개선 구현·새 배포는 하지 않았다. 제품 변경은 별도 LOG1006D01의 버전 기록뿐이다. 추가 성능 구현/실기기 확인은 기존 PER1006B01·LOG1006A01·PAN0930A01의 미완료 조건으로 유지한다. 근거 build/validation/MAP1006F01/.
+
+## LOG1006D01 · 개별 진단 로그에 앱 버전·빌드 포함 · 2026-10-06
+- 변경: TaptionPlanDiagnosticsLogger는 생성 시 Bundle.main의 CFBundleShortVersionString/CFBundleVersion을 읽어 보관하고 모든 JSONL 이벤트의 최상위 app_version/build에 기록한다. operation·error·fallback에도 같은 기록 경로가 적용된다. 기존 환경 헤더/개인정보 필터는 유지하며 버전 없는 과거 줄에 현재 버전을 덧씌우지 않는다.
+- 검증: DiagnosticsLogSupportTests11개 통과·0실패·0건너뜀, 새 회귀는170→171 혼합 이력과 버전 없는 legacy 줄, 건강 원문 필터 후 버전 보존을 확인했다. generic iOS Debug BUILD SUCCEEDED/exit0. 두 변경 소스의 해시가 검증 당시와 현재 일치한다(diagnostics-tests-summary.json, device-debug.log, source-confirmation.json).
+- 실행 확인: Simulator 테스트 호스트의 지정 App Group Diagnostics/iphone.jsonl에서 기본 logger가 app_version1.0/build170을 포함한34개 줄을 쓴 것을 확인했다. 첫 접근 보조 스크립트는 simctl 출력을=> 형식으로 잘못 해석해 경로0개를 읽었으며 tab 형식으로 수정한 최종 근거를 따로 남겼다(runtime-version-proof-final.json). 이는 실기기 결과가 아니다.
+- 완료 범위: 로컬 코드·관련 테스트·Debug 및 기본 runtime 버전 기록 확인 완료. 이번 변경을 TestFlight에 배포하거나 실기기에 설치하지 않았다. 배포된170의 과거 로그에는 개별 버전 필드가 없다. 근거 build/validation/LOG1006D01/.
+
 ## PER1006C01 · 전체 조회 확인·반복 변환 생략 · 2026-10-06
 - 시작: main e0695bd 및 실제 원격main 일치. LOG1006A01·CPU1006A01·PER1006B01 로컬 수정과 승인된 정리를 보존했다.
 - 변경: 전체 DB 행의 세대·영역명 UTF-8 바이트·revision·시각·payload SHA-256이 마지막 성공 조회와 모두 같을 때만 기존 snapshot 하나를 재사용한다. 최초 조회와 변경된 DB는 기존 정본 decoder로 읽는다. 캐시는 원본 배열을 공유하며 별도 payload 사본을 보관하지 않는다. 메모리 압력·삭제·실패 시 축출과 epoch 보호를 유지한다. repository_local_load는 읽기·해시 검증·decode 시간/개수/바이트 수/재사용 여부만 기록한다.

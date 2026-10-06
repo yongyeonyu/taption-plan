@@ -30,7 +30,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>170</string>
+	<string>171</string>
 	<key>AIRKOREA_SERVICE_KEY</key>
 	<string>$(AIRKOREA_SERVICE_KEY)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

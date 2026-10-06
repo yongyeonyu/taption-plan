@@ -26817,6 +26817,42 @@ final class FeatureEngineTests: XCTestCase {
 
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
+    func testMapActionLookupCostWithHalfMillionInactiveRecords() {
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        let active = ActualRecord(
+            planID: nil, title: "합성 활동", categoryID: "eating",
+            startedAt: date.addingTimeInterval(-60), endedAt: date.addingTimeInterval(60),
+            source: .motion
+        )
+        let history = (0..<524_953).map { index in
+            let start = date.addingTimeInterval(-172_800 - Double(index) * 30)
+            return ActualRecord(
+                planID: nil, title: "합성 과거", categoryID: "activity",
+                startedAt: start, endedAt: start.addingTimeInterval(20), source: .motion
+            )
+        }
+        let full = history + [active]
+        let day = [active]
+        func lookup(_ actuals: [ActualRecord]) -> MapHomeStickmanAction {
+            if MapHomeStickmanActionResolver.hasAppleWatchConfirmedSleep(
+                at: date, actuals: actuals, sleepSessions: []
+            ) { return .sleeping }
+            return MapHomeStickmanActionResolver.action(
+                at: date, actuals: actuals, travel: [], places: [], frequentPlaces: []
+            )
+        }
+        XCTAssertEqual(lookup(full), .eating)
+        XCTAssertEqual(lookup(day), .eating)
+        for (label, records) in [("full_history", full), ("day_input", day)] {
+            let start = ProcessInfo.processInfo.systemUptime
+            for _ in 0..<5 {
+                for _ in 0..<8 { XCTAssertEqual(lookup(records), .eating) }
+            }
+            let milliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1_000 / 5
+            print("MAP1006F01 \(label) records=\(records.count) eight_lookups_ms=\(milliseconds)")
+        }
+    }
+
     func testCurrentActionIgnoresLargeInactiveHistoryAndTracksChangedFields() {
         let date = Date(timeIntervalSince1970: 1_791_250_000)
         var active = ActualRecord(

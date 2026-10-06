@@ -1314,10 +1314,11 @@ struct MapHomeTimeSidebar: View {
                                 )
                                 .position(
                                     x: activeRailWidth / 2,
-                                        y: trackHeight * MapHomeTimeSidebarMath.position(
-                                            minute: (start + end) / 2,
-                                            window: visibleWindow
-                                        )
+                                    y: trackHeight * MapHomeTimeSidebarMath.segmentCenterPosition(
+                                        start: start,
+                                        end: end,
+                                        window: visibleWindow
+                                    )
                                 )
                         }
                     }
@@ -1523,8 +1524,9 @@ struct MapHomeTimeSidebar: View {
                             x: railOriginX - 16,
                             y: reviewMarkerCenters[segment.id]
                                 ?? verticalInset + trackHeight
-                                    * MapHomeTimeSidebarMath.position(
-                                        minute: (start + end) / 2,
+                                    * MapHomeTimeSidebarMath.segmentCenterPosition(
+                                        start: start,
+                                        end: end,
                                         window: visibleWindow
                                     )
                         )
@@ -2656,48 +2658,36 @@ enum MapHomeTimeSidebarMath {
         return min(max(CGFloat(minute - window.lowerBound) / CGFloat(span), 0), 1)
     }
 
+    static func segmentCenterPosition(
+        start: Int,
+        end: Int,
+        window: ClosedRange<Int>
+    ) -> CGFloat {
+        (position(minute: start, window: window)
+            + position(minute: end, window: window)) / 2
+    }
+
     static func unconfirmedReviewMarkerCenters(
         segments: [MapHomeTimeRailSegment],
         window: ClosedRange<Int>,
         trackHeight: CGFloat,
-        verticalInset: CGFloat = MapHomeTimeSidebarMath.verticalInset,
-        markerHeight: CGFloat = MapHomeTimeSidebarMath.reviewMarkerHitHeight
+        verticalInset: CGFloat = MapHomeTimeSidebarMath.verticalInset
     ) -> [String: CGFloat] {
-        let visible = segments.compactMap { segment -> (id: String, minute: Int)? in
+        let height = max(0, trackHeight)
+        let centers = segments.compactMap { segment -> (String, CGFloat)? in
             let start = max(segment.startMinute, window.lowerBound)
             let end = min(segment.endMinute, window.upperBound)
             guard start < end else { return nil }
-            return (segment.id, (start + end) / 2)
-        }
-        guard !visible.isEmpty else { return [:] }
-
-        let height = max(0, trackHeight)
-        let halfMarker = min(max(0, markerHeight), height) / 2
-        let lowerCenter = verticalInset + halfMarker
-        let upperCenter = verticalInset + height - halfMarker
-        let spacing = visible.count > 1
-            ? min(max(0, markerHeight), (upperCenter - lowerCenter) / CGFloat(visible.count - 1))
-            : 0
-        var centers = visible.map { item in
-            min(
-                max(
-                    verticalInset + height * position(minute: item.minute, window: window),
-                    lowerCenter
-                ),
-                upperCenter
+            return (
+                segment.id,
+                verticalInset + height * segmentCenterPosition(
+                    start: start,
+                    end: end,
+                    window: window
+                )
             )
         }
-
-        if centers.count > 1 {
-            for index in 1..<centers.count {
-                centers[index] = max(centers[index], centers[index - 1] + spacing)
-            }
-            for index in stride(from: centers.count - 2, through: 0, by: -1) {
-                centers[index] = min(centers[index], centers[index + 1] - spacing)
-            }
-        }
-
-        return Dictionary(uniqueKeysWithValues: zip(visible.map(\.id), centers))
+        return Dictionary(uniqueKeysWithValues: centers)
     }
 
     static func spanFraction(start: Int, end: Int, window: ClosedRange<Int>) -> CGFloat {

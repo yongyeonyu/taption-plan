@@ -135,6 +135,48 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertTrue(log.contains("\"outcome\":\"success\""))
     }
 
+    func testCombinedLogPreservesEventVersionsAcrossAppUpdates() throws {
+        let directory = rootURL.appendingPathComponent("primary")
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try Data("{\"event\":\"legacy_event\",\"fields\":{}}\n".utf8)
+            .write(to: directory.appendingPathComponent("iphone.jsonl"))
+        let previousLogger = TaptionPlanDiagnosticsLogger(
+            directoryURL: directory,
+            appVersion: "1.0",
+            buildNumber: "170"
+        )
+        previousLogger.record("previous_event")
+        _ = previousLogger.lastWriteStatus
+
+        let currentLogger = TaptionPlanDiagnosticsLogger(
+            directoryURL: directory,
+            appVersion: "1.1",
+            buildNumber: "171"
+        )
+        currentLogger.record(
+            "health_refresh_failed",
+            level: .error,
+            fields: ["heart_rate": "72", "error_code": "3"]
+        )
+
+        let entries = try currentLogger.combinedLog().split(separator: "\n").map {
+            try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any])
+        }
+        XCTAssertEqual(entries.count, 3)
+        XCTAssertNil(entries[0]["app_version"])
+        XCTAssertNil(entries[0]["build"])
+        XCTAssertEqual(entries[1]["app_version"] as? String, "1.0")
+        XCTAssertEqual(entries[1]["build"] as? String, "170")
+        XCTAssertEqual(entries[2]["app_version"] as? String, "1.1")
+        XCTAssertEqual(entries[2]["build"] as? String, "171")
+        let fields = try XCTUnwrap(entries[2]["fields"] as? [String: String])
+        XCTAssertEqual(fields["error_code"], "3")
+        XCTAssertNil(fields["heart_rate"])
+    }
+
     func testExportedLogRemovesPersonalHealthFields() throws {
         let logger = TaptionPlanDiagnosticsLogger(
             directoryURL: rootURL.appendingPathComponent("primary"),
