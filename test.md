@@ -2,6 +2,7 @@
 
 ## CRH1006A01 · TestFlight169 충돌 상세 접근 · 2026-10-06
 - 실제 관찰: TP 내부 그룹169 행에 세션1·충돌1이 표시됐다. App Store Connect 충돌 피드백 목록은149(9월20일)와44(8월8일) 두 건만 표시하며169 제출 보고서는 보이지 않았다. 연락처·개인 코멘트는 출력/기록하지 않고 날짜·빌드·기기 메타데이터만 확인했다. 충돌 집계 수치와 제출 피드백을 동일하게 취급하지 않는다.
+- 로컬 심볼 확인 제한: 기록에 연결된169 archive 앱/dSYM 경로가 현재 존재하지 않아 dwarfdump 조회와 UUID 대조 시도가 실패했다. IPA는 존재하지만 export-unpacked 앱 경로도 없다. 제거/이동 원인과 주체는 미확인이다. 과거 서명/업로드 검증을 취소하거나 현재 심볼 준비가 됐다고 간주하지 않는다. 이번 작업에서 산출물을 삭제·이동하거나 대체 archive를 만들지 않았다(symbolication-artifact-check.json).
 - 원본 진단 시도: Apple 공식 안내에 따라 Xcode Organizer의 TaptionPlan(com.taption.plan)→Crashes를 열었다. Error Downloading Crashes List / A developer account is required for downloading crashes list. 오류로 원본 보고서를 받지 못했다. Apple Accounts 설정의 Sign In… 화면을 준비했고 직접 로그인을 요청했다. 계정 추가/인증 입력은 수행하지 않았다.
 - 제한:169 충돌 스택·발생 시각·원인·HealthKit 연관성은 미확인이다. 추측 수정이나 새 빌드·업로드·설치를 하지 않았으며 CRH1006A01을 temp에 유지한다. WHK1004A01/HKS1004A01 실기기 건강 권한·수신도 미검증이다.
 - 근거: build/validation/CRH1006A01/web-crash-feedback-summary.json, xcode-access-status.json. 공식 진단 경로: https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs 와 https://help.apple.com/xcode/mac/current/en.lproj/dev861f46ea8.html .
