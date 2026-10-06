@@ -15,6 +15,10 @@
 - 배포 산출물: generic Debug·Release archive/export 모두 exit0, 앱/Widget 두 제품1.0(170)·Watch 미포함·deep strict 서명 통과. archive의 앱/Widget dSYM UUID가 각각 실행 파일과 일치하며 archive-symbols.json에 DWARF 해시와 경로를 남겼다. 최종 IPA의 get-task-allow는false, HealthKit 임상 entitlement/목적 key는 없고 필요한 건강 읽기 목적 key는 있다. IPA42,162,135바이트·SHA2560babc09388218107c4f5662e1be1c0eb7be1bf9dab5bb1dbbe38c9e6fa0bd663.
 - 검증 헬퍼 수정: 첫 archive 검증은 export 전 개발 서명의 get-task-allow를false로 요구하여 assertion이 실패했다. archive 빌드와 실제 signature 검증은 성공했으며 앱 코드를 바꾸지 않았다. 그 초기 근거는 archive-verification-initial-error.json·archive-preexport-entitlements.plist·archive-preexport-signature.log로 보존했다. 배포 서명 조건을 최종 export IPA에 적용한 수정 헬퍼의 archive/IPA 검증은 모두 통과했다.
 - 업로드 전: 최종 소스 해시가 archive 입력과 일치하며, ASC170 미존재를 확인했다. 이후 코드 commit/push·altool 업로드/처리/그룹/API 및 웹 확인 결과를 별도로 추가한다. 실기기 설치·권한 승인·기능 통과는 아직 확인하지 않았다.
+- 메인 반영: 코드·기존 승인된 정리·버전 변경을 deda1ba로 main에 commit/push했고 당시 HEAD·origin/main·실제 원격main 일치와 clean을 확인했다(code-commit.json, code-push.log, code-git-confirmation.json).
+- 업로드/처리: altool1회 upload exit0·오류0, 전달ID/buildID fd5599b9-c05a-4854-8a36-dcbe0cf834c8. BuildUpload COMPLETE·오류0·경고0, build170 VALID·INTERNAL_ONLY 확인 후 기존 TP Taption Plan 내부 테스트 그룹에 연결했다. 최종 IN_BETA_TESTING·그룹 목록170·테스터1명·한국어 테스트 안내 저장 재조회 일치가 API로 확인됐다(upload-summary.json, processing-05.json, deployment-api-summary.json).
+- 실제 웹: Chrome의 해당 그룹에서 내부 그룹·1명의 테스터·128개의 빌드, 1.0(170) 내부 ‘테스트 중’ 행을 확인했다. 테스터 페이지도 테스터(1)와 실제 설치됨1.0(169) 행을 읽었다. 이는170 설치 확인이 아니며 연락처는 저장하지 않았다(web-group-confirmation-final.json, web-group-build170-visible.jpg).
+- 완료/제한: 내부 배포 조건을 모두 충족하여 REL1006A01만 temp에서 제거한다. LOG1006A01/CPU1006A01/PER1006B01·Watch/HealthKit·다른 실기기 검증 조건은 유지하며 이번 배포로 기능 통과를 추정하지 않는다. 원본169 크래시 스택/dSYM 미확보와 IAP/공개 심사 보류도 유지한다. 신규170 archive/dSYM은 정확한 UUID와 함께 보존했다. 배포 기록 commit/push 뒤 최종 HEAD/원격main·clean 결과는 final-git.json에 남긴다. 문서 전용 후속 변경에는 앱 테스트/빌드를 재실행하지 않는다.
 
 ## CLN1006E01 · 검증 완료 생성 캐시 정리 · 2026-10-06
 - 결과: 이번 Debug Simulator7곳475.07MiB·Release Simulator7곳533.81MiB·검증 완료 후 남은 ArchiveDD1407.97MiB, 합계15개 경로/2416.85MiB(약2.36GiB)를 삭제했다. 진행 중인 Release 공용 모듈은 완료 전까지 유지했고 최종 archive의 외부 DD 의존 symlink가 없음을 확인한 뒤 DD 전체를 제거했다.
