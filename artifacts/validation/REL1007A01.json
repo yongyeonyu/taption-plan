@@ -286,24 +286,278 @@
       ],
       "watch_embedded": false
     },
-    "release": "in progress"
+    "release": {
+      "exit": 0,
+      "configuration": "Release",
+      "optimized_O": true,
+      "whole_module": true,
+      "testability": false,
+      "products": [
+        {
+          "bundle_id": "com.taption.plan",
+          "version": "1.0",
+          "build": "173",
+          "strict_codesign_exit": 0,
+          "binary": "TaptionPlan",
+          "binary_sha256": "a28dd1d20abc63d4e74c1333216aded56e67dc838eded5d09cbec8440e8082f9",
+          "dSYM": "TaptionPlan.app.dSYM",
+          "dwarf_sha256": "62e27a5958de2129c0da03c266e351ba4e10969c3b1a461218482b46ff05fc67",
+          "uuid": "77CED02E-3A43-3B0B-B871-2A4ACDB48692",
+          "both_devices_provisioned": true,
+          "get_task_allow": true,
+          "app_group_present": true
+        },
+        {
+          "bundle_id": "com.taption.plan.widget",
+          "version": "1.0",
+          "build": "173",
+          "strict_codesign_exit": 0,
+          "binary": "TaptionPlanWidget",
+          "binary_sha256": "5fc0cf0fbc59be45deef701a14dba387e63a86a25773622f5df678edc683e4fd",
+          "dSYM": "TaptionPlanWidget.appex.dSYM",
+          "dwarf_sha256": "86619e8953d1c49fe88df2ba946e269ac9e52c1484301aa92b4e4ebec65a2b47",
+          "uuid": "79F4CC9A-A545-371D-B5A1-142C218B098D",
+          "both_devices_provisioned": true,
+          "get_task_allow": true,
+          "app_group_present": true
+        }
+      ],
+      "watch_embedded": false
+    }
   },
   "installations": {
     "iphone11": {
       "before_build": "167",
-      "status": "pending"
+      "status": "installed and verified",
+      "install_outcome": "success",
+      "after_version": "1.0",
+      "after_build": "173",
+      "method": "update in place; no uninstall; no launch",
+      "device_model": "iPhone12,3"
     },
     "iphone18": {
       "before_build": "172",
-      "status": "pending"
+      "status": "installed and verified",
+      "install_outcome": "success",
+      "after_version": "1.0",
+      "after_build": "173",
+      "method": "update in place; no uninstall; no launch",
+      "device_model": "iPhone19,7"
     }
   },
   "cleanup": {
-    "status": "pending"
+    "status": "complete",
+    "request": "explicit user request",
+    "paths": [
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/build",
+        "allocated_bytes": 3877720064
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.build",
+        "allocated_bytes": 140193792
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.build",
+        "allocated_bytes": 87449600
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.swiftpm",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.swiftpm",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionActivityEngine/.swiftpm",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanEngine/.swiftpm",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/TaptionPlan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-02_19-40-27.005.xcdistributionlogs",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionPlanCore_.build_workspace-state.json.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-06_16-27-16.438.xcdistributionlogs",
+        "allocated_bytes": 225280
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionPlanCore_.build.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_DBP1006A01_core-build.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_workspace-state.json.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_ArchiveDD_SourcePackages_Package.resolved.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-03_19-33-59.156.xcdistributionlogs",
+        "allocated_bytes": 225280
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_workspace-state.json.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_WHK1004A01_DeviceDD_SourcePackages_Package.resolved.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionRouteEngine_.build.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-06_19-10-16.313.xcdistributionlogs",
+        "allocated_bytes": 225280
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_Packages_TaptionRouteEngine_.build_workspace-state.json.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_validation_DBP1006A01_core-build_workspace-state.json.lock",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-04_02-31-08.184.xcdistributionlogs",
+        "allocated_bytes": 172032
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-02_14-18-27.957.xcdistributionlogs",
+        "allocated_bytes": 0
+      },
+      {
+        "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/TaptionPlan_2026-10-06_15-00-22.113.xcdistributionlogs",
+        "allocated_bytes": 225280
+      },
+      {
+        "path": "/Users/u_mo_c/Library/Developer/Xcode/Archives/2026-09-26/TaptionPlan-157-011446.xcarchive",
+        "allocated_bytes": 145760256
+      },
+      {
+        "path": "/tmp/REL1007A01-device-install",
+        "allocated_bytes": 97619968
+      },
+      {
+        "path": "/tmp/taption_c01_app.py",
+        "allocated_bytes": 8192
+      },
+      {
+        "path": "/tmp/taption_c01_repo.py",
+        "allocated_bytes": 16384
+      },
+      {
+        "path": "/tmp/taption_c01_tests.py",
+        "allocated_bytes": 16384
+      },
+      {
+        "path": "/tmp/taption-c01-actual-accesses.txt",
+        "allocated_bytes": 12288
+      },
+      {
+        "path": "/tmp/taption-gps-device-status-final.json",
+        "allocated_bytes": 77824
+      },
+      {
+        "path": "/tmp/taption_architecture_v2.py",
+        "allocated_bytes": 8192
+      },
+      {
+        "path": "/tmp/taption_v3.py",
+        "allocated_bytes": 8192
+      },
+      {
+        "path": "/tmp/taption_v4.py",
+        "allocated_bytes": 8192
+      },
+      {
+        "path": "/tmp/taption_v5.py",
+        "allocated_bytes": 20480
+      },
+      {
+        "path": "/tmp/taption_v5_refine.py",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/tmp/taption_v5_validate.py",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/tmp/taption_validate_v2.py",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/tmp/taption_validate_v3.py",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/tmp/taption_validate_v4.py",
+        "allocated_bytes": 4096
+      },
+      {
+        "path": "/Users/u_mo_c/Library/Logs/CoreSimulator/850D4C37-985B-4563-B4A6-6C2D35B706DD",
+        "allocated_bytes": 548864
+      }
+    ],
+    "simulator": {
+      "udid": "850D4C37-985B-4563-B4A6-6C2D35B706DD",
+      "name": "iPhone 18 Pro",
+      "allocated_bytes": 5357895680
+    },
+    "preserved_symbol_entries": 20,
+    "preserved_local_evidence": "artifacts/local-validation-evidence",
+    "shared_simulators_and_runtimes": "preserved for other projects",
+    "system_derived_data": "No TaptionPlan-prefixed folder present; unrelated projects were not changed.",
+    "deleted_path_count": 44,
+    "deleted_allocated_bytes": 9708462080,
+    "paths_absent": true,
+    "simulator_deleted": true,
+    "other_simulator_ids_preserved": true,
+    "other_simulator_count": 14
   },
   "limits": [
     "Simulator fixture timings are not device performance measurements.",
     "Installation does not validate on-device migration, feature behavior or battery use.",
     "No TestFlight upload is part of this request."
-  ]
+  ],
+  "code_commit": "3d547be186c2a3789ee158f51bbed2cf3c0a6094",
+  "source_versions": {
+    "TaptionPlan": "173",
+    "TaptionPlanWidget": "173",
+    "TaptionPlanWatch": "173",
+    "TaptionPlanWatchWidget": "173"
+  },
+  "final_checks": {
+    "engine_import_boundary": "passed",
+    "approved_home_assets": "366 verified; 122 subjects; three levels each; all bodies unique",
+    "git_diff_check": "passed",
+    "source_files_unchanged_after_install": true
+  }
 }

@@ -31,3 +31,6 @@ Secrets.xcconfig
 
 # Local release binaries and dSYMs retained for crash diagnosis
 /artifacts/release-symbols/
+
+# Compact historical verification and existing device screenshots (local only)
+/artifacts/local-validation-evidence/

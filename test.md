@@ -1,12 +1,14 @@
 # 검증 기록
 
-## REL1007A01 · main 반영·iPhone 11/18 설치·생성 파일 정리 (2026-10-07 진행 중)
+## REL1007A01 · main 반영·iPhone 11/18 설치·생성 파일 정리 (2026-10-07 완료)
 
-- 시작 상태: main9e1ad9d, origin/main fetch 후 ahead/behind0/0. GPS1006H01·PAW1006A01·DBP1006A01/B01/C01의 기존 미커밋 변경을 보존해 함께 반영한다.
-- 검증 재사용: C01 최종 앱156개·Core131개·Release 성능2개가 실패/건너뜀0이며 버전 변경 전 각 소스 manifest145/145/22개와 현재 바이트가 일치했다. GPS package45개의 필터/테스트 소스2개도 일치했다. PAW 이후 바뀐 저장소/AppModel 경로는 C01의156개 회귀에 포함했고 GPS·발자국 UI 변경을 유지했다. 기존 결과를 현재 전체 앱의 새 전수검사로 표시하지 않는다.
-- 버전: CURRENT_PROJECT_VERSION8곳·앱/Widget/독립 Watch 앱/위젯 Info.plist4곳을173으로 맞췄다. 새 generic iOS Debug exit0, 앱·iPhone Widget1.0(173) strict 서명0 및 Watch 제품 미포함을 확인했다. 엔진 경계·diff check 통과. 기능 코드는 검증 후 변경하지 않았으며 최적화 Release 설치본 빌드 중이다.
-- 설치 전: 연결된 iPhone11 Pro는1.0(167), iPhone18 Pro Max는1.0(172)이며 두 기기 모두 Developer Mode 활성 상태다. 설치/정리는 아직 수행 전이며 이후 실제 결과로 갱신한다. 원본 검증 명령/로그는 build/validation/REL1007A01/, 보존할 작은 요약·소스 해시는 artifacts/validation/REL1007A01.json에 기록한다.
-- 제한: 새 TestFlight 업로드 요청이 아니므로 직접 기기 설치를 진행한다. 설치만으로 실제 사용자 DB 이관·지도/GPS·발자국·센서 동작·CPU/배터리가 검증되었다고 처리하지 않는다.
+- main 반영: 시작 main9e1ad9d·원격 ahead/behind0/0에서 기존 GPS1006H01·PAW1006A01·DBP1006A01/B01/C01 변경을 보존해 코드 커밋3d547be186c2a3789ee158f51bbed2cf3c0a6094를 생성·push했고 실제 원격 main SHA 일치를 확인했다. 이 후속 문서/정리 기록도 별도 main 커밋·push 대상이다.
+- 검증 재사용: C01 최종 앱156개·Core131개·Release 성능2개가 실패/건너뜀0이며 버전 변경 전 소스 manifest145/145/22개와 현재 바이트가 일치했다. GPS package45개의 필터/테스트 소스2개도 일치했다. PAW 이후 변경한 저장소/AppModel 경로는 C01의156개 회귀에 포함했고 GPS·발자국 UI 소스는 유지했다. 기존 결과를 현재 전체 앱의 새 전수검사로 표시하지 않는다.
+- 새 빌드: 프로젝트 CURRENT_PROJECT_VERSION8곳·앱/Widget/독립 Watch 앱/위젯 Info.plist4곳을173으로 맞췄다. generic iOS Debug와 Release 모두 exit0. Release는 -O·whole-module 최적화 및 testability 제외를 확인했다. 앱·iPhone Widget 두 제품1.0(173)·strict 서명0·각 실행 파일/dSYM UUID 일치·두 설치 기기 provisioning·기존 App Group을 확인했다. iPhone 제품에 Watch 앱은 없다. 엔진 경계·diff check 통과. 기능 소스는 검증 후 변경하지 않았다.
+- 실기기 설치: iPhone11 Pro(iPhone12,3)는1.0(167)→1.0(173), iPhone18 Pro Max(iPhone19,7)는1.0(172)→1.0(173). 두 devicectl install app JSON outcome success와 각 기기의 설치 후 앱 목록1.0(173)을 읽어 확인했다. development 서명 Release를 기존 앱 삭제 없이 업데이트했으며 앱 실행/사용자 입력은 수행하지 않았다.
+- 정리: 명시 경로44개와 TaptionPlan만 설치된 검증용 iPhone18 Pro 시뮬레이터850D4C37-985B-4563-B4A6-6C2D35B706DD를 삭제했다. 대상 할당 사용량 합계9.042GiB(9,708,462,080바이트)이며 실제 전체 디스크 여유 공간 증가량 측정은 아니다. 저장소 build/ 전체(빌드·xcresult·임시 로그/스크립트/복사본), 두 package .build와 네 .swiftpm, 재생성 가능한 Package.resolved, 확인된 TaptionPlan OS 임시 파일·/tmp 스크립트·설치 복사본과 원래157 Xcode archive를 정리했다. 모든 지정 경로 부재 및 전용 시뮬레이터 삭제를 확인했다. 다른 프로젝트 시뮬레이터14개·공용 런타임·다른 프로젝트 DerivedData는 유지했다.
+- 보존/근거: 사용자 DB·백업·원본 리소스와 ShotGuide 자료는 변경하지 않았다. 원래157/169/170/171/172 및 설치173의 실행 파일·가용 dSYM과 기존 보존된 Widget/Watch 심볼20개 항목을 artifacts/release-symbols/에 보존하고 SHA-256/UUID를 대조했다. 원래169 dSYM은 기존부터 없으며 다른 심볼로 대체하지 않았다. 기존 작은 검증 요약·소스 해시·실기기/배포 화면364개는 artifacts/local-validation-evidence/의 요청 ID 경로에 보존했고 두 기기 install/readback JSON도 추가했다. 이 로컬 자료는 Git 제외다. 과거 build/validation/ 경로는 정리 후 존재하지 않으며 보존된 파일 목록은 해당 manifest에서 확인한다. 현재 요청의 작은 검증·설치·정리 목록은 artifacts/validation/REL1007A01.json에 Git으로 보존한다.
+- 제한: 직접 기기 설치이며 새 TestFlight 업로드/다운로드 결과가 아니다. 실제 사용자 DB 최초 이관·재시작/저장·지도 움직임·GPS 부산 재발 여부·분홍 발자국 탭·센서/Watch 데이터·기기 CPU/배터리 검증은 대표가 제공하는 화면/로그를 기다린다. 설치 성공만으로 기능/성능 통과를 처리하지 않는다. 요청된 설치·정리 기준 충족으로 REL1007A01을 temp에서 제거하고 기존 실기기 기능 대기는 유지한다.
 
 ## DBP1006C01 · SQLite 행 저장·시간 인덱스·앱 호출 경로 개편 (2026-10-07 로컬 검증 완료 / 실기기 대기)
 - 요청/기준: 호환성 불필요·속도 우선 DB 재설계. main9e1ad9d의 미커밋 GPS1006H01·PAW1006A01·A01 변경을 보존하고 B01 활동 배열 분할 설계를 대체했다. 사용자 원본 DB/백업을 도구로 변환하거나 삭제하지 않았다.
