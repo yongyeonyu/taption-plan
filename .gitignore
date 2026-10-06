@@ -18,6 +18,9 @@ Package.resolved
 __pycache__/
 *.py[cod]
 
+# Generated visual previews
+/.cat-visual-check/*.png
+
 # Local configuration
 *.local.xcconfig
 Secrets.xcconfig

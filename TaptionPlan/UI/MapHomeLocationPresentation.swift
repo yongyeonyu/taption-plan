@@ -286,9 +286,8 @@ enum MapHomeCatWorkAccessory: Equatable, Sendable {
 }
 
 enum MapHomeStickmanActionResolver {
-    // 재생/렌더마다 actuals·travel·places·readings 전량을 순회하던 것을
-    // 결과 캐시로 줄인다(CRS0925W01). 전체 입력의 fingerprint로 서로 다른
-    // 내용이 같은 개수·마지막 ID를 가진 경우에도 잘못 재사용하지 않는다.
+    // 현재 시각의 판정에 쓰이는 원본만 hash한다. 활성 기록의 필드 변경도
+    // fingerprint에 포함하므로 개수와 ID가 같아도 오래된 결과를 쓰지 않는다.
     private static let actionCacheLock = NSLock()
     private struct ActionCacheKey: Hashable {
         let date: Date
@@ -330,6 +329,15 @@ enum MapHomeStickmanActionResolver {
         readings: [SensorReading] = [],
         sleepSessions: [SleepSession] = []
     ) -> MapHomeStickmanAction {
+        let actuals = actuals.filter { active($0, at: date) }
+        let travel = travel.filter { $0.span.contains(date) }
+        let places = places.filter { $0.span.contains(date) }
+        let readings = readings.filter {
+            $0.motion.isMovement && abs($0.timestamp.timeIntervalSince(date)) <= 3 * 60
+        }
+        let sleepSessions = sleepSessions.filter {
+            $0.isAppleWatchConfirmed && $0.span.contains(date)
+        }
         let key = actionCacheKey(
             date: date,
             actuals: actuals,

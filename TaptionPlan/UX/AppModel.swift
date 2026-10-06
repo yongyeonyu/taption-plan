@@ -1232,6 +1232,8 @@ final class AppModel {
     @ObservationIgnored private var dayDatabaseMigrationTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
+    @ObservationIgnored private var permissionRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var needsBootstrapPreparation = false
     @ObservationIgnored private var foregroundPreparationTask:
         Task<Void, Never>?
     @ObservationIgnored private var foregroundPreparationGeneration = 0
@@ -3770,6 +3772,12 @@ final class AppModel {
     }
 
     func bootstrap() async {
+        await bootstrapLocalSnapshot()
+        scheduleBootstrapPreparation()
+        await waitForBootstrapPreparation()
+    }
+
+    private func bootstrapLocalSnapshot() async {
         guard allowsRepositoryLoadAttempt() else { return }
         if let bootstrapTask {
             await bootstrapTask.value
@@ -3778,15 +3786,21 @@ final class AppModel {
         let isRecoveringFromLoadFailure = repositoryLoadFailed
         guard !isBootstrapped || isRecoveringFromLoadFailure else { return }
 
-        TaptionPlanDiagnosticsLogger.shared.record("bootstrap_started")
+        let logger = TaptionPlanDiagnosticsLogger.shared
+        let operation = logger.beginOperation("bootstrap_local_snapshot")
+        logger.record("bootstrap_started")
         let task = Task { [weak self] in
             guard let self else { return }
-            defer { bootstrapTask = nil }
+            let generation = dataDeletionGeneration
+            defer {
+                if generation == dataDeletionGeneration { bootstrapTask = nil }
+            }
             do {
-                var source = try await repository.load()
+                let source = try await repository.load()
                 try await recoverCloudRestoreJournal(snapshot: source)
                 try Task.checkCancellation()
-                guard allowsRepositoryLoadAttempt() else { return }
+                guard generation == dataDeletionGeneration,
+                      allowsRepositoryLoadAttempt() else { return }
                 repositoryLoadFailed = false
                 if isRecoveringFromLoadFailure,
                    userFacingError?.hasPrefix(
@@ -3794,45 +3808,15 @@ final class AppModel {
                    ) == true {
                     userFacingError = nil
                 }
-                let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
-                let originalActuals = source.actuals
-                let originalTravel = source.travel
                 // Publish local data before normalization, sensors or cloud work.
                 snapshot = source
                 selectedScale = TimeScale(
                     timelineLevel: source.settings.startScale
                 ).scheduleEquivalent
                 selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
+                needsBootstrapPreparation = true
                 isBootstrapped = true
-                while true {
-                    let revision = snapshotRevision
-                    source = try await Self.preparedLoadedSnapshotInBackground(
-                        source,
-                        lockingAutomaticClassifications: true,
-                        priority: .userInitiated
-                    )
-                    guard !Task.isCancelled, acceptsDataMutation() else { return }
-                    if revision == snapshotRevision { break }
-                    source = snapshot
-                }
-                snapshot = source
-                if source.settings.confirmedSleepSpans
-                    != originalConfirmedSleepSpans
-                    || source.actuals != originalActuals
-                    || source.travel != originalTravel {
-                    _ = await persist()
-                }
-                selectedScale = TimeScale(
-                    timelineLevel: source.settings.startScale
-                ).scheduleEquivalent
-                selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
-                if source.updatedAt == .distantPast,
-                   source.plans.isEmpty {
-                    openInitialSetup()
-                }
-                isBootstrapped = true
-                publishWatchPayload()
-                TaptionPlanDiagnosticsLogger.shared.record(
+                logger.record(
                     "bootstrap_local_snapshot_loaded",
                     fields: [
                         "plans": String(source.plans.count),
@@ -3840,9 +3824,10 @@ final class AppModel {
                         "places": String(source.places.count),
                     ]
                 )
-                await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
-                scheduleDayDatabaseMigration()
+                logger.finishOperation(operation, outcome: "success")
+                scheduleBootstrapPreparation()
             } catch is CancellationError {
+                logger.finishOperation(operation, outcome: "cancelled")
                 return
             } catch {
                 guard allowsRepositoryLoadAttempt() else { return }
@@ -3852,9 +3837,11 @@ final class AppModel {
                     snapshot = fallback
                 }
                 repositoryLoadFailed = true
+                needsBootstrapPreparation = false
                 isBootstrapped = true
                 userFacingError = "저장된 데이터를 불러오지 못했습니다. \(error.localizedDescription)"
-                TaptionPlanDiagnosticsLogger.shared.record(
+                logger.finishOperation(operation, outcome: "failure", error: error)
+                logger.record(
                     "bootstrap_failed",
                     level: .error,
                     fields: ["error": String(describing: type(of: error))]
@@ -3866,40 +3853,65 @@ final class AppModel {
     }
 
     private func scheduleBootstrapPreparation() {
-        guard acceptsDataMutation(), bootstrapPreparationTask == nil else {
+        guard needsBootstrapPreparation,
+              acceptsDataMutation(), bootstrapPreparationTask == nil else {
             return
         }
         bootstrapPreparationTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            // Give SwiftUI a complete frame before touching the full record
-            // graph. This is intentionally a yield, not a fixed sleep.
+            let generation = dataDeletionGeneration
+            let logger = TaptionPlanDiagnosticsLogger.shared
+            let operation = logger.beginOperation("bootstrap_preparation")
+            var outcome = "cancelled"
+            defer {
+                if generation == dataDeletionGeneration {
+                    bootstrapPreparationTask = nil
+                }
+                logger.finishOperation(operation, outcome: outcome)
+            }
+            // Let the initial scene continue before preparing the full record graph.
             await Task.yield()
             guard !Task.isCancelled, self.acceptsDataMutation() else {
-                self.bootstrapPreparationTask = nil
                 return
             }
-            let source = snapshot
-            let loaded: TaptionDataSnapshot
+            var source = snapshot
+            let originalConfirmedSleepSpans = source.settings.confirmedSleepSpans
+            let originalActuals = source.actuals
+            let originalTravel = source.travel
             do {
-                loaded = try await Self.preparedLoadedSnapshotInBackground(
-                    source
-                )
+                while true {
+                    let revision = snapshotRevision
+                    source = try await Self.preparedLoadedSnapshotInBackground(
+                        source,
+                        lockingAutomaticClassifications: true
+                    )
+                    guard !Task.isCancelled,
+                          generation == dataDeletionGeneration,
+                          acceptsDataMutation() else { return }
+                    if revision == snapshotRevision { break }
+                    source = snapshot
+                }
             } catch {
-                self.bootstrapPreparationTask = nil
                 return
             }
-            guard !Task.isCancelled, self.acceptsDataMutation() else {
-                self.bootstrapPreparationTask = nil
-                return
+            snapshot = source
+            needsLocalRecordNormalization = false
+            if source.settings.confirmedSleepSpans != originalConfirmedSleepSpans
+                || source.actuals != originalActuals
+                || source.travel != originalTravel {
+                _ = await persist()
             }
-            snapshot = loaded
-            selectedScale = TimeScale(
-                timelineLevel: loaded.settings.startScale
-            ).scheduleEquivalent
-            selectedCatCoat = CatCoat(catStyle: loaded.settings.catStyle)
+            guard !Task.isCancelled,
+                  generation == dataDeletionGeneration,
+                  acceptsDataMutation() else { return }
+            needsBootstrapPreparation = false
+            if source.updatedAt == .distantPast, source.plans.isEmpty {
+                openInitialSetup()
+            }
+            publishWatchPayload()
             await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
             scheduleDayDatabaseMigration()
-            bootstrapPreparationTask = nil
+            outcome = "success"
         }
     }
 
@@ -3989,7 +4001,7 @@ final class AppModel {
                 TaptionExternalPrivacyStore.setLocked(true)
             }
         }
-        await bootstrap()
+        await bootstrapLocalSnapshot()
         updateForegroundLiveLocationTracking()
         if isAppLocked {
             await concealExternalSurfaces()
@@ -4007,6 +4019,8 @@ final class AppModel {
 
     func handleMemoryPressure() {
         dayLoadCoordinator?.handleMemoryPressure()
+        let repository = self.repository
+        Task { await repository.handleMemoryPressure() }
     }
 
     private func scheduleForegroundPreparation() {
@@ -4659,10 +4673,32 @@ final class AppModel {
     /// The saved snapshot is only a cache; iOS permissions can change while
     /// the app is suspended or in Settings.
     func refreshPermissions() async {
-        await bootstrap()
-        await refreshPermissionStates()
-        refreshAppUsageAuthorizationState()
-        await persistDeviceLocalSnapshot()
+        if let permissionRefreshTask {
+            await permissionRefreshTask.value
+            return
+        }
+        let generation = dataDeletionGeneration
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                if self.dataDeletionGeneration == generation {
+                    self.permissionRefreshTask = nil
+                }
+            }
+            await self.bootstrap()
+            guard !Task.isCancelled, self.dataDeletionGeneration == generation,
+                  self.acceptsDataMutation() else { return }
+            let revision = self.snapshotRevision
+            await self.refreshPermissionStates()
+            guard !Task.isCancelled, self.dataDeletionGeneration == generation,
+                  self.acceptsDataMutation() else { return }
+            self.refreshAppUsageAuthorizationState()
+            if self.snapshotRevision != revision {
+                await self.persistDeviceLocalSnapshot()
+            }
+        }
+        permissionRefreshTask = task
+        await task.value
     }
 
     /// 설치 후 첫 실행에서만 권한 안내를 띄운다. 권한은 기기마다 다르므로
@@ -4719,13 +4755,17 @@ final class AppModel {
     }
 
     func refreshAppUsageAuthorizationState() {
-        appUsageAuthorizationState = screenTimeUsageService.authorizationState
-        snapshot.settings.permissions[.appUsage] = switch appUsageAuthorizationState {
+        let state = screenTimeUsageService.authorizationState
+        if appUsageAuthorizationState != state { appUsageAuthorizationState = state }
+        let permission: PermissionState = switch state {
         case .approved: .authorized
         case .denied: .denied
         case .notDetermined: .notDetermined
         case .unavailable, .requiresCurrentSystem, .dataAccessUnavailable:
             .unavailable
+        }
+        if snapshot.settings.permissions[.appUsage] != permission {
+            snapshot.settings.permissions[.appUsage] = permission
         }
     }
 
@@ -5639,13 +5679,24 @@ final class AppModel {
 
     private func syncSensorBackgroundState() {
         let previousState = sensorCollectionSessionState
-        sensorCollectionSessionState =
-            sensorBackgroundCoordinator.sessionState
-        sensorCollectionSessionID = sensorBackgroundCoordinator.sessionID
-        sensorCollectionStartedAt = sensorBackgroundCoordinator.sessionStartedAt
-        lastSensorWakeReason = sensorBackgroundCoordinator.lastWakeReason
-        lastSensorSavedAt = sensorBackgroundCoordinator.lastSavedAt
-        sensorSaveToken = sensorBackgroundCoordinator.saveToken
+        if sensorCollectionSessionState != sensorBackgroundCoordinator.sessionState {
+            sensorCollectionSessionState = sensorBackgroundCoordinator.sessionState
+        }
+        if sensorCollectionSessionID != sensorBackgroundCoordinator.sessionID {
+            sensorCollectionSessionID = sensorBackgroundCoordinator.sessionID
+        }
+        if sensorCollectionStartedAt != sensorBackgroundCoordinator.sessionStartedAt {
+            sensorCollectionStartedAt = sensorBackgroundCoordinator.sessionStartedAt
+        }
+        if lastSensorWakeReason != sensorBackgroundCoordinator.lastWakeReason {
+            lastSensorWakeReason = sensorBackgroundCoordinator.lastWakeReason
+        }
+        if lastSensorSavedAt != sensorBackgroundCoordinator.lastSavedAt {
+            lastSensorSavedAt = sensorBackgroundCoordinator.lastSavedAt
+        }
+        if sensorSaveToken != sensorBackgroundCoordinator.saveToken {
+            sensorSaveToken = sensorBackgroundCoordinator.saveToken
+        }
         if previousState != sensorCollectionSessionState {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_collection_state",
@@ -6125,6 +6176,7 @@ final class AppModel {
         let pendingTasks = [
             bootstrapTask,
             bootstrapPreparationTask,
+            permissionRefreshTask,
             foregroundPreparationTask,
             foregroundRefreshTask,
             deferredVisibleRefreshTask,
@@ -6146,6 +6198,8 @@ final class AppModel {
         pendingSensorTimeline?.cancel()
         bootstrapTask = nil
         bootstrapPreparationTask = nil
+        permissionRefreshTask = nil
+        needsBootstrapPreparation = false
         foregroundPreparationTask = nil
         foregroundRefreshTask = nil
         deferredVisibleRefreshTask = nil
@@ -11767,93 +11821,84 @@ final class AppModel {
     }
 
     private func refreshPermissionStates() async {
-        let photoState = photoService.permissionState()
-        snapshot.settings.permissions[.photos] = photoState
-        if !permissionState(for: .photos).isGranted {
-            snapshot.settings.showsPhotos = false
-            snapshot.settings.showsPhotosInWidgets = false
-            snapshot.photos = []
-        }
-        let previousCalendarState = permissionState(for: .calendar)
-        let calendarState = calendarService.permissionState()
-        snapshot.settings.permissions[.calendar] = calendarState
-        if calendarState.isGranted, !previousCalendarState.isGranted {
-            UserDefaults.standard.removeObject(
-                forKey: Self.calendarAutomaticRefreshKey
-            )
-            if snapshot.settings.selectedCalendarIDs.isEmpty {
-                snapshot.settings.selectedCalendarIDs = calendarService
-                    .calendars()
-                    .map(\.id)
-            }
-        }
-        if !permissionState(for: .calendar).isGranted {
-            calendarStoreRefreshTask?.cancel()
-            calendarStoreRefreshTask = nil
-            calendarStoreRefreshRequiresWide = false
-            if !snapshot.calendarEvents.isEmpty {
-                snapshot.calendarEvents.removeAll()
-            }
-        }
+        let generation = dataDeletionGeneration
+        guard !Task.isCancelled, acceptsDataMutation() else { return }
         var healthState = PermissionState.unavailable
         do {
             healthState = try await healthService.authorizationRequestState()
         } catch {
             healthState = healthService.permissionState()
         }
-        if healthState == .authorized {
-            UserDefaults.standard.set(
-                true,
-                forKey: Self.healthAuthorizationRequestedKey
-            )
+        guard !Task.isCancelled, dataDeletionGeneration == generation,
+              acceptsDataMutation() else { return }
+        let availability = await sensorService?.hardwareAvailability()
+        let notificationState = await notificationScheduler.authorizationState()
+        guard !Task.isCancelled, dataDeletionGeneration == generation,
+              acceptsDataMutation() else { return }
+        if let sensorService, !sensorService.locationPermissionState().isGranted {
+            await sensorService.stopCollectionAndWait()
+            guard !Task.isCancelled, dataDeletionGeneration == generation,
+                  acceptsDataMutation() else { return }
         }
-        snapshot.settings.permissions[.health] = healthState
-        var locationState = PermissionState.unavailable
+
+        let photoState = photoService.permissionState()
+        let calendarState = calendarService.permissionState()
+        let locationState = sensorService?.locationPermissionState() ?? .unavailable
+        var updatedSettings = snapshot.settings
+        let previousCalendarState = updatedSettings.permissions[.calendar] ?? .notDetermined
+        updatedSettings.permissions[.photos] = photoState
+        updatedSettings.permissions[.calendar] = calendarState
+        updatedSettings.permissions[.health] = healthState
+        updatedSettings.permissions[.location] = locationState
+        updatedSettings.permissions[.motion] = sensorService?.motionPermissionState() ?? .unavailable
+        updatedSettings.permissions[.notifications] = notificationState
+        if !photoState.isGranted {
+            updatedSettings.showsPhotos = false
+            updatedSettings.showsPhotosInWidgets = false
+            if !snapshot.photos.isEmpty { snapshot.photos = [] }
+        }
+        if calendarState.isGranted, !previousCalendarState.isGranted {
+            UserDefaults.standard.removeObject(forKey: Self.calendarAutomaticRefreshKey)
+            if updatedSettings.selectedCalendarIDs.isEmpty {
+                updatedSettings.selectedCalendarIDs = calendarService.calendars().map(\.id)
+            }
+        } else if !calendarState.isGranted {
+            calendarStoreRefreshTask?.cancel()
+            calendarStoreRefreshTask = nil
+            calendarStoreRefreshRequiresWide = false
+            if !snapshot.calendarEvents.isEmpty { snapshot.calendarEvents = [] }
+        }
+        if healthState == .authorized {
+            UserDefaults.standard.set(true, forKey: Self.healthAuthorizationRequestedKey)
+        }
+        if let availability, sensorAvailability != availability {
+            sensorAvailability = availability
+        }
         if let sensorService {
-            locationState = sensorService.locationPermissionState()
-            snapshot.settings.permissions[.location] = locationState
-            snapshot.settings.permissions[.motion] =
-                sensorService.motionPermissionState()
-            snapshot.settings.backgroundPreciseLocationEnabled =
-                snapshot.settings.locationEnabled
-                && sensorService.hasAlwaysLocationAuthorization()
-            sensorAvailability = await sensorService.hardwareAvailability()
-            if permissionState(for: .location).isGranted {
-                snapshot.settings.locationEnabled = true
-                snapshot.settings.backgroundPreciseLocationEnabled =
-                    sensorService.hasAlwaysLocationAuthorization()
+            if locationState.isGranted {
+                updatedSettings.locationEnabled = true
+                updatedSettings.backgroundPreciseLocationEnabled = sensorService.hasAlwaysLocationAuthorization()
             } else {
-                // 권한이 없는 동안 수집만 멈춘다. locationEnabled를 지우면
-                // iOS 설정에서 권한을 다시 허용해도 기록이 재개되지 않는다.
-                await sensorService.stopCollectionAndWait()
                 sensorBackgroundCoordinator.cancel()
                 syncSensorBackgroundState()
-                isSensorCollecting = false
-                snapshot.settings.backgroundPreciseLocationEnabled = false
+                if isSensorCollecting { isSensorCollecting = false }
+                updatedSettings.backgroundPreciseLocationEnabled = false
             }
         } else {
-            snapshot.settings.permissions[.location] = .unavailable
-            snapshot.settings.permissions[.motion] = .unavailable
-            if sensorStorageErrorDescription == nil {
-                snapshot.settings.locationEnabled = false
-            }
-            snapshot.settings.backgroundPreciseLocationEnabled = false
+            if sensorStorageErrorDescription == nil { updatedSettings.locationEnabled = false }
+            updatedSettings.backgroundPreciseLocationEnabled = false
         }
-        let notificationState = await notificationScheduler.authorizationState()
-        snapshot.settings.permissions[.notifications] = notificationState
-        if !permissionState(for: .notifications).isGranted {
-            snapshot.settings.notificationsEnabled = false
-        }
+        if !notificationState.isGranted { updatedSettings.notificationsEnabled = false }
         migratePermissionFlagsIfNeeded(
-            photos: photoState,
-            calendar: calendarState,
-            health: healthState,
-            location: locationState,
-            notifications: notificationState
+            settings: &updatedSettings,
+            photos: photoState, calendar: calendarState, health: healthState,
+            location: locationState, notifications: notificationState
         )
+        if updatedSettings != snapshot.settings { snapshot.settings = updatedSettings }
     }
 
     private func migratePermissionFlagsIfNeeded(
+        settings: inout AppFeatureSettings,
         photos: PermissionState,
         calendar: PermissionState,
         health: PermissionState,
@@ -11865,12 +11910,12 @@ final class AppModel {
         let granted = [photos, calendar, health, location, notifications]
             .contains(where: \.isGranted)
         guard granted else { return }
-        snapshot.settings.showsPhotos = photos.isGranted
-        snapshot.settings.healthEnabled = health.isGranted
-        snapshot.settings.locationEnabled = location.isGranted
-        snapshot.settings.notificationsEnabled = notifications.isGranted
-        if calendar.isGranted, snapshot.settings.selectedCalendarIDs.isEmpty {
-            snapshot.settings.selectedCalendarIDs = calendarService.calendars().map(\.id)
+        settings.showsPhotos = photos.isGranted
+        settings.healthEnabled = health.isGranted
+        settings.locationEnabled = location.isGranted
+        settings.notificationsEnabled = notifications.isGranted
+        if calendar.isGranted, settings.selectedCalendarIDs.isEmpty {
+            settings.selectedCalendarIDs = calendarService.calendars().map(\.id)
         }
         UserDefaults.standard.set(true, forKey: Self.permissionFlagsMigrationKey)
     }

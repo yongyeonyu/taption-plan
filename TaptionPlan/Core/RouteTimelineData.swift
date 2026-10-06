@@ -327,13 +327,12 @@ enum MapHomeSleepLocationPolicy {
         guard upperBound > day.start else { return [] }
 
         let actualSpans = actuals.compactMap { actual -> TimeSpan? in
-            guard AutomaticRecordTimelineEngine.isSleep(actual) else {
-                return nil
-            }
             let end = min(actual.endedAt ?? upperBound, upperBound)
-            guard end > actual.startedAt else { return nil }
-            return TimeSpan(start: actual.startedAt, end: end)
-                .intersection(with: day)
+            guard end > actual.startedAt,
+                  let visible = TimeSpan(start: actual.startedAt, end: end)
+                    .intersection(with: day),
+                  AutomaticRecordTimelineEngine.isSleep(actual) else { return nil }
+            return visible
         }
         let sessionSpans = sleepSessions.compactMap { session -> TimeSpan? in
             guard session.asleepDuration > 0 else { return nil }

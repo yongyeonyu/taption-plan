@@ -2510,6 +2510,18 @@ struct MapHomeView: View {
             guard model.isBootstrapped, scenePhase == .active else { return }
             let loadStartedAt = ProcessInfo.processInfo.systemUptime
             let date = model.selectedDate
+            if !routeReadingsLoadState.isLoaded(for: date) {
+                routeReadingsLoadState = .loading(
+                    MapHomeRouteReadingsPolicy.dayKey(for: date)
+                )
+            }
+            applyInitialMapFocusIfNeeded()
+            reportInitialMapShellReadyIfNeeded(for: date)
+            await Task.yield()
+            await model.bootstrap()
+            guard !Task.isCancelled, scenePhase == .active,
+                  Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
+            else { return }
             if let cached = await model.cachedPlanDayDataSnapshot(for: date) {
                 await refreshRouteReadings(
                     for: date,
@@ -2532,10 +2544,6 @@ struct MapHomeView: View {
                 forceReload: false,
                 refreshRawReadings: true
             )
-            let dayKey = MapHomeRouteReadingsPolicy.dayKey(for: date)
-            if !routeReadingsLoadState.isLoaded(for: date) {
-                routeReadingsLoadState = .loading(dayKey)
-            }
             prepareRouteProjectionReadings()
             refreshRouteProjection()
             focusMapIfNeeded()
@@ -2551,7 +2559,6 @@ struct MapHomeView: View {
                       inSameDayAs: model.selectedDate
                   ) else { return }
             refreshTimeRailSegments()
-            reportInitialMapShellReadyIfNeeded(for: date)
             let snapshotWaitStartedAt = ProcessInfo.processInfo.systemUptime
             await refreshRouteReadings(
                 for: date,
@@ -8741,6 +8748,7 @@ struct MapHomeView: View {
                   inSameDayAs: model.selectedDate
               ) else { return }
         hasReportedInitialDataReady = true
+        TaptionPlanDiagnosticsLogger.shared.record("map_initial_shell_ready")
         onInitialDataReady()
     }
 

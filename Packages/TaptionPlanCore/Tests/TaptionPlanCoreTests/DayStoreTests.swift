@@ -5,6 +5,46 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testSnapshotRevisionsReflectDomainUpdatesAndDeletion() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 10, day: 6)
+        let otherDay = TaptionPlanDayKey(year: 2026, month: 10, day: 7)
+        try await store.saveSnapshots([
+            .init(domain: "plan.actuals", day: day, revision: 2, updatedAt: .now, payload: Data([1])),
+            .init(domain: "plan.settings", day: day, revision: 1, updatedAt: .now, payload: Data([2])),
+            .init(domain: "plan.actuals", day: otherDay, revision: 9, updatedAt: .now, payload: Data([3])),
+        ])
+        let first = try await store.snapshotRevisions(day: day)
+        XCTAssertEqual(Dictionary(uniqueKeysWithValues: first.map { ($0.domain, $0.revision) }), ["plan.actuals": 2, "plan.settings": 1])
+        try await store.saveSnapshot(.init(
+            domain: "plan.settings", day: day, revision: 3, updatedAt: .now, payload: Data([4])
+        ))
+        let updated = try await store.snapshotRevisions(day: day)
+        XCTAssertEqual(Dictionary(uniqueKeysWithValues: updated.map { ($0.domain, $0.revision) }), ["plan.actuals": 2, "plan.settings": 3])
+        try await store.deleteAllContent()
+        let empty = try await store.snapshotRevisions(day: day)
+        XCTAssertTrue(empty.isEmpty)
+    }
+
+    func testSnapshotRevisionsPreserveByteDistinctUnicodeDomains() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 10, day: 6)
+        let domains = ["caf\u{00E9}", "cafe\u{0301}"]
+        XCTAssertEqual(domains[0], domains[1])
+        try await store.saveSnapshots([
+            .init(domain: domains[0], day: day, revision: 2, updatedAt: .now, payload: Data([1])),
+            .init(domain: domains[1], day: day, revision: 7, updatedAt: .now, payload: Data([2])),
+        ])
+        let revisions = try await store.snapshotRevisions(day: day)
+        XCTAssertEqual(revisions.count, 2)
+        XCTAssertEqual(Set(revisions.map { Data($0.domain.utf8) }), Set(domains.map { Data($0.utf8) }))
+        XCTAssertEqual(Set(revisions.map(\.revision)), [2, 7])
+    }
+
     func testRestoreReceiptReopenRollbackPreservesExistingAndLaterChanges() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

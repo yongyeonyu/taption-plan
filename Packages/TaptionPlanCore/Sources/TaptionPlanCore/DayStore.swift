@@ -401,6 +401,24 @@ public actor TaptionPlanDayStore {
         return try readSnapshot(statement)
     }
 
+    public func snapshotRevisions(day: TaptionPlanDayKey) throws -> [(domain: String, revision: UInt64)] {
+        try validate(snapshotDay: day)
+        let statement = try prepare(
+            "SELECT domain, revision FROM snapshots WHERE day_key = ?;"
+        )
+        defer { sqlite3_finalize(statement) }
+        try bind(dayKey(day), to: statement, at: 1)
+        var result: [(domain: String, revision: UInt64)] = []
+        while try step(statement) == SQLITE_ROW {
+            guard let domain = sqlite3_column_text(statement, 0).map({ String(cString: $0) }),
+                  !domain.isEmpty else {
+                throw TaptionPlanDayStoreError.databaseCorrupt(message: "Invalid snapshot domain")
+            }
+            result.append((domain, try readUInt64(sqlite3_column_int64(statement, 1))))
+        }
+        return result
+    }
+
     public func snapshots(day: TaptionPlanDayKey) throws -> [Snapshot] {
         try validate(snapshotDay: day)
         let statement = try prepare(

@@ -24,7 +24,7 @@ struct AppShellView: View {
     @State private var initialLaunchProgressValue = 0.0
     @State private var initialLaunchProgressTarget = 0.0
     @State private var initialLaunchProgressTask: Task<Void, Never>?
-    @State private var initialLaunchCompletionTask: Task<Void, Never>?
+    @State private var initialLaunchStartedAt: TimeInterval?
     @State private var lockGeneration = 0
     @State private var automaticBiometricAttemptedGeneration: Int?
     @State private var isBiometricAuthenticationInFlight = false
@@ -313,21 +313,19 @@ struct AppShellView: View {
 
     private func dismissInitialLaunchOverlayIfReady() {
         guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
-        advanceInitialLaunchProgress(to: 1)
-        guard initialLaunchCompletionTask == nil else { return }
-        initialLaunchCompletionTask = Task { @MainActor in
-            while !Task.isCancelled, initialLaunchProgressValue < 1 {
-                try? await Task.sleep(for: .milliseconds(33))
-            }
-            guard !Task.isCancelled, initialLaunchReady else {
-                initialLaunchCompletionTask = nil
-                return
-            }
-            withAnimation(.easeOut(duration: 0.18)) {
-                initialLaunchProgressValue = 1
-                isInitialLaunchOverlayVisible = false
-            }
-            initialLaunchCompletionTask = nil
+        initialLaunchProgressTask?.cancel()
+        initialLaunchProgressTarget = 1
+        withAnimation(.easeOut(duration: 0.18)) {
+            initialLaunchProgressValue = 1
+            isInitialLaunchOverlayVisible = false
+        }
+        if let initialLaunchStartedAt {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "initial_launch_ready",
+                fields: ["duration_ms": String(Int((
+                    ProcessInfo.processInfo.systemUptime - initialLaunchStartedAt
+                ) * 1_000))]
+            )
         }
     }
 
@@ -481,6 +479,8 @@ struct AppShellView: View {
     }
 
     private func performInitialLaunchPreparation() async {
+        initialLaunchStartedAt = ProcessInfo.processInfo.systemUptime
+        TaptionPlanDiagnosticsLogger.shared.record("initial_launch_started")
         startInitialLaunchProgressTicker()
         advanceInitialLaunchProgress(to: 0.04)
         await proAccess.refreshAccess()
@@ -490,10 +490,8 @@ struct AppShellView: View {
         if proAccess.grantsAccess {
             advanceInitialLaunchProgress(to: 0.20)
             await model.sceneBecameActive()
-            await model.refreshPermissions()
-            model.presentPermissionOnboardingIfNeeded()
             advanceInitialLaunchProgress(to: 0.86)
-            scheduleDeferredSensorActivation()
+            scheduleDeferredPermissionPreparation()
         } else {
             advanceInitialLaunchProgress(to: 0.80)
             await model.suspendForCommerceLock()
@@ -510,11 +508,21 @@ struct AppShellView: View {
             showsMapHome = false
             await model.openDeepLink(url)
         }
-        await reconcileSensorLiveActivity()
         advanceInitialLaunchProgress(to: 0.96)
         isSecurityStateReady = true
         advanceInitialLaunchProgress(to: 0.98)
         dismissInitialLaunchOverlayIfReady()
+    }
+
+    private func scheduleDeferredPermissionPreparation() {
+        Task { @MainActor in
+            await Task.yield()
+            await model.refreshPermissions()
+            guard scenePhase == .active, proAccess.grantsAccess else { return }
+            model.presentPermissionOnboardingIfNeeded()
+            await activateRequiredSensorsIfReady()
+            await reconcileSensorLiveActivity()
+        }
     }
 
     private func scheduleDeferredStoreKitProductLoad() {

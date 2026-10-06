@@ -1,5 +1,6 @@
 import CloudKit
 import Compression
+import CryptoKit
 import Darwin
 import Foundation
 import OSLog
@@ -14,6 +15,7 @@ protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
     func save(_ snapshot: TaptionDataSnapshot) async throws
     func deleteAll() async throws
+    func handleMemoryPressure() async
 }
 
 enum TaptionRepositoryBackgroundExecution {
@@ -210,6 +212,8 @@ extension PlanDataRepository {
     func deleteAll() async throws {
         try await save(.empty)
     }
+
+    func handleMemoryPressure() async {}
 }
 
 enum TaptionLocalDatabaseLocation {
@@ -298,6 +302,11 @@ actor MigratingPlanRepository: PlanDataRepository {
         }
         writeTail = task
         try await task.value
+    }
+
+    func handleMemoryPressure() async {
+        await primary.handleMemoryPressure()
+        await legacy.handleMemoryPressure()
     }
 
     func deleteAll() async throws {
@@ -908,6 +917,29 @@ actor SQLitePlanRepository: PlanDataRepository {
     private struct SavedRows: Sendable {
         let generation: UInt64
         let nextRevision: UInt64
+        let revisions: [String: UInt64]
+        let encodedDomains: [String]
+    }
+
+    private struct CommittedSnapshot: Sendable {
+        let value: TaptionDataSnapshot
+        let generation: UInt64
+        let revisions: [String: UInt64]
+        let loadStamps: [LoadedRowStamp]?
+    }
+
+    private struct LoadedRowStamp: Equatable, Sendable {
+        let domain: Data
+        let revision: UInt64
+        let updatedAt: Date
+        let payloadDigest: SHA256.Digest
+
+        init(_ row: TaptionPlanDayStore.Snapshot) {
+            domain = Data(row.domain.utf8)
+            revision = row.revision
+            updatedAt = row.updatedAt
+            payloadDigest = SHA256.hash(data: row.payload)
+        }
     }
 
     private struct DeletedRows: Sendable {
@@ -922,6 +954,10 @@ actor SQLitePlanRepository: PlanDataRepository {
     private var nextRevision: UInt64 = 0
     private var observedGeneration: UInt64?
     private var dataDeletionGeneration: UInt64
+    private var committedSnapshot: CommittedSnapshot?
+    private var cacheEpoch: UInt64 = 0
+    private(set) var lastEncodedDomains: [String] = []
+    private(set) var lastLoadReusedSnapshot = false
 
     init(databaseURL: URL) throws {
         self.store = try TaptionPlanDayStore(url: databaseURL, allowsUndatedSnapshots: true)
@@ -967,8 +1003,15 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
+        let epoch = cacheEpoch
+        var succeeded = false
+        lastLoadReusedSnapshot = false
+        defer {
+            if !succeeded { clearSerializationCache() }
+        }
         let generationURL = self.generationURL
         let deletionPendingURL = self.deletionPendingURL
+        let readStart = ProcessInfo.processInfo.systemUptime
         let loaded = try await withStoreLockRetry { store in
             if FileManager.default.fileExists(atPath: deletionPendingURL.path) {
                 let recoveredGeneration =
@@ -988,48 +1031,61 @@ actor SQLitePlanRepository: PlanDataRepository {
                 rows: try store.snapshots(day: Self.day)
             )
         }
-        observedGeneration = loaded.generation
-        nextRevision = max(
-            nextRevision,
-            loaded.rows.map(\.revision).max() ?? 0
+        try Task.checkCancellation()
+        let readMS = (ProcessInfo.processInfo.systemUptime - readStart) * 1_000
+        let verificationStart = ProcessInfo.processInfo.systemUptime
+        let stamps = loaded.rows.map(LoadedRowStamp.init)
+        let verificationMS = (ProcessInfo.processInfo.systemUptime - verificationStart) * 1_000
+        let decodeStart = ProcessInfo.processInfo.systemUptime
+        let value: TaptionDataSnapshot
+        if let cached = committedSnapshot,
+           cached.generation == loaded.generation,
+           cached.loadStamps == stamps {
+            value = cached.value
+            lastLoadReusedSnapshot = true
+        } else {
+            value = loaded.rows.isEmpty ? .empty : try snapshot(from: loaded.rows)
+        }
+        let decodeMS = (ProcessInfo.processInfo.systemUptime - decodeStart) * 1_000
+        try Task.checkCancellation()
+        remember(
+            value,
+            generation: loaded.generation,
+            revisions: Dictionary(uniqueKeysWithValues: loaded.rows.map { ($0.domain, $0.revision) }),
+            epoch: epoch,
+            loadStamps: stamps
         )
-        guard !loaded.rows.isEmpty else { return .empty }
-        return try snapshot(from: loaded.rows)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "repository_local_load",
+            fields: [
+                "read_ms": String(format: "%.2f", readMS),
+                "verify_ms": String(format: "%.2f", verificationMS),
+                "decode_ms": String(format: "%.2f", decodeMS),
+                "domains": String(loaded.rows.count),
+                "stored_bytes": String(loaded.rows.reduce(0) { $0 + $1.payload.count }),
+                "reused_snapshot": String(lastLoadReusedSnapshot),
+            ]
+        )
+        succeeded = true
+        return value
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         var value = snapshot
         value.updatedAt = .now
-        let encodedDomains: [(String, Data, Bool)] = [
-            (Self.metadataDomain, try Self.payload(Metadata(
-                schemaVersion: value.schemaVersion,
-                updatedAt: value.updatedAt
-            )), true),
-            ("plan.plans", try Self.payload(value.plans), false),
-            ("plan.actuals", try Self.payload(value.actuals), false),
-            ("plan.recordLinks", try Self.payload(value.recordLinks), false),
-            ("plan.memos", try Self.payload(value.memos), false),
-            ("plan.stickers", try Self.payload(value.stickers), false),
-            ("plan.categories", try Self.payload(value.categories), false),
-            ("plan.photos", try Self.payload(value.photos), false),
-            ("plan.calendarEvents", try Self.payload(value.calendarEvents), false),
-            ("plan.weather", try Self.payload(value.weather), false),
-            ("plan.places", try Self.payload(value.places), false),
-            ("plan.travel", try Self.payload(value.travel), false),
-            ("plan.floorTransitions", try Self.payload(value.floorTransitions), false),
-            ("plan.yearlyReports", try Self.payload(value.yearlyReports), false),
-            ("plan.settings", try Self.payload(value.settings), false),
-        ]
+        let valueToSave = value
         try await TaptionRepositoryBackgroundExecution.run {
-            try await self.saveProtected(encodedDomains)
+            try await self.saveProtected(valueToSave)
         }
     }
 
-    private func saveProtected(_ encodedDomains: [(String, Data, Bool)]) async throws {
+    private func saveProtected(_ value: TaptionDataSnapshot) async throws {
         let expectedGeneration = observedGeneration
         let currentNextRevision = nextRevision
         let deletionGeneration = dataDeletionGeneration
         let generationURL = self.generationURL
+        let cached = committedSnapshot
+        let epoch = cacheEpoch
         let saved = try await withStoreLockRetry { store in
             let generation = Self.readGeneration(at: generationURL)
             guard expectedGeneration == nil || expectedGeneration == generation,
@@ -1038,25 +1094,34 @@ actor SQLitePlanRepository: PlanDataRepository {
                   ) else {
                 throw RepositoryError.staleGeneration
             }
-            let existingRows = try store.snapshots(day: Self.day)
-            let rowsByDomain = Dictionary(
-                uniqueKeysWithValues: existingRows.map { ($0.domain, $0) }
-            )
-            let revisions = Dictionary(
-                uniqueKeysWithValues: existingRows.map { ($0.domain, $0.revision) }
-            )
+            let storedRevisions = try store.snapshotRevisions(day: Self.day)
+            var revisions = storedRevisions.reduce(into: [String: UInt64]()) { values, row in
+                values[row.domain] = max(values[row.domain] ?? 0, row.revision)
+            }
             var revision = max(
                 currentNextRevision,
-                existingRows.map(\.revision).max() ?? 0
+                revisions.values.max() ?? 0
             )
             guard revision < UInt64(Int64.max) else {
                 throw TaptionPlanDayStoreError.revisionOverflow
             }
             revision += 1
             var writes: [TaptionPlanDayStore.Snapshot] = []
-            for (domain, payload, force) in encodedDomains {
-                guard force || payload != rowsByDomain[domain]?.payload else {
-                    continue
+            var encodedDomains: [String] = []
+            func append<Value: Encodable>(
+                _ domain: String, _ field: Value, unchanged: Bool = false,
+                store: isolated TaptionPlanDayStore, force: Bool = false
+            ) throws {
+                try Task.checkCancellation()
+                if !force, cached?.generation == generation,
+                   let cachedRevision = cached?.revisions[domain],
+                   cachedRevision == revisions[domain], unchanged {
+                    return
+                }
+                encodedDomains.append(domain)
+                let payload = try Self.payload(field)
+                if !force, payload == (try store.snapshot(domain: domain, day: Self.day))?.payload {
+                    return
                 }
                 guard revision > (revisions[domain] ?? 0) else {
                     throw TaptionPlanDayStoreError.revisionOverflow
@@ -1070,17 +1135,80 @@ actor SQLitePlanRepository: PlanDataRepository {
                         payload: payload
                     )
                 )
+                revisions[domain] = revision
             }
+            try append(
+                Self.metadataDomain,
+                Metadata(schemaVersion: value.schemaVersion, updatedAt: value.updatedAt),
+                store: store, force: true
+            )
+            try append("plan.plans", value.plans, unchanged: Self.sharesStorage(value.plans, previous: cached?.value.plans), store: store)
+            try append("plan.actuals", value.actuals, unchanged: Self.sharesStorage(value.actuals, previous: cached?.value.actuals), store: store)
+            try append("plan.recordLinks", value.recordLinks, unchanged: Self.sharesStorage(value.recordLinks, previous: cached?.value.recordLinks), store: store)
+            try append("plan.memos", value.memos, unchanged: Self.sharesStorage(value.memos, previous: cached?.value.memos), store: store)
+            try append("plan.stickers", value.stickers, unchanged: Self.sharesStorage(value.stickers, previous: cached?.value.stickers), store: store)
+            try append("plan.categories", value.categories, unchanged: Self.sharesStorage(value.categories, previous: cached?.value.categories), store: store)
+            try append("plan.photos", value.photos, unchanged: Self.sharesStorage(value.photos, previous: cached?.value.photos), store: store)
+            try append("plan.calendarEvents", value.calendarEvents, unchanged: Self.sharesStorage(value.calendarEvents, previous: cached?.value.calendarEvents), store: store)
+            try append("plan.weather", value.weather, unchanged: Self.sharesStorage(value.weather, previous: cached?.value.weather), store: store)
+            try append("plan.places", value.places, unchanged: Self.sharesStorage(value.places, previous: cached?.value.places), store: store)
+            try append("plan.travel", value.travel, unchanged: Self.sharesStorage(value.travel, previous: cached?.value.travel), store: store)
+            try append("plan.floorTransitions", value.floorTransitions, unchanged: Self.sharesStorage(value.floorTransitions, previous: cached?.value.floorTransitions), store: store)
+            try append("plan.yearlyReports", value.yearlyReports, unchanged: Self.sharesStorage(value.yearlyReports, previous: cached?.value.yearlyReports), store: store)
+            try append("plan.settings", value.settings, store: store)
             guard TaptionDataDeletionFence.allows(
                 generation: deletionGeneration
             ) else {
                 throw RepositoryError.staleGeneration
             }
             try store.saveSnapshots(writes)
-            return SavedRows(generation: generation, nextRevision: revision)
+            return SavedRows(
+                generation: generation, nextRevision: revision,
+                revisions: revisions, encodedDomains: encodedDomains
+            )
         }
-        observedGeneration = saved.generation
-        nextRevision = saved.nextRevision
+        if saved.generation >= (observedGeneration ?? 0), saved.nextRevision >= nextRevision {
+            lastEncodedDomains = saved.encodedDomains
+        }
+        remember(value, generation: saved.generation, revisions: saved.revisions, epoch: epoch)
+    }
+
+    private static func sharesStorage<Value>(_ value: [Value], previous: [Value]?) -> Bool {
+        guard let previous, previous.count == value.count else { return false }
+        if value.isEmpty { return true }
+        // Buffer identity proves unchanged value contents without treating distinct
+        // Unicode representations as equal or retaining temporary raw pointers.
+        return previous.withUnsafeBufferPointer { old in
+            value.withUnsafeBufferPointer { current in old.baseAddress == current.baseAddress }
+        }
+    }
+
+    private func remember(
+        _ value: TaptionDataSnapshot, generation: UInt64,
+        revisions: [String: UInt64], epoch: UInt64,
+        loadStamps: [LoadedRowStamp]? = nil
+    ) {
+        guard generation >= (observedGeneration ?? 0) else { return }
+        if generation != observedGeneration { nextRevision = 0 }
+        observedGeneration = generation
+        let revision = revisions.values.max() ?? 0
+        guard revision >= nextRevision else { return }
+        nextRevision = revision
+        if epoch == cacheEpoch {
+            committedSnapshot = .init(
+                value: value, generation: generation, revisions: revisions,
+                loadStamps: loadStamps
+            )
+        }
+    }
+
+    func handleMemoryPressure() async {
+        clearSerializationCache()
+    }
+
+    private func clearSerializationCache() {
+        cacheEpoch &+= 1
+        committedSnapshot = nil
     }
 
     func deleteAll() async throws {
@@ -1111,6 +1239,8 @@ actor SQLitePlanRepository: PlanDataRepository {
             )
         }
         nextRevision = 0
+        clearSerializationCache()
+        lastEncodedDomains = []
         observedGeneration = deleted.generation
         dataDeletionGeneration = deleted.deletionGeneration
     }

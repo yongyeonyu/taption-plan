@@ -5122,6 +5122,71 @@ private actor PlanRawSensorRestoreAccumulator {
     }
 }
 
+private actor PlanManifestBodyPreparation {
+    private let month: String
+    private let latest: PlanMonthlyArchive
+    private let pinKey: Data
+    private let accountKey: Data
+    private let dataGeneration: UInt64
+    private var stage: PlanRawRestoreStage?
+    private var payload: PlanCloudBackupPayload?
+    private var latestPayload: PlanCloudBackupPayload?
+
+    init(month: String, latest: PlanMonthlyArchive, pinKey: Data, accountKey: Data, dataGeneration: UInt64) {
+        self.month = month
+        self.latest = latest
+        self.pinKey = pinKey
+        self.accountKey = accountKey
+        self.dataGeneration = dataGeneration
+    }
+
+    func append(_ archive: PlanMonthlyArchive, raw: PlanRawSensorMonthlyArchive?) throws {
+        try autoreleasepool {
+            try checkCancellation()
+            let decoded = try archive.decodedPayload(pinKeyData: pinKey, accountKeyData: accountKey)
+            if archive.snapshotGenerationID == latest.snapshotGenerationID { latestPayload = decoded }
+            if let previous = payload {
+                payload = PlanCloudBackupPayload(snapshot: CloudSnapshotRecoveryEngine.merge(local: previous.snapshot, remote: decoded.snapshot),
+                    routePoints: PlanBackupRoutePointReducer.merging(existing: previous.routePoints, incoming: decoded.routePoints),
+                    appLog: decoded.appLog ?? previous.appLog)
+            } else { payload = decoded }
+            if stage == nil {
+                stage = try PlanRawRestoreStage(url: FileManager.default.temporaryDirectory
+                    .appendingPathComponent("TaptionPlanRestoreStage/cas-\(UUID().uuidString).sqlite"), removesOnClose: true)
+            }
+            if archive.hasRawSensorArchive != false {
+                guard let raw, raw.generationID == archive.generationID, let stage else {
+                    throw PlanSecurityError.accountUnavailable
+                }
+                try stage.transaction {
+                    try raw.visitDecodedPages(pinKeyData: pinKey, accountKeyData: accountKey,
+                        cancellationCheck: { try Task.checkCancellation() }) { try stage.append($0) }
+                }
+            }
+            try checkCancellation()
+        }
+    }
+
+    func finish(latestRaw: PlanRawSensorMonthlyArchive?) throws -> (
+        payload: PlanCloudBackupPayload, raw: PlanCloudRawSensorPayload, unchanged: Bool, mainThread: Bool
+    ) {
+        try autoreleasepool {
+            try checkCancellation()
+            guard let payload, let latestPayload, let stage else { throw PlanSecurityError.invalidArchive }
+            let latestRawPayload = try latestRaw?.decodedPayload(pinKeyData: pinKey, accountKeyData: accountKey)
+            let raw = try stage.materializedPayload(monthKey: month, createdAt: latestRawPayload?.createdAt ?? latest.createdAt)
+            let unchanged = payload == latestPayload && (raw == latestRawPayload || (raw.isEmpty && latestRawPayload == nil))
+            try checkCancellation()
+            return (payload, raw, unchanged, Thread.isMainThread)
+        }
+    }
+
+    private func checkCancellation() throws {
+        try Task.checkCancellation()
+        guard TaptionDataDeletionFence.allows(generation: dataGeneration) else { throw CancellationError() }
+    }
+}
+
 private struct PlanMonthlyArchivePreparationInput: Sendable {
     let payload: PlanCloudBackupPayload
     let monthKey: String
@@ -5336,7 +5401,7 @@ final class PlanSecurityBackupService {
             forKey: latestSuccessfulBackupDateKey
         ) as? Date
         if let manifestPublisher {
-            Task {
+            Task(priority: .utility) { [self] in
                 do {
                     _ = try await manifestPublisher.retryPendingReconciling { [weak self] manifest in
                         guard let self else { throw CancellationError() }
@@ -6158,35 +6223,33 @@ final class PlanSecurityBackupService {
             guard let latest = referenced.max(by: Self.archivePrecedes) else { continue }
             let siblings = referenced.sorted(by: Self.archivePrecedes)
             guard siblings.count > 1 else { continue }
-            let latestPayload = try latest.decodedPayload(pinKeyData: verifier.keyMaterial, accountKeyData: accountKey)
-            var payload: PlanCloudBackupPayload?
-            let stage = try PlanRawRestoreStage(url: FileManager.default.temporaryDirectory
-                .appendingPathComponent("TaptionPlanRestoreStage/cas-\(UUID().uuidString).sqlite"), removesOnClose: true)
-            for archive in siblings {
-                try checkRestorePreparation(fence)
-                let decoded = try archive.decodedPayload(pinKeyData: verifier.keyMaterial, accountKeyData: accountKey)
-                if let previous = payload {
-                    payload = PlanCloudBackupPayload(snapshot: CloudSnapshotRecoveryEngine.merge(local: previous.snapshot, remote: decoded.snapshot),
-                        routePoints: PlanBackupRoutePointReducer.merging(existing: previous.routePoints, incoming: decoded.routePoints),
-                        appLog: decoded.appLog ?? previous.appLog)
-                } else { payload = decoded }
-                if archive.hasRawSensorArchive != false {
-                    guard let raw = try rawSensorBackupStore.load(monthKey: month, generationID: archive.generationID),
-                          Self.isCommitted(raw, snapshot: archive) else { throw PlanSecurityError.accountUnavailable }
-                    try stage.transaction {
-                        try raw.visitDecodedPages(pinKeyData: verifier.keyMaterial, accountKeyData: accountKey,
-                            cancellationCheck: { try Task.checkCancellation() }) { try stage.append($0) }
-                    }
+            let worker = PlanManifestBodyPreparation(month: month, latest: latest,
+                pinKey: verifier.keyMaterial, accountKey: accountKey, dataGeneration: fence.dataGeneration)
+            let operation = TaptionPlanDiagnosticsLogger.shared.beginOperation(
+                "backup_manifest_prepare", fields: ["sources": String(siblings.count)]
+            )
+            let prepared: (payload: PlanCloudBackupPayload, raw: PlanCloudRawSensorPayload, unchanged: Bool, mainThread: Bool)
+            do {
+                for archive in siblings {
+                    try checkRestorePreparation(fence)
+                    let raw = archive.hasRawSensorArchive == false ? nil : try rawSensorBackupStore.load(
+                        monthKey: month, generationID: archive.generationID
+                    )
+                    try await worker.append(archive, raw: raw)
+                    try checkRestorePreparation(fence)
                 }
+                let latestRaw = try rawSensorBackupStore.load(monthKey: month, generationID: latest.generationID)
+                prepared = try await worker.finish(latestRaw: latestRaw)
+                try checkRestorePreparation(fence)
+                TaptionPlanDiagnosticsLogger.shared.finishOperation(operation, outcome: "success",
+                    fields: ["worker_main_thread": String(prepared.mainThread)])
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.finishOperation(operation,
+                    outcome: error is CancellationError ? "cancelled" : "failure", error: error)
+                throw error
             }
-            guard let payload else { continue }
-            let latestRaw = try rawSensorBackupStore.load(monthKey: month, generationID: latest.generationID)
-            let latestRawPayload = try latestRaw?.decodedPayload(pinKeyData: verifier.keyMaterial, accountKeyData: accountKey)
-            let raw = try stage.materializedPayload(monthKey: month, createdAt: latestRawPayload?.createdAt ?? latest.createdAt)
-            if payload == latestPayload, raw == latestRawPayload || (raw.isEmpty && latestRawPayload == nil) {
-                continue
-            }
-            let generation = try await saveMonthlyGeneration(payload, rawSensorPayload: raw.isEmpty ? nil : raw,
+            if prepared.unchanged { continue }
+            let generation = try await saveMonthlyGeneration(prepared.payload, rawSensorPayload: prepared.raw.isEmpty ? nil : prepared.raw,
                 date: Date(timeIntervalSince1970: floor(latest.createdAt.timeIntervalSince1970) + 1),
                 dataGeneration: fence.dataGeneration, migrationMonthKey: month, publishesManifest: false)
             try checkRestorePreparation(fence)
@@ -6207,7 +6270,7 @@ final class PlanSecurityBackupService {
         guard let manifestPublisher else { return }
         let backupStore = self.backupStore
         let rawSensorBackupStore = self.rawSensorBackupStore
-        Task {
+        Task(priority: .utility) { [self] in
             do {
                 let manifest = try await manifestPublisher.publishReconciling(
                     monthKey: monthKey,

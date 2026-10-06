@@ -2098,6 +2098,13 @@ enum DayPhaseEngine {
             start: span.start.addingTimeInterval(-margin),
             end: span.end.addingTimeInterval(margin)
         )
+        // Filter by time once before classifying titles or grouping places.
+        // The margin keeps overnight records and commute arrival evidence.
+        let actuals = actuals.filter {
+            $0.span(asOf: asOf).intersection(with: window) != nil
+        }
+        let travel = travel.filter { $0.span.intersection(with: window) != nil }
+        let stays = stays.filter { $0.span.intersection(with: window) != nil }
         let contexts = stationaryContexts(actuals, in: window, asOf: asOf)
         let workBlocks = destinationAwareBlocks(
                 contexts,

@@ -29,22 +29,24 @@ public enum TaptionPlanCanonicalStorage {
     private static let minimumCompressionSize = 4 * 1_024
 
     public static func encode<Value: Encodable>(_ value: Value, compress: Bool = true) throws -> TaptionPlanEncodedPayload {
-        let encoder = PropertyListEncoder()
-        encoder.outputFormat = .binary
-        let raw = try encoder.encode(value)
-        guard raw.count <= maximumUncompressedSize else {
-            throw TaptionPlanCanonicalStorageError.invalidPayload
+        try autoreleasepool {
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            let raw = try encoder.encode(value)
+            guard raw.count <= maximumUncompressedSize else {
+                throw TaptionPlanCanonicalStorageError.invalidPayload
+            }
+            let payload: (Data, Bool)
+            if compress,
+               raw.count >= minimumCompressionSize,
+               let compressed = lzfse(raw),
+               compressed.count < raw.count {
+                payload = (compressed, true)
+            } else {
+                payload = (raw, false)
+            }
+            return .init(data: payload.0, checksum: checksum(raw), uncompressedSize: raw.count, isCompressed: payload.1)
         }
-        let payload: (Data, Bool)
-        if compress,
-           raw.count >= minimumCompressionSize,
-           let compressed = lzfse(raw),
-           compressed.count < raw.count {
-            payload = (compressed, true)
-        } else {
-            payload = (raw, false)
-        }
-        return .init(data: payload.0, checksum: checksum(raw), uncompressedSize: raw.count, isCompressed: payload.1)
     }
 
     public static func envelope(for encoded: TaptionPlanEncodedPayload) -> Data {

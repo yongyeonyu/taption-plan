@@ -1084,6 +1084,102 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(callCount, 1)
     }
 
+    @MainActor
+    func testInitialSceneDoesNotWaitForBootstrapNormalizationSave() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = date
+        stored.categories = CategoryCatalog.builtIn
+        stored.settings.locationEnabled = false
+        stored.settings.healthEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.travel = [TravelSegment(
+            mode: .walking,
+            span: TimeSpan(start: date, end: date.addingTimeInterval(600)),
+            distanceMeters: 500,
+            confidence: .high,
+            evidence: [],
+            isConfirmed: true,
+            isClassificationLocked: false
+        )]
+        let repository = GatedSavePlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        let sceneReady = expectation(description: "Local data is ready before save finishes")
+        var sceneReadyBeforeSaveRelease = false
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        let scene = Task { @MainActor in
+            await model.sceneBecameActive()
+            sceneReadyBeforeSaveRelease = true
+            sceneReady.fulfill()
+        }
+        await fulfillment(of: [sceneReady], timeout: 1)
+        let wasReady = sceneReadyBeforeSaveRelease
+        let presentationMilliseconds = Int((
+            ProcessInfo.processInfo.systemUptime - startedAt
+        ) * 1_000)
+        await repository.waitForFirstSave()
+        var normalizationFinished = false
+        let completeBootstrap = Task { @MainActor in
+            await model.bootstrap()
+            normalizationFinished = true
+        }
+        await Task.yield()
+        XCTAssertFalse(normalizationFinished)
+        await repository.releaseFirstSave()
+        await scene.value
+        await completeBootstrap.value
+        XCTAssertTrue(wasReady)
+        XCTAssertTrue(model.isBootstrapped)
+        XCTAssertTrue(normalizationFinished)
+        XCTAssertTrue(model.snapshot.travel.allSatisfy(\.isClassificationLocked))
+        let persisted = try await repository.load()
+        XCTAssertEqual(persisted.travel, model.snapshot.travel)
+        print("LOG1006A01 initial_scene_ms=\(presentationMilliseconds) ready_before_save_release=\(wasReady)")
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testBootstrapPreparationPreservesCorrectionAndSourceEvidence() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let original = ActualRecord(
+            planID: nil, title: "원래 활동", categoryID: "activity",
+            startedAt: date, endedAt: date.addingTimeInterval(600),
+            source: .location,
+            behavior: StationaryContextKind.unknownStay.rawValue,
+            evidence: ["fixture"]
+        )
+        var stored = TaptionDataSnapshot.empty
+        stored.updatedAt = date
+        stored.actuals = [original]
+        stored.settings.locationEnabled = false
+        stored.settings.healthEnabled = false
+        stored.settings.weatherEnabled = false
+        stored.settings.activityCorrections[original.id] = ActivityCorrection(
+            title: "수정된 활동", behavior: original.behavior, categoryID: "work"
+        )
+        let repository = InMemoryPlanRepository(snapshot: stored)
+        let model = AppModel(
+            repository: repository,
+            cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.bootstrap()
+        let corrected = try XCTUnwrap(model.snapshot.actuals.first)
+        XCTAssertEqual(corrected.id, original.id)
+        XCTAssertEqual(corrected.title, "수정된 활동")
+        XCTAssertEqual(corrected.categoryID, "work")
+        XCTAssertEqual(corrected.source, original.source)
+        XCTAssertEqual(corrected.evidence, original.evidence)
+        XCTAssertTrue(corrected.isClassificationLocked)
+        XCTAssertTrue(corrected.manuallyCorrected)
+        let persisted = try await repository.load()
+        XCTAssertEqual(persisted.actuals, model.snapshot.actuals)
+    }
+
     func testInitialLaunchGateWaitsForMapShellWhenAccessIsGranted() {
         let common = (
             hasCompletedInitialProRefresh: true,
@@ -1113,6 +1209,19 @@ final class FeatureEngineTests: XCTestCase {
                 grantsAccess: common.grantsAccess
             )
         )
+    }
+
+    func testInitialLaunchGateKeepsSecurityAndStoredDataRequired() {
+        for (securityReady, localDataReady) in [(false, true), (true, false)] {
+            XCTAssertFalse(AppShellInitialLaunchGate.isReady(
+                hasCompletedInitialProRefresh: true,
+                isSecurityStateReady: securityReady,
+                hasRenderedInitialDestination: true,
+                hasCompletedInitialMapShellPreparation: true,
+                isBootstrapped: localDataReady,
+                grantsAccess: true
+            ))
+        }
     }
 
     func testInitialLaunchProgressAdvancesMonotonicallyToTarget() {
@@ -1315,6 +1424,25 @@ final class FeatureEngineTests: XCTestCase {
                 calendar: utcCalendar
             )
         )
+    }
+
+    func testMapDaySnapshotSkipsFingerprintForMatchingRevision() {
+        let day = makeDate(2026, 10, 6)
+        let cached = PlanDayDataSnapshot(
+            day: day, sourceRevision: 7, sourceUpdatedAt: day,
+            sourceFingerprint: "fixture-fingerprint", actuals: [], places: [],
+            travel: [], readings: [], isComplete: true
+        )
+        var calls = 0
+        func fingerprint() -> String? {
+            calls += 1
+            return "fixture-fingerprint"
+        }
+        XCTAssertTrue(cached.matchesCurrentSource(revision: 7, fingerprint: fingerprint()))
+        XCTAssertEqual(calls, 0)
+        XCTAssertTrue(cached.matchesCurrentSource(revision: 8, fingerprint: fingerprint()))
+        XCTAssertEqual(calls, 1)
+        XCTAssertFalse(cached.matchesCurrentSource(revision: 9, fingerprint: "changed"))
     }
 
     func testMapDaySnapshotRejectsDifferentRevisionWhenFingerprintsAreUnavailable() {
@@ -16484,6 +16612,31 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testUnchangedPermissionRefreshDoesNotSaveOrPublishNewSnapshot() async throws {
+        let repository = PermissionCountingPlanRepository()
+        let model = AppModel(
+            repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false
+        )
+        await model.refreshPermissions()
+        try await Task.sleep(for: .seconds(2))
+        let writes = await repository.saveCount
+        let revision = model.snapshotRevision
+        let settings = model.snapshot.settings
+
+        async let first: Void = model.refreshPermissions()
+        async let second: Void = model.refreshPermissions()
+        _ = await (first, second)
+        await model.refreshPermissions()
+        try await Task.sleep(for: .seconds(2))
+
+        let finalWrites = await repository.saveCount
+        XCTAssertEqual(finalWrites, writes)
+        XCTAssertEqual(model.snapshotRevision, revision)
+        XCTAssertEqual(model.snapshot.settings, settings)
+    }
+
+    @MainActor
     func testCalendarSelectionSurvivesPermissionRefresh() async {
         var stored = TaptionDataSnapshot.empty
         stored.settings.selectedCalendarIDs = ["work", "personal"]
@@ -22945,6 +23098,122 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testDayPhaseProjectionExcludesLargeUnrelatedHistory() {
+        let day = dayPhaseDay()
+        let current = [
+            sleepActual(-2, 7, on: day),
+            stationaryContext(.homeRest, 0, 7, on: day),
+            stationaryContext(.work, 9, 18, on: day),
+            stationaryContext(.homeRest, 20, 24, on: day),
+        ]
+        let history = (0..<120_000).map { index in
+            let start = day.start.addingTimeInterval(-2 * 86_400 - Double(index) * 60)
+            return ActualRecord(
+                planID: nil,
+                title: "집에서 휴식",
+                categoryID: "activity",
+                startedAt: start,
+                endedAt: start.addingTimeInterval(30),
+                source: .location,
+                behavior: StationaryContextKind.homeRest.rawValue
+            )
+        }
+        let actuals = history + current
+        let expected = DayPhaseEngine.completePhases(
+            actuals: current, travel: [], stays: [], placeKinds: [:],
+            in: day, asOf: day.end
+        )
+        let expectedSleep = MapHomeSleepLocationPolicy.spans(actuals: current, in: day)
+        let phaseStarted = ProcessInfo.processInfo.systemUptime
+        let projected = DayPhaseEngine.completePhases(
+            actuals: actuals, travel: [], stays: [], placeKinds: [:],
+            in: day, asOf: day.end
+        )
+        let phaseMilliseconds = (ProcessInfo.processInfo.systemUptime - phaseStarted) * 1_000
+        let sleepStarted = ProcessInfo.processInfo.systemUptime
+        let sleep = MapHomeSleepLocationPolicy.spans(actuals: actuals, in: day)
+        let sleepMilliseconds = (ProcessInfo.processInfo.systemUptime - sleepStarted) * 1_000
+
+        XCTAssertEqual(projected, expected)
+        XCTAssertEqual(sleep, expectedSleep)
+        XCTAssertEqual(actuals.count, 120_004)
+        XCTAssertEqual(actuals.last, current.last)
+        print("CPU1006A01 fixture records=\(actuals.count) phases_ms=\(phaseMilliseconds) sleep_ms=\(sleepMilliseconds)")
+    }
+
+    func testDayPhaseWindowKeepsOvernightTitlesWorkoutAndOpenRecords() {
+        let day = dayPhaseDay()
+        let now = day.start.addingTimeInterval(14 * hour)
+        let sleep = ActualRecord(
+            planID: nil, title: "SLEEP", categoryID: "activity",
+            startedAt: day.start.addingTimeInterval(-2 * hour),
+            endedAt: day.start.addingTimeInterval(7 * hour), source: .healthKit
+        )
+        let app = ActualRecord(
+            planID: nil, title: "취침 앱", categoryID: "appUsage",
+            startedAt: day.start.addingTimeInterval(7 * hour),
+            endedAt: day.start.addingTimeInterval(8 * hour), source: .appUsage
+        )
+        let workout = ActualRecord(
+            planID: nil, title: "달리기", categoryID: "exercise",
+            startedAt: day.start.addingTimeInterval(12 * hour),
+            endedAt: day.start.addingTimeInterval(13 * hour), source: .appleWatch,
+            evidence: [AutomaticRecordTimelineEngine.watchWorkoutEvidence]
+        )
+        let open = ActualRecord(
+            planID: nil, title: "업무", categoryID: "work",
+            startedAt: day.start.addingTimeInterval(13 * hour),
+            source: .location, behavior: StationaryContextKind.work.rawValue
+        )
+        let future = sleepActual(15, 16, on: day)
+        let records = [sleep, app, workout, open, future]
+        let phases = DayPhaseEngine.completePhases(
+            actuals: records, travel: [], stays: [], placeKinds: [:],
+            in: day, asOf: now
+        )
+        XCTAssertEqual(phases.filter { $0.phase == .sleep }.map(\.span), [
+            TimeSpan(start: day.start, end: sleep.endedAt!)
+        ])
+        XCTAssertEqual(phases.filter { $0.phase == .exercise }.map(\.span), [
+            workout.span(asOf: now)
+        ])
+        XCTAssertEqual(phases.last?.phase, .work)
+        XCTAssertEqual(phases.last?.span.end, now)
+        XCTAssertEqual(phases.reduce(0) { $0 + $1.span.duration }, 14 * hour, accuracy: 0.001)
+        XCTAssertEqual(records.last, future)
+        XCTAssertNil(open.endedAt)
+    }
+
+    func testSleepLocationTimeFilterKeepsOvernightOpenAndCutoffSemantics() {
+        let day = dayPhaseDay()
+        let cutoff = day.start.addingTimeInterval(6 * hour)
+        let overnight = ActualRecord(
+            planID: nil, title: "취침", categoryID: "activity",
+            startedAt: day.start.addingTimeInterval(-2 * hour),
+            endedAt: day.start.addingTimeInterval(4 * hour), source: .healthKit
+        )
+        let open = ActualRecord(
+            planID: nil, title: "sleep", categoryID: "activity",
+            startedAt: day.start.addingTimeInterval(5 * hour), source: .appleWatch
+        )
+        let ignored = [
+            sleepActual(-3, 0, on: day), sleepActual(6, 7, on: day),
+            ActualRecord(
+                planID: nil, title: "수면 앱", categoryID: "appUsage",
+                startedAt: day.start.addingTimeInterval(4 * hour),
+                endedAt: day.start.addingTimeInterval(5 * hour), source: .appUsage
+            ),
+        ]
+        XCTAssertEqual(
+            MapHomeSleepLocationPolicy.spans(
+                actuals: ignored + [overnight, open], in: day, through: cutoff
+            ),
+            [TimeSpan(start: day.start, end: overnight.endedAt!),
+             TimeSpan(start: open.startedAt, end: cutoff)]
+        )
+        XCTAssertNil(open.endedAt)
+    }
+
     /// iPhone·Watch가 운동으로 확정한 시간은 업무·이동·수면보다 먼저
     /// 일과에 놓인다. 수동 계획이나 수동적 동작 추정은 운동으로 올리지 않는다.
     func testDayPhaseRingPrioritizesConfirmedWorkout() {
@@ -26548,6 +26817,36 @@ final class FeatureEngineTests: XCTestCase {
 
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
+    func testCurrentActionIgnoresLargeInactiveHistoryAndTracksChangedFields() {
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        var active = ActualRecord(
+            planID: nil, title: "식사", categoryID: "eating",
+            startedAt: date.addingTimeInterval(-60), endedAt: date.addingTimeInterval(60),
+            source: .manual
+        )
+        let history = (0..<120_000).map { index in
+            let start = date.addingTimeInterval(Double(index) * 60 - 365 * 24 * 60 * 60)
+            return ActualRecord(
+                planID: nil, title: "합성 과거 수면", categoryID: "sleep",
+                startedAt: start, endedAt: start.addingTimeInterval(30), source: .appleWatch
+            )
+        }
+        let full = history + [active]
+        let start = ProcessInfo.processInfo.systemUptime
+        for _ in 0..<20 {
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(
+                at: date, actuals: full, travel: [], places: [], frequentPlaces: []
+            ), .eating)
+        }
+        let milliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1_000 / 20
+        print("PER1006B01 action records=\(full.count) mean_ms=\(milliseconds)")
+        active.title = "업무"
+        active.categoryID = "work"
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(
+            at: date, actuals: history + [active], travel: [], places: [], frequentPlaces: []
+        ), .computer)
+    }
+
     func testDestinationActionsUseCompanySchoolAndRestaurantSemantics() {
         let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
         let point = GeoPoint(
@@ -28048,6 +28347,18 @@ final class MapHomeStickmanTests: XCTestCase {
 private struct RawArchiveWatchFixture: Codable, Hashable {
     var sampleCount: Int
     var mode: String
+}
+
+private actor PermissionCountingPlanRepository: PlanDataRepository {
+    private var value = TaptionDataSnapshot.empty
+    private(set) var saveCount = 0
+
+    func load() async throws -> TaptionDataSnapshot { value }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        saveCount += 1
+        value = snapshot
+    }
 }
 
 private actor RejectingSavePlanRepository: PlanDataRepository {

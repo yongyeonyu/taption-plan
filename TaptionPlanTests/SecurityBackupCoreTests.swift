@@ -158,6 +158,11 @@ final class SecurityBackupCoreTests: XCTestCase {
         let service = PlanSecurityBackupService(credentialStore: credentials, backupStore: snapshots,
             rawSensorBackupStore: raws, cloudRecoveryKeyProvider: keys)
         let merged = try await service.reconcileManifestBodies(manifest)
+        let preparation = TaptionPlanDiagnosticsLogger.shared.combinedLog()
+            .split(whereSeparator: \.isNewline)
+            .last { $0.contains("\"operation\":\"backup_manifest_prepare\"")
+                && $0.contains("\"event\":\"operation_finished\"") }
+        XCTAssertTrue(try XCTUnwrap(preparation).contains("\"worker_main_thread\":\"false\""))
         XCTAssertEqual(merged.referencedSnapshotGenerations(monthKey: month).count, 3)
         let package = try await service.loadLatestBackupPackage()
         XCTAssertEqual(Set(package.backup.snapshot.plans.map(\.title)), ["A", "B"])

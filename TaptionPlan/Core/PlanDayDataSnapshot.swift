@@ -116,10 +116,10 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
 
     func matchesCurrentSource(
         revision: UInt64,
-        fingerprint: String?
+        fingerprint: @autoclosure () -> String?
     ) -> Bool {
         if sourceRevision == revision { return true }
-        guard let sourceFingerprint, let fingerprint else { return false }
+        guard let sourceFingerprint, let fingerprint = fingerprint() else { return false }
         return sourceFingerprint == fingerprint
     }
 
