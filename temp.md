@@ -1,10 +1,10 @@
 # 남은 요청
 
-## REL1004A01 · main 반영·HealthKit 최소 수집 TestFlight [169 내부 배포 완료 / 웹 그룹 화면 확인 대기]
-- 현재: 코드1fe06ab main push, iOS Debug·Release archive/export·서명·앱/Widget1.0(169)·Watch 미포함 확인 완료. TestFlight169 VALID·INTERNAL_ONLY·IN_BETA_TESTING, 내부 그룹 목록169·테스터1명·한국어 안내는 API로 확인했다. Chrome 로그인 대기로 실제 그룹 화면은 미확인이다(test.md REL1004A01). 재업로드하지 않는다.
-- 원인: 사용자가 다음 진행을 요청했다. WHK1004A01/HKS1004A01과 집 육각형 배경은 로컬 변경이며 기존 TestFlight168에 포함되지 않았다.
-- 해결: 현 소스와 유효 검증을 대조하고 main 커밋·push 후 새 번호로 Debug/Release·서명·버전·Watch 미포함을 검증하여 기존 내부 TestFlight 그룹에 배포한다. 원본 네 제품 설정은 같은 번호를 유지하되 사용자 지시에 따라 iPhone 배포 산출물은 앱/Widget 두 개로 확인한다.
-- 검증: Core 회귀 유효성, 최종 Debug·archive/export·서명/번호, 업로드 처리·기존 내부 그룹 빌드/테스터 실제 화면, main 원격 일치·clean. 실기기 건강 권한·수신은 별도 미완료로 유지하며 Simulator 생성·IAP/공개 심사 제출은 하지 않는다. 근거 build/validation/REL1004A01/.
+## CRH1006A01 · TestFlight169 충돌 상세 확인 [원본 보고서 접근 / Xcode 개발자 계정 로그인 대기]
+- 현재: 그룹169 충돌 집계1 확인. 웹의 제출 충돌 피드백에는169 보고서가 없고 Xcode Organizer는 개발자 계정 필요 오류다. Apple Accounts 로그인 화면을 준비하여 직접 인증을 요청했다. 원본 스택을 받지 못하여 원인·수정은 미확인이다(test.md CRH1006A01).
+- 원인: 실제 내부 그룹169 행에 세션1·충돌1이 표시된다. 원인이나 건강 수신과의 연관성은 미확인이다.
+- 해결: App Store Connect의 해당 충돌/피드백 상세를 읽고 빌드/발생 시각/스택 근거가 확보되면 관련 코드만 확인한다. 원문 건강·위치·일정이나 테스터 연락처는 저장하지 않는다.
+- 검증: 실제169 충돌 진단 근거·원인/수정 필요 여부. 표시 수치만으로 기능 실패·해결을 추정하지 않는다. 동작 수정이 필요하면 관련 회귀·Debug를 실행하고 새 배포는 기존 범위와 최신 상태를 확인한다. 근거 build/validation/CRH1006A01/.
 
 ## HKS1004A01 · HealthKit 최소 수집 범위 [구현·Core117·iOS Debug 완료 / 실기기 권한 화면 확인 대기]
 - 현재: 최소8종 권한/import/observer, 목적 문구와 임상 entitlement 정리 완료. Core117통과, iOS Debug·최종 서명 entitlement 확인 완료. 실제 권한 화면·Watch 수신 및 심사는 미검증이다. 수정본은 내부 TestFlight169에 포함됐다(test.md HKS1004A01, REL1004A01).
@@ -17,12 +17,6 @@
 - 원인: 별도 Watch 앱 전송·설치 상태를 요구하는 기존 경로가 사용자 요구와 다르다.
 - 해결: iPhone HealthKit을 정본 수신 경로로 사용하고 페어링 시 건강 권한을 요청하며 앱 활성화마다 즉시 증분 조회한다. iPhone 제품에서 Watch 앱 임베딩을 해제하고 기존 원본·출처와 소스는 보존한다.
 - 검증: 연결/권한/활성화 정책 회귀, iOS Debug 빌드, Watch 제품 미포함 확인. 실제 권한 승인·Watch에서 iPhone으로 동기화된 데이터 수신은 실기기 근거로 구분한다. 시뮬레이터 재생성 없이 가능한 검증을 수행한다. 근거: build/validation/WHK1004A01/.
-
-## REL1003A01 · main 커밋·push·TestFlight 빌드업 [내부 배포 완료 / 웹 그룹 화면 확인 대기]
-- 현재: 코드027464b main push·최종 iOS/Watch Debug·Release archive/export·archive/IPA 서명과 네 번들1.0(168) 확인 완료. TestFlight168 VALID·IN_BETA_TESTING·INTERNAL_ONLY, 기존 내부 그룹 연결/목록·테스터1명·한국어 안내는 API로 확인했다. 웹 상세 페이지는 로그인 만료 상태로 사용자 직접 인증 대기이며 실제 그룹 화면만 미확인이다(`test.md` REL1003A01). 168 재업로드는 하지 않는다.
-- 원인: 토요일 표시·Watch 수신 개선·세계 건축 성장 366개 자산과 관련 기록이 아직 로컬 변경이며 현재 빌드는 167이다. 사용자가 워크트리 정리, main 커밋·push 및 TestFlight 새 빌드 배포를 요청했다.
-- 해결: 현재 원격/변경과 유효한 검증을 대조하고 기존 자료·삭제 변경을 보존하여 main에 반영한다. ASC 최신 번호 확인 후 네 제품 버전을 올리고 Debug·Release archive/export·서명/번호를 검증하여 내부 TestFlight에 업로드한다. 처리 완료·기존 내부 그룹 연결·실제 그룹 화면을 확인하고 배포 기록도 커밋·push한다.
-- 검증: 관련 기존 테스트의 현재 소스 유효성, 최종 Debug/Release 성공, 앱·Widget·Watch·Watch Widget 버전 일치, 업로드/처리/내부 그룹 빌드·테스터 노출, 실제 원격 main과 HEAD 일치·워크트리 clean. 근거는 build/validation/REL1003A01/에 새로 남기며 실기기 기능/성능 대기와 IAP/공개 제출 보류는 유지한다.
 
 ## WCH1003A01 · Apple Watch 데이터 수신 지연 개선 [기존 Watch 앱 경로 / WHK1004A01로 요구 변경]
 - 현재: 2026-10-04 사용자가 Watch 앱 없이 HealthKit 수신으로 요구를 변경했다(WHK1004A01). 기존 Watch 앱 전송의 실기기 속도는 확인되지 않았으며 현재 주 수신 경로의 완료 기준으로 사용하지 않는다. ambient 원본/저장 ACK에 제한된 즉시 전송을 추가하고 수동 건강 조회를 센서 drain과 병행한다. 관련58통과·0실패·0건너뜀, iOS·Watch Debug 성공. 수정본은 내부 TestFlight168에 포함됐다. 수정본 기기 설치와 실제 수신 시간은 미확인이다(`test.md` WCH1003A01, REL1003A01).

@@ -1,5 +1,21 @@
 # 검증 기록
 
+## CRH1006A01 · TestFlight169 충돌 상세 접근 · 2026-10-06
+- 실제 관찰: TP 내부 그룹169 행에 세션1·충돌1이 표시됐다. App Store Connect 충돌 피드백 목록은149(9월20일)와44(8월8일) 두 건만 표시하며169 제출 보고서는 보이지 않았다. 연락처·개인 코멘트는 출력/기록하지 않고 날짜·빌드·기기 메타데이터만 확인했다. 충돌 집계 수치와 제출 피드백을 동일하게 취급하지 않는다.
+- 원본 진단 시도: Apple 공식 안내에 따라 Xcode Organizer의 TaptionPlan(com.taption.plan)→Crashes를 열었다. Error Downloading Crashes List / A developer account is required for downloading crashes list. 오류로 원본 보고서를 받지 못했다. Apple Accounts 설정의 Sign In… 화면을 준비했고 직접 로그인을 요청했다. 계정 추가/인증 입력은 수행하지 않았다.
+- 제한:169 충돌 스택·발생 시각·원인·HealthKit 연관성은 미확인이다. 추측 수정이나 새 빌드·업로드·설치를 하지 않았으며 CRH1006A01을 temp에 유지한다. WHK1004A01/HKS1004A01 실기기 건강 권한·수신도 미검증이다.
+- 근거: build/validation/CRH1006A01/web-crash-feedback-summary.json, xcode-access-status.json. 공식 진단 경로: https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs 와 https://help.apple.com/xcode/mac/current/en.lproj/dev861f46ea8.html .
+
+
+## WEB1006A01 · TestFlight 실제 그룹 화면 확인 · 2026-10-06
+- 결과: 로그인된 기존 Chrome 탭에서 Taption Plan의 TP Taption Plan 내부 테스트 그룹을 직접 확인했다. 그룹 헤더는 내부 그룹·테스터1명·127개 빌드, 빌드 탭은1.0(169) 내부·테스트 중을 표시하고 링크 ID90924a58-f2b2-42dc-a15a-62ea4adde888가 배포 근거와 일치했다. 같은 화면에서168과167도 테스트 중이다.
+- 테스터: 실제 테스터 탭은 테스터(1), 설치됨1.0(169)·2026년10월4일을 표시했다. 이번 작업에서 새 설치를 실행한 결과가 아니며 건강 권한 승인/Watch 데이터 수신·기능/성능 통과로 처리하지 않는다. 테스터 연락처는 파일/문서에 기록하지 않았다.
+- API: 169 VALID·INTERNAL_ONLY·IN_BETA_TESTING, 기존 그룹 목록169·테스터1명을 최신 조회로 다시 확인했다. 기존 재업로드/새 빌드/그룹 변경은 하지 않았다.
+- 완료: WEB1006A01 및 REL1004A01의 실제 웹 그룹 조건을 충족했다. 이전 REL1003A01도 동일 그룹의168 테스트 중·테스터 노출을 확인하여 남은 웹 조건을 충족했다. 이 세 항목만 temp에서 제거하고 WHK1004A01/HKS1004A01과 다른 실제 기기 검증 대기는 유지한다. 문서만 변경하여 앱 테스트/빌드는 실행하지 않았다.
+- 관찰: 그룹169 행의 세션1·충돌1 표시는 실제 화면 값이다. 원인이나 HealthKit 연관성은 이 화면만으로 판정할 수 없어 충돌 상세를 별도로 확인한다.
+- 근거: build/validation/WEB1006A01/web-group-confirmation.json, api-summary.json, build-current.json, group-builds-current.json, testers-current.json. 시작 HEAD/원격main f6ea922 일치·clean이었다.
+
+
 ## REL1004A01 · HealthKit 최소 범위·Watch 앱 제외 TestFlight169 · 2026-10-04
 - 시작: main HEAD/origin/main/실제 원격 a4d1910 일치. 기존 집 흰색50% 육각형 배경과 WHK1004A01·HKS1004A01 변경/기록을 보존하여 새 배포를 진행한다.
 - 버전: ASC 최신168 VALID를 확인하여169 선택. project build 설정8개 및 앱·Widget·보존된 Watch·Watch Widget 원본 Info.plist4개 모두169. 현재 사용자의 Watch 앱 제외 지시에 따라 iPhone 최종 배포 산출물은 앱/Widget 두 개, Watch 디렉터리 없음으로 검증한다.
