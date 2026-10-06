@@ -586,6 +586,67 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(restored.actuals, value.actuals)
     }
 
+    func testSaveReadbackReusesVerifiedSnapshotImmediately() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        var value = TaptionDataSnapshot.empty
+        value.actuals = [ActualRecord(planID: nil, title: "합성", categoryID: "work",
+            startedAt: Date(timeIntervalSince1970: 1_790_000_000), source: .manual)]
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(value)
+        let first = try await repository.load()
+        let reused = await repository.lastLoadReusedSnapshot
+        XCTAssertTrue(reused)
+        XCTAssertEqual(first.actuals, value.actuals)
+        value.settings.healthEnabled.toggle()
+        try await repository.save(value)
+        let second = try await repository.load()
+        let reusedAfterEdit = await repository.lastLoadReusedSnapshot
+        XCTAssertTrue(reusedAfterEdit)
+        XCTAssertEqual(second.actuals, value.actuals)
+        let reopened = try await SQLitePlanRepository(databaseURL: url).load()
+        XCTAssertEqual(reopened, second)
+    }
+
+    func testSaveVerifiesSameRevisionExternalBytesBeforeSkippingEncoding() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = TaptionDataSnapshot.empty
+        value.plans = [PlanRecord(title: "Caf\u{00E9}",
+            span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)), categoryID: "work")]
+        try await repository.save(value)
+        var external = value.plans
+        external[0].title = "Cafe\u{0301}"
+        try replacePlansPayload(TaptionPlanCanonicalStorage.envelope(
+            for: TaptionPlanCanonicalStorage.encode(external)), databaseURL: url)
+        value.settings.healthEnabled.toggle()
+        try await repository.save(value)
+        let encoded = await repository.lastEncodedDomains
+        XCTAssertTrue(encoded.contains("plan.plans"))
+        let loaded = try await repository.load()
+        XCTAssertEqual(Array(loaded.plans[0].title.utf8), Array(value.plans[0].title.utf8))
+    }
+
+    func testStartupSettingsReadDoesNotDecodeOrTrustHistory() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = TaptionDataSnapshot.empty
+        value.settings.healthEnabled = true
+        try await repository.save(value)
+        try replacePlansPayload(Data([0]), databaseURL: url)
+        let startup = try await repository.loadStartupSnapshot()
+        XCTAssertEqual(startup?.settings.healthEnabled, true)
+        XCTAssertTrue(startup?.plans.isEmpty == true)
+        do {
+            _ = try await repository.load()
+            XCTFail("Settings-only read must not hide corrupt history")
+        } catch {
+            XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .invalidPayload)
+        }
+    }
+
     func testRepeatedLoadChecksCanonicalBytesEvenWhenRevisionIsUnchanged() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }
@@ -732,6 +793,19 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         }
         let repeatPeak = repeatMemory.finish()
         print("PER1006C01 fixture records=\(value.actuals.count) first_load_ms=\(loadMS) repeated_mean_ms=\(repeatMS) first_peak_mb=\(loadPeak) repeated_peak_mb=\(repeatPeak)")
+        let coldRepository = try SQLitePlanRepository(databaseURL: url)
+        let startupStart = ProcessInfo.processInfo.systemUptime
+        let startup = try await coldRepository.loadStartupSnapshot()
+        let startupMS = (ProcessInfo.processInfo.systemUptime - startupStart) * 1_000
+        XCTAssertEqual(startup?.settings.healthEnabled, value.settings.healthEnabled)
+        XCTAssertTrue(startup?.actuals.isEmpty == true)
+        let coldStart = ProcessInfo.processInfo.systemUptime
+        let coldLoaded = try await coldRepository.load()
+        let coldMS = (ProcessInfo.processInfo.systemUptime - coldStart) * 1_000
+        let coldReused = await coldRepository.lastLoadReusedSnapshot
+        XCTAssertFalse(coldReused)
+        XCTAssertEqual(coldLoaded, restored)
+        print("MAP1006G01 storage records=\(value.actuals.count) startup_settings_ms=\(startupMS) cold_history_ms=\(coldMS) startup_history_records=\(startup?.actuals.count ?? -1)")
     }
 
     func testSQLiteRepositoryRetriesFileLockWithoutHoldingItAcrossSuspension()

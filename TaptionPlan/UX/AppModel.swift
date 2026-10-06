@@ -955,7 +955,7 @@ final class AppModel {
     private(set) var snapshot: TaptionDataSnapshot = .empty {
         didSet {
             if isRevertingSnapshotAfterRepositoryFailure { return }
-            if repositoryLoadFailed {
+            if repositoryLoadFailed || isStartupSnapshotPartial {
                 isRevertingSnapshotAfterRepositoryFailure = true
                 timestampOnlySnapshotAssignment = false
                 snapshot = oldValue
@@ -1027,6 +1027,8 @@ final class AppModel {
         false
     @ObservationIgnored private var needsLocalRecordNormalization = true
     private(set) var isBootstrapped = false
+    private(set) var hasPreparedStartupSettings = false
+    @ObservationIgnored private var isStartupSnapshotPartial = false
     /// 저장소를 읽지 못한 상태에서 빈 스냅샷을 저장하면 기존 기록을
     /// 덮어쓸 수 있다. 복구 가능한 저장본을 다시 읽기 전까지 저장을 막는다.
     @ObservationIgnored private var repositoryLoadFailed = false
@@ -1231,6 +1233,7 @@ final class AppModel {
     @ObservationIgnored private let dayLoadCoordinator: PlanDayLoadCoordinator?
     @ObservationIgnored private var dayDatabaseMigrationTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
+    @ObservationIgnored private var startupSettingsTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
     @ObservationIgnored private var permissionRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var needsBootstrapPreparation = false
@@ -3777,6 +3780,41 @@ final class AppModel {
         await waitForBootstrapPreparation()
     }
 
+    func prepareLocalDataForDisplay() async {
+        await bootstrapLocalSnapshot()
+    }
+
+    private func prepareStartupSettings() async {
+        guard !isBootstrapped, !hasPreparedStartupSettings,
+              allowsRepositoryLoadAttempt() else { return }
+        if let startupSettingsTask { await startupSettingsTask.value; return }
+        let generation = dataDeletionGeneration
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { startupSettingsTask = nil }
+            do {
+                let journal = try PlanCloudRestoreJournal.applicationSupport()
+                guard try journal.pending() == nil,
+                      let source = try await repository.loadStartupSnapshot() else { return }
+                try Task.checkCancellation()
+                guard generation == dataDeletionGeneration,
+                      !isBootstrapped, allowsRepositoryLoadAttempt(),
+                      try journal.pending() == nil else { return }
+                snapshot = source
+                selectedScale = TimeScale(timelineLevel: source.settings.startScale).scheduleEquivalent
+                selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
+                isStartupSnapshotPartial = true
+                hasPreparedStartupSettings = true
+                TaptionPlanDiagnosticsLogger.shared.record("startup_settings_ready")
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record("startup_settings_deferred",
+                    fields: ["error": String(describing: type(of: error))])
+            }
+        }
+        startupSettingsTask = task
+        await task.value
+    }
+
     private func bootstrapLocalSnapshot() async {
         guard allowsRepositoryLoadAttempt() else { return }
         if let bootstrapTask {
@@ -3809,6 +3847,7 @@ final class AppModel {
                     userFacingError = nil
                 }
                 // Publish local data before normalization, sensors or cloud work.
+                isStartupSnapshotPartial = false
                 snapshot = source
                 selectedScale = TimeScale(
                     timelineLevel: source.settings.startScale
@@ -3816,6 +3855,10 @@ final class AppModel {
                 selectedCatCoat = CatCoat(catStyle: source.settings.catStyle)
                 needsBootstrapPreparation = true
                 isBootstrapped = true
+                if hasPreparedStartupSettings && isSceneActive {
+                    updateForegroundLiveLocationTracking()
+                    scheduleWatchHealthRefresh()
+                }
                 logger.record(
                     "bootstrap_local_snapshot_loaded",
                     fields: [
@@ -3831,6 +3874,8 @@ final class AppModel {
                 return
             } catch {
                 guard allowsRepositoryLoadAttempt() else { return }
+                isStartupSnapshotPartial = false
+                hasPreparedStartupSettings = false
                 if !isRecoveringFromLoadFailure {
                     var fallback = TaptionDataSnapshot.empty
                     fallback.categories = CategoryCatalog.builtIn
@@ -4001,7 +4046,12 @@ final class AppModel {
                 TaptionExternalPrivacyStore.setLocked(true)
             }
         }
-        await bootstrapLocalSnapshot()
+        await prepareStartupSettings()
+        if hasPreparedStartupSettings && !isBootstrapped {
+            Task { @MainActor [weak self] in await self?.bootstrapLocalSnapshot() }
+        } else {
+            await bootstrapLocalSnapshot()
+        }
         updateForegroundLiveLocationTracking()
         if isAppLocked {
             await concealExternalSurfaces()
@@ -6159,7 +6209,7 @@ final class AppModel {
     }
 
     func deleteAllUserData() async {
-        guard acceptsDataMutation() else { return }
+        guard acceptsDataMutation() || (isStartupSnapshotPartial && allowsRepositoryLoadAttempt()) else { return }
         isDeletingUserData = true
         let deletionCutoff = Date.now
         dataDeletionGeneration = TaptionDataDeletionFence.advance(
@@ -6175,6 +6225,7 @@ final class AppModel {
         foregroundPreparationGeneration &+= 1
         let pendingTasks = [
             bootstrapTask,
+            startupSettingsTask,
             bootstrapPreparationTask,
             permissionRefreshTask,
             foregroundPreparationTask,
@@ -6197,6 +6248,9 @@ final class AppModel {
         let pendingSensorTimeline = sensorTimelineTask
         pendingSensorTimeline?.cancel()
         bootstrapTask = nil
+        startupSettingsTask = nil
+        hasPreparedStartupSettings = false
+        isStartupSnapshotPartial = false
         bootstrapPreparationTask = nil
         permissionRefreshTask = nil
         needsBootstrapPreparation = false
@@ -6223,6 +6277,7 @@ final class AppModel {
         dayDatabaseMigrationTask = nil
         _ = airPodsActivityService.stop(at: deletionCutoff)
         await sensorService?.prepareForDataDeletion()
+        await dayLoadCoordinator?.invalidateAll()
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
         for task in pendingTasks { await task.value }
@@ -6283,7 +6338,6 @@ final class AppModel {
         lastWatchHealthSnapshotRawRetryAt = nil
         lastWatchHealthSnapshotRawRetryFingerprint = nil
         lastWatchHealthSnapshotRawRetryAttemptAt = nil
-        await dayLoadCoordinator?.invalidateAll()
         var deletionFailures: [String] = []
         func recordDeletionFailure(_ label: String, _ error: Error) {
             deletionFailures.append(label)
@@ -10758,22 +10812,26 @@ final class AppModel {
             }
         }
 
-        let orderedSummaries = summaries.values.sorted {
-            if $0.startedAt != $1.startedAt {
-                return $0.startedAt < $1.startedAt
-            }
-            return $0.sequence < $1.sequence
+        let sourceSummaries = Array(summaries.values)
+        let sourceChunks = Array(chunks.values)
+        let worker = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            let orderedSummaries = try RouteTimelineCancellableSort.sorted(sourceSummaries,
+                by: { $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.sequence < $1.sequence },
+                cancellationCheck: { try Task.checkCancellation() })
+            let orderedChunks = try RouteTimelineCancellableSort.sorted(sourceChunks,
+                by: { $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.sequence < $1.sequence },
+                cancellationCheck: { try Task.checkCancellation() })
+            let replayed = WatchActivityRawReplayEngine.replaying(summaries: orderedSummaries, chunks: orderedChunks)
+            try Task.checkCancellation()
+            return WatchSensorTimelineData(summaries: replayed, accelerationChunks: orderedChunks)
         }
-        let orderedChunks = chunks.values.sorted {
-            if $0.startedAt != $1.startedAt {
-                return $0.startedAt < $1.startedAt
-            }
-            return $0.sequence < $1.sequence
+        guard let prepared = try? await withTaskCancellationHandler(operation: { try await worker.value },
+            onCancel: { worker.cancel() }) else {
+            return WatchSensorTimelineData(summaries: [], accelerationChunks: [])
         }
-        let replayed = WatchActivityRawReplayEngine.replaying(
-            summaries: orderedSummaries,
-            chunks: orderedChunks
-        )
+        let replayed = prepared.summaries
+        let orderedChunks = prepared.accelerationChunks
         let replayedCount = replayed.filter {
             $0.behaviorModelVersion
                 == WatchActivityRawReplayEngine.modelVersion
@@ -10818,11 +10876,14 @@ final class AppModel {
                 archived = result.readings
                 isComplete = result.isComplete
             } catch {
+                let cancellationReason = Task.isCancelled ? "caller_task_cancelled"
+                    : !hasCurrentDataGeneration ? "data_generation_changed" : "archive_read_failed"
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "route_readings_load_failed",
                     level: .error,
                     fields: [
                         "error": String(describing: type(of: error)),
+                        "reason": cancellationReason,
                         "start": String(span.start.timeIntervalSince1970),
                         "end": String(span.end.timeIntervalSince1970),
                     ]
@@ -10835,17 +10896,17 @@ final class AppModel {
             isComplete = false
         }
         let watchData = await watchDataTask
-        return SensorReadingsLoadResult(
-            readings: (archived + photoBackfillReadings(
-                in: span,
-                existingReadings: archived
-            ))
-                .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
-                .sorted { $0.timestamp < $1.timestamp },
-            isComplete: isComplete,
-            watchSummaries: watchData.summaries,
-            watchAccelerationChunks: watchData.accelerationChunks
-        )
+        let photoReadings = photoBackfillReadings(in: span, existingReadings: archived)
+        let worker = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            let readings = try RouteTimelineCancellableSort.sorted(
+                (archived + photoReadings).filter { RouteTimelineTimestamp.isValid($0.timestamp) },
+                by: { $0.timestamp < $1.timestamp }, cancellationCheck: { try Task.checkCancellation() })
+            return SensorReadingsLoadResult(readings: readings, isComplete: isComplete,
+                watchSummaries: watchData.summaries, watchAccelerationChunks: watchData.accelerationChunks)
+        }
+        return (try? await withTaskCancellationHandler(operation: { try await worker.value },
+            onCancel: { worker.cancel() })) ?? SensorReadingsLoadResult(readings: [], isComplete: false)
     }
 
     /// Loads the WBS-style day snapshot: one source snapshot plus one bounded
@@ -10940,6 +11001,39 @@ final class AppModel {
             worker.cancel()
             return nil
         }
+    }
+
+    func planDaySourceSnapshot(for date: Date, reusing previous: PlanDayDataSnapshot?) async -> PlanDayDataSnapshot? {
+        guard acceptsDataMutation() else { return nil }
+        let generation = dataDeletionGeneration
+        let source = snapshot
+        let revision = dayProjectionRevision
+        let worker = Task.detached(priority: .utility) {
+            if let previous, Calendar.autoupdatingCurrent.isDate(previous.day, inSameDayAs: date) {
+                return try PlanDayDataSnapshot.rebase(from: previous, date: date,
+                    sourceRevision: revision, source: source,
+                    cancellationCheck: { try Task.checkCancellation() })
+            }
+            return try PlanDayDataSnapshot.make(date: date, sourceRevision: revision,
+                source: source, sensorResult: SensorReadingsLoadResult(readings: [], isComplete: false),
+                cancellationCheck: { try Task.checkCancellation() })
+        }
+        let value = try? await withTaskCancellationHandler(operation: { try await worker.value },
+            onCancel: { worker.cancel() })
+        guard !Task.isCancelled, generation == dataDeletionGeneration,
+              revision == dayProjectionRevision, acceptsDataMutation() else { return nil }
+        return value
+    }
+
+    func startupDayDataPreview(for date: Date) async -> PlanDayDataSnapshot? {
+        guard hasPreparedStartupSettings, !isBootstrapped, !isAppLocked,
+              allowsRepositoryLoadAttempt(), let dayLoadCoordinator else { return nil }
+        let generation = dataDeletionGeneration
+        let value = await dayLoadCoordinator.cachedSnapshot(day: date, source: snapshot,
+            sourceRevision: dayProjectionRevision)
+        guard generation == dataDeletionGeneration, !isAppLocked,
+              allowsRepositoryLoadAttempt() else { return nil }
+        return value
     }
 
     func cachedPlanDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot? {
@@ -13616,7 +13710,7 @@ final class AppModel {
     }
 
     private func acceptsDataMutation(capturedAt: Date? = nil) -> Bool {
-        !repositoryLoadFailed
+        !repositoryLoadFailed && !isStartupSnapshotPartial
             && allowsRepositoryLoadAttempt()
             && TaptionDataDeletionFence.allows(
                 generation: dataDeletionGeneration,

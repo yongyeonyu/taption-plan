@@ -1543,6 +1543,11 @@ final class PlanDayLoadCoordinator {
     }
 
     private var inFlight: [CacheKey: InFlightRequest] = [:]
+    private struct RawRequest {
+        let id: UUID
+        let task: Task<SensorReadingsLoadResult, Never>
+    }
+    private var rawRequests: [TaptionPlanDayKey: RawRequest] = [:]
     private var prefetchTask: Task<Void, Never>?
     private var forceReloadDays: Set<TaptionPlanDayKey> = []
     private var dayInvalidationGenerations: [TaptionPlanDayKey: UInt64] = [:]
@@ -1564,6 +1569,7 @@ final class PlanDayLoadCoordinator {
         for request in inFlight.values {
             request.task.cancel()
         }
+        for request in rawRequests.values { request.task.cancel() }
     }
 
     /// Returns a complete last-known day for immediate display. This path is
@@ -1858,9 +1864,14 @@ final class PlanDayLoadCoordinator {
                 )
             }
             let sensorStartedAt = ProcessInfo.processInfo.systemUptime
-            let sensorResult = await sensorLoader(dayStart)
+            let sensorResult = await sharedSensorResult(day: dayStart, key: dayKey, loader: sensorLoader)
             durations["sensor_ms"] = ProcessInfo.processInfo.systemUptime
                 - sensorStartedAt
+            guard !Task.isCancelled else {
+                return finish(PlanDayDataSnapshot.incomplete(date: dayStart,
+                    sourceRevision: sourceRevision, source: source), source: "source_projection_cancelled",
+                    durations: durations)
+            }
             let projectionStartedAt = ProcessInfo.processInfo.systemUptime
             let projected = await Self.makeSnapshot(
                 date: dayStart,
@@ -1991,6 +2002,8 @@ final class PlanDayLoadCoordinator {
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)
+        rawRequests.removeValue(forKey: dayKey)?.task.cancel()
+        TaptionPlanDiagnosticsLogger.shared.record("day_load_invalidated", fields: ["reason": "raw_data_changed"])
         dayInvalidationGenerations[dayKey, default: 0] &+= 1
         forceReloadDays.insert(dayKey)
         let keys = Set(cache.keys.filter { $0.day == dayKey })
@@ -2015,11 +2028,16 @@ final class PlanDayLoadCoordinator {
     func handleMemoryPressure() {
         cache.removeAll()
         lastKnownCache.removeAll()
+        rawRequests.values.forEach { $0.task.cancel() }
+        rawRequests.removeAll()
     }
 
     func invalidateAll() async {
         let prefetch = prefetchTask
         let requests = inFlight.values.map(\.task)
+        let raw = rawRequests.values.map(\.task)
+        rawRequests.removeAll()
+        raw.forEach { $0.cancel() }
         for day in Set(cache.keys.map(\.day) + inFlight.keys.map(\.day)) {
             dayInvalidationGenerations[day, default: 0] &+= 1
         }
@@ -2032,6 +2050,7 @@ final class PlanDayLoadCoordinator {
         lastKnownCache.removeAll()
         await prefetch?.value
         for request in requests { _ = await request.value }
+        for request in raw { _ = await request.value }
     }
 
     var cachedDayCount: Int { cache.count }
@@ -2039,9 +2058,25 @@ final class PlanDayLoadCoordinator {
     private func cancelRequests(except key: CacheKey) {
         let requests = inFlight.filter { $0.key.day == key.day && $0.key != key }
         for (otherKey, request) in requests {
+            TaptionPlanDiagnosticsLogger.shared.record("day_projection_cancelled",
+                fields: ["reason": "source_revision_changed", "raw_read_kept": "true"])
             request.task.cancel()
             inFlight.removeValue(forKey: otherKey)
         }
+    }
+
+    private func sharedSensorResult(day: Date, key: TaptionPlanDayKey,
+                                    loader: @escaping (Date) async -> SensorReadingsLoadResult) async -> SensorReadingsLoadResult {
+        if let existing = rawRequests[key] { return await existing.task.value }
+        let id = UUID()
+        let task = Task { @MainActor in
+            let result = await loader(day)
+            return Task.isCancelled ? SensorReadingsLoadResult(readings: [], isComplete: false) : result
+        }
+        rawRequests[key] = RawRequest(id: id, task: task)
+        let value = await task.value
+        if rawRequests[key]?.id == id { rawRequests.removeValue(forKey: key) }
+        return value
     }
 
     private func insert(_ value: PlanDayDataSnapshot, for key: CacheKey) {

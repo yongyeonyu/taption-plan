@@ -28,7 +28,7 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 - `PlanRepository`와 `HealthKitImportStore`는 기존 날짜 없는 snapshot 키 `0000-00-00`을 읽기 위해 `allowsUndatedSnapshots`를 켭니다. 일반 날짜, event, map 검증은 이 예외를 물려받지 않아야 합니다.
 - `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. `SecurityBackupCore` 백업 포맷의 legacy read 경로는 별도 계약이므로 포맷 작업 때 구분해 확인하세요.
-- `SQLitePlanRepository`는 마지막으로 확정한 snapshot 하나와 영역별 revision만 재사용합니다. 저장 시 DB revision이 같고 이전과 같은 원본 배열을 공유할 때만 변환을 생략합니다. 변경 가능한 새 배열과 settings는 현재 정본 codec으로 변환하여 바이트를 비교하며, Unicode 표현이 다른 원문을 값 동등성으로 생략하지 않습니다. metadata revision은 매 저장 증가합니다. 메모리 압력·삭제·로드 실패 때 캐시를 비우고, 오래된 비동기 결과로 다시 채우지 않습니다. 경로·스키마·payload 포맷은 유지합니다.
+- `SQLitePlanRepository`는 마지막으로 확정한 snapshot 하나와 영역별 revision·행 검증 정보를 재사용합니다. 저장 시 DB generation·revision·원문 바이트 검증 정보가 같고 이전과 같은 원본 배열을 공유할 때만 변환을 생략합니다. 변경 가능한 새 배열과 settings는 현재 정본 codec으로 변환하여 바이트를 비교하며, Unicode 표현이 다른 원문을 값 동등성으로 생략하지 않습니다. metadata revision은 매 저장 증가합니다. 저장 직후 확정한 DB 행이 예상 바이트와 일치할 때만 다음 조회용 캐시를 연결합니다. 메모리 압력·삭제·로드 실패 때 캐시를 비우고, 오래된 비동기 결과로 다시 채우지 않습니다. 경로·스키마·payload 포맷은 유지합니다.
 - 백업 포맷·암호화·체크섬·세대 참조를 바꾸기 전에는 현재 구현과 요청 기록을 확인합니다. 읽기 호환·복원·rollback 기준 없이 기존 백업을 제거하거나 변환하지 않습니다.
 
 - 앱의 복원 메뉴는 `loadLatestBackupPackage(streamRaw: true)`로 V4 raw 암호문을 파일 페이지로 읽고 `PlanStagedRawRestore`의 SQLite cursor를 최대 256행/기본 1MiB씩 소비합니다. 단일 항목은 하드 4MiB 제한입니다. 기존 `.available(payload)`는 호환·진단 경로이며 전체 배열을 반환합니다.
@@ -39,7 +39,7 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 전체 snapshot을 반복 조회할 때는 DB의 모든 행을 읽고 세대·영역명 원문 바이트·revision·시각·payload SHA-256을 확인한 뒤 마지막 조회 값 하나만 재사용합니다. revision이 같아도 실제 저장 바이트가 바뀌면 현재 decoder로 다시 읽습니다. 메모리 압력·삭제·로드 실패는 저장과 조회의 공통 캐시를 비웁니다. 최초 조회의 codec과 저장 형식은 유지하며 `repository_local_load`의 읽기·검증·decode 시간과 재사용 여부로 구간을 구분합니다.
 
-시작 화면은 복원 journal과 잠금 상태를 확인한 로컬 snapshot 및 지도 shell이 준비되면 열린다. `sceneBecameActive()`는 로컬 로드까지만 기다리고, 데이터 변경에 쓰는 `bootstrap()`은 기록 정리·저장 완료를 계속 기다린다. 정리 worker는 현재 revision과 일치하는 결과만 반영하며 그 결과를 메인 actor에서 다시 정리하지 않는다. 첫 날짜 조회와 권한·Live Activity 처리는 화면 진입 뒤 이어진다. `initial_launch_ready`, `bootstrap_local_snapshot` / `bootstrap_preparation`의 operation 시간으로 화면 진입과 정리 시간을 구분한다.
+시작 화면은 복원 journal·잠금·접근 상태를 확인하고 설정 및 지도 shell이 준비되면 열린다. SQLite의 `loadStartupSnapshot()`은 metadata·settings·categories만 읽으며 전체 이력의 성공을 보증하거나 조회 캐시에 빈 이력을 넣지 않는다. pending 복원 journal·legacy 저장소·설정 읽기 실패 때는 기존 전체 로드 절차를 따른다. 전체 로드 전 일자 DB preview는 읽기 전용이며 편집·저장을 차단한다. 전체 로드 실패 때도 기존 원본 덮어쓰기 차단을 유지한다. `prepareLocalDataForDisplay()`는 전체 로컬 원본까지만 기다리고, 데이터 변경에 쓰는 `bootstrap()`은 기록 정리·저장 완료까지 기다린다. 정리 worker는 현재 revision과 일치하는 결과만 반영하며 그 결과를 메인 actor에서 다시 정리하지 않는다. `startup_settings_ready`, `initial_launch_ready`, `bootstrap_local_snapshot` / `bootstrap_preparation`으로 설정·화면 진입·전체 로드·정리 시간을 구분한다.
 
 권한 새로고침의 동시 요청은 한 작업을 기다립니다. 조회가 끝난 뒤 최신 settings에 실제 변경만 반영하고, 동일 상태의 권한·센서 상태를 다시 공개하거나 저장하지 않습니다. 지도 일자 revision이 같으면 fingerprint를 만들지 않으며, 현재 활동 캐시는 해당 시각의 기록·이동·체류·근접 이동 센서·Watch 수면 근거만 hash합니다. 활성 원본의 모든 필드는 비교에 포함합니다.
 
@@ -49,7 +49,8 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 - `TaptionBoundedCache`는 actor 또는 MainActor 소유자가 동기 접근합니다. 조회는 O(1), 용량 초과 삽입 때만 제한된 항목을 검사합니다. `peek`은 recency를 바꾸지 않으며 메모리 압력 시 소유자가 비웁니다.
 - `AppModel`의 일자 fingerprint 캐시는 actuals/places/travel 변경 revision에 연결합니다. 캡처한 revision이 현재와 다르면 비동기 결과를 캐시에 넣지 않습니다. `PlanDayLoadCoordinator`에 공급하는 fingerprint는 동일하게 캡처한 source의 값이어야 합니다.
-- 일자 DB는 원본 digest를 검증한 materialized 값을 한 번 읽고, source가 다르면 그 값의 raw로 다시 projection합니다. stale preview는 별도 읽기 계약을 유지합니다. 삭제 generation·취소·강제 raw 갱신을 우회하지 않습니다.
+- 지도는 날짜·source revision이 바뀔 때 utility worker에서 불변 일자 입력을 준비합니다. 준비 중 전체 과거 이력으로 돌아가지 않으며 UI의 유효성 확인은 revision·날짜·projection version만 비교합니다. 카메라 좌표 콜백에는 준비된 활동·재생 정보를 전달합니다.
+- 일자 DB는 원본 digest를 검증한 materialized 값을 한 번 읽고, source가 다르면 그 값의 raw로 다시 projection합니다. stale preview는 별도 읽기 계약을 유지합니다. 같은 날 source가 바뀌어 projection을 취소할 때 진행 중인 센서 원본 읽기는 공유합니다. raw 변경·삭제·전체 무효화·메모리 압력에는 원본 읽기도 취소합니다. 삭제 generation·취소·강제 raw 갱신을 우회하지 않습니다. Watch 원본 replay와 센서 결합·정렬은 utility worker에서 처리하고, 취소 로그는 원문 없이 호출 취소·generation 변경·archive 읽기 실패를 구분합니다.
 - `DayPhaseEngine`은 하루 앞뒤35분의 근거 범위로 기록·이동·체류를 먼저 거른 뒤 제목 판정·장소 그룹을 계산합니다. 자정을 넘는 기록과 출퇴근 경계를 보존하고 원본을 수정하지 않습니다. 수면 위치도 날짜/cutoff 교집합을 확인한 뒤 기존 제목 판정을 적용합니다. 전체 과거 기록에 대한 반복 제목 검색을 화면 계산에 넣지 않습니다.
 - `TaptionLatestValueProjection`과 `TaptionInputFrameGate`가 공통 입력 정책입니다. 동일 상태로 갱신 예산을 소비하지 않고, 종료 이벤트는 최종값을 즉시 반영합니다. UIKit/MapKit 제스처와 표시 좌표는 앱에 남깁니다.
 - Release에서 패키지 경계를 넘는 제네릭 캐시가 특수화되도록 작은 조회 함수는 `@inlinable`입니다. Debug 측정만으로 성능 개선을 판단하지 않습니다. 공통 UUID 비교는 기존 대문자 UUID 문자열 순서와 같아 fingerprint 호환성을 유지합니다.

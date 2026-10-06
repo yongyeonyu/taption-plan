@@ -13,9 +13,14 @@ import TaptionPlanCore
 
 protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot?
     func save(_ snapshot: TaptionDataSnapshot) async throws
     func deleteAll() async throws
     func handleMemoryPressure() async
+}
+
+extension PlanDataRepository {
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot? { nil }
 }
 
 enum TaptionRepositoryBackgroundExecution {
@@ -259,6 +264,11 @@ actor MigratingPlanRepository: PlanDataRepository {
     ) {
         self.primary = primary
         self.legacy = legacy
+    }
+
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot? {
+        guard !TaptionDataDeletionFence.repositoryDeletionIsPending() else { return nil }
+        return try await primary.loadStartupSnapshot()
     }
 
     func load() async throws -> TaptionDataSnapshot {
@@ -919,6 +929,7 @@ actor SQLitePlanRepository: PlanDataRepository {
         let nextRevision: UInt64
         let revisions: [String: UInt64]
         let encodedDomains: [String]
+        let loadStamps: [LoadedRowStamp]?
     }
 
     private struct CommittedSnapshot: Sendable {
@@ -1070,6 +1081,27 @@ actor SQLitePlanRepository: PlanDataRepository {
         return value
     }
 
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot? {
+        let generationURL = self.generationURL
+        let deletionPendingURL = self.deletionPendingURL
+        let loaded = try await withStoreLockRetry { store in
+            guard !FileManager.default.fileExists(atPath: deletionPendingURL.path),
+                  !TaptionDataDeletionFence.repositoryDeletionIsPending() else {
+                return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: [])
+            }
+            let rows = try [Self.metadataDomain, "plan.settings", "plan.categories"].compactMap {
+                try store.snapshot(domain: $0, day: Self.day)
+            }
+            return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: rows)
+        }
+        try Task.checkCancellation()
+        guard loaded.rows.contains(where: { $0.domain == Self.metadataDomain }) else { return nil }
+        let value = try snapshot(from: loaded.rows)
+        guard value.updatedAt != .distantPast else { return nil }
+        observedGeneration = max(observedGeneration ?? 0, loaded.generation)
+        return value
+    }
+
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         var value = snapshot
         value.updatedAt = .now
@@ -1094,7 +1126,9 @@ actor SQLitePlanRepository: PlanDataRepository {
                   ) else {
                 throw RepositoryError.staleGeneration
             }
-            let storedRevisions = try store.snapshotRevisions(day: Self.day)
+            let storedRows = try store.snapshots(day: Self.day)
+            let storedRevisions = storedRows.map { (domain: $0.domain, revision: $0.revision) }
+            var expectedRows = Dictionary(uniqueKeysWithValues: storedRows.map { ($0.domain, $0) })
             var revisions = storedRevisions.reduce(into: [String: UInt64]()) { values, row in
                 values[row.domain] = max(values[row.domain] ?? 0, row.revision)
             }
@@ -1115,7 +1149,9 @@ actor SQLitePlanRepository: PlanDataRepository {
                 try Task.checkCancellation()
                 if !force, cached?.generation == generation,
                    let cachedRevision = cached?.revisions[domain],
-                   cachedRevision == revisions[domain], unchanged {
+                   cachedRevision == revisions[domain], unchanged,
+                   let row = expectedRows[domain],
+                   cached?.loadStamps?.contains(LoadedRowStamp(row)) == true {
                     return
                 }
                 encodedDomains.append(domain)
@@ -1162,15 +1198,24 @@ actor SQLitePlanRepository: PlanDataRepository {
                 throw RepositoryError.staleGeneration
             }
             try store.saveSnapshots(writes)
+            for row in writes { expectedRows[row.domain] = row }
+            let committedRows = try store.snapshots(day: Self.day)
+            let matches = committedRows.count == expectedRows.count && committedRows.allSatisfy {
+                guard let expected = expectedRows[$0.domain] else { return false }
+                return $0.revision == expected.revision && $0.payload == expected.payload
+            }
             return SavedRows(
                 generation: generation, nextRevision: revision,
-                revisions: revisions, encodedDomains: encodedDomains
+                revisions: revisions, encodedDomains: encodedDomains,
+                loadStamps: matches ? committedRows.map(LoadedRowStamp.init) : nil
             )
         }
         if saved.generation >= (observedGeneration ?? 0), saved.nextRevision >= nextRevision {
             lastEncodedDomains = saved.encodedDomains
         }
-        remember(value, generation: saved.generation, revisions: saved.revisions, epoch: epoch)
+        try Task.checkCancellation()
+        remember(value, generation: saved.generation, revisions: saved.revisions,
+                 epoch: epoch, loadStamps: saved.loadStamps)
     }
 
     private static func sharesStorage<Value>(_ value: [Value], previous: [Value]?) -> Bool {

@@ -5358,6 +5358,99 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testChangedSourceProjectionKeepsInFlightSensorRead() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-source-shared-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        var loads = 0
+        var rawCancelled = false
+        let loader: (Date) async -> SensorReadingsLoadResult = { _ in
+            loads += 1
+            await gate.pauseOnce()
+            rawCancelled = Task.isCancelled
+            return SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true)
+        }
+        let first = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sourceFingerprint: "first-source", sensorLoader: loader, forceReload: true)
+        }
+        await gate.waitUntilPaused()
+        let second = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 2,
+                sourceFingerprint: "changed-source", sensorLoader: loader, forceReload: true)
+        }
+        for _ in 0..<20 { await Task.yield() }
+        await gate.resume()
+        let old = await first.value
+        let updated = await second.value
+        XCTAssertFalse(old.isComplete)
+        XCTAssertTrue(updated.isComplete)
+        XCTAssertEqual(updated.sourceRevision, 2)
+        XCTAssertEqual(updated.readings.count, 1)
+        XCTAssertEqual(loads, 1)
+        XCTAssertFalse(rawCancelled)
+    }
+
+    @MainActor
+    func testPlanDayInvalidateAllCancelsSharedRawReadBeforeReturning() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-raw-invalidate-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        var rawCancelled = false
+        let request = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: { _ in
+                    await withTaskCancellationHandler(operation: { await gate.pauseOnce() },
+                        onCancel: { Task { await gate.resume() } })
+                    rawCancelled = Task.isCancelled
+                    return SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true)
+                }, forceReload: true)
+        }
+        await gate.waitUntilPaused()
+        await coordinator.invalidateAll()
+        let result = await request.value
+        XCTAssertTrue(rawCancelled)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertTrue(result.readings.isEmpty)
+        XCTAssertEqual(coordinator.cachedDayCount, 0)
+    }
+
+    @MainActor
+    func testPlanDayMemoryPressureCancelsRawReadWithoutCachingResult() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-raw-pressure-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        var cancelled = false
+        let request = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: { _ in
+                    await gate.pauseOnce()
+                    cancelled = Task.isCancelled
+                    return SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true)
+                }, forceReload: true)
+        }
+        await gate.waitUntilPaused()
+        coordinator.handleMemoryPressure()
+        await gate.resume()
+        let result = await request.value
+        XCTAssertTrue(cancelled)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertTrue(result.readings.isEmpty)
+        XCTAssertEqual(coordinator.cachedDayCount, 0)
+        let fresh = await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+            sensorLoader: { _ in SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true) },
+            forceReload: true)
+        XCTAssertTrue(fresh.isComplete)
+        XCTAssertEqual(fresh.readings.count, 1)
+    }
+
+    @MainActor
     func testConcurrentForcedDayLoadsShareSensorRead() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-forced-shared-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }

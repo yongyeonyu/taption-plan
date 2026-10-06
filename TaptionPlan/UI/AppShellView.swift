@@ -129,6 +129,10 @@ struct AppShellView: View {
             advanceInitialLaunchProgress(to: 0.86)
             dismissInitialLaunchOverlayIfReady()
         }
+        .onChange(of: model.hasPreparedStartupSettings) { _, _ in
+            advanceInitialLaunchProgress(to: 0.86)
+            dismissInitialLaunchOverlayIfReady()
+        }
         .onChange(of: isSecurityStateReady) { _, _ in
             dismissInitialLaunchOverlayIfReady()
         }
@@ -262,7 +266,7 @@ struct AppShellView: View {
             hasRenderedInitialDestination: hasRenderedInitialDestination,
             hasCompletedInitialMapShellPreparation:
                 hasCompletedInitialMapShellPreparation,
-            isBootstrapped: model.isBootstrapped,
+            isBootstrapped: model.isBootstrapped || model.hasPreparedStartupSettings,
             grantsAccess: proAccess.grantsAccess
         )
     }

@@ -1085,6 +1085,123 @@ final class FeatureEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testInitialSceneDoesNotWaitForFullHistoryAndRejectsPartialWrites() async throws {
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        var source = TaptionDataSnapshot.empty
+        source.updatedAt = date
+        source.settings.locationEnabled = false
+        source.settings.healthEnabled = false
+        source.settings.weatherEnabled = false
+        source.actuals = [ActualRecord(planID: nil, title: "합성 활동", categoryID: "eating",
+            startedAt: date, endedAt: date.addingTimeInterval(60), source: .motion,
+            isClassificationLocked: true)]
+        let repository = GatedStartupPlanRepository(snapshot: source)
+        let model = AppModel(repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false)
+        let start = ProcessInfo.processInfo.systemUptime
+        await model.sceneBecameActive()
+        XCTAssertTrue(model.hasPreparedStartupSettings)
+        XCTAssertFalse(model.isBootstrapped)
+        XCTAssertTrue(model.snapshot.actuals.isEmpty)
+        let plan = model.addPlan(title: "준비 중 편집", categoryID: "work", startAt: date, duration: 60)
+        XCTAssertNil(plan)
+        let savesBeforeHydration = await repository.saves
+        XCTAssertEqual(savesBeforeHydration, 0)
+        print("MAP1006G01 startup_settings_ms=\((ProcessInfo.processInfo.systemUptime - start) * 1000) history_pending=true")
+        await repository.releaseHistory()
+        await model.prepareLocalDataForDisplay()
+        XCTAssertTrue(model.isBootstrapped)
+        XCTAssertEqual(model.snapshot.actuals, source.actuals)
+        await model.bootstrap()
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testLateStartupSettingsCannotReplaceLoadedHistory() async throws {
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        var source = TaptionDataSnapshot.empty
+        source.updatedAt = date
+        source.settings.locationEnabled = false
+        source.settings.healthEnabled = false
+        source.settings.weatherEnabled = false
+        source.actuals = [ActualRecord(planID: nil, title: "합성 원본", categoryID: "eating",
+            startedAt: date, endedAt: date.addingTimeInterval(60), source: .manual,
+            isClassificationLocked: true)]
+        let repository = GatedStartupPlanRepository(snapshot: source, holdsStartup: true)
+        await repository.releaseHistory()
+        let model = AppModel(repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false)
+        let activation = Task { @MainActor in await model.sceneBecameActive() }
+        await repository.waitUntilStartupStarted()
+        await model.prepareLocalDataForDisplay()
+        XCTAssertTrue(model.isBootstrapped)
+        await repository.releaseStartup()
+        await activation.value
+        XCTAssertFalse(model.hasPreparedStartupSettings)
+        XCTAssertEqual(model.snapshot.actuals, source.actuals)
+        await model.bootstrap()
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testStartupSettingsDoNotAllowWritesAfterHistoryLoadFails() async throws {
+        var source = TaptionDataSnapshot.empty
+        source.updatedAt = Date(timeIntervalSince1970: 1_791_250_000)
+        source.settings.locationEnabled = false
+        source.settings.healthEnabled = false
+        source.settings.weatherEnabled = false
+        let repository = GatedStartupPlanRepository(snapshot: source, failsHistory: true)
+        let model = AppModel(repository: repository, cloudSyncService: nil,
+            registersHealthBackgroundHandler: false)
+        await model.sceneBecameActive()
+        XCTAssertTrue(model.hasPreparedStartupSettings)
+        await repository.releaseHistory()
+        await model.prepareLocalDataForDisplay()
+        XCTAssertTrue(model.isBootstrapped)
+        XCTAssertFalse(model.hasPreparedStartupSettings)
+        XCTAssertNotNil(model.userFacingError)
+        XCTAssertNil(model.addPlan(title: "실패 뒤 편집", categoryID: "work",
+            startAt: source.updatedAt, duration: 60))
+        let saves = await repository.saves
+        XCTAssertEqual(saves, 0)
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
+    func testDaySourcePreparationKeepsOnlyCurrentDayBeforeSensorRead() async throws {
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        var source = TaptionDataSnapshot.empty
+        source.settings.locationEnabled = false
+        source.settings.healthEnabled = false
+        source.settings.weatherEnabled = false
+        let active = ActualRecord(planID: nil, title: "합성 현재", categoryID: "eating",
+            startedAt: date.addingTimeInterval(-30), endedAt: date.addingTimeInterval(30),
+            source: .motion, isClassificationLocked: true)
+        source.actuals = (0..<524_953).map { index in
+            ActualRecord(planID: nil, title: "합성 과거", categoryID: "activity",
+                startedAt: date.addingTimeInterval(-172_800 - Double(index)*30),
+                endedAt: date.addingTimeInterval(-172_780 - Double(index)*30),
+                source: .motion, isClassificationLocked: true)
+        } + [active]
+        let model = AppModel(repository: InMemoryPlanRepository(snapshot: source),
+            cloudSyncService: nil, registersHealthBackgroundHandler: false)
+        await model.prepareLocalDataForDisplay()
+        let start = ProcessInfo.processInfo.systemUptime
+        let prepared = await model.planDaySourceSnapshot(for: date, reusing: nil)
+        let day = try XCTUnwrap(prepared)
+        let preparationMS = (ProcessInfo.processInfo.systemUptime - start)*1000
+        XCTAssertEqual(day.actuals, [active])
+        XCTAssertFalse(day.isComplete)
+        let lookupStart = ProcessInfo.processInfo.systemUptime
+        for _ in 0..<8 {
+            XCTAssertEqual(MapHomeStickmanActionResolver.action(at: date,
+                actuals: day.actuals, travel: day.travel, places: day.places, frequentPlaces: []), .eating)
+        }
+        print("MAP1006G01 map records=\(source.actuals.count) day_records=\(day.actuals.count) preparation_ms=\(preparationMS) eight_lookups_ms=\((ProcessInfo.processInfo.systemUptime - lookupStart)*1000)")
+        await model.sceneEnteredBackground()
+    }
+
+    @MainActor
     func testInitialSceneDoesNotWaitForBootstrapNormalizationSave() async throws {
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         var stored = TaptionDataSnapshot.empty
@@ -28432,6 +28549,67 @@ private actor RecoveringLoadPlanRepository: PlanDataRepository {
     func save(_ snapshot: TaptionDataSnapshot) async throws {
         self.snapshot = snapshot
     }
+}
+
+private actor GatedStartupPlanRepository: PlanDataRepository {
+    private enum FixtureError: Error { case invalidHistory }
+    private var value: TaptionDataSnapshot
+    private let failsHistory: Bool
+    private var holdsStartup: Bool
+    private var startupStarted = false
+    private var startupWaiters: [CheckedContinuation<Void, Never>] = []
+    private var startupStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var released = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private(set) var saves = 0
+
+    init(snapshot: TaptionDataSnapshot, failsHistory: Bool = false, holdsStartup: Bool = false) {
+        value = snapshot
+        self.failsHistory = failsHistory
+        self.holdsStartup = holdsStartup
+    }
+
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot? {
+        var startup = TaptionDataSnapshot.empty
+        startup.settings = value.settings
+        startup.updatedAt = value.updatedAt
+        startupStarted = true
+        let startWaiters = startupStartWaiters
+        startupStartWaiters.removeAll()
+        startWaiters.forEach { $0.resume() }
+        if holdsStartup { await withCheckedContinuation { startupWaiters.append($0) } }
+        try Task.checkCancellation()
+        return startup
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        let captured = value
+        if !released { await withCheckedContinuation { waiters.append($0) } }
+        try Task.checkCancellation()
+        if failsHistory { throw FixtureError.invalidHistory }
+        return captured
+    }
+
+    func waitUntilStartupStarted() async {
+        if !startupStarted { await withCheckedContinuation { startupStartWaiters.append($0) } }
+    }
+
+    func releaseStartup() {
+        holdsStartup = false
+        let pending = startupWaiters
+        startupWaiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+
+    func releaseHistory() {
+        released = true
+        let pending = waiters
+        waiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws { saves += 1; value = snapshot }
+    func deleteAll() async throws { value = .empty }
 }
 
 private actor GatedSavePlanRepository: PlanDataRepository {

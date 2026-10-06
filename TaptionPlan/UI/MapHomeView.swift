@@ -1257,6 +1257,13 @@ struct MapHomeRouteReadingsTaskKey: Hashable {
     }
 }
 
+struct MapHomeDaySourceTaskKey: Hashable {
+    let day: Date
+    let revision: UInt64
+    let isReady: Bool
+    let isActive: Bool
+}
+
 struct MapHomePreparedRouteReadings: Sendable {
     let normalized: [SensorReading]
     let display: [SensorReading]
@@ -2461,13 +2468,7 @@ struct MapHomeView: View {
             refreshHomeGrowth(at: .now)
         }
         .onChange(of: model.dayProjectionRevision) { _, _ in
-            dayDataSnapshot = nil
             routeActualIndex = nil
-            guard scenePhase == .active else { return }
-            refreshTimeRailSegments()
-            requestRouteProjectionRefresh(preparingReadings: true)
-            requestWBSPlaybackProjectionRefresh()
-            scheduleExpectedRouteRefresh()
         }
         .onChange(of: model.isBootstrapped) { _, isReady in
             if isReady { refreshHomeGrowth(at: .now) }
@@ -2497,17 +2498,39 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
+        .task(id: MapHomeDaySourceTaskKey(
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+            revision: model.dayProjectionRevision, isReady: model.isBootstrapped,
+            isActive: scenePhase == .active
+        )) {
+            guard model.isBootstrapped, scenePhase == .active else { return }
+            let date = model.selectedDate
+            guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
+                  !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
+                  Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate) else { return }
+            if currentDayDataSnapshot == nil {
+                dayDataSnapshot = prepared
+                dayDataIsPreview = !prepared.isComplete
+            }
+            routeActualIndex = nil
+            refreshHomeGrowth(at: .now)
+            refreshTimeRailSegments()
+            requestRouteProjectionRefresh(preparingReadings: true)
+            requestWBSPlaybackProjectionRefresh()
+            scheduleExpectedRouteRefresh()
+        }
         .task(
             id: MapHomeRouteReadingsTaskKey(
                 date: model.selectedDate,
-                isBootstrapped: model.isBootstrapped,
+                isBootstrapped: model.isBootstrapped || model.hasPreparedStartupSettings,
                 rawDataRevision: Calendar.autoupdatingCurrent.isDateInToday(
                     model.selectedDate
                 ) ? 0 : model.rawDataRevision(for: model.selectedDate),
                 isSceneActive: scenePhase == .active
             )
         ) {
-            guard model.isBootstrapped, scenePhase == .active else { return }
+            guard model.isBootstrapped || model.hasPreparedStartupSettings,
+                  scenePhase == .active else { return }
             let loadStartedAt = ProcessInfo.processInfo.systemUptime
             let date = model.selectedDate
             if !routeReadingsLoadState.isLoaded(for: date) {
@@ -2518,7 +2541,10 @@ struct MapHomeView: View {
             applyInitialMapFocusIfNeeded()
             reportInitialMapShellReadyIfNeeded(for: date)
             await Task.yield()
-            await model.bootstrap()
+            if let preview = await model.startupDayDataPreview(for: date) {
+                await refreshRouteReadings(for: date, preloadedDayData: preview, isPreview: true)
+            }
+            await model.prepareLocalDataForDisplay()
             guard !Task.isCancelled, scenePhase == .active,
                   Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
             else { return }
@@ -2868,6 +2894,8 @@ struct MapHomeView: View {
     private func vectorMap(style: MapHomeVectorStyle) -> some View {
         let waypoints = pawprintWaypoints
         let places = placeAnnotations
+        let playback = appleMapPlayback
+        let displayedSpeed = displayedSpeedMetersPerSecond
         return MapHomeVectorMap(
             style: style,
             cameraPosition: mapPosition,
@@ -2897,7 +2925,9 @@ struct MapHomeView: View {
                     viewport: viewport,
                     stickmanPoint: stickmanPoint,
                     waypoints: waypoints,
-                    places: places
+                    places: places,
+                    playback: playback,
+                    displayedSpeed: displayedSpeed
                 )
             }
         }
@@ -3345,12 +3375,13 @@ struct MapHomeView: View {
             }.map(MapHomeStickmanAnimationEngine.phase(for:))
             cameraCoordinate = coordinate
         }
+        let action = displayedStickmanAction
         return MapHomeApplePlayback(
             coordinate: coordinate,
             cameraCoordinate: cameraCoordinate,
             headingDegrees: heading,
-            action: displayedStickmanAction,
-            accessibilityLabel: "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title)",
+            action: action,
+            accessibilityLabel: "\(displayedLocationAccessibilityLabel) · \(action.title)",
             phase: phase,
             followsUserLocation: selectedTimelineMinute == nil,
             equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
@@ -3540,7 +3571,9 @@ struct MapHomeView: View {
         viewport: MapHomeVectorViewport?,
         stickmanPoint: CGPoint?,
         waypoints: [PawprintWaypoint],
-        places: [MapHomePlaceAnnotation]
+        places: [MapHomePlaceAnnotation],
+        playback: MapHomeApplePlayback?,
+        displayedSpeed: Double?
     ) -> some View {
         ZStack {
             fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places)
@@ -3787,7 +3820,7 @@ struct MapHomeView: View {
                !isDisplayedCatAtHome,
                let point = vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
                 MapHomeVectorPlayerMarker(
-                    heading: vectorPlayerHeading,
+                    heading: playback?.headingDegrees ?? 0,
                     backgroundHex: style.backgroundHex
                 )
                     .position(x: point.x, y: point.y + 11)
@@ -3795,16 +3828,15 @@ struct MapHomeView: View {
                     .accessibilityHidden(true)
             }
 
-            if displayedLocationCoordinate != nil,
-               !isDisplayedCatAtHome,
+            if let playback,
                let point = stickmanPoint {
                 MapHomeStickmanMarker(
-                    action: displayedStickmanAction,
-                    animationPhase: appleMapPlayback?.stickmanAnimationPhase,
-                    routePhase: appleMapPlayback?.phase == .forecast
+                    action: playback.action,
+                    animationPhase: playback.stickmanAnimationPhase,
+                    routePhase: playback.phase == .forecast
                         ? .forecast
                         : .actual,
-                    speedMetersPerSecond: displayedSpeedMetersPerSecond,
+                    speedMetersPerSecond: displayedSpeed,
                     equippedAccessoryID: homeGrowthHistory.season.equippedAccessory
                     )
                     .position(
@@ -3823,7 +3855,7 @@ struct MapHomeView: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(
-                        "\(displayedLocationAccessibilityLabel) · \(displayedStickmanAction.title), \(language.text("설명 보기","Show info"))"
+                        "\(playback.accessibilityLabel), \(language.text("설명 보기","Show info"))"
                     )
             }
 
@@ -4131,17 +4163,14 @@ struct MapHomeView: View {
             asOf: now,
             calendar: calendar
         )
-        if calendar.isDate(model.selectedDate, inSameDayAs: now) {
-            let sourceActuals = currentDayDataSnapshot?.actuals
-                ?? model.snapshot.actuals
-            let sourceTravel = currentDayDataSnapshot?.travel
-                ?? model.snapshot.travel
+        if calendar.isDate(model.selectedDate, inSameDayAs: now),
+           let dayData = currentDayDataSnapshot {
             MapHomeGrowthPolicy.observeCurrentDay(
                 in: &history,
                 date: now,
                 qualified: MapHomeGrowthPolicy.qualifiesDay(
-                    actuals: sourceActuals,
-                    travel: sourceTravel,
+                    actuals: dayData.actuals,
+                    travel: dayData.travel,
                     on: now,
                     asOf: now,
                     calendar: calendar
@@ -4156,9 +4185,8 @@ struct MapHomeView: View {
 
     private func rewardRecentCompletedDay(_ day: Date, asOf now: Date = .now) {
         let calendar = MapHomeGrowthPolicy.localCalendar
-        let dayData = currentDayDataSnapshot
-        let actuals = dayData?.actuals ?? model.snapshot.actuals
-        let travel = dayData?.travel ?? model.snapshot.travel
+        let actuals = model.snapshot.actuals
+        let travel = model.snapshot.travel
         var history = homeGrowthHistory
         if let key = history.season.pendingDay,
            let pendingDate = MapHomeGrowthPolicy.date(for: key, calendar: calendar),
@@ -4198,9 +4226,9 @@ struct MapHomeView: View {
     /// 대비로 계산해 합이 100%가 되게 한다.
     private var daySummaryCategories: [MapHomeDaySummaryEntry] {
         let snap = currentDayDataSnapshot
-        let actuals = snap?.actuals ?? model.snapshot.actuals
-        let travel = snap?.travel ?? model.snapshot.travel
-        let stays = snap?.places ?? model.snapshot.places
+        let actuals = snap?.actuals ?? []
+        let travel = snap?.travel ?? []
+        let stays = snap?.places ?? []
         let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
             model.snapshot.settings.frequentPlaces
         )
@@ -4851,7 +4879,7 @@ struct MapHomeView: View {
             dayStart: dayStart,
             dayEnd: dayEnd
         )
-        let travelRanges = (dayData?.travel ?? model.snapshot.travel).compactMap {
+        let travelRanges = (dayData?.travel ?? []).compactMap {
             segment -> MapHomePlaybackMovementRange? in
             guard segment.distanceMeters > 0
                     || segment.mode == .subway
@@ -6921,14 +6949,7 @@ struct MapHomeView: View {
         let dayData = currentDayDataSnapshot
         let registeredLocations = model.settings.userTransitLocations
         let nearbyPlaces = nearbyTransitPlaces
-        let calendar = Calendar.autoupdatingCurrent
-        let dayStart = calendar.startOfDay(for: model.selectedDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let daySpan = TimeSpan(start: dayStart, end: dayEnd)
-        let travel = dayData?.travel ?? model.snapshot.travel.filter {
-            $0.span.intersection(with: daySpan) != nil
-        }
+        let travel = dayData?.travel ?? []
         let decisions = model.settings.transitBoardingDecisions
         let cutoff = routeOverlayCutoff
         let key = MapHomeTransitBoardingCandidateCacheKey(
@@ -7111,8 +7132,8 @@ struct MapHomeView: View {
         }
         let dayData = currentDayDataSnapshot
         let next = MapHomeTimeRailSegmentEngine.segments(
-            from: dayData?.actuals ?? model.snapshot.actuals,
-            travel: dayData?.travel ?? model.snapshot.travel,
+            from: dayData?.actuals ?? [],
+            travel: dayData?.travel ?? [],
             on: model.selectedDate
         )
         if next != timeRailSegments {
@@ -7149,13 +7170,7 @@ struct MapHomeView: View {
         liveRouteProjectionRefreshTask = nil
         nearbyTransitPlaces = []
         hasDeferredWBSPlaybackRefresh = false
-        timeRailSegments = model.isBootstrapped
-            ? MapHomeTimeRailSegmentEngine.segments(
-                from: model.snapshot.actuals,
-                travel: model.snapshot.travel,
-                on: date
-            )
-            : []
+        timeRailSegments = []
         timeSidebarVisibleStartMinute = 0
         timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
         zoomResetToken += 1
@@ -7166,12 +7181,8 @@ struct MapHomeView: View {
 
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         guard let dayDataSnapshot,
-              dayDataSnapshot.matchesCurrentSource(
-                    revision: model.dayProjectionRevision,
-                    fingerprint: model.daySourceFingerprint(
-                        for: model.selectedDate
-                    )
-                ),
+              dayDataSnapshot.sourceRevision == model.dayProjectionRevision
+                || (!model.isBootstrapped && dayDataIsPreview && model.hasPreparedStartupSettings),
               dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
@@ -7369,8 +7380,8 @@ struct MapHomeView: View {
         let selectedDay = inputKey.selectedDay
         let dayEnd = inputKey.dayEnd
         let dayData = currentDayDataSnapshot
-        let travel = dayData?.travel ?? model.snapshot.travel
-        let placesCount = (dayData?.places ?? model.snapshot.places).count
+        let travel = dayData?.travel ?? []
+        let placesCount = (dayData?.places ?? []).count
         let normalizedReadings = normalizedRouteReadings
         let playbackReadings = currentDayReadings
         let day = TimeSpan(start: selectedDay, end: dayEnd)
@@ -7894,7 +7905,7 @@ struct MapHomeView: View {
             minute: cutoffMinute
         ) {
             MapHomeSubwayRouteOverlayEngine.overlays(
-                travel: dayData?.travel ?? model.snapshot.travel,
+                travel: dayData?.travel ?? [],
                 readings: routeReadings
                     + model.liveRouteState.readings
                     + (model.latestSensorReading.map { [$0] } ?? []),
@@ -8048,7 +8059,7 @@ struct MapHomeView: View {
     /// m/s로 추정한다. 재생 중이면 현재 leg의 이동 세그먼트 속도(거리/시간),
     /// 실시간이면 최신 센서 속도를 쓴다. 정지/미확정이면 nil.
     private var displayedSpeedMetersPerSecond: Double? {
-        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
+        let travel = currentDayDataSnapshot?.travel ?? []
         let date = displayedLocationDate
         if let segment = travel
             .filter({ $0.span.contains(date) })
@@ -8062,7 +8073,7 @@ struct MapHomeView: View {
     }
 
     private var displayedStickmanAction: MapHomeStickmanAction {
-        let actuals = currentDayDataSnapshot?.actuals ?? model.snapshot.actuals
+        let actuals = currentDayDataSnapshot?.actuals ?? []
         let sleepSessions = model.sleepSessions
         if MapHomeStickmanActionResolver.hasAppleWatchConfirmedSleep(
             at: displayedLocationDate,
@@ -8093,8 +8104,8 @@ struct MapHomeView: View {
         return MapHomeStickmanActionResolver.action(
             at: displayedLocationDate,
             actuals: actuals,
-            travel: currentDayDataSnapshot?.travel ?? model.snapshot.travel,
-            places: currentDayDataSnapshot?.places ?? model.snapshot.places,
+            travel: currentDayDataSnapshot?.travel ?? [],
+            places: currentDayDataSnapshot?.places ?? [],
             frequentPlaces: model.settings.frequentPlaces,
             readings: (currentDayDataSnapshot?.readings ?? routeReadings)
                 + model.liveRouteState.readings
@@ -8197,8 +8208,8 @@ struct MapHomeView: View {
               )
         else { return [] }
         return MapHomeSectionDetailEngine.details(
-            actuals: dayData?.actuals ?? model.snapshot.actuals,
-            travel: dayData?.travel ?? model.snapshot.travel,
+            actuals: dayData?.actuals ?? [],
+            travel: dayData?.travel ?? [],
             segment: segment,
             dayStart: dayStart,
             dayEnd: dayEnd,
@@ -8247,7 +8258,7 @@ struct MapHomeView: View {
               TaptionDataDeletionFence.allows(generation: dataGeneration),
               calendar.isDate(date, inSameDayAs: model.selectedDate)
         else { return }
-        if dayData.sourceRevision != model.dayProjectionRevision {
+        if dayData.sourceRevision != model.dayProjectionRevision, model.isBootstrapped {
             guard let rebased = await model.rebasePlanDayDataSnapshot(
                 from: dayData,
                 for: date
@@ -8742,7 +8753,7 @@ struct MapHomeView: View {
 
     private func reportInitialMapShellReadyIfNeeded(for date: Date) {
         guard !hasReportedInitialDataReady,
-              model.isBootstrapped,
+              model.isBootstrapped || model.hasPreparedStartupSettings,
               Calendar.autoupdatingCurrent.isDate(
                   date,
                   inSameDayAs: model.selectedDate
@@ -8813,7 +8824,7 @@ struct MapHomeView: View {
 
     private func removeCompletedExpectedRoutes(at timestamp: Date) {
         guard !expectedRouteOverlays.isEmpty else { return }
-        let travel = currentDayDataSnapshot?.travel ?? model.snapshot.travel
+        let travel = currentDayDataSnapshot?.travel ?? []
         let travelByID = Dictionary(
             uniqueKeysWithValues: travel.map { ($0.id, $0) }
         )
@@ -8855,7 +8866,7 @@ struct MapHomeView: View {
         mapRenderCache.invalidateRouteData()
         let calendar = Calendar.autoupdatingCurrent
         let dayData = currentDayDataSnapshot
-        let actuals = dayData?.actuals ?? model.snapshot.actuals
+        let actuals = dayData?.actuals ?? []
         let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
             selectedDate: model.selectedDate,
             actuals: actuals,
@@ -8879,7 +8890,7 @@ struct MapHomeView: View {
             selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
             actuals: actuals,
             actualIndex: actualIndex,
-            travel: dayData?.travel ?? model.snapshot.travel,
+            travel: dayData?.travel ?? [],
             readings: displayRouteReadings,
             readingsAreNormalized: true,
             filtersSparseRouteConnections: true,
@@ -9084,19 +9095,19 @@ struct MapHomeView: View {
         }
         return MapHomeWBSPlaybackProjection.make(
             selectedDate: model.selectedDate,
-            places: dayData?.places ?? model.snapshot.places,
-            travel: dayData?.travel ?? model.snapshot.travel,
+            places: dayData?.places ?? [],
+            travel: dayData?.travel ?? [],
             readings: currentDayReadings,
             expectedRouteRequests: playbackRequests,
             resolvedRoutes: expectedRoutes + generatedRoutes + storedWBSResolvedRoutes,
-            actuals: dayData?.actuals ?? model.snapshot.actuals,
+            actuals: dayData?.actuals ?? [],
             confirmedSleepSpans: model.settings.confirmedSleepSpans,
             sleepSessions: model.sleepSessions
         )
     }
 
     private var storedWBSResolvedRoutes: [MapHomeWBSResolvedRoute] {
-        (currentDayDataSnapshot?.travel ?? model.snapshot.travel).compactMap { segment in
+        (currentDayDataSnapshot?.travel ?? []).compactMap { segment in
             guard segment.mode == .subway,
                   segment.isConfirmed,
                   let route = segment.subwayRoute,
@@ -9143,7 +9154,7 @@ struct MapHomeView: View {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
         let sleepSpans = MapHomeSleepLocationPolicy.spans(
-            actuals: currentDayDataSnapshot?.actuals ?? model.snapshot.actuals,
+            actuals: currentDayDataSnapshot?.actuals ?? [],
             confirmedSleepSpans: model.settings.confirmedSleepSpans,
             sleepSessions: model.sleepSessions,
             in: TimeSpan(start: dayStart, end: dayEnd)
@@ -9156,7 +9167,7 @@ struct MapHomeView: View {
             date,
             in: sleepAnchors
         )?.point
-        let confirmedSubwayPoint = (currentDayDataSnapshot?.travel ?? model.snapshot.travel)
+        let confirmedSubwayPoint = (currentDayDataSnapshot?.travel ?? [])
             .filter { segment in
                 guard segment.mode == .subway,
                       segment.isConfirmed,
