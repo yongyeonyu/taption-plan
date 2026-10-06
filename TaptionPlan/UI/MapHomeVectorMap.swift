@@ -665,6 +665,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let onSingleFingerPanEnded: () -> Void
     let onUserCameraGesture: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
+    let onSingleTap: (CGPoint, [String: CGPoint]) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -725,6 +726,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var observedCameraGestures: [UIGestureRecognizer] = []
         private var longPressGesture: UILongPressGestureRecognizer?
+        private var singleTapGesture: UITapGestureRecognizer?
 
         init(parent: MapHomeVectorMap) {
             self.parent = parent
@@ -744,6 +746,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
             longPress.delegate = self
             mapView.addGestureRecognizer(longPress)
             longPressGesture = longPress
+            let singleTap = UITapGestureRecognizer(target: self, action: #selector(handleSingleTap(_:)))
+            singleTap.cancelsTouchesInView = false
+            singleTap.delegate = self
+            singleTap.require(toFail: longPress)
+            mapView.addGestureRecognizer(singleTap)
+            singleTapGesture = singleTap
+            attachTapDependencies(in: mapView)
         }
 
         func detach(from mapView: MLNMapView) {
@@ -759,6 +768,10 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 mapView.removeGestureRecognizer(longPressGesture)
             }
             longPressGesture = nil
+            if let singleTapGesture {
+                mapView.removeGestureRecognizer(singleTapGesture)
+            }
+            singleTapGesture = nil
             self.mapView = nil
             pendingViewport = nil
         }
@@ -884,6 +897,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             applyCameraCommandIfNeeded(to: mapView)
             attachPanGestures(in: mapView)
             attachCameraGestures(in: mapView)
+            attachTapDependencies(in: mapView)
             publishViewport(from: mapView, force: true)
         }
 
@@ -906,7 +920,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldReceive touch: UITouch
         ) -> Bool {
-            guard gestureRecognizer === longPressGesture,
+            guard gestureRecognizer === longPressGesture || gestureRecognizer === singleTapGesture,
                   let view = gestureRecognizer.view else { return true }
             return MapHomeLongPressRoutingMath.shouldPresentLocation(
                 at: touch.location(in: view),
@@ -939,6 +953,26 @@ struct MapHomeVectorMap: UIViewRepresentable {
                     toCoordinateFrom: mapView
                 )
             )
+        }
+
+        @objc private func handleSingleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let mapView else { return }
+            var points: [String: CGPoint] = [:]
+            for marker in parent.markers {
+                points[marker.id] = mapView.convert(marker.coordinate, toPointTo: mapView)
+            }
+            parent.onSingleTap(gesture.location(in: mapView), points)
+        }
+
+        private func attachTapDependencies(in view: UIView) {
+            guard let singleTapGesture else { return }
+            for gesture in allSubviews(in: view).flatMap({ $0.gestureRecognizers ?? [] }) {
+                if let tap = gesture as? UITapGestureRecognizer,
+                   tap !== singleTapGesture,
+                   tap.numberOfTapsRequired > 1 || tap.numberOfTouchesRequired > 1 {
+                    singleTapGesture.require(toFail: tap)
+                }
+            }
         }
 
         private var cameraRevisionChanged: Bool {

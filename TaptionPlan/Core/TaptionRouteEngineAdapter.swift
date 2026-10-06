@@ -29,6 +29,13 @@ struct TaptionRoutePlaybackInput: Sendable {
     }
 }
 
+struct TaptionPreparedRouteReadings: Sendable {
+    let readings: [SensorReading]
+    let latestTrustedReading: SensorReading?
+    let impossibleLocationCount: Int
+    let innovationOutlierCount: Int
+}
+
 enum TaptionRouteEngineAdapter {
     static func displaySnapshot(
         readings: [SensorReading],
@@ -75,6 +82,29 @@ enum TaptionRouteEngineAdapter {
         includeLowConfidenceBoundaries: Bool = true,
         cancellationCheck: () throws -> Void
     ) rethrows -> [SensorReading] {
+        try prepareFilteredReadings(
+            from: readings,
+            includeLowConfidenceBoundaries: includeLowConfidenceBoundaries,
+            cancellationCheck: cancellationCheck
+        ).readings
+    }
+
+    static func prepareFilteredReadings(
+        from readings: [SensorReading],
+        includeLowConfidenceBoundaries: Bool = true
+    ) -> TaptionPreparedRouteReadings {
+        prepareFilteredReadings(
+            from: readings,
+            includeLowConfidenceBoundaries: includeLowConfidenceBoundaries,
+            cancellationCheck: {}
+        )
+    }
+
+    static func prepareFilteredReadings(
+        from readings: [SensorReading],
+        includeLowConfidenceBoundaries: Bool = true,
+        cancellationCheck: () throws -> Void
+    ) rethrows -> TaptionPreparedRouteReadings {
         try cancellationCheck()
         var originals: [UUID: SensorReading] = [:]
         originals.reserveCapacity(readings.count)
@@ -88,10 +118,11 @@ enum TaptionRouteEngineAdapter {
                 originals[reading.id] = reading
             }
         }
-        let segments = try displayRoute(
-            from: readings,
+        let report = try RouteLoggerRouteFilter().filterWithReport(
+            samples(from: readings, cancellationCheck: cancellationCheck),
             cancellationCheck: cancellationCheck
-        ).segments
+        )
+        let segments = report.log.segments
         var result: [SensorReading] = []
         result.reserveCapacity(readings.count)
         for index in segments.indices {
@@ -147,7 +178,31 @@ enum TaptionRouteEngineAdapter {
             cancellationCheck: cancellationCheck
         )
         try cancellationCheck()
-        return unique
+        var latestTrustedReading: SensorReading?
+        var impossibleLocationCount = 0
+        var innovationOutlierCount = 0
+        for (index, decision) in report.decisions.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            switch decision.reason {
+            case .acceptedPath, .stationarySuppressed:
+                latestTrustedReading = originals[decision.id]
+            case .lowConfidenceBoundary where includeLowConfidenceBoundaries:
+                latestTrustedReading = originals[decision.id]
+            case .impossibleSpeed:
+                impossibleLocationCount += 1
+            case .innovationOutlier:
+                innovationOutlierCount += 1
+            default:
+                break
+            }
+        }
+        try cancellationCheck()
+        return TaptionPreparedRouteReadings(
+            readings: unique,
+            latestTrustedReading: latestTrustedReading,
+            impossibleLocationCount: impossibleLocationCount,
+            innovationOutlierCount: innovationOutlierCount
+        )
     }
 
     static func sortedReadings(

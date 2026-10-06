@@ -3630,10 +3630,13 @@ final class AppModel {
                 }
                 loaded.travel = travel
             }
-            return try preparedLoadedSnapshot(
+            loaded = try preparedLoadedSnapshot(
                 loaded,
                 cancellationCheck: { try Task.checkCancellation() }
             )
+            loaded.actuals = try PlanActualStorage.reusingUnchangedStorage(loaded.actuals,
+                previous: source.actuals, cancellationCheck: { try Task.checkCancellation() })
+            return loaded
         }
         return try await withTaskCancellationHandler(operation: {
             try await worker.value
@@ -7231,19 +7234,25 @@ final class AppModel {
             return
         }
 
+        var updated = actual
         if GoalRecordPolicy.isGoal(goal) {
-            snapshot.actuals[actualIndex].routineID = goal.id
-            snapshot.actuals[actualIndex].planID = nil
+            updated.routineID = goal.id
+            updated.planID = nil
         } else {
-            snapshot.actuals[actualIndex].planID = goal.id
-            snapshot.actuals[actualIndex].routineID = routineAncestorID(
+            updated.planID = goal.id
+            updated.routineID = routineAncestorID(
                 for: goal.id
             )
         }
+        guard let edit = PlanActualEdit(replacing: updated, at: actualIndex, in: snapshot.actuals) else { return }
+        let normalizationWasPending = needsLocalRecordNormalization
+        snapshot.actuals = edit.result
+        // Linking does not alter classification or require another historical normalization.
+        needsLocalRecordNormalization = normalizationWasPending
         removeRecordLinks {
             $0.fromNodeID == "automatic.actual.\(actualID.uuidString)"
         }
-        await persist()
+        await persist(actualEdit: edit)
     }
 
     /// Create a relationship only after the user explicitly taps the source
@@ -10935,8 +10944,8 @@ final class AppModel {
             await refreshSensorTimeline(containing: date)
             guard acceptsDataMutation() else { return empty() }
         }
-        let source = snapshot
         let sourceRevision = dayProjectionRevision
+        let source = await indexedDaySource(snapshot, for: date)
         if let dayLoadCoordinator {
             let fingerprint = await cachedDayFingerprint(for: date, source: source, revision: sourceRevision)
             let loaded = await dayLoadCoordinator.load(
@@ -10957,12 +10966,12 @@ final class AppModel {
                 },
                 forceReload: forceReload || refreshRawReadings
             )
-            return acceptsDataMutation() ? loaded : empty()
+            return acceptsDataMutation() && sourceRevision == dayProjectionRevision ? loaded : empty()
         }
         let result = await sensorReadingsLoadResult(
             in: daySpan(containing: date)
         )
-        guard acceptsDataMutation() else { return empty() }
+        guard acceptsDataMutation(), sourceRevision == dayProjectionRevision else { return empty() }
         return PlanDayDataSnapshot.make(
             date: date,
             sourceRevision: sourceRevision,
@@ -10977,8 +10986,8 @@ final class AppModel {
     ) async -> PlanDayDataSnapshot? {
         guard acceptsDataMutation() else { return nil }
         let deletionGeneration = dataDeletionGeneration
-        let source = snapshot
         let sourceRevision = dayProjectionRevision
+        let source = await indexedDaySource(snapshot, for: date)
         let worker = Task.detached(priority: .utility) {
             try PlanDayDataSnapshot.rebase(
                 from: previous,
@@ -10995,7 +11004,7 @@ final class AppModel {
             )
             guard !Task.isCancelled,
                   deletionGeneration == dataDeletionGeneration,
-                  acceptsDataMutation() else { return nil }
+                  sourceRevision == dayProjectionRevision, acceptsDataMutation() else { return nil }
             return rebased
         } catch {
             worker.cancel()
@@ -11006,8 +11015,8 @@ final class AppModel {
     func planDaySourceSnapshot(for date: Date, reusing previous: PlanDayDataSnapshot?) async -> PlanDayDataSnapshot? {
         guard acceptsDataMutation() else { return nil }
         let generation = dataDeletionGeneration
-        let source = snapshot
         let revision = dayProjectionRevision
+        let source = await indexedDaySource(snapshot, for: date)
         let worker = Task.detached(priority: .utility) {
             if let previous, Calendar.autoupdatingCurrent.isDate(previous.day, inSameDayAs: date) {
                 return try PlanDayDataSnapshot.rebase(from: previous, date: date,
@@ -11039,15 +11048,30 @@ final class AppModel {
     func cachedPlanDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot? {
         let generation = dataDeletionGeneration
         guard acceptsDataMutation(), let dayLoadCoordinator else { return nil }
+        let revision = dayProjectionRevision
         let result = await dayLoadCoordinator.cachedSnapshot(
             day: date,
             source: snapshot,
-            sourceRevision: dayProjectionRevision
+            sourceRevision: revision
         )
-        guard generation == dataDeletionGeneration, acceptsDataMutation() else {
+        guard generation == dataDeletionGeneration, revision == dayProjectionRevision, acceptsDataMutation() else {
             return nil
         }
         return result
+    }
+
+    private func indexedDaySource(_ source: TaptionDataSnapshot, for date: Date) async -> TaptionDataSnapshot {
+        do {
+            guard let actuals = try await repository.actuals(in: daySpan(containing: date), matching: source.actuals) else {
+                return source
+            }
+            var value = source
+            value.actuals = actuals
+            return value
+        } catch {
+            // A failed/obsolete SQL projection must never replace in-memory edits or canonical data.
+            return source
+        }
     }
 
     private func daySpan(containing date: Date) -> TimeSpan {
@@ -13730,7 +13754,8 @@ final class AppModel {
     private func saveToRepository(
         _ value: TaptionDataSnapshot,
         expectedRevision: UInt64? = nil,
-        requiresCurrentRevision: Bool = true
+        requiresCurrentRevision: Bool = true,
+        actualEdit: PlanActualEdit? = nil
     ) async throws -> Bool {
         guard hasCurrentDataGeneration else {
             throw RepositoryError.staleGeneration
@@ -13754,7 +13779,7 @@ final class AppModel {
                let expectedRevision, expectedRevision != snapshotRevision {
                 return false
             }
-            try await repository.save(value)
+            try await repository.save(value, actualEdit: actualEdit)
             return !requiresCurrentRevision || expectedRevision == nil
                 || expectedRevision == snapshotRevision
         }
@@ -13766,7 +13791,7 @@ final class AppModel {
     }
 
     @discardableResult
-    private func persist(allowingDeletion: Bool = false) async -> Bool {
+    private func persist(allowingDeletion: Bool = false, actualEdit: PlanActualEdit? = nil) async -> Bool {
         guard hasCurrentDataGeneration,
               allowingDeletion || !isDeletingUserData else { return false }
         activeDataMutationCount += 1
@@ -13787,7 +13812,8 @@ final class AppModel {
             guard try await saveToRepository(
                 value,
                 expectedRevision: sourceRevision,
-                requiresCurrentRevision: false
+                requiresCurrentRevision: false,
+                actualEdit: actualEdit
             ) else { return false }
             if snapshotRevision == sourceRevision {
                 assignTimestampOnlySnapshot(visibleValue)

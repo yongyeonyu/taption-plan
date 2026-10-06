@@ -32,6 +32,48 @@ struct TaptionRouteEngineAdapterTests {
         #expect(abs((snapshot.selectedCoordinate?.latitude ?? 0) - 37.0005) < 0.000_01)
     }
 
+    @Test func liveLocationUsesRecentTrustedStationarySampleInsteadOfCityJump() {
+        let stationary = stride(from: 0.0, through: 900.0, by: 30).map {
+            reading($0, latitude: 37, motion: .stationary)
+        }
+        let jump = reading(901, latitude: 35, motion: .stationary)
+        let values = stationary + [jump, reading(902, latitude: 35.00001)]
+        let prepared = TaptionRouteEngineAdapter.prepareFilteredReadings(from: values)
+
+        #expect(prepared.latestTrustedReading?.id == stationary.last?.id)
+        #expect(prepared.latestTrustedReading?.timestamp == base.addingTimeInterval(900))
+        #expect(prepared.impossibleLocationCount == 2)
+        #expect(prepared.readings.allSatisfy { $0.point!.latitude > 36 })
+        #expect(values[values.count - 2].point?.latitude == 35)
+    }
+
+    @Test func recoveredRouteMarksDiscontinuityAndKeepsSensorProvenance() {
+        let values = [reading(0, latitude: 37), reading(1, latitude: 35), reading(2, latitude: 37.0001)]
+        let prepared = TaptionRouteEngineAdapter.prepareFilteredReadings(from: values)
+
+        #expect(prepared.latestTrustedReading?.id == values[2].id)
+        #expect(prepared.readings.map(\.id) == [values[0].id, values[2].id])
+        #expect(prepared.readings.first?.trackingSessionEnded == true)
+        #expect(prepared.latestTrustedReading == values[2])
+        #expect(prepared.impossibleLocationCount == 1)
+    }
+
+    @Test func lowConfidenceCityJumpIsExcludedFromPreparedDayAndCurrentLocation() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let start = calendar.startOfDay(for: base)
+        let values = [reading(0, latitude: 37), reading(1, latitude: 35, accuracy: 500)]
+        let prepared = try MapHomeRouteReadingsPreparation.prepare(
+            routeReadings: values, liveReadings: [], latestReading: values.last,
+            dayStart: start, dayEnd: start.addingTimeInterval(24 * 60 * 60),
+            cancellationCheck: {}
+        )
+
+        #expect(prepared.latestTrustedReading?.id == values[0].id)
+        #expect(prepared.impossibleLocationCount == 1)
+        #expect(prepared.normalized.map(\.id) == [values[0].id])
+        #expect(prepared.sourceCount == 3)
+    }
+
     @Test func selectedCoordinateIsNilInsideRecordedRouteGap() {
         let values = [
             reading(0, latitude: 37),

@@ -60,6 +60,7 @@ private func hashExactBytes(_ value: String, into hasher: inout Hasher) {
 
 public enum TaptionPlanDayStoreError: Error, Equatable, Sendable {
     case invalidDay
+    case invalidTimeRange
     case invalidDomain
     case invalidIdentifier
     case invalidMetadataKey
@@ -115,6 +116,12 @@ public struct TaptionPlanMapDayDocument: Hashable, Sendable {
 }
 
 public actor TaptionPlanDayStore {
+    public struct SnapshotReadVersion: Equatable, Sendable {
+        fileprivate let connectionID: UUID
+        fileprivate let externalVersion: Int64
+        fileprivate let localChanges: Int64
+    }
+
     public struct EventIdentifier: Hashable, Sendable {
         public let rawValue: String
 
@@ -212,8 +219,10 @@ public actor TaptionPlanDayStore {
         }
     }
 
-    private nonisolated(unsafe) var database: OpaquePointer?
+    nonisolated(unsafe) var database: OpaquePointer?
+    private let connectionID = UUID()
     private let allowsUndatedSnapshots: Bool
+    private var hasInstantRangeIndex = false
     private static let undatedSnapshotDay = TaptionPlanDayKey(year: 0, month: 0, day: 0)
     private static let snapshotUpsertSQL =
         """
@@ -365,6 +374,30 @@ public actor TaptionPlanDayStore {
         try saveCodableSnapshot(value, domain: destinationDomain ?? sourceDomain, day: day,
                                 revision: source.revision, updatedAt: source.updatedAt)
         return try markMigrationCompleted(marker)
+    }
+
+    /// Compare only versions from this connection. Local and external writes both invalidate it.
+    public func snapshotReadVersion() throws -> SnapshotReadVersion {
+        let statement = try prepare("PRAGMA main.data_version;")
+        defer { sqlite3_finalize(statement) }
+        guard try step(statement) == SQLITE_ROW else { throw lastError() }
+        return SnapshotReadVersion(
+            connectionID: connectionID,
+            externalVersion: sqlite3_column_int64(statement, 0),
+            localChanges: sqlite3_total_changes64(database)
+        )
+    }
+
+    public func withSnapshotWriteTransaction<Value: Sendable>(
+        _ operation: @Sendable (isolated TaptionPlanDayStore) throws -> Value
+    ) throws -> Value {
+        try withTransaction { try operation(self) }
+    }
+
+    public func withSnapshotReadTransaction<Value: Sendable>(
+        _ operation: @Sendable (isolated TaptionPlanDayStore) throws -> Value
+    ) throws -> Value {
+        try withTransaction(immediate: false) { try operation(self) }
     }
 
     public func saveSnapshots(_ snapshots: [Snapshot]) throws {
@@ -738,6 +771,7 @@ public actor TaptionPlanDayStore {
 
     public func deleteAllContent() throws {
         try withTransaction {
+            try execute("DELETE FROM actual_records;")
             try execute("DELETE FROM snapshots;")
             try execute("DELETE FROM events;")
             try execute("DELETE FROM restore_receipts;")
@@ -828,6 +862,31 @@ public actor TaptionPlanDayStore {
         return result
     }
 
+    /// An inclusive instant range, independent of the timezone used when day keys were written.
+    public func events(in interval: ClosedRange<Date>, domain: String) throws -> [Event] {
+        try validate(domain: domain)
+        guard interval.lowerBound.timeIntervalSince1970.isFinite,
+              interval.upperBound.timeIntervalSince1970.isFinite else {
+            throw TaptionPlanDayStoreError.invalidTimeRange
+        }
+        // Existing large archives build this once on the store actor's first range query,
+        // never during synchronous app/repository initialization.
+        if !hasInstantRangeIndex {
+            try execute("CREATE INDEX IF NOT EXISTS events_domain_timestamp_index ON events(domain, timestamp, sequence, id);")
+            hasInstantRangeIndex = sqlite3_get_autocommit(database) != 0
+        }
+        let statement = try prepare("SELECT day_key, timestamp, sequence, id, domain, payload FROM events WHERE domain = ? AND timestamp >= ? AND timestamp <= ? ORDER BY day_key, timestamp, sequence, id;")
+        defer { sqlite3_finalize(statement) }
+        try bind(domain, to: statement, at: 1)
+        try bind(interval.lowerBound.timeIntervalSince1970, to: statement, at: 2)
+        try bind(interval.upperBound.timeIntervalSince1970, to: statement, at: 3)
+        var result: [Event] = []
+        while try step(statement) == SQLITE_ROW {
+            result.append(try readEvent(statement))
+        }
+        return result
+    }
+
     public func allEvents(domain: String? = nil) throws -> [Event] {
         if let domain { try validate(domain: domain) }
         let statement: OpaquePointer
@@ -895,6 +954,7 @@ public actor TaptionPlanDayStore {
             "PRAGMA journal_mode=WAL;",
             "PRAGMA synchronous=NORMAL;",
             "PRAGMA foreign_keys=ON;",
+            Self.actualRecordSchema,
             """
             CREATE TABLE IF NOT EXISTS snapshots (
                 domain TEXT NOT NULL,
@@ -949,17 +1009,32 @@ public actor TaptionPlanDayStore {
         )
     }
 
-    private func withTransaction(_ body: () throws -> Void) throws {
+    func withTransaction<Value>(immediate: Bool = true, _ body: () throws -> Value) throws -> Value {
         try Task.checkCancellation()
+        if sqlite3_get_autocommit(database) == 0 {
+            let savepoint = "taption_" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            try execute("SAVEPOINT \(savepoint);")
+            do {
+                let value = try body()
+                try Task.checkCancellation()
+                try execute("RELEASE \(savepoint);")
+                return value
+            } catch {
+                _ = try? execute("ROLLBACK TO \(savepoint);")
+                _ = try? execute("RELEASE \(savepoint);")
+                throw error
+            }
+        }
         sqlite3_progress_handler(database, 1000, { _ in
             Task<Never, Never>.isCancelled ? 1 : 0
         }, nil)
         defer { sqlite3_progress_handler(database, 0, nil, nil) }
-        try execute("BEGIN IMMEDIATE TRANSACTION;")
+        try execute(immediate ? "BEGIN IMMEDIATE TRANSACTION;" : "BEGIN DEFERRED TRANSACTION;")
         do {
-            try body()
+            let value = try body()
             try Task.checkCancellation()
             try execute("COMMIT;")
+            return value
         } catch {
             sqlite3_progress_handler(database, 0, nil, nil)
             _ = try? execute("ROLLBACK;")
@@ -967,7 +1042,7 @@ public actor TaptionPlanDayStore {
         }
     }
 
-    private func execute(
+    func execute(
         _ sql: String,
         binds: ((OpaquePointer) throws -> Void)? = nil
     ) throws {
@@ -1028,7 +1103,7 @@ public actor TaptionPlanDayStore {
         try bind(event.payload, to: statement, at: 6)
     }
 
-    private func prepare(_ sql: String) throws -> OpaquePointer {
+    func prepare(_ sql: String) throws -> OpaquePointer {
         guard let database else { throw lastError() }
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
@@ -1038,7 +1113,7 @@ public actor TaptionPlanDayStore {
         return statement
     }
 
-    private func step(_ statement: OpaquePointer) throws -> Int32 {
+    func step(_ statement: OpaquePointer) throws -> Int32 {
         let result = sqlite3_step(statement)
         guard result == SQLITE_ROW || result == SQLITE_DONE else { throw lastError() }
         return result
@@ -1093,7 +1168,7 @@ public actor TaptionPlanDayStore {
         )
     }
 
-    private func readData(_ statement: OpaquePointer, at index: Int32) -> Data {
+    func readData(_ statement: OpaquePointer, at index: Int32) -> Data {
         let length = Int(sqlite3_column_bytes(statement, index))
         guard length > 0, let bytes = sqlite3_column_blob(statement, index) else { return Data() }
         return Data(bytes: bytes, count: length)
@@ -1184,25 +1259,25 @@ public actor TaptionPlanDayStore {
         guard result == SQLITE_OK else { throw lastError() }
     }
 
-    private func bind(_ value: UInt64, to statement: OpaquePointer, at index: Int32) throws {
+    func bind(_ value: UInt64, to statement: OpaquePointer, at index: Int32) throws {
         guard value <= UInt64(Int64.max) else { throw TaptionPlanDayStoreError.revisionOverflow }
         let result = sqlite3_bind_int64(statement, index, Int64(value))
         guard result == SQLITE_OK else { throw lastError() }
     }
 
-    private func bind(_ value: TimeInterval, to statement: OpaquePointer, at index: Int32) throws {
+    func bind(_ value: TimeInterval, to statement: OpaquePointer, at index: Int32) throws {
         let result = sqlite3_bind_double(statement, index, value)
         guard result == SQLITE_OK else { throw lastError() }
     }
 
-    private func bind(_ value: Data, to statement: OpaquePointer, at index: Int32) throws {
+    func bind(_ value: Data, to statement: OpaquePointer, at index: Int32) throws {
         let result: Int32 = value.withUnsafeBytes { bytes in
             sqlite3_bind_blob(statement, index, bytes.baseAddress, Int32(value.count), Self.sqliteTransient)
         }
         guard result == SQLITE_OK else { throw lastError() }
     }
 
-    private func lastError() -> TaptionPlanDayStoreError {
+    func lastError() -> TaptionPlanDayStoreError {
         guard let database else { return .database(code: SQLITE_MISUSE, message: "Database is closed") }
         let code = sqlite3_errcode(database)
         let message = String(cString: sqlite3_errmsg(database))
@@ -1216,5 +1291,5 @@ public actor TaptionPlanDayStore {
         return .database(code: code, message: message)
     }
 
-    private static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+    static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 }

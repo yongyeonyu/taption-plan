@@ -19,6 +19,8 @@ int sqlite3_reset(sqlite3_stmt *);
 int sqlite3_clear_bindings(sqlite3_stmt *);
 int sqlite3_changes(sqlite3 *);
 int sqlite3_total_changes(sqlite3 *);
+long long sqlite3_total_changes64(sqlite3 *);
+int sqlite3_get_autocommit(sqlite3 *);
 int sqlite3_wal_checkpoint_v2(sqlite3 *, const char *, int, int *, int *);
 int sqlite3_bind_text(sqlite3_stmt *, int, const char *, int, sqlite3_destructor_type);
 int sqlite3_bind_int64(sqlite3_stmt *, int, long long);

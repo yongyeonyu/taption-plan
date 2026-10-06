@@ -15,12 +15,18 @@ protocol PlanDataRepository: Sendable {
     func load() async throws -> TaptionDataSnapshot
     func loadStartupSnapshot() async throws -> TaptionDataSnapshot?
     func save(_ snapshot: TaptionDataSnapshot) async throws
+    func save(_ snapshot: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws
+    func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]?
     func deleteAll() async throws
     func handleMemoryPressure() async
 }
 
 extension PlanDataRepository {
     func loadStartupSnapshot() async throws -> TaptionDataSnapshot? { nil }
+    func save(_ snapshot: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws {
+        try await save(snapshot)
+    }
+    func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? { nil }
 }
 
 enum TaptionRepositoryBackgroundExecution {
@@ -300,7 +306,15 @@ actor MigratingPlanRepository: PlanDataRepository {
         return existing
     }
 
+    func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? {
+        try await primary.actuals(in: span, matching: source)
+    }
+
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        try await save(snapshot, actualEdit: nil)
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws {
         migrationTask?.cancel()
         migrationTask = nil
         migrationTaskID = nil
@@ -308,7 +322,7 @@ actor MigratingPlanRepository: PlanDataRepository {
         let primary = self.primary
         let task = Task<Void, Error> {
             if let previous { _ = try? await previous.value }
-            try await primary.save(snapshot)
+            try await primary.save(snapshot, actualEdit: actualEdit)
         }
         writeTail = task
         try await task.value
@@ -922,6 +936,10 @@ actor SQLitePlanRepository: PlanDataRepository {
     private struct LoadedRows: Sendable {
         let generation: UInt64
         let rows: [TaptionPlanDayStore.Snapshot]
+        let actualRows: [TaptionPlanDayStore.ActualRow]?
+        let actualRevision: UInt64
+        let readVersion: TaptionPlanDayStore.SnapshotReadVersion?
+        let reusedRows: Bool
     }
 
     private struct SavedRows: Sendable {
@@ -930,6 +948,17 @@ actor SQLitePlanRepository: PlanDataRepository {
         let revisions: [String: UInt64]
         let encodedDomains: [String]
         let loadStamps: [LoadedRowStamp]?
+        let readVersion: TaptionPlanDayStore.SnapshotReadVersion
+        let readMS: Double
+        let encodeMS: Double
+        let writeMS: Double
+        let verifyMS: Double
+        let reusedRows: Bool
+        let writtenDomains: Int
+        let actualRevision: UInt64
+        let actualKeys: [String]
+        let comparedRecords: Int
+        let writtenRecords: Int
     }
 
     private struct CommittedSnapshot: Sendable {
@@ -937,6 +966,9 @@ actor SQLitePlanRepository: PlanDataRepository {
         let generation: UInt64
         let revisions: [String: UInt64]
         let loadStamps: [LoadedRowStamp]?
+        let readVersion: TaptionPlanDayStore.SnapshotReadVersion?
+        let actualRevision: UInt64
+        let actualKeys: [String]
     }
 
     private struct LoadedRowStamp: Equatable, Sendable {
@@ -944,12 +976,14 @@ actor SQLitePlanRepository: PlanDataRepository {
         let revision: UInt64
         let updatedAt: Date
         let payloadDigest: SHA256.Digest
+        let payloadBytes: Int
 
         init(_ row: TaptionPlanDayStore.Snapshot) {
             domain = Data(row.domain.utf8)
             revision = row.revision
             updatedAt = row.updatedAt
             payloadDigest = SHA256.hash(data: row.payload)
+            payloadBytes = row.payload.count
         }
     }
 
@@ -969,6 +1003,10 @@ actor SQLitePlanRepository: PlanDataRepository {
     private var cacheEpoch: UInt64 = 0
     private(set) var lastEncodedDomains: [String] = []
     private(set) var lastLoadReusedSnapshot = false
+    private(set) var lastLoadSkippedPayloadRead = false
+    private(set) var lastDecodedDomains: [String] = []
+    private(set) var lastComparedActualRecords = 0
+    private(set) var lastWrittenActualRecords = 0
 
     init(databaseURL: URL) throws {
         self.store = try TaptionPlanDayStore(url: databaseURL, allowsUndatedSnapshots: true)
@@ -1015,8 +1053,11 @@ actor SQLitePlanRepository: PlanDataRepository {
 
     func load() async throws -> TaptionDataSnapshot {
         let epoch = cacheEpoch
+        let cached = committedSnapshot
         var succeeded = false
         lastLoadReusedSnapshot = false
+        lastLoadSkippedPayloadRead = false
+        lastDecodedDomains = []
         defer {
             if !succeeded { clearSerializationCache() }
         }
@@ -1037,34 +1078,61 @@ actor SQLitePlanRepository: PlanDataRepository {
                 )
                 try FileManager.default.removeItem(at: deletionPendingURL)
             }
-            return LoadedRows(
-                generation: Self.readGeneration(at: generationURL),
-                rows: try store.snapshots(day: Self.day)
-            )
+            let version = try store.snapshotReadVersion()
+            if cached?.readVersion != version || cached?.generation != Self.readGeneration(at: generationURL) {
+                try Self.importInlineActualsIfNeeded(store)
+            }
+            return try store.withSnapshotReadTransaction { store in
+                let generation = Self.readGeneration(at: generationURL)
+                // Capture before SELECT so a concurrent commit cannot tag old rows with a newer version.
+                let version = try store.snapshotReadVersion()
+                let reuse = cached?.generation == generation
+                    && cached?.readVersion == version && cached?.loadStamps != nil
+                let actualRevision = try store.actualRecordRevision()
+                let rows = reuse ? [] : try store.snapshots(day: Self.day)
+                let root = rows.first { $0.domain == PlanActualStorage.domain }
+                let rootUnchanged = reuse || root.map { row in
+                    cached?.loadStamps?.contains(LoadedRowStamp(row)) == true
+                } == true
+                let reuseActuals = cached?.generation == generation && rootUnchanged
+                    && cached?.actualRevision == actualRevision
+                return LoadedRows(generation: generation, rows: rows,
+                    actualRows: reuseActuals ? nil : root == nil ? [] : try store.actualRecords(), actualRevision: actualRevision,
+                    readVersion: version, reusedRows: reuse)
+            }
         }
         try Task.checkCancellation()
         let readMS = (ProcessInfo.processInfo.systemUptime - readStart) * 1_000
         let verificationStart = ProcessInfo.processInfo.systemUptime
-        let stamps = loaded.rows.map(LoadedRowStamp.init)
+        let stamps = loaded.reusedRows ? (cached?.loadStamps ?? []) : loaded.rows.map(LoadedRowStamp.init)
         let verificationMS = (ProcessInfo.processInfo.systemUptime - verificationStart) * 1_000
         let decodeStart = ProcessInfo.processInfo.systemUptime
         let value: TaptionDataSnapshot
-        if let cached = committedSnapshot,
+        if let cached,
            cached.generation == loaded.generation,
-           cached.loadStamps == stamps {
+           cached.loadStamps == stamps, cached.actualRevision == loaded.actualRevision {
             value = cached.value
             lastLoadReusedSnapshot = true
         } else {
-            value = loaded.rows.isEmpty ? .empty : try snapshot(from: loaded.rows)
+            let prior = cached?.generation == loaded.generation ? cached : nil
+            let priorStamps = Dictionary(uniqueKeysWithValues: (prior?.loadStamps ?? []).map { ($0.domain, $0) })
+            var reusableDomains = Set(stamps.filter { priorStamps[$0.domain] == $0 }.map(\.domain))
+            if prior?.actualRevision != loaded.actualRevision { reusableDomains.remove(Data(PlanActualStorage.domain.utf8)) }
+            value = try snapshot(from: loaded.rows, actualRows: loaded.actualRows,
+                reusing: prior?.value, reusableDomains: reusableDomains)
         }
+        lastLoadSkippedPayloadRead = loaded.reusedRows
         let decodeMS = (ProcessInfo.processInfo.systemUptime - decodeStart) * 1_000
         try Task.checkCancellation()
         remember(
             value,
             generation: loaded.generation,
-            revisions: Dictionary(uniqueKeysWithValues: loaded.rows.map { ($0.domain, $0.revision) }),
+            revisions: loaded.reusedRows ? (cached?.revisions ?? [:])
+                : Dictionary(uniqueKeysWithValues: loaded.rows.map { ($0.domain, $0.revision) }),
             epoch: epoch,
-            loadStamps: stamps
+            loadStamps: stamps, readVersion: loaded.readVersion,
+            actualRevision: loaded.actualRevision,
+            actualKeys: loaded.actualRows?.map(\.key) ?? cached?.actualKeys ?? []
         )
         TaptionPlanDiagnosticsLogger.shared.record(
             "repository_local_load",
@@ -1072,8 +1140,12 @@ actor SQLitePlanRepository: PlanDataRepository {
                 "read_ms": String(format: "%.2f", readMS),
                 "verify_ms": String(format: "%.2f", verificationMS),
                 "decode_ms": String(format: "%.2f", decodeMS),
-                "domains": String(loaded.rows.count),
-                "stored_bytes": String(loaded.rows.reduce(0) { $0 + $1.payload.count }),
+                "domains": String(stamps.count),
+                "stored_bytes": String(stamps.reduce(0) { $0 + $1.payloadBytes }),
+                "payload_read_bytes": String(loaded.rows.reduce(0) { $0 + $1.payload.count }),
+                "actual_rows_read": String(loaded.actualRows?.count ?? 0),
+                "reused_rows": String(loaded.reusedRows),
+                "decoded_domains": String(lastDecodedDomains.count),
                 "reused_snapshot": String(lastLoadReusedSnapshot),
             ]
         )
@@ -1087,12 +1159,14 @@ actor SQLitePlanRepository: PlanDataRepository {
         let loaded = try await withStoreLockRetry { store in
             guard !FileManager.default.fileExists(atPath: deletionPendingURL.path),
                   !TaptionDataDeletionFence.repositoryDeletionIsPending() else {
-                return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: [])
+                return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: [], actualRows: nil, actualRevision: 0,
+                    readVersion: nil, reusedRows: false)
             }
             let rows = try [Self.metadataDomain, "plan.settings", "plan.categories"].compactMap {
                 try store.snapshot(domain: $0, day: Self.day)
             }
-            return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: rows)
+            return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: rows, actualRows: nil, actualRevision: 0,
+                readVersion: nil, reusedRows: false)
         }
         try Task.checkCancellation()
         guard loaded.rows.contains(where: { $0.domain == Self.metadataDomain }) else { return nil }
@@ -1103,15 +1177,20 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        try await save(snapshot, actualEdit: nil)
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws {
         var value = snapshot
         value.updatedAt = .now
         let valueToSave = value
         try await TaptionRepositoryBackgroundExecution.run {
-            try await self.saveProtected(valueToSave)
+            try await self.saveProtected(valueToSave, actualEdit: actualEdit)
         }
     }
 
-    private func saveProtected(_ value: TaptionDataSnapshot) async throws {
+    private func saveProtected(_ value: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws {
+        let totalStart = ProcessInfo.processInfo.systemUptime
         let expectedGeneration = observedGeneration
         let currentNextRevision = nextRevision
         let deletionGeneration = dataDeletionGeneration
@@ -1119,103 +1198,148 @@ actor SQLitePlanRepository: PlanDataRepository {
         let cached = committedSnapshot
         let epoch = cacheEpoch
         let saved = try await withStoreLockRetry { store in
-            let generation = Self.readGeneration(at: generationURL)
-            guard expectedGeneration == nil || expectedGeneration == generation,
-                  TaptionDataDeletionFence.allows(
-                    generation: deletionGeneration
-                  ) else {
-                throw RepositoryError.staleGeneration
-            }
-            let storedRows = try store.snapshots(day: Self.day)
-            let storedRevisions = storedRows.map { (domain: $0.domain, revision: $0.revision) }
-            var expectedRows = Dictionary(uniqueKeysWithValues: storedRows.map { ($0.domain, $0) })
-            var revisions = storedRevisions.reduce(into: [String: UInt64]()) { values, row in
-                values[row.domain] = max(values[row.domain] ?? 0, row.revision)
-            }
-            var revision = max(
-                currentNextRevision,
-                revisions.values.max() ?? 0
-            )
-            guard revision < UInt64(Int64.max) else {
-                throw TaptionPlanDayStoreError.revisionOverflow
-            }
-            revision += 1
-            var writes: [TaptionPlanDayStore.Snapshot] = []
-            var encodedDomains: [String] = []
-            func append<Value: Encodable>(
-                _ domain: String, _ field: Value, unchanged: Bool = false,
-                store: isolated TaptionPlanDayStore, force: Bool = false
-            ) throws {
-                try Task.checkCancellation()
-                if !force, cached?.generation == generation,
-                   let cachedRevision = cached?.revisions[domain],
-                   cachedRevision == revisions[domain], unchanged,
-                   let row = expectedRows[domain],
-                   cached?.loadStamps?.contains(LoadedRowStamp(row)) == true {
-                    return
+            try store.withSnapshotWriteTransaction { store in
+                let readStart = ProcessInfo.processInfo.systemUptime
+                let generation = Self.readGeneration(at: generationURL)
+                guard expectedGeneration == nil || expectedGeneration == generation,
+                      TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
+                    throw RepositoryError.staleGeneration
                 }
-                encodedDomains.append(domain)
-                let payload = try Self.payload(field)
-                if !force, payload == (try store.snapshot(domain: domain, day: Self.day))?.payload {
-                    return
-                }
-                guard revision > (revisions[domain] ?? 0) else {
+                let version = try store.snapshotReadVersion()
+                let reuse = cached?.generation == generation
+                    && cached?.readVersion == version && cached?.loadStamps != nil
+                let storedRows = reuse ? [] : try store.snapshots(day: Self.day)
+                let rowByDomain = Dictionary(uniqueKeysWithValues: storedRows.map { ($0.domain, $0) })
+                let cachedStamps = Dictionary(uniqueKeysWithValues: (cached?.loadStamps ?? []).map { ($0.domain, $0) })
+                var expectedStamps = reuse ? cachedStamps
+                    : Dictionary(uniqueKeysWithValues: storedRows.map { (Data($0.domain.utf8), LoadedRowStamp($0)) })
+                var revisions = reuse ? (cached?.revisions ?? [:])
+                    : Dictionary(uniqueKeysWithValues: storedRows.map { ($0.domain, $0.revision) })
+                let actualRevision = try store.actualRecordRevision()
+                let actualKey = Data(PlanActualStorage.domain.utf8)
+                let actualCacheMatches = cached?.generation == generation
+                    && cachedStamps[actualKey] == expectedStamps[actualKey]
+                    && cached?.actualRevision == actualRevision
+                var actualDelta: PlanActualStorage.Delta?
+                let readMS = (ProcessInfo.processInfo.systemUptime - readStart) * 1_000
+                var revision = max(currentNextRevision, revisions.values.max() ?? 0)
+                guard revision < UInt64(Int64.max) else {
                     throw TaptionPlanDayStoreError.revisionOverflow
                 }
-                writes.append(
-                    .init(
-                        domain: domain,
-                        day: Self.day,
-                        revision: revision,
-                        updatedAt: .now,
-                        payload: payload
-                    )
+                revision += 1
+                var writes: [TaptionPlanDayStore.Snapshot] = []
+                var encodedDomains: [String] = []
+                var encodeMS = 0.0
+                func append<Value: Encodable>(
+                    _ domain: String, _ field: Value, unchanged: Bool = false,
+                    store: isolated TaptionPlanDayStore, force: Bool = false
+                ) throws {
+                    try Task.checkCancellation()
+                    let key = Data(domain.utf8)
+                    if !force, cached?.generation == generation, unchanged,
+                       let expected = expectedStamps[key], cachedStamps[key] == expected {
+                        return
+                    }
+                    encodedDomains.append(domain)
+                    let encodeStart = ProcessInfo.processInfo.systemUptime
+                    let payload = try Self.payload(field)
+                    encodeMS += (ProcessInfo.processInfo.systemUptime - encodeStart) * 1_000
+                    if !force {
+                        let stored = reuse ? try store.snapshot(domain: domain, day: Self.day) : rowByDomain[domain]
+                        if stored?.payload == payload { return }
+                    }
+                    guard revision > (revisions[domain] ?? 0) else {
+                        throw TaptionPlanDayStoreError.revisionOverflow
+                    }
+                    writes.append(.init(domain: domain, day: Self.day, revision: revision,
+                        updatedAt: .now, payload: payload))
+                    revisions[domain] = revision
+                }
+                try append(
+                    Self.metadataDomain,
+                    Metadata(schemaVersion: value.schemaVersion, updatedAt: value.updatedAt),
+                    store: store, force: true
                 )
-                revisions[domain] = revision
+                try append("plan.plans", value.plans, unchanged: Self.sharesStorage(value.plans, previous: cached?.value.plans), store: store)
+                let unchangedActuals = actualCacheMatches && expectedStamps[actualKey] != nil
+                    && Self.sharesStorage(value.actuals, previous: cached?.value.actuals)
+                if !unchangedActuals {
+                    let encodeStart = ProcessInfo.processInfo.systemUptime
+                    actualDelta = try PlanActualStorage.delta(value.actuals,
+                        previous: actualCacheMatches ? cached?.value.actuals : nil,
+                        previousKeys: actualCacheMatches ? cached?.actualKeys ?? [] : [], edit: actualEdit)
+                    encodeMS += (ProcessInfo.processInfo.systemUptime - encodeStart) * 1_000
+                    // The root contains only the storage version and count; records live in typed rows.
+                    try append(PlanActualStorage.domain, PlanActualStorage.NativeHeader(count: value.actuals.count), store: store)
+                }
+                try append("plan.recordLinks", value.recordLinks, unchanged: Self.sharesStorage(value.recordLinks, previous: cached?.value.recordLinks), store: store)
+                try append("plan.memos", value.memos, unchanged: Self.sharesStorage(value.memos, previous: cached?.value.memos), store: store)
+                try append("plan.stickers", value.stickers, unchanged: Self.sharesStorage(value.stickers, previous: cached?.value.stickers), store: store)
+                try append("plan.categories", value.categories, unchanged: Self.sharesStorage(value.categories, previous: cached?.value.categories), store: store)
+                try append("plan.photos", value.photos, unchanged: Self.sharesStorage(value.photos, previous: cached?.value.photos), store: store)
+                try append("plan.calendarEvents", value.calendarEvents, unchanged: Self.sharesStorage(value.calendarEvents, previous: cached?.value.calendarEvents), store: store)
+                try append("plan.weather", value.weather, unchanged: Self.sharesStorage(value.weather, previous: cached?.value.weather), store: store)
+                try append("plan.places", value.places, unchanged: Self.sharesStorage(value.places, previous: cached?.value.places), store: store)
+                try append("plan.travel", value.travel, unchanged: Self.sharesStorage(value.travel, previous: cached?.value.travel), store: store)
+                try append("plan.floorTransitions", value.floorTransitions, unchanged: Self.sharesStorage(value.floorTransitions, previous: cached?.value.floorTransitions), store: store)
+                try append("plan.yearlyReports", value.yearlyReports, unchanged: Self.sharesStorage(value.yearlyReports, previous: cached?.value.yearlyReports), store: store)
+                try append("plan.settings", value.settings, store: store)
+                guard TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
+                    throw RepositoryError.staleGeneration
+                }
+                let writeStart = ProcessInfo.processInfo.systemUptime
+                if let actualDelta {
+                    try PlanActualStorage.write(actualDelta, records: value.actuals, to: store)
+                }
+                try store.saveSnapshots(writes)
+                let writeMS = (ProcessInfo.processInfo.systemUptime - writeStart) * 1_000
+                let verifyStart = ProcessInfo.processInfo.systemUptime
+                let writtenByDomain = Dictionary(uniqueKeysWithValues: writes.map { ($0.domain, $0) })
+                for row in writes { expectedStamps[Data(row.domain.utf8)] = LoadedRowStamp(row) }
+                let committedRows = try store.snapshots(day: Self.day)
+                let committedStamps = committedRows.map(LoadedRowStamp.init)
+                let matches = committedRows.count == expectedStamps.count && zip(committedRows, committedStamps).allSatisfy { row, stamp in
+                    if let written = writtenByDomain[row.domain] {
+                        return row.revision == written.revision && row.payload == written.payload
+                    }
+                    return expectedStamps[stamp.domain] == stamp
+                }
+                guard matches else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
+                let verifyMS = (ProcessInfo.processInfo.systemUptime - verifyStart) * 1_000
+                return SavedRows(generation: generation, nextRevision: revision,
+                    revisions: revisions, encodedDomains: encodedDomains,
+                    loadStamps: matches ? committedStamps : nil,
+                    readVersion: try store.snapshotReadVersion(),
+                    readMS: readMS, encodeMS: encodeMS, writeMS: writeMS, verifyMS: verifyMS,
+                    reusedRows: reuse, writtenDomains: writes.count,
+                    actualRevision: try store.actualRecordRevision(),
+                    actualKeys: actualDelta?.keys ?? cached?.actualKeys ?? [],
+                    comparedRecords: actualDelta?.comparedRecords ?? 0,
+                    writtenRecords: actualDelta?.replaceAll == true ? value.actuals.count
+                        : (actualDelta?.rows.count ?? 0) + (actualDelta?.deletedKeys.count ?? 0))
             }
-            try append(
-                Self.metadataDomain,
-                Metadata(schemaVersion: value.schemaVersion, updatedAt: value.updatedAt),
-                store: store, force: true
-            )
-            try append("plan.plans", value.plans, unchanged: Self.sharesStorage(value.plans, previous: cached?.value.plans), store: store)
-            try append("plan.actuals", value.actuals, unchanged: Self.sharesStorage(value.actuals, previous: cached?.value.actuals), store: store)
-            try append("plan.recordLinks", value.recordLinks, unchanged: Self.sharesStorage(value.recordLinks, previous: cached?.value.recordLinks), store: store)
-            try append("plan.memos", value.memos, unchanged: Self.sharesStorage(value.memos, previous: cached?.value.memos), store: store)
-            try append("plan.stickers", value.stickers, unchanged: Self.sharesStorage(value.stickers, previous: cached?.value.stickers), store: store)
-            try append("plan.categories", value.categories, unchanged: Self.sharesStorage(value.categories, previous: cached?.value.categories), store: store)
-            try append("plan.photos", value.photos, unchanged: Self.sharesStorage(value.photos, previous: cached?.value.photos), store: store)
-            try append("plan.calendarEvents", value.calendarEvents, unchanged: Self.sharesStorage(value.calendarEvents, previous: cached?.value.calendarEvents), store: store)
-            try append("plan.weather", value.weather, unchanged: Self.sharesStorage(value.weather, previous: cached?.value.weather), store: store)
-            try append("plan.places", value.places, unchanged: Self.sharesStorage(value.places, previous: cached?.value.places), store: store)
-            try append("plan.travel", value.travel, unchanged: Self.sharesStorage(value.travel, previous: cached?.value.travel), store: store)
-            try append("plan.floorTransitions", value.floorTransitions, unchanged: Self.sharesStorage(value.floorTransitions, previous: cached?.value.floorTransitions), store: store)
-            try append("plan.yearlyReports", value.yearlyReports, unchanged: Self.sharesStorage(value.yearlyReports, previous: cached?.value.yearlyReports), store: store)
-            try append("plan.settings", value.settings, store: store)
-            guard TaptionDataDeletionFence.allows(
-                generation: deletionGeneration
-            ) else {
-                throw RepositoryError.staleGeneration
-            }
-            try store.saveSnapshots(writes)
-            for row in writes { expectedRows[row.domain] = row }
-            let committedRows = try store.snapshots(day: Self.day)
-            let matches = committedRows.count == expectedRows.count && committedRows.allSatisfy {
-                guard let expected = expectedRows[$0.domain] else { return false }
-                return $0.revision == expected.revision && $0.payload == expected.payload
-            }
-            return SavedRows(
-                generation: generation, nextRevision: revision,
-                revisions: revisions, encodedDomains: encodedDomains,
-                loadStamps: matches ? committedRows.map(LoadedRowStamp.init) : nil
-            )
         }
         if saved.generation >= (observedGeneration ?? 0), saved.nextRevision >= nextRevision {
             lastEncodedDomains = saved.encodedDomains
+            lastComparedActualRecords = saved.comparedRecords
+            lastWrittenActualRecords = saved.writtenRecords
         }
         try Task.checkCancellation()
         remember(value, generation: saved.generation, revisions: saved.revisions,
-                 epoch: epoch, loadStamps: saved.loadStamps)
+                 epoch: epoch, loadStamps: saved.loadStamps, readVersion: saved.readVersion,
+                 actualRevision: saved.actualRevision, actualKeys: saved.actualKeys)
+        TaptionPlanDiagnosticsLogger.shared.record("repository_local_save", fields: [
+            "total_ms": String(format: "%.2f", (ProcessInfo.processInfo.systemUptime - totalStart) * 1_000),
+            "read_ms": String(format: "%.2f", saved.readMS),
+            "encode_ms": String(format: "%.2f", saved.encodeMS),
+            "write_ms": String(format: "%.2f", saved.writeMS),
+            "verify_ms": String(format: "%.2f", saved.verifyMS),
+            "reused_rows": String(saved.reusedRows),
+            "encoded_domains": String(saved.encodedDomains.count),
+            "written_domains": String(saved.writtenDomains),
+            "compared_actual_records": String(saved.comparedRecords),
+            "written_actual_records": String(saved.writtenRecords),
+        ])
     }
 
     private static func sharesStorage<Value>(_ value: [Value], previous: [Value]?) -> Bool {
@@ -1231,7 +1355,9 @@ actor SQLitePlanRepository: PlanDataRepository {
     private func remember(
         _ value: TaptionDataSnapshot, generation: UInt64,
         revisions: [String: UInt64], epoch: UInt64,
-        loadStamps: [LoadedRowStamp]? = nil
+        loadStamps: [LoadedRowStamp]? = nil,
+        readVersion: TaptionPlanDayStore.SnapshotReadVersion? = nil,
+        actualRevision: UInt64 = 0, actualKeys: [String] = []
     ) {
         guard generation >= (observedGeneration ?? 0) else { return }
         if generation != observedGeneration { nextRevision = 0 }
@@ -1242,7 +1368,8 @@ actor SQLitePlanRepository: PlanDataRepository {
         if epoch == cacheEpoch {
             committedSnapshot = .init(
                 value: value, generation: generation, revisions: revisions,
-                loadStamps: loadStamps
+                loadStamps: loadStamps, readVersion: readVersion,
+                actualRevision: actualRevision, actualKeys: actualKeys
             )
         }
     }
@@ -1322,43 +1449,104 @@ actor SQLitePlanRepository: PlanDataRepository {
         let updatedAt: Date
     }
 
+    /// A one-time import replaces the deployed array payload atomically. No legacy copy is kept.
+    private static func importInlineActualsIfNeeded(_ store: isolated TaptionPlanDayStore) throws {
+        guard let row = try store.snapshot(domain: PlanActualStorage.domain, day: day),
+              (try? PlanActualStorage.nativeHeader(row.payload)) == nil else { return }
+        try store.withSnapshotWriteTransaction { store in
+            guard let current = try store.snapshot(domain: PlanActualStorage.domain, day: day),
+                  (try? PlanActualStorage.nativeHeader(current.payload)) == nil else { return }
+            let records = try PlanActualStorage.decode([ActualRecord].self, from: current.payload)
+            let delta = try PlanActualStorage.delta(records, previous: nil, previousKeys: [], edit: nil)
+            try PlanActualStorage.write(delta, records: records, to: store)
+            guard current.revision < UInt64(Int64.max) else { throw TaptionPlanDayStoreError.revisionOverflow }
+            try store.saveSnapshots([.init(domain: PlanActualStorage.domain, day: day,
+                revision: current.revision + 1, updatedAt: current.updatedAt,
+                payload: payload(PlanActualStorage.NativeHeader(count: records.count)))])
+        }
+    }
+
+    func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? {
+        guard let cached = committedSnapshot,
+              PlanActualStorage.sharesStorage(source, cached.value.actuals) else { return nil }
+        let started = ProcessInfo.processInfo.systemUptime
+        let generationURL = self.generationURL
+        let deletionPendingURL = self.deletionPendingURL
+        let deletionGeneration = dataDeletionGeneration
+        let rows = try await withStoreLockRetry { store -> [TaptionPlanDayStore.ActualRow]? in
+            try store.withSnapshotReadTransaction { store in
+                guard Self.readGeneration(at: generationURL) == cached.generation,
+                      !FileManager.default.fileExists(atPath: deletionPendingURL.path),
+                      TaptionDataDeletionFence.allows(generation: deletionGeneration),
+                      try store.actualRecordRevision() == cached.actualRevision,
+                      let root = try store.snapshot(domain: PlanActualStorage.domain, day: Self.day),
+                      cached.loadStamps?.contains(LoadedRowStamp(root)) == true else { return nil }
+                return try store.actualRecords(in: span.start...span.end)
+            }
+        }
+        try Task.checkCancellation()
+        guard let rows else { return nil }
+        let records = try PlanActualStorage.records(from: rows)
+        TaptionPlanDiagnosticsLogger.shared.record("repository_actual_range", fields: [
+            "rows": String(records.count), "total_records": String(source.count),
+            "elapsed_ms": String(format: "%.2f", (ProcessInfo.processInfo.systemUptime - started) * 1_000),
+        ])
+        return records
+    }
+
     private func snapshot(
-        from rows: [TaptionPlanDayStore.Snapshot]
+        from rows: [TaptionPlanDayStore.Snapshot],
+        actualRows: [TaptionPlanDayStore.ActualRow]? = nil,
+        reusing previous: TaptionDataSnapshot? = nil,
+        reusableDomains: Set<Data> = []
     ) throws -> TaptionDataSnapshot {
         var value = TaptionDataSnapshot.empty
         let rowByDomain = Dictionary(uniqueKeysWithValues: rows.map { ($0.domain, $0) })
         if let metadata = rowByDomain[Self.metadataDomain] {
             let decoded = try decode(Metadata.self, from: metadata.payload)
+            lastDecodedDomains.append(Self.metadataDomain)
             value.schemaVersion = decoded.schemaVersion
             value.updatedAt = decoded.updatedAt
         }
-        try decode("plan.plans", from: rowByDomain, into: &value.plans)
-        try decode("plan.actuals", from: rowByDomain, into: &value.actuals)
-        try decode("plan.recordLinks", from: rowByDomain, into: &value.recordLinks)
-        try decode("plan.memos", from: rowByDomain, into: &value.memos)
-        try decode("plan.stickers", from: rowByDomain, into: &value.stickers)
-        try decode("plan.categories", from: rowByDomain, into: &value.categories)
-        try decode("plan.photos", from: rowByDomain, into: &value.photos)
-        try decode("plan.calendarEvents", from: rowByDomain, into: &value.calendarEvents)
-        try decode("plan.weather", from: rowByDomain, into: &value.weather)
-        try decode("plan.places", from: rowByDomain, into: &value.places)
-        try decode("plan.travel", from: rowByDomain, into: &value.travel)
-        try decode("plan.floorTransitions", from: rowByDomain, into: &value.floorTransitions)
-        try decode("plan.yearlyReports", from: rowByDomain, into: &value.yearlyReports)
-        try decode("plan.settings", from: rowByDomain, into: &value.settings)
+        func assign<Value: Decodable>(_ domain: String, _ keyPath: WritableKeyPath<TaptionDataSnapshot, Value>) throws {
+            guard let row = rowByDomain[domain] else { return }
+            if let previous, reusableDomains.contains(Data(domain.utf8)) {
+                value[keyPath: keyPath] = previous[keyPath: keyPath]
+            } else {
+                value[keyPath: keyPath] = try decode(Value.self, from: row.payload)
+                lastDecodedDomains.append(domain)
+            }
+        }
+        try assign("plan.plans", \.plans)
+        if let row = rowByDomain[PlanActualStorage.domain] {
+            if let previous, reusableDomains.contains(Data(PlanActualStorage.domain.utf8)) {
+                value.actuals = previous.actuals
+            } else {
+                let header = try PlanActualStorage.nativeHeader(row.payload)
+                guard let actualRows, actualRows.count == header.count,
+                      actualRows.enumerated().allSatisfy({ $0.offset == $0.element.position }) else {
+                    throw TaptionPlanCanonicalStorageError.invalidPayload
+                }
+                value.actuals = try PlanActualStorage.records(from: actualRows)
+                lastDecodedDomains.append(PlanActualStorage.domain)
+            }
+        }
+        try assign("plan.recordLinks", \.recordLinks)
+        try assign("plan.memos", \.memos)
+        try assign("plan.stickers", \.stickers)
+        try assign("plan.categories", \.categories)
+        try assign("plan.photos", \.photos)
+        try assign("plan.calendarEvents", \.calendarEvents)
+        try assign("plan.weather", \.weather)
+        try assign("plan.places", \.places)
+        try assign("plan.travel", \.travel)
+        try assign("plan.floorTransitions", \.floorTransitions)
+        try assign("plan.yearlyReports", \.yearlyReports)
+        try assign("plan.settings", \.settings)
         guard value.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
             throw RepositoryError.unsupportedSchema(value.schemaVersion)
         }
         return value
-    }
-
-    private func decode<Value: Decodable>(
-        _ domain: String,
-        from rows: [String: TaptionPlanDayStore.Snapshot],
-        into value: inout Value
-    ) throws {
-        guard let row = rows[domain] else { return }
-        value = try decode(Value.self, from: row.payload)
     }
 
     private func decode<Value: Decodable>(

@@ -150,8 +150,27 @@ public struct RouteLoggerRouteFilter: Sendable {
             )
         }
 
+        var plausible: [RouteSample] = []
+        plausible.reserveCapacity(normalized.count)
+        var lastPlausible: RouteSample?
+        var discontinuityIDs = Set<UUID>()
+        var needsNewSegment = false
+        for (index, sample) in normalized.enumerated() {
+            if index.isMultiple(of: 256) { try cancellationCheck() }
+            if let previous = lastPlausible, !isPlausible(sample, after: previous) {
+                decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .impossibleSpeed))
+                needsNewSegment = true
+                continue
+            }
+            if needsNewSegment, sample.isPrecisePathSample(configuration) {
+                discontinuityIDs.insert(sample.id)
+                needsNewSegment = false
+            }
+            plausible.append(sample)
+            lastPlausible = sample
+        }
         let boundaries = try boundarySamples(
-            from: normalized,
+            from: plausible,
             cancellationCheck: cancellationCheck
         )
         var boundaryIDs = Set<UUID>()
@@ -161,8 +180,8 @@ public struct RouteLoggerRouteFilter: Sendable {
             boundaryIDs.insert(sample.id)
         }
         var precise: [RouteSample] = []
-        precise.reserveCapacity(normalized.count)
-        for (index, sample) in normalized.enumerated() {
+        precise.reserveCapacity(plausible.count)
+        for (index, sample) in plausible.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
             if sample.isPrecisePathSample(configuration) {
                 precise.append(sample)
@@ -182,11 +201,26 @@ public struct RouteLoggerRouteFilter: Sendable {
         var lastAccepted: RouteSample?
         var lastOutput: RouteSample?
         var kalman = Kalman2D()
+        var stationaryEndpoint: (source: RouteSample, output: RouteSample)?
+
+        func retainStationaryEndpoint() {
+            guard let endpoint = stationaryEndpoint else { return }
+            current.sources.append(endpoint.source)
+            current.path.append(endpoint.output)
+            stationaryEndpoint = nil
+        }
 
         for (index, sample) in precise.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
+            if discontinuityIDs.contains(sample.id) {
+                retainStationaryEndpoint()
+                if !current.path.isEmpty { segments.append(current) }
+                current = MutableSegment(isNewSegment: true)
+                kalman = Kalman2D()
+            }
             if let previous = lastAccepted,
                sample.timestamp.timeIntervalSince(previous.timestamp) > configuration.segmentGap {
+                retainStationaryEndpoint()
                 if !current.path.isEmpty { segments.append(current) }
                 current = MutableSegment(isNewSegment: true)
                 lastAccepted = nil
@@ -214,21 +248,29 @@ public struct RouteLoggerRouteFilter: Sendable {
             let isStationary = sample.speedMetersPerSecond.map {
                 $0.isFinite && $0 >= 0 && $0 <= configuration.stationarySpeedMetersPerSecond
             } ?? (displacement <= stationaryThreshold)
-            if displacement <= stationaryThreshold, isStationary {
+            if !current.path.isEmpty, displacement <= stationaryThreshold, isStationary {
+                lastAccepted = sample
+                stationaryEndpoint = (sample, RouteSample(
+                    id: sample.id, timestamp: sample.timestamp,
+                    coordinate: previousOutput.coordinate,
+                    horizontalAccuracyMeters: sample.horizontalAccuracyMeters,
+                    speedMetersPerSecond: sample.speedMetersPerSecond,
+                    speedAccuracyMetersPerSecond: sample.speedAccuracyMetersPerSecond,
+                    sequence: sample.sequence, mode: sample.mode,
+                    isApproximate: sample.isApproximate
+                ))
+                if sample.timestamp.timeIntervalSince(current.path.last!.timestamp)
+                    >= configuration.segmentGap {
+                    retainStationaryEndpoint()
+                }
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .stationarySuppressed))
                 continue
             }
 
-            let allowance = 3 * hypot(previous.horizontalAccuracyMeters, sample.horizontalAccuracyMeters)
-            let maximumSpeed = min(
-                configuration.absoluteMaximumSpeedMetersPerSecond,
-                max(modeSpeed(for: sample, previous: previous), reportedMaximumSpeed(previous, sample))
-            )
-            guard displacement <= max(25, maximumSpeed * elapsed + allowance) else {
+            retainStationaryEndpoint()
+            guard isPlausible(sample, after: previous) else {
                 if !current.path.isEmpty { segments.append(current) }
                 current = MutableSegment(isNewSegment: true)
-                lastAccepted = nil
-                lastOutput = nil
                 kalman = Kalman2D()
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .impossibleSpeed))
                 continue
@@ -241,8 +283,6 @@ public struct RouteLoggerRouteFilter: Sendable {
             ) else {
                 if !current.path.isEmpty { segments.append(current) }
                 current = MutableSegment(isNewSegment: true)
-                lastAccepted = nil
-                lastOutput = nil
                 kalman = Kalman2D()
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .innovationOutlier))
                 continue
@@ -253,6 +293,7 @@ public struct RouteLoggerRouteFilter: Sendable {
             lastOutput = output
             decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .acceptedPath))
         }
+        retainStationaryEndpoint()
         if !current.path.isEmpty { segments.append(current) }
 
         let routeSegments = try attach(
@@ -438,6 +479,19 @@ public struct RouteLoggerRouteFilter: Sendable {
         return mode == .unknown
             ? configuration.maximumUnknownSpeedMetersPerSecond
             : mode.maximumSpeedMetersPerSecond
+    }
+
+    private func isPlausible(_ sample: RouteSample, after previous: RouteSample) -> Bool {
+        let elapsed = sample.timestamp.timeIntervalSince(previous.timestamp)
+        guard elapsed > 0 else { return false }
+        if elapsed > configuration.segmentGap { return true }
+        let allowance = 3 * hypot(previous.horizontalAccuracyMeters, sample.horizontalAccuracyMeters)
+        let maximumSpeed = min(
+            configuration.absoluteMaximumSpeedMetersPerSecond,
+            max(modeSpeed(for: sample, previous: previous), reportedMaximumSpeed(previous, sample))
+        )
+        return Geo.distance(previous.coordinate, sample.coordinate)
+            <= max(25, maximumSpeed * elapsed + allowance)
     }
 
     private func reportedMaximumSpeed(_ lhs: RouteSample, _ rhs: RouteSample) -> Double {

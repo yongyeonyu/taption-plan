@@ -6,6 +6,265 @@ import XCTest
 import TaptionPlanCore
 
 final class SQLitePlanRepositoryTests: XCTestCase {
+    private func recordFixture(count: Int = 1_500) -> TaptionDataSnapshot {
+        var value = TaptionDataSnapshot.empty
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        let duplicateID = UUID()
+        value.actuals = (0..<count).map { i in
+            ActualRecord(id: i < 2 ? duplicateID : UUID(), planID: nil,
+                title: i.isMultiple(of: 2) ? "Caf\u{00E9}" : "Cafe\u{0301}", categoryID: "activity",
+                startedAt: start.addingTimeInterval(Double(count - i) * 60),
+                endedAt: i.isMultiple(of: 3) ? nil : start.addingTimeInterval(Double(count - i) * 60 + 30),
+                source: .location, createdAt: start, behavior: "fixture", evidence: ["source-fixture", "Cafe\u{0301}"],
+                modelVersion: "fixture-v1", isClassificationLocked: true)
+        }
+        return value
+    }
+
+    func testInlineHistoryImportsOnceIntoTypedRowsWithAllProvenance() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let value = recordFixture()
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+        try await store.saveSnapshot(.init(domain: "plan.actuals", day: day, revision: 1,
+            updatedAt: Date(timeIntervalSince1970: 1_790_000_000), payload: try PlanActualStorage.encode(value.actuals)))
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        let loaded = try await repository.load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(loaded.actuals[...], value.actuals[...]))
+        let root = try await store.snapshot(domain: "plan.actuals", day: day)
+        let header = try PlanActualStorage.nativeHeader(XCTUnwrap(root).payload)
+        XCTAssertEqual(header.count, value.actuals.count)
+        let revision = try await store.actualRecordRevision()
+        let reopened = try await SQLitePlanRepository(databaseURL: url).load()
+        let secondRevision = try await store.actualRecordRevision()
+        XCTAssertEqual(revision, secondRevision)
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(reopened.actuals[...], value.actuals[...]))
+        XCTAssertEqual(reopened.actuals[0].id, reopened.actuals[1].id)
+        try await repository.deleteAll()
+        let rows = try await store.actualRecords()
+        XCTAssertTrue(rows.isEmpty)
+    }
+
+    func testTypedHistoryWritesOneRowAndHandlesAppendReorderShrinkEmpty() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        var value = recordFixture()
+        try await repository.save(value)
+        let before = try await store.actualRecordRevision()
+        var record = value.actuals[512]
+        record.title = "Cafe\u{0301}\0native"
+        record.evidence[1] = "Caf\u{00E9}"
+        let edit = try XCTUnwrap(PlanActualEdit(replacing: record, at: 512, in: value.actuals))
+        value.actuals = edit.result
+        try await repository.save(value, actualEdit: edit)
+        let compared = await repository.lastComparedActualRecords
+        let written = await repository.lastWrittenActualRecords
+        let after = try await store.actualRecordRevision()
+        XCTAssertEqual(compared, 1)
+        XCTAssertEqual(written, 1)
+        XCTAssertEqual(after - before, 1)
+        let reader = try SQLitePlanRepository(databaseURL: url)
+        let first = try await reader.load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(first.actuals[...], value.actuals[...]))
+        value.actuals.append(value.actuals[0])
+        try await repository.save(value)
+        let appended = await repository.lastWrittenActualRecords
+        XCTAssertEqual(appended, 1)
+        value.actuals.reverse()
+        try await repository.save(value)
+        let reordered = try await reader.load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(reordered.actuals[...], value.actuals[...]))
+        value.actuals = Array(value.actuals.prefix(1))
+        try await repository.save(value)
+        let shrunk = try await reader.load()
+        XCTAssertEqual(shrunk.actuals, value.actuals)
+        value.actuals = []
+        try await repository.save(value)
+        let empty = try await reader.load()
+        let noRows = try await store.actualRecords()
+        XCTAssertTrue(empty.actuals.isEmpty)
+        XCTAssertTrue(noRows.isEmpty)
+    }
+
+    func testNativeImportFailureRollsBackAndRetryCompletes() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let value = recordFixture()
+        let store = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        let day = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+        let source = TaptionPlanDayStore.Snapshot(domain: "plan.actuals", day: day,
+            revision: 1, updatedAt: Date(timeIntervalSince1970: 1_790_000_000), payload: try PlanActualStorage.encode(value.actuals))
+        try await store.saveSnapshot(source)
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, "CREATE TRIGGER fail_native BEFORE INSERT ON actual_records WHEN NEW.position=500 BEGIN SELECT RAISE(ABORT,'fixture'); END;", nil, nil, nil), SQLITE_OK)
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        do { _ = try await repository.load(); XCTFail("Failed import must not activate") } catch {}
+        let original = try await store.snapshot(domain: "plan.actuals", day: day)
+        let rows = try await store.actualRecords()
+        let revision = try await store.actualRecordRevision()
+        XCTAssertEqual(original, source)
+        XCTAssertTrue(rows.isEmpty)
+        XCTAssertEqual(revision, 0)
+        XCTAssertEqual(sqlite3_exec(database, "DROP TRIGGER fail_native;", nil, nil, nil), SQLITE_OK)
+        let afterRetry = try await repository.load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(afterRetry.actuals[...], value.actuals[...]))
+    }
+
+    func testExternalTypedRowChangeInvalidatesCacheWithoutRootRevisionChange() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = recordFixture()
+        try await repository.save(value)
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, "UPDATE actual_records SET title='external' WHERE position=1;", nil, nil, nil), SQLITE_OK)
+        let loaded = try await repository.load()
+        value.actuals[1].title = "external"
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(loaded.actuals[...], value.actuals[...]))
+        XCTAssertEqual(sqlite3_exec(database, "UPDATE actual_records SET evidence=X'00' WHERE position=1;", nil, nil, nil), SQLITE_OK)
+        do { _ = try await repository.load(); XCTFail("Corruption must not be hidden by cached root") } catch {}
+        try await repository.save(value)
+        await repository.handleMemoryPressure()
+        let repaired = try await repository.load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(repaired.actuals[...], value.actuals[...]))
+    }
+
+    func testIndexedDayQueryRejectsUnsavedOrExternallyChangedSource() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = recordFixture()
+        try await repository.save(value)
+        let start = value.actuals[800].startedAt
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(60))
+        let query = try await repository.actuals(in: span, matching: value.actuals)
+        let expected = value.actuals.filter { $0.startedAt <= span.end && ($0.endedAt == nil || max($0.startedAt, $0.endedAt!) >= span.start) }
+        XCTAssertEqual(query, expected)
+        value.actuals[0].title = "unsaved"
+        let pending = try await repository.actuals(in: span, matching: value.actuals)
+        XCTAssertNil(pending)
+        let current = try await repository.load()
+        let external = try SQLitePlanRepository(databaseURL: url)
+        var externalValue = current
+        externalValue.actuals[0].title = "external"
+        try await external.save(externalValue)
+        let stale = try await repository.actuals(in: span, matching: current.actuals)
+        XCTAssertNil(stale)
+        try await repository.save(value)
+        await repository.handleMemoryPressure()
+        let memoryPressure = try await repository.actuals(in: span, matching: value.actuals)
+        XCTAssertNil(memoryPressure)
+    }
+
+    func testEditHintFallsBackWhenAnotherRecordAlsoChanged() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = recordFixture()
+        try await repository.save(value)
+        var record = value.actuals[0]
+        record.title = "first"
+        let edit = try XCTUnwrap(PlanActualEdit(replacing: record, at: 0, in: value.actuals))
+        value.actuals = edit.result
+        value.actuals[900].title = "second"
+        try await repository.save(value, actualEdit: edit)
+        let written = await repository.lastWrittenActualRecords
+        XCTAssertEqual(written, 2)
+        let loaded = try await SQLitePlanRepository(databaseURL: url).load()
+        XCTAssertEqual(loaded.actuals, value.actuals)
+    }
+
+    func testEveryActualFieldSurvivesTypedDeltaAndModelRoundTrip() throws {
+        let value = recordFixture(count: 1_024)
+        let mutations: [(inout ActualRecord) -> Void] = [
+            { $0.id = UUID() }, { $0.planID = UUID() }, { $0.routineID = UUID() },
+            { $0.title = "Cafe\u{0301}" }, { $0.categoryID = "work" },
+            { $0.startedAt.addTimeInterval(0.125) }, { $0.endedAt = .now },
+            { $0.source = .manual }, { $0.confidence = .low }, { $0.createdAt.addTimeInterval(0.125) },
+            { $0.behavior = "other" }, { $0.evidence[1] = "Caf\u{00E9}" },
+            { $0.routeID = UUID() }, { $0.sensorChunkID = UUID() }, { $0.modelVersion = "v2" },
+            { $0.manuallyCorrected.toggle() }, { $0.isClassificationLocked.toggle() },
+        ]
+        for mutate in mutations {
+            var changed = value.actuals
+            mutate(&changed[2])
+            let next = try PlanActualStorage.delta(changed, previous: value.actuals,
+                previousKeys: PlanActualStorage.keys(for: value.actuals), edit: nil)
+            XCTAssertEqual(next.rows.map(\.position), [2])
+            let decoded = try PlanActualStorage.records(from: next.rows)
+            XCTAssertTrue(PlanActualStorage.exactlyEqual(decoded[...], changed[2...2]))
+        }
+    }
+
+    func testNoOpPreparationReusesStorageButKeepsByteDistinctEdits() throws {
+        let previous = recordFixture(count: 3).actuals
+        var identical = previous
+        identical[0].title = "temporary"
+        identical[0] = previous[0]
+        let reused = PlanActualStorage.reusingUnchangedStorage(identical, previous: previous, cancellationCheck: {})
+        XCTAssertTrue(PlanActualStorage.sharesStorage(reused, previous))
+        var changed = previous
+        changed[0].title = "Cafe\u{0301}"
+        XCTAssertEqual(changed[0].title, previous[0].title)
+        let preserved = PlanActualStorage.reusingUnchangedStorage(changed, previous: previous, cancellationCheck: {})
+        XCTAssertFalse(PlanActualStorage.sharesStorage(preserved, previous))
+        XCTAssertEqual(Array(preserved[0].title.utf8), Array(changed[0].title.utf8))
+        XCTAssertThrowsError(try PlanActualStorage.reusingUnchangedStorage(identical, previous: previous,
+            cancellationCheck: { throw CancellationError() }))
+    }
+
+    @MainActor
+    func testAppDayProjectionUsesIndexedSourceAndGoalLinkUsesExplicitDelta() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let date = Date(timeIntervalSince1970: 1_791_250_000)
+        var value = TaptionDataSnapshot.empty
+        value.categories = CategoryCatalog.builtIn
+        value.settings.locationEnabled = false
+        value.settings.healthEnabled = false
+        value.settings.weatherEnabled = false
+        let actual = ActualRecord(planID: nil, title: "합성 활동", categoryID: "work",
+            startedAt: date, endedAt: date.addingTimeInterval(600), source: .manual)
+        let old = ActualRecord(planID: nil, title: "합성 과거", categoryID: "work",
+            startedAt: date.addingTimeInterval(-172_800), endedAt: date.addingTimeInterval(-172_200), source: .manual)
+        let goal = PlanRecord(title: "루틴:합성 목표", span: TimeSpan(start: date.addingTimeInterval(-60),
+            end: date.addingTimeInterval(3_600)), categoryID: "work")
+        value.actuals = [old, actual]
+        value.plans = [goal]
+        let primary = try SQLitePlanRepository(databaseURL: url)
+        try await primary.save(value)
+        let tracker = IndexedRepositoryProbe(primary: primary)
+        let repository = MigratingPlanRepository(primary: tracker, legacy: InMemoryPlanRepository())
+        let model = AppModel(repository: repository, cloudSyncService: nil, registersHealthBackgroundHandler: false)
+        await model.bootstrap()
+        let day = await model.planDaySourceSnapshot(for: date, reusing: nil)
+        XCTAssertEqual(day?.actuals.map(\.id), [actual.id])
+        let counts = await tracker.queryCounts
+        XCTAssertEqual(counts.last, 1)
+        await model.connectActualRecord(actual.id, toGoal: goal.id)
+        let editCount = await tracker.explicitEdits
+        XCTAssertEqual(editCount, 1)
+        let compared = await primary.lastComparedActualRecords
+        let written = await primary.lastWrittenActualRecords
+        XCTAssertEqual(compared, 1)
+        XCTAssertEqual(written, 1)
+        let stored = try await primary.load()
+        XCTAssertEqual(stored.actuals.first { $0.id == actual.id }?.routineID, goal.id)
+        XCTAssertEqual(stored.actuals.first { $0.id == old.id }, old)
+        let beforePreview = await tracker.queryCounts.count
+        _ = await model.cachedPlanDayDataSnapshot(for: date)
+        let afterPreview = await tracker.queryCounts.count
+        XCTAssertEqual(afterPreview, beforePreview, "Cached preview must not query canonical history")
+        await model.sceneEnteredBackground()
+    }
+
     func testFileRepositoryDecodesSecondsSince1970LZFSESnapshot() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-plan-legacy-\(UUID().uuidString)", isDirectory: true)
@@ -597,6 +856,10 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         let first = try await repository.load()
         let reused = await repository.lastLoadReusedSnapshot
         XCTAssertTrue(reused)
+        let skippedPayload = await repository.lastLoadSkippedPayloadRead
+        let decoded = await repository.lastDecodedDomains
+        XCTAssertTrue(skippedPayload)
+        XCTAssertTrue(decoded.isEmpty)
         XCTAssertEqual(first.actuals, value.actuals)
         value.settings.healthEnabled.toggle()
         try await repository.save(value)
@@ -606,6 +869,67 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(second.actuals, value.actuals)
         let reopened = try await SQLitePlanRepository(databaseURL: url).load()
         XCTAssertEqual(reopened, second)
+    }
+
+    func testExternalSettingsWriteOnlyDecodesChangedDomains() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = TaptionDataSnapshot.empty
+        value.actuals = [ActualRecord(planID: nil, title: "합성", categoryID: "work",
+            startedAt: Date(timeIntervalSince1970: 1_790_000_000), source: .manual)]
+        try await repository.save(value)
+        let external = try SQLitePlanRepository(databaseURL: url)
+        var externalValue = try await external.load()
+        externalValue.settings.healthEnabled.toggle()
+        try await external.save(externalValue)
+        let loaded = try await repository.load()
+        let decoded = await repository.lastDecodedDomains
+        let skipped = await repository.lastLoadSkippedPayloadRead
+        XCTAssertFalse(skipped)
+        XCTAssertEqual(Set(decoded), ["plan.metadata", "plan.settings"])
+        XCTAssertEqual(loaded.actuals, value.actuals)
+        XCTAssertEqual(loaded.settings, externalValue.settings)
+    }
+
+    func testExternalSensorWriteChecksBytesWithoutDecodingUnchangedPlans() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(.empty)
+        let before = try await repository.load()
+        let external = try TaptionPlanDayStore(url: url, allowsUndatedSnapshots: true)
+        try await external.appendEvents([.init(day: .init(year: 2026, month: 10, day: 6),
+            timestamp: .now, sequence: 1, id: "fixture", domain: "sensor-reading", payload: Data([1]))])
+        let after = try await repository.load()
+        let reused = await repository.lastLoadReusedSnapshot
+        let skipped = await repository.lastLoadSkippedPayloadRead
+        let decoded = await repository.lastDecodedDomains
+        XCTAssertEqual(after, before)
+        XCTAssertTrue(reused)
+        XCTAssertFalse(skipped)
+        XCTAssertTrue(decoded.isEmpty)
+        _ = try await repository.load()
+        let nextSkipped = await repository.lastLoadSkippedPayloadRead
+        XCTAssertTrue(nextSkipped)
+    }
+
+    func testExternalDeletedDomainDoesNotResurrectCachedRecords() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        var value = TaptionDataSnapshot.empty
+        value.plans = [PlanRecord(title: "합성", span: .init(start: .now,
+            end: .now.addingTimeInterval(60)), categoryID: "work")]
+        try await repository.save(value)
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database,
+            "DELETE FROM snapshots WHERE domain='plan.plans';", nil, nil, nil), SQLITE_OK)
+        let loaded = try await repository.load()
+        XCTAssertTrue(loaded.plans.isEmpty)
+        XCTAssertEqual(loaded.settings, value.settings)
     }
 
     func testSaveVerifiesSameRevisionExternalBytesBeforeSkippingEncoding() async throws {
@@ -626,6 +950,37 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertTrue(encoded.contains("plan.plans"))
         let loaded = try await repository.load()
         XCTAssertEqual(Array(loaded.plans[0].title.utf8), Array(value.plans[0].title.utf8))
+    }
+
+    func testWaitingLoadDoesNotRepopulateCacheAfterMemoryPressure() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(.empty)
+        _ = try await repository.load()
+        let descriptor = Darwin.open(url.appendingPathExtension("lock").path,
+            O_CREAT | O_RDWR, S_IRUSR | S_IWUSR)
+        XCTAssertGreaterThanOrEqual(descriptor, 0)
+        defer {
+            _ = flock(descriptor, LOCK_UN)
+            Darwin.close(descriptor)
+        }
+        XCTAssertEqual(flock(descriptor, LOCK_EX), 0)
+        let pending = Task { try await repository.load() }
+        var started = false
+        for _ in 0..<200 {
+            if !(await repository.lastLoadSkippedPayloadRead) { started = true; break }
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(started)
+        await repository.handleMemoryPressure()
+        XCTAssertEqual(flock(descriptor, LOCK_UN), 0)
+        _ = try await pending.value
+        _ = try await repository.load()
+        let skipped = await repository.lastLoadSkippedPayloadRead
+        let decoded = await repository.lastDecodedDomains
+        XCTAssertFalse(skipped)
+        XCTAssertFalse(decoded.isEmpty)
     }
 
     func testStartupSettingsReadDoesNotDecodeOrTrustHistory() async throws {
@@ -806,6 +1161,47 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertFalse(coldReused)
         XCTAssertEqual(coldLoaded, restored)
         print("MAP1006G01 storage records=\(value.actuals.count) startup_settings_ms=\(startupMS) cold_history_ms=\(coldMS) startup_history_records=\(startup?.actuals.count ?? -1)")
+
+        var externalValue = coldLoaded
+        externalValue.settings.healthEnabled.toggle()
+        try await coldRepository.save(externalValue)
+        let externalStart = ProcessInfo.processInfo.systemUptime
+        let externalLoaded = try await repository.load()
+        let externalMS = (ProcessInfo.processInfo.systemUptime - externalStart) * 1_000
+        XCTAssertEqual(externalLoaded.actuals, value.actuals)
+        XCTAssertEqual(externalLoaded.settings, externalValue.settings)
+
+        var edited = externalLoaded
+        edited.actuals[edited.actuals.count - 1].title = "합성 수정"
+        let editStart = ProcessInfo.processInfo.systemUptime
+        try await repository.save(edited)
+        let editMS = (ProcessInfo.processInfo.systemUptime - editStart) * 1_000
+        let compared = await repository.lastComparedActualRecords
+        let written = await repository.lastWrittenActualRecords
+        XCTAssertEqual(compared, value.actuals.count)
+        XCTAssertEqual(written, 1)
+        let editedReload = try await SQLitePlanRepository(databaseURL: url).load()
+        XCTAssertEqual(editedReload.actuals, edited.actuals)
+        print("DBP1006A01 storage records=\(value.actuals.count) external_settings_load_ms=\(externalMS) single_record_save_ms=\(editMS)")
+        var directRecord = edited.actuals.last!
+        directRecord.title = "직접 수정"
+        let direct = try XCTUnwrap(PlanActualEdit(replacing: directRecord, at: edited.actuals.count - 1, in: edited.actuals))
+        edited.actuals = direct.result
+        let directStart = ProcessInfo.processInfo.systemUptime
+        try await repository.save(edited, actualEdit: direct)
+        let directMS = (ProcessInfo.processInfo.systemUptime - directStart) * 1_000
+        let directCompared = await repository.lastComparedActualRecords
+        let directWritten = await repository.lastWrittenActualRecords
+        XCTAssertEqual(directCompared, 1)
+        XCTAssertEqual(directWritten, 1)
+        let span = TimeSpan(start: start.addingTimeInterval(60 * 60 * 24 * 50), end: start.addingTimeInterval(60 * 60 * 24 * 51))
+        let dayStart = ProcessInfo.processInfo.systemUptime
+        let day = try await repository.actuals(in: span, matching: edited.actuals)
+        let dayMS = (ProcessInfo.processInfo.systemUptime - dayStart) * 1_000
+        XCTAssertEqual(day?.count, 1_441)
+        let final = try await SQLitePlanRepository(databaseURL: url).load()
+        XCTAssertTrue(PlanActualStorage.exactlyEqual(final.actuals[...], edited.actuals[...]))
+        print("DBP1006C01 native records=\(value.actuals.count) full_diff_ms=\(editMS) direct_edit_ms=\(directMS) compared_records=\(directCompared) written_records=\(directWritten) day_query_ms=\(dayMS) day_records=\(day?.count ?? -1)")
     }
 
     func testSQLiteRepositoryRetriesFileLockWithoutHoldingItAcrossSuspension()
@@ -1169,4 +1565,23 @@ private actor FailOncePlanRepository: PlanDataRepository {
             try? await Task.sleep(for: .milliseconds(5))
         }
     }
+}
+
+private actor IndexedRepositoryProbe: PlanDataRepository {
+    let primary: SQLitePlanRepository
+    private(set) var queryCounts: [Int] = []
+    private(set) var explicitEdits = 0
+    init(primary: SQLitePlanRepository) { self.primary = primary }
+    func load() async throws -> TaptionDataSnapshot { try await primary.load() }
+    func save(_ snapshot: TaptionDataSnapshot) async throws { try await primary.save(snapshot) }
+    func save(_ snapshot: TaptionDataSnapshot, actualEdit: PlanActualEdit?) async throws {
+        if actualEdit != nil { explicitEdits += 1 }
+        try await primary.save(snapshot, actualEdit: actualEdit)
+    }
+    func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? {
+        let result = try await primary.actuals(in: span, matching: source)
+        queryCounts.append(result?.count ?? -1)
+        return result
+    }
+    func deleteAll() async throws { try await primary.deleteAll() }
 }

@@ -22,6 +22,21 @@ struct RouteEngineTests {
         #expect(result.segments.first?.pathSamples.map(\.coordinate.latitude).allSatisfy { $0 == 37 } == true)
     }
 
+    @Test func continuousStationaryRouteRetainsEndTimeAndInterpolationCheckpoints() {
+        let values = stride(from: 0.0, through: 3_600.0, by: 30).map {
+            sample($0, 37 + ($0 == 0 ? 0 : 0.00001))
+        }
+        let log = RouteLoggerRouteFilter().filter(values)
+        #expect(log.segments.count == 1)
+        #expect(log.segments[0].end == values.last?.timestamp)
+        #expect(log.segments[0].pathSamples.map(\.timestamp)
+                == [0.0, 900, 1_800, 2_700, 3_600].map { base.addingTimeInterval($0) })
+        #expect(log.segments[0].pathSamples.allSatisfy { $0.coordinate.latitude == 37 })
+        #expect(log.normalizedSamples == values)
+        let index = RouteTimeCoordinateIndex(segments: log.segments.map(\.pathSamples))
+        #expect(index.sample(at: base.addingTimeInterval(3_550))?.coordinate.latitude == 37)
+    }
+
     @Test func walkingRunningAndCarAcceptReasonableMotion() {
         let walk = RouteLoggerRouteFilter().filter([sample(0, 37), sample(10, 37.0002, mode: .walking)]).segments
         let run = RouteLoggerRouteFilter().filter([sample(0, 37), sample(10, 37.0005, mode: .running)]).segments
@@ -43,6 +58,62 @@ struct RouteEngineTests {
         #expect(result.segments.first?.pathSamples.count == 1)
         #expect(result.segments.first?.boundarySamples.count == 1)
         #expect(result.segments.first?.isLowConfidence == true)
+    }
+
+    @Test func stationarySamplingDoesNotTurnIntoAGPSGap() {
+        let stationary = stride(from: 0.0, through: 900.0, by: 30).map {
+            sample($0, 37)
+        }
+        let jump = sample(901, 35)
+        let recovery = sample(902, 37.00001)
+        let values = stationary + [jump, recovery]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+
+        #expect(report.decisions.contains { $0.id == jump.id && $0.reason == .impossibleSpeed })
+        #expect(!report.log.segments.flatMap(\.pathSamples).contains { $0.id == jump.id })
+        #expect(report.log.normalizedSamples == values)
+        #expect(report.log.segments.flatMap(\.pathSamples).last?.coordinate.latitude == recovery.coordinate.latitude)
+    }
+
+    @Test func consecutiveImpossibleLocationsCannotBecomeANewAnchor() {
+        let values = [
+            sample(0, 37), sample(1, 35), sample(2, 35.00001),
+            sample(3, 35.00002), sample(4, 37.0001), sample(5, 37.0002),
+        ]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        let rejectedIDs = Set(values[1...3].map(\.id))
+
+        #expect(report.decisions.filter { $0.reason == .impossibleSpeed }.count == 3)
+        #expect(report.log.segments.flatMap(\.pathSamples).allSatisfy { !rejectedIDs.contains($0.id) })
+        #expect(report.log.segments.last?.pathSamples.first?.id == values[4].id)
+        #expect(report.log.segments.last?.pathSamples.last?.id == values[5].id)
+        #expect(report.log.normalizedSamples == values)
+    }
+
+    @Test func realSamplingGapAllowsARelocatedAnchorAfterRejections() {
+        let values = [sample(0, 37), sample(1, 35), sample(901, 35), sample(902, 35.0001)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+
+        #expect(report.decisions.contains { $0.id == values[1].id && $0.reason == .impossibleSpeed })
+        #expect(report.log.segments.last?.pathSamples.first?.id == values[2].id)
+        #expect(report.log.segments.last?.pathSamples.last?.id == values[3].id)
+    }
+
+    @Test func stationarySuppressionKeepsRecentRawMotionReference() {
+        let values = [sample(0, 37), sample(1, 37.000025), sample(2, 37.00025)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+
+        #expect(report.decisions.contains { $0.id == values[1].id && $0.reason == .stationarySuppressed })
+        #expect(!report.decisions.contains { $0.id == values[2].id && $0.reason == .impossibleSpeed })
+    }
+
+    @Test func lowConfidenceBoundaryCannotBypassImpossibleLocationCheck() {
+        let values = [sample(0, 37), sample(1, 35, accuracy: 500), sample(2, 37.0001)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+
+        #expect(report.decisions.contains { $0.id == values[1].id && $0.reason == .impossibleSpeed })
+        #expect(!report.log.segments.flatMap(\.boundarySamples).contains { $0.id == values[1].id })
+        #expect(report.log.normalizedSamples == values)
     }
 
     @Test func segmentBoundaryRetainsFilteredCoordinates() {

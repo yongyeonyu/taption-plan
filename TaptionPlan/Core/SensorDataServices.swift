@@ -1635,14 +1635,14 @@ actor SensorReadingArchive {
     ) async throws -> (readings: [SensorReading], isComplete: Bool) {
         guard let dayStore else { throw Error.dayStoreUnavailable }
         try await ensureMigrated(generation: generation)
+        guard span.start <= span.end else { return ([], true) }
         let events = try await withProtectedLock { [self] in
             try await self.checkDataGeneration(generation)
             let loaded = try await dayStore.events(
-                from: TaptionPlanDayKey(date: span.start),
-                through: TaptionPlanDayKey(date: span.end),
+                in: span.start...span.end,
                 domain: "sensor-reading"
             )
-            return loaded.filter { span.contains($0.timestamp) }
+            return loaded
         }
         let decoded = try await decodeReadings(
             events,

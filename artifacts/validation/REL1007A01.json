@@ -1,0 +1,309 @@
+{
+  "request_id": "REL1007A01",
+  "date": "2026-10-07",
+  "reused_validation": {
+    "request_id": "DBP1006C01",
+    "results": {
+      "app-tests-final-v3": {
+        "exit": 0,
+        "source_mismatches": [],
+        "result": "Passed",
+        "passedTests": 156,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "totalTestCount": 156
+      },
+      "performance-all-final": {
+        "exit": 0,
+        "source_mismatches": [],
+        "result": "Passed",
+        "passedTests": 2,
+        "failedTests": 0,
+        "skippedTests": 0,
+        "totalTestCount": 2,
+        "configuration": "Release",
+        "compile_O_seen": true,
+        "whole_module_seen": true,
+        "testability": true
+      },
+      "device-debug-final": {
+        "exit": 0,
+        "source_mismatches": []
+      },
+      "core-final-03": {
+        "passed": 131,
+        "failed": 0,
+        "skipped": 0,
+        "source_mismatches": []
+      },
+      "unique_app_tests": 156,
+      "products": {
+        "app": {
+          "version": "1.0",
+          "build": "172",
+          "codesign_exit": 0
+        },
+        "widget": {
+          "version": "1.0",
+          "build": "172",
+          "codesign_exit": 0
+        },
+        "watch_embedded": false
+      }
+    },
+    "metrics": {
+      "performance-all-final": {
+        "history": {
+          "records": 120000.0,
+          "initial_ms": 1927.9872917104512,
+          "settings_ms": 3.5989583702757955,
+          "load_ms": 0.15983334742486477,
+          "initial_peak_mb": 113.67448425292969,
+          "settings_peak_mb": 103.25260925292969,
+          "load_peak_mb": 103.25260925292969,
+          "first_load_ms": 0.15983334742486477,
+          "repeated_mean_ms": 0.0999444358361264,
+          "first_peak_mb": 103.25260925292969,
+          "repeated_peak_mb": 103.28385925292969,
+          "startup_settings_ms": 0.26495830388739705,
+          "cold_history_ms": 188.9799166820012,
+          "startup_history_records": 0.0,
+          "external_settings_load_ms": 0.38133334601297975,
+          "single_record_save_ms": 32.621833321172744,
+          "full_diff_ms": 32.621833321172744,
+          "direct_edit_ms": 2.9784583603031933,
+          "compared_records": 1.0,
+          "written_records": 1.0,
+          "day_query_ms": 2.620583341922611,
+          "day_records": 1441.0
+        },
+        "sensors": {
+          "records": 5000.0,
+          "append_ms": 108.94883330911398,
+          "read_mean_ms": 72.34968056824678
+        },
+        "sensor_range": {
+          "legacy_rows": 4440.0,
+          "indexed_rows": 2.0,
+          "legacy_query_ms": 4.963527763417612,
+          "indexed_query_ms": 0.04084724544857939
+        }
+      }
+    },
+    "validated_source_sha256": {
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/ActualRecordStore.swift": "49b4e506072e98e57b3a6c3b3062f51fcb129c9b32d30efea8ffc2164ec54444",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/ActualRecordStoreTests.swift": "811f0d11289082ebc3d114774eb780e4cd4b9cf4724cdbf9c64b8cc7dc3b5f5b",
+      "TaptionPlan/Core/PlanActualStorage.swift": "41d2956242838b0c89d091b054f79cfb63f42a9665aa290aa8064982533be6e9",
+      "ExportOptions.plist": "292e9bae5e9e2069f1c514eb0f1f47eef9e144be4c1c3df922e35eb42e093fab",
+      "Packages/TaptionActivityEngine/Package.swift": "e2561bfcb67a4006c4c4f0eacfcffd002720895cb668e113b148e720fe6ea459",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/ActivityClassifier.swift": "004b3095598aa696c8b2ed659d3bf217fcf08e25d5c794d876fcb3707883634f",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/ActivityGapInference.swift": "9f68625b6cf4263700b0a7573d770e8dc323968c3a0548bf1e1d08a6e8c456a2",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/ActivityModels.swift": "bab526059f7a4ab8f311c5b2b3a9e28d87569d153653b0ca311a6f7f4922c469",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/ActivityProjection.swift": "3e513ce3a1540e0caf43108bd975baf7546be96ee966d8e9dacbb686c0ebff40",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/ActivityTaxonomy.swift": "834b639c3341dbc949b078d0f3ea80255647bc1a75e1ea4dd2f81c57d7aca1dd",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/DataTrustModels.swift": "ff339a1a66611e4a977fc8f8794461d8198ce81908b75f4508d44d44628dae0f",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/PlaceActivityInference.swift": "e72304002985dce7ffd74474d3ff63a9eb39552f834d61801909f522ab540ad5",
+      "Packages/TaptionActivityEngine/Sources/TaptionActivityEngine/SleepInference.swift": "175b9cf42765685300505b94dbcdfb3286fd336c8dbfcf26f8c5fdf095b02299",
+      "Packages/TaptionActivityEngine/Tests/TaptionActivityEngineTests/ActivityEngineTests.swift": "eec9447719a90ed6ab58aeb8a0857a6be440f97e4fcd710bcc1012e2e4a7ecf5",
+      "Packages/TaptionPlanCore/Package.swift": "0ee8b672d9d1a010e3cd99e094c7a49235e1543526dfc798a6ba49f602f798e0",
+      "Packages/TaptionPlanCore/Sources/CSQLite/module.modulemap": "2b5c88df2d0df17cf29afd5fc142066c47e6319897c5876b1ad0416773274396",
+      "Packages/TaptionPlanCore/Sources/CSQLite/sqlite3_shim.h": "4e481a5a4227019fa861833869efc9648c3617440ac7d43cff3a017472b0cce2",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift": "8fac04c0a8cd192638eba869b474c4afbf47b8e17b1c399375f576f4ac64c36d",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/CoreEngineContracts.swift": "dd9cd763901aa45857ee6f4cd436d1be256e24038314706fe2de0e5a46468c39",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStore.swift": "238cc37c37072f355f66c49037113d7f48df9c7de7cee79f83c993f654fa765e",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": "8fa52bd38bbdfa3162e7e7124f485792c25c894a6b391c84bb81ace7912c1287",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/HealthReadScope.swift": "7770831ab5ae57e2de1653fe287710b015ab2a2f2192374a9064985db8a68b8e",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/RobustScalarFilter.swift": "b2d61b64e105a08c405e7b50c27717f585d6b914ef4f7ca4a2486841c98a2221",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift": "c5b81fd4e8a4036747743b87f71140d966fc2b4ed979170a169a189c71165205",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/SharedContainer.swift": "d5dd57c040632bc93018f59c35bb57adda3c5877555ebaf2629101c3092dd6c8",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/StorageContracts.swift": "2eede57b3ffcd3b0f12f6383c39bce1e63010ae474143ae12c1f048d6fd50448",
+      "Packages/TaptionPlanCore/Sources/TaptionPlanCore/WatchHealthLaunchPolicy.swift": "b0aa206a03a386a3e5da13a710d4253d8cbbeb798be2b5c5e0b10e9a76e6efc5",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/CoreEngineContractsTests.swift": "45af02d8e538f778f080a2d8fd510698031f744e35684b2c0bcda53e2e4a482c",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/DayStoreTests.swift": "4ddfae4e33b2ba61ce15c6fc9f6fab185deba92010a2ddddbc0d1edd7ad50da1",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/DayStoreV3Tests.swift": "53034de0dd304e5dc544d784eeae2f647200c5deac7752a1e36a93a91184e91a",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/HealthReadScopeTests.swift": "b8e71c7ff413c9928d987ce8b47a1be5c922c77393050a7ee3aa5f63df6ec503",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/RuntimeEfficiencyTests.swift": "ec84de26de30848c73009e05ea5cbed12ed642063861926ef24e469c09e96199",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/StorageContractsTests.swift": "aa2a3ee4f0eb75aa81599109ea5a11a6320ce2922a869960e3e77c0f218649fc",
+      "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/WatchHealthLaunchPolicyTests.swift": "e93ad00037a4eb7e5e6fb269b831d956c2871ae78a41f6efb3cd9a30a937f82d",
+      "Packages/TaptionPlanEngine/Package.swift": "0a6f293f576b62e110887777b67c1ee172039a066488cf4c9244a186cbdc240a",
+      "Packages/TaptionPlanEngine/Sources/TaptionPlanEngine/TaptionPlanEngine.swift": "308eda94d04c186a15d15ee57bfa62b6a9bf81ab6fa086114916487f838993a0",
+      "Packages/TaptionPlanEngine/Tests/TaptionPlanEngineTests/TaptionPlanEngineTests.swift": "acd9839d2d8f1075291ed465703cc11bc8494616c20d318d48d3c1fa424819d2",
+      "Packages/TaptionRouteEngine/Package.swift": "9246f2f02d0ac2abcd75de09d800d566b2bb4e3dcd498ce33de11e52291f42ee",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteEvidence.swift": "56438ac7496a72f21ccea13a0c61ce07996257cdffb8694e36c045da8b77f88a",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteGapInference.swift": "59f6f20afc7c7bf452ec0d2967863e129d05c9750ea5e4844e9f39fec352e8b5",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteGeometry.swift": "5b0e9e957283dde4ad3a9763663b3ad6a98a5d928f6ed8d8173fec364cb1b359",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteIndex.swift": "48310d59221684a8a041dff595e620e0f5dc09e56e9e8e987d4879e157262e94",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteLoggerRouteFilter.swift": "7017b698e7101bd51f0f5f6ef51116145a733cd25f6d8bb0a5fa5f61d9bc3017",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteModels.swift": "af0d58007947df2bab33542471e29d95c99779aaa58ec07299247af6cc35f8b2",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RoutePlayback.swift": "eacf37f06280effac0df3469e073a7426b4386b40dc3332f4a0b7d7a12019e4b",
+      "Packages/TaptionRouteEngine/Sources/TaptionRouteEngine/RouteSparseConnectionPolicy.swift": "2abfe2de7bb575208fac9829b95452ee61706deb424266c70a1085154c30ba96",
+      "Packages/TaptionRouteEngine/Tests/TaptionRouteEngineTests/RouteEngineTests.swift": "379c9cc6400efce8e00e28f13728fee1d663b52877df6a2d2ce542d223ca7a6d",
+      "TaptionPlan.xcodeproj/project.pbxproj": "dd09ec49a192a5c22eff7b8080692b33ba4b6fbeadd7223b4d7b41b7d110165c",
+      "TaptionPlan/Core/AppLanguagePreference.swift": "a1c6b6f97582d316ec0397c45438592a4d114672fbb5586812862d05e036d1dc",
+      "TaptionPlan/Core/AppleIntegrations.swift": "f37db509c5dd3b865c4d0f06390dd0431ff8f880a03de987c8239b6cb76ebe33",
+      "TaptionPlan/Core/BiometricDataProtection.swift": "fa330217545e91c29ddc8846fc05bb72fd4f8c10168d9a099157f24504463368",
+      "TaptionPlan/Core/CatAnimationShared.swift": "63917a2ca5a8f4e03f443755ff4448ea0a988a0a001e1c81ba65becaab3636c0",
+      "TaptionPlan/Core/DiagnosticsLogSupport.swift": "9b0580a32a04c5730b3eff46d7593aef055852ff01e520a57962126c3474a247",
+      "TaptionPlan/Core/FeatureModels.swift": "86e3631095d2ffd35d39fbb097cc0b847085722721bbe40940eefbe5c009fa30",
+      "TaptionPlan/Core/HealthAndSensorModels.swift": "16f023efc01305d5e6689ba08d30cc5b3ccb93553be920ab878172dcf0f11b68",
+      "TaptionPlan/Core/HealthKitBehaviorProjection.swift": "077e495f16373613bc6986dafcefe79fa31c4d8b919a2d9306912c7b3d08b089",
+      "TaptionPlan/Core/HealthKitImportCoordinator.swift": "94a4c6cd47a04e66a83dddfa348042f66695235ef05f1b33b12c88b35f7232b0",
+      "TaptionPlan/Core/HealthKitImportStore.swift": "2e026a26700cdbad8adc70bd509dfad09faea64196f4bd73e5ea068c0d4da7ce",
+      "TaptionPlan/Core/HealthKitTypeCatalog.swift": "2dc6d8788b562411989d2948aae278ca8fbd9b3457aae5bdc70f15940347d0b1",
+      "TaptionPlan/Core/LiveActivitySupport.swift": "59befc35731f5de0e672006c0140826f515648a0942b367bd7aba3d10789b701",
+      "TaptionPlan/Core/PlanDayDataSnapshot.swift": "fff86b26ce5018026ffe35b5f0f0d6768abc9ff4a781a2ca44ee7fd4647bfc44",
+      "TaptionPlan/Core/PlanDayDatabase.swift": "15eb8b0944943716f93cf569ff03e385c510e326a2fecca86c3334e2c3413ca5",
+      "TaptionPlan/Core/PlanItem.swift": "36d16f7ab3522c24e6cc7e11c994258ca8260e1a2d39117ae0190f1b61fef03b",
+      "TaptionPlan/Core/PlanRepository.swift": "9f31d69c1c57ba5cf9c873b9777f84eb95ebb7fc40a75ea9c57ab9bc5373cd51",
+      "TaptionPlan/Core/PlanningEngine.swift": "eb280d8240c07cdba7e89df8d8d54b6120a33f864c2946e6f32352ccfa98456f",
+      "TaptionPlan/Core/RecordSummaryEngine.swift": "20598cb1adb54a22f905bbede88555066b30b63ad5cf3f22154c5de8b129273c",
+      "TaptionPlan/Core/RouteTimelineData.swift": "5a4dc633265e2c733ed209aa0fb5446bb5f31bb26851030e4898a00d54a4c8bc",
+      "TaptionPlan/Core/ScreenTimeUsageService.swift": "271f3e1548dab8395a92b193cc77ea743eb9326009a5b0513ebd7af5fdfd2f58",
+      "TaptionPlan/Core/SecurityBackupCore.swift": "386b5fcaca9cc983365bfc2b6037e90d0423021effdce8d2b6bcb7b3cb49043d",
+      "TaptionPlan/Core/SensorBackgroundCoordinator.swift": "c829a634ad6ce99d91d9ffc0680db2be35880f5e9399a06aaaf67f27f8dfb17f",
+      "TaptionPlan/Core/SensorDataServices.swift": "dbfa98324f6ee46bef57163d623d688ef4663250d1847a0ac76473f2bc4b18f5",
+      "TaptionPlan/Core/SensorFusion.swift": "712ed26a0bbb32a1b626cb23b69f8014a629ac6dec4ba61836ab00e7aecf2920",
+      "TaptionPlan/Core/SleepAnalysisEngine.swift": "7aa7a945b89ca8dac8ea4b69efea09437b5968811ba7f8929faefa3a17c41bec",
+      "TaptionPlan/Core/StationaryContextClassifier.swift": "892a3ff645c3d5fb79eaae06572bb0f2b3e5b6cbe885f1e9b261e8706671d7ee",
+      "TaptionPlan/Core/StoreKitSupport.swift": "2806cfe71d92420ce4613e338ab1b64eb2f5e534b7a648542a683be883bc7538",
+      "TaptionPlan/Core/SubwayCatalog.swift": "d82a2983849ff2690845f5560c24cec946b9a932ab61d03c3350d5bca8802702",
+      "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": "076d4ea973b2aadaee281d8421dcdbf142aaf295b3d9dd4e8072a0ba34150f4d",
+      "TaptionPlan/Core/TaptionRouteEngineAdapter.swift": "f4ce60d978953744a0cb0d33e2f0bb0167882ed5602055e0673db569cb27e05e",
+      "TaptionPlan/Core/TemplatesAndSettings.swift": "ba374adb33cb0611aa5e18d69e8e11d3160dc818c1f55296d628ae23b1195e0c",
+      "TaptionPlan/Core/WatchAmbientSummaryAccumulator.swift": "2d198549eece9fdefb2047a86fa0f95f71d0bd238d28bad3ab74948255f7813d",
+      "TaptionPlan/Core/WatchConnectivitySupport.swift": "52e6284d0a858162eb61e49d375f8463c2e70d3c5e64986f76c9822cbc501799",
+      "TaptionPlan/Core/WatchDayDatabase.swift": "905434dcb2385add28d39415ad8cef55578158f37b0ed07b43801e7847648e73",
+      "TaptionPlan/Core/WatchSensorQueryPlan.swift": "023c7939555b4fc49610377feb81b86a4ec1f9b7148e73e2a58d9f507cea4015",
+      "TaptionPlan/Core/WatchSyncModels.swift": "4e685562567218c9d3bc5ecbe062ed19408ac9a043c2bb0900e6a7b6a1d983b1",
+      "TaptionPlan/Core/WidgetPayloadFactory.swift": "687cb7a8c634dd4e6d2c881c633efe640c0c286196a8016a3fe4d03ba66634ad",
+      "TaptionPlan/Core/WidgetShared.swift": "304a5db05aad29db76cec0fb6493d0c2d0591e9ea3af71f7e910f69e88770dfa",
+      "TaptionPlan/Info.plist": "a9817a802c50bbc2cfe8803be6275107a86f97099ad0d6cc7c641193a7f9859c",
+      "TaptionPlan/TaptionPlanApp.swift": "ae4b309bbd96eaa2da8de698d0ee3f21ea74d6076d62131137e4a4716d8f7c31",
+      "TaptionPlan/UI/AddPlanSheet.swift": "657380fbd3f822e9b762f497fdeb2ba0cf2c3512b076de8b4cd3a2ff1efdd595",
+      "TaptionPlan/UI/AppShellView.swift": "2aae5ff471ae35650d164c966dc58f06d699783c5e35ed3dd76a4eb6a79dbfdf",
+      "TaptionPlan/UI/CategoryManagerView.swift": "0bde90153f10667755de73379a2528022d1a303a9bb5de39f49d7246c6d35a7f",
+      "TaptionPlan/UI/DetailViews.swift": "6b22b3e824b5c25166a58ed0c5625f0725dccb428d91feacb70e26c9e8aaa6a2",
+      "TaptionPlan/UI/DraftComponents.swift": "11bdb7d0a00764b7012dd88e3e6fd3064732a5eecf361020aef77ac2dee33aac",
+      "TaptionPlan/UI/GoalsView.swift": "0c86800ae2dc269633cda7347580d60978634856c7bfb6a0af7ebe00b041a48e",
+      "TaptionPlan/UI/MapHomeCalendarSheet.swift": "ab8a2a50d1deb3c8468bf9e911b4609a1934cf802ec939baf3ee842541022e8f",
+      "TaptionPlan/UI/MapHomeInteractionPolicy.swift": "a72e0627738a098e140b88a8156e39bc9f596443eb19890d78ee390218c5e777",
+      "TaptionPlan/UI/MapHomeLocationPresentation.swift": "e364199576b2bfb8308f3e92510bdbe0d663e5f6350b5bacdc6466dedf20b42d",
+      "TaptionPlan/UI/MapHomeTimeSidebar.swift": "383c55019fb02b0bd2893d75522dd42740e2d2e6a66e093e899c29cc7e1e2341",
+      "TaptionPlan/UI/MapHomeVectorMap.swift": "2f55f2ab2f5beaf53805c2794d8d8f5b54d641cdfcdc8502e981bf2d11ffc4bb",
+      "TaptionPlan/UI/MapHomeView.swift": "c7bf272cbc1dbf33b62a28e370e1fd916199edff215fed1102d3fdb103e145fd",
+      "TaptionPlan/UI/PhotoClusterSheet.swift": "78f7209a91a37ba297de2584f53e34227839d6de5875a91e256fc6d7f991bca2",
+      "TaptionPlan/UI/PhotoGalleryView.swift": "5fe0785efc43a4f98ff8ae275e223fcb8807092ec7047461ebeac0af02db92e7",
+      "TaptionPlan/UI/PlanEditorSheet.swift": "1d1905ab0bd713b788e712c120b8aae47d35beb4ebf5a3cba45133e002863ebc",
+      "TaptionPlan/UI/ReviewView.swift": "74da41d08aa65c9b62eaf23c8ff105e23fd0d60f8eeadf94fdcdefe6c73bb26e",
+      "TaptionPlan/UI/ScheduleView.swift": "56b726ec89112cb473a67b091b704477edb92ed352a06d4bb9ad5b1e3843f84a",
+      "TaptionPlan/UI/SettingsView.swift": "e27c0db5548d6b16c1c7c33b91a600772feb2e3148a31e6f3faa7c4bde6084e0",
+      "TaptionPlan/UI/Theme.swift": "80a7ab7ae091bdafdcdc14eb72df977fd17e79fce80ca08e783108e356a61961",
+      "TaptionPlan/UI/TimelineBlockStyleViews.swift": "afb2cdb082548905fbb9518d7af0918734da505e0782f945542d3698b7639b94",
+      "TaptionPlan/UX/AppModel.swift": "f971d052fc550f87fa33d60b8ea20ce9e2d394be48e47218445bf7724e8fc96b",
+      "TaptionPlan/UX/CatPresentation.swift": "3ae575925e3452c93dd8878c2b540a90e2da27ab3e90a094c97cb871e2af778c",
+      "TaptionPlan/UX/NavigationModels.swift": "6bba6ea6aadd2672363701af1650956d71e78bdcc7f577d12a14039eeab3d9b6",
+      "TaptionPlan/UX/TimelineBoardModels.swift": "0e0ff045586b93b42758ad0b020b258b8457434c91a489dc275e328161daf6e6",
+      "TaptionPlan/UX/TimelineInteractionEngine.swift": "ef620391d2c1302725d436477618e7989dba3d8665b3bf4a0bae2fd64e5aa7cd",
+      "TaptionPlanTests/AppLanguagePreferenceTests.swift": "df87438f80409edaf9e99c8947e73abf6d22ed5c6e816bd4a6667104cdb8ac90",
+      "TaptionPlanTests/DiagnosticsLogSupportTests.swift": "213171a7849bfb566d577ca30acc17602e9b7ddceb5bc44f41256e43254506ba",
+      "TaptionPlanTests/FeatureEngineTests.swift": "792f427de10520bd0b1a6cfca1d37ddc508cd4b4bb7b4cd4aa6296d6fd13cad7",
+      "TaptionPlanTests/HealthKitIntegrationTests.swift": "3cb909119509480b25c6cd26d4cfc52344990db4d8d286c0d6877765ff2f024f",
+      "TaptionPlanTests/LocalizationCatalogTests.swift": "fee4530d45a804b3a84a21ed6bfd622f8ebe4f030ab3d61b05c58d899f1f2339",
+      "TaptionPlanTests/RouteTimelineDataTests.swift": "d6115640aea28a2e4a79e57c192762b7e0dcc370fc44b9756949bd54076cbfad",
+      "TaptionPlanTests/SQLitePlanRepositoryTests.swift": "0745413da07db1a1e89efab2a1c4770d6481de26791cfd872f0855bdeb9f684c",
+      "TaptionPlanTests/SecurityBackupCoreTests.swift": "9f3d0cbbcf93c8412288bd25d097d66befda6d3e42f23c8af77cfb5735f92808",
+      "TaptionPlanTests/SensorBackgroundCoordinatorTests.swift": "573d3d22fe583a761a8743fd2abb6cbea40e3807a9ce54a6d29c82303cf02876",
+      "TaptionPlanTests/SensorDayStoreTests.swift": "2b07fe417659c16dcf270f8a08603433171b0e804f2992c67af2e02b659072ea",
+      "TaptionPlanTests/TaptionActivityEngineAdapterTests.swift": "1510abfebf946a5d5e3abdef4e3889dfa7f0bb880d555500294532fbfcddab5e",
+      "TaptionPlanTests/TaptionRouteEngineAdapterTests.swift": "9e33d38293cf9216654f8f88a88ac181a67578c821781fb418e0aa85a4efe218",
+      "TaptionPlanTests/TimeScaleTests.swift": "9527ef7c23d73aae12f7e70b18f54fde92b74c6afb38ed40008fa1014dc67702",
+      "TaptionPlanTests/WatchMeasurementAlertTests.swift": "b7d0a4e5e11bb61831b55aaa37268f5d51b4b08f4a03e209b17a3d463f2ac55f",
+      "TaptionPlanTests/WatchSensorQueryPlanTests.swift": "6ac3f6899085b7bb0fae1fe53f5d8bf805300451d1fc0e1ee8f4073f66ffbb35",
+      "TaptionPlanWatch/ContentView.swift": "0200b7c8eee5f082ce785c10fad597a7aaca5593310f2f67b83cc18d7a585751",
+      "TaptionPlanWatch/Info.plist": "b6c573ed66da4cac027589e245c4fcf3a714ddccb4e540432d88aea395006a88",
+      "TaptionPlanWatch/TaptionPlanWatch-Bridging-Header.h": "e163c5e233c6981b4f1fd2b645067a5db02328244234bb2fcd5bb8cf99baaf92",
+      "TaptionPlanWatch/TaptionPlanWatchApp.swift": "bc733e584b379a27e38bdbc7561c29d24ea18de881af55c68f67790239408ba0",
+      "TaptionPlanWatch/WatchAmbientSensorRecorder.swift": "db150dbc8542f18b96b90070d7d7f1fd8e2a43746d00108c971f2af57ef4f874",
+      "TaptionPlanWatch/WatchConnectivityController.swift": "aa9743fdd5abef0978d965f6dc6ad90ab03559359fcf3da8c59a761ab09cc647",
+      "TaptionPlanWatch/WatchLaunchDiagnostics.swift": "e7f0064fa53548b1369af16b08bdbcbaf020f458c5ae8ba2199e9662ea1a762e",
+      "TaptionPlanWatch/WatchObjCExceptionCatcher.h": "9c7ff741070b3057c51051074ff161c0f8ff58faa785fb3b309f10006cee228f",
+      "TaptionPlanWatch/WatchWorkoutManager.swift": "53bbbd58fc4f2da8df1aefa6aee95647302c69c06f3332879690d7bec89f2e6b",
+      "TaptionPlanWatchWidget/Info.plist": "f14e049f01cb4ba6b9dc543633951e0e03cd334e0228f4717916358268d380e8",
+      "TaptionPlanWatchWidget/TaptionPlanWatchWidget.swift": "290c34b23b99977df7b801eb1394ad9becceec36d2296029dac414999176a126",
+      "TaptionPlanWatchWidget/WatchWidgetShared.swift": "0834bb0da3cf93935ef321d7113ab2a6b88f19b6b0a3f4f38b3a5448ce2cd5b0",
+      "TaptionPlanWidget/Info.plist": "a8f6d2dbce3b9ad070458cadb7216ea2dee4c56d70b0bef82544e76fac59a72d",
+      "TaptionPlanWidget/TaptionPlanWidget.swift": "9cda67de2df376ee3322793ecd067805a2bdbaa353dee749e704c99e435d8c97",
+      "tools/generate_taption_plan_app_icon.swift": "198f2b17cb789246eda50cc5a45601c2d8e415c918357b937746bfdb96956af9",
+      "tools/process_cat_motion_atlases.swift": "55708252c8b9111ef4619332bebd1a24c0bdd24d9afaef7397b815402ad027bd",
+      "tools/render_taption_plan_launch_icon.swift": "fd57f2cf3fe7121fd6a3cf4da866d82085fc1e06fc0e275c2ff39e87a4b2c2c0"
+    },
+    "source_changes_since_validation": {
+      "TaptionPlan.xcodeproj/project.pbxproj": {
+        "validated": "dd09ec49a192a5c22eff7b8080692b33ba4b6fbeadd7223b4d7b41b7d110165c",
+        "current": "713acd010ad1231c6194efc3115d1a4632a41a8bcd283020943b55f0b3ae7465",
+        "reason": "build number 172 to 173"
+      },
+      "TaptionPlan/Info.plist": {
+        "validated": "a9817a802c50bbc2cfe8803be6275107a86f97099ad0d6cc7c641193a7f9859c",
+        "current": "3d6a5888f3ee628ca893d5e0d407e69c0cdf1d71e2d522fa3357afaa7c3e28a6",
+        "reason": "build number 172 to 173"
+      },
+      "TaptionPlanWatch/Info.plist": {
+        "validated": "b6c573ed66da4cac027589e245c4fcf3a714ddccb4e540432d88aea395006a88",
+        "current": "9f0363d2017da7c79c8daecd892ddab61df98fe5815a3e03d4d27d6938edc333",
+        "reason": "build number 172 to 173"
+      },
+      "TaptionPlanWatchWidget/Info.plist": {
+        "validated": "f14e049f01cb4ba6b9dc543633951e0e03cd334e0228f4717916358268d380e8",
+        "current": "96bb4cbfeb9f85cffc579eb9b501b3ab29cd51d50a22232fcd05a40149c6f550",
+        "reason": "build number 172 to 173"
+      },
+      "TaptionPlanWidget/Info.plist": {
+        "validated": "a8f6d2dbce3b9ad070458cadb7216ea2dee4c56d70b0bef82544e76fac59a72d",
+        "current": "5cdf9b2bf527858ce8edca5c020d45abb9536bc7eb5a10aefedfd95aa9e4857e",
+        "reason": "build number 172 to 173"
+      }
+    }
+  },
+  "build": {
+    "version": "1.0",
+    "number": "173",
+    "debug_exit": 0,
+    "debug_products": {
+      "products": [
+        {
+          "bundle_id": "com.taption.plan",
+          "version": "1.0",
+          "build": "173",
+          "strict_codesign_exit": 0
+        },
+        {
+          "bundle_id": "com.taption.plan.widget",
+          "version": "1.0",
+          "build": "173",
+          "strict_codesign_exit": 0
+        }
+      ],
+      "watch_embedded": false
+    },
+    "release": "in progress"
+  },
+  "installations": {
+    "iphone11": {
+      "before_build": "167",
+      "status": "pending"
+    },
+    "iphone18": {
+      "before_build": "172",
+      "status": "pending"
+    }
+  },
+  "cleanup": {
+    "status": "pending"
+  },
+  "limits": [
+    "Simulator fixture timings are not device performance measurements.",
+    "Installation does not validate on-device migration, feature behavior or battery use.",
+    "No TestFlight upload is part of this request."
+  ]
+}

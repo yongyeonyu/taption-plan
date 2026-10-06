@@ -1,5 +1,88 @@
 # 검증 기록
 
+## REL1007A01 · main 반영·iPhone 11/18 설치·생성 파일 정리 (2026-10-07 진행 중)
+
+- 시작 상태: main9e1ad9d, origin/main fetch 후 ahead/behind0/0. GPS1006H01·PAW1006A01·DBP1006A01/B01/C01의 기존 미커밋 변경을 보존해 함께 반영한다.
+- 검증 재사용: C01 최종 앱156개·Core131개·Release 성능2개가 실패/건너뜀0이며 버전 변경 전 각 소스 manifest145/145/22개와 현재 바이트가 일치했다. GPS package45개의 필터/테스트 소스2개도 일치했다. PAW 이후 바뀐 저장소/AppModel 경로는 C01의156개 회귀에 포함했고 GPS·발자국 UI 변경을 유지했다. 기존 결과를 현재 전체 앱의 새 전수검사로 표시하지 않는다.
+- 버전: CURRENT_PROJECT_VERSION8곳·앱/Widget/독립 Watch 앱/위젯 Info.plist4곳을173으로 맞췄다. 새 generic iOS Debug exit0, 앱·iPhone Widget1.0(173) strict 서명0 및 Watch 제품 미포함을 확인했다. 엔진 경계·diff check 통과. 기능 코드는 검증 후 변경하지 않았으며 최적화 Release 설치본 빌드 중이다.
+- 설치 전: 연결된 iPhone11 Pro는1.0(167), iPhone18 Pro Max는1.0(172)이며 두 기기 모두 Developer Mode 활성 상태다. 설치/정리는 아직 수행 전이며 이후 실제 결과로 갱신한다. 원본 검증 명령/로그는 build/validation/REL1007A01/, 보존할 작은 요약·소스 해시는 artifacts/validation/REL1007A01.json에 기록한다.
+- 제한: 새 TestFlight 업로드 요청이 아니므로 직접 기기 설치를 진행한다. 설치만으로 실제 사용자 DB 이관·지도/GPS·발자국·센서 동작·CPU/배터리가 검증되었다고 처리하지 않는다.
+
+## DBP1006C01 · SQLite 행 저장·시간 인덱스·앱 호출 경로 개편 (2026-10-07 로컬 검증 완료 / 실기기 대기)
+- 요청/기준: 호환성 불필요·속도 우선 DB 재설계. main9e1ad9d의 미커밋 GPS1006H01·PAW1006A01·A01 변경을 보존하고 B01 활동 배열 분할 설계를 대체했다. 사용자 원본 DB/백업을 도구로 변환하거나 삭제하지 않았다.
+- 구현: `actual_records`에 활동 필드를 별도 열로 저장하고 RTree+REAL 경계 재검사로 기간 교집합을 조회한다. 트리거가 외부 SQL 수정까지 활동 revision/시간 인덱스에 반영한다. UUID 중복 출현 키와 position으로 중복·순서를 보존하며 evidence만 현재 정본 codec을 사용한다. 처음 배포 배열을 읽을 때만 단일 트랜잭션으로 행에 이관하며 B01 manifest/분할 payload/원본 중복 테이블 API는 제거했다.
+- 증분/앱: immutable 단건 변경 객체와 확정 배열 저장 공간이 일치하면 한 행만 UPSERT한다. 일반 수정은 변경 행을 비교하고 전체 가져오기는512행씩 바인딩하고 한 트랜잭션 안에서 행별 트리거 제거→정본 행 입력→SQL 한 번의 RTree 구성→트리거 복구→revision1회 증가를 수행한다. 오류·취소 시 DDL/행/인덱스/revision 모두 rollback한다. 빈 DB에 빈 이력을 다시 쓰면 인덱스 구성과 revision 갱신을 생략한다. 일자 생성·재계산은 현재 확정 배열과 revision이 맞을 때만 범위 SQL을 사용하고, 미저장 변경/외부 변경/메모리 압력 때는 캡처한 원본으로 돌아간다. 초기 정리 worker가 내용이 같은 배열을 새로 만드는 경로는 원래 저장 공간을 재사용하도록 고쳤다.
+- 중간 실패: `app-tests-01`146개 중3개는 실제 저장 오류가 아니라 `encodedDomains`의 활동 영역 중복 집계 실패였다. 중복 집계를 제거했다. `app-tests-02`147개 중 앱 호출 검증1개에서 assertion2건이 실패해 초기 정리 이후 배열 저장 공간이 바뀌는 문제를 발견했다. 기대치를 낮추지 않고 실제 경로를 수정했다.
+- 최종 회귀 통과: Core 전체131개·실패/건너뜀0(`core-final-03.log`); SQLite48·센서100·앱 시작/취소/수정/일자8개를 함께 실행한 앱156개·실패/건너뜀0(`app-tests-final-v3.xcresult`). 행 경계/진행 중/자정 교차·원문 UTF-8/embedded NUL·중복 ID·각 provenance 필드·부분 변경/추가/재정렬/축소/삭제·일관 WAL 읽기·실패/취소 rollback·외부 SQL 변경·부정확한 단건 hint의 fallback·앱 호출을 포함한다. EXPLAIN에서 RTree와 row_id PK 탐색을 확인했다.
+- 중간 추가 수정: 최초 typed 구현의 Release 전체 저장6,488ms 회귀를 확인해 일괄 시간 인덱스로 변경했다. 변경 중 문자열 들여쓰기와 Swift6 Sendable 선언으로 컴파일이 실패한 뒤 수정했다(`core-native-02`, `core-final-02`, `app-tests-final`). `app-tests-final-v2`는 빈 이력 재저장 시 불필요한 revision 변경을 검출한1개 실패가 있어 이를 수정했고 v3에서156개 전체 통과했다. 앞서 통과한 실행/폐기한 구현의 수치를 최종 성능으로 혼용하지 않는다.
+- 최종 빌드/정합: `performance-all-final.xcresult` Release(-O/WMO/ENABLE_TESTABILITY)2개·실패/건너뜀0; `device-debug-final.log` generic iOS Debug 성공(`ENABLE_DEBUG_DYLIB=NO`, 기존 개발용 dylib 서명 우회 CLI값이며 프로젝트 설정 변경 없음). 앱/Widget 산출물1.0(172), Watch 미포함, 두 번들 strict codesign exit0. 모든 최종 앱/성능/기기 빌드 및 Core 입력 파일 해시가 현재 소스와 일치한다(`final-verification.json`). 엔진 import 경계·`git diff --check` 통과. GPS/발자국 기존 변경의 소스 해시는 C01 전과 동일하다(`source-comparison.json`). 캐시된 일자 preview가 정본을 추가 조회하지 않는 것도 앱 호출 횟수로 확인했다.
+- 최종 성능(12만 건, 동일 규격 Simulator Release fixture, 이전 B01→C01): 최초 전체 저장2,354.655→1,927.987ms; 최초 전체 조회748.395→188.980ms; 일반 배열 API의 한 건 변경 저장46.321→32.622ms; 설정 저장6.942→3.599ms; 외부 설정 변경 뒤 조회5.914→0.381ms. 새 명시 단건 API는 비교1건/쓰기1행·2.978ms, 하루 범위는1,441행·2.621ms. 설정용 부분 시작 조회0.265ms, 확정 snapshot 반복 조회3회 평균0.100ms. 최초 과정의 process peak는 B01 약108.97→113.67MiB로 소폭 증가했다. fixture1회 벽시계 측정이며 기기 성능·통계적 보장·UI 전체 지연으로 일반화하지 않는다. 실제 기존 DB 이관은 초기 codec decode가 추가되므로 신규 전체 저장1.93초와 같다고 보지 않는다.
+- 센서 재검증(5천 건): 저장108.949ms·전체 조회3회 평균72.350ms. 같은 실행에서 좁은 범위 조회는 일자 전체4,440행/4.964ms와 인덱스2행/0.041ms. 센서 범위 SQL은 B01부터 적용된 것이며 C01의 신규 개선으로 중복 주장하지 않는다. 측정 간 환경 변화도 포함한다. 수치 원본은 `metrics.json`과 각 성능 로그이다.
+- 제한: 전체 앱 초기 로드/portable 백업/일괄 분석은 전체 모델을 구성하고, 일반 배열 변경 비교·재정렬은 전체 건수에 비례한다. 단건 DB 측정은 배열 복사/화면 갱신을 포함한 전체 UI 지연이 아니다. 실제 사용자 DB 이관/기기 화면·CPU·배터리·체감은 미검증이며 commit/push/TestFlight/실기기 설치는 실행하지 않았다. 근거 `build/validation/DBP1006C01/`.
+
+
+## DBP1006B01 · 대용량 활동 이력 부분 저장·센서 시각 범위 조회 · 2026-10-06
+- 시작: main9e1ad9d의 GPS1006H01·PAW1006A01·DBP1006A01 미커밋 변경을 보존했다. A01의 최종 Release 결과를 비교 기준으로 재사용했다. 사용자 원본 DB·iCloud 백업·인증 자료는 열거나 변환하지 않았고 합성 fixture에서 검증했다.
+- 구현: 활동 이력1,024건 이상을512건 이하 묶음으로 분할한다. `plan.actuals`는 버전1 manifest, `snapshot_parts`는 기존 canonical envelope로 압축된 배열을 보관한다. 배열 위치를 유지하므로 중복 UUID나 날짜 역순을 합치거나 정렬하지 않는다. 같은 묶음은 UTF-8/시각 비트까지 대조해 재인코딩을 생략하고, 변경 묶음만 UPSERT한다. append·축소·empty도 같은 트랜잭션으로 처리한다. metadata·manifest·묶음을 물리적으로 다시 읽어 검증하고 새 묶음의 decode 값이 입력과 일치한 뒤 commit한다. read는 별도 WAL 읽기 트랜잭션으로 묶어 외부 동시 쓰기 때도 root/묶음 세대가 섞이지 않는다.
+- 변환/호환: 기존 inline 원본 행은 `snapshot_partition_sources`에 최초1회 보존하고, 최신 값 대신 자동 fallback하지 않는다. 저장 도중 강제 실패 시 manifest·묶음·보존 원본·metadata가 함께 rollback되고 재시도 가능함을 확인했다. 현재 facade·App Group 경로·portable snapshot·암호화 백업 포맷은 유지한다. 기존 배열 DB→분할 DB→파일 백업→새 DB 복원에서 원문·순서·중복·설정이 같다. 이전 앱 바이너리는 새 manifest를 배열로 해석할 수 없으므로 DB 파일 자체의 다운그레이드는 지원하지 않는다. 전체 사용자 데이터 삭제는 보존 원본/묶음도 삭제한다.
+- 범위 조회: 센서의 `TimeSpan.contains` 계약대로 SQL에서 양 끝 시각을 포함한다. `events_domain_timestamp_index`는 동기 저장소 초기화 대신 actor의 첫 범위 조회에서 생성한다. 저장 당시 날짜 키의 시간대가 달라도 실제 timestamp가 범위 안이면 읽고, 기존 payload 시각 재확인·원본 복구·취소·generation 검사를 유지한다. 실제 query plan이 시간 범위 인덱스를 SEARCH하는지 Core 테스트로 확인했다.
+- 최종 관련 검증: `app-tests-v2.xcresult`144개·`core-tests-final.log`127개·Release 성능2개 모두 실패/건너뜀0. 한 건 수정 시512건 이하 묶음1개만 encode/write하는 assertion, 전체 필드 변경·바이트가 다른 Unicode·중복 ID·삭제/추가·외부 동일 revision 손상·메모리 압력·변환 rollback·portable 복원·시간대/양 끝 시각·범위 밖 손상 원본 배제를 검증했다. 기존 센서 복구·삭제·일자 DB·취소 회귀도 포함한다. 첫 앱143개도 통과했다.
+- 중간 실패 구분: 최초 Core127개에서 새 fixture의 `.now`가 SQLite REAL 왕복 때 미세하게 달라져 한 테스트의 equality assertion2개가 실패했다. 비교용 시각을 정확한 고정 시각으로 바꿨다. 두 번째 Core 검사에서는 기존 V3 동시 cold-open 테스트가 `database is locked`로1회 실패했다. 해당 테스트 단독 재검사와 최종 전체127개는 통과했으며, V3 초기화 코드를 바꾸거나 이 중간 실패를 통과로 처리하지 않았다.
+- 성능: 같은 iPhone18 Pro/iOS27.0 Simulator의 Release(-O/whole-module, testability ON)·같은 규격의12만 건 fixture를 비교했다. 각 저장/콜드 조회는1회 측정이며, 반복 조회/센서 query는3회 평균이다. 통계적 유의성·기기 CPU/배터리·실제 사용자 DB의 지연 개선 근거가 아니다.
+
+|12만 건 작업|A01 최종 ms|B01 최종 ms|
+|---|---:|---:|
+|기록 한 건 수정 저장|1140.100|46.321|
+|최초 전체 이력 조회|1019.167|748.395|
+|설정만 저장|9.475|6.942|
+|저장 직후 조회|0.217|0.154|
+|반복 조회 평균|0.115|0.080|
+|외부 설정 변경 뒤 조회|6.023|5.914|
+|최초 전체 저장|1733.994|2354.655|
+
+- 센서5천 건 fixture에서 좁은 범위를 요청할 때, 같은 실행에서 이전 날짜 쿼리는4,440행/5.304ms, 새 시각 쿼리는2행/0.054ms였으며 반환 원문은 같다. 센서 전체5천 건 append198.889ms·조회92.942ms도 기록했으나 A01 대비 변화에는 실행 환경 차이도 포함될 수 있어 범위 쿼리의 구조적 개선과 구분한다. 최초 전체 저장의 프로세스 peak 표본은203.14→108.97MiB였으며 실기기 peak memory 개선을 입증한 값은 아니다.
+- 비용/제한: 최초 전체 저장은 이번 측정에서0.62초 늘었다. 기존 배열의 첫 전환은 전체 인코딩/검증과 원본 보존 비용이 필요하며, 보존 원본만큼 DB 디스크 사용량도 추가된다. 전체 snapshot facade는 여전히 모든 이력을 메모리에 읽고, 배열 앞부분 삽입/전체 재정렬은 여러 묶음을 바꾼다. 다른 작은 영역/배열은 inline을 유지한다. 실제172 기기 적용·체감/지도·배터리 검증은 배포 후 확인해야 한다.
+- 빌드/일치: generic iOS Debug exit0·BUILD SUCCEEDED. 기존 개발용 dylib 서명 회피 명령 옵션 ENABLE_DEBUG_DYLIB=NO를 사용했으며 프로젝트 설정은 바꾸지 않았다. 최종 앱/Widget1.0(172)·각 strict 서명 exit0·Watch 미포함을 확인했다. 최종 앱 Debug 테스트·Release2개·iOS Debug의 Swift/plist/project/header/modulemap 소스와 현재 파일이 모두 일치하고 Core 최종 소스도 일치한다. 두 번째 Release 성능 검사는 첫 Release의 동일 컴파일 산출물을 증분 재사용했다. import 경계·diff 검사가 통과했다. A01 최종 대비 변경 파일8개만 확인했고 GPS/분홍 발자국 구현은 보존했다.
+- 근거/남음: `build/validation/DBP1006B01/`의 각 로그/xcresult/summary·metrics.json·final-verification.json·source-comparison.json. 현재 commit/push·TestFlight 업로드·실기기 설치 전이다. 실제 사용자 DB 전환과 기기 체감 검증 조건은 temp.md에 유지한다.
+
+## DBP1006A01 · DB 반복 조회·저장 및 센서 codec 비용 개선 · 2026-10-06
+- 시작: main9e1ad9d에서 GPS1006H01·PAW1006A01의 미커밋 변경을 보존했다. 현재 접근 가능한 최신 iCloud 진단 로그는170 자료이며 이번172 기기 DB 시간의 근거로 사용하지 않았다. 사용자 DB/원본/백업을 변환·삭제하지 않고 합성 fixture로 측정했다.
+- 확인한 원인: snapshot은 영역별 큰 Codable 배열이며, 설정 저장에도 전체 영역 payload를 읽고 SHA-256 검증 후 저장 뒤 다시 읽었다. 외부 연결에서 설정만 바뀌어도 모든 이력을 다시 decode했다. 센서 codec은 각 레코드의 SHA-256 문자열을 만들 때 Foundation 포맷 호출32회를 반복했다. 큰 배열의 한 항목 변경이 전체 재인코딩을 요구하는 구조도 확인했다.
+- 변경: 동일 SQLite 연결의 data_version·64bit total_changes와 삭제 generation이 같으면 검증된 snapshot을 재사용한다. 토큰은 SELECT 전에 캡처하고 연결 ID를 포함한다. 외부 변경이 있으면 실제 payload·revision·시각을 다시 검증하되 동일 영역의 decode는 재사용한다. 저장 전 확인·변환·쓰기·실제 행 재검증을 BEGIN IMMEDIATE 안에 묶고 중첩 저장은 savepoint로 rollback을 보존한다. 메모리 압력 후 오래된 읽기가 캐시를 다시 채우지 않는 조건을 유지했다. codec은 기존 소문자 SHA-256 문자열 바이트를 직접 생성하고 각 decode를 autorelease pool로 감쌌으며 plist/LZFSE/envelope/원본·백업 형식은 그대로다. repository_local_save의 읽기·변환·쓰기·검증 시간과 repository_local_load의 실제 읽은 바이트·decode 영역 수를 추가했다. 원본 내용은 새 로그에 넣지 않는다.
+- 회귀: 최종 app-tests-final.xcresult138개·Core124개 통과, 실패/건너뜀0. 외부 동일 revision의 원문/Unicode 변경·손상, 외부 영역 삭제, 센서만 변경된 DB, 대기 중 메모리 압력, 트랜잭션/중첩 실패 rollback·별도 SQLite writer 차단, 기존 삭제·복원·센서 원본 계약을 확인했다. 첫 앱/패키지 시도는 CSQLite shim에 새 함수 선언2개가 없어 컴파일 실패했고 테스트는 실행되지 않았다(app-tests.log/core-tests.log). 선언을 보완한 Core123 중간 통과 후 codec 회귀를 추가해 최종124개를 통과했다. 이전 실패를 최종 통과 수에 합산하지 않는다.
+- 측정 조건: iPhone18 Pro/iOS27.0 Simulator, Release -O/whole-module/ENABLE_TESTABILITY=YES. repository는 동일12만 건 fixture에서 비교했고 센서는 동일5천 건을 저장한 뒤3회 조회 평균이다. 각 성능 실행은1개 통과·실패/건너뜀0이며 최종 Release2개도 통과했다. 컴파일 대기는 앱 실행 시간에서 제외한다. 최종 repository 측정은 직전 sensor 실행과 동일한 소스/Release 산출물을 재사용했다(release-build-confirmation.json). 단일 실행 및3회 평균의 fixture 수치이며 기기 체감·CPU·배터리·통계적 유의성을 입증하지 않는다.
+
+| 구간 | 수정 전 ms | 수정 후 ms |
+| --- | ---: | ---: |
+| 설정 저장 | 25.199 | 9.475 |
+| 저장 직후 조회 | 6.119 | 0.217 |
+| 반복 조회3회 평균 | 5.750 | 0.115 |
+| 외부 연결의 설정 변경 뒤 조회 | 889.187 | 6.023 |
+| 최초 전체 이력 조회 | 934.609 | 1019.167 |
+| 최초 전체 저장 | 1593.857 | 1733.994 |
+| 기록 한 건 수정 저장 | 1315.922 | 1140.100 |
+| 센서5천 건 저장 | 539.058 | 345.725 |
+| 센서5천 건 조회3회 평균 | 291.705 | 177.169 |
+
+- 빌드/일치: generic iOS Debug exit0·BUILD SUCCEEDED. 기존 macOS 개발용 dylib 서명 문제에 사용했던 명령 옵션 ENABLE_DEBUG_DYLIB=NO를 적용했으며 프로젝트 설정은 변경하지 않았다. 앱/Widget1.0(172)·각 strict 서명 exit0·Watch 미포함을 확인했다. 최종 Debug 테스트·Release2개·iOS Debug의 Swift/plist/project/header/modulemap 소스 해시와 현재 파일이 모두 일치하며 Core 최종 소스도 일치한다. import 경계·diff 검사 통과. GPS/분홍 발자국 구현 소스는 이번 작업 시작과 동일하다.
+- 남은 한계: 최초 전체 조회·최초 저장의 개선은 입증하지 못했고 이번 측정에서는 더 느렸다. 기록 한 건 수정도1.14초가 남으며 원본이 큰 배열 하나인 구조는 유지했다. 근본적인 날짜/레코드별 부분 저장은 기존 기록·백업의 마이그레이션/rollback 검증을 포함한 후속 범위다. 실제172 기기 DB 시간·화면 지연은 미확인이고 수정본은 commit/push·TestFlight 업로드·실기기 설치하지 않았다. 열린 조건은 temp.md에 유지한다. 근거 build/validation/DBP1006A01/의 metrics.json·각 xcresult/summary·core-tests-final.log·final-build-verification.json·source-comparison.json.
+
+## GPS1006H01 · 오늘 부산 GPS 급이탈 경로 조사·수정 · 2026-10-06
+- 시작: main9e1ad9d의 clean 상태에서 진행했다. 사용자가 발생 빌드를1.0(172)로 확인했으며 재생으로 발생 시각을 찾지 못해 원본 조회를 요청했다. iCloud 원본 백업의 헤더·암호문만 읽었고 위치/건강/일정 원문을 출력하거나 외부 전송하지 않았다.
+- 확인한 코드 문제: 정지 표본을 생략할 때 마지막 정상 비교 시각도 오래 남아 실제 수집 공백으로 오인하고 새 좌표를 기준으로 잡을 수 있었다. 이상 좌표 뒤 비교 기준을 지워 연속된 도시 급이탈의 두 번째 표본이 새 경로에 들어갔다. 낮은 정확도의 경계 표본은 기존 거리 검사를 우회했다. 초기5개 회귀 중3개 실패·2개 통과(baseline-expanded.log)로 코드의 실패 경로를 재현했다. 이것은 오늘 부산 원본을 직접 확인한 결과가 아니다.
+- 수정: 원본 normalized samples/저장 데이터를 유지하고 표시·판정 입력의 시간/거리 검사를 경계 표본에도 적용했다. 거른 표본 뒤에도 마지막 정상 위치를 비교 기준으로 유지하며 정상 GPS 공백 뒤 새 위치는 허용한다. 정지 수집 중 정상 시각을 갱신하고 경로의15분 이하 체크포인트와 마지막 시각을 기존 정지 위치에 남긴다. 정지 끝 시각 회귀의 초기 실패도 stationary-end-baseline.log에 기록했다. 현재 위치 마커는 일자 utility worker의 최신 정상/정지 표본을 사용하고 원본 최신 좌표로 우회하지 않는다. 날짜 projection은 버전1→2, 지도 문서 키는v7→v8로 바꿔 파생 캐시를 다시 만들며 SQLite raw 스키마3·codec·App Group·백업 형식은 유지했다.
+- 검증: TaptionRouteEngine45개 통과(route-package-final.log), TaptionPlanCore119개 통과(core-package.log), 실패/건너뜀0. 관련 앱 최종351개 통과·실패/건너뜀0(PAW1006A01/app-tests-verified.xcresult 및 app-tests-verified-summary.json). 앱의 이전 stationary 시도는350개 통과·1개 실패였으며, 정지 끝 표본을 삭제한다는 옛 기대값3곳을 끝 시각 보존·좌표 고정·급이탈 뒤 경로 단절 검증으로 갱신했다. 그 실패를 통과로 처리하지 않았다. 앱/엔진 import 경계도 통과했다.
+- 실제 원본 접근 제한: 최신으로 확인한2026-10 원본 백업은V4·1,749,967바이트이며 생성 시각은2026-10-06T19:58:56+09:00이다. 암호화 payload와 wrapped key가 있고 PIN salt/verifier는 백업 헤더에 없다. Mac의 해당 앱 PIN verifier/계정 복구 키와 iCloud 문서 복구 키가 없고 iPhone18은 unavailable였다(raw-access-summary.json). 제공된 PIN 값과 복구 키를 기록하거나 백업을 복호화/복원/변경하지 않았다. 오늘 부산 급이탈의 정확한 표본·시각·장시간 공백/첫 표본 여부와 실제 수정 효과는 직접 대조하지 못했다. 접근 가능한1532 진단 로그는 기존170 조사 자료이므로172 원본 근거로 사용하지 않았다.
+- Debug/산출물: 첫 generic iOS Debug는 컴파일·링크 후 TaptionPlan.debug.dylib의 internal error in Code Signing subsystem으로 exit65였다(device-debug.log). 프로젝트 설정은 변경하지 않고 명령에 ENABLE_DEBUG_DYLIB=NO를 적용한 재시도는 exit0·BUILD SUCCEEDED였다(device-debug-no-dylib.log). 앱·Widget 산출물은1.0(172), 각각 codesign --verify --deep --strict exit0이며 Watch 앱은 포함하지 않았다. 최종 앱 테스트와 Debug의 Swift/plist/project 소스 해시는 일치한다(products-build-summary.json). 이 빌드는 설치·TestFlight 업로드 결과가 아니다.
+- 현재 제한: 실기기 설치·GPS 위치·체류/재생 화면은 테스트 성공으로 통과 처리하지 않는다. 실제 원본/화면 조건 때문에 temp.md에 남기며, 수정본의 새 TestFlight 업로드·push는 아직 진행하지 않았다. 근거 build/validation/GPS1006H01/ 및 build/validation/PAW1006A01/.
+
+## PAW1006A01 · 분홍 발자국의 기록 시각 선택 · 2026-10-06
+- 구현: RouteTimelineSegment의 좌표마다 시각을 연결하고 지도 표시/캐시에도 함께 보존한다. 분홍 발자국은 해당 시각을 사용하며 회색 예상 발자국에는 실제 기록 시각을 부여하지 않는다. 지도 renderer의 단일 탭 시점에 마커를 현재 화면 좌표로 변환해 가까운 분홍 발자국을 고른다. 드래그·다중 탭 확대·길게 누르기와 구분하고 발자국 위에 드래그를 가리는 투명 버튼 영역을 추가하지 않았다.
+- 선택 동작: 재생·현재 위치 추적·대기 중인 위치 요청을 멈춘 뒤 선택 날짜의 분/초 시각으로 이동한다. 정지 중에는 선택한 발자국의 정확한 경로 좌표를 표시하며 같은 분 안의 다른 발자국도 각 시각을 유지한다. 시간축 확대 범위 밖이면 선택 시간이 보이게 이동한다. 분홍 발자국에는 시간 접근성 동작을 연결하고 회색 발자국은 제외했다. 입력은 준비된 일자 경로/마커를 사용하며 전체 과거 이력 조회를 추가하지 않았다.
+- 검증: 분홍 시작/중간/끝·초 단위 시각·날짜 경계·겹친 회색/분홍·현재 화면의 가까운 대상·잘못된 시각 입력·확대 시간축8개 통과. 전체 관련 앱351개는 XCTest305개(발자국8·RouteTimeline114·SensorDayStore7·TimeScale176)와 Swift Testing46개(경로 adapter19·활동 adapter27)이며 실패/건너뜀0이다. 최종 근거 app-tests-verified-summary.json. 첫 앱 테스트 시도는 helper의 default throwing closure 호출2곳 컴파일 오류로 실행되지 않았고 비투척 overload를 분리한 뒤 다시 검증했다(app-tests.log). 중간 실패/이전 결과와 최종 결과를 구분했다.
+- Debug: generic iOS Debug 재시도와 앱·Widget strict 서명 검증이 성공했고 최종 앱 테스트의 소스 해시와 일치한다. 첫 개발용 dylib 서명 실패와 ENABLE_DEBUG_DYLIB=NO 재시도 결과는 위 GPS1006H01 및 products-build-summary.json에 구분했다.
+- 현재 제한: iPhone18의 실제 탭/드래그·확대·겹친 발자국·VoiceOver 동작은 아직 검증하지 않았다. 사용자의 기존 실기기 확인 방식을 유지하고 temp.md에 해당 조건을 남긴다. 새 TestFlight 배포·실기기 설치는 진행하지 않았다. 근거 build/validation/PAW1006A01/.
+
 ## REL1006C01 · MAP1006G01 main 반영 및 TestFlight172 내부 배포 · 2026-10-06
 - 시작: 원격 main과 로컬 HEAD가 4ab5cd3으로 일치하고 MAP1006G01의 검증된 변경 11개가 로컬에 있었다. 사용자의 다음 진행 요청에 따라 해당 변경을 보존해 다음 내부 배포를 진행했다. 실제 API 최신 빌드는171 VALID이고172는 없었다. Chrome 내부 그룹 화면의171 테스트 중·테스터1명·129개 빌드와 로그인 가능 상태를 확인했다.
 - 버전/로컬 검증: 프로젝트 CURRENT_PROJECT_VERSION8곳과 앱·Widget·Watch·Watch Widget Info.plist4곳을172로 맞췄다. 원본 short version은 $(MARKETING_VERSION)을 프로젝트1.0으로 해석했다. MAP1006G01 Debug185개·Release3개(각 실패/건너뜀0)의 Swift 소스 해시 일치를 확인해 재사용했다. 새 generic iOS Debug exit0·앱/Widget1.0(172)·strict 서명·기존 HealthKit entitlement 범위·Watch 미포함을 확인했다. 엔진 import 경계와 diff check 통과, 변경 없는366개 집 이미지의 기존 검증을 재사용했다. 근거 build/validation/REL1006C01/prior-validation-reuse.json·prearchive-checks.json·debug-bundles.json.

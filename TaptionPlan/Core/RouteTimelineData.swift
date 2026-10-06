@@ -294,6 +294,25 @@ struct RouteTimelineSegment: Identifiable, Hashable, Sendable {
     /// It is nil when an interval has no measurable movement.
     let speedMetersPerSecond: Double?
     let confirmedSubwayTravelID: UUID?
+    let coordinateTimestamps: [Date]
+
+    init(
+        id: String, start: Date, end: Date, category: RouteTimelineCategory,
+        colorHex: String, opacity: Double, coordinates: [GeoPoint],
+        speedMetersPerSecond: Double?, confirmedSubwayTravelID: UUID?,
+        coordinateTimestamps: [Date] = []
+    ) {
+        self.id = id
+        self.start = start
+        self.end = end
+        self.category = category
+        self.colorHex = colorHex
+        self.opacity = opacity
+        self.coordinates = coordinates
+        self.speedMetersPerSecond = speedMetersPerSecond
+        self.confirmedSubwayTravelID = confirmedSubwayTravelID
+        self.coordinateTimestamps = coordinateTimestamps
+    }
 }
 
 struct RouteTimelineProjection: Hashable, Sendable {
@@ -2939,6 +2958,7 @@ enum RouteTimelineDataEngine {
         var speedMetersPerSecond: Double?
         let confirmedSubwayTravelID: UUID?
         var coordinates: [GeoPoint]
+        var coordinateTimestamps: [Date]
 
         var segment: RouteTimelineSegment {
             RouteTimelineSegment(
@@ -2950,7 +2970,8 @@ enum RouteTimelineDataEngine {
                 opacity: opacity,
                 coordinates: coordinates,
                 speedMetersPerSecond: speedMetersPerSecond,
-                confirmedSubwayTravelID: confirmedSubwayTravelID
+                confirmedSubwayTravelID: confirmedSubwayTravelID,
+                coordinateTimestamps: coordinateTimestamps
             )
         }
     }
@@ -3126,6 +3147,7 @@ enum RouteTimelineDataEngine {
                 current.end = end
                 if !sameLocation(current.coordinates.last, endPoint) {
                     current.coordinates.append(endPoint)
+                    current.coordinateTimestamps.append(end)
                 }
                 current.speedMetersPerSecond = measuredSpeed(
                     from: current.coordinates[0],
@@ -3146,7 +3168,10 @@ enum RouteTimelineDataEngine {
                     confirmedSubwayTravelID: confirmedSubwayTravelID,
                     coordinates: sameLocation(startPoint, endPoint)
                         ? [startPoint]
-                        : [startPoint, endPoint]
+                        : [startPoint, endPoint],
+                    coordinateTimestamps: sameLocation(startPoint, endPoint)
+                        ? [start]
+                        : [start, end]
                 )
             }
         }

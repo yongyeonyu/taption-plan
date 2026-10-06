@@ -1,8 +1,20 @@
 import Foundation
+import CryptoKit
 import XCTest
 @testable import TaptionPlanCore
 
 final class StorageContractsTests: XCTestCase {
+    func testCanonicalChecksumPreservesLegacyHexadecimalBytes() {
+        XCTAssertEqual(TaptionPlanCanonicalStorage.checksum(Data()),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        XCTAssertEqual(TaptionPlanCanonicalStorage.checksum(Data("abc".utf8)),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        for data in [Data(0...255), Data(repeating: 0, count: 8_192), Data("한글 원문".utf8)] {
+            let legacy = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            XCTAssertEqual(Array(TaptionPlanCanonicalStorage.checksum(data).utf8), Array(legacy.utf8))
+        }
+    }
+
     func testCanonicalBinaryRoundTripAndChecksum() throws {
         let value = try TaptionPlanStorageEnvelopeV2(updatedAt: Date(timeIntervalSince1970: 12))
         let encoded = try TaptionPlanCanonicalStorage.encode(value)

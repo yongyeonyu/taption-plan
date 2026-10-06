@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ABD100600000000000000001 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
+		ABD100600000000000000002 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
 		A10000000000000000000003 /* PlanItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* PlanItem.swift */; };
@@ -219,6 +221,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		FBD100600000000000000001 /* PlanActualStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanActualStorage.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000002 /* TaptionPlanTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C10000000000000000000003 /* TaptionPlanWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaptionPlanWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -506,6 +509,7 @@
 				F1000000000000000000000F /* FeatureModels.swift */,
 				F10000000000000000000080 /* record-classification.json */,
 				F10000000000000000000010 /* PlanRepository.swift */,
+				FBD100600000000000000001 /* PlanActualStorage.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
 				F10000000000000000000013 /* SensorFusion.swift */,
@@ -887,6 +891,7 @@
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
 				A10000000000000000000010 /* PlanRepository.swift in Sources */,
+				ABD100600000000000000001 /* PlanActualStorage.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A10000000000000000000013 /* SensorFusion.swift in Sources */,
@@ -966,6 +971,7 @@
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
 				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
+				ABD100600000000000000002 /* PlanActualStorage.swift in Sources */,
 				A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */,
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
@@ -1154,7 +1160,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlanDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 172;
+			CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1182,7 +1188,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
@@ -1253,7 +1259,7 @@
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidgetDebug.entitlements;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) TAPTION_WIDGET";
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 172;
+			CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1281,7 +1287,7 @@
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) TAPTION_WIDGET";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1308,7 +1314,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatchDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 172;
+			CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1342,7 +1348,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
@@ -1375,7 +1381,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 172;
+			CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1403,7 +1409,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 172;
+				CURRENT_PROJECT_VERSION = 173;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;

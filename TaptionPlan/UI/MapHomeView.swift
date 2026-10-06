@@ -17,6 +17,7 @@ private struct MapHomeCachedRouteOverlay: Codable, Sendable {
     let opacity: Double
     let speedMetersPerSecond: Double?
     let coordinates: [MapHomeCachedCoordinate]
+    let coordinateTimestamps: [Date]
 }
 
 private struct MapHomeCachedExpectedRouteOverlay: Codable, Sendable {
@@ -1267,6 +1268,9 @@ struct MapHomeDaySourceTaskKey: Hashable {
 struct MapHomePreparedRouteReadings: Sendable {
     let normalized: [SensorReading]
     let display: [SensorReading]
+    let latestTrustedReading: SensorReading?
+    let impossibleLocationCount: Int
+    let innovationOutlierCount: Int
     let sourceCount: Int
     let filteredCount: Int
     let watchSourceCount: Int
@@ -1344,10 +1348,11 @@ enum MapHomeRouteReadingsPreparation {
                 dayReadings.append(latestReading)
             }
         }
-        let filtered = try TaptionRouteEngineAdapter.filteredReadings(
+        let filteredRoute = try TaptionRouteEngineAdapter.prepareFilteredReadings(
             from: dayReadings,
             cancellationCheck: cancellationCheck
         )
+        let filtered = filteredRoute.readings
         try cancellationCheck()
         let normalized = try RouteTimelineDataEngine
             .normalizedDisplayReadings(
@@ -1374,6 +1379,9 @@ enum MapHomeRouteReadingsPreparation {
         return MapHomePreparedRouteReadings(
             normalized: normalized,
             display: display,
+            latestTrustedReading: filteredRoute.latestTrustedReading,
+            impossibleLocationCount: filteredRoute.impossibleLocationCount,
+            innovationOutlierCount: filteredRoute.innovationOutlierCount,
             sourceCount: sourceCount,
             filteredCount: filtered.count,
             watchSourceCount: watchSourceCount,
@@ -1841,6 +1849,8 @@ struct MapHomeView: View {
     @State private var headingMonitor = MapHomeHeadingMonitor()
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
+    @State private var selectedPawprintTimestamp: Date?
+    @State private var selectedPawprintCoordinate: CLLocationCoordinate2D?
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
     @State private var isUnconfirmedReviewPresented = false
@@ -1893,6 +1903,7 @@ struct MapHomeView: View {
     @State private var routeReadingsLoadState: MapHomeRouteReadingsLoadState = .idle
     @State private var hasReportedInitialDataReady = false
     @State private var normalizedRouteReadings: [SensorReading] = []
+    @State private var currentMapLocationReading: SensorReading?
     @State private var historicalPlaybackReadings: [SensorReading] = []
     @State private var displayRouteReadings: [SensorReading] = []
     @State private var lastPreparedRouteReadingsSignature: String?
@@ -1951,7 +1962,7 @@ struct MapHomeView: View {
         "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
-    private static let mapCacheAlgorithmKey = "route-document-v7"
+    private static let mapCacheAlgorithmKey = "route-document-v8"
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
@@ -2621,6 +2632,14 @@ struct MapHomeView: View {
             scheduleLiveRouteProjectionRefresh()
             scheduleExpectedRouteRefresh()
         }
+        .onChange(of: currentMapLocationReading?.id) { _, _ in
+            applyInitialLocationIfAvailable(using: nil)
+            guard selectedTimelineMinute == nil,
+                  Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+                  userTrackingMode.keepsCameraLocked
+            else { return }
+            focusDisplayedLocation(using: nil)
+        }
         .onChange(of: model.settings.frequentPlaces) { _, _ in
             focusMapIfNeeded()
         }
@@ -2914,7 +2933,10 @@ struct MapHomeView: View {
             onSingleFingerPanBegan: handleUserMapPan,
             onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
             onUserCameraGesture: handleUserCameraGesture,
-            onLongPress: presentMapLongPressMenu
+            onLongPress: presentMapLongPressMenu,
+            onSingleTap: { point, positions in
+                selectPawprintIfTapped(at: point, waypoints: waypoints, positions: positions)
+            }
         )
         .id(style.rawValue)
         .overlay {
@@ -3334,7 +3356,12 @@ struct MapHomeView: View {
         let phase: MapHomeAppleRoutePhase
         let animationPhase: Int?
         let cameraCoordinate: CLLocationCoordinate2D
-        if let frame = wbsPlaybackFrame {
+        if selectedPawprintPoint != nil {
+            heading = CLLocationDirection(wbsPlaybackFrame?.direction.rawValue ?? 0) * 45
+            phase = .actual
+            animationPhase = wbsPlaybackFrame?.stickmanFrameIndex
+            cameraCoordinate = coordinate
+        } else if let frame = wbsPlaybackFrame {
             heading = CLLocationDirection(frame.direction.rawValue * 45)
             phase = frame.routePhase == .actual ? .actual : .forecast
             animationPhase = frame.stickmanFrameIndex
@@ -3556,6 +3583,7 @@ struct MapHomeView: View {
     }
 
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
+        guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
         guard let stickmanPoint = vectorMapViewportStore.stickmanPoint
                 ?? displayedStickmanViewportPoint,
               MapHomeCatTapRouting.shouldPresentCatDetails(
@@ -3564,6 +3592,57 @@ struct MapHomeView: View {
                   isAtHome: isDisplayedCatAtHome
               ) else { return }
         selectedMarkerInfo = .cat(displayedStickmanAction)
+    }
+
+    private func pawprintTarget(
+        at point: CGPoint,
+        waypoints: [PawprintWaypoint],
+        positions: [String: CGPoint]? = nil
+    ) -> PawprintWaypoint? {
+        guard let positions = positions ?? vectorMapViewportStore.viewport?.markerPoints else { return nil }
+        let targets = waypoints.compactMap { waypoint -> MapHomePawprintTapTarget? in
+            guard let position = positions[vectorPawprintMarkerID(waypoint.index)]
+            else { return nil }
+            return MapHomePawprintTapTarget(
+                id: waypoint.index, point: position,
+                timestamp: waypoint.timestamp, isPredicted: waypoint.isPredicted
+            )
+        }
+        guard let id = MapHomePawprintInteractionPolicy.nearestTarget(
+            to: point, targets: targets, selectedDate: model.selectedDate
+        ) else { return nil }
+        return waypoints.first { $0.index == id }
+    }
+
+    private func selectPawprintIfTapped(
+        at point: CGPoint,
+        waypoints: [PawprintWaypoint],
+        positions: [String: CGPoint]
+    ) {
+        guard let waypoint = pawprintTarget(at: point, waypoints: waypoints, positions: positions)
+        else { return }
+        selectPawprint(waypoint)
+    }
+
+    private func selectPawprint(_ waypoint: PawprintWaypoint) {
+        guard let selection = MapHomePawprintInteractionPolicy.selection(
+            timestamp: waypoint.timestamp, isPredicted: waypoint.isPredicted,
+            selectedDate: model.selectedDate
+        ) else { return }
+        stopDayPlayback(resetProgress: true)
+        isTimelineInteractionActive = false
+        recordUserMapAdjustment()
+        currentLocationRequestTask?.cancel()
+        currentLocationRequestTask = nil
+        setUserTrackingMode(.idle)
+        isTimelineSelectionPinned = true
+        selectedTimelineMinute = selection.minute
+        selectedPawprintTimestamp = selection.timestamp
+        selectedPawprintCoordinate = waypoint.coordinate
+        _ = refreshRouteProjection()
+        refreshHistoricalPlaybackPoint()
+        focusMap(on: wbsGeoPoint(waypoint.coordinate), using: nil, followsTracking: true)
+        dismissMapSearchOverlay()
     }
 
     private func vectorMapAnnotationOverlay(
@@ -3583,16 +3662,17 @@ struct MapHomeView: View {
                     for: vectorPawprintMarkerID(waypoint.index)
                 ) {
                     MapHomeProjectedAnnotation(point: point, anchor: .center) {
-                        Image(systemName: "pawprint.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(
-                                waypoint.isPredicted
-                                    ? Color.gray.opacity(0.68)
-                                    : Color.tpAccent.opacity(0.55)
-                            )
-                            .rotationEffect(.degrees(waypoint.angle))
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
+                        if let timestamp = waypoint.timestamp, !waypoint.isPredicted {
+                            pawprintImage(waypoint)
+                                .accessibilityLabel(
+                                    Text(language.text("기록 발자국 ", "Recorded paw "))
+                                        + Text(timestamp, style: .time)
+                                )
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityAction { selectPawprint(waypoint) }
+                        } else {
+                            pawprintImage(waypoint).accessibilityHidden(true)
+                        }
                     }
                 }
             }
@@ -3941,12 +4021,19 @@ struct MapHomeView: View {
         let coordinate: CLLocationCoordinate2D
         let angle: Double
         let isPredicted: Bool
+        let timestamp: Date?
         var id: Int { index }
     }
 
-    /// 이동 경로를 고양이 발자국 스탬프로 게임화한다. 표시 중인 과거
-    /// 경로 좌표를 일정 간격으로 뽑아 발자국을 찍고, 진행 방향으로
-    /// 회전시켜 "탐험한 길" 느낌을 준다. 성능을 위해 최대 40개로 제한한다.
+    private func pawprintImage(_ waypoint: PawprintWaypoint) -> some View {
+        Image(systemName: "pawprint.fill")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(waypoint.isPredicted ? Color.gray.opacity(0.68) : Color.tpAccent.opacity(0.55))
+            .rotationEffect(.degrees(waypoint.angle))
+            .allowsHitTesting(false)
+    }
+
+    /// 실제 경로의 좌표와 시각을 함께 샘플링하며 예상 발자국에는 시각을 부여하지 않는다.
     private var pawprintWaypoints: [PawprintWaypoint] {
         // 발자국은 이동 경로마다(세그먼트마다) 연속으로 찍는다. 예전에는 모든
         // 세그먼트를 flatMap 으로 이어붙인 뒤 전역 stride 로 샘플링해, 세그먼트
@@ -3956,10 +4043,7 @@ struct MapHomeView: View {
         // (=dropLast)만 써서, leg 가 1개뿐인 날이나 지금 재생 중인 마지막 leg 에는 발자국이
         // 전혀 안 나왔다(PAW0926T05). 이제 timelineRouteOverlays 전체를 쓴다.
         let segments = timelineRouteOverlays
-            .map(\.coordinates)
-            .filter { $0.count >= 2 }
-        // 대략적인 좌표 간격(도 단위). 위도 1도≈111km 이므로 0.00035도≈40m.
-        let spacingDegrees = 0.00035
+            .filter { $0.coordinates.count >= 2 }
         let hardCap = 220
         // Boarding confirms the mode; catalog geometry remains inferred even after confirmation.
         let railPaths = displayedExpectedRouteOverlays.filter {
@@ -3976,21 +4060,15 @@ struct MapHomeView: View {
                 from: normalizedRouteReadings, through: routeOverlayCutoff)
         let predictedBudget = min(96, predictedSegments.reduce(0) { $0 + $1.count })
         var result: [PawprintWaypoint] = []
-        routeSegments: for coords in segments {
-            var accum = 0.0
-            var placedFirst = false
-            for i in 0..<coords.count {
+        routeSegments: for segment in segments {
+            let coords = segment.coordinates
+            let indices = MapHomePawprintInteractionPolicy.sampleIndices(
+                coordinates: coords,
+                timestamps: segment.coordinateTimestamps,
+                limit: hardCap - predictedBudget - result.count
+            )
+            for i in indices {
                 let c = coords[i]
-                if i > 0 {
-                    let prev = coords[i - 1]
-                    let dLon = c.longitude - prev.longitude
-                    let dLat = c.latitude - prev.latitude
-                    accum += (dLon * dLon + dLat * dLat).squareRoot()
-                }
-                let atEnd = i == coords.count - 1
-                if placedFirst && accum < spacingDegrees && !atEnd { continue }
-                accum = 0
-                placedFirst = true
                 let nextIndex = min(coords.count - 1, i + 1)
                 let n = coords[nextIndex]
                 let a = (n.longitude - c.longitude == 0 && n.latitude - c.latitude == 0)
@@ -4004,7 +4082,8 @@ struct MapHomeView: View {
                         index: result.count,
                         coordinate: c,
                         angle: a,
-                        isPredicted: false
+                        isPredicted: false,
+                        timestamp: segment.coordinateTimestamps[i]
                     )
                 )
                 if result.count >= hardCap - predictedBudget {
@@ -4029,7 +4108,8 @@ struct MapHomeView: View {
                         index: result.count,
                         coordinate: point,
                         angle: angle,
-                        isPredicted: true
+                        isPredicted: true,
+                        timestamp: nil
                     )
                 )
                 if result.count >= hardCap { return result }
@@ -4763,7 +4843,7 @@ struct MapHomeView: View {
             for: model.selectedDate,
             now: currentDate
         )
-        let currentMinute = MapHomeDayPlaybackMath.playbackStartMinute(
+        let defaultMinute = MapHomeDayPlaybackMath.playbackStartMinute(
             selectedMinute: selectedTimelineMinute,
             endMinute: playbackEndMinute,
             isToday: Calendar.autoupdatingCurrent.isDate(
@@ -4771,6 +4851,16 @@ struct MapHomeView: View {
                 inSameDayAs: currentDate
             )
         )
+        let pawSelection = MapHomePawprintInteractionPolicy.selection(
+            timestamp: selectedPawprintTimestamp, isPredicted: false,
+            selectedDate: model.selectedDate
+        )
+        let currentMinute = pawSelection.map {
+            defaultMinute == Double($0.minute) && $0.minuteOffset < playbackEndMinute
+                ? $0.minuteOffset : defaultMinute
+        } ?? defaultMinute
+        selectedPawprintTimestamp = nil
+        selectedPawprintCoordinate = nil
         var playbackMinute = currentMinute
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
@@ -4964,6 +5054,8 @@ struct MapHomeView: View {
     }
 
     private func stopDayPlayback(resetProgress: Bool) {
+        selectedPawprintTimestamp = nil
+        selectedPawprintCoordinate = nil
         let wasRunning = isDayPlaybackRunning
         if wasRunning, !resetProgress, let currentMinute = dayPlaybackCurrentMinute {
             selectedTimelineMinute = min(
@@ -5106,6 +5198,7 @@ struct MapHomeView: View {
                         selectedMinute: Binding(
                             get: { timelineSelectionMinute(at: timeline.date) },
                             set: { minute in
+                                selectedPawprintTimestamp = nil
                                 guard selectedTimelineMinute != minute else { return }
                                 stopDayPlayback(resetProgress: true)
                                 isTimelineSelectionPinned = true
@@ -7080,17 +7173,14 @@ struct MapHomeView: View {
     }
 
     private var currentCoordinate: CLLocationCoordinate2D? {
-        let readings = [model.latestSensorReading, model.liveRouteState.readings.last]
-            .compactMap { $0 }
+        let readings = currentMapLocationReading.map { [$0] } ?? []
         let temporaryLocations = SubwayStationCatalog.temporaryLocations(from: readings)
         let point = MapCurrentLocationAnchorPolicy.latestValidReading(
             in: readings
         )?.point ?? RealtimeSensorMapProjection.project(
             readings: readings,
             at: .now,
-            temporaryLocations: temporaryLocations.isEmpty
-                ? cachedTemporaryLocations
-                : temporaryLocations
+            temporaryLocations: temporaryLocations
         )?.point
         guard let point, isValid(point) else { return nil }
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
@@ -7098,8 +7188,7 @@ struct MapHomeView: View {
 
     private var hasConfirmedCurrentGPS: Bool {
         MapHomeCurrentGPSPolicy.isConfirmed(
-            in: [model.latestSensorReading, model.liveRouteState.readings.last]
-                .compactMap { $0 }
+            in: currentMapLocationReading.map { [$0] } ?? []
         )
     }
 
@@ -7149,10 +7238,13 @@ struct MapHomeView: View {
         routeActualIndex = nil
         routeReadings = []
         normalizedRouteReadings = []
+        currentMapLocationReading = nil
         historicalPlaybackReadings = []
         displayRouteReadings = []
         lastPreparedRouteReadingsSignature = nil
         historicalPlaybackPoint = nil
+        selectedPawprintTimestamp = nil
+        selectedPawprintCoordinate = nil
         routeProjection = nil
         wbsPlaybackProjection = nil
         timelineRouteOverlays = []
@@ -7952,7 +8044,8 @@ struct MapHomeView: View {
                 categoryID: segment.category.rawValue,
                 opacity: segment.opacity,
                 speedMetersPerSecond: segment.speedMetersPerSecond,
-                coordinates: coordinates
+                coordinates: coordinates,
+                coordinateTimestamps: segment.coordinateTimestamps
             )
         }
     }
@@ -7974,6 +8067,7 @@ struct MapHomeView: View {
     }
 
     private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
+        if selectedPawprintPoint != nil { return selectedPawprintCoordinate }
         if let point = wbsPlaybackFrame?.coordinate {
             let coordinate = CLLocationCoordinate2D(
                 latitude: point.latitude,
@@ -8007,6 +8101,7 @@ struct MapHomeView: View {
     }
 
     private var displayedPlaybackFocusPoint: GeoPoint? {
+        if let point = selectedPawprintPoint { return point }
         if let point = wbsPlaybackFrame?.cameraCoordinate {
             return point
         }
@@ -8038,7 +8133,23 @@ struct MapHomeView: View {
             return dayPlaybackCurrentMinute
                 ?? Double(selectedTimelineMinute ?? effectiveTimelineMinute)
         }
+        if let selection = MapHomePawprintInteractionPolicy.selection(
+            timestamp: selectedPawprintTimestamp, isPredicted: false,
+            selectedDate: model.selectedDate
+        ), selection.minute == selectedTimelineMinute {
+            return selection.minuteOffset
+        }
         return Double(selectedTimelineMinute ?? effectiveTimelineMinute)
+    }
+
+    private var selectedPawprintPoint: GeoPoint? {
+        guard !isDayPlaybackRunning,
+              let coordinate = selectedPawprintCoordinate,
+              let selection = MapHomePawprintInteractionPolicy.selection(
+                timestamp: selectedPawprintTimestamp, isPredicted: false,
+                selectedDate: model.selectedDate
+              ), selection.minute == selectedTimelineMinute else { return nil }
+        return wbsGeoPoint(coordinate)
     }
 
     private var displayedPlaybackDate: Date? {
@@ -8468,13 +8579,17 @@ struct MapHomeView: View {
                     longitude: coordinate.longitude
                 )
             }
-            guard coordinates.count >= 2 else { return nil }
+            guard coordinates.count >= 2,
+                  coordinates.count == overlay.coordinateTimestamps.count,
+                  overlay.coordinateTimestamps.allSatisfy(RouteTimelineTimestamp.isValid)
+            else { return nil }
             return MapHomeTimelineRouteOverlay(
                 id: overlay.id,
                 categoryID: overlay.categoryID,
                 opacity: overlay.opacity,
                 speedMetersPerSecond: overlay.speedMetersPerSecond,
-                coordinates: coordinates
+                coordinates: coordinates,
+                coordinateTimestamps: overlay.coordinateTimestamps
             )
         }
         cachedTemporaryLocations = (payload.temporaryLocations ?? []).compactMap { item in
@@ -8678,7 +8793,8 @@ struct MapHomeView: View {
                             latitude: $0.latitude,
                             longitude: $0.longitude
                         )
-                    }
+                    },
+                    coordinateTimestamps: overlay.coordinateTimestamps
                 )
             },
             expected: expectedRouteOverlays.map { overlay in
@@ -8991,6 +9107,9 @@ struct MapHomeView: View {
                   lastPreparedRouteReadingsSignature == preparationSignature,
                   scenePhase == .active else { return }
             normalizedRouteReadings = prepared.normalized
+            if currentMapLocationReading != prepared.latestTrustedReading {
+                currentMapLocationReading = prepared.latestTrustedReading
+            }
             historicalPlaybackReadings = prepared.normalized
             displayRouteReadings = prepared.display
             routeReadingsPreparationTask = nil
@@ -8999,6 +9118,8 @@ struct MapHomeView: View {
                 fields: [
                     "day_start": String(dayStart.timeIntervalSince1970),
                     "source_readings": String(prepared.sourceCount),
+                    "impossible_location_count": String(prepared.impossibleLocationCount),
+                    "innovation_outlier_count": String(prepared.innovationOutlierCount),
                     "filtered_readings": String(prepared.filteredCount),
                     "normalized_readings": String(prepared.normalized.count),
                     "display_readings": String(prepared.display.count),
@@ -9134,6 +9255,10 @@ struct MapHomeView: View {
 
     @discardableResult
     private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
+        if let point = selectedPawprintPoint {
+            if historicalPlaybackPoint != point { historicalPlaybackPoint = point }
+            return point
+        }
         if let frame = wbsPlaybackFrame,
            selectedTimelineMinute != nil {
             recordPlaybackRouteAlignment(frame)
@@ -12704,19 +12829,22 @@ private struct MapHomeTimelineRouteOverlay: Identifiable {
     let speedMetersPerSecond: Double?
     let coordinates: [CLLocationCoordinate2D]
     let geometrySignature: Int
+    let coordinateTimestamps: [Date]
 
     init(
         id: String,
         categoryID: String,
         opacity: Double,
         speedMetersPerSecond: Double?,
-        coordinates: [CLLocationCoordinate2D]
+        coordinates: [CLLocationCoordinate2D],
+        coordinateTimestamps: [Date]
     ) {
         self.id = id
         self.categoryID = categoryID
         self.opacity = opacity
         self.speedMetersPerSecond = speedMetersPerSecond
         self.coordinates = coordinates
+        self.coordinateTimestamps = coordinateTimestamps
         geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
     }
 }

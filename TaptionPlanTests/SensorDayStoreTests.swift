@@ -209,6 +209,84 @@ private final class PlanDaySaveValidity {
 }
 
 final class SensorDayStoreTests: XCTestCase {
+    func testSensorArchiveReadWritePerformanceFixture() async throws {
+        let fence = DataDeletionFenceTestFixture()
+        defer { fence.restore() }
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("DBP1006A01-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
+        let date = Date(timeIntervalSince1970: 1_790_000_000)
+        let readings = (0..<5_000).map {
+            makeReading(date.addingTimeInterval(Double($0) * 5), sequence: $0)
+        }
+        let span = TimeSpan(start: date, end: date.addingTimeInterval(25_001))
+        let archive = try SensorReadingArchive(fileURL: fileURL)
+        _ = try await archive.readings(in: span)
+        let writeStart = ProcessInfo.processInfo.systemUptime
+        try await archive.append(readings)
+        let writeMS = (ProcessInfo.processInfo.systemUptime - writeStart) * 1_000
+        let reopened = try SensorReadingArchive(fileURL: fileURL)
+        var readMS = 0.0
+        for _ in 0..<3 {
+            let readStart = ProcessInfo.processInfo.systemUptime
+            let loaded = try await reopened.readingsLoadResult(in: span)
+            readMS += (ProcessInfo.processInfo.systemUptime - readStart) * 1_000 / 3
+            XCTAssertTrue(loaded.isComplete)
+            XCTAssertEqual(loaded.readings, readings)
+        }
+        print("DBP1006A01 sensors records=\(readings.count) append_ms=\(writeMS) read_mean_ms=\(readMS)")
+        let store = try TaptionPlanDayStore(url: directory.appendingPathComponent("taption-plan-v2.sqlite"))
+        let narrow = TimeSpan(start: date.addingTimeInterval(10_000), end: date.addingTimeInterval(10_005))
+        var legacyMS = 0.0
+        var indexedMS = 0.0
+        var legacyRows = 0
+        for _ in 0..<3 {
+            let legacyStart = ProcessInfo.processInfo.systemUptime
+            let allDay = try await store.events(from: TaptionPlanDayKey(date: narrow.start),
+                through: TaptionPlanDayKey(date: narrow.end), domain: "sensor-reading")
+            let legacy = allDay.filter { narrow.contains($0.timestamp) }
+            legacyMS += (ProcessInfo.processInfo.systemUptime - legacyStart) * 1_000 / 3
+            legacyRows = allDay.count
+            let indexedStart = ProcessInfo.processInfo.systemUptime
+            let indexed = try await store.events(in: narrow.start...narrow.end, domain: "sensor-reading")
+            indexedMS += (ProcessInfo.processInfo.systemUptime - indexedStart) * 1_000 / 3
+            XCTAssertEqual(indexed, legacy)
+            XCTAssertEqual(indexed.count, 2)
+        }
+        let result = try await reopened.readingsLoadResult(in: narrow)
+        XCTAssertTrue(result.isComplete)
+        XCTAssertEqual(result.readings, Array(readings[2_000...2_001]))
+        print("DBP1006B01 sensor_range legacy_rows=\(legacyRows) indexed_rows=2 legacy_query_ms=\(legacyMS) indexed_query_ms=\(indexedMS)")
+    }
+
+    func testSensorRangeUsesInstantsAndKeepsEndpointsWithDifferentStoredDayKey() async throws {
+        let fence = DataDeletionFenceTestFixture()
+        defer { fence.restore() }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("DBP1006B01-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("sensor-readings-v1.jsonl")
+        let databaseURL = directory.appendingPathComponent("taption-plan-v2.sqlite")
+        let archive = try SensorReadingArchive(fileURL: url)
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        let readings = [-1, 0, 1, 2, 3].map { makeReading(start.addingTimeInterval(Double($0))) }
+        try await archive.append(readings)
+        let store = try TaptionPlanDayStore(url: databaseURL)
+        let original = try await store.allEvents(domain: "sensor-reading")
+        let first = try XCTUnwrap(original.first { $0.id == readings[1].id.uuidString })
+        try await store.upsertEvents([.init(day: .init(year: 2025, month: 1, day: 1),
+            timestamp: first.timestamp, sequence: first.sequence, id: first.id,
+            domain: first.domain, payload: first.payload)])
+        let outOfRange = try XCTUnwrap(original.first { $0.id == readings[4].id.uuidString })
+        try await store.upsertEvents([.init(day: outOfRange.day, timestamp: outOfRange.timestamp,
+            sequence: outOfRange.sequence, id: outOfRange.id, domain: outOfRange.domain, payload: Data([0]))])
+        let loaded = try await archive.readingsLoadResult(in: .init(start: start, end: start.addingTimeInterval(2)))
+        XCTAssertTrue(loaded.isComplete)
+        XCTAssertEqual(loaded.readings, Array(readings[1...3]))
+        let instant = try await archive.readingsLoadResult(in: .init(start: start, end: start))
+        XCTAssertEqual(instant.readings, [readings[1]])
+    }
+
     private func makeReading(_ date: Date, id: UUID = UUID(), sequence: Int? = nil) -> SensorReading {
         SensorReading(
             id: id,

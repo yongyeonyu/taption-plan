@@ -1781,7 +1781,7 @@ final class RouteTimelineDataTests: XCTestCase {
         }
     }
 
-    func testFilteredRouteReadingsRemoveDriftAndImpossibleJumpWithoutMutatingRawReadings() {
+    func testFilteredRouteReadingsKeepStationaryEndAndRejectJumpWithoutMutatingRawReadings() {
         let start = date(0)
         func sample(
             _ seconds: TimeInterval,
@@ -1820,12 +1820,15 @@ final class RouteTimelineDataTests: XCTestCase {
             filtered.map(\.id.uuidString),
             [
                 "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000002",
                 "00000000-0000-0000-0000-000000000003",
                 "00000000-0000-0000-0000-000000000005",
             ]
         )
-        XCTAssertEqual(filtered.count, 3)
-        XCTAssertTrue(filtered[1].trackingSessionEnded == true)
+        XCTAssertEqual(filtered.count, 4)
+        XCTAssertEqual(filtered[1].timestamp, readings[1].timestamp)
+        XCTAssertEqual(filtered[1].point, readings[0].point)
+        XCTAssertTrue(filtered[2].trackingSessionEnded == true)
     }
 
     func testNormalizedReadingsPreserveSessionEndAcrossEqualTimestampOrders() {
@@ -4063,5 +4066,129 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteHex, "#C65D4D")
         XCTAssertEqual(MapHomeWBSTripStyle.actualRouteLineWidth, 2.2)
         XCTAssertEqual(MapHomeWBSTripStyle.forecastRouteLineWidth, 1.8)
+    }
+}
+
+final class MapHomePawprintInteractionTests: XCTestCase {
+    private var calendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.timeZone = TimeZone(secondsFromGMT: 0)!
+        return value
+    }
+    private var day: Date { Date(timeIntervalSince1970: 1_791_244_800) }
+    private func time(_ seconds: Double) -> Date { day.addingTimeInterval(seconds) }
+
+    func testPawsKeepStartMiddleAndEndTraceTimes() {
+        let coordinates = [0.0, 0.00001, 0.0004, 0.0008].map {
+            CLLocationCoordinate2D(latitude: 37, longitude: 127 + $0)
+        }
+        let times = [0.0, 10, 41, 95].map(time)
+        let indices = MapHomePawprintInteractionPolicy.sampleIndices(
+            coordinates: coordinates, timestamps: times, limit: 220
+        )
+        XCTAssertEqual(indices, [0, 2, 3])
+        XCTAssertEqual(indices.map { times[$0] }, [time(0), time(41), time(95)])
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.sampleIndices(
+            coordinates: coordinates, timestamps: times, limit: 2
+        ), [0, 2])
+    }
+
+    func testPawsRejectMissingOrUnorderedTimes() {
+        let coordinates = [CLLocationCoordinate2D(latitude: 37, longitude: 127),
+                           CLLocationCoordinate2D(latitude: 37.001, longitude: 127)]
+        for times in [[], [time(0)], [time(60), time(0)],
+                      [time(0), Date(timeIntervalSinceReferenceDate: .nan)]] as [[Date]] {
+            XCTAssertTrue(MapHomePawprintInteractionPolicy.sampleIndices(
+                coordinates: coordinates, timestamps: times, limit: 220
+            ).isEmpty)
+        }
+    }
+
+    func testSelectionPreservesSecondsAndRejectsGrayPaws() throws {
+        let selected = try XCTUnwrap(MapHomePawprintInteractionPolicy.selection(
+            timestamp: time(73.5), isPredicted: false, selectedDate: day, calendar: calendar
+        ))
+        XCTAssertEqual(selected.minute, 1)
+        XCTAssertEqual(selected.minuteOffset, 1.225, accuracy: 0.00001)
+        XCTAssertEqual(selected.timestamp, time(73.5))
+        XCTAssertNil(MapHomePawprintInteractionPolicy.selection(
+            timestamp: time(73.5), isPredicted: true, selectedDate: day, calendar: calendar
+        ))
+        XCTAssertNil(MapHomePawprintInteractionPolicy.selection(
+            timestamp: nil, isPredicted: false, selectedDate: day, calendar: calendar
+        ))
+    }
+
+    func testSelectionStaysInsideSelectedDay() {
+        XCTAssertNotNil(MapHomePawprintInteractionPolicy.selection(
+            timestamp: time(0), isPredicted: false, selectedDate: day, calendar: calendar
+        ))
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.selection(
+            timestamp: time(86_399.5), isPredicted: false, selectedDate: day, calendar: calendar
+        )?.minute, 1_439)
+        for date in [time(-1), time(86_400)] {
+            XCTAssertNil(MapHomePawprintInteractionPolicy.selection(
+                timestamp: date, isPredicted: false, selectedDate: day, calendar: calendar
+            ))
+        }
+    }
+
+    func testOverlappingGrayPawDoesNotHidePinkTimeTarget() {
+        let targets = [
+            MapHomePawprintTapTarget(id: 0, point: .zero, timestamp: time(120), isPredicted: true),
+            MapHomePawprintTapTarget(id: 1, point: .zero, timestamp: time(60), isPredicted: false),
+            MapHomePawprintTapTarget(id: 2, point: .zero, timestamp: time(180), isPredicted: false),
+        ]
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.nearestTarget(
+            to: .zero, targets: targets, selectedDate: day, calendar: calendar
+        ), 1)
+        XCTAssertNil(MapHomePawprintInteractionPolicy.nearestTarget(
+            to: CGPoint(x: 23, y: 0), targets: targets, selectedDate: day, calendar: calendar
+        ))
+        XCTAssertNil(MapHomePawprintInteractionPolicy.nearestTarget(
+            to: .zero, targets: [targets[0]], selectedDate: day, calendar: calendar
+        ))
+    }
+
+    func testTapChoosesNearestPinkPawAtCurrentViewportPosition() {
+        let targets = [
+            MapHomePawprintTapTarget(id: 1, point: CGPoint(x: 10, y: 10), timestamp: time(0), isPredicted: false),
+            MapHomePawprintTapTarget(id: 2, point: CGPoint(x: 14, y: 10), timestamp: time(60), isPredicted: false),
+        ]
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.nearestTarget(
+            to: CGPoint(x: 13, y: 10), targets: targets, selectedDate: day, calendar: calendar
+        ), 2)
+    }
+
+    func testProjectionCarriesTimesForEveryRenderedCoordinate() throws {
+        let readings = [0.0, 10, 50].enumerated().map { index, seconds in
+            SensorReading(timestamp: time(seconds), point: GeoPoint(
+                latitude: 37, longitude: 127 + Double(index) * 0.0004,
+                altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5
+            ))
+        }
+        let projection = RouteTimelineDataEngine.project(
+            selectedDate: day, throughMinute: 10, actuals: [], readings: readings,
+            readingsAreNormalized: true, calendar: calendar
+        )
+        let segment = try XCTUnwrap(projection.segments.first)
+        XCTAssertEqual(segment.coordinates.count, segment.coordinateTimestamps.count)
+        XCTAssertEqual(segment.coordinateTimestamps, readings.map(\.timestamp))
+        XCTAssertEqual(segment.coordinates, readings.compactMap(\.point))
+    }
+
+    func testTimeAxisRevealsTappedTimeWithoutChangingVisibleSelection() {
+        XCTAssertEqual(MapHomeTimeSidebarMath.startMinuteRevealingSelection(
+            selectedMinute: 600, visibleStartMinute: 0, durationMinutes: 120
+        ), 540)
+        XCTAssertEqual(MapHomeTimeSidebarMath.startMinuteRevealingSelection(
+            selectedMinute: 600, visibleStartMinute: 570, durationMinutes: 120
+        ), 570)
+        XCTAssertEqual(MapHomeTimeSidebarMath.startMinuteRevealingSelection(
+            selectedMinute: 1_439, visibleStartMinute: 0, durationMinutes: 60
+        ), 1_380)
+        XCTAssertEqual(MapHomeTimeSidebarMath.startMinuteRevealingSelection(
+            selectedMinute: 600, visibleStartMinute: 0, durationMinutes: 1_440
+        ), 0)
     }
 }

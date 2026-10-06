@@ -27,6 +27,7 @@ public enum TaptionPlanCanonicalStorage {
     public static let maximumUncompressedSize = 64 * 1_024 * 1_024
     private static let envelopeMagic = Data("TP-CANON".utf8)
     private static let minimumCompressionSize = 4 * 1_024
+    private static let hexadecimalDigits = Array("0123456789abcdef".utf8)
 
     public static func encode<Value: Encodable>(_ value: Value, compress: Bool = true) throws -> TaptionPlanEncodedPayload {
         try autoreleasepool {
@@ -102,18 +103,26 @@ public enum TaptionPlanCanonicalStorage {
     }
 
     public static func decode<Value: Decodable>(_ type: Value.Type, from encoded: TaptionPlanEncodedPayload) throws -> Value {
-        guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
-              encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {
-            throw TaptionPlanCanonicalStorageError.invalidPayload
+        try autoreleasepool {
+            guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
+                  encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {
+                throw TaptionPlanCanonicalStorageError.invalidPayload
+            }
+            let raw = encoded.isCompressed ? try unlzfse(encoded.data, size: encoded.uncompressedSize) : encoded.data
+            guard checksum(raw) == encoded.checksum else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
+            do { return try PropertyListDecoder().decode(type, from: raw) }
+            catch { throw TaptionPlanCanonicalStorageError.invalidPayload }
         }
-        let raw = encoded.isCompressed ? try unlzfse(encoded.data, size: encoded.uncompressedSize) : encoded.data
-        guard checksum(raw) == encoded.checksum else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
-        do { return try PropertyListDecoder().decode(type, from: raw) }
-        catch { throw TaptionPlanCanonicalStorageError.invalidPayload }
     }
 
     public static func checksum(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(64)
+        for byte in SHA256.hash(data: data) {
+            bytes.append(hexadecimalDigits[Int(byte >> 4)])
+            bytes.append(hexadecimalDigits[Int(byte & 0x0f)])
+        }
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     private static func lzfse(_ data: Data) -> Data? {

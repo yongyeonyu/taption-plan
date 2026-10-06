@@ -28,3 +28,6 @@ Secrets.xcconfig
 # Local AI tool settings and memory
 .codex/
 .workbuddy-ai/
+
+# Local release binaries and dSYMs retained for crash diagnosis
+/artifacts/release-symbols/

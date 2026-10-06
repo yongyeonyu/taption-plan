@@ -11,6 +11,94 @@ enum RouteMapLineStyle {
     static let minimumOpacity: Double = 0.72
 }
 
+struct MapHomePawprintTapTarget {
+    let id: Int
+    let point: CGPoint
+    let timestamp: Date?
+    let isPredicted: Bool
+}
+
+struct MapHomePawprintTimeSelection: Equatable {
+    let timestamp: Date
+    let minute: Int
+    let minuteOffset: Double
+}
+
+enum MapHomePawprintInteractionPolicy {
+    static func sampleIndices(
+        coordinates: [CLLocationCoordinate2D],
+        timestamps: [Date],
+        limit: Int
+    ) -> [Int] {
+        guard limit > 0, coordinates.count >= 2,
+              coordinates.count == timestamps.count,
+              timestamps.allSatisfy(RouteTimelineTimestamp.isValid),
+              zip(timestamps, timestamps.dropFirst()).allSatisfy({ $0 <= $1 })
+        else { return [] }
+        var result: [Int] = []
+        var distance = 0.0
+        for index in coordinates.indices {
+            guard CLLocationCoordinate2DIsValid(coordinates[index]) else { return [] }
+            if index > 0 {
+                let latitude = coordinates[index].latitude - coordinates[index - 1].latitude
+                let longitude = RouteTimelineLongitude.shortestDelta(
+                    from: coordinates[index - 1].longitude,
+                    to: coordinates[index].longitude
+                )
+                distance += hypot(latitude, longitude)
+            }
+            if result.isEmpty || distance >= 0.00035 || index == coordinates.count - 1 {
+                result.append(index)
+                distance = 0
+                if result.count == limit { break }
+            }
+        }
+        return result
+    }
+
+    static func selection(
+        timestamp: Date?,
+        isPredicted: Bool,
+        selectedDate: Date,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> MapHomePawprintTimeSelection? {
+        guard !isPredicted, let timestamp,
+              RouteTimelineTimestamp.isValid(timestamp) else { return nil }
+        let start = calendar.startOfDay(for: selectedDate)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start),
+              timestamp >= start, timestamp < end else { return nil }
+        let offset = timestamp.timeIntervalSince(start) / 60
+        return MapHomePawprintTimeSelection(
+            timestamp: timestamp,
+            minute: min(MapHomeTimeSidebarMath.fullDayMinutes - 1, Int(offset)),
+            minuteOffset: offset
+        )
+    }
+
+    static func nearestTarget(
+        to point: CGPoint,
+        targets: [MapHomePawprintTapTarget],
+        selectedDate: Date,
+        radius: CGFloat = 22,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Int? {
+        var nearestID: Int?
+        var nearestDistance = radius * radius
+        for target in targets {
+            guard selection(
+                timestamp: target.timestamp, isPredicted: target.isPredicted,
+                selectedDate: selectedDate, calendar: calendar
+            ) != nil else { continue }
+            let distance = pow(target.point.x - point.x, 2) + pow(target.point.y - point.y, 2)
+            if distance < nearestDistance || (distance == nearestDistance && nearestID == nil) {
+                nearestID = target.id
+                nearestDistance = distance
+            }
+        }
+        return nearestID
+    }
+}
+
 enum MapHomeCompassControlState: Equatable, Sendable {
     case directionArrow
     case compass

@@ -325,6 +325,22 @@ struct TaptionActivityEngineAdapterTests {
         #expect(!projection.routeReadings.isEmpty)
     }
 
+    @Test func qualityProjectionRetainsStationaryEndForPlaceInference() {
+        let readings = stride(from: 0.0, through: 1_800.0, by: 30).map { seconds in
+            SensorReading(
+                timestamp: base.addingTimeInterval(seconds),
+                point: GeoPoint(latitude: 37, longitude: 126, altitude: 0,
+                                horizontalAccuracy: 5, verticalAccuracy: 5),
+                locationFixQuality: .precise, motion: .stationary, gpsAvailable: true
+            )
+        }
+        let projection = TaptionActivityEngineAdapter.qualityProjection(from: readings)
+        #expect(projection.readings == readings)
+        #expect(projection.routeReadings.map(\.timestamp)
+                == [0.0, 900, 1_800].map { base.addingTimeInterval($0) })
+        #expect(projection.routeReadings.allSatisfy { $0.point?.latitude == 37 })
+    }
+
     @Test func qualityProjectionDropsInvalidTimestampsBeforeOrdering() {
         let valid = (0..<7).map { index in
             SensorReading(

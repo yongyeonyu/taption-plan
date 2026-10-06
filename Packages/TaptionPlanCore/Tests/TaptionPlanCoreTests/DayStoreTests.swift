@@ -5,6 +5,109 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testInstantRangeQueryKeepsInclusiveBoundariesAndIgnoresStoredTimezone() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let start = Date(timeIntervalSince1970: 1_790_000_000)
+        let rows = [-1, 0, 1, 2, 3].map { i in
+            TaptionPlanDayStore.Event(day: .init(year: 2026, month: 10, day: i == 0 ? 5 : 6),
+                timestamp: start.addingTimeInterval(Double(i)), sequence: 1,
+                id: "fixture\(i)", domain: "sensor-reading", payload: Data([1]))
+        }
+        try await store.appendEvents(rows + [.init(day: .init(year: 2026, month: 10, day: 6),
+            timestamp: start, sequence: 1, id: "other", domain: "other", payload: Data([2]))])
+        let actual = try await store.events(in: start...start.addingTimeInterval(2), domain: "sensor-reading")
+        XCTAssertEqual(actual.map(\.id), ["fixture0", "fixture1", "fixture2"])
+        let instant = try await store.events(in: start...start, domain: "sensor-reading")
+        XCTAssertEqual(instant.map(\.id), ["fixture0"])
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        var statement: OpaquePointer?
+        XCTAssertEqual(sqlite3_prepare_v2(database, "EXPLAIN QUERY PLAN SELECT payload FROM events WHERE domain='sensor-reading' AND timestamp>=0 AND timestamp<=1 ORDER BY day_key,timestamp,sequence,id;", -1, &statement, nil), SQLITE_OK)
+        defer { sqlite3_finalize(statement) }
+        var plan: [String] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            if let value = sqlite3_column_text(statement, 3) { plan.append(String(cString: value)) }
+        }
+        XCTAssertTrue(plan.contains { $0.contains("events_domain_timestamp_index") && $0.contains("SEARCH") }, plan.joined(separator: ";"))
+    }
+
+    func testSnapshotReadVersionTracksLocalExternalAndConnectionChanges() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let external = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 10, day: 6)
+        let initial = try await store.snapshotReadVersion()
+        _ = try await store.snapshots(day: day)
+        let afterRead = try await store.snapshotReadVersion()
+        XCTAssertEqual(initial, afterRead)
+        let otherConnection = try await external.snapshotReadVersion()
+        XCTAssertNotEqual(initial, otherConnection)
+        try await store.saveSnapshot(.init(domain: "fixture", day: day,
+            revision: 1, updatedAt: .now, payload: Data([1])))
+        let afterLocal = try await store.snapshotReadVersion()
+        XCTAssertNotEqual(afterRead, afterLocal)
+        try await external.saveSnapshot(.init(domain: "fixture", day: day,
+            revision: 2, updatedAt: .now, payload: Data([2])))
+        let afterExternal = try await store.snapshotReadVersion()
+        XCTAssertNotEqual(afterLocal, afterExternal)
+    }
+
+    func testSnapshotWriteTransactionRollsBackWritesOnFailure() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 10, day: 6)
+        do {
+            let _: Bool = try await store.withSnapshotWriteTransaction { store in
+                try store.saveSnapshots([.init(domain: "fixture", day: day,
+                    revision: 1, updatedAt: .now, payload: Data([1]))])
+                throw TaptionPlanDayStoreError.invalidMetadataKey
+            }
+            XCTFail("Failed transaction must not commit")
+        } catch { XCTAssertEqual(error as? TaptionPlanDayStoreError, .invalidMetadataKey) }
+        let rows = try await store.snapshots(day: day)
+        XCTAssertTrue(rows.isEmpty)
+    }
+
+    func testCaughtNestedSnapshotFailureDoesNotCommitPartialBatch() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let day = TaptionPlanDayKey(year: 2026, month: 10, day: 6)
+        try await store.withSnapshotWriteTransaction { store in
+            do {
+                try store.saveSnapshots([
+                    .init(domain: "partial", day: day, revision: 1, updatedAt: .now, payload: Data([1])),
+                    .init(domain: "", day: day, revision: 1, updatedAt: .now, payload: Data([2])),
+                ])
+                XCTFail("Invalid domain must fail")
+            } catch { XCTAssertEqual(error as? TaptionPlanDayStoreError, .invalidDomain) }
+            try store.saveSnapshot(.init(domain: "committed", day: day,
+                revision: 1, updatedAt: .now, payload: Data([3])))
+        }
+        let rows = try await store.snapshots(day: day)
+        XCTAssertEqual(rows.map(\.domain), ["committed"])
+    }
+
+    func testSnapshotWriteTransactionBlocksUncoordinatedSQLiteWriter() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let result = try await store.withSnapshotWriteTransaction { _ in
+            var observer: OpaquePointer?
+            guard sqlite3_open_v2(url.path, &observer, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
+                throw TaptionPlanDayStoreError.databaseCorrupt(message: "Fixture open failed")
+            }
+            defer { sqlite3_close(observer) }
+            return sqlite3_exec(observer, "BEGIN IMMEDIATE;", nil, nil, nil)
+        }
+        XCTAssertEqual(result, SQLITE_BUSY)
+    }
+
     func testSnapshotRevisionsReflectDomainUpdatesAndDeletion() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

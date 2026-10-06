@@ -284,7 +284,7 @@ public actor TaptionPlanV3Store {
     public static let defaultRawEventPageBytes = 1 * 1_024 * 1_024
     public static let maximumRawEventPageBytes = 4 * 1_024 * 1_024
     public static let schemaVersion = 3
-    public static let projectionVersion: UInt64 = 1
+    public static let projectionVersion: UInt64 = 2
     static let rawDigestCacheCapacity = 64
     private static let rawDigestCacheAtomicWriteMarker =
         "raw_digest_cache_atomic_write_v1"

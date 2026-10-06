@@ -1596,6 +1596,15 @@ struct MapHomeTimeSidebar: View {
         }
         .onChange(of: selectedMinute) { _, _ in
             guard !isHandleDragging, viewportDragStartMinute == nil else { return }
+            let start = MapHomeTimeSidebarMath.startMinuteRevealingSelection(
+                selectedMinute: selectedMinute,
+                visibleStartMinute: visibleStartMinute,
+                durationMinutes: visibleDurationMinutes
+            )
+            if start != visibleStartMinute {
+                visibleStartMinute = start
+                onViewportChanged?(start, visibleDurationMinutes)
+            }
             nleProjection.synchronize(with: nleState)
         }
     }
@@ -2643,6 +2652,17 @@ enum MapHomeTimeSidebarMath {
 
     static func maximumVisibleStart(durationMinutes: Int) -> Int {
         fullDayMinutes - min(max(durationMinutes, 60), fullDayMinutes)
+    }
+
+    static func startMinuteRevealingSelection(
+        selectedMinute: Int,
+        visibleStartMinute: Int,
+        durationMinutes: Int
+    ) -> Int {
+        let duration = min(max(durationMinutes, 60), fullDayMinutes)
+        let start = min(max(visibleStartMinute, 0), fullDayMinutes - duration)
+        if (start...(start + duration)).contains(selectedMinute) { return start }
+        return startMinute(centerMinute: selectedMinute, durationMinutes: duration)
     }
 
     static func resetState(selectedMinute: Int) -> MapHomeTimeSidebarNLEState {
