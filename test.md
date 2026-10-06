@@ -1,10 +1,16 @@
 # 검증 기록
 
 ## REL1006B01 · 물음표 위치·개별 버전 로그 TestFlight171 · 2026-10-06
-- 준비: 실제 원격main a05a8fd와 로컬이 일치하고 ASC 최신170 VALID·INTERNAL_ONLY/171 미존재를 확인하여171을 선택했다. project build 설정8곳과 앱/Widget/보존된 독립 Watch/Watch Widget 원본 Info.plist4개의 번호를1.0(171)로 맞췄다. iPhone 제품은 Watch 앱을 추가하지 않는다.
-- 검증 재사용: UNP1006A01의TimeScale176개, LOG1006D01의Diagnostics11개, MAP1006F01의합성 진단1개가 각각 실패·건너뜀0이며 검증 대상 Swift 소스 해시가 현재와 일치하여188개 통과 근거를 재사용한다. import 경계와 git diff --check도 통과했다(prior-validation-summary.json, prior-validation-reuse.json, source-build-versions.json).
-- 포함 범위: 미확인 물음표의 겹침 회피 이동 제거/정확한 구간 중앙과 모든 새 진단 이벤트의app_version/build 기록이다. MAP1006F01의지도/저장 구조 개선은 분석·개선책과 진단 fixture만 추가했고 성능 개선 구현을 이번 빌드에 포함한 것으로 처리하지 않는다. 실기기 위치·터치·시작/지도 성능 검증은 별도 미완료 조건을 유지한다.
-- 진행: 코드main commit/push 후 generic Debug·Release archive/export·서명·산출물 번호/dSYM 대조,1회 업로드·처리·내부 그룹API/실제 웹 확인을 이어간다. 아직 업로드·실기기 설치/기능 통과를 확인하지 않았다. 근거 build/validation/REL1006B01/.
+- 준비: 실제 원격 main a05a8fd와 로컬이 일치하고 ASC 최신 170 VALID·INTERNAL_ONLY / 171 미존재를 확인하여 171을 선택했다. project build 설정 8곳과 앱·Widget·보존된 독립 Watch·Watch Widget 원본 Info.plist 4개의 번호를 1.0(171)로 맞췄다. iPhone 제품에는 앱·Widget만 포함한다(source-build-versions.json).
+- 검증 재사용: UNP1006A01의 TimeScale 176개, LOG1006D01의 Diagnostics 11개, MAP1006F01의 합성 진단 1개가 각각 실패·건너뜀 0이며 검증 대상 Swift 소스 해시가 현재와 일치하여 188개 통과 근거를 재사용했다. import 경계·git diff --check와 승인된 성장 366개 자산 원본 대조도 통과했다(prior-validation-summary.json, prior-validation-reuse.json, prearchive-checks.json).
+- 포함 범위: 미확인 물음표의 겹침 회피 이동 제거·정확한 구간 중앙과 모든 새 진단 이벤트의 app_version/build 기록이다. MAP1006F01의 지도·저장 구조 개선은 분석·개선책과 진단 fixture만 추가했으며 성능 개선 구현을 이번 빌드에 포함한 것으로 처리하지 않는다.
+- main 반영: 코드·기존 변경·빌드 171·요청 기록을 0705ceb로 main에 commit/push했다. 당시 HEAD·origin/main·실제 원격 main이 일치하고 워크트리 clean을 확인했다(code-commit.json, code-git-confirmation.json). 배포 기록 후속 commit은 별도다.
+- 산출물: generic Debug·Release archive/export 모두 exit 0, 앱·Widget 두 제품 1.0(171)·Watch 미포함·deep strict 서명 통과. 각 archive 실행 파일과 dSYM UUID 일치/해시를 archive-symbols.json에 보존했다. IPA는 42,161,717바이트·SHA-256 4872c75d1b55e0aa358108592c40388639f0c481b8ad9049ef3ebcaeeb6bb13a이며 배포 서명의 get-task-allow=false와 필요한 HealthKit scope를 확인했다. archive 입력 138개 소스가 업로드 직전에도 일치한다(pre-upload-verification.json).
+- 업로드·처리: ASC 171 미존재를 다시 확인한 뒤 altool 1회 exit 0 / UPLOAD SUCCEEDED with no errors. 전달 ID·build ID는 494e4f9b-e6dc-433b-b8a8-0d407bd50256. 최초 PROCESSING에서 COMPLETE로 처리됐으며 오류·경고 0, build 171 VALID·INTERNAL_ONLY다(upload-summary.json, processing-01~03.json).
+- 내부 배포: TP Taption Plan 내부 테스트 그룹에 연결했고 최종 IN_BETA_TESTING·그룹 목록 171·테스터 1명·한국어 테스트 안내 저장 및 재조회 일치를 API로 확인했다(deployment-api-summary.json). 안내에는 물음표 위치·겹침 선택과 새 이벤트의 app_version 1.0 / build 171 확인을 요청했으며 추가 성능 구현이 포함되지 않았음을 명시했다.
+- 실제 웹: Chrome의 해당 그룹에서 내부 그룹·테스터 1명·129개 빌드, 1.0(171) 내부 ‘테스트 중’ 행을 읽었다. 테스터 페이지도 테스터(1)와 설치됨 1.0(170) 표시를 확인했다. 이는 171 설치 확인이 아니며 연락처는 저장하지 않았다(web-group-confirmation-final.json, web-group-build171.jpg).
+- 정리: 검증 뒤 이번에 재생성한 build/ArchiveDD 1043.35MiB를 삭제했다. 169·170·171 IPA, 170·171 앱 바이너리와 앱·Widget dSYM 총 9개 파일의 정리 전후 바이트 수·SHA-256이 일치한다. 검증 근거·배포 archive·사용자 원본은 보존했다(cache-cleanup.json).
+- 완료·제한: 내부 배포 조건을 충족해 REL1006B01만 temp에서 제거했다. UNP1006A01의 실기기 화면·선택 확인과 기존 성능·Watch·HealthKit 등 미완료 검증은 유지하며 설치·기기 기능 통과로 추정하지 않는다. IAP·공개 심사 보류도 유지한다. 배포 기록 commit/push 뒤 최종 HEAD·원격 main 일치와 clean은 final-git.json에 남긴다. 문서 전용 후속 변경에는 테스트·빌드를 재실행하지 않는다. 근거 build/validation/REL1006B01/.
 
 ## UNP1006A01 · 미확인 물음표의 정확한 시간 위치 · 2026-10-06
 - 시작: main a05a8fd/origin/main 일치. 기존 LOG1006D01 버전 기록·MAP1006F01 진단 테스트·temp/test 변경을 보존했다. 제공된 이미지는 읽어 확인했으며 원본을 복사·수정하지 않았다(placement-evidence.json의 경로/해시).
@@ -14,6 +20,7 @@
 - 빌드: generic iOS Debug BUILD SUCCEEDED/exit0. 검증 시점과 최종 제품/관련 테스트5개 소스 해시가 일치하며 git diff --check 통과. 이전 LOG1006D01 및 MAP1006F01의 소스가 그대로여서 유효한 검증을 재사용했다(source-confirmation.json, prior-validation-reuse.json).
 - 정리: 이번 테스트/빌드에서 재생성한 build/ArchiveDD1294.2MiB를 검증 후 삭제했다. 검증 로그/xcresult와 기존169·170 배포 산출물은 보존했으며 배포 파일5개의 바이트 수/SHA-256이 정리 전후 일치했다(cache-cleanup.json).
 - 완료/제한: 로컬 구현·단위 좌표/회귀·Debug 완료. 새 커밋/push·배포·설치 또는 실기기 화면 확인은 하지 않았다. 사용자 대표의 배포 후 화면 확인은 temp에 유지한다. 근거 build/validation/UNP1006A01/.
+- 배포 후속: REL1006B01에서 1.0(171) 내부 배포·실제 그룹의 빌드/테스터 노출을 확인했다. 실기기 화면과 겹친 물음표 선택은 계속 미확인이다.
 
 ## CLN1006F01 · 이번 검증에서 재생성한 빌드 캐시 정리 · 2026-10-06
 - LOG1006D01의11개 테스트/generic Debug 및 MAP1006F01의1개 측정이 완료된 뒤 이번에 생성한 build/ArchiveDD1283.87MiB를 정리했다. 글로벌 xcodebuild가 있어 첫 사전 확인에서는 삭제하지 않았으며, 프로세스 cwd/derivedDataPath 메타데이터로 현재 저장소/캐시를 쓰지 않는 것을 확인한 뒤 지정 캐시만 정리했다. 다른 실행의 파일·빌드·기기에는 작업하지 않았다.
@@ -34,6 +41,7 @@
 - 검증: DiagnosticsLogSupportTests11개 통과·0실패·0건너뜀, 새 회귀는170→171 혼합 이력과 버전 없는 legacy 줄, 건강 원문 필터 후 버전 보존을 확인했다. generic iOS Debug BUILD SUCCEEDED/exit0. 두 변경 소스의 해시가 검증 당시와 현재 일치한다(diagnostics-tests-summary.json, device-debug.log, source-confirmation.json).
 - 실행 확인: Simulator 테스트 호스트의 지정 App Group Diagnostics/iphone.jsonl에서 기본 logger가 app_version1.0/build170을 포함한34개 줄을 쓴 것을 확인했다. 첫 접근 보조 스크립트는 simctl 출력을=> 형식으로 잘못 해석해 경로0개를 읽었으며 tab 형식으로 수정한 최종 근거를 따로 남겼다(runtime-version-proof-final.json). 이는 실기기 결과가 아니다.
 - 완료 범위: 로컬 코드·관련 테스트·Debug 및 기본 runtime 버전 기록 확인 완료. 이번 변경을 TestFlight에 배포하거나 실기기에 설치하지 않았다. 배포된170의 과거 로그에는 개별 버전 필드가 없다. 근거 build/validation/LOG1006D01/.
+- 배포 후속: REL1006B01에서 1.0(171) 내부 배포를 확인했다. 새 로그의 앱 버전·빌드 기록이 포함되며, 실기기 내보내기 결과는 아직 확인하지 않았다.
 
 ## PER1006C01 · 전체 조회 확인·반복 변환 생략 · 2026-10-06
 - 시작: main e0695bd 및 실제 원격main 일치. LOG1006A01·CPU1006A01·PER1006B01 로컬 수정과 승인된 정리를 보존했다.
