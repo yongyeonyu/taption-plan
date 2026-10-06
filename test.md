@@ -1,5 +1,12 @@
 # 검증 기록
 
+## HND1007A01 · clean main 재확인 및 새 채팅 인계 (2026-10-07)
+
+- 시작 확인: main d52eea44a8d88b9f08f12161700144b4d9266b63, git status 변경 없음. origin/main fetch 및 ls-remote SHA 일치·ahead/behind0/0을 확인했다. 추가 기능 변경이나 빌드/설치/정리를 수행하지 않았다.
+- 인계 범위: 코드3d547be·기록d52eea4, iPhone11/18 직접 Release1.0(173) 설치/readback 완료와 마지막 TestFlight172를 구분한다. DBP1006C01의 native 행/RTree·증분 저장·일자 조회, GPS1006H01 및 PAW1006A01 구현·검증·남은 실제 원본/실기기 조건을 전달한다. 시뮬레이터 합성 수치와 실제 기기 성능을 구분한다.
+- 근거 위치: artifacts/validation/REL1007A01.json 및 test.md, 로컬 artifacts/local-validation-evidence/·artifacts/release-symbols/를 전달한다. 과거 build/validation/·xcresult·빌드 캐시는 정리되어 존재하지 않는다. 사용자 원본·백업·ShotGuide 자료는 보존한다.
+- 완료: 인계 내용은 새 채팅용 프롬프트로 제공한다. 이 문서 기록을 main에 커밋·push한 뒤 실제 원격 SHA와 clean을 재확인한다. 문서 전용 변경이므로 기존 유효한 코드 검증을 재사용하며 새 앱 테스트/빌드는 실행하지 않는다.
+
 ## REL1007A01 · main 반영·iPhone 11/18 설치·생성 파일 정리 (2026-10-07 완료)
 
 - main 반영: 시작 main9e1ad9d·원격 ahead/behind0/0에서 기존 GPS1006H01·PAW1006A01·DBP1006A01/B01/C01 변경을 보존해 코드 커밋3d547be186c2a3789ee158f51bbed2cf3c0a6094를 생성·push했고 실제 원격 main SHA 일치를 확인했다. 이 후속 문서/정리 기록도 별도 main 커밋·push 대상이다.
