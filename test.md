@@ -1,10 +1,12 @@
 # 검증 기록
 
-## GIT1014A01 · main 커밋·푸시와 clean 확인 (2026-10-14 진행)
+## GIT1014A01 · main 커밋·푸시와 clean 확인 (2026-10-14 완료)
 - 시작: main HEAD ea8fe22247dfbbdc21f125c626670336d029bbb8, git fetch origin main 성공 후 origin/main과 ahead/behind0/0이었다. DB 직접 읽기·센서 저장/변환·지도 경로/복귀 배율·분홍/회색 발자국·백업 개선, 관련 테스트/배포/정리 기록과 BIM8F4K2Q6 아트워크가 미커밋 상태였다.
 - 사전 검증: PAW1014B01의 최종 입력146개 SHA256이 현재와 모두 일치했다. 관련 앱158개 통과·실패/건너뜀0와 generic iOS Debug·앱/Widget175 strict 서명 근거를 재사용한다. 변경 없는 Core133개와 앞선 관련 검증은 원래 요청 ID의 결과를 유지한다. 이 Git 작업에서 기능 코드를 바꾸거나 앱 테스트/빌드를 다시 실행하지 않았다. git diff --check·엔진 import 경계 통과, 새 JSON 자료 파싱 성공.
 - 보존/범위: main의 수정 소스·새 SensorReadingStorage.swift·작은 검증 JSON·완성된 프로젝트 아트워크 자료를 함께 반영한다. 아트워크 기록에 실제 기기 UI/개인 위치·건강/계정 자료를 사용하지 않았음을 확인했다. 사용자 DB/백업·인증정보·원래 배포 실행 파일/dSYM·실제 검증 로그/xcresult는 기존 Git 제외/로컬 보존 상태를 유지한다. ShotGuide 자료는 포함하지 않는다. TestFlight 재업로드나 기존 미완료 실기기/백업 조건의 완료 판정은 이 요청 범위가 아니다.
 - staged 점검: 최초 검사에서 아트워크 README의 의도된 Markdown 줄바꿈 공백10곳과 끝 빈 줄이 검출됐다. 같은 화면 줄바꿈을 유지하는 백슬래시 표기로 정리한 뒤 git diff --cached --check exit0을 확인했다. 기능 코드/아트워크 이미지·원래 ZIP은 변경하지 않았다. 스테이지의 최종 입력 해시와 포함 파일을 확인한 뒤 main에 커밋·일반 push하고 원격 실제 HEAD/0대0/clean을 판정한다.
+- 실행 결과: 소스/자료64개 파일을 main 커밋2f3f49a5a418ea1756a231dcfc13372730e3f2ad로 저장했고 git push origin main exit0을 확인했다. push 후 git ls-remote의 실제 main HEAD가 같은 SHA였고 ahead/behind0/0·git status --porcelain 빈 출력이었다. 커밋의 입력146개도 검증 SHA와 모두 같았다. 완료 기준 충족으로 GIT1014A01만 temp.md에서 제거했고 기존 실기기/새 TestFlight·BKR1007A01 대기는 유지한다.
+- 근거: artifacts/validation/GIT1014A01.json은 소스 커밋 push 직후의 원격/clean 스냅샷이다. 이 완료 기록은 같은 main의 후속 문서 커밋으로 반영하고, 해당 최종 커밋 자체의 SHA와 마지막 원격/clean 상태는 artifacts/local-validation-evidence/GIT1014A01/final-state.json에 남긴다. 사용자 자료/원래 심볼은 보존하며 이 Git 작업의 임시 기록 폴더만 해당 로컬 근거 위치로 옮긴다.
 
 ## PAW1014B01 · 09:44 이후 발자국 표시 누락 (2026-10-14 코드·자동 검증 완료)
 - 확인한 코드 원인: 발자국 후보를 시간순으로 추가하다 전체 한도에 도달하면 뒤쪽 경로를 처리하지 않았다. 단일 경로의 sampleIndices도 limit에서 즉시 break하여 마지막 좌표/시각을 버렸다. 경로 projection·사이드바에는 전체 좌표가 남으므로 발자국에만 시간 경계가 생길 수 있었다. 배포175에도 앞부분부터 제한하는 구조가 있으며, 직전 미배포 PAW1014A01의 회색 메뉴 변경을 이번 기기 증상의 원인으로 간주하지 않는다.
