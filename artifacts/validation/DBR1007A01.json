@@ -1,0 +1,165 @@
+{
+  "requestID": "DBR1007A01",
+  "date": "2026-10-07",
+  "status": "local implementation and scoped validation complete",
+  "baseCommit": "ea8fe22247dfbbdc21f125c626670336d029bbb8",
+  "changes": [
+    "TSR1 direct binary SensorReading records with all 52 fields; existing SHA-256/size/LZFSE envelope retained",
+    "Single SQLite cursor constructs actual models and keys, checking order/count",
+    "RTree position lookup resolves immutable committed models after revision/root/generation checks",
+    "Per-scan exact-byte reuse for six repeated text columns and evidence, maximum 4 KiB per value"
+  ],
+  "schemaCompatibility": "No direct decoding of older PropertyList single SensorReading records. Portable Codable/JSON backup model retained. Actual user databases and backups not modified by task tools.",
+  "validation": {
+    "core": {
+      "total": 133,
+      "passed": 133,
+      "failed": 0,
+      "skipped": 0,
+      "log": "core-verified.log"
+    },
+    "appReleaseFunctional": {
+      "result": "Passed",
+      "totalTestCount": 156,
+      "passedTests": 156,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    "releasePerformance": {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    "releasePerformanceRepeat": {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    "baselinePerformance": {
+      "result": "Passed",
+      "totalTestCount": 2,
+      "passedTests": 2,
+      "failedTests": 0,
+      "skippedTests": 0
+    },
+    "expandedDebug": {
+      "result": "Failed",
+      "totalTestCount": 292,
+      "passedTests": 291,
+      "failedTests": 1,
+      "skippedTests": 0
+    },
+    "baselineExistingFailure": {
+      "result": "Failed",
+      "totalTestCount": 1,
+      "passedTests": 0,
+      "failedTests": 1,
+      "skippedTests": 0
+    },
+    "deviceDebug": {
+      "products": [
+        {
+          "id": "com.taption.plan",
+          "version": "1.0",
+          "build": "173",
+          "signatureExit": 0
+        },
+        {
+          "id": "com.taption.plan.widget",
+          "version": "1.0",
+          "build": "173",
+          "signatureExit": 0
+        }
+      ],
+      "watchEmbedded": false,
+      "sourceHashesMatched": 146
+    }
+  },
+  "knownFailure": {
+    "id": "BKR1007A01",
+    "test": "SecurityBackupCoreTests.testBackupRouteReducerKeepsEndpointsAndBoundsDenseGPS",
+    "status": "pre-existing endpoint coordinate mismatch reproduced with unchanged baseline Release executable; source not modified",
+    "baselineBinary": {
+      "path": "build/DBR1007A01DD/Build/Products/Release-iphonesimulator/TaptionPlan.app/TaptionPlan",
+      "sha256": "7c821b7d9aa81991c6231b4ef83941275873a8a0918cd776d3108f6afca0a13f",
+      "unchangedAfterBaselineRegression": true,
+      "pathIsHistoricalBuildOutput": true,
+      "note": "Hash was checked before the final Release rebuild; this DerivedData path is not an immutable retained binary."
+    },
+    "interruptedAttempt": "baseline-backup-regression: one test failed, Xcode cleanup hung; SIGINT/SIGTERM, exit 143. Completed reproduction: baseline-backup-02, exit 65."
+  },
+  "metrics": {
+    "actual_full_read_ms": {
+      "baselineMS": 296.4863749984943,
+      "finalRunsMS": [
+        354.38766666993615,
+        219.48908333433792
+      ]
+    },
+    "actual_day_read_ms": {
+      "baselineMS": 4.963541665347293,
+      "finalRunsMS": [
+        1.2543333359644748,
+        1.0951666663459036
+      ]
+    },
+    "sensor_read_mean_ms": {
+      "baselineMS": 135.9497222219943,
+      "finalRunsMS": [
+        51.40061111039056,
+        32.0605416673061
+      ]
+    },
+    "initial_save_ms": {
+      "baselineMS": 2849.1129583308066,
+      "finalRunsMS": [
+        3859.216708333406,
+        2425.401333333866
+      ]
+    },
+    "single_edit_ms": {
+      "baselineMS": 6.57008333291742,
+      "finalRunsMS": [
+        7.942874999571359,
+        6.822166666097473
+      ]
+    },
+    "settings_save_ms": {
+      "baselineMS": 4.428291664225981,
+      "finalRunsMS": [
+        8.982458333775867,
+        4.840291669097496
+      ]
+    }
+  },
+  "fixture": {
+    "activities": 120000,
+    "dayRows": 1441,
+    "sensorRows": 5000,
+    "sensorReadRepetitions": 3
+  },
+  "limitations": [
+    "Synthetic iOS Simulator Release, new repository over a just-written database; not an OS cold disk-cache benchmark",
+    "Other compiler processes were active on the shared Mac; full-history read and write wall times varied. No confirmed full-history, CPU, battery or peak-memory improvement",
+    "Full snapshot/backup/analysis and general array-diff paths still scale with complete history",
+    "No physical-device validation, install, commit, push or deployment performed"
+  ],
+  "evidenceDirectory": "build/validation/DBR1007A01/",
+  "sourceManifestSHA256": "d1b96b1313f189d1d6cf4b83f78014d728a21887d4d1edb7db80904afb948539",
+  "matchedSourceFiles": 146,
+  "changedSourceSHA256": {
+    "Packages/TaptionPlanCore/Sources/TaptionPlanCore/ActualRecordStore.swift": "13b84327573df8468ac20106da2b575bac3e8b881fe9bb32f313f8153946ecca",
+    "Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift": "59a3b469b319bde5260f315668e247922652b4aef1df991388c6cfc627bb5874",
+    "Packages/TaptionPlanCore/Tests/TaptionPlanCoreTests/ActualRecordStoreTests.swift": "cef63443db3fd50eb17a0dd64dd599a52e02f4f1a3caf6f63eddd47a60060e4d",
+    "TaptionPlan.xcodeproj/project.pbxproj": "56e7860ad5f04c9ae7465872a6e381df47f7b7530d8962af93a4a3fe75442261",
+    "TaptionPlan/Core/PlanActualStorage.swift": "44d7e071cf6118515bfd51cbc3364d26cd7ce1e0ca271e2030768e418757b7d0",
+    "TaptionPlan/Core/PlanRepository.swift": "86a5f0c3cb0db1543050b5f634d34c26a1c93e074e09d48187f03254d66a1550",
+    "TaptionPlanTests/SQLitePlanRepositoryTests.swift": "862ebdd0db884e7d4bcbf17301ce3ef742935511248ef0bf9114d5cbd3574ee1",
+    "TaptionPlanTests/SensorDayStoreTests.swift": "1b5f6ccddb125b94976c434ece5f1418e14390f0bfadc4c567a9b21b35a77592",
+    "TaptionPlan/Core/SensorReadingStorage.swift": "b4b7fca0ed02baa93da833ef194060a24908c9d4379ace47d7d3521e5ec2b720"
+  }
+}

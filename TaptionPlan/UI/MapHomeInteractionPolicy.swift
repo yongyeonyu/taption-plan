@@ -16,6 +16,8 @@ struct MapHomePawprintTapTarget {
     let point: CGPoint
     let timestamp: Date?
     let isPredicted: Bool
+    var routeID: String? = nil
+    var routeSpan: TimeSpan? = nil
 }
 
 struct MapHomePawprintTimeSelection: Equatable {
@@ -24,7 +26,64 @@ struct MapHomePawprintTimeSelection: Equatable {
     let minuteOffset: Double
 }
 
+struct MapHomePawprintTrace {
+    let coordinates: [CLLocationCoordinate2D]
+    let timestamps: [Date]
+}
+
 enum MapHomePawprintInteractionPolicy {
+    static let markerLimit = 220
+
+    static func recordedBudget(inferredDemand: Int) -> Int {
+        markerLimit - min(96, max(0, inferredDemand))
+    }
+
+    static func spreadIndices(count: Int, limit: Int) -> [Int] {
+        guard count > 0, limit > 0 else { return [] }
+        guard count > limit else { return Array(0..<count) }
+        guard limit > 1 else { return [count - 1] }
+        return (0..<limit).map {
+            Int((Double($0) * Double(count - 1) / Double(limit - 1)).rounded())
+        }
+    }
+
+    static func distributedCounts(
+        sampleCounts: [Int], latestTimestamps: [Date], limit: Int
+    ) -> [Int] {
+        var counts = Array(repeating: 0, count: sampleCounts.count)
+        guard limit > 0, latestTimestamps.count == sampleCounts.count else { return counts }
+        let priority = sampleCounts.indices.filter { sampleCounts[$0] > 0 }.sorted {
+            if latestTimestamps[$0] != latestTimestamps[$1] {
+                return latestTimestamps[$0] > latestTimestamps[$1]
+            }
+            return $0 > $1
+        }
+        var remaining = limit
+        // Give every path an endpoint before increasing any path's density.
+        while remaining > 0 {
+            var allocated = false
+            for index in priority where counts[index] < sampleCounts[index] {
+                counts[index] += 1
+                remaining -= 1
+                allocated = true
+                if remaining == 0 { break }
+            }
+            if !allocated { break }
+        }
+        return counts
+    }
+
+    static func sampleIndices(segments: [MapHomePawprintTrace], limit: Int) -> [[Int]] {
+        let candidates = segments.map {
+            sampleIndices(coordinates: $0.coordinates, timestamps: $0.timestamps, limit: limit)
+        }
+        let counts = distributedCounts(sampleCounts: candidates.map(\.count),
+            latestTimestamps: segments.map { $0.timestamps.last ?? .distantPast }, limit: limit)
+        return candidates.indices.map { index in
+            spreadIndices(count: candidates[index].count, limit: counts[index]).map { candidates[index][$0] }
+        }
+    }
+
     static func sampleIndices(
         coordinates: [CLLocationCoordinate2D],
         timestamps: [Date],
@@ -50,10 +109,9 @@ enum MapHomePawprintInteractionPolicy {
             if result.isEmpty || distance >= 0.00035 || index == coordinates.count - 1 {
                 result.append(index)
                 distance = 0
-                if result.count == limit { break }
             }
         }
-        return result
+        return spreadIndices(count: result.count, limit: limit).map { result[$0] }
     }
 
     static func selection(
@@ -85,10 +143,14 @@ enum MapHomePawprintInteractionPolicy {
         var nearestID: Int?
         var nearestDistance = radius * radius
         for target in targets {
-            guard selection(
-                timestamp: target.timestamp, isPredicted: target.isPredicted,
-                selectedDate: selectedDate, calendar: calendar
-            ) != nil else { continue }
+            if target.isPredicted {
+                guard target.routeID != nil, let span = target.routeSpan,
+                      let day = calendar.dateInterval(of: .day, for: selectedDate),
+                      span.start < day.end, span.end >= day.start else { continue }
+            } else {
+                guard selection(timestamp: target.timestamp, isPredicted: false,
+                    selectedDate: selectedDate, calendar: calendar) != nil else { continue }
+            }
             let distance = pow(target.point.x - point.x, 2) + pow(target.point.y - point.y, 2)
             if distance < nearestDistance || (distance == nearestDistance && nearestID == nil) {
                 nearestID = target.id

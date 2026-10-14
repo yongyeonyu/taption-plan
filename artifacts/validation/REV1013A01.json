@@ -1,0 +1,100 @@
+{
+  "requestID": "REV1013A01",
+  "verifiedAt": "2026-10-13T17:03:44.927172+09:00",
+  "head": "ea8fe22247dfbbdc21f125c626670336d029bbb8",
+  "branch": "main",
+  "changesCommitted": false,
+  "scope": "Review of MAP1013A01 and MAP1013B01 map lifecycle, route cache, boarding decisions, repository writes and manual travel edits",
+  "sourceSHA256": {
+    "TaptionPlan/UI/MapHomeVectorMap.swift": "06b31a49d683993909d4af9e87ec921c210e3e19d195d77f266b87ff6fd43d2f",
+    "TaptionPlan/UI/MapHomeView.swift": "4425efc5831c4bd5f992d20448185ca4869164140867e5c5fc6deecb8ab08a6f",
+    "TaptionPlan/UX/AppModel.swift": "9e804d3bfe825454706fdb6fa2ed9c7caff5e4101da070d2fffca2385dafdf5c",
+    "TaptionPlan/Core/FeatureModels.swift": "004beb970917e330d7a4105f28315df1f5950582e681113fd194e1634b318f33",
+    "TaptionPlan/Core/SensorFusion.swift": "4302a891c78d8f55f6352f3c55d3938b98c28d61fa62f73630f59bc345e1de44",
+    "TaptionPlanTests/TimeScaleTests.swift": "4eef5dc8e6ec4cccba4a27edda02fb36cb6fce23f5ffeedf257886ad7ed75377",
+    "TaptionPlanTests/FeatureEngineTests.swift": "93306f698f391fce8378d087af00b32f84d25816f6f6fab757e2ef880f06d2cb"
+  },
+  "findings": [
+    {
+      "priority": "P1",
+      "issue": "Boarding decision confirms unrelated following travel within a 30-minute window",
+      "fix": "Match selected IDs or a unique saved journey instead of a dwell time window",
+      "file": "TaptionPlan/Core/SensorFusion.swift"
+    },
+    {
+      "priority": "P1",
+      "issue": "Forgotten or manually changed confirmations are reapplied by a retained boarding decision",
+      "fix": "Remove the selected journey from previous boarding decisions and clear obsolete route geometry and provenance while keeping other targets",
+      "file": "TaptionPlan/UX/AppModel.swift"
+    },
+    {
+      "priority": "P2",
+      "issue": "Overlapping travel spans can select another travel ID's saved subway route",
+      "fix": "Prioritize exact route ID; allow only an unambiguous missing-ID fallback; exclude routes already represented by another current travel",
+      "file": "TaptionPlan/Core/SensorFusion.swift"
+    },
+    {
+      "priority": "P2",
+      "issue": "Candidate deletion publishes suppression and dismisses the sheet even when saving fails",
+      "fix": "Share staged decision writes with confirmation, publish only after the write and current revision check, and keep the sheet on failure",
+      "file": "TaptionPlan/UI/MapHomeView.swift"
+    }
+  ],
+  "baseline": {
+    "result": "Failed as expected",
+    "passed": 0,
+    "failed": 4,
+    "skipped": 0,
+    "resultBundle": "build/validation/REV1013A01/baseline-02.xcresult",
+    "sourceHashes": "build/validation/REV1013A01/baseline-source.json"
+  },
+  "tests": {
+    "result": "Passed",
+    "passed": 232,
+    "failed": 0,
+    "skipped": 0,
+    "resultBundle": "build/validation/REV1013A01/related-final-01.xcresult",
+    "log": "build/validation/REV1013A01/related-final-01.log",
+    "command": "build/validation/REV1013A01/related-final-01-command.json"
+  },
+  "debugBuild": {
+    "result": "BUILD SUCCEEDED",
+    "log": "build/validation/REV1013A01/device-debug.log",
+    "products": [
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app",
+        "bundleID": "com.taption.plan",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      },
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "bundleID": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      }
+    ],
+    "signingFlag": "--verbose=2 forces Xcode signing to rerun after previously observed stale incremental App Intents metadata"
+  },
+  "coverage": [
+    "Following journey remains unchanged; regenerated and slightly shifted same journey retains confirmed geometry",
+    "Exact overlapping IDs, missing geometry, ambiguous regenerated IDs and partial confirmation removal",
+    "Failed deletion stays unpublished; successful deletion waits for the write and keeps concurrent settings",
+    "Manual cancellation and mode change clear replay state and obsolete subway geometry",
+    "Existing native route zoom/style reload, day-cache readiness, startup camera, route timeline and subway inference regressions"
+  ],
+  "reusedEvidence": [
+    "MAP1013B01 full TimeScale suite remains applicable to unchanged TimeScaleTests.swift and MapHomeVectorMap.swift; relevant camera and renderer tests also rerun here"
+  ],
+  "intermediateResults": [
+    "baseline-01: four failing tests with one extra invalid pre-bootstrap classification-lock comparison, corrected for baseline-02",
+    "boarding-01: 13 passed, 1 failed; partial decision removal exposed an additional missing-ID fallback to a route already attached to another current travel. Fixed before final 232-test run"
+  ],
+  "limits": [
+    "Scoped code review, not a repository-wide exhaustive audit",
+    "Synthetic simulator checks; actual device gestures, foreground return and user DB verification remain pending",
+    "No build number change, installation, TestFlight upload, commit or push"
+  ]
+}

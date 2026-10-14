@@ -1,0 +1,67 @@
+{
+  "requestID": "BIM8F4K2Q6",
+  "status": "illustrative feature artwork draft; not app screenshots",
+  "generatedAt": "2026-10-07T18:14:24.728Z",
+  "outputs": [
+    {
+      "file": "output/bokki-plan-01-movement-1206x2622.png",
+      "width": 1206,
+      "height": 2622,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 1616452,
+      "sha256": "b6e59af9797d82d686e08bf668d17048e8ca9237b01036279698c6a03308cd8a"
+    },
+    {
+      "file": "output/bokki-plan-01-movement-603x1311.jpg",
+      "width": 603,
+      "height": 1311,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 134492,
+      "sha256": "5dc6eabbd393aeee7a3ab1303af185d66616192ba6824a55d2eeb629cdb7337e"
+    },
+    {
+      "file": "output/bokki-plan-01-movement-603x1311.webp",
+      "width": 603,
+      "height": 1311,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 65118,
+      "sha256": "f6fb44c333f895f5ba2d73033f86362f0083b12434c2169700d2e001a7014db0"
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-1206x2622.png",
+      "width": 1206,
+      "height": 2622,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 1726883,
+      "sha256": "6fa533448f1c958b1496f2ce449fdc905cabe64bcb5e964a69ee2a1c842bcf3f"
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-603x1311.jpg",
+      "width": 603,
+      "height": 1311,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 122053,
+      "sha256": "64f29faddf261beb6b225314e40048bc533a873356653d7a354baea788087392"
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-603x1311.webp",
+      "width": 603,
+      "height": 1311,
+      "space": "srgb",
+      "channels": 3,
+      "hasAlpha": false,
+      "bytes": 50742,
+      "sha256": "59ea6984cdf78609a881074ffabe1087bb660a907d470978e8f22db254d1a98b"
+    }
+  ]
+}

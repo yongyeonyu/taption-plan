@@ -1,0 +1,65 @@
+{
+  "requestID": "MAP1013B01",
+  "verifiedAt": "2026-10-13T16:33:09.001777+09:00",
+  "head": "ea8fe22247dfbbdc21f125c626670336d029bbb8",
+  "branch": "main",
+  "changesCommitted": false,
+  "sourceSHA256": {
+    "TaptionPlan/UI/MapHomeView.swift": "189be6e8abb12f3c0654d165ac816fd470df5c91bc9d48a81b3a6d2729f659fb",
+    "TaptionPlan/UI/MapHomeVectorMap.swift": "06b31a49d683993909d4af9e87ec921c210e3e19d195d77f266b87ff6fd43d2f",
+    "TaptionPlanTests/TimeScaleTests.swift": "4eef5dc8e6ec4cccba4a27edda02fb36cb6fce23f5ffeedf257886ad7ed75377"
+  },
+  "baseline": {
+    "result": "Failed as expected",
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "expectedDistanceMeters": 3000,
+    "actualDistanceMetersAfterZeroSizeCommand": 69478131.93155484,
+    "resultBundle": "build/validation/MAP1013B01/baseline.xcresult",
+    "sourceHashes": "build/validation/MAP1013B01/baseline-source.json"
+  },
+  "tests": {
+    "result": "Passed",
+    "passed": 186,
+    "failed": 0,
+    "skipped": 0,
+    "resultBundle": "build/validation/MAP1013B01/related-01.xcresult",
+    "log": "build/validation/MAP1013B01/related-01.log"
+  },
+  "debugBuild": {
+    "result": "BUILD SUCCEEDED",
+    "log": "build/validation/MAP1013B01/device-debug-signing.log",
+    "products": [
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app",
+        "bundleID": "com.taption.plan",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      },
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "bundleID": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      }
+    ],
+    "initialBuildLog": "build/validation/MAP1013B01/device-debug.log",
+    "signingRetryReason": "Initial incremental build succeeded but widget strict verification found modified Metadata.appintents/extract.actionsdata. Rebuilt with OTHER_CODE_SIGN_FLAGS=--verbose to rerun Xcode signing; final app and embedded widget strict verification both passed."
+  },
+  "coverage": [
+    "Zero-size camera command waits for layout; first rendered frame retries the pending command",
+    "Background return restores 3000m once; transient inactivity preserves manual zoom",
+    "Camera restoration preserves center, heading and pitch",
+    "Normal redraws retain manual zoom; automatic fallback starts at 3000m",
+    "Old camera revision viewport is discarded before readback",
+    "Existing TimeScale, native MapLibre route zoom/style reload and pending day cache tests"
+  ],
+  "limits": [
+    "Synthetic simulator tests; actual device background return screen not yet verified",
+    "Map renderer checks use native camera state and visible features, not screenshot pixel comparisons",
+    "No build number change, installation, TestFlight upload, commit or push"
+  ]
+}

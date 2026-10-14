@@ -1702,7 +1702,14 @@ actor SensorReadingArchive {
                     )
                 }
                 let recovered: (reading: SensorReading, source: String)?
-                if let reading = try? legacyDecoder.decode(
+                if let encoded = try? TaptionPlanCanonicalStorage.encodedPayload(from: event.payload),
+                   let reading = try? TaptionPlanCanonicalStorage.decodePropertyListForMigration(
+                       SensorReading.self, from: encoded),
+                   reading.id.uuidString == event.id,
+                   abs(reading.timestamp.timeIntervalSince(event.timestamp)) <= 0.000001,
+                   UInt64(max(0, reading.sequence ?? 0)) == event.sequence {
+                    recovered = (reading, "canonical_property_list")
+                } else if let reading = try? legacyDecoder.decode(
                     SensorReading.self,
                     from: event.payload
                 ), reading.id.uuidString == event.id {

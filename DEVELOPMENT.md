@@ -13,6 +13,7 @@
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
 | SQLite 저장·일자 DB·암호화 백업 | `TaptionPlan/Core/PlanRepository.swift`, `PlanDayDatabase.swift`, `SecurityBackupCore.swift` |
 | 활동 기록의 행 저장·증분 변경·시간 인덱스 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/ActualRecordStore.swift`, `TaptionPlan/Core/PlanActualStorage.swift` |
+| 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
 | 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
 | 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionPlanEngine/` |
@@ -29,6 +30,7 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 - `PlanRepository`와 `HealthKitImportStore`는 기존 날짜 없는 snapshot 키 `0000-00-00`을 읽기 위해 `allowsUndatedSnapshots`를 켭니다. 일반 날짜, event, map 검증은 이 예외를 물려받지 않아야 합니다.
 - `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. `SecurityBackupCore` 백업 포맷의 legacy read 경로는 별도 계약이므로 포맷 작업 때 구분해 확인하세요.
+- 센서 단일 레코드는 `TaptionPlanBinaryRecord`를 통해 `TSR1` 고정 필드 순서로 직접 저장/복원합니다. UUID는 16바이트, 실수/시각은 원래 64비트, 정수는 little-endian 64비트, 문자열은 UTF-8 길이와 원문, optional은 별도 존재 태그를 사용합니다. 52개 필드·중첩 센서·enum의 모든 값을 보존하며 필드 순서/enum 코드를 바꿀 때는 형식 버전을 올려야 합니다. 기존 SHA-256·바이트 수·LZFSE envelope 검사를 생략하지 않습니다. 정상 읽기는 현재 형식만 사용하며, 실패한 센서 행의 envelope·체크섬이 유효하고 내부가 bplist00인 경우에만 기존 PropertyList를 한 번 해석해 조건부 repair 트랜잭션으로 TSR1에 저장합니다. UUID·sequence와 SQLite 시각의 1µs 이내 일치를 확인하고 삭제 generation·원래 행 비교를 유지합니다. 실제 사용자 DB를 도구로 삭제/초기화하지 않습니다. 일반 Codable/JSON 모델과 portable 백업 경로는 독립적으로 유지합니다. 읽을 수 없는 센서 원본 때문에 수동 백업이 중단되면 localSensorArchiveIncomplete로 구분하고 기존 기록/백업을 보존합니다.
 - 활동 기록은 `actual_records`의 형식 있는 SQLite 열에 저장합니다. UUID와 중복 출현 순서로 행 키를 만들고 별도 `position`으로 원래 배열 순서를 보존합니다. 시작/종료/생성 시각은 Foundation 기준 시각의 REAL로 저장하며, 제목·분류·연결·source·confidence·provenance·분류 잠금은 별도 열입니다. 가변 evidence만 현재 정본 codec으로 저장합니다. `plan.actuals`에는 형식 버전과 건수만 남고, 이전512건 배열 분할/manifest/원본 중복 테이블은 사용하지 않습니다.
 - `actual_record_ranges`의1차원 RTree가 겹치는 시간 구간을 찾습니다. Float 경계의 바깥 반올림으로 얻은 후보를 원래 REAL 시각으로 다시 제한하므로 자정·소수점 경계·진행 중 기록을 유지합니다. 조회는 revision과 행을 같은 WAL 읽기 트랜잭션에서 가져옵니다. DB 트리거가 행 삽입/수정/삭제 시 시간 인덱스와 활동 revision을 함께 갱신합니다.
 - `SQLitePlanRepository`는 마지막 확정 snapshot 하나와 영역별 검증 정보·활동 revision·행 키를 재사용합니다. 같은 연결의 `data_version`·`total_changes64`와 삭제 generation이 같으면 payload를 읽지 않습니다. 외부 변경은 작은 snapshot 영역의 바이트와 활동 revision으로 구분하며, 센서·설정만 바뀌면 활동 전체를 다시 읽지 않습니다. 메모리 압력·삭제·로드 실패 때 캐시를 비우고 오래된 계산이 다시 채우지 못하게 합니다.
@@ -46,6 +48,10 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 일자 지도 문서의 생성·재계산은 `actuals(in:matching:)`으로 현재 확정 원본에 대응하는 날짜만 읽습니다. 저장 전 수정, 외부 변경 또는 메모리 압력으로 원본 일치가 보장되지 않으면 캡처한 메모리 원본을 사용하며 오래된 비동기 결과는 revision으로 폐기합니다. `repository_actual_range`에는 조회 건수·전체 건수·경과 시간만 기록합니다. 이미 완성된 일자 캐시의 조회는 정본 DB를 추가로 읽지 않습니다. 전체 앱 초기 로드·portable 백업·일괄 분석은 여전히 전체 모델을 구성하며, 일반 배열 변경의 비교와 전체 재정렬은 전체 건수에 비례합니다. 단건 API의 저장 시간은 Swift 배열 복사·화면 갱신을 포함한 전체 편집 지연과 구분합니다.
 
+활동 전체 조회는 SQLite cursor를 한 번 순회하면서 최종 모델과 행 키를 만듭니다. 중간 전체 `ActualRow` 배열을 유지하지 않으며 순서·건수·원본 해석 오류나 취소는 부분 결과를 반환하지 않습니다. 날짜 조회는 같은 WAL 읽기 트랜잭션에서 generation·revision·root를 확인한 뒤 RTree로 `position`만 조회하고, 이미 확정한 불변 배열의 해당 항목을 반환합니다. 범위 조회에서 제목·evidence를 다시 읽거나 decode하지 않습니다. 전체 조회의 `read_ms`에는 cursor의 모델 변환도 포함되므로 이전 기록의 SQL/변환 분리 시간과 직접 비교하지 않습니다.
+
+전체 cursor의 제목·분류·출처·확신도·행동·모델 버전과 evidence는 열마다 최대 4KiB 값 하나만 재사용합니다. SQLite의 원문 바이트와 정확히 같을 때만 기존 값을 돌려주며 Unicode 정규화 동등성으로 대체하지 않습니다. 캐시는 조회 종료/오류 시 폐기하며, 큰 값이나 다른 원문은 다시 읽고 검증합니다.
+
 센서 조회는 `TimeSpan.contains`와 같은 양 끝 포함 조건을 SQL의 `domain`·`timestamp` 범위에 전달합니다. 날짜 키를 만든 시간대가 바뀌어도 실제 시각이 범위 안이면 가져옵니다. `events_domain_timestamp_index`는 기존 대형 DB의 동기 초기화를 늦추지 않도록 저장소 actor의 첫 범위 조회 때 생성하고, 이후 재사용합니다. payload decode 후 원래 시각 필터·원본 복구·generation·취소 검사는 유지합니다. 한 날짜 전체를 읽고 Swift에서 대부분을 버리는 경로는 사용하지 않습니다.
 
 시작 화면은 복원 journal·잠금·접근 상태를 확인하고 설정 및 지도 shell이 준비되면 열린다. SQLite의 `loadStartupSnapshot()`은 metadata·settings·categories만 읽으며 전체 이력의 성공을 보증하거나 조회 캐시에 빈 이력을 넣지 않는다. pending 복원 journal·legacy 저장소·설정 읽기 실패 때는 기존 전체 로드 절차를 따른다. 전체 로드 전 일자 DB preview는 읽기 전용이며 편집·저장을 차단한다. 전체 로드 실패 때도 기존 원본 덮어쓰기 차단을 유지한다. `prepareLocalDataForDisplay()`는 전체 로컬 원본까지만 기다리고, 데이터 변경에 쓰는 `bootstrap()`은 기록 정리·저장 완료까지 기다린다. 정리 worker는 현재 revision과 일치하는 결과만 반영하며 그 결과를 메인 actor에서 다시 정리하지 않는다. `startup_settings_ready`, `initial_launch_ready`, `bootstrap_local_snapshot` / `bootstrap_preparation`으로 설정·화면 진입·전체 로드·정리 시간을 구분한다.
@@ -54,7 +60,15 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 GPS 경로는 낮은 정확도의 경계 표본도 시간·거리 검사를 거치며, 급이탈을 거른 뒤에도 마지막 정상 위치를 비교 기준으로 유지합니다. 정지 표본을 줄일 때 마지막 시각과 15분 이하의 경로 체크포인트를 남깁니다. 현재 위치 마커는 일자 worker가 검증한 위치를 사용합니다. 원본 저장 형식은 그대로이며 파생 일자 projection은 버전 2, 지도 문서 캐시 키는 `route-document-v8`입니다.
 
-분홍 발자국은 경로 좌표에 대응하는 시각을 캐시에 함께 보존합니다. 탭한 시점의 지도 좌표 변환으로 가장 가까운 분홍 발자국을 고르고 재생·현재 위치 추적·대기 중인 위치 요청을 멈춘 뒤 초 단위 시각과 위치로 이동합니다. 회색 예상 발자국은 시간 선택 대상에서 제외하며 지도 드래그·확대 제스처는 지도 렌더러가 처리합니다.
+분홍 발자국은 경로 좌표에 대응하는 시각을 캐시에 함께 보존합니다. 탭한 시점의 지도 좌표 변환으로 발자국을 고르고 재생·현재 위치 추적·대기 중인 위치 요청을 멈춘 뒤 초 단위 시각과 위치로 이동합니다. 회색 발자국은 전체 예상 경로와 연결하며 선택 시 강조와 변경/삭제 메뉴를 엽니다. 변경은 전체 좌표·구간·예상 좌표 출처를 사용자 확정으로 저장하고, 삭제는 해당 경로의 제외 결정을 저장합니다. 저장 후 공개하며 실패 시 경로/메뉴를 유지합니다. 이동 ID 재생성·좌표 재계산 뒤에도 선택을 적용하고, 실제 원본 센서는 수정하지 않습니다. 확정 경로의 분홍 발자국 시각은 저장된 구간의 거리 비례 시각이며 센서에서 직접 관측한 시각으로 취급하지 않습니다. 화면 시각이 다른 오래된 회색 tap 입력을 버리며 지도 드래그·확대 제스처는 지도 렌더러가 처리합니다.
+
+발자국 표시 상한은 전체 220개입니다. 거리 간격 후보를 경로 끝까지 만든 뒤 전체 구간에 고르게 나누고, 경로별 표시 수를 순환 배정하여 앞선 긴 경로가 이후 경로를 지우지 않게 합니다. 한 개만 배정되면 마지막 좌표를 사용하고 경로 수가 상한을 넘으면 최근 시각의 경로부터 남깁니다. 예상·사용자 확정 추정 경로에는 먼저 최대 96개를 예약하고, 관측 경로의 남는 표시 수를 재사용합니다. 화면 발자국·지도 좌표 변환 마커·탭 판정은 같은 샘플 목록을 사용합니다. 지도 배율에 따른 한도 변경이나 원본 기록 삭제는 하지 않습니다.
+
+벡터 지도의 경로는 스타일이 먼저 준비되거나 다시 로드돼도 소스·레이어를 확인해 복구합니다. 점선에는 gradient용 거리 metrics를 사용하지 않습니다. 일자 입력이 준비 중이면 같은 날의 확정된 표시를 유지하고, 준비된 revision의 빈 경로만 삭제로 반영합니다. 지하철 탑승 결정에는 선택 당시의 검증된 역 노선 좌표와 추정 근거를 저장합니다. 저장소 쓰기가 끝난 뒤 화면에 공개하며 재분석 시 같은 이동의 사용자 확정 경로·시각을 유지합니다.
+
+탑승 결정은 선택한 이동 ID 또는 유일하게 일치하는 저장 구간에만 재적용합니다. 현재 다른 이동에 이미 연결된 노선을 ID 재생성의 fallback으로 가져오지 않습니다. 확정 취소·수단 변경 때 해당 이동의 이전 탑승 결정과 사용자 확정 노선 근거를 정리하며 같은 결정의 다른 이동은 보존합니다. 후보 삭제도 쓰기 완료와 최신 revision 확인 후 공개하고 실패 시 화면을 유지합니다.
+
+지도 화면 진입과 백그라운드에서 활성 상태로 복귀할 때 중심·방향·기울기를 유지하고 초기 카메라 거리 3,000m를 적용합니다. 일시적인 inactive 전환과 사용 중 화면 갱신은 수동 배율을 유지합니다. 벡터 지도 크기가 0이면 카메라 명령의 revision을 소비하지 않고 첫 렌더링 프레임에서 재시도합니다. 비활성 상태 또는 이전 카메라 revision의 화면 콜백은 복귀 배율을 덮지 못합니다.
 
 백업 manifest의 복호화·병합은 `PlanManifestBodyPreparation` actor가 세대를 순서대로 처리합니다. raw 암호문을 한 세대씩 전달하고 임시 Foundation 객체는 변환 구간에서 해제합니다. 호출자는 각 반환과 최종 저장 전에 PIN·취소·삭제 fence를 확인합니다. `backup_manifest_prepare`는 시간·개수·메인 스레드 여부만 기록하며 원본 자료를 기록하지 않습니다.
 

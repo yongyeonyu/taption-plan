@@ -936,7 +936,7 @@ actor SQLitePlanRepository: PlanDataRepository {
     private struct LoadedRows: Sendable {
         let generation: UInt64
         let rows: [TaptionPlanDayStore.Snapshot]
-        let actualRows: [TaptionPlanDayStore.ActualRow]?
+        let actualRecords: PlanActualStorage.Loaded?
         let actualRevision: UInt64
         let readVersion: TaptionPlanDayStore.SnapshotReadVersion?
         let reusedRows: Bool
@@ -1096,8 +1096,13 @@ actor SQLitePlanRepository: PlanDataRepository {
                 } == true
                 let reuseActuals = cached?.generation == generation && rootUnchanged
                     && cached?.actualRevision == actualRevision
+                let actualRecords: PlanActualStorage.Loaded?
+                if reuseActuals { actualRecords = nil }
+                else if let root {
+                    actualRecords = try PlanActualStorage.read(from: store, count: PlanActualStorage.nativeHeader(root.payload).count)
+                } else { actualRecords = .init() }
                 return LoadedRows(generation: generation, rows: rows,
-                    actualRows: reuseActuals ? nil : root == nil ? [] : try store.actualRecords(), actualRevision: actualRevision,
+                    actualRecords: actualRecords, actualRevision: actualRevision,
                     readVersion: version, reusedRows: reuse)
             }
         }
@@ -1118,7 +1123,7 @@ actor SQLitePlanRepository: PlanDataRepository {
             let priorStamps = Dictionary(uniqueKeysWithValues: (prior?.loadStamps ?? []).map { ($0.domain, $0) })
             var reusableDomains = Set(stamps.filter { priorStamps[$0.domain] == $0 }.map(\.domain))
             if prior?.actualRevision != loaded.actualRevision { reusableDomains.remove(Data(PlanActualStorage.domain.utf8)) }
-            value = try snapshot(from: loaded.rows, actualRows: loaded.actualRows,
+            value = try snapshot(from: loaded.rows, actualRecords: loaded.actualRecords,
                 reusing: prior?.value, reusableDomains: reusableDomains)
         }
         lastLoadSkippedPayloadRead = loaded.reusedRows
@@ -1132,7 +1137,7 @@ actor SQLitePlanRepository: PlanDataRepository {
             epoch: epoch,
             loadStamps: stamps, readVersion: loaded.readVersion,
             actualRevision: loaded.actualRevision,
-            actualKeys: loaded.actualRows?.map(\.key) ?? cached?.actualKeys ?? []
+            actualKeys: loaded.actualRecords?.keys ?? cached?.actualKeys ?? []
         )
         TaptionPlanDiagnosticsLogger.shared.record(
             "repository_local_load",
@@ -1143,7 +1148,7 @@ actor SQLitePlanRepository: PlanDataRepository {
                 "domains": String(stamps.count),
                 "stored_bytes": String(stamps.reduce(0) { $0 + $1.payloadBytes }),
                 "payload_read_bytes": String(loaded.rows.reduce(0) { $0 + $1.payload.count }),
-                "actual_rows_read": String(loaded.actualRows?.count ?? 0),
+                "actual_rows_read": String(loaded.actualRecords?.records.count ?? 0),
                 "reused_rows": String(loaded.reusedRows),
                 "decoded_domains": String(lastDecodedDomains.count),
                 "reused_snapshot": String(lastLoadReusedSnapshot),
@@ -1159,13 +1164,13 @@ actor SQLitePlanRepository: PlanDataRepository {
         let loaded = try await withStoreLockRetry { store in
             guard !FileManager.default.fileExists(atPath: deletionPendingURL.path),
                   !TaptionDataDeletionFence.repositoryDeletionIsPending() else {
-                return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: [], actualRows: nil, actualRevision: 0,
+                return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: [], actualRecords: nil, actualRevision: 0,
                     readVersion: nil, reusedRows: false)
             }
             let rows = try [Self.metadataDomain, "plan.settings", "plan.categories"].compactMap {
                 try store.snapshot(domain: $0, day: Self.day)
             }
-            return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: rows, actualRows: nil, actualRevision: 0,
+            return LoadedRows(generation: Self.readGeneration(at: generationURL), rows: rows, actualRecords: nil, actualRevision: 0,
                 readVersion: nil, reusedRows: false)
         }
         try Task.checkCancellation()
@@ -1467,13 +1472,14 @@ actor SQLitePlanRepository: PlanDataRepository {
     }
 
     func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? {
+        guard span.start <= span.end else { return [] }
         guard let cached = committedSnapshot,
               PlanActualStorage.sharesStorage(source, cached.value.actuals) else { return nil }
         let started = ProcessInfo.processInfo.systemUptime
         let generationURL = self.generationURL
         let deletionPendingURL = self.deletionPendingURL
         let deletionGeneration = dataDeletionGeneration
-        let rows = try await withStoreLockRetry { store -> [TaptionPlanDayStore.ActualRow]? in
+        let positions = try await withStoreLockRetry { store -> [Int]? in
             try store.withSnapshotReadTransaction { store in
                 guard Self.readGeneration(at: generationURL) == cached.generation,
                       !FileManager.default.fileExists(atPath: deletionPendingURL.path),
@@ -1481,12 +1487,15 @@ actor SQLitePlanRepository: PlanDataRepository {
                       try store.actualRecordRevision() == cached.actualRevision,
                       let root = try store.snapshot(domain: PlanActualStorage.domain, day: Self.day),
                       cached.loadStamps?.contains(LoadedRowStamp(root)) == true else { return nil }
-                return try store.actualRecords(in: span.start...span.end)
+                return try store.actualRecordPositions(in: span.start...span.end)
             }
         }
         try Task.checkCancellation()
-        guard let rows else { return nil }
-        let records = try PlanActualStorage.records(from: rows)
+        guard let positions else { return nil }
+        let records = try positions.map { position in
+            guard source.indices.contains(position) else { throw TaptionPlanCanonicalStorageError.invalidPayload }
+            return source[position]
+        }
         TaptionPlanDiagnosticsLogger.shared.record("repository_actual_range", fields: [
             "rows": String(records.count), "total_records": String(source.count),
             "elapsed_ms": String(format: "%.2f", (ProcessInfo.processInfo.systemUptime - started) * 1_000),
@@ -1496,7 +1505,7 @@ actor SQLitePlanRepository: PlanDataRepository {
 
     private func snapshot(
         from rows: [TaptionPlanDayStore.Snapshot],
-        actualRows: [TaptionPlanDayStore.ActualRow]? = nil,
+        actualRecords: PlanActualStorage.Loaded? = nil,
         reusing previous: TaptionDataSnapshot? = nil,
         reusableDomains: Set<Data> = []
     ) throws -> TaptionDataSnapshot {
@@ -1523,11 +1532,10 @@ actor SQLitePlanRepository: PlanDataRepository {
                 value.actuals = previous.actuals
             } else {
                 let header = try PlanActualStorage.nativeHeader(row.payload)
-                guard let actualRows, actualRows.count == header.count,
-                      actualRows.enumerated().allSatisfy({ $0.offset == $0.element.position }) else {
+                guard let actualRecords, actualRecords.records.count == header.count else {
                     throw TaptionPlanCanonicalStorageError.invalidPayload
                 }
-                value.actuals = try PlanActualStorage.records(from: actualRows)
+                value.actuals = actualRecords.records
                 lastDecodedDomains.append(PlanActualStorage.domain)
             }
         }

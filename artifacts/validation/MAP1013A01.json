@@ -1,0 +1,56 @@
+{
+  "requestID": "MAP1013A01",
+  "verifiedAt": "2026-10-13T16:11:25.210718+09:00",
+  "head": "ea8fe22247dfbbdc21f125c626670336d029bbb8",
+  "branch": "main",
+  "changesCommitted": false,
+  "sourceSHA256": {
+    "TaptionPlan/Core/FeatureModels.swift": "004beb970917e330d7a4105f28315df1f5950582e681113fd194e1634b318f33",
+    "TaptionPlan/Core/SensorFusion.swift": "681594d2f14373dcff8bcd9414d10e04e4b387a21521a602e2875ba08a1d3240",
+    "TaptionPlan/UI/MapHomeVectorMap.swift": "25d654792383835222280c44964c8527be95518320d9b796df992ad83e50f180",
+    "TaptionPlan/UI/MapHomeView.swift": "bff24b200ed6c6f4683b47a35bf4c144d3000435c5ec13c4d54affabab446c03",
+    "TaptionPlan/UX/AppModel.swift": "cba5b3c6c28c7d67f712bbdce0eb9090f0fadc1c7818175702d03e3287ccb996",
+    "TaptionPlanTests/FeatureEngineTests.swift": "2531852098fe1ac93d6257a412db7d1a6cf687fbe3e528ccd1fc3ea4777da6ec",
+    "TaptionPlanTests/TimeScaleTests.swift": "c4e5fc64e05208139a1d02876f3fa7b6c153688280bb8b4cbd91a70304733b08"
+  },
+  "tests": {
+    "result": "Passed",
+    "passed": 219,
+    "failed": 0,
+    "skipped": 0,
+    "resultBundle": "build/validation/MAP1013A01/related-final-01.xcresult",
+    "log": "build/validation/MAP1013A01/related-final-01.log"
+  },
+  "debugBuild": {
+    "result": "BUILD SUCCEEDED",
+    "log": "build/validation/MAP1013A01/device-debug.log",
+    "products": [
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app",
+        "bundleID": "com.taption.plan",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      },
+      {
+        "path": "build/ArchiveDD/Build/Products/Debug-iphoneos/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "bundleID": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "174",
+        "strictSignatureExit": 0
+      }
+    ]
+  },
+  "coverage": [
+    "native MapLibre route feature queries at zoom 8, 12, 14, 16, 18, 20; offscreen return; style reload",
+    "pending day source, restored cache, confirmed-empty replacement, other-day isolation",
+    "boarding route coordinates and inference provenance; JSON restart and independent SQLite connection",
+    "save failure, pre-write cancellation, stale candidate, delayed publication, day switch and concurrent setting edit"
+  ],
+  "limits": [
+    "Synthetic simulator tests; no physical device gesture or user database verification",
+    "Map renderer tests query visible route features, not screenshot pixel comparisons",
+    "No build number change, installation, TestFlight upload, commit or push"
+  ],
+  "reference": "https://maplibre.org/maplibre-style-spec/layers/#line-dasharray"
+}

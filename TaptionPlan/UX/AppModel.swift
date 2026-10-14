@@ -1113,8 +1113,6 @@ final class AppModel {
     @ObservationIgnored private var altitudeSpikeGate = AltitudeSpikeGate()
     @ObservationIgnored private var altitudeGatePlaceID: UUID? = nil
     @ObservationIgnored private var calibrationNoticeTask: Task<Void, Never>?
-    @ObservationIgnored private var transitDecisionPersistTask: Task<Void, Never>?
-    @ObservationIgnored private var transitDecisionPersistRequested = false
 
     var widgetSyncStatus: TaptionWidgetSyncStatus {
         TaptionWidgetSyncStatus.compare(
@@ -2590,7 +2588,9 @@ final class AppModel {
             in: span
         ) ?? (readings: [], isComplete: true)
         guard sensorLoad.isComplete else {
-            throw PlanSecurityError.invalidArchive
+            TaptionPlanDiagnosticsLogger.shared.record("icloud_backup_local_sensor_load_failed", level: .error,
+                fields: ["stage": "local_sensor_archive", "readable_count": String(sensorLoad.readings.count)])
+            throw PlanSecurityError.localSensorArchiveIncomplete
         }
         let sensorReadings = sensorLoad.readings
         let envelopes: [RawDeviceDataEnvelope]
@@ -6239,7 +6239,6 @@ final class AppModel {
             selectedDateRefreshTask,
             widgetReloadFollowupTask,
             calibrationNoticeTask,
-            transitDecisionPersistTask,
             sensorAnalysisDebounceTask,
             liveWeatherRefreshTask,
             pendingDeviceLocalPersistTask,
@@ -6267,8 +6266,6 @@ final class AppModel {
         selectedDateRefreshTask = nil
         widgetReloadFollowupTask = nil
         calibrationNoticeTask = nil
-        transitDecisionPersistTask = nil
-        transitDecisionPersistRequested = false
         sensorAnalysisDebounceTask = nil
         sensorAnalysisTaskGeneration &+= 1
         pendingSensorAnalysisRevisions.removeAll(keepingCapacity: false)
@@ -10666,6 +10663,7 @@ final class AppModel {
 
     func confirmTravel(_ travelIDs: [UUID], mode: TravelMode) {
         let ids = Set(travelIDs)
+        let previousSegments = snapshot.travel.filter { ids.contains($0.id) }
         var corrections = snapshot.settings.movementCorrections
         var didChange = false
         for index in snapshot.travel.indices
@@ -10680,8 +10678,10 @@ final class AppModel {
             snapshot.travel[index].mode = mode
             snapshot.travel[index].confidence = .high
             snapshot.travel[index].isConfirmed = true
+            if mode != .subway { snapshot.travel[index].subwayRoute = nil }
             snapshot.travel[index].evidence.removeAll {
                 $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
+                    || (mode != .subway && $0.hasPrefix("사용자 확정 경로 ·"))
             }
             snapshot.travel[index].evidence.append(
                 wasChanged ? "사용자 확인 · 수단 수정" : "사용자 확인"
@@ -10690,59 +10690,128 @@ final class AppModel {
         }
         guard didChange else { return }
         snapshot.settings.movementCorrections = corrections
+        snapshot.settings.transitBoardingDecisions = TransitBoardingDecisionEngine.removingConfirmations(
+            for: previousSegments, from: snapshot.settings.transitBoardingDecisions)
+        snapshot.settings.predictedRouteDecisions.removeAll {
+            !$0.isDeleted && $0.route.travelID.map(ids.contains) == true
+        }
         Task { await persist() }
     }
 
-    func confirmTransitBoarding(_ candidate: TransitBoardingCandidate) {
-        confirmTravel(candidate.travelSegmentIDs, mode: candidate.mode)
-        upsertingTransitBoardingDecision(
-            for: candidate,
-            mode: candidate.mode
-        )
+    @discardableResult
+    func confirmTransitBoarding(_ candidate: TransitBoardingCandidate) async -> Bool {
+        await saveTransitBoardingDecision(for: candidate, mode: candidate.mode)
     }
 
-    func deleteTransitBoardingCandidate(
-        _ candidate: TransitBoardingCandidate
-    ) async {
-        upsertingTransitBoardingDecision(for: candidate, mode: nil)
-        await transitDecisionPersistTask?.value
+    @discardableResult
+    func savePredictedRouteDecision(_ route: MapPredictedRoute, deleting: Bool) async -> Bool {
+        guard acceptsDataMutation(), route.isValid, !Task.isCancelled else { return false }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
+        let generation = dataDeletionGeneration
+        do {
+            while acceptsDataMutation(), generation == dataDeletionGeneration {
+                try Task.checkCancellation()
+                let revision = snapshotRevision
+                var value = snapshotForPersistence()
+                value.settings.predictedRouteDecisions.removeAll { $0.matches(route) }
+                value.settings.predictedRouteDecisions.append(.init(route: route,
+                    isDeleted: deleting, updatedAt: .now))
+                if !deleting, let travelID = route.travelID,
+                   let index = value.travel.firstIndex(where: { $0.id == travelID }) {
+                    value.travel[index].isConfirmed = true
+                    value.travel[index].confidence = .high
+                    let evidence = "사용자 확정 경로 · 예상 좌표 기반"
+                    if !value.travel[index].evidence.contains(evidence) { value.travel[index].evidence.append(evidence) }
+                }
+                value.updatedAt = .now
+                guard try await saveToRepository(value, expectedRevision: revision),
+                      revision == snapshotRevision else { continue }
+                value.memos = snapshot.memos
+                snapshot = value
+                schedulePostSaveRefresh()
+                publishWidgetPayload()
+                return true
+            }
+        } catch is CancellationError {
+            return false
+        } catch {
+            userFacingError = "경로를 저장하지 못했습니다. 다시 시도해 주세요."
+            TaptionPlanDiagnosticsLogger.shared.record("predicted_route_save_failed", level: .error,
+                fields: ["action": deleting ? "delete" : "confirm", "error_type": String(describing: type(of: error))])
+        }
+        return false
     }
 
-    private func upsertingTransitBoardingDecision(
+    @discardableResult
+    func deleteTransitBoardingCandidate(_ candidate: TransitBoardingCandidate) async -> Bool {
+        await saveTransitBoardingDecision(for: candidate, mode: nil)
+    }
+
+    private func saveTransitBoardingDecision(
         for candidate: TransitBoardingCandidate,
         mode: TravelMode?
-    ) {
+    ) async -> Bool {
+        guard acceptsDataMutation(), !Task.isCancelled else { return false }
+        activeDataMutationCount += 1
+        defer { activeDataMutationCount -= 1 }
+        let generation = dataDeletionGeneration
+        let ids = Set(candidate.travelSegmentIDs)
         let decision = TransitBoardingDecision(
-            candidateKey: candidate.id,
-            placeID: candidate.placeID,
-            kind: candidate.kind,
-            point: candidate.point,
-            span: candidate.span,
-            mode: mode,
-            travelSegmentIDs: candidate.travelSegmentIDs
-        )
-        var decisions = snapshot.settings.transitBoardingDecisions
-        decisions.removeAll { $0.candidateKey == decision.candidateKey }
-        decisions.append(decision)
-        if decisions.count > 200 {
-            decisions.sort { $0.updatedAt < $1.updatedAt }
-            decisions.removeFirst(decisions.count - 200)
-        }
-        snapshot.settings.transitBoardingDecisions = decisions
-        scheduleTransitDecisionPersistence()
-    }
-
-    private func scheduleTransitDecisionPersistence() {
-        transitDecisionPersistRequested = true
-        guard transitDecisionPersistTask == nil else { return }
-        transitDecisionPersistTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            while self.transitDecisionPersistRequested {
-                self.transitDecisionPersistRequested = false
-                _ = await self.persist()
+            candidateKey: candidate.id, placeID: candidate.placeID,
+            kind: candidate.kind, point: candidate.point, span: candidate.span,
+            mode: mode, travelSegmentIDs: candidate.travelSegmentIDs,
+            subwayRoutes: mode == .subway
+                ? candidate.subwayRoutes.filter { ids.contains($0.travelSegmentID) } : nil)
+        do {
+            // Rebase on sensor/other edits that arrive while the repository write is waiting.
+            while acceptsDataMutation(), generation == dataDeletionGeneration {
+                try Task.checkCancellation()
+                guard mode == nil || snapshot.travel.contains(where: { ids.contains($0.id) }) else {
+                    userFacingError = "이동 기록이 변경되었습니다. 지도의 탑승 후보를 다시 선택해 주세요."
+                    return false
+                }
+                let revision = snapshotRevision
+                var value = snapshotForPersistence()
+                if let mode {
+                    for segment in value.travel where ids.contains(segment.id) {
+                        value.settings.movementCorrections = MovementCorrectionEngine.recording(
+                            mode: mode, for: segment,
+                            places: value.places, existing: value.settings.movementCorrections)
+                    }
+                    value.travel = value.travel.map { segment in
+                        guard ids.contains(segment.id) else { return segment }
+                        return TransitBoardingDecisionEngine.applying([decision], to: [segment])[0]
+                    }
+                }
+                value.settings.transitBoardingDecisions.removeAll {
+                    $0.candidateKey == decision.candidateKey
+                }
+                value.settings.transitBoardingDecisions.append(decision)
+                value.settings.transitBoardingDecisions.sort { $0.updatedAt < $1.updatedAt }
+                if value.settings.transitBoardingDecisions.count > 200 {
+                    value.settings.transitBoardingDecisions.removeFirst(
+                        value.settings.transitBoardingDecisions.count - 200)
+                }
+                value.updatedAt = .now
+                guard try await saveToRepository(value, expectedRevision: revision),
+                      revision == snapshotRevision else { continue }
+                value.memos = snapshot.memos
+                snapshot = value
+                schedulePostSaveRefresh()
+                publishWidgetPayload()
+                return true
             }
-            self.transitDecisionPersistTask = nil
+        } catch is CancellationError {
+            return false
+        } catch {
+            userFacingError = mode == nil
+                ? "탑승 후보를 삭제하지 못했습니다. 다시 시도해 주세요."
+                : "탑승 경로를 저장하지 못했습니다. 다시 시도해 주세요."
+            TaptionPlanDiagnosticsLogger.shared.record("transit_boarding_save_failed", level: .error,
+                fields: ["error": String(describing: type(of: error))])
         }
+        return false
     }
 
     func forgetTravelConfirmation(_ travelID: UUID) {
@@ -10751,6 +10820,7 @@ final class AppModel {
 
     func forgetTravelConfirmations(_ travelIDs: [UUID]) {
         let ids = Set(travelIDs)
+        let previousSegments = snapshot.travel.filter { ids.contains($0.id) }
         var corrections = snapshot.settings.movementCorrections
         var earliestStart: Date?
         for index in snapshot.travel.indices
@@ -10770,13 +10840,20 @@ final class AppModel {
             snapshot.travel[index].confidence =
                 correction?.inferredConfidence ?? .medium
             snapshot.travel[index].isConfirmed = false
+            snapshot.travel[index].subwayRoute = nil
             snapshot.travel[index].evidence.removeAll {
                 $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
+                    || $0.hasPrefix("사용자 확정 경로 ·")
             }
             earliestStart = min(earliestStart ?? segment.span.start, segment.span.start)
         }
         guard let earliestStart else { return }
         snapshot.settings.movementCorrections = corrections
+        snapshot.settings.transitBoardingDecisions = TransitBoardingDecisionEngine.removingConfirmations(
+            for: previousSegments, from: snapshot.settings.transitBoardingDecisions)
+        snapshot.settings.predictedRouteDecisions.removeAll {
+            !$0.isDeleted && $0.route.travelID.map(ids.contains) == true
+        }
         Task {
             await persist()
             await refreshSensorTimeline(containing: earliestStart)
@@ -13881,6 +13958,7 @@ final class AppModel {
         value.settings.floorCalibration = nil
         value.settings.floorCalibrationHistory = []
         value.settings.transitBoardingDecisions = []
+        value.settings.predictedRouteDecisions = []
         value.settings.movementCorrections = []
         value.settings.activityCorrections = [:]
         // 거절한 자리는 이 기기의 위치 기록에서만 나온 좌표다. 자주가는 곳
@@ -13966,6 +14044,7 @@ final class AppModel {
             local.settings.floorCalibrationHistory
         value.settings.transitBoardingDecisions =
             local.settings.transitBoardingDecisions
+        value.settings.predictedRouteDecisions = local.settings.predictedRouteDecisions
         value.settings.movementCorrections =
             local.settings.movementCorrections
         value.settings.activityCorrections =

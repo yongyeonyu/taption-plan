@@ -209,6 +209,218 @@ private final class PlanDaySaveValidity {
 }
 
 final class SensorDayStoreTests: XCTestCase {
+    func testVerifiedPropertyListSensorRowsMigrateWithoutRecoveryCopies() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000.0000001)
+        let reading = makeReading(date, sequence: 7)
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        let bytes = try encoder.encode(reading)
+        let oldPayload = TaptionPlanCanonicalStorage.envelope(for: .init(
+            data: bytes, checksum: TaptionPlanCanonicalStorage.checksum(bytes),
+            uncompressedSize: bytes.count, isCompressed: false))
+        XCTAssertThrowsError(try TaptionPlanCanonicalStorage.decode(SensorReading.self,
+            from: TaptionPlanCanonicalStorage.encodedPayload(from: oldPayload)))
+        let db = root.appendingPathComponent("sensor.sqlite")
+        let store = try TaptionPlanDayStore(url: db)
+        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
+            sequence: 7, id: reading.id.uuidString, domain: "sensor-reading", payload: oldPayload)])
+        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
+        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
+        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
+        let result = try await archive.readingsLoadResult(in: span)
+        XCTAssertTrue(result.isComplete)
+        XCTAssertEqual(result.readings, [reading])
+        let migratedEvents = try await store.events(in: span.start...span.end, domain: "sensor-reading")
+        let migrated = try XCTUnwrap(migratedEvents.first)
+        XCTAssertNotEqual(migrated.payload, oldPayload)
+        XCTAssertEqual(try TaptionPlanCanonicalStorage.decode(SensorReading.self,
+            from: TaptionPlanCanonicalStorage.encodedPayload(from: migrated.payload)), reading)
+        let reopened = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
+        let reloaded = try await reopened.readingsLoadResult(in: span)
+        XCTAssertTrue(reloaded.isComplete)
+        XCTAssertEqual(reloaded.readings, [reading])
+    }
+
+    func testPropertyListMigrationRejectsCorruptChecksumAndPreservesUnreadableRow() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let reading = makeReading(date, sequence: 1)
+        let encoder = PropertyListEncoder(); encoder.outputFormat = .binary
+        let bytes = try encoder.encode(reading)
+        let bad = TaptionPlanCanonicalStorage.envelope(for: .init(data: bytes,
+            checksum: String(repeating: "0", count: 64), uncompressedSize: bytes.count, isCompressed: false))
+        let db = root.appendingPathComponent("sensor.sqlite")
+        let store = try TaptionPlanDayStore(url: db)
+        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
+            sequence: 1, id: reading.id.uuidString, domain: "sensor-reading", payload: bad)])
+        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
+        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
+        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
+        let result = try await archive.readingsLoadResult(in: span)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertTrue(result.readings.isEmpty)
+        let unchanged = try await store.events(in: span.start...span.end, domain: "sensor-reading")
+        XCTAssertEqual(unchanged.first?.payload, bad)
+    }
+
+    func testPropertyListMigrationDoesNotRepairMismatchedEventIdentity() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let reading = makeReading(date, sequence: 1)
+        let encoder = PropertyListEncoder(); encoder.outputFormat = .binary
+        let bytes = try encoder.encode(reading)
+        let payload = TaptionPlanCanonicalStorage.envelope(for: .init(data: bytes,
+            checksum: TaptionPlanCanonicalStorage.checksum(bytes), uncompressedSize: bytes.count, isCompressed: false))
+        let db = root.appendingPathComponent("sensor.sqlite")
+        let store = try TaptionPlanDayStore(url: db)
+        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
+            sequence: 1, id: UUID().uuidString, domain: "sensor-reading", payload: payload)])
+        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
+        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
+        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
+        let result = try await archive.readingsLoadResult(in: span)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertTrue(result.readings.isEmpty)
+        let unchanged = try await store.events(in: span.start...span.end, domain: "sensor-reading")
+        XCTAssertEqual(unchanged.first?.payload, payload)
+    }
+
+    func testDirectSensorStoragePreservesEveryFieldAndPortableCodable() throws {
+        var value = makeReading(Date(timeIntervalSinceReferenceDate: 800_000_000.125), sequence: Int.max)
+        value.point = GeoPoint(latitude: -0.0, longitude: 179.75, altitude: -400.25, horizontalAccuracy: 3.25, verticalAccuracy: -1)
+        value.locationFixQuality = .approximate
+        value.speedMetersPerSecond = -0.0
+        value.speedAccuracyMetersPerSecond = 2.125
+        value.courseDegrees = 359.75
+        value.courseAccuracyDegrees = -1
+        value.motion = .cycling
+        value.motionConfidence = .high
+        value.relativeAltitudeMeters = -12.125
+        value.pressureKilopascals = 99.5
+        value.altimeterSessionID = UUID()
+        value.floorsAscended = 10
+        value.floorsDescended = 3
+        value.stepCount = Int.min
+        value.walkingRunningDistanceMeters = 1_234.5
+        value.currentPaceSecondsPerMeter = 1.25
+        value.currentCadenceStepsPerSecond = 3.5
+        value.averageActivePaceSecondsPerMeter = 2.75
+        value.deviceMotion = .init(gravity: .init(x: 1, y: 2, z: 3), userAcceleration: .init(x: 4, y: 5, z: 6), rotationRate: .init(x: 7, y: 8, z: 9), attitudeRadians: .init(x: 10, y: 11, z: 12), magneticFieldMicroteslas: .init(x: 13, y: 14, z: 15), magneticFieldAccuracy: 16, headingDegrees: 17.25)
+        value.deviceMotionSummary = .init(sampleCount: 240, meanUserAccelerationG: 0.1, userAccelerationStandardDeviationG: 0.2, peakUserAccelerationG: 0.3, meanRotationRateRadiansPerSecond: 0.4, rotationRateStandardDeviationRadiansPerSecond: 0.5, peakRotationRateRadiansPerSecond: 0.6)
+        value.watchAccelerationAverageG = .init(x: -1, y: -2, z: -3)
+        value.watchAccelerationStandardDeviationG = 0.15
+        value.watchAccelerationMeanJerkGPerSecond = 0.25
+        value.systemFloor = -4
+        value.powerState = .charging
+        value.screenBrightness = 0.75
+        value.screenIsOn = false
+        value.gpsAvailable = false
+        value.connectedWiFiSSID = "Cafe\u{0301}\0網"
+        value.subwayWiFiObservationStreak = 12
+        value.nearbyStation = true
+        value.nearbyStationName = "역\0🚉"
+        value.matchesRailRoute = true
+        value.matchesPublicTransitRoute = true
+        value.frequentStops = true
+        value.rideHailingHint = true
+        value.nearAirport = true
+        value.nearPort = true
+        value.onWater = true
+        value.watchWorkoutKind = "walking"
+        value.behavior = "stairs"
+        value.behaviorConfidenceScore = 0.875
+        value.behaviorEvidence = ["", "Cafe\u{0301}", "Café", String(repeating: "근거\0", count: 3_000)]
+        value.behaviorModelVersion = "model-v3"
+        value.trackingSessionID = UUID()
+        value.trackingKind = .automatic
+        value.trackingWasAutomaticallyDetected = true
+        value.sourceDevice = .appleWatch
+        value.trackingSessionEnded = false
+        XCTAssertEqual(Mirror(reflecting: value).children.count, 52, "New model fields require a storage format review")
+        for reading in [value, SensorReading(timestamp: .distantPast)] {
+            let encoded = try TaptionPlanCanonicalStorage.encode(reading)
+            let restored = try TaptionPlanCanonicalStorage.decode(SensorReading.self, from: encoded)
+            XCTAssertEqual(restored, reading)
+            XCTAssertEqual(try restored.storageBytes(), try reading.storageBytes())
+            let json = JSONEncoder()
+            json.outputFormatting = [.sortedKeys]
+            XCTAssertEqual(try json.encode(restored), try json.encode(reading))
+            let portable = try TaptionPlanCanonicalStorage.encode([reading])
+            XCTAssertEqual(try TaptionPlanCanonicalStorage.decode([SensorReading].self, from: portable), [reading])
+        }
+        let encoded = try TaptionPlanCanonicalStorage.encode(value)
+        XCTAssertTrue(encoded.isCompressed)
+        let restored = try TaptionPlanCanonicalStorage.decode(SensorReading.self, from: encoded)
+        XCTAssertEqual(restored.point?.latitude.bitPattern, (-0.0 as Double).bitPattern)
+        XCTAssertEqual(restored.speedMetersPerSecond?.bitPattern, (-0.0 as Double).bitPattern)
+        XCTAssertEqual(restored.connectedWiFiSSID.map { Array($0.utf8) }, value.connectedWiFiSSID.map { Array($0.utf8) })
+        XCTAssertEqual(restored.behaviorEvidence?.map { Array($0.utf8) }, value.behaviorEvidence?.map { Array($0.utf8) })
+    }
+
+    func testDirectSensorStorageRejectsTruncationFlagsLengthsAndCorruption() throws {
+        let reading = SensorReading(timestamp: Date(timeIntervalSinceReferenceDate: 123.25), connectedWiFiSSID: "x", behaviorEvidence: ["evidence"])
+        let raw = try reading.storageBytes()
+        for count in 0..<raw.count {
+            XCTAssertThrowsError(try SensorReading.fromStorageBytes(Data(raw.prefix(count))))
+        }
+        var trailing = raw
+        trailing.append(0)
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(trailing))
+        var version = raw
+        version[3] = 0x32
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(version))
+        // Header(4), UUID(16), timestamp(8), then the point presence tag.
+        var badPresence = raw
+        badPresence[28] = 2
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(badPresence))
+        var badEnum = raw
+        badEnum[34] = 255 // Six absent optional fields precede motion.
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(badEnum))
+        let evidenceOffset = try XCTUnwrap(raw.range(of: Data("evidence".utf8)))
+        var badLength = raw
+        badLength.replaceSubrange((evidenceOffset.lowerBound - 4)..<evidenceOffset.lowerBound, with: [255, 255, 255, 255])
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(badLength))
+        var badUTF8 = raw
+        badUTF8[evidenceOffset.lowerBound] = 255
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(badUTF8))
+        let encoded = try TaptionPlanCanonicalStorage.encode(reading, compress: false)
+        var corrupt = encoded.data
+        corrupt[20] ^= 1
+        XCTAssertThrowsError(try TaptionPlanCanonicalStorage.decode(SensorReading.self, from: .init(data: corrupt, checksum: encoded.checksum, uncompressedSize: encoded.uncompressedSize, isCompressed: false))) { error in
+            XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .checksumMismatch)
+        }
+        let old = try PropertyListEncoder().encode(reading)
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(old))
+    }
+
+    func testDirectSensorStorageKeepsAllEnumCasesAndUnusualDoubleBits() throws {
+        for motion in MotionKind.allCases {
+            for confidence in ConfidenceLevel.allCases {
+                for tracking in TrackingKind.allCases {
+                    var reading = SensorReading(timestamp: Date(timeIntervalSinceReferenceDate: -0.0), motion: motion, motionConfidence: confidence, trackingKind: tracking)
+                    reading.speedMetersPerSecond = Double(bitPattern: 0x7ff8_0000_0000_0042)
+                    for power in [DevicePowerState.unknown, .unplugged, .charging, .full] {
+                        reading.powerState = power
+                        let decoded = try SensorReading.fromStorageBytes(reading.storageBytes())
+                        XCTAssertEqual(decoded.motion, motion)
+                        XCTAssertEqual(decoded.motionConfidence, confidence)
+                        XCTAssertEqual(decoded.trackingKind, tracking)
+                        XCTAssertEqual(decoded.powerState, power)
+                        XCTAssertEqual(decoded.timestamp.timeIntervalSinceReferenceDate.bitPattern, reading.timestamp.timeIntervalSinceReferenceDate.bitPattern)
+                        XCTAssertEqual(decoded.speedMetersPerSecond?.bitPattern, reading.speedMetersPerSecond?.bitPattern)
+                    }
+                }
+            }
+        }
+    }
+
     func testSensorArchiveReadWritePerformanceFixture() async throws {
         let fence = DataDeletionFenceTestFixture()
         defer { fence.restore() }

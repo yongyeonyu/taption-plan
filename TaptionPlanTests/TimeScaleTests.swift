@@ -1,4 +1,5 @@
 import MapKit
+@preconcurrency import MapLibre
 import SwiftUI
 import XCTest
 @testable import TaptionPlan
@@ -5010,5 +5011,247 @@ final class TimeScaleTests: XCTestCase {
             270,
             accuracy: 0.001
         )
+    }
+}
+
+@MainActor
+final class MapHomeVectorRouteRenderingTests: XCTestCase {
+    func testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip() async throws {
+        let center = CLLocationCoordinate2D(latitude: 37.55, longitude: 126.95)
+        let coordinates = [
+            CLLocationCoordinate2D(latitude: center.latitude, longitude: center.longitude - 0.1),
+            center,
+            CLLocationCoordinate2D(latitude: center.latitude, longitude: center.longitude + 0.1),
+        ]
+        func route(_ id: String) -> MapHomeVectorRoute {
+            MapHomeVectorRoute(id: id, coordinates: coordinates,
+                geometrySignature: MapHomeRouteGeometrySignature.value(for: coordinates),
+                colorHex: "#ED5599", opacity: 1)
+        }
+        let parent = MapHomeVectorMap(style: .rpg, cameraPosition: .automatic, cameraRevision: 0,
+            historicalRoutes: [route("history")], activeRoute: route("active"),
+            expectedRoutes: [route("expected")], subwayRoutes: [route("subway")], markers: [],
+            contentInsets: .zero, longPressExclusionFrame: .zero, followsHeading: false,
+            headingDegrees: 0, displayedCoordinate: center, onViewportChange: { _, _ in },
+            onSingleFingerPanBegan: {}, onSingleFingerPanEnded: {}, onUserCameraGesture: {},
+            onLongPress: { _ in }, onSingleTap: { _, _ in })
+        let coordinator = parent.makeCoordinator()
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 390, height: 600)
+        window.rootViewController = UIViewController()
+        let map = MLNMapView(frame: window.bounds,
+            styleJSON: ##"{"version":8,"sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"#ffffff"}}]}"##)
+        map.delegate = coordinator
+        coordinator.attach(to: map)
+        window.rootViewController?.view.addSubview(map)
+        window.makeKeyAndVisible()
+        defer {
+            coordinator.detach(from: map)
+            map.delegate = nil
+            map.removeFromSuperview()
+            window.isHidden = true
+        }
+        let layers: Set<String> = ["tap-historical-route", "tap-active-route", "tap-expected-route", "tap-subway-route"]
+        for _ in 0..<80 where map.style?.layer(withIdentifier: "tap-active-route") == nil {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let loadedStyle = try XCTUnwrap(map.style)
+        XCTAssertNotNil(loadedStyle.layer(withIdentifier: "tap-active-route"))
+        XCTAssertNotNil(loadedStyle.source(withIdentifier: "tap-active-route-source") as? MLNShapeSource)
+        for zoom in [14.0, 20, 8, 16, 12, 18, 14] {
+            map.setCenter(CLLocationCoordinate2D(latitude: 35, longitude: 129), zoomLevel: zoom, animated: false)
+            map.setCenter(center, zoomLevel: zoom, animated: false)
+            var visible = Set<String>()
+            for _ in 0..<80 {
+                try await Task.sleep(for: .milliseconds(50))
+                coordinator.updateContent(in: map)
+                visible = Set(layers.filter {
+                    !map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: [$0]).isEmpty
+                })
+                if visible == layers { break }
+            }
+            XCTAssertEqual(visible, layers, "route layers at zoom \(zoom)")
+        }
+        map.styleJSON = #"{"version":8,"sources":{},"layers":[]}"#
+        for _ in 0..<80 {
+            try await Task.sleep(for: .milliseconds(50))
+            coordinator.updateContent(in: map)
+            if !map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["tap-active-route"]).isEmpty { break }
+        }
+        for layer in layers {
+            XCTAssertFalse(map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: [layer]).isEmpty,
+                "style reload must restore \(layer) even when route content is unchanged")
+        }
+    }
+}
+
+final class MapHomeSubwayRouteCacheTests: XCTestCase {
+    func testCameraRedrawKeepsRestoredRouteUntilDayInputIsReady() {
+        let cache = MapHomeSubwayRouteCache()
+        let day = Date(timeIntervalSince1970: 1_790_208_000)
+        let overlay = MapHomeSubwayRouteOverlay(id: UUID(), coordinates: [
+            CLLocationCoordinate2D(latitude: 37.5, longitude: 126.7),
+            CLLocationCoordinate2D(latitude: 37.6, longitude: 126.8),
+        ], estimated: false)
+        cache.restore(day: day, overlays: [overlay])
+        for minute in [600, 600, 601, 601] {
+            XCTAssertEqual(cache.routes(day: day, minute: minute, sourceRevision: nil) {
+                XCTFail("unavailable input must not erase a restored route")
+                return []
+            }.map(\.id), [overlay.id])
+        }
+        var computations = 0
+        XCTAssertEqual(cache.routes(day: day, minute: 601, sourceRevision: 1) {
+            computations += 1
+            return [overlay]
+        }.map(\.id), [overlay.id])
+        _ = cache.routes(day: day, minute: 601, sourceRevision: 1) {
+            computations += 1
+            return []
+        }
+        XCTAssertEqual(computations, 1)
+        cache.invalidate()
+        XCTAssertEqual(cache.routes(day: day, minute: 601, sourceRevision: nil) { [] }.count, 1)
+        XCTAssertTrue(cache.routes(day: day, minute: 601, sourceRevision: 2) { [] }.isEmpty,
+            "a ready, empty source must remove deleted routes")
+    }
+
+    func testPendingDifferentDayDoesNotShowPreviousDaysRoute() {
+        let cache = MapHomeSubwayRouteCache()
+        let day = Date(timeIntervalSince1970: 1_790_208_000)
+        cache.restore(day: day, overlays: [MapHomeSubwayRouteOverlay(id: UUID(), coordinates: [], estimated: false)])
+        XCTAssertTrue(cache.routes(day: day.addingTimeInterval(86_400), minute: 600,
+            sourceRevision: nil) { [] }.isEmpty)
+    }
+}
+
+@MainActor
+final class MapHomeStartupCameraTests: XCTestCase {
+    private let center = CLLocationCoordinate2D(latitude: 37.55, longitude: 126.95)
+
+    private func map(revision: Int = 1, position: MapCameraPosition? = nil,
+                     onViewport: @escaping (MapHomeVectorViewport, Bool) -> Void = { _, _ in }) -> MapHomeVectorMap {
+        MapHomeVectorMap(style: .rpg,
+            cameraPosition: position ?? .camera(MapCamera(centerCoordinate: center,
+                distance: MapHomeStartupCameraPolicy.distance)), cameraRevision: revision,
+            historicalRoutes: [], activeRoute: nil, expectedRoutes: [], subwayRoutes: [], markers: [],
+            contentInsets: .zero, longPressExclusionFrame: .zero, followsHeading: false,
+            headingDegrees: 0, displayedCoordinate: center, onViewportChange: onViewport,
+            onSingleFingerPanBegan: {}, onSingleFingerPanEnded: {}, onUserCameraGesture: {},
+            onLongPress: { _ in }, onSingleTap: { _, _ in })
+    }
+
+    func testCameraCommandWaitsForNonzeroViewport() {
+        let coordinator = map().makeCoordinator()
+        let view = MLNMapView(frame: .zero, styleJSON: #"{"version":8,"sources":{},"layers":[]}"#)
+        coordinator.attach(to: view)
+        defer { coordinator.detach(from: view) }
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        view.frame = CGRect(x: 0, y: 0, width: 390, height: 600)
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        XCTAssertEqual(view.camera.altitude, MapHomeStartupCameraPolicy.distance, accuracy: 1)
+        XCTAssertEqual(view.centerCoordinate.latitude, center.latitude, accuracy: 0.00001)
+        XCTAssertEqual(view.centerCoordinate.longitude, center.longitude, accuracy: 0.00001)
+    }
+
+    func testFirstRenderedFrameAppliesPendingCameraWithoutResettingManualZoom() {
+        let coordinator = map().makeCoordinator()
+        let view = MLNMapView(frame: .zero, styleJSON: #"{"version":8,"sources":{},"layers":[]}"#)
+        coordinator.attach(to: view)
+        defer { coordinator.detach(from: view) }
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        view.frame = CGRect(x: 0, y: 0, width: 390, height: 600)
+        coordinator.mapViewDidFinishRenderingFrame(view, fullyRendered: true)
+        XCTAssertEqual(view.camera.altitude, MapHomeStartupCameraPolicy.distance, accuracy: 1)
+
+        view.setCenter(center, zoomLevel: 9, animated: false)
+        let manualDistance = view.camera.altitude
+        coordinator.updateContent(in: view)
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        coordinator.mapViewDidFinishRenderingFrame(view, fullyRendered: true)
+        XCTAssertEqual(view.camera.altitude, manualDistance, accuracy: 1)
+    }
+
+    func testOnlyBackgroundReturnRequestsZoomRestorationOnce() {
+        var policy = MapHomeStartupCameraPolicy()
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .active))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .inactive))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .active))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .background))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .inactive))
+        XCTAssertTrue(policy.shouldRestoreZoom(on: .active))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .active))
+        XCTAssertFalse(policy.shouldRestoreZoom(on: .background))
+        XCTAssertTrue(policy.shouldRestoreZoom(on: .active))
+    }
+
+    func testRestoredCameraKeepsCenterAndAnglesAtInitialDistance() {
+        let camera = MapCamera(centerCoordinate: center, distance: 50_000_000, heading: 70, pitch: 30)
+        let restored = MapHomeStartupCameraPolicy.camera(
+            restoring: camera, fallbackCenter: MapHomeStartupCameraPolicy.fallbackCenter)
+        XCTAssertEqual(restored.distance, MapHomeStartupCameraPolicy.distance)
+        XCTAssertEqual(restored.centerCoordinate.latitude, center.latitude)
+        XCTAssertEqual(restored.centerCoordinate.longitude, center.longitude)
+        XCTAssertEqual(restored.heading, 70)
+        XCTAssertEqual(restored.pitch, 30)
+        let initial = MapHomeStartupCameraPolicy.camera(restoring: nil, fallbackCenter: center)
+        XCTAssertEqual(initial.distance, MapHomeStartupCameraPolicy.distance)
+        XCTAssertEqual(initial.centerCoordinate.latitude, center.latitude)
+        XCTAssertEqual(initial.centerCoordinate.longitude, center.longitude)
+    }
+
+    func testForegroundCameraCommandRestoresZoomAfterManualZoomOut() {
+        let coordinator = map().makeCoordinator()
+        let view = MLNMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 600),
+            styleJSON: #"{"version":8,"sources":{},"layers":[]}"#)
+        coordinator.attach(to: view)
+        defer { coordinator.detach(from: view) }
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        let movedCenter = CLLocationCoordinate2D(latitude: 37.61, longitude: 127.01)
+        view.setCenter(movedCenter, zoomLevel: 3, animated: false)
+        let camera = MapCamera(centerCoordinate: view.centerCoordinate, distance: view.camera.altitude)
+        coordinator.parent = map(revision: 2, position: .camera(
+            MapHomeStartupCameraPolicy.camera(restoring: camera, fallbackCenter: center)))
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        XCTAssertEqual(view.camera.altitude, MapHomeStartupCameraPolicy.distance, accuracy: 1)
+        XCTAssertEqual(view.centerCoordinate.latitude, movedCenter.latitude, accuracy: 0.00001)
+        XCTAssertEqual(view.centerCoordinate.longitude, movedCenter.longitude, accuracy: 0.00001)
+        coordinator.updateContent(in: view)
+        coordinator.mapViewDidFinishRenderingFrame(view, fullyRendered: true)
+        XCTAssertEqual(view.camera.altitude, MapHomeStartupCameraPolicy.distance, accuracy: 1)
+    }
+
+    func testAutomaticCameraUsesInitialDistanceWhileLocationLoads() {
+        let coordinator = map(position: .automatic).makeCoordinator()
+        let view = MLNMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 600),
+            styleJSON: #"{"version":8,"sources":{},"layers":[]}"#)
+        coordinator.attach(to: view)
+        defer { coordinator.detach(from: view) }
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        XCTAssertEqual(view.camera.altitude, MapHomeStartupCameraPolicy.distance, accuracy: 1)
+    }
+
+    func testQueuedViewportFromBeforeCameraResetIsDiscarded() async {
+        var received: [MapHomeVectorViewport] = []
+        let coordinator = map(onViewport: { viewport, _ in received.append(viewport) }).makeCoordinator()
+        let view = MLNMapView(frame: CGRect(x: 0, y: 0, width: 390, height: 600),
+            styleJSON: #"{"version":8,"sources":{},"layers":[]}"#)
+        coordinator.attach(to: view)
+        defer { coordinator.detach(from: view) }
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        view.setCenter(center, zoomLevel: 3, animated: false)
+        coordinator.mapView(view, regionDidChangeAnimated: false)
+        coordinator.parent = map(revision: 2, onViewport: { viewport, _ in received.append(viewport) })
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        XCTAssertTrue(received.isEmpty)
+        coordinator.applyCameraCommandIfNeeded(to: view)
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        XCTAssertEqual(received.count, 1)
+        XCTAssertEqual(received.last?.cameraDistance ?? 0, MapHomeStartupCameraPolicy.distance, accuracy: 1)
     }
 }

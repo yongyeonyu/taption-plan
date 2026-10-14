@@ -33,6 +33,7 @@ private struct MapHomeCachedSubwayRouteOverlay: Codable, Sendable {
     let id: UUID
     let estimated: Bool
     let coordinates: [MapHomeCachedCoordinate]
+    var travelID: UUID? = nil
 }
 
 private struct MapHomeCachedTemporaryLocation: Codable, Sendable {
@@ -270,9 +271,7 @@ enum MapHomeRouteFitMath {
 }
 
 private final class MapHomeMapRenderCache {
-    private(set) var subwayRouteOverlays: [MapHomeSubwayRouteOverlay]?
-    private(set) var subwayRouteDay: Date?
-    private(set) var subwayRouteMinute: Int?
+    private let subway = MapHomeSubwayRouteCache()
     private(set) var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay]?
     private(set) var visibleExpectedRouteCutoff: Date?
     private(set) var routeBounds: MapHomeRouteCoordinateBounds?
@@ -280,9 +279,7 @@ private final class MapHomeMapRenderCache {
         (key: MapHomeTransitBoardingCandidateCacheKey, candidates: [TransitBoardingCandidate])?
 
     func invalidateRouteData() {
-        subwayRouteOverlays = nil
-        subwayRouteDay = nil
-        subwayRouteMinute = nil
+        subway.invalidate()
         visibleExpectedRouteOverlays = nil
         visibleExpectedRouteCutoff = nil
         routeBounds = nil
@@ -313,31 +310,20 @@ private final class MapHomeMapRenderCache {
         minute: Int,
         overlays: [MapHomeSubwayRouteOverlay]
     ) {
-        // The persisted map cache contains confirmed routes only. Leave its
-        // key unset so the first render recomputes train-derived estimates
-        // from the current sensor readings as well.
-        subwayRouteDay = nil
-        subwayRouteMinute = nil
-        subwayRouteOverlays = overlays
+        subway.restore(day: day, overlays: overlays)
         routeBounds = nil
     }
 
     func subwayRoutes(
         day: Date,
         minute: Int,
+        sourceRevision: UInt64?,
         make: () -> [MapHomeSubwayRouteOverlay]
     ) -> [MapHomeSubwayRouteOverlay] {
-        if subwayRouteDay == day,
-           subwayRouteMinute == minute,
-           let subwayRouteOverlays {
-            return subwayRouteOverlays
+        subway.routes(day: day, minute: minute, sourceRevision: sourceRevision) {
+            routeBounds = nil
+            return make()
         }
-        let overlays = make()
-        subwayRouteDay = day
-        subwayRouteMinute = minute
-        subwayRouteOverlays = overlays
-        routeBounds = nil
-        return overlays
     }
 
     func visibleExpectedRoutes(
@@ -1081,6 +1067,12 @@ struct MapHomePredictedRouteCoordinate: Equatable, Sendable {
     let longitude: Double
 }
 
+struct MapHomePredictedGPSGap {
+    let start: SensorReading
+    let end: SensorReading
+    let coordinates: [MapHomePredictedRouteCoordinate]
+}
+
 enum MapHomeGPSGapPredictionPolicy {
     static let minimumGap: TimeInterval = 45
     static let maximumGap: TimeInterval = 5 * 60
@@ -1114,6 +1106,14 @@ enum MapHomeGPSGapPredictionPolicy {
         through cutoff: Date? = nil,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [[MapHomePredictedRouteCoordinate]] {
+        predictedGaps(from: readings, through: cutoff, calendar: calendar).map(\.coordinates)
+    }
+
+    static func predictedGaps(
+        from readings: [SensorReading],
+        through cutoff: Date? = nil,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [MapHomePredictedGPSGap] {
         let ordered = readings.filter { reading in
             RouteTimelineTimestamp.isValid(reading.timestamp)
                 && (cutoff.map { reading.timestamp <= $0 } ?? true)
@@ -1162,7 +1162,7 @@ enum MapHomeGPSGapPredictionPolicy {
                 maximumSamplesPerGap,
                 max(1, Int(ceil(distance / sampleSpacingMeters)) - 1)
             )
-            return (1...sampleCount).map { index in
+            let coordinates = (1...sampleCount).map { index in
                 let fraction = Double(index) / Double(sampleCount + 1)
                 return MapHomePredictedRouteCoordinate(
                     latitude: startPoint.latitude
@@ -1171,6 +1171,7 @@ enum MapHomeGPSGapPredictionPolicy {
                         + (endPoint.longitude - startPoint.longitude) * fraction
                 )
             }
+            return MapHomePredictedGPSGap(start: start, end: end, coordinates: coordinates)
         }
     }
 
@@ -1866,6 +1867,7 @@ struct MapHomeView: View {
         MapHomeRouteReadingsPreparationGeneration()
     @State private var hasAppliedInitialLocation = false
     @State private var hasAppliedInitialMapFocus = false
+    @State private var startupCameraPolicy = MapHomeStartupCameraPolicy()
     @State private var hasCancelledInitialLocationFocus = false
     @State private var mapSearchText = ""
     @State private var mapSearchResults: [MapHomeSearchResult] = []
@@ -1879,6 +1881,7 @@ struct MapHomeView: View {
     @State private var requestingPermission: RequiredPermission?
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
     @State private var selectedTransitBoardingCandidate: TransitBoardingCandidate?
+    @State private var selectedPredictedRoute: MapPredictedRoute?
     @State private var pendingUserLocationSelection: MapHomeUserLocationSelection?
     @State private var mapSearchTask: Task<Void, Never>?
     @State private var transitPOIRefreshTask: Task<Void, Never>?
@@ -2348,6 +2351,11 @@ struct MapHomeView: View {
             .presentationDetents([.height(270)])
             .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedPredictedRoute) { route in
+            MapHomePredictedRouteMenu(model: model, route: route, language: language)
+                .presentationDetents([.height(230)])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(
             isPresented: $isSearchPinMenuPresented,
             onDismiss: {
@@ -2472,6 +2480,7 @@ struct MapHomeView: View {
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .onAppear {
+            if scenePhase == .active { restoreInitialMapZoom() }
             prepareRouteProjectionReadings()
             refreshHomeGrowth(at: .now)
         }
@@ -2726,6 +2735,9 @@ struct MapHomeView: View {
             scheduleExpectedRouteRefresh()
         }
         .onChange(of: scenePhase) { _, phase in
+            if startupCameraPolicy.shouldRestoreZoom(on: phase) {
+                restoreInitialMapZoom()
+            }
             if phase != .active {
                 routeReadingsPreparationTask?.cancel()
                 routeReadingsPreparationTask = nil
@@ -2911,6 +2923,7 @@ struct MapHomeView: View {
     }
 
     private func vectorMap(style: MapHomeVectorStyle) -> some View {
+        let cameraRevision = mapCameraRevision
         let waypoints = pawprintWaypoints
         let places = placeAnnotations
         let playback = appleMapPlayback
@@ -2922,14 +2935,17 @@ struct MapHomeView: View {
             historicalRoutes: vectorHistoricalRoutes,
             activeRoute: vectorActiveRoute,
             expectedRoutes: vectorExpectedRoutes,
-            subwayRoutes: vectorSubwayRoutes,
-            markers: vectorMapMarkers,
+            subwayRoutes: vectorSubwayRoutes + vectorUserSelectedRoutes,
+            markers: vectorMapMarkers(waypoints: waypoints),
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             followsHeading: isHeadingMode && userTrackingMode.keepsCameraLocked,
             headingDegrees: -compassRotationDegrees,
             displayedCoordinate: displayedLocationCoordinate,
-            onViewportChange: applyVectorMapViewport,
+            onViewportChange: { viewport, isFinal in
+                guard cameraRevision == mapCameraRevision else { return }
+                applyVectorMapViewport(viewport, isFinal: isFinal)
+            },
             onSingleFingerPanBegan: handleUserMapPan,
             onSingleFingerPanEnded: finishDisplayedStickmanViewportProjection,
             onUserCameraGesture: handleUserCameraGesture,
@@ -3478,7 +3494,8 @@ struct MapHomeView: View {
         }
         let estimatedSubway: [MapHomeVectorRoute] = subwayRouteOverlays.compactMap {
             overlay -> MapHomeVectorRoute? in
-            guard overlay.estimated else { return nil }
+            guard overlay.estimated,
+                  predictedRoute(for: overlay).map({ !hasRouteDecision($0) }) ?? true else { return nil }
             return MapHomeVectorRoute(
                 id: "subway-estimated-\(overlay.id)",
                 coordinates: overlay.coordinates,
@@ -3492,7 +3509,8 @@ struct MapHomeView: View {
 
     private var vectorSubwayRoutes: [MapHomeVectorRoute] {
         subwayRouteOverlays.compactMap { overlay in
-            guard !overlay.estimated else { return nil }
+            guard !overlay.estimated,
+                  predictedRoute(for: overlay).map({ !hasRouteDecision($0) }) ?? true else { return nil }
             return MapHomeVectorRoute(
                 id: "subway-\(overlay.id)",
                 coordinates: overlay.coordinates,
@@ -3503,7 +3521,7 @@ struct MapHomeView: View {
         }
     }
 
-    private var vectorMapMarkers: [MapHomeVectorMarker] {
+    private func vectorMapMarkers(waypoints: [PawprintWaypoint]) -> [MapHomeVectorMarker] {
         var markers = temporaryLocationAnnotations.map {
             MapHomeVectorMarker(
                 id: vectorTemporaryMarkerID($0.id),
@@ -3567,7 +3585,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        for waypoint in pawprintWaypoints {
+        for waypoint in waypoints {
             markers.append(
                 MapHomeVectorMarker(
                     id: vectorPawprintMarkerID(waypoint.index),
@@ -3580,6 +3598,97 @@ struct MapHomeView: View {
 
     private var vectorPlayerHeading: CLLocationDirection {
         appleMapPlayback?.headingDegrees ?? 0
+    }
+
+    private func predictedRoute(source: String, travelID: UUID? = nil, mode: TravelMode,
+                                span: TimeSpan, coordinates: [CLLocationCoordinate2D]) -> MapPredictedRoute {
+        MapPredictedRoute(source: source, travelID: travelID, mode: mode, span: span,
+            coordinates: coordinates.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude,
+                altitude: 0, horizontalAccuracy: -1, verticalAccuracy: -1) })
+    }
+
+    private func predictedRoute(for overlay: MapHomeExpectedRouteOverlay) -> MapPredictedRoute {
+        predictedRoute(source: overlay.mode == .subway || overlay.mode == .train ? "rail" : "forecast",
+            travelID: overlay.segmentID, mode: overlay.mode,
+            span: TimeSpan(start: overlay.departureDate, end: overlay.arrivalDate), coordinates: overlay.coordinates)
+    }
+
+    private func predictedRoute(for overlay: MapHomeWBSGeneratedRouteOverlay) -> MapPredictedRoute {
+        let mode = overlay.mode ?? .walking
+        let matching = currentDayDataSnapshot?.travel.filter {
+            abs($0.span.start.timeIntervalSince(overlay.departureDate)) <= 1
+                && abs($0.span.end.timeIntervalSince(overlay.arrivalDate)) <= 1
+        } ?? []
+        return predictedRoute(source: mode == .subway || mode == .train ? "rail" : "forecast",
+            travelID: matching.count == 1 ? matching[0].id : nil,
+            mode: mode, span: TimeSpan(start: overlay.departureDate, end: overlay.arrivalDate),
+            coordinates: overlay.coordinates)
+    }
+
+    private func predictedRoute(for overlay: MapHomeSubwayRouteOverlay) -> MapPredictedRoute? {
+        guard let travel = currentDayDataSnapshot?.travel.first(where: { $0.id == (overlay.travelID ?? overlay.id) }) else { return nil }
+        let points = travel.subwayRoute?.coordinates.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        } ?? overlay.coordinates
+        return predictedRoute(source: "rail", travelID: travel.id, mode: travel.mode,
+            span: travel.span, coordinates: points.count >= 2 ? points : overlay.coordinates)
+    }
+
+    private func hasRouteDecision(_ route: MapPredictedRoute) -> Bool {
+        model.snapshot.settings.predictedRouteDecisions.contains { $0.matches(route) }
+    }
+
+    private var predictedMapRoutes: [MapPredictedRoute] {
+        let cutoff = routeOverlayCutoff
+        var routes = expectedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
+        routes += wbsGeneratedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
+        routes += subwayRouteOverlays.compactMap { predictedRoute(for: $0) }
+        routes += MapHomeGPSGapPredictionPolicy.predictedGaps(from: normalizedRouteReadings, through: cutoff).compactMap { gap in
+            guard let first = gap.start.point, let last = gap.end.point else { return nil }
+            return MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking,
+                span: TimeSpan(start: gap.start.timestamp, end: gap.end.timestamp),
+                coordinates: [first] + gap.coordinates.map {
+                    GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0,
+                        horizontalAccuracy: -1, verticalAccuracy: -1)
+                } + [last])
+        }
+        var seen = Set<String>()
+        return routes.filter { $0.isValid && !hasRouteDecision($0) && seen.insert($0.id).inserted }
+    }
+
+    private var confirmedPredictedRoutes: [MapPredictedRoute] {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        return model.snapshot.settings.predictedRouteDecisions.filter {
+            !$0.isDeleted && $0.route.isValid
+                && $0.route.span.start < end && $0.route.span.end > start
+        }.map(\.route)
+    }
+
+    private func coordinates(for route: MapPredictedRoute, through cutoff: Date? = nil) -> [CLLocationCoordinate2D] {
+        let points = route.coordinates.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        guard let cutoff else { return points }
+        let fraction = min(1, max(0, cutoff.timeIntervalSince(route.span.start) / route.span.duration))
+        guard fraction > 0 else { return [] }
+        return MapHomeExpectedRouteOverlay.prefixByDistanceResult(points, fraction: fraction,
+            segmentLengths: MapHomeExpectedRoutePlaybackMath.segmentLengths(for: points)).coordinates
+    }
+
+    private var vectorUserSelectedRoutes: [MapHomeVectorRoute] {
+        var routes = confirmedPredictedRoutes.map { route in
+            let points = coordinates(for: route, through: routeOverlayCutoff)
+            return MapHomeVectorRoute(id: "confirmed-predicted-\(route.id)", coordinates: points,
+                geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
+                colorHex: MapHomeWBSTripStyle.actualRouteHex, opacity: 0.95)
+        }
+        if let selectedPredictedRoute {
+            let points = coordinates(for: selectedPredictedRoute)
+            routes.append(MapHomeVectorRoute(id: "selected-\(selectedPredictedRoute.id)", coordinates: points,
+                geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
+                colorHex: "#FF9800", opacity: 1))
+        }
+        return routes
     }
 
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
@@ -3605,7 +3714,9 @@ struct MapHomeView: View {
             else { return nil }
             return MapHomePawprintTapTarget(
                 id: waypoint.index, point: position,
-                timestamp: waypoint.timestamp, isPredicted: waypoint.isPredicted
+                timestamp: waypoint.timestamp, isPredicted: waypoint.isPredicted,
+                routeID: waypoint.predictedRoute?.id,
+                routeSpan: waypoint.predictedRoute?.span
             )
         }
         guard let id = MapHomePawprintInteractionPolicy.nearestTarget(
@@ -3625,6 +3736,16 @@ struct MapHomeView: View {
     }
 
     private func selectPawprint(_ waypoint: PawprintWaypoint) {
+        if let route = waypoint.predictedRoute {
+            stopDayPlayback(resetProgress: false)
+            recordUserMapAdjustment()
+            currentLocationRequestTask?.cancel()
+            currentLocationRequestTask = nil
+            setUserTrackingMode(.idle)
+            selectedPredictedRoute = route
+            dismissMapSearchOverlay()
+            return
+        }
         guard let selection = MapHomePawprintInteractionPolicy.selection(
             timestamp: waypoint.timestamp, isPredicted: waypoint.isPredicted,
             selectedDate: model.selectedDate
@@ -3656,7 +3777,9 @@ struct MapHomeView: View {
     ) -> some View {
         ZStack {
             fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places)
-            ForEach(waypoints) { waypoint in
+            ForEach(waypoints.sorted {
+                $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
+            }) { waypoint in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorPawprintMarkerID(waypoint.index)
@@ -3668,6 +3791,11 @@ struct MapHomeView: View {
                                     Text(language.text("기록 발자국 ", "Recorded paw "))
                                         + Text(timestamp, style: .time)
                                 )
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityAction { selectPawprint(waypoint) }
+                        } else if waypoint.predictedRoute != nil {
+                            pawprintImage(waypoint)
+                                .accessibilityLabel(language.text("예상 경로 선택", "Select predicted route"))
                                 .accessibilityAddTraits(.isButton)
                                 .accessibilityAction { selectPawprint(waypoint) }
                         } else {
@@ -4022,51 +4150,48 @@ struct MapHomeView: View {
         let angle: Double
         let isPredicted: Bool
         let timestamp: Date?
+        var predictedRoute: MapPredictedRoute? = nil
         var id: Int { index }
     }
 
     private func pawprintImage(_ waypoint: PawprintWaypoint) -> some View {
         Image(systemName: "pawprint.fill")
             .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(waypoint.isPredicted ? Color.gray.opacity(0.68) : Color.tpAccent.opacity(0.55))
+            .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
+                ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68) : Color.tpAccent.opacity(0.55))
             .rotationEffect(.degrees(waypoint.angle))
             .allowsHitTesting(false)
     }
 
     /// 실제 경로의 좌표와 시각을 함께 샘플링하며 예상 발자국에는 시각을 부여하지 않는다.
     private var pawprintWaypoints: [PawprintWaypoint] {
-        // 발자국은 이동 경로마다(세그먼트마다) 연속으로 찍는다. 예전에는 모든
-        // 세그먼트를 flatMap 으로 이어붙인 뒤 전역 stride 로 샘플링해, 세그먼트
-        // 경계에서 발자국이 건너뛰어 "끊어져" 보였다. 이제 각 세그먼트를 지도
-        // 상의 좌표 간격 기준으로 촘촘히(≈일정 거리마다) 찍어 트레일이 이어진다.
-        // 발자국은 전체 이동 경로(활성 leg 포함)에서 찍는다. 예전엔 vectorHistoricalRoutes
-        // (=dropLast)만 써서, leg 가 1개뿐인 날이나 지금 재생 중인 마지막 leg 에는 발자국이
-        // 전혀 안 나왔다(PAW0926T05). 이제 timelineRouteOverlays 전체를 쓴다.
         let segments = timelineRouteOverlays
             .filter { $0.coordinates.count >= 2 }
-        let hardCap = 220
-        // Boarding confirms the mode; catalog geometry remains inferred even after confirmation.
-        let railPaths = displayedExpectedRouteOverlays.filter {
-                ($0.mode == .subway || $0.mode == .train) && $0.departureDate <= routeOverlayCutoff
-            }.map(\.coordinates)
-            + displayedWBSGeneratedRouteOverlays.filter {
-                ($0.mode == .subway || $0.mode == .train) && $0.departureDate <= routeOverlayCutoff
-            }.map(\.coordinates)
-        let predictedSegments = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(from: subwayRouteOverlays)
-            + railPaths.map {
-            MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: $0)
-        }.filter { !$0.isEmpty }
-            + MapHomeGPSGapPredictionPolicy.predictedCoordinates(
-                from: normalizedRouteReadings, through: routeOverlayCutoff)
-        let predictedBudget = min(96, predictedSegments.reduce(0) { $0 + $1.count })
+        let hardCap = MapHomePawprintInteractionPolicy.markerLimit
+        let predictedSegments = predictedMapRoutes.map { route in
+            (route: route, points: MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(
+                along: coordinates(for: route, through: routeOverlayCutoff)))
+        }
+        let confirmedSegments = confirmedPredictedRoutes.map { route in
+            let samples = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: coordinates(for: route))
+            let timestamps = samples.indices.map { index in
+                route.span.start.addingTimeInterval(route.span.duration
+                    * Double(index) / Double(max(1, samples.count - 1)))
+            }
+            let visible = samples.indices.filter {
+                timestamps[$0] <= routeOverlayCutoff && Calendar.autoupdatingCurrent
+                    .isDate(timestamps[$0], inSameDayAs: model.selectedDate)
+            }
+            return (route: route, points: visible.map { samples[$0] }, timestamps: visible.map { timestamps[$0] })
+        }
+        let inferredCounts = confirmedSegments.map { $0.points.count } + predictedSegments.map { $0.points.count }
+        let recordedSamples = MapHomePawprintInteractionPolicy.sampleIndices(
+            segments: segments.map { MapHomePawprintTrace(coordinates: $0.coordinates, timestamps: $0.coordinateTimestamps) },
+            limit: MapHomePawprintInteractionPolicy.recordedBudget(inferredDemand: inferredCounts.reduce(0, +))
+        )
         var result: [PawprintWaypoint] = []
-        routeSegments: for segment in segments {
+        for (segment, indices) in zip(segments, recordedSamples) {
             let coords = segment.coordinates
-            let indices = MapHomePawprintInteractionPolicy.sampleIndices(
-                coordinates: coords,
-                timestamps: segment.coordinateTimestamps,
-                limit: hardCap - predictedBudget - result.count
-            )
             for i in indices {
                 let c = coords[i]
                 let nextIndex = min(coords.count - 1, i + 1)
@@ -4086,16 +4211,28 @@ struct MapHomeView: View {
                         timestamp: segment.coordinateTimestamps[i]
                     )
                 )
-                if result.count >= hardCap - predictedBudget {
-                    break routeSegments
-                }
             }
         }
-        for coordinates in predictedSegments {
-            let points = coordinates.map {
+        let inferredBudgets = MapHomePawprintInteractionPolicy.distributedCounts(sampleCounts: inferredCounts,
+            latestTimestamps: confirmedSegments.map { $0.route.span.end } + predictedSegments.map { $0.route.span.end },
+            limit: hardCap - result.count)
+        for (segmentIndex, segment) in confirmedSegments.enumerated() {
+            for index in MapHomePawprintInteractionPolicy.spreadIndices(
+                count: segment.points.count, limit: inferredBudgets[segmentIndex]
+            ) {
+                let point = segment.points[index]
+                result.append(PawprintWaypoint(index: result.count,
+                    coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                    angle: 0, isPredicted: false, timestamp: segment.timestamps[index]))
+            }
+        }
+        for (segmentIndex, segment) in predictedSegments.enumerated() {
+            let points = segment.points.map {
                 CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
             }
-            for index in points.indices {
+            for index in MapHomePawprintInteractionPolicy.spreadIndices(
+                count: points.count, limit: inferredBudgets[confirmedSegments.count + segmentIndex]
+            ) {
                 let point = points[index]
                 let previous = points[max(0, index - 1)]
                 let next = points[min(points.count - 1, index + 1)]
@@ -4109,10 +4246,10 @@ struct MapHomeView: View {
                         coordinate: point,
                         angle: angle,
                         isPredicted: true,
-                        timestamp: nil
+                        timestamp: nil,
+                        predictedRoute: segment.route
                     )
                 )
-                if result.count >= hardCap { return result }
             }
         }
         return result
@@ -4153,6 +4290,7 @@ struct MapHomeView: View {
         _ viewport: MapHomeVectorViewport,
         isFinal: Bool
     ) {
+        guard scenePhase == .active else { return }
         let now = ProcessInfo.processInfo.systemUptime
         vectorMapViewportStore.update(viewport)
         let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
@@ -7358,6 +7496,8 @@ struct MapHomeView: View {
             expectedRouteOverlays.compactMap {
                 $0.visible(through: cutoff)
             }
+        }.filter { visible in
+            !hasRouteDecision(predictedRoute(for: expectedRouteOverlays.first { $0.id == visible.id } ?? visible))
         }
     }
 
@@ -7371,7 +7511,7 @@ struct MapHomeView: View {
 
     private var visibleWBSGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] {
         let cutoff = routeOverlayCutoff
-        return wbsGeneratedRouteOverlays.compactMap {
+        return wbsGeneratedRouteOverlays.filter { !hasRouteDecision(predictedRoute(for: $0)) }.compactMap {
             $0.visible(through: cutoff)
         }
     }
@@ -7994,7 +8134,8 @@ struct MapHomeView: View {
         ).minute ?? effectiveTimelineMinute
         return mapRenderCache.subwayRoutes(
             day: dayStart,
-            minute: cutoffMinute
+            minute: cutoffMinute,
+            sourceRevision: dayData?.sourceRevision
         ) {
             MapHomeSubwayRouteOverlayEngine.overlays(
                 travel: dayData?.travel ?? [],
@@ -8634,7 +8775,8 @@ struct MapHomeView: View {
                 return MapHomeSubwayRouteOverlay(
                     id: overlay.id,
                     coordinates: coordinates,
-                estimated: overlay.estimated
+                    estimated: overlay.estimated,
+                    travelID: overlay.travelID
                 )
             }
             mapRenderCache.restoreSubwayRoutes(
@@ -8821,7 +8963,8 @@ struct MapHomeView: View {
                             latitude: $0.latitude,
                             longitude: $0.longitude
                         )
-                    }
+                    },
+                    travelID: overlay.travelID
                 )
             },
             subwayMinute: subwayMinute,
@@ -8978,11 +9121,11 @@ struct MapHomeView: View {
 
     @discardableResult
     private func refreshRouteProjection() -> RouteTimelineProjection? {
-        guard scenePhase == .active else { return nil }
+        guard scenePhase == .active,
+              let dayData = currentDayDataSnapshot else { return routeProjection }
         mapRenderCache.invalidateRouteData()
         let calendar = Calendar.autoupdatingCurrent
-        let dayData = currentDayDataSnapshot
-        let actuals = dayData?.actuals ?? []
+        let actuals = dayData.actuals
         let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
             selectedDate: model.selectedDate,
             actuals: actuals,
@@ -9006,7 +9149,7 @@ struct MapHomeView: View {
             selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
             actuals: actuals,
             actualIndex: actualIndex,
-            travel: dayData?.travel ?? [],
+            travel: dayData.travel,
             readings: displayRouteReadings,
             readingsAreNormalized: true,
             filtersSparseRouteConnections: true,
@@ -9430,6 +9573,17 @@ struct MapHomeView: View {
     private func setMapPosition(_ position: MapCameraPosition) {
         mapPosition = position
         mapCameraRevision &+= 1
+    }
+
+    private func restoreInitialMapZoom() {
+        let camera = MapHomeStartupCameraPolicy.camera(
+            restoring: visibleMapCamera,
+            fallbackCenter: displayedLocationCoordinate ?? currentCoordinate
+                ?? MapHomeStartupCameraPolicy.fallbackCenter
+        )
+        mapCameraFrameProjection.reset()
+        if visibleMapCamera != camera { visibleMapCamera = camera }
+        setMapPosition(.camera(camera))
     }
 
     private func minuteOfDay(for date: Date) -> Int {
@@ -12692,16 +12846,51 @@ struct MapHomeSubwayRouteOverlay: Identifiable {
     let coordinates: [CLLocationCoordinate2D]
     let estimated: Bool
     let geometrySignature: Int
+    let travelID: UUID?
 
     init(
         id: UUID,
         coordinates: [CLLocationCoordinate2D],
-        estimated: Bool
+        estimated: Bool,
+        travelID: UUID? = nil
     ) {
         self.id = id
         self.coordinates = coordinates
         self.estimated = estimated
+        self.travelID = travelID
         geometrySignature = MapHomeRouteGeometrySignature.value(for: coordinates)
+    }
+}
+
+final class MapHomeSubwayRouteCache {
+    private var day: Date?
+    private var minute: Int?
+    private var revision: UInt64?
+    private var overlays: [MapHomeSubwayRouteOverlay] = []
+
+    func invalidate() {
+        minute = nil
+        revision = nil
+    }
+
+    func restore(day: Date, overlays: [MapHomeSubwayRouteOverlay]) {
+        self.day = day
+        self.overlays = overlays
+        invalidate()
+    }
+
+    func routes(day: Date, minute: Int, sourceRevision: UInt64?,
+                make: () -> [MapHomeSubwayRouteOverlay]) -> [MapHomeSubwayRouteOverlay] {
+        // Camera redraws can arrive before the next immutable day snapshot is ready.
+        // Missing input is not an authoritative empty route list.
+        guard let sourceRevision else { return self.day == day ? overlays : [] }
+        if self.day != day || self.minute != minute || revision != sourceRevision {
+            overlays = make()
+            self.day = day
+            self.minute = minute
+            revision = sourceRevision
+        }
+        return overlays
     }
 }
 
@@ -12747,7 +12936,8 @@ enum MapHomeSubwayRouteOverlayEngine {
             return makeOverlay(
                 id: resolved.id,
                 points: points,
-                estimated: false
+                estimated: false,
+                travelID: resolved.id
             )
         }
 
@@ -12779,7 +12969,8 @@ enum MapHomeSubwayRouteOverlayEngine {
             return makeOverlay(
                 id: confirmed.contains(where: { $0.id == candidate.id }) ? inferred.id : candidate.id,
                 points: route.coordinates,
-                estimated: true
+                estimated: true,
+                travelID: candidate.id
             )
         }
         return confirmed + estimated
@@ -12797,7 +12988,8 @@ enum MapHomeSubwayRouteOverlayEngine {
     private static func makeOverlay(
         id: UUID,
         points: [GeoPoint],
-        estimated: Bool
+        estimated: Bool,
+        travelID: UUID
     ) -> MapHomeSubwayRouteOverlay? {
         let coordinates = points.compactMap { point -> CLLocationCoordinate2D? in
             guard isValid(point) else { return nil }
@@ -12810,7 +13002,8 @@ enum MapHomeSubwayRouteOverlayEngine {
         return MapHomeSubwayRouteOverlay(
             id: id,
             coordinates: coordinates,
-            estimated: estimated
+            estimated: estimated,
+            travelID: travelID
         )
     }
 
@@ -13633,9 +13826,56 @@ private struct MapHomeSearchResult: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
+private struct MapHomePredictedRouteMenu: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var isSaving = false
+    @State private var saveFailed = false
+    let model: AppModel
+    let route: MapPredictedRoute
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(language.text("선택한 회색 경로", "Selected predicted route"))
+                .font(.headline)
+            Button { save(deleting: false) } label: {
+                Label(language.text("변경", "Confirm"), systemImage: "checkmark.circle")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isSaving)
+            Button(role: .destructive) { save(deleting: true) } label: {
+                Label(language.text("삭제", "Delete"), systemImage: "trash")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isSaving)
+            if saveFailed {
+                Text(language.text("저장하지 못했습니다. 다시 시도해 주세요.", "Couldn’t save. Please try again."))
+                    .font(.footnote).foregroundStyle(.red)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .interactiveDismissDisabled(isSaving)
+    }
+
+    private func save(deleting: Bool) {
+        isSaving = true
+        saveFailed = false
+        Task { @MainActor in
+            if await model.savePredictedRouteDecision(route, deleting: deleting) { dismiss() }
+            else { saveFailed = true }
+            isSaving = false
+        }
+    }
+}
+
 private struct MapHomeTransitBoardingCandidateSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var model: AppModel
+    @State private var isSaving = false
+    @State private var saveFailed = false
     let candidate: TransitBoardingCandidate
     let language: MapHomeLanguage
 
@@ -13672,8 +13912,16 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
             }
 
             Button {
-                model.confirmTransitBoarding(candidate)
-                dismiss()
+                isSaving = true
+                saveFailed = false
+                Task { @MainActor in
+                    if await model.confirmTransitBoarding(candidate) {
+                        dismiss()
+                    } else {
+                        saveFailed = true
+                    }
+                    isSaving = false
+                }
             } label: {
                 Label(
                     language.text(
@@ -13690,11 +13938,18 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(Color.tpReferenceBlue)
+            .disabled(isSaving)
 
             Button(role: .destructive) {
+                isSaving = true
+                saveFailed = false
                 Task { @MainActor in
-                    await model.deleteTransitBoardingCandidate(candidate)
-                    dismiss()
+                    if await model.deleteTransitBoardingCandidate(candidate) {
+                        dismiss()
+                    } else {
+                        saveFailed = true
+                    }
+                    isSaving = false
                 }
             } label: {
                 Label(
@@ -13704,11 +13959,20 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.bordered)
+            .disabled(isSaving)
+
+            if saveFailed {
+                Text(language.text("저장하지 못했습니다. 다시 시도해 주세요.",
+                    "Couldn’t save. Please try again."))
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
 
             Spacer(minLength: 0)
         }
         .padding(20)
         .background(Color.tpSurface)
+        .interactiveDismissDisabled(isSaving)
     }
 }
 
@@ -16912,6 +17176,24 @@ private struct MapHomeGrowthSheet: View {
     }
 }
 
-enum MapHomeStartupCameraPolicy {
+struct MapHomeStartupCameraPolicy {
     static let distance: CLLocationDistance = 3_000
+    static let fallbackCenter = CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780)
+    private var needsZoomRestore = false
+
+    mutating func shouldRestoreZoom(on phase: ScenePhase) -> Bool {
+        if phase == .background { needsZoomRestore = true }
+        guard phase == .active else { return false }
+        defer { needsZoomRestore = false }
+        return needsZoomRestore
+    }
+
+    static func camera(restoring camera: MapCamera?, fallbackCenter: CLLocationCoordinate2D) -> MapCamera {
+        MapCamera(
+            centerCoordinate: camera?.centerCoordinate ?? fallbackCenter,
+            distance: distance,
+            heading: camera?.heading ?? 0,
+            pitch: camera?.pitch ?? 0
+        )
+    }
 }

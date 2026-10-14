@@ -1,0 +1,88 @@
+{
+  "requestID": "BIM8F4K2Q6",
+  "checkedAt": "2026-10-07T18:16:44.873Z",
+  "rasterChecks": [
+    {
+      "file": "output/bokki-plan-01-movement-1206x2622.png",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    },
+    {
+      "file": "output/bokki-plan-01-movement-603x1311.jpg",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    },
+    {
+      "file": "output/bokki-plan-01-movement-603x1311.webp",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-1206x2622.png",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-603x1311.jpg",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    },
+    {
+      "file": "output/bokki-plan-02-context-notes-603x1311.webp",
+      "sha256Matches": true,
+      "dimensionsValid": true,
+      "opaqueRGB": true
+    }
+  ],
+  "assets": [
+    {
+      "file": "source/route-hero.png",
+      "sha256": "5bcb927ffbd119db59a5335c290b5751b0946b4b100d14e02af92d2d6e4e3659"
+    },
+    {
+      "file": "source/context-hero.png",
+      "sha256": "cf8950294c1b3f7e0922ef48e98713d9aa55ca2ef398980fde699b687d5a81ea"
+    },
+    {
+      "file": "source/official-app-icon.png",
+      "sha256": "ab0cb7c7530878465a388f9ea438725e827f012ed41fda9cdd124dd4aadca750"
+    },
+    {
+      "file": "source/bokki-plan-01-movement.svg",
+      "sha256": "d0d16ded17b66351b7f7bdde29e505b4813698dd39b75b6f013b4c3d0d3b92a6"
+    },
+    {
+      "file": "source/bokki-plan-02-context-notes.svg",
+      "sha256": "dcaaedeb7d374a650aff24c16fc106f9deafcb46e42fdb34d982f34f472f6b62"
+    },
+    {
+      "file": "source/copy.json",
+      "sha256": "a4e8d1c9b9b4dc52c792d5c1de58e56e113255bfc9802ec2100e19016dbb296a"
+    },
+    {
+      "file": "render.mjs",
+      "sha256": "7bdceb0920ca9971d63b64cf7ff5f835490985baccda303b4e432a097062607d"
+    },
+    {
+      "file": "README.md",
+      "sha256": "c0979933b0457ddc1f5c99623575f32b60fefc9636588692e6c45dcf8de71557"
+    }
+  ],
+  "sourceInputsUnchanged": true,
+  "sourceInputCount": 146,
+  "visualReview": {
+    "preview": "output/preview-pair.jpg",
+    "reviewed": true,
+    "EnglishCopyReadable": true,
+    "noVisibleTextClipping": true,
+    "unbrandedFinalProps": true,
+    "visibleArtworkDisclosure": true,
+    "realAppScreenshot": false
+  },
+  "status": "PASS — illustrative artwork deliverables; actual device UI still required for App Store screenshot use"
+}

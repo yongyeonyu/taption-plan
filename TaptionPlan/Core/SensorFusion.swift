@@ -2786,7 +2786,11 @@ enum TransitBoardingCandidateEngine {
                     span: span,
                     dwellDuration: span.duration,
                     source: place.source,
-                    travelSegmentIDs: relatedTravel.map(\.id)
+                    travelSegmentIDs: relatedTravel.map(\.id),
+                    subwayRoutes: place.kind.boardingMode == .subway
+                        ? TransitBoardingDecisionEngine.subwayRoutes(
+                            for: relatedTravel, readingIndex: availableReadingIndex)
+                        : []
                 )
                 guard !isSuppressed(candidate, by: decisions),
                       seenKeys.insert(key).inserted else { continue }
@@ -3111,16 +3115,32 @@ enum TransitBoardingCandidateEngine {
 }
 
 enum TransitBoardingDecisionEngine {
+    static func subwayRoutes(
+        for segments: [TravelSegment],
+        readingIndex: SensorEvidenceTimeIndex
+    ) -> [TransitBoardingSubwayRoute] {
+        segments.compactMap { segment in
+            var confirmed = segment
+            confirmed.mode = .subway
+            confirmed.isConfirmed = true
+            guard let route = SubwayTravelSegmentEngine.confirmedRoute(
+                for: confirmed, readingIndex: readingIndex)?.subwayRoute else { return nil }
+            return TransitBoardingSubwayRoute(
+                travelSegmentID: segment.id, span: segment.span, route: route)
+        }
+    }
+
     static func applying(
         _ decisions: [TransitBoardingDecision],
         to segments: [TravelSegment]
     ) -> [TravelSegment] {
         let active = decisions.filter { $0.mode != nil }
         guard !active.isEmpty else { return segments }
+        let availableIDs = Set(segments.map(\.id))
 
         return segments.map { segment in
             guard let decision = active
-                .filter({ matches(segment, decision: $0) })
+                .filter({ matches(segment, decision: $0, availableIDs: availableIDs) })
                 .max(by: { $0.updatedAt < $1.updatedAt }),
                   let mode = decision.mode else {
                 return segment
@@ -3133,18 +3153,71 @@ enum TransitBoardingDecisionEngine {
             value.evidence.append(
                 "사용자 확인 · \(MovementPresentation.title(for: mode)) 탑승"
             )
+            if mode == .subway, let saved = savedRoute(
+                for: segment, decision: decision, availableIDs: availableIDs) {
+                value.span = saved.span
+                value.subwayRoute = saved.route
+                let provenance = "사용자 확정 경로 · 역 좌표 기반 추정"
+                if !value.evidence.contains(provenance) { value.evidence.append(provenance) }
+            } else if mode != .subway {
+                value.subwayRoute = nil
+                value.evidence.removeAll { $0.hasPrefix("사용자 확정 경로 ·") }
+            }
             return value
         }
     }
 
+    static func removingConfirmations(
+        for segments: [TravelSegment],
+        from decisions: [TransitBoardingDecision]
+    ) -> [TransitBoardingDecision] {
+        let ids = Set(segments.map(\.id))
+        return decisions.compactMap { decision in
+            guard decision.mode != nil else { return decision }
+            let savedIDs = Set(segments.compactMap {
+                savedRoute(for: $0, decision: decision)?.travelSegmentID
+            })
+            let removedIDs = ids.union(savedIDs)
+            guard decision.travelSegmentIDs.contains(where: removedIDs.contains)
+                    || !savedIDs.isEmpty else { return decision }
+            var value = decision
+            value.travelSegmentIDs.removeAll { removedIDs.contains($0) }
+            value.subwayRoutes?.removeAll { removedIDs.contains($0.travelSegmentID) }
+            return !value.travelSegmentIDs.isEmpty || value.subwayRoutes?.isEmpty == false
+                ? value : nil
+        }
+    }
+
+    private static func savedRoute(
+        for segment: TravelSegment,
+        decision: TransitBoardingDecision,
+        availableIDs: Set<UUID> = []
+    ) -> TransitBoardingSubwayRoute? {
+        let routes = (decision.subwayRoutes ?? []).filter {
+            sameJourney($0.span, segment.span) && SubwayStationCatalog.isValid($0.route)
+        }
+        if decision.travelSegmentIDs.contains(segment.id) {
+            return routes.first { $0.travelSegmentID == segment.id }
+        }
+        let missing = routes.filter { !availableIDs.contains($0.travelSegmentID) }
+        return missing.count == 1 ? missing[0] : nil
+    }
+
+    private static func sameJourney(_ saved: TimeSpan, _ inferred: TimeSpan) -> Bool {
+        if saved == inferred { return true }
+        guard abs(saved.start.timeIntervalSince(inferred.start)) <= 120,
+              abs(saved.end.timeIntervalSince(inferred.end)) <= 120,
+              let overlap = saved.intersection(with: inferred) else { return false }
+        return overlap.duration / max(1, max(saved.duration, inferred.duration)) >= 0.8
+    }
+
     private static func matches(
         _ segment: TravelSegment,
-        decision: TransitBoardingDecision
+        decision: TransitBoardingDecision,
+        availableIDs: Set<UUID>
     ) -> Bool {
         if decision.travelSegmentIDs.contains(segment.id) { return true }
-        let gapAfter = segment.span.start.timeIntervalSince(decision.span.end)
-        if (-2 * 60...30 * 60).contains(gapAfter) { return true }
-        return segment.span.intersection(with: decision.span) != nil
+        return savedRoute(for: segment, decision: decision, availableIDs: availableIDs) != nil
     }
 }
 

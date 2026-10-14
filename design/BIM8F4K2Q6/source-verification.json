@@ -1,0 +1,19 @@
+{
+  "requestID": "BIM8F4K2Q6",
+  "checkedAt": "2026-10-07T18:14:58.550Z",
+  "release": "1.0(174)",
+  "releaseEvidence": "artifacts/validation/REL1007B01.json",
+  "sourceInputs": 146,
+  "mismatches": [],
+  "unchanged": true,
+  "icon": {
+    "source": "TaptionPlan/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+    "copy": "design/BIM8F4K2Q6/source/official-app-icon.png",
+    "sha256": "ab0cb7c7530878465a388f9ea438725e827f012ed41fda9cdd124dd4aadca750",
+    "exactCopy": true
+  },
+  "artifactOnly": true,
+  "appTestsOrBuildsRun": false,
+  "deviceUIUsed": false,
+  "privateDataUsed": false
+}

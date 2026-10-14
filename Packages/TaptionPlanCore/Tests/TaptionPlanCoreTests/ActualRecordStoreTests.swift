@@ -36,6 +36,8 @@ final class ActualRecordStoreTests: XCTestCase {
         try await store.applyActualRecordDelta(upserting: rows, deletingKeys: [])
         let query = try await store.actualRecords(in: Date(timeIntervalSinceReferenceDate: t + 0.125)...Date(timeIntervalSinceReferenceDate: t + 0.25))
         XCTAssertEqual(query, [rows[0], rows[1], rows[2], rows[5], rows[6]])
+        let positions = try await store.actualRecordPositions(in: Date(timeIntervalSinceReferenceDate: t + 0.125)...Date(timeIntervalSinceReferenceDate: t + 0.25))
+        XCTAssertEqual(positions, [0, 1, 2, 5, 6])
         XCTAssertEqual(Array(query[0].title.utf8), Array(rows[0].title.utf8))
         let all = try await store.actualRecords()
         XCTAssertEqual(all, rows)
@@ -131,7 +133,8 @@ final class ActualRecordStoreTests: XCTestCase {
             var external: OpaquePointer?
             XCTAssertEqual(sqlite3_open_v2(url.path, &external, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
             defer { sqlite3_close(external) }
-            XCTAssertEqual(sqlite3_exec(external, "UPDATE actual_records SET title='external';", nil, nil, nil), SQLITE_OK)
+            XCTAssertEqual(sqlite3_exec(external, "UPDATE actual_records SET title='external', started_at=300, ended_at=400;", nil, nil, nil), SQLITE_OK)
+            XCTAssertEqual(try store.actualRecordPositions(in: Date(timeIntervalSinceReferenceDate: 100)...Date(timeIntervalSinceReferenceDate: 200)), [0])
             return (revision, try store.actualRecordRevision(), try store.actualRecords())
         }
         XCTAssertEqual(during.0, during.1)
@@ -140,6 +143,44 @@ final class ActualRecordStoreTests: XCTestCase {
         let revision = try await store.actualRecordRevision()
         XCTAssertEqual(after[0].title, "external")
         XCTAssertEqual(revision, during.0 + 1)
+        let moved = try await store.actualRecordPositions(in: Date(timeIntervalSinceReferenceDate: 100)...Date(timeIntervalSinceReferenceDate: 200))
+        XCTAssertTrue(moved.isEmpty)
+    }
+
+    func testThrowingScanClosesCursorAndLeavesRecordsAvailable() async throws {
+        let store = try TaptionPlanDayStore(url: location())
+        let rows = [row("a", position: 0, start: 100, end: 200), row("b", position: 1, start: 300, end: nil)]
+        try await store.applyActualRecordDelta(upserting: rows, deletingKeys: [])
+        do {
+            try await store.scanActualRecords { _ in throw CancellationError() }
+            XCTFail("A cancelled visitor must propagate cancellation")
+        } catch is CancellationError {}
+        let after = try await store.actualRecords()
+        XCTAssertEqual(after, rows)
+        try await store.applyActualRecordDelta(upserting: [], deletingKeys: ["a"])
+        let remaining = try await store.actualRecordPositions(in: .distantPast ... .distantFuture)
+        XCTAssertEqual(remaining, [1])
+    }
+
+    func testScanReusesOnlyExactBytesAndRejectsInvalidUTF8AfterCacheHit() async throws {
+        let url = try location()
+        let store = try TaptionPlanDayStore(url: url)
+        var rows = (0..<6).map { row(String($0), position: $0, start: 100, end: 200) }
+        rows[2].title = "Caf\u{00E9}\0title"
+        rows[3].evidence = Data([1, 0, 3])
+        rows[4].title = String(repeating: "큰 원문", count: 2_000)
+        rows[4].evidence = Data(repeating: 127, count: 8_192)
+        rows[5].behavior = nil
+        try await store.applyActualRecordDelta(upserting: rows, deletingKeys: [])
+        let loaded = try await store.actualRecords()
+        XCTAssertEqual(loaded, rows)
+        XCTAssertEqual(loaded.map { Array($0.title.utf8) }, rows.map { Array($0.title.utf8) })
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        XCTAssertEqual(sqlite3_exec(db, "UPDATE actual_records SET title=CAST(X'FF' AS TEXT) WHERE position=2;", nil, nil, nil), SQLITE_OK)
+        do { _ = try await store.actualRecords(); XCTFail("A cached title must not hide invalid text") }
+        catch { XCTAssertEqual(error as? TaptionPlanDayStoreError, .databaseCorrupt(message: "Invalid record text")) }
     }
 
     func testRangeQueryPlanUsesRTreeBeforePrimaryKeyLookup() async throws {

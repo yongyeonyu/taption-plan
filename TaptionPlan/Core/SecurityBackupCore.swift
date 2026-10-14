@@ -132,6 +132,7 @@ enum PlanSecurityError: Error, Equatable {
     case biometricUnavailable
     case biometricRejected
     case tooManyAttempts(retryAfter: TimeInterval)
+    case localSensorArchiveIncomplete
 }
 
 extension PlanSecurityError: LocalizedError {
@@ -165,6 +166,12 @@ extension PlanSecurityError: LocalizedError {
             AppLanguagePreference.text(
                 korean: "백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.",
                 english: "The backup encryption or integrity check failed.",
+                preference: preference
+            )
+        case .localSensorArchiveIncomplete:
+            AppLanguagePreference.text(
+                korean: "기기의 일부 센서 기록을 읽지 못해 백업을 완료하지 못했습니다. 기존 기록과 백업은 보존되어 있습니다.",
+                english: "Some sensor records on this device could not be read. Existing records and backups are preserved.",
                 preference: preference
             )
         case .archiveNotFound:

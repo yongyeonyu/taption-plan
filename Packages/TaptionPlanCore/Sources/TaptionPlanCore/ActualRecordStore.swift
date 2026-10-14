@@ -93,12 +93,21 @@ extension TaptionPlanDayStore {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
+    private static let actualRangePredicate = "FROM actual_record_ranges r CROSS JOIN actual_records a ON a.row_id=r.row_id WHERE r.starts<=?1 AND r.ends>=?2 AND a.started_at<=?1 AND (a.ended_at IS NULL OR MAX(a.started_at,a.ended_at)>=?2) ORDER BY a.position;"
+
     public func actualRecords(in range: ClosedRange<Date>? = nil) throws -> [ActualRow] {
+        var result: [ActualRow] = []
+        try scanActualRecords(in: range) { result.append($0) }
+        return result
+    }
+
+    /// Reads and converts one row at a time without retaining a second full history array.
+    public func scanActualRecords(in range: ClosedRange<Date>? = nil, _ visit: (ActualRow) throws -> Void) throws {
         let sql: String
-        if range != nil {
-            // RTree bounds round outwards; REAL predicates preserve exact subsecond boundaries.
+        if let range {
+            try validateActualRange(range)
             let columns = Self.actualColumns.split(separator: ",").map { "a." + $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ",")
-            sql = "SELECT \(columns) FROM actual_record_ranges r CROSS JOIN actual_records a ON a.row_id=r.row_id WHERE r.starts<=?1 AND r.ends>=?2 AND a.started_at<=?1 AND (a.ended_at IS NULL OR MAX(a.started_at,a.ended_at)>=?2) ORDER BY a.position;"
+            sql = "SELECT \(columns) \(Self.actualRangePredicate)"
         } else {
             sql = "SELECT \(Self.actualColumns) FROM actual_records ORDER BY position;"
         }
@@ -108,12 +117,39 @@ extension TaptionPlanDayStore {
             try bind(range.upperBound.timeIntervalSinceReferenceDate, to: statement, at: 1)
             try bind(range.lowerBound.timeIntervalSinceReferenceDate, to: statement, at: 2)
         }
-        var result: [ActualRow] = []
+        var count = 0
+        var cache = ActualReadCache()
+        while try step(statement) == SQLITE_ROW {
+            if count.isMultiple(of: 256) { try Task.checkCancellation() }
+            try visit(readActual(statement, cache: &cache))
+            count += 1
+        }
+        try Task.checkCancellation()
+    }
+
+    /// Caller must check the revision in the same read transaction before resolving positions.
+    public func actualRecordPositions(in range: ClosedRange<Date>) throws -> [Int] {
+        try validateActualRange(range)
+        let statement = try prepare("SELECT a.position \(Self.actualRangePredicate)")
+        defer { sqlite3_finalize(statement) }
+        try bind(range.upperBound.timeIntervalSinceReferenceDate, to: statement, at: 1)
+        try bind(range.lowerBound.timeIntervalSinceReferenceDate, to: statement, at: 2)
+        var result: [Int] = []
         while try step(statement) == SQLITE_ROW {
             if result.count.isMultiple(of: 256) { try Task.checkCancellation() }
-            result.append(try readActual(statement))
+            let position = sqlite3_column_int64(statement, 0)
+            guard position >= 0 else { throw TaptionPlanDayStoreError.databaseCorrupt(message: "Invalid record position") }
+            result.append(Int(position))
         }
+        try Task.checkCancellation()
         return result
+    }
+
+    private func validateActualRange(_ range: ClosedRange<Date>) throws {
+        guard range.lowerBound.timeIntervalSinceReferenceDate.isFinite,
+              range.upperBound.timeIntervalSinceReferenceDate.isFinite else {
+            throw TaptionPlanDayStoreError.invalidTimeRange
+        }
     }
 
     /// Replacement and its index become visible together; failures restore rows, index and triggers.
@@ -193,25 +229,51 @@ extension TaptionPlanDayStore {
         guard result == SQLITE_OK else { throw lastError() }
     }
 
-    private func readActual(_ statement: OpaquePointer) throws -> ActualRow {
+    private struct ActualReadCache {
+        // One value per repeated column, capped at 4 KiB each and discarded after the scan.
+        var text = [String?](repeating: nil, count: 19)
+        var evidence: Data?
+    }
+
+    private func readActual(_ statement: OpaquePointer, cache: inout ActualReadCache) throws -> ActualRow {
         func text(_ index: Int32) throws -> String? {
             guard sqlite3_column_type(statement, index) != SQLITE_NULL else { return nil }
-            guard let bytes = sqlite3_column_text(statement, index),
-                  let value = String(bytes: UnsafeBufferPointer(start: bytes, count: Int(sqlite3_column_bytes(statement, index))), encoding: .utf8) else {
+            guard let bytes = sqlite3_column_text(statement, index) else {
                 throw TaptionPlanDayStoreError.databaseCorrupt(message: "Invalid record text")
             }
+            let buffer = UnsafeBufferPointer(start: bytes, count: Int(sqlite3_column_bytes(statement, index)))
+            let reusable: Bool
+            switch index {
+            case 5, 6, 9, 10, 12, 16: reusable = buffer.count <= 4_096
+            default: reusable = false
+            }
+            if reusable, let previous = cache.text[Int(index)], previous.utf8.elementsEqual(buffer) { return previous }
+            guard let value = String(bytes: buffer, encoding: .utf8) else {
+                throw TaptionPlanDayStoreError.databaseCorrupt(message: "Invalid record text")
+            }
+            if reusable { cache.text[Int(index)] = value }
             return value
         }
         func required(_ index: Int32) throws -> String {
             guard let value = try text(index) else { throw TaptionPlanDayStoreError.databaseCorrupt(message: "Missing record field") }
             return value
         }
+        let evidence: Data
+        let evidenceSize = Int(sqlite3_column_bytes(statement, 13))
+        if let previous = cache.evidence, previous.count == evidenceSize,
+           let bytes = sqlite3_column_blob(statement, 13),
+           previous.withUnsafeBytes({ $0.elementsEqual(UnsafeRawBufferPointer(start: bytes, count: evidenceSize)) }) {
+            evidence = previous
+        } else {
+            evidence = readData(statement, at: 13)
+            cache.evidence = evidence.count <= 4_096 ? evidence : nil
+        }
         return try ActualRow(key: required(0), position: Int(sqlite3_column_int64(statement, 1)),
             id: required(2), planID: text(3), routineID: text(4), title: required(5), categoryID: required(6),
             startedAt: Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 7)),
             endedAt: sqlite3_column_type(statement, 8) == SQLITE_NULL ? nil : Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 8)),
             source: required(9), confidence: required(10), createdAt: Date(timeIntervalSinceReferenceDate: sqlite3_column_double(statement, 11)),
-            behavior: text(12), evidence: readData(statement, at: 13), routeID: text(14), sensorChunkID: text(15),
+            behavior: text(12), evidence: evidence, routeID: text(14), sensorChunkID: text(15),
             modelVersion: text(16), manuallyCorrected: sqlite3_column_int64(statement, 17) == 1,
             classificationLocked: sqlite3_column_int64(statement, 18) == 1)
     }

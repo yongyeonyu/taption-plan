@@ -1,0 +1,125 @@
+{
+  "requestID": "CLN1014B01",
+  "targets": [
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/build/PAW1014A01DD",
+      "allocatedBytes": 1402150912
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.build",
+      "allocatedBytes": 142229504
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.swiftpm",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.swiftpm",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionActivityEngine/.swiftpm",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanEngine/.swiftpm",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/TaptionPlan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+      "allocatedBytes": 4096
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/com.taption.plan",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_workspace-state.json.lock",
+      "allocatedBytes": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_Package.resolved.lock",
+      "allocatedBytes": 0
+    }
+  ],
+  "simulator": {
+    "udid": "CDA04A6E-0BA9-42A8-A30F-C89833699E37",
+    "name": "Taption PAW1014A01 BAK1014A01",
+    "dataPath": "/Users/u_mo_c/Library/Developer/CoreSimulator/Devices/CDA04A6E-0BA9-42A8-A30F-C89833699E37/data",
+    "state": "Booted"
+  },
+  "preserveMoves": [
+    {
+      "source": "/Users/u_mo_c/Documents/taption plan/build/validation/PAW1014A01",
+      "destination": "/Users/u_mo_c/Documents/taption plan/artifacts/local-validation-evidence/PAW1014A01"
+    },
+    {
+      "source": "/Users/u_mo_c/Documents/taption plan/build/validation/BAK1014A01",
+      "destination": "/Users/u_mo_c/Documents/taption plan/artifacts/local-validation-evidence/BAK1014A01"
+    }
+  ],
+  "status": "complete; newly generated outputs and dedicated simulator removed",
+  "removed": [
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/build/PAW1014A01DD",
+      "allocatedBytesDeleted": 1401962496
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.build",
+      "allocatedBytesDeleted": 142229504
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanCore/.swiftpm",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionRouteEngine/.swiftpm",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionActivityEngine/.swiftpm",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/Packages/TaptionPlanEngine/.swiftpm",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/Users/u_mo_c/Documents/taption plan/TaptionPlan.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+      "allocatedBytesDeleted": 4096
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/com.taption.plan",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_artifacts_maplibre-gl-native-distribution_MapLibre.lock",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_workspace-state.json.lock",
+      "allocatedBytesDeleted": 0
+    },
+    {
+      "path": "/var/folders/q1/0p9tcvnx7yx5l12y55zm4tdm0000gn/T/_Users_u_mo_c_Documents_taption plan_build_PAW1014A01DD_SourcePackages_Package.resolved.lock",
+      "allocatedBytesDeleted": 0
+    }
+  ],
+  "allocatedBytesDeleted": 1544196096,
+  "simulatorAllocatedBytesDeleted": 2899214336,
+  "sourceInputsUnchanged": true,
+  "sourceInputCount": 146,
+  "buildAbsent": true,
+  "preservedAdditionalRecords": [
+    "artifacts/local-validation-evidence/PAW1014A01/build-records/Logs",
+    "artifacts/local-validation-evidence/PAW1014A01/build-records/TestResults"
+  ],
+  "simulatorDeleted": "CDA04A6E-0BA9-42A8-A30F-C89833699E37",
+  "testsAndLogsPreserved": true,
+  "originalRelease175FilesVerified": 12,
+  "remainingSimulatorCountObserved": 8
+}

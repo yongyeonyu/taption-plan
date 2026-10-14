@@ -2310,10 +2310,17 @@ struct TransitBoardingCandidate: Identifiable, Hashable, Sendable {
     let dwellDuration: TimeInterval
     let source: TransitBoardingPlaceSource
     let travelSegmentIDs: [UUID]
+    var subwayRoutes: [TransitBoardingSubwayRoute] = []
 
     var mode: TravelMode {
         kind.boardingMode
     }
+}
+
+struct TransitBoardingSubwayRoute: Codable, Hashable, Sendable {
+    var travelSegmentID: UUID
+    var span: TimeSpan
+    var route: SubwayRoutePath
 }
 
 struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
@@ -2326,6 +2333,7 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
     var span: TimeSpan
     var mode: TravelMode?
     var travelSegmentIDs: [UUID]
+    var subwayRoutes: [TransitBoardingSubwayRoute]?
     var updatedAt: Date
 
     var id: String { candidateKey }
@@ -2338,6 +2346,7 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
         span: TimeSpan,
         mode: TravelMode?,
         travelSegmentIDs: [UUID] = [],
+        subwayRoutes: [TransitBoardingSubwayRoute]? = nil,
         updatedAt: Date = .now
     ) {
         self.candidateKey = candidateKey
@@ -2347,6 +2356,7 @@ struct TransitBoardingDecision: Identifiable, Codable, Hashable, Sendable {
         self.span = span
         self.mode = mode
         self.travelSegmentIDs = travelSegmentIDs
+        self.subwayRoutes = subwayRoutes
         self.updatedAt = updatedAt
     }
 }
@@ -2891,6 +2901,56 @@ struct TravelSegment: Identifiable, Codable, Hashable, Sendable {
         try values.encode(isConfirmed, forKey: .isConfirmed)
         try values.encodeIfPresent(subwayRoute, forKey: .subwayRoute)
         try values.encode(isClassificationLocked, forKey: .isClassificationLocked)
+    }
+}
+
+struct MapPredictedRoute: Identifiable, Codable, Hashable, Sendable {
+    let source: String
+    let travelID: UUID?
+    let mode: TravelMode
+    let span: TimeSpan
+    let coordinates: [GeoPoint]
+
+    // Identity survives regenerated travel IDs and a change in the displayed cutoff.
+    var id: String {
+        let endpoints = [coordinates.first, coordinates.last].compactMap { $0 }.map {
+            "\(($0.latitude * 1_000_000).rounded()):\(($0.longitude * 1_000_000).rounded())"
+        }.joined(separator: ":")
+        return "\(source):\(mode.rawValue):\(span.start.timeIntervalSince1970.rounded()):\(span.end.timeIntervalSince1970.rounded()):\(endpoints)"
+    }
+
+    var isValid: Bool {
+        span.start.timeIntervalSince1970.isFinite && span.end.timeIntervalSince1970.isFinite
+            && span.duration > 0 && coordinates.count >= 2
+            && coordinates.allSatisfy {
+                $0.latitude.isFinite && $0.longitude.isFinite
+                    && (-90...90).contains($0.latitude) && (-180...180).contains($0.longitude)
+            }
+    }
+}
+
+struct MapPredictedRouteDecision: Identifiable, Codable, Hashable, Sendable {
+    let route: MapPredictedRoute
+    let isDeleted: Bool
+    let updatedAt: Date
+    var id: String { route.id }
+
+    func matches(_ candidate: MapPredictedRoute) -> Bool {
+        if let id = route.travelID, id == candidate.travelID,
+           let overlap = route.span.intersection(with: candidate.span),
+           overlap.duration >= min(route.span.duration, candidate.span.duration) * 0.9 {
+            return true
+        }
+        guard route.source == candidate.source,
+              abs(route.span.start.timeIntervalSince(candidate.span.start)) <= 1,
+              abs(route.span.end.timeIntervalSince(candidate.span.end)) <= 1,
+              let first = route.coordinates.first, let last = route.coordinates.last,
+              let candidateFirst = candidate.coordinates.first, let candidateLast = candidate.coordinates.last else { return false }
+        func close(_ lhs: GeoPoint, _ rhs: GeoPoint) -> Bool {
+            let dx = (lhs.longitude - rhs.longitude) * cos(lhs.latitude * .pi / 180)
+            return hypot(lhs.latitude - rhs.latitude, dx) * 111_320 <= 50
+        }
+        return close(first, candidateFirst) && close(last, candidateLast)
     }
 }
 
@@ -3824,6 +3884,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     /// 지도상의 3분 이상 교통 장소 후보에 대한 사용자 확인·삭제 기록.
     /// 원본 센서와 지도 POI는 저장하지 않고 이 결정만 기기에 남긴다.
     var transitBoardingDecisions: [TransitBoardingDecision]
+    var predictedRouteDecisions: [MapPredictedRouteDecision]
     /// 기기 위치 기록에서만 나오는 값이라 iCloud로 내보내지 않는다.
     var dismissedPlaceSuggestions: [DismissedPlaceSuggestion]
     var movementCorrections: [TravelModeCorrection]
@@ -3909,6 +3970,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         frequentPlaces: [FrequentPlace] = FrequentPlace.defaults,
         userTransitLocations: [UserTransitLocation] = [],
         transitBoardingDecisions: [TransitBoardingDecision] = [],
+        predictedRouteDecisions: [MapPredictedRouteDecision] = [],
         dismissedPlaceSuggestions: [DismissedPlaceSuggestion] = [],
         movementCorrections: [TravelModeCorrection] = [],
         suppressedActualIDs: Set<UUID> = [],
@@ -3954,6 +4016,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             return value
         }
         self.transitBoardingDecisions = transitBoardingDecisions
+        self.predictedRouteDecisions = predictedRouteDecisions
         self.dismissedPlaceSuggestions = dismissedPlaceSuggestions
         self.movementCorrections = movementCorrections
         self.suppressedActualIDs = suppressedActualIDs
@@ -3995,6 +4058,7 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case frequentPlaces
         case userTransitLocations
         case transitBoardingDecisions
+        case predictedRouteDecisions
         case dismissedPlaceSuggestions
         case movementCorrections
         case suppressedActualIDs
@@ -4111,6 +4175,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
             [TransitBoardingDecision].self,
             forKey: .transitBoardingDecisions
         ) ?? defaults.transitBoardingDecisions
+        predictedRouteDecisions = try values.decodeIfPresent(
+            [MapPredictedRouteDecision].self, forKey: .predictedRouteDecisions
+        ) ?? defaults.predictedRouteDecisions
         dismissedPlaceSuggestions = try values.decodeIfPresent(
             [DismissedPlaceSuggestion].self,
             forKey: .dismissedPlaceSuggestions

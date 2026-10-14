@@ -4070,6 +4070,36 @@ final class RouteTimelineDataTests: XCTestCase {
 }
 
 final class MapHomePawprintInteractionTests: XCTestCase {
+    func testGrayPawSelectsItsWholeRouteAndPinkWinsExactOverlap() {
+        let gray = MapHomePawprintTapTarget(id: 10, point: CGPoint(x: 20, y: 10),
+            timestamp: nil, isPredicted: true, routeID: "route-one",
+            routeSpan: TimeSpan(start: time(0), end: time(120)))
+        let pink = MapHomePawprintTapTarget(id: 11, point: .zero, timestamp: time(45), isPredicted: false)
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.nearestTarget(to: gray.point,
+            targets: [pink, gray], selectedDate: day, calendar: calendar), 10)
+        // Both are visible at the same coordinate; recorded paw precedes predictions in the renderer.
+        let overlapping = MapHomePawprintTapTarget(id: 10, point: .zero,
+            timestamp: nil, isPredicted: true, routeID: "route-one",
+            routeSpan: TimeSpan(start: time(0), end: time(120)))
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.nearestTarget(to: .zero,
+            targets: [pink, overlapping], selectedDate: day, calendar: calendar), 11)
+        XCTAssertNil(MapHomePawprintInteractionPolicy.selection(timestamp: nil,
+            isPredicted: true, selectedDate: day, calendar: calendar))
+    }
+
+    func testOldViewportGrayPawCannotSelectAnotherDayRoute() {
+        let stale = MapHomePawprintTapTarget(id: 10, point: .zero,
+            timestamp: nil, isPredicted: true, routeID: "old-day",
+            routeSpan: TimeSpan(start: time(-120), end: time(-60)))
+        XCTAssertNil(MapHomePawprintInteractionPolicy.nearestTarget(to: .zero,
+            targets: [stale], selectedDate: day, calendar: calendar))
+        let crossing = MapHomePawprintTapTarget(id: 11, point: .zero,
+            timestamp: nil, isPredicted: true, routeID: "overnight",
+            routeSpan: TimeSpan(start: time(-120), end: time(60)))
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.nearestTarget(to: .zero,
+            targets: [crossing], selectedDate: day, calendar: calendar), 11)
+    }
+
     private var calendar: Calendar {
         var value = Calendar(identifier: .gregorian)
         value.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -4090,7 +4120,94 @@ final class MapHomePawprintInteractionTests: XCTestCase {
         XCTAssertEqual(indices.map { times[$0] }, [time(0), time(41), time(95)])
         XCTAssertEqual(MapHomePawprintInteractionPolicy.sampleIndices(
             coordinates: coordinates, timestamps: times, limit: 2
-        ), [0, 2])
+        ), [0, 3])
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.sampleIndices(
+            coordinates: coordinates, timestamps: times, limit: 1
+        ), [3])
+    }
+
+    private func trace(start: Double, count: Int, interval: Double = 1) -> MapHomePawprintTrace {
+        MapHomePawprintTrace(
+            coordinates: (0..<count).map { CLLocationCoordinate2D(latitude: 37, longitude: 127 + Double($0) * 0.0005) },
+            timestamps: (0..<count).map { time(start + Double($0) * interval) }
+        )
+    }
+
+    func testLongMorningTraceKeepsPawsAfter0944WithoutRaisingLimit() {
+        let route = trace(start: 8 * 3600, count: 420, interval: 28.5)
+        // The old prefix limit ended at 09:44:01.5 in this fixture.
+        XCTAssertEqual(route.timestamps[219], time(9 * 3600 + 44 * 60 + 1.5))
+        let indices = MapHomePawprintInteractionPolicy.sampleIndices(
+            coordinates: route.coordinates, timestamps: route.timestamps, limit: 220)
+        XCTAssertEqual(indices.count, 220)
+        XCTAssertEqual(indices.first, 0)
+        XCTAssertEqual(indices.last, 419)
+        XCTAssertEqual(Set(indices).count, indices.count)
+        XCTAssertTrue(zip(indices, indices.dropFirst()).allSatisfy { $0 < $1 })
+        XCTAssertGreaterThan(indices.filter { route.timestamps[$0] > time(9 * 3600 + 44 * 60) }.count, 90)
+    }
+
+    func testDenseEarlyRouteDoesNotConsumeLateShortRouteBudget() {
+        let routes = [trace(start: 8 * 3600, count: 500), trace(start: 10 * 3600, count: 3, interval: 60)]
+        let indices = MapHomePawprintInteractionPolicy.sampleIndices(segments: routes, limit: 220)
+        XCTAssertEqual(indices.map(\.count).reduce(0, +), 220)
+        XCTAssertEqual(indices[0].first, 0)
+        XCTAssertEqual(indices[0].last, 499)
+        XCTAssertEqual(indices[1], [0, 1, 2])
+        let selected = MapHomePawprintInteractionPolicy.selection(timestamp: routes[1].timestamps[indices[1].last!],
+            isPredicted: false, selectedDate: day, calendar: calendar)
+        XCTAssertEqual(selected?.timestamp, time(10 * 3600 + 120))
+    }
+
+    func testInferredPawsLeaveAllFifteenRecordedRoutesVisible() {
+        let routes = (0..<15).map { trace(start: 8 * 3600 + Double($0) * 800, count: 120) }
+        let budget = MapHomePawprintInteractionPolicy.recordedBudget(inferredDemand: 1_000)
+        XCTAssertEqual(budget, 124)
+        let indices = MapHomePawprintInteractionPolicy.sampleIndices(segments: routes, limit: budget)
+        XCTAssertEqual(indices.map(\.count).reduce(0, +), 124)
+        for samples in indices {
+            XCTAssertGreaterThanOrEqual(samples.count, 2)
+            XCTAssertEqual(samples.first, 0)
+            XCTAssertEqual(samples.last, 119)
+        }
+        let inferred = MapHomePawprintInteractionPolicy.distributedCounts(sampleCounts: Array(repeating: 24, count: 20),
+            latestTimestamps: (0..<20).map { time(Double($0)) }, limit: 220 - budget)
+        XCTAssertEqual(inferred.reduce(0, +) + indices.map(\.count).reduce(0, +), 220)
+        XCTAssertTrue(inferred.allSatisfy { $0 >= 2 })
+    }
+
+    func testLatestTraceWinsWhenOnlyOnePawFitsEvenIfInputIsUnordered() {
+        let routes = [trace(start: 3600, count: 2), trace(start: 7200, count: 2), trace(start: 5400, count: 2)]
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.sampleIndices(segments: routes, limit: 1), [[], [1], []])
+    }
+
+    func testMoreRoutesThanPawsKeepNewestEndpoints() {
+        let routes = (0..<300).map { trace(start: Double($0) * 60, count: 2) }
+        let indices = MapHomePawprintInteractionPolicy.sampleIndices(segments: routes, limit: 220)
+        XCTAssertTrue(indices.prefix(80).allSatisfy(\.isEmpty))
+        XCTAssertTrue(indices.suffix(220).allSatisfy { $0 == [1] })
+        XCTAssertEqual(indices.map(\.count).reduce(0, +), 220)
+    }
+
+    func testInvalidTailCannotBeHiddenBySmallPawBudget() {
+        let coordinates = [CLLocationCoordinate2D(latitude: 37, longitude: 127),
+                           CLLocationCoordinate2D(latitude: 37.001, longitude: 127),
+                           CLLocationCoordinate2D(latitude: .nan, longitude: 127)]
+        XCTAssertTrue(MapHomePawprintInteractionPolicy.sampleIndices(coordinates: coordinates,
+            timestamps: [time(0), time(1), time(2)], limit: 1).isEmpty)
+        let valid = trace(start: 60, count: 2)
+        let invalid = MapHomePawprintTrace(coordinates: coordinates, timestamps: [time(0), time(1), time(2)])
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.sampleIndices(segments: [invalid, valid], limit: 2), [[], [0, 1]])
+    }
+
+    func testSamplingBudgetsDoNotInventPointsOrWasteRecordedCapacity() {
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.recordedBudget(inferredDemand: 0), 220)
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.recordedBudget(inferredDemand: 10), 210)
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.distributedCounts(sampleCounts: [2, 0, 3],
+            latestTimestamps: [time(0), time(1), time(2)], limit: 220), [2, 0, 3])
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.spreadIndices(count: 24, limit: 2), [0, 23])
+        XCTAssertEqual(MapHomePawprintInteractionPolicy.spreadIndices(count: 24, limit: 1), [23])
+        XCTAssertTrue(MapHomePawprintInteractionPolicy.sampleIndices(segments: [trace(start: 0, count: 2)], limit: 0)[0].isEmpty)
     }
 
     func testPawsRejectMissingOrUnorderedTimes() {

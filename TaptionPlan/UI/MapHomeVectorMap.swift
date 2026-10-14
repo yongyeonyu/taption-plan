@@ -709,7 +709,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
     final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate {
         var parent: MapHomeVectorMap
         private weak var mapView: MLNMapView?
-        private var styleIsLoaded = false
         private var lastCameraRevision = Int.min
         private var lastContentSignature: MapHomeVectorContentKey?
         private var lastProjectedMarkers: [MapHomeVectorMarker] = []
@@ -721,7 +720,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var maximumViewportFrameGapMS: Double = 0
         private var lastViewportPublishUptime: TimeInterval = 0
         private var pendingViewport:
-            (viewport: MapHomeVectorViewport, force: Bool)?
+            (viewport: MapHomeVectorViewport, force: Bool, cameraRevision: Int)?
         private var isViewportDeliveryScheduled = false
         private var observedPanGestures: [UIPanGestureRecognizer] = []
         private var observedCameraGestures: [UIGestureRecognizer] = []
@@ -753,6 +752,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             mapView.addGestureRecognizer(singleTap)
             singleTapGesture = singleTap
             attachTapDependencies(in: mapView)
+            updateContent(in: mapView)
         }
 
         func detach(from mapView: MLNMapView) {
@@ -777,7 +777,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func updateContent(in mapView: MLNMapView) {
-            guard styleIsLoaded else { return }
+            guard let style = mapView.style else { return }
+            if installRouteLayers(in: style) { lastContentSignature = nil }
             let signature = MapHomeVectorContentKey(
                 historical: parent.historicalRoutes.map(\.contentKey),
                 active: parent.activeRoute?.contentKey,
@@ -790,7 +791,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 }
                 return
             }
-            lastContentSignature = signature
             setShape(
                 routes: parent.historicalRoutes,
                 sourceID: LayerID.historicalSource,
@@ -811,11 +811,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 sourceID: LayerID.subwaySource,
                 in: mapView
             )
+            lastContentSignature = signature
             publishViewport(from: mapView, force: false)
         }
 
         func applyCameraCommandIfNeeded(to mapView: MLNMapView) {
-            guard cameraRevisionChanged else { return }
+            guard mapView.bounds.width > 0, mapView.bounds.height > 0,
+                  cameraRevisionChanged else { return }
             if let region = parent.cameraPosition.region {
                 let halfLatitude = region.span.latitudeDelta / 2
                 let halfLongitude = region.span.longitudeDelta / 2
@@ -845,14 +847,15 @@ struct MapHomeVectorMap: UIViewRepresentable {
                     ),
                     animated: false
                 )
-            } else if let coordinate = parent.displayedCoordinate {
-                mapView.setCenter(coordinate, zoomLevel: 14, animated: false)
-            } else if let coordinate = firstRouteCoordinate {
-                mapView.setCenter(coordinate, zoomLevel: 12, animated: false)
             } else {
-                mapView.setCenter(
-                    CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
-                    zoomLevel: 10,
+                mapView.setCamera(
+                    MLNMapCamera(
+                        lookingAtCenter: parent.displayedCoordinate
+                            ?? firstRouteCoordinate ?? MapHomeStartupCameraPolicy.fallbackCenter,
+                        altitude: MapHomeStartupCameraPolicy.distance,
+                        pitch: 0,
+                        heading: 0
+                    ),
                     animated: false
                 )
             }
@@ -860,6 +863,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func applyHeadingIfNeeded(to mapView: MLNMapView) {
+            guard mapView.bounds.width > 0, mapView.bounds.height > 0 else { return }
             guard parent.followsHeading,
                   let coordinate = parent.displayedCoordinate else {
                 lastHeading = nil
@@ -890,8 +894,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
-            styleIsLoaded = true
-            installRouteLayers(in: style)
             lastContentSignature = nil
             updateContent(in: mapView)
             applyCameraCommandIfNeeded(to: mapView)
@@ -903,6 +905,12 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         func mapViewRegionIsChanging(_ mapView: MLNMapView) {
             publishViewport(from: mapView, force: false)
+        }
+
+        func mapViewDidFinishRenderingFrame(_ mapView: MLNMapView, fullyRendered: Bool) {
+            guard lastCameraRevision != parent.cameraRevision else { return }
+            applyCameraCommandIfNeeded(to: mapView)
+            applyHeadingIfNeeded(to: mapView)
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
@@ -1028,7 +1036,16 @@ struct MapHomeVectorMap: UIViewRepresentable {
             [view] + view.subviews.flatMap(allSubviews)
         }
 
-        private func installRouteLayers(in style: MLNStyle) {
+        private func installRouteLayers(in style: MLNStyle) -> Bool {
+            let pairs = [
+                (LayerID.historicalSource, LayerID.historicalLayer),
+                (LayerID.subwaySource, LayerID.subwayLayer),
+                (LayerID.activeSource, LayerID.activeLayer),
+                (LayerID.expectedSource, LayerID.expectedLayer),
+            ]
+            guard pairs.contains(where: {
+                style.source(withIdentifier: $0.0) == nil || style.layer(withIdentifier: $0.1) == nil
+            }) else { return false }
             let historical = addSource(LayerID.historicalSource, to: style)
             let historicalLayer = lineLayer(
                 LayerID.historicalLayer,
@@ -1037,7 +1054,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forKeyPath: "opacity")
             )
-            style.addLayer(historicalLayer)
+            if style.layer(withIdentifier: historicalLayer.identifier) == nil {
+                style.addLayer(historicalLayer)
+            }
 
             let subway = addSource(LayerID.subwaySource, to: style)
             let subwayLayer = lineLayer(
@@ -1051,7 +1070,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
-            style.addLayer(subwayLayer)
+            if style.layer(withIdentifier: subwayLayer.identifier) == nil {
+                style.addLayer(subwayLayer)
+            }
 
             let active = addSource(LayerID.activeSource, to: style)
             let activeLayer = lineLayer(
@@ -1065,7 +1086,9 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
                 opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
             )
-            style.addLayer(activeLayer)
+            if style.layer(withIdentifier: activeLayer.identifier) == nil {
+                style.addLayer(activeLayer)
+            }
 
             let expected = addSource(LayerID.expectedSource, to: style)
             let expectedLayer = lineLayer(
@@ -1076,14 +1099,21 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 opacity: NSExpression(forKeyPath: "opacity")
             )
             expectedLayer.lineDashPattern = NSExpression(forConstantValue: MapHomeWBSTripStyle.routeDash)
-            style.addLayer(expectedLayer)
+            if style.layer(withIdentifier: expectedLayer.identifier) == nil {
+                style.addLayer(expectedLayer)
+            }
+            return true
         }
 
         private func addSource(_ identifier: String, to style: MLNStyle) -> MLNShapeSource {
+            if let source = style.source(withIdentifier: identifier) as? MLNShapeSource {
+                return source
+            }
             let source = MLNShapeSource(
                 identifier: identifier,
                 features: [],
-                options: [.lineDistanceMetrics: true]
+                // Distance metrics are for gradients; they distort dashed routes when zooming.
+                options: nil
             )
             style.addSource(source)
             return source
@@ -1182,10 +1212,11 @@ struct MapHomeVectorMap: UIViewRepresentable {
             if let pendingViewport {
                 self.pendingViewport = (
                     viewport,
-                    pendingViewport.force || force
+                    pendingViewport.force || force,
+                    lastCameraRevision
                 )
             } else {
-                pendingViewport = (viewport, force)
+                pendingViewport = (viewport, force, lastCameraRevision)
             }
             guard !isViewportDeliveryScheduled else { return }
             isViewportDeliveryScheduled = true
@@ -1195,6 +1226,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                     return
                 }
                 self.pendingViewport = nil
+                guard pendingViewport.cameraRevision == self.parent.cameraRevision else { return }
                 self.parent.onViewportChange(
                     pendingViewport.viewport,
                     pendingViewport.force

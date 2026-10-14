@@ -163,6 +163,43 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertNil(memoryPressure)
     }
 
+    func testStreamingHistoryRejectsBrokenOrderAndMissingRows() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        let value = recordFixture(count: 3)
+        try await repository.save(value)
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, "UPDATE actual_records SET position=4 WHERE position=1;", nil, nil, nil), SQLITE_OK)
+        do { _ = try await repository.load(); XCTFail("Broken ordering must not yield a partial history") }
+        catch { XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .invalidPayload) }
+        XCTAssertEqual(sqlite3_exec(database, "UPDATE actual_records SET position=1 WHERE position=4;", nil, nil, nil), SQLITE_OK)
+        let recovered = try await repository.load()
+        XCTAssertEqual(recovered.actuals, value.actuals)
+        XCTAssertEqual(sqlite3_exec(database, "DELETE FROM actual_records WHERE position=2;", nil, nil, nil), SQLITE_OK)
+        do { _ = try await repository.load(); XCTFail("Count mismatch must not yield a partial history") }
+        catch { XCTAssertEqual(error as? TaptionPlanCanonicalStorageError, .invalidPayload) }
+    }
+
+    func testRemovedActualRootCannotLeaveStaleKeysInReadCache() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let repository = try SQLitePlanRepository(databaseURL: url)
+        try await repository.save(recordFixture(count: 3))
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        XCTAssertEqual(sqlite3_exec(database, "DELETE FROM actual_records; DELETE FROM snapshots WHERE domain='plan.actuals';", nil, nil, nil), SQLITE_OK)
+        var empty = try await repository.load()
+        XCTAssertTrue(empty.actuals.isEmpty)
+        empty.actuals = recordFixture(count: 1).actuals
+        try await repository.save(empty)
+        let reloaded = try await SQLitePlanRepository(databaseURL: url).load()
+        XCTAssertEqual(reloaded.actuals, empty.actuals)
+    }
+
     func testEditHintFallsBackWhenAnotherRecordAlsoChanged() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

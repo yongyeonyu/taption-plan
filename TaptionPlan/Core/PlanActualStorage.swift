@@ -99,10 +99,40 @@ enum PlanActualStorage {
         }
     }
 
+    struct Loaded: Sendable {
+        var records: [ActualRecord] = []
+        var keys: [String] = []
+    }
+
+    static func read(from store: isolated TaptionPlanDayStore, count: Int) throws -> Loaded {
+        guard count >= 0 else { throw TaptionPlanCanonicalStorageError.invalidPayload }
+        var loaded = Loaded()
+        loaded.records.reserveCapacity(min(count, 4_096))
+        loaded.keys.reserveCapacity(min(count, 4_096))
+        var decoder = RowDecoder()
+        try store.scanActualRecords { row in
+            guard row.position == loaded.records.count, loaded.records.count < count else {
+                throw TaptionPlanCanonicalStorageError.invalidPayload
+            }
+            loaded.records.append(try decoder.record(from: row))
+            loaded.keys.append(row.key)
+        }
+        guard loaded.records.count == count else { throw TaptionPlanCanonicalStorageError.invalidPayload }
+        return loaded
+    }
+
     static func records(from rows: [TaptionPlanDayStore.ActualRow]) throws -> [ActualRecord] {
-        var evidenceCache: [Data: [String]] = [:]
+        var decoder = RowDecoder()
         return try rows.enumerated().map { index, row in
             if index.isMultiple(of: 256) { try Task.checkCancellation() }
+            return try decoder.record(from: row)
+        }
+    }
+
+    private struct RowDecoder {
+        var evidenceCache: [Data: [String]] = [:]
+
+        mutating func record(from row: TaptionPlanDayStore.ActualRow) throws -> ActualRecord {
             guard let id = UUID(uuidString: row.id), let source = ActualSource(rawValue: row.source),
                   let confidence = ConfidenceLevel(rawValue: row.confidence) else {
                 throw TaptionPlanCanonicalStorageError.invalidPayload

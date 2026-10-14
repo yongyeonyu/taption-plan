@@ -22,7 +22,13 @@ public enum TaptionPlanCanonicalStorageError: Error, Equatable, Sendable {
     case decompressionFailed
 }
 
-/// The sole persistence codec: binary Codable, optionally LZFSE compressed, with SHA-256 integrity.
+/// A versioned direct representation for high-volume records; Codable remains the portable model.
+public protocol TaptionPlanBinaryRecord: Codable {
+    func storageBytes() throws -> Data
+    static func fromStorageBytes(_ data: Data) throws -> Self
+}
+
+/// The sole persistence envelope: binary records/Codable, LZFSE compression and SHA-256 integrity.
 public enum TaptionPlanCanonicalStorage {
     public static let maximumUncompressedSize = 64 * 1_024 * 1_024
     private static let envelopeMagic = Data("TP-CANON".utf8)
@@ -31,9 +37,14 @@ public enum TaptionPlanCanonicalStorage {
 
     public static func encode<Value: Encodable>(_ value: Value, compress: Bool = true) throws -> TaptionPlanEncodedPayload {
         try autoreleasepool {
-            let encoder = PropertyListEncoder()
-            encoder.outputFormat = .binary
-            let raw = try encoder.encode(value)
+            let raw: Data
+            if let record = value as? any TaptionPlanBinaryRecord {
+                raw = try record.storageBytes()
+            } else {
+                let encoder = PropertyListEncoder()
+                encoder.outputFormat = .binary
+                raw = try encoder.encode(value)
+            }
             guard raw.count <= maximumUncompressedSize else {
                 throw TaptionPlanCanonicalStorageError.invalidPayload
             }
@@ -104,15 +115,41 @@ public enum TaptionPlanCanonicalStorage {
 
     public static func decode<Value: Decodable>(_ type: Value.Type, from encoded: TaptionPlanEncodedPayload) throws -> Value {
         try autoreleasepool {
-            guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
-                  encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {
-                throw TaptionPlanCanonicalStorageError.invalidPayload
+            let raw = try validatedBytes(from: encoded)
+            do {
+                if let recordType = type as? any TaptionPlanBinaryRecord.Type {
+                    guard let value = try recordType.fromStorageBytes(raw) as? Value else {
+                        throw TaptionPlanCanonicalStorageError.invalidPayload
+                    }
+                    return value
+                }
+                return try PropertyListDecoder().decode(type, from: raw)
             }
-            let raw = encoded.isCompressed ? try unlzfse(encoded.data, size: encoded.uncompressedSize) : encoded.data
-            guard checksum(raw) == encoded.checksum else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
-            do { return try PropertyListDecoder().decode(type, from: raw) }
             catch { throw TaptionPlanCanonicalStorageError.invalidPayload }
         }
+    }
+
+    /// Used only by a repair transaction to rewrite a verified pre-binary record.
+    public static func decodePropertyListForMigration<Value: TaptionPlanBinaryRecord>(
+        _ type: Value.Type, from encoded: TaptionPlanEncodedPayload
+    ) throws -> Value {
+        try autoreleasepool {
+            let raw = try validatedBytes(from: encoded)
+            guard raw.starts(with: Data("bplist00".utf8)) else {
+                throw TaptionPlanCanonicalStorageError.invalidPayload
+            }
+            return try PropertyListDecoder().decode(type, from: raw)
+        }
+    }
+
+    private static func validatedBytes(from encoded: TaptionPlanEncodedPayload) throws -> Data {
+        guard (0...maximumUncompressedSize).contains(encoded.uncompressedSize),
+              encoded.isCompressed || encoded.data.count == encoded.uncompressedSize else {
+            throw TaptionPlanCanonicalStorageError.invalidPayload
+        }
+        let raw = encoded.isCompressed ? try unlzfse(encoded.data, size: encoded.uncompressedSize) : encoded.data
+        guard checksum(raw) == encoded.checksum else { throw TaptionPlanCanonicalStorageError.checksumMismatch }
+        return raw
     }
 
     public static func checksum(_ data: Data) -> String {

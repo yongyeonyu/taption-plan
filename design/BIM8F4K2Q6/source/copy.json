@@ -1,0 +1,33 @@
+{
+  "requestID": "BIM8F4K2Q6",
+  "brand": "Bokki Plan",
+  "byline": "BY BOKKIYAW",
+  "release": "PLANNED RELEASE IN 2026",
+  "platform": "IPHONE",
+  "artworkLabel": "Illustrative feature artwork",
+  "disclaimer": "Fictional day · Not app UI",
+  "panels": [
+    {
+      "id": "01-movement",
+      "theme": "light",
+      "eyebrow": "EVERYDAY MOVEMENT",
+      "headline": ["See where", "your day went."],
+      "body": ["Follow everyday routes.", "Replay the moments between."],
+      "supportTitle": "Walks. Stops. The way home.",
+      "supportBody": "A day you can look back on.",
+      "hero": "route-hero.png",
+      "alt": "A fictional miniature neighborhood with a mint route linking a home, a leafy park and a cafe."
+    },
+    {
+      "id": "02-context-notes",
+      "theme": "dark",
+      "eyebrow": "HEALTH CONTEXT & NOTES",
+      "headline": ["More than", "a route."],
+      "body": ["Apple Health context.", "Notes tied to time and place."],
+      "supportTitle": "Steps. Workouts. Sleep.",
+      "supportBody": "Keep a note of what mattered.",
+      "hero": "context-hero.png",
+      "alt": "An illustrated paper journal with a mint ribbon linking a heart, walking shoes, a place pin and a crescent moon."
+    }
+  ]
+}
