@@ -29,6 +29,28 @@ extension PlanDataRepository {
     func actuals(in span: TimeSpan, matching source: [ActualRecord]) async throws -> [ActualRecord]? { nil }
 }
 
+#if os(iOS) && !TAPTION_WIDGET
+/// iOS terminates an app whose expiration handler returns without ending the
+/// task, so the handler must end it itself instead of waiting for the work.
+@MainActor
+final class BackgroundTaskAssertion {
+    private var identifier = UIBackgroundTaskIdentifier.invalid
+
+    func begin(name: String, onExpiration: @escaping @Sendable () -> Void) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            onExpiration()
+            self?.end()
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
+    }
+}
+#endif
+
 enum TaptionRepositoryBackgroundExecution {
     @MainActor
     static func run<Value: Sendable>(
@@ -39,14 +61,11 @@ enum TaptionRepositoryBackgroundExecution {
             try Task.checkCancellation()
             return try await operation()
         }
-        let identifier = UIApplication.shared.beginBackgroundTask(
-            withName: "TaptionPlan.repository"
-        ) { task.cancel() }
-        guard identifier != .invalid else {
-            task.cancel()
-            throw CancellationError()
-        }
-        defer { UIApplication.shared.endBackgroundTask(identifier) }
+        let assertion = BackgroundTaskAssertion()
+        assertion.begin(name: "TaptionPlan.repository") { task.cancel() }
+        // An invalid assertion means iOS granted no extra time. Still run the
+        // write: dropping it silently would lose data that is still in memory.
+        defer { assertion.end() }
         return try await withTaskCancellationHandler {
             try await task.value
         } onCancel: {

@@ -6921,10 +6921,11 @@ final class PlanSecurityBackupService {
             dataGeneration: TaptionDataDeletionFence.currentGeneration()
         )
         try checkRestorePreparation(preparationFence)
-        let snapshotArchives = try selectedSnapshotArchives(
+        let snapshotArchives = try await selectedSnapshotArchivesOffMain(
             accountIdentifier: accountIdentifier
         )
-        let backup = try loadLatestBackup(
+        try checkRestorePreparation(preparationFence)
+        let backup = try await loadLatestBackupOffMain(
             from: snapshotArchives,
             accountIdentifier: accountIdentifier,
             pinKeyData: capturedVerifier.keyMaterial
@@ -6964,11 +6965,11 @@ final class PlanSecurityBackupService {
         }
         let accountIdentifier =
             CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
-        let snapshotArchives = try selectedSnapshotArchives(
+        let snapshotArchives = try await selectedSnapshotArchivesOffMain(
             accountIdentifier: accountIdentifier
         )
         do {
-            let payload = try loadLatestBackup(
+            let payload = try await loadLatestBackupOffMain(
                 from: snapshotArchives,
                 accountIdentifier: accountIdentifier,
                 pinKeyData: capturedVerifier.keyMaterial
@@ -6990,7 +6991,7 @@ final class PlanSecurityBackupService {
                   ) else {
                 throw CancellationError()
             }
-            let payload = try loadLatestBackup(
+            let payload = try await loadLatestBackupOffMain(
                 from: snapshotArchives,
                 accountIdentifier: accountIdentifier,
                 pinKeyData: capturedVerifier.keyMaterial,
@@ -7126,12 +7127,12 @@ final class PlanSecurityBackupService {
             CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
         let pinKeyData = capturedVerifier.keyMaterial
         var backup: PlanCloudBackupPayload
-        var snapshotArchives = try selectedSnapshotArchives(
+        var snapshotArchives = try await selectedSnapshotArchivesOffMain(
             accountIdentifier: accountIdentifier
         )
         var accountKeyData: Data?
         do {
-            backup = try loadLatestBackup(
+            backup = try await loadLatestBackupOffMain(
                 from: snapshotArchives,
                 accountIdentifier: accountIdentifier,
                 pinKeyData: pinKeyData
@@ -7146,10 +7147,10 @@ final class PlanSecurityBackupService {
             let accountKey = try await cloudRecoveryKeyProvider.key()
             try checkRestorePreparation(preparationFence)
             accountKeyData = accountKey
-            snapshotArchives = try selectedSnapshotArchives(
+            snapshotArchives = try await selectedSnapshotArchivesOffMain(
                 accountIdentifier: accountIdentifier
             )
-            backup = try loadLatestBackup(
+            backup = try await loadLatestBackupOffMain(
                 from: snapshotArchives,
                 accountIdentifier: accountIdentifier,
                 pinKeyData: capturedVerifier.keyMaterial,
@@ -7249,6 +7250,40 @@ final class PlanSecurityBackupService {
         pinKeyData: Data? = nil,
         accountKeyData: Data? = nil
     ) throws -> PlanCloudBackupPayload {
+        unreadableSnapshotArchiveCount = 0
+        let result = try decodeLatestBackup(
+            from: archives, accountIdentifier: accountIdentifier,
+            pinKeyData: pinKeyData, accountKeyData: accountKeyData)
+        unreadableSnapshotArchiveCount = result.unreadableCount
+        return result.payload
+    }
+
+    /// Decrypts, decodes and merges every archive in the lineage. This is the
+    /// expensive part of a restore, so the async restore paths run it in the
+    /// worker; it therefore must not touch main-actor state.
+    private func loadLatestBackupOffMain(
+        from archives: [PlanMonthlyArchive],
+        accountIdentifier: String,
+        pinKeyData: Data? = nil,
+        accountKeyData: Data? = nil
+    ) async throws -> PlanCloudBackupPayload {
+        unreadableSnapshotArchiveCount = 0
+        let result = try await PlanBackupWorker.run {
+            try self.decodeLatestBackup(
+                from: archives, accountIdentifier: accountIdentifier,
+                pinKeyData: pinKeyData, accountKeyData: accountKeyData)
+        }
+        unreadableSnapshotArchiveCount = result.unreadableCount
+        return result.payload
+    }
+
+    nonisolated private func decodeLatestBackup(
+        from archives: [PlanMonthlyArchive],
+        accountIdentifier: String,
+        pinKeyData: Data?,
+        accountKeyData: Data?
+    ) throws -> (payload: PlanCloudBackupPayload, unreadableCount: Int) {
+        var unreadableSnapshotArchiveCount = 0
         let lineageArchives = snapshotConflictLineageArchives(from: archives)
         let dailyArchives = latestSnapshotArchives(from: archives).filter { PlanDailyBackupSchedule.isDayKey($0.monthKey) }
         let newest = dailyArchives.max {
@@ -7258,7 +7293,6 @@ final class PlanSecurityBackupService {
         guard let latestArchive = newest else {
             throw PlanSecurityError.archiveNotFound
         }
-        unreadableSnapshotArchiveCount = 0
         guard latestArchive.accountIdentifier == accountIdentifier else {
             throw PlanSecurityError.accountMismatch
         }
@@ -7301,22 +7335,40 @@ final class PlanSecurityBackupService {
             }
             mergedSnapshot = value
         }
-        return PlanCloudBackupPayload(
+        return (PlanCloudBackupPayload(
             snapshot: mergedSnapshot,
             routePoints: PlanBackupRoutePointReducer.restoring(
                 payloads.map(\.routePoints)
             ),
             appLog: latestPayload.appLog
-        )
+        ), unreadableSnapshotArchiveCount)
     }
 
     private func selectedSnapshotArchives(
         accountIdentifier: String
     ) throws -> [PlanMonthlyArchive] {
+        try Self.selectedSnapshotArchives(from: backupStore, accountIdentifier: accountIdentifier)
+    }
+
+    /// Reading every daily archive file is slow iCloud I/O, so restore calls
+    /// this through the worker instead of on the main actor.
+    private func selectedSnapshotArchivesOffMain(
+        accountIdentifier: String
+    ) async throws -> [PlanMonthlyArchive] {
+        nonisolated(unsafe) let store = backupStore
+        return try await PlanBackupWorker.run {
+            try Self.selectedSnapshotArchives(from: store, accountIdentifier: accountIdentifier)
+        }
+    }
+
+    nonisolated private static func selectedSnapshotArchives(
+        from store: PlanCloudBackupStore,
+        accountIdentifier: String
+    ) throws -> [PlanMonthlyArchive] {
         guard !accountIdentifier.isEmpty else {
             throw PlanSecurityError.accountUnavailable
         }
-        let archives = try backupStore.allArchives()
+        let archives = try store.allArchives()
         guard archives.allSatisfy({
             $0.accountIdentifier == accountIdentifier
         }) else {
@@ -7325,7 +7377,7 @@ final class PlanSecurityBackupService {
         return archives.sorted(by: Self.archivePrecedes)
     }
 
-    private func latestSnapshotArchives(
+    nonisolated private func latestSnapshotArchives(
         from archives: [PlanMonthlyArchive]
     ) -> [PlanMonthlyArchive] {
         var latestByMonth: [String: PlanMonthlyArchive] = [:]
@@ -7339,7 +7391,7 @@ final class PlanSecurityBackupService {
         return latestByMonth.values.sorted(by: Self.archivePrecedes)
     }
 
-    private func snapshotConflictLineageArchives(
+    nonisolated private func snapshotConflictLineageArchives(
         from archives: [PlanMonthlyArchive]
     ) -> [PlanMonthlyArchive] {
         let latestByMonth = latestSnapshotArchives(from: archives)
@@ -7518,7 +7570,7 @@ final class PlanSecurityBackupService {
         )
     }
 
-    private static func archivePrecedes(
+    nonisolated private static func archivePrecedes(
         _ lhs: PlanMonthlyArchive,
         _ rhs: PlanMonthlyArchive
     ) -> Bool {
@@ -7541,7 +7593,7 @@ final class PlanSecurityBackupService {
         return lhs.payloadDigest.lexicographicallyPrecedes(rhs.payloadDigest)
     }
 
-    private static func archivePrecedes(
+    nonisolated private static func archivePrecedes(
         _ lhs: PlanRawSensorMonthlyArchive,
         _ rhs: PlanRawSensorMonthlyArchive
     ) -> Bool {

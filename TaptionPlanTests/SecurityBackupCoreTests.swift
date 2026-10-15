@@ -7296,11 +7296,36 @@ extension SecurityBackupCoreTests {
         let restored = try await service.loadLatestBackup()
         XCTAssertEqual(restored.snapshot.memos.first?.text, text)
     }
+
+    func testRestoreReadsAndDecodesArchivesOffTheMainThread() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingDailyBackupStore(root: root)
+        let service = makeService(backupStore: store, rawSensorBackupStore: FilePlanCloudRawSensorBackupStore(root: root),
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 43))
+        try service.setPIN("1234")
+        let day = dailyDate(14), now = dailyDate(15, hour: 12)
+        let preparation = try await service.prepareDailyBackup(dates: [day], now: now,
+            calendar: dailyCalendar, dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "restore")),
+            rawSensorPayload: nil, day: day, preparation: preparation, includesCompleteRawData: true)
+
+        store.archiveReads = 0
+        store.archiveReadsOnMainThread = 0
+        let backup = try await service.loadLatestBackup()
+        let package = try await service.loadLatestBackupPackage(rewrapRecoveredArchive: false)
+
+        XCTAssertEqual(backup.snapshot.memos.first?.text, "restore")
+        XCTAssertEqual(package.backup.snapshot.memos.first?.text, "restore")
+        XCTAssertGreaterThanOrEqual(store.archiveReads, 2)
+        XCTAssertEqual(store.archiveReadsOnMainThread, 0, "Restore must not read iCloud archive files on the main thread")
+    }
 }
 
 private final class CountingDailyBackupStore: PlanCloudBackupStore {
     let base: FilePlanCloudBackupStore
     var archiveReads = 0
+    var archiveReadsOnMainThread = 0
     var failNextSave = false
     init(root: URL) { base = FilePlanCloudBackupStore(root: root) }
     func save(_ archive: PlanMonthlyArchive, at path: PlanCloudBackupPath) throws {
@@ -7309,7 +7334,11 @@ private final class CountingDailyBackupStore: PlanCloudBackupStore {
     }
     func delete(at path: PlanCloudBackupPath) throws { try base.delete(at: path) }
     func latest() throws -> PlanMonthlyArchive? { archiveReads += 1; return try base.latest() }
-    func allArchives() throws -> [PlanMonthlyArchive] { archiveReads += 1; return try base.allArchives() }
+    func allArchives() throws -> [PlanMonthlyArchive] {
+        archiveReads += 1
+        if Thread.isMainThread { archiveReadsOnMainThread += 1 }
+        return try base.allArchives()
+    }
     func archives(for periodKey: String) throws -> [PlanMonthlyArchive] { archiveReads += 1; return try base.archives(for: periodKey) }
     func dailyCompletion(for dayKey: String) throws -> Data? { try base.dailyCompletion(for: dayKey) }
     func saveDailyCompletion(_ data: Data, dayKey: String) throws { try base.saveDailyCompletion(data, dayKey: dayKey) }

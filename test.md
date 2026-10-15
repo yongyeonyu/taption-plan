@@ -1,5 +1,11 @@
 # 검증 기록
 
+## COM1016A01 · 1단계 안정성 1차 (2026-10-16)
+- 수정: (1) `PlanRepository`의 백그라운드 작업 만료 핸들러가 작업을 끝내지 않던 문제를 `BackgroundTaskAssertion`으로 고쳤다. 핸들러가 직접 종료하고, 할당을 못 받아도 쓰기를 버리지 않고 실행한다(이전에는 CancellationError로 조용히 버렸다). (2) HealthKit observer completion을 한 번만 호출하게 하고 20초 제한과 백그라운드 할당을 추가했다. (3) `sceneEnteredBackground`에 백그라운드 할당을 걸고, 취소한 센서 갱신이 정리된 뒤 강제 저장하게 했다(갱신 중이면 강제 저장이 trailing 쓰기로 미뤄지던 경로). (4) 복원의 `allArchives()` 읽기와 전체 archive 복호화·병합을 `PlanBackupWorker`로 옮겼다(`selectedSnapshotArchivesOffMain`, `loadLatestBackupOffMain`, 순수 `nonisolated` 디코드).
+- 변경 전 재현: 신규 `testRestoreReadsAndDecodesArchivesOffTheMainThread`가 수정 전 코드에서 `TEST FAILED`(`restore-baseline-01.log`). 수정 후 통과.
+- 자동 검증: `SecurityBackupCoreTests` + `DiagnosticsLogSupportTests` 176개 통과, 실패·건너뜀 0(`phase1-backup-01.xcresult`). generic iOS Debug `BUILD SUCCEEDED`(`debug-phase1-01.log`).
+- 제한: (1)(2)(3)은 단위 테스트가 없다. UIApplication 백그라운드 할당과 HealthKit 실제 wake는 기기에서만 재현된다. 코드 판독과 빌드 통과만 근거이며 실기기 효과는 미확인이다. 센서 갱신 롤백(`performSensorTimelineRefresh`)은 갱신 중 사용자 편집이 메모리에서 사라지는지 재현 전이라 수정하지 않았다(`persistDeviceLocalSnapshot`은 갱신 중 저장을 이미 미룬다). 레거시 일자 DB 이관·백그라운드 깨움마다 AppModel 재생성은 미착수.
+
 ## COM1016A01 · 0단계 기준선 (2026-10-16)
 - 변경: CRS1015A01 변경을 95255af로 커밋(push 안 함). 하드코딩 경로(`/Users/u_mo_c/...`)로 파일을 쓰던 임시 고양이 시트 테스트 `testTempRenderCatContactSheet`(138줄)와 `import SwiftUI // TEMP-CAT-SHEET`를 삭제했다. `.gitignore`에서 `Package.resolved`를 빼고 Xcode workspace의 `Package.resolved`를 추적한다. `.github/workflows/ci.yml`을 추가했다(패키지 테스트·경계 검사·앱 generic iOS Debug 빌드).
 - 검증: `scripts/check-app-engine-import-boundary.sh` 통과. `swift test` Core 134개·Activity 33개 0실패, Route는 swift-testing 48개 통과, Engine은 XCTest 1개 통과. 앱 테스트 타깃 `build-for-testing`(generic iOS Simulator) `TEST BUILD SUCCEEDED`(삭제한 테스트 외 컴파일 오류 없음). 로그: `build/validation/COM1016A01/`.

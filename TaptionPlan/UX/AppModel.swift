@@ -4120,8 +4120,14 @@ final class AppModel {
     }
 
     func sceneEnteredBackground() async {
+        // Checkpoint, final persist and backup below need more time than iOS
+        // gives a suspending scene, so hold an assertion until they finish.
+        let backgroundAssertion = BackgroundTaskAssertion()
+        backgroundAssertion.begin(name: "TaptionPlan.sceneBackground") {}
+        defer { backgroundAssertion.end() }
         isSceneActive = false
         updateForegroundLiveLocationTracking()
+        let cancelledSensorTimeline = sensorTimelineTask
         sensorTimelineTask?.cancel()
         cancelSensorAnalysisUntilForeground()
         postSaveRefreshTask?.cancel()
@@ -4154,6 +4160,9 @@ final class AppModel {
         if let rawDeviceDataArchive {
             try? await rawDeviceDataArchive.checkpoint()
         }
+        // A refresh that is still unwinding makes the persist below defer to
+        // a trailing write, which may never run once the app is suspended.
+        _ = await cancelledSensorTimeline?.value
         await persistDeviceLocalSnapshot(force: true)
         await repository.handleMemoryPressure()
         await saveCloudBackupOnBackground()

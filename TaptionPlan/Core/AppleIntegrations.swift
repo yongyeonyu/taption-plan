@@ -522,13 +522,21 @@ actor HealthBackgroundRefreshCoordinator {
 
 private final class HealthObserverCompletion: @unchecked Sendable {
     private let callback: () -> Void
+    private let lock = NSLock()
+    private var hasCompleted = false
 
     init(_ callback: @escaping () -> Void) {
         self.callback = callback
     }
 
+    /// HealthKit accepts one completion per delivery, so a deadline and the
+    /// finished work can both call this safely.
     func callAsFunction() {
-        callback()
+        lock.lock()
+        let isFirst = !hasCompleted
+        hasCompleted = true
+        lock.unlock()
+        if isFirst { callback() }
     }
 }
 
@@ -677,11 +685,30 @@ final class AppleHealthService: @unchecked Sendable {
             ) { [weak self] _, completion, error in
                 let completion = HealthObserverCompletion(completion)
                 Task {
-                    if error == nil {
-                        self?.markObservedChange(typeIdentifier)
-                        await onUpdate()
+                    guard error == nil else {
+                        completion()
+                        return
                     }
+                    // Release HealthKit even if the refresh outlives the wake
+                    // window, so delivery is not throttled for slow work.
+                    let deadline = Task {
+                        try await Task.sleep(for: .seconds(20))
+                        completion()
+                    }
+                    #if os(iOS) && !TAPTION_WIDGET
+                    let assertion = await MainActor.run {
+                        let assertion = BackgroundTaskAssertion()
+                        assertion.begin(name: "TaptionPlan.healthObserver") {}
+                        return assertion
+                    }
+                    #endif
+                    self?.markObservedChange(typeIdentifier)
+                    await onUpdate()
+                    deadline.cancel()
                     completion()
+                    #if os(iOS) && !TAPTION_WIDGET
+                    await assertion.end()
+                    #endif
                 }
             }
         }
