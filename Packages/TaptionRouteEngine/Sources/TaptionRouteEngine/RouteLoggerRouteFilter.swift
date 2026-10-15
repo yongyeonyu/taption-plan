@@ -11,6 +11,8 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
     public var maximumGapSpeedMetersPerSecond: Double
     public var innovationGate: Double
     public var processAccelerationNoise: Double
+    public var reanchorMinimumSamples: Int
+    public var reanchorMinimumDuration: TimeInterval
 
     public init(
         stationaryRadiusMeters: Double = 3,
@@ -22,7 +24,9 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
         absoluteMaximumSpeedMetersPerSecond: Double = 120,
         maximumGapSpeedMetersPerSecond: Double = 280,
         innovationGate: Double = 9,
-        processAccelerationNoise: Double = 4
+        processAccelerationNoise: Double = 4,
+        reanchorMinimumSamples: Int = 6,
+        reanchorMinimumDuration: TimeInterval = 90
     ) {
         self.stationaryRadiusMeters = stationaryRadiusMeters
         self.stationarySpeedMetersPerSecond = stationarySpeedMetersPerSecond
@@ -34,6 +38,8 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
         self.maximumGapSpeedMetersPerSecond = maximumGapSpeedMetersPerSecond
         self.innovationGate = innovationGate
         self.processAccelerationNoise = processAccelerationNoise
+        self.reanchorMinimumSamples = reanchorMinimumSamples
+        self.reanchorMinimumDuration = reanchorMinimumDuration
     }
 }
 
@@ -157,14 +163,35 @@ public struct RouteLoggerRouteFilter: Sendable {
         plausible.reserveCapacity(normalized.count)
         var lastPlausible: RouteSample?
         var discontinuityIDs = Set<UUID>()
+        var reanchorIDs = Set<UUID>()
         var needsNewSegment = false
+        var rejectedRun: [RouteSample] = []
         for (index, sample) in normalized.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
-            if let previous = lastPlausible, !isPlausible(sample, after: previous) {
+            let next = index + 1 < normalized.count ? normalized[index + 1] : nil
+            if let previous = lastPlausible,
+               !isPlausible(sample, after: previous)
+                || isContradictedGapJump(sample, after: previous, next: next) {
                 decisions.append(.init(id: sample.id, timestamp: sample.timestamp, reason: .impossibleSpeed))
                 needsNewSegment = true
+                rejectedRun.append(sample)
+                if isSelfConsistentRun(rejectedRun) {
+                    // The anchor, not the run, was the outlier: a stale first fix
+                    // would otherwise reject real movement until speed catches up.
+                    let runIDs = Set(rejectedRun.map(\.id))
+                    decisions.removeAll { runIDs.contains($0.id) && $0.reason == .impossibleSpeed }
+                    if let first = rejectedRun.first {
+                        discontinuityIDs.insert(first.id)
+                        reanchorIDs.insert(first.id)
+                    }
+                    plausible.append(contentsOf: rejectedRun)
+                    lastPlausible = rejectedRun.last
+                    needsNewSegment = false
+                    rejectedRun.removeAll()
+                }
                 continue
             }
+            rejectedRun.removeAll()
             if needsNewSegment, sample.isPrecisePathSample(configuration) {
                 discontinuityIDs.insert(sample.id)
                 needsNewSegment = false
@@ -220,6 +247,10 @@ public struct RouteLoggerRouteFilter: Sendable {
                 if !current.path.isEmpty { segments.append(current) }
                 current = MutableSegment(isNewSegment: true)
                 kalman = Kalman2D()
+                if reanchorIDs.contains(sample.id) {
+                    lastAccepted = nil
+                    lastOutput = nil
+                }
             }
             if let previous = lastAccepted,
                sample.timestamp.timeIntervalSince(previous.timestamp) > configuration.segmentGap {
@@ -482,6 +513,42 @@ public struct RouteLoggerRouteFilter: Sendable {
         return mode == .unknown
             ? configuration.maximumUnknownSpeedMetersPerSecond
             : mode.maximumSpeedMetersPerSecond
+    }
+
+    /// A far fix after a recording gap passes the loose gap-speed check, so
+    /// look at the next fix: if it returns near the previous anchor and does
+    /// not follow the far fix, the far fix is a stale or cached outlier.
+    private func isContradictedGapJump(
+        _ sample: RouteSample,
+        after previous: RouteSample,
+        next: RouteSample?
+    ) -> Bool {
+        guard let next else { return false }
+        let elapsed = sample.timestamp.timeIntervalSince(previous.timestamp)
+        guard elapsed > configuration.segmentGap,
+              !isGroundPlausible(sample, after: previous) else { return false }
+        return isGroundPlausible(next, after: previous)
+            && !isGroundPlausible(next, after: sample)
+    }
+
+    /// Ground travel limit only; unlike `isPlausible` it never uses the gap
+    /// (flight) speed, so it separates "far but possible" from "ground-possible".
+    private func isGroundPlausible(_ sample: RouteSample, after previous: RouteSample) -> Bool {
+        let elapsed = sample.timestamp.timeIntervalSince(previous.timestamp)
+        guard elapsed > 0 else { return false }
+        let allowance = 3 * hypot(previous.horizontalAccuracyMeters, sample.horizontalAccuracyMeters)
+        return Geo.distance(previous.coordinate, sample.coordinate)
+            <= max(25, configuration.absoluteMaximumSpeedMetersPerSecond * elapsed + allowance)
+    }
+
+    /// Enough rejected fixes that agree with each other over enough time to be
+    /// the real position. Short bursts (a few seconds) stay rejected.
+    private func isSelfConsistentRun(_ run: [RouteSample]) -> Bool {
+        guard run.count >= configuration.reanchorMinimumSamples,
+              let first = run.first, let last = run.last,
+              last.timestamp.timeIntervalSince(first.timestamp) >= configuration.reanchorMinimumDuration
+        else { return false }
+        return zip(run, run.dropFirst()).allSatisfy { isGroundPlausible($1, after: $0) }
     }
 
     private func isPlausible(_ sample: RouteSample, after previous: RouteSample) -> Bool {

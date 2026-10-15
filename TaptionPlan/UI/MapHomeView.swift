@@ -1964,7 +1964,7 @@ struct MapHomeView: View {
         "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
-    private static let mapCacheAlgorithmKey = "route-document-v9"
+    private static let mapCacheAlgorithmKey = "route-document-v10"
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10

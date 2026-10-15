@@ -112,6 +112,49 @@ struct RouteEngineTests {
         #expect(report.log.normalizedSamples == values)
     }
 
+    // Seoul (37.5) to Busan (34.2) is roughly 365 km. 1,800 s later that is ~200 m/s.
+    @Test func singleFarFixAfterGapIsRejectedWhenNextFixReturnsToTheAnchor() {
+        let values = [
+            sample(0, 37.5), sample(30, 37.5001),
+            sample(1_830, 34.2, accuracy: 65),
+            sample(1_831, 37.5002), sample(1_832, 37.5003), sample(1_833, 37.5004),
+        ]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        let busan = values[2].id
+        #expect(report.decisions.contains { $0.id == busan && $0.reason == .impossibleSpeed })
+        #expect(!report.log.segments.flatMap { $0.pathSamples + $0.boundarySamples }.contains { $0.id == busan })
+        #expect(report.log.segments.flatMap(\.pathSamples).contains { $0.id == values[5].id })
+        #expect(report.log.normalizedSamples == values)
+    }
+
+    @Test func farFixAfterGapIsKeptWhenFollowingFixesContinueThere() {
+        let values = [
+            sample(0, 37.5), sample(30, 37.5001),
+            sample(1_830, 34.2), sample(1_831, 34.2001), sample(1_832, 34.2002),
+        ]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(!report.decisions.contains { $0.reason == .impossibleSpeed })
+        #expect(report.log.segments.last?.pathSamples.first?.id == values[2].id)
+        #expect(report.log.segments.last?.pathSamples.last?.id == values[4].id)
+    }
+
+    @Test func staleFirstFixDoesNotRejectTheRealRouteForever() {
+        let stale = sample(0, 34.2, accuracy: 65)
+        var values = [stale]
+        for second in 1...120 { values.append(sample(Double(second), 37.5 + Double(second) * 0.000005)) }
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        let rejected = report.decisions.filter { $0.reason == .impossibleSpeed }
+        #expect(rejected.count < 10, "Real fixes must re-anchor within seconds, not wait for speed to catch up")
+        #expect(report.log.segments.flatMap(\.pathSamples).contains { $0.id == values.last?.id })
+    }
+
+    @Test func shortBurstOfFarFixesStillCannotReanchor() {
+        let values = [sample(0, 37), sample(1, 35), sample(2, 35.00001), sample(3, 35.00002),
+                      sample(4, 37.0001), sample(5, 37.0002)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(report.decisions.filter { $0.reason == .impossibleSpeed }.count == 3)
+    }
+
     @Test func longGapAllowsNormalIntercityTravelAndDoesNotReuseWalkingSpeed() {
         let values = [sample(0, 37, mode: .walking), sample(7_200, 34, mode: .walking)]
         let report = RouteLoggerRouteFilter().filterWithReport(values)
