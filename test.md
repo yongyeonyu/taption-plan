@@ -1,18 +1,26 @@
 # 검증 기록
 
+## REL1015B01 · 일별 증분·압축 백업을 포함한 TestFlight177 내부 배포 완료
+- 소스/main: 일별 백업·로그 gzip·177 번호·자동 검증 기록을 e0c4f6767bd1b0c6afb7ed90e001d269974254fe에 커밋하고 push했다. 실제 원격 SHA 일치·ahead/behind0/0·clean을 확인했다. 이후 최종 배포 기록 커밋의 결과는 local-validation-evidence/REL1015B01/final-git.json에 별도 보존한다.
+- 검증: BAK1015B01/CMP1015A01의 앱 고유276개·Core40개 최종 통과 근거를 재사용했다(전체 앱 스위트 실행으로 표시하지 않음). 최종 Debug, iPhone Release archive/export, 독립 Watch Release는 모두 exit0·오류0·경고0. 제품 입력166개 해시는 최종 테스트/아카이브/정리 전후 일치한다. 네 최종 번들은1.0(177), strict 서명 검증 통과. iPhone IPA는 앱/Widget만 포함하며 Watch는 없다. export get-task-allow=false, beta-reports-active=true, iCloud Production이다.
+- 원본/업로드: 앱 UUID E155B899-2758-33D2-848D-4323994E619B, Widget UUID6DB97AA0-C5F2-3CF6-A65B-95440D7F4A6A가 archive/export 실행 파일과 dSYM에서 일치했다. IPA42,861,119바이트·SHA256 b1bc01e3dd2dec23f8f712e5d48e27ff2261522138a4519d624330130b63052e를1회 업로드했고 exit0/UPLOAD SUCCEEDED, delivery5317e02c-f155-42cc-a8c0-d55fea959260을 받았다. 초기 API 목록에 아직 노출되지 않은 대기 상태는 오류/재업로드로 처리하지 않았다.
+- 배포: API VALID/READY_FOR_BETA_TESTING 확인 후 ko 변경 안내를 저장하고 TP Taption Plan 내부 테스트 그룹에 연결했다. 최종 VALID/INTERNAL_ONLY/IN_BETA_TESTING, external NOT_APPLICABLE, 테스터1명·그룹134개 빌드를 확인했다. 로그인된 실제 웹 그룹 화면에서도1.0(177) ‘테스트 중’·90일 후 만료·테스터1명·134개 빌드를 읽어 화면과 텍스트를 보존했다.
+- 보존/정리: 원래 archive/export 실행 파일·두 dSYM·IPA·소스 해시14개를 artifacts/release-symbols/177/에 보존했다. 이번 생성 출력/캐시7경로의 삭제 전 할당 합계2,836,615,168바이트(약2.64GiB)와 전용 TaptionPlan-BAK1015B01 Simulator D5976B9F-8DBC-4CAD-8A13-D2949FD5D532를 제거했다. 실제 여유 공간 증가량과 구분한다. 원본14개·제품 입력166개는 삭제 전후 SHA가 같다. BAK1015B01의4014개·CMP1015A01의5개·REL1015B01의52개 실제 결과 파일은 같은 ID의 local-validation-evidence/로 바이트 동일성 확인 후 이동했다. 부분 xcresult와 중간 실패 로그도 보존했다.
+- 제한: 실제 iPhone 설치·일별 백업/복원·iCloud 전송 시간과 기존 백그라운드/GPS/재생 조건은 별도 미검증이다. 원래 사용자 DB·월별 백업·다른 프로젝트·공용 런타임은 변경하지 않았다. 공개 App Store/IAP/계약/심사는 진행하지 않았다. 근거는 artifacts/validation/REL1015B01.json과 로컬 같은 ID 폴더이다.
+
 ## BAK1015B01 · 완료 상태가 있는 일별 증분 백업
 - 구현: 월별 파일 생성 경로를 Gregorian `yyyy-MM-dd` snapshot/raw 조각으로 바꿨다. 미존재·미완성 날짜만 저장하며 오늘은 갱신한다. 날짜가 지난 뒤 마지막 전체 원본 저장·복호화 검증을 마치면 계정 키 HMAC으로 인증한 작은 `.dailycomplete`를 쓴다. 다음 백업에서는 표식과 참조 파일 존재만 확인하고 완료 날짜의 payload 읽기·암호화·쓰기를 건너뛴다. 성공 시각은 전체 배치가 끝난 뒤 갱신한다.
 - 보존/복원: 원래 월별 백업·사용자 DB는 보존한다. 날짜 경계에 걸친 기록은 ID로 합치며 미래 계획은 오늘 조각에 둔다. DST의 23/25시간 날짜를 달력 경계로 처리한다. 모든 조각을 합친 뒤 링크/삭제 표식을 처리하며 120일 이후 기록도 복원한다. 최신 날짜 파일을 읽을 수 없으면 부분 복원을 성공으로 표시하지 않는다. 오늘의 직전 세대·동시 분기·다른 기기가 게시 중일 수 있는 raw 파일을 보존한다.
 - 비용: 센서 날짜 목록은 SQLite timestamp 메타데이터로 조회하고 완료 날짜 원문은 열지 않는다. 첫 실행의 과거 누락 날짜 저장, 메타데이터 인덱스 스캔 및 메모리 snapshot 분류는 전체 기록에 비례하는 비용이 남는다. background snapshot 갱신은 기존 raw 참조를 유지하며 완료 표식은 만들지 않는다.
 - 검증: Core DayStore 40개(core-days-02), 앱 SecurityBackupCore 151개(daily-tests-05)가 각각 실패0으로 통과했다. daily-tests-03의 변경 없는 Diagnostics16개·Feature2개·SensorDayStore107개를 재사용해 앱 고유276개를 검증했다. 앱 최종 실행들의 건너뜀0. 신규 일별13개 회귀는 완료 날짜 본문 읽기0, 당일 덮어쓰기·다음 날 최종 확정, 실패 시 기존 백업, 키/PIN 변경 fence, 날짜 경계·미래 계획·privacy·교차 날짜 링크, 월별+125일 복원, 훼손 최신 파일 거부, raw 참조 유지, 배치 성공 시각·동시 분기 보존을 확인한다. 최종 177 iOS Debug 빌드(device-debug-02)는 exit0·오류0·경고0이며 앱/Widget strict 서명 검증도 통과했다.
 - 실패 이력: 초기 Core fixture의 sequence 타입, 일별 helper의 fileprivate encoder 참조, GeoPoint fixture 필수 인자 누락을 수정했다. daily-tests-02는270개 중 기존 GPS 끝점 assertion1개가 실패했다. 정지 흔들림 anchor 정책에 맞게 마지막 ID/시각과3m 이내를 확인하도록 시험을 고쳤고 GPS 기능 코드는 변경하지 않았다. daily-tests-03은274개 전부 통과했다. daily-tests-04는151개 중 새 보존 fixture가 값 없는 센서라 걸러져1개 실패했으며 모든 case 종료 후 장시간 진단 수집만 SIGINT/SIGTERM으로 중단했다(exit-15, 부분 xcresult 보존). 유효한 합성 위치로 고쳐 daily-tests-05에서151개 모두 재통과했다. 중간 실패·중단을 성공으로 합산하지 않았다.
-- 제한: 실제 iPhone 저장/복원·자정 동작·iCloud 동기화 시간·두 기기 동시 게시 검증은 별도이다. 작업 도구로 사용자 DB/백업 원문을 변환하거나 삭제하지 않았다. 근거는 build/validation/BAK1015B01/의 로그·xcresult·verification.json·166개 입력 해시이며 최종 정리 시 같은 ID의 local-validation-evidence/로 보존한다.
+- 제한: 실제 iPhone 저장/복원·자정 동작·iCloud 동기화 시간·두 기기 동시 게시 검증은 별도이다. 작업 도구로 사용자 DB/백업 원문을 변환하거나 삭제하지 않았다. 로그·xcresult·verification.json·166개 입력 해시는 artifacts/local-validation-evidence/BAK1015B01/에 보존했다. 수정은 REL1015B01의177 내부 TestFlight에 포함했다.
 
 ## CMP1015A01 · 데이터·진단 로그 압축
 - 데이터: 새 일별 snapshot/raw도 기존 V4 페이지 LZFSE 압축 후 AES-GCM 암호화·체크섬·바이트 수 검증을 그대로 사용한다. 데이터 압축 알고리즘을 새로 도입한 것으로 표현하지 않는다. 반복 한글/이모지 메모를 저장·복원해 원문 일치와 압축 효과를 시험했다.
 - 로그: 민감정보 제거 이후 표준 gzip으로 압축해 `.txt.gz`로 업로드한다. 충돌 방지를 위해 파일명에 UUID 접미사를 넣고 latest.json은 실제 압축 파일명·바이트 수를 가리킨다. 전송 실패 때 로컬 패키지를 남겨 같은 바이트로 재시도하며 기존 `.txt` 경로는 유지한다.
 - 검증: Diagnostics16개와 Feature2개 통과, 빈 로그/한글/이모지/큰 로그 원문 일치, CRC 훼손 거부, 업로드 실패 후 재시도·manifest 내용 확인. 실제 Swift 압축 함수를 별도로 실행한 합성 로그1,440,000바이트는4,285바이트(약0.30%)였고 Python 표준 gzip으로 해제한 바이트가 원문과 일치했다. 반복 문구 fixture의 결과이며 실제 사용자 로그 압축률·전송 속도 결과가 아니다.
-- 근거/제한: build/validation/CMP1015A01/gzip-standard-verification.json 및 BAK1015B01 관련 앱 결과. 최종 177 Debug 빌드·앱/Widget strict 서명 검증도 통과했다. 실제 기기 iCloud 업로드/다운로드는 미검증이다.
+- 근거/제한: artifacts/local-validation-evidence/CMP1015A01/gzip-standard-verification.json 및 BAK1015B01 관련 앱 결과. 수정은177 내부 TestFlight에 포함했다. 최종 177 Debug 빌드·앱/Widget strict 서명 검증도 통과했다. 실제 기기 iCloud 업로드/다운로드는 미검증이다.
 
 ## REL1015A01 · main 반영과 TestFlight176 내부 배포 완료
 - 소스/커밋: 시작 main8ea705385d70827a52a2c53ed48b18d2f42250e8의 기존 변경을 보존하고 실제 origin/main·ASC 최신175를 확인했다. 백그라운드·백업·GPS·재생 수정과176 번호를34e805ec4a9edd1986386f63f0488cffd6e50490에 커밋·push했으며 원격 SHA 일치·ahead/behind0/0·clean을 읽어 확인했다. 최종 배포 기록 커밋의 원격/clean 결과는 로컬 final-git.json으로 별도 보존한다.

@@ -1,0 +1,315 @@
+{
+  "requestID": "REL1015B01",
+  "completedAt": "2026-10-15T20:22:53.725637+09:00",
+  "version": "1.0",
+  "build": "177",
+  "sourceCommit": "e0c4f6767bd1b0c6afb7ed90e001d269974254fe",
+  "sourcePush": {
+    "head": "e0c4f6767bd1b0c6afb7ed90e001d269974254fe",
+    "remoteMain": "e0c4f6767bd1b0c6afb7ed90e001d269974254fe",
+    "aheadBehind": "0\t0",
+    "clean": true
+  },
+  "releaseInputCount": 166,
+  "tests": {
+    "selectedAppTests": 276,
+    "coreDayStoreTests": 40,
+    "finalSelectedFailures": 0,
+    "appSkipped": 0,
+    "evidence": [
+      "artifacts/validation/BAK1015B01.json",
+      "artifacts/validation/CMP1015A01.json"
+    ],
+    "notFullAppTestSuite": true
+  },
+  "debug": {
+    "startedAt": "2026-10-15T20:04:01.820812+09:00",
+    "exitCode": 0,
+    "elapsedSeconds": 186.81263995170593,
+    "errors": [],
+    "warnings": [],
+    "sourceInputCount": 166
+  },
+  "archive": {
+    "startedAt": "2026-10-15T20:08:31.550716+09:00",
+    "exitCode": 0,
+    "elapsedSeconds": 204.6480679512024,
+    "errors": [],
+    "warnings": [],
+    "sourceInputCount": 166
+  },
+  "export": {
+    "startedAt": "2026-10-15T20:11:57.419575+09:00",
+    "exitCode": 0,
+    "elapsedSeconds": 35.450801849365234,
+    "errors": [],
+    "warnings": [],
+    "sourceInputCount": 166
+  },
+  "watch": {
+    "startedAt": "2026-10-15T20:12:33.337590+09:00",
+    "exitCode": 0,
+    "elapsedSeconds": 44.96367311477661,
+    "errors": [],
+    "warnings": [],
+    "sourceInputCount": 166
+  },
+  "archiveProducts": {
+    "products": [
+      {
+        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app",
+        "id": "com.taption.plan",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "6b1b184fa3517023e619893d86cc8b985920928b58a1a7b1aaf5da7b65665530",
+        "uuids": [
+          [
+            "E155B899-2758-33D2-848D-4323994E619B",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": true,
+          "betaReportsActive": null,
+          "expires": "2027-09-26T05:03:59"
+        },
+        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
+        "dsymUUIDsMatch": true
+      },
+      {
+        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/Products/Applications/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "id": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "81dfc50a51b6ff991444e92961ba764eef7e0373562c58de21a03c851a0d3703",
+        "uuids": [
+          [
+            "6DB97AA0-C5F2-3CF6-A65B-95440D7F4A6A",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": true,
+          "betaReportsActive": null,
+          "expires": "2027-09-26T05:03:56"
+        },
+        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
+        "dsymUUIDsMatch": true
+      }
+    ],
+    "embeddedWatch": false
+  },
+  "exportProducts": {
+    "products": [
+      {
+        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app",
+        "id": "com.taption.plan",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "1abf630842cc9ab28b916d9d5022308c3386598b2239ac9c5b80555d7a7ab776",
+        "uuids": [
+          [
+            "E155B899-2758-33D2-848D-4323994E619B",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": false,
+          "betaReportsActive": true,
+          "expires": "2027-08-03T04:58:12"
+        },
+        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlan.app.dSYM",
+        "dsymUUIDsMatch": true
+      },
+      {
+        "bundle": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check/Payload/TaptionPlan.app/PlugIns/TaptionPlanWidget.appex",
+        "id": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "3e1b73a7ea7e51b4b6f082fdb0c195ac5482eaca643badb1f37f31ac0995f169",
+        "uuids": [
+          [
+            "6DB97AA0-C5F2-3CF6-A65B-95440D7F4A6A",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": false,
+          "betaReportsActive": true,
+          "expires": "2027-08-03T04:58:12"
+        },
+        "dsym": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive/dSYMs/TaptionPlanWidget.appex.dSYM",
+        "dsymUUIDsMatch": true
+      }
+    ],
+    "embeddedWatch": false,
+    "ipa": {
+      "bytes": 42861119,
+      "sha256": "b1bc01e3dd2dec23f8f712e5d48e27ff2261522138a4519d624330130b63052e"
+    }
+  },
+  "watchProducts": {
+    "products": [
+      {
+        "bundle": "build/REL1015B01DD/Build/Products/Release-watchos/TaptionPlanWatch.app",
+        "id": "com.taption.plan.watchkitapp",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "5bf1d3e871dcc4e7d58f725f2476e31245767cd0ca3a5f75813da60ab6e37789",
+        "uuids": [
+          [
+            "929AC2CB-DBF0-3C19-AA6A-ABC1BC2D1615",
+            "arm64_32"
+          ],
+          [
+            "F5F08468-EB67-3FF1-BA1C-0B688CDE5270",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": true,
+          "betaReportsActive": null,
+          "expires": "2027-08-04T03:07:21"
+        }
+      },
+      {
+        "bundle": "build/REL1015B01DD/Build/Products/Release-watchos/TaptionPlanWatch.app/PlugIns/TaptionPlanWatchWidget.appex",
+        "id": "com.taption.plan.watchkitapp.widget",
+        "version": "1.0",
+        "build": "177",
+        "signatureVerified": true,
+        "binarySHA256": "9817a0374b6e9fd8d2ad8109631b27660d48986f1dcec6bdba67d04875057a48",
+        "uuids": [
+          [
+            "96C948D3-BF40-30B1-9038-FD8AA94AABC8",
+            "arm64_32"
+          ],
+          [
+            "CE2DE6B8-B072-365D-B801-5E536B69A684",
+            "arm64"
+          ]
+        ],
+        "provisioning": {
+          "getTaskAllow": true,
+          "betaReportsActive": null,
+          "expires": "2027-08-04T03:07:17"
+        }
+      }
+    ],
+    "embeddedWatch": false
+  },
+  "exportEntitlements": {
+    "get-task-allow": false,
+    "beta-reports-active": true,
+    "com.apple.developer.icloud-container-environment": "Production",
+    "com.apple.developer.icloud-services": [
+      "CloudKit",
+      "CloudDocuments"
+    ]
+  },
+  "upload": {
+    "exitCode": 0,
+    "elapsedSeconds": 88.16733717918396,
+    "uploadSucceeded": true,
+    "deliveryID": "5317e02c-f155-42cc-a8c0-d55fea959260"
+  },
+  "testFlight": {
+    "checkedAt": "2026-10-15T20:20:04.173567+09:00",
+    "build": "177",
+    "buildID": "5317e02c-f155-42cc-a8c0-d55fea959260",
+    "processingState": "VALID",
+    "buildAudienceType": "INTERNAL_ONLY",
+    "details": [
+      {
+        "autoNotifyEnabled": true,
+        "internalBuildState": "IN_BETA_TESTING",
+        "externalBuildState": "NOT_APPLICABLE"
+      }
+    ],
+    "groupID": "b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd",
+    "groupName": "TP Taption Plan 내부 테스트",
+    "groupContainsBuild": true,
+    "groupBuildCount": 134,
+    "testerCount": 1
+  },
+  "web": {
+    "checkedAt": "2026-10-15T20:21:12.928651+09:00",
+    "group": "TP Taption Plan 내부 테스트",
+    "build": "177",
+    "version": "1.0",
+    "testerCount": 1,
+    "buildCount": 134,
+    "state": "테스트 중",
+    "expiry": "90일 후 만료",
+    "screenshot": "web-group-build177.jpg",
+    "screenshotSHA256": "2d866cf7cfc9cf24c805b01bb0263edf4a8cdd95b20ce785ec2d5e88ef1e32d4",
+    "url": "https://appstoreconnect.apple.com/teams/229c124e-7477-462c-b3f0-3180eb81ff25/apps/6797370230/testflight/groups/b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd/builds"
+  },
+  "preservation": {
+    "path": "artifacts/release-symbols/177",
+    "files": 14,
+    "manifest": "artifacts/release-symbols/177/manifest.json",
+    "sourceInputCount": 166
+  },
+  "cleanup": {
+    "requestID": "REL1015B01",
+    "finishedAt": "2026-10-15T20:21:15.063694+09:00",
+    "paths": [
+      {
+        "path": "build/BAK1015B01DD",
+        "allocatedBytesBefore": 1488244736,
+        "removed": true
+      },
+      {
+        "path": "build/BAK1015B01Core",
+        "allocatedBytesBefore": 141164544,
+        "removed": true
+      },
+      {
+        "path": "build/REL1015B01DD",
+        "allocatedBytesBefore": 925245440,
+        "removed": true
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/TaptionPlan177.xcarchive",
+        "allocatedBytesBefore": 130441216,
+        "removed": true
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-177",
+        "allocatedBytesBefore": 42946560,
+        "removed": true
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/export-check",
+        "allocatedBytesBefore": 108564480,
+        "removed": true
+      },
+      {
+        "path": "/Users/u_mo_c/Documents/taption plan/build/validation/REL1015B01/__pycache__",
+        "allocatedBytesBefore": 8192,
+        "removed": true
+      }
+    ],
+    "allocatedBytesBeforeTotal": 2836615168,
+    "deletedSimulator": {
+      "id": "D5976B9F-8DBC-4CAD-8A13-D2949FD5D532",
+      "name": "TaptionPlan-BAK1015B01"
+    },
+    "sourceInputsVerifiedBeforeAndAfter": 166,
+    "originalFilesVerifiedBeforeAndAfter": 14,
+    "scope": "Only output created by BAK1015B01/REL1015B01 and their dedicated simulator; no shared runtime, other project or user data deleted."
+  },
+  "evidenceRoot": "artifacts/local-validation-evidence/REL1015B01",
+  "finalGitEvidence": "artifacts/local-validation-evidence/REL1015B01/final-git.json",
+  "limitations": [
+    "Actual iPhone daily backup/restore and iCloud transfer duration were not verified.",
+    "Existing physical-device checks for background/GPS/playback remain open.",
+    "No public App Store submission, IAP or contract changes."
+  ]
+}

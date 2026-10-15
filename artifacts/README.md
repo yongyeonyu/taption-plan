@@ -1,5 +1,7 @@
 # 검증·진단 자료
 
+`validation/REL1015B01.json`은 일별 증분·로그 압축을 포함한1.0(177)의 main 반영·내부 TestFlight 배포·정리 기록입니다. 원래 실행 파일/dSYM/IPA는 `release-symbols/177/manifest.json`, 실제 빌드·API·그룹 화면·최종 Git 결과는 `local-validation-evidence/REL1015B01/`에 보존합니다.
+
 `validation/BAK1015B01.json`과 `CMP1015A01.json`은 일별 완료 백업·로그 gzip 변경의 자동 검증 기록입니다. 앱 고유276개·Core40개 및177 Debug 결과, 중간 실패/재검증, 합성 압축률과 실제 기기 제한을 구분합니다. 실제 근거는 같은 요청 ID의 `local-validation-evidence/`에 보존합니다.
 
 `validation/REL1015A01.json`은 main 소스34e805e의1.0(176) Release·내부 TestFlight 배포·그룹 웹 확인·생성 출력 정리 기록입니다. 실제 로그·API 결과·내부 그룹 화면과 최종 Git 확인은 `local-validation-evidence/REL1015A01/`에 있습니다. `release-symbols/176/manifest.json`은 실제 업로드한 IPA와 원래 archive/export 실행 파일·두 dSYM·소스 해시의 동일성을 기록합니다. iPhone 배포에는 앱/Widget만 포함하며 실제 기기 기능 판정은 별도입니다.
