@@ -1,9 +1,13 @@
 # 검증 기록
 
-## REL1016A01 · 1.0(178) 내부 배포 진행 (2026-10-16)
-- 소스: 5bd8d63까지 `origin/main`에 push(55e3732, 원격 SHA 일치·ahead/behind 0/0 확인). 빌드 번호 178을 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist` `CFBundleVersion`에 반영했고, ASC 최신 빌드는 177(178 없음)이었다.
-- 1차 업로드 거부: Release archive·internal export 성공(앱·Widget 1.0(178), strict 서명, get-task-allow=false, iCloud Production, Watch 미포함, IPA 42,898,532바이트 SHA-256 `e6046f4c…2c55`). `altool --upload-app`이 오류 90683(`NSHealthUpdateUsageDescription` 누락)으로 거부했다. 업로드 전 검증 단계 거부이며 ASC에 빌드가 생성되지 않았다. 원인은 5a 작업에서 읽기 전용이라는 이유로 이 키를 제거한 것이다. HealthKit entitlement가 있으면 Apple이 쓰기 권한 문구를 요구한다.
-- 수정: Info.plist와 InfoPlist.xcstrings에서 키를 복구했고(`HealthPurposeStringContractTests` 추가), 번호 178을 그대로 재사용해 다시 archive한다. 이전 5a 에이전트의 판단 오류이며 `PRIVACY.md`의 "iPhone 앱은 건강 데이터를 읽기만 한다"는 서술은 그대로 사실이다.
+## REL1016A01 · 1.0(178) 내부 TestFlight 배포·iPhone 11 Pro/18 Pro Max 설치 (2026-10-16)
+- 소스: `origin/main` `fabb399`(push 후 원격 일치). 빌드 번호 178을 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`에 반영했고 ASC 최신은 177이었다.
+- 1차 업로드 거부: 첫 archive(`TaptionPlan178.xcarchive`)의 IPA를 `altool`이 오류 90683(`NSHealthUpdateUsageDescription` 누락)으로 거부했다. 업로드 전 검증 단계 거부이며 ASC에 빌드가 만들어지지 않았다. 5a 작업에서 읽기 전용이라는 판단으로 이 키를 지웠으나 HealthKit entitlement가 있으면 필요하다. 키·번역을 복구하고 `HealthPurposeStringContractTests`를 추가했다(이 테스트는 아직 실행하지 않았다).
+- 최종 산출물: 재 archive(`TaptionPlan178b.xcarchive`, 오류·경고 0)와 internal export(`export-178b`). 앱 `com.taption.plan`·Widget `com.taption.plan.widget` 모두 1.0(178), strict 서명 통과, get-task-allow=false, iCloud 환경 Production, Watch 미포함, 건강 쓰기 문구 키 포함. IPA 42,898,718바이트·SHA-256 `99549fe99443eef45883f4eb6f20ecbf4f90553a46527a52bf4a1c7a36006374`를 1회 업로드했고 exit 0·`UPLOAD SUCCEEDED with no errors`, Delivery `18979b73-1851-46fd-9af5-d840ff613a2f`.
+- 내부 배포: API로 빌드 178 `VALID`, 내부 상태 `READY_FOR_BETA_TESTING`을 확인하고 ko 안내를 저장한 뒤 `TP Taption Plan 내부 테스트` 그룹에 연결했다(HTTP 204). 최종 내부 `IN_BETA_TESTING`, 외부 `NOT_APPLICABLE`, 그룹에 178 포함(135개 빌드), 테스터 1명. 규칙의 웹 그룹 화면 확인은 하지 못했다: 이 앱 브라우저는 App Store Connect에 로그인되어 있지 않고 로그인 정보는 입력하지 않았다. 웹 화면 판독은 미완료이며 API 근거만 있다.
+- 기기 설치(`devicectl install app`, 기존 데이터 유지 update-in-place): archive 앱(개발 서명, Team 4FWG8XXYM7)을 iPhone 11 Pro `00008030-…`와 iPhone 18 Pro Max `00008160-…`에 설치했다. 두 JSON outcome `success`, 설치 후 앱 목록 readback 모두 1.0(178). 이전은 iPhone 11 Pro 1.0(177). iPhone 18은 첫 조회에서 연결이 끊겼으나 재시도에서 성공했다. 설치만으로 권한·저장·센서·백업·부산 재현 여부는 판정하지 않았다. TestFlight 앱 업데이트와 개발 서명 설치가 번갈아 있으면 서명이 바뀐다.
+- 보존: dSYM·IPA·실행 파일을 `artifacts/release-symbols/178/`에 보존했다(git 제외 경로). 로그·검증 JSON은 `build/validation/REL1016A01/`에 있다.
+- 제한: 이번 빌드의 변경(백업 복원 off-main, 백그라운드 보호, 경로 필터, 날씨 정리)은 합성 테스트와 Debug·Release 빌드까지 확인했고 실기기 동작은 대표 확인을 기다린다. 공개 App Store·IAP·심사 제출은 하지 않았다.
 
 ## COM1016A01 · Open-Meteo 기록 폐기·개인정보 문구 정정·조사 (2026-10-16)
 - 대표 결정: 부산은 다시 써 보고 재현 여부를 본다. 개인정보(App Store Connect 라벨)는 대표가 나중에 확인한다. Open-Meteo 시절 기록은 지운다. 해외 대기질 제공자와 건강 데이터의 iCloud 포함 범위를 조사한다.
