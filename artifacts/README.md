@@ -1,5 +1,7 @@
 # 검증·진단 자료
 
+`validation/CRS1015A01.json`은 iPhone 18의 실제 176 백업 watchdog 세 건을 원래 dSYM으로 확인하고 반복 인코딩·화면 스레드 정지를 수정한 근거입니다. 고유 175개 테스트·Debug·서명을 확인했으며 오늘 10:10 부산 원본 대조와 수정 빌드의 실기기 확인은 남아 있습니다. 원본 충돌 보고서 3개는 `local-validation-evidence/CRS1015A01/device-crashes/`에 로컬 전용으로 보존하고, 현재 검증 로그/xcresult는 `build/validation/CRS1015A01/`에 있습니다.
+
 `validation/REL1015B01.json`은 일별 증분·로그 압축을 포함한1.0(177)의 main 반영·내부 TestFlight 배포·정리 기록입니다. 원래 실행 파일/dSYM/IPA는 `release-symbols/177/manifest.json`, 실제 빌드·API·그룹 화면·최종 Git 결과는 `local-validation-evidence/REL1015B01/`에 보존합니다.
 
 `validation/BAK1015B01.json`과 `CMP1015A01.json`은 일별 완료 백업·로그 gzip 변경의 자동 검증 기록입니다. 앱 고유276개·Core40개 및177 Debug 결과, 중간 실패/재검증, 합성 압축률과 실제 기기 제한을 구분합니다. 실제 근거는 같은 요청 ID의 `local-validation-evidence/`에 보존합니다.

@@ -1,4 +1,5 @@
 import CryptoKit
+import TaptionPlanCore
 import XCTest
 @testable import TaptionPlan
 
@@ -2309,7 +2310,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let state = BackupDeletionFenceTestState()
         let backupStore = DeletionFenceTestBackupStore(
             state: state,
-            advanceAfterRawWriteOnRead: 2
+            advanceAfterRawWriteOnRead: 1
         )
         let rawStore = DeletionFenceTestRawSensorBackupStore(state: state)
         let service = makeService(
@@ -2349,7 +2350,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         } catch is CancellationError {
         }
 
-        XCTAssertEqual(state.snapshotReadsAfterRawWrite, 2)
+        XCTAssertEqual(state.snapshotReadsAfterRawWrite, 1)
         XCTAssertEqual(backupStore.saveCount, 0)
         XCTAssertTrue(try rawStore.allArchives().isEmpty)
         XCTAssertNil(service.status.latestSuccessfulBackupDate)
@@ -7313,5 +7314,168 @@ private final class CountingDailyBackupStore: PlanCloudBackupStore {
     func dailyCompletion(for dayKey: String) throws -> Data? { try base.dailyCompletion(for: dayKey) }
     func saveDailyCompletion(_ data: Data, dayKey: String) throws { try base.saveDailyCompletion(data, dayKey: dayKey) }
     func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool { try base.containsSnapshot(at: path) }
+    func deleteAll() throws { try base.deleteAll() }
+}
+
+@MainActor
+extension SecurityBackupCoreTests {
+    func testRawBackupPageEncodingScalesWithPagesInsteadOfRows() throws {
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        let readings = (0..<512).map { index in
+            SensorReading(timestamp: now.addingTimeInterval(Double(index)),
+                point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+                sourceDevice: .iPhone)
+        }
+        let encoder = BackupCountingJSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        let payload = PlanCloudRawSensorPayload(monthKey: "2026-10-15", sensorReadings: readings, createdAt: now)
+        let pages = try PlanCloudRawSensorPageCodec.pages(from: payload, encoder: encoder)
+        XCTAssertEqual(pages.count, 2)
+        XCTAssertLessThanOrEqual(encoder.encodeCalls, 16, "Do not encode the growing page for every appended row")
+        print("Raw backup page encoding calls: \(encoder.encodeCalls) for \(readings.count) rows")
+        let restored = try PlanCloudRawSensorPageCodec.payload(from: pages, monthKey: payload.monthKey, createdAt: now)
+        XCTAssertEqual(restored.sensorReadings, readings)
+    }
+
+    func testRawBackupPreparationYieldsTheMainActorBeforeCommit() async throws {
+        let raw = BackupLoadCallbackStore()
+        let service = makeService(rawSensorBackupStore: raw,
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 51))
+        try service.setPIN("1234")
+        var finished = false
+        var mainActorRanBeforeFinish = false
+        raw.onFirstLoad = {
+            Task { @MainActor in mainActorRanBeforeFinish = !finished }
+        }
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        let readings = (0..<512).map { index in
+            SensorReading(timestamp: now.addingTimeInterval(Double(index)),
+                point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+                sourceDevice: .iPhone)
+        }
+        _ = try await service.saveMonthlyGeneration(PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: PlanCloudRawSensorPayload(monthKey: "2026-10", sensorReadings: readings, createdAt: now),
+            date: now, publishesManifest: false)
+        finished = true
+        await Task.yield()
+        XCTAssertTrue(mainActorRanBeforeFinish, "Backup preparation must let the UI run before the archive commits")
+    }
+
+    func testRawBackupPagesSplitByEncodedBytesAndKeepOrder() throws {
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        let readings = (0..<80).map { SensorReading(timestamp: now.addingTimeInterval(Double($0)),
+            point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5), sourceDevice: .iPhone) }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let payload = PlanCloudRawSensorPayload(monthKey: "2026-10-15", sensorReadings: readings, createdAt: now)
+        let pages = try PlanCloudRawSensorPageCodec.pages(from: payload, maximumRows: 64, maximumBytes: 4_096, encoder: encoder)
+        XCTAssertGreaterThan(pages.count, 2)
+        for (index, page) in pages.enumerated() {
+            XCTAssertEqual(page.index, index)
+            XCTAssertLessThanOrEqual(try encoder.encode(page).count, 4_096)
+        }
+        let restored = try PlanCloudRawSensorPageCodec.payload(from: pages, monthKey: payload.monthKey, createdAt: now)
+        XCTAssertTrue(restored.sensorReadings == readings, "Preserve all row values and their order")
+    }
+
+    func testRawBackupPagesRejectAnOversizedSingleItem() throws {
+        let date = Date(timeIntervalSince1970: 1_792_000_000)
+        let context = WeatherContext(observedAt: date,
+            condition: String(repeating: "x", count: PlanCloudRawSensorPageCodec.hardMaximumBytes),
+            symbolName: "sun.max.fill", temperatureCelsius: 20, point: nil)
+        let envelope = try RawDeviceDataEnvelope(capturedAt: date, source: .gps,
+            kind: "weather-context", payload: context)
+        let payload = PlanCloudRawSensorPayload(monthKey: "2026-10-15", envelopes: [envelope])
+        XCTAssertThrowsError(try PlanCloudRawSensorPageCodec.pages(from: payload)) { error in
+            guard case TaptionPlanV3StoreError.rawEventPageItemTooLarge = error else {
+                return XCTFail("Expected a page size error, got \(error)")
+            }
+        }
+    }
+
+    func testRawBackupPageCandidatesStayBoundedForLargeRows() throws {
+        let envelopes = try (0..<8).map { index in
+            let date = Date(timeIntervalSince1970: 1_792_000_000 + Double(index))
+            let context = WeatherContext(observedAt: date, condition: String(repeating: "x", count: 100_000),
+                symbolName: "sun.max.fill", temperatureCelsius: Double(index), point: nil)
+            return try RawDeviceDataEnvelope(capturedAt: date,
+                source: .gps, kind: "weather-context", payload: context)
+        }
+        let payload = PlanCloudRawSensorPayload(monthKey: "2026-10-15", envelopes: envelopes)
+        let encoder = BackupCountingJSONEncoder()
+        let pages = try PlanCloudRawSensorPageCodec.pages(from: payload, maximumBytes: 150_000, encoder: encoder)
+        XCTAssertEqual(pages.count, 8)
+        XCTAssertEqual(encoder.maximumPageRows, 1, "Do not allocate an oversized page before splitting it")
+        let restored = try PlanCloudRawSensorPageCodec.payload(from: pages,
+            monthKey: payload.monthKey, createdAt: payload.createdAt)
+        XCTAssertTrue(restored.envelopes == envelopes, "Preserve every envelope byte")
+    }
+
+    func testRawBackupPageTraversalStopsOnCancellation() async throws {
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        let payload = PlanCloudRawSensorPayload(monthKey: "2026-10-15",
+            sensorReadings: (0..<3).map { SensorReading(timestamp: now.addingTimeInterval(Double($0)),
+                point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)) })
+        let task = Task {
+            var visited = 0
+            do {
+                try PlanCloudRawSensorPageCodec.forEachPage(from: payload, maximumRows: 1) { _ in
+                    visited += 1
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+                XCTFail("Cancelled traversal must stop before the next page")
+            } catch is CancellationError { }
+            return visited
+        }
+        let visited = try await task.value
+        XCTAssertEqual(visited, 1)
+    }
+
+    func testRawBackupPreparationInvalidatedByPINChangeDoesNotWrite() async throws {
+        let raw = BackupLoadCallbackStore()
+        let snapshots = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: snapshots, rawSensorBackupStore: raw,
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 51))
+        try service.setPIN("1234")
+        raw.onFirstLoad = { try? service.setPIN("5678") }
+        let now = Date(timeIntervalSince1970: 1_792_000_000)
+        do {
+            _ = try await service.saveMonthlyGeneration(PlanCloudBackupPayload(snapshot: .empty),
+                rawSensorPayload: PlanCloudRawSensorPayload(monthKey: "2026-10",
+                    sensorReadings: [SensorReading(timestamp: now,
+                        point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5))]), date: now, publishesManifest: false)
+            XCTFail("An invalidated preparation must not publish a backup")
+        } catch is CancellationError { }
+        XCTAssertTrue(try raw.allArchives().isEmpty)
+        XCTAssertTrue(snapshots.archives.isEmpty)
+    }
+}
+
+private final class BackupCountingJSONEncoder: JSONEncoder, @unchecked Sendable {
+    private(set) var encodeCalls = 0
+    private(set) var maximumPageRows = 0
+    override func encode<T: Encodable>(_ value: T) throws -> Data {
+        if let page = value as? PlanCloudRawSensorPage {
+            encodeCalls += 1
+            maximumPageRows = max(maximumPageRows, page.rowCount)
+        }
+        return try super.encode(value)
+    }
+}
+
+private final class BackupLoadCallbackStore: PlanCloudRawSensorBackupStore {
+    private let base = InMemoryPlanCloudRawSensorBackupStore()
+    var onFirstLoad: (() -> Void)?
+    func save(_ archive: PlanRawSensorMonthlyArchive, at path: PlanCloudRawSensorBackupPath) throws { try base.save(archive, at: path) }
+    func delete(at path: PlanCloudRawSensorBackupPath) throws { try base.delete(at: path) }
+    func latest() throws -> PlanRawSensorMonthlyArchive? { try base.latest() }
+    func allArchives() throws -> [PlanRawSensorMonthlyArchive] { try base.allArchives() }
+    func load(monthKey: String, generationID: UUID?) throws -> PlanRawSensorMonthlyArchive? {
+        let callback = onFirstLoad
+        onFirstLoad = nil
+        callback?()
+        return try base.load(monthKey: monthKey, generationID: generationID)
+    }
     func deleteAll() throws { try base.deleteAll() }
 }

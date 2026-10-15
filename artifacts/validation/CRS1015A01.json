@@ -1,0 +1,105 @@
+{
+  "requestID": "CRS1015A01",
+  "date": "2026-10-15",
+  "baseCommit": "2a2575821d0a78f662a9aad41670f083005695af",
+  "status": "backup_watchdog_fixed_and_validated_gps_raw_evidence_pending",
+  "device": {
+    "model": "iPhone 18 Pro Max",
+    "installedVersion": "1.0",
+    "installedBuild": "177",
+    "readOnlyInspection": true
+  },
+  "confirmedCrashes": {
+    "build": "176",
+    "localTimes": [
+      "18:59:47",
+      "19:01:27",
+      "19:15:28"
+    ],
+    "namespace": "FRONTBOARD",
+    "code": "0x8badf00d",
+    "event": "scene-update",
+    "allowanceSeconds": 10,
+    "mainThread": "PlanCloudRawSensorPageCodec.forEachPage -> saveRawSensorArchive -> saveMonthlyGeneration",
+    "matchedOriginalUUID": "F65005BE-72A5-39C6-9813-0AC3507B6457"
+  },
+  "changes": [
+    "Linear raw row sizing with bounded page candidates and strict final byte limits",
+    "Off-main raw merge, compression, encryption, raw file writes, snapshot preparation and daily receipt decoding",
+    "Cancellation/PIN/deletion checks and immutable previous-generation preservation",
+    "Strict previous raw decoding; preserve unreadable prior archive separately",
+    "Termination parser supports domain/code colon form; records original diagnostic build and version"
+  ],
+  "verification": {
+    "securityTests": 158,
+    "diagnosticTests": 17,
+    "uniqueTotal": 175,
+    "failed": 0,
+    "skipped": 0,
+    "finalDiagnosticRerun": 17,
+    "genericIOSDebugExit": 0,
+    "debugWarnings": 0,
+    "appAndWidgetSignatureExit": 0,
+    "finalInputHashesMatch": true,
+    "pageConstructionFullPageEncodes": {
+      "rows": 512,
+      "before": 1024,
+      "after": 2
+    }
+  },
+  "intermediateRuns": [
+    {
+      "run": "baseline-01",
+      "exit": 65,
+      "executed": 2,
+      "failedTests": 2,
+      "reason": "Both newly added watchdog/performance regressions reproduced the defects"
+    },
+    {
+      "run": "related-01",
+      "exit": 65,
+      "executed": 0,
+      "reason": "Missing core module import in a new test fixture"
+    },
+    {
+      "run": "related-02",
+      "exit": 65,
+      "executed": 175,
+      "failedTests": 5,
+      "assertionFailures": 9,
+      "reason": "Four new fixtures were removed by existing export privacy rules; one deletion test injected at an obsolete read count. Valid export fixtures and the commit-read injection point were corrected without removing cancellation or preservation assertions."
+    }
+  ],
+  "gps": {
+    "reportedBuild": "177",
+    "reportedDay": "2026-10-15",
+    "reportedStartLocalTime": "10:10",
+    "rawInspected": false,
+    "latestAvailableRawDay": "2026-10-06",
+    "directDBAccess": "devicectl error 11007: app-group root lies outside Library/Documents/tmp; not bypassed",
+    "decryptionLimitation": "PIN alone does not provide the device verifier or account recovery key",
+    "rootCauseConfirmed": false,
+    "gpsCodeChanged": false,
+    "userReportedBackupStatus": "in_progress_on_build_177"
+  },
+  "deployment": {
+    "buildNumberChanged": false,
+    "newDeviceInstall": false,
+    "newTestFlightUpload": false,
+    "committed": false,
+    "pushed": false
+  },
+  "sourceSHA256": {
+    "TaptionPlan/Core/SecurityBackupCore.swift": "96a6ad35905dc81334522ed87d2e8c1f1cd7538b7db99d3e4ae4abfcad62e1be",
+    "TaptionPlan/Core/SystemDiagnostics.swift": "46fb4d7d22cd83f15ef9aa15be10494c4c5e581cd94270a144b4d5f8bf09f610",
+    "TaptionPlanTests/SecurityBackupCoreTests.swift": "2ae449d90ccca8f46c7306b6b01919dbec59bedb552d16d1547aa81cc0ce3212",
+    "TaptionPlanTests/DiagnosticsLogSupportTests.swift": "5150333b9aba7f56b5f1bb3146f50ea7a6575e61e275394c329a758b907974a3"
+  },
+  "evidenceDirectory": "build/validation/CRS1015A01/",
+  "originalCrashReports": "artifacts/local-validation-evidence/CRS1015A01/device-crashes/",
+  "preservation": {
+    "userDatabaseAndBackupsUnchanged": true,
+    "originalReleaseExecutablesAndDSYMsUnchanged": true,
+    "noPINKeysOrLocationHealthPlaintextSavedOrTransmitted": true
+  }
+}

@@ -83,6 +83,24 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertEqual(unavailable["termination_code"], "unknown")
     }
 
+    func testSystemTerminationRecognizesRunningBoardWatchdogReason() {
+        let fields = TaptionTerminationDiagnosticFields.make(
+            reason: "<RBSTerminateContext| domain:10 code:0x8BADF00D explanation:scene-update watchdog transgression private-location>",
+            exceptionType: 10, exceptionCode: 0, signal: 9)
+        XCTAssertEqual(fields["termination_domain"], "10")
+        XCTAssertEqual(fields["termination_code"], "0x8badf00d")
+        XCTAssertEqual(fields["termination_category"], "watchdog")
+        XCTAssertFalse(fields.values.contains { $0.contains("private") })
+        let decimal = TaptionTerminationDiagnosticFields.make(reason: "namespace:FRONTBOARD code:2343432205",
+            exceptionType: 10, exceptionCode: 0, signal: 9)
+        XCTAssertEqual(decimal["termination_namespace"], "FRONTBOARD")
+        XCTAssertEqual(decimal["termination_category"], "watchdog")
+        let unknown = TaptionTerminationDiagnosticFields.make(reason: "Namespace private_secret Code 9",
+            exceptionType: nil, exceptionCode: nil, signal: nil)
+        XCTAssertEqual(unknown["termination_namespace"], "unknown")
+        XCTAssertEqual(unknown["termination_category"], "unknown")
+    }
+
     func testPrimaryWriteReportsPrimarySuccess() throws {
         let primary = rootURL.appendingPathComponent("primary")
         let fallback = rootURL.appendingPathComponent("fallback")
