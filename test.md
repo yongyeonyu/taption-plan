@@ -1,5 +1,12 @@
 # 검증 기록
 
+## COM1016A01 · Open-Meteo 기록 폐기·개인정보 문구 정정·조사 (2026-10-16)
+- 대표 결정: 부산은 다시 써 보고 재현 여부를 본다. 개인정보(App Store Connect 라벨)는 대표가 나중에 확인한다. Open-Meteo 시절 기록은 지운다. 해외 대기질 제공자와 건강 데이터의 iCloud 포함 범위를 조사한다.
+- 수정: `WeatherTimelineEngine.coalesced`가 `providerName`이 `Open-Meteo`로 시작하는 날씨 행을 걸러내고, 남은 행의 Open-Meteo 대기질 값은 비운다. 로드·raw 재생·병합이 모두 이 함수를 거친다. 저장된 raw 봉투와 이전 백업 파일은 수정하지 않았다. 다음 저장 때 스냅샷에서 해당 행이 빠진다. 신규 `WeatherRetiredProviderTests` 2개, 오래된 fixture 1개(`testWeatherTimelineKeepsSameDisplayedWeatherContinuous`의 대기질 제공자) 갱신. `WeatherRetiredProviderTests`+해당 테스트 3개 통과, 먼저 돌린 `FeatureEngineTests`·`LocalizationCatalogTests` 659개 중 2개 실패(기존 StoreKit, fixture 1개는 위에서 수정).
+- `PRIVACY.md`: 건강 데이터(HealthKit 파생)는 iCloud에 올리지 않고, 백업에는 iPhone 위치 기록·방문 장소·Apple Watch 동작 센서 표본이 포함되며 복구 키가 사용자의 iCloud 계정에 있다고 정정했다(코드 판독 결과, `PlanDailyBackup`·`PlanRepository.iCloudSafe`·`cloudRawSensorPayload`).
+- 조사 결과(정적 판독, 실행 아님): HealthKit에서 온 활동·수면·심박·운동 경로는 업로드되지 않는다(`PlanRepository.swift` 1640-1690, HealthKit import store는 백업 제외). Watch 가속도 chunk(CoreMotion)와 iPhone GPS는 필터 없이 올라간다. 복구 키는 사용자의 비공개 CloudKit에 있어 Apple 계정 수준의 접근이 가능하다. 4자리 PIN으로 감싼 키도 있다. 심사 지침 5.1.3의 "건강 정보" 범위에 Watch 동작 센서를 포함하는지는 대표/심사 판단이며 코드는 바꾸지 않았다.
+- 해외 대기질 조사(웹, 가격은 공식 페이지 미명시 항목 있음): Open-Meteo Standard 월 $29/100만 호출 + CC BY 4.0/CAMS 출처 표시(모델 약 45km), OpenWeatherMap Air Pollution 무료 100만/월·상업 허용(AQI 1-5, 출처 표시 필요, 약관 PDF 미확인), WAQI는 유료 앱 금지, Google은 약 $450/월(100k, 캐시 없이). WeatherKit에는 대기질 API가 없다. 키는 얇은 프록시로 숨겨야 한다. 구현·계약은 대표 결정 전이다.
+
 ## COM1016A01 · WeatherKit 병합 검증과 오래된 기대값 2건 갱신 (2026-10-16)
 - 병합: 에이전트 브랜치의 5a 커밋(Open-Meteo 제거·WeatherKit attribution·개인정보 문서)을 `main`에 `30cd228`로 가져왔다(충돌 없음). 병합본 `FeatureEngineTests`+`LocalizationCatalogTests` 657개 중 655 통과, 실패 2(`testManualCloudBackup…`, `testStoreKitProductPurchaseEntitlementAndRestore`, 모두 위 기존 실패)이며 generic iOS Debug `BUILD SUCCEEDED`(`merge-5a-01.xcresult`, `debug-merge-5a-01.log`).
 - 갱신: `testHealthBackgroundObserversOnlyWakeForTimelineInputs`의 기대 타입을 현재 정책(workout·수면·심박·걸음, HKS1004A01의 8개 읽기 범위)에 맞춰 mindfulSession→heartRate로 고쳤다. `testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration`의 기대 오류를 `invalidArchive`→`localSensorArchiveIncomplete`로 고쳤다(AppModel의 현재 계약, DEVELOPMENT.md). 이전 세대·raw 보존 검증은 그대로다. `HealthKitIntegrationTests` 전체와 수동 백업 2개 포함 37개 통과(`stale-fix-01.xcresult`).

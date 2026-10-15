@@ -5289,3 +5289,33 @@ final class MapHomePerformanceHelperTests: XCTestCase {
         XCTAssertNotEqual(weekdayEnglish, weekdayKorean)
     }
 }
+
+final class WeatherRetiredProviderTests: XCTestCase {
+    private func context(_ offset: TimeInterval, provider: String?, airProvider: String? = nil) -> WeatherContext {
+        let observedAt = Date(timeIntervalSince1970: 1_790_000_000 + offset)
+        return WeatherContext(
+            observedAt: observedAt, providerName: provider, condition: "맑음", symbolName: "sun.max.fill",
+            temperatureCelsius: 20 + offset / 3_600,
+            airQuality: airProvider.map {
+                AirQualityContext(pm10MicrogramsPerCubicMeter: 20, pm25MicrogramsPerCubicMeter: 10,
+                    observedAt: observedAt, providerName: $0, isFallback: true)
+            })
+    }
+
+    func testCoalescedDropsRowsFromRetiredOpenMeteoProviderOnly() {
+        let kept = context(0, provider: "WeatherKit")
+        let legacyUnknown = context(3_600, provider: nil)
+        let retired = context(7_200, provider: "Open-Meteo")
+        let result = WeatherTimelineEngine.coalesced([retired, legacyUnknown, kept])
+        XCTAssertEqual(Set(result.map(\.id)), [kept.id, legacyUnknown.id])
+    }
+
+    func testCoalescedRemovesRetiredAirQualityFromKeptRows() throws {
+        let row = context(0, provider: "WeatherKit", airProvider: "Open-Meteo")
+        let korean = context(3_600, provider: "WeatherKit", airProvider: "에어코리아")
+        let result = WeatherTimelineEngine.coalesced([row, korean])
+        XCTAssertEqual(result.count, 2)
+        XCTAssertNil(try XCTUnwrap(result.first { $0.id == row.id }).airQuality)
+        XCTAssertEqual(try XCTUnwrap(result.first { $0.id == korean.id }).airQuality?.providerName, "에어코리아")
+    }
+}

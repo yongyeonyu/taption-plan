@@ -17487,7 +17487,7 @@ final class FeatureEngineTests: XCTestCase {
                 pm10MicrogramsPerCubicMeter: 63,
                 pm25MicrogramsPerCubicMeter: 30,
                 observedAt: start.addingTimeInterval(60 * 60),
-                providerName: "Open-Meteo",
+                providerName: "에어코리아",
                 isFallback: true
             )
         )

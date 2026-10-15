@@ -2796,14 +2796,17 @@ enum WeatherTimelineEngine {
         defaultDuration: TimeInterval = 15 * 60
     ) -> [WeatherContext] {
         var seen = Set<UUID>()
+        // Open-Meteo's free tier forbids commercial use, so its rows are
+        // retired on load and raw replay. The raw envelopes stay untouched.
         let ordered = contexts
-            .filter { seen.insert($0.id).inserted }
+            .filter { !$0.isFromRetiredProvider && seen.insert($0.id).inserted }
             .sorted { $0.observedAt < $1.observedAt }
         var result: [WeatherContext] = []
         result.reserveCapacity(ordered.count)
 
         for original in ordered {
             var current = original
+            if current.airQuality?.isFromRetiredProvider == true { current.airQuality = nil }
             current.validUntil = span(
                 for: current,
                 defaultDuration: defaultDuration

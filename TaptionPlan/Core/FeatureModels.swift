@@ -1470,6 +1470,20 @@ enum WeatherSymbolKind: String, CaseIterable, Equatable, Sendable {
     }
 }
 
+private let retiredWeatherProviderPrefix = "Open-Meteo"
+
+extension WeatherContext {
+    var isFromRetiredProvider: Bool {
+        providerName?.hasPrefix(retiredWeatherProviderPrefix) == true
+    }
+}
+
+extension AirQualityContext {
+    var isFromRetiredProvider: Bool {
+        providerName.hasPrefix(retiredWeatherProviderPrefix)
+    }
+}
+
 struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var observedAt: Date
