@@ -1504,16 +1504,8 @@ private extension HKWorkoutActivityType {
 actor AppleWeatherContextService {
     private static let maximumForecastDays = 10
     private let service = WeatherKit.WeatherService.shared
-    private let fallbackService: OpenMeteoWeatherContextService
     private var cachedContext: CachedWeatherContext?
     private var appleAuthenticationRetryAfter: Date?
-
-    init(
-        fallbackService: OpenMeteoWeatherContextService =
-            OpenMeteoWeatherContextService()
-    ) {
-        self.fallbackService = fallbackService
-    }
 
     func context(
         latitude: Double,
@@ -1558,33 +1550,20 @@ actor AppleWeatherContextService {
             }
         }
 
-        do {
-            let context = try await fallbackService.context(
-                latitude: latitude,
-                longitude: longitude,
-                at: date
-            )
-            cachedContext = CachedWeatherContext(
-                location: point,
+        // A short network interruption should not erase the last usable
+        // weather during an active workout. Keep the cached observation
+        // as a graceful stale fallback and let the next refresh retry.
+        if let cachedContext {
+            var context = cachedContext.context
+            context.observedAt = date
+            context.isStale = true
+            self.cachedContext = CachedWeatherContext(
+                location: cachedContext.location,
                 context: context
             )
             return context
-        } catch {
-            // A short network interruption should not erase the last usable
-            // weather during an active workout. Keep the cached observation
-            // as a graceful stale fallback and let the next refresh retry.
-            if let cachedContext {
-                var context = cachedContext.context
-                context.observedAt = date
-                context.isStale = true
-                self.cachedContext = CachedWeatherContext(
-                    location: cachedContext.location,
-                    context: context
-                )
-                return context
-            }
-            throw WeatherContextServiceError.temporarilyUnavailable
         }
+        throw WeatherContextServiceError.temporarilyUnavailable
     }
 
     func hourlyContexts(
@@ -1605,8 +1584,6 @@ actor AppleWeatherContextService {
         )
         let forecastEnd = min(end, maximumEnd)
         guard forecastStart < forecastEnd else { return [] }
-        var contexts: [WeatherContext] = []
-        var loadedForecast = false
 
         do {
             let forecast = try await service.weather(
@@ -1622,27 +1599,9 @@ actor AppleWeatherContextService {
                     isForecast: $0.date >= forecastStart
                 )
             }
-            contexts.append(contentsOf: values)
-            loadedForecast = values.contains {
-                $0.observedAt >= forecastStart
-            }
+            if !values.isEmpty { return values }
         } catch {
-            // Fall through to the existing provider fallback below.
-        }
-
-        if !loadedForecast {
-            if let fallback = try? await fallbackService.hourlyContexts(
-                latitude: latitude,
-                longitude: longitude,
-                from: forecastStart,
-                through: forecastEnd
-            ) {
-                contexts.append(contentsOf: fallback)
-            }
-        }
-
-        if !contexts.isEmpty {
-            return contexts
+            // Fall through to the unbounded hourly request below.
         }
 
         do {
@@ -1660,12 +1619,7 @@ actor AppleWeatherContextService {
                 Self.weatherContext($0, isForecast: $0.date >= Date.now)
             }
         } catch {
-            return try await fallbackService.hourlyContexts(
-                latitude: latitude,
-                longitude: longitude,
-                from: forecastStart,
-                through: forecastEnd
-            )
+            throw WeatherContextServiceError.temporarilyUnavailable
         }
     }
 
@@ -1755,238 +1709,62 @@ enum WeatherContextServiceError: LocalizedError {
     }
 }
 
-actor OpenMeteoWeatherContextService {
-    private let session: URLSession
+/// Apple WeatherKit이 날씨를 보여 주는 화면마다 요구하는 출처 표기.
+struct WeatherAttributionInfo: Equatable, Sendable {
+    var serviceName: String
+    var combinedMarkLightURL: URL?
+    var combinedMarkDarkURL: URL?
+    var legalPageURL: URL
 
-    init(session: URLSession = .shared) {
-        self.session = session
-    }
+    /// 출처 정보를 아직 받지 못했을 때도 법적 고지 링크는 항상 보여 준다.
+    static let fallback = WeatherAttributionInfo(
+        serviceName: "Apple 날씨",
+        combinedMarkLightURL: nil,
+        combinedMarkDarkURL: nil,
+        legalPageURL: URL(
+            string: "https://weatherkit.apple.com/legal-attribution.html"
+        )!
+    )
 
-    func context(
-        latitude: Double,
-        longitude: Double,
-        at date: Date = .now
-    ) async throws -> WeatherContext {
-        var components = URLComponents(
-            string: "https://api.open-meteo.com/v1/forecast"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "latitude", value: String(latitude)),
-            URLQueryItem(name: "longitude", value: String(longitude)),
-            URLQueryItem(
-                name: "current",
-                value:
-                    "temperature_2m,weather_code,"
-                    + "precipitation_probability,is_day"
-            ),
-            URLQueryItem(name: "timezone", value: "auto"),
-            URLQueryItem(name: "forecast_days", value: "1"),
-        ]
-        guard let url = components?.url else {
-            throw OpenMeteoWeatherError.invalidRequest
-        }
-
-        var lastError: Error?
-        for attempt in 0..<2 {
-            do {
-                var request = URLRequest(url: url)
-                request.timeoutInterval = 12
-                request.cachePolicy = .reloadIgnoringLocalCacheData
-                let (data, response) = try await session.data(for: request)
-                guard let response = response as? HTTPURLResponse,
-                      (200..<300).contains(response.statusCode) else {
-                    throw OpenMeteoWeatherError.invalidResponse
-                }
-                let payload = try JSONDecoder().decode(
-                    OpenMeteoWeatherResponse.self,
-                    from: data
-                )
-                let presentation = OpenMeteoWeatherCodePresentation(
-                    code: payload.current.weatherCode,
-                    isDay: payload.current.isDay != 0
-                )
-                return WeatherContext(
-                    observedAt: date,
-                    fetchedAt: date,
-                    isStale: false,
-                    providerName: "Open-Meteo",
-                    condition: presentation.condition,
-                    symbolName: presentation.symbolName,
-                    temperatureCelsius: payload.current.temperatureCelsius,
-                    precipitationChance:
-                        payload.current.precipitationProbability.map {
-                            $0 / 100
-                        }
-                )
-            } catch {
-                lastError = error
-                if attempt == 0 {
-                    try? await Task.sleep(for: .seconds(1))
-                }
-            }
-        }
-        throw lastError ?? OpenMeteoWeatherError.invalidResponse
-    }
-
-    func hourlyContexts(
-        latitude: Double,
-        longitude: Double,
-        from start: Date,
-        through end: Date
-    ) async throws -> [WeatherContext] {
-        let now = Date.now
-        let forecastStart = max(start, now)
-        guard forecastStart < end else { return [] }
-        var components = URLComponents(
-            string: "https://api.open-meteo.com/v1/forecast"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "latitude", value: String(latitude)),
-            URLQueryItem(name: "longitude", value: String(longitude)),
-            URLQueryItem(
-                name: "hourly",
-                value: "temperature_2m,weather_code,precipitation_probability,is_day"
-            ),
-            URLQueryItem(
-                name: "current",
-                value: "temperature_2m,weather_code,precipitation_probability,is_day"
-            ),
-            URLQueryItem(
-                name: "timezone",
-                value: TimeZone.autoupdatingCurrent.identifier
-            ),
-            URLQueryItem(name: "forecast_days", value: "7"),
-        ]
-        guard let url = components?.url else {
-            throw OpenMeteoWeatherError.invalidRequest
-        }
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 12
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse,
-              (200..<300).contains(response.statusCode) else {
-            throw OpenMeteoWeatherError.invalidResponse
-        }
-        let payload = try JSONDecoder().decode(
-            OpenMeteoWeatherResponse.self,
-            from: data
-        )
-        guard let hourly = payload.hourly else {
-            throw OpenMeteoWeatherError.invalidResponse
-        }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.autoupdatingCurrent
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
-        let fetchedAt = Date.now
-        return zip(hourly.time, zip(hourly.temperatureCelsius, zip(hourly.weatherCode, zip(hourly.precipitationProbability, hourly.isDay))))
-            .compactMap { value -> WeatherContext? in
-                guard let observedAt = formatter.date(from: value.0),
-                      observedAt >= forecastStart,
-                      observedAt < end else { return nil }
-                let presentation = OpenMeteoWeatherCodePresentation(
-                    code: value.1.1.0,
-                    isDay: value.1.1.1.1 != 0
-                )
-                return WeatherContext(
-                    observedAt: observedAt,
-                    fetchedAt: fetchedAt,
-                    isStale: false,
-                    isForecast: observedAt >= fetchedAt,
-                    providerName: "Open-Meteo",
-                    condition: presentation.condition,
-                    symbolName: presentation.symbolName,
-                    temperatureCelsius: value.1.0,
-                    precipitationChance: value.1.1.1.0.map { $0 / 100 }
-                )
-            }
+    func markURL(isDark: Bool) -> URL? {
+        isDark ? combinedMarkDarkURL : combinedMarkLightURL
     }
 }
 
-private enum OpenMeteoWeatherError: Error {
-    case invalidRequest
-    case invalidResponse
+protocol WeatherAttributionProviding: Sendable {
+    func attribution() async throws -> WeatherAttributionInfo
 }
 
-private struct OpenMeteoWeatherResponse: Decodable {
-    struct Current: Decodable {
-        let temperatureCelsius: Double
-        let weatherCode: Int
-        let precipitationProbability: Double?
-        let isDay: Int
-
-        enum CodingKeys: String, CodingKey {
-            case temperatureCelsius = "temperature_2m"
-            case weatherCode = "weather_code"
-            case precipitationProbability = "precipitation_probability"
-            case isDay = "is_day"
-        }
-    }
-
-    let current: Current
-    let hourly: Hourly?
-
-    struct Hourly: Decodable {
-        let time: [String]
-        let temperatureCelsius: [Double]
-        let weatherCode: [Int]
-        let precipitationProbability: [Double?]
-        let isDay: [Int]
-
-        enum CodingKeys: String, CodingKey {
-            case time
-            case temperatureCelsius = "temperature_2m"
-            case weatherCode = "weather_code"
-            case precipitationProbability = "precipitation_probability"
-            case isDay = "is_day"
-        }
+struct AppleWeatherAttributionProvider: WeatherAttributionProviding {
+    func attribution() async throws -> WeatherAttributionInfo {
+        let value = try await WeatherKit.WeatherService.shared.attribution
+        return WeatherAttributionInfo(
+            serviceName: value.serviceName,
+            combinedMarkLightURL: value.combinedMarkLightURL,
+            combinedMarkDarkURL: value.combinedMarkDarkURL,
+            legalPageURL: value.legalPageURL
+        )
     }
 }
 
-struct OpenMeteoWeatherCodePresentation: Equatable {
-    let condition: String
-    let symbolName: String
+actor WeatherAttributionStore {
+    static let shared = WeatherAttributionStore()
 
-    init(code: Int, isDay: Bool) {
-        switch code {
-        case 0:
-            condition = "맑음"
-            symbolName = isDay ? "sun.max.fill" : "moon.stars.fill"
-        case 1:
-            condition = "대체로 맑음"
-            symbolName = isDay ? "sun.min.fill" : "moon.fill"
-        case 2:
-            condition = "구름 조금"
-            symbolName = isDay ? "cloud.sun.fill" : "cloud.moon.fill"
-        case 3:
-            condition = "흐림"
-            symbolName = "cloud.fill"
-        case 45, 48:
-            condition = "안개"
-            symbolName = "cloud.fog.fill"
-        case 51, 53, 55:
-            condition = "이슬비"
-            symbolName = "cloud.drizzle.fill"
-        case 56, 57, 66, 67:
-            condition = "진눈깨비"
-            symbolName = "cloud.sleet.fill"
-        case 61, 63:
-            condition = "비"
-            symbolName = "cloud.rain.fill"
-        case 65, 80, 81, 82:
-            condition = "강한 비"
-            symbolName = "cloud.heavyrain.fill"
-        case 71, 73, 75, 77, 85, 86:
-            condition = "눈"
-            symbolName = "cloud.snow.fill"
-        case 95, 96, 99:
-            condition = "뇌우"
-            symbolName = "cloud.bolt.rain.fill"
-        default:
-            condition = "날씨 정보"
-            symbolName = "cloud.fill"
+    private let provider: any WeatherAttributionProviding
+    private var cached: WeatherAttributionInfo?
+
+    init(provider: any WeatherAttributionProviding = AppleWeatherAttributionProvider()) {
+        self.provider = provider
+    }
+
+    /// 조회에 실패하면 기본 문구와 법적 고지 링크를 돌려주고 캐시하지 않는다.
+    func current() async -> WeatherAttributionInfo {
+        if let cached { return cached }
+        guard let value = try? await provider.attribution() else {
+            return .fallback
         }
+        cached = value
+        return value
     }
 }
 
@@ -2035,13 +1813,9 @@ actor AirQualityContextService {
             return context
         }
 
-        let context = try await openMeteoContext(
-            latitude: latitude,
-            longitude: longitude,
-            at: date
-        )
-        cachedContext = CachedContext(location: location, context: context)
-        return context
+        // 상업 이용이 가능한 해외 대기질 제공원이 없으므로 국내 에어코리아
+        // 자료만 사용한다. 자료가 없으면 대기질을 비워 둔다.
+        throw AirQualityServiceError.noProvider
     }
 
     static func configuredServiceKey() -> String? {
@@ -2135,33 +1909,6 @@ actor AirQualityContextService {
         }
     }
 
-    private func openMeteoContext(
-        latitude: Double,
-        longitude: Double,
-        at date: Date
-    ) async throws -> AirQualityContext {
-        var components = URLComponents(
-            string: "https://air-quality-api.open-meteo.com/v1/air-quality"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "latitude", value: String(latitude)),
-            URLQueryItem(name: "longitude", value: String(longitude)),
-            URLQueryItem(name: "current", value: "pm10,pm2_5"),
-            URLQueryItem(name: "timezone", value: "auto"),
-        ]
-        guard let url = components?.url else {
-            throw AirQualityServiceError.invalidRequest
-        }
-        let payload: OpenMeteoAirQualityResponse = try await fetch(url)
-        return AirQualityContext(
-            pm10MicrogramsPerCubicMeter: payload.current.pm10,
-            pm25MicrogramsPerCubicMeter: payload.current.pm25,
-            observedAt: date,
-            providerName: "Open-Meteo",
-            isFallback: true
-        )
-    }
-
     private func fetch<T: Decodable>(_ url: URL) async throws -> T {
         let (data, response) = try await session.data(from: url)
         guard let response = response as? HTTPURLResponse,
@@ -2180,6 +1927,7 @@ private enum AirQualityServiceError: Error {
     case invalidRequest
     case invalidResponse
     case noStation
+    case noProvider
 }
 
 private struct AirKoreaEnvelope<Item: Decodable>: Decodable {
@@ -2222,19 +1970,6 @@ private enum AirKoreaDateParser {
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         return formatter.date(from: value)
     }
-}
-
-private struct OpenMeteoAirQualityResponse: Decodable {
-    struct Current: Decodable {
-        var pm10: Double
-        var pm25: Double
-
-        enum CodingKeys: String, CodingKey {
-            case pm10
-            case pm25 = "pm2_5"
-        }
-    }
-    var current: Current
 }
 
 // MARK: - AirPods playback and call observations

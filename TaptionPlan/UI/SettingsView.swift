@@ -261,6 +261,8 @@ struct SettingsView: View {
                                 }
                             )
                         )
+                        WeatherAttributionView()
+                            .padding(.leading, 45)
                         cloudSyncRow
                     }
 

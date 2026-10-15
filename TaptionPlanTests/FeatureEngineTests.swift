@@ -17224,29 +17224,6 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(recovered, reset)
     }
 
-    func testOpenMeteoWeatherCodesUseKoreanConditionsAndDayNightSymbols() {
-        let clearDay = OpenMeteoWeatherCodePresentation(
-            code: 0,
-            isDay: true
-        )
-        XCTAssertEqual(clearDay.condition, "맑음")
-        XCTAssertEqual(clearDay.symbolName, "sun.max.fill")
-
-        let clearNight = OpenMeteoWeatherCodePresentation(
-            code: 0,
-            isDay: false
-        )
-        XCTAssertEqual(clearNight.condition, "맑음")
-        XCTAssertEqual(clearNight.symbolName, "moon.stars.fill")
-
-        let heavyRain = OpenMeteoWeatherCodePresentation(
-            code: 65,
-            isDay: true
-        )
-        XCTAssertEqual(heavyRain.condition, "강한 비")
-        XCTAssertEqual(heavyRain.symbolName, "cloud.heavyrain.fill")
-    }
-
     func testWeatherSymbolKindClassifiesSharedSymbols() {
         XCTAssertEqual(WeatherSymbolKind(symbolName: "sun.max.fill"), .sun)
         XCTAssertEqual(WeatherSymbolKind(symbolName: "cloud.moon.fill"), .moon)
@@ -17302,93 +17279,6 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(decoded.isStale, true)
         XCTAssertEqual(decoded.isForecast, true)
         XCTAssertEqual(decoded.providerName, "WeatherKit")
-    }
-
-    func testOpenMeteoHourlyContextsMarkFutureValuesAsForecasts() async throws {
-        let calendar = Calendar.autoupdatingCurrent
-        let currentHour = try XCTUnwrap(
-            calendar.dateInterval(of: .hour, for: .now)?.start
-        )
-        let from = try XCTUnwrap(
-            calendar.date(byAdding: .hour, value: 1, to: currentHour)
-        )
-        let through = try XCTUnwrap(
-            calendar.date(byAdding: .hour, value: 3, to: from)
-        )
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.autoupdatingCurrent
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
-        let first = formatter.string(from: from)
-        let second = formatter.string(from: from.addingTimeInterval(3_600))
-
-        WeatherURLProtocolStub.requestCount = 0
-        WeatherURLProtocolStub.handler = { request in
-            let items = URLComponents(
-                url: try XCTUnwrap(request.url),
-                resolvingAgainstBaseURL: false
-            )?.queryItems ?? []
-            XCTAssertEqual(
-                items.first(where: { $0.name == "forecast_days" })?.value,
-                "7"
-            )
-            let json = """
-            {
-              "current": {"temperature_2m": 20, "weather_code": 0, "precipitation_probability": 10, "is_day": 1},
-              "hourly": {
-                "time": ["\(first)", "\(second)"],
-                "temperature_2m": [20, 21],
-                "weather_code": [0, 1],
-                "precipitation_probability": [10, 20],
-                "is_day": [1, 1]
-              }
-            }
-            """
-            return (200, Data(json.utf8))
-        }
-        defer { WeatherURLProtocolStub.handler = nil }
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [WeatherURLProtocolStub.self]
-        let service = OpenMeteoWeatherContextService(
-            session: URLSession(configuration: configuration)
-        )
-
-        let contexts = try await service.hourlyContexts(
-            latitude: 37.5,
-            longitude: 127,
-            from: from,
-            through: through
-        )
-
-        XCTAssertEqual(contexts.count, 2)
-        XCTAssertTrue(contexts.allSatisfy { $0.isForecast == true })
-        XCTAssertEqual(WeatherURLProtocolStub.requestCount, 1)
-    }
-
-    func testOpenMeteoHourlyContextsSkipHistoricalOnlyRanges() async throws {
-        let through = Date.now.addingTimeInterval(-60)
-        let from = through.addingTimeInterval(-3_600)
-        WeatherURLProtocolStub.requestCount = 0
-        WeatherURLProtocolStub.handler = { _ in
-            XCTFail("historical weather must use the raw archive")
-            return (500, Data())
-        }
-        defer { WeatherURLProtocolStub.handler = nil }
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.protocolClasses = [WeatherURLProtocolStub.self]
-        let service = OpenMeteoWeatherContextService(
-            session: URLSession(configuration: configuration)
-        )
-
-        let contexts = try await service.hourlyContexts(
-            latitude: 37.5,
-            longitude: 127,
-            from: from,
-            through: through
-        )
-
-        XCTAssertTrue(contexts.isEmpty)
-        XCTAssertEqual(WeatherURLProtocolStub.requestCount, 0)
     }
 
     func testWeatherProjectionReplacesCurrentHourOnlyAtSameLocation() {
@@ -17712,16 +17602,11 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 2)
     }
 
-    func testAirQualityFallsBackToOpenMeteoWithoutKey() async throws {
+    func testAirQualityHasNoOverseasFallbackWithoutKey() async throws {
         AirQualityURLProtocolStub.requestCount = 0
-        AirQualityURLProtocolStub.handler = { request in
-            XCTAssertTrue(
-                request.url?.host?.contains("open-meteo.com") == true
-            )
-            return (
-                200,
-                Data("{\"current\":{\"pm10\":21.5,\"pm2_5\":8.25}}".utf8)
-            )
+        AirQualityURLProtocolStub.handler = { _ in
+            XCTFail("air quality must not call any provider without a key")
+            return (500, Data())
         }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [AirQualityURLProtocolStub.self]
@@ -17729,15 +17614,53 @@ final class FeatureEngineTests: XCTestCase {
             session: URLSession(configuration: configuration),
             serviceKey: nil
         )
-        let context = try await service.context(
-            latitude: 37.5,
-            longitude: 127
+        do {
+            _ = try await service.context(latitude: 37.5, longitude: 127)
+            XCTFail("expected no provider")
+        } catch {}
+        do {
+            _ = try await service.context(latitude: 48.85, longitude: 2.35)
+            XCTFail("expected no provider")
+        } catch {}
+        XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 0)
+    }
+
+    func testWeatherAttributionUsesProviderAndCachesIt() async {
+        let expected = WeatherAttributionInfo(
+            serviceName: "Apple Weather",
+            combinedMarkLightURL: URL(string: "https://example.com/light.png"),
+            combinedMarkDarkURL: URL(string: "https://example.com/dark.png"),
+            legalPageURL: URL(string: "https://example.com/legal")!
         )
-        XCTAssertTrue(context.isFallback)
-        XCTAssertEqual(context.providerName, "Open-Meteo")
-        XCTAssertEqual(context.pm10MicrogramsPerCubicMeter, 21.5)
-        XCTAssertEqual(context.pm25MicrogramsPerCubicMeter, 8.25)
-        XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 1)
+        let provider = StubWeatherAttributionProvider(result: .success(expected))
+        let store = WeatherAttributionStore(provider: provider)
+
+        let first = await store.current()
+        let second = await store.current()
+
+        XCTAssertEqual(first, expected)
+        XCTAssertEqual(second, expected)
+        XCTAssertEqual(provider.callCount, 1)
+        XCTAssertEqual(first.markURL(isDark: false)?.lastPathComponent, "light.png")
+        XCTAssertEqual(first.markURL(isDark: true)?.lastPathComponent, "dark.png")
+    }
+
+    func testWeatherAttributionFallsBackToLegalLinkWithoutCaching() async {
+        let provider = StubWeatherAttributionProvider(
+            result: .failure(WeatherContextServiceError.temporarilyUnavailable)
+        )
+        let store = WeatherAttributionStore(provider: provider)
+
+        let first = await store.current()
+        _ = await store.current()
+
+        XCTAssertEqual(first, .fallback)
+        XCTAssertEqual(
+            first.legalPageURL.absoluteString,
+            "https://weatherkit.apple.com/legal-attribution.html"
+        )
+        XCTAssertNil(first.markURL(isDark: false))
+        XCTAssertEqual(provider.callCount, 2)
     }
 
     func testGoalDetailBranchesAndDeduplicatesOverlappingTime() {
@@ -28580,51 +28503,6 @@ private final class AirQualityURLProtocolStub: URLProtocol, @unchecked Sendable 
     override func stopLoading() {}
 }
 
-private final class WeatherURLProtocolStub: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var handler:
-        ((URLRequest) throws -> (Int, Data))?
-    nonisolated(unsafe) static var requestCount = 0
-
-    override class func canInit(with request: URLRequest) -> Bool { true }
-
-    override class func canonicalRequest(
-        for request: URLRequest
-    ) -> URLRequest {
-        request
-    }
-
-    override func startLoading() {
-        Self.requestCount += 1
-        guard let handler = Self.handler else {
-            client?.urlProtocol(
-                self,
-                didFailWithError: URLError(.badServerResponse)
-            )
-            return
-        }
-        do {
-            let (status, data) = try handler(request)
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: status,
-                httpVersion: nil,
-                headerFields: ["Content-Type": "application/json"]
-            )!
-            client?.urlProtocol(
-                self,
-                didReceive: response,
-                cacheStoragePolicy: .notAllowed
-            )
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
-}
-
 private actor HealthRefreshCallCounter {
     private(set) var value = 0
 
@@ -29740,5 +29618,23 @@ private actor ControlledTransitBoardingRepository: PlanDataRepository {
         holds = false
         release?.resume()
         release = nil
+    }
+}
+
+private final class StubWeatherAttributionProvider:
+    WeatherAttributionProviding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls = 0
+    private let result: Result<WeatherAttributionInfo, Error>
+
+    init(result: Result<WeatherAttributionInfo, Error>) {
+        self.result = result
+    }
+
+    var callCount: Int { lock.withLock { calls } }
+
+    func attribution() async throws -> WeatherAttributionInfo {
+        lock.withLock { calls += 1 }
+        return try result.get()
     }
 }

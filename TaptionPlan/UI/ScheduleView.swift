@@ -2597,6 +2597,8 @@ private struct AirQualityDetailSheet: View {
                         Color.tpBackground,
                         in: RoundedRectangle(cornerRadius: 14)
                     )
+
+                    WeatherAttributionView()
                 }
                 .padding(18)
             }
@@ -4341,6 +4343,9 @@ private struct TimelineDetailPanel: View {
                             .foregroundStyle(Color.tpWeatherDark)
                     }
                 }
+            }
+            if !detailData.weather.isEmpty {
+                WeatherAttributionView()
             }
         }
     }

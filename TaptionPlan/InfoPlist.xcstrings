@@ -104,23 +104,6 @@
         }
       }
     },
-    "NSHealthUpdateUsageDescription" : {
-      "comment" : "Privacy - Health Update Usage Description",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Health write access is required to synchronize workouts and sleep records with your timeline."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "운동과 수면 기록을 앱의 시간표와 동기화하기 위해 건강 데이터 저장 권한이 필요합니다."
-          }
-        }
-      }
-    },
     "NSLocationAlwaysAndWhenInUseUsageDescription" : {
       "comment" : "Privacy - Location Always and When In Use Usage Description",
       "localizations" : {

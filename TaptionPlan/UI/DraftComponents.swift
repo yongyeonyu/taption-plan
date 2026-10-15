@@ -1,5 +1,34 @@
 import SwiftUI
 
+/// Apple 날씨 출처 표기(결합 마크와 법적 고지 링크). 상세·설정 화면에서만 쓴다.
+struct WeatherAttributionView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var attribution = WeatherAttributionInfo.fallback
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if let url = attribution.markURL(isDark: colorScheme == .dark) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFit()
+                } placeholder: {
+                    Text(attribution.serviceName)
+                }
+                .frame(height: 14)
+            } else {
+                Text(attribution.serviceName)
+                    .font(.taption(size: 9, weight: .semibold))
+            }
+            Link(
+                "날씨 데이터 출처 및 법적 고지",
+                destination: attribution.legalPageURL
+            )
+            .font(.taption(size: 8))
+        }
+        .foregroundStyle(Color.tpSecondary)
+        .task { attribution = await WeatherAttributionStore.shared.current() }
+    }
+}
+
 struct DraftTopBar: View {
     let title: String
     let trailing: String
