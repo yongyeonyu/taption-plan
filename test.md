@@ -1,5 +1,11 @@
 # 검증 기록
 
+## COM1016A01 · 전체 앱 회귀 (2026-10-16, WeatherKit 병합 전 e9cbdae~b77874b 상태)
+- 실행: `TaptionPlanTests` 전체, 전용 시뮬레이터 iOS 27.0(`full-01.xcresult`). 결과 **1,623 통과 · 4 실패 · 0 건너뜀**(총 1,627).
+- 실패 4개: `HealthKitIntegrationTests.testHealthBackgroundObserversOnlyWakeForTimelineInputs`(관찰 타입 기대값에 Mindful 포함, 실제는 4종), `FeatureEngineTests.testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration`(기대 `invalidArchive`, 실제 `localSensorArchiveIncomplete`), `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`(StoreKitTest 구매가 entitlement가 되지 않음), `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(P95 5.6초 > 5초).
+- 원인 분류: 시작 시점 커밋 `2a25758`을 별도 워크트리에서 같은 시뮬레이터로 실행하면 **같은 4개가 동일하게 실패**한다(`baseline.xcresult`, 성능 테스트는 119초로 기준 100초 초과). 이번 세션 변경으로 생긴 회귀가 아니다. 단독 재실행(`full-01-rerun-01.xcresult`)에서도 4개 모두 재현되었다.
+- 추정(미확인): 앞의 두 개는 HKS1004A01(HealthKit 최소 범위)·BAK1014A01(`localSensorArchiveIncomplete` 구분)로 코드가 바뀐 뒤 테스트 기대값이 갱신되지 않은 것으로 보인다. StoreKit은 이전 기록의 iOS 26.5 skip 보호가 iOS 27에서는 적용되지 않아 실제 실행된 것으로 보인다. 성능 테스트는 다른 프로젝트의 빌드가 같은 Mac에서 동시에 도는 부하의 영향이 크다. 4개 모두 이번에 수정하지 않았고 통과로 처리하지 않는다.
+
 ## COM1016A01 · 4단계 빠른 성능 수정 1차 (2026-10-16)
 - 수정(`MapHomeView.swift`): 읽을 때마다 JSON 디코딩하던 `homeGrowthHistory`를 `MapHomeGrowthHistoryCache`로 저장 값당 한 번만 디코딩하게 했다(마커·재생 마커·주석마다 약 11회 읽던 경로). 헤더 날짜 문구 3곳의 `DateFormatter` 생성을 형식·로케일별 재사용(`MapHomeDateText`)으로 바꿨다. 포맷터 시간대는 `autoupdatingCurrent`로 맞춰 시간대 변경을 따른다. 화면 배치는 바꾸지 않았다.
 - 자동 검증: 신규 `MapHomePerformanceHelperTests` 2개 포함 `TimeScaleTests`·`MapHomeGrowthPolicyTests`·`MapHomeStickmanTests` 237개 실패·건너뜀 0(`phase4-quick-01.xcresult`, 전용 시뮬레이터).
