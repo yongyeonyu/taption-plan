@@ -1,6 +1,8 @@
 # 검증·진단 자료
 
-`validation/PLY1015A01.json`은 재생에서 예전 위치가 남는 좌표 캐시·경로 cutoff fallback 제거와 마커/카메라 위치 조회 통일의 근거입니다. 관련164개 테스트·Debug/서명 결과와 첫 fixture 실패를 포함한 실제 자료는 `local-validation-evidence/PLY1015A01/`에 보존합니다. 이번 전용 빌드 캐시와 Simulator만 제거했으며 수정 빌드의 배포·실제 회사 도착 화면 확인은 아직 하지 않았습니다.
+`validation/REL1015A01.json`은 main 소스34e805e의1.0(176) Release·내부 TestFlight 배포·그룹 웹 확인·생성 출력 정리 기록입니다. 실제 로그·API 결과·내부 그룹 화면과 최종 Git 확인은 `local-validation-evidence/REL1015A01/`에 있습니다. `release-symbols/176/manifest.json`은 실제 업로드한 IPA와 원래 archive/export 실행 파일·두 dSYM·소스 해시의 동일성을 기록합니다. iPhone 배포에는 앱/Widget만 포함하며 실제 기기 기능 판정은 별도입니다.
+
+`validation/PLY1015A01.json`은 재생에서 예전 위치가 남는 좌표 캐시·경로 cutoff fallback 제거와 마커/카메라 위치 조회 통일의 근거입니다. 관련164개 테스트·Debug/서명 결과와 첫 fixture 실패를 포함한 실제 자료는 `local-validation-evidence/PLY1015A01/`에 보존합니다. 이번 전용 빌드 캐시와 Simulator만 제거했습니다. 수정은 REL1015A01에서176 내부 배포에 포함했고 실제 회사 도착 화면 확인은 남아 있습니다.
 
 `validation/BGX1015A01.json`, `BAK1015A01.json`, `GPS1015A01.json`은10월15일 로그 조사와 백그라운드 상태/메모리·백업 시각 검증·GPS 공백 판정 수정의 근거입니다. 실제 xcresult/로그/입력 해시와 좌표·키를 제외한 로그 요약은 같은 요청 ID의 `local-validation-evidence/` 하위에 보존합니다. 실제 OS 종료 사유·원본 백업 복호화·부산 원본 표본은 미확인이며 배포·실기기 성공을 뜻하지 않습니다.
 

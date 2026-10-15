@@ -1,9 +1,13 @@
 # 검증 기록
 
-## REL1015A01 · main 반영과 TestFlight176 배포 [진행 중]
-- 시작: main8ea705385d70827a52a2c53ed48b18d2f42250e8에서 기존 백그라운드·백업·GPS·재생 수정과 검증 자료를 보존했다. 실제 origin/main fetch 후 ahead/behind0/0, ASC 최신175 VALID와 기존 TP Taption Plan 내부 테스트 그룹을 확인했다.
-- 입력/번호: PLY1015A01의 최종147개 입력이 현재 소스와 모두 일치했다. 검증한 코드는 유지하고 project의 CURRENT_PROJECT_VERSION8곳과 앱·Widget·독립 Watch·Watch Widget Info.plist4곳을176으로 변경했다. 최종 입력 차이는 번호를 담은5개 파일과 새 SystemDiagnostics.swift의 끝 빈 줄1개 정리뿐이다(공백 제외 내용 동일). BGX/BAK1015A01, GPS1015A01/B01, PLY1015A01의 해당 검증 근거를 재사용하며 전체 앱 테스트를 새로 통과했다고 합산하지 않는다.
-- 배포 범위:1.0(176) iPhone 내부 TestFlight용으로 archive/export하며 앱과 Widget만 포함한다. 독립 Watch/Watch Widget은 번호·서명 검증용이며 iPhone 배포에 추가하지 않는다. 공개 App Store/IAP/계약/심사 제출은 하지 않는다. 실제 기기 기능과 원인 미확정 항목은 temp.md의 기존 조건을 유지한다.
+## REL1015A01 · main 반영과 TestFlight176 내부 배포 완료
+- 소스/커밋: 시작 main8ea705385d70827a52a2c53ed48b18d2f42250e8의 기존 변경을 보존하고 실제 origin/main·ASC 최신175를 확인했다. 백그라운드·백업·GPS·재생 수정과176 번호를34e805ec4a9edd1986386f63f0488cffd6e50490에 커밋·push했으며 원격 SHA 일치·ahead/behind0/0·clean을 읽어 확인했다. 최종 배포 기록 커밋의 원격/clean 결과는 로컬 final-git.json으로 별도 보존한다.
+- 입력/검증 재사용: PLY1015A01의147개 입력과 대조했고 이후 차이는 CURRENT_PROJECT_VERSION8곳/네 Info.plist를 담은5개 번호 파일과 SystemDiagnostics.swift의 끝 빈 줄1개 정리뿐이다(공백 제외 내용 동일). PLY 관련164개·GPS1015B01 관련51개·BGX/BAK/GPS 공유 관련 앱 고유191개·Core133개·Route48개와 해당 Debug 근거를 재사용했다. 범위 간 중복을 전체 앱 테스트로 합산하지 않았으며 각 요청의 최초 fixture 실패도 기존 기록에 남아 있다.
+- Release: iPhone archive, 내부 전용 export, 독립 Watch Release 모두 exit0·오류0·경고0. 앱·Widget·Watch·Watch Widget 최종 번들이 모두1.0(176)이고 strict 서명 검증을 통과했다. iPhone IPA에는 앱/Widget만 있고 Watch는 없다. 앱은 -O/whole-module로 컴파일됐고 enable-testing은 없다. 배포본 get-task-allow=false, beta-reports-active=true, iCloud 환경Production을 확인했다.
+- 원본/업로드: 앱 UUID F65005BE-72A5-39C6-9813-0AC3507B6457, Widget UUID59BF1480-562E-3444-8CD7-6860D1B86EA5가 archive/export 실행 파일과 dSYM에서 일치했다. IPA42,756,870바이트·SHA256 7794ba963994fdfde9a970a719ce48ec253ca90a338bccf20a643b025f14c05d를1회 업로드했고 exit0/UPLOAD SUCCEEDED, delivery46775d6e-88ed-4a88-ab80-83a3ddb9e0c1을 받았다.
+- 내부 배포: API VALID/READY_FOR_BETA_TESTING과 웹의 현재 표시 ‘테스트 준비 완료’를 확인한 뒤 ko 안내를 저장하고 TP Taption Plan 내부 테스트 그룹에 연결했다(HTTP204). 최종 API VALID/INTERNAL_ONLY/IN_BETA_TESTING, external NOT_APPLICABLE, 그룹176 포함·테스터1명을 확인했다. 로그인된 웹 그룹 화면에서도1.0(176) ‘테스트 중’, 내부 그룹1명·133개 빌드·90일 후 만료를 읽고 화면/텍스트를 보존했다. 중간 GET_RELATIONSHIP 미지원403은 그룹의 related builds 조회로 해결했으며 인증/배포 실패로 분류하지 않는다.
+- 보존/정리: 원래 실행 파일·두 dSYM·IPA·소스 해시 등14개를 artifacts/release-symbols/176/에 바이트 동일성 확인 후 보존했다. 이번 생성 출력/캐시7경로의 삭제 전 할당 합계1,215,619,072바이트를 정리했다(실제 여유 공간 증가량과 구분). Simulator 생성/삭제0. 실제 로그·API 결과·화면 등49개는 artifacts/local-validation-evidence/REL1015A01/로 이동했고 모든 바이트가 일치했다. 정리 전후147개 제품 입력과 원본14개 해시도 일치한다.
+- 범위/제한: 실제 기기 설치·장시간 수집·수동 백업·부산 원본·재생/발자국 화면 검증은 하지 않았으며 기존 temp.md 조건을 유지한다. 공개 App Store·IAP·계약·심사 제출은 하지 않았다. 작은 근거는 artifacts/validation/REL1015A01.json, 실제 근거는 artifacts/local-validation-evidence/REL1015A01/에 있다.
 
 ## PLY1015A01 · 재생 중 과거 집 좌표로 돌아가는 포커스 수정
 - 코드 원인: `startDayPlayback`은 그날 이동 leg가 하나라도 있으면 historicalPlaybackPoint 갱신을 생략했다. 현재 시각에는 leg가 없더라도 시작 때 캐시한 좌표 또는 그리기용 projection cutoff를 재사용할 수 있었다. 드래그 종료는 좌표를 다시 계산하므로 입력 방식에 따라 위치가 달라질 수 있다. 카메라의 예상 경로 fallback에는 표시/숨김 조건도 빠져 있었다. GPS 공백에서 등록된 집을 기본 위치로 가져오는 코드는 없으며, 원본 GPS가 없으면 마지막 확인 위치밖에 알 수 없다는 제한과 구분한다.
