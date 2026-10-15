@@ -5255,3 +5255,37 @@ final class MapHomeStartupCameraTests: XCTestCase {
         XCTAssertEqual(received.last?.cameraDistance ?? 0, MapHomeStartupCameraPolicy.distance, accuracy: 1)
     }
 }
+
+@MainActor
+final class MapHomePerformanceHelperTests: XCTestCase {
+    func testGrowthHistoryCacheReturnsDecodedValueAndFollowsStoredData() throws {
+        let cache = MapHomeGrowthHistoryCache()
+        let first = MapHomeGrowthHistory.initial(for: Date(timeIntervalSince1970: 1_790_000_000))
+        var second = first
+        second.season.level += 1
+        let firstData = try JSONEncoder().encode(first)
+        let secondData = try JSONEncoder().encode(second)
+
+        XCTAssertNil(cache.history(for: Data()))
+        XCTAssertEqual(cache.history(for: firstData), first)
+        XCTAssertEqual(cache.history(for: firstData), first)
+        XCTAssertEqual(cache.history(for: secondData), second, "A changed stored value must not return the cached history")
+        XCTAssertEqual(cache.history(for: secondData)?.season.level, second.season.level)
+        XCTAssertNil(cache.history(for: Data("not json".utf8)))
+    }
+
+    func testDateTextReusesFormatterAndKeepsFormatLocaleAndTimeZone() {
+        let date = Date(timeIntervalSince1970: 1_790_000_000)
+        let english = Locale(identifier: "en_US_POSIX")
+        let korean = Locale(identifier: "ko_KR")
+        let a = MapHomeDateText.string(from: date, format: "yyyy-MM-dd", locale: english)
+        XCTAssertEqual(a, MapHomeDateText.string(from: date, format: "yyyy-MM-dd", locale: english))
+        let formatter = DateFormatter()
+        formatter.locale = english
+        formatter.dateFormat = "yyyy-MM-dd"
+        XCTAssertEqual(a, formatter.string(from: date))
+        let weekdayEnglish = MapHomeDateText.string(from: date, format: "EEEE", locale: english)
+        let weekdayKorean = MapHomeDateText.string(from: date, format: "EEEE", locale: korean)
+        XCTAssertNotEqual(weekdayEnglish, weekdayKorean)
+    }
+}

@@ -1521,6 +1521,46 @@ enum MapHomeGrowthAccessoryCatalog {
     }
 }
 
+/// The growth history is read many times per body pass (every marker and the
+/// playback marker), so decode the stored JSON once per stored value.
+@MainActor
+final class MapHomeGrowthHistoryCache {
+    private var data = Data()
+    private var decoded: MapHomeGrowthHistory?
+
+    func history(for data: Data) -> MapHomeGrowthHistory? {
+        if let decoded, self.data == data { return decoded }
+        guard let value = try? JSONDecoder().decode(MapHomeGrowthHistory.self, from: data) else {
+            return nil
+        }
+        self.data = data
+        decoded = value
+        return value
+    }
+}
+
+/// Header date text is rebuilt on every invalidation; DateFormatter creation
+/// is expensive, so reuse one per format and locale.
+@MainActor
+enum MapHomeDateText {
+    private static var formatters: [String: DateFormatter] = [:]
+
+    static func string(from date: Date, format: String, locale: Locale) -> String {
+        let key = "\(locale.identifier)|\(format)"
+        let formatter: DateFormatter
+        if let cached = formatters[key] {
+            formatter = cached
+        } else {
+            formatter = DateFormatter()
+            formatter.locale = locale
+            formatter.dateFormat = format
+            formatters[key] = formatter
+        }
+        formatter.timeZone = .autoupdatingCurrent
+        return formatter.string(from: date)
+    }
+}
+
 struct MapHomeGrowthHistory: Codable, Equatable {
     var season: MapHomeGrowthSeason
     var archives: [MapHomeGrowthSeason] = []
@@ -1846,6 +1886,7 @@ struct MapHomeView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @AppStorage(MapHomeGrowthPolicy.storageKey)
     private var homeGrowthData = Data()
+    @State private var growthHistoryCache = MapHomeGrowthHistoryCache()
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var headingMonitor = MapHomeHeadingMonitor()
     @State private var selectedScope: TimeScale = .day
@@ -4345,13 +4386,7 @@ struct MapHomeView: View {
     }
 
     private var homeGrowthHistory: MapHomeGrowthHistory {
-        guard let decoded = try? JSONDecoder().decode(
-            MapHomeGrowthHistory.self,
-            from: homeGrowthData
-        ) else {
-            return .initial(for: .now)
-        }
-        return decoded
+        growthHistoryCache.history(for: homeGrowthData) ?? .initial(for: .now)
     }
 
     private func refreshHomeGrowth(at now: Date) {
@@ -9421,30 +9456,29 @@ struct MapHomeView: View {
     }
 
     private var dateTitle: String {
-        let formatter = DateFormatter()
-        formatter.locale = language.locale
-        formatter.dateFormat = selectedScope == .day
-            ? language.dateTitleFormat
-            : language.monthTitleFormat
-        return formatter.string(from: model.selectedDate)
+        MapHomeDateText.string(
+            from: model.selectedDate,
+            format: selectedScope == .day
+                ? language.dateTitleFormat
+                : language.monthTitleFormat,
+            locale: language.locale
+        )
     }
 
     private var dateTitleLabel: Text {
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = language.locale
-        weekdayFormatter.dateFormat = language.weekdayFormat
         let weekday = Calendar.autoupdatingCurrent.component(.weekday, from: model.selectedDate)
-        let weekdayText = Text(" \(weekdayFormatter.string(from: model.selectedDate))")
+        let weekdayName = MapHomeDateText.string(
+            from: model.selectedDate, format: language.weekdayFormat, locale: language.locale)
+        let weekdayText = Text(" \(weekdayName)")
             .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(dateColor(weekday: weekday))
         return datePartTitleLabel + weekdayText
     }
 
     private var datePartTitleLabel: Text {
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = language.locale
-        dateFormatter.dateFormat = language.datePartFormat
-        return Text(dateFormatter.string(from: model.selectedDate))
+        let datePart = MapHomeDateText.string(
+            from: model.selectedDate, format: language.datePartFormat, locale: language.locale)
+        return Text(datePart)
             .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(
                 dateColor(
