@@ -3,13 +3,13 @@
 ## COM1016A01 · 4단계 빠른 성능 수정 1차 (2026-10-16)
 - 수정(`MapHomeView.swift`): 읽을 때마다 JSON 디코딩하던 `homeGrowthHistory`를 `MapHomeGrowthHistoryCache`로 저장 값당 한 번만 디코딩하게 했다(마커·재생 마커·주석마다 약 11회 읽던 경로). 헤더 날짜 문구 3곳의 `DateFormatter` 생성을 형식·로케일별 재사용(`MapHomeDateText`)으로 바꿨다. 포맷터 시간대는 `autoupdatingCurrent`로 맞춰 시간대 변경을 따른다. 화면 배치는 바꾸지 않았다.
 - 자동 검증: 신규 `MapHomePerformanceHelperTests` 2개 포함 `TimeScaleTests`·`MapHomeGrowthPolicyTests`·`MapHomeStickmanTests` 237개 실패·건너뜀 0(`phase4-quick-01.xcresult`, 전용 시뮬레이터).
-- 제한: 시간 단축을 측정하지 않았다(Instruments 계측 전). 디코딩 횟수 감소는 코드 구조에서 나온 것이다. `MapHomeGrowthSheet.history`와 다른 `DateFormatter` 3곳은 이번에 바꾸지 않았다. generic iOS Debug 빌드는 이번 묶음 이후 별도 실행 예정.
+- 제한: 시간 단축을 측정하지 않았다(Instruments 계측 전). 디코딩 횟수 감소는 코드 구조에서 나온 것이다. `MapHomeGrowthSheet.history`와 다른 `DateFormatter` 3곳은 이번에 바꾸지 않았다. 누적 변경(1·2·4단계) 이후 generic iOS Debug `BUILD SUCCEEDED`(`debug-phase4-01.log`, 경고 0).
 
 ## COM1016A01 · 2단계 경로 필터 1차 (2026-10-16)
 - 수정(`RouteLoggerRouteFilter`): (1) 15분 넘는 공백 뒤 지상 이동으로는 불가능한 먼 점이면 다음 점을 본다. 다음 점이 공백 전 기준점으로 돌아오고 먼 점을 따르지 않으면 먼 점을 `impossibleSpeed`로 거부한다. 다음 점이 없거나 먼 점을 따르면 기존대로 받아들여 비행·장거리 이동을 보존한다. (2) 거부된 점이 6개 이상, 90초 이상 서로 일치하면 기준점이 이상치였다고 보고 새 기준으로 다시 잡는다(오래된 첫 점이 실제 경로를 계속 거부하던 문제). 3초짜리 짧은 급이탈은 기존 테스트대로 계속 거부한다. 일자 projection 3→4, 지도 캐시 키 `route-document-v9`→`v10`으로 파생값만 재계산한다.
 - 변경 전 재현: 신규 4개 중 `singleFarFixAfterGapIsRejectedWhenNextFixReturnsToTheAnchor`, `staleFirstFixDoesNotRejectTheRealRouteForever`는 수정 전 필터에서 실패했고(2개 실패, 5 issue) 수정 후 통과한다. 나머지 2개는 기존 동작을 보존하는 보호 테스트라 양쪽 모두 통과한다.
 - 자동 검증: Route 패키지 52개(기존 48 + 신규 4) 통과, Core 134개 통과, 앱 `RouteTimelineDataTests`·`MapHomePawprintInteractionTests`·`SensorDayStoreTests`·`SQLitePlanRepositoryTests`·`TimeScaleTests` 472개 실패·건너뜀 0(`phase2-filter-02.xcresult`, 전용 시뮬레이터 TP-COM1016A01).
-- 제한: 합성 trace 검증이며 실제 10:10 부산 원본은 복호화 키가 없어 대조하지 못했다. 이 수정이 대표 사례의 직접 원인이라고 단정하지 않는다. 다음 점이 없는 마지막 먼 점은 여전히 수용된다. 앱 `FeatureEngineTests`는 이번 묶음에서 실행하지 않았다(전체 회귀에서 실행 예정). Debug 빌드는 projection 변경 뒤 별도 실행 예정이다. 첫 시도(`phase2-filter-01`)는 다른 프로젝트의 시뮬레이터와 겹쳐 앱 실행 실패로 중단했고 결과로 사용하지 않았다.
+- 제한: 합성 trace 검증이며 실제 10:10 부산 원본은 복호화 키가 없어 대조하지 못했다. 이 수정이 대표 사례의 직접 원인이라고 단정하지 않는다. 다음 점이 없는 마지막 먼 점은 여전히 수용된다. 앱 `FeatureEngineTests`는 이번 묶음에서 실행하지 않았다(전체 회귀에서 실행 예정). Debug 빌드는 `debug-phase4-01.log`에서 통과했다. 첫 시도(`phase2-filter-01`)는 다른 프로젝트의 시뮬레이터와 겹쳐 앱 실행 실패로 중단했고 결과로 사용하지 않았다.
 
 ## COM1016A01 · 1단계 안정성 1차 (2026-10-16)
 - 수정: (1) `PlanRepository`의 백그라운드 작업 만료 핸들러가 작업을 끝내지 않던 문제를 `BackgroundTaskAssertion`으로 고쳤다. 핸들러가 직접 종료하고, 할당을 못 받아도 쓰기를 버리지 않고 실행한다(이전에는 CancellationError로 조용히 버렸다). (2) HealthKit observer completion을 한 번만 호출하게 하고 20초 제한과 백그라운드 할당을 추가했다. (3) `sceneEnteredBackground`에 백그라운드 할당을 걸고, 취소한 센서 갱신이 정리된 뒤 강제 저장하게 했다(갱신 중이면 강제 저장이 trailing 쓰기로 미뤄지던 경로). (4) 복원의 `allArchives()` 읽기와 전체 archive 복호화·병합을 `PlanBackupWorker`로 옮겼다(`selectedSnapshotArchivesOffMain`, `loadLatestBackupOffMain`, 순수 `nonisolated` 디코드).
