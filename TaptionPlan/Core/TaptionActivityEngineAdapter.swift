@@ -16,6 +16,8 @@ struct TaptionSensorQualityProjection: Sendable {
     let readings: [SensorReading]
     let routeReadings: [SensorReading]
     let rejectionCounts: [String: Int]
+    let impossibleLocationCount: Int
+    let innovationOutlierCount: Int
 }
 
 struct TaptionDataTrustProjection: Sendable {
@@ -649,7 +651,7 @@ enum TaptionActivityEngineAdapter {
         try apply(\.behaviorConfidenceScore, label: "behaviorConfidence", range: 0...1, minimumDeviation: 0.02)
 
         try cancellationCheck()
-        let routeReadings = try TaptionRouteEngineAdapter.filteredReadings(
+        let route = try TaptionRouteEngineAdapter.prepareFilteredReadings(
             from: projected,
             includeLowConfidenceBoundaries: false,
             cancellationCheck: cancellationCheck
@@ -657,8 +659,10 @@ enum TaptionActivityEngineAdapter {
         try cancellationCheck()
         return TaptionSensorQualityProjection(
             readings: projected,
-            routeReadings: routeReadings,
-            rejectionCounts: rejectionCounts
+            routeReadings: route.readings,
+            rejectionCounts: rejectionCounts,
+            impossibleLocationCount: route.impossibleLocationCount,
+            innovationOutlierCount: route.innovationOutlierCount
         )
     }
 

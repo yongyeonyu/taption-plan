@@ -5741,6 +5741,36 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundTransitionCancelsDayLoadAndAllowsFreshForegroundRead() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-background-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let gate = SensorReadCheckpointGate()
+        var cancelled = false
+        coordinator.invalidate(day: date)
+        let request = Task { @MainActor in
+            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sensorLoader: { _ in
+                    await gate.pauseOnce()
+                    cancelled = Task.isCancelled
+                    return SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true)
+                })
+        }
+        await gate.waitUntilPaused()
+        coordinator.prepareForBackground()
+        await gate.resume()
+        let result = await request.value
+        XCTAssertTrue(cancelled)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertEqual(coordinator.cachedDayCount, 0)
+        let fresh = await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+            sensorLoader: { _ in SensorReadingsLoadResult(readings: [self.makeReading(date)], isComplete: true) })
+        XCTAssertTrue(fresh.isComplete)
+        XCTAssertEqual(fresh.readings.count, 1)
+    }
+
+    @MainActor
     func testConcurrentForcedDayLoadsShareSensorRead() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-forced-shared-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -5755,14 +5785,18 @@ final class SensorDayStoreTests: XCTestCase {
         }
         let first = Task { @MainActor in
             await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sourceFingerprint: "shared-forced-load",
                 sensorLoader: loader, forceReload: true)
         }
         await gate.waitUntilPaused()
+        let secondStarted = expectation(description: "second request joins the pending load")
         let second = Task { @MainActor in
-            await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+            secondStarted.fulfill()
+            return await coordinator.load(day: date, source: .empty, sourceRevision: 1,
+                sourceFingerprint: "shared-forced-load",
                 sensorLoader: loader, forceReload: true)
         }
-        await Task.yield()
+        await fulfillment(of: [secondStarted], timeout: 1)
         await gate.resume()
         let a = await first.value
         let b = await second.value

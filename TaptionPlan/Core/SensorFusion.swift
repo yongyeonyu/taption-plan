@@ -1645,7 +1645,14 @@ enum HealthRouteMergeEngine {
             accepted.append(reading.timestamp)
             result.append(reading)
         }
-        return result
+        guard !result.isEmpty, !existingTimes.isEmpty else { return result }
+        // Separate streams can each look plausible while disagreeing with
+        // the device's fixes around a gap. Validate their combined timeline.
+        let retainedIDs = Set(TaptionRouteEngineAdapter.filteredReadings(
+            from: existing + result,
+            includeLowConfidenceBoundaries: false
+        ).map(\.id))
+        return result.filter { retainedIDs.contains($0.id) }
     }
 
     private static func hasNeighbor(

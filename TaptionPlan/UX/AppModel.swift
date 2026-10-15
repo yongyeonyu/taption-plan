@@ -4071,6 +4071,7 @@ final class AppModel {
     }
 
     func handleMemoryPressure() {
+        TaptionPlanDiagnosticsLogger.shared.record("application_memory_warning", level: .notice)
         dayLoadCoordinator?.handleMemoryPressure()
         let repository = self.repository
         Task { await repository.handleMemoryPressure() }
@@ -4179,6 +4180,7 @@ final class AppModel {
         selectedDateRefreshTask = nil
         calendarStoreRefreshTask?.cancel()
         calendarStoreRefreshTask = nil
+        dayLoadCoordinator?.prepareForBackground()
         foregroundPreparationGeneration &+= 1
         foregroundPreparationTask?.cancel()
         foregroundPreparationTask = nil
@@ -4202,6 +4204,7 @@ final class AppModel {
             try? await rawDeviceDataArchive.checkpoint()
         }
         await persistDeviceLocalSnapshot(force: true)
+        await repository.handleMemoryPressure()
         await saveCloudBackupOnBackground()
     }
 
@@ -9823,6 +9826,8 @@ final class AppModel {
                 "quality_rejections": String(
                     sensorQuality.rejectionCounts.values.reduce(0, +)
                 ),
+                "impossible_location_count": String(sensorQuality.impossibleLocationCount),
+                "innovation_outlier_count": String(sensorQuality.innovationOutlierCount),
             ]
         )
         let pedometer =
@@ -12628,14 +12633,19 @@ final class AppModel {
         sensorService?.setForegroundLiveLocationTrackingEnabled(enabled)
     }
 
+    private var hasContinuousBackgroundCollection: Bool {
+        isSensorCollecting
+            && sensorService?.isCollectionLive() == true
+            && settings.backgroundPreciseLocationEnabled
+            && sensorService?.hasAlwaysLocationAuthorization() == true
+    }
+
     private func reconcileBackgroundSensorSession(at date: Date = .now) {
         SensorBackgroundRefreshPolicy.save(
             intervalSeconds: settings.gpsLoggingPreferences
                 .effectiveIntervalSeconds
         )
-        guard isSensorCollecting,
-              settings.backgroundPreciseLocationEnabled,
-              sensorService?.hasAlwaysLocationAuthorization() == true else {
+        guard hasContinuousBackgroundCollection else {
             if activeTrackingSession == nil {
                 sensorBackgroundCoordinator.endSession()
                 syncSensorBackgroundState()
@@ -12853,7 +12863,10 @@ final class AppModel {
         }
 
         if reading.trackingSessionEnded == true {
-            sensorBackgroundCoordinator.endSession()
+            sensorBackgroundCoordinator.finishTrackingSession(
+                continuesCollection: hasContinuousBackgroundCollection,
+                at: reading.timestamp
+            )
         } else if session?.wasAutomaticallyDetected == true,
                   settings.gpsLoggingPreferences.effectiveIntervalSeconds
                     == GPSLoggingPreferences.Preset.realtime.intervalSeconds {

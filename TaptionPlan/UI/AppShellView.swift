@@ -454,6 +454,7 @@ struct AppShellView: View {
         Task { @MainActor in
             switch phase {
             case .active:
+                TaptionPlanDiagnosticsSession.recordPhase(.active)
                 await proAccess.refreshAccess()
                 scheduleDeferredStoreKitProductLoad()
                 if proAccess.grantsAccess {
@@ -464,12 +465,14 @@ struct AppShellView: View {
                 }
                 isSecurityStateReady = true
             case .background:
+                TaptionPlanDiagnosticsSession.recordPhase(.background)
                 if proAccess.grantsAccess {
                     await model.sceneEnteredBackground()
                 } else {
                     await model.suspendForCommerceLock()
                 }
             case .inactive:
+                TaptionPlanDiagnosticsSession.recordPhase(.inactive)
                 if proAccess.grantsAccess {
                     await model.reconcileSensorCollectionLiveActivity(
                         isForeground: true

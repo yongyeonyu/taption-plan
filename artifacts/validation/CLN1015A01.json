@@ -1,0 +1,52 @@
+{
+  "requestID": "CLN1015A01",
+  "paths": [
+    {
+      "path": "build/BGX1015A01DD",
+      "allocatedBytes": 1385058304,
+      "removed": true
+    },
+    {
+      "path": "build/GPS1015A01Core",
+      "allocatedBytes": 142061568,
+      "removed": true
+    },
+    {
+      "path": "build/GPS1015A01Route",
+      "allocatedBytes": 87396352,
+      "removed": true
+    },
+    {
+      "path": "build/validation/BAK1015A01/SwiftModuleCache",
+      "allocatedBytes": 30629888,
+      "removed": true
+    }
+  ],
+  "simulatorUDID": "F0168712-954B-4B3C-AFCD-A48C1B596FA0",
+  "simulatorName": "TaptionPlan BGX1015A01 validation",
+  "onlyCreatedThisRequest": true,
+  "originalDataAndReleaseSymbolsOutsideDeletionScope": true,
+  "sourceInputCount": 147,
+  "simulatorRemoved": true,
+  "sourceInputsUnchanged": true,
+  "allocatedBytesRemoved": 1645146112,
+  "evidencePreservation": {
+    "BGX1015A01": {
+      "fileCount": 930,
+      "allBytesPreserved": true
+    },
+    "BAK1015A01": {
+      "fileCount": 2736,
+      "allBytesPreserved": true
+    },
+    "GPS1015A01": {
+      "fileCount": 4,
+      "allBytesPreserved": true
+    },
+    "CLN1015A01": {
+      "fileCount": 3,
+      "allBytesPreserved": true
+    }
+  },
+  "status": "complete"
+}

@@ -163,13 +163,12 @@ final class TaptionPlanAppDelegate:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         let session = TaptionPlanDiagnosticsSession.begin()
+        TaptionPlanSystemDiagnostics.shared.start()
         if session.previousSessionWasUnfinished == true {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "previous_session_unfinished",
                 level: .notice,
-                fields: session.previousSessionStartedAt.map {
-                    ["started_at": String($0.timeIntervalSince1970)]
-                } ?? [:]
+                fields: TaptionPlanDiagnosticsSession.latestSummary()
             )
         }
         TaptionPlanDeviceLocalStorage.excludeFromBackup()
@@ -223,6 +222,7 @@ final class TaptionPlanAppDelegate:
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        TaptionPlanDiagnosticsSession.recordPhase(.background)
         PhoneScreenActivityStore.update(
             brightness: Double(UIScreen.main.brightness),
             isOn: false

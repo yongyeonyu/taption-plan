@@ -121,6 +121,11 @@ enum TaptionPlanDiagnosticsLogPolicy {
 }
 
 struct TaptionPlanDiagnosticsSession: Sendable {
+    enum Phase: String { case launching, active, inactive, background, terminated }
+    private static let phaseKey = "taption.diagnostics.session.phase.v1"
+    private static let phaseAtKey = "taption.diagnostics.session.phase-at.v1"
+    private static let lastPhaseKey = "taption.diagnostics.session.last-phase.v1"
+    private static let lastPhaseAtKey = "taption.diagnostics.session.last-phase-at.v1"
     private static let activeKey = "taption.diagnostics.session.active.v1"
     private static let startedAtKey = "taption.diagnostics.session.started-at.v1"
     private static let lastUnfinishedKey =
@@ -135,12 +140,15 @@ struct TaptionPlanDiagnosticsSession: Sendable {
     static func begin(defaults: UserDefaults = .standard) -> Self {
         let hadActiveSession = defaults.object(forKey: activeKey) as? Bool
         let previousStartedAt = defaults.object(forKey: startedAtKey) as? Date
+        defaults.set(defaults.string(forKey: phaseKey), forKey: lastPhaseKey)
+        defaults.set(defaults.object(forKey: phaseAtKey) as? Date, forKey: lastPhaseAtKey)
         if let hadActiveSession {
             defaults.set(hadActiveSession, forKey: lastUnfinishedKey)
             defaults.set(previousStartedAt, forKey: lastStartedAtKey)
         }
         defaults.set(true, forKey: activeKey)
         defaults.set(Date.now, forKey: startedAtKey)
+        recordPhase(.launching, defaults: defaults)
         return Self(
             previousSessionWasUnfinished: hadActiveSession,
             previousSessionStartedAt: previousStartedAt
@@ -149,6 +157,13 @@ struct TaptionPlanDiagnosticsSession: Sendable {
 
     static func markCleanTermination(defaults: UserDefaults = .standard) {
         defaults.set(false, forKey: activeKey)
+        recordPhase(.terminated, defaults: defaults)
+    }
+
+    static func recordPhase(_ phase: Phase, at date: Date = .now, defaults: UserDefaults = .standard) {
+        guard defaults.string(forKey: phaseKey) != phase.rawValue else { return }
+        defaults.set(phase.rawValue, forKey: phaseKey)
+        defaults.set(date, forKey: phaseAtKey)
     }
 
     static func latestSummary(
@@ -161,6 +176,12 @@ struct TaptionPlanDiagnosticsSession: Sendable {
         if let startedAt = defaults.object(forKey: lastStartedAtKey) as? Date {
             values["previous_session_started_at"] =
                 String(startedAt.timeIntervalSince1970)
+        }
+        if let phase = defaults.string(forKey: lastPhaseKey) {
+            values["previous_session_last_phase"] = phase
+        }
+        if let date = defaults.object(forKey: lastPhaseAtKey) as? Date {
+            values["previous_session_last_phase_at"] = String(date.timeIntervalSince1970)
         }
         return values
     }

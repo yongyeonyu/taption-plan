@@ -90,13 +90,42 @@ struct RouteEngineTests {
         #expect(report.log.normalizedSamples == values)
     }
 
-    @Test func realSamplingGapAllowsARelocatedAnchorAfterRejections() {
-        let values = [sample(0, 37), sample(1, 35), sample(901, 35), sample(902, 35.0001)]
+    @Test func realSamplingGapAllowsAPlausibleRelocatedAnchorAfterRejections() {
+        let values = [sample(0, 37), sample(1, 35), sample(3_601, 35), sample(3_602, 35.0001)]
         let report = RouteLoggerRouteFilter().filterWithReport(values)
 
         #expect(report.decisions.contains { $0.id == values[1].id && $0.reason == .impossibleSpeed })
         #expect(report.log.segments.last?.pathSamples.first?.id == values[2].id)
         #expect(report.log.segments.last?.pathSamples.last?.id == values[3].id)
+    }
+
+    @Test func samplingGapDoesNotAdmitImpossibleDistantAnchorOrBoundary() {
+        let values = [
+            sample(0, 37), sample(901, 34), sample(902, 34.0001, accuracy: 500),
+            sample(903, 37.0001), sample(904, 37.0002),
+        ]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        let rejected = Set(values[1...2].map(\.id))
+        #expect(report.decisions.filter { $0.reason == .impossibleSpeed }.map(\.id) == values[1...2].map(\.id))
+        #expect(report.log.segments.flatMap { $0.pathSamples + $0.boundarySamples }.allSatisfy { !rejected.contains($0.id) })
+        #expect(report.log.segments.last?.pathSamples.last?.id == values.last?.id)
+        #expect(report.log.normalizedSamples == values)
+    }
+
+    @Test func longGapAllowsNormalIntercityTravelAndDoesNotReuseWalkingSpeed() {
+        let values = [sample(0, 37, mode: .walking), sample(7_200, 34, mode: .walking)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(report.log.segments.count == 2)
+        #expect(report.log.segments.last?.pathSamples.first?.id == values.last?.id)
+        #expect(!report.decisions.contains { $0.reason == .impossibleSpeed })
+    }
+
+    @Test func recordingGapPreservesPlausibleFlightBetweenWalkingSamples() {
+        let values = [sample(0, 37, mode: .walking), sample(3_600, 29, mode: .walking)]
+        let report = RouteLoggerRouteFilter().filterWithReport(values)
+        #expect(report.log.segments.count == 2)
+        #expect(report.log.segments.last?.pathSamples.first?.id == values.last?.id)
+        #expect(!report.decisions.contains { $0.reason == .impossibleSpeed })
     }
 
     @Test func stationarySuppressionKeepsRecentRawMotionReference() {

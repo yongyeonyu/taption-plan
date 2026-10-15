@@ -504,6 +504,49 @@ struct MapHomeWBSPlaybackFrame: Hashable, Sendable {
     }
 }
 
+struct MapHomePlaybackLocation: Equatable {
+    let coordinate: GeoPoint
+    let cameraCoordinate: GeoPoint
+
+    init(coordinate: GeoPoint, cameraCoordinate: GeoPoint? = nil) {
+        self.coordinate = coordinate
+        self.cameraCoordinate = cameraCoordinate ?? coordinate
+    }
+
+    static func resolve(
+        at date: Date,
+        frame: MapHomeWBSPlaybackFrame?,
+        normalizedReadings: [SensorReading],
+        confirmedTravel: [TravelSegment] = [],
+        expectedCoordinate: GeoPoint? = nil,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> Self? {
+        if let frame, frame.date == date {
+            return Self(coordinate: frame.coordinate, cameraCoordinate: frame.cameraCoordinate)
+        }
+        let subwayPoint = confirmedTravel.lazy.filter { segment in
+            segment.mode == .subway && segment.isConfirmed
+                && segment.span.contains(date)
+                && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+        }.max { $0.span.start < $1.span.start }.flatMap { segment in
+            RouteTimelineDataEngine.confirmedSubwayCoordinates(for: segment, through: date).last
+        }
+        if let point = subwayPoint ?? expectedCoordinate {
+            return Self(coordinate: point)
+        }
+        // The prepared readings belong to one day and are sorted. Query that
+        // day's evidence directly; a rendered route or an earlier frame can lag.
+        guard let first = normalizedReadings.first,
+              date >= first.timestamp,
+              calendar.isDate(first.timestamp, inSameDayAs: date),
+              let point = RouteTimelineDataEngine.playbackCoordinate(
+                at: date,
+                inNormalizedReadings: normalizedReadings
+              ) else { return nil }
+        return Self(coordinate: point)
+    }
+}
+
 /// WBS와 같은 불변 일 단위 leg 투영이다. 센서·장소·이동 원본은 만들 때 한 번만
 /// 정규화하고 재생 중에는 날짜로 frame만 조회한다.
 struct MapHomeWBSPlaybackProjection: Hashable, Sendable {

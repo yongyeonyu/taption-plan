@@ -32,6 +32,44 @@ struct TaptionRouteEngineAdapterTests {
         #expect(abs((snapshot.selectedCoordinate?.latitude ?? 0) - 37.0005) < 0.000_01)
     }
 
+    @Test func healthRouteMergeRejectsRemotePointBetweenDeviceFixes() {
+        let device = [reading(0, latitude: 37), reading(60, latitude: 37.0006)]
+        var remote = reading(30, latitude: 34)
+        remote.sourceDevice = .appleWatch
+        let original = remote
+
+        let merged = HealthRouteMergeEngine.merging([remote], into: device)
+
+        #expect(merged.isEmpty)
+        #expect(remote == original)
+        #expect(device.map(\.point?.latitude) == [37, 37.0006])
+    }
+
+    @Test func healthRouteMergeKeepsValidGapSamplesAndOriginalValues() {
+        let device = [reading(0, latitude: 37), reading(180, latitude: 37.0018)]
+        var health = [reading(60, latitude: 37.0006), reading(120, latitude: 37.0012)]
+        for index in health.indices {
+            health[index].sourceDevice = .appleWatch
+            health[index].watchWorkoutKind = "walking"
+        }
+
+        #expect(HealthRouteMergeEngine.merging(Array(health.reversed()), into: device) == health)
+        #expect(HealthRouteMergeEngine.merging(health, into: []) == health)
+    }
+
+    @Test func healthRouteMergePreservesTwentySecondSpacingBoundary() {
+        let device = [reading(0, latitude: 37), reading(120, latitude: 37.0012)]
+        let health = [19.0, 20, 39, 40, 100, 101].map {
+            reading($0, latitude: 37 + $0 * 0.00001)
+        }
+
+        let merged = HealthRouteMergeEngine.merging(health, into: device)
+
+        #expect(merged.map(\.timestamp) == [20.0, 40, 100].map {
+            base.addingTimeInterval($0)
+        })
+    }
+
     @Test func liveLocationUsesRecentTrustedStationarySampleInsteadOfCityJump() {
         let stationary = stride(from: 0.0, through: 900.0, by: 30).map {
             reading($0, latitude: 37, motion: .stationary)
@@ -56,6 +94,20 @@ struct TaptionRouteEngineAdapterTests {
         #expect(prepared.readings.first?.trackingSessionEnded == true)
         #expect(prepared.latestTrustedReading == values[2])
         #expect(prepared.impossibleLocationCount == 1)
+    }
+
+    @Test func longGapCityJumpCannotReplaceTrustedLocationOrPersistInDayProjection() throws {
+        let values = [
+            reading(0, latitude: 37), reading(901, latitude: 34),
+            reading(902, latitude: 34.0001, accuracy: 500), reading(903, latitude: 37.0001),
+        ]
+        let prepared = TaptionRouteEngineAdapter.prepareFilteredReadings(from: values)
+        #expect(prepared.impossibleLocationCount == 2)
+        #expect(prepared.latestTrustedReading?.id == values.last?.id)
+        #expect(prepared.readings.map(\.id) == [values[0].id, values[3].id])
+        #expect(TaptionRouteEngineAdapter.displayRoute(from: values).normalizedSamples.count == values.count)
+        let beforeRecovery = TaptionRouteEngineAdapter.prepareFilteredReadings(from: Array(values.prefix(3)))
+        #expect(beforeRecovery.latestTrustedReading?.id == values.first?.id)
     }
 
     @Test func lowConfidenceCityJumpIsExcludedFromPreparedDayAndCurrentLocation() throws {

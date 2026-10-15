@@ -1,5 +1,54 @@
 # 검증 기록
 
+## REL1015A01 · main 반영과 TestFlight176 배포 [진행 중]
+- 시작: main8ea705385d70827a52a2c53ed48b18d2f42250e8에서 기존 백그라운드·백업·GPS·재생 수정과 검증 자료를 보존했다. 실제 origin/main fetch 후 ahead/behind0/0, ASC 최신175 VALID와 기존 TP Taption Plan 내부 테스트 그룹을 확인했다.
+- 입력/번호: PLY1015A01의 최종147개 입력이 현재 소스와 모두 일치했다. 검증한 코드는 유지하고 project의 CURRENT_PROJECT_VERSION8곳과 앱·Widget·독립 Watch·Watch Widget Info.plist4곳을176으로 변경했다. 최종 입력 차이는 번호를 담은5개 파일과 새 SystemDiagnostics.swift의 끝 빈 줄1개 정리뿐이다(공백 제외 내용 동일). BGX/BAK1015A01, GPS1015A01/B01, PLY1015A01의 해당 검증 근거를 재사용하며 전체 앱 테스트를 새로 통과했다고 합산하지 않는다.
+- 배포 범위:1.0(176) iPhone 내부 TestFlight용으로 archive/export하며 앱과 Widget만 포함한다. 독립 Watch/Watch Widget은 번호·서명 검증용이며 iPhone 배포에 추가하지 않는다. 공개 App Store/IAP/계약/심사 제출은 하지 않는다. 실제 기기 기능과 원인 미확정 항목은 temp.md의 기존 조건을 유지한다.
+
+## PLY1015A01 · 재생 중 과거 집 좌표로 돌아가는 포커스 수정
+- 코드 원인: `startDayPlayback`은 그날 이동 leg가 하나라도 있으면 historicalPlaybackPoint 갱신을 생략했다. 현재 시각에는 leg가 없더라도 시작 때 캐시한 좌표 또는 그리기용 projection cutoff를 재사용할 수 있었다. 드래그 종료는 좌표를 다시 계산하므로 입력 방식에 따라 위치가 달라질 수 있다. 카메라의 예상 경로 fallback에는 표시/숨김 조건도 빠져 있었다. GPS 공백에서 등록된 집을 기본 위치로 가져오는 코드는 없으며, 원본 GPS가 없으면 마지막 확인 위치밖에 알 수 없다는 제한과 구분한다.
+- 수정: 시각 없는 좌표 상태와 경로 cutoff fallback을 제거했다. 재생·시간축·다시 중심 맞추기·일자 갱신이 `MapHomePlaybackLocation`의 같은 선택 시각 결과를 사용한다. 현재 WBS frame(수면 포함), 사용자 확정 지하철, 표시 중 예상 경로를 유지하고, 나머지는 이미 준비된 해당 일자 GPS를 이진 탐색한다. 미래 첫 표본·다른 날짜 표본·이전 frame을 해당 시각의 GPS로 쓰지 않는다. 매 frame마다 전체 센서를 정렬하거나 수면 anchor를 다시 계산하지 않는다. 센서 원본·DB·백업을 수정하지 않았다.
+- 회귀: 집 근처 이동 이후 회사 정지 표본, 이동 종료의 정확한 경계, GPS 공백 중 회사 유지, 과거 frame/다른 날짜/미래 표본 거부, 새 leg 없이 늦게 도착한 회사 표본, 수면 anchor, 확정 지하철, 예상 경로의 마커/카메라 일치 등8개를 추가했다. `playback-tests-02.xcresult`는 관련164개 통과·실패0·건너뜀0(exit0): RouteTimelineData122, 발자국17, 초기 카메라7, 재생/프레임 제한 TimeScale18개. 순차 재생 시각과 직접 선택 시각의 위치 계산을 검증한 단위 테스트이며 실제 탭/드래그 UI 조작이나 사용자 DB 재현을 뜻하지 않는다.
+- 첫 실행: `playback-tests-01.xcresult`는145개 통과·1개 실패·건너뜀0(exit65)였다. 새 도착 경계 테스트가10분 공백에도 이동 leg가 생긴다고 잘못 가정했으며 기존 희소 연결 정책이 이를 차단했다.1분 간격의 정상 이동 표본으로 fixture를 바꾸어 최종 실행에서 통과했다. 이 실패를 앱 결함의 baseline 재현으로 취급하지 않는다. 최초 Simulator 컴파일에는 Apple StoreKitTest SDK의 기존 deprecated 경고1건이 있었다.
+- 빌드/보존: generic iOS Debug 성공(exit0, 경고0·오류0), 앱/Widget1.0(175) 및 두 서명 strict 검증 성공, Watch 미포함. 엔진 import 경계·`git diff --check` 통과.147개 입력 해시가 최종 테스트/빌드/정리 전후 일치하며 이전 GPS1015B01 대비 변경 입력은 RouteTimelineData·MapHomeView·RouteTimelineDataTests3개다. 빌드 번호 변경·설치·TestFlight 업로드·commit/push는 하지 않았다.
+- 정리/근거: 이번 전용 `build/PLY1015A01DD`(할당1,386,553,344바이트)와 Simulator `FC77B220-BDCF-4833-80F9-6AE7753062FA`만 제거했다. 다른 시뮬레이터·공용 런타임·사용자 DB·원래 배포 실행 파일/dSYM은 보존했다. 실제 xcresult/로그/소스 해시는 `artifacts/local-validation-evidence/PLY1015A01/`, 작은 요약은 `artifacts/validation/PLY1015A01.json`에 보존한다.
+- 남은 확인: 대표의 드래그가 시간축/지도 중 어느 동작인지는 아직 회신이 없으며 해당 발생 시각의 실제 화면·원본 GPS와 대조하지 않았다. 수정 빌드에서 회사 도착 이후 같은 시각을 재생/일시 정지/직접 선택했을 때의 지도 중심을 대표 화면으로 확인해야 한다. PLY1015A01은 이 실기기 조건과 함께 temp.md에 유지한다. 앞선 백그라운드·백업·부산 원인 미확인 조건도 그대로 유지한다.
+
+## BGX1015A01 · 10월15일 백그라운드 중단 조사·상태/메모리 개선
+- 최신 근거: iCloud의 `TaptionLogs-20261015-155408.txt`(1,738,491바이트, SHA-256 `16eda5902d1c98efff02aa04420738a864b464c3e1961e31da528fed90b78179`)를 확인했다. 실행본은1.0(175), iOS27.2(24B5099f)다. 13:26:57 시작 세션의 마지막 로그가15:39:31이고15:53:49에 새 프로세스가 시작됐으며 previous_session_unfinished=true였다. 내보내기 시점 센서 stream은 live, archive error는 none이다. 설정된 백그라운드 수집 간격은300초다.
+- 원인 구분:13:31:13·14:43:13·15:16:58의 stopped→collecting 전환은 같은 초에 발생했다. 운동 구간 종료를 전체 수집 종료로 반영한 코드 경로를 확인했다. 다만 실제 프로세스 종료의 메모리/CPU/watchdog/사용자 종료 여부는 이 로그로 확인되지 않는다. suspended 앱은 종료 콜백이 없을 수 있어 unfinished를 crash로 단정하지 않는다([Apple](https://developer.apple.com/documentation/uikit/uiapplicationdelegate/applicationwillterminate(_:))). 사용자 iPhone은 시작/후속 조회 모두 devicectl unavailable이며 Mac에 해당 앱의 iOS 종료 보고서가 없다.
+- 수정: 지속 수집이 실제 live이고 Always 권한이 있을 때 운동 종료로 수집 ID/상태를 끊지 않는다. 자동 운동 세션에서 지속 수집으로 바뀌면 이전 만료 시각을 제거한다. 백그라운드 전환 시 일자 선계산·진행 중 projection/raw 요청과 메모리 캐시를 비우고 저장 후 repository 직렬화 캐시를 해제한다. 원본 DB와 저장 기록은 지우지 않는다.
+- 진단 보완: 앱 target 전용 SystemDiagnostics.swift에서 MetricKit의 종료 원인별 집계와 crash의 숫자 코드만 기존 진단 로그에 기록한다. 원문 예외·스택·위치·건강·비밀번호/키는 수집하지 않는다. 이전 세션의 마지막 scene 단계/시각과 메모리 경고도 남긴다. OS 집계는 제공된 구간의 합계이며 특정 종료의 확정 사유로 자동 해석하지 않는다. 실제 MetricKit 전달은 기기에서 후속 확인해야 한다([Apple](https://developer.apple.com/documentation/metrickit/mxmetricmanager)).
+- 검증 진행 근거: 관련 앱 related-02는191개 통과/실패·건너뜀0이다. 최종 비행 공백 보완 후 related-03은190개 통과·1개 실패·건너뜀0이다. 실패는 기존 동시 조회 테스트가 Task.yield 한 번으로 두 요청이 겹쳤다고 가정해 발생했으며, 실제 합류 전에 첫 조회가 끝나면 두 번의 강제 조회는 정상 동작이다. 테스트에 같은 source fingerprint와 두 번째 요청 진입 expectation을 넣어 의도한 동시 조건을 고정하고 별도 반복 검증한다. related-01은 새 진단 dictionary의 Swift type-check 시간 초과로 컴파일 실패했으며 타입 분리와 앱 target 분리 후 해소했다.
+- 빌드 제한: 첫 generic iOS Debug는 No space left on device로 실패했다. 소스 오류 성공으로 취급하지 않으며 -jobs2로 재시도한다. 최종 결과는 아래 후속 기록에 남긴다. 실기기 설치·TestFlight 업로드·실제 종료 원인 확인은 이번 자동 검증과 구분한다.
+- 최종 검증: related-03의 통과190개와 같은 최종 기능 코드에서 concurrency-04의 수정된 동시 조회1개가5회 연속 통과했다. 고유 앱191개를 확인했고 반복 실행을 추가 테스트 수로 합산하지 않았다. 마지막 테스트/빌드 입력147개가 현재 파일과 일치하며, related-03 이후 달라진 입력은 위 테스트 파일뿐이다. 경로48개·Core133개도 실패/건너뜀0이다. generic iOS Debug 재시도 device-debug-02는exit0·BUILD SUCCEEDED, 소스 경고/오류0이고 앱/Widget1.0(175)의 strict codesign도 각각0이다. Watch 제품은 포함하지 않는다. import 경계와 git diff --check를 통과했다.
+- 완료 범위/후속: 위 내용은 로컬 코드·자동 검증 완료이며 현재 TestFlight175와 실기기에 적용한 결과가 아니다. 실제 OS 종료의 직접 원인·MetricKit 기기 전달·화면상 지속 수집은 다음 배포/대표 제공 근거로 확인한다. 요청3개는 이 실기기 조건과 함께 temp.md에 유지한다. 공유 근거는 artifacts/validation/BGX1015A01.json 및 artifacts/local-validation-evidence/BGX1015A01/에 보존한다.
+
+## BAK1015A01 · 정상 백업의 시각 정밀도 비교 오류 수정
+- 실제 로그:13:26:59 snapshot-only 자동 백업은 성공했고15:53:51 같은 경로는 PlanSecurityError(code4)로 실패했다. 업로드 파일은15:54:08에 만들어져 첨부 화면의 이후 수동 백업 이벤트는 포함하지 않는다. 이 자동 실패 구간에는 BAK1014A01의 로컬 센서 행 변환 실패가 없다. 실행175에는 지난 BAK1014A01 수정도 아직 배포되지 않았다.
+- 원본 확인:15:53:51에 생성된 V4 백업 파일 `2026-10.1792047229554.15A18644-93BB-40F3-A428-53D59AF32770.taptionbackup`의 암호문 SHA-256은 저장된 payloadDigest와 일치한다. 파일 SHA-256은 `129ddeaa100539366eb3b53f3e9d4c2935a7d20edc11f8793208b5b3739104c6`이다. 체크섬 검증은 복호화/전체 복구 검증이 아니다. 기기 PIN verifier/계정 복구 키에 접근하지 못해 사용자 원본을 복호화하지 않았다. 제공된 비밀번호를 파일/로그/외부에 기록하지 않았고 원본 DB/백업에 쓰기하지 않았다.
+- 재현·수정: Date의 내부 epoch 값은 secondsSince1970 JSON 왕복에서0.119209µs 차이가 날 수 있다. 기존 commitMonthlyArchive가 원본 Date와 읽어온 Date를 직접 비교해 정상 파일도 invalidArchive로 처리했다. 최종 파일 백업 회귀 baseline-02가1개 실패/건너뜀0으로 이 경로를 재현했다. baseline-01은 안정적으로 왕복되는 날짜를 잘못 선택한 fixture 전제 실패였고 종료 진단 수집 중 취소(exit75)했으므로 앱 결함의 재현 근거로 쓰지 않는다.
+- 구현: archive identity는 JSON에 실제 기록되는 epoch seconds를 비교하고 나머지 digest·계정·세대·삭제/취소 조건을 유지한다. 자동 snapshot 백업에도 recovery_key/previous_snapshot/prepare_archive/commit_archive/committed 단계를 기록한다. 새 회귀는 실제 파일 저장 후 PIN/계정 키 기반 복원, raw 세대 백업과 이전 세대 보존까지 확인한다. 실제15:53 실패의 세부 단계/비교 전 메모리 시각은 기존 로그에 없어 같은 원인이라고 확정하지는 않는다.
+- 검증: 공유 앱 관련 선택에는 백업36개(신규2개 포함)가 들어 있다. 기존 BKR1007A01의 dense GPS 끝점 불일치 테스트는 이 선택에 포함하지 않았으며 해결/통과로 처리하지 않는다. 현재 자동 검증 통과와 실제 사용자 DB의 수동 백업 성공은 별도다.
+
+## GPS1015B01 · 보완 운동 경로의 교차 위치 검증과 진단 개선
+- 실제 로그: 대표가 제공한 10:10경(KST)을 기준으로 최신175 로그의10:00–10:20 구간538개 이벤트를 분석했다. 원본 변경 무효화408회와 경로 분석8회가 있었으나, 좌표/정확도/위치별 거부 시각이 없어 부산 원본·15분 공백 여부·HealthKit 기여를 확정할 수 없다. 이 시간대의 HealthKit 갱신이나 날씨 오류는 인과관계 근거로 사용하지 않았다. 실제 기기 tunnel은 unavailable이었다.
+- 재현: HealthRouteMergeEngine이20초 시간 중복만 검사하므로 정상 iPhone 위치 사이의 멀리 떨어진 HealthKit 표본을 그대로 허용했다. 합성 위치 회귀를 수정 전 바이너리로 실행한 baseline-03은23개 중22통과/1실패/건너뜀0, exit65였고 해당 급이탈 테스트만 실패했다. baseline-01은 선택 문자열 문제로0개 실행했으므로 검증으로 인정하지 않았다. baseline-02는 같은 실패를 기록한 뒤 Xcode 상세 진단 수집이 끝나지 않아 중단(exit143)했으며, baseline-03에서 상세 수집 없이 완료된 실패를 다시 확보했다.
+- 수정: 후보가 있을 때 기존 위치와 합친 시간순 경로로 타당성을 확인한 뒤 허용 ID의 원래 HealthKit 값을 반환한다. 기존20초 시간 중복 기준을 유지하며 원본 기록·백업을 수정하지 않는다. 수치 품질 거부 합계와 구분하여 센서 경로의 impossible_location_count/innovation_outlier_count를 백그라운드 분석 로그에 기록하고 좌표·장소·건강 원문은 넣지 않는다.
+- 검증: related-01의 경로 adapter23개/활동 품질 adapter28개, 총51개가 통과했고 실패·건너뜀0이다. 원거리 보완 제외, 정상 보완·HealthKit 단독 경로, 원본 값 보존,20초 경계, GPS/수치 거부 구분을 포함한다. generic iOS Debug 빌드 exit0/BUILD SUCCEEDED, 경고·오류0, 앱·위젯1.0(175)의 strict codesign 모두0이며 Watch는 포함하지 않는다. 제품 입력147개의 해시가 유지됐고 package 입력도 이전 GPS1015A01의 경로48개/Core133개 검증 이후 변경되지 않았다. import 경계와 git diff --check도 통과했다.
+- 보존/정리: 실제 검증 자료817개를 artifacts/local-validation-evidence/GPS1015B01로 옮기고 모든 파일의 바이트 SHA 일치를 확인했다. 이번 build/GPS1015B01DD의 할당1,389,359,104바이트(약1.29GiB), 전용 Simulator 910258DE-36B4-4E09-8176-8842F9B43959, 임시 장치 목록5개만 정리했다. 사용자 DB/백업·원래 배포 심볼·다른 프로젝트·공용 런타임은 보존했다. 요약은 artifacts/validation/GPS1015B01.json이며 코드/자동 검증 범위인 B01만 temp.md에서 제거하고 실제 원본 판정 A01은 유지했다.
+- 제한: 이 별도 코드 결함을 실제10:10 부산 건의 원인으로 확정하지 않았다. 현재 기록의 실제 재판정과 실기기 화면은 GPS1015A01의 남은 조건이다. 설치·TestFlight 업로드·commit/push는 수행하지 않았다.
+
+## GPS1015A01 · 수집 공백 후 잘못된 먼 위치가 기준점이 되는 결함 수정
+- 확인: 최신175 로그와 사용자 부산 오표시 보고를 대조했다. 이후 대표가 발생 시각을 2026-10-15 10:10경(KST)으로 제공해 10:00–10:20 로그를 추가 분석했다. 원본 변경 무효화408회와 분석8회가 있었고, 10:09:56/10:12:16에도 분석했다. 다만 gps 필드는 좌표 유무와 무관한 전체 센서 행 수이며 quality_rejections는 수치 품질 판정 합계다. 이 로그로 GPS 좌표의 연속성·급이탈 시각 또는15분 공백을 입증할 수 없다. 10:10:13 날씨 오류와 부산 표시의 인과관계도 확인되지 않았다. 암호화된 원본 위치 표본은 확보하지 못했고 기기 tunnel도 unavailable이므로 해당 GPS 수신 원인/출처는 미확정이다. 원본 위치/건강 자료를 파일이나 외부로 출력하지 않았다. 보완 운동 경로의 교차 검사 누락은 GPS1015B01에서 별도로 재현·검증하며 이번 실제 원인으로 간주하지 않는다.
+- 재현: 기존 필터는15분 넘는 공백 뒤 속도 검사를 무조건 생략했다. 합성333km 급이탈 뒤의 먼 지점을 새 기준으로 받아들이고 원래 위치로 돌아온 표본을 반대로 거부하는 실패를 baseline-route-01에서1개 테스트/3개 assertion으로 재현했다.
+- 수정: 공백은 선분만 나누며 이동 가능 거리 검사를 계속한다. 관측되지 않은 비행도 있을 수 있어 공백용 최대 속도280m/s를 별도로 두고, 연속 표본의 기존 이동수단/최대속도 제한은 유지했다. 저정확도 경계도 같은 검사를 받으며 거부된 표본은 정본에서 삭제하지 않는다. projection version3/지도 cache key v9로 이전 파생 결과를 재계산한다. 지도·활동 분석·백업 경로가 공유하는 필터에 적용된다.
+- 검증: 경로 package 최종48개/실패·건너뜀0, Core133개/실패·건너뜀0. 급이탈/연속 먼 점/정상 복귀, 현재 위치 마커, 실제 장거리 지상 이동·비행 공백, 원본 보존을 확인했다. 공유 앱 테스트에서 경로 adapter/일자 DB 회귀도 실행했다. 실제 부산 표본의 재판정과 기기 화면 확인은 후속 조건으로 남긴다.
+
+## CLN1015A01 · 이번 검증의 재생성 출력물 정리 (완료)
+- 삭제: 이번 요청에서 만든 build/BGX1015A01DD, build/GPS1015A01Core, build/GPS1015A01Route, BAK1015A01/SwiftModuleCache 네 경로와 전용 Simulator F0168712-954B-4B3C-AFCD-A48C1B596FA0만 제거했다. 네 경로의 삭제 전 할당 합계는1,645,146,112바이트(약1.53GiB)이며 Simulator 사용량은 이 합계에 넣지 않았다. 공용 런타임·다른 프로젝트·원본 DB/백업·원래 배포 실행 파일/dSYM은 대상이 아니다.
+- 보존/검증: 실제 로그·xcresult·입력 SHA·진단 요약을 artifacts/local-validation-evidence/BGX1015A01, BAK1015A01, GPS1015A01, CLN1015A01로 옮겼고 기존 파일930/2736/4/3개의 바이트 SHA가 이동 전후 모두 같았다. 소스147개도 모두 일치한다. 최종 Debug/앱·Widget 서명 검증 뒤에만 출력물을 제거했다. artifacts/validation/CLN1015A01.json에 경로·제거/보존 결과를 기록했고 이 정리 요청만 temp.md에서 제거했다.
+
 ## GIT1014A01 · main 커밋·푸시와 clean 확인 (2026-10-14 완료)
 - 시작: main HEAD ea8fe22247dfbbdc21f125c626670336d029bbb8, git fetch origin main 성공 후 origin/main과 ahead/behind0/0이었다. DB 직접 읽기·센서 저장/변환·지도 경로/복귀 배율·분홍/회색 발자국·백업 개선, 관련 테스트/배포/정리 기록과 BIM8F4K2Q6 아트워크가 미커밋 상태였다.
 - 사전 검증: PAW1014B01의 최종 입력146개 SHA256이 현재와 모두 일치했다. 관련 앱158개 통과·실패/건너뜀0와 generic iOS Debug·앱/Widget175 strict 서명 근거를 재사용한다. 변경 없는 Core133개와 앞선 관련 검증은 원래 요청 ID의 결과를 유지한다. 이 Git 작업에서 기능 코드를 바꾸거나 앱 테스트/빌드를 다시 실행하지 않았다. git diff --check·엔진 import 경계 통과, 새 JSON 자료 파싱 성공.

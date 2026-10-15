@@ -1,0 +1,47 @@
+{
+  "baseCommit": "8ea705385d70827a52a2c53ed48b18d2f42250e8",
+  "branch": "main",
+  "sourceInputCount": 147,
+  "sourceInputsUnchanged": true,
+  "sharedSourceAndValidation": "artifacts/validation/BGX1015A01.json",
+  "testflightUploaded": false,
+  "installedOnDevice": false,
+  "deviceFunctionVerified": false,
+  "userDatabaseOrBackupModified": false,
+  "cleanupRequestID": "CLN1015A01",
+  "requestID": "GPS1015A01",
+  "status": "recording-gap defect reproduced and fixed; user reports ~10:10 KST, original samples and incident cause remain unverified",
+  "diagnosis": {
+    "userReportedUnvisitedCity": "Busan",
+    "exactTimeProvided": false,
+    "rawLocationSamplesInspected": false,
+    "reproducedCodeDefect": "A gap over 15 minutes bypassed plausibility, admitted a distant anchor and rejected the return samples",
+    "rawSamplesPreserved": true,
+    "approximateTimeProvided": true,
+    "reportedTime": "2026-10-15T10:10:00+09:00",
+    "rawChangeInvalidationsInTwentyMinuteWindow": 408,
+    "gapDefectConfirmedAsIncidentCause": false,
+    "followupRequestID": "GPS1015B01"
+  },
+  "fix": {
+    "gapPlausibilityCheckEnabled": true,
+    "maximumGapSpeedMetersPerSecond": 280,
+    "continuousAbsoluteLimitUnchanged": 120,
+    "projectionVersion": 3,
+    "mapCacheAlgorithmKey": "route-document-v9",
+    "rawDataDeleted": false
+  },
+  "baseline": {
+    "path": "artifacts/local-validation-evidence/GPS1015A01/baseline-route-01.log",
+    "failedTests": 1,
+    "failedAssertions": 3
+  },
+  "tests": {
+    "routePassed": 48,
+    "corePassed": 133,
+    "appSharedWith": "BGX1015A01",
+    "normalGroundAndFlightGapsCovered": true,
+    "rawDataPreservationCovered": true
+  },
+  "subsequentSourceVerification": "artifacts/validation/GPS1015B01.json"
+}

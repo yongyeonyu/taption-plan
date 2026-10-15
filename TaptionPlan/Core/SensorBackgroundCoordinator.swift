@@ -114,6 +114,10 @@ final class SensorBackgroundCoordinator {
         at date: Date = .now
     ) -> Bool {
         if sessionState == .collecting {
+            if sessionExpiresAt != nil {
+                sessionExpiresAt = nil
+                persist()
+            }
             return false
         }
         sessionID = id ?? sessionID ?? UUID()
@@ -172,6 +176,14 @@ final class SensorBackgroundCoordinator {
         sessionStartedAt = nil
         sessionExpiresAt = nil
         persist()
+    }
+
+    func finishTrackingSession(continuesCollection: Bool, at date: Date) {
+        if continuesCollection {
+            _ = beginCollectionSession(at: date)
+        } else {
+            endSession()
+        }
     }
 
     func cancel() {

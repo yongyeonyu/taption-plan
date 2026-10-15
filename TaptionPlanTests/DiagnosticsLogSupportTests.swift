@@ -54,6 +54,34 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertEqual(next.previousSessionWasUnfinished, false)
     }
 
+    func testBackgroundSessionWithoutTerminationCallbackRetainsItsLastPhase() throws {
+        let suite = "TaptionPlanDiagnosticsSessionTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        _ = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        let backgroundDate = Date(timeIntervalSince1970: 1_000)
+        TaptionPlanDiagnosticsSession.recordPhase(.background, at: backgroundDate, defaults: defaults)
+        _ = TaptionPlanDiagnosticsSession.begin(defaults: defaults)
+        let summary = TaptionPlanDiagnosticsSession.latestSummary(defaults: defaults)
+        XCTAssertEqual(summary["previous_session_unfinished"], "true")
+        XCTAssertEqual(summary["previous_session_last_phase"], "background")
+        XCTAssertEqual(summary["previous_session_last_phase_at"], "1000.0")
+    }
+
+    func testSystemTerminationFieldsExcludeFreeformExceptionAndPersonalData() {
+        let fields = TaptionTerminationDiagnosticFields.make(
+            reason: "Namespace FRONTBOARD, Code 0x8badf00d; private-location private-secret",
+            exceptionType: 1, exceptionCode: 2, signal: 9
+        )
+        XCTAssertEqual(fields["termination_namespace"], "FRONTBOARD")
+        XCTAssertEqual(fields["termination_code"], "0x8badf00d")
+        XCTAssertEqual(fields["signal"], "9")
+        XCTAssertFalse(fields.values.contains { $0.contains("private") })
+        let unavailable = TaptionTerminationDiagnosticFields.make(reason: nil, exceptionType: nil, exceptionCode: nil, signal: nil)
+        XCTAssertEqual(unavailable["termination_namespace"], "unknown")
+        XCTAssertEqual(unavailable["termination_code"], "unknown")
+    }
+
     func testPrimaryWriteReportsPrimarySuccess() throws {
         let primary = rootURL.appendingPathComponent("primary")
         let fallback = rootURL.appendingPathComponent("fallback")

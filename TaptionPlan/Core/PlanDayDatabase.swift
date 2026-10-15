@@ -2032,6 +2032,17 @@ final class PlanDayLoadCoordinator {
         rawRequests.removeAll()
     }
 
+    func prepareForBackground() {
+        prefetchTask?.cancel()
+        prefetchTask = nil
+        for (key, request) in inFlight {
+            dayInvalidationGenerations[key.day, default: 0] &+= 1
+            request.task.cancel()
+        }
+        inFlight.removeAll()
+        handleMemoryPressure()
+    }
+
     func invalidateAll() async {
         let prefetch = prefetchTask
         let requests = inFlight.values.map(\.task)

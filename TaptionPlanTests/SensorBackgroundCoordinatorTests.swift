@@ -3,6 +3,35 @@ import XCTest
 
 @MainActor
 final class SensorBackgroundCoordinatorTests: XCTestCase {
+    func testTrackingEndKeepsContinuousCollectionIdentityAndSavedToken() {
+        let coordinator = SensorBackgroundCoordinator()
+        let start = Date(timeIntervalSince1970: 8_000)
+        _ = coordinator.beginCollectionSession(at: start)
+        let id = coordinator.sessionID
+        _ = coordinator.markSaved(at: start)
+        coordinator.finishTrackingSession(continuesCollection: true, at: start.addingTimeInterval(60))
+        XCTAssertEqual(coordinator.sessionState, .collecting)
+        XCTAssertEqual(coordinator.sessionID, id)
+        XCTAssertEqual(coordinator.sessionStartedAt, start)
+        XCTAssertEqual(coordinator.saveToken, 1)
+        coordinator.finishTrackingSession(continuesCollection: false, at: start.addingTimeInterval(120))
+        XCTAssertEqual(coordinator.sessionState, .stopped)
+    }
+
+    func testContinuousCollectionClearsAutomaticSessionExpiryAcrossRestart() throws {
+        let suite = "SensorBackgroundCoordinatorTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let start = Date(timeIntervalSince1970: 8_000)
+        let first = SensorBackgroundCoordinator(defaults: defaults)
+        _ = first.beginAutomaticSession(at: start, expiresAfter: 10)
+        _ = first.beginCollectionSession(at: start.addingTimeInterval(1))
+        XCTAssertNil(first.sessionExpiresAt)
+        let restored = SensorBackgroundCoordinator(defaults: defaults)
+        XCTAssertFalse(restored.expireIfNeeded(at: start.addingTimeInterval(11)))
+        XCTAssertEqual(restored.sessionState, .collecting)
+    }
+
     func testWakeReasonsAreDeduplicatedIndependently() {
         let coordinator = SensorBackgroundCoordinator(
             wakeDeduplicationWindow: 5

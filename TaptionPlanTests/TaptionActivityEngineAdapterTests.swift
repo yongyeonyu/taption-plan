@@ -325,6 +325,25 @@ struct TaptionActivityEngineAdapterTests {
         #expect(!projection.routeReadings.isEmpty)
     }
 
+    @Test func qualityProjectionSeparatesLocationRejectionsFromScalarRejections() {
+        let readings = [37.0, 34, 37.0001].enumerated().map { index, latitude in
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(index)),
+                point: GeoPoint(latitude: latitude, longitude: 126, altitude: 0,
+                                horizontalAccuracy: 5, verticalAccuracy: 5),
+                locationFixQuality: .precise, motion: .walking, gpsAvailable: true
+            )
+        }
+
+        let projection = TaptionActivityEngineAdapter.qualityProjection(from: readings)
+
+        #expect(projection.readings == readings)
+        #expect(projection.rejectionCounts.isEmpty)
+        #expect(projection.impossibleLocationCount == 1)
+        #expect(projection.innovationOutlierCount == 0)
+        #expect(!projection.routeReadings.contains { $0.id == readings[1].id })
+    }
+
     @Test func qualityProjectionRetainsStationaryEndForPlaceInference() {
         let readings = stride(from: 0.0, through: 1_800.0, by: 30).map { seconds in
             SensorReading(

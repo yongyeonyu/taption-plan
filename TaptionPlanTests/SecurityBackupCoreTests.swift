@@ -47,6 +47,56 @@ private final class RestoreCancellationProbe: @unchecked Sendable {
 
 @MainActor
 final class SecurityBackupCoreTests: XCTestCase {
+    func testFileBackupAcceptsTimestampPrecisionLostByJSONAndRestoresPayload() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let service = makeService(
+            backupStore: store,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
+        )
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
+        let serializedDate = Date(timeIntervalSince1970: date.timeIntervalSince1970)
+        XCTAssertNotEqual(date, serializedDate, "Exercise Date's sub-microsecond serialization loss")
+        var snapshot = TaptionDataSnapshot.empty
+        let memo = ActionMemo(kind: .nextAction, text: "fractional timestamp backup", createdAt: date, updatedAt: date)
+        snapshot.memos = [memo]
+
+        let saved = try await service.saveMonthlyArchive(PlanCloudBackupPayload(snapshot: snapshot), date: date)
+        let readback = try XCTUnwrap(store.latest())
+        XCTAssertEqual(readback.createdAt, serializedDate)
+        XCTAssertEqual(readback.snapshotGenerationID, saved.snapshotGenerationID)
+        XCTAssertEqual(readback.payloadDigest, saved.payloadDigest)
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+        let restored = try await service.loadLatestBackup()
+        XCTAssertEqual(restored.snapshot.memos.map(\.id), [memo.id])
+        XCTAssertEqual(restored.snapshot.memos.first?.text, memo.text)
+    }
+
+    func testFileBackedRawGenerationBackupAcceptsFractionalTimestampAndPreservesPrevious() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let service = makeService(backupStore: store, rawSensorBackupStore: FilePlanCloudRawSensorBackupStore(root: root),
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider())
+        try service.setPIN("1234")
+        let date = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
+        let readingDate = Date(timeIntervalSince1970: floor(date.timeIntervalSince1970))
+        let reading = SensorReading(timestamp: readingDate, point: GeoPoint(latitude: 37, longitude: 126,
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: -1))
+        let previous = try await service.saveMonthlyArchive(PlanCloudBackupPayload(snapshot: .empty), date: date.addingTimeInterval(-60))
+        let generation = try await service.saveMonthlyGeneration(PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: .init(monthKey: PlanArchiveSchedule.monthKey(for: date), sensorReadings: [reading], createdAt: date), date: date)
+        XCTAssertEqual(generation.snapshot.parentSnapshotGenerationID, previous.snapshotGenerationID)
+        XCTAssertEqual(try store.allArchives().count, 2)
+        let restored = try await service.loadLatestBackupPackage(rewrapRecoveredArchive: false)
+        guard case .available(let raw) = restored.rawSensorState else { return XCTFail("Expected raw sensor payload") }
+        XCTAssertEqual(raw.sensorReadings.map(\.id), [reading.id])
+        XCTAssertEqual(raw.sensorReadings.first?.point, reading.point)
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, date)
+    }
+
     func testV4FileBackedRestoreProducesBoundedStageAndPreservesCiphertext() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

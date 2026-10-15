@@ -3,6 +3,112 @@ import XCTest
 @testable import TaptionPlan
 
 final class RouteTimelineDataTests: XCTestCase {
+    func testPlaybackAndScrubbingStayAtOfficeAfterEarlierHomeMovement() throws {
+        let readings = [reading(30, latitude: 37), reading(31, latitude: 37.0001),
+            reading(600, latitude: 37.1), reading(601, latitude: 37.1)]
+        let projection = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: readings, calendar: calendar)
+        XCTAssertFalse(projection.legs.isEmpty)
+        XCTAssertNotNil(projection.frame(at: date(30).addingTimeInterval(30)))
+        XCTAssertNil(projection.frame(at: date(610)))
+
+        // Sequential playback and a direct seek resolve the same timestamp,
+        // including a stationary arrival that produced no movement leg.
+        for minute in [600, 601, 610, 610] {
+            let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(minute),
+                frame: projection.frame(at: date(minute)), normalizedReadings: readings,
+                calendar: calendar))
+            XCTAssertEqual(location.coordinate, readings.last?.point)
+            XCTAssertEqual(location.cameraCoordinate, location.coordinate)
+        }
+    }
+
+    func testPlaybackArrivalUsesLastFixAtExactMovementEnd() throws {
+        let readings = [reading(599, latitude: 37), reading(600, latitude: 37.0001)]
+        let projection = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: readings, calendar: calendar)
+        XCTAssertNotNil(projection.frame(at: date(599)))
+        XCTAssertNil(projection.frame(at: date(600)))
+        for minute in [600, 601, 620] {
+            let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(minute),
+                frame: projection.frame(at: date(minute)), normalizedReadings: readings,
+                calendar: calendar))
+            XCTAssertEqual(location.coordinate, readings.last?.point)
+            XCTAssertEqual(location.cameraCoordinate, readings.last?.point)
+        }
+    }
+
+    func testPlaybackGapUsesOfficeFixInsteadOfFutureReturnHome() throws {
+        let readings = [reading(600, latitude: 37.1), reading(700, latitude: 37)]
+        let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(650),
+            frame: nil, normalizedReadings: readings, calendar: calendar))
+        XCTAssertEqual(location.coordinate, readings.first?.point)
+        XCTAssertEqual(location.cameraCoordinate, readings.first?.point)
+    }
+
+    func testPlaybackDoesNotReuseStaleFrameOrAnotherDayOrFutureFix() throws {
+        let readings = [reading(30, latitude: 37), reading(31, latitude: 37.0001)]
+        let projection = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: readings, calendar: calendar)
+        let oldFrame = try XCTUnwrap(projection.frame(at: date(30)))
+        XCTAssertNil(MapHomePlaybackLocation.resolve(at: date(600), frame: oldFrame,
+            normalizedReadings: [], calendar: calendar))
+        XCTAssertNil(MapHomePlaybackLocation.resolve(at: date(0), frame: nil,
+            normalizedReadings: readings, calendar: calendar))
+        XCTAssertNil(MapHomePlaybackLocation.resolve(at: date(1440), frame: oldFrame,
+            normalizedReadings: readings, calendar: calendar))
+    }
+
+    func testPlaybackSeesLateStationaryFixWithoutNewMovementLeg() throws {
+        let initial = [reading(30, latitude: 37), reading(31, latitude: 37.0001)]
+        let projection = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: initial, calendar: calendar)
+        let updated = initial + [reading(600, latitude: 37.1)]
+        let next = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: updated, calendar: calendar)
+        XCTAssertEqual(projection, next)
+        let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(610),
+            frame: projection.frame(at: date(610)), normalizedReadings: updated,
+            calendar: calendar))
+        XCTAssertEqual(location.coordinate, updated.last?.point)
+        XCTAssertEqual(location.cameraCoordinate, location.coordinate)
+    }
+
+    func testPlaybackLocationPreservesSleepAnchorForMarkerAndCamera() throws {
+        let readings = [reading(20, latitude: 37), reading(30, latitude: 37.01)]
+        let projection = MapHomeWBSPlaybackProjection.make(selectedDate: date(0),
+            places: [], travel: [], readings: readings,
+            confirmedSleepSpans: [TimeSpan(start: date(20), end: date(40))], calendar: calendar)
+        let frame = try XCTUnwrap(projection.frame(at: date(30)))
+        let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(30),
+            frame: frame, normalizedReadings: readings, calendar: calendar))
+        XCTAssertEqual(location.coordinate, readings.first?.point)
+        XCTAssertEqual(location.cameraCoordinate, readings.first?.point)
+        XCTAssertEqual(readings.last?.point?.latitude, 37.01)
+    }
+
+    func testPlaybackLocationPreservesConfirmedSubwayOverOldGPS() throws {
+        var (travel, readings) = confirmedSubwayFixture()
+        travel.subwayRoute = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "마곡나루역"]))
+        let expected = try XCTUnwrap(RouteTimelineDataEngine.confirmedSubwayCoordinates(
+            for: travel, through: date(425)).last)
+        let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(425),
+            frame: nil, normalizedReadings: [readings[0]], confirmedTravel: [travel],
+            expectedCoordinate: readings[0].point, calendar: calendar))
+        XCTAssertEqual(location.coordinate, expected)
+        XCTAssertEqual(location.cameraCoordinate, expected)
+    }
+
+    func testPlaybackForecastUsesOneLocationForMarkerAndCamera() throws {
+        let oldGPS = reading(30, latitude: 37)
+        let forecast = try XCTUnwrap(reading(600, latitude: 37.1).point)
+        let location = try XCTUnwrap(MapHomePlaybackLocation.resolve(at: date(600),
+            frame: nil, normalizedReadings: [oldGPS], expectedCoordinate: forecast,
+            calendar: calendar))
+        XCTAssertEqual(location.coordinate, forecast)
+        XCTAssertEqual(location.cameraCoordinate, forecast)
+    }
+
     func testGPSGapFootprintsUsePlaybackCutoffInsteadOfWholeDay() {
         let readings = [reading(60, latitude: 37), reading(62, latitude: 37.0015),
             reading(120, latitude: 37.002), reading(122, latitude: 37.0035)]

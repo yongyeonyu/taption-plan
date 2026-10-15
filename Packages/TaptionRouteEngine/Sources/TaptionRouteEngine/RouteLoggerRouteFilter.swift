@@ -8,6 +8,7 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
     public var maximumAccuracyForBoundaryMeters: Double
     public var maximumUnknownSpeedMetersPerSecond: Double
     public var absoluteMaximumSpeedMetersPerSecond: Double
+    public var maximumGapSpeedMetersPerSecond: Double
     public var innovationGate: Double
     public var processAccelerationNoise: Double
 
@@ -19,6 +20,7 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
         maximumAccuracyForBoundaryMeters: Double = 1_000,
         maximumUnknownSpeedMetersPerSecond: Double = 55,
         absoluteMaximumSpeedMetersPerSecond: Double = 120,
+        maximumGapSpeedMetersPerSecond: Double = 280,
         innovationGate: Double = 9,
         processAccelerationNoise: Double = 4
     ) {
@@ -29,6 +31,7 @@ public struct RouteLoggerRouteFilterConfiguration: Sendable {
         self.maximumAccuracyForBoundaryMeters = maximumAccuracyForBoundaryMeters
         self.maximumUnknownSpeedMetersPerSecond = maximumUnknownSpeedMetersPerSecond
         self.absoluteMaximumSpeedMetersPerSecond = absoluteMaximumSpeedMetersPerSecond
+        self.maximumGapSpeedMetersPerSecond = maximumGapSpeedMetersPerSecond
         self.innovationGate = innovationGate
         self.processAccelerationNoise = processAccelerationNoise
     }
@@ -484,12 +487,15 @@ public struct RouteLoggerRouteFilter: Sendable {
     private func isPlausible(_ sample: RouteSample, after previous: RouteSample) -> Bool {
         let elapsed = sample.timestamp.timeIntervalSince(previous.timestamp)
         guard elapsed > 0 else { return false }
-        if elapsed > configuration.segmentGap { return true }
         let allowance = 3 * hypot(previous.horizontalAccuracyMeters, sample.horizontalAccuracyMeters)
-        let maximumSpeed = min(
-            configuration.absoluteMaximumSpeedMetersPerSecond,
-            max(modeSpeed(for: sample, previous: previous), reportedMaximumSpeed(previous, sample))
-        )
+        // A recording gap separates segments, but cannot validate a teleport.
+        // The movement mode before the gap need not apply to the whole gap.
+        let maximumSpeed = elapsed > configuration.segmentGap
+            ? configuration.maximumGapSpeedMetersPerSecond
+            : min(
+                configuration.absoluteMaximumSpeedMetersPerSecond,
+                max(modeSpeed(for: sample, previous: previous), reportedMaximumSpeed(previous, sample))
+            )
         return Geo.distance(previous.coordinate, sample.coordinate)
             <= max(25, maximumSpeed * elapsed + allowance)
     }

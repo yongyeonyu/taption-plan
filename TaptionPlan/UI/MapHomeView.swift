@@ -1910,7 +1910,6 @@ struct MapHomeView: View {
     @State private var historicalPlaybackReadings: [SensorReading] = []
     @State private var displayRouteReadings: [SensorReading] = []
     @State private var lastPreparedRouteReadingsSignature: String?
-    @State private var historicalPlaybackPoint: GeoPoint?
     @State private var timelineRouteOverlays: [MapHomeTimelineRouteOverlay] = []
     @State private var cachedTemporaryLocations: [SubwayStationCatalog.TemporaryLocation] = []
     @State private var expectedRouteOverlays: [MapHomeExpectedRouteOverlay] = []
@@ -1965,7 +1964,7 @@ struct MapHomeView: View {
         "#F2D58D", "#F28FA9", "#B7DCC7", "#B7D5EE",
     ]
 
-    private static let mapCacheAlgorithmKey = "route-document-v8"
+    private static let mapCacheAlgorithmKey = "route-document-v9"
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
@@ -2683,7 +2682,7 @@ struct MapHomeView: View {
             } else {
                 prepareRouteProjectionReadings()
                 refreshRouteProjection()
-                refreshHistoricalPlaybackPoint()
+                recordCurrentPlaybackAlignment()
             }
 
             let shouldFitRoutes = shouldFitRoutesAfterDateChange
@@ -3007,13 +3006,7 @@ struct MapHomeView: View {
                     )
                 }
                 guard shouldFocus else { return }
-                let point = isDayPlaybackRunning
-                    ? displayedPlaybackFocusPoint
-                        ?? historicalPlaybackPoint
-                        ?? refreshHistoricalPlaybackPoint()
-                    : displayedPlaybackFocusPoint
-                        ?? refreshHistoricalPlaybackPoint()
-                guard let point else { return }
+                guard let point = displayedPlaybackFocusPoint else { return }
                 focusMap(on: point, using: nil, followsTracking: true)
             } else {
                 refreshSelectedTimelineMapPosition(minute: minute, using: nil)
@@ -3761,7 +3754,7 @@ struct MapHomeView: View {
         selectedPawprintTimestamp = selection.timestamp
         selectedPawprintCoordinate = waypoint.coordinate
         _ = refreshRouteProjection()
-        refreshHistoricalPlaybackPoint()
+        recordCurrentPlaybackAlignment()
         focusMap(on: wbsGeoPoint(waypoint.coordinate), using: nil, followsTracking: true)
         dismissMapSearchOverlay()
     }
@@ -5018,7 +5011,7 @@ struct MapHomeView: View {
         hasDeferredWBSPlaybackRefresh = false
         refreshWBSPlaybackProjection()
         refreshRouteProjection()
-        refreshHistoricalPlaybackPoint()
+        recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         var lastUptime = ProcessInfo.processInfo.systemUptime
         dayPlaybackTask = Task { @MainActor in
@@ -5058,9 +5051,6 @@ struct MapHomeView: View {
                     minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
                 ) {
                     dayPlaybackCurrentMinute = playbackMinute
-                    if wbsPlaybackProjection?.legs.isEmpty != false {
-                        refreshHistoricalPlaybackPoint()
-                    }
                 }
                 if TimelineInteractionFrameGate.shouldRender(
                     lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -5080,12 +5070,11 @@ struct MapHomeView: View {
                         )
                     isDayPlaybackRunning = false
                     isTimelineInteractionActive = false
-                    historicalPlaybackPoint = nil
                     dayPlaybackCurrentMinute = nil
                     _ = flushDeferredRouteProjection()
                         ?? refreshRouteProjection()
                     flushDeferredWBSPlaybackProjection()
-                    refreshHistoricalPlaybackPoint()
+                    recordCurrentPlaybackAlignment()
                     dayPlaybackTask = nil
                     lastPlaybackRouteProjectionUptime = 0
                     lastPlaybackMapFocusUptime = 0
@@ -5205,7 +5194,6 @@ struct MapHomeView: View {
         dayPlaybackTask = nil
         isDayPlaybackRunning = false
         dayPlaybackCurrentMinute = nil
-        historicalPlaybackPoint = nil
         lastPlaybackRouteProjectionUptime = 0
         lastPlaybackMapFocusUptime = 0
         lastPlaybackMarkerUptime = 0
@@ -5215,7 +5203,7 @@ struct MapHomeView: View {
             _ = flushDeferredRouteProjection()
                 ?? refreshRouteProjection()
             flushDeferredWBSPlaybackProjection()
-            refreshHistoricalPlaybackPoint()
+            recordCurrentPlaybackAlignment()
         }
     }
 
@@ -7380,7 +7368,6 @@ struct MapHomeView: View {
         historicalPlaybackReadings = []
         displayRouteReadings = []
         lastPreparedRouteReadingsSignature = nil
-        historicalPlaybackPoint = nil
         selectedPawprintTimestamp = nil
         selectedPawprintCoordinate = nil
         routeProjection = nil
@@ -7452,17 +7439,11 @@ struct MapHomeView: View {
         using proxy: MapProxy? = nil
     ) {
         let deferredProjection = flushDeferredRouteProjection()
-        guard minute != nil else {
-            historicalPlaybackPoint = nil
-            return
-        }
-        let projection = deferredProjection
+        guard minute != nil else { return }
+        _ = deferredProjection
             ?? refreshRouteProjection()
-        let point = refreshHistoricalPlaybackPoint()
-            ?? (routeReadingsLoadState.isLoaded(for: model.selectedDate)
-                ? projection?.coordinateAtCutoff
-                : nil)
-        guard let point else { return }
+        recordCurrentPlaybackAlignment()
+        guard let point = displayedPlaybackFocusPoint else { return }
         focusMap(on: point, using: proxy, followsTracking: true)
     }
 
@@ -8208,17 +8189,7 @@ struct MapHomeView: View {
     }
 
     private var historicalPlaybackCoordinate: CLLocationCoordinate2D? {
-        if selectedPawprintPoint != nil { return selectedPawprintCoordinate }
-        if let point = wbsPlaybackFrame?.coordinate {
-            let coordinate = CLLocationCoordinate2D(
-                latitude: point.latitude,
-                longitude: point.longitude
-            )
-            return CLLocationCoordinate2DIsValid(coordinate) ? coordinate : nil
-        }
-        guard selectedTimelineMinute != nil,
-              let point = historicalPlaybackPoint
-                ?? routeProjection?.coordinateAtCutoff,
+        guard let point = displayedPlaybackLocation?.coordinate,
               isValid(point) else { return nil }
         return CLLocationCoordinate2D(
             latitude: point.latitude,
@@ -8228,9 +8199,11 @@ struct MapHomeView: View {
 
     private var activeExpectedRoute: MapHomeExpectedRouteOverlay? {
         let date = displayedLocationDate
+        let visibleIDs = Set(displayedExpectedRouteOverlays.map(\.id))
         return expectedRouteOverlays
             .filter {
-                $0.coordinates.count >= 2
+                visibleIDs.contains($0.id)
+                    && $0.coordinates.count >= 2
                     && $0.departureDate <= date
                     && date <= $0.arrivalDate
             }
@@ -8242,25 +8215,31 @@ struct MapHomeView: View {
     }
 
     private var displayedPlaybackFocusPoint: GeoPoint? {
-        if let point = selectedPawprintPoint { return point }
-        if let point = wbsPlaybackFrame?.cameraCoordinate {
-            return point
+        displayedPlaybackLocation?.cameraCoordinate
+    }
+
+    private var displayedPlaybackLocation: MapHomePlaybackLocation? {
+        guard selectedTimelineMinute != nil else { return nil }
+        if let point = selectedPawprintPoint {
+            return MapHomePlaybackLocation(coordinate: point)
         }
-        guard let coordinate = expectedRoutePlaybackCoordinate
-            ?? historicalPlaybackCoordinate else { return nil }
-        guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
-        return GeoPoint(
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude,
-            altitude: 0,
-            horizontalAccuracy: -1,
-            verticalAccuracy: -1
+        let frame = wbsPlaybackFrame
+        let expectedPoint = frame == nil ? expectedRoutePlaybackCoordinate.flatMap { coordinate in
+            CLLocationCoordinate2DIsValid(coordinate) ? wbsGeoPoint(coordinate) : nil
+        } : nil
+        return MapHomePlaybackLocation.resolve(
+            at: displayedLocationDate,
+            frame: frame,
+            normalizedReadings: routeReadingsLoadState.isLoaded(for: model.selectedDate)
+                ? historicalPlaybackReadings : [],
+            confirmedTravel: currentDayDataSnapshot?.travel ?? [],
+            expectedCoordinate: expectedPoint
         )
     }
 
     private var displayedLocationCoordinate: CLLocationCoordinate2D? {
         if selectedTimelineMinute != nil {
-            return historicalPlaybackCoordinate ?? expectedRoutePlaybackCoordinate
+            return historicalPlaybackCoordinate
         }
         guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else {
             return nil
@@ -8604,10 +8583,10 @@ struct MapHomeView: View {
             return
         }
         prepareRouteProjectionReadings()
-        let projection = refreshRouteProjection()
+        refreshRouteProjection()
         if selectedTimelineMinute != nil {
-            if let point = refreshHistoricalPlaybackPoint()
-                ?? (dayData.isComplete ? projection?.coordinateAtCutoff : nil) {
+            recordCurrentPlaybackAlignment()
+            if let point = displayedPlaybackFocusPoint {
                 focusMap(
                     on: point,
                     followsTracking: true
@@ -9053,7 +9032,7 @@ struct MapHomeView: View {
             prepareRouteProjectionReadings()
         }
         refreshRouteProjection()
-        refreshHistoricalPlaybackPoint()
+        recordCurrentPlaybackAlignment()
     }
 
     private func scheduleLiveRouteProjectionRefresh() {
@@ -9115,7 +9094,7 @@ struct MapHomeView: View {
         }
         let projection = refreshRouteProjection()
         flushDeferredWBSPlaybackProjection()
-        refreshHistoricalPlaybackPoint()
+        recordCurrentPlaybackAlignment()
         return projection
     }
 
@@ -9396,80 +9375,10 @@ struct MapHomeView: View {
         )
     }
 
-    @discardableResult
-    private func refreshHistoricalPlaybackPoint() -> GeoPoint? {
-        if let point = selectedPawprintPoint {
-            if historicalPlaybackPoint != point { historicalPlaybackPoint = point }
-            return point
-        }
-        if let frame = wbsPlaybackFrame,
-           selectedTimelineMinute != nil {
+    private func recordCurrentPlaybackAlignment() {
+        if let frame = wbsPlaybackFrame, selectedPawprintPoint == nil {
             recordPlaybackRouteAlignment(frame)
-            let point = frame.coordinate
-            if historicalPlaybackPoint != point {
-                historicalPlaybackPoint = point
-            }
-            return point
         }
-        guard selectedTimelineMinute != nil,
-              routeReadingsLoadState.isLoaded(for: model.selectedDate) else {
-            historicalPlaybackPoint = nil
-            return nil
-        }
-        let date = routeTimelineDate
-        let calendar = Calendar.autoupdatingCurrent
-        let dayStart = calendar.startOfDay(for: model.selectedDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let sleepSpans = MapHomeSleepLocationPolicy.spans(
-            actuals: currentDayDataSnapshot?.actuals ?? [],
-            confirmedSleepSpans: model.settings.confirmedSleepSpans,
-            sleepSessions: model.sleepSessions,
-            in: TimeSpan(start: dayStart, end: dayEnd)
-        )
-        let sleepAnchors = MapHomeSleepLocationPolicy.anchors(
-            for: sleepSpans,
-            readings: historicalPlaybackReadings
-        )
-        let sleepPoint = MapHomeSleepLocationPolicy.contains(
-            date,
-            in: sleepAnchors
-        )?.point
-        let confirmedSubwayPoint = (currentDayDataSnapshot?.travel ?? [])
-            .filter { segment in
-                guard segment.mode == .subway,
-                      segment.isConfirmed,
-                      let route = segment.subwayRoute,
-                      SubwayStationCatalog.isValid(route) else {
-                    return false
-                }
-                return segment.span.contains(date)
-            }
-            .max { $0.span.start < $1.span.start }
-            .flatMap { segment in
-                RouteTimelineDataEngine.confirmedSubwayCoordinates(
-                    for: segment,
-                    through: date
-                ).last
-            }
-        let timelineRoutePoint = routeProjection.flatMap {
-            MapHomeRouteTimelinePlaybackMath.coordinate(
-                at: date,
-                in: $0.segments
-            )
-        }
-        let point = sleepPoint
-            ?? confirmedSubwayPoint
-            ?? timelineRoutePoint
-            ?? RouteTimelineDataEngine.playbackCoordinate(
-                at: date,
-                inNormalizedReadings: historicalPlaybackReadings,
-                sleepAnchors: sleepAnchors
-            )
-        if historicalPlaybackPoint != point {
-            historicalPlaybackPoint = point
-        }
-        return point
     }
 
     private func recordPlaybackRouteAlignment(
@@ -9719,10 +9628,7 @@ struct MapHomeView: View {
 
     private func focusDisplayedLocation(using proxy: MapProxy?) {
         if selectedTimelineMinute != nil {
-            guard let point = displayedPlaybackFocusPoint
-                ?? historicalPlaybackPoint
-                ?? refreshHistoricalPlaybackPoint()
-            else { return }
+            guard let point = displayedPlaybackFocusPoint else { return }
             focusMap(on: point, using: proxy, followsTracking: true)
         } else {
             focusUserLocation(using: proxy, preservesCamera: true)

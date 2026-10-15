@@ -1,0 +1,53 @@
+{
+  "baseCommit": "8ea705385d70827a52a2c53ed48b18d2f42250e8",
+  "branch": "main",
+  "sourceInputCount": 147,
+  "sourceInputsUnchanged": true,
+  "sharedSourceAndValidation": "artifacts/validation/BGX1015A01.json",
+  "testflightUploaded": false,
+  "installedOnDevice": false,
+  "deviceFunctionVerified": false,
+  "userDatabaseOrBackupModified": false,
+  "cleanupRequestID": "CLN1015A01",
+  "requestID": "BAK1015A01",
+  "status": "timestamp serialization defect reproduced and fixed; original manual failure and real backup restore not yet confirmed",
+  "diagnosis": {
+    "lastSuccessfulAutomaticBackup": "2026-10-15T13:26:59+09:00",
+    "failedAutomaticBackup": "2026-10-15T15:53:51+09:00",
+    "failedOperationDomain": "TaptionPlan.PlanSecurityError",
+    "failedOperationCode": 4,
+    "failedOperationIncludesRawSensors": false,
+    "manualOperationIncludedInExport": false,
+    "writtenArchive": {
+      "filename": "2026-10.1792047229554.15A18644-93BB-40F3-A428-53D59AF32770.taptionbackup",
+      "version": 4,
+      "fileSHA256": "129ddeaa100539366eb3b53f3e9d4c2935a7d20edc11f8793208b5b3739104c6",
+      "createdAt": 1792047229.554995,
+      "encryptedPayloadBytes": 1092950,
+      "ciphertextDigestValid": true,
+      "decrypted": false
+    },
+    "exactFailureStageLogged": false,
+    "reproducedCodeDefect": "Date comparison differs by 0.119209 microseconds across secondsSince1970 serialization; archive identity must compare wire timestamp",
+    "invalidSensorRowsLoggedNearFailure": false
+  },
+  "privacy": {
+    "providedPINRecorded": false,
+    "deviceKeysRecorded": false,
+    "rawLocationOrHealthExported": false,
+    "userDatabaseOrBackupModified": false
+  },
+  "baseline": {
+    "path": "artifacts/local-validation-evidence/BAK1015A01/baseline-02.xcresult",
+    "failed": 1,
+    "skipped": 0,
+    "error": "invalidArchive"
+  },
+  "fix": "Compare archive identity timestamps in the exact secondsSince1970 wire representation; preserve digest/account/generation/cancellation checks",
+  "verification": {
+    "fileBackedSnapshotAndRawGenerationRestorePassed": true,
+    "previousGenerationPreserved": true,
+    "selectedBackupCasesPassed": 36,
+    "debugSharedWith": "BGX1015A01"
+  }
+}

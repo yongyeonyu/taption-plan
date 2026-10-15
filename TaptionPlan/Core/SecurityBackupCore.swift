@@ -5209,7 +5209,7 @@ private struct PlanMonthlyArchivePreparationInput: Sendable {
 private struct PlanMonthlyArchiveIdentity: Equatable, Sendable {
     let monthKey: String
     let accountIdentifier: String
-    let createdAt: Date
+    let createdAtSeconds: TimeInterval
     let payloadDigest: Data
     let generationID: UUID?
     let snapshotGenerationID: UUID?
@@ -5219,7 +5219,9 @@ private struct PlanMonthlyArchiveIdentity: Equatable, Sendable {
     init(_ archive: PlanMonthlyArchive) {
         monthKey = archive.monthKey
         accountIdentifier = archive.accountIdentifier
-        createdAt = archive.createdAt
+        // Compare the timestamp stored by the secondsSince1970 encoder.
+        // Date's reference epoch can retain an extra fraction of a microsecond.
+        createdAtSeconds = archive.createdAt.timeIntervalSince1970
         payloadDigest = archive.payloadDigest
         generationID = archive.generationID
         snapshotGenerationID = archive.snapshotGenerationID
@@ -5597,6 +5599,9 @@ final class PlanSecurityBackupService {
         date: Date = .now,
         dataGeneration: UInt64? = nil
     ) async throws -> PlanMonthlyArchive {
+        func recordStage(_ stage: String) {
+            TaptionPlanDiagnosticsLogger.shared.record("icloud_backup_snapshot_stage", fields: ["stage": stage])
+        }
         guard !Task.isCancelled else { throw CancellationError() }
         guard hasPIN else { throw PlanSecurityError.pinRequiredForCloudBackup }
         guard let cloudRecoveryKeyProvider else {
@@ -5614,6 +5619,7 @@ final class PlanSecurityBackupService {
         ) else {
             throw CancellationError()
         }
+        recordStage("recovery_key")
         let accountKey = try await cloudRecoveryKeyProvider.key()
         guard !Task.isCancelled,
               preparationRevision == capturedPreparationRevision,
@@ -5626,6 +5632,7 @@ final class PlanSecurityBackupService {
         let accountIdentifier =
             CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
         let monthKey = PlanArchiveSchedule.monthKey(for: date)
+        recordStage("previous_snapshot")
         let previousArchive = try monthlyArchive(
             for: monthKey,
             accountIdentifier: accountIdentifier
@@ -5646,6 +5653,7 @@ final class PlanSecurityBackupService {
             hasRawSensorArchive: hasRawSensorArchive,
             previousArchive: previousArchive
         )
+        recordStage("prepare_archive")
         let preparationTask = Task.detached(priority: .utility) {
             guard !Task.isCancelled else { throw CancellationError() }
             let archive = try PlanMonthlyArchivePreparation.prepare(input)
@@ -5664,13 +5672,16 @@ final class PlanSecurityBackupService {
             throw error
         }
         guard !Task.isCancelled else { throw CancellationError() }
-        return try commitMonthlyArchive(
+        recordStage("commit_archive")
+        let committed = try commitMonthlyArchive(
             prepared,
             accountIdentifier: accountIdentifier,
             expectedPreviousArchive: previousArchive,
             preparationRevision: capturedPreparationRevision,
             dataGeneration: capturedDataGeneration
         )
+        recordStage("committed")
+        return committed
     }
 
     struct LegacyMigrationResult: Equatable {

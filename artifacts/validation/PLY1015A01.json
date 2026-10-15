@@ -1,0 +1,107 @@
+{
+  "requestID": "PLY1015A01",
+  "date": "2026-10-15",
+  "baseCommit": "8ea705385d70827a52a2c53ed48b18d2f42250e8",
+  "branch": "main",
+  "status": "code and automated verification complete; user device playback confirmation pending",
+  "originalIncidentReproducedOnDevice": false,
+  "confirmedCodeDefects": [
+    "unkeyed historical point reused when any movement leg existed but no leg covered the current playback time",
+    "drawing projection cutoff reused as selected time location",
+    "camera fallback could select hidden forecast routes"
+  ],
+  "fix": [
+    "shared date-specific location resolver for marker and camera",
+    "remove historical point state and drawing cutoff fallbacks",
+    "fallback to binary search of prepared day readings",
+    "preserve current frames including sleep and confirmed subway paths",
+    "limit forecast camera fallback to displayed routes",
+    "reject previous-day and future-first-fix fallback"
+  ],
+  "relatedTests": {
+    "bundle": "playback-tests-02.xcresult",
+    "exitCode": 0,
+    "passed": 164,
+    "failed": 0,
+    "skipped": 0,
+    "newCases": 8,
+    "suites": {
+      "RouteTimelineDataTests": 122,
+      "MapHomePawprintInteractionTests": 17,
+      "MapHomeStartupCameraTests": 7,
+      "TimeScaleTests": 18
+    }
+  },
+  "initialAttempt": {
+    "bundle": "playback-tests-01.xcresult",
+    "exitCode": 65,
+    "passed": 145,
+    "failed": 1,
+    "skipped": 0,
+    "failure": "testPlaybackArrivalUsesLastFixAtExactMovementEnd",
+    "cause": "fixture assumed a movement leg across a sparse 10-minute gap; adjusted to a normal 1-minute movement",
+    "applicationDefectBaseline": false,
+    "simulatorSDKWarnings": 1
+  },
+  "debugBuild": {
+    "destination": "generic/platform=iOS",
+    "exitCode": 0,
+    "buildSucceeded": true,
+    "warnings": 0,
+    "errors": 0,
+    "products": [
+      {
+        "product": "TaptionPlan.app",
+        "bundleID": "com.taption.plan",
+        "version": "1.0",
+        "build": "175",
+        "signatureExitCode": 0
+      },
+      {
+        "product": "TaptionPlanWidget.appex",
+        "bundleID": "com.taption.plan.widget",
+        "version": "1.0",
+        "build": "175",
+        "signatureExitCode": 0
+      }
+    ],
+    "watchEmbedded": false,
+    "sourceInputCount": 147,
+    "sourceMismatches": []
+  },
+  "sourceInputCount": 147,
+  "sourceInputsUnchangedDuringFinalVerificationAndCleanup": true,
+  "sourceManifest": "verified-source.json",
+  "sourceManifestSHA256": "2a0ec0f8628525de1ce7efe57d04f1e915641ede6f66291521905605d5fad75b",
+  "changedInputSHA256": {
+    "TaptionPlan/Core/RouteTimelineData.swift": "ff4fdfba5dfa22cdc10c7cdb0e6c92517e26591d9508ae0243f62efd496e82c3",
+    "TaptionPlan/UI/MapHomeView.swift": "ae25c1fd45c7595805b981b6b80b7ad6625d34b06bee886e60c76abca441c517",
+    "TaptionPlanTests/RouteTimelineDataTests.swift": "8c1ef433cb46ddfe6664d535b2850a9e930e9dfbe619036f400f7caf99aeac68"
+  },
+  "importBoundaryCheck": "passed",
+  "diffWhitespaceCheck": "passed",
+  "cleanup": {
+    "removedBuildDirectory": "build/PLY1015A01DD",
+    "allocatedBytesBeforeRemoval": 1386553344,
+    "buildDirectoryAbsent": true,
+    "removedDedicatedSimulator": "FC77B220-BDCF-4833-80F9-6AE7753062FA",
+    "simulatorDeleteExitCode": 0,
+    "simulatorAbsent": true,
+    "otherSimulatorOrSharedRuntimeDeleted": false,
+    "originalReleaseSymbolsOrUserDataDeleted": false,
+    "sourceInputCount": 147,
+    "sourceMismatches": []
+  },
+  "evidenceRoot": "artifacts/local-validation-evidence/PLY1015A01",
+  "preservedFileCount": 714,
+  "preservationByteIdentical": true,
+  "installedOnUserDevice": false,
+  "uploadedToTestFlight": false,
+  "committedOrPushed": false,
+  "limitations": [
+    "drag gesture type not yet clarified",
+    "same timestamp playback/pause/drag comparison on user device pending",
+    "tests use synthetic inputs, not original user GPS or interactive device UI",
+    "background termination, backup restore and Busan sample investigations remain separately open"
+  ]
+}
