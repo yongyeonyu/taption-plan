@@ -5319,3 +5319,14 @@ final class WeatherRetiredProviderTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(result.first { $0.id == korean.id }).airQuality?.providerName, "에어코리아")
     }
 }
+
+/// App Store Connect rejects an upload whose HealthKit entitlement has no
+/// matching purpose strings, so keep both keys even though the iPhone app only reads.
+final class HealthPurposeStringContractTests: XCTestCase {
+    func testHealthKitPurposeStringsArePresent() {
+        for key in ["NSHealthShareUsageDescription", "NSHealthUpdateUsageDescription"] {
+            let value = Bundle.main.object(forInfoDictionaryKey: key) as? String
+            XCTAssertFalse(value?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true, "\(key) is required for HealthKit uploads")
+        }
+    }
+}

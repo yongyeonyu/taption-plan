@@ -1,5 +1,10 @@
 # 검증 기록
 
+## REL1016A01 · 1.0(178) 내부 배포 진행 (2026-10-16)
+- 소스: 5bd8d63까지 `origin/main`에 push(55e3732, 원격 SHA 일치·ahead/behind 0/0 확인). 빌드 번호 178을 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist` `CFBundleVersion`에 반영했고, ASC 최신 빌드는 177(178 없음)이었다.
+- 1차 업로드 거부: Release archive·internal export 성공(앱·Widget 1.0(178), strict 서명, get-task-allow=false, iCloud Production, Watch 미포함, IPA 42,898,532바이트 SHA-256 `e6046f4c…2c55`). `altool --upload-app`이 오류 90683(`NSHealthUpdateUsageDescription` 누락)으로 거부했다. 업로드 전 검증 단계 거부이며 ASC에 빌드가 생성되지 않았다. 원인은 5a 작업에서 읽기 전용이라는 이유로 이 키를 제거한 것이다. HealthKit entitlement가 있으면 Apple이 쓰기 권한 문구를 요구한다.
+- 수정: Info.plist와 InfoPlist.xcstrings에서 키를 복구했고(`HealthPurposeStringContractTests` 추가), 번호 178을 그대로 재사용해 다시 archive한다. 이전 5a 에이전트의 판단 오류이며 `PRIVACY.md`의 "iPhone 앱은 건강 데이터를 읽기만 한다"는 서술은 그대로 사실이다.
+
 ## COM1016A01 · Open-Meteo 기록 폐기·개인정보 문구 정정·조사 (2026-10-16)
 - 대표 결정: 부산은 다시 써 보고 재현 여부를 본다. 개인정보(App Store Connect 라벨)는 대표가 나중에 확인한다. Open-Meteo 시절 기록은 지운다. 해외 대기질 제공자와 건강 데이터의 iCloud 포함 범위를 조사한다.
 - 수정: `WeatherTimelineEngine.coalesced`가 `providerName`이 `Open-Meteo`로 시작하는 날씨 행을 걸러내고, 남은 행의 Open-Meteo 대기질 값은 비운다. 로드·raw 재생·병합이 모두 이 함수를 거친다. 저장된 raw 봉투와 이전 백업 파일은 수정하지 않았다. 다음 저장 때 스냅샷에서 해당 행이 빠진다. 신규 `WeatherRetiredProviderTests` 2개, 오래된 fixture 1개(`testWeatherTimelineKeepsSameDisplayedWeatherContinuous`의 대기질 제공자) 갱신. `WeatherRetiredProviderTests`+해당 테스트 3개 통과, 먼저 돌린 `FeatureEngineTests`·`LocalizationCatalogTests` 659개 중 2개 실패(기존 StoreKit, fixture 1개는 위에서 수정).
