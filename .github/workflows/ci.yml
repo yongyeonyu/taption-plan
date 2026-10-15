@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  packages:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check app/engine import boundary
+        run: bash scripts/check-app-engine-import-boundary.sh
+      - name: Test shared packages
+        run: |
+          for package in TaptionPlanCore TaptionRouteEngine TaptionActivityEngine TaptionPlanEngine; do
+            swift test --package-path "Packages/$package"
+          done
+
+  app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app (Debug, generic iOS)
+        run: |
+          xcodebuild build -project TaptionPlan.xcodeproj -scheme TaptionPlan \
+            -configuration Debug -destination 'generic/platform=iOS' \
+            -derivedDataPath build/CIDD -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox'

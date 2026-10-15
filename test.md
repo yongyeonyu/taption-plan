@@ -1,5 +1,10 @@
 # 검증 기록
 
+## COM1016A01 · 0단계 기준선 (2026-10-16)
+- 변경: CRS1015A01 변경을 95255af로 커밋(push 안 함). 하드코딩 경로(`/Users/u_mo_c/...`)로 파일을 쓰던 임시 고양이 시트 테스트 `testTempRenderCatContactSheet`(138줄)와 `import SwiftUI // TEMP-CAT-SHEET`를 삭제했다. `.gitignore`에서 `Package.resolved`를 빼고 Xcode workspace의 `Package.resolved`를 추적한다. `.github/workflows/ci.yml`을 추가했다(패키지 테스트·경계 검사·앱 generic iOS Debug 빌드).
+- 검증: `scripts/check-app-engine-import-boundary.sh` 통과. `swift test` Core 134개·Activity 33개 0실패, Route는 swift-testing 48개 통과, Engine은 XCTest 1개 통과. 앱 테스트 타깃 `build-for-testing`(generic iOS Simulator) `TEST BUILD SUCCEEDED`(삭제한 테스트 외 컴파일 오류 없음). 로그: `build/validation/COM1016A01/`.
+- 제한: 앱 단위 테스트는 실행하지 않고 컴파일만 확인했다(삭제한 테스트 외 코드 변경 없음). CI는 GitHub 러너에서 실행해 본 적이 없다(Xcode 버전 지원 미확인). 정적 감사 항목은 코드 읽기 결과이며 실행·계측 전이다.
+
 ## CRS1015A01 · iPhone 18 백업 충돌 원인 수정 / 10:10 부산 원본 대기 (2026-10-15)
 - 시작 상태: main `2a2575821d0a78f662a9aad41670f083005695af`, clean. 대표는 현재 177에서 오늘 10:10부터 부산 표시가 남는다고 확인하고 집에 있는 iPhone 18의 로그 조회를 요청했다. 실제 연결·DDI 접근과 설치된 1.0(177)을 확인했다. 앱 실행·설치·DB 쓰기는 하지 않았다.
 - 직접 원인: 실기기 Retired의 `TaptionPlan-2026-10-15-185947.ips`, `190127.ips`, `191528.ips` 모두 176의 EXC_CRASH/SIGKILL, FRONTBOARD `0x8badf00d`, 백그라운드 scene-update 10초 watchdog이다. 실제 UUID `F65005BE-72A5-39C6-9813-0AC3507B6457`와 원래 176 dSYM이 일치했다. `atos`로 main thread의 `PlanCloudRawSensorPageCodec.forEachPage` → `saveRawSensorArchive` → `saveMonthlyGeneration` → 수동 백업을 확인했다. 이번 세 건은 raw 페이지 반복 JSON 인코딩이 화면 스레드를 막아 종료된 경우다. 다른 시각의 백그라운드 종료를 같은 원인으로 처리하지 않는다.
