@@ -1,5 +1,11 @@
 # 검증 기록
 
+## COM1016A01 · WeatherKit 병합 검증과 오래된 기대값 2건 갱신 (2026-10-16)
+- 병합: 에이전트 브랜치의 5a 커밋(Open-Meteo 제거·WeatherKit attribution·개인정보 문서)을 `main`에 `30cd228`로 가져왔다(충돌 없음). 병합본 `FeatureEngineTests`+`LocalizationCatalogTests` 657개 중 655 통과, 실패 2(`testManualCloudBackup…`, `testStoreKitProductPurchaseEntitlementAndRestore`, 모두 위 기존 실패)이며 generic iOS Debug `BUILD SUCCEEDED`(`merge-5a-01.xcresult`, `debug-merge-5a-01.log`).
+- 갱신: `testHealthBackgroundObserversOnlyWakeForTimelineInputs`의 기대 타입을 현재 정책(workout·수면·심박·걸음, HKS1004A01의 8개 읽기 범위)에 맞춰 mindfulSession→heartRate로 고쳤다. `testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration`의 기대 오류를 `invalidArchive`→`localSensorArchiveIncomplete`로 고쳤다(AppModel의 현재 계약, DEVELOPMENT.md). 이전 세대·raw 보존 검증은 그대로다. `HealthKitIntegrationTests` 전체와 수동 백업 2개 포함 37개 통과(`stale-fix-01.xcresult`).
+- 남은 기존 실패 2건: `testStoreKitProductPurchaseEntitlementAndRestore`(iOS 27 StoreKitTest, IAP는 보류 중이라 건너뜀 처리하지 않고 실패로 둔다), `testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(부하 의존 성능 기준 5초, 다른 프로젝트 빌드 동시 실행 중 5.6~38초).
+- 미확인: WeatherKit attribution의 실제 화면 렌더, 한국어 조건 문구, 앱 전체 재실행(병합 후 전체 1,6xx개는 실행하지 않았다).
+
 ## COM1016A01 · 전체 앱 회귀 (2026-10-16, WeatherKit 병합 전 e9cbdae~b77874b 상태)
 - 실행: `TaptionPlanTests` 전체, 전용 시뮬레이터 iOS 27.0(`full-01.xcresult`). 결과 **1,623 통과 · 4 실패 · 0 건너뜀**(총 1,627).
 - 실패 4개: `HealthKitIntegrationTests.testHealthBackgroundObserversOnlyWakeForTimelineInputs`(관찰 타입 기대값에 Mindful 포함, 실제는 4종), `FeatureEngineTests.testManualCloudBackupRejectsIncompleteSensorArchiveBeforeReplacingGeneration`(기대 `invalidArchive`, 실제 `localSensorArchiveIncomplete`), `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`(StoreKitTest 구매가 entitlement가 되지 않음), `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(P95 5.6초 > 5초).

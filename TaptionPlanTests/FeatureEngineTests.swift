@@ -3455,7 +3455,7 @@ final class FeatureEngineTests: XCTestCase {
             try await model.saveCloudBackupNow()
             XCTFail("An incomplete raw sensor archive must not be committed.")
         } catch {
-            XCTAssertEqual(error as? PlanSecurityError, .invalidArchive)
+            XCTAssertEqual(error as? PlanSecurityError, .localSensorArchiveIncomplete)
         }
 
         XCTAssertEqual(try backupStore.latest(), committedGeneration.snapshot)

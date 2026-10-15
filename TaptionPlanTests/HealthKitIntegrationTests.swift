@@ -810,7 +810,7 @@ final class HealthKitIntegrationTests: XCTestCase {
             [
                 HKObjectType.workoutType().identifier,
                 HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
-                HKCategoryTypeIdentifier.mindfulSession.rawValue,
+                HKQuantityTypeIdentifier.heartRate.rawValue,
                 HKQuantityTypeIdentifier.stepCount.rawValue,
             ]
         )
