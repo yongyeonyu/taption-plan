@@ -5,6 +5,25 @@ import XCTest
 @testable import TaptionPlanCore
 
 final class DayStoreTests: XCTestCase {
+    func testBackupDateMetadataFindsAllDaysWithoutDecodingPayloads() async throws {
+        let url = temporaryURL()
+        defer { removeDatabase(at: url) }
+        let store = try TaptionPlanDayStore(url: url)
+        let first = Date(timeIntervalSince1970: 1_000 * 86_400 + 10)
+        let second = first.addingTimeInterval(10)
+        let later = first.addingTimeInterval(3 * 86_400)
+        let values = [first, second, later].enumerated().map { index, date in
+            TaptionPlanDayStore.Event(day: .init(year: 2001, month: 1, day: 1), timestamp: date,
+                sequence: UInt64(index), id: "fixture-\(index)", domain: "sensor-reading", payload: Data([0xff]))
+        }
+        try await store.appendEvents(values + [.init(day: .init(year: 2001, month: 1, day: 1),
+            timestamp: later.addingTimeInterval(86_400), sequence: 0, id: "other", domain: "other", payload: Data())])
+        let ranges = try await store.eventDateRanges(domain: "sensor-reading")
+        XCTAssertEqual(ranges, [first...second, later...later])
+        let missing = try await store.eventDateRanges(domain: "missing")
+        XCTAssertTrue(missing.isEmpty)
+    }
+
     func testInstantRangeQueryKeepsInclusiveBoundariesAndIgnoresStoredTimezone() async throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

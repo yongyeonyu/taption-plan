@@ -133,6 +133,7 @@ enum PlanSecurityError: Error, Equatable {
     case biometricRejected
     case tooManyAttempts(retryAfter: TimeInterval)
     case localSensorArchiveIncomplete
+    case backupInProgress
 }
 
 extension PlanSecurityError: LocalizedError {
@@ -168,6 +169,9 @@ extension PlanSecurityError: LocalizedError {
                 english: "The backup encryption or integrity check failed.",
                 preference: preference
             )
+        case .backupInProgress:
+            AppLanguagePreference.text(korean: "백업이 이미 진행 중입니다. 완료된 뒤 다시 시도해 주세요.",
+                english: "A backup is already in progress. Try again when it finishes.", preference: preference)
         case .localSensorArchiveIncomplete:
             AppLanguagePreference.text(
                 korean: "기기의 일부 센서 기록을 읽지 못해 백업을 완료하지 못했습니다. 기존 기록과 백업은 보존되어 있습니다.",
@@ -3514,6 +3518,10 @@ protocol PlanCloudBackupStore: AnyObject {
     func delete(at path: PlanCloudBackupPath) throws
     func latest() throws -> PlanMonthlyArchive?
     func allArchives() throws -> [PlanMonthlyArchive]
+    func archives(for periodKey: String) throws -> [PlanMonthlyArchive]
+    func dailyCompletion(for dayKey: String) throws -> Data?
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws
+    func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool
     func deleteAll() throws
 }
 
@@ -3685,6 +3693,14 @@ private enum PlanCloudArchiveFilePolicy {
 }
 
 extension PlanCloudBackupStore {
+    func archives(for periodKey: String) throws -> [PlanMonthlyArchive] {
+        try allArchives().filter { $0.monthKey == periodKey }
+    }
+    func dailyCompletion(for dayKey: String) throws -> Data? { nil }
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws {}
+    func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool {
+        try archives(for: path.monthKey).contains { $0.snapshotGenerationID == path.snapshotGenerationID }
+    }
     func retainSnapshotGenerations(referencedByMonth: [String: Set<UUID>],
         protectedRawByMonth: [String: Set<UUID>] = [:], unreferencedLimitPerMonth: Int) throws {
         let all = try allArchives()
@@ -3823,7 +3839,52 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
         }
     }
 
-    func allArchives() throws -> [PlanMonthlyArchive] {
+    func allArchives() throws -> [PlanMonthlyArchive] { try readArchives(periodKey: nil) }
+
+    func archives(for periodKey: String) throws -> [PlanMonthlyArchive] { try readArchives(periodKey: periodKey) }
+
+    func dailyCompletion(for dayKey: String) throws -> Data? {
+        let url = try completionURL(dayKey)
+        guard fileManager.fileExists(atPath: url.path) else {
+            let placeholder = url.deletingLastPathComponent().appendingPathComponent("." + url.lastPathComponent + ".icloud")
+            if fileManager.fileExists(atPath: placeholder.path) {
+                try? fileManager.startDownloadingUbiquitousItem(at: url)
+                throw PlanSecurityError.accountUnavailable
+            }
+            return nil
+        }
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size <= 16_384 else { throw PlanSecurityError.invalidArchive }
+        var bytes = 0
+        switch PlanCloudArchiveFilePolicy.read(url, totalBytes: &bytes, fileManager: fileManager) {
+        case .data(let data):
+            guard data.count <= 16_384 else { throw PlanSecurityError.invalidArchive }
+            return data
+        case .unavailable: throw PlanSecurityError.accountUnavailable
+        case .rejected: throw PlanSecurityError.invalidArchive
+        }
+    }
+
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws {
+        let url = try completionURL(dayKey)
+        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+    }
+
+    func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool {
+        let url = path.storageComponents.reduce(root) { $0.appendingPathComponent($1) }
+        return fileManager.fileExists(atPath: url.path)
+            || fileManager.fileExists(atPath: url.deletingLastPathComponent()
+                .appendingPathComponent("." + url.lastPathComponent + ".icloud").path)
+    }
+
+    private func completionURL(_ dayKey: String) throws -> URL {
+        guard PlanDailyBackupSchedule.isDayKey(dayKey) else { throw PlanSecurityError.invalidArchive }
+        return root.appendingPathComponent("Taption Plan", isDirectory: true)
+            .appendingPathComponent(dayKey + ".dailycomplete")
+    }
+
+    private func readArchives(periodKey: String?) throws -> [PlanMonthlyArchive] {
         let root = root.appendingPathComponent("Taption Plan", isDirectory: true)
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(
@@ -3837,17 +3898,21 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
             in: root,
             pathExtension: "taptionbackup",
             fileManager: fileManager
-        )
+        ).filter { periodKey == nil || $0.lastPathComponent.hasPrefix(periodKey! + ".") }
         var archives: [PlanMonthlyArchive] = []
         var archiveCount = 0
         var totalBytes = 0
         var unavailableCount = 0
         var rejectedCount = 0
         var invalidCount = 0
-        let boundedMonths = months.prefix(
-            PlanCloudArchiveFilePolicy.maximumFileCount
-        )
+        let dailyFiles = months.filter { PlanDailyBackupSchedule.isDayKey(String($0.lastPathComponent.prefix(10))) }
+        let legacyFiles = months.filter { !PlanDailyBackupSchedule.isDayKey(String($0.lastPathComponent.prefix(10))) }
+        let boundedMonths = dailyFiles + legacyFiles.prefix(PlanCloudArchiveFilePolicy.maximumFileCount)
+        let latestDailyFiles = Dictionary(grouping: dailyFiles) { String($0.lastPathComponent.prefix(10)) }
+            .mapValues { $0.first!.lastPathComponent }
+        var invalidLatestDailyArchive = false
         for month in boundedMonths {
+            let isLatestDaily = latestDailyFiles[String(month.lastPathComponent.prefix(10))] == month.lastPathComponent
             archiveCount += 1
             switch PlanCloudArchiveFilePolicy.read(
                 month,
@@ -3860,6 +3925,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
                     from: data
                 ) else {
                     invalidCount += 1
+                    invalidLatestDailyArchive = invalidLatestDailyArchive || isLatestDaily
                     continue
                 }
                 let expectedName: Bool
@@ -3875,6 +3941,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
                 }
                 guard expectedName else {
                     invalidCount += 1
+                    invalidLatestDailyArchive = invalidLatestDailyArchive || isLatestDaily
                     continue
                 }
                 archives.append(archive)
@@ -3882,6 +3949,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
                 unavailableCount += 1
             case .rejected:
                 rejectedCount += 1
+                invalidLatestDailyArchive = invalidLatestDailyArchive || isLatestDaily
             }
         }
         let skippedByLimit = months.count - boundedMonths.count
@@ -3903,7 +3971,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
         if unavailableCount > 0 {
             throw PlanSecurityError.accountUnavailable
         }
-        guard archiveCount == 0 || !archives.isEmpty else {
+        guard !invalidLatestDailyArchive, archiveCount == 0 || !archives.isEmpty else {
             throw PlanSecurityError.invalidArchive
         }
         return archives
@@ -3918,7 +3986,7 @@ final class FilePlanCloudBackupStore: PlanCloudBackupStore {
         for file in try fileManager.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: nil
-        ) where file.pathExtension == "taptionbackup" {
+        ) where file.pathExtension == "taptionbackup" || file.pathExtension == "dailycomplete" {
             try fileManager.removeItem(at: file)
         }
     }
@@ -3955,6 +4023,11 @@ final class UbiquitousPlanCloudBackupStore: PlanCloudBackupStore {
         try fileStore().allArchives()
     }
 
+    func archives(for periodKey: String) throws -> [PlanMonthlyArchive] { try fileStore().archives(for: periodKey) }
+    func dailyCompletion(for dayKey: String) throws -> Data? { try fileStore().dailyCompletion(for: dayKey) }
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws { try fileStore().saveDailyCompletion(data, dayKey: dayKey) }
+    func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool { try fileStore().containsSnapshot(at: path) }
+
     func deleteAll() throws {
         try fileStore().deleteAll()
     }
@@ -3979,6 +4052,9 @@ final class UbiquitousPlanCloudBackupStore: PlanCloudBackupStore {
 
 final class InMemoryPlanCloudBackupStore: PlanCloudBackupStore {
     private(set) var archives: [String: PlanMonthlyArchive] = [:]
+    private var dailyCompletions: [String: Data] = [:]
+    func dailyCompletion(for dayKey: String) throws -> Data? { dailyCompletions[dayKey] }
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws { dailyCompletions[dayKey] = data }
     func save(_ archive: PlanMonthlyArchive, at path: PlanCloudBackupPath) throws {
         guard path.monthKey == archive.monthKey,
               path.snapshotGenerationID == archive.snapshotGenerationID else {
@@ -4009,10 +4085,12 @@ final class InMemoryPlanCloudBackupStore: PlanCloudBackupStore {
 
     func deleteAll() throws {
         archives.removeAll()
+        dailyCompletions.removeAll()
     }
 }
 
 protocol PlanCloudRawSensorBackupStore: AnyObject {
+    func containsArchive(monthKey: String, generationID: UUID) throws -> Bool
     func save(
         _ archive: PlanRawSensorMonthlyArchive,
         at path: PlanCloudRawSensorBackupPath
@@ -4042,6 +4120,9 @@ protocol PlanCloudRawSensorBackupStore: AnyObject {
 }
 
 extension PlanCloudRawSensorBackupStore {
+    func containsArchive(monthKey: String, generationID: UUID) throws -> Bool {
+        try load(monthKey: monthKey, generationID: generationID) != nil
+    }
     @MainActor
     func loadFilePagesForRestore(monthKey: String, generationID: UUID?,
         byteBudget: PlanCloudArchiveRestoreByteBudget) async throws -> PlanRawSensorFilePages? { nil }
@@ -4108,6 +4189,14 @@ final class FilePlanCloudRawSensorBackupStore:
     init(root: URL, fileManager: FileManager = .default) {
         self.root = root
         self.fileManager = fileManager
+    }
+
+    func containsArchive(monthKey: String, generationID: UUID) throws -> Bool {
+        let path = PlanCloudRawSensorBackupPath(monthKey: monthKey, generationID: generationID)
+        let url = path.storageComponents.reduce(root) { $0.appendingPathComponent($1) }
+        return fileManager.fileExists(atPath: url.path)
+            || fileManager.fileExists(atPath: url.deletingLastPathComponent()
+                .appendingPathComponent("." + url.lastPathComponent + ".icloud").path)
     }
 
     func save(
@@ -4525,6 +4614,10 @@ final class UbiquitousPlanCloudRawSensorBackupStore:
     ) {
         self.containerIdentifier = containerIdentifier
         self.fileManager = fileManager
+    }
+
+    func containsArchive(monthKey: String, generationID: UUID) throws -> Bool {
+        try fileStore().containsArchive(monthKey: monthKey, generationID: generationID)
     }
 
     func save(
@@ -5252,7 +5345,10 @@ private enum PlanMonthlyArchivePreparation {
     ) throws -> PlanMonthlyArchive {
         let payload: PlanCloudBackupPayload
         let inheritedGenerationID: UUID?
-        if let previousArchive = input.previousArchive {
+        if PlanDailyBackupSchedule.isDayKey(input.monthKey) {
+            payload = input.payload
+            inheritedGenerationID = input.previousArchive?.generationID
+        } else if let previousArchive = input.previousArchive {
             guard previousArchive.accountIdentifier == input.accountIdentifier else {
                 throw PlanSecurityError.accountMismatch
             }
@@ -5745,6 +5841,136 @@ final class PlanSecurityBackupService {
         return result
     }
 
+    func prepareDailyBackup(
+        dates: Set<Date>, now: Date, calendar: Calendar, dataGeneration: UInt64
+    ) async throws -> PlanDailyBackupPreparation {
+        guard let verifier else { throw PlanSecurityError.pinRequiredForCloudBackup }
+        guard let cloudRecoveryKeyProvider else { throw PlanSecurityError.accountUnavailable }
+        let revision = preparationRevision
+        let accountKey = try await cloudRecoveryKeyProvider.key()
+        guard !Task.isCancelled, self.verifier == verifier, preparationRevision == revision,
+              TaptionDataDeletionFence.allows(generation: dataGeneration) else { throw CancellationError() }
+        var pending: [Date] = []
+        var skipped = 0
+        for day in Set(dates.map { calendar.startOfDay(for: $0) }).sorted() {
+            try Task.checkCancellation()
+            let key = PlanDailyBackupSchedule.key(for: day, calendar: calendar)
+            let span = PlanDailyBackupSchedule.span(for: day, calendar: calendar)
+            if span.end <= now, let data = try backupStore.dailyCompletion(for: key) {
+                let receipt = try PlanDailyBackupCompletion.decode(data, accountKey: accountKey)
+                guard receipt.dayKey == key else { throw PlanSecurityError.invalidArchive }
+                let rawExists: Bool
+                if let rawID = receipt.rawGenerationID {
+                    rawExists = try rawSensorBackupStore.containsArchive(monthKey: key, generationID: rawID)
+                } else { rawExists = true }
+                if receipt.closedAt >= span.end, rawExists,
+                   try backupStore.containsSnapshot(at: receipt.path) {
+                    skipped += 1
+                    continue
+                }
+            }
+            pending.append(day)
+        }
+        return PlanDailyBackupPreparation(days: pending, skippedDays: skipped, now: now, calendar: calendar,
+            accountKey: accountKey, verifier: verifier, preparationRevision: revision, dataGeneration: dataGeneration)
+    }
+
+    func saveDailyGeneration(
+        _ payload: PlanCloudBackupPayload, rawSensorPayload: PlanCloudRawSensorPayload?,
+        day: Date, preparation: PlanDailyBackupPreparation, includesCompleteRawData: Bool
+    ) async throws -> PlanCloudBackupGeneration {
+        func checkFence() throws {
+            guard !Task.isCancelled, verifier == preparation.verifier,
+                  preparationRevision == preparation.preparationRevision,
+                  TaptionDataDeletionFence.allows(generation: preparation.dataGeneration) else { throw CancellationError() }
+        }
+        try checkFence()
+        guard preparation.days.contains(day) else { throw PlanSecurityError.invalidArchive }
+        let key = PlanDailyBackupSchedule.key(for: day, calendar: preparation.calendar)
+        let generation: PlanCloudBackupGeneration
+        if includesCompleteRawData {
+            generation = try await saveMonthlyGeneration(payload, rawSensorPayload: rawSensorPayload,
+                date: preparation.now, dataGeneration: preparation.dataGeneration,
+                migrationMonthKey: key, publishesManifest: false, preparedAccountKey: preparation.accountKey,
+                recordsSuccessfulBackup: false)
+        } else {
+            let account = CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
+            let previous = try monthlyArchive(for: key, accountIdentifier: account)
+            let saved = try saveMonthlyArchive(payload, accountIdentifier: account,
+                accountKey: preparation.accountKey, date: preparation.now, recordsSuccessfulBackup: false,
+                generationID: previous?.generationID, hasRawSensorArchive: previous?.hasRawSensorArchive ?? false,
+                monthKeyOverride: key, preparationRevision: preparation.preparationRevision,
+                dataGeneration: preparation.dataGeneration)
+            generation = PlanCloudBackupGeneration(snapshot: saved, rawSensors: nil,
+                generationID: saved.generationID ?? UUID())
+        }
+        try checkFence()
+        let span = PlanDailyBackupSchedule.span(for: day, calendar: preparation.calendar)
+        if includesCompleteRawData, span.end <= preparation.now,
+           let snapshotID = generation.snapshot.snapshotGenerationID {
+            let receipt = PlanDailyBackupCompletion(dayKey: key, closedAt: span.end,
+                createdAt: generation.snapshot.createdAt, snapshotGenerationID: snapshotID,
+                rawGenerationID: generation.rawSensors?.generationID)
+            // Verify the new bodies before publishing a receipt that allows future skips.
+            _ = try generation.snapshot.decodedPayload(pinKeyData: preparation.verifier.keyMaterial)
+            if let raw = generation.rawSensors {
+                guard let stored = try rawSensorBackupStore.load(monthKey: key, generationID: raw.generationID),
+                      stored.payloadDigest == raw.payloadDigest else { throw PlanSecurityError.invalidArchive }
+                _ = try stored.decodedPayload(pinKeyData: preparation.verifier.keyMaterial, allowsPartialRecovery: false)
+            }
+            try checkFence()
+            let encoded = try receipt.encoded(accountKey: preparation.accountKey)
+            try backupStore.saveDailyCompletion(encoded, dayKey: key)
+            guard let readback = try backupStore.dailyCompletion(for: key),
+                  readback == encoded else {
+                throw PlanSecurityError.invalidArchive
+            }
+        }
+        try checkFence()
+        // Only old generations of the day just written are eligible for pruning.
+        do {
+            let archives = try backupStore.archives(for: key)
+            let byID = Dictionary(archives.compactMap { archive in
+                archive.snapshotGenerationID.map { ($0, archive) }
+            }, uniquingKeysWith: { first, _ in first })
+            var cursor = generation.snapshot.parentSnapshotGenerationID
+            var ancestors: [PlanMonthlyArchive] = []
+            var visited = Set<UUID>()
+            while let id = cursor, visited.insert(id).inserted, let archive = byID[id] {
+                ancestors.append(archive)
+                cursor = archive.parentSnapshotGenerationID
+            }
+            // Keep the direct predecessor and every concurrent branch. Never remove
+            // an orphan raw generation that another device may still be publishing.
+            let removable = Array(ancestors.dropFirst())
+            let removedIDs = Set(removable.compactMap(\.snapshotGenerationID))
+            let referencedRaw = Set(archives.filter { archive in
+                !(archive.snapshotGenerationID.map(removedIDs.contains) ?? false)
+            }.compactMap(\.generationID))
+            for old in removable {
+                try checkFence()
+                try backupStore.delete(at: PlanCloudBackupPath(monthKey: key,
+                    snapshotGenerationID: old.snapshotGenerationID, createdAt: old.createdAt))
+            }
+            for rawID in Set(removable.compactMap(\.generationID)).subtracting(referencedRaw) {
+                try checkFence()
+                try rawSensorBackupStore.delete(at: PlanCloudRawSensorBackupPath(monthKey: key, generationID: rawID))
+            }
+        } catch is CancellationError { throw CancellationError() }
+        catch {
+            TaptionPlanDiagnosticsLogger.shared.record("daily_backup_retention_deferred", level: .notice,
+                fields: ["error_type": String(reflecting: type(of: error))])
+        }
+        return generation
+    }
+
+    func finishDailyBackup(_ preparation: PlanDailyBackupPreparation) throws {
+        guard !Task.isCancelled, verifier == preparation.verifier,
+              preparationRevision == preparation.preparationRevision,
+              TaptionDataDeletionFence.allows(generation: preparation.dataGeneration) else { throw CancellationError() }
+        recordSuccessfulBackup(at: preparation.now)
+    }
+
     func saveMonthlyGeneration(
         _ payload: PlanCloudBackupPayload,
         rawSensorPayload: PlanCloudRawSensorPayload?,
@@ -5752,7 +5978,9 @@ final class PlanSecurityBackupService {
         dataGeneration: UInt64? = nil,
         migrationGenerationID: UUID? = nil,
         migrationMonthKey: String? = nil,
-        publishesManifest: Bool = true
+        publishesManifest: Bool = true,
+        preparedAccountKey: Data? = nil,
+        recordsSuccessfulBackup: Bool = true
     ) async throws -> PlanCloudBackupGeneration {
         preservedUnmergedRawBackup = false
         guard let capturedVerifier = verifier else {
@@ -5771,10 +5999,12 @@ final class PlanSecurityBackupService {
         }
         func recordStage(_ stage: String) {
             TaptionPlanDiagnosticsLogger.shared.record("icloud_backup_generation_stage",
-                fields: ["month_key": PlanArchiveSchedule.monthKey(for: date), "stage": stage])
+                fields: ["period_key": migrationMonthKey ?? PlanArchiveSchedule.monthKey(for: date), "stage": stage])
         }
         recordStage("recovery_key")
-        let accountKey = try await cloudRecoveryKeyProvider.key()
+        let accountKey: Data
+        if let preparedAccountKey { accountKey = preparedAccountKey }
+        else { accountKey = try await cloudRecoveryKeyProvider.key() }
         guard !Task.isCancelled,
               preparationRevision == capturedPreparationRevision,
               verifier == capturedVerifier,
@@ -5924,14 +6154,14 @@ final class PlanSecurityBackupService {
             throw error
         }
         recordStage("committed")
-        recordSuccessfulBackup(at: date)
+        if recordsSuccessfulBackup { recordSuccessfulBackup(at: date) }
         if publishesManifest {
-        publishBackupManifest(
-            monthKey: snapshotArchive.monthKey,
-            snapshotGenerationID: snapshotArchive.snapshotGenerationID
-                ?? generationID,
-            rawGenerationID: rawSave?.generationID
-        )
+            publishBackupManifest(
+                monthKey: snapshotArchive.monthKey,
+                snapshotGenerationID: snapshotArchive.snapshotGenerationID
+                    ?? generationID,
+                rawGenerationID: rawSave?.generationID
+            )
         }
         return PlanCloudBackupGeneration(
             snapshot: snapshotArchive,
@@ -6105,8 +6335,7 @@ final class PlanSecurityBackupService {
         for monthKey: String,
         accountIdentifier: String
     ) throws -> PlanMonthlyArchive? {
-        guard let archive = try backupStore.allArchives()
-            .filter({ $0.monthKey == monthKey })
+        guard let archive = try backupStore.archives(for: monthKey)
             .max(by: Self.archivePrecedes) else {
             return nil
         }
@@ -6822,7 +7051,7 @@ final class PlanSecurityBackupService {
                 accountKeyData: accountKey
             )
             try checkRestorePreparation(preparationFence)
-            if rewrapRecoveredArchive {
+            if rewrapRecoveredArchive && !snapshotArchives.contains(where: { PlanDailyBackupSchedule.isDayKey($0.monthKey) }) {
                 let currentMonth = PlanBackupRoutePointReducer.backupSpan(
                     containing: .now
                 )
@@ -6916,7 +7145,12 @@ final class PlanSecurityBackupService {
         accountKeyData: Data? = nil
     ) throws -> PlanCloudBackupPayload {
         let lineageArchives = snapshotConflictLineageArchives(from: archives)
-        guard let latestArchive = latestSnapshotArchives(from: archives).last else {
+        let dailyArchives = latestSnapshotArchives(from: archives).filter { PlanDailyBackupSchedule.isDayKey($0.monthKey) }
+        let newest = dailyArchives.max {
+            $0.createdAt == $1.createdAt ? $0.monthKey < $1.monthKey : $0.createdAt < $1.createdAt
+        }
+            ?? latestSnapshotArchives(from: archives).last
+        guard let latestArchive = newest else {
             throw PlanSecurityError.archiveNotFound
         }
         unreadableSnapshotArchiveCount = 0
@@ -6947,12 +7181,20 @@ final class PlanSecurityBackupService {
             let (archive, payload) = pair
             return archive.monthKey == latestArchive.monthKey ? payload : nil
         }
-        var mergedSnapshot = latestPayload.snapshot
-        for payload in latestMonthPayloads where payload.snapshot != latestPayload.snapshot {
-            mergedSnapshot = CloudSnapshotRecoveryEngine.merge(
-                local: mergedSnapshot,
-                remote: payload.snapshot
-            )
+        let mergedSnapshot: TaptionDataSnapshot
+        if !dailyArchives.isEmpty {
+            let legacy = decoded.filter { !PlanDailyBackupSchedule.isDayKey($0.0.monthKey) }.last?.1.snapshot
+            let daily = decoded.filter { PlanDailyBackupSchedule.isDayKey($0.0.monthKey) }
+                .sorted {
+                    $0.0.createdAt == $1.0.createdAt ? $0.0.monthKey < $1.0.monthKey : $0.0.createdAt < $1.0.createdAt
+                }.map { $0.1.snapshot }
+            mergedSnapshot = PlanDailyBackupPartition.combine(legacy: legacy, daily: daily, metadata: latestPayload.snapshot)
+        } else {
+            var value = latestPayload.snapshot
+            for payload in latestMonthPayloads where payload.snapshot != latestPayload.snapshot {
+                value = CloudSnapshotRecoveryEngine.merge(local: value, remote: payload.snapshot)
+            }
+            mergedSnapshot = value
         }
         return PlanCloudBackupPayload(
             snapshot: mergedSnapshot,

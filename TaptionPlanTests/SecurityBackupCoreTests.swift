@@ -5371,7 +5371,9 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(reduced.first?.id, readings.first?.id)
         XCTAssertEqual(reduced.last?.id, readings.last?.id)
         XCTAssertEqual(reduced.first?.sensorReading, readings.first)
-        XCTAssertEqual(reduced.last?.sensorReading, readings.last)
+        // The route filter anchors stationary jitter, while retaining the endpoint's identity and time.
+        XCTAssertEqual(reduced.last?.sensorReading.timestamp, readings.last?.timestamp)
+        XCTAssertLessThanOrEqual(distanceMeters(reduced.last!.sensorReading.point!, readings.last!.point!), 3)
         XCTAssertLessThanOrEqual(
             reduced.count,
             PlanBackupRoutePointReducer.maximumCount
@@ -6949,4 +6951,367 @@ private final class RestoreRetentionRemovalProbe: FileManager, @unchecked Sendab
         if rejectRemoval { throw BackupStoreTestError.injected }
         try super.removeItem(at: URL)
     }
+}
+
+@MainActor
+extension SecurityBackupCoreTests {
+    private var dailyCalendar: Calendar { PlanDailyBackupSchedule.calendar(timeZone: TimeZone(secondsFromGMT: 0)!) }
+    private func dailyDate(_ day: Int, hour: Int = 0) -> Date {
+        dailyCalendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))!
+    }
+    private func dailySnapshot(_ date: Date, text: String) -> TaptionDataSnapshot {
+        var value = TaptionDataSnapshot.empty
+        value.updatedAt = date
+        var memo = ActionMemo(kind: .nextAction, text: text, createdAt: date, updatedAt: date)
+        memo.occurredAt = date
+        value.memos = [memo]
+        return value
+    }
+
+    func testDailyBackupSkipsCompletedDayWithoutOpeningItsArchive() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingDailyBackupStore(root: root)
+        let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
+        let keys = BackupTestFixedRecoveryKeyProvider(byte: 42)
+        let service = makeService(backupStore: store, rawSensorBackupStore: rawStore, cloudRecoveryKeyProvider: keys)
+        try service.setPIN("1234")
+        let day = dailyDate(14), now = dailyDate(15, hour: 12)
+        let preparation = try await service.prepareDailyBackup(dates: [day, dailyDate(15)], now: now,
+            calendar: dailyCalendar, dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertEqual(preparation.days, [day, dailyDate(15)])
+        let reading = SensorReading(timestamp: day.addingTimeInterval(60), point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5), sourceDevice: .iPhone)
+        _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "past")),
+            rawSensorPayload: PlanCloudRawSensorPayload(monthKey: "2026-10-14", sensorReadings: [reading], createdAt: now),
+            day: day, preparation: preparation, includesCompleteRawData: true)
+        store.archiveReads = 0
+        let next = try await service.prepareDailyBackup(dates: [day, dailyDate(15)], now: now,
+            calendar: dailyCalendar, dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertEqual(next.days, [dailyDate(15)])
+        XCTAssertEqual(next.skippedDays, 1)
+        XCTAssertEqual(store.archiveReads, 0, "Completed days must not read archive bodies")
+        XCTAssertNotNil(try store.dailyCompletion(for: "2026-10-14"))
+        XCTAssertNil(try store.dailyCompletion(for: "2026-10-15"))
+        keys.byte = 43
+        do {
+            _ = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+                dataGeneration: TaptionDataDeletionFence.currentGeneration())
+            XCTFail("A different account key must not trust completion metadata")
+        } catch { XCTAssertEqual(error as? PlanSecurityError, .invalidArchive) }
+    }
+
+    func testDailyBackupOverwritesTodayAndClosesPreviousDayOnlyAfterFinalSave() async throws {
+        let store = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 41))
+        try service.setPIN("1234")
+        let day = dailyDate(14)
+        var value = dailySnapshot(day, text: "first")
+        for (offset, text) in [(12, "first"), (23, "latest")] {
+            let now = dailyDate(14, hour: offset)
+            value.memos[0].text = text
+            value.updatedAt = now
+            let preparation = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+                dataGeneration: TaptionDataDeletionFence.currentGeneration())
+            _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: value), rawSensorPayload: nil,
+                day: day, preparation: preparation, includesCompleteRawData: true)
+            XCTAssertNil(try store.dailyCompletion(for: "2026-10-14"))
+        }
+        let beforeMidnight = try await service.loadLatestBackup()
+        XCTAssertEqual(beforeMidnight.snapshot.memos.first?.text, "latest")
+        let midnight = dailyDate(15)
+        let closing = try await service.prepareDailyBackup(dates: [day, midnight], now: midnight, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertEqual(closing.days, [day, midnight])
+        value.memos[0].text = "final"
+        value.updatedAt = midnight
+        _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: value), rawSensorPayload: nil,
+            day: day, preparation: closing, includesCompleteRawData: true)
+        let next = try await service.prepareDailyBackup(dates: [day, midnight], now: midnight.addingTimeInterval(60), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertEqual(next.days, [midnight])
+        XCTAssertEqual(try store.archives(for: "2026-10-14").count, 2, "Keep the current and preceding verified snapshots")
+        let restored = try await service.loadLatestBackup()
+        XCTAssertEqual(restored.snapshot.memos.first?.text, "final")
+    }
+
+    func testDailyBackupFailedFinalSaveDoesNotMarkDayCompleteOrReplacePriorBackup() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingDailyBackupStore(root: root)
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 40))
+        try service.setPIN("1234")
+        let day = dailyDate(14)
+        let first = try await service.prepareDailyBackup(dates: [day], now: dailyDate(14, hour: 23), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let payload = PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "preserve"))
+        let saved = try await service.saveDailyGeneration(payload, rawSensorPayload: nil, day: day,
+            preparation: first, includesCompleteRawData: true)
+        let closing = try await service.prepareDailyBackup(dates: [day], now: dailyDate(15), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        store.failNextSave = true
+        do {
+            _ = try await service.saveDailyGeneration(payload, rawSensorPayload: nil, day: day,
+                preparation: closing, includesCompleteRawData: true)
+            XCTFail("Injected write failure must propagate")
+        } catch { XCTAssertEqual(error as? BackupStoreTestError, .injected) }
+        XCTAssertNil(try store.dailyCompletion(for: "2026-10-14"))
+        XCTAssertEqual(try store.latest()?.snapshotGenerationID, saved.snapshot.snapshotGenerationID)
+    }
+
+    func testDailyCompletionMissingReferencedFileRetriesAndFractionalTimestampRoundTrips() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 39))
+        try service.setPIN("1234")
+        let now = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
+        let day = dailyCalendar.date(byAdding: .day, value: -1, to: dailyCalendar.startOfDay(for: now))!
+        let preparation = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let saved = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "fraction")),
+            rawSensorPayload: nil, day: day, preparation: preparation, includesCompleteRawData: true)
+        let key = PlanDailyBackupSchedule.key(for: day, calendar: dailyCalendar)
+        let done = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertTrue(done.days.isEmpty)
+        try store.delete(at: PlanCloudBackupPath(monthKey: key, snapshotGenerationID: saved.snapshot.snapshotGenerationID, createdAt: saved.snapshot.createdAt))
+        let missing = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        XCTAssertEqual(missing.days, [day])
+    }
+
+    func testDailyPartitionPreservesOvernightRecordsCrossDayLinksAndDST() throws {
+        let calendar = PlanDailyBackupSchedule.calendar(timeZone: TimeZone(identifier: "America/Los_Angeles")!)
+        let day = calendar.date(from: DateComponents(year: 2026, month: 3, day: 8))!
+        let span = PlanDailyBackupSchedule.span(for: day, calendar: calendar)
+        XCTAssertEqual(span.end.timeIntervalSince(span.start), 23 * 3_600)
+        XCTAssertTrue(PlanDailyBackupSchedule.isDayKey("2028-02-29"))
+        XCTAssertFalse(PlanDailyBackupSchedule.isDayKey("2026-02-29"))
+        let first = dailyDate(14), second = dailyDate(15)
+        var source = dailySnapshot(second, text: "linked")
+        let plan = PlanRecord(title: "overnight", span: TimeSpan(start: first.addingTimeInterval(23 * 3_600), end: second.addingTimeInterval(60)), categoryID: "work")
+        source.plans = [plan]
+        source.memos[0].planID = plan.id
+        let parts = PlanDailyBackupPartition.make(source, days: [first, second], now: second.addingTimeInterval(100), calendar: dailyCalendar)
+        XCTAssertEqual(parts[first]?.plans.first?.id, plan.id)
+        XCTAssertEqual(parts[second]?.plans.first?.id, plan.id)
+        XCTAssertTrue(parts[first]?.memos.isEmpty == true)
+        let joined = PlanDailyBackupPartition.combine(legacy: nil, daily: [parts[first]!, parts[second]!], metadata: source)
+        XCTAssertEqual(joined.plans.count, 1)
+        XCTAssertEqual(joined.memos.first?.planID, plan.id)
+    }
+
+    func testDailyRestoreKeepsMoreThan120DatesAndExistingMonthlyBackup() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 38))
+        try service.setPIN("1234")
+        let start = dailyDate(1)
+        let legacy = try await service.saveMonthlyArchive(dailySnapshot(start.addingTimeInterval(-40 * 86_400), text: "legacy"), date: start.addingTimeInterval(-40 * 86_400))
+        let days = (0..<125).map { start.addingTimeInterval(Double($0) * 86_400) }
+        let now = start.addingTimeInterval(126 * 86_400)
+        let preparation = try await service.prepareDailyBackup(dates: Set(days), now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        for (index, day) in days.enumerated() {
+            _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "day-\(index)")),
+                rawSensorPayload: nil, day: day, preparation: preparation, includesCompleteRawData: true)
+        }
+        XCTAssertEqual(try store.allArchives().count, 126)
+        XCTAssertTrue(try store.containsSnapshot(at: PlanCloudBackupPath(monthKey: legacy.monthKey,
+            snapshotGenerationID: legacy.snapshotGenerationID, createdAt: legacy.createdAt)))
+        let restored = try await service.loadLatestBackup()
+        XCTAssertEqual(restored.snapshot.memos.count, 126)
+        XCTAssertTrue(restored.snapshot.memos.contains { $0.text == "legacy" })
+        XCTAssertTrue(restored.snapshot.memos.contains { $0.text == "day-0" })
+        XCTAssertTrue(restored.snapshot.memos.contains { $0.text == "day-124" })
+    }
+
+    func testDailyPartitionKeepsFuturePlansInTodayAndAppliesPrivacyBeforeSplitting() throws {
+        let today = dailyDate(15), previous = dailyDate(14)
+        var source = dailySnapshot(today, text: "today")
+        let future = dailyDate(20)
+        let plan = PlanRecord(title: "future", span: TimeSpan(start: future, end: future.addingTimeInterval(3600)), categoryID: "work")
+        source.plans = [plan]
+        let health = ActualRecord(planID: nil, title: "health fixture", categoryID: "health",
+            startedAt: previous, endedAt: previous.addingTimeInterval(60), source: .healthKit)
+        source.actuals = [health]
+        source.settings.suppressedActualIDs = [health.id]
+        let dates = PlanDailyBackupPartition.dates(in: source, now: today, calendar: dailyCalendar)
+        XCTAssertFalse(dates.contains(future))
+        let parts = PlanDailyBackupPartition.make(source, days: [previous, today], now: today, calendar: dailyCalendar)
+        XCTAssertEqual(parts[today]?.plans.map(\.id), [plan.id])
+        XCTAssertTrue(parts[today]?.settings.suppressedActualIDs.isEmpty == true)
+        XCTAssertTrue(parts[previous]?.actuals.isEmpty == true)
+    }
+
+    func testDailySnapshotOnlyUpdatePreservesRawReferenceWithoutCloningRaw() async throws {
+        let store = InMemoryPlanCloudBackupStore()
+        let raw = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(backupStore: store, rawSensorBackupStore: raw,
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 36))
+        try service.setPIN("1234")
+        let day = dailyDate(15), now = dailyDate(15, hour: 12)
+        let first = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let reading = SensorReading(timestamp: day.addingTimeInterval(60),
+            point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5), sourceDevice: .iPhone)
+        let saved = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "first")),
+            rawSensorPayload: PlanCloudRawSensorPayload(monthKey: "2026-10-15", sensorReadings: [reading], createdAt: now),
+            day: day, preparation: first, includesCompleteRawData: true)
+        let second = try await service.prepareDailyBackup(dates: [day], now: now.addingTimeInterval(60), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let updated = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "new")),
+            rawSensorPayload: nil, day: day, preparation: second, includesCompleteRawData: false)
+        XCTAssertEqual(updated.snapshot.generationID, saved.snapshot.generationID)
+        XCTAssertEqual(updated.snapshot.hasRawSensorArchive, true)
+        XCTAssertEqual(try raw.allArchives().count, 1)
+        XCTAssertNil(try store.dailyCompletion(for: "2026-10-15"))
+        let restored = try await service.loadLatestBackupPackage()
+        XCTAssertEqual(restored.backup.snapshot.memos.first?.text, "new")
+        guard case .available(let payload) = restored.rawSensorState else { return XCTFail("Raw reference must remain restorable") }
+        XCTAssertEqual(payload.sensorReadings.map(\.id), [reading.id])
+    }
+
+    func testDailyPreparationInvalidatedByPINChangeCannotWrite() async throws {
+        let store = InMemoryPlanCloudBackupStore()
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 35))
+        try service.setPIN("1234")
+        let day = dailyDate(14)
+        let preparation = try await service.prepareDailyBackup(dates: [day], now: dailyDate(15), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        try service.setPIN("5678")
+        do {
+            _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: .empty), rawSensorPayload: nil,
+                day: day, preparation: preparation, includesCompleteRawData: true)
+            XCTFail("An invalidated preparation must not write")
+        } catch { XCTAssertTrue(error is CancellationError) }
+        XCTAssertTrue(try store.allArchives().isEmpty)
+        XCTAssertNil(try store.dailyCompletion(for: "2026-10-14"))
+    }
+
+    func testDailyRestoreRejectsUnreadableLatestDayInsteadOfDroppingHistory() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 34))
+        try service.setPIN("1234")
+        let days = [dailyDate(14), dailyDate(15)]
+        let preparation = try await service.prepareDailyBackup(dates: Set(days), now: dailyDate(16), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        var last: PlanMonthlyArchive?
+        for day in days {
+            last = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "preserve")),
+                rawSensorPayload: nil, day: day, preparation: preparation, includesCompleteRawData: true).snapshot
+        }
+        let saved = try XCTUnwrap(last)
+        let path = PlanCloudBackupPath(monthKey: saved.monthKey, snapshotGenerationID: saved.snapshotGenerationID, createdAt: saved.createdAt)
+        let file = path.storageComponents.reduce(root) { $0.appendingPathComponent($1) }
+        try Data("corrupt fixture".utf8).write(to: file)
+        do { _ = try await service.loadLatestBackup(); XCTFail("Do not return a partial history as success") }
+        catch { XCTAssertEqual(error as? PlanSecurityError, .invalidArchive) }
+    }
+
+    func testDailyBatchRecordsSuccessOnlyAfterAllDatesFinish() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = CountingDailyBackupStore(root: root)
+        let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 33))
+        try service.setPIN("1234")
+        let days = [dailyDate(14), dailyDate(15)], now = dailyDate(15, hour: 12)
+        let preparation = try await service.prepareDailyBackup(dates: Set(days), now: now, calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let payload = PlanCloudBackupPayload(snapshot: .empty)
+        _ = try await service.saveDailyGeneration(payload, rawSensorPayload: nil, day: days[0],
+            preparation: preparation, includesCompleteRawData: true)
+        XCTAssertNil(service.status.latestSuccessfulBackupDate)
+        store.failNextSave = true
+        do {
+            _ = try await service.saveDailyGeneration(payload, rawSensorPayload: nil, day: days[1],
+                preparation: preparation, includesCompleteRawData: true)
+            XCTFail("The final date must fail")
+        } catch { XCTAssertEqual(error as? BackupStoreTestError, .injected) }
+        XCTAssertNil(service.status.latestSuccessfulBackupDate)
+        _ = try await service.saveDailyGeneration(payload, rawSensorPayload: nil, day: days[1],
+            preparation: preparation, includesCompleteRawData: true)
+        try service.finishDailyBackup(preparation)
+        XCTAssertEqual(service.status.latestSuccessfulBackupDate, now)
+        try service.setPIN("5678")
+        XCTAssertThrowsError(try service.finishDailyBackup(preparation)) { XCTAssertTrue($0 is CancellationError) }
+    }
+
+    func testDailyRetentionPreservesConcurrentBranchAndUnpublishedRaw() async throws {
+        let store = InMemoryPlanCloudBackupStore(), branchStore = InMemoryPlanCloudBackupStore()
+        let raw = InMemoryPlanCloudRawSensorBackupStore(), branchRaw = InMemoryPlanCloudRawSensorBackupStore()
+        let service = makeService(backupStore: store, rawSensorBackupStore: raw,
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 32))
+        let branch = makeService(backupStore: branchStore, rawSensorBackupStore: branchRaw,
+            cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 32))
+        try service.setPIN("1234")
+        try branch.setPIN("1234")
+        let day = dailyDate(15), key = "2026-10-15"
+        func save(_ target: PlanSecurityBackupService, hour: Int) async throws -> PlanCloudBackupGeneration {
+            let now = dailyDate(15, hour: hour)
+            let preparation = try await target.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
+                dataGeneration: TaptionDataDeletionFence.currentGeneration())
+            let reading = SensorReading(timestamp: now,
+                point: GeoPoint(latitude: 1, longitude: 1, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+                sourceDevice: .iPhone)
+            return try await target.saveDailyGeneration(PlanCloudBackupPayload(snapshot: dailySnapshot(day, text: "fixture")),
+                rawSensorPayload: PlanCloudRawSensorPayload(monthKey: key, sensorReadings: [reading], createdAt: now),
+                day: day, preparation: preparation, includesCompleteRawData: true)
+        }
+        let first = try await save(service, hour: 8)
+        let concurrent = try await save(branch, hour: 9)
+        let unpublished = try await save(branch, hour: 10)
+        let predecessor = try await save(service, hour: 11)
+        try store.save(concurrent.snapshot, at: PlanCloudBackupPath(monthKey: key,
+            snapshotGenerationID: concurrent.snapshot.snapshotGenerationID, createdAt: concurrent.snapshot.createdAt))
+        for generation in [concurrent, unpublished] {
+            let archive = try XCTUnwrap(generation.rawSensors)
+            try raw.save(archive, at: PlanCloudRawSensorBackupPath(monthKey: key, generationID: archive.generationID))
+        }
+        let latest = try await save(service, hour: 12)
+        XCTAssertEqual(Set(try store.allArchives().compactMap(\.snapshotGenerationID)),
+            Set([predecessor, latest, concurrent].compactMap { $0.snapshot.snapshotGenerationID }))
+        let rawIDs = Set(try raw.allArchives().map(\.generationID))
+        XCTAssertFalse(rawIDs.contains(first.rawSensors!.generationID))
+        for generation in [predecessor, latest, concurrent, unpublished] {
+            XCTAssertTrue(rawIDs.contains(generation.rawSensors!.generationID))
+        }
+    }
+
+    func testDailyBackupRetainsCompressionAndRestoresExactText() async throws {
+        let service = makeService(cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 37))
+        try service.setPIN("1234")
+        let day = dailyDate(15)
+        let text = String(repeating: "압축 백업 검증 🐾\n", count: 20_000)
+        let snapshot = dailySnapshot(day, text: text)
+        let preparation = try await service.prepareDailyBackup(dates: [day], now: day.addingTimeInterval(100), calendar: dailyCalendar,
+            dataGeneration: TaptionDataDeletionFence.currentGeneration())
+        let saved = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: snapshot), rawSensorPayload: nil,
+            day: day, preparation: preparation, includesCompleteRawData: true)
+        XCTAssertLessThan(saved.snapshot.encryptedPayload.count, text.utf8.count / 10)
+        let restored = try await service.loadLatestBackup()
+        XCTAssertEqual(restored.snapshot.memos.first?.text, text)
+    }
+}
+
+private final class CountingDailyBackupStore: PlanCloudBackupStore {
+    let base: FilePlanCloudBackupStore
+    var archiveReads = 0
+    var failNextSave = false
+    init(root: URL) { base = FilePlanCloudBackupStore(root: root) }
+    func save(_ archive: PlanMonthlyArchive, at path: PlanCloudBackupPath) throws {
+        if failNextSave { failNextSave = false; throw BackupStoreTestError.injected }
+        try base.save(archive, at: path)
+    }
+    func delete(at path: PlanCloudBackupPath) throws { try base.delete(at: path) }
+    func latest() throws -> PlanMonthlyArchive? { archiveReads += 1; return try base.latest() }
+    func allArchives() throws -> [PlanMonthlyArchive] { archiveReads += 1; return try base.allArchives() }
+    func archives(for periodKey: String) throws -> [PlanMonthlyArchive] { archiveReads += 1; return try base.archives(for: periodKey) }
+    func dailyCompletion(for dayKey: String) throws -> Data? { try base.dailyCompletion(for: dayKey) }
+    func saveDailyCompletion(_ data: Data, dayKey: String) throws { try base.saveDailyCompletion(data, dayKey: dayKey) }
+    func containsSnapshot(at path: PlanCloudBackupPath) throws -> Bool { try base.containsSnapshot(at: path) }
+    func deleteAll() throws { try base.deleteAll() }
 }

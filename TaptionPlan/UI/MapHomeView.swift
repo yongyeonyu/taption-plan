@@ -6735,7 +6735,7 @@ struct MapHomeView: View {
             return language.text("00:00 자동 백업 켜짐", "00:00 automatic backup on")
         }
         if model.securityStatus.settings.cloudBackupEnabled {
-            return language.text("월별 iCloud 백업 켜짐", "Monthly iCloud backup on")
+            return language.text("일별 iCloud 백업 켜짐", "Daily iCloud backup on")
         }
         if model.securityStatus.settings.lockOnLaunch {
             return language.text("앱 열 때마다 잠금", "Locks whenever the app opens")
@@ -11881,7 +11881,7 @@ private struct MapHomeSecuritySheet: View {
 
                 card(language.text("iCloud 백업", "iCloud Backup")) {
                     Toggle(
-                        language.text("월별 암호화 백업", "Monthly encrypted backup"),
+                        language.text("일별 암호화 백업", "Daily encrypted backup"),
                         isOn: Binding(
                             get: { security.settings.cloudBackupEnabled },
                             set: { setCloudBackup($0) }
@@ -11897,8 +11897,8 @@ private struct MapHomeSecuritySheet: View {
                     )
                     .tint(Color.tpReferenceMint)
                     Text(language.text(
-                        "iCloud Drive/Taption Plan에 월별 단일 암호화 파일로 저장합니다. 같은 iCloud 계정이면 새 기기와 비밀번호 분실 후에도 복구할 수 있습니다.",
-                        "One encrypted file is saved per month in iCloud Drive/Taption Plan. The same iCloud account can recover it on a new device or after password loss."
+                        "iCloud Drive/Taption Plan에 날짜별로 압축·암호화해 저장합니다. 완료된 날짜는 건너뛰고 오늘 기록은 갱신합니다. 같은 iCloud 계정으로 복구할 수 있습니다.",
+                        "Compressed, encrypted backups are saved by date in iCloud Drive/Taption Plan. Completed days are skipped; today is updated. Restore with the same iCloud account."
                     ))
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)

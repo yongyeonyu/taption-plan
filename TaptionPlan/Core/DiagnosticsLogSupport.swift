@@ -1,6 +1,39 @@
 import Foundation
+import zlib
 import Dispatch
 import TaptionPlanCore
+
+enum TaptionLogGzip {
+    enum Failure: Error { case invalidInputSize, compressionFailed }
+
+    static func compress(_ data: Data) throws -> Data {
+        guard data.count <= Int(UInt32.max) else { throw Failure.invalidInputSize }
+        var stream = z_stream()
+        guard deflateInit2_(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, MAX_WBITS + 16,
+            8, Z_DEFAULT_STRATEGY, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else {
+            throw Failure.compressionFailed
+        }
+        defer { deflateEnd(&stream) }
+        let chunkSize = 32 * 1_024
+        var buffer = [UInt8](repeating: 0, count: chunkSize)
+        var result = Data()
+        try data.withUnsafeBytes { bytes in
+            stream.next_in = UnsafeMutablePointer(mutating: bytes.bindMemory(to: Bytef.self).baseAddress)
+            stream.avail_in = uInt(data.count)
+            var status: Int32 = Z_OK
+            repeat {
+                status = buffer.withUnsafeMutableBytes { output in
+                    stream.next_out = output.bindMemory(to: Bytef.self).baseAddress
+                    stream.avail_out = uInt(chunkSize)
+                    return deflate(&stream, Z_FINISH)
+                }
+                guard status == Z_OK || status == Z_STREAM_END else { throw Failure.compressionFailed }
+                result.append(contentsOf: buffer.prefix(chunkSize - Int(stream.avail_out)))
+            } while status != Z_STREAM_END
+        }
+        return result
+    }
+}
 
 enum TaptionDiagnosticsLevel: String, Sendable {
     case info
@@ -584,7 +617,7 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         let url = packageDirectoryURL.appendingPathComponent(
-            "TaptionLogs-\(formatter.string(from: .now)).txt"
+            "TaptionLogs-\(formatter.string(from: .now))-\(UUID().uuidString.prefix(8)).txt.gz"
         )
         let environment = summary
             .sorted { $0.key < $1.key }
@@ -611,11 +644,8 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         ## apple_watch_log
         \(resolvedWatchLog)
         """
-        try text.write(
-            to: url,
-            atomically: true,
-            encoding: .utf8
-        )
+        let compressed = try TaptionLogGzip.compress(Data(text.utf8))
+        try compressed.write(to: url, options: [.atomic, .completeFileProtection])
         try retainNewestPackages(limit: 6)
         return url
     }
@@ -657,7 +687,7 @@ enum TaptionPlanDiagnosticsICloudError: LocalizedError {
 
 /// A small, replace-in-place pointer lets the Settings screen and iCloud
 /// Drive users find the newest exported package without changing the
-/// immutable, collision-safe history of `TaptionLogs-*.txt` files.
+/// immutable, collision-safe history of `TaptionLogs-*.txt.gz` files (older `.txt` files remain readable).
 struct TaptionDiagnosticsLatestLogManifest: Codable, Equatable, Sendable {
     static let fileName = "latest.json"
 

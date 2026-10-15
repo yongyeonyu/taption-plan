@@ -1063,16 +1063,18 @@ actor RawDeviceDataDayArchive {
         }
     }
 
+    func backupDateRanges() async throws -> [ClosedRange<Date>] {
+        let generation = dataDeletionGeneration
+        try checkDataGeneration(generation)
+        return try await store.eventDateRanges(domain: Self.domain)
+    }
+
     func envelopes(in span: TimeSpan) async throws
         -> [RawDeviceDataEnvelope] {
         let generation = dataDeletionGeneration
         let events = try await withProtectedLock { [self] in
             try await self.checkDataGeneration(generation)
-            return try await self.store.events(
-                from: TaptionPlanDayKey(date: span.start),
-                through: TaptionPlanDayKey(date: span.end),
-                domain: Self.domain
-            )
+            return try await self.store.events(in: span.start...span.end, domain: Self.domain)
         }
         return try await decodedEnvelopes(
             events,
@@ -1433,6 +1435,14 @@ actor SensorReadingArchive {
         let generation = dataDeletionGeneration
         let result = try await loadEvents(in: span, generation: generation)
         return (result.readings.sorted(by: readingOrder), result.isComplete)
+    }
+
+    func backupDateRanges() async throws -> [ClosedRange<Date>] {
+        let generation = dataDeletionGeneration
+        guard let dayStore else { throw Error.dayStoreUnavailable }
+        try await ensureMigrated(generation: generation)
+        try checkDataGeneration(generation)
+        return try await dayStore.eventDateRanges(domain: "sensor-reading")
     }
 
     func allReadings() async throws -> [SensorReading] {
@@ -2299,6 +2309,10 @@ final class AppleSensorDataService {
     @discardableResult
     func endTracking() -> TrackingSession? {
         collector.endTracking()
+    }
+
+    func backupDateRanges() async throws -> [ClosedRange<Date>] {
+        try await archive.backupDateRanges()
     }
 
     func archivedReadings(in span: TimeSpan) async throws -> [SensorReading] {

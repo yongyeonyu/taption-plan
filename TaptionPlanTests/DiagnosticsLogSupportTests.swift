@@ -1,4 +1,5 @@
 import XCTest
+import zlib
 @testable import TaptionPlan
 
 final class DiagnosticsLogSupportTests: XCTestCase {
@@ -300,5 +301,74 @@ final class DiagnosticsLogSupportTests: XCTestCase {
         XCTAssertTrue(bounded.split(separator: "\n").allSatisfy {
             $0.hasPrefix("line_")
         })
+    }
+}
+
+func gunzipLogForTest(_ data: Data) throws -> Data {
+    var stream = z_stream()
+    guard inflateInit2_(&stream, MAX_WBITS + 16, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size)) == Z_OK else {
+        throw TaptionLogGzip.Failure.compressionFailed
+    }
+    defer { inflateEnd(&stream) }
+    var result = Data()
+    var output = [UInt8](repeating: 0, count: 16_384)
+    try data.withUnsafeBytes { input in
+        stream.next_in = UnsafeMutablePointer(mutating: input.bindMemory(to: Bytef.self).baseAddress)
+        stream.avail_in = uInt(data.count)
+        var status = Z_OK
+        repeat {
+            status = output.withUnsafeMutableBytes { buffer in
+                stream.next_out = buffer.bindMemory(to: Bytef.self).baseAddress
+                stream.avail_out = 16_384
+                return inflate(&stream, Z_NO_FLUSH)
+            }
+            guard status == Z_OK || status == Z_STREAM_END, result.count < 64 * 1_024 * 1_024 else {
+                throw TaptionLogGzip.Failure.compressionFailed
+            }
+            result.append(contentsOf: output.prefix(16_384 - Int(stream.avail_out)))
+        } while status != Z_STREAM_END
+        guard stream.avail_in == 0 else { throw TaptionLogGzip.Failure.compressionFailed }
+    }
+    return result
+}
+
+extension DiagnosticsLogSupportTests {
+    func testGzipRoundTripsEmptyUnicodeAndLargeLogs() throws {
+        for text in ["", "백업 완료 🐾\n", String(repeating: "2026-10-15 diagnostic stage=complete rows=100\n", count: 30_000)] {
+            let original = Data(text.utf8)
+            let encoded = try TaptionLogGzip.compress(original)
+            XCTAssertEqual(Array(encoded.prefix(3)), [0x1f, 0x8b, 0x08])
+            XCTAssertEqual(try gunzipLogForTest(encoded), original)
+            if original.count > 1_000_000 { XCTAssertLessThan(encoded.count, original.count / 20) }
+        }
+    }
+
+    func testGzipChecksumDetectsCorruption() throws {
+        var encoded = try TaptionLogGzip.compress(Data("diagnostic fixture".utf8))
+        encoded[encoded.count - 8] ^= 0xff
+        XCTAssertThrowsError(try gunzipLogForTest(encoded))
+    }
+
+    func testCompressedLogUploadManifestAndRetryKeepExactBytes() throws {
+        let builder = TaptionPlanDiagnosticsLogPackageBuilder(packageDirectoryURL: rootURL.appendingPathComponent("packages"))
+        let package = try builder.makePackage(summary: ["build": "fixture"], iphoneLog: "backup_finished", watchLog: nil)
+        XCTAssertTrue(package.lastPathComponent.hasSuffix(".txt.gz"))
+        let original = try Data(contentsOf: package)
+        var reject = true
+        let exporter = TaptionPlanDiagnosticsICloudExporter(ubiquityContainerURL: { self.rootURL }, transferItem: { from, to in
+            if reject { throw TaptionLogGzip.Failure.compressionFailed }
+            try FileManager.default.copyItem(at: from, to: to)
+        })
+        XCTAssertThrowsError(try exporter.export(package))
+        XCTAssertEqual(try Data(contentsOf: package), original)
+        reject = false
+        let uploaded = try exporter.export(package)
+        XCTAssertEqual(try Data(contentsOf: uploaded), original)
+        let manifestURL = uploaded.deletingLastPathComponent().appendingPathComponent("latest.json")
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        let manifest = try decoder.decode(TaptionDiagnosticsLatestLogManifest.self, from: Data(contentsOf: manifestURL))
+        XCTAssertEqual(manifest.fileName, uploaded.lastPathComponent)
+        XCTAssertEqual(manifest.byteCount, original.count)
+        XCTAssertTrue(String(decoding: try gunzipLogForTest(original), as: UTF8.self).contains("backup_finished"))
     }
 }

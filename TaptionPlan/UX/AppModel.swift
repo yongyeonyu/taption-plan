@@ -1242,6 +1242,7 @@ final class AppModel {
     @ObservationIgnored private var deferredVisibleRefreshTask: Task<Void, Never>?
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var automaticCloudBackupRetryAfter: Date?
+    @ObservationIgnored private var isDailyCloudBackupRunning = false
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
     @ObservationIgnored private var calendarStoreRefreshTask:
@@ -2009,31 +2010,17 @@ final class AppModel {
         let operation = logger.beginOperation("icloud_backup_manual")
         var appLogBytes = 0
         do {
-            if let securityBackupService {
-                let migration = try await securityBackupService.migrateLegacyMonthlyArchives()
-                logger.record("legacy_backup_migration_finished", fields: [
-                    "converted_months": String(migration.convertedMonths),
-                    "unreadable_months": String(migration.skippedUnreadableMonths)])
-            }
-            guard let securityBackupService else {
-                throw PlanSecurityError.accountUnavailable
-            }
-            let date = Date.now
-            let payload = await cloudBackupPayload(now: date)
-            guard acceptsDataMutation() else { throw CancellationError() }
-            appLogBytes = payload.appLog?.utf8.count ?? 0
-            let generation = try await saveCloudBackupGeneration(
-                using: securityBackupService,
-                payload: payload,
-                date: date
-            )
+            guard let securityBackupService else { throw PlanSecurityError.accountUnavailable }
+            let report = try await saveDailyCloudBackup(using: securityBackupService, date: .now)
+            appLogBytes = report.appLogBytes
             securityStatus = securityBackupService.status
             automaticCloudBackupRetryAfter = nil
             logger.finishOperation(
                 operation,
                 outcome: "success",
                 fields: [
-                    "month": generation.snapshot.monthKey,
+                    "saved_days": String(report.savedDays),
+                    "skipped_days": String(report.skippedDays),
                     "app_log_bytes": String(appLogBytes),
                 ]
             )
@@ -2547,43 +2534,66 @@ final class AppModel {
         if let failure = failures.first { throw failure }
     }
 
-    private func cloudBackupPayload(
-        now: Date = .now,
-        includesRoutes: Bool = true
-    ) async -> PlanCloudBackupPayload {
-        let backupSnapshot = snapshot
-        let routeReadings: [SensorReading]
-        if includesRoutes, let sensorService {
-            let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
-            routeReadings = (try? await sensorService.archivedRouteReadings(
-                in: span
-            )) ?? []
-        } else {
-            routeReadings = []
+    private func saveDailyCloudBackup(
+        using service: PlanSecurityBackupService, date: Date,
+        includesRawSensors: Bool = true
+    ) async throws -> (savedDays: Int, skippedDays: Int, appLogBytes: Int) {
+        guard !isDailyCloudBackupRunning else { throw PlanSecurityError.backupInProgress }
+        isDailyCloudBackupRunning = true
+        defer { isDailyCloudBackupRunning = false }
+        let calendar = PlanDailyBackupSchedule.calendar()
+        let today = calendar.startOfDay(for: date)
+        let captured = snapshot
+        var dates = includesRawSensors
+            ? await Task.detached(priority: .utility) {
+                PlanDailyBackupPartition.dates(in: captured, now: date, calendar: calendar)
+            }.value : [today]
+        if includesRawSensors {
+            try await rawDeviceDataArchive?.checkpoint()
+            let sensorRanges = try await sensorService?.backupDateRanges() ?? []
+            let envelopeRanges = try await rawDeviceDataArchive?.backupDateRanges() ?? []
+            for range in sensorRanges + envelopeRanges {
+                var day = calendar.startOfDay(for: range.lowerBound)
+                let last = calendar.startOfDay(for: range.upperBound)
+                while day <= last {
+                    dates.insert(day)
+                    day = calendar.date(byAdding: .day, value: 1, to: day)!
+                }
+            }
+            if let dayDatabase {
+                dates.formUnion(try await dayDatabase.backupDates(calendar: calendar).filter { $0 <= today })
+            }
         }
-
-        return await Task.detached(priority: .utility) {
-            let backupLog = TaptionPlanDiagnosticsLogger.shared.combinedLog(
-                maximumBytes: TaptionPlanDiagnosticsLogPolicy
-                    .maximumBackupBytes
-            )
-            return PlanCloudBackupPayload(
-                snapshot: PlanCloudSnapshotRecoveryPolicy.iCloudSafe(
-                    backupSnapshot
-                ),
-                routePoints: PlanBackupRoutePointReducer.reduce(routeReadings),
-                appLog: backupLog.isEmpty ? nil : backupLog
-            )
+        guard acceptsDataMutation(), !Task.isCancelled else { throw CancellationError() }
+        let preparation = try await service.prepareDailyBackup(dates: dates, now: date,
+            calendar: calendar, dataGeneration: dataDeletionGeneration)
+        let pendingDays = preparation.days
+        let partitions = await Task.detached(priority: .utility) {
+            PlanDailyBackupPartition.make(captured, days: pendingDays, now: date, calendar: calendar)
         }.value
+        let log = TaptionPlanDiagnosticsLogger.shared.combinedLog(
+            maximumBytes: TaptionPlanDiagnosticsLogPolicy.maximumBackupBytes)
+        for day in pendingDays {
+            guard acceptsDataMutation(), !Task.isCancelled else { throw CancellationError() }
+            let raw = includesRawSensors ? try await cloudRawSensorPayload(day: day, now: date, calendar: calendar) : nil
+            guard let slice = partitions[day] else { throw PlanSecurityError.invalidArchive }
+            let payload = await Task.detached(priority: .utility) {
+                PlanCloudBackupPayload(snapshot: slice,
+                    routePoints: PlanBackupRoutePointReducer.reduce(raw?.sensorReadings ?? []),
+                    appLog: day == today && !log.isEmpty ? log : nil)
+            }.value
+            _ = try await service.saveDailyGeneration(payload, rawSensorPayload: raw,
+                day: day, preparation: preparation, includesCompleteRawData: includesRawSensors)
+            await Task.yield()
+        }
+        try service.finishDailyBackup(preparation)
+        return (pendingDays.count, preparation.skippedDays, log.utf8.count)
     }
 
     private func cloudRawSensorPayload(
-        now: Date = .now
+        day: Date, now: Date, calendar: Calendar
     ) async throws -> PlanCloudRawSensorPayload {
-        let span = PlanBackupRoutePointReducer.backupSpan(containing: now)
-        if let rawDeviceDataArchive {
-            try await rawDeviceDataArchive.checkpoint()
-        }
+        let span = PlanDailyBackupSchedule.span(for: day, calendar: calendar)
         let sensorLoad = try await sensorService?.archivedReadingsLoadResult(
             in: span
         ) ?? (readings: [], isComplete: true)
@@ -2592,10 +2602,10 @@ final class AppModel {
                 fields: ["stage": "local_sensor_archive", "readable_count": String(sensorLoad.readings.count)])
             throw PlanSecurityError.localSensorArchiveIncomplete
         }
-        let sensorReadings = sensorLoad.readings
+        let sensorReadings = sensorLoad.readings.filter { $0.timestamp < span.end }
         let envelopes: [RawDeviceDataEnvelope]
         if let rawDeviceDataArchive {
-            envelopes = try await rawDeviceDataArchive.envelopes(in: span)
+            envelopes = try await rawDeviceDataArchive.envelopes(in: span).filter { $0.capturedAt < span.end }
         } else {
             envelopes = []
         }
@@ -2616,71 +2626,12 @@ final class AppModel {
             }
         }
         return PlanCloudRawSensorPayload(
-            monthKey: PlanArchiveSchedule.monthKey(for: now),
+            monthKey: PlanDailyBackupSchedule.key(for: day, calendar: calendar),
             sensorReadings: sensorReadings,
             envelopes: envelopes,
             watchAccelerationChunks: Array(watchChunks.values),
             createdAt: now
         )
-    }
-
-    private func saveCloudBackupGeneration(
-        using securityBackupService: PlanSecurityBackupService,
-        payload: PlanCloudBackupPayload,
-        date: Date
-    ) async throws -> PlanCloudBackupGeneration {
-        let rawSensorPayload = try await cloudRawSensorPayload(now: date)
-        guard acceptsDataMutation() else { throw CancellationError() }
-        let generation = try await securityBackupService.saveMonthlyGeneration(
-            payload,
-            rawSensorPayload: rawSensorPayload.isEmpty
-                ? nil
-                : rawSensorPayload,
-            date: date,
-            dataGeneration: dataDeletionGeneration
-        )
-        if rawSensorPayload.isEmpty {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                generation.rawSensors == nil
-                    ? "icloud_raw_sensor_backup_skipped_empty"
-                    : "icloud_raw_sensor_backup_preserved_empty_generation",
-                level: .notice,
-                fields: [
-                    "month": PlanArchiveSchedule.monthKey(for: date),
-                ]
-            )
-            return generation
-        }
-        guard let archive = generation.rawSensors else {
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "icloud_raw_sensor_backup_skipped_empty",
-                level: .notice,
-                fields: [
-                    "month": PlanArchiveSchedule.monthKey(for: date),
-                    "service_latest_persisted_at": sensorService?
-                        .latestPersistedReadingDate()
-                        .map { String($0.timeIntervalSince1970) } ?? "none",
-                ]
-            )
-            return generation
-        }
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "icloud_raw_sensor_backup_saved",
-            fields: [
-                "path": PlanCloudRawSensorBackupPath(
-                    monthKey: archive.monthKey
-                ).relativePath,
-                "sensor_readings": String(rawSensorPayload.sensorReadings.count),
-                "envelopes": String(rawSensorPayload.envelopes.count),
-                "latest_sensor_at": rawSensorPayload.sensorReadings.last.map {
-                    String($0.timestamp.timeIntervalSince1970)
-                } ?? "none",
-                "latest_envelope_at": rawSensorPayload.envelopes.last.map {
-                    String($0.capturedAt.timeIntervalSince1970)
-                } ?? "none",
-            ]
-        )
-        return generation
     }
 
     func setMapCategoryColor(_ hex: String, for categoryID: String) {
@@ -4263,28 +4214,9 @@ final class AppModel {
                 )
                 return
             }
-            let date = Date.now
-            let payload = await cloudBackupPayload(
-                now: date,
-                includesRoutes: includesRawSensors
-            )
-            guard acceptsDataMutation() else { throw CancellationError() }
-            appLogBytes = payload.appLog?.utf8.count ?? 0
-            let snapshotArchive: PlanMonthlyArchive
-            if includesRawSensors {
-                snapshotArchive = try await saveCloudBackupGeneration(
-                    using: securityBackupService,
-                    payload: payload,
-                    date: date
-                ).snapshot
-            } else {
-                snapshotArchive = try await securityBackupService
-                    .saveMonthlyArchive(
-                        payload,
-                        date: date,
-                        dataGeneration: dataDeletionGeneration
-                    )
-            }
+            let report = try await saveDailyCloudBackup(using: securityBackupService,
+                date: .now, includesRawSensors: includesRawSensors)
+            appLogBytes = report.appLogBytes
             securityStatus = securityBackupService.status
             automaticCloudBackupRetryAfter = nil
             logger.finishOperation(
@@ -4292,7 +4224,8 @@ final class AppModel {
                 outcome: "success",
                 fields: [
                     "reason": reason,
-                    "month": snapshotArchive.monthKey,
+                    "saved_days": String(report.savedDays),
+                    "skipped_days": String(report.skippedDays),
                     "app_log_bytes": String(appLogBytes),
                     "raw_sensors": String(includesRawSensors),
                 ]

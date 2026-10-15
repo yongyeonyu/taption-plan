@@ -26018,7 +26018,7 @@ final class FeatureEngineTests: XCTestCase {
             iphoneLog: "iphone-event",
             watchLog: "health snapshot ready workouts=2\nwatch-event"
         )
-        let text = try String(contentsOf: package, encoding: .utf8)
+        let text = String(decoding: try gunzipLogForTest(Data(contentsOf: package)), as: UTF8.self)
 
         XCTAssertTrue(text.contains("## iphone_log"))
         XCTAssertTrue(text.contains("iphone-event"))

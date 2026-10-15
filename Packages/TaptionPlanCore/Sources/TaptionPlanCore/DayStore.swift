@@ -887,6 +887,26 @@ public actor TaptionPlanDayStore {
         return result
     }
 
+    /// UTC date buckets need only timestamp metadata, never event payload decoding.
+    public func eventDateRanges(domain: String) throws -> [ClosedRange<Date>] {
+        try validate(domain: domain)
+        if !hasInstantRangeIndex {
+            try execute("CREATE INDEX IF NOT EXISTS events_domain_timestamp_index ON events(domain, timestamp, sequence, id);")
+            hasInstantRangeIndex = sqlite3_get_autocommit(database) != 0
+        }
+        let statement = try prepare("SELECT MIN(timestamp), MAX(timestamp) FROM events WHERE domain = ? GROUP BY date(timestamp, 'unixepoch') ORDER BY MIN(timestamp);")
+        defer { sqlite3_finalize(statement) }
+        try bind(domain, to: statement, at: 1)
+        var result: [ClosedRange<Date>] = []
+        while try step(statement) == SQLITE_ROW {
+            let first = sqlite3_column_double(statement, 0)
+            let last = sqlite3_column_double(statement, 1)
+            guard first.isFinite, last.isFinite, first <= last else { throw TaptionPlanDayStoreError.invalidTimeRange }
+            result.append(Date(timeIntervalSince1970: first)...Date(timeIntervalSince1970: last))
+        }
+        return result
+    }
+
     public func allEvents(domain: String? = nil) throws -> [Event] {
         if let domain { try validate(domain: domain) }
         let statement: OpaquePointer

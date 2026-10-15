@@ -1,0 +1,44 @@
+{
+  "requestID": "CMP1015A01",
+  "status": "implementation-and-automated-validation-complete",
+  "dataFormat": "Existing V4 LZFSE pages before AES-GCM; applied to daily snapshot/raw",
+  "logFormat": "gzip (.txt.gz)",
+  "diagnosticsTests": 16,
+  "featureTests": 2,
+  "failures": 0,
+  "skipped": 0,
+  "standardGzipProof": {
+    "exitCode": 0,
+    "originalBytes": 1440000,
+    "gzipBytes": 4285,
+    "compressedRatio": 0.0029756944444444444,
+    "pythonStandardGzipRoundTrip": true,
+    "helperSHA256": "19f30b112fe4c97c2a45cb9502e6fa3d9358e3f5c9a0c427ae1c5bd71575f4b2",
+    "fixture": "synthetic, no user data"
+  },
+  "debug": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0,
+    "build": "177",
+    "products": [
+      {
+        "bundle": "com.taption.plan",
+        "build": "177",
+        "signatureVerified": true
+      },
+      {
+        "bundle": "com.taption.plan.widget",
+        "build": "177",
+        "signatureVerified": true
+      }
+    ],
+    "log": "REL1015B01/device-debug-02.log"
+  },
+  "evidenceRoot": "artifacts/local-validation-evidence/CMP1015A01",
+  "sharedTestEvidence": "artifacts/local-validation-evidence/BAK1015B01",
+  "limitations": [
+    "Synthetic compression ratio does not represent real logs.",
+    "Actual iPhone iCloud transfer/restore not tested."
+  ]
+}

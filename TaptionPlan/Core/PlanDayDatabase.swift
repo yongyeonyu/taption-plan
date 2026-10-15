@@ -1155,6 +1155,19 @@ actor PlanDayDatabase {
         )
     }
 
+    func backupDates(calendar: Calendar) async throws -> Set<Date> {
+        let days = try await iPhoneStore.allDays() + watchStore.allDays()
+        var result = Set<Date>()
+        for day in days {
+            guard let date = calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day)) else { continue }
+            // Stored day keys may have been created in another time zone.
+            for offset in -1...1 {
+                if let neighbor = calendar.date(byAdding: .day, value: offset, to: date) { result.insert(neighbor) }
+            }
+        }
+        return result
+    }
+
     func migrationDayRanges(
         source: TaptionDataSnapshot,
         readings: [SensorReading],

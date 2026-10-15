@@ -1,0 +1,103 @@
+{
+  "requestID": "BAK1015B01",
+  "status": "implementation-and-automated-validation-complete",
+  "dailyTestCount": 13,
+  "selectedAppTests": 276,
+  "security": {
+    "run": "daily-tests-05",
+    "tests": 151,
+    "failures": 0,
+    "skipped": 0
+  },
+  "reusedFromDailyTests03": {
+    "diagnostics": 16,
+    "diagnosticsFeature": 2,
+    "sensorDayStore": 107,
+    "failures": 0,
+    "skipped": 0
+  },
+  "coreDayStore": {
+    "run": "core-days-02",
+    "tests": 40,
+    "failures": 0
+  },
+  "inputHashes": "source-tests-05.json",
+  "inputCount": 166,
+  "earlierAttempts": [
+    {
+      "run": "core-days-01",
+      "result": "compile failure: new fixture sequence Int64 instead of UInt64; corrected"
+    },
+    {
+      "run": "device-debug-01",
+      "result": "compile failure: daily helper used fileprivate encoder/decoder; uses its own secondsSince1970 encoder now; redundant await warning removed"
+    },
+    {
+      "run": "daily-tests-01",
+      "result": "compile failure: new GeoPoint fixture missing required accuracy/altitude fields; corrected"
+    },
+    {
+      "run": "daily-tests-02",
+      "tests": 270,
+      "failures": 1,
+      "exitCode": 65,
+      "reason": "Existing dense GPS test asserted exact stationary-jitter terminal coordinate; retained ID/time and <=3m stationary-anchor contract, no production GPS change"
+    },
+    {
+      "run": "daily-tests-03",
+      "tests": 274,
+      "failures": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    {
+      "run": "daily-tests-04",
+      "tests": 151,
+      "failures": 1,
+      "exitCode": -15,
+      "reason": "New retention fixture had no sensor value and was filtered as empty; corrected with a synthetic location. All cases finished; verbose failure diagnostics stopped with SIGINT then SIGTERM. Partial result bundle retained. Full security suite rerun in 05."
+    }
+  ],
+  "limits": [
+    "First daily backup must create missing historical dates.",
+    "Metadata index scans and in-memory snapshot partitioning still scale with record count.",
+    "Actual iPhone backup/restore, iCloud sync duration and simultaneous two-device publication were not tested.",
+    "Existing monthly backups and local user databases were not changed by execution tools."
+  ],
+  "dailyTestNames": [
+    "testDailyBackupSkipsCompletedDayWithoutOpeningItsArchive",
+    "testDailyBackupOverwritesTodayAndClosesPreviousDayOnlyAfterFinalSave",
+    "testDailyBackupFailedFinalSaveDoesNotMarkDayCompleteOrReplacePriorBackup",
+    "testDailyCompletionMissingReferencedFileRetriesAndFractionalTimestampRoundTrips",
+    "testDailyPartitionPreservesOvernightRecordsCrossDayLinksAndDST",
+    "testDailyRestoreKeepsMoreThan120DatesAndExistingMonthlyBackup",
+    "testDailyPartitionKeepsFuturePlansInTodayAndAppliesPrivacyBeforeSplitting",
+    "testDailySnapshotOnlyUpdatePreservesRawReferenceWithoutCloningRaw",
+    "testDailyPreparationInvalidatedByPINChangeCannotWrite",
+    "testDailyRestoreRejectsUnreadableLatestDayInsteadOfDroppingHistory",
+    "testDailyBatchRecordsSuccessOnlyAfterAllDatesFinish",
+    "testDailyRetentionPreservesConcurrentBranchAndUnpublishedRaw",
+    "testDailyBackupRetainsCompressionAndRestoresExactText"
+  ],
+  "debug": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0,
+    "build": "177",
+    "products": [
+      {
+        "bundle": "com.taption.plan",
+        "build": "177",
+        "signatureVerified": true
+      },
+      {
+        "bundle": "com.taption.plan.widget",
+        "build": "177",
+        "signatureVerified": true
+      }
+    ],
+    "log": "REL1015B01/device-debug-02.log"
+  },
+  "evidenceRoot": "artifacts/local-validation-evidence/BAK1015B01",
+  "resultsOrigin": "build/validation/BAK1015B01"
+}
