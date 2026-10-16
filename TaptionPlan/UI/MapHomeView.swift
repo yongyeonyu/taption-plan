@@ -16788,10 +16788,11 @@ struct MapHomeDaySummarySheet: View {
     }
 
     private var dateText: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: language == .english ? "en_US" : "ko_KR")
-        formatter.dateFormat = language == .english ? "EEE, MMM d" : "M월 d일 EEEE"
-        return formatter.string(from: date)
+        MapHomeDateText.string(
+            from: date,
+            format: language == .english ? "EEE, MMM d" : "M월 d일 EEEE",
+            locale: Locale(identifier: language == .english ? "en_US" : "ko_KR")
+        )
     }
 }
 
@@ -16799,9 +16800,10 @@ private struct MapHomeGrowthSheet: View {
     @Binding var growthData: Data
     let language: MapHomeLanguage
 
+    @State private var historyCache = MapHomeGrowthHistoryCache()
+
     private var history: MapHomeGrowthHistory {
-        (try? JSONDecoder().decode(MapHomeGrowthHistory.self, from: growthData))
-            ?? .initial(for: .now)
+        historyCache.history(for: growthData) ?? .initial(for: .now)
     }
 
     private var season: MapHomeGrowthSeason { history.season }

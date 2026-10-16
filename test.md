@@ -1,5 +1,10 @@
 # 검증 기록
 
+## COM1016A01 · 성장 시트 캐시·날짜 포맷터·백그라운드 모델 생성 시간 진단 (2026-10-16, 178 이후)
+- 수정: `MapHomeGrowthSheet.history`가 저장 값당 한 번만 디코딩하도록 `MapHomeGrowthHistoryCache`를 쓰고, 시트의 날짜 문구 `DateFormatter` 생성을 `MapHomeDateText`로 바꿨다. UI 없는 깨움이 만드는 `AppModel`의 초기화 시간을 `background_model_created` 로그(`init_ms`)로 남긴다(측정만, 동작 변경 없음). 화면 배치는 바꾸지 않았다.
+- 자동 검증: `MapHomePerformanceHelperTests`·`MapHomeGrowthPolicyTests`·`TimeScaleTests` 196개 통과·실패 0(`sheet-fmt-01.log`, 로그 기준 집계).
+- 제한: 시간 단축을 측정하지 않았다. `init_ms`는 실제 깨움이 일어난 뒤 진단 로그에서 읽어야 한다. 설정 시트의 `dateStyle` 포맷터 2곳은 바꾸지 않았다.
+
 ## COM1016A01 · 대기질 중계 서버(B안)·센서 갱신 롤백 보호 (2026-10-16, 178 이후)
 - 수정(앱): `AirQualityContextService`가 data.go.kr을 직접 부르지 않고 중계 서버(`AIR_QUALITY_PROXY_HOST`, 호스트 이름만)의 `/airkorea/stations`·`/airkorea/measurement?stationName=`을 호출한다. 앱에서 서비스 키를 모두 제거했고 `Info.plist`의 `AIRKOREA_SERVICE_KEY`를 `AIR_QUALITY_PROXY_HOST`로 바꿨다. 값이 비어 있거나 `$(`로 시작하거나 `/`·`:`·공백을 포함하면 사용하지 않는다(대기질 미표시). 빌드 설정에는 아직 호스트를 넣지 않았다.
 - 수정(서버): `server/airkorea-proxy/`(Cloudflare Worker). 경로·메서드·파라미터를 허용 목록으로 제한하고 측정소 이름 형식을 검사하며 측정소별로 캐시한다(목록 24시간, 측정값 30분). 상류의 오류 응답(키·한도)은 캐시하지 않고 502로 바꾼다. 키는 `wrangler secret`에만 둔다. 요청·IP를 기록하지 않는다. 배포는 하지 않았다.

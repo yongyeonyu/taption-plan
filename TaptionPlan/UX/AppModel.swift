@@ -898,8 +898,16 @@ final class AppModel {
 
     static func backgroundTaskInstance() -> AppModel {
         if let applicationInstance { return applicationInstance }
+        // Every UI-less wake builds a whole model; record the cost so the
+        // decision to keep one alive rests on measured time, not a guess.
+        let started = ContinuousClock.now
         let model = AppModel(registersHealthBackgroundHandler: false)
         applicationInstance = model
+        let elapsed = started.duration(to: .now).components
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "background_model_created",
+            fields: ["init_ms": String(elapsed.seconds * 1_000 + elapsed.attoseconds / 1_000_000_000_000_000)]
+        )
         return model
     }
 
