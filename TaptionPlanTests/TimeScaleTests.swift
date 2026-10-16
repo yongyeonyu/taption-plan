@@ -5372,5 +5372,154 @@ final class DesignTokenValueTests: XCTestCase {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         return [red, green, blue, alpha]
+
+/// User-facing error and status messages used to be Korean-only. Each pair
+/// must keep the original Korean wording and give English users Hangul-free text.
+final class LocalizedMessageContractTests: XCTestCase {
+    private func containsHangul(_ text: String) -> Bool {
+        text.unicodeScalars.contains {
+            (0xAC00...0xD7A3).contains($0.value)
+                || (0x1100...0x11FF).contains($0.value)
+                || (0x3130...0x318F).contains($0.value)
+        }
+    }
+
+    private func assertPair(
+        _ korean: String,
+        _ english: String,
+        expectedKorean: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(korean, expectedKorean, file: file, line: line)
+        XCTAssertFalse(english.isEmpty, file: file, line: line)
+        XCTAssertFalse(containsHangul(english), "\(english)", file: file, line: line)
+        XCTAssertNotEqual(korean, english, file: file, line: line)
+    }
+
+    func testAppModelMessagesKeepKoreanAndHaveEnglish() {
+        let cases: [(AppModelMessage, String)] = [
+            (.dataLoadFailed("detail"), "저장된 데이터를 불러오지 못했습니다. detail"),
+            (.locationReadFailed("detail"), "위치 기록을 읽지 못했습니다. detail"),
+            (.sensorSaveFailed("detail"), "센서 기록을 저장하지 못했습니다. detail"),
+            (.floorOutOfRange(lower: -3, upper: 60), "층수는 지하 3층부터 60층 사이로 입력해 주세요."),
+        ]
+        for (message, expected) in cases {
+            assertPair(
+                message.text(preference: .korean),
+                message.text(preference: .english),
+                expectedKorean: expected
+            )
+        }
+    }
+
+    func testDataLoadFailureIsRecognisedInEitherLanguage() {
+        for preference in [AppLanguagePreference.korean, .english] {
+            let message = AppModelMessage.dataLoadFailed("x").text(preference: preference)
+            XCTAssertTrue(AppModelMessage.isDataLoadFailure(message))
+        }
+        XCTAssertFalse(AppModelMessage.isDataLoadFailure(nil))
+        XCTAssertFalse(AppModelMessage.isDataLoadFailure("other error"))
+        XCTAssertFalse(AppModelMessage.isDataLoadFailure(
+            AppModelMessage.sensorSaveFailed("x").text(preference: .english)
+        ))
+    }
+
+    func testCoreErrorMessagesKeepKoreanAndHaveEnglish() {
+        assertPair(
+            PlanRepositoryAvailabilityError.unavailable.message(preference: .korean),
+            PlanRepositoryAvailabilityError.unavailable.message(preference: .english),
+            expectedKorean: "기기 저장소를 열 수 없어 변경 내용을 저장하지 않습니다."
+        )
+        assertPair(
+            BiometricDataProtectionError.authenticationCancelled.message(preference: .korean),
+            BiometricDataProtectionError.authenticationCancelled.message(preference: .english),
+            expectedKorean: "생체 인증이 취소되었습니다."
+        )
+        assertPair(
+            VoiceMemoRecordingError.inputUnavailable.message(preference: .korean),
+            VoiceMemoRecordingError.inputUnavailable.message(preference: .english),
+            expectedKorean: "마이크 입력 장치를 사용할 수 없습니다."
+        )
+        assertPair(
+            VoiceMemoPlaybackError.fileMissing.message(preference: .korean),
+            VoiceMemoPlaybackError.fileMissing.message(preference: .english),
+            expectedKorean: "음성 메모 파일을 찾지 못했습니다."
+        )
+        assertPair(
+            WeatherContextServiceError.temporarilyUnavailable.message(preference: .korean),
+            WeatherContextServiceError.temporarilyUnavailable.message(preference: .english),
+            expectedKorean: "날씨 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
+        )
+        assertPair(
+            HealthKitImportCoordinatorError.invalidAnchorCursor.message(preference: .korean),
+            HealthKitImportCoordinatorError.invalidAnchorCursor.message(preference: .english),
+            expectedKorean: "HealthKit 변경 동기화 지점을 읽지 못했습니다."
+        )
+        assertPair(
+            TaptionPlanDiagnosticsICloudError.unavailable.message(preference: .korean),
+            TaptionPlanDiagnosticsICloudError.unavailable.message(preference: .english),
+            expectedKorean: "iCloud Drive를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인해 주세요."
+        )
+        assertPair(
+            ScreenTimeUsageError.requiresCurrentSystem.message(preference: .korean),
+            ScreenTimeUsageError.requiresCurrentSystem.message(preference: .english),
+            expectedKorean: "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다."
+        )
+    }
+
+    func testStatusLabelsKeepKoreanAndHaveEnglish() {
+        let cloud: [(CloudUnavailableReason, String)] = [
+            (.unsupportedBuild, "이 빌드 미지원"),
+            (.signedOut, "iCloud 로그인 필요"),
+            (.restricted, "기기에서 제한됨"),
+            (.temporarilyUnavailable, "잠시 후 다시"),
+            (.accountCheckFailed, "계정 확인 실패"),
+            (.schemaMissing, "서버 설정 필요"),
+        ]
+        for (reason, expected) in cloud {
+            assertPair(
+                reason.statusLabel(preference: .korean),
+                reason.statusLabel(preference: .english),
+                expectedKorean: expected
+            )
+            XCTAssertFalse(containsHangul(reason.guidance(preference: .english)))
+            XCTAssertFalse(reason.guidance(preference: .english).isEmpty)
+        }
+
+        assertPair(
+            ScreenTimeAuthorizationState.denied.displayName(preference: .korean),
+            ScreenTimeAuthorizationState.denied.displayName(preference: .english),
+            expectedKorean: "권한 거부됨"
+        )
+        let screenTimeGuidance = ScreenTimeAuthorizationState.denied
+        assertPair(
+            screenTimeGuidance.guidance(preference: .korean) ?? "",
+            screenTimeGuidance.guidance(preference: .english) ?? "",
+            expectedKorean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요."
+        )
+        assertPair(
+            AppleWatchConnectionState.noRecentData.settingsLabel(preference: .korean),
+            AppleWatchConnectionState.noRecentData.settingsLabel(preference: .english),
+            expectedKorean: "연결됨 · 최근 데이터 없음"
+        )
+        let koreanRow = AppleWatchOnboarding.companionRow(for: .appNotInstalled, preference: .korean)
+        let englishRow = AppleWatchOnboarding.companionRow(for: .appNotInstalled, preference: .english)
+        assertPair(koreanRow.value, englishRow.value, expectedKorean: "설치 필요")
+        XCTAssertFalse(containsHangul(englishRow.subtitle))
+        XCTAssertFalse(containsHangul(englishRow.detail ?? ""))
+        for limitation in AppleWatchOnboarding.watchlessLimitations(preference: .english) {
+            XCTAssertFalse(containsHangul(limitation))
+        }
+        XCTAssertFalse(containsHangul(AppleWatchOnboarding.iPhoneOnlyCoverage(preference: .english)))
+    }
+
+    func testEnglishDurationAndFloorLabelsHaveNoHangul() {
+        XCTAssertEqual(ScreenTimeUsageRecordEngine.localizedDurationText(14 * 60, preference: .korean), "14분")
+        XCTAssertEqual(ScreenTimeUsageRecordEngine.localizedDurationText(14 * 60, preference: .english), "14 min")
+        XCTAssertEqual(ScreenTimeUsageRecordEngine.localizedDurationText(7_200 + 14 * 60, preference: .english), "2 hr 14 min")
+        XCTAssertNil(ScreenTimeUsageRecordEngine.localizedDurationText(30, preference: .english))
+        XCTAssertEqual(FloorLabel.english(-2), "B2")
+        XCTAssertEqual(FloorLabel.english(7), "7F")
     }
 }

@@ -1054,7 +1054,10 @@ final class AppModel {
     private(set) var sensorSaveToken = 0
     private(set) var isCloudSyncing = false
     private(set) var isExportingDiagnostics = false
-    private(set) var diagnosticsExportStatus = "준비됨"
+    private(set) var diagnosticsExportStatus = AppLanguagePreference.text(
+        korean: "준비됨",
+        english: "Ready"
+    )
     private(set) var cloudUnavailableReason: CloudUnavailableReason?
     private(set) var isRecordingVoiceMemo = false
     private(set) var playingVoiceAttachmentID: UUID?
@@ -1147,25 +1150,45 @@ final class AppModel {
         let savedAt = defaults.object(
             forKey: Self.diagnosticsLatestSavedAtKey
         ) as? Date else {
-            return "최신 로그 없음"
+            return AppLanguagePreference.text(
+                korean: "최신 로그 없음",
+                english: "No recent log"
+            )
         }
-        return "최신 \(fileName) · \(savedAt.formatted(date: .abbreviated, time: .shortened))"
+        let savedText = savedAt.formatted(date: .abbreviated, time: .shortened)
+        return AppLanguagePreference.text(
+            korean: "최신 \(fileName) · \(savedText)",
+            english: "Latest \(fileName) · \(savedText)"
+        )
     }
 
     var appUsageStatusText: String {
         guard appUsageAuthorizationState == .approved else {
             return appUsageAuthorizationState.displayName
         }
-        guard lastAppUsageRefreshAt != nil else { return "동기화 대기" }
-        guard let total = ScreenTimeUsageRecordEngine
-            .durationText(appUsageTotalDuration) else {
-            return "오늘 기록 없음"
+        guard lastAppUsageRefreshAt != nil else {
+            return AppLanguagePreference.text(
+                korean: "동기화 대기",
+                english: "Waiting to sync"
+            )
         }
-        return "오늘 \(total) · \(appUsageRecordCount)개"
+        guard let total = ScreenTimeUsageRecordEngine
+            .localizedDurationText(appUsageTotalDuration) else {
+            return AppLanguagePreference.text(
+                korean: "오늘 기록 없음",
+                english: "No records today"
+            )
+        }
+        return AppLanguagePreference.text(
+            korean: "오늘 \(total) · \(appUsageRecordCount)개",
+            english: "Today \(total) · \(appUsageRecordCount) items"
+        )
     }
 
     var cloudStatusText: String {
-        if isCloudSyncing { return "동기화 중" }
+        if isCloudSyncing {
+            return AppLanguagePreference.text(korean: "동기화 중", english: "Syncing")
+        }
         if let cloudUnavailableReason { return cloudUnavailableReason.statusLabel }
         return permissionState(for: .cloud).settingsLabel
     }
@@ -1189,10 +1212,23 @@ final class AppModel {
         var missing: [String] = []
         if !settings.locationEnabled
             || !permissionState(for: .location).isGranted {
-            missing.append("위치·이동")
+            missing.append(AppLanguagePreference.text(
+                korean: "위치·이동",
+                english: "Location & movement"
+            ))
         }
-        if !settings.healthEnabled { missing.append("건강 데이터") }
-        if settings.selectedCalendarIDs.isEmpty { missing.append("캘린더") }
+        if !settings.healthEnabled {
+            missing.append(AppLanguagePreference.text(
+                korean: "건강 데이터",
+                english: "Health data"
+            ))
+        }
+        if settings.selectedCalendarIDs.isEmpty {
+            missing.append(AppLanguagePreference.text(
+                korean: "캘린더",
+                english: "Calendar"
+            ))
+        }
         return missing.isEmpty ? nil : missing
     }
 
@@ -2717,7 +2753,10 @@ final class AppModel {
         guard let restored = item.entry.applying(to: snapshot, undo: true) else {
             userEditUndoHistory.removeLast()
             synchronizeUserEditHistoryAvailability()
-            userFacingError = "동기화된 변경과 충돌해 실행취소하지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "동기화된 변경과 충돌해 실행취소하지 못했습니다.",
+                english: "Undo failed because it conflicts with synced changes."
+            )
             return
         }
         guard restored != snapshot else { return }
@@ -2733,7 +2772,10 @@ final class AppModel {
         guard let reapplied = item.entry.applying(to: snapshot, undo: false) else {
             userEditRedoHistory.removeLast()
             synchronizeUserEditHistoryAvailability()
-            userFacingError = "동기화된 변경과 충돌해 다시실행하지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "동기화된 변경과 충돌해 다시실행하지 못했습니다.",
+                english: "Redo failed because it conflicts with synced changes."
+            )
             return
         }
         guard reapplied != snapshot else { return }
@@ -3122,7 +3164,10 @@ final class AppModel {
                 !replacedByConfirmedSleep.contains($0)
             }
             guard (expectedRecords + preservedPieces).allSatisfy({ storedIDs.contains($0.id) }) else {
-                userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
+                userFacingError = AppLanguagePreference.text(
+                    korean: "변경 내용을 저장소에서 다시 확인하지 못했습니다.",
+                    english: "Changes could not be verified against storage again."
+                )
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "section_edit_save_failed",
                     level: .error,
@@ -3133,7 +3178,10 @@ final class AppModel {
         } catch is CancellationError {
             return nil
         } catch {
-            userFacingError = "변경 내용을 저장소에서 다시 확인하지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "변경 내용을 저장소에서 다시 확인하지 못했습니다.",
+                english: "Changes could not be verified against storage again."
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "section_edit_save_failed",
                 level: .error,
@@ -3231,7 +3279,12 @@ final class AppModel {
 
     var currentAltitudeStatus: String? {
         guard let estimate = latestAltitudeEstimate else { return nil }
-        return "\(estimate.floor)층 추정 · 해발 \(Int(estimate.seaLevelAltitudeMeters.rounded()))m · ±\(Int(estimate.verticalAccuracyMeters.rounded()))m"
+        let altitude = Int(estimate.seaLevelAltitudeMeters.rounded())
+        let accuracy = Int(estimate.verticalAccuracyMeters.rounded())
+        return AppLanguagePreference.text(
+            korean: "\(estimate.floor)층 추정 · 해발 \(altitude)m · ±\(accuracy)m",
+            english: "Estimated floor \(estimate.floor) · \(altitude) m above sea level · ±\(accuracy) m"
+        )
     }
 
     var canShiftToPreviousPeriod: Bool {
@@ -3244,7 +3297,10 @@ final class AppModel {
 
     var integrationStatusSummary: String {
         if isRefreshingIntegrations {
-            return "연동 확인 중"
+            return AppLanguagePreference.text(
+                korean: "연동 확인 중",
+                english: "Checking integrations"
+            )
         }
         let enabled = [
             settings.showsPhotos
@@ -3254,7 +3310,14 @@ final class AppModel {
             settings.healthEnabled,
             settings.locationEnabled,
         ].filter { $0 }.count
-        return enabled == 0 ? "기기 안에 안전하게 저장" : "연동 \(enabled)개 사용 중"
+        return AppLanguagePreference.text(
+            korean: enabled == 0
+                ? "기기 안에 안전하게 저장"
+                : "연동 \(enabled)개 사용 중",
+            english: enabled == 0
+                ? "Stored securely on this device"
+                : "\(enabled) integrations in use"
+        )
     }
 
     var healthIntegrationSummary: String {
@@ -3262,8 +3325,14 @@ final class AppModel {
             $0.source == .healthKit || $0.source == .appleWatch
         }
         let health = settings.healthEnabled
-            ? "원본 \(healthSyncOverview.totalSampleCount)건 · 일과 \(deviceRecords.count)건"
-            : "건강 연결 꺼짐"
+            ? AppLanguagePreference.text(
+                korean: "원본 \(healthSyncOverview.totalSampleCount)건 · 일과 \(deviceRecords.count)건",
+                english: "\(healthSyncOverview.totalSampleCount) source samples · \(deviceRecords.count) daily records"
+            )
+            : AppLanguagePreference.text(
+                korean: "건강 연결 꺼짐",
+                english: "Health connection off"
+            )
         return "HealthKit · \(health)"
     }
 
@@ -3272,22 +3341,41 @@ final class AppModel {
             return "\(healthSyncProgress.completedTypes)/\(healthSyncProgress.totalTypes)"
         }
         if healthSyncOverview.failedTypeCount > 0 {
-            return "완료 \(healthSyncOverview.completedTypeCount) · 오류 \(healthSyncOverview.failedTypeCount)"
+            return AppLanguagePreference.text(
+                korean: "완료 \(healthSyncOverview.completedTypeCount) · 오류 \(healthSyncOverview.failedTypeCount)",
+                english: "Done \(healthSyncOverview.completedTypeCount) · Errors \(healthSyncOverview.failedTypeCount)"
+            )
         }
-        return "\(healthSyncOverview.completedTypeCount)개 유형"
+        return AppLanguagePreference.text(
+            korean: "\(healthSyncOverview.completedTypeCount)개 유형",
+            english: "\(healthSyncOverview.completedTypeCount) types"
+        )
     }
 
     var healthSyncDetail: String {
         if let healthSyncProgress {
-            return "\(healthSyncProgress.typeName) · \(healthSyncProgress.importedSamples)건 가져옴"
+            return AppLanguagePreference.text(
+                korean: "\(healthSyncProgress.typeName) · \(healthSyncProgress.importedSamples)건 가져옴",
+                english: "\(healthSyncProgress.typeName) · \(healthSyncProgress.importedSamples) imported"
+            )
         }
         if let error = healthSyncOverview.lastError {
-            return "일부 건강 유형 재시도 필요 · \(error)"
+            return AppLanguagePreference.text(
+                korean: "일부 건강 유형 재시도 필요 · \(error)",
+                english: "Some Health types need a retry · \(error)"
+            )
         }
         if let last = healthSyncOverview.lastSyncedAt {
-            return "전체 이력·증분 원본 · 마지막 \(last.formatted(date: .omitted, time: .shortened))"
+            let lastText = last.formatted(date: .omitted, time: .shortened)
+            return AppLanguagePreference.text(
+                korean: "전체 이력·증분 원본 · 마지막 \(lastText)",
+                english: "Full history · incremental source · last \(lastText)"
+            )
         }
-        return "사용자가 허용한 전체 이력 · 기기 로컬 저장"
+        return AppLanguagePreference.text(
+            korean: "사용자가 허용한 전체 이력 · 기기 로컬 저장",
+            english: "Full history you allowed · stored locally on this device"
+        )
     }
 
     func selectTab(_ tab: RootTab) {
@@ -3806,9 +3894,7 @@ final class AppModel {
                       allowsRepositoryLoadAttempt() else { return }
                 repositoryLoadFailed = false
                 if isRecoveringFromLoadFailure,
-                   userFacingError?.hasPrefix(
-                       "저장된 데이터를 불러오지 못했습니다."
-                   ) == true {
+                   AppModelMessage.isDataLoadFailure(userFacingError) {
                     userFacingError = nil
                 }
                 // Publish local data before normalization, sensors or cloud work.
@@ -3849,7 +3935,8 @@ final class AppModel {
                 repositoryLoadFailed = true
                 needsBootstrapPreparation = false
                 isBootstrapped = true
-                userFacingError = "저장된 데이터를 불러오지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppModelMessage
+                    .dataLoadFailed(error.localizedDescription).text()
                 logger.finishOperation(operation, outcome: "failure", error: error)
                 logger.record(
                     "bootstrap_failed",
@@ -4879,7 +4966,10 @@ final class AppModel {
                 calendarStoreRefreshTask = nil
                 calendarStoreRefreshRequiresWide = false
             }
-            userFacingError = "캘린더를 연결하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "캘린더를 연결하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not connect Calendar. \(error.localizedDescription)"
+            )
             return false
         }
     }
@@ -4953,7 +5043,10 @@ final class AppModel {
                 level: .error,
                 fields: TaptionDiagnosticError.fields(for: error)
             )
-            userFacingError = "건강 데이터를 연결하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "건강 데이터를 연결하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not connect Health data. \(error.localizedDescription)"
+            )
             return false
         }
     }
@@ -5013,8 +5106,10 @@ final class AppModel {
                 "HealthKit history sync failed: \(error.localizedDescription, privacy: .public)"
             )
             if showErrors {
-                userFacingError =
-                    "건강 전체 이력을 가져오지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppLanguagePreference.text(
+                    korean: "건강 전체 이력을 가져오지 못했습니다. \(error.localizedDescription)",
+                    english: "Could not import the full Health history. \(error.localizedDescription)"
+                )
             }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "health_history_sync_failed",
@@ -5044,8 +5139,10 @@ final class AppModel {
             snapshot.settings.permissions[.notifications] =
                 await notificationScheduler.authorizationState()
             snapshot.settings.notificationsEnabled = false
-            userFacingError =
-                "계획 알림을 켜지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획 알림을 켜지 못했습니다. \(error.localizedDescription)",
+                english: "Could not turn on plan notifications. \(error.localizedDescription)"
+            )
             return false
         }
     }
@@ -5067,9 +5164,14 @@ final class AppModel {
         defer { isRequestingPermission = false }
         guard let sensorService else {
             snapshot.settings.permissions[.location] = .unavailable
-            userFacingError = sensorStorageErrorDescription == nil
-                ? "이 기기에서는 위치·동작 센서를 사용할 수 없습니다."
-                : "센서 저장소를 열지 못해 위치 기록을 시작할 수 없습니다. 진단 로그를 확인해주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: sensorStorageErrorDescription == nil
+                    ? "이 기기에서는 위치·동작 센서를 사용할 수 없습니다."
+                    : "센서 저장소를 열지 못해 위치 기록을 시작할 수 없습니다. 진단 로그를 확인해주세요.",
+                english: sensorStorageErrorDescription == nil
+                    ? "Location and motion sensors are unavailable on this device."
+                    : "The sensor archive could not be opened, so location recording cannot start. Check the diagnostics log."
+            )
             return false
         }
 
@@ -5121,8 +5223,10 @@ final class AppModel {
         if always,
            refreshed.isGranted,
            !snapshot.settings.backgroundPreciseLocationEnabled {
-            userFacingError =
-                "장소를 자동 기록하려면 위치 접근을 ‘항상’으로 허용해주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "장소를 자동 기록하려면 위치 접근을 ‘항상’으로 허용해주세요.",
+                english: "To record places automatically, allow location access “Always”."
+            )
         }
         publishWatchPayload()
         await persist()
@@ -5494,8 +5598,10 @@ final class AppModel {
                     level: .error,
                     fields: CloudKitErrorPolicy.diagnosticFields(for: error)
                 )
-                userFacingError =
-                    "iCloud와 동기화하지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppLanguagePreference.text(
+                    korean: "iCloud와 동기화하지 못했습니다. \(error.localizedDescription)",
+                    english: "Could not sync with iCloud. \(error.localizedDescription)"
+                )
             }
         }
         isCloudSyncing = false
@@ -5830,9 +5936,17 @@ final class AppModel {
     /// Watch 앱 설치와 무관한 HealthKit 수신 안내.
     var appleWatchCompanionRow: AppleWatchCompanionRow {
         AppleWatchCompanionRow(
-            subtitle: "iPhone 건강 앱에 동기화된 Watch 데이터를 가져옵니다",
-            value: settings.healthEnabled ? "건강 연결" : "권한 필요",
-            detail: "별도 Watch 앱 없이 앱을 열면 조회합니다. Watch에서 iPhone으로 동기화되는 시점에 따라 최신 데이터가 늦게 도착할 수 있습니다."
+            subtitle: AppLanguagePreference.text(
+                korean: "iPhone 건강 앱에 동기화된 Watch 데이터를 가져옵니다",
+                english: "Imports Watch data synced to the iPhone Health app"
+            ),
+            value: settings.healthEnabled
+                ? AppLanguagePreference.text(korean: "건강 연결", english: "Health connected")
+                : AppLanguagePreference.text(korean: "권한 필요", english: "Permission needed"),
+            detail: AppLanguagePreference.text(
+                korean: "별도 Watch 앱 없이 앱을 열면 조회합니다. Watch에서 iPhone으로 동기화되는 시점에 따라 최신 데이터가 늦게 도착할 수 있습니다.",
+                english: "Data is fetched when you open the app, with no separate Watch app. The latest data may arrive late depending on when the Watch syncs to the iPhone."
+            )
         )
     }
 
@@ -5860,7 +5974,10 @@ final class AppModel {
         }
         guard let sensorService,
               permissionState(for: .location).isGranted else {
-            userFacingError = "위치 권한을 허용해야 걷기·달리기 경로를 기록할 수 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "위치 권한을 허용해야 걷기·달리기 경로를 기록할 수 있습니다.",
+                english: "Allow location access to record walking and running routes."
+            )
             return
         }
         if activeTrackingSession != nil {
@@ -6042,7 +6159,10 @@ final class AppModel {
     func exportDiagnosticsToICloud() async {
         guard !isExportingDiagnostics else { return }
         isExportingDiagnostics = true
-        diagnosticsExportStatus = "전송 중"
+        diagnosticsExportStatus = AppLanguagePreference.text(
+            korean: "전송 중",
+            english: "Exporting"
+        )
         defer { isExportingDiagnostics = false }
         let logger = TaptionPlanDiagnosticsLogger.shared
         let operation = logger.beginOperation(
@@ -6069,7 +6189,10 @@ final class AppModel {
             let destination = try await Task.detached(priority: .utility) {
                 try TaptionPlanDiagnosticsICloudExporter().export(package)
             }.value
-            diagnosticsExportStatus = "전송됨"
+            diagnosticsExportStatus = AppLanguagePreference.text(
+                korean: "전송됨",
+                english: "Exported"
+            )
             let defaults = UserDefaults(
                 suiteName: TaptionWidgetSharedStore.appGroupIdentifier
             ) ?? .standard
@@ -6098,7 +6221,10 @@ final class AppModel {
                 ]
             )
         } catch {
-            diagnosticsExportStatus = "실패"
+            diagnosticsExportStatus = AppLanguagePreference.text(
+                korean: "실패",
+                english: "Failed"
+            )
             logger.finishOperation(
                 operation,
                 outcome: "failure",
@@ -6150,7 +6276,8 @@ final class AppModel {
             "location_enabled": String(settings.locationEnabled),
             "health_enabled": String(settings.healthEnabled),
             "cloud_status": cloudStatusText,
-            "cloud_status_reason": cloudUnavailableReason?.statusLabel ?? "없음",
+            "cloud_status_reason": cloudUnavailableReason?
+                .statusLabel(preference: .korean) ?? "없음",
             "widget_sync": widgetSyncStatusText,
             "integration_refresh_skipped": String(integrationRefreshSkipCount),
             "widget_payload_skipped": String(widgetPayloadSkipCount),
@@ -6242,7 +6369,10 @@ final class AppModel {
             do {
                 try await Task.sleep(for: .milliseconds(10))
             } catch {
-                userFacingError = "데이터 삭제가 취소되었습니다. 다시 시도해 주세요."
+                userFacingError = AppLanguagePreference.text(
+                    korean: "데이터 삭제가 취소되었습니다. 다시 시도해 주세요.",
+                    english: "Data deletion was cancelled. Please try again."
+                )
                 return
             }
         }
@@ -6305,15 +6435,21 @@ final class AppModel {
             do {
                 try await cloudSyncService.deleteSnapshot()
             } catch {
-                recordDeletionFailure("iCloud 동기화 기록", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "iCloud 동기화 기록", english: "iCloud sync records"),
+                    error)
             }
         } else if permissionState(for: .cloud).isGranted {
-            recordDeletionFailure("iCloud 동기화 기록", CancellationError())
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "iCloud 동기화 기록", english: "iCloud sync records"),
+                CancellationError())
         }
         do {
             try await repository.deleteAll()
         } catch {
-            recordDeletionFailure("앱 기록", error)
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "앱 기록", english: "App records"),
+                error)
         }
         if let sensorService {
             do {
@@ -6321,7 +6457,9 @@ final class AppModel {
                     generation: dataDeletionGeneration
                 )
             } catch {
-                recordDeletionFailure("iPhone 센서 원본", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "iPhone 센서 원본", english: "iPhone sensor source data"),
+                    error)
             }
         }
         do {
@@ -6329,7 +6467,9 @@ final class AppModel {
                 generation: dataDeletionGeneration
             )
         } catch {
-            recordDeletionFailure("건강 데이터 원본", error)
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "건강 데이터 원본", english: "Health source data"),
+                error)
         }
         healthSyncOverview = HealthKitSyncOverview(states: [])
         lastHealthRefreshAt = nil
@@ -6339,7 +6479,9 @@ final class AppModel {
                     generation: dataDeletionGeneration
                 )
             } catch {
-                recordDeletionFailure("기기 원본", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "기기 원본", english: "Device source data"),
+                    error)
             }
         }
         if let watchSensorArchive {
@@ -6349,14 +6491,18 @@ final class AppModel {
                     forKey: Self.watchLegacyFallbackReadKey
                 )
             } catch {
-                recordDeletionFailure("Watch 기존 원본", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "Watch 기존 원본", english: "Existing Watch source data"),
+                    error)
             }
         }
         if watchConnectivityService.watchDataDeletionRequired(),
            !(await watchConnectivityService.requestWatchDataDeletion(
                generation: dataDeletionGeneration
            )) {
-            recordDeletionFailure("Watch 본체 확인", CancellationError())
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "Watch 본체 확인", english: "Watch device check"),
+                CancellationError())
         }
         if let dayDatabase {
             do {
@@ -6364,14 +6510,18 @@ final class AppModel {
                     generation: dataDeletionGeneration
                 )
             } catch {
-                recordDeletionFailure("날짜별 원본", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "날짜별 원본", english: "Per-day source data"),
+                    error)
             }
         }
         if let biometricProtectedSnapshotStore {
             do {
                 try biometricProtectedSnapshotStore.deleteStoredSnapshot()
             } catch {
-                recordDeletionFailure("보호된 스냅샷", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "보호된 스냅샷", english: "Protected snapshot"),
+                    error)
             }
         }
         biometricDataProtectionStatus = biometricProtectedSnapshotStore?.status
@@ -6380,7 +6530,9 @@ final class AppModel {
             do {
                 try securityBackupService.deleteAllBackups()
             } catch {
-                recordDeletionFailure("iCloud 백업", error)
+                recordDeletionFailure(
+                    AppLanguagePreference.text(korean: "iCloud 백업", english: "iCloud backup"),
+                    error)
             }
         }
         securityStatus = securityBackupService?.status ?? securityStatus
@@ -6396,25 +6548,34 @@ final class AppModel {
         do {
             try TaptionWidgetSharedStore.deleteAll()
         } catch {
-            recordDeletionFailure("위젯 공유 기록", error)
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "위젯 공유 기록", english: "Widget shared records"),
+                error)
         }
         do {
             try TaptionPlanDiagnosticsLogPackageBuilder.applicationSupport()
                 .deleteAll()
         } catch {
-            recordDeletionFailure("진단 로그", error)
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "진단 로그", english: "Diagnostics log"),
+                error)
         }
         do {
             try TaptionPlanDiagnosticsICloudExporter().deleteAll()
         } catch {
-            recordDeletionFailure("iCloud 진단 로그", error)
+            recordDeletionFailure(
+                AppLanguagePreference.text(korean: "iCloud 진단 로그", english: "iCloud diagnostics log"),
+                error)
         }
         let diagnosticsDefaults = UserDefaults(
             suiteName: TaptionWidgetSharedStore.appGroupIdentifier
         ) ?? .standard
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestFileKey)
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestSavedAtKey)
-        diagnosticsExportStatus = "준비됨"
+        diagnosticsExportStatus = AppLanguagePreference.text(
+            korean: "준비됨",
+            english: "Ready"
+        )
         if let applicationSupport = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -6443,11 +6604,16 @@ final class AppModel {
         )
         if deletionFailures.isEmpty,
            !(await persist(allowingDeletion: true)) {
-            deletionFailures.append("빈 저장본")
+            deletionFailures.append(AppLanguagePreference.text(
+                korean: "빈 저장본",
+                english: "Empty snapshot"
+            ))
         }
         if !deletionFailures.isEmpty {
-            userFacingError = "일부 데이터를 삭제하지 못했습니다: "
-                + deletionFailures.joined(separator: ", ")
+            userFacingError = AppLanguagePreference.text(
+                korean: "일부 데이터를 삭제하지 못했습니다: ",
+                english: "Some data could not be deleted: "
+            ) + deletionFailures.joined(separator: ", ")
             TaptionPlanDiagnosticsLogger.shared.record(
                 "user_data_deletion_incomplete",
                 level: .error,
@@ -6526,7 +6692,10 @@ final class AppModel {
 
     func applyInitialCategorySelection() async {
         guard !pendingSetupCategoryIDs.isEmpty else {
-            userFacingError = "대분류를 하나 이상 선택해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "대분류를 하나 이상 선택해 주세요.",
+                english: "Select at least one major category."
+            )
             return
         }
         snapshot.categories = snapshot.categories.map { category in
@@ -6882,7 +7051,10 @@ final class AppModel {
         snapshot.settings.permissions[.microphone] =
             granted ? .authorized : .denied
         guard granted else {
-            userFacingError = "음성 메모를 사용하려면 마이크 권한이 필요합니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "음성 메모를 사용하려면 마이크 권한이 필요합니다.",
+                english: "Microphone access is required to use voice memos."
+            )
             await persist()
             return
         }
@@ -6905,9 +7077,14 @@ final class AppModel {
         } catch {
             isRecordingVoiceMemo = false
             let reason = (error as? VoiceMemoRecordingError)?.localizedDescription
-                ?? "마이크 입력 장치를 확인해 주세요."
-            userFacingError =
-                "음성 녹음을 시작하지 못했습니다. \(reason)"
+                ?? AppLanguagePreference.text(
+                    korean: "마이크 입력 장치를 확인해 주세요.",
+                    english: "Check your microphone input device."
+                )
+            userFacingError = AppLanguagePreference.text(
+                korean: "음성 녹음을 시작하지 못했습니다. \(reason)",
+                english: "Could not start voice recording. \(reason)"
+            )
         }
     }
 
@@ -6925,8 +7102,10 @@ final class AppModel {
             playingVoiceAttachmentID = attachment.id
         } catch {
             playingVoiceAttachmentID = nil
-            userFacingError =
-                "음성 메모를 재생하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "음성 메모를 재생하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not play the voice memo. \(error.localizedDescription)"
+            )
         }
     }
 
@@ -6972,7 +7151,10 @@ final class AppModel {
                     subCategoryName
                 )
             } catch {
-                userFacingError = "상위 루틴 안에 계획을 배치하지 못했습니다."
+                userFacingError = AppLanguagePreference.text(
+                    korean: "상위 루틴 안에 계획을 배치하지 못했습니다.",
+                    english: "Could not place the plan inside the parent routine."
+                )
                 return nil
             }
         } else {
@@ -7023,18 +7205,27 @@ final class AppModel {
         guard let index = snapshot.plans.firstIndex(where: {
             $0.id == planID
         }) else {
-            userFacingError = "수정할 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "수정할 계획을 찾지 못했습니다.",
+                english: "Could not find the plan to edit."
+            )
             return
         }
         guard !snapshot.plans[index].isFixed else {
-            userFacingError = "캘린더 고정 일정은 캘린더에서 수정해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "캘린더 고정 일정은 캘린더에서 수정해 주세요.",
+                english: "Edit fixed calendar events in the Calendar app."
+            )
             return
         }
         let cleanTitle = title.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
         guard !cleanTitle.isEmpty, span.duration > 0 else {
-            userFacingError = "계획 이름과 시간을 확인해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획 이름과 시간을 확인해 주세요.",
+                english: "Check the plan name and time."
+            )
             return
         }
         let cleanedRepeatRules = Self.cleanGoalRepeatRules(repeatRules)
@@ -7091,10 +7282,15 @@ final class AppModel {
             recordUserEdit(from: previous)
             Task { await persist() }
         } catch PlanningError.parentCycle {
-            userFacingError = "계획을 자기 하위 루틴 안으로 옮길 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획을 자기 하위 루틴 안으로 옮길 수 없습니다.",
+                english: "A plan cannot be moved inside its own sub-routine."
+            )
         } catch {
-            userFacingError =
-                "상위·하위 계획의 기간 안에서 시간을 정해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "상위·하위 계획의 기간 안에서 시간을 정해 주세요.",
+                english: "Choose a time within the period of the parent and child plans."
+            )
         }
     }
 
@@ -7110,7 +7306,10 @@ final class AppModel {
             $0.id == planID
         }), let target = snapshot.plans.first(where: { $0.id == goalID }),
               GoalRecordPolicy.isGoal(target) else {
-            userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
+                english: "Could not find the routine or action item to link."
+            )
             return
         }
         let plan = snapshot.plans[planIndex]
@@ -7119,7 +7318,10 @@ final class AppModel {
               !AutomaticRecordTimelineEngine.isRoutineOnlyCategory(
                   plan.categoryID
               ) else {
-            userFacingError = "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "반복 세그먼트와 루틴은 액션아이템으로 연결할 수 없습니다.",
+                english: "Repeating segments and routines cannot be linked as action items."
+            )
             return
         }
         do {
@@ -7145,11 +7347,20 @@ final class AppModel {
             }
             await persist()
         } catch PlanningError.childOutsideParent {
-            userFacingError = "액션아이템의 시간이 루틴 기간 안에 있어야 합니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "액션아이템의 시간이 루틴 기간 안에 있어야 합니다.",
+                english: "The action item's time must fall within the routine's period."
+            )
         } catch PlanningError.parentCycle {
-            userFacingError = "루틴의 하위 항목을 다시 연결할 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "루틴의 하위 항목을 다시 연결할 수 없습니다.",
+                english: "A routine's sub-items cannot be relinked."
+            )
         } catch {
-            userFacingError = "액션아이템을 루틴에 연결하지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "액션아이템을 루틴에 연결하지 못했습니다.",
+                english: "Could not link the action item to the routine."
+            )
         }
     }
 
@@ -7165,25 +7376,37 @@ final class AppModel {
         }), let goal = snapshot.plans.first(where: {
             $0.id == goalID && !$0.isFixed && $0.status != .skipped
         }) else {
-            userFacingError = "연결할 실제 기록 또는 루틴을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "연결할 실제 기록 또는 루틴을 찾지 못했습니다.",
+                english: "Could not find the actual record or routine to link."
+            )
             return
         }
 
         let actual = snapshot.actuals[actualIndex]
         guard actual.span().intersection(with: goal.span) != nil else {
-            userFacingError = "실제 기록 시간이 루틴 기간 안에 있어야 합니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "실제 기록 시간이 루틴 기간 안에 있어야 합니다.",
+                english: "The actual record's time must fall within the routine's period."
+            )
             return
         }
 
         guard GoalRecordPolicy.isGoal(goal)
                 || (goal.origin != .repeatRule && goal.origin != .calendar) else {
-            userFacingError = "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
+                english: "Repeating segments and events cannot be used as link targets."
+            )
             return
         }
 
         guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
                 || GoalRecordPolicy.isGoal(goal) else {
-            userFacingError = "수면·활동 기록은 루틴에만 연결할 수 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
+                english: "Sleep and activity records can only be linked to routines."
+            )
             return
         }
 
@@ -7217,17 +7440,26 @@ final class AppModel {
         to planID: UUID
     ) async {
         guard let target = snapshot.plans.first(where: { $0.id == planID }) else {
-            userFacingError = "연결할 루틴 또는 액션아이템을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "연결할 루틴 또는 액션아이템을 찾지 못했습니다.",
+                english: "Could not find the routine or action item to link."
+            )
             return
         }
         guard GoalRecordPolicy.isGoal(target)
                 || (target.origin != .repeatRule && target.origin != .calendar) else {
-            userFacingError = "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "반복 세그먼트와 일정은 연결 대상으로 사용할 수 없습니다.",
+                english: "Repeating segments and events cannot be used as link targets."
+            )
             return
         }
         let targetNodeID = "\(GoalRecordPolicy.isGoal(target) ? "routine" : "action").\(planID.uuidString)"
         guard sourceNodeID != targetNodeID else {
-            userFacingError = "같은 항목에는 연결할 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "같은 항목에는 연결할 수 없습니다.",
+                english: "An item cannot be linked to itself."
+            )
             return
         }
 
@@ -7240,7 +7472,10 @@ final class AppModel {
             guard !AutomaticRecordTimelineEngine.linksOnlyToRoutine(
                 snapshot.actuals[actualIndex]
             ) || GoalRecordPolicy.isGoal(target) else {
-                userFacingError = "수면·활동 기록은 루틴에만 연결할 수 있습니다."
+                userFacingError = AppLanguagePreference.text(
+                    korean: "수면·활동 기록은 루틴에만 연결할 수 있습니다.",
+                    english: "Sleep and activity records can only be linked to routines."
+                )
                 return
             }
             if GoalRecordPolicy.isGoal(target) {
@@ -7277,7 +7512,10 @@ final class AppModel {
         endedAt: Date?
     ) async {
         guard let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            userFacingError = "루틴을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "루틴을 찾지 못했습니다.",
+                english: "Could not find the routine."
+            )
             return
         }
         let minimumEnd = startedAt.addingTimeInterval(60)
@@ -7477,17 +7715,24 @@ final class AppModel {
 
     private static func repeatWeekdayText(_ weekdays: Set<Int>) -> String {
         let normalized = Set(weekdays.filter { (1...7).contains($0) })
-        if normalized == [1, 2, 3, 4, 5, 6, 7] { return "매일" }
-        if normalized == [2, 3, 4, 5, 6] { return "주중" }
-        if normalized == [1, 7] { return "주말" }
-        let labels = [
-            2: "월", 3: "화", 4: "수", 5: "목",
-            6: "금", 7: "토", 1: "일",
-        ]
+        if normalized == [1, 2, 3, 4, 5, 6, 7] {
+            return AppLanguagePreference.text(korean: "매일", english: "Daily")
+        }
+        if normalized == [2, 3, 4, 5, 6] {
+            return AppLanguagePreference.text(korean: "주중", english: "Weekdays")
+        }
+        if normalized == [1, 7] {
+            return AppLanguagePreference.text(korean: "주말", english: "Weekends")
+        }
+        // Index 0 is Sunday to match `Calendar` weekday numbers (1...7).
+        let labels = AppLanguagePreference.text(
+            korean: "일,월,화,수,목,금,토",
+            english: "Sun,Mon,Tue,Wed,Thu,Fri,Sat"
+        ).split(separator: ",").map(String.init)
         return [2, 3, 4, 5, 6, 7, 1]
             .filter { normalized.contains($0) }
-            .compactMap { labels[$0] }
-            .joined(separator: "·")
+            .map { labels[$0 - 1] }
+            .joined(separator: AppLanguagePreference.text(korean: "·", english: ", "))
     }
 
     func deletePlan(_ planID: UUID) async {
@@ -7589,7 +7834,7 @@ final class AppModel {
             $0.id == plan.categoryID
         })?.name
             ?? TimelineRowKind.title(forCategoryID: plan.categoryID)
-            ?? "활동"
+            ?? AppLanguagePreference.text(korean: "활동", english: "Activity")
         let title: String = switch plan.categoryID {
         case "activity": AppLanguagePreference.text(korean: "활동", english: "Activity")
         case "work": AppLanguagePreference.text(korean: "업무", english: "Work")
@@ -7628,7 +7873,8 @@ final class AppModel {
                 ?? "sparkles"
             let title = RecordClassificationCatalog.categories.first {
                 $0.id == categoryID
-            }?.title ?? TimelineRowKind.title(forCategoryID: categoryID) ?? "활동"
+            }?.title ?? TimelineRowKind.title(forCategoryID: categoryID)
+                ?? AppLanguagePreference.text(korean: "활동", english: "Activity")
             return (title, categoryID, systemImage)
         }
         return (
@@ -7642,7 +7888,10 @@ final class AppModel {
         guard let actual = snapshot.actuals.first(where: {
             $0.id == actualID
         }) else {
-            userFacingError = "삭제할 실제 기록을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "삭제할 실제 기록을 찾지 못했습니다.",
+                english: "Could not find the actual record to delete."
+            )
             return
         }
 
@@ -7680,7 +7929,10 @@ final class AppModel {
         guard let index = snapshot.plans.firstIndex(where: {
             $0.id == planID
         }) else {
-            userFacingError = "캘린더로 보낼 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "캘린더로 보낼 계획을 찾지 못했습니다.",
+                english: "Could not find the plan to send to Calendar."
+            )
             return
         }
         if snapshot.plans[index].externalEventID != nil {
@@ -7690,7 +7942,10 @@ final class AppModel {
             await requestCalendar()
         }
         guard permissionState(for: .calendar).isGranted else {
-            userFacingError = "캘린더 권한을 허용해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "캘린더 권한을 허용해 주세요.",
+                english: "Please allow Calendar access."
+            )
             return
         }
         do {
@@ -7705,8 +7960,10 @@ final class AppModel {
             await refreshCalendarEvents()
             await persist()
         } catch {
-            userFacingError =
-                "계획을 캘린더에 추가하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획을 캘린더에 추가하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not add the plan to Calendar. \(error.localizedDescription)"
+            )
         }
     }
 
@@ -7757,11 +8014,20 @@ final class AppModel {
             )
             Task { await persist() }
         } catch PlanningError.fixedPlan {
-            userFacingError = "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "캘린더의 고정 일정은 이곳에서 옮길 수 없습니다.",
+                english: "Fixed calendar events cannot be moved here."
+            )
         } catch PlanningError.childOutsideParent {
-            userFacingError = "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "하위 계획은 상위 루틴 기간 안에서만 옮길 수 있습니다.",
+                english: "A sub-plan can only be moved within its parent routine's period."
+            )
         } catch {
-            userFacingError = "계획을 옮기지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획을 옮기지 못했습니다.",
+                english: "Could not move the plan."
+            )
         }
     }
 
@@ -7809,10 +8075,15 @@ final class AppModel {
             )
             Task { await persist() }
         } catch PlanningError.childOutsideParent {
-            userFacingError =
-                "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "상위·하위 계획의 기간을 벗어나지 않도록 길이를 조절해 주세요.",
+                english: "Adjust the length so it stays within the period of the parent and child plans."
+            )
         } catch {
-            userFacingError = "계획 길이를 조절하지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획 길이를 조절하지 못했습니다.",
+                english: "Could not adjust the plan length."
+            )
         }
     }
 
@@ -7835,7 +8106,10 @@ final class AppModel {
             Task { await persist() }
             return category
         } catch {
-            userFacingError = "대분류를 추가하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "대분류를 추가하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not add the major category. \(error.localizedDescription)"
+            )
             return nil
         }
     }
@@ -7860,7 +8134,10 @@ final class AppModel {
                 && $0.name.localizedCaseInsensitiveCompare(cleanName)
                     == .orderedSame
         }) else {
-            userFacingError = "같은 이름의 대분류가 이미 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "같은 이름의 대분류가 이미 있습니다.",
+                english: "A major category with the same name already exists."
+            )
             return
         }
         do {
@@ -7873,8 +8150,10 @@ final class AppModel {
             )
             Task { await persist() }
         } catch {
-            userFacingError =
-                "대분류를 수정하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "대분류를 수정하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not edit the major category. \(error.localizedDescription)"
+            )
         }
     }
 
@@ -7942,8 +8221,10 @@ final class AppModel {
             snapshot.actuals = result.actuals
             Task { await persist() }
         } catch {
-            userFacingError =
-                "대분류를 삭제하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "대분류를 삭제하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not delete the major category. \(error.localizedDescription)"
+            )
         }
     }
 
@@ -7953,7 +8234,10 @@ final class AppModel {
         at date: Date = .now
     ) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            userFacingError = "선택한 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "선택한 계획을 찾지 못했습니다.",
+                english: "Could not find the selected plan."
+            )
             return
         }
         let plan = snapshot.plans[index]
@@ -7991,13 +8275,19 @@ final class AppModel {
             }
             await persist()
         } catch {
-            userFacingError = "계획을 처리하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "계획을 처리하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not process the plan. \(error.localizedDescription)"
+            )
         }
     }
 
     func startPlan(_ planID: UUID, at date: Date = .now) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            userFacingError = "선택한 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "선택한 계획을 찾지 못했습니다.",
+                english: "Could not find the selected plan."
+            )
             return
         }
         let result = QuickActionEngine.start(
@@ -8022,14 +8312,20 @@ final class AppModel {
         } catch LiveActivityError.unavailable {
             // The plan timer still works when Live Activities are disabled.
         } catch {
-            userFacingError = "Live Activity를 시작하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "Live Activity를 시작하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not start the Live Activity. \(error.localizedDescription)"
+            )
         }
         await persist()
     }
 
     func pausePlan(_ planID: UUID, at date: Date = .now) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            userFacingError = "선택한 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "선택한 계획을 찾지 못했습니다.",
+                english: "Could not find the selected plan."
+            )
             return
         }
         snapshot.plans[index].status = .planned
@@ -8055,7 +8351,10 @@ final class AppModel {
 
     func skipPlan(_ planID: UUID) async {
         guard let index = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
-            userFacingError = "선택한 계획을 찾지 못했습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "선택한 계획을 찾지 못했습니다.",
+                english: "Could not find the selected plan."
+            )
             return
         }
         snapshot.plans[index] = QuickActionEngine.skip(plan: snapshot.plans[index])
@@ -8407,9 +8706,10 @@ final class AppModel {
                         "sequence": String(summary.sequence),
                     ]) { _, new in new }
                 )
-                userFacingError =
-                    "Apple Watch 센서 기록을 저장하지 못했습니다. "
-                    + error.localizedDescription
+                userFacingError = AppLanguagePreference.text(
+                    korean: "Apple Watch 센서 기록을 저장하지 못했습니다. ",
+                    english: "Could not save Apple Watch sensor records. "
+                ) + error.localizedDescription
             }
         }
         guard storedInDayDatabase || storedInLegacyArchive else {
@@ -9728,8 +10028,8 @@ final class AppModel {
                 level: .error,
                 fields: ["error": String(describing: type(of: error))]
             )
-            userFacingError =
-                "위치 기록을 읽지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppModelMessage
+                .locationReadFailed(error.localizedDescription).text()
             return false
         }
         // Raw readings stay in the archive. Every downstream algorithm uses
@@ -10706,7 +11006,10 @@ final class AppModel {
         } catch is CancellationError {
             return false
         } catch {
-            userFacingError = "경로를 저장하지 못했습니다. 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "경로를 저장하지 못했습니다. 다시 시도해 주세요.",
+                english: "Could not save the route. Please try again."
+            )
             TaptionPlanDiagnosticsLogger.shared.record("predicted_route_save_failed", level: .error,
                 fields: ["action": deleting ? "delete" : "confirm", "error_type": String(describing: type(of: error))])
         }
@@ -10738,7 +11041,10 @@ final class AppModel {
             while acceptsDataMutation(), generation == dataDeletionGeneration {
                 try Task.checkCancellation()
                 guard mode == nil || snapshot.travel.contains(where: { ids.contains($0.id) }) else {
-                    userFacingError = "이동 기록이 변경되었습니다. 지도의 탑승 후보를 다시 선택해 주세요."
+                    userFacingError = AppLanguagePreference.text(
+                        korean: "이동 기록이 변경되었습니다. 지도의 탑승 후보를 다시 선택해 주세요.",
+                        english: "The movement record has changed. Select the boarding candidate on the map again."
+                    )
                     return false
                 }
                 let revision = snapshotRevision
@@ -10775,9 +11081,14 @@ final class AppModel {
         } catch is CancellationError {
             return false
         } catch {
-            userFacingError = mode == nil
-                ? "탑승 후보를 삭제하지 못했습니다. 다시 시도해 주세요."
-                : "탑승 경로를 저장하지 못했습니다. 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: mode == nil
+                    ? "탑승 후보를 삭제하지 못했습니다. 다시 시도해 주세요."
+                    : "탑승 경로를 저장하지 못했습니다. 다시 시도해 주세요.",
+                english: mode == nil
+                    ? "Could not delete the boarding candidate. Please try again."
+                    : "Could not save the boarding route. Please try again."
+            )
             TaptionPlanDiagnosticsLogger.shared.record("transit_boarding_save_failed", level: .error,
                 fields: ["error": String(describing: type(of: error))])
         }
@@ -11262,8 +11573,10 @@ final class AppModel {
         }
         guard let reading = latestSensorReading,
               reading.point != nil else {
-            userFacingError =
-                "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요.",
+                english: "Current location is not available yet. Turn on location access and try again shortly."
+            )
             return
         }
         // 층수는 앱의 추정에서 가져오지 않는다. 추정이 틀린 상태에서 자리를
@@ -11274,7 +11587,10 @@ final class AppModel {
             ?? lastManuallyConfirmedFloor(forPlaceID: placeID)
             ?? 1
         guard FloorCalibrationPrompt.range.contains(resolvedFloor) else {
-            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
+            userFacingError = AppModelMessage.floorOutOfRange(
+                lower: FloorCalibrationPrompt.range.lowerBound,
+                upper: FloorCalibrationPrompt.range.upperBound
+            ).text()
             return
         }
         snapshot.settings.frequentPlaces[index].setLocation(
@@ -11308,7 +11624,10 @@ final class AppModel {
             return
         }
         guard floor.map(FloorCalibrationPrompt.range.contains) ?? true else {
-            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
+            userFacingError = AppModelMessage.floorOutOfRange(
+                lower: FloorCalibrationPrompt.range.lowerBound,
+                upper: FloorCalibrationPrompt.range.upperBound
+            ).text()
             return
         }
         snapshot.settings.frequentPlaces[index].setMapLocation(
@@ -11428,8 +11747,10 @@ final class AppModel {
             return
         }
         guard latestSensorReading?.point != nil else {
-            userFacingError =
-                "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요.",
+                english: "Current location is not available yet. Turn on location access and try again shortly."
+            )
             return
         }
         guard let sensorService else { return }
@@ -11448,19 +11769,28 @@ final class AppModel {
         // 남기지도, 뒤늦게 오류를 띄우지도 않는다.
         guard !Task.isCancelled else { return }
         guard let anchor = latestSensorReading, anchor.point != nil else {
-            userFacingError =
-                "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "현재 위치를 아직 읽지 못했습니다. 위치 권한을 켠 뒤 잠시 후 다시 시도해 주세요.",
+                english: "Current location is not available yet. Turn on location access and try again shortly."
+            )
             return
         }
         switch AltitudeBurstReducer.reduce(samples) {
         case let .tooFewSamples(collected):
-            userFacingError = collected == 0
-                ? "기압 센서를 읽지 못해 보정을 취소했습니다. 위치 기록을 켠 뒤 다시 시도해 주세요."
-                : "표본이 \(collected)개뿐이라 보정을 취소했습니다. 잠시 후 다시 시도해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: collected == 0
+                    ? "기압 센서를 읽지 못해 보정을 취소했습니다. 위치 기록을 켠 뒤 다시 시도해 주세요."
+                    : "표본이 \(collected)개뿐이라 보정을 취소했습니다. 잠시 후 다시 시도해 주세요.",
+                english: collected == 0
+                    ? "Calibration was cancelled because the barometer could not be read. Turn on location recording and try again."
+                    : "Calibration was cancelled because only \(collected) samples were collected. Try again shortly."
+            )
         case let .tooNoisy(spread):
             userFacingError = String(
-                format:
-                    "고도가 %.1fm나 흔들려 보정을 취소했습니다. 한자리에 선 채로 다시 시도해 주세요.",
+                format: AppLanguagePreference.text(
+                    korean: "고도가 %.1fm나 흔들려 보정을 취소했습니다. 한자리에 선 채로 다시 시도해 주세요.",
+                    english: "Altitude fluctuated by %.1f m, so calibration was cancelled. Stay in one place and try again."
+                ),
                 spread
             )
         case let .reduced(sample, _):
@@ -11691,13 +12021,19 @@ final class AppModel {
     func addCustomFrequentPlace(name: String) {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else {
-            userFacingError = "장소 이름을 입력해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "장소 이름을 입력해 주세요.",
+                english: "Enter a place name."
+            )
             return
         }
         guard !snapshot.settings.frequentPlaces.contains(where: {
             $0.name.localizedCaseInsensitiveCompare(cleanName) == .orderedSame
         }) else {
-            userFacingError = "같은 이름의 자주가는 곳이 이미 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "같은 이름의 자주가는 곳이 이미 있습니다.",
+                english: "A frequent place with the same name already exists."
+            )
             return
         }
         snapshot.settings.frequentPlaces.append(
@@ -11712,13 +12048,19 @@ final class AppModel {
     func addRestaurant(name: String) {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else {
-            userFacingError = "식당 이름을 입력해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "식당 이름을 입력해 주세요.",
+                english: "Enter a restaurant name."
+            )
             return
         }
         guard !snapshot.settings.frequentPlaces.contains(where: {
             $0.name.localizedCaseInsensitiveCompare(cleanName) == .orderedSame
         }) else {
-            userFacingError = "같은 이름의 자주가는 곳이 이미 있습니다."
+            userFacingError = AppLanguagePreference.text(
+                korean: "같은 이름의 자주가는 곳이 이미 있습니다.",
+                english: "A frequent place with the same name already exists."
+            )
             return
         }
         snapshot.settings.frequentPlaces.append(
@@ -11742,15 +12084,24 @@ final class AppModel {
         guard acceptsDataMutation() else { return nil }
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else {
-            userFacingError = "위치 이름을 입력해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "위치 이름을 입력해 주세요.",
+                english: "Enter a location name."
+            )
             return nil
         }
         guard abs(latitude) <= 90, abs(longitude) <= 180 else {
-            userFacingError = "위치 좌표를 확인해 주세요."
+            userFacingError = AppLanguagePreference.text(
+                korean: "위치 좌표를 확인해 주세요.",
+                english: "Check the location coordinates."
+            )
             return nil
         }
         guard floor.map(FloorCalibrationPrompt.range.contains) ?? true else {
-            userFacingError = "층수는 \(FloorLabel.korean(FloorCalibrationPrompt.range.lowerBound))부터 \(FloorLabel.korean(FloorCalibrationPrompt.range.upperBound)) 사이로 입력해 주세요."
+            userFacingError = AppModelMessage.floorOutOfRange(
+                lower: FloorCalibrationPrompt.range.lowerBound,
+                upper: FloorCalibrationPrompt.range.upperBound
+            ).text()
             return nil
         }
         let location = UserTransitLocation(
@@ -12377,8 +12728,10 @@ final class AppModel {
                 "HealthKit refresh failed: \(error.localizedDescription, privacy: .public)"
             )
             if showErrors {
-                userFacingError =
-                    "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppLanguagePreference.text(
+                    korean: "건강 데이터를 읽지 못했습니다. \(error.localizedDescription)",
+                    english: "Could not read Health data. \(error.localizedDescription)"
+                )
             }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "health_refresh_failed",
@@ -12453,7 +12806,10 @@ final class AppModel {
                 }
             }
             if showErrors {
-                userFacingError = "앱 사용시간을 읽지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppLanguagePreference.text(
+                    korean: "앱 사용시간을 읽지 못했습니다. \(error.localizedDescription)",
+                    english: "Could not read app usage time. \(error.localizedDescription)"
+                )
             }
             TaptionPlanDiagnosticsLogger.shared.record(
                 "screen_time_refresh_failed",
@@ -12527,9 +12883,10 @@ final class AppModel {
                 "HealthKit background delivery failed: \(error.localizedDescription, privacy: .public)"
             )
             if showErrors {
-                userFacingError =
-                    "건강 데이터 자동 갱신을 켜지 못했습니다. "
-                    + error.localizedDescription
+                userFacingError = AppLanguagePreference.text(
+                    korean: "건강 데이터 자동 갱신을 켜지 못했습니다. ",
+                    english: "Could not turn on automatic Health data refresh. "
+                ) + error.localizedDescription
             }
         }
     }
@@ -12756,7 +13113,10 @@ final class AppModel {
             seaLevelAltitudeMeters: estimate.seaLevelAltitudeMeters
         ) {
             showFloorCalibrationNotice(
-                "\(match.name) \(FloorLabel.korean(estimate.floor)) 고도 보정을 적용했습니다."
+                AppLanguagePreference.text(
+                    korean: "\(match.name) \(FloorLabel.korean(estimate.floor)) 고도 보정을 적용했습니다.",
+                    english: "Applied altitude calibration for \(match.name) \(FloorLabel.english(estimate.floor))."
+                )
             )
         }
     }
@@ -13439,7 +13799,10 @@ final class AppModel {
                     to: snapshot
                 )
             } catch {
-                userFacingError = "위젯 요청을 반영하지 못했습니다. \(error.localizedDescription)"
+                userFacingError = AppLanguagePreference.text(
+                    korean: "위젯 요청을 반영하지 못했습니다. \(error.localizedDescription)",
+                    english: "Could not apply the widget request. \(error.localizedDescription)"
+                )
             }
         }
     }
@@ -13536,7 +13899,10 @@ final class AppModel {
             Self.integrationLogger.error(
                 "Widget ground-truth publish failed: \(error.localizedDescription, privacy: .public)"
             )
-            userFacingError = "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "위젯 데이터를 갱신하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not update widget data. \(error.localizedDescription)"
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "widget_payload_failed",
                 level: .error,
@@ -13884,15 +14250,20 @@ final class AppModel {
                         plans: snapshot.plans
                     )
                 } catch {
-                    userFacingError =
-                        "계획 알림을 갱신하지 못했습니다. \(error.localizedDescription)"
+                    userFacingError = AppLanguagePreference.text(
+                        korean: "계획 알림을 갱신하지 못했습니다. \(error.localizedDescription)",
+                        english: "Could not update plan notifications. \(error.localizedDescription)"
+                    )
                 }
             }
             return true
         } catch is CancellationError {
             return false
         } catch {
-            userFacingError = "변경 내용을 저장하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppLanguagePreference.text(
+                korean: "변경 내용을 저장하지 못했습니다. \(error.localizedDescription)",
+                english: "Could not save changes. \(error.localizedDescription)"
+            )
             TaptionPlanDiagnosticsLogger.shared.record(
                 "local_persistence_failed",
                 level: .error,
@@ -14269,8 +14640,8 @@ final class AppModel {
             if isSceneActive { scheduleTrailingDeviceLocalPersist() }
             return false
         } catch {
-            userFacingError =
-                "센서 기록을 저장하지 못했습니다. \(error.localizedDescription)"
+            userFacingError = AppModelMessage
+                .sensorSaveFailed(error.localizedDescription).text()
             return false
         }
     }
@@ -14370,6 +14741,64 @@ enum TaptionWatchDaySummaryFactory {
     }
 }
 
+/// Error messages the app also matches on or tests by their leading sentence,
+/// so the Korean and English wording live side by side.
+enum AppModelMessage: Equatable, Sendable {
+    case dataLoadFailed(String)
+    case locationReadFailed(String)
+    case sensorSaveFailed(String)
+    case floorOutOfRange(lower: Int, upper: Int)
+
+    func lead(preference: AppLanguagePreference = .current) -> String {
+        switch self {
+        case .dataLoadFailed:
+            AppLanguagePreference.text(
+                korean: "저장된 데이터를 불러오지 못했습니다.",
+                english: "Saved data could not be loaded.",
+                preference: preference
+            )
+        case .locationReadFailed:
+            AppLanguagePreference.text(
+                korean: "위치 기록을 읽지 못했습니다.",
+                english: "Could not read location records.",
+                preference: preference
+            )
+        case .sensorSaveFailed:
+            AppLanguagePreference.text(
+                korean: "센서 기록을 저장하지 못했습니다.",
+                english: "Could not save sensor records.",
+                preference: preference
+            )
+        case let .floorOutOfRange(lower, upper):
+            AppLanguagePreference.text(
+                korean: "층수는 \(FloorLabel.korean(lower))부터 \(FloorLabel.korean(upper)) 사이로 입력해 주세요.",
+                english: "Enter a floor between \(FloorLabel.english(lower)) and \(FloorLabel.english(upper)).",
+                preference: preference
+            )
+        }
+    }
+
+    func text(preference: AppLanguagePreference = .current) -> String {
+        switch self {
+        case let .dataLoadFailed(detail),
+             let .locationReadFailed(detail),
+             let .sensorSaveFailed(detail):
+            "\(lead(preference: preference)) \(detail)"
+        case .floorOutOfRange:
+            lead(preference: preference)
+        }
+    }
+
+    /// True for a load-failure message in either language, so recovery still
+    /// clears it after the app language changed.
+    static func isDataLoadFailure(_ message: String?) -> Bool {
+        guard let message else { return false }
+        return [AppLanguagePreference.korean, .english].contains {
+            message.hasPrefix(dataLoadFailed("").lead(preference: $0))
+        }
+    }
+}
+
 extension PermissionState {
     var isGranted: Bool {
         self == .authorized || self == .limited
@@ -14377,11 +14806,16 @@ extension PermissionState {
 
     var settingsLabel: String {
         switch self {
-        case .notDetermined: "연결하기"
-        case .denied: "권한 필요"
-        case .limited: "일부 허용"
-        case .authorized: "연결됨"
-        case .unavailable: "사용 불가"
+        case .notDetermined:
+            AppLanguagePreference.text(korean: "연결하기", english: "Connect")
+        case .denied:
+            AppLanguagePreference.text(korean: "권한 필요", english: "Permission needed")
+        case .limited:
+            AppLanguagePreference.text(korean: "일부 허용", english: "Partially allowed")
+        case .authorized:
+            AppLanguagePreference.text(korean: "연결됨", english: "Connected")
+        case .unavailable:
+            AppLanguagePreference.text(korean: "사용 불가", english: "Unavailable")
         }
     }
 }

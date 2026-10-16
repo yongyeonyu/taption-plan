@@ -24,19 +24,47 @@ enum BiometricDataProtectionError: LocalizedError {
     case archiveMissing
 
     var errorDescription: String? {
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
         switch self {
         case .biometricUnavailable:
-            "Face ID 또는 Touch ID를 사용할 수 없습니다. 기기 잠금과 생체 인증을 확인해 주세요."
+            AppLanguagePreference.text(
+                korean: "Face ID 또는 Touch ID를 사용할 수 없습니다. 기기 잠금과 생체 인증을 확인해 주세요.",
+                english: "Face ID or Touch ID is unavailable. Check your device passcode and biometric settings.",
+                preference: preference
+            )
         case .authenticationCancelled:
-            "생체 인증이 취소되었습니다."
+            AppLanguagePreference.text(
+                korean: "생체 인증이 취소되었습니다.",
+                english: "Biometric authentication was cancelled.",
+                preference: preference
+            )
         case .authenticationFailed:
-            "생체 인증을 완료하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "생체 인증을 완료하지 못했습니다.",
+                english: "Biometric authentication could not be completed.",
+                preference: preference
+            )
         case .keychain:
-            "보호 키를 키체인에 저장하거나 열지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "보호 키를 키체인에 저장하거나 열지 못했습니다.",
+                english: "The protection key could not be saved to or opened from the Keychain.",
+                preference: preference
+            )
         case .invalidKey, .invalidArchive:
-            "보호된 데이터의 무결성을 확인하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "보호된 데이터의 무결성을 확인하지 못했습니다.",
+                english: "The integrity of the protected data could not be verified.",
+                preference: preference
+            )
         case .archiveMissing:
-            "보호된 데이터가 아직 없습니다."
+            AppLanguagePreference.text(
+                korean: "보호된 데이터가 아직 없습니다.",
+                english: "There is no protected data yet.",
+                preference: preference
+            )
         }
     }
 }

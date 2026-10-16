@@ -428,7 +428,15 @@ enum PlanRepositoryAvailabilityError: LocalizedError, Equatable, Sendable {
     case unavailable
 
     var errorDescription: String? {
-        "기기 저장소를 열 수 없어 변경 내용을 저장하지 않습니다."
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
+        AppLanguagePreference.text(
+            korean: "기기 저장소를 열 수 없어 변경 내용을 저장하지 않습니다.",
+            english: "The device storage could not be opened, so changes will not be saved.",
+            preference: preference
+        )
     }
 }
 
@@ -1864,30 +1872,92 @@ enum CloudUnavailableReason: Sendable {
     case schemaMissing
 
     var statusLabel: String {
-        switch self {
-        case .unsupportedBuild: "이 빌드 미지원"
-        case .signedOut: "iCloud 로그인 필요"
-        case .restricted: "기기에서 제한됨"
-        case .temporarilyUnavailable: "잠시 후 다시"
-        case .accountCheckFailed: "계정 확인 실패"
-        case .schemaMissing: "서버 설정 필요"
-        }
+        statusLabel(preference: .current)
     }
 
     var guidance: String {
+        guidance(preference: .current)
+    }
+
+    func statusLabel(preference: AppLanguagePreference) -> String {
         switch self {
         case .unsupportedBuild:
-            "이 빌드에는 iCloud 컨테이너가 없습니다. 기록은 이 기기에만 저장됩니다."
+            AppLanguagePreference.text(
+                korean: "이 빌드 미지원",
+                english: "Unsupported in this build",
+                preference: preference
+            )
         case .signedOut:
-            "설정 앱 → 맨 위 이름 → iCloud에서 로그인하고 iCloud Drive를 켠 뒤 이 줄을 눌러주세요."
+            AppLanguagePreference.text(
+                korean: "iCloud 로그인 필요",
+                english: "iCloud sign-in required",
+                preference: preference
+            )
         case .restricted:
-            "스크린타임이나 기기 관리 정책이 iCloud를 막고 있습니다. 제한을 푼 뒤 다시 시도해주세요."
+            AppLanguagePreference.text(
+                korean: "기기에서 제한됨",
+                english: "Restricted on this device",
+                preference: preference
+            )
         case .temporarilyUnavailable:
-            "iCloud 계정을 확인하는 중입니다. 잠시 뒤 이 줄을 눌러 다시 시도해주세요."
+            AppLanguagePreference.text(
+                korean: "잠시 후 다시",
+                english: "Try again shortly",
+                preference: preference
+            )
         case .accountCheckFailed:
-            "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요."
+            AppLanguagePreference.text(
+                korean: "계정 확인 실패",
+                english: "Account check failed",
+                preference: preference
+            )
         case .schemaMissing:
-            "iCloud 컨테이너의 TaptionSnapshot 스키마가 Production에 배포되지 않았습니다. 배포 전까지 기록은 이 기기에 안전하게 저장되며, 배포 후 이 줄을 눌러 다시 시도할 수 있습니다."
+            AppLanguagePreference.text(
+                korean: "서버 설정 필요",
+                english: "Server setup required",
+                preference: preference
+            )
+        }
+    }
+
+    func guidance(preference: AppLanguagePreference) -> String {
+        switch self {
+        case .unsupportedBuild:
+            AppLanguagePreference.text(
+                korean: "이 빌드에는 iCloud 컨테이너가 없습니다. 기록은 이 기기에만 저장됩니다.",
+                english: "This build has no iCloud container. Records are saved on this device only.",
+                preference: preference
+            )
+        case .signedOut:
+            AppLanguagePreference.text(
+                korean: "설정 앱 → 맨 위 이름 → iCloud에서 로그인하고 iCloud Drive를 켠 뒤 이 줄을 눌러주세요.",
+                english: "Sign in under Settings → your name at the top → iCloud, turn on iCloud Drive, then tap this row.",
+                preference: preference
+            )
+        case .restricted:
+            AppLanguagePreference.text(
+                korean: "스크린타임이나 기기 관리 정책이 iCloud를 막고 있습니다. 제한을 푼 뒤 다시 시도해주세요.",
+                english: "Screen Time or a device management policy is blocking iCloud. Remove the restriction and try again.",
+                preference: preference
+            )
+        case .temporarilyUnavailable:
+            AppLanguagePreference.text(
+                korean: "iCloud 계정을 확인하는 중입니다. 잠시 뒤 이 줄을 눌러 다시 시도해주세요.",
+                english: "Checking your iCloud account. Tap this row again shortly to retry.",
+                preference: preference
+            )
+        case .accountCheckFailed:
+            AppLanguagePreference.text(
+                korean: "iCloud 계정 상태를 확인하지 못했습니다. 네트워크를 확인한 뒤 이 줄을 눌러주세요.",
+                english: "Could not check your iCloud account status. Check your network, then tap this row.",
+                preference: preference
+            )
+        case .schemaMissing:
+            AppLanguagePreference.text(
+                korean: "iCloud 컨테이너의 TaptionSnapshot 스키마가 Production에 배포되지 않았습니다. 배포 전까지 기록은 이 기기에 안전하게 저장되며, 배포 후 이 줄을 눌러 다시 시도할 수 있습니다.",
+                english: "The iCloud container's TaptionSnapshot schema has not been deployed to Production. Until it is deployed, records are stored safely on this device; after deployment, tap this row to try again.",
+                preference: preference
+            )
         }
     }
 }
@@ -2126,7 +2196,7 @@ actor CloudKitSnapshotSyncService {
                 fields: [
                     "status": String(describing: status),
                     "permission": result.0.rawValue,
-                    "reason": result.1?.statusLabel ?? "authorized",
+                    "reason": result.1?.statusLabel(preference: .korean) ?? "authorized",
                 ]
             )
             return result

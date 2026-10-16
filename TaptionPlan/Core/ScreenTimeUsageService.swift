@@ -22,25 +22,75 @@ enum ScreenTimeAuthorizationState: String, Sendable {
     case approved
 
     var displayName: String {
+        displayName(preference: .current)
+    }
+
+    func displayName(preference: AppLanguagePreference) -> String {
         switch self {
-        case .unavailable: "이 기기에서 지원 안 함"
-        case .requiresCurrentSystem: "iOS 26.4 이상 필요"
-        case .dataAccessUnavailable: "데이터 접근 재승인 필요"
-        case .notDetermined: "권한 필요"
-        case .denied: "권한 거부됨"
-        case .approved: "권한 승인됨"
+        case .unavailable:
+            AppLanguagePreference.text(
+                korean: "이 기기에서 지원 안 함",
+                english: "Not supported on this device",
+                preference: preference
+            )
+        case .requiresCurrentSystem:
+            AppLanguagePreference.text(
+                korean: "iOS 26.4 이상 필요",
+                english: "Requires iOS 26.4 or later",
+                preference: preference
+            )
+        case .dataAccessUnavailable:
+            AppLanguagePreference.text(
+                korean: "데이터 접근 재승인 필요",
+                english: "Data access needs re-approval",
+                preference: preference
+            )
+        case .notDetermined:
+            AppLanguagePreference.text(
+                korean: "권한 필요",
+                english: "Permission needed",
+                preference: preference
+            )
+        case .denied:
+            AppLanguagePreference.text(
+                korean: "권한 거부됨",
+                english: "Permission denied",
+                preference: preference
+            )
+        case .approved:
+            AppLanguagePreference.text(
+                korean: "권한 승인됨",
+                english: "Permission granted",
+                preference: preference
+            )
         }
     }
 
     /// 상태 행을 탭했을 때 사용자가 실제로 무엇을 해야 하는지 알려 준다.
     var guidance: String? {
+        guidance(preference: .current)
+    }
+
+    func guidance(preference: AppLanguagePreference) -> String? {
         switch self {
         case .dataAccessUnavailable:
-            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다."
+            AppLanguagePreference.text(
+                korean: "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다.",
+                english: "Permission was granted, but app usage data access is missing. In Settings > Screen Time, turn on App & Website Activity and sharing of app usage data. This data access may not be available depending on your region or Apple Account.",
+                preference: preference
+            )
         case .denied:
-            "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요."
+            AppLanguagePreference.text(
+                korean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요.",
+                english: "In Settings > Screen Time > App & Website Activity, allow Taption Plan.",
+                preference: preference
+            )
         case .requiresCurrentSystem:
-            "설정 > 일반 > 소프트웨어 업데이트에서 iOS 26.4 이상으로 업데이트해 주세요."
+            AppLanguagePreference.text(
+                korean: "설정 > 일반 > 소프트웨어 업데이트에서 iOS 26.4 이상으로 업데이트해 주세요.",
+                english: "Update to iOS 26.4 or later in Settings > General > Software Update.",
+                preference: preference
+            )
         default: nil
         }
     }
@@ -548,21 +598,47 @@ enum ScreenTimeUsageError: LocalizedError {
     case dataAccessNotGranted
 
     var errorDescription: String? {
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
         switch self {
         case .unavailable:
-            "이 기기에서는 앱 사용시간 연동을 사용할 수 없습니다."
+            AppLanguagePreference.text(
+                korean: "이 기기에서는 앱 사용시간 연동을 사용할 수 없습니다.",
+                english: "App usage integration is unavailable on this device.",
+                preference: preference
+            )
         case .requiresCurrentSystem:
-            "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다."
+            AppLanguagePreference.text(
+                korean: "앱 사용시간 기록에는 iOS 26.4 이상이 필요합니다.",
+                english: "Recording app usage requires iOS 26.4 or later.",
+                preference: preference
+            )
         case .dataAccessUnavailable:
-            "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다."
+            AppLanguagePreference.text(
+                korean: "권한은 승인됐지만 앱 사용 데이터 접근이 없습니다. 설정 > 스크린 타임에서 앱 및 웹사이트 활동과 앱 사용 데이터 공유를 켜 주세요. 지역·Apple 계정에 따라 이 데이터 접근이 제공되지 않을 수도 있습니다.",
+                english: "Permission was granted, but app usage data access is missing. In Settings > Screen Time, turn on App & Website Activity and sharing of app usage data. This data access may not be available depending on your region or Apple Account.",
+                preference: preference
+            )
         case .dataAccessNotGranted:
-            """
-            앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.
-            1. 설정 > 스크린 타임을 켭니다.
-            2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.
-            3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 Taption Plan을 허용합니다.
-            그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.
-            """
+            AppLanguagePreference.text(
+                korean: """
+                앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.
+                1. 설정 > 스크린 타임을 켭니다.
+                2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.
+                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 Taption Plan을 허용합니다.
+                그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.
+                """,
+                english: """
+                App usage data access has not been granted. Please check the following in order.
+                1. Turn on Settings > Screen Time.
+                2. Turn on Settings > Screen Time > App & Website Activity.
+                3. Allow Taption Plan under Settings > Screen Time > Share App Usage Data.
+                If it still fails, access is restricted for this Apple Account, such as a child account in Family Sharing or an account in some countries or regions.
+                """,
+                preference: preference
+            )
         }
     }
 }
@@ -575,6 +651,23 @@ enum ScreenTimeUsageRecordEngine {
         stableID(
             "\(sample.key)|\(Int(sample.span.start.timeIntervalSinceReferenceDate))"
         )
+    }
+
+    /// 화면에 보이는 사용시간 문구. 저장되는 기록 제목은 `durationText`를 쓴다.
+    static func localizedDurationText(
+        _ interval: TimeInterval,
+        preference: AppLanguagePreference = .current
+    ) -> String? {
+        guard preference.resolvedLanguage == .english else {
+            return durationText(interval)
+        }
+        let minutes = Int(interval / 60)
+        guard minutes > 0 else { return nil }
+        if minutes < 60 { return "\(minutes) min" }
+        let remainder = minutes % 60
+        return remainder == 0
+            ? "\(minutes / 60) hr"
+            : "\(minutes / 60) hr \(remainder) min"
     }
 
     /// 화면에 쓸 "N시간 N분" 문구. 0분이면 nil.

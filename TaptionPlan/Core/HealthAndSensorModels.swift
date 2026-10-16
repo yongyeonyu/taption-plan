@@ -21,12 +21,18 @@ enum SleepStage: String, Codable, CaseIterable, Hashable, Sendable {
 
     var displayName: String {
         switch self {
-        case .inBed: "침대에 있음"
-        case .awake: "깨어 있음"
-        case .core: "코어 수면"
-        case .deep: "깊은 수면"
-        case .rem: "REM 수면"
-        case .asleepUnspecified: "수면"
+        case .inBed:
+            AppLanguagePreference.text(korean: "침대에 있음", english: "In bed")
+        case .awake:
+            AppLanguagePreference.text(korean: "깨어 있음", english: "Awake")
+        case .core:
+            AppLanguagePreference.text(korean: "코어 수면", english: "Core sleep")
+        case .deep:
+            AppLanguagePreference.text(korean: "깊은 수면", english: "Deep sleep")
+        case .rem:
+            AppLanguagePreference.text(korean: "REM 수면", english: "REM sleep")
+        case .asleepUnspecified:
+            AppLanguagePreference.text(korean: "수면", english: "Sleep")
         }
     }
 
@@ -275,9 +281,12 @@ enum SensorCollectionProfile: Int, Codable, CaseIterable, Hashable, Sendable {
 
     var displayName: String {
         switch self {
-        case .batterySaver: "배터리 최소화"
-        case .balanced: "균형"
-        case .accuracy: "정확도 최적화"
+        case .batterySaver:
+            AppLanguagePreference.text(korean: "배터리 최소화", english: "Battery saver")
+        case .balanced:
+            AppLanguagePreference.text(korean: "균형", english: "Balanced")
+        case .accuracy:
+            AppLanguagePreference.text(korean: "정확도 최적화", english: "Best accuracy")
         }
     }
 }

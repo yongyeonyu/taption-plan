@@ -1381,7 +1381,10 @@ private enum HealthBackgroundDeliveryError: LocalizedError {
     case registrationFailed
 
     var errorDescription: String? {
-        "HealthKit 백그라운드 전달을 등록하지 못했습니다."
+        AppLanguagePreference.text(
+            korean: "HealthKit 백그라운드 전달을 등록하지 못했습니다.",
+            english: "Could not register HealthKit background delivery."
+        )
     }
 }
 
@@ -1705,7 +1708,15 @@ enum WeatherContextServiceError: LocalizedError {
     case temporarilyUnavailable
 
     var errorDescription: String? {
-        "날씨 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
+        AppLanguagePreference.text(
+            korean: "날씨 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+            english: "The weather service is temporarily unavailable. Please try again shortly.",
+            preference: preference
+        )
     }
 }
 
@@ -4317,13 +4328,29 @@ enum VoiceMemoRecordingError: LocalizedError {
     case couldNotStart
 
     var errorDescription: String? {
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
         switch self {
         case .inputUnavailable:
-            "마이크 입력 장치를 사용할 수 없습니다."
+            AppLanguagePreference.text(
+                korean: "마이크 입력 장치를 사용할 수 없습니다.",
+                english: "The microphone input device is unavailable.",
+                preference: preference
+            )
         case .invalidInputFormat:
-            "현재 오디오 입력 형식을 확인할 수 없습니다."
+            AppLanguagePreference.text(
+                korean: "현재 오디오 입력 형식을 확인할 수 없습니다.",
+                english: "The current audio input format could not be determined.",
+                preference: preference
+            )
         case .couldNotStart:
-            "녹음 준비를 완료하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "녹음 준비를 완료하지 못했습니다.",
+                english: "Recording could not be prepared.",
+                preference: preference
+            )
         }
     }
 }
@@ -4376,11 +4403,23 @@ enum VoiceMemoPlaybackError: LocalizedError {
     case couldNotStart
 
     var errorDescription: String? {
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
         switch self {
         case .fileMissing:
-            "음성 메모 파일을 찾지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "음성 메모 파일을 찾지 못했습니다.",
+                english: "The voice memo file could not be found.",
+                preference: preference
+            )
         case .couldNotStart:
-            "음성 메모 재생을 시작하지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "음성 메모 재생을 시작하지 못했습니다.",
+                english: "Voice memo playback could not be started.",
+                preference: preference
+            )
         }
     }
 }
@@ -4415,7 +4454,10 @@ actor PlanNotificationScheduler {
         guard plan.span.start > .now, plan.status == .planned else { return }
         let content = UNMutableNotificationContent()
         content.title = plan.title
-        content.body = "계획 시작 시간입니다."
+        content.body = AppLanguagePreference.text(
+            korean: "계획 시작 시간입니다.",
+            english: "It's time for your plan to start."
+        )
         content.sound = .default
         content.userInfo = ["planID": plan.id.uuidString]
         let components = Calendar.autoupdatingCurrent.dateComponents(

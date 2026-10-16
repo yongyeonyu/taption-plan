@@ -428,7 +428,11 @@ final class FeatureEngineTests: XCTestCase {
         model.userFacingError = nil
         let failureResult = await model.refreshSensorTimeline()
         XCTAssertFalse(failureResult)
-        XCTAssertTrue(model.userFacingError?.hasPrefix("위치 기록을 읽지 못했습니다.") == true)
+        XCTAssertTrue(
+            model.userFacingError?.hasPrefix(
+                AppModelMessage.locationReadFailed("").lead()
+            ) == true
+        )
     }
 
     @MainActor
@@ -543,9 +547,7 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(model.snapshot, fallback)
         XCTAssertEqual(model.snapshotRevision, revision)
         XCTAssertTrue(
-            model.userFacingError?.hasPrefix(
-                "저장된 데이터를 불러오지 못했습니다."
-            ) == true
+            AppModelMessage.isDataLoadFailure(model.userFacingError)
         )
         do {
             try await model.protectCurrentDataWithBiometrics()
@@ -592,9 +594,7 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertTrue(model.snapshot.plans.contains { $0.id == storedPlan.id })
         XCTAssertFalse(
-            model.userFacingError?.hasPrefix(
-                "저장된 데이터를 불러오지 못했습니다."
-            ) == true
+            AppModelMessage.isDataLoadFailure(model.userFacingError)
         )
         XCTAssertNotNil(
             model.addPlan(
@@ -784,7 +784,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         XCTAssertTrue(
             failureModel.userFacingError?.hasPrefix(
-                "센서 기록을 저장하지 못했습니다."
+                AppModelMessage.sensorSaveFailed("").lead()
             ) == true
         )
     }
@@ -16479,7 +16479,10 @@ final class FeatureEngineTests: XCTestCase {
                 NSError(domain: "CKErrorDomain", code: 3)
             )
         )
-        XCTAssertEqual(CloudUnavailableReason.schemaMissing.statusLabel, "서버 설정 필요")
+        XCTAssertEqual(
+            CloudUnavailableReason.schemaMissing.statusLabel(preference: .korean),
+            "서버 설정 필요"
+        )
         XCTAssertTrue(
             CloudUnavailableReason.schemaMissing.guidance.contains("Production")
         )

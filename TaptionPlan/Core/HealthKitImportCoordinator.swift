@@ -73,13 +73,29 @@ enum HealthKitImportCoordinatorError: LocalizedError, Equatable {
     case invalidAnchorCursor
 
     var errorDescription: String? {
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
         switch self {
         case .localStoreUnavailable:
-            "HealthKit 로컬 원본 저장소를 열지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "HealthKit 로컬 원본 저장소를 열지 못했습니다.",
+                english: "The local HealthKit source store could not be opened.",
+                preference: preference
+            )
         case .invalidHistoryCursor:
-            "HealthKit 전체 기록 동기화 지점을 읽지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "HealthKit 전체 기록 동기화 지점을 읽지 못했습니다.",
+                english: "The HealthKit full-history sync point could not be read.",
+                preference: preference
+            )
         case .invalidAnchorCursor:
-            "HealthKit 변경 동기화 지점을 읽지 못했습니다."
+            AppLanguagePreference.text(
+                korean: "HealthKit 변경 동기화 지점을 읽지 못했습니다.",
+                english: "The HealthKit change sync point could not be read.",
+                preference: preference
+            )
         }
     }
 }

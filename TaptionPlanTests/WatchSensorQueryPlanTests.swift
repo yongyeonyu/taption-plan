@@ -2739,9 +2739,18 @@ final class AppleWatchOnboardingTests: XCTestCase {
     /// 설정 줄은 사라지지 않고 문구만 바뀐다. 설치되지 않았을 때만 찾아가는
     /// 길을 덧붙이고, 이미 설치된 사람에게 설치를 권하지 않는다.
     func testCompanionRowHasOneWordingPerState() {
-        let watchless = AppleWatchOnboarding.companionRow(for: .notPaired)
-        let notInstalled = AppleWatchOnboarding.companionRow(for: .appNotInstalled)
-        let installed = AppleWatchOnboarding.companionRow(for: .reachable)
+        let watchless = AppleWatchOnboarding.companionRow(
+            for: .notPaired,
+            preference: .korean
+        )
+        let notInstalled = AppleWatchOnboarding.companionRow(
+            for: .appNotInstalled,
+            preference: .korean
+        )
+        let installed = AppleWatchOnboarding.companionRow(
+            for: .reachable,
+            preference: .korean
+        )
 
         XCTAssertEqual(watchless.value, "안내")
         XCTAssertEqual(notInstalled.value, "설치 필요")
@@ -2749,17 +2758,22 @@ final class AppleWatchOnboardingTests: XCTestCase {
 
         XCTAssertEqual(
             notInstalled.detail,
-            AppleWatchOnboarding.installInstruction
+            AppleWatchOnboarding.installInstruction(preference: .korean)
         )
         XCTAssertNil(installed.detail)
         XCTAssertEqual(
-            watchless.detail?.contains(AppleWatchOnboarding.iPhoneOnlyCoverage),
+            watchless.detail?.contains(
+                AppleWatchOnboarding.iPhoneOnlyCoverage(preference: .korean)
+            ),
             true
         )
 
         // iPad처럼 확인할 수 없는 기기에서도 워치 앱이 있다는 사실은 알린다.
         XCTAssertEqual(
-            AppleWatchOnboarding.companionRow(for: .unsupported),
+            AppleWatchOnboarding.companionRow(
+                for: .unsupported,
+                preference: .korean
+            ),
             watchless
         )
 
@@ -2773,7 +2787,7 @@ final class AppleWatchOnboardingTests: XCTestCase {
     /// 아이폰이 이미 하는 일을 없다고 적으면 거짓말이 된다. 목록에 아이폰
     /// 단독으로도 남는 기록이 섞이지 않았는지 지킨다.
     func testWatchlessLimitationsDoNotClaimIPhoneOnlyFeaturesAreLost() {
-        let text = AppleWatchOnboarding.watchlessLimitations.joined(
+        let text = AppleWatchOnboarding.watchlessLimitations(preference: .korean).joined(
             separator: "\n"
         )
         for covered in ["장소", "날씨", "앱 사용시간", "사진", "캘린더", "층수"] {

@@ -681,7 +681,15 @@ enum TaptionPlanDiagnosticsICloudError: LocalizedError {
     case unavailable
 
     var errorDescription: String? {
-        "iCloud Drive를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인해 주세요."
+        message()
+    }
+
+    func message(preference: AppLanguagePreference = .current) -> String {
+        AppLanguagePreference.text(
+            korean: "iCloud Drive를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인해 주세요.",
+            english: "iCloud Drive is unavailable. Check that iCloud Drive is turned on.",
+            preference: preference
+        )
     }
 }
 

@@ -2077,6 +2077,10 @@ enum FloorLabel {
     static func korean(_ floor: Int) -> String {
         floor < 0 ? "지하 \(-floor)층" : "\(floor)층"
     }
+
+    static func english(_ floor: Int) -> String {
+        floor < 0 ? "B\(-floor)" : "\(floor)F"
+    }
 }
 
 struct CalibratedAltitudeEstimate: Codable, Hashable, Sendable {
