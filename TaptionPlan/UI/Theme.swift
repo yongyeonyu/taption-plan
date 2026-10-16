@@ -98,6 +98,15 @@ extension Color {
     static let tpTransitDark = Color(red: 154 / 255, green: 106 / 255, blue: 45 / 255)
     static let tpNow = Color(red: 1.00, green: 59 / 255, blue: 48 / 255)
 
+    // Neutral control surfaces shared by the non-home screens.
+    static let tpControlFill = Color(red: 0.94, green: 0.94, blue: 0.95)
+    static let tpControlFillSoft = Color(red: 0.95, green: 0.95, blue: 0.96)
+    static let tpFieldFill = Color(red: 0.965, green: 0.965, blue: 0.975)
+    static let tpControlStroke = Color(red: 0.89, green: 0.89, blue: 0.91)
+    static let tpTrackFill = Color(red: 0.93, green: 0.93, blue: 0.94)
+    static let tpWarningTint = Color(red: 1.00, green: 0.95, blue: 0.85)
+    static let tpSuccessTint = Color(red: 0.93, green: 0.96, blue: 0.91)
+
     init(hex: String) {
         let clean = hex
             .trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -134,6 +143,27 @@ extension Color {
             Int((blue * 255).rounded())
         )
     }
+}
+
+/// 모서리 반경 토큰. 화면에서 실제로 쓰이던 값을 이름만 붙여 모았다.
+enum TaptionRadius {
+    static let tight: CGFloat = 7
+    static let small: CGFloat = 8
+    static let control: CGFloat = 9
+    static let field: CGFloat = 10
+    static let compact: CGFloat = 11
+    static let panel: CGFloat = 12
+    static let tile: CGFloat = 13
+    static let card: CGFloat = 14
+}
+
+/// 스택 간격 토큰. 화면에서 실제로 쓰이던 값을 이름만 붙여 모았다.
+enum TaptionSpacing {
+    static let tight: CGFloat = 4
+    static let compact: CGFloat = 5
+    static let snug: CGFloat = 6
+    static let cozy: CGFloat = 7
+    static let regular: CGFloat = 8
 }
 
 /// 메뉴 화면이 공유하는 여백·컨트롤 토큰. 터치 영역은 각 화면의 최소 높이를
@@ -406,7 +436,7 @@ extension PlanCategory {
 }
 
 extension View {
-    func draftCard(radius: CGFloat = 14) -> some View {
+    func draftCard(radius: CGFloat = TaptionRadius.card) -> some View {
         self
             .background(
                 LinearGradient(
@@ -426,7 +456,7 @@ extension View {
     /// A lightweight pastel surface for the record and timeline cards. It
     /// avoids material blur so continuous timeline gestures stay on budget.
     func tpCardSurface(
-        radius: CGFloat = 14,
+        radius: CGFloat = TaptionRadius.card,
         tint: Color = .tpSurfaceBlue
     ) -> some View {
         self

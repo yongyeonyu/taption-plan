@@ -89,7 +89,7 @@ struct GoalsView: View {
         let repeatSegmentCount = repeatSegmentCount(for: goal.planID)
         return VStack(alignment: .leading, spacing: 9) {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(goal.category.darkColor)
                         .frame(width: 10, height: 10)
@@ -126,7 +126,7 @@ struct GoalsView: View {
 
                 GeometryReader { proxy in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color(red: 0.93, green: 0.93, blue: 0.94))
+                        Capsule().fill(Color.tpTrackFill)
                         Capsule()
                             .fill(goal.category.darkColor)
                             .frame(width: proxy.size.width * goal.progress)
@@ -141,6 +141,7 @@ struct GoalsView: View {
                     model.openGoalDetail(planID)
                 }
             }
+            .accessibilityAddTraits(.isButton)
 
             goalTimelineSection(
                 rows: childRows,
@@ -164,7 +165,7 @@ struct GoalsView: View {
     }
 
     private var emptyGoalState: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             Text("아직 루틴이 없습니다")
                 .font(.taption(size: 12.5, weight: .bold))
                 .foregroundStyle(Color.tpInk)
@@ -178,10 +179,10 @@ struct GoalsView: View {
         .padding(.vertical, 12)
         .background(
             Color.white.opacity(0.78),
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.6)
         }
     }
@@ -193,8 +194,8 @@ struct GoalsView: View {
         repeatSegmentCount: Int
     ) -> some View {
         if !rows.isEmpty || repeatSegmentCount > 0 {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
+                HStack(spacing: TaptionSpacing.snug) {
                     Text("계획 타임라인")
                         .font(.taption(size: 9, weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
@@ -232,8 +233,8 @@ struct GoalsView: View {
                     .padding(.vertical, 7)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        Color(red: 0.965, green: 0.965, blue: 0.975),
-                        in: RoundedRectangle(cornerRadius: 9)
+                        Color.tpFieldFill,
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 }
             }
@@ -608,8 +609,8 @@ private struct RoutineTimeRangeSlider: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("계획 · \(timeRange(plan.span.start, plan.span.end))")
                 Spacer(minLength: 4)
                 Label(status.0, systemImage: status.2)
@@ -656,7 +657,7 @@ private struct RoutineTimeRangeSlider: View {
             }
             .frame(height: 26)
 
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 Text("실제 · \(timeRange(actualStart, actualEnd))")
                 Text("· \(durationText(actualDuration))")
                     .foregroundStyle(Color.tpSecondary)
@@ -668,7 +669,7 @@ private struct RoutineTimeRangeSlider: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
-        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 9))
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
         .onChange(of: actual?.startedAt) { _, value in
             if let value { actualStart = value }
         }
@@ -876,13 +877,14 @@ struct GoalDetailView: View {
     }
 
     private var detailHeader: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Button {
                 model.closeGoalDetail()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.taption(size: 15, weight: .bold))
             }
+            .accessibilityLabel("뒤로")
             Text(goal.map { GoalRecordPolicy.displayTitle($0.title) } ?? "루틴 상세")
                 .font(.taption(size: 16, weight: .bold))
                 .lineLimit(1)
@@ -925,7 +927,7 @@ struct GoalDetailView: View {
             ProgressView(value: progress)
                 .tint(PlanCategory(categoryID: goal.categoryID).darkColor)
 
-            HStack(spacing: 6) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Image(systemName: achievementSymbol(progress))
                 Text(achievementLabel(progress))
                 Spacer()
@@ -995,7 +997,7 @@ struct GoalDetailView: View {
                 .font(.taption(size: 8.5, weight: .semibold))
             }
             if !detail.missedDays.isEmpty {
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     Image(systemName: "exclamationmark.circle.fill")
                     Text(
                         "놓친 날 " + detail.missedDays.map {
@@ -1007,11 +1009,11 @@ struct GoalDetailView: View {
                 .foregroundStyle(Color.orange)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: TaptionRadius.small))
             }
             Text("4주 실제 추세")
                 .font(.taption(size: 9, weight: .bold))
-            HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: TaptionSpacing.regular) {
                 let maximum = max(detail.fourWeekActuals.max() ?? 1, 1)
                 ForEach(Array(detail.fourWeekActuals.enumerated()), id: \.offset) { index, value in
                     VStack(spacing: 3) {
@@ -1066,8 +1068,8 @@ struct GoalDetailView: View {
                 )
                 let isComplete = plan.status == .completed
                     || actualProgress >= 0.999
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 7) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
+                    HStack(spacing: TaptionSpacing.cozy) {
                         Button {
                             guard !isComplete else { return }
                             Task {
@@ -1091,6 +1093,7 @@ struct GoalDetailView: View {
                                             : Color.tpSecondary
                                 )
                         }
+                        .accessibilityLabel(isComplete ? "완료됨" : "완료로 표시")
                         .buttonStyle(.plain)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(plan.title)
@@ -1127,7 +1130,7 @@ struct GoalDetailView: View {
                     .font(.taption(size: 9.5, weight: .bold))
                     .padding(.top, 3)
                 ForEach(detail.upcomingPlans) { plan in
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         Image(systemName: plan.status == .completed
                             ? "checkmark.circle.fill"
                             : "circle")
@@ -1164,7 +1167,7 @@ struct GoalDetailView: View {
         detail: GoalDetailSnapshot
     ) -> some View {
         if !plans.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
                 Text("연결 액션")
                     .font(.taption(size: 9.5, weight: .bold))
                     .padding(.top, 2)
@@ -1176,8 +1179,8 @@ struct GoalDetailView: View {
                     )
                     let isComplete = plan.status == .completed
                         || actualProgress >= 0.999
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 7) {
+                    VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
+                        HStack(spacing: TaptionSpacing.cozy) {
                             Button {
                                 guard !isComplete else { return }
                                 Task {
@@ -1201,6 +1204,7 @@ struct GoalDetailView: View {
                                                 : Color.tpSecondary
                                     )
                             }
+                            .accessibilityLabel(isComplete ? "완료됨" : "완료로 표시")
                             .buttonStyle(.plain)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(plan.title)
@@ -1247,7 +1251,7 @@ struct GoalDetailView: View {
     }
 
     private func emptyDashboard(goal: PlanRecord) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
             Label("첫 실행 계획이 필요합니다", systemImage: "flag.checkered")
                 .font(.taption(size: 10, weight: .bold))
             Text("루틴을 월·주·일 계획으로 내려보내면 실제 기록이 다시 이 루틴으로 합쳐집니다.")
@@ -1265,7 +1269,7 @@ struct GoalDetailView: View {
     }
 
     private func actionButtons(goal: PlanRecord) -> some View {
-        VStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
             Button {
                 presentChildPlan(for: goal.id)
             } label: {
@@ -1290,7 +1294,7 @@ struct GoalDetailView: View {
             .font(.taption(size: 8.5, weight: .bold))
             .buttonStyle(.bordered)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
                 Label("메모", systemImage: "note.text")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -1321,7 +1325,7 @@ struct GoalDetailView: View {
     @ViewBuilder
     private func actualEvidenceRows(_ matches: [GoalActualMatch]) -> some View {
         if !matches.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
                 Text("활동 근거")
                     .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -1329,7 +1333,7 @@ struct GoalDetailView: View {
                     let isLocked = AutomaticRecordTimelineEngine.isImmutable(
                         match.actual
                     )
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         Image(systemName: isLocked
                             ? "lock.fill"
                             : match.actual.endedAt == nil
@@ -1499,6 +1503,7 @@ struct GoalActionLinkSheet: View {
                                 }
                                 Spacer(minLength: 4)
                                 Image(systemName: "link")
+                                    .accessibilityHidden(true)
                                     .font(.taption(size: 9, weight: .bold))
                                     .foregroundStyle(Color.tpInk)
                             }
@@ -1528,12 +1533,12 @@ struct GoalActionControls: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             Text("루틴 제어")
                 .font(.taption(size: 9, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
 
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 Button {
                     Task {
                         if goal.status == .running {
@@ -1584,10 +1589,10 @@ struct GoalActionControls: View {
         .padding(.vertical, 8)
         .background(
             Color.white,
-            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.compact, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.compact, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
         }
     }
@@ -1601,7 +1606,7 @@ struct InlineMemoField: View {
     @State private var editingMemoID: UUID?
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: TaptionSpacing.compact) {
             TextField("메모를 입력…", text: $text, axis: .vertical)
                 .font(.taption(size: 9.5))
                 .lineLimit(2...4)
@@ -1626,10 +1631,10 @@ struct InlineMemoField: View {
         .padding(.vertical, 8)
         .background(
             Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.control, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.control, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
         }
     }
@@ -1748,7 +1753,7 @@ private struct GoalChildPlanRowView: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 Text(row.timeText)
                     .font(.taption(size: 8.5, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -1787,9 +1792,9 @@ private struct GoalChildPlanRowView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(rowBackground, in: RoundedRectangle(cornerRadius: 9))
+            .background(rowBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
             .overlay {
-                RoundedRectangle(cornerRadius: 9)
+                RoundedRectangle(cornerRadius: TaptionRadius.control)
                     .stroke(rowStroke, lineWidth: row.hasOverlap ? 1.1 : 0.6)
             }
         }

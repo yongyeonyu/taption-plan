@@ -36,18 +36,18 @@ struct PhotoClusterSheet: View {
                     .background(
                         Color.black,
                         in: RoundedRectangle(
-                            cornerRadius: 14,
+                            cornerRadius: TaptionRadius.card,
                             style: .continuous
                         )
                     )
                     .clipShape(
                         RoundedRectangle(
-                            cornerRadius: 14,
+                            cornerRadius: TaptionRadius.card,
                             style: .continuous
                         )
                     )
 
-                    HStack(spacing: 8) {
+                    HStack(spacing: TaptionSpacing.regular) {
                         Text(selectedPhotoTime)
                         Spacer(minLength: 8)
                         Text("\(selectedIndex + 1) / \(photos.count)")
@@ -89,13 +89,13 @@ struct PhotoClusterSheet: View {
     }
 
     private var contextStrip: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             Text("이 시간의 맥락")
                 .font(.taption(size: 10, weight: .black))
                 .foregroundStyle(Color.tpSecondary)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     ForEach(contextLabels, id: \.self) {
                         Text($0)
                             .font(
@@ -117,7 +117,7 @@ struct PhotoClusterSheet: View {
         .background(
             Color.tpPhoto.opacity(0.42),
             in: RoundedRectangle(
-                cornerRadius: 13,
+                cornerRadius: TaptionRadius.tile,
                 style: .continuous
             )
         )
@@ -168,9 +168,11 @@ struct PhotoClusterPage: View {
                     .interpolation(.high)
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityLabel("사진")
             } else if failedToLoad {
-                VStack(spacing: 8) {
+                VStack(spacing: TaptionSpacing.regular) {
                     Image(systemName: "photo")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 24, weight: .semibold))
                     Text("사진을 불러오지 못했습니다")
                         .font(.taption(size: 9, weight: .semibold))

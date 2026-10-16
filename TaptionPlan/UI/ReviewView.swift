@@ -456,7 +456,7 @@ struct ReviewView: View {
     // MARK: - 머리말
 
     private var reviewHeader: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
             HStack(alignment: .firstTextBaseline) {
                 Text("기록")
                     .font(.taption(size: 19, weight: .bold))
@@ -492,7 +492,7 @@ struct ReviewView: View {
                             .padding(.vertical, 5)
                             .background {
                                 if model.reviewScale == scale {
-                                    RoundedRectangle(cornerRadius: 7)
+                                    RoundedRectangle(cornerRadius: TaptionRadius.tight)
                                         .fill(Color.tpSurface)
                                         .shadow(
                                             color: Color.tpSky.opacity(0.24),
@@ -508,7 +508,7 @@ struct ReviewView: View {
             .padding(2)
             .background(
                 Color.tpSky.opacity(0.18),
-                in: RoundedRectangle(cornerRadius: 9)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.control)
             )
 
             if !content.pickableBuckets.isEmpty {
@@ -534,7 +534,7 @@ struct ReviewView: View {
     /// 전체로 돌아간다. 따로 "고르기 모드"로 들어가지 않는다.
     private var bucketPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 if !selectedBucketIDs.isEmpty {
                     Button {
                         selectedBucketIDs = []
@@ -667,7 +667,7 @@ struct ReviewView: View {
     }
 
     private var timelineLocationHeader: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: TaptionSpacing.compact) {
             Image(systemName: "mappin.and.ellipse")
                 .font(.taption(size: 10, weight: .semibold))
                 .foregroundStyle(Color.tpPlaceDark)
@@ -900,13 +900,13 @@ struct ReviewView: View {
             by: \.quadrant
         )
         return VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 4) {
+            HStack(alignment: .top, spacing: TaptionSpacing.tight) {
                 circularActivityLabel(in: .topLeft, from: labels)
                 Spacer(minLength: 4)
                 circularActivityLabel(in: .topRight, from: labels)
             }
             Spacer(minLength: 0)
-            HStack(alignment: .bottom, spacing: 4) {
+            HStack(alignment: .bottom, spacing: TaptionSpacing.tight) {
                 circularActivityLabel(in: .bottomLeft, from: labels)
                 Spacer(minLength: 4)
                 circularActivityLabel(in: .bottomRight, from: labels)
@@ -1181,10 +1181,10 @@ struct ReviewView: View {
                 )
                 .background(
                     Color.white.opacity(0.96),
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.tight, style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    RoundedRectangle(cornerRadius: TaptionRadius.tight, style: .continuous)
                         .stroke(
                             color(forCategoryID: item.groupID).opacity(0.45),
                             lineWidth: 0.8
@@ -1293,7 +1293,7 @@ struct ReviewView: View {
                     viewportWidth,
                     viewportWidth * clockZoomScale
                 )
-                VStack(spacing: 8) {
+                VStack(spacing: TaptionSpacing.regular) {
                     HStack(spacing: 0) {
                         linearPlayheadLabels
                             .frame(
@@ -1424,7 +1424,7 @@ struct ReviewView: View {
             Text(title)
                 .font(.taption(size: 7.5, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 Circle()
                     .fill(item.tint)
                     .frame(width: 6, height: 6)
@@ -1818,7 +1818,7 @@ struct ReviewView: View {
         color: Color
     ) {
         context.fill(
-            Path(roundedRect: rect, cornerRadius: 7),
+            Path(roundedRect: rect, cornerRadius: TaptionRadius.tight),
             with: .color(color)
         )
     }
@@ -1840,7 +1840,7 @@ struct ReviewView: View {
                 height: rect.height
             )
             context.fill(
-                Path(roundedRect: bar, cornerRadius: 7),
+                Path(roundedRect: bar, cornerRadius: TaptionRadius.tight),
                 with: .color(color.opacity(opacity))
             )
         }
@@ -2013,9 +2013,9 @@ struct ReviewView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(Color.tpSurfaceCream.opacity(0.96), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.tpSurfaceCream.opacity(0.96), in: RoundedRectangle(cornerRadius: TaptionRadius.small))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: TaptionRadius.small)
                 .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.8)
         }
     }
@@ -2613,7 +2613,7 @@ struct ReviewView: View {
     /// 일과 띠의 색이 무엇을 뜻하는지 적는다. 카테고리 범례처럼 눌러서 하나만
     /// 살릴 수 있고, 그때 눈금판 가운데에도 같은 이름이 뜬다.
     private func phaseLegend(_ ring: RecordClockDetailRing) -> some View {
-        ChipFlowLayout(spacing: 5) {
+        ChipFlowLayout(spacing: TaptionSpacing.compact) {
             Text("일과")
                 .font(.taption(size: 8.5, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
@@ -2629,7 +2629,7 @@ struct ReviewView: View {
                     )
                     clockHighlight = clockHighlight == next ? nil : next
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: TaptionSpacing.tight) {
                         Capsule()
                             .fill(detailColor(.dayPhase, token: token))
                             .frame(width: 10, height: 6)
@@ -2915,7 +2915,7 @@ struct ReviewView: View {
     }
 
     private var categoryLegend: some View {
-        ChipFlowLayout(spacing: 5) {
+        ChipFlowLayout(spacing: TaptionSpacing.compact) {
             if model.reviewScale == .day {
                 Text("상세활동")
                     .font(.taption(size: 8.5, weight: .bold))
@@ -2967,7 +2967,7 @@ struct ReviewView: View {
             let next = ReviewClockHighlight.category(group.id)
             clockHighlight = clockHighlight == next ? nil : next
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 Circle()
                     .fill(color(forCategoryID: group.id))
                     .frame(width: 7, height: 7)
@@ -3006,7 +3006,7 @@ struct ReviewView: View {
             let next = ReviewClockHighlight.detail(selection)
             clockHighlight = clockHighlight == next ? nil : next
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 Circle()
                     .fill(detailColor(kind, token: token))
                     .frame(width: 7, height: 7)
@@ -3043,7 +3043,7 @@ struct ReviewView: View {
             let next = ReviewClockHighlight.category(id)
             clockHighlight = clockHighlight == next ? nil : next
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 Circle().fill(tint).frame(width: 7, height: 7)
                 Text(phase?.title ?? id)
                     .font(
@@ -3061,7 +3061,7 @@ struct ReviewView: View {
             .background(
                 isSelected
                     ? tint.opacity(0.16)
-                    : Color(red: 0.95, green: 0.95, blue: 0.96),
+                    : Color.tpControlFillSoft,
                 in: Capsule()
             )
         }
@@ -3079,7 +3079,7 @@ struct ReviewView: View {
     private var memoBreakdownCard: some View {
         let memos = content.contexts.filter { $0.symbolName == "note.text" }
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
             Label("메모", systemImage: "note.text")
                 .font(.taption(size: 11, weight: .bold))
 
@@ -3089,7 +3089,7 @@ struct ReviewView: View {
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(memos) { memo in
-                    HStack(alignment: .top, spacing: 7) {
+                    HStack(alignment: .top, spacing: TaptionSpacing.cozy) {
                         Image(systemName: "note.text")
                             .font(.taption(size: 11))
                             .foregroundStyle(Color.tpStudyDark)
@@ -3121,7 +3121,7 @@ struct ReviewView: View {
 
     private var recordHierarchyCard: some View {
         let groups = hierarchyGroups
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             HStack(alignment: .firstTextBaseline) {
                 Label("실제 기록", systemImage: "checkmark.circle")
                     .font(.taption(size: 11, weight: .bold))
@@ -3172,8 +3172,9 @@ struct ReviewView: View {
                     collapsedGroupIDs.remove(group.id)
                 }
             } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     Image(systemName: "chevron.down")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 8, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
@@ -3198,7 +3199,7 @@ struct ReviewView: View {
                 highlightedCategoryID == group.id
                     ? color(forCategoryID: group.id).opacity(0.09)
                     : Color.clear,
-                in: RoundedRectangle(cornerRadius: 7)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
             )
 
             if isExpanded {
@@ -3218,12 +3219,12 @@ struct ReviewView: View {
             clearClockHighlight()
             model.detail = .actual(child.recordID)
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 if let tokenData = appUsageTokenData(for: child, in: group) {
                     // 어플 기록만 시스템이 그리는 실제 앱 이름·아이콘을 쓴다.
                     AppUsageNameLabel(tokenData: tokenData, size: 10)
                 } else {
-                    HStack(spacing: 5) {
+                    HStack(spacing: TaptionSpacing.compact) {
                         Image(systemName: childSymbolName(child, in: group))
                             .font(.taption(size: 9, weight: .semibold))
                             .foregroundStyle(color(forCategoryID: group.id))
@@ -3315,7 +3316,7 @@ struct ReviewView: View {
         let contexts = content.contexts.filter {
             $0.symbolName != "note.text"
         }
-        return VStack(alignment: .leading, spacing: 7) {
+        return VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             Text("이 기간을 설명한 기록")
                 .font(.taption(size: 11, weight: .bold))
             if contexts.isEmpty {
@@ -3335,7 +3336,7 @@ struct ReviewView: View {
     }
 
     private func contextLine(_ image: String, _ text: String) -> some View {
-        HStack(spacing: 7) {
+        HStack(spacing: TaptionSpacing.cozy) {
             Image(systemName: image)
                 .font(.taption(size: 13))
                 .foregroundStyle(Color.tpSecondary)
@@ -3754,6 +3755,7 @@ struct ActualRecordDetailView: View {
                     Image(systemName: "chevron.left")
                         .font(.taption(size: 18, weight: .semibold))
                 }
+                .accessibilityLabel("뒤로")
                 .buttonStyle(.plain)
                 Text("기록 상세")
                     .font(.taption(size: 19, weight: .bold))
@@ -3813,7 +3815,7 @@ struct ActualRecordDetailView: View {
         else { return AnyView(EmptyView()) }
 
         return AnyView(
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 pagerButton("chevron.left", enabled: index > 0) {
                     moveRecord(by: -1)
                 }
@@ -3848,6 +3850,9 @@ struct ActualRecordDetailView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+        .accessibilityLabel(
+            systemImage == "chevron.left" ? "이전 기록" : "다음 기록"
+        )
     }
 
     private var recordSwipeGesture: some Gesture {
@@ -3876,8 +3881,8 @@ struct ActualRecordDetailView: View {
                     isActivityPickerPresented = true
                 }
             } label: {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+                    HStack(alignment: .firstTextBaseline, spacing: TaptionSpacing.regular) {
                         Label(
                             displayTitle(record, categoryID: categoryID),
                             systemImage: symbolName(record, categoryID: categoryID)
@@ -3931,7 +3936,7 @@ struct ActualRecordDetailView: View {
                 detailRow("행동 분류", behavior)
             }
             if !record.evidence.isEmpty {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
                     Text("측정 근거")
                         .font(.taption(size: 10, weight: .bold))
                     ForEach(record.evidence, id: \.self) { evidence in
@@ -4100,7 +4105,7 @@ struct SubwayRouteTimelineView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: isCompact ? 6 : 9) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: TaptionSpacing.snug) {
                 Label("지하철 노선", systemImage: "tram.fill")
                     .font(.taption(
                         size: isCompact ? 8 : 11,
@@ -4385,8 +4390,8 @@ private struct ActivityCorrectionHierarchyPicker: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 5) {
+        HStack(alignment: .top, spacing: TaptionSpacing.regular) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
                 Text("일과")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -4398,7 +4403,7 @@ private struct ActivityCorrectionHierarchyPicker: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
                 Text("상세활동")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -4429,7 +4434,7 @@ private struct ActivityCorrectionHierarchyPicker: View {
             guard selectedPhase != phase else { return }
             selectedPhase = phase
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 Image(systemName: Self.phaseSystemImage(phase))
                     .font(.taption(size: 10, weight: .semibold))
                     .frame(width: 15)
@@ -4449,8 +4454,8 @@ private struct ActivityCorrectionHierarchyPicker: View {
             .background(
                 isSelected
                     ? tint.opacity(0.14)
-                    : Color(red: 0.95, green: 0.95, blue: 0.96),
-                in: RoundedRectangle(cornerRadius: 9)
+                    : Color.tpControlFillSoft,
+                in: RoundedRectangle(cornerRadius: TaptionRadius.control)
             )
             .contentShape(Rectangle())
         }
@@ -4466,7 +4471,7 @@ private struct ActivityCorrectionHierarchyPicker: View {
             guard !option.isAutomaticOnly else { return }
             onSelect(option)
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Image(systemName: option.systemImage)
                     .font(.taption(size: 10, weight: .semibold))
                     .frame(width: 17)
@@ -4481,10 +4486,10 @@ private struct ActivityCorrectionHierarchyPicker: View {
             .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
             .background(
                 tint.opacity(0.1),
-                in: RoundedRectangle(cornerRadius: 9)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.control)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 9)
+                RoundedRectangle(cornerRadius: TaptionRadius.control)
                     .stroke(tint.opacity(0.22), lineWidth: 0.7)
             }
             .contentShape(Rectangle())
@@ -4720,6 +4725,7 @@ private struct ActivityCorrectionSheet: View {
                 Spacer()
                 if isSelected(option) {
                     Image(systemName: "checkmark.circle.fill")
+                        .accessibilityLabel("선택됨")
                         .foregroundStyle(Color.tpProjectDark)
                 }
             }

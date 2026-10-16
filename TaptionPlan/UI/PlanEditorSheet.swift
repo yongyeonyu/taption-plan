@@ -75,7 +75,7 @@ struct PlanEditorSheet: View {
                             .padding(.vertical, 10)
                             .background(
                                 Color.white,
-                                in: RoundedRectangle(cornerRadius: 12)
+                                in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
                             )
                         }
                         .buttonStyle(.plain)
@@ -175,7 +175,7 @@ struct PlanEditorSheet: View {
     }
 
     private var nameCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             Text("계획 이름")
                 .font(.taption(size: 8.5, weight: .black))
                 .foregroundStyle(Color.tpSecondary)
@@ -209,7 +209,7 @@ struct PlanEditorSheet: View {
     }
 
     private var categoryHierarchyCard: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TaptionSpacing.regular) {
             hierarchyTextField(
                 label: "중분류",
                 placeholder: "예: 일본, 자격증, 가족여행",
@@ -230,7 +230,7 @@ struct PlanEditorSheet: View {
         placeholder: String,
         text: Binding<String>
     ) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Text(label)
                 .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
@@ -243,7 +243,7 @@ struct PlanEditorSheet: View {
     }
 
     private var timeCard: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TaptionSpacing.regular) {
             DatePicker(
                 "시작",
                 selection: $startAt,

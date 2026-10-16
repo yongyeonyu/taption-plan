@@ -98,7 +98,7 @@ private struct PhotoGalleryClusterTile: View {
     let cluster: PhotoCluster
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TaptionSpacing.regular) {
             ZStack(alignment: .topTrailing) {
                 PhotoGalleryThumbnail(
                     model: model,
@@ -146,7 +146,7 @@ private struct PhotoGalleryClusterTile: View {
         .background(Color.white)
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 14,
+                cornerRadius: TaptionRadius.card,
                 style: .continuous
             )
         )

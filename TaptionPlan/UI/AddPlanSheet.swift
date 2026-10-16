@@ -126,7 +126,7 @@ struct AddPlanSheet: View {
                     .padding(.vertical, 8)
                     .background(
                         canAddPlan ? Color.tpInk : Color.tpLine,
-                        in: RoundedRectangle(cornerRadius: 10)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                     )
                     .disabled(!canAddPlan)
             }
@@ -189,8 +189,8 @@ struct AddPlanSheet: View {
     }
 
     private var goalTitleField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("루틴 이름")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -199,7 +199,7 @@ struct AddPlanSheet: View {
                     .foregroundStyle(Color.tpSecondary)
             }
 
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Text("루틴:")
                     .font(.taption(size: 15, weight: .semibold))
                     .foregroundStyle(Color.tpInk.opacity(0.72))
@@ -216,21 +216,22 @@ struct AddPlanSheet: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.tpSecondary.opacity(0.55))
                     }
+                    .accessibilityLabel("제목 지우기")
                     .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 9)
             .background(
-                Color(red: 0.965, green: 0.965, blue: 0.975),
-                in: RoundedRectangle(cornerRadius: 10)
+                Color.tpFieldFill,
+                in: RoundedRectangle(cornerRadius: TaptionRadius.field)
             )
         }
     }
 
     private var goalDurationPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 DraftChip(
                     title: startAt.formatted(
                         Date.FormatStyle()
@@ -251,6 +252,7 @@ struct AddPlanSheet: View {
                         goalDurationMonths = months
                         goalEndAt = defaultGoalEndDate(from: startAt)
                     }
+                    .accessibilityAddTraits(.isButton)
                 }
                 DraftChip(
                     title: "직접지정",
@@ -262,6 +264,7 @@ struct AddPlanSheet: View {
                         goalEndAt = defaultGoalEndDate(from: startAt)
                     }
                 }
+                .accessibilityAddTraits(.isButton)
             }
         }
     }
@@ -287,7 +290,7 @@ struct AddPlanSheet: View {
         title: String,
         selection: Binding<Date>
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             Text(title)
                 .font(.taption(size: 9.5, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
@@ -301,13 +304,13 @@ struct AddPlanSheet: View {
         }
         .padding(10)
         .background(
-            Color(red: 0.965, green: 0.965, blue: 0.975),
-            in: RoundedRectangle(cornerRadius: 12)
+            Color.tpFieldFill,
+            in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
         )
     }
 
     private var recentMiddleCategorySection: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             sectionLabel("최근", caption: "최근 추가한 중분류")
             if recentMiddleCategories.isEmpty {
                 Text("아직 추가한 중분류가 없습니다")
@@ -316,7 +319,7 @@ struct AddPlanSheet: View {
                     .padding(.vertical, 5)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         ForEach(recentMiddleCategories) { recent in
                             Button {
                                 titleFocused = false
@@ -336,8 +339,8 @@ struct AddPlanSheet: View {
                                     categoryID == recent.categoryID
                                         && middleCategoryName == recent.name
                                         ? Color(hex: recent.category.lightHex)
-                                        : Color(red: 0.95, green: 0.95, blue: 0.96),
-                                    in: RoundedRectangle(cornerRadius: 9)
+                                        : Color.tpControlFillSoft,
+                                    in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                                 )
                             }
                             .buttonStyle(.plain)
@@ -349,7 +352,7 @@ struct AddPlanSheet: View {
     }
 
     private var goalConnectionPicker: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             sectionLabel("루틴 연결", caption: "상위 루틴 아래에 계획을 붙입니다")
             if rootPlans.isEmpty {
                 Text("연결할 루틴이 없습니다")
@@ -358,7 +361,7 @@ struct AddPlanSheet: View {
                     .padding(.vertical, 5)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         Button {
                             parentID = nil
                         } label: {
@@ -388,7 +391,7 @@ struct AddPlanSheet: View {
             titleFocused = false
             isCalendarPresented = true
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 Image(systemName: "calendar")
                     .font(.taption(size: 13, weight: .bold))
                 Text(formattedSelectedDate)
@@ -398,6 +401,7 @@ struct AddPlanSheet: View {
                     .font(.taption(size: 9.5, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                 Image(systemName: "chevron.down")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -405,8 +409,8 @@ struct AddPlanSheet: View {
             .padding(.horizontal, 11)
             .padding(.vertical, 10)
             .background(
-                Color(red: 0.965, green: 0.965, blue: 0.975),
-                in: RoundedRectangle(cornerRadius: 10)
+                Color.tpFieldFill,
+                in: RoundedRectangle(cornerRadius: TaptionRadius.field)
             )
         }
         .buttonStyle(.plain)
@@ -501,8 +505,8 @@ struct AddPlanSheet: View {
     }
 
     private var categoryQuickPicker: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("대분류")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -512,22 +516,23 @@ struct AddPlanSheet: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     ForEach(visibleCategories) { category in
                         Button {
                             selectCategory(category.id)
                         } label: {
                             VStack(spacing: 3) {
                                 Image(systemName: category.icon.systemImage)
+                                    .accessibilityHidden(true)
                                     .font(.taption(size: 14, weight: .bold))
                                     .foregroundStyle(Color.tpInk)
                                     .frame(width: 38, height: 34)
                                     .background(
                                         Color(hex: category.lightHex),
-                                        in: RoundedRectangle(cornerRadius: 10)
+                                        in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                                     )
                                     .overlay {
-                                        RoundedRectangle(cornerRadius: 10)
+                                        RoundedRectangle(cornerRadius: TaptionRadius.field)
                                             .stroke(
                                                 categoryID == category.id
                                                     ? Color.tpInk
@@ -556,15 +561,16 @@ struct AddPlanSheet: View {
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: "plus")
+                                .accessibilityHidden(true)
                                 .font(.taption(size: 14, weight: .bold))
                                 .foregroundStyle(Color.tpSecondary)
                                 .frame(width: 38, height: 34)
                                 .background(
                                     Color.white,
-                                    in: RoundedRectangle(cornerRadius: 10)
+                                    in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                                 )
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: TaptionRadius.field)
                                         .stroke(
                                             Color.tpSecondary.opacity(0.55),
                                             style: StrokeStyle(
@@ -587,8 +593,8 @@ struct AddPlanSheet: View {
     }
 
     private var middleCategoryPicker: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("중분류")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -598,7 +604,7 @@ struct AddPlanSheet: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     ForEach(middleCategorySuggestions, id: \.self) { suggestion in
                         Button {
                             titleFocused = false
@@ -624,8 +630,8 @@ struct AddPlanSheet: View {
     }
 
     private var subCategoryPicker: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("소분류")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -635,7 +641,7 @@ struct AddPlanSheet: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     ForEach(subCategorySuggestions, id: \.self) { suggestion in
                         Button {
                             titleFocused = false
@@ -762,7 +768,7 @@ struct AddPlanSheet: View {
         placeholder: String,
         text: Binding<String>
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             HStack {
                 Text(label)
                     .font(.taption(size: 10.5, weight: .bold))
@@ -781,8 +787,8 @@ struct AddPlanSheet: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 9)
         .background(
-            Color(red: 0.965, green: 0.965, blue: 0.975),
-            in: RoundedRectangle(cornerRadius: 10)
+            Color.tpFieldFill,
+            in: RoundedRectangle(cornerRadius: TaptionRadius.field)
         )
     }
 
@@ -940,7 +946,7 @@ struct AddPlanSheet: View {
     }
 
     private func sectionLabel(_ title: String, caption: String) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: TaptionSpacing.snug) {
             Text(title)
                 .font(.taption(size: 10.5, weight: .bold))
                 .foregroundStyle(Color.tpInk)
@@ -968,8 +974,8 @@ struct GoalRepeatRulesEditor: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text("반복")
                     .font(.taption(size: 10.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -985,7 +991,7 @@ struct GoalRepeatRulesEditor: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: TaptionSpacing.snug) {
                 presetButton("주중", weekdays: [2, 3, 4, 5, 6],
                              start: 23 * 60, end: 6 * 60 + 30)
                 presetButton("주말", weekdays: [7, 1],
@@ -1027,8 +1033,8 @@ struct GoalRepeatRulesEditor: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(
-                    Color(red: 0.965, green: 0.965, blue: 0.975),
-                    in: RoundedRectangle(cornerRadius: 9)
+                    Color.tpFieldFill,
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                 )
         }
         .buttonStyle(.plain)
@@ -1038,8 +1044,8 @@ struct GoalRepeatRulesEditor: View {
         rule: Binding<GoalRepeatRule>,
         index: Int
     ) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Text(GoalRepeatRuleFormatter.summary(rule.wrappedValue))
                     .font(.taption(size: 9.5, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -1052,6 +1058,7 @@ struct GoalRepeatRulesEditor: View {
                         .font(.taption(size: 9.5, weight: .bold))
                         .foregroundStyle(Color.red.opacity(0.78))
                 }
+                .accessibilityLabel("반복 규칙 삭제")
                 .buttonStyle(.plain)
             }
 
@@ -1060,9 +1067,9 @@ struct GoalRepeatRulesEditor: View {
                 .textInputAutocapitalization(.sentences)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 7)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+                .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
 
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 ForEach(weekdayOrder, id: \.value) { day in
                     Button {
                         toggle(day.value, in: rule)
@@ -1080,14 +1087,14 @@ struct GoalRepeatRulesEditor: View {
                                 rule.wrappedValue.weekdays.contains(day.value)
                                     ? Color.tpInk
                                     : Color.white,
-                                in: RoundedRectangle(cornerRadius: 8)
+                                in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                             )
                     }
                     .buttonStyle(.plain)
                 }
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 repeatTimePicker(
                     title: "시작",
                     selection: timeBinding(rule, isStart: true)
@@ -1100,8 +1107,8 @@ struct GoalRepeatRulesEditor: View {
         }
         .padding(9)
         .background(
-            Color(red: 0.965, green: 0.965, blue: 0.975),
-            in: RoundedRectangle(cornerRadius: 11)
+            Color.tpFieldFill,
+            in: RoundedRectangle(cornerRadius: TaptionRadius.compact)
         )
     }
 
@@ -1123,7 +1130,7 @@ struct GoalRepeatRulesEditor: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
     }
 
     private func ruleBinding(_ index: Int) -> Binding<GoalRepeatRule> {
@@ -1258,7 +1265,7 @@ private struct MiniTimeSliceEditor: View {
     private let windowDuration: TimeInterval = 6 * 3_600
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             HStack(alignment: .firstTextBaseline) {
                 Text("시간")
                     .font(.taption(size: 10.5, weight: .bold))
@@ -1277,8 +1284,8 @@ private struct MiniTimeSliceEditor: View {
                 let barWidth = max(34, upper - lower)
 
                 ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 11)
-                        .fill(Color(red: 0.965, green: 0.965, blue: 0.975))
+                    RoundedRectangle(cornerRadius: TaptionRadius.compact)
+                        .fill(Color.tpFieldFill)
 
                     ForEach(0...12, id: \.self) { tick in
                         let x = width * CGFloat(tick) / 12
@@ -1295,10 +1302,10 @@ private struct MiniTimeSliceEditor: View {
                         }
                     }
 
-                    RoundedRectangle(cornerRadius: 9)
+                    RoundedRectangle(cornerRadius: TaptionRadius.control)
                         .fill(Color(hex: category.lightHex))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 9)
+                            RoundedRectangle(cornerRadius: TaptionRadius.control)
                                 .stroke(
                                     Color(hex: category.darkHex),
                                     lineWidth: isMoving ? 2.5 : 1.2
@@ -1329,7 +1336,7 @@ private struct MiniTimeSliceEditor: View {
             }
             .frame(height: 70)
 
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 Image(systemName: "arrow.left.and.right")
                 Text("양 끝 드래그: 5분 조정")
                 Text("·")
@@ -1568,7 +1575,7 @@ private struct CustomCategoryScreen: View {
                             .font(.taption(size: 18))
                             .foregroundStyle(Color(red: 0.33, green: 0.46, blue: 0.24))
                             .frame(width: 34, height: 34)
-                            .background(colors[selectedColor], in: RoundedRectangle(cornerRadius: 11))
+                            .background(colors[selectedColor], in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
                         VStack(alignment: .leading, spacing: 2) {
                             Text("미리보기")
                                 .font(.taption(size: 9.5))
@@ -1590,12 +1597,12 @@ private struct CustomCategoryScreen: View {
                             .multilineTextAlignment(.trailing)
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("아이콘 · \(CategoryIcon.allCases.count)개")
                             .font(.taption(size: 11, weight: .bold))
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: 5) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 8), spacing: TaptionSpacing.compact) {
                             ForEach(icons, id: \.self) { icon in
                                 Button {
                                     selectedIcon = icon
@@ -1605,16 +1612,18 @@ private struct CustomCategoryScreen: View {
                                         .foregroundStyle(selectedIcon == icon ? Color.white : Color.tpSecondary)
                                         .frame(maxWidth: .infinity, minHeight: 31)
                                         .background(
-                                            selectedIcon == icon ? Color.tpInk : Color(red: 0.94, green: 0.94, blue: 0.95),
-                                            in: RoundedRectangle(cornerRadius: 9)
+                                            selectedIcon == icon ? Color.tpInk : Color.tpControlFill,
+                                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                                         )
                                 }
+                                .accessibilityLabel("아이콘 \(icon.rawValue)")
+                                .accessibilityAddTraits(selectedIcon == icon ? .isSelected : [])
                                 .buttonStyle(.plain)
                             }
                         }
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("색상")
@@ -1624,24 +1633,26 @@ private struct CustomCategoryScreen: View {
                                 Button {
                                     selectedColor = index
                                 } label: {
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: TaptionRadius.field)
                                         .fill(colors[index])
                                         .frame(width: 31, height: 31)
                                         .overlay {
                                             if selectedColor == index {
-                                                RoundedRectangle(cornerRadius: 10)
+                                                RoundedRectangle(cornerRadius: TaptionRadius.field)
                                                     .stroke(Color.tpInk, lineWidth: 2)
                                                     .padding(-3)
                                             }
                                         }
                                 }
+                                .accessibilityLabel("색상 \(index + 1)")
+                                .accessibilityAddTraits(selectedColor == index ? .isSelected : [])
                                 .buttonStyle(.plain)
                                 if index != colors.indices.last { Spacer() }
                             }
                         }
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
 
                     Button {
                         onSave(name, selectedIcon, colorHex)
@@ -1651,7 +1662,7 @@ private struct CustomCategoryScreen: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
+                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                     }
                     .buttonStyle(.plain)
                 }
@@ -1686,7 +1697,7 @@ private struct TimeSliderScreen: View {
             pickerHeader("시간 선택", trailing: "완료", action: onDone)
 
             VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 8) {
+                HStack(spacing: TaptionSpacing.regular) {
                     RoundedRectangle(cornerRadius: 4).fill(Color.tpStudyDark).frame(width: 12, height: 12)
                     Text("영어 공부").font(.taption(size: 16, weight: .bold))
                 }
@@ -1708,17 +1719,17 @@ private struct TimeSliderScreen: View {
                         xPosition(for: span.end, width: availableWidth) + 6
                     let barWidth = max(16, upper - lower)
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: TaptionRadius.card)
                             .fill(Color(red: 0.96, green: 0.96, blue: 0.97))
                         HStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { index in
                                 Rectangle()
-                                    .fill(index.isMultiple(of: 4) ? Color(red: 0.85, green: 0.85, blue: 0.87) : Color(red: 0.93, green: 0.93, blue: 0.94))
+                                    .fill(index.isMultiple(of: 4) ? Color(red: 0.85, green: 0.85, blue: 0.87) : Color.tpTrackFill)
                                     .frame(width: 0.5)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: TaptionRadius.field)
                             .fill(Color.tpStudy)
                             .frame(width: barWidth, height: 38)
                             .position(x: lower + barWidth / 2, y: 28)
@@ -1745,7 +1756,7 @@ private struct TimeSliderScreen: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 10))
+                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.field))
                             .position(
                                 x: min(
                                     proxy.size.width - 31,
@@ -1767,7 +1778,7 @@ private struct TimeSliderScreen: View {
                 .font(.taption(size: 10))
                 .foregroundStyle(Color.tpSecondary)
 
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     ForEach([30, 60, 90, 120], id: \.self) { minutes in
                         Button {
                             durationMinutes = minutes
@@ -1788,14 +1799,14 @@ private struct TimeSliderScreen: View {
                                             green: 0.94,
                                             blue: 0.95
                                         ),
-                                    in: RoundedRectangle(cornerRadius: 9)
+                                    in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                                 )
                         }
                         .buttonStyle(.plain)
                     }
                 }
 
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     hint("슬라이드", "1분 단위\n이동")
                     hint("빠르게", "10분 단위\n반올림 스냅")
                     hint(
@@ -1812,7 +1823,7 @@ private struct TimeSliderScreen: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
-                        .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
+                        .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                 }
                 .buttonStyle(.plain)
             }
@@ -1985,7 +1996,7 @@ private struct TimeSliderScreen: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
-        .background(Color(red: 0.96, green: 0.96, blue: 0.97), in: RoundedRectangle(cornerRadius: 11))
+        .background(Color(red: 0.96, green: 0.96, blue: 0.97), in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
     }
 }
 

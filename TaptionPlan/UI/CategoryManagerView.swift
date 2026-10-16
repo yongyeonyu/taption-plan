@@ -33,7 +33,7 @@ struct CategoryManagerView: View {
     }
 
     private var overviewCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             Label("자동 분류 기준", systemImage: "list.bullet.rectangle")
                 .font(.taption(size: 11, weight: .bold))
                 .foregroundStyle(Color.tpInk)
@@ -55,12 +55,13 @@ struct CategoryManagerView: View {
         VStack(alignment: .leading, spacing: TaptionMenuMetrics.sectionSpacing) {
             HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: category.systemImage)
+                    .accessibilityHidden(true)
                     .font(.taption(size: 14, weight: .bold))
                     .foregroundStyle(categoryColor(category.id))
                     .frame(width: 30, height: 30)
                     .background(
                         categoryColor(category.id).opacity(0.16),
-                        in: RoundedRectangle(cornerRadius: 8)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                     )
 
                 Text(category.title)
@@ -77,7 +78,7 @@ struct CategoryManagerView: View {
                     .foregroundStyle(Color.tpSecondary)
             }
 
-            LazyVStack(spacing: 5) {
+            LazyVStack(spacing: TaptionSpacing.compact) {
                 ForEach(category.details) { detail in
                     detailRow(detail, tint: categoryColor(category.id))
                 }
@@ -85,7 +86,7 @@ struct CategoryManagerView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
     }
 
     private func detailRow(
@@ -108,7 +109,7 @@ struct CategoryManagerView: View {
         }
         .padding(.horizontal, TaptionMenuMetrics.chipHorizontalPadding)
         .frame(minHeight: 31)
-        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
     }
 
     private var automaticBadge: some View {

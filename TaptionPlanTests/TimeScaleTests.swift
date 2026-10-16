@@ -5330,3 +5330,47 @@ final class HealthPurposeStringContractTests: XCTestCase {
         }
     }
 }
+
+/// The design tokens replaced hard-coded literals, so each token must keep the
+/// exact value it replaced.
+final class DesignTokenValueTests: XCTestCase {
+    func testRadiusTokensKeepReplacedValues() {
+        XCTAssertEqual(TaptionRadius.tight, 7)
+        XCTAssertEqual(TaptionRadius.small, 8)
+        XCTAssertEqual(TaptionRadius.control, 9)
+        XCTAssertEqual(TaptionRadius.field, 10)
+        XCTAssertEqual(TaptionRadius.compact, 11)
+        XCTAssertEqual(TaptionRadius.panel, 12)
+        XCTAssertEqual(TaptionRadius.tile, 13)
+        XCTAssertEqual(TaptionRadius.card, 14)
+    }
+
+    func testSpacingTokensKeepReplacedValues() {
+        XCTAssertEqual(TaptionSpacing.tight, 4)
+        XCTAssertEqual(TaptionSpacing.compact, 5)
+        XCTAssertEqual(TaptionSpacing.snug, 6)
+        XCTAssertEqual(TaptionSpacing.cozy, 7)
+        XCTAssertEqual(TaptionSpacing.regular, 8)
+    }
+
+    func testColorTokensKeepReplacedLiterals() {
+        let expected: [(Color, Color)] = [
+            (.tpControlFill, Color(red: 0.94, green: 0.94, blue: 0.95)),
+            (.tpControlFillSoft, Color(red: 0.95, green: 0.95, blue: 0.96)),
+            (.tpFieldFill, Color(red: 0.965, green: 0.965, blue: 0.975)),
+            (.tpControlStroke, Color(red: 0.89, green: 0.89, blue: 0.91)),
+            (.tpTrackFill, Color(red: 0.93, green: 0.93, blue: 0.94)),
+            (.tpWarningTint, Color(red: 1.00, green: 0.95, blue: 0.85)),
+            (.tpSuccessTint, Color(red: 0.93, green: 0.96, blue: 0.91)),
+        ]
+        for (token, literal) in expected {
+            XCTAssertEqual(components(token), components(literal))
+        }
+    }
+
+    private func components(_ color: Color) -> [CGFloat] {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return [red, green, blue, alpha]
+    }
+}

@@ -2126,7 +2126,7 @@ struct ScheduleView: View {
     }
 
     private func integrationNotice(_ missing: [String]) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Image(systemName: "exclamationmark.circle")
                 .font(.taption(size: 13, weight: .bold))
                 .foregroundStyle(Color.tpPlaceDark)
@@ -2156,7 +2156,7 @@ struct ScheduleView: View {
     }
 
     private var sleepConnectionNotice: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Image(systemName: "moon.zzz")
                 .font(.taption(size: 13, weight: .bold))
                 .foregroundStyle(Color.tpHealthDark)
@@ -2178,7 +2178,7 @@ struct ScheduleView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(Color(red: 0.93, green: 0.96, blue: 0.91))
+        .background(Color.tpSuccessTint)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpHealthDark.opacity(0.18)).frame(height: 0.5)
         }
@@ -2190,8 +2190,8 @@ struct ScheduleView: View {
     private func appleWatchNotice(
         _ prompt: AppleWatchOnboardingPrompt
     ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.regular) {
                 Image(systemName: "applewatch")
                     .font(.taption(size: 13, weight: .bold))
                     .foregroundStyle(Color.tpInk)
@@ -2541,7 +2541,7 @@ private struct AirQualityDetailSheet: View {
                         }
                     }
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         Image(systemName: weather.isStale == true
                             ? "clock.arrow.circlepath"
                             : "checkmark.circle.fill")
@@ -2571,7 +2571,7 @@ private struct AirQualityDetailSheet: View {
                         )
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
                         detailRow(
                             "관측 시각",
                             airQuality.observedAt.formatted(
@@ -2595,7 +2595,7 @@ private struct AirQualityDetailSheet: View {
                     .padding(14)
                     .background(
                         Color.tpBackground,
-                        in: RoundedRectangle(cornerRadius: 14)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.card)
                     )
 
                     WeatherAttributionView()
@@ -2617,7 +2617,7 @@ private struct AirQualityDetailSheet: View {
         value: Double,
         grade: AirQualityGrade
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             Text(title)
                 .font(.taption(size: 13, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
@@ -2629,7 +2629,7 @@ private struct AirQualityDetailSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 14))
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
     }
 
     private func detailRow(_ title: String, _ value: String) -> some View {
@@ -3008,8 +3008,8 @@ private struct RecordRelationshipView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
                     .font(.taption(size: 10, weight: .bold))
                 Text("기록 출처 연결")
@@ -3045,7 +3045,7 @@ private struct RecordRelationshipView: View {
                 .padding(.vertical, 5)
                 .background(
                     Color.tpSleep.opacity(0.14),
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
                 )
             }
 
@@ -3103,7 +3103,7 @@ private struct RecordRelationshipView: View {
                                         .frame(width: columnWidth, height: cardHeight, alignment: .leading)
                                         .background(
                                             layerColor(layer).opacity(0.11),
-                                            in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            in: RoundedRectangle(cornerRadius: TaptionRadius.tight, style: .continuous)
                                         )
                                 }
                             }
@@ -3116,9 +3116,9 @@ private struct RecordRelationshipView: View {
             .frame(height: CGFloat(max(1, columns.map(\.count).max() ?? 1)) * (cardHeight + rowGap) + 18)
         }
         .padding(9)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionRadius.compact, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.compact, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.75), lineWidth: 0.5)
         }
     }
@@ -3555,12 +3555,12 @@ private struct TimelineDetailPanel: View {
     }
 
     private var detailContextHeader: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             if playheadDetailSections.isEmpty {
                 detailContextTitle
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 5) {
+                    HStack(spacing: TaptionSpacing.compact) {
                         ForEach(playheadDetailSections) { item in
                             Button {
                                 section = item
@@ -3602,14 +3602,14 @@ private struct TimelineDetailPanel: View {
     }
 
     private var detailContextTitle: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Image(systemName: activeSelection?.preferredDetailSection.systemImage ?? "clock")
                 .font(.taption(size: 10, weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 24, height: 24)
                 .background(
                     Color.tpSurface,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.tight, style: .continuous)
                 )
 
             VStack(alignment: .leading, spacing: 1) {
@@ -3789,7 +3789,7 @@ private struct TimelineDetailPanel: View {
         let isFocused = activeSelection?.preferredDetailSection == item
             || (focusedRoutineForDetail != nil && item == .routine)
             || (activeSelection != nil && section == item)
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             Group {
                 switch item {
                 case .schedule:
@@ -3837,10 +3837,10 @@ private struct TimelineDetailPanel: View {
             isFocused
                 ? Color.tpInk.opacity(0.035)
                 : Color.tpSurface,
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.panel, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.panel, style: .continuous)
                 .stroke(
                     isFocused
                         ? Color.tpInk.opacity(0.34)
@@ -3853,7 +3853,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routeContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             HStack {
                 Label(
                     routeTitle,
@@ -3870,7 +3870,7 @@ private struct TimelineDetailPanel: View {
                 trackingControls
             }
             if let air = closestAirQuality {
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     Image(systemName: "aqi.medium")
                     Text("PM10 \(Int(air.pm10MicrogramsPerCubicMeter.rounded()))")
                     Text("PM2.5 \(Int(air.pm25MicrogramsPerCubicMeter.rounded()))")
@@ -4015,7 +4015,7 @@ private struct TimelineDetailPanel: View {
                             }
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous))
                 }
 
                 if displayedRouteCoordinates.count >= 2 {
@@ -4064,7 +4064,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var trackingControls: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: TaptionSpacing.snug) {
             if let session = model.activeTrackingSession {
                 Label(
                     "\(session.kind.displayName) 기록 중",
@@ -4111,11 +4111,11 @@ private struct TimelineDetailPanel: View {
     }
 
     private var locationContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading("위치", systemImage: "mappin.and.ellipse")
             if detailPlaces.isEmpty {
                 if let coordinate = currentLocationCoordinate {
-                    HStack(spacing: 7) {
+                    HStack(spacing: TaptionSpacing.cozy) {
                         Image(systemName: "scope")
                             .foregroundStyle(Color.tpNow)
                         Text(
@@ -4129,7 +4129,7 @@ private struct TimelineDetailPanel: View {
                 }
             } else {
                 ForEach(detailPlaces) { place in
-                    HStack(spacing: 7) {
+                    HStack(spacing: TaptionSpacing.cozy) {
                         Image(systemName: "building.2")
                             .font(.taption(size: 9, weight: .bold))
                             .foregroundStyle(Color.tpPlaceDark)
@@ -4156,11 +4156,11 @@ private struct TimelineDetailPanel: View {
     }
 
     private var movementContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading("이동", systemImage: "figure.walk.motion")
             ForEach(confirmedDetailTravel) { travel in
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 7) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
+                    HStack(spacing: TaptionSpacing.cozy) {
                         Image(systemName: routeModeSystemImage(travel.mode))
                             .font(.taption(size: 9, weight: .bold))
                             .foregroundStyle(detailTravelColor(travel))
@@ -4199,7 +4199,7 @@ private struct TimelineDetailPanel: View {
                 }
             }
             ForEach(confirmedDetailMovementActuals) { actual in
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     Image(
                         systemName: movementActualSymbol(actual)
                     )
@@ -4247,7 +4247,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var activityContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             automaticRecordsContent(
                 title: "활동",
                 systemImage: "figure.run",
@@ -4261,7 +4261,7 @@ private struct TimelineDetailPanel: View {
     /// 앱 사용은 "어떤 앱을, 언제부터, 얼마나"가 전부다. 선택한 줄은 앱
     /// 열기·알림 근거까지 펼쳐서 탭 한 번으로 전부 보이게 한다.
     private var appUsageContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading(
                 ScreenTimeUsageRecordEngine.laneTitle,
                 systemImage: "app.badge.clock"
@@ -4280,7 +4280,7 @@ private struct TimelineDetailPanel: View {
     private func appUsageRow(_ actual: ActualRecord) -> some View {
         let span = actual.span()
         let isSelected = selectedActual?.id == actual.id
-        return HStack(alignment: .top, spacing: 7) {
+        return HStack(alignment: .top, spacing: TaptionSpacing.cozy) {
             Image(systemName: "app.badge.clock")
                 .font(.taption(size: 9, weight: .bold))
                 .foregroundStyle(Color.tpProjectDark)
@@ -4310,10 +4310,10 @@ private struct TimelineDetailPanel: View {
     }
 
     private var weatherContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading("날씨", systemImage: "cloud.sun")
             ForEach(detailData.weather) { weather in
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     Image(systemName: weather.symbolName)
                         .font(.taption(size: 12, weight: .bold))
                         .symbolRenderingMode(.palette)
@@ -4353,7 +4353,7 @@ private struct TimelineDetailPanel: View {
     /// 메모 카드. 시간표 메모 줄이 표식으로 뭉쳐 보여 주는 것을 여기서는
     /// 하나씩 펼쳐 보여 준다. 새 메모 입력은 하단 메뉴에서 시작한다.
     private var memoContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading(
                 TimelineRowKind.memo.title,
                 systemImage: TimelineRowKind.memo.systemImage
@@ -4386,10 +4386,10 @@ private struct TimelineDetailPanel: View {
     }
 
     private var routineContent: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             detailHeading("루틴", systemImage: "repeat.circle")
             if let routine = focusedRoutineForDetail {
-                HStack(spacing: 8) {
+                HStack(spacing: TaptionSpacing.regular) {
                     Image(systemName: "repeat.circle.fill")
                         .font(.taption(size: 18, weight: .bold))
                         .foregroundStyle(Color.tpSleepDark)
@@ -4422,7 +4422,7 @@ private struct TimelineDetailPanel: View {
                     plans: model.snapshot.plans,
                     actuals: model.snapshot.actuals
                 )
-                HStack(spacing: 8) {
+                HStack(spacing: TaptionSpacing.regular) {
                     Label("하위 액션 \(actions.count)개", systemImage: "checklist")
                     Label("연결 실적 \(linkedActuals.count)개", systemImage: "checkmark.circle")
                 }
@@ -4464,10 +4464,10 @@ private struct TimelineDetailPanel: View {
         actuals: [ActualRecord],
         tint: Color
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading(title, systemImage: systemImage)
             ForEach(plans) { plan in
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(tint.opacity(0.72))
                         .frame(width: 5, height: 24)
@@ -4481,7 +4481,7 @@ private struct TimelineDetailPanel: View {
                 }
             }
             ForEach(actuals) { actual in
-                HStack(spacing: 7) {
+                HStack(spacing: TaptionSpacing.cozy) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.taption(size: 9, weight: .bold))
                         .foregroundStyle(tint)
@@ -4525,7 +4525,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var actionContent: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             detailHeading("액션·메모", systemImage: "checklist.checked")
             if let actual = selectedActual {
                 Text(actual.title)
@@ -4571,7 +4571,7 @@ private struct TimelineDetailPanel: View {
                                 id: plan.id
                             )
                         } label: {
-                            HStack(spacing: 7) {
+                            HStack(spacing: TaptionSpacing.cozy) {
                                 RoundedRectangle(
                                     cornerRadius: plan.origin == .repeatRule
                                         ? 0
@@ -4597,6 +4597,7 @@ private struct TimelineDetailPanel: View {
                                         .foregroundStyle(Color.tpSecondary)
                                 }
                                 Image(systemName: "chevron.right")
+                                    .accessibilityHidden(true)
                                     .font(.taption(size: 7, weight: .bold))
                                     .foregroundStyle(Color.tpSecondary)
                             }
@@ -4605,7 +4606,7 @@ private struct TimelineDetailPanel: View {
                             .background(
                                 Color.white.opacity(0.82),
                                 in: RoundedRectangle(
-                                    cornerRadius: 9,
+                                    cornerRadius: TaptionRadius.control,
                                     style: .continuous
                                 )
                             )
@@ -4618,7 +4619,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private func routineLinkControl(for action: PlanRecord) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: TaptionSpacing.snug) {
             if let routine = routineForAction(action) {
                 Label(
                     "연결된 루틴 · \(routineDisplayTitle(routine))",
@@ -4644,7 +4645,7 @@ private struct TimelineDetailPanel: View {
         .padding(.vertical, 6)
         .background(
             Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
         )
     }
 
@@ -4672,7 +4673,7 @@ private struct TimelineDetailPanel: View {
 
     private func actualGoalLinkControl(_ actual: ActualRecord) -> some View {
         let routineOnly = AutomaticRecordTimelineEngine.linksOnlyToRoutine(actual)
-        return HStack(spacing: 6) {
+        return HStack(spacing: TaptionSpacing.snug) {
             if let goal = goalForActual(actual) {
                 Label(
                     "루틴 근거 · \(GoalRecordPolicy.displayTitle(goal.title).replacingOccurrences(of: GoalRecordPolicy.currentPrefix, with: ""))",
@@ -4704,12 +4705,12 @@ private struct TimelineDetailPanel: View {
         .padding(.vertical, 6)
         .background(
             Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
         )
     }
 
     private func recordLinkControl(_ selection: TimelineSelection) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: TaptionSpacing.snug) {
             Label("연결은 직접 선택", systemImage: "link.badge.plus")
                 .font(.taption(size: 8, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
@@ -4725,7 +4726,7 @@ private struct TimelineDetailPanel: View {
         .padding(.vertical, 6)
         .background(
             Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
         )
     }
 
@@ -5262,8 +5263,8 @@ private struct TimelineDetailPanel: View {
 
     private func actionMemoPreview(planID: UUID) -> some View {
         let memos = model.memos(for: planID)
-        return VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 5) {
+        return VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
+            HStack(spacing: TaptionSpacing.compact) {
                 Image(systemName: "note.text")
                     .font(.taption(size: 8.5, weight: .bold))
                 Text("메모 \(memos.count)개")
@@ -5290,16 +5291,16 @@ private struct TimelineDetailPanel: View {
         .padding(.vertical, 8)
         .background(
             Color.white.opacity(0.78),
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
                 .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
         }
     }
 
     private var eventContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading("이벤트", systemImage: "sparkles")
             let events = detailData.eventPlans
             if events.isEmpty {
@@ -5324,7 +5325,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var photoContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             HStack {
                 detailHeading("사진", systemImage: "photo.on.rectangle")
                 Spacer()
@@ -5352,9 +5353,9 @@ private struct TimelineDetailPanel: View {
                 .frame(height: 220)
                 .background(
                     Color.black,
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous))
 
                 Text(cluster.capturedAt.formatted(date: .omitted, time: .shortened))
                     .font(.taption(size: 8, weight: .semibold))
@@ -5373,7 +5374,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private var scheduleContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.snug) {
             detailHeading("일정", systemImage: "calendar")
             let calendarEvents = detailData.calendarEvents
             if calendarEvents.isEmpty {
@@ -5382,7 +5383,7 @@ private struct TimelineDetailPanel: View {
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(calendarEvents) { event in
-                    HStack(spacing: 7) {
+                    HStack(spacing: TaptionSpacing.cozy) {
                         Image(systemName: "calendar")
                             .font(.taption(size: 8, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
@@ -6152,7 +6153,7 @@ private struct TimelineDetailPanel: View {
     }
 
     private func travelModeEditor(for travel: TravelSegment) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             Label(
                 routeModeName(travel.mode),
                 systemImage: routeModeSystemImage(travel.mode)
@@ -6192,9 +6193,9 @@ private struct TimelineDetailPanel: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: 9))
+        .background(Color.tpSurfaceCream, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
         .overlay {
-            RoundedRectangle(cornerRadius: 9)
+            RoundedRectangle(cornerRadius: TaptionRadius.control)
                 .stroke(Color.tpLine, lineWidth: 0.7)
         }
     }
@@ -6485,7 +6486,7 @@ private struct RoutineActionLinkSheet: View {
                                 dismiss()
                             }
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: TaptionSpacing.regular) {
                                 Image(systemName: isCurrentRoutine(routine)
                                     ? "checkmark.circle.fill"
                                     : "repeat.circle")
@@ -6603,7 +6604,7 @@ private struct GoalActualLinkSheet: View {
                                 )
                             }
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: TaptionSpacing.regular) {
                                 Image(systemName: candidate.isCurrent
                                     ? "checkmark.circle.fill"
                                     : "scope")
@@ -6838,7 +6839,7 @@ private struct RecordNodeLinkSheet: View {
                                 )
                             }
                         } label: {
-                            HStack(spacing: 8) {
+                            HStack(spacing: TaptionSpacing.regular) {
                                 Image(systemName: GoalRecordPolicy.isGoal(plan)
                                     ? "repeat.circle"
                                     : "checklist")
@@ -6900,7 +6901,7 @@ private struct DetailMemoList: View {
         if items.isEmpty {
             EmptyView()
         } else {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
                 ForEach(items) { memo in
                     if let onSelect {
                         Button {
@@ -6921,10 +6922,10 @@ private struct DetailMemoList: View {
             .padding(.vertical, 7)
             .background(
                 Color.tpBackground,
-                in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionRadius.small, style: .continuous)
                     .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.5)
             }
             .accessibilityLabel(
@@ -6934,7 +6935,7 @@ private struct DetailMemoList: View {
     }
 
     private func memoRow(_ memo: ActionMemo) -> some View {
-        HStack(alignment: .top, spacing: 5) {
+        HStack(alignment: .top, spacing: TaptionSpacing.compact) {
             Image(systemName: TimelineRowKind.memo.systemImage)
                 .font(.taption(size: 8, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
@@ -8031,6 +8032,7 @@ private struct TimelineBoard: View {
                                 .foregroundStyle(.secondary)
                             if preset == currentResolutionPreset {
                                 Image(systemName: "checkmark")
+                                    .accessibilityLabel("선택됨")
                             }
                         }
                     }
@@ -9901,7 +9903,7 @@ private struct TimelineBoard: View {
 
     private func photoRow(_ clusters: [PhotoCluster]) -> some View {
         HStack(spacing: 0) {
-            HStack(spacing: 4) {
+            HStack(spacing: TaptionSpacing.tight) {
                 RoundedRectangle(cornerRadius: 3)
                     .fill(Color.tpPhotoDark)
                     .frame(width: 8, height: 8)
@@ -9950,9 +9952,9 @@ private struct TimelineBoard: View {
                         localIdentifier: cluster.representative.id
                     )
                         .frame(width: 39, height: 39)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
                                 .stroke(.white, lineWidth: 2)
                         }
                         .shadow(color: .black.opacity(0.24), radius: 2.5, y: 1)
@@ -11190,7 +11192,7 @@ private struct TimelineRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Button(action: onRowTap) {
-                HStack(spacing: 4) {
+                HStack(spacing: TaptionSpacing.tight) {
                     if let iconName = row.iconName {
                         Image(systemName: iconName)
                             .font(.taption(size: 8.5, weight: .bold))
@@ -11786,7 +11788,7 @@ private struct TimelineRowModel: Identifiable {
     var fillColor: Color {
         customFillColor
             ?? category?.color
-            ?? Color(red: 0.94, green: 0.94, blue: 0.95)
+            ?? Color.tpControlFill
     }
 
     var actualColor: Color {
@@ -11916,6 +11918,7 @@ private struct PhotoAssetThumbnail: View {
                         endPoint: .bottomTrailing
                     )
                     Image(systemName: "photo")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                 }

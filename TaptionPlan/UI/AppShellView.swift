@@ -834,7 +834,7 @@ private struct AppLockPINSheet: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 18)
                 .frame(width: 210, height: 48)
-                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14))
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
                 .onChange(of: pin) { _, value in
                     pin = String(value.filter(\.isNumber).prefix(4))
                     if pin.count == 4 {
@@ -900,8 +900,9 @@ private struct RequiredPermissionGateView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
             Image(systemName: "sensor.fill")
+                .accessibilityHidden(true)
                 .font(.system(size: 30, weight: .bold))
                 .foregroundStyle(Color.tpReferenceRose)
             Text(text("필수 권한 설정", "Required permissions"))
@@ -928,6 +929,7 @@ private struct RequiredPermissionGateView: View {
         let missing = gate.missing.contains(permission)
         return HStack(spacing: 12) {
             Image(systemName: metadata(permission).icon)
+                .accessibilityHidden(true)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(
                     missing ? Color.tpReferenceRose : Color.tpReferenceMint
@@ -936,7 +938,7 @@ private struct RequiredPermissionGateView: View {
                 .background(
                     (missing ? Color.tpReferenceRose : Color.tpReferenceMint)
                         .opacity(0.1),
-                    in: RoundedRectangle(cornerRadius: 12)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
                 )
             VStack(alignment: .leading, spacing: 3) {
                 Text(metadata(permission).title)
@@ -970,6 +972,7 @@ private struct RequiredPermissionGateView: View {
                 .disabled(requesting != nil)
             } else {
                 Image(systemName: "checkmark.circle.fill")
+                    .accessibilityLabel(text("허용됨", "Granted"))
                     .font(.system(size: 22))
                     .foregroundStyle(Color.tpReferenceMint)
             }
@@ -1118,7 +1121,7 @@ struct PermissionOnboardingSheet: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             Text("하루는 알아서 기록됩니다")
                 .font(.taption(size: 15, weight: .black))
                 .foregroundStyle(Color.tpInk)
@@ -1133,7 +1136,7 @@ struct PermissionOnboardingSheet: View {
     }
 
     private var footer: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: TaptionSpacing.regular) {
             if isFinished {
                 Button("시작하기") { finish() }
                     .font(.taption(size: 11, weight: .bold))
@@ -1167,15 +1170,16 @@ struct PermissionOnboardingSheet: View {
         offset: Int
     ) -> some View {
         let isCurrent = offset == progress.index
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
             HStack(spacing: 9) {
                 Image(systemName: step.icon)
+                    .accessibilityHidden(true)
                     .font(.taption(size: 14))
                     .foregroundStyle(Color.tpInk)
                     .frame(width: 29, height: 29)
                     .background(
                         Color.tpBackground,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(step.title)
@@ -1222,7 +1226,7 @@ struct PermissionOnboardingSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .draftCard()
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous)
                 .stroke(
                     isCurrent ? Color.tpInk.opacity(0.32) : Color.clear,
                     lineWidth: 1
@@ -1345,7 +1349,7 @@ struct TaptionProAccessView: View {
                         )
                     )
 
-                VStack(spacing: 7) {
+                VStack(spacing: TaptionSpacing.cozy) {
                     Text(title)
                         .font(.system(
                             size: 25,

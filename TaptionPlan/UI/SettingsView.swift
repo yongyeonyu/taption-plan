@@ -95,7 +95,7 @@ struct SettingsView: View {
                         )
                         settingsRow(
                             icon: "pawprint.fill",
-                            iconBackground: Color(red: 1.00, green: 0.95, blue: 0.85),
+                            iconBackground: Color.tpWarningTint,
                             iconColor: Color(red: 0.57, green: 0.38, blue: 0.08),
                             title: "달리는 고양이",
                             subtitle: "위젯 · Live Activity",
@@ -195,7 +195,7 @@ struct SettingsView: View {
                         )
                         settingsToggleRow(
                             icon: "heart.text.square",
-                            iconBackground: Color(red: 0.93, green: 0.96, blue: 0.91),
+                            iconBackground: Color.tpSuccessTint,
                             iconColor: .tpHealthDark,
                             title: "건강 데이터",
                             subtitle: model.healthIntegrationSummary,
@@ -299,7 +299,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
                             settingsRow(
                                 icon: "icloud.and.arrow.up",
                                 iconBackground: Color(
@@ -401,7 +401,7 @@ struct SettingsView: View {
     }
 
     private var cloudSyncRow: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             settingsRow(
                 icon: "icloud",
                 iconBackground: Color(red: 0.90, green: 0.95, blue: 1.00),
@@ -424,7 +424,7 @@ struct SettingsView: View {
     }
 
     private var watchInstallRow: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
             settingsRow(
                 icon: "applewatch",
                 iconBackground: Color(red: 0.91, green: 0.92, blue: 0.95),
@@ -449,7 +449,7 @@ struct SettingsView: View {
         _ value: (report: String, receivedAt: Date)
     ) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 Text("Watch 실행 기록")
                     .font(.taption(size: 9, weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
@@ -491,12 +491,13 @@ struct SettingsView: View {
             } label: {
                 HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                     Image(systemName: "mappin.and.ellipse")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 13))
                         .foregroundStyle(Color.tpPlaceDark)
                         .frame(width: 24, height: 24)
                         .background(
                             Color.tpPlace,
-                            in: RoundedRectangle(cornerRadius: 7)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                         )
                     VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 3) {
@@ -555,7 +556,7 @@ struct SettingsView: View {
         .frame(minHeight: 44)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
     }
@@ -568,12 +569,13 @@ struct SettingsView: View {
                     ? "figure.run"
                     : "figure.walk"
             )
+            .accessibilityHidden(true)
             .font(.taption(size: 13, weight: .bold))
             .foregroundStyle(Color.tpTransitDark)
             .frame(width: 24, height: 24)
             .background(
                 Color.tpTransit.opacity(0.28),
-                in: RoundedRectangle(cornerRadius: 7)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
             )
 
             VStack(alignment: .leading, spacing: 2) {
@@ -604,7 +606,7 @@ struct SettingsView: View {
         .padding(.vertical, 7)
         .background(
             Color.tpTransit.opacity(0.16),
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.panel, style: .continuous)
         )
     }
 
@@ -649,12 +651,13 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: TaptionMenuMetrics.sectionSpacing) {
             HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: "star.circle.fill")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 13))
                     .foregroundStyle(Color.tpPlaceDark)
                     .frame(width: 24, height: 24)
                     .background(
                         Color.tpPlace,
-                        in: RoundedRectangle(cornerRadius: 7)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                     )
                 VStack(alignment: .leading, spacing: 1) {
                     Text("자주가는 곳")
@@ -704,7 +707,7 @@ struct SettingsView: View {
                     .padding(.vertical, TaptionMenuMetrics.compactButtonVerticalPadding)
                     .background(
                         Color.tpBackground,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
 
                 Button {
@@ -718,7 +721,7 @@ struct SettingsView: View {
                         .padding(.vertical, TaptionMenuMetrics.compactButtonVerticalPadding)
                         .background(
                             Color.tpInk,
-                            in: RoundedRectangle(cornerRadius: 9)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                 }
                 .buttonStyle(.plain)
@@ -734,7 +737,7 @@ struct SettingsView: View {
                     .padding(.vertical, TaptionMenuMetrics.compactButtonVerticalPadding)
                     .background(
                         Color.tpBackground,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
 
                 Button {
@@ -748,7 +751,7 @@ struct SettingsView: View {
                         .padding(.vertical, TaptionMenuMetrics.compactButtonVerticalPadding)
                         .background(
                             Color.tpPlaceDark,
-                            in: RoundedRectangle(cornerRadius: 9)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                 }
                 .buttonStyle(.plain)
@@ -764,7 +767,7 @@ struct SettingsView: View {
         .padding(.vertical, 8)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
         .sheet(item: $selectedFrequentPlace) { place in
@@ -844,7 +847,7 @@ struct SettingsView: View {
                         .padding(.vertical, TaptionMenuMetrics.compactButtonVerticalPadding)
                         .background(
                             Color.tpInk,
-                            in: RoundedRectangle(cornerRadius: 9)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                 }
                 .buttonStyle(.plain)
@@ -870,7 +873,7 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Color.tpBackground,
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
         )
     }
 
@@ -886,14 +889,14 @@ struct SettingsView: View {
     }
 
     private var calibrationHistoryList: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
             Text("캘리브레이션 히스토리")
                 .font(.taption(size: 9, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             ForEach(
                 model.settings.floorCalibrationHistory.suffix(10).reversed()
             ) { event in
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     Image(
                         systemName: event.isAutomatic
                             ? "wand.and.stars"
@@ -943,10 +946,12 @@ struct SettingsView: View {
                     Spacer(minLength: 0)
                     if place.point != nil {
                         Image(systemName: "checkmark.circle.fill")
+                            .accessibilityHidden(true)
                             .font(.taption(size: 8.8, weight: .bold))
                             .foregroundStyle(Color.tpPlaceDark)
                     }
                     Image(systemName: "chevron.right")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 7.5, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -966,7 +971,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 Color.tpBackground,
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.field, style: .continuous)
             )
         }
         .buttonStyle(.plain)
@@ -981,15 +986,16 @@ struct SettingsView: View {
     }
 
     private var sensorCollectionProfileRow: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
             HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: "slider.horizontal.3")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 13))
                     .foregroundStyle(Color.tpMovementDark)
                     .frame(width: 24, height: 24)
                     .background(
                         Color.tpMovement,
-                        in: RoundedRectangle(cornerRadius: 7)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                     )
 
                 VStack(alignment: .leading, spacing: 1) {
@@ -1065,21 +1071,22 @@ struct SettingsView: View {
         .padding(.vertical, 8)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
     }
 
     private var watchAccelerationCollectionRow: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
             HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: "waveform.path.ecg")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 13))
                     .foregroundStyle(Color.tpHealthDark)
                     .frame(width: 24, height: 24)
                     .background(
-                        Color(red: 0.93, green: 0.96, blue: 0.91),
-                        in: RoundedRectangle(cornerRadius: 7)
+                        Color.tpSuccessTint,
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                     )
 
                 VStack(alignment: .leading, spacing: 1) {
@@ -1124,13 +1131,13 @@ struct SettingsView: View {
         .padding(.vertical, 8)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
     }
 
     private var watchDataSyncRow: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
             HStack {
                 Text("Apple Watch 데이터 가져오기")
                     .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
@@ -1203,10 +1210,11 @@ struct SettingsView: View {
         } label: {
             HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
                 Image(systemName: "chart.bar.xaxis")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 17))
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
-                    .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 12))
+                    .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("내 시간표")
@@ -1227,11 +1235,12 @@ struct SettingsView: View {
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 12, weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
             .padding(10)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(true)
@@ -1272,6 +1281,7 @@ struct SettingsView: View {
                     Image(systemName: expandedSettingsSections.contains(title)
                         ? "chevron.up"
                         : "chevron.down")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 8, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
                 }
@@ -1295,8 +1305,8 @@ struct SettingsView: View {
                 content()
             }
         }
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
     }
 
     private func settingsScaleRow(
@@ -1357,12 +1367,13 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
             Image(systemName: icon)
+                .accessibilityHidden(true)
                 .font(.taption(size: 13))
                 .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .background(
                     iconBackground,
-                    in: RoundedRectangle(cornerRadius: 7)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                 )
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
@@ -1388,14 +1399,14 @@ struct SettingsView: View {
         .frame(minHeight: 44)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
     }
 
     private func settingsRow(
         icon: String,
-        iconBackground: Color = Color(red: 0.94, green: 0.94, blue: 0.95),
+        iconBackground: Color = Color.tpControlFill,
         iconColor: Color = .tpSecondary,
         title: String,
         subtitle: String,
@@ -1434,12 +1445,13 @@ struct SettingsView: View {
     ) -> some View {
         HStack(spacing: TaptionMenuMetrics.sectionSpacing) {
             Image(systemName: icon)
+                .accessibilityHidden(true)
                 .font(.taption(size: 13))
                 .foregroundStyle(iconColor)
                 .frame(width: 24, height: 24)
                 .background(
                     iconBackground,
-                    in: RoundedRectangle(cornerRadius: 7)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                 )
 
             VStack(alignment: .leading, spacing: 1) {
@@ -1476,6 +1488,7 @@ struct SettingsView: View {
             }
 
             Image(systemName: "chevron.right")
+                .accessibilityHidden(true)
                 .font(.taption(size: 10, weight: .semibold))
                 .foregroundStyle(
                     Color(red: 0.69, green: 0.69, blue: 0.71)
@@ -1485,7 +1498,7 @@ struct SettingsView: View {
         .frame(minHeight: 44)
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(red: 0.94, green: 0.94, blue: 0.95))
+                .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
     }
@@ -1766,7 +1779,7 @@ private struct FrequentPlaceDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .foregroundStyle(.white)
-                .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: 9))
+                .background(Color.tpPlaceDark, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
             }
             .buttonStyle(.plain)
             .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
@@ -1782,7 +1795,7 @@ private struct FrequentPlaceDetailView: View {
                     .foregroundStyle(Color.tpPlaceDark)
                     .background(
                         Color.tpPlace,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
             }
             .buttonStyle(.plain)
@@ -1968,7 +1981,7 @@ private struct FrequentPlaceDetailView: View {
         } label: {
             Group {
                 if let sampling {
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         ProgressView()
                             .controlSize(.mini)
                             .tint(.white)
@@ -1989,7 +2002,7 @@ private struct FrequentPlaceDetailView: View {
             .foregroundStyle(.white)
             .background(
                 floorPrompt.canCommit ? Color.tpInk : Color.tpPlaceDark,
-                in: RoundedRectangle(cornerRadius: 9)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.control)
             )
         }
         .buttonStyle(.plain)
@@ -2009,12 +2022,12 @@ private struct FrequentPlaceDetailView: View {
     }
 
     private func floorReferenceList(_ place: FrequentPlace) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
             Text("이 건물 층 기준")
                 .font(.taption(size: 9, weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             ForEach(place.floorReferencePoints, id: \.floor) { reference in
-                HStack(spacing: 6) {
+                HStack(spacing: TaptionSpacing.snug) {
                     Text(FloorLabel.korean(reference.floor))
                         .font(.taption(size: 9.5, weight: .bold))
                         .foregroundStyle(Color.tpInk)
@@ -2038,6 +2051,7 @@ private struct FrequentPlaceDetailView: View {
                                 minHeight: TaptionMenuMetrics.minimumHitSize
                             )
                     }
+                    .accessibilityLabel("층 기준 삭제")
                     .buttonStyle(.plain)
                 }
             }
@@ -2065,7 +2079,7 @@ private struct FrequentPlaceDetailView: View {
                 .contentShape(Rectangle())
                 .background(
                     Color(red: 1, green: 0.93, blue: 0.93),
-                    in: RoundedRectangle(cornerRadius: 10)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                 )
             }
         }
@@ -2155,7 +2169,7 @@ private extension View {
     func detailCard() -> some View {
         self
             .padding(TaptionMenuMetrics.contentInset)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
     }
 }
 

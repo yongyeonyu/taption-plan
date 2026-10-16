@@ -20,7 +20,7 @@ struct QuickActionSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 14)
 
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 Text(item.title)
                     .font(.taption(size: 16, weight: .bold))
                 Spacer()
@@ -40,7 +40,7 @@ struct QuickActionSheet: View {
                             .padding(.vertical, 6)
                             .background(
                                 Color.tpBackground,
-                                in: RoundedRectangle(cornerRadius: 8)
+                                in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                             )
                     }
                     .buttonStyle(.plain)
@@ -48,8 +48,8 @@ struct QuickActionSheet: View {
             }
             .padding(.bottom, 14)
 
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: TaptionSpacing.regular) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.compact) {
                     Text(item.time)
                         .font(.taption(size: 15, weight: .bold))
                     Text(item.context)
@@ -77,7 +77,7 @@ struct QuickActionSheet: View {
                         .frame(width: 34, height: 34)
                         .background(
                             Color.white,
-                            in: RoundedRectangle(cornerRadius: 9)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                     }
                     .buttonStyle(.plain)
@@ -92,11 +92,11 @@ struct QuickActionSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 11)
-            .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 13))
+            .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
             .padding(.bottom, 12)
 
             // 메모 입력은 하단 메뉴의 메모 추가 버튼에서 시작한다.
-            HStack(spacing: 8) {
+            HStack(spacing: TaptionSpacing.regular) {
                 Image(systemName: "note.text")
                     .font(.taption(size: 15))
                 VStack(alignment: .leading, spacing: 2) {
@@ -114,7 +114,7 @@ struct QuickActionSheet: View {
             .padding(.vertical, 9)
             .background(
                 Color(red: 0.95, green: 0.94, blue: 0.97),
-                in: RoundedRectangle(cornerRadius: 12)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
             )
             .padding(.bottom, 10)
 
@@ -180,8 +180,8 @@ struct QuickActionSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
-                    style == .primary ? Color.tpInk : style == .health ? Color.tpExercise : Color(red: 0.94, green: 0.94, blue: 0.95),
-                    in: RoundedRectangle(cornerRadius: 12)
+                    style == .primary ? Color.tpInk : style == .health ? Color.tpExercise : Color.tpControlFill,
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
                 )
         }
         .buttonStyle(.plain)
@@ -277,8 +277,8 @@ struct MemoDetailView: View {
     // MARK: - 시각
 
     private var instantCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+        VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
+            HStack(alignment: .firstTextBaseline, spacing: TaptionSpacing.snug) {
                 Text(
                     instant.formatted(
                         Date.FormatStyle(date: .abbreviated, time: .omitted)
@@ -300,8 +300,8 @@ struct MemoDetailView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
                         .background(
-                            Color(red: 0.94, green: 0.94, blue: 0.95),
-                            in: RoundedRectangle(cornerRadius: 9)
+                            Color.tpControlFill,
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                 }
                 .buttonStyle(.plain)
@@ -453,7 +453,7 @@ struct MemoDetailView: View {
     // MARK: - 목록
 
     private var savedMemoList: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TaptionSpacing.regular) {
             if entryMemos.isEmpty {
                 ContentUnavailableView(
                     "이 시각에는 아직 메모가 없습니다",
@@ -471,7 +471,7 @@ struct MemoDetailView: View {
     }
 
     private func memoEntryRow(_ entry: ActionMemo) -> some View {
-        HStack(alignment: .top, spacing: 7) {
+        HStack(alignment: .top, spacing: TaptionSpacing.cozy) {
             Text(entry.occurredAt.formatted(date: .omitted, time: .shortened))
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
@@ -479,7 +479,7 @@ struct MemoDetailView: View {
                 .padding(.top, 9)
 
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     Text(entry.kind.displayName)
                         .font(.taption(size: 9, weight: .bold))
                         .foregroundStyle(Color.tpStudyDark)
@@ -508,7 +508,7 @@ struct MemoDetailView: View {
                     .font(.taption(size: 11))
                     .lineSpacing(3)
                 if !entry.attachments.isEmpty {
-                    HStack(spacing: 5) {
+                    HStack(spacing: TaptionSpacing.compact) {
                         ForEach(entry.attachments) { attachment in
                             if attachment.kind == .photo {
                                 MemoPhotoThumbnail(
@@ -519,7 +519,7 @@ struct MemoDetailView: View {
                                 .frame(width: 42, height: 42)
                                 .clipShape(
                                     RoundedRectangle(
-                                        cornerRadius: 8,
+                                        cornerRadius: TaptionRadius.small,
                                         style: .continuous
                                     )
                                 )
@@ -548,7 +548,7 @@ struct MemoDetailView: View {
                                     .background(
                                         Color.tpBackground,
                                         in: RoundedRectangle(
-                                            cornerRadius: 7
+                                            cornerRadius: TaptionRadius.tight
                                         )
                                     )
                                 }
@@ -569,7 +569,7 @@ struct MemoDetailView: View {
     // MARK: - 입력
 
     private var composer: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: TaptionSpacing.regular) {
             TextField(
                 editingMemoID == nil
                     ? "이 시각에 짧은 메모 남기기…"
@@ -587,7 +587,7 @@ struct MemoDetailView: View {
                 .fill(Color(red: 0.93, green: 0.93, blue: 0.95))
                 .frame(height: 0.5)
 
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Button {
                     Task {
                         await model.toggleVoiceMemo(kind: selectedMemoKind)
@@ -615,7 +615,7 @@ struct MemoDetailView: View {
                     .frame(width: 42, height: 34)
                     .background(
                         Color(red: 0.95, green: 0.95, blue: 0.97),
-                        in: RoundedRectangle(cornerRadius: 8)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                     )
                 }
                 .buttonStyle(.plain)
@@ -645,7 +645,7 @@ struct MemoDetailView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
         .overlay {
             RoundedRectangle(cornerRadius: 15)
-                .stroke(Color(red: 0.89, green: 0.89, blue: 0.91), lineWidth: 1)
+                .stroke(Color.tpControlStroke, lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.07), radius: 8, y: 5)
     }
@@ -694,8 +694,8 @@ struct MemoDetailView: View {
             .foregroundStyle(dark ? Color.white : Color.tpSecondary)
             .padding(.horizontal, 9)
             .padding(.vertical, 7)
-            .background(dark ? Color.tpInk : Color(red: 0.94, green: 0.94, blue: 0.95))
-            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .background(dark ? Color.tpInk : Color.tpControlFill)
+            .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.control))
     }
 }
 
@@ -713,6 +713,7 @@ private struct MemoPhotoThumbnail: View {
                     .scaledToFill()
             } else {
                 Image(systemName: "photo")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 13))
                     .foregroundStyle(Color.tpPhotoDark)
             }
@@ -835,17 +836,18 @@ struct CatPickerView: View {
                                 }
                                 .padding(.horizontal, 8)
                                 .frame(maxWidth: .infinity, minHeight: 59)
-                                .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
+                                .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 12)
+                                    RoundedRectangle(cornerRadius: TaptionRadius.panel)
                                         .stroke(
-                                            model.selectedCatCoat == coat ? Color.tpInk : Color(red: 0.89, green: 0.89, blue: 0.91),
+                                            model.selectedCatCoat == coat ? Color.tpInk : Color.tpControlStroke,
                                             lineWidth: model.selectedCatCoat == coat ? 2 : 1
                                         )
                                 }
                                 .overlay(alignment: .topTrailing) {
                                     if model.selectedCatCoat == coat {
                                         Image(systemName: "checkmark")
+                                            .accessibilityLabel("선택됨")
                                             .font(.taption(size: 8, weight: .black))
                                             .foregroundStyle(.white)
                                             .frame(width: 15, height: 15)
@@ -866,7 +868,7 @@ struct CatPickerView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
+                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                     }
                     .buttonStyle(.plain)
 
@@ -942,7 +944,7 @@ struct InferenceDetailView: View {
             }
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 8) {
+                VStack(spacing: TaptionSpacing.regular) {
                     Text("이동은 아래 10종류만 사용합니다. 센서가 직접 구분하지 못하는 수단은 여러 신호를 합쳐 신뢰도와 함께 표시합니다.")
                         .font(.taption(size: 9.5))
                         .foregroundStyle(Color.tpSecondary)
@@ -951,7 +953,7 @@ struct InferenceDetailView: View {
 
                     routeMapCard
 
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 5) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: TaptionSpacing.compact) {
                         ForEach(modes, id: \.self) { mode in
                             Button {
                                 guard let selectedGroup else { return }
@@ -960,7 +962,7 @@ struct InferenceDetailView: View {
                                     mode: mode
                                 )
                             } label: {
-                                VStack(spacing: 4) {
+                                VStack(spacing: TaptionSpacing.tight) {
                                     Image(systemName: mode.systemImage)
                                         .font(.taption(size: 15))
                                     Text(mode.displayName)
@@ -976,10 +978,10 @@ struct InferenceDetailView: View {
                                     selectedGroup?.mode == mode
                                         ? Color.tpTransitDark
                                         : Color.white,
-                                    in: RoundedRectangle(cornerRadius: 10)
+                                    in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                                 )
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 10)
+                                    RoundedRectangle(cornerRadius: TaptionRadius.field)
                                         .stroke(
                                             selectedGroup?.mode == mode
                                                 ? Color.tpTransitDark
@@ -1012,6 +1014,7 @@ struct InferenceDetailView: View {
                                 .onTapGesture {
                                     selectedGroupID = group.id
                                 }
+                                .accessibilityAddTraits(.isButton)
                         }
                         ForEach(dayFloors) { floor in
                             floorInferenceCard(floor)
@@ -1054,15 +1057,16 @@ struct InferenceDetailView: View {
     private func travelInferenceCard(
         _ group: TravelSegmentGroup
     ) -> some View {
-        VStack(spacing: 7) {
-            HStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Image(systemName: group.mode.systemImage)
+                    .accessibilityHidden(true)
                     .font(.taption(size: 15))
                     .foregroundStyle(Color.tpTransitDark)
                     .frame(width: 29, height: 29)
                     .background(
                         Color.tpTransit,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(
@@ -1094,13 +1098,13 @@ struct InferenceDetailView: View {
                     .background(
                         group.confidence == .high
                             ? Color(red: 0.92, green: 0.96, blue: 0.93)
-                            : Color(red: 1.00, green: 0.95, blue: 0.85),
-                        in: RoundedRectangle(cornerRadius: 7)
+                            : Color.tpWarningTint,
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
                     )
             }
 
             if group.segments.count > 1 {
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     Image(systemName: "square.stack.3d.up")
                     Text("이어진 유사 경로 \(group.segments.count)개를 한 번에 표시")
                     Spacer()
@@ -1114,16 +1118,16 @@ struct InferenceDetailView: View {
                 .padding(.vertical, 5)
                 .background(
                     Color.tpTransit.opacity(0.58),
-                    in: RoundedRectangle(cornerRadius: 8)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                 )
             }
 
             if !group.evidence.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.tight) {
                     Text("판정 근거")
                         .font(.taption(size: 7.5, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
-                    ChipFlowLayout(spacing: 4) {
+                    ChipFlowLayout(spacing: TaptionSpacing.tight) {
                         ForEach(group.evidence, id: \.self) { signal in
                             signalChip(signal)
                         }
@@ -1131,7 +1135,7 @@ struct InferenceDetailView: View {
                 }
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: TaptionSpacing.snug) {
                 if group.isConfirmed {
                     Button("자동 판정으로 되돌리기") {
                         model.forgetTravelConfirmations(group.segmentIDs)
@@ -1140,8 +1144,8 @@ struct InferenceDetailView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 7)
                     .background(
-                        Color(red: 0.94, green: 0.94, blue: 0.95),
-                        in: RoundedRectangle(cornerRadius: 9)
+                        Color.tpControlFill,
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 } else {
                     Button("맞아요") {
@@ -1155,7 +1159,7 @@ struct InferenceDetailView: View {
                     .padding(.vertical, 7)
                     .background(
                         Color.tpInk,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 }
                 Button("다른 수단") {
@@ -1165,8 +1169,8 @@ struct InferenceDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 7)
                 .background(
-                    Color(red: 0.94, green: 0.94, blue: 0.95),
-                    in: RoundedRectangle(cornerRadius: 9)
+                    Color.tpControlFill,
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                 )
             }
             .font(.taption(size: 8.5, weight: .bold))
@@ -1176,7 +1180,7 @@ struct InferenceDetailView: View {
         .draftCard()
         .overlay {
             if selectedGroupID == group.id {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: TaptionRadius.card)
                     .stroke(Color.tpTransitDark, lineWidth: 2)
             }
         }
@@ -1185,15 +1189,16 @@ struct InferenceDetailView: View {
     private func floorInferenceCard(
         _ floor: FloorTransition
     ) -> some View {
-        VStack(spacing: 7) {
-            HStack(spacing: 7) {
+        VStack(spacing: TaptionSpacing.cozy) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Image(systemName: "building.2")
+                    .accessibilityHidden(true)
                     .font(.taption(size: 15))
                     .foregroundStyle(Color.tpPlaceDark)
                     .frame(width: 29, height: 29)
                     .background(
                         Color.tpPlace,
-                        in: RoundedRectangle(cornerRadius: 9)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(
@@ -1219,18 +1224,19 @@ struct InferenceDetailView: View {
                     )
             }
 
-            ChipFlowLayout(spacing: 4) {
+            ChipFlowLayout(spacing: TaptionSpacing.tight) {
                 ForEach(floor.evidence, id: \.self) { signal in
                     signalChip(signal)
                 }
             }
 
-            HStack(spacing: 6) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Button {
                     floorOverrides[floor.id, default: 0] -= 1
                 } label: {
                     Image(systemName: "minus")
                 }
+                .accessibilityLabel("층 내리기")
                 Text("\(floorOverrides[floor.id] ?? floor.toFloor ?? 0)층")
                     .font(.taption(size: 10, weight: .black))
                     .frame(maxWidth: .infinity)
@@ -1239,6 +1245,7 @@ struct InferenceDetailView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .accessibilityLabel("층 올리기")
                 Button("이 층으로 확인") {
                     model.confirmFloorTransition(
                         floor.id,
@@ -1252,7 +1259,7 @@ struct InferenceDetailView: View {
                 .padding(.vertical, 7)
                 .background(
                     Color.tpInk,
-                    in: RoundedRectangle(cornerRadius: 9)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                 )
             }
             .font(.taption(size: 8.5, weight: .bold))
@@ -1269,14 +1276,14 @@ struct InferenceDetailView: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .background(
-                Color(red: 0.94, green: 0.94, blue: 0.95),
-                in: RoundedRectangle(cornerRadius: 7)
+                Color.tpControlFill,
+                in: RoundedRectangle(cornerRadius: TaptionRadius.tight)
             )
     }
 
     private var routeMapCard: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(spacing: TaptionSpacing.regular) {
+            HStack(spacing: TaptionSpacing.snug) {
                 Image(systemName: "map")
                     .foregroundStyle(Color.tpTransitDark)
                 VStack(alignment: .leading, spacing: 1) {
@@ -1293,7 +1300,7 @@ struct InferenceDetailView: View {
             }
 
             if allRouteCoordinates.isEmpty {
-                VStack(spacing: 6) {
+                VStack(spacing: TaptionSpacing.snug) {
                     Image(systemName: "location.slash")
                         .font(.taption(size: 18))
                     Text("저장된 GPS 좌표가 있는 경로부터 지도에 표시됩니다")
@@ -1303,7 +1310,7 @@ struct InferenceDetailView: View {
                 .frame(maxWidth: .infinity, minHeight: 105)
                 .background(
                     Color.tpBackground,
-                    in: RoundedRectangle(cornerRadius: 11)
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.compact)
                 )
             } else {
                 Map(position: $mapPosition, content: {
@@ -1356,10 +1363,10 @@ struct InferenceDetailView: View {
                             }
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 11))
+                .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.compact))
             }
 
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 if let selectedGroup {
                     Label(
                         "\(selectedGroup.mode.displayName) · \(selectedGroup.span.duration.shortDuration)",
@@ -1385,7 +1392,7 @@ struct InferenceDetailView: View {
                         .padding(.vertical, 7)
                         .background(
                             Color.tpInk,
-                            in: RoundedRectangle(cornerRadius: 9)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
                 }
                 .buttonStyle(.plain)
@@ -1559,7 +1566,7 @@ struct InferenceDetailView: View {
     }
 
     private var privacyCard: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: TaptionSpacing.snug) {
             Image(systemName: "lock")
                 .font(.taption(size: 15))
                 .foregroundStyle(Color.tpPlaceDark)
@@ -1574,10 +1581,10 @@ struct InferenceDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(9)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 11))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
         .overlay {
-            RoundedRectangle(cornerRadius: 11)
-                .stroke(Color(red: 0.89, green: 0.89, blue: 0.91), lineWidth: 1)
+            RoundedRectangle(cornerRadius: TaptionRadius.compact)
+                .stroke(Color.tpControlStroke, lineWidth: 1)
         }
     }
 }
@@ -1617,7 +1624,7 @@ struct LocationTimelineView: View {
                     Button {
                         model.detail = .inference
                     } label: {
-                        HStack(spacing: 7) {
+                        HStack(spacing: TaptionSpacing.cozy) {
                             Image(systemName: "mappin.and.ellipse")
                                 .foregroundStyle(Color(red: 0.18, green: 0.54, blue: 0.36))
                             Text(locationStatusTitle)
@@ -1638,7 +1645,7 @@ struct LocationTimelineView: View {
                         .padding(.vertical, 8)
                         .background(
                             Color(red: 0.93, green: 0.97, blue: 0.98),
-                            in: RoundedRectangle(cornerRadius: 12)
+                            in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
                         )
                     }
                     .buttonStyle(.plain)
@@ -1682,7 +1689,7 @@ struct LocationTimelineView: View {
                         .padding(.horizontal, 8)
                         .padding(.top, 9)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: TaptionSpacing.snug) {
                         Image(systemName: "lock")
                             .font(.taption(size: 15))
                             .foregroundStyle(Color.tpPlaceDark)
@@ -1697,10 +1704,10 @@ struct LocationTimelineView: View {
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(9)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 11))
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 11)
-                            .stroke(Color(red: 0.89, green: 0.89, blue: 0.91), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: TaptionRadius.compact)
+                            .stroke(Color.tpControlStroke, lineWidth: 1)
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -1987,7 +1994,7 @@ struct LocationTimelineView: View {
     }
 
     private func rowLabel(_ title: String, color: Color, compact: Bool = false) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: TaptionSpacing.tight) {
             RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 8, height: 8)
             Text(title)
                 .font(.taption(size: compact ? 9 : 10.5, weight: .semibold))
@@ -2005,8 +2012,8 @@ struct LocationTimelineView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .frame(width: max(17, proxy.size.width * length), height: 32)
-            .background(Color.tpPlace, in: RoundedRectangle(cornerRadius: 9))
-            .overlay { RoundedRectangle(cornerRadius: 9).stroke(Color.tpPlaceDark.opacity(0.35)) }
+            .background(Color.tpPlace, in: RoundedRectangle(cornerRadius: TaptionRadius.control))
+            .overlay { RoundedRectangle(cornerRadius: TaptionRadius.control).stroke(Color.tpPlaceDark.opacity(0.35)) }
             .position(x: proxy.size.width * start + max(17, proxy.size.width * length) / 2, y: 31)
     }
 
@@ -2015,9 +2022,9 @@ struct LocationTimelineView: View {
             .font(.taption(size: 11))
             .foregroundStyle(Color(red: 0.44, green: 0.29, blue: 0.09))
             .frame(width: max(14, proxy.size.width * length), height: 29)
-            .background(Color.tpTransit.opacity(dashed ? 0.68 : 1), in: RoundedRectangle(cornerRadius: 9))
+            .background(Color.tpTransit.opacity(dashed ? 0.68 : 1), in: RoundedRectangle(cornerRadius: TaptionRadius.control))
             .overlay {
-                RoundedRectangle(cornerRadius: 9)
+                RoundedRectangle(cornerRadius: TaptionRadius.control)
                     .stroke(Color.tpTransitDark.opacity(0.45), style: StrokeStyle(lineWidth: 1, dash: dashed ? [3, 2] : []))
             }
             .position(x: proxy.size.width * start + max(14, proxy.size.width * length) / 2, y: 32)
@@ -2030,7 +2037,7 @@ struct LocationTimelineView: View {
             .lineLimit(1)
             .padding(.horizontal, 6)
             .frame(width: max(18, proxy.size.width * length), height: 26, alignment: .leading)
-            .background(Color.tpProject, in: RoundedRectangle(cornerRadius: 7))
+            .background(Color.tpProject, in: RoundedRectangle(cornerRadius: TaptionRadius.tight))
             .position(x: proxy.size.width * start + max(18, proxy.size.width * length) / 2, y: 29)
     }
 
@@ -2330,9 +2337,9 @@ struct LocationTimelineView: View {
                 .foregroundStyle(Color.tpPlaceDark)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
-                .background(.white, in: RoundedRectangle(cornerRadius: 7))
+                .background(.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tight))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 7)
+                    RoundedRectangle(cornerRadius: TaptionRadius.tight)
                         .stroke(Color.tpPlaceDark.opacity(0.35))
                 }
                 .offset(y: -25)
@@ -2358,7 +2365,7 @@ struct WidgetPreviewView: View {
             }
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
                     Text("홈 화면 · 중간 위젯")
                         .font(.taption(size: 12, weight: .bold))
                         .foregroundStyle(Color.tpInk.opacity(0.55))
@@ -2392,7 +2399,7 @@ struct WidgetPreviewView: View {
     private var widgetCard: some View {
         VStack(spacing: 0) {
             HStack {
-                HStack(spacing: 5) {
+                HStack(spacing: TaptionSpacing.compact) {
                     Text("지금의 시간표")
                         .font(.taption(size: 13, weight: .bold))
                     Text("집중 중")
@@ -2400,7 +2407,7 @@ struct WidgetPreviewView: View {
                         .foregroundStyle(Color(red: 0.57, green: 0.38, blue: 0.08))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color(red: 1.00, green: 0.95, blue: 0.85), in: Capsule())
+                        .background(Color.tpWarningTint, in: Capsule())
                     Text("\(model.selectedCatCoat.shortName) ▾")
                         .font(.taption(size: 8, weight: .bold))
                         .foregroundStyle(Color.tpSecondary)
@@ -2428,7 +2435,7 @@ struct WidgetPreviewView: View {
                         20,
                         proxy.size.width * max(0.02, end - start)
                     )
-                    RoundedRectangle(cornerRadius: 7)
+                    RoundedRectangle(cornerRadius: TaptionRadius.tight)
                         .fill(categoryColor(plan.categoryID))
                         .frame(width: width, height: 24)
                         .overlay(alignment: .leading) {
@@ -2469,8 +2476,8 @@ struct WidgetPreviewView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(
-                    Color(red: 0.93, green: 0.93, blue: 0.94),
-                    in: RoundedRectangle(cornerRadius: 10)
+                    Color.tpTrackFill,
+                    in: RoundedRectangle(cornerRadius: TaptionRadius.field)
                 )
         }
         .buttonStyle(.plain)
@@ -2523,7 +2530,7 @@ struct WidgetPreviewView: View {
                     .padding(.vertical, 7)
                     .background(
                         .white,
-                        in: RoundedRectangle(cornerRadius: 12)
+                        in: RoundedRectangle(cornerRadius: TaptionRadius.panel)
                     )
                     .buttonStyle(.plain)
                 }
@@ -2702,13 +2709,15 @@ struct CategorySetupView: View {
         return Button {
             model.toggleSetupCategory(category.id)
         } label: {
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
                 HStack {
                     Image(systemName: category.icon.systemImage)
+                        .accessibilityHidden(true)
                         .font(.taption(size: 16, weight: .bold))
                         .foregroundStyle(tint)
                     Spacer()
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .accessibilityHidden(true)
                         .font(.taption(size: 15, weight: .bold))
                         .foregroundStyle(selected ? tint : Color.tpLine)
                 }
@@ -2724,10 +2733,10 @@ struct CategorySetupView: View {
             .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
             .background(
                 selected ? Color(hex: category.lightHex).opacity(0.75) : Color.white,
-                in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                in: RoundedRectangle(cornerRadius: TaptionRadius.tile, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                RoundedRectangle(cornerRadius: TaptionRadius.tile, style: .continuous)
                     .stroke(selected ? tint.opacity(0.65) : Color.tpLine, lineWidth: selected ? 1.5 : 0.8)
             }
         }

@@ -269,7 +269,7 @@ struct DraftScalePicker: View {
                         .padding(.vertical, TaptionMenuMetrics.scaleControlVerticalPadding)
                         .background {
                             if selected == scale {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                RoundedRectangle(cornerRadius: TaptionRadius.tight, style: .continuous)
                                     .fill(Color.tpSurface)
                                     .shadow(color: Color.tpSky.opacity(0.24), radius: 1.5, y: 1)
                             }
@@ -284,7 +284,7 @@ struct DraftScalePicker: View {
         }
         .padding(2)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
+            RoundedRectangle(cornerRadius: TaptionRadius.control, style: .continuous)
                 .fill(Color.tpSky.opacity(0.18))
         )
     }
@@ -410,7 +410,7 @@ struct DraftChip: View {
             .padding(.horizontal, TaptionMenuMetrics.chipHorizontalPadding)
             .padding(.vertical, TaptionMenuMetrics.chipVerticalPadding)
             .background(selected ? tint : Color.tpSky.opacity(0.16))
-            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.control, style: .continuous))
     }
 }
 
@@ -473,7 +473,7 @@ struct FixedStripeBackground: View {
         Canvas { context, size in
             context.fill(
                 Path(CGRect(origin: .zero, size: size)),
-                with: .color(Color(red: 0.95, green: 0.95, blue: 0.96))
+                with: .color(Color.tpControlFillSoft)
             )
             var path = Path()
             var x: CGFloat = -size.height
@@ -732,7 +732,7 @@ private struct PreviewActionCat: View {
         phase: Int
     ) -> some View {
         ZStack {
-            HStack(spacing: 7) {
+            HStack(spacing: TaptionSpacing.cozy) {
                 Triangle().fill(coat.baseColor)
                 Triangle().fill(coat.baseColor)
             }
@@ -743,7 +743,7 @@ private struct PreviewActionCat: View {
                 .fill(coat.baseColor)
                 .overlay { Circle().stroke(outline.opacity(0.9), lineWidth: 1) }
 
-            HStack(spacing: 5) {
+            HStack(spacing: TaptionSpacing.compact) {
                 eyeShape(action)
                 eyeShape(action)
             }
@@ -833,6 +833,7 @@ private struct PreviewActionCat: View {
             .offset(x: 21, y: 16)
         case .startled:
             Image(systemName: "exclamationmark")
+                .accessibilityHidden(true)
                 .font(.system(size: 11, weight: .black))
                 .foregroundStyle(Color.tpNow)
                 .offset(x: 21, y: -17)
@@ -856,6 +857,7 @@ private struct PreviewActionCat: View {
                     style: StrokeStyle(lineWidth: 1, dash: [2, 2])
                 )
                 Image(systemName: "fish.fill")
+                    .accessibilityHidden(true)
                     .font(.system(size: 9))
                     .foregroundStyle(Color.tpPlaceDark)
                     .offset(
@@ -866,6 +868,7 @@ private struct PreviewActionCat: View {
             .frame(width: 64, height: 48)
         case .grooming:
             Image(systemName: "sparkles")
+                .accessibilityHidden(true)
                 .font(.system(size: 8, weight: .bold))
                 .foregroundStyle(Color.tpWeatherDark)
                 .offset(x: 20, y: -14)
