@@ -1,0 +1,4 @@
+name = "taption-airkorea-proxy"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+# 서비스 키는 코드에 쓰지 않는다: `npx wrangler secret put AIRKOREA_SERVICE_KEY`

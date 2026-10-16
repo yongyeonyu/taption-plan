@@ -1775,17 +1775,18 @@ actor AirQualityContextService {
     }
 
     private let session: URLSession
-    private let serviceKey: String?
+    /// The data.go.kr key lives only on the relay server, never in the app.
+    private let proxyBaseURL: URL?
     private var stations: [AirKoreaStation] = []
     private var stationsLoadedAt: Date?
     private var cachedContext: CachedContext?
 
     init(
         session: URLSession = .shared,
-        serviceKey: String? = AirQualityContextService.configuredServiceKey()
+        proxyBaseURL: URL? = AirQualityContextService.configuredProxyBaseURL()
     ) {
         self.session = session
-        self.serviceKey = serviceKey?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.proxyBaseURL = proxyBaseURL
     }
 
     func context(
@@ -1801,12 +1802,11 @@ actor AirQualityContextService {
         }
 
         if isInSouthKorea(latitude: latitude, longitude: longitude),
-           let key = serviceKey,
-           !key.isEmpty,
+           let proxyBaseURL,
            let context = try? await airKoreaContext(
                 latitude: latitude,
                 longitude: longitude,
-                serviceKey: key,
+                proxyBaseURL: proxyBaseURL,
                 at: date
            ) {
             cachedContext = CachedContext(location: location, context: context)
@@ -1818,31 +1818,32 @@ actor AirQualityContextService {
         throw AirQualityServiceError.noProvider
     }
 
-    static func configuredServiceKey() -> String? {
-        if let environment = ProcessInfo.processInfo.environment[
-            "AIRKOREA_SERVICE_KEY"
-        ], !environment.isEmpty {
-            return environment
-        }
-        guard let bundled = Bundle.main.object(
-            forInfoDictionaryKey: "AIRKOREA_SERVICE_KEY"
-        ) as? String,
-        !bundled.isEmpty,
-        !bundled.hasPrefix("$(") else {
-            return nil
-        }
-        return bundled
+    /// Host name only (a build setting cannot hold `https://` without escaping).
+    static func configuredProxyBaseURL() -> URL? {
+        let environment = ProcessInfo.processInfo.environment["AIR_QUALITY_PROXY_HOST"]
+        let bundled = Bundle.main.object(forInfoDictionaryKey: "AIR_QUALITY_PROXY_HOST") as? String
+        return proxyBaseURL(host: environment ?? bundled)
+    }
+
+    static func proxyBaseURL(host: String?) -> URL? {
+        guard let host = host?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !host.isEmpty, !host.hasPrefix("$("),
+              !host.contains("/"), !host.contains(":"), !host.contains(" ") else { return nil }
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = host
+        return components.url
     }
 
     private func airKoreaContext(
         latitude: Double,
         longitude: Double,
-        serviceKey: String,
+        proxyBaseURL: URL,
         at date: Date
     ) async throws -> AirQualityContext {
         if stations.isEmpty
             || stationsLoadedAt.map({ date.timeIntervalSince($0) > 30 * 86_400 }) == true {
-            stations = try await loadStations(serviceKey: serviceKey)
+            stations = try await loadStations(proxyBaseURL: proxyBaseURL)
             stationsLoadedAt = date
         }
         let origin = CLLocation(latitude: latitude, longitude: longitude)
@@ -1854,17 +1855,10 @@ actor AirQualityContextService {
         }
 
         var components = URLComponents(
-            string: "https://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMsrstnAcctoRltmMesureDnsty"
+            url: proxyBaseURL.appendingPathComponent("airkorea/measurement"),
+            resolvingAgainstBaseURL: false
         )
-        components?.queryItems = [
-            URLQueryItem(name: "serviceKey", value: serviceKey),
-            URLQueryItem(name: "returnType", value: "json"),
-            URLQueryItem(name: "numOfRows", value: "1"),
-            URLQueryItem(name: "pageNo", value: "1"),
-            URLQueryItem(name: "stationName", value: station.name),
-            URLQueryItem(name: "dataTerm", value: "DAILY"),
-            URLQueryItem(name: "ver", value: "1.3"),
-        ]
+        components?.queryItems = [URLQueryItem(name: "stationName", value: station.name)]
         guard let url = components?.url else {
             throw AirQualityServiceError.invalidRequest
         }
@@ -1884,19 +1878,8 @@ actor AirQualityContextService {
         )
     }
 
-    private func loadStations(serviceKey: String) async throws -> [AirKoreaStation] {
-        var components = URLComponents(
-            string: "https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc/getMsrstnList"
-        )
-        components?.queryItems = [
-            URLQueryItem(name: "serviceKey", value: serviceKey),
-            URLQueryItem(name: "returnType", value: "json"),
-            URLQueryItem(name: "numOfRows", value: "1000"),
-            URLQueryItem(name: "pageNo", value: "1"),
-        ]
-        guard let url = components?.url else {
-            throw AirQualityServiceError.invalidRequest
-        }
+    private func loadStations(proxyBaseURL: URL) async throws -> [AirKoreaStation] {
+        let url = proxyBaseURL.appendingPathComponent("airkorea/stations")
         let payload: AirKoreaEnvelope<AirKoreaStationPayload> = try await fetch(url)
         return payload.response.body.items.compactMap { item in
             guard let latitude = Double(item.dmX),

@@ -17556,7 +17556,9 @@ final class FeatureEngineTests: XCTestCase {
         AirQualityURLProtocolStub.handler = { request in
             let path = try XCTUnwrap(request.url?.path)
             let json: String
-            if path.contains("getMsrstnList") {
+            XCTAssertEqual(request.url?.host, "air.example.com")
+            XCTAssertFalse(request.url?.absoluteString.contains("serviceKey") == true)
+            if path.hasSuffix("/airkorea/stations") {
                 json = """
                 {"response":{"body":{"items":[
                   {"stationName":"가까운역","dmX":"37.5001","dmY":"127.0001"},
@@ -17581,7 +17583,7 @@ final class FeatureEngineTests: XCTestCase {
         configuration.protocolClasses = [AirQualityURLProtocolStub.self]
         let service = AirQualityContextService(
             session: URLSession(configuration: configuration),
-            serviceKey: "local-test-key"
+            proxyBaseURL: URL(string: "https://air.example.com")
         )
         let first = try await service.context(
             latitude: 37.5,
@@ -17602,6 +17604,16 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(AirQualityURLProtocolStub.requestCount, 2)
     }
 
+    func testAirQualityProxyHostIsValidatedAndNeverContainsASecret() {
+        XCTAssertEqual(AirQualityContextService.proxyBaseURL(host: "air.example.com")?.absoluteString, "https://air.example.com")
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: nil))
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: ""))
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: "$(AIR_QUALITY_PROXY_HOST)"))
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: "https://air.example.com"))
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: "air.example.com/path"))
+        XCTAssertNil(AirQualityContextService.proxyBaseURL(host: "air example.com"))
+    }
+
     func testAirQualityHasNoOverseasFallbackWithoutKey() async throws {
         AirQualityURLProtocolStub.requestCount = 0
         AirQualityURLProtocolStub.handler = { _ in
@@ -17612,7 +17624,7 @@ final class FeatureEngineTests: XCTestCase {
         configuration.protocolClasses = [AirQualityURLProtocolStub.self]
         let service = AirQualityContextService(
             session: URLSession(configuration: configuration),
-            serviceKey: nil
+            proxyBaseURL: nil
         )
         do {
             _ = try await service.context(latitude: 37.5, longitude: 127)

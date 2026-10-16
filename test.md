@@ -1,12 +1,20 @@
 # 검증 기록
 
+## COM1016A01 · 대기질 중계 서버(B안)·센서 갱신 롤백 보호 (2026-10-16, 178 이후)
+- 수정(앱): `AirQualityContextService`가 data.go.kr을 직접 부르지 않고 중계 서버(`AIR_QUALITY_PROXY_HOST`, 호스트 이름만)의 `/airkorea/stations`·`/airkorea/measurement?stationName=`을 호출한다. 앱에서 서비스 키를 모두 제거했고 `Info.plist`의 `AIRKOREA_SERVICE_KEY`를 `AIR_QUALITY_PROXY_HOST`로 바꿨다. 값이 비어 있거나 `$(`로 시작하거나 `/`·`:`·공백을 포함하면 사용하지 않는다(대기질 미표시). 빌드 설정에는 아직 호스트를 넣지 않았다.
+- 수정(서버): `server/airkorea-proxy/`(Cloudflare Worker). 경로·메서드·파라미터를 허용 목록으로 제한하고 측정소 이름 형식을 검사하며 측정소별로 캐시한다(목록 24시간, 측정값 30분). 상류의 오류 응답(키·한도)은 캐시하지 않고 502로 바꾼다. 키는 `wrangler secret`에만 둔다. 요청·IP를 기록하지 않는다. 배포는 하지 않았다.
+- 수정(센서 갱신): 갱신 중 `persist()`가 호출됐으면(사용자 편집) 취소·실패 때 snapshot 전체 되돌리기를 건너뛰고 지문을 지워 다시 계산하게 했다. 재현 테스트는 없다(코드 판독 기반, 갱신 함수 안에서는 `persist()`를 부르지 않음을 확인).
+- 문서·CI: `PRIVACY.md`에 중계 서버 경유와 호스팅 업체의 IP 처리 가능성을 명시했고, CI에 중계 서버 테스트 job을 추가했다(GitHub 러너에서 실행해 본 적 없음).
+- 자동 검증: 서버 `npm test` 6개 통과(상류 키 전달·응답에 키 미포함·잘못된 경로/메서드/이름 거부·오류 비캐시·키 미설정 503). 앱 `FeatureEngineTests`+`HealthPurposeStringContractTests`+`WeatherRetiredProviderTests` 실행 결과 로그 기준 659 통과·1 실패(기존 `testStoreKitProductPurchaseEntitlementAndRestore`)(`aq-proxy-02.log`). 신규 `testAirQualityProxyHostIsValidatedAndNeverContainsASecret`와 수정된 에어코리아 테스트 2개, 건강 문구 계약 테스트가 통과했다.
+- 제한: 결과 번들(`aq-proxy-02.xcresult`)이 마무리되지 않아 숫자는 로그에서 집계했다. 중계 서버를 실제 배포·호출한 적이 없고 data.go.kr 응답과 한도·상업 이용 조건은 확인하지 못했다. 서버 배포·키 발급·호스트 설정 전에는 앱에서 대기질이 표시되지 않는다. 이 변경은 178에 포함되지 않았다. 롤백 보호의 실기기 효과는 미확인이다.
+
 ## REL1016A01 · 1.0(178) 내부 TestFlight 배포·iPhone 11 Pro/18 Pro Max 설치 (2026-10-16)
 - 소스: `origin/main` `fabb399`(push 후 원격 일치). 빌드 번호 178을 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`에 반영했고 ASC 최신은 177이었다.
 - 1차 업로드 거부: 첫 archive(`TaptionPlan178.xcarchive`)의 IPA를 `altool`이 오류 90683(`NSHealthUpdateUsageDescription` 누락)으로 거부했다. 업로드 전 검증 단계 거부이며 ASC에 빌드가 만들어지지 않았다. 5a 작업에서 읽기 전용이라는 판단으로 이 키를 지웠으나 HealthKit entitlement가 있으면 필요하다. 키·번역을 복구하고 `HealthPurposeStringContractTests`를 추가했다(이 테스트는 아직 실행하지 않았다).
 - 최종 산출물: 재 archive(`TaptionPlan178b.xcarchive`, 오류·경고 0)와 internal export(`export-178b`). 앱 `com.taption.plan`·Widget `com.taption.plan.widget` 모두 1.0(178), strict 서명 통과, get-task-allow=false, iCloud 환경 Production, Watch 미포함, 건강 쓰기 문구 키 포함. IPA 42,898,718바이트·SHA-256 `99549fe99443eef45883f4eb6f20ecbf4f90553a46527a52bf4a1c7a36006374`를 1회 업로드했고 exit 0·`UPLOAD SUCCEEDED with no errors`, Delivery `18979b73-1851-46fd-9af5-d840ff613a2f`.
 - 내부 배포: API로 빌드 178 `VALID`, 내부 상태 `READY_FOR_BETA_TESTING`을 확인하고 ko 안내를 저장한 뒤 `TP Taption Plan 내부 테스트` 그룹에 연결했다(HTTP 204). 최종 내부 `IN_BETA_TESTING`, 외부 `NOT_APPLICABLE`, 그룹에 178 포함(135개 빌드), 테스터 1명. 규칙의 웹 그룹 화면 확인은 하지 못했다: 이 앱 브라우저는 App Store Connect에 로그인되어 있지 않고 로그인 정보는 입력하지 않았다. 웹 화면 판독은 미완료이며 API 근거만 있다.
 - 기기 설치(`devicectl install app`, 기존 데이터 유지 update-in-place): archive 앱(개발 서명, Team 4FWG8XXYM7)을 iPhone 11 Pro `00008030-…`와 iPhone 18 Pro Max `00008160-…`에 설치했다. 두 JSON outcome `success`, 설치 후 앱 목록 readback 모두 1.0(178). 이전은 iPhone 11 Pro 1.0(177). iPhone 18은 첫 조회에서 연결이 끊겼으나 재시도에서 성공했다. 설치만으로 권한·저장·센서·백업·부산 재현 여부는 판정하지 않았다. TestFlight 앱 업데이트와 개발 서명 설치가 번갈아 있으면 서명이 바뀐다.
-- 보존: dSYM·IPA·실행 파일을 `artifacts/release-symbols/178/`에 보존했다(git 제외 경로). 로그·검증 JSON은 `build/validation/REL1016A01/`에 있다.
+- 보존/정리: dSYM·IPA·실행 파일을 `artifacts/release-symbols/178/`에 보존했다(git 제외 경로, 원본과 해시·바이트 동일 확인). 로그·검증 JSON은 `build/validation/REL1016A01/`에 있다. 그 뒤 생성물 11경로(Release·이전 요청 DerivedData, archive 2개, export 2개, 무효 xcresult 2개, 임시 복사본 3개) 약 3,322MB를 삭제했다. 사용자 DB·백업·보존 심볼·유효 근거는 유지했다.
 - 제한: 이번 빌드의 변경(백업 복원 off-main, 백그라운드 보호, 경로 필터, 날씨 정리)은 합성 테스트와 Debug·Release 빌드까지 확인했고 실기기 동작은 대표 확인을 기다린다. 공개 App Store·IAP·심사 제출은 하지 않았다.
 
 ## COM1016A01 · Open-Meteo 기록 폐기·개인정보 문구 정정·조사 (2026-10-16)

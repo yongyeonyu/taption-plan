@@ -31,8 +31,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>178</string>
-	<key>AIRKOREA_SERVICE_KEY</key>
-	<string>$(AIRKOREA_SERVICE_KEY)</string>
+	<key>AIR_QUALITY_PROXY_HOST</key>
+	<string>$(AIR_QUALITY_PROXY_HOST)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>

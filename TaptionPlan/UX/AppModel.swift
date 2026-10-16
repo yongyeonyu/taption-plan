@@ -1257,6 +1257,9 @@ final class AppModel {
     @ObservationIgnored private(set) var isCommerceLocked = false
     @ObservationIgnored private var isHealthRefreshRunning = false
     @ObservationIgnored private var isSensorTimelineRefreshing = false
+    /// A user edit saved while a sensor refresh was running. Rolling the whole
+    /// snapshot back to the pre-refresh copy would silently delete that edit.
+    @ObservationIgnored private var userEditedDuringSensorRefresh = false
     @ObservationIgnored private var isDeletingUserData = false
     @ObservationIgnored private var dataDeletionGeneration =
         TaptionDataDeletionFence.currentGeneration()
@@ -9647,9 +9650,20 @@ final class AppModel {
         ]
         var committed = false
         isSensorTimelineRefreshing = true
+        userEditedDuringSensorRefresh = false
         activeDataMutationCount += 1
         defer {
-            if !committed {
+            if !committed, userEditedDuringSensorRefresh {
+                // Keep the edit and the revisions that already guard its save.
+                // Derived records are recomputed because the fingerprint is cleared.
+                sensorRefreshFingerprints.removeValue(
+                    forKey: Calendar.autoupdatingCurrent.startOfDay(for: date)
+                )
+                needsLocalRecordNormalization = true
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "sensor_refresh_rollback_skipped_for_user_edit"
+                )
+            } else if !committed {
                 snapshot = snapshotBeforeRefresh
                 latestSensorReading = latestSensorReadingBeforeRefresh
                 let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
@@ -9669,6 +9683,7 @@ final class AppModel {
             }
             activeDataMutationCount -= 1
             isSensorTimelineRefreshing = false
+            userEditedDuringSensorRefresh = false
         }
         let span = TimelineAggregationEngine().interval(
             for: .day,
@@ -13826,6 +13841,7 @@ final class AppModel {
     private func persist(allowingDeletion: Bool = false, actualEdit: PlanActualEdit? = nil) async -> Bool {
         guard hasCurrentDataGeneration,
               allowingDeletion || !isDeletingUserData else { return false }
+        if isSensorTimelineRefreshing { userEditedDuringSensorRefresh = true }
         activeDataMutationCount += 1
         defer { activeDataMutationCount -= 1 }
         guard !repositoryLoadFailed else {
