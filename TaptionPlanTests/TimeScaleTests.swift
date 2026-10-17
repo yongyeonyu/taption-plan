@@ -5372,6 +5372,8 @@ final class DesignTokenValueTests: XCTestCase {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
         return [red, green, blue, alpha]
+    }
+}
 
 /// User-facing error and status messages used to be Korean-only. Each pair
 /// must keep the original Korean wording and give English users Hangul-free text.
