@@ -281,8 +281,10 @@ struct SettingsView: View {
                                     url: try model.exportSnapshotURL()
                                 )
                             } catch {
-                                model.userFacingError =
-                                    "데이터 파일을 만들지 못했습니다."
+                                model.userFacingError = AppLanguagePreference.text(
+                                    korean: "데이터 파일을 만들지 못했습니다.",
+                                    english: "Couldn't create the data file."
+                                )
                             }
                         }
                         settingsRow(
@@ -295,7 +297,10 @@ struct SettingsView: View {
                                 do {
                                     sharedExport = ShareableURL(url: try await model.exportTodaySensorRawURL())
                                 } catch {
-                                    model.userFacingError = "오늘 원본 파일을 만들지 못했습니다."
+                                    model.userFacingError = AppLanguagePreference.text(
+                                        korean: "오늘 원본 파일을 만들지 못했습니다.",
+                                        english: "Couldn't create today's raw data file."
+                                    )
                                 }
                             }
                         }

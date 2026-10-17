@@ -1,5 +1,12 @@
 # 검증 기록
 
+## COM1016A01 · 병합 후 전체 회귀·iPhone 18 Debug 설치·Cloudflare Worker 생성 (2026-10-17)
+- 병합: 디자인 토큰(824490f)·영어화(7b95250)·성장 시트 캐시(f54c585)를 main에 합쳤고, 충돌 해결 때 빠진 테스트 클래스 닫는 괄호 2줄을 a418a9c로 고쳤다(첫 전체 실행이 이 컴파일 오류로 실패). SettingsView의 한국어 오류 문구 2곳도 영어화했다.
+- 전체 회귀(병합 상태, 전용 시뮬레이터, 다른 프로젝트 빌드와 동시): `merged-full-02.log` 로그 기준 고유 1,534개 통과, 실패 1(기존 StoreKit). 실행이 마무리 단계에서 멈춰 결과 번들은 없고 `SQLitePlanRepositoryTests`·`SensorDayStoreTests` 일부가 돌지 않아 `merged-rest-01`로 다시 실행: 155 통과, 실패 1(`testFailedPrimaryMigrationCanRetryOnNextLoad`). 이 테스트는 단독 재실행(`merged-two-01`)에서도 실패했다. 0.5초 안에 이관 재시도가 끝나기를 기다리는 시간 의존 테스트이나, 시작 커밋에서의 재현을 아직 확인하지 않아 이번 변경 때문이 아니라고 단정하지 않는다. 성능 테스트 `testThirtyDayApp…P95`는 부하 중 계속 실패(기존). 병합 상태 generic iOS Debug `BUILD SUCCEEDED`.
+- iPhone 18 Pro Max 설치: 병합 main(미커밋 SettingsView 영어화 포함)의 Debug 빌드를 `devicectl install app`으로 설치, outcome success, 앱 목록 readback 1.0(178). 번호는 TestFlight 178과 같지만 내용은 이후 변경을 포함한다. 기존 데이터 유지. 프록시 호스트 미설정이라 대기질은 표시되지 않는다.
+- Cloudflare: 대표 계정에 Worker `taption-airkorea-proxy`(`taption-airkorea-proxy.axony99.workers.dev`)를 만들었다. 중계 코드는 편집기 초안으로 입력해 미리보기에서 not_found/invalid_station/not_configured 응답을 확인했으나, 프로덕션 배포 클릭은 권한 판정이 막아 대표가 직접 눌러야 한다. 서비스 키·로그 끄기도 대표 작업이다.
+- 정리: 디스크가 100%에 가까워 이전 xcresult 4개(약 420MB)를 삭제했다.
+
 ## COM1016A01 · 성장 시트 캐시·날짜 포맷터·백그라운드 모델 생성 시간 진단 (2026-10-16, 178 이후)
 - 수정: `MapHomeGrowthSheet.history`가 저장 값당 한 번만 디코딩하도록 `MapHomeGrowthHistoryCache`를 쓰고, 시트의 날짜 문구 `DateFormatter` 생성을 `MapHomeDateText`로 바꿨다. UI 없는 깨움이 만드는 `AppModel`의 초기화 시간을 `background_model_created` 로그(`init_ms`)로 남긴다(측정만, 동작 변경 없음). 화면 배치는 바꾸지 않았다.
 - 자동 검증: `MapHomePerformanceHelperTests`·`MapHomeGrowthPolicyTests`·`TimeScaleTests` 196개 통과·실패 0(`sheet-fmt-01.log`, 로그 기준 집계).
