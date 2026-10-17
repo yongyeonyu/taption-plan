@@ -1,6 +1,6 @@
 # 남은 요청
 
-## COM1016A01 · 판매 가능 수준 품질 개선 (안정성·지도 경로·디자인·성능·출시 준비) [0단계 진행]
+## COM1016A01 · 판매 가능 수준 품질 개선 (안정성·지도 경로·디자인·성능·출시 준비) [0·1·2·3·4·5a 1차 완료 / 실기기·대표 결정 대기]
 - 원인: 대표가 안정성(충돌·백그라운드 종료), 최적화, 지도 경로 버그, 화랑이·등록 장소 마커 크기·위치, 화면별 스타일 불일치가 반복된다고 요청했다. 2026-10-16 정적 감사(코드 읽기, 미실행)에서 같은 뿌리의 원인 후보를 확인했다. 센서 갱신 실패 시 전체 snapshot 롤백(AppModel `performSensorTimelineRefresh`), 백그라운드 작업 만료 핸들러가 작업을 끝내지 않음(PlanRepository), 복원 경로 MainActor 실행, 경로 필터의 15분 이후 280m/s 허용(RouteLoggerRouteFilter:21,493), 재생 위치 근거 4곳, 디자인 토큰·공용 마커 부재, 거대 파일(AppModel 1.4만/MapHomeView 1.7만 줄).
 - 해결(단계): 0 기준선(커밋·CI·임시 테스트 제거) → 1 안정성 → 2 지도 경로(단일 position resolver·상수 표·합성 GPS 회귀) → 3 디자인 시스템(TaptionMascot·TaptionPlaceMarker·토큰) → 4 성능·파일 분리 → 5 출시 준비(WeatherKit만 사용·개인정보·건강 데이터 iCloud 포함 범위 조사·접근성·다국어·UI 테스트) → 6 판매 게이트. 판매 방식은 미정이며 IAP는 별도 재개 요청 전까지 보류한다.
 - 검증 기준: 단계마다 변경에 맞는 단위 테스트와 앱 Debug 빌드, 결과는 test.md·build/validation/COM1016A01/에 기록한다. 판매 게이트는 실사용 2주 watchdog·크래시 0, 대표 시나리오 5종 지도의 합성·실기기 통과, 시작·복귀 시간 예산 충족. 실기기 판정은 합성 테스트와 구분하고 대표 확인을 따른다. 감사 항목은 정적 판독이므로 수정 전 해당 코드를 다시 확인한다.
@@ -12,6 +12,10 @@
 - 대기질(대표 결정: 중계 서버 B안): 178은 서비스 키가 비어 한국 대기질이 표시되지 않는다. 앱·서버 코드는 준비됐고(test.md) 남은 일: 대표의 data.go.kr 활용신청·인증키, 한도·상업 이용 조건 확인, Cloudflare 계정·`wrangler secret put AIRKOREA_SERVICE_KEY`·`wrangler deploy`, 배포 호스트를 `AIR_QUALITY_PROXY_HOST` 빌드 설정에 넣고 새 빌드. 절차는 server/airkorea-proxy/README.md.
 - 센서 갱신 롤백 보호: 갱신 중 persist()가 호출됐으면(사용자 편집) 취소·실패 시 snapshot 전체 되돌리기를 건너뛰고 지문을 지워 다시 계산하게 했다. 합성 재현 테스트는 없다(코드 판독 기반).
 - 대표 지시(2026-10-16): 홈 지도·집 마커의 화랑이 아이콘 크기는 작아 보여도 변경하지 않고 그대로 유지한다. 디자인 시스템 작업의 화랑이 크기 통일에서 이 두 곳은 제외한다.
+- 2026-10-17 현재 상태 요약(main 07c1576, push는 fabb399까지·이후 미push): 완료 = 0단계, 1단계 1차(만료 핸들러·HealthKit observer·전환 보호·복원 off-main·센서 갱신 롤백 보호), 2단계 1차(경로 필터 공백 뒤 먼 점 거부·재앵커), 3단계 1차(디자인 토큰·접근성 라벨, 홈 화면·화랑이 크기 제외), 4단계 빠른 수정(성장 기록 캐시·포맷터·백그라운드 모델 생성 시간 로그), 5a(WeatherKit만·attribution·개인정보 문서·Open-Meteo 기록 폐기·약 190+2곳 영어화). 178을 내부 TestFlight 배포·두 기기 설치했고, 병합 main의 Debug 빌드를 iPhone 18에 추가 설치했다(번호 178 동일, 내용 다름).
+- 남은 코드 작업: 레거시 일자 DB 이관 일 단위화, 백그라운드 깨움 AppModel 재생성(측정 로그 `background_model_created` 먼저 읽기), 재생 위치 단일 resolver·상수 표 통합·발자국 구간 폐기 완화·경계 점 현재 위치 정책(실기록 대조 필요), AppModel/MapHomeView 파일 분리, Instruments 측정, UI 테스트, 44pt 터치 영역, 기존 실패 테스트 2건(StoreKit iOS 27, 성능 P95) 및 `testFailedPrimaryMigrationCanRetryOnNextLoad`(시작 커밋 재현 미확인) 원인 확정.
+- 대표 작업/결정 대기: Cloudflare Worker `taption-airkorea-proxy` 편집 초안 **배포 버튼 클릭**(제 클릭은 권한 판정이 막음), data.go.kr 인증키를 Secret `AIRKOREA_SERVICE_KEY`로 등록, Workers Logs 끄기, 한도·상업 이용 조건 확인 → 끝나면 앱 빌드 설정 `AIR_QUALITY_PROXY_HOST=taption-airkorea-proxy.axony99.workers.dev` 입력 후 179 빌드. 부산 재현 여부·수동 백업·백그라운드 복귀 확인. Watch 동작 센서 iCloud 포함 여부, App Store Connect 개인정보 라벨, 해외 대기질 제공자(Open-Meteo 유료/OpenWeatherMap) 결정. 179 배포는 지시 전까지 보류.
+- 환경 메모: Mac을 5개 프로젝트가 공유한다. 무거운 작업은 `/private/tmp/xcode-shared/both.sh <라벨> <명령>`(공유 락 /tmp/mac-shared + 자체 락)으로 감싸고, 전용 시뮬레이터 UDID는 `/private/tmp/xcode-shared/taptionplan-sim.txt`, DerivedData는 `build/ArchiveDD`. 다른 세션에 보낸 메시지는 전달되지 않으니 `/tmp/mac-shared/claims.txt`에 적는다. 디스크 여유가 약 1.7GB뿐이다.
 - 진행: 0단계에서 CRS1015A01 변경을 95255af로 커밋했다. 하드코딩 경로를 쓰는 임시 고양이 시트 테스트를 삭제하고 Package.resolved를 추적하며 CI를 추가한다. 177 설치본에 수정이 없으므로 배포 빌드 번호 상향은 1단계 첫 묶음 이후 별도 확인한다.
 
 ## CRS1015A01 · 백업 watchdog 수정 / 10:10 부산 원본·실기기 검증 대기
