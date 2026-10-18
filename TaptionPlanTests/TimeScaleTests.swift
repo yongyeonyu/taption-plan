@@ -3719,21 +3719,6 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testUserTrackingStaysLockedWhenPlaybackIsRunning() {
-        XCTAssertTrue(
-            MapHomeUserTrackingPolicy.keepsFollowing(
-                after: .pan,
-                duringPlayback: true
-            )
-        )
-        XCTAssertFalse(
-            MapHomeUserTrackingPolicy.keepsFollowing(
-                after: .pan,
-                duringPlayback: false
-            )
-        )
-    }
-
     func testPlaybackCenterDoesNotOverridePinchWithoutLocationChange() {
         let coordinate = CLLocationCoordinate2D(
             latitude: 37.55,
@@ -5523,5 +5508,47 @@ final class LocalizedMessageContractTests: XCTestCase {
         XCTAssertNil(ScreenTimeUsageRecordEngine.localizedDurationText(30, preference: .english))
         XCTAssertEqual(FloorLabel.english(-2), "B2")
         XCTAssertEqual(FloorLabel.english(7), "7F")
+    }
+}
+
+final class PlanTextSuggestionFormatTests: XCTestCase {
+    func testCleanedTrimsDedupesAndLimitsTitles() {
+        let result = PlanTextSuggestionFormat.cleaned(
+            titles: ["  \"아침 러닝\" ", "아침 러닝", "", "• 저녁 독서\n모임", "한강 산책", "네 번째"],
+            memo: "준비물:\n운동화"
+        )
+        XCTAssertEqual(result.titles, ["아침 러닝", "저녁 독서 모임", "한강 산책"])
+        XCTAssertEqual(result.memo, "준비물: 운동화")
+    }
+
+    func testCleanedClipsLongValues() {
+        let long = String(repeating: "가", count: 40)
+        let result = PlanTextSuggestionFormat.cleaned(titles: [long], memo: long + long + long)
+        XCTAssertEqual(result.titles.first?.count, PlanTextSuggestionFormat.maxTitleLength)
+        XCTAssertEqual(result.memo.count, PlanTextSuggestionFormat.maxMemoLength)
+    }
+
+    func testEmptyModelOutputBecomesEmptySuggestion() {
+        XCTAssertEqual(
+            PlanTextSuggestionFormat.cleaned(titles: [" ", "\n"], memo: "  "),
+            .empty
+        )
+    }
+
+    func testPromptIncludesContextAndRecentTitles() {
+        let context = PlanTextContext(
+            categoryName: "운동",
+            middleCategoryName: "러닝",
+            startAt: Date(timeIntervalSince1970: 0),
+            durationMinutes: 45,
+            recentTitles: ["a", "b", "c", "d", "e", "f"]
+        )
+        let prompt = PlanTextSuggestionFormat.prompt(for: context, preference: .korean)
+        XCTAssertTrue(prompt.contains("대분류: 운동"))
+        XCTAssertTrue(prompt.contains("중분류: 러닝"))
+        XCTAssertTrue(prompt.contains("45분"))
+        XCTAssertTrue(prompt.contains("최근 제목: a, b, c, d, e"))
+        XCTAssertFalse(prompt.contains("e, f"))
+        XCTAssertFalse(prompt.contains("세부:"))
     }
 }

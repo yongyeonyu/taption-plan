@@ -21,6 +21,10 @@ struct AddPlanSheet: View {
     @State private var selectedDetent: PresentationDetent = .large
     @State private var isCalendarPresented = false
     @FocusState private var titleFocused: Bool
+    @State private var textSuggestion: PlanTextSuggestion?
+    @State private var autoFilledTitle: String?
+    @State private var autoFilledMemo: String?
+    @State private var textSuggestionTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -94,6 +98,102 @@ struct AddPlanSheet: View {
                 autofillGoalTitleIfNeeded(replacing: "")
             }
             titleFocused = false
+            requestTextSuggestion()
+        }
+        .onChange(of: categoryID) { requestTextSuggestion() }
+        .onChange(of: middleCategoryName) { requestTextSuggestion() }
+        .onChange(of: subCategoryName) { requestTextSuggestion() }
+        .onChange(of: durationMinutes) { requestTextSuggestion() }
+        .onDisappear { textSuggestionTask?.cancel() }
+    }
+
+    /// 지원 기기에서만 추천을 받는다. 미지원 기기는 아무것도 채우지 않는다.
+    private func requestTextSuggestion() {
+        textSuggestionTask?.cancel()
+        guard PlanTextSuggester.isAvailable else { return }
+        let context = PlanTextContext(
+            categoryName: selectedCategory.name,
+            middleCategoryName: middleCategoryName,
+            subCategoryName: subCategoryName,
+            startAt: startAt,
+            durationMinutes: durationMinutes,
+            recentTitles: recentPlanTitles,
+            isGoal: model.addPlanContext.isGoal
+        )
+        textSuggestionTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled,
+                  let suggestion = await PlanTextSuggester.suggest(for: context),
+                  !Task.isCancelled else { return }
+            applyTextSuggestion(suggestion)
+        }
+    }
+
+    private var recentPlanTitles: [String] {
+        var seen = Set<String>()
+        return model.snapshot.plans.reversed()
+            .map(\.title)
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+            .prefix(PlanTextSuggestionFormat.maxRecentTitles)
+            .map { $0 }
+    }
+
+    /// 비어 있거나 이전에 자동으로 채운 값만 바꾼다. 사용자가 쓴 값은 그대로 둔다.
+    private func applyTextSuggestion(_ suggestion: PlanTextSuggestion) {
+        textSuggestion = suggestion
+        if model.addPlanContext.isGoal {
+            if let first = suggestion.titles.first,
+               title.isEmpty || title == selectedCategory.name || title == autoFilledTitle {
+                title = first
+                autoFilledTitle = first
+            }
+        } else if !suggestion.memo.isEmpty,
+                  memoText.isEmpty || memoText == autoFilledMemo {
+            memoText = suggestion.memo
+            autoFilledMemo = suggestion.memo
+        }
+    }
+
+    private func chooseSuggestion(_ candidate: String) {
+        if model.addPlanContext.isGoal {
+            title = candidate
+            autoFilledTitle = nil
+        } else {
+            memoText = candidate
+            autoFilledMemo = nil
+        }
+    }
+
+    @ViewBuilder
+    private var textSuggestionChips: some View {
+        if let titles = textSuggestion?.titles, !titles.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: TaptionSpacing.snug) {
+                    Image(systemName: "sparkles")
+                        .font(.taption(size: 10, weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                        .accessibilityHidden(true)
+                    ForEach(titles, id: \.self) { candidate in
+                        Button {
+                            chooseSuggestion(candidate)
+                        } label: {
+                            Text(candidate)
+                                .font(.taption(size: 10, weight: .semibold))
+                                .foregroundStyle(Color.tpInk)
+                                .lineLimit(1)
+                                .padding(.horizontal, 10)
+                                .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+                                .background(Color.tpFieldFill, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(AppLanguagePreference.text(
+                            korean: "추천 입력 \(candidate)",
+                            english: "Use suggestion \(candidate)"
+                        ))
+                    }
+                }
+            }
+            .padding(.top, -6)
         }
     }
 
@@ -152,6 +252,7 @@ struct AddPlanSheet: View {
                 placeholder: "예: 청계천 산책, 준비물, 체크포인트",
                 text: $memoText
             )
+            textSuggestionChips
 
             Text("계획명은 중분류 이름으로 추가되고, 입력한 내용은 액션 메모에 연결됩니다.")
                 .font(.taption(size: 8.5, weight: .semibold))
@@ -176,6 +277,7 @@ struct AddPlanSheet: View {
             categoryQuickPicker
 
             goalTitleField
+            textSuggestionChips
 
             goalDurationPicker
 

@@ -22,6 +22,7 @@
 		A10000000000000000000008 /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000008 /* ReviewView.swift */; };
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
+		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
 		A10000000000000000000090 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000090 /* LaunchScreen.storyboard */; };
 		A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000001 /* PrivacyInfo.xcprivacy */; };
@@ -251,6 +252,7 @@
 		F10000000000000000000008 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
+		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
@@ -504,6 +506,7 @@
 				F10000000000000000000008 /* ReviewView.swift */,
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
+				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
 				F10000000000000000000004 /* Theme.swift */,
@@ -950,6 +953,7 @@
 				A10000000000000000000008 /* ReviewView.swift in Sources */,
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
+				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
@@ -1240,7 +1244,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlanDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 178;
+			CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1269,7 +1273,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlan/TaptionPlan.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 178;
+				CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlan/Info.plist;
@@ -1341,7 +1345,7 @@
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidgetDebug.entitlements;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) TAPTION_WIDGET";
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 178;
+			CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1369,7 +1373,7 @@
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWidget/TaptionPlanWidget.entitlements;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) TAPTION_WIDGET";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 178;
+				CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWidget/Info.plist;
@@ -1396,7 +1400,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatchDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 178;
+			CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1430,7 +1434,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatch/TaptionPlanWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 178;
+				CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
@@ -1463,7 +1467,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidgetDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-			CURRENT_PROJECT_VERSION = 178;
+			CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;
@@ -1491,7 +1495,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TaptionPlanWatchWidget/TaptionPlanWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 178;
+				CURRENT_PROJECT_VERSION = 179;
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatchWidget/Info.plist;

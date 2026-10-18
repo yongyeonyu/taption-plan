@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AIR_QUALITY_PROXY_HOST</key>
+	<string>$(AIR_QUALITY_PROXY_HOST)</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.taption.plan.widget-refresh</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -12,6 +18,12 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -23,24 +35,16 @@
 			</array>
 		</dict>
 	</array>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>178</string>
-	<key>AIR_QUALITY_PROXY_HOST</key>
-	<string>$(AIR_QUALITY_PROXY_HOST)</string>
+	<string>179</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSFaceIDUsageDescription</key>
-	<string>보호된 Taption Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>고정된 일정을 시간표에 표시하기 위해 캘린더 접근이 필요합니다.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>보호된 Taption Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Apple 건강 앱의 운동·수면 기록을 시간표에 표시하고, 심박·걸음·운동 거리·활동 에너지·운동 경로로 활동 기록과 이동 지도를 보완하기 위해 읽기 권한이 필요합니다.</string>
 	<key>NSHealthUpdateUsageDescription</key>
@@ -55,6 +59,8 @@
 	<string>걷기·달리기·이동 상태와 걸음 및 층수 변화를 추정하기 위해 동작 및 피트니스 접근이 필요합니다.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>촬영 시각에 맞춰 사진을 시간표에 표시하기 위해 사진 접근이 필요합니다.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>iCloud.com.taption.plan</key>
@@ -67,8 +73,6 @@
 			<string>Any</string>
 		</dict>
 	</dict>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -80,10 +84,6 @@
 	<array>
 		<string>fetch</string>
 		<string>location</string>
-	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.taption.plan.widget-refresh</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
