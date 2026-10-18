@@ -1,5 +1,14 @@
 # 검증 기록
 
+## REL1018A01 · 빌드 179 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main` `fa248e4`를 push(`ef7bf0b..fa248e4`). 빌드 번호 179를 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`에 반영(확인 완료).
+- 아카이브: Release generic iOS `TaptionPlan179.xcarchive`, `ARCHIVE SUCCEEDED`, 경고 0, 번들 버전 179(`archive-179.log`). IPA 내보내기 `export-179` 성공(43,025,797바이트).
+- 업로드: `altool --upload-package` `UPLOAD SUCCEEDED`, 전달 ID `01d7db6b-…`(`altool-179.log`).
+- 처리: ASC API에서 빌드 179 `processingState` `VALID`(제출 준비 완료). 폴링 로그 `asc-poll-179.log`.
+- 그룹 연결: `TP Taption Plan 내부 테스트`(내부 그룹)에 빌드 179 연결(HTTP 204). 읽기 확인: 그룹 빌드 목록 맨 위에 179 `VALID`, 기존 178·177도 그대로 보임, 테스터 1명.
+- 제한: 웹 App Store Connect 그룹 화면은 이 앱 브라우저에 로그인되어 있지 않아 읽지 못했고 로그인 정보는 입력하지 않았다. 확인은 API 응답 기준이다. 실제 설치·테스터 수신과 AIT1018A01의 추천 품질은 아직 확인하지 않았다. IAP·심사 제출은 하지 않았다.
+- 실기기 기록: iPhone 11 Pro와 18 Pro Max에 개발 서명 빌드가 설치된 적은 있으나 이번 TestFlight 빌드 설치는 하지 않았다.
+
 ## AIT1018A01 · 제목·메모 추천(Apple 온디바이스 모델)·빌드 179 (2026-10-18)
 - 구현: 지원 기기(`SystemLanguageModel` available)에서만 계획 추가 화면의 메모(일반 계획)·루틴 이름(반복 루틴)을 자동 작성하고, 추천 칩 최대 3개를 보여준다. 미지원 기기는 공란. 사용자가 쓴 값은 덮어쓰지 않는다. 입력 맥락은 기기 안에서만 쓴다.
 - 실기기 단위 테스트: iPhone 18 Pro Max에서 `PlanTextSuggestionFormatTests` 4개 통과(`device-xcui-18c.log`). 실제 모델 생성 품질은 아직 확인하지 않았다.
