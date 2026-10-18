@@ -13,13 +13,15 @@ final class TaptionPlanSmokeUITests: XCTestCase {
 
         XCTAssertEqual(app.state, .runningForeground)
 
-        // 위치·센서 권한 요청이 떠 있으면 '허용 안 함'을 누른다. 데이터 변경이 아니다.
-        let decline = app.buttons["허용 안 함"]
+        // 권한 요청은 시스템(SpringBoard) 알림이라 앱 트리가 아니라 거기서 찾는다.
+        // '허용 안 함'만 누르며 데이터 변경이 아니다.
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let decline = springboard.buttons["허용 안 함"]
         if decline.waitForExistence(timeout: 3) {
             decline.tap()
         }
 
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 15))
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "home-after-launch"
         attachment.lifetime = .keepAlways

@@ -1,5 +1,10 @@
 # 남은 요청
 
+## AIT1018A01 · Apple Foundation Models로 제목·메모 추천 자동 작성 (2026-10-18)
+- 원인: 계획 추가 시 제목(루틴 이름)·메모를 매번 직접 입력해야 한다. 대표 결정: Apple 온디바이스 모델(Foundation Models)을 지원 기기에서만 쓰고, 미지원 기기는 공란으로 둔다.
+- 해결: 앱 target에 `PlanTextSuggestion`(맥락→프롬프트, 결과 정리 순수 함수)과 iOS 26+ `FoundationModels` 구현을 둔다. `SystemLanguageModel.default.availability`가 available일 때만 호출한다. 빈 칸일 때만 자동 작성하고 사용자가 입력한 값은 덮어쓰지 않는다. 대안 후보는 탭해서 넣는 칩으로 보여준다. 원본·자동 기록은 바꾸지 않고, 사용자가 저장할 때만 반영된다.
+- 검증 기준: 정리·프롬프트 단위 테스트, 미지원 경로에서 공란 유지 테스트, Debug 빌드. 지원 기기(iPhone 18 Pro Max)의 실제 생성 품질은 실기기에서 확인하고 따로 기록한다.
+
 ## MAP1018A01 · 홈 지도 재생·미확인 활동 시트 (2026-10-18)
 - 원인: (1) 재생 중 지도 드래그가 `handleUserMapPan`에서 무시됨(`keepsFollowing(duringPlayback: true)`가 항상 참이라 early return). (2) 미확인 활동 시트에 `interactiveDismissDisabled()`와 오른쪽 '닫기' 버튼이 있어 아래로 내리기가 막힘. (3) 재생이 집 반경 안에서 멈추고 화랑이가 집 안에서 20pt로 줄어 보이는 문제는 `isDisplayedCatAtHome`(반경 판정)과 `homeCatMarker`(glyph 20pt) 때문으로 보이나 미확정.
 - 해결: (1) 재생 중 팬이면 `stopDayPlayback(resetProgress: true)` 후 기존 팬 처리. 미사용 오버로드 제거. (2) 닫기 버튼 제거, `interactiveDismissDisabled(savingSegmentID != nil)`로 저장 중에만 막음. (3) 보류: 화랑이 크기는 메모리상 홈 마스코트 크기 변경 금지 규칙이라 대표 확인 필요.

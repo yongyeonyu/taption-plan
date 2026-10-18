@@ -1,5 +1,12 @@
 # 검증 기록
 
+## AIT1018A01 · 제목·메모 추천(Apple 온디바이스 모델)·빌드 179 (2026-10-18)
+- 구현: 지원 기기(`SystemLanguageModel` available)에서만 계획 추가 화면의 메모(일반 계획)·루틴 이름(반복 루틴)을 자동 작성하고, 추천 칩 최대 3개를 보여준다. 미지원 기기는 공란. 사용자가 쓴 값은 덮어쓰지 않는다. 입력 맥락은 기기 안에서만 쓴다.
+- 실기기 단위 테스트: iPhone 18 Pro Max에서 `PlanTextSuggestionFormatTests` 4개 통과(`device-xcui-18c.log`). 실제 모델 생성 품질은 아직 확인하지 않았다.
+- 실기기 UI 스모크: iPhone 18 Pro Max `testLaunchShowsHomeWithoutChangingData` 1차 실패(`device-xcui-18c`): 앱 창 확인 조건이 `runningForeground` 대기에서 막힌 것으로, 권한 알림은 시스템 쪽이라 앱 트리에서 찾지 못했다. 시스템 알림을 SpringBoard에서 찾고 앱 창 존재를 확인하도록 고친 뒤 재실행(`device-xcui-18d`)에서 **TEST SUCCEEDED**. iPhone 11 Pro는 수정 전 실행에서 통과(`device-xcui-11c`).
+- 빌드 번호 178 → 179: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist` 모두 179.
+- 제한: 추천 품질·실제 자동 작성 화면은 실기기에서 직접 확인하지 않았다. 권한 알림을 여러 기기에서 다룰 때 대상이 바뀔 수 있다.
+
 ## UI테스트 실기기 · iPhone 11 Pro (2026-10-18)
 - 실행: `TaptionPlanUITests/testLaunchShowsHomeWithoutChangingData`, Debug 개발 서명, 기기 `00008030-…`. 결과 **TEST SUCCEEDED**, 1 통과·0 실패(`device-xcui-11c.log`, `device-xcui-11c.xcresult`).
 - 범위: 앱 실행과 홈 화면 표시, 권한 팝업의 '허용 안 함'만 누름. 저장·지도 이동·시트 동작은 검사하지 않았다. 설치는 개발 서명 빌드로 TestFlight 설치본을 대체했다.
