@@ -1,5 +1,11 @@
 # 검증 기록
 
+## COM1016A01 · 대기질 중계 호스트 설정·마이그레이션 재시도 테스트 경합 수정 (2026-10-18)
+- 수정: 앱 target Debug/Release 빌드 설정에 `AIR_QUALITY_PROXY_HOST = taption-airkorea-proxy.axony99.workers.dev`를 넣었다(`project.pbxproj` 2곳). Worker 주소는 `/airkorea/stations?ping=1`에 HTTP 200으로 응답했다. 서비스 키 등록·Workers Logs 설정은 대표 작업이라 확인하지 못했고, 실제 대기질 값이 내려오는지는 확인하지 않았다.
+- 분류: `testFailedPrimaryMigrationCanRetryOnNextLoad`는 시작 커밋 2a25758 이후 `MigratingPlanRepository`·테스트 본문이 바뀌지 않았다(`git diff 2a25758 HEAD`로 확인, 바뀐 곳은 백그라운드 보호·문구 현지화뿐). 첫 저장 실패 뒤 `finishMigrationTask`가 끝나기 전에 재로드하면 `guard migrationTask == nil`에 막혀 재시도가 예약되지 않는 기존 타이밍 경합이다. 시작 커밋에서 실행해 재현하지는 않았고 코드 판독으로 분류했다. 테스트가 재시도될 때까지 `load()`를 반복하도록 고쳤다(앱 코드 변경 없음).
+- 자동 검증: 신규 전용 시뮬레이터 `TaptionPlan-COM1016A01-b`(iOS 27.0)에서 `testAirQualityProxyHostIsValidatedAndNeverContainsASecret`·`testAirQualityHasNoOverseasFallbackWithoutKey`·`testFailedPrimaryMigrationCanRetryOnNextLoad` 3개 통과, `TEST SUCCEEDED`(`aq-host-02.xcresult`, `aq-host-test2.log`). 빌드된 Debug 앱 `Info.plist`의 `AIR_QUALITY_PROXY_HOST`가 위 호스트로 치환된 것을 읽었다.
+- 제한: 기존 전용 시뮬레이터 253B15E0이 사라져 새로 만들고 `taptionplan-sim.txt`를 갱신했다(이전 값은 `previous-sim-udid.txt`). 이전 `aq-host-01`·`aq-host-build`는 시뮬레이터 없음과 락 대기열 고장으로 결과 없음. 공유 락 `xcode.queue`가 비어 있는데 다른 프로젝트 `acquire` 프로세스 여러 개가 9~10시간째 대기 중이라 제 것만 종료했다. 대기질이 실제 화면에 표시되는지, 179 빌드·배포는 하지 않았다.
+
 ## COM1016A01 · 병합 후 전체 회귀·iPhone 18 Debug 설치·Cloudflare Worker 생성 (2026-10-17)
 - 병합: 디자인 토큰(824490f)·영어화(7b95250)·성장 시트 캐시(f54c585)를 main에 합쳤고, 충돌 해결 때 빠진 테스트 클래스 닫는 괄호 2줄을 a418a9c로 고쳤다(첫 전체 실행이 이 컴파일 오류로 실패). SettingsView의 한국어 오류 문구 2곳도 영어화했다.
 - 전체 회귀(병합 상태, 전용 시뮬레이터, 다른 프로젝트 빌드와 동시): `merged-full-02.log` 로그 기준 고유 1,534개 통과, 실패 1(기존 StoreKit). 실행이 마무리 단계에서 멈춰 결과 번들은 없고 `SQLitePlanRepositoryTests`·`SensorDayStoreTests` 일부가 돌지 않아 `merged-rest-01`로 다시 실행: 155 통과, 실패 1(`testFailedPrimaryMigrationCanRetryOnNextLoad`). 이 테스트는 단독 재실행(`merged-two-01`)에서도 실패했다. 0.5초 안에 이관 재시도가 끝나기를 기다리는 시간 의존 테스트이나, 시작 커밋에서의 재현을 아직 확인하지 않아 이번 변경 때문이 아니라고 단정하지 않는다. 성능 테스트 `testThirtyDayApp…P95`는 부하 중 계속 실패(기존). 병합 상태 generic iOS Debug `BUILD SUCCEEDED`.

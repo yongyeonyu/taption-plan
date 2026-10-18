@@ -637,9 +637,11 @@ final class SQLitePlanRepositoryTests: XCTestCase {
         XCTAssertEqual(first.plans, existing.plans)
         await primary.waitUntilSaveAttempted()
 
-        let second = try await repository.load()
-        XCTAssertEqual(second.plans, existing.plans)
+        // The failed attempt clears its task asynchronously, so a load that
+        // races ahead of it is not retried yet. Keep loading until it is.
         for _ in 0..<100 {
+            let next = try await repository.load()
+            XCTAssertEqual(next.plans, existing.plans)
             if (try await primary.load()).plans == existing.plans { return }
             try await Task.sleep(for: .milliseconds(5))
         }
