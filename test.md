@@ -1,5 +1,10 @@
 # 검증 기록
 
+## UI테스트 실기기 · iPhone 11 Pro (2026-10-18)
+- 실행: `TaptionPlanUITests/testLaunchShowsHomeWithoutChangingData`, Debug 개발 서명, 기기 `00008030-…`. 결과 **TEST SUCCEEDED**, 1 통과·0 실패(`device-xcui-11c.log`, `device-xcui-11c.xcresult`).
+- 범위: 앱 실행과 홈 화면 표시, 권한 팝업의 '허용 안 함'만 누름. 저장·지도 이동·시트 동작은 검사하지 않았다. 설치는 개발 서명 빌드로 TestFlight 설치본을 대체했다.
+- 제한: iPhone 18 Pro Max 실행은 아직 안 했다. 실기기 기능 판정은 스모크 테스트만으로 통과 처리하지 않는다.
+
 ## MAP1018A01 · 재생 중 지도 드래그 정지·속도별 자동 확대축소·미확인 활동 시트 닫기 (2026-10-18)
 - 수정: (1) 재생 중 지도 팬이면 재생을 멈추고 그 시각에 머문다(`handleUserMapPan`, 미사용 오버로드 제거). (2) 미확인 활동 시트의 오른쪽 '닫기' 버튼을 지우고, 아래로 내리기는 저장 중에만 막는다(`interactiveDismissDisabled(savingSegmentID != nil)`). (3) 재생 중 이동 속도(약 1.5~20m/s, 로그 비율)에 따라 지도 거리를 약 700m~12km로 부드럽게(계수 0.2) 바꾼다(`MapHomePlaybackZoomPolicy`, `playbackAwareDistance`). 멈춘 상태나 재생 중이 아니면 거리를 바꾸지 않는다. (4) 집에 있을 때 파랑이 크기를 이동 중 마커 크기(36pt)와 같게 했다. 배경·위치 변경은 하지 않았다.
 - 자동 검증: 전용 시뮬레이터 `TaptionPlan-COM1016A01-b` Debug 빌드 `BUILD SUCCEEDED`, 오류 0·경고 0(`pan-zoom-size-build.log`). 이전 빌드 실패·취소 로그는 기록하지 않는다.
