@@ -155,6 +155,7 @@
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
+		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +186,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = E10000000000000000000005;
 			remoteInfo = TaptionPlanWatchWidget;
+		};
+		5A000000000000000000001C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E10000000000000000000001;
+			remoteInfo = TaptionPlan;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -355,6 +363,8 @@
 		F90000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
+		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
+		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -402,6 +412,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5A0000000000000000000016 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -410,6 +427,7 @@
 			children = (
 				810000000000000000000003 /* TaptionPlan */,
 				810000000000000000000004 /* TaptionPlanTests */,
+				5A0000000000000000000013 /* TaptionPlanUITests */,
 				810000000000000000000008 /* TaptionPlanWidget */,
 				810000000000000000000009 /* TaptionPlanWatch */,
 				81000000000000000000000A /* TaptionPlanWatchWidget */,
@@ -422,6 +440,7 @@
 			children = (
 				C10000000000000000000001 /* TaptionPlan.app */,
 				C10000000000000000000002 /* TaptionPlanTests.xctest */,
+				5A0000000000000000000012 /* TaptionPlanUITests.xctest */,
 				C10000000000000000000003 /* TaptionPlanWidget.appex */,
 				C10000000000000000000004 /* TaptionPlanWatch.app */,
 				C10000000000000000000005 /* TaptionPlanWatchWidget.appex */,
@@ -613,6 +632,14 @@
 			path = TaptionPlanWatchWidget;
 			sourceTree = "<group>";
 		};
+		5A0000000000000000000013 /* TaptionPlanUITests */ = {
+			isa = PBXGroup;
+			children = (
+				5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */,
+			);
+			path = TaptionPlanUITests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -725,6 +752,24 @@
 			productReference = C10000000000000000000005 /* TaptionPlanWatchWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		5A0000000000000000000014 /* TaptionPlanUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A0000000000000000000018 /* Build configuration list for PBXNativeTarget "TaptionPlanUITests" */;
+			buildPhases = (
+				5A0000000000000000000015 /* Sources */,
+				5A0000000000000000000016 /* Frameworks */,
+				5A0000000000000000000017 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A000000000000000000001B /* PBXTargetDependency */,
+			);
+			name = TaptionPlanUITests;
+			productName = TaptionPlanUITests;
+			productReference = 5A0000000000000000000012 /* TaptionPlanUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -811,6 +856,7 @@
 			targets = (
 				E10000000000000000000001 /* TaptionPlan */,
 				E10000000000000000000002 /* TaptionPlanTests */,
+				5A0000000000000000000014 /* TaptionPlanUITests */,
 				E10000000000000000000003 /* TaptionPlanWidget */,
 				E10000000000000000000004 /* TaptionPlanWatch */,
 				E10000000000000000000005 /* TaptionPlanWatchWidget */,
@@ -872,6 +918,13 @@
 				A2000000000000000000000B /* Localizable.xcstrings in Resources */,
 				A2000000000000000000000F /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000004 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A0000000000000000000017 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1026,6 +1079,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5A0000000000000000000015 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1048,6 +1109,11 @@
 			isa = PBXTargetDependency;
 			target = E10000000000000000000005 /* TaptionPlanWatchWidget */;
 			targetProxy = B10000000000000000000004 /* PBXContainerItemProxy */;
+		};
+		5A000000000000000000001B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E10000000000000000000001 /* TaptionPlan */;
+			targetProxy = 5A000000000000000000001C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1447,6 +1513,38 @@
 			};
 			name = Release;
 		};
+		5A0000000000000000000019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4FWG8XXYM7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.taption.plan.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = TaptionPlan;
+			};
+			name = Debug;
+		};
+		5A000000000000000000001A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4FWG8XXYM7;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.taption.plan.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = TaptionPlan;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -1558,6 +1656,15 @@
 			buildConfigurations = (
 				61000000000000000000000B /* Debug */,
 				61000000000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A0000000000000000000018 /* Build configuration list for PBXNativeTarget "TaptionPlanUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A0000000000000000000019 /* Debug */,
+				5A000000000000000000001A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
