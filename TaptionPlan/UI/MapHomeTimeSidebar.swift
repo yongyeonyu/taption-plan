@@ -2061,7 +2061,6 @@ enum MapHomeUnconfirmedQuickCategoryLayout {
 }
 
 struct MapHomeUnconfirmedReviewSheet: View {
-    @Environment(\.dismiss) private var dismiss
     let date: Date
     let segments: [MapHomeTimeRailSegment]
     let focusedSegment: MapHomeTimeRailSegment?
@@ -2234,14 +2233,9 @@ struct MapHomeUnconfirmedReviewSheet: View {
             }
             .navigationTitle(language.text("미확인 활동", "Unconfirmed activity"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(language.text("닫기", "Close")) { dismiss() }
-                        .disabled(savingSegmentID != nil)
-                }
-            }
         }
-        .interactiveDismissDisabled()
+        // 아래로 내리는 핸들 제스처로 닫는다. 저장 중에만 막는다.
+        .interactiveDismissDisabled(savingSegmentID != nil)
     }
 
     private func time(_ minute: Int) -> String {

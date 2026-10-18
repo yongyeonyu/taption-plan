@@ -1,5 +1,15 @@
 # 검증 기록
 
+## MAP1018A01 · 재생 중 지도 드래그 정지·속도별 자동 확대축소·미확인 활동 시트 닫기 (2026-10-18)
+- 수정: (1) 재생 중 지도 팬이면 재생을 멈추고 그 시각에 머문다(`handleUserMapPan`, 미사용 오버로드 제거). (2) 미확인 활동 시트의 오른쪽 '닫기' 버튼을 지우고, 아래로 내리기는 저장 중에만 막는다(`interactiveDismissDisabled(savingSegmentID != nil)`). (3) 재생 중 이동 속도(약 1.5~20m/s, 로그 비율)에 따라 지도 거리를 약 700m~12km로 부드럽게(계수 0.2) 바꾼다(`MapHomePlaybackZoomPolicy`, `playbackAwareDistance`). 멈춘 상태나 재생 중이 아니면 거리를 바꾸지 않는다. (4) 집에 있을 때 파랑이 크기를 이동 중 마커 크기(36pt)와 같게 했다. 배경·위치 변경은 하지 않았다.
+- 자동 검증: 전용 시뮬레이터 `TaptionPlan-COM1016A01-b` Debug 빌드 `BUILD SUCCEEDED`, 오류 0·경고 0(`pan-zoom-size-build.log`). 이전 빌드 실패·취소 로그는 기록하지 않는다.
+- 제한: 시뮬레이터 접근 권한이 없어 드래그 정지·시트 닫힘·자동 확대축소의 실제 동작을 화면으로 확인하지 못했다. 집에서 재생이 멈춰 보이는 원인(반경 판정)은 미확정이다. 파랑이를 집 앞에 따로 세우는 작업은 다음 단계다.
+
+## UI테스트 타깃 추가 (2026-10-18)
+- 추가: `TaptionPlanUITests`(ui-testing 번들, 호스트 TaptionPlan, 번들 `com.taption.plan.uitests`)와 `TaptionPlanSmokeUITests`(실행 후 홈 확인, 권한 팝업의 '허용 안 함'만 누름, 데이터 변경 없음), 공유 스킴 테스트 목록 등록.
+- 검증: `xcodebuild -list`에 `TaptionPlanUITests` 타깃 인식 확인. 실기기 실행은 아직 하지 않았다.
+- 제한: 실기기(iPhone 11 Pro·18 Pro Max) 설치·XCUI 실행은 미실행. 설치 시 개발 서명 빌드가 TestFlight 설치본을 대신할 수 있어 사전 확인이 필요하다.
+
 ## COM1016A01 · 44pt 터치 영역 1차 (2026-10-18, 홈 화면 제외)
 - 수정: `Theme.swift`에 `taptionTouchTarget`·`taptionHitOutset`을 추가해 보이는 크기와 배치는 그대로 두고 터치 영역만 넓힌다(패딩+contentShape+음수 패딩, `nonisolated`). 아이콘 전용 버튼 8곳에 적용했다: 캘린더 보내기(34)·메모 메뉴(28×24)·사진 선택(42×34)·미리보기 화살표(34)(`DetailViews`), 메모 동작 3개(22, 가로는 간격 3pt라 이웃과 겹치지 않게 1.5pt만, 세로 44)(`GoalsView`), 기록 페이저(28)(`ReviewView`), 색상 스와치(31)(`AddPlanSheet`), 닫기(40)(`AppShellView`). 설정 화면은 이미 44pt 최소 높이를 쓰고 있어 건드리지 않았다. 카테고리 칩은 라벨 전체가 48×46이라 이미 충분하다. 장식용 아이콘 배경(행 안의 24~29pt)은 터치 대상이 아니라 대상에서 뺐다. `MapHomeView`는 수정하지 않았다.
 - 검증: generic이 아닌 전용 시뮬레이터 대상 Debug 빌드 `BUILD SUCCEEDED`, 경고·오류 0(`touch44-build2.log`). 첫 빌드는 `PhotosPicker` 라벨의 격리 오류로 실패해(`touch44-build.log`) 수정자를 `nonisolated`로 바꿨다. 새 시뮬레이터 설치·실행에서 홈 화면이 정상 표시됨을 스크린샷으로 확인했다(`touch44-shots/launch-01.png`, 권한 팝업 포함).

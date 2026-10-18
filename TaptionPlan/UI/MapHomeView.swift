@@ -895,13 +895,6 @@ enum MapHomeUserTrackingPolicy {
         interaction != .pan
     }
 
-    static func keepsFollowing(
-        after interaction: Interaction,
-        duringPlayback: Bool
-    ) -> Bool {
-        duringPlayback || keepsFollowing(after: interaction)
-    }
-
     static func focusesLocationUpdates(in mode: MapHomeUserTrackingMode) -> Bool {
         mode == .following
     }
@@ -941,6 +934,28 @@ enum MapHomePresencePolicy {
             && coordinate.longitude.isFinite
             && (-90...90).contains(coordinate.latitude)
             && (-180...180).contains(coordinate.longitude)
+    }
+}
+
+/// 재생 중 이동 속도에 따라 지도 거리를 로그 비율로 부드럽게 맞춘다.
+/// 걷기 수준이면 가까이, 지하철·차량 수준이면 멀리 본다. 멈춰 있으면 현재 거리를 유지한다.
+enum MapHomePlaybackZoomPolicy {
+    static let walkingSpeed = 1.5
+    static let vehicleSpeed = 20.0
+    static let nearDistance = 700.0
+    static let farDistance = 12_000.0
+    static let easing = 0.2
+
+    static func targetDistance(speedMetersPerSecond: Double?) -> Double? {
+        guard let speed = speedMetersPerSecond, speed.isFinite, speed >= walkingSpeed else {
+            return nil
+        }
+        let ratio = min(1, (log(speed) - log(walkingSpeed)) / (log(vehicleSpeed) - log(walkingSpeed)))
+        return exp(log(nearDistance) + ratio * (log(farDistance) - log(nearDistance)))
+    }
+
+    static func eased(current: Double, target: Double) -> Double {
+        exp(log(current) + (log(target) - log(current)) * easing)
     }
 }
 
@@ -9602,6 +9617,16 @@ struct MapHomeView: View {
         setMapPosition(.region(region))
     }
 
+    /// 재생 중에는 속도에 맞춘 거리를, 아니면 현재 거리를 돌려준다.
+    private func playbackAwareDistance(current: Double) -> Double {
+        guard isDayPlaybackRunning,
+              let target = MapHomePlaybackZoomPolicy.targetDistance(
+                  speedMetersPerSecond: displayedSpeedMetersPerSecond
+              )
+        else { return current }
+        return MapHomePlaybackZoomPolicy.eased(current: current, target: target)
+    }
+
     private func focusMap(
         on point: GeoPoint,
         using proxy: MapProxy? = nil,
@@ -9629,7 +9654,7 @@ struct MapHomeView: View {
             setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: center,
-                    distance: camera.distance,
+                    distance: playbackAwareDistance(current: camera.distance),
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
@@ -9638,7 +9663,7 @@ struct MapHomeView: View {
             setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: coordinate,
-                    distance: camera.distance,
+                    distance: playbackAwareDistance(current: camera.distance),
                     heading: camera.heading,
                     pitch: camera.pitch
                 )
@@ -9705,7 +9730,7 @@ struct MapHomeView: View {
             setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: center,
-                    distance: camera.distance,
+                    distance: playbackAwareDistance(current: camera.distance),
                     heading: heading ?? camera.heading,
                     pitch: camera.pitch
                 )
@@ -9714,7 +9739,7 @@ struct MapHomeView: View {
             setMapPosition(.camera(
                 MapCamera(
                     centerCoordinate: coordinate,
-                    distance: camera.distance,
+                    distance: playbackAwareDistance(current: camera.distance),
                     heading: heading ?? camera.heading,
                     pitch: camera.pitch
                 )
@@ -9867,11 +9892,10 @@ struct MapHomeView: View {
     }
 
     private func handleUserMapPan() {
-        guard MapHomeUserTrackingPolicy.keepsFollowing(
-            after: .pan,
-            duringPlayback: isDayPlaybackRunning
-        ) == false
-        else { return }
+        // 재생 중 지도를 직접 끌면 재생을 멈추고 그 시각에 머문다.
+        if isDayPlaybackRunning {
+            stopDayPlayback(resetProgress: true)
+        }
         recordUserMapAdjustment()
         if usesVectorRoadMap,
            let vectorMapViewport = vectorMapViewportStore.viewport {
@@ -13219,7 +13243,7 @@ private struct MapHomePlacePin: View {
                 .frame(width: 48, height: 48)
                 .shadow(color: .black.opacity(0.20), radius: 3, y: 1)
                 .background { homeMarkerBackground }
-            MapHomeStickmanGlyph(action: catAction, size: 20)
+            MapHomeStickmanGlyph(action: catAction, size: MapHomeStickmanMarker.size.width)
                 .offset(
                     x: MapHomeCatTapRouting.catOffsetInHomeImage.x,
                     y: MapHomeCatTapRouting.catOffsetInHomeImage.y

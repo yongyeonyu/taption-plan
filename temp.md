@@ -1,5 +1,10 @@
 # 남은 요청
 
+## MAP1018A01 · 홈 지도 재생·미확인 활동 시트 (2026-10-18)
+- 원인: (1) 재생 중 지도 드래그가 `handleUserMapPan`에서 무시됨(`keepsFollowing(duringPlayback: true)`가 항상 참이라 early return). (2) 미확인 활동 시트에 `interactiveDismissDisabled()`와 오른쪽 '닫기' 버튼이 있어 아래로 내리기가 막힘. (3) 재생이 집 반경 안에서 멈추고 화랑이가 집 안에서 20pt로 줄어 보이는 문제는 `isDisplayedCatAtHome`(반경 판정)과 `homeCatMarker`(glyph 20pt) 때문으로 보이나 미확정.
+- 해결: (1) 재생 중 팬이면 `stopDayPlayback(resetProgress: true)` 후 기존 팬 처리. 미사용 오버로드 제거. (2) 닫기 버튼 제거, `interactiveDismissDisabled(savingSegmentID != nil)`로 저장 중에만 막음. (3) 보류: 화랑이 크기는 메모리상 홈 마스코트 크기 변경 금지 규칙이라 대표 확인 필요.
+- 검증 기준: 전용 시뮬레이터 Debug 빌드 성공, 기존 `keepsFollowing(after:)` 테스트 통과, 시트 드래그 닫힘과 재생 팬 정지는 화면에서 확인(권한 전까지 미확인).
+
 ## COM1016A01 · 판매 가능 수준 품질 개선 (안정성·지도 경로·디자인·성능·출시 준비) [0·1·2·3·4·5a 1차 완료 / 실기기·대표 결정 대기]
 - 원인: 대표가 안정성(충돌·백그라운드 종료), 최적화, 지도 경로 버그, 화랑이·등록 장소 마커 크기·위치, 화면별 스타일 불일치가 반복된다고 요청했다. 2026-10-16 정적 감사(코드 읽기, 미실행)에서 같은 뿌리의 원인 후보를 확인했다. 센서 갱신 실패 시 전체 snapshot 롤백(AppModel `performSensorTimelineRefresh`), 백그라운드 작업 만료 핸들러가 작업을 끝내지 않음(PlanRepository), 복원 경로 MainActor 실행, 경로 필터의 15분 이후 280m/s 허용(RouteLoggerRouteFilter:21,493), 재생 위치 근거 4곳, 디자인 토큰·공용 마커 부재, 거대 파일(AppModel 1.4만/MapHomeView 1.7만 줄).
 - 해결(단계): 0 기준선(커밋·CI·임시 테스트 제거) → 1 안정성 → 2 지도 경로(단일 position resolver·상수 표·합성 GPS 회귀) → 3 디자인 시스템(TaptionMascot·TaptionPlaceMarker·토큰) → 4 성능·파일 분리 → 5 출시 준비(WeatherKit만 사용·개인정보·건강 데이터 iCloud 포함 범위 조사·접근성·다국어·UI 테스트) → 6 판매 게이트. 판매 방식은 미정이며 IAP는 별도 재개 요청 전까지 보류한다.
