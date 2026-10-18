@@ -3847,6 +3847,7 @@ struct ActualRecordDetailView: View {
                 .frame(width: 28, height: 28)
                 .background(Color.tpSurface, in: Circle())
                 .overlay(Circle().stroke(Color.tpLine, lineWidth: 0.7))
+                .taptionTouchTarget(visualWidth: 28, visualHeight: 28)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)

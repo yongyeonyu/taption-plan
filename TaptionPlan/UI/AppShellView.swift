@@ -1331,6 +1331,7 @@ struct TaptionProAccessView: View {
                                     Color.black.opacity(0.06),
                                     in: Circle()
                                 )
+                                .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(text("닫기", "Close"))

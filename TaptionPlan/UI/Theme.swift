@@ -187,6 +187,26 @@ enum TaptionMenuMetrics {
     static let scaleControlVerticalPadding: CGFloat = 4.5
 }
 
+extension View {
+    /// 보이는 크기와 배치는 그대로 두고 터치 영역만 최소 44pt까지 넓힌다.
+    nonisolated func taptionTouchTarget(visualWidth: CGFloat, visualHeight: CGFloat) -> some View {
+        let minimum = TaptionMenuMetrics.minimumHitSize
+        return taptionHitOutset(
+            horizontal: max(0, (minimum - visualWidth) / 2),
+            vertical: max(0, (minimum - visualHeight) / 2)
+        )
+    }
+
+    /// 이웃 컨트롤과 겹치지 않도록 방향별로 터치 영역을 직접 넓힐 때 쓴다.
+    nonisolated func taptionHitOutset(horizontal: CGFloat = 0, vertical: CGFloat = 0) -> some View {
+        padding(.horizontal, horizontal)
+            .padding(.vertical, vertical)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -horizontal)
+            .padding(.vertical, -vertical)
+    }
+}
+
 /// 지도 홈·기록·설정이 같은 색을 쓰도록 묶은 자동 기록의 대분류 팔레트다.
 enum CanonicalCategoryPalette {
     static let orderedIDs = [

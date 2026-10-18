@@ -79,6 +79,7 @@ struct QuickActionSheet: View {
                             Color.white,
                             in: RoundedRectangle(cornerRadius: TaptionRadius.control)
                         )
+                        .taptionTouchTarget(visualWidth: 34, visualHeight: 34)
                     }
                     .buttonStyle(.plain)
                     .disabled(selectedPlan?.externalEventID != nil)
@@ -500,7 +501,7 @@ struct MemoDetailView: View {
                             .font(.taption(size: 10, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
                             .frame(width: 28, height: 24)
-                            .contentShape(Rectangle())
+                            .taptionTouchTarget(visualWidth: 28, visualHeight: 24)
                     }
                     .accessibilityLabel("메모 메뉴")
                 }
@@ -617,6 +618,7 @@ struct MemoDetailView: View {
                         Color(red: 0.95, green: 0.95, blue: 0.97),
                         in: RoundedRectangle(cornerRadius: TaptionRadius.small)
                     )
+                    .taptionTouchTarget(visualWidth: 42, visualHeight: 34)
                 }
                 .buttonStyle(.plain)
                 Spacer()
@@ -918,6 +920,7 @@ struct CatPickerView: View {
                 .frame(width: 34, height: 34)
                 .background(.white.opacity(0.78), in: Circle())
                 .overlay { Circle().stroke(Color.tpLine, lineWidth: 1) }
+                .taptionTouchTarget(visualWidth: 34, visualHeight: 34)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)

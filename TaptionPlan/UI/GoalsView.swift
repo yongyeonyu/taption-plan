@@ -1668,6 +1668,8 @@ struct InlineMemoField: View {
                 )
                 .frame(width: 22, height: 22)
                 .background(Color.white.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
+                // 버튼 간격이 3pt라 가로는 이웃과 겹치지 않는 만큼만 넓힌다.
+                .taptionHitOutset(horizontal: 1.5, vertical: 11)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)

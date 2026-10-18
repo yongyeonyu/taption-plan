@@ -1643,6 +1643,7 @@ private struct CustomCategoryScreen: View {
                                                     .padding(-3)
                                             }
                                         }
+                                        .taptionTouchTarget(visualWidth: 31, visualHeight: 31)
                                 }
                                 .accessibilityLabel("색상 \(index + 1)")
                                 .accessibilityAddTraits(selectedColor == index ? .isSelected : [])

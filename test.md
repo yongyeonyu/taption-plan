@@ -1,5 +1,10 @@
 # 검증 기록
 
+## COM1016A01 · 44pt 터치 영역 1차 (2026-10-18, 홈 화면 제외)
+- 수정: `Theme.swift`에 `taptionTouchTarget`·`taptionHitOutset`을 추가해 보이는 크기와 배치는 그대로 두고 터치 영역만 넓힌다(패딩+contentShape+음수 패딩, `nonisolated`). 아이콘 전용 버튼 8곳에 적용했다: 캘린더 보내기(34)·메모 메뉴(28×24)·사진 선택(42×34)·미리보기 화살표(34)(`DetailViews`), 메모 동작 3개(22, 가로는 간격 3pt라 이웃과 겹치지 않게 1.5pt만, 세로 44)(`GoalsView`), 기록 페이저(28)(`ReviewView`), 색상 스와치(31)(`AddPlanSheet`), 닫기(40)(`AppShellView`). 설정 화면은 이미 44pt 최소 높이를 쓰고 있어 건드리지 않았다. 카테고리 칩은 라벨 전체가 48×46이라 이미 충분하다. 장식용 아이콘 배경(행 안의 24~29pt)은 터치 대상이 아니라 대상에서 뺐다. `MapHomeView`는 수정하지 않았다.
+- 검증: generic이 아닌 전용 시뮬레이터 대상 Debug 빌드 `BUILD SUCCEEDED`, 경고·오류 0(`touch44-build2.log`). 첫 빌드는 `PhotosPicker` 라벨의 격리 오류로 실패해(`touch44-build.log`) 수정자를 `nonisolated`로 바꿨다. 새 시뮬레이터 설치·실행에서 홈 화면이 정상 표시됨을 스크린샷으로 확인했다(`touch44-shots/launch-01.png`, 권한 팝업 포함).
+- 제한: 시뮬레이터 접근 권한을 받지 못해 탭·화면 이동을 하지 못했다. 수정한 8곳의 실제 화면과 터치 동작, 이웃 컨트롤과의 겹침은 눈으로 확인하지 않았다. 관련 단위 테스트가 없어 새로 만들지 않았다(뷰 수정자). 슬라이더 손잡이(22, 드래그)·`GoalsView` 범위 손잡이는 탭 대상이 아니라 바꾸지 않았다. 메모 동작 3개의 가로 터치 폭은 약 25pt로 44pt에 못 미친다(레이아웃 변경 필요).
+
 ## COM1016A01 · 대기질 중계 호스트 설정·마이그레이션 재시도 테스트 경합 수정 (2026-10-18)
 - 수정: 앱 target Debug/Release 빌드 설정에 `AIR_QUALITY_PROXY_HOST = taption-airkorea-proxy.axony99.workers.dev`를 넣었다(`project.pbxproj` 2곳). Worker 주소는 `/airkorea/stations?ping=1`에 HTTP 200으로 응답했다. 서비스 키 등록·Workers Logs 설정은 대표 작업이라 확인하지 못했고, 실제 대기질 값이 내려오는지는 확인하지 않았다.
 - 분류: `testFailedPrimaryMigrationCanRetryOnNextLoad`는 시작 커밋 2a25758 이후 `MigratingPlanRepository`·테스트 본문이 바뀌지 않았다(`git diff 2a25758 HEAD`로 확인, 바뀐 곳은 백그라운드 보호·문구 현지화뿐). 첫 저장 실패 뒤 `finishMigrationTask`가 끝나기 전에 재로드하면 `guard migrationTask == nil`에 막혀 재시도가 예약되지 않는 기존 타이밍 경합이다. 시작 커밋에서 실행해 재현하지는 않았고 코드 판독으로 분류했다. 테스트가 재시도될 때까지 `load()`를 반복하도록 고쳤다(앱 코드 변경 없음).
