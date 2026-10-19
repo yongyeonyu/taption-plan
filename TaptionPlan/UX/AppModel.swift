@@ -1468,19 +1468,18 @@ final class AppModel {
             self.repository = repository
             repositorySource = "injected"
         } else {
-            let appGroupSQLite = try? SQLitePlanRepository.appGroup()
-            let appGroupFile = try? FilePlanRepository.appGroup()
-            let applicationSupportFile = try?
-                FilePlanRepository.applicationSupport()
-            let applicationSupportSQLite = appGroupSQLite == nil
-                ? try? SQLitePlanRepository.applicationSupport()
-                : nil
-            let selection = PlanRepositoryResolver.resolve(
-                appGroupSQLite: appGroupSQLite,
-                appGroupFile: appGroupFile,
-                applicationSupportSQLite: applicationSupportSQLite,
-                applicationSupportFile: applicationSupportFile
-            )
+            let selection: PlanRepositorySelection
+            if let store = try? TaptionStoreV2.applicationSupport() {
+                selection = PlanRepositorySelection(
+                    repository: TaptionStoreRepository(store: store),
+                    source: "taption-store"
+                )
+            } else {
+                selection = PlanRepositorySelection(
+                    repository: UnavailablePlanRepository(),
+                    source: "unavailable"
+                )
+            }
             self.repository = selection.repository
             repositorySource = selection.source
         }

@@ -1256,12 +1256,13 @@ actor SensorReadingArchive {
         rawArchive: RawDeviceDataMonthlyArchive? = nil,
         trackingChunkArchive: TrackingSessionChunkArchive? = nil,
         storeURL: URL? = nil,
+        store: TaptionStoreV2? = nil,
         beforeValidateAppend: @escaping @Sendable () async throws -> Void = {}
     ) throws {
         let resolvedStoreURL = storeURL ?? fileURL
             .deletingLastPathComponent()
-            .appendingPathComponent("taption-store.sqlite")
-        self.store = try TaptionStoreV2(url: resolvedStoreURL)
+            .appendingPathComponent(TaptionStoreV2.fileName)
+        self.store = try store ?? TaptionStoreV2(url: resolvedStoreURL)
         self.legacyFileURL = fileURL
         self.rawArchive = rawArchive
         self.trackingChunkArchive = trackingChunkArchive
@@ -1281,15 +1282,13 @@ actor SensorReadingArchive {
             appropriateFor: nil,
             create: true
         )
-        let storeRoot = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
-        ) ?? root.appendingPathComponent("TaptionPlan", isDirectory: true)
+        let shared = try TaptionStoreV2.applicationSupport(fileManager: fileManager)
         return try SensorReadingArchive(
             fileURL: root.appendingPathComponent("TaptionPlan/Sensors/sensor-readings-v1.jsonl"),
             rawArchive: rawArchive
                 ?? (try? RawDeviceDataMonthlyArchive.applicationSupport()),
             trackingChunkArchive: try? TrackingSessionChunkArchive.applicationSupport(),
-            storeURL: storeRoot.appendingPathComponent("taption-store.sqlite", isDirectory: false)
+            store: shared
         )
     }
 

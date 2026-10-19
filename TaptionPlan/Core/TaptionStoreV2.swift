@@ -1,5 +1,6 @@
 import Foundation
 import SQLite3
+import TaptionPlanCore
 
 /// 새 저장소(스키마 1). 이전 DB·백업과 호환하지 않는다.
 ///
@@ -30,6 +31,8 @@ struct TaptionStoreRecord: Equatable, Sendable {
     var updatedAt: Date
     var origin: Origin
     var isDeleted = false
+    /// 같은 종류 안에서 처음 저장된 순서. 불러올 때 이 순서를 유지한다.
+    var ord = 0
     /// 레코드 내용(JSON 문자열). `json_extract`로 조회할 수 있다.
     var body: String
 }
@@ -270,6 +273,30 @@ private final class TaptionSQLiteConnection: @unchecked Sendable {
 
 actor TaptionStoreV2 {
     static let schemaVersion = 1
+    static let fileName = "taption-store.sqlite"
+
+    private nonisolated(unsafe) static var sharedStores: [String: TaptionStoreV2] = [:]
+    private static let sharedLock = NSLock()
+
+    /// 앱이 쓰는 저장소 하나. 센서·계획·기록이 같은 파일과 같은 연결을 쓴다.
+    static func applicationSupport(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
+        let root = try fileManager.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        )
+        let storeRoot = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
+        ) ?? root.appendingPathComponent("TaptionPlan", isDirectory: true)
+        return try shared(at: storeRoot.appendingPathComponent(fileName, isDirectory: false))
+    }
+
+    static func shared(at url: URL) throws -> TaptionStoreV2 {
+        sharedLock.lock()
+        defer { sharedLock.unlock() }
+        if let existing = sharedStores[url.path] { return existing }
+        let store = try TaptionStoreV2(url: url)
+        sharedStores[url.path] = store
+        return store
+    }
 
     private var connection: TaptionSQLiteConnection?
     private let calendar: Calendar
@@ -537,8 +564,8 @@ actor TaptionStoreV2 {
         do {
             let statement = try prepare(db, """
                 INSERT OR REPLACE INTO records
-                (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, body)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, ord, body)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)
             defer { sqlite3_finalize(statement) }
             for record in records {
@@ -554,7 +581,8 @@ actor TaptionStoreV2 {
                 bind(statement, 6, .real(record.updatedAt.timeIntervalSince1970))
                 bind(statement, 7, .text(record.origin.rawValue))
                 bind(statement, 8, .int(record.isDeleted ? 1 : 0))
-                bind(statement, 9, .text(record.body))
+                bind(statement, 9, .int(Int64(record.ord)))
+                bind(statement, 10, .text(record.body))
                 try step(db, statement)
             }
             try exec(db, "COMMIT")
@@ -599,6 +627,54 @@ actor TaptionStoreV2 {
             ))
         }
         return result
+    }
+
+    /// 지워지지 않은 모든 기록 행(종류, id, 순서, 본문). 불러오기와 변경 비교의 기준으로 쓴다.
+    func allRecordRows() throws -> [(kind: String, id: String, ord: Int, body: String)] {
+        let db = try handle()
+        let statement = try prepare(
+            db, "SELECT kind, id, ord, body FROM records WHERE deleted = 0 ORDER BY kind, ord, id"
+        )
+        defer { sqlite3_finalize(statement) }
+        var rows: [(kind: String, id: String, ord: Int, body: String)] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            rows.append((
+                String(cString: sqlite3_column_text(statement, 0)),
+                String(cString: sqlite3_column_text(statement, 1)),
+                Int(sqlite3_column_int64(statement, 2)),
+                String(cString: sqlite3_column_text(statement, 3))
+            ))
+        }
+        return rows
+    }
+
+    /// 한 트랜잭션으로 바뀐 행은 쓰고, 사라진 행은 지운다.
+    func applyRecordChanges(upserts: [TaptionStoreRecord], deletes: [(kind: String, id: String)]) throws {
+        guard !upserts.isEmpty || !deletes.isEmpty else { return }
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            if !deletes.isEmpty {
+                let statement = try prepare(db, "DELETE FROM records WHERE kind = ? AND id = ?")
+                defer { sqlite3_finalize(statement) }
+                for item in deletes {
+                    sqlite3_reset(statement)
+                    sqlite3_clear_bindings(statement)
+                    bind(statement, 1, .text(item.kind))
+                    bind(statement, 2, .text(item.id))
+                    try step(db, statement)
+                }
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+        try upsertRecords(upserts)
+    }
+
+    func deleteAllRecords() throws {
+        try exec(try handle(), "DELETE FROM records")
     }
 
     func recordCount(kind: String? = nil) throws -> Int {
@@ -705,6 +781,7 @@ actor TaptionStoreV2 {
                     updated_ts REAL NOT NULL,
                     origin TEXT NOT NULL CHECK (origin IN ('auto', 'user', 'imported')),
                     deleted INTEGER NOT NULL DEFAULT 0,
+                    ord INTEGER NOT NULL DEFAULT 0,
                     body TEXT NOT NULL
                 );
                 CREATE INDEX records_kind_start ON records(kind, start_ts);

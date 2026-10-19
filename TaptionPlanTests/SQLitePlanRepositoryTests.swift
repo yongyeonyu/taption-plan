@@ -1816,3 +1816,101 @@ final class TaptionStoreV2Tests: XCTestCase {
         }
     }
 }
+
+final class TaptionStoreRepositoryTests: XCTestCase {
+    private var directory: URL!
+
+    override func setUpWithError() throws {
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("repo-\(UUID().uuidString)")
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private func makeStore() throws -> TaptionStoreV2 {
+        try TaptionStoreV2(url: directory.appendingPathComponent("taption.sqlite"))
+    }
+
+    private func plan(_ title: String, at seconds: TimeInterval) -> PlanRecord {
+        let start = Date(timeIntervalSince1970: 1_792_300_000 + seconds)
+        return PlanRecord(title: title, span: TimeSpan(start: start, end: start.addingTimeInterval(1_800)),
+                          categoryID: "activity")
+    }
+
+    func testEmptyStoreLoadsAnEmptySnapshot() async throws {
+        let repository = TaptionStoreRepository(store: try makeStore())
+        let snapshot = try await repository.load()
+        XCTAssertEqual(snapshot.updatedAt, .distantPast)
+        XCTAssertTrue(snapshot.plans.isEmpty)
+    }
+
+    func testSnapshotRoundTripKeepsItemsOrderAndSettingsAcrossInstances() async throws {
+        let store = try makeStore()
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = [plan("둘째", at: 3_600), plan("첫째", at: 0), plan("셋째", at: 7_200)]
+        snapshot.memos = [ActionMemo(kind: .nextAction, text: "메모",
+                                     createdAt: Date(timeIntervalSince1970: 1_792_300_000),
+                                     updatedAt: Date(timeIntervalSince1970: 1_792_300_000))]
+        snapshot.settings.mapDisplayStyle = .hybrid
+        try await TaptionStoreRepository(store: store).save(snapshot)
+
+        let reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.map(\.title), ["둘째", "첫째", "셋째"], "처음 저장한 순서를 유지한다")
+        XCTAssertEqual(reloaded.plans.map(\.id), snapshot.plans.map(\.id))
+        XCTAssertEqual(reloaded.memos.map(\.text), ["메모"])
+        XCTAssertEqual(reloaded.settings.mapDisplayStyle, .hybrid)
+        XCTAssertEqual(reloaded.updatedAt, snapshot.updatedAt)
+    }
+
+    func testSaveWritesOnlyChangedRowsAndRemovesDeletedOnes() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        let keep = plan("그대로", at: 0)
+        var edit = plan("고칠 것", at: 3_600)
+        let remove = plan("지울 것", at: 7_200)
+        snapshot.plans = [keep, edit, remove]
+        try await repository.save(snapshot)
+
+        edit.title = "고쳤다"
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_200)
+        snapshot.plans = [keep, edit]
+        try await repository.save(snapshot)
+
+        let rows = try await store.records(kind: "plan")
+        XCTAssertEqual(rows.count, 2)
+        let byID = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0) })
+        XCTAssertEqual(byID["\(keep.id)"]?.updatedAt, Date(timeIntervalSince1970: 1_792_300_100),
+                       "바뀌지 않은 행은 다시 쓰지 않는다")
+        XCTAssertEqual(byID["\(edit.id)"]?.updatedAt, Date(timeIntervalSince1970: 1_792_300_200))
+        XCTAssertNil(byID["\(remove.id)"])
+        XCTAssertEqual(byID["\(keep.id)"]?.origin, .user)
+        XCTAssertNotNil(byID["\(keep.id)"]?.start, "본문의 span에서 시작 시각을 뽑는다")
+
+        let reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.map(\.title), ["그대로", "고쳤다"])
+    }
+
+    func testDeleteAllClearsPlanDataButNotSensorReadings() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = [plan("계획", at: 0)]
+        try await repository.save(snapshot)
+        try await store.upsertReadings([SensorReading(
+            timestamp: Date(timeIntervalSince1970: 1_792_300_000),
+            point: GeoPoint(latitude: 37, longitude: 126, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+            locationFixQuality: .precise, gpsAvailable: true
+        )])
+
+        try await repository.deleteAll()
+        let cleared = try await repository.load()
+        XCTAssertEqual(cleared.updatedAt, .distantPast)
+        let readingCount = try await store.readingCount()
+        XCTAssertEqual(readingCount, 1)
+    }
+}
