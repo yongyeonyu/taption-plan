@@ -1,5 +1,11 @@
 # 검증 기록
 
+## ARC1019A01 · 월 단위 백업 엔진 병합 (2026-10-19)
+- 병합: 에이전트가 별도 워크트리에서 만든 브랜치 `rewrite/backup-v2`(커밋 `5708caf`, 요청 ID BKP1019A02)를 `rewrite/storage-v2`에 합쳤다. 자동 병합은 충돌이 없었으나 합친 결과에서 백업 엔진 테스트 3개가 실패했다: 에이전트의 `upsertRecordsKeepingNewer`가 `ON CONFLICT(id)`를 썼는데 독립 검토 반영으로 `records` 기본키가 `(kind, id)`가 되어 `ON CONFLICT clause does not match any PRIMARY KEY`가 났다. 충돌 대상을 `(kind, id)`로 맞춰 고쳤다(`merge-a-11.log` 실패 → `merge-a-11b.log` 통과).
+- 자동 검증: iPhone 11 Pro 실기기, `TaptionBackupV2Tests`(17)·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`SensorDayStoreTests` 합쳐 123개 실행, 실패 0, `TEST SUCCEEDED`(`merge-a-11b.log`). 에이전트가 보고한 백업 엔진 17개 통과와 같은 결과다.
+- 에이전트 보고 중 확인한 것/못 한 것: 브랜치·파일 구성·테스트 통과는 직접 확인했다. 압축률(합성 위치 5,000건: 원본 JSON 3,134,110B → zlib 백업 454,417B, 14.5%)과 파이썬 도구가 실제 파일을 여는 검증은 에이전트의 기록이며 직접 재현하지 않았다. iCloud Drive 구현(`TaptionICloudDriveBackupDestination`)은 실행하지 못했다(기기에서만 동작, iCloud entitlement 설정 없음).
+- 미결정(에이전트 보고): 시작 시각이 없는 기록(설정 헤더·분류 등)은 월 백업에 담기지 않음, 진행 중인 달에서 사용자가 지운 행은 행 수 규칙 때문에 새 백업이 거부될 수 있음, 봉인된 달에 늦게 들어온 센서 행의 재봉인 정책, 전체 삭제와 백업 파일의 관계.
+
 ## ARC1019A01 · 독립 검토 반영 (브랜치 rewrite/storage-v2, 2026-10-19)
 - 검토: 읽기 전용 에이전트가 새 저장소 코드를 독립 검토했고, 지적 항목을 코드로 직접 확인한 뒤 고쳤다. 확인된 결함: (1-1) 헤더를 해석하지 못하면 빈 스냅샷을 돌려주고 다음 저장이 전 항목을 지움, (1-2) `applyRecordChanges`의 삭제와 저장이 별도 트랜잭션, (1-3) 연속 저장 시 비교 기준(`known`)이 어긋남, (1-4) `records` 기본키가 id 단독이라 종류가 다른 행이 서로 덮어씀, (1-5) 삭제 뒤 빈 페이지·WAL에 값이 남음, (1-6) 복원 롤백 삭제가 실패하면 목록이 먼저 사라짐, (1-7) 읽기 중 `sqlite3_step` 오류를 무시, (2-1) 시각이 1970 기준 변환에서 반올림돼 같은 기록 재전송이 충돌로 거부됨, (2-3) `busy_timeout` 없음, (2-6) 센서 삭제가 계획·기록까지 지움, 사용자 달력(불교력 등)에 따라 `day` 값이 달라짐.
 - 조치: 헤더 해석 실패는 `invalidSnapshot`으로 실패, 변경을 한 트랜잭션으로, 저장을 순서대로 하나씩, 기본키를 (kind, id)로, `secure_delete=ON`과 삭제 뒤 공간 반환(분할 incremental_vacuum), 복원 세션 목록은 삭제 성공 뒤에 제거, 읽기 끝 상태 확인, 센서 원본 비교를 저장 형태끼리(`sameStoredContent`), 5초 대기, 센서 삭제는 `deleteAllReadings`, 그레고리력 현지 날짜 고정, 스키마 생성을 `BEGIN IMMEDIATE`와 `IF NOT EXISTS`로.
@@ -1637,3 +1643,10 @@
 - 최종 회귀/렌더: MapHomeGrowthPolicyTests 18개 통과·0실패·0건너뜀. 기존 패키징 테스트를 실제 번들 UIImage 366개·128pt 크기·48pt 렌더·중복 검사와 전체 검토 이미지 첨부로 보강했다. 366개 렌더 그림을 시각 확인했고, 최종 렌더 검토 PNG가 512px 초기 적용본과 바이트 단위로 동일함을 확인했다. 흰 배경에서 각 아이콘 영역만 따로 비교해 366개 고유·연속 365쌍 모두 차이(채널차 35 초과 최소 29픽셀), 건물 전환 121쌍 최소 320픽셀. 제작 원본의 투명 RGBA 차이 기준/54픽셀 결과와 다른 배경·렌더 조건으로 구분한다. 실제 지도/기기 체감 판정을 대신하지 않는다.
 - 최종 빌드/근거: generic iOS Debug 성공, `assetutil`로 최종 기기용 Assets.car에 HomeEvolution001–366 모두 포함됨을 확인했다. `growth-native128-tests.xcresult`, `growth-native128-tests-summary.json`, `ios-native128-debug-build.log`, `device-native128-asset-info.json`, `integration-native128-summary.json`, `bundled-home-levels-native128-48pt.png`가 최종 근거다. 512px 초기 적용의 테스트 18개/Debug 성공 및 `integration-summary.json`도 중간 기록으로 보존했다. 최종 자산 `--check`, `git diff --check` 성공.
 - 범위/제한: 레벨 이미지 반영·관련 검증 완료로 이 요청만 temp에서 제거했다. 이번 수정본의 iPhone11/18 설치·실기기 지도/성장 상세 확인·TestFlight 업로드는 수행하지 않았다. 이전 설치/167 배포 상태와 이번 검증을 합쳐서 완료 처리하지 않는다. 다른 미완료 요청은 남긴다.
+
+## BKP1019A02 · 월 단위 백업 엔진 v2 (브랜치 rewrite/backup-v2, 2026-10-19)
+- 구현: `TaptionBackupFormat/Destination/Engine.swift`, `TaptionStoreV2`의 월 범위 보조(rangeStats·dataTimeBounds·recordsForBackup·upsertRecordsKeepingNewer·deleteRange), `scripts/taption-backup-decode.py` 재작성. UI·AppModel 연결 없음.
+- 실기기 단위 테스트(iPhone 11 Pro 00008030-001628201AD2802E, Debug, `TaptionBackupV2Tests`): 17개 실행·0실패(`build/validation/BKP1019A02/run4.log`, `run4.xcresult`). 앞선 run1·run2는 Swift 6 동시성 컴파일 오류, run3은 17개 중 1개 실패(마지막 시각 기대값 오류, 테스트 수정)로 통과가 아니다. 시뮬레이터는 쓰지 않았다.
+- 파이썬 도구 검증: 같은 실기기 테스트가 만든 실제 파일(기본 설정: 600000회, zlib, 301 센서 + 1 기록)을 xcresult 첨부로 꺼내 `python3 -I scripts/taption-backup-decode.py`로 `--header`·`--summary`·전체 내보내기가 성공했고(독립 PBKDF2·AES-GCM·zlib·트레일러 해시 검증) 틀린 비밀번호는 종료 코드 1이다. 도구의 LZFSE 경로는 실행하지 않았다.
+- 압축률(합성 위치 기록 5,000건, 3초 간격 걷기, 대부분 열은 null): 원본 JSON(SensorReading 배열) 3,134,110B / SQLite 파일 1,118,208B / 표 단위 JSONL 평문 2,025,073B / 백업 파일 압축 없음 2,027,170B, LZFSE 473,050B(원본 JSON의 15.1%, 건당 94.6B), zlib 454,417B(14.5%, 건당 90.9B). 실제 센서 필드가 더 채워진 데이터의 수치는 아니다.
+- 제한: iCloud Drive 목적지는 기기에서만 동작하는 구현이며 entitlement가 없어 실행·검증하지 못했다. 시작 시각이 없는 기록(설정·분류 등)은 월 백업에 담지 않는다. 앱 전체 Debug 빌드는 테스트 빌드로 성공했으나 전체 테스트는 실행하지 않았다.

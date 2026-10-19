@@ -728,6 +728,149 @@ actor TaptionStoreV2 {
         return try scalarInt("SELECT COUNT(*) FROM records")
     }
 
+    // MARK: 월 백업 보조
+
+    /// 시각 범위 `[from, to)` 안의 행 수와 시각 범위. 기록은 시작 시각이 있는 행만 센다.
+    func rangeStats(from: Double, to: Double) throws -> (readings: Int, records: Int, first: Double?, last: Double?) {
+        let db = try handle()
+        let statement = try prepare(db, """
+            SELECT
+              (SELECT COUNT(*) FROM readings WHERE ts >= ?1 AND ts < ?2),
+              (SELECT COUNT(*) FROM records WHERE start_ts >= ?1 AND start_ts < ?2),
+              (SELECT MIN(v) FROM (SELECT MIN(ts) AS v FROM readings WHERE ts >= ?1 AND ts < ?2
+                 UNION ALL SELECT MIN(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2)),
+              (SELECT MAX(v) FROM (SELECT MAX(ts) AS v FROM readings WHERE ts >= ?1 AND ts < ?2
+                 UNION ALL SELECT MAX(start_ts) FROM records WHERE start_ts >= ?1 AND start_ts < ?2))
+            """)
+        defer { sqlite3_finalize(statement) }
+        bind(statement, 1, .real(from))
+        bind(statement, 2, .real(to))
+        guard sqlite3_step(statement) == SQLITE_ROW else { return (0, 0, nil, nil) }
+        func optional(_ column: Int32) -> Double? {
+            sqlite3_column_type(statement, column) == SQLITE_NULL ? nil : sqlite3_column_double(statement, column)
+        }
+        return (Int(sqlite3_column_int64(statement, 0)), Int(sqlite3_column_int64(statement, 1)),
+                optional(2), optional(3))
+    }
+
+    /// 데이터가 있는 가장 이른·늦은 시각(센서 원본과 시작 시각이 있는 기록).
+    func dataTimeBounds() throws -> (first: Double, last: Double)? {
+        let db = try handle()
+        let statement = try prepare(db, """
+            SELECT MIN(v), MAX(w) FROM (
+              SELECT MIN(ts) AS v, MAX(ts) AS w FROM readings
+              UNION ALL SELECT MIN(start_ts), MAX(start_ts) FROM records)
+            """)
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW,
+              sqlite3_column_type(statement, 0) != SQLITE_NULL else { return nil }
+        return (sqlite3_column_double(statement, 0), sqlite3_column_double(statement, 1))
+    }
+
+    /// 백업용 기록 행. 삭제 표시 행과 순서(`ord`)까지 포함하고 결정적 순서(종류, id)로 돌려준다.
+    func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
+        let db = try handle()
+        let statement = try prepare(db, """
+            SELECT id, kind, start_ts, end_ts, updated_ts, origin, deleted, ord, body
+            FROM records WHERE start_ts >= ? AND start_ts < ? ORDER BY kind, id
+            """)
+        defer { sqlite3_finalize(statement) }
+        bind(statement, 1, .real(from))
+        bind(statement, 2, .real(to))
+        var result: [TaptionStoreRecord] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            guard let origin = TaptionStoreRecord.Origin(
+                rawValue: String(cString: sqlite3_column_text(statement, 5))
+            ) else { throw TaptionStoreV2Error.corruptRow("unknown origin") }
+            func date(_ column: Int32) -> Date? {
+                sqlite3_column_type(statement, column) == SQLITE_NULL
+                    ? nil : Date(timeIntervalSince1970: sqlite3_column_double(statement, column))
+            }
+            result.append(TaptionStoreRecord(
+                id: String(cString: sqlite3_column_text(statement, 0)),
+                kind: String(cString: sqlite3_column_text(statement, 1)),
+                start: date(2), end: date(3),
+                updatedAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 4)),
+                origin: origin,
+                isDeleted: sqlite3_column_int(statement, 6) != 0,
+                ord: Int(sqlite3_column_int64(statement, 7)),
+                body: String(cString: sqlite3_column_text(statement, 8))
+            ))
+        }
+        return result
+    }
+
+    /// 복원용. 같은 종류·`id`가 있으면 파일의 행이 더 나중에 고친 것일 때만 덮어쓴다(로컬 최신 편집 보호).
+    /// 새로 넣었거나 덮어쓴 행 수를 돌려준다.
+    @discardableResult
+    func upsertRecordsKeepingNewer(_ records: [TaptionStoreRecord]) throws -> Int {
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        var changed = 0
+        do {
+            let statement = try prepare(db, """
+                INSERT INTO records (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, ord, body)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(kind, id) DO UPDATE SET
+                  day = excluded.day, start_ts = excluded.start_ts,
+                  end_ts = excluded.end_ts, updated_ts = excluded.updated_ts, origin = excluded.origin,
+                  deleted = excluded.deleted, ord = excluded.ord, body = excluded.body
+                WHERE excluded.updated_ts > records.updated_ts
+                """)
+            defer { sqlite3_finalize(statement) }
+            for record in records {
+                sqlite3_reset(statement)
+                sqlite3_clear_bindings(statement)
+                bind(statement, 1, .text(record.id))
+                bind(statement, 2, .text(record.kind))
+                bind(statement, 3, record.start.map {
+                    .int(Int64(TaptionReadingRowCodec.dayNumber(for: $0, calendar: calendar)))
+                } ?? .null)
+                bind(statement, 4, record.start.map { .real($0.timeIntervalSince1970) } ?? .null)
+                bind(statement, 5, record.end.map { .real($0.timeIntervalSince1970) } ?? .null)
+                bind(statement, 6, .real(record.updatedAt.timeIntervalSince1970))
+                bind(statement, 7, .text(record.origin.rawValue))
+                bind(statement, 8, .int(record.isDeleted ? 1 : 0))
+                bind(statement, 9, .int(Int64(record.ord)))
+                bind(statement, 10, .text(record.body))
+                try step(db, statement)
+                changed += Int(sqlite3_changes(db))
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+        return changed
+    }
+
+    /// 오프로드용. `[from, to)`의 센서 원본·기록 행을 한 트랜잭션으로 지우되, 지운 행 수가 검증한 수와 다르면
+    /// (검증 뒤에 새 행이 들어온 경우) 되돌리고 `false`를 돌려준다.
+    func deleteRange(from: Double, to: Double, expectedReadings: Int, expectedRecords: Int) throws -> Bool {
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            var removed: [Int] = []
+            for table in [("readings", "ts"), ("records", "start_ts")] {
+                let statement = try prepare(db, "DELETE FROM \(table.0) WHERE \(table.1) >= ? AND \(table.1) < ?")
+                defer { sqlite3_finalize(statement) }
+                bind(statement, 1, .real(from))
+                bind(statement, 2, .real(to))
+                try step(db, statement)
+                removed.append(Int(sqlite3_changes(db)))
+            }
+            guard removed == [expectedReadings, expectedRecords] else {
+                try exec(db, "ROLLBACK")
+                return false
+            }
+            try exec(db, "COMMIT")
+            return true
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+    }
+
     // MARK: 메타·삭제
 
     func meta(_ key: String) throws -> String? {

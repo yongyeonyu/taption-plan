@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Taption Plan 백업(.taptionbackup, .rawsensorbackup)을 비밀번호만으로 풀어 JSON Lines로 낸다.
+"""Taption Plan 월 백업(yyyy-MM.taptionbackup, 형식 버전 1)을 비밀번호만으로 풀어 JSON Lines로 낸다.
 
 사용:
-  python3 scripts/taption-backup-decode.py <백업 파일> --out build/backup-decode
-  python3 scripts/taption-backup-decode.py <백업 파일> --summary
+  python3 scripts/taption-backup-decode.py <백업 파일> --header            # 비밀번호 없이 헤더만
+  python3 scripts/taption-backup-decode.py <백업 파일> --summary           # 복호화해 표별 행 수·검증 결과
+  python3 scripts/taption-backup-decode.py <백업 파일> --out build/backup-decode   # 줄을 <이름>.jsonl로 저장
+  python3 scripts/taption-backup-decode.py <백업 파일> > rows.jsonl        # 표준 출력으로 줄 내보내기
 
 비밀번호는 --password 또는 환경변수 TAPTION_BACKUP_PASSWORD, 없으면 입력창으로 받는다.
-새 형식 백업(파일 안에 passwordKDFSalt가 있는 것)만 열린다. 이전 백업은 솔트가 기기에만 있어 열 수 없다.
-이 도구는 인증 태그를 확인하지 않고 복호화한다(분석용). 위변조 검증이 필요하면 앱의 복원을 쓴다.
+키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수, 32바이트). 모든 프레임의 AES-GCM 태그,
+본문 SHA-256, 트레일러의 행 수·내용 해시를 확인하고, 하나라도 틀리면 종료 코드 1로 끝낸다.
+압축은 macOS의 libcompression(LZFSE/zlib)을 ctypes로 쓴다. macOS에서만 동작한다.
 """
 import argparse
 import base64
@@ -15,135 +18,139 @@ import collections
 import ctypes
 import getpass
 import hashlib
+import hmac
 import json
 import os
 import struct
 import sys
 
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-SECTIONS = [
-    "header", "plans", "actuals", "recordLinks", "memos", "stickers", "categories", "photos",
-    "calendarEvents", "weather", "places", "travel", "floorTransitions", "yearlyReports", "routePoints",
-]
-FRAME_MAGICS = {b"TPS4": "snapshot", b"TPP4": "raw-sensor"}
-COMPRESSION_MAGIC = b"TPZ1"
-COMPRESSION_LZFSE = 0x801
+MAGIC = b"TAPTBK02"
+HEADER_REGION = 2048
+BODY_OFFSET = len(MAGIC) + 4 + HEADER_REGION
+COMPRESSION_ALGORITHMS = {1: 0x801, 2: 0x205}  # 1=LZFSE, 2=zlib. 0=압축 안 함
 
 
-def lzfse_decode(data: bytes, expected: int) -> bytes:
+def fail(message: str) -> None:
+    print(f"오류: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def decompress(codec: int, data: bytes, size: int) -> bytes:
+    if codec == 0:
+        if len(data) != size:
+            fail("압축하지 않은 프레임 크기가 다릅니다")
+        return data
+    algorithm = COMPRESSION_ALGORITHMS.get(codec)
+    if algorithm is None:
+        fail(f"알 수 없는 압축 코덱: {codec}")
     lib = ctypes.CDLL("/usr/lib/libcompression.dylib")
     lib.compression_decode_buffer.restype = ctypes.c_size_t
     lib.compression_decode_buffer.argtypes = [
         ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int,
     ]
-    out = ctypes.create_string_buffer(expected)
-    written = lib.compression_decode_buffer(out, expected, data, len(data), None, COMPRESSION_LZFSE)
-    if written != expected:
-        raise ValueError(f"LZFSE 해제 크기가 다릅니다: {written} != {expected}")
+    out = ctypes.create_string_buffer(size)
+    written = lib.compression_decode_buffer(out, size, data, len(data), None, algorithm)
+    if written != size:
+        fail(f"압축 해제 크기가 다릅니다: {written} != {size}")
     return out.raw
 
 
-def decompress(blob: bytes) -> bytes:
-    if blob[:4] != COMPRESSION_MAGIC:
-        return blob
-    (size,) = struct.unpack("<Q", blob[4:12])
-    return lzfse_decode(blob[12:], size)
+def read_header(data: bytes) -> dict:
+    if data[:8] != MAGIC:
+        fail("Taption 월 백업 파일이 아닙니다")
+    (length,) = struct.unpack(">I", data[8:12])
+    if length != HEADER_REGION:
+        fail("헤더 영역 길이가 맞지 않습니다")
+    header = json.loads(data[12:12 + length])
+    if header.get("format") != "taption-backup" or header.get("version") != 1:
+        fail(f"지원하지 않는 형식입니다: {header.get('format')} v{header.get('version')}")
+    return header
 
 
-def gcm_decrypt_without_tag_check(key: bytes, combined: bytes) -> bytes:
-    nonce, body = combined[:12], combined[12:-16]
-    counter = nonce + b"\x00\x00\x00\x02"  # GCM의 첫 데이터 블록 카운터
-    decryptor = Cipher(algorithms.AES(key), modes.CTR(counter)).decryptor()
-    return decryptor.update(body) + decryptor.finalize()
+def derive_key(password: str, header: dict) -> bytes:
+    kdf = header["kdf"]
+    if kdf["algorithm"] != "PBKDF2-HMAC-SHA256":
+        fail(f"알 수 없는 KDF: {kdf['algorithm']}")
+    key = hashlib.pbkdf2_hmac("sha256", password.encode(), base64.b64decode(kdf["salt"]), int(kdf["iterations"]), 32)
+    mac = hmac.new(key, f"taption-backup-key-check|{header['month']}".encode(), hashlib.sha256).digest()[:16]
+    if base64.b64encode(mac).decode() != header["keyCheck"]:
+        fail("비밀번호가 맞지 않습니다")
+    return key
 
 
-def read_frame(data: bytes):
-    magic = data[:4]
-    if magic not in FRAME_MAGICS:
-        raise ValueError(f"알 수 없는 프레임 머리표: {magic!r}")
-    (count,) = struct.unpack("<I", data[4:8])
-    offset, pages = 8, []
-    for _ in range(count):
-        (length,) = struct.unpack("<I", data[offset:offset + 4])
-        offset += 4
-        pages.append(data[offset:offset + length])
-        offset += length
-    if offset != len(data):
-        raise ValueError("프레임 끝이 맞지 않습니다")
-    return FRAME_MAGICS[magic], pages
-
-
-def derive_key(password: str, archive: dict) -> bytes:
-    salt = archive.get("passwordKDFSalt")
-    if not salt:
-        raise SystemExit("이 백업에는 passwordKDFSalt가 없습니다. 비밀번호만으로 열 수 없는 이전 형식입니다.")
-    iterations = int(archive.get("passwordKDFIterations") or 600_000)
-    return hashlib.pbkdf2_hmac("sha256", password.encode(), base64.b64decode(salt), iterations, 32)
-
-
-def decode_archive(path: str, password: str):
-    with open(path, "rb") as handle:
-        archive = json.load(handle)
-    pin_key = derive_key(password, archive)
-    wrapped = base64.b64decode(archive["wrappedPayloadKey"])
-    try:
-        archive_key = AESGCM(pin_key).decrypt(wrapped[:12], wrapped[12:], None)
-    except Exception as error:  # noqa: BLE001
-        raise SystemExit(f"비밀번호가 맞지 않거나 파일이 손상됐습니다: {error}")
-    kind, pages = read_frame(base64.b64decode(archive["encryptedPayload"]))
-    meta = {k: archive.get(k) for k in ("version", "monthKey", "createdAt", "generationID", "hasRawSensorArchive")}
-    meta["kind"] = kind
-    meta["page_count"] = len(pages)
-    for index, page in enumerate(pages):
-        plain = decompress(gcm_decrypt_without_tag_check(archive_key, page))
-        yield meta, index, plain
-
-
-def page_records(kind: str, plain: bytes):
-    if kind == "snapshot":
-        section = SECTIONS[plain[0]] if plain[0] < len(SECTIONS) else f"section-{plain[0]}"
-        (ordinal,) = struct.unpack("<I", plain[1:5])
+def decode_lines(data: bytes, header: dict, key: bytes):
+    """복호화한 줄(bytes, 개행 제외)을 차례로 내고, 끝에서 모든 검증을 마친다."""
+    body = data[BODY_OFFSET:]
+    if len(body) != header["bodyBytes"] or hashlib.sha256(body).hexdigest() != header["bodySHA256"]:
+        fail("본문 바이트 수 또는 SHA-256이 헤더와 다릅니다(파일이 깨졌습니다)")
+    salt = base64.b64decode(header["kdf"]["salt"])
+    offset, digest, trailer = 0, hashlib.sha256(), None
+    for index in range(header["chunkCount"]):
+        codec = body[offset]
+        plain_size, sealed_size = struct.unpack(">II", body[offset + 1:offset + 9])
+        sealed = body[offset + 9:offset + 9 + sealed_size]
+        offset += 9 + sealed_size
+        final = index == header["chunkCount"] - 1
+        aad = b"TAPTBK02|" + salt + f"|{header['month']}|".encode() + struct.pack(">I", index) \
+            + bytes([1 if final else 0, codec]) + struct.pack(">I", plain_size)
         try:
-            rows = json.loads(plain[5:])
-        except ValueError:
-            rows = {"undecodable_bytes": len(plain) - 5}
-        yield {"section": section, "ordinal": ordinal, "rows": rows}
-    else:
-        try:
-            yield {"raw": json.loads(plain)}
-        except ValueError:
-            yield {"raw_undecodable_bytes": len(plain)}
+            compressed = AESGCM(key).decrypt(sealed[:12], sealed[12:], aad)
+        except InvalidTag:
+            fail(f"프레임 {index}의 인증 태그가 맞지 않습니다(변조 또는 손상)")
+        for line in decompress(codec, compressed, plain_size).split(b"\n"):
+            if not line:
+                continue
+            if trailer is not None:
+                fail("트레일러 뒤에 데이터가 있습니다")
+            if line.startswith(b'["#end"'):
+                trailer = json.loads(line)
+                continue
+            digest.update(line + b"\n")
+            yield line
+    if offset != len(body):
+        fail("본문 끝이 맞지 않습니다")
+    if trailer is None or trailer[5] != digest.hexdigest() or trailer[5] != header["contentSHA256"]:
+        fail("트레일러의 내용 해시가 맞지 않습니다")
+    if (trailer[1], trailer[2]) != (header["readingCount"], header["recordCount"]):
+        fail("트레일러의 행 수가 헤더와 다릅니다")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("file")
     parser.add_argument("--password", default=os.environ.get("TAPTION_BACKUP_PASSWORD"))
-    parser.add_argument("--out", help="JSON Lines를 쓸 폴더(없으면 요약만 출력)")
-    parser.add_argument("--summary", action="store_true", help="쪽·행 개수 요약만 출력")
+    parser.add_argument("--header", action="store_true", help="비밀번호 없이 헤더만 출력")
+    parser.add_argument("--summary", action="store_true", help="복호화·검증 후 표별 행 수만 출력")
+    parser.add_argument("--out", help="JSON Lines를 쓸 폴더(없으면 표준 출력)")
     args = parser.parse_args()
-    password = args.password or getpass.getpass("비밀번호: ")
 
-    counts = collections.Counter()
+    with open(args.file, "rb") as handle:
+        data = handle.read()
+    header = read_header(data)
+    if args.header:
+        print(json.dumps(header, ensure_ascii=False, indent=2, sort_keys=True))
+        return
+    key = derive_key(args.password or getpass.getpass("비밀번호: "), header)
+
     out_file = None
     if args.out and not args.summary:
         os.makedirs(args.out, exist_ok=True)
-        out_file = open(os.path.join(args.out, os.path.basename(args.file) + ".jsonl"), "w", encoding="utf-8")
-    meta = {}
-    for meta, index, plain in decode_archive(args.file, password):
-        for record in page_records(meta["kind"], plain):
-            if "section" in record:
-                rows = record["rows"]
-                counts[record["section"]] += len(rows) if isinstance(rows, list) else 1
-            else:
-                counts["raw_items"] += 1
-            if out_file:
-                out_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+        out_file = open(os.path.join(args.out, os.path.basename(args.file) + ".jsonl"), "wb")
+    counts = collections.Counter()
+    for line in decode_lines(data, header, key):
+        counts["schema" if line.startswith(b'["#') else {b"r": "readings", b"c": "records"}[line[2:3]]] += 1
+        if out_file:
+            out_file.write(line + b"\n")
+        elif not args.summary:
+            sys.stdout.buffer.write(line + b"\n")
     if out_file:
         out_file.close()
-    print(json.dumps({"meta": meta, "counts": dict(counts)}, ensure_ascii=False, indent=2))
+    print(json.dumps({"month": header["month"], "verified": True, "rows": dict(counts),
+                      "firstTimestamp": header["firstTimestamp"], "lastTimestamp": header["lastTimestamp"]},
+                     ensure_ascii=False), file=sys.stderr if not (args.summary or args.out) else sys.stdout)
 
 
 if __name__ == "__main__":
