@@ -1696,3 +1696,9 @@
 - 제한: UI 스모크(`TaptionPlanUITests`)는 기기 자동화 모드 시간 초과로 이번 빌드에서 실행하지 못했다. 실제 iCloud 업로드·다운로드·덮어쓰기·로컬 정리·복원은 설치본에서 직접 확인하지 않았다(코드 점검과 로컬 폴더 목적지 테스트만). iPhone 18 Pro Max는 사용하지 않았다.
 - 정리: 병합된 에이전트 워크트리 4개와 브랜치를 삭제했다. 디자인 토큰 작업(`4a7f170`)이 있는 `agent-ada235d414d79094f`는 main에 없어서 남겼다.
 - 처리·그룹(빌드 181): ASC API `processingState` `VALID`(`asc-poll-181.log`). `TP Taption Plan 내부 테스트`에 연결(HTTP 204) 후 readback: 그룹 맨 위 181 `VALID`, 180·179·178도 유지, 테스터 1명. `main` push 완료(`3ef9a95..1bab95e`). 제한: 웹 그룹 화면은 읽지 못했고 근거는 API 응답이다. 실제 설치·테스터 수신은 확인하지 않았다.
+
+## REL1019C01 · 빌드 182 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(빌드 번호 182: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: 발자국을 Apple 지도 스타일에도 표시(MAP1019B01), 지금 백업 버튼 비활성 이유 표시, 다른 세션의 UXP1019C01(PIN 키패드, 안개 오버레이, GPS 1분 간격 등).
+- 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,406개 중 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-182.log`).
+- 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 182 확인, `altool` `No errors uploading`(`altool-182.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204) 후 readback: 182·181·180·179 확인.
+- 제한: 발자국의 Apple 지도 표시, 백업 버튼 이유 표시, UXP1019C01 변경은 화면에서 확인하지 못했다(UI 스모크는 자동화 모드 시간 초과). 날씨 미표시는 원인 미확인(폰 로그 필요). 설치·테스터 수신은 확인하지 않았다.
