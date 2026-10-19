@@ -390,3 +390,40 @@ extension DiagnosticsLogSupportTests {
         XCTAssertTrue(String(decoding: try gunzipLogForTest(original), as: UTF8.self).contains("backup_finished"))
     }
 }
+
+final class DiagnosticsLogStructureTests: XCTestCase {
+    func testNoiseGateRateLimitsNoisyEventsAndReportsSuppressedCount() {
+        var gate = TaptionDiagnosticsNoiseGate(intervals: ["noisy": 30])
+        let start = Date(timeIntervalSince1970: 1_000)
+        XCTAssertEqual(gate.admit("noisy", at: start), 0)
+        XCTAssertNil(gate.admit("noisy", at: start.addingTimeInterval(5)))
+        XCTAssertNil(gate.admit("noisy", at: start.addingTimeInterval(29)))
+        XCTAssertEqual(gate.admit("noisy", at: start.addingTimeInterval(31)), 2)
+        XCTAssertEqual(gate.admit("noisy", at: start.addingTimeInterval(32 + 30)), 0)
+        XCTAssertEqual(gate.admit("other", at: start), 0, "목록에 없는 이벤트는 항상 쓴다")
+        XCTAssertEqual(gate.admit("other", at: start), 0)
+    }
+
+    func testEntriesCarrySchemaSessionSequenceAndNumericMetrics() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let logger = TaptionPlanDiagnosticsLogger(directoryURL: root, fallbackDirectoryURL: nil)
+        logger.record("first_event", fields: ["a": "1"], metrics: ["speed_mps": 3.5, "bad": .nan])
+        logger.record("second_event")
+        _ = logger.lastWriteStatus  // 직렬 큐가 비워질 때까지 기다린다.
+
+        let text = try String(contentsOf: root.appendingPathComponent("iphone.jsonl"), encoding: .utf8)
+        let entries = try text.split(separator: "\n").map {
+            try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any])
+        }
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(entries[0]["schema"] as? Int, TaptionPlanDiagnosticsLogger.schemaVersion)
+        XCTAssertEqual(entries[0]["seq"] as? Int, 1)
+        XCTAssertEqual(entries[1]["seq"] as? Int, 2)
+        XCTAssertEqual(entries[0]["session_id"] as? String, entries[1]["session_id"] as? String)
+        let metrics = try XCTUnwrap(entries[0]["metrics"] as? [String: Double])
+        XCTAssertEqual(metrics["speed_mps"], 3.5)
+        XCTAssertNil(metrics["bad"], "유한하지 않은 값은 기록하지 않는다")
+        XCTAssertNil(entries[1]["metrics"])
+    }
+}

@@ -2305,6 +2305,12 @@ struct DeviceStillnessTracker: Equatable, Sendable {
         }
     }
 
+    /// 지금까지 이어진 정지 시간(초). 정지가 아니면 0.
+    func stillDuration(at date: Date) -> TimeInterval {
+        guard isTrulyStill(at: date), let stillSince else { return 0 }
+        return max(0, date.timeIntervalSince(stillSince))
+    }
+
     func isTrulyStill(at date: Date) -> Bool {
         guard let stillSince, let lastSampleAt,
               date.timeIntervalSince(lastSampleAt) <= Self.maximumSampleAge,
@@ -2403,6 +2409,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
     private var stillnessTracker = DeviceStillnessTracker()
     private var lastAcceptedLocationAt: Date?
+    private var gateAcceptedCount = 0
+    private var gateIgnoredCount = 0
+    private var gateWindowStartedAt: Date?
     private var activeTrackingSession: TrackingSession?
     private var activeTrackingPreferences = GPSLoggingPreferences.standard
     private var trackingStreamsAreContinuous = false
@@ -3092,8 +3101,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             lastAcceptedAt: lastAcceptedLocationAt,
             now: now
         ) {
+            gateIgnoredCount += 1
+            flushLocationGateSummary(at: now)
             return
         }
+        gateAcceptedCount += 1
+        flushLocationGateSummary(at: now)
         lastAcceptedLocationAt = now
         latestLocation = newestLocation
         if let precise = validLocations.last(where: {
@@ -3138,6 +3151,28 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 emit(force: true)
             }
         }
+    }
+
+    /// 정지 판정이 위치를 얼마나 걸러냈는지 1분마다 요약해 남긴다(검증·분석용).
+    private func flushLocationGateSummary(at now: Date) {
+        guard let started = gateWindowStartedAt else {
+            gateWindowStartedAt = now
+            return
+        }
+        let window = now.timeIntervalSince(started)
+        guard window >= 60, gateAcceptedCount + gateIgnoredCount > 0 else { return }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "location_gate_summary",
+            metrics: [
+                "accepted": Double(gateAcceptedCount),
+                "ignored_still": Double(gateIgnoredCount),
+                "window_s": window.rounded(),
+                "still_s": stillnessTracker.stillDuration(at: now).rounded(),
+            ]
+        )
+        gateAcceptedCount = 0
+        gateIgnoredCount = 0
+        gateWindowStartedAt = now
     }
 
     private func promoteBackgroundMovementIfNeeded(

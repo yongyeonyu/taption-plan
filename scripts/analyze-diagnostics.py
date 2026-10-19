@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Taption Plan 진단 로그(TaptionLogs-*.txt.gz 또는 .txt)를 표로 요약한다.
+
+사용:
+  python3 scripts/analyze-diagnostics.py <로그 파일>            # 요약 보고서
+  python3 scripts/analyze-diagnostics.py <로그 파일> --csv out.csv   # 이벤트 전체를 CSV로
+  python3 scripts/analyze-diagnostics.py <로그 파일> --event largest_jump_m  # 필드 값이 있는 이벤트만
+
+로그 스키마 2: 한 줄에 JSON 객체 하나(schema, session_id, seq, timestamp, build, level, event, fields, metrics).
+"""
+import argparse
+import collections
+import csv
+import gzip
+import json
+import sys
+from datetime import datetime, timedelta, timezone
+
+KST = timezone(timedelta(hours=9))
+
+
+def read_log(path):
+    opener = gzip.open if path.endswith(".gz") else open
+    with opener(path, "rt", encoding="utf-8") as handle:
+        text = handle.read()
+    header, events = {}, []
+    section = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        if section == "environment" and ": " in line:
+            key, value = line.split(": ", 1)
+            header[key] = value
+        elif section == "iphone_log" and line.startswith("{"):
+            try:
+                events.append(json.loads(line))
+            except ValueError:
+                pass
+    return header, events
+
+
+def local(timestamp):
+    return datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone(KST)
+
+
+def report(header, events):
+    print(f"이벤트 {len(events)}개, 빌드 {sorted({e.get('build') for e in events})}, "
+          f"스키마 {sorted({e.get('schema', 1) for e in events})}")
+    if events:
+        print(f"기간(KST) {local(events[0]['timestamp']):%m-%d %H:%M:%S} ~ {local(events[-1]['timestamp']):%m-%d %H:%M:%S}")
+    sessions = collections.OrderedDict()
+    for event in events:
+        sessions.setdefault(event.get("session_id", "(없음)"), []).append(event)
+    print(f"\n세션 {len(sessions)}개")
+    for session, items in sessions.items():
+        print(f"  {session}: {len(items)}건 {local(items[0]['timestamp']):%H:%M:%S}~{local(items[-1]['timestamp']):%H:%M:%S}")
+
+    print("\n이벤트 종류별 개수(억제된 반복 포함)")
+    counts, suppressed = collections.Counter(), collections.Counter()
+    for event in events:
+        counts[event["event"]] += 1
+        suppressed[event["event"]] += int(event.get("fields", {}).get("suppressed_since_last", 0))
+    for name, count in counts.most_common(15):
+        extra = f" (+억제 {suppressed[name]})" if suppressed[name] else ""
+        print(f"  {name:45s} {count:5d}{extra}")
+
+    print("\n튄 위치(map_route_readings_prepared의 largest_jump_*) — 큰 순서")
+    jumps = [e for e in events if e["event"] == "map_route_readings_prepared" and "largest_jump_m" in e.get("fields", {})]
+    jumps.sort(key=lambda e: int(e["fields"]["largest_jump_m"]), reverse=True)
+    for event in jumps[:5]:
+        f = event["fields"]
+        print(f"  {local(event['timestamp']):%H:%M:%S} 거리 {int(f['largest_jump_m'])/1000:.1f}km 간격 {f['largest_jump_gap_s']}s "
+              f"속도 {f['largest_jump_speed_mps']}m/s 점시각 {f['largest_jump_at']} 품질 {f['largest_jump_quality']} "
+              f"출처 {f['largest_jump_device']} 정확도 {f['largest_jump_accuracy_m']}m")
+    if not jumps:
+        print("  (없음)")
+
+    print("\n가장 긴 예상 경로(expected_route_projection_built의 longest_route_*)")
+    routes = [e for e in events if e["event"] == "expected_route_projection_built" and "longest_route_km" in e.get("fields", {})]
+    seen = set()
+    for event in sorted(routes, key=lambda e: int(e["fields"]["longest_route_km"]), reverse=True):
+        f = event["fields"]
+        key = (f["longest_route_kind"], f["longest_route_mode"], f["longest_route_km"], f["longest_route_start"])
+        if key in seen:
+            continue
+        seen.add(key)
+        print(f"  {f['longest_route_km']}km {f['longest_route_kind']}/{f['longest_route_mode']} "
+              f"{f['longest_route_start']}~{f['longest_route_end']} ({f['longest_route_minutes']}분)")
+        if len(seen) >= 5:
+            break
+    if not routes:
+        print("  (없음)")
+
+    print("\n정지 판정(location_gate_summary) — 합계")
+    gates = [e.get("metrics", {}) for e in events if e["event"] == "location_gate_summary"]
+    if gates:
+        accepted = sum(g.get("accepted", 0) for g in gates)
+        ignored = sum(g.get("ignored_still", 0) for g in gates)
+        total = accepted + ignored
+        print(f"  반영 {accepted:.0f} / 무시 {ignored:.0f} (무시 비율 {ignored / total:.0%}), 요약 {len(gates)}회")
+    else:
+        print("  (없음)")
+
+    print("\n재생 확대·축소(playback_zoom_sample)")
+    zooms = [e.get("metrics", {}) for e in events if e["event"] == "playback_zoom_sample"]
+    if zooms:
+        speeds = [z["speed_mps"] for z in zooms if z.get("speed_mps", -1) >= 0]
+        print(f"  표본 {len(zooms)}개, 속도 {min(speeds, default=0):.1f}~{max(speeds, default=0):.1f}m/s, "
+              f"목표 거리 {min(z['target_m'] for z in zooms):.0f}~{max(z['target_m'] for z in zooms):.0f}m")
+    else:
+        print("  (없음)")
+
+    print("\n사용자 동작")
+    for name in ("sidebar_double_tap", "section_edit_open_requested", "map_style_changed"):
+        print(f"  {name}: {counts.get(name, 0)}")
+
+    print("\n환경 요약(앞 12개)")
+    for key in list(header)[:12]:
+        print(f"  {key}: {header[key]}")
+
+
+def export_csv(events, path):
+    keys = sorted({k for e in events for k in e.get("fields", {})} | {f"m.{k}" for e in events for k in e.get("metrics", {})})
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["time_kst", "session_id", "seq", "build", "level", "event"] + keys)
+        for e in events:
+            row = [local(e["timestamp"]).isoformat(), e.get("session_id", ""), e.get("seq", ""), e.get("build", ""),
+                   e.get("level", ""), e["event"]]
+            fields, metrics = e.get("fields", {}), e.get("metrics", {})
+            for key in keys:
+                row.append(metrics.get(key[2:], "") if key.startswith("m.") else fields.get(key, ""))
+            writer.writerow(row)
+    print(f"{len(events)}행을 {path}에 썼습니다.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("file")
+    parser.add_argument("--csv")
+    parser.add_argument("--event", help="이 필드(또는 이벤트 이름)를 가진 기록만 JSON으로 출력")
+    args = parser.parse_args()
+    header, events = read_log(args.file)
+    if args.csv:
+        export_csv(events, args.csv)
+    elif args.event:
+        for e in events:
+            if e["event"] == args.event or args.event in e.get("fields", {}) or args.event in e.get("metrics", {}):
+                print(json.dumps(e, ensure_ascii=False))
+    else:
+        report(header, events)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

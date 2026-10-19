@@ -1850,6 +1850,10 @@ struct MapHomeTimeSidebar: View {
                 commitPendingRailSnapshot()
                 onInteractionChanged?(false)
                 if isDoubleTap {
+                    TaptionPlanDiagnosticsLogger.shared.record(
+                        "sidebar_double_tap",
+                        metrics: ["minute": Double(tappedMinute)]
+                    )
                     onSectionEdit?(tappedMinute)
                 }
             }

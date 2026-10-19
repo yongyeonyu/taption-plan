@@ -284,8 +284,43 @@ enum TaptionPlanDiagnosticsTravelSummary {
     }
 }
 
+/// 반복이 심한 이벤트가 로그를 채워 중요한 기록이 밀려나지 않도록 이벤트별 최소 간격을 둔다.
+/// 건너뛴 개수는 다음에 남는 기록에 `suppressed_since_last`로 붙어, 얼마나 반복됐는지 알 수 있다.
+struct TaptionDiagnosticsNoiseGate: Sendable {
+    static let defaultIntervals: [String: TimeInterval] = [
+        "day_load_invalidated": 30,
+        "transit_boarding_candidates_evaluated": 60,
+        "fmap_route_projection": 30,
+        "map_viewport_performance": 30,
+        "watch_payload_skipped": 60,
+        "widget_payload_published": 60,
+        "playback_zoom_sample": 5,
+    ]
+
+    private let intervals: [String: TimeInterval]
+    private var lastWritten: [String: Date] = [:]
+    private var suppressed: [String: Int] = [:]
+
+    init(intervals: [String: TimeInterval] = Self.defaultIntervals) {
+        self.intervals = intervals
+    }
+
+    /// 쓰면 그동안 건너뛴 개수를, 건너뛰어야 하면 nil을 돌려준다.
+    mutating func admit(_ event: String, at date: Date) -> Int? {
+        guard let interval = intervals[event] else { return 0 }
+        if let last = lastWritten[event], date.timeIntervalSince(last) < interval,
+           date >= last {
+            suppressed[event, default: 0] += 1
+            return nil
+        }
+        lastWritten[event] = date
+        return suppressed.removeValue(forKey: event) ?? 0
+    }
+}
+
 final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     static let shared = TaptionPlanDiagnosticsLogger()
+    static let schemaVersion = 2
 
     private let fileManager: FileManager
     private let primaryDirectoryURL: URL
@@ -298,6 +333,9 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
         qos: .utility
     )
     private var writeStatus = TaptionDiagnosticsWriteStatus.neverAttempted
+    private let sessionID = String(UUID().uuidString.prefix(8))
+    private var sequence = 0
+    private var noiseGate = TaptionDiagnosticsNoiseGate()
 
     var lastWriteStatus: TaptionDiagnosticsWriteStatus {
         queue.sync { writeStatus }
@@ -324,32 +362,46 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
         self.fallbackDirectoryURL = fallbackDirectoryURL ?? directories.fallback
     }
 
+    /// `fields`는 문자열 값, `metrics`는 분석에 바로 쓰는 숫자 값이다(JSON 숫자로 기록).
     func record(
         _ event: String,
         level: TaptionDiagnosticsLevel = .info,
-        fields: [String: String] = [:]
+        fields: [String: String] = [:],
+        metrics: [String: Double] = [:]
     ) {
         if level == .error {
             queue.sync {
-                writeRecord(event, level: level, fields: fields)
+                writeRecord(event, level: level, fields: fields, metrics: metrics)
             }
             return
         }
         queue.async { [self] in
-            writeRecord(event, level: level, fields: fields)
+            writeRecord(event, level: level, fields: fields, metrics: metrics)
         }
     }
 
     private func writeRecord(
         _ event: String,
         level: TaptionDiagnosticsLevel,
-        fields: [String: String]
+        fields: [String: String],
+        metrics: [String: Double]
     ) {
+        var fields = fields
+        if level != .error {
+            guard let suppressedCount = noiseGate.admit(event, at: .now) else { return }
+            if suppressedCount > 0 {
+                fields["suppressed_since_last"] = String(suppressedCount)
+            }
+        }
+        sequence += 1
+        let currentSequence = sequence
         do {
             let data = try makeEntryData(
                 event: event,
                 level: level,
-                fields: fields
+                fields: fields,
+                metrics: metrics,
+                sequence: currentSequence
             )
             try write(data, to: primaryDirectoryURL)
             writeStatus = .primarySucceeded
@@ -364,7 +416,9 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
                 let data = try makeEntryData(
                     event: event,
                     level: level,
-                    fields: fields
+                    fields: fields,
+                    metrics: metrics,
+                    sequence: currentSequence
                 )
                 try write(data, to: fallbackDirectoryURL)
                 writeStatus = .fallbackSucceeded
@@ -476,9 +530,14 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     private func makeEntryData(
         event: String,
         level: TaptionDiagnosticsLevel,
-        fields: [String: String]
+        fields: [String: String],
+        metrics: [String: Double],
+        sequence: Int
     ) throws -> Data {
-        let entry: [String: Any] = [
+        var entry: [String: Any] = [
+            "schema": Self.schemaVersion,
+            "session_id": sessionID,
+            "seq": sequence,
             "timestamp": ISO8601DateFormatter().string(from: .now),
             "app_version": appVersion,
             "build": buildNumber,
@@ -486,6 +545,8 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
             "event": event,
             "fields": fields,
         ]
+        let finiteMetrics = metrics.filter { $0.value.isFinite }
+        if !finiteMetrics.isEmpty { entry["metrics"] = finiteMetrics }
         var data = try JSONSerialization.data(
             withJSONObject: entry,
             options: [.sortedKeys]
@@ -633,6 +694,9 @@ struct TaptionPlanDiagnosticsLogPackageBuilder {
         let text = """
         Taption Plan diagnostics
         created_at: \(ISO8601DateFormatter().string(from: .now))
+        log_schema: \(TaptionPlanDiagnosticsLogger.schemaVersion)
+        log_format: one JSON object per line under iphone_log (keys: schema, session_id, seq, timestamp, build, level, event, fields, metrics)
+        log_sampling: noisy events are rate limited; suppressed_since_last in fields counts the skipped ones
         privacy: titles, memo text, coordinates and raw health values are excluded; detected station names and lines may be included for transit debugging
 
         ## environment

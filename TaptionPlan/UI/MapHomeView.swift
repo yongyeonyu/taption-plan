@@ -9788,7 +9788,17 @@ struct MapHomeView: View {
                   speedMetersPerSecond: displayedSpeedMetersPerSecond
               )
         else { return current }
-        return MapHomePlaybackZoomPolicy.eased(current: current, target: target)
+        let next = MapHomePlaybackZoomPolicy.eased(current: current, target: target)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "playback_zoom_sample",
+            metrics: [
+                "speed_mps": displayedSpeedMetersPerSecond ?? -1,
+                "current_m": current.rounded(),
+                "target_m": target.rounded(),
+                "next_m": next.rounded(),
+            ]
+        )
+        return next
     }
 
     private func focusMap(

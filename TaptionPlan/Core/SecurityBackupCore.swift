@@ -1535,6 +1535,10 @@ struct PlanMonthlyArchive: Codable, Equatable, Sendable {
     let snapshotGenerationID: UUID?
     let parentSnapshotGenerationID: UUID?
     let hasRawSensorArchive: Bool?
+    /// 비밀번호만으로 복구하려고 키 유도 정보(비밀이 아님)를 파일에 함께 둔다.
+    /// 비밀번호 + 이 솔트로 `wrappedPayloadKey`를 열 수 있다.
+    var passwordKDFSalt: Data? = nil
+    var passwordKDFIterations: Int? = nil
 
     init(
         monthKey: String,
@@ -1692,6 +1696,8 @@ struct PlanRawSensorMonthlyArchive: Codable, Equatable, Sendable {
     let accountWrappedPayloadKey: Data
     let payloadDigest: Data
     let generationID: UUID?
+    var passwordKDFSalt: Data? = nil
+    var passwordKDFIterations: Int? = nil
 
     init(
         monthKey: String,
@@ -2371,6 +2377,8 @@ private struct PlanRawSensorMonthlyArchiveRestoreDecoder {
         var accountWrappedPayloadKey: Data?
         var payloadDigest: Data?
         var generationID: UUID?
+        var passwordKDFSalt: Data?
+        var passwordKDFIterations: Int?
 
         try skipWhitespace()
         if !consume(0x7D) {
@@ -2403,6 +2411,14 @@ private struct PlanRawSensorMonthlyArchiveRestoreDecoder {
                         generationID = isNull(valueRange)
                             ? nil
                             : try decode(UUID.self, from: valueRange)
+                    case "passwordKDFSalt":
+                        passwordKDFSalt = isNull(valueRange)
+                            ? nil
+                            : try decode(Data.self, from: valueRange)
+                    case "passwordKDFIterations":
+                        passwordKDFIterations = isNull(valueRange)
+                            ? nil
+                            : try decode(Int.self, from: valueRange)
                     default:
                         break
                     }
@@ -2429,7 +2445,7 @@ private struct PlanRawSensorMonthlyArchiveRestoreDecoder {
               let payloadDigest else {
             throw invalidJSON
         }
-        return PlanRawSensorMonthlyArchive(
+        var archive = PlanRawSensorMonthlyArchive(
             decodedVersion: version,
             monthKey: monthKey,
             accountIdentifier: accountIdentifier,
@@ -2440,6 +2456,9 @@ private struct PlanRawSensorMonthlyArchiveRestoreDecoder {
             payloadDigest: payloadDigest,
             generationID: generationID
         )
+        archive.passwordKDFSalt = passwordKDFSalt
+        archive.passwordKDFIterations = passwordKDFIterations
+        return archive
     }
 
     private mutating func decodeBase64String() throws -> Data {
@@ -5335,6 +5354,7 @@ private struct PlanMonthlyArchivePreparationInput: Sendable {
     let monthKey: String
     let accountIdentifier: String
     let pinKeyData: Data
+    let pinKDFSalt: Data?
     let accountKeyData: Data?
     let date: Date
     let generationID: UUID?
@@ -5466,7 +5486,7 @@ private enum PlanMonthlyArchivePreparation {
         } else {
             accountWrappedPayloadKey = Data()
         }
-        return PlanMonthlyArchive(
+        var archive = PlanMonthlyArchive(
             monthKey: input.monthKey,
             accountIdentifier: input.accountIdentifier,
             encryptedPayload: encryptedPayload,
@@ -5479,6 +5499,11 @@ private enum PlanMonthlyArchivePreparation {
                 input.previousArchive?.snapshotGenerationID,
             hasRawSensorArchive: input.hasRawSensorArchive
         )
+        if let salt = input.pinKDFSalt {
+            archive.passwordKDFSalt = salt
+            archive.passwordKDFIterations = PlanPINVerifier.pbkdf2Iterations
+        }
+        return archive
     }
 }
 
@@ -5786,6 +5811,8 @@ final class PlanSecurityBackupService {
             monthKey: monthKey,
             accountIdentifier: accountIdentifier,
             pinKeyData: capturedVerifier.keyMaterial,
+            pinKDFSalt: capturedVerifier.version == PlanPINVerifier.currentVersion
+                ? capturedVerifier.salt : nil,
             accountKeyData: accountKey,
             date: date,
             generationID: nil,
@@ -6317,6 +6344,7 @@ final class PlanSecurityBackupService {
                 monthKey: monthKey,
                 accountIdentifier: accountIdentifier,
                 pinKeyData: verifier.keyMaterial,
+                pinKDFSalt: verifier.version == PlanPINVerifier.currentVersion ? verifier.salt : nil,
                 accountKeyData: accountKey,
                 date: date,
                 generationID: generationID,
@@ -6341,7 +6369,9 @@ final class PlanSecurityBackupService {
     ) async throws -> PlanMonthlyArchive {
         guard let verifier else { throw PlanSecurityError.pinRequiredForCloudBackup }
         let input = PlanMonthlyArchivePreparationInput(payload: payload, monthKey: monthKey,
-            accountIdentifier: accountIdentifier, pinKeyData: verifier.keyMaterial, accountKeyData: accountKey,
+            accountIdentifier: accountIdentifier, pinKeyData: verifier.keyMaterial,
+            pinKDFSalt: verifier.version == PlanPINVerifier.currentVersion ? verifier.salt : nil,
+            accountKeyData: accountKey,
             date: date, generationID: generationID, hasRawSensorArchive: hasRawSensorArchive,
             previousArchive: expectedPreviousArchive)
         let prepared = try await PlanBackupWorker.run { try PlanMonthlyArchivePreparation.prepare(input) }
@@ -6663,6 +6693,7 @@ final class PlanSecurityBackupService {
         let prepared = try Self.prepareRawSensorArchive(payload, existingArchive: existing,
             requiresExistingArchive: previous?.hasRawSensorArchive == true,
             monthKey: monthKey, accountIdentifier: accountIdentifier, pinKeyData: verifier.keyMaterial,
+            pinKDFSalt: verifier.version == PlanPINVerifier.currentVersion ? verifier.salt : nil,
             accountKey: accountKey, date: date, generationID: generationID)
         preservedUnmergedRawBackup = prepared.preservedUnmerged
         let archive = prepared.archive
@@ -6708,6 +6739,7 @@ final class PlanSecurityBackupService {
             try Self.prepareRawSensorArchive(payload, existingArchive: existing,
                 requiresExistingArchive: previous?.hasRawSensorArchive == true,
                 monthKey: monthKey, accountIdentifier: accountIdentifier, pinKeyData: verifier.keyMaterial,
+                pinKDFSalt: verifier.version == PlanPINVerifier.currentVersion ? verifier.salt : nil,
                 accountKey: accountKey, date: date, generationID: generationID)
         }
         try checkFence()
@@ -6744,7 +6776,7 @@ final class PlanSecurityBackupService {
     nonisolated private static func prepareRawSensorArchive(
         _ incoming: PlanCloudRawSensorPayload,
         existingArchive: PlanRawSensorMonthlyArchive?, requiresExistingArchive: Bool,
-        monthKey: String, accountIdentifier: String, pinKeyData: Data,
+        monthKey: String, accountIdentifier: String, pinKeyData: Data, pinKDFSalt: Data? = nil,
         accountKey: Data?, date: Date, generationID: UUID?
     ) throws -> (archive: PlanRawSensorMonthlyArchive, preservedUnmerged: Bool) {
         try Task.checkCancellation()
@@ -6821,7 +6853,7 @@ final class PlanSecurityBackupService {
         } else {
             accountWrappedPayloadKey = Data()
         }
-        let archive = PlanRawSensorMonthlyArchive(
+        var archive = PlanRawSensorMonthlyArchive(
             monthKey: monthKey,
             accountIdentifier: accountIdentifier,
             encryptedPayload: encryptedPayload,
@@ -6830,6 +6862,10 @@ final class PlanSecurityBackupService {
             createdAt: date,
             generationID: generationID
         )
+        if let pinKDFSalt {
+            archive.passwordKDFSalt = pinKDFSalt
+            archive.passwordKDFIterations = PlanPINVerifier.pbkdf2Iterations
+        }
         try Task.checkCancellation()
         let elapsed = startedAt.duration(to: .now).components
         TaptionPlanDiagnosticsLogger.shared.record("raw_sensor_archive_prepared", fields: [

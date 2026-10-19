@@ -1,5 +1,12 @@
 # 검증 기록
 
+## LOG1019A01 · 비밀번호만으로 복구되는 백업·분석용 로그 구조 (2026-10-19)
+- 백업: 새 월별·원시 센서 아카이브에 키 유도 솔트(`passwordKDFSalt`)와 반복 횟수(`passwordKDFIterations`)를 파일에 함께 저장한다. 비밀번호 + 파일의 솔트로 `wrappedPayloadKey`를 열 수 있다. 원시 센서 아카이브의 스트리밍 파서가 새 키를 읽어 다시 쓸 때도 유지한다. 백업을 만드는 경로 3곳(월별 2곳, 원시 센서 2곳)에 솔트를 넘겼다. 이전 형식 백업은 솔트가 기기에만 있어 비밀번호만으로 열 수 없고, 삭제하지 않았다.
+- 도구: `scripts/taption-backup-decode.py`(비밀번호로 JSON Lines 복호화), `scripts/analyze-diagnostics.py`(로그 요약·CSV). 분석 스크립트는 기존 로그로 실행해 동작을 확인했다.
+- 로그 스키마 2: 모든 기록에 `schema`·`session_id`·`seq`·숫자 `metrics`를 넣었다. 반복 이벤트(`day_load_invalidated` 등 7종)는 이벤트별 최소 간격을 두고 건너뛴 수를 `suppressed_since_last`로 남긴다. 새 이벤트: `location_gate_summary`, `playback_zoom_sample`, `sidebar_double_tap`, `map_style_changed`. 이전 로그와는 호환하지 않는다.
+- 자동 검증: iPhone 11 Pro 실기기에서 `DiagnosticsLogStructureTests`·`DiagnosticsLogSupportTests`·`SecurityBackupCoreTests`·`StationaryLocationGateTests`·`RouteTimelineDataTests`·`TimeScaleTests` 480개 실행, 실패 0, `TEST SUCCEEDED`(`ux-unit-11h.log`). 비밀번호 복구 테스트(`testBackupFilesCarryPasswordSaltSoPasswordAloneOpensThePayloadKey`)는 앱의 백업 경로로 만든 파일에서 비밀번호 "0000" + 파일 솔트로 키를 열고, 틀린 비밀번호로는 열리지 않음을 확인했다.
+- 제한: 파이썬 복호화 도구의 쪽 프레임·LZFSE 해제·페이지 JSON 해석은 코드를 읽고 맞춘 것이며 실제 새 백업 파일로 실행해 보지 않았다(현재 백업은 모두 이전 형식). 인증 태그를 확인하지 않고 복호화한다. 4자리 비밀번호는 솔트가 파일에 있어 오프라인 대입으로 짧은 시간에 풀릴 수 있다. 저장소(SQLite)·백업 엔진 전체를 갈아엎지는 않았다. 새 빌드(181)는 올리지 않았고 새 로그는 실기기에서 아직 확인하지 않았다.
+
 ## MAP1019A01 · 부산 점 원인·예상 경로·재생·정지 판정·지도 스타일 (2026-10-19)
 - 부산 원인(정적 판독): 역 목록(`SubwayCatalog.packedRoutes`)에서 서울 `5호선 송정`이 부산 동해선 송정 좌표(35.1875, 129.2024)로, `5호선 양평`이 경기 양평군 좌표로, `경의중앙 용산`이 대구 좌표로 들어 있었다. 같은 이름의 다른 지역 역 좌표가 연결된 오류다. 세 좌표를 서울 역 좌표로 고쳤다(오차 약 100m, 실제 역 위치와 대조하지 않았다). `1호선`~`4호선`은 여러 도시를 한 이름으로 묶어 자동 점검이 되지 않아 점검하지 못했다. 기기 로그에는 좌표가 없어 실제 발생 지점과의 대조는 하지 못했다.
 - 예상 경로: `missingRouteGaps`가 연속된 두 기록 사이 끊김마다 예상 경로를 이었다. 15분 이내 시속 약 198km, 그 이후 약 1,000km를 넘는 점프는 잇지 않고, 되돌아오는 튄 점 하나는 걸러낸다. 이동 수단별로 끝점을 더 엄격히 보는 규칙은 기존 테스트 7건과 충돌해 되돌렸다(자동차·버스도 GPS 공백을 잇는 것이 기존 설계).

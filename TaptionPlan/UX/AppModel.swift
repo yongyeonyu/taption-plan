@@ -10837,6 +10837,13 @@ final class AppModel {
     func setMapDisplayStyle(_ style: MapDisplayStyle) {
         let persistedStyle = style.runtimeStyle
         guard snapshot.settings.mapDisplayStyle != persistedStyle else { return }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_style_changed",
+            fields: [
+                "from": snapshot.settings.mapDisplayStyle.rawValue,
+                "to": persistedStyle.rawValue,
+            ]
+        )
         snapshot.settings.mapDisplayStyle = persistedStyle
         Task { await persist() }
     }

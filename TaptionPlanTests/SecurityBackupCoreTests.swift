@@ -75,6 +75,46 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(restored.snapshot.memos.first?.text, memo.text)
     }
 
+    /// 비밀번호만 알면 파일 안의 솔트로 키를 다시 만들어 열 수 있어야 한다(기기에 남은 값 없이).
+    func testBackupFilesCarryPasswordSaltSoPasswordAloneOpensThePayloadKey() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = FilePlanCloudBackupStore(root: root)
+        let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
+        let service = makeService(backupStore: store, rawSensorBackupStore: rawStore,
+            cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider())
+        try service.setPIN("0000")
+        let date = Date(timeIntervalSince1970: 1_792_300_000)
+        let reading = SensorReading(timestamp: date, point: GeoPoint(latitude: 37, longitude: 126,
+            altitude: 0, horizontalAccuracy: 5, verticalAccuracy: -1))
+        let monthKey = PlanArchiveSchedule.monthKey(for: date)
+        _ = try await service.saveMonthlyGeneration(PlanCloudBackupPayload(snapshot: .empty),
+            rawSensorPayload: .init(monthKey: monthKey, sensorReadings: [reading], createdAt: date), date: date)
+
+        let archive = try XCTUnwrap(store.latest())
+        let salt = try XCTUnwrap(archive.passwordKDFSalt)
+        XCTAssertEqual(salt.count, 16)
+        XCTAssertEqual(archive.passwordKDFIterations, PlanPINVerifier.pbkdf2Iterations)
+        // 도구가 하는 그대로: 비밀번호 + 파일의 솔트 → 키 → wrappedPayloadKey 열기.
+        let derived = try PlanPINVerifier(pin: "0000", random: { _ in salt }).keyMaterial
+        let payloadKey = try AES.GCM.open(
+            AES.GCM.SealedBox(combined: archive.wrappedPayloadKey), using: SymmetricKey(data: derived)
+        )
+        XCTAssertEqual(payloadKey.count, 32)
+        let wrong = try PlanPINVerifier(pin: "0001", random: { _ in salt }).keyMaterial
+        XCTAssertThrowsError(try AES.GCM.open(
+            AES.GCM.SealedBox(combined: archive.wrappedPayloadKey), using: SymmetricKey(data: wrong)
+        ))
+
+        let raw = try XCTUnwrap(rawStore.load(monthKey: monthKey, generationID: archive.generationID))
+        XCTAssertEqual(raw.passwordKDFSalt, salt)
+        XCTAssertEqual(raw.passwordKDFIterations, PlanPINVerifier.pbkdf2Iterations)
+        let rawKey = try AES.GCM.open(
+            AES.GCM.SealedBox(combined: raw.wrappedPayloadKey), using: SymmetricKey(data: derived)
+        )
+        XCTAssertEqual(rawKey.count, 32)
+    }
+
     func testFileBackedRawGenerationBackupAcceptsFractionalTimestampAndPreservesPrevious() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
