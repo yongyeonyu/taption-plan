@@ -1109,10 +1109,13 @@ final class TaptionBackupV2Tests: XCTestCase {
             calendar: calendar, configuration: configuration
         )
         _ = try await backupEngine.backup(month: september, password: password, now: date(2026, 10, 2))
-        async let offload = backupEngine.offloadSealedMonths(password: password, now: date(2026, 12, 1))
+        let pw = password
+        let december = date(2026, 12, 1)
+        let third = date(2026, 10, 3)
+        async let offload = backupEngine.offloadSealedMonths(password: pw, now: december)
         async let deletion = backupEngine.deleteAllBackups()
-        async let again = backupEngine.backup(month: september, password: password, now: date(2026, 10, 3))
-        async let restoration = backupEngine.restore(month: september, password: password)
+        async let again = backupEngine.backup(month: september, password: pw, now: third)
+        async let restoration = backupEngine.restore(month: september, password: pw)
         _ = try? await (offload, deletion, again, restoration)
 
         let events = log.events

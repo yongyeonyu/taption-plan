@@ -626,8 +626,10 @@ enum TaptionBackupRowIdentity {
         }
     }
 
+    /// 줄 끝의 줄바꿈 유무와 상관없이 같은 값(내보내는 줄은 개행이 붙고, 파일에서 푼 줄은 없다).
     static func contentHash(_ line: Data) -> UInt64 {
-        SHA256.hash(data: line).prefix(8).reduce(0) { ($0 << 8) | UInt64($1) }
+        let body = line.last == 0x0A ? line.dropLast() : line[...]
+        return SHA256.hash(data: body).prefix(8).reduce(0) { ($0 << 8) | UInt64($1) }
     }
 }
 
