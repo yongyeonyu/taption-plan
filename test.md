@@ -1722,3 +1722,10 @@
 - CI(Xcode 26.6) 오류: `app` 작업이 ① `VoiceMemoPlayer`의 `AVAudioPlayerDelegate` 격리 오류, ② `MapHomeView.body` 타입 검사 시간 초과로 실패했다. ①은 `@preconcurrency`, ②는 `body`와 `.task` 클로저를 나눠 수정했다. 로컬(Xcode 27.0)에서는 ②가 재현되지 않아 CI 통과는 push 후 실행 결과로만 확인할 수 있다. `init`의 날씨 필터 식은 로컬에서 4초대로 남아 있다.
 - 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 183, `altool` `No errors uploading`(`altool-183.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 183·182·181·180 확인.
 - 제한: 지도 홈의 새 표시(집 날씨 아이콘, 그라데이션, 자동 줌, 발자국)는 화면에서 확인하지 못했다. WeatherKit 인증 실패(JWT Code=2)는 Apple 개발자 계정 쪽 조치가 필요하며 코드로 해결되지 않는다. 설치·테스터 수신은 확인하지 않았다.
+
+## MAP1019D01 · Apple 지도 발자국 가림·경로 불일치 수정 (2026-10-19)
+- 현상(대표 실기기 iPhone 18 Pro Max, 빌드 183 Release 설치본): Apple 지도에서 집·회사·식당 핀과 하랑이가 안 보임, 발자국이 경로선 위에 정확히 얹히지 않음.
+- 원인 1: 빌드 182에서 추가한 Apple 지도 발자국 주석(최대 220개)이 핀과 같은 `displayPriority`·`collisionMode`라서 MapKit 충돌 처리로 집 핀(하랑이가 안에 그려짐)이 숨겨졌다. 장소 위치(집 등)는 새 저장소가 이전 설정을 가져오지 않아 대표가 다시 등록했다.
+- 원인 2: 사용자가 확정한 예상 경로와 선택한 예상 경로의 선은 벡터 지도(`vectorUserSelectedRoutes`)에만 있고 Apple 지도에는 없어서, 그 구간 발자국만 선 없이 떠 있었다.
+- 수정: 발자국 주석은 `displayPriority = .defaultLow`, `collisionMode = .none`, 가장 아래 z로 두어 충돌에서 뺐다. Apple 지도에 `appleUserSelectedRoutes`를 추가해 같은 좌표로 선을 그린다.
+- 검증: 관련 단위 테스트 43개 통과(`paw-collision.log`, `paw-line.log`), 앱 Debug/Release 빌드와 iPhone 18 Pro Max 설치 성공. 화면에서 직접 확인하지 못했다. "시간이 지나면 정확히 올라온다"는 현상의 원인을 이 수정이 모두 설명하는지는 확인하지 못했다(확정하지 못한 추정).

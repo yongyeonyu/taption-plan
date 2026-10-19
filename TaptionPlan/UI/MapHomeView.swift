@@ -3488,7 +3488,38 @@ struct MapHomeView: View {
         }
 
         routes += appleMapForecastRoutes
+        routes += appleUserSelectedRoutes
         return routes.filter { $0.coordinates.count >= 2 }
+    }
+
+    /// 사용자가 확정한 예상 경로와 지금 선택한 예상 경로의 선. 발자국이 이 경로 위에 그려지므로 선도 같은 좌표로 그린다
+    /// (벡터 지도의 `vectorUserSelectedRoutes`와 같은 내용).
+    private var appleUserSelectedRoutes: [MapHomeAppleRoute] {
+        var routes = confirmedPredictedRoutes.map { route -> MapHomeAppleRoute in
+            let points = coordinates(for: route, through: routeOverlayCutoff)
+            return MapHomeAppleRoute(
+                id: "confirmed-predicted-\(route.id)",
+                coordinates: points,
+                geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
+                colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                opacity: 0.95,
+                phase: .actual,
+                transport: nil
+            )
+        }
+        if let selectedPredictedRoute {
+            let points = coordinates(for: selectedPredictedRoute)
+            routes.append(MapHomeAppleRoute(
+                id: "selected-\(selectedPredictedRoute.id)",
+                coordinates: points,
+                geometrySignature: MapHomeRouteGeometrySignature.value(for: points),
+                colorHex: "#FF9800",
+                opacity: 1,
+                phase: .actual,
+                transport: nil
+            ))
+        }
+        return routes
     }
 
     private var appleMapForecastRoutes: [MapHomeAppleRoute] {
