@@ -1756,3 +1756,8 @@
 - 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,436개 중 실패 3개 — 기존 환경 실패 2개(StoreKit, LocalizationCatalog)와 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(`full-185.log`). 마지막 것은 빌드 184 전체 실행에서 통과했고 그 뒤 지도 코드 변경이 없으며, 단독 3회 실행에서 모두 통과했다(`vector-1~3.log`). 전체 실행 중 렌더링 타이밍에 따른 흔들림으로 판단했지만 원인을 확정하지는 않았다.
 - 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 185, `altool` `No errors uploading`(`altool-185.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 185·184·183·182 확인.
 - 제한: 화면에서 직접 확인하지 않았다(기기 로그로 하루치 로드만 확인). 날씨는 WeatherKit 인증 실패가 계속된다. 실기기 사용이 다른 세션의 순서표(/tmp/device-queue.md)와 겹쳤을 수 있어 공지했다.
+
+## WTH1019A01 · WeatherKit 인증 실패 원인과 계정 설정 (2026-10-19)
+- 원인: 개발자 사이트의 App ID `com.taption.plan`(7CZ37R5K4D)에서 Capabilities 탭의 WeatherKit은 켜져 있었으나 App Services 탭의 WeatherKit이 꺼져 있었다. 앱 엔타이틀먼트·프로파일은 정상이어서 기기에서는 `WDSJWTAuthenticatorServiceListener` 코드 2(JWT 발급 실패)만 보였다.
+- 조치: 대표 지시로 App Services의 WeatherKit을 체크하고 저장·확인했다. 다시 읽은 결과 `WEATHER_KIT` 체크됨. MusicKit·ShazamKit은 건드리지 않았다. Apple 안내대로 이 App ID를 포함한 프로비저닝 프로파일은 무효화되며 다음 빌드에서 자동 서명이 다시 만든다. 확인 버튼 좌표 클릭 중 다른 App ID(H3RTVV23VQ) 편집 화면이 한 번 열렸으나 아무것도 저장하지 않고 벗어났다.
+- 검증: 아직 기기에서 날씨 호출을 다시 확인하지 않았다(반영 대기, 실기기는 다른 세션이 사용 중). 앱은 인증 실패 후 15분마다 다시 시도한다.
