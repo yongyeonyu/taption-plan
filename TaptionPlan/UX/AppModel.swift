@@ -26,32 +26,6 @@ private struct WatchSensorTimelineData: Sendable {
     }
 }
 
-enum CloudRestoreReadingPreparation {
-    static func validAndSorted(
-        _ readings: [SensorReading],
-        cancellationCheck: () throws -> Void
-    ) throws -> [SensorReading] {
-        var result: [SensorReading] = []
-        for (index, reading) in readings.enumerated() {
-            if index.isMultiple(of: 256) {
-                try cancellationCheck()
-            }
-            guard RouteTimelineTimestamp.isValid(reading.timestamp) else { continue }
-            result.append(reading)
-        }
-        return try RouteTimelineCancellableSort.sorted(
-            result,
-            by: {
-                if $0.timestamp != $1.timestamp {
-                    return $0.timestamp < $1.timestamp
-                }
-                return $0.id.uuidString < $1.id.uuidString
-            },
-            cancellationCheck: cancellationCheck
-        )
-    }
-}
-
 enum ActivityClassificationRecordOrdering {
     static func sorted(
         _ records: [ActualRecord],
@@ -1926,13 +1900,15 @@ final class AppModel {
 
     /// iCloud 백업 파일을 모두 지운다. **되돌릴 수 없으므로 사용자 확인 뒤에만 부른다.**
     /// 실패한 파일이 있으면 이름을 담아 던진다. 성공하면 마지막 백업 시각도 지운다.
-    private func deleteAllBackupFiles() async throws {
+    func deleteAllBackupFiles(confirmed: Bool) async throws {
+        guard confirmed else { throw CancellationError() }
         guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
         let result = try await backupService.deleteAllBackups()
         if !result.failed.isEmpty || !(result.remaining ?? []).isEmpty {
             throw BackupDeletionError(names: result.failed.map(\.name) + (result.remaining ?? []))
         }
         securityService?.clearLatestBackupDate()
+        securityStatus = securityService?.status ?? securityStatus
         backupListings = []
     }
 
@@ -5621,7 +5597,7 @@ final class AppModel {
             backupActivity = .deleting
             defer { backupActivity = .idle }
             do {
-                try await deleteAllBackupFiles()
+                try await deleteAllBackupFiles(confirmed: true)
             } catch {
                 recordDeletionFailure(
                     AppLanguagePreference.text(korean: "iCloud 백업", english: "iCloud backup"),
