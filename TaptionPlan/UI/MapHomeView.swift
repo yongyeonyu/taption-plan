@@ -3245,6 +3245,17 @@ struct MapHomeView: View {
     }
 
 
+    /// 벡터 지도 `fogOfWarOverlay`와 같은 걷어낼 지점(발자국·장소 61pt, 현재 위치 81pt).
+    private var appleFogReveals: [MapHomeFogReveal]? {
+        guard fogOfWarEnabled else { return nil }
+        var reveals = pawprintWaypoints.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: 61) }
+        reveals += placeAnnotations.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: 61) }
+        if let displayed = displayedLocationCoordinate {
+            reveals.append(MapHomeFogReveal(coordinate: displayed, radius: 81))
+        }
+        return reveals
+    }
+
     private var mapKitMap: some View {
         MapHomeAppleMap(
             style: .mapLibreRPG,
@@ -3261,6 +3272,7 @@ struct MapHomeView: View {
             playbackTargetPoint: currentLocationTargetPoint,
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
+            fogReveals: appleFogReveals,
             onCameraFrame: { frame, locationPoint, isFinal in
                 let now = ProcessInfo.processInfo.systemUptime
                 if let rendered = mapCameraFrameProjection.submit(
@@ -5910,7 +5922,7 @@ struct MapHomeView: View {
                 Image("MapHomeHomeIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 46, height: 42)
+                    .frame(width: 58, height: 53)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -6917,30 +6929,28 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "applewatch")
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                    VStack(alignment: .leading, spacing: 3) {
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(language.text("Apple Watch 데이터", "Apple Watch data"))
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(language.text("앱을 열면 건강 데이터 조회", "Read health data on app open"))
-                            .font(.system(size: 11))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        Text(appleWatchDataStatusText)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: isAppleWatchMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
-                .padding(12)
-                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.vertical, 9)
+                .padding(.horizontal, 12)
+                .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
             if isAppleWatchMenuExpanded {
-                Text(language.text(
-                    "별도 Watch 앱 없이 iPhone 건강 앱에 동기화된 운동·심박·수면 데이터를 읽습니다. 최초 연결 시 건강 읽기 권한을 승인해 주세요. Watch에서 iPhone으로 아직 동기화되지 않은 데이터는 도착 후 반영됩니다.",
-                    "Read workouts, heart rate, and sleep synced to iPhone Health without a Watch app. Approve health read access when first connecting. Data appears after Apple Watch syncs it to iPhone."
-                ))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
                 Button(language.text("지금 가져오기", "Import now")) {
                     if model.settings.healthEnabled {
                         model.requestWatchDataSync(source: "map_watch_card")
@@ -6952,6 +6962,21 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpAccent)
             }
         }
+    }
+
+    /// "사용 가능 · 10월 19일 오후 4:51 가져옴" / "사용 불가"
+    private var appleWatchDataStatusText: String {
+        let available: Bool
+        switch model.appleWatchConnectionState {
+        case .unsupported, .notPaired: available = false
+        case .appNotInstalled, .noRecentData, .background, .reachable: available = model.settings.healthEnabled
+        }
+        guard available else { return language.text("사용 불가", "Unavailable") }
+        guard let fetched = model.lastHealthRefreshAt else {
+            return language.text("사용 가능", "Available")
+        }
+        let stamp = fetched.formatted(.dateTime.month().day().hour().minute())
+        return language.text("사용 가능 · \(stamp) 가져옴", "Available · fetched \(stamp)")
     }
 
     private var dataProtectionStatusText: String {
@@ -7164,53 +7189,30 @@ struct MapHomeView: View {
                     )
 
                     VStack(spacing: 5) {
+                        // 1분 단위(1~15분), 5분 눈금 근처는 모델이 스냅한다.
                         Slider(
                             value: Binding(
-                                get: {
-                                    Double(
-                                        GPSLoggingPreferences.supportedIntervalSeconds
-                                            .firstIndex(
-                                                of: preferences.effectiveIntervalSeconds
-                                            ) ?? 0
-                                    )
-                                },
-                                set: { value in
-                                    let index = min(
-                                        max(Int(value.rounded()), 0),
-                                        GPSLoggingPreferences.supportedIntervalSeconds.count - 1
-                                    )
-                                    model.setGPSLoggingIntervalSeconds(
-                                        GPSLoggingPreferences.supportedIntervalSeconds[index]
-                                    )
+                                get: { Double(preferences.intervalSeconds / 60) },
+                                set: { minutes in
+                                    let seconds = Int(minutes.rounded()) * 60
+                                    let snapped = GPSLoggingPreferences.clampedSeconds(seconds)
+                                    guard snapped != preferences.intervalSeconds else { return }
+                                    model.setGPSLoggingIntervalSeconds(snapped)
                                 }
                             ),
-                            in: 0...Double(
-                                max(
-                                    0,
-                                    GPSLoggingPreferences.supportedIntervalSeconds.count - 1
-                                )
-                            ),
+                            in: 1...15,
                             step: 1
                         )
                         .tint(tint)
+                        .disabled(preferences.isBatteryMinimal)
                         HStack {
-                            Text(
-                                gpsLoggingIntervalText(
-                                    GPSLoggingPreferences.supportedIntervalSeconds.first ?? 60
-                                )
-                            )
+                            Text(gpsLoggingIntervalText(60))
                             Spacer()
-                            Text(
-                                gpsLoggingIntervalText(
-                                    GPSLoggingPreferences.supportedIntervalSeconds[1]
-                                )
-                            )
+                            Text(gpsLoggingIntervalText(300))
                             Spacer()
-                            Text(
-                                gpsLoggingIntervalText(
-                                    GPSLoggingPreferences.supportedIntervalSeconds.last ?? 900
-                                )
-                            )
+                            Text(gpsLoggingIntervalText(600))
+                            Spacer()
+                            Text(gpsLoggingIntervalText(900))
                         }
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -12031,6 +12033,11 @@ private struct MapHomeSecuritySheet: View {
     @State private var message: String?
     @State private var restoreTarget: PlanBackupListingRow?
     @State private var isOffloadConfirmationPresented = false
+    @FocusState private var focusedField: PINField?
+
+    private enum PINField { case pin, confirmation, backup }
+    /// 등록된 비밀번호는 다시 보여줄 수 없으므로, 등록돼 있으면 빈 칸 대신 점 6개로 표시한다.
+    private var registeredPINDots: String { String(repeating: "●", count: securityPINDigits) }
 
     private var security: PlanSecurityStatus { model.securityStatus }
     private var hasPIN: Bool { security.hasPIN }
@@ -12042,6 +12049,21 @@ private struct MapHomeSecuritySheet: View {
     private var isBusy: Bool { activity.isBusy }
     private var canUseBackupPassword: Bool {
         hasPIN && backupPassword.count == securityPINDigits && !isBusy
+    }
+
+    /// 백업 버튼이 꺼져 있을 때 이유를 알려 준다. 켜져 있으면 nil.
+    private var backupDisabledReason: String? {
+        if !model.backupDestinationAvailable {
+            return language.text("백업 저장소를 열지 못했습니다. 앱을 다시 실행해 주세요.", "The backup store could not be opened. Relaunch the app.")
+        }
+        if !hasPIN {
+            return language.text("먼저 위에서 앱 비밀번호(6자리)를 등록해야 백업할 수 있습니다.", "Register an app password (6 digits) above first to back up.")
+        }
+        if isBusy { return nil }
+        if backupPassword.count != securityPINDigits {
+            return language.text("비밀번호 \(securityPINDigits)자리를 입력하면 버튼이 켜집니다.", "Enter your \(securityPINDigits)-digit password to enable the button.")
+        }
+        return nil
     }
 
     var body: some View {
@@ -12072,13 +12094,15 @@ private struct MapHomeSecuritySheet: View {
                 }
 
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
-                    SecureField(language.text("비밀번호", "Password"), text: $pin)
+                    SecureField(hasPIN ? registeredPINDots : language.text("비밀번호", "Password"), text: $pin)
                         .keyboardType(.numberPad)
                         .textContentType(.newPassword)
+                        .focused($focusedField, equals: .pin)
                         .onChange(of: pin) { _, value in pin = numericPIN(value) }
-                    SecureField(language.text("비밀번호 확인", "Confirm password"), text: $confirmation)
+                    SecureField(hasPIN ? registeredPINDots : language.text("비밀번호 확인", "Confirm password"), text: $confirmation)
                         .keyboardType(.numberPad)
                         .textContentType(.newPassword)
+                        .focused($focusedField, equals: .confirmation)
                         .onChange(of: confirmation) { _, value in confirmation = numericPIN(value) }
                     Button(language.text("비밀번호 저장", "Save password")) {
                         savePIN()
@@ -12162,7 +12186,14 @@ private struct MapHomeSecuritySheet: View {
                 }
             }
             .padding(22)
+            // 비밀번호 칸 밖의 빈 곳을 누르면 숫자 키패드를 내린다.
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { focusedField = nil }
+            )
         }
+        .scrollDismissesKeyboard(.interactively)
         .background(Color.tpSurface)
         .task { await model.refreshBackupListings() }
         .alert(
@@ -12206,6 +12237,7 @@ private struct MapHomeSecuritySheet: View {
             .foregroundStyle(.secondary)
             SecureField(language.text("백업 비밀번호", "Backup password"), text: $backupPassword)
                 .keyboardType(.numberPad)
+                .focused($focusedField, equals: .backup)
                 .textContentType(.password)
                 .onChange(of: backupPassword) { _, value in
                     backupPassword = numericPIN(value)
@@ -12233,6 +12265,11 @@ private struct MapHomeSecuritySheet: View {
             .buttonStyle(.borderedProminent)
             .tint(Color.tpReferenceBlue)
             .disabled(!canUseBackupPassword || !model.backupDestinationAvailable)
+            if let reason = backupDisabledReason {
+                Text(reason)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
             if let report = model.lastBackupReport, report.operation == .backup {
                 reportView(report)
             }
@@ -12397,8 +12434,7 @@ private struct MapHomeSecuritySheet: View {
         }
         perform {
             try model.configureBackupPIN(pin)
-            pin = ""
-            confirmation = ""
+            focusedField = nil
             message = language.text("비밀번호를 저장했습니다.", "Password saved.")
         }
     }
@@ -16017,6 +16053,58 @@ private actor MapHomeAppleRouteResolver {
     }
 }
 
+/// Apple 지도용 안개 탐험. 벡터 지도의 `fogOfWarOverlay`와 같은 모양(어둡게 덮고
+/// 발자국·장소 61pt, 현재 위치 81pt 반경만 둥글게 걷어냄)을 MapKit 오버레이로 그린다.
+private struct MapHomeFogReveal: Equatable {
+    let coordinate: CLLocationCoordinate2D
+    let radius: CGFloat
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.coordinate.latitude == rhs.coordinate.latitude
+            && lhs.coordinate.longitude == rhs.coordinate.longitude
+            && lhs.radius == rhs.radius
+    }
+}
+
+private final class MapHomeFogOverlay: NSObject, MKOverlay {
+    let coordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
+    let boundingMapRect = MKMapRect.world
+    let reveals: [(point: MKMapPoint, radius: CGFloat)]
+
+    init(reveals: [MapHomeFogReveal]) {
+        self.reveals = reveals.map { (MKMapPoint($0.coordinate), $0.radius) }
+    }
+}
+
+private final class MapHomeFogRenderer: MKOverlayRenderer {
+    private nonisolated(unsafe) static let gradient = CGGradient(
+        colorsSpace: CGColorSpaceCreateDeviceRGB(),
+        colors: [UIColor.black.cgColor,
+                 UIColor.black.withAlphaComponent(0.7).cgColor,
+                 UIColor.clear.cgColor] as CFArray,
+        locations: [0, 0.5, 1]
+    )
+
+    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
+        guard let fog = overlay as? MapHomeFogOverlay else { return }
+        let tile = rect(for: mapRect)
+        context.setFillColor(UIColor.black.withAlphaComponent(0.55).cgColor)
+        context.fill(tile)
+        guard let gradient = Self.gradient else { return }
+        context.setBlendMode(.destinationOut)
+        for reveal in fog.reveals {
+            let center = point(for: reveal.point)
+            // Radius is in screen points; renderer space is map points scaled by zoomScale.
+            let radius = reveal.radius / zoomScale
+            let circle = CGRect(x: center.x - radius, y: center.y - radius,
+                                width: radius * 2, height: radius * 2)
+            guard circle.intersects(tile) else { continue }
+            context.drawRadialGradient(gradient, startCenter: center, startRadius: 0,
+                                       endCenter: center, endRadius: radius, options: [])
+        }
+    }
+}
+
 private struct MapHomeAppleMap: UIViewRepresentable {
     let style: MapDisplayStyle
     let accessibilityLabel: String
@@ -16030,6 +16118,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let playbackTargetPoint: CGPoint
     let contentInsets: UIEdgeInsets
     let longPressExclusionFrame: CGRect
+    /// nil = 안개 탐험 꺼짐.
+    let fogReveals: [MapHomeFogReveal]?
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onUserCameraGesture: () -> Void
@@ -16095,6 +16185,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var lastCenteredPlaybackTargetPoint: CGPoint?
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var routePolylines: [String: MKPolyline] = [:]
+        private var fogOverlay: MapHomeFogOverlay?
+        private var lastFogReveals: [MapHomeFogReveal]?
         private var routeSignatures: [String: String] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var walkerView: MapHomeAppleHostedAnnotationView?
@@ -16200,6 +16292,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func updateContent(in mapView: MKMapView) {
+            updateFog(in: mapView)
             updateRoutes(in: mapView)
             updateAnnotations(in: mapView)
             updateWalker(in: mapView)
@@ -16321,6 +16414,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             _ mapView: MKMapView,
             rendererFor overlay: MKOverlay
         ) -> MKOverlayRenderer {
+            if let fog = overlay as? MapHomeFogOverlay {
+                return MapHomeFogRenderer(overlay: fog)
+            }
             guard let polyline = overlay as? MKPolyline,
                   let style = routeStyles[ObjectIdentifier(polyline)] else {
                 return MKOverlayRenderer(overlay: overlay)
@@ -16444,6 +16540,18 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             }
             guard !polylines.isEmpty else { return }
             mapView.addOverlays(polylines, level: .aboveRoads)
+        }
+
+        private func updateFog(in mapView: MKMapView) {
+            guard parent.fogReveals != lastFogReveals else { return }
+            lastFogReveals = parent.fogReveals
+            if let fogOverlay { mapView.removeOverlay(fogOverlay) }
+            fogOverlay = nil
+            guard let reveals = parent.fogReveals else { return }
+            let overlay = MapHomeFogOverlay(reveals: reveals)
+            fogOverlay = overlay
+            // Index 0 keeps the fog under the route polylines, like the vector map.
+            mapView.insertOverlay(overlay, at: 0, level: .aboveRoads)
         }
 
         private func updateAnnotations(in mapView: MKMapView) {

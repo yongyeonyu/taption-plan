@@ -11635,8 +11635,17 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertFalse(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
-            [60, 300, 900]
+            Array(stride(from: 60, through: 900, by: 60))
         )
+        // 1-minute steps, snapped to the 5-minute marks within one minute.
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 120).intervalSeconds, 120)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 180).intervalSeconds, 180)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 240).intervalSeconds, 300)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 360).intervalSeconds, 300)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 420).intervalSeconds, 420)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 540).intervalSeconds, 600)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 780).intervalSeconds, 780)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 840).intervalSeconds, 900)
         var legacyConfiguration = SensorCollectionConfiguration.standard
         legacyConfiguration.minimumEmissionInterval = 1
         XCTAssertEqual(legacyConfiguration.normalized.minimumEmissionInterval, 60)

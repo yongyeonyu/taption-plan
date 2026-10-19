@@ -340,7 +340,9 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         var intervalSeconds: Int { rawValue }
     }
 
-    static let supportedIntervalSeconds = [60, 300, 900]
+    /// 1분 단위로 1~15분. 5분 눈금(5·10·15분) 근처 ±1분은 그 눈금에 붙는다.
+    static let supportedIntervalSeconds = Array(stride(from: 60, through: 900, by: 60))
+    static let snapIntervalSeconds = [300, 600, 900]
     static let batteryMinimalIntervalSeconds = 900
 
     var isBatteryMinimal: Bool
@@ -421,9 +423,13 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     static func clampedSeconds(_ value: Int) -> Int {
-        supportedIntervalSeconds.min {
+        let minute = supportedIntervalSeconds.min {
             abs($0 - value) < abs($1 - value)
         } ?? standard.intervalSeconds
+        if let snap = snapIntervalSeconds.first(where: { abs($0 - minute) <= 60 }) {
+            return snap
+        }
+        return minute
     }
 
     @available(*, deprecated, message: "Use clampedSeconds")

@@ -1,5 +1,11 @@
 # 남은 요청
 
+## UXP1019C01 · 데이터 보호 키패드·메뉴 정리·Apple 지도 안개·GPS 1분 간격·Apple Watch 상태 (2026-10-19)
+- 요청: (1) 데이터 보호 시트에서 비밀번호 칸 밖을 누르면 숫자 키패드가 내려가고, 비밀번호가 등록돼 있으면 칸에 점 6개로 계속 표시. (2) 햄버거 메뉴 행 스타일 정리. (3) 안개 탐험(스모크)을 Apple 지도에도 적용. (4) 화랑이 아이콘 크게. (5) GPS 수집 간격 1분 단위, 5분 눈금 스냅. (6) Apple Watch 데이터 행을 사용 가능/불가 + 가져온 시각으로 표시하고 설명 문구 삭제.
+- 해결: (1) `MapHomeSecuritySheet`에 `@FocusState`, 빈 곳 탭·스크롤 시 키패드 내림, 등록 시 placeholder 점 6개, 저장 후 입력값 유지. (2) Apple Watch 행을 다른 행과 같은 아이콘·글꼴·여백·chevron으로. (3) `MapHomeFogOverlay`/`MapHomeFogRenderer`(MKOverlay)로 벡터 지도와 같은 반경(발자국·장소 61pt, 현재 위치 81pt)을 걷어냄. (4) 메뉴 머리의 `MapHomeHomeIcon` 46×42 → 58×53(INT1019A01의 "화랑이 크기는 그대로"를 대표가 이번에 바꿈). 지도 위 화랑이 마커(36pt)는 그대로. (5) `GPSLoggingPreferences.supportedIntervalSeconds` 1~15분, `clampedSeconds`가 5·10·15분 ±1분을 스냅, 메뉴 슬라이더 1분 단위. (6) `appleWatchDataStatusText`(연결 상태 + `healthEnabled` + `lastHealthRefreshAt`), 펼친 영역 설명 문단 삭제.
+- 검증 기준: 앱 Debug 빌드, `FeatureEngineTests/testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes`. 실기기에서 키패드 내림·점 표시·Apple 지도 안개·메뉴 모양·간격 슬라이더 확인(대표).
+- 진행: 빌드·단위 테스트 통과(test.md UXP1019C01). 남음: 실기기 화면 확인.
+
 ## INT1019A01 · 새 월 단위 백업 엔진을 앱·화면에 연결하고 이전 백업 엔진 삭제 — 브랜치 rewrite/connect-v2 (2026-10-19)
 - 원인: 새 저장소(`TaptionStoreV2`)와 월 단위 백업 엔진(`TaptionBackupEngine`)은 완성됐지만 앱 화면은 아직 이전 엔진(`PlanSecurityBackupService`, `SecurityBackupCore.swift` 약 7,700줄, `PlanDailyBackup.swift`)을 쓴다. 이전 엔진은 CloudKit 복구 키·일별 파일·이중 키라 새 구조와 호환되지 않는다. 대표 결정: 이전 구조 호환 없음, 자동 백업 없이 사용자가 누르면 백업한다.
 - 해결: (1) 비밀번호·앱 잠금·생체 인증·시도 제한은 `AppLockAndPIN.swift`(타입)와 `PlanSecurityService.swift`(서비스)로 분리해 살린다. (2) AppModel에 지금 백업·로컬 정리(오프로드)·복원·백업 파일 포함 전체 삭제를 새 엔진으로 연결하고, 데이터 보호 시트(홈 지도 배치·화랑이 크기는 그대로)를 바꾼다. 복원 뒤 repository를 다시 불러온다. (3) 이전 엔진·일별 백업·자동/백그라운드 백업·복구 키·복원 journal·관련 테스트를 삭제한다. (4) `TaptionICloudDriveBackupDestination`의 컨테이너 ID·경로·다운로드 처리를 점검한다.

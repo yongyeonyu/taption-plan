@@ -1,5 +1,10 @@
 # 검증 기록
 
+## UXP1019C01 · 데이터 보호 키패드·메뉴·Apple 지도 안개·GPS 간격·Apple Watch 상태 (2026-10-19)
+- 앱 Debug 빌드(generic iOS, 별도 DerivedData `/tmp/tp-uxp1019c01-dd`): 1차 실패(`CGGradient` 정적 상수 동시성 오류) → `nonisolated(unsafe)`로 고친 뒤 `BUILD SUCCEEDED`(`build/validation/UXP1019C01/app-build2.log`).
+- 단위 테스트: 임시 시뮬레이터 iPhone 17(iOS 27)에서 `FeatureEngineTests/testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes` 1개 통과(`gps-tests.xcresult`). 1분 단위 값과 4·6·9·11·14분 스냅을 단언에 추가했다.
+- 미확인: 실기기·시뮬레이터 화면에서 키패드 내림, 점 6개 표시, Apple 지도 안개, 메뉴 모양, 슬라이더 조작, Apple Watch 상태 문구.
+
 ## ARC1019A01 · 에이전트 두 작업 병합 (2026-10-19)
 - 병합: (1) 월 단위 백업 엔진 최종본 `rewrite/backup-v2`(`0217902`: 삭제 표시, 설정 파일, 봉인된 달의 늦은 행 합집합, `deleteAllBackups`)는 앞으로 당기기로 반영했다. (2) 일자 DB 사용처 이전 브랜치 `worktree-agent-a8b7b688a4e569816`(`945659c`, STO1019B01: 워치·원시 기기 데이터·HealthKit을 새 저장소로, 하루 캐시·이전 저장소 클래스·이전 형식 옮기기 삭제, 약 12,600줄 삭제)를 합쳤다. 충돌 5개 파일을 직접 해결: 저장소 저장은 순서 직렬화와 삭제 세대 확인을 둘 다 유지, `TaptionStoreV2`는 두 쪽이 각자 고친 같은 결함(단일 트랜잭션 변경, 저장 형태 비교, `busy_timeout`)이라 삭제 표시를 지원하는 쪽으로 통일하고 중복 함수·설정을 제거, 프로젝트 파일은 서로 다른 파일 등록이라 둘 다 유지.
 - 판단 번복: 독립 검토 반영 때 센서 저장소 `deleteAll`을 위치 기록만 지우게 바꿨으나, 에이전트의 단일 파일 설계는 센서 저장소의 `deleteAll`이 한 파일의 모든 사본(위치·원시 봉투·워치·HealthKit·기록)을 지우고 삭제 세대(fence)로 이전 저장소 객체의 저장을 막는다. 검토가 우려한 캐시 불일치는 이 fence로 막히므로 전체 삭제 쪽을 따랐다.
