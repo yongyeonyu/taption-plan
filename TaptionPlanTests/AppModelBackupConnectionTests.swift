@@ -132,8 +132,11 @@ final class AppModelBackupConnectionTests: XCTestCase {
         // 같은 내용으로 다시 백업하면 바뀐 것이 없다고 보고한다.
         await model.backUpNow(password: password, now: now.addingTimeInterval(60))
         let again = try XCTUnwrap(model.lastBackupReport)
-        XCTAssertTrue(again.items.allSatisfy { $0.kind != .done })
-        XCTAssertTrue(again.items.contains { $0.kind == .unchanged })
+        // 설정 파일은 저장 때마다 헤더 수정 시각이 바뀌므로 월 파일만 본다.
+        let months = again.items.filter { $0.name != "settings" }
+        XCTAssertFalse(months.isEmpty)
+        XCTAssertTrue(months.allSatisfy { $0.kind == .unchanged || $0.kind == .skipped }, "\(months)")
+        XCTAssertEqual(months.filter { $0.kind == .unchanged }.map(\.name), ["2026-07", "2026-08", "2026-10"])
 
         // 목록: 비밀번호 없이는 월·크기만, 비밀번호를 넣으면 행 수.
         await model.refreshBackupListings()
