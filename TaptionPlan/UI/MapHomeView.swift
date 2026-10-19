@@ -12207,7 +12207,11 @@ private struct MapHomeSecuritySheet: View {
             SecureField(language.text("백업 비밀번호", "Backup password"), text: $backupPassword)
                 .keyboardType(.numberPad)
                 .textContentType(.password)
-                .onChange(of: backupPassword) { _, value in backupPassword = numericPIN(value) }
+                .onChange(of: backupPassword) { _, value in
+                    backupPassword = numericPIN(value)
+                    let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
+                    Task { await model.refreshBackupListings(password: shown) }
+                }
             if let latestBackupText {
                 Text(language.text(
                     "마지막 백업: \(latestBackupText)",
@@ -12273,8 +12277,8 @@ private struct MapHomeSecuritySheet: View {
     private var restoreCard: some View {
         card(language.text("백업 목록과 복원", "Backups and restore")) {
             Text(language.text(
-                "목록의 월, 행 수, 마지막 기록 시각은 비밀번호 없이 보입니다. 불러오려면 위 ‘백업 비밀번호’ 칸에 그 백업의 비밀번호를 넣으세요.",
-                "Month, row count and last record time are shown without a password. To restore, enter that backup's password in the field above."
+                "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 불러오려면 위 ‘백업 비밀번호’ 칸에 그 백업의 비밀번호를 넣으세요.",
+                "Row counts and times appear after you enter the password. To restore, enter that backup's password in the field above."
             ))
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
@@ -12292,7 +12296,8 @@ private struct MapHomeSecuritySheet: View {
                 listingRow(row)
             }
             Button {
-                Task { await model.refreshBackupListings() }
+                let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
+                Task { await model.refreshBackupListings(password: shown) }
             } label: {
                 Label(language.text("목록 새로고침", "Refresh list"), systemImage: "arrow.clockwise")
             }
@@ -12450,10 +12455,14 @@ private struct MapHomeSecuritySheet: View {
     }
 
     private func listingDetail(_ row: PlanBackupListingRow) -> String {
-        guard row.isReadable, let rows = row.rowCount else {
-            return language.text("헤더를 읽지 못했습니다(내려받는 중이거나 손상됨)", "Header unreadable (still downloading or damaged)")
+        let size = ByteCountFormatter.string(fromByteCount: Int64(row.size), countStyle: .file)
+        guard row.metadataShown else {
+            return language.text("\(size) · 비밀번호를 넣으면 행 수와 시각이 보입니다", "\(size) · enter the password to see rows and times")
         }
-        var parts = [language.text("\(rows)행", "\(rows) rows")]
+        guard row.isReadable, let rows = row.rowCount else {
+            return language.text("\(size) · 열 수 없음(내려받는 중이거나 손상됨)", "\(size) · unreadable (still downloading or damaged)")
+        }
+        var parts = [size, language.text("\(rows)행", "\(rows) rows")]
         if let last = row.lastDataAt {
             parts.append(language.text("마지막 기록 \(formatted(last))", "last record \(formatted(last))"))
         }

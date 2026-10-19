@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BAC1015B01000000000000001 /* PlanDailyBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAC1015B01000000000000002 /* PlanDailyBackup.swift */; };
 		ABD100600000000000000001 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
 		ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		ABD100600000000000000002 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
@@ -103,6 +102,7 @@
 		5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F1 /* TaptionBackupFormat.swift */; };
 		5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F2 /* TaptionBackupDestination.swift */; };
 		5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F3 /* TaptionBackupEngine.swift */; };
+		5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */; };
 		5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B3F /* PlanBackupPresentation.swift */; };
 		5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B2F /* PlanSecurityService.swift */; };
 		5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B1F /* AppLockAndPIN.swift */; };
@@ -119,7 +119,6 @@
 		A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000086 /* RouteTimelineDataTests.swift */; };
 		A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000087 /* MapHomeLocationPresentation.swift */; };
 		A10000000000000000000088 /* BiometricDataProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000088 /* BiometricDataProtection.swift */; };
-		A10000000000000000000089 /* SecurityBackupCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000089 /* SecurityBackupCore.swift */; };
 		A10000000000000000000092 /* PlanDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000092 /* PlanDayDatabase.swift */; };
 		A10000000000000000000093 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
 		A10000000000000000000094 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
@@ -247,7 +246,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		BAC1015B01000000000000002 /* PlanDailyBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDailyBackup.swift; sourceTree = "<group>"; };
 		FBD100600000000000000001 /* PlanActualStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanActualStorage.swift; sourceTree = "<group>"; };
 		FBD100700000000000000001 /* SensorReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingStorage.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -329,6 +327,7 @@
 		5B00000000000000000000F1 /* TaptionBackupFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupFormat.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F2 /* TaptionBackupDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupDestination.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F3 /* TaptionBackupEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupEngine.swift; sourceTree = "<group>"; };
+		5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupEngineAdapter.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B3F /* PlanBackupPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupPresentation.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B2F /* PlanSecurityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanSecurityService.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B1F /* AppLockAndPIN.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPIN.swift; sourceTree = "<group>"; };
@@ -342,7 +341,6 @@
 		F10000000000000000000087 /* MapHomeLocationPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationPresentation.swift; sourceTree = "<group>"; };
 		F10000000000000000000088 /* BiometricDataProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricDataProtection.swift; sourceTree = "<group>"; };
 		F10000000000000000000091 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../Products.storekit; sourceTree = "<group>"; };
-		F10000000000000000000089 /* SecurityBackupCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCore.swift; sourceTree = "<group>"; };
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000093 /* WatchDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDayDatabase.swift; sourceTree = "<group>"; };
 		F1000000000000000000008A /* SecurityBackupCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityBackupCoreTests.swift; sourceTree = "<group>"; };
@@ -592,6 +590,7 @@
 				5A00000000000000000000F2 /* TaptionStoreV2.swift */,
 				5A00000000000000000000F3 /* TaptionStoreRepository.swift */,
 				5B00000000000000000000F3 /* TaptionBackupEngine.swift */,
+				5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */,
 				5B0000000000000000000B3F /* PlanBackupPresentation.swift */,
 				5B0000000000000000000B2F /* PlanSecurityService.swift */,
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
@@ -602,8 +601,6 @@
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
-				F10000000000000000000089 /* SecurityBackupCore.swift */,
-				BAC1015B01000000000000002 /* PlanDailyBackup.swift */,
 				F10000000000000000000092 /* PlanDayDatabase.swift */,
 				F51002000000000000000001 /* PlanDayDataSnapshot.swift */,
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
@@ -1029,6 +1026,7 @@
 				5A00000000000000000000A2 /* TaptionStoreV2.swift in Sources */,
 				5A00000000000000000000A3 /* TaptionStoreRepository.swift in Sources */,
 				5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */,
+				5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */,
 				5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */,
 				5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */,
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
@@ -1040,8 +1038,6 @@
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
 				A10000000000000000000087 /* MapHomeLocationPresentation.swift in Sources */,
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
-				A10000000000000000000089 /* SecurityBackupCore.swift in Sources */,
-				BAC1015B01000000000000001 /* PlanDailyBackup.swift in Sources */,
 				A10000000000000000000092 /* PlanDayDatabase.swift in Sources */,
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */,
 				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,

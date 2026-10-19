@@ -54,7 +54,9 @@ struct PlanBackupListingRow: Equatable, Identifiable, Sendable {
     var createdAt: Date?
     /// 로컬에서 정리해 이 기기에는 없고 백업에만 있는 달.
     var isOffloaded: Bool
-    /// 헤더를 읽었는지(깨졌거나 아직 내려받지 못한 파일은 false).
+    /// 행 수·시각 같은 헤더 메타데이터를 채웠는지(비밀번호를 넣은 뒤에만 true).
+    var metadataShown: Bool
+    /// 메타데이터를 보여 준 상태에서 헤더를 읽었는지(깨졌거나 아직 내려받지 못한 파일은 false).
     var isReadable: Bool
 }
 

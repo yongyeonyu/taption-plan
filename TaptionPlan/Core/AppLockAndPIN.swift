@@ -130,14 +130,9 @@ enum PlanSecurityError: Error, Equatable {
     case invalidPIN
     case invalidCredential
     case pinRequiredForCloudBackup
-    case invalidArchive
-    case archiveNotFound
-    case accountUnavailable
-    case accountMismatch
     case biometricUnavailable
     case biometricRejected
     case tooManyAttempts(retryAfter: TimeInterval)
-    case localSensorArchiveIncomplete
     case backupInProgress
 }
 
@@ -168,39 +163,9 @@ extension PlanSecurityError: LocalizedError {
                 english: "Set a 6-digit PIN before using this feature.",
                 preference: preference
             )
-        case .invalidArchive:
-            AppLanguagePreference.text(
-                korean: "백업 파일의 암호화 또는 무결성을 확인하지 못했습니다.",
-                english: "The backup encryption or integrity check failed.",
-                preference: preference
-            )
         case .backupInProgress:
             AppLanguagePreference.text(korean: "백업이 이미 진행 중입니다. 완료된 뒤 다시 시도해 주세요.",
                 english: "A backup is already in progress. Try again when it finishes.", preference: preference)
-        case .localSensorArchiveIncomplete:
-            AppLanguagePreference.text(
-                korean: "기기의 일부 센서 기록을 읽지 못해 백업을 완료하지 못했습니다. 기존 기록과 백업은 보존되어 있습니다.",
-                english: "Some sensor records on this device could not be read. Existing records and backups are preserved.",
-                preference: preference
-            )
-        case .archiveNotFound:
-            AppLanguagePreference.text(
-                korean: "불러올 iCloud 백업이 없습니다.",
-                english: "No iCloud backup is available to restore.",
-                preference: preference
-            )
-        case .accountUnavailable:
-            AppLanguagePreference.text(
-                korean: "iCloud 계정을 확인한 뒤 다시 시도해 주세요.",
-                english: "Check your iCloud account and try again.",
-                preference: preference
-            )
-        case .accountMismatch:
-            AppLanguagePreference.text(
-                korean: "이 백업을 만든 iCloud 계정과 다릅니다.",
-                english: "This is not the iCloud account that created the backup.",
-                preference: preference
-            )
         case .biometricUnavailable:
             AppLanguagePreference.text(
                 korean: "Face ID 또는 Touch ID를 사용할 수 없습니다.",
@@ -315,60 +280,34 @@ final class MockPlanLocalBiometricAuthenticator: PlanLocalBiometricAuthenticator
     func authenticate(reason: String) async -> Bool { result }
 }
 
+/// 앱 잠금 설정. 이전 버전이 저장한 `cloudBackupEnabled`·`midnightBackupEnabled` 키는 무시한다(자동 백업은 없다).
 struct PlanAppLockSettings: Codable, Equatable, Sendable {
     var lockOnLaunch: Bool
     var lockOnForeground: Bool
     var biometricUnlockEnabled: Bool
-    /// A backup is opt-in. Turning it on requires the four-digit recovery
-    /// code, but does not force an app lock for ordinary use.
-    var cloudBackupEnabled: Bool
-    var midnightBackupEnabled: Bool
 
     init(
         lockOnLaunch: Bool = false,
         lockOnForeground: Bool = false,
-        biometricUnlockEnabled: Bool = false,
-        cloudBackupEnabled: Bool = false,
-        midnightBackupEnabled: Bool = false
+        biometricUnlockEnabled: Bool = false
     ) {
         self.lockOnLaunch = lockOnLaunch
         self.lockOnForeground = lockOnForeground
         self.biometricUnlockEnabled = biometricUnlockEnabled
-        self.cloudBackupEnabled = cloudBackupEnabled
-        self.midnightBackupEnabled = midnightBackupEnabled
     }
 
     private enum CodingKeys: String, CodingKey {
         case lockOnLaunch
         case lockOnForeground
         case biometricUnlockEnabled
-        case cloudBackupEnabled
-        case midnightBackupEnabled
     }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
-            lockOnLaunch: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .lockOnLaunch
-            ) ?? false,
-            lockOnForeground: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .lockOnForeground
-            ) ?? false,
-            biometricUnlockEnabled: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .biometricUnlockEnabled
-            ) ?? false,
-            cloudBackupEnabled: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .cloudBackupEnabled
-            ) ?? false,
-            midnightBackupEnabled: try values.decodeIfPresent(
-                Bool.self,
-                forKey: .midnightBackupEnabled
-            ) ?? false
+            lockOnLaunch: try values.decodeIfPresent(Bool.self, forKey: .lockOnLaunch) ?? false,
+            lockOnForeground: try values.decodeIfPresent(Bool.self, forKey: .lockOnForeground) ?? false,
+            biometricUnlockEnabled: try values.decodeIfPresent(Bool.self, forKey: .biometricUnlockEnabled) ?? false
         )
     }
 }
@@ -392,7 +331,6 @@ struct PlanSecurityStatus: Equatable, Sendable {
     let failedAttempts: Int
     let retryAfter: Date?
     let latestSuccessfulBackupDate: Date?
-    let preservedUnmergedRawBackup: Bool
     /// 백업 뒤 로컬에 남길 최근 달 수(이번 달 포함).
     let localMonthsToKeep: Int
 
@@ -404,7 +342,6 @@ struct PlanSecurityStatus: Equatable, Sendable {
         failedAttempts: Int,
         retryAfter: Date?,
         latestSuccessfulBackupDate: Date? = nil,
-        preservedUnmergedRawBackup: Bool = false,
         localMonthsToKeep: Int = 2
     ) {
         self.settings = settings
@@ -414,7 +351,6 @@ struct PlanSecurityStatus: Equatable, Sendable {
         self.failedAttempts = failedAttempts
         self.retryAfter = retryAfter
         self.latestSuccessfulBackupDate = latestSuccessfulBackupDate
-        self.preservedUnmergedRawBackup = preservedUnmergedRawBackup
         self.localMonthsToKeep = localMonthsToKeep
     }
 }

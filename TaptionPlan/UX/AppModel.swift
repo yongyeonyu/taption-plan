@@ -1242,7 +1242,7 @@ final class AppModel {
     @ObservationIgnored private let airQualityService: AirQualityContextService
     @ObservationIgnored private let cloudSyncService: CloudKitSnapshotSyncService?
     @ObservationIgnored private let securityService: PlanSecurityService?
-    @ObservationIgnored private let backupEngine: TaptionBackupEngine?
+    @ObservationIgnored private let backupService: PlanBackupEngineAdapter?
     @ObservationIgnored private let placeNameResolver: PlaceNameResolver
     @ObservationIgnored private let transportContextService:
         AppleTransportContextService
@@ -1492,11 +1492,12 @@ final class AppModel {
         self.cloudSyncService = cloudSyncService
         self.securityService = securityService ?? PlanSecurityService()
         if let backupEngine {
-            self.backupEngine = backupEngine
+            self.backupService = PlanBackupEngineAdapter(engine: backupEngine)
         } else if repository == nil, let store = try? TaptionStoreV2.applicationSupport() {
-            self.backupEngine = TaptionBackupEngine(store: store, destination: TaptionICloudDriveBackupDestination())
+            self.backupService = PlanBackupEngineAdapter(
+                engine: TaptionBackupEngine(store: store, destination: TaptionICloudDriveBackupDestination()))
         } else {
-            self.backupEngine = nil
+            self.backupService = nil
         }
         self.securityStatus = self.securityService?.status ?? PlanSecurityStatus(
             settings: PlanAppLockSettings(), state: .unlocked, hasPIN: false,
@@ -1735,7 +1736,7 @@ final class AppModel {
 
     // MARK: 백업 (월 단위 엔진)
 
-    var backupDestinationAvailable: Bool { backupEngine != nil }
+    var backupDestinationAvailable: Bool { backupService != nil }
 
     func setLocalMonthsToKeep(_ months: Int) {
         guard let securityService else { return }
@@ -1751,38 +1752,20 @@ final class AppModel {
         try securityService.verifyPIN(password, unlocking: false)
     }
 
-    /// iCloud Drive의 백업 파일 목록. 월, 행 수, 마지막 시각은 파일 헤더에서 비밀번호 없이 읽는다.
-    func refreshBackupListings() async {
-        guard let backupEngine else {
+    /// iCloud Drive의 백업 파일 목록. 비밀번호를 넣기 전에는 월 이름과 파일 크기만 보이고,
+    /// 행 수·마지막 시각은 비밀번호를 넣은 뒤(`password`)에만 채운다.
+    func refreshBackupListings(password: String? = nil) async {
+        guard let backupService else {
             backupListings = []
             return
         }
         do {
-            let listings = try await backupEngine.listBackups()
-            var rows: [PlanBackupListingRow] = []
-            for listing in listings {
-                var offloaded = false
-                if case .month(let month) = listing.scope {
-                    offloaded = (try? await backupEngine.isSealed(month)) ?? false
-                }
-                rows.append(PlanBackupListingRow(
-                    name: listing.info.name,
-                    scope: listing.scope,
-                    size: listing.info.size,
-                    rowCount: listing.header?.rowCount,
-                    lastDataAt: listing.header?.lastTimestamp.map { Date(timeIntervalSince1970: $0) },
-                    createdAt: listing.header.map { Date(timeIntervalSince1970: $0.createdAt) },
-                    isOffloaded: offloaded,
-                    isReadable: listing.header != nil
-                ))
-            }
-            backupListings = rows
+            backupListings = try await backupService.listings(password: password)
+            backupListingError = nil
         } catch {
             backupListings = []
             backupListingError = PlanBackupPresenter.message(for: error)
-            return
         }
-        backupListingError = nil
     }
 
     /// 저장소가 바뀐 뒤(복원·로컬 정리) 메모리 상태를 저장소에서 다시 만든다.
@@ -1834,14 +1817,9 @@ final class AppModel {
         var report: PlanBackupReport
         do {
             try authorizeBackupPassword(password)
-            guard let backupEngine else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
+            guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
             await flushPendingWrites()
-            let results = try await backupEngine.backupAllMonths(password: password, now: now) { [weak self] done, total in
-                Task { @MainActor [weak self] in
-                    guard let self, case .backingUp = self.backupActivity else { return }
-                    self.backupActivity = .backingUp(completed: done, total: total)
-                }
-            }
+            let results = try await backupService.backupAll(password: password, now: now)
             let items = results.map(PlanBackupPresenter.item(for:))
             if items.contains(where: { $0.kind == .done || $0.kind == .unchanged }) {
                 securityService?.recordSuccessfulBackup(at: now)
@@ -1867,7 +1845,7 @@ final class AppModel {
             logger.finishOperation(operation, outcome: "failure", error: error)
         }
         endBackupOperation(report)
-        await refreshBackupListings()
+        await refreshBackupListings(password: password)
     }
 
     /// 백업 후 로컬 정리: 끝난 달 중 백업을 다시 읽어 검증한 달만 이 기기에서 지운다.
@@ -1879,11 +1857,11 @@ final class AppModel {
         var report: PlanBackupReport
         do {
             try authorizeBackupPassword(password)
-            guard let backupEngine, let securityService else {
+            guard let backupService, let securityService else {
                 throw TaptionBackupError.destinationUnavailable("engine unavailable")
             }
             await flushPendingWrites()
-            let results = try await backupEngine.offloadSealedMonths(
+            let results = try await backupService.offload(
                 password: password, now: now, keepRecentMonths: securityService.localMonthsToKeep
             )
             let items = results.map(PlanBackupPresenter.item(for:))
@@ -1904,7 +1882,7 @@ final class AppModel {
             )
         }
         endBackupOperation(report)
-        await refreshBackupListings()
+        await refreshBackupListings(password: password)
     }
 
     /// 백업 한 개(월 또는 설정)를 비밀번호로 복원한다. 로컬에서 정리한 달을 다시 불러오는 데도 쓴다.
@@ -1917,13 +1895,9 @@ final class AppModel {
         }
         var report: PlanBackupReport
         do {
-            guard let backupEngine else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
+            guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
             await flushPendingWrites()
-            let summary: TaptionBackupEngine.RestoreSummary
-            switch scope {
-            case .month(let month): summary = try await backupEngine.restore(month: month, password: password)
-            case .settings: summary = try await backupEngine.restoreSettings(password: password)
-            }
+            let summary = try await backupService.restore(scope, password: password)
             try await reloadSnapshotAfterStoreChange()
             let detail = AppLanguagePreference.text(
                 korean: "센서 \(summary.newReadings)행 추가, 기록 \(summary.changedRecords)개 반영",
@@ -1942,7 +1916,7 @@ final class AppModel {
             )
         }
         endBackupOperation(report)
-        await refreshBackupListings()
+        await refreshBackupListings(password: password)
     }
 
     private static func backupBusyReport(_ operation: PlanBackupReport.Operation) -> PlanBackupReport {
@@ -1953,8 +1927,8 @@ final class AppModel {
     /// iCloud 백업 파일을 모두 지운다. **되돌릴 수 없으므로 사용자 확인 뒤에만 부른다.**
     /// 실패한 파일이 있으면 이름을 담아 던진다. 성공하면 마지막 백업 시각도 지운다.
     private func deleteAllBackupFiles() async throws {
-        guard let backupEngine else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
-        let result = try await backupEngine.deleteAllBackups()
+        guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
+        let result = try await backupService.deleteAllBackups()
         if !result.failed.isEmpty || !(result.remaining ?? []).isEmpty {
             throw BackupDeletionError(names: result.failed.map(\.name) + (result.remaining ?? []))
         }
