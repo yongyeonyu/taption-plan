@@ -17012,9 +17012,18 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 centerOffset: descriptor.centerOffset
             )
             view.transform = .identity
-            view.displayPriority = .defaultHigh
-            view.zPriority = .defaultUnselected
-            view.selectedZPriority = .defaultUnselected
+            if case .pawprint = annotation.kind {
+                // 발자국은 수백 개라서 충돌 계산에 넣으면 집·회사 같은 핀이 가려진다. 충돌에서 빼고 핀 아래에 둔다.
+                view.displayPriority = .defaultLow
+                view.collisionMode = .none
+                view.zPriority = .min
+                view.selectedZPriority = .min
+            } else {
+                view.displayPriority = .defaultHigh
+                view.collisionMode = .rectangle
+                view.zPriority = .defaultUnselected
+                view.selectedZPriority = .defaultUnselected
+            }
             view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
             view.isEnabled = annotation.isInteractive
             view.isUserInteractionEnabled = annotation.isInteractive
@@ -17031,9 +17040,11 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     view.zPriority = .min
                     view.selectedZPriority = .min
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.userLocation
-                } else if annotation is MapHomeAppleMapAnnotation {
-                    view.zPriority = .defaultUnselected
-                    view.selectedZPriority = .defaultUnselected
+                } else if let hosted = annotation as? MapHomeAppleMapAnnotation {
+                    let isPawprint: Bool
+                    if case .pawprint = hosted.kind { isPawprint = true } else { isPawprint = false }
+                    view.zPriority = isPawprint ? .min : .defaultUnselected
+                    view.selectedZPriority = isPawprint ? .min : .defaultUnselected
                     view.layer.zPosition = MapHomeAppleAnnotationLayerPriority.place
                 }
             }
