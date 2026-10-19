@@ -1,5 +1,17 @@
 # 검증 기록
 
+## REL1019A01 · 빌드 180 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main` `42076d6`(빌드 번호 180: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). push 완료.
+- 실기기 검증: iPhone 11 Pro 한 대만 실행(iPhone 18 Pro Max는 연결 끊김 `unavailable`로 제외). `TimeScaleTests`·`PlanTextSuggestionFormatTests`·`TaptionPlanUITests` 179개 실행, 실패 0, `TEST SUCCEEDED`(`final-11b.log`). 결과 번들은 정리 중 삭제했다. 텍스트 로그가 근거다.
+- 아카이브·업로드: Release 아카이브 성공, IPA 내보내기 성공, `altool` `No errors uploading`(`altool-180.log`). 전달 빌드 ID `91ff3889-3e15-46dc-afdc-2ad491768960`.
+- 처리·그룹: ASC API에서 빌드 180 `VALID`. `TP Taption Plan 내부 테스트`에 연결(HTTP 204) 후 readback: 그룹 맨 위 180 `VALID`, 179·178도 유지, 테스터 1명.
+- 제한: 웹 그룹 화면은 앱 브라우저에 로그인되어 있지 않아 읽지 못했다. 근거는 API 응답이다. 실제 설치·테스터 수신은 확인하지 않았다. iPhone 18 Pro Max 검증은 이번 빌드에서 하지 않았다.
+- 주의: 릴리스 스크립트의 자동 그룹 연결 단계는 빌드 ID를 못 받아 실패했는데도 "done"을 기록했다. 실제 연결은 위 수동 호출로 했다.
+
+## 정리 기록 (2026-10-19)
+- 불필요 산출물 삭제: 이전 시도의 `.xcresult`(device-xcui-11/18 계열, aq-host, merged/full 일부), `xcui18-attach`, `build/ArchiveDD`의 TestResults·Logs·export-179(IPA). 텍스트 로그(`.log`)와 `artifacts/`(릴리스 심볼)·사용자 데이터는 유지했다.
+- 주의: `device-xcui-11c.xcresult`·`device-xcui-18d.xcresult`를 근거로 적은 과거 항목의 결과 번들은 사라졌다. 같은 이름의 `.log`에 결과가 남아 있다. 번들은 재확인할 수 없다.
+
 ## REL1018A01 · 빌드 179 내부 TestFlight 배포 (2026-10-19)
 - 소스: `main` `fa248e4`를 push(`ef7bf0b..fa248e4`). 빌드 번호 179를 `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`에 반영(확인 완료).
 - 아카이브: Release generic iOS `TaptionPlan179.xcarchive`, `ARCHIVE SUCCEEDED`, 경고 0, 번들 버전 179(`archive-179.log`). IPA 내보내기 `export-179` 성공(43,025,797바이트).
