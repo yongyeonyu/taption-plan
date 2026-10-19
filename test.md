@@ -1715,3 +1715,10 @@
 - 테스트(실기기 iPhone 11 Pro): 새 `MapHomeLiveMapTests` 29개 통과(`live-map-1.log`). 전체 `TaptionPlanTests` 1,435개 중 실패는 기존 환경 실패 2개 테스트(StoreKit 구매·복원, LocalizationCatalog의 Mac 경로 파일)뿐, 새 실패 없음(`full-1.log`). 앱 Debug 빌드는 위 테스트 빌드에 포함되어 통과.
 - 제한: 화면은 확인하지 못했다(UI 스모크 불가, 시뮬레이터 금지). 집 날씨 배지 위치/겹침, 레일 안내 문구 크기, 경로 그라데이션 모양, 자동 줌 체감(2초 간격 단계 점프, Apple 지도는 애니메이션 없음)은 대표 실기기 확인이 필요하다. 사용자가 지도를 조작하면 20초 동안 자동 줌이 멈추고 위치 버튼을 누르면 풀린다. 집 날씨는 "현재 위치" 날씨를 집 핀에 보여준다(집 위치 별도 조회 아님).
 
+
+## REL1019D01 · 빌드 183 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(빌드 번호 183: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: MAP1019C01(날씨 실패 상태 표시·집 위 날씨 아이콘, 경로 속도 그라데이션, 실시간 자동 줌, `gps_fix` 로그), 발자국 Apple 지도 표시, 백업 버튼 비활성 이유 표시, CI 빌드 오류 2건 수정(CI1019A01).
+- 테스트(실기기 iPhone 11 Pro): 병합 후 전체 `TaptionPlanTests` 1,435개 중 실패 3개 — 기존 환경 실패 2개(StoreKit, LocalizationCatalog)와 `TaptionStoreRepositoryTests.testConcurrentSavesEndWithTheLastSnapshotInTheStore`. 마지막은 테스트가 두 `Task`의 도착 순서를 가정한 플래키로, 저장소가 아니라 테스트의 문제다(3회 중 1회 실패). 순서에 의존하지 않는 검증으로 바꿔 `TaptionStoreRepositoryTests` 10개를 4회 연속 통과했다(`conc3-*.log`). 전체 스위트를 수정 후 다시 돌리지는 않았다.
+- CI(Xcode 26.6) 오류: `app` 작업이 ① `VoiceMemoPlayer`의 `AVAudioPlayerDelegate` 격리 오류, ② `MapHomeView.body` 타입 검사 시간 초과로 실패했다. ①은 `@preconcurrency`, ②는 `body`와 `.task` 클로저를 나눠 수정했다. 로컬(Xcode 27.0)에서는 ②가 재현되지 않아 CI 통과는 push 후 실행 결과로만 확인할 수 있다. `init`의 날씨 필터 식은 로컬에서 4초대로 남아 있다.
+- 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 183, `altool` `No errors uploading`(`altool-183.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 183·182·181·180 확인.
+- 제한: 지도 홈의 새 표시(집 날씨 아이콘, 그라데이션, 자동 줌, 발자국)는 화면에서 확인하지 못했다. WeatherKit 인증 실패(JWT Code=2)는 Apple 개발자 계정 쪽 조치가 필요하며 코드로 해결되지 않는다. 설치·테스터 수신은 확인하지 않았다.
