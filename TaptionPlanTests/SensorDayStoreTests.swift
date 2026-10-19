@@ -209,89 +209,6 @@ private final class PlanDaySaveValidity {
 }
 
 final class SensorDayStoreTests: XCTestCase {
-    func testVerifiedPropertyListSensorRowsMigrateWithoutRecoveryCopies() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let date = Date(timeIntervalSinceReferenceDate: 800_000_000.0000001)
-        let reading = makeReading(date, sequence: 7)
-        let encoder = PropertyListEncoder()
-        encoder.outputFormat = .binary
-        let bytes = try encoder.encode(reading)
-        let oldPayload = TaptionPlanCanonicalStorage.envelope(for: .init(
-            data: bytes, checksum: TaptionPlanCanonicalStorage.checksum(bytes),
-            uncompressedSize: bytes.count, isCompressed: false))
-        XCTAssertThrowsError(try TaptionPlanCanonicalStorage.decode(SensorReading.self,
-            from: TaptionPlanCanonicalStorage.encodedPayload(from: oldPayload)))
-        let db = root.appendingPathComponent("sensor.sqlite")
-        let store = try TaptionPlanDayStore(url: db)
-        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
-            sequence: 7, id: reading.id.uuidString, domain: "sensor-reading", payload: oldPayload)])
-        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
-        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
-        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
-        let result = try await archive.readingsLoadResult(in: span)
-        XCTAssertTrue(result.isComplete)
-        XCTAssertEqual(result.readings, [reading])
-        let migratedEvents = try await store.events(in: span.start...span.end, domain: "sensor-reading")
-        let migrated = try XCTUnwrap(migratedEvents.first)
-        XCTAssertNotEqual(migrated.payload, oldPayload)
-        XCTAssertEqual(try TaptionPlanCanonicalStorage.decode(SensorReading.self,
-            from: TaptionPlanCanonicalStorage.encodedPayload(from: migrated.payload)), reading)
-        let reopened = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
-        let reloaded = try await reopened.readingsLoadResult(in: span)
-        XCTAssertTrue(reloaded.isComplete)
-        XCTAssertEqual(reloaded.readings, [reading])
-    }
-
-    func testPropertyListMigrationRejectsCorruptChecksumAndPreservesUnreadableRow() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let reading = makeReading(date, sequence: 1)
-        let encoder = PropertyListEncoder(); encoder.outputFormat = .binary
-        let bytes = try encoder.encode(reading)
-        let bad = TaptionPlanCanonicalStorage.envelope(for: .init(data: bytes,
-            checksum: String(repeating: "0", count: 64), uncompressedSize: bytes.count, isCompressed: false))
-        let db = root.appendingPathComponent("sensor.sqlite")
-        let store = try TaptionPlanDayStore(url: db)
-        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
-            sequence: 1, id: reading.id.uuidString, domain: "sensor-reading", payload: bad)])
-        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
-        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
-        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
-        let result = try await archive.readingsLoadResult(in: span)
-        XCTAssertFalse(result.isComplete)
-        XCTAssertTrue(result.readings.isEmpty)
-        let unchanged = try await store.events(in: span.start...span.end, domain: "sensor-reading")
-        XCTAssertEqual(unchanged.first?.payload, bad)
-    }
-
-    func testPropertyListMigrationDoesNotRepairMismatchedEventIdentity() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: root) }
-        let date = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let reading = makeReading(date, sequence: 1)
-        let encoder = PropertyListEncoder(); encoder.outputFormat = .binary
-        let bytes = try encoder.encode(reading)
-        let payload = TaptionPlanCanonicalStorage.envelope(for: .init(data: bytes,
-            checksum: TaptionPlanCanonicalStorage.checksum(bytes), uncompressedSize: bytes.count, isCompressed: false))
-        let db = root.appendingPathComponent("sensor.sqlite")
-        let store = try TaptionPlanDayStore(url: db)
-        try await store.appendEvents([.init(day: TaptionPlanDayKey(date: date), timestamp: date,
-            sequence: 1, id: UUID().uuidString, domain: "sensor-reading", payload: payload)])
-        _ = try await store.markMigrationCompleted("sensor-reading-v1-to-day-store-v2")
-        let archive = try SensorReadingArchive(fileURL: root.appendingPathComponent("absent.jsonl"), dayStoreURL: db)
-        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
-        let result = try await archive.readingsLoadResult(in: span)
-        XCTAssertFalse(result.isComplete)
-        XCTAssertTrue(result.readings.isEmpty)
-        let unchanged = try await store.events(in: span.start...span.end, domain: "sensor-reading")
-        XCTAssertEqual(unchanged.first?.payload, payload)
-    }
-
     func testDirectSensorStoragePreservesEveryFieldAndPortableCodable() throws {
         var value = makeReading(Date(timeIntervalSinceReferenceDate: 800_000_000.125), sequence: Int.max)
         value.point = GeoPoint(latitude: -0.0, longitude: 179.75, altitude: -400.25, horizontalAccuracy: 3.25, verticalAccuracy: -1)
@@ -448,55 +365,28 @@ final class SensorDayStoreTests: XCTestCase {
             XCTAssertEqual(loaded.readings, readings)
         }
         print("DBP1006A01 sensors records=\(readings.count) append_ms=\(writeMS) read_mean_ms=\(readMS)")
-        let store = try TaptionPlanDayStore(url: directory.appendingPathComponent("taption-plan-v2.sqlite"))
         let narrow = TimeSpan(start: date.addingTimeInterval(10_000), end: date.addingTimeInterval(10_005))
-        var legacyMS = 0.0
-        var indexedMS = 0.0
-        var legacyRows = 0
-        for _ in 0..<3 {
-            let legacyStart = ProcessInfo.processInfo.systemUptime
-            let allDay = try await store.events(from: TaptionPlanDayKey(date: narrow.start),
-                through: TaptionPlanDayKey(date: narrow.end), domain: "sensor-reading")
-            let legacy = allDay.filter { narrow.contains($0.timestamp) }
-            legacyMS += (ProcessInfo.processInfo.systemUptime - legacyStart) * 1_000 / 3
-            legacyRows = allDay.count
-            let indexedStart = ProcessInfo.processInfo.systemUptime
-            let indexed = try await store.events(in: narrow.start...narrow.end, domain: "sensor-reading")
-            indexedMS += (ProcessInfo.processInfo.systemUptime - indexedStart) * 1_000 / 3
-            XCTAssertEqual(indexed, legacy)
-            XCTAssertEqual(indexed.count, 2)
-        }
+        let rangeStart = ProcessInfo.processInfo.systemUptime
         let result = try await reopened.readingsLoadResult(in: narrow)
         XCTAssertTrue(result.isComplete)
         XCTAssertEqual(result.readings, Array(readings[2_000...2_001]))
-        print("DBP1006B01 sensor_range legacy_rows=\(legacyRows) indexed_rows=2 legacy_query_ms=\(legacyMS) indexed_query_ms=\(indexedMS)")
+        print("ARC1019A01 sensor_range rows=\(result.readings.count) query_ms=\((ProcessInfo.processInfo.systemUptime - rangeStart) * 1_000)")
     }
 
-    func testSensorRangeUsesInstantsAndKeepsEndpointsWithDifferentStoredDayKey() async throws {
+    func testSensorRangeIncludesBothEndpointsAndUsesInstantsAcrossLocalMidnight() async throws {
         let fence = DataDeletionFenceTestFixture()
         defer { fence.restore() }
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("DBP1006B01-\(UUID().uuidString)")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ARC1019A01-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let url = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let databaseURL = directory.appendingPathComponent("taption-plan-v2.sqlite")
-        let archive = try SensorReadingArchive(fileURL: url)
-        let start = Date(timeIntervalSince1970: 1_790_000_000)
-        let readings = [-1, 0, 1, 2, 3].map { makeReading(start.addingTimeInterval(Double($0))) }
+        let archive = try SensorReadingArchive(fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"))
+        let midnight = Date(timeIntervalSince1970: 1_792_335_600)  // 2026-10-19 00:00 KST
+        let readings = [-2, -1, 0, 1, 2].map { makeReading(midnight.addingTimeInterval(Double($0))) }
         try await archive.append(readings)
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let original = try await store.allEvents(domain: "sensor-reading")
-        let first = try XCTUnwrap(original.first { $0.id == readings[1].id.uuidString })
-        try await store.upsertEvents([.init(day: .init(year: 2025, month: 1, day: 1),
-            timestamp: first.timestamp, sequence: first.sequence, id: first.id,
-            domain: first.domain, payload: first.payload)])
-        let outOfRange = try XCTUnwrap(original.first { $0.id == readings[4].id.uuidString })
-        try await store.upsertEvents([.init(day: outOfRange.day, timestamp: outOfRange.timestamp,
-            sequence: outOfRange.sequence, id: outOfRange.id, domain: outOfRange.domain, payload: Data([0]))])
-        let loaded = try await archive.readingsLoadResult(in: .init(start: start, end: start.addingTimeInterval(2)))
-        XCTAssertTrue(loaded.isComplete)
-        XCTAssertEqual(loaded.readings, Array(readings[1...3]))
-        let instant = try await archive.readingsLoadResult(in: .init(start: start, end: start))
-        XCTAssertEqual(instant.readings, [readings[1]])
+        let result = try await archive.readingsLoadResult(
+            in: TimeSpan(start: midnight.addingTimeInterval(-1), end: midnight.addingTimeInterval(1))
+        )
+        XCTAssertTrue(result.isComplete)
+        XCTAssertEqual(result.readings.map(\.id), readings[1...3].map(\.id), "양 끝을 포함하고 현지 날짜와 무관하게 시각으로 고른다")
     }
 
     private func makeReading(_ date: Date, id: UUID = UUID(), sequence: Int? = nil) -> SensorReading {
@@ -1108,94 +998,11 @@ final class SensorDayStoreTests: XCTestCase {
         let span = TimeSpan(start: first.addingTimeInterval(-1), end: first.addingTimeInterval(61))
         let values = try await archive.readings(in: span)
         XCTAssertEqual(values.map(\.sequence), [1, 2])
-        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("taption-plan-v2.sqlite").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("taption-store.sqlite").path))
 
         let reopened = try SensorReadingArchive(fileURL: fileURL)
         let reopenedValues = try await reopened.readings(in: span)
         XCTAssertEqual(reopenedValues.map(\.id), values.map(\.id))
-    }
-
-    func testLegacyJSONAndRawArchiveMigrateOnceWithIDDeduplication() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-migration-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let date = Date(timeIntervalSince1970: 1_700_000_000)
-        let id = UUID()
-        let reading = makeReading(date, id: id, sequence: 7)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        var legacy = try encoder.encode(reading)
-        legacy.append(0x0A)
-        try legacy.write(to: fileURL)
-
-        let raw = RawDeviceDataMonthlyArchive(rootDirectory: directory.appendingPathComponent("RawData"))
-        try raw.append(source: .gps, kind: "sensor-reading", payload: reading, capturedAt: date)
-        let archive = try SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
-        let span = TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1))
-        let migrated = try await archive.readings(in: span)
-        XCTAssertEqual(migrated.map(\.id), [id])
-
-        let second = try SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
-        let reopened = try await second.routeReadings(in: span)
-        XCTAssertEqual(reopened.map(\.id), [id])
-    }
-
-    func testLegacyFileReadFailureDoesNotCommitMigration() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-migration-read-retry-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        try FileManager.default.createDirectory(
-            at: fileURL,
-            withIntermediateDirectories: true
-        )
-        let archive = try SensorReadingArchive(
-            fileURL: fileURL,
-            dayStoreURL: directory.appendingPathComponent("sensor.sqlite")
-        )
-
-        do {
-            _ = try await archive.allReadings()
-            XCTFail("A legacy file read failure must not complete migration")
-        } catch {
-            // The unreadable source must keep the migration marker unset.
-        }
-
-        try FileManager.default.removeItem(at: fileURL)
-        let reading = makeReading(Date(timeIntervalSince1970: 1_900_000_000))
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        var legacy = try encoder.encode(reading)
-        legacy.append(0x0A)
-        try legacy.write(to: fileURL)
-
-        let restored = try await archive.allReadings()
-        XCTAssertEqual(restored.map(\.id), [reading.id])
-    }
-
-    func testNewSensorWriteDoesNotAppendLegacyCompression() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-uncompressed-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let archive = try SensorReadingArchive(
-            fileURL: fileURL,
-            rawArchive: RawDeviceDataMonthlyArchive(rootDirectory: directory.appendingPathComponent("RawData")),
-            trackingChunkArchive: TrackingSessionChunkArchive(rootDirectory: directory.appendingPathComponent("RawData"))
-        )
-        try await archive.append(makeReading(Date(timeIntervalSince1970: 1_800_000_000)))
-        let files = FileManager.default.enumerator(
-            at: directory,
-            includingPropertiesForKeys: nil
-        )?.compactMap { $0 as? URL } ?? []
-        XCTAssertFalse(files.contains { $0.pathExtension == "zlib" })
-        XCTAssertTrue(files.contains { $0.lastPathComponent == "taption-plan-v2.sqlite" })
     }
 
     func testDuplicateSensorWriteRejectsConflictAndDeleteAllClearsArchive() async throws {
@@ -1213,8 +1020,8 @@ final class SensorDayStoreTests: XCTestCase {
                 makeReading(date.addingTimeInterval(10), id: id, sequence: 2)
             )
             XCTFail("Expected immutable sensor conflict")
-        } catch let error as TaptionPlanDayStoreError {
-            XCTAssertEqual(error, .eventConflict(id: id.uuidString))
+        } catch let error as TaptionStoreV2Error {
+            XCTAssertEqual(error, .readingConflict(id.uuidString))
         }
         let span = TimeSpan(
             start: date.addingTimeInterval(-1),
@@ -1539,136 +1346,6 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(Set(restored.map(\.id)), Set(envelopes.map(\.id)))
     }
 
-    func testSensorReadRejectsStaleDeletionGenerationAndPreservesEvents() async throws {
-        let deletionFence = DataDeletionFenceTestFixture()
-        defer { deletionFence.restore() }
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-read-delete-generation-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let databaseURL = directory.appendingPathComponent("sensor.sqlite")
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL
-        )
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let reading = makeReading(Date(timeIntervalSince1970: 1_850_000_000))
-        try await archive.append(reading)
-        let storedBeforeDeletion = try await store.allEvents(domain: "sensor-reading")
-        let generation = TaptionDataDeletionFence.advance()
-        defer { TaptionDataDeletionFence.finish(generation: generation) }
-        do {
-            _ = try await archive.allReadings()
-            XCTFail("Stale archive read unexpectedly returned data")
-        } catch is CancellationError {}
-
-        let stored = try await store.allEvents(domain: "sensor-reading")
-        XCTAssertEqual(stored, storedBeforeDeletion)
-    }
-
-    func testSensorReadCancellationDuringDecodePreservesEventsAndAllowsRetry() async throws {
-        let deletionFence = DataDeletionFenceTestFixture()
-        defer { deletionFence.restore() }
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-read-decode-cancel-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let databaseURL = directory.appendingPathComponent("sensor.sqlite")
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let date = Date(timeIntervalSince1970: 1_850_000_000)
-        let readings = (0..<129).map { index in
-            makeReading(date.addingTimeInterval(Double(index)), sequence: index)
-        }
-        try await store.appendEvents(try readings.map { reading in
-            .init(
-                day: TaptionPlanDayKey(date: reading.timestamp),
-                timestamp: reading.timestamp,
-                sequence: UInt64(reading.sequence ?? 0),
-                id: reading.id.uuidString,
-                domain: "sensor-reading",
-                payload: TaptionPlanCanonicalStorage.envelope(
-                    for: try TaptionPlanCanonicalStorage.encode(reading)
-                )
-            )
-        })
-        _ = try await store.markMigrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        let storedBeforeRead = try await store.allEvents(domain: "sensor-reading")
-        let gate = SensorReadCheckpointGate()
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL,
-            afterDecodeBatch: { _ in await gate.pauseOnce() }
-        )
-        let read = Task { try await archive.allReadings() }
-
-        await gate.waitUntilPaused()
-        read.cancel()
-        await gate.resume()
-        do {
-            _ = try await read.value
-            XCTFail("Cancelled decode unexpectedly returned readings")
-        } catch is CancellationError {}
-
-        let storedAfterRead = try await store.allEvents(domain: "sensor-reading")
-        XCTAssertEqual(storedAfterRead, storedBeforeRead)
-        try await archive.append(makeReading(date.addingTimeInterval(129)))
-        let retriedReadings = try await archive.allReadings()
-        XCTAssertEqual(retriedReadings.count, 130)
-    }
-
-    func testDeletionBeforeRepairWritePreventsRecoveredSensorEventFromReturning() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-repair-delete-race-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let databaseURL = directory.appendingPathComponent("sensor.sqlite")
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let date = Date(timeIntervalSince1970: 1_850_000_000)
-        let reading = makeReading(date)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        try await store.appendEvents([.init(
-            day: TaptionPlanDayKey(date: date),
-            timestamp: date,
-            sequence: 0,
-            id: reading.id.uuidString,
-            domain: "sensor-reading",
-            payload: try encoder.encode(reading)
-        )])
-        _ = try await store.markMigrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        let gate = SensorReadCheckpointGate()
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL,
-            beforeRepairWrite: { await gate.pauseOnce() }
-        )
-        let read = Task { try await archive.allReadings() }
-        await gate.waitUntilPaused()
-
-        let generation = TaptionDataDeletionFence.advance()
-        defer { TaptionDataDeletionFence.finish(generation: generation) }
-        try await archive.deleteAll(generation: generation)
-        let afterDelete = try await store.allEvents(domain: "sensor-reading")
-        XCTAssertTrue(afterDelete.isEmpty)
-        await gate.resume()
-        do {
-            _ = try await read.value
-            XCTFail("A read concurrent with deletion unexpectedly returned")
-        } catch is CancellationError {}
-
-        let afterRead = try await store.allEvents(domain: "sensor-reading")
-        XCTAssertTrue(afterRead.isEmpty)
-    }
-
     func testRawDeviceEnvelopeBatchRejectsDivergentDuplicate() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("raw-day-conflict-batch-\(UUID().uuidString)")
@@ -1751,439 +1428,6 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertNotEqual(first.id, changed.id)
     }
 
-    func testSensorMigrationRejectsDivergentLegacyAndRawDuplicate() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-migration-conflict-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let date = Date(timeIntervalSince1970: 1_850_000_000)
-        let id = UUID()
-        let legacyReading = makeReading(date, id: id, sequence: 1)
-        let rawReading = makeReading(date.addingTimeInterval(1), id: id, sequence: 2)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        var legacy = try encoder.encode(legacyReading)
-        legacy.append(0x0A)
-        try legacy.write(to: fileURL)
-
-        let raw = RawDeviceDataMonthlyArchive(
-            rootDirectory: directory.appendingPathComponent("RawData")
-        )
-        try raw.append(
-            source: .gps,
-            kind: "sensor-reading",
-            payload: rawReading,
-            capturedAt: rawReading.timestamp
-        )
-        let archive = try SensorReadingArchive(fileURL: fileURL, rawArchive: raw)
-
-        do {
-            _ = try await archive.readings(
-                in: TimeSpan(
-                    start: date.addingTimeInterval(-1),
-                    end: date.addingTimeInterval(2)
-                )
-            )
-            XCTFail("Expected immutable sensor conflict")
-        } catch {
-            XCTAssertEqual(String(describing: error), "conflictingReading")
-        }
-    }
-
-    func testDeleteAllBypassesConflictingLegacyMigration() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-delete-conflict-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let rawDirectory = directory.appendingPathComponent("RawData")
-        let date = Date(timeIntervalSince1970: 1_850_000_000)
-        let id = UUID()
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        var legacy = try encoder.encode(makeReading(date, id: id, sequence: 1))
-        legacy.append(0x0A)
-        try legacy.write(to: fileURL)
-        let raw = RawDeviceDataMonthlyArchive(rootDirectory: rawDirectory)
-        try raw.append(
-            source: .gps,
-            kind: "sensor-reading",
-            payload: makeReading(
-                date.addingTimeInterval(1),
-                id: id,
-                sequence: 2
-            ),
-            capturedAt: date.addingTimeInterval(1)
-        )
-        let archive = try SensorReadingArchive(
-            fileURL: fileURL,
-            rawArchive: raw
-        )
-
-        try await archive.deleteAll()
-
-        let remaining = try await archive.allReadings()
-        XCTAssertTrue(remaining.isEmpty)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: rawDirectory.path))
-    }
-
-    func testMigrationRetrySkipsEventsWrittenBeforeMarker() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-migration-retry-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let date = Date(timeIntervalSince1970: 1_900_000_000)
-        let reading = makeReading(date, sequence: 11)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        var legacy = try encoder.encode(reading)
-        legacy.append(0x0A)
-        try legacy.write(to: fileURL)
-
-        let dayStore = try TaptionPlanDayStore(url: directory.appendingPathComponent("taption-plan-v2.sqlite"))
-        try await dayStore.appendEvents([
-            .init(
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 11,
-                id: reading.id.uuidString,
-                domain: "sensor-reading",
-                payload: TaptionPlanCanonicalStorage.envelope(
-                    for: try TaptionPlanCanonicalStorage.encode(reading)
-                )
-            )
-        ])
-        let archive = try SensorReadingArchive(fileURL: fileURL)
-        let values = try await archive.readings(in: TimeSpan(start: date.addingTimeInterval(-1), end: date.addingTimeInterval(1)))
-        XCTAssertEqual(values.map(\.id), [reading.id])
-    }
-
-    func testSensorMigrationKeepsMalformedLegacyRowsAndCanRetry() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-malformed-migration-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let date = Date(timeIntervalSince1970: 1_900_000_000)
-        let first = makeReading(date, sequence: 1)
-        let middle = makeReading(date.addingTimeInterval(1), sequence: 2)
-        let last = makeReading(date.addingTimeInterval(2), sequence: 3)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        var original = try encoder.encode(first)
-        original.append(0x0A)
-        original.append(contentsOf: "{malformed}\n".utf8)
-        original.append(try encoder.encode(last))
-        original.append(0x0A)
-        try original.write(to: fileURL)
-
-        let archive = try SensorReadingArchive(fileURL: fileURL)
-        let store = try TaptionPlanDayStore(
-            url: directory.appendingPathComponent("taption-plan-v2.sqlite")
-        )
-        do {
-            _ = try await archive.allReadings()
-            XCTFail("Malformed legacy JSONL must keep migration retryable")
-        } catch {}
-
-        let incompleteMigration = try await store.migrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        XCTAssertFalse(incompleteMigration)
-        XCTAssertEqual(try Data(contentsOf: fileURL), original)
-
-        var repaired = try encoder.encode(first)
-        repaired.append(0x0A)
-        repaired.append(try encoder.encode(middle))
-        repaired.append(0x0A)
-        repaired.append(try encoder.encode(last))
-        repaired.append(0x0A)
-        try repaired.write(to: fileURL)
-
-        let readings = try await archive.allReadings()
-        XCTAssertEqual(readings.map(\.id), [first.id, middle.id, last.id])
-        let completedMigration = try await store.migrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        XCTAssertTrue(completedMigration)
-        XCTAssertEqual(try Data(contentsOf: fileURL), repaired)
-    }
-
-    func testConcurrentLegacyMigrationsCommitOneImmutableEventSet() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-concurrent-migration-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let date = Date(timeIntervalSince1970: 1_900_000_000)
-        let readings = (0..<640).map { index in
-            makeReading(date.addingTimeInterval(Double(index)), sequence: index)
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        var legacy = Data()
-        for reading in readings {
-            legacy.append(try encoder.encode(reading))
-            legacy.append(0x0A)
-        }
-        let fileURL = directory.appendingPathComponent("sensor-readings-v1.jsonl")
-        let databaseURL = directory.appendingPathComponent("sensor.sqlite")
-        try legacy.write(to: fileURL)
-
-        let firstArchive = try SensorReadingArchive(
-            fileURL: fileURL,
-            dayStoreURL: databaseURL
-        )
-        let secondArchive = try SensorReadingArchive(
-            fileURL: fileURL,
-            dayStoreURL: databaseURL
-        )
-        async let first = firstArchive.allReadings()
-        async let second = secondArchive.allReadings()
-        let restored = try await (first, second)
-
-        XCTAssertEqual(restored.0.count, readings.count)
-        XCTAssertEqual(restored.1.map(\.id), restored.0.map(\.id))
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let storedEvents = try await store.allEvents(domain: "sensor-reading")
-        let migrationCompleted = try await store.migrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        XCTAssertEqual(storedEvents.count, readings.count)
-        XCTAssertTrue(migrationCompleted)
-    }
-
-    func testAllReadingsPreservesUnreadableDayStoreEvent() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-invalid-day-event-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSince1970: 1_950_000_000)
-        let databaseURL = directory.appendingPathComponent("taption-plan-v2.sqlite")
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
-            dayStoreURL: databaseURL
-        )
-        let dayStore = try TaptionPlanDayStore(url: databaseURL)
-        let reading = makeReading(date, sequence: 1)
-        try await dayStore.appendEvents([
-            .init(
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 1,
-                id: reading.id.uuidString,
-                domain: "sensor-reading",
-                payload: TaptionPlanCanonicalStorage.envelope(
-                    for: try TaptionPlanCanonicalStorage.encode(reading)
-                )
-            ),
-            .init(
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date.addingTimeInterval(1),
-                sequence: 2,
-                id: UUID().uuidString,
-                domain: "sensor-reading",
-                payload: Data([0x00])
-            ),
-        ])
-
-        let values = try await archive.allReadings()
-        XCTAssertEqual(values.map(\.id), [reading.id])
-        let ranged = try await archive.routeReadingsLoadResult(
-            in: TimeSpan(
-                start: date.addingTimeInterval(-1),
-                end: date.addingTimeInterval(2)
-            )
-        )
-        XCTAssertEqual(ranged.readings.map(\.id), [reading.id])
-        XCTAssertFalse(ranged.isComplete)
-        let storedEvents = try await dayStore.allEvents(domain: "sensor-reading")
-        XCTAssertEqual(storedEvents.count, 2)
-    }
-
-    func testAllReadingsForMigrationRejectsIncompleteArchive() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-incomplete-migration-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSince1970: 1_950_000_000)
-        let databaseURL = directory.appendingPathComponent("taption-plan-v2.sqlite")
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
-            dayStoreURL: databaseURL
-        )
-        let dayStore = try TaptionPlanDayStore(url: databaseURL)
-        let reading = makeReading(date, sequence: 1)
-        try await dayStore.appendEvents([
-            .init(
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 1,
-                id: reading.id.uuidString,
-                domain: "sensor-reading",
-                payload: TaptionPlanCanonicalStorage.envelope(
-                    for: try TaptionPlanCanonicalStorage.encode(reading)
-                )
-            ),
-            .init(
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date.addingTimeInterval(1),
-                sequence: 2,
-                id: UUID().uuidString,
-                domain: "sensor-reading",
-                payload: Data([0x00])
-            ),
-        ])
-
-        do {
-            _ = try await archive.allReadingsForMigration()
-            XCTFail("An incomplete archive must not be accepted for migration")
-        } catch {
-            XCTAssertTrue(String(describing: error).contains("incompleteArchive"))
-        }
-
-        let readable = try await archive.allReadings()
-        XCTAssertEqual(readable.map(\.id), [reading.id])
-    }
-
-    func testCorruptDayEventsScanLegacyRecoveryOnce() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-recovery-index-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let fileURL = directory.appendingPathComponent(
-            "sensor-readings-v1.jsonl"
-        )
-        let date = Date(timeIntervalSince1970: 1_950_000_000)
-        let readings = (0..<4_000).map {
-            makeReading(date.addingTimeInterval(Double($0)), sequence: $0)
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        var legacy = Data()
-        for reading in readings {
-            legacy.append(try encoder.encode(reading))
-            legacy.append(0x0A)
-        }
-        try legacy.write(to: fileURL)
-
-        let databaseURL = directory.appendingPathComponent(
-            "taption-plan-v2.sqlite"
-        )
-        let dayStore = try TaptionPlanDayStore(url: databaseURL)
-        try await dayStore.appendEvents(readings.prefix(100).map {
-            .init(
-                day: TaptionPlanDayKey(date: $0.timestamp),
-                timestamp: $0.timestamp,
-                sequence: UInt64($0.sequence ?? 0),
-                id: $0.id.uuidString,
-                domain: "sensor-reading",
-                payload: Data([0x00])
-            )
-        })
-        _ = try await dayStore.markMigrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        let archive = try SensorReadingArchive(
-            fileURL: fileURL,
-            dayStoreURL: databaseURL
-        )
-        let startedAt = ProcessInfo.processInfo.systemUptime
-        let result = try await archive.routeReadingsLoadResult(
-            in: TimeSpan(
-                start: date.addingTimeInterval(-1),
-                end: date.addingTimeInterval(101)
-            )
-        )
-        let duration = ProcessInfo.processInfo.systemUptime - startedAt
-        print("SENSOR_LEGACY_RECOVERY_100_MS=\(duration * 1_000)")
-
-        XCTAssertEqual(result.readings.map(\.id), readings.prefix(100).map(\.id))
-        XCTAssertTrue(result.isComplete)
-        XCTAssertLessThan(duration, 2)
-
-        try FileManager.default.removeItem(at: fileURL)
-        let reopened = try SensorReadingArchive(
-            fileURL: fileURL,
-            dayStoreURL: databaseURL
-        )
-        let repaired = try await reopened.routeReadingsLoadResult(
-            in: TimeSpan(
-                start: date.addingTimeInterval(-1),
-                end: date.addingTimeInterval(101)
-            )
-        )
-        XCTAssertEqual(repaired.readings.map(\.id), readings.prefix(100).map(\.id))
-        XCTAssertTrue(repaired.isComplete)
-    }
-
-    func testInlineLegacySensorEventsRepairWithoutArchiveScan() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-inline-legacy-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        let date = Date(timeIntervalSince1970: 1_950_000_000)
-        let readings = (0..<2_346).map {
-            makeReading(date.addingTimeInterval(Double($0)), sequence: $0)
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        let databaseURL = directory.appendingPathComponent(
-            "taption-plan-v2.sqlite"
-        )
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        try await store.appendEvents(try readings.map { reading in
-            .init(
-                day: TaptionPlanDayKey(date: reading.timestamp),
-                timestamp: reading.timestamp,
-                sequence: UInt64(reading.sequence ?? 0),
-                id: reading.id.uuidString,
-                domain: "sensor-reading",
-                payload: try encoder.encode(reading)
-            )
-        })
-        _ = try await store.markMigrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("missing.jsonl"),
-            dayStoreURL: databaseURL
-        )
-
-        let startedAt = ProcessInfo.processInfo.systemUptime
-        let result = try await archive.routeReadingsLoadResult(
-            in: TimeSpan(
-                start: date.addingTimeInterval(-1),
-                end: date.addingTimeInterval(2_347)
-            )
-        )
-        let duration = ProcessInfo.processInfo.systemUptime - startedAt
-        print("SENSOR_INLINE_LEGACY_2346_MS=\(duration * 1_000)")
-
-        XCTAssertEqual(result.readings.count, readings.count)
-        XCTAssertTrue(result.isComplete)
-        XCTAssertLessThan(duration, 2)
-        let events = try await store.allEvents(domain: "sensor-reading")
-        XCTAssertTrue(events.allSatisfy {
-            String(decoding: $0.payload.prefix(8), as: UTF8.self) == "TP-CANON"
-        })
-    }
-
     func testSensorArchiveInitializationReportsInvalidDatabasePath() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("sensor-invalid-store-\(UUID().uuidString)")
@@ -2203,7 +1447,7 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertThrowsError(
             try SensorReadingArchive(
                 fileURL: directory.appendingPathComponent("readings.jsonl"),
-                dayStoreURL: databaseDirectory
+                storeURL: databaseDirectory
             )
         )
     }
@@ -4529,7 +3773,7 @@ final class SensorDayStoreTests: XCTestCase {
             fileURL: directory.appendingPathComponent(
                 "primary-sensor-readings.jsonl"
             ),
-            dayStoreURL: directory.appendingPathComponent(
+            storeURL: directory.appendingPathComponent(
                 "primary-sensor.sqlite"
             )
         )

@@ -12,6 +12,8 @@ enum TaptionStoreV2Error: Error, Equatable {
     case sqlFailed(String)
     case unsupportedSchema(Int)
     case corruptRow(String)
+    /// 같은 `id`의 센서 원본이 이미 다른 내용으로 저장돼 있다(원본은 바꾸지 않는다).
+    case readingConflict(String)
 }
 
 struct TaptionStoreRecord: Equatable, Sendable {
@@ -278,14 +280,7 @@ actor TaptionStoreV2 {
                 let row = try TaptionReadingRowCodec.row(for: reading, calendar: calendar)
                 sqlite3_reset(statement)
                 sqlite3_clear_bindings(statement)
-                var index: Int32 = 1
-                bind(statement, index, .text(row.id)); index += 1
-                bind(statement, index, .real(row.timestamp)); index += 1
-                bind(statement, index, .text(row.day)); index += 1
-                for value in row.values {
-                    bind(statement, index, value); index += 1
-                }
-                bind(statement, index, row.extra.map { .text($0) } ?? .null)
+                bindRow(statement, row)
                 try step(db, statement)
             }
             try exec(db, "COMMIT")
@@ -297,17 +292,136 @@ actor TaptionStoreV2 {
     }
 
     func readings(from start: Date, to end: Date) throws -> [SensorReading] {
+        let result = try loadReadings(
+            where: "ts >= ? AND ts < ?",
+            bindings: [.real(start.timeIntervalSince1970), .real(end.timeIntervalSince1970)]
+        )
+        if let failure = result.failures.first { throw failure }
+        return result.readings
+    }
+
+    /// 끝을 포함하는 범위 조회. 해석할 수 없는 행은 건너뛰고 `isComplete`를 false로 돌려준다.
+    func readingsLoadResult(
+        from start: Date,
+        through end: Date
+    ) throws -> (readings: [SensorReading], isComplete: Bool) {
+        let result = try loadReadings(
+            where: "ts >= ? AND ts <= ?",
+            bindings: [.real(start.timeIntervalSince1970), .real(end.timeIntervalSince1970)]
+        )
+        return (result.readings, result.failures.isEmpty)
+    }
+
+    func allReadingsLoadResult() throws -> (readings: [SensorReading], isComplete: Bool) {
+        let result = try loadReadings(where: "1 = 1", bindings: [])
+        return (result.readings, result.failures.isEmpty)
+    }
+
+    func readings(ids: [String]) throws -> [SensorReading] {
+        var found: [SensorReading] = []
+        for chunk in stride(from: 0, to: ids.count, by: 400).map({ Array(ids[$0..<min($0 + 400, ids.count)]) }) {
+            let placeholders = Array(repeating: "?", count: chunk.count).joined(separator: ", ")
+            let result = try loadReadings(where: "id IN (\(placeholders))", bindings: chunk.map { .text($0) })
+            if let failure = result.failures.first { throw failure }
+            found += result.readings
+        }
+        return found
+    }
+
+    /// 센서 원본은 바꾸지 않는다. 새 `id`는 넣고, 같은 내용은 그대로 두며, 내용이 다르면 전체를 되돌리고 거부한다.
+    func appendImmutableReadings(_ readings: [SensorReading]) throws {
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            let names = TaptionReadingRowCodec.columns.map(\.name)
+            let columnList = (["id", "ts", "day"] + names + ["extra"]).joined(separator: ", ")
+            let placeholders = Array(repeating: "?", count: names.count + 4).joined(separator: ", ")
+            let statement = try prepare(db, "INSERT OR IGNORE INTO readings (\(columnList)) VALUES (\(placeholders))")
+            defer { sqlite3_finalize(statement) }
+            var existingIDs: [String] = []
+            var incoming: [String: SensorReading] = [:]
+            for reading in readings {
+                let row = try TaptionReadingRowCodec.row(for: reading, calendar: calendar)
+                sqlite3_reset(statement)
+                sqlite3_clear_bindings(statement)
+                bindRow(statement, row)
+                try step(db, statement)
+                if sqlite3_changes(db) == 0 {
+                    existingIDs.append(row.id)
+                    incoming[row.id] = reading
+                }
+            }
+            if !existingIDs.isEmpty {
+                let stored = try self.readings(ids: existingIDs)
+                for value in stored where incoming[value.id.uuidString] != value {
+                    throw TaptionStoreV2Error.readingConflict(value.id.uuidString)
+                }
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    /// 이미 있는 `id`는 건드리지 않고 새 기록만 넣는다. 새로 들어간 `id`를 돌려준다.
+    func insertNewReadings(_ readings: [SensorReading]) throws -> [String] {
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        var inserted: [String] = []
+        do {
+            let names = TaptionReadingRowCodec.columns.map(\.name)
+            let columnList = (["id", "ts", "day"] + names + ["extra"]).joined(separator: ", ")
+            let placeholders = Array(repeating: "?", count: names.count + 4).joined(separator: ", ")
+            let statement = try prepare(db, "INSERT OR IGNORE INTO readings (\(columnList)) VALUES (\(placeholders))")
+            defer { sqlite3_finalize(statement) }
+            for reading in readings {
+                let row = try TaptionReadingRowCodec.row(for: reading, calendar: calendar)
+                sqlite3_reset(statement)
+                sqlite3_clear_bindings(statement)
+                bindRow(statement, row)
+                try step(db, statement)
+                if sqlite3_changes(db) > 0 { inserted.append(row.id) }
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+        return inserted
+    }
+
+    /// 기록이 있는 현지 날짜마다 첫·마지막 시각 범위.
+    func dayRanges() throws -> [ClosedRange<Date>] {
+        let db = try handle()
+        let statement = try prepare(db, "SELECT MIN(ts), MAX(ts) FROM readings GROUP BY day ORDER BY day")
+        defer { sqlite3_finalize(statement) }
+        var ranges: [ClosedRange<Date>] = []
+        while sqlite3_step(statement) == SQLITE_ROW {
+            let lower = Date(timeIntervalSince1970: sqlite3_column_double(statement, 0))
+            let upper = Date(timeIntervalSince1970: sqlite3_column_double(statement, 1))
+            ranges.append(lower...max(lower, upper))
+        }
+        return ranges
+    }
+
+    private func loadReadings(
+        where condition: String,
+        bindings: [TaptionReadingRowCodec.Value]
+    ) throws -> (readings: [SensorReading], failures: [Error]) {
         let db = try handle()
         let names = TaptionReadingRowCodec.columns.map(\.name)
         let columnList = (["id", "ts", "day"] + names + ["extra"]).joined(separator: ", ")
         let statement = try prepare(
             db,
-            "SELECT \(columnList) FROM readings WHERE ts >= ? AND ts < ? ORDER BY ts, id"
+            "SELECT \(columnList) FROM readings WHERE \(condition) ORDER BY ts, seq, id"
         )
         defer { sqlite3_finalize(statement) }
-        bind(statement, 1, .real(start.timeIntervalSince1970))
-        bind(statement, 2, .real(end.timeIntervalSince1970))
-        var result: [SensorReading] = []
+        for (offset, value) in bindings.enumerated() {
+            bind(statement, Int32(offset + 1), value)
+        }
+        var readings: [SensorReading] = []
+        var failures: [Error] = []
         while sqlite3_step(statement) == SQLITE_ROW {
             var values: [TaptionReadingRowCodec.Value] = []
             for offset in 0..<names.count {
@@ -322,9 +436,43 @@ actor TaptionStoreV2 {
                 extra: sqlite3_column_type(statement, extraIndex) == SQLITE_NULL
                     ? nil : String(cString: sqlite3_column_text(statement, extraIndex))
             )
-            result.append(try TaptionReadingRowCodec.reading(from: row))
+            do {
+                readings.append(try TaptionReadingRowCodec.reading(from: row))
+            } catch {
+                failures.append(error)
+            }
         }
-        return result
+        return (readings, failures)
+    }
+
+    private nonisolated func bindRow(_ statement: OpaquePointer, _ row: TaptionReadingRowCodec.Row) {
+        var index: Int32 = 1
+        bind(statement, index, .text(row.id)); index += 1
+        bind(statement, index, .real(row.timestamp)); index += 1
+        bind(statement, index, .text(row.day)); index += 1
+        for value in row.values {
+            bind(statement, index, value); index += 1
+        }
+        bind(statement, index, row.extra.map { .text($0) } ?? .null)
+    }
+
+    func deleteReadings(ids: [String]) throws {
+        guard !ids.isEmpty else { return }
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            let statement = try prepare(db, "DELETE FROM readings WHERE id = ?")
+            defer { sqlite3_finalize(statement) }
+            for id in ids {
+                sqlite3_reset(statement)
+                bind(statement, 1, .text(id))
+                try step(db, statement)
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
     }
 
     func readingCount() throws -> Int {

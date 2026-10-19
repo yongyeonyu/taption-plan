@@ -1,5 +1,11 @@
 # 검증 기록
 
+## ARC1019A01 · 2단계 센서 저장소를 새 저장소로 교체 (브랜치 rewrite/storage-v2, 2026-10-19)
+- 구현: `SensorReadingArchive`(위치·센서 원본 저장소)가 `TaptionStoreV2`의 `readings` 표만 쓴다. 공개 함수는 유지했고 이전 형식 옮기기·손상 복구·복구 캐시·보존 기간 정리를 없앴다(약 680줄 중 대부분). 센서 원본은 변경하지 않는다: 같은 `id`가 다른 내용으로 오면 묶음 전체를 되돌리고 `readingConflict`로 거부한다(같은 내용은 그대로 둔다). 데이터 삭제는 새 저장소까지 지운다. 이전 JSONL 파일은 시작할 때 지운다. 새 저장소 API 추가: 끝 포함 범위 조회, 전체 조회, id 조회, 새 기록만 삽입, 날짜별 범위.
+- 테스트 정리: 이전 형식 옮기기·복구만 검증하던 테스트 19개 삭제, 이전 일자 DB를 직접 읽던 3개를 새 저장소 기준으로 교체(자정 전후 시각 범위·양 끝 포함 테스트 포함), `FeatureEngineTests`의 이전 생성자 인자 14곳 정리.
+- 자동 검증: iPhone 11 Pro 실기기, `SensorDayStoreTests`·`TaptionStoreV2Tests`·`TimeScaleTests`·`RouteTimelineDataTests` 391개 실행, 실패 0, `TEST SUCCEEDED`(`m2-11e.log`). 첫 실행들은 컴파일 오류(잠금 안 await 누락, 이전 인자, 메서드명 가림)로 시작하지 못했다.
+- 제한: 계획·실적·워치 요약·원시 기기 데이터·HealthKit 가져오기·하루 화면 캐시는 아직 이전 일자 DB를 쓴다(3단계). 대용량 성능은 측정하지 않았다. 이전 일자 DB 파일(`taption-data-v2.sqlite`)은 아직 삭제하지 않았다.
+
 ## ARC1019A01 · 1단계 새 저장소 TaptionStoreV2 (브랜치 rewrite/storage-v2, 2026-10-19)
 - 구현: `TaptionStoreV2.swift`(앱 target). 새 SQLite 파일, 스키마 1. `readings` 표는 위치·센서 원본을 열이 나뉜 행(29개 열 + 현지 날짜 `day` + `extra` JSON)으로 저장하고, `records` 표는 계획·메모 등을 행 하나씩, 출처(auto/user/imported)·삭제 표시와 함께 둔다. `SensorReading` ↔ 행 변환은 열 정의 표 하나로 무손실 왕복한다(열로 빼지 않은 필드는 `extra`). 이전 DB·백업은 읽지도 지우지도 않는다. WAL, 파일 보호 `completeUntilFirstUserAuthentication`, 더 새로운 스키마 거부.
 - 자동 검증: iPhone 11 Pro 실기기, `TaptionStoreV2Tests` 5개 통과·실패 0, `TEST SUCCEEDED`(`m1-11b.log`). 필드가 가득 찬 기록의 무손실 왕복(중첩 필드 포함), 같은 ID 덮어쓰기·반개구간·시간순, 일반 SQL 열 조회(속도·출처·현지 날짜·정확도), 기록 출처·삭제·종류·범위 조회, 재열기·새 스키마 거부·전체 삭제. 첫 실행은 `deinit`의 포인터 접근 오류로 컴파일 실패해 연결을 래퍼 클래스로 감쌌다(`m1-11.log`).

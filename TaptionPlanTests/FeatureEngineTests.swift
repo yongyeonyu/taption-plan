@@ -945,7 +945,7 @@ final class FeatureEngineTests: XCTestCase {
         }
         let archive = try SensorReadingArchive(
             fileURL: archiveDirectory.appendingPathComponent("readings.jsonl"),
-            dayStoreURL: archiveDirectory.appendingPathComponent("data.sqlite")
+            storeURL: archiveDirectory.appendingPathComponent("data.sqlite")
         )
         let sensorService = AppleSensorDataService(
             archive: archive,
@@ -3327,7 +3327,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let sensorArchive = try SensorReadingArchive(
             fileURL: root.appendingPathComponent("readings.jsonl"),
-            dayStoreURL: sensorDatabaseURL
+            storeURL: sensorDatabaseURL
         )
         let model = AppModel(
             repository: InMemoryPlanRepository(snapshot: .empty),
@@ -3426,7 +3426,7 @@ final class FeatureEngineTests: XCTestCase {
         )
         let sensorArchive = try SensorReadingArchive(
             fileURL: root.appendingPathComponent("readings.jsonl"),
-            dayStoreURL: sensorDatabaseURL
+            storeURL: sensorDatabaseURL
         )
         let sensorLoad = try await sensorArchive.readingsLoadResult(in: span)
         XCTAssertFalse(sensorLoad.isComplete)
@@ -11539,8 +11539,7 @@ final class FeatureEngineTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
 
         let archive = try SensorReadingArchive(
-            fileURL: fileURL,
-            retentionInterval: 86_400
+            fileURL: fileURL
         )
         let now = makeDate(2026, 7, 30, 12, 0)
         let motion = DeviceMotionSnapshot(
@@ -11569,8 +11568,7 @@ final class FeatureEngineTests: XCTestCase {
         try await archive.compact(now: now)
 
         let reopened = try SensorReadingArchive(
-            fileURL: fileURL,
-            retentionInterval: 86_400
+            fileURL: fileURL
         )
         let restored = try await reopened.readings(
             in: TimeSpan(
@@ -11712,7 +11710,6 @@ final class FeatureEngineTests: XCTestCase {
         )
         let archive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("readings.jsonl"),
-            retentionInterval: 86_400,
             rawArchive: rawArchive,
             trackingChunkArchive: trackingArchive
         )
@@ -21124,7 +21121,7 @@ final class FeatureEngineTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("sensor.sqlite")
         let archive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL,
+            storeURL: databaseURL,
             beforeValidateAppend: {
                 throw CancellationError()
             }
@@ -21282,7 +21279,7 @@ final class FeatureEngineTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("restore.sqlite")
         let sensorArchive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL
+            storeURL: databaseURL
         )
         let sensorService = AppleSensorDataService(archive: sensorArchive)
         let rawArchive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
@@ -21358,7 +21355,7 @@ final class FeatureEngineTests: XCTestCase {
         let sensorService = AppleSensorDataService(
             archive: try SensorReadingArchive(
                 fileURL: directory.appendingPathComponent("legacy.jsonl"),
-                dayStoreURL: databaseURL
+                storeURL: databaseURL
             )
         )
         let rawArchive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
@@ -21432,7 +21429,7 @@ final class FeatureEngineTests: XCTestCase {
         let sensorService = AppleSensorDataService(
             archive: try SensorReadingArchive(
                 fileURL: directory.appendingPathComponent("legacy.jsonl"),
-                dayStoreURL: databaseURL
+                storeURL: databaseURL
             )
         )
         let repository = GatedSavePlanRepository(snapshot: .empty)
@@ -21514,7 +21511,7 @@ final class FeatureEngineTests: XCTestCase {
         let sensorService = AppleSensorDataService(
             archive: try SensorReadingArchive(
                 fileURL: directory.appendingPathComponent("legacy.jsonl"),
-                dayStoreURL: databaseURL
+                storeURL: databaseURL
             )
         )
         let repository = GatedSavePlanRepository(snapshot: .empty)
@@ -21594,7 +21591,7 @@ final class FeatureEngineTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("restore.sqlite")
         let sensorArchive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL
+            storeURL: databaseURL
         )
         let sensorService = AppleSensorDataService(archive: sensorArchive)
         let readingID = UUID()
@@ -21662,7 +21659,7 @@ final class FeatureEngineTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("restore.sqlite")
         let sensorArchive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL
+            storeURL: databaseURL
         )
         let sensorService = AppleSensorDataService(archive: sensorArchive)
         let readingID = UUID()
@@ -21778,7 +21775,7 @@ final class FeatureEngineTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("restore.sqlite")
         let sensorArchive = try SensorReadingArchive(
             fileURL: directory.appendingPathComponent("legacy.jsonl"),
-            dayStoreURL: databaseURL
+            storeURL: databaseURL
         )
         let sensorService = AppleSensorDataService(archive: sensorArchive)
         let rawArchive = try RawDeviceDataDayArchive(
