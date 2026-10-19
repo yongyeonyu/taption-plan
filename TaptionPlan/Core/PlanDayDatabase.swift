@@ -474,12 +474,12 @@ final class PlanDayLoadCoordinator {
             }
             guard dayInvalidationGenerations[key.day, default: 0]
                     == invalidationGeneration else {
-                return await self.load(
-                    day: day,
-                    source: source,
-                    sourceRevision: sourceRevision,
-                    sensorLoader: sensorLoader,
-                    forceReload: true
+                // 읽는 동안 새 원본이 들어왔다. 이 결과도 완전한 하루이므로 바로 보여 주고(새 점은 실시간 경로가 덧붙인다),
+                // 캐시에는 넣지 않아 다음 요청이 새로 읽게 한다. 다시 읽기를 반복하면 계속 들어오는 위치에 밀려 끝나지 않는다.
+                return finish(
+                    projected,
+                    source: "rebuilt_superseded",
+                    durations: durations
                 )
             }
             return finish(
@@ -572,7 +572,9 @@ final class PlanDayLoadCoordinator {
 
     func invalidate(day: Date) {
         let dayKey = TaptionPlanDayKey(date: day)
-        rawRequests.removeValue(forKey: dayKey)?.task.cancel()
+        // 진행 중인 읽기는 취소하지 않는다. 오늘은 새 위치가 몇 초마다 저장되므로 취소하면 하루치 로드가
+        // 끝나지 못하고 지도에 실시간 몇 점만 남는다. 끝난 결과는 새 세대가 아니므로 캐시에 넣지 않는다.
+        rawRequests.removeValue(forKey: dayKey)
         TaptionPlanDiagnosticsLogger.shared.record("day_load_invalidated", fields: ["reason": "raw_data_changed"])
         dayInvalidationGenerations[dayKey, default: 0] &+= 1
         forceReloadDays.insert(dayKey)
@@ -585,7 +587,6 @@ final class PlanDayLoadCoordinator {
         }
         for key in keys {
             cache.removeValue(for: key)
-            inFlight[key]?.task.cancel()
             inFlight.removeValue(forKey: key)
         }
     }

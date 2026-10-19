@@ -2274,6 +2274,52 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(retryCount, 1)
     }
 
+    /// 오늘은 새 위치가 몇 초마다 저장되어 무효화가 계속 온다. 읽는 중의 무효화가 로드를 취소하면
+    /// 지도는 하루치 대신 실시간 몇 점만 그린다(MAP1019F01). 결과는 완전해야 하고, 캐시에는 넣지 않아 다음 요청이 새로 읽는다.
+    @MainActor
+    func testInvalidationDuringLoadReturnsCompleteDayWithoutCachingIt() async throws {
+        let coordinator = PlanDayLoadCoordinator()
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let started = expectation(description: "sensor read started")
+        var release: CheckedContinuation<Void, Never>?
+        var loadCount = 0
+        let loading = Task { @MainActor in
+            await coordinator.load(
+                day: date,
+                source: .empty,
+                sourceRevision: 1,
+                sensorLoader: { _ in
+                    loadCount += 1
+                    await withCheckedContinuation { continuation in
+                        release = continuation
+                        started.fulfill()
+                    }
+                    return SensorReadingsLoadResult(readings: [], isComplete: true)
+                }
+            )
+        }
+        await fulfillment(of: [started], timeout: 1)
+        coordinator.invalidate(day: date)
+        coordinator.invalidate(day: date)
+        release?.resume()
+        let result = await loading.value
+        XCTAssertTrue(result.isComplete, "무효화가 진행 중인 하루치 로드를 취소하면 안 된다")
+        XCTAssertEqual(loadCount, 1, "무효화마다 다시 읽기를 반복하면 계속 들어오는 위치에 밀려 끝나지 않는다")
+        XCTAssertEqual(coordinator.cachedDayCount, 0, "무효화 이전 세대의 결과는 캐시에 남기지 않는다")
+
+        let fresh = await coordinator.load(
+            day: date,
+            source: .empty,
+            sourceRevision: 1,
+            sensorLoader: { _ in
+                loadCount += 1
+                return SensorReadingsLoadResult(readings: [], isComplete: true)
+            }
+        )
+        XCTAssertTrue(fresh.isComplete)
+        XCTAssertEqual(loadCount, 2, "다음 요청은 새 원본을 읽어야 한다")
+    }
+
     @MainActor
     func testPlanDayLoadCoordinatorCachedPreviewP95With65853HistoryRecords() async throws {
         let directory = FileManager.default.temporaryDirectory

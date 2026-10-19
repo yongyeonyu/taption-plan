@@ -364,6 +364,8 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
     }
 
     /// `fields`는 문자열 값, `metrics`는 분석에 바로 쓰는 숫자 값이다(JSON 숫자로 기록).
+    static let mirrorsToStandardOutput = ProcessInfo.processInfo.arguments.contains("-TaptionDiagnosticsStdout")
+
     func record(
         _ event: String,
         level: TaptionDiagnosticsLevel = .info,
@@ -404,6 +406,10 @@ final class TaptionPlanDiagnosticsLogger: @unchecked Sendable {
                 metrics: metrics,
                 sequence: currentSequence
             )
+            if Self.mirrorsToStandardOutput, let line = String(data: data, encoding: .utf8) {
+                // 개발 도구에서 앱을 콘솔 연결로 실행할 때만 켠다(`-TaptionDiagnosticsStdout`). 파일 기록과 내용이 같다.
+                print("TAPTIONDIAG " + line.trimmingCharacters(in: .newlines))
+            }
             try write(data, to: primaryDirectoryURL)
             writeStatus = .primarySucceeded
             return
