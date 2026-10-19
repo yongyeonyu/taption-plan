@@ -169,6 +169,8 @@
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
+		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
 /* End PBXBuildFile section */
 
@@ -388,6 +390,8 @@
 		F90000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
+		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -498,6 +502,7 @@
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
+				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
 				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
@@ -521,6 +526,7 @@
 			children = (
 				F1000000000000000000007D /* MapHomeView.swift */,
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
+				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
@@ -979,6 +985,7 @@
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
+				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
@@ -1057,6 +1064,7 @@
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
+				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
 				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,

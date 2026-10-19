@@ -1213,6 +1213,8 @@ final class AppModel {
     @ObservationIgnored private let healthService: AppleHealthService
     @ObservationIgnored private let sensorService: AppleSensorDataService?
     @ObservationIgnored private let weatherService: AppleWeatherContextService
+    /// 날씨를 못 가져온 이유를 화면에 보여주기 위한 상태(값이 바뀔 때만 갱신한다).
+    private(set) var weatherStatus = WeatherServiceStatus()
     @ObservationIgnored private let airQualityService: AirQualityContextService
     @ObservationIgnored private let cloudSyncService: CloudKitSnapshotSyncService?
     @ObservationIgnored private let securityService: PlanSecurityService?
@@ -12393,6 +12395,7 @@ final class AppModel {
         } catch is CancellationError {
             return
         } catch {
+            recordWeatherFailure(WeatherFailureKind.kind(for: error), at: now)
             TaptionPlanDiagnosticsLogger.shared.record(
                 "weather_preview_failed",
                 level: .error,
@@ -12485,6 +12488,10 @@ final class AppModel {
                     } catch is CancellationError {
                         throw CancellationError()
                     } catch {
+                        self.recordWeatherFailure(
+                            WeatherFailureKind.kind(for: error),
+                            at: now
+                        )
                         TaptionPlanDiagnosticsLogger.shared.record(
                             "weather_preview_failed",
                             level: .error,
@@ -12519,6 +12526,7 @@ final class AppModel {
                 self.lastLiveEnvironmentPoint = point
                 self.lastLiveEnvironmentAt = date
                 self.lastLiveEnvironmentFailureAt = nil
+                self.recordWeatherSuccess(context)
                 self.snapshot.weather = WeatherTimelineEngine.replacing(
                     self.snapshot.weather,
                     current: context,
@@ -12540,10 +12548,15 @@ final class AppModel {
                 Self.integrationLogger.info(
                     "Live weather context unavailable: \(error.localizedDescription, privacy: .public)"
                 )
+                let failureKind = WeatherFailureKind.kind(for: error)
+                self.recordWeatherFailure(failureKind, at: date)
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "live_environment_failed",
                     level: .error,
-                    fields: ["error": String(describing: type(of: error))]
+                    fields: [
+                        "error": String(describing: type(of: error)),
+                        "authentication": String(failureKind == .authentication),
+                    ]
                 )
             }
         }
@@ -12698,6 +12711,7 @@ final class AppModel {
                 snapshot.weather,
                 current: context
             )
+            recordWeatherSuccess(context)
             TaptionPlanDiagnosticsLogger.shared.record(
                 "stored_environment_fallback_refreshed",
                 fields: [
@@ -12712,12 +12726,31 @@ final class AppModel {
             Self.integrationLogger.info(
                 "Stored weather fallback unavailable: \(error.localizedDescription, privacy: .public)"
             )
+            let failureKind = WeatherFailureKind.kind(for: error)
+            recordWeatherFailure(failureKind, at: .now)
             TaptionPlanDiagnosticsLogger.shared.record(
                 "stored_environment_fallback_failed",
                 level: .error,
-                fields: ["error": String(describing: type(of: error))]
+                fields: [
+                    "error": String(describing: type(of: error)),
+                    "authentication": String(failureKind == .authentication),
+                ]
             )
         }
+    }
+
+    private func recordWeatherSuccess(_ context: WeatherContext) {
+        // 오래된 값(실패 뒤 캐시)은 성공으로 세지 않는다.
+        guard context.isStale != true else { return }
+        var next = weatherStatus
+        guard next.recordSuccess(at: .now) else { return }
+        weatherStatus = next
+    }
+
+    private func recordWeatherFailure(_ kind: WeatherFailureKind, at date: Date) {
+        var next = weatherStatus
+        guard next.recordFailure(kind, at: date) else { return }
+        weatherStatus = next
     }
 
     private func coalesceWeatherSnapshot() {

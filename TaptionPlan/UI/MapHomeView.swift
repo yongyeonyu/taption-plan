@@ -329,8 +329,39 @@ private final class MapHomeMapRenderCache {
     private(set) var routeBounds: MapHomeRouteCoordinateBounds?
     private var transitBoardingCandidateCache:
         (key: MapHomeTransitBoardingCandidateCacheKey, candidates: [TransitBoardingCandidate])?
+    private var gradientSliceCache: [String: (key: Int, slices: [MapHomeRouteGradientSlice]?)] = [:]
+    private static let gradientSliceCacheLimit = 32
+
+    /// 경로의 속도 그라데이션 구간. 지오메트리 서명과 시각이 같으면 다시 계산하지 않는다.
+    func gradientSlices(
+        id: String,
+        coordinates: [CLLocationCoordinate2D],
+        geometrySignature: Int,
+        timestamps: [Date]
+    ) -> [MapHomeRouteGradientSlice]? {
+        var hasher = Hasher()
+        hasher.combine(geometrySignature)
+        hasher.combine(timestamps.count)
+        hasher.combine(timestamps.first)
+        hasher.combine(timestamps.last)
+        let key = hasher.finalize()
+        if let cached = gradientSliceCache[id], cached.key == key {
+            return cached.slices
+        }
+        let slices = MapHomeRouteGradientSlicer.slices(
+            overlayID: id,
+            coordinates: coordinates,
+            timestamps: timestamps
+        )
+        if gradientSliceCache.count >= Self.gradientSliceCacheLimit {
+            gradientSliceCache.removeAll(keepingCapacity: true)
+        }
+        gradientSliceCache[id] = (key, slices)
+        return slices
+    }
 
     func invalidateRouteData() {
+        gradientSliceCache.removeAll(keepingCapacity: true)
         subway.invalidate()
         visibleExpectedRouteOverlays = nil
         visibleExpectedRouteCutoff = nil
@@ -2146,6 +2177,7 @@ struct MapHomeView: View {
     @State private var customPaletteColor = Color.tpReferenceMint
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
     @State private var mapRenderCache = MapHomeMapRenderCache()
+    @State private var liveZoomGovernor = MapHomeLiveZoomGovernor()
     @State private var visibleMapCamera: MapCamera?
     @State private var shouldFitRoutesAfterDateChange = false
     @State private var hasUserAdjustedMap = false
@@ -3135,12 +3167,13 @@ struct MapHomeView: View {
         let places = placeAnnotations
         let playback = appleMapPlayback
         let displayedSpeed = displayedSpeedMetersPerSecond
+        let activeSegments = vectorActiveRouteSegments
         return MapHomeVectorMap(
             style: style,
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
             historicalRoutes: vectorHistoricalRoutes,
-            activeRoute: vectorActiveRoute,
+            activeRoute: activeSegments.isEmpty ? vectorActiveRoute : nil,
             expectedRoutes: vectorExpectedRoutes,
             subwayRoutes: vectorSubwayRoutes + vectorUserSelectedRoutes,
             markers: vectorMapMarkers(waypoints: waypoints),
@@ -3159,7 +3192,8 @@ struct MapHomeView: View {
             onLongPress: presentMapLongPressMenu,
             onSingleTap: { point, positions in
                 selectPawprintIfTapped(at: point, waypoints: waypoints, positions: positions)
-            }
+            },
+            activeRouteSegments: activeSegments
         )
         .id(style.rawValue)
         .overlay {
@@ -3332,31 +3366,83 @@ struct MapHomeView: View {
     }
 
     private var vectorHistoricalRoutes: [MapHomeVectorRoute] {
-        timelineRouteOverlays.dropLast().map { overlay in
+        timelineRouteOverlays.dropLast().flatMap { overlay in
+            vectorRoutes(for: overlay, idPrefix: "")
+        }
+    }
+
+    /// 실제 경로를 속도 그라데이션 구간으로 나눈다. 속도를 모르면 기존 단색 한 줄이다.
+    private func vectorRoutes(
+        for overlay: MapHomeTimelineRouteOverlay,
+        idPrefix: String
+    ) -> [MapHomeVectorRoute] {
+        let opacity = MapHomeWBSTripStyle.actualRouteOpacity
+            * min(max(overlay.opacity, 0), 1)
+        guard let slices = mapRenderCache.gradientSlices(
+            id: overlay.id,
+            coordinates: overlay.coordinates,
+            geometrySignature: overlay.geometrySignature,
+            timestamps: overlay.coordinateTimestamps
+        ) else {
+            return [
+                MapHomeVectorRoute(
+                    id: idPrefix + overlay.id,
+                    coordinates: overlay.coordinates,
+                    geometrySignature: overlay.geometrySignature,
+                    colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                    opacity: opacity
+                )
+            ]
+        }
+        return slices.map { slice in
             MapHomeVectorRoute(
-                id: overlay.id,
-                coordinates: overlay.coordinates,
-                geometrySignature: overlay.geometrySignature,
-                colorHex: MapHomeWBSTripStyle.actualRouteHex,
-                opacity: MapHomeWBSTripStyle.actualRouteOpacity
-                    * min(max(overlay.opacity, 0), 1)
+                id: idPrefix + slice.id,
+                coordinates: slice.coordinates,
+                geometrySignature: slice.geometrySignature,
+                colorHex: slice.colorHex,
+                opacity: opacity
             )
         }
     }
 
-    private var appleMapRoutes: [MapHomeAppleRoute] {
-        var routes = timelineRouteOverlays.map { overlay in
-            MapHomeAppleRoute(
-                id: "timeline-\(overlay.id)",
+    private var appleActualRoutes: [MapHomeAppleRoute] {
+        timelineRouteOverlays.flatMap { overlay -> [MapHomeAppleRoute] in
+            let opacity = MapHomeWBSTripStyle.actualRouteOpacity
+                * min(max(overlay.opacity, 0), 1)
+            guard let slices = mapRenderCache.gradientSlices(
+                id: overlay.id,
                 coordinates: overlay.coordinates,
                 geometrySignature: overlay.geometrySignature,
-                colorHex: MapHomeWBSTripStyle.actualRouteHex,
-                opacity: MapHomeWBSTripStyle.actualRouteOpacity
-                    * min(max(overlay.opacity, 0), 1),
-                phase: .actual,
-                transport: nil
-            )
+                timestamps: overlay.coordinateTimestamps
+            ) else {
+                return [
+                    MapHomeAppleRoute(
+                        id: "timeline-\(overlay.id)",
+                        coordinates: overlay.coordinates,
+                        geometrySignature: overlay.geometrySignature,
+                        colorHex: MapHomeWBSTripStyle.actualRouteHex,
+                        opacity: opacity,
+                        phase: .actual,
+                        transport: nil
+                    )
+                ]
+            }
+            return slices.map { slice in
+                MapHomeAppleRoute(
+                    id: "timeline-\(slice.id)",
+                    coordinates: slice.coordinates,
+                    geometrySignature: slice.geometrySignature,
+                    colorHex: slice.colorHex,
+                    opacity: opacity,
+                    phase: .actual,
+                    transport: nil
+                )
+            }
         }
+    }
+
+    private var appleMapRoutes: [MapHomeAppleRoute] {
+        var routes = appleActualRoutes
 
         routes += subwayRouteOverlays.compactMap { overlay in
             guard overlay.coordinates.count >= 2 else { return nil }
@@ -3697,6 +3783,13 @@ struct MapHomeView: View {
                 selectPawprint(waypoint)
             }
         }
+    }
+
+    private var vectorActiveRouteSegments: [MapHomeVectorRoute] {
+        guard let overlay = timelineRouteOverlays.last else { return [] }
+        let routes = vectorRoutes(for: overlay, idPrefix: "active-")
+        return routes.count == 1 && routes[0].id == "active-" + overlay.id
+            ? [] : routes
     }
 
     private var vectorActiveRoute: MapHomeVectorRoute? {
@@ -4133,6 +4226,7 @@ struct MapHomeView: View {
                                     showsCatAtHome: place.isCatAtHome,
                                     catAction: place.catAction,
                                     equippedAccessoryID: place.equippedAccessoryID,
+                                    weatherBadge: place.weatherBadge,
                                     onOpenDaySummary: { isDaySummaryPresented = true }
                                 )
                                 .fixedSize()
@@ -5570,12 +5664,32 @@ struct MapHomeView: View {
                         )
                         .allowsHitTesting(false)
                     if model.settings.weatherSidebarVisible {
+                        let railWeather = MapHomeWeatherDisplayCache.contexts(
+                            incoming: model.snapshot.weather,
+                            cached: cachedWeatherContexts
+                        )
+                        if let notice = MapHomeWeatherNoticePolicy.notice(
+                            status: model.weatherStatus,
+                            hasDisplayableWeather: railWeather.contains {
+                                MapHomeWeatherDisplayPolicy.isComplete($0)
+                                    && Calendar.autoupdatingCurrent.isDate(
+                                        $0.observedAt,
+                                        inSameDayAs: model.selectedDate
+                                    )
+                            }
+                        ) {
+                            MapHomeWeatherNoticeView(notice: notice, language: language)
+                                .frame(width: MapHomeWeatherNoticeView.width, alignment: .trailing)
+                                .offset(
+                                    x: weatherOriginX + Layout.weatherRailWidth
+                                        - MapHomeWeatherNoticeView.width,
+                                    y: 6
+                                )
+                                .allowsHitTesting(false)
+                        }
                         MapHomeWeatherSidebar(
                             date: model.selectedDate,
-                            contexts: MapHomeWeatherDisplayCache.contexts(
-                                incoming: model.snapshot.weather,
-                                cached: cachedWeatherContexts
-                            ),
+                            contexts: railWeather,
                             selectedMinute: minute,
                             language: language,
                             visibleStartMinute: weatherVisibleStartMinute,
@@ -7301,7 +7415,11 @@ struct MapHomeView: View {
     }
 
     private var placeAnnotations: [MapHomePlaceAnnotation] {
-        model.settings.frequentPlaces.compactMap { place in
+        let homeWeather = MapHomeHomeWeatherBadgePolicy.badge(
+            from: model.snapshot.weather,
+            now: .now
+        )
+        return model.settings.frequentPlaces.compactMap { place in
             guard let destination = MapHomeLocationDestination(placeKind: place.kind),
                   let point = place.point,
                   isValid(point) else { return nil }
@@ -7331,7 +7449,8 @@ struct MapHomeView: View {
                 isCatAtHome: destination == .home && isDisplayedCatAtHome,
                 catAction: displayedStickmanAction,
                 equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
-                coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+                coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                weatherBadge: destination == .home ? homeWeather : nil
             )
         }
     }
@@ -9809,10 +9928,42 @@ struct MapHomeView: View {
         setMapPosition(.region(region))
     }
 
-    /// 재생 중에는 속도에 맞춘 거리를, 아니면 현재 거리를 돌려준다.
+    /// 실시간 따라가기 중 최신 센서 속도. 오래된 값은 쓰지 않는다.
+    private var liveFollowSpeedMetersPerSecond: Double? {
+        guard let reading = model.latestSensorReading,
+              Date.now.timeIntervalSince(reading.timestamp) <= 15,
+              let speed = reading.speedMetersPerSecond, speed >= 0 else { return nil }
+        return speed
+    }
+
+    /// 오늘의 실시간 따라가기에서 속도에 맞춘 거리. 바꾸지 않아야 하면 nil.
+    private func liveFollowDistance(current: Double) -> Double? {
+        guard !isDayPlaybackRunning,
+              selectedTimelineMinute == nil,
+              userTrackingMode == .following,
+              Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+              let next = liveZoomGovernor.nextDistance(
+                  current: current,
+                  speedMetersPerSecond: liveFollowSpeedMetersPerSecond,
+                  uptime: ProcessInfo.processInfo.systemUptime
+              ), abs(next - current) >= 1 else { return nil }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "live_zoom_sample",
+            metrics: [
+                "speed_mps": liveFollowSpeedMetersPerSecond ?? -1,
+                "current_m": current.rounded(),
+                "next_m": next.rounded(),
+            ]
+        )
+        return next
+    }
+
+    /// 재생 중에는 속도에 맞춘 거리를, 실시간 따라가기에서는 속도 비례 줌을, 아니면 현재 거리를 돌려준다.
     private func playbackAwareDistance(current: Double) -> Double {
-        guard isDayPlaybackRunning,
-              let target = MapHomePlaybackZoomPolicy.targetDistance(
+        guard isDayPlaybackRunning else {
+            return liveFollowDistance(current: current) ?? current
+        }
+        guard let target = MapHomePlaybackZoomPolicy.targetDistance(
                   speedMetersPerSecond: displayedSpeedMetersPerSecond
               )
         else { return current }
@@ -9907,10 +10058,13 @@ struct MapHomeView: View {
         }
 
         if preservesCamera, !rendersVectorMap {
+            let distance = visibleMapCamera.flatMap {
+                liveFollowDistance(current: $0.distance)
+            }
             if let heading {
-                requestAppleMapHeading(heading, centeredAt: coordinate)
+                requestAppleMapHeading(heading, centeredAt: coordinate, distance: distance)
             } else {
-                requestAppleMapCenter(coordinate)
+                requestAppleMapCenter(coordinate, distance: distance)
             }
             return
         }
@@ -9967,29 +10121,35 @@ struct MapHomeView: View {
     }
 
     private func requestAppleMapCenter(
-        _ coordinate: CLLocationCoordinate2D
+        _ coordinate: CLLocationCoordinate2D,
+        distance: CLLocationDistance? = nil
     ) {
         appleViewportCommand = MapHomeAppleViewportCommand(
             revision: (appleViewportCommand?.revision ?? 0) &+ 1,
             centerCoordinate: coordinate,
             heading: nil,
-            targetPoint: currentLocationTargetPoint
+            targetPoint: currentLocationTargetPoint,
+            distance: distance
         )
     }
 
     private func requestAppleMapHeading(
         _ heading: CLLocationDirection,
-        centeredAt coordinate: CLLocationCoordinate2D?
+        centeredAt coordinate: CLLocationCoordinate2D?,
+        distance: CLLocationDistance? = nil
     ) {
         appleViewportCommand = MapHomeAppleViewportCommand(
             revision: (appleViewportCommand?.revision ?? 0) &+ 1,
             centerCoordinate: coordinate,
             heading: heading,
-            targetPoint: coordinate == nil ? nil : currentLocationTargetPoint
+            targetPoint: coordinate == nil ? nil : currentLocationTargetPoint,
+            distance: distance
         )
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy?) {
+        // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
+        liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         currentLocationRequestTask?.cancel()
@@ -10112,6 +10272,9 @@ struct MapHomeView: View {
     }
 
     private func recordUserMapAdjustment() {
+        liveZoomGovernor.pauseForUserAdjustment(
+            uptime: ProcessInfo.processInfo.systemUptime
+        )
         hasUserAdjustedMap = true
         hasCancelledInitialLocationFocus = true
         initialLocationRequestTask?.cancel()
@@ -13365,6 +13528,8 @@ private struct MapHomePlaceAnnotation: Identifiable {
     let catAction: MapHomeStickmanAction
     let equippedAccessoryID: String?
     let coordinate: CLLocationCoordinate2D
+    /// 집 핀 위에 올리는 현재 날씨(집에만, 데이터가 없으면 nil).
+    var weatherBadge: MapHomeHomeWeatherBadge? = nil
 }
 
 private struct MapHomeTransitAnnotation: Identifiable {
@@ -13387,6 +13552,7 @@ private struct MapHomePlacePin: View {
     var showsCatAtHome = false
     var catAction: MapHomeStickmanAction = .activity
     var equippedAccessoryID: String? = nil
+    var weatherBadge: MapHomeHomeWeatherBadge? = nil
     var onOpenDaySummary: (() -> Void)? = nil
     @State private var isGrowthSummaryExpanded = false
     @State private var isGrowthCalloutVisible = false
@@ -13398,10 +13564,17 @@ private struct MapHomePlacePin: View {
                     .opacity(isGrowthCalloutVisible ? 1 : 0)
                     .allowsHitTesting(isGrowthCalloutVisible)
                     .accessibilityHidden(!isGrowthCalloutVisible)
-                if showsCatAtHome {
-                    homeCatMarker(level: growthLevel)
-                } else {
-                    homeMarkerArtwork(level: growthLevel)
+                Group {
+                    if showsCatAtHome {
+                        homeCatMarker(level: growthLevel)
+                    } else {
+                        homeMarkerArtwork(level: growthLevel)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if let weatherBadge {
+                        homeWeatherBadge(weatherBadge)
+                    }
                 }
             } else {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
@@ -13433,6 +13606,39 @@ private struct MapHomePlacePin: View {
             destination == .home
                 ? "집 레벨 \(growthLevel ?? 1), \(growthStatus ?? "하루 요약 보기")"
                 : "\(name), 레벨 \(floor ?? 1)"
+        )
+    }
+
+    /// 집 위에 얹는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
+    private func homeWeatherBadge(_ badge: MapHomeHomeWeatherBadge) -> some View {
+        let palette = WeatherSymbolKind(symbolName: badge.symbolName).palette
+        return HStack(spacing: 2) {
+            Image(systemName: badge.symbolName)
+                .font(.system(size: 11, weight: .semibold))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(
+                    Color(red: palette.primary.red, green: palette.primary.green, blue: palette.primary.blue),
+                    Color(red: palette.secondary.red, green: palette.secondary.green, blue: palette.secondary.blue)
+                )
+            Text(badge.temperatureText)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.tpInk)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(Color.white.opacity(0.94), in: Capsule())
+        .overlay { Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
+        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+        .fixedSize()
+        .offset(y: -9)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            AppLanguagePreference.text(
+                korean: "현재 날씨 \(badge.condition), \(badge.temperatureText)",
+                english: "Current weather \(badge.condition), \(badge.temperatureText)"
+            )
         )
     }
 
@@ -15688,6 +15894,8 @@ struct MapHomeAppleViewportCommand {
     let centerCoordinate: CLLocationCoordinate2D?
     let heading: CLLocationDirection?
     let targetPoint: CGPoint?
+    /// 실시간 자동 줌이 정한 카메라 거리(없으면 현재 거리 유지).
+    var distance: CLLocationDistance? = nil
 }
 
 enum MapHomeAppleCameraCommand {
@@ -15695,8 +15903,14 @@ enum MapHomeAppleCameraCommand {
     static func center(
         _ coordinate: CLLocationCoordinate2D,
         at targetPoint: CGPoint?,
+        distance: CLLocationDistance? = nil,
         on mapView: MKMapView
     ) {
+        if let distance, distance.isFinite, distance > 0 {
+            let camera = mapView.camera.copy() as! MKMapCamera
+            camera.centerCoordinateDistance = distance
+            mapView.setCamera(camera, animated: false)
+        }
         mapView.setCenter(
             cameraCenter(
                 for: coordinate,
@@ -15712,10 +15926,12 @@ enum MapHomeAppleCameraCommand {
         _ heading: CLLocationDirection,
         centeredAt coordinate: CLLocationCoordinate2D?,
         targetPoint: CGPoint?,
+        distance requestedDistance: CLLocationDistance? = nil,
         on mapView: MKMapView
     ) {
         let camera = mapView.camera.copy() as! MKMapCamera
-        let distance = camera.centerCoordinateDistance
+        let distance = requestedDistance.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+            ?? camera.centerCoordinateDistance
         let pitch = camera.pitch
         if let coordinate {
             camera.centerCoordinate = coordinate
@@ -16374,12 +16590,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     heading,
                     centeredAt: command.centerCoordinate,
                     targetPoint: command.targetPoint,
+                    distance: command.distance,
                     on: mapView
                 )
             } else if let coordinate = command.centerCoordinate {
                 MapHomeAppleCameraCommand.center(
                     coordinate,
                     at: command.targetPoint,
+                    distance: command.distance,
                     on: mapView
                 )
             }
@@ -16846,7 +17064,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                             pendingWeeklyRewards: place.pendingWeeklyRewards,
                             showsCatAtHome: place.isCatAtHome,
                             catAction: place.catAction,
-                            equippedAccessoryID: place.equippedAccessoryID
+                            equippedAccessoryID: place.equippedAccessoryID,
+                            weatherBadge: place.weatherBadge
                         )
                         .fixedSize()
                     ),
