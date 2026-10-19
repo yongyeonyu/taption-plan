@@ -1779,3 +1779,8 @@
 - WTH: 사이드바 날씨 스위치(`weatherSidebarVisible`)는 집 위 날씨(`MapHomeHomeWeatherBadgePolicy`)와 이미 독립이라 코드 변경 없음.
 - CAL: 달력 점(빨강=미확인 활동 있음, 초록=완료, 없음=기록 없음), 공휴일 점 제거. 단위 테스트 통과, 화면 확인 전.
 - BKP: 백업 비밀번호 칸 삭제, 6자리를 기기 Keychain(`backup-password-v1`)에 보관·보관 없을 때만 1회 입력. 단위 테스트 통과. 실기기 백업·복원 동작과 iCloud 사용은 확인하지 않았다. 백업 포맷·키 도출은 바꾸지 않았다.
+
+## NAM1020B01 · App Store Connect 앱 이름 BOKKI Plan (2026-10-20)
+- 조치(대표 지시): ASC API로 앱 `6797370230`(`com.taption.plan`)의 `ko` 앱 정보 현지화 이름을 `Taption Plan` → `BOKKI Plan`으로 변경. 앱 정보 상태 `PREPARE_FOR_SUBMISSION`(편집 가능). 지역은 `ko` 하나뿐이다.
+- 확인: 변경 요청 HTTP 200, 읽기: 앱 `name`과 현지화 `name` 모두 `BOKKI Plan`, 부제·개인정보 URL은 그대로.
+- 제한: 이 이름은 새 빌드·심사 제출 때 반영되며, 기기에 보이는 이름은 새 빌드가 필요하다(코드 변경은 b275eb6, 아직 TestFlight 미배포). ASC 웹 로그인은 없어 화면으로는 보지 못했다. 제 변경 외 다른 ASC 설정은 건드리지 않았다.
