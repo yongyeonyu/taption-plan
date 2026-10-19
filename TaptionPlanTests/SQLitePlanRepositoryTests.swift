@@ -543,14 +543,25 @@ final class TaptionStoreRepositoryTests: XCTestCase {
         item.title = "수정"
         edited.plans = [item]
         edited.updatedAt = Date(timeIntervalSince1970: 1_792_300_200)
-        // 수정했다가 바로 되돌리는 연속 저장: 마지막 상태가 저장소에 있어야 한다.
-        let first = Task { try await repository.save(edited) }
-        let second = Task { try await repository.save(base) }
+        // 두 저장이 동시에 들어온다. 어느 쪽이 먼저 도착할지는 정해지지 않으므로 순서를 가정하지 않는다.
+        // 직렬화가 맞다면 저장소는 둘 중 하나의 완전한 상태이고, 내부 비교 기준(known)도 저장소와 같다.
+        let editedSnapshot = edited
+        let baseSnapshot = base
+        let first = Task { try await repository.save(editedSnapshot) }
+        let second = Task { try await repository.save(baseSnapshot) }
         _ = try await first.value
         _ = try await second.value
 
+        let afterRace = try await TaptionStoreRepository(store: store).load().plans.map(\.title)
+        XCTAssertTrue(afterRace == ["원래"] || afterRace == ["수정"], "섞인 상태가 저장되면 안 된다: \(afterRace)")
+
+        // 내부 기준이 어긋났다면 이 저장은 "바뀐 것 없음"으로 건너뛰어 저장소가 그대로 남는다.
+        try await repository.save(base)
         let reloaded = try await TaptionStoreRepository(store: store).load()
         XCTAssertEqual(reloaded.plans.map(\.title), ["원래"])
+        try await repository.save(edited)
+        let reedited = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reedited.plans.map(\.title), ["수정"])
     }
 
     func testDeleteAllClearsPlanDataButNotSensorReadings() async throws {
