@@ -87,12 +87,6 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
         return encoder
     }
 
-    static func payloadDecoder() -> JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .secondsSince1970
-        return decoder
-    }
-
     var hasValidPayload: Bool {
         guard let data = payloadJSON.data(using: .utf8) else { return false }
         if let payloadByteCount, payloadByteCount != data.count { return false }
@@ -272,7 +266,6 @@ actor RawDeviceDataDayArchive {
     ) async throws -> [RawDeviceDataEnvelope] {
         var values: [RawDeviceDataEnvelope] = []
         values.reserveCapacity(events.count)
-        let decoder = RawDeviceDataEnvelope.payloadDecoder()
         for (index, event) in events.enumerated() {
             if index > 0, index.isMultiple(of: Self.decodeBatchSize) {
                 _ = await Task.yield()
@@ -281,7 +274,7 @@ actor RawDeviceDataDayArchive {
                 try Task.checkCancellation()
                 try checkDataGeneration(generation)
             }
-            guard let value = try? decoder.decode(RawDeviceDataEnvelope.self, from: Data(event.payload.utf8)),
+            guard let value = try? TaptionRawPayloadCoding.decode(RawDeviceDataEnvelope.self, from: event.payload),
                   value.hasValidPayload, value.id.uuidString == event.id else {
                 throw Error.invalidEnvelope
             }
@@ -314,7 +307,6 @@ actor RawDeviceDataDayArchive {
             }
             uniqueByID[envelope.id] = envelope
         }
-        let encoder = RawDeviceDataEnvelope.payloadEncoder()
         return try uniqueByID.values.map { envelope in
             TaptionRawEvent(
                 kind: Self.kind,
@@ -326,7 +318,7 @@ actor RawDeviceDataDayArchive {
                     "kind:\(envelope.kind)",
                     "schema:\(envelope.schemaVersion)",
                 ],
-                payload: String(decoding: try encoder.encode(envelope), as: UTF8.self)
+                payload: try TaptionRawPayloadCoding.encode(envelope)
             )
         }
     }
@@ -470,8 +462,11 @@ actor SensorReadingArchive {
         try checkDataGeneration(generation)
         let existing = try await store.readings(ids: readings.map(\.id.uuidString))
         let incoming = Dictionary(readings.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        for reading in existing where incoming[reading.id] != reading {
-            throw Error.conflictingReading
+        for reading in existing {
+            guard let sent = incoming[reading.id],
+                  TaptionReadingRowCodec.storedFormsEqual(sent, reading) else {
+                throw Error.conflictingReading
+            }
         }
     }
 

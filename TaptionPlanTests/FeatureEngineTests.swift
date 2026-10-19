@@ -3321,10 +3321,6 @@ final class FeatureEngineTests: XCTestCase {
         try backupService.setAppLockSettings(backupSettings)
 
         let sensorDatabaseURL = root.appendingPathComponent("sensor.sqlite")
-        let sensorStore = try TaptionPlanDayStore(url: sensorDatabaseURL)
-        _ = try await sensorStore.markMigrationCompleted(
-            "sensor-reading-v1-to-day-store-v2"
-        )
         let sensorArchive = try SensorReadingArchive(
             fileURL: root.appendingPathComponent("readings.jsonl"),
             storeURL: sensorDatabaseURL
@@ -3343,9 +3339,6 @@ final class FeatureEngineTests: XCTestCase {
             registersHealthBackgroundHandler: false,
             dayDatabase: try PlanDayDatabase(
                 directory: root.appendingPathComponent("day-data")
-            ),
-            watchSensorArchive: AppleWatchSensorActivityArchive(
-                fileURL: root.appendingPathComponent("watch/summaries.json")
             )
         )
 
@@ -11585,16 +11578,8 @@ final class FeatureEngineTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-route-recovery-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let rawArchive = RawDeviceDataMonthlyArchive(
-            rootDirectory: directory.appendingPathComponent("raw")
-        )
-        let trackingArchive = TrackingSessionChunkArchive(
-            rootDirectory: directory.appendingPathComponent("raw")
-        )
         let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("readings.jsonl"),
-            rawArchive: rawArchive,
-            trackingChunkArchive: trackingArchive
+            fileURL: directory.appendingPathComponent("readings.jsonl")
         )
         let now = makeDate(2026, 8, 24, 12)
         let historical = SensorReading(
@@ -11636,144 +11621,6 @@ final class FeatureEngineTests: XCTestCase {
         let recovered = try await archive.routeReadings(in: span)
         XCTAssertEqual(indexed.map(\.id), [historical.id, tracked.id])
         XCTAssertEqual(recovered.map(\.id), [historical.id, tracked.id])
-    }
-
-    func testRawDeviceDataArchiveStoresMonthlyCompressedPayloads() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-raw-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let archive = RawDeviceDataMonthlyArchive(rootDirectory: directory)
-        let july = makeDate(2026, 7, 31, 5, 42)
-        let august = makeDate(2026, 8, 1, 0, 5)
-        let reading = SensorReading(
-            timestamp: july,
-            point: GeoPoint(
-                latitude: 37.524,
-                longitude: 126.673,
-                altitude: 42,
-                horizontalAccuracy: 9,
-                verticalAccuracy: 12
-            ),
-            motion: .automotive,
-            stepCount: 33
-        )
-        try archive.append(
-            source: .gps,
-            kind: "sensor-reading",
-            payload: reading,
-            capturedAt: july
-        )
-        let watchPayload = RawArchiveWatchFixture(sampleCount: 12, mode: "car")
-        try archive.append(
-            source: .appleWatch,
-            kind: "watch-sensor-summary",
-            payload: watchPayload,
-            capturedAt: august
-        )
-
-        let julyValues = try archive.envelopes(inMonthContaining: july)
-        let augustValues = try archive.envelopes(inMonthContaining: august)
-        XCTAssertEqual(julyValues.count, 1)
-        XCTAssertEqual(julyValues[0].source, .gps)
-        XCTAssertEqual(julyValues[0].kind, "sensor-reading")
-        XCTAssertTrue(julyValues[0].payloadJSON.contains("\"automotive\""))
-        XCTAssertEqual(augustValues.count, 1)
-        XCTAssertEqual(augustValues[0].source, .appleWatch)
-        try archive.flushPendingWrites()
-        let chunks = directory
-            .appendingPathComponent("2026-08")
-            .appendingPathComponent("chunks")
-        let chunkFiles = try FileManager.default.contentsOfDirectory(
-            at: chunks,
-            includingPropertiesForKeys: nil
-        )
-        XCTAssertTrue(chunkFiles.contains { $0.pathExtension == "zlib" })
-    }
-
-    func testRawDeviceDataArchiveDoesNotRewriteLegacyMonthlyFile() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-raw-legacy-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let monthDirectory = directory.appendingPathComponent("2026-08")
-        try FileManager.default.createDirectory(
-            at: monthDirectory,
-            withIntermediateDirectories: true
-        )
-        let date = makeDate(2026, 8, 1, 12)
-        let legacyEnvelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .gps,
-            kind: "legacy",
-            payload: RawArchiveWatchFixture(sampleCount: 1, mode: "walk")
-        )
-        var legacyPayload = try RawDeviceDataMonthlyArchive
-            .payloadEncoder()
-            .encode(legacyEnvelope)
-        legacyPayload.append(0x0A)
-        let legacyData = try (legacyPayload as NSData).compressed(
-            using: .zlib
-        ) as Data
-        let legacyURL = monthDirectory.appendingPathComponent(
-            "taption-raw-2026-08.jsonl.zlib"
-        )
-        try legacyData.write(to: legacyURL)
-
-        let archive = RawDeviceDataMonthlyArchive(
-            rootDirectory: directory,
-            flushDelay: 3_600
-        )
-        try archive.append(
-            source: .healthKit,
-            kind: "new",
-            payload: RawArchiveWatchFixture(sampleCount: 2, mode: "run"),
-            capturedAt: date.addingTimeInterval(60)
-        )
-        try archive.flushPendingWrites()
-
-        XCTAssertEqual(try Data(contentsOf: legacyURL), legacyData)
-        XCTAssertEqual(
-            try archive.envelopes(inMonthContaining: date).map(\.kind),
-            ["legacy", "new"]
-        )
-    }
-
-    func testTrackingSessionArchiveWritesIndependentCompressedChunks() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-session-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = TrackingSessionChunkArchive(rootDirectory: directory)
-        let sessionID = UUID()
-        let start = makeDate(2026, 8, 1, 9, 0)
-        try archive.append(
-            SensorReading(
-                timestamp: start,
-                motion: .walking,
-                trackingSessionID: sessionID,
-                trackingKind: .walking,
-                sourceDevice: .iPhone,
-                sequence: 1
-            )
-        )
-        try archive.append(
-            SensorReading(
-                timestamp: start.addingTimeInterval(12),
-                motion: .walking,
-                trackingSessionID: sessionID,
-                trackingKind: .walking,
-                sourceDevice: .iPhone,
-                sequence: 2,
-                trackingSessionEnded: true
-            )
-        )
-        let file = directory
-            .appendingPathComponent("2026-08")
-            .appendingPathComponent(sessionID.uuidString)
-            .appendingPathComponent("000001.jsonl.zlib")
-        XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
-        let compressed = try Data(contentsOf: file)
-        let payload = try (compressed as NSData).decompressed(using: .zlib) as Data
-        XCTAssertEqual(payload.split(separator: 0x0A).count, 2)
     }
 
     func testSensorCollectionProfilesUseRequestedIntervalsAndPowerPolicy() {
@@ -15603,57 +15450,6 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(export.lastPathComponent, "Taption-Plan-Data.json")
     }
 
-    func testEncryptedFileRepositoryRoundTrip() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-test-\(UUID().uuidString)", isDirectory: true)
-        let fileURL = directory.appendingPathComponent("snapshot.json")
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        var snapshot = TaptionDataSnapshot.empty
-        snapshot.categories = CategoryCatalog.builtIn
-        let repository = FilePlanRepository(fileURL: fileURL)
-        try await repository.save(snapshot)
-        let restored = try await repository.load()
-
-        XCTAssertEqual(restored.categories.count, CategoryCatalog.builtIn.count)
-        XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
-    }
-
-    func testFileRepositoryRecoversLastValidGenerationAfterCorruption() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("taption-recovery-\(UUID().uuidString)", isDirectory: true)
-        let fileURL = directory.appendingPathComponent("snapshot.json")
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        var first = TaptionDataSnapshot.empty
-        first.categories = CategoryCatalog.builtIn
-        first.plans = [
-            PlanRecord(
-                title: "보존된 기록",
-                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
-                categoryID: "activity"
-            )
-        ]
-        let repository = FilePlanRepository(fileURL: fileURL)
-        try await repository.save(first)
-
-        var second = first
-        second.plans[0].title = "새 기록"
-        try await repository.save(second)
-        #if !targetEnvironment(simulator)
-        XCTAssertEqual(
-            try FileManager.default.attributesOfItem(
-                atPath: fileURL.appendingPathExtension("backup").path
-            )[.protectionKey] as? FileProtectionType,
-            .completeUntilFirstUserAuthentication
-        )
-        #endif
-        try Data("broken".utf8).write(to: fileURL, options: [.atomic])
-
-        let recovered = try await repository.load()
-        XCTAssertEqual(recovered.plans.first?.title, "보존된 기록")
-    }
-
     func testSnapshotCompressionRoundTripAndLegacyJSON() {
         let json = Data(repeating: 0x41, count: 32 * 1024)
         let stored = TaptionSnapshotCompression.encode(json)
@@ -15712,38 +15508,6 @@ final class FeatureEngineTests: XCTestCase {
                 keyData: Data(repeating: 0xA5, count: 32)
             )
         )
-    }
-
-    func testAppGroupRepositoryMigratesExistingDeviceSnapshotOnce() async throws {
-        var existing = TaptionDataSnapshot.empty
-        existing.updatedAt = makeDate(2026, 7, 31, 18)
-        existing.categories = CategoryCatalog.builtIn
-        existing.plans = [
-            PlanRecord(
-                title: "기존 계획",
-                span: TimeSpan(
-                    start: existing.updatedAt,
-                    end: existing.updatedAt.addingTimeInterval(hour)
-                ),
-                categoryID: "project"
-            )
-        ]
-        let primary = InMemoryPlanRepository()
-        let legacy = InMemoryPlanRepository(snapshot: existing)
-        let repository = MigratingPlanRepository(
-            primary: primary,
-            legacy: legacy
-        )
-
-        let loaded = try await repository.load()
-        for _ in 0..<100 {
-            if try await primary.load().plans == loaded.plans { break }
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        let shared = try await primary.load()
-
-        XCTAssertEqual(loaded.plans.first?.title, "기존 계획")
-        XCTAssertEqual(shared.plans, loaded.plans)
     }
 
     func testWidgetCommandMutatesSharedSnapshotWithoutOpeningApp() throws {
@@ -22170,8 +21934,8 @@ final class FeatureEngineTests: XCTestCase {
         )
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        let repository = FilePlanRepository(
-            fileURL: directory.appendingPathComponent("taption-data-v1.json")
+        let repository = TaptionStoreRepository(
+            store: try TaptionStoreV2(url: directory.appendingPathComponent(TaptionStoreV2.fileName))
         )
         let occurredAt = makeDate(2026, 8, 4, 9, 30)
         let memo = ActionMemo(
@@ -29299,13 +29063,13 @@ final class TransitBoardingPersistenceTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("plan.sqlite")
-        let repository = try SQLitePlanRepository(databaseURL: url)
+        let repository = TaptionStoreRepository(store: try TaptionStoreV2(url: url))
         try await repository.save(source)
         let model = AppModel(repository: repository, cloudSyncService: nil)
         await model.bootstrap()
         let success = await model.confirmTransitBoarding(candidate)
         XCTAssertTrue(success)
-        let stored = try await SQLitePlanRepository(databaseURL: url).load()
+        let stored = try await TaptionStoreRepository(store: TaptionStoreV2(url: url)).load()
         XCTAssertEqual(stored.travel.first?.subwayRoute, candidate.subwayRoutes.first?.route)
         XCTAssertEqual(stored.settings.transitBoardingDecisions.first?.subwayRoutes, candidate.subwayRoutes)
     }
@@ -29388,13 +29152,13 @@ final class PredictedRoutePersistenceTests: XCTestCase {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let url = root.appendingPathComponent("routes.sqlite")
-        let repo = try SQLitePlanRepository(databaseURL: url)
+        let repo = TaptionStoreRepository(store: try TaptionStoreV2(url: url))
         try await repo.save(source)
         let model = AppModel(repository: repo, cloudSyncService: nil)
         await model.bootstrap()
         let saved = await model.savePredictedRouteDecision(route, deleting: false)
         XCTAssertTrue(saved)
-        let reopened = try SQLitePlanRepository(databaseURL: url)
+        let reopened = TaptionStoreRepository(store: try TaptionStoreV2(url: url))
         let loaded = try await reopened.load()
         let decision = try XCTUnwrap(loaded.settings.predictedRouteDecisions.first)
         XCTAssertEqual(decision.route, route)

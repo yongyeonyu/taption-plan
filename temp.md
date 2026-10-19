@@ -6,6 +6,12 @@
 - 해결(단계): 1 새 DB 스키마(열이 나뉜 표, 자동/수동 provenance 컬럼)와 저장소 → 2 수집·화면을 새 저장소에 연결 → 3 새 백업·복원(날짜별 파일 하나, 표 단위 JSON Lines, 비밀번호 + 파일 내 솔트) → 4 이전 코드 삭제·기기 검증. 기존 DB와 백업 파일은 삭제하지 않고 읽지 않은 채 둔다(새 저장소는 새 파일).
 - 검증 기준: 단계마다 단위 테스트와 Debug 빌드를 기록하고, 마지막 단계에서 iPhone 실기기 테스트가 통과해야 main에 합치고 TestFlight를 올린다. 그 전에는 main에 합치지 않는다. 실기기 저장·복원 결과는 합성 테스트와 구분한다.
 
+## STO1019B01 · 이전 일자 DB 사용처를 새 저장소 하나(taption-store.sqlite)로 통합 — 브랜치 worktree-agent-a8b7b688a4e569816 (2026-10-19)
+- 요청: 아직 이전 일자 DB(`TaptionPlanDayStore` 등)를 쓰는 곳을 새 저장소로 옮기거나, 다시 계산 가능한 파생 캐시이면 없앤다. 이전 형식 옮기기 코드는 삭제한다(이전 데이터는 버린다).
+- 원인: 워치 요약·가속도, 원시 기기 봉투, HealthKit 가져온 값, 이전 계획 저장소, 하루 화면 projection 캐시, 지도 캐시가 각자 다른 DB 파일(`taption-data-v2.sqlite`, `taption-plan-iphone-v3.sqlite`, `healthkit-local-v1.sqlite`, `taption-map-cache-v1.sqlite`)과 파일 보관소를 써서 삭제·백업·분석 경로가 갈라져 있다.
+- 해결: 원본(워치 요약·가속도·원시 봉투)은 새 `raw_events` 표(종류·id 유일, 변경 금지, 출처·provenance 열)로, HealthKit 값은 `records`(imported)로 옮기고, 하루 projection 캐시와 지도 캐시는 디스크에서 없애 메모리 캐시로 바꾼다. 이전 계획 저장소·월별/추적/워치 파일 보관소·이전 형식 옮기기를 삭제한다.
+- 검증 기준: 변경 단위 테스트와 앱 Debug 빌드, 전체 `TaptionPlanTests`를 실기기에서 실행해 변경 전 기준(StoreKit 1건, LocalizationCatalog 1건)과 비교. 실기기에서 사용자 화면으로 확인하는 것은 별도 대기.
+
 ## LOG1019A01 · 새 백업·로그 실기기 확인 대기 (2026-10-19)
 - 코드·단위 테스트 완료(test.md LOG1019A01). 남은 것: 새 빌드 설치 후 백업이 한 번 돌아 새 형식 파일이 생기면 `scripts/taption-backup-decode.py`로 실제 복호화 확인(쪽 프레임·압축 해제 검증), 새 로그로 `scripts/analyze-diagnostics.py` 실행 확인. 비밀번호 길이 확장(4자리 제한 해제)과 저장소·백업 엔진 전면 재설계는 결정 대기. 새 빌드(181)는 지시 전까지 보류.
 

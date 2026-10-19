@@ -20,6 +20,8 @@ actor TaptionStoreRepository: PlanDataRepository {
     private static let headerID = "snapshot"
 
     private let store: TaptionStoreV2
+    /// 이 저장소 객체가 알고 있는 전역 삭제 세대. 데이터 삭제가 진행 중이거나 그 뒤에 만들어진 세대와 다르면 쓰지 않는다.
+    private var deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
     private var known: [String: [String: (ord: Int, body: String)]]?
     private var nextOrd: [String: Int] = [:]
@@ -68,6 +70,9 @@ actor TaptionStoreRepository: PlanDataRepository {
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        guard TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
+            throw RepositoryError.staleGeneration
+        }
         if known == nil { _ = try await load() }
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
@@ -125,6 +130,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         try await store.deleteAllRecords()
         known = [:]
         nextOrd = [:]
+        deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     func handleMemoryPressure() async {

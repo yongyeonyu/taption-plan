@@ -405,22 +405,11 @@ public actor HealthKitImportStore {
     }
 
     private static func encode<Value: Encodable>(_ value: Value) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        encoder.nonConformingFloatEncodingStrategy = .convertToString(
-            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
-        )
-        encoder.outputFormatting = [.sortedKeys]
-        return String(decoding: try encoder.encode(value), as: UTF8.self)
+        try TaptionRawPayloadCoding.encode(value)
     }
 
     private static func decode<Value: Decodable>(_ type: Value.Type, from body: String) throws -> Value {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .secondsSince1970
-        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
-            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
-        )
-        return try decoder.decode(type, from: Data(body.utf8))
+        try TaptionRawPayloadCoding.decode(type, from: body)
     }
 
     private func validate(typeIdentifier: String) throws {

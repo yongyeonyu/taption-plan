@@ -1,5 +1,11 @@
 # 검증 기록
 
+## STO1019B01 · 이전 일자 DB 사용처를 새 저장소 하나로 통합 (브랜치 worktree-agent-a8b7b688a4e569816, 2026-10-19)
+- 구현: 새 `raw_events` 표(`TaptionStoreRawEvents.swift`: 종류+id 유일, 변경 금지·충돌 시 묶음 전체 롤백, origin·provenance·시각 열, 본문은 JSON)에 워치 요약·가속도 묶음·원시 기기 봉투를 저장. HealthKit 값은 `records`(imported)·동기화 위치는 별도 종류 행. `PlanDayDatabase`는 워치 원본 전용으로 줄이고 `PlanDayLoadCoordinator`·지도 하루 캐시는 메모리 전용 bounded 캐시(메모리 경고·데이터 삭제 때 비움). `TaptionStoreRepository`에 전역 삭제 fence 확인 추가, 위젯은 같은 파일을 연다. 삭제: 이전 계획 저장소·월별/추적/워치 파일 보관소·이전 형식 옮기기·패키지 `TaptionPlanDayStore`(약 7,700줄).
+- 기존 버그 수정: `appendImmutableReadings`/`validateAppend`가 1970 기준 초 변환 시 마지막 비트가 달라진 같은 기록을 충돌로 거부함(재시도 시 발생). 저장 모양 기준 비교로 수정, 회귀 테스트 추가.
+- 자동 검증(iPhone 11 Pro): 전체 `TaptionPlanTests` 1518개 중 실패 2건(기준과 동일: StoreKit 1건, LocalizationCatalog 1건), `full-1.log`. 이후 보정(busy_timeout)만 바꾼 뒤 `SensorDayStoreTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`HealthKitIntegrationTests` 106개 실패 0(`final-targeted.log`). Debug 앱 빌드 성공.
+- 제한: 기기에 남아 있는 옛 스키마의 `taption-store.sqlite`(열 부족) 때문에 AppModel 기본 생성 시험 일부가 SQL 오류 로그를 남김(결과는 통과). 지도 하루 캐시가 메모리 전용이라 앱 재시작 직후 첫 지도 로딩 성능은 측정하지 않음. 실기기 화면 확인·워치 실제 수신 확인 없음. 워치 앱 쪽 `WatchDayDatabase`(패키지 V3 저장소)와 백업 엔진은 건드리지 않음.
+
 ## ARC1019A01 · 3단계(1/2) 계획·기록 저장소를 새 저장소로 교체 (브랜치 rewrite/storage-v2, 2026-10-19)
 - 구현: `TaptionStoreRepository`(`PlanDataRepository`). 스냅샷의 14종 배열(계획·실적·연결·메모·스티커·카테고리·사진·캘린더·날씨·장소·이동·층 이동·연간 리포트)을 `records` 표에 행 하나씩, 헤더(스키마 버전·갱신 시각·설정)를 `header` 행으로 저장한다. 저장은 직전 상태와 본문을 비교해 바뀐 행만 쓰고 사라진 항목은 지운다. 같은 종류 안에서 처음 저장한 순서(`ord`)를 유지한다. 본문 JSON에서 시작·끝 시각과 출처(계획·메모 등 사용자, 장소·이동·날씨 자동, 사진·캘린더 가져옴, 실적은 수동 보정이면 사용자)를 열에 채운다. 전체 삭제는 계획 데이터만 지우고 센서 위치 기록은 남긴다. 센서 저장소와 같은 파일·같은 연결을 공유한다(`TaptionStoreV2.applicationSupport()`). 앱 시작 시 이전 SQLite·파일 저장소 선택 코드를 이 저장소로 교체했다.
 - 자동 검증: iPhone 11 Pro 실기기, `TaptionStoreRepositoryTests`(4개)·`TaptionStoreV2Tests`(6개) 10개 실행, 실패 0(`m3b-11.log`). 빈 저장소는 빈 스냅샷, 다른 인스턴스에서 항목·순서·설정 복원, 바뀐 행만 쓰기(바뀌지 않은 행의 갱신 시각 유지)·삭제 반영·출처와 시작 시각 열, 계획 삭제가 센서 기록을 지우지 않음. 첫 실행은 패키지 import 누락으로 컴파일 실패했다(`m3a-11.log`).

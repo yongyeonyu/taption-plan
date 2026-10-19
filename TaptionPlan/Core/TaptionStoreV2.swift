@@ -153,6 +153,16 @@ enum TaptionReadingRowCodec {
     }
 
     /// 현지 날짜를 정수 `yyyymmdd`로(예: 20261019). 문자열보다 작고 대소 비교·묶음이 쉽다.
+    /// 두 센서 기록이 저장되는 모양(행)으로 같은지. 시각이 1970년 기준 초로 바뀔 때 마지막 비트가 달라져도
+    /// 같은 기록으로 본다(저장했다가 읽은 값과 원래 값이 `==`이 아닐 수 있다).
+    static func storedFormsEqual(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        guard let left = try? row(for: lhs, calendar: calendar),
+              let right = try? row(for: rhs, calendar: calendar) else { return false }
+        return left == right
+    }
+
     static func dayNumber(for date: Date, calendar: Calendar) -> Int {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
@@ -320,6 +330,8 @@ actor TaptionStoreV2 {
             if let handle { sqlite3_close_v2(handle) }
             throw TaptionStoreV2Error.openFailed(message)
         }
+        // 앱·위젯이 같은 파일을 열므로 다른 쪽 쓰기가 끝나길 잠깐 기다린다(바로 실패하지 않는다).
+        sqlite3_busy_timeout(handle, 5_000)
         do {
             try Self.configure(handle)
         } catch {
@@ -430,8 +442,11 @@ actor TaptionStoreV2 {
             }
             if !existingIDs.isEmpty {
                 let stored = try self.readings(ids: existingIDs)
-                for value in stored where incoming[value.id.uuidString] != value {
-                    throw TaptionStoreV2Error.readingConflict(value.id.uuidString)
+                for value in stored {
+                    guard let sent = incoming[value.id.uuidString],
+                          TaptionReadingRowCodec.storedFormsEqual(sent, value) else {
+                        throw TaptionStoreV2Error.readingConflict(value.id.uuidString)
+                    }
                 }
             }
             try exec(db, "COMMIT")

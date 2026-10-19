@@ -20,6 +20,35 @@ struct TaptionRawEvent: Equatable, Sendable {
     /// 값이 어디서 왔는지(기기·전송 경로·가공 여부).
     var provenance: [String] = []
     var payload: String
+
+    /// 저장되는 모양으로 같은지. 시각은 1970년 기준 초(저장 열)로 바뀐 값으로 비교해,
+    /// 저장했다가 읽은 값과 원래 값의 마지막 비트 차이를 다른 내용으로 보지 않는다.
+    func storedFormEquals(_ other: TaptionRawEvent) -> Bool {
+        kind == other.kind && id == other.id && sequence == other.sequence && origin == other.origin
+            && provenance == other.provenance && payload == other.payload
+            && timestamp.timeIntervalSince1970 == other.timestamp.timeIntervalSince1970
+    }
+}
+
+/// 원본 이벤트 본문의 JSON 변환. 시각은 기본(`timeIntervalSinceReferenceDate`) 방식이라 다시 읽어도 비트 단위로 같다.
+/// 사람이 보는 시각은 `raw_events.ts`/`records.start_ts` 열(1970년 기준 초)에 따로 있다.
+enum TaptionRawPayloadCoding {
+    static func encode<Value: Encodable>(_ value: Value) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(
+            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
+        )
+        encoder.outputFormatting = [.sortedKeys]
+        return String(decoding: try encoder.encode(value), as: UTF8.self)
+    }
+
+    static func decode<Value: Decodable>(_ type: Value.Type, from payload: String) throws -> Value {
+        let decoder = JSONDecoder()
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
+            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
+        )
+        return try decoder.decode(type, from: Data(payload.utf8))
+    }
 }
 
 extension TaptionStoreV2 {
@@ -75,7 +104,7 @@ extension TaptionStoreV2 {
                 try step(db, statement)
                 if sqlite3_changes(db) > 0 {
                     inserted.append(event.id)
-                } else if let stored = try rawEvent(db, kind: event.kind, id: event.id), stored != event {
+                } else if let stored = try rawEvent(db, kind: event.kind, id: event.id), !stored.storedFormEquals(event) {
                     throw TaptionStoreV2Error.rawEventConflict(kind: event.kind, id: event.id)
                 }
             }
@@ -91,7 +120,7 @@ extension TaptionStoreV2 {
     func validateRawEvents(_ events: [TaptionRawEvent]) throws {
         let db = try handle()
         for event in events {
-            if let stored = try rawEvent(db, kind: event.kind, id: event.id), stored != event {
+            if let stored = try rawEvent(db, kind: event.kind, id: event.id), !stored.storedFormEquals(event) {
                 throw TaptionStoreV2Error.rawEventConflict(kind: event.kind, id: event.id)
             }
         }
