@@ -1766,3 +1766,7 @@
 - 소스: `main`(빌드 번호 186, 코드 변경 없음: 185 이후 WTH1019A01 기록과 설정만 바뀌었다). 빌드 185 테스트 결과(`REL1019F01`)를 그대로 근거로 쓴다.
 - 아카이브·업로드: 아카이브 성공(`archive-186.log`), `altool` `No errors uploading`(`altool-186.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 186·185·184·183 확인(`asc-poll-186.log`).
 - 제한: WeatherKit App Services 체크 반영을 기기에서 아직 확인하지 않았다. 설치·테스터 수신은 확인하지 않았다.
+
+## WTH1020A01 · WeatherKit 날씨 표시 실기기 확인 (2026-10-20)
+- 확인: 대표가 iPhone 18 Pro Max(`00008160-000E195A1140000A`, 설치 빌드 184)에서 앱을 열어 날씨가 뜨는 것을 직접 확인했다. WTH1019A01의 App Services WeatherKit 체크가 반영된 것으로 본다.
+- 제한: 앱 로그로는 확인하지 못했다(`devicectl` 콘솔은 표준 출력만, `idevicesyslog` 연결 실패, 오늘자 진단 묶음 없음). 실행 기록은 `build/validation/WTH1020A01/`. 코드 변경 없음, 빌드 186 설치·수신은 확인하지 않았다.
