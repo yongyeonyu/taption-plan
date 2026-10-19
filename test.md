@@ -1729,3 +1729,10 @@
 - 원인 2: 사용자가 확정한 예상 경로와 선택한 예상 경로의 선은 벡터 지도(`vectorUserSelectedRoutes`)에만 있고 Apple 지도에는 없어서, 그 구간 발자국만 선 없이 떠 있었다.
 - 수정: 발자국 주석은 `displayPriority = .defaultLow`, `collisionMode = .none`, 가장 아래 z로 두어 충돌에서 뺐다. Apple 지도에 `appleUserSelectedRoutes`를 추가해 같은 좌표로 선을 그린다.
 - 검증: 관련 단위 테스트 43개 통과(`paw-collision.log`, `paw-line.log`), 앱 Debug/Release 빌드와 iPhone 18 Pro Max 설치 성공. 화면에서 직접 확인하지 못했다. "시간이 지나면 정확히 올라온다"는 현상의 원인을 이 수정이 모두 설명하는지는 확인하지 못했다(확정하지 못한 추정).
+
+## MAP1019E01 · Apple 지도 발자국을 네이티브 이미지 뷰로 교체 (2026-10-19)
+- 현상(대표 실기기 iPhone 18 Pro Max): 발자국이 늦게 뜨고 일부가 경로에서 벗어남(확대 시 첫 화면에는 발자국·경로가 없음, 축소 시 발자국이 띠처럼 뭉침).
+- 추정 원인: 발자국마다 SwiftUI 호스팅 뷰(`UIHostingController`)를 만들어 최대 220개 생성이 느리고, 크기가 잡히기 전 첫 배치에서 위치가 어긋난다. 코드를 읽어 세운 추정이며 화면에서 확인하지 못했다.
+- 수정: `MapHomeApplePawprintAnnotationView`(이미지 뷰 하나, 색별 이미지 캐시, 28pt 고정 크기)로 교체. 충돌 계산 제외(`collisionMode = .none`)는 유지.
+- 검증: 관련 단위 테스트 43개 통과(`paw-native.log`), 앱 Release 빌드와 iPhone 18 Pro Max 설치 성공. 화면 확인 못 함. 경로선이 확대 시 늦게 그려지는 문제(경로 재계산이 줌 단계별로 비동기일 가능성)와 GPS 점프 직선은 이번에 다루지 않았다.
+- 날씨: WeatherKit 인증 실패(JWT Code=2)가 계속된다. 앱 ID 기능과 프로파일은 정상이므로 계정의 보류 중인 계약 동의 여부 등 Apple 계정 쪽 확인이 필요하다(추정).

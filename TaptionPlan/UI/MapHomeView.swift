@@ -16239,6 +16239,52 @@ private final class MapHomeAppleHostedAnnotationView: MKAnnotationView {
     }
 }
 
+/// 발자국 주석. SwiftUI 호스팅 뷰를 수백 개 만들면 늦게 뜨고 첫 배치 때 위치가 어긋나므로 이미지 뷰 하나만 쓴다.
+private final class MapHomeApplePawprintAnnotationView: MKAnnotationView {
+    private static let size = CGSize(width: 28, height: 28)
+    private static var imageCache: [UInt32: UIImage] = [:]
+    private let imageView = UIImageView()
+    private var appliedColor: UInt32?
+
+    override init(annotation: MKAnnotation?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        bounds = CGRect(origin: .zero, size: Self.size)
+        imageView.frame = bounds
+        imageView.contentMode = .center
+        imageView.isUserInteractionEnabled = false
+        addSubview(imageView)
+        centerOffset = .zero
+        canShowCallout = false
+        clipsToBounds = false
+        displayPriority = .defaultLow
+        collisionMode = .none
+        zPriority = .min
+        selectedZPriority = .min
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    func apply(_ paw: MapHomeApplePawprint, color: UIColor) {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let key = (UInt32(red * 255) << 24) | (UInt32(green * 255) << 16) | (UInt32(blue * 255) << 8) | UInt32(alpha * 255)
+        if appliedColor != key {
+            appliedColor = key
+            if let cached = Self.imageCache[key] {
+                imageView.image = cached
+            } else {
+                let configuration = UIImage.SymbolConfiguration(pointSize: 12, weight: .bold)
+                let image = UIImage(systemName: "pawprint.fill", withConfiguration: configuration)?
+                    .withTintColor(color, renderingMode: .alwaysOriginal)
+                if Self.imageCache.count > 64 { Self.imageCache.removeAll() }
+                Self.imageCache[key] = image
+                imageView.image = image
+            }
+        }
+        transform = CGAffineTransform(rotationAngle: CGFloat(paw.angle * .pi / 180))
+    }
+}
+
 private final class MapHomeAppleDirectionsHandle: @unchecked Sendable {
     let directions: MKDirections
 
@@ -16703,6 +16749,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             guard let annotation = annotation as? MapHomeAppleMapAnnotation else {
                 return nil
             }
+            if case .pawprint = annotation.kind {
+                let pawIdentifier = "MapHome.applePawprint"
+                let pawView = (mapView.dequeueReusableAnnotationView(withIdentifier: pawIdentifier)
+                    as? MapHomeApplePawprintAnnotationView)
+                    ?? MapHomeApplePawprintAnnotationView(annotation: annotation, reuseIdentifier: pawIdentifier)
+                configurePawprint(pawView, annotation: annotation)
+                return pawView
+            }
             let reuseIdentifier = "MapHome.appleAnnotation"
             let view = (mapView.dequeueReusableAnnotationView(withIdentifier: reuseIdentifier)
                 as? MapHomeAppleHostedAnnotationView)
@@ -16894,6 +16948,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     existing.update(from: annotation)
                     if let view = mapView.view(for: existing) as? MapHomeAppleHostedAnnotationView {
                         configure(view, annotation: existing)
+                    } else if let view = mapView.view(for: existing) as? MapHomeApplePawprintAnnotationView {
+                        configurePawprint(view, annotation: existing)
                     }
                 } else {
                     mapView.addAnnotation(MapHomeAppleMapAnnotation(annotation: annotation))
@@ -17028,6 +17084,24 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             view.isUserInteractionEnabled = false
             view.isAccessibilityElement = true
             view.accessibilityTraits = .image
+            view.accessibilityLabel = annotation.label
+        }
+
+        private func configurePawprint(
+            _ view: MapHomeApplePawprintAnnotationView,
+            annotation: MapHomeAppleMapAnnotation
+        ) {
+            guard case .pawprint(let paw) = annotation.kind else { return }
+            let color: Color = paw.isSelectedRoute ? .orange
+                : paw.isPredicted ? Color.gray.opacity(0.68)
+                : MapHomePawprintSpeedColor.color(forMetersPerSecond: paw.speedMetersPerSecond)
+            view.annotation = annotation
+            view.apply(paw, color: UIColor(color))
+            view.isEnabled = annotation.isInteractive
+            view.isUserInteractionEnabled = annotation.isInteractive
+            view.isAccessibilityElement = annotation.isInteractive
+            view.accessibilityTraits = annotation.isInteractive ? .button : .image
+            view.accessibilityIdentifier = "MapHome.appleAnnotation.\(annotation.identifier)"
             view.accessibilityLabel = annotation.label
         }
 
