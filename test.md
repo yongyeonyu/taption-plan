@@ -1742,3 +1742,11 @@
 - 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,435개 중 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-184.log`).
 - 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 184, `altool` `No errors uploading`(`altool-184.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204) 후 readback: 184·183·182·181 확인.
 - 제한: 발자국 표시 변경은 화면에서 확인하지 못했다. WeatherKit 인증 실패는 Apple 계정 쪽 조치가 필요하다. 설치·테스터 수신은 확인하지 않았다.
+
+## MAP1019F01 · 오늘 지도 경로가 실시간 몇 점만 그려지던 근본 원인 수정 (2026-10-19)
+- 근거(iPhone 18 Pro Max, 콘솔 연결 실행 `-TaptionDiagnosticsStdout`, `console-1.log`): 저장소에는 오늘 GPS 1,333건이 있었지만(`sensor_timeline_evidence_loaded gps=1333`) 지도 하루치 로드는 `day_load_invalidated reason=raw_data_changed` 직후 `source_projection_cancelled`, `readings=0`, `is_complete=false`로 끝났고 다시 시도하지 않았다. 지도 경로는 실시간 2점(`source_readings=2`)만 썼다.
+- 원인: 새 위치가 저장될 때마다 `PlanDayLoadCoordinator.invalidate(day:)`가 진행 중인 하루치 읽기와 로드를 취소했다. 지도는 오늘 날짜의 로드 키에 원본 변경 번호를 넣지 않아(`rawDataRevision: isToday ? 0`) 취소된 뒤 다시 불러오지 않았다.
+- 수정: 무효화는 진행 중인 작업을 취소하지 않고 캐시와 진행 목록에서만 뺀다. 읽는 중 무효화된 결과는 완전한 하루로 돌려주되 캐시에 넣지 않는다(다시 읽기 반복 없음). 새 점은 실시간 경로가 덧붙인다. 진단 로그를 콘솔로도 내보내는 실행 인자 `-TaptionDiagnosticsStdout`를 추가했다.
+- 검증: 새 테스트 `testInvalidationDuringLoadReturnsCompleteDayWithoutCachingIt` 포함 `SensorDayStoreTests` 52개 통과(`dayload-1.log`). 기기 재실행(`console-2.log`): `day_snapshot_load_finished readings=1336 source=rebuilt_memory duration_ms=201`, `map_day_snapshot_loaded is_complete=true`, `map_route_readings_prepared display_readings=1242`, 경로 7구간 1,236점. 화면은 직접 보지 않았다.
+- 날씨: 같은 실행에서도 `live_environment_failed authentication=true`. Apple 계정 쪽 조치가 필요하다.
+- 정리: 불필요 파일 삭제 — `build/DD-ci`, `build/ArchiveDD`의 중간 산출물·캐시·아카이브 179~183·IPA 전부(184 아카이브만 남김), 디자인 토큰 워크트리 폴더(브랜치 `worktree-agent-ada235d414d79094f`는 남김). `build/validation` 로그·결과 번들, `artifacts`(릴리스 심볼·검증 근거), 빌드 캐시 `build/DD`·`build/DD18`은 유지했다.
