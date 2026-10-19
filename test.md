@@ -1736,3 +1736,9 @@
 - 수정: `MapHomeApplePawprintAnnotationView`(이미지 뷰 하나, 색별 이미지 캐시, 28pt 고정 크기)로 교체. 충돌 계산 제외(`collisionMode = .none`)는 유지.
 - 검증: 관련 단위 테스트 43개 통과(`paw-native.log`), 앱 Release 빌드와 iPhone 18 Pro Max 설치 성공. 화면 확인 못 함. 경로선이 확대 시 늦게 그려지는 문제(경로 재계산이 줌 단계별로 비동기일 가능성)와 GPS 점프 직선은 이번에 다루지 않았다.
 - 날씨: WeatherKit 인증 실패(JWT Code=2)가 계속된다. 앱 ID 기능과 프로파일은 정상이므로 계정의 보류 중인 계약 동의 여부 등 Apple 계정 쪽 확인이 필요하다(추정).
+
+## REL1019E01 · 빌드 184 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(빌드 번호 184: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: 발자국 Apple 지도 표시·충돌 제외·네이티브 뷰(MAP1019B01/D01/E01), 확정·선택 예상 경로 선 추가.
+- 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,435개 중 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-184.log`).
+- 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 184, `altool` `No errors uploading`(`altool-184.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204) 후 readback: 184·183·182·181 확인.
+- 제한: 발자국 표시 변경은 화면에서 확인하지 못했다. WeatherKit 인증 실패는 Apple 계정 쪽 조치가 필요하다. 설치·테스터 수신은 확인하지 않았다.
