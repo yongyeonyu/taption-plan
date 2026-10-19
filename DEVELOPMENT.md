@@ -11,7 +11,7 @@
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
-| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `SecurityBackupCore.swift` |
+| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
@@ -29,7 +29,7 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 ## 보존해야 할 데이터 계약
 
 - `PlanRepository`와 `HealthKitImportStore`는 기존 날짜 없는 snapshot 키 `0000-00-00`을 읽기 위해 `allowsUndatedSnapshots`를 켭니다. 일반 날짜, event, map 검증은 이 예외를 물려받지 않아야 합니다.
-- `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. `SecurityBackupCore` 백업 포맷의 legacy read 경로는 별도 계약이므로 포맷 작업 때 구분해 확인하세요.
+- `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. 백업 파일(`yyyy-MM.taptionbackup`)은 `TaptionBackupFormat` 헤더 버전을 따르며 이전 백업 포맷은 읽지 않습니다.
 - 센서 단일 레코드는 `TaptionPlanBinaryRecord`를 통해 `TSR1` 고정 필드 순서로 직접 저장/복원합니다. UUID는 16바이트, 실수/시각은 원래 64비트, 정수는 little-endian 64비트, 문자열은 UTF-8 길이와 원문, optional은 별도 존재 태그를 사용합니다. 52개 필드·중첩 센서·enum의 모든 값을 보존하며 필드 순서/enum 코드를 바꿀 때는 형식 버전을 올려야 합니다. 기존 SHA-256·바이트 수·LZFSE envelope 검사를 생략하지 않습니다. 정상 읽기는 현재 형식만 사용하며, 실패한 센서 행의 envelope·체크섬이 유효하고 내부가 bplist00인 경우에만 기존 PropertyList를 한 번 해석해 조건부 repair 트랜잭션으로 TSR1에 저장합니다. UUID·sequence와 SQLite 시각의 1µs 이내 일치를 확인하고 삭제 generation·원래 행 비교를 유지합니다. 실제 사용자 DB를 도구로 삭제/초기화하지 않습니다. 일반 Codable/JSON 모델과 portable 백업 경로는 독립적으로 유지합니다. 읽을 수 없는 센서 원본 때문에 수동 백업이 중단되면 localSensorArchiveIncomplete로 구분하고 기존 기록/백업을 보존합니다.
 - 활동 기록은 `actual_records`의 형식 있는 SQLite 열에 저장합니다. UUID와 중복 출현 순서로 행 키를 만들고 별도 `position`으로 원래 배열 순서를 보존합니다. 시작/종료/생성 시각은 Foundation 기준 시각의 REAL로 저장하며, 제목·분류·연결·source·confidence·provenance·분류 잠금은 별도 열입니다. 가변 evidence만 현재 정본 codec으로 저장합니다. `plan.actuals`에는 형식 버전과 건수만 남고, 이전512건 배열 분할/manifest/원본 중복 테이블은 사용하지 않습니다.
 - `actual_record_ranges`의1차원 RTree가 겹치는 시간 구간을 찾습니다. Float 경계의 바깥 반올림으로 얻은 후보를 원래 REAL 시각으로 다시 제한하므로 자정·소수점 경계·진행 중 기록을 유지합니다. 조회는 revision과 행을 같은 WAL 읽기 트랜잭션에서 가져옵니다. DB 트리거가 행 삽입/수정/삭제 시 시간 인덱스와 활동 revision을 함께 갱신합니다.
