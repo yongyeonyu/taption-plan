@@ -1706,3 +1706,12 @@
 ## CI1019A01 · GitHub CI `app` 작업 실패 수정 (2026-10-19)
 - 원인: CI(Xcode 26.6)에서 `VoiceMemoPlayer`의 `AVAudioPlayerDelegate` 적합이 메인 액터 격리를 넘는다는 오류 1건으로 `app` 작업이 실패했다. 로컬(Xcode 27.0)에서는 나타나지 않는다. 확인한 CI 실행 12건이 모두 실패였고(빌드 178 전후부터), 모두 이 오류로 본다(최신 실행 로그만 직접 확인).
 - 수정: `@preconcurrency AVAudioPlayerDelegate`로 선언. 동작 변경 없음. 로컬 빌드와 `AppLockAndPINTests` 통과(`ci-fix.log`). 이 수정은 빌드 182 이후 소스라서 TestFlight 빌드에는 반영되지 않았다.
+
+## MAP1019C01 · 날씨 표시·경로 속도 그라데이션·GPS 로그 실시간·자동 줌 (브랜치 map1019c01, 2026-10-19)
+- 해석: "초록→빨강 그라데이션"은 속도 기준으로 해석했다(느림 초록 → 빠름 빨강, `MapHomePawprintSpeedColor`와 같은 척도, 시속 150km에서 최대). 실제(GPS) 경로에만 적용하고 예상·지하철 경로는 기존 색을 쓴다. 속도를 구할 수 없으면(시각 없음) 기존 단색. 구간은 최대 64개, 3점 이동 평균, 구간 수가 곧 색 단계라 연속 그라데이션이 아니라 64단계 근사다.
+- 구현: 순수 규칙 `TaptionPlan/UI/MapHomeLiveMapPolicies.swift`(날씨 상태·집 날씨 배지·속도 구간·자동 줌 governor·`gps_fix` 필드). 날씨 서비스 `AppleIntegrations.swift`(인증 실패 구분 `authenticationFailed`, 재시도 6시간 → 15분), AppModel `weatherStatus`·`live_environment_failed.authentication`, 레일 안내 `MapHomeView.currentTimeRail`, 집 핀 `MapHomePlacePin.homeWeatherBadge`(벡터·Apple 공통 뷰), 경로 `MapHomeView.vectorRoutes/appleActualRoutes`+`MapHomeVectorMap` 활성 경로 구간, 자동 줌 `MapHomeView.liveFollowDistance`(벡터는 카메라 distance, Apple은 `MapHomeAppleViewportCommand.distance`), GPS 로그 `AppleSensorCollector.recordForegroundGPSFix`+노이즈 게이트 `gps_fix` 1초.
+- 날씨 레일 추적: 레일 코드(`MapHomeWeatherSidebar`, `weatherSidebarVisible` 기본 true)는 `isComplete`(fetchedAt 있음·stale 아님)인 오늘 날씨가 있으면 그리며 필터·날짜·레이아웃 문제는 찾지 못했다(`testWeatherRailShowsCompleteContextsForTheSelectedDay`). 안 보인 원인은 WeatherKit 인증 실패로 데이터가 없는 것이다. 로그의 `Failed to generate jwt token ... Code=2`는 앱 코드로 해결되지 않으며 Apple 개발자 계정 쪽 WeatherKit 서비스 활성화·전파 확인이 필요하다. 이번 변경은 실패 이유 표시와 15분 재시도만 한다.
+- GPS 로그 flush: 로거는 기록마다 큐에서 바로 파일에 이어 쓰므로 별도 배치가 없어 이미 실시간이다(오류 수준은 동기). 변경 없음. `testGPSFixIsWrittenToLogImmediatelyAndCoalesced`가 즉시 읽힘과 1초 합치기를 확인한다.
+- 테스트(실기기 iPhone 11 Pro): 새 `MapHomeLiveMapTests` 29개 통과(`live-map-1.log`). 전체 `TaptionPlanTests` 1,435개 중 실패는 기존 환경 실패 2개 테스트(StoreKit 구매·복원, LocalizationCatalog의 Mac 경로 파일)뿐, 새 실패 없음(`full-1.log`). 앱 Debug 빌드는 위 테스트 빌드에 포함되어 통과.
+- 제한: 화면은 확인하지 못했다(UI 스모크 불가, 시뮬레이터 금지). 집 날씨 배지 위치/겹침, 레일 안내 문구 크기, 경로 그라데이션 모양, 자동 줌 체감(2초 간격 단계 점프, Apple 지도는 애니메이션 없음)은 대표 실기기 확인이 필요하다. 사용자가 지도를 조작하면 20초 동안 자동 줌이 멈추고 위치 버튼을 누르면 풀린다. 집 날씨는 "현재 위치" 날씨를 집 핀에 보여준다(집 위치 별도 조회 아님).
+

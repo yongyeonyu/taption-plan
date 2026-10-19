@@ -1,5 +1,12 @@
 # 남은 요청
 
+## MAP1019C01 · 날씨 표시·이동 경로 속도 그라데이션·GPS 로그 실시간·속도 비례 자동 줌 — 브랜치 map1019c01 (2026-10-19)
+- 요청(대표): (1) "사이드바 옆에 날씨가 나오게, 현재 날씨는 집 위에 아이콘으로." (2) "이동 경로도 초록→빨강 그라데이션." (3) "앱 실행 중 GPS 로그가 실시간으로 찍히게, 속도에 따라 지도 줌 인/아웃 자동 조절."
+- 원인: (1) 실기기에서 WeatherKit이 `WDSJWTAuthenticatorServiceListener.Errors Code=2`(JWT 인증 실패)로 실패하고, `AppleWeatherContextService`가 6시간 동안 재시도 없이 `temporarilyUnavailable`로 조용히 사라지게 해 화면에는 빈 레일만 남는다(Apple 개발자 계정 쪽 서비스 활성화·전파 문제로 코드로는 못 고친다). 집 핀에는 날씨 표시가 없다. (2) 경로 선이 단색(`actualRouteHex`)이다. (3) 위치 fix마다의 로그가 없고(`location_gate_summary`가 1분 요약뿐), 속도 비례 줌은 재생(`MapHomePlaybackZoomPolicy`)에만 있고 실시간 따라가기에는 없다.
+- 해결: (1) AppModel에 날씨 상태(마지막 성공 시각·실패 종류·실패 시각)를 값이 바뀔 때만 갱신, 서비스는 인증 실패를 `authenticationFailed`로 구분하고 재시도를 15분으로, 사이드바 옆 레일에 실패 이유를 작게 표시, `live_environment_failed`에 `authentication` 필드, 집 핀 위 현재 날씨 아이콘+기온 오버레이(벡터·Apple 둘 다, 데이터 없으면 숨김). (2) 속도 구간 색(`MapHomePawprintSpeedColor` 척도: 느림 초록→빠름 빨강, 150km/h에서 최대)을 순수 함수로 계산해 경로를 구간별 폴리라인(Apple)·구간별 feature(MapLibre)로 나눈다(상한 64구간, 3점 이동 평균, 지오메트리 서명 캐시, 속도 없으면 단색). 실제 경로에만 적용. (3) 포그라운드 위치 fix마다 `gps_fix`(좌표 없음, 1초 합치기), 실시간 따라가기 줌 정책(히스테리시스·최소 간격·사용자 조작 후 일시 정지)을 벡터·Apple 지도에 적용.
+- 검증 기준: 날씨 상태·아이콘 매핑·표시 판단, 속도 구간 색·분할·상한·폴백, 속도→줌 정책, `gps_fix` 필드·합치기 단위 테스트(실기기), 앱 Debug 빌드, 전체 `TaptionPlanTests`를 기존 실패 2개(StoreKit, LocalizationCatalog)와 비교. 결과는 `build/validation/MAP1019C01/`와 test.md. 화면 확인은 대표(UI 스모크 불가).
+- 진행: 구현·단위 테스트(29개)·전체 TaptionPlanTests(기존 실패 2개뿐)·Debug 빌드 통과(test.md MAP1019C01). 남음: 대표 실기기 화면 확인, WeatherKit 인증은 Apple 개발자 계정 쪽 조치 필요.
+
 ## UXP1019C01 · 데이터 보호 키패드·메뉴 정리·Apple 지도 안개·GPS 1분 간격·Apple Watch 상태 (2026-10-19)
 - 요청: (1) 데이터 보호 시트에서 비밀번호 칸 밖을 누르면 숫자 키패드가 내려가고, 비밀번호가 등록돼 있으면 칸에 점 6개로 계속 표시. (2) 햄버거 메뉴 행 스타일 정리. (3) 안개 탐험(스모크)을 Apple 지도에도 적용. (4) 화랑이 아이콘 크게. (5) GPS 수집 간격 1분 단위, 5분 눈금 스냅. (6) Apple Watch 데이터 행을 사용 가능/불가 + 가져온 시각으로 표시하고 설명 문구 삭제.
 - 해결: (1) `MapHomeSecuritySheet`에 `@FocusState`, 빈 곳 탭·스크롤 시 키패드 내림, 등록 시 placeholder 점 6개, 저장 후 입력값 유지. (2) Apple Watch 행을 다른 행과 같은 아이콘·글꼴·여백·chevron으로. (3) `MapHomeFogOverlay`/`MapHomeFogRenderer`(MKOverlay)로 벡터 지도와 같은 반경(발자국·장소 61pt, 현재 위치 81pt)을 걷어냄. (4) 메뉴 머리의 `MapHomeHomeIcon` 46×42 → 58×53(INT1019A01의 "화랑이 크기는 그대로"를 대표가 이번에 바꿈). 지도 위 화랑이 마커(36pt)는 그대로. (5) `GPSLoggingPreferences.supportedIntervalSeconds` 1~15분, `clampedSeconds`가 5·10·15분 ±1분을 스냅, 메뉴 슬라이더 1분 단위. (6) `appleWatchDataStatusText`(연결 상태 + `healthEnabled` + `lastHealthRefreshAt`), 펼친 영역 설명 문단 삭제.

@@ -574,6 +574,7 @@ struct MapHomeVectorContentKey: Equatable {
     let active: MapHomeVectorRouteContentKey?
     let expected: [MapHomeVectorRouteContentKey]
     let subway: [MapHomeVectorRouteContentKey]
+    var activeSegments: [MapHomeVectorRouteContentKey] = []
 }
 
 enum MapHomeRouteGeometrySignature {
@@ -666,6 +667,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let onUserCameraGesture: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let onSingleTap: (CGPoint, [String: CGPoint]) -> Void
+    /// 속도 그라데이션으로 나뉜 실제 경로 구간(있으면 `activeRoute` 대신 그린다).
+    var activeRouteSegments: [MapHomeVectorRoute] = []
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -783,7 +786,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 historical: parent.historicalRoutes.map(\.contentKey),
                 active: parent.activeRoute?.contentKey,
                 expected: parent.expectedRoutes.map(\.contentKey),
-                subway: parent.subwayRoutes.map(\.contentKey)
+                subway: parent.subwayRoutes.map(\.contentKey),
+                activeSegments: parent.activeRouteSegments.map(\.contentKey)
             )
             guard signature != lastContentSignature else {
                 if lastProjectedMarkers != parent.markers || lastProjectionBounds != mapView.bounds {
@@ -797,7 +801,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 in: mapView
             )
             setShape(
-                routes: parent.activeRoute.map { [$0] } ?? [],
+                routes: (parent.activeRoute.map { [$0] } ?? []) + parent.activeRouteSegments,
                 sourceID: LayerID.activeSource,
                 in: mapView
             )
@@ -991,6 +995,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         private var firstRouteCoordinate: CLLocationCoordinate2D? {
             parent.activeRoute?.coordinates.first
+                ?? parent.activeRouteSegments.first?.coordinates.first
                 ?? parent.historicalRoutes.first?.coordinates.first
                 ?? parent.expectedRoutes.first?.coordinates.first
                 ?? parent.subwayRoutes.first?.coordinates.first
@@ -1075,16 +1080,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
             }
 
             let active = addSource(LayerID.activeSource, to: style)
+            // 구간마다 색(속도 그라데이션)이 달라 feature 속성에서 읽는다.
             let activeLayer = lineLayer(
                 LayerID.activeLayer,
                 source: active,
-                color: NSExpression(
-                    forConstantValue: UIColor(
-                        Color(hex: MapHomeWBSTripStyle.actualRouteHex)
-                    )
-                ),
+                color: NSExpression(format: "CAST(color, 'UIColor')"),
                 width: MapHomeWBSTripStyle.actualRouteLineWidth,
-                opacity: NSExpression(forConstantValue: MapHomeWBSTripStyle.actualRouteOpacity)
+                opacity: NSExpression(forKeyPath: "opacity")
             )
             if style.layer(withIdentifier: activeLayer.identifier) == nil {
                 style.addLayer(activeLayer)

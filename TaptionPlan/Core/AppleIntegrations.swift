@@ -1506,6 +1506,8 @@ private extension HKWorkoutActivityType {
 
 actor AppleWeatherContextService {
     private static let maximumForecastDays = 10
+    /// WeatherKit 인증 실패 뒤 다시 시도하기까지 기다리는 시간.
+    static let authenticationRetryInterval: TimeInterval = 15 * 60
     private let service = WeatherKit.WeatherService.shared
     private var cachedContext: CachedWeatherContext?
     private var appleAuthenticationRetryAfter: Date?
@@ -1547,7 +1549,7 @@ actor AppleWeatherContextService {
             } catch {
                 if Self.isWeatherKitAuthenticationFailure(error) {
                     appleAuthenticationRetryAfter = date.addingTimeInterval(
-                        6 * 60 * 60
+                        Self.authenticationRetryInterval
                     )
                 }
             }
@@ -1565,6 +1567,9 @@ actor AppleWeatherContextService {
                 context: context
             )
             return context
+        }
+        if appleAuthenticationRetryAfter != nil {
+            throw WeatherContextServiceError.authenticationFailed
         }
         throw WeatherContextServiceError.temporarilyUnavailable
     }
@@ -1622,6 +1627,9 @@ actor AppleWeatherContextService {
                 Self.weatherContext($0, isForecast: $0.date >= Date.now)
             }
         } catch {
+            if Self.isWeatherKitAuthenticationFailure(error) {
+                throw WeatherContextServiceError.authenticationFailed
+            }
             throw WeatherContextServiceError.temporarilyUnavailable
         }
     }
@@ -1668,7 +1676,7 @@ actor AppleWeatherContextService {
         )
     }
 
-    private static func isWeatherKitAuthenticationFailure(
+    static func isWeatherKitAuthenticationFailure(
         _ error: Error
     ) -> Bool {
         let nsError = error as NSError
@@ -1704,15 +1712,23 @@ private struct CachedWeatherContext {
     }
 }
 
-enum WeatherContextServiceError: LocalizedError {
+enum WeatherContextServiceError: LocalizedError, Equatable {
     case temporarilyUnavailable
+    case authenticationFailed
 
     var errorDescription: String? {
         message()
     }
 
     func message(preference: AppLanguagePreference = .current) -> String {
-        AppLanguagePreference.text(
+        if self == .authenticationFailed {
+            return AppLanguagePreference.text(
+                korean: "Apple 날씨(WeatherKit) 인증에 실패했습니다.",
+                english: "Apple Weather (WeatherKit) authentication failed.",
+                preference: preference
+            )
+        }
+        return AppLanguagePreference.text(
             korean: "날씨 서비스에 잠시 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
             english: "The weather service is temporarily unavailable. Please try again shortly.",
             preference: preference
@@ -3103,10 +3119,24 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         ) {
             gateIgnoredCount += 1
             flushLocationGateSummary(at: now)
+            recordForegroundGPSFix(
+                newestLocation,
+                accepted: false,
+                isFirstFix: isFirstLocationFix,
+                batchCount: validLocations.count,
+                at: now
+            )
             return
         }
         gateAcceptedCount += 1
         flushLocationGateSummary(at: now)
+        recordForegroundGPSFix(
+            newestLocation,
+            accepted: true,
+            isFirstFix: isFirstLocationFix,
+            batchCount: validLocations.count,
+            at: now
+        )
         lastAcceptedLocationAt = now
         latestLocation = newestLocation
         if let precise = validLocations.last(where: {
@@ -3151,6 +3181,42 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 emit(force: true)
             }
         }
+    }
+
+    /// 앱이 포그라운드일 때 받은 fix를 좌표 없이 남긴다. 1초에 한 번을 넘는 기록은
+    /// 로거의 소음 게이트가 합치고 `suppressed_since_last`로 개수를 붙인다.
+    private func recordForegroundGPSFix(
+        _ location: CLLocation,
+        accepted: Bool,
+        isFirstFix: Bool,
+        batchCount: Int,
+        at now: Date
+    ) {
+        guard isForegroundLiveLocationTrackingEnabled else { return }
+        let source = location.sourceInformation
+        TaptionPlanDiagnosticsLogger.shared.record(
+            GPSFixDiagnostics.eventName,
+            fields: GPSFixDiagnostics.fields(
+                accepted: accepted,
+                reason: GPSFixDiagnostics.reason(
+                    accepted: accepted,
+                    hasPreviousLocation: !isFirstFix,
+                    isTrulyStill: stillnessTracker.isTrulyStill(at: now),
+                    motionIsStationary: latestMotion == .stationary
+                ),
+                source: GPSFixDiagnostics.source(
+                    isSimulated: source?.isSimulatedBySoftware ?? false,
+                    isFromAccessory: source?.isProducedByAccessory ?? false
+                ),
+                hasAltitude: location.verticalAccuracy >= 0
+            ),
+            metrics: GPSFixDiagnostics.metrics(
+                horizontalAccuracy: location.horizontalAccuracy,
+                speed: location.speed,
+                course: location.course,
+                batchCount: batchCount
+            )
+        )
     }
 
     /// 정지 판정이 위치를 얼마나 걸러냈는지 1분마다 요약해 남긴다(검증·분석용).
