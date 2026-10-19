@@ -1624,3 +1624,161 @@ private actor IndexedRepositoryProbe: PlanDataRepository {
     }
     func deleteAll() async throws { try await primary.deleteAll() }
 }
+
+import SQLite3
+
+final class TaptionStoreV2Tests: XCTestCase {
+    private var directory: URL!
+    private var calendar: Calendar!
+
+    override func setUpWithError() throws {
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("store-v2-\(UUID().uuidString)")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        self.calendar = calendar
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    private var storeURL: URL { directory.appendingPathComponent("taption.sqlite") }
+    private let base = Date(timeIntervalSince1970: 1_792_300_000)  // 2026-10-18 14:06 KST
+
+    private func reading(
+        _ offset: TimeInterval, speed: Double? = nil, device: TrackingDevice = .iPhone
+    ) -> SensorReading {
+        var value = SensorReading(
+            timestamp: base.addingTimeInterval(offset),
+            point: GeoPoint(latitude: 37.5612, longitude: 126.8115, altitude: 21.5,
+                            horizontalAccuracy: 12.25, verticalAccuracy: 3),
+            locationFixQuality: .precise,
+            gpsAvailable: true,
+            sourceDevice: device
+        )
+        value.speedMetersPerSecond = speed
+        return value
+    }
+
+    func testReadingRoundTripKeepsEveryFieldIncludingNestedOnes() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        var rich = reading(0, speed: 1.75)
+        rich.motion = .walking
+        rich.motionConfidence = .high
+        rich.courseDegrees = 271.5
+        rich.nearbyStation = true
+        rich.nearbyStationName = "송정"
+        rich.matchesRailRoute = true
+        rich.stepCount = 1234
+        rich.behavior = "commute"
+        rich.trackingSessionID = UUID()
+        rich.trackingKind = .automatic
+        rich.trackingWasAutomaticallyDetected = true
+        rich.sequence = 42
+        rich.deviceMotionSummary = DeviceMotionSummary(
+            sampleCount: 30, meanUserAccelerationG: 0.12, userAccelerationStandardDeviationG: 0.03,
+            peakUserAccelerationG: 0.4, meanRotationRateRadiansPerSecond: 0.2,
+            rotationRateStandardDeviationRadiansPerSecond: 0.05, peakRotationRateRadiansPerSecond: 0.9
+        )
+        rich.behaviorEvidence = ["a", "b"]
+        try await store.upsertReadings([rich, reading(10)])
+
+        let loaded = try await store.readings(from: base.addingTimeInterval(-1), to: base.addingTimeInterval(60))
+        XCTAssertEqual(loaded.count, 2)
+        XCTAssertEqual(loaded.first, rich)
+        XCTAssertNil(loaded.last?.speedMetersPerSecond)
+    }
+
+    func testUpsertReplacesTheSameIDAndRangeIsHalfOpenAndOrdered() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        var first = reading(30, speed: 1)
+        try await store.upsertReadings([first, reading(0), reading(60)])
+        first.speedMetersPerSecond = 9
+        try await store.upsertReadings([first])
+        let count = try await store.readingCount()
+        XCTAssertEqual(count, 3)
+        let loaded = try await store.readings(from: base, to: base.addingTimeInterval(60))
+        XCTAssertEqual(loaded.map(\.timestamp), [base, base.addingTimeInterval(30)])
+        XCTAssertEqual(loaded.last?.speedMetersPerSecond, 9)
+    }
+
+    func testReadingsAreQueryableWithPlainSQLByColumn() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        try await store.upsertReadings([
+            reading(0, speed: 0.5), reading(30, speed: 25), reading(60, speed: 40, device: .appleWatch),
+        ])
+        await store.close()
+
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(storeURL.path, &database, SQLITE_OPEN_READONLY, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        func scalar(_ sql: String) -> Int32 {
+            var statement: OpaquePointer?
+            XCTAssertEqual(sqlite3_prepare_v2(database, sql, -1, &statement, nil), SQLITE_OK)
+            defer { sqlite3_finalize(statement) }
+            XCTAssertEqual(sqlite3_step(statement), SQLITE_ROW)
+            return sqlite3_column_int(statement, 0)
+        }
+        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE speed_mps > 20"), 2)
+        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE source_device = 'appleWatch'"), 1)
+        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE day = '2026-10-18'"), 3, "현지(서울) 날짜로 나뉜다")
+        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE h_acc < 20 AND fix_quality = 'precise'"), 3)
+        XCTAssertEqual(scalar("PRAGMA user_version"), Int32(TaptionStoreV2.schemaVersion))
+    }
+
+    func testRecordsKeepOriginAndSkipDeletedAndFilterByKindAndRange() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        func record(_ id: String, kind: String, offset: TimeInterval, origin: TaptionStoreRecord.Origin,
+                    deleted: Bool = false) -> TaptionStoreRecord {
+            TaptionStoreRecord(
+                id: id, kind: kind, start: base.addingTimeInterval(offset),
+                end: base.addingTimeInterval(offset + 600), updatedAt: base, origin: origin,
+                isDeleted: deleted, body: #"{"title":"\#(id)"}"#
+            )
+        }
+        try await store.upsertRecords([
+            record("a", kind: "plan", offset: 0, origin: .user),
+            record("b", kind: "plan", offset: 3_600, origin: .auto),
+            record("c", kind: "plan", offset: 7_200, origin: .user, deleted: true),
+            record("d", kind: "memo", offset: 0, origin: .imported),
+        ])
+        let plans = try await store.records(kind: "plan")
+        XCTAssertEqual(plans.map(\.id), ["a", "b"])
+        XCTAssertEqual(plans.map(\.origin), [.user, .auto])
+        XCTAssertEqual(plans.first?.body, #"{"title":"a"}"#)
+        let later = try await store.records(kind: "plan", from: base.addingTimeInterval(1_800))
+        XCTAssertEqual(later.map(\.id), ["b"])
+        let memoCount = try await store.recordCount(kind: "memo")
+        let totalCount = try await store.recordCount()
+        XCTAssertEqual(memoCount, 1)
+        XCTAssertEqual(totalCount, 4)
+    }
+
+    func testReopenKeepsDataAndNewerSchemaIsRefusedAndDeleteAllClears() async throws {
+        do {
+            let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+            try await store.upsertReadings([reading(0)])
+            try await store.setMeta("device", "iPhone 11 Pro")
+            await store.close()
+        }
+        let reopened = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        let reopenedCount = try await reopened.readingCount()
+        let device = try await reopened.meta("device")
+        let version = try await reopened.meta("schema_version")
+        XCTAssertEqual(reopenedCount, 1)
+        XCTAssertEqual(device, "iPhone 11 Pro")
+        XCTAssertEqual(version, String(TaptionStoreV2.schemaVersion))
+        try await reopened.deleteAll()
+        let clearedCount = try await reopened.readingCount()
+        XCTAssertEqual(clearedCount, 0)
+        await reopened.close()
+
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(storeURL.path, &database, SQLITE_OPEN_READWRITE, nil), SQLITE_OK)
+        sqlite3_exec(database, "PRAGMA user_version = 99", nil, nil, nil)
+        sqlite3_close(database)
+        XCTAssertThrowsError(try TaptionStoreV2(url: storeURL, calendar: calendar)) { error in
+            XCTAssertEqual(error as? TaptionStoreV2Error, .unsupportedSchema(99))
+        }
+    }
+}

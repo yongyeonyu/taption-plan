@@ -1,5 +1,10 @@
 # 검증 기록
 
+## ARC1019A01 · 1단계 새 저장소 TaptionStoreV2 (브랜치 rewrite/storage-v2, 2026-10-19)
+- 구현: `TaptionStoreV2.swift`(앱 target). 새 SQLite 파일, 스키마 1. `readings` 표는 위치·센서 원본을 열이 나뉜 행(29개 열 + 현지 날짜 `day` + `extra` JSON)으로 저장하고, `records` 표는 계획·메모 등을 행 하나씩, 출처(auto/user/imported)·삭제 표시와 함께 둔다. `SensorReading` ↔ 행 변환은 열 정의 표 하나로 무손실 왕복한다(열로 빼지 않은 필드는 `extra`). 이전 DB·백업은 읽지도 지우지도 않는다. WAL, 파일 보호 `completeUntilFirstUserAuthentication`, 더 새로운 스키마 거부.
+- 자동 검증: iPhone 11 Pro 실기기, `TaptionStoreV2Tests` 5개 통과·실패 0, `TEST SUCCEEDED`(`m1-11b.log`). 필드가 가득 찬 기록의 무손실 왕복(중첩 필드 포함), 같은 ID 덮어쓰기·반개구간·시간순, 일반 SQL 열 조회(속도·출처·현지 날짜·정확도), 기록 출처·삭제·종류·범위 조회, 재열기·새 스키마 거부·전체 삭제. 첫 실행은 `deinit`의 포인터 접근 오류로 컴파일 실패해 연결을 래퍼 클래스로 감쌌다(`m1-11.log`).
+- 제한: 앱은 아직 새 저장소를 쓰지 않는다(2단계에서 연결). 대용량 쓰기·읽기 성능은 측정하지 않았다. 새 DB 파일의 백업·복원은 3단계.
+
 ## PIN1019A01 · 비밀번호 6자리 (2026-10-19)
 - 변경: 새로 등록·변경하는 비밀번호는 6자리 숫자만 받는다(`PlanPINVerifier.currentDigits`). 저장된 검증 정보에 `digits`를 기록하고, 값이 없는 이전 저장본은 4자리로 보아 그대로 풀린다. 앱 잠금 입력창은 등록된 자릿수에서 자동 해제하며 데이터 보호 화면의 문구·입력 제한도 6자리로 바꿨다. `PlanSecurityStatus.pinDigits` 추가.
 - 자동 검증: iPhone 11 Pro 실기기, `SecurityBackupCoreTests`(316개 통과)·`DiagnosticsLogStructureTests`·`TimeScaleTests` 등 339개 중 338 통과, 실패 1(`LocalizationCatalogTests.testEveryCatalogKeyHasAnEnglishValue`: 기기에서 Mac 경로의 `Localizable.xcstrings`를 열지 못함, 이번 변경과 무관한 기기 환경 문제로 보이나 시뮬레이터에서 재실행하지 않았다)(`ux-pin6.log`). 새 테스트: 6자리 검증 구조, 4자리 신규 거부, 이전 4자리 저장본의 해제 유지.
