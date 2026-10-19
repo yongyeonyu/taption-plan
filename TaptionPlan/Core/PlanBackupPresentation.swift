@@ -87,6 +87,8 @@ enum PlanBackupPresenter {
                 name: name, kind: .skipped,
                 detail: text("이 기기에 데이터가 없어 기존 백업을 건드리지 않았습니다.", "No data on this device; the existing backup was not touched.")
             )
+        case .failed(let message):
+            return .init(name: name, kind: .rejected, detail: message)
         }
     }
 
@@ -111,6 +113,16 @@ enum PlanBackupPresenter {
             text(
                 "기존 백업 파일을 읽을 수 없어 덮어쓰지 않았습니다.",
                 "The existing backup file could not be read, so it was not overwritten."
+            )
+        case .existingCorrupted:
+            text(
+                "기존 백업 파일이 손상되었고 이 기기에 그 내용이 모두 없어 덮어쓰지 않았습니다.",
+                "The existing backup is damaged and this device does not hold all of it, so it was not overwritten."
+            )
+        case .staleAfterDataWipe:
+            text(
+                "전체 데이터 삭제 전에 만든 백업이라 합치지도 덮어쓰지도 않았습니다. 복원하거나 백업을 삭제하세요.",
+                "This backup predates a full data deletion, so it was neither merged nor overwritten. Restore it or delete the backups."
             )
         }
     }
@@ -187,6 +199,16 @@ extension TaptionBackupError {
             return text(
                 "올린 파일을 다시 확인하지 못했습니다. 기존 백업은 그대로입니다.",
                 "The uploaded file could not be verified. The existing backup is unchanged."
+            )
+        case .passwordDiffersFromExistingBackup:
+            return text(
+                "기존 백업을 만들 때 쓴 비밀번호와 달라 올리지 않았습니다. 비밀번호를 다시 확인해 주세요.",
+                "This password differs from the one used for the existing backup, so nothing was uploaded. Check your password."
+            )
+        case .conflictingVersions:
+            return text(
+                "iCloud에 같은 백업의 충돌 버전이 있어 건드리지 않았습니다. 다른 기기의 백업을 정리해 주세요.",
+                "iCloud has conflicting versions of this backup, so it was left untouched. Resolve them on your other devices."
             )
         }
     }

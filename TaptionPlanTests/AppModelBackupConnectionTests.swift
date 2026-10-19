@@ -52,6 +52,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
         var configuration = TaptionBackupEngine.Configuration()
         configuration.iterations = 1_000
+        configuration.minimumIterations = 1
         configuration.temporaryDirectory = temporary
         let engine = TaptionBackupEngine(
             store: store, destination: TaptionLocalFolderBackupDestination(directory: backups),
@@ -229,13 +230,7 @@ final class AppModelBackupConnectionTests: XCTestCase {
         }
     }
 
-    func testICloudPlaceholderNamesResolveToTheRealFile() {
-        XCTAssertEqual(
-            TaptionICloudDriveBackupDestination.placeholderTarget(".2026-07.taptionbackup.icloud"),
-            "2026-07.taptionbackup"
-        )
-        XCTAssertNil(TaptionICloudDriveBackupDestination.placeholderTarget("2026-07.taptionbackup"))
-        XCTAssertNil(TaptionICloudDriveBackupDestination.placeholderTarget(".icloud"))
-        XCTAssertEqual(TaptionICloudDriveBackupDestination.defaultContainerIdentifier, "iCloud.com.taption.plan")
+    func testICloudDestinationUsesTheAppUbiquityContainer() {
+        XCTAssertEqual(TaptionICloudDriveBackupDestination().containerIdentifier, "iCloud.com.taption.plan")
     }
 }
