@@ -2205,11 +2205,13 @@ struct MapHomeView: View {
         self.onInitialDataReady = onInitialDataReady
         _selectedScope = State(initialValue: .day)
         _timeRailSegments = State(initialValue: [])
-        _cachedWeatherContexts = State(
-            initialValue: MapHomeWeatherTimelineMath.coalescedDisplayContexts(
-                model.snapshot.weather.filter(MapHomeWeatherDisplayPolicy.isComplete)
-            )
-        )
+        let storedWeather: [WeatherContext] = model.snapshot.weather
+        var completeWeather: [WeatherContext] = []
+        for context in storedWeather where MapHomeWeatherDisplayPolicy.isComplete(context) {
+            completeWeather.append(context)
+        }
+        let displayWeather: [WeatherContext] = MapHomeWeatherTimelineMath.coalescedDisplayContexts(completeWeather)
+        _cachedWeatherContexts = State(initialValue: displayWeather)
     }
 
     private var language: MapHomeLanguage {
@@ -2475,6 +2477,11 @@ struct MapHomeView: View {
     }
 
     var body: some View {
+        lifecycleModifiers(presentationModifiers(baseContent))
+    }
+
+    /// `body`의 수정자 체인이 길면 타입 검사가 느려져(CI에서 시간 초과) 세 덩어리로 나눈다.
+    private var baseContent: some View {
         Group {
             if scenePhase == .background {
                 Color.tpSurface.ignoresSafeArea()
@@ -2501,6 +2508,10 @@ struct MapHomeView: View {
             }
         )
         .preferredColorScheme(.light)
+    }
+
+    private func presentationModifiers(_ content: some View) -> some View {
+        content
         .sheet(item: $selectedMarkerInfo) { info in
             MapHomeMarkerInfoSheet(kind: info, language: language)
                 .presentationDetents([.height(320), .medium])
@@ -2686,6 +2697,10 @@ struct MapHomeView: View {
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
+    }
+
+    private func lifecycleModifiers(_ content: some View) -> some View {
+        content
         .onAppear {
             if scenePhase == .active { restoreInitialMapZoom() }
             prepareRouteProjectionReadings()
@@ -2725,113 +2740,8 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
-        .task(id: MapHomeDaySourceTaskKey(
-            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
-            revision: model.dayProjectionRevision, isReady: model.isBootstrapped,
-            isActive: scenePhase == .active
-        )) {
-            guard model.isBootstrapped, scenePhase == .active else { return }
-            let date = model.selectedDate
-            guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
-                  !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
-                  Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate) else { return }
-            if currentDayDataSnapshot == nil {
-                dayDataSnapshot = prepared
-                dayDataIsPreview = !prepared.isComplete
-            }
-            routeActualIndex = nil
-            refreshHomeGrowth(at: .now)
-            refreshTimeRailSegments()
-            requestRouteProjectionRefresh(preparingReadings: true)
-            requestWBSPlaybackProjectionRefresh()
-            scheduleExpectedRouteRefresh()
-        }
-        .task(
-            id: MapHomeRouteReadingsTaskKey(
-                date: model.selectedDate,
-                isBootstrapped: model.isBootstrapped || model.hasPreparedStartupSettings,
-                rawDataRevision: Calendar.autoupdatingCurrent.isDateInToday(
-                    model.selectedDate
-                ) ? 0 : model.rawDataRevision(for: model.selectedDate),
-                isSceneActive: scenePhase == .active
-            )
-        ) {
-            guard model.isBootstrapped || model.hasPreparedStartupSettings,
-                  scenePhase == .active else { return }
-            let loadStartedAt = ProcessInfo.processInfo.systemUptime
-            let date = model.selectedDate
-            if !routeReadingsLoadState.isLoaded(for: date) {
-                routeReadingsLoadState = .loading(
-                    MapHomeRouteReadingsPolicy.dayKey(for: date)
-                )
-            }
-            applyInitialMapFocusIfNeeded()
-            reportInitialMapShellReadyIfNeeded(for: date)
-            await Task.yield()
-            if let preview = await model.startupDayDataPreview(for: date) {
-                await refreshRouteReadings(for: date, preloadedDayData: preview, isPreview: true)
-            }
-            await model.prepareLocalDataForDisplay()
-            guard !Task.isCancelled, scenePhase == .active,
-                  Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
-            else { return }
-            if let cached = await model.cachedPlanDayDataSnapshot(for: date) {
-                await refreshRouteReadings(
-                    for: date,
-                    preloadedDayData: cached,
-                    isPreview: true
-                )
-                guard !Task.isCancelled,
-                      Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
-                else { return }
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "map_cached_projection_ready",
-                    fields: ["duration_ms": String(Int((
-                        ProcessInfo.processInfo.systemUptime - loadStartedAt
-                    ) * 1_000))]
-                )
-            }
-            guard !Task.isCancelled else { return }
-            async let dayData = model.planDayDataSnapshot(
-                for: date,
-                forceReload: false,
-                refreshRawReadings: true
-            )
-            prepareRouteProjectionReadings()
-            refreshRouteProjection()
-            focusMapIfNeeded()
-            refreshTimeRailSegments()
-            let mapCacheStartedAt = ProcessInfo.processInfo.systemUptime
-            let cachedMapDay = await loadMapDayCache(for: date)
-            let mapCacheDuration = ProcessInfo.processInfo.systemUptime
-                - mapCacheStartedAt
-            applyInitialMapFocusIfNeeded()
-            guard !Task.isCancelled,
-                  Calendar.autoupdatingCurrent.isDate(
-                      date,
-                      inSameDayAs: model.selectedDate
-                  ) else { return }
-            refreshTimeRailSegments()
-            let snapshotWaitStartedAt = ProcessInfo.processInfo.systemUptime
-            await refreshRouteReadings(
-                for: date,
-                preloadedDayData: await dayData,
-                cachedMapDay: cachedMapDay
-            )
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "map_date_load_finished",
-                fields: [
-                    "duration_ms": String(Int((
-                        ProcessInfo.processInfo.systemUptime - loadStartedAt
-                    ) * 1_000)),
-                    "map_cache_ms": String(Int(mapCacheDuration * 1_000)),
-                    "snapshot_wait_ms": String(Int((
-                        ProcessInfo.processInfo.systemUptime - snapshotWaitStartedAt
-                    ) * 1_000)),
-                ]
-            )
-            applyInitialMapFocusIfNeeded()
-        }
+        .task(id: daySourceTaskKey) { await runDaySourceTask() }
+        .task(id: routeReadingsTaskKey) { await runRouteReadingsTask() }
         .onChange(
             of: MapHomeRouteReadingsPreparation.latestRouteInputSignature(
                 model.latestSensorReading
@@ -3117,6 +3027,124 @@ struct MapHomeView: View {
 
     private var usesVectorRoadMap: Bool {
         false
+    }
+
+    private func runDaySourceTask() async {
+        guard model.isBootstrapped, scenePhase == .active else { return }
+        let date = model.selectedDate
+        guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
+              !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
+              Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate) else { return }
+        if currentDayDataSnapshot == nil {
+            dayDataSnapshot = prepared
+            dayDataIsPreview = !prepared.isComplete
+        }
+        routeActualIndex = nil
+        refreshHomeGrowth(at: .now)
+        refreshTimeRailSegments()
+        requestRouteProjectionRefresh(preparingReadings: true)
+        requestWBSPlaybackProjectionRefresh()
+        scheduleExpectedRouteRefresh()
+            }
+
+    private func runRouteReadingsTask() async {
+        guard model.isBootstrapped || model.hasPreparedStartupSettings,
+              scenePhase == .active else { return }
+        let loadStartedAt = ProcessInfo.processInfo.systemUptime
+        let date = model.selectedDate
+        if !routeReadingsLoadState.isLoaded(for: date) {
+            routeReadingsLoadState = .loading(
+                MapHomeRouteReadingsPolicy.dayKey(for: date)
+            )
+        }
+        applyInitialMapFocusIfNeeded()
+        reportInitialMapShellReadyIfNeeded(for: date)
+        await Task.yield()
+        if let preview = await model.startupDayDataPreview(for: date) {
+            await refreshRouteReadings(for: date, preloadedDayData: preview, isPreview: true)
+        }
+        await model.prepareLocalDataForDisplay()
+        guard !Task.isCancelled, scenePhase == .active,
+              Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
+        else { return }
+        if let cached = await model.cachedPlanDayDataSnapshot(for: date) {
+            await refreshRouteReadings(
+                for: date,
+                preloadedDayData: cached,
+                isPreview: true
+            )
+            guard !Task.isCancelled,
+                  Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
+            else { return }
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "map_cached_projection_ready",
+                fields: ["duration_ms": String(Int((
+                    ProcessInfo.processInfo.systemUptime - loadStartedAt
+                ) * 1_000))]
+            )
+        }
+        guard !Task.isCancelled else { return }
+        async let dayData = model.planDayDataSnapshot(
+            for: date,
+            forceReload: false,
+            refreshRawReadings: true
+        )
+        prepareRouteProjectionReadings()
+        refreshRouteProjection()
+        focusMapIfNeeded()
+        refreshTimeRailSegments()
+        let mapCacheStartedAt = ProcessInfo.processInfo.systemUptime
+        let cachedMapDay = await loadMapDayCache(for: date)
+        let mapCacheDuration = ProcessInfo.processInfo.systemUptime
+            - mapCacheStartedAt
+        applyInitialMapFocusIfNeeded()
+        guard !Task.isCancelled,
+              Calendar.autoupdatingCurrent.isDate(
+                  date,
+                  inSameDayAs: model.selectedDate
+              ) else { return }
+        refreshTimeRailSegments()
+        let snapshotWaitStartedAt = ProcessInfo.processInfo.systemUptime
+        await refreshRouteReadings(
+            for: date,
+            preloadedDayData: await dayData,
+            cachedMapDay: cachedMapDay
+        )
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_date_load_finished",
+            fields: [
+                "duration_ms": String(Int((
+                    ProcessInfo.processInfo.systemUptime - loadStartedAt
+                ) * 1_000)),
+                "map_cache_ms": String(Int(mapCacheDuration * 1_000)),
+                "snapshot_wait_ms": String(Int((
+                    ProcessInfo.processInfo.systemUptime - snapshotWaitStartedAt
+                ) * 1_000)),
+            ]
+        )
+        applyInitialMapFocusIfNeeded()
+            }
+
+    /// `body`의 수정자 체인이 길어 타입 검사가 느려지지 않도록 `.task`의 id를 따로 계산한다.
+    private var daySourceTaskKey: MapHomeDaySourceTaskKey {
+        MapHomeDaySourceTaskKey(
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+            revision: model.dayProjectionRevision,
+            isReady: model.isBootstrapped,
+            isActive: scenePhase == .active
+        )
+    }
+
+    private var routeReadingsTaskKey: MapHomeRouteReadingsTaskKey {
+        let date = model.selectedDate
+        let isToday = Calendar.autoupdatingCurrent.isDateInToday(date)
+        let rawRevision: UInt64 = isToday ? 0 : model.rawDataRevision(for: date)
+        return MapHomeRouteReadingsTaskKey(
+            date: date,
+            isBootstrapped: model.isBootstrapped || model.hasPreparedStartupSettings,
+            rawDataRevision: rawRevision,
+            isSceneActive: scenePhase == .active
+        )
     }
 
     /// Map Home이 실제로 MapLibre 벡터 렌더러로 그려지는지(= Apple 스타일이 아님).
