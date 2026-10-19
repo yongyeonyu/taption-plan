@@ -809,6 +809,9 @@ private struct AppLockPINSheet: View {
         validationMessage ?? errorMessage
     }
 
+    /// 등록된 비밀번호의 자릿수(이전에 4자리로 등록했다면 4).
+    private var pinDigits: Int { model.securityStatus.pinDigits }
+
     var body: some View {
         VStack(spacing: 14) {
             Text(
@@ -821,8 +824,8 @@ private struct AppLockPINSheet: View {
                 .font(.taption(size: 20, weight: .bold))
             SecureField(
                 AppLanguagePreference.text(
-                    korean: "4자리 비밀번호",
-                    english: "4-digit PIN",
+                    korean: "\(pinDigits)자리 비밀번호",
+                    english: "\(pinDigits)-digit PIN",
                     rawPreference: languageRawValue
                 ),
                 text: $pin
@@ -836,8 +839,8 @@ private struct AppLockPINSheet: View {
                 .frame(width: 210, height: 48)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
                 .onChange(of: pin) { _, value in
-                    pin = String(value.filter(\.isNumber).prefix(4))
-                    if pin.count == 4 {
+                    pin = String(value.filter(\.isNumber).prefix(pinDigits))
+                    if pin.count == pinDigits {
                         unlock()
                     }
                 }

@@ -12038,6 +12038,7 @@ private struct MapHomeSecuritySheet: View {
 
     private var security: PlanSecurityStatus { model.securityStatus }
     private var hasPIN: Bool { security.hasPIN }
+    private var securityPINDigits: Int { security.pinDigits }
     private var appLockEnabled: Bool {
         security.settings.lockOnLaunch && security.settings.lockOnForeground
     }
@@ -12058,7 +12059,7 @@ private struct MapHomeSecuritySheet: View {
                         Text(language.text("데이터 보호", "Data Protection"))
                             .font(.system(size: 21, weight: .bold, design: .rounded))
                         Text(hasPIN
-                            ? language.text("4자리 비밀번호 등록됨", "4-digit password registered")
+                            ? language.text("\(securityPINDigits)자리 비밀번호 등록됨", "\(securityPINDigits)-digit password registered")
                             : language.text("백업 전 비밀번호 등록 필요", "Set a password before backup")
                         )
                         .font(.system(size: 11.5, weight: .medium, design: .rounded))
@@ -12069,7 +12070,7 @@ private struct MapHomeSecuritySheet: View {
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
 
-                card(language.text("4자리 비밀번호", "4-digit password")) {
+                card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
                     SecureField(language.text("비밀번호", "Password"), text: $pin)
                         .keyboardType(.numberPad)
                         .textContentType(.newPassword)
@@ -12083,7 +12084,8 @@ private struct MapHomeSecuritySheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpReferenceRose)
-                    .disabled(pin.count != 4 || confirmation.count != 4)
+                    .disabled(pin.count != PlanPINVerifier.currentDigits
+                        || confirmation.count != PlanPINVerifier.currentDigits)
                 }
 
                 card(language.text("앱 잠금", "App lock")) {
@@ -12249,7 +12251,7 @@ private struct MapHomeSecuritySheet: View {
     }
 
     private func numericPIN(_ value: String) -> String {
-        String(value.filter(\.isNumber).prefix(4))
+        String(value.filter(\.isNumber).prefix(PlanPINVerifier.currentDigits))
     }
 
     private func savePIN() {

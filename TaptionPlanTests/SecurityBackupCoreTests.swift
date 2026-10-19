@@ -1,3 +1,4 @@
+import CommonCrypto
 import CryptoKit
 import TaptionPlanCore
 import XCTest
@@ -56,7 +57,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: store,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
         let serializedDate = Date(timeIntervalSince1970: date.timeIntervalSince1970)
         XCTAssertNotEqual(date, serializedDate, "Exercise Date's sub-microsecond serialization loss")
@@ -83,7 +84,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
         let service = makeService(backupStore: store, rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider())
-        try service.setPIN("0000")
+        try service.setPIN("000090")
         let date = Date(timeIntervalSince1970: 1_792_300_000)
         let reading = SensorReading(timestamp: date, point: GeoPoint(latitude: 37, longitude: 126,
             altitude: 0, horizontalAccuracy: 5, verticalAccuracy: -1))
@@ -96,12 +97,12 @@ final class SecurityBackupCoreTests: XCTestCase {
         XCTAssertEqual(salt.count, 16)
         XCTAssertEqual(archive.passwordKDFIterations, PlanPINVerifier.pbkdf2Iterations)
         // 도구가 하는 그대로: 비밀번호 + 파일의 솔트 → 키 → wrappedPayloadKey 열기.
-        let derived = try PlanPINVerifier(pin: "0000", random: { _ in salt }).keyMaterial
+        let derived = try PlanPINVerifier(pin: "000090", random: { _ in salt }).keyMaterial
         let payloadKey = try AES.GCM.open(
             AES.GCM.SealedBox(combined: archive.wrappedPayloadKey), using: SymmetricKey(data: derived)
         )
         XCTAssertEqual(payloadKey.count, 32)
-        let wrong = try PlanPINVerifier(pin: "0001", random: { _ in salt }).keyMaterial
+        let wrong = try PlanPINVerifier(pin: "000190", random: { _ in salt }).keyMaterial
         XCTAssertThrowsError(try AES.GCM.open(
             AES.GCM.SealedBox(combined: archive.wrappedPayloadKey), using: SymmetricKey(data: wrong)
         ))
@@ -121,7 +122,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let store = FilePlanCloudBackupStore(root: root)
         let service = makeService(backupStore: store, rawSensorBackupStore: FilePlanCloudRawSensorBackupStore(root: root),
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider())
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
         let readingDate = Date(timeIntervalSince1970: floor(date.timeIntervalSince1970))
         let reading = SensorReading(timestamp: readingDate, point: GeoPoint(latitude: 37, longitude: 126,
@@ -147,7 +148,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let service = PlanSecurityBackupService(credentialStore: credentials,
             backupStore: FilePlanCloudBackupStore(root: root), rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: keys)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let start = Date(timeIntervalSince1970: 1_790_640_000)
         let readings = (0..<1500).map { offset in
             SensorReading(timestamp: start.addingTimeInterval(Double(offset)),
@@ -217,7 +218,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let writerA = PlanSecurityBackupService(credentialStore: credentials,
             backupStore: InMemoryPlanCloudBackupStore(), rawSensorBackupStore: InMemoryPlanCloudRawSensorBackupStore(),
             cloudRecoveryKeyProvider: keys)
-        try writerA.setPIN("1234")
+        try writerA.setPIN("123490")
         let writerB = PlanSecurityBackupService(credentialStore: credentials,
             backupStore: InMemoryPlanCloudBackupStore(), rawSensorBackupStore: InMemoryPlanCloudRawSensorBackupStore(),
             cloudRecoveryKeyProvider: keys)
@@ -375,20 +376,60 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
     }
 
-    func testPINVerifierStoresOnlySaltAndDigestAndUsesFourDigits() throws {
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in Data(repeating: 7, count: 16) }
+    func testPINVerifierStoresOnlySaltAndDigestAndUsesSixDigits() throws {
+        let verifier = try PlanPINVerifier(pin: "123456") { _ in Data(repeating: 7, count: 16) }
         XCTAssertEqual(verifier.version, PlanPINVerifier.currentVersion)
         XCTAssertEqual(verifier.salt, Data(repeating: 7, count: 16))
-        XCTAssertNotEqual(verifier.digest, Data("1234".utf8))
-        XCTAssertTrue(verifier.matches("1234"))
-        XCTAssertFalse(verifier.matches("1235"))
+        XCTAssertEqual(verifier.digits, 6)
+        XCTAssertEqual(verifier.pinLength, 6)
+        XCTAssertNotEqual(verifier.digest, Data("123456".utf8))
+        XCTAssertTrue(verifier.matches("123456"))
+        XCTAssertFalse(verifier.matches("123457"))
+        XCTAssertFalse(verifier.matches("1234"), "6자리 검증 정보는 4자리를 받지 않는다")
+        XCTAssertThrowsError(try PlanPINVerifier(pin: "1234"), "새로 등록하는 4자리는 거부한다")
         XCTAssertThrowsError(try PlanPINVerifier(pin: "12345"))
-        XCTAssertThrowsError(try PlanPINVerifier(pin: "12a4"))
+        XCTAssertThrowsError(try PlanPINVerifier(pin: "1234567"))
+        XCTAssertThrowsError(try PlanPINVerifier(pin: "12a456"))
+        let reloaded = try JSONDecoder().decode(PlanPINVerifier.self, from: JSONEncoder().encode(verifier))
+        XCTAssertEqual(reloaded, verifier)
+        XCTAssertEqual(reloaded.pinLength, 6)
+    }
+
+    func testStoredFourDigitVerifierKeepsUnlockingWithoutADigitsField() throws {
+        // 자릿수 필드가 없던 이전 저장본(PBKDF2 v2, 4자리)도 그대로 풀려야 한다.
+        let salt = Data(repeating: 9, count: 16)
+        let probe = try PlanPINVerifier(pin: "123456") { _ in salt }
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(probe)) as? [String: Any]
+        )
+        object["digits"] = nil
+        var digest = Data(count: 32)
+        let status = digest.withUnsafeMutableBytes { out in
+            salt.withUnsafeBytes { saltBytes in
+                "1234".withCString { password in
+                    CCKeyDerivationPBKDF(
+                        CCPBKDFAlgorithm(kCCPBKDF2), password, 4,
+                        saltBytes.bindMemory(to: UInt8.self).baseAddress, salt.count,
+                        CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256), UInt32(PlanPINVerifier.pbkdf2Iterations),
+                        out.bindMemory(to: UInt8.self).baseAddress, 32
+                    )
+                }
+            }
+        }
+        XCTAssertEqual(status, Int32(kCCSuccess))
+        object["digest"] = digest.base64EncodedString()
+        let legacy = try JSONDecoder().decode(
+            PlanPINVerifier.self, from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNil(legacy.digits)
+        XCTAssertEqual(legacy.pinLength, 4)
+        XCTAssertTrue(legacy.matches("1234"))
+        XCTAssertFalse(legacy.matches("123456"))
     }
 
     func testPINVerifierRejectsRandomGenerationFailure() {
         XCTAssertThrowsError(
-            try PlanPINVerifier(pin: "1234") { _ in
+            try PlanPINVerifier(pin: "123490") { _ in
                 throw PlanSecurityError.invalidCredential
             }
         ) { error in
@@ -401,7 +442,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             PlanSecurityError.invalidPIN.localizedDescription(
                 preference: .english
             ),
-            "Check your 4-digit PIN and try again."
+            "Check your 6-digit PIN and try again."
         )
         XCTAssertEqual(
             PlanSecurityError.biometricRejected.localizedDescription(
@@ -456,7 +497,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         ) { error in
             XCTAssertEqual(error as? PlanSecurityError, .pinRequiredForCloudBackup)
         }
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         try service.setAppLockSettings(
             .init(lockOnLaunch: false, lockOnForeground: true)
         )
@@ -475,10 +516,10 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             settingsDefaults: defaults
         )
-        try first.setPIN("1234")
+        try first.setPIN("123490")
         let blockedAt = Date(timeIntervalSince1970: 10_000)
         for _ in 0..<5 {
-            XCTAssertThrowsError(try first.verifyPIN("0000", now: blockedAt))
+            XCTAssertThrowsError(try first.verifyPIN("000090", now: blockedAt))
         }
 
         let replacement = PlanSecurityBackupService(
@@ -488,7 +529,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         )
         XCTAssertThrowsError(
             try replacement.verifyPIN(
-                "1234",
+                "123490",
                 now: blockedAt.addingTimeInterval(1)
             )
         ) { error in
@@ -496,7 +537,7 @@ final class SecurityBackupCoreTests: XCTestCase {
                 return XCTFail("Expected persisted PIN throttle, got \(error)")
             }
         }
-        try replacement.verifyPIN("1234", now: blockedAt.addingTimeInterval(31))
+        try replacement.verifyPIN("123490", now: blockedAt.addingTimeInterval(31))
 
         let reset = PlanSecurityBackupService(
             credentialStore: credentials,
@@ -510,7 +551,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testArchiveMetadataTamperingFailsAuthenticatedDecode() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let createdAt = Date(timeIntervalSince1970: 10_000)
         let archive = try service.saveMonthlyArchive(
             .empty,
@@ -548,7 +589,7 @@ final class SecurityBackupCoreTests: XCTestCase {
 
         // 옛 기기: PIN "1234" 로 이번 달 아카이브를 저장한다.
         let oldDevice = makeService(backupStore: backupStore)
-        try oldDevice.setPIN("1234")
+        try oldDevice.setPIN("123490")
         _ = try oldDevice.saveMonthlyArchive(
             .empty,
             accountIdentifier: "account-a",
@@ -557,7 +598,7 @@ final class SecurityBackupCoreTests: XCTestCase {
 
         // 새 기기: 같은 백업 저장소를 보지만 PIN(키)이 다르고 계정 복구 키도 없다.
         let newDevice = makeService(backupStore: backupStore)
-        try newDevice.setPIN("9999")
+        try newDevice.setPIN("999990")
 
         // 예전엔 여기서 throw. 이제는 성공해야 한다.
         let resaved = try newDevice.saveMonthlyArchive(
@@ -585,7 +626,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             settingsDefaults: defaults
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         _ = try writer.saveMonthlyArchive(
             .empty,
             accountIdentifier: "account-a",
@@ -609,7 +650,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             rawSensorBackupStore: rawStore
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_788_000_000)
         _ = try service.saveMonthlyArchive(
             .empty,
@@ -639,7 +680,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let service = makeService(
             rawSensorBackupStore: DeleteFailingRawSensorBackupStore()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         _ = try service.saveMonthlyArchive(
             .empty,
             accountIdentifier: "account-a",
@@ -928,7 +969,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             cloudRecoveryKeyProvider: recoveryKeys,
             settingsDefaults: defaults
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -991,7 +1032,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -1218,7 +1259,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: InMemoryPlanCloudRawSensorBackupStore(),
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -1385,7 +1426,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             cloudRecoveryKeyProvider: recoveryKeys,
             settingsDefaults: defaults()
         )
-        try firstService.setPIN("1234")
+        try firstService.setPIN("123490")
         let secondService = PlanSecurityBackupService(
             credentialStore: credentials,
             backupStore: secondStore,
@@ -1508,7 +1549,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let raw = InMemoryPlanCloudRawSensorBackupStore()
         let service = makeService(backupStore: store, rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider())
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(latitude: 37, longitude: 127, altitude: 0,
             horizontalAccuracy: 5, verticalAccuracy: 5)
@@ -1531,11 +1572,11 @@ final class SecurityBackupCoreTests: XCTestCase {
         let store = InMemoryPlanCloudBackupStore()
         let old = makeService(backupStore: store,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 9))
-        try old.setPIN("1234")
+        try old.setPIN("123490")
         _ = try await old.saveMonthlyArchive(TaptionDataSnapshot.empty)
         let current = makeService(backupStore: store,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 8))
-        try current.setPIN("5678")
+        try current.setPIN("567890")
         let before = store.archives
         let report = await current.verifyCloudBackup()
         XCTAssertFalse(report.verified)
@@ -1550,13 +1591,13 @@ final class SecurityBackupCoreTests: XCTestCase {
         let store = InMemoryPlanCloudBackupStore()
         let old = makeService(backupStore: store,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 9))
-        try old.setPIN("1234")
+        try old.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         _ = try await old.saveMonthlyArchive(TaptionDataSnapshot.empty, date: firstDate)
         let original = store.archives
         let current = makeService(backupStore: store,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 8))
-        try current.setPIN("5678")
+        try current.setPIN("567890")
         _ = try await current.saveMonthlyArchive(TaptionDataSnapshot.empty, date: firstDate.addingTimeInterval(40 * 86_400))
         let beforePreflight = store.archives
         let restored = try await current.loadLatestBackupPackage(rewrapRecoveredArchive: false)
@@ -1570,12 +1611,12 @@ final class SecurityBackupCoreTests: XCTestCase {
         let store = InMemoryPlanCloudBackupStore()
         let old = makeService(backupStore: store,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 8))
-        try old.setPIN("1234")
+        try old.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         _ = try await old.saveMonthlyArchive(TaptionDataSnapshot.empty, date: firstDate)
         let keys = BackupTestFixedRecoveryKeyProvider(byte: 9)
         let current = makeService(backupStore: store, cloudRecoveryKeyProvider: keys)
-        try current.setPIN("5678")
+        try current.setPIN("567890")
         _ = try await current.saveMonthlyArchive(TaptionDataSnapshot.empty, date: firstDate.addingTimeInterval(40 * 86_400))
         keys.byte = 8
         let restored = try await current.loadLatestBackupPackage()
@@ -1586,7 +1627,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testUnreadableNewestSnapshotCannotFallBackToOlderValidSnapshot() throws {
         let store = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: store)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         _ = try service.saveMonthlyArchive(.empty, accountIdentifier: "account-a", date: firstDate)
         let secondDate = firstDate.addingTimeInterval(40 * 86_400)
@@ -1610,7 +1651,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let raw = InMemoryPlanCloudRawSensorBackupStore()
         let old = makeService(backupStore: backups, rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 9))
-        try old.setPIN("1234")
+        try old.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(latitude: 37.5, longitude: 126.9, altitude: 0,
             horizontalAccuracy: 5, verticalAccuracy: 5)
@@ -1622,7 +1663,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let originalSnapshots = backups.archives
         let current = makeService(backupStore: backups, rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 8))
-        try current.setPIN("5678")
+        try current.setPIN("567890")
         let snapshotOnly = try await current.saveMonthlyGeneration(
             PlanCloudBackupPayload(snapshot: .empty), rawSensorPayload: nil,
             date: date.addingTimeInterval(90))
@@ -1654,7 +1695,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -1792,7 +1833,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let readings = (0..<300).map { index in
             SensorReading(
@@ -1863,7 +1904,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let routePoints = (0..<300).compactMap { index -> PlanBackupRoutePoint? in
             let reading = SensorReading(
@@ -1923,7 +1964,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             manifestPublisher: publisher,
             settingsDefaults: UserDefaults(suiteName: "SecurityBackupCoreTests.\(UUID().uuidString)")!
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_788_629_099)
         let snapshotOnly = try await service.saveMonthlyGeneration(
             PlanCloudBackupPayload(snapshot: .empty), rawSensorPayload: nil, date: date
@@ -2023,7 +2064,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -2066,7 +2107,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
 
         func makeReading(_ offset: TimeInterval) -> SensorReading {
@@ -2136,7 +2177,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -2199,7 +2240,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -2261,7 +2302,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         defer {
             if let generation = state.advancedGeneration {
                 TaptionDataDeletionFence.finish(generation: generation)
@@ -2310,7 +2351,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         defer {
             if let generation = state.advancedGeneration {
                 TaptionDataDeletionFence.finish(generation: generation)
@@ -2358,7 +2399,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         defer {
             if let generation = state.advancedGeneration {
                 TaptionDataDeletionFence.finish(generation: generation)
@@ -2410,7 +2451,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         defer {
             if let generation = state.advancedGeneration {
                 TaptionDataDeletionFence.finish(generation: generation)
@@ -2447,7 +2488,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         defer {
             if let generation = state.advancedGeneration {
                 TaptionDataDeletionFence.finish(generation: generation)
@@ -2463,7 +2504,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             date: date
         )
         state.snapshotArchiveWasWritten = false
-        backupStore.onSave = { _ = try? service.setPIN("5678") }
+        backupStore.onSave = { _ = try? service.setPIN("567890") }
 
         do {
             _ = try await service.saveMonthlyGeneration(
@@ -2487,7 +2528,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testSnapshotOnlySavePreservesStandaloneRawArchiveWithoutPreviousSnapshot()
         async throws {
         let service = makeService()
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -2534,7 +2575,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let date = Date(timeIntervalSinceReferenceDate: 811012345.000002)
         let point = GeoPoint(
@@ -2593,7 +2634,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let task = Task {
             try await service.saveMonthlyArchive(
@@ -2631,7 +2672,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         do {
             _ = try await service.saveMonthlyArchive(
@@ -2653,7 +2694,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let task = Task {
             try await service.saveMonthlyArchive(
@@ -2664,7 +2705,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         while !recoveryKeys.keyWasRequested {
             await Task.yield()
         }
-        try service.setPIN("5678")
+        try service.setPIN("567890")
         recoveryKeys.release()
 
         do {
@@ -2683,7 +2724,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let task = Task {
             try await service.saveMonthlyArchive(
                 PlanCloudBackupPayload(snapshot: .empty),
@@ -2712,7 +2753,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let payload = PlanCloudRawSensorPayload(
             monthKey: "2026-08",
@@ -2757,7 +2798,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let task = Task {
             try await service.saveRawSensorArchive(
                 PlanCloudRawSensorPayload(monthKey: "2026-08")
@@ -2784,14 +2825,14 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let task = Task {
             try await service.saveRawSensorArchive(
                 PlanCloudRawSensorPayload(monthKey: "2026-08")
             )
         }
         while !recoveryKeys.keyWasRequested { await Task.yield() }
-        try service.setPIN("5678")
+        try service.setPIN("567890")
         recoveryKeys.release()
 
         do {
@@ -2809,7 +2850,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         _ = try await writer.saveMonthlyArchive(
             PlanCloudBackupPayload(snapshot: .empty)
         )
@@ -2819,7 +2860,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try reader.setPIN("5678")
+        try reader.setPIN("567890")
         let task = Task { try await reader.loadLatestBackup() }
         while !recoveryKeys.keyWasRequested { await Task.yield() }
         try reader.deleteAllBackups()
@@ -2843,7 +2884,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let first = try await service.saveMonthlyGeneration(
             PlanCloudBackupPayload(snapshot: .empty),
@@ -2910,7 +2951,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testBiometricGateUnlocksWithoutExposingRawBiometric() async throws {
         let biometric = MockPlanLocalBiometricAuthenticator(result: true)
         let service = makeService(biometric: biometric)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         try service.setAppLockSettings(.init(lockOnLaunch: true, lockOnForeground: false, biometricUnlockEnabled: true))
         service.handleLaunch()
         XCTAssertTrue(service.status.state != .unlocked)
@@ -2922,7 +2963,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         let service = makeService(
             biometric: MockPlanLocalBiometricAuthenticator(result: true)
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         try service.setAppLockSettings(
             .init(lockOnLaunch: true, lockOnForeground: false, biometricUnlockEnabled: false)
         )
@@ -2936,18 +2977,18 @@ final class SecurityBackupCoreTests: XCTestCase {
         }
         XCTAssertNotEqual(service.status.state, .unlocked)
 
-        try service.unlock(withPIN: "1234")
+        try service.unlock(withPIN: "123490")
         XCTAssertEqual(service.status.state, .unlocked)
     }
 
     func testSameAccountRecoversWithNewPINAndDifferentAccountIsRejected() throws {
         let service = makeService()
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         _ = try service.saveMonthlyArchive(.empty, accountIdentifier: "account-a")
-        let recovered = try service.recoverLatestArchive(accountIdentifier: "account-a", newPIN: "9876")
+        let recovered = try service.recoverLatestArchive(accountIdentifier: "account-a", newPIN: "987690")
         assertEmptySnapshot(recovered)
         XCTAssertTrue(service.hasPIN)
-        XCTAssertThrowsError(try service.recoverLatestArchive(accountIdentifier: "account-b", newPIN: "1111")) { error in
+        XCTAssertThrowsError(try service.recoverLatestArchive(accountIdentifier: "account-b", newPIN: "111190")) { error in
             XCTAssertEqual(error as? PlanSecurityError, .accountMismatch)
         }
     }
@@ -2980,7 +3021,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -3207,7 +3248,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let july = Date(timeIntervalSince1970: 1_775_000_000)
         let august = Date(timeIntervalSince1970: 1_777_700_000)
         let julyReading = SensorReading(
@@ -3279,7 +3320,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let july = calendar.date(
@@ -3376,7 +3417,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_782_000_000)
         let snapshot = try await service.saveMonthlyGeneration(
             PlanCloudBackupPayload(snapshot: .empty),
@@ -3416,7 +3457,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testRawBackupRejectsConflictingPayloadForTheSameID() throws {
         let rawStore = InMemoryPlanCloudRawSensorBackupStore()
         let service = makeService(rawSensorBackupStore: rawStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_777_700_000)
         let id = UUID()
         let point = GeoPoint(
@@ -3465,7 +3506,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let july = Date(timeIntervalSince1970: 1_775_000_000)
         let august = Date(timeIntervalSince1970: 1_777_700_000)
         let id = UUID()
@@ -3515,7 +3556,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -3567,7 +3608,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -3612,7 +3653,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let secondDate = firstDate.addingTimeInterval(40 * 86_400)
         let point = GeoPoint(
@@ -3685,7 +3726,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: baseRawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -3715,7 +3756,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             ),
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try reader.setPIN("1234")
+        try reader.setPIN("123490")
         let restore = Task {
             try await reader.loadLatestBackupPackage()
         }
@@ -3738,7 +3779,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let secondDate = Calendar.autoupdatingCurrent.date(
             byAdding: .month,
@@ -3802,7 +3843,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let secondDate = Calendar.autoupdatingCurrent.date(
             byAdding: .month,
@@ -3898,7 +3939,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -3965,7 +4006,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -4019,7 +4060,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let point = GeoPoint(
             latitude: 37.5,
@@ -4080,7 +4121,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider()
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -4132,7 +4173,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
 
         let archive = try await writer.saveMonthlyArchive(.empty)
         XCTAssertNil(
@@ -4146,7 +4187,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             cloudRecoveryKeyProvider: recoveryKeys
         )
         let recovered = try await replacementDevice.recoverLatestArchive(
-            newPIN: "9876"
+            newPIN: "987690"
         )
         assertEmptySnapshot(recovered)
         XCTAssertTrue(replacementDevice.hasPIN)
@@ -4159,7 +4200,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         var snapshot = TaptionDataSnapshot.empty
         snapshot.settings.frequentPlaces[0].point = GeoPoint(
             latitude: 37.5665,
@@ -4199,7 +4240,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             backupStore: backupStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try reinstalled.setPIN("9876")
+        try reinstalled.setPIN("987690")
         let restored = try await reinstalled.loadLatestBackup()
 
         XCTAssertEqual(
@@ -4228,7 +4269,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try writer.setPIN("1234")
+        try writer.setPIN("123490")
         let reading = SensorReading(
             timestamp: .now,
             point: GeoPoint(
@@ -4266,7 +4307,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawStore,
             cloudRecoveryKeyProvider: recoveryKeys
         )
-        try reinstalled.setPIN("9876")
+        try reinstalled.setPIN("987690")
         let firstRestore = try await reinstalled.loadLatestBackupPackage()
         guard case .available = firstRestore.rawSensorState else {
             return XCTFail(
@@ -4566,7 +4607,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testSameMonthBackupMergesGPSAndKeepsLatestFullSettings() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
         let firstDate = calendar.date(from: DateComponents(
@@ -4660,7 +4701,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testStaleSameMonthBackupDoesNotEraseNewerRecords() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let month = Date(timeIntervalSince1970: 1_785_600_000)
 
         var newer = TaptionDataSnapshot.empty
@@ -4713,7 +4754,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testSameMonthBackupPreservesExistingAppLogWhenLatestPayloadIsEmpty() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let firstDate = Date(timeIntervalSince1970: 1_787_538_400)
         let latestDate = firstDate.addingTimeInterval(3_600)
 
@@ -4740,7 +4781,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     func testBackupRestoreCombinesRoutesAcrossMonthlyArchives() throws {
         let backupStore = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: backupStore)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 9 * 3_600)!
         let july = calendar.date(from: DateComponents(
@@ -4807,7 +4848,7 @@ final class SecurityBackupCoreTests: XCTestCase {
 
     func testBackupPayloadKeepsConfirmedTravel() throws {
         let service = makeService()
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         var snapshot = TaptionDataSnapshot.empty
         snapshot.travel = [
             TravelSegment(
@@ -4852,7 +4893,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             try encoder.encode(snapshot)
         )
         let archiveKey = Data(repeating: 9, count: 32)
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let accountIdentifier = "legacy-v2-migration-account"
@@ -4927,7 +4968,7 @@ final class SecurityBackupCoreTests: XCTestCase {
                 suiteName: "SecurityBackupCoreTests.\(UUID().uuidString)"
             )!
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let upgraded = try service.saveMonthlyArchive(
             snapshot,
@@ -4948,7 +4989,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     }
 
     func testVersionOneSnapshotArchiveStillDecodes() throws {
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let archive = try JSONDecoder().decode(
@@ -5003,7 +5044,7 @@ final class SecurityBackupCoreTests: XCTestCase {
                 suiteName: "SecurityBackupCoreTests.\(UUID().uuidString)"
             )!
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let upgraded = try service.saveMonthlyArchive(
             PlanCloudBackupPayload(snapshot: .empty, appLog: "new save"),
             accountIdentifier: accountIdentifier,
@@ -5073,7 +5114,7 @@ final class SecurityBackupCoreTests: XCTestCase {
                 suiteName: "SecurityBackupCoreTests.\(UUID().uuidString)"
             )!
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let upgraded = try service.saveMonthlyArchive(
             snapshot,
@@ -5094,7 +5135,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     }
 
     func testVersionOneRawSensorArchiveStillDecodes() throws {
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let archiveData = try makeVersionOneArchiveData(
@@ -5123,7 +5164,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     }
 
     func testVersionTwoRawSensorArchiveStillDecodesAfterV4WriteUpgrade() throws {
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let date = Date(timeIntervalSince1970: 1_788_629_099)
@@ -5232,7 +5273,7 @@ final class SecurityBackupCoreTests: XCTestCase {
                 suiteName: "SecurityBackupCoreTests.\(UUID().uuidString)"
             )!
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
 
         let resealed = try service.saveRawSensorArchive(
             payload,
@@ -5289,7 +5330,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             cloudRecoveryKeyProvider: recoveryKeys,
             settingsDefaults: defaults
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_788_629_099)
         let monthKey = PlanArchiveSchedule.monthKey(for: date)
         let accountIdentifier = CloudKitPlanCloudRecoveryKeyProvider.privateAccountScope
@@ -6119,7 +6160,7 @@ final class SecurityBackupCoreTests: XCTestCase {
             rawSensorBackupStore: rawSensorBackupStore,
             cloudRecoveryKeyProvider: recoveryKeyProvider
         )
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let date = Date(timeIntervalSince1970: 1_787_538_400)
         let reading = SensorReading(
             timestamp: date,
@@ -6186,7 +6227,7 @@ final class SecurityBackupCoreTests: XCTestCase {
         accountKeyData: Data? = nil
     ) throws -> Data {
         let key = Data(repeating: 9, count: 32)
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let encoder = JSONEncoder()
@@ -6239,7 +6280,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     ) throws -> Data {
         precondition((2...3).contains(version))
         let archiveKey = Data(repeating: 9, count: 32)
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let compressed = TaptionSnapshotCompression.encode(
@@ -6299,7 +6340,7 @@ final class SecurityBackupCoreTests: XCTestCase {
     ) throws -> Data {
         precondition((2...3).contains(version))
         let archiveKey = Data(repeating: 9, count: 32)
-        let verifier = try PlanPINVerifier(pin: "1234") { _ in
+        let verifier = try PlanPINVerifier(pin: "123490") { _ in
             Data(repeating: 4, count: 16)
         }
         let compressed = TaptionSnapshotCompression.encode(
@@ -7016,7 +7057,7 @@ extension SecurityBackupCoreTests {
         let rawStore = FilePlanCloudRawSensorBackupStore(root: root)
         let keys = BackupTestFixedRecoveryKeyProvider(byte: 42)
         let service = makeService(backupStore: store, rawSensorBackupStore: rawStore, cloudRecoveryKeyProvider: keys)
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(14), now = dailyDate(15, hour: 12)
         let preparation = try await service.prepareDailyBackup(dates: [day, dailyDate(15)], now: now,
             calendar: dailyCalendar, dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7044,7 +7085,7 @@ extension SecurityBackupCoreTests {
     func testDailyBackupOverwritesTodayAndClosesPreviousDayOnlyAfterFinalSave() async throws {
         let store = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 41))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(14)
         var value = dailySnapshot(day, text: "first")
         for (offset, text) in [(12, "first"), (23, "latest")] {
@@ -7080,7 +7121,7 @@ extension SecurityBackupCoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let store = CountingDailyBackupStore(root: root)
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 40))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(14)
         let first = try await service.prepareDailyBackup(dates: [day], now: dailyDate(14, hour: 23), calendar: dailyCalendar,
             dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7104,7 +7145,7 @@ extension SecurityBackupCoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let store = FilePlanCloudBackupStore(root: root)
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 39))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let now = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
         let day = dailyCalendar.date(byAdding: .day, value: -1, to: dailyCalendar.startOfDay(for: now))!
         let preparation = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
@@ -7147,7 +7188,7 @@ extension SecurityBackupCoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let store = FilePlanCloudBackupStore(root: root)
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 38))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let start = dailyDate(1)
         let legacy = try await service.saveMonthlyArchive(dailySnapshot(start.addingTimeInterval(-40 * 86_400), text: "legacy"), date: start.addingTimeInterval(-40 * 86_400))
         let days = (0..<125).map { start.addingTimeInterval(Double($0) * 86_400) }
@@ -7191,7 +7232,7 @@ extension SecurityBackupCoreTests {
         let raw = InMemoryPlanCloudRawSensorBackupStore()
         let service = makeService(backupStore: store, rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 36))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(15), now = dailyDate(15, hour: 12)
         let first = try await service.prepareDailyBackup(dates: [day], now: now, calendar: dailyCalendar,
             dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7217,11 +7258,11 @@ extension SecurityBackupCoreTests {
     func testDailyPreparationInvalidatedByPINChangeCannotWrite() async throws {
         let store = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 35))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(14)
         let preparation = try await service.prepareDailyBackup(dates: [day], now: dailyDate(15), calendar: dailyCalendar,
             dataGeneration: TaptionDataDeletionFence.currentGeneration())
-        try service.setPIN("5678")
+        try service.setPIN("567890")
         do {
             _ = try await service.saveDailyGeneration(PlanCloudBackupPayload(snapshot: .empty), rawSensorPayload: nil,
                 day: day, preparation: preparation, includesCompleteRawData: true)
@@ -7236,7 +7277,7 @@ extension SecurityBackupCoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let store = FilePlanCloudBackupStore(root: root)
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 34))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let days = [dailyDate(14), dailyDate(15)]
         let preparation = try await service.prepareDailyBackup(dates: Set(days), now: dailyDate(16), calendar: dailyCalendar,
             dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7258,7 +7299,7 @@ extension SecurityBackupCoreTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let store = CountingDailyBackupStore(root: root)
         let service = makeService(backupStore: store, cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 33))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let days = [dailyDate(14), dailyDate(15)], now = dailyDate(15, hour: 12)
         let preparation = try await service.prepareDailyBackup(dates: Set(days), now: now, calendar: dailyCalendar,
             dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7277,7 +7318,7 @@ extension SecurityBackupCoreTests {
             preparation: preparation, includesCompleteRawData: true)
         try service.finishDailyBackup(preparation)
         XCTAssertEqual(service.status.latestSuccessfulBackupDate, now)
-        try service.setPIN("5678")
+        try service.setPIN("567890")
         XCTAssertThrowsError(try service.finishDailyBackup(preparation)) { XCTAssertTrue($0 is CancellationError) }
     }
 
@@ -7288,8 +7329,8 @@ extension SecurityBackupCoreTests {
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 32))
         let branch = makeService(backupStore: branchStore, rawSensorBackupStore: branchRaw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 32))
-        try service.setPIN("1234")
-        try branch.setPIN("1234")
+        try service.setPIN("123490")
+        try branch.setPIN("123490")
         let day = dailyDate(15), key = "2026-10-15"
         func save(_ target: PlanSecurityBackupService, hour: Int) async throws -> PlanCloudBackupGeneration {
             let now = dailyDate(15, hour: hour)
@@ -7324,7 +7365,7 @@ extension SecurityBackupCoreTests {
 
     func testDailyBackupRetainsCompressionAndRestoresExactText() async throws {
         let service = makeService(cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 37))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(15)
         let text = String(repeating: "압축 백업 검증 🐾\n", count: 20_000)
         let snapshot = dailySnapshot(day, text: text)
@@ -7343,7 +7384,7 @@ extension SecurityBackupCoreTests {
         let store = CountingDailyBackupStore(root: root)
         let service = makeService(backupStore: store, rawSensorBackupStore: FilePlanCloudRawSensorBackupStore(root: root),
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 43))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         let day = dailyDate(14), now = dailyDate(15, hour: 12)
         let preparation = try await service.prepareDailyBackup(dates: [day], now: now,
             calendar: dailyCalendar, dataGeneration: TaptionDataDeletionFence.currentGeneration())
@@ -7410,7 +7451,7 @@ extension SecurityBackupCoreTests {
         let raw = BackupLoadCallbackStore()
         let service = makeService(rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 51))
-        try service.setPIN("1234")
+        try service.setPIN("123490")
         var finished = false
         var mainActorRanBeforeFinish = false
         raw.onFirstLoad = {
@@ -7506,8 +7547,8 @@ extension SecurityBackupCoreTests {
         let snapshots = InMemoryPlanCloudBackupStore()
         let service = makeService(backupStore: snapshots, rawSensorBackupStore: raw,
             cloudRecoveryKeyProvider: BackupTestFixedRecoveryKeyProvider(byte: 51))
-        try service.setPIN("1234")
-        raw.onFirstLoad = { try? service.setPIN("5678") }
+        try service.setPIN("123490")
+        raw.onFirstLoad = { try? service.setPIN("567890") }
         let now = Date(timeIntervalSince1970: 1_792_000_000)
         do {
             _ = try await service.saveMonthlyGeneration(PlanCloudBackupPayload(snapshot: .empty),

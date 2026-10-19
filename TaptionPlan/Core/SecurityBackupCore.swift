@@ -15,10 +15,17 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
     static let currentVersion = 2
     static let legacyIterations = 120_000
     static let pbkdf2Iterations = 600_000
+    /// 새로 등록하는 비밀번호 자릿수. 값이 없는 이전 저장본은 4자리로 본다.
+    static let currentDigits = 6
+    static let legacyDigits = 4
 
     let version: Int
     let salt: Data
     let digest: Data
+    let digits: Int?
+
+    /// 이 검증 정보로 풀리는 비밀번호의 자릿수.
+    var pinLength: Int { digits ?? Self.legacyDigits }
 
     init(pin: String, random: (Int) throws -> Data = { count in
         var data = Data(repeating: 0, count: count)
@@ -33,7 +40,7 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
         }
         return data
     }) throws {
-        guard Self.isValid(pin) else { throw PlanSecurityError.invalidPIN }
+        guard Self.isValid(pin, digits: Self.currentDigits) else { throw PlanSecurityError.invalidPIN }
         let salt = try random(16)
         guard salt.count == 16 else { throw PlanSecurityError.invalidCredential }
         guard let digest = Self.derive(
@@ -46,10 +53,11 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
         self.version = Self.currentVersion
         self.salt = salt
         self.digest = digest
+        self.digits = Self.currentDigits
     }
 
     func matches(_ pin: String) -> Bool {
-        guard Self.isValid(pin),
+        guard Self.isValid(pin, digits: pinLength),
               let candidate = Self.derive(
                 pin: pin,
                 salt: salt,
@@ -59,11 +67,11 @@ struct PlanPINVerifier: Codable, Equatable, Sendable {
     }
 
     /// PBKDF output is retained only as a verifier and key-encryption key; the
-    /// four digit PIN itself never leaves the call stack.
+    /// PIN itself never leaves the call stack.
     var keyMaterial: Data { digest }
 
-    static func isValid(_ pin: String) -> Bool {
-        pin.utf8.count == 4 && pin.utf8.allSatisfy { $0 >= 48 && $0 <= 57 }
+    static func isValid(_ pin: String, digits: Int = currentDigits) -> Bool {
+        pin.utf8.count == digits && pin.utf8.allSatisfy { $0 >= 48 && $0 <= 57 }
     }
 
     private static func derive(
@@ -147,8 +155,8 @@ extension PlanSecurityError: LocalizedError {
         switch self {
         case .invalidPIN:
             AppLanguagePreference.text(
-                korean: "4자리 숫자 비밀번호를 다시 확인해 주세요.",
-                english: "Check your 4-digit PIN and try again.",
+                korean: "6자리 숫자 비밀번호를 다시 확인해 주세요.",
+                english: "Check your 6-digit PIN and try again.",
                 preference: preference
             )
         case .invalidCredential:
@@ -159,8 +167,8 @@ extension PlanSecurityError: LocalizedError {
             )
         case .pinRequiredForCloudBackup:
             AppLanguagePreference.text(
-                korean: "이 기능을 사용하려면 4자리 비밀번호를 먼저 등록해 주세요.",
-                english: "Set a 4-digit PIN before using this feature.",
+                korean: "이 기능을 사용하려면 6자리 비밀번호를 먼저 등록해 주세요.",
+                english: "Set a 6-digit PIN before using this feature.",
                 preference: preference
             )
         case .invalidArchive:
@@ -382,6 +390,8 @@ struct PlanSecurityStatus: Equatable, Sendable {
     let settings: PlanAppLockSettings
     let state: PlanAppLockState
     let hasPIN: Bool
+    /// 등록된 비밀번호의 자릿수(없으면 새로 등록할 자릿수).
+    let pinDigits: Int
     let failedAttempts: Int
     let retryAfter: Date?
     let latestSuccessfulBackupDate: Date?
@@ -391,6 +401,7 @@ struct PlanSecurityStatus: Equatable, Sendable {
         settings: PlanAppLockSettings,
         state: PlanAppLockState,
         hasPIN: Bool,
+        pinDigits: Int = PlanPINVerifier.currentDigits,
         failedAttempts: Int,
         retryAfter: Date?,
         latestSuccessfulBackupDate: Date? = nil,
@@ -399,6 +410,7 @@ struct PlanSecurityStatus: Equatable, Sendable {
         self.settings = settings
         self.state = state
         self.hasPIN = hasPIN
+        self.pinDigits = pinDigits
         self.failedAttempts = failedAttempts
         self.retryAfter = retryAfter
         self.latestSuccessfulBackupDate = latestSuccessfulBackupDate
@@ -5617,6 +5629,7 @@ final class PlanSecurityBackupService {
             settings: settings,
             state: state,
             hasPIN: hasPIN,
+            pinDigits: verifier?.pinLength ?? PlanPINVerifier.currentDigits,
             failedAttempts: failedAttempts,
             retryAfter: blockedUntil,
             latestSuccessfulBackupDate: latestSuccessfulBackupDate,

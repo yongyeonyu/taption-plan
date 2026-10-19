@@ -1,5 +1,10 @@
 # 검증 기록
 
+## PIN1019A01 · 비밀번호 6자리 (2026-10-19)
+- 변경: 새로 등록·변경하는 비밀번호는 6자리 숫자만 받는다(`PlanPINVerifier.currentDigits`). 저장된 검증 정보에 `digits`를 기록하고, 값이 없는 이전 저장본은 4자리로 보아 그대로 풀린다. 앱 잠금 입력창은 등록된 자릿수에서 자동 해제하며 데이터 보호 화면의 문구·입력 제한도 6자리로 바꿨다. `PlanSecurityStatus.pinDigits` 추가.
+- 자동 검증: iPhone 11 Pro 실기기, `SecurityBackupCoreTests`(316개 통과)·`DiagnosticsLogStructureTests`·`TimeScaleTests` 등 339개 중 338 통과, 실패 1(`LocalizationCatalogTests.testEveryCatalogKeyHasAnEnglishValue`: 기기에서 Mac 경로의 `Localizable.xcstrings`를 열지 못함, 이번 변경과 무관한 기기 환경 문제로 보이나 시뮬레이터에서 재실행하지 않았다)(`ux-pin6.log`). 새 테스트: 6자리 검증 구조, 4자리 신규 거부, 이전 4자리 저장본의 해제 유지.
+- 제한: 화면에서 직접 확인하지 않았다. 기존 4자리 비밀번호를 6자리로 바꾸면 이전 백업과 키는 이어지지 않는다. 6자리도 솔트가 파일에 있어 오프라인 대입은 가능하다.
+
 ## LOG1019A01 · 비밀번호만으로 복구되는 백업·분석용 로그 구조 (2026-10-19)
 - 백업: 새 월별·원시 센서 아카이브에 키 유도 솔트(`passwordKDFSalt`)와 반복 횟수(`passwordKDFIterations`)를 파일에 함께 저장한다. 비밀번호 + 파일의 솔트로 `wrappedPayloadKey`를 열 수 있다. 원시 센서 아카이브의 스트리밍 파서가 새 키를 읽어 다시 쓸 때도 유지한다. 백업을 만드는 경로 3곳(월별 2곳, 원시 센서 2곳)에 솔트를 넘겼다. 이전 형식 백업은 솔트가 기기에만 있어 비밀번호만으로 열 수 없고, 삭제하지 않았다.
 - 도구: `scripts/taption-backup-decode.py`(비밀번호로 JSON Lines 복호화), `scripts/analyze-diagnostics.py`(로그 요약·CSV). 분석 스크립트는 기존 로그로 실행해 동작을 확인했다.

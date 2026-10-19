@@ -3315,7 +3315,7 @@ final class FeatureEngineTests: XCTestCase {
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider(),
             settingsDefaults: defaults
         )
-        try backupService.setPIN("1234")
+        try backupService.setPIN("123490")
         var backupSettings = backupService.settings
         backupSettings.cloudBackupEnabled = false
         try backupService.setAppLockSettings(backupSettings)
@@ -3379,7 +3379,7 @@ final class FeatureEngineTests: XCTestCase {
             cloudRecoveryKeyProvider: InMemoryPlanCloudRecoveryKeyProvider(),
             settingsDefaults: defaults
         )
-        try backupService.setPIN("1234")
+        try backupService.setPIN("123490")
         var backupSettings = backupService.settings
         backupSettings.cloudBackupEnabled = false
         try backupService.setAppLockSettings(backupSettings)
