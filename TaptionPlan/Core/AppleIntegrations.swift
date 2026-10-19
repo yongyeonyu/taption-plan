@@ -4485,7 +4485,7 @@ enum VoiceMemoRecordingError: LocalizedError {
 }
 
 @MainActor
-final class VoiceMemoPlayer: NSObject, AVAudioPlayerDelegate {
+final class VoiceMemoPlayer: NSObject, @preconcurrency AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     var onFinish: (() -> Void)?
 

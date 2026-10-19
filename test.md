@@ -1702,3 +1702,7 @@
 - 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,406개 중 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-182.log`).
 - 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 182 확인, `altool` `No errors uploading`(`altool-182.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204) 후 readback: 182·181·180·179 확인.
 - 제한: 발자국의 Apple 지도 표시, 백업 버튼 이유 표시, UXP1019C01 변경은 화면에서 확인하지 못했다(UI 스모크는 자동화 모드 시간 초과). 날씨 미표시는 원인 미확인(폰 로그 필요). 설치·테스터 수신은 확인하지 않았다.
+
+## CI1019A01 · GitHub CI `app` 작업 실패 수정 (2026-10-19)
+- 원인: CI(Xcode 26.6)에서 `VoiceMemoPlayer`의 `AVAudioPlayerDelegate` 적합이 메인 액터 격리를 넘는다는 오류 1건으로 `app` 작업이 실패했다. 로컬(Xcode 27.0)에서는 나타나지 않는다. 확인한 CI 실행 12건이 모두 실패였고(빌드 178 전후부터), 모두 이 오류로 본다(최신 실행 로그만 직접 확인).
+- 수정: `@preconcurrency AVAudioPlayerDelegate`로 선언. 동작 변경 없음. 로컬 빌드와 `AppLockAndPINTests` 통과(`ci-fix.log`). 이 수정은 빌드 182 이후 소스라서 TestFlight 빌드에는 반영되지 않았다.
