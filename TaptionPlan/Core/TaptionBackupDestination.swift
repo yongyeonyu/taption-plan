@@ -72,21 +72,30 @@ struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
     }
 }
 
-/// iCloud Drive 목적지. 앱의 ubiquity 컨테이너 안 `Documents/TaptionBackup` 폴더에 파일을 복사한다.
+/// iCloud Drive 목적지. 앱의 ubiquity 컨테이너(`iCloud.com.taption.plan`, 앱 그룹 컨테이너가 아니다) 안
+/// `Documents/TaptionBackup` 폴더에 파일을 복사한다. Info.plist의 `NSUbiquitousContainers`가 Documents를 공개해
+/// 파일 앱의 iCloud Drive에서도 보인다.
 ///
 /// **기기에서만 동작한다.** `FileManager.url(forUbiquityContainerIdentifier:)`는 iCloud 로그인과
 /// iCloud Documents entitlement(`com.apple.developer.icloud-container-identifiers`,
 /// `com.apple.developer.ubiquity-container-identifiers`)가 있는 서명된 앱에서만 주소를 돌려주며,
-/// 시뮬레이터·테스트 호스트·entitlement 없는 빌드에서는 nil이라 `destinationUnavailable`을 던진다.
-/// 이 저장소의 entitlement는 아직 설정하지 않았고, 이 구현은 실기기에서 검증하지 못했다.
-/// 읽기 전에 `startDownloadingUbiquitousItem`으로 내려받고, 쓰기·삭제는 `NSFileCoordinator`를 거친다.
+/// 시뮬레이터·테스트 호스트·iCloud 로그아웃 상태에서는 nil이라 `destinationUnavailable`을 던진다.
+/// 다른 기기에서 올린 파일은 아직 내려받기 전일 수 있다. 내려받기 전 파일은 목록에 `.이름.icloud` 자리 표시 파일로
+/// 보이므로 이름을 되살려 목록에 넣고, `fetch`가 내려받기를 시작해 `current`가 될 때까지 기다린다.
+/// 쓰기·삭제는 `NSFileCoordinator`를 거친다. 이 구현의 실제 iCloud 동작은 실기기에서만 확인할 수 있다.
 struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
+    static let defaultContainerIdentifier = "iCloud.com.taption.plan"
+
     let containerIdentifier: String?
     let folderName: String
     /// 내려받기를 기다리는 최대 시간(초).
     let downloadTimeout: TimeInterval
 
-    init(containerIdentifier: String? = nil, folderName: String = "TaptionBackup", downloadTimeout: TimeInterval = 120) {
+    init(
+        containerIdentifier: String? = TaptionICloudDriveBackupDestination.defaultContainerIdentifier,
+        folderName: String = "TaptionBackup",
+        downloadTimeout: TimeInterval = 120
+    ) {
         self.containerIdentifier = containerIdentifier
         self.folderName = folderName
         self.downloadTimeout = downloadTimeout
@@ -108,18 +117,47 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         )
     }
 
+    /// `.이름.icloud` 자리 표시 파일이 가리키는 원래 이름. 자리 표시 파일이 아니면 nil.
+    static func placeholderTarget(_ fileName: String) -> String? {
+        let suffix = ".icloud"
+        guard fileName.hasPrefix("."), fileName.hasSuffix(suffix),
+              fileName.count > suffix.count + 1 else { return nil }
+        return String(fileName.dropFirst().dropLast(suffix.count))
+    }
+
     func list() async throws -> [TaptionBackupFileInfo] {
-        try await folder().list()
+        let local = try await folder()
+        var infos = try await local.list()
+        guard FileManager.default.fileExists(atPath: local.directory.path) else { return infos }
+        let present = Set(infos.map(\.name))
+        let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
+        for url in try FileManager.default.contentsOfDirectory(at: local.directory, includingPropertiesForKeys: keys) {
+            guard let name = Self.placeholderTarget(url.lastPathComponent),
+                  name.hasSuffix("." + TaptionBackupMonth.fileExtension), !present.contains(name) else { continue }
+            let values = try? url.resourceValues(forKeys: Set(keys))
+            infos.append(TaptionBackupFileInfo(
+                name: name, size: values?.fileSize ?? 0, modifiedAt: values?.contentModificationDate ?? .distantPast
+            ))
+        }
+        return infos.sorted { $0.name < $1.name }
     }
 
     func fetch(name: String) async throws -> URL {
-        let url = try await folder().fetch(name: name)
-        try FileManager.default.startDownloadingUbiquitousItem(at: url)
+        let directory = try await folder().directory
+        let url = directory.appendingPathComponent(name, isDirectory: false)
+        let placeholder = directory.appendingPathComponent(".\(name).icloud", isDirectory: false)
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: url.path) || fileManager.fileExists(atPath: placeholder.path) else {
+            throw TaptionBackupError.fileMissing(name)
+        }
+        try? fileManager.startDownloadingUbiquitousItem(at: url)
         let deadline = Date().addingTimeInterval(downloadTimeout)
         while Date() < deadline {
-            let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
-                .ubiquitousItemDownloadingStatus
-            if status == nil || status == .current { return url }
+            if fileManager.fileExists(atPath: url.path) {
+                let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
+                    .ubiquitousItemDownloadingStatus
+                if status == nil || status == .current { return url }
+            }
             try await Task.sleep(nanoseconds: 500_000_000)
         }
         throw TaptionBackupError.destinationUnavailable("download timed out: \(name)")
@@ -139,9 +177,16 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
     func remove(name: String) async throws {
         let destination = try await folder()
         let target = destination.directory.appendingPathComponent(name, isDirectory: false)
-        guard FileManager.default.fileExists(atPath: target.path) else { return }
+        let placeholder = destination.directory.appendingPathComponent(".\(name).icloud", isDirectory: false)
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: target.path) || fileManager.fileExists(atPath: placeholder.path) else { return }
+        // 내려받지 않은 파일도 실제 이름 주소로 조정해 지운다.
         try Self.coordinated(target, options: .forDeleting) { url in
-            try FileManager.default.removeItem(at: url)
+            if fileManager.fileExists(atPath: url.path) {
+                try fileManager.removeItem(at: url)
+            } else if fileManager.fileExists(atPath: placeholder.path) {
+                try fileManager.removeItem(at: placeholder)
+            }
         }
     }
 

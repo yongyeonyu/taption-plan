@@ -2085,50 +2085,6 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(restored.flatMap(\.samples).map(\.sequence), [1, 2])
     }
 
-    @MainActor
-    func testWatchAccelerationRestoreRollbackKeepsPreexistingChunk() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-watch-rollback-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let start = Date(timeIntervalSince1970: 2_200_100_000)
-        func chunk(sequence: Int) -> TaptionWatchAccelerationChunk {
-            let capturedAt = start.addingTimeInterval(Double(sequence))
-            return TaptionWatchAccelerationChunk(
-                sessionID: nil,
-                sequence: sequence,
-                startedAt: capturedAt,
-                endedAt: capturedAt,
-                samples: [TaptionWatchAccelerationSample(
-                    capturedAt: capturedAt,
-                    acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                    sequence: sequence,
-                    isAmbient: true
-                )]
-            )
-        }
-        let existing = chunk(sequence: 1)
-        let added = chunk(sequence: 2)
-        try await database.recordWatchAccelerationChunk(existing)
-
-        let receipt = try await database
-            .recordWatchAccelerationChunksForRestore([existing, added])
-        try await database.rollbackWatchAccelerationRestore(receipt)
-
-        let restored = try await database.watchAccelerationChunks(
-            in: TimeSpan(
-                start: start.addingTimeInterval(-1),
-                end: start.addingTimeInterval(3)
-            )
-        )
-        XCTAssertEqual(restored, [existing])
-        let store = try TaptionStoreV2(
-            url: directory.appendingPathComponent(TaptionStoreV2.fileName)
-        )
-        let ids = try await store.rawEvents(kind: TaptionRawEvent.Kind.watchAcceleration).map(\.id)
-        XCTAssertEqual(ids, [existing.id.uuidString])
-    }
-
     func testPlanDaySnapshotMakeStopsBeforeCancelledProjection() {
         let date = Date(timeIntervalSince1970: 2_200_000_000)
         let readings = (0..<1_024).map {

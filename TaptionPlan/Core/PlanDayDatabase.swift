@@ -2,19 +2,11 @@ import Foundation
 import OSLog
 import TaptionPlanCore
 
-enum PlanDayDatabaseRestoreError: Error {
-    case rollbackFailed
-}
-
 /// 애플워치 센서 요약·가속도 묶음의 저장소. 새 저장소(`TaptionStoreV2`)의 `raw_events` 표에 둔다.
 ///
 /// 워치가 보낸 값은 원본 그대로 한 번만 저장하고(같은 id에 다른 내용이면 거부), 출처(기기·전송 경로)는
 /// provenance 열에 남긴다. 하루 화면용 파생 값은 여기에 저장하지 않는다(`PlanDayLoadCoordinator`가 메모리에만 둔다).
 actor PlanDayDatabase {
-    struct WatchAccelerationRestoreReceipt: Sendable {
-        let eventIDs: [String]
-    }
-
     private static let watchSummaryProvenance = [
         "source-device:appleWatch",
         "transport:WatchConnectivity",
@@ -32,8 +24,6 @@ actor PlanDayDatabase {
     private let store: TaptionStoreV2
     private let writeLockURL: URL
     private var dataDeletionGeneration: UInt64
-    /// 복원 세션이 새로 넣은 가속도 묶음의 id. 복원이 끝나지 못하면 이 묶음만 되돌린다.
-    private var restoreSessions: [UUID: [String]] = [:]
 
     init(store: TaptionStoreV2) {
         self.store = store
@@ -60,7 +50,6 @@ actor PlanDayDatabase {
         defer { lock.unlock() }
         dataDeletionGeneration = generation
             ?? TaptionDataDeletionFence.currentGeneration()
-        restoreSessions.removeAll()
         try await store.deleteRawEvents(kind: TaptionRawEvent.Kind.watchSummary)
         try await store.deleteRawEvents(kind: TaptionRawEvent.Kind.watchAcceleration)
     }
@@ -154,48 +143,6 @@ actor PlanDayDatabase {
         defer { lock.unlock() }
         try checkDataGeneration()
         try await store.appendRawEvents(try chunks.map(Self.watchAccelerationEvent))
-    }
-
-    func recordWatchAccelerationChunksForRestore(
-        _ chunks: [TaptionWatchAccelerationChunk], restoreSessionID: UUID? = nil
-    ) async throws -> WatchAccelerationRestoreReceipt {
-        guard !chunks.isEmpty else {
-            return WatchAccelerationRestoreReceipt(eventIDs: [])
-        }
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration()
-        let inserted = try await store.appendRawEvents(try chunks.map(Self.watchAccelerationEvent))
-        if let restoreSessionID {
-            restoreSessions[restoreSessionID, default: []] += inserted
-        }
-        return WatchAccelerationRestoreReceipt(eventIDs: inserted)
-    }
-
-    /// 확정하면 세션 기록만 비우고, 확정하지 못하면 그 세션이 넣은 묶음을 되돌린다.
-    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        let inserted = restoreSessions.removeValue(forKey: id) ?? []
-        guard !committed, !inserted.isEmpty else { return }
-        try await rollbackWatchAccelerationRestore(WatchAccelerationRestoreReceipt(eventIDs: inserted))
-    }
-
-    func rollbackWatchAccelerationRestore(
-        _ receipt: WatchAccelerationRestoreReceipt
-    ) async throws {
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        try checkDataGeneration()
-        do {
-            try await store.deleteRawEvents(
-                kind: TaptionRawEvent.Kind.watchAcceleration,
-                ids: receipt.eventIDs
-            )
-        } catch {
-            Self.logger.error(
-                "Watch acceleration rollback failed: \(error.localizedDescription, privacy: .public)"
-            )
-            throw PlanDayDatabaseRestoreError.rollbackFailed
-        }
     }
 
     func validateWatchAccelerationChunks(

@@ -1670,3 +1670,9 @@
 - 파이썬 도구는 7필드 트레일러와 톰스톤 수 집계로 갱신했고 실기기가 만든 새 파일을 `--summary`로 검증했다(톰스톤·설정 파일 자체를 파이썬으로 연 것은 아니다).
 - 제한: iCloud Drive 목적지 미검증, 사용자 확인 UI·AppModel 연결 없음, 전체 앱 테스트는 실행하지 않았다.
 
+
+## INT1019A01 · 새 월 단위 백업 엔진 앱 연결·이전 엔진 삭제 (브랜치 rewrite/connect-v2, 2026-10-19)
+- 구현: `AppLockAndPIN.swift`(PlanPINVerifier·잠금 타입), `PlanSecurityService.swift`(비밀번호·잠금·생체·시도 제한·마지막 백업 시각·로컬 보관 달 수), `PlanBackupEngineAdapter.swift`(엔진 호출 단일 지점), `PlanBackupPresentation.swift`, AppModel `backUpNow/offloadLocalMonths/restoreBackup/refreshBackupListings/deleteAllBackupFiles(confirmed:)`, 데이터 보호 시트·설정의 삭제 확인(iCloud 백업 포함은 별도 2단계 확인). 헤더 메타데이터(행 수·시각)는 비밀번호를 넣은 뒤에만 표시. `TaptionICloudDriveBackupDestination`은 컨테이너 `iCloud.com.taption.plan` 명시, `.이름.icloud` 자리 표시 파일 목록·다운로드·삭제 처리 추가.
+- 삭제: `SecurityBackupCore.swift`(7,270줄, 타입 이전 후 전부), `PlanDailyBackup.swift`(179줄), `SecurityBackupCoreTests.swift`(7,591줄), FeatureEngineTests의 이전 백업·복원 테스트 약 17개, 자동/백그라운드 백업, CloudKit 복구 키·매니페스트 동기화, 복원 journal, 복원 세션 보조(`appendForRestore` 등), DEBUG 백업 검증 인자.
+- 실기기(iPhone 11 Pro) 결과: 새 테스트(AppLockAndPINTests·AppModelBackupConnectionTests)·TaptionBackupV2Tests 통과. 전체 TaptionPlanTests 1,389개 실행, 실패 테스트 2개(StoreKit 구매·복원, LocalizationCatalog)로 변경 전 기준과 동일(새 실패 없음). 앱 Debug 빌드 성공. 로그 `build/validation/INT1019A01/`.
+- 제한: UI 스모크(`TaptionPlanUITests`)는 "Timed out while enabling automation mode"로 시작하지 못했다(기기 화면 잠김 추정, ui-smoke-1.log). 실제 iCloud 업로드·다운로드·자리 표시 파일 처리는 코드 점검만 했고 기기 설치본에서 대표가 눌러 확인해야 한다. 로컬 정리된 달 열람 시 홈 안내는 만들지 않았고 백업 목록의 불러오기로 대신한다.

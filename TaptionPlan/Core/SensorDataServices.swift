@@ -160,8 +160,6 @@ actor RawDeviceDataDayArchive {
     private let store: TaptionStoreV2
     private let writeLockURL: URL
     private var dataDeletionGeneration: UInt64
-    /// 복원 세션이 새로 넣은 봉투의 id. 복원이 끝나지 못하면 이 봉투만 되돌린다.
-    private var restoreSessions: [UUID: [UUID]] = [:]
 
     init(databaseURL: URL) throws {
         try self.init(store: TaptionStoreV2(url: databaseURL))
@@ -188,38 +186,6 @@ actor RawDeviceDataDayArchive {
         try await withProtectedLock { [self] in
             try await self.checkDataGeneration(generation)
             try await self.store.appendRawEvents(events)
-        }
-    }
-
-    func appendForRestore(
-        _ envelopes: [RawDeviceDataEnvelope], restoreSessionID: UUID? = nil
-    ) async throws -> [UUID] {
-        guard !envelopes.isEmpty else { return [] }
-        let generation = dataDeletionGeneration
-        let events = try events(for: envelopes)
-        let inserted = try await withProtectedLock { [self] in
-            try await self.checkDataGeneration(generation)
-            return try await self.store.appendRawEvents(events).compactMap(UUID.init(uuidString:))
-        }
-        if let restoreSessionID {
-            restoreSessions[restoreSessionID, default: []] += inserted
-        }
-        return inserted
-    }
-
-    /// 확정하면 세션 기록만 비우고, 확정하지 못하면 그 세션이 넣은 봉투를 되돌린다.
-    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        let inserted = restoreSessions.removeValue(forKey: id) ?? []
-        guard !committed, !inserted.isEmpty else { return }
-        try await rollbackRestore(ids: inserted)
-    }
-
-    func rollbackRestore(ids: [UUID]) async throws {
-        guard !ids.isEmpty else { return }
-        let generation = dataDeletionGeneration
-        try await withProtectedLock { [self] in
-            try await self.checkDataGeneration(generation)
-            try await self.store.deleteRawEvents(kind: Self.kind, ids: ids.map(\.uuidString))
         }
     }
 
@@ -341,7 +307,6 @@ actor RawDeviceDataDayArchive {
 
     private func deleteProtected(generation: UInt64) async throws {
         dataDeletionGeneration = generation
-        restoreSessions.removeAll()
         try await store.deleteRawEvents(kind: Self.kind)
     }
 
@@ -365,8 +330,6 @@ actor SensorReadingArchive {
     private let writeLockURL: URL
     private let beforeValidateAppend: @Sendable () async throws -> Void
     private var dataDeletionGeneration: UInt64
-    /// 복원 세션이 새로 넣은 기록의 id. 복원이 끝나지 못하면 이 기록만 되돌린다.
-    private var restoreSessions: [UUID: [String]] = [:]
 
     /// - Parameters:
     ///   - fileURL: 이전 JSONL 파일 위치. 있으면 지운다(이전 데이터는 쓰지 않는다).
@@ -416,47 +379,6 @@ actor SensorReadingArchive {
         try await withLock {
             try await self.checkDataGeneration(generation)
             try await self.store.appendImmutableReadings(readings)
-        }
-    }
-
-    func appendForRestore(_ readings: [SensorReading], restoreSessionID: UUID? = nil) async throws -> [UUID] {
-        guard !readings.isEmpty else { return [] }
-        let generation = dataDeletionGeneration
-        try Self.rejectConflicts(within: readings)
-        let inserted = try await withLock {
-            try await self.checkDataGeneration(generation)
-            return try await self.store.insertNewReadings(readings)
-        }
-        if let restoreSessionID {
-            restoreSessions[restoreSessionID, default: []] += inserted
-        }
-        return inserted.compactMap(UUID.init(uuidString:))
-    }
-
-    /// 확정하면 세션 기록만 비우고, 확정하지 못하면 그 세션이 넣은 기록을 되돌린다.
-    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        let inserted = restoreSessions[id] ?? []
-        guard !committed else {
-            restoreSessions[id] = nil
-            return
-        }
-        if !inserted.isEmpty {
-            let generation = dataDeletionGeneration
-            try await withLock {
-                try await self.checkDataGeneration(generation)
-                try await self.store.deleteReadings(ids: inserted)
-            }
-        }
-        // 지우는 데 성공한 뒤에만 목록을 버려서, 실패하면 다시 시도할 수 있다.
-        restoreSessions[id] = nil
-    }
-
-    func rollbackRestore(ids: [UUID]) async throws {
-        guard !ids.isEmpty else { return }
-        let generation = dataDeletionGeneration
-        try await withLock {
-            try await self.checkDataGeneration(generation)
-            try await self.store.deleteReadings(ids: ids.map(\.uuidString))
         }
     }
 
@@ -1059,23 +981,6 @@ final class AppleSensorDataService {
         if !inserted.isEmpty {
             onReadingsPersisted?(inserted)
         }
-    }
-
-    func recordExternalReadingsForRestore(
-        _ readings: [SensorReading], restoreSessionID: UUID? = nil
-    ) async throws -> [UUID] {
-        guard !isDataDeletionActive else { throw CancellationError() }
-        return try await archive.appendForRestore(
-            readings.sorted { $0.timestamp < $1.timestamp }, restoreSessionID: restoreSessionID
-        )
-    }
-
-    func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        try await archive.finishRestoreSession(id, committed: committed)
-    }
-
-    func rollbackExternalReadingsRestore(ids: [UUID]) async throws {
-        try await archive.rollbackRestore(ids: ids)
     }
 
     func validateExternalReadings(_ readings: [SensorReading]) async throws {

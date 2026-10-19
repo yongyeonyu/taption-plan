@@ -1,5 +1,10 @@
 # 남은 요청
 
+## INT1019A01 · 새 월 단위 백업 엔진을 앱·화면에 연결하고 이전 백업 엔진 삭제 — 브랜치 rewrite/connect-v2 (2026-10-19)
+- 원인: 새 저장소(`TaptionStoreV2`)와 월 단위 백업 엔진(`TaptionBackupEngine`)은 완성됐지만 앱 화면은 아직 이전 엔진(`PlanSecurityBackupService`, `SecurityBackupCore.swift` 약 7,700줄, `PlanDailyBackup.swift`)을 쓴다. 이전 엔진은 CloudKit 복구 키·일별 파일·이중 키라 새 구조와 호환되지 않는다. 대표 결정: 이전 구조 호환 없음, 자동 백업 없이 사용자가 누르면 백업한다.
+- 해결: (1) 비밀번호·앱 잠금·생체 인증·시도 제한은 `AppLockAndPIN.swift`(타입)와 `PlanSecurityService.swift`(서비스)로 분리해 살린다. (2) AppModel에 지금 백업·로컬 정리(오프로드)·복원·백업 파일 포함 전체 삭제를 새 엔진으로 연결하고, 데이터 보호 시트(홈 지도 배치·화랑이 크기는 그대로)를 바꾼다. 복원 뒤 repository를 다시 불러온다. (3) 이전 엔진·일별 백업·자동/백그라운드 백업·복구 키·복원 journal·관련 테스트를 삭제한다. (4) `TaptionICloudDriveBackupDestination`의 컨테이너 ID·경로·다운로드 처리를 점검한다.
+- 검증 기준: AppModel 수준 테스트(비밀번호 등록 → 백업 → 월 파일 생성 → 오프로드 → 복원 → 확인 후 전체 삭제), PIN/잠금/시도 제한/4자리 호환 테스트, 실기기 전체 `TaptionPlanTests`를 기준 실패(StoreKit 1, LocalizationCatalog 1)와 비교, 앱 Debug 빌드, UI 스모크. 실제 iCloud 업로드·다운로드는 기기에서 대표가 눌러 확인(미확인으로 기록).
+
 ## BKP1019A02 · 월 단위 백업 엔진 v2 (브랜치 rewrite/backup-v2, 2026-10-19)
 - 요청: 대표 확정 규칙(월 파일 `yyyy-MM.taptionbackup`, 상위 집합일 때만 덮어쓰기, 임시 파일 검증 후 원자 교체, 비밀번호+헤더 솔트 PBKDF2 600000, 표 단위 JSON Lines→압축→AES-GCM, `BackupDestination` 추상화, 봉인·오프로드, 복원)을 이전 엔진과 별개인 새 파일로 구현. UI·AppModel 연결 제외.
 - 해결: `TaptionBackupFormat/Engine/Destination.swift`와 저장소 월 범위 보조 메서드, 단위 테스트, `scripts/taption-backup-decode.py` 재작성.
