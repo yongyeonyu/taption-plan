@@ -1797,3 +1797,12 @@
 - 테스트: 전체 `TaptionPlanTests`는 FLK1020B01(b275eb6 기준)에서 실행했고, 이후 색 3단계 변경은 `MapHomeLiveMapTests` 29개 통과(`live-1.log`). 시작 화면 이름 변경 후 전체 재실행은 하지 않았다.
 - 아카이브·업로드: Release 아카이브 성공(`archive-187.log`), IPA 내보내기 성공(`export-187.log`), IPA 안 앱·위젯 번들 버전 187·표시 이름 BOKKI Plan/BOKKI Plan Widget(Release 아카이브에는 Watch 번들이 없다, 이전 빌드도 같음). `altool` `No errors uploading`(`altool-187.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 187·186·185·184·183 확인, 테스터 1명(`asc-poll-187.log`).
 - 제한: 기기 설치·테스터 수신과 시작 화면·색·달력 화면은 직접 보지 않았다.
+
+## WRK1020A01 · 디자인 토큰 워크트리 브랜치 정리 (2026-10-20)
+- 확인: `worktree-agent-ada235d414d79094f`의 유일한 커밋 `4a7f170`(디자인 토큰, COM1016A01)은 `git cherry`에서 main의 `824490f`와 같은 패치로 나왔다(`-` 표시). 병합을 시도하자 충돌은 `TimeScaleTests.swift` 한 곳뿐이었고 해소하니 main과 차이가 없어 `git merge --abort`로 되돌렸다(main 변경 없음).
+- 조치(대표 지시 "main에 합치기"의 결과): 이미 main에 있는 내용이라 병합할 것이 없었고, 브랜치만 `git branch -D`로 삭제했다. 워크트리 폴더는 이전에 정리돼 있었다.
+
+## MAP1020A01 · 지도 발자국 지연·GPS 튐 직선 로그 확인 시도 (2026-10-20)
+- 시도: 대표 선택("실기기 로그로 확인")에 따라 iPhone 18 Pro Max 앱 컨테이너의 진단 묶음(`Diagnostics/Packages`, 10/19 12:14)을 읽기 전용으로 복사하려 했으나 `devicectl`이 CoreDeviceError 4016(기기가 사용 조건을 만족하지 못함, 잠금·연결 상태로 추정)으로 실패했다. 파일 목록은 같은 시각에 읽혔다.
+- 코드 점검: 확대 중 뷰포트는 `mapViewRegionIsChanging`마다 한 번의 메인 큐 전달로 합쳐져 시간 사이드바·발자국 오버레이 저장소에 반영되고, 부모 상태는 30Hz로 제한된다. 이 경로에서 눈에 띄는 결함은 찾지 못했다. 5분 이하 구간의 불가능 속도(55m/s 초과) 차단은 `RouteSparseConnectionPolicy`에 이미 있다.
+- 미결: 원인 미확정. 기기 잠금 해제 후 진단 묶음 복사(`map_viewport_performance`의 `max_frame_gap_ms`, `largest_jump_*`) 또는 문제 날짜·시간대 확인이 필요하다.
