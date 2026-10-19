@@ -330,7 +330,7 @@ struct AppShellView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 230, height: 230)
-                    Text("Taption Plan")
+                    Text("BOKKI Plan")
                         .font(.system(size: 25, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     ProgressView(value: initialLaunchProgress, total: 1)
@@ -359,8 +359,8 @@ struct AppShellView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
                 AppLanguagePreference.text(
-                    korean: "Taption Plan 불러오는 중",
-                    english: "Loading Taption Plan",
+                    korean: "BOKKI Plan 불러오는 중",
+                    english: "Loading BOKKI Plan",
                     rawPreference: languageRawValue
                 )
             )
@@ -1114,7 +1114,7 @@ struct PermissionOnboardingSheet: View {
             Text("하루는 알아서 기록됩니다")
                 .font(.taption(size: 15, weight: .black))
                 .foregroundStyle(Color.tpInk)
-            Text("Taption Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.")
+            Text("BOKKI Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다.")
                 .font(.taption(size: 9))
                 .foregroundStyle(Color.tpSecondary)
                 .fixedSize(horizontal: false, vertical: true)

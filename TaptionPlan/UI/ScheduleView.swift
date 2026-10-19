@@ -2197,7 +2197,7 @@ struct ScheduleView: View {
                     .foregroundStyle(Color.tpInk)
                 Text(
                     prompt == .installInvitation
-                        ? "Apple Watch에도 Taption Plan이 있습니다"
+                        ? "Apple Watch에도 BOKKI Plan이 있습니다"
                         : "Apple Watch 없이도 하루는 기록됩니다"
                 )
                 .font(.taption(size: 9.5, weight: .bold))

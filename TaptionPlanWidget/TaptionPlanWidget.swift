@@ -2426,7 +2426,7 @@ private struct TaptionPlanAppIcon: View {
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
             )
             .accessibilityLabel(
-                widgetText("Taption Plan 앱 아이콘", "Taption Plan app icon")
+                widgetText("BOKKI Plan 앱 아이콘", "BOKKI Plan app icon")
             )
     }
 }

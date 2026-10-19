@@ -286,8 +286,8 @@ enum AppleWatchOnboarding {
 
     static func installInstruction(preference: AppLanguagePreference) -> String {
         AppLanguagePreference.text(
-            korean: "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → Taption Plan에서 ‘설치’",
-            english: "In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to Taption Plan",
+            korean: "iPhone의 Watch 앱 → 나의 시계 → 사용 가능한 앱 → BOKKI Plan에서 ‘설치’",
+            english: "In the Watch app on iPhone → My Watch → Available Apps → tap “Install” next to BOKKI Plan",
             preference: preference
         )
     }

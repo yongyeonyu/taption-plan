@@ -27583,6 +27583,30 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         ))
     }
 
+    func testCalendarDotsMarkIncompleteCompleteAndEmptyDays() {
+        let day1 = date(2026, 9, 20)
+        let day2 = date(2026, 9, 21)
+        let day3 = date(2026, 9, 22)
+        let asOf = date(2026, 9, 25)
+        func record(_ start: Date, hours: Double) -> ActualRecord {
+            ActualRecord(
+                planID: nil, title: "업무", categoryID: "work",
+                startedAt: start, endedAt: start.addingTimeInterval(hours * 3_600),
+                source: .manual, manuallyCorrected: true
+            )
+        }
+        let statuses = MapHomeCalendarLogStatusPolicy.statuses(
+            actuals: [record(day1, hours: 24), record(day2, hours: 12)],
+            travel: [], month: day1, asOf: asOf, calendar: calendar
+        )
+        XCTAssertEqual(statuses[day1], .complete)
+        XCTAssertEqual(statuses[day2], .incomplete, "기록이 있어도 비는 구간(미확인)이 있으면 빨강")
+        XCTAssertNil(statuses[day3], "기록이 없는 날은 점이 없다")
+        XCTAssertTrue(MapHomeCalendarLogStatusPolicy.statuses(
+            actuals: [], travel: [], month: day1, asOf: asOf, calendar: calendar
+        ).isEmpty)
+    }
+
     func testRecentCompletedDayOnlyAddsOneHouseLevel() {
         var history = MapHomeGrowthHistory.initial(for: date(2026, 9, 20), calendar: calendar)
         MapHomeGrowthPolicy.observeCurrentDay(

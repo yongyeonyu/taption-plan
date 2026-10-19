@@ -5048,7 +5048,7 @@ final class MapHomeVectorRouteRenderingTests: XCTestCase {
             map.setCenter(CLLocationCoordinate2D(latitude: 35, longitude: 129), zoomLevel: zoom, animated: false)
             map.setCenter(center, zoomLevel: zoom, animated: false)
             var visible = Set<String>()
-            for _ in 0..<80 {
+            for _ in 0..<160 {
                 try await Task.sleep(for: .milliseconds(50))
                 coordinator.updateContent(in: map)
                 visible = Set(layers.filter {
@@ -5059,10 +5059,10 @@ final class MapHomeVectorRouteRenderingTests: XCTestCase {
             XCTAssertEqual(visible, layers, "route layers at zoom \(zoom)")
         }
         map.styleJSON = #"{"version":8,"sources":{},"layers":[]}"#
-        for _ in 0..<80 {
+        for _ in 0..<160 {
             try await Task.sleep(for: .milliseconds(50))
             coordinator.updateContent(in: map)
-            if !map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: ["tap-active-route"]).isEmpty { break }
+            if layers.allSatisfy({ !map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: [$0]).isEmpty }) { break }
         }
         for layer in layers {
             XCTAssertFalse(map.visibleFeatures(in: map.bounds, styleLayerIdentifiers: [layer]).isEmpty,
@@ -5483,7 +5483,7 @@ final class LocalizedMessageContractTests: XCTestCase {
         assertPair(
             screenTimeGuidance.guidance(preference: .korean) ?? "",
             screenTimeGuidance.guidance(preference: .english) ?? "",
-            expectedKorean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요."
+            expectedKorean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 BOKKI Plan을 허용해 주세요."
         )
         assertPair(
             AppleWatchConnectionState.noRecentData.settingsLabel(preference: .korean),

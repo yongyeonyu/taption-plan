@@ -20,6 +20,33 @@ final class AppLockAndPINTests: XCTestCase {
         )
     }
 
+    func testPasswordIsRememberedOnThisDeviceAfterRegistrationAndVerification() throws {
+        let remembered = InMemoryPlanCredentialStore()
+        let suite = "AppLockAndPINTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        let credentials = InMemoryPlanCredentialStore()
+        let service = PlanSecurityService(
+            credentialStore: credentials, passwordStore: remembered, settingsDefaults: defaults
+        )
+        XCTAssertNil(service.rememberedPassword)
+        try service.setPIN("123456")
+        XCTAssertEqual(service.rememberedPassword, "123456")
+        try service.setPIN("654321")
+        XCTAssertEqual(service.rememberedPassword, "654321", "비밀번호를 바꾸면 보관값도 바뀐다")
+        XCTAssertThrowsError(try service.verifyPIN("111111", unlocking: false))
+        XCTAssertEqual(service.rememberedPassword, "654321", "틀린 값은 보관하지 않는다")
+
+        // 보관 항목이 비어 있는 기존 사용자: 올바른 비밀번호를 한 번 확인하면 보관된다.
+        let migrated = PlanSecurityService(
+            credentialStore: credentials, passwordStore: InMemoryPlanCredentialStore(), settingsDefaults: defaults
+        )
+        XCTAssertTrue(migrated.hasPIN)
+        XCTAssertNil(migrated.rememberedPassword)
+        try migrated.verifyPIN("654321", unlocking: false)
+        XCTAssertEqual(migrated.rememberedPassword, "654321")
+    }
+
     func testBiometricAttemptGateRunsOncePerLockGeneration() {
         XCTAssertTrue(AppLockBiometricAttemptGate.shouldStart(generation: 1, attemptedGeneration: nil, isInFlight: false))
         XCTAssertFalse(AppLockBiometricAttemptGate.shouldStart(generation: 1, attemptedGeneration: 1, isInFlight: false))

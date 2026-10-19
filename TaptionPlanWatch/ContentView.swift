@@ -42,7 +42,7 @@ struct WatchContentView: View {
                         .padding(.bottom, 8)
                 }
             }
-            .navigationTitle("Taption Plan")
+            .navigationTitle("BOKKI Plan")
             .task {
                 WatchLaunchDiagnostics.mark("first-view-task")
                 connectivity.prepare()

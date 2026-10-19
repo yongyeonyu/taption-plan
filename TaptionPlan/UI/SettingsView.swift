@@ -342,7 +342,7 @@ struct SettingsView: View {
                                 blue: 0.16
                             ),
                             title: "모든 데이터 삭제",
-                            subtitle: "이 기기와 iCloud의 Taption Plan 데이터",
+                            subtitle: "이 기기와 iCloud의 BOKKI Plan 데이터",
                             value: ""
                         ) {
                             showsDeleteConfirmation = true
@@ -393,7 +393,7 @@ struct SettingsView: View {
             UserTransitLocationsSettingsView(model: model)
         }
         .confirmationDialog(
-            "모든 Taption Plan 데이터를 삭제할까요?",
+            "모든 BOKKI Plan 데이터를 삭제할까요?",
             isPresented: $showsDeleteConfirmation,
             titleVisibility: .visible
         ) {
@@ -437,8 +437,8 @@ struct SettingsView: View {
             Button(AppLanguagePreference.text(korean: "취소", english: "Cancel"), role: .cancel) {}
         } message: {
             Text(AppLanguagePreference.text(
-                korean: "이 기기의 모든 기록과 iCloud Drive의 Taption Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
-                english: "All records on this device and every Taption Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone."
+                korean: "이 기기의 모든 기록과 iCloud Drive의 BOKKI Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
+                english: "All records on this device and every BOKKI Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone."
             ))
         }
     }
@@ -674,7 +674,7 @@ struct SettingsView: View {
             }
             .last
         return VStack(alignment: .leading, spacing: 2) {
-            Text("Taption Plan \(version) (빌드 \(build))")
+            Text("BOKKI Plan \(version) (빌드 \(build))")
             if let watchBuild, let reportedAt = model.watchLaunchReport?.receivedAt {
                 // 워치가 마지막으로 보고한 값이다. 지금 설치된 빌드와 다를 수
                 // 있어 언제 보고된 값인지 함께 보여준다.

@@ -133,7 +133,7 @@ enum MapHomeHomeWeatherBadgePolicy {
 
 // MARK: - Route speed gradient
 
-/// 실제 경로를 속도 구간별 색(느림 초록 → 빠름 빨강, `MapHomePawprintSpeedColor` 척도)으로 나눈다.
+/// 실제 경로를 속도 구간별 색(느림 빨강 → 빠름 초록, `MapHomePawprintSpeedColor` 척도)으로 나눈다.
 enum MapHomeRouteSpeedGradient {
     static let maximumPieces = 64
 
@@ -221,7 +221,7 @@ enum MapHomeRouteSpeedGradient {
 
     static func colorHex(forMetersPerSecond speed: Double) -> String {
         let ratio = MapHomePawprintSpeedColor.ratio(forMetersPerSecond: speed) ?? 0
-        let rgb = rgb(hue: (1.0 / 3.0) * (1 - ratio), saturation: 0.85, brightness: 0.82)
+        let rgb = rgb(hue: (1.0 / 3.0) * ratio, saturation: 0.85, brightness: 0.82)
         return String(
             format: "#%02X%02X%02X",
             Int((rgb.red * 255).rounded()),

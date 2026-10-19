@@ -635,7 +635,7 @@ final class WatchWorkoutManager: NSObject, ObservableObject {
                     sensorSessionID.uuidString,
                 TaptionWatchHealthMetadata.workoutPurgeIdentifier:
                     workoutPurgeIdentifier.uuidString,
-                HKMetadataKeyWorkoutBrandName: "Taption Plan",
+                HKMetadataKeyWorkoutBrandName: "BOKKI Plan",
             ]
             if let linkedPlan {
                 metadata.merge([

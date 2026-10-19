@@ -81,8 +81,8 @@ enum ScreenTimeAuthorizationState: String, Sendable {
             )
         case .denied:
             AppLanguagePreference.text(
-                korean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 Taption Plan을 허용해 주세요.",
-                english: "In Settings > Screen Time > App & Website Activity, allow Taption Plan.",
+                korean: "설정 > 스크린 타임 > 앱 및 웹사이트 활동에서 BOKKI Plan을 허용해 주세요.",
+                english: "In Settings > Screen Time > App & Website Activity, allow BOKKI Plan.",
                 preference: preference
             )
         case .requiresCurrentSystem:
@@ -627,14 +627,14 @@ enum ScreenTimeUsageError: LocalizedError {
                 앱 사용 데이터 접근이 승인되지 않았습니다. 순서대로 확인해 주세요.
                 1. 설정 > 스크린 타임을 켭니다.
                 2. 설정 > 스크린 타임 > 앱 및 웹사이트 활동을 켭니다.
-                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 Taption Plan을 허용합니다.
+                3. 설정 > 스크린 타임 > 앱 사용 데이터 공유에서 BOKKI Plan을 허용합니다.
                 그래도 같다면 이 Apple 계정에서는 접근이 제한됩니다. 가족 공유의 자녀 계정이거나 일부 국가/지역인 경우가 여기에 해당합니다.
                 """,
                 english: """
                 App usage data access has not been granted. Please check the following in order.
                 1. Turn on Settings > Screen Time.
                 2. Turn on Settings > Screen Time > App & Website Activity.
-                3. Allow Taption Plan under Settings > Screen Time > Share App Usage Data.
+                3. Allow BOKKI Plan under Settings > Screen Time > Share App Usage Data.
                 If it still fails, access is restricted for this Apple Account, such as a child account in Family Sharing or an account in some countries or regions.
                 """,
                 preference: preference

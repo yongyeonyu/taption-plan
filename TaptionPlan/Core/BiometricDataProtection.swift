@@ -190,8 +190,8 @@ final class BiometricProtectedSnapshotStore {
     func protect(_ snapshot: TaptionDataSnapshot) async throws -> BiometricDataProtectionStatus {
         let keyData = try await keychain.key(
             localizedReason: AppLanguagePreference.text(
-                korean: "Taption Plan의 보호된 기록을 잠금 해제합니다.",
-                english: "Unlock protected Taption Plan records."
+                korean: "BOKKI Plan의 보호된 기록을 잠금 해제합니다.",
+                english: "Unlock protected BOKKI Plan records."
             )
         )
         let archive = try BiometricProtectedSnapshotCodec.archive(
@@ -214,8 +214,8 @@ final class BiometricProtectedSnapshotStore {
         let archive = try loadArchive()
         let keyData = try await keychain.key(
             localizedReason: AppLanguagePreference.text(
-                korean: "Taption Plan의 보호된 기록을 확인합니다.",
-                english: "Verify protected Taption Plan records."
+                korean: "BOKKI Plan의 보호된 기록을 확인합니다.",
+                english: "Verify protected BOKKI Plan records."
             )
         )
         _ = try BiometricProtectedSnapshotCodec.snapshot(

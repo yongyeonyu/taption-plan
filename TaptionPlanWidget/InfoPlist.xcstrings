@@ -7,13 +7,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan Widget"
+            "value" : "BOKKI Plan Widget"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan 위젯"
+            "value" : "BOKKI Plan 위젯"
           }
         }
       }

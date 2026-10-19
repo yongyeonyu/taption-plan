@@ -68,13 +68,13 @@
         }
       }
     },
-    "Taption Plan" : {
+    "BOKKI Plan" : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan"
+            "value" : "BOKKI Plan"
           }
         }
       }

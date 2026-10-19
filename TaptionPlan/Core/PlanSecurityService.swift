@@ -1,7 +1,7 @@
 import Foundation
 
 /// 비밀번호(6자리 숫자) 등록·검증, 앱 잠금, 생체 인증, 시도 횟수 제한, 마지막 백업 시각과 로컬 보관 달 수를 맡는다.
-/// 백업 파일 자체는 `TaptionBackupEngine`이 다루며, 이 서비스는 백업 키를 저장하지 않는다.
+/// 백업 파일 자체는 `TaptionBackupEngine`이 다루며, 백업 키는 저장하지 않고, 비밀번호 6자리만 이 기기 Keychain에 따로 보관한다.
 @MainActor
 final class PlanSecurityService {
     static let defaultLocalMonthsToKeep = 2
@@ -11,6 +11,8 @@ final class PlanSecurityService {
     static let delayAfterAttempts: TimeInterval = 30
 
     private let credentialStore: PlanCredentialStore
+    /// 백업·복원에 쓰는 6자리를 이 기기에만 보관한다(대표 결정, BKP1020A01). nil이면 보관하지 않는다.
+    private let passwordStore: PlanCredentialStore?
     private let biometricAuthenticator: PlanLocalBiometricAuthenticator
     private let settingsDefaults: UserDefaults
     private let settingsKey = "TaptionPlan.security.app-lock-settings-v1"
@@ -26,10 +28,14 @@ final class PlanSecurityService {
 
     init(
         credentialStore: PlanCredentialStore = KeychainPlanCredentialStore(),
+        passwordStore: PlanCredentialStore? = nil,
         biometricAuthenticator: PlanLocalBiometricAuthenticator = SystemPlanLocalBiometricAuthenticator(),
         settingsDefaults: UserDefaults = .standard
     ) {
         self.credentialStore = credentialStore
+        self.passwordStore = passwordStore
+            ?? (credentialStore is KeychainPlanCredentialStore
+                ? KeychainPlanCredentialStore(account: "backup-password-v1") : nil)
         self.biometricAuthenticator = biometricAuthenticator
         self.settingsDefaults = settingsDefaults
         if let data = try? credentialStore.read() {
@@ -54,6 +60,19 @@ final class PlanSecurityService {
 
     var hasPIN: Bool { verifier != nil }
 
+    /// 등록된 비밀번호와 일치하는 보관값. 없거나 등록 비밀번호와 다르면 nil.
+    var rememberedPassword: String? {
+        guard let verifier,
+              let data = try? passwordStore?.read(),
+              let value = String(data: data, encoding: .utf8),
+              verifier.matches(value) else { return nil }
+        return value
+    }
+
+    private func remember(_ pin: String) {
+        try? passwordStore?.write(Data(pin.utf8))
+    }
+
     var status: PlanSecurityStatus {
         .init(
             settings: settings,
@@ -76,6 +95,7 @@ final class PlanSecurityService {
         verifier = value
         failedAttempts = 0
         blockedUntil = nil
+        remember(pin)
     }
 
     /// 비밀번호를 확인한다. 틀리면 횟수를 세고 5번째부터 30초 동안 막는다. `unlocking`이면 앱 잠금도 푼다.
@@ -94,6 +114,7 @@ final class PlanSecurityService {
         failedAttempts = 0
         blockedUntil = nil
         try persistCredentialState()
+        remember(pin)
         if unlocking { state = .unlocked }
     }
 
@@ -112,7 +133,7 @@ final class PlanSecurityService {
 
     func unlockWithBiometrics() async throws {
         guard settings.biometricUnlockEnabled else { throw PlanSecurityError.biometricUnavailable }
-        let reason = AppLanguagePreference.text(korean: "Taption Plan 잠금 해제", english: "Unlock Taption Plan")
+        let reason = AppLanguagePreference.text(korean: "BOKKI Plan 잠금 해제", english: "Unlock BOKKI Plan")
         guard await biometricAuthenticator.authenticate(reason: reason) else {
             throw PlanSecurityError.biometricRejected
         }

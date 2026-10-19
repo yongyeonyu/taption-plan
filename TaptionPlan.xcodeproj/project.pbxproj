@@ -1459,7 +1459,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
+				INFOPLIST_KEY_CFBundleDisplayName = "BOKKI Plan";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동 중 심박수와 거리 정보를 읽어 실시간 운동 기록을 표시합니다.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Apple Watch에서 측정한 걷기·달리기·자전거 운동을 건강 앱에 저장합니다.";
 				INFOPLIST_KEY_WKBackgroundModes = "workout-processing";
@@ -1492,7 +1492,7 @@
 				DEVELOPMENT_TEAM = 4FWG8XXYM7;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TaptionPlanWatch/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Taption Plan";
+				INFOPLIST_KEY_CFBundleDisplayName = "BOKKI Plan";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "운동 중 심박수와 거리 정보를 읽어 실시간 운동 기록을 표시합니다.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Apple Watch에서 측정한 걷기·달리기·자전거 운동을 건강 앱에 저장합니다.";
 				INFOPLIST_KEY_WKBackgroundModes = "workout-processing";

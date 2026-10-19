@@ -956,12 +956,12 @@
         }
       }
     },
-    "Apple Watch에도 Taption Plan이 있습니다" : {
+    "Apple Watch에도 BOKKI Plan이 있습니다" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan is also available on Apple Watch"
+            "value" : "BOKKI Plan is also available on Apple Watch"
           }
         }
       }
@@ -1181,28 +1181,28 @@
         }
       }
     },
-    "Taption Plan" : {
+    "BOKKI Plan" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan"
+            "value" : "BOKKI Plan"
           }
         }
       }
     },
-    "Taption Plan %@ (빌드 %@)" : {
+    "BOKKI Plan %@ (빌드 %@)" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan %1$@ (Build %2$@)"
+            "value" : "BOKKI Plan %1$@ (Build %2$@)"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Taption Plan %1$@ (빌드 %2$@)"
+            "value" : "BOKKI Plan %1$@ (빌드 %2$@)"
           }
         }
       }
@@ -1217,23 +1217,23 @@
         }
       }
     },
-    "Taption Plan은 위치·건강·캘린더·사진·앱 사용시간을 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
+    "BOKKI Plan은 위치·건강·캘린더·사진·앱 사용시간을 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
       "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan reads your location, health, calendar, photos, and app usage to record your day for you. Allow only what you need, and change permissions anytime in Settings."
+            "value" : "BOKKI Plan reads your location, health, calendar, photos, and app usage to record your day for you. Allow only what you need, and change permissions anytime in Settings."
           }
         }
       }
     },
-    "Taption Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
+    "BOKKI Plan은 위치·건강·캘린더를 읽어 하루를 대신 적습니다. 필요한 것만 허용해도 되고, 설정에서 언제든 바꿀 수 있습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan reads your location, health data, and calendars to record your day for you. Allow only what you need, and change permissions anytime in Settings."
+            "value" : "BOKKI Plan reads your location, health data, and calendars to record your day for you. Allow only what you need, and change permissions anytime in Settings."
           }
         }
       }
@@ -2344,12 +2344,12 @@
         }
       }
     },
-    "모든 Taption Plan 데이터를 삭제할까요?" : {
+    "모든 BOKKI Plan 데이터를 삭제할까요?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete all Taption Plan data?"
+            "value" : "Delete all BOKKI Plan data?"
           }
         }
       }

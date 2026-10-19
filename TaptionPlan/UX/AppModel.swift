@@ -1639,6 +1639,9 @@ final class AppModel {
         return false
     }
 
+    /// 이 기기에 보관된 6자리 비밀번호. 백업·복원·로컬 정리에 쓰며, 없으면 한 번 입력받는다.
+    var rememberedBackupPassword: String? { securityService?.rememberedPassword }
+
     func configureBackupPIN(_ pin: String) throws {
         guard let securityService else { throw PlanSecurityError.invalidCredential }
         try securityService.setPIN(pin)

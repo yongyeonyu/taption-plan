@@ -1111,7 +1111,7 @@ enum MapHomeExpectedRouteDiagnostics {
     }
 }
 
-/// 발바닥 색: 느리면 초록, 빠르면 빨강(시속 150km에서 최대), 속도를 모르는 미확인은 회색.
+/// 발바닥 색: 느리면 빨강, 빠르면 초록(시속 150km에서 최대), 속도를 모르는 미확인은 회색.
 enum MapHomePawprintSpeedColor {
     static let maximumMetersPerSecond = 150.0 / 3.6
 
@@ -1124,8 +1124,8 @@ enum MapHomePawprintSpeedColor {
         guard let ratio = ratio(forMetersPerSecond: speed) else {
             return Color.gray.opacity(0.68)
         }
-        // 색상환 초록(1/3)에서 빨강(0)으로.
-        return Color(hue: (1.0 / 3.0) * (1 - ratio), saturation: 0.85, brightness: 0.82)
+        // 색상환 빨강(0)에서 초록(1/3)으로.
+        return Color(hue: (1.0 / 3.0) * ratio, saturation: 0.85, brightness: 0.82)
             .opacity(0.9)
     }
 
@@ -2565,6 +2565,15 @@ struct MapHomeView: View {
                 selectedDate: $model.selectedDate,
                 holidayName: { date in
                     TimelineAxisGrid.koreanHolidayName(on: date)
+                },
+                logStatuses: { month in
+                    MapHomeCalendarLogStatusPolicy.statuses(
+                        actuals: model.snapshot.actuals,
+                        travel: model.snapshot.travel,
+                        month: month,
+                        asOf: .now,
+                        calendar: MapHomeGrowthPolicy.localCalendar
+                    )
                 },
                 language: language
             )
@@ -6210,8 +6219,8 @@ struct MapHomeView: View {
         let build = info?["CFBundleVersion"] as? String ?? "-"
         return Text(
             language.text(
-                "Taption Plan \(version) (빌드 \(build))",
-                "Taption Plan \(version) (Build \(build))"
+                "BOKKI Plan \(version) (빌드 \(build))",
+                "BOKKI Plan \(version) (Build \(build))"
             )
         )
         .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -12280,6 +12289,7 @@ private struct MapHomeSecuritySheet: View {
     @State private var pin = ""
     @State private var confirmation = ""
     @State private var backupPassword = ""
+    @State private var remembered: String?
     @State private var message: String?
     @State private var restoreTarget: PlanBackupListingRow?
     @State private var isOffloadConfirmationPresented = false
@@ -12297,8 +12307,18 @@ private struct MapHomeSecuritySheet: View {
     }
     private var activity: PlanBackupActivity { model.backupActivity }
     private var isBusy: Bool { activity.isBusy }
+    /// 기기에 보관된 비밀번호가 있으면 그것을, 없으면(기존 사용자 첫 1회) 입력한 값을 쓴다.
+    private var password: String { remembered ?? backupPassword }
+    private var needsPasswordEntry: Bool { hasPIN && remembered == nil }
     private var canUseBackupPassword: Bool {
-        hasPIN && backupPassword.count == securityPINDigits && !isBusy
+        hasPIN && password.count == securityPINDigits && !isBusy
+    }
+
+    private func refreshRemembered() {
+        let value = model.rememberedBackupPassword
+        guard value != remembered else { return }
+        remembered = value
+        if let value { Task { await model.refreshBackupListings(password: value) } }
     }
 
     /// 백업 버튼이 꺼져 있을 때 이유를 알려 준다. 켜져 있으면 nil.
@@ -12310,7 +12330,7 @@ private struct MapHomeSecuritySheet: View {
             return language.text("먼저 위에서 앱 비밀번호(6자리)를 등록해야 백업할 수 있습니다.", "Register an app password (6 digits) above first to back up.")
         }
         if isBusy { return nil }
-        if backupPassword.count != securityPINDigits {
+        if password.count != securityPINDigits {
             return language.text("비밀번호 \(securityPINDigits)자리를 입력하면 버튼이 켜집니다.", "Enter your \(securityPINDigits)-digit password to enable the button.")
         }
         return nil
@@ -12446,6 +12466,9 @@ private struct MapHomeSecuritySheet: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Color.tpSurface)
         .task { await model.refreshBackupListings() }
+        .onAppear { refreshRemembered() }
+        .onChange(of: isBusy) { _, _ in refreshRemembered() }
+        .onChange(of: hasPIN) { _, _ in refreshRemembered() }
         .alert(
             language.text("이 달을 불러올까요?", "Restore this month?"),
             isPresented: Binding(
@@ -12480,20 +12503,22 @@ private struct MapHomeSecuritySheet: View {
     private var backupCard: some View {
         card(language.text("iCloud 백업", "iCloud Backup")) {
             Text(language.text(
-                "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, 아래에 비밀번호를 넣고 누를 때만 올립니다.",
-                "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you enter your password and tap the button."
+                "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
+                "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now."
             ))
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
-            SecureField(language.text("백업 비밀번호", "Backup password"), text: $backupPassword)
-                .keyboardType(.numberPad)
-                .focused($focusedField, equals: .backup)
-                .textContentType(.password)
-                .onChange(of: backupPassword) { _, value in
-                    backupPassword = numericPIN(value)
-                    let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
-                    Task { await model.refreshBackupListings(password: shown) }
-                }
+            if needsPasswordEntry {
+                SecureField(language.text("비밀번호", "Password"), text: $backupPassword)
+                    .keyboardType(.numberPad)
+                    .focused($focusedField, equals: .backup)
+                    .textContentType(.password)
+                    .onChange(of: backupPassword) { _, value in
+                        backupPassword = numericPIN(value)
+                        let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
+                        Task { await model.refreshBackupListings(password: shown) }
+                    }
+            }
             if let latestBackupText {
                 Text(language.text(
                     "마지막 백업: \(latestBackupText)",
@@ -12509,7 +12534,7 @@ private struct MapHomeSecuritySheet: View {
                     .foregroundStyle(.secondary)
             }
             Button(language.text(isBusy ? "작업 중입니다" : "지금 백업", isBusy ? "Working" : "Back up now")) {
-                let password = backupPassword
+                let password = self.password
                 Task { await model.backUpNow(password: password) }
             }
             .buttonStyle(.borderedProminent)
@@ -12564,8 +12589,8 @@ private struct MapHomeSecuritySheet: View {
     private var restoreCard: some View {
         card(language.text("백업 목록과 복원", "Backups and restore")) {
             Text(language.text(
-                "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 불러오려면 위 ‘백업 비밀번호’ 칸에 그 백업의 비밀번호를 넣으세요.",
-                "Row counts and times appear after you enter the password. To restore, enter that backup's password in the field above."
+                "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 백업은 앱 비밀번호와 같은 비밀번호로 열립니다.",
+                "Row counts and times appear once the password is known. Backups open with your app password."
             ))
             .font(.system(size: 11, weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
@@ -12583,7 +12608,7 @@ private struct MapHomeSecuritySheet: View {
                 listingRow(row)
             }
             Button {
-                let shown = backupPassword.count == securityPINDigits ? backupPassword : nil
+                let shown = password.count == securityPINDigits ? password : nil
                 Task { await model.refreshBackupListings(password: shown) }
             } label: {
                 Label(language.text("목록 새로고침", "Refresh list"), systemImage: "arrow.clockwise")
@@ -12612,10 +12637,10 @@ private struct MapHomeSecuritySheet: View {
             }
             Spacer(minLength: 8)
             Button(language.text("불러오기", "Restore")) {
-                guard !backupPassword.isEmpty else {
+                guard !password.isEmpty else {
                     message = language.text(
-                        "‘백업 비밀번호’ 칸에 이 백업의 비밀번호를 넣어 주세요.",
-                        "Enter this backup's password in the ‘Backup password’ field."
+                        "비밀번호를 먼저 입력해 주세요.",
+                        "Enter your password first."
                     )
                     return
                 }
@@ -12684,6 +12709,7 @@ private struct MapHomeSecuritySheet: View {
         }
         perform {
             try model.configureBackupPIN(pin)
+            refreshRemembered()
             focusedField = nil
             message = language.text("비밀번호를 저장했습니다.", "Password saved.")
         }
@@ -12710,14 +12736,14 @@ private struct MapHomeSecuritySheet: View {
     }
 
     private func offload() {
-        let password = backupPassword
+        let password = self.password
         Task { await model.offloadLocalMonths(password: password) }
     }
 
     private func restoreConfirmed() {
         guard let target = restoreTarget else { return }
         restoreTarget = nil
-        let password = backupPassword
+        let password = self.password
         Task { await model.restoreBackup(target.scope, password: password) }
     }
 

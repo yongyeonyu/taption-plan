@@ -1,5 +1,48 @@
 import SwiftUI
 
+/// 달력 점: 기록은 있지만 미확인 활동이 남은 날(빨강), 기록이 끝난 날(초록). 기록이 없으면 점이 없다.
+enum MapHomeCalendarLogStatus: Equatable {
+    case incomplete
+    case complete
+}
+
+enum MapHomeCalendarLogStatusPolicy {
+    /// `month`가 속한 달의 날짜별 상태. 센서·기록이 없는 날은 담지 않는다.
+    static func statuses(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        month: Date,
+        asOf now: Date,
+        calendar: Calendar
+    ) -> [Date: MapHomeCalendarLogStatus] {
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let end = calendar.date(byAdding: .month, value: 1, to: first),
+              let days = calendar.range(of: .day, in: .month, for: first) else { return [:] }
+        let monthActuals = actuals.filter {
+            let span = $0.span(asOf: now)
+            return span.start < end && first < span.end
+        }
+        let monthTravel = travel.filter { $0.span.start < end && first < $0.span.end }
+        guard !monthActuals.isEmpty || !monthTravel.isEmpty else { return [:] }
+        var result: [Date: MapHomeCalendarLogStatus] = [:]
+        for offset in 0..<days.count {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: first) else { continue }
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: day) else { continue }
+            let hasRecord = monthActuals.contains {
+                let span = $0.span(asOf: now)
+                return span.start < dayEnd && day < span.end
+            } || monthTravel.contains { $0.span.start < dayEnd && day < $0.span.end }
+            guard hasRecord else { continue }
+            let segments = MapHomeTimeRailSegmentEngine.segments(
+                from: monthActuals, travel: monthTravel, on: day, asOf: now, calendar: calendar
+            )
+            guard !segments.isEmpty else { continue }
+            result[day] = segments.contains { $0.categoryID == "unconfirmed" } ? .incomplete : .complete
+        }
+        return result
+    }
+}
+
 /// A compact month selector used by the map home header.
 ///
 /// The sheet deliberately owns only calendar presentation. Holiday dates are
@@ -8,18 +51,22 @@ import SwiftUI
 struct MapHomeCalendarSheet: View {
     @Binding private var selectedDate: Date
     private let holidayName: (Date) -> String?
+    private let logStatuses: (Date) -> [Date: MapHomeCalendarLogStatus]
     private let language: MapHomeLanguage
     private let calendar: Calendar
 
     @State private var displayedMonth: Date
+    @State private var statuses: [Date: MapHomeCalendarLogStatus] = [:]
 
     init(
         selectedDate: Binding<Date>,
         holidayName: @escaping (Date) -> String?,
+        logStatuses: @escaping (Date) -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         language: MapHomeLanguage = .korean
     ) {
         self._selectedDate = selectedDate
         self.holidayName = holidayName
+        self.logStatuses = logStatuses
         self.language = language
 
         var calendar = Calendar(identifier: .gregorian)
@@ -55,6 +102,7 @@ struct MapHomeCalendarSheet: View {
         .presentationDetents([.height(430)])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
+        .task(id: displayedMonth) { statuses = logStatuses(displayedMonth) }
     }
 
     private var header: some View {
@@ -132,6 +180,7 @@ struct MapHomeCalendarSheet: View {
         let holiday = holidayName(date)
         let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(date)
+        let status = statuses[calendar.startOfDay(for: date)]
 
         return Button {
             selectedDate = date
@@ -150,14 +199,14 @@ struct MapHomeCalendarSheet: View {
                     }
 
                 Circle()
-                    .fill(holiday == nil ? Color.clear : Color.tpHoliday)
-                    .frame(width: 3, height: 3)
+                    .fill(logDotColor(status))
+                    .frame(width: 4, height: 4)
             }
             .frame(maxWidth: .infinity, minHeight: 38)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel(day: day, date: date, holiday: holiday))
+        .accessibilityLabel(accessibilityLabel(day: day, date: date, holiday: holiday, status: status))
     }
 
     private var monthDays: [Date?] {
@@ -212,10 +261,26 @@ struct MapHomeCalendarSheet: View {
         return .tpInk
     }
 
-    private func accessibilityLabel(day: Int, date: Date, holiday: String?) -> String {
-        let title = language == .korean
+    private func logDotColor(_ status: MapHomeCalendarLogStatus?) -> Color {
+        switch status {
+        case .incomplete: .tpHoliday
+        case .complete: Color(red: 0.25, green: 0.70, blue: 0.40)
+        case nil: .clear
+        }
+    }
+
+    private func accessibilityLabel(
+        day: Int, date: Date, holiday: String?, status: MapHomeCalendarLogStatus?
+    ) -> String {
+        var title = language == .korean
             ? "\(monthTitle) \(day)일"
             : "\(monthTitle) \(day)"
-        return holiday.map { "\(title), \($0)" } ?? title
+        if let holiday { title += ", \(holiday)" }
+        switch status {
+        case .incomplete: title += language.text(", 미확인 활동 있음", ", unconfirmed activity")
+        case .complete: title += language.text(", 기록 완료", ", fully logged")
+        case nil: break
+        }
+        return title
     }
 }

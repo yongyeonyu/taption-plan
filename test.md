@@ -1770,3 +1770,12 @@
 ## WTH1020A01 · WeatherKit 날씨 표시 실기기 확인 (2026-10-20)
 - 확인: 대표가 iPhone 18 Pro Max(`00008160-000E195A1140000A`, 설치 빌드 184)에서 앱을 열어 날씨가 뜨는 것을 직접 확인했다. WTH1019A01의 App Services WeatherKit 체크가 반영된 것으로 본다.
 - 제한: 앱 로그로는 확인하지 못했다(`devicectl` 콘솔은 표준 출력만, `idevicesyslog` 연결 실패, 오늘자 진단 묶음 없음). 실행 기록은 `build/validation/WTH1020A01/`. 코드 변경 없음, 빌드 186 설치·수신은 확인하지 않았다.
+
+## FLK1020A01·COL1020A01·NAM1020A01·WTH1020B01·CAL1020A01·BKP1020A01 · 2026-10-20 묶음 (실행 로그 `build/validation/BKP1020A01/`)
+- 테스트(실기기 iPhone 11 Pro): `AppLockAndPINTests`·`MapHomeGrowthPolicyTests`·`MapHomeLiveMapTests`·`MapHomeVectorRouteRenderingTests` 64개 통과·실패 0(`related-2.log`). 1차(`related-1.log`)는 달력 점 테스트 1개 실패 — 기록 없는 날도 하루 전체 미확인 구간으로 계산돼 빨강이 됐고, 날짜별 기록 겹침 확인을 추가해 고쳤다. generic iOS Debug 빌드 통과(`app-debug.log`).
+- FLK: 마지막 대기 루프가 레이어 하나만 보이면 빠져나오던 경쟁 상태를 고치고 한도를 8초로 늘렸다. 전체 `TaptionPlanTests`는 실행하지 않아 간헐 실패 해소는 미확인(원인 확정 아님).
+- COL: 속도 색을 반전(0km/h 빨강, 150km/h 초록), hex 테스트 갱신. 화면 확인 전.
+- NAM: 표시 이름·앱 안 문구를 BOKKI Plan으로 변경(IAP 상품명 "Taption Plan Pro"·진단 헤더·번들 ID 유지). 현지화 카탈로그 테스트와 App Store Connect 이름 변경은 하지 않았다.
+- WTH: 사이드바 날씨 스위치(`weatherSidebarVisible`)는 집 위 날씨(`MapHomeHomeWeatherBadgePolicy`)와 이미 독립이라 코드 변경 없음.
+- CAL: 달력 점(빨강=미확인 활동 있음, 초록=완료, 없음=기록 없음), 공휴일 점 제거. 단위 테스트 통과, 화면 확인 전.
+- BKP: 백업 비밀번호 칸 삭제, 6자리를 기기 Keychain(`backup-password-v1`)에 보관·보관 없을 때만 1회 입력. 단위 테스트 통과. 실기기 백업·복원 동작과 iCloud 사용은 확인하지 않았다. 백업 포맷·키 도출은 바꾸지 않았다.

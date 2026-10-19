@@ -7,13 +7,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan"
+            "value" : "BOKKI Plan"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Taption Plan"
+            "value" : "BOKKI Plan"
           }
         }
       }
@@ -59,13 +59,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Face ID unlocks the encryption key for protected Taption Plan records."
+            "value" : "Face ID unlocks the encryption key for protected BOKKI Plan records."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "보호된 Taption Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다."
+            "value" : "보호된 BOKKI Plan 기록의 암호키를 열기 위해 Face ID를 사용합니다."
           }
         }
       }

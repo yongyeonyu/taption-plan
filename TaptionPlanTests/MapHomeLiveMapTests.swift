@@ -190,19 +190,19 @@ final class MapHomeLiveMapTests: XCTestCase {
     // MARK: - Route speed gradient
 
     func testGradientColorsFollowThePawprintSpeedScale() {
-        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 0), "#1FD11F")
-        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 150 / 3.6), "#D11F1F")
+        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 0), "#D11F1F")
+        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 150 / 3.6), "#1FD11F")
         XCTAssertEqual(
             MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 500),
-            "#D11F1F",
-            "시속 150km를 넘으면 빨강에 머문다"
+            "#1FD11F",
+            "시속 150km를 넘으면 초록에 머문다"
         )
         let middle = MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 75 / 3.6)
         XCTAssertNotEqual(middle, "#1FD11F")
         XCTAssertNotEqual(middle, "#D11F1F")
     }
 
-    func testGradientSplitsSlowThenFastRouteIntoGreenThenRedPieces() throws {
+    func testGradientSplitsSlowThenFastRouteIntoRedThenGreenPieces() throws {
         let route = makeRoute(stepsMeters: Array(repeating: 1.0, count: 50) + Array(repeating: 30.0, count: 50))
         let pieces = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
             coordinates: route.coordinates,
