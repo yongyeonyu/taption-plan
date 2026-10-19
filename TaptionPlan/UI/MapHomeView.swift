@@ -6955,12 +6955,6 @@ struct MapHomeView: View {
     }
 
     private var dataProtectionStatusText: String {
-        if model.securityStatus.settings.midnightBackupEnabled {
-            return language.text("00:00 자동 백업 켜짐", "00:00 automatic backup on")
-        }
-        if model.securityStatus.settings.cloudBackupEnabled {
-            return language.text("일별 iCloud 백업 켜짐", "Daily iCloud backup on")
-        }
         if model.securityStatus.settings.lockOnLaunch {
             return language.text("앱 열 때마다 잠금", "Locks whenever the app opens")
         }
@@ -12033,18 +12027,21 @@ private struct MapHomeSecuritySheet: View {
     let language: MapHomeLanguage
     @State private var pin = ""
     @State private var confirmation = ""
+    @State private var backupPassword = ""
     @State private var message: String?
-    @State private var backupAlertMessage: String?
-    @State private var isBackingUp = false
-    @State private var pendingRestore: PlanCloudBackupRestorePackage?
-    @State private var isRestoreConfirmationPresented = false
-    @State private var isApplyingRestore = false
+    @State private var restoreTarget: PlanBackupListingRow?
+    @State private var isOffloadConfirmationPresented = false
 
     private var security: PlanSecurityStatus { model.securityStatus }
     private var hasPIN: Bool { security.hasPIN }
     private var securityPINDigits: Int { security.pinDigits }
     private var appLockEnabled: Bool {
         security.settings.lockOnLaunch && security.settings.lockOnForeground
+    }
+    private var activity: PlanBackupActivity { model.backupActivity }
+    private var isBusy: Bool { activity.isBusy }
+    private var canUseBackupPassword: Bool {
+        hasPIN && backupPassword.count == securityPINDigits && !isBusy
     }
 
     var body: some View {
@@ -12090,6 +12087,12 @@ private struct MapHomeSecuritySheet: View {
                     .tint(Color.tpReferenceRose)
                     .disabled(pin.count != PlanPINVerifier.currentDigits
                         || confirmation.count != PlanPINVerifier.currentDigits)
+                    Text(language.text(
+                        "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
+                        "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time."
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
                 }
 
                 card(language.text("앱 잠금", "App lock")) {
@@ -12117,49 +12120,9 @@ private struct MapHomeSecuritySheet: View {
                     .foregroundStyle(.secondary)
                 }
 
-                card(language.text("iCloud 백업", "iCloud Backup")) {
-                    Toggle(
-                        language.text("일별 암호화 백업", "Daily encrypted backup"),
-                        isOn: Binding(
-                            get: { security.settings.cloudBackupEnabled },
-                            set: { setCloudBackup($0) }
-                        )
-                    )
-                    .tint(Color.tpReferenceBlue)
-                    Toggle(
-                        language.text("00:00에 백업", "Back up at 00:00"),
-                        isOn: Binding(
-                            get: { security.settings.midnightBackupEnabled },
-                            set: { setMidnightBackup($0) }
-                        )
-                    )
-                    .tint(Color.tpReferenceMint)
-                    Text(language.text(
-                        "iCloud Drive/Taption Plan에 날짜별로 압축·암호화해 저장합니다. 완료된 날짜는 건너뛰고 오늘 기록은 갱신합니다. 같은 iCloud 계정으로 복구할 수 있습니다.",
-                        "Compressed, encrypted backups are saved by date in iCloud Drive/Taption Plan. Completed days are skipped; today is updated. Restore with the same iCloud account."
-                    ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    if let latestBackupText {
-                        Text(language.text(
-                            "최근 백업: \(latestBackupText)",
-                            "Last backup: \(latestBackupText)"
-                        ))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpReferenceBlue)
-                    }
-                    if isBackingUp {
-                        ProgressView().controlSize(.small)
-                    }
-                    HStack(spacing: 10) {
-                        Button(language.text(isBackingUp ? "백업 중입니다" : "지금 백업", isBackingUp ? "Backing up" : "Back up now")) { saveBackup() }
-                            .buttonStyle(.bordered)
-                            .disabled(!hasPIN || isBackingUp)
-                        Button(language.text("백업 불러오기", "Restore backup")) { prepareRestore() }
-                            .buttonStyle(.bordered)
-                            .disabled(!hasPIN || isBackingUp)
-                    }
-                }
+                backupCard
+                offloadCard
+                restoreCard
 
                 card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
                     Text(language.text(
@@ -12199,41 +12162,203 @@ private struct MapHomeSecuritySheet: View {
                 }
             }
             .padding(22)
-            .alert(
-                language.text("iCloud 백업 결과", "iCloud Backup Result"),
-                isPresented: Binding(
-                    get: { backupAlertMessage != nil },
-                    set: { isPresented in
-                        if !isPresented { backupAlertMessage = nil }
-                    }
-                )
-            ) {
-                Button(language.text("확인", "OK")) {
-                    backupAlertMessage = nil
-                }
-            } message: {
-                Text(backupAlertMessage ?? "")
-            }
         }
         .background(Color.tpSurface)
+        .task { await model.refreshBackupListings() }
         .alert(
-            language.text("iCloud 백업 불러오기", "Restore iCloud backup"),
-            isPresented: $isRestoreConfirmationPresented
+            language.text("이 달을 불러올까요?", "Restore this month?"),
+            isPresented: Binding(
+                get: { restoreTarget != nil },
+                set: { if !$0 { restoreTarget = nil } }
+            )
         ) {
-            Button(language.text("취소", "Cancel"), role: .cancel) {
-                pendingRestore = nil
-            }
-            Button(language.text("현재 데이터 교체", "Replace current data"), role: .destructive) {
-                applyRestore()
-            }
+            Button(language.text("취소", "Cancel"), role: .cancel) { restoreTarget = nil }
+            Button(language.text("불러오기", "Restore")) { restoreConfirmed() }
         } message: {
             Text(language.text(
-                "현재 기기의 기록을 백업 내용으로 교체합니다.",
-                "Current records on this device will be replaced by the backup."
-            ) + ((pendingRestore?.unreadableSnapshotArchiveCount ?? 0) > 0
-                ? language.text("\n\n읽지 못한 이전 백업은 복원에서 제외됩니다. 원본 파일은 보존됩니다.",
-                    "\n\nUnreadable previous backups will be excluded. Their original files are preserved.")
-                : ""))
+                "\(restoreTarget.map(title(of:)) ?? "")의 백업을 이 기기로 가져옵니다. 이 기기에 더 새로운 기록이 있으면 그대로 유지됩니다. 위 입력란의 비밀번호는 그 백업을 만들 때 쓴 비밀번호여야 합니다.",
+                "Brings the backup for \(restoreTarget.map(title(of:)) ?? "") onto this device. Newer records already on this device are kept. The password above must be the one used when that backup was made."
+            ))
+        }
+        .alert(
+            language.text("로컬 정리", "Clear from this device"),
+            isPresented: $isOffloadConfirmationPresented
+        ) {
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+            Button(language.text("정리", "Clear"), role: .destructive) { offload() }
+        } message: {
+            Text(language.text(
+                "최근 \(security.localMonthsToKeep)개 달을 뺀 지난 달 중 백업을 다시 읽어 확인된 달만 이 기기에서 지웁니다. 지운 달은 백업 목록에서 다시 불러올 수 있습니다.",
+                "Past months older than the latest \(security.localMonthsToKeep) are removed from this device only after their backup is read back and verified. You can restore them from the backup list."
+            ))
+        }
+    }
+
+    // MARK: 카드
+
+    private var backupCard: some View {
+        card(language.text("iCloud 백업", "iCloud Backup")) {
+            Text(language.text(
+                "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, 아래에 비밀번호를 넣고 누를 때만 올립니다.",
+                "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you enter your password and tap the button."
+            ))
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(.secondary)
+            SecureField(language.text("백업 비밀번호", "Backup password"), text: $backupPassword)
+                .keyboardType(.numberPad)
+                .textContentType(.password)
+                .onChange(of: backupPassword) { _, value in backupPassword = numericPIN(value) }
+            if let latestBackupText {
+                Text(language.text(
+                    "마지막 백업: \(latestBackupText)",
+                    "Last backup: \(latestBackupText)"
+                ))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpReferenceBlue)
+            }
+            if case .backingUp(let completed, let total) = activity {
+                ProgressView(value: Double(completed), total: Double(max(total, 1)))
+                Text(language.text("백업 중 \(completed)/\(total)", "Backing up \(completed)/\(total)"))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            Button(language.text(isBusy ? "작업 중입니다" : "지금 백업", isBusy ? "Working" : "Back up now")) {
+                let password = backupPassword
+                Task { await model.backUpNow(password: password) }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.tpReferenceBlue)
+            .disabled(!canUseBackupPassword || !model.backupDestinationAvailable)
+            if let report = model.lastBackupReport, report.operation == .backup {
+                reportView(report)
+            }
+        }
+    }
+
+    private var offloadCard: some View {
+        card(language.text("백업 후 로컬 정리", "Clear from device after backup")) {
+            Stepper(
+                value: Binding(
+                    get: { security.localMonthsToKeep },
+                    set: { model.setLocalMonthsToKeep($0) }
+                ),
+                in: PlanSecurityService.localMonthsToKeepRange
+            ) {
+                Text(language.text(
+                    "이 기기에 남길 최근 \(security.localMonthsToKeep)개 달(이번 달 포함)",
+                    "Keep the latest \(security.localMonthsToKeep) months on this device (this month included)"
+                ))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+            }
+            Text(language.text(
+                "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
+                "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed."
+            ))
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(.secondary)
+            if case .offloading = activity {
+                ProgressView().controlSize(.small)
+            }
+            Button(language.text("백업 후 로컬 정리", "Clear after backup")) {
+                isOffloadConfirmationPresented = true
+            }
+            .buttonStyle(.bordered)
+            .disabled(!canUseBackupPassword || !model.backupDestinationAvailable)
+            if let report = model.lastBackupReport, report.operation == .offload {
+                reportView(report)
+            }
+        }
+    }
+
+    private var restoreCard: some View {
+        card(language.text("백업 목록과 복원", "Backups and restore")) {
+            Text(language.text(
+                "목록의 월, 행 수, 마지막 기록 시각은 비밀번호 없이 보입니다. 불러오려면 위 ‘백업 비밀번호’ 칸에 그 백업의 비밀번호를 넣으세요.",
+                "Month, row count and last record time are shown without a password. To restore, enter that backup's password in the field above."
+            ))
+            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .foregroundStyle(.secondary)
+            if case .restoring(let name) = activity {
+                ProgressView(language.text("\(name) 불러오는 중", "Restoring \(name)"))
+                    .controlSize(.small)
+            }
+            if model.backupListings.isEmpty {
+                Text(model.backupListingError
+                    ?? language.text("iCloud에 백업 파일이 없습니다.", "No backup files in iCloud."))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(model.backupListings) { row in
+                listingRow(row)
+            }
+            Button {
+                Task { await model.refreshBackupListings() }
+            } label: {
+                Label(language.text("목록 새로고침", "Refresh list"), systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.bordered)
+            .disabled(isBusy)
+            if let report = model.lastBackupReport, report.operation == .restore {
+                reportView(report)
+            }
+        }
+    }
+
+    private func listingRow(_ row: PlanBackupListingRow) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title(of: row))
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                Text(listingDetail(row))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                if row.isOffloaded {
+                    Text(language.text("이 기기에서는 정리됨 · 불러올 수 있음", "Cleared from this device · can be restored"))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpReferenceBlue)
+                }
+            }
+            Spacer(minLength: 8)
+            Button(language.text("불러오기", "Restore")) {
+                guard !backupPassword.isEmpty else {
+                    message = language.text(
+                        "‘백업 비밀번호’ 칸에 이 백업의 비밀번호를 넣어 주세요.",
+                        "Enter this backup's password in the ‘Backup password’ field."
+                    )
+                    return
+                }
+                restoreTarget = row
+            }
+            .buttonStyle(.bordered)
+            .disabled(isBusy || !row.isReadable)
+        }
+    }
+
+    private func reportView(_ report: PlanBackupReport) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(report.summary)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(report.succeeded ? Color.tpReferenceBlue : Color.tpReferenceRose)
+            ForEach(report.items) { item in
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: icon(for: item.kind))
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(item.kind == .rejected ? Color.tpReferenceRose : Color.tpReferenceBlue)
+                    Text("\(item.name == "settings" ? language.text("설정", "Settings") : item.name) · \(item.detail)")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private func icon(for kind: PlanBackupItem.Kind) -> String {
+        switch kind {
+        case .done: "checkmark.circle.fill"
+        case .unchanged: "equal.circle.fill"
+        case .rejected: "exclamationmark.triangle.fill"
+        case .skipped: "minus.circle.fill"
         }
     }
 
@@ -12253,6 +12378,8 @@ private struct MapHomeSecuritySheet: View {
             in: RoundedRectangle(cornerRadius: 14)
         )
     }
+
+    // MARK: 동작
 
     private func numericPIN(_ value: String) -> String {
         String(value.filter(\.isNumber).prefix(PlanPINVerifier.currentDigits))
@@ -12284,18 +12411,6 @@ private struct MapHomeSecuritySheet: View {
         configure(value)
     }
 
-    private func setCloudBackup(_ enabled: Bool) {
-        var value = security.settings
-        value.cloudBackupEnabled = enabled
-        configure(value)
-    }
-
-    private func setMidnightBackup(_ enabled: Bool) {
-        var value = security.settings
-        value.midnightBackupEnabled = enabled
-        configure(value)
-    }
-
     private func configure(_ value: PlanAppLockSettings) {
         perform {
             try model.configureAppLock(value)
@@ -12303,65 +12418,16 @@ private struct MapHomeSecuritySheet: View {
         }
     }
 
-    private func saveBackup() {
-        guard !isBackingUp else { return }
-        isBackingUp = true
-        message = nil
-        performAsync {
-            defer { isBackingUp = false }
-            try await model.saveCloudBackupNow()
-            showBackupFeedback(
-                model.securityStatus.preservedUnmergedRawBackup
-                    ? language.text(
-                        "백업완료\n\n기존 원본 백업은 읽지 못해 합치지 않았으며, 이전 파일은 그대로 보존했습니다.",
-                        "Backup complete\n\nThe previous raw backup could not be merged; its original file was preserved.")
-                    : language.text("백업완료", "Backup complete")
-            )
-        }
+    private func offload() {
+        let password = backupPassword
+        Task { await model.offloadLocalMonths(password: password) }
     }
 
-    private func prepareRestore() {
-        performAsync {
-            pendingRestore = try await model.loadCloudBackup()
-            isRestoreConfirmationPresented = pendingRestore != nil
-        }
-    }
-
-    private func applyRestore() {
-        guard let pendingRestore, !isApplyingRestore else { return }
-        isApplyingRestore = true
-        Task { @MainActor in
-            do {
-                let result = try await model.applyCloudBackup(pendingRestore)
-                self.pendingRestore = nil
-                switch result {
-                case .complete:
-                    showBackupFeedback(
-                        language.text(
-                            "백업을 불러왔습니다.",
-                            "Backup restored."
-                        )
-                    )
-                case .snapshotOnly:
-                    showBackupFeedback(
-                        language.text(
-                            "일정은 복구했지만 일부 원본 센서·이동경로를 저장하지 못했습니다.",
-                            "The schedule was restored, but some raw sensor or route data could not be saved."
-                        )
-                    )
-                case .unchanged:
-                    showBackupFeedback(
-                        language.text(
-                            "원본 센서를 저장하지 못해 기존 기록을 유지했습니다. 다시 시도해 주세요.",
-                            "Raw sensor data could not be saved, so existing records were kept. Try again."
-                        )
-                    )
-                }
-            } catch {
-                showBackupFeedback(error.localizedDescription)
-            }
-            self.isApplyingRestore = false
-        }
+    private func restoreConfirmed() {
+        guard let target = restoreTarget else { return }
+        restoreTarget = nil
+        let password = backupPassword
+        Task { await model.restoreBackup(target.scope, password: password) }
     }
 
     private func perform(_ action: () throws -> Void) {
@@ -12372,28 +12438,41 @@ private struct MapHomeSecuritySheet: View {
         }
     }
 
-    private func performAsync(_ action: @escaping () async throws -> Void) {
-        Task { @MainActor in
-            do {
-                try await action()
-            } catch {
-                showBackupFeedback(error.localizedDescription)
-            }
+    // MARK: 표시 문구
+
+    private func title(of row: PlanBackupListingRow) -> String {
+        switch row.scope {
+        case .settings:
+            return language.text("설정", "Settings")
+        case .month(let month):
+            return language.text("\(month.year)년 \(month.month)월", "\(month.month)/\(month.year)")
         }
     }
 
-    private func showBackupFeedback(_ text: String) {
-        message = text
-        backupAlertMessage = text
+    private func listingDetail(_ row: PlanBackupListingRow) -> String {
+        guard row.isReadable, let rows = row.rowCount else {
+            return language.text("헤더를 읽지 못했습니다(내려받는 중이거나 손상됨)", "Header unreadable (still downloading or damaged)")
+        }
+        var parts = [language.text("\(rows)행", "\(rows) rows")]
+        if let last = row.lastDataAt {
+            parts.append(language.text("마지막 기록 \(formatted(last))", "last record \(formatted(last))"))
+        }
+        if let created = row.createdAt {
+            parts.append(language.text("백업 \(formatted(created))", "backed up \(formatted(created))"))
+        }
+        return parts.joined(separator: " · ")
     }
 
-    private var latestBackupText: String? {
-        guard let date = security.latestSuccessfulBackupDate else { return nil }
+    private func formatted(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = language.locale
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    private var latestBackupText: String? {
+        security.latestSuccessfulBackupDate.map(formatted)
     }
 }
 

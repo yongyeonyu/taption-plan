@@ -17,6 +17,7 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var sharedExport: ShareableURL?
     @State private var showsDeleteConfirmation = false
+    @State private var showsDeleteBackupsConfirmation = false
     @State private var customFrequentPlaceName = ""
     @State private var restaurantName = ""
     @State private var selectedFrequentPlace: FrequentPlace?
@@ -399,9 +400,46 @@ struct SettingsView: View {
             Button("모든 데이터 삭제", role: .destructive) {
                 Task { await model.deleteAllUserData() }
             }
+            Button(
+                AppLanguagePreference.text(
+                    korean: "iCloud 백업까지 모두 삭제",
+                    english: "Delete iCloud backups too"
+                ),
+                role: .destructive
+            ) {
+                // 첫 확인창이 닫힌 뒤에 두 번째 확인창을 띄운다.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    showsDeleteBackupsConfirmation = true
+                }
+            }
             Button("취소", role: .cancel) {}
         } message: {
             Text("계획, 실제 기록, 메모, 자동 이동 기록이 삭제됩니다. 구매 내역과 체험 사용 여부는 유지되며, 이 작업은 되돌릴 수 없습니다.")
+        }
+        .confirmationDialog(
+            AppLanguagePreference.text(
+                korean: "iCloud 백업도 영구 삭제할까요?",
+                english: "Permanently delete the iCloud backups too?"
+            ),
+            isPresented: $showsDeleteBackupsConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                AppLanguagePreference.text(
+                    korean: "기기 데이터와 iCloud 백업 영구 삭제",
+                    english: "Permanently delete device data and backups"
+                ),
+                role: .destructive
+            ) {
+                Task { await model.deleteAllUserData(includingBackups: true) }
+            }
+            Button(AppLanguagePreference.text(korean: "취소", english: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(AppLanguagePreference.text(
+                korean: "이 기기의 모든 기록과 iCloud Drive의 Taption Plan 백업 파일이 모두 삭제됩니다. 백업을 지우면 복원할 방법이 없으며, 이 작업은 되돌릴 수 없습니다.",
+                english: "All records on this device and every Taption Plan backup file in iCloud Drive will be deleted. Once the backups are gone they cannot be restored, and this cannot be undone."
+            ))
         }
     }
 

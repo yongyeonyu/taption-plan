@@ -132,18 +132,28 @@ actor TaptionBackupEngine {
 
     /// 로컬에 데이터가 있는 모든 달과 설정 파일을 차례로 백업한다. 바뀐 파일만 실제로 다시 쓴다.
     /// 봉인된 달은 늦게 도착한 행이 있을 때만 합집합으로 다시 만든다.
-    func backupAllMonths(password: String, now: Date = Date()) async throws -> [BackupResult] {
+    /// `progress`는 파일 하나를 마칠 때마다 (끝낸 개수, 전체 개수)로 부른다. 설정 파일이 마지막이다.
+    func backupAllMonths(
+        password: String, now: Date = Date(), progress: (@Sendable (Int, Int) -> Void)? = nil
+    ) async throws -> [BackupResult] {
         var results: [BackupResult] = []
+        var months: [TaptionBackupMonth] = []
         if let bounds = try await store.dataTimeBounds() {
-            let first = TaptionBackupMonth(date: Date(timeIntervalSince1970: bounds.first), calendar: calendar)
+            var month = TaptionBackupMonth(date: Date(timeIntervalSince1970: bounds.first), calendar: calendar)
             let last = TaptionBackupMonth(date: Date(timeIntervalSince1970: bounds.last), calendar: calendar)
-            var month = first
             while month <= last {
-                results.append(try await backup(month: month, password: password, now: now))
+                months.append(month)
                 month = month.adding(months: 1)
             }
         }
+        let total = months.count + 1
+        progress?(0, total)
+        for month in months {
+            results.append(try await backup(month: month, password: password, now: now))
+            progress?(results.count, total)
+        }
         results.append(try await backupSettings(password: password, now: now))
+        progress?(total, total)
         return results
     }
 
