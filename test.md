@@ -1683,3 +1683,10 @@
 - B2(헤더 메타 암호화)는 지시가 바뀌어 이번에 구현: 평문에는 형식·버전·KDF·봉인 블록만, 키 확인은 헤더 블록 GCM 태그. `listBackups(password:)`로 변경.
 - 파이썬 도구: 실기기가 만든 파일(600000회, 301 센서 + 1 기록)로 `--header`(평문만/비밀번호 시 암호화 포함), `--summary`, 표준 출력·`--out` 내보내기 성공, 틀린 비밀번호·100바이트 잘림·3000바이트 잘림·본문 비트 반전은 종료 코드 1이며 표준 출력 0바이트.
 - 제한: iCloud 시스템 구현(`TaptionSystemUbiquityFileSystem`)은 기기·entitlement 없이 실행하지 못했다(흉내 구현으로만 시험). 직렬화는 엔진 인스턴스 안에서만 보장된다. 새 기기가 이미 올라간 파일의 시간대를 자동으로 따르지는 못한다(헤더가 암호화돼 있어 비밀번호 없이 읽을 수 없고, 저장된 meta 또는 현재 기기 시간대를 쓴다). 센서 원본 하드 삭제(`deleteReadings`)는 다음 백업에서 되살아난다(복원 롤백 전용으로 문서화). 같은 id의 센서 원본 내용이 다르면 합치기는 로컬을 지키고 개수만 센다.
+
+## REL1019B01 · 빌드 181 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(`rewrite/storage-v2` fast-forward 병합 + 빌드 번호 181: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 새 저장소·월 단위 암호화 백업·진단 로그 재작성 포함. 이전 구조의 데이터는 가져오지 않으므로 이 빌드는 빈 저장소로 시작한다.
+- 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,406개 중 실패는 기존 환경 실패 2개 테스트(StoreKit 구매·복원, LocalizationCatalog의 Mac 경로 파일)뿐. 로그 `build/validation/INT1019A01/merge-full.log`.
+- 아카이브·업로드: Release 아카이브 성공(`archive-181.log`), 앱·위젯 번들 버전 181 확인(Release 아카이브에는 Watch 번들이 들어 있지 않으며 180도 같았다), IPA 내보내기 성공(41,956,753바이트), `altool` `No errors uploading`(`altool-181.log`), 전달 ID `fc159561-2589-47aa-8a88-284764f31977`.
+- 제한: UI 스모크(`TaptionPlanUITests`)는 기기 자동화 모드 시간 초과로 이번 빌드에서 실행하지 못했다. 실제 iCloud 업로드·다운로드·덮어쓰기·로컬 정리·복원은 설치본에서 직접 확인하지 않았다(코드 점검과 로컬 폴더 목적지 테스트만). iPhone 18 Pro Max는 사용하지 않았다.
+- 정리: 병합된 에이전트 워크트리 4개와 브랜치를 삭제했다. 디자인 토큰 작업(`4a7f170`)이 있는 `agent-ada235d414d79094f`는 main에 없어서 남겼다.
