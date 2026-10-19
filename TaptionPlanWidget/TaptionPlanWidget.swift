@@ -2170,7 +2170,7 @@ struct TaptionWidgetActionIntent: AppIntent {
         var command = TaptionWidgetCommand(planID: id, kind: action)
         var refreshedPayload: TaptionWidgetPayload?
         do {
-            let repository = try SQLitePlanRepository.appGroup()
+            let repository = try TaptionStoreRepository.appGroup()
             let source = try await repository.load()
             let updated = try TaptionWidgetCommandEngine.apply(
                 command,
@@ -2215,7 +2215,7 @@ struct TaptionWidgetLocationTrackingIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         TaptionLocationTrackingRequestStore.write(enabled)
-        if let repository = try? SQLitePlanRepository.appGroup(),
+        if let repository = try? TaptionStoreRepository.appGroup(),
            var snapshot = try? await repository.load() {
             snapshot.settings.locationEnabled = enabled
             if !enabled {

@@ -15,6 +15,8 @@ enum TaptionStoreV2Error: Error, Equatable {
     case corruptRow(String)
     /// 같은 `id`의 센서 원본이 이미 다른 내용으로 저장돼 있다(원본은 바꾸지 않는다).
     case readingConflict(String)
+    /// 같은 종류·`id`의 원본 이벤트가 이미 다른 내용으로 저장돼 있다.
+    case rawEventConflict(kind: String, id: String)
 }
 
 struct TaptionStoreRecord: Equatable, Sendable {
@@ -299,11 +301,14 @@ actor TaptionStoreV2 {
     }
 
     private var connection: TaptionSQLiteConnection?
-    private let calendar: Calendar
+    let calendar: Calendar
+    /// 저장소 파일 위치. 같은 폴더에 쓰기 잠금 파일을 둘 때 쓴다.
+    nonisolated let url: URL
 
     /// `url`에 새 저장소를 만들거나 연다. `calendar`는 `day` 열(현지 날짜)을 정하는 데 쓴다.
     init(url: URL, calendar: Calendar = .autoupdatingCurrent) throws {
         self.calendar = calendar
+        self.url = url
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -562,33 +567,39 @@ actor TaptionStoreV2 {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
-            let statement = try prepare(db, """
-                INSERT OR REPLACE INTO records
-                (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, ord, body)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """)
-            defer { sqlite3_finalize(statement) }
-            for record in records {
-                sqlite3_reset(statement)
-                sqlite3_clear_bindings(statement)
-                bind(statement, 1, .text(record.id))
-                bind(statement, 2, .text(record.kind))
-                bind(statement, 3, record.start.map {
-                    .int(Int64(TaptionReadingRowCodec.dayNumber(for: $0, calendar: calendar)))
-                } ?? .null)
-                bind(statement, 4, record.start.map { .real($0.timeIntervalSince1970) } ?? .null)
-                bind(statement, 5, record.end.map { .real($0.timeIntervalSince1970) } ?? .null)
-                bind(statement, 6, .real(record.updatedAt.timeIntervalSince1970))
-                bind(statement, 7, .text(record.origin.rawValue))
-                bind(statement, 8, .int(record.isDeleted ? 1 : 0))
-                bind(statement, 9, .int(Int64(record.ord)))
-                bind(statement, 10, .text(record.body))
-                try step(db, statement)
-            }
+            try writeRecords(db, records)
             try exec(db, "COMMIT")
         } catch {
             try? exec(db, "ROLLBACK")
             throw error
+        }
+    }
+
+    /// 열린 트랜잭션 안에서 행을 쓴다(같은 `id`는 덮어쓴다).
+    private func writeRecords(_ db: OpaquePointer, _ records: [TaptionStoreRecord]) throws {
+        guard !records.isEmpty else { return }
+        let statement = try prepare(db, """
+            INSERT OR REPLACE INTO records
+            (id, kind, day, start_ts, end_ts, updated_ts, origin, deleted, ord, body)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """)
+        defer { sqlite3_finalize(statement) }
+        for record in records {
+            sqlite3_reset(statement)
+            sqlite3_clear_bindings(statement)
+            bind(statement, 1, .text(record.id))
+            bind(statement, 2, .text(record.kind))
+            bind(statement, 3, record.start.map {
+                .int(Int64(TaptionReadingRowCodec.dayNumber(for: $0, calendar: calendar)))
+            } ?? .null)
+            bind(statement, 4, record.start.map { .real($0.timeIntervalSince1970) } ?? .null)
+            bind(statement, 5, record.end.map { .real($0.timeIntervalSince1970) } ?? .null)
+            bind(statement, 6, .real(record.updatedAt.timeIntervalSince1970))
+            bind(statement, 7, .text(record.origin.rawValue))
+            bind(statement, 8, .int(record.isDeleted ? 1 : 0))
+            bind(statement, 9, .int(Int64(record.ord)))
+            bind(statement, 10, .text(record.body))
+            try step(db, statement)
         }
     }
 
@@ -648,7 +659,7 @@ actor TaptionStoreV2 {
         return rows
     }
 
-    /// 한 트랜잭션으로 바뀐 행은 쓰고, 사라진 행은 지운다.
+    /// 한 트랜잭션으로 사라진 행은 지우고 바뀐 행은 쓴다. 중간에 실패하면 모두 되돌린다.
     func applyRecordChanges(upserts: [TaptionStoreRecord], deletes: [(kind: String, id: String)]) throws {
         guard !upserts.isEmpty || !deletes.isEmpty else { return }
         let db = try handle()
@@ -665,12 +676,12 @@ actor TaptionStoreV2 {
                     try step(db, statement)
                 }
             }
+            try writeRecords(db, upserts)
             try exec(db, "COMMIT")
         } catch {
             try? exec(db, "ROLLBACK")
             throw error
         }
-        try upsertRecords(upserts)
     }
 
     func deleteAllRecords() throws {
@@ -722,6 +733,8 @@ actor TaptionStoreV2 {
         do {
             try exec(db, "DELETE FROM readings")
             try exec(db, "DELETE FROM records")
+            try exec(db, "DELETE FROM raw_events")
+            try exec(db, "DELETE FROM meta WHERE key <> 'schema_version'")
             try exec(db, "COMMIT")
         } catch {
             try? exec(db, "ROLLBACK")
@@ -751,6 +764,7 @@ actor TaptionStoreV2 {
         defer { sqlite3_finalize(statement) }
         let current = sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : 0
         if current > schemaVersion { throw TaptionStoreV2Error.unsupportedSchema(current) }
+        try createRawEventsTable(db)
         if current == 0 {
             let columnDefinitions = TaptionReadingRowCodec.columns.map { column -> String in
                 let type: String
@@ -798,12 +812,12 @@ actor TaptionStoreV2 {
         }
     }
 
-    private func handle() throws -> OpaquePointer {
+    func handle() throws -> OpaquePointer {
         guard let connection else { throw TaptionStoreV2Error.openFailed("closed") }
         return connection.pointer
     }
 
-    private func exec(_ db: OpaquePointer, _ sql: String) throws {
+    func exec(_ db: OpaquePointer, _ sql: String) throws {
         var error: UnsafeMutablePointer<CChar>?
         guard sqlite3_exec(db, sql, nil, nil, &error) == SQLITE_OK else {
             let message = error.map { String(cString: $0) } ?? String(cString: sqlite3_errmsg(db))
@@ -812,7 +826,7 @@ actor TaptionStoreV2 {
         }
     }
 
-    private func prepare(_ db: OpaquePointer, _ sql: String) throws -> OpaquePointer {
+    func prepare(_ db: OpaquePointer, _ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
             throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
@@ -820,21 +834,21 @@ actor TaptionStoreV2 {
         return statement
     }
 
-    private func step(_ db: OpaquePointer, _ statement: OpaquePointer) throws {
+    func step(_ db: OpaquePointer, _ statement: OpaquePointer) throws {
         let code = sqlite3_step(statement)
         guard code == SQLITE_DONE || code == SQLITE_ROW else {
             throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
-    private func scalarInt(_ sql: String) throws -> Int {
+    func scalarInt(_ sql: String) throws -> Int {
         let db = try handle()
         let statement = try prepare(db, sql)
         defer { sqlite3_finalize(statement) }
         return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int64(statement, 0)) : 0
     }
 
-    private nonisolated func bind(_ statement: OpaquePointer, _ index: Int32, _ value: TaptionReadingRowCodec.Value) {
+    nonisolated func bind(_ statement: OpaquePointer, _ index: Int32, _ value: TaptionReadingRowCodec.Value) {
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         switch value {
         case .null: sqlite3_bind_null(statement, index)

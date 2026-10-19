@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// 계획·기록 저장소. `TaptionStoreV2`의 `records` 표에 스냅샷의 모든 항목을 행 하나씩 저장한다.
 /// 저장할 때는 직전 상태와 비교해 바뀐 행만 쓰고 사라진 행은 지운다.
@@ -183,5 +184,16 @@ actor TaptionStoreRepository: PlanDataRepository {
             id: id, kind: kind, start: start, end: end, updatedAt: updatedAt, origin: origin,
             ord: ord, body: body
         )
+    }
+}
+
+extension TaptionStoreRepository {
+    /// 위젯 등 확장이 앱과 같은 파일(앱 그룹 컨테이너의 `taption-store.sqlite`)을 연다.
+    static func appGroup(fileManager: FileManager = .default) throws -> TaptionStoreRepository {
+        guard let directory = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
+        ) else { throw RepositoryError.appGroupUnavailable }
+        let store = try TaptionStoreV2.shared(at: directory.appendingPathComponent(TaptionStoreV2.fileName))
+        return TaptionStoreRepository(store: store)
     }
 }

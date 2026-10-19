@@ -192,52 +192,31 @@ public struct HealthKitSyncOverview: Codable, Hashable, Sendable {
     }
 }
 
+/// HealthKit에서 가져온 샘플과 종류별 동기화 위치를 새 저장소의 `records` 표에 둔다.
+/// 샘플은 가져온 값(`imported`)이며, 본문 JSON에 출처 앱·기기 정보가 그대로 남는다.
 public actor HealthKitImportStore {
     public static let eventDomain = "healthkit-sample"
     public static let applicationGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
-    public static let databaseFileName = "healthkit-local-v1.sqlite"
 
-    private static let stateDomainPrefix = "healthkit.sync-state."
-    private static let stateDay = TaptionPlanDayKey(year: 0, month: 0, day: 0)
+    private static let stateKind = "healthkit-sync-state"
     private static let maximumRecordDurationMetadataKey =
         "healthkit.maximum-record-duration-v1"
 
-    private let dayStore: TaptionPlanDayStore
+    private let store: TaptionStoreV2
     private let writeLockURL: URL
     private var dataDeletionGeneration: UInt64
 
     public init(databaseURL: URL) throws {
-        dayStore = try TaptionPlanDayStore(url: databaseURL, allowsUndatedSnapshots: true)
+        store = try TaptionStoreV2(url: databaseURL)
         writeLockURL = databaseURL.appendingPathExtension("lock")
         dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     public init(fileManager: FileManager = .default) throws {
-        let root = fileManager.containerURL(
-            forSecurityApplicationGroupIdentifier: Self.applicationGroupIdentifier
-        ) ?? fileManager.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0]
-        let directory = root.appendingPathComponent(
-            "TaptionPlan/HealthKit",
-            isDirectory: true
-        )
-        try fileManager.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-        var resourceValues = URLResourceValues()
-        resourceValues.isExcludedFromBackup = true
-        var protectedDirectory = directory
-        try protectedDirectory.setResourceValues(resourceValues)
-        try? fileManager.setAttributes(
-            [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            ofItemAtPath: directory.path
-        )
-        try self.init(
-            databaseURL: directory.appendingPathComponent(Self.databaseFileName)
-        )
+        let shared = try TaptionStoreV2.applicationSupport(fileManager: fileManager)
+        store = shared
+        writeLockURL = shared.url.appendingPathExtension("lock")
+        dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     @discardableResult
@@ -246,16 +225,12 @@ public actor HealthKitImportStore {
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration(generation)
-        let uniqueRecords = records.reduce(into: [UUID: HealthKitSampleRecord]()) {
-            $0[$1.uuid] = $1
-        }.values
-        let events = try uniqueRecords.map { record in
-            try makeEvent(for: record)
-        }
+        let uniqueRecords = Self.unique(records)
+        let rows = try uniqueRecords.map(makeRow)
         try await updateMaximumRecordDuration(for: uniqueRecords)
         try checkDataGeneration(generation)
-        try await dayStore.upsertEvents(events)
-        return events.count
+        try await store.upsertRecords(rows)
+        return rows.count
     }
 
     public func delete(ids: [UUID]) async throws {
@@ -263,9 +238,9 @@ public actor HealthKitImportStore {
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration(generation)
-        try await dayStore.deleteEvents(
-            ids: ids.map(HealthKitSampleRecord.eventID(for:)),
-            domain: Self.eventDomain
+        try await store.applyRecordChanges(
+            upserts: [],
+            deletes: ids.map { (Self.eventDomain, HealthKitSampleRecord.eventID(for: $0)) }
         )
     }
 
@@ -273,11 +248,11 @@ public actor HealthKitImportStore {
         let byEventID = ids.reduce(into: [String: UUID]()) {
             $0[HealthKitSampleRecord.eventID(for: $1)] = $1
         }
-        let existing = try await dayStore.existingEventIdentifiers(
-            Array(byEventID.keys),
-            domain: Self.eventDomain
+        let existing = try await store.existingRecordIDs(
+            kind: Self.eventDomain,
+            ids: Array(byEventID.keys)
         )
-        return Set(existing.compactMap { byEventID[$0.rawValue] })
+        return Set(existing.compactMap { byEventID[$0] })
     }
 
     public func apply(
@@ -290,33 +265,13 @@ public actor HealthKitImportStore {
         defer { lock.unlock() }
         try checkDataGeneration(generation)
         try validate(typeIdentifier: state.typeIdentifier)
-        let uniqueRecords = records.reduce(into: [UUID: HealthKitSampleRecord]()) {
-            $0[$1.uuid] = $1
-        }.values
-        let events = try uniqueRecords.map(makeEvent)
+        let uniqueRecords = Self.unique(records)
+        let rows = try uniqueRecords.map(makeRow) + [makeStateRow(state)]
         try await updateMaximumRecordDuration(for: uniqueRecords)
-        let domain = Self.stateDomain(for: state.typeIdentifier)
-        let currentRevision = try await dayStore.snapshot(
-            domain: domain,
-            day: Self.stateDay
-        )?.revision ?? 0
-        guard currentRevision < UInt64.max else {
-            throw HealthKitImportStoreError.revisionOverflow
-        }
-        let encodedState = try TaptionPlanCanonicalStorage.encode(state)
-        let stateSnapshot = TaptionPlanDayStore.Snapshot(
-            domain: domain,
-            day: Self.stateDay,
-            revision: currentRevision + 1,
-            updatedAt: state.lastSyncedAt ?? .now,
-            payload: TaptionPlanCanonicalStorage.envelope(for: encodedState)
-        )
         try checkDataGeneration(generation)
-        try await dayStore.applyEventDelta(
-            upserting: events,
-            deletingIDs: deletedIDs.map(HealthKitSampleRecord.eventID(for:)),
-            domain: Self.eventDomain,
-            snapshots: [stateSnapshot]
+        try await store.applyRecordChanges(
+            upserts: rows,
+            deletes: deletedIDs.map { (Self.eventDomain, HealthKitSampleRecord.eventID(for: $0)) }
         )
     }
 
@@ -324,13 +279,11 @@ public actor HealthKitImportStore {
         guard start <= end else { throw HealthKitImportStoreError.invalidDateRange }
         let maximumDuration = try await maximumRecordDuration()
         let queryStart = start.addingTimeInterval(-maximumDuration)
-        let events = try await dayStore.events(
-            from: TaptionPlanDayKey(date: queryStart),
-            through: TaptionPlanDayKey(date: end),
-            domain: Self.eventDomain
-        )
-        return try events.compactMap { event in
-            let record = try decodeRecord(from: event.payload)
+        // 저장소의 범위 조회는 끝을 포함하지 않으므로 끝 바로 다음 시각까지 읽고 아래에서 걸러 낸다.
+        let queryEnd = Date(timeIntervalSince1970: end.timeIntervalSince1970.nextUp)
+        let rows = try await store.records(kind: Self.eventDomain, from: queryStart, to: queryEnd)
+        return try rows.compactMap { row in
+            let record = try Self.decode(HealthKitSampleRecord.self, from: row.body)
             return record.startDate <= end && record.endDate >= start ? record : nil
         }
     }
@@ -344,44 +297,28 @@ public actor HealthKitImportStore {
 
     public func syncState(for typeIdentifier: String) async throws -> HealthKitTypeSyncState? {
         try validate(typeIdentifier: typeIdentifier)
-        return try await dayStore.codableSnapshot(
-            HealthKitTypeSyncState.self,
-            domain: Self.stateDomain(for: typeIdentifier),
-            day: Self.stateDay
-        )
+        let id = Self.stateID(for: typeIdentifier)
+        return try await store.records(kind: Self.stateKind)
+            .first { $0.id == id }
+            .map { try Self.decode(HealthKitTypeSyncState.self, from: $0.body) }
     }
 
-    /// Stores only the sync checkpoint. Main can combine it with event changes using DayStore's atomic delta API.
+    /// 동기화 위치만 저장한다. 샘플 변경과 함께 저장하려면 `apply`를 쓴다.
     public func saveSyncState(_ state: HealthKitTypeSyncState) async throws {
         let generation = dataDeletionGeneration
         let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
         defer { lock.unlock() }
         try checkDataGeneration(generation)
         try validate(typeIdentifier: state.typeIdentifier)
-        let domain = Self.stateDomain(for: state.typeIdentifier)
-        let currentRevision = try await dayStore.snapshot(domain: domain, day: Self.stateDay)?.revision ?? 0
-        guard currentRevision < UInt64.max else { throw HealthKitImportStoreError.revisionOverflow }
+        let row = try makeStateRow(state)
         try checkDataGeneration(generation)
-        try await dayStore.saveCodableSnapshot(
-            state,
-            domain: domain,
-            day: Self.stateDay,
-            revision: currentRevision + 1,
-            updatedAt: state.lastSyncedAt ?? .now
-        )
+        try await store.upsertRecords([row])
     }
 
     public func overview() async throws -> HealthKitSyncOverview {
-        let snapshots = try await dayStore.snapshots(day: Self.stateDay)
-        let states = try snapshots
-            .filter { $0.domain.hasPrefix(Self.stateDomainPrefix) }
-            .map { snapshot in
-                let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: snapshot.payload)
-                return try TaptionPlanCanonicalStorage.decode(
-                    HealthKitTypeSyncState.self,
-                    from: encoded
-                )
-            }
+        let states = try await store.records(kind: Self.stateKind).map {
+            try Self.decode(HealthKitTypeSyncState.self, from: $0.body)
+        }
         return HealthKitSyncOverview(states: states)
     }
 
@@ -390,7 +327,8 @@ public actor HealthKitImportStore {
         defer { lock.unlock() }
         dataDeletionGeneration = generation
             ?? TaptionDataDeletionFence.currentGeneration()
-        try await dayStore.deleteAllContent()
+        try await store.deleteRecords(kinds: [Self.eventDomain, Self.stateKind])
+        try await store.deleteMeta(Self.maximumRecordDurationMetadataKey)
     }
 
     private func checkDataGeneration(_ generation: UInt64) throws {
@@ -406,46 +344,24 @@ public actor HealthKitImportStore {
         guard let candidate = records.lazy
             .compactMap(Self.recordDuration)
             .max() else { return }
-        let current = try await maximumRecordDurationHoldingLock()
+        let current = try await maximumRecordDuration()
         guard candidate > current else { return }
-        try await dayStore.setMetadata(
-            String(candidate),
-            forKey: Self.maximumRecordDurationMetadataKey
-        )
+        try await store.setMeta(Self.maximumRecordDurationMetadataKey, String(candidate))
     }
 
+    /// 가장 긴 샘플의 길이. 조회 범위를 이만큼 앞으로 넓혀 범위에 걸치는 긴 샘플을 놓치지 않는다.
     private func maximumRecordDuration() async throws -> TimeInterval {
-        if let stored = try await storedMaximumRecordDuration() {
-            return stored
+        if let value = try await store.meta(Self.maximumRecordDurationMetadataKey),
+           let duration = TimeInterval(value), duration.isFinite, duration >= 0 {
+            return duration
         }
-        let lock = try await TaptionDataFileLock.acquire(url: writeLockURL)
-        defer { lock.unlock() }
-        return try await maximumRecordDurationHoldingLock()
-    }
-
-    private func maximumRecordDurationHoldingLock() async throws -> TimeInterval {
-        if let stored = try await storedMaximumRecordDuration() {
-            return stored
-        }
-        let events = try await dayStore.allEvents(domain: Self.eventDomain)
         var maximum: TimeInterval = 0
-        for event in events {
-            let record = try decodeRecord(from: event.payload)
+        for row in try await store.records(kind: Self.eventDomain) {
+            let record = try Self.decode(HealthKitSampleRecord.self, from: row.body)
             maximum = max(maximum, Self.recordDuration(record) ?? 0)
         }
-        try await dayStore.setMetadata(
-            String(maximum),
-            forKey: Self.maximumRecordDurationMetadataKey
-        )
+        try await store.setMeta(Self.maximumRecordDurationMetadataKey, String(maximum))
         return maximum
-    }
-
-    private func storedMaximumRecordDuration() async throws -> TimeInterval? {
-        guard let value = try await dayStore.metadata(
-            forKey: Self.maximumRecordDurationMetadataKey
-        ), let duration = TimeInterval(value), duration.isFinite,
-              duration >= 0 else { return nil }
-        return duration
     }
 
     private static func recordDuration(
@@ -456,25 +372,55 @@ public actor HealthKitImportStore {
         return duration
     }
 
-    private func makeEvent(for record: HealthKitSampleRecord) throws -> TaptionPlanDayStore.Event {
-        let encoded = try TaptionPlanCanonicalStorage.encode(record)
-        return TaptionPlanDayStore.Event(
-            day: TaptionPlanDayKey(date: record.startDate),
-            timestamp: record.startDate,
-            sequence: 0,
+    private static func unique(_ records: [HealthKitSampleRecord]) -> [HealthKitSampleRecord] {
+        Array(records.reduce(into: [UUID: HealthKitSampleRecord]()) { $0[$1.uuid] = $1 }.values)
+    }
+
+    private func makeRow(for record: HealthKitSampleRecord) throws -> TaptionStoreRecord {
+        TaptionStoreRecord(
             id: record.eventID,
-            domain: Self.eventDomain,
-            payload: TaptionPlanCanonicalStorage.envelope(for: encoded)
+            kind: Self.eventDomain,
+            start: record.startDate,
+            end: record.endDate,
+            updatedAt: .now,
+            origin: .imported,
+            body: try Self.encode(record)
         )
     }
 
-    private func decodeRecord(from envelope: Data) throws -> HealthKitSampleRecord {
-        let encoded = try TaptionPlanCanonicalStorage.encodedPayload(from: envelope)
-        return try TaptionPlanCanonicalStorage.decode(HealthKitSampleRecord.self, from: encoded)
+    private func makeStateRow(_ state: HealthKitTypeSyncState) throws -> TaptionStoreRecord {
+        TaptionStoreRecord(
+            id: Self.stateID(for: state.typeIdentifier),
+            kind: Self.stateKind,
+            start: nil,
+            end: nil,
+            updatedAt: state.lastSyncedAt ?? .now,
+            origin: .auto,
+            body: try Self.encode(state)
+        )
     }
 
-    private static func stateDomain(for typeIdentifier: String) -> String {
-        "\(stateDomainPrefix)\(typeIdentifier)"
+    private static func stateID(for typeIdentifier: String) -> String {
+        "healthkit-state:\(typeIdentifier)"
+    }
+
+    private static func encode<Value: Encodable>(_ value: Value) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .secondsSince1970
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(
+            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
+        )
+        encoder.outputFormatting = [.sortedKeys]
+        return String(decoding: try encoder.encode(value), as: UTF8.self)
+    }
+
+    private static func decode<Value: Decodable>(_ type: Value.Type, from body: String) throws -> Value {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
+            positiveInfinity: "inf", negativeInfinity: "-inf", nan: "nan"
+        )
+        return try decoder.decode(type, from: Data(body.utf8))
     }
 
     private func validate(typeIdentifier: String) throws {
