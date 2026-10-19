@@ -1761,3 +1761,8 @@
 - 원인: 개발자 사이트의 App ID `com.taption.plan`(7CZ37R5K4D)에서 Capabilities 탭의 WeatherKit은 켜져 있었으나 App Services 탭의 WeatherKit이 꺼져 있었다. 앱 엔타이틀먼트·프로파일은 정상이어서 기기에서는 `WDSJWTAuthenticatorServiceListener` 코드 2(JWT 발급 실패)만 보였다.
 - 조치: 대표 지시로 App Services의 WeatherKit을 체크하고 저장·확인했다. 다시 읽은 결과 `WEATHER_KIT` 체크됨. MusicKit·ShazamKit은 건드리지 않았다. Apple 안내대로 이 App ID를 포함한 프로비저닝 프로파일은 무효화되며 다음 빌드에서 자동 서명이 다시 만든다. 확인 버튼 좌표 클릭 중 다른 App ID(H3RTVV23VQ) 편집 화면이 한 번 열렸으나 아무것도 저장하지 않고 벗어났다.
 - 검증: 아직 기기에서 날씨 호출을 다시 확인하지 않았다(반영 대기, 실기기는 다른 세션이 사용 중). 앱은 인증 실패 후 15분마다 다시 시도한다.
+
+## REL1019G01 · 빌드 186 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(빌드 번호 186, 코드 변경 없음: 185 이후 WTH1019A01 기록과 설정만 바뀌었다). 빌드 185 테스트 결과(`REL1019F01`)를 그대로 근거로 쓴다.
+- 아카이브·업로드: 아카이브 성공(`archive-186.log`), `altool` `No errors uploading`(`altool-186.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 186·185·184·183 확인(`asc-poll-186.log`).
+- 제한: WeatherKit App Services 체크 반영을 기기에서 아직 확인하지 않았다. 설치·테스터 수신은 확인하지 않았다.
