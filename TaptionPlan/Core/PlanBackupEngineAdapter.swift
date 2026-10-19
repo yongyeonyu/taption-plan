@@ -10,7 +10,7 @@ struct PlanBackupEngineAdapter: Sendable {
     func listings(password: String?) async throws -> [PlanBackupListingRow] {
         let showsMetadata = !(password ?? "").isEmpty
         var rows: [PlanBackupListingRow] = []
-        for listing in try await engine.listBackups() {
+        for listing in try await engine.listBackups(password: showsMetadata ? password : nil) {
             var offloaded = false
             if case .month(let month) = listing.scope {
                 offloaded = (try? await engine.isSealed(month)) ?? false
@@ -25,7 +25,7 @@ struct PlanBackupEngineAdapter: Sendable {
                 createdAt: header.map { Date(timeIntervalSince1970: $0.createdAt) },
                 isOffloaded: offloaded,
                 metadataShown: showsMetadata,
-                isReadable: !showsMetadata || listing.header != nil
+                isReadable: !showsMetadata || listing.state == .ok
             ))
         }
         return rows

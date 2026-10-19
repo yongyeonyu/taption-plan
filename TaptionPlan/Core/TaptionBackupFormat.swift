@@ -6,6 +6,9 @@ import Foundation
 // 월 단위 백업 파일 형식(버전 1). 이전 백업 엔진과 호환하지 않는다.
 //
 // 파일 = 매직 "TAPTBK02"(8) + 헤더 영역 길이 u32 BE + 헤더 영역(평문 JSON, 공백으로 채움, 고정 2048바이트) + 프레임들
+// 헤더 영역의 평문에는 형식 이름·버전·KDF(알고리즘·솔트·반복 횟수)와 봉인된 헤더 블록(`sealed`, base64)만 있다. 월은 파일 이름이다.
+//   행 수·시각 범위·생성 시각·시간대·내용/본문 해시 같은 나머지 메타데이터는 같은 키로 AES-GCM 봉인한 헤더 블록 안에 있다
+//   (AAD = 솔트·월·버전을 묶음). 평문 키 확인값은 없다: 헤더 블록의 GCM 태그가 맞아야 비밀번호가 맞다.
 // 프레임 = 코덱 u8 + 압축 전 크기 u32 BE + 봉인 길이 u32 BE + 봉인(AES-GCM: nonce 12 + 암호문 + 태그 16)
 // 프레임 평문 = JSON Lines(한 줄에 배열 하나). 표마다 스키마 줄(`["#readings",열...]`) 뒤에 행 줄이 온다.
 //   센서 원본 행  ["r", id, ts, 열값..., extra]   기록 행  ["c", id, kind, start, end, updated, origin, deleted, ord, body]
@@ -29,6 +32,11 @@ enum TaptionBackupError: Error, Equatable {
     case fileMissing(String)
     case destinationUnavailable(String)
     case verificationFailed(String)
+    /// 쓰려는 비밀번호가 그 달 파일에 이미 쓰인 비밀번호와 다르다(`wrongPassword`는 복원·열기용). 오타나 변경으로
+    /// 기존 파일과 읽을 수 없는 새 파일이 섞이는 것을 막는다. 연관값은 파일 이름.
+    case passwordDiffersFromExistingBackup(String)
+    /// iCloud 충돌 버전이 풀리지 않은 파일. 연관값은 파일 이름.
+    case conflictingVersions(String)
 }
 
 /// 월(현지 달력 기준). 파일 이름은 `yyyy-MM.taptionbackup`.
@@ -115,7 +123,16 @@ enum TaptionBackupScope: Hashable, Sendable {
     }
 }
 
-/// 평문 헤더. 비밀번호 없이 "몇 건·언제까지"를 볼 수 있다. 내용은 모두 암호화돼 있다.
+/// 헤더 영역의 평문 부분. 비밀번호 없이 읽을 수 있는 것은 이것뿐이다.
+struct TaptionBackupPublicHeader: Codable, Equatable, Sendable {
+    var format: String
+    var version: Int
+    var kdf: TaptionBackupHeader.KDF
+    /// 봉인된 헤더 블록(AES-GCM nonce + 암호문 + 태그)의 base64.
+    var sealed: String
+}
+
+/// 복호화된 헤더(봉인된 헤더 블록의 내용 + 평문 부분). 파일 안에는 암호화돼 있다.
 struct TaptionBackupHeader: Codable, Equatable, Sendable {
     struct KDF: Codable, Equatable, Sendable {
         var algorithm: String
@@ -135,8 +152,6 @@ struct TaptionBackupHeader: Codable, Equatable, Sendable {
     var createdAt: Double
     var kdf: KDF
     var cipher = "AES-256-GCM"
-    /// HMAC(키, 월)의 앞 16바이트(base64). 틀린 비밀번호를 변조와 구분하는 데만 쓴다.
-    var keyCheck: String
     /// 프레임 압축에 선호한 코덱 이름(프레임마다 코덱 바이트가 따로 있다).
     var compression: String
     var chunkBytes: Int
@@ -147,12 +162,12 @@ struct TaptionBackupHeader: Codable, Equatable, Sendable {
     var rowCount: Int
     var firstTimestamp: Double?
     var lastTimestamp: Double?
-    /// 기록 행(삭제 표시 포함)의 가장 늦은 수정 시각. 새 파일이 기존 파일보다 오래된 상태인지 가리는 데 쓴다.
+    /// 기록 행(삭제 표시 포함)의 가장 늦은 수정 시각.
     var latestRecordUpdate: Double?
     /// 트레일러 앞 모든 줄의 SHA-256(hex). 같은 데이터면 같은 값이다.
     var contentSHA256: String
     var bodyBytes: Int
-    /// 헤더 영역 뒤 모든 바이트의 SHA-256(hex). 비밀번호 없이 파일이 온전한지 확인한다.
+    /// 헤더 영역 뒤 모든 바이트의 SHA-256(hex).
     var bodySHA256: String
 }
 
@@ -218,7 +233,9 @@ enum TaptionBackupCodec: UInt8, Sendable {
 enum TaptionBackupCrypto {
     static let defaultIterations = 600_000
     static let saltBytes = 16
-    static let maxIterations = 10_000_000
+    /// 헤더가 약한 반복 횟수로 파일을 만들거나(하한), 열 때 CPU를 오래 묶는(상한) 값을 막는다.
+    static let minIterations = 100_000
+    static let maxIterations = 5_000_000
 
     static func randomBytes(_ count: Int) throws -> Data {
         var data = Data(count: count)
@@ -228,9 +245,12 @@ enum TaptionBackupCrypto {
     }
 
     /// PBKDF2-HMAC-SHA256(비밀번호 UTF-8, 솔트, 반복, 32바이트).
-    static func deriveKey(password: String, salt: Data, iterations: Int) throws -> SymmetricKey {
+    /// `minimumIterations`는 테스트가 빠른 값을 쓰려고 낮출 때만 바꾼다(앱은 기본값 `minIterations`).
+    static func deriveKey(
+        password: String, salt: Data, iterations: Int, minimumIterations: Int = minIterations
+    ) throws -> SymmetricKey {
         guard !password.isEmpty else { throw TaptionBackupError.emptyPassword }
-        guard (1...maxIterations).contains(iterations), salt.count >= 8 else {
+        guard (max(1, minimumIterations)...maxIterations).contains(iterations), salt.count >= 8 else {
             throw TaptionBackupError.malformed("kdf parameters")
         }
         let passwordBytes = Array(password.utf8)
@@ -251,9 +271,13 @@ enum TaptionBackupCrypto {
         return SymmetricKey(data: derived)
     }
 
-    static func keyCheck(_ key: SymmetricKey, month: String) -> String {
-        let mac = HMAC<SHA256>.authenticationCode(for: Data("taption-backup-key-check|\(month)".utf8), using: key)
-        return Data(mac.prefix(16)).base64EncodedString()
+    /// 헤더 블록의 AAD: 솔트·월·형식 버전을 묶어 다른 파일/월로 옮긴 블록을 거부한다.
+    static func headerAAD(salt: Data, month: String, version: Int) -> Data {
+        var aad = Data("TAPTBK02-HDR|".utf8)
+        aad.append(salt)
+        aad.append(Data("|\(month)|".utf8))
+        aad.append(bigEndian(UInt32(version)))
+        return aad
     }
 
     static func hex<D: Sequence>(_ digest: D) -> String where D.Element == UInt8 {
@@ -286,8 +310,16 @@ enum TaptionBackupLayout {
     static let magic = Data("TAPTBK02".utf8)
     static let headerRegionBytes = 2048
     static let bodyOffset = UInt64(magic.count + 4 + headerRegionBytes)
-    /// 한 프레임 봉인 길이의 상한(깨진 길이로 큰 메모리를 잡지 않게).
+    /// 한 프레임 크기의 절대 상한(깨진 길이로 큰 메모리를 잡지 않게).
     static let maxFrameBytes = 256 << 20
+    static let maxChunkBytes = 64 << 20
+    static let aeadOverhead = 28
+
+    /// 작성기는 줄을 모아 `chunkBytes`를 넘기기 전에 프레임을 닫으므로 프레임은 보통 `chunkBytes` 이하다.
+    /// 줄 하나가 더 큰 경우를 위해 몇 배의 여유만 허용하고, 헤더의 `chunkBytes`를 믿어 큰 메모리를 잡지 않는다.
+    static func maxPlainFrameBytes(chunkBytes: Int) -> Int {
+        min(maxFrameBytes, max(chunkBytes * 4, 64 << 10))
+    }
 }
 
 /// 임시 파일에 프레임을 차례로 쓰는 작성기. 줄을 모아 `chunkBytes`마다 압축·봉인한다.
@@ -313,7 +345,7 @@ final class TaptionBackupFileWriter {
         self.key = key
         self.salt = salt
         self.codec = codec
-        self.chunkBytes = max(1, chunkBytes)
+        self.chunkBytes = min(max(1, chunkBytes), TaptionBackupLayout.maxChunkBytes)
         try handle.write(contentsOf: TaptionBackupLayout.magic)
         try handle.write(contentsOf: TaptionBackupCrypto.bigEndian(UInt32(TaptionBackupLayout.headerRegionBytes)))
         try handle.write(contentsOf: Data(repeating: 0x20, count: TaptionBackupLayout.headerRegionBytes))
@@ -337,10 +369,7 @@ final class TaptionBackupFileWriter {
         header.plaintextBytes = plaintextBytes
         header.bodyBytes = bodyBytes
         header.bodySHA256 = TaptionBackupCrypto.hex(bodyHasher.finalize())
-        let json = try TaptionBackupHeaderCoding.encode(header)
-        guard json.count <= TaptionBackupLayout.headerRegionBytes else {
-            throw TaptionBackupError.malformed("header too large")
-        }
+        let json = try TaptionBackupHeaderCoding.encode(header, key: key, salt: salt)
         try handle.seek(toOffset: UInt64(TaptionBackupLayout.magic.count + 4))
         try handle.write(contentsOf: json)
         try handle.synchronize()
@@ -355,6 +384,9 @@ final class TaptionBackupFileWriter {
     private func flush(isFinal: Bool) throws {
         let plain = pending
         pending = Data()
+        guard plain.count <= TaptionBackupLayout.maxPlainFrameBytes(chunkBytes: chunkBytes) else {
+            throw TaptionBackupError.malformed("frame too large")
+        }
         let compressed = codec.compress(plain)
         let aad = TaptionBackupCrypto.frameAAD(
             salt: salt, month: month, index: frameIndex, isFinal: isFinal,
@@ -374,36 +406,92 @@ final class TaptionBackupFileWriter {
 }
 
 enum TaptionBackupHeaderCoding {
-    static func encode(_ header: TaptionBackupHeader) throws -> Data {
+    /// 헤더를 봉인해 고정 크기 헤더 영역(평문 부분 + 봉인된 블록, 공백으로 채움)으로 만든다.
+    static func encode(_ header: TaptionBackupHeader, key: SymmetricKey, salt: Data) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        var json = try encoder.encode(header)
-        let padding = TaptionBackupLayout.headerRegionBytes - json.count
-        if padding > 0 { json.append(Data(repeating: 0x20, count: padding)) }
+        let aad = TaptionBackupCrypto.headerAAD(salt: salt, month: header.month, version: header.version)
+        let box = try AES.GCM.seal(try encoder.encode(header), using: key, authenticating: aad)
+        guard let combined = box.combined else { throw TaptionBackupError.malformed("seal header") }
+        let publicHeader = TaptionBackupPublicHeader(
+            format: header.format, version: header.version, kdf: header.kdf, sealed: combined.base64EncodedString()
+        )
+        var json = try encoder.encode(publicHeader)
+        guard json.count <= TaptionBackupLayout.headerRegionBytes else { throw TaptionBackupError.malformed("header too large") }
+        json.append(Data(repeating: 0x20, count: TaptionBackupLayout.headerRegionBytes - json.count))
         return json
     }
 }
 
 /// 비밀번호 없이 헤더를 읽고, 비밀번호로 프레임을 풀어 줄을 넘겨 준다.
 enum TaptionBackupFileReader {
-    static func readHeader(at url: URL) throws -> TaptionBackupHeader {
+    static var headerPrefixBytes: Int { TaptionBackupLayout.magic.count + 4 + TaptionBackupLayout.headerRegionBytes }
+
+    /// 비밀번호 없이 읽는 평문 헤더 부분.
+    static func readPublicHeader(at url: URL) throws -> TaptionBackupPublicHeader {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
-        let prefix = try handle.read(upToCount: TaptionBackupLayout.magic.count + 4) ?? Data()
-        guard prefix.count == TaptionBackupLayout.magic.count + 4,
+        return try parsePublicHeader(try handle.read(upToCount: headerPrefixBytes) ?? Data())
+    }
+
+    /// 파일 앞 `headerPrefixBytes`바이트(매직 + 길이 + 헤더 영역)에서 평문 헤더를 읽는다.
+    static func parsePublicHeader(_ prefix: Data) throws -> TaptionBackupPublicHeader {
+        let lengthEnd = TaptionBackupLayout.magic.count + 4
+        guard prefix.count >= lengthEnd,
               prefix.prefix(TaptionBackupLayout.magic.count) == TaptionBackupLayout.magic else {
             throw TaptionBackupError.notABackup
         }
         let length = Int(TaptionBackupCrypto.readUInt32(prefix, at: TaptionBackupLayout.magic.count))
         guard length == TaptionBackupLayout.headerRegionBytes else { throw TaptionBackupError.malformed("header length") }
-        let region = try handle.read(upToCount: length) ?? Data()
-        guard region.count == length else { throw TaptionBackupError.malformed("header truncated") }
-        guard let header = try? JSONDecoder().decode(TaptionBackupHeader.self, from: region),
+        guard prefix.count >= lengthEnd + length else { throw TaptionBackupError.malformed("header truncated") }
+        let region = prefix.dropFirst(lengthEnd).prefix(length)
+        guard let header = try? JSONDecoder().decode(TaptionBackupPublicHeader.self, from: Data(region)),
               header.format == TaptionBackupHeader.formatName else { throw TaptionBackupError.notABackup }
         guard header.version == TaptionBackupHeader.currentVersion else {
             throw TaptionBackupError.unsupportedVersion(header.version)
         }
         return header
+    }
+
+    /// 비밀번호로 키를 만들고 봉인된 헤더 블록을 연다. 블록의 GCM 태그가 맞지 않으면 `wrongPassword`
+    /// (틀린 비밀번호와 헤더 손상을 구분할 수 없다). `scopeKey`는 파일 이름에서 온 월(또는 "settings")이다.
+    /// 키 유도는 비싸므로 호출자가 같은 솔트·반복 횟수의 키를 캐시해 `key`로 넘길 수 있다.
+    static func open(
+        public publicHeader: TaptionBackupPublicHeader, scopeKey: String, password: String,
+        minimumIterations: Int = TaptionBackupCrypto.minIterations, cachedKey: SymmetricKey? = nil
+    ) throws -> (header: TaptionBackupHeader, key: SymmetricKey) {
+        guard let salt = Data(base64Encoded: publicHeader.kdf.salt) else { throw TaptionBackupError.malformed("salt") }
+        guard publicHeader.kdf.algorithm == "PBKDF2-HMAC-SHA256" else { throw TaptionBackupError.malformed("kdf") }
+        let key = try cachedKey ?? TaptionBackupCrypto.deriveKey(
+            password: password, salt: salt, iterations: publicHeader.kdf.iterations, minimumIterations: minimumIterations
+        )
+        guard let combined = Data(base64Encoded: publicHeader.sealed), combined.count > TaptionBackupLayout.aeadOverhead else {
+            throw TaptionBackupError.malformed("sealed header")
+        }
+        let plain: Data
+        do {
+            plain = try AES.GCM.open(
+                AES.GCM.SealedBox(combined: combined), using: key,
+                authenticating: TaptionBackupCrypto.headerAAD(salt: salt, month: scopeKey, version: publicHeader.version)
+            )
+        } catch {
+            throw TaptionBackupError.wrongPassword
+        }
+        guard let header = try? JSONDecoder().decode(TaptionBackupHeader.self, from: plain),
+              header.month == scopeKey, header.kdf == publicHeader.kdf, header.version == publicHeader.version,
+              header.format == publicHeader.format else {
+            throw TaptionBackupError.malformed("header block does not match")
+        }
+        return (header, key)
+    }
+
+    static func open(
+        at url: URL, scopeKey: String, password: String, minimumIterations: Int = TaptionBackupCrypto.minIterations
+    ) throws -> (header: TaptionBackupHeader, key: SymmetricKey) {
+        try open(
+            public: try readPublicHeader(at: url), scopeKey: scopeKey, password: password,
+            minimumIterations: minimumIterations
+        )
     }
 
     /// 비밀번호 없이 본문 바이트 수와 SHA-256을 확인한다(전송 중 깨짐 등).
@@ -422,16 +510,6 @@ enum TaptionBackupFileReader {
         }
     }
 
-    static func key(password: String, header: TaptionBackupHeader) throws -> SymmetricKey {
-        guard let salt = Data(base64Encoded: header.kdf.salt) else { throw TaptionBackupError.malformed("salt") }
-        guard header.kdf.algorithm == "PBKDF2-HMAC-SHA256" else { throw TaptionBackupError.malformed("kdf") }
-        let key = try TaptionBackupCrypto.deriveKey(password: password, salt: salt, iterations: header.kdf.iterations)
-        guard TaptionBackupCrypto.keyCheck(key, month: header.month) == header.keyCheck else {
-            throw TaptionBackupError.wrongPassword
-        }
-        return key
-    }
-
     struct Counts: Equatable, Sendable {
         var readings = 0
         var records = 0
@@ -446,9 +524,15 @@ enum TaptionBackupFileReader {
         isolation: isolated (any Actor)? = #isolation, handler: (Data) async throws -> Void
     ) async throws -> Counts {
         guard let salt = Data(base64Encoded: header.kdf.salt) else { throw TaptionBackupError.malformed("salt") }
+        guard (1...TaptionBackupLayout.maxChunkBytes).contains(header.chunkBytes), header.chunkCount >= 0,
+              header.chunkCount <= header.bodyBytes / (9 + TaptionBackupLayout.aeadOverhead) else {
+            throw TaptionBackupError.malformed("header sizes")
+        }
+        let maxPlain = TaptionBackupLayout.maxPlainFrameBytes(chunkBytes: header.chunkBytes)
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         try handle.seek(toOffset: TaptionBackupLayout.bodyOffset)
+        var plainTotal = 0
         var counts = Counts()
         var hasher = SHA256()
         var trailer: [TaptionBackupJSONLine.Field]?
@@ -460,8 +544,10 @@ enum TaptionBackupFileReader {
             }
             let plainSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 1))
             let sealedSize = Int(TaptionBackupCrypto.readUInt32(prefix, at: 5))
-            guard sealedSize >= 28, sealedSize <= TaptionBackupLayout.maxFrameBytes,
-                  plainSize <= TaptionBackupLayout.maxFrameBytes else { throw TaptionBackupError.malformed("frame size") }
+            guard sealedSize >= TaptionBackupLayout.aeadOverhead,
+                  sealedSize <= maxPlain + TaptionBackupLayout.aeadOverhead,
+                  plainSize <= maxPlain else { throw TaptionBackupError.malformed("frame size") }
+            plainTotal += plainSize
             let sealed = try handle.read(upToCount: sealedSize) ?? Data()
             guard sealed.count == sealedSize else { throw TaptionBackupError.malformed("frame truncated") }
             consumed += 9 + sealedSize
@@ -492,7 +578,8 @@ enum TaptionBackupFileReader {
                 try await handler(Data(line))
             }
         }
-        guard consumed == header.bodyBytes, (try handle.read(upToCount: 1) ?? Data()).isEmpty else {
+        guard consumed == header.bodyBytes, plainTotal == header.plaintextBytes,
+              (try handle.read(upToCount: 1) ?? Data()).isEmpty else {
             throw TaptionBackupError.malformed("body length")
         }
         counts.contentSHA256 = TaptionBackupCrypto.hex(hasher.finalize())
@@ -507,6 +594,42 @@ enum TaptionBackupFileReader {
             throw TaptionBackupError.verificationFailed("trailer does not match header or content")
         }
         return counts
+    }
+}
+
+/// 줄 하나가 어느 행인지(센서 원본은 id, 기록은 종류와 id)를 가리키는 열쇠와 내용 해시.
+/// 월 파일 안의 행을 id 단위로 비교(포함 여부)하는 데 쓴다.
+enum TaptionBackupRowIdentity {
+    struct Entry: Hashable, Sendable {
+        var key: String
+        var isReading: Bool
+    }
+
+    private static let readingPrefix = Array("[\"r\",\"".utf8)
+
+    /// 센서 원본 줄은 `["r","<UUID 36자>",`로 시작하므로 파싱 없이 바로 자른다. 그 밖의 줄은 파싱한다.
+    static func entry(of line: Data) -> Entry? {
+        let bytes = line.startIndex
+        if line.count > readingPrefix.count + 36, line.prefix(readingPrefix.count).elementsEqual(readingPrefix) {
+            let idStart = line.index(bytes, offsetBy: readingPrefix.count)
+            let idEnd = line.index(idStart, offsetBy: 36)
+            if line[idEnd] == 0x22, let id = String(data: line[idStart..<idEnd], encoding: .utf8), !id.contains("\\") {
+                return Entry(key: id, isReading: true)
+            }
+        }
+        guard let fields = try? TaptionBackupJSONLine.parse(line), fields.count >= 3,
+              let id = fields[1].string else { return nil }
+        switch fields[0].string {
+        case "r": return Entry(key: id, isReading: true)
+        case "c": return fields[2].string.map { Entry(key: "\($0)\u{0}\(id)", isReading: false) }
+        default: return nil
+        }
+    }
+
+    /// 줄 끝의 줄바꿈 유무와 상관없이 같은 값(내보내는 줄은 개행이 붙고, 파일에서 푼 줄은 없다).
+    static func contentHash(_ line: Data) -> UInt64 {
+        let body = line.last == 0x0A ? line.dropLast() : line[...]
+        return SHA256.hash(data: body).prefix(8).reduce(0) { ($0 << 8) | UInt64($1) }
     }
 }
 
