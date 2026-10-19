@@ -3575,6 +3575,30 @@ struct MapHomeView: View {
                 )
             )
         }
+        for waypoint in pawprintWaypoints {
+            let isSelectedRoute = waypoint.isPredicted
+                && waypoint.predictedRoute?.id == selectedPredictedRoute?.id
+            let isInteractive = waypoint.predictedRoute != nil
+                || (waypoint.timestamp != nil && !waypoint.isPredicted)
+            annotations.append(
+                MapHomeAppleAnnotation(
+                    id: vectorPawprintMarkerID(waypoint.index),
+                    coordinate: waypoint.coordinate,
+                    kind: .pawprint(MapHomeApplePawprint(
+                        index: waypoint.index, angle: waypoint.angle,
+                        isPredicted: waypoint.isPredicted, isSelectedRoute: isSelectedRoute,
+                        speedMetersPerSecond: waypoint.speedMetersPerSecond
+                    )),
+                    accessibilityLabel: waypoint.predictedRoute != nil
+                        ? language.text("예상 경로 선택", "Select predicted route")
+                        : waypoint.timestamp.map {
+                            language.text("기록 발자국 ", "Recorded paw ")
+                                + $0.formatted(date: .omitted, time: .shortened)
+                        } ?? "",
+                    isInteractive: isInteractive
+                )
+            )
+        }
         return annotations
     }
 
@@ -3668,6 +3692,10 @@ struct MapHomeView: View {
             selectedMapStickerEditor = .memo(memo.id)
         case .search:
             isSearchPinMenuPresented = true
+        case .pawprint(let paw):
+            if let waypoint = pawprintWaypoints.first(where: { $0.index == paw.index }) {
+                selectPawprint(waypoint)
+            }
         }
     }
 
@@ -15623,6 +15651,16 @@ private enum MapHomeAppleAnnotationKind {
     case sticker(MapSticker)
     case memo(ActionMemo)
     case search(MapHomeSearchResult)
+    case pawprint(MapHomeApplePawprint)
+}
+
+/// Apple 지도에 그릴 발자국 하나. 벡터 지도의 `PawprintWaypoint`와 같은 정보를 값으로 옮긴 것이다.
+private struct MapHomeApplePawprint: Equatable {
+    let index: Int
+    let angle: Double
+    let isPredicted: Bool
+    let isSelectedRoute: Bool
+    let speedMetersPerSecond: Double?
 }
 
 private struct MapHomeAppleAnnotation {
@@ -16847,6 +16885,20 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     rootView: AnyView(MapHomeMapMemoMarker(memo: memo)),
                     size: CGSize(width: 150, height: 60),
                     centerOffset: CGPoint(x: 0, y: -30)
+                )
+            case .pawprint(let paw):
+                let color: Color = paw.isSelectedRoute ? .orange
+                    : paw.isPredicted ? Color.gray.opacity(0.68)
+                    : MapHomePawprintSpeedColor.color(forMetersPerSecond: paw.speedMetersPerSecond)
+                return MapHomeAppleHostedDescriptor(
+                    rootView: AnyView(
+                        Image(systemName: "pawprint.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(color)
+                            .rotationEffect(.degrees(paw.angle))
+                    ),
+                    size: CGSize(width: 24, height: 24),
+                    centerOffset: .zero
                 )
             case .search:
                 return MapHomeAppleHostedDescriptor(
