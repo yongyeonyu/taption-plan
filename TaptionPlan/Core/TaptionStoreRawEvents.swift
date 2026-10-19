@@ -225,18 +225,26 @@ extension TaptionStoreV2 {
         try step(db, statement)
     }
 
-    /// 지정한 종류의 기록(`records`)을 모두 지운다(삭제 표시가 아니라 행 삭제).
-    func deleteRecords(kinds: [String]) throws {
+    /// 지정한 종류의 기록(`records`)을 모두 **삭제 표시(톰스톤)** 로 바꾼다. 행을 지우지 않는다.
+    /// 하드 삭제하면 월 백업 파일에 남은 같은 행이 다음 백업의 합집합에서 되살아나기 때문이다. 본문은 `{}`로 비우고
+    /// 수정 시각은 이전보다 항상 뒤로 둬서(`applyRecordChanges`와 같은 규칙) 오래된 백업 행을 이긴다.
+    /// 읽기 API(`records(kind:)` 등)는 삭제 표시를 숨긴다. 전체 삭제(`deleteAllRecords`)와 달리 백업 무효화 표시는 남기지 않는다.
+    func deleteRecords(kinds: [String], deletedAt: Date = Date()) throws {
         guard !kinds.isEmpty else { return }
         let db = try handle()
-        let statement = try prepare(db, "DELETE FROM records WHERE kind = ?")
-        defer { sqlite3_finalize(statement) }
         try exec(db, "BEGIN IMMEDIATE")
         do {
+            let statement = try prepare(db, """
+                UPDATE records SET deleted = 1, body = '{}', end_ts = NULL,
+                  updated_ts = MAX(?, updated_ts + 0.001)
+                WHERE kind = ? AND deleted = 0
+                """)
+            defer { sqlite3_finalize(statement) }
             for kind in kinds {
                 sqlite3_reset(statement)
                 sqlite3_clear_bindings(statement)
-                bind(statement, 1, .text(kind))
+                bind(statement, 1, .real(deletedAt.timeIntervalSince1970))
+                bind(statement, 2, .text(kind))
                 try step(db, statement)
             }
             try exec(db, "COMMIT")
