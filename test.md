@@ -1650,3 +1650,11 @@
 - 파이썬 도구 검증: 같은 실기기 테스트가 만든 실제 파일(기본 설정: 600000회, zlib, 301 센서 + 1 기록)을 xcresult 첨부로 꺼내 `python3 -I scripts/taption-backup-decode.py`로 `--header`·`--summary`·전체 내보내기가 성공했고(독립 PBKDF2·AES-GCM·zlib·트레일러 해시 검증) 틀린 비밀번호는 종료 코드 1이다. 도구의 LZFSE 경로는 실행하지 않았다.
 - 압축률(합성 위치 기록 5,000건, 3초 간격 걷기, 대부분 열은 null): 원본 JSON(SensorReading 배열) 3,134,110B / SQLite 파일 1,118,208B / 표 단위 JSONL 평문 2,025,073B / 백업 파일 압축 없음 2,027,170B, LZFSE 473,050B(원본 JSON의 15.1%, 건당 94.6B), zlib 454,417B(14.5%, 건당 90.9B). 실제 센서 필드가 더 채워진 데이터의 수치는 아니다.
 - 제한: iCloud Drive 목적지는 기기에서만 동작하는 구현이며 entitlement가 없어 실행·검증하지 못했다. 시작 시각이 없는 기록(설정·분류 등)은 월 백업에 담지 않는다. 앱 전체 Debug 빌드는 테스트 빌드로 성공했으나 전체 테스트는 실행하지 않았다.
+
+## BKP1019A02 후속 · 확정 4건 구현 (2026-10-19)
+- 병합: `rewrite/storage-v2` 25c15b7을 fast-forward로 합쳤다(충돌 없음). 합친 직후 실기기 `TaptionBackupV2Tests`·`SQLitePlanRepositoryTests`·`SensorDayStoreTests` 156개 통과·0실패(`build/validation/BKP1019A02/merge1.xcresult`). 이 실행은 후속 코드 수정과 시간이 겹쳐 시작돼 컴파일된 소스가 병합 직후와 정확히 같다고 보증하지 못한다.
+- 구현: 삭제 표시(톰스톤: `TaptionStoreV2.applyRecordChanges`가 DELETE 대신 `deleted=1`, 본문 `{}`, 수정 시각을 이전보다 항상 뒤로), 설정 파일(`taption-settings.taptionbackup`), 봉인된 달의 늦은 행 합집합, `deleteAllBackups()`. 상위 집합 판정에 기록 최신 수정 시각(`latestRecordUpdate`)을 더했다.
+- 구현 뒤 실기기 `TaptionBackupV2Tests`(22개)·`SQLitePlanRepositoryTests`·`TaptionStoreRepositoryTests`·`SensorDayStoreTests` 합계 167개 통과·0실패·0건너뜀(`impl1.xcresult`, `impl1.log`). 새 테스트 5개: 톰스톤 왕복, 오프로드된 달 빈/축소 로컬 거부, 설정 파일, 늦은 행(틀린 비밀번호·손상·읽을 수 없는 파일은 덮어쓰지 않음), 삭제 호출 전 아무것도 지우지 않음과 부분 실패 보고. 기존 테스트 2개의 기대값(백업 결과 개수, 봉인된 달의 늦은 행 동작)을 새 규칙에 맞춰 고쳤다.
+- 파이썬 도구는 7필드 트레일러와 톰스톤 수 집계로 갱신했고 실기기가 만든 새 파일을 `--summary`로 검증했다(톰스톤·설정 파일 자체를 파이썬으로 연 것은 아니다).
+- 제한: iCloud Drive 목적지 미검증, 사용자 확인 UI·AppModel 연결 없음, 전체 앱 테스트는 실행하지 않았다.
+

@@ -9,7 +9,9 @@ import Foundation
 // 프레임 = 코덱 u8 + 압축 전 크기 u32 BE + 봉인 길이 u32 BE + 봉인(AES-GCM: nonce 12 + 암호문 + 태그 16)
 // 프레임 평문 = JSON Lines(한 줄에 배열 하나). 표마다 스키마 줄(`["#readings",열...]`) 뒤에 행 줄이 온다.
 //   센서 원본 행  ["r", id, ts, 열값..., extra]   기록 행  ["c", id, kind, start, end, updated, origin, deleted, ord, body]
-//   마지막 줄(트레일러) ["#end", 센서 수, 기록 수, 첫 시각, 마지막 시각, 내용 SHA-256]
+//   마지막 줄(트레일러) ["#end", 센서 수, 기록 수, 첫 시각, 마지막 시각, 내용 SHA-256, 기록 최신 수정 시각]
+//   기록 행의 deleted=1은 삭제 표시(톰스톤)다. 센서 원본에는 삭제 표시가 없다.
+//   월 파일은 시작 시각이 그 달인 행을, 설정 파일(taption-settings.taptionbackup)은 시작 시각이 없는 기록을 담는다.
 // 키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수, 32바이트). 압축한 뒤 암호화한다.
 // 각 프레임의 AAD가 솔트·월·프레임 번호·마지막 여부·코덱·크기를 묶어, 순서 바꿈·잘림·헤더 변조를 복호화 단계에서 잡는다.
 
@@ -79,6 +81,40 @@ struct TaptionBackupMonth: Hashable, Comparable, Sendable {
     }
 }
 
+/// 백업 파일 하나가 담는 범위: 한 달, 또는 달과 무관한 설정·분류 기록(시작 시각이 없는 기록).
+enum TaptionBackupScope: Hashable, Sendable {
+    static let settingsFileName = "taption-settings." + TaptionBackupMonth.fileExtension
+    static let settingsKey = "settings"
+
+    case month(TaptionBackupMonth)
+    case settings
+
+    init?(fileName: String) {
+        if fileName == Self.settingsFileName {
+            self = .settings
+        } else if let month = TaptionBackupMonth(fileName: fileName) {
+            self = .month(month)
+        } else {
+            return nil
+        }
+    }
+
+    /// 헤더의 `month` 필드와 키 확인값·AAD에 쓰는 이름.
+    var key: String {
+        switch self {
+        case .month(let month): month.key
+        case .settings: Self.settingsKey
+        }
+    }
+
+    var fileName: String {
+        switch self {
+        case .month(let month): month.fileName
+        case .settings: Self.settingsFileName
+        }
+    }
+}
+
 /// 평문 헤더. 비밀번호 없이 "몇 건·언제까지"를 볼 수 있다. 내용은 모두 암호화돼 있다.
 struct TaptionBackupHeader: Codable, Equatable, Sendable {
     struct KDF: Codable, Equatable, Sendable {
@@ -111,6 +147,8 @@ struct TaptionBackupHeader: Codable, Equatable, Sendable {
     var rowCount: Int
     var firstTimestamp: Double?
     var lastTimestamp: Double?
+    /// 기록 행(삭제 표시 포함)의 가장 늦은 수정 시각. 새 파일이 기존 파일보다 오래된 상태인지 가리는 데 쓴다.
+    var latestRecordUpdate: Double?
     /// 트레일러 앞 모든 줄의 SHA-256(hex). 같은 데이터면 같은 값이다.
     var contentSHA256: String
     var bodyBytes: Int
@@ -458,13 +496,14 @@ enum TaptionBackupFileReader {
             throw TaptionBackupError.malformed("body length")
         }
         counts.contentSHA256 = TaptionBackupCrypto.hex(hasher.finalize())
-        guard let trailer, trailer.count == 6,
+        guard let trailer, trailer.count == 7,
               trailer[1].int == counts.readings, trailer[2].int == counts.records,
               trailer[5].string == counts.contentSHA256,
               header.readingCount == counts.readings, header.recordCount == counts.records,
               header.rowCount == counts.readings + counts.records,
               header.contentSHA256 == counts.contentSHA256,
-              trailer[3].double == header.firstTimestamp, trailer[4].double == header.lastTimestamp else {
+              trailer[3].double == header.firstTimestamp, trailer[4].double == header.lastTimestamp,
+              trailer[6].double == header.latestRecordUpdate else {
             throw TaptionBackupError.verificationFailed("trailer does not match header or content")
         }
         return counts

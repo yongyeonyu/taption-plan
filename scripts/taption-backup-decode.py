@@ -8,6 +8,7 @@
   python3 scripts/taption-backup-decode.py <백업 파일> > rows.jsonl        # 표준 출력으로 줄 내보내기
 
 비밀번호는 --password 또는 환경변수 TAPTION_BACKUP_PASSWORD, 없으면 입력창으로 받는다.
+월 파일은 시작 시각이 그 달인 행을, taption-settings.taptionbackup은 시작 시각이 없는 기록을 담는다. 기록 행의 deleted=1은 삭제 표시다.
 키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수, 32바이트). 모든 프레임의 AES-GCM 태그,
 본문 SHA-256, 트레일러의 행 수·내용 해시를 확인하고, 하나라도 틀리면 종료 코드 1로 끝낸다.
 압축은 macOS의 libcompression(LZFSE/zlib)을 ctypes로 쓴다. macOS에서만 동작한다.
@@ -116,6 +117,8 @@ def decode_lines(data: bytes, header: dict, key: bytes):
         fail("트레일러의 내용 해시가 맞지 않습니다")
     if (trailer[1], trailer[2]) != (header["readingCount"], header["recordCount"]):
         fail("트레일러의 행 수가 헤더와 다릅니다")
+    if len(trailer) != 7 or trailer[6] != header.get("latestRecordUpdate"):
+        fail("트레일러의 기록 최신 수정 시각이 헤더와 다릅니다")
 
 
 def main() -> None:
@@ -142,6 +145,8 @@ def main() -> None:
     counts = collections.Counter()
     for line in decode_lines(data, header, key):
         counts["schema" if line.startswith(b'["#') else {b"r": "readings", b"c": "records"}[line[2:3]]] += 1
+        if line.startswith(b'["c"') and json.loads(line)[7]:
+            counts["tombstones"] += 1
         if out_file:
             out_file.write(line + b"\n")
         elif not args.summary:

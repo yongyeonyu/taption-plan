@@ -519,23 +519,32 @@ final class TaptionBackupV2Tests: XCTestCase {
         sepCount = try await harness.store.recordCount()
         XCTAssertEqual(sepCount, 1)
 
-        // 봉인된 달은 다시 쓰지 않는다.
-        try await harness.store.upsertReadings([reading(date(2026, 9, 30, 23), 7)])
+        // 봉인된 달이 비어 있으면 다시 쓰지 않는다.
         let sealedBackup = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
         XCTAssertEqual(sealedBackup.outcome, .skippedSealed)
-        let late = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 11, 5))
-        XCTAssertEqual(late.count, 1, "봉인 뒤 늦게 들어온 행은 검증이 맞지 않아 지우지 않는다")
-        if case .sealed = late[0].outcome { XCTFail() }
+
+        // 봉인 뒤 늦게 도착한 행: 그대로는 지우지 않고, 백업하면 합집합으로 다시 만든 뒤 재봉인된다.
+        let lateReading = reading(date(2026, 9, 30, 23), 7)
+        try await harness.store.upsertReadings([lateReading])
+        let blocked = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 11, 5))
+        XCTAssertEqual(blocked.count, 1)
+        if case .sealed = blocked[0].outcome { XCTFail("늦게 도착한 행이 있는 달을 그대로 지우면 안 된다") }
+        let merged = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
+        XCTAssertEqual(merged.outcome, .written)
+        XCTAssertEqual(merged.header?.readingCount, 51, "기존 파일 50건 + 늦은 1건")
+        XCTAssertEqual(merged.header?.recordCount, 1)
+        let unsealed = try await backupEngine.isSealed(september)
+        XCTAssertFalse(unsealed)
+        let resealed = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 11, 5))
+        XCTAssertEqual(resealed, [.init(month: september, outcome: .sealed(readings: 51, records: 1))])
 
         // 지운 달 불러오기.
-        let lateRows = try await harness.store.readings(from: date(2026, 9, 30), to: date(2026, 10, 1))
-        try await harness.store.deleteReadings(ids: lateRows.map { $0.id.uuidString })
         let restored = try await backupEngine.restore(month: september, password: password)
-        XCTAssertEqual(restored.newReadings, 50)
+        XCTAssertEqual(restored.newReadings, 51)
         let sealedAfter = try await backupEngine.isSealed(september)
         XCTAssertFalse(sealedAfter, "복원하면 봉인이 풀린다")
         let all = try await allReadings(harness.store)
-        XCTAssertEqual(Set(all), Set(sepData + octData))
+        XCTAssertEqual(Set(all), Set(sepData + octData + [lateReading]))
     }
 
     func testOffloadDoesNotDeleteWhenTheUploadedFileFailsVerification() async throws {
@@ -588,8 +597,8 @@ final class TaptionBackupV2Tests: XCTestCase {
             readings(day: date(2026, 8, 31, 23), count: 5) + readings(day: date(2026, 10, 2), count: 5, startIndex: 50)
         )
         let results = try await engine(harness).backupAllMonths(password: password, now: date(2026, 10, 19))
-        XCTAssertEqual(results.map(\.month.key), ["2026-08", "2026-09", "2026-10"])
-        XCTAssertEqual(results.map(\.outcome), [.written, .skippedNoData, .written])
+        XCTAssertEqual(results.map(\.scope.key), ["2026-08", "2026-09", "2026-10", "settings"])
+        XCTAssertEqual(results.map(\.outcome), [.written, .skippedNoData, .written, .skippedNoData])
         let names = try await harness.destination.list().map(\.name)
         XCTAssertEqual(names, ["2026-08.taptionbackup", "2026-10.taptionbackup"])
     }
@@ -673,6 +682,267 @@ final class TaptionBackupV2Tests: XCTestCase {
         attachment.name = "external-decoder-2026-10.taptionbackup"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    // MARK: 삭제 표시(톰스톤)
+
+    private func plan(_ title: String, at seconds: TimeInterval) -> PlanRecord {
+        let start = Date(timeIntervalSince1970: 1_792_300_000 + seconds)
+        return PlanRecord(title: title, span: TimeSpan(start: start, end: start.addingTimeInterval(1_800)), categoryID: "activity")
+    }
+
+    func testUserDeletedRecordBecomesTombstoneThatBackupCarriesAndRestoreApplies() async throws {
+        let source = try makeHarness()
+        let month = TaptionBackupMonth(year: 2026, month: 10)
+        let repository = TaptionStoreRepository(store: source.store)
+        let keep = plan("남길 계획", at: 0)
+        let remove = plan("지울 계획", at: 3_600)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = [keep, remove]
+        try await repository.save(snapshot)
+        let backupEngine = engine(source)
+        let first = try await backupEngine.backup(month: month, password: password, now: date(2026, 10, 19))
+        XCTAssertEqual(first.outcome, .written)
+        XCTAssertEqual(first.header?.recordCount, 2)
+
+        // 복원해 둔 다른 기기(삭제 전 상태).
+        let target = try makeHarness()
+        let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar)
+        _ = try await restorer.restore(month: month, password: password)
+        let before = try await target.store.records(kind: "plan")
+        XCTAssertEqual(before.count, 2)
+
+        // 사용자가 계획 하나를 지움 → 저장소는 삭제 표시로 바꾼다.
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_200)
+        snapshot.plans = [keep]
+        try await repository.save(snapshot)
+        let loaded = try await repository.load()
+        XCTAssertEqual(loaded.plans.map(\.id), [keep.id], "삭제된 행은 불러오지 않는다")
+        let rows = try await source.store.recordsForBackup(from: 0, to: .greatestFiniteMagnitude)
+        let tombstone = try XCTUnwrap(rows.first { $0.id == "\(remove.id)" })
+        XCTAssertTrue(tombstone.isDeleted)
+        XCTAssertEqual(tombstone.body, "{}", "삭제 표시에는 내용이 남지 않는다")
+        XCTAssertNotNil(tombstone.start, "어느 달의 삭제인지 알 수 있게 시작 시각은 남긴다")
+        XCTAssertGreaterThan(tombstone.updatedAt, Date(timeIntervalSince1970: 1_792_300_100))
+
+        // 삭제된 달의 새 백업은 거부되지 않는다(행 수는 그대로, 삭제 표시가 추가됨).
+        let second = try await backupEngine.backup(month: month, password: password, now: date(2026, 10, 20))
+        XCTAssertEqual(second.outcome, .written, second.message)
+        XCTAssertEqual(second.header?.rowCount, 2)
+        XCTAssertGreaterThan(second.header?.latestRecordUpdate ?? 0, first.header?.latestRecordUpdate ?? 0)
+
+        // 복원하면 더 오래된 로컬 행에 삭제가 적용된다.
+        _ = try await restorer.restore(month: month, password: password)
+        let after = try await target.store.records(kind: "plan")
+        XCTAssertEqual(after.map(\.id), ["\(keep.id)"])
+
+        // 로컬이 삭제 시각보다 나중에 고친 행은 지키고 삭제를 적용하지 않는다.
+        let guarded = try makeHarness()
+        let guardedEngine = TaptionBackupEngine(store: guarded.store, destination: source.destination, calendar: calendar)
+        let newerLocal = TaptionStoreRecord(
+            id: "\(remove.id)", kind: "plan", start: remove.span.start, end: nil,
+            updatedAt: Date().addingTimeInterval(3_600), origin: .user, body: "{\"edited\":true}"
+        )
+        try await guarded.store.upsertRecords([newerLocal])
+        _ = try await guardedEngine.restore(month: month, password: password)
+        let kept = try await guarded.store.records(kind: "plan").first { $0.id == "\(remove.id)" }
+        XCTAssertEqual(kept?.body, "{\"edited\":true}")
+    }
+
+    func testOffloadedMonthEmptyOrShrunkenLocalDataNeverOverwritesTheFullFile() async throws {
+        let harness = try makeHarness()
+        let september = TaptionBackupMonth(year: 2026, month: 9)
+        try await harness.store.upsertReadings(readings(day: date(2026, 9, 12), count: 40))
+        try await harness.store.upsertRecords([record("m", start: date(2026, 9, 13), ord: 0)])
+        let backupEngine = engine(harness)
+        _ = try await backupEngine.backup(month: september, password: password, now: date(2026, 10, 2))
+        let offload = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 11, 3))
+        XCTAssertEqual(offload.first?.outcome, .sealed(readings: 40, records: 1))
+        let url = harness.backupDirectory.appendingPathComponent(september.fileName)
+        let full = try fileBytes(url)
+
+        // 로컬이 비어 있으면 봉인 표시와 상관없이 쓰지 않는다.
+        let empty = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
+        XCTAssertEqual(empty.outcome, .skippedSealed)
+        // 봉인 표시를 잃은 기기(예: 새 설치)에서도 빈 로컬은 쓰지 않는다.
+        try await harness.store.setMeta("backup.sealed.2026-09", "")
+        let lost = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
+        XCTAssertEqual(lost.outcome, .skippedNoData)
+        // 봉인 표시 없이 일부만 남은 로컬도 상위 집합이 아니어서 거부한다.
+        try await harness.store.upsertReadings([reading(date(2026, 9, 2), 1)])
+        let partial = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 5))
+        XCTAssertEqual(partial.outcome, .keptExisting(.fewerRows(existing: 41, new: 1)))
+        XCTAssertEqual(try fileBytes(url), full)
+    }
+
+    // MARK: 설정 파일
+
+    func testSettingsFileHoldsUndatedRecordsAndFollowsTheSameRules() async throws {
+        let source = try makeHarness()
+        let october = TaptionBackupMonth(year: 2026, month: 10)
+        let base = Date(timeIntervalSince1970: 1_790_000_000)
+        try await source.store.upsertRecords([
+            record("snapshot", kind: "header", start: nil, ord: 0, updated: base, body: "{\"theme\":\"dark\"}"),
+            record("c1", kind: "category", start: nil, ord: 0, updated: base),
+            record("c2", kind: "category", start: nil, ord: 1, updated: base, deleted: true, body: "{}"),
+            record("dated", start: date(2026, 10, 2), ord: 0),
+        ])
+        try await source.store.upsertReadings(readings(day: date(2026, 10, 2), count: 5))
+        let backupEngine = engine(source)
+        let results = try await backupEngine.backupAllMonths(password: password, now: date(2026, 10, 19))
+        XCTAssertEqual(results.map(\.scope.key), ["2026-10", "settings"])
+        XCTAssertEqual(results.map(\.outcome), [.written, .written])
+        let settings = try XCTUnwrap(results.last?.header)
+        XCTAssertEqual(settings.recordCount, 3, "시작 시각이 없는 기록(삭제 표시 포함)만")
+        XCTAssertEqual(settings.readingCount, 0)
+        XCTAssertEqual(settings.month, "settings")
+        XCTAssertEqual(results.first?.header?.recordCount, 1, "월 파일에는 시작 시각이 있는 기록만")
+        let names = try await source.destination.list().map(\.name)
+        XCTAssertEqual(names, ["2026-10.taptionbackup", "taption-settings.taptionbackup"])
+        let listing = try await backupEngine.listBackups()
+        XCTAssertEqual(listing.map(\.scope), [.month(october), .settings])
+
+        // 같은 규칙: 변경 없으면 그대로, 로컬이 비면 지키고, 더 적으면 거부.
+        let again = try await backupEngine.backupSettings(password: password, now: date(2026, 10, 20))
+        XCTAssertEqual(again.outcome, .unchanged)
+        // 오프로드는 설정 기록(시작 시각 없음)을 지우지 않는다.
+        _ = try await backupEngine.backup(month: october, password: password, now: date(2026, 11, 2))
+        let offloaded = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 12, 15))
+        XCTAssertEqual(offloaded, [.init(month: october, outcome: .sealed(readings: 5, records: 1))])
+        let kept = try await source.store.undatedRecordCount()
+        XCTAssertEqual(kept, 3)
+        let url = source.backupDirectory.appendingPathComponent(TaptionBackupScope.settingsFileName)
+        let original = try fileBytes(url)
+        try await source.store.deleteAllRecords()
+        let emptied = try await backupEngine.backupSettings(password: password, now: date(2026, 10, 21))
+        XCTAssertEqual(emptied.outcome, .skippedNoData)
+        try await source.store.upsertRecords([record("c1", kind: "category", start: nil, ord: 0, updated: base)])
+        let fewer = try await backupEngine.backupSettings(password: password, now: date(2026, 10, 22))
+        XCTAssertEqual(fewer.outcome, .keptExisting(.fewerRows(existing: 3, new: 1)))
+        XCTAssertEqual(try fileBytes(url), original)
+
+        // 복원은 파일이 더 새로울 때만 덮어쓴다.
+        let target = try makeHarness()
+        let restorer = TaptionBackupEngine(store: target.store, destination: source.destination, calendar: calendar)
+        try await target.store.upsertRecords([
+            record("c1", kind: "category", start: nil, ord: 0, updated: base.addingTimeInterval(500), body: "{\"local\":true}"),
+        ])
+        let summary = try await restorer.restoreSettings(password: password)
+        XCTAssertEqual(summary.scope, .settings)
+        let categories = try await target.store.records(kind: "category")
+        XCTAssertEqual(categories.map(\.body), ["{\"local\":true}"], "로컬이 더 새로우면 유지")
+        let headers = try await target.store.records(kind: "header")
+        XCTAssertEqual(headers.map(\.body), ["{\"theme\":\"dark\"}"])
+        let undated = try await target.store.undatedRecordCount()
+        XCTAssertEqual(undated, 3)
+    }
+
+    // MARK: 봉인된 달에 늦게 도착한 행
+
+    func testLateRowsInSealedMonthNeverOverwriteAnUnreadableOrDifferentlyKeyedFile() async throws {
+        let harness = try makeHarness()
+        let september = TaptionBackupMonth(year: 2026, month: 9)
+        try await harness.store.upsertReadings(readings(day: date(2026, 9, 12), count: 30))
+        let backupEngine = engine(harness)
+        _ = try await backupEngine.backup(month: september, password: password, now: date(2026, 10, 2))
+        _ = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 11, 3))
+        let url = harness.backupDirectory.appendingPathComponent(september.fileName)
+        let sealedBytes = try fileBytes(url)
+        let late = reading(date(2026, 9, 29), 5)
+        try await harness.store.upsertReadings([late])
+
+        // 틀린 비밀번호: 합집합을 만들 수 없으므로 오류로 멈추고 파일을 건드리지 않는다.
+        do {
+            _ = try await backupEngine.backup(month: september, password: "111111", now: date(2026, 11, 4))
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error as? TaptionBackupError, .wrongPassword)
+        }
+        XCTAssertEqual(try fileBytes(url), sealedBytes)
+        let stillSealed = try await backupEngine.isSealed(september)
+        XCTAssertTrue(stillSealed)
+
+        // 본문이 손상된 기존 파일: 합칠 수 없으므로 덮어쓰지 않는다.
+        var damaged = sealedBytes
+        damaged[Int(TaptionBackupLayout.bodyOffset) + 30] ^= 0x04
+        try damaged.write(to: url)
+        do {
+            _ = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error as? TaptionBackupError, .checksumMismatch)
+        }
+        XCTAssertEqual(try fileBytes(url), damaged)
+
+        // 헤더도 읽을 수 없는 파일.
+        try Data("garbage".utf8).write(to: url)
+        let unreadable = try await backupEngine.backup(month: september, password: password, now: date(2026, 11, 4))
+        XCTAssertEqual(unreadable.outcome, .keptExisting(.existingUnreadable))
+        XCTAssertEqual(try fileBytes(url), Data("garbage".utf8))
+        let local = try await allReadings(harness.store)
+        XCTAssertEqual(local, [late], "늦게 도착한 행은 로컬에 그대로 있다")
+    }
+
+    // MARK: 전체 삭제
+
+    private final class RecordingDestination: TaptionBackupDestination, @unchecked Sendable {
+        let base: TaptionLocalFolderBackupDestination
+        let failingName: String?
+        private let lock = NSLock()
+        private var removed: [String] = []
+        var removeCalls: [String] { lock.withLock { removed } }
+
+        init(base: TaptionLocalFolderBackupDestination, failingName: String? = nil) {
+            self.base = base
+            self.failingName = failingName
+        }
+
+        func list() async throws -> [TaptionBackupFileInfo] { try await base.list() }
+        func fetch(name: String) async throws -> URL { try await base.fetch(name: name) }
+        func replace(name: String, with localFile: URL) async throws { try await base.replace(name: name, with: localFile) }
+        func remove(name: String) async throws {
+            lock.withLock { removed.append(name) }
+            if name == failingName { throw TaptionBackupError.destinationUnavailable("busy") }
+            try await base.remove(name: name)
+        }
+    }
+
+    func testNoOperationDeletesBackupsExceptDeleteAllBackupsAndPartialFailureIsReported() async throws {
+        let harness = try makeHarness()
+        let recording = RecordingDestination(base: harness.destination, failingName: "2026-10.taptionbackup")
+        let backupEngine = engine(harness, destination: recording)
+        try await harness.store.upsertReadings(
+            readings(day: date(2026, 9, 12), count: 10) + readings(day: date(2026, 10, 3), count: 10, startIndex: 20)
+        )
+        try await harness.store.upsertRecords([record("c", kind: "category", start: nil)])
+
+        // 백업·재백업·오프로드·복원·실패 경로를 모두 거쳐도 삭제는 한 번도 호출되지 않는다.
+        _ = try await backupEngine.backupAllMonths(password: password, now: date(2026, 10, 19))
+        _ = try await backupEngine.backupAllMonths(password: password, now: date(2026, 10, 20))
+        _ = try await backupEngine.offloadSealedMonths(password: password, now: date(2026, 12, 1))
+        _ = try await backupEngine.restore(month: TaptionBackupMonth(year: 2026, month: 9), password: password)
+        _ = try? await backupEngine.restore(month: TaptionBackupMonth(year: 2026, month: 9), password: "000000")
+        let namesBefore = try await harness.destination.list().map(\.name)
+        XCTAssertEqual(namesBefore, ["2026-09.taptionbackup", "2026-10.taptionbackup", "taption-settings.taptionbackup"])
+        XCTAssertEqual(recording.removeCalls, [], "사용자가 전체 삭제를 요청하기 전에는 아무것도 지우지 않는다")
+
+        // 일부 실패: 실패한 파일만 남고 결과에 표시된다.
+        let result = try await backupEngine.deleteAllBackups()
+        XCTAssertEqual(Set(result.removed), ["2026-09.taptionbackup", "taption-settings.taptionbackup"])
+        XCTAssertEqual(result.failed.map(\.name), ["2026-10.taptionbackup"])
+        XCTAssertEqual(result.remaining, ["2026-10.taptionbackup"])
+        let sealed = try await backupEngine.isSealed(TaptionBackupMonth(year: 2026, month: 9))
+        XCTAssertFalse(sealed, "지운 월 파일의 봉인 표시는 푼다")
+
+        // 실패 없는 경우 모두 지운다. 로컬 데이터는 건드리지 않는다.
+        let clean = engine(harness)
+        let all = try await clean.deleteAllBackups()
+        XCTAssertEqual(all.removed, ["2026-10.taptionbackup"])
+        XCTAssertTrue(all.failed.isEmpty)
+        XCTAssertEqual(all.remaining, [])
+        let localCount = try await harness.store.readingCount()
+        XCTAssertEqual(localCount, 20, "로컬 데이터는 그대로(9월은 복원으로 되돌아왔다)")
     }
 
     // MARK: 변조 도우미

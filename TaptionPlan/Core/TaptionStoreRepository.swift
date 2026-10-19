@@ -137,7 +137,7 @@ actor TaptionStoreRepository: PlanDataRepository {
             newKnown[Self.headerKind] = [Self.headerID: (0, headerBody)]
         }
 
-        try await store.applyRecordChanges(upserts: upserts, deletes: deletes)
+        try await store.applyRecordChanges(upserts: upserts, deletes: deletes, deletedAt: Date())
         known = newKnown
     }
 

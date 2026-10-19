@@ -688,20 +688,29 @@ actor TaptionStoreV2 {
         return rows
     }
 
-    /// 한 트랜잭션으로 바뀐 행은 쓰고, 사라진 행은 지운다. 도중에 실패하면 둘 다 되돌린다.
-    func applyRecordChanges(upserts: [TaptionStoreRecord], deletes: [(kind: String, id: String)]) throws {
+    /// 한 트랜잭션으로 바뀐 행은 쓰고, 사라진 행은 삭제 표시(톰스톤)로 바꾼다. 도중에 실패하면 둘 다 되돌린다.
+    /// 삭제 표시는 본문을 비우고 `deleted=1`, 수정 시각을 `deletedAt`(이전 수정 시각보다 항상 뒤)으로 둔다.
+    /// 월 백업이 "이 id가 지워졌다"를 담고 복원 때 오래된 로컬 행에 적용할 수 있게 하기 위해서다.
+    func applyRecordChanges(
+        upserts: [TaptionStoreRecord], deletes: [(kind: String, id: String)], deletedAt: Date = Date()
+    ) throws {
         guard !upserts.isEmpty || !deletes.isEmpty else { return }
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
         do {
             if !deletes.isEmpty {
-                let statement = try prepare(db, "DELETE FROM records WHERE kind = ? AND id = ?")
+                let statement = try prepare(db, """
+                    UPDATE records SET deleted = 1, body = '{}', end_ts = NULL,
+                      updated_ts = MAX(?, updated_ts + 0.001)
+                    WHERE kind = ? AND id = ?
+                    """)
                 defer { sqlite3_finalize(statement) }
                 for item in deletes {
                     sqlite3_reset(statement)
                     sqlite3_clear_bindings(statement)
-                    bind(statement, 1, .text(item.kind))
-                    bind(statement, 2, .text(item.id))
+                    bind(statement, 1, .real(deletedAt.timeIntervalSince1970))
+                    bind(statement, 2, .text(item.kind))
+                    bind(statement, 3, .text(item.id))
                     try step(db, statement)
                 }
             }
@@ -769,16 +778,32 @@ actor TaptionStoreV2 {
 
     /// 백업용 기록 행. 삭제 표시 행과 순서(`ord`)까지 포함하고 결정적 순서(종류, id)로 돌려준다.
     func recordsForBackup(from: Double, to: Double) throws -> [TaptionStoreRecord] {
+        try loadBackupRecords(where: "start_ts >= ? AND start_ts < ?", bindings: [.real(from), .real(to)])
+    }
+
+    /// 시작 시각이 없는 기록(설정 헤더·분류 등). 달에 속하지 않아 설정 백업 파일에 담는다.
+    func undatedRecordsForBackup() throws -> [TaptionStoreRecord] {
+        try loadBackupRecords(where: "start_ts IS NULL", bindings: [])
+    }
+
+    func undatedRecordCount() throws -> Int {
+        try scalarInt("SELECT COUNT(*) FROM records WHERE start_ts IS NULL")
+    }
+
+    private func loadBackupRecords(
+        where condition: String, bindings: [TaptionReadingRowCodec.Value]
+    ) throws -> [TaptionStoreRecord] {
         let db = try handle()
         let statement = try prepare(db, """
             SELECT id, kind, start_ts, end_ts, updated_ts, origin, deleted, ord, body
-            FROM records WHERE start_ts >= ? AND start_ts < ? ORDER BY kind, id
+            FROM records WHERE \(condition) ORDER BY kind, id
             """)
         defer { sqlite3_finalize(statement) }
-        bind(statement, 1, .real(from))
-        bind(statement, 2, .real(to))
+        for (offset, value) in bindings.enumerated() { bind(statement, Int32(offset + 1), value) }
         var result: [TaptionStoreRecord] = []
-        while sqlite3_step(statement) == SQLITE_ROW {
+        var code = sqlite3_step(statement)
+        while code == SQLITE_ROW {
+            defer { code = sqlite3_step(statement) }
             guard let origin = TaptionStoreRecord.Origin(
                 rawValue: String(cString: sqlite3_column_text(statement, 5))
             ) else { throw TaptionStoreV2Error.corruptRow("unknown origin") }
@@ -796,6 +821,9 @@ actor TaptionStoreV2 {
                 ord: Int(sqlite3_column_int64(statement, 7)),
                 body: String(cString: sqlite3_column_text(statement, 8))
             ))
+        }
+        guard code == SQLITE_DONE else {
+            throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
         }
         return result
     }

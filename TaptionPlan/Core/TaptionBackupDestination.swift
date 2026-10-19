@@ -29,7 +29,7 @@ struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
         guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
         let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
         return try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys)
-            .filter { TaptionBackupMonth(fileName: $0.lastPathComponent) != nil }
+            .filter { $0.pathExtension == TaptionBackupMonth.fileExtension && !$0.lastPathComponent.hasPrefix(".") }
             .map { url in
                 let values = try url.resourceValues(forKeys: Set(keys))
                 return TaptionBackupFileInfo(
