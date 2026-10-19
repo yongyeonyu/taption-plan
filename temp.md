@@ -5,6 +5,7 @@
 - 원인: 오프로드가 행 수만 대조하고, 봉인 표시가 로컬 meta에만 있으며, 비밀번호 불일치·장기 기록·하드 삭제·actor 재진입·달력/시간대·스테이징 위치·iCloud 상태·프레임 크기/KDF 상한·파이썬 도구 출력 시점 등이 검증되지 않는다.
 - 해결: 위 항목별로 실패하는 테스트를 먼저 쓰고 최소 수정. B1(6자리 비밀번호 오프라인 대입)·B2(평문 헤더 메타)는 설계 결정이라 고치지 않고 선택지만 보고한다.
 - 검증 기준: 실기기 iPhone 11 Pro에서 `scripts/with-device-lock.sh`로 TaptionBackupV2Tests, 마지막에 TaptionStoreV2Tests·TaptionStoreRepositoryTests·SensorDayStoreTests·TaptionBackupV2Tests와 앱 Debug 빌드 통과. 결과는 `build/validation/BKP1019C01/`와 test.md에 기록. iCloud 목적지는 실기기·entitlement 없이 검증할 수 없어 파일 시스템 추상화 + 로컬 폴더 규약 테스트로만 덮는다.
+- 진행: 코드·단위 테스트·파이썬 검증 완료(test.md BKP1019C01). 남음: 대표 검토 후 rewrite/storage-v2 병합, 앱 연결(`listBackups(password:)` 시그니처 반영, 전체 삭제 시 `deleteAllBackups()` 연동), iCloud 실기기 검증, B1(6자리 비밀번호 대입) 설계 결정.
 
 ## BKP1019A02 · 월 단위 백업 엔진 v2 (브랜치 rewrite/backup-v2, 2026-10-19)
 - 요청: 대표 확정 규칙(월 파일 `yyyy-MM.taptionbackup`, 상위 집합일 때만 덮어쓰기, 임시 파일 검증 후 원자 교체, 비밀번호+헤더 솔트 PBKDF2 600000, 표 단위 JSON Lines→압축→AES-GCM, `BackupDestination` 추상화, 봉인·오프로드, 복원)을 이전 엔진과 별개인 새 파일로 구현. UI·AppModel 연결 제외.
