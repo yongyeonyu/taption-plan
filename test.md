@@ -1784,3 +1784,10 @@
 - 조치(대표 지시): ASC API로 앱 `6797370230`(`com.taption.plan`)의 `ko` 앱 정보 현지화 이름을 `Taption Plan` → `BOKKI Plan`으로 변경. 앱 정보 상태 `PREPARE_FOR_SUBMISSION`(편집 가능). 지역은 `ko` 하나뿐이다.
 - 확인: 변경 요청 HTTP 200, 읽기: 앱 `name`과 현지화 `name` 모두 `BOKKI Plan`, 부제·개인정보 URL은 그대로.
 - 제한: 이 이름은 새 빌드·심사 제출 때 반영되며, 기기에 보이는 이름은 새 빌드가 필요하다(코드 변경은 b275eb6, 아직 TestFlight 미배포). ASC 웹 로그인은 없어 화면으로는 보지 못했다. 제 변경 외 다른 ASC 설정은 건드리지 않았다.
+
+## FLK1020B01 · 전체 TaptionPlanTests (실기기 iPhone 11 Pro, 2026-10-20, 커밋 b275eb6)
+- 결과: 1,438개 실행, 실패 4건(예상 밖 1건): `full-1.log`.
+  - 기존 환경 실패 2개 — `testStoreKitProductPurchaseEntitlementAndRestore`(StoreKit), `LocalizationCatalogTests.testEveryCatalogKeyHasAnEnglishValue`(기기에서 Mac 경로의 `TaptionPlan/Localizable.xcstrings`를 열지 못함, 코드 문제 아님).
+  - `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`(FeatureEngineTests.swift:929, 저장 시각이 5초 대기 안에 갱신되지 않음) — 이번 변경과 무관한 센서 분석 타이밍 테스트이며 단독 재실행은 통과(`sensor-1.log`, 1개·실패 0). 전체 실행 부하에서의 간헐 실패로 보지만 원인은 확정하지 못했다.
+- `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`: 이번 전체 실행에서 통과. 1회 통과라 FLK1020A01의 수정 효과를 입증하지는 못한다(이전에는 전체 실행에서만 간헐 실패).
+- 달력 점·비밀번호 보관·색 반전 테스트는 전체 실행에서도 통과.
