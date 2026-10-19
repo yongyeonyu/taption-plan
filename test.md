@@ -1750,3 +1750,9 @@
 - 검증: 새 테스트 `testInvalidationDuringLoadReturnsCompleteDayWithoutCachingIt` 포함 `SensorDayStoreTests` 52개 통과(`dayload-1.log`). 기기 재실행(`console-2.log`): `day_snapshot_load_finished readings=1336 source=rebuilt_memory duration_ms=201`, `map_day_snapshot_loaded is_complete=true`, `map_route_readings_prepared display_readings=1242`, 경로 7구간 1,236점. 화면은 직접 보지 않았다.
 - 날씨: 같은 실행에서도 `live_environment_failed authentication=true`. Apple 계정 쪽 조치가 필요하다.
 - 정리: 불필요 파일 삭제 — `build/DD-ci`, `build/ArchiveDD`의 중간 산출물·캐시·아카이브 179~183·IPA 전부(184 아카이브만 남김), 디자인 토큰 워크트리 폴더(브랜치 `worktree-agent-ada235d414d79094f`는 남김). `build/validation` 로그·결과 번들, `artifacts`(릴리스 심볼·검증 근거), 빌드 캐시 `build/DD`·`build/DD18`은 유지했다.
+
+## REL1019F01 · 빌드 185 내부 TestFlight 배포 (2026-10-19)
+- 소스: `main`(빌드 번호 185: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: MAP1019F01(오늘 경로 하루치 로드가 새 위치마다 취소되던 문제 수정, 콘솔 진단 출력 인자).
+- 테스트(실기기 iPhone 11 Pro): 전체 `TaptionPlanTests` 1,436개 중 실패 3개 — 기존 환경 실패 2개(StoreKit, LocalizationCatalog)와 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(`full-185.log`). 마지막 것은 빌드 184 전체 실행에서 통과했고 그 뒤 지도 코드 변경이 없으며, 단독 3회 실행에서 모두 통과했다(`vector-1~3.log`). 전체 실행 중 렌더링 타이밍에 따른 흔들림으로 판단했지만 원인을 확정하지는 않았다.
+- 아카이브·업로드: 아카이브 성공, 앱·위젯 번들 버전 185, `altool` `No errors uploading`(`altool-185.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 185·184·183·182 확인.
+- 제한: 화면에서 직접 확인하지 않았다(기기 로그로 하루치 로드만 확인). 날씨는 WeatherKit 인증 실패가 계속된다. 실기기 사용이 다른 세션의 순서표(/tmp/device-queue.md)와 겹쳤을 수 있어 공지했다.
