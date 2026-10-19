@@ -1714,22 +1714,6 @@ final class DayStoreV3Tests: XCTestCase {
         XCTAssertLessThan(warmP95, 50)
     }
 
-    func testExistingV2StoreIsRejectedWithoutMutatingIt() throws {
-        let url = temporaryURL()
-        defer { removeDatabase(at: url) }
-        do {
-            _ = try TaptionPlanDayStore(url: url)
-        }
-        let before = try Data(contentsOf: url)
-
-        XCTAssertThrowsError(
-            try TaptionPlanV3Store(url: url, device: .iPhone)
-        ) { error in
-            XCTAssertEqual(error as? TaptionPlanV3StoreError, .unsupportedSchema(0))
-        }
-        XCTAssertEqual(try Data(contentsOf: url), before)
-    }
-
     func testExistingUnsupportedDatabaseIsInspectedReadOnly() throws {
         let url = temporaryURL()
         defer { removeDatabase(at: url) }

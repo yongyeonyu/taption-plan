@@ -15,6 +15,8 @@ enum TaptionStoreV2Error: Error, Equatable {
     case corruptRow(String)
     /// 같은 `id`의 센서 원본이 이미 다른 내용으로 저장돼 있다(원본은 바꾸지 않는다).
     case readingConflict(String)
+    /// 같은 종류·`id`의 원본 이벤트가 이미 다른 내용으로 저장돼 있다.
+    case rawEventConflict(kind: String, id: String)
 }
 
 struct TaptionStoreRecord: Equatable, Sendable {
@@ -150,7 +152,6 @@ enum TaptionReadingRowCodec {
         return decoder
     }
 
-    /// 현지 날짜를 정수 `yyyymmdd`로(예: 20261019). 문자열보다 작고 대소 비교·묶음이 쉽다.
     static func dayNumber(for date: Date, calendar: Calendar) -> Int {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
@@ -315,11 +316,14 @@ actor TaptionStoreV2 {
     }
 
     private var connection: TaptionSQLiteConnection?
-    private let calendar: Calendar
+    let calendar: Calendar
+    /// 저장소 파일 위치. 같은 폴더에 쓰기 잠금 파일을 둘 때 쓴다.
+    nonisolated let url: URL
 
     /// `url`에 새 저장소를 만들거나 연다. `calendar`는 `day` 열(현지 날짜)을 정하는 데 쓴다.
     init(url: URL, calendar: Calendar = TaptionStoreV2.localGregorianCalendar()) throws {
         self.calendar = calendar
+        self.url = url
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -331,6 +335,8 @@ actor TaptionStoreV2 {
             if let handle { sqlite3_close_v2(handle) }
             throw TaptionStoreV2Error.openFailed(message)
         }
+        // 앱·위젯이 같은 파일을 열므로 다른 쪽 쓰기가 끝나길 잠깐 기다린다(바로 실패하지 않는다).
+        sqlite3_busy_timeout(handle, 5_000)
         do {
             try Self.configure(handle)
         } catch {
@@ -943,6 +949,8 @@ actor TaptionStoreV2 {
         do {
             try exec(db, "DELETE FROM readings")
             try exec(db, "DELETE FROM records")
+            try exec(db, "DELETE FROM raw_events")
+            try exec(db, "DELETE FROM meta WHERE key <> 'schema_version'")
             try exec(db, "COMMIT")
         } catch {
             try? exec(db, "ROLLBACK")
@@ -956,7 +964,6 @@ actor TaptionStoreV2 {
 
     private static func configure(_ db: OpaquePointer) throws {
         // auto_vacuum은 파일을 처음 만들 때(WAL 전환 전에) 정해야 적용된다. 이미 있는 파일에는 영향이 없다.
-        sqlite3_busy_timeout(db, 5_000)
         for pragma in [
             "PRAGMA auto_vacuum=INCREMENTAL", "PRAGMA journal_mode=WAL",
             // 삭제한 위치 기록의 바이트가 빈 페이지에 남지 않게 지울 때 0으로 덮는다.
@@ -977,6 +984,7 @@ actor TaptionStoreV2 {
         defer { sqlite3_finalize(statement) }
         let current = sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int(statement, 0)) : 0
         if current > schemaVersion { throw TaptionStoreV2Error.unsupportedSchema(current) }
+        try createRawEventsTable(db)
         if current == 0 {
             let columnDefinitions = TaptionReadingRowCodec.columns.map { column -> String in
                 let type: String
@@ -1025,12 +1033,12 @@ actor TaptionStoreV2 {
         }
     }
 
-    private func handle() throws -> OpaquePointer {
+    func handle() throws -> OpaquePointer {
         guard let connection else { throw TaptionStoreV2Error.openFailed("closed") }
         return connection.pointer
     }
 
-    private func exec(_ db: OpaquePointer, _ sql: String) throws {
+    func exec(_ db: OpaquePointer, _ sql: String) throws {
         var error: UnsafeMutablePointer<CChar>?
         guard sqlite3_exec(db, sql, nil, nil, &error) == SQLITE_OK else {
             let message = error.map { String(cString: $0) } ?? String(cString: sqlite3_errmsg(db))
@@ -1039,7 +1047,7 @@ actor TaptionStoreV2 {
         }
     }
 
-    private func prepare(_ db: OpaquePointer, _ sql: String) throws -> OpaquePointer {
+    func prepare(_ db: OpaquePointer, _ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
             throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
@@ -1047,21 +1055,21 @@ actor TaptionStoreV2 {
         return statement
     }
 
-    private func step(_ db: OpaquePointer, _ statement: OpaquePointer) throws {
+    func step(_ db: OpaquePointer, _ statement: OpaquePointer) throws {
         let code = sqlite3_step(statement)
         guard code == SQLITE_DONE || code == SQLITE_ROW else {
             throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
-    private func scalarInt(_ sql: String) throws -> Int {
+    func scalarInt(_ sql: String) throws -> Int {
         let db = try handle()
         let statement = try prepare(db, sql)
         defer { sqlite3_finalize(statement) }
         return sqlite3_step(statement) == SQLITE_ROW ? Int(sqlite3_column_int64(statement, 0)) : 0
     }
 
-    private nonisolated func bind(_ statement: OpaquePointer, _ index: Int32, _ value: TaptionReadingRowCodec.Value) {
+    nonisolated func bind(_ statement: OpaquePointer, _ index: Int32, _ value: TaptionReadingRowCodec.Value) {
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         switch value {
         case .null: sqlite3_bind_null(statement, index)

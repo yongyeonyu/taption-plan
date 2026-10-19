@@ -96,6 +96,58 @@ struct MapHomeDayCacheReadingsFingerprint: Codable, Equatable, Sendable {
     }
 }
 
+/// 하루 지도 캐시(파생 경로·주석·임시 위치·중심/줌)의 메모리 보관소.
+/// 원본에서 다시 계산할 수 있고 Apple 지도 타일은 담지 않으므로 디스크에 저장하지 않는다.
+/// 최대 14일까지만 두고 오래 안 쓴 날부터 내보내며, 메모리 경고와 데이터 삭제 때 모두 비운다.
+@MainActor
+private enum MapHomeDayCacheMemory {
+    private struct Key: Hashable {
+        let day: TaptionPlanDayKey
+        let algorithmKey: String
+        let styleKey: String
+    }
+
+    private struct Entry {
+        let generation: UInt64
+        let payload: MapHomeDayCachePayload
+    }
+
+    private static var cache = TaptionBoundedCache<Key, Entry>(capacity: 14)
+
+    static func payload(
+        day: TaptionPlanDayKey, algorithmKey: String, styleKey: String, generation: UInt64
+    ) -> MapHomeDayCachePayload? {
+        let key = Key(day: day, algorithmKey: algorithmKey, styleKey: styleKey)
+        guard let entry = cache.value(for: key) else { return nil }
+        guard entry.generation == generation else {
+            cache.removeValue(for: key)
+            return nil
+        }
+        return entry.payload
+    }
+
+    static func store(
+        _ payload: MapHomeDayCachePayload,
+        day: TaptionPlanDayKey, algorithmKey: String, styleKey: String, generation: UInt64
+    ) {
+        cache.insert(
+            Entry(generation: generation, payload: payload),
+            for: Key(day: day, algorithmKey: algorithmKey, styleKey: styleKey)
+        )
+    }
+
+    static func removeAll() {
+        cache.removeAll()
+    }
+}
+
+/// 메모리 경고·데이터 삭제 때 앱 모델이 하루 지도 캐시를 비운다.
+enum MapHomeDayCacheEviction {
+    @MainActor static func removeAll() {
+        MapHomeDayCacheMemory.removeAll()
+    }
+}
+
 private struct MapHomeDayCachePayload: Codable, Sendable {
     let sourceUpdatedAt: Date?
     let sourceRevision: UInt64
@@ -2112,8 +2164,6 @@ struct MapHomeView: View {
     @State private var lastPlaybackMarkerUptime: TimeInterval = 0
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
-    @State private var mapDayCacheStore: TaptionPlanDayStore?
-    @State private var mapDayCacheWriteTask: Task<Void, Never>?
     @State private var mapDayCacheWriteSignature: Int?
 
     private static let categoryPaletteHexes = [
@@ -8856,17 +8906,12 @@ struct MapHomeView: View {
         guard TaptionDataDeletionFence.allows(generation: generation) else {
             return nil
         }
-        if mapDayCacheStore == nil {
-            mapDayCacheStore = makeMapDayCacheStore()
-        }
-        guard let mapDayCacheStore else { return nil }
-        let key = TaptionPlanDayKey(date: date)
         let styleKey = MapDisplayStyle.mapLibreRPG.runtimeStyle.rawValue
-        guard let payload = try? await mapDayCacheStore.codableMapDayDocument(
-            MapHomeDayCachePayload.self,
-            day: key,
+        guard let payload = MapHomeDayCacheMemory.payload(
+            day: TaptionPlanDayKey(date: date),
             algorithmKey: Self.mapCacheAlgorithmKey,
-            styleKey: styleKey
+            styleKey: styleKey,
+            generation: generation
         ), Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate)
             && TaptionDataDeletionFence.allows(generation: generation)
         else { return nil }
@@ -9008,18 +9053,6 @@ struct MapHomeView: View {
         )
     }
 
-    private func mapDayCacheDatabaseURL() -> URL? {
-        guard let dataURL = try? TaptionLocalDatabaseLocation
-            .sharedOrApplicationSupport() else { return nil }
-        return dataURL.deletingLastPathComponent()
-            .appendingPathComponent("taption-map-cache-v1.sqlite")
-    }
-
-    private func makeMapDayCacheStore() -> TaptionPlanDayStore? {
-        guard let url = mapDayCacheDatabaseURL() else { return nil }
-        return try? TaptionPlanDayStore(url: url)
-    }
-
     private func persistMapDayCache() {
         guard let dayData = currentDayDataSnapshot,
               dayData.isComplete,
@@ -9027,11 +9060,6 @@ struct MapHomeView: View {
               visibleMapCenter.longitude.isFinite,
               visibleMapSpan.latitudeDelta.isFinite,
               visibleMapSpan.longitudeDelta.isFinite else { return }
-        guard let databaseURL = mapDayCacheDatabaseURL() else { return }
-        if mapDayCacheStore == nil {
-            mapDayCacheStore = makeMapDayCacheStore()
-        }
-        guard let mapDayCacheStore else { return }
         let generation = TaptionDataDeletionFence.currentGeneration()
         guard TaptionDataDeletionFence.allows(generation: generation) else {
             return
@@ -9167,37 +9195,13 @@ struct MapHomeView: View {
                 )
             }
         )
-        let day = TaptionPlanDayKey(date: model.selectedDate)
-        mapDayCacheWriteTask?.cancel()
-        mapDayCacheWriteTask = Task {
-            do {
-                let lock = try await TaptionDataFileLock.acquire(
-                    url: databaseURL.appendingPathExtension("lock")
-                )
-                defer { lock.unlock() }
-                guard !Task.isCancelled,
-                      TaptionDataDeletionFence.allows(
-                        generation: generation
-                      ) else { return }
-                _ = try await mapDayCacheStore.saveCodableMapDayDocument(
-                    payload,
-                    day: day,
-                    algorithmKey: Self.mapCacheAlgorithmKey,
-                    styleKey: styleKey
-                )
-            } catch is CancellationError {
-                return
-            } catch {
-                if mapDayCacheWriteSignature == writeSignature {
-                    mapDayCacheWriteSignature = nil
-                }
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "map_day_cache_save_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.fields(for: error)
-                )
-            }
-        }
+        MapHomeDayCacheMemory.store(
+            payload,
+            day: TaptionPlanDayKey(date: model.selectedDate),
+            algorithmKey: Self.mapCacheAlgorithmKey,
+            styleKey: styleKey,
+            generation: generation
+        )
     }
 
     private func reportInitialMapShellReadyIfNeeded(for date: Date) {

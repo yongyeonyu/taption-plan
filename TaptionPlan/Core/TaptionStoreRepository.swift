@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// 계획·기록 저장소. `TaptionStoreV2`의 `records` 표에 스냅샷의 모든 항목을 행 하나씩 저장한다.
 /// 저장할 때는 직전 상태와 비교해 바뀐 행만 쓰고 사라진 행은 지운다.
@@ -19,6 +20,8 @@ actor TaptionStoreRepository: PlanDataRepository {
     private static let headerID = "snapshot"
 
     private let store: TaptionStoreV2
+    /// 이 저장소 객체가 알고 있는 전역 삭제 세대. 데이터 삭제가 진행 중이거나 그 뒤에 만들어진 세대와 다르면 쓰지 않는다.
+    private var deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
     private var known: [String: [String: (ord: Int, body: String)]]?
     private var nextOrd: [String: Int] = [:]
@@ -78,6 +81,9 @@ actor TaptionStoreRepository: PlanDataRepository {
 
     /// 저장은 한 번에 하나씩 순서대로 처리한다(await 사이에 다른 저장이 끼어들면 비교 기준이 어긋난다).
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        guard TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
+            throw RepositoryError.staleGeneration
+        }
         let previous = saveTail
         let task = Task { [self] in
             _ = try? await previous?.value
@@ -88,6 +94,10 @@ actor TaptionStoreRepository: PlanDataRepository {
     }
 
     private func performSave(_ snapshot: TaptionDataSnapshot) async throws {
+        // 순서를 기다리는 사이에 데이터 삭제가 일어났을 수 있으므로 다시 확인한다.
+        guard TaptionDataDeletionFence.allows(generation: deletionGeneration) else {
+            throw RepositoryError.staleGeneration
+        }
         if known == nil { _ = try await load() }
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
@@ -145,6 +155,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         try await store.deleteAllRecords()
         known = [:]
         nextOrd = [:]
+        deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
 
     func handleMemoryPressure() async {
@@ -204,5 +215,16 @@ actor TaptionStoreRepository: PlanDataRepository {
             id: id, kind: kind, start: start, end: end, updatedAt: updatedAt, origin: origin,
             ord: ord, body: body
         )
+    }
+}
+
+extension TaptionStoreRepository {
+    /// 위젯 등 확장이 앱과 같은 파일(앱 그룹 컨테이너의 `taption-store.sqlite`)을 연다.
+    static func appGroup(fileManager: FileManager = .default) throws -> TaptionStoreRepository {
+        guard let directory = fileManager.containerURL(
+            forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
+        ) else { throw RepositoryError.appGroupUnavailable }
+        let store = try TaptionStoreV2.shared(at: directory.appendingPathComponent(TaptionStoreV2.fileName))
+        return TaptionStoreRepository(store: store)
     }
 }

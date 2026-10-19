@@ -304,45 +304,6 @@ final class HealthKitIntegrationTests: XCTestCase {
         XCTAssertEqual(records, [record])
     }
 
-    func testHealthKitStoreBackfillsMaximumDurationForLegacyDatabase() async throws {
-        let url = temporaryDatabaseURL()
-        defer { removeDatabase(at: url) }
-        let queryStart = Date(timeIntervalSince1970: 1_800_000_000)
-        let record = HealthKitSampleRecord(
-            uuid: UUID(),
-            typeIdentifier: "HKWorkoutTypeIdentifier",
-            startDate: queryStart.addingTimeInterval(-30 * 86_400),
-            endDate: queryStart.addingTimeInterval(3_600),
-            sourceName: "Apple Watch",
-            sourceBundleIdentifier: "com.apple.health"
-        )
-        let encoded = try TaptionPlanCanonicalStorage.encode(record)
-        let legacyStore = try TaptionPlanDayStore(url: url)
-        try await legacyStore.upsertEvents([
-            TaptionPlanDayStore.Event(
-                day: TaptionPlanDayKey(date: record.startDate),
-                timestamp: record.startDate,
-                sequence: 0,
-                id: record.eventID,
-                domain: HealthKitImportStore.eventDomain,
-                payload: TaptionPlanCanonicalStorage.envelope(for: encoded)
-            ),
-        ])
-        let store = try HealthKitImportStore(databaseURL: url)
-
-        let first = try await store.records(
-            from: queryStart,
-            through: queryStart.addingTimeInterval(86_400)
-        )
-        let second = try await store.records(
-            from: queryStart,
-            through: queryStart.addingTimeInterval(86_400)
-        )
-
-        XCTAssertEqual(first, [record])
-        XCTAssertEqual(second, [record])
-    }
-
     @available(iOS 18.0, *)
     func testMalformedHealthKitHistoryCursorPreservesCheckpointWithoutReimport()
         async throws
@@ -973,6 +934,61 @@ final class HealthKitIntegrationTests: XCTestCase {
         )
         XCTAssertTrue(remaining.isEmpty)
         XCTAssertEqual(finalState, deletedState)
+    }
+
+    func testHealthKitStoreRecomputesMaximumDurationWhenItsMetaIsMissing() async throws {
+        let url = temporaryDatabaseURL()
+        defer { removeDatabase(at: url) }
+        let queryStart = Date(timeIntervalSince1970: 1_800_000_000)
+        let record = HealthKitSampleRecord(
+            uuid: UUID(),
+            typeIdentifier: "HKWorkoutTypeIdentifier",
+            startDate: queryStart.addingTimeInterval(-30 * 86_400),
+            endDate: queryStart.addingTimeInterval(3_600),
+            sourceName: "Apple Watch",
+            sourceBundleIdentifier: "com.apple.health"
+        )
+        let store = try HealthKitImportStore(databaseURL: url)
+        try await store.upsert([record])
+        try await TaptionStoreV2(url: url).deleteMeta("healthkit.maximum-record-duration-v1")
+
+        let first = try await store.records(
+            from: queryStart,
+            through: queryStart.addingTimeInterval(86_400)
+        )
+        let second = try await store.records(
+            from: queryStart,
+            through: queryStart.addingTimeInterval(86_400)
+        )
+
+        XCTAssertEqual(first, [record])
+        XCTAssertEqual(second, [record])
+    }
+
+    func testHealthKitSamplesAreImportedRowsWithTheirSourceKept() async throws {
+        let url = temporaryDatabaseURL()
+        defer { removeDatabase(at: url) }
+        let start = Date(timeIntervalSince1970: 1_788_000_000)
+        let record = HealthKitSampleRecord(
+            uuid: UUID(),
+            typeIdentifier: "HKQuantityTypeIdentifierHeartRate",
+            startDate: start,
+            endDate: start.addingTimeInterval(60),
+            numericValue: 72,
+            unit: "count/min",
+            sourceName: "Apple Watch",
+            sourceBundleIdentifier: "com.apple.health"
+        )
+        let store = try HealthKitImportStore(databaseURL: url)
+        try await store.upsert([record])
+
+        let rows = try await TaptionStoreV2(url: url).records(kind: HealthKitImportStore.eventDomain)
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows.first?.origin, .imported)
+        XCTAssertEqual(rows.first?.start, start)
+        XCTAssertTrue(rows.first?.body.contains("\"sourceName\":\"Apple Watch\"") == true)
+        let existing = try await store.existingRecordIDs([record.uuid, UUID()])
+        XCTAssertEqual(existing, [record.uuid])
     }
 
     func testHealthKitDeleteAllClearsSamplesAndSyncAnchors() async throws {

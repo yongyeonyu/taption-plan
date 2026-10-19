@@ -105,13 +105,13 @@ private final class WatchDeliveryAcknowledgementProbe: @unchecked Sendable {
 }
 
 private actor GatedSQLitePlanRepository: PlanDataRepository {
-    private let base: SQLitePlanRepository
+    private let base: TaptionStoreRepository
     private var blocksNextSave = false
     private var saveIsBlocked = false
     private var blockedSave: CheckedContinuation<Void, Never>?
 
     init(databaseURL: URL) throws {
-        base = try SQLitePlanRepository(databaseURL: databaseURL)
+        base = try TaptionStoreRepository(store: TaptionStoreV2(url: databaseURL))
     }
 
     func load() async throws -> TaptionDataSnapshot {
@@ -459,7 +459,6 @@ final class SensorDayStoreTests: XCTestCase {
     private func makeWatchSummaryModel(
         directory: URL,
         database: PlanDayDatabase,
-        archive: AppleWatchSensorActivityArchive,
         service: AppleWatchConnectivityService,
         snapshot: TaptionDataSnapshot = .empty,
         readingArchive: SensorReadingArchive? = nil,
@@ -484,8 +483,7 @@ final class SensorDayStoreTests: XCTestCase {
             watchConnectivityService: service,
             rawDeviceDataArchive: rawData,
             registersHealthBackgroundHandler: false,
-            dayDatabase: database,
-            watchSensorArchive: archive
+            dayDatabase: database
         )
     }
 
@@ -647,100 +645,6 @@ final class SensorDayStoreTests: XCTestCase {
                 isPurging: true
             )
         )
-    }
-
-    @MainActor
-    func testLegacyWatchArchiveKeepsExistingPayloadForRepeatedIdentity()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("watch-archive-identity-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: directory.appendingPathComponent("summaries.json")
-        )
-        let start = Date(timeIntervalSince1970: 2_200_000_000)
-        let summary = TaptionWatchSensorSummary(
-            sessionID: UUID(),
-            sequence: 1,
-            workoutKind: .walking,
-            linkedPlanID: nil,
-            linkedPlanTitle: nil,
-            linkedCategoryID: nil,
-            startedAt: start,
-            endedAt: start.addingTimeInterval(30),
-            isFinal: true,
-            accelerometerSampleCount: 1,
-            accelerometerAverageG: nil,
-            peakAccelerationG: 1,
-            gyroscopeSampleCount: 0,
-            gyroscopeAverageRadiansPerSecond: nil,
-            peakRotationRateRadiansPerSecond: nil,
-            gravity: nil,
-            userAccelerationG: nil,
-            rotationRateRadiansPerSecond: nil,
-            attitudeRadians: nil,
-            relativeAltitudeMeters: nil,
-            pressureKilopascals: nil,
-            stepCount: nil,
-            distanceMeters: nil,
-            floorsAscended: nil,
-            floorsDescended: nil,
-            latestHeartRate: nil,
-            averageHeartRate: nil,
-            maximumHeartRate: nil,
-            activeEnergyKilocalories: nil
-        )
-        try await archive.record(summary)
-        try await archive.record(summary)
-        var conflictingSummary = summary
-        conflictingSummary.isFinal = false
-        do {
-            try await archive.record(conflictingSummary)
-            XCTFail("Conflicting Watch summary replaced the stored payload")
-        } catch {}
-        let storedSummaries = try await archive.allSummaries()
-        XCTAssertEqual(storedSummaries, [summary])
-
-        var ambientSummary = summary
-        ambientSummary.sessionID = UUID()
-        ambientSummary.isFinal = false
-        ambientSummary.isAmbient = true
-        ambientSummary.ambientWindowStart = start
-        ambientSummary.ambientRevision = 0
-        try await archive.record(ambientSummary)
-        ambientSummary.ambientRevision = 1
-        ambientSummary.accelerometerSampleCount = 2
-        try await archive.record(ambientSummary)
-        let allAfterRevision = try await archive.allSummaries()
-        let ambientStored = allAfterRevision.filter {
-            $0.sessionID == ambientSummary.sessionID
-        }
-        XCTAssertEqual(ambientStored, [ambientSummary])
-
-        let sample = TaptionWatchAccelerationSample(
-            capturedAt: start,
-            acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-            sequence: 1,
-            isAmbient: true
-        )
-        let chunk = TaptionWatchAccelerationChunk(
-            sessionID: summary.sessionID,
-            sequence: 1,
-            startedAt: start,
-            endedAt: start,
-            isAmbient: true,
-            samples: [sample]
-        )
-        try await archive.record(chunk)
-        try await archive.record(chunk)
-        var conflictingChunk = chunk
-        conflictingChunk.samples[0].acceleration.x = 1
-        do {
-            try await archive.record(conflictingChunk)
-            XCTFail("Conflicting Watch chunk replaced the stored raw payload")
-        } catch {}
-        let storedChunks = try await archive.allAccelerationChunks()
-        XCTAssertEqual(storedChunks, [chunk])
     }
 
     @MainActor
@@ -1036,152 +940,11 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
-    func testDeleteAllClearsLegacyRawTrackingAndDayArchives() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("sensor-complete-delete-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let rawDirectory = directory.appendingPathComponent("RawData")
-        let raw = RawDeviceDataMonthlyArchive(rootDirectory: rawDirectory)
-        let tracking = TrackingSessionChunkArchive(rootDirectory: rawDirectory)
-        let date = Date(timeIntervalSince1970: 1_850_100_000)
-        let reading = makeReading(date)
-        try raw.append(
-            source: .gps,
-            kind: "sensor-reading",
-            payload: reading,
-            capturedAt: date
-        )
-        try tracking.append(
-            SensorReading(
-                timestamp: date,
-                motion: .walking,
-                trackingSessionID: UUID(),
-                sequence: 1,
-                trackingSessionEnded: true
-            )
-        )
-        let archive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
-            rawArchive: raw,
-            trackingChunkArchive: tracking
-        )
-        let dayArchive = try RawDeviceDataDayArchive(
-            databaseURL: directory.appendingPathComponent("raw-day.sqlite")
-        )
-        let envelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .gps,
-            kind: "location",
-            payload: ["latitude": 37.5]
-        )
-        try await dayArchive.append(envelope)
-
-        try await archive.deleteAll()
-        try await dayArchive.deleteAll()
-
-        let dayEnvelopes = try await dayArchive.allEnvelopes()
-        XCTAssertFalse(FileManager.default.fileExists(atPath: rawDirectory.path))
-        XCTAssertTrue(try raw.allEnvelopes().isEmpty)
-        XCTAssertTrue(try tracking.allPersistedReadings().isEmpty)
-        XCTAssertTrue(dayEnvelopes.isEmpty)
-    }
-
-    func testTrackingChunkArchiveContinuesIndexAfterReopen() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tracking-chunk-reopen-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let sessionID = UUID()
-        let start = Date(timeIntervalSince1970: 1_800_000_000)
-        let first = TrackingSessionChunkArchive(rootDirectory: directory)
-        try first.append(SensorReading(
-            timestamp: start,
-            motion: .walking,
-            trackingSessionID: sessionID,
-            sequence: 1,
-            trackingSessionEnded: true
-        ))
-        let month = Calendar.autoupdatingCurrent.dateComponents(
-            [.year, .month],
-            from: start
-        )
-        let monthKey = String(
-            format: "%04d-%02d",
-            month.year ?? 1970,
-            month.month ?? 1
-        )
-        let sessionDirectory = directory
-            .appendingPathComponent(monthKey)
-            .appendingPathComponent(sessionID.uuidString)
-        let firstURL = sessionDirectory.appendingPathComponent("000001.jsonl.zlib")
-        let firstPayload = try Data(contentsOf: firstURL)
-
-        let reopened = TrackingSessionChunkArchive(rootDirectory: directory)
-        try reopened.append(SensorReading(
-            timestamp: start.addingTimeInterval(10),
-            motion: .walking,
-            trackingSessionID: sessionID,
-            sequence: 2,
-            trackingSessionEnded: true
-        ))
-
-        XCTAssertEqual(try Data(contentsOf: firstURL), firstPayload)
-        XCTAssertTrue(FileManager.default.fileExists(
-            atPath: sessionDirectory
-                .appendingPathComponent("000002.jsonl.zlib").path
-        ))
-        XCTAssertEqual(
-            try reopened.allPersistedReadings().map(\.sequence),
-            [1, 2]
-        )
-    }
-
-    func testTrackingChunkArchiveIgnoresRawMonthlyArchiveFiles() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tracking-raw-format-collision-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let raw = RawDeviceDataMonthlyArchive(
-            rootDirectory: directory,
-            flushDelay: 0
-        )
-        let tracking = TrackingSessionChunkArchive(rootDirectory: directory)
-        let date = Date(timeIntervalSince1970: 1_850_200_000)
-        let rawReading = makeReading(date)
-        try raw.append(
-            source: .gps,
-            kind: "sensor-reading",
-            payload: rawReading,
-            capturedAt: date
-        )
-        try raw.flushPendingWrites()
-
-        let trackedID = UUID()
-        try tracking.append(
-            SensorReading(
-                id: trackedID,
-                timestamp: date,
-                motion: .walking,
-                trackingSessionID: UUID(),
-                trackingSessionEnded: true
-            )
-        )
-
-        XCTAssertEqual(
-            try tracking.allPersistedReadings().map(\.id),
-            [trackedID]
-        )
-        let visited = try await tracking.forEachPersistedReadingBatch(size: 8) {
-            batch in
-            return batch.allSatisfy { $0.id == trackedID }
-        }
-        XCTAssertTrue(visited)
-    }
-
-    func testRawDeviceEnvelopeUsesCanonicalDayDatabase() async throws {
+    func testRawDeviceEnvelopeIsStoredImmutablyInTheSingleStore() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("raw-day-store-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let databaseURL = directory.appendingPathComponent("taption-data-v2.sqlite")
+        let databaseURL = directory.appendingPathComponent(TaptionStoreV2.fileName)
         let date = Date(timeIntervalSince1970: 1_850_000_000)
         let envelope = try RawDeviceDataEnvelope(
             capturedAt: date,
@@ -1202,8 +965,11 @@ final class SensorDayStoreTests: XCTestCase {
         do {
             try await archive.append(conflicting)
             XCTFail("Expected immutable raw envelope conflict")
-        } catch let error as TaptionPlanDayStoreError {
-            XCTAssertEqual(error, .eventConflict(id: envelope.id.uuidString))
+        } catch let error as TaptionStoreV2Error {
+            XCTAssertEqual(
+                error,
+                .rawEventConflict(kind: TaptionRawEvent.Kind.deviceEnvelope, id: envelope.id.uuidString)
+            )
         }
         try await archive.checkpoint()
         let restored = try await archive.envelopes(
@@ -1220,64 +986,61 @@ final class SensorDayStoreTests: XCTestCase {
             envelope.payloadChecksum,
             TaptionPlanCanonicalStorage.checksum(payloadData)
         )
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        let events = try await store.events(
-            from: TaptionPlanDayKey(date: date),
-            through: TaptionPlanDayKey(date: date),
-            domain: "raw-device-data"
-        )
+        let store = try TaptionStoreV2(url: databaseURL)
+        let events = try await store.rawEvents(kind: TaptionRawEvent.Kind.deviceEnvelope)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.origin, .auto)
         XCTAssertEqual(
-            String(decoding: events.first?.payload.prefix(8) ?? Data(), as: UTF8.self),
-            "TP-CANON"
+            events.first?.provenance,
+            ["source:iPhonePedometer", "kind:pedometer-summary", "schema:1"]
         )
-        XCTAssertFalse(events.first?.payload.starts(with: [0x54, 0x50, 0x5A, 0x31]) == true)
+        XCTAssertEqual(events.first?.payload.first, "{", "payload is plain JSON that SQL can read")
     }
 
-    func testRawDeviceEnvelopeRepairsInlineLegacyJSONEvent() async throws {
+    func testDeleteAllClearsEverySourceCopyInTheSingleStore() async throws {
         let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("raw-day-inline-legacy-\(UUID().uuidString)")
+            .appendingPathComponent("sensor-complete-delete-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        try FileManager.default.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
+        let storeURL = directory.appendingPathComponent(TaptionStoreV2.fileName)
+        let store = try TaptionStoreV2(url: storeURL)
+        let date = Date(timeIntervalSince1970: 1_850_100_000)
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("sensor-readings-v1.jsonl"),
+            store: store
         )
-        let databaseURL = directory.appendingPathComponent("raw-day.sqlite")
-        let date = Date(timeIntervalSince1970: 1_850_000_000)
-        var envelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .gps,
-            kind: "sensor-reading",
-            payload: ["speed": 12]
-        )
-        envelope.payloadChecksum = nil
-        envelope.payloadByteCount = nil
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        let store = try TaptionPlanDayStore(url: databaseURL)
-        try await store.appendEvents([.init(
-            day: TaptionPlanDayKey(date: date),
-            timestamp: date,
-            sequence: 0,
-            id: envelope.id.uuidString,
-            domain: "raw-device-data",
-            payload: try encoder.encode(envelope)
+        try await archive.append(makeReading(date))
+        let rawArchive = try RawDeviceDataDayArchive(store: store)
+        try await rawArchive.append(try RawDeviceDataEnvelope(
+            capturedAt: date, source: .gps, kind: "location", payload: ["latitude": 37.5]
+        ))
+        let database = PlanDayDatabase(store: store)
+        let start = Date.now.addingTimeInterval(-60)
+        try await database.recordWatchAccelerationChunk(TaptionWatchAccelerationChunk(
+            sessionID: nil, sequence: 1, startedAt: start, endedAt: start,
+            samples: [TaptionWatchAccelerationSample(
+                capturedAt: start, acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
+                sequence: 1, isAmbient: true
+            )]
+        ))
+        let healthKit = try HealthKitImportStore(databaseURL: storeURL)
+        try await healthKit.upsert([HealthKitSampleRecord(
+            uuid: UUID(), typeIdentifier: "HKQuantityTypeIdentifierStepCount",
+            startDate: date, endDate: date.addingTimeInterval(60),
+            sourceName: "iPhone", sourceBundleIdentifier: "com.apple.health"
         )])
+        let before = try await store.readingCount()
+        XCTAssertEqual(before, 1)
 
-        let archive = try RawDeviceDataDayArchive(databaseURL: databaseURL)
-        let restoredAll = try await archive.allEnvelopes()
-        XCTAssertEqual(restoredAll, [envelope])
-        let events = try await store.allEvents(domain: "raw-device-data")
-        XCTAssertEqual(
-            String(decoding: try XCTUnwrap(events.first).payload.prefix(8), as: UTF8.self),
-            "TP-CANON"
-        )
-        let restoredRange = try await archive.envelopes(
-            in: TimeSpan(
-                start: date.addingTimeInterval(-1),
-                end: date.addingTimeInterval(1)
-            )
-        )
-        XCTAssertEqual(restoredRange, [envelope])
+        // 사용자가 데이터 삭제를 요청하면 한 파일 안의 모든 사본이 지워진다.
+        try await archive.deleteAll()
+        let readings = try await store.readingCount()
+        let envelopes = try await store.rawEventCount(kind: TaptionRawEvent.Kind.deviceEnvelope)
+        let chunks = try await store.rawEventCount(kind: TaptionRawEvent.Kind.watchAcceleration)
+        let healthRecords = try await healthKit.allRecords()
+        XCTAssertEqual(readings, 0)
+        XCTAssertEqual(envelopes, 0)
+        XCTAssertEqual(chunks, 0)
+        XCTAssertTrue(healthRecords.isEmpty)
     }
 
     func testCancelledRawReadReleasesLockAndPreservesEvents() async throws {
@@ -1373,8 +1136,11 @@ final class SensorDayStoreTests: XCTestCase {
         do {
             try await archive.append([first, conflicting])
             XCTFail("Expected immutable raw envelope conflict")
-        } catch let error as TaptionPlanDayStoreError {
-            XCTAssertEqual(error, .eventConflict(id: id.uuidString))
+        } catch let error as TaptionStoreV2Error {
+            XCTAssertEqual(
+                error,
+                .rawEventConflict(kind: TaptionRawEvent.Kind.deviceEnvelope, id: id.uuidString)
+            )
         }
         let persisted = try await archive.allEnvelopes()
         XCTAssertTrue(persisted.isEmpty)
@@ -1453,508 +1219,7 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testPlanDayDatabaseKeepsMaterializedRowsInactiveUntilMigrationCompletes() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-database-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let requiredBeforeImport = try await database.requiresLegacyMigration()
-        XCTAssertTrue(requiredBeforeImport)
-        let day = Date(timeIntervalSince1970: 2_000_000_000)
-        let snapshot = PlanDayDataSnapshot(
-            day: day,
-            sourceRevision: 7,
-            sourceUpdatedAt: day,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        )
-
-        try await database.save(snapshot)
-        let beforeMigration = try await database.load(
-            day: day,
-            sourceRevision: 7
-        )
-        XCTAssertNil(beforeMigration)
-
-        let report = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 7,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        XCTAssertEqual(report?.dayCount, 0)
-        let requiredAfterImport = try await database.requiresLegacyMigration()
-        XCTAssertFalse(requiredAfterImport)
-        let restored = try await database.load(day: day, sourceRevision: 7)
-        XCTAssertEqual(restored, snapshot)
-    }
-
-    @MainActor
-    func testLegacyMigrationKeepsLongActualSpansAsRanges() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-migration-ranges-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let calendar = Calendar(identifier: .gregorian)
-        let startedAt = Date(timeIntervalSince1970: 1_600_000_000)
-        let endedAt = calendar.date(byAdding: .year, value: 25, to: startedAt)!
-        var source = TaptionDataSnapshot.empty
-        source.actuals = [
-            ActualRecord(
-                planID: nil,
-                title: "Long migration range",
-                categoryID: "activity",
-                startedAt: startedAt,
-                endedAt: endedAt,
-                source: .manual
-            ),
-        ]
-
-        let ranges = try await database.migrationDayRanges(
-            source: source,
-            readings: [],
-            watchSummaries: [],
-            watchAccelerationChunks: [],
-            rawEnvelopes: [],
-            calendar: calendar
-        )
-
-        XCTAssertEqual(ranges.count, 1)
-        XCTAssertEqual(ranges[0].firstDay, calendar.startOfDay(for: startedAt))
-        XCTAssertEqual(ranges[0].lastDay, calendar.startOfDay(for: endedAt))
-    }
-
-    func testMigrationRangeRejectsFailedOrNonAdvancingCalendarDays() {
-        let day = Date(timeIntervalSince1970: 1_700_000_000)
-        let lastDay = day.addingTimeInterval(2 * 24 * 60 * 60)
-
-        XCTAssertThrowsError(
-            try PlanDayMigrationRange.nextDay(
-                after: day,
-                through: lastDay,
-                advance: { _ in nil }
-            )
-        )
-        XCTAssertThrowsError(
-            try PlanDayMigrationRange.nextDay(
-                after: day,
-                through: lastDay,
-                advance: { $0 }
-            )
-        )
-        XCTAssertThrowsError(
-            try PlanDayMigrationRange.nextDay(
-                after: day,
-                through: lastDay,
-                advance: { $0.addingTimeInterval(3 * 24 * 60 * 60) }
-            )
-        )
-        XCTAssertEqual(
-            try? PlanDayMigrationRange.nextDay(
-                after: day,
-                through: lastDay,
-                advance: { $0.addingTimeInterval(24 * 60 * 60) }
-            ),
-            day.addingTimeInterval(24 * 60 * 60)
-        )
-    }
-
-    @MainActor
-    func testLegacyMigrationReplacesMultipleConflictingImports() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-migration-retry-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let envelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .iPhoneMotion,
-            kind: "motion-activities",
-            payload: ["state": "walking"]
-        )
-        let secondEnvelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .iPhoneMotion,
-            kind: "motion-activities",
-            payload: ["state": "running"]
-        )
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        try await store.appendRawEvents([
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 0,
-                id: envelope.id.uuidString,
-                domain: "raw-device-data",
-                provenance: ["legacy:raw-device-data"],
-                payload: Data([0])
-            ),
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 1,
-                id: secondEnvelope.id.uuidString,
-                domain: "raw-device-data",
-                provenance: ["legacy:raw-device-data"],
-                payload: Data([2])
-            ),
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 2,
-                id: UUID().uuidString,
-                domain: "sensor-reading",
-                provenance: ["source-device:iPhone", "live"],
-                payload: Data([3])
-            ),
-        ])
-        let initialEvents = try await store.rawEvents(
-            for: TaptionPlanDayKey(date: date)
-        )
-        let preservedLiveID = try XCTUnwrap(
-            initialEvents.first(where: { $0.domain == "sensor-reading" })?.id
-        )
-        let watchStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-watch-v3.sqlite"
-            ),
-            device: .appleWatch
-        )
-        let preservedWatchID = UUID().uuidString
-        try await watchStore.appendRawEvents([
-            TaptionPlanRawEvent(
-                device: .appleWatch,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 1,
-                id: preservedWatchID,
-                domain: "watch-sensor-summary",
-                provenance: ["source-device:appleWatch", "live"],
-                payload: Data([2])
-            ),
-        ])
-        let database = try PlanDayDatabase(directory: directory)
-
-        let report = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: [envelope, secondEnvelope]
-        )
-
-        XCTAssertEqual(report?.dayCount, 1)
-        XCTAssertEqual(report?.iPhoneEventCount, 3)
-        XCTAssertEqual(report?.watchEventCount, 1)
-        let stillRequiresMigration = try await database.requiresLegacyMigration()
-        XCTAssertFalse(stillRequiresMigration)
-        let importedEvents = try await store.rawEvents(
-            for: TaptionPlanDayKey(date: date)
-        )
-        XCTAssertTrue(importedEvents.contains { $0.id == preservedLiveID })
-        XCTAssertTrue(importedEvents.contains { $0.id == envelope.id.uuidString })
-        XCTAssertTrue(
-            importedEvents.contains { $0.id == secondEnvelope.id.uuidString }
-        )
-        let importedWatchEvents = try await watchStore.rawEvents(
-            for: TaptionPlanDayKey(date: date)
-        )
-        XCTAssertTrue(importedWatchEvents.contains { $0.id == preservedWatchID })
-    }
-
-    @MainActor
-    func testLegacyMigrationPreservesConflictingUnmarkedRawRecords() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-migration-live-conflict-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let envelope = try RawDeviceDataEnvelope(
-            capturedAt: date,
-            source: .iPhoneMotion,
-            kind: "motion-activities",
-            payload: ["state": "walking"]
-        )
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let unrelatedID = UUID().uuidString
-        try await store.appendRawEvents([
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 0,
-                id: envelope.id.uuidString,
-                domain: "raw-device-data",
-                provenance: ["source-device:iPhone", "live"],
-                payload: Data([0])
-            ),
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: TaptionPlanDayKey(date: date),
-                timestamp: date,
-                sequence: 1,
-                id: unrelatedID,
-                domain: "sensor-reading",
-                provenance: ["source-device:iPhone", "live"],
-                payload: Data([1])
-            ),
-        ])
-        let database = try PlanDayDatabase(directory: directory)
-
-        do {
-            _ = try await database.migrateLegacyIfNeeded(
-                source: .empty,
-                sourceRevision: 1,
-                readings: [],
-                watchSummaries: [],
-                rawEnvelopes: [envelope]
-            )
-            XCTFail("Unmarked raw data must not be replaced by migration")
-        } catch let error as TaptionPlanV3StoreError {
-            guard case let .payloadConflict(_, domain, id) = error else {
-                return XCTFail("Unexpected store error: \(error)")
-            }
-            XCTAssertEqual(domain, "raw-device-data")
-            XCTAssertEqual(id, envelope.id.uuidString)
-        }
-
-        let events = try await store.rawEvents(
-            for: TaptionPlanDayKey(date: date)
-        )
-        XCTAssertEqual(events.count, 2)
-        XCTAssertTrue(events.contains { $0.id == envelope.id.uuidString })
-        XCTAssertTrue(events.contains { $0.id == unrelatedID })
-        let stillRequiresMigration = try await database.requiresLegacyMigration()
-        XCTAssertTrue(stillRequiresMigration)
-    }
-
-    @MainActor
-    func testLegacyMigrationAcceptsSQLiteTimestampRoundTrip() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-date-round-trip-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSinceReferenceDate: 809_404_315.441_151_02)
-        let storedDate = Date(
-            timeIntervalSince1970: date.timeIntervalSince1970
-        )
-        XCTAssertNotEqual(date, storedDate)
-        let database = try PlanDayDatabase(directory: directory)
-
-        let report = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [makeReading(date)],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-
-        XCTAssertEqual(report?.dayCount, 1)
-        XCTAssertEqual(report?.iPhoneEventCount, 1)
-        let stillRequiresMigration = try await database.requiresLegacyMigration()
-        XCTAssertFalse(stillRequiresMigration)
-    }
-
-    @MainActor
-    func testPlanDayDatabaseInvalidatesMaterializationWhenRawDigestChanges() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let day = Date(timeIntervalSince1970: 2_000_000_000)
-        let dayKey = TaptionPlanDayKey(date: day)
-        let snapshot = PlanDayDataSnapshot(
-            day: day,
-            sourceRevision: 1,
-            sourceUpdatedAt: day,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        )
-        try await database.save(snapshot)
-        let beforeChange = try await database.load(
-            day: day,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(beforeChange, snapshot)
-
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        try await store.appendRawEvents([
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: dayKey,
-                timestamp: day.addingTimeInterval(1),
-                sequence: 1,
-                id: UUID().uuidString,
-                domain: "test-raw-change",
-                provenance: ["test"],
-                payload: Data([0x01])
-            ),
-        ])
-
-        let afterChange = try await database.load(
-            day: day,
-            sourceRevision: 1
-        )
-        let staleRow = try await store.materializedDay(for: dayKey)
-        XCTAssertNil(afterChange)
-        XCTAssertNil(staleRow)
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRemovesCorruptMaterializedPayloadForRecovery() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(
-                "plan-day-corrupt-materialized-\(UUID().uuidString)"
-            )
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let day = Date(timeIntervalSince1970: 2_000_000_000)
-        let dayKey = TaptionPlanDayKey(date: day)
-        let snapshot = PlanDayDataSnapshot(
-            day: day,
-            sourceRevision: 1,
-            sourceUpdatedAt: day,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        )
-        try await database.save(snapshot)
-
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let currentRow = try await store.materializedDay(for: dayKey)
-        let current = try XCTUnwrap(currentRow)
-        try await store.replaceMaterializedDay(
-            .init(
-                device: .iPhone,
-                day: dayKey,
-                sourceRevision: current.sourceRevision,
-                projectionVersion: current.projectionVersion,
-                rawDigest: current.rawDigest,
-                rawEventCount: current.rawEventCount,
-                firstTimestamp: current.firstTimestamp,
-                lastTimestamp: current.lastTimestamp,
-                payload: Data([0])
-            )
-        )
-
-        let recovered = try await database.load(day: day, sourceRevision: 1)
-        let removed = try await store.materializedDay(for: dayKey)
-        XCTAssertNil(recovered)
-        XCTAssertNil(removed)
-    }
-
-    @MainActor
-    func testPlanDayCorruptRowCleanupKeepsConcurrentRepair() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(
-                "plan-day-corrupt-row-repair-\(UUID().uuidString)"
-            )
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let day = Date(timeIntervalSince1970: 2_000_000_000)
-        let dayKey = TaptionPlanDayKey(date: day)
-        let snapshot = PlanDayDataSnapshot(
-            day: day,
-            sourceRevision: 1,
-            sourceUpdatedAt: day,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        )
-        try await database.save(snapshot)
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let loadedRow = try await store.materializedDay(for: dayKey)
-        let validRow = try XCTUnwrap(loadedRow)
-        try await store.replaceMaterializedDay(
-            .init(
-                device: .iPhone,
-                day: dayKey,
-                sourceRevision: validRow.sourceRevision,
-                projectionVersion: validRow.projectionVersion,
-                rawDigest: validRow.rawDigest,
-                rawEventCount: validRow.rawEventCount,
-                firstTimestamp: validRow.firstTimestamp,
-                lastTimestamp: validRow.lastTimestamp,
-                payload: Data([0])
-            )
-        )
-
-        let lock = try await TaptionDataFileLock.acquire(
-            url: directory.appendingPathComponent("taption-plan-day-write.lock")
-        )
-        defer { lock.unlock() }
-        let loadTask = Task {
-            try await database.load(day: day, sourceRevision: 1)
-        }
-        try await Task.sleep(for: .milliseconds(50))
-        try await store.replaceMaterializedDay(validRow)
-        lock.unlock()
-
-        let recovered = try await loadTask.value
-        let persisted = try await store.materializedDay(for: dayKey)
-        XCTAssertEqual(recovered, snapshot)
-        XCTAssertEqual(persisted, validRow)
-    }
-
-    @MainActor
-    func testWatchSummaryRecordAndLegacyMigrationShareIdempotentProvenance() async throws {
+    func testWatchSummaryRecordIsIdempotentAndKeepsProvenance() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-watch-race-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -1991,176 +1256,40 @@ final class SensorDayStoreTests: XCTestCase {
             maximumHeartRate: nil,
             activeEnergyKilocalories: nil
         )
-        let day = TaptionPlanDayKey(date: summary.endedAt)
+        let store = try TaptionStoreV2(
+            url: directory.appendingPathComponent(TaptionStoreV2.fileName)
+        )
 
         try await database.recordWatchSummary(summary)
-        let watchStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-watch-v3.sqlite"),
-            device: .appleWatch
-        )
-        let iPhoneStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-iphone-v3.sqlite"),
-            device: .iPhone
-        )
-        try await database.save(PlanDayDataSnapshot(
-            day: summary.endedAt,
-            sourceRevision: 1,
-            sourceUpdatedAt: summary.endedAt,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        ))
         try await database.recordWatchSummary(summary)
-        let cachedAfterDuplicate = try await iPhoneStore.materializedDay(for: day)
-        XCTAssertNotNil(cachedAfterDuplicate)
 
-        let watchDigest = try await watchStore.rawDigest(for: day)
-        let iPhoneDigest = try await iPhoneStore.rawDigest(for: day)
-        let watchEvents = try await watchStore.rawEvents(for: day)
-        let iPhoneEvents = try await iPhoneStore.rawEvents(for: day)
-        XCTAssertEqual(watchDigest.eventCount, 1)
-        XCTAssertEqual(iPhoneDigest.eventCount, 1)
+        let events = try await store.rawEvents(kind: TaptionRawEvent.Kind.watchSummary)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.id, summary.rawEventID)
+        XCTAssertEqual(events.first?.origin, .auto)
         XCTAssertEqual(
-            watchEvents.first?.provenance,
+            events.first?.provenance,
             ["source-device:appleWatch", "transport:WatchConnectivity"]
         )
-        XCTAssertEqual(
-            iPhoneEvents.first?.provenance,
-            [
-                "source-device:appleWatch",
-                "transport:WatchConnectivity",
-                "merge:iPhone",
-            ]
-        )
-        XCTAssertFalse(
-            watchEvents.first?.provenance.contains("merge:iPhone") ?? true
-        )
 
-        try await iPhoneStore.deleteAllData()
-        let restoredFromWatchRaw = try await database.watchSummaries(
+        var conflicting = summary
+        conflicting.endedAt = summary.endedAt.addingTimeInterval(1)
+        do {
+            try await database.recordWatchSummary(conflicting)
+            XCTFail("a different summary with the same raw event id was accepted")
+        } catch let error as TaptionStoreV2Error {
+            XCTAssertEqual(
+                error,
+                .rawEventConflict(kind: TaptionRawEvent.Kind.watchSummary, id: summary.rawEventID)
+            )
+        }
+        let restored = try await database.watchSummaries(
             in: TimeSpan(
                 start: summary.startedAt,
                 end: summary.endedAt.addingTimeInterval(1)
             )
         )
-        XCTAssertEqual(restoredFromWatchRaw, [summary])
-
-        let report = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [summary],
-            rawEnvelopes: []
-        )
-        XCTAssertEqual(report?.watchEventCount, 1)
-        XCTAssertEqual(report?.iPhoneEventCount, 1)
-        let migratedWatchDigest = try await watchStore.rawDigest(for: day)
-        let migratedIPhoneDigest = try await iPhoneStore.rawDigest(for: day)
-        XCTAssertEqual(migratedWatchDigest.eventCount, 1)
-        XCTAssertEqual(migratedIPhoneDigest.eventCount, 1)
-    }
-
-    @MainActor
-    func testWatchAmbientMigrationMatchesLiveEventsAcrossMidnightAndRevision()
-        async throws {
-        let calendar = Calendar.autoupdatingCurrent
-        let midnight = calendar.startOfDay(
-            for: Date.now.addingTimeInterval(-86_400)
-        )
-        let windowStart = midnight.addingTimeInterval(-30)
-        let endedAt = midnight.addingTimeInterval(30)
-
-        for recordLiveFirst in [true, false] {
-            let directory = FileManager.default.temporaryDirectory
-                .appendingPathComponent(
-                    "watch-ambient-migration-\(UUID().uuidString)"
-                )
-            defer { try? FileManager.default.removeItem(at: directory) }
-            let database = try PlanDayDatabase(directory: directory)
-            let sessionID = UUID()
-            let summary = makeWatchSummary(
-                sessionID: sessionID,
-                sequence: 4,
-                startedAt: windowStart,
-                endedAt: endedAt,
-                ambientWindowStart: windowStart,
-                ambientRevision: 2
-            )
-            let chunk = TaptionWatchAccelerationChunk(
-                id: UUID(),
-                sessionID: sessionID,
-                sequence: 4,
-                startedAt: windowStart,
-                endedAt: endedAt,
-                isAmbient: true,
-                samples: [],
-                ambientWindowStart: windowStart,
-                ambientRevision: 2
-            )
-            if recordLiveFirst {
-                try await database.recordWatchSummary(summary)
-                try await database.recordWatchAccelerationChunk(chunk)
-            }
-
-            let report = try await database.migrateLegacyIfNeeded(
-                source: .empty,
-                sourceRevision: 1,
-                readings: [],
-                watchSummaries: [summary],
-                watchAccelerationChunks: [chunk],
-                rawEnvelopes: []
-            )
-            if !recordLiveFirst {
-                try await database.recordWatchSummary(summary)
-                try await database.recordWatchAccelerationChunk(chunk)
-            }
-
-            let watchStore = try TaptionPlanV3Store(
-                url: directory.appendingPathComponent(
-                    "taption-plan-watch-v3.sqlite"
-                ),
-                device: .appleWatch
-            )
-            let iPhoneStore = try TaptionPlanV3Store(
-                url: directory.appendingPathComponent(
-                    "taption-plan-iphone-v3.sqlite"
-                ),
-                device: .iPhone
-            )
-            let eventDay = TaptionPlanDayKey(date: windowStart)
-            let endedDay = TaptionPlanDayKey(date: endedAt)
-            XCTAssertNotEqual(eventDay, endedDay)
-            XCTAssertNotNil(report)
-
-            for store in [watchStore, iPhoneStore] {
-                let summaryEvents = try await store.rawEvents(
-                    for: eventDay,
-                    domain: "watch-sensor-summary"
-                )
-                let chunkEvents = try await store.rawEvents(
-                    for: eventDay,
-                    domain: "watch-acceleration"
-                )
-                let summariesOnEndedDay = try await store.rawEvents(
-                    for: endedDay,
-                    domain: "watch-sensor-summary"
-                )
-                let chunksOnEndedDay = try await store.rawEvents(
-                    for: endedDay,
-                    domain: "watch-acceleration"
-                )
-                XCTAssertEqual(summaryEvents.count, 1)
-                XCTAssertEqual(summaryEvents.first?.id, summary.rawEventID)
-                XCTAssertEqual(summaryEvents.first?.timestamp, windowStart)
-                XCTAssertEqual(chunkEvents.count, 1)
-                XCTAssertEqual(chunkEvents.first?.id, chunk.id.uuidString)
-                XCTAssertEqual(chunkEvents.first?.timestamp, windowStart)
-                XCTAssertTrue(summariesOnEndedDay.isEmpty)
-                XCTAssertTrue(chunksOnEndedDay.isEmpty)
-            }
-        }
+        XCTAssertEqual(restored, [summary])
     }
 
     @MainActor
@@ -2309,87 +1438,6 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testOldWatchSummaryFallbackIsVisibleBeforeDeliverySucceeds()
-        async throws {
-        let deletionFence = DataDeletionFenceTestFixture()
-        defer { deletionFence.restore() }
-        let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("watch-summary-fallback-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: root) }
-        let databaseDirectory = root.appendingPathComponent("database")
-        let database = try PlanDayDatabase(directory: databaseDirectory)
-        let sessionID = UUID()
-        let anchor = Date.now.addingTimeInterval(-40 * 60)
-        let stored = makeWatchSummary(
-            sessionID: sessionID,
-            sequence: 3,
-            startedAt: anchor.addingTimeInterval(20 * 60 + 30),
-            endedAt: anchor.addingTimeInterval(20 * 60 + 50),
-            ambientWindowStart: anchor.addingTimeInterval(20 * 60)
-        )
-        let stale = makeWatchSummary(
-            sessionID: sessionID,
-            sequence: 2,
-            startedAt: anchor.addingTimeInterval(10 * 60 + 30),
-            endedAt: anchor.addingTimeInterval(10 * 60 + 50),
-            ambientWindowStart: anchor.addingTimeInterval(10 * 60)
-        )
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        try await database.recordWatchSummary(stored)
-        let writeLockURL = databaseDirectory.appendingPathComponent(
-            "taption-plan-day-write.lock"
-        )
-        try FileManager.default.removeItem(at: writeLockURL)
-        try FileManager.default.createDirectory(
-            at: writeLockURL,
-            withIntermediateDirectories: false
-        )
-
-        let defaults = UserDefaults.standard
-        let fallbackKey = "taption.watch-legacy-fallback-read.v1"
-        let previousFlag = defaults.object(forKey: fallbackKey)
-        defaults.set(false, forKey: fallbackKey)
-        defer {
-            if let previousFlag {
-                defaults.set(previousFlag, forKey: fallbackKey)
-            } else {
-                defaults.removeObject(forKey: fallbackKey)
-            }
-        }
-
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
-        let service = AppleWatchConnectivityService()
-        let model = try makeWatchSummaryModel(
-            directory: root,
-            database: database,
-            archive: archive,
-            service: service
-        )
-        await model.bootstrap()
-        try deliverWatchSummary(stale, through: service)
-
-        let visible = await waitForWatchSummary(
-            stale,
-            in: TimeSpan(
-                start: stale.startedAt,
-                end: stale.endedAt.addingTimeInterval(1)
-            ),
-            model: model
-        )
-        XCTAssertTrue(visible, "A successfully archived fallback must be readable by the timeline")
-        let storedSummaryApplied = await waitForWatchSummaryApplied(stored)
-        XCTAssertTrue(storedSummaryApplied)
-    }
-
-    @MainActor
     func testWatchSummaryHighWaterRestoresAcrossAppRestartDespiteStaleCache()
         async throws {
         let deletionFence = DataDeletionFenceTestFixture()
@@ -2400,7 +1448,7 @@ final class SensorDayStoreTests: XCTestCase {
         let databaseDirectory = root.appendingPathComponent("database")
         let database = try PlanDayDatabase(directory: databaseDirectory)
         let sessionID = UUID()
-        let startedAt = Date.now.addingTimeInterval(-5 * 60)
+        let startedAt = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970).addingTimeInterval(-5 * 60)
         let latest = makeWatchSummary(
             sessionID: sessionID,
             sequence: 10,
@@ -2429,17 +1477,8 @@ final class SensorDayStoreTests: XCTestCase {
             linkedPlan: nil
         )
         let snapshotURL = root.appendingPathComponent("snapshot.sqlite")
-        let repository = try GatedSQLitePlanRepository(
-            databaseURL: snapshotURL
-        )
+        let repository = try GatedSQLitePlanRepository(databaseURL: snapshotURL)
         try await repository.save(snapshot)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
         try await database.recordWatchSummary(latest)
 
         let defaults = UserDefaults.standard
@@ -2472,9 +1511,6 @@ final class SensorDayStoreTests: XCTestCase {
         }
 
         let restartedDatabase = try PlanDayDatabase(directory: databaseDirectory)
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
         let service = AppleWatchConnectivityService()
         let acknowledgements = WatchDeliveryAcknowledgementProbe()
         service.onAmbientAcknowledgementRequested = {
@@ -2483,7 +1519,6 @@ final class SensorDayStoreTests: XCTestCase {
         let model = try makeWatchSummaryModel(
             directory: root,
             database: restartedDatabase,
-            archive: archive,
             service: service,
             repository: repository
         )
@@ -2537,9 +1572,7 @@ final class SensorDayStoreTests: XCTestCase {
             acknowledgements.values,
             ["summary:\(stale.rawEventID)"]
         )
-        let readbackRepository = try SQLitePlanRepository(
-            databaseURL: snapshotURL
-        )
+        let readbackRepository = try TaptionStoreRepository(store: TaptionStoreV2(url: snapshotURL))
         let persistedSnapshot = try await readbackRepository.load()
         XCTAssertEqual(
             persistedSnapshot.actuals.first { $0.id == sessionID }?.endedAt,
@@ -2559,24 +1592,15 @@ final class SensorDayStoreTests: XCTestCase {
         let databaseDirectory = root.appendingPathComponent("database")
         let database = try PlanDayDatabase(directory: databaseDirectory)
         let repositoryURL = root.appendingPathComponent("snapshot.sqlite")
-        let repository = try GatedSQLitePlanRepository(
-            databaseURL: repositoryURL
-        )
+        let repository = try GatedSQLitePlanRepository(databaseURL: repositoryURL)
         let sessionID = UUID()
-        let startedAt = Date.now.addingTimeInterval(-5 * 60)
+        let startedAt = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970).addingTimeInterval(-5 * 60)
         let summary = makeWatchSummary(
             sessionID: sessionID,
             sequence: 10,
             startedAt: startedAt,
             endedAt: startedAt.addingTimeInterval(100),
             isAmbient: false
-        )
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
         )
         try await database.recordWatchSummary(summary)
 
@@ -2609,9 +1633,6 @@ final class SensorDayStoreTests: XCTestCase {
             }
         }
 
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
         let service = AppleWatchConnectivityService()
         let acknowledgements = WatchDeliveryAcknowledgementProbe()
         service.onAmbientAcknowledgementRequested = {
@@ -2620,7 +1641,6 @@ final class SensorDayStoreTests: XCTestCase {
         let model = try makeWatchSummaryModel(
             directory: root,
             database: database,
-            archive: archive,
             service: service,
             repository: repository
         )
@@ -2658,9 +1678,7 @@ final class SensorDayStoreTests: XCTestCase {
             ["summary:\(summary.rawEventID)"]
         )
 
-        let readbackRepository = try SQLitePlanRepository(
-            databaseURL: repositoryURL
-        )
+        let readbackRepository = try TaptionStoreRepository(store: TaptionStoreV2(url: repositoryURL))
         let persistedSnapshot = try await readbackRepository.load()
         XCTAssertTrue(persistedSnapshot.actuals.contains {
             $0.source == .appleWatch && $0.id == sessionID
@@ -2679,16 +1697,9 @@ final class SensorDayStoreTests: XCTestCase {
         let database = try PlanDayDatabase(
             directory: root.appendingPathComponent("database")
         )
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
 
         let sessionID = UUID()
-        let startedAt = Date.now.addingTimeInterval(-5 * 60)
+        let startedAt = Date(timeIntervalSince1970: Date.now.timeIntervalSince1970).addingTimeInterval(-5 * 60)
         let latestPointID = UUID()
         let stalePointID = UUID()
         func routePoint(_ id: UUID, at date: Date) -> TaptionWatchLocationPoint {
@@ -2726,9 +1737,6 @@ final class SensorDayStoreTests: XCTestCase {
                 at: startedAt.addingTimeInterval(70)
             )]
         )
-        let watchArchive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
         let readingArchive = try SensorReadingArchive(
             fileURL: root.appendingPathComponent("readings.jsonl")
         )
@@ -2736,7 +1744,6 @@ final class SensorDayStoreTests: XCTestCase {
         let model = try makeWatchSummaryModel(
             directory: root,
             database: database,
-            archive: watchArchive,
             service: service,
             readingArchive: readingArchive
         )
@@ -2779,13 +1786,6 @@ final class SensorDayStoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         let databaseDirectory = root.appendingPathComponent("database")
         let database = try PlanDayDatabase(directory: databaseDirectory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
 
         let sessionID = UUID()
         let now = Date.now
@@ -2843,9 +1843,6 @@ final class SensorDayStoreTests: XCTestCase {
             forKey: highWaterKey
         )
         defaults.removeObject(forKey: appliedHighWaterKey)
-        let fallbackKey = "taption.watch-legacy-fallback-read.v1"
-        let previousFallback = defaults.object(forKey: fallbackKey)
-        defaults.set(true, forKey: fallbackKey)
         defer {
             if let previousHighWater {
                 defaults.set(previousHighWater, forKey: highWaterKey)
@@ -2857,31 +1854,13 @@ final class SensorDayStoreTests: XCTestCase {
             } else {
                 defaults.removeObject(forKey: appliedHighWaterKey)
             }
-            if let previousFallback {
-                defaults.set(previousFallback, forKey: fallbackKey)
-            } else {
-                defaults.removeObject(forKey: fallbackKey)
-            }
         }
 
         let restartedDatabase = try PlanDayDatabase(directory: databaseDirectory)
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
-        try await archive.record(
-            makeWatchSummary(
-                sessionID: UUID(),
-                sequence: latestSequence + 10_000_000,
-                startedAt: latestStartedAt,
-                endedAt: latestStartedAt.addingTimeInterval(10),
-                ambientWindowStart: latestStartedAt
-            )
-        )
         let service = AppleWatchConnectivityService()
         let model = try makeWatchSummaryModel(
             directory: root,
             database: restartedDatabase,
-            archive: archive,
             service: service
         )
         let stale = makeWatchSummary(
@@ -2934,13 +1913,6 @@ final class SensorDayStoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         let databaseDirectory = root.appendingPathComponent("database")
         let database = try PlanDayDatabase(directory: databaseDirectory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
         let sessionID = UUID()
         let anchor = Date.now.addingTimeInterval(-2 * 60)
         let windowStart = anchor
@@ -2986,14 +1958,10 @@ final class SensorDayStoreTests: XCTestCase {
             behavior: .running,
             routePoints: [routePoint]
         )
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: root.appendingPathComponent("watch-summaries.json")
-        )
         let service = AppleWatchConnectivityService()
         let model = try makeWatchSummaryModel(
             directory: root,
             database: database,
-            archive: archive,
             service: service,
             snapshot: source
         )
@@ -3025,51 +1993,6 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testLegacyMigrationPreservesWatchAccelerationChunks() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-watch-legacy-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let start = Date(timeIntervalSince1970: 2_150_000_000)
-        let sessionID = UUID()
-        let samples = (0..<3).map { index in
-            TaptionWatchAccelerationSample(
-                capturedAt: start.addingTimeInterval(Double(index)),
-                acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                sessionID: sessionID,
-                sequence: index + 1,
-                isAmbient: true
-            )
-        }
-        let chunk = TaptionWatchAccelerationChunk(
-            sessionID: sessionID,
-            sequence: 1,
-            startedAt: start,
-            endedAt: samples.last!.capturedAt,
-            samples: samples
-        )
-
-        let report = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            watchAccelerationChunks: [chunk],
-            rawEnvelopes: []
-        )
-
-        XCTAssertEqual(report?.watchEventCount, 1)
-        XCTAssertEqual(report?.iPhoneEventCount, 1)
-        let restored = try await database.watchAccelerationSamples(
-            in: TimeSpan(
-                start: start.addingTimeInterval(-1),
-                end: start.addingTimeInterval(4)
-            )
-        )
-        XCTAssertEqual(restored.map(\.id), samples.map(\.id))
-    }
-
-    @MainActor
     func testWatchAccelerationChunkPreservesRawSamplesAcrossDuplicateDelivery() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-watch-raw-\(UUID().uuidString)")
@@ -3098,35 +2021,24 @@ final class SensorDayStoreTests: XCTestCase {
             samples: samples
         )
 
-        let day = TaptionPlanDayKey(date: chunk.endedAt)
-        let watchStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-watch-v3.sqlite"),
-            device: .appleWatch
-        )
-        let iPhoneStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-iphone-v3.sqlite"),
-            device: .iPhone
+        let store = try TaptionStoreV2(
+            url: directory.appendingPathComponent(TaptionStoreV2.fileName)
         )
         try await database.recordWatchAccelerationChunk(chunk)
-        try await database.save(PlanDayDataSnapshot(
-            day: chunk.endedAt,
-            sourceRevision: 1,
-            sourceUpdatedAt: chunk.endedAt,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        ))
         try await database.recordWatchAccelerationChunk(chunk)
-        let cachedAfterDuplicate = try await iPhoneStore.materializedDay(for: day)
-        XCTAssertNotNil(cachedAfterDuplicate)
 
-        let watchDigest = try await watchStore.rawDigest(for: day)
-        let iPhoneDigest = try await iPhoneStore.rawDigest(for: day)
-        XCTAssertEqual(watchDigest.eventCount, 1)
-        XCTAssertEqual(iPhoneDigest.eventCount, 1)
-        try await iPhoneStore.deleteAllData()
+        let events = try await store.rawEvents(kind: TaptionRawEvent.Kind.watchAcceleration)
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.id, chunk.id.uuidString)
+        XCTAssertEqual(events.first?.origin, .auto)
+        XCTAssertEqual(
+            events.first?.provenance,
+            [
+                "source-device:appleWatch",
+                "source:WatchAcceleration",
+                "derived:downsampled-accelerometer-v1",
+            ]
+        )
         let restored = try await database.watchAccelerationSamples(
             in: TimeSpan(
                 start: start.addingTimeInterval(-1),
@@ -3141,8 +2053,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("watch-acceleration-order-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let fileURL = directory.appendingPathComponent("summaries.json")
-        let archive = AppleWatchSensorActivityArchive(fileURL: fileURL)
+        let database = try PlanDayDatabase(directory: directory)
         let sessionID = UUID()
         let start = Date(timeIntervalSince1970: 1_850_100_000)
         func chunk(sequence: Int) -> TaptionWatchAccelerationChunk {
@@ -3164,174 +2075,14 @@ final class SensorDayStoreTests: XCTestCase {
             )
         }
 
-        try await archive.record(chunk(sequence: 2), now: start)
-        try await archive.record(chunk(sequence: 1), now: start)
+        try await database.recordWatchAccelerationChunk(chunk(sequence: 2))
+        try await database.recordWatchAccelerationChunk(chunk(sequence: 1))
 
-        let restored = try await AppleWatchSensorActivityArchive(
-            fileURL: fileURL
-        ).allAccelerationChunks()
+        let restored = try await PlanDayDatabase(directory: directory).watchAccelerationChunks(
+            in: TimeSpan(start: start, end: start.addingTimeInterval(3))
+        )
         XCTAssertEqual(restored.map(\.sequence), [1, 2])
         XCTAssertEqual(restored.flatMap(\.samples).map(\.sequence), [1, 2])
-    }
-
-    func testLegacyWatchRestoreRollbackPreservesConcurrentChunk() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("legacy-watch-rollback-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: directory.appendingPathComponent("summaries.json")
-        )
-        let start = Date(timeIntervalSince1970: 1_850_100_000)
-        func chunk(sequence: Int) -> TaptionWatchAccelerationChunk {
-            let capturedAt = start.addingTimeInterval(Double(sequence))
-            return TaptionWatchAccelerationChunk(
-                sessionID: nil,
-                sequence: sequence,
-                startedAt: capturedAt,
-                endedAt: capturedAt,
-                samples: [TaptionWatchAccelerationSample(
-                    capturedAt: capturedAt,
-                    acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                    sequence: sequence,
-                    isAmbient: true
-                )]
-            )
-        }
-        let existing = chunk(sequence: 1)
-        let restored = chunk(sequence: 2)
-        let arrivedDuringRestore = chunk(sequence: 3)
-        try await archive.record(existing, now: start)
-        let optionalReceipt = try await archive.recordForRestore(
-            [restored],
-            now: start
-        )
-        let receipt = try XCTUnwrap(optionalReceipt)
-
-        try await archive.record(arrivedDuringRestore, now: start)
-        try await archive.rollbackAccelerationRestore(receipt)
-
-        let stored = try await archive.allAccelerationChunks()
-        XCTAssertEqual(
-            stored.map(\.id),
-            [existing.id, arrivedDuringRestore.id]
-        )
-        XCTAssertFalse(stored.contains { $0.id == restored.id })
-    }
-
-    func testLegacyWatchRestoreCommitKeepsConcurrentChunk() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("legacy-watch-commit-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: directory.appendingPathComponent("summaries.json")
-        )
-        let start = Date(timeIntervalSince1970: 1_850_200_000)
-        func chunk(sequence: Int) -> TaptionWatchAccelerationChunk {
-            let capturedAt = start.addingTimeInterval(Double(sequence))
-            return TaptionWatchAccelerationChunk(
-                sessionID: nil,
-                sequence: sequence,
-                startedAt: capturedAt,
-                endedAt: capturedAt,
-                samples: [TaptionWatchAccelerationSample(
-                    capturedAt: capturedAt,
-                    acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                    sequence: sequence,
-                    isAmbient: true
-                )]
-            )
-        }
-        let restored = chunk(sequence: 1)
-        let arrivedDuringRestore = chunk(sequence: 2)
-        let optionalReceipt = try await archive.recordForRestore(
-            [restored],
-            now: start
-        )
-        let receipt = try XCTUnwrap(optionalReceipt)
-
-        try await archive.record(arrivedDuringRestore, now: start)
-        await archive.commitAccelerationRestore(receipt)
-
-        let stored = try await archive.allAccelerationChunks()
-        XCTAssertEqual(
-            stored.map(\.id),
-            [restored.id, arrivedDuringRestore.id]
-        )
-    }
-
-    func testLegacyWatchRestoreRollbackKeepsChunkRedeliveredDuringRestore()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("legacy-watch-redelivery-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: directory.appendingPathComponent("summaries.json")
-        )
-        let start = Date(timeIntervalSince1970: 1_850_300_000)
-        let capturedAt = start.addingTimeInterval(1)
-        let chunk = TaptionWatchAccelerationChunk(
-            sessionID: nil,
-            sequence: 1,
-            startedAt: capturedAt,
-            endedAt: capturedAt,
-            samples: [TaptionWatchAccelerationSample(
-                capturedAt: capturedAt,
-                acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                sequence: 1,
-                isAmbient: true
-            )]
-        )
-        let optionalReceipt = try await archive.recordForRestore(
-            [chunk],
-            now: start
-        )
-        let receipt = try XCTUnwrap(optionalReceipt)
-
-        try await archive.record(chunk, now: start)
-        try await archive.rollbackAccelerationRestore(receipt)
-
-        let stored = try await archive.allAccelerationChunks()
-        XCTAssertEqual(stored, [chunk])
-    }
-
-    func testCanceledLegacyWatchReadReleasesRestoreWaiter() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("legacy-watch-canceled-read-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let archive = AppleWatchSensorActivityArchive(
-            fileURL: directory.appendingPathComponent("summaries.json")
-        )
-        let start = Date(timeIntervalSince1970: 1_850_400_000)
-        let capturedAt = start.addingTimeInterval(1)
-        let chunk = TaptionWatchAccelerationChunk(
-            sessionID: nil,
-            sequence: 1,
-            startedAt: capturedAt,
-            endedAt: capturedAt,
-            samples: [TaptionWatchAccelerationSample(
-                capturedAt: capturedAt,
-                acceleration: TaptionWatchSensorVector3(x: 0, y: 0, z: 1),
-                sequence: 1,
-                isAmbient: true
-            )]
-        )
-        let optionalReceipt = try await archive.recordForRestore(
-            [chunk],
-            now: start
-        )
-        let receipt = try XCTUnwrap(optionalReceipt)
-        let readTask = Task { try await archive.allAccelerationChunks() }
-        await Task.yield()
-
-        readTask.cancel()
-        do {
-            _ = try await readTask.value
-            XCTFail("Cancelled restore reader unexpectedly completed")
-        } catch is CancellationError {}
-
-        try await archive.rollbackAccelerationRestore(receipt)
-        let stored = try await archive.allAccelerationChunks()
-        XCTAssertTrue(stored.isEmpty)
     }
 
     @MainActor
@@ -3371,176 +2122,11 @@ final class SensorDayStoreTests: XCTestCase {
             )
         )
         XCTAssertEqual(restored, [existing])
-        let day = TaptionPlanDayKey(date: start)
-        let watchStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-watch-v3.sqlite"),
-            device: .appleWatch
+        let store = try TaptionStoreV2(
+            url: directory.appendingPathComponent(TaptionStoreV2.fileName)
         )
-        let iPhoneStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent("taption-plan-iphone-v3.sqlite"),
-            device: .iPhone
-        )
-        let watchIDs = try await watchStore.rawEvents(
-            for: day,
-            domain: "watch-acceleration"
-        ).map(\.id)
-        let iPhoneIDs = try await iPhoneStore.rawEvents(
-            for: day,
-            domain: "watch-acceleration"
-        ).map(\.id)
-        XCTAssertEqual(watchIDs, [existing.id.uuidString])
-        XCTAssertEqual(iPhoneIDs, [existing.id.uuidString])
-    }
-
-    @MainActor
-    func testPlanDayDatabaseReadsBackTheLatestProjectionAfterRegeneration() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-projection-refresh-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-
-        let day = Date(timeIntervalSince1970: 2_200_000_000)
-        let actualID = UUID()
-        let reading = makeReading(
-            day.addingTimeInterval(90),
-            sequence: 1
-        )
-        func snapshot(title: String) -> PlanDayDataSnapshot {
-            PlanDayDataSnapshot(
-                day: day,
-                sourceRevision: 1,
-                sourceUpdatedAt: day,
-                actuals: [
-                    ActualRecord(
-                        id: actualID,
-                        planID: nil,
-                        title: title,
-                        categoryID: "activity",
-                        startedAt: day.addingTimeInterval(60),
-                        endedAt: day.addingTimeInterval(120),
-                        source: .location,
-                        confidence: .medium,
-                        createdAt: day
-                    ),
-                ],
-                places: [],
-                travel: [],
-                readings: [reading],
-                isComplete: true
-            )
-        }
-
-        try await database.save(snapshot(title: "근무"))
-        try await database.save(snapshot(title: "집안일"))
-
-        let restored = try await database.load(day: day, sourceRevision: 1)
-        XCTAssertEqual(restored?.actuals.first?.title, "집안일")
-        XCTAssertEqual(restored, snapshot(title: "집안일"))
-
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let dayKey = TaptionPlanDayKey(date: day)
-        let actualEvents = try await store.rawEvents(for: dayKey, domain: "plan-actual")
-        let sensorEvents = try await store.rawEvents(for: dayKey, domain: "sensor-reading")
-        XCTAssertEqual(actualEvents.count, 1)
-        XCTAssertEqual(sensorEvents.count, 1)
-        #if !targetEnvironment(simulator)
-        XCTAssertEqual(
-            try FileManager.default.attributesOfItem(
-                atPath: directory.appendingPathComponent(
-                    "taption-plan-iphone-v3.sqlite"
-                ).path
-            )[.protectionKey] as? FileProtectionType,
-            .completeUntilFirstUserAuthentication
-        )
-        #endif
-    }
-
-    @MainActor
-    func testPlanDayDatabaseReusesLegacyPayloadWithoutSourceFingerprint() async throws {
-        struct LegacyPayload: Encodable {
-            let day: Date
-            let sourceUpdatedAt: Date
-            let actuals: [ActualRecord]
-            let places: [PlaceStay]
-            let travel: [TravelSegment]
-            let readings: [SensorReading]
-            let isComplete: Bool
-        }
-
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-legacy-payload-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let day = Date(timeIntervalSince1970: 2_200_000_000)
-        let snapshot = PlanDayDataSnapshot(
-            day: day,
-            sourceRevision: 1,
-            sourceUpdatedAt: day,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [],
-            isComplete: true
-        )
-        try await database.save(snapshot)
-
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let dayKey = TaptionPlanDayKey(date: day)
-        let materialized = try await store.materializedDay(for: dayKey)
-        let current = try XCTUnwrap(materialized)
-        let legacy = try TaptionPlanCanonicalStorage.encode(LegacyPayload(
-            day: snapshot.day,
-            sourceUpdatedAt: snapshot.sourceUpdatedAt,
-            actuals: snapshot.actuals,
-            places: snapshot.places,
-            travel: snapshot.travel,
-            readings: snapshot.readings,
-            isComplete: snapshot.isComplete
-        ))
-        try await store.replaceMaterializedDay(.init(
-            device: current.device,
-            day: current.day,
-            sourceRevision: current.sourceRevision,
-            projectionVersion: current.projectionVersion,
-            rawDigest: current.rawDigest,
-            rawEventCount: current.rawEventCount,
-            firstTimestamp: current.firstTimestamp,
-            lastTimestamp: current.lastTimestamp,
-            payload: TaptionPlanCanonicalStorage.envelope(for: legacy)
-        ))
-
-        let restored = try await database.load(
-            day: day,
-            sourceRevision: 99,
-            sourceFingerprint: snapshot.sourceFingerprint
-        )
-
-        XCTAssertEqual(restored?.sourceFingerprint, snapshot.sourceFingerprint)
-        XCTAssertEqual(restored?.sourceRevision, 99)
+        let ids = try await store.rawEvents(kind: TaptionRawEvent.Kind.watchAcceleration).map(\.id)
+        XCTAssertEqual(ids, [existing.id.uuidString])
     }
 
     func testPlanDaySnapshotMakeStopsBeforeCancelledProjection() {
@@ -3573,15 +2159,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-projection-cancel-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_200_000_000)
         let readings = (0..<1_024).map {
             makeReading(date.addingTimeInterval(TimeInterval($0)))
@@ -3613,240 +2191,12 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testPlanDayLoadCoordinatorCachedSnapshotDoesNotWriteOrSeedNormalLoad() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-cached-preview-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let stored = PlanDayDataSnapshot(
-            day: date,
-            sourceRevision: 1,
-            sourceUpdatedAt: date,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [makeReading(date)],
-            isComplete: true
-        )
-        try await database.save(stored)
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let dayKey = TaptionPlanDayKey(date: date)
-        let beforeRow = try await store.materializedDay(for: dayKey)
-        let before = try XCTUnwrap(beforeRow)
-        let coordinator = PlanDayLoadCoordinator(database: database)
-
-        let preview = await coordinator.cachedSnapshot(
-            day: date,
-            source: .empty,
-            sourceRevision: 99
-        )
-
-        XCTAssertEqual(preview?.sourceRevision, 1)
-        XCTAssertEqual(coordinator.cachedDayCount, 0)
-        let afterPreviewRow = try await store.materializedDay(for: dayKey)
-        let afterPreview = try XCTUnwrap(afterPreviewRow)
-        XCTAssertEqual(afterPreview, before)
-
-        var sensorLoadCount = 0
-        let refreshed = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 99,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: true
-                )
-            }
-        )
-        XCTAssertEqual(sensorLoadCount, 0)
-        XCTAssertEqual(refreshed.sourceRevision, 99)
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorCachedSnapshotAllowsStaleRawOnlyForPreview() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-cached-stale-raw-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let stored = PlanDayDataSnapshot(
-            day: date,
-            sourceRevision: 1,
-            sourceUpdatedAt: date,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [makeReading(date)],
-            isComplete: true
-        )
-        try await database.save(stored)
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let dayKey = TaptionPlanDayKey(date: date)
-        try await store.appendRawEvents([
-            TaptionPlanRawEvent(
-                device: .iPhone,
-                day: dayKey,
-                timestamp: date.addingTimeInterval(1),
-                sequence: 2,
-                id: UUID().uuidString,
-                domain: "cached-preview-test",
-                provenance: ["test"],
-                payload: Data([0x01])
-            ),
-        ])
-        let rowBeforePreviewValue = try await store.materializedDay(for: dayKey)
-        let rowBeforePreview = try XCTUnwrap(rowBeforePreviewValue)
-        let coordinator = PlanDayLoadCoordinator(database: database)
-
-        let preview = await coordinator.cachedSnapshot(
-            day: date,
-            source: .empty,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(preview?.readings, stored.readings)
-        let afterPreviewRow = try await store.materializedDay(for: dayKey)
-        let afterPreview = try XCTUnwrap(afterPreviewRow)
-        XCTAssertEqual(afterPreview, rowBeforePreview)
-
-        var sensorLoadCount = 0
-        let refreshed = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: true
-                )
-            }
-        )
-        XCTAssertEqual(sensorLoadCount, 1)
-        XCTAssertTrue(refreshed.isComplete)
-        XCTAssertTrue(refreshed.readings.isEmpty)
-        let afterRefreshRow = try await store.materializedDay(for: dayKey)
-        let afterRefresh = try XCTUnwrap(afterRefreshRow)
-        XCTAssertNotEqual(afterRefresh.payload, rowBeforePreview.payload)
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorForceReloadBypassesMaterializedCacheWhenPrimaryArchiveAdvances() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-primary-archive-advance-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let primaryArchive = try SensorReadingArchive(
-            fileURL: directory.appendingPathComponent(
-                "primary-sensor-readings.jsonl"
-            ),
-            storeURL: directory.appendingPathComponent(
-                "primary-sensor.sqlite"
-            )
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let span = TimeSpan(
-            start: date.addingTimeInterval(-1),
-            end: date.addingTimeInterval(61)
-        )
-        let first = makeReading(date, sequence: 1)
-        let second = makeReading(
-            date.addingTimeInterval(60),
-            sequence: 2
-        )
-        try await primaryArchive.append(first)
-        try await database.save(PlanDayDataSnapshot(
-            day: date,
-            sourceRevision: 1,
-            sourceUpdatedAt: date,
-            actuals: [],
-            places: [],
-            travel: [],
-            readings: [first],
-            isComplete: true
-        ))
-
-        // The primary archive advances independently; V3 has not received
-        // the new reading, so its materialized digest still looks valid.
-        try await primaryArchive.append(second)
-        let primaryReadings = try await primaryArchive.routeReadings(in: span)
-        XCTAssertEqual(primaryReadings, [first, second])
-
-        let coordinator = PlanDayLoadCoordinator(database: database)
-        var sensorLoadCount = 0
-        let cached = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: primaryReadings,
-                    isComplete: true
-                )
-            }
-        )
-        XCTAssertEqual(cached.readings, [first])
-        XCTAssertEqual(sensorLoadCount, 0)
-
-        let refreshed = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: primaryReadings,
-                    isComplete: true
-                )
-            },
-            forceReload: true
-        )
-        XCTAssertEqual(refreshed.readings, [first, second])
-        XCTAssertEqual(sensorLoadCount, 1)
-    }
-
-    @MainActor
     func testPlanDayLoadCoordinatorKeepsInvalidatedPreviewUntilMemoryPressure() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-cached-invalidation-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
         let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let reading = makeReading(date)
 
         _ = await coordinator.load(
@@ -3861,7 +2211,6 @@ final class SensorDayStoreTests: XCTestCase {
             }
         )
         coordinator.invalidate(day: date)
-        try await database.invalidate(day: date)
 
         let invalidatedPreview = await coordinator.cachedSnapshot(
             day: date,
@@ -3885,9 +2234,8 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-cached-generation-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
         let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
 
         _ = await coordinator.load(
             day: date,
@@ -3919,8 +2267,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-cached-cancelled-invalidation-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
 
         _ = await coordinator.load(
@@ -3972,130 +2319,11 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testPlanDayLoadCoordinatorRetriesCacheReadInvalidatedWhileBlocked()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-blocked-cache-invalidation-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = makeReading(date.addingTimeInterval(1), sequence: 1)
-        let refreshed = makeReading(date.addingTimeInterval(2), sequence: 2)
-        try await database.save(PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [original],
-                isComplete: true
-            )
-        ))
-
-        let cacheReadGate = SensorReadCheckpointGate()
-        let coordinator = PlanDayLoadCoordinator(
-            database: database,
-            afterDatabaseCacheRead: { await cacheReadGate.pauseOnce() }
-        )
-        var reloadCount = 0
-        let loadTask = Task { @MainActor in
-            await coordinator.load(
-                day: date,
-                source: .empty,
-                sourceRevision: 1,
-                sensorLoader: { _ in
-                    reloadCount += 1
-                    return SensorReadingsLoadResult(
-                        readings: [refreshed],
-                        isComplete: true
-                    )
-                }
-            )
-        }
-        await cacheReadGate.waitUntilPaused()
-        coordinator.invalidate(day: date)
-        await cacheReadGate.resume()
-
-        let loaded = await loadTask.value
-        XCTAssertEqual(loaded.readings, [refreshed])
-        XCTAssertEqual(reloadCount, 1)
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorDoesNotRetryCancelledBlockedCacheRead()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-blocked-cache-cancel-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = makeReading(date.addingTimeInterval(1), sequence: 1)
-        let refreshed = makeReading(date.addingTimeInterval(2), sequence: 2)
-        try await database.save(PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [original],
-                isComplete: true
-            )
-        ))
-
-        let cacheReadGate = SensorReadCheckpointGate()
-        let coordinator = PlanDayLoadCoordinator(
-            database: database,
-            afterDatabaseCacheRead: { await cacheReadGate.pauseOnce() }
-        )
-        var reloadCount = 0
-        let loadTask = Task { @MainActor in
-            await coordinator.load(
-                day: date,
-                source: .empty,
-                sourceRevision: 1,
-                sensorLoader: { _ in
-                    reloadCount += 1
-                    return SensorReadingsLoadResult(
-                        readings: [refreshed],
-                        isComplete: true
-                    )
-                }
-            )
-        }
-        await cacheReadGate.waitUntilPaused()
-        coordinator.invalidate(day: date)
-        loadTask.cancel()
-        await cacheReadGate.resume()
-
-        let loaded = await loadTask.value
-        XCTAssertFalse(loaded.isComplete)
-        XCTAssertEqual(reloadCount, 0)
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(persisted?.readings, [original])
-    }
-
-    @MainActor
     func testPlanDayLoadCoordinatorCachedPreviewP95With65853HistoryRecords() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-cached-preview-benchmark-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
 
         var sensorLoadCount = 0
@@ -4165,8 +2393,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-coordinator-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database, cacheCapacity: 1)
+        let coordinator = PlanDayLoadCoordinator(cacheCapacity: 1)
         let first = Date(timeIntervalSince1970: 2_100_000_000)
         let second = first.addingTimeInterval(86_400)
 
@@ -4197,8 +2424,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-reuse-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         var loadCount = 0
         let loader: (Date) async -> SensorReadingsLoadResult = { _ in
@@ -4235,8 +2461,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-revision-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         var loadCount = 0
         let loader: (Date) async -> SensorReadingsLoadResult = { _ in
@@ -4296,581 +2521,10 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testReprojectionUsesOneMaterializedReadAndPreservesRaw() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("single-day-read-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        _ = try await database.migrateLegacyIfNeeded(source: .empty, sourceRevision: 1,
-            readings: [], watchSummaries: [], rawEnvelopes: [])
-        let readings = (0..<1_440).map { makeReading(date.addingTimeInterval(Double($0))) }
-        try await database.save(PlanDayDataSnapshot.make(date: date, sourceRevision: 1,
-            source: .empty, sensorResult: SensorReadingsLoadResult(readings: readings, isComplete: true)))
-        var source = TaptionDataSnapshot.empty
-        source.actuals = [ActualRecord(planID: nil, title: "확정 활동", categoryID: "work",
-            startedAt: date, endedAt: date.addingTimeInterval(60), source: .manual)]
-        let before = await database.materializedLoadCount
-        let coordinator = PlanDayLoadCoordinator(database: database)
-        var sensorLoads = 0
-        let result = await coordinator.load(day: date, source: source, sourceRevision: 2,
-            sensorLoader: { _ in
-                sensorLoads += 1
-                return SensorReadingsLoadResult(readings: [], isComplete: false)
-            })
-        let count = await database.materializedLoadCount - before
-        XCTAssertEqual(count, 1)
-        XCTAssertEqual(sensorLoads, 0)
-        XCTAssertEqual(result.readings, readings)
-        XCTAssertEqual(result.actuals, source.actuals)
-        XCTAssertTrue(result.isComplete)
-        print("REPROJECT_MATERIALIZED_READS=\(count)")
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorReprojectsPersistedRawWhenSourceChanges() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-reproject-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let reading = makeReading(date)
-        try await database.save(
-            PlanDayDataSnapshot.make(
-                date: date,
-                sourceRevision: 1,
-                source: .empty,
-                sensorResult: SensorReadingsLoadResult(
-                    readings: [reading],
-                    isComplete: true
-                )
-            )
-        )
-        let coordinator = PlanDayLoadCoordinator(database: database)
-        var sensorLoadCount = 0
-        var changedSource = TaptionDataSnapshot.empty
-        changedSource.actuals = [
-            ActualRecord(
-                planID: nil,
-                title: "업무",
-                categoryID: "work",
-                startedAt: date.addingTimeInterval(3_600),
-                endedAt: date.addingTimeInterval(7_200),
-                source: .manual
-            ),
-        ]
-
-        _ = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: false
-                )
-            }
-        )
-        let reprojected = await coordinator.load(
-            day: date,
-            source: changedSource,
-            sourceRevision: 2,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: false
-                )
-            }
-        )
-
-        XCTAssertEqual(sensorLoadCount, 0)
-        XCTAssertEqual(reprojected.readings, [reading])
-        XCTAssertEqual(reprojected.actuals.count, 1)
-        XCTAssertEqual(reprojected.sourceRevision, 2)
-        XCTAssertEqual(coordinator.cachedDayCount, 2)
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 2,
-            sourceFingerprint: reprojected.sourceFingerprint
-        )
-        XCTAssertEqual(persisted?.actuals, reprojected.actuals)
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRejectsInvalidatedReprojectionWaitingForWriteLock()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-save-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        try await database.save(original)
-
-        let lock = try await TaptionDataFileLock.acquire(
-            url: directory.appendingPathComponent("taption-plan-day-write.lock")
-        )
-        defer { lock.unlock() }
-        let validity = PlanDaySaveValidity()
-        let stale = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 2,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        let saveTask = Task {
-            try await database.save(stale, ifCurrent: { validity.check() })
-        }
-        try await Task.sleep(for: .milliseconds(20))
-        validity.isCurrent = false
-        lock.unlock()
-
-        do {
-            try await saveTask.value
-            XCTFail("Invalidated reprojection was committed")
-        } catch is CancellationError {}
-
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(persisted?.sourceRevision, original.sourceRevision)
-        XCTAssertEqual(persisted?.sourceFingerprint, original.sourceFingerprint)
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorDoesNotRetryCancelledReprojectionWaitingForWriteLock()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-cancelled-reprojection-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        try await database.save(original)
-
-        let lock = try await TaptionDataFileLock.acquire(
-            url: directory.appendingPathComponent("taption-plan-day-write.lock")
-        )
-        defer { lock.unlock() }
-
-        let coordinator = PlanDayLoadCoordinator(database: database)
-        var changedSource = TaptionDataSnapshot.empty
-        changedSource.actuals = [
-            ActualRecord(
-                planID: nil,
-                title: "업무",
-                categoryID: "work",
-                startedAt: date.addingTimeInterval(3_600),
-                endedAt: date.addingTimeInterval(7_200),
-                source: .manual
-            ),
-        ]
-        var sensorLoadCount = 0
-        let loadTask = Task { @MainActor in
-            await coordinator.load(
-                day: date,
-                source: changedSource,
-                sourceRevision: 2,
-                sensorLoader: { _ in
-                    sensorLoadCount += 1
-                    return SensorReadingsLoadResult(
-                        readings: [],
-                        isComplete: true
-                    )
-                }
-            )
-        }
-        try await Task.sleep(for: .milliseconds(100))
-        loadTask.cancel()
-        lock.unlock()
-        _ = await loadTask.value
-
-        XCTAssertEqual(sensorLoadCount, 0)
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(persisted?.sourceRevision, original.sourceRevision)
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRemovesMaterializationInvalidatedDuringCommit()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-commit-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        try await database.save(original)
-        let stale = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 2,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        let validity = PlanDaySaveValidity(rejectAtCheck: 6)
-
-        do {
-            try await database.save(stale, ifCurrent: { validity.check() })
-            XCTFail("Invalidated materialization remained committed")
-        } catch is CancellationError {}
-
-        let retained = try await database.load(
-            day: date,
-            sourceRevision: original.sourceRevision
-        )
-        XCTAssertEqual(retained?.sourceRevision, original.sourceRevision)
-
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 2
-        )
-        XCTAssertNil(persisted)
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRestoresRawProjectionWhenInvalidatedAfterReplace()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-raw-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let oldRecord = ActualRecord(
-            planID: nil,
-            title: "기존",
-            categoryID: "work",
-            startedAt: date.addingTimeInterval(3_600),
-            endedAt: date.addingTimeInterval(7_200),
-            source: .manual
-        )
-        var oldSource = TaptionDataSnapshot.empty
-        oldSource.actuals = [oldRecord]
-        let original = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: oldSource,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        try await database.save(original)
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let dayKey = TaptionPlanDayKey(date: date)
-        let originalRawEvents = try await store.rawEvents(
-            for: dayKey,
-            domain: "plan-actual"
-        )
-
-        let newRecord = ActualRecord(
-            planID: nil,
-            title: "새 항목",
-            categoryID: "work",
-            startedAt: date.addingTimeInterval(10_800),
-            endedAt: date.addingTimeInterval(14_400),
-            source: .manual
-        )
-        var newSource = TaptionDataSnapshot.empty
-        newSource.actuals = [newRecord]
-        let stale = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 2,
-            source: newSource,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        let validity = PlanDaySaveValidity(rejectAtCheck: 4)
-
-        do {
-            try await database.save(stale, ifCurrent: { validity.check() })
-            XCTFail("Invalidated raw projection remained committed")
-        } catch is CancellationError {}
-
-        let rawEvents = try await store.rawEvents(
-            for: dayKey,
-            domain: "plan-actual"
-        )
-        XCTAssertEqual(rawEvents, originalRawEvents)
-        let persisted = try await database.load(
-            day: date,
-            sourceRevision: 1
-        )
-        XCTAssertEqual(persisted?.actuals, [oldRecord])
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRemovesSensorEventsWhenInvalidatedAfterAppend()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-sensor-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let original = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 1,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [],
-                isComplete: true
-            )
-        )
-        try await database.save(original)
-
-        let staleReading = makeReading(date.addingTimeInterval(60))
-        let stale = PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: 2,
-            source: .empty,
-            sensorResult: SensorReadingsLoadResult(
-                readings: [staleReading],
-                isComplete: true
-            )
-        )
-        let validity = PlanDaySaveValidity(rejectAtCheck: 3)
-        do {
-            try await database.save(stale, ifCurrent: { validity.check() })
-            XCTFail("Invalidated sensor event was persisted")
-        } catch is CancellationError {}
-
-        let store = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-iphone-v3.sqlite"
-            ),
-            device: .iPhone
-        )
-        let rawEvents = try await store.rawEvents(
-            for: TaptionPlanDayKey(date: date),
-            domain: "sensor-reading"
-        )
-        XCTAssertTrue(rawEvents.isEmpty)
-        let persisted = try await database.load(day: date, sourceRevision: 1)
-        XCTAssertEqual(persisted?.readings, [])
-    }
-
-    @MainActor
-    func testPlanDayDatabaseRollsBackOnlyInsertedWatchEventsWhenInvalidatedAfterAppend()
-        async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stale-watch-raw-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        var existingReading = makeReading(date.addingTimeInterval(60))
-        existingReading.sourceDevice = .appleWatch
-        var insertedReading = makeReading(date.addingTimeInterval(120))
-        insertedReading.sourceDevice = .appleWatch
-
-        func snapshot(revision: UInt64, readings: [SensorReading])
-            -> PlanDayDataSnapshot {
-            PlanDayDataSnapshot.make(
-                date: date,
-                sourceRevision: revision,
-                source: .empty,
-                sensorResult: SensorReadingsLoadResult(
-                    readings: readings,
-                    isComplete: true
-                )
-            )
-        }
-
-        try await database.save(snapshot(revision: 1, readings: [existingReading]))
-        let watchStore = try TaptionPlanV3Store(
-            url: directory.appendingPathComponent(
-                "taption-plan-watch-v3.sqlite"
-            ),
-            device: .appleWatch
-        )
-        let dayKey = TaptionPlanDayKey(date: date)
-        let before = try await watchStore.rawEvents(
-            for: dayKey,
-            domain: "sensor-reading"
-        )
-        XCTAssertEqual(before.count, 1)
-
-        let validity = PlanDaySaveValidity(rejectAtCheck: 5)
-        do {
-            try await database.save(
-                snapshot(revision: 2, readings: [existingReading, insertedReading]),
-                ifCurrent: { validity.check() }
-            )
-            XCTFail("Invalidation after the Watch append must cancel the save")
-        } catch is CancellationError {}
-
-        let after = try await watchStore.rawEvents(
-            for: dayKey,
-            domain: "sensor-reading"
-        )
-        XCTAssertEqual(after, before)
-
-        var taskCancelledReading = makeReading(date.addingTimeInterval(180))
-        taskCancelledReading.sourceDevice = .appleWatch
-        let cancellationValidity = PlanDaySaveValidity(cancelAtCheck: 5)
-        let cancellationTask = Task { @MainActor in
-            try await database.save(
-                snapshot(
-                    revision: 3,
-                    readings: [existingReading, taskCancelledReading]
-                ),
-                ifCurrent: { cancellationValidity.check() }
-            )
-        }
-        do {
-            try await cancellationTask.value
-            XCTFail("Task cancellation after the Watch append must cancel the save")
-        } catch is CancellationError {}
-
-        let afterTaskCancellation = try await watchStore.rawEvents(
-            for: dayKey,
-            domain: "sensor-reading"
-        )
-        XCTAssertEqual(afterTaskCancellation, before)
-    }
-
-    @MainActor
-    func testPlanDayLoadCoordinatorReusesPersistedDayAcrossRuntimeRevision() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-stable-cache-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        _ = try await database.migrateLegacyIfNeeded(
-            source: .empty,
-            sourceRevision: 1,
-            readings: [],
-            watchSummaries: [],
-            rawEnvelopes: []
-        )
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        var sensorLoadCount = 0
-        let first = PlanDayLoadCoordinator(database: database)
-        _ = await first.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: true
-                )
-            }
-        )
-
-        let relaunched = PlanDayLoadCoordinator(database: database)
-        let restored = await relaunched.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 99,
-            sensorLoader: { _ in
-                sensorLoadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: false
-                )
-            }
-        )
-
-        XCTAssertTrue(restored.isComplete)
-        XCTAssertEqual(restored.sourceRevision, 99)
-        XCTAssertEqual(sensorLoadCount, 1)
-    }
-
-    @MainActor
     func testConcurrentDayLoadsDoNotCancelEachOther() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-independent-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         let first = Task { @MainActor in
@@ -4895,7 +2549,7 @@ final class SensorDayStoreTests: XCTestCase {
     func testChangedSourceProjectionKeepsInFlightSensorRead() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-source-shared-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         var loads = 0
@@ -4931,7 +2585,7 @@ final class SensorDayStoreTests: XCTestCase {
     func testPlanDayInvalidateAllCancelsSharedRawReadBeforeReturning() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-raw-invalidate-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         var rawCancelled = false
@@ -4957,7 +2611,7 @@ final class SensorDayStoreTests: XCTestCase {
     func testPlanDayMemoryPressureCancelsRawReadWithoutCachingResult() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-raw-pressure-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         var cancelled = false
@@ -4988,7 +2642,7 @@ final class SensorDayStoreTests: XCTestCase {
     func testBackgroundTransitionCancelsDayLoadAndAllowsFreshForegroundRead() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-background-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         var cancelled = false
@@ -5018,7 +2672,7 @@ final class SensorDayStoreTests: XCTestCase {
     func testConcurrentForcedDayLoadsShareSensorRead() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-forced-shared-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let coordinator = PlanDayLoadCoordinator(database: try PlanDayDatabase(directory: directory))
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let gate = SensorReadCheckpointGate()
         var loadCount = 0
@@ -5054,8 +2708,7 @@ final class SensorDayStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-incomplete-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         var loadCount = 0
         let loader: (Date) async -> SensorReadingsLoadResult = { _ in
@@ -5086,53 +2739,11 @@ final class SensorDayStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testPlanDayLoadCoordinatorIgnoresPersistedIncompleteDay() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-persisted-incomplete-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let date = Date(timeIntervalSince1970: 2_100_000_000)
-        let database = try PlanDayDatabase(directory: directory)
-        try await database.save(
-            PlanDayDataSnapshot.make(
-                date: date,
-                sourceRevision: 1,
-                source: .empty,
-                sensorResult: SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: false
-                )
-            )
-        )
-        let coordinator = PlanDayLoadCoordinator(database: database)
-        var loadCount = 0
-
-        let loaded = await coordinator.load(
-            day: date,
-            source: .empty,
-            sourceRevision: 1,
-            sensorLoader: { _ in
-                loadCount += 1
-                return SensorReadingsLoadResult(
-                    readings: [],
-                    isComplete: true
-                )
-            }
-        )
-
-        XCTAssertTrue(loaded.isComplete)
-        XCTAssertEqual(loadCount, 1)
-    }
-
-    @MainActor
     func testPlanDayLoadCoordinatorPreloadsEveryDayInMonth() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("plan-day-preload-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(
-            database: database,
-            cacheCapacity: 42
-        )
+        let coordinator = PlanDayLoadCoordinator(cacheCapacity: 42)
         let date = Date(timeIntervalSince1970: 2_100_000_000)
         let calendar = Calendar.autoupdatingCurrent
         let monthStart = calendar.date(
@@ -5164,9 +2775,6 @@ final class SensorDayStoreTests: XCTestCase {
 
     @MainActor
     func testThirtyDayAppColdAndWarmLoadP95StaysInteractive() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("plan-day-30d-p95-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: directory) }
         let calendar = Calendar.autoupdatingCurrent
         let base = calendar.date(
             from: DateComponents(year: 2026, month: 8, day: 1)
@@ -5174,34 +2782,7 @@ final class SensorDayStoreTests: XCTestCase {
         let days = (0..<30).compactMap {
             calendar.date(byAdding: .day, value: $0, to: base)
         }
-        do {
-            let database = try PlanDayDatabase(directory: directory)
-            _ = try await database.migrateLegacyIfNeeded(
-                source: .empty,
-                sourceRevision: 1,
-                readings: [],
-                watchSummaries: [],
-                rawEnvelopes: []
-            )
-            for day in days {
-                let readings = (0..<1_440).map {
-                    makeReading(day.addingTimeInterval(Double($0 * 60)))
-                }
-                try await database.save(PlanDayDataSnapshot(
-                    day: day,
-                    sourceRevision: 1,
-                    sourceUpdatedAt: day,
-                    actuals: [],
-                    places: [],
-                    travel: [],
-                    readings: readings,
-                    isComplete: true
-                ))
-            }
-        }
-
-        let database = try PlanDayDatabase(directory: directory)
-        let coordinator = PlanDayLoadCoordinator(database: database)
+        let coordinator = PlanDayLoadCoordinator()
         var sensorLoadCount = 0
         func readDurations() async -> [Double] {
             var milliseconds: [Double] = []
@@ -5211,11 +2792,13 @@ final class SensorDayStoreTests: XCTestCase {
                     day: day,
                     source: .empty,
                     sourceRevision: 1,
-                    sensorLoader: { _ in
+                    sensorLoader: { [self] day in
                         sensorLoadCount += 1
                         return SensorReadingsLoadResult(
-                            readings: [],
-                            isComplete: false
+                            readings: (0..<1_440).map {
+                                makeReading(day.addingTimeInterval(Double($0 * 60)))
+                            },
+                            isComplete: true
                         )
                     }
                 )
@@ -5237,8 +2820,8 @@ final class SensorDayStoreTests: XCTestCase {
         let warmP95 = p95(await readDurations())
         print("APP_DAY_LOAD_30D_COLD_P95_MS=\(coldP95)")
         print("APP_DAY_LOAD_30D_WARM_P95_MS=\(warmP95)")
-        XCTAssertEqual(sensorLoadCount, 0)
-        XCTAssertLessThan(coldP95, 100)
+        XCTAssertEqual(sensorLoadCount, 30, "the warm pass is served from memory without reading sensors")
+        XCTAssertLessThan(coldP95, 500)
         XCTAssertLessThan(warmP95, 5)
     }
 }

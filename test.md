@@ -1,5 +1,11 @@
 # 검증 기록
 
+## ARC1019A01 · 에이전트 두 작업 병합 (2026-10-19)
+- 병합: (1) 월 단위 백업 엔진 최종본 `rewrite/backup-v2`(`0217902`: 삭제 표시, 설정 파일, 봉인된 달의 늦은 행 합집합, `deleteAllBackups`)는 앞으로 당기기로 반영했다. (2) 일자 DB 사용처 이전 브랜치 `worktree-agent-a8b7b688a4e569816`(`945659c`, STO1019B01: 워치·원시 기기 데이터·HealthKit을 새 저장소로, 하루 캐시·이전 저장소 클래스·이전 형식 옮기기 삭제, 약 12,600줄 삭제)를 합쳤다. 충돌 5개 파일을 직접 해결: 저장소 저장은 순서 직렬화와 삭제 세대 확인을 둘 다 유지, `TaptionStoreV2`는 두 쪽이 각자 고친 같은 결함(단일 트랜잭션 변경, 저장 형태 비교, `busy_timeout`)이라 삭제 표시를 지원하는 쪽으로 통일하고 중복 함수·설정을 제거, 프로젝트 파일은 서로 다른 파일 등록이라 둘 다 유지.
+- 판단 번복: 독립 검토 반영 때 센서 저장소 `deleteAll`을 위치 기록만 지우게 바꿨으나, 에이전트의 단일 파일 설계는 센서 저장소의 `deleteAll`이 한 파일의 모든 사본(위치·원시 봉투·워치·HealthKit·기록)을 지우고 삭제 세대(fence)로 이전 저장소 객체의 저장을 막는다. 검토가 우려한 캐시 불일치는 이 fence로 막히므로 전체 삭제 쪽을 따랐다.
+- 자동 검증: 합친 직후 전체 `TaptionPlanTests` 1,547개 중 실패 5(기기 환경 의존 StoreKit·로컬라이제이션 3 + 새 실패 `testDeleteAllClearsEverySourceCopyInTheSingleStore` 2, `merge-ab-full.log`). 전체 삭제 쪽으로 정리한 뒤 `SensorDayStoreTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`TaptionBackupV2Tests`·`HealthKitIntegrationTests` 135개 실행, 실패 0(`merge-ab-fix.log`).
+- 제한: 두 에이전트의 보고 중 직접 재현한 것은 위 테스트 실행뿐이다. 에이전트가 보고한 압축률·파이썬 도구 검증·iCloud 구현 미실행·성능 측정 부재는 그대로 둔다. 위젯이 새 저장소를 여는 경로는 기기에서 확인하지 못했다.
+
 ## ARC1019A01 · 월 단위 백업 엔진 병합 (2026-10-19)
 - 병합: 에이전트가 별도 워크트리에서 만든 브랜치 `rewrite/backup-v2`(커밋 `5708caf`, 요청 ID BKP1019A02)를 `rewrite/storage-v2`에 합쳤다. 자동 병합은 충돌이 없었으나 합친 결과에서 백업 엔진 테스트 3개가 실패했다: 에이전트의 `upsertRecordsKeepingNewer`가 `ON CONFLICT(id)`를 썼는데 독립 검토 반영으로 `records` 기본키가 `(kind, id)`가 되어 `ON CONFLICT clause does not match any PRIMARY KEY`가 났다. 충돌 대상을 `(kind, id)`로 맞춰 고쳤다(`merge-a-11.log` 실패 → `merge-a-11b.log` 통과).
 - 자동 검증: iPhone 11 Pro 실기기, `TaptionBackupV2Tests`(17)·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`SensorDayStoreTests` 합쳐 123개 실행, 실패 0, `TEST SUCCEEDED`(`merge-a-11b.log`). 에이전트가 보고한 백업 엔진 17개 통과와 같은 결과다.
@@ -11,6 +17,12 @@
 - 조치: 헤더 해석 실패는 `invalidSnapshot`으로 실패, 변경을 한 트랜잭션으로, 저장을 순서대로 하나씩, 기본키를 (kind, id)로, `secure_delete=ON`과 삭제 뒤 공간 반환(분할 incremental_vacuum), 복원 세션 목록은 삭제 성공 뒤에 제거, 읽기 끝 상태 확인, 센서 원본 비교를 저장 형태끼리(`sameStoredContent`), 5초 대기, 센서 삭제는 `deleteAllReadings`, 그레고리력 현지 날짜 고정, 스키마 생성을 `BEGIN IMMEDIATE`와 `IF NOT EXISTS`로.
 - 자동 검증: iPhone 11 Pro 실기기, `TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`SensorDayStoreTests` 106개 실행, 실패 0, `TEST SUCCEEDED`(`review-fix-11.log`). 새 회귀 테스트: 종류가 다른 같은 id, 닫힌 저장소에서 삭제까지 되돌림, 소수 초 시각 재전송 허용·다른 내용 거부, 삭제 뒤 파일과 WAL에 SSID 문자열이 남지 않음, 그레고리력 `day`, 해석 불가 헤더가 실패하고 계획이 남음, 연속 저장이 마지막 상태로 끝남.
 - 제한: 성능 지적(항목마다 JSON 직렬화, 저장마다 전체 재인코딩, `known`의 본문 상주, `day` 색인)은 측정 전이라 고치지 않았다. 시간대를 옮겨 다닐 때 `day`는 기록 시점의 시간대 기준이다. 다중 프로세스(위젯)가 같은 파일을 여는 경로는 아직 없어서 확인하지 못했다.
+
+## STO1019B01 · 이전 일자 DB 사용처를 새 저장소 하나로 통합 (브랜치 worktree-agent-a8b7b688a4e569816, 2026-10-19)
+- 구현: 새 `raw_events` 표(`TaptionStoreRawEvents.swift`: 종류+id 유일, 변경 금지·충돌 시 묶음 전체 롤백, origin·provenance·시각 열, 본문은 JSON)에 워치 요약·가속도 묶음·원시 기기 봉투를 저장. HealthKit 값은 `records`(imported)·동기화 위치는 별도 종류 행. `PlanDayDatabase`는 워치 원본 전용으로 줄이고 `PlanDayLoadCoordinator`·지도 하루 캐시는 메모리 전용 bounded 캐시(메모리 경고·데이터 삭제 때 비움). `TaptionStoreRepository`에 전역 삭제 fence 확인 추가, 위젯은 같은 파일을 연다. 삭제: 이전 계획 저장소·월별/추적/워치 파일 보관소·이전 형식 옮기기·패키지 `TaptionPlanDayStore`(약 7,700줄).
+- 기존 버그 수정: `appendImmutableReadings`/`validateAppend`가 1970 기준 초 변환 시 마지막 비트가 달라진 같은 기록을 충돌로 거부함(재시도 시 발생). 저장 모양 기준 비교로 수정, 회귀 테스트 추가.
+- 자동 검증(iPhone 11 Pro): 전체 `TaptionPlanTests` 1518개 중 실패 2건(기준과 동일: StoreKit 1건, LocalizationCatalog 1건), `full-1.log`. 이후 보정(busy_timeout)만 바꾼 뒤 `SensorDayStoreTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`·`HealthKitIntegrationTests` 106개 실패 0(`final-targeted.log`). Debug 앱 빌드 성공.
+- 제한: 기기에 남아 있는 옛 스키마의 `taption-store.sqlite`(열 부족) 때문에 AppModel 기본 생성 시험 일부가 SQL 오류 로그를 남김(결과는 통과). 지도 하루 캐시가 메모리 전용이라 앱 재시작 직후 첫 지도 로딩 성능은 측정하지 않음. 실기기 화면 확인·워치 실제 수신 확인 없음. 워치 앱 쪽 `WatchDayDatabase`(패키지 V3 저장소)와 백업 엔진은 건드리지 않음.
 
 ## ARC1019A01 · 3단계(1/2) 계획·기록 저장소를 새 저장소로 교체 (브랜치 rewrite/storage-v2, 2026-10-19)
 - 구현: `TaptionStoreRepository`(`PlanDataRepository`). 스냅샷의 14종 배열(계획·실적·연결·메모·스티커·카테고리·사진·캘린더·날씨·장소·이동·층 이동·연간 리포트)을 `records` 표에 행 하나씩, 헤더(스키마 버전·갱신 시각·설정)를 `header` 행으로 저장한다. 저장은 직전 상태와 본문을 비교해 바뀐 행만 쓰고 사라진 항목은 지운다. 같은 종류 안에서 처음 저장한 순서(`ord`)를 유지한다. 본문 JSON에서 시작·끝 시각과 출처(계획·메모 등 사용자, 장소·이동·날씨 자동, 사진·캘린더 가져옴, 실적은 수동 보정이면 사용자)를 열에 채운다. 전체 삭제는 계획 데이터만 지우고 센서 위치 기록은 남긴다. 센서 저장소와 같은 파일·같은 연결을 공유한다(`TaptionStoreV2.applicationSupport()`). 앱 시작 시 이전 SQLite·파일 저장소 선택 코드를 이 저장소로 교체했다.

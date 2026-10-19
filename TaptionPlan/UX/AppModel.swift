@@ -993,7 +993,6 @@ final class AppModel {
                 || oldValue.travel != snapshot.travel {
                 dayProjectionRevision &+= 1
                 needsLocalRecordNormalization = true
-                dayDatabaseMigrationTask?.cancel()
             }
             if oldValue.settings.activityCorrections != snapshot.settings.activityCorrections
                 || oldValue.settings.confirmedSleepSpans != snapshot.settings.confirmedSleepSpans {
@@ -1267,13 +1266,10 @@ final class AppModel {
     @ObservationIgnored private let watchConnectivityService: AppleWatchConnectivityService
     @ObservationIgnored private let airPodsActivityService: AirPodsActivityService
     @ObservationIgnored private let screenTimeUsageService: ScreenTimeUsageService
-    @ObservationIgnored private let watchSensorArchive:
-        AppleWatchSensorActivityArchive?
     @ObservationIgnored private let rawDeviceDataArchive:
         RawDeviceDataDayArchive?
     @ObservationIgnored private let dayDatabase: PlanDayDatabase?
     @ObservationIgnored private let dayLoadCoordinator: PlanDayLoadCoordinator?
-    @ObservationIgnored private var dayDatabaseMigrationTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var startupSettingsTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
@@ -1382,8 +1378,6 @@ final class AppModel {
         "taption.health-permission-reminder.v1"
     private static let watchDataSyncProfileConfiguredKey =
         "taption.watch-data-sync-profile-configured.v1"
-    private static let watchLegacyFallbackReadKey =
-        "taption.watch-legacy-fallback-read.v1"
     private static let watchSummaryHighWaterKeyPrefix =
         "taption.watch-summary-high-water.v1."
     private static let watchSummaryAppliedHighWaterKeyPrefix =
@@ -1458,7 +1452,6 @@ final class AppModel {
         registersHealthBackgroundHandler: Bool = true,
         startsCommerceLocked: Bool = false,
         dayDatabase: PlanDayDatabase? = nil,
-        watchSensorArchive: AppleWatchSensorActivityArchive? = nil,
         sensorAnalysisDebounceDelay: Duration = .seconds(120)
     ) {
         isCommerceLocked = startsCommerceLocked
@@ -1486,8 +1479,6 @@ final class AppModel {
         let protectionStore = try? BiometricProtectedSnapshotStore.applicationSupport()
         self.biometricProtectedSnapshotStore = protectionStore
         self.biometricDataProtectionStatus = protectionStore?.status ?? .unavailable
-        let legacyRawArchive = try?
-            RawDeviceDataMonthlyArchive.applicationSupport()
         let rawArchive = rawDeviceDataArchive
             ?? (try? RawDeviceDataDayArchive.applicationSupport())
         self.calendarService = calendarService ?? AppleCalendarService()
@@ -1498,9 +1489,7 @@ final class AppModel {
             self.sensorStorageErrorDescription = nil
         } else {
             do {
-                self.sensorService = try AppleSensorDataService.applicationSupport(
-                    rawArchive: legacyRawArchive
-                )
+                self.sensorService = try AppleSensorDataService.applicationSupport()
                 self.sensorStorageErrorDescription = nil
             } catch {
                 self.sensorService = nil
@@ -1535,15 +1524,11 @@ final class AppModel {
             screenTimeUsageService ?? ScreenTimeUsageService()
         self.appUsageAuthorizationState =
             self.screenTimeUsageService.authorizationState
-        self.watchSensorArchive = watchSensorArchive ?? (try?
-            AppleWatchSensorActivityArchive.applicationSupport())
         self.rawDeviceDataArchive = rawArchive
         let resolvedDayDatabase = dayDatabase
             ?? (try? PlanDayDatabase.applicationSupport())
         self.dayDatabase = resolvedDayDatabase
-        self.dayLoadCoordinator = resolvedDayDatabase.map {
-            PlanDayLoadCoordinator(database: $0)
-        }
+        self.dayLoadCoordinator = PlanDayLoadCoordinator()
         let watchReceipt = appleWatchDataReceiptStore.load()
         self.appleWatchLastDataReceivedAt = watchReceipt.latestDataAt
         self.appleWatchReceivedDataKinds = watchReceipt.recentKinds()
@@ -2314,15 +2299,12 @@ final class AppModel {
             }
             if let chunks = rawSensorPayload?.watchAccelerationChunks,
                !chunks.isEmpty {
-                if let dayDatabase {
-                    try await dayDatabase.validateWatchAccelerationChunks(
-                        chunks
-                    )
-                } else if let watchSensorArchive {
-                    try await watchSensorArchive.validateAppend(chunks)
-                } else {
+                guard let dayDatabase else {
                     throw PlanSecurityError.archiveNotFound
                 }
+                try await dayDatabase.validateWatchAccelerationChunks(
+                    chunks
+                )
                 try Task.checkCancellation()
             }
         } catch {
@@ -2343,8 +2325,6 @@ final class AppModel {
         if (rawSensorPayload?.watchAccelerationChunks?.isEmpty == false && dayDatabase != nil)
             || (rawStage != nil && dayDatabase != nil) { requiredStores.insert("watch") }
         let restoreSessionID = try restoreJournal.begin(target: value, requiredStores: requiredStores)
-        var legacyWatchReceipt:
-            AppleWatchSensorActivityArchive.AccelerationRestoreReceipt?
         do {
             try Task.checkCancellation()
             if let rawStage { _ = try await processStagedRawRestore(rawStage, sessionID: restoreSessionID) }
@@ -2376,9 +2356,6 @@ final class AppModel {
                             Array(chunks[offset..<min(offset + 256, chunks.count)]),
                             restoreSessionID: restoreSessionID)
                     }
-                } else if let watchSensorArchive {
-                    legacyWatchReceipt = try await watchSensorArchive
-                        .recordForRestore(chunks)
                 }
                 try Task.checkCancellation()
             }
@@ -2387,8 +2364,7 @@ final class AppModel {
             do {
                 try await recoverCloudRestoreJournal()
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
-                    legacyWatchReceipt: legacyWatchReceipt
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil
                 )
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -2421,8 +2397,7 @@ final class AppModel {
             do {
                 try await recoverCloudRestoreJournal()
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
-                    legacyWatchReceipt: legacyWatchReceipt
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil
                 )
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -2444,8 +2419,7 @@ final class AppModel {
                 try await finishCloudRestoreSession(restoreSessionID, committed: false, requiredStores: requiredStores)
                 try restoreJournal.finish(restoreSessionID)
                 try await rollbackCloudBackupRawMerge(
-                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil,
-                    legacyWatchReceipt: legacyWatchReceipt
+                    sensorReadingIDs: [], envelopeIDs: [], watchReceipt: nil
                 )
             } catch {
                 TaptionPlanDiagnosticsLogger.shared.record(
@@ -2482,11 +2456,6 @@ final class AppModel {
         liveMergeCacheKey = nil
         liveMergeCacheValue = []
         sensorRefreshFingerprints.removeAll()
-        if let legacyWatchReceipt, let watchSensorArchive {
-            await watchSensorArchive.commitAccelerationRestore(
-                legacyWatchReceipt
-            )
-        }
         let calendar = Calendar.autoupdatingCurrent
         let restoredAnalysisDates = Set(
             restoredReadings.map { calendar.startOfDay(for: $0.timestamp) }
@@ -2536,24 +2505,13 @@ final class AppModel {
     private func rollbackCloudBackupRawMerge(
         sensorReadingIDs: [UUID],
         envelopeIDs: [UUID],
-        watchReceipt: PlanDayDatabase.WatchAccelerationRestoreReceipt?,
-        legacyWatchReceipt:
-            AppleWatchSensorActivityArchive.AccelerationRestoreReceipt?
+        watchReceipt: PlanDayDatabase.WatchAccelerationRestoreReceipt?
     ) async throws {
         var failures: [any Error] = []
         if let watchReceipt, let dayDatabase {
             do {
                 try await dayDatabase.rollbackWatchAccelerationRestore(
                     watchReceipt
-                )
-            } catch {
-                failures.append(error)
-            }
-        }
-        if let legacyWatchReceipt, let watchSensorArchive {
-            do {
-                try await watchSensorArchive.rollbackAccelerationRestore(
-                    legacyWatchReceipt
                 )
             } catch {
                 failures.append(error)
@@ -2656,14 +2614,6 @@ final class AppModel {
             envelopes = []
         }
         var watchChunks = [UUID: TaptionWatchAccelerationChunk]()
-        if await needsLegacyWatchSensorArchive(), let watchSensorArchive {
-            for chunk in try await watchSensorArchive.accelerationChunks(
-                in: span
-            ) {
-                watchChunks[chunk.id] = chunk
-            }
-        }
-        // The canonical database wins over the migration-only legacy copy.
         if let dayDatabase {
             for chunk in try await dayDatabase.watchAccelerationChunks(
                 in: span
@@ -4006,74 +3956,7 @@ final class AppModel {
             }
             publishWatchPayload()
             await applyPendingWidgetCommands(repositoryAlreadyLoaded: true)
-            scheduleDayDatabaseMigration()
             outcome = "success"
-        }
-    }
-
-    private func scheduleDayDatabaseMigration() {
-        guard dayDatabaseMigrationTask == nil,
-              let dayDatabase,
-              let sensorService else { return }
-        let source = snapshot
-        let sourceRevision = dayProjectionRevision
-        let legacyRawDeviceArchive = self.rawDeviceDataArchive
-        let legacyWatchSensorArchive = self.watchSensorArchive
-        dayDatabaseMigrationTask = Task { @MainActor [weak self, dayDatabase, sensorService, legacyRawDeviceArchive, legacyWatchSensorArchive, source, sourceRevision] in
-            defer {
-                let needsRetry = self?.dayProjectionRevision != sourceRevision
-                self?.dayDatabaseMigrationTask = nil
-                if needsRetry {
-                    self?.scheduleDayDatabaseMigration()
-                }
-            }
-            do {
-                guard try await dayDatabase.requiresLegacyMigration() else {
-                    return
-                }
-                guard let legacyRawDeviceArchive,
-                      let legacyWatchSensorArchive else {
-                    TaptionPlanDiagnosticsLogger.shared.record(
-                        "day_database_migration_blocked",
-                        level: .error,
-                        fields: ["reason": "legacy_archive_unavailable"]
-                    )
-                    return
-                }
-                let readings = try await sensorService.allArchivedRouteReadings()
-                let watchSummaries = try await legacyWatchSensorArchive.allSummaries()
-                let watchAccelerationChunks = try await legacyWatchSensorArchive
-                    .allAccelerationChunks()
-                let rawEnvelopes = try await legacyRawDeviceArchive.allEnvelopes()
-                guard !Task.isCancelled,
-                      self?.dayProjectionRevision == sourceRevision else { return }
-                if let report = try await dayDatabase.migrateLegacyIfNeeded(
-                    source: source,
-                    sourceRevision: sourceRevision,
-                    readings: readings,
-                    watchSummaries: watchSummaries,
-                    watchAccelerationChunks: watchAccelerationChunks,
-                    rawEnvelopes: rawEnvelopes
-                ) {
-                    TaptionPlanDiagnosticsLogger.shared.record(
-                        "day_database_migration_completed",
-                        fields: [
-                            "days": String(report.dayCount),
-                            "iphone_events": String(report.iPhoneEventCount),
-                            "watch_events": String(report.watchEventCount),
-                            "exact_digest_days": String(report.exactDigestDayCount),
-                        ]
-                    )
-                }
-            } catch is CancellationError {
-                return
-            } catch {
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "day_database_migration_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.compactFields(for: error)
-                )
-            }
         }
     }
 
@@ -4121,6 +4004,7 @@ final class AppModel {
     func handleMemoryPressure() {
         TaptionPlanDiagnosticsLogger.shared.record("application_memory_warning", level: .notice)
         dayLoadCoordinator?.handleMemoryPressure()
+        MapHomeDayCacheEviction.removeAll()
         let repository = self.repository
         Task { await repository.handleMemoryPressure() }
     }
@@ -6326,7 +6210,6 @@ final class AppModel {
             pendingDeviceLocalPersistTask,
             postSaveRefreshTask,
             cloudSyncTask,
-            dayDatabaseMigrationTask,
         ].compactMap { $0 }
         pendingTasks.forEach { $0.cancel() }
         let pendingSensorTimeline = sensorTimelineTask
@@ -6356,10 +6239,10 @@ final class AppModel {
         postSaveRefreshTask = nil
         postSaveRefreshRequested = false
         cloudSyncTask = nil
-        dayDatabaseMigrationTask = nil
         _ = airPodsActivityService.stop(at: deletionCutoff)
         await sensorService?.prepareForDataDeletion()
         await dayLoadCoordinator?.invalidateAll()
+        MapHomeDayCacheEviction.removeAll()
         sensorBackgroundCoordinator.cancel()
         syncSensorBackgroundState()
         for task in pendingTasks { await task.value }
@@ -6480,18 +6363,6 @@ final class AppModel {
             } catch {
                 recordDeletionFailure(
                     AppLanguagePreference.text(korean: "기기 원본", english: "Device source data"),
-                    error)
-            }
-        }
-        if let watchSensorArchive {
-            do {
-                try await watchSensorArchive.deleteAll()
-                UserDefaults.standard.removeObject(
-                    forKey: Self.watchLegacyFallbackReadKey
-                )
-            } catch {
-                recordDeletionFailure(
-                    AppLanguagePreference.text(korean: "Watch 기존 원본", english: "Existing Watch source data"),
                     error)
             }
         }
@@ -8499,35 +8370,7 @@ final class AppModel {
                 )
             }
         }
-        var storedInLegacyArchive = false
-        if !storedInDayDatabase,
-           acceptsDataMutation(capturedAt: chunk.endedAt),
-           let watchSensorArchive {
-            do {
-                try await watchSensorArchive.record(chunk)
-                storedInLegacyArchive = true
-                UserDefaults.standard.set(
-                    true,
-                    forKey: Self.watchLegacyFallbackReadKey
-                )
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_acceleration_archive_recorded",
-                    fields: [
-                        "chunk": chunk.id.uuidString,
-                        "samples": String(chunk.samples.count),
-                    ]
-                )
-            } catch {
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_acceleration_archive_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.fields(for: error).merging([
-                        "chunk": chunk.id.uuidString,
-                    ]) { _, new in new }
-                )
-            }
-        }
-        guard storedInDayDatabase || storedInLegacyArchive else {
+        guard storedInDayDatabase else {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "watch_acceleration_persistence_failed",
                 level: .error,
@@ -8682,36 +8525,13 @@ final class AppModel {
                 )
             }
         }
-        var storedInLegacyArchive = false
-        if !storedInDayDatabase,
-           acceptsDataMutation(capturedAt: summary.endedAt),
-           let watchSensorArchive {
-            do {
-                try await watchSensorArchive.record(summary)
-                storedInLegacyArchive = true
-                UserDefaults.standard.set(
-                    true,
-                    forKey: Self.watchLegacyFallbackReadKey
-                )
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_sensor_archive_recorded",
-                    fields: ["sequence": String(summary.sequence)]
-                )
-            } catch {
-                TaptionPlanDiagnosticsLogger.shared.record(
-                    "watch_sensor_archive_failed",
-                    level: .error,
-                    fields: TaptionDiagnosticError.fields(for: error).merging([
-                        "sequence": String(summary.sequence),
-                    ]) { _, new in new }
-                )
+        guard storedInDayDatabase else {
+            if acceptsDataMutation(capturedAt: summary.endedAt) {
                 userFacingError = AppLanguagePreference.text(
-                    korean: "Apple Watch 센서 기록을 저장하지 못했습니다. ",
-                    english: "Could not save Apple Watch sensor records. "
-                ) + error.localizedDescription
+                    korean: "Apple Watch 센서 기록을 저장하지 못했습니다.",
+                    english: "Could not save Apple Watch sensor records."
+                )
             }
-        }
-        guard storedInDayDatabase || storedInLegacyArchive else {
             if latestWatchSummaryVersion[summary.sessionID] == version {
                 latestWatchSummaryVersion[summary.sessionID] = previousVersion
                 if summary.isFinal {
@@ -9086,46 +8906,13 @@ final class AppModel {
                 return true
             } catch { }
         }
-        guard let watchSensorArchive else { return false }
-        do {
-            try await watchSensorArchive.record(summary)
-            UserDefaults.standard.set(
-                true,
-                forKey: Self.watchLegacyFallbackReadKey
-            )
-            return true
-        } catch {
-            return false
-        }
+        return false
     }
 
     private func latestPersistedWatchSummary(
         for sessionID: UUID
     ) async throws -> TaptionWatchSensorSummary? {
-        var latest = try await dayDatabase?.latestWatchSummary(
-            for: sessionID
-        )
-        let shouldReadLegacyArchive = dayDatabase == nil
-            || Self.persistedWatchSummaryHighWater(for: sessionID) == nil
-            || UserDefaults.standard.bool(
-                forKey: Self.watchLegacyFallbackReadKey
-            )
-        if shouldReadLegacyArchive, let watchSensorArchive {
-            let legacy = try await watchSensorArchive.allSummaries()
-                .filter { $0.sessionID == sessionID }
-                .max {
-                    Self.watchSummaryVersion($0)
-                        < Self.watchSummaryVersion($1)
-                }
-            if let legacy,
-               latest.map({
-                   Self.watchSummaryVersion($0)
-                       < Self.watchSummaryVersion(legacy)
-               }) ?? true {
-                latest = legacy
-            }
-        }
-        return latest
+        try await dayDatabase?.latestWatchSummary(for: sessionID)
     }
 
     private func restoreWatchSummaryHighWaterIfNeeded(
@@ -9154,26 +8941,6 @@ final class AppModel {
                 sequence: latest.sequence,
                 revision: latest.ambientRevision ?? 0
             )
-        }
-        let shouldReadLegacyArchive = dayDatabase == nil
-            || cached == nil
-            || UserDefaults.standard.bool(
-                forKey: Self.watchLegacyFallbackReadKey
-            )
-        if shouldReadLegacyArchive, let watchSensorArchive {
-            let summaries = try await watchSensorArchive.allSummaries()
-            let legacy = summaries.lazy
-                .filter { $0.sessionID == sessionID }
-                .map {
-                    WatchSummaryVersion(
-                        sequence: $0.sequence,
-                        revision: $0.ambientRevision ?? 0
-                    )
-                }
-                .max()
-            if let legacy {
-                persisted = max(persisted ?? legacy, legacy)
-            }
         }
         if let persisted {
             restored = max(restored ?? persisted, persisted)
@@ -9427,7 +9194,7 @@ final class AppModel {
             return
         }
         let rawPayloadFingerprint = (
-            try? RawDeviceDataMonthlyArchive.payloadEncoder().encode(snapshot)
+            try? RawDeviceDataEnvelope.payloadEncoder().encode(snapshot)
         ).map(TaptionPlanCanonicalStorage.checksum)
         guard WatchHealthSnapshotRetryPolicy.accepts(
             capturedAt: snapshot.capturedAt,
@@ -11154,21 +10921,6 @@ final class AppModel {
         var summaries = [String: TaptionWatchSensorSummary]()
         var chunks = [UUID: TaptionWatchAccelerationChunk]()
 
-        if await needsLegacyWatchSensorArchive(), let watchSensorArchive {
-            async let legacySummaries = try? watchSensorArchive.summaries(
-                in: span
-            )
-            async let legacyChunks = try? watchSensorArchive.accelerationChunks(
-                in: span
-            )
-            for summary in (await legacySummaries) ?? [] {
-                summaries["\(summary.sessionID.uuidString):\(summary.sequence)"] =
-                    summary
-            }
-            for chunk in (await legacyChunks) ?? [] {
-                chunks[chunk.id] = chunk
-            }
-        }
         if let dayDatabase {
             async let databaseSummaries = try? dayDatabase.watchSummaries(
                 in: span
@@ -11224,14 +10976,6 @@ final class AppModel {
             summaries: replayed,
             accelerationChunks: orderedChunks
         )
-    }
-
-    private func needsLegacyWatchSensorArchive() async -> Bool {
-        guard let dayDatabase else { return true }
-        return ((try? await dayDatabase.requiresLegacyMigration()) ?? true)
-            || UserDefaults.standard.bool(
-                forKey: Self.watchLegacyFallbackReadKey
-            )
     }
 
     func sensorReadingsLoadResult(
