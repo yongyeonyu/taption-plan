@@ -1721,9 +1721,43 @@ final class TaptionStoreV2Tests: XCTestCase {
         }
         XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE speed_mps > 20"), 2)
         XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE source_device = 'appleWatch'"), 1)
-        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE day = '2026-10-18'"), 3, "현지(서울) 날짜로 나뉜다")
+        XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE day = 20261018"), 3, "현지(서울) 날짜가 정수로 나뉜다")
         XCTAssertEqual(scalar("SELECT COUNT(*) FROM readings WHERE h_acc < 20 AND fix_quality = 'precise'"), 3)
         XCTAssertEqual(scalar("PRAGMA user_version"), Int32(TaptionStoreV2.schemaVersion))
+        XCTAssertEqual(scalar("PRAGMA auto_vacuum"), 2, "삭제한 공간을 돌려받으려면 증분 auto_vacuum이어야 한다")
+    }
+
+    func testStoreStaysSmallAndGivesSpaceBackAfterDeletingOldDays() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        let count = 6_000
+        let readings = (0..<count).map { index -> SensorReading in
+            var value = reading(Double(index) * 6, speed: Double(index % 30))
+            value.motion = index % 3 == 0 ? .walking : .stationary
+            value.deviceMotionSummary = DeviceMotionSummary(
+                sampleCount: 12, meanUserAccelerationG: 0.01, userAccelerationStandardDeviationG: 0.005,
+                peakUserAccelerationG: 0.05, meanRotationRateRadiansPerSecond: 0.01,
+                rotationRateStandardDeviationRadiansPerSecond: 0.004, peakRotationRateRadiansPerSecond: 0.03
+            )
+            return value
+        }
+        try await store.upsertReadings(readings)
+        try await store.reclaimSpace()
+        func size() -> Int {
+            ((try? FileManager.default.attributesOfItem(atPath: storeURL.path)[.size]) as? Int) ?? 0
+        }
+        let fullSize = size()
+        let bytesPerRow = Double(fullSize) / Double(count)
+        print("ARC1019A01 store bytes_per_reading=\(bytesPerRow) total=\(fullSize)")
+        XCTAssertLessThan(bytesPerRow, 260, "움직임 요약까지 있는 기록 한 건이 이 크기를 넘지 않아야 한다")
+
+        // 앞의 3/4를 지우고 공간을 돌려받는다.
+        let doomed = readings.prefix(count * 3 / 4).map { $0.id.uuidString }
+        try await store.deleteReadings(ids: Array(doomed))
+        try await store.reclaimSpace()
+        let shrunk = size()
+        XCTAssertLessThan(shrunk, fullSize / 2, "삭제 뒤 파일이 실제로 줄어야 한다")
+        let remaining = try await store.readingCount()
+        XCTAssertEqual(remaining, count / 4)
     }
 
     func testRecordsKeepOriginAndSkipDeletedAndFilterByKindAndRange() async throws {

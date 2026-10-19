@@ -76,6 +76,35 @@ enum TaptionReadingRowCodec {
         Column(name: "step_count", path: "stepCount", kind: .int),
         Column(name: "rel_alt_m", path: "relativeAltitudeMeters", kind: .real),
         Column(name: "pressure_kpa", path: "pressureKilopascals", kind: .real),
+        Column(name: "dm_n", path: "deviceMotionSummary.sampleCount", kind: .int),
+        Column(name: "dm_acc_mean_g", path: "deviceMotionSummary.meanUserAccelerationG", kind: .real),
+        Column(name: "dm_acc_std_g", path: "deviceMotionSummary.userAccelerationStandardDeviationG", kind: .real),
+        Column(name: "dm_acc_peak_g", path: "deviceMotionSummary.peakUserAccelerationG", kind: .real),
+        Column(name: "dm_rot_mean", path: "deviceMotionSummary.meanRotationRateRadiansPerSecond", kind: .real),
+        Column(name: "dm_rot_std", path: "deviceMotionSummary.rotationRateStandardDeviationRadiansPerSecond", kind: .real),
+        Column(name: "dm_rot_peak", path: "deviceMotionSummary.peakRotationRateRadiansPerSecond", kind: .real),
+        // 항상 들어 있는 불리언은 열로 두면 값 없이 헤더 1바이트만 쓴다(JSON이면 행마다 20바이트 남짓).
+        Column(name: "matches_transit", path: "matchesPublicTransitRoute", kind: .bool),
+        Column(name: "frequent_stops", path: "frequentStops", kind: .bool),
+        Column(name: "ride_hailing", path: "rideHailingHint", kind: .bool),
+        Column(name: "near_airport", path: "nearAirport", kind: .bool),
+        Column(name: "near_port", path: "nearPort", kind: .bool),
+        Column(name: "on_water", path: "onWater", kind: .bool),
+        Column(name: "floors_up", path: "floorsAscended", kind: .int),
+        Column(name: "floors_down", path: "floorsDescended", kind: .int),
+        Column(name: "walk_dist_m", path: "walkingRunningDistanceMeters", kind: .real),
+        Column(name: "pace_s_per_m", path: "currentPaceSecondsPerMeter", kind: .real),
+        Column(name: "cadence_hz", path: "currentCadenceStepsPerSecond", kind: .real),
+        Column(name: "system_floor", path: "systemFloor", kind: .int),
+        Column(name: "screen_brightness", path: "screenBrightness", kind: .real),
+        Column(name: "wifi_ssid", path: "connectedWiFiSSID", kind: .text),
+        Column(name: "behavior_conf", path: "behaviorConfidenceScore", kind: .real),
+        Column(name: "watch_workout", path: "watchWorkoutKind", kind: .text),
+        Column(name: "watch_acc_x", path: "watchAccelerationAverageG.x", kind: .real),
+        Column(name: "watch_acc_y", path: "watchAccelerationAverageG.y", kind: .real),
+        Column(name: "watch_acc_z", path: "watchAccelerationAverageG.z", kind: .real),
+        Column(name: "watch_acc_std", path: "watchAccelerationStandardDeviationG", kind: .real),
+        Column(name: "watch_jerk", path: "watchAccelerationMeanJerkGPerSecond", kind: .real),
     ]
 
     enum Value: Equatable, Sendable {
@@ -83,14 +112,27 @@ enum TaptionReadingRowCodec {
         case int(Int64)
         case real(Double)
         case text(String)
+        case blob(Data)
     }
 
     struct Row: Equatable, Sendable {
         var id: String
         var timestamp: Double
-        var day: String
+        var day: Int
         var values: [Value]
         var extra: String?
+    }
+
+    /// UUID 문자열을 16바이트로. 문자열(36자)보다 행마다 20바이트가 줄고 색인도 작아진다.
+    static func uuidData(_ string: String) -> Data? {
+        guard let uuid = UUID(uuidString: string) else { return nil }
+        return withUnsafeBytes(of: uuid.uuid) { Data($0) }
+    }
+
+    static func uuidString(from data: Data) -> String? {
+        guard data.count == 16 else { return nil }
+        let uuid = data.withUnsafeBytes { $0.loadUnaligned(as: uuid_t.self) }
+        return UUID(uuid: uuid).uuidString
     }
 
     private static func encoder() -> JSONEncoder {
@@ -105,18 +147,19 @@ enum TaptionReadingRowCodec {
         return decoder
     }
 
-    static func dayKey(for date: Date, calendar: Calendar) -> String {
+    /// 현지 날짜를 정수 `yyyymmdd`로(예: 20261019). 문자열보다 작고 대소 비교·묶음이 쉽다.
+    static func dayNumber(for date: Date, calendar: Calendar) -> Int {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+        return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
     }
 
     static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
         var object = try JSONSerialization.jsonObject(
             with: encoder().encode(reading)
         ) as? [String: Any] ?? [:]
-        guard let id = object["id"] as? String,
+        guard let id = object["id"] as? String, uuidData(id) != nil,
               let timestamp = (object["timestamp"] as? NSNumber)?.doubleValue else {
-            throw TaptionStoreV2Error.corruptRow("reading without id or timestamp")
+            throw TaptionStoreV2Error.corruptRow("reading without a UUID id or timestamp")
         }
         object["id"] = nil
         object["timestamp"] = nil
@@ -132,7 +175,7 @@ enum TaptionReadingRowCodec {
         return Row(
             id: id,
             timestamp: timestamp,
-            day: dayKey(for: Date(timeIntervalSince1970: timestamp), calendar: calendar),
+            day: dayNumber(for: Date(timeIntervalSince1970: timestamp), calendar: calendar),
             values: values,
             extra: extra
         )
@@ -166,7 +209,7 @@ enum TaptionReadingRowCodec {
             guard var inner = object[parts[0]] as? [String: Any], let raw = inner[parts[1]],
                   let value = convert(raw, kind: column.kind) else { return .null }
             inner[parts[1]] = nil
-            object[parts[0]] = inner
+            object[parts[0]] = inner.isEmpty ? nil : inner
             return value
         }
         guard let raw = object[parts[0]], let value = convert(raw, kind: column.kind) else { return .null }
@@ -320,8 +363,10 @@ actor TaptionStoreV2 {
     func readings(ids: [String]) throws -> [SensorReading] {
         var found: [SensorReading] = []
         for chunk in stride(from: 0, to: ids.count, by: 400).map({ Array(ids[$0..<min($0 + 400, ids.count)]) }) {
-            let placeholders = Array(repeating: "?", count: chunk.count).joined(separator: ", ")
-            let result = try loadReadings(where: "id IN (\(placeholders))", bindings: chunk.map { .text($0) })
+            let blobs = chunk.compactMap(TaptionReadingRowCodec.uuidData)
+            guard !blobs.isEmpty else { continue }
+            let placeholders = Array(repeating: "?", count: blobs.count).joined(separator: ", ")
+            let result = try loadReadings(where: "id IN (\(placeholders))", bindings: blobs.map { .blob($0) })
             if let failure = result.failures.first { throw failure }
             found += result.readings
         }
@@ -429,9 +474,13 @@ actor TaptionStoreV2 {
             }
             let extraIndex = Int32(3 + names.count)
             let row = TaptionReadingRowCodec.Row(
-                id: String(cString: sqlite3_column_text(statement, 0)),
+                id: {
+                    if case .blob(let data) = Self.value(statement, 0),
+                       let string = TaptionReadingRowCodec.uuidString(from: data) { return string }
+                    return ""
+                }(),
                 timestamp: sqlite3_column_double(statement, 1),
-                day: String(cString: sqlite3_column_text(statement, 2)),
+                day: Int(sqlite3_column_int64(statement, 2)),
                 values: values,
                 extra: sqlite3_column_type(statement, extraIndex) == SQLITE_NULL
                     ? nil : String(cString: sqlite3_column_text(statement, extraIndex))
@@ -447,9 +496,9 @@ actor TaptionStoreV2 {
 
     private nonisolated func bindRow(_ statement: OpaquePointer, _ row: TaptionReadingRowCodec.Row) {
         var index: Int32 = 1
-        bind(statement, index, .text(row.id)); index += 1
+        bind(statement, index, .blob(TaptionReadingRowCodec.uuidData(row.id) ?? Data())); index += 1
         bind(statement, index, .real(row.timestamp)); index += 1
-        bind(statement, index, .text(row.day)); index += 1
+        bind(statement, index, .int(Int64(row.day))); index += 1
         for value in row.values {
             bind(statement, index, value); index += 1
         }
@@ -464,8 +513,9 @@ actor TaptionStoreV2 {
             let statement = try prepare(db, "DELETE FROM readings WHERE id = ?")
             defer { sqlite3_finalize(statement) }
             for id in ids {
+                guard let data = TaptionReadingRowCodec.uuidData(id) else { continue }
                 sqlite3_reset(statement)
-                bind(statement, 1, .text(id))
+                bind(statement, 1, .blob(data))
                 try step(db, statement)
             }
             try exec(db, "COMMIT")
@@ -497,7 +547,7 @@ actor TaptionStoreV2 {
                 bind(statement, 1, .text(record.id))
                 bind(statement, 2, .text(record.kind))
                 bind(statement, 3, record.start.map {
-                    .text(TaptionReadingRowCodec.dayKey(for: $0, calendar: calendar))
+                    .int(Int64(TaptionReadingRowCodec.dayNumber(for: $0, calendar: calendar)))
                 } ?? .null)
                 bind(statement, 4, record.start.map { .real($0.timeIntervalSince1970) } ?? .null)
                 bind(statement, 5, record.end.map { .real($0.timeIntervalSince1970) } ?? .null)
@@ -582,6 +632,14 @@ actor TaptionStoreV2 {
         try step(db, statement)
     }
 
+    /// 삭제로 생긴 빈 공간을 파일에서 실제로 돌려준다(오프로드 뒤에 부른다).
+    func reclaimSpace() throws {
+        let db = try handle()
+        try exec(db, "PRAGMA wal_checkpoint(TRUNCATE)")
+        try exec(db, "PRAGMA incremental_vacuum")
+        try exec(db, "PRAGMA wal_checkpoint(TRUNCATE)")
+    }
+
     func deleteAll() throws {
         let db = try handle()
         try exec(db, "BEGIN IMMEDIATE")
@@ -598,7 +656,11 @@ actor TaptionStoreV2 {
     // MARK: SQLite 보조
 
     private static func configure(_ db: OpaquePointer) throws {
-        for pragma in ["PRAGMA journal_mode=WAL", "PRAGMA synchronous=NORMAL", "PRAGMA foreign_keys=ON"] {
+        // auto_vacuum은 파일을 처음 만들 때(WAL 전환 전에) 정해야 적용된다. 이미 있는 파일에는 영향이 없다.
+        for pragma in [
+            "PRAGMA auto_vacuum=INCREMENTAL", "PRAGMA journal_mode=WAL",
+            "PRAGMA synchronous=NORMAL", "PRAGMA foreign_keys=ON",
+        ] {
             var error: UnsafeMutablePointer<CChar>?
             if sqlite3_exec(db, pragma, nil, nil, &error) != SQLITE_OK {
                 let message = error.map { String(cString: $0) } ?? "pragma failed"
@@ -627,18 +689,17 @@ actor TaptionStoreV2 {
                 BEGIN;
                 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE TABLE readings (
-                    id TEXT PRIMARY KEY,
+                    id BLOB NOT NULL UNIQUE,
                     ts REAL NOT NULL,
-                    day TEXT NOT NULL,
+                    day INTEGER NOT NULL,
                     \(columnDefinitions),
                     extra TEXT
                 );
                 CREATE INDEX readings_ts ON readings(ts);
-                CREATE INDEX readings_day ON readings(day);
                 CREATE TABLE records (
                     id TEXT PRIMARY KEY,
                     kind TEXT NOT NULL,
-                    day TEXT,
+                    day INTEGER,
                     start_ts REAL,
                     end_ts REAL,
                     updated_ts REAL NOT NULL,
@@ -647,7 +708,6 @@ actor TaptionStoreV2 {
                     body TEXT NOT NULL
                 );
                 CREATE INDEX records_kind_start ON records(kind, start_ts);
-                CREATE INDEX records_day ON records(day);
                 INSERT INTO meta (key, value) VALUES ('schema_version', '\(schemaVersion)');
                 PRAGMA user_version = \(schemaVersion);
                 COMMIT;
@@ -704,6 +764,10 @@ actor TaptionStoreV2 {
         case .int(let number): sqlite3_bind_int64(statement, index, number)
         case .real(let number): sqlite3_bind_double(statement, index, number)
         case .text(let text): sqlite3_bind_text(statement, index, text, -1, transient)
+        case .blob(let data):
+            _ = data.withUnsafeBytes { buffer in
+                sqlite3_bind_blob(statement, index, buffer.baseAddress, Int32(buffer.count), transient)
+            }
         }
     }
 
@@ -712,6 +776,8 @@ actor TaptionStoreV2 {
         case SQLITE_INTEGER: .int(sqlite3_column_int64(statement, column))
         case SQLITE_FLOAT: .real(sqlite3_column_double(statement, column))
         case SQLITE_TEXT: .text(String(cString: sqlite3_column_text(statement, column)))
+        case SQLITE_BLOB:
+            .blob(Data(bytes: sqlite3_column_blob(statement, column), count: Int(sqlite3_column_bytes(statement, column))))
         default: .null
         }
     }
