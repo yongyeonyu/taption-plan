@@ -1760,6 +1760,97 @@ final class TaptionStoreV2Tests: XCTestCase {
         XCTAssertEqual(remaining, count / 4)
     }
 
+    func testSameIDInDifferentKindsDoesNotOverwriteEachOther() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        func record(_ kind: String, _ body: String) -> TaptionStoreRecord {
+            TaptionStoreRecord(id: "same", kind: kind, start: base, end: nil, updatedAt: base,
+                               origin: .user, body: body)
+        }
+        try await store.upsertRecords([record("category", #"{"a":1}"#), record("photo", #"{"b":2}"#)])
+        let categories = try await store.records(kind: "category")
+        let photos = try await store.records(kind: "photo")
+        XCTAssertEqual(categories.map(\.body), [#"{"a":1}"#])
+        XCTAssertEqual(photos.map(\.body), [#"{"b":2}"#])
+    }
+
+    func testApplyRecordChangesRollsBackDeletesWhenTheWriteFails() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        func record(_ id: String) -> TaptionStoreRecord {
+            TaptionStoreRecord(id: id, kind: "plan", start: base, end: nil, updatedAt: base,
+                               origin: .user, body: "{}")
+        }
+        try await store.upsertRecords([record("keep")])
+        // origin CHECK는 통과하지만 body가 NOT NULL인 열에 NULL을 넣을 수 없으니, 잘못된 kind 길이 대신
+        // 저장소가 거부하는 입력(닫힌 연결)으로 실패를 만든다.
+        await store.close()
+        do {
+            try await store.applyRecordChanges(upserts: [record("new")], deletes: [("plan", "keep")])
+            XCTFail("닫힌 저장소는 거부해야 한다")
+        } catch {}
+        let reopened = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        let kept = try await reopened.records(kind: "plan")
+        XCTAssertEqual(kept.map(\.id), ["keep"], "실패한 변경은 삭제도 반영하지 않는다")
+    }
+
+    func testResendingTheSameReadingWithFractionalSecondsIsNotAConflict() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        // 기준일(2001) 기준 소수 초를 가진 시각: 1970 기준으로 바꾸면 반올림되는 값이다.
+        let fractional = Date(timeIntervalSinceReferenceDate: 813_740_029.554995)
+        let sent = SensorReading(
+            timestamp: fractional,
+            point: GeoPoint(latitude: 37.5, longitude: 126.9, altitude: 1, horizontalAccuracy: 5, verticalAccuracy: 5),
+            locationFixQuality: .precise, gpsAvailable: true
+        )
+        try await store.appendImmutableReadings([sent])
+        try await store.appendImmutableReadings([sent])   // 같은 기록 재전송: 거부하면 안 된다.
+        var changed = sent
+        changed.speedMetersPerSecond = 12
+        do {
+            try await store.appendImmutableReadings([changed])
+            XCTFail("같은 id에 다른 내용은 거부해야 한다")
+        } catch let error as TaptionStoreV2Error {
+            XCTAssertEqual(error, .readingConflict(sent.id.uuidString))
+        }
+        let count = try await store.readingCount()
+        XCTAssertEqual(count, 1)
+    }
+
+    func testDeleteAllLeavesNoReadingBytesAndSecureDeleteIsOn() async throws {
+        let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
+        let marker = "VERY-UNIQUE-SSID-9f3a7c"
+        var value = reading(0)
+        value.connectedWiFiSSID = marker
+        try await store.upsertReadings([value])
+        try await store.deleteAll()
+        await store.close()
+        for suffix in ["", "-wal"] {
+            let path = storeURL.path + suffix
+            guard let data = FileManager.default.contents(atPath: path) else { continue }
+            XCTAssertNil(data.range(of: Data(marker.utf8)), "삭제 뒤 \(path)에 값이 남아 있다")
+        }
+        var database: OpaquePointer?
+        XCTAssertEqual(sqlite3_open_v2(storeURL.path, &database, SQLITE_OPEN_READONLY, nil), SQLITE_OK)
+        defer { sqlite3_close(database) }
+        var statement: OpaquePointer?
+        sqlite3_prepare_v2(database, "SELECT COUNT(*) FROM readings", -1, &statement, nil)
+        defer { sqlite3_finalize(statement) }
+        XCTAssertEqual(sqlite3_step(statement), SQLITE_ROW)
+        XCTAssertEqual(sqlite3_column_int(statement, 0), 0)
+    }
+
+    func testDayUsesTheGregorianCalendarEvenWhenTheUserCalendarIsBuddhist() async throws {
+        let store = try TaptionStoreV2(url: storeURL)   // 기본 달력: 그레고리력 현지 날짜
+        try await store.upsertReadings([reading(0)])
+        let ranges = try await store.dayRanges()
+        XCTAssertEqual(ranges.count, 1)
+        let parts = TaptionStoreV2.localGregorianCalendar().dateComponents([.year], from: base)
+        XCTAssertEqual(parts.year, 2026)
+        XCTAssertEqual(
+            TaptionReadingRowCodec.dayNumber(for: base, calendar: Calendar(identifier: .buddhist)) / 10_000,
+            2569, "불교력이면 연도가 달라진다는 전제(기본 달력은 이 값을 쓰지 않는다)"
+        )
+    }
+
     func testRecordsKeepOriginAndSkipDeletedAndFilterByKindAndRange() async throws {
         let store = try TaptionStoreV2(url: storeURL, calendar: calendar)
         func record(_ id: String, kind: String, offset: TimeInterval, origin: TaptionStoreRecord.Origin,
@@ -1892,6 +1983,53 @@ final class TaptionStoreRepositoryTests: XCTestCase {
 
         let reloaded = try await TaptionStoreRepository(store: store).load()
         XCTAssertEqual(reloaded.plans.map(\.title), ["그대로", "고쳤다"])
+    }
+
+    func testUndecodableHeaderFailsInsteadOfLoadingEmptyAndWipingOnNextSave() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = [plan("지키는 계획", at: 0)]
+        try await repository.save(snapshot)
+        // 앱 업데이트로 헤더를 해석하지 못하게 된 상황.
+        try await store.upsertRecords([TaptionStoreRecord(
+            id: "snapshot", kind: "header", start: nil, end: nil,
+            updatedAt: Date(timeIntervalSince1970: 1_792_300_100), origin: .user, body: #"{"unexpected":true}"#
+        )])
+
+        let fresh = TaptionStoreRepository(store: store)
+        do {
+            _ = try await fresh.load()
+            XCTFail("해석할 수 없는 헤더는 빈 스냅샷이 아니라 실패여야 한다")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .invalidSnapshot)
+        }
+        let remaining = try await store.records(kind: "plan")
+        XCTAssertEqual(remaining.count, 1, "실패해도 저장된 계획은 그대로여야 한다")
+    }
+
+    func testConcurrentSavesEndWithTheLastSnapshotInTheStore() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var base = TaptionDataSnapshot.empty
+        base.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        var item = plan("원래", at: 0)
+        base.plans = [item]
+        try await repository.save(base)
+
+        var edited = base
+        item.title = "수정"
+        edited.plans = [item]
+        edited.updatedAt = Date(timeIntervalSince1970: 1_792_300_200)
+        // 수정했다가 바로 되돌리는 연속 저장: 마지막 상태가 저장소에 있어야 한다.
+        let first = Task { try await repository.save(edited) }
+        let second = Task { try await repository.save(base) }
+        _ = try await first.value
+        _ = try await second.value
+
+        let reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.map(\.title), ["원래"])
     }
 
     func testDeleteAllClearsPlanDataButNotSensorReadings() async throws {

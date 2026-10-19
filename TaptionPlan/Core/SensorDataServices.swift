@@ -1325,13 +1325,20 @@ actor SensorReadingArchive {
 
     /// 확정하면 세션 기록만 비우고, 확정하지 못하면 그 세션이 넣은 기록을 되돌린다.
     func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        let inserted = restoreSessions.removeValue(forKey: id) ?? []
-        guard !committed, !inserted.isEmpty else { return }
-        let generation = dataDeletionGeneration
-        try await withLock {
-            try await self.checkDataGeneration(generation)
-            try await self.store.deleteReadings(ids: inserted)
+        let inserted = restoreSessions[id] ?? []
+        guard !committed else {
+            restoreSessions[id] = nil
+            return
         }
+        if !inserted.isEmpty {
+            let generation = dataDeletionGeneration
+            try await withLock {
+                try await self.checkDataGeneration(generation)
+                try await self.store.deleteReadings(ids: inserted)
+            }
+        }
+        // 지우는 데 성공한 뒤에만 목록을 버려서, 실패하면 다시 시도할 수 있다.
+        restoreSessions[id] = nil
     }
 
     func rollbackRestore(ids: [UUID]) async throws {
@@ -1352,8 +1359,11 @@ actor SensorReadingArchive {
         try checkDataGeneration(generation)
         let existing = try await store.readings(ids: readings.map(\.id.uuidString))
         let incoming = Dictionary(readings.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        for reading in existing where incoming[reading.id] != reading {
-            throw Error.conflictingReading
+        for reading in existing {
+            guard let sent = incoming[reading.id],
+                  TaptionReadingRowCodec.sameStoredContent(sent, reading) else {
+                throw Error.conflictingReading
+            }
         }
     }
 
@@ -1409,7 +1419,7 @@ actor SensorReadingArchive {
         defer { lock.unlock() }
         dataDeletionGeneration = generation
             ?? TaptionDataDeletionFence.currentGeneration()
-        try await store.deleteAll()
+        try await store.deleteAllReadings()
         try rawArchive?.deleteAll()
         try trackingChunkArchive?.deleteAll()
         try? FileManager.default.removeItem(at: legacyFileURL)

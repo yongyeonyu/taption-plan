@@ -22,6 +22,7 @@ actor TaptionStoreRepository: PlanDataRepository {
     /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
     private var known: [String: [String: (ord: Int, body: String)]]?
     private var nextOrd: [String: Int] = [:]
+    private var saveTail: Task<Void, Error>?
 
     init(store: TaptionStoreV2) {
         self.store = store
@@ -38,9 +39,18 @@ actor TaptionStoreRepository: PlanDataRepository {
         known = state
         nextOrd = next
 
-        guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body,
-              let header = try? Self.decoder().decode(Header.self, from: Data(headerBody.utf8)) else {
+        guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body else {
+            // 헤더 없이 다른 행만 있으면 비정상이다. 빈 스냅샷으로 보고 위에 저장하면 그 행이 지워진다.
+            if state.values.contains(where: { !$0.isEmpty }) { throw RepositoryError.invalidSnapshot }
             return .empty
+        }
+        // 헤더를 해석하지 못하면 빈 스냅샷으로 넘기지 않고 실패시킨다(다음 저장이 전부 지우는 것을 막는다).
+        let header: Header
+        do {
+            header = try Self.decoder().decode(Header.self, from: Data(headerBody.utf8))
+        } catch {
+            known = nil
+            throw RepositoryError.invalidSnapshot
         }
         func items<T: Decodable>(_ kind: Kind, as type: T.Type) throws -> [T] {
             let ordered = (state[kind.rawValue] ?? [:]).values.sorted { $0.ord < $1.ord }
@@ -66,7 +76,18 @@ actor TaptionStoreRepository: PlanDataRepository {
         )
     }
 
+    /// 저장은 한 번에 하나씩 순서대로 처리한다(await 사이에 다른 저장이 끼어들면 비교 기준이 어긋난다).
     func save(_ snapshot: TaptionDataSnapshot) async throws {
+        let previous = saveTail
+        let task = Task { [self] in
+            _ = try? await previous?.value
+            try await performSave(snapshot)
+        }
+        saveTail = task
+        try await task.value
+    }
+
+    private func performSave(_ snapshot: TaptionDataSnapshot) async throws {
         if known == nil { _ = try await load() }
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
@@ -80,7 +101,7 @@ actor TaptionStoreRepository: PlanDataRepository {
                 let body = try Self.encode(item)
                 seen.insert(id)
                 if let existing = previous[id], existing.body == body { continue }
-                let ord = previous[id]?.ord ?? takeOrd(kind.rawValue, in: previous)
+                let ord = previous[id]?.ord ?? takeOrd(kind.rawValue)
                 previous[id] = (ord, body)
                 upserts.append(Self.record(kind: kind.rawValue, id: id, ord: ord, body: body,
                                            updatedAt: snapshot.updatedAt))
@@ -131,8 +152,8 @@ actor TaptionStoreRepository: PlanDataRepository {
         known = nil
     }
 
-    private func takeOrd(_ kind: String, in current: [String: (ord: Int, body: String)]) -> Int {
-        let value = max(nextOrd[kind] ?? 0, (current.values.map(\.ord).max() ?? -1) + 1)
+    private func takeOrd(_ kind: String) -> Int {
+        let value = nextOrd[kind] ?? 0
         nextOrd[kind] = value + 1
         return value
     }
