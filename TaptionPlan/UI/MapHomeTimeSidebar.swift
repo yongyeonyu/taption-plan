@@ -1119,6 +1119,8 @@ struct MapHomeTimeSidebar: View {
     @State private var viewportDragStartMinute: Int?
     @State private var gestureBaseState: MapHomeTimeSidebarNLEState?
     @State private var isHandleDragging = false
+    @State private var handleTouchStartUptime: TimeInterval?
+    @State private var handleDoubleTapDetector = MapHomeSidebarDoubleTapDetector()
     @State private var nleProjection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
     @State private var railSnapshot: MapHomeTimeSidebarRailSnapshot
@@ -1484,11 +1486,6 @@ struct MapHomeTimeSidebar: View {
                             )
                         )
                         .zIndex(3)
-                        .simultaneousGesture(
-                            TapGesture(count: 2).onEnded {
-                                onSectionEdit?(minute)
-                            }
-                        )
                         .accessibilityLabel("시간 선택")
                         .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
                 }
@@ -1718,11 +1715,6 @@ struct MapHomeTimeSidebar: View {
                         publish(minute)
                     }
                 )
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded {
-                        onSectionEdit?(minute)
-                    }
-                )
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
@@ -1747,11 +1739,6 @@ struct MapHomeTimeSidebar: View {
                 .simultaneousGesture(
                     TapGesture().onEnded {
                         publish(minute)
-                    }
-                )
-                .simultaneousGesture(
-                    TapGesture(count: 2).onEnded {
-                        onSectionEdit?(minute)
                     }
                 )
                 .accessibilityLabel(
@@ -1796,6 +1783,9 @@ struct MapHomeTimeSidebar: View {
             coordinateSpace: .named("mapHomeTimeSidebarRail")
         )
             .onChanged { value in
+                if handleTouchStartUptime == nil {
+                    handleTouchStartUptime = ProcessInfo.processInfo.systemUptime
+                }
                 if !isHandleDragging {
                     isHandleDragging = true
                     onInteractionChanged?(true)
@@ -1844,12 +1834,24 @@ struct MapHomeTimeSidebar: View {
                     }
                     render(projected, nowUptime: nowUptime, force: true)
                 }
+                let tappedMinute = min(max(selectedMinute, 0), maxMinute)
+                let endUptime = ProcessInfo.processInfo.systemUptime
+                let isDoubleTap = handleDoubleTapDetector.registerEnd(
+                    startUptime: handleTouchStartUptime ?? endUptime,
+                    endUptime: endUptime,
+                    translation: value.translation,
+                    location: value.location
+                )
+                handleTouchStartUptime = nil
                 dragStartMinute = nil
                 isHandleDragging = false
                 gestureBaseState = nil
                 handleDrag.reset()
                 commitPendingRailSnapshot()
                 onInteractionChanged?(false)
+                if isDoubleTap {
+                    onSectionEdit?(tappedMinute)
+                }
             }
     }
 
@@ -2440,6 +2442,48 @@ struct MapHomeWeatherSidebar: View {
                 endMinute: endMinute
             )
         }
+    }
+}
+
+/// 드래그 제스처가 터치를 먼저 가져가므로 탭 두 번은 드래그 종료에서 직접 판정한다.
+/// 움직임이 거의 없고 짧은 터치가 가까운 위치에서 연달아 두 번 오면 더블탭이다.
+struct MapHomeSidebarDoubleTapDetector: Equatable {
+    static let maximumMovement: CGFloat = 10
+    static let maximumTapDuration: TimeInterval = 0.35
+    static let maximumInterval: TimeInterval = 0.45
+    static let maximumSeparation: CGFloat = 40
+
+    private var lastTapUptime: TimeInterval?
+    private var lastTapLocation: CGPoint?
+
+    /// 터치 하나가 끝날 때 부르고, 더블탭이면 true를 돌려준다.
+    mutating func registerEnd(
+        startUptime: TimeInterval,
+        endUptime: TimeInterval,
+        translation: CGSize,
+        location: CGPoint
+    ) -> Bool {
+        let movement = hypot(translation.width, translation.height)
+        guard movement <= Self.maximumMovement,
+              endUptime - startUptime <= Self.maximumTapDuration else {
+            reset()
+            return false
+        }
+        if let lastTapUptime, let lastTapLocation,
+           endUptime - lastTapUptime <= Self.maximumInterval,
+           hypot(location.x - lastTapLocation.x, location.y - lastTapLocation.y)
+               <= Self.maximumSeparation {
+            reset()
+            return true
+        }
+        lastTapUptime = endUptime
+        lastTapLocation = location
+        return false
+    }
+
+    mutating func reset() {
+        lastTapUptime = nil
+        lastTapLocation = nil
     }
 }
 

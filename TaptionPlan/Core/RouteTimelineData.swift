@@ -1788,6 +1788,7 @@ enum ExpectedRouteRequestEngine {
                 observed.append(reading)
             }
         }
+        observed = removingIsolatedImpossibleJumps(from: observed)
         guard observed.count >= 2 else { return [] }
         var gaps: [RouteGap] = []
         for index in 0..<(observed.count - 1) {
@@ -1813,6 +1814,13 @@ enum ExpectedRouteRequestEngine {
                             : nil
                     )
             else { continue }
+            // 물리적으로 불가능한 속도의 끊김은 빠진 이동이 아니라 튄 위치다.
+            // 이런 구간에 예상 경로를 이으면 회사↔멀리 떨어진 곳 직선이 그려진다.
+            guard !isImpossibleJump(
+                from: lhsPoint,
+                to: rhsPoint,
+                duration: duration
+            ) else { continue }
             gaps.append(RouteGap(
                 start: lhsPoint,
                 end: rhsPoint,
@@ -1820,6 +1828,57 @@ enum ExpectedRouteRequestEngine {
             ))
         }
         return gaps
+    }
+
+    /// 라우트 필터와 같은 기준: 15분 이내는 지상 이동 한계, 그 이후는 항공기 속도까지 허용한다.
+    private static let longGapImpossibleSpeedMetersPerSecond: Double = 280
+
+    private static func isImpossibleJump(
+        from start: GeoPoint,
+        to end: GeoPoint,
+        duration: TimeInterval
+    ) -> Bool {
+        guard duration > 0 else { return false }
+        let limit = duration <= RouteSparseConnectionPolicy.maximumGapDuration
+            ? RouteSparseConnectionPolicy.impossibleSpeedMetersPerSecond
+            : longGapImpossibleSpeedMetersPerSecond
+        return distanceMeters(start, end) / duration > limit
+    }
+
+    /// 불가능한 속도로 튀었다가 바로 원래 자리로 돌아오는 점 하나를 제거한다.
+    /// 되돌아오지 않는 점(실제 이동일 수 있음)은 그대로 둔다.
+    private static func removingIsolatedImpossibleJumps(
+        from readings: [SensorReading]
+    ) -> [SensorReading] {
+        guard readings.count >= 3 else { return readings }
+        var kept: [SensorReading] = []
+        kept.reserveCapacity(readings.count)
+        for index in readings.indices {
+            let reading = readings[index]
+            guard let previous = kept.last,
+                  let previousPoint = previous.point,
+                  let point = reading.point,
+                  index + 1 < readings.count,
+                  let nextPoint = readings[index + 1].point else {
+                kept.append(reading)
+                continue
+            }
+            let jumpsAway = isImpossibleJump(
+                from: previousPoint,
+                to: point,
+                duration: reading.timestamp.timeIntervalSince(previous.timestamp)
+            )
+            let nextDuration = readings[index + 1].timestamp
+                .timeIntervalSince(previous.timestamp)
+            let nextIsPlausible = !isImpossibleJump(
+                from: previousPoint,
+                to: nextPoint,
+                duration: nextDuration
+            )
+            if jumpsAway && nextIsPlausible { continue }
+            kept.append(reading)
+        }
+        return kept
     }
 
     private static func deduplicated(

@@ -940,22 +940,124 @@ enum MapHomePresencePolicy {
 /// 재생 중 이동 속도에 따라 지도 거리를 로그 비율로 부드럽게 맞춘다.
 /// 걷기 수준이면 가까이, 지하철·차량 수준이면 멀리 본다. 멈춰 있으면 현재 거리를 유지한다.
 enum MapHomePlaybackZoomPolicy {
-    static let walkingSpeed = 1.5
-    static let vehicleSpeed = 20.0
-    static let nearDistance = 700.0
-    static let farDistance = 12_000.0
+    static let slowSpeed = 0.5
+    static let vehicleSpeed = 30.0
+    static let nearDistance = 500.0
+    static let farDistance = 15_000.0
     static let easing = 0.2
 
+    /// 느릴수록 가깝게(확대), 빠를수록 멀리(축소). 속도를 모르면 nil로 현재 거리를 유지한다.
     static func targetDistance(speedMetersPerSecond: Double?) -> Double? {
-        guard let speed = speedMetersPerSecond, speed.isFinite, speed >= walkingSpeed else {
+        guard let speed = speedMetersPerSecond, speed.isFinite, speed >= 0 else {
             return nil
         }
-        let ratio = min(1, (log(speed) - log(walkingSpeed)) / (log(vehicleSpeed) - log(walkingSpeed)))
+        let clamped = min(vehicleSpeed, max(slowSpeed, speed))
+        let ratio = (log(clamped) - log(slowSpeed)) / (log(vehicleSpeed) - log(slowSpeed))
         return exp(log(nearDistance) + ratio * (log(farDistance) - log(nearDistance)))
     }
 
     static func eased(current: Double, target: Double) -> Double {
         exp(log(current) + (log(target) - log(current)) * easing)
+    }
+}
+
+/// 지도에 쓰인 점 중 가장 크게 튄 구간을 좌표 없이 요약해 로그로 남긴다.
+enum MapHomeRouteJumpDiagnostics {
+    static func fields(for readings: [SensorReading], calendar: Calendar = .autoupdatingCurrent) -> [String: String] {
+        let sorted = readings
+            .filter { $0.point != nil }
+            .sorted { $0.timestamp < $1.timestamp }
+        var best: (meters: Double, gap: TimeInterval, later: SensorReading)?
+        for (earlier, later) in zip(sorted, sorted.dropFirst()) {
+            guard let from = earlier.point, let to = later.point else { continue }
+            let meters = distanceMeters(from, to)
+            if best == nil || meters > best!.meters {
+                best = (meters, later.timestamp.timeIntervalSince(earlier.timestamp), later)
+            }
+        }
+        guard let best else { return [:] }
+        let parts = calendar.dateComponents([.hour, .minute], from: best.later.timestamp)
+        return [
+            "largest_jump_m": String(Int(best.meters.rounded())),
+            "largest_jump_gap_s": String(Int(best.gap.rounded())),
+            "largest_jump_speed_mps": best.gap > 0 ? String(Int((best.meters / best.gap).rounded())) : "0",
+            "largest_jump_at": String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0),
+            "largest_jump_quality": best.later.locationFixQuality?.rawValue ?? "unknown",
+            "largest_jump_device": best.later.sourceDevice?.rawValue ?? "unknown",
+            "largest_jump_accuracy_m": best.later.point.map { String(Int($0.horizontalAccuracy.rounded())) } ?? "unknown",
+        ]
+    }
+}
+
+/// 예상 경로 중 양 끝이 가장 멀리 떨어진 것을 좌표 없이 요약한다.
+/// 직선처럼 먼 예상 경로가 어디서 생겼는지(종류·수단·시각) 로그로 가려내기 위함이다.
+enum MapHomeExpectedRouteDiagnostics {
+    struct Candidate {
+        let kind: String
+        let mode: String
+        let start: Date
+        let end: Date
+        let first: CLLocationCoordinate2D
+        let last: CLLocationCoordinate2D
+    }
+
+    static func fields(
+        for candidates: [Candidate],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [String: String] {
+        var best: (Candidate, Double)?
+        for candidate in candidates {
+            let meters = CLLocation(latitude: candidate.first.latitude, longitude: candidate.first.longitude)
+                .distance(from: CLLocation(latitude: candidate.last.latitude, longitude: candidate.last.longitude))
+            guard meters.isFinite else { continue }
+            if best == nil || meters > best!.1 { best = (candidate, meters) }
+        }
+        guard let (candidate, meters) = best else { return [:] }
+        func clock(_ date: Date) -> String {
+            let parts = calendar.dateComponents([.hour, .minute], from: date)
+            return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+        }
+        return [
+            "longest_route_kind": candidate.kind,
+            "longest_route_mode": candidate.mode,
+            "longest_route_km": String(Int((meters / 1_000).rounded())),
+            "longest_route_start": clock(candidate.start),
+            "longest_route_end": clock(candidate.end),
+            "longest_route_minutes": String(Int(candidate.end.timeIntervalSince(candidate.start) / 60)),
+        ]
+    }
+}
+
+/// 발바닥 색: 느리면 초록, 빠르면 빨강(시속 150km에서 최대), 속도를 모르는 미확인은 회색.
+enum MapHomePawprintSpeedColor {
+    static let maximumMetersPerSecond = 150.0 / 3.6
+
+    static func ratio(forMetersPerSecond speed: Double?) -> Double? {
+        guard let speed, speed.isFinite, speed >= 0 else { return nil }
+        return min(1, speed / maximumMetersPerSecond)
+    }
+
+    static func color(forMetersPerSecond speed: Double?) -> Color {
+        guard let ratio = ratio(forMetersPerSecond: speed) else {
+            return Color.gray.opacity(0.68)
+        }
+        // 색상환 초록(1/3)에서 빨강(0)으로.
+        return Color(hue: (1.0 / 3.0) * (1 - ratio), saturation: 0.85, brightness: 0.82)
+            .opacity(0.9)
+    }
+
+    static func speed(
+        from first: CLLocationCoordinate2D,
+        at firstDate: Date?,
+        to second: CLLocationCoordinate2D,
+        at secondDate: Date?
+    ) -> Double? {
+        guard let firstDate, let secondDate else { return nil }
+        let seconds = secondDate.timeIntervalSince(firstDate)
+        guard seconds > 0 else { return nil }
+        let meters = CLLocation(latitude: first.latitude, longitude: first.longitude)
+            .distance(from: CLLocation(latitude: second.latitude, longitude: second.longitude))
+        return meters / seconds
     }
 }
 
@@ -2825,7 +2927,7 @@ struct MapHomeView: View {
         // 지도 provider가 OpenFreeMap(벡터, RPG 등)이면 무료 벡터 렌더러를 쓰고,
         // Apple 스타일이면 기존 MapKit 경로를 유지한다. 경로 재생·마커는 벡터
         // 렌더러도 지원한다(MapHomeVectorRoute/Marker).
-        if let vectorStyle = MapDisplayStyle.mapLibreRPG.runtimeStyle.mapHomeVectorStyle {
+        if let vectorStyle = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle {
             vectorMap(style: vectorStyle)
         } else {
             mapKitMap
@@ -2970,7 +3072,7 @@ struct MapHomeView: View {
     /// Map Home이 실제로 MapLibre 벡터 렌더러로 그려지는지(= Apple 스타일이 아님).
     /// 카메라 이동 명령 경로를 실제 렌더 엔진에 맞춰 고르는 데 쓴다.
     private var rendersVectorMap: Bool {
-        MapDisplayStyle.mapLibreRPG.runtimeStyle.mapHomeVectorStyle != nil
+        model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle != nil
     }
 
     private var vectorMapContentInsets: UIEdgeInsets {
@@ -4200,6 +4302,7 @@ struct MapHomeView: View {
         let isPredicted: Bool
         let timestamp: Date?
         var predictedRoute: MapPredictedRoute? = nil
+        var speedMetersPerSecond: Double? = nil
         var id: Int { index }
     }
 
@@ -4207,7 +4310,8 @@ struct MapHomeView: View {
         Image(systemName: "pawprint.fill")
             .font(.system(size: 12, weight: .bold))
             .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
-                ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68) : Color.tpAccent.opacity(0.55))
+                ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68)
+                : MapHomePawprintSpeedColor.color(forMetersPerSecond: waypoint.speedMetersPerSecond))
             .rotationEffect(.degrees(waypoint.angle))
             .allowsHitTesting(false)
     }
@@ -4251,13 +4355,20 @@ struct MapHomeView: View {
                                 c.latitude - coords[i - 1].latitude) * 180 / .pi
                         : 0)
                     : atan2(n.longitude - c.longitude, n.latitude - c.latitude) * 180 / .pi
+                let previousIndex = max(0, i - 1)
                 result.append(
                     PawprintWaypoint(
                         index: result.count,
                         coordinate: c,
                         angle: a,
                         isPredicted: false,
-                        timestamp: segment.coordinateTimestamps[i]
+                        timestamp: segment.coordinateTimestamps[i],
+                        speedMetersPerSecond: MapHomePawprintSpeedColor.speed(
+                            from: coords[previousIndex],
+                            at: segment.coordinateTimestamps[previousIndex],
+                            to: n,
+                            at: segment.coordinateTimestamps[nextIndex]
+                        )
                     )
                 )
             }
@@ -4266,13 +4377,27 @@ struct MapHomeView: View {
             latestTimestamps: confirmedSegments.map { $0.route.span.end } + predictedSegments.map { $0.route.span.end },
             limit: hardCap - result.count)
         for (segmentIndex, segment) in confirmedSegments.enumerated() {
+            // 확인된 이동은 구간 전체 길이를 시간으로 나눈 평균 속도를 쓴다.
+            var segmentSpeed: Double?
+            if let firstPoint = segment.points.first, let lastPoint = segment.points.last,
+               let firstDate = segment.timestamps.first, let lastDate = segment.timestamps.last {
+                let length = zip(segment.points, segment.points.dropFirst()).reduce(0.0) { sum, pair in
+                    sum + CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
+                        .distance(from: CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude))
+                }
+                let seconds = lastDate.timeIntervalSince(firstDate)
+                if seconds > 0, firstPoint.latitude.isFinite, lastPoint.latitude.isFinite {
+                    segmentSpeed = length / seconds
+                }
+            }
             for index in MapHomePawprintInteractionPolicy.spreadIndices(
                 count: segment.points.count, limit: inferredBudgets[segmentIndex]
             ) {
                 let point = segment.points[index]
                 result.append(PawprintWaypoint(index: result.count,
                     coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                    angle: 0, isPredicted: false, timestamp: segment.timestamps[index]))
+                    angle: 0, isPredicted: false, timestamp: segment.timestamps[index],
+                    speedMetersPerSecond: segmentSpeed))
             }
         }
         for (segmentIndex, segment) in predictedSegments.enumerated() {
@@ -6559,7 +6684,7 @@ struct MapHomeView: View {
 
                 Picker(
                     selection: Binding(
-                        get: { MapDisplayStyle.mapLibreRPG },
+                        get: { model.settings.mapDisplayStyle },
                         set: { model.setMapDisplayStyle($0) }
                     )
                 ) {
@@ -6569,7 +6694,6 @@ struct MapHomeView: View {
                             systemImage: mapStyleSystemImage(style)
                         )
                         .tag(style)
-                        .disabled(style != .mapLibreRPG)
                     }
                 } label: {
                     Label(
@@ -8051,9 +8175,33 @@ struct MapHomeView: View {
             grouping: generated.compactMap(\.mode),
             by: { $0 }
         )
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "expected_route_projection_built",
-            fields: [
+        var routeCandidates: [MapHomeExpectedRouteDiagnostics.Candidate] = []
+        for route in expected {
+            guard let first = route.coordinates.first, let last = route.coordinates.last else { continue }
+            routeCandidates.append(MapHomeExpectedRouteDiagnostics.Candidate(
+                kind: "expected", mode: route.mode.rawValue,
+                start: route.departureDate, end: route.arrivalDate, first: first, last: last
+            ))
+        }
+        for route in generated {
+            guard let first = route.coordinates.first, let last = route.coordinates.last else { continue }
+            routeCandidates.append(MapHomeExpectedRouteDiagnostics.Candidate(
+                kind: "generated", mode: route.mode?.rawValue ?? "unknown",
+                start: route.departureDate, end: route.arrivalDate, first: first, last: last
+            ))
+        }
+        for leg in forecastMovements {
+            guard let first = leg.coordinates.first, let last = leg.coordinates.last else { continue }
+            let kind: String = leg.id.hasPrefix("movement-gap-") ? "forecast_gap" : "forecast_movement"
+            routeCandidates.append(MapHomeExpectedRouteDiagnostics.Candidate(
+                kind: kind, mode: "leg",
+                start: leg.startDate, end: leg.endDate,
+                first: CLLocationCoordinate2D(latitude: first.latitude, longitude: first.longitude),
+                last: CLLocationCoordinate2D(latitude: last.latitude, longitude: last.longitude)
+            ))
+        }
+        let routeSummary: [String: String] = MapHomeExpectedRouteDiagnostics.fields(for: routeCandidates)
+        let baseFields: [String: String] = [
                 "phase": phase,
                 "expected_overlay_count": String(expected.count),
                 "generated_overlay_count": String(generated.count),
@@ -8082,7 +8230,10 @@ struct MapHomeView: View {
                     }
                     return "\(mode.rawValue)=\(count)"
                 }.joined(separator: ","),
-            ]
+        ]
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "expected_route_projection_built",
+            fields: baseFields.merging(routeSummary, uniquingKeysWith: { base, _ in base })
         )
     }
 
@@ -8349,6 +8500,16 @@ struct MapHomeView: View {
             if segment.distanceMeters > 0 {
                 return segment.distanceMeters / dur
             }
+        }
+        if selectedTimelineMinute != nil,
+           let reading = historicalPlaybackReadings
+               .filter({ abs($0.timestamp.timeIntervalSince(date)) <= 120
+                   && ($0.speedMetersPerSecond ?? -1) >= 0 })
+               .min(by: {
+                   abs($0.timestamp.timeIntervalSince(date))
+                       < abs($1.timestamp.timeIntervalSince(date))
+               }) {
+            return reading.speedMetersPerSecond
         }
         return model.latestSensorReading?.speedMetersPerSecond
     }
@@ -9299,7 +9460,10 @@ struct MapHomeView: View {
                     "readings_with_point": String(prepared.readingsWithPointCount),
                     "readings_rail_match": String(prepared.railMatchCount),
                     "readings_station_name": String(prepared.stationNameCount),
-                ]
+                ].merging(
+                    MapHomeRouteJumpDiagnostics.fields(for: prepared.display),
+                    uniquingKeysWith: { first, _ in first }
+                )
             )
             requestRouteProjectionRefresh()
             requestWBSPlaybackProjectionRefresh()

@@ -1350,12 +1350,12 @@ struct SettingsView: View {
             iconBackground: Color.tpSurfaceCream,
             iconColor: Color.tpReferenceRose,
             title: "지도 스타일",
-            subtitle: "RPG 지도 · 다른 스타일은 추후 제공",
-            value: "RPG",
+            subtitle: "지도 화면의 표시 메뉴에서 바꿉니다",
+            value: "표시 메뉴",
             valueIsOn: false
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("지도 스타일, RPG 지도만 사용")
+        .accessibilityLabel("지도 스타일, 지도 화면의 표시 메뉴에서 선택")
     }
 
     private func settingsToggleRow(

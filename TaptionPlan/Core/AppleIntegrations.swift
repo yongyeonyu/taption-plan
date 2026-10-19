@@ -2272,6 +2272,71 @@ private struct DeviceMotionAccumulator {
     }
 }
 
+/// 휴대폰이 정말 움직이지 않는지 가속도·회전 센서로 판정한다.
+/// 모든 표본이 아주 작은 임계값 안에 일정 시간 이어져야 정지로 보고, 표본이 오래됐거나
+/// 없으면(앱이 정지 상태이거나 센서를 못 받으면) 절대 정지로 보지 않는다.
+struct DeviceStillnessTracker: Equatable, Sendable {
+    static let maximumUserAccelerationG = 0.015
+    static let maximumRotationRateRadiansPerSecond = 0.03
+    static let minimumStillDuration: TimeInterval = 60
+    static let maximumSampleAge: TimeInterval = 10
+
+    private var stillSince: Date?
+    private var lastSampleAt: Date?
+
+    mutating func append(
+        userAccelerationMagnitudeG: Double,
+        rotationRateMagnitude: Double,
+        at date: Date
+    ) {
+        defer { lastSampleAt = date }
+        let isStill = userAccelerationMagnitudeG.isFinite
+            && rotationRateMagnitude.isFinite
+            && userAccelerationMagnitudeG <= Self.maximumUserAccelerationG
+            && rotationRateMagnitude <= Self.maximumRotationRateRadiansPerSecond
+        if !isStill {
+            stillSince = nil
+        } else if stillSince == nil {
+            stillSince = date
+        }
+        // 표본 사이가 길게 끊겼으면 그 사이 움직였을 수 있어 처음부터 다시 잰다.
+        if let lastSampleAt, date.timeIntervalSince(lastSampleAt) > Self.maximumSampleAge {
+            stillSince = isStill ? date : nil
+        }
+    }
+
+    func isTrulyStill(at date: Date) -> Bool {
+        guard let stillSince, let lastSampleAt,
+              date.timeIntervalSince(lastSampleAt) <= Self.maximumSampleAge,
+              date.timeIntervalSince(lastSampleAt) >= -1 else { return false }
+        return lastSampleAt.timeIntervalSince(stillSince) >= Self.minimumStillDuration
+    }
+
+    mutating func reset() {
+        self = DeviceStillnessTracker()
+    }
+}
+
+/// 정지 중에는 새 위치를 받아도 반영하지 않는다. 처음 위치이거나 움직임을 확신할 수 없거나
+/// 일정 시간이 지나면(심장박동) 반영해서 현재 위치가 오래되지 않게 한다.
+enum StationaryLocationGate {
+    static let heartbeatInterval: TimeInterval = 10 * 60
+
+    static func shouldIgnoreFixes(
+        isTrulyStill: Bool,
+        motionIsStationary: Bool,
+        hasPreviousLocation: Bool,
+        hasManualTrackingSession: Bool,
+        lastAcceptedAt: Date?,
+        now: Date
+    ) -> Bool {
+        guard isTrulyStill, motionIsStationary, hasPreviousLocation,
+              !hasManualTrackingSession else { return false }
+        guard let lastAcceptedAt else { return false }
+        return now.timeIntervalSince(lastAcceptedAt) < heartbeatInterval
+    }
+}
+
 @MainActor
 enum ForegroundLiveLocationPolicy {
     static let distanceFilterMeters: CLLocationDistance = 5
@@ -2336,6 +2401,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var currentWiFiFetchInFlight = false
     private var lastWiFiFetchAt: Date?
     private var deviceMotionAccumulator = DeviceMotionAccumulator()
+    private var stillnessTracker = DeviceStillnessTracker()
+    private var lastAcceptedLocationAt: Date?
     private var activeTrackingSession: TrackingSession?
     private var activeTrackingPreferences = GPSLoggingPreferences.standard
     private var trackingStreamsAreContinuous = false
@@ -2507,6 +2574,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         lastWiFiFetchAt = nil
         lastBackgroundWakeLocation = nil
         deviceMotionAccumulator.reset()
+        stillnessTracker.reset()
         activeTrackingSession = nil
         activeTrackingPreferences = .standard
         trackingStreamsAreContinuous = false
@@ -2856,6 +2924,19 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     }
                     self.latestDeviceMotion = snapshot
                     self.deviceMotionAccumulator.append(snapshot)
+                    self.stillnessTracker.append(
+                        userAccelerationMagnitudeG: sqrt(
+                            snapshot.userAcceleration.x * snapshot.userAcceleration.x
+                                + snapshot.userAcceleration.y * snapshot.userAcceleration.y
+                                + snapshot.userAcceleration.z * snapshot.userAcceleration.z
+                        ),
+                        rotationRateMagnitude: sqrt(
+                            snapshot.rotationRate.x * snapshot.rotationRate.x
+                                + snapshot.rotationRate.y * snapshot.rotationRate.y
+                                + snapshot.rotationRate.z * snapshot.rotationRate.z
+                        ),
+                        at: Date.now
+                    )
                     self.emit()
                 }
             }
@@ -2952,6 +3033,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         latestAverageActivePace = nil
         latestDeviceMotion = nil
         deviceMotionAccumulator.reset()
+        stillnessTracker.reset()
     }
 
     private func refreshConnectedWiFiIfNeeded(force: Bool = false) {
@@ -3001,6 +3083,18 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 && age < 5 * 60
         }.sorted { $0.timestamp < $1.timestamp }
         guard let newestLocation = validLocations.last else { return }
+        // 휴대폰이 가속도·회전 센서로 확실히 멈춰 있으면 새 위치를 반영하지 않는다.
+        if StationaryLocationGate.shouldIgnoreFixes(
+            isTrulyStill: stillnessTracker.isTrulyStill(at: now),
+            motionIsStationary: latestMotion == .stationary,
+            hasPreviousLocation: latestLocation != nil,
+            hasManualTrackingSession: activeTrackingSession?.wasAutomaticallyDetected == false,
+            lastAcceptedAt: lastAcceptedLocationAt,
+            now: now
+        ) {
+            return
+        }
+        lastAcceptedLocationAt = now
         latestLocation = newestLocation
         if let precise = validLocations.last(where: {
             $0.horizontalAccuracy

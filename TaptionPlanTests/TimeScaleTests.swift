@@ -5552,3 +5552,281 @@ final class PlanTextSuggestionFormatTests: XCTestCase {
         XCTAssertFalse(prompt.contains("세부:"))
     }
 }
+
+final class MapHomeSidebarAndPlaybackPolicyTests: XCTestCase {
+    func testDoubleTapIsDetectedForTwoShortStillTouches() {
+        var detector = MapHomeSidebarDoubleTapDetector()
+        XCTAssertFalse(detector.registerEnd(
+            startUptime: 10.00, endUptime: 10.08,
+            translation: CGSize(width: 1, height: 2), location: CGPoint(x: 20, y: 300)
+        ))
+        XCTAssertTrue(detector.registerEnd(
+            startUptime: 10.20, endUptime: 10.27,
+            translation: .zero, location: CGPoint(x: 22, y: 304)
+        ))
+    }
+
+    func testDoubleTapIgnoresDragsSlowTouchesAndFarTaps() {
+        var detector = MapHomeSidebarDoubleTapDetector()
+        _ = detector.registerEnd(startUptime: 0, endUptime: 0.05, translation: .zero, location: .zero)
+        XCTAssertFalse(detector.registerEnd(
+            startUptime: 0.2, endUptime: 0.3,
+            translation: CGSize(width: 0, height: 40), location: .zero
+        ), "움직인 터치는 더블탭이 아니다")
+        _ = detector.registerEnd(startUptime: 1, endUptime: 1.05, translation: .zero, location: .zero)
+        XCTAssertFalse(detector.registerEnd(
+            startUptime: 1.2, endUptime: 2.0, translation: .zero, location: .zero
+        ), "오래 누른 터치는 더블탭이 아니다")
+        _ = detector.registerEnd(startUptime: 3, endUptime: 3.05, translation: .zero, location: .zero)
+        XCTAssertFalse(detector.registerEnd(
+            startUptime: 3.1, endUptime: 3.15, translation: .zero, location: CGPoint(x: 0, y: 200)
+        ), "멀리 떨어진 탭은 더블탭이 아니다")
+        _ = detector.registerEnd(startUptime: 5, endUptime: 5.05, translation: .zero, location: .zero)
+        XCTAssertFalse(detector.registerEnd(
+            startUptime: 6, endUptime: 6.05, translation: .zero, location: .zero
+        ), "간격이 길면 더블탭이 아니다")
+    }
+
+    func testPlaybackZoomGetsFartherAsSpeedIncreases() throws {
+        let walking = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 1.4))
+        let bus = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 12))
+        let train = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 80))
+        let standing = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 0))
+        XCTAssertEqual(standing, MapHomePlaybackZoomPolicy.nearDistance, accuracy: 0.001)
+        XCTAssertLessThan(standing, walking)
+        XCTAssertLessThan(walking, bus)
+        XCTAssertLessThan(bus, train)
+        XCTAssertEqual(train, MapHomePlaybackZoomPolicy.farDistance, accuracy: 0.001)
+        XCTAssertNil(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: nil))
+        XCTAssertNil(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: .nan))
+        let eased = MapHomePlaybackZoomPolicy.eased(current: 1_000, target: 4_000)
+        XCTAssertGreaterThan(eased, 1_000)
+        XCTAssertLessThan(eased, 4_000)
+    }
+
+    func testPawprintSpeedColorRatioStopsAtOneHundredFiftyKilometersPerHour() throws {
+        XCTAssertEqual(try XCTUnwrap(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: 0)), 0, accuracy: 0.0001)
+        XCTAssertEqual(
+            try XCTUnwrap(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: 150 / 3.6)), 1, accuracy: 0.0001
+        )
+        XCTAssertEqual(try XCTUnwrap(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: 300 / 3.6)), 1)
+        XCTAssertEqual(
+            try XCTUnwrap(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: 75 / 3.6)), 0.5, accuracy: 0.0001
+        )
+        XCTAssertNil(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: nil))
+        XCTAssertNil(MapHomePawprintSpeedColor.ratio(forMetersPerSecond: -1))
+    }
+
+    func testPawprintSpeedFromTwoTimedCoordinates() throws {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let speed = try XCTUnwrap(MapHomePawprintSpeedColor.speed(
+            from: CLLocationCoordinate2D(latitude: 37.0, longitude: 127.0), at: start,
+            to: CLLocationCoordinate2D(latitude: 37.0, longitude: 127.01), at: start.addingTimeInterval(100)
+        ))
+        XCTAssertEqual(speed, 8.9, accuracy: 0.5)
+        XCTAssertNil(MapHomePawprintSpeedColor.speed(
+            from: CLLocationCoordinate2D(latitude: 37, longitude: 127), at: start,
+            to: CLLocationCoordinate2D(latitude: 37, longitude: 127), at: nil
+        ))
+    }
+
+    func testRouteJumpDiagnosticsReportsLargestJumpWithoutCoordinates() {
+        func reading(_ seconds: TimeInterval, _ lat: Double, _ lon: Double) -> SensorReading {
+            SensorReading(
+                timestamp: Date(timeIntervalSince1970: 1_792_300_000 + seconds),
+                point: GeoPoint(latitude: lat, longitude: lon, altitude: 0, horizontalAccuracy: 30, verticalAccuracy: 5),
+                sourceDevice: .iPhone
+            )
+        }
+        let fields = MapHomeRouteJumpDiagnostics.fields(for: [
+            reading(0, 37.5, 127.0),
+            reading(60, 37.5005, 127.0),
+            reading(120, 35.1, 129.0),
+            reading(180, 37.5, 127.0),
+        ])
+        XCTAssertEqual(fields["largest_jump_gap_s"], "60")
+        XCTAssertEqual(fields["largest_jump_device"], "iPhone")
+        XCTAssertEqual(fields["largest_jump_accuracy_m"], "30")
+        XCTAssertGreaterThan(Int(fields["largest_jump_m"] ?? "0") ?? 0, 300_000)
+        XCTAssertFalse(fields.values.contains { $0.contains("37.5") || $0.contains("129.0") })
+        XCTAssertTrue(MapHomeRouteJumpDiagnostics.fields(for: []).isEmpty)
+    }
+}
+
+final class MapHomeExpectedRouteDiagnosticsTests: XCTestCase {
+    func testLongestRouteSummaryHasNoCoordinates() {
+        func candidate(_ kind: String, _ mode: String, _ lat: Double, _ lon: Double) -> MapHomeExpectedRouteDiagnostics.Candidate {
+            .init(
+                kind: kind, mode: mode,
+                start: Date(timeIntervalSince1970: 1_792_300_000),
+                end: Date(timeIntervalSince1970: 1_792_300_000 + 3_600),
+                first: CLLocationCoordinate2D(latitude: 37.5, longitude: 127.0),
+                last: CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            )
+        }
+        let fields = MapHomeExpectedRouteDiagnostics.fields(for: [
+            candidate("expected", "walking", 37.501, 127.0),
+            candidate("forecast_gap", "leg", 35.1, 129.0),
+            candidate("generated", "subway", 37.6, 127.1),
+        ])
+        XCTAssertEqual(fields["longest_route_kind"], "forecast_gap")
+        XCTAssertEqual(fields["longest_route_mode"], "leg")
+        XCTAssertEqual(fields["longest_route_minutes"], "60")
+        XCTAssertGreaterThan(Int(fields["longest_route_km"] ?? "0") ?? 0, 300)
+        XCTAssertFalse(fields.values.contains { $0.contains("35.1") || $0.contains("129") })
+        XCTAssertTrue(MapHomeExpectedRouteDiagnostics.fields(for: []).isEmpty)
+    }
+}
+
+final class SubwayCatalogCoordinateTests: XCTestCase {
+    private func station(_ line: String, _ name: String) throws -> SubwayStationCatalog.Station {
+        try XCTUnwrap(SubwayStationCatalog.stations.first {
+            $0.lineName == line && $0.stationName == name
+        })
+    }
+
+    private func kilometers(_ lhs: SubwayStationCatalog.Station, _ rhs: SubwayStationCatalog.Station) throws -> Double {
+        let a = CLLocation(latitude: try XCTUnwrap(lhs.latitude), longitude: try XCTUnwrap(lhs.longitude))
+        let b = CLLocation(latitude: try XCTUnwrap(rhs.latitude), longitude: try XCTUnwrap(rhs.longitude))
+        return a.distance(from: b) / 1_000
+    }
+
+    func testSeoulLineFiveSongjeongIsNextToGimpoAirportNotBusan() throws {
+        let songjeong = try station("5호선", "송정")
+        let airport = try station("5호선", "김포공항")
+        let magok = try station("5호선", "마곡")
+        XCTAssertLessThan(try kilometers(songjeong, airport), 5)
+        XCTAssertLessThan(try kilometers(songjeong, magok), 5)
+    }
+
+    func testSeoulStationsAreNotMappedToSameNamedStationsElsewhere() throws {
+        XCTAssertLessThan(
+            try kilometers(try station("5호선", "양평"), try station("5호선", "영등포시장")),
+            5
+        )
+        XCTAssertLessThan(
+            try kilometers(try station("경의중앙", "용산"), try station("경의중앙", "효창공원앞")),
+            8
+        )
+    }
+}
+
+final class ExpectedRouteImpossibleJumpTests: XCTestCase {
+    private let calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        return calendar
+    }()
+
+    private func date(_ minute: Int) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: 19))!
+            .addingTimeInterval(TimeInterval(minute * 60))
+    }
+
+    private func reading(_ minute: Int, _ latitude: Double, _ longitude: Double) -> SensorReading {
+        SensorReading(
+            timestamp: date(minute),
+            point: GeoPoint(
+                latitude: latitude, longitude: longitude, altitude: 0,
+                horizontalAccuracy: 20, verticalAccuracy: 10
+            ),
+            locationFixQuality: .precise,
+            gpsAvailable: true
+        )
+    }
+
+    private func requestCount(_ readings: [SensorReading]) -> Int {
+        let travel = TravelSegment(
+            mode: .subway,
+            span: TimeSpan(start: date(0), end: date(60)),
+            distanceMeters: 5_000,
+            confidence: .high,
+            evidence: [],
+            isConfirmed: false,
+            isClassificationLocked: true
+        )
+        return ExpectedRouteRequestEngine.requests(
+            travel: [travel], places: [], readings: readings,
+            in: TimeSpan(start: date(0), end: date(1_440)), through: date(1_440)
+        ).count
+    }
+
+    func testIsolatedFarFixDoesNotCreateExpectedRoute() {
+        // 서울 → (8분 뒤) 부산 한 점 → (16분 뒤) 서울. 부산 점은 튄 위치다.
+        let readings = [
+            reading(0, 37.5, 126.9),
+            reading(8, 35.1875, 129.2024),
+            reading(16, 37.50005, 126.9),
+        ]
+        XCTAssertEqual(requestCount(readings), 0)
+    }
+
+    func testFarFixWithoutReturnDoesNotCreateImpossibleExpectedRoute() {
+        let readings = [
+            reading(0, 37.5, 126.9),
+            reading(8, 35.1875, 129.2024),
+        ]
+        XCTAssertEqual(requestCount(readings), 0)
+    }
+}
+
+final class StationaryLocationGateTests: XCTestCase {
+    private let start = Date(timeIntervalSince1970: 1_792_300_000)
+
+    private func fillStill(_ tracker: inout DeviceStillnessTracker, seconds: Int, step: Int = 2) {
+        for offset in stride(from: 0, through: seconds, by: step) {
+            tracker.append(
+                userAccelerationMagnitudeG: 0.003, rotationRateMagnitude: 0.002,
+                at: start.addingTimeInterval(TimeInterval(offset))
+            )
+        }
+    }
+
+    func testStillOnlyAfterTheFullWindowOfTinyMotion() {
+        var tracker = DeviceStillnessTracker()
+        fillStill(&tracker, seconds: 30)
+        XCTAssertFalse(tracker.isTrulyStill(at: start.addingTimeInterval(31)))
+        fillStill(&tracker, seconds: 70)
+        XCTAssertTrue(tracker.isTrulyStill(at: start.addingTimeInterval(71)))
+    }
+
+    func testAnyMotionOrStaleSamplesBreakStillness() {
+        var tracker = DeviceStillnessTracker()
+        fillStill(&tracker, seconds: 90)
+        XCTAssertTrue(tracker.isTrulyStill(at: start.addingTimeInterval(91)))
+        XCTAssertFalse(tracker.isTrulyStill(at: start.addingTimeInterval(120)), "샘플이 오래되면 정지로 보지 않는다")
+        tracker.append(userAccelerationMagnitudeG: 0.05, rotationRateMagnitude: 0.002, at: start.addingTimeInterval(92))
+        XCTAssertFalse(tracker.isTrulyStill(at: start.addingTimeInterval(93)))
+        tracker.append(userAccelerationMagnitudeG: 0.003, rotationRateMagnitude: 0.2, at: start.addingTimeInterval(94))
+        XCTAssertFalse(tracker.isTrulyStill(at: start.addingTimeInterval(95)))
+    }
+
+    func testLongSampleGapRestartsTheStillWindow() {
+        var tracker = DeviceStillnessTracker()
+        fillStill(&tracker, seconds: 70)
+        tracker.append(userAccelerationMagnitudeG: 0.003, rotationRateMagnitude: 0.002, at: start.addingTimeInterval(200))
+        XCTAssertFalse(tracker.isTrulyStill(at: start.addingTimeInterval(201)))
+    }
+
+    func testGateIgnoresFixesOnlyWhenEverythingAgreesAndHeartbeatAllowsOne() {
+        let now = start.addingTimeInterval(3_600)
+        func ignore(still: Bool = true, stationary: Bool = true, previous: Bool = true,
+                    manual: Bool = false, last: Date? = nil) -> Bool {
+            StationaryLocationGate.shouldIgnoreFixes(
+                isTrulyStill: still, motionIsStationary: stationary, hasPreviousLocation: previous,
+                hasManualTrackingSession: manual, lastAcceptedAt: last ?? now.addingTimeInterval(-60), now: now
+            )
+        }
+        XCTAssertTrue(ignore())
+        XCTAssertFalse(ignore(still: false))
+        XCTAssertFalse(ignore(stationary: false))
+        XCTAssertFalse(ignore(previous: false))
+        XCTAssertFalse(ignore(manual: true))
+        XCTAssertFalse(ignore(last: now.addingTimeInterval(-StationaryLocationGate.heartbeatInterval - 1)),
+                       "오래 지나면 한 번은 반영한다")
+        XCTAssertFalse(StationaryLocationGate.shouldIgnoreFixes(
+            isTrulyStill: true, motionIsStationary: true, hasPreviousLocation: true,
+            hasManualTrackingSession: false, lastAcceptedAt: nil, now: now
+        ))
+    }
+}
