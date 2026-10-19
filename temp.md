@@ -6,7 +6,7 @@
 - 검증 기준: 단독 통과와 전체 `TaptionPlanTests` 실행에서 통과 여부. 결과는 `build/validation/FLK1020A01/`와 test.md.
 
 ## COL1020A01 · 속도 색 반전 (2026-10-20)
-- 요청(대표): 경로 색을 느리면 빨강, 빠르면 초록으로. 범위: 경로 선과 발바닥 모두.
+- 요청(대표): 경로 색을 느리면 빨강, 빠르면 초록으로(범위: 경로 선과 발바닥 모두). 이후 변경: 빨강→초록→파랑으로 일정 비율로 나눈다(0km/h 빨강, 75km/h 초록, 150km/h 이상 파랑).
 - 해결: `MapHomePawprintSpeedColor`·`MapHomeRouteSpeedGradient`의 hue를 반대로 계산한다(0km/h 빨강, 150km/h 초록). 속도 없음 회색은 그대로.
 - 검증 기준: 색 hex·구간 분할 단위 테스트 갱신, Debug 빌드.
 

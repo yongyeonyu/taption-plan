@@ -191,18 +191,22 @@ final class MapHomeLiveMapTests: XCTestCase {
 
     func testGradientColorsFollowThePawprintSpeedScale() {
         XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 0), "#D11F1F")
-        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 150 / 3.6), "#1FD11F")
+        XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 150 / 3.6), "#1F1FD1")
         XCTAssertEqual(
             MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 500),
-            "#1FD11F",
-            "시속 150km를 넘으면 초록에 머문다"
+            "#1F1FD1",
+            "시속 150km를 넘으면 파랑에 머문다"
         )
-        let middle = MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 75 / 3.6)
-        XCTAssertNotEqual(middle, "#1FD11F")
-        XCTAssertNotEqual(middle, "#D11F1F")
+        XCTAssertEqual(
+            MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 75 / 3.6), "#1FD11F",
+            "중간 속도는 초록: 빨강→초록→파랑을 반씩 나눈다"
+        )
+        let quarter = MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 37.5 / 3.6)
+        XCTAssertNotEqual(quarter, "#D11F1F")
+        XCTAssertNotEqual(quarter, "#1FD11F")
     }
 
-    func testGradientSplitsSlowThenFastRouteIntoRedThenGreenPieces() throws {
+    func testGradientSplitsSlowThenFastRouteIntoRedThenBluePieces() throws {
         let route = makeRoute(stepsMeters: Array(repeating: 1.0, count: 50) + Array(repeating: 30.0, count: 50))
         let pieces = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
             coordinates: route.coordinates,

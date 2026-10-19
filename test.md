@@ -1791,3 +1791,9 @@
   - `FeatureEngineTests.testImmediateSensorAnalysisKeepsEveryPendingDay`(FeatureEngineTests.swift:929, 저장 시각이 5초 대기 안에 갱신되지 않음) — 이번 변경과 무관한 센서 분석 타이밍 테스트이며 단독 재실행은 통과(`sensor-1.log`, 1개·실패 0). 전체 실행 부하에서의 간헐 실패로 보지만 원인은 확정하지 못했다.
 - `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`: 이번 전체 실행에서 통과. 1회 통과라 FLK1020A01의 수정 효과를 입증하지는 못한다(이전에는 전체 실행에서만 간헐 실패).
 - 달력 점·비밀번호 보관·색 반전 테스트는 전체 실행에서도 통과.
+
+## REL1020A01 · 빌드 187 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 187: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: COL(속도 색 빨강→초록→파랑), NAM(BOKKI Plan 화면 이름·시작 화면 `LaunchScreen.storyboard`), CAL(달력 점), BKP(비밀번호 기기 Keychain 보관), FLK(테스트 대기 수정).
+- 테스트: 전체 `TaptionPlanTests`는 FLK1020B01(b275eb6 기준)에서 실행했고, 이후 색 3단계 변경은 `MapHomeLiveMapTests` 29개 통과(`live-1.log`). 시작 화면 이름 변경 후 전체 재실행은 하지 않았다.
+- 아카이브·업로드: Release 아카이브 성공(`archive-187.log`), IPA 내보내기 성공(`export-187.log`), IPA 안 앱·위젯 번들 버전 187·표시 이름 BOKKI Plan/BOKKI Plan Widget(Release 아카이브에는 Watch 번들이 없다, 이전 빌드도 같음). `altool` `No errors uploading`(`altool-187.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 187·186·185·184·183 확인, 테스터 1명(`asc-poll-187.log`).
+- 제한: 기기 설치·테스터 수신과 시작 화면·색·달력 화면은 직접 보지 않았다.

@@ -1111,7 +1111,7 @@ enum MapHomeExpectedRouteDiagnostics {
     }
 }
 
-/// 발바닥 색: 느리면 빨강, 빠르면 초록(시속 150km에서 최대), 속도를 모르는 미확인은 회색.
+/// 발바닥 색: 느리면 빨강, 중간 속도는 초록, 빠르면 파랑(시속 150km에서 최대)으로 같은 비율로 나눈다. 속도를 모르는 미확인은 회색.
 enum MapHomePawprintSpeedColor {
     static let maximumMetersPerSecond = 150.0 / 3.6
 
@@ -1124,8 +1124,8 @@ enum MapHomePawprintSpeedColor {
         guard let ratio = ratio(forMetersPerSecond: speed) else {
             return Color.gray.opacity(0.68)
         }
-        // 색상환 빨강(0)에서 초록(1/3)으로.
-        return Color(hue: (1.0 / 3.0) * ratio, saturation: 0.85, brightness: 0.82)
+        // 색상환 빨강(0) → 초록(1/3) → 파랑(2/3)을 속도 비율 0~1에 고르게 대응시킨다.
+        return Color(hue: (2.0 / 3.0) * ratio, saturation: 0.85, brightness: 0.82)
             .opacity(0.9)
     }
 
