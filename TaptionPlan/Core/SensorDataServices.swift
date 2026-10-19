@@ -1247,6 +1247,8 @@ actor SensorReadingArchive {
     private let writeLockURL: URL
     private let beforeValidateAppend: @Sendable () async throws -> Void
     private var dataDeletionGeneration: UInt64
+    /// 복원 세션이 새로 넣은 기록의 id. 복원이 끝나지 못하면 이 기록만 되돌린다.
+    private var restoreSessions: [UUID: [String]] = [:]
 
     /// - Parameters:
     ///   - fileURL: 이전 JSONL 파일 위치. 있으면 지운다(이전 데이터는 쓰지 않는다).
@@ -1309,19 +1311,27 @@ actor SensorReadingArchive {
 
     func appendForRestore(_ readings: [SensorReading], restoreSessionID: UUID? = nil) async throws -> [UUID] {
         guard !readings.isEmpty else { return [] }
-        _ = restoreSessionID
         let generation = dataDeletionGeneration
         try Self.rejectConflicts(within: readings)
         let inserted = try await withLock {
             try await self.checkDataGeneration(generation)
             return try await self.store.insertNewReadings(readings)
         }
+        if let restoreSessionID {
+            restoreSessions[restoreSessionID, default: []] += inserted
+        }
         return inserted.compactMap(UUID.init(uuidString:))
     }
 
-    /// 복원 세션은 행 단위로 넣고 실패 시 `rollbackRestore`로 지우므로 따로 남길 상태가 없다.
+    /// 확정하면 세션 기록만 비우고, 확정하지 못하면 그 세션이 넣은 기록을 되돌린다.
     func finishRestoreSession(_ id: UUID, committed: Bool) async throws {
-        _ = (id, committed)
+        let inserted = restoreSessions.removeValue(forKey: id) ?? []
+        guard !committed, !inserted.isEmpty else { return }
+        let generation = dataDeletionGeneration
+        try await withLock {
+            try await self.checkDataGeneration(generation)
+            try await self.store.deleteReadings(ids: inserted)
+        }
     }
 
     func rollbackRestore(ids: [UUID]) async throws {
