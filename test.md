@@ -1865,3 +1865,9 @@
 - 테스트: 실데이터 형태 회귀 `approximateOutlierDoesNotRejectTheReturningPreciseFixes`는 수정 전 4개 단언 실패를 확인하고 수정 후 통과, 이어지는 근사 유지 테스트 통과, `TaptionRouteEngine` 54개 전부 통과. 10월 전체 readings 3,303개에 새 필터를 돌려 새로 제거된 점은 10:34:43 한 개뿐임을 확인했다(임시 테스트, 저장소에 남기지 않음).
 - 앱(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,443개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`), 렌더 테스트는 통과. generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 화면에서 다시 그려 확인하지 못했다(저장된 경로 캐시·DB에는 이전 필터 결과가 남아 있을 수 있어 새 빌드에서 하루를 다시 계산해야 반영된다). 다른 유형의 튐(근사가 아닌 위치, 앞뒤 중앙값 스파이크 등)은 이번 범위가 아니다.
+
+## REL1020E01 · 빌드 191 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 191: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`, 커밋 d7c3491). 190 이후 포함: PLY1020B01(재생 줌 시간 기준 부드럽게·현재 위치 보강 제거), BKP1020B01(iCloud 백업 진행 표시), GPS1020A01(근사 위치 튐 필터), HOM1020B01(집 아이콘·레벨 탭 → 성장 카드 + 오늘 하루 요약).
+- 테스트: PLY·BKP·GPS는 각 항목 기록의 테스트(전체 `TaptionPlanTests` 1,443개 중 기존 환경 실패 2개뿐, GPS1020A01)를 따른다. HOM1020B01은 화면 코드라 단위 테스트를 추가하지 않았고 generic Debug 빌드만 통과했다.
+- 아카이브·업로드: 첫 아카이브는 시스템 부하(평균 200+, 다른 세션의 ffmpeg 작업)로 50분 넘게 멈춰 정리하고 다시 시작했다. 재시도에서 Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 191·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-191.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 191·190·189·188·187 확인, 테스터 1명(`asc-poll-191.log`). 처음 poll 스크립트는 파일이 없어 한 번 실패해 다시 만들어 돌렸다.
+- 제한: 기기 설치·테스터 수신과 화면 확인(재생 줌, 집 아이콘 탭, 10:34 직선 사라짐)은 하지 못했다. 저장된 경로 캐시에는 이전 필터 결과가 남아 있을 수 있다.
