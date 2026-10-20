@@ -1827,3 +1827,10 @@
 - 집 레벨 라벨(HOM): 집 아이콘 아래 `Lv.N` 라벨 상시 표시, 탭하면 오늘 하루 요약. 위쪽 같은 높이 여백으로 아이콘 위치 유지.
 - 테스트(iPhone 11 Pro): `MapHomeLiveMapTests`·렌더 테스트 33개 통과(`live-2.log`, 신규 재생 속도 테스트 포함), generic iOS Debug 빌드 통과(`app-debug.log`). 첫 시도(`live-1.log`)는 앱 시작 실패(CoreDeviceError 10004, 프로세스 확인 불가)로 테스트가 실행되지 않았고 재시도에서 통과했다. 전체 `TaptionPlanTests`는 이번 변경 후 다시 돌리지 않았다.
 - 제한: 재생 화면·집 라벨 위치·탭은 화면으로 확인하지 못했다(아이폰 18이 외출 중). 속도 비례 줌의 실제 체감도 미확인. TestFlight 배포·push는 대표 지시 전까지 보류.
+
+## REL1020C01 · 빌드 189 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 189: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 포함: PLY1020A01(재생 속도 줌·포커스), HOM1020A01(집 레벨 라벨 상시 표시·탭으로 하루 요약), 커밋 0bce919.
+- 테스트: 위 두 변경은 `MapHomeLiveMapTests`·렌더 테스트 33개 통과, generic Debug 빌드 통과(PLY1020A01·HOM1020A01). 이 변경 후 전체 `TaptionPlanTests`는 실행하지 않았다.
+- 아카이브·업로드: Release 아카이브 성공(`archive-189.log`), IPA 내보내기 성공(`export-189.log`), IPA 앱·위젯 번들 버전 189·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음, 이전 빌드도 같음), `altool` `No errors uploading`(`altool-189.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 189·188·187·186·185 확인, 테스터 1명(`asc-poll-189.log`).
+- 정리: 디스크 부족 공지(다른 세션)에 대표가 "빌드 캐시만 삭제"를 선택해 `build/DD`·`DD-gen`·`DD18`, ArchiveDD 캐시, 아카이브 184~188과 export 185~188을 지웠다(약 3.3GB). 189 아카이브·IPA, 검증 로그, `artifacts`는 유지.
+- 제한: 기기 설치·테스터 수신과 재생 줌·집 라벨 화면은 직접 보지 못했다.
