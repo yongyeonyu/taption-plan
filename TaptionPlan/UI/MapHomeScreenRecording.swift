@@ -43,8 +43,14 @@ final class MapHomeScreenRecorder {
         do {
             try await recorder.startRecording()
             isRecording = true
+            TaptionPlanDiagnosticsLogger.shared.record("screen_recording_started")
             return true
         } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "screen_recording_start_failed",
+                level: .error,
+                fields: ["error": error.localizedDescription]
+            )
             return false
         }
     }
@@ -57,16 +63,29 @@ final class MapHomeScreenRecorder {
         try? FileManager.default.removeItem(at: url)
         do {
             try await RPScreenRecorder.shared().stopRecording(withOutput: url)
+            let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+            TaptionPlanDiagnosticsLogger.shared.record("screen_recording_stopped", metrics: ["bytes": Double(bytes)])
             return url
         } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "screen_recording_stop_failed",
+                level: .error,
+                fields: ["error": error.localizedDescription]
+            )
             return nil
         }
     }
+}
+
+/// 사진 앱 권한·저장. PhotoKit 완료 핸들러는 백그라운드 큐에서 불리므로 메인 액터와 분리한다.
+enum MapHomeScreenRecordingStore {
+    static func requestPhotoAddAccess() async -> Bool {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        return status == .authorized || status == .limited
+    }
 
     static func saveToPhotos(_ url: URL) async -> Bool {
-        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-        guard status == .authorized || status == .limited else { return false }
-        return await withCheckedContinuation { continuation in
+        await withCheckedContinuation { continuation in
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
             }, completionHandler: { success, _ in

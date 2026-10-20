@@ -5800,6 +5800,11 @@ struct MapHomeView: View {
     private func startRecordingPlayback() {
         isRecordingOptionsPresented = false
         Task { @MainActor in
+            // 권한은 재생 전에 먼저 묻는다: 사진 저장 → 화면 녹화.
+            guard await MapHomeScreenRecordingStore.requestPhotoAddAccess() else {
+                TaptionPlanDiagnosticsLogger.shared.record("screen_recording_blocked", fields: ["reason": "photo_access_denied"])
+                return
+            }
             isScreenRecording = true
             // 시트가 내려가고 화면이 정리될 시간을 둔다.
             try? await Task.sleep(nanoseconds: 700_000_000)
@@ -5817,7 +5822,8 @@ struct MapHomeView: View {
             let url = await screenRecorder.stop()
             isScreenRecording = false
             guard let url else { return }
-            _ = await MapHomeScreenRecorder.saveToPhotos(url)
+            let saved = await MapHomeScreenRecordingStore.saveToPhotos(url)
+            TaptionPlanDiagnosticsLogger.shared.record("screen_recording_saved", fields: ["saved": saved ? "true" : "false"])
             recordedVideoURL = url
             isRecordedVideoSharePresented = true
         }
@@ -12843,6 +12849,37 @@ private struct MapHomeSecuritySheet: View {
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
 
+                card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
+                    Text(language.text(
+                        "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
+                        "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            Task { await model.exportDiagnosticsToICloud() }
+                        } label: {
+                            Label(
+                                language.text("로그 업로드", "Upload logs"),
+                                systemImage: "icloud.and.arrow.up"
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Color.tpReferenceBlue)
+                        .disabled(model.isExportingDiagnostics)
+
+                        Text(model.diagnosticsExportStatus)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpReferenceBlue)
+                    }
+
+                    Text(model.diagnosticsLatestLogSummary)
+                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {
                     SecureField(hasPIN ? registeredPINDots : language.text("비밀번호", "Password"), text: $pin)
                         .keyboardType(.numberPad)
@@ -12897,37 +12934,6 @@ private struct MapHomeSecuritySheet: View {
                 backupCard
                 offloadCard
                 restoreCard
-
-                card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
-                    Text(language.text(
-                        "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
-                        "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
-                    ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-
-                    HStack(spacing: 10) {
-                        Button {
-                            Task { await model.exportDiagnosticsToICloud() }
-                        } label: {
-                            Label(
-                                language.text("로그 업로드", "Upload logs"),
-                                systemImage: "icloud.and.arrow.up"
-                            )
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(Color.tpReferenceBlue)
-                        .disabled(model.isExportingDiagnostics)
-
-                        Text(model.diagnosticsExportStatus)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.tpReferenceBlue)
-                    }
-
-                    Text(model.diagnosticsLatestLogSummary)
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
 
                 if let message {
                     Text(message)

@@ -295,6 +295,7 @@ struct TaptionDiagnosticsNoiseGate: Sendable {
         "watch_payload_skipped": 60,
         "widget_payload_published": 60,
         "playback_zoom_sample": 5,
+        "map_camera_command": 1,
         "gps_fix": 1,
     ]
 

@@ -2008,3 +2008,9 @@
 - 구현: MapHomePhotoLayer.swift(묶음 정책·썸네일 로더·핀·격자 앨범·전체 화면 넘겨 보기). 선택 날짜의 위치 있는 사진(숨김 제외)을 PhotoKit으로 읽어 화면 배율(카메라 거리)에 따라 묶고, 벡터 지도에 썸네일+개수 핀 표시. 사이드바 선택 시각 ±30분 사진 묶음은 테두리 강조. 핀 탭 → 격자 앨범 → 탭하면 넘겨 보기. 재생 중에는 지나온 시각 20분 안의 사진만 순서대로 나타남. 녹화 레이어에 "사진" 추가(기본 끔). 사진 권한은 처음 로드 때 요청, 거부 시 표시 안 함.
 - 한계: Apple 지도 스타일에는 사진 핀 미표시.
 - 검증: build-for-testing 성공, 아이폰 11 Pro에서 신규 단위 테스트 6개 통과(build/validation/PHO1020A01/test2.log): 사진 묶음·하이라이트·재생 창, 녹화 레이어, 재생 배율 모드, 이동 수단별 거리, 재생 틱 상수. 실기기 화면(사진 핀 표시·앨범·녹화) 확인은 미실시.
+
+## REC1020U01 — 녹화 종료 시 크래시 수정·권한 선요청·로그 카드 이동 (2026-10-20)
+- 원인(기기 크래시 리포트 TaptionPlan-2026-10-20-210743.ips, EXC_BREAKPOINT): 재생 종료 후 `MapHomeScreenRecorder.saveToPhotos`의 PhotoKit 완료 핸들러가 @MainActor 클래스 안 클로저라 백그라운드 큐 `com.apple.PHPhotoLibrary.transaction.high`에서 actor 격리 검사(_dispatch_assert_queue_fail)로 트랩.
+- 수정: 사진 권한·저장을 비격리 `MapHomeScreenRecordingStore`로 분리. 녹화 시작 전에 사진 저장 권한을 먼저 요청(거부 시 재생 안 함) 후 화면 녹화 권한→재생. 녹화 시작·중지·실패·저장 결과를 로그(screen_recording_*)에 기록. `map_camera_command` 로그는 1초 1건으로 제한(재생 중 프레임마다 쓰던 것).
+- 보안·백업 시트의 "iCloud 로그 업로드" 카드를 월별 불러오기 목록 위(시트 맨 위)로 이동.
+- 검증: build-for-testing 성공(build/validation/REC1020U01/build.log). 실기기 녹화 재확인 미실시.
