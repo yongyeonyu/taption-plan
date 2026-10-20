@@ -18048,6 +18048,7 @@ final class FeatureEngineTests: XCTestCase {
         for feature in [
             PermissionFeature.location,
             .health,
+            .photos,
             .calendar,
             .notifications,
         ] {

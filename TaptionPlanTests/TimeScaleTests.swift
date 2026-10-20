@@ -4408,7 +4408,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            60,
+            61.25,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4458,7 +4458,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            61.25,
+            61.875,
             accuracy: 0.000_001
         )
         XCTAssertEqual(

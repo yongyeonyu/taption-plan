@@ -1065,6 +1065,12 @@ struct PermissionOnboardingSheet: View {
             detail: "iPhone 건강 앱과 승인된 건강 앱의 걸음·운동·수면을 읽습니다. Apple Watch 기록도 함께 반영합니다."
         ),
         PermissionOnboardingStep(
+            feature: .photos,
+            icon: "photo.on.rectangle",
+            title: "사진",
+            detail: "사진을 찍은 위치와 시각에 맞춰 지도에 보여주고, 재생 화면 녹화 영상을 사진 앱에 저장합니다."
+        ),
+        PermissionOnboardingStep(
             feature: .calendar,
             icon: "calendar",
             title: "캘린더",
@@ -1257,12 +1263,14 @@ struct PermissionOnboardingSheet: View {
         for step: PermissionOnboardingStep
     ) async -> Bool {
         switch step.feature {
-        case .location: await model.enableLocationCollection()
-        case .health: await model.requestHealth()
-        case .calendar: await model.requestCalendar()
-        case .notifications: await model.requestNotifications()
-        case .photos, .appUsage: false
-        default: false
+        case .location: return await model.enableLocationCollection()
+        case .health: return await model.requestHealth()
+        case .calendar: return await model.requestCalendar()
+        case .notifications: return await model.requestNotifications()
+        case .photos:
+            await model.requestPhotos()
+            return model.permissionState(for: .photos) != .notDetermined
+        default: return false
         }
     }
 
