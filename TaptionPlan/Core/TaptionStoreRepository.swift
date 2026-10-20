@@ -31,6 +31,21 @@ actor TaptionStoreRepository: PlanDataRepository {
         self.store = store
     }
 
+    /// 시작 화면용 가벼운 읽기: 헤더 행 하나(설정·갱신 시각)만 읽어 설정만 담은 스냅샷을 돌려준다.
+    /// 모든 행을 읽고 해석하는 `load()`를 기다리지 않고 지도 시작 화면이 먼저 열리게 한다.
+    /// 헤더가 없거나 해석할 수 없으면 nil이며, 이때는 `load()`가 정식 결과(또는 오류)를 낸다.
+    func loadStartupSnapshot() async throws -> TaptionDataSnapshot? {
+        let rows = try await store.records(kind: Self.headerKind)
+        guard let body = rows.first(where: { $0.id == Self.headerID })?.body,
+              let header = try? Self.decoder().decode(Header.self, from: Data(body.utf8)),
+              header.updatedAt != .distantPast else { return nil }
+        var startup = TaptionDataSnapshot.empty
+        startup.schemaVersion = header.schemaVersion
+        startup.updatedAt = header.updatedAt
+        startup.settings = header.settings
+        return startup
+    }
+
     func load() async throws -> TaptionDataSnapshot {
         let rows = try await store.allRecordRows()
         var state: [String: [String: (ord: Int, body: String)]] = [:]

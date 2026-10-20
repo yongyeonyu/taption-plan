@@ -1871,3 +1871,9 @@
 - 테스트: PLY·BKP·GPS는 각 항목 기록의 테스트(전체 `TaptionPlanTests` 1,443개 중 기존 환경 실패 2개뿐, GPS1020A01)를 따른다. HOM1020B01은 화면 코드라 단위 테스트를 추가하지 않았고 generic Debug 빌드만 통과했다.
 - 아카이브·업로드: 첫 아카이브는 시스템 부하(평균 200+, 다른 세션의 ffmpeg 작업)로 50분 넘게 멈춰 정리하고 다시 시작했다. 재시도에서 Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 191·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-191.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 191·190·189·188·187 확인, 테스터 1명(`asc-poll-191.log`). 처음 poll 스크립트는 파일이 없어 한 번 실패해 다시 만들어 돌렸다.
 - 제한: 기기 설치·테스터 수신과 화면 확인(재생 줌, 집 아이콘 탭, 10:34 직선 사라짐)은 하지 못했다. 저장된 경로 캐시에는 이전 필터 결과가 남아 있을 수 있다.
+
+## LAU1020A01 · 시작 화면 36% 정체: 시작용 가벼운 읽기 복원 (2026-10-20, 커밋 후 미배포)
+- 근거: 앱은 `loadStartupSnapshot()`(설정만)이 있으면 첫 화면을 먼저 열고 전체 읽기는 뒤에서 하도록 만들어져 있다(`hasPreparedStartupSettings`, `isStartupSnapshotPartial`). 새 저장소로 옮긴 커밋 06459b1(STO1019B01)이 이전 구현을 없애 `TaptionStoreRepository`는 기본값 nil을 돌려줬고, 시작이 `load()`(모든 행 읽기·해석)를 기다렸다. 이전 구현은 `git show 06459b1`에서 확인했다.
+- 수정: `TaptionStoreRepository.loadStartupSnapshot()`이 헤더 행 하나만 읽어 설정·갱신 시각만 담은 스냅샷을 돌려준다(없거나 해석 실패면 nil). 저장 비교 기준은 여전히 `load()`가 만든다. 데이터 포맷·DB 변경 없음.
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,444개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-2.log`). 신규 `testStartupSnapshotCarriesOnlySettingsAndDoesNotTouchOtherRows` 통과. 첫 시도(`full-1.log`)는 테스트의 async 호출 컴파일 오류로 실행 전 실패해 고쳤다. generic Debug 빌드는 `app-debug.log`.
+- 제한: 실제 시작 속도는 측정하지 못했다(설치 직후·큰 DB에서의 체감은 새 빌드로 대표가 확인). 시작 스냅샷에는 기록 행이 없으므로 첫 화면이 열린 직후 전체 로드가 끝나기 전까지 일부 화면(지도 경로·하루 요약 등)이 비어 보일 수 있다. 코드는 기존 부분 스냅샷 경로를 따르며 이 상태에서 저장을 막는다.

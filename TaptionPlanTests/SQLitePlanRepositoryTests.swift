@@ -450,6 +450,29 @@ final class TaptionStoreRepositoryTests: XCTestCase {
                           categoryID: "activity")
     }
 
+    func testStartupSnapshotCarriesOnlySettingsAndDoesNotTouchOtherRows() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        let emptyStartup = try await repository.loadStartupSnapshot()
+        XCTAssertNil(emptyStartup, "저장된 헤더가 없으면 nil")
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = (0..<50).map { plan("계획 \($0)", at: TimeInterval($0) * 60) }
+        snapshot.settings.mapDisplayStyle = .hybrid
+        try await repository.save(snapshot)
+
+        let fresh = TaptionStoreRepository(store: store)
+        let loadedStartup = try await fresh.loadStartupSnapshot()
+        let startup = try XCTUnwrap(loadedStartup)
+        XCTAssertEqual(startup.settings.mapDisplayStyle, .hybrid)
+        XCTAssertEqual(startup.updatedAt, snapshot.updatedAt)
+        XCTAssertTrue(startup.plans.isEmpty, "시작 스냅샷은 기록 행을 읽지 않는다")
+        // 시작 스냅샷을 읽은 뒤에도 정식 load()는 모든 행을 돌려준다(저장 비교 기준은 load()가 만든다).
+        let full = try await fresh.load()
+        XCTAssertEqual(full.plans.count, 50)
+        XCTAssertEqual(full.settings.mapDisplayStyle, .hybrid)
+    }
+
     func testEmptyStoreLoadsAnEmptySnapshot() async throws {
         let repository = TaptionStoreRepository(store: try makeStore())
         let snapshot = try await repository.load()
