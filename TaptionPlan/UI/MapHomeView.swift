@@ -6276,12 +6276,19 @@ struct MapHomeView: View {
             VStack(spacing: 0) {
                 mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
                 if let scale = MapHomeCameraZoomMath.scale(distance: visibleMapCamera?.distance) {
-                    Text("\(scale)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(Color.tpSecondary)
-                        .frame(width: Layout.mapControlSize)
-                        .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
+                    Button {
+                        fitMapToRoutes()
+                    } label: {
+                        Text("\(scale)")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.tpSecondary)
+                            .frame(width: Layout.mapControlSize, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
+                    .accessibilityHint(language.text("이동 경로에 맞춰 화면 배율을 조정합니다", "Fits the map to the route"))
                 }
                 mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
             }
@@ -7970,6 +7977,23 @@ struct MapHomeView: View {
         return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
 
+    /// GPS를 아직 못 받았을 때 화랑이가 있을 가장 최근 위치(최신 센서 → 실시간 경로 → 오늘 경로 마지막 점).
+    private var lastKnownCoordinate: CLLocationCoordinate2D? {
+        let candidates: [GeoPoint?] = [
+            model.latestSensorReading?.point,
+            model.liveRouteState.readings.last?.point,
+            displayRouteReadings.last(where: { $0.point != nil })?.point,
+            currentDayReadings.last(where: { $0.point != nil })?.point,
+        ]
+        guard let point = candidates.compactMap({ $0 }).first(where: { isValid($0) }) else { return nil }
+        return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+    }
+
+    /// 위치 버튼·따라가기가 맞출 좌표: 확정 현재 위치, 없으면 가장 최근 위치.
+    private var liveFocusCoordinate: CLLocationCoordinate2D? {
+        currentCoordinate ?? lastKnownCoordinate
+    }
+
     private var hasConfirmedCurrentGPS: Bool {
         MapHomeCurrentGPSPolicy.isConfirmed(
             in: currentMapLocationReading.map { [$0] } ?? []
@@ -8929,7 +8953,7 @@ struct MapHomeView: View {
         guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else {
             return nil
         }
-        return currentCoordinate
+        return liveFocusCoordinate
     }
 
     private var displayedPlaybackMinute: Double? {
@@ -10206,6 +10230,15 @@ struct MapHomeView: View {
         return min(max((scale - 0.05) / 0.95, 0), 1)
     }
 
+    /// 배율 숫자를 누르면 이동 경로 전체가 보이도록 배율과 위치를 맞춘다. 따라가기는 멈춘다.
+    private func fitMapToRoutes() {
+        guard !isDayPlaybackRunning, let region = mapRouteFitRegion else { return }
+        setUserTrackingMode(.idle)
+        isMapCenteredOnUser = false
+        hasUserAdjustedMap = true
+        setMapPosition(.region(region))
+    }
+
     private func focusMapOnAllRoutes() {
         guard MapHomePlaybackCameraPolicy.allowsAutomaticFit(
             isPlaybackRunning: isDayPlaybackRunning,
@@ -10400,7 +10433,7 @@ struct MapHomeView: View {
         heading: CLLocationDirection? = nil,
         preservesCamera: Bool = false
     ) {
-        guard let coordinate = currentCoordinate else {
+        guard let coordinate = liveFocusCoordinate else {
             isMapCenteredOnUser = false
             return
         }
@@ -10500,6 +10533,8 @@ struct MapHomeView: View {
         liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
+        // GPS를 기다리는 동안에도 가장 최근 위치로 먼저 이동해 화랑이를 보여준다.
+        focusUserLocation(using: proxy, preservesCamera: true)
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = Task { @MainActor in
             defer { currentLocationRequestTask = nil }
@@ -10508,10 +10543,11 @@ struct MapHomeView: View {
             )
             guard !Task.isCancelled,
                   userTrackingMode.keepsCameraLocked else { return }
-            guard isAvailable else {
+            guard isAvailable || liveFocusCoordinate != nil else {
                 setUserTrackingMode(.idle)
                 return
             }
+            if isAvailable { setUserTrackingMode(.following) }
             focusUserLocation(using: proxy, preservesCamera: true)
         }
     }

@@ -45,7 +45,7 @@ enum MapHomeCalendarLogStatusPolicy {
 
 /// 달력 하단 메뉴의 시간 종류. `rawValue`는 대분류 canonical 분류 ID와 같다(`DayPhase`).
 enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
-    case sleep, movement, study, work, exercise, hobby
+    case sleep, movement, study, work, exercise, hobby, distance
 
     var id: String { rawValue }
 
@@ -57,6 +57,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .work: language.text("업무시간", "Work")
         case .exercise: language.text("운동시간", "Exercise")
         case .hobby: language.text("취미시간", "Hobby")
+        case .distance: language.text("이동거리", "Distance")
         }
     }
 
@@ -68,8 +69,12 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .work: "briefcase.fill"
         case .exercise: "dumbbell.fill"
         case .hobby: "paintpalette.fill"
+        case .distance: "point.topleft.down.to.point.bottomright.curvepath"
         }
     }
+
+    /// 시간 합계는 초, 이동거리는 미터로 같은 딕셔너리에 담는다.
+    var isDistance: Bool { self == .distance }
 }
 
 enum MapHomeCalendarTimeTotalsPolicy {
@@ -110,9 +115,31 @@ enum MapHomeCalendarTimeTotalsPolicy {
             for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) where entry.actual > 0 && entry.categoryID != "unconfirmed" {
                 byID[entry.categoryID, default: 0] += entry.actual
             }
+            let meters = distanceMeters(of: monthTravel, in: TimeSpan(start: day, end: dayEnd))
+            if meters >= 10 { byID[MapHomeCalendarTimeKind.distance.rawValue] = meters }
             if !byID.isEmpty { result[day] = byID }
         }
         return result
+    }
+
+    /// 하루와 겹치는 이동 구간의 거리(미터). 구간이 날을 걸치면 겹친 시간 비율만큼만 더한다.
+    static func distanceMeters(of travel: [TravelSegment], in day: TimeSpan) -> Double {
+        travel.reduce(0) { sum, segment in
+            guard segment.distanceMeters.isFinite, segment.distanceMeters > 0 else { return sum }
+            let total = segment.span.end.timeIntervalSince(segment.span.start)
+            let overlap = min(segment.span.end, day.end).timeIntervalSince(max(segment.span.start, day.start))
+            guard overlap > 0 else { return sum }
+            return sum + (total > 0 ? segment.distanceMeters * min(1, overlap / total) : segment.distanceMeters)
+        }
+    }
+
+    static func distanceCellText(meters: Double) -> String {
+        guard meters >= 10 else { return "" }
+        return meters < 1_000 ? "\(Int(meters.rounded()))m" : String(format: "%.1fk", meters / 1_000)
+    }
+
+    static func distanceText(meters: Double) -> String {
+        meters < 1_000 ? "\(Int(meters.rounded())) m" : String(format: "%.1f km", meters / 1_000)
     }
 
     /// 달력 칸의 짧은 표기: 1시간 이상은 `7:20`, 한 시간 미만은 `45m`. 0은 빈 문자열.
@@ -231,7 +258,7 @@ struct MapHomeCalendarSheet: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
             ForEach(MapHomeCalendarTimeKind.allCases) { kind in
                 let isOn = selectedKind == kind
-                let tint = timeTint(kind.rawValue)
+                let tint = kind.isDistance ? Color.tpAccent : timeTint(kind.rawValue)
                 Button {
                     selectedKind = isOn ? nil : kind
                 } label: {
@@ -258,8 +285,14 @@ struct MapHomeCalendarSheet: View {
         }
     }
 
+    private func panelText(_ value: Double, for kind: MapHomeCalendarTimeKind) -> String {
+        kind.isDistance
+            ? MapHomeCalendarTimeTotalsPolicy.distanceText(meters: value)
+            : MapHomeCalendarTimeTotalsPolicy.durationText(seconds: value, language: language)
+    }
+
     private func timePanel(for kind: MapHomeCalendarTimeKind) -> some View {
-        let tint = timeTint(kind.rawValue)
+        let tint = kind.isDistance ? Color.tpAccent : timeTint(kind.rawValue)
         let daysInMonth = calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
         let days = (0..<daysInMonth).compactMap { calendar.date(byAdding: .day, value: $0, to: monthStart) }
@@ -282,8 +315,7 @@ struct MapHomeCalendarSheet: View {
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
-            Text(MapHomeCalendarTimeTotalsPolicy.durationText(
-                seconds: selectedInMonth ? seconds(of: kind, on: selected) : 0, language: language))
+            Text(panelText(selectedInMonth ? seconds(of: kind, on: selected) : 0, for: kind))
                 .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundStyle(tint)
             HStack(alignment: .bottom, spacing: 2) {
@@ -296,9 +328,9 @@ struct MapHomeCalendarSheet: View {
             .frame(height: 44, alignment: .bottom)
             HStack(spacing: 8) {
                 timeStat(language.text("이번 달 합계", "Month total"),
-                         MapHomeCalendarTimeTotalsPolicy.durationText(seconds: sum, language: language))
+                         panelText(sum, for: kind))
                 timeStat(language.text("하루 평균", "Daily average"),
-                         MapHomeCalendarTimeTotalsPolicy.durationText(seconds: sum / Double(elapsedDays), language: language))
+                         panelText(sum / Double(elapsedDays), for: kind))
             }
         }
         .padding(12)
@@ -421,9 +453,11 @@ struct MapHomeCalendarSheet: View {
                     }
 
                 if let selectedKind {
-                    Text(MapHomeCalendarTimeTotalsPolicy.cellText(seconds: seconds(of: selectedKind, on: date)))
+                    Text(selectedKind.isDistance
+                        ? MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: seconds(of: selectedKind, on: date))
+                        : MapHomeCalendarTimeTotalsPolicy.cellText(seconds: seconds(of: selectedKind, on: date)))
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundStyle(timeTint(selectedKind.rawValue))
+                        .foregroundStyle(selectedKind.isDistance ? Color.tpAccent : timeTint(selectedKind.rawValue))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(height: 12)
