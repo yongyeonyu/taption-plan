@@ -1919,3 +1919,9 @@
 - 벡터 고대비(대표 선택 "흰 바탕 고대비로 재설계"): 배경 #FFFFFF, 물 #C9DFF5, 땅 #F3F3F3, 건물 #9A9A9A, 도로 외곽선 #000000, 도로 #FFC400으로 바꿔 야간과 구분한다. 목록 이름·저장값은 그대로다.
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,449개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`). generic iOS Debug 빌드 통과(`app-debug.log`).
 - 제한: 위성·하이브리드·표준·간략화의 실제 모습, 벡터 고대비의 읽기 쉬움(노란 도로가 흰 바탕에서 보이는지), 배율 숫자의 위치·크기는 화면으로 확인하지 못했다. 안개·발자국·경로 색이 위성·하이브리드 위에서 잘 보이는지도 확인이 필요하다. 배포 보류.
+
+## REL1020H01 · 빌드 194 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 194: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`, 커밋 4e4abfb). 193 이후 포함: ZMS1020B01(지도 배율 0~100 표시), MAP1020D01(위성·하이브리드·표준·간략화 스타일 실제 적용, 벡터 고대비 흰 바탕 재설계).
+- 테스트: 배포 직전 전체 `TaptionPlanTests` 1,449개(iPhone 11 Pro), 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(ZMS1020B01 `full-1.log`). generic Debug 빌드 통과.
+- 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 194·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-194.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 194·193·192·191·190 확인, 테스터 1명(`asc-poll-194.log`).
+- 제한: 기기 설치·테스터 수신과 화면 확인(위성·하이브리드 모습, 벡터 고대비 가독성, 배율 숫자 위치)은 하지 못했다.
