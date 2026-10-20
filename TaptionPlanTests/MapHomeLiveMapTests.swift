@@ -216,6 +216,52 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertNil(MapHomePlaybackSpeed.speed(at: base, travel: [], readings: []))
     }
 
+    func testPlaybackZoomSmootherLimitsRateAndFollowsTimeNotTicks() {
+        let smoother = MapHomePlaybackZoomSmoother()
+        var distance = 250.0
+        var uptime = 100.0
+        // 첫 호출은 기준 시각만 잡는다.
+        XCTAssertEqual(smoother.next(current: distance, target: 40_000, uptime: uptime), distance)
+        // 1초 동안 30틱: 초당 로그 변화 상한(0.9) 안에서만 멀어진다.
+        for _ in 0..<30 {
+            uptime += 1.0 / 30
+            distance = smoother.next(current: distance, target: 40_000, uptime: uptime)
+        }
+        XCTAssertLessThanOrEqual(log(distance / 250), MapHomePlaybackZoomSmoother.maximumLogRate + 0.001)
+        XCTAssertGreaterThan(distance, 250)
+        // 틱 수가 달라도 같은 시간이면 비슷한 결과(시간 기준).
+        let coarse = MapHomePlaybackZoomSmoother()
+        var coarseDistance = 250.0
+        var coarseUptime = 100.0
+        _ = coarse.next(current: coarseDistance, target: 40_000, uptime: coarseUptime)
+        for _ in 0..<5 {
+            coarseUptime += 0.2
+            coarseDistance = coarse.next(current: coarseDistance, target: 40_000, uptime: coarseUptime)
+        }
+        XCTAssertEqual(log(coarseDistance), log(distance), accuracy: 0.15)
+        // 정지와 이동이 번갈아도 한 번에 크게 튀지 않는다.
+        var flipping = 2_000.0
+        var t = 200.0
+        let flip = MapHomePlaybackZoomSmoother()
+        _ = flip.next(current: flipping, target: 250, uptime: t)
+        var largestStep = 0.0
+        for index in 0..<60 {
+            t += 1.0 / 30
+            let before = flipping
+            flipping = flip.next(current: flipping, target: index % 20 < 10 ? 250 : 40_000, uptime: t)
+            largestStep = max(largestStep, abs(log(flipping / before)))
+        }
+        XCTAssertLessThan(largestStep, MapHomePlaybackZoomSmoother.maximumLogRate / 30 + 0.0001)
+        // 목표에 가까워지면 넘지 않고 수렴한다.
+        var near = 300.0
+        let settle = MapHomePlaybackZoomSmoother()
+        var u = 0.0
+        _ = settle.next(current: near, target: 250, uptime: u)
+        for _ in 0..<300 { u += 0.05; near = settle.next(current: near, target: 250, uptime: u) }
+        XCTAssertEqual(near, 250, accuracy: 1)
+        XCTAssertGreaterThanOrEqual(near, 250)
+    }
+
     func testLiveFollowSpeedTreatsStaleSlowReadingAsStationary() {
         typealias Speed = MapHomeLiveFollowSpeed
         XCTAssertEqual(Speed.speed(latestAge: 3, latestSpeed: 1.2), 1.2)

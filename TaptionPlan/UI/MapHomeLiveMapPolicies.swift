@@ -358,6 +358,30 @@ enum MapHomeLiveFollowSpeed {
     }
 }
 
+/// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고(시정수 1.2초),
+/// 초당 로그 변화량에 상한(약 2.5배/초)을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
+final class MapHomePlaybackZoomSmoother {
+    static let timeConstant: TimeInterval = 1.2
+    static let maximumLogRate = 0.9
+    static let maximumStep: TimeInterval = 0.5
+
+    private var lastUptime: TimeInterval?
+
+    func next(current: Double, target: Double, uptime: TimeInterval) -> Double {
+        defer { lastUptime = uptime }
+        guard current.isFinite, current > 0, target.isFinite, target > 0,
+              let lastUptime else { return current }
+        let dt = min(max(uptime - lastUptime, 0), Self.maximumStep)
+        guard dt > 0 else { return current }
+        let gap = log(target) - log(current)
+        let step = gap * (1 - exp(-dt / Self.timeConstant))
+        let limit = Self.maximumLogRate * dt
+        return exp(log(current) + min(max(step, -limit), limit))
+    }
+
+    func reset() { lastUptime = nil }
+}
+
 /// 재생 시각의 이동 속도(m/s). 확정된 이동 구간의 평균 속도가 있으면 그것을, 없으면 그 시각을 사이에 둔
 /// 두 위치 점의 거리/시간을 쓴다. 한쪽 점만 있으면 가까운(120초 이내) 센서 속도, 아무것도 없으면 nil이다.
 /// 재생 중에는 오늘의 실시간 속도를 섞지 않는다.

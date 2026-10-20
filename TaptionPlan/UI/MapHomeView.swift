@@ -2188,6 +2188,7 @@ struct MapHomeView: View {
     @State private var mapCameraFrameProjection = MapHomeCameraFrameProjection()
     @State private var mapRenderCache = MapHomeMapRenderCache()
     @State private var liveZoomGovernor = MapHomeLiveZoomGovernor()
+    @State private var playbackZoomSmoother = MapHomePlaybackZoomSmoother()
     @State private var visibleMapCamera: MapCamera?
     @State private var shouldFitRoutesAfterDateChange = false
     @State private var hasUserAdjustedMap = false
@@ -3311,8 +3312,7 @@ struct MapHomeView: View {
                       minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
                   ) else { return }
             recordPlaybackFocusSample()
-            // 그 시각의 위치가 아직 없으면(자정 직후 등) 현재 위치로라도 카메라를 옮겨 둔다.
-            guard let point = displayedPlaybackFocusPoint ?? playbackFocusFallbackPoint else { return }
+            guard let point = displayedPlaybackFocusPoint else { return }
             focusMap(on: point, using: nil, followsTracking: true)
         }
         .onChange(of: isTimelineInteractionActive) { _, isInteracting in
@@ -5461,6 +5461,7 @@ struct MapHomeView: View {
         isTimelineSelectionPinned = true
         isTimelineInteractionActive = true
         isDayPlaybackRunning = true
+        playbackZoomSmoother.reset()
         lastPlaybackRouteProjectionUptime = 0
         lastPlaybackMapFocusUptime = 0
         lastPlaybackMarkerUptime = 0
@@ -10025,12 +10026,6 @@ struct MapHomeView: View {
         )
     }
 
-    private var playbackFocusFallbackPoint: GeoPoint? {
-        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
-              let coordinate = currentCoordinate, CLLocationCoordinate2DIsValid(coordinate) else { return nil }
-        return wbsGeoPoint(coordinate)
-    }
-
     /// 재생 중 화랑이가 화면 가운데에서 얼마나 벗어났는지 1초에 한 번 기록한다(좌표 없이 픽셀과 유무만).
     private func recordPlaybackFocusSample() {
         guard TimelineInteractionFrameGate.shouldRender(
@@ -10114,7 +10109,11 @@ struct MapHomeView: View {
                   speedMetersPerSecond: displayedSpeedMetersPerSecond
               )
         else { return current }
-        let next = MapHomePlaybackZoomPolicy.eased(current: current, target: target)
+        let next = playbackZoomSmoother.next(
+            current: current,
+            target: target,
+            uptime: ProcessInfo.processInfo.systemUptime
+        )
         TaptionPlanDiagnosticsLogger.shared.record(
             "playback_zoom_sample",
             metrics: [

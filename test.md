@@ -1846,3 +1846,9 @@
 - 테스트: 줌 정책·재생 정책·렌더 테스트 39개 통과, generic Debug 빌드 통과(ZMR1020A01). 이 변경 후 전체 `TaptionPlanTests`는 돌리지 않았다.
 - 아카이브·업로드: Release 아카이브 성공(`archive-190.log`), IPA 내보내기 성공(`export-190.log`), IPA 앱·위젯 번들 버전 190·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-190.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 190·189·188·187·186 확인, 테스터 1명(`asc-poll-190.log`).
 - 제한: 기기 설치·테스터 수신과 줌 체감·재생 포커스 화면은 직접 보지 못했다.
+
+## PLY1020B01 · 재생 줌 요동·00:25 회사 중심 수정 (2026-10-20, 커밋 후 미배포)
+- 근거: 대표의 화면 녹화(12:14, 23초) 프레임을 1초 간격으로 확인했다. 화랑이는 대체로 화면 가운데였지만 (1) 줌이 몇 초 사이 넓게↔가깝게 요동, (2) 00:25에 집 대신 회사 핀이 가운데(190의 "위치 없으면 현재 위치" 보강 때문), (3) 07:49 프레임은 너무 가까이 확대돼 타일이 늦어 빈 격자, (4) 08:28 프레임의 안개 걷힌 원이 화랑이와 어긋남, (5) 회사 구간 GPS 튐 직선.
+- 수정: `MapHomePlaybackZoomSmoother`(경과 시간 기준 시정수 1.2초, 초당 로그 변화 상한 0.9)로 재생 줌 거리를 부드럽게 하고, 현재 위치 보강을 되돌렸다. 재생 시작 때 smoother를 초기화한다.
+- 테스트(iPhone 11 Pro): `MapHomeLiveMapTests`(신규 smoother 테스트 포함)·`MapHomeSidebarAndPlaybackPolicyTests`·렌더 테스트 40개 통과(`zoom-1.log`), generic Debug 빌드는 `app-debug.log`.
+- 미해결: (4) 안개 원 어긋남은 원인 미확인, (5) GPS 튐은 기존 열린 항목(아이폰 18 로그 필요). 재생 체감은 화면으로 확인하지 못했다. 배포·push는 대표 지시 전까지 보류.
