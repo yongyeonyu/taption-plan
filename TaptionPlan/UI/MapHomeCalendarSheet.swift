@@ -43,6 +43,97 @@ enum MapHomeCalendarLogStatusPolicy {
     }
 }
 
+/// 달력 하단 메뉴의 시간 종류. `rawValue`는 대분류 canonical 분류 ID와 같다(`DayPhase`).
+enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
+    case sleep, movement, study, work, exercise, hobby
+
+    var id: String { rawValue }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .sleep: language.text("수면시간", "Sleep")
+        case .movement: language.text("이동시간", "Travel")
+        case .study: language.text("수업시간", "Class")
+        case .work: language.text("업무시간", "Work")
+        case .exercise: language.text("운동시간", "Exercise")
+        case .hobby: language.text("취미시간", "Hobby")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .sleep: "moon.zzz.fill"
+        case .movement: "figure.walk.motion"
+        case .study: "graduationcap.fill"
+        case .work: "briefcase.fill"
+        case .exercise: "dumbbell.fill"
+        case .hobby: "paintpalette.fill"
+        }
+    }
+}
+
+enum MapHomeCalendarTimeTotalsPolicy {
+    /// `month`가 속한 달의 날짜별·대분류별 시간(초). 오늘 이후와 기록이 없는 날은 담지 않는다.
+    static func totals(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        month: Date,
+        asOf now: Date,
+        calendar: Calendar
+    ) -> [Date: [String: TimeInterval]] {
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let end = calendar.date(byAdding: .month, value: 1, to: first),
+              let days = calendar.range(of: .day, in: .month, for: first) else { return [:] }
+        let monthActuals = actuals.filter {
+            let span = $0.span(asOf: now)
+            return span.start < end && first < span.end
+        }
+        let monthTravel = travel.filter { $0.span.start < end && first < $0.span.end }
+        let monthStays = stays.filter { $0.span.start < end && first < $0.span.end }
+        guard !monthActuals.isEmpty || !monthTravel.isEmpty || !monthStays.isEmpty else { return [:] }
+        var result: [Date: [String: TimeInterval]] = [:]
+        for offset in 0..<days.count {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: first),
+                  day <= now,
+                  let dayEnd = calendar.date(byAdding: .day, value: 1, to: day) else { continue }
+            let phases = DayPhaseEngine.completePhases(
+                actuals: monthActuals,
+                travel: monthTravel,
+                stays: monthStays,
+                placeKinds: placeKinds,
+                in: TimeSpan(start: day, end: dayEnd),
+                asOf: now
+            )
+            var byID: [String: TimeInterval] = [:]
+            for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) where entry.actual > 0 && entry.categoryID != "unconfirmed" {
+                byID[entry.categoryID, default: 0] += entry.actual
+            }
+            if !byID.isEmpty { result[day] = byID }
+        }
+        return result
+    }
+
+    /// 달력 칸의 짧은 표기: 1시간 이상은 `7:20`, 한 시간 미만은 `45m`. 0은 빈 문자열.
+    static func cellText(seconds: TimeInterval) -> String {
+        let minutes = Int((seconds / 60).rounded())
+        guard minutes > 0 else { return "" }
+        if minutes < 60 { return "\(minutes)m" }
+        let remainder = minutes % 60
+        return remainder == 0 ? "\(minutes / 60)h" : "\(minutes / 60):\(String(format: "%02d", remainder))"
+    }
+
+    static func durationText(seconds: TimeInterval, language: MapHomeLanguage) -> String {
+        let minutes = Int((seconds / 60).rounded())
+        guard minutes > 0 else { return language.text("0분", "0 min") }
+        let hours = minutes / 60, remainder = minutes % 60
+        if hours == 0 { return language.text("\(remainder)분", "\(remainder) min") }
+        if remainder == 0 { return language.text("\(hours)시간", "\(hours) h") }
+        return language.text("\(hours)시간 \(remainder)분", "\(hours) h \(remainder) min")
+    }
+}
+
 /// A compact month selector used by the map home header.
 ///
 /// The sheet deliberately owns only calendar presentation. Holiday dates are
@@ -52,21 +143,29 @@ struct MapHomeCalendarSheet: View {
     @Binding private var selectedDate: Date
     private let holidayName: (Date) -> String?
     private let logStatuses: (Date) -> [Date: MapHomeCalendarLogStatus]
+    private let timeTotals: (Date) async -> [Date: [String: TimeInterval]]
+    private let timeTint: (String) -> Color
     private let language: MapHomeLanguage
     private let calendar: Calendar
 
     @State private var displayedMonth: Date
     @State private var statuses: [Date: MapHomeCalendarLogStatus] = [:]
+    @State private var selectedKind: MapHomeCalendarTimeKind?
+    @State private var totals: [Date: [String: TimeInterval]] = [:]
 
     init(
         selectedDate: Binding<Date>,
         holidayName: @escaping (Date) -> String?,
         logStatuses: @escaping (Date) -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
+        timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
+        timeTint: @escaping (String) -> Color = { _ in Color.tpAccent },
         language: MapHomeLanguage = .korean
     ) {
         self._selectedDate = selectedDate
         self.holidayName = holidayName
         self.logStatuses = logStatuses
+        self.timeTotals = timeTotals
+        self.timeTint = timeTint
         self.language = language
 
         var calendar = Calendar(identifier: .gregorian)
@@ -82,27 +181,140 @@ struct MapHomeCalendarSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
+        ScrollView {
+            VStack(spacing: 0) {
+                header
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
 
-            weekdayHeader
-                .padding(.horizontal, 16)
-                .padding(.top, 18)
+                weekdayHeader
+                    .padding(.horizontal, 16)
+                    .padding(.top, 18)
 
-            monthGrid
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 18)
+                monthGrid
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+
+                timeMenu
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                if let selectedKind {
+                    timePanel(for: selectedKind)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                }
+            }
+            .padding(.bottom, 18)
         }
         .frame(maxWidth: .infinity)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.tpBackground)
-        .presentationDetents([.height(430)])
+        .presentationDetents([.height(selectedKind == nil ? 540 : 700), .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
-        .task(id: displayedMonth) { statuses = logStatuses(displayedMonth) }
+        .task(id: displayedMonth) {
+            statuses = logStatuses(displayedMonth)
+            totals = [:]
+            let month = displayedMonth
+            let value = await timeTotals(month)
+            guard !Task.isCancelled, month == displayedMonth else { return }
+            totals = value
+        }
+    }
+
+    private func seconds(of kind: MapHomeCalendarTimeKind, on date: Date) -> TimeInterval {
+        totals[calendar.startOfDay(for: date)]?[kind.rawValue] ?? 0
+    }
+
+    private var timeMenu: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+            ForEach(MapHomeCalendarTimeKind.allCases) { kind in
+                let isOn = selectedKind == kind
+                let tint = timeTint(kind.rawValue)
+                Button {
+                    selectedKind = isOn ? nil : kind
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: kind.systemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(kind.title(language))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(isOn ? tint : Color.tpInk)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(isOn ? tint.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isOn ? tint : Color.tpLine, lineWidth: isOn ? 1.2 : 0.8)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(kind.title(language))
+                .accessibilityAddTraits(isOn ? .isSelected : [])
+            }
+        }
+    }
+
+    private func timePanel(for kind: MapHomeCalendarTimeKind) -> some View {
+        let tint = timeTint(kind.rawValue)
+        let daysInMonth = calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
+        let days = (0..<daysInMonth).compactMap { calendar.date(byAdding: .day, value: $0, to: monthStart) }
+        let values = days.map { day in day <= Date.now ? seconds(of: kind, on: day) : 0 }
+        let elapsedDays = max(1, days.filter { $0 <= Date.now }.count)
+        let sum = values.reduce(0, +)
+        let maxValue = max(values.max() ?? 0, 1)
+        let selected = calendar.startOfDay(for: selectedDate)
+        let selectedInMonth = calendar.isDate(selected, equalTo: monthStart, toGranularity: .month)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(kind.title(language))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                if selectedInMonth {
+                    Text(language.text("\(calendar.component(.month, from: selected))월 \(calendar.component(.day, from: selected))일",
+                                       selected.formatted(.dateTime.month(.abbreviated).day())))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+            }
+            Text(MapHomeCalendarTimeTotalsPolicy.durationText(
+                seconds: selectedInMonth ? seconds(of: kind, on: selected) : 0, language: language))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(Array(days.enumerated()), id: \.offset) { index, day in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(tint.opacity(calendar.isDate(day, inSameDayAs: selected) ? 1 : 0.4))
+                        .frame(height: max(2, 44 * values[index] / maxValue))
+                }
+            }
+            .frame(height: 44, alignment: .bottom)
+            HStack(spacing: 8) {
+                timeStat(language.text("이번 달 합계", "Month total"),
+                         MapHomeCalendarTimeTotalsPolicy.durationText(seconds: sum, language: language))
+                timeStat(language.text("하루 평균", "Daily average"),
+                         MapHomeCalendarTimeTotalsPolicy.durationText(seconds: sum / Double(elapsedDays), language: language))
+            }
+        }
+        .padding(12)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine.opacity(0.9), lineWidth: 0.8) }
+    }
+
+    private func timeStat(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
+            Text(value).font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(Color.tpInk)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private var header: some View {
@@ -198,9 +410,18 @@ struct MapHomeCalendarSheet: View {
                         }
                     }
 
-                Circle()
-                    .fill(logDotColor(status))
-                    .frame(width: 4, height: 4)
+                if let selectedKind {
+                    Text(MapHomeCalendarTimeTotalsPolicy.cellText(seconds: seconds(of: selectedKind, on: date)))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(timeTint(selectedKind.rawValue))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(height: 12)
+                } else {
+                    Circle()
+                        .fill(logDotColor(status))
+                        .frame(width: 4, height: 4)
+                }
             }
             .frame(maxWidth: .infinity, minHeight: 38)
             .contentShape(Rectangle())

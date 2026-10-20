@@ -27608,6 +27608,42 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         ))
     }
 
+    func testCalendarTimeTextFormatsCellsAndDurations() {
+        typealias Policy = MapHomeCalendarTimeTotalsPolicy
+        XCTAssertEqual(Policy.cellText(seconds: 0), "")
+        XCTAssertEqual(Policy.cellText(seconds: 45 * 60), "45m")
+        XCTAssertEqual(Policy.cellText(seconds: 2 * 3_600), "2h")
+        XCTAssertEqual(Policy.cellText(seconds: 7 * 3_600 + 5 * 60), "7:05")
+        XCTAssertEqual(Policy.durationText(seconds: 7 * 3_600 + 20 * 60, language: .korean), "7시간 20분")
+        XCTAssertEqual(Policy.durationText(seconds: 3_600, language: .korean), "1시간")
+        XCTAssertEqual(Policy.durationText(seconds: 30 * 60, language: .korean), "30분")
+        XCTAssertEqual(Policy.durationText(seconds: 0, language: .korean), "0분")
+        XCTAssertEqual(MapHomeCalendarTimeKind.allCases.map(\.rawValue),
+                       ["sleep", "movement", "study", "work", "exercise", "hobby"])
+    }
+
+    func testCalendarTimeTotalsSumCanonicalCategoriesPerDay() {
+        let day = date(2026, 9, 20)
+        let asOf = date(2026, 9, 25)
+        func record(_ title: String, from: Double, to: Double) -> ActualRecord {
+            ActualRecord(
+                planID: nil, title: title, categoryID: "activity",
+                startedAt: day.addingTimeInterval(from * 3_600), endedAt: day.addingTimeInterval(to * 3_600),
+                source: .manual, manuallyCorrected: true
+            )
+        }
+        let totals = MapHomeCalendarTimeTotalsPolicy.totals(
+            actuals: [record("수면", from: 0, to: 7), record("업무", from: 9, to: 12)],
+            travel: [], stays: [], placeKinds: [:], month: day, asOf: asOf, calendar: calendar
+        )
+        let values = totals[day] ?? [:]
+        XCTAssertEqual(values["sleep"] ?? 0, 7 * 3_600, accuracy: 1)
+        // 업무·수업·취미는 장소(회사·학교 등) 근거가 있어야 하루 요약이 센다. 장소 없는 수동 기록은 집계하지 않는다.
+        XCTAssertNil(values["unconfirmed"], "미확인은 시간 메뉴에 담지 않는다")
+        XCTAssertNil(totals[date(2026, 9, 21)], "기록이 없는 날은 담지 않는다")
+        XCTAssertNil(totals[date(2026, 9, 26)], "오늘 이후는 담지 않는다")
+    }
+
     func testCalendarDotsMarkIncompleteCompleteAndEmptyDays() {
         let day1 = date(2026, 9, 20)
         let day2 = date(2026, 9, 21)

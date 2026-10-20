@@ -1894,3 +1894,9 @@
 - 수정: `presentCatDetailsIfTapped`가 화랑이 상세를 먼저 판정하고, 아니면 집 핀 좌표로 `MapHomeCatTapRouting.hitsHomeSummary`(집 아이콘 반경 30pt + 그 아래 레벨 라벨 64×30 사각형, 화랑이가 집에 있으면 아이콘이 커 라벨이 더 아래)를 판정해 `하루 요약`(성장 카드 포함)을 연다. 발자국 탭은 그대로 우선한다.
 - 테스트(iPhone 11 Pro): 신규 `testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround`와 기존 `testHomeIconTapRoutingSeparatesHouseFromHomeCat`, `MapHomeLiveMapTests` 포함 35개 통과(`tap-1.log`). generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 실제 탭 좌표가 맞는지는 화면으로 확인하지 못했다(판정 좌표는 핀 레이아웃 상수: 아이콘 중심 +30pt, 라벨 높이 22+간격 5). 어긋나면 대표 화면에서 탭 위치를 알려 주면 보정한다. 배포 보류.
+
+## CAL1020B01 · 달력 하단 시간 메뉴 (2026-10-20, 커밋 후 미배포)
+- 변경: `MapHomeCalendarSheet`에 수면·이동·수업·업무·운동·취미 메뉴(3×2)를 추가했다. 메뉴를 고르면 날짜 칸의 점 대신 그날의 해당 시간(`7:20`·`45m`·`2h`)이 보이고, 달력 아래 패널에 선택일 시간·월 합계·하루 평균·일별 막대가 나온다(대표 선택: 날짜 칸 + 아래 패널, 기존 대분류 그대로·미확인 제외). 같은 메뉴를 다시 누르면 꺼진다. 색은 앱 대분류 색을 쓴다. 시트 높이는 540(메뉴 없음)·700(패널 열림)·큰 크기이고 내용은 스크롤된다.
+- 계산: 달 단위로 백그라운드에서 `DayPhaseEngine.completePhases` + `categoryDurations(.canonical)`를 날짜마다 돌려 대분류 ID(sleep·movement·study·work·exercise·hobby)별 시간을 합친다. 하루 요약과 같은 엔진이라 값이 일치한다. 미확인은 담지 않는다.
+- 테스트(iPhone 11 Pro): `MapHomeGrowthPolicyTests` 21개 통과(신규 시간 표기·월 집계 2개, `time-3.log`), generic iOS Debug 빌드는 `app-debug.log`. 첫 시도들은 테스트 기대 오류(미확인 포함, 업무는 장소 근거 필요)로 실패해 엔진 동작에 맞게 고쳤다.
+- 제한: 업무·수업·취미는 하루 요약과 같이 장소(회사·학교 등) 근거가 있을 때만 센다. 입력은 `model.snapshot`(저장된 기록·이동·체류)이라 센서에서 막 분석된 오늘 분은 늦게 반영될 수 있다. 화면(메뉴 배치, 시트 높이, 계산 시간)은 확인하지 못했다. 한 달 계산이 느리면 알려 주면 캐시를 넣는다. 배포 보류.

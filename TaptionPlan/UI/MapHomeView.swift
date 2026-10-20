@@ -2595,6 +2595,31 @@ struct MapHomeView: View {
                         calendar: MapHomeGrowthPolicy.localCalendar
                     )
                 },
+                timeTotals: { month in
+                    let actuals = model.snapshot.actuals
+                    let travel = model.snapshot.travel
+                    let stays = model.snapshot.places
+                    let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
+                        model.snapshot.settings.frequentPlaces
+                    )
+                    return await Task.detached(priority: .utility) {
+                        MapHomeCalendarTimeTotalsPolicy.totals(
+                            actuals: actuals,
+                            travel: travel,
+                            stays: stays,
+                            placeKinds: placeKinds,
+                            month: month,
+                            asOf: .now,
+                            calendar: MapHomeGrowthPolicy.localCalendar
+                        )
+                    }.value
+                },
+                timeTint: { categoryID in
+                    MapHomeSidebarMajorCategory.presentation(
+                        for: categoryID,
+                        categoryColors: model.settings.mapCategoryColors
+                    ).tint
+                },
                 language: language
             )
         }
