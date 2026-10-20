@@ -1972,3 +1972,7 @@
 - 로그(build 195, 19:15): gps_fix는 launch 직후 같은 초에 수신되나, 화면 반영은 저장 완료 + acceptsDataMutation(일자 로딩 완료) 뒤라 지연.
 - 수정: 저장 전 표시 전용 onLiveReadingPreview → AppModel.applyLiveReadingPreview가 latestSensorReading와 liveRouteState를 즉시 갱신(저장·분석 경로는 그대로, id 중복 방지).
 - 검증: Debug 빌드 성공(build/validation/GPS1020D01/build.log). 단위 테스트·실기기 확인은 미실시. 발자국 1분 간격은 기존 저장 주기 유지, 별도 변경 없음.
+
+## REL1020J01 — Build 196 (2026-10-20)
+- 아카이브·내보내기·업로드 성공, ASC 처리 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(테스터 1명). 앱·위젯 번들 CFBundleVersion 196 확인.
+- 포함: 긴 이동 재생 전체 경로 맞춤, 과거 날씨 GPS 고정, 메모+ 버튼. GPS1020D01(실시간 GPS 반영)은 미포함.
