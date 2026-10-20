@@ -1858,3 +1858,10 @@
 - 수정: `backupAllMonths(progress:)`가 시작 때 한 번, 달·설정 파일이 끝날 때마다 (끝낸 수, 전체 수)를 알리고 `AppModel.updateBackupProgress`가 백업 중일 때만 `backupActivity`를 갱신한다. 백업 포맷·키·파일 내용은 바꾸지 않았다.
 - 테스트(iPhone 11 Pro): `TaptionBackupV2Tests` 40개 통과·실패 0(신규 진행 알림 테스트 포함: 0/3→3/3, `backup-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 실제 iCloud 업로드 중 화면에서 숫자가 오르는지는 확인하지 못했다(파일 하나를 처리하는 동안은 값이 그대로이므로, 한 달이 매우 크면 그 파일 처리 중에는 여전히 멈춘 것처럼 보일 수 있다). 대표가 보고한 백업은 이미 완료됐다.
+
+## GPS1020A01 · 10:34 위치 튐(근사 위치 1개) 필터 수정 (2026-10-20, 커밋 후 미배포)
+- 근거: 대표가 올린 `2026-10.taptionbackup`(검증 통과, readings 3,335·records 30,561)를 로컬에서 복호화해(`scripts/taption-backup-decode.py`, 결과는 git 무시된 `build/backup-decode/`) 10:34 전후를 확인했다. 10:33:25 근사 86m → 10:34:43 근사 229m, 회사에서 1,452m 떨어짐(77초, 18.8m/s) → 10:34:45 정밀 22m는 다시 회사(1,430m, 2초) → 10:34:46 정밀 7m. 필터가 근사 위치를 받아들이고 돌아온 정밀 위치 둘을 `impossibleSpeed`로 버렸으며 근사 위치는 `lowConfidenceBoundary`로 경로 끝에 그려졌다. 비밀번호는 대표가 채팅으로 알려 줬고 환경변수로만 사용했다(기록에 남기지 않음).
+- 수정(대표 선택 "이웃과 모순될 때만 제거"): `RouteLoggerRouteFilter`가 정밀 위치와 모순되는 직전 근사·저정확도 위치를 `contradictedByPreciseFix`로 빼고 그 앞 위치를 기준으로 다시 판단한다(앱·DB 포맷 변경 없음, 원본 센서 보존). 이웃과 이어지는 근사 위치는 유지한다.
+- 테스트: 실데이터 형태 회귀 `approximateOutlierDoesNotRejectTheReturningPreciseFixes`는 수정 전 4개 단언 실패를 확인하고 수정 후 통과, 이어지는 근사 유지 테스트 통과, `TaptionRouteEngine` 54개 전부 통과. 10월 전체 readings 3,303개에 새 필터를 돌려 새로 제거된 점은 10:34:43 한 개뿐임을 확인했다(임시 테스트, 저장소에 남기지 않음).
+- 앱(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,443개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`), 렌더 테스트는 통과. generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 화면에서 다시 그려 확인하지 못했다(저장된 경로 캐시·DB에는 이전 필터 결과가 남아 있을 수 있어 새 빌드에서 하루를 다시 계산해야 반영된다). 다른 유형의 튐(근사가 아닌 위치, 앞뒤 중앙값 스파이크 등)은 이번 범위가 아니다.

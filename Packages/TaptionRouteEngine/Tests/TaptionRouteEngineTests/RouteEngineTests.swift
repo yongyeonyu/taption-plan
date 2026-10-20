@@ -53,6 +53,48 @@ struct RouteEngineTests {
         #expect(values[1].coordinate.latitude == 37.005)
     }
 
+    /// 2026-10-20 10:34 실제 기록: 회사에서 정확도 229m의 근사 위치 1개가 1.45km 떨어져 나왔고, 2초 뒤 정밀 위치가
+    /// 다시 회사였다. 이전 필터는 근사 위치를 받아들이고 돌아온 정밀 위치를 "불가능한 속도"로 버렸다.
+    @Test func approximateOutlierDoesNotRejectTheReturningPreciseFixes() {
+        func approximate(_ seconds: TimeInterval, _ latitude: Double, accuracy: Double) -> RouteSample {
+            RouteSample(
+                timestamp: base.addingTimeInterval(seconds),
+                coordinate: .init(latitude: latitude, longitude: 126),
+                horizontalAccuracyMeters: accuracy,
+                mode: .unknown,
+                isApproximate: true
+            )
+        }
+        let office = 37.0
+        let far = office + 1_452 / 111_320.0
+        let a = approximate(0, office, accuracy: 86)
+        let b = approximate(78, far, accuracy: 229)
+        let c = sample(80, office + 25 / 111_320.0, accuracy: 22, mode: .unknown)
+        let d = sample(81, office + 26 / 111_320.0, accuracy: 7, mode: .unknown)
+        let result = RouteLoggerRouteFilter().filterWithReport([a, b, c, d])
+        let drawn = result.log.segments.flatMap { $0.pathSamples + $0.boundarySamples }
+        #expect(!drawn.contains { $0.id == b.id }, "근사 이상치는 경로·경계 어디에도 그리지 않는다")
+        #expect(result.log.segments.flatMap(\.pathSamples).contains { $0.id == c.id || $0.id == d.id },
+                "돌아온 정밀 위치는 살아 있어야 한다")
+        #expect(result.decisions.contains { $0.id == b.id && $0.reason == .contradictedByPreciseFix })
+        #expect(!result.decisions.contains { ($0.id == c.id || $0.id == d.id) && $0.reason == .impossibleSpeed })
+    }
+
+    @Test func approximateFixBetweenConsistentPreciseFixesIsKept() {
+        let a = sample(0, 37, accuracy: 5, mode: .walking)
+        let b = RouteSample(
+            timestamp: base.addingTimeInterval(10),
+            coordinate: .init(latitude: 37.00005, longitude: 126),
+            horizontalAccuracyMeters: 229,
+            mode: .walking,
+            isApproximate: true
+        )
+        let c = sample(20, 37.0001, accuracy: 5, mode: .walking)
+        let result = RouteLoggerRouteFilter().filterWithReport([a, b, c])
+        #expect(!result.decisions.contains { $0.reason == .contradictedByPreciseFix },
+                "이웃과 이어지는 근사 위치는 제거하지 않는다")
+    }
+
     @Test func accuracyBoundaryKeepsApproximateOutOfPath() {
         let result = RouteLoggerRouteFilter().filter([sample(0, 37), sample(1, 37.001, accuracy: 500)])
         #expect(result.segments.first?.pathSamples.count == 1)

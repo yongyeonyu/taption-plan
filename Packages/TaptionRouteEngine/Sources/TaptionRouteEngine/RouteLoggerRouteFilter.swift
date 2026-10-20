@@ -53,6 +53,8 @@ public enum RouteSampleDecisionReason: String, Codable, Hashable, Sendable {
     case stationarySuppressed
     case impossibleSpeed
     case innovationOutlier
+    /// 근사·저정확도 위치가 뒤따르는 정밀 위치와 모순돼 버려졌다(근사 위치 1개가 멀리 튄 뒤 정밀 위치가 돌아오는 경우).
+    case contradictedByPreciseFix
 }
 
 public struct RouteSampleDecision: Codable, Hashable, Sendable {
@@ -169,6 +171,21 @@ public struct RouteLoggerRouteFilter: Sendable {
         for (index, sample) in normalized.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
             let next = index + 1 < normalized.count ? normalized[index + 1] : nil
+            // 저정확도·근사 위치가 뒤이은 정밀 위치를 "불가능한 속도"로 몰아내지 못하게 한다. 정밀 위치와 모순되는
+            // 직전의 근사 위치는 이상치로 되돌려 빼고, 그 앞의 위치를 기준으로 다시 판단한다.
+            while let previous = lastPlausible,
+                  sample.isPrecisePathSample(configuration),
+                  !previous.isPrecisePathSample(configuration),
+                  plausible.last?.id == previous.id,
+                  !isPlausible(sample, after: previous) {
+                plausible.removeLast()
+                decisions.append(.init(
+                    id: previous.id,
+                    timestamp: previous.timestamp,
+                    reason: .contradictedByPreciseFix
+                ))
+                lastPlausible = plausible.last
+            }
             if let previous = lastPlausible,
                !isPlausible(sample, after: previous)
                 || isContradictedGapJump(sample, after: previous, next: next) {
