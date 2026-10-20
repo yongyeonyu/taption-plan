@@ -1980,3 +1980,8 @@
 ## MAP1020K01 — 지도 카메라 순간 이동 진단 로그 (2026-10-20)
 - 196 영상(19:28)에서 2~3초마다 카메라가 화랑이 중심으로 튀었다 복귀. 19:30 로그는 GPS 1~3초 간격 정상, 카메라 명령은 로그에 없어 원인 미확정.
 - setMapPosition마다 map_camera_command(caller·tracking·playing·distance) 기록 추가. Debug 빌드 성공. 다음 빌드에서 재현 후 로그로 확정 예정.
+
+## REL1020L01 — Build 197 (2026-10-20)
+- 아카이브·내보내기·업로드 성공, ASC 처리 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(테스터 1명). 소스 CURRENT_PROJECT_VERSION 8곳·Info.plist 4개 197 확인.
+- IPA 번들: 앱·위젯 197 확인. Watch·Watch 위젯 번들은 이 IPA에서 발견되지 않아 읽지 못함.
+- 포함: GPS1020D01(실시간 GPS 반영), MAP1020K01(카메라 명령 진단 로그). 단위 테스트·실기기 확인은 미실시.
