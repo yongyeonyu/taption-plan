@@ -540,23 +540,40 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertNotEqual(first.colorHex, last.colorHex)
     }
 
-    func testGradientPieceCountIsCappedAndShortRoutesUseOnePiecePerEdge() throws {
+    func testGradientPieceCountIsCappedAndShortRoutesUseOnePiece() throws {
         let long = makeRoute(stepsMeters: Array(repeating: 2.0, count: 5_000))
         let capped = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
             coordinates: long.coordinates, timestamps: long.timestamps
         ))
-        XCTAssertEqual(capped.count, MapHomeRouteSpeedGradient.maximumPieces)
+        XCTAssertLessThanOrEqual(capped.count, MapHomeRouteSpeedGradient.maximumPieces)
         let custom = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
             coordinates: long.coordinates, timestamps: long.timestamps, maximumPieces: 8
         ))
-        XCTAssertEqual(custom.count, 8)
+        XCTAssertLessThanOrEqual(custom.count, 8)
         let short = makeRoute(stepsMeters: [2, 2])
         XCTAssertEqual(
             MapHomeRouteSpeedGradient.pieces(
                 coordinates: short.coordinates, timestamps: short.timestamps
             )?.count,
-            2
+            1
         )
+    }
+
+    func testGradientColorsOfDrawnPiecesDoNotChangeAsRouteGrows() throws {
+        let steps = (0..<400).map { Double(1 + ($0 / 40) * 3) }
+        let full = makeRoute(stepsMeters: steps)
+        let partial = makeRoute(stepsMeters: Array(steps.prefix(250)))
+        let fullPieces = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
+            coordinates: full.coordinates, timestamps: full.timestamps
+        ))
+        let partialPieces = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
+            coordinates: partial.coordinates, timestamps: partial.timestamps
+        ))
+        // 마지막 몇 구간(성장 중인 머리)을 뺀 이미 그린 구간은 색이 같아야 한다.
+        for index in 0..<(partialPieces.count - 3) {
+            XCTAssertEqual(partialPieces[index].startIndex, fullPieces[index].startIndex)
+            XCTAssertEqual(partialPieces[index].colorHex, fullPieces[index].colorHex)
+        }
     }
 
     func testGradientFallsBackToSingleColorWhenSpeedIsUnknown() {
@@ -577,14 +594,14 @@ final class MapHomeLiveMapTests: XCTestCase {
     }
 
     func testGradientFillsPiecesWithoutTimeFromNeighbors() throws {
-        let route = makeRoute(stepsMeters: [2, 2, 2, 2])
+        let route = makeRoute(stepsMeters: Array(repeating: 2.0, count: 12))
         var timestamps = route.timestamps
-        // 가운데 두 점이 같은 시각이라 그 사이 구간 속도를 알 수 없다.
-        timestamps[3] = timestamps[2]
+        // 가운데 구간(간선 4~7)의 점들이 모두 같은 시각이라 그 구간 속도를 알 수 없다.
+        for index in 5...8 { timestamps[index] = timestamps[4] }
         let pieces = try XCTUnwrap(MapHomeRouteSpeedGradient.pieces(
             coordinates: route.coordinates, timestamps: timestamps
         ))
-        XCTAssertEqual(pieces.count, 4)
+        XCTAssertEqual(pieces.count, 3)
         XCTAssertTrue(pieces.allSatisfy { $0.speedMetersPerSecond.isFinite && $0.speedMetersPerSecond >= 0 })
         XCTAssertEqual(MapHomeRouteSpeedGradient.fillGaps([nil, 4, nil, nil, 6, nil]) ?? [], [4, 4, 4, 4, 6, 6])
         XCTAssertNil(MapHomeRouteSpeedGradient.fillGaps([nil, nil]))

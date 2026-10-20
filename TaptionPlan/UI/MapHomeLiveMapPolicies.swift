@@ -135,7 +135,9 @@ enum MapHomeHomeWeatherBadgePolicy {
 
 /// 실제 경로를 속도 구간별 색(느림 빨강 → 중간 초록 → 빠름 파랑, `MapHomePawprintSpeedColor` 척도)으로 나눈다.
 enum MapHomeRouteSpeedGradient {
-    static let maximumPieces = 64
+    /// 구간 하나가 묶는 간선 수. 경로가 늘어나도 구간 경계가 움직이지 않아 이미 그린 색이 바뀌지 않는다.
+    static let edgesPerPiece = 4
+    static let maximumPieces = 1_000
 
     struct Piece: Equatable {
         /// 경로 좌표 인덱스 범위(양 끝 포함). 인접 구간은 끝점을 공유한다.
@@ -155,14 +157,17 @@ enum MapHomeRouteSpeedGradient {
               coordinates.count == timestamps.count,
               maximumPieces > 0 else { return nil }
         let edgeCount = coordinates.count - 1
-        let pieceCount = min(maximumPieces, edgeCount)
+        // 구간 경계는 절대 인덱스(stride의 배수)로 고정한다. 아주 긴 경로에서만 stride를 두 배로 늘린다.
+        var stride = edgesPerPiece
+        while (edgeCount + stride - 1) / stride > maximumPieces { stride *= 2 }
+        let pieceCount = (edgeCount + stride - 1) / stride
         var rawSpeeds: [Double?] = []
         rawSpeeds.reserveCapacity(pieceCount)
         var bounds: [(start: Int, end: Int)] = []
         bounds.reserveCapacity(pieceCount)
         for piece in 0..<pieceCount {
-            let start = piece * edgeCount / pieceCount
-            let end = (piece + 1) * edgeCount / pieceCount
+            let start = piece * stride
+            let end = min(edgeCount, (piece + 1) * stride)
             bounds.append((start, end))
             var meters = 0.0
             var seconds = 0.0
