@@ -2567,7 +2567,14 @@ struct MapHomeView: View {
                 categories: daySummaryCategories,
                 stepCount: dayStepCount,
                 growthData: $homeGrowthData,
-                language: language
+                language: language,
+                growthCard: MapHomeGrowthCardInfo(
+                    level: homeGrowthHistory.season.level,
+                    status: homeGrowthMarkerStatus,
+                    isQualifiedToday: isHomeGrowthQualifiedToday,
+                    streak: homeGrowthHistory.season.streak,
+                    pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
+                )
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -13775,25 +13782,28 @@ private struct MapHomePlacePin: View {
         )
     }
 
-    /// 집 아이콘 아래에 늘 보이는 레벨 라벨. 누르면 오늘 하루 요약을 연다.
+    /// 집 아이콘 아래에 늘 보이는 레벨 라벨. 누르면 성장 카드와 오늘 하루 요약을 연다.
+    /// 여는 동작이 없는 곳(Apple 지도의 주석 뷰)에서는 버튼으로 감싸지 않아 지도의 주석 선택이 그대로 일어난다.
+    @ViewBuilder
     private func homeLevelLabel(level: Int) -> some View {
-        Button {
-            onOpenDaySummary?()
-        } label: {
-            Text("Lv.\(level)")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.tpInk)
-                .padding(.horizontal, 12)
-                .frame(height: MapHomePlacePinLayout.levelLabelHeight)
-                .background(Color.tpSurface.opacity(0.98), in: Capsule())
-                .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
-                .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
-                .contentShape(Capsule())
+        let label = Text("Lv.\(level)")
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Color.tpInk)
+            .padding(.horizontal, 12)
+            .frame(height: MapHomePlacePinLayout.levelLabelHeight)
+            .background(Color.tpSurface.opacity(0.98), in: Capsule())
+            .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
+            .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
+            .contentShape(Capsule())
+        if let onOpenDaySummary {
+            Button(action: onOpenDaySummary) { label }
+                .buttonStyle(.plain)
+                .accessibilityLabel("집 레벨 \(level) · 성장 카드와 오늘 하루 요약 열기")
+                .accessibilityHint("하단에서 성장 카드와 오늘 하루 요약을 엽니다")
+        } else {
+            label
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("집 레벨 \(level) · 오늘 하루 요약 열기")
-        .accessibilityHint("하단에서 오늘 하루 요약을 엽니다")
     }
 
     /// 집 위에 얹는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
@@ -13840,10 +13850,10 @@ private struct MapHomePlacePin: View {
             .contentShape(Rectangle())
             .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48)))
             .accessibilityElement()
-            .accessibilityLabel(isGrowthCalloutVisible ? "집 성장 정보 숨기기" : "집 성장 정보 보기")
-            .accessibilityHint("집 그림을 눌러 레벨과 오늘 상태를 표시합니다")
+            .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
+            .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { toggleGrowthCallout() }
+            .accessibilityAction { onOpenDaySummary?() }
             .overlay(alignment: .topTrailing) {
                 if isLeapDay {
                     Image(systemName: "star.fill")
@@ -13874,7 +13884,7 @@ private struct MapHomePlacePin: View {
                     markerPoint: CGPoint(x: markerSize.width / 2, y: markerSize.height / 2),
                     radius: MapHomeCatTapRouting.homeIconHitRadius
                 ) else { return }
-                toggleGrowthCallout()
+                onOpenDaySummary?()
             }
     }
 
@@ -13994,10 +14004,10 @@ private struct MapHomePlacePin: View {
         .contentShape(Rectangle())
         .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 78, height: 78)))
         .accessibilityElement()
-        .accessibilityLabel(isGrowthCalloutVisible ? "집 성장 정보 숨기기" : "집 성장 정보 보기")
-        .accessibilityHint("집 그림을 눌러 레벨과 오늘 상태를 표시합니다")
+        .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
+        .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction { toggleGrowthCallout() }
+        .accessibilityAction { onOpenDaySummary?() }
     }
 }
 
@@ -17603,16 +17613,60 @@ struct MapHomeDaySummaryEntry: Identifiable, Hashable {
 
 /// 지도에서 여는 하루 대분류 요약. 세부 활동은 건드리지 않고, 대분류별
 /// 소요 시간과 비중만 막대로 보여준다.
+/// 하루 요약 맨 위에 보여 주는 집 성장 카드 값. 집 핀의 성장 값과 같은 출처다.
+struct MapHomeGrowthCardInfo: Equatable {
+    var level: Int
+    var status: String
+    var isQualifiedToday: Bool
+    var streak: Int
+    var pendingWeeklyRewards: Int
+}
+
 struct MapHomeDaySummarySheet: View {
     let date: Date
     let categories: [MapHomeDaySummaryEntry]
     let stepCount: Int?
     @Binding var growthData: Data
     let language: MapHomeLanguage
+    var growthCard: MapHomeGrowthCardInfo? = nil
     @State private var isGrowthPresented = false
 
     private var totalSeconds: TimeInterval {
         categories.reduce(0) { $0 + $1.seconds }
+    }
+
+    private func growthCardView(_ card: MapHomeGrowthCardInfo) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "house.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.tpAccent)
+                Text("Lv.\(card.level)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.tpInk)
+                Spacer(minLength: 8)
+                Label(language.text("연속 \(card.streak)일", "\(card.streak)-day streak"), systemImage: "flame.fill")
+                Label(language.text("보상 \(card.pendingWeeklyRewards)", "Rewards \(card.pendingWeeklyRewards)"), systemImage: "gift.fill")
+            }
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            Text(card.status)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(card.isQualifiedToday ? Color.tpAccent : Color.tpSecondary)
+                .lineLimit(2)
+            Capsule()
+                .fill(card.isQualifiedToday ? Color.tpPastelMint : Color.tpLine.opacity(0.55))
+                .frame(height: 4)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     var body: some View {
@@ -17642,6 +17696,10 @@ struct MapHomeDaySummarySheet: View {
                     .buttonStyle(.plain)
                     .accessibilityHint(language.text("주간 보상과 집 성장 기록을 엽니다", "Opens weekly rewards and your house history"))
                 }
+            }
+
+            if let growthCard {
+                growthCardView(growthCard)
             }
 
             if let stepCount {
