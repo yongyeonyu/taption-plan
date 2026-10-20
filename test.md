@@ -1906,3 +1906,9 @@
 - 수정: 안개의 현재 위치 원 중심을 `MapHomeFogRevealPolicy.currentLocationPoint`로 정해 화랑이가 그려지는 `stickmanPoint`가 있으면 그 점을, 없으면 뷰포트 점을 쓴다. 발자국·장소 원은 지도 좌표 그대로다.
 - 테스트(iPhone 11 Pro): 신규 `testFogRevealFollowsTheDrawnStickmanPointWhenAvailable`과 `MapHomeLiveMapTests` 34개 통과(`fog-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 어긋남이 이 두 값의 시점 차이 때문이라는 것은 코드 근거이며 화면으로 확인하지 못했다. 화랑이 자체가 실제 위치보다 늦게 따라온다면 그 지연은 이번 범위가 아니다(같은 재생에서 대표가 계속 어긋남을 보면 알려 달라). 배포 보류.
+
+## REL1020G01 · 빌드 193 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 193: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`, 커밋 cdc6cba). 192 이후 포함: PLY1020C01(이동 구간 재생 4배 느리게), HOM1020C01(집 아이콘·레벨 탭을 지도 단위 탭으로 판정), CAL1020B01(달력 하단 시간 메뉴), FOG1020A01(안개 구멍을 화랑이 점에 맞춤).
+- 테스트(배포 전, iPhone 11 Pro): 전체 `TaptionPlanTests` 1,448개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`). 신규 테스트(달력 시간 2개·집 탭 판정·안개 정책·재생 배속 3개 갱신)는 모두 통과. generic Debug 빌드 통과.
+- 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 193·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-193.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 193·192·191·190·189 확인, 테스터 1명(`asc-poll-193.log`).
+- 제한: 기기 설치·테스터 수신과 화면 확인(재생 배속·집 탭·달력 메뉴 배치와 계산 속도·안개 정렬)은 하지 못했다.
