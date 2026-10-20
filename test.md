@@ -1834,3 +1834,9 @@
 - 아카이브·업로드: Release 아카이브 성공(`archive-189.log`), IPA 내보내기 성공(`export-189.log`), IPA 앱·위젯 번들 버전 189·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음, 이전 빌드도 같음), `altool` `No errors uploading`(`altool-189.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 189·188·187·186·185 확인, 테스터 1명(`asc-poll-189.log`).
 - 정리: 디스크 부족 공지(다른 세션)에 대표가 "빌드 캐시만 삭제"를 선택해 `build/DD`·`DD-gen`·`DD18`, ArchiveDD 캐시, 아카이브 184~188과 export 185~188을 지웠다(약 3.3GB). 189 아카이브·IPA, 검증 로그, `artifacts`는 유지.
 - 제한: 기기 설치·테스터 수신과 재생 줌·집 라벨 화면은 직접 보지 못했다.
+
+## ZMR1020A01 · 줌 범위 확대와 재생 포커스 점검 (2026-10-20, 커밋 후 미배포)
+- 변경: `MapHomePlaybackZoomPolicy` 거리 범위 500m~15km → 250m~40km(재생·실시간 따라가기 공통). 재생 틱 포커스는 그 시각 위치가 없으면 현재 위치로 이동하고, `playback_focus_sample`(화랑이의 화면 가운데 이탈 px, 카메라 거리, 속도, 위치·카메라 유무)을 1초마다 기록한다.
+- 재생 포커스 원인: 코드만으로 확정하지 못했다. 후보는 (a) 자정 직후 그 시각 이전 표본이 없어 위치·화랑이·포커스가 모두 없음(전날 표본은 거부), (b) Apple 지도 스타일의 중앙 정렬 정책. 189에서 추가한 30Hz 포커스에도 안 된다면 위 로그로 확정한다.
+- 테스트(iPhone 11 Pro): `MapHomeLiveMapTests`·`MapHomeSidebarAndPlaybackPolicyTests`·렌더 테스트 39개 통과(`zoom-2.log`), generic Debug 빌드는 아래 결과. 첫 시도(`zoom-1.log`)는 컴파일 오류(좌표 유효성 확인 호출)로 실행 전 실패해 고쳤다.
+- 제한: 재생 화면과 줌 체감은 보지 못했다.

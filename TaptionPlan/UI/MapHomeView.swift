@@ -1035,8 +1035,8 @@ enum MapHomePresencePolicy {
 enum MapHomePlaybackZoomPolicy {
     static let slowSpeed = 0.5
     static let vehicleSpeed = 30.0
-    static let nearDistance = 500.0
-    static let farDistance = 15_000.0
+    static let nearDistance = 250.0
+    static let farDistance = 40_000.0
     static let easing = 0.2
 
     /// 느릴수록 가깝게(확대), 빠를수록 멀리(축소). 속도를 모르면 nil로 현재 거리를 유지한다.
@@ -2203,6 +2203,7 @@ struct MapHomeView: View {
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
     @State private var lastPlaybackRouteProjectionUptime: TimeInterval = 0
     @State private var lastPlaybackMapFocusUptime: TimeInterval = 0
+    @State private var lastPlaybackFocusLogUptime: TimeInterval = 0
     @State private var lastPlaybackMarkerUptime: TimeInterval = 0
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
@@ -3308,8 +3309,10 @@ struct MapHomeView: View {
                       lastUptime: &lastPlaybackMapFocusUptime,
                       nowUptime: ProcessInfo.processInfo.systemUptime,
                       minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
-                  ),
-                  let point = displayedPlaybackFocusPoint else { return }
+                  ) else { return }
+            recordPlaybackFocusSample()
+            // 그 시각의 위치가 아직 없으면(자정 직후 등) 현재 위치로라도 카메라를 옮겨 둔다.
+            guard let point = displayedPlaybackFocusPoint ?? playbackFocusFallbackPoint else { return }
             focusMap(on: point, using: nil, followsTracking: true)
         }
         .onChange(of: isTimelineInteractionActive) { _, isInteracting in
@@ -10019,6 +10022,35 @@ struct MapHomeView: View {
         return MapHomeLiveFollowSpeed.speed(
             latestAge: Date.now.timeIntervalSince(reading.timestamp),
             latestSpeed: reading.speedMetersPerSecond
+        )
+    }
+
+    private var playbackFocusFallbackPoint: GeoPoint? {
+        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+              let coordinate = currentCoordinate, CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+        return wbsGeoPoint(coordinate)
+    }
+
+    /// 재생 중 화랑이가 화면 가운데에서 얼마나 벗어났는지 1초에 한 번 기록한다(좌표 없이 픽셀과 유무만).
+    private func recordPlaybackFocusSample() {
+        guard TimelineInteractionFrameGate.shouldRender(
+            lastUptime: &lastPlaybackFocusLogUptime,
+            nowUptime: ProcessInfo.processInfo.systemUptime,
+            minimumInterval: 1
+        ) else { return }
+        let center = currentLocationTargetPoint
+        let offset = displayedStickmanViewportPoint.map {
+            hypot($0.x - center.x, $0.y - center.y)
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "playback_focus_sample",
+            metrics: [
+                "has_point": displayedPlaybackFocusPoint == nil ? 0 : 1,
+                "has_camera": visibleMapCamera == nil ? 0 : 1,
+                "stickman_offset_px": offset?.rounded() ?? -1,
+                "camera_distance_m": visibleMapCamera?.distance.rounded() ?? -1,
+                "speed_mps": displayedSpeedMetersPerSecond ?? -1,
+            ]
         )
     }
 
