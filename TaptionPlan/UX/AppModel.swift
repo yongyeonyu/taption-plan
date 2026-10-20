@@ -1518,6 +1518,11 @@ final class AppModel {
         self.voiceMemoPlayer.onFinish = { [weak self] in
             self?.playingVoiceAttachmentID = nil
         }
+        self.sensorService?.onLiveReadingPreview = { [weak self] reading in
+            Task { @MainActor [weak self] in
+                self?.applyLiveReadingPreview(reading)
+            }
+        }
         self.sensorService?.onReadingsPersisted = { [weak self] readings in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -12125,6 +12130,32 @@ final class AppModel {
         }
     }
 
+    /// 앱이 열려 있을 때 저장·일자 로딩을 기다리지 않고 현재 위치와 경로를 바로 반영한다.
+    private func applyLiveReadingPreview(_ reading: SensorReading) {
+        guard isSceneActive, let point = reading.point,
+              RouteTimelineTimestamp.isValid(reading.timestamp) else { return }
+        if let latest = latestSensorReading, latest.timestamp > reading.timestamp {
+            return
+        }
+        if latestSensorReading?.id != reading.id {
+            latestSensorReading = reading
+        }
+        guard TrackingSessionPolicy.isPreciseRouteReading(reading),
+              !liveRouteState.readings.suffix(3).contains(where: { $0.id == reading.id })
+        else { return }
+        let moved = liveRouteState.readings.last?.point.map {
+            distanceMeters($0, point) >= 2
+        } ?? true
+        guard moved else { return }
+        liveRouteState.readings.append(reading)
+        if liveRouteState.readings.count > Self.liveRouteSoftLimit {
+            liveRouteState.readings.removeFirst(
+                liveRouteState.readings.count - Self.liveRouteHardLimit
+            )
+        }
+        liveRouteState.lastUpdatedAt = reading.timestamp
+    }
+
     private func handleLiveSensorReading(_ reading: SensorReading) {
         if reading.locationFixQuality == .approximate {
             latestSensorReading = reading
@@ -12190,7 +12221,8 @@ final class AppModel {
         }
 
         if let point = reading.point {
-            if TrackingSessionPolicy.isPreciseRouteReading(reading) {
+            if TrackingSessionPolicy.isPreciseRouteReading(reading),
+               !liveRouteState.readings.suffix(3).contains(where: { $0.id == reading.id }) {
                 let lastPoint = liveRouteState.readings.last?.point
                 let shouldAppend = lastPoint.map {
                     distanceMeters($0, point) >= 2

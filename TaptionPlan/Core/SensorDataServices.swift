@@ -527,6 +527,8 @@ final class AppleSensorDataService {
 
     private(set) var lastPersistenceErrorDescription: String?
     var onReadingsPersisted: (([SensorReading]) -> Void)?
+    /// 저장 전에 전달되는 표시 전용 실시간 위치. 저장·분석 경로와 무관하다.
+    var onLiveReadingPreview: ((SensorReading) -> Void)?
     var onPersistenceFailed: ((String) -> Void)?
 
     init(
@@ -755,6 +757,9 @@ final class AppleSensorDataService {
         _ reading: SensorReading,
         generation: Int
     ) async -> Bool {
+        if isForegroundLiveLocationTrackingEnabled, reading.point != nil {
+            onLiveReadingPreview?(reading)
+        }
         pendingReadings.append(reading)
         guard inFlightReadings.isEmpty else { return true }
         if lastFlushedCollectionGeneration != generation

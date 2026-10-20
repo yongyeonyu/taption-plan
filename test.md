@@ -1967,3 +1967,8 @@
 - 변경: `MapHomePlaybackZoomPlan` 입력에 구간 거리·범위(경로 상자 대각선)를 추가했다. 탈것 구간이 5km 미만이면 85 고정, 5~50km는 기존 속도 비례, 50km 이상은 구간 전체가 한 화면에 들어오는 배율(`MapHomePlaybackZoomPolicy.fitScale`: 범위×2.43을 카메라 거리로, 배율 15~60로 제한)로 가운데를 고정하고 구간의 5%(3~10분)인 시작·끝만 85로 확대한다. 긴 이동은 등록 장소에서 출발·도착해도 이 규칙이 우선이며 걷기·달리기는 거리와 무관하게 85 고정이다. `MapHomePlaybackZoomInputBuilder`가 확정 이동 구간 거리(없으면 위치 점 경로 길이)와 위치 점의 경로 범위를 만든다.
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,458개 실패 0(`ZMP1020B01/full-1.log`), 신규 `testLongTripsFitTheWholeRouteAndShortVehicleTripsStayAtBaseline`(인천→대구 모양 입력·시작/끝 85·가운데 고정·fitScale 상하한·5km 미만·5~50km·걷기)와 거리·범위 입력 단언 통과. generic Debug 빌드는 `app-debug.log`.
 - 제한: 시야 약 550m(85), 카메라 거리≈보이는 범위×1.9 같은 비율은 근사이며 실제 인천→대구 재생에서 경로가 화면에 잘 들어오는지, 시작·끝 확대가 부드러운지는 화면으로 확인하지 못했다. 재생 막대의 모드 선택(수동 고정)은 이번 범위가 아니다. 배포 보류.
+
+## GPS1020D01 — 앱 실행 직후·실행 중 실시간 GPS 반영 (2026-10-20)
+- 로그(build 195, 19:15): gps_fix는 launch 직후 같은 초에 수신되나, 화면 반영은 저장 완료 + acceptsDataMutation(일자 로딩 완료) 뒤라 지연.
+- 수정: 저장 전 표시 전용 onLiveReadingPreview → AppModel.applyLiveReadingPreview가 latestSensorReading와 liveRouteState를 즉시 갱신(저장·분석 경로는 그대로, id 중복 방지).
+- 검증: Debug 빌드 성공(build/validation/GPS1020D01/build.log). 단위 테스트·실기기 확인은 미실시. 발자국 1분 간격은 기존 저장 주기 유지, 별도 변경 없음.
