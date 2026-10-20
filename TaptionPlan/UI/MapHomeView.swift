@@ -4136,14 +4136,28 @@ struct MapHomeView: View {
 
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
         guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
-        guard let stickmanPoint = vectorMapViewportStore.stickmanPoint
-                ?? displayedStickmanViewportPoint,
-              MapHomeCatTapRouting.shouldPresentCatDetails(
-                  tapPoint: tapPoint,
-                  locationPoint: stickmanPoint,
-                  isAtHome: isDisplayedCatAtHome
-              ) else { return }
-        selectedMarkerInfo = .cat(displayedStickmanAction)
+        if let stickmanPoint = vectorMapViewportStore.stickmanPoint ?? displayedStickmanViewportPoint,
+           MapHomeCatTapRouting.shouldPresentCatDetails(
+               tapPoint: tapPoint,
+               locationPoint: stickmanPoint,
+               isAtHome: isDisplayedCatAtHome
+           ) {
+            selectedMarkerInfo = .cat(displayedStickmanAction)
+            return
+        }
+        if isHomeSummaryTapped(at: tapPoint) { isDaySummaryPresented = true }
+    }
+
+    /// 집 아이콘·레벨 라벨 탭. 핀 안쪽 제스처에 기대지 않고 지도 단위 탭에서 집 핀 좌표로 판정한다.
+    private func isHomeSummaryTapped(at tapPoint: CGPoint) -> Bool {
+        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
+              let viewport = vectorMapViewportStore.viewport,
+              let pinPoint = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return false }
+        return MapHomeCatTapRouting.hitsHomeSummary(
+            tapPoint: tapPoint,
+            pinPoint: pinPoint,
+            showsCatAtHome: isDisplayedCatAtHome
+        )
     }
 
     private func pawprintTarget(

@@ -60,6 +60,31 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround() {
+        let pin = CGPoint(x: 100, y: 200)
+        let icon = CGPoint(x: pin.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
+                           y: pin.y + MapHomeCatTapRouting.homeImageCenterOffset.y)
+        // 집 아이콘 가운데와 둘레 안쪽은 열린다.
+        XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(tapPoint: icon, pinPoint: pin, showsCatAtHome: false))
+        XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(
+            tapPoint: CGPoint(x: icon.x + 25, y: icon.y), pinPoint: pin, showsCatAtHome: true))
+        // 레벨 라벨(아이콘 아래)도 열린다. 화랑이가 집에 있으면 아이콘이 커서 라벨이 더 아래다.
+        for showsCat in [false, true] {
+            let label = MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: showsCat)
+            XCTAssertGreaterThan(label.y, icon.y)
+            XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(tapPoint: label, pinPoint: pin, showsCatAtHome: showsCat))
+        }
+        XCTAssertGreaterThan(
+            MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: true).y,
+            MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: false).y
+        )
+        // 멀리 떨어진 지도 점은 열리지 않는다.
+        XCTAssertFalse(MapHomeCatTapRouting.hitsHomeSummary(
+            tapPoint: CGPoint(x: pin.x + 120, y: pin.y), pinPoint: pin, showsCatAtHome: false))
+        XCTAssertFalse(MapHomeCatTapRouting.hitsHomeSummary(
+            tapPoint: CGPoint(x: pin.x, y: pin.y - 80), pinPoint: pin, showsCatAtHome: false))
+    }
+
     func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
         let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(

@@ -1888,3 +1888,9 @@
 - 변경: `MapHomeDayPlaybackMath.movementPlaybackMultiplier` 1/6 → 1/24. 이동 구간 재생이 초당 10분에서 2.5분으로 느려진다(정지 구간 초당 60분 유지, 모든 이동 수단 공통). 하루 전체 재생 시간은 이동이 많을수록 길어진다.
 - 테스트(iPhone 11 Pro): 재생 배속 테스트 3개(이동 안 1초=2.5분, 걷기·차량, 경계 분할 30→61.25·110→112.5)를 새 값에 맞춰 갱신해 통과(`playback-2.log`). `MapHomeSidebarAndPlaybackPolicyTests`·`MapHomeLiveMapTests` 39개 통과(`playback-1.log`; 이 묶음에는 위 3개가 포함되지 않아 따로 실행). generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 재생 체감은 화면으로 확인하지 못했다. 재생 줌(PLY1020B01)은 경과 시간 기준이라 속도 변화와 무관하게 동작한다.
+
+## HOM1020C01 · 집 아이콘·레벨 탭이 벡터 지도 위에서 안 먹던 문제 (2026-10-20, 커밋 후 미배포)
+- 원인(코드 근거, 기기 재현은 못 함): 집 핀 안쪽 SwiftUI 탭 제스처가 벡터 지도 오버레이 위에서 동작하지 않는다. 화랑이·발자국은 지도 단위 탭(`SpatialTapGesture`)에서 좌표로 판정하는데 집 아이콘만 핀 안쪽 제스처에 기대고 있었다. HOM1020B01(191)의 아이콘·레벨 탭이 열리지 않은 이유이자 그 전에 성장 카드가 열리지 않은 이유로 본다.
+- 수정: `presentCatDetailsIfTapped`가 화랑이 상세를 먼저 판정하고, 아니면 집 핀 좌표로 `MapHomeCatTapRouting.hitsHomeSummary`(집 아이콘 반경 30pt + 그 아래 레벨 라벨 64×30 사각형, 화랑이가 집에 있으면 아이콘이 커 라벨이 더 아래)를 판정해 `하루 요약`(성장 카드 포함)을 연다. 발자국 탭은 그대로 우선한다.
+- 테스트(iPhone 11 Pro): 신규 `testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround`와 기존 `testHomeIconTapRoutingSeparatesHouseFromHomeCat`, `MapHomeLiveMapTests` 포함 35개 통과(`tap-1.log`). generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 실제 탭 좌표가 맞는지는 화면으로 확인하지 못했다(판정 좌표는 핀 레이아웃 상수: 아이콘 중심 +30pt, 라벨 높이 22+간격 5). 어긋나면 대표 화면에서 탭 위치를 알려 주면 보정한다. 배포 보류.

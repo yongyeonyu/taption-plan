@@ -375,6 +375,30 @@ enum MapHomeCatTapRouting {
         )
     }
 
+    /// 집 핀의 "성장 카드 + 하루 요약" 탭 영역. 핀 안쪽 제스처가 벡터 지도 위에서 먹지 않아 지도 단위 탭에서 좌표로 판정한다.
+    /// 집 아이콘 둘레와 그 아래 레벨 라벨 사각형이며, 위치는 집 핀의 지도 좌표(핀 중심) 기준이다.
+    static let homeSummaryIconRadius: CGFloat = 30
+    static let homeSummaryLabelSize = CGSize(width: 64, height: 30)
+
+    static func homeLevelLabelCenter(pinPoint: CGPoint, showsCatAtHome: Bool) -> CGPoint {
+        let iconHalfHeight: CGFloat = showsCatAtHome ? 39 : 24
+        return CGPoint(
+            x: pinPoint.x + homeImageCenterOffset.x,
+            y: pinPoint.y + homeImageCenterOffset.y + iconHalfHeight + 5 + 11
+        )
+    }
+
+    static func hitsHomeSummary(tapPoint: CGPoint, pinPoint: CGPoint, showsCatAtHome: Bool) -> Bool {
+        let iconCenter = CGPoint(
+            x: pinPoint.x + homeImageCenterOffset.x,
+            y: pinPoint.y + homeImageCenterOffset.y
+        )
+        if contains(tapPoint: tapPoint, markerPoint: iconCenter, radius: homeSummaryIconRadius) { return true }
+        let label = homeLevelLabelCenter(pinPoint: pinPoint, showsCatAtHome: showsCatAtHome)
+        return abs(tapPoint.x - label.x) <= homeSummaryLabelSize.width / 2
+            && abs(tapPoint.y - label.y) <= homeSummaryLabelSize.height / 2
+    }
+
     static func shouldPresentCatDetails(
         tapPoint: CGPoint,
         locationPoint: CGPoint,
