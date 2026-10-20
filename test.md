@@ -1930,3 +1930,9 @@
 - 변경: 배율 85를 기준으로 정지·걷기·달리기·등록 장소(반경 200m)에서 출발·도착하는 이동·속도 불명 이동은 85로 고정하고, 그 밖의 탈것만 속도로 정한다(1m/s→92, 40m/s→42, 로그 비율). 시작 화면 거리를 3,000m에서 배율 85(약 550m)로 바꿨다. 재생을 시작할 때 `MapHomePlaybackZoomPlan`이 이동 구간을 나눠 구간 배율을 정한다(탈것 구간 평균 속도, 4분보다 짧은 구간은 85 쪽으로 감쇠, 탈것 사이 3분 이하 틈은 앞 배율 유지). 입력(속도·등록 장소 접촉)은 `MapHomePlaybackZoomInputBuilder`가 확정 이동 구간 또는 위치 점 경로에서 만든다. 카메라는 `MapHomePlaybackZoomSmoother`(시간 기준)가 부드럽게 따라가고, 실시간 따라가기와 정지 확대 틱도 같은 85 기준(양방향 수렴)을 쓴다.
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,453개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-2.log`). 신규 정책·계획·입력 테스트 4개와 갱신한 기존 줌 테스트 통과. 첫 시도(`full-1.log`)는 테스트의 Optional 컴파일 오류로 실행 전 실패해 고쳤다. generic Debug 빌드는 `app-debug.log`.
 - 제한: 실제 재생에서의 줌 체감과 계획 값(구간별 배율)은 화면으로 확인하지 못했다. 등록 장소 접촉은 위치 점이 구간 시작·끝 180초 안에 있을 때만 판정하며, 등록 장소 밖 집·회사 근처가 아닌 곳은 해당하지 않는다. 대표의 "집이나 회사 학교 등 특정 장소에서 이동하는 건 85 고정"은 선택대로 출발·도착 모두로 적용했다(자가용·택시로 집↔회사를 바로 이동하면 85로 고정된다). 배포 보류.
+
+## HLT1020A01 · HealthKit 운동 출처 판정 (2026-10-20, 커밋 후 미배포)
+- 원인(코드 근거, 기기 확인은 못 함): `AppleHealthService.isTrustedWorkoutSource`가 `com.apple.Health`·`com.apple.health`·Taption 번들 ID와 정확히 일치할 때만 운동을 받는다. Apple Watch 운동 앱이 기록한 운동의 출처 번들 ID는 `com.apple.health.<기기 UUID>` 형태라 모두 버려져 운동 기록과 운동 시간(달력 운동시간 메뉴·하루 요약)에 안 들어왔다고 본다. 이전 테스트가 `com.apple.health.fake` 거부를 고정해 둔 의도(임의 접미사 차단)는 유지한다.
+- 수정: `com.apple.health.` 뒤가 유효한 UUID일 때만 신뢰한다. `.fake`, UUID 뒤 추가 문자, 앞 접두사, 빈 접미사는 계속 거부한다. 서드파티 앱(Strava 등)의 운동은 계속 받지 않는다.
+- 테스트(iPhone 11 Pro): `HealthKitIntegrationTests` 36개 통과(출처 판정 테스트 확장, `health-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 이 원인이 대표 기기의 실제 문제인지는 확인하지 못했다(운동 기록의 출처 번들 ID를 기기에서 읽지 못함). 과거 Watch 운동은 다음 HealthKit 동기화에서 반영되며, 반영 여부와 운동 시간 값은 대표 기기에서 확인이 필요하다. 서드파티 운동 앱 기록을 받아야 한다면 별도 결정이 필요하다. 배포 보류.

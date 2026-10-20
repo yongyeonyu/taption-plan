@@ -976,8 +976,15 @@ final class AppleHealthService: @unchecked Sendable {
     }
 
     static func isTrustedWorkoutSource(_ bundleIdentifier: String) -> Bool {
-        ["com.apple.Health", "com.apple.health", "com.taption.plan",
-         "com.taption.plan.watchkitapp"].contains(bundleIdentifier)
+        if ["com.apple.Health", "com.apple.health", "com.taption.plan",
+            "com.taption.plan.watchkitapp"].contains(bundleIdentifier) {
+            return true
+        }
+        // Apple Watch 운동 앱이 기록한 운동의 출처는 `com.apple.health.<기기 UUID>` 형태다. UUID가 맞는 것만 받고
+        // `com.apple.health.fake` 같은 임의 접미사는 계속 거른다(HLT1020A01: 이전에는 Watch 운동이 모두 버려졌다).
+        let prefix = "com.apple.health."
+        guard bundleIdentifier.hasPrefix(prefix) else { return false }
+        return UUID(uuidString: String(bundleIdentifier.dropFirst(prefix.count))) != nil
     }
 
     private static func trustedWorkout(_ sample: HKSample) -> HKWorkout? {

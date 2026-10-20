@@ -138,9 +138,17 @@ final class HealthKitIntegrationTests: XCTestCase {
                        "com.taption.plan.watchkitapp"] {
             XCTAssertTrue(AppleHealthService.isTrustedWorkoutSource(bundle))
         }
+        // Apple Watch 운동 앱 출처: com.apple.health.<기기 UUID>.
+        for bundle in ["com.apple.health.2D5CE5F6-0E6B-4B3F-9F5E-1234567890AB",
+                       "com.apple.health.2d5ce5f6-0e6b-4b3f-9f5e-1234567890ab"] {
+            XCTAssertTrue(AppleHealthService.isTrustedWorkoutSource(bundle), bundle)
+        }
         for bundle in ["", "com.example.workout", "com.apple.health.fake",
-                       "com.taption.plan.watchkitapp.fake", "Apple Watch"] {
-            XCTAssertFalse(AppleHealthService.isTrustedWorkoutSource(bundle))
+                       "com.taption.plan.watchkitapp.fake", "Apple Watch",
+                       "com.apple.health.2D5CE5F6-0E6B-4B3F-9F5E-1234567890AB.extra",
+                       "com.example.com.apple.health.2D5CE5F6-0E6B-4B3F-9F5E-1234567890AB",
+                       "com.apple.health."] {
+            XCTAssertFalse(AppleHealthService.isTrustedWorkoutSource(bundle), bundle)
         }
     }
 
