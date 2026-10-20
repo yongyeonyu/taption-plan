@@ -2346,7 +2346,7 @@ final class TimeScaleTests: XCTestCase {
             temperatureCelsius: 24
         )
 
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: current), 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: current, now: observedAt.addingTimeInterval(1_800)), 1)
         XCTAssertEqual(
             MapHomeWeatherDisplayPolicy.opacity(for: future),
             MapHomeWeatherDisplayPolicy.forecastOpacity
@@ -4431,7 +4431,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
-            62.5,
+            65,
             accuracy: 0.000_001
         )
         XCTAssertEqual(

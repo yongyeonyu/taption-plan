@@ -33,12 +33,22 @@ struct MapHomeRecordingLayers: Codable, Equatable {
 @MainActor
 final class MapHomeScreenRecorder {
     private(set) var isRecording = false
+    /// 시작하지 못했을 때 사용자에게 보여줄 이유.
+    private(set) var lastFailureMessage: String?
 
     var isAvailable: Bool { RPScreenRecorder.shared().isAvailable }
 
     func start() async -> Bool {
         let recorder = RPScreenRecorder.shared()
-        guard recorder.isAvailable, !recorder.isRecording else { return false }
+        lastFailureMessage = nil
+        guard recorder.isAvailable else {
+            lastFailureMessage = "이 기기·상태에서는 화면 녹화를 사용할 수 없습니다(다른 앱이 화면을 녹화·미러링 중인지 확인해 주세요)."
+            return false
+        }
+        guard !recorder.isRecording else {
+            lastFailureMessage = "이미 화면 녹화 중입니다. 제어 센터에서 녹화를 끄고 다시 시도해 주세요."
+            return false
+        }
         recorder.isMicrophoneEnabled = false
         do {
             try await recorder.startRecording()
@@ -46,6 +56,7 @@ final class MapHomeScreenRecorder {
             TaptionPlanDiagnosticsLogger.shared.record("screen_recording_started")
             return true
         } catch {
+            lastFailureMessage = "화면 녹화를 시작하지 못했습니다: \(error.localizedDescription)"
             TaptionPlanDiagnosticsLogger.shared.record(
                 "screen_recording_start_failed",
                 level: .error,
@@ -79,6 +90,10 @@ final class MapHomeScreenRecorder {
 
 /// 사진 앱 권한·저장. PhotoKit 완료 핸들러는 백그라운드 큐에서 불리므로 메인 액터와 분리한다.
 enum MapHomeScreenRecordingStore {
+    static func photoAddStatus() -> PHAuthorizationStatus {
+        PHPhotoLibrary.authorizationStatus(for: .addOnly)
+    }
+
     static func requestPhotoAddAccess() async -> Bool {
         let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         return status == .authorized || status == .limited
@@ -109,6 +124,9 @@ struct MapHomeRecordingOptionsSheet: View {
     @Binding var layers: MapHomeRecordingLayers
     let language: MapHomeLanguage
     let onStart: () -> Void
+    @State private var photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
+
+    private var photoAllowed: Bool { photoStatus == .authorized || photoStatus == .limited }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -118,6 +136,7 @@ struct MapHomeRecordingOptionsSheet: View {
             Text(language.text("지도는 항상 보입니다. 영상에 넣을 항목을 고르세요.", "The map is always shown. Choose what to include."))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
+            permissionRow
             toggle(language.text("시간 사이드바", "Time sidebar"), $layers.timeSidebar)
             toggle(language.text("날씨 사이드바", "Weather sidebar"), $layers.weatherSidebar)
             toggle(language.text("사이드바 메모", "Sidebar memos"), $layers.sidebarMemos)
@@ -138,6 +157,32 @@ struct MapHomeRecordingOptionsSheet: View {
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.tpBackground)
+        .task {
+            // 화면에 들어올 때 권한이 없으면 바로 묻는다(결정 전일 때만 시스템 창이 뜬다).
+            if photoStatus == .notDetermined {
+                _ = await MapHomeScreenRecordingStore.requestPhotoAddAccess()
+            }
+            photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
+        }
+    }
+
+    @ViewBuilder
+    private var permissionRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: photoAllowed ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(photoAllowed ? Color.green : Color.orange)
+            Text(photoAllowed
+                 ? language.text("사진 저장 권한 허용됨 · 화면 녹화 권한은 녹화 시작 때 시스템이 묻습니다", "Photo saving allowed · The system asks for screen recording when it starts")
+                 : language.text("사진 저장 권한이 필요합니다", "Photo saving permission is needed"))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+            Spacer(minLength: 0)
+            if !photoAllowed, photoStatus != .notDetermined,
+               let url = URL(string: UIApplication.openSettingsURLString) {
+                Button(language.text("설정 열기", "Open Settings")) { UIApplication.shared.open(url) }
+                    .font(.system(size: 12, weight: .bold))
+            }
+        }
     }
 
     private func toggle(_ title: String, _ isOn: Binding<Bool>) -> some View {

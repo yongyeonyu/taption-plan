@@ -768,7 +768,10 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
 
     var minutesPerSecond: Double {
         switch mode {
-        case .walking, .running, nil:
+        case .walking:
+            // 걷기는 다른 이동보다 두 배 빠르게 재생한다(대표 지시, PLY1020Z01).
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 2
+        case .running, nil:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
         case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
@@ -2182,6 +2185,7 @@ struct MapHomeView: View {
     private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
     @State private var isRecordedVideoSharePresented = false
+    @State private var recordingFailureMessage: String?
     @State private var recordedVideoURL: URL?
     @State private var screenRecorder = MapHomeScreenRecorder()
     @AppStorage(MapHomeGrowthPolicy.storageKey)
@@ -2639,6 +2643,17 @@ struct MapHomeView: View {
             )
             .presentationDetents([.height(560), .large])
             .presentationDragIndicator(.visible)
+        }
+        .alert(
+            language.text("화면 녹화", "Screen recording"),
+            isPresented: Binding(
+                get: { recordingFailureMessage != nil },
+                set: { if !$0 { recordingFailureMessage = nil } }
+            )
+        ) {
+            Button(language.text("확인", "OK"), role: .cancel) { recordingFailureMessage = nil }
+        } message: {
+            Text(recordingFailureMessage ?? "")
         }
         .sheet(isPresented: $isRecordedVideoSharePresented) {
             if let recordedVideoURL {
@@ -5838,6 +5853,7 @@ struct MapHomeView: View {
             // 권한은 재생 전에 먼저 묻는다: 사진 저장 → 화면 녹화.
             guard await MapHomeScreenRecordingStore.requestPhotoAddAccess() else {
                 TaptionPlanDiagnosticsLogger.shared.record("screen_recording_blocked", fields: ["reason": "photo_access_denied"])
+                recordingFailureMessage = "사진 저장 권한이 없어 녹화하지 않았습니다. 설정에서 사진 권한을 허용해 주세요."
                 return
             }
             isScreenRecording = true
@@ -5845,6 +5861,7 @@ struct MapHomeView: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
             guard await screenRecorder.start() else {
                 isScreenRecording = false
+                recordingFailureMessage = screenRecorder.lastFailureMessage ?? "화면 녹화를 시작하지 못했습니다."
                 return
             }
             // 녹화는 항상 자정(0시)부터 처음부터 재생한다.
@@ -15348,13 +15365,9 @@ private struct MapHomeStickerEditorSheet: View {
             TextField(
                 language.text("메모 내용", "Memo text"),
                 text: $memoText,
+                prompt: Text(language.text("새 지도 메모", "New map memo")),
                 axis: .vertical
             )
-            Picker(language.text("종류", "Kind"), selection: $memoKind) {
-                ForEach(MemoKind.allCases, id: \.rawValue) { kind in
-                    Text(memoKindTitle(kind)).tag(kind)
-                }
-            }
             DatePicker(
                 language.text("시간", "Time"),
                 selection: $occurredAt,
@@ -15433,7 +15446,8 @@ private struct MapHomeStickerEditorSheet: View {
             }
         case .memo(let id), .newMemo(let id):
             guard let memo = model.snapshot.memos.first(where: { $0.id == id }) else { return }
-            memoText = memo.text
+            // 새 메모는 임시로 넣어 둔 문구 대신 빈칸에 음영 안내만 보이고, 누르면 바로 입력한다.
+            memoText = isNewMemo ? "" : memo.text
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             if let point = memo.mapPoint {

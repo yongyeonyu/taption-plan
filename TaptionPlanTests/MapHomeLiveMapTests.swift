@@ -852,3 +852,26 @@ final class MapHomeLiveMapTests: XCTestCase {
         return (coordinates, timestamps)
     }
 }
+
+extension MapHomeLiveMapTests {
+    func testPastWeatherIsDimmedOnlyWhenEndedBeforeOneHourAgo() {
+        let now = Date()
+        func context(end: Date, forecast: Bool = false) -> WeatherContext {
+            WeatherContext(
+                observedAt: end.addingTimeInterval(-3_600),
+                validUntil: end,
+                isForecast: forecast,
+                condition: "c",
+                symbolName: "sun.max",
+                temperatureCelsius: 10
+            )
+        }
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-7_200)), now: now), 0.6)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-1_800)), now: now), 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(3_600)), now: now), 1)
+        XCTAssertEqual(
+            MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-7_200), forecast: true), now: now),
+            MapHomeWeatherDisplayPolicy.forecastOpacity
+        )
+    }
+}

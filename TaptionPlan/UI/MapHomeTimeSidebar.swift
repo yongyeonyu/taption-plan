@@ -30,14 +30,13 @@ enum MapHomeWeatherDisplayPolicy {
         context.isForecast == true ? .forecastOpaque : .currentWhite
     }
 
-    /// GPS 위치로 확정된 과거 날씨(현재 -1시간 이전)는 살짝 흐리게 보인다.
+    /// 현재 -1시간보다 앞서 끝난 날씨(지나간 시간대)는 살짝 흐리게 보인다.
     static let fixedPastOpacity = 0.6
     static let fixedPastAge: TimeInterval = 60 * 60
 
     static func isFixedPast(_ context: WeatherContext, now: Date) -> Bool {
         context.isForecast != true
-            && context.placeName == "GPS"
-            && context.observedAt <= now.addingTimeInterval(-fixedPastAge)
+            && (context.validUntil ?? context.observedAt) <= now.addingTimeInterval(-fixedPastAge)
     }
 
     static func opacity(for context: WeatherContext, now: Date = .now) -> Double {
