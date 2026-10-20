@@ -1185,6 +1185,36 @@ enum MapHomePawprintSpeedColor {
             .opacity(0.9)
     }
 
+    /// 발자국 색 속도: 해당 점 앞뒤 `halfWindow`초 구간의 이동거리/시간. 인접 두 점의 순간 속도는
+    /// GPS 잡음으로 튀고, 재생으로 발자국이 다시 뽑힐 때마다 색이 바뀌므로 시간 창으로 고정한다.
+    static let windowSeconds: TimeInterval = 30
+
+    static func windowedSpeed(
+        coordinates: [CLLocationCoordinate2D],
+        timestamps: [Date],
+        index: Int,
+        halfWindow: TimeInterval = windowSeconds
+    ) -> Double? {
+        guard coordinates.count == timestamps.count, coordinates.indices.contains(index),
+              halfWindow > 0 else { return nil }
+        let center = timestamps[index]
+        var low = index
+        while low > 0, center.timeIntervalSince(timestamps[low - 1]) <= halfWindow { low -= 1 }
+        var high = index
+        while high < coordinates.count - 1, timestamps[high + 1].timeIntervalSince(center) <= halfWindow {
+            high += 1
+        }
+        guard high > low else { return nil }
+        let seconds = timestamps[high].timeIntervalSince(timestamps[low])
+        guard seconds > 0 else { return nil }
+        var meters = 0.0
+        for k in low..<high {
+            meters += CLLocation(latitude: coordinates[k].latitude, longitude: coordinates[k].longitude)
+                .distance(from: CLLocation(latitude: coordinates[k + 1].latitude, longitude: coordinates[k + 1].longitude))
+        }
+        return meters / seconds
+    }
+
     static func speed(
         from first: CLLocationCoordinate2D,
         at firstDate: Date?,
@@ -4960,7 +4990,11 @@ struct MapHomeView: View {
                         angle: a,
                         isPredicted: false,
                         timestamp: segment.coordinateTimestamps[i],
-                        speedMetersPerSecond: MapHomePawprintSpeedColor.speed(
+                        speedMetersPerSecond: MapHomePawprintSpeedColor.windowedSpeed(
+                            coordinates: coords,
+                            timestamps: segment.coordinateTimestamps,
+                            index: i
+                        ) ?? MapHomePawprintSpeedColor.speed(
                             from: coords[previousIndex],
                             at: segment.coordinateTimestamps[previousIndex],
                             to: n,
@@ -5813,7 +5847,9 @@ struct MapHomeView: View {
                 isScreenRecording = false
                 return
             }
-            if !isDayPlaybackRunning { startDayPlayback() }
+            // 녹화는 항상 자정(0시)부터 처음부터 재생한다.
+            if isDayPlaybackRunning { stopDayPlayback(resetProgress: true) }
+            startDayPlayback(fromMidnight: true)
         }
     }
 
@@ -5838,7 +5874,7 @@ struct MapHomeView: View {
         }
     }
 
-    private func startDayPlayback() {
+    private func startDayPlayback(fromMidnight: Bool = false) {
         dayPlaybackTask?.cancel()
         let currentDate = Date.now
         let playbackEndMinute = MapHomeDayPlaybackMath.playbackEndMinute(
@@ -5857,10 +5893,10 @@ struct MapHomeView: View {
             timestamp: selectedPawprintTimestamp, isPredicted: false,
             selectedDate: model.selectedDate
         )
-        let currentMinute = pawSelection.map {
+        let currentMinute = fromMidnight ? 0 : (pawSelection.map {
             defaultMinute == Double($0.minute) && $0.minuteOffset < playbackEndMinute
                 ? $0.minuteOffset : defaultMinute
-        } ?? defaultMinute
+        } ?? defaultMinute)
         selectedPawprintTimestamp = nil
         selectedPawprintCoordinate = nil
         var playbackMinute = currentMinute
@@ -6170,6 +6206,7 @@ struct MapHomeView: View {
                 )
                 let timeRailTop = max(0, proxy.size.height - railHeight)
                 ZStack(alignment: .topLeading) {
+                    if recordingShows(\.timeSidebar) {
                     Capsule()
                         .fill(Color.tpAccent.opacity(0.07))
                         .overlay {
@@ -6187,6 +6224,7 @@ struct MapHomeView: View {
                             y: timeRailTop + selectedCardCenterY
                         )
                         .allowsHitTesting(false)
+                    }
                     if model.settings.weatherSidebarVisible, recordingShows(\.weatherSidebar) {
                         let railWeather = MapHomeWeatherDisplayCache.contexts(
                             incoming: model.snapshot.weather,
@@ -6222,6 +6260,7 @@ struct MapHomeView: View {
                         .offset(x: weatherOriginX)
                         .allowsHitTesting(false)
                     }
+                    if recordingShows(\.timeSidebar) {
                     MapHomeTimeSidebar(
                         date: model.selectedDate,
                         selectedMinute: Binding(
@@ -6268,6 +6307,7 @@ struct MapHomeView: View {
                             isUnconfirmedReviewPresented = true
                         }
                     )
+                    }
 
                     ForEach(recordingShows(\.sidebarMemos) ? scheduleStickersForSelectedDate : []) { sticker in
                         let window = MapHomeTimeSidebarMath.visibleWindow(

@@ -252,6 +252,31 @@ final class MapHomeLiveMapTests: XCTestCase {
         )
     }
 
+    func testPawprintWindowedSpeedIgnoresSingleSampleJitter() {
+        // 1초 간격으로 10 m씩(10 m/s) 가다가 한 점만 튄 경로.
+        let route = makeRoute(stepsMeters: Array(repeating: 10.0, count: 120))
+        var coordinates = route.coordinates
+        coordinates[60].latitude += 0.0005
+        let jittered = MapHomePawprintSpeedColor.windowedSpeed(
+            coordinates: coordinates, timestamps: route.timestamps, index: 60
+        )
+        let clean = MapHomePawprintSpeedColor.windowedSpeed(
+            coordinates: route.coordinates, timestamps: route.timestamps, index: 60
+        )
+        let instant = MapHomePawprintSpeedColor.speed(
+            from: coordinates[60], at: route.timestamps[60],
+            to: coordinates[61], at: route.timestamps[61]
+        )
+        XCTAssertEqual(try XCTUnwrap(clean), 10, accuracy: 1)
+        XCTAssertLessThan(abs(try XCTUnwrap(jittered) - 10), abs(try XCTUnwrap(instant) - 10))
+        // 같은 점은 경로가 더 길어져도(재생 진행) 같은 속도를 낸다.
+        let shorter = MapHomePawprintSpeedColor.windowedSpeed(
+            coordinates: Array(route.coordinates.prefix(100)),
+            timestamps: Array(route.timestamps.prefix(100)), index: 60
+        )
+        XCTAssertEqual(try XCTUnwrap(shorter), try XCTUnwrap(clean), accuracy: 0.001)
+    }
+
     func testPhotoClustersGroupNearbyAndIgnoreHiddenOrUnlocated() {
         var noLocation = photo("n", minute: 5, lat: 0, lon: 0)
         noLocation.location = nil
