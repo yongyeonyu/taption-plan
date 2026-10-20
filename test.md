@@ -1821,3 +1821,9 @@
 - 테스트: 줌 변경은 `MapHomeLiveMapTests` 31개·렌더 테스트 통과, generic Debug 빌드 통과(ZMS1020A01). 전체 `TaptionPlanTests`의 마지막 실행은 렌더 테스트 환경 실패 1건 외 기존 실패 2개(FLK1020C01).
 - 아카이브·업로드: Release 아카이브 성공(`archive-188.log`), IPA 내보내기 성공(`export-188.log`), IPA 앱·위젯 번들 버전 188·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음, 이전 빌드도 같음), `altool` `No errors uploading`(`altool-188.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 188·187·186·185·184 확인, 테스터 1명(`asc-poll-188.log`).
 - 제한: 기기 설치·테스터 수신과 실제 이동·정지 화면 확대는 직접 보지 못했다.
+
+## PLY1020A01·HOM1020A01 · 재생 줌·집 레벨 라벨 (2026-10-20, 배포 보류)
+- 재생 속도·줌(PLY): 원인 3가지(Apple 지도에 재생 줌 호출 없음, 속도가 이동 구간 없으면 nil 또는 실시간 속도, 벡터 지도 포커스가 정수 분 변경 때만)를 고쳤다. `MapHomePlaybackSpeed`(확정 이동 구간 → 앞뒤 두 점 거리/시간 → 가까운 센서 속도)와 재생 틱(30Hz) 포커스·줌 갱신.
+- 집 레벨 라벨(HOM): 집 아이콘 아래 `Lv.N` 라벨 상시 표시, 탭하면 오늘 하루 요약. 위쪽 같은 높이 여백으로 아이콘 위치 유지.
+- 테스트(iPhone 11 Pro): `MapHomeLiveMapTests`·렌더 테스트 33개 통과(`live-2.log`, 신규 재생 속도 테스트 포함), generic iOS Debug 빌드 통과(`app-debug.log`). 첫 시도(`live-1.log`)는 앱 시작 실패(CoreDeviceError 10004, 프로세스 확인 불가)로 테스트가 실행되지 않았고 재시도에서 통과했다. 전체 `TaptionPlanTests`는 이번 변경 후 다시 돌리지 않았다.
+- 제한: 재생 화면·집 라벨 위치·탭은 화면으로 확인하지 못했다(아이폰 18이 외출 중). 속도 비례 줌의 실제 체감도 미확인. TestFlight 배포·push는 대표 지시 전까지 보류.

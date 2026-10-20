@@ -189,6 +189,33 @@ final class MapHomeLiveMapTests: XCTestCase {
 
     // MARK: - Route speed gradient
 
+    func testPlaybackSpeedUsesNeighbouringPointsWhenNoTravelSegmentExists() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        func reading(_ offset: TimeInterval, longitude: Double, speed: Double? = nil) -> SensorReading {
+            var value = SensorReading(timestamp: base.addingTimeInterval(offset))
+            value.point = GeoPoint(latitude: 37.5, longitude: longitude, altitude: 0,
+                                   horizontalAccuracy: 5, verticalAccuracy: 5)
+            value.speedMetersPerSecond = speed
+            return value
+        }
+        // 위도 37.5°에서 경도 0.001° ≈ 88m. 60초에 약 88m → 약 1.5m/s(걷기).
+        let walking = [reading(0, longitude: 127.000), reading(60, longitude: 127.001)]
+        let slow = MapHomePlaybackSpeed.speed(at: base.addingTimeInterval(30), travel: [], readings: walking)
+        XCTAssertEqual(try XCTUnwrap(slow), 88.0 / 60.0, accuracy: 0.3)
+        // 60초에 약 8.8km → 약 147m/s는 거리 비례 줌의 상한을 넘는 빠른 이동.
+        let fast = [reading(0, longitude: 127.0), reading(60, longitude: 127.1)]
+        XCTAssertGreaterThan(
+            try XCTUnwrap(MapHomePlaybackSpeed.speed(at: base.addingTimeInterval(30), travel: [], readings: fast)), 30
+        )
+        // 제자리: 같은 좌표 두 점은 0, 한쪽 점만 있으면 가까운 센서 속도, 둘 다 멀면 nil.
+        let still = [reading(0, longitude: 127.0), reading(600, longitude: 127.0)]
+        XCTAssertEqual(MapHomePlaybackSpeed.speed(at: base.addingTimeInterval(300), travel: [], readings: still), 0)
+        let single = [reading(0, longitude: 127.0, speed: 1.2)]
+        XCTAssertEqual(MapHomePlaybackSpeed.speed(at: base.addingTimeInterval(60), travel: [], readings: single), 1.2)
+        XCTAssertNil(MapHomePlaybackSpeed.speed(at: base.addingTimeInterval(600), travel: [], readings: single))
+        XCTAssertNil(MapHomePlaybackSpeed.speed(at: base, travel: [], readings: []))
+    }
+
     func testLiveFollowSpeedTreatsStaleSlowReadingAsStationary() {
         typealias Speed = MapHomeLiveFollowSpeed
         XCTAssertEqual(Speed.speed(latestAge: 3, latestSpeed: 1.2), 1.2)

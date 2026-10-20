@@ -990,6 +990,13 @@ enum MapHomeUserTrackingPolicy {
     }
 }
 
+enum MapHomePlacePinLayout {
+    /// 집 핀의 레벨 라벨 높이. 위쪽에 같은 높이를 비워 아이콘 위치를 유지한다.
+    static let levelLabelHeight: CGFloat = 22
+    /// Apple 지도 호스팅 뷰의 집 핀 높이: 기존 138 + 위아래 (라벨 높이 + 간격 5) 두 번.
+    static let appleHomeHostHeight: CGFloat = 138 + 2 * (levelLabelHeight + 5)
+}
+
 enum MapHomePlaceAnnotationLayout {
     static let vectorAnchor = UnitPoint.center
     static let appleCenterOffset = CGPoint.zero
@@ -3294,6 +3301,17 @@ struct MapHomeView: View {
                 refreshSelectedTimelineMapPosition(minute: minute, using: nil)
             }
         }
+        .onChange(of: dayPlaybackCurrentMinute) { _, _ in
+            // 정수 분이 바뀔 때만이 아니라 재생 틱(30Hz)마다 화랑이를 가운데에 두고 속도에 맞춰 줌을 맞춘다.
+            guard isDayPlaybackRunning,
+                  TimelineInteractionFrameGate.shouldRender(
+                      lastUptime: &lastPlaybackMapFocusUptime,
+                      nowUptime: ProcessInfo.processInfo.systemUptime,
+                      minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
+                  ),
+                  let point = displayedPlaybackFocusPoint else { return }
+            focusMap(on: point, using: nil, followsTracking: true)
+        }
         .onChange(of: isTimelineInteractionActive) { _, isInteracting in
             guard !isInteracting, !isDayPlaybackRunning,
                   selectedTimelineMinute != nil else { return }
@@ -3387,6 +3405,9 @@ struct MapHomeView: View {
         }
         .onChange(of: headingMonitor.headingDegrees) { _, _ in
             applyMapHeading(using: nil)
+        }
+        .onChange(of: dayPlaybackCurrentMinute) { _, _ in
+            advanceApplePlaybackZoom()
         }
         .onChange(of: isTimelineInteractionActive) { _, isInteracting in
             guard !isInteracting else { return }
@@ -8761,25 +8782,12 @@ struct MapHomeView: View {
     /// m/s로 추정한다. 재생 중이면 현재 leg의 이동 세그먼트 속도(거리/시간),
     /// 실시간이면 최신 센서 속도를 쓴다. 정지/미확정이면 nil.
     private var displayedSpeedMetersPerSecond: Double? {
-        let travel = currentDayDataSnapshot?.travel ?? []
-        let date = displayedLocationDate
-        if let segment = travel
-            .filter({ $0.span.contains(date) })
-            .max(by: { $0.span.start < $1.span.start }) {
-            let dur = max(1, segment.span.end.timeIntervalSince(segment.span.start))
-            if segment.distanceMeters > 0 {
-                return segment.distanceMeters / dur
-            }
-        }
-        if selectedTimelineMinute != nil,
-           let reading = historicalPlaybackReadings
-               .filter({ abs($0.timestamp.timeIntervalSince(date)) <= 120
-                   && ($0.speedMetersPerSecond ?? -1) >= 0 })
-               .min(by: {
-                   abs($0.timestamp.timeIntervalSince(date))
-                       < abs($1.timestamp.timeIntervalSince(date))
-               }) {
-            return reading.speedMetersPerSecond
+        if selectedTimelineMinute != nil {
+            return MapHomePlaybackSpeed.speed(
+                at: displayedLocationDate,
+                travel: currentDayDataSnapshot?.travel ?? [],
+                readings: historicalPlaybackReadings
+            )
         }
         return model.latestSensorReading?.speedMetersPerSecond
     }
@@ -10011,6 +10019,24 @@ struct MapHomeView: View {
         return MapHomeLiveFollowSpeed.speed(
             latestAge: Date.now.timeIntervalSince(reading.timestamp),
             latestSpeed: reading.speedMetersPerSecond
+        )
+    }
+
+    /// Apple 지도의 재생 중 속도 비례 줌. 가운데 맞추기는 지도 뷰가 하고, 여기서는 거리만 바꾼다.
+    private func advanceApplePlaybackZoom() {
+        guard isDayPlaybackRunning,
+              TimelineInteractionFrameGate.shouldRender(
+                  lastUptime: &lastPlaybackMapFocusUptime,
+                  nowUptime: ProcessInfo.processInfo.systemUptime,
+                  minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
+              ),
+              let camera = visibleMapCamera,
+              let point = displayedPlaybackFocusPoint else { return }
+        let next = playbackAwareDistance(current: camera.distance)
+        guard abs(next - camera.distance) / camera.distance >= 0.01 else { return }
+        requestAppleMapCenter(
+            CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+            distance: next
         )
     }
 
@@ -13666,6 +13692,8 @@ private struct MapHomePlacePin: View {
     var body: some View {
         VStack(spacing: 5) {
             if destination == .home, let growthLevel {
+                // 아래 레벨 라벨과 같은 높이를 위에 비워 두어 집 아이콘이 좌표에서 움직이지 않게 한다.
+                Color.clear.frame(width: 1, height: MapHomePlacePinLayout.levelLabelHeight)
                 homeGrowthCallout(level: growthLevel)
                     .opacity(isGrowthCalloutVisible ? 1 : 0)
                     .allowsHitTesting(isGrowthCalloutVisible)
@@ -13682,6 +13710,7 @@ private struct MapHomePlacePin: View {
                         homeWeatherBadge(weatherBadge)
                     }
                 }
+                homeLevelLabel(level: growthLevel)
             } else {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
@@ -13713,6 +13742,27 @@ private struct MapHomePlacePin: View {
                 ? "집 레벨 \(growthLevel ?? 1), \(growthStatus ?? "하루 요약 보기")"
                 : "\(name), 레벨 \(floor ?? 1)"
         )
+    }
+
+    /// 집 아이콘 아래에 늘 보이는 레벨 라벨. 누르면 오늘 하루 요약을 연다.
+    private func homeLevelLabel(level: Int) -> some View {
+        Button {
+            onOpenDaySummary?()
+        } label: {
+            Text("Lv.\(level)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 12)
+                .frame(height: MapHomePlacePinLayout.levelLabelHeight)
+                .background(Color.tpSurface.opacity(0.98), in: Capsule())
+                .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
+                .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("집 레벨 \(level) · 오늘 하루 요약 열기")
+        .accessibilityHint("하단에서 오늘 하루 요약을 엽니다")
     }
 
     /// 집 위에 얹는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
@@ -17260,7 +17310,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         )
                         .fixedSize()
                     ),
-                    size: CGSize(width: 130, height: 138),
+                    size: CGSize(
+                        width: 130,
+                        height: place.destination == .home ? MapHomePlacePinLayout.appleHomeHostHeight : 138
+                    ),
                     centerOffset: MapHomePlaceAnnotationLayout.appleCenterOffset
                 )
             case .transit(let place):

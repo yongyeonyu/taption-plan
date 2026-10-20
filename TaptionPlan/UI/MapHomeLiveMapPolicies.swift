@@ -358,6 +358,44 @@ enum MapHomeLiveFollowSpeed {
     }
 }
 
+/// 재생 시각의 이동 속도(m/s). 확정된 이동 구간의 평균 속도가 있으면 그것을, 없으면 그 시각을 사이에 둔
+/// 두 위치 점의 거리/시간을 쓴다. 한쪽 점만 있으면 가까운(120초 이내) 센서 속도, 아무것도 없으면 nil이다.
+/// 재생 중에는 오늘의 실시간 속도를 섞지 않는다.
+enum MapHomePlaybackSpeed {
+    static let singleSidedMaximumAge: TimeInterval = 120
+
+    static func speed(at date: Date, travel: [TravelSegment], readings: [SensorReading]) -> Double? {
+        if let segment = travel
+            .filter({ $0.span.contains(date) })
+            .max(by: { $0.span.start < $1.span.start }),
+           segment.distanceMeters > 0 {
+            return segment.distanceMeters / max(1, segment.span.end.timeIntervalSince(segment.span.start))
+        }
+        var before: (time: Date, point: GeoPoint, speed: Double?)?
+        var after: (time: Date, point: GeoPoint)?
+        for reading in readings {
+            guard let point = reading.point else { continue }
+            if reading.timestamp <= date {
+                if before.map({ reading.timestamp > $0.time }) ?? true {
+                    before = (reading.timestamp, point, reading.speedMetersPerSecond)
+                }
+            } else if after.map({ reading.timestamp < $0.time }) ?? true {
+                after = (reading.timestamp, point)
+            }
+        }
+        if let before, let after {
+            let gap = after.time.timeIntervalSince(before.time)
+            guard gap > 0 else { return nil }
+            return distanceMeters(before.point, after.point) / gap
+        }
+        if let before, date.timeIntervalSince(before.time) <= singleSidedMaximumAge,
+           let speed = before.speed, speed.isFinite, speed >= 0 {
+            return speed
+        }
+        return nil
+    }
+}
+
 // MARK: - GPS fix diagnostics
 
 /// 포그라운드에서 받은 위치 fix를 좌표 없이 요약한다(위도·경도는 개인정보라 남기지 않는다).
