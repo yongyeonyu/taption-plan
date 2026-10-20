@@ -1852,3 +1852,9 @@
 - 수정: `MapHomePlaybackZoomSmoother`(경과 시간 기준 시정수 1.2초, 초당 로그 변화 상한 0.9)로 재생 줌 거리를 부드럽게 하고, 현재 위치 보강을 되돌렸다. 재생 시작 때 smoother를 초기화한다.
 - 테스트(iPhone 11 Pro): `MapHomeLiveMapTests`(신규 smoother 테스트 포함)·`MapHomeSidebarAndPlaybackPolicyTests`·렌더 테스트 40개 통과(`zoom-1.log`), generic Debug 빌드는 `app-debug.log`.
 - 미해결: (4) 안개 원 어긋남은 원인 미확인, (5) GPS 튐은 기존 열린 항목(아이폰 18 로그 필요). 재생 체감은 화면으로 확인하지 못했다. 배포·push는 대표 지시 전까지 보류.
+
+## BKP1020B01 · iCloud 백업 진행 표시 (2026-10-20, 커밋 후 미배포)
+- 원인: `backUpNow`가 `.backingUp(completed: 0, total: 1)`로 시작한 뒤 진행 값을 갱신하는 곳이 없었고, 엔진 `backupAllMonths`에 진행 알림이 없었다. 파일마다 iCloud에서 받아 검증하는 시간이 길어도 0에 머문다.
+- 수정: `backupAllMonths(progress:)`가 시작 때 한 번, 달·설정 파일이 끝날 때마다 (끝낸 수, 전체 수)를 알리고 `AppModel.updateBackupProgress`가 백업 중일 때만 `backupActivity`를 갱신한다. 백업 포맷·키·파일 내용은 바꾸지 않았다.
+- 테스트(iPhone 11 Pro): `TaptionBackupV2Tests` 40개 통과·실패 0(신규 진행 알림 테스트 포함: 0/3→3/3, `backup-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 실제 iCloud 업로드 중 화면에서 숫자가 오르는지는 확인하지 못했다(파일 하나를 처리하는 동안은 값이 그대로이므로, 한 달이 매우 크면 그 파일 처리 중에는 여전히 멈춘 것처럼 보일 수 있다). 대표가 보고한 백업은 이미 완료됐다.

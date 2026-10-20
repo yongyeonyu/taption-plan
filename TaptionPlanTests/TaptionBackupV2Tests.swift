@@ -621,6 +621,25 @@ final class TaptionBackupV2Tests: XCTestCase {
         XCTAssertEqual(names, ["2026-08.taptionbackup", "2026-10.taptionbackup"])
     }
 
+    func testBackupAllMonthsReportsProgressForEveryFile() async throws {
+        let harness = try makeHarness()
+        try await harness.store.upsertReadings(
+            readings(day: date(2026, 8, 31, 23), count: 5) + readings(day: date(2026, 10, 2), count: 5, startIndex: 50)
+        )
+        final class Recorder: @unchecked Sendable {
+            private let lock = NSLock()
+            private var values: [[Int]] = []
+            func add(_ completed: Int, _ total: Int) { lock.lock(); values.append([completed, total]); lock.unlock() }
+            var snapshot: [[Int]] { lock.lock(); defer { lock.unlock() }; return values }
+        }
+        let recorder = Recorder()
+        let results = try await engine(harness).backupAllMonths(
+            password: password, now: date(2026, 10, 19)
+        ) { completed, total in recorder.add(completed, total) }
+        XCTAssertEqual(results.count, 3)
+        XCTAssertEqual(recorder.snapshot, [[0, 3], [1, 3], [2, 3], [3, 3]], "시작 때 한 번, 파일마다 한 번(설정 포함)")
+    }
+
     // MARK: 압축률
 
     func testCompressionRatioOnSyntheticLocationHistory() async throws {

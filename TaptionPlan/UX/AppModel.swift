@@ -1772,6 +1772,13 @@ final class AppModel {
         return true
     }
 
+    /// 백업 중일 때만 진행 값을 바꾼다(끝난 뒤 늦게 도착한 알림은 무시).
+    private func updateBackupProgress(completed: Int, total: Int) {
+        guard case .backingUp = backupActivity else { return }
+        let next = PlanBackupActivity.backingUp(completed: completed, total: max(total, 1))
+        if backupActivity != next { backupActivity = next }
+    }
+
     private func endBackupOperation(_ report: PlanBackupReport) {
         activeDataMutationCount -= 1
         backupActivity = .idle
@@ -1798,7 +1805,9 @@ final class AppModel {
             try authorizeBackupPassword(password)
             guard let backupService else { throw TaptionBackupError.destinationUnavailable("engine unavailable") }
             await flushPendingWrites()
-            let results = try await backupService.backupAll(password: password, now: now)
+            let results = try await backupService.backupAll(password: password, now: now) { [weak self] completed, total in
+                Task { @MainActor in self?.updateBackupProgress(completed: completed, total: total) }
+            }
             let items = results.map(PlanBackupPresenter.item(for:))
             if items.contains(where: { $0.kind == .done || $0.kind == .unchanged }) {
                 securityService?.recordSuccessfulBackup(at: now)

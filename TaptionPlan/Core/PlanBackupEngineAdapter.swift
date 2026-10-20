@@ -31,8 +31,12 @@ struct PlanBackupEngineAdapter: Sendable {
         return rows
     }
 
-    func backupAll(password: String, now: Date) async throws -> [TaptionBackupEngine.BackupResult] {
-        try await engine.backupAllMonths(password: password, now: now)
+    func backupAll(
+        password: String,
+        now: Date,
+        progress: (@Sendable (Int, Int) -> Void)? = nil
+    ) async throws -> [TaptionBackupEngine.BackupResult] {
+        try await engine.backupAllMonths(password: password, now: now, progress: progress)
     }
 
     func offload(password: String, now: Date, keepRecentMonths: Int) async throws -> [TaptionBackupEngine.OffloadResult] {
