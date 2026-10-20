@@ -4258,7 +4258,7 @@ struct MapHomeView: View {
         displayedSpeed: Double?
     ) -> some View {
         ZStack {
-            fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places)
+            fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
             ForEach(waypoints.sorted {
                 $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
             }) { waypoint in
@@ -4590,7 +4590,8 @@ struct MapHomeView: View {
     private func fogOfWarOverlay(
         viewport: MapHomeVectorViewport?,
         waypoints: [PawprintWaypoint],
-        places: [MapHomePlaceAnnotation]
+        places: [MapHomePlaceAnnotation],
+        stickmanPoint: CGPoint? = nil
     ) -> some View {
         if fogOfWarEnabled, let viewport {
             Canvas { context, size in
@@ -4603,7 +4604,10 @@ struct MapHomeView: View {
                 reveals += places.compactMap {
                     viewport.markerPoints[vectorPlaceMarkerID($0.id)]
                 }.map { ($0, CGFloat(61)) }
-                if let point = viewport.markerPoints[vectorDisplayedMarkerID] {
+                if let point = MapHomeFogRevealPolicy.currentLocationPoint(
+                    stickmanPoint: stickmanPoint,
+                    viewportPoint: viewport.markerPoints[vectorDisplayedMarkerID]
+                ) {
                     reveals.append((point, 81))
                 }
                 for (point, radius) in reveals {

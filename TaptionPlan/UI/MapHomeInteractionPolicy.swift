@@ -557,6 +557,15 @@ final class MapHomeCameraFrameProjection {
     }
 }
 
+/// 안개에서 현재 위치를 걷어 내는 원의 중심. 화랑이가 실제로 그려지는 화면 점이 있으면 그 점을 쓴다.
+/// 화랑이 점은 입력 예산(최대 60Hz)으로 갱신되고 지도 뷰포트는 프레임마다 바뀌어, 지도가 빨리 움직이는 재생 중에
+/// 둘을 따로 쓰면 안개 구멍이 화랑이와 어긋나 보인다(2026-10-20 재생 녹화 08:28 프레임).
+enum MapHomeFogRevealPolicy {
+    static func currentLocationPoint(stickmanPoint: CGPoint?, viewportPoint: CGPoint?) -> CGPoint? {
+        stickmanPoint ?? viewportPoint
+    }
+}
+
 final class MapHomeStickmanViewportProjection {
     private var latestPoint: CGPoint?
     private var renderedPoint: CGPoint?

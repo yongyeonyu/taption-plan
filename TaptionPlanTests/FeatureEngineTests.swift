@@ -60,6 +60,14 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testFogRevealFollowsTheDrawnStickmanPointWhenAvailable() {
+        let stickman = CGPoint(x: 120, y: 340)
+        let viewport = CGPoint(x: 150, y: 380)
+        XCTAssertEqual(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: stickman, viewportPoint: viewport), stickman)
+        XCTAssertEqual(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: viewport), viewport)
+        XCTAssertNil(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: nil))
+    }
+
     func testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround() {
         let pin = CGPoint(x: 100, y: 200)
         let icon = CGPoint(x: pin.x + MapHomeCatTapRouting.homeImageCenterOffset.x,

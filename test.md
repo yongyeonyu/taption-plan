@@ -1900,3 +1900,9 @@
 - 계산: 달 단위로 백그라운드에서 `DayPhaseEngine.completePhases` + `categoryDurations(.canonical)`를 날짜마다 돌려 대분류 ID(sleep·movement·study·work·exercise·hobby)별 시간을 합친다. 하루 요약과 같은 엔진이라 값이 일치한다. 미확인은 담지 않는다.
 - 테스트(iPhone 11 Pro): `MapHomeGrowthPolicyTests` 21개 통과(신규 시간 표기·월 집계 2개, `time-3.log`), generic iOS Debug 빌드는 `app-debug.log`. 첫 시도들은 테스트 기대 오류(미확인 포함, 업무는 장소 근거 필요)로 실패해 엔진 동작에 맞게 고쳤다.
 - 제한: 업무·수업·취미는 하루 요약과 같이 장소(회사·학교 등) 근거가 있을 때만 센다. 입력은 `model.snapshot`(저장된 기록·이동·체류)이라 센서에서 막 분석된 오늘 분은 늦게 반영될 수 있다. 화면(메뉴 배치, 시트 높이, 계산 시간)은 확인하지 못했다. 한 달 계산이 느리면 알려 주면 캐시를 넣는다. 배포 보류.
+
+## FOG1020A01 · 재생 중 안개 구멍이 화랑이와 어긋남 (2026-10-20, 커밋 후 미배포)
+- 근거: 대표의 재생 녹화(12:14) 08:28 프레임에서 안개 걷힌 원이 화랑이와 떨어져 있었다. 코드상 안개의 현재 위치 원은 뷰포트의 `displayed-location` 점(`viewport.markerPoints`, 프레임마다 갱신)을 쓰고 화랑이는 `stickmanPoint`(`MapHomeStickmanViewportProjection`, 입력 예산 최대 60Hz)로 그려져 지도가 빠르게 움직일 때 서로 다른 시점의 점이 된다. 기기에서 재현·측정하지는 못했다.
+- 수정: 안개의 현재 위치 원 중심을 `MapHomeFogRevealPolicy.currentLocationPoint`로 정해 화랑이가 그려지는 `stickmanPoint`가 있으면 그 점을, 없으면 뷰포트 점을 쓴다. 발자국·장소 원은 지도 좌표 그대로다.
+- 테스트(iPhone 11 Pro): 신규 `testFogRevealFollowsTheDrawnStickmanPointWhenAvailable`과 `MapHomeLiveMapTests` 34개 통과(`fog-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 어긋남이 이 두 값의 시점 차이 때문이라는 것은 코드 근거이며 화면으로 확인하지 못했다. 화랑이 자체가 실제 위치보다 늦게 따라온다면 그 지연은 이번 범위가 아니다(같은 재생에서 대표가 계속 어긋남을 보면 알려 달라). 배포 보류.
