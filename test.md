@@ -1883,3 +1883,8 @@
 - 테스트: 전체 `TaptionPlanTests` 1,444개(iPhone 11 Pro), 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐, 신규 시작 스냅샷 테스트 통과(LAU1020A01 `full-2.log`). generic Debug 빌드 통과.
 - 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 192·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-192.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 192·191·190·189·188 확인, 테스터 1명(`asc-poll-192.log`).
 - 제한: 기기 설치·테스터 수신과 시작 속도 체감은 확인하지 못했다.
+
+## PLY1020C01 · 이동 구간 재생 4배 느리게 (2026-10-20, 커밋 후 미배포)
+- 변경: `MapHomeDayPlaybackMath.movementPlaybackMultiplier` 1/6 → 1/24. 이동 구간 재생이 초당 10분에서 2.5분으로 느려진다(정지 구간 초당 60분 유지, 모든 이동 수단 공통). 하루 전체 재생 시간은 이동이 많을수록 길어진다.
+- 테스트(iPhone 11 Pro): 재생 배속 테스트 3개(이동 안 1초=2.5분, 걷기·차량, 경계 분할 30→61.25·110→112.5)를 새 값에 맞춰 갱신해 통과(`playback-2.log`). `MapHomeSidebarAndPlaybackPolicyTests`·`MapHomeLiveMapTests` 39개 통과(`playback-1.log`; 이 묶음에는 위 3개가 포함되지 않아 따로 실행). generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 재생 체감은 화면으로 확인하지 못했다. 재생 줌(PLY1020B01)은 경과 시간 기준이라 속도 변화와 무관하게 동작한다.

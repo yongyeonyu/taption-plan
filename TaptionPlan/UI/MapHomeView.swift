@@ -651,7 +651,8 @@ enum MapHomeDayPlaybackMath {
     static let routeProjectionInterval: TimeInterval = 0.25
     static let mapFocusInterval: TimeInterval = 1.0 / 30.0
     static let stationaryMinutesPerSecond = 60.0
-    static let movementPlaybackMultiplier = 1.0 / 6.0
+    /// 이동 구간은 정지 구간 배속의 1/24(초당 2.5분)로 재생한다. 이전 1/6보다 4배 느리다(대표 지시, PLY1020C01).
+    static let movementPlaybackMultiplier = 1.0 / 24.0
     static let movingMinutesPerSecond = stationaryMinutesPerSecond * movementPlaybackMultiplier
 
     static func playbackEndMinute(

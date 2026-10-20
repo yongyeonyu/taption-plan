@@ -4397,7 +4397,7 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeDayPlaybackUsesSixthSpeedInsideMovement() {
+    func testMapHomeDayPlaybackUsesOneTwentyFourthSpeedInsideMovement() {
         let ranges = [
             MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
         ]
@@ -4417,12 +4417,12 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            70,
+            62.5,
             accuracy: 0.000_001
         )
     }
 
-    func testMapHomeDayPlaybackUsesSixthSpeedForWalkingAndVehicles() {
+    func testMapHomeDayPlaybackUsesOneTwentyFourthSpeedForWalkingAndVehicles() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
@@ -4431,7 +4431,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
-            70,
+            62.5,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4442,7 +4442,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .car),
                 ]
             ),
-            70,
+            62.5,
             accuracy: 0.000_001
         )
     }
@@ -4458,7 +4458,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            65,
+            61.25,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4467,7 +4467,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            120,
+            112.5,
             accuracy: 0.000_001
         )
     }
