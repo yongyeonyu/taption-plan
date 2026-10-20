@@ -392,6 +392,9 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
         var mode: TravelMode?
         var speedMetersPerSecond: Double?
         var touchesRegisteredPlace: Bool
+        /// 구간 이동 거리(m)와 경로가 차지하는 범위의 대각선(m). 모르면 nil(거리는 속도×시간으로 추정).
+        var distanceMeters: Double? = nil
+        var extentMeters: Double? = nil
     }
 
     struct Entry: Equatable, Sendable {
@@ -399,7 +402,13 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
         var endMinute: Double
         var scale: Double
         var isFixed: Bool
+        /// 긴 이동: 시작·끝의 이 시간(분)은 85로 확대하고 가운데는 `scale`(경로 전체 맞춤)로 고정한다.
+        var edgeMinutes: Double = 0
     }
+
+    /// 이 거리(m) 미만의 탈것 구간은 85 고정, 이상 ~`longHaulMeters`는 속도 비례, 이상은 경로 전체 맞춤 고정.
+    static let shortTripMeters = 5_000.0
+    static let longHaulMeters = 50_000.0
 
     /// 이 길이(분)보다 짧은 탈것 구간은 목표를 85 쪽으로 줄인다.
     static let minimumFullEffectMinutes = 4.0
@@ -413,16 +422,31 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
         var built: [Entry] = []
         for input in inputs.sorted(by: { $0.startMinute < $1.startMinute }) where input.endMinute > input.startMinute {
             let speed = input.speedMetersPerSecond.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+            let durationMinutes = input.endMinute - input.startMinute
+            let distance = input.distanceMeters ?? speed.map { $0 * durationMinutes * 60 }
             let walkingLike = input.mode == .walking || input.mode == .running
                 || (input.mode == nil && (speed ?? 0) <= MapHomePlaybackZoomPolicy.walkingCeiling)
-            let fixed = walkingLike || input.touchesRegisteredPlace || speed == nil
+            // 긴 이동(인천→대구 같은)은 85로는 지도가 화면을 순식간에 지나가 볼 수 없으므로, 등록 장소에서 이어지더라도
+            // 구간 전체가 한 화면에 들어오는 배율로 고정하고 시작·끝에서만 85로 확대한다(대표 선택 ZMP1020B01).
+            if !walkingLike, let distance, distance >= Self.longHaulMeters, let extent = input.extentMeters, extent > 0 {
+                built.append(Entry(
+                    startMinute: input.startMinute,
+                    endMinute: input.endMinute,
+                    scale: MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: extent),
+                    isFixed: false,
+                    edgeMinutes: min(10, max(3, durationMinutes * 0.05))
+                ))
+                continue
+            }
+            let shortTrip = (distance ?? .infinity) < Self.shortTripMeters
+            let fixed = walkingLike || input.touchesRegisteredPlace || speed == nil || shortTrip
             var scale = baseline
             if !fixed, let speed {
                 let raw = MapHomePlaybackZoomPolicy.scale(forVehicleSpeed: speed)
                 let weight = min(1, (input.endMinute - input.startMinute) / Self.minimumFullEffectMinutes)
                 scale = baseline + (raw - baseline) * weight
             }
-            if let last = built.last, !fixed, !last.isFixed,
+            if let last = built.last, !fixed, !last.isFixed, last.edgeMinutes == 0,
                input.startMinute - last.endMinute <= Self.holdGapMinutes {
                 // 탈것 구간 사이의 짧은 틈: 앞 구간 배율을 틈 끝까지 유지한다.
                 built[built.count - 1].endMinute = input.startMinute
@@ -435,6 +459,10 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
     /// 재생 분(0~1,440)의 목표 배율. 구간 밖은 85.
     func scale(atMinute minute: Double) -> Double {
         for entry in entries where minute >= entry.startMinute && minute < entry.endMinute {
+            if entry.edgeMinutes > 0,
+               minute < entry.startMinute + entry.edgeMinutes || minute >= entry.endMinute - entry.edgeMinutes {
+                return MapHomePlaybackZoomPolicy.baselineScale
+            }
             return entry.scale
         }
         return MapHomePlaybackZoomPolicy.baselineScale
@@ -461,13 +489,16 @@ enum MapHomePlaybackZoomInputBuilder {
         return ranges.map { range in
             let start = dayStart.addingTimeInterval(range.startMinute * 60)
             let end = dayStart.addingTimeInterval(range.endMinute * 60)
+            let inside = located.filter { $0.timestamp >= start && $0.timestamp <= end }
             return .init(
                 startMinute: range.startMinute,
                 endMinute: range.endMinute,
                 mode: range.mode,
                 speedMetersPerSecond: speed(from: start, to: end, travel: travel, readings: located),
                 touchesRegisteredPlace: isNearPlace(at: start, readings: located, places: places)
-                    || isNearPlace(at: end, readings: located, places: places)
+                    || isNearPlace(at: end, readings: located, places: places),
+                distanceMeters: distance(from: start, to: end, travel: travel, inside: inside),
+                extentMeters: extent(of: inside)
             )
         }
     }
@@ -488,6 +519,33 @@ enum MapHomePlaybackZoomInputBuilder {
             if let a = lhs.point, let b = rhs.point { meters += distanceMeters(a, b) }
         }
         return meters / duration
+    }
+
+    /// 구간 이동 거리(m): 겹치는 확정 이동 구간의 거리, 없으면 위치 점 경로 길이. 모르면 nil.
+    static func distance(from start: Date, to end: Date, travel: [TravelSegment], inside: [SensorReading]) -> Double? {
+        let middle = start.addingTimeInterval(end.timeIntervalSince(start) / 2)
+        if let segment = travel.filter({ $0.span.contains(middle) && $0.distanceMeters > 0 })
+            .max(by: { $0.span.start < $1.span.start }) {
+            return segment.distanceMeters
+        }
+        guard inside.count >= 2 else { return nil }
+        var meters = 0.0
+        for (lhs, rhs) in zip(inside, inside.dropFirst()) {
+            if let a = lhs.point, let b = rhs.point { meters += distanceMeters(a, b) }
+        }
+        return meters
+    }
+
+    /// 경로가 차지하는 범위(위도·경도 최소·최대 상자)의 대각선(m). 점이 둘 미만이면 nil.
+    static func extent(of readings: [SensorReading]) -> Double? {
+        let points = readings.compactMap(\.point)
+        guard points.count >= 2,
+              let minLat = points.map(\.latitude).min(), let maxLat = points.map(\.latitude).max(),
+              let minLon = points.map(\.longitude).min(), let maxLon = points.map(\.longitude).max() else { return nil }
+        func point(_ latitude: Double, _ longitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0)
+        }
+        return distanceMeters(point(minLat, minLon), point(maxLat, maxLon))
     }
 
     static func isNearPlace(at date: Date, readings: [SensorReading], places: [GeoPoint]) -> Bool {

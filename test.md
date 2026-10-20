@@ -1961,3 +1961,9 @@
 - 변경: `WeatherDayFixEngine`(시별 위치·1km 묶음·교체), `AppleWeatherContextService.historicalHourlyContexts`(과거 구간만 조회), `AppModel.scheduleWeatherDayFixIfNeeded`/`fixPastDayWeather`(새 위치 점이 들어올 때 30분 간격으로 아직 고정하지 않은 지난 날 최대 3일을 오래된 날부터 처리, 진단 `weather_day_fixed`). 고정값은 `isForecast=false`·`placeName="GPS"`·그 시의 위치로 저장하고 원본은 기존 raw 아카이브(`weather-fixed-hourly`)에 남긴다.
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,457개 실패 0(`WTH1020C01/full-2.log`), 신규 시별 위치·묶음·교체 테스트 2개 통과. 첫 실행(`full-1.log`)에서 `testImmediateSensorAnalysisKeepsEveryPendingDay`가 5초 대기 안에 끝나지 않아 한 번 실패해(이번 변경과 무관한 타이밍) 대기를 20초로 늘렸고 재실행에서 통과했다. generic Debug 빌드 통과.
 - 제한: WeatherKit 과거 시간별 응답의 실제 모습(빠진 시간 비율)과 자정 직후 고정이 실제로 일어나는지는 기기에서 확인하지 못했다. 앱이 실행되지 않는 시간에는 고정되지 않고 다음 실행·위치 점에서 처리한다. 고정은 새 위치 점이 들어올 때만 확인하므로 위치 수집을 끈 상태에서는 앱을 열어도 시도하지 않는다(날씨 설정이 켜져 있으면 시도). 배포 보류.
+
+## ZMP1020B01 · 긴 이동 재생: 길이별 자동 + 경로 전체 맞춤 (2026-10-20, 커밋 후 미배포)
+- 문제: 85 배율(시야 약 550m)에서 시속 100km 이동은 재생(초당 2.5분)에서 화랑이가 초당 약 4km를 가 화면 7장이 매초 지나가 지도 타일이 따라오지 못하고 구간 맥락이 사라진다(인천→대구 약 290km 같은 이동).
+- 변경: `MapHomePlaybackZoomPlan` 입력에 구간 거리·범위(경로 상자 대각선)를 추가했다. 탈것 구간이 5km 미만이면 85 고정, 5~50km는 기존 속도 비례, 50km 이상은 구간 전체가 한 화면에 들어오는 배율(`MapHomePlaybackZoomPolicy.fitScale`: 범위×2.43을 카메라 거리로, 배율 15~60로 제한)로 가운데를 고정하고 구간의 5%(3~10분)인 시작·끝만 85로 확대한다. 긴 이동은 등록 장소에서 출발·도착해도 이 규칙이 우선이며 걷기·달리기는 거리와 무관하게 85 고정이다. `MapHomePlaybackZoomInputBuilder`가 확정 이동 구간 거리(없으면 위치 점 경로 길이)와 위치 점의 경로 범위를 만든다.
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,458개 실패 0(`ZMP1020B01/full-1.log`), 신규 `testLongTripsFitTheWholeRouteAndShortVehicleTripsStayAtBaseline`(인천→대구 모양 입력·시작/끝 85·가운데 고정·fitScale 상하한·5km 미만·5~50km·걷기)와 거리·범위 입력 단언 통과. generic Debug 빌드는 `app-debug.log`.
+- 제한: 시야 약 550m(85), 카메라 거리≈보이는 범위×1.9 같은 비율은 근사이며 실제 인천→대구 재생에서 경로가 화면에 잘 들어오는지, 시작·끝 확대가 부드러운지는 화면으로 확인하지 못했다. 재생 막대의 모드 선택(수동 고정)은 이번 범위가 아니다. 배포 보류.

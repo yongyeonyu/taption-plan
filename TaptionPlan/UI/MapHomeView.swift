@@ -1084,6 +1084,14 @@ enum MapHomePlaybackZoomPolicy {
         return MapHomeCameraZoomMath.distance(forScale: scale(forVehicleSpeed: speed))
     }
 
+    /// 경로 범위(대각선 m)가 한 화면에 들어오는 배율. 카메라 거리는 보이는 범위의 약 1.9배(시야각)에 여유 1.3을 곱해 정하고,
+    /// 너무 넓거나(15 미만) 좁지 않게(60 초과 없음) 자른다.
+    static func fitScale(forExtentMeters extent: Double) -> Double {
+        guard extent.isFinite, extent > 0,
+              let scale = MapHomeCameraZoomMath.scale(distance: extent * 2.43) else { return fastestScale }
+        return min(60, max(15, Double(scale)))
+    }
+
     static func eased(current: Double, target: Double) -> Double {
         exp(log(current) + (log(target) - log(current)) * easing)
     }

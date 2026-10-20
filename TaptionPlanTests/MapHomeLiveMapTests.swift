@@ -322,6 +322,45 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(far.scale(atMinute: 25), base)
     }
 
+    func testLongTripsFitTheWholeRouteAndShortVehicleTripsStayAtBaseline() {
+        typealias Plan = MapHomePlaybackZoomPlan
+        let base = MapHomePlaybackZoomPolicy.baselineScale
+        // 인천→대구: 약 290km, 3시간, 범위 대각선 약 250km. 집(등록 장소)에서 출발해도 85 고정이 아니라 경로 전체 맞춤.
+        let trip = Plan(inputs: [.init(
+            startMinute: 600, endMinute: 780, mode: .car, speedMetersPerSecond: 27,
+            touchesRegisteredPlace: true, distanceMeters: 290_000, extentMeters: 250_000
+        )])
+        let fit = MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 250_000)
+        XCTAssertEqual(trip.scale(atMinute: 690), fit, accuracy: 0.001, "가운데는 경로 전체 맞춤으로 고정")
+        XCTAssertGreaterThan(fit, 15)
+        XCTAssertLessThan(fit, 45, "250km 범위는 매우 넓게 본다")
+        XCTAssertEqual(trip.scale(atMinute: 601), base, "시작은 85로 확대")
+        XCTAssertEqual(trip.scale(atMinute: 779), base, "도착도 85로 확대")
+        // 가운데에서는 시간이 지나도 배율이 변하지 않는다(고정).
+        XCTAssertEqual(trip.scale(atMinute: 650), trip.scale(atMinute: 720), accuracy: 0.0001)
+        // 범위가 더 좁은 긴 이동은 더 가깝게 본다.
+        XCTAssertGreaterThan(
+            MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 60_000),
+            MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 250_000)
+        )
+        XCTAssertEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 5_000_000), 15, "하한")
+        XCTAssertLessThanOrEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 100), 60, "상한")
+        // 5km 미만 탈것은 85 고정, 5~50km는 속도 비례.
+        let hop = Plan(inputs: [.init(
+            startMinute: 0, endMinute: 10, mode: .bus, speedMetersPerSecond: 6,
+            touchesRegisteredPlace: false, distanceMeters: 3_600, extentMeters: 3_000)])
+        XCTAssertEqual(hop.scale(atMinute: 5), base)
+        let city = Plan(inputs: [.init(
+            startMinute: 0, endMinute: 40, mode: .bus, speedMetersPerSecond: 12,
+            touchesRegisteredPlace: false, distanceMeters: 28_800, extentMeters: 20_000)])
+        XCTAssertLessThan(city.scale(atMinute: 20), base - 10)
+        // 걷기는 거리가 길어도(예: 하루 종일 걷기) 85 고정이다.
+        let hike = Plan(inputs: [.init(
+            startMinute: 0, endMinute: 600, mode: .walking, speedMetersPerSecond: 1.4,
+            touchesRegisteredPlace: false, distanceMeters: 60_000, extentMeters: 40_000)])
+        XCTAssertEqual(hike.scale(atMinute: 300), base)
+    }
+
     func testPlaybackZoomInputBuilderMeasuresSpeedAndRegisteredPlaceContact() throws {
         let dayStart = Date(timeIntervalSince1970: 1_800_000_000)
         func point(_ meters: Double) -> GeoPoint {
@@ -346,6 +385,9 @@ final class MapHomeLiveMapTests: XCTestCase {
         )
         XCTAssertFalse(away[0].touchesRegisteredPlace)
         XCTAssertNil(MapHomePlaybackZoomInputBuilder.speed(from: dayStart, to: dayStart.addingTimeInterval(600), travel: [], readings: []))
+        // 거리와 범위: 10분 동안 12km를 직선으로 가면 거리 12km, 범위 대각선 12km.
+        XCTAssertEqual(try XCTUnwrap(inputs[0].distanceMeters), 12_000, accuracy: 100)
+        XCTAssertEqual(try XCTUnwrap(inputs[0].extentMeters), 12_000, accuracy: 100)
     }
 
     func testLiveFollowSpeedTreatsStaleSlowReadingAsStationary() {
