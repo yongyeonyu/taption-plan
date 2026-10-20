@@ -189,6 +189,33 @@ final class MapHomeLiveMapTests: XCTestCase {
 
     // MARK: - Route speed gradient
 
+    func testLiveFollowSpeedTreatsStaleSlowReadingAsStationary() {
+        typealias Speed = MapHomeLiveFollowSpeed
+        XCTAssertEqual(Speed.speed(latestAge: 3, latestSpeed: 1.2), 1.2)
+        XCTAssertNil(Speed.speed(latestAge: 3, latestSpeed: nil), "최근 값에 속도가 없으면 알 수 없음")
+        XCTAssertEqual(Speed.speed(latestAge: 40, latestSpeed: 0.2), 0, "멈춰서 fix가 끊기면 정지")
+        XCTAssertEqual(Speed.speed(latestAge: 120, latestSpeed: 1.5), 0, "걷기 이하로 끊기면 정지")
+        XCTAssertEqual(Speed.speed(latestAge: 40, latestSpeed: nil), 0)
+        XCTAssertNil(Speed.speed(latestAge: 40, latestSpeed: 20), "달리다 끊기면(터널) 정지로 단정하지 않는다")
+        XCTAssertNil(Speed.speed(latestAge: 3, latestSpeed: -1))
+    }
+
+    func testStationaryGovernorZoomsInStepByStepToTheBaseDistance() {
+        let governor = MapHomeLiveZoomGovernor()
+        var distance = 15_000.0
+        var uptime = 100.0
+        var steps = 0
+        while let next = governor.nextDistance(current: distance, speedMetersPerSecond: 0, uptime: uptime) {
+            XCTAssertLessThan(next, distance)
+            distance = next
+            uptime += MapHomeLiveZoomGovernor.minimumInterval + 0.01
+            steps += 1
+            XCTAssertLessThan(steps, 40)
+        }
+        XCTAssertLessThan(distance, MapHomePlaybackZoomPolicy.nearDistance * exp(MapHomeLiveZoomGovernor.hysteresis))
+        XCTAssertLessThan(Double(steps) * MapHomeLiveZoomGovernor.minimumInterval, 45, "약 45초 안에 기본 거리에 닿는다")
+    }
+
     func testGradientColorsFollowThePawprintSpeedScale() {
         XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 0), "#D11F1F")
         XCTAssertEqual(MapHomeRouteSpeedGradient.colorHex(forMetersPerSecond: 150 / 3.6), "#1F1FD1")

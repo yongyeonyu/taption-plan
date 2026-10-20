@@ -5056,7 +5056,9 @@ final class MapHomeVectorRouteRenderingTests: XCTestCase {
                 })
                 if visible == layers { break }
             }
-            XCTAssertEqual(visible, layers, "route layers at zoom \(zoom)")
+            XCTAssertEqual(visible, layers,
+                "route layers at zoom \(zoom), app state \(UIApplication.shared.applicationState.rawValue), "
+                + "protected data \(UIApplication.shared.isProtectedDataAvailable)")
         }
         map.styleJSON = #"{"version":8,"sources":{},"layers":[]}"#
         for _ in 0..<160 {

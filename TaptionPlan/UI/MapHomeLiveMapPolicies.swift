@@ -343,6 +343,21 @@ final class MapHomeLiveZoomGovernor {
     }
 }
 
+/// 실시간 따라가기에서 줌 판단에 쓰는 속도. 멈춰 있으면 위치 게이트가 fix를 거르므로 센서 값이 오래되는데,
+/// 그때를 "알 수 없음"으로 두면 정지 상태 확대가 멈춘다. 마지막 속도가 걷기 이하면 정지로 본다.
+enum MapHomeLiveFollowSpeed {
+    static let freshAge: TimeInterval = 15
+    /// 이 속도 이상으로 달리던 중 값이 끊기면(터널·지하철) 정지로 단정하지 않는다.
+    static let stillCeiling = 3.0
+
+    static func speed(latestAge: TimeInterval, latestSpeed: Double?) -> Double? {
+        let known = latestSpeed.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+        if latestAge <= freshAge { return known }
+        guard let known else { return 0 }
+        return known < stillCeiling ? 0 : nil
+    }
+}
+
 // MARK: - GPS fix diagnostics
 
 /// 포그라운드에서 받은 위치 fix를 좌표 없이 요약한다(위도·경도는 개인정보라 남기지 않는다).

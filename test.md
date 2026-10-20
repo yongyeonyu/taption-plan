@@ -1806,3 +1806,12 @@
 - 시도: 대표 선택("실기기 로그로 확인")에 따라 iPhone 18 Pro Max 앱 컨테이너의 진단 묶음(`Diagnostics/Packages`, 10/19 12:14)을 읽기 전용으로 복사하려 했으나 `devicectl`이 CoreDeviceError 4016(기기가 사용 조건을 만족하지 못함, 잠금·연결 상태로 추정)으로 실패했다. 파일 목록은 같은 시각에 읽혔다.
 - 코드 점검: 확대 중 뷰포트는 `mapViewRegionIsChanging`마다 한 번의 메인 큐 전달로 합쳐져 시간 사이드바·발자국 오버레이 저장소에 반영되고, 부모 상태는 30Hz로 제한된다. 이 경로에서 눈에 띄는 결함은 찾지 못했다. 5분 이하 구간의 불가능 속도(55m/s 초과) 차단은 `RouteSparseConnectionPolicy`에 이미 있다.
 - 미결: 원인 미확정. 기기 잠금 해제 후 진단 묶음 복사(`map_viewport_performance`의 `max_frame_gap_ms`, `largest_jump_*`) 또는 문제 날짜·시간대 확인이 필요하다.
+
+## ZMS1020A01 · 정지 시 현재 위치 확대와 속도 비례 줌 점검 (2026-10-20)
+- 요청(대표): 속도에 따른 줌 가변이 제대로 되는지, 멈춰 있을 때 현재 위치가 확대돼 보이지 않는 경우를 확인.
+- 확인: 속도 비례 곡선(`MapHomePlaybackZoomPolicy` 0.5m/s→500m ~ 30m/s→15km, 로그 비율)과 지배자 `MapHomeLiveZoomGovernor`(지수 평활 0.35, 15% 이내 무시, 최소 2초, 조작 후 20초 정지)는 기존 단위 테스트로 계속 통과.
+- 원인(코드 근거, 기기 재현은 못 함): (1) 멈추면 위치 게이트가 fix를 걸러 `latestSensorReading`이 15초 넘게 오래돼 `liveFollowSpeedMetersPerSecond`가 nil이 되고 줌 판단이 멈췄다. (2) 줌은 새 위치(`onChange(latestSensorReading.id)`)마다 한 걸음씩만 움직여 새 위치가 없으면 진행하지 않았다.
+- 수정: `MapHomeLiveFollowSpeed`가 오래된 값에서 마지막 속도가 3m/s 미만이면 정지(0), 달리다 끊기면(터널·지하철) 알 수 없음으로 두고, 따라가기 중 정지이며 거리가 기본 거리(500m)×1.16보다 멀면 2초마다 `focusDisplayedLocation`으로 한 걸음씩 확대한다.
+- 테스트(iPhone 11 Pro): 신규 2개(오래된 값 정지 판정, 정지 시 15km→기본 거리 45초 이내 수렴) 포함 `MapHomeLiveMapTests` 31개와 렌더 테스트 1개 통과(`zoom-2.log`), generic iOS Debug 빌드 통과(`app-debug.log`).
+- 전체 재실행(`full-1.log`, FLK1020C01): 1,438개 중 실패 14줄(예상 밖 1건). 기존 환경 실패 2개 외에 `MapHomeVectorRouteRenderingTests`가 모든 줌에서 레이어 0개로 실패했다(앞 전체 실행 FLK1020B01에서는 통과, 단독·부분 실행은 통과). 모든 줌에서 비어 있어 렌더링 자체가 안 돌았던 환경 문제(화면 잠금·앱 비활성 등)로 보이나 확정하지 못했고, 다음 실패 때 앱 상태가 메시지에 남도록 단언 메시지에 `applicationState`·`isProtectedDataAvailable`을 추가했다. 앞선 센서 분석 타이밍 테스트는 이번 전체 실행에서는 실패하지 않았다.
+- 제한: 실제 이동·정지 화면에서의 확대 동작은 직접 보지 못했다(기기 사용 중이 아님). 아직 TestFlight 배포 전, 코드 변경은 이 커밋에 포함.

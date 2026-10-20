@@ -1020,6 +1020,9 @@ enum MapHomePresencePolicy {
     }
 }
 
+/// 정지 상태 확대용 2초 간격 신호. body마다 새로 만들면 다시 구독돼 멈추므로 하나를 공유한다.
+@MainActor private let mapHomeStationaryZoomTicker = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
 /// 재생 중 이동 속도에 따라 지도 거리를 로그 비율로 부드럽게 맞춘다.
 /// 걷기 수준이면 가까이, 지하철·차량 수준이면 멀리 본다. 멈춰 있으면 현재 거리를 유지한다.
 enum MapHomePlaybackZoomPolicy {
@@ -3313,6 +3316,9 @@ struct MapHomeView: View {
             ) else { return }
             focusDisplayedLocation(using: nil)
         }
+        .onReceive(mapHomeStationaryZoomTicker) { _ in
+            advanceStationaryZoomIfNeeded()
+        }
     }
 
 
@@ -3399,6 +3405,9 @@ struct MapHomeView: View {
                 in: userTrackingMode
             ) else { return }
             focusDisplayedLocation(using: nil)
+        }
+        .onReceive(mapHomeStationaryZoomTicker) { _ in
+            advanceStationaryZoomIfNeeded()
         }
     }
 
@@ -9998,10 +10007,22 @@ struct MapHomeView: View {
 
     /// 실시간 따라가기 중 최신 센서 속도. 오래된 값은 쓰지 않는다.
     private var liveFollowSpeedMetersPerSecond: Double? {
-        guard let reading = model.latestSensorReading,
-              Date.now.timeIntervalSince(reading.timestamp) <= 15,
-              let speed = reading.speedMetersPerSecond, speed >= 0 else { return nil }
-        return speed
+        guard let reading = model.latestSensorReading else { return nil }
+        return MapHomeLiveFollowSpeed.speed(
+            latestAge: Date.now.timeIntervalSince(reading.timestamp),
+            latestSpeed: reading.speedMetersPerSecond
+        )
+    }
+
+    /// 멈춰 있어 새 위치가 오지 않아도 기본 거리까지 확대를 이어 간다(2초 간격 한 걸음씩).
+    private func advanceStationaryZoomIfNeeded() {
+        guard scenePhase == .active,
+              MapHomeUserTrackingPolicy.focusesLocationUpdates(in: userTrackingMode),
+              liveFollowSpeedMetersPerSecond == 0,
+              let camera = visibleMapCamera,
+              camera.distance > MapHomePlaybackZoomPolicy.nearDistance * exp(MapHomeLiveZoomGovernor.hysteresis)
+        else { return }
+        focusDisplayedLocation(using: nil)
     }
 
     /// 오늘의 실시간 따라가기에서 속도에 맞춘 거리. 바꾸지 않아야 하면 nil.
