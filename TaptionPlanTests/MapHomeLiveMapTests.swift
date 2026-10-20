@@ -237,6 +237,18 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(MapHomeDayTravelSummary.distanceText(420), "420 m")
     }
 
+    func testRecordingLayersDefaultsAndRoundTrip() {
+        let defaults = MapHomeRecordingLayers(rawValue: "")
+        XCTAssertFalse(defaults.cat)
+        XCTAssertTrue(defaults.routes)
+        XCTAssertFalse(defaults.mapMemos)
+        var changed = defaults
+        changed.cat = true
+        changed.timeSidebar = false
+        XCTAssertEqual(MapHomeRecordingLayers(rawValue: changed.rawValue), changed)
+        XCTAssertEqual(MapHomeRecordingLayers(rawValue: "not json"), defaults)
+    }
+
     func testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive() {
         XCTAssertEqual(MapHomePlaybackZoomMode(rawValue: "fixed"), .fixed)
         XCTAssertNil(MapHomePlaybackZoomMode(rawValue: "unknown"))

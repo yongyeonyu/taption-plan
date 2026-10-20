@@ -647,9 +647,11 @@ final class MapHomeSearchCompleter: NSObject, @preconcurrency MKLocalSearchCompl
 
 enum MapHomeDayPlaybackMath {
     static let durationSeconds: TimeInterval = 24
-    static let frameIntervalNanoseconds: UInt64 = 16_666_667
+    /// 재생 틱은 120Hz 예산(대표 지시, PLY1020R01). 60Hz 기기는 시스템이 프레임을 합친다.
+    static let frameIntervalNanoseconds: UInt64 = 8_333_333
     static let routeProjectionInterval: TimeInterval = 0.25
-    static let mapFocusInterval: TimeInterval = 1.0 / 30.0
+    /// 8ms 문턱: 8.33ms 틱의 지터에도 매 프레임 지도 중심을 갱신한다.
+    static let mapFocusInterval: TimeInterval = 0.008
     static let stationaryMinutesPerSecond = 60.0
     /// 이동 구간은 정지 구간 배속의 1/24(초당 2.5분)로 재생한다. 이전 1/6보다 4배 느리다(대표 지시, PLY1020C01).
     static let movementPlaybackMultiplier = 1.0 / 24.0
@@ -2141,6 +2143,13 @@ struct MapHomeView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @AppStorage(MapHomePlaybackZoomMode.storageKey)
     private var playbackZoomModeRaw = MapHomePlaybackZoomMode.adaptive.rawValue
+    @AppStorage(MapHomeRecordingLayers.storageKey)
+    private var recordingLayersRaw = ""
+    @State private var isScreenRecording = false
+    @State private var isRecordingOptionsPresented = false
+    @State private var isRecordedVideoSharePresented = false
+    @State private var recordedVideoURL: URL?
+    @State private var screenRecorder = MapHomeScreenRecorder()
     @AppStorage(MapHomeGrowthPolicy.storageKey)
     private var homeGrowthData = Data()
     @State private var growthHistoryCache = MapHomeGrowthHistoryCache()
@@ -2522,7 +2531,7 @@ struct MapHomeView: View {
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
                     .zIndex(MapHomeLayerPriority.loading)
-            } else if let memo = nearbyScheduleMemo {
+            } else if let memo = nearbyScheduleMemo, recordingShows(\.sidebarMemos) {
                 scheduleMemoPreview(memo)
                     .zIndex(MapHomeLayerPriority.loading)
             }
@@ -2547,7 +2556,8 @@ struct MapHomeView: View {
                 Color.clear
                     .frame(height: Layout.headerVisibleHeight + 8)
                     .allowsHitTesting(false)
-                if isSearchExpanded || isMapSearchFocused || hasMapSearchResults || !mapSearchText.isEmpty || selectedSearchPin != nil {
+                if !isScreenRecording,
+                   isSearchExpanded || isMapSearchFocused || hasMapSearchResults || !mapSearchText.isEmpty || selectedSearchPin != nil {
                     HStack(alignment: .top, spacing: 0) {
                         mapSearchBar
                     }
@@ -2559,20 +2569,42 @@ struct MapHomeView: View {
             .frame(maxHeight: .infinity, alignment: .top)
             .zIndex(MapHomeLayerPriority.search)
 
-            if isMenuOpen {
+            if isMenuOpen, !isScreenRecording {
                 menu
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
 
-            VStack(spacing: 0) {
-                header
-                Spacer(minLength: 0)
+            if !isScreenRecording {
+                VStack(spacing: 0) {
+                    header
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, Layout.horizontalInset)
+                .padding(.top, 2)
+                .zIndex(MapHomeLayerPriority.header)
             }
-            .padding(.horizontal, Layout.horizontalInset)
-            .padding(.top, 2)
-            .zIndex(MapHomeLayerPriority.header)
-
+        }
+        .onChange(of: isDayPlaybackRunning) { _, isRunning in
+            if !isRunning { finishRecordingPlayback() }
+        }
+        .sheet(isPresented: $isRecordingOptionsPresented) {
+            MapHomeRecordingOptionsSheet(
+                layers: Binding(
+                    get: { recordingLayers },
+                    set: { recordingLayersRaw = $0.rawValue }
+                ),
+                language: language,
+                onStart: startRecordingPlayback
+            )
+            .presentationDetents([.height(560), .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isRecordedVideoSharePresented) {
+            if let recordedVideoURL {
+                MapHomeShareSheet(url: recordedVideoURL)
+                    .presentationDetents([.medium, .large])
+            }
         }
     }
 
@@ -3445,10 +3477,10 @@ struct MapHomeView: View {
             style: style,
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
-            historicalRoutes: vectorHistoricalRoutes,
-            activeRoute: activeSegments.isEmpty ? vectorActiveRoute : nil,
-            expectedRoutes: vectorExpectedRoutes,
-            subwayRoutes: vectorSubwayRoutes + vectorUserSelectedRoutes,
+            historicalRoutes: recordingShows(\.routes) ? vectorHistoricalRoutes : [],
+            activeRoute: recordingShows(\.routes) && activeSegments.isEmpty ? vectorActiveRoute : nil,
+            expectedRoutes: recordingShows(\.routes) ? vectorExpectedRoutes : [],
+            subwayRoutes: recordingShows(\.routes) ? vectorSubwayRoutes + vectorUserSelectedRoutes : [],
             markers: vectorMapMarkers(waypoints: waypoints),
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
@@ -3466,7 +3498,7 @@ struct MapHomeView: View {
             onSingleTap: { point, positions in
                 selectPawprintIfTapped(at: point, waypoints: waypoints, positions: positions)
             },
-            activeRouteSegments: activeSegments
+            activeRouteSegments: recordingShows(\.routes) ? activeSegments : []
         )
         .id(style.rawValue)
         .overlay {
@@ -4450,7 +4482,7 @@ struct MapHomeView: View {
     ) -> some View {
         ZStack {
             fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
-            ForEach(waypoints.sorted {
+            ForEach((recordingShows(\.footprints) ? waypoints : []).sorted {
                 $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
             }) { waypoint in
                 if let point = vectorPoint(
@@ -4676,7 +4708,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(mapMemosOnMap) { memo in
+            ForEach(recordingShows(\.mapMemos) ? mapMemosOnMap : []) { memo in
                 if let projected = vectorPoint(
                     in: viewport,
                     for: vectorMapMemoMarkerID(memo.id)
@@ -4711,6 +4743,7 @@ struct MapHomeView: View {
             }
 
             if let playback,
+               recordingShows(\.cat),
                let point = stickmanPoint {
                 MapHomeStickmanMarker(
                     action: playback.action,
@@ -5261,6 +5294,17 @@ struct MapHomeView: View {
             headerDateButton("chevron.right", amount: 1)
             headerDateButton("chevron.forward.2", amount: 7)
 
+            Button {
+                isRecordingOptionsPresented = true
+            } label: {
+                Image(systemName: "record.circle")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 34, height: Layout.headerHitTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("재생 화면 녹화", "Record playback"))
+
             // 하루 재생 버튼을 상단바 안으로 합쳐 한 줄로 통일한다.
             Button {
                 toggleDayPlayback()
@@ -5661,6 +5705,41 @@ struct MapHomeView: View {
         }
     }
 
+    private var recordingLayers: MapHomeRecordingLayers {
+        MapHomeRecordingLayers(rawValue: recordingLayersRaw)
+    }
+
+    /// 녹화 중에는 고른 레이어만 보이고, 녹화 중이 아니면 항상 보인다.
+    private func recordingShows(_ layer: KeyPath<MapHomeRecordingLayers, Bool>) -> Bool {
+        !isScreenRecording || recordingLayers[keyPath: layer]
+    }
+
+    private func startRecordingPlayback() {
+        isRecordingOptionsPresented = false
+        Task { @MainActor in
+            isScreenRecording = true
+            // 시트가 내려가고 화면이 정리될 시간을 둔다.
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            guard await screenRecorder.start() else {
+                isScreenRecording = false
+                return
+            }
+            if !isDayPlaybackRunning { startDayPlayback() }
+        }
+    }
+
+    private func finishRecordingPlayback() {
+        guard isScreenRecording else { return }
+        Task { @MainActor in
+            let url = await screenRecorder.stop()
+            isScreenRecording = false
+            guard let url else { return }
+            _ = await MapHomeScreenRecorder.saveToPhotos(url)
+            recordedVideoURL = url
+            isRecordedVideoSharePresented = true
+        }
+    }
+
     private func toggleDayPlayback() {
         if isDayPlaybackRunning {
             stopDayPlayback(resetProgress: false)
@@ -5944,6 +6023,7 @@ struct MapHomeView: View {
             trailingInteractionWidth: Layout.horizontalInset
         )
         return HStack(alignment: .top, spacing: 0) {
+            if !isScreenRecording {
             mapControls(proxy: nil, railHeight: frame.height)
                 .onGeometryChange(
                     for: CGRect.self,
@@ -5955,6 +6035,7 @@ struct MapHomeView: View {
                         mapControlsFrame = frame
                     }
                 )
+            }
             Spacer(minLength: 0)
             Color.clear
                 .frame(width: timeSidebarWidth, height: frame.height)
@@ -6016,7 +6097,7 @@ struct MapHomeView: View {
                             y: timeRailTop + selectedCardCenterY
                         )
                         .allowsHitTesting(false)
-                    if model.settings.weatherSidebarVisible {
+                    if model.settings.weatherSidebarVisible, recordingShows(\.weatherSidebar) {
                         let railWeather = MapHomeWeatherDisplayCache.contexts(
                             incoming: model.snapshot.weather,
                             cached: cachedWeatherContexts
@@ -6098,7 +6179,7 @@ struct MapHomeView: View {
                         }
                     )
 
-                    ForEach(scheduleStickersForSelectedDate) { sticker in
+                    ForEach(recordingShows(\.sidebarMemos) ? scheduleStickersForSelectedDate : []) { sticker in
                         let window = MapHomeTimeSidebarMath.visibleWindow(
                             startMinute: timeSidebarVisibleStartMinute,
                             durationMinutes: timeSidebarVisibleDurationMinutes,

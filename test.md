@@ -1998,3 +1998,8 @@
 ## CAL1020P01 — 달력 이동거리, 날씨 과거 확정 디밍, 배율 숫자 경로 맞춤, GPS 버튼 최근 위치 (2026-10-20)
 - 달력 시간 메뉴에 "이동거리" 추가(날짜별 km, 날을 걸친 구간은 겹친 시간 비율). 날씨 사이드바: GPS로 확정된 과거 날씨(현재 -1시간 이전)를 투명도 0.6으로 흐리게(새로고침 없음). 배율 숫자 탭 → 이동 경로 전체 화면 맞춤(따라가기 해제). GPS 버튼: 눌렀을 때 최근 위치(최신 센서→실시간 경로→오늘 경로)로 즉시 이동하고, GPS 수신 전에는 화랑이를 최근 위치에 표시.
 - 검증: build-for-testing 성공(build/validation/CAL1020P01/build2.log). 단위 테스트 추가·실행 안 함, 실기기 확인 미실시. INS1020O01: 개발 서명 Debug(197 소스, 이 변경 이전)를 아이폰18 Pro Max에 덮어쓰기 설치 성공(installationURL 확인, 실행 확인 안 함).
+
+## REC1020Q01 / PLY1020R01 — 재생 화면 녹화와 120Hz 재생 (2026-10-20)
+- 헤더에 녹화 버튼(record.circle) 추가 → 레이어 선택 시트(시간 사이드바·날씨 사이드바·사이드바 메모·지도 메모·경로·발자국·화랑이, 기본: 지도메모 끔·화랑이 끔=화살표) → "녹화하며 재생": 컨트롤·헤더 숨김 후 ReplayKit 녹화 시작→재생, 재생이 끝나거나 멈추면 종료·사진 앱 저장·공유 시트. Info.plist에 NSPhotoLibraryAddUsageDescription 추가. 한계: 레이어 숨김은 벡터 지도 스타일만.
+- PLY1020R01: 재생 틱 8.33ms, 지도 중심·마커 갱신 문턱 8ms(기존 16.67ms/33ms). TimeScaleTests 상수 갱신.
+- 검증: build-for-testing 성공(build/validation/REC1020Q01/build.log). 단위 테스트(testRecordingLayersDefaultsAndRoundTrip 등) 실행 안 함, 실기기 녹화·120Hz 체감 미확인. 사진 레이어는 PHO1020A01 이후 추가.

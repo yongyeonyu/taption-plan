@@ -166,6 +166,7 @@
 		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
+		A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
@@ -377,6 +378,7 @@
 		F60000000000000000000004 /* HealthKitBehaviorProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitBehaviorProjection.swift; sourceTree = "<group>"; };
 		F60000000000000000000005 /* HealthKitIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitIntegrationTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
+		F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeScreenRecording.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
@@ -529,6 +531,7 @@
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
+				F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
@@ -988,6 +991,7 @@
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
+				A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,

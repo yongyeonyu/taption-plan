@@ -4266,7 +4266,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeDayPlaybackMapsTwentyFourSecondsToTwentyFourHours() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.frameIntervalNanoseconds,
-            16_666_667
+            8_333_333
         )
         XCTAssertEqual(
             MapHomeDayPlaybackMath.routeProjectionInterval,
@@ -4275,7 +4275,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeDayPlaybackMath.mapFocusInterval,
-            1.0 / 30.0,
+            0.008,
             accuracy: 0.000_000_001
         )
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 0), 0)
