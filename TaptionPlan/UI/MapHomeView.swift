@@ -10091,9 +10091,21 @@ struct MapHomeView: View {
         focusMapOnAllRoutes()
     }
 
-    private func setMapPosition(_ position: MapCameraPosition) {
+    private func setMapPosition(_ position: MapCameraPosition, caller: String = #function) {
         mapPosition = position
         mapCameraRevision &+= 1
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "map_camera_command",
+            fields: [
+                "caller": caller,
+                "tracking": String(describing: userTrackingMode),
+                "playing": isDayPlaybackRunning ? "true" : "false",
+            ],
+            metrics: [
+                "revision": Double(mapCameraRevision),
+                "distance_m": position.camera?.distance.rounded() ?? -1,
+            ]
+        )
     }
 
     private func restoreInitialMapZoom() {

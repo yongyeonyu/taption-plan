@@ -1976,3 +1976,7 @@
 ## REL1020J01 — Build 196 (2026-10-20)
 - 아카이브·내보내기·업로드 성공, ASC 처리 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(테스터 1명). 앱·위젯 번들 CFBundleVersion 196 확인.
 - 포함: 긴 이동 재생 전체 경로 맞춤, 과거 날씨 GPS 고정, 메모+ 버튼. GPS1020D01(실시간 GPS 반영)은 미포함.
+
+## MAP1020K01 — 지도 카메라 순간 이동 진단 로그 (2026-10-20)
+- 196 영상(19:28)에서 2~3초마다 카메라가 화랑이 중심으로 튀었다 복귀. 19:30 로그는 GPS 1~3초 간격 정상, 카메라 명령은 로그에 없어 원인 미확정.
+- setMapPosition마다 map_camera_command(caller·tracking·playing·distance) 기록 추가. Debug 빌드 성공. 다음 빌드에서 재현 후 로그로 확정 예정.
