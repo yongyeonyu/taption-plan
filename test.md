@@ -1989,3 +1989,8 @@
 ## PLY1020M01 — 재생 배율 설정: 현재 배율 고정 / 속도에 따라 가변 (2026-10-20)
 - 햄버거 메뉴 > 표시에 "재생 배율" 메뉴 추가(@AppStorage mapHomePlaybackZoomMode, 기본 가변). 고정이면 playbackAwareDistance가 재생 중 현재 거리를 그대로 반환(저장 스키마 변경 없음).
 - 검증: Debug 빌드 성공(build/validation/PLY1020M01/build.log). 단위 테스트 testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive 추가했으나 기기 점유 때문에 실행 안 함. 실기기 재생 확인 미실시.
+
+## SUM1020N01 — 하루 요약 하단 잘림 수정 + 이동 수단별 거리 (2026-10-20)
+- 원인: 하루 요약 시트의 항목 목록만 내부 ScrollView였고 집 성장 카드가 추가되며 하단 항목(활동)이 잘림.
+- 수정: 시트 전체를 ScrollView로 바꾸고(medium/large 모두 끝까지 스크롤), 하단에 "이동 거리" 섹션 추가. 하루 travel 구간을 수단별(걷기·뛰기·자전거·버스·지하철·택시·운전·기차·비행기·배)로 합산하고 10 m 미만은 제외, 긴 순서 표시. 확인된 수단만 나온다.
+- 검증: build-for-testing 성공(build/validation/SUM1020N01/build.log). 단위 테스트 testDayTravelSummaryGroupsByModeAndSortsByDistance 추가, 기기 미사용으로 실행 안 함. 실기기 화면 확인 미실시.

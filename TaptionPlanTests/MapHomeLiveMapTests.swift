@@ -216,6 +216,27 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertNil(MapHomePlaybackSpeed.speed(at: base, travel: [], readings: []))
     }
 
+    func testDayTravelSummaryGroupsByModeAndSortsByDistance() {
+        func segment(_ mode: TravelMode, _ meters: Double) -> TravelSegment {
+            TravelSegment(
+                mode: mode,
+                span: TimeSpan(start: .now, end: .now.addingTimeInterval(60)),
+                distanceMeters: meters,
+                confidence: .high,
+                evidence: [],
+                isConfirmed: true
+            )
+        }
+        let entries = MapHomeDayTravelSummary.entries(from: [
+            segment(.walking, 400), segment(.subway, 12_300), segment(.walking, 650),
+            segment(.cycling, 5), segment(.car, .nan),
+        ])
+        XCTAssertEqual(entries.map(\.mode), [.subway, .walking])
+        XCTAssertEqual(entries[1].meters, 1_050, accuracy: 0.001)
+        XCTAssertEqual(MapHomeDayTravelSummary.distanceText(1_050), "1.1 km")
+        XCTAssertEqual(MapHomeDayTravelSummary.distanceText(420), "420 m")
+    }
+
     func testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive() {
         XCTAssertEqual(MapHomePlaybackZoomMode(rawValue: "fixed"), .fixed)
         XCTAssertNil(MapHomePlaybackZoomMode(rawValue: "unknown"))

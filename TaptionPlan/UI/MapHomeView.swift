@@ -2622,6 +2622,9 @@ struct MapHomeView: View {
                 date: model.selectedDate,
                 categories: daySummaryCategories,
                 stepCount: dayStepCount,
+                travelDistances: MapHomeDayTravelSummary.entries(
+                    from: currentDayDataSnapshot?.travel ?? []
+                ),
                 growthData: $homeGrowthData,
                 language: language,
                 growthCard: MapHomeGrowthCardInfo(
@@ -17845,6 +17848,7 @@ struct MapHomeDaySummarySheet: View {
     let date: Date
     let categories: [MapHomeDaySummaryEntry]
     let stepCount: Int?
+    var travelDistances: [MapHomeDayTravelDistanceEntry] = []
     @Binding var growthData: Data
     let language: MapHomeLanguage
     var growthCard: MapHomeGrowthCardInfo? = nil
@@ -17889,6 +17893,23 @@ struct MapHomeDaySummarySheet: View {
     }
 
     var body: some View {
+        ScrollView(showsIndicators: false) {
+            summaryContent
+                .padding(22)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(Color.tpBackground)
+        .sheet(isPresented: $isGrowthPresented) {
+            MapHomeGrowthSheet(
+                growthData: $growthData,
+                language: language
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var summaryContent: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(language.text("하루 요약", "Day Summary"))
@@ -17956,26 +17977,40 @@ struct MapHomeDaySummarySheet: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 12) {
-                        ForEach(categories) { entry in
-                            row(entry)
-                        }
+                VStack(spacing: 12) {
+                    ForEach(categories) { entry in
+                        row(entry)
                     }
                 }
             }
-            Spacer(minLength: 0)
+
+            if !travelDistances.isEmpty {
+                travelDistanceSection
+            }
         }
-        .padding(22)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpBackground)
-        .sheet(isPresented: $isGrowthPresented) {
-            MapHomeGrowthSheet(
-                growthData: $growthData,
-                language: language
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
+    }
+
+    private var travelDistanceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(language.text("이동 거리", "Distance by mode"))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.tpSecondary)
+            ForEach(travelDistances) { entry in
+                HStack(spacing: 10) {
+                    Image(systemName: entry.mode.summarySystemImage)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(width: 24)
+                    Text(language.text(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                    Spacer()
+                    Text(MapHomeDayTravelSummary.distanceText(entry.meters))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.tpInk)
+                }
+            }
         }
     }
 
@@ -18374,4 +18409,80 @@ enum MapHomePlaybackZoomMode: String, CaseIterable, Sendable {
 
     var koreanTitle: String { self == .fixed ? "현재 배율로 고정" : "속도에 따라 가변" }
     var englishTitle: String { self == .fixed ? "Keep current zoom" : "Vary with speed" }
+}
+
+
+struct MapHomeDayTravelDistanceEntry: Identifiable, Equatable {
+    let mode: TravelMode
+    let meters: Double
+    var id: TravelMode { mode }
+}
+
+/// 하루 요약의 이동 수단별 거리. 확인된 수단만 거리가 긴 순서로 보여준다.
+enum MapHomeDayTravelSummary {
+    static let minimumMeters = 10.0
+
+    static func entries(from segments: [TravelSegment]) -> [MapHomeDayTravelDistanceEntry] {
+        var totals: [TravelMode: Double] = [:]
+        for segment in segments where segment.distanceMeters.isFinite && segment.distanceMeters > 0 {
+            totals[segment.mode, default: 0] += segment.distanceMeters
+        }
+        return totals
+            .filter { $0.value >= minimumMeters }
+            .map { MapHomeDayTravelDistanceEntry(mode: $0.key, meters: $0.value) }
+            .sorted { $0.meters != $1.meters ? $0.meters > $1.meters : $0.mode.rawValue < $1.mode.rawValue }
+    }
+
+    static func distanceText(_ meters: Double) -> String {
+        meters < 1_000
+            ? "\(Int(meters.rounded())) m"
+            : String(format: "%.1f km", meters / 1_000)
+    }
+}
+
+private extension TravelMode {
+    var summarySystemImage: String {
+        switch self {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .bus: "bus"
+        case .subway: "tram"
+        case .taxi: "car.side"
+        case .car: "car"
+        case .train: "train.side.front.car"
+        case .airplane: "airplane"
+        case .ship: "ferry"
+        }
+    }
+
+    var summaryKoreanTitle: String {
+        switch self {
+        case .walking: "걷기"
+        case .running: "뛰기"
+        case .cycling: "자전거"
+        case .bus: "버스"
+        case .subway: "지하철"
+        case .taxi: "택시"
+        case .car: "운전"
+        case .train: "기차"
+        case .airplane: "비행기"
+        case .ship: "배"
+        }
+    }
+
+    var summaryEnglishTitle: String {
+        switch self {
+        case .walking: "Walking"
+        case .running: "Running"
+        case .cycling: "Cycling"
+        case .bus: "Bus"
+        case .subway: "Subway"
+        case .taxi: "Taxi"
+        case .car: "Driving"
+        case .train: "Train"
+        case .airplane: "Flight"
+        case .ship: "Ferry"
+        }
+    }
 }
