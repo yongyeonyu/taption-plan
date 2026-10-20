@@ -332,9 +332,19 @@ struct MapHomeCalendarSheet: View {
 
             Spacer(minLength: 12)
 
-            Text(monthTitle)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.tpInk)
+            Button {
+                jumpToToday()
+            } label: {
+                Text(monthTitle)
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 8)
+                    .frame(minHeight: 34)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(monthTitle)
+            .accessibilityHint(language.text("누르면 오늘 날짜로 이동합니다", "Jumps to today"))
 
             Spacer(minLength: 12)
 
@@ -453,6 +463,13 @@ struct MapHomeCalendarSheet: View {
 
     private var gridColumns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+    }
+
+    /// 월 제목을 누르면 오늘 날짜를 선택하고 그 달로 돌아온다.
+    private func jumpToToday() {
+        let today = calendar.startOfDay(for: .now)
+        selectedDate = today
+        displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
     }
 
     private func shiftMonth(by value: Int) {

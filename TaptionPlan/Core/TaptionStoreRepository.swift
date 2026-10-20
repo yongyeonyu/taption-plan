@@ -25,6 +25,11 @@ actor TaptionStoreRepository: PlanDataRepository {
     /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
     private var known: [String: [String: (ord: Int, body: String)]]?
     private var nextOrd: [String: Int] = [:]
+    /// 마지막으로 저장소와 맞춘 각 항목의 해시: 종류 → id → hashValue. 저장할 때 해시가 같은 항목은 JSON으로 다시 만들지 않는다
+    /// (이전에는 저장할 때마다 모든 기록을 JSON으로 만들어 비교해, 기록이 많으면 미확인 활동 하나를 저장하는 데도 몇 초가 걸렸다).
+    private var knownHashes: [String: [String: Int]] = [:]
+    /// 테스트용: 마지막 초기화 이후 JSON으로 만든 항목 수.
+    private var encodedItemCount = 0
     private var saveTail: Task<Void, Error>?
 
     init(store: TaptionStoreV2) {
@@ -56,6 +61,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         }
         known = state
         nextOrd = next
+        knownHashes = [:]
 
         guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body else {
             // 헤더 없이 다른 행만 있으면 비정상이다. 빈 스냅샷으로 보고 위에 저장하면 그 행이 지워진다.
@@ -70,10 +76,20 @@ actor TaptionStoreRepository: PlanDataRepository {
             known = nil
             throw RepositoryError.invalidSnapshot
         }
-        func items<T: Decodable>(_ kind: Kind, as type: T.Type) throws -> [T] {
-            let ordered = (state[kind.rawValue] ?? [:]).values.sorted { $0.ord < $1.ord }
-            return try ordered.map { try Self.decoder().decode(T.self, from: Data($0.body.utf8)) }
+        var loadedHashes: [String: [String: Int]] = [:]
+        func items<T: Decodable & Hashable>(_ kind: Kind, as type: T.Type) throws -> [T] {
+            let ordered = (state[kind.rawValue] ?? [:]).sorted { $0.value.ord < $1.value.ord }
+            var hashes: [String: Int] = [:]
+            hashes.reserveCapacity(ordered.count)
+            let decoded = try ordered.map { entry -> T in
+                let item = try Self.decoder().decode(T.self, from: Data(entry.value.body.utf8))
+                hashes[entry.key] = item.hashValue
+                return item
+            }
+            loadedHashes[kind.rawValue] = hashes
+            return decoded
         }
+        defer { knownHashes = loadedHashes }
         return TaptionDataSnapshot(
             schemaVersion: header.schemaVersion,
             updatedAt: header.updatedAt,
@@ -117,14 +133,22 @@ actor TaptionStoreRepository: PlanDataRepository {
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
         var newKnown = known ?? [:]
+        var newHashes = knownHashes
 
-        func sync<T: Encodable & Identifiable>(_ kind: Kind, _ items: [T]) throws {
+        func sync<T: Encodable & Identifiable & Hashable>(_ kind: Kind, _ items: [T]) throws {
             var previous = newKnown[kind.rawValue] ?? [:]
+            var hashes = newHashes[kind.rawValue] ?? [:]
             var seen = Set<String>()
+            seen.reserveCapacity(items.count)
             for item in items {
                 let id = "\(item.id)"
-                let body = try Self.encode(item)
                 seen.insert(id)
+                let hash = item.hashValue
+                // 저장소와 맞춘 뒤 바뀌지 않은 항목은 JSON으로 다시 만들지 않는다.
+                if hashes[id] == hash, previous[id] != nil { continue }
+                let body = try Self.encode(item)
+                encodedItemCount += 1
+                hashes[id] = hash
                 if let existing = previous[id], existing.body == body { continue }
                 let ord = previous[id]?.ord ?? takeOrd(kind.rawValue)
                 previous[id] = (ord, body)
@@ -133,9 +157,11 @@ actor TaptionStoreRepository: PlanDataRepository {
             }
             for id in previous.keys where !seen.contains(id) {
                 previous[id] = nil
+                hashes[id] = nil
                 deletes.append((kind.rawValue, id))
             }
             newKnown[kind.rawValue] = previous
+            newHashes[kind.rawValue] = hashes
         }
 
         try sync(.plan, snapshot.plans)
@@ -164,11 +190,13 @@ actor TaptionStoreRepository: PlanDataRepository {
 
         try await store.applyRecordChanges(upserts: upserts, deletes: deletes, deletedAt: Date())
         known = newKnown
+        knownHashes = newHashes
     }
 
     func deleteAll() async throws {
         try await store.deleteAllRecords()
         known = [:]
+        knownHashes = [:]
         nextOrd = [:]
         deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
@@ -176,7 +204,11 @@ actor TaptionStoreRepository: PlanDataRepository {
     func handleMemoryPressure() async {
         // 다음 저장 때 저장소에서 다시 읽어 비교 기준을 만든다.
         known = nil
+        knownHashes = [:]
     }
+
+    func resetEncodedItemCountForTesting() { encodedItemCount = 0 }
+    func encodedItemCountForTesting() -> Int { encodedItemCount }
 
     private func takeOrd(_ kind: String) -> Int {
         let value = nextOrd[kind] ?? 0

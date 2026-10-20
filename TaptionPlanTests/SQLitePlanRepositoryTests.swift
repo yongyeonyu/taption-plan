@@ -450,6 +450,58 @@ final class TaptionStoreRepositoryTests: XCTestCase {
                           categoryID: "activity")
     }
 
+    func testSaveEncodesOnlyChangedItemsAndStillPersistsEveryChange() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_100)
+        snapshot.plans = (0..<200).map { plan("계획 \($0)", at: TimeInterval($0) * 60) }
+        try await repository.save(snapshot)
+        let firstSaveEncoded = await repository.encodedItemCountForTesting()
+        XCTAssertGreaterThanOrEqual(firstSaveEncoded, 200, "처음 저장은 모든 항목을 만든다")
+
+        // 한 항목만 바꾸면 그 항목 하나만 JSON으로 만든다.
+        await repository.resetEncodedItemCountForTesting()
+        snapshot.plans[10].title = "바뀐 계획"
+        snapshot.updatedAt = snapshot.updatedAt.addingTimeInterval(1)
+        try await repository.save(snapshot)
+        let encodedAfterOneEdit = await repository.encodedItemCountForTesting()
+        XCTAssertEqual(encodedAfterOneEdit, 1)
+        var reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.count, 200)
+        XCTAssertEqual(reloaded.plans.first { $0.id == snapshot.plans[10].id }?.title, "바뀐 계획")
+
+        // 바꿨다가 되돌려도 저장소에 되돌린 값이 들어간다.
+        let original = plan("원래 계획", at: 600)
+        snapshot.plans[10] = original
+        snapshot.updatedAt = snapshot.updatedAt.addingTimeInterval(1)
+        try await repository.save(snapshot)
+        snapshot.plans[10].title = "원래 계획"
+        snapshot.updatedAt = snapshot.updatedAt.addingTimeInterval(1)
+        try await repository.save(snapshot)
+        reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.first { $0.id == original.id }?.title, "원래 계획")
+
+        // 항목을 지우면 저장소에서도 사라진다.
+        snapshot.plans.remove(at: 3)
+        snapshot.updatedAt = snapshot.updatedAt.addingTimeInterval(1)
+        try await repository.save(snapshot)
+        reloaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(reloaded.plans.count, 199)
+
+        // 새 저장소 객체가 읽은 뒤에도 한 항목만 만든다(읽을 때 해시를 채운다).
+        let fresh = TaptionStoreRepository(store: store)
+        var loaded = try await fresh.load()
+        await fresh.resetEncodedItemCountForTesting()
+        loaded.plans[20].title = "새 객체에서 바꿈"
+        loaded.updatedAt = loaded.updatedAt.addingTimeInterval(1)
+        try await fresh.save(loaded)
+        let freshEncoded = await fresh.encodedItemCountForTesting()
+        XCTAssertEqual(freshEncoded, 1)
+        let final = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(final.plans.first { $0.id == loaded.plans[20].id }?.title, "새 객체에서 바꿈")
+    }
+
     func testStartupSnapshotCarriesOnlySettingsAndDoesNotTouchOtherRows() async throws {
         let store = try makeStore()
         let repository = TaptionStoreRepository(store: store)

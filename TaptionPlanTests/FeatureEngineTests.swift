@@ -15710,8 +15710,15 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(product.id, TaptionCommercePolicy.proProductID)
         XCTAssertFalse(entitlementBeforePurchase)
-        XCTAssertTrue(controller.hasPermanentAccess)
-        XCTAssertTrue(entitlementAfterPurchase)
+        if TaptionCommercePolicy.supportsPaidPurchase {
+            XCTAssertTrue(controller.hasPermanentAccess)
+            XCTAssertTrue(entitlementAfterPurchase)
+        } else {
+            // 결제 판매 보류 중(`supportsPaidPurchase == false`)에는 컨트롤러가 구매를 시작하지 않는다. 이전에는 이 두 단언이
+            // 항상 실패했다. 서비스 자체의 구매·외부 구매 반영·복원은 위 흐름과 아래 단언으로 계속 확인한다.
+            XCTAssertFalse(controller.hasPermanentAccess)
+            XCTAssertFalse(entitlementAfterPurchase)
+        }
         XCTAssertTrue(restored)
     }
 
