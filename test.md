@@ -1877,3 +1877,9 @@
 - 수정: `TaptionStoreRepository.loadStartupSnapshot()`이 헤더 행 하나만 읽어 설정·갱신 시각만 담은 스냅샷을 돌려준다(없거나 해석 실패면 nil). 저장 비교 기준은 여전히 `load()`가 만든다. 데이터 포맷·DB 변경 없음.
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,444개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-2.log`). 신규 `testStartupSnapshotCarriesOnlySettingsAndDoesNotTouchOtherRows` 통과. 첫 시도(`full-1.log`)는 테스트의 async 호출 컴파일 오류로 실행 전 실패해 고쳤다. generic Debug 빌드는 `app-debug.log`.
 - 제한: 실제 시작 속도는 측정하지 못했다(설치 직후·큰 DB에서의 체감은 새 빌드로 대표가 확인). 시작 스냅샷에는 기록 행이 없으므로 첫 화면이 열린 직후 전체 로드가 끝나기 전까지 일부 화면(지도 경로·하루 요약 등)이 비어 보일 수 있다. 코드는 기존 부분 스냅샷 경로를 따르며 이 상태에서 저장을 막는다.
+
+## REL1020F01 · 빌드 192 내부 TestFlight 배포 (2026-10-20)
+- 소스: `main`(빌드 번호 192: `CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`, 커밋 103c482). 191 이후 포함: LAU1020A01(시작 화면 36% 정체: `loadStartupSnapshot()` 복원).
+- 테스트: 전체 `TaptionPlanTests` 1,444개(iPhone 11 Pro), 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐, 신규 시작 스냅샷 테스트 통과(LAU1020A01 `full-2.log`). generic Debug 빌드 통과.
+- 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 192·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-192.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 192·191·190·189·188 확인, 테스터 1명(`asc-poll-192.log`).
+- 제한: 기기 설치·테스터 수신과 시작 속도 체감은 확인하지 못했다.
