@@ -1912,3 +1912,10 @@
 - 테스트(배포 전, iPhone 11 Pro): 전체 `TaptionPlanTests` 1,448개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`). 신규 테스트(달력 시간 2개·집 탭 판정·안개 정책·재생 배속 3개 갱신)는 모두 통과. generic Debug 빌드 통과.
 - 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 193·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `No errors uploading`(`altool-193.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 193·192·191·190·189 확인, 테스터 1명(`asc-poll-193.log`).
 - 제한: 기기 설치·테스터 수신과 화면 확인(재생 배속·집 탭·달력 메뉴 배치와 계산 속도·안개 정렬)은 하지 못했다.
+
+## ZMS1020B01·MAP1020D01 · 지도 배율 표시, 위성·하이브리드 스타일, 벡터 고대비 (2026-10-20, 커밋 후 미배포)
+- 지도 배율(ZMS1020B01): `MapHomeCameraZoomMath.scale(distance:)`가 카메라 거리의 로그를 0~100으로 바꾼다(최대 축소 거리 30,000km=0, 최대 확대 거리 80m=100, 확대·축소 버튼이 막히는 한계와 같다). 왼쪽 확대(+)/축소(−) 버튼 사이에 작은 숫자로 보인다. 신규 단위 테스트 통과(`scale-1.log`).
+- 위성·하이브리드(MAP1020D01): 원인은 `MapHomeAppleMap.applyMapStyle`이 선택과 무관하게 흐린 표준 지도로 고정하고 호출부도 스타일 인자를 `.mapLibreRPG`로 고정한 것이다. 이제 실제 선택 스타일을 넘겨 위성=`MKImageryMapConfiguration`, 하이브리드=`MKHybridMapConfiguration`, 표준=기본 강조, 간략화=기존 흐린 표준으로 나눠 적용한다.
+- 벡터 고대비(대표 선택 "흰 바탕 고대비로 재설계"): 배경 #FFFFFF, 물 #C9DFF5, 땅 #F3F3F3, 건물 #9A9A9A, 도로 외곽선 #000000, 도로 #FFC400으로 바꿔 야간과 구분한다. 목록 이름·저장값은 그대로다.
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,449개, 실패는 기존 환경 실패 2개(StoreKit, LocalizationCatalog)뿐(`full-1.log`). generic iOS Debug 빌드 통과(`app-debug.log`).
+- 제한: 위성·하이브리드·표준·간략화의 실제 모습, 벡터 고대비의 읽기 쉬움(노란 도로가 흰 바탕에서 보이는지), 배율 숫자의 위치·크기는 화면으로 확인하지 못했다. 안개·발자국·경로 색이 위성·하이브리드 위에서 잘 보이는지도 확인이 필요하다. 배포 보류.

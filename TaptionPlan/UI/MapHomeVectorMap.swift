@@ -21,7 +21,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#0A1B2A"
         case .light: "#F7F6F4"
-        case .contrast: "#030A11"
+        case .contrast: "#FFFFFF"
         case .pastel: "#FFF7F4"
         case .casual: "#FFF8EC"
         case .rpg: "#ECDFC0"
@@ -32,7 +32,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#07131F"
         case .light: "#DDEFF4"
-        case .contrast: "#0E3546"
+        case .contrast: "#C9DFF5"
         case .pastel: "#DCEEFF"
         case .casual: "#BFE8F0"
         case .rpg: "#A7CFD4"
@@ -43,7 +43,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#102838"
         case .light: "#E7EFE4"
-        case .contrast: "#102B38"
+        case .contrast: "#F3F3F3"
         case .pastel: "#E5F3E4"
         case .casual: "#DDF2D2"
         case .rpg: "#DCCB9E"
@@ -54,7 +54,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#66727D"
         case .light: "#CBD5E1"
-        case .contrast: "#A9B4BE"
+        case .contrast: "#9A9A9A"
         case .pastel: "#DCCFEB"
         case .casual: "#F1D0B4"
         case .rpg: "#CBAE7C"
@@ -65,7 +65,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#163C47"
         case .light, .pastel: "#FFFFFF"
-        case .contrast: "#15262D"
+        case .contrast: "#000000"
         case .casual: "#FFFDF7"
         case .rpg: "#F3E7C8"
         }
@@ -75,7 +75,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         switch self {
         case .night: "#35C6B1"
         case .light: "#73C9A6"
-        case .contrast: "#7FFFE8"
+        case .contrast: "#FFC400"
         case .pastel: "#80CFC2"
         case .casual: "#F2A37F"
         case .rpg: "#9A7B4A"

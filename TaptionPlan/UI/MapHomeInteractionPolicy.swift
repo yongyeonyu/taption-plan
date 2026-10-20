@@ -451,6 +451,15 @@ enum MapHomeCameraZoomMath {
             : distance >= maximumDistance
     }
 
+    /// 지도 배율 표시(0~100). 최대 축소(`maximumDistance`)가 0, 최대 확대(`minimumDistance`)가 100이고
+    /// 그 사이는 카메라 거리의 로그에 비례한다(확대·축소 버튼의 한 단계가 비슷한 폭으로 보이게).
+    static func scale(distance: CLLocationDistance?) -> Int? {
+        guard let distance, distance.isFinite, distance > 0 else { return nil }
+        let clamped = min(max(distance, minimumDistance), maximumDistance)
+        let ratio = (log(maximumDistance) - log(clamped)) / (log(maximumDistance) - log(minimumDistance))
+        return Int((ratio * 100).rounded())
+    }
+
     static func centerPreservingAnchor(
         cameraCenter: CLLocationCoordinate2D,
         anchor: CLLocationCoordinate2D,

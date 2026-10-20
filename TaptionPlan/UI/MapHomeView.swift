@@ -3389,7 +3389,7 @@ struct MapHomeView: View {
 
     private var mapKitMap: some View {
         MapHomeAppleMap(
-            style: .mapLibreRPG,
+            style: model.settings.mapDisplayStyle.runtimeStyle,
             accessibilityLabel: language.text("Apple 지도", "Apple map"),
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
@@ -6075,6 +6075,14 @@ struct MapHomeView: View {
 
             VStack(spacing: 0) {
                 mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
+                if let scale = MapHomeCameraZoomMath.scale(distance: visibleMapCamera?.distance) {
+                    Text("\(scale)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.tpSecondary)
+                        .frame(width: Layout.mapControlSize)
+                        .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
+                }
                 mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
             }
             .background(Color.tpSurface.opacity(0.92), in: Capsule())
@@ -16813,23 +16821,50 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func applyMapStyle(to mapView: MKMapView) {
-            let styleRawValue = parent.style.runtimeStyle.rawValue
-            guard lastMapStyleRawValue != styleRawValue else { return }
-            lastMapStyleRawValue = styleRawValue
-            mapView.mapType = .mutedStandard
+            let style = parent.style.runtimeStyle
+            guard lastMapStyleRawValue != style.rawValue else { return }
+            lastMapStyleRawValue = style.rawValue
             mapView.overrideUserInterfaceStyle = .light
             mapView.clipsToBounds = true
             mapView.layer.masksToBounds = true
-            mapView.backgroundColor = UIColor(hex: MapHomeWBSTripStyle.paperHex)
-            let configuration = MKStandardMapConfiguration(
-                elevationStyle: .flat,
-                emphasisStyle: .muted
-            )
-            configuration.pointOfInterestFilter = .excludingAll
-            configuration.showsTraffic = false
-            mapView.preferredConfiguration = configuration
             mapView.pointOfInterestFilter = .excludingAll
             mapView.showsTraffic = false
+            switch style {
+            case .imagery:
+                // 위성: 항공 사진만. 이전에는 선택과 무관하게 흐린 표준 지도로 고정돼 있었다.
+                mapView.mapType = .satellite
+                mapView.backgroundColor = .black
+                mapView.preferredConfiguration = MKImageryMapConfiguration(elevationStyle: .flat)
+            case .hybrid:
+                // 하이브리드: 항공 사진 위에 도로·지명.
+                mapView.mapType = .hybrid
+                mapView.backgroundColor = .black
+                let configuration = MKHybridMapConfiguration(elevationStyle: .flat)
+                configuration.pointOfInterestFilter = .excludingAll
+                configuration.showsTraffic = false
+                mapView.preferredConfiguration = configuration
+            case .standard:
+                mapView.mapType = .standard
+                mapView.backgroundColor = UIColor(hex: MapHomeWBSTripStyle.paperHex)
+                let configuration = MKStandardMapConfiguration(
+                    elevationStyle: .flat,
+                    emphasisStyle: .default
+                )
+                configuration.pointOfInterestFilter = .excludingAll
+                configuration.showsTraffic = false
+                mapView.preferredConfiguration = configuration
+            default:
+                // 간략화(그리고 벡터 스타일의 Apple 대체): 기존의 흐린(muted) 표준 지도.
+                mapView.mapType = .mutedStandard
+                mapView.backgroundColor = UIColor(hex: MapHomeWBSTripStyle.paperHex)
+                let configuration = MKStandardMapConfiguration(
+                    elevationStyle: .flat,
+                    emphasisStyle: .muted
+                )
+                configuration.pointOfInterestFilter = .excludingAll
+                configuration.showsTraffic = false
+                mapView.preferredConfiguration = configuration
+            }
         }
 
         func updateContent(in mapView: MKMapView) {

@@ -60,6 +60,23 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testMapZoomScaleRunsFromZeroAtMaxZoomOutToHundredAtMaxZoomIn() {
+        typealias Zoom = MapHomeCameraZoomMath
+        XCTAssertEqual(Zoom.scale(distance: Zoom.minimumDistance), 100)
+        XCTAssertEqual(Zoom.scale(distance: Zoom.maximumDistance), 0)
+        XCTAssertEqual(Zoom.scale(distance: Zoom.minimumDistance / 2), 100, "한계를 넘어도 100")
+        XCTAssertEqual(Zoom.scale(distance: Zoom.maximumDistance * 2), 0, "한계를 넘어도 0")
+        let geometricMean = (Zoom.minimumDistance * Zoom.maximumDistance).squareRoot()
+        XCTAssertEqual(Zoom.scale(distance: geometricMean), 50)
+        XCTAssertNil(Zoom.scale(distance: nil))
+        XCTAssertNil(Zoom.scale(distance: 0))
+        // 확대할수록 값이 커진다.
+        XCTAssertGreaterThan(Zoom.scale(distance: 500) ?? 0, Zoom.scale(distance: 15_000) ?? 0)
+        // 확대·축소 버튼이 한계에서 막히는 지점과 100·0이 일치한다.
+        XCTAssertTrue(Zoom.isAtLimit(distance: Zoom.minimumDistance, direction: 1))
+        XCTAssertTrue(Zoom.isAtLimit(distance: Zoom.maximumDistance, direction: -1))
+    }
+
     func testFogRevealFollowsTheDrawnStickmanPointWhenAvailable() {
         let stickman = CGPoint(x: 120, y: 340)
         let viewport = CGPoint(x: 150, y: 380)
