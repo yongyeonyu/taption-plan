@@ -1954,3 +1954,10 @@
 - 변경: 왼쪽 레일 맨 아래 `메모+` 버튼(`note.text.badge.plus`) → 일정 메모(기존 `addScheduleSticker`, 사이드바 선택 시각으로 만들고 편집 화면에서 시각 수정) / 지도 메모(지도 가운데 핀 + "여기에 메모" 확정 → 기존 `addMapMemo()`). 사이드바 시각이 일정 메모 시각의 앞뒤 30분 안에 오면 상단에 미리보기 카드(탭=편집, X=닫기, 가장 가까운 하나, 닫은 것은 세션 동안 숨김). 햄버거 메뉴의 '메모' 항목은 삭제했다(`stickerMenuItem`, `isStickerMenuExpanded`).
 - 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,455개 실패 0(`MEM1020A01/full-1.log`), 신규 `testSchedulePreviewShowsOnlyMemosWithinThirtyMinutesOfTheSidebarTime` 통과. generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 버튼이 작은 화면에서 레일 높이에 맞는지, 팝업·핀·버튼의 위치와 크기는 화면으로 확인하지 못했다. 위치 선택 중에는 지도를 움직일 수 있고 핀은 지도 가운데(화면 중앙)에 고정된다. 사이드바 시각이 지정되지 않은 라이브 상태에서는 지금 시각 기준으로 팝업이 뜬다. 사진 기능(PHO1020A01)은 설계만 확정했고 미구현이다. 배포 보류.
+
+## WTH1020C01 · 과거 날씨를 GPS 위치 기준으로 고정, 자정 후 전날 저장 (2026-10-20, 커밋 후 미배포)
+- 요청·선택: 미래는 현재 위치 예보(기존 동작), 과거는 그 시각 GPS 위치의 날씨로 고정하고 자정이 지나면 전날을 고정해 저장한다. 시간별(매시), 자정 후 첫 실행·복귀 시 + iOS가 허용한 백그라운드 위치 실행, GPS 없는 시간은 가장 가까운 GPS(없으면 집).
+- 근거: WeatherKit 문서상 `hourly(startDate:endDate:)`는 2021-08-01 이후 과거 시간별 데이터를 최대 10일씩 준다. 다만 일부 시간이 빠지거나 전부 비면 오류가 나는 사례가 보고돼 있어, 받은 시간만 고정하고 하나도 못 받으면 고정한 것으로 치지 않는다.
+- 변경: `WeatherDayFixEngine`(시별 위치·1km 묶음·교체), `AppleWeatherContextService.historicalHourlyContexts`(과거 구간만 조회), `AppModel.scheduleWeatherDayFixIfNeeded`/`fixPastDayWeather`(새 위치 점이 들어올 때 30분 간격으로 아직 고정하지 않은 지난 날 최대 3일을 오래된 날부터 처리, 진단 `weather_day_fixed`). 고정값은 `isForecast=false`·`placeName="GPS"`·그 시의 위치로 저장하고 원본은 기존 raw 아카이브(`weather-fixed-hourly`)에 남긴다.
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,457개 실패 0(`WTH1020C01/full-2.log`), 신규 시별 위치·묶음·교체 테스트 2개 통과. 첫 실행(`full-1.log`)에서 `testImmediateSensorAnalysisKeepsEveryPendingDay`가 5초 대기 안에 끝나지 않아 한 번 실패해(이번 변경과 무관한 타이밍) 대기를 20초로 늘렸고 재실행에서 통과했다. generic Debug 빌드 통과.
+- 제한: WeatherKit 과거 시간별 응답의 실제 모습(빠진 시간 비율)과 자정 직후 고정이 실제로 일어나는지는 기기에서 확인하지 못했다. 앱이 실행되지 않는 시간에는 고정되지 않고 다음 실행·위치 점에서 처리한다. 고정은 새 위치 점이 들어올 때만 확인하므로 위치 수집을 끈 상태에서는 앱을 열어도 시도하지 않는다(날씨 설정이 켜져 있으면 시도). 배포 보류.

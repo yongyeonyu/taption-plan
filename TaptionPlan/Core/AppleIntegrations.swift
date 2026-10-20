@@ -1641,6 +1641,32 @@ actor AppleWeatherContextService {
         }
     }
 
+    /// 지난 시간(현재 이전)의 시간별 날씨. 과거 구간만 묻는다. 일부 시간이 비어 오면 온 시간만 돌려주고, 전부 비면 빈 배열이다.
+    /// WeatherKit의 과거 데이터는 일부 시간이 빠질 수 있어 호출한 쪽이 온 시간만 고정한다.
+    func historicalHourlyContexts(
+        latitude: Double,
+        longitude: Double,
+        from start: Date,
+        through end: Date
+    ) async throws -> [WeatherContext] {
+        let clippedEnd = min(end, Date.now)
+        guard start < clippedEnd else { return [] }
+        do {
+            let hours = try await service.weather(
+                for: CLLocation(latitude: latitude, longitude: longitude),
+                including: .hourly(startDate: start, endDate: clippedEnd)
+            )
+            return hours
+                .filter { $0.date >= start && $0.date < clippedEnd }
+                .map { Self.weatherContext($0, isForecast: false) }
+        } catch {
+            if Self.isWeatherKitAuthenticationFailure(error) {
+                throw WeatherContextServiceError.authenticationFailed
+            }
+            throw WeatherContextServiceError.temporarilyUnavailable
+        }
+    }
+
     private static func weatherContext(
         _ value: WeatherKit.HourWeather,
         isForecast: Bool? = nil

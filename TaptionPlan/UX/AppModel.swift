@@ -886,6 +886,10 @@ final class AppModel {
     private static let mapLocationReadingTimeout: TimeInterval = 3
     private static let weatherPreviewRefreshInterval: TimeInterval = 30 * 60
     private static let weatherPreviewMaximumDays = 7
+    /// 지난 날 날씨 고정: 한 번에 거슬러 가는 최대 일수와 시도 간격.
+    private static let weatherFixBackfillDays = 3
+    private static let weatherFixRetryInterval: TimeInterval = 30 * 60
+    private static let weatherFixedThroughDayKey = "taption.weather.fixed-through-day-v1"
     var selectedTab: RootTab = .schedule
     var selectedScale: TimeScale = .day
     var selectedDate: Date = .now {
@@ -1298,6 +1302,8 @@ final class AppModel {
     @ObservationIgnored private var lastLiveEnvironmentFailureAt: Date?
     @ObservationIgnored private var lastFutureWeatherRefreshAt: Date?
     @ObservationIgnored private var lastFutureWeatherPoint: GeoPoint?
+    @ObservationIgnored private var weatherFixTask: Task<Void, Never>?
+    @ObservationIgnored private var lastWeatherFixAttemptAt: Date?
     @ObservationIgnored private var lastTrackingSessionRecoveryPersistAt: Date?
     @ObservationIgnored private var lastDeviceSnapshotPersistAt: Date?
     @ObservationIgnored private var lastReviewArchiveRefreshAt: Date?
@@ -12024,6 +12030,7 @@ final class AppModel {
         with reading: SensorReading
     ) {
         latestSensorReading = reading
+        scheduleWeatherDayFixIfNeeded()
         guard let point = reading.point,
               let match = settings.frequentPlaces
                 .compactMap({ place -> (FrequentPlace, Double)? in
@@ -12319,6 +12326,82 @@ final class AppModel {
             TimeInterval(Self.weatherPreviewMaximumDays) * 24 * 60 * 60
         )
         return TimeSpan(start: start, end: end)
+    }
+
+    /// 자정이 지나면 전날 날씨를 그날의 GPS 위치 기준으로 고정해 저장한다(WTH1020C01). 새 위치 점이 들어올 때와 앞으로 올 때
+    /// 확인하고(iOS가 앱 실행을 허용한 때에만 동작), 아직 고정하지 않은 지난 날(최대 3일)을 오래된 날부터 처리한다.
+    /// 실패하면 30분 뒤에 다시 시도하고, 받은 시간이 하나도 없는 날은 고정한 것으로 치지 않는다.
+    private func scheduleWeatherDayFixIfNeeded(now: Date = .now) {
+        guard weatherFixTask == nil,
+              settings.locationEnabled || settings.weatherEnabled,
+              lastWeatherFixAttemptAt.map({ now.timeIntervalSince($0) >= Self.weatherFixRetryInterval }) ?? true
+        else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: now)
+        let fixedThrough = UserDefaults.standard.object(forKey: Self.weatherFixedThroughDayKey) as? Double
+        let earliest = calendar.date(byAdding: .day, value: -Self.weatherFixBackfillDays, to: today) ?? today
+        let first = max(earliest, fixedThrough.map {
+            calendar.date(byAdding: .day, value: 1, to: Date(timeIntervalSince1970: $0)) ?? today
+        } ?? earliest)
+        guard first < today else { return }
+        lastWeatherFixAttemptAt = now
+        weatherFixTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.weatherFixTask = nil }
+            var day = first
+            while day < today, !Task.isCancelled {
+                guard await self.fixPastDayWeather(day, now: now) else { break }
+                UserDefaults.standard.set(day.timeIntervalSince1970, forKey: Self.weatherFixedThroughDayKey)
+                day = calendar.date(byAdding: .day, value: 1, to: day) ?? today
+            }
+        }
+    }
+
+    /// 한 날을 고정한다. 하나 이상의 시간을 받아 저장하면 true.
+    private func fixPastDayWeather(_ dayStart: Date, now: Date) async -> Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return false }
+        let readings = await sensorReadings(in: TimeSpan(start: dayStart, end: dayEnd))
+        let home = settings.frequentPlaces.first { $0.kind == .home }?.point
+        let hours = WeatherDayFixEngine.hourLocations(
+            dayStart: dayStart, dayEnd: dayEnd, readings: readings, home: home, calendar: calendar
+        )
+        guard !hours.isEmpty else { return false }
+        var fixed: [WeatherContext] = []
+        for group in WeatherDayFixEngine.groups(hours) {
+            do {
+                let contexts = try await weatherService.historicalHourlyContexts(
+                    latitude: group.point.latitude,
+                    longitude: group.point.longitude,
+                    from: group.start,
+                    through: group.end
+                )
+                for var context in contexts {
+                    context.isForecast = false
+                    context.point = group.point
+                    context.placeName = "GPS"
+                    fixed.append(context)
+                }
+            } catch is CancellationError {
+                return false
+            } catch {
+                recordWeatherFailure(WeatherFailureKind.kind(for: error), at: now)
+                if (error as? WeatherContextServiceError) == .authenticationFailed { break }
+            }
+        }
+        guard !fixed.isEmpty, acceptsDataMutation() else { return false }
+        await archiveWeatherRawContexts(fixed, kind: "weather-fixed-hourly")
+        snapshot.weather = WeatherDayFixEngine.replacing(snapshot.weather, withFixed: fixed, calendar: calendar)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "weather_day_fixed",
+            fields: [
+                "day": String(dayStart.timeIntervalSince1970),
+                "hours": String(fixed.count),
+                "locations": String(WeatherDayFixEngine.groups(hours).count),
+            ]
+        )
+        _ = await persistDeviceLocalSnapshot()
+        return true
     }
 
     private func refreshFutureWeatherPreviewIfNeeded() async {

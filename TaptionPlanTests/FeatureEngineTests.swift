@@ -77,6 +77,61 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(Zoom.isAtLimit(distance: Zoom.maximumDistance, direction: -1))
     }
 
+    func testWeatherDayFixPicksNearestGPSPerHourFallsBackToHomeAndGroupsNearbyHours() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let dayStart = calendar.date(from: DateComponents(year: 2026, month: 9, day: 20))!
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+        func point(_ latitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        func reading(_ hour: Double, _ latitude: Double, accuracy: Double = 10) -> SensorReading {
+            var p = point(latitude); p.horizontalAccuracy = accuracy
+            return SensorReading(timestamp: dayStart.addingTimeInterval(hour * 3_600), point: p)
+        }
+        let home = point(37.0), company = point(37.3)   // 위도 0.3° ≈ 33km
+        let readings = [reading(0.2, 37.0), reading(9.4, 37.3), reading(12, 37.9, accuracy: 5_000)]
+        let hours = WeatherDayFixEngine.hourLocations(
+            dayStart: dayStart, dayEnd: dayEnd, readings: readings, home: nil, calendar: calendar
+        )
+        XCTAssertEqual(hours.count, 24)
+        XCTAssertEqual(hours[0].point.latitude, 37.0)
+        XCTAssertEqual(hours[9].point.latitude, 37.3)
+        XCTAssertEqual(hours[23].point.latitude, 37.3, "마지막 GPS가 가장 가깝다")
+        XCTAssertTrue(hours.allSatisfy { $0.point.latitude != 37.9 }, "부정확한 점은 쓰지 않는다")
+        // 가까운 연속한 시는 한 묶음: 0~6시(집)와 7~23시(회사) 쪽으로 나뉜다.
+        let groups = WeatherDayFixEngine.groups(hours)
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups.first?.start, dayStart)
+        XCTAssertEqual(groups.last?.end, dayEnd)
+        XCTAssertEqual(groups.map(\.hours.count).reduce(0, +), 24)
+        // GPS가 없으면 집, 집도 없으면 비어 있다.
+        let homeOnly = WeatherDayFixEngine.hourLocations(
+            dayStart: dayStart, dayEnd: dayEnd, readings: [], home: home, calendar: calendar)
+        XCTAssertEqual(homeOnly.count, 24)
+        XCTAssertEqual(WeatherDayFixEngine.groups(homeOnly).count, 1)
+        XCTAssertTrue(WeatherDayFixEngine.hourLocations(
+            dayStart: dayStart, dayEnd: dayEnd, readings: [], home: nil, calendar: calendar).isEmpty)
+    }
+
+    func testWeatherDayFixReplacesOnlyTheFixedHours() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let dayStart = calendar.date(from: DateComponents(year: 2026, month: 9, day: 20))!
+        func context(_ hour: Int, _ condition: String, forecast: Bool) -> WeatherContext {
+            WeatherContext(
+                observedAt: dayStart.addingTimeInterval(TimeInterval(hour) * 3_600),
+                isForecast: forecast, condition: condition, symbolName: "cloud", temperatureCelsius: 15
+            )
+        }
+        let existing = [context(10, "예보", forecast: true), context(11, "관측", forecast: false)]
+        let result = WeatherDayFixEngine.replacing(existing, withFixed: [context(10, "고정", forecast: false)], calendar: calendar)
+        XCTAssertEqual(result.map(\.condition), ["고정", "관측"])
+        XCTAssertEqual(result.first?.isForecast, false)
+        XCTAssertEqual(WeatherDayFixEngine.replacing(existing, withFixed: [], calendar: calendar).count, 2,
+                       "받은 시간이 없으면 기존 값을 그대로 둔다")
+    }
+
     func testFogRevealFollowsTheDrawnStickmanPointWhenAvailable() {
         let stickman = CGPoint(x: 120, y: 340)
         let viewport = CGPoint(x: 150, y: 380)
@@ -987,7 +1042,7 @@ final class FeatureEngineTests: XCTestCase {
         let expectedStarts = [firstDay, secondDay].map {
             String($0.timeIntervalSinceReferenceDate)
         }
-        let deadline = Date.now.addingTimeInterval(5)
+        let deadline = Date.now.addingTimeInterval(20)  // 전체 실행 부하에서 5초로는 저장이 끝나기 전에 끊겨 간헐 실패했다.
         var log = ""
         var persistedAfter = persistedBefore
         while Date.now < deadline {

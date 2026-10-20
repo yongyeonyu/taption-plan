@@ -2679,6 +2679,94 @@ enum RecordRelationshipEngine {
     }
 }
 
+/// 지난 날의 날씨를 그 시각의 GPS 위치 기준으로 고정한다(WTH1020C01). 미래는 현재 위치 예보, 과거는 GPS 위치의 실제 날씨.
+/// 하루를 시(hour)로 나눠 각 시의 위치(가운데 시각에 가장 가까운 GPS, 없으면 집)를 정하고, 가까운 연속한 시를 한 묶음으로
+/// 묶어(날씨 호출 수를 줄인다) 묶음마다 시간별 날씨를 받아 해당 시의 기존 날씨를 교체한다.
+enum WeatherDayFixEngine {
+    struct HourLocation: Equatable {
+        var hourStart: Date
+        var hourEnd: Date
+        var point: GeoPoint
+    }
+
+    struct Group: Equatable {
+        var point: GeoPoint
+        var start: Date
+        var end: Date
+        var hours: [HourLocation]
+    }
+
+    /// 같은 묶음으로 보는 최대 거리(첫 시의 위치 기준).
+    static let groupRadiusMeters = 1_000.0
+    /// 이보다 부정확한 위치 점은 날씨 위치로 쓰지 않는다.
+    static let maximumAccuracyMeters = 1_000.0
+
+    static func hourLocations(
+        dayStart: Date,
+        dayEnd: Date,
+        readings: [SensorReading],
+        home: GeoPoint?,
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [HourLocation] {
+        let located = readings
+            .filter {
+                guard let point = $0.point else { return false }
+                return point.horizontalAccuracy >= 0
+                    && point.horizontalAccuracy <= maximumAccuracyMeters
+                    && $0.timestamp >= dayStart && $0.timestamp < dayEnd
+            }
+            .sorted { $0.timestamp < $1.timestamp }
+        var result: [HourLocation] = []
+        var cursor = dayStart
+        var index = 0
+        while cursor < dayEnd,
+              let next = calendar.date(byAdding: .hour, value: 1, to: cursor), next > cursor {
+            let middle = cursor.addingTimeInterval(next.timeIntervalSince(cursor) / 2)
+            while index + 1 < located.count,
+                  abs(located[index + 1].timestamp.timeIntervalSince(middle))
+                    <= abs(located[index].timestamp.timeIntervalSince(middle)) {
+                index += 1
+            }
+            if let reading = located.isEmpty ? nil : located[index], let point = reading.point {
+                result.append(HourLocation(hourStart: cursor, hourEnd: next, point: point))
+            } else if let home {
+                result.append(HourLocation(hourStart: cursor, hourEnd: next, point: home))
+            }
+            cursor = next
+        }
+        return result
+    }
+
+    static func groups(_ hours: [HourLocation]) -> [Group] {
+        var result: [Group] = []
+        for hour in hours {
+            if var last = result.last,
+               last.hours.last?.hourEnd == hour.hourStart,
+               distanceMeters(last.point, hour.point) <= groupRadiusMeters {
+                last.end = hour.hourEnd
+                last.hours.append(hour)
+                result[result.count - 1] = last
+            } else {
+                result.append(Group(point: hour.point, start: hour.hourStart, end: hour.hourEnd, hours: [hour]))
+            }
+        }
+        return result
+    }
+
+    /// 고정한 시의 기존 날씨(예보·관측 모두)를 빼고 고정 값을 넣는다. 받지 못한 시의 기존 값은 그대로 둔다.
+    static func replacing(
+        _ existing: [WeatherContext],
+        withFixed fixed: [WeatherContext],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> [WeatherContext] {
+        let fixedBuckets = Set(fixed.map { WeatherTimelineEngine.hourBucket(for: $0.observedAt, calendar: calendar) })
+        let kept = existing.filter {
+            !fixedBuckets.contains(WeatherTimelineEngine.hourBucket(for: $0.observedAt, calendar: calendar))
+        }
+        return (kept + fixed).sorted { $0.observedAt < $1.observedAt }
+    }
+}
+
 enum WeatherTimelineEngine {
     static let defaultDuration: TimeInterval = 15 * 60
 
