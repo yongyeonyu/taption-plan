@@ -237,6 +237,51 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(MapHomeDayTravelSummary.distanceText(420), "420 m")
     }
 
+    private func photo(_ id: String, minute: Double, lat: Double, lon: Double, hidden: Bool = false) -> PhotoMoment {
+        let day = Calendar.autoupdatingCurrent.startOfDay(for: .now)
+        return PhotoMoment(
+            id: id,
+            capturedAt: day.addingTimeInterval(minute * 60),
+            pixelWidth: 10,
+            pixelHeight: 10,
+            isFavorite: false,
+            isHiddenFromTimeline: hidden,
+            location: GeoPoint(latitude: lat, longitude: lon, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+            linkedPlanID: nil,
+            linkedPlaceID: nil
+        )
+    }
+
+    func testPhotoClustersGroupNearbyAndIgnoreHiddenOrUnlocated() {
+        var noLocation = photo("n", minute: 5, lat: 0, lon: 0)
+        noLocation.location = nil
+        let moments = [
+            photo("a", minute: 60, lat: 37.5000, lon: 127.0000),
+            photo("b", minute: 70, lat: 37.5002, lon: 127.0000),
+            photo("c", minute: 80, lat: 37.6000, lon: 127.1000),
+            photo("h", minute: 90, lat: 37.5000, lon: 127.0000, hidden: true),
+            noLocation,
+        ]
+        let clusters = MapHomePhotoPolicy.clusters(from: moments, radiusMeters: 100)
+        XCTAssertEqual(clusters.map(\.count), [2, 1])
+        XCTAssertEqual(clusters[0].moments.map(\.id), ["a", "b"])
+        XCTAssertGreaterThan(
+            MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: 20_000),
+            MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: 500)
+        )
+    }
+
+    func testPhotoHighlightAndPlaybackWindow() throws {
+        let cluster = try XCTUnwrap(MapHomePhotoPolicy.clusters(
+            from: [photo("a", minute: 600, lat: 37.5, lon: 127.0)], radiusMeters: 50
+        ).first)
+        XCTAssertTrue(MapHomePhotoPolicy.isHighlighted(cluster, selectedMinute: 625))
+        XCTAssertFalse(MapHomePhotoPolicy.isHighlighted(cluster, selectedMinute: 640))
+        XCTAssertTrue(MapHomePhotoPolicy.playbackVisibleMoments(in: cluster, playbackMinute: 590).isEmpty)
+        XCTAssertEqual(MapHomePhotoPolicy.playbackVisibleMoments(in: cluster, playbackMinute: 610).count, 1)
+        XCTAssertTrue(MapHomePhotoPolicy.playbackVisibleMoments(in: cluster, playbackMinute: 640).isEmpty)
+    }
+
     func testRecordingLayersDefaultsAndRoundTrip() {
         let defaults = MapHomeRecordingLayers(rawValue: "")
         XCTAssertFalse(defaults.cat)

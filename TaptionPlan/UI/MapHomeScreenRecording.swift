@@ -11,6 +11,8 @@ struct MapHomeRecordingLayers: Codable, Equatable {
     var mapMemos = false
     var routes = true
     var footprints = true
+    /// 재생 시각에 맞춰 사진이 차례로 나타난다.
+    var photos = false
     /// 꺼 두면 화랑이 대신 화살표만 보인다.
     var cat = false
 
@@ -101,6 +103,7 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("날씨 사이드바", "Weather sidebar"), $layers.weatherSidebar)
             toggle(language.text("사이드바 메모", "Sidebar memos"), $layers.sidebarMemos)
             toggle(language.text("지도 메모", "Map memos"), $layers.mapMemos)
+            toggle(language.text("사진 (시간에 맞춰 나타남)", "Photos (appear with time)"), $layers.photos)
             toggle(language.text("경로", "Route"), $layers.routes)
             toggle(language.text("발자국", "Footprints"), $layers.footprints)
             toggle(language.text("화랑이 (끄면 화살표)", "Character (arrow when off)"), $layers.cat)

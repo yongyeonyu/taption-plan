@@ -2146,6 +2146,9 @@ struct MapHomeView: View {
     @AppStorage(MapHomeRecordingLayers.storageKey)
     private var recordingLayersRaw = ""
     @State private var isScreenRecording = false
+    @State private var photoMoments: [PhotoMoment] = []
+    @State private var photoAlbumSelection: MapHomePhotoAlbumSelection?
+    private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
     @State private var isRecordedVideoSharePresented = false
     @State private var recordedVideoURL: URL?
@@ -2587,6 +2590,12 @@ struct MapHomeView: View {
         }
         .onChange(of: isDayPlaybackRunning) { _, isRunning in
             if !isRunning { finishRecordingPlayback() }
+        }
+        .task(id: model.selectedDate) { await loadPhotoMoments() }
+        .sheet(item: $photoAlbumSelection) { selection in
+            MapHomePhotoAlbumSheet(moments: selection.moments, language: language)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isRecordingOptionsPresented) {
             MapHomeRecordingOptionsSheet(
@@ -4250,6 +4259,9 @@ struct MapHomeView: View {
                 )
             )
         }
+        markers += photoClusters.map {
+            MapHomeVectorMarker(id: vectorPhotoMarkerID($0.id), coordinate: $0.coordinate)
+        }
         markers += mapMemosOnMap.compactMap { memo in
             guard let point = memo.mapPoint else { return nil }
             return MapHomeVectorMarker(
@@ -4705,6 +4717,30 @@ struct MapHomeView: View {
                             )
                         )
                     }
+                }
+            }
+
+            ForEach(photoClusters) { cluster in
+                if let info = photoPinInfo(for: cluster),
+                   let point = vectorPoint(in: viewport, for: vectorPhotoMarkerID(cluster.id)) {
+                    MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
+                        Button {
+                            photoAlbumSelection = MapHomePhotoAlbumSelection(
+                                id: cluster.id,
+                                moments: cluster.moments
+                            )
+                        } label: {
+                            MapHomePhotoPin(
+                                coverID: info.coverID,
+                                count: info.count,
+                                isHighlighted: info.highlighted
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(!isDayPlaybackRunning && !isScreenRecording)
+                    }
+                    .animation(.easeOut(duration: 0.25), value: info.coverID)
                 }
             }
 
@@ -5704,6 +5740,53 @@ struct MapHomeView: View {
         default: nil
         }
     }
+
+    private func loadPhotoMoments() async {
+        var state = photoLibrary.permissionState()
+        if state == .notDetermined { state = await photoLibrary.requestAccess() }
+        guard state == .authorized || state == .limited else {
+            photoMoments = []
+            return
+        }
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
+        let library = photoLibrary
+        let moments = await Task.detached(priority: .utility) {
+            library.moments(in: TimeSpan(start: dayStart, end: dayEnd))
+        }.value
+        guard !Task.isCancelled else { return }
+        photoMoments = MapHomePhotoPolicy.locatedMoments(moments)
+    }
+
+    private var photoClusters: [MapHomePhotoCluster] {
+        guard !photoMoments.isEmpty, recordingShows(\.photos) else { return [] }
+        return MapHomePhotoPolicy.clusters(
+            from: photoMoments,
+            radiusMeters: MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: visibleMapCamera?.distance)
+        )
+    }
+
+    /// 핀에 보일 대표 사진·개수·강조 여부. 재생 중에는 지나온 사진만 순서대로 나타난다.
+    private func photoPinInfo(for cluster: MapHomePhotoCluster) -> (coverID: String, count: Int, highlighted: Bool)? {
+        if isDayPlaybackRunning {
+            let minute = dayPlaybackCurrentMinute ?? Double(effectiveTimelineMinute)
+            let visible = MapHomePhotoPolicy.playbackVisibleMoments(in: cluster, playbackMinute: minute)
+            guard let cover = visible.last else { return nil }
+            return (cover.id, visible.count, true)
+        }
+        let highlighted = selectedTimelineMinute != nil
+            && MapHomePhotoPolicy.isHighlighted(cluster, selectedMinute: Double(effectiveTimelineMinute))
+        let cover = highlighted
+            ? cluster.moments.min {
+                abs(MapHomePhotoPolicy.minuteOfDay($0.capturedAt) - Double(effectiveTimelineMinute))
+                    < abs(MapHomePhotoPolicy.minuteOfDay($1.capturedAt) - Double(effectiveTimelineMinute))
+            } ?? cluster.moments[0]
+            : cluster.moments[0]
+        return (cover.id, cluster.count, highlighted)
+    }
+
+    private func vectorPhotoMarkerID(_ id: String) -> String { "photo-\(id)" }
 
     private var recordingLayers: MapHomeRecordingLayers {
         MapHomeRecordingLayers(rawValue: recordingLayersRaw)
