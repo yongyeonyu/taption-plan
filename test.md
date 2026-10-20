@@ -1936,3 +1936,16 @@
 - 수정: `com.apple.health.` 뒤가 유효한 UUID일 때만 신뢰한다. `.fake`, UUID 뒤 추가 문자, 앞 접두사, 빈 접미사는 계속 거부한다. 서드파티 앱(Strava 등)의 운동은 계속 받지 않는다.
 - 테스트(iPhone 11 Pro): `HealthKitIntegrationTests` 36개 통과(출처 판정 테스트 확장, `health-1.log`), generic iOS Debug 빌드는 `app-debug.log`.
 - 제한: 이 원인이 대표 기기의 실제 문제인지는 확인하지 못했다(운동 기록의 출처 번들 ID를 기기에서 읽지 못함). 과거 Watch 운동은 다음 HealthKit 동기화에서 반영되며, 반영 여부와 운동 시간 값은 대표 기기에서 확인이 필요하다. 서드파티 운동 앱 기록을 받아야 한다면 별도 결정이 필요하다. 배포 보류.
+
+## TST1020A01·CAL1020C01·SAV1020A01 · 기존 실패 2개 수정, 달력 월 제목 탭, 저장 속도 (2026-10-20, 커밋 후 미배포)
+- 기존 실패 2개(TST1020A01): (1) `testStoreKitProductPurchaseEntitlementAndRestore` — 결제 판매 보류(`TaptionCommercePolicy.supportsPaidPurchase == false`) 중에는 컨트롤러가 구매를 시작하지 않아 `controller.hasPermanentAccess`·구매 직후 권한 단언이 항상 실패했다. 정책에 맞춰 판매 보류 때는 둘 다 false를 기대하고, 서비스 자체의 구매·외부 구매·복원은 계속 검증한다. (2) `LocalizationCatalogTests.testEveryCatalogKeyHasAnEnglishValue` — 소스 트리(.xcstrings)를 읽어 실기기에서 파일을 못 찾아 실패했다. 소스를 못 읽는 실행(실기기)에서는 컴파일된 번들(앱·앱 확장·워치 앱)의 `ko`/`en` 문자열 표를 대조하고, 하나도 확인하지 못하면 실패한다(아무것도 검증하지 않고 통과하는 것을 막음). 시뮬레이터·Mac에서는 기존 소스 검증을 그대로 쓴다.
+- 달력 월 제목(CAL1020C01): 월 제목("2026년 11월")을 누르면 오늘 날짜를 선택하고 그 달로 돌아온다(대표 요청). 시트는 닫지 않는다.
+- 저장 속도(SAV1020A01): 원인은 `TaptionStoreRepository.performSave`가 저장할 때마다 모든 종류의 모든 기록을 `JSONEncoder`로 다시 만들어 저장소 본문과 비교한 것(새 저장소로 옮긴 STO1019B01 이후). 미확인 구간 분류는 기록 하나를 더하고 저장하는데 기록이 수만 건이면 몇 초가 든다. 저장소와 맞춘 항목의 `hashValue`를 기억해 같은 항목은 JSON으로 다시 만들지 않는다(읽을 때 해시를 채우고 삭제·메모리 압력·전체 삭제에서 비움). 저장 내용·DB 포맷은 그대로. 신규 `testSaveEncodesOnlyChangedItemsAndStillPersistsEveryChange`는 한 항목만 바꾸면 인코딩이 1건이고, 바꿨다 되돌림·삭제·새 저장소 객체에서도 반영됨을 확인한다.
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,454개 **실패 0**(`build/validation/TST1020A01/full-1.log`). 기존 환경 실패 2개가 사라졌다. 저장소·백업 40개 통과(`SAV1020A01/repo-1.log`). generic iOS Debug 빌드 통과.
+- 제한: 저장 속도 개선의 체감(미확인 활동 설정 시간)은 측정하지 못했다(대표 기기 확인 필요). 해시 충돌은 이론상 가능하나 64비트라 사실상 없다고 본다. 달력 제목 탭은 화면 확인 전.
+
+## REL1020I01 · 빌드 195 내부 TestFlight 배포 (2026-10-20)
+- 소스: 빌드 번호 195(`CURRENT_PROJECT_VERSION` 8곳과 네 `Info.plist`). 코드는 직전 main(커밋 7439ee1: HLT1020A01 Apple Watch 운동 출처 UUID 허용 + ZMP1020A01 줌 기준 85·범위 확대·구간 사전 계획)이다. 같은 시기에 만든 TST1020A01·CAL1020C01·SAV1020A01 변경은 이 빌드에 들어 있지 않다(아카이브 후 작업).
+- 테스트(배포 전, iPhone 11 Pro): 전체 `TaptionPlanTests` 1,453개, 실패는 기존 환경 실패 2개뿐(`build/validation/REL1020I01/full-1.log`).
+- 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 195·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `UPLOAD SUCCEEDED`(ASC가 일시 500을 두 번 돌려줬으나 업로드는 오류 없이 끝남, `altool-195.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 195·194·193·192·191 확인, 테스터 1명(`asc-poll-195.log`).
+- 제한: 기기 설치·테스터 수신과 화면 확인(헬스킷 Watch 운동 반영, 줌 85 기준·구간 계획 체감)은 하지 못했다.
