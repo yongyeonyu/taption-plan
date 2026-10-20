@@ -1985,3 +1985,7 @@
 - 아카이브·내보내기·업로드 성공, ASC 처리 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(테스터 1명). 소스 CURRENT_PROJECT_VERSION 8곳·Info.plist 4개 197 확인.
 - IPA 번들: 앱·위젯 197 확인. Watch·Watch 위젯 번들은 이 IPA에서 발견되지 않아 읽지 못함.
 - 포함: GPS1020D01(실시간 GPS 반영), MAP1020K01(카메라 명령 진단 로그). 단위 테스트·실기기 확인은 미실시.
+
+## PLY1020M01 — 재생 배율 설정: 현재 배율 고정 / 속도에 따라 가변 (2026-10-20)
+- 햄버거 메뉴 > 표시에 "재생 배율" 메뉴 추가(@AppStorage mapHomePlaybackZoomMode, 기본 가변). 고정이면 playbackAwareDistance가 재생 중 현재 거리를 그대로 반환(저장 스키마 변경 없음).
+- 검증: Debug 빌드 성공(build/validation/PLY1020M01/build.log). 단위 테스트 testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive 추가했으나 기기 점유 때문에 실행 안 함. 실기기 재생 확인 미실시.

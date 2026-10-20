@@ -2139,6 +2139,8 @@ struct MapHomeView: View {
         AppLanguagePreference.sharedDefaultsKey,
         store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
+    @AppStorage(MapHomePlaybackZoomMode.storageKey)
+    private var playbackZoomModeRaw = MapHomePlaybackZoomMode.adaptive.rawValue
     @AppStorage(MapHomeGrowthPolicy.storageKey)
     private var homeGrowthData = Data()
     @State private var growthHistoryCache = MapHomeGrowthHistoryCache()
@@ -7179,6 +7181,27 @@ struct MapHomeView: View {
                     language.text("지도 스타일 선택", "Choose map style")
                 )
 
+                Picker(
+                    selection: Binding(
+                        get: { MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive },
+                        set: { playbackZoomModeRaw = $0.rawValue }
+                    )
+                ) {
+                    ForEach(MapHomePlaybackZoomMode.allCases, id: \.self) { mode in
+                        Text(language.text(mode.koreanTitle, mode.englishTitle)).tag(mode)
+                    }
+                } label: {
+                    Label(
+                        language.text("재생 배율", "Playback zoom"),
+                        systemImage: "plus.magnifyingglass"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .pickerStyle(.menu)
+                .tint(Color.tpAccent)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
                 Toggle(isOn: $fogOfWarEnabled) {
                     Label(
                         language.text("안개 탐험", "Fog of Exploration"),
@@ -10279,6 +10302,9 @@ struct MapHomeView: View {
     private func playbackAwareDistance(current: Double) -> Double {
         guard isDayPlaybackRunning else {
             return liveFollowDistance(current: current) ?? current
+        }
+        guard MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed else {
+            return current
         }
         let playbackMinute = dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0)
         let target = playbackZoomPlan.targetDistance(atMinute: playbackMinute)
@@ -18336,4 +18362,16 @@ struct MapHomeStartupCameraPolicy {
             pitch: camera?.pitch ?? 0
         )
     }
+}
+
+
+/// 재생 중 지도 배율 방식. 고정이면 재생을 시작할 때의 배율을 그대로 둔다.
+enum MapHomePlaybackZoomMode: String, CaseIterable, Sendable {
+    case adaptive
+    case fixed
+
+    static let storageKey = "mapHomePlaybackZoomMode"
+
+    var koreanTitle: String { self == .fixed ? "현재 배율로 고정" : "속도에 따라 가변" }
+    var englishTitle: String { self == .fixed ? "Keep current zoom" : "Vary with speed" }
 }

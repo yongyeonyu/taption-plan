@@ -216,6 +216,14 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertNil(MapHomePlaybackSpeed.speed(at: base, travel: [], readings: []))
     }
 
+    func testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive() {
+        XCTAssertEqual(MapHomePlaybackZoomMode(rawValue: "fixed"), .fixed)
+        XCTAssertNil(MapHomePlaybackZoomMode(rawValue: "unknown"))
+        XCTAssertEqual(MapHomePlaybackZoomMode.allCases, [.adaptive, .fixed])
+        XCTAssertEqual(MapHomePlaybackZoomMode.fixed.koreanTitle, "현재 배율로 고정")
+        XCTAssertEqual(MapHomePlaybackZoomMode.adaptive.koreanTitle, "속도에 따라 가변")
+    }
+
     func testPlaybackZoomSmootherLimitsRateAndFollowsTimeNotTicks() {
         let smoother = MapHomePlaybackZoomSmoother()
         var distance = 250.0
