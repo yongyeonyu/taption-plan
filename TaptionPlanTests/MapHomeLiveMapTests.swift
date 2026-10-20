@@ -262,6 +262,92 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(near, 250)
     }
 
+    func testZoomScaleBaselineIsEightyFiveAndRangeIsWider() {
+        typealias Policy = MapHomePlaybackZoomPolicy
+        XCTAssertEqual(MapHomeCameraZoomMath.scale(distance: Policy.baselineDistance), 85)
+        XCTAssertEqual(MapHomeCameraZoomMath.scale(distance: MapHomeCameraZoomMath.distance(forScale: 92)), 92)
+        XCTAssertEqual(MapHomeCameraZoomMath.distance(forScale: 100), MapHomeCameraZoomMath.minimumDistance, accuracy: 0.001)
+        XCTAssertEqual(MapHomeCameraZoomMath.distance(forScale: 0), MapHomeCameraZoomMath.maximumDistance, accuracy: 1)
+        // 시작 화면도 85.
+        XCTAssertEqual(MapHomeStartupCameraPolicy.distance, Policy.baselineDistance, accuracy: 0.001)
+        // 탈것 곡선: 느리면 92, 빠르면 42, 그 사이는 단조 감소.
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 0.2), 92, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 40), 42, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 200), 42, accuracy: 0.001)
+        XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 3), Policy.scale(forVehicleSpeed: 12))
+        XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 12), Policy.scale(forVehicleSpeed: 30))
+        // 센서 속도만 아는 경우: 정지·걷기는 85, 그 위는 탈것 곡선, 모르면 nil.
+        XCTAssertEqual(try XCTUnwrap(Policy.targetDistance(speedMetersPerSecond: 0)), Policy.baselineDistance, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(Policy.targetDistance(speedMetersPerSecond: 2.0)), Policy.baselineDistance, accuracy: 0.001)
+        XCTAssertGreaterThan(try XCTUnwrap(Policy.targetDistance(speedMetersPerSecond: 20)), Policy.baselineDistance * 10)
+        XCTAssertNil(Policy.targetDistance(speedMetersPerSecond: nil))
+    }
+
+    func testPlaybackZoomPlanFixesWalkingPlacesAndStaysAndOnlyVehiclesZoom() {
+        typealias Plan = MapHomePlaybackZoomPlan
+        let plan = Plan(inputs: [
+            .init(startMinute: 100, endMinute: 115, mode: .walking, speedMetersPerSecond: 1.4, touchesRegisteredPlace: false),
+            .init(startMinute: 200, endMinute: 240, mode: .subway, speedMetersPerSecond: 20, touchesRegisteredPlace: false),
+            .init(startMinute: 300, endMinute: 330, mode: .car, speedMetersPerSecond: 15, touchesRegisteredPlace: true),
+            .init(startMinute: 400, endMinute: 420, mode: nil, speedMetersPerSecond: 1.0, touchesRegisteredPlace: false),
+            .init(startMinute: 500, endMinute: 520, mode: .bus, speedMetersPerSecond: nil, touchesRegisteredPlace: false),
+        ])
+        let base = MapHomePlaybackZoomPolicy.baselineScale
+        XCTAssertEqual(plan.scale(atMinute: 50), base, "정지·구간 밖은 85")
+        XCTAssertEqual(plan.scale(atMinute: 105), base, "걷기는 85 고정")
+        XCTAssertLessThan(plan.scale(atMinute: 220), base - 20, "지하철은 크게 축소")
+        XCTAssertEqual(plan.scale(atMinute: 310), base, "등록 장소에서 이어지는 이동은 85 고정")
+        XCTAssertEqual(plan.scale(atMinute: 410), base, "모드를 모르는 느린 이동은 걷기로 보고 85")
+        XCTAssertEqual(plan.scale(atMinute: 510), base, "속도를 모르면 85")
+        XCTAssertEqual(plan.scale(atMinute: 240), base, "구간 끝은 85로 돌아온다")
+    }
+
+    func testPlaybackZoomPlanDampsShortSegmentsAndHoldsAcrossShortGaps() {
+        typealias Plan = MapHomePlaybackZoomPlan
+        let base = MapHomePlaybackZoomPolicy.baselineScale
+        let full = Plan(inputs: [.init(startMinute: 0, endMinute: 30, mode: .train, speedMetersPerSecond: 30, touchesRegisteredPlace: false)])
+        let short = Plan(inputs: [.init(startMinute: 0, endMinute: 1, mode: .train, speedMetersPerSecond: 30, touchesRegisteredPlace: false)])
+        XCTAssertLessThan(full.scale(atMinute: 5), short.scale(atMinute: 0.5), "짧은 구간은 덜 축소")
+        XCTAssertGreaterThan(short.scale(atMinute: 0.5), base - 15)
+        // 탈것 구간 사이 2분 틈은 앞 구간 배율을 유지하고, 10분 틈은 85로 돌아온다.
+        let near = Plan(inputs: [
+            .init(startMinute: 0, endMinute: 20, mode: .bus, speedMetersPerSecond: 10, touchesRegisteredPlace: false),
+            .init(startMinute: 22, endMinute: 40, mode: .bus, speedMetersPerSecond: 10, touchesRegisteredPlace: false),
+        ])
+        XCTAssertEqual(near.scale(atMinute: 21), near.scale(atMinute: 10), accuracy: 0.001)
+        let far = Plan(inputs: [
+            .init(startMinute: 0, endMinute: 20, mode: .bus, speedMetersPerSecond: 10, touchesRegisteredPlace: false),
+            .init(startMinute: 30, endMinute: 50, mode: .bus, speedMetersPerSecond: 10, touchesRegisteredPlace: false),
+        ])
+        XCTAssertEqual(far.scale(atMinute: 25), base)
+    }
+
+    func testPlaybackZoomInputBuilderMeasuresSpeedAndRegisteredPlaceContact() throws {
+        let dayStart = Date(timeIntervalSince1970: 1_800_000_000)
+        func point(_ meters: Double) -> GeoPoint {
+            GeoPoint(latitude: 37.5, longitude: 127.0 + meters / (111_320 * cos(37.5 * .pi / 180)),
+                     altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+        }
+        func reading(minute: Double, meters: Double) -> SensorReading {
+            SensorReading(timestamp: dayStart.addingTimeInterval(minute * 60), point: point(meters))
+        }
+        // 10분 동안 12km: 20m/s. 출발점은 등록 장소(0m)에서 100m 이내.
+        let readings = (0...10).map { reading(minute: 100 + Double($0), meters: Double($0) * 1_200) }
+        let inputs = MapHomePlaybackZoomInputBuilder.inputs(
+            ranges: [MapHomePlaybackMovementRange(startMinute: 100, endMinute: 110, mode: .car)],
+            dayStart: dayStart, travel: [], readings: readings, places: [point(100)]
+        )
+        XCTAssertEqual(inputs.count, 1)
+        XCTAssertEqual(try XCTUnwrap(inputs[0].speedMetersPerSecond), 20, accuracy: 0.5)
+        XCTAssertTrue(inputs[0].touchesRegisteredPlace)
+        let away = MapHomePlaybackZoomInputBuilder.inputs(
+            ranges: [MapHomePlaybackMovementRange(startMinute: 100, endMinute: 110, mode: .car)],
+            dayStart: dayStart, travel: [], readings: readings, places: [point(5_000_000)]
+        )
+        XCTAssertFalse(away[0].touchesRegisteredPlace)
+        XCTAssertNil(MapHomePlaybackZoomInputBuilder.speed(from: dayStart, to: dayStart.addingTimeInterval(600), travel: [], readings: []))
+    }
+
     func testLiveFollowSpeedTreatsStaleSlowReadingAsStationary() {
         typealias Speed = MapHomeLiveFollowSpeed
         XCTAssertEqual(Speed.speed(latestAge: 3, latestSpeed: 1.2), 1.2)
@@ -285,7 +371,7 @@ final class MapHomeLiveMapTests: XCTestCase {
             steps += 1
             XCTAssertLessThan(steps, 40)
         }
-        XCTAssertLessThan(distance, MapHomePlaybackZoomPolicy.nearDistance * exp(MapHomeLiveZoomGovernor.hysteresis))
+        XCTAssertLessThan(abs(log(distance / MapHomePlaybackZoomPolicy.baselineDistance)), MapHomeLiveZoomGovernor.hysteresis)
         XCTAssertLessThan(Double(steps) * MapHomeLiveZoomGovernor.minimumInterval, 45, "약 45초 안에 기본 거리에 닿는다")
     }
 
@@ -403,12 +489,12 @@ final class MapHomeLiveMapTests: XCTestCase {
         let fast = MapHomeLiveZoomGovernor()
         let out = try XCTUnwrap(fast.nextDistance(current: 1_000, speedMetersPerSecond: 25, uptime: 10))
         XCTAssertGreaterThan(out, 1_000)
-        XCTAssertLessThan(out, MapHomePlaybackZoomPolicy.farDistance)
+        XCTAssertLessThan(out, MapHomeCameraZoomMath.distance(forScale: MapHomePlaybackZoomPolicy.fastestScale))
 
         let slow = MapHomeLiveZoomGovernor()
         let into = try XCTUnwrap(slow.nextDistance(current: 8_000, speedMetersPerSecond: 0, uptime: 10))
         XCTAssertLessThan(into, 8_000)
-        XCTAssertGreaterThan(into, MapHomePlaybackZoomPolicy.nearDistance)
+        XCTAssertGreaterThan(into, MapHomePlaybackZoomPolicy.baselineDistance)
     }
 
     func testLiveZoomReturnsToDefaultDistanceWhenStopped() throws {
@@ -422,13 +508,13 @@ final class MapHomeLiveMapTests: XCTestCase {
             uptime += MapHomeLiveZoomGovernor.minimumInterval + 0.1
         }
         XCTAssertEqual(
-            distance, MapHomePlaybackZoomPolicy.nearDistance,
-            accuracy: MapHomePlaybackZoomPolicy.nearDistance * 0.2
+            distance, MapHomePlaybackZoomPolicy.baselineDistance,
+            accuracy: MapHomePlaybackZoomPolicy.baselineDistance * 0.2
         )
     }
 
     func testLiveZoomIgnoresSmallDifferencesAndRespectsMinimumInterval() throws {
-        let near = MapHomePlaybackZoomPolicy.nearDistance
+        let near = MapHomePlaybackZoomPolicy.baselineDistance
         let governor = MapHomeLiveZoomGovernor()
         // 목표(기본 줌)와 15% 안쪽 차이는 무시한다.
         XCTAssertNil(governor.nextDistance(current: near * 1.1, speedMetersPerSecond: 0, uptime: 0))

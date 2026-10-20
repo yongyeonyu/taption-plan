@@ -1031,23 +1031,34 @@ enum MapHomePresencePolicy {
 /// 정지 상태 확대용 2초 간격 신호. body마다 새로 만들면 다시 구독돼 멈추므로 하나를 공유한다.
 @MainActor private let mapHomeStationaryZoomTicker = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
-/// 재생 중 이동 속도에 따라 지도 거리를 로그 비율로 부드럽게 맞춘다.
-/// 걷기 수준이면 가까이, 지하철·차량 수준이면 멀리 본다. 멈춰 있으면 현재 거리를 유지한다.
+/// 지도 거리 기준(배율 0~100, 대표 지시 ZMP1020A01). 정지·걷기·등록 장소에서 이어지는 이동·시작 화면은 85로 고정하고,
+/// 그 밖의 탈것만 속도에 따라 느리면 92(약 220m)까지 확대, 빠르면 42(약 140km)까지 축소한다.
 enum MapHomePlaybackZoomPolicy {
-    static let slowSpeed = 0.5
-    static let vehicleSpeed = 30.0
-    static let nearDistance = 250.0
-    static let farDistance = 40_000.0
+    static let baselineScale = 85.0
+    static let slowestScale = 92.0
+    static let fastestScale = 42.0
+    /// 이 속도(m/s)에서 `slowestScale`, `vehicleSpeed`에서 `fastestScale`(로그 비율).
+    static let slowSpeed = 1.0
+    static let vehicleSpeed = 40.0
+    /// 센서 속도만 아는 경우 이 속도 이하는 걷기 이하로 보고 85에 고정한다.
+    static let walkingCeiling = 2.5
     static let easing = 0.2
 
-    /// 느릴수록 가깝게(확대), 빠를수록 멀리(축소). 속도를 모르면 nil로 현재 거리를 유지한다.
-    static func targetDistance(speedMetersPerSecond: Double?) -> Double? {
-        guard let speed = speedMetersPerSecond, speed.isFinite, speed >= 0 else {
-            return nil
-        }
+    static var baselineDistance: Double { MapHomeCameraZoomMath.distance(forScale: baselineScale) }
+
+    /// 탈것의 속도에 맞는 배율(로그 비율, 범위 안으로 자른다).
+    static func scale(forVehicleSpeed speed: Double) -> Double {
+        guard speed.isFinite, speed > 0 else { return slowestScale }
         let clamped = min(vehicleSpeed, max(slowSpeed, speed))
         let ratio = (log(clamped) - log(slowSpeed)) / (log(vehicleSpeed) - log(slowSpeed))
-        return exp(log(nearDistance) + ratio * (log(farDistance) - log(nearDistance)))
+        return slowestScale + ratio * (fastestScale - slowestScale)
+    }
+
+    /// 센서 속도만 아는 때(실시간 따라가기)의 목표 거리. 걷기 이하·정지는 85, 그 위는 탈것 곡선. 모르면 nil.
+    static func targetDistance(speedMetersPerSecond: Double?) -> Double? {
+        guard let speed = speedMetersPerSecond, speed.isFinite, speed >= 0 else { return nil }
+        guard speed > walkingCeiling else { return baselineDistance }
+        return MapHomeCameraZoomMath.distance(forScale: scale(forVehicleSpeed: speed))
     }
 
     static func eased(current: Double, target: Double) -> Double {
@@ -2190,6 +2201,7 @@ struct MapHomeView: View {
     @State private var mapRenderCache = MapHomeMapRenderCache()
     @State private var liveZoomGovernor = MapHomeLiveZoomGovernor()
     @State private var playbackZoomSmoother = MapHomePlaybackZoomSmoother()
+    @State private var playbackZoomPlan = MapHomePlaybackZoomPlan(inputs: [])
     @State private var visibleMapCamera: MapCamera?
     @State private var shouldFitRoutesAfterDateChange = false
     @State private var hasUserAdjustedMap = false
@@ -5506,6 +5518,15 @@ struct MapHomeView: View {
         var playbackMinute = currentMinute
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
+        playbackZoomPlan = MapHomePlaybackZoomPlan(
+            inputs: MapHomePlaybackZoomInputBuilder.inputs(
+                ranges: movingRanges,
+                dayStart: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+                travel: currentDayDataSnapshot?.travel ?? [],
+                readings: routeReadings + model.liveRouteState.readings,
+                places: model.settings.frequentPlaces.compactMap(\.point)
+            )
+        )
         if currentMinute == 0 {
             selectedTimelineMinute = 0
         }
@@ -10132,7 +10153,7 @@ struct MapHomeView: View {
               MapHomeUserTrackingPolicy.focusesLocationUpdates(in: userTrackingMode),
               liveFollowSpeedMetersPerSecond == 0,
               let camera = visibleMapCamera,
-              camera.distance > MapHomePlaybackZoomPolicy.nearDistance * exp(MapHomeLiveZoomGovernor.hysteresis)
+              abs(log(camera.distance / MapHomePlaybackZoomPolicy.baselineDistance)) >= MapHomeLiveZoomGovernor.hysteresis
         else { return }
         focusDisplayedLocation(using: nil)
     }
@@ -10164,10 +10185,8 @@ struct MapHomeView: View {
         guard isDayPlaybackRunning else {
             return liveFollowDistance(current: current) ?? current
         }
-        guard let target = MapHomePlaybackZoomPolicy.targetDistance(
-                  speedMetersPerSecond: displayedSpeedMetersPerSecond
-              )
-        else { return current }
+        let playbackMinute = dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0)
+        let target = playbackZoomPlan.targetDistance(atMinute: playbackMinute)
         let next = playbackZoomSmoother.next(
             current: current,
             target: target,
@@ -10176,7 +10195,7 @@ struct MapHomeView: View {
         TaptionPlanDiagnosticsLogger.shared.record(
             "playback_zoom_sample",
             metrics: [
-                "speed_mps": displayedSpeedMetersPerSecond ?? -1,
+                "plan_scale": playbackZoomPlan.scale(atMinute: playbackMinute),
                 "current_m": current.rounded(),
                 "target_m": target.rounded(),
                 "next_m": next.rounded(),
@@ -18202,7 +18221,8 @@ private struct MapHomeGrowthSheet: View {
 }
 
 struct MapHomeStartupCameraPolicy {
-    static let distance: CLLocationDistance = 3_000
+    /// 시작 화면 배율 85(약 550m)로 연다(대표 지시 ZMP1020A01). 이전에는 3,000m였다.
+    static let distance: CLLocationDistance = MapHomeCameraZoomMath.distance(forScale: MapHomePlaybackZoomPolicy.baselineScale)
     static let fallbackCenter = CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780)
     private var needsZoomRestore = false
 

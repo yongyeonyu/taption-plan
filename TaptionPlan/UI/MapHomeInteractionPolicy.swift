@@ -451,6 +451,12 @@ enum MapHomeCameraZoomMath {
             : distance >= maximumDistance
     }
 
+    /// 지도 배율(0~100)에 해당하는 카메라 거리. `scale(distance:)`의 역함수다.
+    static func distance(forScale scale: Double) -> CLLocationDistance {
+        let ratio = min(max(scale, 0), 100) / 100
+        return exp(log(maximumDistance) - ratio * (log(maximumDistance) - log(minimumDistance)))
+    }
+
     /// 지도 배율 표시(0~100). 최대 축소(`maximumDistance`)가 0, 최대 확대(`minimumDistance`)가 100이고
     /// 그 사이는 카메라 거리의 로그에 비례한다(확대·축소 버튼의 한 단계가 비슷한 폭으로 보이게).
     static func scale(distance: CLLocationDistance?) -> Int? {

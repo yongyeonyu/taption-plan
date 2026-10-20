@@ -5589,16 +5589,18 @@ final class MapHomeSidebarAndPlaybackPolicyTests: XCTestCase {
         ), "간격이 길면 더블탭이 아니다")
     }
 
-    func testPlaybackZoomGetsFartherAsSpeedIncreases() throws {
+    func testPlaybackZoomGetsFartherAsSpeedIncreasesForVehiclesOnly() throws {
         let walking = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 1.4))
         let bus = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 12))
         let train = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 80))
         let standing = try XCTUnwrap(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: 0))
-        XCTAssertEqual(standing, MapHomePlaybackZoomPolicy.nearDistance, accuracy: 0.001)
-        XCTAssertLessThan(standing, walking)
+        XCTAssertEqual(standing, MapHomePlaybackZoomPolicy.baselineDistance, accuracy: 0.001)
+        XCTAssertEqual(walking, MapHomePlaybackZoomPolicy.baselineDistance, accuracy: 0.001, "걷기는 85 고정")
         XCTAssertLessThan(walking, bus)
         XCTAssertLessThan(bus, train)
-        XCTAssertEqual(train, MapHomePlaybackZoomPolicy.farDistance, accuracy: 0.001)
+        XCTAssertEqual(
+            train, MapHomeCameraZoomMath.distance(forScale: MapHomePlaybackZoomPolicy.fastestScale), accuracy: 0.001
+        )
         XCTAssertNil(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: nil))
         XCTAssertNil(MapHomePlaybackZoomPolicy.targetDistance(speedMetersPerSecond: .nan))
         let eased = MapHomePlaybackZoomPolicy.eased(current: 1_000, target: 4_000)

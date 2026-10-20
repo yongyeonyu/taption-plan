@@ -293,8 +293,6 @@ final class MapHomeLiveZoomGovernor {
     static let userPauseDuration: TimeInterval = 20
     static let speedSmoothing = 0.35
     static let easing = 0.35
-    /// 정지한 것으로 보는 속도. 이때 목표는 `MapHomePlaybackZoomPolicy.nearDistance`(기본 줌)다.
-    static let stationarySpeed = MapHomePlaybackZoomPolicy.slowSpeed
 
     private var smoothedSpeed: Double?
     private var lastChangeUptime: TimeInterval?
@@ -319,7 +317,7 @@ final class MapHomeLiveZoomGovernor {
             return nil
         }
         guard let target = MapHomePlaybackZoomPolicy.targetDistance(
-            speedMetersPerSecond: smoothed < Self.stationarySpeed ? 0 : smoothed
+            speedMetersPerSecond: smoothed
         ) else { return nil }
         guard abs(log(target / current)) >= Self.hysteresis else { return nil }
         let next = exp(log(current) + (log(target) - log(current)) * Self.easing)
@@ -380,6 +378,127 @@ final class MapHomePlaybackZoomSmoother {
     }
 
     func reset() { lastUptime = nil }
+}
+
+/// 재생 줌 계획(대표 지시 ZMP1020A01). 재생을 시작할 때 이동 구간을 미리 나눠 구간마다 목표 배율을 정해 둔다.
+/// - 정지 구간·걷기·달리기·등록 장소에서 출발하거나 도착하는 이동·속도를 모르는 이동은 85로 고정한다.
+/// - 그 밖의 탈것 구간만 구간 속도로 목표 배율을 정한다(느리면 최대 92, 빠르면 최소 42).
+/// - 짧은 구간은 목표를 85 쪽으로 줄여(구간 길이/최소 길이) 확대·축소가 튀지 않게 하고, 탈것 구간 사이의 짧은 틈은
+///   앞 구간 배율을 유지해 갔다 오는 요동을 없앤다. 실제 카메라 움직임의 부드러움은 `MapHomePlaybackZoomSmoother`가 맡는다.
+struct MapHomePlaybackZoomPlan: Equatable, Sendable {
+    struct Input: Equatable, Sendable {
+        var startMinute: Double
+        var endMinute: Double
+        var mode: TravelMode?
+        var speedMetersPerSecond: Double?
+        var touchesRegisteredPlace: Bool
+    }
+
+    struct Entry: Equatable, Sendable {
+        var startMinute: Double
+        var endMinute: Double
+        var scale: Double
+        var isFixed: Bool
+    }
+
+    /// 이 길이(분)보다 짧은 탈것 구간은 목표를 85 쪽으로 줄인다.
+    static let minimumFullEffectMinutes = 4.0
+    /// 탈것 구간 사이의 이 길이(분) 이하 틈은 앞 구간 배율을 유지한다.
+    static let holdGapMinutes = 3.0
+
+    let entries: [Entry]
+
+    init(inputs: [Input]) {
+        let baseline = MapHomePlaybackZoomPolicy.baselineScale
+        var built: [Entry] = []
+        for input in inputs.sorted(by: { $0.startMinute < $1.startMinute }) where input.endMinute > input.startMinute {
+            let speed = input.speedMetersPerSecond.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+            let walkingLike = input.mode == .walking || input.mode == .running
+                || (input.mode == nil && (speed ?? 0) <= MapHomePlaybackZoomPolicy.walkingCeiling)
+            let fixed = walkingLike || input.touchesRegisteredPlace || speed == nil
+            var scale = baseline
+            if !fixed, let speed {
+                let raw = MapHomePlaybackZoomPolicy.scale(forVehicleSpeed: speed)
+                let weight = min(1, (input.endMinute - input.startMinute) / Self.minimumFullEffectMinutes)
+                scale = baseline + (raw - baseline) * weight
+            }
+            if let last = built.last, !fixed, !last.isFixed,
+               input.startMinute - last.endMinute <= Self.holdGapMinutes {
+                // 탈것 구간 사이의 짧은 틈: 앞 구간 배율을 틈 끝까지 유지한다.
+                built[built.count - 1].endMinute = input.startMinute
+            }
+            built.append(Entry(startMinute: input.startMinute, endMinute: input.endMinute, scale: scale, isFixed: fixed))
+        }
+        entries = built
+    }
+
+    /// 재생 분(0~1,440)의 목표 배율. 구간 밖은 85.
+    func scale(atMinute minute: Double) -> Double {
+        for entry in entries where minute >= entry.startMinute && minute < entry.endMinute {
+            return entry.scale
+        }
+        return MapHomePlaybackZoomPolicy.baselineScale
+    }
+
+    func targetDistance(atMinute minute: Double) -> Double {
+        MapHomeCameraZoomMath.distance(forScale: scale(atMinute: minute))
+    }
+}
+
+/// 재생 줌 계획의 입력을 만든다: 이동 구간의 속도와 등록 장소 접촉 여부.
+enum MapHomePlaybackZoomInputBuilder {
+    static let placeRadiusMeters = 200.0
+    static let endpointToleranceSeconds: TimeInterval = 180
+
+    static func inputs(
+        ranges: [MapHomePlaybackMovementRange],
+        dayStart: Date,
+        travel: [TravelSegment],
+        readings: [SensorReading],
+        places: [GeoPoint]
+    ) -> [MapHomePlaybackZoomPlan.Input] {
+        let located = readings.filter { $0.point != nil }.sorted { $0.timestamp < $1.timestamp }
+        return ranges.map { range in
+            let start = dayStart.addingTimeInterval(range.startMinute * 60)
+            let end = dayStart.addingTimeInterval(range.endMinute * 60)
+            return .init(
+                startMinute: range.startMinute,
+                endMinute: range.endMinute,
+                mode: range.mode,
+                speedMetersPerSecond: speed(from: start, to: end, travel: travel, readings: located),
+                touchesRegisteredPlace: isNearPlace(at: start, readings: located, places: places)
+                    || isNearPlace(at: end, readings: located, places: places)
+            )
+        }
+    }
+
+    /// 구간 평균 속도: 겹치는 확정 이동 구간의 거리/시간, 없으면 구간 안 위치 점의 경로 길이/시간. 모르면 nil.
+    static func speed(from start: Date, to end: Date, travel: [TravelSegment], readings: [SensorReading]) -> Double? {
+        let duration = end.timeIntervalSince(start)
+        guard duration > 0 else { return nil }
+        let middle = start.addingTimeInterval(duration / 2)
+        if let segment = travel.filter({ $0.span.contains(middle) && $0.distanceMeters > 0 })
+            .max(by: { $0.span.start < $1.span.start }) {
+            return segment.distanceMeters / max(1, segment.span.duration)
+        }
+        let inside = readings.filter { $0.timestamp >= start && $0.timestamp <= end }
+        guard inside.count >= 2 else { return nil }
+        var meters = 0.0
+        for (lhs, rhs) in zip(inside, inside.dropFirst()) {
+            if let a = lhs.point, let b = rhs.point { meters += distanceMeters(a, b) }
+        }
+        return meters / duration
+    }
+
+    static func isNearPlace(at date: Date, readings: [SensorReading], places: [GeoPoint]) -> Bool {
+        guard !places.isEmpty,
+              let nearest = readings.min(by: {
+                  abs($0.timestamp.timeIntervalSince(date)) < abs($1.timestamp.timeIntervalSince(date))
+              }),
+              abs(nearest.timestamp.timeIntervalSince(date)) <= endpointToleranceSeconds,
+              let point = nearest.point else { return false }
+        return places.contains { distanceMeters($0, point) <= placeRadiusMeters }
+    }
 }
 
 /// 재생 시각의 이동 속도(m/s). 확정된 이동 구간의 평균 속도가 있으면 그것을, 없으면 그 시각을 사이에 둔
