@@ -1003,6 +1003,29 @@ enum MapHomePlaceAnnotationLayout {
     static let appleCenterOffset = CGPoint.zero
 }
 
+/// 일정 메모 미리보기: 사이드바 시각이 메모 시각의 앞뒤 30분 안에 오면 보여 준다(대표 선택).
+enum MapHomeMemoPreviewPolicy {
+    static let windowSeconds: TimeInterval = 30 * 60
+
+    /// 선택한 날짜의 일정 메모 중 `now` 앞뒤 30분 안에서 가장 가까운 것(닫은 것은 제외). 없으면 nil.
+    static func nearest(
+        in stickers: [MapSticker],
+        at now: Date,
+        selectedDate: Date,
+        dismissed: Set<UUID> = [],
+        calendar: Calendar = .autoupdatingCurrent
+    ) -> MapSticker? {
+        stickers
+            .filter {
+                $0.placement == .schedule
+                    && !dismissed.contains($0.id)
+                    && calendar.isDate($0.occurredAt, inSameDayAs: selectedDate)
+                    && abs($0.occurredAt.timeIntervalSince(now)) <= windowSeconds
+            }
+            .min { abs($0.occurredAt.timeIntervalSince(now)) < abs($1.occurredAt.timeIntervalSince(now)) }
+    }
+}
+
 enum MapHomeStickmanAnnotationLayout {
     static let centerOffset = CGPoint(x: 0, y: -18)
 }
@@ -2094,7 +2117,9 @@ struct MapHomeView: View {
     @State private var isCategoryMenuExpanded = false
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
-    @State private var isStickerMenuExpanded = false
+    @State private var isMemoAddMenuPresented = false
+    @State private var isPlacingMapMemo = false
+    @State private var dismissedMemoPreviewIDs = Set<UUID>()
     private let isStickerMode = true
     @State private var selectedMapStickerEditor: MapHomeStickerEditorTarget?
     @State private var isAppleWatchMenuExpanded = false
@@ -2484,6 +2509,14 @@ struct MapHomeView: View {
 
             mapSideRails
 
+            if isPlacingMapMemo {
+                mapMemoPlacementOverlay
+                    .zIndex(MapHomeLayerPriority.loading)
+            } else if let memo = nearbyScheduleMemo {
+                scheduleMemoPreview(memo)
+                    .zIndex(MapHomeLayerPriority.loading)
+            }
+
             if isDayDataLoading {
                 HStack(spacing: 6) {
                     ProgressView()
@@ -2684,6 +2717,24 @@ struct MapHomeView: View {
             }
         ) {
             searchPinSheet
+        }
+        .confirmationDialog(
+            language.text("메모 추가", "Add memo"),
+            isPresented: $isMemoAddMenuPresented,
+            titleVisibility: .visible
+        ) {
+            Button {
+                addScheduleSticker()
+            } label: {
+                Label(language.text("일정 메모", "Schedule memo"), systemImage: "calendar.badge.plus")
+            }
+            Button {
+                isMenuOpen = false
+                isPlacingMapMemo = true
+            } label: {
+                Label(language.text("지도 메모", "Map memo"), systemImage: "mappin.and.ellipse")
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
         }
         .confirmationDialog(
             language.text("지도에 추가", "Add to map"),
@@ -3073,6 +3124,123 @@ struct MapHomeView: View {
         )
     }
 
+    /// 사이드바(선택 시각, 없으면 지금)가 일정 메모 시각의 앞뒤 30분 안에 오면 보여 주는 메모. 가장 가까운 하나.
+    private var nearbyScheduleMemo: MapSticker? {
+        MapHomeMemoPreviewPolicy.nearest(
+            in: model.snapshot.stickers,
+            at: timelineDate(forMinute: Double(effectiveTimelineMinute)),
+            selectedDate: model.selectedDate,
+            dismissed: dismissedMemoPreviewIDs
+        )
+    }
+
+    private func scheduleMemoPreview(_ memo: MapSticker) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: memo.systemImage)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color(hex: memo.colorHex))
+                .frame(width: 30, height: 30)
+                .background(Color.white.opacity(0.96), in: Circle())
+                .overlay(Circle().stroke(Color(hex: memo.colorHex), lineWidth: 1))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(memo.title)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                if let text = memo.memo, !text.isEmpty {
+                    Text(text)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                        .lineLimit(2)
+                }
+                Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            .foregroundStyle(Color.tpInk)
+            Spacer(minLength: 4)
+            Button {
+                dismissedMemoPreviewIDs.insert(memo.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("닫기", "Dismiss"))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 280, alignment: .leading)
+        .background(Color.tpSurface.opacity(0.97), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.8), lineWidth: 0.8)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+        .contentShape(Rectangle())
+        .onTapGesture { selectedMapStickerEditor = .sticker(memo.id) }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(language.text("일정 메모 \(memo.title)", "Schedule memo \(memo.title)"))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12)
+        .padding(.top, topOverlayHeight + 10)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .transition(.opacity)
+    }
+
+    /// 지도 메모 위치 고르기: 지도 가운데에 핀을 두고 지도를 움직여 맞춘 뒤 "여기에 메모"를 누른다.
+    private var mapMemoPlacementOverlay: some View {
+        ZStack {
+            Image(systemName: "mappin")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(Color.tpReferenceGold)
+                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
+                .offset(y: -17)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            VStack {
+                Text(language.text("지도를 움직여 메모 위치를 맞추세요", "Move the map to place the memo"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.tpSurface.opacity(0.95), in: Capsule())
+                    .padding(.top, topOverlayHeight + 10)
+                    .allowsHitTesting(false)
+                Spacer()
+                HStack(spacing: 12) {
+                    Button {
+                        isPlacingMapMemo = false
+                    } label: {
+                        Text(language.text("취소", "Cancel"))
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                            .padding(.horizontal, 22)
+                            .frame(minHeight: 46)
+                            .background(Color.tpSurface.opacity(0.97), in: Capsule())
+                            .overlay(Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.8))
+                    }
+                    Button {
+                        isPlacingMapMemo = false
+                        addMapMemo()
+                    } label: {
+                        Text(language.text("여기에 메모", "Memo here"))
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 22)
+                            .frame(minHeight: 46)
+                            .background(Color.tpReferenceGold, in: Capsule())
+                    }
+                }
+                .padding(.bottom, Layout.overlayBottomMargin + 8)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
     private func addMapMemo() {
         guard let point = mapCenterPoint else { return }
         addMapMemo(
@@ -3104,7 +3272,6 @@ struct MapHomeView: View {
             occurredAt: occurredAt,
             shouldPersist: false
         ) else { return }
-        isStickerMenuExpanded = false
         isMenuOpen = false
         selectedMapStickerEditor = .newMemo(id)
     }
@@ -3118,7 +3285,6 @@ struct MapHomeView: View {
             planID: selectedSchedulePlanIDs.first,
             occurredAt: date
         ) else { return }
-        isStickerMenuExpanded = false
         isMenuOpen = false
         selectedMapStickerEditor = .sticker(id)
     }
@@ -6146,6 +6312,20 @@ struct MapHomeView: View {
             .overlay {
                 Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
             }
+
+            Button {
+                isMemoAddMenuPresented = true
+            } label: {
+                Image(systemName: "note.text.badge.plus")
+                    .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                    .foregroundStyle(Color.tpReferenceGold)
+                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+            }
+            .background(Color.tpSurface.opacity(0.92), in: Capsule())
+            .overlay {
+                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
+            }
+            .accessibilityLabel(language.text("메모 추가", "Add memo"))
         }
         .padding(.bottom, 4)
         .frame(width: Layout.timeRailWidth, height: railHeight)
@@ -6276,7 +6456,6 @@ struct MapHomeView: View {
             locationMenuItem
             categoryMenuItem
             displayMenuItem
-            stickerMenuItem
             languageMenuItem
             appleWatchMenuItem
             settingsMenuItem
@@ -6927,110 +7106,6 @@ struct MapHomeView: View {
             language.text("한국어", "Korean")
         case .english:
             "English"
-        }
-    }
-
-    private var stickerMenuItem: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Button {
-                isStickerMenuExpanded.toggle()
-            } label: {
-                HStack(spacing: 13) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
-                    Text(language.text("메모", "Memos"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    Spacer()
-                    Image(systemName: isStickerMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .foregroundStyle(Color.tpInk)
-                .padding(.vertical, 9)
-                .padding(.horizontal, 12)
-                .background(
-                    Color.tpInk.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("메모 메뉴", "Memo menu"))
-
-            if isStickerMenuExpanded {
-                Button {
-                    addMapMemo()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "note.text.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.tpReferenceGold)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("지도에 메모 추가", "Add memo to map"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(language.text("현재 지도 중심에 시간 연동 메모 배치", "Place a time-linked memo at the current map center"))
-                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(Color.primary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 8)
-                    .background(
-                        Color.tpReferenceGold.opacity(0.055),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("지도에 메모 추가", "Add memo to map"))
-                .padding(.leading, 12)
-
-                Button {
-                    addScheduleSticker()
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "calendar.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.tpReferenceMint)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(language.text("일정에 메모 추가", "Add memo to schedule"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            Text(language.text("선택한 시간에 메모 스티커 배치", "Place a memo sticker at the selected time"))
-                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(Color.primary)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 8)
-                    .background(
-                        Color.tpReferenceMint.opacity(0.055),
-                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    )
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("일정에 메모 추가", "Add memo to schedule"))
-                .padding(.leading, 12)
-
-                if isStickerMode {
-                    Text(language.text("지도의 메모를 탭해 수정할 수 있어요.", "Tap a map memo to edit it."))
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
-                        .padding(.horizontal, 12)
-                }
-            }
         }
     }
 

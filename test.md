@@ -1949,3 +1949,8 @@
 - 테스트(배포 전, iPhone 11 Pro): 전체 `TaptionPlanTests` 1,453개, 실패는 기존 환경 실패 2개뿐(`build/validation/REL1020I01/full-1.log`).
 - 아카이브·업로드: Release 아카이브·IPA 내보내기 성공, IPA 앱·위젯 번들 버전 195·표시 이름 BOKKI Plan/BOKKI Plan Widget(Watch 번들은 Release 아카이브에 없음), `altool` `UPLOAD SUCCEEDED`(ASC가 일시 500을 두 번 돌려줬으나 업로드는 오류 없이 끝남, `altool-195.log`). ASC `VALID`, `TP Taption Plan 내부 테스트` 연결(HTTP 204), readback: 195·194·193·192·191 확인, 테스터 1명(`asc-poll-195.log`).
 - 제한: 기기 설치·테스터 수신과 화면 확인(헬스킷 Watch 운동 반영, 줌 85 기준·구간 계획 체감)은 하지 못했다.
+
+## MEM1020A01 · 메모+ 버튼, 일정 메모 미리보기, 지도 메모 위치 선택, 햄버거 메모 삭제 (2026-10-20, 커밋 후 미배포)
+- 변경: 왼쪽 레일 맨 아래 `메모+` 버튼(`note.text.badge.plus`) → 일정 메모(기존 `addScheduleSticker`, 사이드바 선택 시각으로 만들고 편집 화면에서 시각 수정) / 지도 메모(지도 가운데 핀 + "여기에 메모" 확정 → 기존 `addMapMemo()`). 사이드바 시각이 일정 메모 시각의 앞뒤 30분 안에 오면 상단에 미리보기 카드(탭=편집, X=닫기, 가장 가까운 하나, 닫은 것은 세션 동안 숨김). 햄버거 메뉴의 '메모' 항목은 삭제했다(`stickerMenuItem`, `isStickerMenuExpanded`).
+- 테스트(iPhone 11 Pro): 전체 `TaptionPlanTests` 1,455개 실패 0(`MEM1020A01/full-1.log`), 신규 `testSchedulePreviewShowsOnlyMemosWithinThirtyMinutesOfTheSidebarTime` 통과. generic iOS Debug 빌드는 `app-debug.log`.
+- 제한: 버튼이 작은 화면에서 레일 높이에 맞는지, 팝업·핀·버튼의 위치와 크기는 화면으로 확인하지 못했다. 위치 선택 중에는 지도를 움직일 수 있고 핀은 지도 가운데(화면 중앙)에 고정된다. 사이드바 시각이 지정되지 않은 라이브 상태에서는 지금 시각 기준으로 팝업이 뜬다. 사진 기능(PHO1020A01)은 설계만 확정했고 미구현이다. 배포 보류.

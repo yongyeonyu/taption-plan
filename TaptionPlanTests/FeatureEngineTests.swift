@@ -85,6 +85,38 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(MapHomeFogRevealPolicy.currentLocationPoint(stickmanPoint: nil, viewportPoint: nil))
     }
 
+    func testSchedulePreviewShowsOnlyMemosWithinThirtyMinutesOfTheSidebarTime() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let day = calendar.date(from: DateComponents(year: 2026, month: 10, day: 20))!
+        func sticker(_ title: String, hour: Int, minute: Int, placement: MapStickerPlacement = .schedule,
+                     dayOffset: Int = 0) -> MapSticker {
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: day)!
+                .addingTimeInterval(TimeInterval(hour * 3_600 + minute * 60))
+            return MapSticker(title: title, placement: placement, occurredAt: date)
+        }
+        let early = sticker("이른", hour: 9, minute: 0)
+        let near = sticker("근처", hour: 14, minute: 20)
+        let map = sticker("지도용", hour: 14, minute: 30, placement: .map)
+        let otherDay = sticker("다음 날", hour: 14, minute: 30, dayOffset: 1)
+        let all = [early, near, map, otherDay]
+        let now = day.addingTimeInterval(14 * 3_600)
+        XCTAssertEqual(MapHomeMemoPreviewPolicy.nearest(in: all, at: now, selectedDate: day, calendar: calendar)?.title, "근처")
+        // 31분 밖이면 안 보인다.
+        XCTAssertNil(MapHomeMemoPreviewPolicy.nearest(
+            in: all, at: day.addingTimeInterval(14 * 3_600 + 52 * 60), selectedDate: day, calendar: calendar))
+        // 정확히 30분 경계는 보인다.
+        XCTAssertNotNil(MapHomeMemoPreviewPolicy.nearest(
+            in: all, at: day.addingTimeInterval(13 * 3_600 + 50 * 60), selectedDate: day, calendar: calendar))
+        // 닫은 메모는 다시 보이지 않고, 지도 배치 스티커·다른 날 메모는 대상이 아니다.
+        XCTAssertNil(MapHomeMemoPreviewPolicy.nearest(
+            in: all, at: now, selectedDate: day, dismissed: [near.id], calendar: calendar))
+        // 둘이 가까우면 더 가까운 것.
+        let closer = sticker("더 가까운", hour: 14, minute: 5)
+        XCTAssertEqual(MapHomeMemoPreviewPolicy.nearest(
+            in: all + [closer], at: now, selectedDate: day, calendar: calendar)?.title, "더 가까운")
+    }
+
     func testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround() {
         let pin = CGPoint(x: 100, y: 200)
         let icon = CGPoint(x: pin.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
