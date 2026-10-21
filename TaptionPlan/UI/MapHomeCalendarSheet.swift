@@ -393,11 +393,18 @@ struct MapHomeCalendarSheet: View {
             totals = [:]
             if !statuses.isEmpty { statuses = [:] }
             let month = displayedMonth
+            TaptionPlanDiagnosticsLogger.shared.record("calendar_load_start")
             let monthStatuses = await logStatuses(month)
-            guard !Task.isCancelled, month == displayedMonth else { return }
+            guard !Task.isCancelled, month == displayedMonth else {
+                TaptionPlanDiagnosticsLogger.shared.record("calendar_load_cancelled", fields: ["stage": "statuses"])
+                return
+            }
             statuses = monthStatuses
             let value = await timeTotals(month)
-            guard !Task.isCancelled, month == displayedMonth else { return }
+            guard !Task.isCancelled, month == displayedMonth else {
+                TaptionPlanDiagnosticsLogger.shared.record("calendar_load_cancelled", fields: ["stage": "totals"])
+                return
+            }
             totals = value
             TaptionPlanDiagnosticsLogger.shared.record("calendar_totals_set", metrics: ["days": Double(value.count), "statuses": Double(monthStatuses.count)])
         }
