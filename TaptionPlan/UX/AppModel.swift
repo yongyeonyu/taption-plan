@@ -4799,13 +4799,18 @@ final class AppModel {
         return merged
     }
 
-    /// 자정부터 지금까지의 걸음 수(CMPedometer). 지원되지 않거나 실패하면 nil.
-    private static func todayPedometerSteps(from start: Date, calendar: Calendar) async -> Double? {
+    private nonisolated(unsafe) static let todayPedometer = CMPedometer()
+
+    /// 자정부터 지금까지의 걸음 수(CMPedometer). 지원되지 않거나 실패하거나 3초 안에 응답이 없으면 nil.
+    /// 측정기를 계속 들고 있어야 응답이 오고, 시간 제한이 없으면 달력 계산이 영원히 멈출 수 있다.
+    private nonisolated static func todayPedometerSteps(from start: Date, calendar: Calendar) async -> Double? {
         guard CMPedometer.isStepCountingAvailable() else { return nil }
         return await withCheckedContinuation { continuation in
-            CMPedometer().queryPedometerData(from: start, to: .now) { data, _ in
-                continuation.resume(returning: data.map { Double($0.numberOfSteps.intValue) })
+            let once = PedometerResumeOnce(continuation)
+            todayPedometer.queryPedometerData(from: start, to: .now) { data, _ in
+                once.resume(data.map { Double($0.numberOfSteps.intValue) })
             }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 3) { once.resume(nil) }
         }
     }
 
@@ -14130,5 +14135,22 @@ struct TodaySensorRawExport: Codable, Sendable {
         let start = calendar.startOfDay(for: date)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
         return source.filter { $0.timestamp >= start && $0.timestamp < end }
+    }
+}
+
+
+/// 걸음 측정 응답과 시간 초과 중 먼저 온 쪽으로 한 번만 이어 간다.
+private final class PedometerResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Double?, Never>?
+
+    init(_ continuation: CheckedContinuation<Double?, Never>) { self.continuation = continuation }
+
+    func resume(_ value: Double?) {
+        lock.lock()
+        let pending = continuation
+        continuation = nil
+        lock.unlock()
+        pending?.resume(returning: value)
     }
 }

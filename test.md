@@ -2273,3 +2273,7 @@
 ## REL1021R01 · Build 209 TestFlight (2026-10-21)
 - CURRENT_PROJECT_VERSION 209 확인. 아카이브·업로드 성공(build/validation/REL1021R01/). ASC 209 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 목록 최상단 209, 테스터 1명.
 - 209는 알람 확인·워치 해제 작업 이전 커밋 기준. 그 뒤 변경(ALM1021C01, 요약 바 진하게 예정)은 미포함.
+
+## CAL1021G06 · 달력 멈춤 수정 (2026-10-22)
+- 로그로 원인 확정(calendar_stage에서 policy_done 뒤 steps_done 없음 + 크래시 로그 dispatch_assert_queue_fail in todayPedometerSteps). 수정 후 아이폰18 UI 테스트 통과, 캡처에서 달력 점 표시(20일 초록, 21·22일 빨강). build/validation/CAL1021G05/att2.
+- 한계: 지표 값(시간·걸음 합계)은 지표를 눌러 확인하는 화면까지 아직 캡처하지 않음.
