@@ -5773,6 +5773,13 @@ struct MapHomeView: View {
         homeGrowthData = encoded
     }
 
+    /// 선택한 날이 자정까지 지나서 끝까지 관측됐는지. 아니면 카드의 나머지 시간은 미확인으로 표시한다.
+    private var isDayObservedToEnd: Bool {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: model.selectedDate)) ?? .now
+        return Date.now >= dayEnd
+    }
+
     /// 하루 카드 데이터: 선택한 날짜의 대분류·걸음·이동·번 돈.
     private var dailyCardData: MapHomeDailyCardData {
         let categories = daySummaryCategories
@@ -5793,7 +5800,10 @@ struct MapHomeView: View {
             steps: dayStepCount,
             distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
             categories: categories,
-            totalText: language.text("관측 \(MapHomeAlarmPolicy.hoursText(total))", "Observed \(MapHomeAlarmPolicy.hoursText(total))"),
+            totalText: language.text(
+                "관측 \(MapHomeAlarmPolicy.hoursText(total))" + (isDayObservedToEnd ? "" : " · 나머지는 미확인"),
+                "Observed \(MapHomeAlarmPolicy.hoursText(total))" + (isDayObservedToEnd ? "" : " · rest unconfirmed")
+            ),
             accessoryID: homeGrowthHistory.season.equippedAccessory,
             routePoints: currentDayReadings.compactMap { reading in
                 reading.point.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0) }
@@ -5836,10 +5846,14 @@ struct MapHomeView: View {
         // 식사는 대분류 phase에 없어 '활동'에 흡수된다. 활동 구간과 식사
         // 기록(원본 actuals)의 겹치는 시간만큼을 활동에서 떼어 '식사'로 옮긴다.
         // 총합·이동·수면 집계는 그대로 두고 세부 원본도 건드리지 않는다.
+        let dayWindow = TimeSpan(start: start, end: end)
         let eatingSpans = actuals
             .filter { RecordAnalysisCategoryPolicy.categoryID(for: $0) == "eating" }
             .map { $0.span(asOf: .now) }
+            .compactMap { $0.intersection(with: dayWindow) }
         if !eatingSpans.isEmpty {
+            // 식사 기록 전체를 식사로 센다. 활동과 겹친 만큼은 활동에서 옮기고, 나머지는 그날 가장 긴 다른 분류에서 뗀다.
+            let eatingTotal = Self.unionDuration(eatingSpans)
             let activityPhaseSpans = phases
                 .filter { RecordAnalysisCategoryPolicy.canonicalPhase($0.phase).rawValue == "activity" }
                 .map(\.span)
@@ -5853,15 +5867,24 @@ struct MapHomeView: View {
                     }
                 }
             }
-            let eatingSeconds = Self.unionDuration(overlaps)
-            let movedSeconds = min(eatingSeconds, totalsByID["activity"] ?? 0)
+            let overlapSeconds = Self.unionDuration(overlaps)
+            let movedSeconds = min(overlapSeconds, totalsByID["activity"] ?? 0)
             if movedSeconds > 0 {
                 totalsByID["activity", default: 0] -= movedSeconds
-                totalsByID["eating", default: 0] += movedSeconds
                 if (totalsByID["activity"] ?? 0) <= 0 {
                     totalsByID["activity"] = nil
                 }
             }
+            var remaining = max(0, eatingTotal - movedSeconds)
+            while remaining > 0,
+                  let donor = totalsByID.filter({ $0.key != "eating" }).max(by: { $0.value < $1.value }),
+                  donor.value > 0 {
+                let taken = min(remaining, donor.value)
+                totalsByID[donor.key] = donor.value - taken
+                remaining -= taken
+                if (totalsByID[donor.key] ?? 0) <= 0 { totalsByID[donor.key] = nil }
+            }
+            totalsByID["eating", default: 0] += eatingTotal - remaining
         }
         let total = totalsByID.values.reduce(0) { $0 + max(0, $1) }
         guard total > 0 else { return [] }

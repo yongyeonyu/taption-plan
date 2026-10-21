@@ -1676,6 +1676,18 @@ struct MapHomeAlarmSettings: Equatable {
         (try? String(data: JSONEncoder().encode(enabled.map(\.rawValue).sorted().compactMap(MapHomeAlarmKind.init(rawValue:))), encoding: .utf8)) ?? "[]"
     }
 
+    /// 하루 카드 알림 시각(기본 오전 8시). 사용자가 설정에서 바꾼다.
+    static let dailyCardHourKey = "mapHomeDailyCardHour"
+    static let dailyCardMinuteKey = "mapHomeDailyCardMinute"
+    static var dailyCardTime: DateComponents {
+        let defaults = UserDefaults.standard
+        let hasValue = defaults.object(forKey: dailyCardHourKey) != nil
+        return DateComponents(
+            hour: hasValue ? defaults.integer(forKey: dailyCardHourKey) : 8,
+            minute: defaults.integer(forKey: dailyCardMinuteKey)
+        )
+    }
+
     static var current: MapHomeAlarmSettings {
         UserDefaults.standard.object(forKey: storageKey) == nil
             ? MapHomeAlarmSettings()
@@ -1871,7 +1883,7 @@ final class MapHomeAlarmCenter {
         }
     }
 
-    /// 자정 5분 뒤 어제 카드 알림(매일 반복). 꺼지면 예약을 지운다.
+    /// 하루 카드 알림(매일 반복, 기본 오전 8시). 꺼지면 예약을 지운다.
     func syncDailyCardSchedule(language: MapHomeLanguage = .current) async {
         let center = UNUserNotificationCenter.current()
         guard MapHomeAlarmSettings.current.enabled.contains(.dailyCard), await isAuthorized() else {
@@ -1884,8 +1896,9 @@ final class MapHomeAlarmCenter {
         content.sound = .default
         content.userInfo = [Self.userInfoKind: MapHomeAlarmKind.dailyCard.rawValue]
         var components = DateComponents()
-        components.hour = 0
-        components.minute = 5
+        let time = MapHomeAlarmSettings.dailyCardTime
+        components.hour = time.hour
+        components.minute = time.minute
         try? await center.add(UNNotificationRequest(
             identifier: Self.dailyCardIdentifier, content: content,
             trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
@@ -1925,6 +1938,8 @@ final class MapHomeAlarmCenter {
 struct MapHomeAlarmSettingsSheet: View {
     let language: MapHomeLanguage
     @AppStorage(MapHomeAlarmSettings.storageKey) private var raw = MapHomeAlarmSettings().rawValue
+    @AppStorage(MapHomeAlarmSettings.dailyCardHourKey) private var cardHour = 8
+    @AppStorage(MapHomeAlarmSettings.dailyCardMinuteKey) private var cardMinute = 0
     @State private var isAuthorized: Bool?
 
     private var settings: MapHomeAlarmSettings { MapHomeAlarmSettings(rawValue: raw) }
@@ -1976,12 +1991,38 @@ struct MapHomeAlarmSettingsSheet: View {
                         .padding(.horizontal, 14)
                         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    if group == .day {
+                        HStack {
+                            Text(language.text("하루 카드 알림 시각", "Day card time"))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            Spacer()
+                            DatePicker("", selection: cardTimeBinding, displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
                 }
             }
             .padding(22)
         }
         .background(Color.tpBackground)
         .task { isAuthorized = await MapHomeAlarmCenter.shared.isAuthorized() }
+    }
+
+    private var cardTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: cardHour, minute: cardMinute, second: 0, of: .now) ?? .now
+            },
+            set: { date in
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+                cardHour = parts.hour ?? 8
+                cardMinute = parts.minute ?? 0
+                Task { await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language) }
+            }
+        )
     }
 
     private func binding(_ kind: MapHomeAlarmKind) -> Binding<Bool> {
