@@ -5762,17 +5762,19 @@ struct MapHomeView: View {
             ), hourlyRate: $0.hourlyRate)
         }
         let work = categories.first { $0.id == MapHomeSalaryPolicy.workKey }?.seconds
-        let formatter = Date.FormatStyle().year().month().day().weekday(.wide).locale(language.locale)
         return MapHomeDailyCardData(
-            dateText: model.selectedDate.formatted(Date.FormatStyle().year().month().day().locale(language.locale)),
-            weekdayText: model.selectedDate.formatted(formatter),
+            dateText: model.selectedDate.formatted(Date.FormatStyle().month().day().locale(language.locale)),
+            weekdayText: model.selectedDate.formatted(Date.FormatStyle().weekday(.wide).locale(language.locale)),
             earnedText: earned.map(MapHomeSalaryPolicy.wonText),
             workText: work.map(MapHomeAlarmPolicy.hoursText),
             steps: dayStepCount,
             distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
             categories: categories,
             totalText: language.text("관측 \(MapHomeAlarmPolicy.hoursText(total))", "Observed \(MapHomeAlarmPolicy.hoursText(total))"),
-            accessoryID: homeGrowthHistory.season.equippedAccessory
+            accessoryID: homeGrowthHistory.season.equippedAccessory,
+            routePoints: currentDayReadings.compactMap { reading in
+                reading.point.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0) }
+            }
         )
     }
 

@@ -1,4 +1,5 @@
 import CoreMotion
+import MapKit
 import Photos
 import SwiftUI
 import UserNotifications
@@ -2013,6 +2014,7 @@ struct MapHomeDailyCardData: Equatable {
     var categories: [MapHomeDaySummaryEntry]
     var totalText: String
     var accessoryID: String?
+    var routePoints: [GeoPoint] = []
 }
 
 /// 540×540pt로 그려 2배로 렌더링하면 1080×1080이 된다.
@@ -2020,10 +2022,21 @@ struct MapHomeDailyCardView: View {
     static let side: CGFloat = 540
     let data: MapHomeDailyCardData
     let language: MapHomeLanguage
+    /// 배경으로 깐 지도(경로 포함). 위에 밝은 막을 씌워 디밍한다.
+    var mapImage: UIImage?
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color.tpBackground, Color.tpSurface], startPoint: .topLeading, endPoint: .bottomTrailing)
+            if let mapImage {
+                Image(uiImage: mapImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: Self.side, height: Self.side)
+                    .clipped()
+                Color.tpBackground.opacity(0.72)
+            } else {
+                LinearGradient(colors: [Color.tpBackground, Color.tpSurface], startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -2061,6 +2074,9 @@ struct MapHomeDailyCardView: View {
                                 }
                             }
                             .frame(height: 12)
+                            Text(MapHomeAlarmPolicy.hoursText(entry.seconds))
+                                .font(.system(size: 14, weight: .semibold, design: .rounded)).monospacedDigit()
+                                .frame(width: 96, alignment: .trailing)
                             Text("\(Int((entry.ratio * 100).rounded()))%").font(.system(size: 15, weight: .bold, design: .rounded)).monospacedDigit().frame(width: 46, alignment: .trailing)
                         }
                     }
@@ -2095,6 +2111,7 @@ struct MapHomeDailyCardSheet: View {
     let data: MapHomeDailyCardData
     let language: MapHomeLanguage
     @State private var image: UIImage?
+    @State private var mapImage: UIImage?
     @State private var shareURL: URL?
     @State private var message: String?
 
@@ -2136,13 +2153,46 @@ struct MapHomeDailyCardSheet: View {
             .padding(22)
         }
         .background(Color.tpBackground)
-        .task(id: data) { image = Self.render(data: data, language: language) }
+        .task(id: data) {
+            mapImage = await Self.routeMap(points: data.routePoints)
+            image = Self.render(data: data, language: language, mapImage: mapImage)
+        }
         .sheet(item: $shareURL) { url in MapHomeShareSheet(url: url) }
     }
 
+    /// 경로가 가운데 오도록 지도를 그리고 경로선을 올린다. 경로가 없으면 nil(배경 없이 그라데이션).
+    static func routeMap(points: [GeoPoint]) async -> UIImage? {
+        let coordinates = points.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        guard coordinates.count >= 2 else { return nil }
+        let lats = coordinates.map(\.latitude), lons = coordinates.map(\.longitude)
+        let center = CLLocationCoordinate2D(latitude: (lats.min()! + lats.max()!) / 2, longitude: (lons.min()! + lons.max()!) / 2)
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.01, (lats.max()! - lats.min()!) * 1.5),
+            longitudeDelta: max(0.01, (lons.max()! - lons.min()!) * 1.5)
+        )
+        let options = MKMapSnapshotter.Options()
+        options.region = MKCoordinateRegion(center: center, span: span)
+        options.size = CGSize(width: MapHomeDailyCardView.side, height: MapHomeDailyCardView.side)
+        options.scale = 2
+        guard let snapshot = try? await MKMapSnapshotter(options: options).start() else { return nil }
+        let renderer = UIGraphicsImageRenderer(size: snapshot.image.size)
+        return renderer.image { _ in
+            snapshot.image.draw(at: .zero)
+            let path = UIBezierPath()
+            for (index, coordinate) in coordinates.enumerated() {
+                let point = snapshot.point(for: coordinate)
+                index == 0 ? path.move(to: point) : path.addLine(to: point)
+            }
+            path.lineWidth = 6
+            path.lineJoinStyle = .round
+            UIColor(Color.tpAccent).setStroke()
+            path.stroke()
+        }
+    }
+
     @MainActor
-    static func render(data: MapHomeDailyCardData, language: MapHomeLanguage) -> UIImage? {
-        let renderer = ImageRenderer(content: MapHomeDailyCardView(data: data, language: language))
+    static func render(data: MapHomeDailyCardData, language: MapHomeLanguage, mapImage: UIImage?) -> UIImage? {
+        let renderer = ImageRenderer(content: MapHomeDailyCardView(data: data, language: language, mapImage: mapImage))
         renderer.scale = 2
         renderer.proposedSize = ProposedViewSize(width: MapHomeDailyCardView.side, height: MapHomeDailyCardView.side)
         return renderer.uiImage
