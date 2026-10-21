@@ -1116,15 +1116,32 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(merged[day3], 1_200, "센서만 있으면 그 값")
     }
 
-    func testSalaryHourlyRatePrefersLastMonthPayOverMeasuredHours() throws {
+    func testKoreanNetPayMatchesSalaryCalculatorFor50Million() {
+        // 연봉 5,000만 원(부양 1인·식대 20만): 공개 계산기 월 실수령 약 357만 원.
+        let b = MapHomeKoreanNetPay.monthly(gross: 50_000_000 / 12)
+        XCTAssertEqual(b.pension, 188_417, accuracy: 1)
+        XCTAssertEqual(b.employment, 35_700, accuracy: 1)
+        XCTAssertEqual(b.net, 3_573_640, accuracy: 2_000)
+        XCTAssertEqual(MapHomeKoreanNetPay.monthly(gross: 0).net, 0)
+        XCTAssertLessThan(MapHomeKoreanNetPay.monthly(gross: 160_000_000 / 12).net, 160_000_000 / 12 * 0.75, "고연봉은 공제가 커진다")
+    }
+
+    func testSalaryRateUsesMonthlyPayBasisAndEditedAccumulation() throws {
         typealias P = MapHomeSalaryPolicy
-        // 지난달 200시간 일하고 200만원 → 시급 1만원(연봉보다 우선).
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 48_000_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 200 * 3_600)), 10_000, accuracy: 0.01)
-        // 지난달 금액이 없으면 연봉 ÷ 12 ÷ 209시간(측정 근무 시간은 쓰지 않는다).
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 25_080_000, lastMonthPay: 0, lastMonthWorkSeconds: 50 * 3_600)), 10_000, accuracy: 0.01)
-        // 근무 기록이 20시간 미만이면 209시간으로 나눈다.
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 25_080_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 3_600)), 10_000, accuracy: 0.01)
-        XCTAssertNil(P.hourlyRate(annualPay: 0, lastMonthPay: 0, lastMonthWorkSeconds: 200 * 3_600))
+        var settings = P.Settings(annualPay: 25_080_000, isNetInput: true)
+        // 세후 입력: 연봉 ÷ 12 ÷ 209.
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600)), 10_000, accuracy: 0.01)
+        // 월급을 넣으면 연봉 대신 월급.
+        settings.monthlyPay = 4_180_000
+        XCTAssertEqual(try XCTUnwrap(P.baseHourlyRate(settings)), 20_000, accuracy: 0.01)
+        // 누적을 고치면 누적 시급 = 누적 ÷ 근무 시간.
+        settings.monthAccumOverride = 1_500_000
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600)), 15_000, accuracy: 0.01)
+        XCTAssertEqual(P.accumulated(settings, monthWorkSeconds: 100 * 3_600), 1_500_000)
+        // 세전 입력 + 세후 보기는 세후 월급 기준.
+        let gross = P.Settings(annualPay: 50_000_000, isNetInput: false, showsNet: true)
+        XCTAssertEqual(P.displayedMonthly(gross), MapHomeKoreanNetPay.monthly(gross: 50_000_000 / 12).net, accuracy: 0.01)
+        XCTAssertNil(P.hourlyRate(P.Settings(), monthWorkSeconds: 0))
     }
 
     func testSalaryLiveSecondsAddElapsedOnlyWhileWorkingInTickSteps() {
