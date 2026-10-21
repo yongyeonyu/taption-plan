@@ -49,7 +49,9 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 20))
         menu.tap()
-        let upload = app.buttons["로그 업로드"].firstMatch
+        let settings = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "설정")).firstMatch
+        if settings.waitForExistence(timeout: 5) { settings.tap() }
+        let upload = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "로그 업로드")).firstMatch
         var tries = 0
         while !upload.exists && tries < 8 {
             app.swipeUp()
