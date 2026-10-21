@@ -1,3 +1,4 @@
+import CoreMotion
 import Foundation
 @preconcurrency import ActivityKit
 import CoreLocation
@@ -4757,7 +4758,24 @@ final class AppModel {
             "calendar_steps",
             metrics: ["health_days": Double(health.count), "sensor_days": Double(sensor.count)]
         )
-        return MapHomeCalendarTimeTotalsPolicy.mergedStepCounts(health: health, sensor: sensor)
+        var merged = MapHomeCalendarTimeTotalsPolicy.mergedStepCounts(health: health, sensor: sensor)
+        // 오늘 걸음은 센서 기록(활동이 끝나야 저장됨)이 늦으므로 CMPedometer로 바로 읽어 더 큰 값을 쓴다.
+        let today = calendar.startOfDay(for: .now)
+        if calendar.isDate(first, equalTo: today, toGranularity: .month),
+           let live = await Self.todayPedometerSteps(from: today, calendar: calendar) {
+            merged[today] = max(merged[today] ?? 0, live)
+        }
+        return merged
+    }
+
+    /// 자정부터 지금까지의 걸음 수(CMPedometer). 지원되지 않거나 실패하면 nil.
+    private static func todayPedometerSteps(from start: Date, calendar: Calendar) async -> Double? {
+        guard CMPedometer.isStepCountingAvailable() else { return nil }
+        return await withCheckedContinuation { continuation in
+            CMPedometer().queryPedometerData(from: start, to: .now) { data, _ in
+                continuation.resume(returning: data.map { Double($0.numberOfSteps.intValue) })
+            }
+        }
     }
 
     func startManualCloudSync() {

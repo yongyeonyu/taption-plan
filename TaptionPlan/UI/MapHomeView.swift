@@ -11278,7 +11278,7 @@ struct MapHomeView: View {
         setMapPosition(.camera(
             MapCamera(
                 centerCoordinate: CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude),
-                distance: 200,
+                distance: 70,
                 heading: 0,
                 pitch: 0
             )

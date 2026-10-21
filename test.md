@@ -2225,3 +2225,8 @@
 - CURRENT_PROJECT_VERSION 207(8곳)·Info.plist 4개 확인. Release 아카이브·내보내기·altool 업로드 성공(build/validation/REL1021P01/).
 - IPA 앱·위젯 CFBundleVersion 207 확인. ASC 207 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 빌드 목록 최상단 207, 테스터 1명.
 - 한계: 기기 동작은 대표 확인 필요. 코드리뷰 8건 미수정. FeatureEngineTests 전체 실행 결과는 기록 없음.
+
+## WLK1021T01 · 오늘 걸음 실시간 반영, 집 버튼 줌 70m (2026-10-21)
+- 원인: 달력 걸음 수는 센서 기록(활동 종료 후 저장)과 건강 앱 값만 읽어 걷는 중에는 바뀌지 않음.
+- 변경: 이번 달이면 오늘 0시~현재 CMPedometer 걸음을 읽어 오늘 값을 max로 반영(AppModel.calendarDailyStepCounts). 집 버튼 카메라 거리 200m→70m(대표 지정 "70").
+- 검증: Debug 빌드 성공. 기기 걸음 반영은 미확인(대표 확인 필요).
