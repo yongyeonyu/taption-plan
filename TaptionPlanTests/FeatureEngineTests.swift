@@ -7102,6 +7102,35 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testPhoneSleepWakeConfirmsFastWhenScreenIsOnAndStepsRise() {
+        let start = makeDate(2026, 8, 10, 22, 0)
+        var readings = (0...16).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .stationary, motionConfidence: .high, stepCount: 0,
+                screenBrightness: 0.1, screenIsOn: false
+            )
+        }
+        // 기상 후보가 생기고 20분 동안 화면이 켜진 채 걷는다(1시간 전이라도 확정되어야 한다).
+        let wake = start.addingTimeInterval(95 * 60)
+        for index in 0...5 {
+            readings.append(SensorReading(
+                timestamp: wake.addingTimeInterval(Double(index) * 5 * 60),
+                motion: .walking, motionConfidence: .high, stepCount: index * 20,
+                screenBrightness: 0.8, screenIsOn: true
+            ))
+        }
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(3 * hour))
+        let status = PhoneSleepWakeEngine.status(readings: readings, maximumSampleGap: 20 * 60, asOf: span.end)
+        XCTAssertEqual(status.phase, .awake, "강한 신호는 20분 안에 기상으로 확정된다")
+        let records = PhoneSleepWakeEngine.records(
+            readings: readings, actuals: [], inside: span, watchAvailable: false,
+            maximumSampleGap: 20 * 60, asOf: span.end
+        )
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(records[0].endedAt, wake)
+    }
+
     func testPhoneSleepWakeUsesDistinctStableIDsForDifferentSpans() {
         let start = makeDate(2026, 8, 10, 22, 0)
         func record(startedAt: Date) -> ActualRecord? {

@@ -5684,6 +5684,9 @@ enum PhoneSleepWakeEngine {
     static let confirmationDuration: TimeInterval = 60 * 60
     static let chargingConfirmationDuration: TimeInterval = 30 * 60
     static let wakeConfirmationDuration: TimeInterval = 60 * 60
+    /// 화면 켜짐이나 걸음 증가 같은 강한 깸 신호가 있으면 이 시간만 이어져도 기상으로 확정한다.
+    static let fastWakeConfirmationDuration: TimeInterval = 15 * 60
+    static let fastWakeStepIncrease = 30
     static let darkBrightness = 0.25
     static let brightBrightness = 0.60
 
@@ -5794,6 +5797,7 @@ enum PhoneSleepWakeEngine {
         var sleepStartedAt: Date?
         var sleepCharging = false
         var wakeCandidateStart: Date?
+        var wakeCandidateSteps: Int?
         var lastWakeExpectedAt: Date?
 
         var status: PhoneSleepWakeStatus {
@@ -5829,21 +5833,27 @@ enum PhoneSleepWakeEngine {
 
         if state.sleepStartedAt != nil {
             if isWakeSignal(reading) {
+                if state.wakeCandidateStart == nil { state.wakeCandidateSteps = reading.stepCount }
                 state.wakeCandidateStart = state.wakeCandidateStart ?? reading.timestamp
                 state.lastWakeExpectedAt = state.wakeCandidateStart
-                if reading.timestamp.timeIntervalSince(state.wakeCandidateStart ?? reading.timestamp)
-                    >= wakeConfirmationDuration {
+                let elapsed = reading.timestamp.timeIntervalSince(state.wakeCandidateStart ?? reading.timestamp)
+                let stepIncrease = (reading.stepCount ?? 0) - (state.wakeCandidateSteps ?? reading.stepCount ?? 0)
+                let strongWake = reading.screenIsOn == true || stepIncrease >= fastWakeStepIncrease
+                if elapsed >= wakeConfirmationDuration
+                    || (strongWake && elapsed >= fastWakeConfirmationDuration) {
                     state.sleepStartedAt = nil
                     state.sleepExpectedAt = nil
                     state.sleepCandidateStart = nil
                     state.sleepCharging = false
                     state.wakeCandidateStart = nil
+                    state.wakeCandidateSteps = nil
                 }
             } else if isSleepSignal(reading) || blocked {
                 // A brief awakening that settles before confirmation is part
                 // of the same sleep session; a later movement can start a new
                 // wake candidate.
                 state.wakeCandidateStart = nil
+                state.wakeCandidateSteps = nil
                 state.lastWakeExpectedAt = nil
             }
             return

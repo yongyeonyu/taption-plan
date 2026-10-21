@@ -2280,3 +2280,7 @@
 
 ## CAL1021G 종결 · 달력 0 문제 (2026-10-22)
 - 대표 확인: 아이폰18 달력에서 10월 20·21일 값이 나옴(빌드 214). 원인은 오늘 걸음 읽기(todayPedometerSteps)의 응답 대기 중단·콜백 격리 충돌, 수정은 CAL1021G06. 임시 진단 이벤트(calendar_stage/load/totals_set)는 제거, calendar_day_fallback 대체 경로는 유지.
+
+## SLP1022C01 · 빠른 기상 확정 (2026-10-22)
+- 아이폰11 단위 테스트: 수면·기상 관련 14개 통과(신규 testPhoneSleepWakeConfirmsFastWhenScreenIsOnAndStepsRise 포함, build/validation/SLP1022C01/test2.log).
+- 한계: 실제 기상 알림이 빨라졌는지는 기기 미확인. 약한 신호는 여전히 1시간 확정. 가속도 임계값·야간 가산 같은 추가 보정은 하지 않음.
