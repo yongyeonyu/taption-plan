@@ -2283,6 +2283,7 @@ struct MapHomeView: View {
     @State private var isCategoryMenuExpanded = false
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
+    @State private var isStrideCalibrationPresented = false
     @State private var isMemoAddMenuPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
@@ -2897,6 +2898,11 @@ struct MapHomeView: View {
                 )
             )
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isStrideCalibrationPresented) {
+            MapHomeStrideCalibrationSheet(language: language)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isCalendarPresented) {
             MapHomeCalendarSheet(
@@ -6453,9 +6459,13 @@ struct MapHomeView: View {
         let enabled = MapHomeCalendarTimeKind.enabledExtras(
             from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
         )
-        if enabled.contains(.steps) {
+        if enabled.contains(.steps) || enabled.contains(.stepDistance) {
+            let stride = MapHomeStride.current
             for (day, steps) in await model.calendarDailyStepCounts(month: month) {
-                result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps
+                if enabled.contains(.steps) { result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps }
+                if enabled.contains(.stepDistance), steps > 0 {
+                    result[day, default: [:]][MapHomeCalendarTimeKind.stepDistance.rawValue] = steps * stride
+                }
             }
         }
         if includePhotos, enabled.contains(.photos) {
@@ -8102,6 +8112,16 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                Button {
+                    isStrideCalibrationPresented = true
+                } label: {
+                    Label(language.text("보폭 보정(걸음 → 거리)", "Stride calibration"), systemImage: "shoeprints.fill")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 6)
+                }
+                .buttonStyle(.plain)
                 Text(language.text("지도 스타일", "Map style"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)

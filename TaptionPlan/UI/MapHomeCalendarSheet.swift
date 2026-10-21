@@ -1,3 +1,4 @@
+import CoreMotion
 import SwiftUI
 
 /// 달력 점: 기록은 있지만 미확인 활동이 남은 날(빨강), 기록이 끝난 날(초록). 기록이 없으면 점이 없다.
@@ -47,7 +48,7 @@ enum MapHomeCalendarLogStatusPolicy {
 enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     case sleep, movement, study, work, exercise, hobby, distance, places, trips
     // 사용자가 "+"로 골라 쓰는 추가 지표
-    case steps, photos, walkDistance, carDistance, transitDistance, awayTime
+    case steps, photos, walkDistance, carDistance, transitDistance, awayTime, stepDistance
 
     var id: String { rawValue }
 
@@ -65,6 +66,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .steps: language.text("걸음 수", "Steps")
         case .photos: language.text("사진 수", "Photos")
         case .walkDistance: language.text("걷기 거리", "Walking")
+        case .stepDistance: language.text("걸음 환산 거리", "Step distance")
         case .carDistance: language.text("운전 거리", "Driving")
         case .transitDistance: language.text("대중교통 거리", "Transit")
         case .awayTime: language.text("외출 시간", "Time away")
@@ -85,6 +87,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .steps: "figure.walk"
         case .photos: "photo.fill"
         case .walkDistance: "figure.walk.circle"
+        case .stepDistance: "shoeprints.fill"
         case .carDistance: "car.fill"
         case .transitDistance: "tram.fill"
         case .awayTime: "door.left.hand.open"
@@ -93,7 +96,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
 
     /// 시간 합계는 초, 이동거리는 미터로 같은 딕셔너리에 담는다.
     var isDistance: Bool {
-        self == .distance || self == .walkDistance || self == .carDistance || self == .transitDistance
+        self == .distance || self == .walkDistance || self == .carDistance || self == .transitDistance || self == .stepDistance
     }
 
     /// 방문 장소 수·이동 횟수·걸음 수·사진 수는 개수를 같은 딕셔너리에 담는다.
@@ -101,7 +104,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
 
     /// 기본으로 늘 보이는 지표와, 사용자가 "+"로 더하는 지표.
     static let coreKinds: [MapHomeCalendarTimeKind] = [.sleep, .movement, .study, .work, .exercise, .hobby, .distance, .places, .trips]
-    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime]
+    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime, .stepDistance]
     static let extraStorageKey = "mapHomeCalendarExtraKinds"
 
     static func enabledExtras(from raw: String) -> [MapHomeCalendarTimeKind] {
@@ -380,7 +383,7 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled, month == displayedMonth, !fast.isEmpty else { return }
             // 시간 합계·사진 수 같은 값은 30초 갱신에 맡기고, 걸음 수와 이동 거리만 덮어쓴다.
             let fastKeys: Set<String> = [
-                MapHomeCalendarTimeKind.steps, .distance, .walkDistance, .carDistance, .transitDistance,
+                MapHomeCalendarTimeKind.steps, .distance, .walkDistance, .carDistance, .transitDistance, .stepDistance,
             ].reduce(into: []) { $0.insert($1.rawValue) }
             for (day, values) in fast {
                 totals[day, default: [:]].merge(values.filter { fastKeys.contains($0.key) }) { _, new in new }
@@ -755,5 +758,143 @@ struct MapHomeCalendarSheet: View {
         case nil: break
         }
         return title
+    }
+}
+
+/// 걸음 수를 거리로 바꾸는 보폭(m). 기본값은 대표가 알려주는 값으로 바꾼다.
+enum MapHomeStride {
+    static let storageKey = "mapHomeStrideMeters"
+    static let defaultMeters = 20.0 / 26.5
+    static let allowedRange = 0.3...1.5
+
+    static var current: Double {
+        let stored = UserDefaults.standard.double(forKey: storageKey)
+        return allowedRange.contains(stored) ? stored : defaultMeters
+    }
+
+    /// 걸어간 거리(m)와 그때의 걸음 수로 보폭을 구한다. 값이 비정상이면 nil.
+    static func calibrated(distanceMeters: Double, steps: Int) -> Double? {
+        guard steps >= 5, distanceMeters > 0 else { return nil }
+        let stride = distanceMeters / Double(steps)
+        return allowedRange.contains(stride) ? stride : nil
+    }
+}
+
+/// 보폭 보정: 시작 → 정해진 거리를 걷기 → 종료 → 거리 입력으로 보폭을 저장한다. 직접 입력도 된다.
+struct MapHomeStrideCalibrationSheet: View {
+    let language: MapHomeLanguage
+    @AppStorage(MapHomeStride.storageKey) private var strideMeters = MapHomeStride.defaultMeters
+    @State private var pedometer = CMPedometer()
+    @State private var isMeasuring = false
+    @State private var steps = 0
+    @State private var distanceText = "10"
+    @State private var manualCentimeters = ""
+    @State private var message: String?
+
+    private var currentStride: Double {
+        MapHomeStride.allowedRange.contains(strideMeters) ? strideMeters : MapHomeStride.defaultMeters
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(language.text("보폭 보정", "Stride calibration"))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text(language.text(
+                    "현재 보폭 \(String(format: "%.0f", currentStride * 100))cm · 걸음 수 × 보폭으로 걸음 환산 거리를 계산합니다.",
+                    "Stride \(String(format: "%.0f", currentStride * 100)) cm · used for step-based distance."
+                ))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(language.text("1. 시작을 누르고 정한 거리를 걸은 뒤 종료를 누르세요.", "1. Tap Start, walk a known distance, then tap Stop."))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    Text(language.text("\(steps)걸음", "\(steps) steps"))
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Button(isMeasuring ? language.text("종료", "Stop") : language.text("시작", "Start")) {
+                        isMeasuring ? stop() : start()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(isMeasuring ? Color.tpHoliday : Color.tpAccent)
+                    HStack {
+                        Text(language.text("2. 걸은 거리", "2. Distance walked"))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        TextField("10", text: $distanceText)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+                        Text("m")
+                        Spacer()
+                        Button(language.text("보폭 저장", "Save")) { saveMeasured() }
+                            .buttonStyle(.bordered)
+                            .disabled(isMeasuring || steps < 5)
+                    }
+                }
+                .padding(14)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                HStack {
+                    Text(language.text("직접 입력", "Manual"))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    TextField("75", text: $manualCentimeters)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    Text("cm")
+                    Spacer()
+                    Button(language.text("저장", "Save")) { saveManual() }.buttonStyle(.bordered)
+                }
+                if let message {
+                    Text(message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.tpAccent)
+                }
+            }
+            .padding(22)
+        }
+        .background(Color.tpBackground)
+        .onDisappear { pedometer.stopUpdates() }
+    }
+
+    private func start() {
+        guard CMPedometer.isStepCountingAvailable() else {
+            message = language.text("이 기기에서는 걸음 수를 쓸 수 없습니다.", "Step counting is unavailable on this device.")
+            return
+        }
+        steps = 0
+        message = nil
+        isMeasuring = true
+        pedometer.startUpdates(from: Date()) { data, _ in
+            guard let data else { return }
+            Task { @MainActor in steps = data.numberOfSteps.intValue }
+        }
+    }
+
+    private func stop() {
+        pedometer.stopUpdates()
+        isMeasuring = false
+    }
+
+    private func number(_ text: String) -> Double? {
+        Double(text.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespaces))
+    }
+
+    private func saveMeasured() {
+        guard let distance = number(distanceText),
+              let stride = MapHomeStride.calibrated(distanceMeters: distance, steps: steps) else {
+            message = language.text("거리나 걸음 수가 맞지 않습니다(보폭 30~150cm).", "Distance or steps look wrong (stride 30–150 cm).")
+            return
+        }
+        strideMeters = stride
+        message = language.text("보폭 \(String(format: "%.0f", stride * 100))cm로 저장했습니다.", "Saved \(String(format: "%.0f", stride * 100)) cm.")
+    }
+
+    private func saveManual() {
+        guard let centimeters = number(manualCentimeters), MapHomeStride.allowedRange.contains(centimeters / 100) else {
+            message = language.text("30~150cm 사이로 입력해 주세요.", "Enter 30–150 cm.")
+            return
+        }
+        strideMeters = centimeters / 100
+        message = language.text("보폭 \(String(format: "%.0f", centimeters))cm로 저장했습니다.", "Saved \(String(format: "%.0f", centimeters)) cm.")
     }
 }
