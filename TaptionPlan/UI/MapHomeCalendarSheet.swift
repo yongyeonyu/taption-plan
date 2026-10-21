@@ -941,13 +941,47 @@ enum MapHomeSalaryPolicy {
     static let workKey = MapHomeCalendarTimeKind.work.rawValue
     static let movementKey = MapHomeCalendarTimeKind.movement.rawValue
 
-    /// 시급. 지난달 받은 금액과 지난달 실제 근무 시간이 있으면 그 비율, 없으면 연봉 ÷ 12 ÷ (지난달 근무 또는 209시간).
+    /// 시급. 지난달 받은 금액과 지난달 실제 근무 시간이 있으면 그 비율, 없으면 연봉 ÷ 12 ÷ 209시간.
     static func hourlyRate(annualPay: Double, lastMonthPay: Double, lastMonthWorkSeconds: TimeInterval) -> Double? {
         let hours = lastMonthWorkSeconds / 3_600
         let measured: Double? = hours >= minimumMeasuredHours ? hours : nil
         if lastMonthPay > 0, let measured { return lastMonthPay / measured }
         guard annualPay > 0 else { return nil }
-        return annualPay / 12 / (measured ?? standardMonthlyHours)
+        // 연봉만 있으면 소정근로시간으로 나눈다(지난달 기록이 덜 잡히면 시급이 부풀기 때문).
+        return annualPay / 12 / standardMonthlyHours
+    }
+
+    /// 그날 업무로 잡힌 구간들. 재생·지난 날짜는 이 구간에서 시각까지의 근무 시간만 센다(업무 밖에서는 늘지 않는다).
+    static func workSpans(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        day: TimeSpan,
+        asOf now: Date
+    ) -> [TimeSpan] {
+        DayPhaseEngine.completePhases(
+            actuals: actuals.filter { let s = $0.span(asOf: now); return s.start < day.end && day.start < s.end },
+            travel: travel.filter { $0.span.start < day.end && day.start < $0.span.end },
+            stays: stays.filter { $0.span.start < day.end && day.start < $0.span.end },
+            placeKinds: placeKinds,
+            in: day,
+            asOf: now
+        )
+        .filter { phase in
+            DayPhaseEngine.categoryDurations([phase], scope: .canonical).contains { $0.categoryID == workKey && $0.actual > 0 }
+        }
+        .map(\.span)
+    }
+
+    static func workSeconds(in spans: [TimeSpan], until date: Date) -> TimeInterval {
+        spans.reduce(0) { $0 + max(0, min($1.end, date).timeIntervalSince($1.start)) }
+    }
+
+    /// 표시 간격 단위로 내린 값(설정한 간격마다 한 번씩 오른다).
+    static func quantized(_ seconds: TimeInterval, tick: TimeInterval) -> TimeInterval {
+        let step = max(1, tick)
+        return (seconds / step).rounded(.down) * step
     }
 
     static func earnings(workSeconds: TimeInterval, hourlyRate: Double) -> Double {
@@ -1034,8 +1068,8 @@ struct MapHomeSalarySettingsSheet: View {
                 field(language.text("연봉", "Annual pay"), text: $annualManText, unit: language.text("만원", "×10k KRW"), placeholder: "4000")
                 field(language.text("지난달 받은 금액(선택)", "Last month's pay (optional)"), text: $lastMonthText, unit: language.text("원", "KRW"), placeholder: "2500000")
                 Text(language.text(
-                    "지난달 받은 금액을 넣으면 지난달 실제 근무 시간으로 나눠 시급을 정해요(연장수당 포함). 없으면 연봉 ÷ 12 ÷ 근무 시간(기록이 없으면 209시간).",
-                    "With last month's pay, the hourly rate is that pay divided by last month's measured work hours. Otherwise annual ÷ 12 ÷ hours (209 if not measured)."
+                    "지난달 받은 금액을 넣으면 지난달 실제 근무 시간으로 나눠 시급을 정해요(연장수당 포함). 없으면 연봉 ÷ 12 ÷ 209시간(주 40시간 기준).",
+                    "With last month's pay, the hourly rate is that pay divided by last month's measured work hours. Otherwise annual ÷ 12 ÷ 209 hours."
                 ))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.tpSecondary)

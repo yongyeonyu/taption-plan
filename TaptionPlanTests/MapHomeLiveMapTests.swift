@@ -1120,8 +1120,8 @@ extension MapHomeLiveMapTests {
         typealias P = MapHomeSalaryPolicy
         // 지난달 200시간 일하고 200만원 → 시급 1만원(연봉보다 우선).
         XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 48_000_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 200 * 3_600)), 10_000, accuracy: 0.01)
-        // 지난달 금액이 없으면 연봉 ÷ 12 ÷ 지난달 근무 시간.
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 24_000_000, lastMonthPay: 0, lastMonthWorkSeconds: 200 * 3_600)), 10_000, accuracy: 0.01)
+        // 지난달 금액이 없으면 연봉 ÷ 12 ÷ 209시간(측정 근무 시간은 쓰지 않는다).
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 25_080_000, lastMonthPay: 0, lastMonthWorkSeconds: 50 * 3_600)), 10_000, accuracy: 0.01)
         // 근무 기록이 20시간 미만이면 209시간으로 나눈다.
         XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 25_080_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 3_600)), 10_000, accuracy: 0.01)
         XCTAssertNil(P.hourlyRate(annualPay: 0, lastMonthPay: 0, lastMonthWorkSeconds: 200 * 3_600))
@@ -1150,5 +1150,20 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(summary.commuteSeconds, 2 * 3_600, "근무 없는 날 이동은 출퇴근으로 세지 않는다")
         XCTAssertEqual(summary.earnings, 80_000, accuracy: 0.01)
         XCTAssertEqual(try XCTUnwrap(summary.effectiveHourlyRate), 8_000, accuracy: 0.01)
+    }
+
+    func testSalaryPlaybackCountsOnlyWorkSpansUntilPlaybackTimeInTicks() {
+        typealias P = MapHomeSalaryPolicy
+        let day = Date(timeIntervalSince1970: 0)
+        let spans = [
+            TimeSpan(start: day + 9 * 3_600, end: day + 12 * 3_600),
+            TimeSpan(start: day + 13 * 3_600, end: day + 18 * 3_600),
+        ]
+        XCTAssertEqual(P.workSeconds(in: spans, until: day + 8 * 3_600), 0, "출근 전에는 0")
+        XCTAssertEqual(P.workSeconds(in: spans, until: day + 12.5 * 3_600), 3 * 3_600, "점심시간에는 늘지 않는다")
+        XCTAssertEqual(P.workSeconds(in: spans, until: day + 14 * 3_600), 4 * 3_600)
+        XCTAssertEqual(P.workSeconds(in: spans, until: .distantFuture), 8 * 3_600)
+        XCTAssertEqual(P.quantized(125, tick: 60), 120)
+        XCTAssertEqual(P.quantized(125, tick: 1), 125)
     }
 }

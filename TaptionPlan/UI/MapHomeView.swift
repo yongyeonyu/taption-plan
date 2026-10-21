@@ -2289,6 +2289,8 @@ struct MapHomeView: View {
     @AppStorage(MapHomeSalaryPolicy.lastMonthPayKey) private var salaryLastMonthPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.tickKey) private var salaryTickSeconds = 10
     @State private var salaryLive: MapHomeSalaryPolicy.Live?
+    /// 날짜(0시)별 업무 구간. 선택한 날짜와 오늘만 둔다.
+    @State private var salaryWorkSpans: [Date: [TimeSpan]] = [:]
     @State private var isMemoAddMenuPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
@@ -2911,7 +2913,8 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         // 연봉을 넣었으면 30초마다 오늘 근무 시간을 다시 센다(사이 값은 지도 라벨이 표시 간격마다 더한다).
-        .task(id: "\(salaryAnnualPay)|\(salaryLastMonthPay)|\(scenePhase == .active)") {
+        // 기록을 다 불러오기 전(앱 시작 직후)에 센 0을 붙들지 않게, 기록 개수가 바뀌면 처음부터 다시 센다.
+        .task(id: "\(salaryAnnualPay)|\(salaryLastMonthPay)|\(scenePhase == .active)|\(model.selectedDate.timeIntervalSince1970)|\(model.snapshot.actuals.count)|\(model.snapshot.places.count)") {
             guard scenePhase == .active else { return }
             var monthComputedAt: Date?
             while !Task.isCancelled {
@@ -5173,7 +5176,11 @@ struct MapHomeView: View {
                     .accessibilityLabel(
                         "\(playback.accessibilityLabel), \(language.text("설명 보기","Show info"))"
                     )
-                salaryCounterLabel(at: point)
+            }
+
+            // 연봉 카운터는 늘 보인다: 화랑이(또는 화살표)가 밖에 있으면 그 위, 집에 있으면 집 핀 위.
+            if let anchor = salaryAnchor(viewport: viewport, stickmanPoint: playback == nil ? nil : stickmanPoint) {
+                salaryCounterLabel(at: anchor)
                     .zIndex(MapHomeLayerPriority.stickman)
             }
 
@@ -6520,16 +6527,24 @@ struct MapHomeView: View {
         let calendar = MapHomeGrowthPolicy.localCalendar
         let now = Date.now
         let previous = salaryLive
-        let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, lastMonth: TimeInterval?) in
+        let selectedDay = calendar.startOfDay(for: model.selectedDate)
+        let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, lastMonth: TimeInterval?, selectedSpans: [TimeSpan], todaySpans: [TimeSpan]) in
             let dayStart = calendar.startOfDay(for: now)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
             let span = TimeSpan(start: dayStart, end: dayEnd)
+            func daySpans(_ day: Date) -> [TimeSpan] {
+                let end = calendar.date(byAdding: .day, value: 1, to: day) ?? day
+                return MapHomeSalaryPolicy.workSpans(
+                    actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
+                    day: TimeSpan(start: day, end: end), asOf: now
+                )
+            }
             func work(asOf date: Date) -> TimeInterval {
                 MapHomeCalendarTimeTotalsPolicy.categorySeconds(
                     actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds, in: span, asOf: date
                 )[MapHomeSalaryPolicy.workKey] ?? 0
             }
-            guard includeMonth else { return (work(asOf: now), work(asOf: now - 60), nil, nil) }
+            guard includeMonth else { return (work(asOf: now), work(asOf: now - 60), nil, nil, daySpans(selectedDay), daySpans(dayStart)) }
             func monthTotals(_ month: Date) -> [Date: [String: TimeInterval]] {
                 MapHomeCalendarTimeTotalsPolicy.totals(
                     actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
@@ -6538,7 +6553,7 @@ struct MapHomeView: View {
             }
             let lastMonthDate = calendar.date(byAdding: .month, value: -1, to: now) ?? now
             let lastMonth = monthTotals(lastMonthDate).values.reduce(0) { $0 + ($1[MapHomeSalaryPolicy.workKey] ?? 0) }
-            return (work(asOf: now), work(asOf: now - 60), monthTotals(now), lastMonth)
+            return (work(asOf: now), work(asOf: now - 60), monthTotals(now), lastMonth, daySpans(selectedDay), daySpans(dayStart))
         }.value
         guard !Task.isCancelled else { return }
         let lastMonthSeconds = counted.lastMonth ?? previous?.lastMonthWorkSeconds ?? 0
@@ -6555,42 +6570,72 @@ struct MapHomeView: View {
             lastMonthWorkSeconds: lastMonthSeconds
         )
         if live != salaryLive { salaryLive = live }
+        // 선택한 날짜가 오늘이면 같은 키라 사전 리터럴로 만들면 중복 키로 멈춘다(오늘 값이 이긴다).
+        var spans = [selectedDay: counted.selectedSpans]
+        spans[calendar.startOfDay(for: now)] = counted.todaySpans
+        if spans != salaryWorkSpans { salaryWorkSpans = spans }
     }
 
-    /// 화랑이 머리 위 연봉 카운터. 오늘을 보고 있고 재생 중이 아닐 때, 오늘 근무가 있으면 표시 간격마다 금액이 오른다.
+    /// 화랑이(집에 있으면 집 핀) 위 연봉 카운터. 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
     @ViewBuilder
     private func salaryCounterLabel(at point: CGPoint) -> some View {
-        if let salaryLive, !isDayPlaybackRunning,
-           Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
-           salaryLive.todayWorkSeconds > 0 || salaryLive.isWorking {
+        if let salaryLive, recordingShows(\.salary) {
             let tick = TimeInterval(max(1, salaryTickSeconds))
-            TimelineView(.periodic(from: salaryLive.measuredAt, by: tick)) { context in
-                let seconds = MapHomeSalaryPolicy.liveWorkSeconds(
-                    base: salaryLive.todayWorkSeconds,
-                    baseDate: salaryLive.measuredAt,
-                    isWorking: salaryLive.isWorking,
-                    now: context.date,
-                    tick: tick
-                )
-                HStack(spacing: 4) {
-                    Image(systemName: "wonsign.circle.fill")
-                        .foregroundStyle(salaryLive.isWorking ? Color.tpReferenceMint : Color.tpSecondary)
-                    Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: salaryLive.hourlyRate)))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
+            let calendar = MapHomeGrowthPolicy.localCalendar
+            let day = calendar.startOfDay(for: model.selectedDate)
+            Group {
+                if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute {
+                    let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: day + minute * 60)
+                    salaryPill(seconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), rate: salaryLive.hourlyRate, isWorking: false)
+                } else if calendar.isDateInToday(model.selectedDate) {
+                    TimelineView(.periodic(from: salaryLive.measuredAt, by: tick)) { context in
+                        salaryPill(
+                            seconds: MapHomeSalaryPolicy.liveWorkSeconds(
+                                base: salaryLive.todayWorkSeconds,
+                                baseDate: salaryLive.measuredAt,
+                                isWorking: salaryLive.isWorking,
+                                now: context.date,
+                                tick: tick
+                            ),
+                            rate: salaryLive.hourlyRate,
+                            isWorking: salaryLive.isWorking
+                        )
+                    }
+                } else {
+                    let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: .distantFuture)
+                    salaryPill(seconds: seconds, rate: salaryLive.hourlyRate, isWorking: false)
                 }
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.tpInk)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .mapHomeGlass(in: Capsule())
-                .animation(.snappy, value: seconds)
             }
             .fixedSize()
-            .position(x: point.x, y: point.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42)
+            .position(point)
             .allowsHitTesting(false)
-            .accessibilityLabel(language.text("오늘 번 돈", "Earned today"))
+            .accessibilityLabel(language.text("번 돈", "Earned"))
         }
+    }
+
+    private func salaryAnchor(viewport: MapHomeVectorViewport?, stickmanPoint: CGPoint?) -> CGPoint? {
+        if let stickmanPoint {
+            return CGPoint(x: stickmanPoint.x, y: stickmanPoint.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42)
+        }
+        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
+              let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return nil }
+        return CGPoint(x: pin.x, y: pin.y - 84)
+    }
+
+    private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "wonsign.circle.fill")
+                .foregroundStyle(isWorking ? Color.tpReferenceMint : Color.tpSecondary)
+            Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: rate)))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+        .font(.system(size: 13, weight: .bold, design: .rounded))
+        .foregroundStyle(Color.tpInk)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .mapHomeGlass(in: Capsule())
+        .animation(.snappy, value: seconds)
     }
 
     /// 녹화 메뉴를 열기 전에 사진 저장 권한과 화면 기록 허용을 먼저 받는다.

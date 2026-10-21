@@ -96,6 +96,8 @@ struct MapHomeRecordingLayers: Codable, Equatable {
     var photos = false
     /// 꺼 두면 화랑이 대신 화살표만 보인다.
     var cat = false
+    /// 연봉 카운터(재생 시각까지 번 돈).
+    var salary = true
 
     static let storageKey = "mapHomeRecordingLayers"
 
@@ -111,6 +113,7 @@ struct MapHomeRecordingLayers: Codable, Equatable {
         footprints = try c.decodeIfPresent(Bool.self, forKey: .footprints) ?? footprints
         photos = try c.decodeIfPresent(Bool.self, forKey: .photos) ?? photos
         cat = try c.decodeIfPresent(Bool.self, forKey: .cat) ?? cat
+        salary = try c.decodeIfPresent(Bool.self, forKey: .salary) ?? salary
     }
 
     init(rawValue: String) {
@@ -246,6 +249,7 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("경로", "Route"), $layers.routes)
             toggle(language.text("발자국", "Footprints"), $layers.footprints)
             toggle(language.text("화랑이 (끄면 화살표)", "Character (arrow when off)"), $layers.cat)
+            toggle(language.text("연봉 카운터", "Salary counter"), $layers.salary)
             Button(action: onStart) {
                 Label(language.text("녹화하며 재생", "Record and play"), systemImage: "record.circle")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
