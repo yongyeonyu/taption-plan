@@ -286,6 +286,7 @@ struct MapHomeCalendarSheet: View {
     @Environment(\.displayScale) private var displayScale
     @AppStorage(MapHomeCalendarTimeKind.extraStorageKey) private var extraKindsRaw = ""
     @State private var selectedKind: MapHomeCalendarTimeKind?
+    @State private var contentHeight: CGFloat = 0
     @State private var totals: [Date: [String: TimeInterval]] = [:]
 
     init(
@@ -340,12 +341,14 @@ struct MapHomeCalendarSheet: View {
                         .padding(.top, 12)
                 }
             }
-            .padding(.bottom, 18)
+            .padding(.bottom, 40)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
         }
         .frame(maxWidth: .infinity)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color.tpBackground)
-        .presentationDetents([.height(selectedKind == nil ? 540 : 700), .large])
+        // 지표 패널·여섯 번째 주가 늘어도 아래 여백까지 한 화면에 보이도록 높이를 내용에 맞춘다.
+        .presentationDetents(contentHeight > 0 ? [.height(contentHeight + 16), .large] : [.height(selectedKind == nil ? 540 : 700), .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
         // 달이 바뀔 때뿐 아니라 "+"로 지표를 켜고 끌 때도 다시 읽는다(걸음·사진은 켠 때만 읽기 때문).
