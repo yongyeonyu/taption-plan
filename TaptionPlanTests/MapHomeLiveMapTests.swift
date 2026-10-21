@@ -1253,4 +1253,15 @@ extension MapHomeLiveMapTests {
         let decoded = P.decodePayHistory(P.encodePayHistory(["2026-09": 2_900_000, "2026-08": 0]))
         XCTAssertEqual(decoded, ["2026-09": 2_900_000])
     }
+
+    func testSalaryProjectionWithoutHistoryUsesStandardMonthNotTheDaysSoFar() {
+        typealias P = MapHomeSalaryPolicy
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        // 기록 없이 오늘(10월 21일 수요일)까지 9시간만 일한 경우: 예상은 월 소정근로 209시간이어야 한다.
+        let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 21, hour: 21))!
+        let today = calendar.startOfDay(for: now)
+        let projected = P.projectedMonthWorkSeconds(dailyWork: [today: 9 * 3_600], now: now, calendar: calendar)
+        XCTAssertEqual(projected / 3_600, 209, accuracy: 0.5)
+    }
 }

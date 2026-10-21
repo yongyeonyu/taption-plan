@@ -1,5 +1,7 @@
 import CoreMotion
+import Photos
 import SwiftUI
+import UserNotifications
 
 /// 달력 점: 기록은 있지만 미확인 활동이 남은 날(빨강), 기록이 끝난 날(초록). 기록이 없으면 점이 없다.
 enum MapHomeCalendarLogStatus: Equatable {
@@ -1193,6 +1195,8 @@ enum MapHomeSalaryPolicy {
             if (2...6).contains(weekday) { weekdayValues.append(seconds) }
         }
         func average(_ values: [TimeInterval]) -> TimeInterval { values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count) }
+        // 최근 기록이 전혀 없으면 추세를 세울 수 없으니 월 소정근로시간(209h)을 예상으로 쓴다. 며칠 일한 값으로 월 전체를 줄이지 않는다.
+        if byWeekday.isEmpty { return standardMonthlyHours * 3_600 }
         let weekdayAverage = average(weekdayValues)
         func expected(_ day: Date) -> TimeInterval {
             let weekday = calendar.component(.weekday, from: day)
@@ -1555,4 +1559,612 @@ struct MapHomeSalarySettingsSheet: View {
         for (key, text) in payTexts { history[key] = number(text) }
         payHistoryRaw = MapHomeSalaryPolicy.encodePayHistory(history)
     }
+}
+
+// MARK: - 알림
+
+/// 사용자가 받을 수 있는 알림 종류. 장소 도착·출발은 등록한 장소 기록으로, 기상은 수면 구간 종료로, 시급은 연봉 카운터로 만든다.
+enum MapHomeAlarmKind: String, CaseIterable, Codable, Identifiable {
+    case arriveCompany, leaveCompany
+    case arriveSchool, leaveSchool
+    case arriveAcademy, leaveAcademy
+    case arriveHome, leaveHome
+    case wakeUp
+    case dailyCard
+    case rateChange, breakEven
+
+    var id: String { rawValue }
+
+    enum Group: String, CaseIterable {
+        case place, day, salary
+        func title(_ language: MapHomeLanguage) -> String {
+            switch self {
+            case .place: language.text("장소", "Places")
+            case .day: language.text("하루", "Day")
+            case .salary: language.text("연봉 카운터", "Salary counter")
+            }
+        }
+    }
+
+    var group: Group {
+        switch self {
+        case .wakeUp, .dailyCard: .day
+        case .rateChange, .breakEven: .salary
+        default: .place
+        }
+    }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .arriveCompany: language.text("출근했어요", "Arrived at work")
+        case .leaveCompany: language.text("퇴근했어요", "Left work")
+        case .arriveSchool: language.text("등교했어요", "Arrived at school")
+        case .leaveSchool: language.text("하교했어요", "Left school")
+        case .arriveAcademy: language.text("학원에 도착했어요", "Arrived at academy")
+        case .leaveAcademy: language.text("학원에서 나왔어요", "Left academy")
+        case .arriveHome: language.text("집에 왔어요", "Home")
+        case .leaveHome: language.text("외출했어요", "Left home")
+        case .wakeUp: language.text("일어났어요", "Woke up")
+        case .dailyCard: language.text("자정 하루 요약 카드", "Midnight day card")
+        case .rateChange: language.text("시급 변동(±3%)", "Hourly rate moved (±3%)")
+        case .breakEven: language.text("퇴근 손익분기", "Overtime break-even")
+        }
+    }
+
+    func detail(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .arriveCompany, .arriveSchool, .arriveAcademy, .arriveHome:
+            language.text("등록한 장소에 머물기 시작하면 알려요.", "When a stay at the registered place begins.")
+        case .leaveCompany, .leaveSchool, .leaveAcademy, .leaveHome:
+            language.text("장소를 떠나 3분이 지나면 알려요.", "Three minutes after leaving the place.")
+        case .wakeUp: language.text("수면 구간이 끝나면 알려요(하루 한 번).", "When the sleep span ends (once a day).")
+        case .dailyCard: language.text("자정 5분 뒤 어제 카드를 보고 저장·공유할 수 있어요.", "At 00:05 open yesterday's card to save or share.")
+        case .rateChange: language.text("추정 시급이 3% 이상 움직이면 알려요(30분에 한 번).", "When the estimated rate moves 3%+ (max every 30 min).")
+        case .breakEven: language.text("근무 중 1시간 안에 시급이 기준의 90% 아래로 내려가면 알려요.", "When another hour of work would push the rate below 90% of base.")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .arriveCompany, .leaveCompany: "briefcase.fill"
+        case .arriveSchool, .leaveSchool: "graduationcap.fill"
+        case .arriveAcademy, .leaveAcademy: "book.fill"
+        case .arriveHome, .leaveHome: "house.fill"
+        case .wakeUp: "sunrise.fill"
+        case .dailyCard: "photo.on.rectangle.angled"
+        case .rateChange: "chart.line.uptrend.xyaxis"
+        case .breakEven: "clock.badge.exclamationmark"
+        }
+    }
+
+    /// 장소 종류별 도착·출발 알림.
+    static func arrive(_ kind: FrequentPlaceKind) -> MapHomeAlarmKind? {
+        switch kind {
+        case .company: .arriveCompany
+        case .school: .arriveSchool
+        case .academy: .arriveAcademy
+        case .home: .arriveHome
+        default: nil
+        }
+    }
+
+    static func leave(_ kind: FrequentPlaceKind) -> MapHomeAlarmKind? {
+        switch kind {
+        case .company: .leaveCompany
+        case .school: .leaveSchool
+        case .academy: .leaveAcademy
+        case .home: .leaveHome
+        default: nil
+        }
+    }
+}
+
+struct MapHomeAlarmSettings: Equatable {
+    static let storageKey = "mapHomeAlarmSettings"
+    static let defaultEnabled: Set<MapHomeAlarmKind> = [.arriveCompany, .leaveCompany, .wakeUp, .dailyCard]
+    var enabled: Set<MapHomeAlarmKind>
+
+    init(enabled: Set<MapHomeAlarmKind> = MapHomeAlarmSettings.defaultEnabled) { self.enabled = enabled }
+
+    init(rawValue: String) {
+        let kinds = rawValue.data(using: .utf8).flatMap { try? JSONDecoder().decode([MapHomeAlarmKind].self, from: $0) }
+        enabled = kinds.map(Set.init) ?? MapHomeAlarmSettings.defaultEnabled
+    }
+
+    var rawValue: String {
+        (try? String(data: JSONEncoder().encode(enabled.map(\.rawValue).sorted().compactMap(MapHomeAlarmKind.init(rawValue:))), encoding: .utf8)) ?? "[]"
+    }
+
+    static var current: MapHomeAlarmSettings {
+        UserDefaults.standard.object(forKey: storageKey) == nil
+            ? MapHomeAlarmSettings()
+            : MapHomeAlarmSettings(rawValue: UserDefaults.standard.string(forKey: storageKey) ?? "")
+    }
+}
+
+/// 기록에서 알림 이벤트를 찾는 순수 규칙. 같은 이벤트는 `key`로 한 번만 보낸다.
+enum MapHomeAlarmPolicy {
+    struct Event: Equatable {
+        var kind: MapHomeAlarmKind
+        var key: String
+        var date: Date
+        var body: String
+    }
+
+    /// 최근 이 시간 안에 생긴 일만 알린다(앱이 늦게 깨어나 묵은 일을 쏟아내지 않게).
+    static let recentWindow: TimeInterval = 45 * 60
+    /// 떠난 뒤 이 시간은 기다린다(잠깐 나갔다 돌아오는 경우).
+    static let leaveSettle: TimeInterval = 3 * 60
+
+    static func timeText(_ date: Date, language: MapHomeLanguage) -> String {
+        date.formatted(Date.FormatStyle().hour().minute().locale(language.locale))
+    }
+
+    /// 장소 도착·출발. 머문 기록이 다시 계산돼 id가 바뀌어도 같은 일이 되도록 키는 종류 + 10분 단위 시각으로 만든다.
+    static func placeEvents(
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        now: Date,
+        language: MapHomeLanguage
+    ) -> [Event] {
+        var events: [Event] = []
+        let kinds: [(PlaceStay, FrequentPlaceKind)] = stays.compactMap { stay in placeKinds[stay.placeKey].map { (stay, $0) } }
+        for (stay, kind) in kinds {
+            let start = stay.span.start, end = stay.span.end
+            if let arrive = MapHomeAlarmKind.arrive(kind), start > now - recentWindow, start <= now {
+                events.append(Event(
+                    kind: arrive, key: "\(arrive.rawValue)-\(Int(start.timeIntervalSince1970 / 600))", date: start,
+                    body: language.text("\(timeText(start, language: language))에 \(stay.displayName) 도착", "Arrived at \(stay.displayName) at \(timeText(start, language: language))")
+                ))
+            }
+            if let leave = MapHomeAlarmKind.leave(kind), end > now - recentWindow, end <= now - leaveSettle {
+                // 같은 장소에 10분 안에 다시 머물기 시작했으면 떠난 게 아니다.
+                let returned = kinds.contains { other, otherKind in
+                    otherKind == kind && other.span.start > end && other.span.start <= end + 10 * 60
+                }
+                if !returned {
+                    events.append(Event(
+                        kind: leave, key: "\(leave.rawValue)-\(Int(end.timeIntervalSince1970 / 600))", date: end,
+                        body: language.text("\(timeText(end, language: language))에 \(stay.displayName)에서 출발", "Left \(stay.displayName) at \(timeText(end, language: language))")
+                    ))
+                }
+            }
+        }
+        return events
+    }
+
+    /// 기상: 오늘 수면 구간이 끝났고 그 뒤로 수면이 없을 때(하루 한 번).
+    static func wakeEvent(phases: [DayPhaseSpan], now: Date, calendar: Calendar, language: MapHomeLanguage) -> Event? {
+        let sleeps = phases.filter { $0.phase == .sleep }.sorted { $0.span.end < $1.span.end }
+        guard let last = sleeps.last, last.span.end > now - recentWindow, last.span.end <= now - 2 * 60 else { return nil }
+        let dayKey = MapHomeSalaryPolicy.monthKey(now, calendar: calendar) + String(format: "-%02d", calendar.component(.day, from: now))
+        let slept = last.span.duration / 3_600
+        return Event(
+            kind: .wakeUp, key: "wake-\(dayKey)", date: last.span.end,
+            body: language.text(
+                "\(timeText(last.span.end, language: language)) 기상 · \(String(format: "%.1f", slept))시간 잤어요",
+                "Up at \(timeText(last.span.end, language: language)) · slept \(String(format: "%.1f", slept)) h"
+            )
+        )
+    }
+
+    /// 시급이 마지막으로 알린 값에서 3% 이상 움직였을 때.
+    static func rateChangeEvent(previous: Double?, current: Double, now: Date, language: MapHomeLanguage) -> Event? {
+        guard let previous, previous > 0 else { return nil }
+        let change = (current - previous) / previous
+        guard abs(change) >= 0.03 else { return nil }
+        let arrow = change > 0 ? "▲" : "▼"
+        return Event(
+            kind: .rateChange, key: "rate-\(Int(now.timeIntervalSince1970 / 1_800))", date: now,
+            body: language.text(
+                "\(arrow) \(MapHomeSalaryPolicy.wonText(previous)) → \(MapHomeSalaryPolicy.wonText(current)) (\(String(format: "%+.1f", change * 100))%)",
+                "\(arrow) \(MapHomeSalaryPolicy.wonText(previous)) → \(MapHomeSalaryPolicy.wonText(current)) (\(String(format: "%+.1f", change * 100))%)"
+            )
+        )
+    }
+
+    /// 지금부터 몇 시간 더 일하면 시급이 기준(월급 ÷ 209h)의 90% 아래로 내려가는지. 8시간 안에 안 내려가면 nil.
+    static func breakEvenHours(
+        settings: MapHomeSalaryPolicy.Settings,
+        monthWorkSeconds: TimeInterval,
+        projectedMonthWorkSeconds: TimeInterval,
+        samples: [MapHomeSalaryPolicy.PaySample]
+    ) -> Double? {
+        guard let base = MapHomeSalaryPolicy.baseHourlyRate(settings) else { return nil }
+        let floor = base * 0.9
+        var hours = 0.0
+        while hours <= 8 {
+            let extra = hours * 3_600
+            if let rate = MapHomeSalaryPolicy.hourlyRate(
+                settings, monthWorkSeconds: monthWorkSeconds + extra,
+                projectedMonthWorkSeconds: projectedMonthWorkSeconds + extra, samples: samples
+            ), rate < floor {
+                return hours
+            }
+            hours += 0.5
+        }
+        return nil
+    }
+}
+
+/// 알림을 실제로 보내고, 보낸 이벤트 키를 기억해 중복을 막는다. 앱이 켜져 있을 때와 백그라운드 새로 고침 때 모두 쓴다.
+@MainActor
+final class MapHomeAlarmCenter {
+    static let shared = MapHomeAlarmCenter()
+    static let deliveredKey = "mapHomeAlarmDelivered"
+    static let lastRateKey = "mapHomeAlarmLastRate"
+    static let dailyCardIdentifier = "taption-alarm-dailyCard"
+    static let userInfoKind = "taptionAlarm"
+    static let userInfoDay = "taptionAlarmDay"
+
+    private var delivered: [String: Double] = {
+        (UserDefaults.standard.dictionary(forKey: MapHomeAlarmCenter.deliveredKey) as? [String: Double]) ?? [:]
+    }()
+
+    func isAuthorized() async -> Bool {
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        return status == .authorized || status == .provisional || status == .ephemeral
+    }
+
+    func requestAuthorization() async -> Bool {
+        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+    }
+
+    /// 장소·기상 이벤트를 찾아 켜 둔 것만 보낸다.
+    func evaluate(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        frequentPlaces: [FrequentPlace],
+        now: Date = .now,
+        language: MapHomeLanguage = .current
+    ) async {
+        let settings = MapHomeAlarmSettings.current
+        guard !settings.enabled.isDisjoint(with: Set(MapHomeAlarmKind.allCases.filter { $0.group != .salary && $0 != .dailyCard })) else { return }
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(frequentPlaces)
+        var events = MapHomeAlarmPolicy.placeEvents(stays: stays, placeKinds: placeKinds, now: now, language: language)
+        if settings.enabled.contains(.wakeUp) {
+            let calendar = MapHomeGrowthPolicy.localCalendar
+            let dayStart = calendar.startOfDay(for: now)
+            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
+            let phases = DayPhaseEngine.completePhases(
+                actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
+                in: TimeSpan(start: dayStart, end: dayEnd), asOf: now
+            )
+            if let wake = MapHomeAlarmPolicy.wakeEvent(phases: phases, now: now, calendar: calendar, language: language) {
+                events.append(wake)
+            }
+        }
+        for event in events where settings.enabled.contains(event.kind) {
+            await deliver(event, language: language)
+        }
+        prune(now: now)
+    }
+
+    /// 연봉 카운터가 시급을 다시 계산할 때 부른다.
+    func noteRate(_ rate: Double, isWorking: Bool, breakEvenHours: Double?, now: Date = .now, language: MapHomeLanguage = .current) async {
+        let settings = MapHomeAlarmSettings.current
+        let previous = UserDefaults.standard.object(forKey: Self.lastRateKey) as? Double
+        if settings.enabled.contains(.rateChange),
+           let event = MapHomeAlarmPolicy.rateChangeEvent(previous: previous, current: rate, now: now, language: language) {
+            if await deliver(event, language: language) { UserDefaults.standard.set(rate, forKey: Self.lastRateKey) }
+        } else if previous == nil {
+            UserDefaults.standard.set(rate, forKey: Self.lastRateKey)
+        }
+        if settings.enabled.contains(.breakEven), isWorking, let hours = breakEvenHours, hours <= 1 {
+            let calendar = MapHomeGrowthPolicy.localCalendar
+            let dayKey = MapHomeSalaryPolicy.monthKey(now, calendar: calendar) + String(format: "-%02d", calendar.component(.day, from: now))
+            let event = MapHomeAlarmPolicy.Event(
+                kind: .breakEven, key: "breakEven-\(dayKey)", date: now,
+                body: hours <= 0
+                    ? language.text("지금 시급이 기준의 90% 아래예요. 더 일할수록 시급이 내려가요.", "Your rate is already under 90% of base; more hours lower it further.")
+                    : language.text("\(String(format: "%.1f", hours))시간 더 일하면 시급이 기준의 90% 아래로 내려가요.", "\(String(format: "%.1f", hours)) more hours push your rate under 90% of base.")
+            )
+            _ = await deliver(event, language: language)
+        }
+    }
+
+    /// 자정 5분 뒤 어제 카드 알림(매일 반복). 꺼지면 예약을 지운다.
+    func syncDailyCardSchedule(language: MapHomeLanguage = .current) async {
+        let center = UNUserNotificationCenter.current()
+        guard MapHomeAlarmSettings.current.enabled.contains(.dailyCard), await isAuthorized() else {
+            center.removePendingNotificationRequests(withIdentifiers: [Self.dailyCardIdentifier])
+            return
+        }
+        let content = UNMutableNotificationContent()
+        content.title = language.text("어제 하루 카드가 준비됐어요", "Yesterday's card is ready")
+        content.body = language.text("눌러서 보고 저장하거나 공유하세요.", "Tap to view, save or share.")
+        content.sound = .default
+        content.userInfo = [Self.userInfoKind: MapHomeAlarmKind.dailyCard.rawValue]
+        var components = DateComponents()
+        components.hour = 0
+        components.minute = 5
+        try? await center.add(UNNotificationRequest(
+            identifier: Self.dailyCardIdentifier, content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        ))
+    }
+
+    @discardableResult
+    private func deliver(_ event: MapHomeAlarmPolicy.Event, language: MapHomeLanguage) async -> Bool {
+        guard delivered[event.key] == nil, await isAuthorized() else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = event.kind.title(language)
+        content.body = event.body
+        content.sound = .default
+        content.userInfo = [Self.userInfoKind: event.kind.rawValue]
+        do {
+            try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "taption-alarm-\(event.key)", content: content, trigger: nil))
+        } catch {
+            return false
+        }
+        delivered[event.key] = event.date.timeIntervalSince1970
+        UserDefaults.standard.set(delivered, forKey: Self.deliveredKey)
+        TaptionPlanDiagnosticsLogger.shared.record("alarm_delivered", fields: ["kind": event.kind.rawValue])
+        return true
+    }
+
+    private func prune(now: Date) {
+        let cutoff = now.timeIntervalSince1970 - 3 * 86_400
+        let kept = delivered.filter { $0.value >= cutoff }
+        if kept.count != delivered.count {
+            delivered = kept
+            UserDefaults.standard.set(delivered, forKey: Self.deliveredKey)
+        }
+    }
+}
+
+/// 알림 설정: 종류별 켜고 끄기, 권한 상태.
+struct MapHomeAlarmSettingsSheet: View {
+    let language: MapHomeLanguage
+    @AppStorage(MapHomeAlarmSettings.storageKey) private var raw = MapHomeAlarmSettings().rawValue
+    @State private var isAuthorized: Bool?
+
+    private var settings: MapHomeAlarmSettings { MapHomeAlarmSettings(rawValue: raw) }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(language.text("알림", "Alerts"))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text(language.text(
+                    "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.",
+                    "Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed."
+                ))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+
+                if isAuthorized == false {
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    } label: {
+                        Label(language.text("알림 권한이 꺼져 있어요 · 설정 열기", "Notifications are off · Open Settings"), systemImage: "bell.slash.fill")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpHoliday)
+                    }
+                }
+
+                ForEach(MapHomeAlarmKind.Group.allCases, id: \.self) { group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.title(language))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpSecondary)
+                        VStack(spacing: 0) {
+                            ForEach(MapHomeAlarmKind.allCases.filter { $0.group == group }) { kind in
+                                Toggle(isOn: binding(kind)) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: kind.systemImage)
+                                            .foregroundStyle(Color.tpAccent)
+                                            .frame(width: 22)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(kind.title(language)).font(.system(size: 14, weight: .semibold, design: .rounded))
+                                            Text(kind.detail(language)).font(.system(size: 11)).foregroundStyle(Color.tpSecondary)
+                                        }
+                                    }
+                                }
+                                .tint(Color.tpAccent)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                }
+            }
+            .padding(22)
+        }
+        .background(Color.tpBackground)
+        .task { isAuthorized = await MapHomeAlarmCenter.shared.isAuthorized() }
+    }
+
+    private func binding(_ kind: MapHomeAlarmKind) -> Binding<Bool> {
+        Binding(
+            get: { settings.enabled.contains(kind) },
+            set: { on in
+                var next = settings
+                if on { next.enabled.insert(kind) } else { next.enabled.remove(kind) }
+                raw = next.rawValue
+                Task {
+                    if on, await !MapHomeAlarmCenter.shared.isAuthorized() {
+                        isAuthorized = await MapHomeAlarmCenter.shared.requestAuthorization()
+                    }
+                    await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - 하루 카드
+
+/// 인스타그램에 올리기 좋은 1080×1080 하루 요약 카드의 데이터.
+struct MapHomeDailyCardData: Equatable {
+    var dateText: String
+    var weekdayText: String
+    var earnedText: String?
+    var workText: String?
+    var steps: Int?
+    var distanceText: String?
+    var categories: [MapHomeDaySummaryEntry]
+    var totalText: String
+    var accessoryID: String?
+}
+
+/// 540×540pt로 그려 2배로 렌더링하면 1080×1080이 된다.
+struct MapHomeDailyCardView: View {
+    static let side: CGFloat = 540
+    let data: MapHomeDailyCardData
+    let language: MapHomeLanguage
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Color.tpBackground, Color.tpSurface], startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(data.dateText).font(.system(size: 34, weight: .bold, design: .rounded))
+                        Text(data.weekdayText).font(.system(size: 18, weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+                    }
+                    Spacer()
+                    MapHomeStickmanMarker(action: .activity, equippedAccessoryID: data.accessoryID)
+                        .frame(width: 96, height: 96)
+                }
+                HStack(spacing: 12) {
+                    if let earned = data.earnedText {
+                        stat(language.text("오늘 번 돈", "Earned"), earned, "wonsign.circle.fill")
+                    }
+                    if let work = data.workText {
+                        stat(language.text("근무", "Work"), work, "briefcase.fill")
+                    }
+                    if let steps = data.steps {
+                        stat(language.text("걸음", "Steps"), steps.formatted(.number.grouping(.automatic)), "figure.walk")
+                    }
+                    if let distance = data.distanceText {
+                        stat(language.text("이동", "Travel"), distance, "point.topleft.down.to.point.bottomright.curvepath")
+                    }
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(data.totalText).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+                    ForEach(data.categories.prefix(5)) { entry in
+                        HStack(spacing: 10) {
+                            Image(systemName: entry.systemImage).foregroundStyle(entry.tint).frame(width: 22)
+                            Text(entry.title).font(.system(size: 16, weight: .semibold, design: .rounded)).frame(width: 90, alignment: .leading)
+                            GeometryReader { proxy in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.tpLine.opacity(0.5))
+                                    Capsule().fill(entry.tint).frame(width: max(6, proxy.size.width * entry.ratio))
+                                }
+                            }
+                            .frame(height: 12)
+                            Text("\(Int((entry.ratio * 100).rounded()))%").font(.system(size: 15, weight: .bold, design: .rounded)).monospacedDigit().frame(width: 46, alignment: .trailing)
+                        }
+                    }
+                }
+                Spacer(minLength: 0)
+                HStack {
+                    Text("BOKKI Plan").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(Color.tpAccent)
+                    Spacer()
+                    Text(language.text("자동 기록으로 만든 하루", "A day from automatic records"))
+                        .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.tpSecondary)
+                }
+            }
+            .padding(36)
+            .foregroundStyle(Color.tpInk)
+        }
+        .frame(width: Self.side, height: Self.side)
+    }
+
+    private func stat(_ title: String, _ value: String, _ symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(title, systemImage: symbol).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+            Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// 카드 미리보기와 저장·공유.
+struct MapHomeDailyCardSheet: View {
+    let data: MapHomeDailyCardData
+    let language: MapHomeLanguage
+    @State private var image: UIImage?
+    @State private var shareURL: URL?
+    @State private var message: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                Text(language.text("하루 카드", "Day card"))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                } else {
+                    ProgressView().frame(height: 300)
+                }
+                HStack(spacing: 12) {
+                    Button { Task { await save() } } label: {
+                        Label(language.text("사진에 저장", "Save to Photos"), systemImage: "square.and.arrow.down")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    Button { share() } label: {
+                        Label(language.text("공유", "Share"), systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.tpAccent)
+                }
+                .disabled(image == nil)
+                if let message {
+                    Text(message).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.tpAccent)
+                }
+                Text(language.text("1080×1080 · 인스타그램 피드 크기", "1080×1080 · Instagram feed size"))
+                    .font(.system(size: 12)).foregroundStyle(Color.tpSecondary)
+            }
+            .padding(22)
+        }
+        .background(Color.tpBackground)
+        .task(id: data) { image = Self.render(data: data, language: language) }
+        .sheet(item: $shareURL) { url in MapHomeShareSheet(url: url) }
+    }
+
+    @MainActor
+    static func render(data: MapHomeDailyCardData, language: MapHomeLanguage) -> UIImage? {
+        let renderer = ImageRenderer(content: MapHomeDailyCardView(data: data, language: language))
+        renderer.scale = 2
+        renderer.proposedSize = ProposedViewSize(width: MapHomeDailyCardView.side, height: MapHomeDailyCardView.side)
+        return renderer.uiImage
+    }
+
+    private func save() async {
+        guard let image else { return }
+        guard await MapHomeScreenRecordingStore.requestPhotoAddAccess() else {
+            message = language.text("사진 저장 권한이 없어요. 설정에서 허용해 주세요.", "Photo access is needed to save.")
+            return
+        }
+        let ok: Bool = await withCheckedContinuation { continuation in
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            }, completionHandler: { success, _ in continuation.resume(returning: success) })
+        }
+        message = ok ? language.text("사진 앱에 저장했어요.", "Saved to Photos.") : language.text("저장하지 못했어요.", "Could not save.")
+    }
+
+    private func share() {
+        guard let image, let png = image.pngData() else { return }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("BOKKI-Plan-\(data.dateText.filter(\.isNumber)).png")
+        try? png.write(to: url)
+        shareURL = url
+    }
+}
+
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
 }

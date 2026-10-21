@@ -12463,6 +12463,15 @@ enum MapHomeLanguage: String, CaseIterable, Identifiable {
     case korean
     case english
 
+    /// 저장된 앱 언어 설정을 따른다(화면 밖 알림·카드 생성에서도 같은 언어를 쓴다).
+    static var current: MapHomeLanguage {
+        let raw = UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)?.string(forKey: AppLanguagePreference.sharedDefaultsKey)
+        switch AppLanguagePreference.resolve(rawValue: raw) {
+        case .korean: return .korean
+        case .english: return .english
+        }
+    }
+
     var id: String { rawValue }
 
     var displayName: String {
