@@ -399,6 +399,7 @@ struct MapHomeCalendarSheet: View {
             let value = await timeTotals(month)
             guard !Task.isCancelled, month == displayedMonth else { return }
             totals = value
+            TaptionPlanDiagnosticsLogger.shared.record("calendar_totals_set", metrics: ["days": Double(value.count), "statuses": Double(monthStatuses.count)])
         }
         // 이번 달을 보고 있으면 걸음 수·이동 거리처럼 GPS로 빨리 바뀌는 값은 새 센서 기록이 들어올 때마다(약 1초 안에) 다시 읽는다.
         .task(id: "\(displayedMonth.timeIntervalSince1970)|\(liveToken)") {
