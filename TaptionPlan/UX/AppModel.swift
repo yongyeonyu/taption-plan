@@ -3520,6 +3520,37 @@ final class AppModel {
         Task { await persistDeviceLocalSnapshot() }
     }
 
+    /// 알람 확인으로 실제 기록을 남긴다. 시작(출근·등교·기상)은 열린 기록을 만들고, 끝(퇴근·하교)은 같은 종류의 열린 기록을 닫는다.
+    func confirmAlarmRecord(categoryID: String, title: String, at date: Date, opens: Bool) {
+        if opens {
+            snapshot.actuals.append(ActualRecord(
+                id: UUID(),
+                planID: nil,
+                routineID: nil,
+                title: title,
+                categoryID: categoryID,
+                startedAt: date,
+                endedAt: nil,
+                source: .manual,
+                confidence: .high,
+                createdAt: .now,
+                behavior: nil,
+                evidence: ["알람 확인"],
+                modelVersion: nil
+            ))
+        } else if let index = snapshot.actuals.indices
+            .filter({ snapshot.actuals[$0].categoryID == categoryID && snapshot.actuals[$0].endedAt == nil })
+            .max(by: { snapshot.actuals[$0].startedAt < snapshot.actuals[$1].startedAt }),
+                  date >= snapshot.actuals[index].startedAt {
+            snapshot.actuals[index].endedAt = date
+            snapshot.actuals[index].manuallyCorrected = true
+        } else {
+            return
+        }
+        snapshot.actuals.sort { $0.startedAt < $1.startedAt }
+        Task { await persistDeviceLocalSnapshot() }
+    }
+
     private func scheduleForegroundRefresh() {
         guard foregroundRefreshTask == nil else { return }
         foregroundRefreshTask = Task { @MainActor [weak self] in
@@ -7570,6 +7601,8 @@ final class AppModel {
     }
 
     private func applyWatchCommand(_ command: TaptionWatchCommand) async {
+        // 애플워치 연동을 해제했으면 워치에서 온 명령을 받지 않는다.
+        guard !UserDefaults.standard.bool(forKey: "appleWatchLinkDisabled") else { return }
         guard !TaptionExternalPrivacyStore.isLocked,
               acceptsDataMutation(capturedAt: command.requestedAt) else {
             return

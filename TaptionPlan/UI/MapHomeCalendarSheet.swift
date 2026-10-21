@@ -1802,6 +1802,7 @@ final class MapHomeAlarmCenter {
     static let dailyCardIdentifier = "taption-alarm-dailyCard"
     static let userInfoKind = "taptionAlarm"
     static let userInfoDay = "taptionAlarmDay"
+    static let userInfoAt = "taptionAlarmAt"
 
     private var delivered: [String: Double] = {
         (UserDefaults.standard.dictionary(forKey: MapHomeAlarmCenter.deliveredKey) as? [String: Double]) ?? [:]
@@ -1898,7 +1899,7 @@ final class MapHomeAlarmCenter {
         content.title = event.kind.title(language)
         content.body = event.body
         content.sound = .default
-        content.userInfo = [Self.userInfoKind: event.kind.rawValue]
+        content.userInfo = [Self.userInfoKind: event.kind.rawValue, Self.userInfoAt: event.date.timeIntervalSince1970]
         do {
             try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "taption-alarm-\(event.key)", content: content, trigger: nil))
         } catch {
@@ -2222,4 +2223,64 @@ struct MapHomeDailyCardSheet: View {
 
 extension URL: @retroactive Identifiable {
     public var id: String { absoluteString }
+}
+
+
+/// 알람을 눌렀을 때 뜨는 확인 화면. 시간은 지금으로 채워져 있고 고칠 수 있다. 확인하면 실제 기록이 남는다.
+struct MapHomeAlarmConfirmSheet: View {
+    let kind: MapHomeAlarmKind
+    let initialDate: Date
+    let language: MapHomeLanguage
+    let onConfirm: (Date) -> Void
+    let onCancel: () -> Void
+    @State private var at: Date
+
+    init(kind: MapHomeAlarmKind, initialDate: Date, language: MapHomeLanguage, onConfirm: @escaping (Date) -> Void, onCancel: @escaping () -> Void) {
+        self.kind = kind
+        self.initialDate = initialDate
+        self.language = language
+        self.onConfirm = onConfirm
+        self.onCancel = onCancel
+        _at = State(initialValue: initialDate)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(kind.title(language))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+            Text(language.text("시간을 확인하고 고쳐 주세요. 확인을 누르면 그 시각부터 기록돼요.", "Check the time and edit if needed. Recording starts from this time."))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+            DatePicker("", selection: $at, displayedComponents: [.date, .hourAndMinute])
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+            HStack(spacing: 12) {
+                Button(language.text("취소", "Cancel"), action: onCancel)
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                Button(language.text("확인", "Confirm")) { onConfirm(at) }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.tpAccent)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(22)
+        .background(Color.tpBackground)
+    }
+}
+
+/// 알람 종류를 실제 기록 종류로 바꾼다. 집 도착·외출은 기록하지 않는다.
+enum MapHomeAlarmRecordMapping {
+    /// (기록 종류, 제목, 시작인지)
+    static func entry(for kind: MapHomeAlarmKind, language: MapHomeLanguage) -> (categoryID: String, title: String, opens: Bool)? {
+        switch kind {
+        case .arriveCompany: ("work", language.text("업무", "Work"), true)
+        case .leaveCompany: ("work", language.text("업무", "Work"), false)
+        case .arriveSchool, .arriveAcademy: ("study", language.text("수업", "Class"), true)
+        case .leaveSchool, .leaveAcademy: ("study", language.text("수업", "Class"), false)
+        case .wakeUp: ("sleep", language.text("수면", "Sleep"), false)
+        default: nil
+        }
+    }
 }

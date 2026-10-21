@@ -2325,6 +2325,8 @@ struct MapHomeView: View {
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
+    @State private var pendingAlarm: (kind: MapHomeAlarmKind, at: Date)?
+    @AppStorage("appleWatchLinkDisabled") private var isAppleWatchLinkDisabled = false
     @State private var isDailyCardPresented = false
     /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
     @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
@@ -3021,6 +3023,30 @@ struct MapHomeView: View {
             }
         ) {
             searchPinSheet
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .taptionPlanAlarmTapped)) { note in
+            guard let raw = note.userInfo?["kind"] as? String, let kind = MapHomeAlarmKind(rawValue: raw) else { return }
+            // 시간은 지금으로 채운다(알람을 보낸 시각이 아니라, 실제로 확인하는 시각).
+            pendingAlarm = (kind, .now)
+        }
+        .sheet(item: Binding(
+            get: { pendingAlarm.map { AlarmConfirmItem(kind: $0.kind, at: $0.at) } },
+            set: { if $0 == nil { pendingAlarm = nil } }
+        )) { item in
+            MapHomeAlarmConfirmSheet(
+                kind: item.kind,
+                initialDate: item.at,
+                language: language,
+                onConfirm: { date in
+                    if let entry = MapHomeAlarmRecordMapping.entry(for: item.kind, language: language) {
+                        model.confirmAlarmRecord(categoryID: entry.categoryID, title: entry.title, at: date, opens: entry.opens)
+                    }
+                    pendingAlarm = nil
+                },
+                onCancel: { pendingAlarm = nil }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isAlarmSettingsPresented) {
             MapHomeAlarmSettingsSheet(language: language)
@@ -8696,6 +8722,12 @@ struct MapHomeView: View {
             }
             .buttonStyle(.plain)
             if isAppleWatchMenuExpanded {
+                Toggle(isOn: $isAppleWatchLinkDisabled) {
+                    Text(language.text("Apple Watch 연동 해제", "Disconnect Apple Watch"))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpHoliday)
+                .padding(.horizontal, 12)
                 Button(language.text("지금 가져오기", "Import now")) {
                     if model.settings.healthEnabled {
                         model.requestWatchDataSync(source: "map_watch_card")
@@ -20473,4 +20505,11 @@ private extension TravelMode {
         case .ship: "Ferry"
         }
     }
+}
+
+
+private struct AlarmConfirmItem: Identifiable {
+    let kind: MapHomeAlarmKind
+    let at: Date
+    var id: String { "\(kind.rawValue)-\(at.timeIntervalSince1970)" }
 }

@@ -278,6 +278,15 @@ final class TaptionPlanAppDelegate:
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        if let kind = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoKind] as? String {
+            let at = response.notification.request.content.userInfo[MapHomeAlarmCenter.userInfoAt] as? Double ?? Date.now.timeIntervalSince1970
+            NotificationCenter.default.post(
+                name: .taptionPlanAlarmTapped,
+                object: nil,
+                userInfo: ["kind": kind, "at": at]
+            )
+            return
+        }
         guard let rawID = response.notification.request.content
             .userInfo["planID"] as? String,
               let planID = UUID(uuidString: rawID) else {
@@ -308,4 +317,5 @@ extension Notification.Name {
     static let taptionPlanOpenNotificationPlan = Notification.Name(
         "TaptionPlanOpenNotificationPlan"
     )
+    static let taptionPlanAlarmTapped = Notification.Name("TaptionPlanAlarmTapped")
 }
