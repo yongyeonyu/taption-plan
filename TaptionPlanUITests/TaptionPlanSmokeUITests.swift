@@ -27,4 +27,18 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// 하단 '달력'을 열어 화면을 남긴다(데이터는 바꾸지 않는다). 달력 숫자가 0으로 나오는지 눈으로 보기 위함.
+    func testOpenCalendarAndCaptureForDiagnosis() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let calendar = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "달력")).firstMatch
+        XCTAssertTrue(calendar.waitForExistence(timeout: 20))
+        calendar.tap()
+        sleep(40)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "calendar-open"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

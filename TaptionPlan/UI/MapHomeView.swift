@@ -6600,6 +6600,10 @@ struct MapHomeView: View {
                 }
             }
         }
+        // 월 기록 목록이 비어 있으면(지도에는 보이는 날도) 날짜별 기록에서 다시 센다. 지도와 같은 출처를 쓴다.
+        if result.isEmpty {
+            result = await dayFallbackTotals(month: month)
+        }
         if includePhotos, enabled.contains(.photos) {
             let library = photoLibrary
             let counts = await Task.detached(priority: .utility) {
@@ -6765,6 +6769,31 @@ struct MapHomeView: View {
         .padding(.vertical, 5)
         .mapHomeGlass(in: Capsule())
         .animation(.snappy, value: seconds)
+    }
+
+    /// 날짜별 기록(지도가 쓰는 출처)으로 한 달 합계를 만든다. 오늘까지의 날짜만 본다.
+    private func dayFallbackTotals(month: Date) async -> [Date: [String: TimeInterval]] {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let days = calendar.range(of: .day, in: .month, for: first) else { return [:] }
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces)
+        var result: [Date: [String: TimeInterval]] = [:]
+        var loaded = 0, missing = 0, withRecords = 0
+        for offset in 0..<days.count {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: first), day <= .now else { continue }
+            guard let data = await model.cachedPlanDayDataSnapshot(for: day) else { missing += 1; continue }
+            loaded += 1
+            let totals = MapHomeCalendarTimeTotalsPolicy.totals(
+                actuals: data.actuals, travel: data.travel, stays: data.places,
+                placeKinds: placeKinds, month: day, asOf: .now, calendar: calendar
+            )
+            if let values = totals[day] { result[day] = values; withRecords += 1 }
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "calendar_day_fallback",
+            metrics: ["loaded": Double(loaded), "missing": Double(missing), "with_records": Double(withRecords)]
+        )
+        return result
     }
 
     /// 녹화 메뉴를 열기 전에 사진 저장 권한과 화면 기록 허용을 먼저 받는다.
