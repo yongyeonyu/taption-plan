@@ -2295,3 +2295,8 @@
 
 ## CRD1022I01 · 알림 탭 카드 열기 (2026-10-22)
 - Debug 빌드 성공. 실제 알림을 눌러 카드가 열리는지는 기기 확인 필요.
+
+## REL1022J01 · Build 216 TestFlight (2026-10-22)
+- CURRENT_PROJECT_VERSION 216(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022J01/). IPA 앱·위젯 CFBundleVersion 216 확인.
+- ASC 216 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 216, 테스터 1명.
+- 한계: 하루 카드 알림 시각·알림 탭 열기, 메모 집계, 식사 집계는 기기에서 대표 확인 필요.
