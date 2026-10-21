@@ -5964,9 +5964,8 @@ struct MapHomeView: View {
 
         return items
             .background {
-                // 하단 메뉴는 리퀴드 글래스: 지도가 비치면서도 아이콘과 글자가 읽힌다.
-                Color.clear
-                    .mapHomeGlass(in: Rectangle())
+                // 하단 메뉴는 디밍 없이 불투명하게 둔다(지도가 비치지 않게).
+                Color.tpSurface
                     .ignoresSafeArea(edges: .bottom)
             }
     }
