@@ -3027,6 +3027,10 @@ struct MapHomeView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .taptionPlanAlarmTapped)) { note in
             guard let raw = note.userInfo?["kind"] as? String, let kind = MapHomeAlarmKind(rawValue: raw) else { return }
+            if kind == .dailyCard {
+                openDailyCardFromAlarm(fireDate: note.userInfo?["fire"] as? Date ?? .now)
+                return
+            }
             // 시간은 지금으로 채운다(알람을 보낸 시각이 아니라, 실제로 확인하는 시각).
             pendingAlarm = (kind, .now)
         }
@@ -5769,6 +5773,16 @@ struct MapHomeView: View {
         guard let encoded = try? JSONEncoder().encode(history),
               encoded != homeGrowthData else { return }
         homeGrowthData = encoded
+    }
+
+    /// 하루 카드 알림을 누르면 그 카드를 연다. 오전(12시 전) 알림은 전날, 그 밖의 시각은 알림이 온 날을 보여 준다(자정 전이면 나머지는 미확인).
+    private func openDailyCardFromAlarm(fireDate: Date) {
+        let calendar = Calendar.autoupdatingCurrent
+        let hour = calendar.component(.hour, from: fireDate)
+        let day = calendar.startOfDay(for: fireDate)
+        let target = hour < 12 ? (calendar.date(byAdding: .day, value: -1, to: day) ?? day) : day
+        model.selectedDate = target
+        isDailyCardPresented = true
     }
 
     /// 알람 확인 시트에 넘길 항목(알람을 누르면 채워지고, 닫으면 비워진다).
