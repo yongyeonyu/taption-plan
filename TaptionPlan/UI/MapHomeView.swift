@@ -2896,7 +2896,6 @@ struct MapHomeView: View {
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
                 )
             )
-            .presentationDetents([.fraction(0.66), .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isCalendarPresented) {
@@ -19022,6 +19021,8 @@ struct MapHomeDaySummarySheet: View {
     let language: MapHomeLanguage
     var growthCard: MapHomeGrowthCardInfo? = nil
     @State private var isGrowthPresented = false
+    @State private var contentHeight: CGFloat = 0
+    private static let bottomPadding: CGFloat = 40
 
     private var totalSeconds: TimeInterval {
         categories.reduce(0) { $0 + $1.seconds }
@@ -19065,9 +19066,13 @@ struct MapHomeDaySummarySheet: View {
         ScrollView(showsIndicators: false) {
             summaryContent
                 .padding(22)
+                .padding(.bottom, Self.bottomPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
         }
         .background(Color.tpBackground)
+        // 내용이 늘어도 아래 여백까지 한 화면에 보이도록 시트 높이를 내용에 맞춘다(넘치면 스크롤·큰 시트).
+        .presentationDetents(contentHeight > 0 ? [.height(contentHeight + 16), .large] : [.fraction(0.8), .large])
         .sheet(isPresented: $isGrowthPresented) {
             MapHomeGrowthSheet(
                 growthData: $growthData,
