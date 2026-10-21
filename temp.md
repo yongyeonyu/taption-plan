@@ -1269,3 +1269,4 @@
 - 조치: 월 목록이 비면 날짜별 기록(cachedPlanDayDataSnapshot)으로 한 달을 다시 세는 대체 경로 추가, 진단 이벤트 `calendar_day_fallback`(loaded/missing/with_records) 기록.
 - 미해결: 대체 경로 후에도 0. 아이폰18 진단 패키지에 이번 실행 로그가 아직 없음(패키지는 기존 10/20 것만 있음). 로그를 내보낼 방법 확인 필요.
 - 검증: UI 테스트(testOpenCalendarAndCaptureForDiagnosis) 실행 성공, 캡처상 값 여전히 없음.
+- 진행: 진단 로그 위치 확인. 앱 실사용 로그는 앱 그룹 컨테이너(group.com.taption.plan)에 있어 devicectl로 읽을 수 없음(ERROR 3). 앱 샌드박스의 Packages는 10/20까지 것뿐. 새 로그를 얻으려면 앱에서 진단 패키지를 내보내는 기능을 쓰거나, 로그를 앱 샌드박스로 복사하는 코드가 필요.
