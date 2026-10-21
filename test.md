@@ -2284,3 +2284,8 @@
 ## SLP1022C01 · 빠른 기상 확정 (2026-10-22)
 - 아이폰11 단위 테스트: 수면·기상 관련 14개 통과(신규 testPhoneSleepWakeConfirmsFastWhenScreenIsOnAndStepsRise 포함, build/validation/SLP1022C01/test2.log).
 - 한계: 실제 기상 알림이 빨라졌는지는 기기 미확인. 약한 신호는 여전히 1시간 확정. 가속도 임계값·야간 가산 같은 추가 보정은 하지 않음.
+
+## REL1022D01 · Build 215 TestFlight (2026-10-22)
+- CURRENT_PROJECT_VERSION 215(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022D01/). IPA 앱·위젯 CFBundleVersion 215 확인.
+- ASC 215 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 빌드 목록 최상단 215, 테스터 1명.
+- 한계: 빠른 기상 확정·알람 확인·UI 변경은 기기에서 대표 확인 필요. 210~214는 개발 설치용(TestFlight 미업로드).
