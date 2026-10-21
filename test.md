@@ -2277,3 +2277,6 @@
 ## CAL1021G06 · 달력 멈춤 수정 (2026-10-22)
 - 로그로 원인 확정(calendar_stage에서 policy_done 뒤 steps_done 없음 + 크래시 로그 dispatch_assert_queue_fail in todayPedometerSteps). 수정 후 아이폰18 UI 테스트 통과, 캡처에서 달력 점 표시(20일 초록, 21·22일 빨강). build/validation/CAL1021G05/att2.
 - 한계: 지표 값(시간·걸음 합계)은 지표를 눌러 확인하는 화면까지 아직 캡처하지 않음.
+
+## CAL1021G 종결 · 달력 0 문제 (2026-10-22)
+- 대표 확인: 아이폰18 달력에서 10월 20·21일 값이 나옴(빌드 214). 원인은 오늘 걸음 읽기(todayPedometerSteps)의 응답 대기 중단·콜백 격리 충돌, 수정은 CAL1021G06. 임시 진단 이벤트(calendar_stage/load/totals_set)는 제거, calendar_day_fallback 대체 경로는 유지.

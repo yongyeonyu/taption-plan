@@ -6576,7 +6576,6 @@ struct MapHomeView: View {
         let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
             model.snapshot.settings.frequentPlaces
         )
-        TaptionPlanDiagnosticsLogger.shared.record("calendar_stage", fields: ["stage": "policy_start", "photos": String(includePhotos)])
         var result = await Task.detached(priority: .utility) {
             MapHomeCalendarTimeTotalsPolicy.totals(
                 actuals: actuals,
@@ -6592,7 +6591,6 @@ struct MapHomeView: View {
         let enabled = MapHomeCalendarTimeKind.enabledExtras(
             from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
         )
-        TaptionPlanDiagnosticsLogger.shared.record("calendar_stage", fields: ["stage": "policy_done", "steps": String(enabled.contains(.steps))])
         if enabled.contains(.steps) || enabled.contains(.stepDistance) {
             let stride = MapHomeStride.current
             for (day, steps) in await model.calendarDailyStepCounts(month: month) {
@@ -6603,13 +6601,10 @@ struct MapHomeView: View {
             }
         }
         // 월 기록 목록이 비어 있으면(지도에는 보이는 날도) 날짜별 기록에서 다시 센다. 지도와 같은 출처를 쓴다.
-        TaptionPlanDiagnosticsLogger.shared.record("calendar_stage", fields: ["stage": "before_fallback", "count": String(result.count)])
         if result.isEmpty {
             result = await dayFallbackTotals(month: month)
         }
-        TaptionPlanDiagnosticsLogger.shared.record("calendar_stage", fields: ["stage": "steps_done"])
         if includePhotos, enabled.contains(.photos) {
-            TaptionPlanDiagnosticsLogger.shared.record("calendar_stage", fields: ["stage": "photos_start"])
             let library = photoLibrary
             let counts = await Task.detached(priority: .utility) {
                 MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: library.moments(in:), calendar: MapHomeGrowthPolicy.localCalendar)
