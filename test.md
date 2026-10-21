@@ -2162,3 +2162,8 @@
 
 ## PIN1021K01 — 위치 고르기 핀·버튼 (2026-10-21)
 - 변경: 취소·"이 위치로" 버튼을 핀 바로 아래로, 핀은 물방울 모양으로 새로 그림. Debug 빌드·아이폰11 설치 성공. 위치 고르기 화면은 직접 보지 못했고 대표 확인 대기. 단위 테스트 없음(UI).
+
+## REL1021I01 · Build 205 TestFlight (2026-10-21)
+- main 9e27398 푸시 후 CURRENT_PROJECT_VERSION 205(8곳)·Info.plist 4개 변경. Release 아카이브·내보내기·altool 업로드 성공(로그 build/validation/REL1021I01/).
+- IPA 번들 앱·위젯 CFBundleVersion 205 확인. ASC 205 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 빌드 목록 최상단 205, 테스터 1명.
+- 한계: 기기 화면 확인은 대표 몫. 날짜 배지 스와이프 동작 불량 보고(대표) — 후속 요청에서 처리.
