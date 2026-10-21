@@ -2326,7 +2326,7 @@ struct MapHomeView: View {
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
     @State private var pendingAlarm: (kind: MapHomeAlarmKind, at: Date)?
-    @AppStorage("appleWatchLinkDisabled") private var isAppleWatchLinkDisabled = false
+    @AppStorage("appleWatchLinkEnabled") private var isAppleWatchLinkEnabled = true
     @State private var isDailyCardPresented = false
     /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
     @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
@@ -8722,11 +8722,11 @@ struct MapHomeView: View {
             }
             .buttonStyle(.plain)
             if isAppleWatchMenuExpanded {
-                Toggle(isOn: $isAppleWatchLinkDisabled) {
-                    Text(language.text("Apple Watch 연동 해제", "Disconnect Apple Watch"))
+                Toggle(isOn: $isAppleWatchLinkEnabled) {
+                    Text(language.text("Apple Watch 연동", "Apple Watch link"))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                 }
-                .tint(Color.tpHoliday)
+                .tint(Color.tpAccent)
                 .padding(.horizontal, 12)
                 Button(language.text("지금 가져오기", "Import now")) {
                     if model.settings.healthEnabled {
