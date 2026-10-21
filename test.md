@@ -2240,3 +2240,7 @@
 - CURRENT_PROJECT_VERSION 208·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1021Q01/). IPA 앱·위젯 208 확인.
 - ASC 208 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204), 그룹 목록 최상단 208, 테스터 1명.
 - 한계: 연봉 카운터·오늘 걸음 실시간은 기기 미확인.
+
+## INS1021V01 · 아이폰18 무선 설치(208 코드, Debug) (2026-10-21)
+- 대표 요청으로 TestFlight 대신 devicectl 무선 설치. CFBundleVersion 208, 설치·실행 성공, 실행 화면 캡처(build/validation/INS1021V01/launch.png): 저장 오류 알림 없이 기존 기록(경로·날씨·메모·집 Lv.366) 표시.
+- 한계: TestFlight 설치본을 개발 서명 빌드로 덮어씀(데이터 유지). 이후 TestFlight 업데이트로 다시 바꿀 수 있음. 연봉 카운터·걸음 실시간은 미확인.
