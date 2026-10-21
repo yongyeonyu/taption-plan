@@ -363,6 +363,20 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled, month == displayedMonth else { return }
             totals = value
         }
+        // 이번 달을 보고 있으면 걸음·기록 시간 같은 값을 30초마다 다시 읽어 달력에 바로 반영한다(깜빡임 없이 값만 교체).
+        .task(id: displayedMonth) {
+            let calendar = MapHomeGrowthPolicy.localCalendar
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled, calendar.isDate(displayedMonth, equalTo: .now, toGranularity: .month) else { continue }
+                let month = displayedMonth
+                let monthStatuses = await logStatuses(month)
+                let value = await timeTotals(month)
+                guard !Task.isCancelled, month == displayedMonth else { return }
+                statuses = monthStatuses
+                totals = value
+            }
+        }
     }
 
     private func cellValueText(_ kind: MapHomeCalendarTimeKind, on date: Date) -> String {
