@@ -41,4 +41,26 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// 메뉴의 '로그 업로드'를 눌러 진단 로그를 iCloud Drive에 내보낸다(데이터는 바꾸지 않는다).
+    func testUploadDiagnosticsLogs() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        menu.tap()
+        let upload = app.buttons["로그 업로드"].firstMatch
+        var tries = 0
+        while !upload.exists && tries < 8 {
+            app.swipeUp()
+            tries += 1
+        }
+        XCTAssertTrue(upload.waitForExistence(timeout: 5))
+        upload.tap()
+        sleep(30)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "after-log-upload"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }
