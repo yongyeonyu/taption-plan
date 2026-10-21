@@ -9926,6 +9926,14 @@ final class AppModel {
                 "health_enabled": String(settings.healthEnabled),
                 "home_point": String(homePoint != nil),
                 "large_gaps": String(largeGapCount),
+                "max_gap_seconds": String(Int(zip(ordered, ordered.dropFirst()).map {
+                    $1.timestamp.timeIntervalSince($0.timestamp)
+                }.max() ?? 0)),
+                "stationary": String(ordered.filter { $0.motion == .stationary }.count),
+                "screen_off": String(ordered.filter { $0.screenIsOn == false }.count),
+                "stationary_dark": String(ordered.filter {
+                    $0.motion == .stationary && $0.screenIsOn == false
+                }.count),
                 "last": String(evidenceSpan.end.timeIntervalSince1970),
                 "readings": String(readings.count),
                 "records": String(records.count),

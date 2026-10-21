@@ -3291,9 +3291,6 @@ struct MapHomeView: View {
             persistMapDayCache()
         }
         .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
-        .onChange(of: autoLandStyleEnabled) { _, enabled in
-            if !enabled { applyAutoLandStyle(near: false) }
-        }
         .onChange(of: model.selectedDate) { oldDate, newDate in
             let calendar = Calendar.autoupdatingCurrent
             let dayChanged = !calendar.isDate(oldDate, inSameDayAs: newDate)
@@ -8502,17 +8499,6 @@ struct MapHomeView: View {
                 .accessibilityLabel(
                     language.text("지도 스타일 선택", "Choose map style")
                 )
-
-                Toggle(isOn: $autoLandStyleEnabled) {
-                    Label(
-                        language.text("땅 보기 자동 전환", "Auto-switch for land"),
-                        systemImage: "square.grid.3x3.square"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpReferenceBlue)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
 
                 Picker(
                     selection: Binding(
