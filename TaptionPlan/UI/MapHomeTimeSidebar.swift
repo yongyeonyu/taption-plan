@@ -2406,6 +2406,8 @@ struct MapHomeWeatherSidebar: View {
                         )
                         .background {
                             if isPastSpan {
+                                // 지난 칸은 배경을 검정 20%로 디밍한다.
+                                Capsule().fill(Color.black.opacity(0.2))
                                 Capsule().fill(
                                     MapHomeWeatherDisplayPolicy
                                         .pillBackgroundStyle(for: entry.context).color
