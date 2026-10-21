@@ -5838,9 +5838,9 @@ struct MapHomeView: View {
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
                 requestAndFollowUserLocation(using: nil)
             }
-            // 하단 가운데 집 버튼: 지도에서 집 아이콘을 누른 것과 같다(하루 요약·집 성장 시트).
+            // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
             bottomBarButton("house.fill", language.text("집", "Home")) {
-                isDaySummaryPresented = true
+                focusMapOnHome()
             }
             bottomBarButton(
                 isDayPlaybackRunning ? "pause.fill" : "play.fill",
@@ -11230,6 +11230,20 @@ struct MapHomeView: View {
         isMapCenteredOnUser = false
         hasUserAdjustedMap = true
         setMapPosition(.region(region))
+    }
+
+    /// 집 위치로 카메라를 옮긴다. 땅 한 칸이 보이는 거리(집 주변 땅 타일의 최소 표시 크기 이상)로 확대한다.
+    private func focusMapOnHome() {
+        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else { return }
+        hasUserAdjustedMap = true
+        setMapPosition(.camera(
+            MapCamera(
+                centerCoordinate: CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude),
+                distance: 100,
+                heading: 0,
+                pitch: 0
+            )
+        ))
     }
 
     private func focusMapOnAllRoutes() {

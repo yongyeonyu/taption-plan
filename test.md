@@ -2181,3 +2181,7 @@
 - CURRENT_PROJECT_VERSION 206(8곳)·Info.plist 4개. Release 아카이브·내보내기·altool 업로드 성공(로그 build/validation/REL1021N01/).
 - IPA 앱·위젯 CFBundleVersion 206 확인. ASC 206 VALID, "TP Taption Plan 내부 테스트" 그룹 연결, 그룹 빌드 목록 최상단 206, 테스터 1명.
 - 한계: 기기 동작(날짜 배지 탭)은 대표 확인 필요.
+
+## HOM1021O01 · 집 버튼 지도 포커스 (2026-10-21)
+- 구현: `focusMapOnHome()`(집 좌표, 거리 100m). Debug 빌드(generic iOS) 성공.
+- 한계: 기기 미설치·미확인(아이폰11은 재설치로 집 장소 미등록). 거리 100m에서 타일 한 칸이 14pt 이상인지는 실기기 확인 필요. 집 버튼으로는 더 이상 요약 시트가 열리지 않음.
