@@ -45,7 +45,9 @@ enum MapHomeCalendarLogStatusPolicy {
 
 /// 달력 하단 메뉴의 시간 종류. `rawValue`는 대분류 canonical 분류 ID와 같다(`DayPhase`).
 enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
-    case sleep, movement, study, work, exercise, hobby, distance
+    case sleep, movement, study, work, exercise, hobby, distance, places, trips
+    // 사용자가 "+"로 골라 쓰는 추가 지표
+    case steps, photos, walkDistance, carDistance, transitDistance, awayTime
 
     var id: String { rawValue }
 
@@ -58,6 +60,14 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .exercise: language.text("운동시간", "Exercise")
         case .hobby: language.text("취미시간", "Hobby")
         case .distance: language.text("이동거리", "Distance")
+        case .places: language.text("방문 장소", "Places")
+        case .trips: language.text("이동 횟수", "Trips")
+        case .steps: language.text("걸음 수", "Steps")
+        case .photos: language.text("사진 수", "Photos")
+        case .walkDistance: language.text("걷기 거리", "Walking")
+        case .carDistance: language.text("운전 거리", "Driving")
+        case .transitDistance: language.text("대중교통 거리", "Transit")
+        case .awayTime: language.text("외출 시간", "Time away")
         }
     }
 
@@ -70,11 +80,43 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
         case .exercise: "dumbbell.fill"
         case .hobby: "paintpalette.fill"
         case .distance: "point.topleft.down.to.point.bottomright.curvepath"
+        case .places: "mappin.and.ellipse"
+        case .trips: "arrow.left.arrow.right"
+        case .steps: "figure.walk"
+        case .photos: "photo.fill"
+        case .walkDistance: "figure.walk.circle"
+        case .carDistance: "car.fill"
+        case .transitDistance: "tram.fill"
+        case .awayTime: "door.left.hand.open"
         }
     }
 
     /// 시간 합계는 초, 이동거리는 미터로 같은 딕셔너리에 담는다.
-    var isDistance: Bool { self == .distance }
+    var isDistance: Bool {
+        self == .distance || self == .walkDistance || self == .carDistance || self == .transitDistance
+    }
+
+    /// 방문 장소 수·이동 횟수·걸음 수·사진 수는 개수를 같은 딕셔너리에 담는다.
+    var isCount: Bool { self == .places || self == .trips || self == .steps || self == .photos }
+
+    /// 기본으로 늘 보이는 지표와, 사용자가 "+"로 더하는 지표.
+    static let coreKinds: [MapHomeCalendarTimeKind] = [.sleep, .movement, .study, .work, .exercise, .hobby, .distance, .places, .trips]
+    static let extraKinds: [MapHomeCalendarTimeKind] = [.steps, .photos, .walkDistance, .carDistance, .transitDistance, .awayTime]
+    static let extraStorageKey = "mapHomeCalendarExtraKinds"
+
+    static func enabledExtras(from raw: String) -> [MapHomeCalendarTimeKind] {
+        let enabled = Set(raw.split(separator: ",").map(String.init))
+        return extraKinds.filter { enabled.contains($0.rawValue) }
+    }
+
+    static func raw(toggling kind: MapHomeCalendarTimeKind, in raw: String) -> String {
+        var enabled = Set(raw.split(separator: ",").map(String.init))
+        if enabled.contains(kind.rawValue) { enabled.remove(kind.rawValue) } else { enabled.insert(kind.rawValue) }
+        return extraKinds.filter { enabled.contains($0.rawValue) }.map(\.rawValue).joined(separator: ",")
+    }
+
+    /// 시간 합계가 아닌 값(거리·개수)은 강조색으로 그린다.
+    var usesAccentTint: Bool { isDistance || isCount }
 }
 
 enum MapHomeCalendarTimeTotalsPolicy {
@@ -98,6 +140,7 @@ enum MapHomeCalendarTimeTotalsPolicy {
         let monthTravel = travel.filter { $0.span.start < end && first < $0.span.end }
         let monthStays = stays.filter { $0.span.start < end && first < $0.span.end }
         guard !monthActuals.isEmpty || !monthTravel.isEmpty || !monthStays.isEmpty else { return [:] }
+        let homeKeys = Set(placeKinds.filter { $0.value == .home }.keys)
         var result: [Date: [String: TimeInterval]] = [:]
         for offset in 0..<days.count {
             guard let day = calendar.date(byAdding: .day, value: offset, to: first),
@@ -117,9 +160,56 @@ enum MapHomeCalendarTimeTotalsPolicy {
             }
             let meters = distanceMeters(of: monthTravel, in: TimeSpan(start: day, end: dayEnd))
             if meters >= 10 { byID[MapHomeCalendarTimeKind.distance.rawValue] = meters }
+            let dayStays = monthStays.filter { $0.span.start < dayEnd && day < $0.span.end }
+            let placeCount = Set(dayStays.map(\.placeKey)).count
+            if placeCount > 0 { byID[MapHomeCalendarTimeKind.places.rawValue] = Double(placeCount) }
+            let tripCount = monthTravel.filter { $0.span.start < dayEnd && day < $0.span.end }.count
+            if tripCount > 0 { byID[MapHomeCalendarTimeKind.trips.rawValue] = Double(tripCount) }
+            let daySpan = TimeSpan(start: day, end: dayEnd)
+            let walkMeters = distanceMeters(of: monthTravel.filter { $0.mode == .walking || $0.mode == .running }, in: daySpan)
+            if walkMeters >= 10 { byID[MapHomeCalendarTimeKind.walkDistance.rawValue] = walkMeters }
+            let carMeters = distanceMeters(of: monthTravel.filter { $0.mode == .car || $0.mode == .taxi }, in: daySpan)
+            if carMeters >= 10 { byID[MapHomeCalendarTimeKind.carDistance.rawValue] = carMeters }
+            let transitMeters = distanceMeters(
+                of: monthTravel.filter { $0.mode == .bus || $0.mode == .subway || $0.mode == .train },
+                in: daySpan
+            )
+            if transitMeters >= 10 { byID[MapHomeCalendarTimeKind.transitDistance.rawValue] = transitMeters }
+            if let away = awaySeconds(stays: dayStays, homeKeys: homeKeys, day: day, dayEnd: min(dayEnd, now)), away > 0 {
+                byID[MapHomeCalendarTimeKind.awayTime.rawValue] = away
+            }
             if !byID.isEmpty { result[day] = byID }
         }
         return result
+    }
+
+    /// 날짜별 걸음 수 합치기: 건강 앱 값과 센서 값 중 큰 쪽(둘 다 같은 걸음의 다른 측정이라 더하지 않는다).
+    static func mergedStepCounts(health: [Date: Double], sensor: [Date: Double]) -> [Date: Double] {
+        health.merging(sensor) { max($0, $1) }
+    }
+
+    /// 그 달 날짜별 사진 수. `moments`는 기간 안 사진을 읽는 함수(사진 접근 권한이 없으면 빈 배열).
+    static func photoCounts(
+        in month: Date,
+        moments: (TimeSpan) -> [PhotoMoment],
+        calendar: Calendar
+    ) -> [Date: Double] {
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let end = calendar.date(byAdding: .month, value: 1, to: first) else { return [:] }
+        var result: [Date: Double] = [:]
+        for moment in moments(TimeSpan(start: first, end: end)) {
+            result[calendar.startOfDay(for: moment.capturedAt), default: 0] += 1
+        }
+        return result
+    }
+
+    /// 집 밖에 있던 시간(초). 집으로 등록한 장소의 체류를 뺀 나머지이고, 그날 체류 기록이나 집 등록이 없으면 nil.
+    static func awaySeconds(stays: [PlaceStay], homeKeys: Set<String>, day: Date, dayEnd: Date) -> TimeInterval? {
+        guard !homeKeys.isEmpty, !stays.isEmpty, dayEnd > day else { return nil }
+        let homeSeconds = stays.filter { homeKeys.contains($0.placeKey) }.reduce(0.0) { sum, stay in
+            sum + max(0, min(stay.span.end, dayEnd).timeIntervalSince(max(stay.span.start, day)))
+        }
+        return max(0, dayEnd.timeIntervalSince(day) - homeSeconds)
     }
 
     /// 하루와 겹치는 이동 구간의 거리(미터). 구간이 날을 걸치면 겹친 시간 비율만큼만 더한다.
@@ -130,6 +220,22 @@ enum MapHomeCalendarTimeTotalsPolicy {
             let overlap = min(segment.span.end, day.end).timeIntervalSince(max(segment.span.start, day.start))
             guard overlap > 0 else { return sum }
             return sum + (total > 0 ? segment.distanceMeters * min(1, overlap / total) : segment.distanceMeters)
+        }
+    }
+
+    /// 달력 칸의 개수 표기. 0은 빈 문자열.
+    static func countCellText(count: Double) -> String {
+        guard count >= 1 else { return "" }
+        return count >= 1_000 ? String(format: "%.1fk", count / 1_000) : String(Int(count.rounded()))
+    }
+
+    static func countText(count: Double, kind: MapHomeCalendarTimeKind, language: MapHomeLanguage) -> String {
+        let value = Int(count.rounded())
+        switch kind {
+        case .places: return language.text("\(value)곳", "\(value)")
+        case .steps: return language.text("\(value)걸음", "\(value) steps")
+        case .photos: return language.text("\(value)장", "\(value)")
+        default: return language.text("\(value)회", "\(value)")
         }
     }
 
@@ -169,7 +275,7 @@ enum MapHomeCalendarTimeTotalsPolicy {
 struct MapHomeCalendarSheet: View {
     @Binding private var selectedDate: Date
     private let holidayName: (Date) -> String?
-    private let logStatuses: (Date) -> [Date: MapHomeCalendarLogStatus]
+    private let logStatuses: (Date) async -> [Date: MapHomeCalendarLogStatus]
     private let timeTotals: (Date) async -> [Date: [String: TimeInterval]]
     private let timeTint: (String) -> Color
     private let language: MapHomeLanguage
@@ -177,13 +283,15 @@ struct MapHomeCalendarSheet: View {
 
     @State private var displayedMonth: Date
     @State private var statuses: [Date: MapHomeCalendarLogStatus] = [:]
+    @Environment(\.displayScale) private var displayScale
+    @AppStorage(MapHomeCalendarTimeKind.extraStorageKey) private var extraKindsRaw = ""
     @State private var selectedKind: MapHomeCalendarTimeKind?
     @State private var totals: [Date: [String: TimeInterval]] = [:]
 
     init(
         selectedDate: Binding<Date>,
         holidayName: @escaping (Date) -> String?,
-        logStatuses: @escaping (Date) -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
+        logStatuses: @escaping (Date) async -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
         timeTint: @escaping (String) -> Color = { _ in Color.tpAccent },
         language: MapHomeLanguage = .korean
@@ -240,14 +348,26 @@ struct MapHomeCalendarSheet: View {
         .presentationDetents([.height(selectedKind == nil ? 540 : 700), .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
-        .task(id: displayedMonth) {
-            statuses = logStatuses(displayedMonth)
+        // 달이 바뀔 때뿐 아니라 "+"로 지표를 켜고 끌 때도 다시 읽는다(걸음·사진은 켠 때만 읽기 때문).
+        .task(id: "\(displayedMonth.timeIntervalSince1970)|\(extraKindsRaw)") {
             totals = [:]
+            if !statuses.isEmpty { statuses = [:] }
             let month = displayedMonth
+            let monthStatuses = await logStatuses(month)
+            guard !Task.isCancelled, month == displayedMonth else { return }
+            statuses = monthStatuses
             let value = await timeTotals(month)
             guard !Task.isCancelled, month == displayedMonth else { return }
             totals = value
         }
+    }
+
+    private func cellValueText(_ kind: MapHomeCalendarTimeKind, on date: Date) -> String {
+        let value = seconds(of: kind, on: date)
+        if kind.isCount { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: value) }
+        return kind.isDistance
+            ? MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: value)
+            : MapHomeCalendarTimeTotalsPolicy.cellText(seconds: value)
     }
 
     private func seconds(of kind: MapHomeCalendarTimeKind, on date: Date) -> TimeInterval {
@@ -256,9 +376,9 @@ struct MapHomeCalendarSheet: View {
 
     private var timeMenu: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-            ForEach(MapHomeCalendarTimeKind.allCases) { kind in
+            ForEach(MapHomeCalendarTimeKind.coreKinds + MapHomeCalendarTimeKind.enabledExtras(from: extraKindsRaw)) { kind in
                 let isOn = selectedKind == kind
-                let tint = kind.isDistance ? Color.tpAccent : timeTint(kind.rawValue)
+                let tint = kind.usesAccentTint ? Color.tpAccent : timeTint(kind.rawValue)
                 Button {
                     selectedKind = isOn ? nil : kind
                 } label: {
@@ -282,17 +402,50 @@ struct MapHomeCalendarSheet: View {
                 .accessibilityLabel(kind.title(language))
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
+            addMetricMenu
         }
     }
 
+    /// "+" 타일: 걸음 수·사진 수·수단별 거리·외출 시간을 골라 달력 지표로 더하거나 뺀다.
+    private var addMetricMenu: some View {
+        Menu {
+            ForEach(MapHomeCalendarTimeKind.extraKinds) { kind in
+                let isEnabled = MapHomeCalendarTimeKind.enabledExtras(from: extraKindsRaw).contains(kind)
+                Button {
+                    extraKindsRaw = MapHomeCalendarTimeKind.raw(toggling: kind, in: extraKindsRaw)
+                    if isEnabled, selectedKind == kind { selectedKind = nil }
+                } label: {
+                    Label(kind.title(language), systemImage: isEnabled ? "checkmark" : kind.systemImage)
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(language.text("추가", "Add"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(Color.tpSecondary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.tpLine, style: StrokeStyle(lineWidth: 0.8, dash: [4, 3]))
+            }
+        }
+        .accessibilityLabel(language.text("지표 추가", "Add metric"))
+    }
+
     private func panelText(_ value: Double, for kind: MapHomeCalendarTimeKind) -> String {
-        kind.isDistance
+        if kind.isCount {
+            return MapHomeCalendarTimeTotalsPolicy.countText(count: value, kind: kind, language: language)
+        }
+        return kind.isDistance
             ? MapHomeCalendarTimeTotalsPolicy.distanceText(meters: value)
             : MapHomeCalendarTimeTotalsPolicy.durationText(seconds: value, language: language)
     }
 
     private func timePanel(for kind: MapHomeCalendarTimeKind) -> some View {
-        let tint = kind.isDistance ? Color.tpAccent : timeTint(kind.rawValue)
+        let tint = kind.usesAccentTint ? Color.tpAccent : timeTint(kind.rawValue)
         let daysInMonth = calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 30
         let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
         let days = (0..<daysInMonth).compactMap { calendar.date(byAdding: .day, value: $0, to: monthStart) }
@@ -326,6 +479,13 @@ struct MapHomeCalendarSheet: View {
                 }
             }
             .frame(height: 44, alignment: .bottom)
+            .overlay(alignment: .bottom) {
+                // 하루 평균: 50% 흐린 1픽셀 선을 모든 항목의 그래프에 긋는다.
+                Rectangle()
+                    .fill(tint.opacity(0.5))
+                    .frame(height: 1 / displayScale)
+                    .offset(y: -min(44, 44 * (sum / Double(elapsedDays)) / maxValue))
+            }
             HStack(spacing: 8) {
                 timeStat(language.text("이번 달 합계", "Month total"),
                          panelText(sum, for: kind))
@@ -453,11 +613,9 @@ struct MapHomeCalendarSheet: View {
                     }
 
                 if let selectedKind {
-                    Text(selectedKind.isDistance
-                        ? MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: seconds(of: selectedKind, on: date))
-                        : MapHomeCalendarTimeTotalsPolicy.cellText(seconds: seconds(of: selectedKind, on: date)))
+                    Text(cellValueText(selectedKind, on: date))
                         .font(.system(size: 10, weight: .semibold, design: .rounded))
-                        .foregroundStyle(selectedKind.isDistance ? Color.tpAccent : timeTint(selectedKind.rawValue))
+                        .foregroundStyle(selectedKind.usesAccentTint ? Color.tpAccent : timeTint(selectedKind.rawValue))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(height: 12)

@@ -2184,6 +2184,10 @@ public actor TaptionPlanV3Store {
     }
 
     private func bind(_ value: Data, to statement: OpaquePointer, at index: Int32) throws {
+        if value.isEmpty {
+            guard sqlite3_bind_zeroblob(statement, index, 0) == SQLITE_OK else { throw lastError() }
+            return
+        }
         let result = value.withUnsafeBytes { bytes in
             sqlite3_bind_blob(
                 statement,

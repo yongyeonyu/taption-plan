@@ -346,11 +346,11 @@ private struct TaptionScheduleWidgetView: View {
             Image(systemName: "arrow.trianglehead.2.clockwise")
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(WidgetPalette.secondary)
-            Text("앱을 열어 오늘 기록을 동기화하세요")
+            Text(widgetText("앱을 열어 오늘 기록을 동기화하세요", "Open the app to sync today's records"))
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(WidgetPalette.ink)
                 .multilineTextAlignment(.center)
-            Text("일정 · 위치 · 이동 · 활동이 여기에 표시됩니다")
+            Text(widgetText("일정 · 위치 · 이동 · 활동이 여기에 표시됩니다", "Plans, places, trips and activity appear here"))
                 .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(WidgetPalette.secondary)
                 .multilineTextAlignment(.center)
@@ -408,7 +408,7 @@ private struct TaptionScheduleWidgetView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.leading, 4)
-                .accessibilityLabel("GPS 트래킹 권한 안내 열기")
+                .accessibilityLabel(widgetText("GPS 트래킹 권한 안내 열기", "Open GPS tracking permission guidance"))
             } else {
                 Button(
                     intent: TaptionWidgetLocationTrackingIntent(
@@ -2187,7 +2187,7 @@ struct TaptionWidgetActionIntent: AppIntent {
         }
 
         if let refreshedPayload {
-            try TaptionWidgetSharedStore.writePayload(refreshedPayload)
+            try? TaptionWidgetSharedStore.writePayload(refreshedPayload)
         }
         try TaptionWidgetSharedStore.appendCommand(command)
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
@@ -2222,12 +2222,13 @@ struct TaptionWidgetLocationTrackingIntent: AppIntent {
                 snapshot.settings.backgroundPreciseLocationEnabled = false
             }
             snapshot.updatedAt = .now
-            try? await repository.save(snapshot)
-            let payload = TaptionWidgetPayloadFactory.make(
-                from: snapshot,
-                hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
-            )
-            try? TaptionWidgetSharedStore.writePayload(payload)
+            if (try? await repository.save(snapshot)) != nil {
+                let payload = TaptionWidgetPayloadFactory.make(
+                    from: snapshot,
+                    hidesSensitiveContent: TaptionExternalPrivacyStore.isLocked
+                )
+                try? TaptionWidgetSharedStore.writePayload(payload)
+            }
         }
         WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
         return .result()
@@ -2250,7 +2251,10 @@ private extension Color {
         let normalized = value
             .trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var number: UInt64 = 0
-        Scanner(string: normalized).scanHexInt64(&number)
+        guard Scanner(string: normalized).scanHexInt64(&number) else {
+            self.init(red: 0.5, green: 0.5, blue: 0.5)
+            return
+        }
         let red: UInt64
         let green: UInt64
         let blue: UInt64
@@ -2259,6 +2263,10 @@ private extension Color {
             red = ((number >> 8) & 0xF) * 17
             green = ((number >> 4) & 0xF) * 17
             blue = (number & 0xF) * 17
+        case 8:
+            red = (number >> 16) & 0xFF
+            green = (number >> 8) & 0xFF
+            blue = number & 0xFF
         default:
             red = (number >> 16) & 0xFF
             green = (number >> 8) & 0xFF
@@ -2362,7 +2370,7 @@ private struct SensorCollectionCompactHeartRate: View {
             if state.isCollecting,
                state.sensorHUDUntil.map({ timeline.date < $0 }) == true {
                 if let heartRate = state.latestHeartRate,
-                   heartRate.isFinite, heartRate > 0 {
+                   heartRate.isFinite, heartRate > 0, heartRate < 1000 {
                     Text("♥︎ \(Int(heartRate.rounded()))")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .monospacedDigit()
@@ -3621,7 +3629,7 @@ struct TaptionPlanLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 10) {
                         ProgressView(
-                            timerInterval: context.state.startedAt...context.state.endsAt,
+                            timerInterval: context.state.startedAt...max(context.state.startedAt, context.state.endsAt),
                             countsDown: false
                         )
                         .tint(Color(red: 0.48, green: 0.37, blue: 0.65))
@@ -3701,7 +3709,7 @@ private struct TaptionLiveActivityLockScreenView: View {
 
             ProgressView(
                 timerInterval:
-                    context.state.startedAt...context.state.endsAt,
+                    context.state.startedAt...max(context.state.startedAt, context.state.endsAt),
                 countsDown: false
             )
             .progressViewStyle(.linear)
@@ -3719,7 +3727,7 @@ private struct TaptionLiveActivityLockScreenView: View {
                         action: .stopCurrentActivity
                     )
                 ) {
-                    Text("종료")
+                    Text(widgetText("종료", "End"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(WidgetPalette.ink)
                         .padding(.horizontal, 13)

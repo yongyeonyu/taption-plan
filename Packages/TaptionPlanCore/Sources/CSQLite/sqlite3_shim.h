@@ -27,6 +27,7 @@ int sqlite3_bind_int64(sqlite3_stmt *, int, long long);
 int sqlite3_bind_double(sqlite3_stmt *, int, double);
 int sqlite3_bind_null(sqlite3_stmt *, int);
 int sqlite3_bind_blob(sqlite3_stmt *, int, const void *, int, sqlite3_destructor_type);
+int sqlite3_bind_zeroblob(sqlite3_stmt *, int, int);
 const unsigned char *sqlite3_column_text(sqlite3_stmt *, int);
 long long sqlite3_column_int64(sqlite3_stmt *, int);
 double sqlite3_column_double(sqlite3_stmt *, int);

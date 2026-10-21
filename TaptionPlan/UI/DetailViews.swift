@@ -2942,6 +2942,7 @@ enum ApplicationTokenCache {
         ) else {
             return nil
         }
+        if decoded.count >= 256 { decoded.removeAll() }
         decoded[data] = token
         return token
     }

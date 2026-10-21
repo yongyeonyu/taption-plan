@@ -252,6 +252,7 @@ actor TaptionBackupEngine {
             let total = months.count + 1
             progress?(0, total)
             for month in months {
+                try Task.checkCancellation()
                 results.append(await attempt(.month(month), password: password, now: now))
                 progress?(results.count, total)
             }
@@ -264,6 +265,8 @@ actor TaptionBackupEngine {
     private func attempt(_ scope: TaptionBackupScope, password: String, now: Date) async -> BackupResult {
         do {
             return try await performBackup(scope: scope, password: password, now: now)
+        } catch is CancellationError {
+            return result(scope, .failed("취소됨"), "\(scope.fileName): 백업이 취소됐다")
         } catch {
             return result(scope, .failed("\(error)"), "\(scope.fileName): 백업에 실패했다 - \(error)")
         }

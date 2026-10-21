@@ -951,14 +951,15 @@ struct AddPlanSheet: View {
                 ) ?? max(start, endInclusive).addingTimeInterval(86_400)
                 return max(86_400, endExclusive.timeIntervalSince(start))
             }
+            let goalStart = Calendar.autoupdatingCurrent.startOfDay(for: startAt)
             let end = Calendar.autoupdatingCurrent.date(
                 byAdding: .month,
                 value: goalDurationMonths,
-                to: startAt
-            ) ?? startAt.addingTimeInterval(
+                to: goalStart
+            ) ?? goalStart.addingTimeInterval(
                 TimeInterval(goalDurationMonths * 30 * 86_400)
             )
-            return max(86_400, end.timeIntervalSince(startAt))
+            return max(86_400, end.timeIntervalSince(goalStart))
         }
         return TimeInterval(durationMinutes * 60)
     }

@@ -946,10 +946,11 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 return $0.id.uuidString < $1.id.uuidString
             }
         let direct = Dictionary(
-            uniqueKeysWithValues: ordered.compactMap { place -> (UUID, GeoPoint)? in
+            ordered.compactMap { place -> (UUID, GeoPoint)? in
                 guard let point = place.point, isValid(point) else { return nil }
                 return (place.id, point)
-            }
+            },
+            uniquingKeysWith: { first, _ in first }
         )
         return ordered.enumerated().compactMap { index, place in
             if let point = direct[place.id] {
@@ -1907,7 +1908,12 @@ enum ExpectedRouteRequestEngine {
         }
         var result: [TravelSegment] = []
         result.reserveCapacity(selected.count)
-        for (index, segment) in selected.values.enumerated() {
+        let ordered = selected.values.sorted {
+            if $0.span.start != $1.span.start { return $0.span.start < $1.span.start }
+            if $0.span.end != $1.span.end { return $0.span.end < $1.span.end }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        for (index, segment) in ordered.enumerated() {
             if index.isMultiple(of: 256) { try cancellationCheck() }
             result.append(segment)
         }

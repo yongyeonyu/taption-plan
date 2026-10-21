@@ -144,6 +144,14 @@ enum TaptionPlanDiagnosticsLogPolicy {
                     }
                 }
             }
+            if let metrics = entry["metrics"] as? [String: Any] {
+                entry["metrics"] = metrics.filter { key, _ in
+                    let normalized = key.lowercased()
+                    return !personalHealthTokens.contains {
+                        normalized.contains($0)
+                    }
+                }
+            }
             guard let redacted = try? JSONSerialization.data(
                 withJSONObject: entry,
                 options: [.sortedKeys]
@@ -832,7 +840,12 @@ struct TaptionPlanDiagnosticsICloudExporter {
         let staged = stagingDirectory.appendingPathComponent(
             packageURL.lastPathComponent
         )
-        try fileManager.copyItem(at: packageURL, to: staged)
+        do {
+            try fileManager.copyItem(at: packageURL, to: staged)
+        } catch {
+            try? fileManager.removeItem(at: stagingDirectory)
+            throw error
+        }
         let destination = availableDestination(
             named: packageURL.lastPathComponent,
             in: destinationDirectory

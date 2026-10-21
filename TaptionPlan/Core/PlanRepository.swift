@@ -150,6 +150,8 @@ enum TaptionDataDeletionFence {
     private static let generationKey = "TaptionPlan.dataDeletionGeneration"
     private static let cutoffKey = "TaptionPlan.dataDeletionCutoff"
     private static let activeKey = "TaptionPlan.dataDeletionActive"
+    private static let activeDateKey = "TaptionPlan.dataDeletionActiveDate"
+    private static let activeTimeout: TimeInterval = 600
 
     private static var defaults: UserDefaults {
         UserDefaults(
@@ -189,6 +191,7 @@ enum TaptionDataDeletionFence {
         defaults.set(String(next), forKey: generationKey)
         defaults.set(date, forKey: cutoffKey)
         defaults.set(String(getpid()), forKey: activeKey)
+        defaults.set(date, forKey: activeDateKey)
         defaults.synchronize()
         return next
     }
@@ -196,18 +199,23 @@ enum TaptionDataDeletionFence {
     static func finish(generation: UInt64) {
         guard generation == currentGeneration() else { return }
         defaults.removeObject(forKey: activeKey)
+        defaults.removeObject(forKey: activeDateKey)
         defaults.synchronize()
     }
 
     static func allows(generation: UInt64, capturedAt: Date? = nil) -> Bool {
         if defaults.object(forKey: activeKey) != nil {
-            if let marker = defaults.string(forKey: activeKey),
+            let startedAt = defaults.object(forKey: activeDateKey) as? Date
+            let expired = startedAt.map { Date.now.timeIntervalSince($0) > activeTimeout } ?? false
+            if !expired,
+               let marker = defaults.string(forKey: activeKey),
                let pid = Int32(marker),
                pid > 0,
                Darwin.kill(pid, 0) == 0 || errno == EPERM {
                 return false
             }
             defaults.removeObject(forKey: activeKey)
+            defaults.removeObject(forKey: activeDateKey)
             defaults.synchronize()
         }
         guard generation == currentGeneration() else { return false }

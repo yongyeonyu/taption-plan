@@ -313,7 +313,7 @@ final class HealthKitIntegrationTests: XCTestCase {
     }
 
     @available(iOS 18.0, *)
-    func testMalformedHealthKitHistoryCursorPreservesCheckpointWithoutReimport()
+    func testMalformedHealthKitHistoryCursorRestartsHistory()
         async throws
     {
         let url = temporaryDatabaseURL()
@@ -329,17 +329,12 @@ final class HealthKitIntegrationTests: XCTestCase {
             addedCount: 7
         )
         try await store.saveSyncState(state)
-        let pages = HealthKitHistoryPageSequence(
-            records: [],
-            importStore: store,
-            typeIdentifier: type.identifier
-        )
         let coordinator = HealthKitImportCoordinator(
             healthStore: HKHealthStore(),
             importStore: store,
             firstSampleDateLoader: { _ in .distantPast },
             earliestPermittedDateLoader: { .distantPast },
-            historyRecordLoader: { _, _, _ in try await pages.next() }
+            historyRecordLoader: { _, _, _ in [] }
         )
 
         _ = try await coordinator.synchronizeSampleChanges(
@@ -348,20 +343,13 @@ final class HealthKitIntegrationTests: XCTestCase {
 
         let savedState = try await store.syncState(for: type.identifier)
         let saved = try XCTUnwrap(savedState)
-        let pageRequestCount = await pages.requestCount()
-        XCTAssertEqual(pageRequestCount, 0)
-        XCTAssertEqual(saved.historyCursor, malformedCursor)
-        XCTAssertFalse(saved.historyComplete)
-        XCTAssertEqual(saved.sampleCount, 7)
-        XCTAssertEqual(saved.addedCount, 7)
-        XCTAssertEqual(
-            saved.lastError,
-            HealthKitImportCoordinatorError.invalidHistoryCursor.errorDescription
-        )
+        XCTAssertNotEqual(saved.historyCursor, malformedCursor, "해석할 수 없는 커서는 처음부터 다시 받는다")
+        XCTAssertTrue(saved.historyComplete)
+        XCTAssertNil(saved.lastError)
     }
 
     @available(iOS 18.0, *)
-    func testMalformedHealthKitAnchorPreservesCheckpointWithoutReset() async throws {
+    func testMalformedHealthKitAnchorRestartsFromBeginning() async throws {
         let url = temporaryDatabaseURL()
         defer { removeDatabase(at: url) }
         let store = try HealthKitImportStore(databaseURL: url)
@@ -387,15 +375,9 @@ final class HealthKitIntegrationTests: XCTestCase {
 
         let savedState = try await store.syncState(for: type.identifier)
         let saved = try XCTUnwrap(savedState)
-        XCTAssertEqual(saved.anchor, malformedAnchor)
+        XCTAssertNotEqual(saved.anchor, malformedAnchor, "해석할 수 없는 앵커는 새 앵커로 바뀐다")
         XCTAssertTrue(saved.historyComplete)
-        XCTAssertEqual(saved.sampleCount, 5)
-        XCTAssertEqual(saved.addedCount, 8)
-        XCTAssertEqual(saved.deletedCount, 3)
-        XCTAssertEqual(
-            saved.lastError,
-            HealthKitImportCoordinatorError.invalidAnchorCursor.errorDescription
-        )
+        XCTAssertNil(saved.lastError)
         XCTAssertThrowsError(
             try HealthKitImportCoordinator.decodeAnchor(malformedAnchor)
         ) { error in

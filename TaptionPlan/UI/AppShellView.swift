@@ -513,6 +513,7 @@ struct AppShellView: View {
             await model.refreshPermissions()
             guard scenePhase == .active, proAccess.grantsAccess else { return }
             model.presentPermissionOnboardingIfNeeded()
+            await model.requestMissingLocationPermissionAtLaunch()
             await activateRequiredSensorsIfReady()
             await reconcileSensorLiveActivity()
         }

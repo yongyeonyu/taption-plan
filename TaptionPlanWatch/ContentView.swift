@@ -255,15 +255,17 @@ struct WatchContentView: View {
     }
 
     private func confirm(_ subject: WatchConfirmationSubject) {
-        sendConfirmation(subject, correctedBehavior: nil)
+        guard acknowledgedSubjectID != subject.id else { return }
         acknowledgedSubjectID = subject.id
         acknowledgedLabel = text("확인했습니다", "Confirmed")
+        sendConfirmation(subject, correctedBehavior: nil)
     }
 
     private func correct(
         _ subject: WatchConfirmationSubject,
         to kind: WatchBehaviorKind
     ) {
+        guard acknowledgedSubjectID != subject.id else { return }
         sendConfirmation(subject, correctedBehavior: kind)
         acknowledgedSubjectID = subject.id
         acknowledgedLabel = text(

@@ -1047,15 +1047,13 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
         if let data = envelope[
             TaptionWatchEnvelope.sensorSummaryKey
         ] as? Data {
-            guard data.count <= TaptionWatchEnvelope.sensorSummaryMaximumBytes
-            else {
+            if data.count > TaptionWatchEnvelope.sensorSummaryMaximumBytes {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_sensor_summary_decode_failed",
                     level: .error,
                     fields: ["reason": "payload_too_large", "bytes": String(data.count)]
                 )
-                return accepted
-            }
+            } else {
             do {
                 let summary = try decoder.decode(
                     TaptionWatchSensorSummary.self,
@@ -1094,19 +1092,18 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                     ]) { _, new in new }
                 )
             }
+            }
         }
         if let data = envelope[
             TaptionWatchEnvelope.accelerationChunkKey
         ] as? Data {
-            guard data.count <= TaptionWatchEnvelope.accelerationChunkMaximumBytes
-            else {
+            if data.count > TaptionWatchEnvelope.accelerationChunkMaximumBytes {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_acceleration_chunk_decode_failed",
                     level: .error,
                     fields: ["reason": "payload_too_large", "bytes": String(data.count)]
                 )
-                return accepted
-            }
+            } else {
             do {
                 let chunk = try decoder.decode(
                     TaptionWatchAccelerationChunk.self,
@@ -1144,19 +1141,18 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                     ]) { _, new in new }
                 )
             }
+            }
         }
         if let data = envelope[
             TaptionWatchEnvelope.healthSnapshotKey
         ] as? Data {
-            guard data.count <= TaptionWatchEnvelope.healthSnapshotMaximumBytes
-            else {
+            if data.count > TaptionWatchEnvelope.healthSnapshotMaximumBytes {
                 TaptionPlanDiagnosticsLogger.shared.record(
                     "watch_health_snapshot_decode_failed",
                     level: .error,
                     fields: ["reason": "payload_too_large", "bytes": String(data.count)]
                 )
-                return accepted
-            }
+            } else {
             do {
                 let snapshot = try decoder.decode(
                     TaptionWatchHealthSnapshot.self,
@@ -1192,6 +1188,7 @@ final class AppleWatchConnectivityService: NSObject, WCSessionDelegate, @uncheck
                     level: .error,
                     fields: fields
                 )
+            }
             }
         }
         if let data = envelope[

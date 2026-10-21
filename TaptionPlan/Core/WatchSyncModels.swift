@@ -989,6 +989,10 @@ struct TaptionWatchAccelerationArchiveAppendIndex: Sendable {
     }
 
     mutating func insert(_ sample: TaptionWatchAccelerationSample) -> Bool {
+        if ambientSampleKeys.count > 200_000 { ambientSampleKeys.removeAll() }
+        if unscopedAmbientSampleKeys.count > 200_000 {
+            unscopedAmbientSampleKeys.removeAll()
+        }
         if sample.isAmbient,
            let stableKey = TaptionWatchStableID.ambientAccelerationTimestampKey(
                capturedAt: sample.capturedAt

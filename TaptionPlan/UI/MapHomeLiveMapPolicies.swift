@@ -366,6 +366,9 @@ enum MapHomeLiveFollowSpeed {
 final class MapHomePlaybackZoomSmoother {
     static let timeConstant: TimeInterval = 1.2
     static let maximumLogRate = 0.9
+    /// 속도가 줄어 다가갈 때(줌인)는 더 천천히, 영화처럼 부드럽게 따라간다.
+    static let zoomInTimeConstant: TimeInterval = 2.2
+    static let zoomInMaximumLogRate = 0.45
     static let maximumStep: TimeInterval = 0.5
 
     private var lastUptime: TimeInterval?
@@ -377,8 +380,9 @@ final class MapHomePlaybackZoomSmoother {
         let dt = min(max(uptime - lastUptime, 0), Self.maximumStep)
         guard dt > 0 else { return current }
         let gap = log(target) - log(current)
-        let step = gap * (1 - exp(-dt / Self.timeConstant))
-        let limit = Self.maximumLogRate * dt
+        let zoomingIn = gap < 0
+        let step = gap * (1 - exp(-dt / (zoomingIn ? Self.zoomInTimeConstant : Self.timeConstant)))
+        let limit = (zoomingIn ? Self.zoomInMaximumLogRate : Self.maximumLogRate) * dt
         return exp(log(current) + min(max(step, -limit), limit))
     }
 
@@ -390,6 +394,107 @@ final class MapHomePlaybackZoomSmoother {
 /// - 그 밖의 탈것 구간만 구간 속도로 목표 배율을 정한다(느리면 최대 92, 빠르면 최소 42).
 /// - 짧은 구간은 목표를 85 쪽으로 줄여(구간 길이/최소 길이) 확대·축소가 튀지 않게 하고, 탈것 구간 사이의 짧은 틈은
 ///   앞 구간 배율을 유지해 갔다 오는 요동을 없앤다. 실제 카메라 움직임의 부드러움은 `MapHomePlaybackZoomSmoother`가 맡는다.
+/// 재생을 시작할 때 이동 경로의 속도를 30초 간격으로 훑어 미리 정해 두는 줌 배율 프로파일.
+/// 속도로 배율을 정하고, 너무 빨리 바뀌지 않게 이동 평균과 변화량 제한으로 조금 평탄화한 뒤,
+/// 등록된 지점(집·회사 등) 반경 안은 확대 배율(85)로 고정한다.
+struct MapHomePlaybackZoomProfile: Equatable, Sendable {
+    static let stepMinutes = 0.5
+    static let speedWindowSeconds: TimeInterval = 90
+    /// 이동 평균 반경(칸). 2칸이면 앞뒤 1분.
+    static let smoothingRadiusSteps = 2
+    /// 30초당 배율이 바뀔 수 있는 최댓값. 85에서 42까지 가는 데 약 3.5분 걸린다.
+    static let maximumStepChange = 6.0
+    static let placeRadiusMeters = 200.0
+    /// 등록 지점 반경 안으로 들어가기 전후 이 칸 수만큼도 85로 둔다(도착 직전 미리 확대).
+    static let placePaddingSteps = 2
+
+    let startMinute: Double
+    let scales: [Double]
+
+    func scale(atMinute minute: Double) -> Double? {
+        guard let first = scales.first else { return nil }
+        guard scales.count > 1 else { return first }
+        let position = (minute - startMinute) / Self.stepMinutes
+        guard position >= 0, position <= Double(scales.count - 1) else { return nil }
+        let lower = Int(position.rounded(.down))
+        let upper = min(lower + 1, scales.count - 1)
+        let fraction = position - Double(lower)
+        return scales[lower] + (scales[upper] - scales[lower]) * fraction
+    }
+
+    static func build(
+        readings: [SensorReading],
+        places: [GeoPoint],
+        dayStart: Date,
+        endMinute: Double = 1_440
+    ) -> MapHomePlaybackZoomProfile? {
+        let located = readings
+            .compactMap { reading -> (time: TimeInterval, point: GeoPoint)? in
+                guard let point = reading.point else { return nil }
+                return (reading.timestamp.timeIntervalSince(dayStart), point)
+            }
+            .sorted { $0.time < $1.time }
+        guard located.count >= 2, endMinute > 0 else { return nil }
+        var cumulative = [0.0]
+        for (a, b) in zip(located, located.dropFirst()) {
+            cumulative.append(cumulative[cumulative.count - 1] + distanceMeters(a.point, b.point))
+        }
+        func lowerBound(_ time: TimeInterval) -> Int {
+            var low = 0, high = located.count
+            while low < high {
+                let mid = (low + high) / 2
+                if located[mid].time < time { low = mid + 1 } else { high = mid }
+            }
+            return low
+        }
+        let baseline = MapHomePlaybackZoomPolicy.baselineScale
+        let count = Int((endMinute / stepMinutes).rounded(.up)) + 1
+        var raw = [Double](repeating: baseline, count: count)
+        var nearPlace = [Bool](repeating: false, count: count)
+        for i in 0..<count {
+            let time = Double(i) * stepMinutes * 60
+            let lo = lowerBound(time - speedWindowSeconds)
+            let hi = lowerBound(time + speedWindowSeconds + 0.001) - 1
+            if hi > lo {
+                let seconds = located[hi].time - located[lo].time
+                if seconds > 0 {
+                    let speed = (cumulative[hi] - cumulative[lo]) / seconds
+                    raw[i] = speed <= MapHomePlaybackZoomPolicy.walkingCeiling
+                        ? baseline
+                        : min(baseline, MapHomePlaybackZoomPolicy.scale(forVehicleSpeed: speed))
+                }
+            }
+            if !places.isEmpty {
+                let index = min(lowerBound(time), located.count - 1)
+                let candidates = [index - 1, index].filter { located.indices.contains($0) }
+                if let nearest = candidates.min(by: { abs(located[$0].time - time) < abs(located[$1].time - time) }),
+                   abs(located[nearest].time - time) <= 300 {
+                    nearPlace[i] = places.contains { distanceMeters($0, located[nearest].point) <= placeRadiusMeters }
+                }
+            }
+        }
+        // 이동 평균으로 조금 평탄화한다.
+        var smooth = raw
+        for i in 0..<count {
+            let lo = max(0, i - smoothingRadiusSteps), hi = min(count - 1, i + smoothingRadiusSteps)
+            smooth[i] = raw[lo...hi].reduce(0, +) / Double(hi - lo + 1)
+        }
+        // 변화량 제한(앞→뒤, 뒤→앞)으로 갑작스러운 변화를 없앤다.
+        for i in 1..<count {
+            smooth[i] = min(max(smooth[i], smooth[i - 1] - maximumStepChange), smooth[i - 1] + maximumStepChange)
+        }
+        for i in stride(from: count - 2, through: 0, by: -1) {
+            smooth[i] = min(max(smooth[i], smooth[i + 1] - maximumStepChange), smooth[i + 1] + maximumStepChange)
+        }
+        // 등록된 지점은 확대 배율로 고정(도착 직전·출발 직후 몇 칸 포함).
+        for i in 0..<count where nearPlace[i] {
+            let lo = max(0, i - placePaddingSteps), hi = min(count - 1, i + placePaddingSteps)
+            for j in lo...hi { smooth[j] = baseline }
+        }
+        return MapHomePlaybackZoomProfile(startMinute: 0, scales: smooth)
+    }
+}
+
 struct MapHomePlaybackZoomPlan: Equatable, Sendable {
     struct Input: Equatable, Sendable {
         var startMinute: Double
@@ -409,10 +514,12 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
         var isFixed: Bool
         /// 긴 이동: 시작·끝의 이 시간(분)은 85로 확대하고 가운데는 `scale`(경로 전체 맞춤)로 고정한다.
         var edgeMinutes: Double = 0
+        /// 경로 전체 맞춤으로 고정한 긴 이동. 순간 속도로 배율을 바꾸지 않는다.
+        var isFitted = false
     }
 
     /// 이 거리(m) 미만의 탈것 구간은 85 고정, 이상 ~`longHaulMeters`는 속도 비례, 이상은 경로 전체 맞춤 고정.
-    static let shortTripMeters = 5_000.0
+    static let shortTripMeters = 1_000.0
     static let longHaulMeters = 50_000.0
 
     /// 이 길이(분)보다 짧은 탈것 구간은 목표를 85 쪽으로 줄인다.
@@ -421,8 +528,11 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
     static let holdGapMinutes = 3.0
 
     let entries: [Entry]
+    /// 속도로 미리 정한 줌 프로파일(있으면 경로 전체 맞춤 구간 밖에서 이 값을 쓴다).
+    var profile: MapHomePlaybackZoomProfile?
 
-    init(inputs: [Input]) {
+    init(inputs: [Input], profile: MapHomePlaybackZoomProfile? = nil) {
+        self.profile = profile
         let baseline = MapHomePlaybackZoomPolicy.baselineScale
         var built: [Entry] = []
         for input in inputs.sorted(by: { $0.startMinute < $1.startMinute }) where input.endMinute > input.startMinute {
@@ -439,12 +549,15 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
                     endMinute: input.endMinute,
                     scale: MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: extent),
                     isFixed: false,
-                    edgeMinutes: min(10, max(3, durationMinutes * 0.05))
+                    edgeMinutes: min(10, max(3, durationMinutes * 0.05)),
+                    isFitted: true
                 ))
                 continue
             }
             let shortTrip = (distance ?? .infinity) < Self.shortTripMeters
-            let fixed = walkingLike || input.touchesRegisteredPlace || speed == nil || shortTrip
+            let fixed = walkingLike || speed == nil || shortTrip
+            // 등록 장소에서 이어지는 탈것 이동은 출발·도착 몇 분만 85로 두고, 가운데는 속도에 따라 축소한다.
+            let placeEdgeMinutes = !fixed && input.touchesRegisteredPlace ? min(3, max(1, durationMinutes * 0.05)) : 0
             var scale = baseline
             if !fixed, let speed {
                 let raw = MapHomePlaybackZoomPolicy.scale(forVehicleSpeed: speed)
@@ -456,7 +569,13 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
                 // 탈것 구간 사이의 짧은 틈: 앞 구간 배율을 틈 끝까지 유지한다.
                 built[built.count - 1].endMinute = input.startMinute
             }
-            built.append(Entry(startMinute: input.startMinute, endMinute: input.endMinute, scale: scale, isFixed: fixed))
+            built.append(Entry(
+                startMinute: input.startMinute,
+                endMinute: input.endMinute,
+                scale: scale,
+                isFixed: fixed,
+                edgeMinutes: placeEdgeMinutes
+            ))
         }
         entries = built
     }
@@ -475,6 +594,28 @@ struct MapHomePlaybackZoomPlan: Equatable, Sendable {
 
     func targetDistance(atMinute minute: Double) -> Double {
         MapHomeCameraZoomMath.distance(forScale: scale(atMinute: minute))
+    }
+
+    /// 탈것 구간 안에서는 구간 평균이 아니라 지금 순간의 속도로 목표 배율을 정한다.
+    /// 빨라지면 축소, 느려지면(걷기 이하까지) 85 쪽으로 다시 확대한다. 구간 처음·끝과 경로 전체 맞춤 구간은 계획 그대로.
+    func scale(atMinute minute: Double, speedMetersPerSecond speed: Double?) -> Double {
+        let planned = scale(atMinute: minute)
+        let baseline = MapHomePlaybackZoomPolicy.baselineScale
+        let containing = entries.first(where: { minute >= $0.startMinute && minute < $0.endMinute })
+        if containing?.isFitted == true { return planned }
+        if let profileScale = profile?.scale(atMinute: minute) { return min(baseline, profileScale) }
+        guard let speed, speed.isFinite, speed >= 0,
+              planned < baseline - 0.001,
+              let entry = containing,
+              !entry.isFixed, !entry.isFitted else { return planned }
+        if speed <= MapHomePlaybackZoomPolicy.walkingCeiling { return baseline }
+        let raw = MapHomePlaybackZoomPolicy.scale(forVehicleSpeed: speed)
+        let weight = min(1, (entry.endMinute - entry.startMinute) / Self.minimumFullEffectMinutes)
+        return min(baseline, baseline + (raw - baseline) * weight)
+    }
+
+    func targetDistance(atMinute minute: Double, speedMetersPerSecond speed: Double?) -> Double {
+        MapHomeCameraZoomMath.distance(forScale: scale(atMinute: minute, speedMetersPerSecond: speed))
     }
 }
 

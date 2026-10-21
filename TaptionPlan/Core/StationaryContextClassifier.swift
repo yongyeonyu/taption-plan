@@ -487,10 +487,6 @@ struct StationaryContextClassifier: Sendable {
         overlapping stay: TimeSpan
     ) -> WatchContextSignals {
         var result = WatchContextSignals()
-        let overlappingRawSamples = rawSamples.filter {
-            stay.contains($0.capturedAt)
-        }
-        guard overlappingRawSamples.count >= 3 else { return result }
         result.hasSustainedMotion = hasRawMotion(
             rawSamples,
             overlapping: stay

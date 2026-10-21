@@ -405,7 +405,8 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
                     isHiddenFromTimeline: asset.isHidden,
                     location: point,
                     linkedPlanID: nil,
-                    linkedPlaceID: nil
+                    linkedPlaceID: nil,
+                    isScreenshot: asset.mediaSubtypes.contains(.photoScreenshot) ? true : nil
                 )
             )
         }
@@ -636,6 +637,37 @@ final class AppleHealthService: @unchecked Sendable {
 
     func permissionState() -> PermissionState {
         HKHealthStore.isHealthDataAvailable() ? .notDetermined : .unavailable
+    }
+
+    /// 건강 앱의 날짜별 걸음 수 합계(그 달). 읽기 권한이 없거나 기록이 없으면 빈 딕셔너리.
+    /// 아이폰·애플워치가 같은 걸음을 두 번 세지 않도록 HealthKit 통계(합산·중복 제거)를 쓴다.
+    func dailyStepCounts(from start: Date, to end: Date, calendar: Calendar) async throws -> [Date: Double] {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let type = HKObjectType.quantityType(forIdentifier: .stepCount) else { return [:] }
+        let anchor = calendar.startOfDay(for: start)
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: .cumulativeSum,
+                anchorDate: anchor,
+                intervalComponents: DateComponents(day: 1)
+            )
+            query.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                var result: [Date: Double] = [:]
+                collection?.enumerateStatistics(from: start, to: end) { statistics, _ in
+                    let steps = statistics.sumQuantity()?.doubleValue(for: .count()) ?? 0
+                    if steps > 0 { result[calendar.startOfDay(for: statistics.startDate)] = steps }
+                }
+                continuation.resume(returning: result)
+            }
+            store.execute(query)
+        }
     }
 
     func requestReadAccess() async throws -> Bool {
@@ -4247,6 +4279,7 @@ final class AppleTransportContextService {
             busStopName: bus,
             isOnRoad: road
         )
+        if cache.count >= 512 { cache.removeAll(keepingCapacity: true) }
         cache[key] = CacheEntry(context: value, storedAt: .now)
         return value
     }

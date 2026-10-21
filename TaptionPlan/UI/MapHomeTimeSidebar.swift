@@ -1,6 +1,18 @@
 import SwiftUI
 import UIKit
 
+extension View {
+    /// Apple 리퀴드 글래스(iOS 26 이상). 그 이전 버전은 반투명 재질로 대신한다.
+    @ViewBuilder
+    func mapHomeGlass<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+}
+
 private func mapHomeWeatherSymbolColor(
     _ weather: WeatherContext,
     component: WeatherSymbolPaletteComponent
@@ -12,7 +24,7 @@ private func mapHomeWeatherSymbolColor(
 
 enum MapHomeWeatherDisplayPolicy {
     static let forecastOpacity = 0.58
-    static let pillBackgroundOpacity = 1.0
+    static let pillBackgroundOpacity = 0.10
 
     enum PillBackgroundStyle: Equatable {
         case currentWhite
@@ -31,7 +43,8 @@ enum MapHomeWeatherDisplayPolicy {
     }
 
     /// 현재 -1시간보다 앞서 끝난 날씨(지나간 시간대)는 살짝 흐리게 보인다.
-    static let fixedPastOpacity = 0.6
+    /// 지나간 칩은 배경까지 함께 흐려서 미래 칩(불투명 배경, 흐린 글자)과 확실히 구분한다.
+    static let fixedPastPillOpacity = 0.05
     static let fixedPastAge: TimeInterval = 60 * 60
 
     static func isFixedPast(_ context: WeatherContext, now: Date) -> Bool {
@@ -39,9 +52,18 @@ enum MapHomeWeatherDisplayPolicy {
             && (context.validUntil ?? context.observedAt) <= now.addingTimeInterval(-fixedPastAge)
     }
 
-    static func opacity(for context: WeatherContext, now: Date = .now) -> Double {
-        if context.isForecast == true { return forecastOpacity }
-        return isFixedPast(context, now: now) ? fixedPastOpacity : 1
+    static func opacity(for context: WeatherContext) -> Double {
+        context.isForecast == true ? forecastOpacity : 1
+    }
+
+    static func pillOpacity(for context: WeatherContext, now: Date = .now) -> Double {
+        isFixedPast(context, now: now) ? fixedPastPillOpacity : 1
+    }
+
+    /// 지난 날씨는 배경만 흐리고 글자·아이콘은 그대로 둔다.
+    /// 이미 끝난 시간대(`isPastSpan`)이거나 관측이 오래됐으면 지난 날씨로 보고 배경을 더 흐리게 한다.
+    static func backgroundOpacity(for context: WeatherContext, isPastSpan: Bool = false, now: Date = .now) -> Double {
+        isPastSpan || isFixedPast(context, now: now) ? fixedPastPillOpacity : pillBackgroundOpacity
     }
 
     static func isComplete(_ context: WeatherContext) -> Bool {
@@ -122,9 +144,9 @@ enum MapHomeTimeSidebarViewportProjection {
 }
 
 enum MapHomeTimeSidebarStyle {
-    static let panelBackground = Color.tpSurface.opacity(0.88)
+    static let panelBackground = Color.tpSurface.opacity(0.10)
     static let panelBorder = Color.tpLine.opacity(0.64)
-    static let numericColumnBackground = Color.tpSurface.opacity(0.92)
+    static let numericColumnBackground = Color.tpSurface.opacity(0.10)
     static let trackBackground = Color.tpBackground.opacity(0.62)
     static let handleBackground = Color.tpSurfaceCream
     static let deepPinkHex = "#D94772"
@@ -1241,8 +1263,9 @@ struct MapHomeTimeSidebar: View {
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(MapHomeTimeSidebarStyle.panelBackground)
+                        .fill(Color.clear)
                         .frame(width: railWidth, height: railHeight)
+                        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                         .position(
                             x: railOriginX + railWidth / 2,
                             y: railHeight / 2
@@ -1562,6 +1585,7 @@ struct MapHomeTimeSidebar: View {
             viewportDragStartMinute = nil
             gestureBaseState = nil
             isHandleDragging = false
+            handleTouchStartUptime = nil
             nleProjection.reset()
             handleDrag.reset()
             pendingRailSegments = nil
@@ -2166,6 +2190,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
                         )
                     } else {
                         List(unconfirmedSegments) { segment in
+Group {
                             VStack(alignment: .leading, spacing: 10) {
                                 Button {
                                     onSelect(segment)
@@ -2242,7 +2267,11 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                 }
                             }
                             .padding(.vertical, 6)
-                        }
+                        
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
                         .listStyle(.plain)
                     }
                 }
@@ -2286,7 +2315,7 @@ struct MapHomeWeatherSidebar: View {
         let startMinute: Int
         let endMinute: Int
 
-        var id: UUID { context.id }
+        var id: String { "\(context.id)-\(startMinute)" }
     }
 
     var body: some View {
@@ -2306,6 +2335,8 @@ struct MapHomeWeatherSidebar: View {
             )
             let currentMinute = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
             let isToday = Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: Date.now)
+            let isPastDay = Calendar.autoupdatingCurrent.startOfDay(for: date)
+                < Calendar.autoupdatingCurrent.startOfDay(for: Date.now)
             let selectedIndex = entries.firstIndex {
                 clampedSelectedMinute >= $0.startMinute
                     && clampedSelectedMinute < $0.endMinute
@@ -2340,6 +2371,7 @@ struct MapHomeWeatherSidebar: View {
                         )
                         let isSelected = index == selectedIndex
                         let isCurrent = index == currentIndex
+                        let isPastSpan = isPastDay || (isToday && entry.endMinute <= currentMinute)
                         let entryMinute = min(
                             max((entry.startMinute + entry.endMinute) / 2, 0),
                             MapHomeTimeSidebarMath.fullDayMinutes
@@ -2365,18 +2397,27 @@ struct MapHomeWeatherSidebar: View {
                                 .monospacedDigit()
                                 .foregroundStyle(isSelected || isCurrent ? Color.tpAccent : Color.tpInk)
                         }
-                        .opacity(MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
+                        // 지난 시간대는 예보로 받은 값이어도 글자·아이콘을 또렷하게 둔다(배경만 흐리게).
+                        .opacity(isPastSpan ? 1 : MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
                         .padding(.horizontal, MapHomeWeatherRailLayout.scaled(8))
                         .frame(
                             width: itemWidth,
                             height: MapHomeWeatherRailLayout.itemHeight
                         )
-                        .background(
-                            MapHomeWeatherDisplayPolicy
-                                .pillBackgroundStyle(for: entry.context).color
-                                .opacity(MapHomeWeatherDisplayPolicy.pillBackgroundOpacity),
-                            in: Capsule()
-                        )
+                        .background {
+                            if isPastSpan {
+                                Capsule().fill(
+                                    MapHomeWeatherDisplayPolicy
+                                        .pillBackgroundStyle(for: entry.context).color
+                                        .opacity(MapHomeWeatherDisplayPolicy.backgroundOpacity(
+                                            for: entry.context,
+                                            isPastSpan: true
+                                        ))
+                                )
+                            } else {
+                                Color.clear.mapHomeGlass(in: Capsule())
+                            }
+                        }
                         .overlay {
                             Capsule()
                                 .stroke(
@@ -2504,7 +2545,7 @@ struct MapHomeSidebarDoubleTapDetector: Equatable {
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
-    static let verticalInset: CGFloat = 20
+    static let verticalInset: CGFloat = 28
     static let reviewMarkerHitHeight: CGFloat = 44
     static let standardDragSensitivity: CGFloat = 1.6
     static let precisionDragSensitivity: CGFloat = 0.25

@@ -3275,8 +3275,9 @@ struct WalkingLocationEngine: Sendable {
                let anchor = first.point,
                let point = reading.point {
                 shouldSplit = distanceMeters(anchor, point) > radiusMeters
-                    || reading.timestamp.timeIntervalSince(first.timestamp)
-                        > maximumGap
+                    || reading.timestamp.timeIntervalSince(
+                        current.last?.timestamp ?? first.timestamp
+                    ) > maximumGap
                     || (first.trackingSessionID != nil
                         && first.trackingSessionID
                             != reading.trackingSessionID)
@@ -5138,6 +5139,17 @@ enum AppleDeviceGroundTruthEngine {
                     trimmedLast.distanceMeters = last.distanceMeters * retained
                     result[result.count - 1] = trimmedLast
                     result.append(segment)
+                    if last.span.end.timeIntervalSince(segment.span.end) >= 60 {
+                        var tail = last
+                        tail.span = TimeSpan(
+                            start: segment.span.end,
+                            end: last.span.end
+                        )
+                        let tailRatio = tail.span.duration
+                            / max(1, last.span.duration)
+                        tail.distanceMeters = last.distanceMeters * tailRatio
+                        result.append(tail)
+                    }
                     continue
                 }
                 result[result.count - 1] = segment

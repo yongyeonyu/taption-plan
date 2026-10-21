@@ -112,6 +112,10 @@ enum BiometricProtectedSnapshotCodec {
         let sealed = try AES.GCM.SealedBox(combined: archive.encryptedPayload)
         let compressed = try AES.GCM.open(sealed, using: key)
         let json = TaptionSnapshotCompression.decode(compressed)
+        guard compressed.count == archive.compressedByteCount,
+              json.count == archive.jsonByteCount else {
+            throw BiometricDataProtectionError.invalidArchive
+        }
         let snapshot = try decoder.decode(TaptionDataSnapshot.self, from: json)
         guard snapshot.schemaVersion <= TaptionDataSnapshot.empty.schemaVersion else {
             throw BiometricDataProtectionError.invalidArchive
@@ -194,11 +198,16 @@ final class BiometricProtectedSnapshotStore {
                 english: "Unlock protected BOKKI Plan records."
             )
         )
-        let archive = try BiometricProtectedSnapshotCodec.archive(
-            snapshot: snapshot,
-            keyData: keyData
-        )
-        let data = try archiveEncoder.encode(archive)
+        let (archive, data) = try await Task.detached(priority: .userInitiated) {
+            let archive = try BiometricProtectedSnapshotCodec.archive(
+                snapshot: snapshot,
+                keyData: keyData
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            encoder.dateEncodingStrategy = .secondsSince1970
+            return (archive, try encoder.encode(archive))
+        }.value
         try fileManager.createDirectory(
             at: archiveURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -218,10 +227,12 @@ final class BiometricProtectedSnapshotStore {
                 english: "Verify protected BOKKI Plan records."
             )
         )
-        _ = try BiometricProtectedSnapshotCodec.snapshot(
-            from: archive,
-            keyData: keyData
-        )
+        try await Task.detached(priority: .userInitiated) {
+            _ = try BiometricProtectedSnapshotCodec.snapshot(
+                from: archive,
+                keyData: keyData
+            )
+        }.value
         return .protected(createdAt: archive.createdAt)
     }
 

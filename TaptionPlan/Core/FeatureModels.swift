@@ -49,6 +49,10 @@ enum RecordAnalysisCategoryNormalizer {
         let value = [title, behavior ?? ""].joined(separator: " ")
             .lowercased()
             .replacingOccurrences(of: " ", with: "")
+        let words = Set(
+            [title, behavior ?? ""].joined(separator: " ").lowercased()
+                .split { !($0.isASCII && $0.isLetter) }.map(String.init)
+        )
         let rawValue = rawCategoryID.lowercased()
             .replacingOccurrences(of: " ", with: "")
         if rawCategoryID == "unconfirmed"
@@ -63,7 +67,7 @@ enum RecordAnalysisCategoryNormalizer {
         }
         if value.contains("sleep") || value.contains("수면")
             || value.contains("코어") || value.contains("깊은")
-            || value.contains("rem") {
+            || words.contains("rem") {
             return "sleep"
         }
         if value.contains("work") || value.contains("업무") || value.contains("근무") {
@@ -93,16 +97,16 @@ enum RecordAnalysisCategoryNormalizer {
         if value.contains("walking") || value.contains("걷")
             || value.contains("automotive") || value.contains("자동차")
             || value.contains("자가용") || value.contains("privatevehicle")
-            || value.contains("car") || value.contains("driving")
+            || words.contains("car") || value.contains("driving")
             || value.contains("subway") || value.contains("metro")
             || value.contains("지하철") || value.contains("transit")
             || value.contains("publictransit") || value.contains("버스")
-            || value.contains("bus") || value.contains("배")
+            || words.contains("bus") || value.contains("배")
             || value.contains("ship") || value.contains("ferry")
             || value.contains("비행기") || value.contains("airplane")
             || value.contains("자전거") || value.contains("cycling")
-            || value.contains("bike") || value.contains("train")
-            || value.contains("rail") {
+            || words.contains("bike") || value.contains("train")
+            || words.contains("rail") {
             return "movement"
         }
         switch rawCategoryID {
@@ -463,6 +467,7 @@ enum MovementPresentation {
         modeCacheLock.unlock()
         let result = _computeMode(for: actual)
         modeCacheLock.lock()
+        if modeCache.count >= 4_096 { modeCache.removeAll(keepingCapacity: true) }
         modeCache[key] = result
         modeCacheLock.unlock()
         return result
@@ -501,8 +506,14 @@ enum MovementPresentation {
             (.running, ["달리기", "달리", "running", "run"]),
             (.walking, ["걷기", "걷", "walking", "walk"]),
         ]
+        let words = Set(
+            text.split { !($0.isASCII && $0.isLetter) }.map(String.init)
+        )
         return keywords.first { _, terms in
-            terms.contains { text.contains($0) }
+            terms.contains {
+                $0.count <= 4 && $0.allSatisfy(\.isASCII)
+                    ? words.contains($0) : text.contains($0)
+            }
         }?.0
     }
 
@@ -1080,6 +1091,8 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     var occurredAt: Date
     /// Optional map position. Existing timeline-only memos keep this nil.
     var mapPoint: GeoPoint?
+    /// 시간을 지정하지 않은 메모. nil·false는 시간이 있는 메모(예전 기록 포함).
+    var isTimeless: Bool?
     var kind: MemoKind
     var text: String
     var attachments: [MemoAttachment]
@@ -1094,6 +1107,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
         categoryID: String? = nil,
         occurredAt: Date? = nil,
         mapPoint: GeoPoint? = nil,
+        isTimeless: Bool? = nil,
         kind: MemoKind,
         text: String,
         attachments: [MemoAttachment] = [],
@@ -1107,6 +1121,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
         self.categoryID = categoryID
         self.occurredAt = occurredAt ?? createdAt
         self.mapPoint = mapPoint
+        self.isTimeless = isTimeless
         self.kind = kind
         self.text = text
         self.attachments = attachments
@@ -1116,7 +1131,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, planID, targetID, categoryID, occurredAt, mapPoint, kind, text
+        case id, planID, targetID, categoryID, occurredAt, mapPoint, isTimeless, kind, text
         case attachments, isHighlightedInReview, createdAt, updatedAt
     }
 
@@ -1155,6 +1170,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
             GeoPoint.self,
             forKey: .mapPoint
         )
+        isTimeless = try values.decodeIfPresent(Bool.self, forKey: .isTimeless)
     }
 }
 
@@ -1279,6 +1295,10 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
     var location: GeoPoint?
     var linkedPlanID: UUID?
     var linkedPlaceID: UUID?
+    /// 스크린샷 여부. 예전 기록에는 없으므로 Optional.
+    var isScreenshot: Bool?
+    /// 사진에 위치가 없어 같은 시각의 내 이동 기록에서 추정한 위치인지.
+    var isLocationEstimated: Bool?
 
     init(
         id: String,
@@ -1289,7 +1309,9 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
         isHiddenFromTimeline: Bool,
         location: GeoPoint? = nil,
         linkedPlanID: UUID? = nil,
-        linkedPlaceID: UUID? = nil
+        linkedPlaceID: UUID? = nil,
+        isScreenshot: Bool? = nil,
+        isLocationEstimated: Bool? = nil
     ) {
         self.id = id
         self.capturedAt = capturedAt
@@ -1300,6 +1322,8 @@ struct PhotoMoment: Identifiable, Codable, Hashable, Sendable {
         self.location = location
         self.linkedPlanID = linkedPlanID
         self.linkedPlaceID = linkedPlaceID
+        self.isScreenshot = isScreenshot
+        self.isLocationEstimated = isLocationEstimated
     }
 }
 

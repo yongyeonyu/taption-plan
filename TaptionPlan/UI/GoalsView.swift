@@ -1478,6 +1478,7 @@ struct GoalActionLinkSheet: View {
                     )
                 } else {
                     List(candidates) { plan in
+Group {
                         Button {
                             dismiss()
                             Task {
@@ -1509,7 +1510,11 @@ struct GoalActionLinkSheet: View {
                             }
                         }
                         .buttonStyle(.plain)
-                    }
+                    
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
                     .listStyle(.plain)
                 }
             }

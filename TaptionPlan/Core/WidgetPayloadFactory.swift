@@ -1,6 +1,25 @@
 import Foundation
 
 enum TaptionWidgetPayloadFactory {
+    private static func stableUUID(for text: String) -> UUID {
+        var a: UInt64 = 0xcbf29ce484222325
+        var b: UInt64 = 0x84222325cbf29ce4
+        for byte in text.utf8 {
+            a = (a ^ UInt64(byte)) &* 0x100000001b3
+            b = (b &+ UInt64(byte)) &* 0x100000001b3 ^ (b >> 29)
+        }
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for i in 0..<8 {
+            bytes[i] = UInt8(truncatingIfNeeded: a >> (8 * UInt64(i)))
+            bytes[8 + i] = UInt8(truncatingIfNeeded: b >> (8 * UInt64(i)))
+        }
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
+            bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
+
     static func make(
         from snapshot: TaptionDataSnapshot,
         now: Date = .now,
@@ -59,7 +78,7 @@ enum TaptionWidgetPayloadFactory {
             .filter { $0.span.intersection(with: widgetSpan) != nil }
             .map { event in
                 TaptionWidgetItem(
-                    id: UUID(uuidString: event.id) ?? UUID(),
+                    id: UUID(uuidString: event.id) ?? Self.stableUUID(for: event.id),
                     title: event.title,
                     categoryID: "calendar",
                     startsAt: event.span.start,

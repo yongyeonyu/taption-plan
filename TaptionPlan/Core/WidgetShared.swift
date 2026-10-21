@@ -2783,10 +2783,17 @@ enum TaptionWidgetSharedStore {
     }
 
     static func takeCommands() throws -> [TaptionWidgetCommand] {
-        let commands = readCommands()
         let url = fileURL(commandsFileName)
-        if FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.removeItem(at: url)
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        let claimed = url.appendingPathExtension("taking-\(UUID().uuidString)")
+        try FileManager.default.moveItem(at: url, to: claimed)
+        defer { try? FileManager.default.removeItem(at: claimed) }
+        guard let data = try? Data(contentsOf: claimed),
+              let commands = try? decoder.decode(
+                [TaptionWidgetCommand].self,
+                from: data
+              ) else {
+            return []
         }
         return commands.sorted { $0.requestedAt < $1.requestedAt }
     }

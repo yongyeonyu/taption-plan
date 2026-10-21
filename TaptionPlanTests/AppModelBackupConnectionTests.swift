@@ -139,12 +139,9 @@ final class AppModelBackupConnectionTests: XCTestCase {
         XCTAssertTrue(months.allSatisfy { $0.kind == .unchanged || $0.kind == .skipped }, "\(months)")
         XCTAssertEqual(months.filter { $0.kind == .unchanged }.map(\.name), ["2026-07", "2026-08", "2026-10"])
 
-        // 목록: 비밀번호 없이는 월·크기만, 비밀번호를 넣으면 행 수.
+        // 목록: 비밀번호를 입력하기 전에는 보여 주지 않고, 넣으면 행 수까지 보여 준다.
         await model.refreshBackupListings()
-        let bare = try XCTUnwrap(model.backupListings.first { $0.name == "2026-07.taptionbackup" })
-        XCTAssertNil(bare.rowCount)
-        XCTAssertFalse(bare.metadataShown)
-        XCTAssertGreaterThan(bare.size, 0)
+        XCTAssertTrue(model.backupListings.isEmpty)
         await model.refreshBackupListings(password: password)
         let detailed = try XCTUnwrap(model.backupListings.first { $0.name == "2026-07.taptionbackup" })
         XCTAssertEqual(detailed.rowCount, 2)

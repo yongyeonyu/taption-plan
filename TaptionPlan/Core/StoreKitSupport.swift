@@ -78,7 +78,7 @@ enum TaptionProTrialPolicy {
         }
         let remainingDays = max(
             1,
-            Int(ceil(expiresAt.timeIntervalSince(effectiveNow) / 86_400))
+            Int(min(ceil(expiresAt.timeIntervalSince(effectiveNow) / 86_400), 1_000_000))
         )
         return .trial(
             expiresAt: expiresAt,
@@ -442,12 +442,15 @@ actor StoreKitPurchaseService {
 
         switch try await proProduct.purchase() {
         case .success(let verification):
-            guard case .verified(let transaction) = verification,
-                  TaptionCommercePolicy.grantsProAccess(
-                    productID: transaction.productID,
-                    productType: transaction.productType,
-                    revocationDate: transaction.revocationDate
-                  ) else {
+            guard case .verified(let transaction) = verification else {
+                throw StorePurchaseError.unverifiedTransaction
+            }
+            guard TaptionCommercePolicy.grantsProAccess(
+                productID: transaction.productID,
+                productType: transaction.productType,
+                revocationDate: transaction.revocationDate
+            ) else {
+                await transaction.finish()
                 throw StorePurchaseError.unverifiedTransaction
             }
             return .purchased(transaction)
@@ -666,8 +669,7 @@ final class TaptionProAccessController {
         guard case .trial(let expiresAt, _) = newState else { return }
         let delay = max(0, expiresAt.timeIntervalSinceNow)
         let nanoseconds = UInt64(
-            min(delay, Double(UInt64.max) / 1_000_000_000)
-                * 1_000_000_000
+            min(delay, 1_000_000_000) * 1_000_000_000
         )
         trialExpirationTask = Task { [weak self] in
             do {

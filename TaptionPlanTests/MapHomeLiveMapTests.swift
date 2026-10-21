@@ -383,8 +383,8 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(MapHomeStartupCameraPolicy.distance, Policy.baselineDistance, accuracy: 0.001)
         // 탈것 곡선: 느리면 92, 빠르면 42, 그 사이는 단조 감소.
         XCTAssertEqual(Policy.scale(forVehicleSpeed: 0.2), 92, accuracy: 0.001)
-        XCTAssertEqual(Policy.scale(forVehicleSpeed: 40), 42, accuracy: 0.001)
-        XCTAssertEqual(Policy.scale(forVehicleSpeed: 200), 42, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 40), 30, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 200), 30, accuracy: 0.001)
         XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 3), Policy.scale(forVehicleSpeed: 12))
         XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 12), Policy.scale(forVehicleSpeed: 30))
         // 센서 속도만 아는 경우: 정지·걷기는 85, 그 위는 탈것 곡선, 모르면 nil.
@@ -407,7 +407,9 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(plan.scale(atMinute: 50), base, "정지·구간 밖은 85")
         XCTAssertEqual(plan.scale(atMinute: 105), base, "걷기는 85 고정")
         XCTAssertLessThan(plan.scale(atMinute: 220), base - 20, "지하철은 크게 축소")
-        XCTAssertEqual(plan.scale(atMinute: 310), base, "등록 장소에서 이어지는 이동은 85 고정")
+        XCTAssertEqual(plan.scale(atMinute: 300.5), base, "등록 장소에서 이어지는 이동은 출발 몇 분만 85")
+        XCTAssertLessThan(plan.scale(atMinute: 310), base - 20, "가운데는 속도에 따라 크게 축소")
+        XCTAssertEqual(plan.scale(atMinute: 329.5), base, "도착 몇 분도 85")
         XCTAssertEqual(plan.scale(atMinute: 410), base, "모드를 모르는 느린 이동은 걷기로 보고 85")
         XCTAssertEqual(plan.scale(atMinute: 510), base, "속도를 모르면 85")
         XCTAssertEqual(plan.scale(atMinute: 240), base, "구간 끝은 85로 돌아온다")
@@ -456,10 +458,10 @@ final class MapHomeLiveMapTests: XCTestCase {
         )
         XCTAssertEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 5_000_000), 15, "하한")
         XCTAssertLessThanOrEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 100), 60, "상한")
-        // 5km 미만 탈것은 85 고정, 5~50km는 속도 비례.
+        // 1km 미만 탈것은 85 고정, 1~50km는 속도 비례.
         let hop = Plan(inputs: [.init(
             startMinute: 0, endMinute: 10, mode: .bus, speedMetersPerSecond: 6,
-            touchesRegisteredPlace: false, distanceMeters: 3_600, extentMeters: 3_000)])
+            touchesRegisteredPlace: false, distanceMeters: 800, extentMeters: 700)])
         XCTAssertEqual(hop.scale(atMinute: 5), base)
         let city = Plan(inputs: [.init(
             startMinute: 0, endMinute: 40, mode: .bus, speedMetersPerSecond: 12,
@@ -866,12 +868,251 @@ extension MapHomeLiveMapTests {
                 temperatureCelsius: 10
             )
         }
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-7_200)), now: now), 0.6)
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-1_800)), now: now), 1)
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(3_600)), now: now), 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillOpacity(for: context(end: now.addingTimeInterval(-7_200)), now: now), MapHomeWeatherDisplayPolicy.fixedPastPillOpacity)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillOpacity(for: context(end: now.addingTimeInterval(-1_800)), now: now), 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillOpacity(for: context(end: now.addingTimeInterval(3_600)), now: now), 1)
         XCTAssertEqual(
-            MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-7_200), forecast: true), now: now),
+            MapHomeWeatherDisplayPolicy.opacity(for: context(end: now.addingTimeInterval(-7_200), forecast: true)),
             MapHomeWeatherDisplayPolicy.forecastOpacity
         )
+        XCTAssertEqual(
+            MapHomeWeatherDisplayPolicy.pillOpacity(for: context(end: now.addingTimeInterval(-7_200), forecast: true), now: now),
+            1
+        )
+    }
+
+    func testHomeLayoutStyleDefaultsToClassicAndReservesBottomSpace() {
+        XCTAssertEqual(MapHomeLayoutStyle(rawValue: "unknown") ?? .classic, .classic)
+        XCTAssertFalse(MapHomeLayoutStyle.classic.movesActionsToBottom)
+        XCTAssertEqual(MapHomeLayoutStyle.classic.bottomReservedHeight, 0)
+        for style in [MapHomeLayoutStyle.tabBar] {
+            XCTAssertTrue(style.movesActionsToBottom)
+            XCTAssertGreaterThan(style.bottomReservedHeight, 44)
+            XCTAssertEqual(MapHomeLayoutStyle(rawValue: style.rawValue), style)
+        }
+    }
+
+    func testDaysUntilNextWeeklyRewardCountsInSevenDayCycles() {
+        typealias Policy = MapHomeGrowthPolicy
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 0), 7)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 1), 6)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 6), 1)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 7), 7, "7일째에 보상을 받은 직후에는 다음 7일")
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 8), 6, "8일째부터 0으로 떨어지지 않는다")
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 13), 1)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: 14), 7)
+        XCTAssertEqual(Policy.daysUntilNextWeeklyReward(streak: -3), 7)
+    }
+
+    func testCalendarCountMetricsFormatCellsAndPanel() {
+        typealias Policy = MapHomeCalendarTimeTotalsPolicy
+        XCTAssertEqual(Policy.countCellText(count: 0), "")
+        XCTAssertEqual(Policy.countCellText(count: 3), "3")
+        XCTAssertEqual(Policy.countText(count: 4, kind: .places, language: .korean), "4곳")
+        XCTAssertEqual(Policy.countText(count: 6, kind: .trips, language: .korean), "6회")
+        XCTAssertTrue(MapHomeCalendarTimeKind.places.isCount)
+        XCTAssertTrue(MapHomeCalendarTimeKind.trips.isCount)
+        XCTAssertFalse(MapHomeCalendarTimeKind.distance.isCount)
+        XCTAssertTrue(MapHomeCalendarTimeKind.distance.usesAccentTint)
+        XCTAssertFalse(MapHomeCalendarTimeKind.sleep.usesAccentTint)
+    }
+
+    func testPlaybackZoomFollowsInstantSpeedInsideVehicleSegments() {
+        typealias Plan = MapHomePlaybackZoomPlan
+        let base = MapHomePlaybackZoomPolicy.baselineScale
+        let plan = Plan(inputs: [.init(
+            startMinute: 100, endMinute: 160, mode: .car, speedMetersPerSecond: 15,
+            touchesRegisteredPlace: false, distanceMeters: 30_000, extentMeters: 20_000
+        )])
+        let fast = plan.scale(atMinute: 130, speedMetersPerSecond: 25)
+        let slow = plan.scale(atMinute: 130, speedMetersPerSecond: 3.5)
+        XCTAssertLessThan(fast, slow, "빠를수록 더 축소")
+        XCTAssertLessThan(fast, base - 20)
+        XCTAssertEqual(plan.scale(atMinute: 130, speedMetersPerSecond: 1.0), base, "걷기 이하로 느려지면 85까지 확대")
+        XCTAssertEqual(plan.scale(atMinute: 130, speedMetersPerSecond: nil), plan.scale(atMinute: 130), "속도를 모르면 계획 그대로")
+        XCTAssertEqual(plan.scale(atMinute: 50, speedMetersPerSecond: 25), base, "구간 밖은 85")
+    }
+
+    func testLongHaulFitStaysFixedRegardlessOfInstantSpeed() {
+        typealias Plan = MapHomePlaybackZoomPlan
+        let trip = Plan(inputs: [.init(
+            startMinute: 600, endMinute: 780, mode: .car, speedMetersPerSecond: 27,
+            touchesRegisteredPlace: false, distanceMeters: 290_000, extentMeters: 250_000
+        )])
+        XCTAssertEqual(
+            trip.scale(atMinute: 690, speedMetersPerSecond: 0.5),
+            trip.scale(atMinute: 690),
+            "경로 전체 맞춤은 순간 속도로 흔들리지 않는다"
+        )
+    }
+
+    func testZoomSmootherZoomsInMoreGentlyThanOut() {
+        let outSmoother = MapHomePlaybackZoomSmoother()
+        let inSmoother = MapHomePlaybackZoomSmoother()
+        _ = outSmoother.next(current: 250, target: 800, uptime: 0)
+        _ = inSmoother.next(current: 800, target: 250, uptime: 0)
+        let out = outSmoother.next(current: 250, target: 800, uptime: 0.5)
+        let into = inSmoother.next(current: 800, target: 250, uptime: 0.5)
+        XCTAssertGreaterThan(abs(log(out / 250)), abs(log(into / 800)), "줌인이 더 천천히")
+    }
+
+    func testPlacingUnlocatedPhotosUsesNearestMovementReadingWithinGap() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        func reading(_ seconds: TimeInterval, longitude: Double) -> SensorReading {
+            var value = SensorReading(timestamp: base.addingTimeInterval(seconds))
+            value.point = GeoPoint(latitude: 37.5, longitude: longitude, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+            return value
+        }
+        func moment(_ id: String, _ seconds: TimeInterval, located: Bool = false, screenshot: Bool = false) -> PhotoMoment {
+            PhotoMoment(
+                id: id, capturedAt: base.addingTimeInterval(seconds), pixelWidth: 10, pixelHeight: 10,
+                isFavorite: false, isHiddenFromTimeline: false,
+                location: located ? GeoPoint(latitude: 1, longitude: 2, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5) : nil,
+                isScreenshot: screenshot ? true : nil
+            )
+        }
+        let readings = [reading(0, longitude: 127.000), reading(600, longitude: 127.010)]
+        let placed = MapHomePhotoPolicy.placingUnlocated(
+            [moment("near-first", 100, screenshot: true), moment("near-second", 500), moment("own", 100, located: true), moment("far", 5_000)],
+            readings: readings
+        )
+        XCTAssertEqual(placed[0].location?.longitude, 127.000, "가까운 첫 기록의 위치")
+        XCTAssertEqual(placed[0].isLocationEstimated, true)
+        XCTAssertEqual(placed[0].isScreenshot, true, "스크린샷 표시는 유지")
+        XCTAssertEqual(placed[1].location?.longitude, 127.010)
+        XCTAssertEqual(placed[2].location?.longitude, 2, "사진 자신의 위치가 있으면 그대로")
+        XCTAssertNil(placed[2].isLocationEstimated)
+        XCTAssertNil(placed[3].location, "기록이 20분 밖이면 위치를 만들지 않는다")
+        XCTAssertEqual(MapHomePhotoPolicy.locatedMoments(placed).count, 3)
+    }
+
+    func testPhotoMomentDecodesOlderRecordWithoutScreenshotFields() throws {
+        let json = #"{"id":"a","capturedAt":0,"pixelWidth":1,"pixelHeight":1,"isFavorite":false,"isHiddenFromTimeline":false}"#
+        let decoded = try JSONDecoder().decode(PhotoMoment.self, from: Data(json.utf8))
+        XCTAssertNil(decoded.isScreenshot)
+        XCTAssertNil(decoded.isLocationEstimated)
+    }
+
+    func testActionMemoTimelessFlagRoundTripsAndOlderRecordsHaveTime() throws {
+        let timeless = ActionMemo(occurredAt: Date(timeIntervalSince1970: 1_800_000_000), isTimeless: true, kind: .idea, text: "큐 메모")
+        let decoded = try JSONDecoder().decode(ActionMemo.self, from: JSONEncoder().encode(timeless))
+        XCTAssertEqual(decoded.isTimeless, true)
+        XCTAssertEqual(decoded.text, "큐 메모")
+        let older = #"{"id":"00000000-0000-0000-0000-000000000001","kind":"idea","text":"옛 메모","createdAt":0}"#
+        let legacy = try JSONDecoder().decode(ActionMemo.self, from: Data(older.utf8))
+        XCTAssertNil(legacy.isTimeless, "옛 기록은 시간이 있는 메모")
+        XCTAssertNil(legacy.mapPoint)
+    }
+
+    func testMemoDisplayModeDefaultsAndTitles() {
+        XCTAssertEqual(MapHomeMemoDisplayMode(rawValue: "unknown") ?? .all, .all)
+        XCTAssertEqual(MapHomeMemoDisplayMode.allCases.map(\.rawValue), ["all", "located", "hidden"])
+        XCTAssertFalse(MapHomeMemoDisplayMode.hidden.koreanTitle.isEmpty)
+    }
+
+    func testPlaybackZoomProfileSmoothsSpeedAndFixesRegisteredPlaces() throws {
+        let dayStart = Date(timeIntervalSince1970: 1_800_000_000)
+        // 위도 37.5°에서 경도 0.001° ≈ 88.3m. 30초마다 한 점.
+        let metersPerDegree = 111_320 * cos(37.5 * .pi / 180)
+        var longitude = 127.0
+        var readings: [SensorReading] = []
+        func addPoint(_ seconds: TimeInterval) {
+            var value = SensorReading(timestamp: dayStart.addingTimeInterval(seconds))
+            value.point = GeoPoint(latitude: 37.5, longitude: longitude, altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5)
+            readings.append(value)
+        }
+        // 0~10분 정지, 10~40분 20m/s(72km/h), 40~60분 정지.
+        for step in 0...120 {
+            let seconds = Double(step) * 30
+            if seconds > 600, seconds <= 2_400 { longitude += 20 * 30 / metersPerDegree }
+            addPoint(seconds)
+        }
+        let midPoint = readings[50].point!   // 25분 지점
+        let profile = try XCTUnwrap(MapHomePlaybackZoomProfile.build(readings: readings, places: [], dayStart: dayStart, endMinute: 60))
+        let base = MapHomePlaybackZoomPolicy.baselineScale
+        XCTAssertEqual(try XCTUnwrap(profile.scale(atMinute: 3)), base, accuracy: 0.001, "정지는 85")
+        XCTAssertLessThan(try XCTUnwrap(profile.scale(atMinute: 25)), base - 20, "빠를 때 크게 축소")
+        // 평탄화: 30초 사이 변화는 상한 이하
+        for index in 1..<profile.scales.count {
+            XCTAssertLessThanOrEqual(abs(profile.scales[index] - profile.scales[index - 1]), MapHomePlaybackZoomProfile.maximumStepChange + 0.001)
+        }
+        // 등록 지점이 경로 한가운데에 있으면 그 근처는 85로 고정
+        let fixed = try XCTUnwrap(MapHomePlaybackZoomProfile.build(readings: readings, places: [midPoint], dayStart: dayStart, endMinute: 60))
+        XCTAssertEqual(try XCTUnwrap(fixed.scale(atMinute: 25)), base, accuracy: 0.001, "등록 지점은 확대 고정")
+        XCTAssertLessThan(try XCTUnwrap(fixed.scale(atMinute: 33)), base - 5, "지점에서 멀어지면 다시 속도 비례")
+        XCTAssertNil(profile.scale(atMinute: 61), "범위 밖은 nil")
+        XCTAssertNil(MapHomePlaybackZoomProfile.build(readings: [], places: [], dayStart: dayStart))
+    }
+
+    func testPlaybackZoomPlanUsesProfileOutsideFittedLongHauls() throws {
+        let profile = MapHomePlaybackZoomProfile(startMinute: 0, scales: Array(repeating: 50, count: 2_881))
+        let plan = MapHomePlaybackZoomPlan(inputs: [
+            .init(startMinute: 100, endMinute: 160, mode: .car, speedMetersPerSecond: 15, touchesRegisteredPlace: false, distanceMeters: 30_000, extentMeters: 20_000),
+            .init(startMinute: 600, endMinute: 780, mode: .car, speedMetersPerSecond: 27, touchesRegisteredPlace: false, distanceMeters: 290_000, extentMeters: 250_000),
+        ], profile: profile)
+        XCTAssertEqual(plan.scale(atMinute: 130, speedMetersPerSecond: nil), 50, accuracy: 0.001, "프로파일 값을 쓴다")
+        XCTAssertEqual(plan.scale(atMinute: 690, speedMetersPerSecond: nil), plan.scale(atMinute: 690), "경로 전체 맞춤은 계획 그대로")
+        XCTAssertEqual(plan.scale(atMinute: 30, speedMetersPerSecond: nil), 50, accuracy: 0.001)
+    }
+
+    func testAccessorySymbolFollowsLandmarkPatternAndFallsBack() throws {
+        let landmark = try XCTUnwrap(MapHomeLandmarkCatalog.candidates.first)
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.symbol(for: landmark.accessoryID), landmark.systemImage)
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.landmark(for: landmark.accessoryID)?.id, landmark.id)
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.landmark(for: "cat.accessory.unknown"))
+        XCTAssertNotNil(MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.unknown"), "옛 id는 기본 심볼")
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.symbol(for: nil))
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.symbol(for: ""))
+    }
+
+    func testLandPlacementCandidatesAndExplicitPlacement() {
+        typealias Policy = MapHomeGrowthPolicy
+        var season = MapHomeGrowthSeason(year: 2026)
+        season.landPlots = ["a", "b", "c"]
+        let first = Policy.placementCandidates(in: season)
+        XCTAssertEqual(first.count, 1)
+        XCTAssertEqual(first[0].x, 0)
+        XCTAssertEqual(first[0].y, 0)
+        XCTAssertFalse(Policy.placeLandPlot("a", atX: 3, y: 3, in: &season), "첫 땅은 집 자리(0,0)에만")
+        XCTAssertTrue(Policy.placeLandPlot("a", atX: 0, y: 0, in: &season))
+        let around = Policy.placementCandidates(in: season)
+        XCTAssertEqual(Set(around.map { "\($0.x),\($0.y)" }), ["1,0", "0,1", "-1,0", "0,-1"])
+        XCTAssertFalse(Policy.placeLandPlot("b", atX: 1, y: 1, in: &season), "변을 맞대지 않은 칸은 불가")
+        XCTAssertTrue(Policy.placeLandPlot("b", atX: 0, y: -1, in: &season))
+        XCTAssertFalse(Policy.placeLandPlot("b", atX: 1, y: 0, in: &season), "이미 놓은 땅은 다시 못 놓는다")
+        XCTAssertFalse(Policy.placeLandPlot("c", atX: 0, y: -1, in: &season), "이미 차지한 칸은 불가")
+        XCTAssertTrue(Policy.placeLandPlot("c", atX: -1, y: -1, in: &season), "새 땅과 변을 맞댄 칸")
+        XCTAssertEqual(season.landPlotPlacements?.count, 3)
+    }
+
+    func testWeeklyChoicesSkipAlreadyChosenLandmarks() {
+        var season = MapHomeGrowthSeason(year: 2026)
+        let all = MapHomeLandmarkCatalog.candidates
+        XCTAssertEqual(all.count, 52)
+        var seen = Set<String>()
+        // 한 해 52번 고르면 매번 아직 안 고른 랜드마크만 나오고, 고른 것은 다시 나오지 않는다.
+        for _ in 0..<52 {
+            let choices = MapHomeLandmarkCatalog.weeklyChoices(for: season)
+            XCTAssertFalse(choices.isEmpty)
+            XCTAssertTrue(choices.allSatisfy { !seen.contains($0.id) }, "이미 고른 후보가 다시 나왔다")
+            let picked = choices[0]
+            seen.insert(picked.id)
+            season.chosenEvolutions.append(picked.id)
+        }
+        XCTAssertEqual(seen.count, 52)
+        XCTAssertEqual(MapHomeLandmarkCatalog.weeklyChoices(for: season).count, 3, "다 모으면 전체에서 다시 돈다")
+    }
+
+    func testMergedStepCountsKeepsTheLargerOfHealthAndSensor() {
+        let day1 = Date(timeIntervalSince1970: 1_800_000_000)
+        let day2 = day1.addingTimeInterval(86_400)
+        let day3 = day2.addingTimeInterval(86_400)
+        let merged = MapHomeCalendarTimeTotalsPolicy.mergedStepCounts(
+            health: [day1: 8_000, day2: 3_000],
+            sensor: [day2: 5_000, day3: 1_200]
+        )
+        XCTAssertEqual(merged[day1], 8_000, "건강 앱만 있으면 그 값")
+        XCTAssertEqual(merged[day2], 5_000, "둘 다 있으면 큰 값(더하지 않는다)")
+        XCTAssertEqual(merged[day3], 1_200, "센서만 있으면 그 값")
     }
 }

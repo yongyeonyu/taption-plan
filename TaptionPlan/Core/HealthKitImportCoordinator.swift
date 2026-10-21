@@ -343,8 +343,7 @@ actor HealthKitImportCoordinator {
     ) async throws -> HealthKitSyncOverview {
         try await synchronizationGate.withPermit {
             try await self.synchronizeChangesSerially(
-                typeIdentifiers: typeIdentifiers,
-                includeAncillary: true
+                typeIdentifiers: typeIdentifiers
             )
         }
     }
@@ -354,15 +353,13 @@ actor HealthKitImportCoordinator {
     ) async throws -> HealthKitSyncOverview {
         try await synchronizationGate.withPermit {
             try await self.synchronizeChangesSerially(
-                typeIdentifiers: typeIdentifiers,
-                includeAncillary: false
+                typeIdentifiers: typeIdentifiers
             )
         }
     }
 
     private func synchronizeChangesSerially(
-        typeIdentifiers: Set<String>?,
-        includeAncillary: Bool
+        typeIdentifiers: Set<String>?
     ) async throws -> HealthKitSyncOverview {
         guard let importStore else {
             throw HealthKitImportCoordinatorError.localStoreUnavailable
@@ -458,9 +455,10 @@ actor HealthKitImportCoordinator {
         }
         var state = initialState
         let now = Date.now
+        // 해석할 수 없는 커서는 없는 것으로 보고 첫 샘플 날짜부터 다시 받는다.
         let cursor: Date?
-        if let historyCursor = state.historyCursor {
-            cursor = try Self.decodeHistoryDate(historyCursor)
+        if let savedCursor = state.historyCursor.flatMap({ try? Self.decodeHistoryDate($0) }) {
+            cursor = savedCursor
         } else {
             cursor = try await firstSampleDate(for: sampleType)
         }
@@ -548,7 +546,8 @@ actor HealthKitImportCoordinator {
             throw HealthKitImportCoordinatorError.localStoreUnavailable
         }
         var state = initialState
-        var anchor = try state.anchor.map(Self.decodeAnchor)
+        // 해석할 수 없는 앵커는 처음부터 다시 받는다(uuid로 합쳐지므로 중복되지 않는다).
+        var anchor = state.anchor.flatMap { try? Self.decodeAnchor($0) }
         while true {
             let page = try await anchoredPage(
                 type: sampleType,

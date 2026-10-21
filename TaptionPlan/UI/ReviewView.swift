@@ -248,7 +248,8 @@ private enum RecentActivitySelectionStore {
     ) -> [ActivityCorrectionOption] {
         let recentIDs = ids()
         let rank = Dictionary(
-            uniqueKeysWithValues: recentIDs.enumerated().map { ($1, $0) }
+            recentIDs.enumerated().map { ($1, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
         return options.enumerated()
             .sorted { left, right in
@@ -4642,6 +4643,8 @@ private struct ActivityCorrectionSheet: View {
     var body: some View {
         NavigationStack {
             List {
+Group {
+
                 if showsQuickMenu, let record, !quickOptions.isEmpty {
                     Section("빠른 변경") {
                         ActivityCorrectionHierarchyPicker(
@@ -4679,7 +4682,11 @@ private struct ActivityCorrectionSheet: View {
                 Section("활동 선택") {
                     ForEach(suggestedOptions) { optionRow($0) }
                 }
-            }
+            
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
             .listStyle(.insetGrouped)
             .navigationTitle(target.isUnconfirmed ? "활동 결정" : "활동 변경")
             .navigationBarTitleDisplayMode(.inline)

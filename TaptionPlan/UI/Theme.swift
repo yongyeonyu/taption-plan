@@ -494,3 +494,15 @@ extension View {
             }
     }
 }
+
+
+extension View {
+    /// 앱 시트 스타일: 시스템 회색 배경 대신 달력 시트와 같은 크림 배경, 강조색 틴트.
+    /// 행 배경은 내용을 `Group { }.listRowBackground(Color.tpSurface)`로 감싸 맞춘다.
+    func tpListStyle() -> some View {
+        self
+            .scrollContentBackground(.hidden)
+            .background(Color.tpBackground)
+            .tint(Color.tpAccent)
+    }
+}

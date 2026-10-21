@@ -124,6 +124,7 @@ enum RecordAnalysisCategoryPolicy {
         cacheLock.unlock()
         let result = _computeCategoryID(for: actual)
         cacheLock.lock()
+        if categoryCache.count >= 4_096 { categoryCache.removeAll(keepingCapacity: true) }
         categoryCache[key] = result
         cacheLock.unlock()
         return result
@@ -581,9 +582,10 @@ enum ReviewReportArchiveEngine {
         sources[today, default: .empty].categories = snapshot.categories
 
         let existingDays = Dictionary(
-            uniqueKeysWithValues: snapshot.yearlyReports
+            snapshot.yearlyReports
                 .flatMap(\.days)
-                .map { ($0.span.start, $0) }
+                .map { ($0.span.start, $0) },
+            uniquingKeysWith: { _, last in last }
         )
         let dayStarts = Set(sources.keys).union(existingDays.keys).filter {
             $0 <= today

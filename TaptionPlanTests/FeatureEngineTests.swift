@@ -27739,7 +27739,7 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(Policy.durationText(seconds: 30 * 60, language: .korean), "30분")
         XCTAssertEqual(Policy.durationText(seconds: 0, language: .korean), "0분")
         XCTAssertEqual(MapHomeCalendarTimeKind.allCases.map(\.rawValue),
-                       ["sleep", "movement", "study", "work", "exercise", "hobby"])
+                       ["sleep", "movement", "study", "work", "exercise", "hobby", "distance", "places", "trips", "steps", "photos", "walkDistance", "carDistance", "transitDistance", "awayTime"])
     }
 
     func testCalendarTimeTotalsSumCanonicalCategoriesPerDay() {
@@ -28109,15 +28109,16 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(history.season.equippedAccessory, "cat.accessory.001")
     }
 
-    func testLandmarkCatalogHasFiveChoicesForEachInitialCountry() {
+    func testLandmarkCatalogHasFiftyTwoChoicesForTheYearlyWeeklyRewards() {
         let grouped = Dictionary(grouping: MapHomeLandmarkCatalog.candidates, by: \.country)
 
         XCTAssertEqual(grouped.count, 10)
-        XCTAssertTrue(grouped.values.allSatisfy { $0.count == 5 })
-        XCTAssertEqual(MapHomeLandmarkCatalog.candidates.count, 50)
+        XCTAssertEqual(grouped["대한민국"]?.count, 7, "한국은 52개로 맞추며 두 곳을 더했다")
+        XCTAssertTrue(grouped.filter { $0.key != "대한민국" }.values.allSatisfy { $0.count == 5 })
+        XCTAssertEqual(MapHomeLandmarkCatalog.candidates.count, 52)
         XCTAssertEqual(
             Set(MapHomeLandmarkCatalog.candidates.map(\.artworkName)).count,
-            50
+            52
         )
         XCTAssertTrue(MapHomeLandmarkCatalog.candidates.allSatisfy {
             $0.artworkName.hasPrefix("Landmark_")

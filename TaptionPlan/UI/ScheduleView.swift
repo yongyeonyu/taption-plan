@@ -869,7 +869,8 @@ private final class TimelinePlaceIndexCache {
         guard self.timelineRevision != timelineRevision else { return }
         self.timelineRevision = timelineRevision
         placesByID = Dictionary(
-            uniqueKeysWithValues: places.map { ($0.id, $0) }
+            places.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
         placesByStart = places.sorted {
             if $0.span.start == $1.span.start {
@@ -6477,6 +6478,7 @@ private struct RoutineActionLinkSheet: View {
                     )
                 } else {
                     List(candidates) { routine in
+Group {
                         Button {
                             Task {
                                 await model.connectActionItem(
@@ -6513,7 +6515,11 @@ private struct RoutineActionLinkSheet: View {
                             }
                         }
                         .buttonStyle(.plain)
-                    }
+                    
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
                     .listStyle(.plain)
                 }
             }
@@ -6590,6 +6596,7 @@ private struct GoalActualLinkSheet: View {
                     )
                 } else {
                     List(candidates) { candidate in
+Group {
                         let goal = candidate.plan
                         Button {
                             // The relationship is written to the in-memory
@@ -6633,7 +6640,11 @@ private struct GoalActualLinkSheet: View {
                             }
                         }
                         .buttonStyle(.plain)
-                    }
+                    
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
                     .listStyle(.plain)
                 }
             }
@@ -6828,6 +6839,7 @@ private struct RecordNodeLinkSheet: View {
                     )
                 } else {
                     List(candidates) { plan in
+Group {
                         Button {
                             // Keep the detail card responsive while the
                             // relationship is persisted in the background.
@@ -6866,7 +6878,11 @@ private struct RecordNodeLinkSheet: View {
                             }
                         }
                         .buttonStyle(.plain)
-                    }
+                    
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
                     .listStyle(.plain)
                 }
             }

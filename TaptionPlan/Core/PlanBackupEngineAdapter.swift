@@ -9,6 +9,7 @@ struct PlanBackupEngineAdapter: Sendable {
     /// (헤더 메타데이터는 비밀번호를 입력한 뒤에만 보여 주는 규칙. `password`는 엔진이 요구하게 되면 그대로 넘긴다.)
     func listings(password: String?) async throws -> [PlanBackupListingRow] {
         let showsMetadata = !(password ?? "").isEmpty
+        guard showsMetadata else { return [] }
         var rows: [PlanBackupListingRow] = []
         for listing in try await engine.listBackups(password: showsMetadata ? password : nil) {
             var offloaded = false

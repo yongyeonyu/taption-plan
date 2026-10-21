@@ -1555,6 +1555,8 @@ private struct UserTransitLocationsSettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+Group {
+
                 if model.settings.userTransitLocations.isEmpty {
                     Text("등록된 역·정류장이 없습니다.")
                         .foregroundStyle(Color.tpSecondary)
@@ -1580,7 +1582,11 @@ private struct UserTransitLocationsSettingsView: View {
                         }
                     }
                 }
-            }
+            
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
             .navigationTitle("사용자 등록 위치")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1610,13 +1616,19 @@ private struct UserTransitLocationNameEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+Group {
+
                 Section {
                     Label(location.kind.title, systemImage: location.kind.systemImage)
                     TextField("이름", text: $name)
                 } header: {
                     Text("등록된 위치 이름")
                 }
-            }
+            
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("이름 편집")
             .navigationBarTitleDisplayMode(.inline)

@@ -130,6 +130,7 @@ struct WatchSensorDrainLedger {
     var isExhausted: Bool { failureCount >= failureLimit }
 
     mutating func succeeded(_ window: WatchSensorQueryWindow) {
+        guard failureCount == 0 else { return }
         advance(past: window)
     }
 

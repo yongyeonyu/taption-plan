@@ -53,7 +53,11 @@ enum CategoryCatalog {
         }) else {
             throw CategoryError.duplicateName
         }
-        guard isValidHex(lightHex) else { throw CategoryError.invalidColor }
+        guard isValidHex(lightHex),
+              darkHex.map(isValidHex) ?? true,
+              actualHex.map(isValidHex) ?? true else {
+            throw CategoryError.invalidColor
+        }
         let sortOrder = (existing.map(\.sortOrder).max() ?? -1) + 1
         return CategoryDefinition(
             id: "custom.\(UUID().uuidString.lowercased())",
@@ -93,9 +97,10 @@ enum CategoryCatalog {
         _ categories: [CategoryDefinition],
         orderedIDs: [String]
     ) -> [CategoryDefinition] {
-        let rank = Dictionary(uniqueKeysWithValues: orderedIDs.enumerated().map {
-            ($0.element, $0.offset)
-        })
+        let rank = Dictionary(
+            orderedIDs.enumerated().map { ($0.element, $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
         return categories
             .map { category in
                 var value = category

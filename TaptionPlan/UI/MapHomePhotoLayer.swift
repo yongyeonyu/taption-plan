@@ -31,6 +31,39 @@ enum MapHomePhotoPolicy {
         return min(max(bucket * 0.06, 25), 5_000)
     }
 
+    /// 위치가 없는 사진(스크린샷 등)에 같은 시각 가장 가까운 내 위치 기록의 좌표를 넣는다.
+    /// 기록이 `maximumGap` 안에 없으면 위치 없이 둔다. 사진 자체의 위치가 있으면 그대로 둔다.
+    static func placingUnlocated(
+        _ moments: [PhotoMoment],
+        readings: [SensorReading],
+        maximumGap: TimeInterval = 20 * 60
+    ) -> [PhotoMoment] {
+        guard moments.contains(where: { $0.location == nil }) else { return moments }
+        let located = readings.filter { $0.point != nil }.sorted { $0.timestamp < $1.timestamp }
+        guard !located.isEmpty else { return moments }
+        func nearest(to date: Date) -> SensorReading? {
+            var low = 0, high = located.count
+            while low < high {
+                let mid = (low + high) / 2
+                if located[mid].timestamp < date { low = mid + 1 } else { high = mid }
+            }
+            let candidates = [low - 1, low].filter { located.indices.contains($0) }.map { located[$0] }
+            return candidates.min {
+                abs($0.timestamp.timeIntervalSince(date)) < abs($1.timestamp.timeIntervalSince(date))
+            }
+        }
+        return moments.map { moment in
+            guard moment.location == nil,
+                  let reading = nearest(to: moment.capturedAt),
+                  abs(reading.timestamp.timeIntervalSince(moment.capturedAt)) <= maximumGap,
+                  let point = reading.point else { return moment }
+            var placed = moment
+            placed.location = point
+            placed.isLocationEstimated = true
+            return placed
+        }
+    }
+
     static func locatedMoments(_ moments: [PhotoMoment]) -> [PhotoMoment] {
         moments.filter { $0.location != nil && !$0.isHiddenFromTimeline }
             .sorted { $0.capturedAt < $1.capturedAt }
@@ -97,6 +130,28 @@ enum MapHomePhotoPolicy {
     }
 }
 
+private final class LockedRequestID: @unchecked Sendable {
+    private let lock = NSLock()
+    private var id: PHImageRequestID?
+    private var isCancelled = false
+
+    func set(_ newID: PHImageRequestID) {
+        lock.lock()
+        id = newID
+        let cancelled = isCancelled
+        lock.unlock()
+        if cancelled { PHImageManager.default().cancelImageRequest(newID) }
+    }
+
+    func cancel() {
+        lock.lock()
+        isCancelled = true
+        let current = id
+        lock.unlock()
+        if let current { PHImageManager.default().cancelImageRequest(current) }
+    }
+}
+
 @MainActor
 final class MapHomePhotoImageLoader {
     static let shared = MapHomePhotoImageLoader()
@@ -110,13 +165,15 @@ final class MapHomePhotoImageLoader {
         }
         let scale = UIScreen.main.scale
         let size = CGSize(width: side * scale, height: side * scale)
-        let image: UIImage? = await withCheckedContinuation { continuation in
+        let requestID = LockedRequestID()
+        let image: UIImage? = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.deliveryMode = .highQualityFormat
             options.resizeMode = .fast
             options.isNetworkAccessAllowed = true
             var resumed = false
-            PHImageManager.default().requestImage(
+            requestID.set(PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: size,
                 contentMode: .aspectFill,
@@ -126,7 +183,10 @@ final class MapHomePhotoImageLoader {
                 if (info?[PHImageResultIsDegradedKey] as? Bool) == true { return }
                 resumed = true
                 continuation.resume(returning: image)
+            })
             }
+        } onCancel: {
+            requestID.cancel()
         }
         if let image { cache.setObject(image, forKey: key) }
         return image
@@ -154,6 +214,7 @@ struct MapHomePhotoThumbnail: View {
         .frame(width: side, height: side)
         .clipped()
         .task(id: localIdentifier) {
+            if image != nil { image = nil }
             image = await MapHomePhotoImageLoader.shared.image(localIdentifier: localIdentifier, side: side)
         }
     }

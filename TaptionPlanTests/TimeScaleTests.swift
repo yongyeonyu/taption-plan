@@ -1233,7 +1233,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeOverlayLayoutMath.timeSidebarHeight(availableHeight: 1_400),
             1_400
         )
-        XCTAssertEqual(MapHomeTimeSidebarMath.verticalInset, 20)
+        XCTAssertEqual(MapHomeTimeSidebarMath.verticalInset, 28)
     }
 
     func testMapSearchUsesMenuEdgeAndClampsForCompactScreens() {
@@ -2346,7 +2346,7 @@ final class TimeScaleTests: XCTestCase {
             temperatureCelsius: 24
         )
 
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.opacity(for: current, now: observedAt.addingTimeInterval(1_800)), 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillOpacity(for: current, now: observedAt.addingTimeInterval(1_800)), 1)
         XCTAssertEqual(
             MapHomeWeatherDisplayPolicy.opacity(for: future),
             MapHomeWeatherDisplayPolicy.forecastOpacity
@@ -2359,7 +2359,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeWeatherDisplayPolicy.pillBackgroundStyle(for: future),
             .forecastOpaque
         )
-        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillBackgroundOpacity, 1)
+        XCTAssertEqual(MapHomeWeatherDisplayPolicy.pillBackgroundOpacity, 0.10)
         XCTAssertEqual(MapHomeWeatherDisplayPolicy.forecastOpacity, 0.58)
         XCTAssertEqual(MapHomeWeatherRailLayout.widgetScale, 0.8)
         XCTAssertEqual(
@@ -3246,7 +3246,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeTimeSidebarMath.minuteByLocation(
-                y: 170,
+                y: MapHomeTimeSidebarMath.verticalInset + 150,
                 trackHeight: 300,
                 verticalInset: MapHomeTimeSidebarMath.verticalInset,
                 maxMinute: 1_439

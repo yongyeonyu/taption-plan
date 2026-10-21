@@ -294,9 +294,9 @@ enum PlanBackupRouteFallbackEngine {
         supplementing archivedReadings: [SensorReading],
         endpointInspectionCount: inout Int?
     ) -> [SensorReading] {
-        let placesByID = Dictionary(uniqueKeysWithValues: places.map {
+        let placesByID = Dictionary(places.map {
             ($0.id, $0)
-        })
+        }, uniquingKeysWith: { first, _ in first })
         let endpointIndex = RouteEndpointIndex(places: places)
         let routeCoverage = RouteCoverageIndex(readings: archivedReadings)
         let segments = travel
@@ -744,9 +744,9 @@ private struct AppModelHistoryEntry {
               Set(plans.map(\.id)) == Set(next.plans.map(\.id)) else {
             return nil
         }
-        let nextByID = Dictionary(uniqueKeysWithValues: next.plans.map {
+        let nextByID = Dictionary(next.plans.map {
             ($0.id, $0)
-        })
+        }, uniquingKeysWith: { first, _ in first })
         let combined = plans.compactMap { first -> AppModelHistoryChange<PlanRecord>? in
             guard let latest = nextByID[first.id],
                   first.before != latest.after else { return nil }
@@ -3797,9 +3797,16 @@ final class AppModel {
     func requiredPermissionGate(
         liveActivitiesEnabled: Bool
     ) -> RequiredPermissionGate {
-        RequiredPermissionGate.evaluate(
+        // 위치·동작은 저장된 캐시가 아니라 지금 시스템 상태를 읽는다. 설정 앱에서
+        // 허용하고 돌아온 직후에도 카드가 남지 않게 하기 위해서다.
+        var permissions = snapshot.settings.permissions
+        if let sensorService {
+            permissions[.location] = sensorService.locationPermissionState()
+            permissions[.motion] = sensorService.motionPermissionState()
+        }
+        return RequiredPermissionGate.evaluate(
             RequiredPermissionSnapshot(
-                permissions: snapshot.settings.permissions,
+                permissions: permissions,
                 locationAlwaysAuthorized:
                     sensorService?.hasAlwaysLocationAuthorization() == true,
                 locationPrecise:
@@ -3820,7 +3827,7 @@ final class AppModel {
             if sensorService?.locationPermissionState() == .denied {
                 openSystemSettings()
             } else {
-                await enableLocationCollection(always: true)
+                await enableLocationCollection(always: true, opensSettingsWhenBlocked: true)
             }
         case .locationPrecise:
             if sensorService?.hasPreciseLocationAuthorization() != true {
@@ -3929,6 +3936,23 @@ final class AppModel {
                 "health_enabled": String(settings.healthEnabled),
             ]
         )
+    }
+
+    /// 안내 시트가 없을 때 위치 권한이 비어 있으면 시작하자마자 시스템 팝업으로 묻는다.
+    /// '항상' 승격 팝업은 iOS가 한 번만 보여 주므로 설치당 한 번만 요청한다.
+    func requestMissingLocationPermissionAtLaunch() async {
+        guard !isPermissionOnboardingPresented, let sensorService else { return }
+        let upgradeKey = "taption.locationAlwaysUpgradeRequested"
+        switch sensorService.locationAuthorizationStatus() {
+        case .notDetermined:
+            break
+        case .authorizedWhenInUse:
+            guard !UserDefaults.standard.bool(forKey: upgradeKey) else { return }
+        default:
+            return
+        }
+        UserDefaults.standard.set(true, forKey: upgradeKey)
+        await enableLocationCollection(always: true)
     }
 
     func presentPermissionOnboarding(for feature: PermissionFeature? = nil) {
@@ -4261,7 +4285,10 @@ final class AppModel {
     }
 
     @discardableResult
-    func enableLocationCollection(always: Bool = true) async -> Bool {
+    func enableLocationCollection(
+        always: Bool = true,
+        opensSettingsWhenBlocked: Bool = false
+    ) async -> Bool {
         guard !isRequestingPermission else { return false }
         isRequestingPermission = true
         defer { isRequestingPermission = false }
@@ -4280,6 +4307,7 @@ final class AppModel {
 
         sensorAvailability = await sensorService.hardwareAvailability()
         var status = sensorService.locationAuthorizationStatus()
+        let startedDenied = status == .denied || status == .restricted
         snapshot.settings.permissions[.location] =
             sensorService.locationPermissionState()
         snapshot.settings.permissions[.motion] = sensorService.motionPermissionState()
@@ -4323,13 +4351,11 @@ final class AppModel {
             receiveSensorWake(.foregroundResume)
             reconcileBackgroundSensorSession()
         }
-        if always,
-           refreshed.isGranted,
-           !snapshot.settings.backgroundPreciseLocationEnabled {
-            userFacingError = AppLanguagePreference.text(
-                korean: "장소를 자동 기록하려면 위치 접근을 ‘항상’으로 허용해주세요.",
-                english: "To record places automatically, allow location access “Always”."
-            )
+        // 사용자가 권한 항목을 직접 눌렀는데 시스템 팝업이 더 뜰 수 없는 상태(거부됨·'항상' 승격 팝업을 이미 봄)면
+        // 앱 설정으로 바로 보낸다. 시작·자동 수집 경로에서는 설정을 열지 않는다.
+        if opensSettingsWhenBlocked,
+           startedDenied || (always && !sensorService.hasAlwaysLocationAuthorization()) {
+            openSystemSettings()
         }
         publishWatchPayload()
         await persist()
@@ -4710,9 +4736,35 @@ final class AppModel {
         isCloudSyncing = false
     }
 
+    /// 달력 지표용: 그 달 날짜별 걸음 수. 건강 앱(HealthKit) 일별 합계를 우선하고, 센서 기록의 누적 걸음 수
+    /// (그날 최댓값)가 더 크면 그 값을 쓴다. 둘 다 없으면 빈 딕셔너리.
+    func calendarDailyStepCounts(month: Date) async -> [Date: Double] {
+        let calendar = Calendar.autoupdatingCurrent
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let end = calendar.date(byAdding: .month, value: 1, to: first) else { return [:] }
+        let health = (try? await healthService.dailyStepCounts(from: first, to: min(end, .now), calendar: calendar)) ?? [:]
+        var sensor: [Date: Double] = [:]
+        if let sensorService,
+           let readings = try? await sensorService.archivedReadings(in: TimeSpan(start: first, end: end)) {
+            for reading in readings {
+                guard let steps = reading.stepCount, steps > 0 else { continue }
+                let day = calendar.startOfDay(for: reading.timestamp)
+                sensor[day] = max(sensor[day] ?? 0, Double(steps))
+            }
+        }
+        // 걸음 수가 0으로 보일 때 원인(건강 앱 값 없음/센서 값 없음)을 로그로 구분할 수 있게 남긴다.
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "calendar_steps",
+            metrics: ["health_days": Double(health.count), "sensor_days": Double(sensor.count)]
+        )
+        return MapHomeCalendarTimeTotalsPolicy.mergedStepCounts(health: health, sensor: sensor)
+    }
+
     func startManualCloudSync() {
-        cloudSyncTask?.cancel()
+        let previous = cloudSyncTask
+        previous?.cancel()
         cloudSyncTask = Task { @MainActor [weak self] in
+            await previous?.value
             await self?.synchronizeCloud()
         }
     }
@@ -6008,9 +6060,51 @@ final class AppModel {
         return memo.id
     }
 
+    /// 통합 메모의 초안: 위치·시간 없이 먼저 만들고, 편집 화면에서 위치·시간을 더한 뒤 저장한다.
+    /// 저장 전에는 임시(pending) 상태라 저장소에 쓰지 않는다. 시간은 기본적으로 지정하지 않음.
+    func addMemoDraft(text: String, occurredAt: Date = .now) -> UUID? {
+        guard acceptsDataMutation(), let cleanText = validatedMemoText(text) else { return nil }
+        let memo = ActionMemo(
+            planID: nil,
+            categoryID: MemoTimelineEngine.categoryID,
+            occurredAt: occurredAt,
+            mapPoint: nil,
+            isTimeless: true,
+            kind: .idea,
+            text: cleanText
+        )
+        snapshot.memos.append(memo)
+        pendingMapMemoIDs.insert(memo.id)
+        return memo.id
+    }
+
+    /// 임시 메모 초안을 저장소에 쓰지 않고 바꾼다(위치를 고르러 편집 화면을 닫을 때 쓴다).
+    /// 글자가 비어 있으면 이전 글자를 그대로 둔다.
+    func updateMemoDraft(
+        _ memoID: UUID,
+        text: String?,
+        occurredAt: Date?,
+        isTimeless: Bool?,
+        mapPoint: GeoPoint??
+    ) {
+        guard pendingMapMemoIDs.contains(memoID),
+              let index = snapshot.memos.firstIndex(where: { $0.id == memoID }) else { return }
+        if let text {
+            let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty, clean.count <= 1_000 { snapshot.memos[index].text = clean }
+        }
+        if let occurredAt, occurredAt.timeIntervalSince1970.isFinite {
+            snapshot.memos[index].occurredAt = occurredAt
+        }
+        if let isTimeless { snapshot.memos[index].isTimeless = isTimeless ? true : nil }
+        if let mapPoint { snapshot.memos[index].mapPoint = mapPoint }
+    }
+
+    func isMemoDraft(_ memoID: UUID) -> Bool { pendingMapMemoIDs.contains(memoID) }
+
     func discardMapMemoDraft(_ memoID: UUID) {
         guard snapshot.memos.contains(where: { memo in
-            memo.id == memoID && memo.mapPoint != nil
+            memo.id == memoID && (memo.mapPoint != nil || pendingMapMemoIDs.contains(memoID))
         }) else {
             return
         }
@@ -6062,7 +6156,8 @@ final class AppModel {
         text: String,
         kind: MemoKind,
         mapPoint: GeoPoint?,
-        occurredAt: Date
+        occurredAt: Date,
+        isTimeless: Bool = false
     ) -> Bool {
         guard acceptsDataMutation() else { return false }
         guard let cleanText = validatedMemoText(text),
@@ -6091,12 +6186,13 @@ final class AppModel {
             containing: occurredAt,
             in: snapshot.plans
         )
-        value.planID = linkedPlan?.id
-        value.categoryID = linkedPlan?.categoryID
+        value.planID = isTimeless ? nil : linkedPlan?.id
+        value.categoryID = isTimeless ? (existingMemo.categoryID ?? MemoTimelineEngine.categoryID) : (linkedPlan?.categoryID
             ?? (existingMemo.planID == nil
                 ? (existingMemo.categoryID ?? MemoTimelineEngine.categoryID)
-                : MemoTimelineEngine.categoryID)
+                : MemoTimelineEngine.categoryID))
         value.mapPoint = mapPoint
+        value.isTimeless = isTimeless ? true : nil
         value.occurredAt = occurredAt
         snapshot.memos[index] = value
         pendingMapMemoIDs.remove(memoID)
@@ -10054,7 +10150,7 @@ final class AppModel {
                     }
                     value.travel = value.travel.map { segment in
                         guard ids.contains(segment.id) else { return segment }
-                        return TransitBoardingDecisionEngine.applying([decision], to: [segment])[0]
+                        return TransitBoardingDecisionEngine.applying([decision], to: [segment]).first ?? segment
                     }
                 }
                 value.settings.transitBoardingDecisions.removeAll {

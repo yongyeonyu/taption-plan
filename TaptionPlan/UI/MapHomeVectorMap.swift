@@ -684,9 +684,10 @@ struct MapHomeVectorMap: UIViewRepresentable {
         mapView.allowsTilting = true
         mapView.showsCompassView = false
         mapView.showsLogoView = false
+        // 지도 출처 (i) 버튼은 숨기지 않는다(출처 표기 의무). 왼쪽 하단 원형 버튼(높이 44, 아래에서 80) 바로 위에 둔다.
         mapView.showsAttributionButton = true
         mapView.attributionButtonPosition = .bottomLeft
-        mapView.attributionButtonMargins = CGPoint(x: 12, y: 12)
+        mapView.attributionButtonMargins = CGPoint(x: 18, y: MapHomeLayoutStyle.attributionBottomMargin)
         mapView.minimumZoomLevel = 2
         mapView.maximumZoomLevel = 20
         mapView.tintColor = UIColor(red: 0.21, green: 0.78, blue: 0.69, alpha: 1)
@@ -1176,12 +1177,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
             let bounds = mapView.visibleCoordinateBounds
             let span = MLNCoordinateBoundsGetCoordinateSpan(bounds)
             let points = Dictionary(
-                uniqueKeysWithValues: parent.markers.map { marker in
+                parent.markers.map { marker in
                     (
                         marker.id,
                         mapView.convert(marker.coordinate, toPointTo: mapView)
                     )
-                }
+                },
+                uniquingKeysWith: { first, _ in first }
             )
             let camera = mapView.camera
             let viewport = MapHomeVectorViewport(
@@ -1253,7 +1255,6 @@ struct MapHomeVectorMap: UIViewRepresentable {
             static let historicalSource = "tap-historical-route-source"
             static let historicalLayer = "tap-historical-route"
             static let activeSource = "tap-active-route-source"
-            static let activeCasingLayer = "tap-active-route-casing"
             static let activeLayer = "tap-active-route"
             static let expectedSource = "tap-expected-route-source"
             static let expectedLayer = "tap-expected-route"

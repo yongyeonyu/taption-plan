@@ -1,7 +1,88 @@
+import AVFoundation
 import Photos
 import ReplayKit
+import Speech
 import SwiftUI
 import UIKit
+
+/// 메모 입력용 음성 받아쓰기(STT). 인식된 글자만 돌려주고 소리는 저장하지 않는다.
+@MainActor
+@Observable
+final class MapHomeDictation {
+    var isListening = false
+    var transcript = ""
+    var errorMessage: String?
+
+    private var recognizer: SFSpeechRecognizer?
+    private let engine = AVAudioEngine()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+    private var task: SFSpeechRecognitionTask?
+
+    func start(localeIdentifier: String) async {
+        guard !isListening else { return }
+        errorMessage = nil
+        transcript = ""
+        let speechStatus = await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
+        }
+        guard speechStatus == .authorized else {
+            errorMessage = "음성 인식 권한이 필요합니다. 설정에서 허용해 주세요."
+            return
+        }
+        guard await AVAudioApplication.requestRecordPermission() else {
+            errorMessage = "마이크 권한이 필요합니다. 설정에서 허용해 주세요."
+            return
+        }
+        let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeIdentifier))
+        guard let recognizer, recognizer.isAvailable else {
+            errorMessage = "지금은 음성 인식을 쓸 수 없습니다."
+            return
+        }
+        self.recognizer = recognizer
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            self.request = request
+            let input = engine.inputNode
+            input.removeTap(onBus: 0)
+            input.installTap(onBus: 0, bufferSize: 1_024, format: input.outputFormat(forBus: 0)) { buffer, _ in
+                request.append(buffer)
+            }
+            engine.prepare()
+            try engine.start()
+            task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                let text = result?.bestTranscription.formattedString
+                let isFinal = result?.isFinal ?? false
+                let failed = error != nil
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    if let text { self.transcript = text }
+                    if isFinal || failed { self.stop() }
+                }
+            }
+            isListening = true
+        } catch {
+            errorMessage = "마이크를 시작하지 못했습니다."
+            stop()
+        }
+    }
+
+    func stop() {
+        // 시작하지 않았으면 마이크 장치·오디오 세션을 건드리지 않는다(편집 화면을 닫을 때마다 불린다).
+        guard isListening || request != nil || task != nil else { return }
+        if engine.isRunning { engine.stop() }
+        engine.inputNode.removeTap(onBus: 0)
+        request?.endAudio()
+        request = nil
+        task?.finish()
+        task = nil
+        isListening = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
 
 /// 녹화 영상에 넣을 표시 레이어. 지도는 항상 보인다.
 struct MapHomeRecordingLayers: Codable, Equatable {
@@ -19,6 +100,18 @@ struct MapHomeRecordingLayers: Codable, Equatable {
     static let storageKey = "mapHomeRecordingLayers"
 
     init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        timeSidebar = try c.decodeIfPresent(Bool.self, forKey: .timeSidebar) ?? timeSidebar
+        weatherSidebar = try c.decodeIfPresent(Bool.self, forKey: .weatherSidebar) ?? weatherSidebar
+        sidebarMemos = try c.decodeIfPresent(Bool.self, forKey: .sidebarMemos) ?? sidebarMemos
+        mapMemos = try c.decodeIfPresent(Bool.self, forKey: .mapMemos) ?? mapMemos
+        routes = try c.decodeIfPresent(Bool.self, forKey: .routes) ?? routes
+        footprints = try c.decodeIfPresent(Bool.self, forKey: .footprints) ?? footprints
+        photos = try c.decodeIfPresent(Bool.self, forKey: .photos) ?? photos
+        cat = try c.decodeIfPresent(Bool.self, forKey: .cat) ?? cat
+    }
 
     init(rawValue: String) {
         self = (try? JSONDecoder().decode(Self.self, from: Data(rawValue.utf8))) ?? Self()
@@ -68,16 +161,17 @@ final class MapHomeScreenRecorder {
 
     func stop() async -> URL? {
         guard isRecording else { return nil }
-        isRecording = false
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("BOKKI-Plan-\(Int(Date.now.timeIntervalSince1970)).mp4")
         try? FileManager.default.removeItem(at: url)
         do {
             try await RPScreenRecorder.shared().stopRecording(withOutput: url)
+            isRecording = false
             let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
             TaptionPlanDiagnosticsLogger.shared.record("screen_recording_stopped", metrics: ["bytes": Double(bytes)])
             return url
         } catch {
+            isRecording = RPScreenRecorder.shared().isRecording
             TaptionPlanDiagnosticsLogger.shared.record(
                 "screen_recording_stop_failed",
                 level: .error,

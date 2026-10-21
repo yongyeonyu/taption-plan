@@ -43,6 +43,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     private var pendingHealthSnapshots: [TaptionWatchHealthSnapshot] = []
     private var widgetReloadFollowupTask: Task<Void, Never>?
     private var handledWorkoutRequestIDs = Set<UUID>()
+    private var handledWorkoutRequestOrder: [UUID] = []
     private var dataSyncRequestGate = TaptionWatchDataSyncRequestGate()
     private var activeDataSyncRequestID: String? {
         dataSyncRequestGate.activeRequestID
@@ -911,7 +912,8 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         for transfer in WCSession.default.outstandingUserInfoTransfers
             where transfer.userInfo[
                 TaptionWatchEnvelope.ambientDeliveryIDKey
-            ] != nil {
+            ] != nil
+                || transfer.userInfo[TaptionWatchEnvelope.launchDiagnosticsKey] == nil {
             transfer.cancel()
         }
         guard let dayDatabase else { return false }
@@ -942,6 +944,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         persistPendingHealthSnapshots()
         payload = nil
         handledWorkoutRequestIDs.removeAll(keepingCapacity: false)
+        handledWorkoutRequestOrder.removeAll()
         TaptionWatchDeviceLocalDefaults.removeObject(forKey: cachedPayloadKey)
         TaptionWatchWidgetStore.clear()
         TaptionWatchMeasurementStore.clear()
@@ -1204,8 +1207,9 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         ), handledWorkoutRequestIDs.insert(request.id).inserted else {
             return
         }
-        if handledWorkoutRequestIDs.count > 100 {
-            handledWorkoutRequestIDs = [request.id]
+        handledWorkoutRequestOrder.append(request.id)
+        if handledWorkoutRequestOrder.count > 100 {
+            handledWorkoutRequestIDs.remove(handledWorkoutRequestOrder.removeFirst())
         }
         onWorkoutRequest?(request)
     }

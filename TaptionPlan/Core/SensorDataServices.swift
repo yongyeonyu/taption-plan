@@ -332,7 +332,7 @@ actor SensorReadingArchive {
     private var dataDeletionGeneration: UInt64
 
     /// - Parameters:
-    ///   - fileURL: 이전 JSONL 파일 위치. 있으면 지운다(이전 데이터는 쓰지 않는다).
+    ///   - fileURL: 이전 JSONL 파일 위치. 비어 있을 때만 지우고 내용이 있으면 보존한다.
     ///   - storeURL: 새 저장소 파일. 없으면 `fileURL` 옆의 `taption-store.sqlite`.
     init(
         fileURL: URL,
@@ -348,7 +348,8 @@ actor SensorReadingArchive {
         self.writeLockURL = resolvedStoreURL.appendingPathExtension("lock")
         self.beforeValidateAppend = beforeValidateAppend
         self.dataDeletionGeneration = TaptionDataDeletionFence.currentGeneration()
-        try? FileManager.default.removeItem(at: fileURL)
+        let legacySize = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        if legacySize == 0 { try? FileManager.default.removeItem(at: fileURL) }
     }
 
     static func applicationSupport(

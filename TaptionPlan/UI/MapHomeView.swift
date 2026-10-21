@@ -960,10 +960,12 @@ enum MapHomeWeatherDisplayCache {
     ) -> [WeatherContext] {
         let fresh = incoming.filter(MapHomeWeatherDisplayPolicy.isComplete)
         guard !fresh.isEmpty else { return cached }
-        return MapHomeWeatherTimelineMath.coalescedDisplayContexts(
+        return Array(MapHomeWeatherTimelineMath.coalescedDisplayContexts(
             cached + fresh
-        )
+        ).suffix(maximumContexts))
     }
+
+    private static let maximumContexts = 512
 
     static func contexts(
         incoming: [WeatherContext],
@@ -971,6 +973,39 @@ enum MapHomeWeatherDisplayCache {
     ) -> [WeatherContext] {
         let merged = merged(cached: cached, incoming: incoming)
         return merged.isEmpty ? incoming : merged
+    }
+}
+
+@MainActor
+enum MapHomeCameraLogThrottle {
+    private static var lastUptime: TimeInterval = 0
+
+    static func shouldLog(nowUptime: TimeInterval, interval: TimeInterval = 1) -> Bool {
+        guard nowUptime - lastUptime >= interval else { return false }
+        lastUptime = nowUptime
+        return true
+    }
+}
+
+/// body마다 여러 번 읽히는 사진 묶음을 (사진 목록, 반경)이 같으면 재사용한다.
+@MainActor
+final class MapHomePhotoClusterCache {
+    private var key: Int?
+    private var value: [MapHomePhotoCluster] = []
+
+    func clusters(for moments: [PhotoMoment], radiusMeters: Double) -> [MapHomePhotoCluster] {
+        var hasher = Hasher()
+        hasher.combine(radiusMeters)
+        for moment in moments {
+            hasher.combine(moment.id)
+            hasher.combine(moment.location?.latitude)
+            hasher.combine(moment.location?.longitude)
+        }
+        let next = hasher.finalize()
+        if key == next { return value }
+        value = MapHomePhotoPolicy.clusters(from: moments, radiusMeters: radiusMeters)
+        key = next
+        return value
     }
 }
 
@@ -1065,7 +1100,7 @@ enum MapHomePresencePolicy {
 enum MapHomePlaybackZoomPolicy {
     static let baselineScale = 85.0
     static let slowestScale = 92.0
-    static let fastestScale = 42.0
+    static let fastestScale = 30.0
     /// 이 속도(m/s)에서 `slowestScale`, `vehicleSpeed`에서 `fastestScale`(로그 비율).
     static let slowSpeed = 1.0
     static let vehicleSpeed = 40.0
@@ -1712,6 +1747,26 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var recentCompletionRewardedDays: [String]?
 }
 
+extension MapHomeGrowthSeason {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        year = try c.decodeIfPresent(Int.self, forKey: .year)
+            ?? Calendar(identifier: .gregorian).component(.year, from: .now)
+        level = try c.decodeIfPresent(Int.self, forKey: .level) ?? 1
+        streak = try c.decodeIfPresent(Int.self, forKey: .streak) ?? 0
+        lastClosedDay = try c.decodeIfPresent(String.self, forKey: .lastClosedDay)
+        pendingDay = try c.decodeIfPresent(String.self, forKey: .pendingDay)
+        pendingDayQualified = try c.decodeIfPresent(Bool.self, forKey: .pendingDayQualified) ?? false
+        pendingWeeklyRewards = try c.decodeIfPresent(Int.self, forKey: .pendingWeeklyRewards) ?? 0
+        chosenEvolutions = try c.decodeIfPresent([String].self, forKey: .chosenEvolutions) ?? []
+        landPlots = try c.decodeIfPresent([String].self, forKey: .landPlots) ?? []
+        accessories = try c.decodeIfPresent([String].self, forKey: .accessories) ?? []
+        equippedAccessory = try c.decodeIfPresent(String.self, forKey: .equippedAccessory)
+        landPlotPlacements = try c.decodeIfPresent([MapHomeGrowthPlotPlacement].self, forKey: .landPlotPlacements)
+        recentCompletionRewardedDays = try c.decodeIfPresent([String].self, forKey: .recentCompletionRewardedDays)
+    }
+}
+
 struct MapHomeGrowthPlotPlacement: Codable, Equatable, Identifiable {
     let plotID: String
     let x: Int
@@ -1742,6 +1797,9 @@ enum MapHomeLandmarkCatalog {
         .init(id: "kr.seongsan", country: "대한민국", name: "성산일출봉", englishName: "Seongsan Ilchulbong", category: "자연", systemImage: "mountain.2.fill"),
         .init(id: "kr.haeundae", country: "대한민국", name: "해운대", englishName: "Haeundae", category: "자연", systemImage: "water.waves"),
         .init(id: "kr.hahoe", country: "대한민국", name: "하회마을", englishName: "Hahoe Folk Village", category: "문화", systemImage: "house.lodge.fill"),
+        // 한 해 주간 보상이 최대 52번이라 52개로 맞췄다. 두 곳은 그림 파일이 아직 없어 심볼로 보인다.
+        .init(id: "kr.namsan", country: "대한민국", name: "N서울타워", englishName: "N Seoul Tower", category: "건축", systemImage: "antenna.radiowaves.left.and.right"),
+        .init(id: "kr.hallasan", country: "대한민국", name: "한라산", englishName: "Hallasan", category: "자연", systemImage: "tree.fill"),
         .init(id: "jp.fuji", country: "일본", name: "후지산", englishName: "Mount Fuji", category: "자연", systemImage: "mountain.2.fill"),
         .init(id: "jp.himeji", country: "일본", name: "히메지성", englishName: "Himeji Castle", category: "건축", systemImage: "building.columns.fill"),
         .init(id: "jp.fushimi", country: "일본", name: "후시미 이나리", englishName: "Fushimi Inari", category: "문화", systemImage: "torii.gate.fill"),
@@ -1789,11 +1847,15 @@ enum MapHomeLandmarkCatalog {
         .init(id: "au.harbour_bridge", country: "호주", name: "시드니 하버 브리지", englishName: "Sydney Harbour Bridge", category: "건축", systemImage: "bridge.fill"),
     ]
 
+    /// 이번 시즌에 이미 고른 랜드마크는 후보에서 뺀다. 50개를 다 모으면(한 해 보상은 최대 52번) 전체에서 다시 돌린다.
     static func weeklyChoices(for season: MapHomeGrowthSeason) -> [MapHomeLandmarkCandidate] {
         guard !candidates.isEmpty else { return [] }
-        let start = (season.year &+ season.chosenEvolutions.count * 3) % candidates.count
-        return (0..<min(3, candidates.count)).map {
-            candidates[(start + $0) % candidates.count]
+        let chosen = Set(season.chosenEvolutions)
+        let remaining = candidates.filter { !chosen.contains($0.id) }
+        let pool = remaining.isEmpty ? candidates : remaining
+        let start = (season.year &+ season.chosenEvolutions.count * 3) % pool.count
+        return (0..<min(3, pool.count)).map {
+            pool[(start + $0) % pool.count]
         }
     }
 }
@@ -1803,8 +1865,17 @@ enum MapHomeGrowthAccessoryCatalog {
         "crown.fill", "sparkles", "leaf.fill", "sun.max.fill", "flower.fill",
     ]
 
+    /// 장식이 따온 랜드마크. 장식 id는 `cat.accessory.<랜드마크 id>`다.
+    static func landmark(for accessoryID: String?) -> MapHomeLandmarkCandidate? {
+        guard let accessoryID, !accessoryID.isEmpty else { return nil }
+        return MapHomeLandmarkCatalog.candidates.first { $0.accessoryID == accessoryID }
+    }
+
+    /// 화랑이 아이콘에 달리는 무늬. 랜드마크 장식은 그 랜드마크의 심볼(건축·자연·문화)을 쓰고,
+    /// 옛 장식 id처럼 랜드마크를 못 찾으면 예전처럼 id로 고른 기본 심볼을 쓴다.
     static func symbol(for accessoryID: String?) -> String? {
         guard let accessoryID, !accessoryID.isEmpty else { return nil }
+        if let landmark = landmark(for: accessoryID) { return landmark.systemImage }
         let index = accessoryID.utf8.reduce(0) { ($0 + Int($1)) % symbols.count }
         return symbols[index]
     }
@@ -1854,6 +1925,17 @@ struct MapHomeGrowthHistory: Codable, Equatable {
     var season: MapHomeGrowthSeason
     var archives: [MapHomeGrowthSeason] = []
 
+    init(season: MapHomeGrowthSeason, archives: [MapHomeGrowthSeason] = []) {
+        self.season = season
+        self.archives = archives
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        season = try c.decode(MapHomeGrowthSeason.self, forKey: .season)
+        archives = try c.decodeIfPresent([MapHomeGrowthSeason].self, forKey: .archives) ?? []
+    }
+
     static func initial(for date: Date, calendar: Calendar = Calendar(identifier: .gregorian)) -> Self {
         Self(season: MapHomeGrowthSeason(year: calendar.component(.year, from: date)))
     }
@@ -1866,6 +1948,11 @@ enum MapHomeGrowthPolicy {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .autoupdatingCurrent
         return calendar
+    }
+
+    /// 주간 보상은 연속 달성 7일마다 한 번. 7일 단위로 남은 일수(1~7)를 돌려준다.
+    static func daysUntilNextWeeklyReward(streak: Int) -> Int {
+        7 - max(0, streak) % 7
     }
 
     static func qualifies(actualCount: Int, unconfirmedCount: Int) -> Bool {
@@ -2066,6 +2153,40 @@ enum MapHomeGrowthPolicy {
         return true
     }
 
+    /// 땅 조각을 붙일 수 있는 빈 칸: 이미 놓인 땅과 변을 맞댄 칸. 아직 아무것도 없으면 (0,0)(집 자리).
+    static func placementCandidates(in season: MapHomeGrowthSeason) -> [(x: Int, y: Int)] {
+        let placements = season.landPlotPlacements ?? []
+        guard !placements.isEmpty else { return [(0, 0)] }
+        let occupied = Set(placements.map { "\($0.x),\($0.y)" })
+        var seen = Set<String>()
+        var result: [(x: Int, y: Int)] = []
+        for placement in placements {
+            for (dx, dy) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
+                let x = placement.x + dx, y = placement.y + dy
+                let key = "\(x),\(y)"
+                if !occupied.contains(key), seen.insert(key).inserted { result.append((x, y)) }
+            }
+        }
+        return result
+    }
+
+    /// 사용자가 고른 칸에 땅 조각을 붙인다. 붙일 수 있는 빈 칸이 아니면 false.
+    @discardableResult
+    static func placeLandPlot(
+        _ plotID: String,
+        atX x: Int,
+        y: Int,
+        in season: inout MapHomeGrowthSeason
+    ) -> Bool {
+        guard season.landPlots.contains(plotID),
+              !(season.landPlotPlacements ?? []).contains(where: { $0.plotID == plotID }),
+              placementCandidates(in: season).contains(where: { $0.x == x && $0.y == y }) else { return false }
+        var placements = season.landPlotPlacements ?? []
+        placements.append(.init(plotID: plotID, x: x, y: y))
+        season.landPlotPlacements = placements
+        return true
+    }
+
     @discardableResult
     static func placeLandPlot(
         _ plotID: String,
@@ -2177,10 +2298,24 @@ struct MapHomeView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @AppStorage(MapHomePlaybackZoomMode.storageKey)
     private var playbackZoomModeRaw = MapHomePlaybackZoomMode.adaptive.rawValue
+    @AppStorage("mapHomeLeftControlsExpanded")
+    private var isLeftControlsExpanded = false
+    @AppStorage(MapHomeLayoutStyle.storageKey)
+    private var layoutStyleRaw = MapHomeLayoutStyle.classic.rawValue
     @AppStorage(MapHomeRecordingLayers.storageKey)
     private var recordingLayersRaw = ""
     @State private var isScreenRecording = false
     @State private var photoMoments: [PhotoMoment] = []
+    @State private var photosNeedReadingRetry = false
+    @AppStorage("mapHomeShowsPhotos") private var showsPhotosOnMap = true
+    @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
+    @State private var pendingMemoLocationID: UUID?
+    @State private var isMapAttributionPresented = false
+    /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
+    @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
+    /// "원래 스타일|자동 전환한 스타일". 비어 있으면 자동 전환 중이 아니다.
+    @AppStorage("mapHomeAutoLandStyleState") private var autoLandStyleState = ""
+    @State private var photoClusterCache = MapHomePhotoClusterCache()
     @State private var photoAlbumSelection: MapHomePhotoAlbumSelection?
     private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
@@ -2299,6 +2434,8 @@ struct MapHomeView: View {
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
     @State private var lastPlaybackRouteProjectionUptime: TimeInterval = 0
     @State private var lastPlaybackMapFocusUptime: TimeInterval = 0
+    @State private var isPlaybackIntroActive = false
+    @State private var playbackIntroTask: Task<Void, Never>?
     @State private var lastPlaybackFocusLogUptime: TimeInterval = 0
     @State private var lastPlaybackMarkerUptime: TimeInterval = 0
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
@@ -2315,6 +2452,7 @@ struct MapHomeView: View {
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
+        static let dateBadgeSize: CGFloat = 56
         static let headerVisibleHeight: CGFloat = 46
         static let headerHitTarget: CGFloat = 44
         static let headerIcon: CGFloat = 19
@@ -2569,8 +2707,8 @@ struct MapHomeView: View {
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
                     .zIndex(MapHomeLayerPriority.loading)
-            } else if let memo = nearbyScheduleMemo, recordingShows(\.sidebarMemos) {
-                scheduleMemoPreview(memo)
+            } else if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
+                memoOverlayStack
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -2614,12 +2752,42 @@ struct MapHomeView: View {
             }
 
             if !isScreenRecording {
-                VStack(spacing: 0) {
-                    header
+                dateBadge
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.top, Layout.horizontalInset)
+                    .padding(.trailing, Layout.horizontalInset)
+                    .zIndex(MapHomeLayerPriority.header)
+            }
+
+            if !isScreenRecording {
+                VStack(alignment: .leading, spacing: 0) {
+                    if !layoutStyle.movesActionsToBottom {
+                        Button {
+                            openMenu()
+                        } label: {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.tpInk)
+                                .frame(width: 40, height: 34)
+                                .background(Color.tpSurface.opacity(0.96), in: Capsule())
+                                .overlay { Capsule().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 6)
+                        .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
+                    }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, Layout.horizontalInset)
                 .padding(.top, 2)
+                .zIndex(MapHomeLayerPriority.header)
+            }
+
+            if !isScreenRecording, !isMenuOpen, layoutStyle.movesActionsToBottom {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    bottomActionBar
+                }
                 .zIndex(MapHomeLayerPriority.header)
             }
         }
@@ -2627,6 +2795,11 @@ struct MapHomeView: View {
             if !isRunning { finishRecordingPlayback() }
         }
         .task(id: model.selectedDate) { await loadPhotoMoments() }
+        .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments() } }
+        // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
+        .onChange(of: isDayDataLoading) { _, loading in
+            if !loading, photosNeedReadingRetry { Task { await loadPhotoMoments() } }
+        }
         .sheet(item: $photoAlbumSelection) { selection in
             MapHomePhotoAlbumSheet(moments: selection.moments, language: language)
                 .presentationDetents([.medium, .large])
@@ -2722,7 +2895,7 @@ struct MapHomeView: View {
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
                 )
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.fraction(0.66), .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isCalendarPresented) {
@@ -2732,13 +2905,17 @@ struct MapHomeView: View {
                     TimelineAxisGrid.koreanHolidayName(on: date)
                 },
                 logStatuses: { month in
-                    MapHomeCalendarLogStatusPolicy.statuses(
-                        actuals: model.snapshot.actuals,
-                        travel: model.snapshot.travel,
-                        month: month,
-                        asOf: .now,
-                        calendar: MapHomeGrowthPolicy.localCalendar
-                    )
+                    let actuals = model.snapshot.actuals
+                    let travel = model.snapshot.travel
+                    return await Task.detached(priority: .userInitiated) {
+                        MapHomeCalendarLogStatusPolicy.statuses(
+                            actuals: actuals,
+                            travel: travel,
+                            month: month,
+                            asOf: .now,
+                            calendar: MapHomeGrowthPolicy.localCalendar
+                        )
+                    }.value
                 },
                 timeTotals: { month in
                     let actuals = model.snapshot.actuals
@@ -2747,7 +2924,7 @@ struct MapHomeView: View {
                     let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
                         model.snapshot.settings.frequentPlaces
                     )
-                    return await Task.detached(priority: .utility) {
+                    var result = await Task.detached(priority: .utility) {
                         MapHomeCalendarTimeTotalsPolicy.totals(
                             actuals: actuals,
                             travel: travel,
@@ -2758,6 +2935,25 @@ struct MapHomeView: View {
                             calendar: MapHomeGrowthPolicy.localCalendar
                         )
                     }.value
+                    // 걸음 수·사진 수는 사용자가 "+"로 켠 때만 읽는다(건강·사진 접근 비용을 아끼기 위해).
+                    let enabled = MapHomeCalendarTimeKind.enabledExtras(
+                        from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
+                    )
+                    if enabled.contains(.steps) {
+                        for (day, steps) in await model.calendarDailyStepCounts(month: month) {
+                            result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps
+                        }
+                    }
+                    if enabled.contains(.photos) {
+                        let library = photoLibrary
+                        let counts = await Task.detached(priority: .utility) {
+                            MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: library.moments(in:), calendar: MapHomeGrowthPolicy.localCalendar)
+                        }.value
+                        for (day, count) in counts {
+                            result[day, default: [:]][MapHomeCalendarTimeKind.photos.rawValue] = count
+                        }
+                    }
+                    return result
                 },
                 timeTint: { categoryID in
                     MapHomeSidebarMajorCategory.presentation(
@@ -2788,7 +2984,8 @@ struct MapHomeView: View {
             MapHomeStickerEditorSheet(
                 model: model,
                 target: target,
-                language: language
+                language: language,
+                onRequestLocation: { id in beginMemoLocationPick(id) }
             )
         }
         .sheet(item: $selectedTransitBoardingCandidate) { candidate in
@@ -2818,23 +3015,16 @@ struct MapHomeView: View {
         ) {
             searchPinSheet
         }
-        .confirmationDialog(
-            language.text("메모 추가", "Add memo"),
-            isPresented: $isMemoAddMenuPresented,
-            titleVisibility: .visible
-        ) {
-            Button {
-                addScheduleSticker()
-            } label: {
-                Label(language.text("일정 메모", "Schedule memo"), systemImage: "calendar.badge.plus")
-            }
-            Button {
-                isMenuOpen = false
-                isPlacingMapMemo = true
-            } label: {
-                Label(language.text("지도 메모", "Map memo"), systemImage: "mappin.and.ellipse")
-            }
-            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        .sheet(isPresented: $isMapAttributionPresented) {
+            MapHomeAttributionSheet(language: language)
+                .presentationDetents([.height(360), .large])
+                .presentationDragIndicator(.visible)
+        }
+        // 지도 메모·일정 메모를 나누지 않고 "메모" 하나로 연다. 위치·시간은 편집 화면에서 더한다.
+        .onChange(of: isMemoAddMenuPresented) { _, presented in
+            guard presented else { return }
+            isMemoAddMenuPresented = false
+            addMemo()
         }
         .confirmationDialog(
             language.text("지도에 추가", "Add to map"),
@@ -2946,6 +3136,10 @@ struct MapHomeView: View {
             sectionEditSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
+        .onChange(of: isMenuOpen) { _, isOpen in
+            guard isOpen else { return }
+            Task { @MainActor in await model.refreshPermissions() }
+        }
     }
 
     private func lifecycleModifiers(_ content: some View) -> some View {
@@ -3027,6 +3221,10 @@ struct MapHomeView: View {
         .onChange(of: model.settings.mapDisplayStyle) { _, _ in
             mapCameraRevision &+= 1
             persistMapDayCache()
+        }
+        .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
+        .onChange(of: autoLandStyleEnabled) { _, enabled in
+            if !enabled { applyAutoLandStyle(near: false) }
         }
         .onChange(of: model.selectedDate) { oldDate, newDate in
             let calendar = Calendar.autoupdatingCurrent
@@ -3151,7 +3349,8 @@ struct MapHomeView: View {
     }
 
     private var mapMemosOnMap: [ActionMemo] {
-        MapMemoDisplayFilterEngine.visibleMemos(
+        guard memoDisplayMode != .hidden else { return [] }
+        return MapMemoDisplayFilterEngine.visibleMemos(
             model.snapshot.memos,
             on: model.selectedDate,
             filter: model.settings.mapMemoDisplayFilter,
@@ -3191,7 +3390,7 @@ struct MapHomeView: View {
     }
 
     private var selectedSchedulePlanIDs: Set<UUID> {
-        let selectedDate = timelineDate(forMinute: Double(effectiveTimelineMinute))
+        let selectedDate = timelineSelectionDate
         return Set(
             model.snapshot.plans
                 .filter { $0.span.start <= selectedDate && selectedDate < $0.span.end }
@@ -3228,7 +3427,7 @@ struct MapHomeView: View {
     private var nearbyScheduleMemo: MapSticker? {
         MapHomeMemoPreviewPolicy.nearest(
             in: model.snapshot.stickers,
-            at: timelineDate(forMinute: Double(effectiveTimelineMinute)),
+            at: timelineSelectionDate,
             selectedDate: model.selectedDate,
             dismissed: dismissedMemoPreviewIDs
         )
@@ -3284,58 +3483,190 @@ struct MapHomeView: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(language.text("일정 메모 \(memo.title)", "Schedule memo \(memo.title)"))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 12)
-        .padding(.top, topOverlayHeight + 10)
-        .frame(maxHeight: .infinity, alignment: .top)
         .transition(.opacity)
     }
 
-    /// 지도 메모 위치 고르기: 지도 가운데에 핀을 두고 지도를 움직여 맞춘 뒤 "여기에 메모"를 누른다.
+    // MARK: 통합 메모 표시
+
+    private var memoDisplayMode: MapHomeMemoDisplayMode {
+        MapHomeMemoDisplayMode(rawValue: memoDisplayRaw) ?? .all
+    }
+
+    /// 시간을 지정하지 않았고 위치도 없는 메모: 왼쪽 위에 큐처럼 쌓인다(오래된 것이 위).
+    private var queuedMemos: [ActionMemo] {
+        model.snapshot.memos
+            .filter { $0.isTimeless == true && $0.mapPoint == nil && !model.isMemoDraft($0.id) }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    /// 시간은 있고 위치는 없는 메모: 사이드바 시각이 앞뒤 30분 안이면 가장 가까운 하나를 보여 준다.
+    private var nearbyTimedMemo: ActionMemo? {
+        let calendar = Calendar.autoupdatingCurrent
+        let center = timelineSelectionDate
+        return model.snapshot.memos
+            .filter {
+                $0.isTimeless != true && $0.mapPoint == nil && !model.isMemoDraft($0.id)
+                    && !dismissedMemoPreviewIDs.contains($0.id)
+                    && calendar.isDate($0.occurredAt, inSameDayAs: model.selectedDate)
+                    && abs($0.occurredAt.timeIntervalSince(center)) <= 30 * 60
+                    && $0.planID == nil
+            }
+            .min { abs($0.occurredAt.timeIntervalSince(center)) < abs($1.occurredAt.timeIntervalSince(center)) }
+    }
+
+    private var memoOverlayStack: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(queuedMemos.prefix(3)) { memo in
+                memoCard(memo, showsTime: false)
+            }
+            if queuedMemos.count > 3 {
+                Text("+\(queuedMemos.count - 3)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .mapHomeGlass(in: Capsule())
+            }
+            if let timed = nearbyTimedMemo {
+                memoCard(timed, showsTime: true)
+            }
+            if let legacy = nearbyScheduleMemo {
+                scheduleMemoPreview(legacy)
+            }
+        }
+        .frame(maxWidth: 280, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, 12)
+        .padding(.top, 10)
+    }
+
+    private func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: showsTime ? "clock.fill" : "note.text")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.tpReferenceBlue)
+                .frame(width: 26, height: 26)
+                .background(Color.white.opacity(0.9), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(memo.text)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(2)
+                if showsTime {
+                    Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture { selectedMapStickerEditor = .memo(memo.id) }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(language.text("메모 \(memo.text)", "Memo \(memo.text)"))
+    }
+
+    /// 새 메모: 먼저 임시 초안을 만들고 편집 화면을 연다. 위치·시간은 편집 화면에서 정한다.
+    private func addMemo() {
+        isMenuOpen = false
+        guard let id = model.addMemoDraft(
+            text: language.text("새 메모", "New memo"),
+            occurredAt: timelineSelectionDate
+        ) else { return }
+        selectedMapStickerEditor = .newMemo(id)
+    }
+
+    /// 편집 화면에서 "위치 추가": 편집 화면을 닫고 지도에서 핀을 고르게 한 뒤 다시 편집 화면으로 돌아온다.
+    private func beginMemoLocationPick(_ id: UUID) {
+        pendingMemoLocationID = id
+        isMenuOpen = false
+        isPlacingMapMemo = true
+    }
+
+    private func finishMemoLocationPick(apply: Bool) {
+        guard let id = pendingMemoLocationID else { return }
+        pendingMemoLocationID = nil
+        if apply, let center = mapCenterPoint {
+            let point = GeoPoint(
+                latitude: center.latitude,
+                longitude: center.longitude,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            )
+            if model.isMemoDraft(id) {
+                model.updateMemoDraft(id, text: nil, occurredAt: nil, isTimeless: nil, mapPoint: .some(point))
+            } else if let memo = model.snapshot.memos.first(where: { $0.id == id }) {
+                _ = model.updateMapMemo(
+                    id,
+                    text: memo.text,
+                    kind: memo.kind,
+                    mapPoint: point,
+                    occurredAt: memo.occurredAt,
+                    isTimeless: memo.isTimeless == true
+                )
+            }
+        }
+        selectedMapStickerEditor = model.isMemoDraft(id) ? .newMemo(id) : .memo(id)
+    }
+
+    /// 위치 고르기: 지도 가운데에 핀을 두고 지도를 움직여 맞춘다. 취소·확인 버튼은 핀 바로 아래에 붙어 함께 떠 있다.
     private var mapMemoPlacementOverlay: some View {
         ZStack {
-            Image(systemName: "mappin")
-                .font(.system(size: 34, weight: .bold))
-                .foregroundStyle(Color.tpReferenceGold)
-                .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
-                .offset(y: -17)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
             VStack {
-                Text(language.text("지도를 움직여 메모 위치를 맞추세요", "Move the map to place the memo"))
+                Text(language.text("지도를 움직여 핀 위치를 맞추세요", "Move the map to place the pin"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color.tpSurface.opacity(0.95), in: Capsule())
-                    .padding(.top, topOverlayHeight + 10)
+                    .mapHomeGlass(in: Capsule())
+                    .padding(.top, 10)
                     .allowsHitTesting(false)
                 Spacer()
-                HStack(spacing: 12) {
+            }
+            ZStack {
+                MapHomePlacementPin()
+                    .offset(y: -MapHomePlacementPin.height / 2)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                HStack(spacing: 10) {
                     Button {
                         isPlacingMapMemo = false
+                        if pendingMemoLocationID != nil { finishMemoLocationPick(apply: false) }
                     } label: {
                         Text(language.text("취소", "Cancel"))
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpInk)
-                            .padding(.horizontal, 22)
-                            .frame(minHeight: 46)
-                            .background(Color.tpSurface.opacity(0.97), in: Capsule())
-                            .overlay(Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.8))
+                            .padding(.horizontal, 18)
+                            .frame(minHeight: 40)
+                            .mapHomeGlass(in: Capsule())
                     }
+                    .buttonStyle(.plain)
                     Button {
                         isPlacingMapMemo = false
-                        addMapMemo()
+                        if pendingMemoLocationID != nil {
+                            finishMemoLocationPick(apply: true)
+                        } else {
+                            addMapMemo()
+                        }
                     } label: {
-                        Text(language.text("여기에 메모", "Memo here"))
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                        Text(pendingMemoLocationID != nil
+                             ? language.text("이 위치로", "Use this spot")
+                             : language.text("여기에 메모", "Memo here"))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 22)
-                            .frame(minHeight: 46)
-                            .background(Color.tpReferenceGold, in: Capsule())
+                            .padding(.horizontal, 18)
+                            .frame(minHeight: 40)
+                            .background(Color.tpReferenceBlue, in: Capsule())
+                            .shadow(color: Color.tpReferenceBlue.opacity(0.35), radius: 6, y: 2)
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.bottom, Layout.overlayBottomMargin + 8)
+                .offset(y: 34)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -3359,9 +3690,7 @@ struct MapHomeView: View {
             horizontalAccuracy: 0,
             verticalAccuracy: 0
         )
-        let occurredAt = timelineDate(
-            forMinute: Double(effectiveTimelineMinute)
-        )
+        let occurredAt = timelineSelectionDate
         let planID = MapMemoLinkEngine
             .plan(containing: occurredAt, in: model.snapshot.plans)?.id
         guard let id = model.addMapMemo(
@@ -3377,7 +3706,7 @@ struct MapHomeView: View {
     }
 
     private func addScheduleSticker() {
-        let date = timelineDate(forMinute: Double(effectiveTimelineMinute))
+        let date = timelineSelectionDate
         guard let id = model.addMapSticker(
             title: language.text("새 일정 메모", "New schedule memo"),
             placement: .schedule,
@@ -3387,10 +3716,6 @@ struct MapHomeView: View {
         ) else { return }
         isMenuOpen = false
         selectedMapStickerEditor = .sticker(id)
-    }
-
-    private var usesVectorRoadMap: Bool {
-        false
     }
 
     private func runDaySourceTask() async {
@@ -3595,7 +3920,7 @@ struct MapHomeView: View {
                 let now = ProcessInfo.processInfo.systemUptime
                 let shouldFocus: Bool
                 if isDayPlaybackRunning {
-                    shouldFocus = TimelineInteractionFrameGate.shouldRender(
+                    shouldFocus = !isPlaybackIntroActive && TimelineInteractionFrameGate.shouldRender(
                         lastUptime: &lastPlaybackMapFocusUptime,
                         nowUptime: now,
                         minimumInterval: interval
@@ -4540,6 +4865,7 @@ struct MapHomeView: View {
     ) -> some View {
         ZStack {
             fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
+            homeLandOverlay(viewport: viewport)
             ForEach((recordingShows(\.footprints) ? waypoints : []).sorted {
                 $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
             }) { waypoint in
@@ -5079,6 +5405,125 @@ struct MapHomeView: View {
         "pawprint-\(index)"
     }
 
+    // MARK: 집 주변 땅(지도)
+
+    /// 붙일 땅(타일)이 남아 있고, 카메라가 집 300m 안에서 400m 이하로 가까울 때. 타일을 추가하는 동안만 벡터 스타일이 필요하다.
+    private var isNearHomeLand: Bool {
+        guard autoLandStyleEnabled,
+              let camera = visibleMapCamera, camera.distance <= 400,
+              let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else { return false }
+        let season = homeGrowthHistory.season
+        let placed = Set((season.landPlotPlacements ?? []).map(\.plotID))
+        guard season.landPlots.contains(where: { !placed.contains($0) }) else { return false }
+        let center = GeoPoint(
+            latitude: camera.centerCoordinate.latitude,
+            longitude: camera.centerCoordinate.longitude,
+            altitude: 0,
+            horizontalAccuracy: 0,
+            verticalAccuracy: 0
+        )
+        return distanceMeters(center, home) <= 300
+    }
+
+    /// 타일을 추가할 때 애플 지도 스타일이면 벡터 스타일로 바꾸고, 다 붙이거나 집에서 벗어나면 원래 스타일로 되돌린다.
+    /// 사용자가 그 사이에 직접 스타일을 바꿨다면 되돌리지 않는다.
+    private func applyAutoLandStyle(near: Bool) {
+        let current = model.settings.mapDisplayStyle.runtimeStyle
+        if near {
+            guard autoLandStyleState.isEmpty, current.mapHomeVectorStyle == nil else { return }
+            let target = MapDisplayStyle.mapLibreLight
+            autoLandStyleState = "\(current.rawValue)|\(target.rawValue)"
+            model.setMapDisplayStyle(target)
+        } else {
+            let parts = autoLandStyleState.split(separator: "|").map(String.init)
+            autoLandStyleState = ""
+            guard parts.count == 2, parts[1] == current.rawValue,
+                  let previous = MapDisplayStyle(rawValue: parts[0]) else { return }
+            model.setMapDisplayStyle(previous)
+        }
+    }
+
+    /// 땅 한 칸의 실제 크기(m). 최대 확대(카메라 거리 80m, 1점≈0.06m) 기준으로 한 칸이 약 66pt가 된다.
+    private static let landCellMeters = 4.0
+
+    /// 집 주변에 이어 붙인 땅을 지도 위에 그린다(최대 확대에 가까울수록 크게). 붙일 땅이 남아 있으면
+    /// 이을 수 있는 빈 칸이 점선 "+"로 나오고, 눌러서 이어 붙인다. 벡터 지도 스타일에서만 그린다.
+    @ViewBuilder
+    private func homeLandOverlay(viewport: MapHomeVectorViewport?) -> some View {
+        if let layout = homeLandLayout(viewport: viewport) {
+            let season = homeGrowthHistory.season
+            let placements = season.landPlotPlacements ?? []
+            let nextPlot = season.landPlots.first { id in !placements.contains { $0.plotID == id } }
+            let candidates = nextPlot == nil ? [] : MapHomeGrowthPolicy.placementCandidates(in: season)
+            ZStack {
+                ForEach(placements) { placement in
+                    RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
+                        .fill(Color.tpPastelMint.opacity(0.55))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
+                                .stroke(Color.tpReferenceMint.opacity(0.7), lineWidth: 1)
+                        }
+                        .frame(width: layout.cell - 2, height: layout.cell - 2)
+                        .offset(x: CGFloat(placement.x) * layout.cell, y: CGFloat(placement.y) * layout.cell)
+                        .allowsHitTesting(false)
+                }
+                ForEach(Array(candidates.enumerated()), id: \.offset) { _, cell in
+                    Button {
+                        placeLandFromMap(x: cell.x, y: cell.y)
+                    } label: {
+                        RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous)
+                            .strokeBorder(Color.tpAccent.opacity(0.8), style: StrokeStyle(lineWidth: 1.4, dash: [5, 4]))
+                            .background(Color.tpAccent.opacity(0.06), in: RoundedRectangle(cornerRadius: layout.cell * 0.14, style: .continuous))
+                            .overlay {
+                                Image(systemName: "plus")
+                                    .font(.system(size: min(20, layout.cell * 0.32), weight: .bold))
+                                    .foregroundStyle(Color.tpAccent)
+                            }
+                            .frame(width: layout.cell - 2, height: layout.cell - 2)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: CGFloat(cell.x) * layout.cell, y: CGFloat(cell.y) * layout.cell)
+                    .accessibilityLabel(language.text("여기에 땅 이어 붙이기", "Attach land here"))
+                }
+            }
+            .frame(width: 0, height: 0)
+            .rotationEffect(.degrees(-layout.heading))
+            .position(layout.center)
+        }
+    }
+
+    private struct HomeLandLayout {
+        let center: CGPoint
+        let cell: CGFloat
+        let heading: Double
+    }
+
+    /// 집 핀의 화면 위치와 한 칸의 화면 크기. 집이 없거나 너무 멀리 있거나 기울어져 있으면 nil.
+    private func homeLandLayout(viewport: MapHomeVectorViewport?) -> HomeLandLayout? {
+        guard let viewport,
+              viewport.pitch < 5,
+              mapViewportSize.height > 0,
+              let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
+              let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return nil }
+        let metersPerPoint = viewport.span.latitudeDelta * 111_320 / Double(mapViewportSize.height)
+        guard metersPerPoint.isFinite, metersPerPoint > 0 else { return nil }
+        let cell = CGFloat(Self.landCellMeters / metersPerPoint)
+        // 너무 작게 보이면 그리지 않고, 화면보다 훨씬 크면 그리지 않는다.
+        guard cell >= 14, cell <= 400 else { return nil }
+        return HomeLandLayout(center: pin, cell: cell, heading: viewport.heading)
+    }
+
+    private func placeLandFromMap(x: Int, y: Int) {
+        guard canWriteHomeGrowth else { return }
+        var history = homeGrowthHistory
+        guard let plotID = history.season.landPlots.first(where: { id in
+            !(history.season.landPlotPlacements ?? []).contains { $0.plotID == id }
+        }), MapHomeGrowthPolicy.placeLandPlot(plotID, atX: x, y: y, in: &history.season),
+              let encoded = try? JSONEncoder().encode(history) else { return }
+        homeGrowthData = encoded
+    }
+
     private func vectorPlaceMarkerID(_ id: UUID) -> String {
         "place-\(id.uuidString)"
     }
@@ -5175,8 +5620,13 @@ struct MapHomeView: View {
         growthHistoryCache.history(for: homeGrowthData) ?? .initial(for: .now)
     }
 
+    /// 저장된 값이 있는데 읽지 못하면 초기값으로 덮어쓰지 않는다.
+    private var canWriteHomeGrowth: Bool {
+        homeGrowthData.isEmpty || growthHistoryCache.history(for: homeGrowthData) != nil
+    }
+
     private func refreshHomeGrowth(at now: Date) {
-        guard model.isBootstrapped, scenePhase == .active else { return }
+        guard model.isBootstrapped, scenePhase == .active, canWriteHomeGrowth else { return }
         var history = homeGrowthHistory
         let calendar = MapHomeGrowthPolicy.localCalendar
         if let key = history.season.pendingDay,
@@ -5216,6 +5666,7 @@ struct MapHomeView: View {
     }
 
     private func rewardRecentCompletedDay(_ day: Date, asOf now: Date = .now) {
+        guard canWriteHomeGrowth else { return }
         let calendar = MapHomeGrowthPolicy.localCalendar
         let actuals = model.snapshot.actuals
         let travel = model.snapshot.travel
@@ -5350,18 +5801,152 @@ struct MapHomeView: View {
         return total + current.duration
     }
 
-    private var header: some View {
-        HStack(spacing: 3) {
+    /// 하단 메뉴 고정: 홈 배치는 하단 탭으로 고정한다(선택 메뉴 제거).
+    private var layoutStyle: MapHomeLayoutStyle { .tabBar }
+
+    private func openMenu() {
+        isLocationMenuExpanded = false
+        isUserLocationsMenuExpanded = false
+        isCategoryMenuExpanded = false
+        isDisplayMenuExpanded = false
+        isSettingsMenuExpanded = false
+        isGPSLoggingMenuExpanded = false
+        withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
+    }
+
+    /// 하단 탭·떠 있는 독. 기존 버튼 동작을 그대로 호출하고 위치만 아래로 모은다.
+    private var bottomActionBar: some View {
+        let items = HStack(spacing: 0) {
+            bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) { openMenu() }
             Button {
                 isCalendarPresented = true
             } label: {
-                MapHomeCalendarGlyph(date: model.selectedDate, language: language)
-                    .frame(width: 42, height: Layout.headerHitTarget)
+                VStack(spacing: 4) {
+                    MapHomeCalendarGlyph(date: model.selectedDate, language: language)
+                        .frame(width: 26, height: 26)
+                    Text(language.text("달력", "Calendar"))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpSecondary)
+                        .frame(height: 12)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
             }
-            .accessibilityLabel(language.text("날짜 선택", "Choose date"))
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("달력", "Calendar"))
+            bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
+                requestAndFollowUserLocation(using: nil)
+            }
+            // 하단 가운데 집 버튼: 지도에서 집 아이콘을 누른 것과 같다(하루 요약·집 성장 시트).
+            bottomBarButton("house.fill", language.text("집", "Home")) {
+                isDaySummaryPresented = true
+            }
+            bottomBarButton(
+                isDayPlaybackRunning ? "pause.fill" : "play.fill",
+                isDayPlaybackRunning ? language.text("일시 정지", "Pause") : language.text("재생", "Play")
+            ) {
+                toggleDayPlayback()
+            }
+            bottomBarButton("record.circle", language.text("녹화", "Record"), tint: .tpHoliday) {
+                isRecordingOptionsPresented = true
+            }
+            bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
+                isMemoAddMenuPresented = true
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 56)
+        .padding(.bottom, 14)
 
-            headerDateButton("chevron.backward.2", amount: -7)
-            headerDateButton("chevron.left", amount: -1)
+        return items
+            .background {
+                // 하단 메뉴는 리퀴드 글래스: 지도가 비치면서도 아이콘과 글자가 읽힌다.
+                Color.clear
+                    .mapHomeGlass(in: Rectangle())
+                    .ignoresSafeArea(edges: .bottom)
+            }
+    }
+
+    private func bottomBarButton(
+        _ systemImage: String,
+        _ title: String,
+        tint: Color = .tpInk,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 26, height: 26)
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(height: 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title)
+    }
+
+    /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜. 누르면 달력을 연다.
+    private var dateBadge: some View {
+        let calendar = TimelineAxisGrid.normalizedCalendar()
+        let weekday = calendar.component(.weekday, from: model.selectedDate)
+        let isHoliday = MapHomeCalendarDayStyle(date: model.selectedDate, calendar: calendar) == .holiday
+        let color: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
+        let weekdayText = model.selectedDate.formatted(
+            Date.FormatStyle()
+                .weekday(.abbreviated)
+                .locale(Locale(identifier: language.text("ko_KR", "en_US")))
+        )
+        return Button {
+            jumpToTodayAndCurrentMapPosition()
+            // 날짜를 바꾸면 경로 데이터가 늦게 들어오므로, 불러온 뒤 한 번 더 전체 경로를 화면에 맞춘다.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(600))
+                guard !isDayPlaybackRunning else { return }
+                focusMapOnAllRoutes()
+            }
+        } label: {
+            VStack(spacing: 0) {
+                Text(weekdayText)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(String(calendar.component(.day, from: model.selectedDate)))
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .monospacedDigit()
+            }
+            .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
+            .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        // 위·왼쪽으로 밀면 다음 날, 아래·오른쪽으로 밀면 이전 날(하루씩). 탭은 오늘로 이동.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 14).onEnded { value in
+                let dx = value.translation.width, dy = value.translation.height
+                guard max(abs(dx), abs(dy)) >= 14 else { return }
+                let forward = abs(dx) >= abs(dy) ? dx < 0 : dy < 0
+                moveDate(by: forward ? 1 : -1)
+            }
+        )
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: moveDate(by: 1)
+            case .decrement: moveDate(by: -1)
+            @unknown default: break
+            }
+        }
+        .accessibilityLabel(language.text("오늘 날짜로 이동", "Go to today"))
+        .accessibilityHint(language.text("밀어서 하루씩 이동", "Swipe to change the day"))
+    }
+
+    private var header: some View {
+        HStack(spacing: 3) {
+
 
             Button {
                 jumpToTodayAndCurrentMapPosition()
@@ -5377,39 +5962,25 @@ struct MapHomeView: View {
                 language.text("오늘 날짜로 이동", "Go to today") + ", \(dateTitle)"
             )
 
-            headerDateButton("chevron.right", amount: 1)
-            headerDateButton("chevron.forward.2", amount: 7)
 
-            Button {
-                isRecordingOptionsPresented = true
-            } label: {
-                Image(systemName: "record.circle")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(width: 34, height: Layout.headerHitTarget)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("재생 화면 녹화", "Record playback"))
 
-            // 하루 재생 버튼을 상단바 안으로 합쳐 한 줄로 통일한다.
-            Button {
-                toggleDayPlayback()
-            } label: {
-                Image(systemName: isDayPlaybackRunning ? "pause.fill" : "play.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(width: 42, height: Layout.headerHitTarget)
-                    .contentShape(Rectangle())
+            if !layoutStyle.movesActionsToBottom {
+                Button {
+                    isRecordingOptionsPresented = true
+                } label: {
+                    Image(systemName: "record.circle")
+                        .font(.system(size: 14, weight: .bold))
+                        .frame(width: 34, height: Layout.headerHitTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("재생 화면 녹화", "Record playback"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(
-                isDayPlaybackRunning
-                    ? language.text("하루 재생 일시 정지", "Pause day playback")
-                    : language.text("하루 재생", "Play day")
-            )
+
         }
         .foregroundStyle(ink)
         .padding(.horizontal, 7)
-        .frame(maxWidth: .infinity)
+        .fixedSize(horizontal: true, vertical: false)
         .frame(height: Layout.headerVisibleHeight)
         .background(Color.tpSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
@@ -5792,6 +6363,10 @@ struct MapHomeView: View {
     }
 
     private func loadPhotoMoments() async {
+        guard showsPhotosOnMap else {
+            photoMoments = []
+            return
+        }
         var state = photoLibrary.permissionState()
         if state == .notDetermined { state = await photoLibrary.requestAccess() }
         guard state == .authorized || state == .limited else {
@@ -5802,19 +6377,23 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
         let library = photoLibrary
+        let readings = currentDayReadings
         let moments = await Task.detached(priority: .utility) {
-            library.moments(in: TimeSpan(start: dayStart, end: dayEnd))
+            MapHomePhotoPolicy.placingUnlocated(
+                library.moments(in: TimeSpan(start: dayStart, end: dayEnd)),
+                readings: readings
+            )
         }.value
         guard !Task.isCancelled else { return }
+        // 위치를 끝내 못 구한 사진이 있으면 하루 데이터가 들어온 뒤 한 번 더 맞춘다.
+        photosNeedReadingRetry = moments.contains { $0.location == nil }
         photoMoments = MapHomePhotoPolicy.locatedMoments(moments)
     }
 
     private var photoClusters: [MapHomePhotoCluster] {
-        guard !photoMoments.isEmpty, recordingShows(\.photos) else { return [] }
-        return MapHomePhotoPolicy.clusters(
-            from: photoMoments,
-            radiusMeters: MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: visibleMapCamera?.distance)
-        )
+        guard showsPhotosOnMap, !photoMoments.isEmpty, recordingShows(\.photos) else { return [] }
+        let radius = MapHomePhotoPolicy.clusterRadiusMeters(cameraDistance: visibleMapCamera?.distance)
+        return photoClusterCache.clusters(for: photoMoments, radiusMeters: radius)
     }
 
     /// 핀에 보일 대표 사진·개수·강조 여부. 재생 중에는 지나온 사진만 순서대로 나타난다.
@@ -5849,6 +6428,8 @@ struct MapHomeView: View {
 
     private func startRecordingPlayback() {
         isRecordingOptionsPresented = false
+        // 권한 확인·ReplayKit 시작 대기 동안 기존 재생이 계속 돌지 않게 먼저 멈춘다.
+        if isDayPlaybackRunning { stopDayPlayback(resetProgress: true) }
         Task { @MainActor in
             // 권한은 재생 전에 먼저 묻는다: 사진 저장 → 화면 녹화.
             guard await MapHomeScreenRecordingStore.requestPhotoAddAccess() else {
@@ -5865,7 +6446,6 @@ struct MapHomeView: View {
                 return
             }
             // 녹화는 항상 자정(0시)부터 처음부터 재생한다.
-            if isDayPlaybackRunning { stopDayPlayback(resetProgress: true) }
             startDayPlayback(fromMidnight: true)
         }
     }
@@ -5919,13 +6499,21 @@ struct MapHomeView: View {
         var playbackMinute = currentMinute
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
+        let zoomDayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
+        let zoomReadings = routeReadings + model.liveRouteState.readings
+        let zoomPlaces = model.settings.frequentPlaces.compactMap(\.point)
         playbackZoomPlan = MapHomePlaybackZoomPlan(
             inputs: MapHomePlaybackZoomInputBuilder.inputs(
                 ranges: movingRanges,
-                dayStart: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+                dayStart: zoomDayStart,
                 travel: currentDayDataSnapshot?.travel ?? [],
-                readings: routeReadings + model.liveRouteState.readings,
-                places: model.settings.frequentPlaces.compactMap(\.point)
+                readings: zoomReadings,
+                places: zoomPlaces
+            ),
+            profile: MapHomePlaybackZoomProfile.build(
+                readings: zoomReadings,
+                places: zoomPlaces,
+                dayStart: zoomDayStart
             )
         )
         if currentMinute == 0 {
@@ -5947,6 +6535,7 @@ struct MapHomeView: View {
         refreshRouteProjection()
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
+        startPlaybackIntro()
         var lastUptime = ProcessInfo.processInfo.systemUptime
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
@@ -6114,7 +6703,35 @@ struct MapHomeView: View {
         }
     }
 
+    /// 재생 시작 연출: 전체 경로를 먼저 보여 주고, 시작 지점으로 줌인한 뒤 재생 카메라에 넘긴다.
+    private func startPlaybackIntro() {
+        playbackIntroTask?.cancel()
+        guard let region = mapRouteFitRegion else { return }
+        isPlaybackIntroActive = true
+        setMapPosition(.region(region))
+        playbackIntroTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.6))
+            guard !Task.isCancelled, isDayPlaybackRunning,
+                  let point = displayedPlaybackFocusPoint else {
+                isPlaybackIntroActive = false
+                return
+            }
+            setMapPosition(.camera(
+                MapCamera(
+                    centerCoordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                    distance: MapHomePlaybackZoomPolicy.baselineDistance,
+                    heading: 0,
+                    pitch: 0
+                )
+            ))
+            try? await Task.sleep(for: .seconds(1.4))
+            isPlaybackIntroActive = false
+        }
+    }
+
     private func stopDayPlayback(resetProgress: Bool) {
+        playbackIntroTask?.cancel()
+        isPlaybackIntroActive = false
         selectedPawprintTimestamp = nil
         selectedPawprintCoordinate = nil
         let wasRunning = isDayPlaybackRunning
@@ -6155,11 +6772,13 @@ struct MapHomeView: View {
         let frame = MapHomeOverlayLayoutMath.alignedRailFrame(
             viewportHeight: viewportSize.height,
             topInset: topOverlayHeight + Layout.timeRailTopMargin,
-            bottomInset: Layout.overlayBottomMargin
+            bottomInset: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
             viewportHeight: viewportSize.height,
-            topOverlayHeight: topOverlayHeight
+            topOverlayHeight: 0,
+            topMargin: Layout.horizontalInset * 2 + Layout.dateBadgeSize,
+            bottomMargin: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
             railWidth: Layout.timeRailWidth,
@@ -6227,7 +6846,7 @@ struct MapHomeView: View {
                     Capsule()
                         .fill(Color.tpAccent.opacity(0.07))
                         .overlay {
-                            Capsule()
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
                                 .stroke(Color.tpAccent.opacity(0.20), lineWidth: 0.8)
                         }
                         .frame(
@@ -6414,168 +7033,152 @@ struct MapHomeView: View {
         case .following:
             locationStateLabel = language.text("현재 위치 따라가기", "Following")
         }
-        return VStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: 10) {
             Spacer(minLength: 0)
 
-            VStack(spacing: 2) {
-                // 상단바에서 옮겨온 메인 메뉴(설정) 진입점. 누르면 좌측 드로어를 연다.
-                Button {
-                    isLocationMenuExpanded = false
-                    isUserLocationsMenuExpanded = false
-                    isCategoryMenuExpanded = false
-                    isDisplayMenuExpanded = false
-                    isSettingsMenuExpanded = false
-                    isGPSLoggingMenuExpanded = false
-                    withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
-                } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.tpInk)
-                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                }
-                .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
-
-            // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isSearchExpanded = true
-                }
-                // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
-                DispatchQueue.main.async {
-                    isMapSearchFocused = true
-                }
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-            }
-            .accessibilityLabel(language.text("장소 검색", "Search places"))
-
-            Button {
-                requestAndFollowUserLocation(using: proxy)
-            } label: {
-                MapHomeLocationButtonIcon(
-                    state: locationState,
-                    showsGPSDot: hasConfirmedCurrentGPS
-                )
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-            }
-            .accessibilityLabel(language.text("현재 위치", "Current location"))
-            .accessibilityValue(locationStateLabel)
-
-            if isHeadingMode {
-                Button {
-                    toggleMapHeadingMode(using: proxy)
-                } label: {
-                        Image("MapHomeCompass")
-                            .resizable()
-                            .scaledToFit()
-                            .padding(9)
-                            .rotationEffect(
-                                .degrees(compassRotationDegrees)
-                            )
-                            .animation(
-                                .linear(duration: 0.12),
-                                value: compassRotationDegrees
-                            )
-                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        .allowsHitTesting(false)
-                }
-                .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
-            } else {
-                Button {
-                    toggleMapHeadingMode(using: proxy)
-                } label: {
-                    Image(systemName: "location.north.line")
-                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                        .foregroundStyle(Color.tpPastelRose)
-                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                }
-                .accessibilityLabel(language.text("나침반 표시", "Show compass"))
-            }
-            }
-            .padding(.vertical, 4)
-            .background(Color.tpSurface.opacity(0.92), in: Capsule())
-            .overlay {
-                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
-            }
-
-            VStack(spacing: 0) {
-                mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
-                if let scale = MapHomeCameraZoomMath.scale(distance: visibleMapCamera?.distance) {
+            if isLeftControlsExpanded {
+                VStack(spacing: 2) {
+                    // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
                     Button {
-                        fitMapToRoutes()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isSearchExpanded = true
+                        }
+                        // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
+                        DispatchQueue.main.async {
+                            isMapSearchFocused = true
+                        }
                     } label: {
-                        Text("\(scale)")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .monospacedDigit()
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.tpInk)
+                            .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                    }
+                    .accessibilityLabel(language.text("장소 검색", "Search places"))
+
+                    if !layoutStyle.movesActionsToBottom {
+                        Button {
+                            requestAndFollowUserLocation(using: proxy)
+                        } label: {
+                            MapHomeLocationButtonIcon(
+                                state: locationState,
+                                showsGPSDot: hasConfirmedCurrentGPS
+                            )
+                            .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        }
+                        .accessibilityLabel(language.text("현재 위치", "Current location"))
+                        .accessibilityValue(locationStateLabel)
+                    }
+
+                    if isHeadingMode {
+                        Button {
+                            toggleMapHeadingMode(using: proxy)
+                        } label: {
+                            Image("MapHomeCompass")
+                                .resizable()
+                                .scaledToFit()
+                                .padding(9)
+                                .rotationEffect(.degrees(compassRotationDegrees))
+                                .animation(.linear(duration: 0.12), value: compassRotationDegrees)
+                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                                .allowsHitTesting(false)
+                        }
+                        .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
+                    } else {
+                        Button {
+                            toggleMapHeadingMode(using: proxy)
+                        } label: {
+                            Image(systemName: "location.north.line")
+                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                                .foregroundStyle(Color.tpPastelRose)
+                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        }
+                        .accessibilityLabel(language.text("나침반 표시", "Show compass"))
+                    }
+
+                    VStack(spacing: 0) {
+                        mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
+                        if let scale = MapHomeCameraZoomMath.scale(distance: visibleMapCamera?.distance) {
+                            Button {
+                                fitMapToRoutes()
+                            } label: {
+                                Text("\(scale)")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .frame(width: Layout.mapControlSize, height: 24)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
+                            .accessibilityHint(language.text("이동 경로에 맞춰 화면 배율을 조정합니다", "Fits the map to the route"))
+                        }
+                        mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
+                    }
+
+                    VStack(spacing: 0) {
+                        Button {
+                            model.undoLastUserEdit()
+                        } label: {
+                            Image(systemName: "arrow.uturn.backward")
+                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                                .foregroundStyle(model.canUndo ? Color.tpInk : Color.tpSecondary.opacity(0.48))
+                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        }
+                        .accessibilityLabel(language.text("실행취소", "Undo"))
+                        .disabled(!model.canUndo)
+
+                        Button {
+                            model.redoLastUserEdit()
+                        } label: {
+                            Image(systemName: "arrow.uturn.forward")
+                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                                .foregroundStyle(model.canRedo ? Color.tpInk : Color.tpSecondary.opacity(0.48))
+                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        }
+                        .accessibilityLabel(language.text("다시실행", "Redo"))
+                        .disabled(!model.canRedo)
+                    }
+
+                    if !layoutStyle.movesActionsToBottom {
+                        Button {
+                            isMemoAddMenuPresented = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
+                                .foregroundStyle(Color.tpReferenceBlue)
+                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        }
+                        .accessibilityLabel(language.text("메모 추가", "Add memo"))
+                    }
+
+                    Button {
+                        isLeftControlsExpanded = false
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
-                            .frame(width: Layout.mapControlSize, height: 24)
+                            .frame(width: Layout.mapControlSize, height: 28)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
-                    .accessibilityHint(language.text("이동 경로에 맞춰 화면 배율을 조정합니다", "Fits the map to the route"))
+                    .accessibilityLabel(language.text("컨트롤 접기", "Collapse controls"))
                 }
-                mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
-            }
-            .background(Color.tpSurface.opacity(0.92), in: Capsule())
-            .overlay {
-                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
-            }
-
-            VStack(spacing: 0) {
+                .padding(.vertical, 4)
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            } else {
                 Button {
-                    model.undoLastUserEdit()
+                    isLeftControlsExpanded = true
                 } label: {
-                    Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                        .foregroundStyle(
-                            model.canUndo
-                                ? Color.tpInk
-                                : Color.tpSecondary.opacity(0.48)
-                        )
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.tpInk)
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                        .mapHomeGlass(in: Circle())
                 }
-                .accessibilityLabel(language.text("실행취소", "Undo"))
-                .disabled(!model.canUndo)
-
-                Button {
-                    model.redoLastUserEdit()
-                } label: {
-                    Image(systemName: "arrow.uturn.forward")
-                        .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                        .foregroundStyle(
-                            model.canRedo
-                                ? Color.tpInk
-                                : Color.tpSecondary.opacity(0.48)
-                        )
-                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                }
-                .accessibilityLabel(language.text("다시실행", "Redo"))
-                .disabled(!model.canRedo)
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("컨트롤 펼치기", "Expand controls"))
             }
-            .background(Color.tpSurface.opacity(0.92), in: Capsule())
-            .overlay {
-                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
-            }
-
-            Button {
-                isMemoAddMenuPresented = true
-            } label: {
-                Image(systemName: "note.text.badge.plus")
-                    .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                    .foregroundStyle(Color.tpReferenceGold)
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-            }
-            .background(Color.tpSurface.opacity(0.92), in: Capsule())
-            .overlay {
-                Capsule().stroke(Color.tpLine.opacity(0.64), lineWidth: 0.8)
-            }
-            .accessibilityLabel(language.text("메모 추가", "Add memo"))
         }
-        .padding(.bottom, 4)
         .frame(width: Layout.timeRailWidth, height: railHeight)
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
@@ -6653,11 +7256,12 @@ struct MapHomeView: View {
                     height: max(0, menuHeight - menuTop),
                     alignment: .top
                 )
-                .background(Color.tpSurface)
-                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(Color.tpSurface.opacity(0.62))
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.tpLine.opacity(0.8), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.tpLine.opacity(0.6), lineWidth: 0.8)
                 }
                 .padding(.top, menuTop)
                 // 왼쪽 가장자리에서 펼쳐져 오른쪽 시간 사이드바를 가리지 않는다.
@@ -6688,9 +7292,9 @@ struct MapHomeView: View {
                 Button { isMenuOpen = false } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.tpInk.opacity(0.6))
+                        .foregroundStyle(Color.tpInk.opacity(0.7))
                         .frame(width: 36, height: 36)
-                        .background(Color.tpInk.opacity(0.06), in: Circle())
+                        .mapHomeGlass(in: Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -6701,12 +7305,49 @@ struct MapHomeView: View {
                     .padding(.bottom, 10)
             }
 
-            locationMenuItem
-            categoryMenuItem
-            displayMenuItem
-            languageMenuItem
-            appleWatchMenuItem
-            settingsMenuItem
+            menuGroupLabel(language.text("기록", "Record"))
+            menuGroupCard {
+                locationMenuItem
+                menuGroupDivider
+                categoryMenuItem
+            }
+            menuGroupLabel(language.text("화면", "View"))
+            menuGroupCard {
+                displayMenuItem
+                menuGroupDivider
+                languageMenuItem
+            }
+            menuGroupLabel(language.text("연결", "Connections"))
+            menuGroupCard {
+                appleWatchMenuItem
+            }
+            menuGroupLabel(language.text("앱", "App"))
+            menuGroupCard {
+                settingsMenuItem
+                menuGroupDivider
+                Button {
+                    isMapAttributionPresented = true
+                } label: {
+                    HStack(spacing: 13) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.tpAccent)
+                            .frame(width: 32, height: 32)
+                            .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        Text(language.text("지도 출처", "Map attribution"))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .foregroundStyle(Color.tpInk)
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 12)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
 
             Spacer(minLength: 28)
 
@@ -6735,10 +7376,10 @@ struct MapHomeView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tpInk.opacity(0.04), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .mapHomeGlass(in: Capsule())
 
             Divider()
                 .padding(.vertical, 9)
@@ -6752,6 +7393,35 @@ struct MapHomeView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(MapHomeScrollBounceDisabler())
+    }
+
+    /// 메인 메뉴 묶음 제목과 카드. 항목은 카드 안에서 얇은 구분선으로 나눈다.
+    private func menuGroupLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .foregroundStyle(Color.tpSecondary)
+            .padding(.top, 16)
+            .padding(.bottom, 6)
+            .padding(.horizontal, 6)
+    }
+
+    private func menuGroupCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 0) {
+            content()
+        }
+        .padding(.vertical, 2)
+        .background(Color.tpSurface.opacity(0.78), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.7), lineWidth: 0.8)
+        }
+    }
+
+    private var menuGroupDivider: some View {
+        Divider()
+            .overlay(Color.tpLine.opacity(0.7))
+            .padding(.leading, 57)
+            .padding(.trailing, 12)
     }
 
     private var appVersionFooter: some View {
@@ -6777,9 +7447,10 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "paintpalette.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
+                        .frame(width: 32, height: 32)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     Text(language.text("행동 분류", "Activity categories"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                     Spacer()
@@ -6790,10 +7461,6 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
-                .background(
-                    Color.tpInk.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("행동 분류 목록", "Activity category list"))
@@ -6999,9 +7666,10 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
+                        .frame(width: 32, height: 32)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     Text(language.text("위치", "Location"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                     Spacer()
@@ -7012,10 +7680,6 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
-                .background(
-                    Color.tpInk.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("위치 목록", "Location list"))
@@ -7320,9 +7984,10 @@ struct MapHomeView: View {
         } label: {
             HStack(spacing: 13) {
                 Image(systemName: "globe")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.tpAccent)
-                    .frame(width: 24)
+                    .frame(width: 32, height: 32)
+                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 Text(language.text("언어", "Language"))
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                 Spacer()
@@ -7336,10 +8001,6 @@ struct MapHomeView: View {
             .foregroundStyle(Color.tpInk)
             .padding(.vertical, 9)
             .padding(.horizontal, 12)
-            .background(
-                Color.tpInk.opacity(0.05),
-                in: RoundedRectangle(cornerRadius: 12)
-            )
         }
         .accessibilityLabel(language.text("언어 선택", "Choose language"))
     }
@@ -7364,9 +8025,10 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "square.3.layers.3d")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
+                        .frame(width: 32, height: 32)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     Text(language.text("표시", "Display"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                     Spacer()
@@ -7377,10 +8039,6 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
-                .background(
-                    Color.tpInk.opacity(0.05),
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
             }
             .buttonStyle(.plain)
 
@@ -7419,6 +8077,17 @@ struct MapHomeView: View {
                     language.text("지도 스타일 선택", "Choose map style")
                 )
 
+                Toggle(isOn: $autoLandStyleEnabled) {
+                    Label(
+                        language.text("땅 보기 자동 전환", "Auto-switch for land"),
+                        systemImage: "square.grid.3x3.square"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
                 Picker(
                     selection: Binding(
                         get: { MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive },
@@ -7439,6 +8108,7 @@ struct MapHomeView: View {
                 .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
+
 
                 Toggle(isOn: $fogOfWarEnabled) {
                     Label(
@@ -7464,6 +8134,38 @@ struct MapHomeView: View {
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Toggle(isOn: $showsPhotosOnMap) {
+                    Label(
+                        language.text("사진", "Photos"),
+                        systemImage: "photo.fill"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Picker(
+                    selection: Binding(
+                        get: { memoDisplayMode },
+                        set: { memoDisplayRaw = $0.rawValue }
+                    )
+                ) {
+                    ForEach(MapHomeMemoDisplayMode.allCases, id: \.self) { mode in
+                        Text(language.text(mode.koreanTitle, mode.englishTitle)).tag(mode)
+                    }
+                } label: {
+                    Label(
+                        language.text("메모", "Memos"),
+                        systemImage: "note.text"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+                .pickerStyle(.menu)
+                .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
@@ -7511,9 +8213,10 @@ struct MapHomeView: View {
             Button { isSettingsMenuExpanded.toggle() } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "gearshape.fill")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
+                        .frame(width: 32, height: 32)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     Text(language.text("설정", "Settings"))
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                     Spacer()
@@ -7597,9 +8300,10 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: "applewatch")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
-                        .frame(width: 24)
+                        .frame(width: 32, height: 32)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(language.text("Apple Watch 데이터", "Apple Watch data"))
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -8066,7 +8770,12 @@ struct MapHomeView: View {
         let cutoff = routeOverlayCutoff
         let key = MapHomeTransitBoardingCandidateCacheKey(
             dayProjectionRevision: model.dayProjectionRevision,
-            settingsHash: registeredLocations.hashValue ^ decisions.hashValue,
+            settingsHash: {
+                var hasher = Hasher()
+                hasher.combine(registeredLocations)
+                hasher.combine(decisions)
+                return hasher.finalize()
+            }(),
             readingsRevision: transitBoardingReadingsRevision,
             nearbyPlacesRevision: nearbyTransitPlacesRevision,
             cutoff: MapHomeTransitBoardingRefreshPolicy.cutoffBucket(cutoff)
@@ -8207,14 +8916,19 @@ struct MapHomeView: View {
 
     /// GPS를 아직 못 받았을 때 화랑이가 있을 가장 최근 위치(최신 센서 → 실시간 경로 → 오늘 경로 마지막 점).
     private var lastKnownCoordinate: CLLocationCoordinate2D? {
-        let candidates: [GeoPoint?] = [
-            model.latestSensorReading?.point,
-            model.liveRouteState.readings.last?.point,
-            displayRouteReadings.last(where: { $0.point != nil })?.point,
-            currentDayReadings.last(where: { $0.point != nil })?.point,
+        let candidates: [() -> GeoPoint?] = [
+            { model.latestSensorReading?.point },
+            { model.liveRouteState.readings.last?.point },
+            { displayRouteReadings.last(where: { $0.point != nil })?.point },
+            { currentDayReadings.last(where: { $0.point != nil })?.point },
         ]
-        guard let point = candidates.compactMap({ $0 }).first(where: { isValid($0) }) else { return nil }
-        return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+        // 앞 후보로 정해지면 하루치 병합·정렬(currentDayReadings)은 계산하지 않는다.
+        for candidate in candidates {
+            if let point = candidate(), isValid(point) {
+                return CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+            }
+        }
+        return nil
     }
 
     /// 위치 버튼·따라가기가 맞출 좌표: 확정 현재 위치, 없으면 가장 최근 위치.
@@ -9302,6 +10016,14 @@ struct MapHomeView: View {
         timelineSelectionMinute()
     }
 
+    /// 과거 날짜 기본값 1440분은 다음 날 0시가 되므로 저장·일정 판정용 시각은 그날 23:59로 묶는다.
+    private var timelineSelectionDate: Date {
+        timelineDate(forMinute: Double(min(
+            effectiveTimelineMinute,
+            MapHomeTimeSidebarMath.fullDayMinutes - 1
+        )))
+    }
+
     private func timelineDate(forMinute minute: Double) -> Date {
         let safeMinute = minute.isFinite
             ? min(
@@ -9990,7 +10712,6 @@ struct MapHomeView: View {
     private func refreshRouteProjection() -> RouteTimelineProjection? {
         guard scenePhase == .active,
               let dayData = currentDayDataSnapshot else { return routeProjection }
-        mapRenderCache.invalidateRouteData()
         let calendar = Calendar.autoupdatingCurrent
         let actuals = dayData.actuals
         let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
@@ -10044,6 +10765,7 @@ struct MapHomeView: View {
         guard routeProjection != next
             || timelineRouteOverlays.map(\.id) != overlays.map(\.id)
         else { return next }
+        mapRenderCache.invalidateRouteData()
         routeProjection = next
         timelineRouteOverlays = overlays
         return next
@@ -10372,6 +11094,9 @@ struct MapHomeView: View {
     private func setMapPosition(_ position: MapCameraPosition, caller: String = #function) {
         mapPosition = position
         mapCameraRevision &+= 1
+        // 재생 중에는 초당 한 번만 기록해 로그 양을 줄인다.
+        if isDayPlaybackRunning,
+           !MapHomeCameraLogThrottle.shouldLog(nowUptime: ProcessInfo.processInfo.systemUptime) { return }
         TaptionPlanDiagnosticsLogger.shared.record(
             "map_camera_command",
             fields: [
@@ -10514,6 +11239,7 @@ struct MapHomeView: View {
     /// Apple 지도의 재생 중 속도 비례 줌. 가운데 맞추기는 지도 뷰가 하고, 여기서는 거리만 바꾼다.
     private func advanceApplePlaybackZoom() {
         guard isDayPlaybackRunning,
+              !isPlaybackIntroActive,
               TimelineInteractionFrameGate.shouldRender(
                   lastUptime: &lastPlaybackMapFocusUptime,
                   nowUptime: ProcessInfo.processInfo.systemUptime,
@@ -10571,7 +11297,10 @@ struct MapHomeView: View {
             return current
         }
         let playbackMinute = dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0)
-        let target = playbackZoomPlan.targetDistance(atMinute: playbackMinute)
+        let target = playbackZoomPlan.targetDistance(
+            atMinute: playbackMinute,
+            speedMetersPerSecond: displayedSpeedMetersPerSecond
+        )
         let next = playbackZoomSmoother.next(
             current: current,
             target: target,
@@ -10635,7 +11364,7 @@ struct MapHomeView: View {
                 MKCoordinateRegion(center: coordinate, span: visibleMapSpan)
             ))
         }
-        if followsTracking, !usesVectorRoadMap {
+        if followsTracking {
             requestAppleMapCenter(coordinate)
         }
         if followsTracking {
@@ -10807,17 +11536,8 @@ struct MapHomeView: View {
                 preservesCamera: true
             )
             setUserTrackingMode(.following)
-        } else if !usesVectorRoadMap {
+        } else {
             requestAppleMapHeading(heading, centeredAt: nil)
-        } else if let camera = visibleMapCamera {
-            setMapPosition(.camera(
-                MapCamera(
-                    centerCoordinate: camera.centerCoordinate,
-                    distance: camera.distance,
-                    heading: heading,
-                    pitch: camera.pitch
-                )
-            ))
         }
     }
 
@@ -10871,10 +11591,6 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
         }
         recordUserMapAdjustment()
-        if usesVectorRoadMap,
-           let vectorMapViewport = vectorMapViewportStore.viewport {
-            mapPosition = .region(vectorMapViewport.region)
-        }
         setUserTrackingMode(.idle)
         isMapCenteredOnUser = false
     }
@@ -15220,9 +15936,13 @@ private struct MapHomeStickerEditorSheet: View {
     @Bindable var model: AppModel
     let target: MapHomeStickerEditorTarget
     let language: MapHomeLanguage
+    /// "위치 추가"를 누르면 편집 화면을 닫고 지도에서 핀을 고르게 한다. 메모 id를 넘긴다.
+    var onRequestLocation: ((UUID) -> Void)? = nil
 
     @State private var title = ""
     @State private var memoText = ""
+    @State private var hasTime = false
+    @State private var keepsDraft = false
     @State private var memoKind: MemoKind = .idea
     @State private var placement: MapStickerPlacement = .map
     @State private var systemImage = "star.fill"
@@ -15232,6 +15952,8 @@ private struct MapHomeStickerEditorSheet: View {
     @State private var occurredAt = Date()
     @State private var isDeleteConfirmationPresented = false
     @State private var didSave = false
+    @State private var dictation = MapHomeDictation()
+    @State private var dictationBase = ""
 
     private let symbols = [
         "star.fill", "heart.fill", "flag.fill", "pin.fill",
@@ -15279,6 +16001,8 @@ private struct MapHomeStickerEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+Group {
+
                 if isSticker {
                     stickerFields
                 } else {
@@ -15290,15 +16014,19 @@ private struct MapHomeStickerEditorSheet: View {
                         isDeleteConfirmationPresented = true
                     }
                 }
-            }
+            
+}
+.listRowBackground(Color.tpSurface)
+}
+.tpListStyle()
             .navigationTitle(
                 language.text(
                     isSticker
                         ? "메모 스티커 수정"
-                        : (isNewMemo ? "지도 메모 추가" : "지도 메모 수정"),
+                        : (isNewMemo ? "메모 추가" : "메모 수정"),
                     isSticker
                         ? "Edit memo sticker"
-                        : (isNewMemo ? "Add map memo" : "Edit map memo")
+                        : (isNewMemo ? "Add memo" : "Edit memo")
                 )
             )
             .navigationBarTitleDisplayMode(.inline)
@@ -15323,7 +16051,7 @@ private struct MapHomeStickerEditorSheet: View {
             }
             .onAppear(perform: load)
             .onDisappear {
-                if isNewMemo, !didSave {
+                if isNewMemo, !didSave, !keepsDraft {
                     deleteNewMemoIfNeeded()
                 }
             }
@@ -15334,11 +16062,7 @@ private struct MapHomeStickerEditorSheet: View {
     private var stickerFields: some View {
         Section(language.text("메모 스티커", "Memo sticker")) {
             TextField(language.text("제목", "Title"), text: $title)
-            TextField(
-                language.text("메모 내용", "Memo text"),
-                text: $memoText,
-                axis: .vertical
-            )
+            memoInputField(prompt: nil)
             Picker(
                 language.text("추가 위치", "Placement"),
                 selection: $placement
@@ -15359,21 +16083,131 @@ private struct MapHomeStickerEditorSheet: View {
         }
     }
 
+    /// 메모 입력칸과 마이크 버튼. 마이크를 누르면 말한 내용이 메모 끝에 글자로 이어진다.
+    private func memoInputField(prompt: Text?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                Group {
+                    if let prompt {
+                        TextField(language.text("메모 내용", "Memo text"), text: $memoText, prompt: prompt, axis: .vertical)
+                    } else {
+                        TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
+                    }
+                }
+                Button {
+                    toggleDictation()
+                } label: {
+                    Image(systemName: dictation.isListening ? "mic.fill" : "mic")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
+                        .frame(width: 34, height: 34)
+                        .background(Color.tpAccent.opacity(0.10), in: Circle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(language.text(dictation.isListening ? "음성 입력 중지" : "음성으로 입력", dictation.isListening ? "Stop dictation" : "Dictate"))
+            }
+            if let message = dictation.errorMessage {
+                Text(message)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.tpHoliday)
+            }
+        }
+        .onChange(of: dictation.transcript) { _, text in
+            if dictation.isListening || !text.isEmpty { memoText = dictationBase + text }
+        }
+        .onDisappear { dictation.stop() }
+    }
+
+    private func toggleDictation() {
+        if dictation.isListening {
+            dictation.stop()
+        } else {
+            dictationBase = memoText.isEmpty ? "" : memoText + " "
+            let identifier = language == .korean ? "ko-KR" : "en-US"
+            Task { await dictation.start(localeIdentifier: identifier) }
+        }
+    }
+
     @ViewBuilder
     private var memoFields: some View {
         Section(language.text("메모", "Memo")) {
-            TextField(
-                language.text("메모 내용", "Memo text"),
-                text: $memoText,
-                prompt: Text(language.text("새 지도 메모", "New map memo")),
-                axis: .vertical
+            memoInputField(prompt: Text(language.text("새 메모", "New memo")))
+        }
+        Section {
+            Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
+            if hasTime {
+                DatePicker(
+                    language.text("시간", "Time"),
+                    selection: $occurredAt,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+            }
+        } header: {
+            Text(language.text("시간", "Time"))
+        } footer: {
+            Text(language.text(
+                "시간을 지정하지 않으면 왼쪽 위 메모 목록에 쌓여요.",
+                "Memos without a time stack in the list at the top left."
+            ))
+        }
+        Section {
+            if let point = editedPoint {
+                Label(
+                    String(format: "%.5f, %.5f", point.latitude, point.longitude),
+                    systemImage: "mappin.circle.fill"
+                )
+                Button(language.text("위치 다시 고르기", "Choose again")) { requestLocation() }
+                Button(language.text("위치 지우기", "Remove location"), role: .destructive) {
+                    latitudeText = ""
+                    longitudeText = ""
+                }
+            } else {
+                Button {
+                    requestLocation()
+                } label: {
+                    Label(language.text("위치 추가", "Add location"), systemImage: "mappin.and.ellipse")
+                }
+            }
+        } header: {
+            Text(language.text("위치", "Location"))
+        } footer: {
+            Text(language.text(
+                "위치를 넣으면 지도에 핀으로 보이고, 없으면 시간에 따른 메모로 보여요.",
+                "With a location the memo shows as a map pin; without one it follows the time."
+            ))
+        }
+    }
+
+    /// 위치 고르기: 지금까지 쓴 내용을 임시로 남기고 편집 화면을 닫는다. 핀을 고르면 다시 열린다.
+    private func requestLocation() {
+        switch target {
+        case .newMemo(let id):
+            keepsDraft = true
+            model.updateMemoDraft(
+                id,
+                text: memoText,
+                occurredAt: occurredAt,
+                isTimeless: !hasTime,
+                mapPoint: .some(editedPoint)
             )
-            DatePicker(
-                language.text("시간", "Time"),
-                selection: $occurredAt,
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            coordinateFields
+            dismiss()
+            onRequestLocation?(id)
+        case .memo(let id):
+            keepsDraft = true
+            if !memoText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                _ = model.updateMapMemo(
+                    id,
+                    text: memoText,
+                    kind: memoKind,
+                    mapPoint: editedPoint,
+                    occurredAt: occurredAt,
+                    isTimeless: !hasTime
+                )
+            }
+            dismiss()
+            onRequestLocation?(id)
+        case .sticker:
+            break
         }
     }
 
@@ -15446,10 +16280,12 @@ private struct MapHomeStickerEditorSheet: View {
             }
         case .memo(let id), .newMemo(let id):
             guard let memo = model.snapshot.memos.first(where: { $0.id == id }) else { return }
-            // 새 메모는 임시로 넣어 둔 문구 대신 빈칸에 음영 안내만 보이고, 누르면 바로 입력한다.
-            memoText = isNewMemo ? "" : memo.text
+            // 임시로 넣어 둔 문구는 빈칸으로 두고, 위치를 고르고 돌아온 초안은 쓴 글을 그대로 보여 준다.
+            let placeholders = ["새 메모", "New memo", "새 지도 메모", "New map memo"]
+            memoText = (isNewMemo && placeholders.contains(memo.text)) ? "" : memo.text
             memoKind = memo.kind
             occurredAt = memo.occurredAt
+            hasTime = memo.isTimeless != true
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
                 longitudeText = String(format: "%.6f", point.longitude)
@@ -15478,7 +16314,8 @@ private struct MapHomeStickerEditorSheet: View {
                 text: memoText,
                 kind: memoKind,
                 mapPoint: editedPoint,
-                occurredAt: occurredAt
+                occurredAt: occurredAt,
+                isTimeless: !hasTime
             ) else { return }
             didSave = true
         }
@@ -16861,7 +17698,8 @@ private final class MapHomeApplePawprintAnnotationView: MKAnnotationView {
     func apply(_ paw: MapHomeApplePawprint, color: UIColor) {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        let key = (UInt32(red * 255) << 24) | (UInt32(green * 255) << 16) | (UInt32(blue * 255) << 8) | UInt32(alpha * 255)
+        func byte(_ value: CGFloat) -> UInt32 { UInt32((min(max(value, 0), 1) * 255).rounded()) }
+        let key = (byte(red) << 24) | (byte(green) << 16) | (byte(blue) << 8) | byte(alpha)
         if appliedColor != key {
             appliedColor = key
             if let cached = Self.imageCache[key] {
@@ -17345,7 +18183,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
-            normalizeAnnotationLayerOrder(in: mapView)
+            normalizeAnnotationLayerOrder(of: views, in: mapView)
         }
 
         func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
@@ -17558,7 +18396,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             guard signature != lastAnnotationsSignature else { return }
             lastAnnotationsSignature = signature
             let existing = mapView.annotations.compactMap { $0 as? MapHomeAppleMapAnnotation }
-            let byID = Dictionary(uniqueKeysWithValues: existing.map { ($0.identifier, $0) })
+            let byID = Dictionary(existing.map { ($0.identifier, $0) }, uniquingKeysWith: { first, _ in first })
             let wantedIDs = Set(parent.annotations.map(\.id))
             let removed = existing.filter { !wantedIDs.contains($0.identifier) }
             if !removed.isEmpty {
@@ -17759,9 +18597,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             view.accessibilityLabel = annotation.label
         }
 
-        private func normalizeAnnotationLayerOrder(in mapView: MKMapView) {
-            for annotation in mapView.annotations {
-                guard let view = mapView.view(for: annotation) else { continue }
+        /// didAdd는 배치로 불리므로 새로 붙은 뷰만 정리한다(전체 순회는 발자국이 많을 때 O(N²)).
+        private func normalizeAnnotationLayerOrder(of views: [MKAnnotationView], in mapView: MKMapView) {
+            for view in views {
+                guard let annotation = view.annotation else { continue }
                 if annotation is MKUserLocation {
                     view.zPriority = .min
                     view.selectedZPriority = .min
@@ -18320,6 +19159,8 @@ private struct MapHomeGrowthSheet: View {
     let language: MapHomeLanguage
 
     @State private var historyCache = MapHomeGrowthHistoryCache()
+    @State private var showsTestTools = true
+    @State private var showsAllAccessories = false
 
     private var history: MapHomeGrowthHistory {
         historyCache.history(for: growthData) ?? .initial(for: .now)
@@ -18343,6 +19184,7 @@ private struct MapHomeGrowthSheet: View {
                     landSection
                     accessorySection
                     archiveSection
+                    if showsTestTools { testToolsSection }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 18)
@@ -18360,10 +19202,13 @@ private struct MapHomeGrowthSheet: View {
                 Text(language.text("우리 집 성장", "Home growth"))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
-                Text("\(season.year) · Lv.\(season.level)")
+                Text(verbatim: "\(season.year) · Lv.\(season.level)")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
+            .contentShape(Rectangle())
+            // 제목을 1.5초 길게 누르면 시험 도구가 열린다.
+            .onLongPressGesture(minimumDuration: 1.5) { showsTestTools.toggle() }
             Spacer()
             if season.pendingWeeklyRewards > 0 {
                 Text(language.text("보상 \(season.pendingWeeklyRewards)", "Rewards \(season.pendingWeeklyRewards)"))
@@ -18418,11 +19263,20 @@ private struct MapHomeGrowthSheet: View {
                         claim(candidate)
                     } label: {
                         HStack(spacing: 12) {
-                            Image(candidate.artworkName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 44, height: 44)
-                                .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            Group {
+                                if UIImage(named: candidate.artworkName) != nil {
+                                    Image(candidate.artworkName)
+                                        .resizable()
+                                        .scaledToFit()
+                                } else {
+                                    // 그림이 아직 없는 랜드마크는 무늬 심볼로 대신한다.
+                                    Image(systemName: candidate.systemImage)
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundStyle(Color(hex: "#D94772"))
+                                }
+                            }
+                            .frame(width: 44, height: 44)
+                            .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(displayName(candidate))
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -18442,7 +19296,8 @@ private struct MapHomeGrowthSheet: View {
                     .buttonStyle(.plain)
                 }
             } else {
-                Text(language.text("다음 보상까지 연속 \(max(0, 7 - season.streak))일 남았어요.", "\(max(0, 7 - season.streak)) consecutive days until your next reward."))
+                let remaining = MapHomeGrowthPolicy.daysUntilNextWeeklyReward(streak: season.streak)
+                Text(language.text("다음 보상까지 연속 \(remaining)일 남았어요.", "\(remaining) consecutive days until your next reward."))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(14)
@@ -18458,50 +19313,127 @@ private struct MapHomeGrowthSheet: View {
                 language.text("연결된 땅", "Connected land"),
                 subtitle: language.text("보상을 받아 집 주변에 한 칸씩 이어 붙여요", "Place each earned plot beside your home or another plot")
             )
-            if placements.isEmpty {
+            if placements.isEmpty && unplacedPlots.isEmpty {
                 Text(language.text("첫 주간 보상을 받으면 땅 조각이 생겨요.", "Your first weekly reward will add a land plot."))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                    ForEach(placements) { placement in
-                        VStack(spacing: 4) {
-                            Image(systemName: "leaf.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(Color.tpAccent)
-                            Text("\(placement.x),\(placement.y)")
-                                .font(.system(size: 9, weight: .medium, design: .rounded).monospacedDigit())
-                                .foregroundStyle(Color.tpSecondary)
+                landGrid
+                Text(language.text(
+                    "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.",
+                    "Zoom all the way in near your home on the map to see this land and attach plots there."
+                ))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+                if let next = unplacedPlots.first {
+                    Text(language.text(
+                        "붙이지 않은 땅 \(unplacedPlots.count)개 · 점선 칸을 눌러 이어 붙여요.",
+                        "\(unplacedPlots.count) plots left · tap a dashed cell to attach."
+                    ))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    Button {
+                        place(next)
+                    } label: {
+                        Label(language.text("자동으로 붙이기", "Place automatically"), systemImage: "wand.and.stars")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpAccent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    /// 연결된 땅을 칸 모양 그대로 보여 준다. (0,0)은 집 자리. 붙일 땅이 남아 있으면 이을 수 있는 빈 칸이 점선으로 나온다.
+    private var landGrid: some View {
+        let candidates = unplacedPlots.isEmpty ? [] : MapHomeGrowthPolicy.placementCandidates(in: season)
+        let xs = placements.map(\.x) + candidates.map(\.x)
+        let ys = placements.map(\.y) + candidates.map(\.y)
+        let minX = xs.min() ?? 0, maxX = xs.max() ?? 0
+        let minY = ys.min() ?? 0, maxY = ys.max() ?? 0
+        let occupied = Dictionary(uniqueKeysWithValues: placements.map { ("\($0.x),\($0.y)", $0) })
+        let candidateKeys = Set(candidates.map { "\($0.x),\($0.y)" })
+        let cell: CGFloat = 42
+        return ScrollView(.horizontal, showsIndicators: false) {
+            VStack(spacing: 4) {
+                ForEach(minY...maxY, id: \.self) { y in
+                    HStack(spacing: 4) {
+                        ForEach(minX...maxX, id: \.self) { x in
+                            let key = "\(x),\(y)"
+                            if occupied[key] != nil {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.tpPastelMint.opacity(0.5))
+                                    if x == 0 && y == 0 {
+                                        Image(MapHomeGrowthPolicy.artworkName(level: season.level))
+                                            .resizable()
+                                            .scaledToFit()
+                                            .padding(3)
+                                    } else {
+                                        Image(systemName: "leaf.fill")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.tpAccent)
+                                    }
+                                }
+                                .frame(width: cell, height: cell)
+                                .accessibilityLabel(language.text("연결된 땅 조각", "Connected plot"))
+                            } else if candidateKeys.contains(key), let plotID = unplacedPlots.first {
+                                Button {
+                                    placeLand(plotID, x: x, y: y)
+                                } label: {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .strokeBorder(Color.tpAccent.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
+                                        .overlay {
+                                            Image(systemName: "plus")
+                                                .font(.system(size: 13, weight: .bold))
+                                                .foregroundStyle(Color.tpAccent)
+                                        }
+                                        .frame(width: cell, height: cell)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(language.text("여기에 땅 붙이기", "Attach land here"))
+                            } else {
+                                Color.clear.frame(width: cell, height: cell)
+                            }
                         }
-                        .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Color.tpPastelMint.opacity(0.32), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .accessibilityLabel(language.text("연결된 땅 조각", "Connected plot"))
                     }
                 }
             }
-            ForEach(unplacedPlots, id: \.self) { plotID in
-                Button {
-                    place(plotID)
-                } label: {
-                    Label(language.text("땅 조각 연결하기", "Place land plot"), systemImage: "arrow.up.right.square")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
-                        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(language.text("기존 땅과 변을 맞대도록 배치합니다", "Connects the plot beside your existing land"))
-            }
+            .padding(2)
         }
+    }
+
+    private func placeLand(_ plotID: String, x: Int, y: Int) {
+        var updated = history
+        guard MapHomeGrowthPolicy.placeLandPlot(plotID, atX: x, y: y, in: &updated.season) else { return }
+        save(updated)
     }
 
     private var accessorySection: some View {
         VStack(alignment: .leading, spacing: 11) {
             sectionTitle(
-                language.text("화랑이 액세서리", "Hwarang accessories"),
-                subtitle: language.text("주간 진화 보상으로 모아 착용해요", "Collect and equip accessories from weekly rewards")
+                language.text(
+                    "화랑이 액세서리 \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)",
+                    "Hwarang accessories \(season.accessories.count) / \(MapHomeLandmarkCatalog.candidates.count)"
+                ),
+                subtitle: language.text("주간 진화 보상으로 모아 착용해요 · 현재 취득 / 전체", "Collect and equip from weekly rewards · owned / total")
             )
+            Button {
+                showsAllAccessories.toggle()
+            } label: {
+                Label(
+                    language.text(showsAllAccessories ? "전체 도감 접기" : "전체 도감 보기", showsAllAccessories ? "Hide all" : "Show all"),
+                    systemImage: showsAllAccessories ? "chevron.up" : "square.grid.3x3.fill"
+                )
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpAccent)
+            }
+            .buttonStyle(.plain)
+            if showsAllAccessories { accessoryCollectionGrid }
             if season.accessories.isEmpty {
                 Text(language.text("아직 모은 액세서리가 없어요.", "No accessories collected yet."))
                     .font(.system(size: 13, weight: .medium))
@@ -18512,23 +19444,77 @@ private struct MapHomeGrowthSheet: View {
                         equip(accessoryID)
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "sparkles")
-                                .foregroundStyle(Color.tpAccent)
-                            Text(accessoryName(accessoryID))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.tpInk)
+                            // 화랑이 아이콘에 달리는 무늬(랜드마크 심볼).
+                            Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color(hex: "#D94772"))
+                                .frame(width: 36, height: 36)
+                                .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(accessoryName(accessoryID))
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color.tpInk)
+                                if let landmark = MapHomeGrowthAccessoryCatalog.landmark(for: accessoryID) {
+                                    Text("\(countryName(landmark.country)) · \(categoryName(landmark.category))")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.tpSecondary)
+                                }
+                            }
                             Spacer()
                             if season.equippedAccessory == accessoryID {
                                 Text(language.text("착용 중", "Equipped"))
                                     .font(.system(size: 11, weight: .bold, design: .rounded))
                                     .foregroundStyle(Color.tpAccent)
                             }
+                            // 지도에서 쓰는 화랑이 아이콘에 이 장식을 단 모습.
+                            MapHomeStickmanMarker(action: .sleeping, equippedAccessoryID: accessoryID)
+                                .frame(width: 36, height: 36)
                         }
                         .padding(12)
                         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
+            }
+        }
+    }
+
+    /// 전체 도감: 모은 장식은 색이 있고 눌러 착용, 못 모은 장식은 회색에 자물쇠.
+    private var accessoryCollectionGrid: some View {
+        let owned = Set(season.accessories)
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+            ForEach(MapHomeLandmarkCatalog.candidates) { candidate in
+                let isOwned = owned.contains(candidate.accessoryID)
+                Button {
+                    if isOwned { equip(candidate.accessoryID) }
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: isOwned ? candidate.systemImage : "lock.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(isOwned ? Color(hex: "#D94772") : Color.tpSecondary.opacity(0.5))
+                        Text(language == .english ? candidate.englishName : candidate.name)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(
+                        isOwned ? Color.tpAccent.opacity(0.10) : Color.tpInk.opacity(0.04),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+                    .overlay {
+                        if season.equippedAccessory == candidate.accessoryID {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.tpAccent, lineWidth: 1.4)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    isOwned
+                        ? (language == .english ? candidate.englishName : candidate.name)
+                        : language.text("아직 모으지 못한 장식", "Not collected yet")
+                )
             }
         }
     }
@@ -18552,7 +19538,7 @@ private struct MapHomeGrowthSheet: View {
                             .scaledToFit()
                             .frame(width: 42, height: 42)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(archive.year)")
+                            Text(verbatim: "\(archive.year)")
                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.tpInk)
                             Text("Lv.\(archive.level) · \(archive.chosenEvolutions.count) \(language.text("진화", "evolutions"))")
@@ -18582,6 +19568,133 @@ private struct MapHomeGrowthSheet: View {
         }
     }
 
+    private var testToolsSection: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            sectionTitle(
+                language.text("시험 도구", "Test tools"),
+                subtitle: language.text("레벨·보상·저장 형식을 임의로 바꿔 기능을 시험해요", "Change level, rewards, and storage shape to test")
+            )
+            Text(language.text("집 레벨", "Home level"))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            testStepper(
+                value: "Lv.\(season.level)",
+                small: { setTestLevel(season.level - 1) },
+                smallUp: { setTestLevel(season.level + 1) },
+                large: { setTestLevel(season.level - 10) },
+                largeUp: { setTestLevel(season.level + 10) }
+            )
+            Text(language.text("연속 달성일", "Streak days"))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            testStepper(
+                value: language.text("\(season.streak)일", "\(season.streak) days"),
+                small: { adjustTestStreak(-1) },
+                smallUp: { adjustTestStreak(1) },
+                large: { adjustTestStreak(-7) },
+                largeUp: { adjustTestStreak(7) }
+            )
+            Text(language.text("연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.", "Each multiple of 7 streak days adds a weekly reward."))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+            Text(language.text("레벨 바로 가기", "Level presets"))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach([1, 100, 200, 300, MapHomeGrowthPolicy.maximumLevel(year: season.year), 366], id: \.self) { level in
+                    testButton("Lv.\(level)") { setTestLevel(level) }
+                }
+            }
+            Text(language.text("보상·연속", "Rewards and streak"))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                testButton(language.text("보상 +1", "Reward +1")) { addTestRewards(streakDays: 0) }
+                testButton(language.text("연속 +7일(보상 +1)", "Streak +7 (reward +1)")) { addTestRewards(streakDays: 7) }
+            }
+            Text(language.text("저장 형식", "Storage shape"))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            testButton(language.text("이전 형식으로 저장 후 다시 읽기", "Save in the old shape and reload")) { saveLegacyShape() }
+            Text(language.text("2026은 365일이라 최대 365입니다. 366은 그림 미리보기용이고, 다음 기록 때 365로 돌아갑니다.", "2026 has 365 days, so the cap is 365. Lv.366 is an artwork preview and returns to the cap on the next record."))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+        }
+    }
+
+    /// 값 한 줄과 −10(−7) / −1 / +1 / +10(+7) 버튼.
+    private func testStepper(
+        value: String,
+        small: @escaping () -> Void,
+        smallUp: @escaping () -> Void,
+        large: @escaping () -> Void,
+        largeUp: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 6) {
+            testButton("−\(value.contains("일") || value.contains("days") ? 7 : 10)", action: large)
+            testButton("−1", action: small)
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .frame(minWidth: 72)
+                .monospacedDigit()
+            testButton("+1", action: smallUp)
+            testButton("+\(value.contains("일") || value.contains("days") ? 7 : 10)", action: largeUp)
+        }
+    }
+
+    private func adjustTestStreak(_ delta: Int) {
+        var updated = history
+        let before = updated.season.streak
+        let after = max(0, before + delta)
+        updated.season.streak = after
+        if after > before {
+            updated.season.pendingWeeklyRewards += after / 7 - before / 7
+        }
+        save(updated)
+    }
+
+    private func testButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 11)
+                .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func setTestLevel(_ level: Int) {
+        var updated = history
+        updated.season.level = min(max(level, 1), 366)
+        save(updated)
+    }
+
+    private func addTestRewards(streakDays: Int) {
+        var updated = history
+        updated.season.streak += streakDays
+        updated.season.pendingWeeklyRewards += 1
+        save(updated)
+    }
+
+    /// 예전 앱이 저장하던 모양(땅 배치·소급 보상 필드 없음)으로 저장해 읽기 호환을 시험한다.
+    private func saveLegacyShape() {
+        guard let encoded = try? JSONEncoder().encode(history),
+              var object = (try? JSONSerialization.jsonObject(with: encoded)) as? [String: Any] else { return }
+        func stripped(_ season: [String: Any]) -> [String: Any] {
+            var copy = season
+            copy.removeValue(forKey: "landPlotPlacements")
+            copy.removeValue(forKey: "recentCompletionRewardedDays")
+            return copy
+        }
+        if let season = object["season"] as? [String: Any] { object["season"] = stripped(season) }
+        if let archives = object["archives"] as? [[String: Any]] { object["archives"] = archives.map(stripped) }
+        guard let legacy = try? JSONSerialization.data(withJSONObject: object) else { return }
+        growthData = legacy
+    }
+
     private func claim(_ candidate: MapHomeLandmarkCandidate) {
         var updated = history
         let plotID = "plot.\(UUID().uuidString)"
@@ -18607,7 +19720,8 @@ private struct MapHomeGrowthSheet: View {
     }
 
     private func save(_ history: MapHomeGrowthHistory) {
-        guard let encoded = try? JSONEncoder().encode(history) else { return }
+        guard growthData.isEmpty || historyCache.history(for: growthData) != nil,
+              let encoded = try? JSONEncoder().encode(history) else { return }
         growthData = encoded
     }
 
@@ -18660,6 +19774,163 @@ struct MapHomeStartupCameraPolicy {
     }
 }
 
+
+/// 위치 고르기용 핀: 물방울 모양 몸통과 흰 점, 끝이 닿는 자리에 그림자 타원. 끝이 뷰 아래 가운데에 있다.
+struct MapHomePlacementPin: View {
+    static let width: CGFloat = 34
+    static let height: CGFloat = 46
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            Ellipse()
+                .fill(Color.black.opacity(0.22))
+                .frame(width: 16, height: 6)
+                .blur(radius: 1.5)
+                .offset(y: 3)
+            MapHomePinShape()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.tpReferenceBlue.opacity(0.95), Color(hex: "#1E7ED0")],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay { MapHomePinShape().stroke(Color.white, lineWidth: 2) }
+                .overlay(alignment: .top) {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 12, height: 12)
+                        .offset(y: Self.width * 0.5 - 6)
+                }
+                .frame(width: Self.width, height: Self.height)
+                .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+        }
+        .frame(width: Self.width, height: Self.height)
+    }
+}
+
+struct MapHomePinShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + w / 2, y: rect.maxY))
+        path.addCurve(to: CGPoint(x: rect.minX, y: rect.minY + h * 0.38),
+                      control1: CGPoint(x: rect.minX + w * 0.40, y: rect.minY + h * 0.78),
+                      control2: CGPoint(x: rect.minX, y: rect.minY + h * 0.62))
+        path.addCurve(to: CGPoint(x: rect.minX + w / 2, y: rect.minY),
+                      control1: CGPoint(x: rect.minX, y: rect.minY + h * 0.17),
+                      control2: CGPoint(x: rect.minX + w * 0.22, y: rect.minY))
+        path.addCurve(to: CGPoint(x: rect.maxX, y: rect.minY + h * 0.38),
+                      control1: CGPoint(x: rect.minX + w * 0.78, y: rect.minY),
+                      control2: CGPoint(x: rect.maxX, y: rect.minY + h * 0.17))
+        path.addCurve(to: CGPoint(x: rect.minX + w / 2, y: rect.maxY),
+                      control1: CGPoint(x: rect.maxX, y: rect.minY + h * 0.62),
+                      control2: CGPoint(x: rect.minX + w * 0.60, y: rect.minY + h * 0.78))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// 지도 데이터·타일 제공자의 출처 표기. 지도 위 (i) 버튼과 같은 내용을 메뉴에서도 보여 준다.
+struct MapHomeAttributionSheet: View {
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(language.text("지도 출처", "Map attribution"))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+            attributionRow("OpenFreeMap", "© OpenMapTiles · Data from OpenStreetMap")
+            attributionRow(
+                language.text("지도 데이터", "Map data"),
+                "© OpenStreetMap contributors (ODbL)"
+            )
+            attributionRow(language.text("지도 표시", "Map rendering"), "MapLibre Native")
+            Link(destination: URL(string: "https://www.openstreetmap.org/copyright")!) {
+                Label(language.text("OpenStreetMap 저작권 보기", "OpenStreetMap copyright"), systemImage: "arrow.up.right.square")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+            }
+            .tint(Color.tpAccent)
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.tpBackground)
+    }
+
+    private func attributionRow(_ title: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+            Text(text)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.tpInk)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// 설정 > 표시 > 메모: 모두 / 위치 있는 메모만 / 숨김. 시간 메모·시간 없는 메모(왼쪽 위 목록)는 "모두"에서만 보인다.
+enum MapHomeMemoDisplayMode: String, CaseIterable, Sendable {
+    case all
+    case located
+    case hidden
+
+    var koreanTitle: String {
+        switch self {
+        case .all: "모두 표시"
+        case .located: "위치 메모만"
+        case .hidden: "표시 안 함"
+        }
+    }
+
+    var englishTitle: String {
+        switch self {
+        case .all: "Show all"
+        case .located: "Located only"
+        case .hidden: "Hide"
+        }
+    }
+}
+
+/// 지도 홈 버튼 배치. 하단 탭·떠 있는 독은 재생·녹화·메모·위치·메뉴를 아래 한 곳에 모은다.
+enum MapHomeLayoutStyle: String, CaseIterable, Sendable {
+    case classic
+    case tabBar
+
+    static let storageKey = "mapHomeLayoutStyle"
+
+    var movesActionsToBottom: Bool { self != .classic }
+
+    /// 지도 출처 (i) 버튼이 왼쪽 하단 원형 버튼(높이 44) 바로 위에 오도록 지도 아래에서 띄우는 거리.
+    /// 하단 메뉴 높이 + 기준 여백 10 + 버튼 44 + 간격 8.
+    static var attributionBottomMargin: CGFloat { MapHomeLayoutStyle.tabBar.bottomReservedHeight + 10 + 44 + 8 }
+
+    /// 하단 막대가 차지하는 높이. 레일과 왼쪽 버튼을 이만큼 위로 올린다.
+    var bottomReservedHeight: CGFloat {
+        switch self {
+        case .classic: 0
+        case .tabBar: 70
+        }
+    }
+
+    var koreanTitle: String {
+        switch self {
+        case .classic: "지금"
+        case .tabBar: "하단 탭"
+        }
+    }
+
+    var englishTitle: String {
+        switch self {
+        case .classic: "Classic"
+        case .tabBar: "Bottom tabs"
+        }
+    }
+}
 
 /// 재생 중 지도 배율 방식. 고정이면 재생을 시작할 때의 배율을 그대로 둔다.
 enum MapHomePlaybackZoomMode: String, CaseIterable, Sendable {

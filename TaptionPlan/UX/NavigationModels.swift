@@ -611,6 +611,8 @@ enum TimelineAxisGrid {
 
 struct ScheduleHeaderFormatter {
     var calendar: Calendar
+    private nonisolated(unsafe) static var formatterCache: [String: DateFormatter] = [:]
+    private static let formatterLock = NSLock()
 
     init(calendar: Calendar = .autoupdatingCurrent) {
         self.calendar = calendar
@@ -647,11 +649,21 @@ struct ScheduleHeaderFormatter {
     }
 
     private func format(_ date: Date, pattern: String) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.dateFormat = pattern
+        let key = "\(pattern)|\(calendar.identifier)|\(calendar.timeZone.identifier)"
+        Self.formatterLock.lock()
+        defer { Self.formatterLock.unlock() }
+        let formatter: DateFormatter
+        if let cached = Self.formatterCache[key] {
+            formatter = cached
+        } else {
+            formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.timeZone = calendar.timeZone
+            formatter.locale = Locale(identifier: "ko_KR")
+            formatter.dateFormat = pattern
+            if Self.formatterCache.count > 16 { Self.formatterCache.removeAll() }
+            Self.formatterCache[key] = formatter
+        }
         return formatter.string(from: date)
     }
 }

@@ -277,8 +277,10 @@ actor SensorCollectionLiveActivityController {
             ActivityContent(state: finalState, staleDate: flatlineUntil),
             dismissalPolicy: .after(flatlineUntil)
         )
-        self.activity = nil
-        lastPublishedAt = nil
+        if self.activity?.id == activity.id {
+            self.activity = nil
+            lastPublishedAt = nil
+        }
     }
 
     func removeExpired(now: Date = .now) async {
@@ -473,7 +475,7 @@ actor TaptionLiveActivityController {
             title: plan.title,
             categoryID: plan.categoryID,
             startedAt: plan.span.start,
-            endsAt: min(.now, plan.span.end),
+            endsAt: max(plan.span.start, min(.now, plan.span.end)),
             catStyle: catStyle.rawValue,
             isRunning: false,
             majorCategoryID: majorCategoryID,
@@ -486,7 +488,7 @@ actor TaptionLiveActivityController {
             ActivityContent(state: finalState, staleDate: nil),
             dismissalPolicy: .default
         )
-        self.activity = nil
+        if self.activity?.id == activity.id { self.activity = nil }
     }
 
     func activeID() -> String? {
