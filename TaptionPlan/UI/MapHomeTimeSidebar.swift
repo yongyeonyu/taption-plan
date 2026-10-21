@@ -3001,3 +3001,26 @@ private extension Array where Element == Int {
         enumerated().min(by: { abs($0.element - value) < abs($1.element - value) })?.offset ?? 0
     }
 }
+
+
+/// 저장된 한국어 활동 이름(정지·휴식, 걷기, 지하철 탑승 …)을 영어 설정에서 영어로 보여 준다.
+/// 저장된 기록 글자는 그대로 두고 화면에 그릴 때만 바꾼다. 모르는 이름은 그대로 돌려준다.
+enum KnownActivityTitleLocalizer {
+    private static let english: [String: String] = [
+        "정지·휴식": "Stationary", "정지": "Stopped", "휴식": "Rest", "집에서 휴식": "Resting at home", "집에서휴식": "Resting at home",
+        "걷기": "Walking", "달리기": "Running", "뛰기": "Running", "자전거": "Cycling", "버스": "Bus", "지하철": "Subway",
+        "택시": "Taxi", "자동차": "Car", "자가용": "Private car", "기차": "Train", "비행기": "Airplane", "배": "Ship",
+        "이동": "Movement", "수면": "Sleep", "업무": "Work", "회사 업무": "Office work", "학교 학습": "School", "수업": "Class",
+        "식사": "Meal", "운동": "Exercise", "취미": "Hobby", "활동": "Activity", "미확인": "Unconfirmed", "외출": "Out",
+    ]
+
+    static func localized(_ title: String, language: MapHomeLanguage) -> String {
+        guard language == .english else { return title }
+        if let value = english[title] { return value }
+        if title.hasSuffix(" 탑승") {
+            let base = String(title.dropLast(3))
+            return (english[base] ?? base) + " ride"
+        }
+        return title
+    }
+}

@@ -13193,7 +13193,7 @@ private struct MapHomeSectionEditSheet: View {
                     size: 22
                 )
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(detail.title).lineLimit(1)
+                    Text(KnownActivityTitleLocalizer.localized(detail.title, language: language)).lineLimit(1)
                     Text("\(timeLabel(detail.startMinute))–\(timeLabel(detail.endMinute))")
                         .font(.system(
                             size: isCompact ? 8 : 9,
@@ -19653,7 +19653,7 @@ struct MapHomeDaySummarySheet: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(entry.tint.opacity(0.16))
+                        .fill(entry.tint.opacity(0.38))
                     Capsule()
                         .fill(entry.tint)
                         .frame(width: max(4, proxy.size.width * entry.ratio))
