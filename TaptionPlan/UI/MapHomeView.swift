@@ -2324,6 +2324,8 @@ struct MapHomeView: View {
     @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
+    @State private var isAlarmSettingsPresented = false
+    @State private var isDailyCardPresented = false
     /// 땅은 벡터 지도에서만 그려져서, 붙일 타일이 있고 집 근처로 확대하면 벡터 스타일로 자동 전환했다가 끝나면 되돌린다.
     @AppStorage("mapHomeAutoLandStyle") private var autoLandStyleEnabled = true
     /// "원래 스타일|자동 전환한 스타일". 비어 있으면 자동 전환 중이 아니다.
@@ -3019,6 +3021,41 @@ struct MapHomeView: View {
             }
         ) {
             searchPinSheet
+        }
+        .sheet(isPresented: $isAlarmSettingsPresented) {
+            MapHomeAlarmSettingsSheet(language: language)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isDailyCardPresented) {
+            MapHomeDailyCardSheet(data: dailyCardData, language: language)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        // 알림 판정: 기록이 바뀔 때마다(장소 머묾·수면·시급) 켜 둔 알림만 보낸다. 하루 카드 예약도 맞춘다.
+        .task(id: "\(model.snapshot.places.count)|\(model.snapshot.actuals.count)|\(salaryLive?.hourlyRate ?? 0)") {
+            await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language)
+            let snap = model.snapshot
+            await MapHomeAlarmCenter.shared.evaluate(
+                actuals: snap.actuals,
+                travel: snap.travel,
+                stays: snap.places,
+                frequentPlaces: snap.settings.frequentPlaces,
+                language: language
+            )
+            if let salaryLive {
+                await MapHomeAlarmCenter.shared.noteRate(
+                    salaryLive.hourlyRate,
+                    isWorking: salaryLive.isWorking,
+                    breakEvenHours: salaryLive.isWorking ? MapHomeAlarmPolicy.breakEvenHours(
+                        settings: MapHomeSalaryPolicy.loadSettings(),
+                        monthWorkSeconds: salaryLive.month?.workSeconds ?? 0,
+                        projectedMonthWorkSeconds: salaryLive.projectedMonthWorkSeconds,
+                        samples: []
+                    ) : nil,
+                    language: language
+                )
+            }
         }
         .sheet(isPresented: $isMapAttributionPresented) {
             MapHomeAttributionSheet(language: language)
@@ -5713,6 +5750,32 @@ struct MapHomeView: View {
         homeGrowthData = encoded
     }
 
+    /// 하루 카드 데이터: 선택한 날짜의 대분류·걸음·이동·번 돈.
+    private var dailyCardData: MapHomeDailyCardData {
+        let categories = daySummaryCategories
+        let total = categories.reduce(0) { $0 + $1.seconds }
+        let travel = MapHomeDayTravelSummary.entries(from: currentDayDataSnapshot?.travel ?? [])
+        let distance = travel.reduce(0) { $0 + $1.meters }
+        let earned = salaryLive.map {
+            MapHomeSalaryPolicy.earnings(workSeconds: MapHomeSalaryPolicy.liveWorkSeconds(
+                base: $0.todayWorkSeconds, baseDate: $0.measuredAt, isWorking: false, now: .now, tick: 1
+            ), hourlyRate: $0.hourlyRate)
+        }
+        let work = categories.first { $0.id == MapHomeSalaryPolicy.workKey }?.seconds
+        let formatter = Date.FormatStyle().year().month().day().weekday(.wide).locale(language.locale)
+        return MapHomeDailyCardData(
+            dateText: model.selectedDate.formatted(Date.FormatStyle().year().month().day().locale(language.locale)),
+            weekdayText: model.selectedDate.formatted(formatter),
+            earnedText: earned.map(MapHomeSalaryPolicy.wonText),
+            workText: work.map(MapHomeAlarmPolicy.hoursText),
+            steps: dayStepCount,
+            distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
+            categories: categories,
+            totalText: language.text("관측 \(MapHomeAlarmPolicy.hoursText(total))", "Observed \(MapHomeAlarmPolicy.hoursText(total))"),
+            accessoryID: homeGrowthHistory.season.equippedAccessory
+        )
+    }
+
     private var dayStepCount: Int? {
         currentDayReadings.compactMap(\.stepCount).filter { $0 > 0 }.max()
     }
@@ -7590,6 +7653,28 @@ struct MapHomeView: View {
             menuGroupLabel(language.text("앱", "App"))
             menuGroupCard {
                 settingsMenuItem
+                menuGroupDivider
+                Button {
+                    isAlarmSettingsPresented = true
+                } label: {
+                    Label(language.text("알림", "Alerts"), systemImage: "bell.badge")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                }
+                .buttonStyle(.plain)
+                menuGroupDivider
+                Button {
+                    isDailyCardPresented = true
+                } label: {
+                    Label(language.text("하루 카드 (1080 공유)", "Day card (1080 share)"), systemImage: "photo.on.rectangle.angled")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                }
+                .buttonStyle(.plain)
                 menuGroupDivider
                 Button {
                     isMapAttributionPresented = true

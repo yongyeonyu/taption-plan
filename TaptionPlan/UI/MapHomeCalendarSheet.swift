@@ -1696,6 +1696,11 @@ enum MapHomeAlarmPolicy {
     /// 떠난 뒤 이 시간은 기다린다(잠깐 나갔다 돌아오는 경우).
     static let leaveSettle: TimeInterval = 3 * 60
 
+    static func hoursText(_ seconds: TimeInterval) -> String {
+        let minutes = Int((seconds / 60).rounded())
+        return minutes >= 60 ? "\(minutes / 60)시간 \(minutes % 60)분" : "\(minutes)분"
+    }
+
     static func timeText(_ date: Date, language: MapHomeLanguage) -> String {
         date.formatted(Date.FormatStyle().hour().minute().locale(language.locale))
     }
