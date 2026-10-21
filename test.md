@@ -2176,3 +2176,8 @@
 - 아이폰11 Pro에 Debug 설치·실행. 기존 기기 DB(10/19 개발 중 생성)가 구 구조라 "sqlFailed: no such column: ord" → 열 추가 마이그레이션(`addMissingRecordsColumns`)·`TaptionStoreV2Error` 오류 문구 노출 추가, 이어서 "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"(기본키 다른 구 구조) 발생. 대표 선택으로 앱 삭제 후 재설치 → 저장 오류 없이 첫 실행 권한 안내 표시.
 - 테스트: TaptionBackupV2Tests 41개 통과(ord 열 없는 저장소 재열기 테스트 추가), 로그 build/validation/STO1021M01/test3.log.
 - 한계: 날짜 배지 탭·더블탭은 기기 조작 수단이 없어 직접 확인하지 못함(캡처는 설치 직후 상태). 구 구조 DB가 TestFlight 사용자에게 있는지는 미확인.
+
+## REL1021N01 · Build 206 TestFlight (2026-10-21)
+- CURRENT_PROJECT_VERSION 206(8곳)·Info.plist 4개. Release 아카이브·내보내기·altool 업로드 성공(로그 build/validation/REL1021N01/).
+- IPA 앱·위젯 CFBundleVersion 206 확인. ASC 206 VALID, "TP Taption Plan 내부 테스트" 그룹 연결, 그룹 빌드 목록 최상단 206, 테스터 1명.
+- 한계: 기기 동작(날짜 배지 탭)은 대표 확인 필요.

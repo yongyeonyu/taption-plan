@@ -1172,3 +1172,10 @@
 - 포함: 204 이후 변경 — 위치 고르기 물방울 핀·핀 아래 버튼(PIN1021K01).
 - 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 205 확인.
 - 완료: 205 업로드·VALID·그룹 연결, test.md 기록.
+
+## REL1021N01 · Build 206 TestFlight 업로드 (2026-10-21)
+- 요청(대표): 빌드업.
+- 범위: CURRENT_PROJECT_VERSION 205→206(8곳·Info.plist 4개), Release 아카이브·내보내기·altool 업로드, ASC VALID, "TP Taption Plan 내부 테스트" 그룹 연결·확인.
+- 포함: 205 이후 변경 — 날짜 배지 탭 주간 펼침·더블탭 맞춤(DTE1021L01), 저장소 ord 열 보강·오류 문구(STO1021M01).
+- 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 206 확인.
+- 완료: 206 업로드·VALID·그룹 연결, test.md 기록.
