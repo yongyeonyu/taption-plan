@@ -7540,8 +7540,10 @@ struct MapHomeView: View {
                         isLeftControlsExpanded = false
                     } label: {
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
+                            .frame(width: 26, height: 26)
+                            .background(Circle().fill(Color.gray.opacity(0.28)))
                             .frame(width: Layout.mapControlSize, height: 28)
                             .contentShape(Rectangle())
                     }
