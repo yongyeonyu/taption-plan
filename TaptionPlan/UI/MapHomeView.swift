@@ -2284,6 +2284,11 @@ struct MapHomeView: View {
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
     @State private var isStrideCalibrationPresented = false
+    @State private var isSalarySettingsPresented = false
+    @AppStorage(MapHomeSalaryPolicy.annualKey) private var salaryAnnualPay = 0.0
+    @AppStorage(MapHomeSalaryPolicy.lastMonthPayKey) private var salaryLastMonthPay = 0.0
+    @AppStorage(MapHomeSalaryPolicy.tickKey) private var salaryTickSeconds = 10
+    @State private var salaryLive: MapHomeSalaryPolicy.Live?
     @State private var isMemoAddMenuPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
@@ -2895,9 +2900,26 @@ struct MapHomeView: View {
                     isQualifiedToday: isHomeGrowthQualifiedToday,
                     streak: homeGrowthHistory.season.streak,
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
-                )
+                ),
+                salary: salaryLive
             )
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isSalarySettingsPresented) {
+            MapHomeSalarySettingsSheet(language: language, lastMonthWorkSeconds: salaryLive?.lastMonthWorkSeconds ?? 0)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        // 연봉을 넣었으면 30초마다 오늘 근무 시간을 다시 센다(사이 값은 지도 라벨이 표시 간격마다 더한다).
+        .task(id: "\(salaryAnnualPay)|\(salaryLastMonthPay)|\(scenePhase == .active)") {
+            guard scenePhase == .active else { return }
+            var monthComputedAt: Date?
+            while !Task.isCancelled {
+                let needsMonth = monthComputedAt.map { Date.now.timeIntervalSince($0) >= 300 } ?? true
+                await refreshSalary(includeMonth: needsMonth)
+                if needsMonth { monthComputedAt = .now }
+                try? await Task.sleep(for: .seconds(30))
+            }
         }
         .sheet(isPresented: $isStrideCalibrationPresented) {
             MapHomeStrideCalibrationSheet(language: language)
@@ -5151,6 +5173,8 @@ struct MapHomeView: View {
                     .accessibilityLabel(
                         "\(playback.accessibilityLabel), \(language.text("설명 보기","Show info"))"
                     )
+                salaryCounterLabel(at: point)
+                    .zIndex(MapHomeLayerPriority.stickman)
             }
 
             if let selectedSearchPin,
@@ -5380,7 +5404,8 @@ struct MapHomeView: View {
 
     /// 붙일 땅(타일)이 남아 있고, 카메라가 집 300m 안에서 400m 이하로 가까울 때. 타일을 추가하는 동안만 벡터 스타일이 필요하다.
     private var isNearHomeLand: Bool {
-        guard autoLandStyleEnabled,
+        guard MapHomeLandFeature.isVisible,
+              autoLandStyleEnabled,
               let camera = visibleMapCamera, camera.distance <= 400,
               let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else { return false }
         let season = homeGrowthHistory.season
@@ -5472,7 +5497,8 @@ struct MapHomeView: View {
 
     /// 집 핀의 화면 위치와 한 칸의 화면 크기. 집이 없거나 너무 멀리 있거나 기울어져 있으면 nil.
     private func homeLandLayout(viewport: MapHomeVectorViewport?) -> HomeLandLayout? {
-        guard let viewport,
+        guard MapHomeLandFeature.isVisible,
+              let viewport,
               viewport.pitch < 5,
               mapViewportSize.height > 0,
               let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
@@ -6478,6 +6504,93 @@ struct MapHomeView: View {
             }
         }
         return result
+    }
+
+    /// 오늘 근무 시간(지금·1분 전)과, 필요하면 이번 달·지난달 합계를 다시 세어 연봉 카운터 값을 만든다.
+    private func refreshSalary(includeMonth: Bool) async {
+        let annual = salaryAnnualPay, lastPay = salaryLastMonthPay
+        guard annual > 0 || lastPay > 0 else {
+            if salaryLive != nil { salaryLive = nil }
+            return
+        }
+        let actuals = model.snapshot.actuals
+        let travel = model.snapshot.travel
+        let stays = model.snapshot.places
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces)
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        let now = Date.now
+        let previous = salaryLive
+        let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, lastMonth: TimeInterval?) in
+            let dayStart = calendar.startOfDay(for: now)
+            let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
+            let span = TimeSpan(start: dayStart, end: dayEnd)
+            func work(asOf date: Date) -> TimeInterval {
+                MapHomeCalendarTimeTotalsPolicy.categorySeconds(
+                    actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds, in: span, asOf: date
+                )[MapHomeSalaryPolicy.workKey] ?? 0
+            }
+            guard includeMonth else { return (work(asOf: now), work(asOf: now - 60), nil, nil) }
+            func monthTotals(_ month: Date) -> [Date: [String: TimeInterval]] {
+                MapHomeCalendarTimeTotalsPolicy.totals(
+                    actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
+                    month: month, asOf: now, calendar: calendar
+                )
+            }
+            let lastMonthDate = calendar.date(byAdding: .month, value: -1, to: now) ?? now
+            let lastMonth = monthTotals(lastMonthDate).values.reduce(0) { $0 + ($1[MapHomeSalaryPolicy.workKey] ?? 0) }
+            return (work(asOf: now), work(asOf: now - 60), monthTotals(now), lastMonth)
+        }.value
+        guard !Task.isCancelled else { return }
+        let lastMonthSeconds = counted.lastMonth ?? previous?.lastMonthWorkSeconds ?? 0
+        guard let rate = MapHomeSalaryPolicy.hourlyRate(
+            annualPay: annual, lastMonthPay: lastPay, lastMonthWorkSeconds: lastMonthSeconds
+        ) else { return }
+        let month = counted.month.map { MapHomeSalaryPolicy.monthSummary(totals: $0, hourlyRate: rate) } ?? previous?.month
+        let live = MapHomeSalaryPolicy.Live(
+            todayWorkSeconds: counted.today,
+            measuredAt: now,
+            isWorking: MapHomeSalaryPolicy.isWorking(workNow: counted.today, workMinuteAgo: counted.minuteAgo),
+            hourlyRate: rate,
+            month: month,
+            lastMonthWorkSeconds: lastMonthSeconds
+        )
+        if live != salaryLive { salaryLive = live }
+    }
+
+    /// 화랑이 머리 위 연봉 카운터. 오늘을 보고 있고 재생 중이 아닐 때, 오늘 근무가 있으면 표시 간격마다 금액이 오른다.
+    @ViewBuilder
+    private func salaryCounterLabel(at point: CGPoint) -> some View {
+        if let salaryLive, !isDayPlaybackRunning,
+           Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
+           salaryLive.todayWorkSeconds > 0 || salaryLive.isWorking {
+            let tick = TimeInterval(max(1, salaryTickSeconds))
+            TimelineView(.periodic(from: salaryLive.measuredAt, by: tick)) { context in
+                let seconds = MapHomeSalaryPolicy.liveWorkSeconds(
+                    base: salaryLive.todayWorkSeconds,
+                    baseDate: salaryLive.measuredAt,
+                    isWorking: salaryLive.isWorking,
+                    now: context.date,
+                    tick: tick
+                )
+                HStack(spacing: 4) {
+                    Image(systemName: "wonsign.circle.fill")
+                        .foregroundStyle(salaryLive.isWorking ? Color.tpReferenceMint : Color.tpSecondary)
+                    Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: salaryLive.hourlyRate)))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                }
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .mapHomeGlass(in: Capsule())
+                .animation(.snappy, value: seconds)
+            }
+            .fixedSize()
+            .position(x: point.x, y: point.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42)
+            .allowsHitTesting(false)
+            .accessibilityLabel(language.text("오늘 번 돈", "Earned today"))
+        }
     }
 
     /// 녹화 메뉴를 열기 전에 사진 저장 권한과 화면 기록 허용을 먼저 받는다.
@@ -8112,6 +8225,16 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                Button {
+                    isSalarySettingsPresented = true
+                } label: {
+                    Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 6)
+                }
+                .buttonStyle(.plain)
                 Button {
                     isStrideCalibrationPresented = true
                 } label: {
@@ -19045,12 +19168,56 @@ struct MapHomeDaySummarySheet: View {
     @Binding var growthData: Data
     let language: MapHomeLanguage
     var growthCard: MapHomeGrowthCardInfo? = nil
+    var salary: MapHomeSalaryPolicy.Live? = nil
     @State private var isGrowthPresented = false
     @State private var contentHeight: CGFloat = 0
     private static let bottomPadding: CGFloat = 40
 
     private var totalSeconds: TimeInterval {
         categories.reduce(0) { $0 + $1.seconds }
+    }
+
+    /// 오늘·이번 달 번 돈과 시급, 출퇴근까지 넣은 실질 시급.
+    private func salaryCardView(_ salary: MapHomeSalaryPolicy.Live) -> some View {
+        let today = MapHomeSalaryPolicy.earnings(workSeconds: salary.todayWorkSeconds, hourlyRate: salary.hourlyRate)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label(language.text("오늘 번 돈", "Earned today"), systemImage: "wonsign.circle.fill")
+                    .foregroundStyle(Color.tpSecondary)
+                Spacer()
+                Text(MapHomeSalaryPolicy.wonText(today)).font(.system(size: 16, weight: .bold, design: .rounded))
+            }
+            if let month = salary.month {
+                HStack {
+                    Text(language.text("이번 달 \(Int(month.workSeconds / 3_600))시간 근무", "This month \(Int(month.workSeconds / 3_600)) h"))
+                        .foregroundStyle(Color.tpSecondary)
+                    Spacer()
+                    Text(MapHomeSalaryPolicy.wonText(month.earnings)).font(.system(size: 14, weight: .semibold, design: .rounded))
+                }
+            }
+            HStack {
+                Text(language.text("시급 \(MapHomeSalaryPolicy.wonText(salary.hourlyRate))", "Hourly \(MapHomeSalaryPolicy.wonText(salary.hourlyRate))"))
+                Spacer()
+                if let effective = salary.month?.effectiveHourlyRate {
+                    Text(language.text("출퇴근 포함 \(MapHomeSalaryPolicy.wonText(effective))", "With commute \(MapHomeSalaryPolicy.wonText(effective))"))
+                        .foregroundStyle(Color.tpAccent)
+                }
+            }
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            Text(language.text("세전 추정", "Pre-tax estimate"))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+        }
+        .font(.system(size: 13, weight: .medium, design: .rounded))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func growthCardView(_ card: MapHomeGrowthCardInfo) -> some View {
@@ -19139,6 +19306,10 @@ struct MapHomeDaySummarySheet: View {
 
             if let growthCard {
                 growthCardView(growthCard)
+            }
+
+            if let salary {
+                salaryCardView(salary)
             }
 
             if let stepCount {
@@ -19280,7 +19451,7 @@ private struct MapHomeGrowthSheet: View {
                 VStack(alignment: .leading, spacing: 22) {
                     seasonProgress
                     weeklyRewardSection
-                    landSection
+                    if MapHomeLandFeature.isVisible { landSection }
                     accessorySection
                     archiveSection
                     if showsTestTools { testToolsSection }

@@ -2230,3 +2230,8 @@
 - 원인: 달력 걸음 수는 센서 기록(활동 종료 후 저장)과 건강 앱 값만 읽어 걷는 중에는 바뀌지 않음.
 - 변경: 이번 달이면 오늘 0시~현재 CMPedometer 걸음을 읽어 오늘 값을 max로 반영(AppModel.calendarDailyStepCounts). 집 버튼 카메라 거리 200m→70m(대표 지정 "70").
 - 검증: Debug 빌드 성공. 기기 걸음 반영은 미확인(대표 확인 필요).
+
+## SAL1021U01 · 땅 타일 숨김·연봉 카운터 (2026-10-21)
+- 구현: temp.md SAL1021U01 참조. Debug 빌드 성공.
+- 테스트(아이폰11): MapHomeLiveMapTests 연봉 3개(시급 우선순위·실시간 초·달 요약) 통과(build/validation/SAL1021U01/test.log). FeatureEngineTests.testCalendarTimeTextFormatsCellsAndDurations(지표 목록·기본 보폭 20/26.5m) 실행 결과는 test-stride.log.
+- 한계: 근무 중 실시간 금액 증가·지도 라벨 위치는 기기 미확인. 라벨은 벡터 지도 화랑이 위에만 표시(애플 지도 스타일 미표시), 집에 있을 땐 표시 안 함. 근무 중 판정은 1분 사이 근무 시간 증가(30초 초과) 기준.

@@ -186,6 +186,30 @@ enum MapHomeCalendarTimeTotalsPolicy {
         return result
     }
 
+    /// 한 구간의 대분류별 시간(초). 연봉 카운터가 오늘 근무 시간만 빠르게 다시 셀 때 쓴다.
+    static func categorySeconds(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        in span: TimeSpan,
+        asOf now: Date
+    ) -> [String: TimeInterval] {
+        let phases = DayPhaseEngine.completePhases(
+            actuals: actuals.filter { let s = $0.span(asOf: now); return s.start < span.end && span.start < s.end },
+            travel: travel.filter { $0.span.start < span.end && span.start < $0.span.end },
+            stays: stays.filter { $0.span.start < span.end && span.start < $0.span.end },
+            placeKinds: placeKinds,
+            in: span,
+            asOf: now
+        )
+        var byID: [String: TimeInterval] = [:]
+        for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) where entry.actual > 0 && entry.categoryID != "unconfirmed" {
+            byID[entry.categoryID, default: 0] += entry.actual
+        }
+        return byID
+    }
+
     /// 날짜별 걸음 수 합치기: 건강 앱 값과 센서 값 중 큰 쪽(둘 다 같은 걸음의 다른 측정이라 더하지 않는다).
     static func mergedStepCounts(health: [Date: Double], sensor: [Date: Double]) -> [Date: Double] {
         health.merging(sensor) { max($0, $1) }
@@ -896,5 +920,188 @@ struct MapHomeStrideCalibrationSheet: View {
         }
         strideMeters = centimeters / 100
         message = language.text("보폭 \(String(format: "%.0f", centimeters))cm로 저장했습니다.", "Saved \(String(format: "%.0f", centimeters)) cm.")
+    }
+}
+
+/// 땅 타일(집 주변 땅 따먹기). 화면이 지저분해 보여 대표 결정으로 숨긴다. 보상 데이터는 그대로 둔다.
+enum MapHomeLandFeature {
+    static let isVisible = false
+}
+
+/// 연봉 카운터: 근무 시간에 시급을 곱해 번 돈을 보여 준다(세전 추정, 금액은 원).
+enum MapHomeSalaryPolicy {
+    static let annualKey = "mapHomeSalaryAnnual"
+    static let lastMonthPayKey = "mapHomeSalaryLastMonthPay"
+    static let tickKey = "mapHomeSalaryTickSeconds"
+    static let tickChoices = [1, 10, 30, 60]
+    /// 주 40시간 기준 월 소정근로시간(주휴 포함). 지난달 근무 기록이 모자랄 때 쓴다.
+    static let standardMonthlyHours = 209.0
+    /// 지난달 근무가 이보다 적게 잡혔으면 측정값 대신 소정근로시간을 쓴다.
+    static let minimumMeasuredHours = 20.0
+    static let workKey = MapHomeCalendarTimeKind.work.rawValue
+    static let movementKey = MapHomeCalendarTimeKind.movement.rawValue
+
+    /// 시급. 지난달 받은 금액과 지난달 실제 근무 시간이 있으면 그 비율, 없으면 연봉 ÷ 12 ÷ (지난달 근무 또는 209시간).
+    static func hourlyRate(annualPay: Double, lastMonthPay: Double, lastMonthWorkSeconds: TimeInterval) -> Double? {
+        let hours = lastMonthWorkSeconds / 3_600
+        let measured: Double? = hours >= minimumMeasuredHours ? hours : nil
+        if lastMonthPay > 0, let measured { return lastMonthPay / measured }
+        guard annualPay > 0 else { return nil }
+        return annualPay / 12 / (measured ?? standardMonthlyHours)
+    }
+
+    static func earnings(workSeconds: TimeInterval, hourlyRate: Double) -> Double {
+        max(0, workSeconds) / 3_600 * hourlyRate
+    }
+
+    /// 화면에 보일 오늘 근무 시간. 근무 중이면 마지막으로 센 뒤 흐른 시간을 표시 간격 단위로 더한다.
+    static func liveWorkSeconds(base: TimeInterval, baseDate: Date, isWorking: Bool, now: Date, tick: TimeInterval) -> TimeInterval {
+        guard isWorking else { return base }
+        let elapsed = max(0, now.timeIntervalSince(baseDate))
+        let step = max(1, tick)
+        return base + (elapsed / step).rounded(.down) * step
+    }
+
+    /// 1분 사이 근무 시간이 30초 넘게 늘었으면 지금 근무 중으로 본다.
+    static func isWorking(workNow: TimeInterval, workMinuteAgo: TimeInterval) -> Bool {
+        workNow - workMinuteAgo > 30
+    }
+
+    struct MonthSummary: Equatable {
+        var workSeconds: TimeInterval
+        var commuteSeconds: TimeInterval
+        var earnings: Double
+        /// 출퇴근 시간까지 넣은 실질 시급. 출퇴근이 없으면 nil.
+        var effectiveHourlyRate: Double?
+    }
+
+    /// 달 합계. 출퇴근은 근무한 날의 이동 시간으로 본다.
+    static func monthSummary(totals: [Date: [String: TimeInterval]], hourlyRate: Double) -> MonthSummary {
+        var work: TimeInterval = 0, commute: TimeInterval = 0
+        for values in totals.values {
+            let dayWork = values[workKey] ?? 0
+            guard dayWork > 0 else { continue }
+            work += dayWork
+            commute += values[movementKey] ?? 0
+        }
+        let pay = earnings(workSeconds: work, hourlyRate: hourlyRate)
+        let effective: Double? = commute > 0 && work > 0 ? pay / ((work + commute) / 3_600) : nil
+        return MonthSummary(workSeconds: work, commuteSeconds: commute, earnings: pay, effectiveHourlyRate: effective)
+    }
+
+    /// 지도 라벨·하루 요약이 쓰는 마지막 계산 결과.
+    struct Live: Equatable {
+        var todayWorkSeconds: TimeInterval
+        var measuredAt: Date
+        var isWorking: Bool
+        var hourlyRate: Double
+        var month: MonthSummary?
+        var lastMonthWorkSeconds: TimeInterval
+    }
+
+    static func wonText(_ value: Double) -> String {
+        "\(Int(value.rounded()).formatted(.number.grouping(.automatic)))원"
+    }
+}
+
+/// 연봉 카운터 설정: 연봉·지난달 받은 금액·표시 간격. 값은 이 기기에만 저장한다.
+struct MapHomeSalarySettingsSheet: View {
+    let language: MapHomeLanguage
+    /// 지난달 실제로 잡힌 근무 시간(초). 시급 미리보기에 쓴다.
+    let lastMonthWorkSeconds: TimeInterval
+    @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
+    @AppStorage(MapHomeSalaryPolicy.lastMonthPayKey) private var lastMonthPay = 0.0
+    @AppStorage(MapHomeSalaryPolicy.tickKey) private var tickSeconds = 10
+    @State private var annualManText = ""
+    @State private var lastMonthText = ""
+
+    private var rate: Double? {
+        MapHomeSalaryPolicy.hourlyRate(annualPay: annualPay, lastMonthPay: lastMonthPay, lastMonthWorkSeconds: lastMonthWorkSeconds)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(language.text("연봉 카운터", "Salary counter"))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                Text(language.text(
+                    "근무 장소에 있는 시간만큼 번 돈을 화랑이 머리 위에 보여줘요. 세전 추정이고, 금액은 이 기기에만 저장돼요.",
+                    "Shows what you earn while at work above your cat. Pre-tax estimate, stored only on this device."
+                ))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+
+                field(language.text("연봉", "Annual pay"), text: $annualManText, unit: language.text("만원", "×10k KRW"), placeholder: "4000")
+                field(language.text("지난달 받은 금액(선택)", "Last month's pay (optional)"), text: $lastMonthText, unit: language.text("원", "KRW"), placeholder: "2500000")
+                Text(language.text(
+                    "지난달 받은 금액을 넣으면 지난달 실제 근무 시간으로 나눠 시급을 정해요(연장수당 포함). 없으면 연봉 ÷ 12 ÷ 근무 시간(기록이 없으면 209시간).",
+                    "With last month's pay, the hourly rate is that pay divided by last month's measured work hours. Otherwise annual ÷ 12 ÷ hours (209 if not measured)."
+                ))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+
+                Text(language.text("표시 간격", "Update every"))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                Picker("", selection: $tickSeconds) {
+                    ForEach(MapHomeSalaryPolicy.tickChoices, id: \.self) { seconds in
+                        Text(seconds < 60 ? language.text("\(seconds)초", "\(seconds)s") : language.text("1분", "1 min")).tag(seconds)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if let rate {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(language.text("시급 \(MapHomeSalaryPolicy.wonText(rate))", "Hourly \(MapHomeSalaryPolicy.wonText(rate))"))
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                        Text(language.text(
+                            "10초에 \(MapHomeSalaryPolicy.wonText(rate / 360)) · 1분에 \(MapHomeSalaryPolicy.wonText(rate / 60))",
+                            "\(MapHomeSalaryPolicy.wonText(rate / 360)) per 10 s · \(MapHomeSalaryPolicy.wonText(rate / 60)) per min"
+                        ))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                Button(language.text("저장", "Save")) { save() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.tpAccent)
+                if annualPay > 0 || lastMonthPay > 0 {
+                    Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {
+                        annualPay = 0
+                        lastMonthPay = 0
+                        annualManText = ""
+                        lastMonthText = ""
+                    }
+                }
+            }
+            .padding(22)
+        }
+        .background(Color.tpBackground)
+        .onAppear {
+            annualManText = annualPay > 0 ? String(Int((annualPay / 10_000).rounded())) : ""
+            lastMonthText = lastMonthPay > 0 ? String(Int(lastMonthPay.rounded())) : ""
+        }
+    }
+
+    private func field(_ title: String, text: Binding<String>, unit: String, placeholder: String) -> some View {
+        HStack {
+            Text(title).font(.system(size: 13, weight: .semibold, design: .rounded))
+            Spacer()
+            TextField(placeholder, text: text)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 120)
+            Text(unit).font(.system(size: 13))
+        }
+    }
+
+    private func save() {
+        let digits = { (text: String) in Double(text.filter(\.isNumber)) ?? 0 }
+        annualPay = digits(annualManText) * 10_000
+        lastMonthPay = digits(lastMonthText)
     }
 }

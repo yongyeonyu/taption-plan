@@ -1115,4 +1115,40 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(merged[day2], 5_000, "둘 다 있으면 큰 값(더하지 않는다)")
         XCTAssertEqual(merged[day3], 1_200, "센서만 있으면 그 값")
     }
+
+    func testSalaryHourlyRatePrefersLastMonthPayOverMeasuredHours() throws {
+        typealias P = MapHomeSalaryPolicy
+        // 지난달 200시간 일하고 200만원 → 시급 1만원(연봉보다 우선).
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 48_000_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 200 * 3_600)), 10_000, accuracy: 0.01)
+        // 지난달 금액이 없으면 연봉 ÷ 12 ÷ 지난달 근무 시간.
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 24_000_000, lastMonthPay: 0, lastMonthWorkSeconds: 200 * 3_600)), 10_000, accuracy: 0.01)
+        // 근무 기록이 20시간 미만이면 209시간으로 나눈다.
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(annualPay: 25_080_000, lastMonthPay: 2_000_000, lastMonthWorkSeconds: 3_600)), 10_000, accuracy: 0.01)
+        XCTAssertNil(P.hourlyRate(annualPay: 0, lastMonthPay: 0, lastMonthWorkSeconds: 200 * 3_600))
+    }
+
+    func testSalaryLiveSecondsAddElapsedOnlyWhileWorkingInTickSteps() {
+        typealias P = MapHomeSalaryPolicy
+        let base = Date(timeIntervalSince1970: 1_000)
+        XCTAssertEqual(P.liveWorkSeconds(base: 3_600, baseDate: base, isWorking: true, now: base + 25, tick: 10), 3_620)
+        XCTAssertEqual(P.liveWorkSeconds(base: 3_600, baseDate: base, isWorking: false, now: base + 25, tick: 10), 3_600)
+        XCTAssertEqual(P.earnings(workSeconds: 36, hourlyRate: 10_000), 100, accuracy: 0.001)
+        XCTAssertTrue(P.isWorking(workNow: 3_660, workMinuteAgo: 3_600))
+        XCTAssertFalse(P.isWorking(workNow: 3_600, workMinuteAgo: 3_600))
+    }
+
+    func testSalaryMonthSummaryCountsCommuteOnlyOnWorkDays() throws {
+        let day1 = Date(timeIntervalSince1970: 0), day2 = Date(timeIntervalSince1970: 86_400)
+        let summary = MapHomeSalaryPolicy.monthSummary(
+            totals: [
+                day1: ["work": 8 * 3_600, "movement": 2 * 3_600],
+                day2: ["movement": 3 * 3_600],
+            ],
+            hourlyRate: 10_000
+        )
+        XCTAssertEqual(summary.workSeconds, 8 * 3_600)
+        XCTAssertEqual(summary.commuteSeconds, 2 * 3_600, "근무 없는 날 이동은 출퇴근으로 세지 않는다")
+        XCTAssertEqual(summary.earnings, 80_000, accuracy: 0.01)
+        XCTAssertEqual(try XCTUnwrap(summary.effectiveHourlyRate), 8_000, accuracy: 0.01)
+    }
 }
