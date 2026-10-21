@@ -1280,3 +1280,4 @@
 - 포함: 달력 진단(calendar_totals_set, calendar_day_fallback), 날씨 비활성 칩 스타일, 접기 화살표 원형.
 - 미포함: 시작 로딩 문구 가운데 정렬, 메뉴 항목 정리, 행동 분류 기본값, 영어 명칭.
 - 진행: 달력 로딩 진단 추가(calendar_load_start / calendar_load_cancelled(stage) / calendar_totals_set). 빌드 211 설치(CAL1021G03). 원인 가설: 달력 합계 작업이 완료 전에 취소됨.
+- 진행: 211 로그: calendar_load_start는 찍히지만 완료·취소 기록이 없음 → 로딩이 중간에서 멈춤(취소 아님). 단계별 진단(calendar_stage) 추가, 빌드 212 설치(CAL1021G04).
