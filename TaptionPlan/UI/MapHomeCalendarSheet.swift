@@ -287,6 +287,8 @@ struct MapHomeCalendarSheet: View {
     @AppStorage(MapHomeCalendarTimeKind.extraStorageKey) private var extraKindsRaw = ""
     @State private var selectedKind: MapHomeCalendarTimeKind?
     @State private var contentHeight: CGFloat = 0
+    /// 새 센서 기록이 들어올 때마다 바뀌는 값. 바뀌면 이번 달 지표를 바로 다시 읽는다.
+    private let liveToken: Double
     @State private var totals: [Date: [String: TimeInterval]] = [:]
 
     init(
@@ -295,8 +297,10 @@ struct MapHomeCalendarSheet: View {
         logStatuses: @escaping (Date) async -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
         timeTint: @escaping (String) -> Color = { _ in Color.tpAccent },
-        language: MapHomeLanguage = .korean
+        language: MapHomeLanguage = .korean,
+        liveToken: Double = 0
     ) {
+        self.liveToken = liveToken
         self._selectedDate = selectedDate
         self.holidayName = holidayName
         self.logStatuses = logStatuses
@@ -363,18 +367,20 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled, month == displayedMonth else { return }
             totals = value
         }
-        // 이번 달을 보고 있으면 걸음·기록 시간 같은 값을 30초마다 다시 읽어 달력에 바로 반영한다(깜빡임 없이 값만 교체).
-        .task(id: displayedMonth) {
+        // 이번 달을 보고 있으면 새 센서 기록이 들어올 때마다(최대 초당 1번) 바로, 건강 앱 걸음 같은 외부 값은 5초마다 다시 읽는다.
+        .task(id: "\(displayedMonth.timeIntervalSince1970)|\(liveToken)") {
             let calendar = MapHomeGrowthPolicy.localCalendar
+            guard calendar.isDate(displayedMonth, equalTo: .now, toGranularity: .month) else { return }
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(30))
-                guard !Task.isCancelled, calendar.isDate(displayedMonth, equalTo: .now, toGranularity: .month) else { continue }
+                try? await Task.sleep(for: .seconds(liveToken == 0 ? 5 : 1))
+                guard !Task.isCancelled else { return }
                 let month = displayedMonth
                 let monthStatuses = await logStatuses(month)
                 let value = await timeTotals(month)
                 guard !Task.isCancelled, month == displayedMonth else { return }
                 statuses = monthStatuses
                 totals = value
+                try? await Task.sleep(for: .seconds(5))
             }
         }
     }

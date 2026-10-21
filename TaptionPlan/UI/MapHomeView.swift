@@ -2961,7 +2961,8 @@ struct MapHomeView: View {
                         categoryColors: model.settings.mapCategoryColors
                     ).tint
                 },
-                language: language
+                language: language,
+                liveToken: ((model.latestSensorReading?.timestamp.timeIntervalSince1970 ?? 0) / 3).rounded(.down)
             )
         }
         .sheet(item: $selectedLocationDestination) { destination in
