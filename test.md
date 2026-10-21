@@ -2220,3 +2220,8 @@
 - 보폭 기본값 20/26.5m(≈75.5cm, 대표 측정), 메뉴 > 표시 > "보폭 보정"(CMPedometer로 걸음 측정 → 걸은 거리 입력 → 저장, 직접 입력 가능), 달력 "+" 지표 "걸음 환산 거리"(걸음 수 × 보폭). Debug 빌드 성공.
 - 테스트: FeatureEngineTests에 kinds 목록·`MapHomeStride` 검증 추가. 아이폰11 전체 FeatureEngineTests 실행은 로그(build/validation/STR1021T01/test.log)에 완료 결과가 남지 않아 통과로 기록하지 않음.
 - 코드리뷰(수정분 중심) 8건 보고: 라이브 갱신이 월 전체를 재계산(효율), 녹화 권한 probe 정지 실패, 구 스키마 PK 불일치 미해결, 보폭 보정 센서 오류 무시 등. 미수정.
+
+## REL1021P01 · Build 207 TestFlight (2026-10-21)
+- CURRENT_PROJECT_VERSION 207(8곳)·Info.plist 4개 확인. Release 아카이브·내보내기·altool 업로드 성공(build/validation/REL1021P01/).
+- IPA 앱·위젯 CFBundleVersion 207 확인. ASC 207 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 빌드 목록 최상단 207, 테스터 1명.
+- 한계: 기기 동작은 대표 확인 필요. 코드리뷰 8건 미수정. FeatureEngineTests 전체 실행 결과는 기록 없음.
