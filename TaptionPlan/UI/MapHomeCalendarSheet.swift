@@ -289,6 +289,7 @@ struct MapHomeCalendarSheet: View {
     @State private var contentHeight: CGFloat = 0
     /// 새 센서 기록이 들어올 때마다 바뀌는 값. 바뀌면 이번 달 지표를 바로 다시 읽는다.
     private let liveToken: Double
+    private let liveTotals: (Date) async -> [Date: [String: TimeInterval]]
     @State private var totals: [Date: [String: TimeInterval]] = [:]
 
     init(
@@ -296,6 +297,7 @@ struct MapHomeCalendarSheet: View {
         holidayName: @escaping (Date) -> String?,
         logStatuses: @escaping (Date) async -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
+        liveTotals: (@escaping (Date) async -> [Date: [String: TimeInterval]]) = { _ in [:] },
         timeTint: @escaping (String) -> Color = { _ in Color.tpAccent },
         language: MapHomeLanguage = .korean,
         liveToken: Double = 0
@@ -305,6 +307,7 @@ struct MapHomeCalendarSheet: View {
         self.holidayName = holidayName
         self.logStatuses = logStatuses
         self.timeTotals = timeTotals
+        self.liveTotals = liveTotals
         self.timeTint = timeTint
         self.language = language
 
@@ -367,22 +370,39 @@ struct MapHomeCalendarSheet: View {
             guard !Task.isCancelled, month == displayedMonth else { return }
             totals = value
         }
-        // 이번 달을 보고 있으면 새 센서 기록이 들어올 때마다(최대 초당 1번) 바로, 건강 앱 걸음 같은 외부 값은 5초마다 다시 읽는다.
+        // 이번 달을 보고 있으면 걸음 수·이동 거리처럼 GPS로 빨리 바뀌는 값은 새 센서 기록이 들어올 때마다(약 1초 안에) 다시 읽는다.
         .task(id: "\(displayedMonth.timeIntervalSince1970)|\(liveToken)") {
-            let calendar = MapHomeGrowthPolicy.localCalendar
-            guard calendar.isDate(displayedMonth, equalTo: .now, toGranularity: .month) else { return }
+            guard isShowingCurrentMonth else { return }
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            let month = displayedMonth
+            let fast = await liveTotals(month)
+            guard !Task.isCancelled, month == displayedMonth, !fast.isEmpty else { return }
+            // 시간 합계·사진 수 같은 값은 30초 갱신에 맡기고, 걸음 수와 이동 거리만 덮어쓴다.
+            let fastKeys: Set<String> = [
+                MapHomeCalendarTimeKind.steps, .distance, .walkDistance, .carDistance, .transitDistance,
+            ].reduce(into: []) { $0.insert($1.rawValue) }
+            for (day, values) in fast {
+                totals[day, default: [:]].merge(values.filter { fastKeys.contains($0.key) }) { _, new in new }
+            }
+        }
+        // 각종 시간 합계·사진 수·기록 상태는 화면을 보는 동안 30초마다 다시 읽는다(분 단위 시간이 30초 안에 반영됨).
+        .task(id: displayedMonth) {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(liveToken == 0 ? 5 : 1))
-                guard !Task.isCancelled else { return }
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled, isShowingCurrentMonth else { continue }
                 let month = displayedMonth
                 let monthStatuses = await logStatuses(month)
                 let value = await timeTotals(month)
                 guard !Task.isCancelled, month == displayedMonth else { return }
                 statuses = monthStatuses
                 totals = value
-                try? await Task.sleep(for: .seconds(5))
             }
         }
+    }
+
+    private var isShowingCurrentMonth: Bool {
+        MapHomeGrowthPolicy.localCalendar.isDate(displayedMonth, equalTo: .now, toGranularity: .month)
     }
 
     private func cellValueText(_ kind: MapHomeCalendarTimeKind, on date: Date) -> String {

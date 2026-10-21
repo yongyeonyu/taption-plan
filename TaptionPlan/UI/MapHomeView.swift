@@ -2917,44 +2917,8 @@ struct MapHomeView: View {
                         )
                     }.value
                 },
-                timeTotals: { month in
-                    let actuals = model.snapshot.actuals
-                    let travel = model.snapshot.travel
-                    let stays = model.snapshot.places
-                    let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
-                        model.snapshot.settings.frequentPlaces
-                    )
-                    var result = await Task.detached(priority: .utility) {
-                        MapHomeCalendarTimeTotalsPolicy.totals(
-                            actuals: actuals,
-                            travel: travel,
-                            stays: stays,
-                            placeKinds: placeKinds,
-                            month: month,
-                            asOf: .now,
-                            calendar: MapHomeGrowthPolicy.localCalendar
-                        )
-                    }.value
-                    // 걸음 수·사진 수는 사용자가 "+"로 켠 때만 읽는다(건강·사진 접근 비용을 아끼기 위해).
-                    let enabled = MapHomeCalendarTimeKind.enabledExtras(
-                        from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
-                    )
-                    if enabled.contains(.steps) {
-                        for (day, steps) in await model.calendarDailyStepCounts(month: month) {
-                            result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps
-                        }
-                    }
-                    if enabled.contains(.photos) {
-                        let library = photoLibrary
-                        let counts = await Task.detached(priority: .utility) {
-                            MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: library.moments(in:), calendar: MapHomeGrowthPolicy.localCalendar)
-                        }.value
-                        for (day, count) in counts {
-                            result[day, default: [:]][MapHomeCalendarTimeKind.photos.rawValue] = count
-                        }
-                    }
-                    return result
-                },
+                timeTotals: { month in await calendarTimeTotals(month: month, includePhotos: true) },
+                liveTotals: { month in await calendarTimeTotals(month: month, includePhotos: false) },
                 timeTint: { categoryID in
                     MapHomeSidebarMajorCategory.presentation(
                         for: categoryID,
@@ -6464,6 +6428,46 @@ struct MapHomeView: View {
     /// 녹화 중에는 고른 레이어만 보이고, 녹화 중이 아니면 항상 보인다.
     private func recordingShows(_ layer: KeyPath<MapHomeRecordingLayers, Bool>) -> Bool {
         !isScreenRecording || recordingLayers[keyPath: layer]
+    }
+
+    /// 달력 지표 합계. 사진 수는 비싸고 천천히 바뀌어 `includePhotos`가 true일 때만 읽는다.
+    private func calendarTimeTotals(month: Date, includePhotos: Bool) async -> [Date: [String: TimeInterval]] {
+        let actuals = model.snapshot.actuals
+        let travel = model.snapshot.travel
+        let stays = model.snapshot.places
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
+            model.snapshot.settings.frequentPlaces
+        )
+        var result = await Task.detached(priority: .utility) {
+            MapHomeCalendarTimeTotalsPolicy.totals(
+                actuals: actuals,
+                travel: travel,
+                stays: stays,
+                placeKinds: placeKinds,
+                month: month,
+                asOf: .now,
+                calendar: MapHomeGrowthPolicy.localCalendar
+            )
+        }.value
+        // 걸음 수·사진 수는 사용자가 "+"로 켠 때만 읽는다(건강·사진 접근 비용을 아끼기 위해).
+        let enabled = MapHomeCalendarTimeKind.enabledExtras(
+            from: UserDefaults.standard.string(forKey: MapHomeCalendarTimeKind.extraStorageKey) ?? ""
+        )
+        if enabled.contains(.steps) {
+            for (day, steps) in await model.calendarDailyStepCounts(month: month) {
+                result[day, default: [:]][MapHomeCalendarTimeKind.steps.rawValue] = steps
+            }
+        }
+        if includePhotos, enabled.contains(.photos) {
+            let library = photoLibrary
+            let counts = await Task.detached(priority: .utility) {
+                MapHomeCalendarTimeTotalsPolicy.photoCounts(in: month, moments: library.moments(in:), calendar: MapHomeGrowthPolicy.localCalendar)
+            }.value
+            for (day, count) in counts {
+                result[day, default: [:]][MapHomeCalendarTimeKind.photos.rawValue] = count
+            }
+        }
+        return result
     }
 
     /// 녹화 메뉴를 열기 전에 사진 저장 권한과 화면 기록 허용을 먼저 받는다.
