@@ -2911,7 +2911,11 @@ struct MapHomeView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isSalarySettingsPresented) {
-            MapHomeSalarySettingsSheet(language: language, monthWorkSeconds: salaryLive?.month?.workSeconds ?? 0)
+            MapHomeSalarySettingsSheet(
+                language: language,
+                monthWorkSeconds: salaryLive?.month?.workSeconds ?? 0,
+                projectedMonthWorkSeconds: salaryLive?.projectedMonthWorkSeconds ?? 0
+            )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -6531,7 +6535,7 @@ struct MapHomeView: View {
         let now = Date.now
         let previous = salaryLive
         let selectedDay = calendar.startOfDay(for: model.selectedDate)
-        let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, selectedSpans: [TimeSpan], todaySpans: [TimeSpan]) in
+        let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, projected: TimeInterval?, selectedSpans: [TimeSpan], todaySpans: [TimeSpan]) in
             let dayStart = calendar.startOfDay(for: now)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
             let span = TimeSpan(start: dayStart, end: dayEnd)
@@ -6547,17 +6551,30 @@ struct MapHomeView: View {
                     actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds, in: span, asOf: date
                 )[MapHomeSalaryPolicy.workKey] ?? 0
             }
-            guard includeMonth else { return (work(asOf: now), work(asOf: now - 60), nil, daySpans(selectedDay), daySpans(dayStart)) }
-            let monthTotals = MapHomeCalendarTimeTotalsPolicy.totals(
-                actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
-                month: now, asOf: now, calendar: calendar
-            )
-            return (work(asOf: now), work(asOf: now - 60), monthTotals, daySpans(selectedDay), daySpans(dayStart))
+            guard includeMonth else { return (work(asOf: now), work(asOf: now - 60), nil, nil, daySpans(selectedDay), daySpans(dayStart)) }
+            func monthTotals(_ month: Date) -> [Date: [String: TimeInterval]] {
+                MapHomeCalendarTimeTotalsPolicy.totals(
+                    actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
+                    month: month, asOf: now, calendar: calendar
+                )
+            }
+            let thisMonth = monthTotals(now)
+            // 추세는 최근 8주를 보므로 지난 두 달 근무도 함께 센다.
+            var dailyWork: [Date: TimeInterval] = [:]
+            for offset in 0...2 {
+                let month = calendar.date(byAdding: .month, value: -offset, to: now) ?? now
+                for (day, values) in (offset == 0 ? thisMonth : monthTotals(month)) {
+                    if let work = values[MapHomeSalaryPolicy.workKey], work > 0 { dailyWork[day] = work }
+                }
+            }
+            let projected = MapHomeSalaryPolicy.projectedMonthWorkSeconds(dailyWork: dailyWork, now: now, calendar: calendar)
+            return (work(asOf: now), work(asOf: now - 60), thisMonth, projected, daySpans(selectedDay), daySpans(dayStart))
         }.value
         guard !Task.isCancelled else { return }
         let monthWork = counted.month.map { MapHomeSalaryPolicy.monthSummary(totals: $0, hourlyRate: 0).workSeconds }
             ?? previous?.month?.workSeconds ?? 0
-        guard let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWork) else { return }
+        let projected = counted.projected ?? previous?.projectedMonthWorkSeconds ?? 0
+        guard let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWork, projectedMonthWorkSeconds: projected) else { return }
         var month = counted.month.map { MapHomeSalaryPolicy.monthSummary(totals: $0, hourlyRate: rate) } ?? previous?.month
         // 이번 달 누적을 직접 고쳤으면 그 금액을 쓴다.
         if settings.monthAccumOverride > 0, let summary = month {
@@ -6571,7 +6588,8 @@ struct MapHomeView: View {
             isWorking: MapHomeSalaryPolicy.isWorking(workNow: counted.today, workMinuteAgo: counted.minuteAgo),
             hourlyRate: rate,
             month: month,
-            showsNet: settings.showsNetAmounts
+            showsNet: settings.showsNetAmounts,
+            projectedMonthWorkSeconds: projected
         )
         if live != salaryLive { salaryLive = live }
         // 선택한 날짜가 오늘이면 같은 키라 사전 리터럴로 만들면 중복 키로 멈춘다(오늘 값이 이긴다).

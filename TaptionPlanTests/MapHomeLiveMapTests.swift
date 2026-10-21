@@ -1129,19 +1129,55 @@ extension MapHomeLiveMapTests {
     func testSalaryRateUsesMonthlyPayBasisAndEditedAccumulation() throws {
         typealias P = MapHomeSalaryPolicy
         var settings = P.Settings(annualPay: 25_080_000, isNetInput: true)
-        // 세후 입력: 연봉 ÷ 12 ÷ 209.
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600)), 10_000, accuracy: 0.01)
+        // 세후 입력, 예측 근무 없음: 연봉 ÷ 12 ÷ 209.
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 0, projectedMonthWorkSeconds: 0)), 10_000, accuracy: 0.01)
+        // 예상 근무 190시간이면 월급 ÷ 190: 덜 일하면 시급이 오른다.
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600, projectedMonthWorkSeconds: 190 * 3_600)), 2_090_000 / 190, accuracy: 0.01)
         // 월급을 넣으면 연봉 대신 월급.
         settings.monthlyPay = 4_180_000
         XCTAssertEqual(try XCTUnwrap(P.baseHourlyRate(settings)), 20_000, accuracy: 0.01)
         // 누적을 고치면 누적 시급 = 누적 ÷ 근무 시간.
         settings.monthAccumOverride = 1_500_000
-        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600)), 15_000, accuracy: 0.01)
+        XCTAssertEqual(try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600, projectedMonthWorkSeconds: 200 * 3_600)), 15_000, accuracy: 0.01)
         XCTAssertEqual(P.accumulated(settings, monthWorkSeconds: 100 * 3_600), 1_500_000)
         // 세전 입력 + 세후 보기는 세후 월급 기준.
         let gross = P.Settings(annualPay: 50_000_000, isNetInput: false, showsNet: true)
         XCTAssertEqual(P.displayedMonthly(gross), MapHomeKoreanNetPay.monthly(gross: 50_000_000 / 12).net, accuracy: 0.01)
-        XCTAssertNil(P.hourlyRate(P.Settings(), monthWorkSeconds: 0))
+        XCTAssertNil(P.hourlyRate(P.Settings(), monthWorkSeconds: 0, projectedMonthWorkSeconds: 0))
+    }
+
+    func testSalaryProjectionUsesWeekdayTrendAndMatchesPayAtMonthEnd() throws {
+        typealias P = MapHomeSalaryPolicy
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        func d(_ m: Int, _ day: Int, _ h: Int = 12) -> Date { calendar.date(from: DateComponents(year: 2026, month: m, day: day, hour: h))! }
+        // 9월·10월 초 평일마다 8시간, 금요일만 6시간 근무.
+        var daily: [Date: TimeInterval] = [:]
+        var day = d(9, 1, 0)
+        while day < d(10, 15, 0) {
+            let weekday = calendar.component(.weekday, from: day)
+            if (2...6).contains(weekday) { daily[day] = weekday == 6 ? 6 * 3_600 : 8 * 3_600 }
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+        // 10월 15일(목) 정오, 오늘 4시간 근무 중.
+        daily[d(10, 15, 0)] = 4 * 3_600
+        let projected = P.projectedMonthWorkSeconds(dailyWork: daily, now: d(10, 15), calendar: calendar)
+        // 10월 평일 22일(금 5일): 17×8 + 5×6 = 166시간이 추세 예측.
+        XCTAssertEqual(projected / 3_600, 166, accuracy: 0.01)
+        // 월말(10월 31일 밤)에는 예측 = 실제 누적이라 월급과 맞아떨어진다.
+        var full = daily
+        day = d(10, 15, 0)
+        while day < d(11, 1, 0) {
+            let weekday = calendar.component(.weekday, from: day)
+            full[day] = (2...6).contains(weekday) ? 8 * 3_600 : 0
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+        let actualSeconds = full.filter { calendar.component(.month, from: $0.key) == 10 }.values.reduce(0, +)
+        let endProjected = P.projectedMonthWorkSeconds(dailyWork: full, now: d(10, 31, 23), calendar: calendar)
+        XCTAssertEqual(endProjected, actualSeconds, accuracy: 1)
+        let settings = P.Settings(annualPay: 0, isNetInput: true, monthlyPay: 3_000_000)
+        let rate = try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: actualSeconds, projectedMonthWorkSeconds: endProjected))
+        XCTAssertEqual(P.earnings(workSeconds: actualSeconds, hourlyRate: rate), 3_000_000, accuracy: 0.01)
     }
 
     func testSalaryLiveSecondsAddElapsedOnlyWhileWorkingInTickSteps() {

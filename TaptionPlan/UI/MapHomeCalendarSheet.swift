@@ -1075,11 +1075,55 @@ enum MapHomeSalaryPolicy {
         return earnings(workSeconds: monthWorkSeconds, hourlyRate: baseHourlyRate(settings) ?? 0)
     }
 
-    /// 누적 시급: 이번 달 누적 금액 ÷ 이번 달 근무 시간. 근무가 1시간 미만이거나 누적을 고치지 않았으면 기본 시급.
-    static func hourlyRate(_ settings: Settings, monthWorkSeconds: TimeInterval) -> Double? {
-        guard let base = baseHourlyRate(settings) else { return nil }
-        guard settings.monthAccumOverride > 0, monthWorkSeconds >= 3_600 else { return base }
-        return settings.monthAccumOverride / (monthWorkSeconds / 3_600)
+    /// 시급은 주식처럼 움직인다: 월급 ÷ (이번 달 예상 근무 시간). 예상치는 지금까지 근무 + 추세로 예측한 남은 근무라서
+    /// 많이 일할수록 내려가고, 월말에는 예상 = 실제가 되어 누적이 월급과 맞아떨어진다.
+    /// 누적 금액을 직접 고쳤으면 그 금액 ÷ 지금까지 근무 시간(1시간 이상일 때).
+    static func hourlyRate(_ settings: Settings, monthWorkSeconds: TimeInterval, projectedMonthWorkSeconds: TimeInterval) -> Double? {
+        let monthly = displayedMonthly(settings)
+        guard monthly > 0 else { return nil }
+        if settings.monthAccumOverride > 0, monthWorkSeconds >= 3_600 {
+            return settings.monthAccumOverride / (monthWorkSeconds / 3_600)
+        }
+        let projected = max(projectedMonthWorkSeconds, monthWorkSeconds)
+        guard projected >= 3_600 else { return monthly / standardMonthlyHours }
+        return monthly / (projected / 3_600)
+    }
+
+    /// 업무 시간 추세로 이번 달 총 근무 시간을 예측한다. 남은 날은 최근 8주 같은 요일의 평균 근무(기록 있는 날만)로,
+    /// 오늘은 "지금까지"와 요일 평균 중 큰 쪽으로 본다. 요일 기록이 없으면 평일 평균, 그것도 없으면 0.
+    static func projectedMonthWorkSeconds(
+        dailyWork: [Date: TimeInterval],
+        now: Date,
+        calendar: Calendar
+    ) -> TimeInterval {
+        guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)),
+              let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) else { return 0 }
+        let today = calendar.startOfDay(for: now)
+        let historyStart = calendar.date(byAdding: .day, value: -56, to: today) ?? today
+        var byWeekday: [Int: [TimeInterval]] = [:]
+        var weekdayValues: [TimeInterval] = []
+        for (day, seconds) in dailyWork where day >= historyStart && day < today && seconds > 0 {
+            let weekday = calendar.component(.weekday, from: day)
+            byWeekday[weekday, default: []].append(seconds)
+            if (2...6).contains(weekday) { weekdayValues.append(seconds) }
+        }
+        func average(_ values: [TimeInterval]) -> TimeInterval { values.isEmpty ? 0 : values.reduce(0, +) / Double(values.count) }
+        let weekdayAverage = average(weekdayValues)
+        func expected(_ day: Date) -> TimeInterval {
+            let weekday = calendar.component(.weekday, from: day)
+            if let values = byWeekday[weekday], !values.isEmpty { return average(values) }
+            return (2...6).contains(weekday) ? weekdayAverage : 0
+        }
+        var total: TimeInterval = 0
+        var day = monthStart
+        while day < monthEnd {
+            let done = dailyWork[day] ?? 0
+            if day < today { total += done }
+            else if day == today { total += max(done, expected(day)) }
+            else { total += expected(day) }
+            day = calendar.date(byAdding: .day, value: 1, to: day) ?? monthEnd
+        }
+        return total
     }
 
     static func intervalTitle(_ seconds: Int, language: MapHomeLanguage) -> String {
@@ -1170,6 +1214,8 @@ enum MapHomeSalaryPolicy {
         var hourlyRate: Double
         var month: MonthSummary?
         var showsNet: Bool
+        /// 추세로 예측한 이번 달 총 근무 시간(시급 산정 기준).
+        var projectedMonthWorkSeconds: TimeInterval
     }
 
     static func wonText(_ value: Double) -> String {
@@ -1180,8 +1226,9 @@ enum MapHomeSalaryPolicy {
 /// 연봉 카운터 설정: 연봉(세전/세후)·월급·이번 달 누적 금액·누적 시급·간격별 금액. 값은 이 기기에만 저장한다.
 struct MapHomeSalarySettingsSheet: View {
     let language: MapHomeLanguage
-    /// 이번 달 지금까지 잡힌 근무 시간(초).
+    /// 이번 달 지금까지 잡힌 근무 시간(초)과 추세로 예측한 이번 달 총 근무 시간.
     let monthWorkSeconds: TimeInterval
+    let projectedMonthWorkSeconds: TimeInterval
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.isNetInputKey) private var isNetInput = false
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var monthlyPay = 0.0
@@ -1207,7 +1254,7 @@ struct MapHomeSalarySettingsSheet: View {
 
     var body: some View {
         let settings = settings
-        let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWorkSeconds)
+        let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWorkSeconds, projectedMonthWorkSeconds: projectedMonthWorkSeconds)
         let basis = settings.showsNetAmounts ? language.text("세후", "net") : language.text("세전", "gross")
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -1274,7 +1321,10 @@ struct MapHomeSalarySettingsSheet: View {
                 // 4. 누적 시급(고칠 수 없음)
                 card {
                     row(language.text("누적 시급(\(basis))", "Hourly (\(basis))"), rate.map(won) ?? "-", bold: true)
-                    Text(language.text("이번 달 누적 금액 ÷ 근무 시간. 누적을 고치지 않았으면 월급 ÷ 209시간.", "This month's total ÷ work hours, or monthly ÷ 209 h."))
+                    Text(language.text(
+                        "월급 ÷ 이번 달 예상 근무 \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600))시간(지금까지 \(String(format: "%.0f", monthWorkSeconds / 3_600))시간 + 최근 8주 요일별 추세). 많이 일할수록 내려가고 월말엔 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
+                        "Monthly ÷ projected \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)) h this month (\(String(format: "%.0f", monthWorkSeconds / 3_600)) h so far + 8-week weekday trend). Matches monthly pay at month end."
+                    ))
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
 
