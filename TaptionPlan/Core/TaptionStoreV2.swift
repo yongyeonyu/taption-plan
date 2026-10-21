@@ -20,6 +20,19 @@ enum TaptionStoreV2Error: Error, Equatable {
     case rawEventConflict(kind: String, id: String)
 }
 
+extension TaptionStoreV2Error: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .openFailed(let message): "openFailed: \(message)"
+        case .sqlFailed(let message): "sqlFailed: \(message)"
+        case .unsupportedSchema(let version): "unsupportedSchema: \(version)"
+        case .corruptRow(let message): "corruptRow: \(message)"
+        case .readingConflict(let id): "readingConflict: \(id)"
+        case .rawEventConflict(let kind, let id): "rawEventConflict: \(kind) \(id)"
+        }
+    }
+}
+
 struct TaptionStoreRecord: Equatable, Sendable {
     enum Origin: String, Sendable {
         case auto
@@ -1172,6 +1185,25 @@ actor TaptionStoreV2 {
                 sqlite3_free(error)
                 throw TaptionStoreV2Error.sqlFailed(message)
             }
+        } else {
+            try addMissingRecordsColumns(db)
+        }
+    }
+
+    /// 순서 열(`ord`)이 생기기 전에 만든 저장소는 같은 user_version 1이라, 열이 없으면 한 번 덧붙인다(기존 행은 0).
+    private static func addMissingRecordsColumns(_ db: OpaquePointer) throws {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(records)", -1, &statement, nil) == SQLITE_OK else {
+            throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        defer { sqlite3_finalize(statement) }
+        var hasOrd = false
+        while sqlite3_step(statement) == SQLITE_ROW {
+            if let name = sqlite3_column_text(statement, 1), String(cString: name) == "ord" { hasOrd = true }
+        }
+        guard !hasOrd else { return }
+        guard sqlite3_exec(db, "ALTER TABLE records ADD COLUMN ord INTEGER NOT NULL DEFAULT 0", nil, nil, nil) == SQLITE_OK else {
+            throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 

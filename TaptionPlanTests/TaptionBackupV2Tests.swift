@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 import CryptoKit
+import SQLite3
 @testable import TaptionPlan
 
 final class TaptionBackupV2Tests: XCTestCase {
@@ -11,6 +12,18 @@ final class TaptionBackupV2Tests: XCTestCase {
         for directory in directories { try? FileManager.default.removeItem(at: directory) }
         directories = []
         super.tearDown()
+    }
+
+    func testReopeningStoreWithoutOrdColumnAddsIt() async throws {
+        let url = try makeDirectory().appendingPathComponent("store.sqlite")
+        do { _ = try TaptionStoreV2(url: url, calendar: calendar) }
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(url.path, &db), SQLITE_OK)
+        XCTAssertEqual(sqlite3_exec(db, "ALTER TABLE records DROP COLUMN ord", nil, nil, nil), SQLITE_OK)
+        sqlite3_close(db)
+        let reopened = try TaptionStoreV2(url: url, calendar: calendar)
+        let rows = try await reopened.allRecordRows()
+        XCTAssertEqual(rows.count, 0)
     }
 
     // MARK: 도우미

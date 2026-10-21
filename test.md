@@ -2171,3 +2171,8 @@
 ## DTE1021L01 · 날짜 배지 탭 주간 펼침·더블탭 맞춤 (2026-10-21)
 - 변경: 스와이프 제거(동작 불량 보고). 한 번 탭 → 선택일이 속한 주(일~토, 달력 기준)를 배지 왼쪽에 펼침, 날짜 선택 시 해당 날짜로 이동 후 접힘, 배지 재탭으로 접힘. 더블탭 → 오늘 날짜 + 전체 경로 화면 맞춤.
 - 검증: Debug 빌드 성공(generic iOS). 기기 설치·동작 확인 안 함, 바깥 탭 닫기 미구현.
+
+## DTE1021L01 후속 · 아이폰11 설치·검증과 저장소 구 스키마 (STO1021M01, 2026-10-21)
+- 아이폰11 Pro에 Debug 설치·실행. 기존 기기 DB(10/19 개발 중 생성)가 구 구조라 "sqlFailed: no such column: ord" → 열 추가 마이그레이션(`addMissingRecordsColumns`)·`TaptionStoreV2Error` 오류 문구 노출 추가, 이어서 "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"(기본키 다른 구 구조) 발생. 대표 선택으로 앱 삭제 후 재설치 → 저장 오류 없이 첫 실행 권한 안내 표시.
+- 테스트: TaptionBackupV2Tests 41개 통과(ord 열 없는 저장소 재열기 테스트 추가), 로그 build/validation/STO1021M01/test3.log.
+- 한계: 날짜 배지 탭·더블탭은 기기 조작 수단이 없어 직접 확인하지 못함(캡처는 설치 직후 상태). 구 구조 DB가 TestFlight 사용자에게 있는지는 미확인.
