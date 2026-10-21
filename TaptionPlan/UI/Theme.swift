@@ -237,18 +237,18 @@ enum CanonicalCategoryPalette {
 }
 
 enum MapHomePastelPalette {
-    // RA 웜 양피지: 지도 톤에 맞춰 채도를 낮춘 어스톤 카테고리 색.
+    // 열 개 기본 분류는 색상(hue)이 겹치지 않게 골랐다: 초록·파랑·청록·보라·남색·주황·노랑·빨강·분홍·회색.
     static let hexes: [String: String] = [
-        "activity": "#5B8C6E",
-        "work": "#4A6FA5",
-        "study": "#4E8FA3",
-        "hobby": "#8A6BA8",
-        "sleep": "#6B6FA8",
-        "movement": "#C67A3E",
-        "eating": "#C99A3E",
-        "exercise": "#C25548",
-        "health": "#B0588F",
-        "unconfirmed": "#A89468",
+        "activity": "#43A047",
+        "work": "#2E6FDB",
+        "study": "#00ACC1",
+        "hobby": "#9C4DCC",
+        "sleep": "#3F3D99",
+        "movement": "#F57C00",
+        "eating": "#E5B800",
+        "exercise": "#D32F2F",
+        "health": "#EC407A",
+        "unconfirmed": "#8D8D8D",
     ]
 
     static func hex(_ id: String) -> String {

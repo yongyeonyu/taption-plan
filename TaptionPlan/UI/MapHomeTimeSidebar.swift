@@ -856,7 +856,7 @@ enum MapHomeTimeRailSegmentEngine {
     }
 
     private static func title(for segment: TravelSegment) -> String {
-        "\(MovementPresentation.title(for: segment.mode)) 탑승"
+        AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: segment.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: segment.mode)) ride")
     }
 
     private static func movementBehavior(for actual: ActualRecord) -> String? {

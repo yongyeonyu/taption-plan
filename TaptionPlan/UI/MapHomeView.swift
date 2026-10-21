@@ -2740,7 +2740,7 @@ struct MapHomeView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(Color.tpSurface.opacity(0.92), in: Capsule())
-                .padding(.top, topOverlayHeight + 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .allowsHitTesting(false)
                 .zIndex(MapHomeLayerPriority.loading)
             }
@@ -7717,50 +7717,11 @@ struct MapHomeView: View {
             menuGroupCard {
                 settingsMenuItem
                 menuGroupDivider
-                Button {
-                    isAlarmSettingsPresented = true
-                } label: {
-                    Label(language.text("알림", "Alerts"), systemImage: "bell.badge")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                }
-                .buttonStyle(.plain)
+                menuRowButton("bell.badge", language.text("알림", "Alerts")) { isAlarmSettingsPresented = true }
                 menuGroupDivider
-                Button {
-                    isDailyCardPresented = true
-                } label: {
-                    Label(language.text("하루 카드 (1080 공유)", "Day card (1080 share)"), systemImage: "photo.on.rectangle.angled")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                }
-                .buttonStyle(.plain)
+                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드 (1080 공유)", "Day card (1080 share)")) { isDailyCardPresented = true }
                 menuGroupDivider
-                Button {
-                    isMapAttributionPresented = true
-                } label: {
-                    HStack(spacing: 13) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.tpAccent)
-                            .frame(width: 32, height: 32)
-                            .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        Text(language.text("지도 출처", "Map attribution"))
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .foregroundStyle(Color.tpInk)
-                    .padding(.vertical, 9)
-                    .padding(.horizontal, 12)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                menuRowButton("info.circle", language.text("지도 출처", "Map attribution")) { isMapAttributionPresented = true }
             }
 
             Spacer(minLength: 28)
@@ -7810,6 +7771,46 @@ struct MapHomeView: View {
     }
 
     /// 메인 메뉴 묶음 제목과 카드. 항목은 카드 안에서 얇은 구분선으로 나눈다.
+    /// 표시 메뉴 안의 이동 항목: 아래 토글·선택 행과 같은 글자 크기·여백·아이콘 색으로 맞춘다.
+    private func displaySubRow(_ systemImage: String, _ title: String) -> some View {
+        HStack(spacing: 8) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+    }
+
+    /// 메뉴 한 줄: 아이콘 상자 + 제목 + 오른쪽 화살표. 지도 출처와 같은 모양이다.
+    private func menuRowButton(_ systemImage: String, _ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 13) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.tpAccent)
+                    .frame(width: 32, height: 32)
+                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(Color.tpInk)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func menuGroupLabel(_ title: String) -> some View {
         Text(title)
             .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -7875,6 +7876,7 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("행동 분류 목록", "Activity category list"))
@@ -8094,6 +8096,7 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("위치 목록", "Location list"))
@@ -8144,6 +8147,7 @@ struct MapHomeView: View {
                     Color.tpReferenceRose.opacity(0.07),
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                 )
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
@@ -8453,6 +8457,7 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
@@ -8460,21 +8465,13 @@ struct MapHomeView: View {
                 Button {
                     isSalarySettingsPresented = true
                 } label: {
-                    Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpAccent)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 6)
+                    displaySubRow("wonsign.circle.fill", language.text("연봉 카운터", "Salary counter"))
                 }
                 .buttonStyle(.plain)
                 Button {
                     isStrideCalibrationPresented = true
                 } label: {
-                    Label(language.text("보폭 보정(걸음 → 거리)", "Stride calibration"), systemImage: "shoeprints.fill")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.tpAccent)
-                        .padding(.horizontal, 12)
-                        .padding(.top, 6)
+                    displaySubRow("shoeprints.fill", language.text("보폭 보정(걸음 → 거리)", "Stride calibration"))
                 }
                 .buttonStyle(.plain)
                 Text(language.text("지도 스타일", "Map style"))
@@ -8662,6 +8659,7 @@ struct MapHomeView: View {
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("설정 목록", "Settings list"))
@@ -8754,6 +8752,7 @@ struct MapHomeView: View {
                 .padding(.vertical, 9)
                 .padding(.horizontal, 12)
                 .background(Color.tpInk.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             if isAppleWatchMenuExpanded {
@@ -8959,6 +8958,7 @@ struct MapHomeView: View {
                     tint.opacity(0.08),
                     in: RoundedRectangle(cornerRadius: 12)
                 )
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(
@@ -12253,7 +12253,7 @@ enum MapHomeSectionDetailEngine {
             let minutes = clippedMinutes(clipped, dayStart: dayStart)
             let detail = MapHomeSectionDetail(
                     id: item.id,
-                    title: "\(MovementPresentation.title(for: item.mode)) 탑승",
+                    title: AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: item.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: item.mode)) ride"),
                     categoryID: "movement",
                     behavior: item.mode.rawValue,
                     startMinute: minutes.start,
@@ -16262,7 +16262,7 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
             } label: {
                 Label(
                     language.text(
-                        "\(MovementPresentation.title(for: candidate.mode)) 탑승",
+                        AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: candidate.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: candidate.mode)) ride"),
                         "Board \(MovementPresentation.englishTitle(for: candidate.mode))"
                     ),
                     systemImage: candidate.mode == .subway

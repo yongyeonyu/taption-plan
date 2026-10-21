@@ -255,27 +255,30 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     }
 
     var title: String {
+        func t(_ korean: String, _ english: String) -> String {
+            AppLanguagePreference.text(korean: korean, english: english)
+        }
         switch self {
-        case .activity: "활동"
-        case .computer: "업무"
-        case .company: "회사 업무"
-        case .school: "학교 학습"
-        case .reading: "수업"
-        case .hobby: "취미"
-        case .sleeping: "수면"
-        case .movement: "이동"
-        case .eating: "식사"
-        case .exercise: "운동"
-        case .unconfirmed: "미확인"
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .car: "자동차"
-        case .subway: "지하철 탑승"
-        case .privateVehicle: "자가용"
-        case .bus: "버스 탑승"
-        case .ship: "배"
-        case .airplane: "비행기"
-        case .cycling: "자전거"
+        case .activity: return t("활동", "Activity")
+        case .computer: return t("업무", "Work")
+        case .company: return t("회사 업무", "Office work")
+        case .school: return t("학교 학습", "School")
+        case .reading: return t("수업", "Class")
+        case .hobby: return t("취미", "Hobby")
+        case .sleeping: return t("수면", "Sleep")
+        case .movement: return t("이동", "Movement")
+        case .eating: return t("식사", "Meal")
+        case .exercise: return t("운동", "Exercise")
+        case .unconfirmed: return t("미확인", "Unconfirmed")
+        case .walking: return t("걷기", "Walking")
+        case .running: return t("달리기", "Running")
+        case .car: return t("자동차", "Car")
+        case .subway: return t("지하철 탑승", "Subway ride")
+        case .privateVehicle: return t("자가용", "Private car")
+        case .bus: return t("버스 탑승", "Bus ride")
+        case .ship: return t("배", "Ship")
+        case .airplane: return t("비행기", "Airplane")
+        case .cycling: return t("자전거", "Cycling")
         }
     }
 }
