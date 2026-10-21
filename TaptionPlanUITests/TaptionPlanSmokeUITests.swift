@@ -51,13 +51,22 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         menu.tap()
         let settings = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "설정")).firstMatch
         if settings.waitForExistence(timeout: 5) { settings.tap() }
-        let upload = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "로그 업로드")).firstMatch
+        let sensors = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "GPS 및 센서 데이터")).firstMatch
+        if sensors.waitForExistence(timeout: 5) { sensors.tap() }
+        let upload = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "로그 보내기", "로그 업로드")).firstMatch
         var tries = 0
-        while !upload.exists && tries < 8 {
+        while !upload.exists && tries < 10 {
             app.swipeUp()
             tries += 1
         }
-        XCTAssertTrue(upload.waitForExistence(timeout: 5))
+        if !upload.waitForExistence(timeout: 5) {
+            let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            shot.name = "no-upload-button"
+            shot.lifetime = .keepAlways
+            add(shot)
+            XCTFail("로그 업로드 버튼을 찾지 못함")
+            return
+        }
         upload.tap()
         sleep(30)
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
