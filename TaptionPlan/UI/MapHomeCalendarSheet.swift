@@ -2056,6 +2056,7 @@ struct MapHomeDailyCardData: Equatable {
     var categories: [MapHomeDaySummaryEntry]
     var totalText: String
     var accessoryID: String?
+    var memoText: String? = nil
     var routePoints: [GeoPoint] = []
 }
 
@@ -2098,6 +2099,9 @@ struct MapHomeDailyCardView: View {
                     }
                     if let steps = data.steps {
                         stat(language.text("걸음", "Steps"), steps.formatted(.number.grouping(.automatic)), "figure.walk")
+                    }
+                    if let memo = data.memoText {
+                        stat(language.text("메모", "Memos"), memo, "note.text")
                     }
                     if let distance = data.distanceText {
                         stat(language.text("이동", "Travel"), distance, "point.topleft.down.to.point.bottomright.curvepath")

@@ -2289,3 +2289,6 @@
 - CURRENT_PROJECT_VERSION 215(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022D01/). IPA 앱·위젯 CFBundleVersion 215 확인.
 - ASC 215 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 빌드 목록 최상단 215, 테스터 1명.
 - 한계: 빠른 기상 확정·알람 확인·UI 변경은 기기에서 대표 확인 필요. 210~214는 개발 설치용(TestFlight 미업로드).
+
+## MEM1022H01 · 하루 요약 메모 (2026-10-22)
+- Debug 빌드 성공(식 복잡도 오류는 식을 나눠서 해결). 기기 확인 전.

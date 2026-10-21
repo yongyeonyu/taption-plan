@@ -2911,7 +2911,8 @@ struct MapHomeView: View {
                     streak: homeGrowthHistory.season.streak,
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
                 ),
-                salary: salaryLive
+                salary: salaryLive,
+                memoCounts: dayMemoCounts
             )
             .presentationDragIndicator(.visible)
         }
@@ -2927,7 +2928,7 @@ struct MapHomeView: View {
         }
         // 연봉을 넣었으면 30초마다 오늘 근무 시간을 다시 센다(사이 값은 지도 라벨이 표시 간격마다 더한다).
         // 기록을 다 불러오기 전(앱 시작 직후)에 센 0을 붙들지 않게, 기록 개수가 바뀌면 처음부터 다시 센다.
-        .task(id: "\(salaryAnnualPay)|\(salaryMonthlyPay)|\(salaryIsNetInput)|\(salaryShowsNet)|\(salaryMonthAccum)|\(salaryPayHistoryRaw)|\(scenePhase == .active)|\(model.selectedDate.timeIntervalSince1970)|\(model.snapshot.actuals.count)|\(model.snapshot.places.count)") {
+        .task(id: salaryTaskID) {
             guard scenePhase == .active else { return }
             var monthComputedAt: Date?
             while !Task.isCancelled {
@@ -3029,10 +3030,7 @@ struct MapHomeView: View {
             // 시간은 지금으로 채운다(알람을 보낸 시각이 아니라, 실제로 확인하는 시각).
             pendingAlarm = (kind, .now)
         }
-        .sheet(item: Binding(
-            get: { pendingAlarm.map { AlarmConfirmItem(kind: $0.kind, at: $0.at) } },
-            set: { if $0 == nil { pendingAlarm = nil } }
-        )) { item in
+        .sheet(item: alarmConfirmBinding) { item in
             MapHomeAlarmConfirmSheet(
                 kind: item.kind,
                 initialDate: item.at,
@@ -5773,6 +5771,41 @@ struct MapHomeView: View {
         homeGrowthData = encoded
     }
 
+    /// 알람 확인 시트에 넘길 항목(알람을 누르면 채워지고, 닫으면 비워진다).
+    private var alarmConfirmBinding: Binding<AlarmConfirmItem?> {
+        Binding<AlarmConfirmItem?>(
+            get: {
+                guard let pending = pendingAlarm else { return nil }
+                return AlarmConfirmItem(kind: pending.kind, at: pending.at)
+            },
+            set: { value in
+                if value == nil { pendingAlarm = nil }
+            }
+        )
+    }
+
+    /// 연봉 카운터 작업을 다시 돌릴 기준값. 식이 길어 따로 뺐다.
+    private var salaryTaskID: String {
+        let parts: [String] = [
+            "\(salaryAnnualPay)", "\(salaryMonthlyPay)", "\(salaryIsNetInput)", "\(salaryShowsNet)",
+            "\(salaryMonthAccum)", "\(salaryPayHistoryRaw)", "\(scenePhase == .active)",
+            "\(model.selectedDate.timeIntervalSince1970)", "\(model.snapshot.actuals.count)", "\(model.snapshot.places.count)",
+        ]
+        return parts.joined(separator: "|")
+    }
+
+    /// 선택한 날의 메모 수: 시각이 있는 메모는 그 날짜, 시각이 없는 메모는 만든 날짜로 센다. 지도에 찍은 메모는 따로 센다.
+    private var dayMemoCounts: (total: Int, map: Int) {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        let memos = model.snapshot.memos.filter { memo -> Bool in
+            let when: Date = (memo.isTimeless == true) ? memo.createdAt : memo.occurredAt
+            return when >= start && when < end
+        }
+        return (memos.count, memos.filter { $0.mapPoint != nil }.count)
+    }
+
     /// 선택한 날이 자정까지 지나서 끝까지 관측됐는지. 아니면 카드의 나머지 시간은 미확인으로 표시한다.
     private var isDayObservedToEnd: Bool {
         let calendar = Calendar.autoupdatingCurrent
@@ -5805,6 +5838,9 @@ struct MapHomeView: View {
                 "Observed \(MapHomeAlarmPolicy.hoursText(total))" + (isDayObservedToEnd ? "" : " · rest unconfirmed")
             ),
             accessoryID: homeGrowthHistory.season.equippedAccessory,
+            memoText: dayMemoCounts.total > 0
+                ? language.text("메모 \(dayMemoCounts.total)개 · 지도 \(dayMemoCounts.map)개", "Memos \(dayMemoCounts.total) · map \(dayMemoCounts.map)")
+                : nil,
             routePoints: currentDayReadings.compactMap { reading in
                 reading.point.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0) }
             }
@@ -19420,6 +19456,7 @@ struct MapHomeDaySummarySheet: View {
     let language: MapHomeLanguage
     var growthCard: MapHomeGrowthCardInfo? = nil
     var salary: MapHomeSalaryPolicy.Live? = nil
+    var memoCounts: (total: Int, map: Int) = (0, 0)
     @State private var isGrowthPresented = false
     @State private var contentHeight: CGFloat = 0
     private static let bottomPadding: CGFloat = 40
@@ -19567,6 +19604,18 @@ struct MapHomeDaySummarySheet: View {
 
             if let salary {
                 salaryCardView(salary)
+            }
+
+            if memoCounts.total > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "note.text")
+                        .foregroundStyle(Color.tpAccent)
+                    Text(language.text("메모", "Memos"))
+                        .foregroundStyle(Color.tpSecondary)
+                    Spacer()
+                    Text(language.text("\(memoCounts.total)개 · 지도 \(memoCounts.map)개", "\(memoCounts.total) · map \(memoCounts.map)"))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                }
             }
 
             if let stepCount {
