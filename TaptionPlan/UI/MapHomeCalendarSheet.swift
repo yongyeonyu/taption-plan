@@ -1014,6 +1014,12 @@ enum MapHomeSalaryPolicy {
     static let showsNetKey = "mapHomeSalaryShowsNet"
     static let monthAccumKey = "mapHomeSalaryMonthAccum"
     static let monthAccumMonthKey = "mapHomeSalaryMonthAccumMonth"
+    /// 달별로 실제 받은 월급(수당 포함, 입력 기준). JSON `{"2026-09": 2900000}`.
+    static let payHistoryKey = "mapHomeSalaryPayHistory"
+    /// 기록이 없을 때 쓰는 법정 연장수당 배율(통상시급 × 1.5).
+    static let defaultOvertimeMultiplier = 1.5
+    /// 한 달 근무가 이보다 적게 잡히면 그 달 기록은 수당 추정에 쓰지 않는다.
+    static let minimumSampleHours = 20.0
     static let tickKey = "mapHomeSalaryTickSeconds"
     static let tickChoices = [1, 10, 30, 60, 300, 600, 1_800, 3_600]
     /// 주 40시간 기준 월 소정근로시간(주휴 포함).
@@ -1031,6 +1037,8 @@ enum MapHomeSalaryPolicy {
         var showsNet = true
         /// 이번 달 누적 금액을 직접 고친 값(0이면 근무 시간으로 계산).
         var monthAccumOverride = 0.0
+        /// 달별 실제 받은 월급(수당 포함).
+        var payHistory: [String: Double] = [:]
 
         var isConfigured: Bool { annualPay > 0 || monthlyPay > 0 }
         var showsNetAmounts: Bool { isNetInput || showsNet }
@@ -1048,8 +1056,69 @@ enum MapHomeSalaryPolicy {
             isNetInput: defaults.bool(forKey: isNetInputKey),
             monthlyPay: defaults.double(forKey: monthlyPayKey),
             showsNet: defaults.object(forKey: showsNetKey) as? Bool ?? true,
-            monthAccumOverride: override
+            monthAccumOverride: override,
+            payHistory: decodePayHistory(defaults.string(forKey: payHistoryKey) ?? "")
         )
+    }
+
+    static func decodePayHistory(_ raw: String) -> [String: Double] {
+        (try? JSONDecoder().decode([String: Double].self, from: Data(raw.utf8))) ?? [:]
+    }
+
+    static func encodePayHistory(_ history: [String: Double]) -> String {
+        (try? String(data: JSONEncoder().encode(history.filter { $0.value > 0 }), encoding: .utf8)) ?? "{}"
+    }
+
+    /// 지난 어느 달의 (근무 시간, 받은 월급) 한 쌍.
+    struct PaySample: Equatable {
+        var hours: Double
+        var pay: Double
+    }
+
+    /// 월급 = 고정분 + 209시간을 넘긴 1시간당 수당. 지난달 기록으로 맞춘다.
+    struct PayModel: Equatable {
+        var fixedMonthly: Double
+        var overtimeHourly: Double
+        /// 맞추는 데 쓴 달 수(0이면 법정 1.5배 기본값).
+        var sampleCount: Int
+    }
+
+    /// 지난달들의 (근무 시간, 받은 월급)에 직선을 맞춘다: 받은 월급 = 고정분 + 수당시급 × (근무 − 209시간).
+    /// 기록이 2개월 이상이고 근무 시간이 서로 다르면 최소제곱, 1개월이면 그 달로 수당시급만, 없으면 통상시급 × 1.5.
+    /// 수당시급은 0~통상시급 3배, 고정분은 기본 월급의 0.5~2배로 묶어 이상값을 막는다.
+    static func fitPayModel(baseMonthly: Double, samples: [PaySample]) -> PayModel {
+        let baseHourly = baseMonthly / standardMonthlyHours
+        let defaultOvertime = baseHourly * defaultOvertimeMultiplier
+        let usable = samples.filter { $0.hours >= minimumSampleHours && $0.pay > 0 }
+        func clampOvertime(_ v: Double) -> Double { min(max(v, 0), baseHourly * 3) }
+        func clampFixed(_ v: Double) -> Double { min(max(v, baseMonthly * 0.5), baseMonthly * 2) }
+        guard !usable.isEmpty else { return PayModel(fixedMonthly: baseMonthly, overtimeHourly: defaultOvertime, sampleCount: 0) }
+        let xs = usable.map { $0.hours - standardMonthlyHours }
+        let ys = usable.map(\.pay)
+        let n = Double(usable.count)
+        let meanX = xs.reduce(0, +) / n, meanY = ys.reduce(0, +) / n
+        let varX = zip(xs, xs).reduce(0) { $0 + ($1.0 - meanX) * ($1.1 - meanX) }
+        if usable.count >= 2, varX > 1 {
+            let cov = zip(xs, ys).reduce(0) { $0 + ($1.0 - meanX) * ($1.1 - meanY) }
+            let slope = clampOvertime(cov / varX)
+            return PayModel(fixedMonthly: clampFixed(meanY - slope * meanX), overtimeHourly: slope, sampleCount: usable.count)
+        }
+        // 근무 시간이 다 비슷하면 기울기를 못 구한다: 고정분만 기록 평균으로 보정하고 수당은 기본값.
+        if abs(meanX) < 1 {
+            return PayModel(fixedMonthly: clampFixed(meanY), overtimeHourly: defaultOvertime, sampleCount: usable.count)
+        }
+        let slope = clampOvertime((meanY - baseMonthly) / meanX)
+        return PayModel(fixedMonthly: baseMonthly, overtimeHourly: slope, sampleCount: usable.count)
+    }
+
+    /// 그 달 근무 시간으로 받을 월급(입력 기준). 209시간 미만이어도 고정분은 다 받는 것으로 본다.
+    static func expectedMonthlyPay(_ model: PayModel, workHours: Double) -> Double {
+        model.fixedMonthly + model.overtimeHourly * max(0, workHours - standardMonthlyHours)
+    }
+
+    /// 입력 기준 금액을 보여 줄 기준으로 바꾼다(세전 입력 + 세후 보기면 공제).
+    static func displayed(_ amount: Double, _ settings: Settings) -> Double {
+        settings.isNetInput || !settings.showsNet ? amount : MapHomeKoreanNetPay.monthly(gross: amount).net
     }
 
     /// 입력 기준(세전 또는 세후)의 월급.
@@ -1075,10 +1144,25 @@ enum MapHomeSalaryPolicy {
         return earnings(workSeconds: monthWorkSeconds, hourlyRate: baseHourlyRate(settings) ?? 0)
     }
 
-    /// 시급은 주식처럼 움직인다: 월급 ÷ (이번 달 예상 근무 시간). 예상치는 지금까지 근무 + 추세로 예측한 남은 근무라서
-    /// 많이 일할수록 내려가고, 월말에는 예상 = 실제가 되어 누적이 월급과 맞아떨어진다.
+    /// 이번 달 받을 것으로 보는 월급(보여 줄 기준): 지난달 기록으로 맞춘 수당 모델에 예상 근무 시간을 넣는다.
+    static func expectedMonthPay(_ settings: Settings, projectedMonthWorkSeconds: TimeInterval, samples: [PaySample]) -> Double? {
+        let base = inputMonthly(settings)
+        guard base > 0 else { return nil }
+        let model = fitPayModel(baseMonthly: base, samples: samples)
+        let hours = max(projectedMonthWorkSeconds, 0) / 3_600
+        return displayed(expectedMonthlyPay(model, workHours: hours), settings)
+    }
+
+    /// 시급은 주식처럼 움직인다: 이번 달 예상 월급(수당 포함) ÷ 이번 달 예상 근무 시간.
+    /// 예상 근무는 지금까지 + 추세로 예측한 남은 근무, 예상 월급은 지난달 기록으로 맞춘 고정분 + 초과 수당이라
+    /// 야근이 늘면 월급과 시간이 함께 올라가고, 월말에는 예상 = 실제가 되어 누적이 그 달 월급과 맞아떨어진다.
     /// 누적 금액을 직접 고쳤으면 그 금액 ÷ 지금까지 근무 시간(1시간 이상일 때).
-    static func hourlyRate(_ settings: Settings, monthWorkSeconds: TimeInterval, projectedMonthWorkSeconds: TimeInterval) -> Double? {
+    static func hourlyRate(
+        _ settings: Settings,
+        monthWorkSeconds: TimeInterval,
+        projectedMonthWorkSeconds: TimeInterval,
+        samples: [PaySample] = []
+    ) -> Double? {
         let monthly = displayedMonthly(settings)
         guard monthly > 0 else { return nil }
         if settings.monthAccumOverride > 0, monthWorkSeconds >= 3_600 {
@@ -1086,7 +1170,8 @@ enum MapHomeSalaryPolicy {
         }
         let projected = max(projectedMonthWorkSeconds, monthWorkSeconds)
         guard projected >= 3_600 else { return monthly / standardMonthlyHours }
-        return monthly / (projected / 3_600)
+        let pay = expectedMonthPay(settings, projectedMonthWorkSeconds: projected, samples: samples) ?? monthly
+        return pay / (projected / 3_600)
     }
 
     /// 업무 시간 추세로 이번 달 총 근무 시간을 예측한다. 남은 날은 최근 8주 같은 요일의 평균 근무(기록 있는 날만)로,
@@ -1216,6 +1301,10 @@ enum MapHomeSalaryPolicy {
         var showsNet: Bool
         /// 추세로 예측한 이번 달 총 근무 시간(시급 산정 기준).
         var projectedMonthWorkSeconds: TimeInterval
+        /// 수당 모델로 본 이번 달 예상 월급(보여 줄 기준).
+        var expectedMonthPay: Double
+        /// 지난 석 달 근무 시간(월 키 → 초). 설정 화면의 월급 기록 입력에 보여 준다.
+        var pastMonthWorkSeconds: [String: TimeInterval] = [:]
     }
 
     static func wonText(_ value: Double) -> String {
@@ -1229,6 +1318,8 @@ struct MapHomeSalarySettingsSheet: View {
     /// 이번 달 지금까지 잡힌 근무 시간(초)과 추세로 예측한 이번 달 총 근무 시간.
     let monthWorkSeconds: TimeInterval
     let projectedMonthWorkSeconds: TimeInterval
+    /// 지난 석 달 근무 시간(월 키 → 초).
+    var pastMonthWorkSeconds: [String: TimeInterval] = [:]
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.isNetInputKey) private var isNetInput = false
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var monthlyPay = 0.0
@@ -1236,6 +1327,8 @@ struct MapHomeSalarySettingsSheet: View {
     @AppStorage(MapHomeSalaryPolicy.monthAccumKey) private var monthAccum = 0.0
     @AppStorage(MapHomeSalaryPolicy.monthAccumMonthKey) private var monthAccumMonth = ""
     @AppStorage(MapHomeSalaryPolicy.tickKey) private var tickSeconds = 10
+    @AppStorage(MapHomeSalaryPolicy.payHistoryKey) private var payHistoryRaw = ""
+    @State private var payTexts: [String: String] = [:]
     @State private var annualManText = ""
     @State private var monthlyText = ""
     @State private var accumText = ""
@@ -1246,15 +1339,39 @@ struct MapHomeSalarySettingsSheet: View {
             isNetInput: isNetInput,
             monthlyPay: monthlyPay,
             showsNet: showsNet,
-            monthAccumOverride: monthAccumMonth == MapHomeSalaryPolicy.monthKey(.now) ? monthAccum : 0
+            monthAccumOverride: monthAccumMonth == MapHomeSalaryPolicy.monthKey(.now) ? monthAccum : 0,
+            payHistory: MapHomeSalaryPolicy.decodePayHistory(payHistoryRaw)
         )
+    }
+
+    /// 지난 석 달의 월 키(최근 달부터).
+    private var pastMonthKeys: [String] {
+        (1...3).compactMap { offset in
+            MapHomeGrowthPolicy.localCalendar.date(byAdding: .month, value: -offset, to: .now).map { MapHomeSalaryPolicy.monthKey($0) }
+        }
+    }
+
+    private var paySamples: [MapHomeSalaryPolicy.PaySample] {
+        settings.payHistory.compactMap { key, pay in
+            guard let seconds = pastMonthWorkSeconds[key] else { return nil }
+            return MapHomeSalaryPolicy.PaySample(hours: seconds / 3_600, pay: pay)
+        }
+    }
+
+    private func monthLabel(_ key: String) -> String {
+        let parts = key.split(separator: "-")
+        guard parts.count == 2, let month = Int(parts[1]) else { return key }
+        return language.text("\(month)월", "\(parts[0])-\(parts[1])")
     }
 
     private func won(_ value: Double) -> String { MapHomeSalaryPolicy.wonText(value) }
 
     var body: some View {
         let settings = settings
-        let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWorkSeconds, projectedMonthWorkSeconds: projectedMonthWorkSeconds)
+        let samples = paySamples
+        let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWorkSeconds, projectedMonthWorkSeconds: projectedMonthWorkSeconds, samples: samples)
+        let model = MapHomeSalaryPolicy.fitPayModel(baseMonthly: MapHomeSalaryPolicy.inputMonthly(settings), samples: samples)
+        let expectedPay = MapHomeSalaryPolicy.expectedMonthPay(settings, projectedMonthWorkSeconds: max(projectedMonthWorkSeconds, monthWorkSeconds), samples: samples)
         let basis = settings.showsNetAmounts ? language.text("세후", "net") : language.text("세전", "gross")
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -1303,9 +1420,43 @@ struct MapHomeSalarySettingsSheet: View {
                     }
                 }
 
+                // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
+                card {
+                    Text(language.text("받은 월급 기록(야근·특근 수당 포함)", "Pay received (incl. overtime)"))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    ForEach(pastMonthKeys, id: \.self) { key in
+                        let hours = (pastMonthWorkSeconds[key] ?? 0) / 3_600
+                        HStack {
+                            Text(monthLabel(key)).font(.system(size: 13, weight: .semibold, design: .rounded))
+                            Text(language.text("근무 \(String(format: "%.0f", hours))시간", "\(String(format: "%.0f", hours)) h"))
+                                .font(.system(size: 11)).foregroundStyle(Color.tpSecondary)
+                            Spacer()
+                            TextField(language.text("받은 금액", "Received"), text: Binding(
+                                get: { payTexts[key] ?? "" },
+                                set: { payTexts[key] = $0; savePayHistory() }
+                            ))
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 130)
+                            Text(language.text("원", "KRW")).font(.system(size: 13))
+                        }
+                    }
+                    Text(model.sampleCount == 0
+                         ? language.text("기록이 없어 법정 기준(통상시급 × 1.5)으로 수당을 봐요. 받은 월급을 넣을수록 정확해져요.", "No records: overtime at 1.5× base. Add months to refine.")
+                         : language.text(
+                            "기록 \(model.sampleCount)개월로 맞춤: 고정 \(won(model.fixedMonthly)) + 209시간 초과 1시간당 \(won(model.overtimeHourly)).",
+                            "Fitted from \(model.sampleCount) months: fixed \(won(model.fixedMonthly)) + \(won(model.overtimeHourly)) per hour over 209."
+                         ))
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
+                    if let expectedPay {
+                        row(language.text("이번 달 예상 월급(\(basis))", "Expected this month (\(basis))"), won(expectedPay), bold: true)
+                    }
+                }
+
                 // 3. 이번 달 누적 금액(고칠 수 있음)
                 card {
-                    let computed = MapHomeSalaryPolicy.earnings(workSeconds: monthWorkSeconds, hourlyRate: MapHomeSalaryPolicy.baseHourlyRate(settings) ?? 0)
+                    let computed = MapHomeSalaryPolicy.earnings(workSeconds: monthWorkSeconds, hourlyRate: rate ?? 0)
                     field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: language.text("원", "KRW"),
                           placeholder: String(Int(computed.rounded()))) {
                         monthAccum = number(accumText)
@@ -1322,8 +1473,8 @@ struct MapHomeSalarySettingsSheet: View {
                 card {
                     row(language.text("누적 시급(\(basis))", "Hourly (\(basis))"), rate.map(won) ?? "-", bold: true)
                     Text(language.text(
-                        "월급 ÷ 이번 달 예상 근무 \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600))시간(지금까지 \(String(format: "%.0f", monthWorkSeconds / 3_600))시간 + 최근 8주 요일별 추세). 많이 일할수록 내려가고 월말엔 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
-                        "Monthly ÷ projected \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)) h this month (\(String(format: "%.0f", monthWorkSeconds / 3_600)) h so far + 8-week weekday trend). Matches monthly pay at month end."
+                        "이번 달 예상 월급 ÷ 예상 근무 \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600))시간(지금까지 \(String(format: "%.0f", monthWorkSeconds / 3_600))시간 + 최근 8주 요일별 추세). 야근이 늘면 수당도 같이 늘고, 월말엔 그 달 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
+                        "Expected pay ÷ projected \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)) h (\(String(format: "%.0f", monthWorkSeconds / 3_600)) h so far + 8-week trend). Overtime raises both; exact at month end."
                     ))
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
@@ -1359,6 +1510,7 @@ struct MapHomeSalarySettingsSheet: View {
         }
         .background(Color.tpBackground)
         .onAppear {
+            payTexts = settings.payHistory.mapValues { String(Int($0.rounded())) }
             annualManText = annualPay > 0 ? String(Int((annualPay / 10_000).rounded())) : ""
             monthlyText = monthlyPay > 0 ? String(Int(monthlyPay.rounded())) : ""
             accumText = settings.monthAccumOverride > 0 ? String(Int(settings.monthAccumOverride.rounded())) : ""
@@ -1397,4 +1549,10 @@ struct MapHomeSalarySettingsSheet: View {
     }
 
     private func number(_ text: String) -> Double { Double(text.filter(\.isNumber)) ?? 0 }
+
+    private func savePayHistory() {
+        var history = settings.payHistory
+        for (key, text) in payTexts { history[key] = number(text) }
+        payHistoryRaw = MapHomeSalaryPolicy.encodePayHistory(history)
+    }
 }

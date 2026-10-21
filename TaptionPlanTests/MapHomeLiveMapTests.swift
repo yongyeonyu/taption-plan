@@ -1219,4 +1219,38 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(P.quantized(125, tick: 60), 120)
         XCTAssertEqual(P.quantized(125, tick: 1), 125)
     }
+
+    func testSalaryPayModelLearnsOvertimeFromReceivedPayAndStaysExactAtMonthEnd() throws {
+        typealias P = MapHomeSalaryPolicy
+        let base = 3_000_000.0
+        // 기록 없음: 고정 = 기본 월급, 수당 = 통상시급 × 1.5.
+        let none = P.fitPayModel(baseMonthly: base, samples: [])
+        XCTAssertEqual(none.fixedMonthly, base)
+        XCTAssertEqual(none.overtimeHourly, base / 209 * 1.5, accuracy: 0.01)
+        XCTAssertEqual(none.sampleCount, 0)
+        // 두 달 기록: 209h → 300만, 249h → 380만이면 수당 시급 2만, 고정 300만.
+        let model = P.fitPayModel(baseMonthly: base, samples: [.init(hours: 209, pay: 3_000_000), .init(hours: 249, pay: 3_800_000)])
+        XCTAssertEqual(model.overtimeHourly, 20_000, accuracy: 0.01)
+        XCTAssertEqual(model.fixedMonthly, 3_000_000, accuracy: 1)
+        XCTAssertEqual(model.sampleCount, 2)
+        // 수당 모델로 본 월급: 229h → 300만 + 20h × 2만 = 340만, 209h 미만은 고정분.
+        XCTAssertEqual(P.expectedMonthlyPay(model, workHours: 229), 3_400_000, accuracy: 0.01)
+        XCTAssertEqual(P.expectedMonthlyPay(model, workHours: 180), 3_000_000, accuracy: 0.01)
+        // 근무 시간이 모자란 달(20h 미만)은 무시, 이상값은 묶인다.
+        let noisy = P.fitPayModel(baseMonthly: base, samples: [.init(hours: 5, pay: 9_000_000), .init(hours: 300, pay: 90_000_000)])
+        XCTAssertEqual(noisy.sampleCount, 1)
+        XCTAssertLessThanOrEqual(noisy.overtimeHourly, base / 209 * 3 + 0.01)
+        // 세후 입력 기준, 예상 249h인 달: 시급 = 380만 ÷ 249h. 월말(실제 249h) 누적 = 380만.
+        let settings = P.Settings(annualPay: 0, isNetInput: true, monthlyPay: base)
+        let samples = [P.PaySample(hours: 209, pay: 3_000_000), P.PaySample(hours: 249, pay: 3_800_000)]
+        let rate = try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 249 * 3_600, projectedMonthWorkSeconds: 249 * 3_600, samples: samples))
+        XCTAssertEqual(rate, 3_800_000 / 249, accuracy: 0.01)
+        XCTAssertEqual(P.earnings(workSeconds: 249 * 3_600, hourlyRate: rate), 3_800_000, accuracy: 0.01)
+        // 월 중간: 지금까지 100h, 예상 249h면 시급은 같고 누적은 그 비율.
+        let midRate = try XCTUnwrap(P.hourlyRate(settings, monthWorkSeconds: 100 * 3_600, projectedMonthWorkSeconds: 249 * 3_600, samples: samples))
+        XCTAssertEqual(midRate, rate, accuracy: 0.01)
+        // JSON 저장은 0원 달을 버린다.
+        let decoded = P.decodePayHistory(P.encodePayHistory(["2026-09": 2_900_000, "2026-08": 0]))
+        XCTAssertEqual(decoded, ["2026-09": 2_900_000])
+    }
 }
