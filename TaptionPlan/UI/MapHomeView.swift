@@ -2274,6 +2274,7 @@ struct MapHomeView: View {
     @State private var appleViewportCommand: MapHomeAppleViewportCommand?
     @State private var vectorMapViewportStore = MapHomeVectorViewportStore()
     @State private var isMenuOpen = false
+    @State private var isDateWeekExpanded = false
     @State private var isCalendarPresented = false
     @State private var selectedLocationDestination: MapHomeLocationDestination?
     @State private var isTransitLocationsPresented = false
@@ -5902,7 +5903,21 @@ struct MapHomeView: View {
                 .weekday(.abbreviated)
                 .locale(Locale(identifier: language.text("ko_KR", "en_US")))
         )
-        return Button {
+        let badge = VStack(spacing: 0) {
+            Text(weekdayText)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(color)
+            Text(String(calendar.component(.day, from: model.selectedDate)))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+                .monospacedDigit()
+        }
+        .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // 더블탭은 오늘 날짜로 이동해 경로를 화면에 맞추고, 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
+        .onTapGesture(count: 2) {
+            isDateWeekExpanded = false
             jumpToTodayAndCurrentMapPosition()
             // 날짜를 바꾸면 경로 데이터가 늦게 들어오므로, 불러온 뒤 한 번 더 전체 경로를 화면에 맞춘다.
             Task { @MainActor in
@@ -5910,29 +5925,12 @@ struct MapHomeView: View {
                 guard !isDayPlaybackRunning else { return }
                 focusMapOnAllRoutes()
             }
-        } label: {
-            VStack(spacing: 0) {
-                Text(weekdayText)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(color)
-                Text(String(calendar.component(.day, from: model.selectedDate)))
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpInk)
-                    .monospacedDigit()
-            }
-            .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
-            .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        .buttonStyle(.plain)
-        // 위·왼쪽으로 밀면 다음 날, 아래·오른쪽으로 밀면 이전 날(하루씩). 탭은 오늘로 이동.
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 14).onEnded { value in
-                let dx = value.translation.width, dy = value.translation.height
-                guard max(abs(dx), abs(dy)) >= 14 else { return }
-                let forward = abs(dx) >= abs(dy) ? dx < 0 : dy < 0
-                moveDate(by: forward ? 1 : -1)
-            }
-        )
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityAdjustableAction { direction in
             switch direction {
             case .increment: moveDate(by: 1)
@@ -5940,8 +5938,50 @@ struct MapHomeView: View {
             @unknown default: break
             }
         }
-        .accessibilityLabel(language.text("오늘 날짜로 이동", "Go to today"))
-        .accessibilityHint(language.text("밀어서 하루씩 이동", "Swipe to change the day"))
+        .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
+        .accessibilityHint(language.text("한 번 누르면 이번 주, 두 번 누르면 오늘로 이동", "Tap for the week, double-tap for today"))
+        return HStack(spacing: 6) {
+            if isDateWeekExpanded { weekStrip(calendar: calendar) }
+            badge
+        }
+    }
+
+    private func weekStrip(calendar: Calendar) -> some View {
+        let start = calendar.dateInterval(of: .weekOfYear, for: model.selectedDate)?.start ?? model.selectedDate
+        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+        return HStack(spacing: 4) {
+            ForEach(days, id: \.self) { day in
+                let weekday = calendar.component(.weekday, from: day)
+                let isHoliday = MapHomeCalendarDayStyle(date: day, calendar: calendar) == .holiday
+                let tint: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
+                let isSelected = calendar.isDate(day, inSameDayAs: model.selectedDate)
+                Button {
+                    shouldFitRoutesAfterDateChange = true
+                    model.selectedDate = day
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded = false }
+                } label: {
+                    VStack(spacing: 0) {
+                        Text(day.formatted(Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))))
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundStyle(tint)
+                        Text(String(calendar.component(.day, from: day)))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                            .monospacedDigit()
+                    }
+                    .frame(width: 34, height: Layout.dateBadgeSize)
+                    .background {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.tpReferenceBlue.opacity(0.22))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 6)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .transition(.move(edge: .trailing).combined(with: .opacity))
     }
 
     private var header: some View {
