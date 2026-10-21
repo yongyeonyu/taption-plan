@@ -5444,8 +5444,8 @@ struct MapHomeView: View {
         }
     }
 
-    /// 땅 한 칸의 실제 크기(m). 최대 확대(카메라 거리 80m, 1점≈0.06m) 기준으로 한 칸이 약 133pt가 된다.
-    private static let landCellMeters = 8.0
+    /// 땅 한 칸의 실제 크기(m). 최대 확대(카메라 거리 80m, 1점≈0.06m) 기준으로 한 칸이 약 416pt가 된다.
+    private static let landCellMeters = 25.0
 
     /// 집 주변에 이어 붙인 땅을 지도 위에 그린다(최대 확대에 가까울수록 크게). 붙일 땅이 남아 있으면
     /// 이을 수 있는 빈 칸이 점선 "+"로 나오고, 눌러서 이어 붙인다. 벡터 지도 스타일에서만 그린다.
@@ -5511,7 +5511,7 @@ struct MapHomeView: View {
         guard metersPerPoint.isFinite, metersPerPoint > 0 else { return nil }
         let cell = CGFloat(Self.landCellMeters / metersPerPoint)
         // 너무 작게 보이면 그리지 않고, 화면보다 훨씬 크면 그리지 않는다.
-        guard cell >= 14, cell <= 400 else { return nil }
+        guard cell >= 14, cell <= 900 else { return nil }
         return HomeLandLayout(center: pin, cell: cell, heading: viewport.heading)
     }
 
@@ -5849,7 +5849,7 @@ struct MapHomeView: View {
                 toggleDayPlayback()
             }
             bottomBarButton("record.circle", language.text("녹화", "Record"), tint: .tpHoliday) {
-                isRecordingOptionsPresented = true
+                openRecordingOptions()
             }
             bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
                 isMemoAddMenuPresented = true
@@ -6006,7 +6006,7 @@ struct MapHomeView: View {
 
             if !layoutStyle.movesActionsToBottom {
                 Button {
-                    isRecordingOptionsPresented = true
+                    openRecordingOptions()
                 } label: {
                     Image(systemName: "record.circle")
                         .font(.system(size: 14, weight: .bold))
@@ -6464,6 +6464,21 @@ struct MapHomeView: View {
     /// 녹화 중에는 고른 레이어만 보이고, 녹화 중이 아니면 항상 보인다.
     private func recordingShows(_ layer: KeyPath<MapHomeRecordingLayers, Bool>) -> Bool {
         !isScreenRecording || recordingLayers[keyPath: layer]
+    }
+
+    /// 녹화 메뉴를 열기 전에 사진 저장 권한과 화면 기록 허용을 먼저 받는다.
+    private func openRecordingOptions() {
+        Task { @MainActor in
+            guard await MapHomeScreenRecordingStore.requestPhotoAddAccess() else {
+                recordingFailureMessage = "사진 저장 권한이 없어 녹화하지 않았습니다. 설정에서 사진 권한을 허용해 주세요."
+                return
+            }
+            guard await screenRecorder.probePermission() else {
+                recordingFailureMessage = screenRecorder.lastFailureMessage ?? "화면 녹화를 시작하지 못했습니다."
+                return
+            }
+            isRecordingOptionsPresented = true
+        }
     }
 
     private func startRecordingPlayback() {
@@ -11239,7 +11254,7 @@ struct MapHomeView: View {
         setMapPosition(.camera(
             MapCamera(
                 centerCoordinate: CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude),
-                distance: 100,
+                distance: 200,
                 heading: 0,
                 pitch: 0
             )

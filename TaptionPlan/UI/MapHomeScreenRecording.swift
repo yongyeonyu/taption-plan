@@ -159,6 +159,13 @@ final class MapHomeScreenRecorder {
         }
     }
 
+    /// 화면 기록 허용 알림은 녹화를 시작할 때만 뜨므로, 잠깐 시작했다 바로 멈추고 파일은 버린다. 허용되면 true.
+    func probePermission() async -> Bool {
+        guard await start() else { return false }
+        if let url = await stop() { try? FileManager.default.removeItem(at: url) }
+        return true
+    }
+
     func stop() async -> URL? {
         guard isRecording else { return nil }
         let url = FileManager.default.temporaryDirectory
