@@ -103,6 +103,11 @@ final class MapHomeDictation {
             errorMessage = "지금은 음성 인식을 쓸 수 없습니다."
             return
         }
+        // 음성은 항상 기기 안에서만 인식한다(서버로 보내지 않는다).
+        guard recognizer.supportsOnDeviceRecognition else {
+            errorMessage = "이 기기에서는 기기 내 음성 인식을 쓸 수 없습니다."
+            return
+        }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playAndRecord, mode: .default, options: [.duckOthers, .defaultToSpeaker])
@@ -121,7 +126,7 @@ final class MapHomeDictation {
             ])
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.shouldReportPartialResults = true
-            request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+            request.requiresOnDeviceRecognition = true
             input.installTap(onBus: 0, bufferSize: 1_024, format: format, block: Self.tapBlock(
                 request: request,
                 file: file,

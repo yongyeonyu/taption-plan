@@ -3634,7 +3634,7 @@ struct MapHomeView: View {
                 $0.isTimeless != true && $0.mapPoint == nil && !model.isMemoDraft($0.id)
                     && Self.hasText($0) && !dismissedMemoPreviewIDs.contains($0.id)
                     && calendar.isDate($0.occurredAt, inSameDayAs: model.selectedDate)
-                    && abs($0.occurredAt.timeIntervalSince(center)) <= 30 * 60
+                    && abs($0.occurredAt.timeIntervalSince(center)) <= 15 * 60
                     && $0.planID == nil
             }
             .min { abs($0.occurredAt.timeIntervalSince(center)) < abs($1.occurredAt.timeIntervalSince(center)) }
@@ -3650,6 +3650,29 @@ struct MapHomeView: View {
                 MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.count) {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
+            }
+            // 현재 시간 ±15분 안의 메모·일정은 목록을 펼치지 않아도 왼쪽 상단에 보인다.
+            if !nearbyPreviewRows.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(nearbyPreviewRows, id: \.id) { row in
+                        HStack(spacing: 6) {
+                            Image(systemName: row.systemImage)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.tpReferenceBlue)
+                            Text(row.title)
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.tpInk)
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text(row.time)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(width: 240, alignment: .leading)
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             // 먼저 연 패널이 위에 오고, 나중에 연 패널은 그 아래에 붙는다. 폭은 같다.
             ForEach(topPanelOrder, id: \.self) { panel in
@@ -3679,6 +3702,38 @@ struct MapHomeView: View {
     private func setTopPanel(_ panel: TopPanel, open: Bool) {
         topPanelOrder.removeAll { $0 == panel }
         if open { topPanelOrder.append(panel) }
+    }
+
+    struct NearbyPreviewRow: Identifiable {
+        let id: String
+        let systemImage: String
+        let title: String
+        let time: String
+    }
+
+    /// 현재 시간 ±15분 안의 메모와 일정 목록(왼쪽 상단 미리보기).
+    private var nearbyPreviewRows: [NearbyPreviewRow] {
+        let center = timelineSelectionDate
+        let window: TimeInterval = 15 * 60
+        var rows: [NearbyPreviewRow] = []
+        if let memo = nearbyTimedMemo {
+            rows.append(NearbyPreviewRow(
+                id: "memo-\(memo.id.uuidString)",
+                systemImage: "note.text",
+                title: memo.text,
+                time: memo.occurredAt.formatted(date: .omitted, time: .shortened)
+            ))
+        }
+        for event in dayCalendarEvents where !event.isAllDay
+            && abs(event.span.start.timeIntervalSince(center)) <= window {
+            rows.append(NearbyPreviewRow(
+                id: "event-\(event.id)",
+                systemImage: "calendar",
+                title: event.title,
+                time: event.span.start.formatted(date: .omitted, time: .shortened)
+            ))
+        }
+        return rows
     }
 
     /// 선택한 날의 일정을 불러온다. 구글 계정이 연결돼 있으면 구글에서, 아니면 기기 캘린더에서 읽는다.
