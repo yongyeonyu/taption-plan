@@ -6116,14 +6116,19 @@ final class AppModel {
 
     /// 통합 메모의 초안: 위치·시간 없이 먼저 만들고, 편집 화면에서 위치·시간을 더한 뒤 저장한다.
     /// 저장 전에는 임시(pending) 상태라 저장소에 쓰지 않는다. 시간은 기본적으로 지정하지 않음.
-    func addMemoDraft(text: String, occurredAt: Date = .now) -> UUID? {
+    func addMemoDraft(
+        text: String,
+        occurredAt: Date = .now,
+        mapPoint: GeoPoint? = nil,
+        isTimeless: Bool = true
+    ) -> UUID? {
         guard acceptsDataMutation(), let cleanText = validatedMemoText(text) else { return nil }
         let memo = ActionMemo(
             planID: nil,
             categoryID: MemoTimelineEngine.categoryID,
             occurredAt: occurredAt,
-            mapPoint: nil,
-            isTimeless: true,
+            mapPoint: mapPoint,
+            isTimeless: isTimeless,
             kind: .idea,
             text: cleanText
         )

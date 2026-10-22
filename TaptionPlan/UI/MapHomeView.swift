@@ -2296,6 +2296,7 @@ struct MapHomeView: View {
     /// 날짜(0시)별 업무 구간. 선택한 날짜와 오늘만 둔다.
     @State private var salaryWorkSpans: [Date: [TimeSpan]] = [:]
     @State private var isMemoAddMenuPresented = false
+    @State private var queueExpanded = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
     private let isStickerMode = true
@@ -3102,18 +3103,10 @@ struct MapHomeView: View {
             titleVisibility: .visible
         ) {
             Button {
-                routeLongPress(.location)
-            } label: {
-                Label(
-                    language.text("위치 추가", "Add location"),
-                    systemImage: "mappin.and.ellipse"
-                )
-            }
-            Button {
                 routeLongPress(.memo)
             } label: {
                 Label(
-                    language.text("지도 메모 추가", "Add map memo"),
+                    language.text("메모 추가", "Add memo"),
                     systemImage: "note.text.badge.plus"
                 )
             }
@@ -3560,10 +3553,20 @@ struct MapHomeView: View {
     }
 
     /// 시간을 지정하지 않았고 위치도 없는 메모: 왼쪽 위에 큐처럼 쌓인다(오래된 것이 위).
+    /// 선택한 날짜의 메모(시각 있는 메모 + 시각 없이 그날 만든 메모, 지도 메모 포함). 시각 없는 메모가 위, 그 다음 시각 순.
     private var queuedMemos: [ActionMemo] {
-        model.snapshot.memos
-            .filter { $0.isTimeless == true && $0.mapPoint == nil && !model.isMemoDraft($0.id) && Self.hasText($0) }
-            .sorted { $0.createdAt < $1.createdAt }
+        let calendar = Calendar.autoupdatingCurrent
+        func onSelectedDay(_ date: Date) -> Bool { calendar.isDate(date, inSameDayAs: model.selectedDate) }
+        return model.snapshot.memos
+            .filter { memo in
+                guard !model.isMemoDraft(memo.id), Self.hasText(memo) else { return false }
+                return memo.isTimeless == true ? onSelectedDay(memo.createdAt) : onSelectedDay(memo.occurredAt)
+            }
+            .sorted { lhs, rhs in
+                let lhsTimed = lhs.isTimeless != true, rhsTimed = rhs.isTimeless != true
+                if lhsTimed != rhsTimed { return !lhsTimed }
+                return lhsTimed ? lhs.occurredAt < rhs.occurredAt : lhs.createdAt < rhs.createdAt
+            }
     }
 
     /// 내용이 비어 있는 메모(취소된 빈 초안 등)는 화면에 올리지 않는다.
@@ -3588,16 +3591,36 @@ struct MapHomeView: View {
 
     private var memoOverlayStack: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(queuedMemos.prefix(3)) { memo in
-                memoCard(memo, showsTime: false)
+            // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
+            if queueExpanded {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(queuedMemos) { memo in
+                            memoCard(memo, showsTime: memo.isTimeless != true)
+                        }
+                    }
+                }
+                .frame(maxHeight: 300)
+            } else {
+                ForEach(queuedMemos.prefix(3)) { memo in
+                    memoCard(memo, showsTime: memo.isTimeless != true)
+                }
             }
             if queuedMemos.count > 3 {
-                Text("+\(queuedMemos.count - 3)")
+                Button {
+                    withAnimation(.snappy) { queueExpanded.toggle() }
+                } label: {
+                    Label(
+                        queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
+                        systemImage: queueExpanded ? "chevron.up" : "chevron.down"
+                    )
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .mapHomeGlass(in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
             if let timed = nearbyTimedMemo {
                 memoCard(timed, showsTime: true)
@@ -3643,11 +3666,18 @@ struct MapHomeView: View {
     }
 
     /// 새 메모: 먼저 임시 초안을 만들고 편집 화면을 연다. 위치·시간은 편집 화면에서 정한다.
+    /// 메모 추가: 시각은 지금, 위치는 현재 위치(없으면 위치 없이). 사용자가 시각을 바꾸고 위치는 뺄 수 있다.
     private func addMemo() {
         isMenuOpen = false
+        let now = Date.now
+        let here = currentCoordinate.map {
+            GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0)
+        }
         guard let id = model.addMemoDraft(
             text: language.text("새 메모", "New memo"),
-            occurredAt: timelineSelectionDate
+            occurredAt: now,
+            mapPoint: here,
+            isTimeless: false
         ) else { return }
         selectedMapStickerEditor = .newMemo(id)
     }
