@@ -3522,6 +3522,7 @@ final class AppModel {
 
     /// 알람 확인으로 실제 기록을 남긴다. 시작(출근·등교·기상)은 열린 기록을 만들고, 끝(퇴근·하교)은 같은 종류의 열린 기록을 닫는다.
     func confirmAlarmRecord(categoryID: String, title: String, at date: Date, opens: Bool) {
+        guard acceptsDataMutation() else { return }
         if opens {
             snapshot.actuals.append(ActualRecord(
                 id: UUID(),
