@@ -183,6 +183,8 @@ actor SensorCollectionLiveActivityController {
             sensorHUDUntil = nil
         }
         let salaryText = UserDefaults.standard.string(forKey: "mapHomeSalaryLiveText")
+        let salaryDefaults = UserDefaults.standard
+        let salaryMeasuredAt = salaryDefaults.object(forKey: "mapHomeSalaryLiveMeasuredAt") as? Date
         let activityFrame: Int = hasNewSample
             ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6
             : (previousState?.currentActivityFrame ?? 0)
@@ -208,7 +210,12 @@ actor SensorCollectionLiveActivityController {
             currentActivitySystemImage: currentActivitySystemImage,
             currentActivityCatStyle: currentActivityCatStyle,
             currentActivityFrame: activityFrame,
-            salaryText: salaryText
+            salaryText: salaryText,
+            salaryBaseSeconds: salaryMeasuredAt == nil ? nil : salaryDefaults.double(forKey: "mapHomeSalaryLiveBase"),
+            salaryHourlyRate: salaryMeasuredAt == nil ? nil : salaryDefaults.double(forKey: "mapHomeSalaryLiveRate"),
+            salaryMeasuredAt: salaryMeasuredAt,
+            salaryIsWorking: salaryMeasuredAt == nil ? nil : salaryDefaults.bool(forKey: "mapHomeSalaryLiveWorking"),
+            salaryTickSeconds: salaryMeasuredAt == nil ? nil : salaryDefaults.integer(forKey: "mapHomeSalaryLiveTick")
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt

@@ -2297,6 +2297,7 @@ struct MapHomeView: View {
     @State private var salaryWorkSpans: [Date: [TimeSpan]] = [:]
     @State private var isMemoAddMenuPresented = false
     @State private var queueExpanded = false
+    @State private var memoStackExpanded = false
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
@@ -3331,14 +3332,8 @@ struct MapHomeView: View {
         }
         .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
         // 잠금 화면 활동 카드에 같은 연봉 글자를 보여 주기 위해 기기 설정에 적어 둔다.
-        .onChange(of: salaryLive?.hourlyRate) { _, _ in
-            if let salaryLive {
-                let text = MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(
-                    workSeconds: salaryLive.todayWorkSeconds, hourlyRate: salaryLive.hourlyRate))
-                UserDefaults.standard.set(text, forKey: "mapHomeSalaryLiveText")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "mapHomeSalaryLiveText")
-            }
+        .onChange(of: salaryLive) { _, _ in
+            persistSalaryForLockScreen()
         }
         .onChange(of: model.selectedDate) { oldDate, newDate in
             let calendar = Calendar.autoupdatingCurrent
@@ -3644,49 +3639,81 @@ struct MapHomeView: View {
     }
 
     private var memoOverlayStack: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
-            if queueExpanded {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(queuedMemos) { memo in
-                            memoCard(memo, showsTime: memo.isTimeless != true)
+        VStack(alignment: .trailing, spacing: 8) {
+            memoCircleButton
+            if memoStackExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
+                if queueExpanded {
+                    ScrollView(showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(queuedMemos) { memo in
+                                memoCard(memo, showsTime: memo.isTimeless != true)
+                            }
                         }
                     }
+                    .frame(maxHeight: 300)
+                } else {
+                    ForEach(queuedMemos.prefix(3)) { memo in
+                        memoCard(memo, showsTime: memo.isTimeless != true)
+                    }
                 }
-                .frame(maxHeight: 300)
-            } else {
-                ForEach(queuedMemos.prefix(3)) { memo in
-                    memoCard(memo, showsTime: memo.isTimeless != true)
+                if queuedMemos.count > 3 {
+                    Button {
+                        withAnimation(.snappy) { queueExpanded.toggle() }
+                    } label: {
+                        Label(
+                            queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
+                            systemImage: queueExpanded ? "chevron.up" : "chevron.down"
+                        )
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .mapHomeGlass(in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
-            }
-            if queuedMemos.count > 3 {
-                Button {
-                    withAnimation(.snappy) { queueExpanded.toggle() }
-                } label: {
-                    Label(
-                        queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
-                        systemImage: queueExpanded ? "chevron.up" : "chevron.down"
-                    )
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .mapHomeGlass(in: Capsule())
+                if let timed = nearbyTimedMemo {
+                    memoCard(timed, showsTime: true)
                 }
-                .buttonStyle(.plain)
-            }
-            if let timed = nearbyTimedMemo {
-                memoCard(timed, showsTime: true)
-            }
-            if let legacy = nearbyScheduleMemo {
-                scheduleMemoPreview(legacy)
+                if let legacy = nearbyScheduleMemo {
+                    scheduleMemoPreview(legacy)
+                }
+                }
+                .frame(maxWidth: 280, alignment: .leading)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .frame(maxWidth: 280, alignment: .leading)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.leading, 12)
-        .padding(.top, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        .padding(.trailing, Layout.horizontalInset)
+        .padding(.top, 56)
+    }
+
+    /// 메모를 우상단 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
+    private var memoCircleButton: some View {
+        let count = queuedMemos.count + (nearbyTimedMemo == nil ? 0 : 1)
+        return Button {
+            withAnimation(.snappy) { memoStackExpanded.toggle() }
+        } label: {
+            Image(systemName: memoStackExpanded ? "xmark" : "note.text")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 40, height: 40)
+                .mapHomeGlass(in: Circle())
+                .overlay(alignment: .topTrailing) {
+                    if count > 0, !memoStackExpanded {
+                        Text("\(count)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.tpReferenceBlue, in: Capsule())
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("메모", "Memos"))
     }
 
     private func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {
@@ -6890,9 +6917,7 @@ struct MapHomeView: View {
             ?? previous?.month?.workSeconds ?? 0
         let projected = counted.projected ?? previous?.projectedMonthWorkSeconds ?? 0
         let pastMonths = counted.pastMonths ?? previous?.pastMonthWorkSeconds ?? [:]
-        let samples = settings.payHistory.compactMap { key, pay -> MapHomeSalaryPolicy.PaySample? in
-            pastMonths[key].map { MapHomeSalaryPolicy.PaySample(hours: $0 / 3_600, pay: pay) }
-        }
+        let samples = MapHomeSalaryPolicy.paySamples(settings, pastMonthWorkSeconds: pastMonths)
         guard let rate = MapHomeSalaryPolicy.hourlyRate(
             settings, monthWorkSeconds: monthWork, projectedMonthWorkSeconds: projected, samples: samples
         ) else { return }
@@ -6922,6 +6947,26 @@ struct MapHomeView: View {
         var spans = [selectedDay: counted.selectedSpans]
         spans[calendar.startOfDay(for: now)] = counted.todaySpans
         if spans != salaryWorkSpans { salaryWorkSpans = spans }
+    }
+
+    /// 잠금 화면 활동 카드가 연봉을 실시간으로 올릴 수 있게 기준값(근무 초·시급·측정 시각)을 기기 설정에 적는다.
+    private func persistSalaryForLockScreen() {
+        let defaults = UserDefaults.standard
+        guard let salaryLive else {
+            for key in ["mapHomeSalaryLiveText", "mapHomeSalaryLiveBase", "mapHomeSalaryLiveRate",
+                        "mapHomeSalaryLiveMeasuredAt", "mapHomeSalaryLiveWorking", "mapHomeSalaryLiveTick"] {
+                defaults.removeObject(forKey: key)
+            }
+            return
+        }
+        let text = MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(
+            workSeconds: salaryLive.todayWorkSeconds, hourlyRate: salaryLive.hourlyRate))
+        defaults.set(text, forKey: "mapHomeSalaryLiveText")
+        defaults.set(salaryLive.todayWorkSeconds, forKey: "mapHomeSalaryLiveBase")
+        defaults.set(salaryLive.hourlyRate, forKey: "mapHomeSalaryLiveRate")
+        defaults.set(salaryLive.measuredAt, forKey: "mapHomeSalaryLiveMeasuredAt")
+        defaults.set(salaryLive.isWorking, forKey: "mapHomeSalaryLiveWorking")
+        defaults.set(max(1, salaryTickSeconds), forKey: "mapHomeSalaryLiveTick")
     }
 
     /// 화랑이(집에 있으면 집 핀) 위 연봉 카운터. 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.

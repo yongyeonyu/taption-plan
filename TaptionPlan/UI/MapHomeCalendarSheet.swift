@@ -1117,6 +1117,7 @@ enum MapHomeSalaryPolicy {
     static let hourlyKey = "mapHomeSalaryHourly"
     static let hourlyTaxKey = "mapHomeSalaryHourlyTax"
     static let weeklyHolidayKey = "mapHomeSalaryWeeklyHoliday"
+    static let hourlyIsNetKey = "mapHomeSalaryHourlyIsNet"
     static let monthAccumKey = "mapHomeSalaryMonthAccum"
     static let monthAccumMonthKey = "mapHomeSalaryMonthAccumMonth"
     /// 달별로 실제 받은 월급(수당 포함, 입력 기준). JSON `{"2026-09": 2900000}`.
@@ -1166,9 +1167,11 @@ enum MapHomeSalaryPolicy {
         var hourlyTax: HourlyTax = .threePointThree
         /// 주 15시간 이상 근무면 주휴수당을 시급에 더한다.
         var includesWeeklyHoliday = false
+        /// 시급을 세후로 입력했는지(세전이면 false).
+        var hourlyIsNet = false
 
         var isConfigured: Bool { isHourly ? hourly > 0 : annualPay > 0 || monthlyPay > 0 }
-        var showsNetAmounts: Bool { isNetInput || showsNet || isHourly }
+        var showsNetAmounts: Bool { showsNet }
     }
 
     static func monthKey(_ date: Date, calendar: Calendar = MapHomeGrowthPolicy.localCalendar) -> String {
@@ -1188,7 +1191,8 @@ enum MapHomeSalaryPolicy {
             isHourly: defaults.bool(forKey: isHourlyKey),
             hourly: defaults.double(forKey: hourlyKey),
             hourlyTax: HourlyTax(rawValue: defaults.string(forKey: hourlyTaxKey) ?? "") ?? .threePointThree,
-            includesWeeklyHoliday: defaults.bool(forKey: weeklyHolidayKey)
+            includesWeeklyHoliday: defaults.bool(forKey: weeklyHolidayKey),
+            hourlyIsNet: defaults.bool(forKey: hourlyIsNetKey)
         )
     }
 
@@ -1198,6 +1202,15 @@ enum MapHomeSalaryPolicy {
 
     static func encodePayHistory(_ history: [String: Double]) -> String {
         (try? String(data: JSONEncoder().encode(history.filter { $0.value > 0 }), encoding: .utf8)) ?? "{}"
+    }
+
+    /// 받은 월급 기록은 실수령(세후)으로 적고, 입력 기준(세전 또는 세후)에 맞춰 짝을 만든다.
+    static func paySamples(_ settings: Settings, pastMonthWorkSeconds: [String: TimeInterval]) -> [PaySample] {
+        settings.payHistory.compactMap { key, received in
+            pastMonthWorkSeconds[key].map {
+                PaySample(hours: $0 / 3_600, pay: settings.isNetInput ? received : grossFromNetMonthly(received))
+            }
+        }
     }
 
     /// 지난 어느 달의 (근무 시간, 받은 월급) 한 쌍.
@@ -1249,7 +1262,28 @@ enum MapHomeSalaryPolicy {
 
     /// 입력 기준 금액을 보여 줄 기준으로 바꾼다(세전 입력 + 세후 보기면 공제).
     static func displayed(_ amount: Double, _ settings: Settings) -> Double {
-        settings.isNetInput || !settings.showsNet ? amount : MapHomeKoreanNetPay.monthly(gross: amount).net
+        if settings.isNetInput { return settings.showsNet ? amount : grossFromNetMonthly(amount) }
+        return settings.showsNet ? MapHomeKoreanNetPay.monthly(gross: amount).net : amount
+    }
+
+    /// 세후 월급에서 세전 월급을 거꾸로 구한다. 세후는 세전에 따라 단조 증가하므로 이분법으로 맞춘다.
+    static func grossFromNetMonthly(_ net: Double) -> Double {
+        guard net > 0 else { return 0 }
+        var low = 0.0, high = net * 3
+        for _ in 0..<60 {
+            let mid = (low + high) / 2
+            if MapHomeKoreanNetPay.monthly(gross: mid).net < net { low = mid } else { high = mid }
+        }
+        return (low + high) / 2
+    }
+
+    /// 입력 기준과 무관하게 세전 월급·세후 월급.
+    static func monthlyGross(_ settings: Settings) -> Double {
+        settings.isNetInput ? grossFromNetMonthly(inputMonthly(settings)) : inputMonthly(settings)
+    }
+
+    static func monthlyNet(_ settings: Settings) -> Double {
+        settings.isNetInput ? inputMonthly(settings) : MapHomeKoreanNetPay.monthly(gross: inputMonthly(settings)).net
     }
 
     /// 입력 기준(세전 또는 세후)의 월급.
@@ -1260,22 +1294,27 @@ enum MapHomeSalaryPolicy {
 
     /// 보여 줄 기준의 월급. 세전 입력을 세후로 보면 4대보험·소득세를 뺀다.
     static func displayedMonthly(_ settings: Settings) -> Double {
-        let input = inputMonthly(settings)
-        return settings.isNetInput || !settings.showsNet ? input : MapHomeKoreanNetPay.monthly(gross: input).net
+        displayed(inputMonthly(settings), settings)
     }
 
-    /// 시급 입력의 세후 시급. 주휴수당(주 15시간 이상이면 주휴 시간 = min(주 근무 ÷ 5, 8)을 근무 시간에 더함)을 넣고 세금을 뺀다.
-    static func hourlyNetRate(_ settings: Settings, weeklyHours: Double) -> Double {
-        var gross = settings.hourly
+    /// 시급의 세전 금액. 세후로 입력했으면 세율을 거꾸로 적용하고, 주휴수당(주 15시간 이상이면 min(주 근무 ÷ 5, 8)시간분)을 더한다.
+    static func hourlyGross(_ settings: Settings, weeklyHours: Double) -> Double {
+        var gross = settings.hourlyIsNet ? settings.hourly / settings.hourlyTax.keepRate : settings.hourly
         if settings.includesWeeklyHoliday, weeklyHours >= 15 {
             gross *= 1 + min(weeklyHours / 5, 8) / weeklyHours
         }
-        return gross * settings.hourlyTax.keepRate
+        return gross
+    }
+
+    /// 표시 기준(세전/세후)에 맞춘 시급.
+    static func hourlyDisplayed(_ settings: Settings, weeklyHours: Double) -> Double {
+        let gross = hourlyGross(settings, weeklyHours: weeklyHours)
+        return settings.showsNet ? gross * settings.hourlyTax.keepRate : gross
     }
 
     /// 월급 ÷ 209시간.
     static func baseHourlyRate(_ settings: Settings) -> Double? {
-        if settings.isHourly { return settings.hourly > 0 ? hourlyNetRate(settings, weeklyHours: 0) : nil }
+        if settings.isHourly { return settings.hourly > 0 ? hourlyDisplayed(settings, weeklyHours: 0) : nil }
         let monthly = displayedMonthly(settings)
         return monthly > 0 ? monthly / standardMonthlyHours : nil
     }
@@ -1308,7 +1347,7 @@ enum MapHomeSalaryPolicy {
         if settings.isHourly {
             guard settings.hourly > 0 else { return nil }
             let weeklyHours = max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
-            return hourlyNetRate(settings, weeklyHours: weeklyHours)
+            return hourlyDisplayed(settings, weeklyHours: weeklyHours)
         }
         let monthly = displayedMonthly(settings)
         guard monthly > 0 else { return nil }
@@ -1477,6 +1516,7 @@ struct MapHomeSalarySettingsSheet: View {
     @AppStorage(MapHomeSalaryPolicy.hourlyKey) private var hourlyPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.hourlyTaxKey) private var hourlyTaxRaw = MapHomeSalaryPolicy.HourlyTax.threePointThree.rawValue
     @AppStorage(MapHomeSalaryPolicy.weeklyHolidayKey) private var weeklyHoliday = false
+    @AppStorage(MapHomeSalaryPolicy.hourlyIsNetKey) private var hourlyIsNet = false
     @AppStorage(MapHomeSalaryPolicy.monthAccumKey) private var monthAccum = 0.0
     @AppStorage(MapHomeSalaryPolicy.monthAccumMonthKey) private var monthAccumMonth = ""
     @AppStorage(MapHomeSalaryPolicy.tickKey) private var tickSeconds = 10
@@ -1498,20 +1538,18 @@ struct MapHomeSalarySettingsSheet: View {
             isHourly: isHourly,
             hourly: hourlyPay,
             hourlyTax: MapHomeSalaryPolicy.HourlyTax(rawValue: hourlyTaxRaw) ?? .threePointThree,
-            includesWeeklyHoliday: weeklyHoliday
+            includesWeeklyHoliday: weeklyHoliday,
+            hourlyIsNet: hourlyIsNet
         )
     }
 
-    /// 세전 연봉·세후 연봉·시급 중 하나만 고른다.
-    private enum InputKind: Hashable { case gross, net, hourly }
+    /// 연봉 또는 시급 중 하나를 고른다.
+    private enum InputKind: Hashable { case annual, hourly }
 
     private var inputKind: Binding<InputKind> {
         Binding(
-            get: { isHourly ? .hourly : (isNetInput ? .net : .gross) },
-            set: { kind in
-                isHourly = kind == .hourly
-                isNetInput = kind == .net
-            }
+            get: { isHourly ? .hourly : .annual },
+            set: { isHourly = $0 == .hourly }
         )
     }
 
@@ -1523,10 +1561,7 @@ struct MapHomeSalarySettingsSheet: View {
     }
 
     private var paySamples: [MapHomeSalaryPolicy.PaySample] {
-        settings.payHistory.compactMap { key, pay in
-            guard let seconds = pastMonthWorkSeconds[key] else { return nil }
-            return MapHomeSalaryPolicy.PaySample(hours: seconds / 3_600, pay: pay)
-        }
+        MapHomeSalaryPolicy.paySamples(settings, pastMonthWorkSeconds: pastMonthWorkSeconds)
     }
 
     private func monthLabel(_ key: String) -> String {
@@ -1555,16 +1590,28 @@ struct MapHomeSalarySettingsSheet: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
 
-                // 1. 세전 연봉 · 세후 연봉 · 시급 중 하나만 입력
+                // 1. 연봉 또는 시급. 세전/세후는 표시 기준 하나로 고르고, 입력은 세전·세후 어느 쪽이든 된다.
                 card {
                     Picker("", selection: inputKind) {
-                        Text(language.text("세전 연봉", "Gross")).tag(InputKind.gross)
-                        Text(language.text("세후 연봉", "Net")).tag(InputKind.net)
+                        Text(language.text("연봉", "Annual")).tag(InputKind.annual)
                         Text(language.text("시급", "Hourly")).tag(InputKind.hourly)
                     }
                     .pickerStyle(.segmented)
                     if isHourly {
-                        field(language.text("시급", "Hourly rate"), text: $hourlyText, unit: language.text("원", "KRW"), placeholder: "10000") {
+                        let weekly = max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
+                        let hourlyGrossNow = MapHomeSalaryPolicy.hourlyGross(settings, weeklyHours: weekly)
+                        field(language.text("세전 시급", "Gross hourly"), text: Binding(
+                            get: { hourlyIsNet ? "" : hourlyText },
+                            set: { hourlyText = $0 }
+                        ), unit: language.text("원", "KRW"), placeholder: String(Int(hourlyGrossNow.rounded()))) {
+                            hourlyIsNet = false
+                            hourlyPay = number(hourlyText)
+                        }
+                        field(language.text("세후 시급", "Net hourly"), text: Binding(
+                            get: { hourlyIsNet ? hourlyText : "" },
+                            set: { hourlyText = $0 }
+                        ), unit: language.text("원", "KRW"), placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
+                            hourlyIsNet = true
                             hourlyPay = number(hourlyText)
                         }
                         Picker("", selection: $hourlyTaxRaw) {
@@ -1576,37 +1623,56 @@ struct MapHomeSalarySettingsSheet: View {
                         Toggle(language.text("주휴수당 포함(주 15시간 이상)", "Include weekly holiday pay"), isOn: $weeklyHoliday)
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .tint(Color.tpAccent)
-                        row(language.text("세후 시급", "Net hourly"), won(MapHomeSalaryPolicy.hourlyNetRate(
-                            settings,
-                            weeklyHours: max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
-                        )), bold: true)
                         Text(language.text(
-                            "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 연봉·월급과 함께 쓰지 않아요.",
-                            "Time = money. Earnings rise with work hours. Not used together with annual pay."
+                            "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.",
+                            "Time = money. Earnings rise with work hours. The other field is computed from the tax method."
                         ))
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                     } else {
-                        field(language.text("연봉", "Annual pay"), text: $annualManText, unit: language.text("만원", "×10k"), placeholder: "4000") {
+                        let grossMan = MapHomeSalaryPolicy.monthlyGross(settings) * 12 / 10_000
+                        let netMan = MapHomeSalaryPolicy.monthlyNet(settings) * 12 / 10_000
+                        field(language.text("세전 연봉", "Gross annual"), text: Binding(
+                            get: { isNetInput ? "" : annualManText },
+                            set: { annualManText = $0 }
+                        ), unit: language.text("만원", "×10k"), placeholder: String(Int(grossMan.rounded()))) {
+                            isNetInput = false
                             annualPay = number(annualManText) * 10_000
+                            monthlyPay = 0
                         }
-                        if !isNetInput {
-                            Toggle(language.text("세후로 보기(4대보험·소득세 공제)", "Show after tax"), isOn: $showsNet)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .tint(Color.tpAccent)
+                        field(language.text("세후 연봉", "Net annual"), text: Binding(
+                            get: { isNetInput ? annualManText : "" },
+                            set: { annualManText = $0 }
+                        ), unit: language.text("만원", "×10k"), placeholder: String(Int(netMan.rounded()))) {
+                            isNetInput = true
+                            annualPay = number(annualManText) * 10_000
+                            monthlyPay = 0
                         }
                         field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "KRW"),
-                              placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(MapHomeSalaryPolicy.Settings(annualPay: annualPay)).rounded()))) {
-                            monthlyPay = number(monthlyText)
+                              placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
+                            annualPay = number(monthlyText) * 12
+                            monthlyPay = 0
+                            annualManText = String(Int((annualPay / 10_000).rounded()))
                         }
-                        Text(language.text("비워 두면 연봉 ÷ 12. 상여·연장수당이 있으면 받은 월급으로 고쳐 주세요.", "Blank = annual ÷ 12."))
+                        Text(language.text("연봉이나 월급 중 하나만 적으면 나머지는 자동 계산돼요(월급제면 월급만).", "Enter either annual or monthly; the other is computed."))
                             .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                     }
+                }
+
+                // 1-1. 표시 기준: 세전 또는 세후
+                card {
+                    Picker("", selection: $showsNet) {
+                        Text(language.text("세전", "Gross")).tag(false)
+                        Text(language.text("세후", "Net")).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    Text(language.text("연봉·시급 모두 여기서 고른 기준으로 카운터와 누적 금액을 보여 줘요.", "Counter and totals use this basis for annual and hourly pay."))
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
 
                 if !isHourly {
                 // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
                 card {
-                    Text(language.text("받은 월급 기록(야근·특근 수당 포함)", "Pay received (incl. overtime)"))
+                    Text(language.text("받은 월급 기록(실수령 세후, 수당 포함)", "Pay received (net, incl. overtime)"))
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                     ForEach(pastMonthKeys, id: \.self) { key in
                         let hours = (pastMonthWorkSeconds[key] ?? 0) / 3_600
@@ -1688,7 +1754,7 @@ struct MapHomeSalarySettingsSheet: View {
                 if settings.isConfigured {
                     Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {
                         annualPay = 0; monthlyPay = 0; monthAccum = 0
-                        annualManText = ""; monthlyText = ""; accumText = ""
+                        annualManText = ""; hourlyText = ""; monthlyText = ""; accumText = ""
                     }
                 }
             }

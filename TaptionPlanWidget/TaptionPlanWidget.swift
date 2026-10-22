@@ -2404,8 +2404,7 @@ private struct SensorCollectionLockScreenView: View {
                 Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
                     .font(.system(size: 14, weight: .bold))
                     .lineLimit(1)
-                Text(context.state.salaryText.map { widgetText("연봉 카운터 \($0)", "Salary \($0)") }
-                     ?? sensorCollectionKinds(context.state.collectionKinds))
+                salaryLine(context.state)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.70))
                     .lineLimit(1)
@@ -2759,6 +2758,29 @@ private struct SensorCollectionSavedAtView: View {
                     .font(.system(size: 12, weight: .bold, design: .rounded))
             }
         }
+    }
+}
+
+/// 잠금 화면 연봉 줄. 기준값이 있으면 TimelineView로 간격마다 다시 그려 실시간으로 올라간다.
+@ViewBuilder
+private func salaryLine(_ state: SensorCollectionActivityAttributes.ContentState) -> some View {
+    if let base = state.salaryBaseSeconds,
+       let rate = state.salaryHourlyRate,
+       let measuredAt = state.salaryMeasuredAt {
+        let tick = state.salaryTickSeconds ?? 10
+        TimelineView(.periodic(from: measuredAt, by: TimeInterval(max(1, tick)))) { timeline in
+            Text(widgetText("연봉 카운터 ", "Salary ") + SensorCollectionSalaryText.text(
+                baseSeconds: base,
+                hourlyRate: rate,
+                measuredAt: measuredAt,
+                isWorking: state.salaryIsWorking ?? false,
+                tickSeconds: tick,
+                now: timeline.date
+            ))
+        }
+    } else {
+        Text(state.salaryText.map { widgetText("연봉 카운터 \($0)", "Salary \($0)") }
+             ?? sensorCollectionKinds(state.collectionKinds))
     }
 }
 

@@ -2337,3 +2337,8 @@
 ## HRL1022L01 · 연봉 3택 + 시급 세금
 - 실행: xcodebuild test -destination iPhone 11 Pro, -only-testing MapHomeLiveMapTests → 74 tests, 0 failures. 로그 build/validation/HRL1022L01/unit.log.
 - 제한: CODE_SIGNING_ALLOWED=NO 로는 기기 설치가 안 돼 기본 서명으로 실행. 설정 화면 기기 확인 미실시.
+
+## LCK1022M01
+- xcodebuild -scheme TaptionPlan (Debug, generic iOS, CODE_SIGNING_ALLOWED=NO) → BUILD SUCCEEDED.
+- xcodebuild -scheme TaptionPlanWidget → BUILD SUCCEEDED.
+- 기기 확인(잠금 화면 실시간 숫자, 메모 원형 아이콘): 미실시.

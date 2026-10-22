@@ -1373,6 +1373,12 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var currentActivityFrame: Int?
         /// 잠금 화면에 보이는 연봉 카운터 글자(예: "53,761원"). 없으면 nil.
         var salaryText: String? = nil
+        /// 잠금 화면이 시간에 맞춰 스스로 올리는 연봉 카운터의 기준값(마지막 계산 시점의 오늘 근무 초).
+        var salaryBaseSeconds: Double? = nil
+        var salaryHourlyRate: Double? = nil
+        var salaryMeasuredAt: Date? = nil
+        var salaryIsWorking: Bool? = nil
+        var salaryTickSeconds: Int? = nil
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -1406,7 +1412,12 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             currentActivitySystemImage: String? = nil,
             currentActivityCatStyle: String? = nil,
             currentActivityFrame: Int? = nil,
-            salaryText: String? = nil
+            salaryText: String? = nil,
+            salaryBaseSeconds: Double? = nil,
+            salaryHourlyRate: Double? = nil,
+            salaryMeasuredAt: Date? = nil,
+            salaryIsWorking: Bool? = nil,
+            salaryTickSeconds: Int? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -1430,10 +1441,33 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.currentActivityCatStyle = currentActivityCatStyle
             self.currentActivityFrame = currentActivityFrame
             self.salaryText = salaryText
+            self.salaryBaseSeconds = salaryBaseSeconds
+            self.salaryHourlyRate = salaryHourlyRate
+            self.salaryMeasuredAt = salaryMeasuredAt
+            self.salaryIsWorking = salaryIsWorking
+            self.salaryTickSeconds = salaryTickSeconds
         }
     }
 
     var sessionID: UUID
+}
+
+/// 잠금 화면 연봉 카운터 글자. 앱이 준 기준값에서 지금 시각까지 흐른 근무 시간을 더해 간격 단위로 맞춘다.
+enum SensorCollectionSalaryText {
+    static func text(
+        baseSeconds: Double,
+        hourlyRate: Double,
+        measuredAt: Date,
+        isWorking: Bool,
+        tickSeconds: Int,
+        now: Date
+    ) -> String {
+        let tick = Double(max(1, tickSeconds))
+        let elapsed = isWorking ? max(0, now.timeIntervalSince(measuredAt)) : 0
+        let seconds = ((max(0, baseSeconds) + elapsed) / tick).rounded(.down) * tick
+        let won = seconds / 3_600 * hourlyRate
+        return "\(Int(won.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic)))원"
+    }
 }
 
 enum SensorCollectionActivityPolicy {
