@@ -7838,12 +7838,12 @@ struct MapHomeView: View {
                         Button {
                             selectedMapStickerEditor = .memo(memo.id)
                         } label: {
-                            Image(systemName: "note.text")
+                            Image(systemName: memo.stickerSymbol ?? "note.text")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(Color.tpInk)
+                                .foregroundStyle(memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk)
                                 .frame(width: 22, height: 22)
                                 .background(Color.white.opacity(0.96), in: Circle())
-                                .overlay(Circle().stroke(Color.tpInk.opacity(0.25), lineWidth: 1))
+                                .overlay(Circle().stroke((memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk).opacity(0.5), lineWidth: 1))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(memo.text) 메모")
@@ -17443,8 +17443,10 @@ Group {
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             hasTime = memo.isTimeless != true
-            // 시간이 있는 메모는 메모로 저장하고 사이드바에 메모 아이콘으로 보인다(스티커 변환은 토글로 고른다).
-            showsAsSticker = false
+            // 저장된 스티커 정보가 있으면 스티커 토글과 종류·색을 그대로 보여 준다.
+            showsAsSticker = memo.isSticker
+            if let symbol = memo.stickerSymbol { systemImage = symbol }
+            if let color = memo.stickerColorHex { colorHex = color }
             placement = .schedule
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
@@ -17469,40 +17471,25 @@ Group {
                 occurredAt: occurredAt
             ) else { return }
         case .memo(let id), .newMemo(let id):
-            if showsAsSticker {
-                // 지도 스티커는 위치가 있어야 한다. 없으면 위치부터 고르도록 알린다.
-                if placement == .map, editedPoint == nil {
-                    showsMapStickerNeedsLocation = true
-                    return
-                }
-                // 스티커로 저장하면 메모 자리는 일정 스티커가 차지한다. 시간이 없으면 지금 시간에 둔다.
-                let text = memoText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty, model.addMapSticker(
-                    title: text,
-                    systemImage: systemImage,
-                    colorHex: colorHex,
-                    placement: placement,
-                    point: placement == .map ? editedPoint : nil,
-                    planID: nil,
-                    occurredAt: hasTime ? occurredAt : .now
-                ) != nil else { return }
-                if case .newMemo = target {
-                    model.discardMapMemoDraft(id)
-                } else {
-                    model.deleteMemo(id)
-                }
-                didSave = true
-                dismiss()
+            // 메모 하나가 스티커 정보를 함께 가진다. 스티커를 끄면 일반 메모가 된다.
+            if showsAsSticker, placement == .map, editedPoint == nil {
+                showsMapStickerNeedsLocation = true
                 return
             }
+            let pinsToMap = showsAsSticker && placement == .schedule ? nil : editedPoint
             guard model.updateMapMemo(
                 id,
                 text: memoText,
                 kind: memoKind,
-                mapPoint: editedPoint,
+                mapPoint: pinsToMap,
                 occurredAt: occurredAt,
                 isTimeless: !hasTime
             ) else { return }
+            model.setMemoSticker(
+                id,
+                symbol: showsAsSticker ? systemImage : nil,
+                colorHex: showsAsSticker ? colorHex : nil
+            )
             didSave = true
         }
         dismiss()

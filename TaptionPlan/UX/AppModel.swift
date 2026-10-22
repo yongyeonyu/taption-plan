@@ -6271,6 +6271,18 @@ final class AppModel {
         return true
     }
 
+    /// 메모의 스티커 정보를 바꾼다. symbol이 nil이면 일반 메모가 된다.
+    @discardableResult
+    func setMemoSticker(_ memoID: UUID, symbol: String?, colorHex: String?) -> Bool {
+        guard acceptsDataMutation(),
+              let index = snapshot.memos.firstIndex(where: { $0.id == memoID }) else { return false }
+        snapshot.memos[index].stickerSymbol = symbol
+        snapshot.memos[index].stickerColorHex = symbol == nil ? nil : colorHex
+        snapshot.memos[index].updatedAt = .now
+        Task { await persist() }
+        return true
+    }
+
     private func validatedMemoText(_ text: String) -> String? {
         let cleanText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return nil }

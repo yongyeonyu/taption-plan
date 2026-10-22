@@ -2522,3 +2522,6 @@
 
 ## REV1022R09
 - 빌드 BUILD SUCCEEDED.
+
+## MEM1022BB01
+- 빌드 BUILD SUCCEEDED. 기존 기록 디코딩·저장 복원 테스트 미실시.

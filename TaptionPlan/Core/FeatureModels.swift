@@ -1093,12 +1093,17 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     var mapPoint: GeoPoint?
     /// 시간을 지정하지 않은 메모. nil·false는 시간이 있는 메모(예전 기록 포함).
     var isTimeless: Bool?
+    /// 스티커 정보. nil이면 일반 메모다. 메모 하나가 스티커 정보를 함께 가진다(예전 기록은 nil).
+    var stickerSymbol: String? = nil
+    var stickerColorHex: String? = nil
     var kind: MemoKind
     var text: String
     var attachments: [MemoAttachment]
     var isHighlightedInReview: Bool
     var createdAt: Date
     var updatedAt: Date
+
+    var isSticker: Bool { stickerSymbol != nil }
 
     init(
         id: UUID = UUID(),
@@ -1133,6 +1138,7 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, planID, targetID, categoryID, occurredAt, mapPoint, isTimeless, kind, text
         case attachments, isHighlightedInReview, createdAt, updatedAt
+        case stickerSymbol, stickerColorHex
     }
 
     /// `categoryID` and `occurredAt` arrived after the first archive format,
@@ -1140,6 +1146,8 @@ struct ActionMemo: Identifiable, Codable, Hashable, Sendable {
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decode(UUID.self, forKey: .id)
+        stickerSymbol = try values.decodeIfPresent(String.self, forKey: .stickerSymbol)
+        stickerColorHex = try values.decodeIfPresent(String.self, forKey: .stickerColorHex)
         planID = try values.decodeIfPresent(UUID.self, forKey: .planID)
         targetID = try values.decodeIfPresent(String.self, forKey: .targetID)
         categoryID = try values.decodeIfPresent(String.self, forKey: .categoryID)
