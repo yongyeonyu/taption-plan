@@ -22,6 +22,11 @@ final class MapHomeDictation {
     private var recorder: AVAudioRecorder?
     /// 녹음이 끝나면 파일 위치를 넘겨준다(메모 첨부용).
     var onRecorded: ((URL) -> Void)?
+    /// 글자 변환이 끝나면 글자를 바로 넘겨준다(입력칸 포커스와 무관하게 메모에 들어가도록).
+    var onTranscribed: ((String) -> Void)?
+    /// 녹음 중 입력 크기(0~1). 웨이브폼 막대에 쓴다.
+    private(set) var level: Double = 0
+    private var meterTask: Task<Void, Never>?
 
     /// 음성 스레드에서 도는 결과 블록은 메인 액터 밖에서 만든다(메인 액터로 만들면 충돌한다).
     private nonisolated static func resultBlock(
@@ -90,6 +95,7 @@ final class MapHomeDictation {
                 AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
             ]
             let recorder = try AVAudioRecorder(url: url, settings: settings)
+            recorder.isMeteringEnabled = true
             guard recorder.record() else {
                 errorMessage = "마이크를 시작하지 못했습니다."
                 return
@@ -97,6 +103,7 @@ final class MapHomeDictation {
             self.recorder = recorder
             recordedURL = url
             isListening = true
+            startMetering()
             TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_started")
         } catch {
             errorMessage = "마이크를 시작하지 못했습니다."
@@ -111,11 +118,26 @@ final class MapHomeDictation {
         recorder.stop()
         self.recorder = nil
         isListening = false
+        meterTask?.cancel()
+        level = 0
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         guard let url = recordedURL, let recognizer else { return }
         // 녹음 파일은 첨부로 남기고(model이 저장), 같은 파일을 글자로 바꾼다.
         onRecorded?(url)
         transcribe(url, with: recognizer)
+    }
+
+    /// 녹음 중 0.09초마다 입력 크기를 읽어 웨이브폼에 보낸다.
+    private func startMetering() {
+        meterTask?.cancel()
+        meterTask = Task { [weak self] in
+            while let self, self.isListening, !Task.isCancelled {
+                self.recorder?.updateMeters()
+                let power = Double(self.recorder?.averagePower(forChannel: 0) ?? -160)
+                self.level = min(max((power + 50) / 50, 0), 1)
+                try? await Task.sleep(nanoseconds: 90_000_000)
+            }
+        }
     }
 
     private func transcribe(_ url: URL, with recognizer: SFSpeechRecognizer) {
@@ -129,6 +151,7 @@ final class MapHomeDictation {
                 TaptionPlanDiagnosticsLogger.shared.record("voice_memo_transcribe_finished", fields: ["has_text": String((text ?? "").isEmpty == false)])
                 self.transcript = text ?? ""
                 self.isTranscribing = false
+                if let text, !text.isEmpty { self.onTranscribed?(text) }
             }
         })
     }
@@ -358,5 +381,51 @@ struct MapHomeRecordingOptionsSheet: View {
         Toggle(title, isOn: isOn)
             .font(.system(size: 15, weight: .semibold, design: .rounded))
             .tint(Color.tpAccent)
+    }
+}
+
+/// 메모 입력 칸(UITextView). 녹음 중에는 소프트 키보드 대신 높이 0짜리 입력뷰를 써서 커서만 남긴다.
+struct MapHomeMemoTextView: UIViewRepresentable {
+    @Binding var text: String
+    var suppressesKeyboard: Bool
+    /// 값이 바뀌면 입력칸에 포커스를 준다(녹음 버튼을 누르면 자동으로 커서가 간다).
+    var focusToken: Int
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    func makeUIView(context: Context) -> UITextView {
+        let view = UITextView()
+        view.delegate = context.coordinator
+        view.backgroundColor = .clear
+        view.font = .systemFont(ofSize: 17)
+        view.textContainerInset = .zero
+        view.textContainer.lineFragmentPadding = 0
+        view.isScrollEnabled = false
+        return view
+    }
+
+    func updateUIView(_ view: UITextView, context: Context) {
+        if view.text != text { view.text = text }
+        if context.coordinator.suppresses != suppressesKeyboard {
+            context.coordinator.suppresses = suppressesKeyboard
+            view.inputView = suppressesKeyboard ? UIView(frame: .zero) : nil
+            if view.isFirstResponder { view.reloadInputViews() }
+        }
+        if context.coordinator.focusToken != focusToken {
+            context.coordinator.focusToken = focusToken
+            view.becomeFirstResponder()
+        }
+    }
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: MapHomeMemoTextView
+        var suppresses = false
+        var focusToken = 0
+
+        init(parent: MapHomeMemoTextView) { self.parent = parent }
+
+        func textViewDidChange(_ view: UITextView) {
+            parent.text = view.text
+        }
     }
 }

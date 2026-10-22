@@ -16744,6 +16744,7 @@ private struct MapHomeStickerEditorSheet: View {
     @State private var didSave = false
     @State private var dictation = MapHomeDictation()
     @State private var dictationBase = ""
+    @State private var memoFocusToken = 0
 
     private let symbols = [
         "star.fill", "heart.fill", "flag.fill", "pin.fill",
@@ -16866,6 +16867,17 @@ Group {
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                 }
             }
+            if dictation.isListening {
+                HStack(alignment: .center, spacing: 3) {
+                    ForEach(0..<16, id: \.self) { index in
+                        Capsule()
+                            .fill(Color.tpHoliday)
+                            .frame(width: 3, height: 4 + 26 * dictation.level * (0.45 + 0.55 * abs(sin(Double(index) * 1.7))))
+                    }
+                }
+                .frame(height: 30)
+                .animation(.easeOut(duration: 0.1), value: dictation.level)
+            }
             Button {
                 toggleDictation()
             } label: {
@@ -16911,17 +16923,19 @@ Group {
 
     /// 메모 입력칸과 마이크 버튼. 마이크를 누르면 말한 내용이 메모 끝에 글자로 이어진다.
     private func memoInputField(prompt: Text?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Group {
-                if let prompt {
-                    TextField(language.text("메모 내용", "Memo text"), text: $memoText, prompt: prompt, axis: .vertical)
-                } else {
-                    TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
-                }
+        ZStack(alignment: .topLeading) {
+            if memoText.isEmpty {
+                (prompt ?? Text(language.text("메모 내용", "Memo text")))
+                    .font(.system(size: 17))
+                    .foregroundStyle(Color.tpSecondary)
+                    .allowsHitTesting(false)
             }
-        }
-        .onChange(of: dictation.transcript) { _, text in
-            if dictation.isListening || !text.isEmpty { memoText = dictationBase + text }
+            MapHomeMemoTextView(
+                text: $memoText,
+                suppressesKeyboard: dictation.isListening || dictation.isTranscribing,
+                focusToken: memoFocusToken
+            )
+            .frame(minHeight: 120)
         }
         .onDisappear { dictation.stop() }
     }
@@ -16931,6 +16945,11 @@ Group {
             dictation.stop()
         } else {
             dictationBase = memoText.isEmpty ? "" : memoText + " "
+            // 녹음을 누르면 입력칸에 커서를 두고, 글자 변환이 끝나면 그 글자를 메모에 붙인다.
+            memoFocusToken += 1
+            dictation.onTranscribed = { text in
+                memoText = dictationBase + text
+            }
             let identifier = language == .korean ? "ko-KR" : "en-US"
             // 녹음 파일은 이 메모의 오디오 첨부로 남긴다.
             let memoID: UUID? = {
