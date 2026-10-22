@@ -17417,8 +17417,8 @@ Group {
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             hasTime = memo.isTimeless != true
-            // 시간이 있는 메모는 스티커로 기본 표시한다.
-            showsAsSticker = hasTime
+            // 시간이 있는 메모는 메모로 저장하고 사이드바에 메모 아이콘으로 보인다(스티커 변환은 토글로 고른다).
+            showsAsSticker = false
             placement = .schedule
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
