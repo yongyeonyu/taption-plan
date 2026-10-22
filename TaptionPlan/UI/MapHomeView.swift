@@ -3127,7 +3127,7 @@ struct MapHomeView: View {
                 routeLongPress(.location)
             } label: {
                 Label(
-                    language.text("위치 메모 추가", "Add location memo"),
+                    language.text("위치 추가", "Add location"),
                     systemImage: "mappin.and.ellipse"
                 )
             }
@@ -3135,7 +3135,7 @@ struct MapHomeView: View {
                 routeLongPress(.memo)
             } label: {
                 Label(
-                    language.text("지도 메모 추가", "Add map memo"),
+                    language.text("위치 메모 추가", "Add location memo"),
                     systemImage: "note.text.badge.plus"
                 )
             }
