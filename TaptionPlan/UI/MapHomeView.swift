@@ -3109,10 +3109,29 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         // 지도 메모·일정 메모를 나누지 않고 "메모" 하나로 연다. 위치·시간은 편집 화면에서 더한다.
-        .onChange(of: isMemoAddMenuPresented) { _, presented in
-            guard presented else { return }
-            isMemoAddMenuPresented = false
-            addMemo()
+        // 메모 추가 메뉴: 메모 추가 / 일정 메모(사이드바) / 지도 메모(위치 고르기).
+        .confirmationDialog(
+            language.text("메모 추가", "Add memo"),
+            isPresented: $isMemoAddMenuPresented,
+            titleVisibility: .visible
+        ) {
+            Button {
+                addMemo()
+            } label: {
+                Label(language.text("메모 추가", "Add memo"), systemImage: "note.text.badge.plus")
+            }
+            Button {
+                addScheduleSticker()
+            } label: {
+                Label(language.text("일정 메모 (사이드바)", "Schedule memo (sidebar)"), systemImage: "calendar.badge.plus")
+            }
+            Button {
+                isMenuOpen = false
+                isPlacingMapMemo = true
+            } label: {
+                Label(language.text("지도 메모 (위치 고르기)", "Map memo (pick location)"), systemImage: "mappin.and.ellipse")
+            }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
         }
         .confirmationDialog(
             language.text("지도에 추가", "Add to map"),
@@ -3120,10 +3139,18 @@ struct MapHomeView: View {
             titleVisibility: .visible
         ) {
             Button {
+                routeLongPress(.location)
+            } label: {
+                Label(
+                    language.text("위치 메모 추가", "Add location memo"),
+                    systemImage: "mappin.and.ellipse"
+                )
+            }
+            Button {
                 routeLongPress(.memo)
             } label: {
                 Label(
-                    language.text("메모 추가", "Add memo"),
+                    language.text("지도 메모 추가", "Add map memo"),
                     systemImage: "note.text.badge.plus"
                 )
             }
