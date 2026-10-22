@@ -2338,9 +2338,9 @@ struct MapHomeView: View {
     @State private var photoAlbumSelection: MapHomePhotoAlbumSelection?
     private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
-    @State private var isRecordedVideoSharePresented = false
+    @State private var recordedVideoShare: URL?
     @State private var recordingFailureMessage: String?
-    @State private var recordedVideoURL: URL?
+
     @State private var screenRecorder = MapHomeScreenRecorder()
     @AppStorage(MapHomeGrowthPolicy.storageKey)
     private var homeGrowthData = Data()
@@ -2847,11 +2847,10 @@ struct MapHomeView: View {
         } message: {
             Text(recordingFailureMessage ?? "")
         }
-        .sheet(isPresented: $isRecordedVideoSharePresented) {
-            if let recordedVideoURL {
-                MapHomeShareSheet(url: recordedVideoURL)
-                    .presentationDetents([.medium, .large])
-            }
+        // 공유 시트는 파일 주소가 정해진 뒤에만 연다(주소 없이 열리면 빈 화면이 나온다).
+        .sheet(item: $recordedVideoShare) { url in
+            MapHomeShareSheet(url: url)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -7027,8 +7026,9 @@ struct MapHomeView: View {
             guard let url else { return }
             let saved = await MapHomeScreenRecordingStore.saveToPhotos(url)
             TaptionPlanDiagnosticsLogger.shared.record("screen_recording_saved", fields: ["saved": saved ? "true" : "false"])
-            recordedVideoURL = url
-            isRecordedVideoSharePresented = true
+            // 녹화 화면을 닫는 애니메이션이 끝난 뒤 공유 시트를 연다.
+            try? await Task.sleep(for: .milliseconds(400))
+            recordedVideoShare = url
         }
     }
 
