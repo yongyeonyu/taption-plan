@@ -15613,7 +15613,9 @@ private struct MapHomePlacePin: View {
                     .accessibilityHidden(!isGrowthCalloutVisible)
                 Group {
                     if showsCatAtHome {
+                        // 홈 화면 화랑이도 1.5배. 핀 끝을 기준으로 키운다.
                         homeCatMarker(level: growthLevel)
+                            .scaleEffect(1.5, anchor: .bottom)
                     } else {
                         homeMarkerArtwork(level: growthLevel)
                     }

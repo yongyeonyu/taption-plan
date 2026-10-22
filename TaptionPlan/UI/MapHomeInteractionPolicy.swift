@@ -381,7 +381,7 @@ enum MapHomeCatTapRouting {
     static let homeSummaryLabelSize = CGSize(width: 64, height: 30)
 
     static func homeLevelLabelCenter(pinPoint: CGPoint, showsCatAtHome: Bool) -> CGPoint {
-        let iconHalfHeight: CGFloat = showsCatAtHome ? 39 : 24
+        let iconHalfHeight: CGFloat = showsCatAtHome ? 58 : 24
         return CGPoint(
             x: pinPoint.x + homeImageCenterOffset.x,
             y: pinPoint.y + homeImageCenterOffset.y + iconHalfHeight + 5 + 11
