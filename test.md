@@ -2305,3 +2305,8 @@
 - CURRENT_PROJECT_VERSION 217(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022K01/). IPA 앱·위젯 CFBundleVersion 217 확인.
 - ASC 217 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 217, 테스터 1명.
 - 한계: 하루 카드 충돌 수정은 아이폰18 UI 테스트로만 확인. 실제 기기에서 사진 저장·공유 후 확인 필요.
+
+## REL1022S01 · Build 218 TestFlight (2026-10-22)
+- CURRENT_PROJECT_VERSION 218(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022S01/). IPA 앱·위젯 CFBundleVersion 218 확인.
+- ASC 218 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 218, 테스터 1명.
+- 한계: 메모 큐·공유 카드 항목 선택·알람 확인 등은 기기 확인 전.

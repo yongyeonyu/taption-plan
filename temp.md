@@ -1366,3 +1366,4 @@
 - 범위: CURRENT_PROJECT_VERSION 217→218(8곳·Info.plist 4개), 아카이브·내보내기·업로드, VALID, 내부 테스트 그룹 연결·확인.
 - 포함: 217 이후 — 메모 기본값·큐·통합 메모 추가, 공유 카드 항목 선택, 전체 리뷰 수정(REV1022Q01~R01).
 - 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 218.
+- 완료: 218 업로드·VALID·그룹 연결, test.md 기록.
