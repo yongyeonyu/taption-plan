@@ -16624,12 +16624,35 @@ private struct MapHomeMapMemoMarker: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.tpReferenceGold.opacity(0.72), lineWidth: 1)
         }
+        // 말풍선 꼬리: 아래 가운데 끝이 선택한 위치(핀 끝)에 닿는다.
+        .padding(.bottom, 7)
+        .overlay(alignment: .bottom) {
+            MapHomeBubbleTail()
+                .fill(Color.tpPastelButter.opacity(0.94))
+                .overlay {
+                    MapHomeBubbleTail()
+                        .stroke(Color.tpReferenceGold.opacity(0.72), lineWidth: 1)
+                }
+                .frame(width: 14, height: 8)
+        }
         .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
         .fixedSize()
         .frame(
             minWidth: TaptionMenuMetrics.minimumHitSize,
             minHeight: TaptionMenuMetrics.minimumHitSize
         )
+    }
+}
+
+/// 말풍선 꼬리(아래를 가리키는 삼각형).
+private struct MapHomeBubbleTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }
 
