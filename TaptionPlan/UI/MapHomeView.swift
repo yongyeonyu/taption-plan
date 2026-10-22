@@ -2523,7 +2523,8 @@ struct MapHomeView: View {
 
     private enum Layout {
         static let horizontalInset: CGFloat = 10
-        static let dateBadgeSize: CGFloat = 56
+        /// 상단 한 줄의 공통 높이(메모·일정 원형 버튼, 날짜 줄, 날짜 배지).
+        static let dateBadgeSize: CGFloat = 40
         static let headerVisibleHeight: CGFloat = 46
         static let headerHitTarget: CGFloat = 44
         static let headerIcon: CGFloat = 19
@@ -2827,7 +2828,7 @@ struct MapHomeView: View {
             if !isScreenRecording {
                 dateBadge
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.top, Layout.horizontalInset)
+                    .padding(.top, 12)
                     .padding(.trailing, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
             }
@@ -6436,10 +6437,10 @@ struct MapHomeView: View {
         )
         let badge = VStack(spacing: 0) {
             Text(weekdayText)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
                 .foregroundStyle(color)
             Text(String(calendar.component(.day, from: model.selectedDate)))
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .monospacedDigit()
         }
