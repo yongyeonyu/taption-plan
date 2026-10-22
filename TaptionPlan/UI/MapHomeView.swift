@@ -2892,8 +2892,8 @@ struct MapHomeView: View {
     private func presentationModifiers(_ content: some View) -> some View {
         content
         .sheet(item: $selectedMarkerInfo) { info in
-            MapHomeMarkerInfoSheet(kind: info, language: language)
-                .presentationDetents([.height(320), .medium])
+            MapHomeMarkerInfoSheet(kind: info, language: language, model: model)
+                .presentationDetents([.height(320), .medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDaySummaryPresented) {
@@ -2914,7 +2914,9 @@ struct MapHomeView: View {
                     pendingWeeklyRewards: homeGrowthHistory.season.pendingWeeklyRewards
                 ),
                 salary: salaryLive,
-                memoCounts: dayMemoCounts
+                memoCounts: dayMemoCounts,
+                model: model,
+                homePlaceID: model.settings.frequentPlaces.first { $0.kind == .home }?.id
             )
             .presentationDragIndicator(.visible)
         }
@@ -19465,9 +19467,69 @@ enum MapHomeMarkerInfoKind: Identifiable, Hashable {
     }
 }
 
+/// 등록지점의 범위를 지도 위 원으로 보여 주고 슬라이더로 바꾼다. 저장하면 그 지점의 반경이 바뀐다.
+struct MapHomePlaceRangeEditor: View {
+    let model: AppModel
+    let placeID: UUID
+    let language: MapHomeLanguage
+    @State private var radiusMeters: Double = 120
+
+    private var place: FrequentPlace? {
+        model.settings.frequentPlaces.first { $0.id == placeID }
+    }
+
+    var body: some View {
+        if let place, let point = place.point {
+            let center = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(language.text("범위 지정", "Range"))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                Map(
+                    initialPosition: .region(MKCoordinateRegion(
+                        center: center,
+                        latitudinalMeters: max(radiusMeters * 3, 200),
+                        longitudinalMeters: max(radiusMeters * 3, 200)
+                    )),
+                    interactionModes: []
+                ) {
+                    MapCircle(center: center, radius: radiusMeters)
+                        .foregroundStyle(Color.tpAccent.opacity(0.22))
+                        .stroke(Color.tpAccent, lineWidth: 2)
+                }
+                .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                HStack {
+                    Text(language.text("반경", "Radius"))
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Text("\(Int(radiusMeters.rounded()))m")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                }
+                Slider(value: $radiusMeters, in: 30...500, step: 10)
+                    .tint(Color.tpAccent)
+                Button(language.text("범위 저장", "Save range")) {
+                    model.updateFrequentPlaceDetails(
+                        place.id,
+                        name: place.name,
+                        radiusMeters: radiusMeters,
+                        minimumDwellMinutes: place.minimumDwellMinutes,
+                        isAutomaticRecordingEnabled: place.isAutomaticRecordingEnabled
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.tpAccent)
+                .frame(maxWidth: .infinity)
+            }
+            .onAppear { radiusMeters = place.radiusMeters }
+        }
+    }
+}
+
 struct MapHomeMarkerInfoSheet: View {
     let kind: MapHomeMarkerInfoKind
     let language: MapHomeLanguage
+    /// 등록지점(집·회사 등)이면 여기서 범위(반경)를 지도 원으로 고칠 수 있다.
+    var model: AppModel? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -19575,6 +19637,9 @@ struct MapHomeDaySummarySheet: View {
     var growthCard: MapHomeGrowthCardInfo? = nil
     var salary: MapHomeSalaryPolicy.Live? = nil
     var memoCounts: (total: Int, map: Int) = (0, 0)
+    /// 집 범위를 이 화면에서 바꿀 수 있도록 모델과 집 장소 id를 받는다.
+    var model: AppModel? = nil
+    var homePlaceID: UUID? = nil
     @State private var isGrowthPresented = false
     @State private var contentHeight: CGFloat = 0
     private static let bottomPadding: CGFloat = 40
@@ -19722,6 +19787,10 @@ struct MapHomeDaySummarySheet: View {
 
             if let salary {
                 salaryCardView(salary)
+            }
+
+            if let model, let homePlaceID {
+                MapHomePlaceRangeEditor(model: model, placeID: homePlaceID, language: language)
             }
 
             if memoCounts.total > 0 {
