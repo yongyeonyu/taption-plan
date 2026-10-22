@@ -13863,7 +13863,7 @@ private struct MapHomeSectionEditSheet: View {
                     }
                 }
                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+                .foregroundStyle(adaptiveLabelColor(on: piece.category.tint))
             }
         }
         .frame(width: width, height: blockHeight)
@@ -21324,4 +21324,12 @@ private struct AlarmConfirmItem: Identifiable {
     let kind: MapHomeAlarmKind
     let at: Date
     var id: String { "\(kind.rawValue)-\(at.timeIntervalSince1970)" }
+}
+
+/// 배경이 밝으면 진한 회색, 어두우면 흰색 글자를 고른다.
+func adaptiveLabelColor(on background: Color) -> Color {
+    var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+    UIColor(background).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+    let luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+    return luminance > 0.6 ? Color(white: 0.25) : .white
 }
