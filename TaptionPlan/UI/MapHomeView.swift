@@ -13166,6 +13166,8 @@ private struct MapHomeSectionEditSheet: View {
     @State private var viewport: MapHomeSectionViewportState
     @State private var magnifyOrigin: MapHomeSectionViewportState?
     @State private var panOrigin: MapHomeSectionViewportState?
+    /// 손잡이를 끄는 중인지. 끄는 동안에는 세로 스크롤이 함께 움직이지 않는다.
+    @State private var isHandleDragging = false
     /// 누른 상세 활동. 테두리를 진하게 표시한다.
     @State private var selectedDetailID: UUID?
     @State private var lastMagnifyPublishUptime: TimeInterval = 0
@@ -13930,6 +13932,7 @@ private struct MapHomeSectionEditSheet: View {
     ) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                isHandleDragging = true
                 updateBoundary(
                     translation: value.translation.height,
                     isStart: isStart,
@@ -13944,6 +13947,7 @@ private struct MapHomeSectionEditSheet: View {
                     trackHeight: trackHeight,
                     isFinal: true
                 )
+                isHandleDragging = false
                 dragBaseMinute = nil
                 lastDragPublishUptime = 0
             }
@@ -14005,7 +14009,8 @@ private struct MapHomeSectionEditSheet: View {
     private func sectionPanGesture(height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 12)
             .onChanged { value in
-                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                guard !isHandleDragging,
+                      abs(value.translation.height) > abs(value.translation.width) else { return }
                 if panOrigin == nil { panOrigin = viewport }
                 guard let panOrigin else { return }
                 let minutesPerPoint = CGFloat(panOrigin.durationMinutes) / max(height, 1)
