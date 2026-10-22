@@ -9950,7 +9950,8 @@ struct MapHomeView: View {
             minute: minute,
             activity: currentActivity(at: minute),
             segment: segment,
-            details: sectionDetails(at: minute)
+            details: sectionDetails(at: minute),
+            daySegments: timeRailSegments
         )
     }
 
@@ -12790,6 +12791,8 @@ private struct MapHomeSectionEditSelection: Identifiable {
     let activity: MapHomeTimeSidebarActivity
     let segment: MapHomeTimeRailSegment
     let details: [MapHomeSectionDetail]
+    /// 같은 날의 다른 구간. 편집 화면에서 흐리게 함께 보여 준다.
+    var daySegments: [MapHomeTimeRailSegment] = []
 
 }
 
@@ -13191,6 +13194,7 @@ private struct MapHomeSectionEditSheet: View {
     @State private var lastDragPublishUptime: TimeInterval = 0
     @State private var viewport: MapHomeSectionViewportState
     @State private var magnifyOrigin: MapHomeSectionViewportState?
+    @State private var panOrigin: MapHomeSectionViewportState?
     @State private var lastMagnifyPublishUptime: TimeInterval = 0
     @State private var cutMinute: Int?
     @State private var cutDragBaseMinute: Int?
@@ -13440,6 +13444,7 @@ private struct MapHomeSectionEditSheet: View {
                         .fill(Color.tpSurface)
 
                     timelineGrid(height: trackHeight)
+                    otherDaySegmentsLayer(height: trackHeight)
                     dimOutsideSelection(height: trackHeight)
 
                     ForEach(selection.details) { detail in
@@ -13463,6 +13468,7 @@ private struct MapHomeSectionEditSheet: View {
                         .stroke(Color.tpLine.opacity(0.7), lineWidth: 1)
                 }
                 .simultaneousGesture(sectionMagnifyGesture(height: trackHeight))
+                .simultaneousGesture(sectionPanGesture(height: trackHeight))
             }
         }
         .padding(.horizontal, 16)
@@ -13998,6 +14004,44 @@ private struct MapHomeSectionEditSheet: View {
         } else if endMinute != minute {
             endMinute = minute
         }
+    }
+
+    /// 같은 날의 다른 구간을 구간 색으로 흐리게 그린다(선택한 구간이 아니면 흐리게).
+    private func otherDaySegmentsLayer(height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(selection.daySegments.filter { $0.id != selection.segment.id }) { segment in
+                let top = min(max(yPosition(segment.startMinute, height: height), 0), height)
+                let bottom = min(max(yPosition(segment.endMinute, height: height), 0), height)
+                let tint = categories.first { $0.id == segment.categoryID }?.tint ?? Color.gray
+                Rectangle()
+                    .fill(tint.opacity(0.22))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: max(0, bottom - top))
+                    .offset(y: top)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// 세로로 끌면 보이는 시간 범위를 옮긴다(확대된 상태에서 위아래로 스크롤).
+    private func sectionPanGesture(height: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard abs(value.translation.height) > abs(value.translation.width) else { return }
+                if panOrigin == nil { panOrigin = viewport }
+                guard let panOrigin else { return }
+                let minutesPerPoint = CGFloat(panOrigin.durationMinutes) / max(height, 1)
+                let shift = Int((-value.translation.height * minutesPerPoint).rounded())
+                let maxStart = 1_440 - panOrigin.durationMinutes
+                let next = MapHomeSectionViewportState(
+                    startMinute: min(max(panOrigin.startMinute + shift, 0), maxStart),
+                    durationMinutes: panOrigin.durationMinutes
+                )
+                if viewport != next { viewport = next }
+            }
+            .onEnded { _ in
+                panOrigin = nil
+            }
     }
 
     private func sectionMagnifyGesture(
