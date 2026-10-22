@@ -8121,7 +8121,7 @@ struct MapHomeView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 8)
 
             if !sensorCollectionPermissionGate.sensorCollectionReady {
                 sensorPermissionCard
