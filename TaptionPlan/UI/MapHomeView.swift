@@ -5319,6 +5319,8 @@ struct MapHomeView: View {
                     speedMetersPerSecond: displayedSpeed,
                     equippedAccessoryID: homeGrowthHistory.season.equippedAccessory
                     )
+                    // 지도 위 화랑이는 1.5배로 보이게 한다.
+                    .scaleEffect(1.5)
                     .position(
                         x: point.x
                             + MapHomeStickmanAnnotationLayout.centerOffset.x,
