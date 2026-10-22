@@ -321,6 +321,14 @@ struct AppShellView: View {
         }
     }
 
+    /// 스플래시에 보일 지금 단계. 전체 데이터 → 오늘 경로 순서로 바뀐다.
+    private var launchStatusText: String {
+        if !model.isBootstrapped {
+            return AppLanguagePreference.text(korean: "데이터 불러오는 중…", english: "Loading data…", rawPreference: languageRawValue)
+        }
+        return AppLanguagePreference.text(korean: "경로 불러오는 중…", english: "Loading routes…", rawPreference: languageRawValue)
+    }
+
     @ViewBuilder
     private var initialLaunchOverlay: some View {
         if isInitialLaunchOverlayVisible {
@@ -353,6 +361,9 @@ struct AppShellView: View {
                         )
                     Text("\(Int((initialLaunchProgress * 100).rounded()))%")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    Text(launchStatusText)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.85))
                         .foregroundStyle(.white.opacity(0.82))
                 }
             }
