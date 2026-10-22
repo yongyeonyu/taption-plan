@@ -16734,6 +16734,7 @@ private struct MapHomeStickerEditorSheet: View {
     @State private var title = ""
     @State private var memoText = ""
     @State private var hasTime = false
+    @State private var showsAsSticker = false
     @State private var keepsDraft = false
     @State private var memoKind: MemoKind = .idea
     @State private var placement: MapStickerPlacement = .map
@@ -16973,6 +16974,14 @@ Group {
             memoInputField(prompt: Text(language.text("새 메모", "New memo")))
         }
         Section {
+            Toggle(language.text("스티커로 표시", "Show as sticker"), isOn: $showsAsSticker)
+        } footer: {
+            Text(language.text(
+                "켜고 저장하면 이 메모가 일정 스티커가 되어 사이드바에 보여요. 시간을 지정했으면 그 시간에, 아니면 지금 시간에 나타나요.",
+                "Saved as a schedule sticker shown in the sidebar: at its set time, or now if no time is set."
+            ))
+        }
+        Section {
             Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
             if hasTime {
                 DatePicker(
@@ -17148,6 +17157,25 @@ Group {
                 occurredAt: occurredAt
             ) else { return }
         case .memo(let id), .newMemo(let id):
+            if showsAsSticker {
+                // 스티커로 저장하면 메모 자리는 일정 스티커가 차지한다. 시간이 없으면 지금 시간에 둔다.
+                let text = memoText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty, model.addMapSticker(
+                    title: text,
+                    placement: .schedule,
+                    point: nil,
+                    planID: nil,
+                    occurredAt: hasTime ? occurredAt : .now
+                ) != nil else { return }
+                if case .newMemo = target {
+                    model.discardMapMemoDraft(id)
+                } else {
+                    model.deleteMemo(id)
+                }
+                didSave = true
+                dismiss()
+                return
+            }
             guard model.updateMapMemo(
                 id,
                 text: memoText,

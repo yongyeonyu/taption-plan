@@ -2410,3 +2410,6 @@
 
 ## MMT1022AC01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## STK1022AD01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
