@@ -2335,6 +2335,9 @@ struct MapHomeView: View {
     @State private var dayCalendarEvents: [CalendarRecord] = []
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
+    /// 날짜 줄을 끄는 중 손가락을 따라 움직이는 거리와 이미 넘긴 칸 수.
+    @State private var weekDragOffset: CGFloat = 0
+    @State private var weekDragStepsApplied = 0
     /// 시작 시간 제한이 지났는지(DB나 경로가 끝나지 않아도 홈을 연다).
     @State private var initialReadyForced = false
     @State private var calendarService = AppleCalendarService()
@@ -6483,7 +6486,7 @@ struct MapHomeView: View {
                             .foregroundStyle(Color.tpInk)
                             .monospacedDigit()
                     }
-                    .frame(width: 34, height: Layout.dateBadgeSize)
+                    .frame(width: 34, height: MapHomeWeekStripMath.height - 8)
                     .background {
                         if isSelected {
                             RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.tpReferenceBlue.opacity(0.22))
@@ -6494,20 +6497,32 @@ struct MapHomeView: View {
             }
         }
         .padding(.horizontal, 6)
+        .frame(height: MapHomeWeekStripMath.height)
+        .offset(x: weekDragOffset)
         .simultaneousGesture(weekSwipeGesture(calendar: calendar))
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .transition(.move(edge: .trailing).combined(with: .opacity))
     }
 
-    /// 펼쳐진 날짜 줄을 좌우로 밀면 하루씩 넘긴다. 줄은 펼친 채로 둔다.
+    /// 펼쳐진 날짜 줄을 손가락에 붙여 좌우로 민다. 한 칸을 넘을 때마다 하루씩 바뀌고, 줄은 손가락을 따라 움직인다.
     private func weekSwipeGesture(calendar: Calendar) -> some Gesture {
-        DragGesture(minimumDistance: 24)
-            .onEnded { value in
-                guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
-                let step = value.translation.width < 0 ? 1 : -1
-                guard let next = calendar.date(byAdding: .day, value: step, to: model.selectedDate) else { return }
-                shouldFitRoutesAfterDateChange = true
-                model.selectedDate = next
+        DragGesture(minimumDistance: 10)
+            .onChanged { value in
+                let dx = value.translation.width
+                guard abs(dx) > abs(value.translation.height) * 1.5 || weekDragStepsApplied != 0 else { return }
+                let pitch = MapHomeWeekStripMath.dayPitch
+                let steps = Int((dx / pitch).rounded(.towardZero))
+                let delta = steps - weekDragStepsApplied
+                if delta != 0, let next = calendar.date(byAdding: .day, value: -delta, to: model.selectedDate) {
+                    shouldFitRoutesAfterDateChange = true
+                    model.selectedDate = next
+                    weekDragStepsApplied = steps
+                }
+                weekDragOffset = dx - CGFloat(steps) * pitch
+            }
+            .onEnded { _ in
+                weekDragStepsApplied = 0
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { weekDragOffset = 0 }
             }
     }
 
@@ -21460,4 +21475,11 @@ func adaptiveLabelColor(on background: Color) -> Color {
     UIColor(background).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
     let luminance = 0.299 * red + 0.587 * green + 0.114 * blue
     return luminance > 0.6 ? Color(white: 0.25) : .white
+}
+
+enum MapHomeWeekStripMath {
+    /// 날짜 한 칸의 너비(칸 34pt + 간격 4pt).
+    static let dayPitch: CGFloat = 38
+    /// 날짜 줄 높이. 양옆 원형 버튼과 같은 높이(40pt).
+    static let height: CGFloat = 40
 }
