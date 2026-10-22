@@ -2528,3 +2528,6 @@
 
 ## REL1022T07 결과
 - archive 성공, 앱·위젯 CFBundleVersion 227. export·업로드 성공. App Store Connect 처리 후 내부 그룹 연결.
+
+## SEC1022BC01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

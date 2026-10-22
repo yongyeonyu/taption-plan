@@ -19,6 +19,8 @@ struct AppShellView: View {
     @State private var isSecurityStateReady = false
     @State private var hasCompletedInitialProRefresh = false
     @State private var hasCompletedInitialMapShellPreparation = false
+    /// 전체 로딩이 너무 오래 걸리면 시간 제한 후 홈을 연다.
+    @State private var launchTimeoutPassed = false
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
     @State private var initialLaunchProgressValue = 0.0
@@ -252,7 +254,7 @@ struct AppShellView: View {
             hasRenderedInitialDestination: hasRenderedInitialDestination,
             hasCompletedInitialMapShellPreparation:
                 hasCompletedInitialMapShellPreparation,
-            isBootstrapped: model.isBootstrapped || model.hasPreparedStartupSettings,
+            isBootstrapped: model.isBootstrapped || launchTimeoutPassed,
             grantsAccess: proAccess.grantsAccess
         )
     }
@@ -474,6 +476,11 @@ struct AppShellView: View {
     private func performInitialLaunchPreparation() async {
         initialLaunchStartedAt = ProcessInfo.processInfo.systemUptime
         TaptionPlanDiagnosticsLogger.shared.record("initial_launch_started")
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 15_000_000_000)
+            launchTimeoutPassed = true
+            dismissInitialLaunchOverlayIfReady()
+        }
         startInitialLaunchProgressTicker()
         advanceInitialLaunchProgress(to: 0.04)
         await proAccess.refreshAccess()

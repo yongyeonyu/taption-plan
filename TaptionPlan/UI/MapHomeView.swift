@@ -2335,6 +2335,8 @@ struct MapHomeView: View {
     @State private var dayCalendarEvents: [CalendarRecord] = []
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
+    /// 시작 시간 제한이 지났는지(DB나 경로가 끝나지 않아도 홈을 연다).
+    @State private var initialReadyForced = false
     @State private var calendarService = AppleCalendarService()
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
@@ -2860,6 +2862,12 @@ struct MapHomeView: View {
         }
         .task(id: model.selectedDate) { await loadPhotoMoments() }
         .task(id: model.selectedDate) { await loadDayCalendarEvents() }
+        .task {
+            // 로딩이 너무 오래 걸리면 시간 제한 후 홈을 연다(무한 로딩 방지).
+            try? await Task.sleep(nanoseconds: 15_000_000_000)
+            initialReadyForced = true
+            reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
+        }
         .onAppear { refreshTimedMemoCache() }
         .onChange(of: model.selectedDate) { _, _ in refreshTimedMemoCache() }
         .onChange(of: model.snapshot.memos) { _, _ in refreshTimedMemoCache() }
@@ -4059,6 +4067,7 @@ struct MapHomeView: View {
         if currentDayDataSnapshot == nil {
             dayDataSnapshot = prepared
             dayDataIsPreview = !prepared.isComplete
+            reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         }
         routeActualIndex = nil
         refreshHomeGrowth(at: .now)
@@ -9992,7 +10001,8 @@ struct MapHomeView: View {
             activity: currentActivity(at: minute),
             segment: segment,
             details: sectionDetails(at: minute),
-            daySegments: timeRailSegments
+            daySegments: timeRailSegments,
+            dayDetails: allDaySectionDetails()
         )
     }
 
@@ -10985,6 +10995,29 @@ struct MapHomeView: View {
         return TimeSpan(start: start, end: end)
     }
 
+    /// 하루 전체의 상세 활동(모든 구간의 세부 활동을 합친다).
+    private func allDaySectionDetails() -> [MapHomeSectionDetail] {
+        var seen = Set<UUID>()
+        var result: [MapHomeSectionDetail] = []
+        for segment in timeRailSegments {
+            let calendar = Calendar.autoupdatingCurrent
+            let dayStart = calendar.startOfDay(for: model.selectedDate)
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
+            let dayData = currentDayDataSnapshot
+            for detail in MapHomeSectionDetailEngine.details(
+                actuals: dayData?.actuals ?? [],
+                travel: dayData?.travel ?? [],
+                segment: segment,
+                dayStart: dayStart,
+                dayEnd: dayEnd,
+                asOf: .now
+            ) where seen.insert(detail.id).inserted {
+                result.append(detail)
+            }
+        }
+        return result
+    }
+
     private func sectionDetails(at minute: Int) -> [MapHomeSectionDetail] {
         let calendar = Calendar.autoupdatingCurrent
         let dayData = currentDayDataSnapshot
@@ -11102,6 +11135,7 @@ struct MapHomeView: View {
             fields: snapshotFields
         )
         dayDataSnapshot = dayData
+        reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         routeActualIndex = nil
         dayDataIsPreview = showsCachedPreview
         let merged = MapHomeRouteReadingsPolicy.merging(
@@ -11501,8 +11535,9 @@ struct MapHomeView: View {
     }
 
     private func reportInitialMapShellReadyIfNeeded(for date: Date) {
+        // 홈은 전체 DB 로드와 오늘 경로(하루 데이터)가 준비된 뒤에 띄운다. 너무 오래 걸리면 시간 제한으로 연다.
         guard !hasReportedInitialDataReady,
-              model.isBootstrapped || model.hasPreparedStartupSettings,
+              (model.isBootstrapped && dayDataSnapshot != nil) || initialReadyForced,
               Calendar.autoupdatingCurrent.isDate(
                   date,
                   inSameDayAs: model.selectedDate
@@ -12851,6 +12886,8 @@ private struct MapHomeSectionEditSelection: Identifiable {
     let details: [MapHomeSectionDetail]
     /// 같은 날의 다른 구간. 편집 화면에서 흐리게 함께 보여 준다.
     var daySegments: [MapHomeTimeRailSegment] = []
+    /// 하루 전체의 상세 활동. 선택한 구간 밖의 활동도 흐리게 보여 준다.
+    var dayDetails: [MapHomeSectionDetail] = []
 
 }
 
@@ -13518,6 +13555,7 @@ private struct MapHomeSectionEditSheet: View {
 
                     timelineGrid(height: trackHeight)
                     otherDaySegmentsLayer(height: trackHeight)
+                    otherDayDetailsLayer(height: trackHeight)
                     dimOutsideSelection(height: trackHeight)
 
                     ForEach(selection.details) { detail in
@@ -14084,6 +14122,27 @@ private struct MapHomeSectionEditSheet: View {
         } else if endMinute != minute {
             endMinute = minute
         }
+    }
+
+    /// 선택한 구간 밖의 상세 활동을 흐리게 그린다. 선택한 구간의 상세 활동은 아래 층에서 진하게 그린다.
+    private func otherDayDetailsLayer(height: CGFloat) -> some View {
+        let selectedIDs = Set(selection.details.map(\.id))
+        return ZStack(alignment: .topLeading) {
+            ForEach(selection.dayDetails.filter { !selectedIDs.contains($0.id) }) { detail in
+                let top = min(max(yPosition(detail.startMinute, height: height), 0), height)
+                let bottom = min(max(yPosition(detail.endMinute, height: height), 0), height)
+                let tint = MapHomeSidebarMajorCategory.presentation(
+                    for: detail.categoryID,
+                    categoryColors: model.settings.mapCategoryColors
+                ).tint
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(tint.opacity(0.22))
+                    .frame(height: max(4, bottom - top))
+                    .padding(.horizontal, 22)
+                    .offset(y: top)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     /// 같은 날의 다른 구간을 구간 색으로 흐리게 그린다(선택한 구간이 아니면 흐리게).
