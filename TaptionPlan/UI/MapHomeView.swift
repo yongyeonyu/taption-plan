@@ -3539,7 +3539,7 @@ struct MapHomeView: View {
     }
 
     /// 선택한 날의 시간이 있는 메모(지도 핀이 아닌 것). 사이드바에 메모 아이콘으로 기본 표시한다.
-    private var timedMemosForSelectedDate: [ActionMemo] { timedMemoCache }
+    private var timedMemosForSelectedDate: [ActionMemo] { memoDisplayMode == .hidden ? [] : timedMemoCache }
 
     /// 선택한 날의 시간 메모 목록을 한 번만 계산해 둔다(배지마다 전체 메모를 다시 훑지 않도록).
     private func refreshTimedMemoCache() {
@@ -9031,23 +9031,13 @@ struct MapHomeView: View {
                     language.text("지도 스타일 선택", "Choose map style")
                 )
 
-                Picker(
-                    selection: Binding(
-                        get: { MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive },
-                        set: { playbackZoomModeRaw = $0.rawValue }
-                    )
-                ) {
-                    ForEach(MapHomePlaybackZoomMode.allCases, id: \.self) { mode in
-                        Text(language.text(mode.koreanTitle, mode.englishTitle)).tag(mode)
-                    }
-                } label: {
-                    Label(
-                        language.text("재생 배율", "Playback zoom"),
-                        systemImage: "plus.magnifyingglass"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                Toggle(isOn: Binding(
+                    get: { (MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive) == .adaptive },
+                    set: { playbackZoomModeRaw = ($0 ? MapHomePlaybackZoomMode.adaptive : .fixed).rawValue }
+                )) {
+                    Label(language.text("속도에 따라 가변", "Vary zoom with speed"), systemImage: "plus.magnifyingglass")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
-                .pickerStyle(.menu)
                 .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
@@ -9091,23 +9081,13 @@ struct MapHomeView: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
-                Picker(
-                    selection: Binding(
-                        get: { memoDisplayMode },
-                        set: { memoDisplayRaw = $0.rawValue }
-                    )
-                ) {
-                    ForEach(MapHomeMemoDisplayMode.allCases, id: \.self) { mode in
-                        Text(language.text(mode.koreanTitle, mode.englishTitle)).tag(mode)
-                    }
-                } label: {
-                    Label(
-                        language.text("메모", "Memos"),
-                        systemImage: "note.text"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                Toggle(isOn: Binding(
+                    get: { memoDisplayMode != .hidden },
+                    set: { memoDisplayRaw = ($0 ? MapHomeMemoDisplayMode.all : .hidden).rawValue }
+                )) {
+                    Label(language.text("메모 표시", "Show memos"), systemImage: "note.text")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
                 }
-                .pickerStyle(.menu)
                 .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
