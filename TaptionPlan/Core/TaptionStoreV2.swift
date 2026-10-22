@@ -20,15 +20,13 @@ enum TaptionStoreV2Error: Error, Equatable {
     case rawEventConflict(kind: String, id: String)
 }
 
+/// 사용자에게는 짧은 한국어 안내만 보이고, 자세한 원인은 진단 로그에 남는다.
 extension TaptionStoreV2Error: LocalizedError {
     var errorDescription: String? {
         switch self {
-        case .openFailed(let message): "openFailed: \(message)"
-        case .sqlFailed(let message): "sqlFailed: \(message)"
-        case .unsupportedSchema(let version): "unsupportedSchema: \(version)"
-        case .corruptRow(let message): "corruptRow: \(message)"
-        case .readingConflict(let id): "readingConflict: \(id)"
-        case .rawEventConflict(let kind, let id): "rawEventConflict: \(kind) \(id)"
+        case .openFailed, .sqlFailed: "기록 저장소를 여는 중 문제가 생겼습니다."
+        case .unsupportedSchema: "이 앱 버전보다 새 기록 형식입니다. 앱을 업데이트해 주세요."
+        case .corruptRow, .readingConflict, .rawEventConflict: "일부 기록을 읽지 못했습니다."
         }
     }
 }

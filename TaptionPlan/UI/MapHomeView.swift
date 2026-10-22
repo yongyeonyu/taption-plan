@@ -2972,7 +2972,8 @@ struct MapHomeView: View {
                     ).tint
                 },
                 language: language,
-                liveToken: ((model.latestSensorReading?.timestamp.timeIntervalSince1970 ?? 0) / 3).rounded(.down)
+                // 달력 빠른 갱신은 15초 단위로만 다시 계산한다(달 전체 재계산 부담을 줄임).
+                liveToken: ((model.latestSensorReading?.timestamp.timeIntervalSince1970 ?? 0) / 15).rounded(.down)
             )
         }
         .sheet(item: $selectedLocationDestination) { destination in
