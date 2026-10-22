@@ -2250,12 +2250,19 @@ struct MapHomeDailyCardSheet: View {
             message = language.text("사진 저장 권한이 없어요. 설정에서 허용해 주세요.", "Photo access is needed to save.")
             return
         }
-        let ok: Bool = await withCheckedContinuation { continuation in
+        let ok = await Self.saveImageToLibrary(image)
+        message = ok ? language.text("사진 앱에 저장했어요.", "Saved to Photos.") : language.text("저장하지 못했어요.", "Could not save.")
+    }
+
+    /// 사진 앱에 저장한다. 사진 쪽 콜백은 메인 액터가 아니므로 이 함수는 액터 밖에서 돈다(메인에서 부르면 충돌).
+    nonisolated static func saveImageToLibrary(_ image: UIImage) async -> Bool {
+        await withCheckedContinuation { continuation in
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.creationRequestForAsset(from: image)
-            }, completionHandler: { success, _ in continuation.resume(returning: success) })
+            }, completionHandler: { success, _ in
+                continuation.resume(returning: success)
+            })
         }
-        message = ok ? language.text("사진 앱에 저장했어요.", "Saved to Photos.") : language.text("저장하지 못했어요.", "Could not save.")
     }
 
     private func share() {

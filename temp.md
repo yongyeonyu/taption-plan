@@ -1309,3 +1309,9 @@
 - 포함: 215 이후 — 수면 진단 항목, 땅 자동 전환 토글 삭제, 식사 집계, 하루 카드 알림 시각 선택(기본 8시)·미확인 표시, 메모 집계, 알림 탭 카드 열기.
 - 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 216.
 - 완료: 216 업로드·VALID·그룹 연결, test.md 기록.
+
+## CRS1022L01 · 하루 카드 충돌 수정 (2026-10-22)
+- 원인 1(카드 열 때): 수면 기록 진단 항목을 넣으면서 같은 키(screen_off)를 두 번 써 딕셔너리 리터럴 중복 키 → 앱 중단(AppModel.applyChargingInactivitySleepRecords). 중복 키 제거.
+- 원인 2(사진에 저장): 사진 저장 콜백을 메인 액터 클로저에서 호출 → 실행 위치 검사로 중단. 저장 호출을 액터 밖 함수로 분리.
+- 검증: 아이폰18 UI 테스트 — 카드 열기, 사진 저장 단계 모두 통과(build/validation/CRASH1022K08). 공유 버튼은 저장 테스트에서 함께 눌러 충돌 없음.
+- 미확인: 알림 설정 토글 자체 충돌 여부는 testOpenAlarmSettingsAndToggle로 통과(build/validation/CRASH1022K03).

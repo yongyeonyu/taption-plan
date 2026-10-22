@@ -9930,7 +9930,6 @@ final class AppModel {
                     $1.timestamp.timeIntervalSince($0.timestamp)
                 }.max() ?? 0)),
                 "stationary": String(ordered.filter { $0.motion == .stationary }.count),
-                "screen_off": String(ordered.filter { $0.screenIsOn == false }.count),
                 "stationary_dark": String(ordered.filter {
                     $0.motion == .stationary && $0.screenIsOn == false
                 }.count),

@@ -74,4 +74,70 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    /// 알림 설정을 열고 토글을 한 번 눌러 본다(재현용). 데이터는 바꾸지 않는다.
+    func testOpenAlarmSettingsAndToggle() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        menu.tap()
+        let alerts = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "알림")).firstMatch
+        var tries = 0
+        while !alerts.exists && tries < 10 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(alerts.waitForExistence(timeout: 5))
+        alerts.tap()
+        sleep(3)
+        let toggle = app.switches.firstMatch
+        if toggle.waitForExistence(timeout: 5) { toggle.tap() }
+        sleep(3)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "alarm-after-toggle"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    /// 하루 카드를 열고 잠시 둔다(재현용). 저장·공유는 누르지 않는다.
+    func testOpenDayCard() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        menu.tap()
+        let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "하루 카드")).firstMatch
+        var tries = 0
+        while !card.exists && tries < 10 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        card.tap()
+        sleep(15)
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "day-card"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    /// 하루 카드의 사진 저장과 공유를 차례로 누른다(재현용).
+    func testDayCardSaveAndShare() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        menu.tap()
+        let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "하루 카드")).firstMatch
+        var tries = 0
+        while !card.exists && tries < 10 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        card.tap()
+        sleep(12)
+        let save = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "사진에 저장")).firstMatch
+        if save.waitForExistence(timeout: 5) { save.tap() }
+        sleep(4)
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let allow = springboard.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "허용", "Allow")).firstMatch
+        if allow.waitForExistence(timeout: 3) { allow.tap() }
+        sleep(3)
+        let share = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "공유")).firstMatch
+        if share.waitForExistence(timeout: 5) { share.tap() }
+        sleep(6)
+    }
 }
