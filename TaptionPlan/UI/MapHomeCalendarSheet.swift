@@ -807,6 +807,56 @@ enum MapHomePlaceZone {
         return previous
     }
 
+    /// 장소 판정 샘플: 시각, 장소 중심까지 거리, 움직이는 중인지.
+    struct Sample {
+        let date: Date
+        let distance: Double
+        let isMoving: Bool
+    }
+
+    /// 도착·출발 확정 결과.
+    enum Event: Equatable {
+        /// 안으로 들어온 뒤 `dwell` 동안 계속 안에 머물렀다.
+        case arrived(Date)
+        /// 밖으로 나간 뒤 움직이며 멀어졌다(이동 확인).
+        case departed(Date)
+    }
+
+    /// 들어옴 후 머무름, 나감 후 이동을 확인해 도착·출발을 확정한다.
+    /// - 도착: 안쪽 전환 뒤 `dwell`(기본 5분) 동안 밖으로 나가지 않을 때만.
+    /// - 출발: 바깥쪽 전환 뒤 `moveWindow`(기본 10분) 안에 움직이는 측정이 있을 때만.
+    static func events(
+        samples: [Sample],
+        radius: Double,
+        dwell: TimeInterval = 5 * 60,
+        moveWindow: TimeInterval = 10 * 60
+    ) -> [Event] {
+        let ordered = samples.sorted { $0.date < $1.date }
+        let changes = transitions(
+            samples: ordered.map { (date: $0.date, distance: $0.distance) },
+            radius: radius
+        )
+        var events: [Event] = []
+        for change in changes {
+            let after = ordered.filter { $0.date >= change.date }
+            switch change.state {
+            case .inside:
+                // 다음 바깥쪽 전환 전에 dwell만큼 흘렀는지 본다(샘플이 dwell 이후까지 있어야 한다).
+                let nextOut = changes.first { $0.date > change.date && $0.state == .outside }?.date
+                let deadline = change.date.addingTimeInterval(dwell)
+                let stayed = (nextOut ?? .distantFuture) >= deadline
+                    && (after.last?.date ?? change.date) >= deadline
+                if stayed { events.append(.arrived(change.date)) }
+            case .outside:
+                let window = after.filter { $0.date <= change.date.addingTimeInterval(moveWindow) }
+                // 멀어졌다는 것만으로는 부족하다. 실제로 움직인 측정이 있어야 출발로 본다.
+                let moved = window.contains { $0.isMoving }
+                if moved { events.append(.departed(change.date)) }
+            }
+        }
+        return events
+    }
+
     /// 시간 순 측정열에서 상태가 바뀐 시각만 골라 돌려준다. 처음 상태는 밖으로 본다.
     static func transitions(
         samples: [(date: Date, distance: Double)],
@@ -1766,6 +1816,49 @@ enum MapHomeAlarmPolicy {
         date.formatted(Date.FormatStyle().hour().minute().locale(language.locale))
     }
 
+    /// 등록지점 범위 판정으로 도착·출발 알림 이벤트를 만든다. 최근 45분 안에 확정된 것만 알린다.
+    static func zoneEvents(
+        readings: [SensorReading],
+        frequentPlaces: [FrequentPlace],
+        now: Date,
+        language: MapHomeLanguage
+    ) -> [Event] {
+        var events: [Event] = []
+        for place in frequentPlaces {
+            guard let point = place.point,
+                  let arriveKind = MapHomeAlarmKind.arrive(place.kind),
+                  let leaveKind = MapHomeAlarmKind.leave(place.kind) else { continue }
+            let samples: [MapHomePlaceZone.Sample] = readings.compactMap { reading in
+                guard let here = reading.point else { return nil }
+                return MapHomePlaceZone.Sample(
+                    date: reading.timestamp,
+                    distance: distanceMeters(here, point),
+                    isMoving: reading.motion.isMovement
+                )
+            }
+            let time = { (date: Date) in timeText(date, language: language) }
+            for result in MapHomePlaceZone.events(samples: samples, radius: place.radiusMeters) {
+                switch result {
+                case .arrived(let date):
+                    events.append(Event(
+                        kind: arriveKind,
+                        key: "\(arriveKind.rawValue)-z\(Int(date.timeIntervalSince1970 / 600))",
+                        date: date,
+                        body: language.text("\(time(date))에 \(place.name) 도착 확인", "Arrived at \(place.name) at \(time(date))")
+                    ))
+                case .departed(let date):
+                    events.append(Event(
+                        kind: leaveKind,
+                        key: "\(leaveKind.rawValue)-z\(Int(date.timeIntervalSince1970 / 600))",
+                        date: date,
+                        body: language.text("\(time(date))에 \(place.name)에서 출발 확인", "Left \(place.name) at \(time(date))")
+                    ))
+                }
+            }
+        }
+        return events.filter { $0.date > now - recentWindow && $0.date <= now }
+    }
+
     /// 장소 도착·출발. 머문 기록이 다시 계산돼 id가 바뀌어도 같은 일이 되도록 키는 종류 + 10분 단위 시각으로 만든다.
     static func placeEvents(
         stays: [PlaceStay],
@@ -1883,6 +1976,7 @@ final class MapHomeAlarmCenter {
         travel: [TravelSegment],
         stays: [PlaceStay],
         frequentPlaces: [FrequentPlace],
+        readings: [SensorReading] = [],
         now: Date = .now,
         language: MapHomeLanguage = .current
     ) async {
@@ -1890,6 +1984,16 @@ final class MapHomeAlarmCenter {
         guard !settings.enabled.isDisjoint(with: Set(MapHomeAlarmKind.allCases.filter { $0.group != .salary && $0 != .dailyCard })) else { return }
         let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(frequentPlaces)
         var events = MapHomeAlarmPolicy.placeEvents(stays: stays, placeKinds: placeKinds, now: now, language: language)
+        // 등록지점 범위(히스테리시스)로 도착·출발을 다시 판정한다: 들어와서 머무르고, 나가서 움직여야 확정.
+        // 측정이 없는 장소는 위의 머묾 기록 판정을 그대로 쓴다.
+        let zoneKinds = Set(frequentPlaces.filter { $0.point != nil }.map(\.kind))
+        if !readings.isEmpty, !zoneKinds.isEmpty {
+            let zoneAlarmKinds = Set(zoneKinds.flatMap { kind in
+                [MapHomeAlarmKind.arrive(kind), MapHomeAlarmKind.leave(kind)].compactMap { $0 }
+            })
+            events = events.filter { !zoneAlarmKinds.contains($0.kind) }
+            events += MapHomeAlarmPolicy.zoneEvents(readings: readings, frequentPlaces: frequentPlaces, now: now, language: language)
+        }
         if settings.enabled.contains(.wakeUp) {
             let calendar = MapHomeGrowthPolicy.localCalendar
             let dayStart = calendar.startOfDay(for: now)

@@ -5991,6 +5991,14 @@ final class AppModel {
         Task { await persist() }
     }
 
+    /// 알람 판정용: 선택한 날짜(오늘)의 센서 측정. 읽지 못하면 빈 배열.
+    func readingsForAlarmCheck(on day: Date) async -> [SensorReading] {
+        guard let sensorService else { return [] }
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: day)
+        let end = Calendar.autoupdatingCurrent.date(byAdding: .day, value: 1, to: start) ?? start
+        return (try? await sensorService.archivedReadings(in: TimeSpan(start: start, end: end))) ?? []
+    }
+
     /// 메모(지도·일반 편집 화면)에 음성 파일을 오디오 첨부로 붙인다.
     func attachAudio(toMemo memoID: UUID, localIdentifier: String) {
         guard acceptsDataMutation() else { return }

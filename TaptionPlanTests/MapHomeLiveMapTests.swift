@@ -1289,4 +1289,24 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(changes.first?.date, start)
         XCTAssertEqual(changes[1].date, start.addingTimeInterval(240))
     }
+
+    func testPlaceZoneArrivalNeedsDwellAndDepartureNeedsMovement() {
+        typealias Z = MapHomePlaceZone
+        let t0 = Date(timeIntervalSince1970: 0)
+        func at(_ minutes: Double, _ distance: Double, moving: Bool = false) -> Z.Sample {
+            Z.Sample(date: t0.addingTimeInterval(minutes * 60), distance: distance, isMoving: moving)
+        }
+        // 잠깐 들렀다 나간 경우(머무름 없음) → 도착 없음.
+        let brief = [at(0, 500), at(1, 40), at(2, 40), at(3, 500, moving: true)]
+        XCTAssertFalse(Z.events(samples: brief, radius: 100).contains { if case .arrived = $0 { return true } else { return false } })
+        // 들어와서 6분 머무름 → 도착 확정.
+        let stay = [at(0, 500), at(1, 40), at(4, 40), at(7, 40)]
+        XCTAssertTrue(Z.events(samples: stay, radius: 100).contains { if case .arrived = $0 { return true } else { return false } })
+        // 나갔지만 가만히 있음(걸어 나가지 않음) → 출발 없음.
+        let stillOut = [at(0, 40), at(1, 40), at(2, 300), at(5, 300)]
+        XCTAssertFalse(Z.events(samples: stillOut, radius: 100).contains { if case .departed = $0 { return true } else { return false } })
+        // 나가서 움직임 → 출발 확정.
+        let leaving = [at(0, 40), at(1, 40), at(2, 300, moving: true), at(5, 400, moving: true)]
+        XCTAssertTrue(Z.events(samples: leaving, radius: 100).contains { if case .departed = $0 { return true } else { return false } })
+    }
 }

@@ -3080,11 +3080,13 @@ struct MapHomeView: View {
         .task(id: "\(model.snapshot.places.count)|\(model.snapshot.actuals.count)|\(salaryLive?.hourlyRate ?? 0)") {
             await MapHomeAlarmCenter.shared.syncDailyCardSchedule(language: language)
             let snap = model.snapshot
+            let readings = await model.readingsForAlarmCheck(on: .now)
             await MapHomeAlarmCenter.shared.evaluate(
                 actuals: snap.actuals,
                 travel: snap.travel,
                 stays: snap.places,
                 frequentPlaces: snap.settings.frequentPlaces,
+                readings: readings,
                 language: language
             )
             if let salaryLive {
@@ -6132,6 +6134,7 @@ struct MapHomeView: View {
                 // 현재 위치를 누르면 날짜도 오늘로 맞춘다.
                 model.selectedDate = Date()
                 requestAndFollowUserLocation(using: nil)
+                focusCurrentLocationAtFixedScale()
             }
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
             bottomBarButton("house.fill", language.text("집", "Home")) {
@@ -7627,6 +7630,7 @@ struct MapHomeView: View {
                     if !layoutStyle.movesActionsToBottom {
                         Button {
                             requestAndFollowUserLocation(using: proxy)
+                            focusCurrentLocationAtFixedScale()
                         } label: {
                             MapHomeLocationButtonIcon(
                                 state: locationState,
@@ -12113,6 +12117,18 @@ struct MapHomeView: View {
             targetPoint: coordinate == nil ? nil : currentLocationTargetPoint,
             distance: distance
         )
+    }
+
+    /// 현재 위치 버튼: 배율은 80으로 고정한다(현재 배율에서 80으로 옮긴다). 방향과 기울기는 그대로 둔다.
+    private func focusCurrentLocationAtFixedScale() {
+        let camera = visibleMapCamera
+        let center = currentCoordinate ?? visibleMapCenter
+        setMapPosition(.camera(MapCamera(
+            centerCoordinate: center,
+            distance: MapHomeCameraZoomMath.distance(forScale: 80),
+            heading: camera?.heading ?? 0,
+            pitch: camera?.pitch ?? 0
+        )))
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy?) {
