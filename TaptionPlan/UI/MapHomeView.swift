@@ -2450,6 +2450,7 @@ struct MapHomeView: View {
     @State private var routeProjection: RouteTimelineProjection?
     /// 마지막 경로 계산의 입력 요약. 같으면 다시 계산하지 않는다.
     @State private var routeProjectionInputKey: RouteProjectionInputKey?
+    @State private var routeProjectionTask: Task<Void, Never>?
     @State private var routeActualIndex: RouteTimelineDataEngine.ActualIndex?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
     @State private var dayDataSnapshot: PlanDayDataSnapshot?
@@ -11656,9 +11657,17 @@ struct MapHomeView: View {
     }
 
     @discardableResult
+    /// 경로 갱신을 요청하고 지금 가진 결과를 돌려준다. 계산은 백그라운드에서 하고, 끝나면 화면에 반영한다.
     private func refreshRouteProjection() -> RouteTimelineProjection? {
+        scheduleRouteProjection()
+        return routeProjection
+    }
+
+    /// 경로 계산을 메인 스레드 밖에서 돌린다. 입력이 같으면 이전 결과를 그대로 쓴다.
+    /// 계산이 끝났을 때 입력이 이미 바뀌었다면 결과를 버린다(늦은 결과가 최신 경로를 덮지 않도록).
+    private func scheduleRouteProjection() {
         guard scenePhase == .active,
-              let dayData = currentDayDataSnapshot else { return routeProjection }
+              let dayData = currentDayDataSnapshot else { return }
         let calendar = Calendar.autoupdatingCurrent
         let actuals = dayData.actuals
         let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
@@ -11678,62 +11687,53 @@ struct MapHomeView: View {
             timelineDate: timelineDate,
             isPlaybackRunning: isDayPlaybackRunning
         )
-        // 입력이 같으면 이전 계산을 그대로 쓴다. 화면을 그릴 때마다 경로를 다시 계산하지 않게 한다.
+        let selectedSpan = isDayPlaybackRunning ? nil : timelineSelectionSpan
+        let readings = displayRouteReadings
         let inputKey = RouteProjectionInputKey(
             day: dayStart,
             sourceRevision: dayData.sourceRevision,
             cutoff: projectionDate,
-            selectedStart: isDayPlaybackRunning ? nil : timelineSelectionSpan?.start,
-            selectedEnd: isDayPlaybackRunning ? nil : timelineSelectionSpan?.end,
+            selectedStart: selectedSpan?.start,
+            selectedEnd: selectedSpan?.end,
             isPlaying: isDayPlaybackRunning,
-            readingCount: displayRouteReadings.count,
-            lastReadingTime: displayRouteReadings.last?.timestamp,
+            readingCount: readings.count,
+            lastReadingTime: readings.last?.timestamp,
             actualCount: actuals.count,
             sleepCount: model.sleepSessions.count,
             confirmedSleepCount: model.settings.confirmedSleepSpans.count
         )
-        if inputKey == routeProjectionInputKey, let cached = routeProjection {
-            return cached
+        if inputKey == routeProjectionInputKey, routeProjection != nil {
+            return
         }
         routeProjectionInputKey = inputKey
-        let next = RouteTimelineDataEngine.project(
-            selectedDate: model.selectedDate,
-            through: projectionDate,
-            selectedSpan: isDayPlaybackRunning ? nil : timelineSelectionSpan,
-            actuals: actuals,
-            actualIndex: actualIndex,
-            travel: dayData.travel,
-            readings: displayRouteReadings,
-            readingsAreNormalized: true,
-            filtersSparseRouteConnections: true,
-            confirmedSleepSpans: model.settings.confirmedSleepSpans,
-            sleepSessions: model.sleepSessions,
-            calendar: calendar
-        )
-        let overlays = makeTimelineRouteOverlays(next)
-        let droppedSubway = next.segments.filter { $0.confirmedSubwayTravelID != nil }.count
-        let droppedShort = next.segments.filter {
-            $0.confirmedSubwayTravelID == nil && $0.coordinates.count < 2
-        }.count
-        TaptionPlanDiagnosticsLogger.shared.record(
-            "fmap_route_projection",
-            fields: [
-                "segment_count": String(next.segments.count),
-                "overlay_count": String(overlays.count),
-                "overlay_coordinate_total": String(overlays.reduce(0) { $0 + $1.coordinates.count }),
-                "dropped_subway_confirmed": String(droppedSubway),
-                "dropped_short": String(droppedShort),
-                "playback_running": String(isDayPlaybackRunning),
-                "selected_minute": selectedTimelineMinute.map(String.init) ?? "none",
-            ]
-        )
-        guard routeProjection != next
-            || timelineRouteOverlays.map(\.id) != overlays.map(\.id)
-        else { return next }
-        mapRenderCache.invalidateRouteData()
-        routeProjection = next
-        timelineRouteOverlays = overlays
-        return next
+        let travel = dayData.travel
+        let confirmedSleepSpans = model.settings.confirmedSleepSpans
+        let sleepSessions = model.sleepSessions
+        let selectedDate = model.selectedDate
+        routeProjectionTask?.cancel()
+        routeProjectionTask = Task { @MainActor in
+            let next = await Task.detached(priority: .userInitiated) {
+                RouteTimelineDataEngine.project(
+                    selectedDate: selectedDate,
+                    through: projectionDate,
+                    selectedSpan: selectedSpan,
+                    actuals: actuals,
+                    actualIndex: actualIndex,
+                    travel: travel,
+                    readings: readings,
+                    readingsAreNormalized: true,
+                    filtersSparseRouteConnections: true,
+                    confirmedSleepSpans: confirmedSleepSpans,
+                    sleepSessions: sleepSessions,
+                    calendar: calendar
+                )
+            }.value
+            guard !Task.isCancelled, routeProjectionInputKey == inputKey else { return }
+            let overlays = makeTimelineRouteOverlays(next)
+            mapRenderCache.invalidateRouteData()
+            routeProjection = next
+            timelineRouteOverlays = overlays
+        }
     }
 
     private func prepareRouteProjectionReadings() {
