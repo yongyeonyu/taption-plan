@@ -13985,7 +13985,7 @@ private struct MapHomeSectionEditSheet: View {
                 let bottom = min(max(yPosition(segment.endMinute, height: height), 0), height)
                 let tint = categories.first { $0.id == segment.categoryID }?.tint ?? Color.gray
                 Rectangle()
-                    .fill(tint.opacity(0.22))
+                    .fill(tint.opacity(0.08))
                     .frame(maxWidth: .infinity)
                     .frame(height: max(0, bottom - top))
                     .offset(y: top)
