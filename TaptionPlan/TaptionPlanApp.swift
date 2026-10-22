@@ -33,7 +33,11 @@ struct TaptionPlanApp: App {
     @UIApplicationDelegateAdaptor(TaptionPlanAppDelegate.self)
     private var appDelegate
 
+    @Environment(\.scenePhase) private var scenePhase
+
     init() {
+        // 설정 파일에 저장된 값을 화면이 읽기 전에 되돌린다(앱을 업데이트해도 설정이 유지된다).
+        AppSettingsFile.restore()
         TaptionPlanSharedContainer.configure(
             provider: FixedTaptionPlanAppGroupProvider(
                 identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
@@ -45,6 +49,54 @@ struct TaptionPlanApp: App {
         WindowGroup {
             AppShellView()
         }
+        .onChange(of: scenePhase) { _, phase in
+            // 앱이 백그라운드로 가거나 꺼질 때 현재 설정을 파일에 적는다.
+            if phase == .background || phase == .inactive { AppSettingsFile.save() }
+        }
+    }
+}
+
+/// 앱의 모든 설정(화면·알림·달력·보폭·연봉 등 사용자 설정 값)을 한 파일에 보관한다.
+/// 위치는 앱 Application Support 안이라 앱을 업데이트해도 지워지지 않는다. 시스템 값과 캐시는 제외한다.
+enum AppSettingsFile {
+    private static let excludedPrefixes = ["Apple", "NS", "AK", "com.apple", "WebKit"]
+
+    static var url: URL {
+        let base = (try? FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )) ?? FileManager.default.temporaryDirectory
+        return base
+            .appendingPathComponent("TaptionPlan/Settings", isDirectory: true)
+            .appendingPathComponent("app-settings.plist")
+    }
+
+    /// 파일에 있는 값을 UserDefaults에 되돌린다. 파일이 없으면 아무것도 하지 않는다.
+    static func restore() {
+        guard let data = try? Data(contentsOf: url),
+              let dictionary = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
+        else { return }
+        for (key, value) in dictionary {
+            UserDefaults.standard.set(value, forKey: key)
+        }
+    }
+
+    /// 현재 설정을 파일로 저장한다(원자적 쓰기).
+    static func save() {
+        let all = UserDefaults.standard.dictionaryRepresentation()
+        let settings = all.filter { key, _ in
+            !excludedPrefixes.contains { key.hasPrefix($0) }
+        }
+        guard let data = try? PropertyListSerialization.data(
+            fromPropertyList: settings,
+            format: .xml,
+            options: 0
+        ) else { return }
+        let directory = url.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? data.write(to: url, options: .atomic)
     }
 }
 
