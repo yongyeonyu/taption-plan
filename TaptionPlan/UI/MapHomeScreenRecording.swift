@@ -27,6 +27,10 @@ final class MapHomeDictation {
     var onRecorded: ((URL) -> Void)?
 
     private var engine: AVAudioEngine?
+    /// 말을 멈췄다 다시 시작하면 인식 결과가 새 구간으로 리셋된다. 끝난 구간은 여기에 쌓아 둔다.
+    private var committedText = ""
+    private var lastPartial = ""
+    private var interruptionObserver: NSObjectProtocol?
     private var liveRequest: SFSpeechAudioBufferRecognitionRequest?
     private var liveTask: SFSpeechRecognitionTask?
     private var file: AVAudioFile?
@@ -141,16 +145,25 @@ final class MapHomeDictation {
             self.liveRequest = request
             recordedURL = url
             isListening = true
+            committedText = ""
+            lastPartial = ""
             liveTask = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    if let text, !text.isEmpty, !finished { self.onPartial?(text) }
-                    guard finished else { return }
-                    self.isTranscribing = false
-                    self.transcript = text ?? ""
-                    if let text, !text.isEmpty { self.onTranscribed?(text) }
+                    self.receive(text ?? "", finished: finished)
                 }
             })
+            // 전화 등으로 오디오가 끊기면 녹음을 바로 멈춘다(자동으로 다시 시작하지 않는다).
+            interruptionObserver = NotificationCenter.default.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] note in
+                let type = (note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt)
+                    .flatMap(AVAudioSession.InterruptionType.init(rawValue:))
+                guard type == .began else { return }
+                Task { @MainActor [weak self] in self?.stop() }
+            }
             TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_started")
         } catch {
             errorMessage = "마이크를 시작하지 못했습니다."
@@ -164,9 +177,38 @@ final class MapHomeDictation {
         }
     }
 
+    /// 인식 결과를 받아 끊긴 구간을 이어 붙인다. 결과가 앞부분과 맞지 않으면 새 구간으로 본다.
+    private func receive(_ text: String, finished: Bool) {
+        if !lastPartial.isEmpty, !text.hasPrefix(lastPartial), !text.isEmpty {
+            committedText = Self.joined(committedText, lastPartial)
+        }
+        let current = text.isEmpty ? lastPartial : text
+        lastPartial = current
+        let full = Self.joined(committedText, current)
+        if finished {
+            isTranscribing = false
+            transcript = full
+            committedText = ""
+            lastPartial = ""
+            if !full.isEmpty { onTranscribed?(full) }
+        } else if !full.isEmpty {
+            onPartial?(full)
+        }
+    }
+
+    private static func joined(_ left: String, _ right: String) -> String {
+        if left.isEmpty { return right }
+        if right.isEmpty { return left }
+        return left + " " + right
+    }
+
     /// 녹음을 끝낸다. 마지막 글자는 인식이 확정되면 onTranscribed로 간다.
     func stop() {
         guard isListening else { return }
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
+            self.interruptionObserver = nil
+        }
         TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_stopped")
         engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()

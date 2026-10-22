@@ -2333,6 +2333,8 @@ struct MapHomeView: View {
     @State private var topPanelOrder: [TopPanel] = []
     /// 선택한 날의 일정(구글 계정 연결 시 구글, 아니면 기기 캘린더). 시작 시간에 구글 로고로 표시한다.
     @State private var dayCalendarEvents: [CalendarRecord] = []
+    /// 선택한 날의 시간 메모 캐시(배지 계산용).
+    @State private var timedMemoCache: [ActionMemo] = []
     @State private var calendarService = AppleCalendarService()
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
@@ -2858,6 +2860,9 @@ struct MapHomeView: View {
         }
         .task(id: model.selectedDate) { await loadPhotoMoments() }
         .task(id: model.selectedDate) { await loadDayCalendarEvents() }
+        .onAppear { refreshTimedMemoCache() }
+        .onChange(of: model.selectedDate) { _, _ in refreshTimedMemoCache() }
+        .onChange(of: model.snapshot.memos) { _, _ in refreshTimedMemoCache() }
         .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments() } }
         // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
         .onChange(of: isDayDataLoading) { _, loading in
@@ -3523,8 +3528,11 @@ struct MapHomeView: View {
     }
 
     /// 선택한 날의 시간이 있는 메모(지도 핀이 아닌 것). 사이드바에 메모 아이콘으로 기본 표시한다.
-    private var timedMemosForSelectedDate: [ActionMemo] {
-        model.snapshot.memos.filter {
+    private var timedMemosForSelectedDate: [ActionMemo] { timedMemoCache }
+
+    /// 선택한 날의 시간 메모 목록을 한 번만 계산해 둔다(배지마다 전체 메모를 다시 훑지 않도록).
+    private func refreshTimedMemoCache() {
+        timedMemoCache = model.snapshot.memos.filter {
             $0.isTimeless != true
                 && $0.mapPoint == nil
                 && !model.isMemoDraft($0.id)
@@ -13377,6 +13385,17 @@ private struct MapHomeSectionEditSheet: View {
     }
 
     var body: some View {
+        sheetBody
+            .onDisappear {
+                // 화면이 사라지면 드래그 상태를 모두 풀어 스크롤 금지가 남지 않게 한다.
+                isHandleDragging = false
+                panOrigin = nil
+                draggingDetailID = nil
+                detailDragTranslation = 0
+            }
+    }
+
+    private var sheetBody: some View {
         VStack(spacing: 14) {
             editHeader
 
