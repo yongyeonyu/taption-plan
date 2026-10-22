@@ -1321,3 +1321,4 @@
 - 범위: CURRENT_PROJECT_VERSION 216→217(8곳·Info.plist 4개), 아카이브·내보내기·업로드, VALID, 내부 테스트 그룹 연결·확인.
 - 포함: 216 이후 — 하루 카드 충돌 두 건 수정(CRS1022L01).
 - 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 217.
+- 완료: 217 업로드·VALID·그룹 연결, test.md 기록.
