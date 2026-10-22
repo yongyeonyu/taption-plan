@@ -2074,6 +2074,16 @@ struct MapHomeDailyCardData: Equatable {
 }
 
 /// 하루 카드에 올릴 달력 항목 하나.
+extension MapHomeDailyCardData {
+    /// 값을 불러오기 전 자리표시자.
+    static var placeholder: MapHomeDailyCardData {
+        MapHomeDailyCardData(
+            dateText: "", weekdayText: "", earnedText: nil, workText: nil,
+            steps: nil, distanceText: nil, categories: [], totalText: "", accessoryID: nil
+        )
+    }
+}
+
 struct MapHomeCardMetric: Identifiable, Equatable {
     let id: String
     let title: String
@@ -2209,10 +2219,13 @@ struct MapHomeDailyCardView: View {
 
 /// 카드 미리보기와 저장·공유.
 struct MapHomeDailyCardSheet: View {
-    let baseData: MapHomeDailyCardData
+    /// 화면이 바뀔 때마다 다시 만들지 않도록, 시트가 열릴 때 한 번만 부른다.
+    let makeData: () -> MapHomeDailyCardData
+    let makeValues: () -> [String: Double]
     let language: MapHomeLanguage
+    @State private var baseData: MapHomeDailyCardData?
     /// 하루 달력 값(항목 id → 값). 고르기 목록과 카드에 쓴다.
-    var dayValues: [String: Double] = [:]
+    @State private var dayValues: [String: Double] = [:]
     @State private var image: UIImage?
     @State private var mapImage: UIImage?
     @State private var shareURL: URL?
@@ -2221,7 +2234,7 @@ struct MapHomeDailyCardSheet: View {
     @State private var isPickerPresented = false
 
     private var data: MapHomeDailyCardData {
-        var copy = baseData
+        var copy = baseData ?? .placeholder
         copy.metrics = selectedIDs.compactMap { id in
             guard let kind = MapHomeCalendarTimeKind(rawValue: id) else { return nil }
             return MapHomeCardMetric(
@@ -2367,8 +2380,17 @@ struct MapHomeDailyCardSheet: View {
             .padding(22)
         }
         .background(Color.tpBackground)
+        .task {
+            // 열릴 때 한 번 불러온다. 이후에는 항목을 고를 때만 카드가 다시 그려진다.
+            baseData = makeData()
+            dayValues = makeValues()
+        }
+        // 지도는 경로가 바뀔 때만 다시 그리고, 카드 그림은 항목이 바뀔 때마다 새로 그린다.
+        .task(id: baseData?.routePoints.count ?? -1) {
+            mapImage = await Self.routeMap(points: baseData?.routePoints ?? [])
+            image = Self.render(data: data, language: language, mapImage: mapImage)
+        }
         .task(id: data) {
-            mapImage = await Self.routeMap(points: data.routePoints)
             image = Self.render(data: data, language: language, mapImage: mapImage)
         }
         .sheet(item: $shareURL) { url in MapHomeShareSheet(url: url) }

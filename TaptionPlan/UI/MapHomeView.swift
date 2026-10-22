@@ -3067,7 +3067,11 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDailyCardPresented) {
-            MapHomeDailyCardSheet(baseData: dailyCardData, language: language, dayValues: dailyMetricValues)
+            MapHomeDailyCardSheet(
+                makeData: { dailyCardData },
+                makeValues: { dailyMetricValues },
+                language: language
+            )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
