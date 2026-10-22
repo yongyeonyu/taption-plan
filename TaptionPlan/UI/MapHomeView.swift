@@ -3056,7 +3056,7 @@ struct MapHomeView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isDailyCardPresented) {
-            MapHomeDailyCardSheet(data: dailyCardData, language: language)
+            MapHomeDailyCardSheet(baseData: dailyCardData, language: language, dayValues: dailyMetricValues)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -5823,6 +5823,22 @@ struct MapHomeView: View {
             return when >= start && when < end
         }
         return (memos.count, memos.filter { $0.mapPoint != nil }.count)
+    }
+
+    /// 선택한 날의 달력 항목 값(항목 id → 값). 공유 카드의 항목 고르기와 카드 값에 쓴다.
+    private var dailyMetricValues: [String: Double] {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: model.selectedDate)
+        let snap = currentDayDataSnapshot
+        let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces)
+        var values = MapHomeCalendarTimeTotalsPolicy.totals(
+            actuals: snap?.actuals ?? [], travel: snap?.travel ?? [], stays: snap?.places ?? [],
+            placeKinds: placeKinds, month: start, asOf: .now, calendar: calendar
+        )[start] ?? [:]
+        if let steps = dayStepCount {
+            values[MapHomeCalendarTimeKind.steps.rawValue] = Double(steps)
+        }
+        return values
     }
 
     /// 선택한 날이 자정까지 지나서 끝까지 관측됐는지. 아니면 카드의 나머지 시간은 미확인으로 표시한다.

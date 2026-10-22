@@ -2058,6 +2058,41 @@ struct MapHomeDailyCardData: Equatable {
     var accessoryID: String?
     var memoText: String? = nil
     var routePoints: [GeoPoint] = []
+    /// 사용자가 골라 넣은 항목(최대 4개). 비어 있으면 기본 통계를 쓴다.
+    var metrics: [MapHomeCardMetric] = []
+}
+
+/// 하루 카드에 올릴 달력 항목 하나.
+struct MapHomeCardMetric: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let value: String
+}
+
+/// 공유 카드에 올릴 항목 고르기: 최대 4개, 골라 둔 순서를 기억한다.
+enum MapHomeCardMetricSelection {
+    static let storageKey = "mapHomeDailyCardMetrics"
+    static let maximum = 4
+
+    static func load() -> [String] {
+        guard let data = UserDefaults.standard.string(forKey: storageKey)?.data(using: .utf8),
+              let ids = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+        return Array(ids.prefix(maximum))
+    }
+
+    static func save(_ ids: [String]) {
+        let trimmed = Array(ids.prefix(maximum))
+        let data = (try? JSONEncoder().encode(trimmed)) ?? Data("[]".utf8)
+        UserDefaults.standard.set(String(decoding: data, as: UTF8.self), forKey: storageKey)
+    }
+
+    /// 항목 id에 해당하는 값을 카드용 문자열로 바꾼다.
+    static func value(for kind: MapHomeCalendarTimeKind, number: Double) -> String {
+        if kind.isCount { return MapHomeCalendarTimeTotalsPolicy.countCellText(count: number) }
+        if kind.isDistance { return MapHomeCalendarTimeTotalsPolicy.distanceCellText(meters: number) }
+        return MapHomeCalendarTimeTotalsPolicy.cellText(seconds: number)
+    }
 }
 
 /// 540×540pt로 그려 2배로 렌더링하면 1080×1080이 된다.
@@ -2090,6 +2125,14 @@ struct MapHomeDailyCardView: View {
                     MapHomeStickmanMarker(action: .activity, equippedAccessoryID: data.accessoryID)
                         .frame(width: 96, height: 96)
                 }
+                if !data.metrics.isEmpty {
+                    // 사용자가 고른 항목(최대 4개)을 카드 윗부분에 그대로 보여 준다.
+                    HStack(spacing: 10) {
+                        ForEach(data.metrics) { metric in
+                            stat(metric.title, metric.value, metric.systemImage)
+                        }
+                    }
+                } else {
                 HStack(spacing: 12) {
                     if let earned = data.earnedText {
                         stat(language.text("오늘 번 돈", "Earned"), earned, "wonsign.circle.fill")
@@ -2106,6 +2149,7 @@ struct MapHomeDailyCardView: View {
                     if let distance = data.distanceText {
                         stat(language.text("이동", "Travel"), distance, "point.topleft.down.to.point.bottomright.curvepath")
                     }
+                }
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Text(data.totalText).font(.system(size: 14, weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
@@ -2154,12 +2198,124 @@ struct MapHomeDailyCardView: View {
 
 /// 카드 미리보기와 저장·공유.
 struct MapHomeDailyCardSheet: View {
-    let data: MapHomeDailyCardData
+    let baseData: MapHomeDailyCardData
     let language: MapHomeLanguage
+    /// 하루 달력 값(항목 id → 값). 고르기 목록과 카드에 쓴다.
+    var dayValues: [String: Double] = [:]
     @State private var image: UIImage?
     @State private var mapImage: UIImage?
     @State private var shareURL: URL?
     @State private var message: String?
+    @State private var selectedIDs: [String] = MapHomeCardMetricSelection.load()
+    @State private var isPickerPresented = false
+
+    private var data: MapHomeDailyCardData {
+        var copy = baseData
+        copy.metrics = selectedIDs.compactMap { id in
+            guard let kind = MapHomeCalendarTimeKind(rawValue: id) else { return nil }
+            return MapHomeCardMetric(
+                id: id,
+                title: kind.title(language),
+                systemImage: kind.systemImage,
+                value: MapHomeCardMetricSelection.value(for: kind, number: dayValues[id] ?? 0)
+            )
+        }
+        return copy
+    }
+
+    private func toggle(_ id: String) {
+        if let index = selectedIDs.firstIndex(of: id) {
+            selectedIDs.remove(at: index)
+        } else if selectedIDs.count < MapHomeCardMetricSelection.maximum {
+            selectedIDs.append(id)
+        }
+        MapHomeCardMetricSelection.save(selectedIDs)
+    }
+
+    private var metricPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(language.text("공유할 항목 (최대 4개)", "Items to share (up to 4)"))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+            HStack(spacing: 8) {
+                ForEach(0..<MapHomeCardMetricSelection.maximum, id: \.self) { index in
+                    slot(index)
+                }
+            }
+            Button {
+                isPickerPresented = true
+            } label: {
+                Label(language.text("항목 추가", "Add item"), systemImage: "plus.circle.fill")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .frame(maxWidth: .infinity, minHeight: 40)
+            }
+            .buttonStyle(.bordered)
+            .tint(Color.tpAccent)
+        }
+        .padding(14)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .sheet(isPresented: $isPickerPresented) {
+            metricPicker
+                .presentationDetents([.large])
+        }
+    }
+
+    private func slot(_ index: Int) -> some View {
+        let filled = index < selectedIDs.count ? MapHomeCalendarTimeKind(rawValue: selectedIDs[index]) : nil
+        return Button {
+            if let filled { toggle(filled.rawValue) } else { isPickerPresented = true }
+        } label: {
+            VStack(spacing: 4) {
+                if let filled {
+                    Image(systemName: filled.systemImage).foregroundStyle(Color.tpAccent)
+                    Text(filled.title(language)).font(.system(size: 10, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(MapHomeCardMetricSelection.value(for: filled, number: dayValues[filled.rawValue] ?? 0))
+                        .font(.system(size: 12, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.6)
+                } else {
+                    Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(Color.tpSecondary)
+                }
+            }
+            .foregroundStyle(Color.tpInk)
+            .frame(maxWidth: .infinity, minHeight: 74)
+            .padding(.horizontal, 4)
+            .background(filled == nil ? Color.clear : Color.tpBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.tpLine, style: StrokeStyle(lineWidth: 1, dash: filled == nil ? [5, 4] : []))
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var metricPicker: some View {
+        NavigationStack {
+            List {
+                ForEach(MapHomeCalendarTimeKind.allCases) { kind in
+                    let chosen = selectedIDs.contains(kind.rawValue)
+                    let full = !chosen && selectedIDs.count >= MapHomeCardMetricSelection.maximum
+                    Button {
+                        toggle(kind.rawValue)
+                    } label: {
+                        HStack {
+                            Image(systemName: kind.systemImage).foregroundStyle(Color.tpAccent).frame(width: 24)
+                            Text(kind.title(language))
+                            Spacer()
+                            Text(MapHomeCardMetricSelection.value(for: kind, number: dayValues[kind.rawValue] ?? 0))
+                                .foregroundStyle(Color.tpSecondary)
+                            Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(chosen ? Color.tpAccent : Color.tpLine)
+                        }
+                    }
+                    .disabled(full)
+                }
+            }
+            .navigationTitle(language.text("공유 항목", "Share items"))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(language.text("완료", "Done")) { isPickerPresented = false }
+                }
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -2167,6 +2323,7 @@ struct MapHomeDailyCardSheet: View {
                 Text(language.text("하루 카드", "Day card"))
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .frame(maxWidth: .infinity, alignment: .leading)
+                metricPanel
                 if let image {
                     Image(uiImage: image)
                         .resizable()
