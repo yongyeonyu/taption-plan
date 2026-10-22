@@ -8295,6 +8295,27 @@ struct MapHomeView: View {
 
     /// 메인 메뉴 묶음 제목과 카드. 항목은 카드 안에서 얇은 구분선으로 나눈다.
     /// 표시 메뉴 안의 이동 항목: 아래 토글·선택 행과 같은 글자 크기·여백·아이콘 색으로 맞춘다.
+    /// 드롭다운 행: 제목과 현재 값, 위아래 화살표. 다른 메뉴 행과 같은 크기를 쓴다.
+    private func displayDropdownRow(_ systemImage: String, _ title: String, _ value: String) -> some View {
+        HStack(spacing: 8) {
+            Label(title, systemImage: systemImage)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpInk)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.tpAccent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
     private func displaySubRow(_ systemImage: String, _ title: String) -> some View {
         HStack(spacing: 8) {
             Label(title, systemImage: systemImage)
@@ -8985,6 +9006,24 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
+                Menu {
+                    ForEach(MapDisplayStyle.allCases, id: \.self) { style in
+                        Button {
+                            model.setMapDisplayStyle(style)
+                        } label: {
+                            Label(mapStyleTitle(style), systemImage: mapStyleSystemImage(style))
+                        }
+                    }
+                } label: {
+                    displayDropdownRow(
+                        "map.fill",
+                        language.text("지도 스타일", "Map style"),
+                        mapStyleTitle(model.settings.mapDisplayStyle)
+                    )
+                }
+                .accessibilityLabel(language.text("지도 스타일 선택", "Choose map style"))
+
                 Button {
                     isSalarySettingsPresented = true
                 } label: {
@@ -8997,39 +9036,6 @@ struct MapHomeView: View {
                     displaySubRow("shoeprints.fill", language.text("보폭 보정(걸음 → 거리)", "Stride calibration"))
                 }
                 .buttonStyle(.plain)
-                Text(language.text("지도 스타일", "Map style"))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 6)
-                    .padding(.horizontal, 12)
-
-                Picker(
-                    selection: Binding(
-                        get: { model.settings.mapDisplayStyle },
-                        set: { model.setMapDisplayStyle($0) }
-                    )
-                ) {
-                    ForEach(MapDisplayStyle.allCases, id: \.self) { style in
-                        Label(
-                            mapStyleTitle(style),
-                            systemImage: mapStyleSystemImage(style)
-                        )
-                        .tag(style)
-                    }
-                } label: {
-                    Label(
-                        language.text("지도 스타일", "Map style"),
-                        systemImage: "map.fill"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                }
-                .pickerStyle(.menu)
-                .tint(Color.tpAccent)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .accessibilityLabel(
-                    language.text("지도 스타일 선택", "Choose map style")
-                )
 
                 Toggle(isOn: Binding(
                     get: { (MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive) == .adaptive },
