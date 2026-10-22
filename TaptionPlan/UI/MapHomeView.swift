@@ -7647,9 +7647,9 @@ struct MapHomeView: View {
                                 "\(sticker.title) schedule memo"
                             )
                         )
-                        // 미확인 아이콘(중심 레인 왼쪽 16pt, 반지름 13pt) 왼쪽에 4pt 띄워 붙인다(반지름 11pt).
+                        // 날씨 칩 중심에 맞춘다(캡처로 잰 값: 미확인 아이콘 중심에서 12pt 왼쪽).
                         .position(
-                            x: MapHomeTimeSidebarMath.handleLaneWidth - 16 - 13 - 4 - 11,
+                            x: MapHomeTimeSidebarMath.handleLaneWidth - 28,
                             y: min(
                                 max(y, MapHomeTimeSidebarMath.verticalInset),
                                 railHeight - MapHomeTimeSidebarMath.verticalInset
