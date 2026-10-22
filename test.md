@@ -2333,3 +2333,7 @@
 ## SAL1022K01 · 연봉 카운터 숫자 쉼표
 - 빌드: Debug generic iOS → BUILD SUCCEEDED.
 - 단위 테스트/기기 확인: 미실시.
+
+## HRL1022L01 · 연봉 3택 + 시급 세금
+- 실행: xcodebuild test -destination iPhone 11 Pro, -only-testing MapHomeLiveMapTests → 74 tests, 0 failures. 로그 build/validation/HRL1022L01/unit.log.
+- 제한: CODE_SIGNING_ALLOWED=NO 로는 기기 설치가 안 돼 기본 서명으로 실행. 설정 화면 기기 확인 미실시.

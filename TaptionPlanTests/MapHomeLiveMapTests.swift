@@ -1126,6 +1126,21 @@ extension MapHomeLiveMapTests {
         XCTAssertLessThan(MapHomeKoreanNetPay.monthly(gross: 160_000_000 / 12).net, 160_000_000 / 12 * 0.75, "고연봉은 공제가 커진다")
     }
 
+    func testHourlyInputTaxesHourlyRateAndAddsWeeklyHolidayOnlyFromFifteenHours() {
+        typealias P = MapHomeSalaryPolicy
+        var settings = P.Settings()
+        settings.isHourly = true
+        settings.hourly = 10_000
+        XCTAssertEqual(P.hourlyRate(settings, monthWorkSeconds: 0, projectedMonthWorkSeconds: 0) ?? 0, 9_670, accuracy: 0.001)
+        settings.hourlyTax = .none
+        settings.includesWeeklyHoliday = true
+        let forty = 40 * 30.4 / 7 * 3_600
+        XCTAssertEqual(P.hourlyRate(settings, monthWorkSeconds: 0, projectedMonthWorkSeconds: forty) ?? 0, 12_000, accuracy: 0.5)
+        let ten = 10 * 30.4 / 7 * 3_600
+        XCTAssertEqual(P.hourlyRate(settings, monthWorkSeconds: 0, projectedMonthWorkSeconds: ten) ?? 0, 10_000, accuracy: 0.5)
+        XCTAssertEqual(P.inputMonthly(settings), 0)
+    }
+
     func testSalaryRateUsesMonthlyPayBasisAndEditedAccumulation() throws {
         typealias P = MapHomeSalaryPolicy
         var settings = P.Settings(annualPay: 25_080_000, isNetInput: true)

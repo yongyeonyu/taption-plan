@@ -1461,3 +1461,8 @@
 - 요청: 연봉 카운터 숫자에 쉼표(,) 표시.
 - 변경: MapHomeSalaryPolicy.wonText를 en_US 로케일 그룹 구분으로 고정(MapHomeCalendarSheet.swift).
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
+
+## HRL1022L01 · 연봉 입력 3택 + 시급 알바 세금 메뉴 (2026-10-22)
+- 요청: 세전연봉·세후연봉·시급 중 하나만 입력. 시급은 별도 메뉴에서 3.3%/4대보험/세금없음 중 선택, 주휴수당 포함 여부 선택, 시간 × 시급으로 금액 상승.
+- 변경: MapHomeSalaryPolicy에 isHourly·hourly·HourlyTax·주휴 설정 추가, hourlyNetRate 추가, 연봉 카드를 3택 선택기로 교체.
+- 검증: iPhone 11 Pro(00008030-001628201AD2802E) 기본 서명 MapHomeLiveMapTests 74개 통과(build/validation/HRL1022L01/unit.log). Debug 빌드 성공. 기기 화면 확인 전.
