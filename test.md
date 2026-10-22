@@ -2342,3 +2342,7 @@
 - xcodebuild -scheme TaptionPlan (Debug, generic iOS, CODE_SIGNING_ALLOWED=NO) → BUILD SUCCEEDED.
 - xcodebuild -scheme TaptionPlanWidget → BUILD SUCCEEDED.
 - 기기 확인(잠금 화면 실시간 숫자, 메모 원형 아이콘): 미실시.
+
+## GCL1022P01
+- xcodebuild -scheme TaptionPlan Debug generic iOS, CODE_SIGNING_ALLOWED=NO → BUILD SUCCEEDED.
+- 기기 확인(일정 목록, 권한 요청): 미실시.

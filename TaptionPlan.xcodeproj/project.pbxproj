@@ -167,6 +167,7 @@
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */; };
+		A1000000000000000000F0B1 /* MapHomeTodayCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */; };
 		A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
@@ -380,6 +381,7 @@
 		F60000000000000000000005 /* HealthKitIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitIntegrationTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007F /* MapHomeCalendarSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeScreenRecording.swift; sourceTree = "<group>"; };
+		F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTodayCalendar.swift; sourceTree = "<group>"; };
 		F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePhotoLayer.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -534,6 +536,7 @@
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */,
+				F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */,
 				F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
@@ -995,6 +998,7 @@
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
 				A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */,
+				A1000000000000000000F0B1 /* MapHomeTodayCalendar.swift in Sources */,
 				A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,

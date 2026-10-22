@@ -268,6 +268,26 @@ struct SettingsView: View {
                     }
 
                     settingsSection(
+                        "구글 캘린더 연동",
+                        summary: "기기 캘린더 · 직접 연동"
+                    ) {
+                        settingsRow(
+                            icon: "calendar.badge.checkmark",
+                            title: "기기 캘린더로 보기",
+                            subtitle: "아이폰 캘린더에 추가한 구글 계정 일정을 지도에서 봅니다",
+                            value: model.permissionState(for: .calendar).isGranted ? "허용됨" : "허용하기"
+                        ) {
+                            Task { _ = try? await AppleCalendarService().requestFullAccess() }
+                        }
+                        settingsRow(
+                            icon: "globe",
+                            title: "구글 계정 직접 연동",
+                            subtitle: "구글 로그인으로 Google Calendar를 바로 읽습니다",
+                            value: "준비 중"
+                        )
+                    }
+
+                    settingsSection(
                         "데이터와 개인정보",
                         summary: "기기 안에 안전하게 저장"
                     ) {

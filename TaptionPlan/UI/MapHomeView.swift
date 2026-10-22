@@ -2298,6 +2298,8 @@ struct MapHomeView: View {
     @State private var isMemoAddMenuPresented = false
     @State private var queueExpanded = false
     @State private var memoStackExpanded = false
+    @State private var todayCalendarExpanded = false
+    @State private var calendarService = AppleCalendarService()
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
@@ -2729,6 +2731,11 @@ struct MapHomeView: View {
                     .zIndex(MapHomeLayerPriority.loading)
             } else if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                 memoOverlayStack
+                    .zIndex(MapHomeLayerPriority.loading)
+            }
+
+            if !isScreenRecording {
+                topLeftControls
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -3638,9 +3645,29 @@ struct MapHomeView: View {
             .min { abs($0.occurredAt.timeIntervalSince(center)) < abs($1.occurredAt.timeIntervalSince(center)) }
     }
 
+    /// 왼쪽 상단: 메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
+    private var topLeftControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
+                    memoCircleButton
+                }
+                MapHomeCalendarButton(isExpanded: todayCalendarExpanded) {
+                    withAnimation(.snappy) { todayCalendarExpanded.toggle() }
+                }
+            }
+            if todayCalendarExpanded {
+                MapHomeTodayCalendarList(language: language, service: calendarService)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, Layout.horizontalInset)
+        .padding(.top, 56)
+    }
+
     private var memoOverlayStack: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            memoCircleButton
+        VStack(alignment: .leading, spacing: 8) {
             if memoStackExpanded {
                 VStack(alignment: .leading, spacing: 8) {
                 // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
@@ -3685,12 +3712,12 @@ struct MapHomeView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-        .padding(.trailing, Layout.horizontalInset)
-        .padding(.top, 56)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, Layout.horizontalInset)
+        .padding(.top, 104)
     }
 
-    /// 메모를 우상단 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
+    /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
     private var memoCircleButton: some View {
         let count = queuedMemos.count + (nearbyTimedMemo == nil ? 0 : 1)
         return Button {
