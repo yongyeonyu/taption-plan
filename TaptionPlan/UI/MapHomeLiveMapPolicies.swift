@@ -364,11 +364,11 @@ enum MapHomeLiveFollowSpeed {
 /// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고(시정수 1.2초),
 /// 초당 로그 변화량에 상한(약 2.5배/초)을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
 final class MapHomePlaybackZoomSmoother {
-    static let timeConstant: TimeInterval = 1.2
-    static let maximumLogRate = 0.9
-    /// 속도가 줄어 다가갈 때(줌인)는 더 천천히, 영화처럼 부드럽게 따라간다.
-    static let zoomInTimeConstant: TimeInterval = 2.2
-    static let zoomInMaximumLogRate = 0.45
+    static let timeConstant: TimeInterval = 0.6
+    static let maximumLogRate = 1.6
+    /// 속도가 줄어 다가갈 때(줌인)는 조금 천천히 따라가되, 너무 늦지 않게 짧은 시간 상수를 쓴다.
+    static let zoomInTimeConstant: TimeInterval = 0.9
+    static let zoomInMaximumLogRate = 0.9
     static let maximumStep: TimeInterval = 0.5
 
     private var lastUptime: TimeInterval?

@@ -1529,3 +1529,8 @@
 - 메모와 일정을 함께 열면 먼저 연 패널이 위, 나중 패널이 아래에 붙음(겹침 없음). 두 패널 폭 280 통일.
 - 일정 버튼을 Google 공식 G 로고(developers.google.com/identity/images/g-logo.png, 200x204)로 교체. 에셋 GoogleGLogo.imageset.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 화면 확인 전.
+
+## PLC1022V01 · 등록 위치 이름·범위 편집 / 줌 전환 단축
+- 등록 위치(회사·식당 등) 랜드마크 시트에 이름 변경과 범위 지정 추가(집 전용 제한 해제). 범위 표시 토글 포함.
+- 재생 줌 페이드 단축: 줌인 시간 상수 2.2→0.9초, 줌아웃 1.2→0.6초, 최대 변화율 상향.
+- 검증: iPhone 11 Pro MapHomeLiveMapTests 75개 통과(build/validation/REV1022R02/unit3.log). 기기 화면 확인 전.

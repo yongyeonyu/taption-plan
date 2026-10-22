@@ -2376,3 +2376,6 @@
 
 ## GLG1022U01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## PLC1022V01
+- MapHomeLiveMapTests 75개 통과(iPhone 11 Pro). 랜드마크 시트 편집·줌 속도 기기 확인 미실시.
