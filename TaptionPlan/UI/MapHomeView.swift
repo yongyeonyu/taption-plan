@@ -778,6 +778,38 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
         }
     }
 
+    /// 이동 구간 안의 세부 활동을 따로 떼어 낸다. 머무름·휴식은 이동 범위에서 빼서 정지 속도로 재생하고,
+    /// 걷기는 걸음 속도 범위로 바꾼다. 나머지는 원래 이동 모드를 그대로 쓴다.
+    static func carved(
+        _ range: Self,
+        details: [(start: Double, end: Double, mode: TravelMode?, isStationary: Bool)]
+    ) -> [Self] {
+        var pieces = [range]
+        var walks: [Self] = []
+        for detail in details where detail.end > range.startMinute && detail.start < range.endMinute {
+            if detail.mode == .walking {
+                let start = max(detail.start, range.startMinute)
+                let end = min(detail.end, range.endMinute)
+                if end > start {
+                    walks.append(Self(startMinute: start, endMinute: end, mode: .walking))
+                }
+            }
+            guard detail.isStationary else { continue }
+            pieces = pieces.flatMap { piece -> [Self] in
+                guard detail.end > piece.startMinute, detail.start < piece.endMinute else { return [piece] }
+                var result: [Self] = []
+                if detail.start > piece.startMinute {
+                    result.append(Self(startMinute: piece.startMinute, endMinute: detail.start, mode: piece.mode))
+                }
+                if detail.end < piece.endMinute {
+                    result.append(Self(startMinute: detail.end, endMinute: piece.endMinute, mode: piece.mode))
+                }
+                return result
+            }
+        }
+        return pieces + walks
+    }
+
     static func normalized(
         _ ranges: [Self]
     ) -> [Self] {
@@ -7361,18 +7393,32 @@ struct MapHomeView: View {
             dayStart: dayStart,
             dayEnd: dayEnd
         )
-        let travelRanges = (dayData?.travel ?? []).compactMap {
-            segment -> MapHomePlaybackMovementRange? in
+        // 세부 활동(머무름·휴식·걷기)을 이동 구간에서 떼어 각자의 속도로 재생한다.
+        let details: [(start: Double, end: Double, mode: TravelMode?, isStationary: Bool)] = (dayData?.actuals ?? []).compactMap { actual in
+            let start = actual.startedAt.timeIntervalSince(dayStart) / 60
+            let end = (actual.endedAt ?? actual.startedAt.addingTimeInterval(60)).timeIntervalSince(dayStart) / 60
+            guard end > start else { return nil }
+            let title = actual.title
+            if title.contains("걷기") || title.contains("Walk") {
+                return (start, end, .walking, false)
+            }
+            if title.contains("머무름") || title.contains("휴식") || title.contains("Rest") || title.contains("Stay") {
+                return (start, end, nil, true)
+            }
+            return nil
+        }
+        let travelRanges = (dayData?.travel ?? []).flatMap { segment -> [MapHomePlaybackMovementRange] in
             guard segment.distanceMeters > 0
                     || segment.mode == .subway
                         && ((segment.subwayRoute?.coordinates.count ?? 0) >= 2),
                   segment.isConfirmed || !segment.evidence.isEmpty
-            else { return nil }
-            return MapHomePlaybackMovementRange(
+            else { return [] }
+            let range = MapHomePlaybackMovementRange(
                 startMinute: segment.span.start.timeIntervalSince(dayStart) / 60,
                 endMinute: segment.span.end.timeIntervalSince(dayStart) / 60,
                 mode: segment.mode
             )
+            return MapHomePlaybackMovementRange.carved(range, details: details)
         }
         return MapHomePlaybackMovementRange.normalized(
             readingRanges + travelRanges
