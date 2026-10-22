@@ -2346,3 +2346,6 @@
 ## GCL1022P01
 - xcodebuild -scheme TaptionPlan Debug generic iOS, CODE_SIGNING_ALLOWED=NO → BUILD SUCCEEDED.
 - 기기 확인(일정 목록, 권한 요청): 미실시.
+
+## REV1022R01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

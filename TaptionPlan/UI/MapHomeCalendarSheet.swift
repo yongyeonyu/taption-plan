@@ -1754,6 +1754,7 @@ struct MapHomeSalarySettingsSheet: View {
                 if settings.isConfigured {
                     Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {
                         annualPay = 0; monthlyPay = 0; monthAccum = 0
+                        isHourly = false; hourlyPay = 0; hourlyIsNet = false
                         annualManText = ""; hourlyText = ""; monthlyText = ""; accumText = ""
                     }
                 }

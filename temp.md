@@ -1479,3 +1479,8 @@
 - 구현: 기기 캘린더(EventKit, 구글 계정 포함) 오늘 일정 목록(MapHomeTodayCalendar.swift), 메모 버튼을 왼쪽 상단으로 이동, 설정 "구글 캘린더 연동" 섹션.
 - 미구현: 구글 계정 직접 연동(OAuth 클라이언트 ID 필요). 설정에 "준비 중"으로 표시.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
+
+## REV1022R01 · 코드 리뷰 수정: 연봉 카운터 끄기가 시급 설정을 못 끔
+- 발견: 끄기 버튼이 연봉·월급만 지워 시급 모드가 남아 카운터가 계속 켜짐.
+- 수정: 끄기 시 isHourly·hourlyPay·hourlyIsNet 초기화.
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
