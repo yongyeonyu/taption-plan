@@ -16139,8 +16139,11 @@ private struct MapHomePlacePin: View {
             .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
             .background { homeMarkerBackground }
             .frame(width: 48, height: 48)
+            // 터치 영역을 위로 넓힌다(보이는 위치는 그대로).
+            .padding(.top, 22)
+            .offset(y: -22)
             .contentShape(Rectangle())
-            .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48)))
+            .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48), topExtension: 22))
             .accessibilityElement()
             .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
             .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
@@ -16168,14 +16171,15 @@ private struct MapHomePlacePin: View {
             .accessibilityHidden(true)
     }
 
-    private func homeIconTapGesture(markerSize: CGSize) -> some Gesture {
+    /// 집 아이콘 탭: 아이콘 위쪽 여유(topExtension)까지 포함한 영역을 누르면 하루 요약을 연다.
+    private func homeIconTapGesture(markerSize: CGSize, topExtension: CGFloat = 0) -> some Gesture {
         SpatialTapGesture(coordinateSpace: .local)
             .onEnded { tap in
-                guard MapHomeCatTapRouting.contains(
-                    tapPoint: tap.location,
-                    markerPoint: CGPoint(x: markerSize.width / 2, y: markerSize.height / 2),
-                    radius: MapHomeCatTapRouting.homeIconHitRadius
-                ) else { return }
+                let inside = tap.location.x >= 0
+                    && tap.location.x <= markerSize.width
+                    && tap.location.y >= 0
+                    && tap.location.y <= topExtension + markerSize.height
+                guard inside else { return }
                 onOpenDaySummary?()
             }
     }
@@ -16293,8 +16297,10 @@ private struct MapHomePlacePin: View {
             }
         }
         .frame(width: 78, height: 78)
+        .padding(.top, 22)
+        .offset(y: -22)
         .contentShape(Rectangle())
-        .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 78, height: 78)))
+        .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 78, height: 78), topExtension: 22))
         .accessibilityElement()
         .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
         .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
