@@ -16898,10 +16898,17 @@ Group {
     /// 스티커를 메모로 되돌린다. 시간은 스티커 시간을 그대로 쓴다.
     private func revertStickerToMemo() {
         guard case .sticker(let id) = target,
-              let sticker = model.snapshot.stickers.first(where: { $0.id == id }),
-              let memoID = model.addMemoDraft(text: sticker.title, occurredAt: sticker.occurredAt, mapPoint: nil, isTimeless: false),
-              model.updateMapMemo(memoID, text: sticker.title, kind: .idea, mapPoint: nil, occurredAt: sticker.occurredAt, isTimeless: false)
-        else { return }
+              let sticker = model.snapshot.stickers.first(where: { $0.id == id }) else { return }
+        // 제목과 메모 본문을 합쳐 글자를 잃지 않는다.
+        let body = [sticker.title, sticker.memo ?? ""]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        guard let memoID = model.addMemoDraft(text: body, occurredAt: sticker.occurredAt, mapPoint: nil, isTimeless: false) else { return }
+        guard model.updateMapMemo(memoID, text: body, kind: .idea, mapPoint: nil, occurredAt: sticker.occurredAt, isTimeless: false) else {
+            model.discardMapMemoDraft(memoID)
+            return
+        }
         model.deleteMapSticker(id)
         didSave = true
         dismiss()
