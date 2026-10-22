@@ -2338,6 +2338,8 @@ struct MapHomeView: View {
     /// 날짜 줄을 끄는 중 손가락을 따라 움직이는 거리와 이미 넘긴 칸 수.
     @State private var weekDragOffset: CGFloat = 0
     @State private var weekDragStepsApplied = 0
+    /// 날짜 줄 드래그가 끝난 시각(끝난 직후의 탭을 무시하려고).
+    @State private var weekDragEndedAt: Date?
     /// 시작 시간 제한이 지났는지(DB나 경로가 끝나지 않아도 홈을 연다).
     @State private var initialReadyForced = false
     @State private var calendarService = AppleCalendarService()
@@ -6479,6 +6481,8 @@ struct MapHomeView: View {
                 let tint: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
                 let isSelected = calendar.isDate(day, inSameDayAs: model.selectedDate)
                 Button {
+                    // 밀고 나서 손을 뗀 자리가 날짜 칸이면 탭으로 잘못 인식된다. 드래그 직후의 탭은 무시한다.
+                    if let end = weekDragEndedAt, Date().timeIntervalSince(end) < 0.4 { return }
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded = false }
@@ -6512,7 +6516,7 @@ struct MapHomeView: View {
 
     /// 펼쳐진 날짜 줄을 손가락에 붙여 좌우로 민다. 한 칸을 넘을 때마다 하루씩 바뀌고, 줄은 손가락을 따라 움직인다.
     private func weekSwipeGesture(calendar: Calendar) -> some Gesture {
-        DragGesture(minimumDistance: 10)
+        DragGesture(minimumDistance: 14)
             .onChanged { value in
                 let dx = value.translation.width
                 guard abs(dx) > abs(value.translation.height) * 1.5 || weekDragStepsApplied != 0 else { return }
@@ -6527,6 +6531,7 @@ struct MapHomeView: View {
                 weekDragOffset = dx - CGFloat(steps) * pitch
             }
             .onEnded { _ in
+                weekDragEndedAt = Date()
                 weekDragStepsApplied = 0
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { weekDragOffset = 0 }
             }
