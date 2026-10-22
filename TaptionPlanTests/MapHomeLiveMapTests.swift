@@ -1141,6 +1141,20 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(P.inputMonthly(settings), 0)
     }
 
+    func testSalaryTextGroupsDigitsAndLinksHourlyWithAnnual() {
+        typealias P = MapHomeSalaryPolicy
+        XCTAssertEqual(P.grouped("55000000"), "55,000,000")
+        XCTAssertEqual(P.grouped("12a3"), "123")
+        XCTAssertEqual(P.grouped(""), "")
+        var hourly = P.Settings()
+        hourly.isHourly = true
+        hourly.hourly = 10_000
+        XCTAssertEqual(P.linkedAnnualGross(hourly), 25_080_000, accuracy: 0.5)
+        var annual = P.Settings()
+        annual.annualPay = 25_080_000
+        XCTAssertEqual(P.linkedHourlyGross(annual), 10_000, accuracy: 0.5)
+    }
+
     func testSalaryRateUsesMonthlyPayBasisAndEditedAccumulation() throws {
         typealias P = MapHomeSalaryPolicy
         var settings = P.Settings(annualPay: 25_080_000, isNetInput: true)

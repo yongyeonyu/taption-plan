@@ -1297,6 +1297,33 @@ enum MapHomeSalaryPolicy {
         displayed(inputMonthly(settings), settings)
     }
 
+    /// 연봉·시급 연동용: 시급 모드여도 연봉·월급 입력의 세전 월급(시급 모드면 저장된 연봉 기준).
+    static func monthlyGrossIgnoringHourly(_ settings: Settings) -> Double {
+        let base = settings.monthlyPay > 0 ? settings.monthlyPay : settings.annualPay / 12
+        return settings.isNetInput ? grossFromNetMonthly(base) : base
+    }
+
+    /// 시급을 쓰면 시급의 연봉 환산(월 209시간 × 12), 연봉을 쓰면 연봉의 세전 시급 환산(÷ 209). 한쪽만 적어도 다른 쪽이 나온다.
+    static func linkedAnnualGross(_ settings: Settings) -> Double {
+        let fromAnnual = monthlyGrossIgnoringHourly(settings) * 12
+        return fromAnnual > 0 ? fromAnnual : hourlyGross(settings, weeklyHours: 0) * standardMonthlyHours * 12
+    }
+
+    static func linkedHourlyGross(_ settings: Settings) -> Double {
+        settings.hourly > 0 ? hourlyGross(settings, weeklyHours: 0) : monthlyGrossIgnoringHourly(settings) / standardMonthlyHours
+    }
+
+    /// 세전 → 세후(4대보험·소득세) 환산 금액.
+    static func netOfGross(_ gross: Double) -> Double {
+        MapHomeKoreanNetPay.monthly(gross: gross / 12).net * 12
+    }
+
+    /// 1,234,567 형식으로 묶는다. 숫자가 아니면 빈 문자열.
+    static func grouped(_ text: String) -> String {
+        guard let value = Int(text.filter(\.isNumber)) else { return "" }
+        return value.formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic))
+    }
+
     /// 시급의 세전 금액. 세후로 입력했으면 세율을 거꾸로 적용하고, 주휴수당(주 15시간 이상이면 min(주 근무 ÷ 5, 8)시간분)을 더한다.
     static func hourlyGross(_ settings: Settings, weeklyHours: Double) -> Double {
         var gross = settings.hourlyIsNet ? settings.hourly / settings.hourlyTax.keepRate : settings.hourly
@@ -1599,7 +1626,9 @@ struct MapHomeSalarySettingsSheet: View {
                     .pickerStyle(.segmented)
                     if isHourly {
                         let weekly = max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
-                        let hourlyGrossNow = MapHomeSalaryPolicy.hourlyGross(settings, weeklyHours: weekly)
+                        let hourlyGrossNow = hourlyText.isEmpty && hourlyPay <= 0
+                            ? MapHomeSalaryPolicy.linkedHourlyGross(settings)
+                            : MapHomeSalaryPolicy.hourlyGross(settings, weeklyHours: weekly)
                         field(language.text("세전 시급", "Gross hourly"), text: Binding(
                             get: { hourlyIsNet ? "" : hourlyText },
                             set: { hourlyText = $0 }
@@ -1629,8 +1658,8 @@ struct MapHomeSalarySettingsSheet: View {
                         ))
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                     } else {
-                        let grossWon = MapHomeSalaryPolicy.monthlyGross(settings) * 12
-                        let netWon = MapHomeSalaryPolicy.monthlyNet(settings) * 12
+                        let grossWon = MapHomeSalaryPolicy.linkedAnnualGross(settings)
+                        let netWon = MapHomeSalaryPolicy.netOfGross(grossWon)
                         field(language.text("세전 연봉", "Gross annual"), text: Binding(
                             get: { isNetInput ? "" : annualText },
                             set: { annualText = $0 }
@@ -1682,8 +1711,8 @@ struct MapHomeSalarySettingsSheet: View {
                                 .font(.system(size: 11)).foregroundStyle(Color.tpSecondary)
                             Spacer()
                             TextField(language.text("받은 금액", "Received"), text: Binding(
-                                get: { payTexts[key] ?? "" },
-                                set: { payTexts[key] = $0; savePayHistory() }
+                                get: { grouped(payTexts[key] ?? "") },
+                                set: { payTexts[key] = $0.filter(\.isNumber); savePayHistory() }
                             ))
                             .keyboardType(.numberPad)
                             .multilineTextAlignment(.trailing)
@@ -1792,7 +1821,10 @@ struct MapHomeSalarySettingsSheet: View {
         HStack {
             Text(title).font(.system(size: 13, weight: .semibold, design: .rounded))
             Spacer()
-            TextField(placeholder, text: text)
+            TextField(grouped(placeholder), text: Binding(
+                get: { grouped(text.wrappedValue) },
+                set: { text.wrappedValue = $0.filter(\.isNumber) }
+            ))
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .textFieldStyle(.roundedBorder)
@@ -1803,6 +1835,8 @@ struct MapHomeSalarySettingsSheet: View {
     }
 
     private func number(_ text: String) -> Double { Double(text.filter(\.isNumber)) ?? 0 }
+
+    private func grouped(_ text: String) -> String { MapHomeSalaryPolicy.grouped(text) }
 
     private func savePayHistory() {
         var history = settings.payHistory

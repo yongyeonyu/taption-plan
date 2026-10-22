@@ -2370,3 +2370,6 @@
 - export(app-store-connect IPA) SUCCEEDED, altool 업로드 SUCCEEDED (delivery 71eb371f-8b89-4e4f-b000-2e9b3f858517).
 - App Store Connect 처리: build 221 VALID. 내부 그룹 "TP Taption Plan 내부 테스트"에 연결, 그룹 빌드 목록에서 221 확인. 테스터 1명.
 - 제한: 실기기 설치·기능 검증은 미실시.
+
+## SAL1022Z02
+- MapHomeLiveMapTests 75개 통과(iPhone 11 Pro). 화면 배치·토글은 기기 확인 미실시.

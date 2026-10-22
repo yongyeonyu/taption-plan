@@ -2376,6 +2376,10 @@ struct MapHomeView: View {
     @State private var selectedSearchPin: MapHomeSearchResult?
     @State private var isSearchPinMenuPresented = false
     @State private var selectedMarkerInfo: MapHomeMarkerInfoKind?
+    /// 랜드마크 시트가 등록지점(집·회사·식당 등)을 고칠 수 있도록 누른 장소 id를 함께 든다.
+    @State private var selectedMarkerPlaceID: UUID?
+    /// 등록 위치의 범위(주황·빨강 원) 표시 여부. 랜드마크 시트에서 켜고 끈다.
+    @AppStorage(MapHomePlaceRangeEditor.showsRangeKey) private var showsPlaceRanges = true
     @State private var fogOfWarEnabled = true
     @State private var isLongPressMenuPresented = false
     @State private var isDaySummaryPresented = false
@@ -2899,7 +2903,7 @@ struct MapHomeView: View {
     private func presentationModifiers(_ content: some View) -> some View {
         content
         .sheet(item: $selectedMarkerInfo) { info in
-            MapHomeMarkerInfoSheet(kind: info, language: language, model: model)
+            MapHomeMarkerInfoSheet(kind: info, language: language, model: model, placeID: selectedMarkerPlaceID)
                 .presentationDetents([.height(320), .medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -3678,7 +3682,7 @@ struct MapHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, Layout.horizontalInset)
-        .padding(.top, 56)
+        .padding(.top, 12)
     }
 
     private var memoOverlayStack: some View {
@@ -3729,7 +3733,7 @@ struct MapHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, Layout.horizontalInset)
-        .padding(.top, 104)
+        .padding(.top, 60)
     }
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
@@ -5230,6 +5234,7 @@ struct MapHomeView: View {
                                 .fixedSize()
                                 .simultaneousGesture(
                                     TapGesture().onEnded {
+                                        selectedMarkerPlaceID = place.id
                                         selectedMarkerInfo = .landmark(place.destination)
                                     }
                                 )
@@ -5681,7 +5686,7 @@ struct MapHomeView: View {
     /// 등록지점 범위: 빨간 원은 반경, 주황 두 원은 ±15% 히스테리시스 구간.
     @ViewBuilder
     private func placeZoneOverlay(viewport: MapHomeVectorViewport?) -> some View {
-        if let viewport, viewport.pitch < 5, mapViewportSize.height > 0 {
+        if showsPlaceRanges, let viewport, viewport.pitch < 5, mapViewportSize.height > 0 {
             let metersPerPoint = viewport.span.latitudeDelta * 111_320 / Double(mapViewportSize.height)
             if metersPerPoint.isFinite, metersPerPoint > 0 {
                 ForEach(model.settings.frequentPlaces.filter { $0.point != nil }) { place in
@@ -19668,11 +19673,52 @@ enum MapHomeMarkerInfoKind: Identifiable, Hashable {
 }
 
 /// 등록지점의 범위를 지도 위 원으로 보여 주고 슬라이더로 바꾼다. 저장하면 그 지점의 반경이 바뀐다.
+/// 등록지점 이름 변경. 저장하면 지도·목록·랜드마크 시트에 같은 이름이 나온다.
+struct MapHomePlaceNameEditor: View {
+    let model: AppModel
+    let placeID: UUID
+    let language: MapHomeLanguage
+    @State private var name = ""
+
+    private var place: FrequentPlace? {
+        model.settings.frequentPlaces.first { $0.id == placeID }
+    }
+
+    var body: some View {
+        if let place {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(language.text("이름", "Name"))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                TextField(language.text("장소 이름", "Place name"), text: $name)
+                    .textFieldStyle(.roundedBorder)
+                Button(language.text("이름 저장", "Save name")) {
+                    model.updateFrequentPlaceDetails(
+                        place.id,
+                        name: trimmed,
+                        radiusMeters: place.radiusMeters,
+                        minimumDwellMinutes: place.minimumDwellMinutes,
+                        isAutomaticRecordingEnabled: place.isAutomaticRecordingEnabled
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.tpAccent)
+                .disabled(trimmed.isEmpty || trimmed == place.name)
+                .frame(maxWidth: .infinity)
+            }
+            .onAppear { name = place.name }
+        }
+    }
+}
+
 struct MapHomePlaceRangeEditor: View {
+    static let showsRangeKey = "mapHomeShowsPlaceRanges"
+
     let model: AppModel
     let placeID: UUID
     let language: MapHomeLanguage
     @State private var radiusMeters: Double = 120
+    @AppStorage(showsRangeKey) private var showsRanges = true
 
     private var place: FrequentPlace? {
         model.settings.frequentPlaces.first { $0.id == placeID }
@@ -19682,8 +19728,17 @@ struct MapHomePlaceRangeEditor: View {
         if let place, let point = place.point {
             let center = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
             VStack(alignment: .leading, spacing: 10) {
-                Text(language.text("범위 지정", "Range"))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                HStack {
+                    Text(language.text("범위 지정", "Range"))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                    Spacer()
+                    Toggle(language.text("지도에 범위 표시", "Show on map"), isOn: $showsRanges)
+                        .labelsHidden()
+                        .tint(Color.tpAccent)
+                    Text(language.text("지도 표시", "Map"))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.tpSecondary)
+                }
                 Map(
                     initialPosition: .region(MKCoordinateRegion(
                         center: center,
@@ -19728,27 +19783,33 @@ struct MapHomePlaceRangeEditor: View {
 struct MapHomeMarkerInfoSheet: View {
     let kind: MapHomeMarkerInfoKind
     let language: MapHomeLanguage
-    /// 등록지점(집·회사 등)이면 여기서 범위(반경)를 지도 원으로 고칠 수 있다.
+    /// 등록지점(집·회사 등)이면 여기서 이름을 바꾸고 범위(반경)를 지도 원으로 고칠 수 있다.
     var model: AppModel? = nil
+    var placeID: UUID? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: symbol)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(Color.tpAccent)
-                    .frame(width: 52, height: 52)
-                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                Text(title)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpInk)
-                Spacer()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                        .frame(width: 52, height: 52)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    Text(title)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                    Spacer()
+                }
+                Text(detail)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let model, let placeID {
+                    MapHomePlaceNameEditor(model: model, placeID: placeID, language: language)
+                    MapHomePlaceRangeEditor(model: model, placeID: placeID, language: language)
+                }
             }
-            Text(detail)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Color.tpSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
