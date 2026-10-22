@@ -74,13 +74,16 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             "redirect_uri": GoogleCalendarConfig.redirectURI,
         ])
         guard let refresh = token.refreshToken else { throw GoogleCalendarError.requestFailed }
-        Self.saveRefreshToken(refresh)
+        guard Self.saveRefreshToken(refresh) else { throw GoogleCalendarError.requestFailed }
         accessToken = token.accessToken
         accessTokenExpiry = Date.now.addingTimeInterval(TimeInterval(token.expiresIn - 60))
         isConnected = true
     }
 
     func disconnect() {
+        if let refresh = Self.loadRefreshToken() {
+            Task { await Self.revoke(refresh) }
+        }
         Self.deleteRefreshToken()
         accessToken = nil
         isConnected = false
@@ -232,12 +235,22 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
         return String(data: data, encoding: .utf8)
     }
 
-    private static func saveRefreshToken(_ token: String) {
+    @discardableResult
+    private static func saveRefreshToken(_ token: String) -> Bool {
         deleteRefreshToken()
         var query = keychainQuery()
         query[kSecValueData as String] = Data(token.utf8)
         query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(query as CFDictionary, nil)
+        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
+    }
+
+    /// 해제할 때 구글 쪽 권한도 취소한다. 실패해도 로컬 토큰은 지운다.
+    private static func revoke(_ token: String) async {
+        var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/revoke")!)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = "token=\(formEncode(token))".data(using: .utf8)
+        _ = try? await URLSession.shared.data(for: request)
     }
 
     private static func deleteRefreshToken() {

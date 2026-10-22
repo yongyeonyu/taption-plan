@@ -2358,3 +2358,6 @@
 
 ## GOA1022S01
 - 빌드 BUILD SUCCEEDED. 기기 로그인/일정 조회 미실시.
+
+## REV1022R04
+- 빌드 BUILD SUCCEEDED. 로그인·해제 기기 확인 미실시.

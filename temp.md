@@ -1498,3 +1498,9 @@
 - 구현: GoogleCalendarAccount(ASWebAuthenticationSession + PKCE, 리프레시 토큰 키체인, calendar.readonly로 오늘 일정 조회). 설정 "구글 계정 직접 연동" 연결/해제, 오늘 일정 목록이 연결 시 구글 일정 사용. Info.plist에 반전된 클라이언트 ID 스킴 추가.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 로그인·일정 조회는 기기에서 미확인(테스트 사용자 계정 필요).
 - 제한: 동의 화면 테스트 상태(등록된 테스트 사용자만 로그인 가능).
+
+## REV1022R04 · 구글 연동 코드 리뷰 수정
+- 키체인 저장 실패를 무시하던 문제: 저장 실패 시 연결 실패로 처리.
+- 해제 시 구글 권한 취소(revoke) 추가.
+- 구글 일정 조회 실패가 "권한 꺼짐"으로 보이던 문제: 실패 상태 메시지 분리.
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.

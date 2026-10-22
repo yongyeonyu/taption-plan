@@ -36,6 +36,7 @@ struct MapHomeTodayCalendarList: View {
         case loading
         case needsPermission
         case denied
+        case failed
         case loaded([CalendarRecord])
     }
 
@@ -58,6 +59,10 @@ struct MapHomeTodayCalendarList: View {
                     }
                 }
                 .font(.system(size: 12, weight: .bold, design: .rounded))
+            case .failed:
+                Text(language.text("구글 캘린더를 불러오지 못했어요. 잠시 후 다시 열어 주세요.", "Could not load Google Calendar. Try again later."))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
             case .denied:
                 Text(language.text("캘린더 접근이 꺼져 있어요. 설정 > 개인정보 보호에서 허용해 주세요.", "Calendar access is off. Enable it in Settings > Privacy."))
                     .font(.system(size: 12, weight: .medium))
@@ -104,7 +109,7 @@ struct MapHomeTodayCalendarList: View {
             do {
                 state = .loaded(try await GoogleCalendarAccount.shared.todayEvents())
             } catch {
-                state = .denied
+                state = .failed
             }
             return
         }
