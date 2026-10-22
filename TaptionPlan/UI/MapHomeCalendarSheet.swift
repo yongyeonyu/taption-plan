@@ -1411,7 +1411,7 @@ enum MapHomeSalaryPolicy {
     }
 
     static func wonText(_ value: Double) -> String {
-        "\(Int(value.rounded()).formatted(.number.grouping(.automatic)))원"
+        "\(Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic)))원"
     }
 }
 

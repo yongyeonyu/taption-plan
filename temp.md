@@ -1456,3 +1456,8 @@
 - 원인: 벡터 파스텔 색 값이 벡터 밝은 지도와 거의 같았음(배경·물·녹지·건물·도로).
 - 변경: MapHomeVectorStyle.pastel 배경 #FFF0F5, 물 #B8DDF5, 녹지 #D4F2E0, 건물 #E8CCF2, 도로 #F7A7BE.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
+
+## SAL1022K01 · 연봉 카운터 숫자 쉼표 (2026-10-22)
+- 요청: 연봉 카운터 숫자에 쉼표(,) 표시.
+- 변경: MapHomeSalaryPolicy.wonText를 en_US 로케일 그룹 구분으로 고정(MapHomeCalendarSheet.swift).
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.

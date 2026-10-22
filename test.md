@@ -2329,3 +2329,7 @@
 ## PAS1022J01 · 벡터 파스텔 지도 색 분리
 - 빌드: Debug generic iOS, CODE_SIGNING_ALLOWED=NO → BUILD SUCCEEDED.
 - 기기 확인: 미실시.
+
+## SAL1022K01 · 연봉 카운터 숫자 쉼표
+- 빌드: Debug generic iOS → BUILD SUCCEEDED.
+- 단위 테스트/기기 확인: 미실시.
