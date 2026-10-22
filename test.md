@@ -2441,3 +2441,6 @@
 
 ## STK1022AF02
 - 빌드 BUILD SUCCEEDED. 기기 정렬 미확인.
+
+## UNC1022AG01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

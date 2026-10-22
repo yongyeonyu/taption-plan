@@ -1144,6 +1144,8 @@ struct MapHomeTimeSidebar: View {
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
+    /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
+    @State private var reviewChoices: [MapHomeTimeRailSegment]?
 
     @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var visibleStartMinute = 0
@@ -1215,6 +1217,58 @@ struct MapHomeTimeSidebar: View {
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
         )
+    }
+
+    /// 미확인 아이콘 묶음 층. 본문 식이 길어 따로 뺐다.
+    @ViewBuilder
+    private func reviewMarkerLayer(
+        railOriginX: CGFloat,
+        verticalInset: CGFloat,
+        centers: [String: CGFloat],
+        segments: [MapHomeTimeRailSegment]
+    ) -> some View {
+                // 아이콘 크기(26pt)만큼 가까운 미확인 구간은 아이콘 하나로 묶는다.
+                ForEach(MapHomeTimeSidebarMath.reviewMarkerGroups(segments: segments, centers: centers), id: \.first?.id) { group in
+                    let y = centers[group.first?.id ?? ""] ?? verticalInset
+                    Button {
+                        if group.count == 1, let only = group.first {
+                            onUnconfirmedReview?(only)
+                        } else {
+                            reviewChoices = group
+                        }
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "questionmark")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.tpInk)
+                                .frame(width: 26, height: 26)
+                                .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
+                                .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
+                                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                            if group.count > 1 {
+                                Text("\(group.count)")
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 4)
+                                    .background(Color.tpReferenceBlue, in: Capsule())
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
+                        .frame(
+                            width: MapHomeTimeSidebarMath.reviewMarkerHitHeight,
+                            height: MapHomeTimeSidebarMath.reviewMarkerHitHeight
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(
+                        group.count == 1
+                            ? "미확인 구간 \(timeLabel(for: group[0].startMinute))–\(timeLabel(for: group[0].endMinute)) 입력"
+                            : "미확인 구간 \(group.count)개 선택"
+                    )
+                    .position(x: railOriginX - 16, y: y)
+                    .zIndex(4)
+                }
     }
 
     var body: some View {
@@ -1523,46 +1577,12 @@ struct MapHomeTimeSidebar: View {
                         .accessibilityHint("화면 오른쪽 끝까지 끌어 시간을 선택합니다")
                 }
 
-                ForEach(reviewableVisibleSegments) { segment in
-                    let start = max(
-                        segment.startMinute,
-                        visibleWindow.lowerBound
-                    )
-                    let end = min(segment.endMinute, visibleWindow.upperBound)
-                    if start < end {
-                        Button {
-                            onUnconfirmedReview?(segment)
-                        } label: {
-                            Image(systemName: "questionmark")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.tpInk)
-                                .frame(width: 26, height: 26)
-                                .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
-                                .overlay(Circle().stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1))
-                                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
-                                .frame(
-                                    width: MapHomeTimeSidebarMath.reviewMarkerHitHeight,
-                                    height: MapHomeTimeSidebarMath.reviewMarkerHitHeight
-                                )
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(
-                            "미확인 구간 \(timeLabel(for: start))–\(timeLabel(for: end)) 입력"
-                        )
-                        .position(
-                            x: railOriginX - 16,
-                            y: reviewMarkerCenters[segment.id]
-                                ?? verticalInset + trackHeight
-                                    * MapHomeTimeSidebarMath.segmentCenterPosition(
-                                        start: start,
-                                        end: end,
-                                        window: visibleWindow
-                                    )
-                        )
-                        .zIndex(4)
-                    }
-                }
+                reviewMarkerLayer(
+                    railOriginX: railOriginX,
+                    verticalInset: verticalInset,
+                    centers: reviewMarkerCenters,
+                    segments: reviewableVisibleSegments
+                )
 
             }
             .frame(
@@ -1572,6 +1592,21 @@ struct MapHomeTimeSidebar: View {
             )
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
+            .confirmationDialog(
+                "미확인 구간 고르기",
+                isPresented: Binding(
+                    get: { reviewChoices != nil },
+                    set: { if !$0 { reviewChoices = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                ForEach(reviewChoices ?? [], id: \.id) { segment in
+                    Button("\(timeLabel(for: segment.startMinute))–\(timeLabel(for: segment.endMinute))") {
+                        onUnconfirmedReview?(segment)
+                    }
+                }
+                Button("취소", role: .cancel) {}
+            }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("시간 선택")
             .accessibilityValue(timeLabel(for: minute))
@@ -2796,6 +2831,27 @@ enum MapHomeTimeSidebarMath {
             )
         }
         return Dictionary(uniqueKeysWithValues: centers)
+    }
+
+    /// 미확인 아이콘끼리 아이콘 크기(26pt)보다 가까우면 한 묶음으로 본다. 위에서 아래 순서로 묶는다.
+    static func reviewMarkerGroups(
+        segments: [MapHomeTimeRailSegment],
+        centers: [String: CGFloat],
+        iconSize: CGFloat = 26
+    ) -> [[MapHomeTimeRailSegment]] {
+        let sorted = segments.sorted { (centers[$0.id] ?? 0) < (centers[$1.id] ?? 0) }
+        var groups: [[MapHomeTimeRailSegment]] = []
+        var lastY: CGFloat?
+        for segment in sorted {
+            let y = centers[segment.id] ?? 0
+            if let lastY, y - lastY < iconSize, !groups.isEmpty {
+                groups[groups.count - 1].append(segment)
+            } else {
+                groups.append([segment])
+            }
+            lastY = y
+        }
+        return groups
     }
 
     static func spanFraction(start: Int, end: Int, window: ClosedRange<Int>) -> CGFloat {

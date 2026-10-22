@@ -7647,9 +7647,9 @@ struct MapHomeView: View {
                                 "\(sticker.title) schedule memo"
                             )
                         )
-                        // 날씨 칩 중심에 맞춘다(캡처로 잰 값: 미확인 아이콘 중심에서 12pt 왼쪽).
+                        // 날씨 칩의 왼쪽 끝에 맞춘다(캡처로 잰 값: 칩 왼쪽 끝 x 17, 스티커 반지름 11).
                         .position(
-                            x: MapHomeTimeSidebarMath.handleLaneWidth - 28,
+                            x: MapHomeTimeSidebarMath.handleLaneWidth - 41,
                             y: min(
                                 max(y, MapHomeTimeSidebarMath.verticalInset),
                                 railHeight - MapHomeTimeSidebarMath.verticalInset
