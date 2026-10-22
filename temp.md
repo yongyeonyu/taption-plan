@@ -1315,3 +1315,9 @@
 - 원인 2(사진에 저장): 사진 저장 콜백을 메인 액터 클로저에서 호출 → 실행 위치 검사로 중단. 저장 호출을 액터 밖 함수로 분리.
 - 검증: 아이폰18 UI 테스트 — 카드 열기, 사진 저장 단계 모두 통과(build/validation/CRASH1022K08). 공유 버튼은 저장 테스트에서 함께 눌러 충돌 없음.
 - 미확인: 알림 설정 토글 자체 충돌 여부는 testOpenAlarmSettingsAndToggle로 통과(build/validation/CRASH1022K03).
+
+## REL1022K01 · Build 217 TestFlight 업로드 (2026-10-22)
+- 요청(대표): 워크트리 클린, 메인 커밋·푸시 후 빌드업.
+- 범위: CURRENT_PROJECT_VERSION 216→217(8곳·Info.plist 4개), 아카이브·내보내기·업로드, VALID, 내부 테스트 그룹 연결·확인.
+- 포함: 216 이후 — 하루 카드 충돌 두 건 수정(CRS1022L01).
+- 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 217.
