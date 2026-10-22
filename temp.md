@@ -1378,3 +1378,4 @@
 - 범위: CURRENT_PROJECT_VERSION 218→219(8곳·Info.plist 4개), 아카이브·내보내기·업로드, VALID, 내부 테스트 그룹 연결·확인.
 - 포함: 마이크 충돌 수정(MIC1022T01).
 - 검증 기준: 업로드 성공, VALID, 그룹 노출, CFBundleVersion 219.
+- 완료: 219 업로드·VALID·그룹 연결, test.md 기록.

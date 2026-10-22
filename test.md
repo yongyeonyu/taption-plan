@@ -2310,3 +2310,8 @@
 - CURRENT_PROJECT_VERSION 218(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022S01/). IPA 앱·위젯 CFBundleVersion 218 확인.
 - ASC 218 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 218, 테스터 1명.
 - 한계: 메모 큐·공유 카드 항목 선택·알람 확인 등은 기기 확인 전.
+
+## REL1022U01 · Build 219 TestFlight (2026-10-22)
+- CURRENT_PROJECT_VERSION 219(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022U01/). IPA 앱·위젯 CFBundleVersion 219 확인.
+- ASC 219 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 219, 테스터 1명.
+- 한계: 마이크 충돌 수정은 대표 기기 확인 대기(로그 전달 예정).
