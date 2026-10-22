@@ -6481,11 +6481,9 @@ struct MapHomeView: View {
                 let tint: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
                 let isSelected = calendar.isDate(day, inSameDayAs: model.selectedDate)
                 Button {
-                    // 밀고 나서 손을 뗀 자리가 날짜 칸이면 탭으로 잘못 인식된다. 드래그 직후의 탭은 무시한다.
-                    if let end = weekDragEndedAt, Date().timeIntervalSince(end) < 0.4 { return }
+                    // 날짜 줄은 오른쪽 위 날짜 배지를 눌러서만 닫는다. 날짜 칸을 누르면 날짜만 바뀐다.
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded = false }
                 } label: {
                     VStack(spacing: 0) {
                         Text(day.formatted(Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))))
