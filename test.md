@@ -2392,3 +2392,6 @@
 ## REL1022T02 결과
 - archive SUCCEEDED, 앱·위젯 CFBundleVersion 222. export 성공, altool 업로드 성공.
 - App Store Connect: build 222 VALID, 내부 그룹 연결 후 그룹 빌드 목록에서 222 확인.
+
+## MIC1022Y01
+- 빌드 BUILD SUCCEEDED. 권한 요청 시점·설정 열기 기기 확인 미실시.

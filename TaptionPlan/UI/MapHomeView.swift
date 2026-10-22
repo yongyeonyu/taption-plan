@@ -16811,6 +16811,7 @@ Group {
 .listRowBackground(Color.tpSurface)
 }
 .tpListStyle()
+            .safeAreaInset(edge: .bottom) { dictationBar }
             .navigationTitle(
                 language.text(
                     isSticker
@@ -16850,6 +16851,39 @@ Group {
         }
     }
 
+    /// 음성 입력 버튼은 편집 화면 하단 가운데에 고정한다. 누르면 권한을 바로 요청하고, 말한 내용이 메모 글자로 이어진다.
+    private var dictationBar: some View {
+        VStack(spacing: 6) {
+            if let message = dictation.errorMessage {
+                Text(message)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.tpHoliday)
+                    .multilineTextAlignment(.center)
+                if MapHomeDictation.isPermissionDenied {
+                    Button(language.text("설정 열기", "Open Settings")) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
+            }
+            Button {
+                toggleDictation()
+            } label: {
+                Image(systemName: dictation.isListening ? "mic.fill" : "mic")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
+                    .frame(width: 68, height: 68)
+                    .background(Color.tpAccent.opacity(0.14), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
     @ViewBuilder
     private var stickerFields: some View {
         Section(language.text("메모 스티커", "Memo sticker")) {
@@ -16884,29 +16918,6 @@ Group {
                 } else {
                     TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
                 }
-            }
-            // 음성 입력은 입력칸 아래 가운데에 크게 둔다. 말한 내용이 글자로 바로 메모에 들어간다.
-            HStack {
-                Spacer()
-                Button {
-                    toggleDictation()
-                } label: {
-                    Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
-                        .frame(width: 64, height: 64)
-                        .background(Color.tpAccent.opacity(0.12), in: Circle())
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
-                Spacer()
-            }
-            .padding(.top, 4)
-            if let message = dictation.errorMessage {
-                Text(message)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.tpHoliday)
             }
         }
         .onChange(of: dictation.transcript) { _, text in

@@ -32,6 +32,13 @@ final class MapHomeDictation {
         }
     }
 
+    /// 음성 인식이나 마이크 권한이 거부된 상태(설정에서만 바꿀 수 있다).
+    static var isPermissionDenied: Bool {
+        SFSpeechRecognizer.authorizationStatus() == .denied
+            || SFSpeechRecognizer.authorizationStatus() == .restricted
+            || AVAudioApplication.shared.recordPermission == .denied
+    }
+
     /// 권한 콜백은 시스템 백그라운드 큐에서 온다. 메인 액터 클로저로 두면 격리 검사에서 SIGTRAP으로 죽으므로 nonisolated로 받는다.
     nonisolated private static func requestSpeechAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
         await withCheckedContinuation { continuation in
