@@ -5094,11 +5094,9 @@ struct MapHomeView: View {
         guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
               let viewport = vectorMapViewportStore.viewport,
               let pinPoint = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return false }
-        return MapHomeCatTapRouting.hitsHomeSummary(
-            tapPoint: tapPoint,
-            pinPoint: pinPoint,
-            showsCatAtHome: isDisplayedCatAtHome
-        )
+        // 집 아이콘(핀 위쪽)과 레벨 라벨 영역을 넓게 잡는다. 화랑이가 집에 있어도 같은 영역이다.
+        let iconRect = CGRect(x: pinPoint.x - 56, y: pinPoint.y - 110, width: 112, height: 150)
+        return iconRect.contains(tapPoint)
     }
 
     private func pawprintTarget(
@@ -6329,6 +6327,8 @@ struct MapHomeView: View {
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
             bottomBarButton("house.fill", language.text("집", "Home")) {
                 focusMapOnHome()
+                // 집으로 옮긴 뒤 하루 요약을 바로 연다.
+                isDaySummaryPresented = true
             }
             bottomBarButton(
                 isDayPlaybackRunning ? "pause.fill" : "play.fill",
