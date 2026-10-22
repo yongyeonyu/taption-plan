@@ -16,6 +16,7 @@ private enum SettingsTypography {
 struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var sharedExport: ShareableURL?
+    @State private var googleErrorMessage: String?
     @State private var showsDeleteConfirmation = false
     @State private var showsDeleteBackupsConfirmation = false
     @State private var customFrequentPlaceName = ""
@@ -288,10 +289,27 @@ struct SettingsView: View {
                             Task {
                                 if GoogleCalendarAccount.shared.isConnected {
                                     GoogleCalendarAccount.shared.disconnect()
-                                } else {
-                                    try? await GoogleCalendarAccount.shared.connect()
+                                    return
+                                }
+                                do {
+                                    try await GoogleCalendarAccount.shared.connect()
+                                } catch GoogleCalendarError.cancelled {
+                                    // 사용자가 로그인 창을 닫은 경우는 알림 없이 끝낸다.
+                                } catch {
+                                    googleErrorMessage = error.localizedDescription
                                 }
                             }
+                        }
+                        .alert(
+                            "구글 캘린더 연결",
+                            isPresented: Binding(
+                                get: { googleErrorMessage != nil },
+                                set: { if !$0 { googleErrorMessage = nil } }
+                            )
+                        ) {
+                            Button("확인", role: .cancel) {}
+                        } message: {
+                            Text(googleErrorMessage ?? "")
                         }
                     }
 

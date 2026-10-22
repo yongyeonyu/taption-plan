@@ -17,12 +17,15 @@ enum GoogleCalendarError: LocalizedError {
     case cancelled
     case notConnected
     case requestFailed
+    /// 리프레시 토큰이 거부됐거나 앱 권한이 취소됐다. 다시 연결해야 한다.
+    case authExpired
 
     var errorDescription: String? {
         switch self {
         case .cancelled: "구글 로그인이 취소됐어요."
         case .notConnected: "구글 계정이 연결되어 있지 않아요."
-        case .requestFailed: "구글 캘린더를 불러오지 못했어요."
+        case .requestFailed: "구글 캘린더를 불러오지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요."
+        case .authExpired: "구글 연결이 만료됐어요. 설정에서 다시 연결해 주세요."
         }
     }
 }
@@ -39,6 +42,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     private(set) var isConnected: Bool
     private var accessToken: String?
     private var accessTokenExpiry = Date.distantPast
+    private var isConnecting = false
 
     override init() {
         isConnected = Self.loadRefreshToken() != nil
@@ -48,6 +52,9 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     // MARK: 연결·해제
 
     func connect() async throws {
+        guard !isConnecting else { return }
+        isConnecting = true
+        defer { isConnecting = false }
         let verifier = Self.randomURLSafe(byteCount: 48)
         let challenge = Self.base64URL(Data(SHA256.hash(data: Data(verifier.utf8))))
         var components = URLComponents(string: "https://accounts.google.com/o/oauth2/v2/auth")!
@@ -72,11 +79,11 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             "code_verifier": verifier,
             "grant_type": "authorization_code",
             "redirect_uri": GoogleCalendarConfig.redirectURI,
-        ])
+        ], isRefresh: false)
         guard let refresh = token.refreshToken else { throw GoogleCalendarError.requestFailed }
         guard Self.saveRefreshToken(refresh) else { throw GoogleCalendarError.requestFailed }
         accessToken = token.accessToken
-        accessTokenExpiry = Date.now.addingTimeInterval(TimeInterval(token.expiresIn - 60))
+        accessTokenExpiry = Self.expiry(afterSeconds: token.expiresIn)
         isConnected = true
     }
 
@@ -106,14 +113,20 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
         ]
         var request = URLRequest(url: components.url!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200,
-              let list = try? JSONDecoder().decode(EventList.self, from: data) else {
+        let (data, response) = try await send(request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 401 {
+            // 사용자가 구글에서 앱 권한을 취소했다.
+            forgetConnection()
+            throw GoogleCalendarError.authExpired
+        }
+        guard status == 200, let list = try? JSONDecoder().decode(EventList.self, from: data) else {
             throw GoogleCalendarError.requestFailed
         }
+        let parser = Event.Parser(calendar: calendar)
         return list.items
             .filter { $0.status != "cancelled" }
-            .compactMap { $0.record(calendar: calendar) }
+            .compactMap { $0.record(parser: parser) }
             .sorted { lhs, rhs in
                 if lhs.isAllDay != rhs.isAllDay { return lhs.isAllDay }
                 return lhs.span.start < rhs.span.start
@@ -124,15 +137,46 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
 
     private func validAccessToken() async throws -> String {
         if let accessToken, accessTokenExpiry > .now { return accessToken }
-        guard let refresh = Self.loadRefreshToken() else { throw GoogleCalendarError.notConnected }
-        let token = try await postToken([
-            "client_id": GoogleCalendarConfig.clientID,
-            "refresh_token": refresh,
-            "grant_type": "refresh_token",
-        ])
-        accessToken = token.accessToken
-        accessTokenExpiry = Date.now.addingTimeInterval(TimeInterval(token.expiresIn - 60))
-        return token.accessToken
+        guard let refresh = Self.loadRefreshToken() else {
+            forgetConnection()
+            throw GoogleCalendarError.notConnected
+        }
+        do {
+            let token = try await postToken([
+                "client_id": GoogleCalendarConfig.clientID,
+                "refresh_token": refresh,
+                "grant_type": "refresh_token",
+            ], isRefresh: true)
+            accessToken = token.accessToken
+            accessTokenExpiry = Self.expiry(afterSeconds: token.expiresIn)
+            return token.accessToken
+        } catch GoogleCalendarError.authExpired {
+            forgetConnection()
+            throw GoogleCalendarError.authExpired
+        }
+    }
+
+    /// 앱이 들고 있는 연결 정보를 지운다(구글 쪽 권한 취소는 하지 않는다: 이미 거부된 상태).
+    private func forgetConnection() {
+        Self.deleteRefreshToken()
+        accessToken = nil
+        accessTokenExpiry = .distantPast
+        isConnected = false
+    }
+
+    /// 만료 60초 전에 갱신한다. 아주 짧은 수명(120초 이하)은 절반이 지나면 갱신해 매번 갱신하지 않게 한다.
+    private static func expiry(afterSeconds seconds: Int) -> Date {
+        let margin = seconds > 120 ? 60 : seconds / 2
+        return Date.now.addingTimeInterval(TimeInterval(seconds - margin))
+    }
+
+    /// 네트워크 연결 실패를 requestFailed로 통일한다.
+    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+        do {
+            return try await URLSession.shared.data(for: request)
+        } catch {
+            throw GoogleCalendarError.requestFailed
+        }
     }
 
     private struct TokenResponse: Decodable {
@@ -147,7 +191,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
         }
     }
 
-    private func postToken(_ fields: [String: String]) async throws -> TokenResponse {
+    private func postToken(_ fields: [String: String], isRefresh: Bool) async throws -> TokenResponse {
         var request = URLRequest(url: URL(string: "https://oauth2.googleapis.com/token")!)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -155,9 +199,12 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             .map { "\($0.key)=\(Self.formEncode($0.value))" }
             .joined(separator: "&")
             .data(using: .utf8)
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200,
-              let token = try? JSONDecoder().decode(TokenResponse.self, from: data) else {
+        let (data, response) = try await send(request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if isRefresh, status == 400 || status == 401 {
+            throw GoogleCalendarError.authExpired
+        }
+        guard status == 200, let token = try? JSONDecoder().decode(TokenResponse.self, from: data) else {
             throw GoogleCalendarError.requestFailed
         }
         return token
@@ -170,6 +217,8 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: GoogleCalendarConfig.redirectScheme) { callbackURL, error in
                 if let callbackURL {
                     continuation.resume(returning: callbackURL)
+                } else if (error as? ASWebAuthenticationSessionError)?.code == .canceledLogin {
+                    continuation.resume(throwing: GoogleCalendarError.cancelled)
                 } else {
                     continuation.resume(throwing: error ?? GoogleCalendarError.cancelled)
                 }
@@ -201,14 +250,14 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
         var start: When?
         var end: When?
 
-        fileprivate struct When: Decodable {
+        struct When: Decodable {
             var dateTime: String?
             var date: String?
         }
 
-        func record(calendar: Calendar) -> CalendarRecord? {
-            guard let start, let startDate = start.instant(calendar: calendar) else { return nil }
-            let endDate = end?.instant(calendar: calendar) ?? startDate.addingTimeInterval(3_600)
+        func record(parser: Parser) -> CalendarRecord? {
+            guard let start, let startDate = parser.instant(start) else { return nil }
+            let endDate = end.flatMap { parser.instant($0) } ?? startDate.addingTimeInterval(3_600)
             let isAllDay = start.dateTime == nil
             return CalendarRecord(
                 id: "google-\(id)",
@@ -220,6 +269,31 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
                 calendarColorHex: nil,
                 sourceTitle: "Google"
             )
+        }
+
+        /// 한 번 만든 포매터를 여러 일정에 재사용한다. 종일 일정은 "yyyy-MM-dd", 시간 일정은 RFC 3339다.
+        struct Parser {
+            private let plain = ISO8601DateFormatter()
+            private let fractional: ISO8601DateFormatter = {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                return formatter
+            }()
+            private let day: DateFormatter
+
+            init(calendar: Calendar) {
+                day = DateFormatter()
+                day.calendar = calendar
+                day.timeZone = calendar.timeZone
+                day.dateFormat = "yyyy-MM-dd"
+            }
+
+            func instant(_ when: When) -> Date? {
+                if let dateTime = when.dateTime {
+                    return plain.date(from: dateTime) ?? fractional.date(from: dateTime)
+                }
+                return when.date.flatMap { day.date(from: $0) }
+            }
         }
     }
 
@@ -288,29 +362,5 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
 
     private static func formEncode(_ value: String) -> String {
         value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed.subtracting(CharacterSet(charactersIn: "+&="))) ?? value
-    }
-}
-
-private extension GoogleCalendarAccount.Event.When {
-    /// 종일 일정은 "yyyy-MM-dd", 시간 일정은 RFC 3339 문자열이다.
-    func instant(calendar: Calendar) -> Date? {
-        if let dateTime {
-            return ISO8601DateFormatter().date(from: dateTime)
-                ?? ISO8601DateFormatter.fractionalDate(from: dateTime)
-        }
-        guard let date else { return nil }
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: date)
-    }
-}
-
-private extension ISO8601DateFormatter {
-    static func fractionalDate(from text: String) -> Date? {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: text)
     }
 }

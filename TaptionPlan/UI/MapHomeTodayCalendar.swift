@@ -60,7 +60,7 @@ struct MapHomeTodayCalendarList: View {
                 }
                 .font(.system(size: 12, weight: .bold, design: .rounded))
             case .failed:
-                Text(language.text("구글 캘린더를 불러오지 못했어요. 잠시 후 다시 열어 주세요.", "Could not load Google Calendar. Try again later."))
+                Text(language.text("구글 캘린더를 불러오지 못했어요. 설정에서 연결을 확인해 주세요.", "Could not load Google Calendar. Check the connection in Settings."))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             case .denied:
