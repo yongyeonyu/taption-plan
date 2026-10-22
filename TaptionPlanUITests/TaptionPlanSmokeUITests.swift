@@ -140,4 +140,21 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         if share.waitForExistence(timeout: 5) { share.tap() }
         sleep(6)
     }
+
+    /// 메모 추가 화면에서 음성 입력 버튼을 누른다(마이크 충돌 재현). 권한 창은 허용한다.
+    func testMemoMicButtonRepro() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let add = app.buttons.containing(NSPredicate(format: "label == %@ OR label == %@", "메모", "Memo")).firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 20))
+        add.tap()
+        let mic = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "음성으로 입력")).firstMatch
+        if mic.waitForExistence(timeout: 8) { mic.tap() }
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for _ in 0..<3 {
+            let allow = springboard.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@ OR label CONTAINS %@", "허용", "확인", "OK")).firstMatch
+            if allow.waitForExistence(timeout: 4) { allow.tap() }
+        }
+        sleep(5)
+    }
 }
