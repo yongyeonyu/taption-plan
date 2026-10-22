@@ -16951,6 +16951,9 @@ Group {
             dictationBase = memoText.isEmpty ? "" : memoText + " "
             // 녹음을 누르면 입력칸에 커서를 두고, 글자 변환이 끝나면 그 글자를 메모에 붙인다.
             memoFocusToken += 1
+            dictation.onPartial = { text in
+                memoText = dictationBase + text
+            }
             dictation.onTranscribed = { text in
                 memoText = dictationBase + text
             }
