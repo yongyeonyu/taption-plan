@@ -2416,3 +2416,7 @@
 
 ## STK1022AD02
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## REL1022T03 결과
+- archive 성공, 앱·위젯 CFBundleVersion 223. export·업로드 성공.
+- App Store Connect: build 223 VALID, 내부 그룹 연결 후 그룹 목록에서 223 확인.
