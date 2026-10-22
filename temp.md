@@ -1451,3 +1451,8 @@
 ## WLK1022I01 · 걷기 재생 속도 1.5배 (2026-10-22)
 - 요청(대표): 걷기 구간 재생 속도를 1.5배 빠르게(기존 2배 → 3배).
 - 구현: 걷기 구간 재생 배율을 2배에서 3배로(MapHomeDayPlaybackMath.movingMinutesPerSecond × 3). 빌드 성공. 기기 미확인.
+
+## PAS1022J01 · 벡터 파스텔 지도 색 분리 (2026-10-22)
+- 원인: 벡터 파스텔 색 값이 벡터 밝은 지도와 거의 같았음(배경·물·녹지·건물·도로).
+- 변경: MapHomeVectorStyle.pastel 배경 #FFF0F5, 물 #B8DDF5, 녹지 #D4F2E0, 건물 #E8CCF2, 도로 #F7A7BE.
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.

@@ -22,7 +22,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#0A1B2A"
         case .light: "#F7F6F4"
         case .contrast: "#FFFFFF"
-        case .pastel: "#FFF7F4"
+        case .pastel: "#FFF0F5"
         case .casual: "#FFF8EC"
         case .rpg: "#ECDFC0"
         }
@@ -33,7 +33,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#07131F"
         case .light: "#DDEFF4"
         case .contrast: "#C9DFF5"
-        case .pastel: "#DCEEFF"
+        case .pastel: "#B8DDF5"
         case .casual: "#BFE8F0"
         case .rpg: "#A7CFD4"
         }
@@ -44,7 +44,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#102838"
         case .light: "#E7EFE4"
         case .contrast: "#F3F3F3"
-        case .pastel: "#E5F3E4"
+        case .pastel: "#D4F2E0"
         case .casual: "#DDF2D2"
         case .rpg: "#DCCB9E"
         }
@@ -55,7 +55,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#66727D"
         case .light: "#CBD5E1"
         case .contrast: "#9A9A9A"
-        case .pastel: "#DCCFEB"
+        case .pastel: "#E8CCF2"
         case .casual: "#F1D0B4"
         case .rpg: "#CBAE7C"
         }
@@ -76,7 +76,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
         case .night: "#35C6B1"
         case .light: "#73C9A6"
         case .contrast: "#FFC400"
-        case .pastel: "#80CFC2"
+        case .pastel: "#F7A7BE"
         case .casual: "#F2A37F"
         case .rpg: "#9A7B4A"
         }

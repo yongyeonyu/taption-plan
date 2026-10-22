@@ -2325,3 +2325,7 @@
 - 빌드: `xcodebuild -scheme TaptionPlan -configuration Debug -destination generic/platform=iOS build CODE_SIGNING_ALLOWED=NO` → BUILD SUCCEEDED.
 - 단위 테스트: 실행하지 않음(재생 배율 상수 한 곱셈 변경).
 - 기기 확인: 미실시. 아이폰 11/18 재생 속도는 실제 화면에서 확인 필요.
+
+## PAS1022J01 · 벡터 파스텔 지도 색 분리
+- 빌드: Debug generic iOS, CODE_SIGNING_ALLOWED=NO → BUILD SUCCEEDED.
+- 기기 확인: 미실시.
