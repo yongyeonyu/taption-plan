@@ -2213,6 +2213,7 @@ final class AppModel {
         endAt: Date,
         with option: ActivityCorrectionOption?
     ) async {
+        guard acceptsDataMutation() else { return }
         guard endAt > startAt,
               displayedSpan.duration > 0,
               let actual = snapshot.actuals.first(where: {
@@ -2317,6 +2318,7 @@ final class AppModel {
         _ span: TimeSpan,
         with option: ActivityCorrectionOption
     ) async {
+        guard acceptsDataMutation() else { return }
         guard span.duration > 0 else { return }
         let alreadySaved = snapshot.actuals.contains { actual in
             actual.source == .manual
@@ -2361,6 +2363,7 @@ final class AppModel {
     func saveActivitySectionEdit(
         _ request: ActivitySectionEditRequest
     ) async -> ActivitySectionEditSaveResult? {
+        guard acceptsDataMutation() else { return nil }
         let records = ActivitySectionOverrideEngine.records(for: request)
         guard !records.isEmpty else { return nil }
         TaptionPlanDiagnosticsLogger.shared.record(
@@ -5965,6 +5968,7 @@ final class AppModel {
         localIdentifier: String,
         text: String? = nil
     ) {
+        guard acceptsDataMutation() else { return }
         guard let entry = memoEntry else { return }
         let fallbackText = attachmentKind == .photo ? "사진 메모" : "음성 메모"
         guard let memoText = validatedMemoText(text ?? fallbackText) else {
@@ -6163,6 +6167,7 @@ final class AppModel {
     func isMemoDraft(_ memoID: UUID) -> Bool { pendingMapMemoIDs.contains(memoID) }
 
     func discardMapMemoDraft(_ memoID: UUID) {
+        guard acceptsDataMutation() else { return }
         guard snapshot.memos.contains(where: { memo in
             memo.id == memoID && (memo.mapPoint != nil || pendingMapMemoIDs.contains(memoID))
         }) else {
@@ -6761,6 +6766,7 @@ final class AppModel {
         startedAt: Date,
         endedAt: Date?
     ) async {
+        guard acceptsDataMutation() else { return }
         guard let planIndex = snapshot.plans.firstIndex(where: { $0.id == planID }) else {
             userFacingError = AppLanguagePreference.text(
                 korean: "루틴을 찾지 못했습니다.",
@@ -7135,6 +7141,7 @@ final class AppModel {
     }
 
     func deleteActual(_ actualID: UUID) async {
+        guard acceptsDataMutation() else { return }
         guard let actual = snapshot.actuals.first(where: {
             $0.id == actualID
         }) else {
@@ -10079,6 +10086,7 @@ final class AppModel {
     }
 
     func deleteMapSticker(_ stickerID: UUID) {
+        guard acceptsDataMutation() else { return }
         guard snapshot.stickers.contains(where: { $0.id == stickerID }) else {
             return
         }

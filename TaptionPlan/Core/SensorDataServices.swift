@@ -120,7 +120,7 @@ struct RawDeviceDataEnvelope: Identifiable, Codable, Hashable, Sendable {
         let fourth = String(hex.dropFirst(16).prefix(4))
         let fifth = String(hex.dropFirst(20).prefix(12))
         let value = "\(first)-\(second)-\(third)-\(fourth)-\(fifth)"
-        return UUID(uuidString: value)!
+        return UUID(uuidString: value) ?? UUID()
     }
 }
 

@@ -1813,9 +1813,7 @@ struct WeatherAttributionInfo: Equatable, Sendable {
         serviceName: "Apple 날씨",
         combinedMarkLightURL: nil,
         combinedMarkDarkURL: nil,
-        legalPageURL: URL(
-            string: "https://weatherkit.apple.com/legal-attribution.html"
-        )!
+        legalPageURL: URL(string: "https://weatherkit.apple.com/legal-attribution.html") ?? URL(fileURLWithPath: "/")
     )
 
     func markURL(isDark: Bool) -> URL? {
