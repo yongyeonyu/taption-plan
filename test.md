@@ -2407,3 +2407,6 @@
 
 ## MNU1022AB01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## MMT1022AC01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

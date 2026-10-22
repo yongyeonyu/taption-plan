@@ -3905,7 +3905,8 @@ struct MapHomeView: View {
             horizontalAccuracy: 0,
             verticalAccuracy: 0
         )
-        let occurredAt = timelineSelectionDate
+        // 위치 메모의 기본 시간은 지금 일시다(타임라인에서 고른 시각이 아니다).
+        let occurredAt = Date.now
         let planID = MapMemoLinkEngine
             .plan(containing: occurredAt, in: model.snapshot.plans)?.id
         guard let id = model.addMapMemo(
