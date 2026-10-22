@@ -3,6 +3,8 @@ import SwiftUI
 /// 지도 왼쪽 상단의 일정 버튼. 구글 캘린더(구글 계정이 추가된 기기 캘린더) 아이콘이다.
 struct MapHomeCalendarButton: View {
     let isExpanded: Bool
+    /// 오늘 일정 개수. 0보다 크면 오른쪽 위에 숫자로 표시한다(메모 버튼과 같은 모양).
+    var count: Int = 0
     let action: () -> Void
 
     var body: some View {
@@ -13,6 +15,16 @@ struct MapHomeCalendarButton: View {
                 .padding(10)
                 .frame(width: 40, height: 40)
                 .mapHomeGlass(in: Circle())
+                .overlay(alignment: .topTrailing) {
+                    if count > 0 {
+                        Text("\(count)")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.tpReferenceBlue, in: Capsule())
+                    }
+                }
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: isExpanded ? "chevron.up.circle.fill" : "calendar.circle.fill")
                         .font(.system(size: 13))

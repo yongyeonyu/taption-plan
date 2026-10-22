@@ -2447,3 +2447,6 @@
 
 ## VCE1022AH01
 - 빌드 BUILD SUCCEEDED. 실시간 글자·첨부 파일 기기 확인 미실시.
+
+## GCL1022AI01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

@@ -2299,6 +2299,8 @@ struct MapHomeView: View {
     @State private var memoStackExpanded = false
     @State private var todayCalendarExpanded = false
     @State private var topPanelOrder: [TopPanel] = []
+    /// 선택한 날의 일정(구글 계정 연결 시 구글, 아니면 기기 캘린더). 시작 시간에 구글 로고로 표시한다.
+    @State private var dayCalendarEvents: [CalendarRecord] = []
     @State private var calendarService = AppleCalendarService()
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
@@ -2823,6 +2825,7 @@ struct MapHomeView: View {
             if !isRunning { finishRecordingPlayback() }
         }
         .task(id: model.selectedDate) { await loadPhotoMoments() }
+        .task(id: model.selectedDate) { await loadDayCalendarEvents() }
         .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments() } }
         // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
         .onChange(of: isDayDataLoading) { _, loading in
@@ -3644,7 +3647,7 @@ struct MapHomeView: View {
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
-                MapHomeCalendarButton(isExpanded: todayCalendarExpanded) {
+                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.count) {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
             }
@@ -3676,6 +3679,23 @@ struct MapHomeView: View {
     private func setTopPanel(_ panel: TopPanel, open: Bool) {
         topPanelOrder.removeAll { $0 == panel }
         if open { topPanelOrder.append(panel) }
+    }
+
+    /// 선택한 날의 일정을 불러온다. 구글 계정이 연결돼 있으면 구글에서, 아니면 기기 캘린더에서 읽는다.
+    private func loadDayCalendarEvents() async {
+        let day = model.selectedDate
+        if GoogleCalendarAccount.shared.isConnected {
+            dayCalendarEvents = (try? await GoogleCalendarAccount.shared.todayEvents(now: day)) ?? []
+        } else if calendarService.permissionState() == .authorized {
+            let start = Calendar.current.startOfDay(for: day)
+            let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
+            dayCalendarEvents = await calendarService.events(
+                in: TimeSpan(start: start, end: end),
+                selectedCalendarIDs: []
+            ) ?? []
+        } else {
+            dayCalendarEvents = []
+        }
     }
 
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
@@ -7655,6 +7675,32 @@ struct MapHomeView: View {
                                 railHeight - MapHomeTimeSidebarMath.verticalInset
                             )
                         )
+                    }
+
+                    // 일정은 시작 시간에 구글 로고로 표시한다(스티커와 같은 열).
+                    ForEach(recordingShows(\.sidebarMemos) ? dayCalendarEvents.filter { !$0.isAllDay } : []) { event in
+                        let window = MapHomeTimeSidebarMath.visibleWindow(
+                            startMinute: timeSidebarVisibleStartMinute,
+                            durationMinutes: timeSidebarVisibleDurationMinutes,
+                            centerMinute: effectiveTimelineMinute
+                        )
+                        let minute = minuteOfDay(for: event.span.start)
+                        let trackHeight = max(1, railHeight - MapHomeTimeSidebarMath.verticalInset * 2)
+                        let y = MapHomeTimeSidebarMath.verticalInset
+                            + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
+                        Image("GoogleGLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .padding(3)
+                            .frame(width: 22, height: 22)
+                            .background(Color.white.opacity(0.96), in: Circle())
+                            .overlay(Circle().stroke(Color.black.opacity(0.12), lineWidth: 1))
+                            .allowsHitTesting(false)
+                            .accessibilityLabel("\(event.title) 일정")
+                            .position(
+                                x: MapHomeTimeSidebarMath.handleLaneWidth - 41,
+                                y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
+                            )
                     }
                 }
                 .onChange(of: timeline.date) { _, date in
