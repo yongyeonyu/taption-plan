@@ -8150,7 +8150,7 @@ struct MapHomeView: View {
                 menuGroupDivider
                 menuRowButton("bell.badge", language.text("알림", "Alerts")) { isAlarmSettingsPresented = true }
                 menuGroupDivider
-                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드 (1080 공유)", "Day card (1080 share)")) { isDailyCardPresented = true }
+                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드", "Day card")) { isDailyCardPresented = true }
                 menuGroupDivider
                 menuRowButton("info.circle", language.text("지도 출처", "Map attribution")) { isMapAttributionPresented = true }
             }
@@ -9020,42 +9020,7 @@ struct MapHomeView: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
-                Picker(
-                    selection: Binding(
-                        get: { model.settings.mapMemoDisplayFilter },
-                        set: { model.setMapMemoDisplayFilter($0) }
-                    )
-                ) {
-                    ForEach(MapMemoDisplayFilter.allCases, id: \.self) { filter in
-                        Text(mapMemoDisplayFilterTitle(filter))
-                            .tag(filter)
-                    }
-                } label: {
-                    Label(
-                        language.text("지도 메모", "Map memos"),
-                        systemImage: "note.text"
-                    )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                }
-                .pickerStyle(.menu)
-                .tint(Color.tpReferenceBlue)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .accessibilityLabel(
-                    language.text("지도 메모 표시 방식", "Map memo display mode")
-                )
             }
-        }
-    }
-
-    private func mapMemoDisplayFilterTitle(
-        _ filter: MapMemoDisplayFilter
-    ) -> String {
-        switch filter {
-        case .all:
-            language.text("모든 지도 메모", "All map memos")
-        case .relevant:
-            language.text("일정 관련 메모", "Schedule-related memos")
         }
     }
 
