@@ -1272,6 +1272,17 @@ struct MapHomeTimeSidebar: View {
     }
 
     var body: some View {
+        // 사이드바가 확대·축소하는 중에도 상위 화면의 배지 위치가 같은 범위를 쓰도록 매번 알린다.
+        sidebarBody
+            .onChange(of: visibleStartMinute) { _, start in
+                onViewportChanged?(start, visibleDurationMinutes)
+            }
+            .onChange(of: visibleDurationMinutes) { _, duration in
+                onViewportChanged?(visibleStartMinute, duration)
+            }
+    }
+
+    private var sidebarBody: some View {
         GeometryReader { proxy in
             let railHeight = max(220, proxy.size.height)
             let trackHeight = max(1, railHeight - verticalInset * 2)
