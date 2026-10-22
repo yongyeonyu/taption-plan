@@ -1489,3 +1489,7 @@
 - 연봉 입력을 원 단위로 바꿔 월급→연봉 환산 시 만원 반올림 손실 제거.
 - Apple 지도 스타일에서도 화랑이 위치에 연봉 카운터 표시.
 - 검증: 앱 Debug 빌드 BUILD SUCCEEDED. iPhone 11 Pro MapHomeLiveMapTests 74개 통과(build/validation/REV1022R02/unit.log). 기기 화면 확인 전.
+
+## REV1022R03 · Apple 지도: 화랑이 화면 밖이면 연봉 카운터 숨김
+- 화면 밖 좌표면 연봉 카운터를 그리지 않음(GeometryReader 범위 검사).
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.

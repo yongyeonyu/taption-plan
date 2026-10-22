@@ -3460,8 +3460,9 @@ struct MapHomeView: View {
 
     /// Apple 지도에서도 연봉 카운터를 화랑이 위에 띄운다(벡터 지도와 같은 위치 규칙).
     private var appleSalaryOverlay: some View {
-        GeometryReader { _ in
-            if let stickman = displayedStickmanViewportPoint {
+        GeometryReader { geometry in
+            if let stickman = displayedStickmanViewportPoint,
+               CGRect(origin: .zero, size: geometry.size).contains(stickman) {
                 salaryCounterLabel(at: CGPoint(
                     x: stickman.x,
                     y: stickman.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42
