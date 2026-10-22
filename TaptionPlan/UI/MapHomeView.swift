@@ -16799,11 +16799,7 @@ private struct MapHomeStickerEditorSheet: View {
             Form {
 Group {
 
-                if isSticker {
-                    stickerFields
-                } else {
-                    memoFields
-                }
+                memoFields
 
                 Section {
                     Button(language.text("삭제", "Delete"), role: .destructive) {
@@ -16899,40 +16895,6 @@ Group {
         .background(.bar)
     }
 
-    @ViewBuilder
-    private var stickerFields: some View {
-        Section(language.text("메모 스티커", "Memo sticker")) {
-            TextField(language.text("제목", "Title"), text: $title)
-            memoInputField(prompt: nil)
-            Picker(
-                language.text("추가 위치", "Placement"),
-                selection: $placement
-            ) {
-                Text(language.text("지도", "Map")).tag(MapStickerPlacement.map)
-                Text(language.text("일정", "Schedule")).tag(MapStickerPlacement.schedule)
-            }
-            DatePicker(
-                language.text("시간", "Time"),
-                selection: $occurredAt,
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            symbolPicker
-            colorPicker
-            if placement == .map {
-                coordinateFields
-            }
-        }
-        if case .sticker = target {
-            Section {
-                Button(language.text("메모로 되돌리기", "Turn back into a memo")) {
-                    revertStickerToMemo()
-                }
-            } footer: {
-                Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
-            }
-        }
-    }
-
     /// 스티커를 메모로 되돌린다. 시간은 스티커 시간을 그대로 쓴다.
     private func revertStickerToMemo() {
         guard case .sticker(let id) = target,
@@ -16989,22 +16951,37 @@ Group {
         }
     }
 
+    /// 메모 추가와 스티커 수정이 같은 화면을 쓴다. 스티커는 제목과 종류·색·위치를 더 고른다.
     @ViewBuilder
     private var memoFields: some View {
-        Section(language.text("메모", "Memo")) {
+        Section(isSticker ? language.text("메모 스티커", "Memo sticker") : language.text("메모", "Memo")) {
+            if isSticker {
+                TextField(language.text("제목", "Title"), text: $title)
+            }
             memoInputField(prompt: Text(language.text("새 메모", "New memo")))
         }
-        Section {
-            Toggle(language.text("스티커로 표시", "Show as sticker"), isOn: $showsAsSticker)
-        } footer: {
-            Text(language.text(
-                "켜고 저장하면 이 메모가 일정 스티커가 되어 사이드바에 보여요. 시간을 지정했으면 그 시간에, 아니면 지금 시간에 나타나요.",
-                "Saved as a schedule sticker shown in the sidebar: at its set time, or now if no time is set."
-            ))
+        if isSticker {
+            Section {
+                stickerOptions
+            }
+        } else {
+            Section {
+                Toggle(language.text("스티커로 표시", "Show as sticker"), isOn: $showsAsSticker)
+                if showsAsSticker {
+                    stickerOptions
+                }
+            } footer: {
+                Text(language.text(
+                    "켜고 저장하면 이 메모가 일정 스티커가 되어 사이드바에 보여요. 시간을 지정했으면 그 시간에, 아니면 지금 시간에 나타나요.",
+                    "Saved as a schedule sticker shown in the sidebar: at its set time, or now if no time is set."
+                ))
+            }
         }
         Section {
-            Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
-            if hasTime {
+            if !isSticker {
+                Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
+            }
+            if hasTime || isSticker {
                 DatePicker(
                     language.text("시간", "Time"),
                     selection: $occurredAt,
@@ -17045,6 +17022,29 @@ Group {
                 "With a location the memo shows as a map pin; without one it follows the time."
             ))
         }
+        if isSticker {
+            Section {
+                Button(language.text("메모로 되돌리기", "Turn back into a memo")) {
+                    revertStickerToMemo()
+                }
+            } footer: {
+                Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
+            }
+        }
+    }
+
+    /// 스티커 종류·색·추가 위치. 메모를 스티커로 표시할 때와 스티커 수정에서 같이 쓴다.
+    @ViewBuilder
+    private var stickerOptions: some View {
+        Picker(
+            language.text("추가 위치", "Placement"),
+            selection: $placement
+        ) {
+            Text(language.text("지도", "Map")).tag(MapStickerPlacement.map)
+            Text(language.text("일정", "Schedule")).tag(MapStickerPlacement.schedule)
+        }
+        symbolPicker
+        colorPicker
     }
 
     /// 위치 고르기: 지금까지 쓴 내용을 임시로 남기고 편집 화면을 닫는다. 핀을 고르면 다시 열린다.
@@ -17143,6 +17143,7 @@ Group {
             systemImage = sticker.systemImage
             colorHex = sticker.colorHex
             occurredAt = sticker.occurredAt
+            hasTime = true
             if let point = sticker.point {
                 latitudeText = String(format: "%.6f", point.latitude)
                 longitudeText = String(format: "%.6f", point.longitude)
@@ -17155,6 +17156,7 @@ Group {
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             hasTime = memo.isTimeless != true
+            placement = .schedule
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
                 longitudeText = String(format: "%.6f", point.longitude)
@@ -17183,8 +17185,10 @@ Group {
                 let text = memoText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty, model.addMapSticker(
                     title: text,
-                    placement: .schedule,
-                    point: nil,
+                    systemImage: systemImage,
+                    colorHex: colorHex,
+                    placement: placement,
+                    point: placement == .map ? editedPoint : nil,
                     planID: nil,
                     occurredAt: hasTime ? occurredAt : .now
                 ) != nil else { return }

@@ -10042,6 +10042,8 @@ final class AppModel {
     func addMapSticker(
         title: String,
         memo: String? = nil,
+        systemImage: String = "star.fill",
+        colorHex: String = "#F28FA9",
         placement: MapStickerPlacement,
         point: GeoPoint?,
         planID: UUID?,
@@ -10054,6 +10056,8 @@ final class AppModel {
         let sticker = MapSticker(
             title: cleanTitle,
             memo: cleanOptionalMapStickerMemo(memo),
+            systemImage: systemImage,
+            colorHex: colorHex,
             placement: placement,
             point: point,
             planID: planID,
