@@ -1545,3 +1545,8 @@
 - 원인: SFSpeechRecognizer.requestAuthorization과 AVAudioApplication.requestRecordPermission 콜백 클로저가 메인 액터에 격리됨(MapHomeDictation.start, VoiceMemoRecorder.requestPermission).
 - 수정: 두 권한 요청을 nonisolated 정적 함수로 분리(MapHomeScreenRecording.swift, AppleIntegrations.swift).
 - 검증: Debug 빌드 BUILD SUCCEEDED. 권한 콜백 재현은 기기에서 미확인(권한 허용/거부 상태에 따라 다름).
+
+## REL1022T02 · TestFlight 빌드 222 (2026-10-22)
+- 요청: 메모 녹음 크래시 수정(CRS1022X01)을 TestFlight에 반영. 빌드 221에는 수정이 없음.
+- 변경: 빌드 번호 221→222.
+- 검증 기준: archive 성공, 앱·위젯 CFBundleVersion 222, App Store Connect VALID, 내부 그룹 연결.
