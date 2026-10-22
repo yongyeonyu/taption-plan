@@ -6153,7 +6153,7 @@ struct MapHomeView: View {
         return MapHomeDailyCardData(
             dateText: model.selectedDate.formatted(Date.FormatStyle().month().day().locale(language.locale)),
             weekdayText: model.selectedDate.formatted(Date.FormatStyle().weekday(.wide).locale(language.locale)),
-            earnedText: earned.map(MapHomeSalaryPolicy.wonText),
+            earnedText: earned.map { MapHomeSalaryPolicy.wonText($0, language: language) },
             workText: work.map(MapHomeAlarmPolicy.hoursText),
             steps: dayStepCount,
             distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
@@ -6458,8 +6458,21 @@ struct MapHomeView: View {
             }
         }
         .padding(.horizontal, 6)
+        .simultaneousGesture(weekSwipeGesture(calendar: calendar))
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .transition(.move(edge: .trailing).combined(with: .opacity))
+    }
+
+    /// 펼쳐진 날짜 줄을 좌우로 밀면 하루씩 넘긴다. 줄은 펼친 채로 둔다.
+    private func weekSwipeGesture(calendar: Calendar) -> some Gesture {
+        DragGesture(minimumDistance: 24)
+            .onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height) * 1.5 else { return }
+                let step = value.translation.width < 0 ? 1 : -1
+                guard let next = calendar.date(byAdding: .day, value: step, to: model.selectedDate) else { return }
+                shouldFitRoutesAfterDateChange = true
+                model.selectedDate = next
+            }
     }
 
     private var header: some View {
@@ -7151,9 +7164,9 @@ struct MapHomeView: View {
 
     private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: "wonsign.circle.fill")
+            Image(systemName: language == .english ? "dollarsign.circle.fill" : "wonsign.circle.fill")
                 .foregroundStyle(isWorking ? Color.tpReferenceMint : Color.tpSecondary)
-            Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: rate)))
+            Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: rate), language: language))
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }

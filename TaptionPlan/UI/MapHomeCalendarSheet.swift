@@ -1523,9 +1523,9 @@ enum MapHomeSalaryPolicy {
     }
 
     /// 영어 설정이면 USD, 한국어 설정이면 원으로 표시한다.
-    static func wonText(_ value: Double) -> String {
+    static func wonText(_ value: Double, language: MapHomeLanguage = .current) -> String {
         let number = Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic))
-        return MapHomeLanguage.current == .english ? "\(number) USD" : "\(number)원"
+        return language == .english ? "\(number) USD" : "\(number)원"
     }
 }
 
