@@ -1516,3 +1516,5 @@
 - 요청: 워크트리 클린, main 커밋·푸시 후 TestFlight 빌드업.
 - 변경: 빌드 번호 220→221 (프로젝트 8곳, Info.plist 4곳 + Watch Info.plist).
 - 검증 기준: archive 성공, 최종 .app/.appex CFBundleVersion 221 확인, App Store Connect 업로드 후 처리 완료(제출 준비 완료), 내부 그룹 연결·빌드 노출 확인.
+
+- 완료: 빌드 221 VALID·내부 그룹 연결 확인(REL1022T01). 대표 설치 후 기능 확인 대기.
