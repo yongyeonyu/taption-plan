@@ -16922,6 +16922,27 @@ Group {
                 coordinateFields
             }
         }
+        if case .sticker = target {
+            Section {
+                Button(language.text("메모로 되돌리기", "Turn back into a memo")) {
+                    revertStickerToMemo()
+                }
+            } footer: {
+                Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
+            }
+        }
+    }
+
+    /// 스티커를 메모로 되돌린다. 시간은 스티커 시간을 그대로 쓴다.
+    private func revertStickerToMemo() {
+        guard case .sticker(let id) = target,
+              let sticker = model.snapshot.stickers.first(where: { $0.id == id }),
+              let memoID = model.addMemoDraft(text: sticker.title, occurredAt: sticker.occurredAt, mapPoint: nil, isTimeless: false),
+              model.updateMapMemo(memoID, text: sticker.title, kind: .idea, mapPoint: nil, occurredAt: sticker.occurredAt, isTimeless: false)
+        else { return }
+        model.deleteMapSticker(id)
+        didSave = true
+        dismiss()
     }
 
     /// 메모 입력칸과 마이크 버튼. 마이크를 누르면 말한 내용이 메모 끝에 글자로 이어진다.
