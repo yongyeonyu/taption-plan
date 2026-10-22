@@ -12061,7 +12061,13 @@ struct MapHomeView: View {
 
     /// 일정·스티커 배지의 기준 x. 날씨 배지가 켜져 있으면 날씨 왼쪽(왼쪽 정렬), 꺼져 있으면 시간 레일 오른쪽(오른쪽 정렬).
     private var scheduleBadgeBaseX: CGFloat {
-        recordingShows(\.weatherSidebar)
+        // 날씨 칩이 실제로 보일 때만 왼쪽에 붙이고, 날씨 칩이 없으면 오른쪽에 붙인다.
+        let hasWeatherChips = recordingShows(\.weatherSidebar)
+            && !MapHomeWeatherDisplayCache.contexts(
+                incoming: model.snapshot.weather,
+                cached: cachedWeatherContexts
+            ).isEmpty
+        return hasWeatherChips
             ? MapHomeTimeSidebarMath.handleLaneWidth - 41
             : MapHomeTimeSidebarMath.handleLaneWidth + 8
     }
@@ -17139,21 +17145,20 @@ private struct MapHomeStickerEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-Group {
+            ScrollView {
+                VStack(spacing: 14) {
+                    memoFields
 
-                memoFields
-
-                Section {
-                    Button(language.text("삭제", "Delete"), role: .destructive) {
-                        isDeleteConfirmationPresented = true
+                    editorCard {
+                        Button(language.text("삭제", "Delete"), role: .destructive) {
+                            isDeleteConfirmationPresented = true
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-            
-}
-.listRowBackground(Color.tpSurface)
-}
-.tpListStyle()
+                .padding(16)
+            }
+            .background(Color.tpBackground)
             .safeAreaInset(edge: .bottom) { dictationBar }
             .alert(
                 language.text("위치를 먼저 고르세요", "Choose a location first"),
@@ -17313,28 +17318,44 @@ Group {
         }
     }
 
+    /// 달력 화면과 같은 카드 스타일(흰 표면, 둥근 모서리, 14pt 여백).
+    @ViewBuilder
+    private func editorCard<Content: View>(title: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let title {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            content()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
     /// 메모 추가와 스티커 수정이 같은 화면을 쓴다. 스티커는 제목과 종류·색·위치를 더 고른다.
     @ViewBuilder
     private var memoFields: some View {
-        Section(isSticker ? language.text("메모 스티커", "Memo sticker") : language.text("메모", "Memo")) {
+        editorCard(title: isSticker ? language.text("메모 스티커", "Memo sticker") : language.text("메모", "Memo")) {
             if isSticker {
                 TextField(language.text("제목", "Title"), text: $title)
             }
             memoInputField(prompt: Text(language.text("새 메모", "New memo")))
         }
         if isSticker {
-            Section {
+            editorCard {
                 stickerOptions
             }
         } else {
-            Section {
+            editorCard {
                 Toggle(language.text("스티커로 표시", "Show as sticker"), isOn: $showsAsSticker)
                 if showsAsSticker {
                     stickerOptions
                 }
             }
         }
-        Section {
+        editorCard(title: language.text("시간", "Time")) {
             if !isSticker {
                 Toggle(language.text("시간 지정", "Set a time"), isOn: $hasTime)
             }
@@ -17345,15 +17366,26 @@ Group {
                     displayedComponents: [.date, .hourAndMinute]
                 )
             }
-        } header: {
-            Text(language.text("시간", "Time"))
         }
-        Section {
+        editorCard(title: language.text("위치", "Location")) {
             if let point = editedPoint {
-                Label(
-                    String(format: "%.5f, %.5f", point.latitude, point.longitude),
-                    systemImage: "mappin.circle.fill"
-                )
+                // 위치를 지도에 보여 준다.
+                Map(
+                    initialPosition: .region(MKCoordinateRegion(
+                        center: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
+                        latitudinalMeters: 400,
+                        longitudinalMeters: 400
+                    )),
+                    interactionModes: []
+                ) {
+                    Marker("", coordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude))
+                        .tint(Color.tpAccent)
+                }
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(String(format: "%.5f, %.5f", point.latitude, point.longitude))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
                 Button(language.text("위치 다시 고르기", "Choose again")) { requestLocation() }
                 Button(language.text("위치 지우기", "Remove location"), role: .destructive) {
                     latitudeText = ""
@@ -17366,16 +17398,15 @@ Group {
                     Label(language.text("위치 추가", "Add location"), systemImage: "mappin.and.ellipse")
                 }
             }
-        } header: {
-            Text(language.text("위치", "Location"))
         }
         if isSticker {
-            Section {
+            editorCard {
                 Button(language.text("메모로 되돌리기", "Turn back into a memo")) {
                     revertStickerToMemo()
                 }
-            } footer: {
                 Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
             }
         }
     }
