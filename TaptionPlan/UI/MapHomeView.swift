@@ -3716,7 +3716,7 @@ struct MapHomeView: View {
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
-                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.count) {
+                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.filter { !$0.isAllDay }.count) {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
             }
