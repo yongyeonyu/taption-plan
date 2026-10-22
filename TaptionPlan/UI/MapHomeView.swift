@@ -16735,6 +16735,7 @@ private struct MapHomeStickerEditorSheet: View {
     @State private var memoText = ""
     @State private var hasTime = false
     @State private var showsAsSticker = false
+    @State private var showsMapStickerNeedsLocation = false
     @State private var keepsDraft = false
     @State private var memoKind: MemoKind = .idea
     @State private var placement: MapStickerPlacement = .map
@@ -16812,6 +16813,15 @@ Group {
 }
 .tpListStyle()
             .safeAreaInset(edge: .bottom) { dictationBar }
+            .alert(
+                language.text("위치를 먼저 고르세요", "Choose a location first"),
+                isPresented: $showsMapStickerNeedsLocation
+            ) {
+                Button(language.text("위치 고르기", "Choose location")) { requestLocation() }
+                Button(language.text("취소", "Cancel"), role: .cancel) {}
+            } message: {
+                Text(language.text("지도 스티커는 위치가 있어야 지도에 보여요. 위치를 고르거나 추가 위치를 일정으로 바꾸세요.", "A map sticker needs a location to show on the map. Pick a location or change the placement to schedule."))
+            }
             .navigationTitle(
                 language.text(
                     isSticker
@@ -17188,6 +17198,11 @@ Group {
             ) else { return }
         case .memo(let id), .newMemo(let id):
             if showsAsSticker {
+                // 지도 스티커는 위치가 있어야 한다. 없으면 위치부터 고르도록 알린다.
+                if placement == .map, editedPoint == nil {
+                    showsMapStickerNeedsLocation = true
+                    return
+                }
                 // 스티커로 저장하면 메모 자리는 일정 스티커가 차지한다. 시간이 없으면 지금 시간에 둔다.
                 let text = memoText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty, model.addMapSticker(
