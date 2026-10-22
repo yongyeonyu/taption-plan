@@ -1550,3 +1550,5 @@
 - 요청: 메모 녹음 크래시 수정(CRS1022X01)을 TestFlight에 반영. 빌드 221에는 수정이 없음.
 - 변경: 빌드 번호 221→222.
 - 검증 기준: archive 성공, 앱·위젯 CFBundleVersion 222, App Store Connect VALID, 내부 그룹 연결.
+
+- 완료: 빌드 222 VALID·내부 그룹 연결(REL1022T02). 기기 설치 후 녹음 크래시 재확인 대기.

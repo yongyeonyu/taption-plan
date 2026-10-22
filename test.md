@@ -2388,3 +2388,7 @@
 
 ## CRS1022X01 확인 메모
 - 기기에서 마이크 권한 항목이 없었음: 음성 인식 허용 응답 콜백에서 크래시해 마이크 요청까지 가지 못함. Info.plist의 NSMicrophoneUsageDescription·NSSpeechRecognitionUsageDescription 키는 있음.
+
+## REL1022T02 결과
+- archive SUCCEEDED, 앱·위젯 CFBundleVersion 222. export 성공, altool 업로드 성공.
+- App Store Connect: build 222 VALID, 내부 그룹 연결 후 그룹 빌드 목록에서 222 확인.
