@@ -2320,3 +2320,8 @@
 - CURRENT_PROJECT_VERSION 220(8곳)·Info.plist 4개. 아카이브·내보내기·업로드 성공(build/validation/REL1022X01/). IPA 앱·위젯 CFBundleVersion 220 확인.
 - ASC 220 VALID, "TP Taption Plan 내부 테스트" 그룹 연결(204 응답), 그룹 목록 최상단 220, 테스터 1명.
 - 한계: 잠금화면 활동·연봉, 메모 음성 첨부·글자 변환, 장소 반경 원, 화면 녹화 복구는 기기 확인 전.
+
+## WLK1022I01 · 걷기 재생 속도 3배 (2026-10-22)
+- 빌드: `xcodebuild -scheme TaptionPlan -configuration Debug -destination generic/platform=iOS build CODE_SIGNING_ALLOWED=NO` → BUILD SUCCEEDED.
+- 단위 테스트: 실행하지 않음(재생 배율 상수 한 곱셈 변경).
+- 기기 확인: 미실시. 아이폰 11/18 재생 속도는 실제 화면에서 확인 필요.
