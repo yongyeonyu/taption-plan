@@ -2432,3 +2432,6 @@
 
 ## REL1022T04 결과
 - archive 성공, 앱·위젯 CFBundleVersion 224. export·업로드 성공. App Store Connect VALID, 내부 그룹 연결 확인.
+
+## STK1022AF01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
