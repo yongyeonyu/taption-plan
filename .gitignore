@@ -33,3 +33,7 @@ Secrets.xcconfig
 
 # Compact historical verification and existing device screenshots (local only)
 /artifacts/local-validation-evidence/
+
+# Clang module cache generated inside the Xcode project
+TaptionPlan.xcodeproj/-Xcc/
+*.pcm
