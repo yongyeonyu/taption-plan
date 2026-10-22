@@ -3889,7 +3889,8 @@ struct MapHomeView: View {
     /// 메모 추가: 시각은 지금, 위치는 현재 위치(없으면 위치 없이). 사용자가 시각을 바꾸고 위치는 뺄 수 있다.
     private func addMemo() {
         isMenuOpen = false
-        let now = Date.now
+        // 기본 일시는 지금 보고 있는 날짜와 사이드바 시간(날짜를 바꾸거나 사이드바를 옮긴 값)이다.
+        let now = timelineSelectionDate
         let here = currentCoordinate.map {
             GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0)
         }
@@ -4012,8 +4013,8 @@ struct MapHomeView: View {
             horizontalAccuracy: 0,
             verticalAccuracy: 0
         )
-        // 위치 메모의 기본 시간은 지금 일시다(타임라인에서 고른 시각이 아니다).
-        let occurredAt = Date.now
+        // 위치 메모의 기본 일시는 지금 보고 있는 날짜와 사이드바 시간이다.
+        let occurredAt = timelineSelectionDate
         let planID = MapMemoLinkEngine
             .plan(containing: occurredAt, in: model.snapshot.plans)?.id
         guard let id = model.addMapMemo(
