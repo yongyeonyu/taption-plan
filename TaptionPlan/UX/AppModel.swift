@@ -4907,6 +4907,21 @@ final class AppModel {
         Task { await persist() }
     }
 
+    /// 센싱 주기를 1~15분 중에서 고른다(모드 없이 분 단위로 바로 설정).
+    func setSensorIntervalMinutes(_ minutes: Int) {
+        let clamped = min(max(minutes, 1), 15)
+        let seconds = clamped * 60
+        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != seconds
+                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal else {
+            return
+        }
+        snapshot.settings.gpsLoggingPreferences.intervalSeconds = seconds
+        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = false
+        snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(for: seconds)
+        refreshActiveGPSLoggingPreferences()
+        Task { await persist() }
+    }
+
     func setGPSLoggingIntervalSeconds(_ seconds: Int) {
         let clamped = GPSLoggingPreferences.clampedSeconds(seconds)
         guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != clamped

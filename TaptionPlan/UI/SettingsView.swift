@@ -1121,40 +1121,26 @@ struct SettingsView: View {
                 .foregroundStyle(Color.tpMovementDark)
             }
 
+            HStack {
+                Text("센싱 주기")
+                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
+                    .foregroundStyle(Color.tpInk)
+                Spacer()
+                Text("\(currentSensingMinutes)분")
+                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
+                    .foregroundStyle(Color.tpMovementDark)
+            }
             Slider(
                 value: Binding(
-                    get: {
-                        Double(
-                            model.settings.sensorCollectionProfile.rawValue
-                        )
-                    },
-                    set: { value in
-                        guard let profile = SensorCollectionProfile(
-                            rawValue: Int(value.rounded())
-                        ) else {
-                            return
-                        }
-                        model.setSensorCollectionProfile(profile)
-                    }
+                    get: { Double(currentSensingMinutes) },
+                    set: { model.setSensorIntervalMinutes(Int($0.rounded())) }
                 ),
-                in: 0...2,
+                in: 1...15,
                 step: 1
             )
             .tint(Color.tpMovementDark)
-            .accessibilityLabel("GPS와 센서 기록 간격")
-            .accessibilityValue(
-                "\(model.settings.sensorCollectionProfile.displayName), "
-                + "\(model.settings.sensorCollectionProfile.intervalMinutes)분"
-            )
-
-            HStack(alignment: .top) {
-                sensorProfileLabel("배터리 최소화", minutes: 15)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                sensorProfileLabel("기본", minutes: 5)
-                    .frame(maxWidth: .infinity)
-                sensorProfileLabel("정확도 최적화", minutes: 1)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+            .accessibilityLabel("센싱 주기")
+            .accessibilityValue("\(currentSensingMinutes)분")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -1163,6 +1149,11 @@ struct SettingsView: View {
                 .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
+    }
+
+    /// 현재 센싱 주기(분). 저장된 초 단위 값을 1~15분으로 맞춰 보여 준다.
+    private var currentSensingMinutes: Int {
+        min(max(model.settings.gpsLoggingPreferences.intervalSeconds / 60, 1), 15)
     }
 
     private var watchAccelerationCollectionRow: some View {
