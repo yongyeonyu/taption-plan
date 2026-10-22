@@ -20536,10 +20536,6 @@ struct MapHomeDaySummarySheet: View {
                 salaryCardView(salary)
             }
 
-            if let model, let homePlaceID {
-                MapHomePlaceRangeEditor(model: model, placeID: homePlaceID, language: language)
-            }
-
             if memoCounts.total > 0 {
                 HStack(spacing: 8) {
                     Image(systemName: "note.text")
@@ -20596,6 +20592,11 @@ struct MapHomeDaySummarySheet: View {
 
             if !travelDistances.isEmpty {
                 travelDistanceSection
+            }
+
+            // 범위 지정은 요약 내용 아래에 둔다.
+            if let model, let homePlaceID {
+                MapHomePlaceRangeEditor(model: model, placeID: homePlaceID, language: language)
             }
         }
     }
