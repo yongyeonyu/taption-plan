@@ -9176,7 +9176,9 @@ struct MapHomeView: View {
         guard let fetched = model.lastHealthRefreshAt else {
             return language.text("사용 가능", "Available")
         }
-        let stamp = fetched.formatted(.dateTime.month().day().hour().minute())
+        let stamp = fetched.formatted(
+            .dateTime.month().day().hour().minute().locale(language.locale)
+        )
         return language.text("사용 가능 · \(stamp) 가져옴", "Available · fetched \(stamp)")
     }
 

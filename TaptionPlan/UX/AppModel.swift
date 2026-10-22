@@ -1014,10 +1014,9 @@ final class AppModel {
     private(set) var sensorSaveToken = 0
     private(set) var isCloudSyncing = false
     private(set) var isExportingDiagnostics = false
-    private(set) var diagnosticsExportStatus = AppLanguagePreference.text(
-        korean: "준비됨",
-        english: "Ready"
-    )
+    /// 내보내기 상태는 키로 저장하고, 보여 줄 때 현재 언어로 바꾼다(언어를 바꿔도 맞게 나온다).
+    private(set) var diagnosticsExportStatusKey: DiagnosticsExportStatusKey = .ready
+    var diagnosticsExportStatus: String { diagnosticsExportStatusKey.localized }
     private(set) var cloudUnavailableReason: CloudUnavailableReason?
     private(set) var isRecordingVoiceMemo = false
     private(set) var playingVoiceAttachmentID: UUID?
@@ -5372,10 +5371,7 @@ final class AppModel {
     func exportDiagnosticsToICloud() async {
         guard !isExportingDiagnostics else { return }
         isExportingDiagnostics = true
-        diagnosticsExportStatus = AppLanguagePreference.text(
-            korean: "전송 중",
-            english: "Exporting"
-        )
+        diagnosticsExportStatusKey = .exporting
         defer { isExportingDiagnostics = false }
         let logger = TaptionPlanDiagnosticsLogger.shared
         let operation = logger.beginOperation(
@@ -5402,10 +5398,7 @@ final class AppModel {
             let destination = try await Task.detached(priority: .utility) {
                 try TaptionPlanDiagnosticsICloudExporter().export(package)
             }.value
-            diagnosticsExportStatus = AppLanguagePreference.text(
-                korean: "전송됨",
-                english: "Exported"
-            )
+            diagnosticsExportStatusKey = .exported
             let defaults = UserDefaults(
                 suiteName: TaptionWidgetSharedStore.appGroupIdentifier
             ) ?? .standard
@@ -5434,10 +5427,7 @@ final class AppModel {
                 ]
             )
         } catch {
-            diagnosticsExportStatus = AppLanguagePreference.text(
-                korean: "실패",
-                english: "Failed"
-            )
+            diagnosticsExportStatusKey = .failed
             logger.finishOperation(
                 operation,
                 outcome: "failure",
@@ -5776,10 +5766,7 @@ final class AppModel {
         ) ?? .standard
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestFileKey)
         diagnosticsDefaults.removeObject(forKey: Self.diagnosticsLatestSavedAtKey)
-        diagnosticsExportStatus = AppLanguagePreference.text(
-            korean: "준비됨",
-            english: "Ready"
-        )
+        diagnosticsExportStatusKey = .ready
         if let applicationSupport = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
@@ -14195,5 +14182,18 @@ private final class PedometerResumeOnce: @unchecked Sendable {
         continuation = nil
         lock.unlock()
         pending?.resume(returning: value)
+    }
+}
+
+enum DiagnosticsExportStatusKey: Sendable {
+    case ready, exporting, exported, failed
+
+    var localized: String {
+        switch self {
+        case .ready: AppLanguagePreference.text(korean: "준비됨", english: "Ready")
+        case .exporting: AppLanguagePreference.text(korean: "전송 중", english: "Exporting")
+        case .exported: AppLanguagePreference.text(korean: "전송됨", english: "Exported")
+        case .failed: AppLanguagePreference.text(korean: "실패", english: "Failed")
+        }
     }
 }
