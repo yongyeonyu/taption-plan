@@ -9,20 +9,21 @@ import UIKit
 @MainActor
 @Observable
 final class MapHomeDictation {
+    /// 녹음 중인지.
     var isListening = false
+    /// 녹음한 파일을 글자로 바꾸는 중인지.
+    var isTranscribing = false
     var transcript = ""
     var errorMessage: String?
+    /// 마지막으로 녹음한 파일(첨부용). 글자 변환이 끝나도 남는다.
+    private(set) var recordedURL: URL?
 
     private var recognizer: SFSpeechRecognizer?
-    private let engine = AVAudioEngine()
-    private var request: SFSpeechAudioBufferRecognitionRequest?
-    private var task: SFSpeechRecognitionTask?
+    private var recorder: AVAudioRecorder?
+    /// 녹음이 끝나면 파일 위치를 넘겨준다(메모 첨부용).
+    var onRecorded: ((URL) -> Void)?
 
-    /// 음성 스레드에서 도는 블록은 메인 액터 밖에서 만든다(메인 액터로 만들면 음성 스레드에서 충돌한다).
-    private nonisolated static func tapBlock(_ request: SFSpeechAudioBufferRecognitionRequest) -> AVAudioNodeTapBlock {
-        { buffer, _ in request.append(buffer) }
-    }
-
+    /// 음성 스레드에서 도는 결과 블록은 메인 액터 밖에서 만든다(메인 액터로 만들면 충돌한다).
     private nonisolated static func resultBlock(
         _ deliver: @escaping @Sendable (String?, Bool) -> Void
     ) -> (SFSpeechRecognitionResult?, Error?) -> Void {
@@ -31,8 +32,9 @@ final class MapHomeDictation {
         }
     }
 
+    /// 녹음을 시작한다. 말한 내용은 녹음이 끝난 뒤 파일로 글자 변환한다.
     func start(localeIdentifier: String) async {
-        guard !isListening else { return }
+        guard !isListening, !isTranscribing else { return }
         errorMessage = nil
         transcript = ""
         let speechStatus = await withCheckedContinuation { continuation in
@@ -54,24 +56,23 @@ final class MapHomeDictation {
         self.recognizer = recognizer
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try session.setActive(true, options: .notifyOthersOnDeactivation)
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.shouldReportPartialResults = true
-            self.request = request
-            let input = engine.inputNode
-            input.removeTap(onBus: 0)
-            input.installTap(onBus: 0, bufferSize: 1_024, format: input.outputFormat(forBus: 0), block: Self.tapBlock(request))
-            engine.prepare()
-            try engine.start()
-            // 인식 결과는 음성 스레드에서 온다. 화면 상태는 메인 액터에서만 바꾸도록 넘긴다.
-            task = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    if let text { self.transcript = text }
-                    if finished { self.stop() }
-                }
-            })
+            try session.setCategory(.playAndRecord, mode: .default, options: [.duckOthers, .defaultToSpeaker])
+            try session.setActive(true)
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("memo-voice-\(UUID().uuidString).m4a")
+            let settings: [String: Any] = [
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVSampleRateKey: 44_100,
+                AVNumberOfChannelsKey: 1,
+                AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
+            ]
+            let recorder = try AVAudioRecorder(url: url, settings: settings)
+            guard recorder.record() else {
+                errorMessage = "마이크를 시작하지 못했습니다."
+                return
+            }
+            self.recorder = recorder
+            recordedURL = url
             isListening = true
         } catch {
             errorMessage = "마이크를 시작하지 못했습니다."
@@ -79,17 +80,30 @@ final class MapHomeDictation {
         }
     }
 
+    /// 녹음을 끝내고 파일을 글자로 바꿔 transcript에 넣는다.
     func stop() {
-        // 시작하지 않았으면 마이크 장치·오디오 세션을 건드리지 않는다(편집 화면을 닫을 때마다 불린다).
-        guard isListening || request != nil || task != nil else { return }
-        if engine.isRunning { engine.stop() }
-        engine.inputNode.removeTap(onBus: 0)
-        request?.endAudio()
-        request = nil
-        task?.finish()
-        task = nil
+        guard let recorder else { return }
+        recorder.stop()
+        self.recorder = nil
         isListening = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        guard let url = recordedURL, let recognizer else { return }
+        // 녹음 파일은 첨부로 남기고(model이 저장), 같은 파일을 글자로 바꾼다.
+        onRecorded?(url)
+        transcribe(url, with: recognizer)
+    }
+
+    private func transcribe(_ url: URL, with recognizer: SFSpeechRecognizer) {
+        isTranscribing = true
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.shouldReportPartialResults = false
+        _ = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
+            Task { @MainActor [weak self] in
+                guard let self, finished else { return }
+                self.transcript = text ?? ""
+                self.isTranscribing = false
+            }
+        })
     }
 }
 

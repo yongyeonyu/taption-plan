@@ -5991,6 +5991,16 @@ final class AppModel {
         Task { await persist() }
     }
 
+    /// 메모(지도·일반 편집 화면)에 음성 파일을 오디오 첨부로 붙인다.
+    func attachAudio(toMemo memoID: UUID, localIdentifier: String) {
+        guard acceptsDataMutation() else { return }
+        guard let index = snapshot.memos.firstIndex(where: { $0.id == memoID }) else { return }
+        snapshot.memos[index].attachments.append(
+            MemoAttachment(kind: .audio, localIdentifier: localIdentifier)
+        )
+        Task { await persist() }
+    }
+
     func memos(for planID: UUID?) -> [ActionMemo] {
         guard let planID else { return [] }
         return snapshot.memos

@@ -16735,6 +16735,16 @@ Group {
         } else {
             dictationBase = memoText.isEmpty ? "" : memoText + " "
             let identifier = language == .korean ? "ko-KR" : "en-US"
+            // 녹음 파일은 이 메모의 오디오 첨부로 남긴다.
+            let memoID: UUID? = {
+                switch target {
+                case .memo(let id), .newMemo(let id): id
+                case .sticker: nil
+                }
+            }()
+            dictation.onRecorded = { url in
+                if let memoID { model.attachAudio(toMemo: memoID, localIdentifier: url.path) }
+            }
             Task { await dictation.start(localeIdentifier: identifier) }
         }
     }
