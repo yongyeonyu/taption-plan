@@ -4994,6 +4994,7 @@ struct MapHomeView: View {
         ZStack {
             fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
             homeLandOverlay(viewport: viewport)
+            placeZoneOverlay(viewport: viewport)
             ForEach((recordingShows(\.footprints) ? waypoints : []).sorted {
                 $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
             }) { waypoint in
@@ -5575,6 +5576,37 @@ struct MapHomeView: View {
             guard parts.count == 2, parts[1] == current.rawValue,
                   let previous = MapDisplayStyle(rawValue: parts[0]) else { return }
             model.setMapDisplayStyle(previous)
+        }
+    }
+
+    /// 등록지점 범위: 빨간 원은 반경, 주황 두 원은 ±15% 히스테리시스 구간.
+    @ViewBuilder
+    private func placeZoneOverlay(viewport: MapHomeVectorViewport?) -> some View {
+        if let viewport, viewport.pitch < 5, mapViewportSize.height > 0 {
+            let metersPerPoint = viewport.span.latitudeDelta * 111_320 / Double(mapViewportSize.height)
+            if metersPerPoint.isFinite, metersPerPoint > 0 {
+                ForEach(model.settings.frequentPlaces.filter { $0.point != nil }) { place in
+                    if let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(place.id)) {
+                        let radius = CGFloat(place.radiusMeters / metersPerPoint)
+                        let outer = CGFloat(place.radiusMeters * (1 + MapHomePlaceZone.band) / metersPerPoint)
+                        let inner = CGFloat(place.radiusMeters * (1 - MapHomePlaceZone.band) / metersPerPoint)
+                        ZStack {
+                            Circle()
+                                .stroke(Color.orange.opacity(0.85), lineWidth: 1.5)
+                                .frame(width: outer * 2, height: outer * 2)
+                            Circle()
+                                .stroke(Color.orange.opacity(0.85), lineWidth: 1.5)
+                                .frame(width: inner * 2, height: inner * 2)
+                            Circle()
+                                .stroke(Color.red, lineWidth: 2)
+                                .frame(width: radius * 2, height: radius * 2)
+                        }
+                        .frame(width: 0, height: 0)
+                        .position(pin)
+                        .allowsHitTesting(false)
+                    }
+                }
+            }
         }
     }
 

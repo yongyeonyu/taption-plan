@@ -788,6 +788,43 @@ struct MapHomeCalendarSheet: View {
     }
 }
 
+/// 등록지점 범위의 들어옴·나감 판정. 반경의 ±15%는 히스테리시스 구간으로, 이 안에서는 이전 상태를 그대로 둔다.
+/// 그래서 경계에서 흔들리는 GPS 값이 "나감·들어옴"을 반복 만들지 않는다.
+enum MapHomePlaceZone {
+    static let band = 0.15
+
+    enum State: Equatable {
+        case inside
+        case outside
+    }
+
+    /// 한 번의 거리 측정으로 다음 상태를 정한다.
+    /// 안쪽 85%보다 가까우면 안, 바깥쪽 115%보다 멀면 밖, 그 사이는 이전 상태 유지.
+    static func next(distance: Double, radius: Double, previous: State) -> State {
+        guard radius > 0, distance.isFinite else { return previous }
+        if distance <= radius * (1 - band) { return .inside }
+        if distance >= radius * (1 + band) { return .outside }
+        return previous
+    }
+
+    /// 시간 순 측정열에서 상태가 바뀐 시각만 골라 돌려준다. 처음 상태는 밖으로 본다.
+    static func transitions(
+        samples: [(date: Date, distance: Double)],
+        radius: Double
+    ) -> [(date: Date, state: State)] {
+        var current = State.outside
+        var result: [(date: Date, state: State)] = []
+        for sample in samples.sorted(by: { $0.date < $1.date }) {
+            let updated = next(distance: sample.distance, radius: radius, previous: current)
+            if updated != current {
+                result.append((sample.date, updated))
+                current = updated
+            }
+        }
+        return result
+    }
+}
+
 /// 걸음 수를 거리로 바꾸는 보폭(m). 기본값은 대표가 알려주는 값으로 바꾼다.
 enum MapHomeStride {
     static let storageKey = "mapHomeStrideMeters"

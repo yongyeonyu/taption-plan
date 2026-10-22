@@ -1264,4 +1264,29 @@ extension MapHomeLiveMapTests {
         let projected = P.projectedMonthWorkSeconds(dailyWork: [today: 9 * 3_600], now: now, calendar: calendar)
         XCTAssertEqual(projected / 3_600, 209, accuracy: 0.5)
     }
+
+    func testPlaceZoneHysteresisKeepsPreviousStateInsideBand() {
+        typealias Z = MapHomePlaceZone
+        let radius = 100.0
+        // 85m 안쪽은 안, 115m 바깥쪽은 밖, 사이(85~115m)는 이전 상태 유지.
+        XCTAssertEqual(Z.next(distance: 80, radius: radius, previous: .outside), .inside)
+        XCTAssertEqual(Z.next(distance: 120, radius: radius, previous: .inside), .outside)
+        XCTAssertEqual(Z.next(distance: 100, radius: radius, previous: .inside), .inside, "경계 흔들림은 상태를 바꾸지 않는다")
+        XCTAssertEqual(Z.next(distance: 100, radius: radius, previous: .outside), .outside)
+    }
+
+    func testPlaceZoneTransitionsIgnoreJitterAtBoundary() {
+        typealias Z = MapHomePlaceZone
+        let start = Date(timeIntervalSince1970: 0)
+        // 안 → 경계에서 흔들림(95~105m) → 밖(130m) → 다시 안(70m).
+        let samples: [(date: Date, distance: Double)] = [
+            (start, 70), (start.addingTimeInterval(60), 98), (start.addingTimeInterval(120), 104),
+            (start.addingTimeInterval(180), 96), (start.addingTimeInterval(240), 130),
+            (start.addingTimeInterval(300), 110), (start.addingTimeInterval(360), 70),
+        ]
+        let changes = Z.transitions(samples: samples, radius: 100)
+        XCTAssertEqual(changes.map(\.state), [.inside, .outside, .inside])
+        XCTAssertEqual(changes.first?.date, start)
+        XCTAssertEqual(changes[1].date, start.addingTimeInterval(240))
+    }
 }
