@@ -16754,19 +16754,14 @@ Group {
             Button {
                 toggleDictation()
             } label: {
-                Label(
-                    dictation.isListening
-                        ? language.text("녹음 중 · 눌러서 끝내기", "Recording · tap to finish")
-                        : language.text("음성 첨부 · 말하면 글자로 입력", "Voice attachment · speak to type"),
-                    systemImage: dictation.isListening ? "mic.fill" : "mic"
-                )
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color.tpAccent.opacity(0.10), in: Capsule())
+                Image(systemName: dictation.isListening ? "mic.fill" : "mic")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
+                    .frame(width: 36, height: 36)
+                    .background(Color.tpAccent.opacity(0.10), in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
             if let message = dictation.errorMessage {
                 Text(message)
                     .font(.system(size: 11, weight: .medium))

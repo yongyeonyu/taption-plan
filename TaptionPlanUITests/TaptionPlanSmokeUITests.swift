@@ -157,4 +157,25 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         }
         sleep(5)
     }
+
+    /// 메모 추가 → 음성 첨부 → 녹음 시작·끝내기(충돌 재현). 권한 창은 허용한다.
+    func testMemoVoiceRecordReproduction() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let add = app.buttons.containing(NSPredicate(format: "label == %@ OR label == %@", "메모", "Memo")).firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 20))
+        add.tap()
+        sleep(2)
+        let voice = app.buttons.containing(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "음성 첨부", "Voice attachment")).firstMatch
+        if voice.waitForExistence(timeout: 8) { voice.tap() }
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for _ in 0..<3 {
+            let allow = springboard.buttons.matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "허용", "Allow")).firstMatch
+            if allow.waitForExistence(timeout: 4) { allow.tap() }
+        }
+        sleep(4)
+        let stop = app.buttons.containing(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "녹음 중", "Recording")).firstMatch
+        if stop.waitForExistence(timeout: 5) { stop.tap() }
+        sleep(8)
+    }
 }

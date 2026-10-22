@@ -35,6 +35,7 @@ final class MapHomeDictation {
     /// 녹음을 시작한다. 말한 내용은 녹음이 끝난 뒤 파일로 글자 변환한다.
     func start(localeIdentifier: String) async {
         guard !isListening, !isTranscribing else { return }
+        TaptionPlanDiagnosticsLogger.shared.record("voice_memo_start_requested")
         errorMessage = nil
         transcript = ""
         let speechStatus = await withCheckedContinuation { continuation in
@@ -74,6 +75,7 @@ final class MapHomeDictation {
             self.recorder = recorder
             recordedURL = url
             isListening = true
+            TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_started")
         } catch {
             errorMessage = "마이크를 시작하지 못했습니다."
             stop()
@@ -83,6 +85,7 @@ final class MapHomeDictation {
     /// 녹음을 끝내고 파일을 글자로 바꿔 transcript에 넣는다.
     func stop() {
         guard let recorder else { return }
+        TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_stopped")
         recorder.stop()
         self.recorder = nil
         isListening = false
@@ -94,12 +97,14 @@ final class MapHomeDictation {
     }
 
     private func transcribe(_ url: URL, with recognizer: SFSpeechRecognizer) {
+        TaptionPlanDiagnosticsLogger.shared.record("voice_memo_transcribe_started")
         isTranscribing = true
         let request = SFSpeechURLRecognitionRequest(url: url)
         request.shouldReportPartialResults = false
         _ = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
             Task { @MainActor [weak self] in
                 guard let self, finished else { return }
+                TaptionPlanDiagnosticsLogger.shared.record("voice_memo_transcribe_finished", fields: ["has_text": String((text ?? "").isEmpty == false)])
                 self.transcript = text ?? ""
                 self.isTranscribing = false
             }
