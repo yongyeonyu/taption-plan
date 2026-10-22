@@ -2385,3 +2385,6 @@
 
 ## CRS1022X01
 - 빌드 BUILD SUCCEEDED. 기기 재현 미실시: 마이크·음성 권한이 이미 허용된 기기에서는 콜백 경로가 다르므로 권한 초기화 후 확인 필요.
+
+## CRS1022X01 확인 메모
+- 기기에서 마이크 권한 항목이 없었음: 음성 인식 허용 응답 콜백에서 크래시해 마이크 요청까지 가지 못함. Info.plist의 NSMicrophoneUsageDescription·NSSpeechRecognitionUsageDescription 키는 있음.
