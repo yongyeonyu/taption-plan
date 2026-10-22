@@ -1511,3 +1511,8 @@
 - 성능: 날짜 포매터를 조회 1회당 1번만 만들고 일정에 재사용.
 - 토큰 갱신: 짧은 수명 토큰은 절반 시점에 갱신.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 실제 로그인·만료·취소는 기기에서 미확인.
+
+## REL1022T01 · TestFlight 빌드 221 (2026-10-22)
+- 요청: 워크트리 클린, main 커밋·푸시 후 TestFlight 빌드업.
+- 변경: 빌드 번호 220→221 (프로젝트 8곳, Info.plist 4곳 + Watch Info.plist).
+- 검증 기준: archive 성공, 최종 .app/.appex CFBundleVersion 221 확인, App Store Connect 업로드 후 처리 완료(제출 준비 완료), 내부 그룹 연결·빌드 노출 확인.
