@@ -404,8 +404,20 @@ struct MapHomeMemoTextView: UIViewRepresentable {
         return view
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView view: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? 300
+        let height = view.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+        return CGSize(width: width, height: max(120, height))
+    }
+
     func updateUIView(_ view: UITextView, context: Context) {
-        if view.text != text { view.text = text }
+        if view.text != text {
+            view.text = text
+            // 글자를 넣은 뒤 크기를 다시 재고 그려야 포커스 전까지 안 보이던 문제가 없다.
+            view.invalidateIntrinsicContentSize()
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+        }
         if context.coordinator.suppresses != suppressesKeyboard {
             context.coordinator.suppresses = suppressesKeyboard
             view.inputView = suppressesKeyboard ? UIView(frame: .zero) : nil

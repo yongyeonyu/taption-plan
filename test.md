@@ -2401,3 +2401,6 @@
 
 ## RNG1022AA01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## VCE1022Z03
+- 빌드 BUILD SUCCEEDED. 녹음 후 포커스 없이 전사 표시 기기 확인 미실시.
