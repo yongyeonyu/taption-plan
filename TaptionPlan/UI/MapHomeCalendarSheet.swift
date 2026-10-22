@@ -1522,8 +1522,10 @@ enum MapHomeSalaryPolicy {
         var pastMonthWorkSeconds: [String: TimeInterval] = [:]
     }
 
+    /// 영어 설정이면 USD, 한국어 설정이면 원으로 표시한다.
     static func wonText(_ value: Double) -> String {
-        "\(Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic)))원"
+        let number = Int(value.rounded()).formatted(.number.locale(Locale(identifier: "en_US")).grouping(.automatic))
+        return MapHomeLanguage.current == .english ? "\(number) USD" : "\(number)원"
     }
 }
 
@@ -1632,14 +1634,14 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세전 시급", "Gross hourly"), text: Binding(
                             get: { hourlyIsNet ? "" : hourlyText },
                             set: { hourlyText = $0 }
-                        ), unit: language.text("원", "KRW"), placeholder: String(Int(hourlyGrossNow.rounded()))) {
+                        ), unit: language.text("원", "USD"), placeholder: String(Int(hourlyGrossNow.rounded()))) {
                             hourlyIsNet = false
                             hourlyPay = number(hourlyText)
                         }
                         field(language.text("세후 시급", "Net hourly"), text: Binding(
                             get: { hourlyIsNet ? hourlyText : "" },
                             set: { hourlyText = $0 }
-                        ), unit: language.text("원", "KRW"), placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
+                        ), unit: language.text("원", "USD"), placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
                             hourlyIsNet = true
                             hourlyPay = number(hourlyText)
                         }
@@ -1663,7 +1665,7 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세전 연봉", "Gross annual"), text: Binding(
                             get: { isNetInput ? "" : annualText },
                             set: { annualText = $0 }
-                        ), unit: language.text("원", "KRW"), placeholder: String(Int(grossWon.rounded()))) {
+                        ), unit: language.text("원", "USD"), placeholder: String(Int(grossWon.rounded()))) {
                             isNetInput = false
                             annualPay = number(annualText)
                             monthlyPay = 0
@@ -1671,12 +1673,12 @@ struct MapHomeSalarySettingsSheet: View {
                         field(language.text("세후 연봉", "Net annual"), text: Binding(
                             get: { isNetInput ? annualText : "" },
                             set: { annualText = $0 }
-                        ), unit: language.text("원", "KRW"), placeholder: String(Int(netWon.rounded()))) {
+                        ), unit: language.text("원", "USD"), placeholder: String(Int(netWon.rounded()))) {
                             isNetInput = true
                             annualPay = number(annualText)
                             monthlyPay = 0
                         }
-                        field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "KRW"),
+                        field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "USD"),
                               placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
                             annualPay = number(monthlyText) * 12
                             monthlyPay = 0
@@ -1718,7 +1720,7 @@ struct MapHomeSalarySettingsSheet: View {
                             .multilineTextAlignment(.trailing)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 130)
-                            Text(language.text("원", "KRW")).font(.system(size: 13))
+                            Text(language.text("원", "USD")).font(.system(size: 13))
                         }
                     }
                     Text(model.sampleCount == 0
@@ -1738,7 +1740,7 @@ struct MapHomeSalarySettingsSheet: View {
                 // 3. 이번 달 누적 금액(고칠 수 있음)
                 card {
                     let computed = MapHomeSalaryPolicy.earnings(workSeconds: monthWorkSeconds, hourlyRate: rate ?? 0)
-                    field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: language.text("원", "KRW"),
+                    field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: language.text("원", "USD"),
                           placeholder: String(Int(computed.rounded()))) {
                         monthAccum = number(accumText)
                         monthAccumMonth = MapHomeSalaryPolicy.monthKey(.now)
