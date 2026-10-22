@@ -3522,6 +3522,17 @@ struct MapHomeView: View {
         )
     }
 
+    /// 선택한 날의 시간이 있는 메모(지도 핀이 아닌 것). 사이드바에 메모 아이콘으로 기본 표시한다.
+    private var timedMemosForSelectedDate: [ActionMemo] {
+        model.snapshot.memos.filter {
+            $0.isTimeless != true
+                && $0.mapPoint == nil
+                && !model.isMemoDraft($0.id)
+                && Self.hasText($0)
+                && Calendar.autoupdatingCurrent.isDate($0.occurredAt, inSameDayAs: model.selectedDate)
+        }
+    }
+
     private var scheduleStickersForSelectedDate: [MapSticker] {
         model.snapshot.stickers.filter {
             $0.placement == .schedule
@@ -7798,6 +7809,34 @@ struct MapHomeView: View {
                     }
 
                     // 일정은 시작 시간에 구글 로고로 표시한다(스티커와 같은 열).
+                    // 시간이 있는 메모는 메모 아이콘으로 사이드바 시간에 바로 보인다.
+                    ForEach(recordingShows(\.sidebarMemos) ? timedMemosForSelectedDate : []) { memo in
+                        let window = MapHomeTimeSidebarMath.visibleWindow(
+                            startMinute: timeSidebarVisibleStartMinute,
+                            durationMinutes: timeSidebarVisibleDurationMinutes,
+                            centerMinute: effectiveTimelineMinute
+                        )
+                        let minute = minuteOfDay(for: memo.occurredAt)
+                        let trackHeight = max(1, railHeight - MapHomeTimeSidebarMath.verticalInset * 2)
+                        let y = MapHomeTimeSidebarMath.verticalInset
+                            + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
+                        Button {
+                            selectedMapStickerEditor = .memo(memo.id)
+                        } label: {
+                            Image(systemName: "note.text")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.tpInk)
+                                .frame(width: 22, height: 22)
+                                .background(Color.white.opacity(0.96), in: Circle())
+                                .overlay(Circle().stroke(Color.tpInk.opacity(0.25), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(memo.text) 메모")
+                        .position(
+                            x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: false),
+                            y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
+                        )
+                    }
                     ForEach(recordingShows(\.sidebarMemos) ? dayCalendarEvents.filter { !$0.isAllDay } : []) { event in
                         let window = MapHomeTimeSidebarMath.visibleWindow(
                             startMinute: timeSidebarVisibleStartMinute,
@@ -11980,6 +12019,7 @@ struct MapHomeView: View {
     private func scheduleBadgeOffset(minute: Int, isEvent: Bool) -> CGFloat {
         let timedEvents = dayCalendarEvents.filter { !$0.isAllDay }.map { minuteOfDay(for: $0.span.start) }
         let timedStickers = scheduleStickersForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
+            + timedMemosForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
         let others = isEvent ? timedStickers : timedEvents
         guard others.contains(where: { abs($0 - minute) <= 10 }) else { return 0 }
         return isEvent ? -14 : 14
@@ -17377,6 +17417,8 @@ Group {
             memoKind = memo.kind
             occurredAt = memo.occurredAt
             hasTime = memo.isTimeless != true
+            // 시간이 있는 메모는 스티커로 기본 표시한다.
+            showsAsSticker = hasTime
             placement = .schedule
             if let point = memo.mapPoint {
                 latitudeText = String(format: "%.6f", point.latitude)
