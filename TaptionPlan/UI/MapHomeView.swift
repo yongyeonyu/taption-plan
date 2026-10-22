@@ -13166,6 +13166,8 @@ private struct MapHomeSectionEditSheet: View {
     @State private var viewport: MapHomeSectionViewportState
     @State private var magnifyOrigin: MapHomeSectionViewportState?
     @State private var panOrigin: MapHomeSectionViewportState?
+    /// 누른 상세 활동. 테두리를 진하게 표시한다.
+    @State private var selectedDetailID: UUID?
     @State private var lastMagnifyPublishUptime: TimeInterval = 0
     @State private var cutMinute: Int?
     @State private var cutDragBaseMinute: Int?
@@ -13642,11 +13644,16 @@ private struct MapHomeSectionEditSheet: View {
             .padding(.horizontal, isCompact ? 5 : 8)
             .frame(width: detailFrame.width, height: blockHeight, alignment: .leading)
             .background(
-                insertedDetailID == detail.id
+                insertedDetailID == detail.id || selectedDetailID == detail.id
                     ? category.tint.opacity(0.30)
                     : category.tint.opacity(0.13),
                 in: RoundedRectangle(cornerRadius: 9)
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(category.tint, lineWidth: selectedDetailID == detail.id ? 2.5 : 0)
+            }
+            .simultaneousGesture(TapGesture().onEnded { selectedDetailID = detail.id })
             .offset(
                 x: draggingDetailID == detail.id
                     ? min(max(detailDragTranslation, 0), 94)
