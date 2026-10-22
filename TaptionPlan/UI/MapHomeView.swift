@@ -12599,12 +12599,9 @@ enum MapHomeSectionViewportMath {
         segmentStart: Int,
         segmentEnd: Int
     ) -> MapHomeSectionViewportState {
-        let center = (segmentStart + segmentEnd) / 2
-        let duration = min(
-            maximumDurationMinutes,
-            max(360, segmentEnd - segmentStart + 180)
-        )
-        return state(centerMinute: center, durationMinutes: duration)
+        // 편집 화면은 24시간 전체를 한 번에 보여 준다. 선택한 구간은 아래에서 강조한다.
+        _ = (segmentStart, segmentEnd)
+        return state(centerMinute: 720, durationMinutes: maximumDurationMinutes)
     }
 
     static func zoomed(
@@ -13217,6 +13214,7 @@ private struct MapHomeSectionEditSheet: View {
                         .fill(Color.tpSurface)
 
                     timelineGrid(height: trackHeight)
+                    dimOutsideSelection(height: trackHeight)
 
                     ForEach(selection.details) { detail in
                         detailBlock(
@@ -13811,6 +13809,24 @@ private struct MapHomeSectionEditSheet: View {
                 self.magnifyOrigin = nil
                 lastMagnifyPublishUptime = 0
             }
+    }
+
+    /// 선택한 구간 밖(위·아래)을 흐리게 덮어, 편집 중인 구간이 돋보이게 한다.
+    private func dimOutsideSelection(height: CGFloat) -> some View {
+        let top = min(max(yPosition(selection.segment.startMinute, height: height), 0), height)
+        let bottom = min(max(yPosition(selection.segment.endMinute, height: height), 0), height)
+        return ZStack(alignment: .topLeading) {
+            Rectangle()
+                .fill(Color.black.opacity(0.12))
+                .frame(maxWidth: .infinity)
+                .frame(height: top)
+            Rectangle()
+                .fill(Color.black.opacity(0.12))
+                .frame(maxWidth: .infinity)
+                .frame(height: max(0, height - bottom))
+                .offset(y: bottom)
+        }
+        .allowsHitTesting(false)
     }
 
     private func yPosition(_ minute: Int, height: CGFloat) -> CGFloat {
