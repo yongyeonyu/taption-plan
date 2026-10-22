@@ -100,6 +100,14 @@ struct MapHomeTodayCalendarList: View {
 
     @MainActor
     private func load() async {
+        if GoogleCalendarAccount.shared.isConnected {
+            do {
+                state = .loaded(try await GoogleCalendarAccount.shared.todayEvents())
+            } catch {
+                state = .denied
+            }
+            return
+        }
         switch service.permissionState() {
         case .notDetermined:
             state = .needsPermission

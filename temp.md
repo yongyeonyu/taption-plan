@@ -1493,3 +1493,8 @@
 ## REV1022R03 · Apple 지도: 화랑이 화면 밖이면 연봉 카운터 숨김
 - 화면 밖 좌표면 연봉 카운터를 그리지 않음(GeometryReader 범위 검사).
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
+
+## GOA1022S01 · 구글 계정 직접 연동(OAuth, PKCE)
+- 구현: GoogleCalendarAccount(ASWebAuthenticationSession + PKCE, 리프레시 토큰 키체인, calendar.readonly로 오늘 일정 조회). 설정 "구글 계정 직접 연동" 연결/해제, 오늘 일정 목록이 연결 시 구글 일정 사용. Info.plist에 반전된 클라이언트 ID 스킴 추가.
+- 검증: Debug 빌드 BUILD SUCCEEDED. 로그인·일정 조회는 기기에서 미확인(테스트 사용자 계정 필요).
+- 제한: 동의 화면 테스트 상태(등록된 테스트 사용자만 로그인 가능).

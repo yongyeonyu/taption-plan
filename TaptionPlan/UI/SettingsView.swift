@@ -282,9 +282,17 @@ struct SettingsView: View {
                         settingsRow(
                             icon: "globe",
                             title: "구글 계정 직접 연동",
-                            subtitle: "구글 로그인으로 Google Calendar를 바로 읽습니다",
-                            value: "준비 중"
-                        )
+                            subtitle: "구글 로그인으로 Google Calendar 일정을 바로 읽습니다",
+                            value: GoogleCalendarAccount.shared.isConnected ? "연결됨" : "연결하기"
+                        ) {
+                            Task {
+                                if GoogleCalendarAccount.shared.isConnected {
+                                    GoogleCalendarAccount.shared.disconnect()
+                                } else {
+                                    try? await GoogleCalendarAccount.shared.connect()
+                                }
+                            }
+                        }
                     }
 
                     settingsSection(

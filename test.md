@@ -2355,3 +2355,6 @@
 
 ## REV1022R03
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## GOA1022S01
+- 빌드 BUILD SUCCEEDED. 기기 로그인/일정 조회 미실시.
