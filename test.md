@@ -2379,3 +2379,6 @@
 
 ## PLC1022V01
 - MapHomeLiveMapTests 75개 통과(iPhone 11 Pro). 랜드마크 시트 편집·줌 속도 기기 확인 미실시.
+
+## MIC1022W01
+- 빌드 BUILD SUCCEEDED. 녹음 크래시는 재현·원인 확정 전.

@@ -2295,7 +2295,6 @@ struct MapHomeView: View {
     @State private var salaryLive: MapHomeSalaryPolicy.Live?
     /// 날짜(0시)별 업무 구간. 선택한 날짜와 오늘만 둔다.
     @State private var salaryWorkSpans: [Date: [TimeSpan]] = [:]
-    @State private var isMemoAddMenuPresented = false
     @State private var queueExpanded = false
     @State private var memoStackExpanded = false
     @State private var todayCalendarExpanded = false
@@ -3118,31 +3117,7 @@ struct MapHomeView: View {
                 .presentationDetents([.height(360), .large])
                 .presentationDragIndicator(.visible)
         }
-        // 지도 메모·일정 메모를 나누지 않고 "메모" 하나로 연다. 위치·시간은 편집 화면에서 더한다.
-        // 메모 추가 메뉴: 메모 추가 / 일정 메모(사이드바) / 지도 메모(위치 고르기).
-        .confirmationDialog(
-            language.text("메모 추가", "Add memo"),
-            isPresented: $isMemoAddMenuPresented,
-            titleVisibility: .visible
-        ) {
-            Button {
-                addMemo()
-            } label: {
-                Label(language.text("메모 추가", "Add memo"), systemImage: "note.text.badge.plus")
-            }
-            Button {
-                addScheduleSticker()
-            } label: {
-                Label(language.text("일정 메모 (사이드바)", "Schedule memo (sidebar)"), systemImage: "calendar.badge.plus")
-            }
-            Button {
-                isMenuOpen = false
-                isPlacingMapMemo = true
-            } label: {
-                Label(language.text("지도 메모 (위치 고르기)", "Map memo (pick location)"), systemImage: "mappin.and.ellipse")
-            }
-            Button(language.text("취소", "Cancel"), role: .cancel) {}
-        }
+        // + 버튼은 바로 메모 편집 화면을 연다. 시간·위치·스티커는 그 화면에서 고른다.
         .confirmationDialog(
             language.text("지도에 추가", "Add to map"),
             isPresented: $isLongPressMenuPresented,
@@ -3943,19 +3918,6 @@ struct MapHomeView: View {
         ) else { return }
         isMenuOpen = false
         selectedMapStickerEditor = .newMemo(id)
-    }
-
-    private func addScheduleSticker() {
-        let date = timelineSelectionDate
-        guard let id = model.addMapSticker(
-            title: language.text("새 일정 메모", "New schedule memo"),
-            placement: .schedule,
-            point: nil,
-            planID: selectedSchedulePlanIDs.first,
-            occurredAt: date
-        ) else { return }
-        isMenuOpen = false
-        selectedMapStickerEditor = .sticker(id)
     }
 
     private func runDaySourceTask() async {
@@ -6264,7 +6226,7 @@ struct MapHomeView: View {
                 openRecordingOptions()
             }
             bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
-                isMemoAddMenuPresented = true
+                addMemo()
             }
         }
         .padding(.horizontal, 8)
@@ -7846,7 +7808,7 @@ struct MapHomeView: View {
 
                     if !layoutStyle.movesActionsToBottom {
                         Button {
-                            isMemoAddMenuPresented = true
+                            addMemo()
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: Layout.mapControlIcon, weight: .bold))
@@ -16923,18 +16885,24 @@ Group {
                     TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
                 }
             }
-            // 음성 입력은 첨부처럼 아래에 둔다. 말한 내용이 글자로 바로 메모에 들어간다.
-            Button {
-                toggleDictation()
-            } label: {
-                Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
-                    .frame(width: 36, height: 36)
-                    .background(Color.tpAccent.opacity(0.10), in: Circle())
+            // 음성 입력은 입력칸 아래 가운데에 크게 둔다. 말한 내용이 글자로 바로 메모에 들어간다.
+            HStack {
+                Spacer()
+                Button {
+                    toggleDictation()
+                } label: {
+                    Image(systemName: dictation.isListening ? "mic.fill" : "mic")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
+                        .frame(width: 64, height: 64)
+                        .background(Color.tpAccent.opacity(0.12), in: Circle())
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
+                Spacer()
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
+            .padding(.top, 4)
             if let message = dictation.errorMessage {
                 Text(message)
                     .font(.system(size: 11, weight: .medium))
