@@ -2456,3 +2456,6 @@
 
 ## NEAR1022AJ01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## ZOM1022AK01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

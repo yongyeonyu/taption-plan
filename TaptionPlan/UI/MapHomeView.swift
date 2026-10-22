@@ -6286,8 +6286,7 @@ struct MapHomeView: View {
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
                 // 현재 위치를 누르면 날짜도 오늘로 맞춘다.
                 model.selectedDate = Date()
-                requestAndFollowUserLocation(using: nil)
-                focusCurrentLocationAtFixedScale()
+                requestAndFollowUserLocation(using: nil, fixedScale: true)
             }
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
             bottomBarButton("house.fill", language.text("집", "Home")) {
@@ -7827,8 +7826,7 @@ struct MapHomeView: View {
 
                     if !layoutStyle.movesActionsToBottom {
                         Button {
-                            requestAndFollowUserLocation(using: proxy)
-                            focusCurrentLocationAtFixedScale()
+                            requestAndFollowUserLocation(using: proxy, fixedScale: true)
                         } label: {
                             MapHomeLocationButtonIcon(
                                 state: locationState,
@@ -12014,10 +12012,12 @@ struct MapHomeView: View {
             return
         }
         hasUserAdjustedMap = true
+        // 집 버튼도 배율 80으로 맞춘다. 자동 줌이 곧바로 덮어쓰지 않도록 잠시 멈춘다.
+        liveZoomGovernor.pauseForUserAdjustment(uptime: ProcessInfo.processInfo.systemUptime)
         setMapPosition(.camera(
             MapCamera(
                 centerCoordinate: CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude),
-                distance: 70,
+                distance: MapHomeCameraZoomMath.distance(forScale: 80),
                 heading: 0,
                 pitch: 0
             )
@@ -12329,13 +12329,18 @@ struct MapHomeView: View {
         )))
     }
 
-    private func requestAndFollowUserLocation(using proxy: MapProxy?) {
+    private func requestAndFollowUserLocation(using proxy: MapProxy?, fixedScale: Bool = false) {
         // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
         liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         // GPS를 기다리는 동안에도 가장 최근 위치로 먼저 이동해 화랑이를 보여준다.
-        focusUserLocation(using: proxy, preservesCamera: true)
+        // 배율 80 고정이면 어느 단계에서도 현재 배율을 그대로 쓰지 않는다.
+        if fixedScale {
+            focusCurrentLocationAtFixedScale()
+        } else {
+            focusUserLocation(using: proxy, preservesCamera: true)
+        }
         currentLocationRequestTask?.cancel()
         currentLocationRequestTask = Task { @MainActor in
             defer { currentLocationRequestTask = nil }
@@ -12349,7 +12354,11 @@ struct MapHomeView: View {
                 return
             }
             if isAvailable { setUserTrackingMode(.following) }
-            focusUserLocation(using: proxy, preservesCamera: true)
+            if fixedScale {
+                focusCurrentLocationAtFixedScale()
+            } else {
+                focusUserLocation(using: proxy, preservesCamera: true)
+            }
         }
     }
 
