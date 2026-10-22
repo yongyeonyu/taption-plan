@@ -5595,12 +5595,18 @@ struct MapHomeView: View {
     }
 
     private func pawprintImage(_ waypoint: PawprintWaypoint) -> some View {
-        Image(systemName: "pawprint.fill")
+        // 선택한 발자국은 흰색 배경(100%)과 강조 테두리로 표시한다.
+        let isSelected = !waypoint.isPredicted && waypoint.timestamp != nil
+            && waypoint.timestamp == selectedPawprintTimestamp
+        return Image(systemName: "pawprint.fill")
             .font(.system(size: 12, weight: .bold))
             .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
                 ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68)
                 : MapHomePawprintSpeedColor.color(forMetersPerSecond: waypoint.speedMetersPerSecond))
             .rotationEffect(.degrees(waypoint.angle))
+            .padding(isSelected ? 5 : 0)
+            .background(Circle().fill(isSelected ? Color.white : Color.clear))
+            .overlay(Circle().stroke(isSelected ? Color.tpAccent : Color.clear, lineWidth: 2))
             .allowsHitTesting(false)
     }
 
@@ -17191,11 +17197,6 @@ Group {
                 if showsAsSticker {
                     stickerOptions
                 }
-            } footer: {
-                Text(language.text(
-                    "켜고 저장하면 이 메모가 일정 스티커가 되어 사이드바에 보여요. 시간을 지정했으면 그 시간에, 아니면 지금 시간에 나타나요.",
-                    "Saved as a schedule sticker shown in the sidebar: at its set time, or now if no time is set."
-                ))
             }
         }
         Section {
@@ -17211,11 +17212,6 @@ Group {
             }
         } header: {
             Text(language.text("시간", "Time"))
-        } footer: {
-            Text(language.text(
-                "시간을 지정하지 않으면 왼쪽 위 메모 목록에 쌓여요.",
-                "Memos without a time stack in the list at the top left."
-            ))
         }
         Section {
             if let point = editedPoint {
@@ -17237,11 +17233,6 @@ Group {
             }
         } header: {
             Text(language.text("위치", "Location"))
-        } footer: {
-            Text(language.text(
-                "위치를 넣으면 지도에 핀으로 보이고, 없으면 시간에 따른 메모로 보여요.",
-                "With a location the memo shows as a map pin; without one it follows the time."
-            ))
         }
         if isSticker {
             Section {
