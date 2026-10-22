@@ -7775,7 +7775,7 @@ struct MapHomeView: View {
                         )
                         // 날씨 칩의 왼쪽 끝에 맞춘다(캡처로 잰 값: 칩 왼쪽 끝 x 17, 스티커 반지름 11).
                         .position(
-                            x: MapHomeTimeSidebarMath.handleLaneWidth - 41,
+                            x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: false),
                             y: min(
                                 max(y, MapHomeTimeSidebarMath.verticalInset),
                                 railHeight - MapHomeTimeSidebarMath.verticalInset
@@ -7804,7 +7804,7 @@ struct MapHomeView: View {
                             .allowsHitTesting(false)
                             .accessibilityLabel("\(event.title) 일정")
                             .position(
-                                x: MapHomeTimeSidebarMath.handleLaneWidth - 41,
+                                x: scheduleBadgeBaseX + scheduleBadgeOffset(minute: minute, isEvent: true),
                                 y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
                             )
                     }
@@ -11951,6 +11951,22 @@ struct MapHomeView: View {
         mapCameraFrameProjection.reset()
         if visibleMapCamera != camera { visibleMapCamera = camera }
         setMapPosition(.camera(camera))
+    }
+
+    /// 일정·스티커 배지의 기준 x. 날씨 배지가 켜져 있으면 날씨 왼쪽(왼쪽 정렬), 꺼져 있으면 시간 레일 오른쪽(오른쪽 정렬).
+    private var scheduleBadgeBaseX: CGFloat {
+        recordingShows(\.weatherSidebar)
+            ? MapHomeTimeSidebarMath.handleLaneWidth - 41
+            : MapHomeTimeSidebarMath.handleLaneWidth + 8
+    }
+
+    /// 같은 시간(±10분)에 일정과 스티커가 함께 있으면 일정은 왼쪽, 스티커는 오른쪽으로 나눈다. 아니면 기본 위치.
+    private func scheduleBadgeOffset(minute: Int, isEvent: Bool) -> CGFloat {
+        let timedEvents = dayCalendarEvents.filter { !$0.isAllDay }.map { minuteOfDay(for: $0.span.start) }
+        let timedStickers = scheduleStickersForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
+        let others = isEvent ? timedStickers : timedEvents
+        guard others.contains(where: { abs($0 - minute) <= 10 }) else { return 0 }
+        return isEvent ? -14 : 14
     }
 
     private func minuteOfDay(for date: Date) -> Int {
