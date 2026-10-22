@@ -11545,7 +11545,7 @@ struct MapHomeView: View {
     private func reportInitialMapShellReadyIfNeeded(for date: Date) {
         // 홈은 전체 DB 로드와 오늘 경로(하루 데이터)가 준비된 뒤에 띄운다. 너무 오래 걸리면 시간 제한으로 연다.
         guard !hasReportedInitialDataReady,
-              (model.isBootstrapped && dayDataSnapshot != nil) || initialReadyForced,
+              (model.isBootstrapped && dayDataSnapshot?.isComplete == true) || initialReadyForced,
               Calendar.autoupdatingCurrent.isDate(
                   date,
                   inSameDayAs: model.selectedDate

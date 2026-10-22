@@ -2564,3 +2564,6 @@
 
 ## TOP1022BO01
 - 빌드 BUILD SUCCEEDED.
+
+## ROT1022BP01
+- 빌드 BUILD SUCCEEDED. 업데이트 직후 경로 표시 기기 확인 미실시.
