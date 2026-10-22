@@ -2373,3 +2373,6 @@
 
 ## SAL1022Z02
 - MapHomeLiveMapTests 75개 통과(iPhone 11 Pro). 화면 배치·토글은 기기 확인 미실시.
+
+## GLG1022U01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

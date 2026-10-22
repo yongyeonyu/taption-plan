@@ -2299,6 +2299,7 @@ struct MapHomeView: View {
     @State private var queueExpanded = false
     @State private var memoStackExpanded = false
     @State private var todayCalendarExpanded = false
+    @State private var topPanelOrder: [TopPanel] = []
     @State private var calendarService = AppleCalendarService()
     @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
@@ -2732,9 +2733,6 @@ struct MapHomeView: View {
 
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
-                    .zIndex(MapHomeLayerPriority.loading)
-            } else if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
-                memoOverlayStack
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -3675,65 +3673,78 @@ struct MapHomeView: View {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
             }
-            if todayCalendarExpanded {
-                MapHomeTodayCalendarList(language: language, service: calendarService)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            // 먼저 연 패널이 위에 오고, 나중에 연 패널은 그 아래에 붙는다. 폭은 같다.
+            ForEach(topPanelOrder, id: \.self) { panel in
+                switch panel {
+                case .memo:
+                    if memoStackExpanded, recordingShows(\.sidebarMemos), memoDisplayMode == .all {
+                        memoListPanel
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                case .calendar:
+                    if todayCalendarExpanded {
+                        MapHomeTodayCalendarList(language: language, service: calendarService)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, Layout.horizontalInset)
         .padding(.top, 12)
+        .onChange(of: memoStackExpanded) { _, open in setTopPanel(.memo, open: open) }
+        .onChange(of: todayCalendarExpanded) { _, open in setTopPanel(.calendar, open: open) }
     }
 
-    private var memoOverlayStack: some View {
+    enum TopPanel: Hashable { case memo, calendar }
+
+    private func setTopPanel(_ panel: TopPanel, open: Bool) {
+        topPanelOrder.removeAll { $0 == panel }
+        if open { topPanelOrder.append(panel) }
+    }
+
+    /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
+    private var memoListPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if memoStackExpanded {
-                VStack(alignment: .leading, spacing: 8) {
-                // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
-                if queueExpanded {
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(queuedMemos) { memo in
-                                memoCard(memo, showsTime: memo.isTimeless != true)
-                            }
+            // 큐는 3개를 항상 보여 주고, 넘치면 펼침 버튼으로 스크롤 목록을 연다.
+            if queueExpanded {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(queuedMemos) { memo in
+                            memoCard(memo, showsTime: memo.isTimeless != true)
                         }
                     }
-                    .frame(maxHeight: 300)
-                } else {
-                    ForEach(queuedMemos.prefix(3)) { memo in
-                        memoCard(memo, showsTime: memo.isTimeless != true)
-                    }
                 }
-                if queuedMemos.count > 3 {
-                    Button {
-                        withAnimation(.snappy) { queueExpanded.toggle() }
-                    } label: {
-                        Label(
-                            queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
-                            systemImage: queueExpanded ? "chevron.up" : "chevron.down"
-                        )
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpSecondary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .mapHomeGlass(in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+                .frame(maxHeight: 300)
+            } else {
+                ForEach(queuedMemos.prefix(3)) { memo in
+                    memoCard(memo, showsTime: memo.isTimeless != true)
                 }
-                if let timed = nearbyTimedMemo {
-                    memoCard(timed, showsTime: true)
+            }
+            if queuedMemos.count > 3 {
+                Button {
+                    withAnimation(.snappy) { queueExpanded.toggle() }
+                } label: {
+                    Label(
+                        queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
+                        systemImage: queueExpanded ? "chevron.up" : "chevron.down"
+                    )
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .mapHomeGlass(in: Capsule())
                 }
-                if let legacy = nearbyScheduleMemo {
-                    scheduleMemoPreview(legacy)
-                }
-                }
-                .frame(maxWidth: 280, alignment: .leading)
-                .transition(.opacity.combined(with: .move(edge: .top)))
+                .buttonStyle(.plain)
+            }
+            if let timed = nearbyTimedMemo {
+                memoCard(timed, showsTime: true)
+            }
+            if let legacy = nearbyScheduleMemo {
+                scheduleMemoPreview(legacy)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.leading, Layout.horizontalInset)
-        .padding(.top, 60)
+        .frame(width: 280, alignment: .leading)
     }
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.

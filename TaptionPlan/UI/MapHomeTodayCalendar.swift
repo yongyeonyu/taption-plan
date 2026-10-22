@@ -7,9 +7,10 @@ struct MapHomeCalendarButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text("G")
-                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
+            Image("GoogleGLogo")
+                .resizable()
+                .scaledToFit()
+                .padding(10)
                 .frame(width: 40, height: 40)
                 .mapHomeGlass(in: Circle())
                 .overlay(alignment: .bottomTrailing) {
@@ -93,7 +94,7 @@ struct MapHomeTodayCalendarList: View {
             }
         }
         .padding(12)
-        .frame(width: 260, alignment: .leading)
+        .frame(width: 280, alignment: .leading)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .task { await load() }
     }

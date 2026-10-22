@@ -1524,3 +1524,8 @@
 - 연봉↔시급 연동: 한쪽만 적어도 다른 쪽 자리표시자가 자동 환산(월 209시간, 12개월). 연봉 환산 시급 = 월급÷209, 시급 환산 연봉 = 시급×209×12.
 - 지도: 왼쪽 상단 메모·일정 버튼을 상단 가까이 올림. 등록 위치 범위 표시 켜고 끄기(랜드마크 시트 범위 편집 안 토글, 기본 켜짐).
 - 검증: Debug 빌드 BUILD SUCCEEDED. iPhone 11 Pro MapHomeLiveMapTests 75개 통과(build/validation/REV1022R02/unit2.log). 기기 화면 확인 전.
+
+## GLG1022U01 · 메모·일정 패널 순서와 폭, 구글 G 로고 (2026-10-22)
+- 메모와 일정을 함께 열면 먼저 연 패널이 위, 나중 패널이 아래에 붙음(겹침 없음). 두 패널 폭 280 통일.
+- 일정 버튼을 Google 공식 G 로고(developers.google.com/identity/images/g-logo.png, 200x204)로 교체. 에셋 GoogleGLogo.imageset.
+- 검증: Debug 빌드 BUILD SUCCEEDED. 기기 화면 확인 전.
