@@ -3093,8 +3093,45 @@ final class AppModel {
 
     func bootstrap() async {
         await bootstrapLocalSnapshot()
+        migrateLegacyStickersOnce()
         scheduleBootstrapPreparation()
         await waitForBootstrapPreparation()
+    }
+
+    /// 예전 스티커 기록을 메모 하나로 한 번만 합친다. 스티커의 종류·색·시간·위치는 그대로 옮긴다.
+    private func migrateLegacyStickersOnce() {
+        let flagKey = "legacyStickersMergedIntoMemos.v1"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: flagKey), !snapshot.stickers.isEmpty else {
+            defaults.set(true, forKey: flagKey)
+            return
+        }
+        guard acceptsDataMutation() else { return }
+        for sticker in snapshot.stickers {
+            let body = [sticker.title, sticker.memo ?? ""]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+            guard !body.isEmpty else { continue }
+            let memo = ActionMemo(
+                planID: nil,
+                categoryID: MemoTimelineEngine.categoryID,
+                occurredAt: sticker.occurredAt,
+                mapPoint: sticker.point,
+                isTimeless: false,
+                kind: .idea,
+                text: body,
+                createdAt: sticker.createdAt,
+                updatedAt: sticker.updatedAt
+            )
+            var merged = memo
+            merged.stickerSymbol = sticker.systemImage
+            merged.stickerColorHex = sticker.colorHex
+            snapshot.memos.append(merged)
+        }
+        snapshot.stickers.removeAll()
+        defaults.set(true, forKey: flagKey)
+        Task { await persist() }
     }
 
     func prepareLocalDataForDisplay() async {

@@ -8162,8 +8162,8 @@ struct MapHomeView: View {
 
                 let menuHeight = max(0, proxy.size.height)
                 let menuTop = max(
-                    Layout.headerVisibleHeight + 8,
-                    headerFrame.maxY + 8
+                    Layout.headerVisibleHeight,
+                    headerFrame.maxY
                 )
                 sidebarContent
                 .frame(
