@@ -32,20 +32,35 @@ final class MapHomeDictation {
         }
     }
 
+    /// 권한 콜백은 시스템 백그라운드 큐에서 온다. 메인 액터 클로저로 두면 격리 검사에서 SIGTRAP으로 죽으므로 nonisolated로 받는다.
+    nonisolated private static func requestSpeechAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { status in
+                continuation.resume(returning: status)
+            }
+        }
+    }
+
+    nonisolated private static func requestMicrophonePermission() async -> Bool {
+        await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+    }
+
     /// 녹음을 시작한다. 말한 내용은 녹음이 끝난 뒤 파일로 글자 변환한다.
     func start(localeIdentifier: String) async {
         guard !isListening, !isTranscribing else { return }
         TaptionPlanDiagnosticsLogger.shared.record("voice_memo_start_requested")
         errorMessage = nil
         transcript = ""
-        let speechStatus = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
-        }
+        let speechStatus = await Self.requestSpeechAuthorization()
         guard speechStatus == .authorized else {
             errorMessage = "음성 인식 권한이 필요합니다. 설정에서 허용해 주세요."
             return
         }
-        guard await AVAudioApplication.requestRecordPermission() else {
+        guard await Self.requestMicrophonePermission() else {
             errorMessage = "마이크 권한이 필요합니다. 설정에서 허용해 주세요."
             return
         }

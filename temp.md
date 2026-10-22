@@ -1539,3 +1539,9 @@
 - + 버튼은 메뉴 없이 메모 편집 화면을 바로 연다. 마이크 버튼은 입력칸 아래 가운데 64pt.
 - iCloud 로그(TaptionLogs) 최신 파일은 크래시 이전 시점이라 녹음 크래시 기록이 없음. 음성 이벤트도 없음.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 재현·크래시 로그 미확보.
+
+## CRS1022X01 · 메모 녹음 크래시 원인과 수정 (2026-10-22)
+- 크래시 리포트(build 221, 15:55, EXC_BREAKPOINT/SIGTRAP): 메인 스레드가 아닌 TCC 권한 응답 콜백(__TCCAccessRequest_block_invoke)에서 메인 액터 클로저가 실행되어 dispatch_assert_queue 실패.
+- 원인: SFSpeechRecognizer.requestAuthorization과 AVAudioApplication.requestRecordPermission 콜백 클로저가 메인 액터에 격리됨(MapHomeDictation.start, VoiceMemoRecorder.requestPermission).
+- 수정: 두 권한 요청을 nonisolated 정적 함수로 분리(MapHomeScreenRecording.swift, AppleIntegrations.swift).
+- 검증: Debug 빌드 BUILD SUCCEEDED. 권한 콜백 재현은 기기에서 미확인(권한 허용/거부 상태에 따라 다름).

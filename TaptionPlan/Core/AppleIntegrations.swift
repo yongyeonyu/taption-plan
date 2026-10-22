@@ -4504,9 +4504,14 @@ final class VoiceMemoRecorder: NSObject, AVAudioRecorderDelegate {
     private var activeURL: URL?
 
     func requestPermission() async -> Bool {
+        await Self.requestRecordPermission()
+    }
+
+    /// 시스템 콜백은 백그라운드 큐에서 온다. 메인 액터 격리를 피하려고 nonisolated로 받는다.
+    nonisolated private static func requestRecordPermission() async -> Bool {
         await withCheckedContinuation { continuation in
-            AVAudioApplication.requestRecordPermission {
-                continuation.resume(returning: $0)
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
             }
         }
     }
