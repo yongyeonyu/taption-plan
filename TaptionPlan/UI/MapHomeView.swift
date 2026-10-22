@@ -2394,6 +2394,8 @@ struct MapHomeView: View {
     @State private var selectedScope: TimeScale = .day
     @State private var selectedTimelineMinute: Int?
     @State private var selectedPawprintTimestamp: Date?
+    /// 발자국을 누르면 강조하는 발자국의 시각. 재생·시간 조정으로 지워지는 선택과 따로 둔다.
+    @State private var highlightedPawprintTimestamp: Date?
     @State private var selectedPawprintCoordinate: CLLocationCoordinate2D?
     @State private var isTimelineSelectionPinned = false
     @State private var sectionEditSelection: MapHomeSectionEditSelection?
@@ -5189,6 +5191,7 @@ struct MapHomeView: View {
         isTimelineSelectionPinned = true
         selectedTimelineMinute = selection.minute
         selectedPawprintTimestamp = selection.timestamp
+        highlightedPawprintTimestamp = waypoint.timestamp
         selectedPawprintCoordinate = waypoint.coordinate
         _ = refreshRouteProjection()
         recordCurrentPlaybackAlignment()
@@ -5629,7 +5632,7 @@ struct MapHomeView: View {
     private func pawprintImage(_ waypoint: PawprintWaypoint) -> some View {
         // 선택한 발자국은 흰색 배경(100%)과 강조 테두리로 표시한다.
         let isSelected = !waypoint.isPredicted && waypoint.timestamp != nil
-            && waypoint.timestamp == selectedPawprintTimestamp
+            && waypoint.timestamp == highlightedPawprintTimestamp
         return Image(systemName: "pawprint.fill")
             .font(.system(size: 12, weight: .bold))
             .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
@@ -9903,6 +9906,7 @@ struct MapHomeView: View {
         displayRouteReadings = []
         lastPreparedRouteReadingsSignature = nil
         selectedPawprintTimestamp = nil
+        highlightedPawprintTimestamp = nil
         selectedPawprintCoordinate = nil
         routeProjection = nil
         wbsPlaybackProjection = nil
