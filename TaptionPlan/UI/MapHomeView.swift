@@ -769,8 +769,8 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
     var minutesPerSecond: Double {
         switch mode {
         case .walking:
-            // 걷기는 다른 이동보다 두 배 빠르게 재생한다(대표 지시, PLY1020Z01).
-            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 2
+            // 걷기는 다른 이동보다 빠르게 재생한다. 2배(PLY1020Z01)에서 1.5배 더 올려 3배(대표 지시, WLK1022I01).
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 3
         case .running, nil:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
         case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
