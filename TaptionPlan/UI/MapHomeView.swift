@@ -2446,6 +2446,8 @@ struct MapHomeView: View {
     @State private var visibleMapCenter = CLLocationCoordinate2D(latitude: 0, longitude: 0)
     @State private var timeRailSegments: [MapHomeTimeRailSegment] = []
     @State private var routeProjection: RouteTimelineProjection?
+    /// 마지막 경로 계산의 입력 요약. 같으면 다시 계산하지 않는다.
+    @State private var routeProjectionInputKey: RouteProjectionInputKey?
     @State private var routeActualIndex: RouteTimelineDataEngine.ActualIndex?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
     @State private var dayDataSnapshot: PlanDayDataSnapshot?
@@ -11672,6 +11674,24 @@ struct MapHomeView: View {
             timelineDate: timelineDate,
             isPlaybackRunning: isDayPlaybackRunning
         )
+        // 입력이 같으면 이전 계산을 그대로 쓴다. 화면을 그릴 때마다 경로를 다시 계산하지 않게 한다.
+        let inputKey = RouteProjectionInputKey(
+            day: dayStart,
+            sourceRevision: dayData.sourceRevision,
+            cutoff: projectionDate,
+            selectedStart: isDayPlaybackRunning ? nil : timelineSelectionSpan?.start,
+            selectedEnd: isDayPlaybackRunning ? nil : timelineSelectionSpan?.end,
+            isPlaying: isDayPlaybackRunning,
+            readingCount: displayRouteReadings.count,
+            lastReadingTime: displayRouteReadings.last?.timestamp,
+            actualCount: actuals.count,
+            sleepCount: model.sleepSessions.count,
+            confirmedSleepCount: model.settings.confirmedSleepSpans.count
+        )
+        if inputKey == routeProjectionInputKey, let cached = routeProjection {
+            return cached
+        }
+        routeProjectionInputKey = inputKey
         let next = RouteTimelineDataEngine.project(
             selectedDate: model.selectedDate,
             through: projectionDate,
@@ -21509,4 +21529,19 @@ enum MapHomeWeekStripMath {
     static let dayPitch: CGFloat = 38
     /// 날짜 줄 높이. 양옆 원형 버튼과 같은 높이(40pt).
     static let height: CGFloat = 40
+}
+
+/// 경로 계산 입력 요약. 이 값이 같으면 같은 경로 결과다.
+struct RouteProjectionInputKey: Hashable {
+    let day: Date
+    let sourceRevision: UInt64
+    let cutoff: Date
+    let selectedStart: Date?
+    let selectedEnd: Date?
+    let isPlaying: Bool
+    let readingCount: Int
+    let lastReadingTime: Date?
+    let actualCount: Int
+    let sleepCount: Int
+    let confirmedSleepCount: Int
 }
