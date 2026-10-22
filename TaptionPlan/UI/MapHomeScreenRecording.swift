@@ -110,6 +110,7 @@ final class MapHomeDictation {
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent("memo-voice-\(UUID().uuidString).m4a")
             let engine = AVAudioEngine()
+            self.engine = engine
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
             let file = try AVAudioFile(forWriting: url, settings: [
@@ -148,7 +149,13 @@ final class MapHomeDictation {
             TaptionPlanDiagnosticsLogger.shared.record("voice_memo_recording_started")
         } catch {
             errorMessage = "마이크를 시작하지 못했습니다."
-            stop()
+            // 시작에 실패하면 탭과 엔진을 바로 정리한다(stop은 녹음 중일 때만 동작).
+            engine?.inputNode.removeTap(onBus: 0)
+            engine?.stop()
+            engine = nil
+            file = nil
+            liveRequest = nil
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         }
     }
 
