@@ -2398,3 +2398,6 @@
 
 ## VCE1022Z02
 - 빌드 BUILD SUCCEEDED. 기기 확인(포커스·키보드·웨이브폼·전사 반영) 미실시.
+
+## RNG1022AA01
+- 빌드 BUILD SUCCEEDED. 기기 확인 미실시.

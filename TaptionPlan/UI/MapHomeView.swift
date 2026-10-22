@@ -5679,6 +5679,7 @@ struct MapHomeView: View {
                                 .frame(width: radius * 2, height: radius * 2)
                         }
                         .frame(width: 0, height: 0)
+                        .opacity(0.5)
                         .position(pin)
                         .allowsHitTesting(false)
                     }
