@@ -1718,7 +1718,7 @@ enum MapHomeAlarmPolicy {
     /// 최근 이 시간 안에 생긴 일만 알린다(앱이 늦게 깨어나 묵은 일을 쏟아내지 않게).
     static let recentWindow: TimeInterval = 45 * 60
     /// 떠난 뒤 이 시간은 기다린다(잠깐 나갔다 돌아오는 경우).
-    static let leaveSettle: TimeInterval = 3 * 60
+    static let leaveSettle: TimeInterval = 10 * 60
 
     static func hoursText(_ seconds: TimeInterval) -> String {
         let minutes = Int((seconds / 60).rounded())
@@ -2208,7 +2208,11 @@ struct MapHomeDailyCardView: View {
 
     private func stat(_ title: String, _ value: String, _ symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label(title, systemImage: symbol).font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+            Label(title, systemImage: symbol)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
         }
         .padding(12)

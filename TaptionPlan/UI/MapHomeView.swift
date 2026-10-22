@@ -3300,6 +3300,16 @@ struct MapHomeView: View {
             persistMapDayCache()
         }
         .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
+        // 잠금 화면 활동 카드에 같은 연봉 글자를 보여 주기 위해 기기 설정에 적어 둔다.
+        .onChange(of: salaryLive?.hourlyRate) { _, _ in
+            if let salaryLive {
+                let text = MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(
+                    workSeconds: salaryLive.todayWorkSeconds, hourlyRate: salaryLive.hourlyRate))
+                UserDefaults.standard.set(text, forKey: "mapHomeSalaryLiveText")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "mapHomeSalaryLiveText")
+            }
+        }
         .onChange(of: model.selectedDate) { oldDate, newDate in
             let calendar = Calendar.autoupdatingCurrent
             let dayChanged = !calendar.isDate(oldDate, inSameDayAs: newDate)
@@ -6086,6 +6096,8 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("달력", "Calendar"))
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
+                // 현재 위치를 누르면 날짜도 오늘로 맞춘다.
+                model.selectedDate = Date()
                 requestAndFollowUserLocation(using: nil)
             }
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
@@ -6166,13 +6178,9 @@ struct MapHomeView: View {
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 더블탭은 오늘 날짜로 이동해 경로를 화면에 맞추고, 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
         // 한 번 탭과 두 번 탭을 하나의 제스처로 묶어, 두 번 탭할 때 한 번 탭 동작이 먼저 실행되지 않게 한다.
-        .gesture(
-            TapGesture(count: 2)
-                .onEnded { jumpToTodayAndFitRoutes() }
-                .exclusively(before: TapGesture().onEnded {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
-                })
-        )
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityAdjustableAction { direction in
@@ -8897,6 +8905,11 @@ struct MapHomeView: View {
                 }
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.tpAccent)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.tpAccent.opacity(0.10), in: Capsule())
             }
         }
     }
@@ -16680,26 +16693,30 @@ Group {
     /// 메모 입력칸과 마이크 버튼. 마이크를 누르면 말한 내용이 메모 끝에 글자로 이어진다.
     private func memoInputField(prompt: Text?) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
-                Group {
-                    if let prompt {
-                        TextField(language.text("메모 내용", "Memo text"), text: $memoText, prompt: prompt, axis: .vertical)
-                    } else {
-                        TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
-                    }
+            Group {
+                if let prompt {
+                    TextField(language.text("메모 내용", "Memo text"), text: $memoText, prompt: prompt, axis: .vertical)
+                } else {
+                    TextField(language.text("메모 내용", "Memo text"), text: $memoText, axis: .vertical)
                 }
-                Button {
-                    toggleDictation()
-                } label: {
-                    Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
-                        .frame(width: 34, height: 34)
-                        .background(Color.tpAccent.opacity(0.10), in: Circle())
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(language.text(dictation.isListening ? "음성 입력 중지" : "음성으로 입력", dictation.isListening ? "Stop dictation" : "Dictate"))
             }
+            // 음성 입력은 첨부처럼 아래에 둔다. 말한 내용이 글자로 바로 메모에 들어간다.
+            Button {
+                toggleDictation()
+            } label: {
+                Label(
+                    dictation.isListening
+                        ? language.text("녹음 중 · 눌러서 끝내기", "Recording · tap to finish")
+                        : language.text("음성 첨부 · 말하면 글자로 입력", "Voice attachment · speak to type"),
+                    systemImage: dictation.isListening ? "mic.fill" : "mic"
+                )
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.tpAccent.opacity(0.10), in: Capsule())
+            }
+            .buttonStyle(.plain)
             if let message = dictation.errorMessage {
                 Text(message)
                     .font(.system(size: 11, weight: .medium))

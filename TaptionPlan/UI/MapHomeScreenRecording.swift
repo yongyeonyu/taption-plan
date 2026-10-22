@@ -146,6 +146,13 @@ final class MapHomeScreenRecorder {
     func start() async -> Bool {
         let recorder = RPScreenRecorder.shared()
         lastFailureMessage = nil
+        // 앱이 남긴 녹화가 아직 돌고 있으면(이전 시도가 멈추지 못한 경우) 먼저 정리하고 새로 시작한다.
+        if recorder.isRecording, !isRecording {
+            let leftover = FileManager.default.temporaryDirectory.appendingPathComponent("BOKKI-Plan-leftover.mp4")
+            try? FileManager.default.removeItem(at: leftover)
+            try? await recorder.stopRecording(withOutput: leftover)
+            try? FileManager.default.removeItem(at: leftover)
+        }
         guard recorder.isAvailable else {
             lastFailureMessage = "이 기기·상태에서는 화면 녹화를 사용할 수 없습니다(다른 앱이 화면을 녹화·미러링 중인지 확인해 주세요)."
             return false

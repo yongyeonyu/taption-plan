@@ -182,6 +182,10 @@ actor SensorCollectionLiveActivityController {
         } else {
             sensorHUDUntil = nil
         }
+        let salaryText = UserDefaults.standard.string(forKey: "mapHomeSalaryLiveText")
+        let activityFrame: Int = hasNewSample
+            ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6
+            : (previousState?.currentActivityFrame ?? 0)
         let state = SensorCollectionActivityAttributes.ContentState(
             startedAt: activityStartedAt,
             lastSavedAt: lastSavedAt,
@@ -203,7 +207,8 @@ actor SensorCollectionLiveActivityController {
             currentActivityCategoryID: currentActivityCategoryID,
             currentActivitySystemImage: currentActivitySystemImage,
             currentActivityCatStyle: currentActivityCatStyle,
-            currentActivityFrame: hasNewSample ? ((previousState?.currentActivityFrame ?? -1) % 6 + 1) % 6 : previousState?.currentActivityFrame ?? 0
+            currentActivityFrame: activityFrame,
+            salaryText: salaryText
         )
         let staleDate = SensorCollectionActivityPolicy.expirationDate(
             startedAt: activityStartedAt

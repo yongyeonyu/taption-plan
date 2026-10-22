@@ -1371,6 +1371,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
         var currentActivitySystemImage: String?
         var currentActivityCatStyle: String?
         var currentActivityFrame: Int?
+        /// 잠금 화면에 보이는 연봉 카운터 글자(예: "53,761원"). 없으면 nil.
+        var salaryText: String? = nil
 
         var phase: SensorCollectionActivityPhase {
             guard let phaseRawValue,
@@ -1403,7 +1405,8 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             currentActivityCategoryID: String? = nil,
             currentActivitySystemImage: String? = nil,
             currentActivityCatStyle: String? = nil,
-            currentActivityFrame: Int? = nil
+            currentActivityFrame: Int? = nil,
+            salaryText: String? = nil
         ) {
             self.startedAt = startedAt
             self.lastSavedAt = lastSavedAt
@@ -1426,6 +1429,7 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
             self.currentActivitySystemImage = currentActivitySystemImage
             self.currentActivityCatStyle = currentActivityCatStyle
             self.currentActivityFrame = currentActivityFrame
+            self.salaryText = salaryText
         }
     }
 

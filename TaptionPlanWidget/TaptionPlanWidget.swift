@@ -2399,10 +2399,13 @@ private struct SensorCollectionLockScreenView: View {
             )
             .frame(width: 52, height: 40)
 
+            // 잠금 화면: 현재 활동 이름을 위에, 연봉 카운터(번 돈)를 아래에 보여 준다.
             VStack(alignment: .leading, spacing: 3) {
-                Text(widgetText("센서 정보 수집중", "Collecting sensor data"))
+                Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
                     .font(.system(size: 14, weight: .bold))
-                Text(sensorCollectionKinds(context.state.collectionKinds))
+                    .lineLimit(1)
+                Text(context.state.salaryText.map { widgetText("연봉 카운터 \($0)", "Salary \($0)") }
+                     ?? sensorCollectionKinds(context.state.collectionKinds))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.70))
                     .lineLimit(1)
