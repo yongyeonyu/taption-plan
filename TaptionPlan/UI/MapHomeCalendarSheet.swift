@@ -891,9 +891,20 @@ struct MapHomeStrideCalibrationSheet: View {
         steps = 0
         message = nil
         isMeasuring = true
-        pedometer.startUpdates(from: Date()) { data, _ in
-            guard let data else { return }
-            Task { @MainActor in steps = data.numberOfSteps.intValue }
+        pedometer.startUpdates(from: Date()) { data, error in
+            Task { @MainActor in
+                if let data {
+                    steps = data.numberOfSteps.intValue
+                } else if error != nil {
+                    // 동작·피트니스 권한이 없거나 측정이 막혔을 때 멈추고 이유를 보여 준다.
+                    pedometer.stopUpdates()
+                    isMeasuring = false
+                    message = language.text(
+                        "걸음 측정을 할 수 없어요. 설정에서 동작 및 피트니스 권한을 허용해 주세요.",
+                        "Steps unavailable. Allow Motion & Fitness in Settings."
+                    )
+                }
+            }
         }
     }
 

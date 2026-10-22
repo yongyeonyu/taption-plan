@@ -2297,6 +2297,7 @@ struct MapHomeView: View {
     @State private var salaryWorkSpans: [Date: [TimeSpan]] = [:]
     @State private var isMemoAddMenuPresented = false
     @State private var queueExpanded = false
+    @State private var isHomeMissingAlertPresented = false
     @State private var isPlacingMapMemo = false
     @State private var dismissedMemoPreviewIDs = Set<UUID>()
     private let isStickerMode = true
@@ -2938,6 +2939,14 @@ struct MapHomeView: View {
                 if needsMonth { monthComputedAt = .now }
                 try? await Task.sleep(for: .seconds(30))
             }
+        }
+        .alert(
+            language.text("집이 등록돼 있지 않아요", "No home place yet"),
+            isPresented: $isHomeMissingAlertPresented
+        ) {
+            Button(language.text("확인", "OK"), role: .cancel) {}
+        } message: {
+            Text(language.text("메뉴 > 위치에서 집을 먼저 등록해 주세요.", "Add your home in Menu > Location first."))
         }
         .sheet(isPresented: $isStrideCalibrationPresented) {
             MapHomeStrideCalibrationSheet(language: language)
@@ -5879,6 +5888,18 @@ struct MapHomeView: View {
         return Date.now >= dayEnd
     }
 
+    /// 오늘로 가서 전체 경로를 화면에 맞춘다(날짜 배지 더블탭).
+    private func jumpToTodayAndFitRoutes() {
+        isDateWeekExpanded = false
+        jumpToTodayAndCurrentMapPosition()
+        // 날짜를 바꾸면 경로 데이터가 늦게 들어오므로, 불러온 뒤 한 번 더 전체 경로를 화면에 맞춘다.
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !isDayPlaybackRunning else { return }
+            focusMapOnAllRoutes()
+        }
+    }
+
     /// 하루 카드 데이터: 선택한 날짜의 대분류·걸음·이동·번 돈.
     private var dailyCardData: MapHomeDailyCardData {
         let categories = daySummaryCategories
@@ -6140,19 +6161,14 @@ struct MapHomeView: View {
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 더블탭은 오늘 날짜로 이동해 경로를 화면에 맞추고, 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
-        .onTapGesture(count: 2) {
-            isDateWeekExpanded = false
-            jumpToTodayAndCurrentMapPosition()
-            // 날짜를 바꾸면 경로 데이터가 늦게 들어오므로, 불러온 뒤 한 번 더 전체 경로를 화면에 맞춘다.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(600))
-                guard !isDayPlaybackRunning else { return }
-                focusMapOnAllRoutes()
-            }
-        }
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
-        }
+        // 한 번 탭과 두 번 탭을 하나의 제스처로 묶어, 두 번 탭할 때 한 번 탭 동작이 먼저 실행되지 않게 한다.
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded { jumpToTodayAndFitRoutes() }
+                .exclusively(before: TapGesture().onEnded {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
+                })
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityAdjustableAction { direction in
@@ -11740,7 +11756,10 @@ struct MapHomeView: View {
 
     /// 집 위치로 카메라를 옮긴다. 땅 한 칸이 보이는 거리(집 주변 땅 타일의 최소 표시 크기 이상)로 확대한다.
     private func focusMapOnHome() {
-        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else { return }
+        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else {
+            isHomeMissingAlertPresented = true
+            return
+        }
         hasUserAdjustedMap = true
         setMapPosition(.camera(
             MapCamera(

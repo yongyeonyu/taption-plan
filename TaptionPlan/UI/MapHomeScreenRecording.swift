@@ -164,8 +164,15 @@ final class MapHomeScreenRecorder {
 
     /// 화면 기록 허용 알림은 녹화를 시작할 때만 뜨므로, 잠깐 시작했다 바로 멈추고 파일은 버린다. 허용되면 true.
     func probePermission() async -> Bool {
+        // 이미 녹화 중이면 권한은 있는 것이다. 다시 시작하지 않는다.
+        if isRecording || RPScreenRecorder.shared().isRecording { return true }
         guard await start() else { return false }
-        if let url = await stop() { try? FileManager.default.removeItem(at: url) }
+        if let url = await stop() {
+            try? FileManager.default.removeItem(at: url)
+        } else {
+            // 멈추지 못했으면 상태를 실제 녹화 상태에 맞춘다(다음 녹화가 막히지 않게).
+            isRecording = RPScreenRecorder.shared().isRecording
+        }
         return true
     }
 
