@@ -3562,8 +3562,13 @@ struct MapHomeView: View {
     /// 시간을 지정하지 않았고 위치도 없는 메모: 왼쪽 위에 큐처럼 쌓인다(오래된 것이 위).
     private var queuedMemos: [ActionMemo] {
         model.snapshot.memos
-            .filter { $0.isTimeless == true && $0.mapPoint == nil && !model.isMemoDraft($0.id) }
+            .filter { $0.isTimeless == true && $0.mapPoint == nil && !model.isMemoDraft($0.id) && Self.hasText($0) }
             .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    /// 내용이 비어 있는 메모(취소된 빈 초안 등)는 화면에 올리지 않는다.
+    private static func hasText(_ memo: ActionMemo) -> Bool {
+        !memo.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// 시간은 있고 위치는 없는 메모: 사이드바 시각이 앞뒤 30분 안이면 가장 가까운 하나를 보여 준다.
@@ -3573,7 +3578,7 @@ struct MapHomeView: View {
         return model.snapshot.memos
             .filter {
                 $0.isTimeless != true && $0.mapPoint == nil && !model.isMemoDraft($0.id)
-                    && !dismissedMemoPreviewIDs.contains($0.id)
+                    && Self.hasText($0) && !dismissedMemoPreviewIDs.contains($0.id)
                     && calendar.isDate($0.occurredAt, inSameDayAs: model.selectedDate)
                     && abs($0.occurredAt.timeIntervalSince(center)) <= 30 * 60
                     && $0.planID == nil
@@ -16495,7 +16500,9 @@ private struct MapHomeStickerEditorSheet: View {
         let cleanTitle = (isSticker ? title : memoText)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanTitle.isEmpty else { return false }
-        if isSticker && placement == .schedule { return true }
+        // 메모는 내용만 있으면 저장된다(위치는 선택). 스티커는 위치가 필요하다.
+        if !isSticker { return true }
+        if placement == .schedule { return true }
         return editedPoint != nil
     }
 
