@@ -3716,7 +3716,7 @@ struct MapHomeView: View {
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
-                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.filter { !$0.isAllDay }.count) {
+                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.count) {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
             }
@@ -13589,7 +13589,7 @@ private struct MapHomeSectionEditSheet: View {
                         .fill(Color.tpSurface)
 
                     timelineGrid(height: trackHeight)
-                    otherDaySegmentsLayer(height: trackHeight)
+                    otherDaySegmentsLayer(x: leftWidth + 9, width: 112, height: trackHeight)
                     otherDayDetailsLayer(height: trackHeight)
                     dimOutsideSelection(height: trackHeight)
 
@@ -14180,18 +14180,34 @@ private struct MapHomeSectionEditSheet: View {
         .allowsHitTesting(false)
     }
 
-    /// 같은 날의 다른 구간을 구간 색으로 흐리게 그린다(선택한 구간이 아니면 흐리게).
-    private func otherDaySegmentsLayer(height: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            ForEach(selection.daySegments.filter { $0.id != selection.segment.id }) { segment in
-                let top = min(max(yPosition(segment.startMinute, height: height), 0), height)
-                let bottom = min(max(yPosition(segment.endMinute, height: height), 0), height)
-                let tint = categories.first { $0.id == segment.categoryID }?.tint ?? Color.gray
-                Rectangle()
-                    .fill(tint.opacity(0.08))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: max(0, bottom - top))
-                    .offset(y: top)
+    /// 같은 날의 다른 대분류 구간을 오른쪽 대분류 열에 흐리게 그린다(선택한 구간은 진하게 따로 그린다).
+    private func otherDaySegmentsLayer(x: CGFloat, width: CGFloat, height: CGFloat) -> some View {
+        let pieces: [MapHomeSectionPreviewPiece] = selection.daySegments
+            .filter { $0.id != selection.segment.id }
+            .compactMap { segment in
+                guard let category = categories.first(where: { $0.id == segment.categoryID }) else { return nil }
+                return MapHomeSectionPreviewPiece(
+                    id: segment.id,
+                    startMinute: segment.startMinute,
+                    endMinute: segment.endMinute,
+                    category: category
+                )
+            }
+        return ZStack(alignment: .topLeading) {
+            ForEach(pieces) { piece in
+                if piece.endMinute > visibleRange.lowerBound,
+                   piece.startMinute < visibleRange.upperBound {
+                    majorPreviewBlock(piece, width: width, height: height)
+                        .opacity(0.4)
+                        .position(
+                            x: x + width / 2,
+                            y: yPosition(
+                                (max(piece.startMinute, visibleRange.lowerBound)
+                                    + min(piece.endMinute, visibleRange.upperBound)) / 2,
+                                height: height
+                            )
+                        )
+                }
             }
         }
         .allowsHitTesting(false)
