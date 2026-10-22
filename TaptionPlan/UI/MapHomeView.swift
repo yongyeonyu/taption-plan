@@ -3782,18 +3782,20 @@ struct MapHomeView: View {
     /// 선택한 날의 일정을 불러온다. 구글 계정이 연결돼 있으면 구글에서, 아니면 기기 캘린더에서 읽는다.
     private func loadDayCalendarEvents() async {
         let day = model.selectedDate
+        var loaded: [CalendarRecord] = []
         if GoogleCalendarAccount.shared.isConnected {
-            dayCalendarEvents = (try? await GoogleCalendarAccount.shared.todayEvents(now: day)) ?? []
+            loaded = (try? await GoogleCalendarAccount.shared.todayEvents(now: day)) ?? []
         } else if calendarService.permissionState() == .authorized {
             let start = Calendar.current.startOfDay(for: day)
             let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
-            dayCalendarEvents = await calendarService.events(
+            loaded = await calendarService.events(
                 in: TimeSpan(start: start, end: end),
                 selectedCalendarIDs: []
             ) ?? []
-        } else {
-            dayCalendarEvents = []
         }
+        // 날짜를 빠르게 넘기면 이전 날짜의 늦은 응답이 올 수 있으므로 지금 날짜와 같을 때만 반영한다.
+        guard Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) else { return }
+        dayCalendarEvents = loaded
     }
 
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
@@ -6338,6 +6340,11 @@ struct MapHomeView: View {
             }
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
             bottomBarButton("house.fill", language.text("집", "Home")) {
+                // 집이 없으면 focusMapOnHome이 안내만 띄우므로 요약은 열지 않는다.
+                guard model.settings.frequentPlaces.contains(where: { $0.kind == .home && $0.point != nil }) else {
+                    focusMapOnHome()
+                    return
+                }
                 focusMapOnHome()
                 // 집으로 옮긴 뒤 하루 요약을 바로 연다.
                 isDaySummaryPresented = true
