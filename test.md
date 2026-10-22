@@ -2349,3 +2349,6 @@
 
 ## REV1022R01
 - 빌드 BUILD SUCCEEDED. 기기 확인 미실시.
+
+## REV1022R02
+- 단위 테스트 74개 통과(iPhone 11 Pro). Apple 지도 표시는 기기 확인 미실시.

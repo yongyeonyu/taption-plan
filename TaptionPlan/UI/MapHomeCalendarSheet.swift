@@ -1522,7 +1522,7 @@ struct MapHomeSalarySettingsSheet: View {
     @AppStorage(MapHomeSalaryPolicy.tickKey) private var tickSeconds = 10
     @AppStorage(MapHomeSalaryPolicy.payHistoryKey) private var payHistoryRaw = ""
     @State private var payTexts: [String: String] = [:]
-    @State private var annualManText = ""
+    @State private var annualText = ""
     @State private var monthlyText = ""
     @State private var hourlyText = ""
     @State private var accumText = ""
@@ -1629,29 +1629,29 @@ struct MapHomeSalarySettingsSheet: View {
                         ))
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
                     } else {
-                        let grossMan = MapHomeSalaryPolicy.monthlyGross(settings) * 12 / 10_000
-                        let netMan = MapHomeSalaryPolicy.monthlyNet(settings) * 12 / 10_000
+                        let grossWon = MapHomeSalaryPolicy.monthlyGross(settings) * 12
+                        let netWon = MapHomeSalaryPolicy.monthlyNet(settings) * 12
                         field(language.text("세전 연봉", "Gross annual"), text: Binding(
-                            get: { isNetInput ? "" : annualManText },
-                            set: { annualManText = $0 }
-                        ), unit: language.text("만원", "×10k"), placeholder: String(Int(grossMan.rounded()))) {
+                            get: { isNetInput ? "" : annualText },
+                            set: { annualText = $0 }
+                        ), unit: language.text("원", "KRW"), placeholder: String(Int(grossWon.rounded()))) {
                             isNetInput = false
-                            annualPay = number(annualManText) * 10_000
+                            annualPay = number(annualText)
                             monthlyPay = 0
                         }
                         field(language.text("세후 연봉", "Net annual"), text: Binding(
-                            get: { isNetInput ? annualManText : "" },
-                            set: { annualManText = $0 }
-                        ), unit: language.text("만원", "×10k"), placeholder: String(Int(netMan.rounded()))) {
+                            get: { isNetInput ? annualText : "" },
+                            set: { annualText = $0 }
+                        ), unit: language.text("원", "KRW"), placeholder: String(Int(netWon.rounded()))) {
                             isNetInput = true
-                            annualPay = number(annualManText) * 10_000
+                            annualPay = number(annualText)
                             monthlyPay = 0
                         }
                         field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "KRW"),
                               placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
                             annualPay = number(monthlyText) * 12
                             monthlyPay = 0
-                            annualManText = String(Int((annualPay / 10_000).rounded()))
+                            annualText = String(Int(annualPay.rounded()))
                         }
                         Text(language.text("연봉이나 월급 중 하나만 적으면 나머지는 자동 계산돼요(월급제면 월급만).", "Enter either annual or monthly; the other is computed."))
                             .font(.system(size: 11, weight: .medium)).foregroundStyle(Color.tpSecondary)
@@ -1755,7 +1755,7 @@ struct MapHomeSalarySettingsSheet: View {
                     Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {
                         annualPay = 0; monthlyPay = 0; monthAccum = 0
                         isHourly = false; hourlyPay = 0; hourlyIsNet = false
-                        annualManText = ""; hourlyText = ""; monthlyText = ""; accumText = ""
+                        annualText = ""; hourlyText = ""; monthlyText = ""; accumText = ""
                     }
                 }
             }
@@ -1764,7 +1764,7 @@ struct MapHomeSalarySettingsSheet: View {
         .background(Color.tpBackground)
         .onAppear {
             payTexts = settings.payHistory.mapValues { String(Int($0.rounded())) }
-            annualManText = annualPay > 0 ? String(Int((annualPay / 10_000).rounded())) : ""
+            annualText = annualPay > 0 ? String(Int(annualPay.rounded())) : ""
             monthlyText = monthlyPay > 0 ? String(Int(monthlyPay.rounded())) : ""
             hourlyText = hourlyPay > 0 ? String(Int(hourlyPay.rounded())) : ""
             accumText = settings.monthAccumOverride > 0 ? String(Int(settings.monthAccumOverride.rounded())) : ""

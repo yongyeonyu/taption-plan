@@ -1484,3 +1484,8 @@
 - 발견: 끄기 버튼이 연봉·월급만 지워 시급 모드가 남아 카운터가 계속 켜짐.
 - 수정: 끄기 시 isHourly·hourlyPay·hourlyIsNet 초기화.
 - 검증: Debug 빌드 BUILD SUCCEEDED. 기기 확인 전.
+
+## REV1022R02 · 리뷰 후속: 연봉 원 단위 입력, Apple 지도 연봉 카운터
+- 연봉 입력을 원 단위로 바꿔 월급→연봉 환산 시 만원 반올림 손실 제거.
+- Apple 지도 스타일에서도 화랑이 위치에 연봉 카운터 표시.
+- 검증: 앱 Debug 빌드 BUILD SUCCEEDED. iPhone 11 Pro MapHomeLiveMapTests 74개 통과(build/validation/REV1022R02/unit.log). 기기 화면 확인 전.
