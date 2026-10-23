@@ -11892,16 +11892,42 @@ struct MapHomeView: View {
         }
     }
 
+    /// 예상 경로 요청을 만드는 쪽과 같은 하루 범위를 쓴다. 범위가 어긋나면 같은
+    /// 이동 구간이라도 요청 id가 달라져 재생 leg와 화면의 경로가 연결되지 않는다.
+    private static func routeDaySpan(for date: Date) -> TimeSpan {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: date)
+        let end = calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(24 * 60 * 60)
+        return TimeSpan(start: start, end: end)
+    }
+
     private func makeWBSPlaybackProjection(
         expected: [MapHomeExpectedRouteOverlay],
         generated: [MapHomeWBSGeneratedRouteOverlay],
         expectedRouteRequests: [ExpectedRouteRequest]? = nil
     ) -> MapHomeWBSPlaybackProjection {
         let dayData = currentDayDataSnapshot
-        let playbackRequests = expectedRouteRequests
-            ?? (wbsExpectedRouteRequestsInputKey == currentExpectedRouteInputKey()
-                ? wbsExpectedRouteRequests
-                : [])
+        let playbackRequests: [ExpectedRouteRequest]?
+        if let expectedRouteRequests {
+            playbackRequests = expectedRouteRequests
+        } else if wbsExpectedRouteRequestsInputKey == currentExpectedRouteInputKey() {
+            playbackRequests = wbsExpectedRouteRequests
+        } else {
+            // 입력이 바뀐 뒤 아직 예상 경로 요청을 다시 만들지 않은 상태다. 여기서
+            // 빈 배열을 넘기면 예상 이동 구간이 하나도 없는 투영이 만들어지고,
+            // 확정된 장소가 없는 미확정 경로에서는 화랑이가 설 자리가 없어 사라진다.
+            // 예상 경로 갱신과 같은 입력으로 다시 계산해 leg id를 맞춘다.
+            let daySpan = Self.routeDaySpan(for: model.selectedDate)
+            playbackRequests = ExpectedRouteRequestEngine.requests(
+                travel: dayData?.travel ?? [],
+                places: [],
+                readings: normalizedRouteReadings,
+                in: daySpan,
+                through: daySpan.end,
+                frequentPlaces: []
+            )
+        }
         let expectedRoutes = expected.map { overlay in
             MapHomeWBSResolvedRoute(
                 legID: "movement-\(overlay.id.uuidString)",

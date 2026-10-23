@@ -1883,3 +1883,15 @@
 - 계측: `repository_local_load`(rows·kinds·read_ms·decode_ms·total_ms)를 남겨 다음 실행에서 적재 비용과 저장소 행 수를 함께 확인한다. 21,875 place stay의 지연·증분 적재는 이 수치를 본 뒤 결정한다.
 - 확인 필요: 재실행 세션이 0행을 읽었다(`actuals 0 · places 0`). 기기에서 지난 기록이 그대로 보이는지, 다음 로그의 `repository_local_load.rows`가 2만 건대인지 확인해야 한다. 0에 가까우면 별도 데이터 유실 조사가 필요하다.
 - 검증 기준: 기기에서 첫 실행 후 즉시 홈으로 보내도 종료 진단(`system_crash_diagnostic`)이 새로 생기지 않고, 다음 실행에서 `previous_session_unfinished`만 남음. 기기 확인 전.
+
+## CAT1023A02 · 미확정 경로에서 화랑이가 사라지던 원인 수정
+- 증상: 예상(미확정) 경로 위에서 화랑이가 보이지 않음. 경로선은 그려지지만 캐릭터가 없거나, 확정 장소(집)에 붙어 집 핀으로 대체됨.
+- 원인: `makeWBSPlaybackProjection`이 예상 경로 요청 캐시의 입력 키가 현재와 다르면 **빈 배열**을 `MapHomeWBSPlaybackProjection.make`에 넘겼다. `expectedRouteRequests`가 빈 배열이면 `ExpectedRouteRequestEngine`을 다시 부르지 않으므로 예상 이동 leg가 하나도 없는 투영이 만들어진다.
+  - 이 투영은 날짜를 바꾼 직후, 위치 읽기를 다시 준비한 직후(`requestWBSPlaybackProjectionRefresh` → `scheduleExpectedRouteRefresh`보다 먼저 실행)에 항상 만들어진다.
+  - 확정된 장소가 없는 미확정 경로에서는 stay leg도 없어 `frame`이 nil이 되고, `displayedLocationCoordinate`가 nil이 되어 `appleMapPlayback`이 nil → 화랑이 미표시.
+  - 부작용: `refreshWBSPlaybackProjection`이 예상 이동 leg id로 `wbsGeneratedRouteOverlays`를 거르므로, 이때 생성 경로 오버레이가 전부 버려져 점선 경로까지 사라졌다.
+- 해결:
+  1. 캐시가 낡았으면 빈 배열 대신 **예상 경로 갱신과 같은 입력**(`travel`, `places: []`, `normalizedRouteReadings`, 같은 하루 범위)으로 요청을 다시 계산한다. leg id가 화면 오버레이 id와 같아진다(`MapHomeView.routeDaySpan`).
+  2. `MapHomeWBSPlaybackProjection.frame`에서 표시 중인 예상 구간이 없고 후보(stay·확정 이동)도 하나도 없으면, 활동 중인 예상 이동 leg를 그대로 쓴다. 확정 체류가 하나라도 있으면 기존 규칙(숨은 경로를 걷지 않음)이 그대로 유지된다.
+- 검증: Debug 빌드 BUILD SUCCEEDED. `RouteTimelineDataTests` 123개 통과(신규 `testWBSPlaybackKeepsForecastMovementWhenNothingElseIsActive` 포함), `MapHomeLiveMapTests` 75개 통과. 기기 확인 전.
+- 확인 필요: 기기에서 미확정 경로(예상 점선) 위로 타임라인을 옮겼을 때 화랑이가 그 선을 따라 움직이는지, 날짜를 바꾼 직후에도 점선 경로가 남아 있는지.

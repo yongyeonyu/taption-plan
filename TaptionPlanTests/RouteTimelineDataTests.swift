@@ -3927,6 +3927,52 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertNil(projection.frame(at: date(200)))
     }
 
+    /// 미확정 경로만 있는 날(확정된 장소도 실측 위치도 없음)에도 화랑이는 사라지지
+    /// 않아야 한다. 예전에는 숨은 예상 구간을 후보에서 빼고 나서 후보가 비어 frame이
+    /// nil이 됐고, 지도에서 캐릭터가 통째로 사라졌다.
+    func testWBSPlaybackKeepsForecastMovementWhenNothingElseIsActive() throws {
+        let request = ExpectedRouteRequest(
+            segmentID: UUID(),
+            mode: .car,
+            transport: .automobile,
+            start: GeoPoint(
+                latitude: 37,
+                longitude: 127,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            end: GeoPoint(
+                latitude: 37.02,
+                longitude: 127.02,
+                altitude: 0,
+                horizontalAccuracy: 5,
+                verticalAccuracy: 5
+            ),
+            departureDate: date(10),
+            arrivalDate: date(50)
+        )
+        let projection = MapHomeWBSPlaybackProjection.make(
+            selectedDate: date(0),
+            places: [],
+            travel: [],
+            readings: [],
+            expectedRouteRequests: [request],
+            calendar: calendar
+        )
+        XCTAssertEqual(
+            projection.legs.filter {
+                $0.routePhase == .forecast && $0.activity == .movement
+            }.count,
+            1
+        )
+
+        let frame = try XCTUnwrap(projection.frame(at: date(30)))
+        XCTAssertEqual(frame.activity, .movement)
+        XCTAssertEqual(frame.legID, "movement-\(request.id.uuidString)")
+        XCTAssertNil(projection.frame(at: date(80)))
+    }
+
     func testWBSPlaybackDoesNotUseResolvedRouteWithoutGPSBoundedGap() {
         let home = PlaceStay(
             placeKey: "forecast-home",

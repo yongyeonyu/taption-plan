@@ -2609,3 +2609,16 @@
 - 2026-10-23 계측 추가: `TaptionStoreRepository.load()`가 `repository_local_load`(rows, kind_count, kinds 상위 4종, read_ms, decode_ms, total_ms)를 남긴다. 본문·좌표는 기록하지 않는다.
   - Debug 빌드 BUILD SUCCEEDED(`build-2.log`). 저장소 테스트 28개 재통과(`app-tests-2.xcresult`).
 - 로그 이상 징후(미해결): 같은 로그에서 재실행 세션(478317E0, 12:57:43)의 `bootstrap_local_snapshot_loaded`가 `actuals 0 · places 0 · plans 0`이었다. 이는 `allRecordRows()`가 0행을 돌려줘 `load()`가 `.empty`를 반환한 경우다. 36초 전 같은 저장소는 721·21,875행을 읽었다. 원인 후보: 강제 종료가 트랜잭션 롤백을 남긴 경우, 다른 저장소 파일을 연 경우, 마이그레이션 중단. 다음 실행 로그의 `repository_local_load.rows`로 판별한다.
+
+## CAT1023A02
+- 재현 경로(코드): `MapHomeView.makeWBSPlaybackProjection` → 예상 경로 요청 캐시 키가 현재 입력과 다르면 `expectedRouteRequests: []` 전달 → `MapHomeWBSPlaybackProjection.make`가 `expectedRequests = []`로 확정(엔진 재계산 없음) → 예상 이동 leg 0개.
+- 발생 시점: `requestWBSPlaybackProjectionRefresh()`(읽기 준비 직후, `MapHomeView.swift:11833`)가 `scheduleExpectedRouteRefresh()`(11834)보다 먼저 실행되므로 매 갱신마다 발생. 날짜 변경 직후(`resetDayScopedState`가 `wbsExpectedRouteRequestsInputKey = nil`)에도 동일.
+- 결과: 예상 leg가 없으면 `frame(at:)`이 stay 후보만 남기고, 확정 장소가 없는 미확정 경로에서는 후보가 비어 nil → `displayedPlaybackLocation` nil → `displayedLocationCoordinate` nil → `appleMapPlayback` nil → 화랑이 미표시. 확정 장소가 있으면 그 장소에 붙어 `isDisplayedCatAtHome`이 참이 되어 집 핀으로 대체됨.
+- 부수 피해: `refreshWBSPlaybackProjection`이 `activeGeneratedIDs`(예상 이동 leg id)로 `wbsGeneratedRouteOverlays`를 필터하므로, 이 순간 생성 경로 오버레이가 전부 제거되어 점선 예상 경로도 함께 사라진다.
+- 수정: ①낡은 캐시면 같은 입력(`places: []`, `normalizedRouteReadings`, 같은 하루 범위)으로 재계산해 leg id를 오버레이 id와 일치시킴. ②`frame`은 stay·확정 이동 후보가 하나도 없으면 활동 중 예상 이동 leg를 사용(숨은 경로 금지 규칙은 확정 체류가 있을 때 그대로).
+- 2026-10-23 검증:
+  - Debug 빌드 BUILD SUCCEEDED(`generic/platform=iOS`, `build/ArchiveDD`).
+  - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 임시 `CRS1023A01-Hwarang`, 검증 후 삭제): `RouteTimelineDataTests` 123개 통과·실패 0·건너뜀 0(`build/validation/CRS1023A01/hwarang-tests-2.xcresult`), 신규 `testWBSPlaybackKeepsForecastMovementWhenNothingElseIsActive` 포함 확인.
+  - `MapHomeLiveMapTests` 75개 통과·실패 0(`maphome-tests.xcresult`).
+  - 기존 규칙 테스트 `testWBSPlaybackDoesNotUseHiddenForecastOrLastLegFallback`(확정 체류가 있으면 stay 유지)와 `testWBSPlaybackBreaksSparseActualRouteGap`(후보가 없으면 nil) 모두 그대로 통과.
+- 미실시: 실기기에서 미확정 경로 재생 확인, 날짜 전환 직후 점선 경로 유지 확인.

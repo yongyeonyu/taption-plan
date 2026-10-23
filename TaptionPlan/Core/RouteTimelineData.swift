@@ -804,11 +804,18 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
             $0.activity == .stay
                 && $0.categoryID == RouteTimelineCategory.sleep.rawValue
         }
-        let candidates: [MapHomeWBSPlaybackLeg]
+        var candidates: [MapHomeWBSPlaybackLeg]
         if let sleepStay = sleepStays.max(by: { $0.startDate < $1.startDate }) {
             candidates = [sleepStay]
         } else if preferredForecast.isEmpty {
             candidates = active.filter { $0.activity == .stay || $0.routePhase != .forecast }
+            // 표시 중인 예상 경로가 없어도 그 시각에 움직이는 예상 구간밖에 없다면
+            // 화랑이를 숨기지 않는다. 확정된 장소가 아직 없는 미확정 경로에서 캐릭터가
+            // 통째로 사라지던 문제를 막는다. 확정 체류가 하나라도 있으면 위 후보가
+            // 비지 않으므로 숨은 경로를 걷는 동작은 그대로 유지된다.
+            if candidates.isEmpty {
+                candidates = active
+            }
         } else {
             candidates = preferredForecast
         }
