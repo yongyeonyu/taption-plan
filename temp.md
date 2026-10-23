@@ -1873,3 +1873,11 @@
 ## SUM1022BU01 · 하루 요약: 범위 지정을 아래로
 - 하루 요약에서 범위 지정 블록을 요약 항목(카테고리·이동 거리) 아래로 이동.
 - 검증: Debug 빌드·Release archive SUCCEEDED, 빌드 230 VALID·내부 그룹 연결 완료. 기기에서 하루 요약 시트 순서 확인 전.
+
+## CRS1023A01 · 시작 직후 앱 종료(0xdead10cc) 원인 확인·수정
+- 증상: 빌드 230 첫 실행 직후 앱이 사라짐. 두 번째 실행은 유지.
+- 로그 근거: RUNNINGBOARD `0xdead10cc`, signal 9. 마지막 세션은 `bootstrap_preparation` 시작 후 `operation_finished` 없이 끊김(12:57:08 시작 → 12:57:28 종료).
+- 가설: 시작 시 전체 스냅샷 적재·저장(place 21,875·actual 721)이 길어(스냅샷 적재 22.0초, launch ready 16.3초) 사용자가 백그라운드로 보낸 순간 SQLite 쓰기 트랜잭션이 열려 있었고, 서스펜드 상태의 파일 잠금 때문에 시스템이 종료.
+- 해결(적용): ①`TaptionStoreRepository.save`를 `TaptionRepositoryBackgroundExecution.run`으로 감싸 쓰기 중 만료 전 완료/취소 보장. ②백그라운드로 내려간 뒤에는 `bootstrap_preparation`의 저장을 시작하지 않고 다음 활성화에서 이어서 저장(`isSceneInBackground`). ③시작 적재 비용 축소: 종류별 JSON 해석을 동시 실행, 항목마다 만들던 JSONDecoder/JSONEncoder를 배치당 하나로 공유.
+- 검증: Debug 빌드 BUILD SUCCEEDED. `TaptionStoreRepositoryTests`·`TaptionStoreV2Tests`·`UnavailablePlanRepositoryTests` 28개 통과, `testInitialSceneDoesNotWaitForBootstrapNormalizationSave`·`testBootstrapPreparationPreservesCorrectionAndSourceEvidence` 통과.
+- 검증 기준: 기기에서 첫 실행 후 즉시 홈으로 보내도 종료 진단(`system_crash_diagnostic`)이 새로 생기지 않고, 다음 실행에서 `previous_session_unfinished`만 남음. 기기 확인 전.

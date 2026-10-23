@@ -2591,3 +2591,18 @@
 - App Store Connect: build 230 `processingState = VALID`. 내부 그룹 `TP Taption Plan 내부 테스트` 연결 POST 204, 그룹 빌드 목록에서 230 확인.
 - 빌드 229는 VALID였으나 그룹 미연결이었고 이번 순서 변경을 포함하지 않음(변경 커밋이 229 빌드 이후). 230이 대체.
 - 실기기에서 하루 요약 시트를 열어 범위 지정이 요약 항목 아래에 오는지 확인은 미실시.
+
+## CRS1023A01
+- 로그: `build/validation/CRS1023A01/diag.txt`(iCloud `TaptionLogs-20261023-215808-96D5CCEB.txt.gz`, 4,969줄, savedAt 2026-10-23T12:58:08Z).
+- 종료 진단: `system_crash_diagnostic` termination_namespace RUNNINGBOARD, termination_code `0xdead10cc`, signal 9, exception_type 10, diagnostic_build 230, testflight true. 같은 세션 `system_diagnostic_counts.crashes = 1`.
+- 타임라인(build 230, 세션 5FDECED7): 12:56:43 실행 → 12:56:56 `map_initial_shell_ready` → 12:57:02 `initial_launch_ready` 16,261ms → 12:57:07 `bootstrap_local_snapshot_loaded` actuals 721·places 21,875, operation 22,050ms → 12:57:08 `bootstrap_preparation` 시작 → 12:57:27 `watch_settings_queued` → 12:57:28 종료. `operation_finished(bootstrap_preparation)` 없음.
+- 다음 세션 478317E0: 12:57:36 시작, `bootstrap_local_snapshot_loaded` actuals 0·places 0(가벼운 시작 경로), 7,169ms, `initial_launch_ready` 15,073ms, 12:58:07 진단 내보내기까지 생존.
+- 228 세션 비교: 스냅샷 적재 10,255ms / 29,434ms / 30,498ms로 이전 빌드도 동일하게 느림 → 이번 커밋의 회귀가 아니라 기존 시작 비용.
+- 코드 확인: `TaptionStoreRepository.save`는 `TaptionRepositoryBackgroundExecution.run`으로 감싸지 않음(센서 경로 `SensorDataServices.swift:258,472`만 사용). `TaptionStoreV2`는 App Group 컨테이너의 `taption-store.sqlite`를 쓰고 `BEGIN IMMEDIATE`~`COMMIT` 구간을 동기로 실행.
+- 미확보: 기기 `.ips` 크래시 리포트(잠금 보유 스레드 확인용). `idevice_id -l`이 기기를 찾지 못해 수집 실패.
+- 2026-10-23 수정 후 검증:
+  - Debug 빌드 BUILD SUCCEEDED(`build/validation/CRS1023A01/build.log`).
+  - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 생성한 `CRS1023A01-Validation`): `TaptionStoreRepositoryTests`·`TaptionStoreV2Tests`·`UnavailablePlanRepositoryTests` 28개 통과, 실패 0·건너뜀 0(`app-tests.xcresult`).
+  - `FeatureEngineTests/testInitialSceneDoesNotWaitForBootstrapNormalizationSave`, `.../testBootstrapPreparationPreservesCorrectionAndSourceEvidence` 통과(`bootstrap-tests-2.xcresult`).
+  - 첫 실행에서 `guard isSceneActive`로 막았더니 `testBootstrapPreparationPreservesCorrectionAndSourceEvidence`가 실패(저장 누락). `isSceneInBackground`(백그라운드 진입 후에만 true)로 조건을 좁혀 통과.
+  - 기기 첫 실행·백그라운드 전환 검증은 미실시.

@@ -1259,6 +1259,8 @@ final class AppModel {
     @ObservationIgnored private var widgetReloadFollowupTask:
         Task<Void, Never>?
     @ObservationIgnored private var isSceneActive = false
+    /// 화면이 백그라운드로 내려간 뒤인지. 이 상태에서는 새 저장을 시작하지 않는다.
+    @ObservationIgnored private var isSceneInBackground = false
     @ObservationIgnored private(set) var isCommerceLocked = false
     @ObservationIgnored private var isHealthRefreshRunning = false
     @ObservationIgnored private var isSensorTimelineRefreshing = false
@@ -3293,6 +3295,9 @@ final class AppModel {
             if source.settings.confirmedSleepSpans != originalConfirmedSleepSpans
                 || source.actuals != originalActuals
                 || source.travel != originalTravel {
+                // 화면이 이미 백그라운드로 내려간 뒤에는 새 쓰기를 시작하지 않는다. 서스펜드 중
+                // SQLite 잠금을 쥐면 시스템이 앱을 종료한다(0xdead10cc). 다음 활성화에서 이어서 저장한다.
+                guard !isSceneInBackground else { return }
                 _ = await persist()
             }
             guard !Task.isCancelled,
@@ -3317,6 +3322,7 @@ final class AppModel {
         isCommerceLocked = false
         let wasSceneActive = isSceneActive
         isSceneActive = true
+        isSceneInBackground = false
         if let securityService {
             if !isBootstrapped {
                 securityService.handleLaunch()
@@ -3341,6 +3347,8 @@ final class AppModel {
             setExternalPrivacyLocked(false)
         }
         guard !wasSceneActive else { return }
+        // 비활성이라 미뤄 둔 기록 정리·저장을 여기서 이어서 끝낸다.
+        scheduleBootstrapPreparation()
         if !pendingSensorAnalysisRevisions.isEmpty {
             startSensorAnalysis(immediately: false)
         }
@@ -3443,6 +3451,7 @@ final class AppModel {
         backgroundAssertion.begin(name: "TaptionPlan.sceneBackground") {}
         defer { backgroundAssertion.end() }
         isSceneActive = false
+        isSceneInBackground = true
         updateForegroundLiveLocationTracking()
         let cancelledSensorTimeline = sensorTimelineTask
         sensorTimelineTask?.cancel()

@@ -53,15 +53,12 @@ actor TaptionStoreRepository: PlanDataRepository {
 
     func load() async throws -> TaptionDataSnapshot {
         let rows = try await store.allRecordRows()
-        var state: [String: [String: (ord: Int, body: String)]] = [:]
-        var next: [String: Int] = [:]
-        for row in rows {
-            state[row.kind, default: [:]][row.id] = (row.ord, row.body)
-            next[row.kind] = max(next[row.kind] ?? 0, row.ord + 1)
-        }
+        let state = Self.groupedRecordRows(rows)
         known = state
-        nextOrd = next
+        nextOrd = Self.nextOrdinals(for: state)
         knownHashes = [:]
+        // 항목마다 JSONDecoder를 새로 만들면 수만 건을 읽을 때 할당 비용이 그대로 쌓인다.
+        let decoder = Self.decoder()
 
         guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body else {
             // 헤더 없이 다른 행만 있으면 비정상이다. 빈 스냅샷으로 보고 위에 저장하면 그 행이 지워진다.
@@ -71,43 +68,99 @@ actor TaptionStoreRepository: PlanDataRepository {
         // 헤더를 해석하지 못하면 빈 스냅샷으로 넘기지 않고 실패시킨다(다음 저장이 전부 지우는 것을 막는다).
         let header: Header
         do {
-            header = try Self.decoder().decode(Header.self, from: Data(headerBody.utf8))
+            header = try decoder.decode(Header.self, from: Data(headerBody.utf8))
         } catch {
             known = nil
             throw RepositoryError.invalidSnapshot
         }
-        var loadedHashes: [String: [String: Int]] = [:]
-        func items<T: Decodable & Hashable>(_ kind: Kind, as type: T.Type) throws -> [T] {
-            let ordered = (state[kind.rawValue] ?? [:]).sorted { $0.value.ord < $1.value.ord }
-            var hashes: [String: Int] = [:]
-            hashes.reserveCapacity(ordered.count)
-            let decoded = try ordered.map { entry -> T in
-                let item = try Self.decoder().decode(T.self, from: Data(entry.value.body.utf8))
-                hashes[entry.key] = item.hashValue
-                return item
-            }
-            loadedHashes[kind.rawValue] = hashes
-            return decoded
+        // 종류별 해석은 서로 독립이라 동시에 돌린다. 항목이 수만 건인 장소·기록이 한 코어를 오래 잡지 않는다.
+        async let plans = Self.decode(state, .plan, as: PlanRecord.self)
+        async let actuals = Self.decode(state, .actual, as: ActualRecord.self)
+        async let recordLinks = Self.decode(state, .recordLink, as: RecordLink.self)
+        async let memos = Self.decode(state, .memo, as: ActionMemo.self)
+        async let stickers = Self.decode(state, .sticker, as: MapSticker.self)
+        async let categories = Self.decode(state, .category, as: CategoryDefinition.self)
+        async let photos = Self.decode(state, .photo, as: PhotoMoment.self)
+        async let calendarEvents = Self.decode(state, .calendarEvent, as: CalendarRecord.self)
+        async let weather = Self.decode(state, .weather, as: WeatherContext.self)
+        async let places = Self.decode(state, .place, as: PlaceStay.self)
+        async let travel = Self.decode(state, .travel, as: TravelSegment.self)
+        async let floorTransitions = Self.decode(state, .floorTransition, as: FloorTransition.self)
+        async let yearlyReports = Self.decode(state, .yearlyReport, as: YearlyReviewArchive.self)
+        let decoded = try await (plans, actuals, recordLinks, memos, stickers, categories, photos,
+                                 calendarEvents, weather, places, travel, floorTransitions, yearlyReports)
+        var hashes: [String: [String: Int]] = [:]
+        func take<T>(_ value: Decoded<T>, _ kind: Kind) -> [T] {
+            hashes[kind.rawValue] = value.hashes
+            return value.items
         }
-        defer { knownHashes = loadedHashes }
-        return TaptionDataSnapshot(
+        let snapshot = TaptionDataSnapshot(
             schemaVersion: header.schemaVersion,
             updatedAt: header.updatedAt,
-            plans: try items(.plan, as: PlanRecord.self),
-            actuals: try items(.actual, as: ActualRecord.self),
-            recordLinks: try items(.recordLink, as: RecordLink.self),
-            memos: try items(.memo, as: ActionMemo.self),
-            stickers: try items(.sticker, as: MapSticker.self),
-            categories: try items(.category, as: CategoryDefinition.self),
-            photos: try items(.photo, as: PhotoMoment.self),
-            calendarEvents: try items(.calendarEvent, as: CalendarRecord.self),
-            weather: try items(.weather, as: WeatherContext.self),
-            places: try items(.place, as: PlaceStay.self),
-            travel: try items(.travel, as: TravelSegment.self),
-            floorTransitions: try items(.floorTransition, as: FloorTransition.self),
-            yearlyReports: try items(.yearlyReport, as: YearlyReviewArchive.self),
+            plans: take(decoded.0, .plan),
+            actuals: take(decoded.1, .actual),
+            recordLinks: take(decoded.2, .recordLink),
+            memos: take(decoded.3, .memo),
+            stickers: take(decoded.4, .sticker),
+            categories: take(decoded.5, .category),
+            photos: take(decoded.6, .photo),
+            calendarEvents: take(decoded.7, .calendarEvent),
+            weather: take(decoded.8, .weather),
+            places: take(decoded.9, .place),
+            travel: take(decoded.10, .travel),
+            floorTransitions: take(decoded.11, .floorTransition),
+            yearlyReports: take(decoded.12, .yearlyReport),
             settings: header.settings
         )
+        knownHashes = hashes
+        return snapshot
+    }
+
+    /// 한 종류의 행을 순서대로 해석하고 값 해시를 함께 만든다. 해시는 저장할 때 바뀌지 않은 항목을
+    /// 다시 JSON으로 만들지 않는 기준이다.
+    private struct Decoded<T> {
+        var items: [T]
+        var hashes: [String: Int]
+    }
+
+    /// 읽은 행을 종류 → id → (순서, 본문)으로 묶는다. 해석 작업들이 이 값을 나눠 읽는다.
+    private nonisolated static func groupedRecordRows(
+        _ rows: [(kind: String, id: String, ord: Int, body: String)]
+    ) -> [String: [String: (ord: Int, body: String)]] {
+        var state: [String: [String: (ord: Int, body: String)]] = [:]
+        for row in rows {
+            state[row.kind, default: [:]][row.id] = (row.ord, row.body)
+        }
+        return state
+    }
+
+    private nonisolated static func nextOrdinals(
+        for state: [String: [String: (ord: Int, body: String)]]
+    ) -> [String: Int] {
+        var next: [String: Int] = [:]
+        for (kind, entries) in state {
+            next[kind] = (entries.values.map(\.ord).max() ?? -1) + 1
+        }
+        return next
+    }
+
+    private nonisolated static func decode<T: Decodable & Hashable>(
+        _ state: [String: [String: (ord: Int, body: String)]],
+        _ kind: Kind,
+        as type: T.Type
+    ) throws -> Decoded<T> {
+        let ordered = (state[kind.rawValue] ?? [:]).sorted { $0.value.ord < $1.value.ord }
+        let decoder = decoder()
+        var items: [T] = []
+        items.reserveCapacity(ordered.count)
+        var hashes: [String: Int] = [:]
+        hashes.reserveCapacity(ordered.count)
+        for entry in ordered {
+            let item = try decoder.decode(T.self, from: Data(entry.value.body.utf8))
+            items.append(item)
+            hashes[entry.key] = item.hashValue
+        }
+        return Decoded(items: items, hashes: hashes)
     }
 
     /// 저장은 한 번에 하나씩 순서대로 처리한다(await 사이에 다른 저장이 끼어들면 비교 기준이 어긋난다).
@@ -118,7 +171,11 @@ actor TaptionStoreRepository: PlanDataRepository {
         let previous = saveTail
         let task = Task { [self] in
             _ = try? await previous?.value
-            try await performSave(snapshot)
+            // 쓰기 트랜잭션을 연 채 서스펜드되면 시스템이 0xdead10cc로 앱을 종료한다.
+            // 만료 전에 끝내거나 취소하도록 백그라운드 시간을 확보한 뒤 쓴다.
+            try await TaptionRepositoryBackgroundExecution.run {
+                try await self.performSave(snapshot)
+            }
         }
         saveTail = task
         try await task.value
@@ -134,6 +191,8 @@ actor TaptionStoreRepository: PlanDataRepository {
         var deletes: [(kind: String, id: String)] = []
         var newKnown = known ?? [:]
         var newHashes = knownHashes
+        // 바뀐 항목마다 JSONEncoder를 새로 만들지 않고 한 번만 만든다.
+        let encoder = Self.encoder()
 
         func sync<T: Encodable & Identifiable & Hashable>(_ kind: Kind, _ items: [T]) throws {
             var previous = newKnown[kind.rawValue] ?? [:]
@@ -146,7 +205,7 @@ actor TaptionStoreRepository: PlanDataRepository {
                 let hash = item.hashValue
                 // 저장소와 맞춘 뒤 바뀌지 않은 항목은 JSON으로 다시 만들지 않는다.
                 if hashes[id] == hash, previous[id] != nil { continue }
-                let body = try Self.encode(item)
+                let body = try Self.encode(item, using: encoder)
                 encodedItemCount += 1
                 hashes[id] = hash
                 if let existing = previous[id], existing.body == body { continue }
@@ -181,7 +240,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         let header = Header(
             schemaVersion: snapshot.schemaVersion, updatedAt: snapshot.updatedAt, settings: snapshot.settings
         )
-        let headerBody = try Self.encode(header)
+        let headerBody = try Self.encode(header, using: encoder)
         if newKnown[Self.headerKind]?[Self.headerID]?.body != headerBody {
             upserts.append(Self.record(kind: Self.headerKind, id: Self.headerID, ord: 0, body: headerBody,
                                        updatedAt: snapshot.updatedAt))
@@ -233,6 +292,11 @@ actor TaptionStoreRepository: PlanDataRepository {
 
     private static func encode<T: Encodable>(_ value: T) throws -> String {
         String(decoding: try encoder().encode(value), as: UTF8.self)
+    }
+
+    /// 여러 항목을 같은 인코더로 연속 변환한다.
+    private static func encode<T: Encodable>(_ value: T, using encoder: JSONEncoder) throws -> String {
+        String(decoding: try encoder.encode(value), as: UTF8.self)
     }
 
     /// 본문 JSON에서 시각·출처를 뽑아 열에 채운다(분석용). 못 찾으면 비워 둔다.
