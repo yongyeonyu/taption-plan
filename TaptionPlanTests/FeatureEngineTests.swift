@@ -89,7 +89,7 @@ final class FeatureEngineTests: XCTestCase {
             var p = point(latitude); p.horizontalAccuracy = accuracy
             return SensorReading(timestamp: dayStart.addingTimeInterval(hour * 3_600), point: p)
         }
-        let home = point(37.0), company = point(37.3)   // 위도 0.3° ≈ 33km
+        let home = point(37.0)   // 회사 자리는 위도 0.3° ≈ 33km 떨어져 있다
         let readings = [reading(0.2, 37.0), reading(9.4, 37.3), reading(12, 37.9, accuracy: 5_000)]
         let hours = WeatherDayFixEngine.hourLocations(
             dayStart: dayStart, dayEnd: dayEnd, readings: readings, home: nil, calendar: calendar
@@ -28037,6 +28037,8 @@ final class MapHomeTimeRailCardTests: XCTestCase {
         XCTAssertEqual(lowered.maxY, previous.maxY + 28, accuracy: 0.1)
     }
 
+    /// 트랙 높이는 1,000에서 위·아래 여백 28씩을 뺀 944다(MapHomeTimeSidebarMath.verticalInset).
+    /// 선택 카드는 2시간(120분)이라 트랙의 1/12을 차지한다.
     func testSelectedCardHighlightsTwoHoursOnFullDayRail() {
         let frame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
             availableHeight: 1_000,
@@ -28045,10 +28047,12 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 1_440
         )
 
-        XCTAssertEqual(frame.height, 80, accuracy: 0.1)
+        XCTAssertEqual(frame.height, 944.0 / 12, accuracy: 0.1)
         XCTAssertEqual(frame.midY, 500, accuracy: 0.1)
     }
 
+    /// 자정에 붙은 카드는 잘려서 1시간(트랙의 1/24)만 남고,
+    /// 60분 창으로 확대하면 카드가 창 전체(트랙 높이)를 덮는다.
     func testSelectedCardClipsAtDayBoundaryAndVisibleWindow() {
         let dayBoundaryFrame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
             availableHeight: 1_000,
@@ -28063,8 +28067,8 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 60
         )
 
-        XCTAssertEqual(dayBoundaryFrame.height, 40, accuracy: 0.1)
-        XCTAssertEqual(zoomedFrame.height, 960, accuracy: 0.1)
+        XCTAssertEqual(dayBoundaryFrame.height, 944.0 / 24, accuracy: 0.1)
+        XCTAssertEqual(zoomedFrame.height, 944, accuracy: 0.1)
     }
 }
 
@@ -29087,6 +29091,9 @@ private final class StubWeatherAttributionProvider:
 }
 
 /// NLE 클립 편집: 대분류 24시간 트랙, 서브클립, 자르기·가르기·옮기기·스냅.
+/// NLE 트랙 편집은 `MapHomeNLEClipEditor`의 메인 액터 정적 메서드를 부른다.
+/// XCTest는 테스트를 메인 스레드에서 돌리므로 클래스 전체를 메인 액터로 둔다.
+@MainActor
 final class NLETrackTests: XCTestCase {
     private var calendar: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -29203,12 +29210,12 @@ final class NLETrackTests: XCTestCase {
         let request = try! XCTUnwrap(requests.first)
         XCTAssertEqual(request.sourceIDs, [source])
         XCTAssertEqual(request.originalSpan.duration, 240 * 60, accuracy: 0.5)
-        guard case let .cover(payload) = request.mode else {
+        guard case let .cover(pieces, fill: fill) = request.mode else {
             return XCTFail("cover 요청이어야 한다")
         }
-        XCTAssertEqual(payload.pieces.count, 2)
-        XCTAssertEqual(payload.pieces.map(\.option.categoryID), ["work", "study"])
-        XCTAssertEqual(payload.fill.categoryID, "unconfirmed")
+        XCTAssertEqual(pieces.count, 2)
+        XCTAssertEqual(pieces.map(\.option.categoryID), ["work", "study"])
+        XCTAssertEqual(fill.categoryID, "unconfirmed")
     }
 
     /// cover는 원본 구간을 빈틈없이 덮는다. 남는 곳은 넘겨준 분류로 채운다.
@@ -29387,17 +29394,17 @@ final class NLETrackTests: XCTestCase {
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: Date())
         let requests = edited.editRequests(dayStart: dayStart)
         XCTAssertEqual(requests.count, 1)
-        guard case let .cover(payload) = requests[0].mode else {
+        guard case let .cover(pieces, fill: _) = requests[0].mode else {
             return XCTFail("덮어쓰기 요청이 아니다")
         }
         // 업무 300–420 · 공부 420–480 · 업무 480–540. 빈 자리 없이 이어진다.
-        XCTAssertEqual(payload.pieces.map(\.option.categoryID), ["work", "study", "work"])
+        XCTAssertEqual(pieces.map(\.option.categoryID), ["work", "study", "work"])
         XCTAssertEqual(
-            payload.pieces.first?.span.start,
+            pieces.first?.span.start,
             dayStart.addingTimeInterval(300 * 60)
         )
         XCTAssertEqual(
-            payload.pieces.last?.span.end,
+            pieces.last?.span.end,
             dayStart.addingTimeInterval(540 * 60)
         )
     }

@@ -293,12 +293,7 @@ final class MapHomeScreenRecorder {
             return false
         }
         recorder.isMicrophoneEnabled = false
-        do {
-            try await recorder.startRecording()
-            isRecording = true
-            TaptionPlanDiagnosticsLogger.shared.record("screen_recording_started")
-            return true
-        } catch {
+        if let error = await Self.startRecording(recorder) {
             lastFailureMessage = "화면 녹화를 시작하지 못했습니다: \(error.localizedDescription)"
             TaptionPlanDiagnosticsLogger.shared.record(
                 "screen_recording_start_failed",
@@ -306,6 +301,21 @@ final class MapHomeScreenRecorder {
                 fields: ["error": error.localizedDescription]
             )
             return false
+        }
+        isRecording = true
+        TaptionPlanDiagnosticsLogger.shared.record("screen_recording_started")
+        return true
+    }
+
+    /// `startRecording`에는 async 변형이 없어서 `try await recorder.startRecording()`은
+    /// 완료 핸들러 기본값(nil) 오버로드를 고른다. 그러면 `await`·`try`가 아무 일도 하지 않고
+    /// 오류는 핸들러가 없어 조용히 사라지며, `catch`는 도달 불가가 된다.
+    /// continuation으로 감싸 실패를 반드시 돌려받는다.
+    private static func startRecording(_ recorder: RPScreenRecorder) async -> Error? {
+        await withCheckedContinuation { continuation in
+            recorder.startRecording { error in
+                continuation.resume(returning: error)
+            }
         }
     }
 

@@ -4422,7 +4422,10 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeDayPlaybackUsesOneTwentyFourthSpeedForWalkingAndVehicles() {
+    /// 걷기는 이동 기본 배속(초당 2.5분)의 3배(초당 7.5분)로 재생한다(WLK1022I01).
+    /// 차량·달리기는 기본 배속 그대로다. 이름의 1/24는 정지 배속이 60분/초이던 시절 기준이라
+    /// 지금 값(정지 120분/초의 1/48)과 맞지 않아 이름과 기대값을 함께 고쳤다.
+    func testMapHomeDayPlaybackRunsWalkingThreeTimesFasterThanVehicles() {
         XCTAssertEqual(
             MapHomeDayPlaybackMath.advancedMinute(
                 from: 60,
@@ -4431,7 +4434,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
-            65,
+            67.5,
             accuracy: 0.000_001
         )
         XCTAssertEqual(

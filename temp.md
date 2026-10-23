@@ -1923,3 +1923,19 @@
 - 검증: Debug 빌드 BUILD SUCCEEDED. `FeatureEngineTests` 643개(신규 `testHomePinStacksWeatherAboveRoofAndLabelUnderHouse` 포함), `MapHomeLiveMapTests` 75개 통과·실패 0. 기기 확인 전.
 - 확인 필요: 기기에서 집 핀 위로 날씨 → 연봉 카운터 순서로 겹치지 않고 쌓이는지, 레벨 라벨이 집 그림에 붙었는지, 라벨을 눌러 하루 요약이 열리는지.
 - 남은 것: `homeGrowthCallout`은 `toggleGrowthCallout()`을 부르는 곳이 없어 늘 투명한데도 핀 위쪽에 약 99pt를 차지한다(집 그림이 좌표 아래 +30에 있는 이유). 없애면 집이 지도에서 49pt 위로 올라가므로 탭 판정 상수를 함께 손봐야 한다. 지금은 그대로 두었다.
+
+## CRV1024A11 · 다방면 코드 리뷰와 수정 (2026-10-24)
+- 요청: 다방면 코드 리뷰를 하고, 실제로 고친 뒤 워크트리를 정리해 main에 푸시하고 TestFlight 빌드를 올린다.
+- 원인·해결:
+  1. **화면 녹화 실패가 조용히 성공으로 처리됐다**(`MapHomeScreenRecording.swift`). ReplayKit `startRecording`에는 async 변형이 없어 `try await recorder.startRecording()`이 완료 핸들러 기본값(nil) 오버로드를 골랐다. `await`·`try`가 아무 일도 하지 않고 오류는 핸들러가 없어 사라지며 `catch`는 도달 불가(컴파일러 경고)였다. → continuation으로 감싼 `startRecording(_:)`을 두고 오류를 반환값으로 받아 `lastFailureMessage`·진단 로그에 남긴다.
+  2. **삭제 예정 튜플 매칭 2곳**(`AppModel.swift` `editedOptions(in:)`·`primarySpan(for:)`): `case let .cover(pieces, _)` → `case let .cover(pieces, fill: _)`. 동작 동일, 경고만 제거.
+  3. **불필요한 `@preconcurrency`**(`AppleIntegrations.swift` `VoiceMemoPlayer`): 델리게이트 메서드가 실제로 구현돼 있어 속성이 필요 없다. 제거.
+  4. **미확인 배지 터치 영역 36pt**(`MapHomeTimeSidebar.swift`): 이 배지가 `unconfirmedCount`를 0으로 만드는 유일한 입구인데 최소 터치 44pt에 못 미쳤다. `minHeight` 36→44. (`.contentShape`도 넣었다가 되돌렸다. 캡슐 배경이 이미 44pt 상자를 칠하고 있어 중복이고, 파일 길이 지표만 늘린다.)
+  5. **낡은 테스트 3건**(동작 변경은 의도된 것, 기대값만 미갱신):
+     - `TimeScaleTests.testMapHomeDayPlaybackUsesOneTwentyFourthSpeedForWalkingAndVehicles` → 걷기 3배(WLK1022I01) 반영해 65→67.5, 이름도 실제 동작으로.
+     - `FeatureEngineTests` 선택 카드 2건 → `verticalInset` 20→28(UIL1021) 반영. 80→944/12, 40→944/24, 960→944.
+     - `MapHomeView`의 `movementPlaybackMultiplier` 주석이 "1/24(초당 2.5분)"인데 상수는 1/48이라 다음 사람이 상수를 1/24로 "고치면" 재생이 2배 빨라진다. 주석을 실제 값으로 정정.
+  6. **환경 의존 통합 테스트 2건**(`HealthKitIntegrationTests` 망가진 앵커·커서): 시뮬레이터에 HealthKit 권한이 없어 질의가 실패하고 상태 전이를 확인할 수 없다. 실패로 두면 코드 결함과 구분되지 않으므로, 권한 없음 오류일 때만 `XCTSkip`하고 나머지 오류는 그대로 실패시킨다. 해석 불가 커서·앵커 처리 자체는 권한과 무관한 `decodeDate`·`decodeAnchor` 단언으로 항상 검증한다.
+- 검증 기준: 앱 테스트 실패 0(환경 의존 2건은 건너뜀으로 표시), 컴파일 경고 0, 패키지 테스트 4개 스위트 실패 0, 아키텍처 게이트 통과, Debug 빌드 성공, TestFlight 업로드 후 처리 완료·내부 테스트 그룹에 빌드와 테스터가 보임.
+- 범위 밖으로 남긴 것: `AppShellView.handleOpenURL`은 `legacyUIEnabled == false`라 딥링크가 동작하지 않는다. 가드를 풀어도 `AppModel.openDeepLink`가 없어진 탭 IA(`selectedTab = .schedule`)로 보내므로 MapHome 상태를 직접 여는 구현이 먼저 필요하다. `MapHomeAppleCameraCommand`의 `as! MKMapCamera` 2곳은 `MKMapCamera.copy()`가 항상 같은 타입을 돌려주므로 그대로 두었다(옵셔널 캐스트로 바꾸면 불가능한 경우에 카메라 갱신을 조용히 건너뛰게 되어 더 나쁘다).
+- 추가 조사(수정 없음): 병렬 실행에서 빠져 있던 `TaptionPlanSmokeUITests` 4건이 병렬을 끄면 실패한다. 원인은 앱 결함이 아니라 첫 실행 HealthKit 권한 시트가 메뉴를 덮는 것이다(실패 시점 접근성 트리 첨부로 확인). '허용 안 함' 탭으로 시트가 닫히지 않아 테스트 수정은 되돌렸고, `TaptionPlanSmokeUITests.swift`는 변경 없음. 실기기에서 권한이 이미 정해진 상태로 재확인이 필요하다.

@@ -341,8 +341,14 @@ final class HealthKitIntegrationTests: XCTestCase {
             typeIdentifiers: [type.identifier]
         )
 
+        XCTAssertNil(
+            HealthKitImportCoordinator.decodeDate(malformedCursor),
+            "해석할 수 없는 히스토리 커서는 없는 것으로 본다"
+        )
+
         let savedState = try await store.syncState(for: type.identifier)
         let saved = try XCTUnwrap(savedState)
+        try skipIfHealthKitEnvironmentBlocksSync(saved.lastError)
         XCTAssertNotEqual(saved.historyCursor, malformedCursor, "해석할 수 없는 커서는 처음부터 다시 받는다")
         XCTAssertTrue(saved.historyComplete)
         XCTAssertNil(saved.lastError)
@@ -373,11 +379,6 @@ final class HealthKitIntegrationTests: XCTestCase {
             typeIdentifiers: [type.identifier]
         )
 
-        let savedState = try await store.syncState(for: type.identifier)
-        let saved = try XCTUnwrap(savedState)
-        XCTAssertNotEqual(saved.anchor, malformedAnchor, "해석할 수 없는 앵커는 새 앵커로 바뀐다")
-        XCTAssertTrue(saved.historyComplete)
-        XCTAssertNil(saved.lastError)
         XCTAssertThrowsError(
             try HealthKitImportCoordinator.decodeAnchor(malformedAnchor)
         ) { error in
@@ -386,6 +387,13 @@ final class HealthKitIntegrationTests: XCTestCase {
                 .invalidAnchorCursor
             )
         }
+
+        let savedState = try await store.syncState(for: type.identifier)
+        let saved = try XCTUnwrap(savedState)
+        try skipIfHealthKitEnvironmentBlocksSync(saved.lastError)
+        XCTAssertNotEqual(saved.anchor, malformedAnchor, "해석할 수 없는 앵커는 새 앵커로 바뀐다")
+        XCTAssertTrue(saved.historyComplete)
+        XCTAssertNil(saved.lastError)
     }
 
     func testHealthSyncOverviewReportsPartialFailures() {
@@ -1378,5 +1386,23 @@ final class HealthKitIntegrationTests: XCTestCase {
         for suffix in ["", "-wal", "-shm"] {
             try? FileManager.default.removeItem(atPath: url.path + suffix)
         }
+    }
+
+    /// 시뮬레이터처럼 HealthKit 권한이 없는 환경에서는 앵커·히스토리 질의가 실패해서
+    /// 저장된 상태 전이를 확인할 수 없다. 그 경우에만 건너뛰고, 다른 오류는 그대로 실패시킨다.
+    private func skipIfHealthKitEnvironmentBlocksSync(
+        _ lastError: String?
+    ) throws {
+        guard let lastError else { return }
+        let environmentBlockers = [
+            "Authorization not determined",
+            "Health data is unavailable",
+        ]
+        guard environmentBlockers.contains(where: { lastError.contains($0) }) else {
+            return
+        }
+        throw XCTSkip(
+            "HealthKit 권한이 없는 환경이라 동기화 상태 전이를 확인할 수 없다: \(lastError)"
+        )
     }
 }

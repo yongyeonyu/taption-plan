@@ -2644,3 +2644,16 @@
   - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 임시 `HOM1023A04-Check`, 검증 후 삭제): `FeatureEngineTests` 643개·`MapHomeLiveMapTests` 75개 통과, 실패 0·건너뜀 0(`build/validation/HOM1023A04/`).
   - 신규 `testHomePinStacksWeatherAboveRoofAndLabelUnderHouse`가 날씨·레벨·카운터 세로 순서를 고정한다.
 - 미실시: 실기기 화면 확인(픽셀 값은 상수로 모아 두어 한 곳만 고치면 됨).
+
+## CRV1024A11 · 다방면 코드 리뷰와 수정 (2026-10-24)
+- 목적: 코드 리뷰에서 나온 것을 실제로 고치고, 워크트리를 정리해 main에 올린 뒤 TestFlight 빌드를 준비한다. 원인·해결 목록은 `temp.md`의 같은 ID 항목에 있다.
+- 고친 것: ①`MapHomeScreenRecording`의 화면 녹화 시작 실패가 조용히 성공으로 처리되던 문제(ReplayKit `startRecording`에 async 변형이 없어 `try await`가 핸들러 기본값 오버로드를 골랐다) ②`AppModel`의 삭제 예정 튜플 매칭 2곳 ③`VoiceMemoPlayer`의 불필요한 `@preconcurrency` ④미확인 배지 최소 터치 36→44pt ⑤낡은 테스트 3건(걷기 3배, 선택 카드 세로 여백 28) ⑥환경 의존 HealthKit 통합 테스트 2건에 건너뜀 조건 추가.
+- 빌드: `xcodebuild -scheme TaptionPlan -configuration Debug -destination generic/platform=iOS build CODE_SIGNING_ALLOWED=NO` → BUILD SUCCEEDED, `warning:` 0건(`build/validation/CRV1024A11/app-build-2.log`). 앱 타깃 경고는 수정 전 14건이었다.
+- 수정한 테스트만 재실행: `MapHomeTimeRailCardTests`·`TimeScaleTests`·`HealthKitIntegrationTests` 213개 통과, 실패 0, 건너뜀 2(`targeted-2.xcresult`).
+- 전체 앱 테스트(병렬 끔, BOKKI-verify2): **1,580개 중 통과 1,574, 실패 4, 건너뜀 2**(`app-tests-4.xcresult`). 통과·실패·건너뜀을 합치지 않고 그대로 적는다.
+  - 실패 4건은 모두 `TaptionPlanSmokeUITests`(`testOpenDayCard`, `testDayCardSaveAndShare`, `testOpenAlarmSettingsAndToggle`, `testUploadDiagnosticsLogs`)다. 원인은 앱 결함이 아니라 **첫 실행에서 뜨는 HealthKit 권한 시트가 화면을 덮어 메뉴를 열지 못하는 것**이다. 실패 시점의 접근성 트리를 첨부해 확인했다: `UIA.Health.AuthSheet`의 데이터 종류 목록이 올라와 있고 `메뉴` 버튼은 그 뒤에 있다. XCUITest로 '허용 안 함'을 눌러도 시트가 닫히지 않아(3회 시도, `ui-4.xcresult`·`ui-5.xcresult`) 테스트 쪽 수정은 되돌렸다. 시뮬레이터 `simctl privacy`에는 health 서비스가 없고 앱에 권한을 건너뛰는 실행 인자도 없다. 실기기(권한이 이미 정해진 기기)에서 다시 확인해야 한다.
+  - 건너뜀 2건은 위 ⑥의 HealthKit 통합 테스트다. 시뮬레이터에 HealthKit 읽기 권한이 없어 앵커·히스토리 질의가 실패하므로, 권한 없음 오류일 때만 건너뛰고 다른 오류는 그대로 실패시킨다. 해석 불가 커서·앵커 처리 자체는 `decodeDate`·`decodeAnchor` 단언으로 항상 검증한다.
+  - 참고: 이전 병렬 실행(`app-tests.log`, 05:48)에서는 위 UI 테스트 4건이 **아예 실행되지 않았다**(테스트 케이스 줄 0건). 병렬 실행에서 UI 테스트가 빠지므로, 전체 통과 여부는 병렬 끈 실행으로만 판단할 수 있다.
+- 패키지 테스트: `--disable-sandbox`로 TaptionPlanCore 85, TaptionRouteEngine 54, TaptionActivityEngine 33, TaptionPlanEngine 1 — 실패 0.
+- 구조 게이트: `scripts/architecture-metrics.py --check docs/architecture-baseline.json` → 기준선 통과. `scripts/check-app-engine-import-boundary.sh` → 통과.
+- 빌드 번호: 230 → 231. `CURRENT_PROJECT_VERSION` 8곳과 앱·iPhone 위젯·Watch·Watch 위젯 `Info.plist`의 `CFBundleVersion` 4곳을 모두 231로 맞췄다. App Store Connect 최신 빌드는 230(VALID)이었다.

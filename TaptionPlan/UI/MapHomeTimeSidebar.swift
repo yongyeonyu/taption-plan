@@ -2294,7 +2294,7 @@ Group {
                                                         .font(.system(size: 11, weight: .semibold))
                                                         .lineLimit(1)
                                                         .minimumScaleFactor(0.72)
-                                                        .frame(maxWidth: .infinity, minHeight: 36)
+                                                        .frame(maxWidth: .infinity, minHeight: 44)
                                                         .background(category.tint.opacity(0.18), in: Capsule())
                                                 }
                                                 .buttonStyle(.plain)

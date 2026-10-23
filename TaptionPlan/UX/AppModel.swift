@@ -2530,8 +2530,8 @@ final class AppModel {
         case let .replace(_, option), let .cutLowerUnconfirmed(_, option),
              let .insertDetail(_, option):
             return [option]
-        case let .cover(payload):
-            return payload.pieces.map(\.option)
+        case let .cover(pieces, _):
+            return pieces.map(\.option)
         }
     }
 
@@ -2547,9 +2547,9 @@ final class AppModel {
         case let .insertDetail(detailSpan, _):
             return detailSpan.intersection(with: request.originalSpan)
                 ?? request.originalSpan
-        case let .cover(payload):
+        case let .cover(pieces, _):
             // 가장 긴 조각을 대표 구간으로 삼는다(선택 표시용).
-            return payload.pieces
+            return pieces
                 .map(\.span)
                 .max { $0.duration < $1.duration }
                 ?? request.originalSpan

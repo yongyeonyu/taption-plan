@@ -654,7 +654,7 @@ enum MapHomeDayPlaybackMath {
     static let mapFocusInterval: TimeInterval = 0.008
     /// 정지 구간(업무·수면·활동 등)은 초당 120분으로 지나간다(대표 지시, PLY1020W01).
     static let stationaryMinutesPerSecond = 120.0
-    /// 이동 구간은 정지 구간 배속의 1/24(초당 2.5분)로 재생한다. 이전 1/6보다 4배 느리다(대표 지시, PLY1020C01).
+    /// 이동 구간은 초당 2.5분, 곧 정지 배속 120분의 1/48로 재생한다(대표 지시, PLY1020C01). 정지 배속이 60분/초이던 시절에는 1/24였다.
     static let movementPlaybackMultiplier = 1.0 / 48.0
     static let movingMinutesPerSecond = stationaryMinutesPerSecond * movementPlaybackMultiplier
 
