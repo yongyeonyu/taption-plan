@@ -52,16 +52,25 @@ actor TaptionStoreRepository: PlanDataRepository {
     }
 
     func load() async throws -> TaptionDataSnapshot {
+        let readStartedAt = Date()
         let rows = try await store.allRecordRows()
+        let readMilliseconds = Date().timeIntervalSince(readStartedAt) * 1_000
         let state = Self.groupedRecordRows(rows)
         known = state
         nextOrd = Self.nextOrdinals(for: state)
         knownHashes = [:]
         // 항목마다 JSONDecoder를 새로 만들면 수만 건을 읽을 때 할당 비용이 그대로 쌓인다.
         let decoder = Self.decoder()
+        let decodeStartedAt = Date()
 
         guard let headerBody = state[Self.headerKind]?[Self.headerID]?.body else {
             // 헤더 없이 다른 행만 있으면 비정상이다. 빈 스냅샷으로 보고 위에 저장하면 그 행이 지워진다.
+            Self.recordLoad(
+                rowCount: rows.count,
+                state: state,
+                readMilliseconds: readMilliseconds,
+                decodeMilliseconds: Date().timeIntervalSince(decodeStartedAt) * 1_000
+            )
             if state.values.contains(where: { !$0.isEmpty }) { throw RepositoryError.invalidSnapshot }
             return .empty
         }
@@ -113,7 +122,39 @@ actor TaptionStoreRepository: PlanDataRepository {
             settings: header.settings
         )
         knownHashes = hashes
+        Self.recordLoad(
+            rowCount: rows.count,
+            state: state,
+            readMilliseconds: readMilliseconds,
+            decodeMilliseconds: Date().timeIntervalSince(decodeStartedAt) * 1_000
+        )
         return snapshot
+    }
+
+    /// 시작 적재 비용을 읽기와 해석으로 나눠 남긴다. 본문·좌표는 남기지 않고 행 수와 시간만 기록한다.
+    private nonisolated static func recordLoad(
+        rowCount: Int,
+        state: [String: [String: (ord: Int, body: String)]],
+        readMilliseconds: Double,
+        decodeMilliseconds: Double
+    ) {
+        let summary = state
+            .mapValues(\.count)
+            .sorted { $0.value > $1.value }
+            .prefix(4)
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ",")
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "repository_local_load",
+            fields: ["kinds": summary],
+            metrics: [
+                "rows": Double(rowCount),
+                "kind_count": Double(state.count),
+                "read_ms": readMilliseconds,
+                "decode_ms": decodeMilliseconds,
+                "total_ms": readMilliseconds + decodeMilliseconds,
+            ]
+        )
     }
 
     /// 한 종류의 행을 순서대로 해석하고 값 해시를 함께 만든다. 해시는 저장할 때 바뀌지 않은 항목을

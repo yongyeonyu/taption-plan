@@ -2606,3 +2606,6 @@
   - `FeatureEngineTests/testInitialSceneDoesNotWaitForBootstrapNormalizationSave`, `.../testBootstrapPreparationPreservesCorrectionAndSourceEvidence` 통과(`bootstrap-tests-2.xcresult`).
   - 첫 실행에서 `guard isSceneActive`로 막았더니 `testBootstrapPreparationPreservesCorrectionAndSourceEvidence`가 실패(저장 누락). `isSceneInBackground`(백그라운드 진입 후에만 true)로 조건을 좁혀 통과.
   - 기기 첫 실행·백그라운드 전환 검증은 미실시.
+- 2026-10-23 계측 추가: `TaptionStoreRepository.load()`가 `repository_local_load`(rows, kind_count, kinds 상위 4종, read_ms, decode_ms, total_ms)를 남긴다. 본문·좌표는 기록하지 않는다.
+  - Debug 빌드 BUILD SUCCEEDED(`build-2.log`). 저장소 테스트 28개 재통과(`app-tests-2.xcresult`).
+- 로그 이상 징후(미해결): 같은 로그에서 재실행 세션(478317E0, 12:57:43)의 `bootstrap_local_snapshot_loaded`가 `actuals 0 · places 0 · plans 0`이었다. 이는 `allRecordRows()`가 0행을 돌려줘 `load()`가 `.empty`를 반환한 경우다. 36초 전 같은 저장소는 721·21,875행을 읽었다. 원인 후보: 강제 종료가 트랜잭션 롤백을 남긴 경우, 다른 저장소 파일을 연 경우, 마이그레이션 중단. 다음 실행 로그의 `repository_local_load.rows`로 판별한다.
