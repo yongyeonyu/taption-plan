@@ -14,6 +14,8 @@ struct MapHomeNLEClipEditor: View {
     let segments: [MapHomeTimeRailSegment]
     let details: [MapHomeSectionDetail]
     let focusMinute: Int
+    /// 레이아웃 확인용. 값이 있으면 처음부터 확대된 상태로 연다.
+    let initialMinuteHeight: CGFloat?
     var onSaved: () -> Void
 
     @State private var track: NLETrack
@@ -21,9 +23,9 @@ struct MapHomeNLEClipEditor: View {
     @State private var selectedClipID: String?
     @State private var selectedSubClipID: String?
     @State private var playheadMinute: Int
-    @State private var minuteWidth: CGFloat = 2.4
+    @State private var minuteHeight: CGFloat = 2.4
     @State private var visibleStartMinute: Double = 0
-    @State private var containerWidth: CGFloat = 0
+    @State private var containerHeight: CGFloat = 0
     @State private var zoomBaseWidth: CGFloat = 0
     @State private var zoomBaseStartMinute: Double = 0
     @State private var panBaseStartMinute: Double = 0
@@ -33,6 +35,8 @@ struct MapHomeNLEClipEditor: View {
     @State private var didPushUndoForDrag = false
     @State private var isSaving = false
     @State private var didCenter = false
+    /// 가장자리로 끌어 화면이 흐른 만큼(분). 끄는 동안의 좌표를 같은 기준으로 맞춘다.
+    @State private var dragScrollShift: Double = 0
 
     init(
         model: AppModel,
@@ -41,6 +45,7 @@ struct MapHomeNLEClipEditor: View {
         segments: [MapHomeTimeRailSegment],
         details: [MapHomeSectionDetail],
         focusMinute: Int,
+        initialMinuteHeight: CGFloat? = nil,
         onSaved: @escaping () -> Void
     ) {
         self.model = model
@@ -49,6 +54,7 @@ struct MapHomeNLEClipEditor: View {
         self.segments = segments
         self.details = details
         self.focusMinute = focusMinute
+        self.initialMinuteHeight = initialMinuteHeight
         self.onSaved = onSaved
         let built = Self.makeMainTrack(segments: segments)
         let initialClip = built.clip(atMinute: min(max(focusMinute, 0), NLETrack.dayMinutes - 1))
@@ -66,22 +72,18 @@ struct MapHomeNLEClipEditor: View {
     // MARK: - 본문
 
     var body: some View {
-        // 높이를 직접 나눠 준다. 스크롤 영역은 제 내용 높이를 그대로 원해서,
-        // 그냥 두면 목록이 화면 아래로 넘친다.
+        // 하루는 위에서 아래로 흐른다. 시간 눈금·클립·서브클립이 모두 세로로 놓인다.
+        // 높이를 직접 나눠 주는 이유는 스크롤/제스처 영역이 제 높이를 그대로
+        // 원해서, 그냥 두면 화면 아래로 넘치기 때문이다.
         GeometryReader { proxy in
             let spacing: CGFloat = 12
-            let reserved: CGFloat = 44 + 72 + 26 + 44 + spacing * 5
-            let trackHeight = min(230, max(140, (proxy.size.height - reserved) * 0.42))
-            let listHeight = max(96, proxy.size.height - reserved - trackHeight)
+            let railHeight = max(220, proxy.size.height - (44 + 26 + 44 + spacing * 3))
             VStack(spacing: spacing) {
                 header
-                timeline
-                    .frame(height: trackHeight)
-                subLane
+                verticalRail
+                    .frame(height: railHeight)
                 selectionSummary
                 toolbar
-                clipList
-                    .frame(height: listHeight)
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
@@ -139,23 +141,32 @@ struct MapHomeNLEClipEditor: View {
         .frame(minHeight: 44)
     }
 
-    // MARK: - 타임라인
+    // MARK: - 세로 타임라인
 
-    private var timeline: some View {
+    /// 시각 눈금이 붙는 왼쪽 띠의 너비.
+    private var gutterWidth: CGFloat { 36 }
+
+    /// 고른 클립 안에서 상세활동이 붙는 오른쪽 띠의 너비.
+    private var subStripWidth: CGFloat { 64 }
+
+    /// 하루 24시간을 세로로 세운 타임라인.
+    ///
+    /// 위에서 아래로 시간이 흐르고, 클립은 하루를 빈틈없이 채우며 쌓인다.
+    /// 고른 클립의 오른쪽에는 그 구간 안의 상세활동이 띠로 붙는다.
+    private var verticalRail: some View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
-            let height = max(80, proxy.size.height)
-            let clipHeight = max(52, height - 34)
+            let height = max(120, proxy.size.height)
             let geometry = NLETimelineGeometry(
-                minuteWidth: minuteWidth,
+                minuteWidth: minuteHeight,
                 visibleStartMinute: visibleStartMinute,
-                visibleMinutes: Double(width) / Double(max(0.01, minuteWidth))
+                visibleMinutes: Double(height) / Double(max(0.01, minuteHeight))
             )
             ZStack(alignment: .topLeading) {
                 Color.tpSurface
-                rulerCanvas(geometry: geometry, width: width)
-                clipRow(geometry: geometry, width: width, height: height, clipHeight: clipHeight)
-                playhead(geometry: geometry, height: height)
+                hourGrid(geometry: geometry, width: width)
+                clipColumn(geometry: geometry, width: width)
+                playheadLine(geometry: geometry, width: width)
             }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
@@ -164,128 +175,136 @@ struct MapHomeNLEClipEditor: View {
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(geometry: geometry, width: width, height: height))
-            .simultaneousGesture(magnifyGesture(width: width))
+            .simultaneousGesture(magnifyGesture(height: height))
             .onAppear {
-                containerWidth = width
-                fitWholeDayIfNeeded(width: width)
+                containerHeight = height
+                fitWholeDayIfNeeded(height: height)
             }
-            .onChange(of: width) { _, newValue in
-                containerWidth = newValue
-                fitWholeDayIfNeeded(width: newValue)
+            .onChange(of: height) { _, newValue in
+                containerHeight = newValue
+                fitWholeDayIfNeeded(height: newValue)
             }
         }
-        .frame(maxHeight: .infinity)
     }
 
-    private func rulerCanvas(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
+    private func hourGrid(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
         Canvas { context, size in
-            let step = rulerStepMinutes
+            let step = gridStepMinutes
             let labelEvery = rulerLabelEveryMinutes
             var minute = Int(geometry.visibleStartMinute / Double(step)) * step
             while Double(minute) <= geometry.visibleEndMinute {
-                let x = geometry.x(forMinute: Double(minute))
-                if x >= 0, x <= width {
+                let y = geometry.y(forMinute: Double(minute))
+                if y >= -1, y <= size.height + 1 {
                     let isHour = minute % 60 == 0
                     var line = Path()
-                    line.move(to: CGPoint(x: x, y: isHour ? 0 : 12))
-                    line.addLine(to: CGPoint(x: x, y: size.height))
+                    line.move(to: CGPoint(x: isHour ? gutterWidth : gutterWidth + 10, y: y))
+                    line.addLine(to: CGPoint(x: size.width, y: y))
                     context.stroke(
                         line,
-                        with: .color(isHour ? Color.tpInk.opacity(0.16) : Color.tpInk.opacity(0.07)),
+                        with: .color(isHour ? Color.tpInk.opacity(0.14) : Color.tpInk.opacity(0.06)),
                         lineWidth: isHour ? 1 : 0.6
                     )
                     if minute % labelEvery == 0 {
+                        // 맨 위 00시가 카드 모서리에 잘리지 않게 안쪽으로 붙인다.
+                        let labelY = min(max(y, 7), size.height - 7)
                         context.draw(
-                            Text(Self.hourLabel(minute / 60))
+                            Text(isHour ? String(format: "%02d", minute / 60) : Self.minuteLabel(minute))
                                 .font(.system(size: 9, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.tpSecondary),
-                            at: CGPoint(x: x + 3, y: 7),
-                            anchor: .leading
+                            at: CGPoint(x: gutterWidth - 7, y: labelY),
+                            anchor: .trailing
                         )
                     }
                 }
                 minute += step
             }
         }
-        .frame(height: 24)
         .allowsHitTesting(false)
     }
 
-    private func clipRow(
-        geometry: NLETimelineGeometry,
-        width: CGFloat,
-        height: CGFloat,
-        clipHeight: CGFloat
-    ) -> some View {
-        let topInset: CGFloat = 26
+    private func clipColumn(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
+        let columnWidth = max(1, width - gutterWidth)
         return ZStack(alignment: .topLeading) {
             ForEach(visibleClips(geometry: geometry)) { clip in
-                let x = geometry.x(forMinute: Double(clip.startMinute))
-                let clipWidth = max(2, geometry.width(minutes: Double(clip.lengthMinutes)))
-                clipBody(clip, width: clipWidth)
-                    .frame(width: clipWidth, height: clipHeight)
-                    .offset(x: x, y: topInset)
+                let y = geometry.y(forMinute: Double(clip.startMinute))
+                // 클립 사이에 1pt 틈을 둔다. 이웃한 클립이 한 덩어리로 보이지 않게.
+                let blockHeight = max(3, geometry.height(minutes: Double(clip.lengthMinutes)) - 2)
+                clipBlock(clip, width: columnWidth, blockHeight: blockHeight, geometry: geometry)
+                    .frame(width: columnWidth, height: blockHeight)
+                    .offset(x: gutterWidth, y: y + 1)
             }
         }
-        .frame(width: width, height: height, alignment: .topLeading)
+        .frame(width: width, alignment: .topLeading)
     }
 
-    private func clipBody(_ clip: NLEClip, width: CGFloat) -> some View {
+    private func clipBlock(
+        _ clip: NLEClip,
+        width: CGFloat,
+        blockHeight: CGFloat,
+        geometry: NLETimelineGeometry
+    ) -> some View {
         let tint = Self.tint(for: clip.option.categoryID)
         let isSelected = clip.id == selectedClipID
+        let showsSubStrip = isSelected && !subTrack.isEmpty && width > subStripWidth + 80
+        let textWidth = showsSubStrip ? max(40, width - subStripWidth - 22) : width - 16
         return ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [tint.opacity(0.95), tint.opacity(0.72)],
-                        startPoint: .top,
-                        endPoint: .bottom
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
                 )
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(isSelected ? 0.95 : 0.35), lineWidth: isSelected ? 2.5 : 1)
-            if width > 46 {
-                VStack(alignment: .leading, spacing: 2) {
+            if blockHeight >= 26 {
+                VStack(alignment: .leading, spacing: 1) {
                     Text(clip.option.title)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    if width > 96 {
+                    if blockHeight >= 44 {
                         Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
-                            .font(.system(size: 9, weight: .semibold, design: .rounded))
-                            .opacity(0.85)
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .opacity(0.88)
                             .lineLimit(1)
                     }
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.top, 6)
+                .padding(.horizontal, 9)
+                .padding(.top, 5)
+                .frame(width: textWidth, alignment: .topLeading)
             }
-            if isSelected {
-                HStack(spacing: 0) {
+            if showsSubStrip {
+                subStrip(clip: clip, width: subStripWidth, geometry: geometry)
+                    .frame(width: subStripWidth, height: blockHeight)
+                    .offset(x: width - subStripWidth - 8, y: 0)
+            }
+            if isSelected, blockHeight >= 22 {
+                VStack(spacing: 0) {
                     trimHandle(isStart: true)
                     Spacer(minLength: 0)
                     trimHandle(isStart: false)
                 }
                 .frame(width: width)
-                .frame(maxHeight: .infinity)
             }
         }
         .opacity(clip.isGap ? 0.55 : 1)
-        .shadow(color: .black.opacity(isSelected ? 0.18 : 0.06), radius: isSelected ? 4 : 1, y: 1)
+        .shadow(color: .black.opacity(isSelected ? 0.16 : 0.05), radius: isSelected ? 3 : 1, y: 1)
     }
 
     private func trimHandle(isStart: Bool) -> some View {
         RoundedRectangle(cornerRadius: 3, style: .continuous)
             .fill(Color.white)
-            .frame(width: 6)
+            .frame(height: 5)
             .overlay {
                 Capsule()
                     .fill(Color.tpInk.opacity(0.45))
-                    .frame(width: 2, height: 16)
+                    .frame(width: 16, height: 2)
             }
-            .padding(.vertical, 3)
-            .padding(.horizontal, 1)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
             .accessibilityLabel(
                 isStart
                     ? language.text("시작 자르기", "Trim start")
@@ -293,103 +312,61 @@ struct MapHomeNLEClipEditor: View {
             )
     }
 
-    private func playhead(geometry: NLETimelineGeometry, height: CGFloat) -> some View {
-        let x = geometry.x(forMinute: Double(playheadMinute))
-        return ZStack(alignment: .top) {
+    /// 고른 클립 안쪽 오른쪽 띠. 상세활동은 이 클립 구간 안에서만 그린다.
+    private func subStrip(
+        clip: NLEClip,
+        width: CGFloat,
+        geometry: NLETimelineGeometry
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.white.opacity(0.22))
+            ForEach(subTrack.clips) { sub in
+                let y = geometry.height(minutes: Double(sub.startMinute - clip.startMinute))
+                let h = max(3, geometry.height(minutes: Double(sub.lengthMinutes)) - 1)
+                let isSelected = sub.id == selectedSubClipID
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.white.opacity(isSelected ? 0.96 : 0.62))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .stroke(
+                                Color.white.opacity(isSelected ? 1 : 0.35),
+                                lineWidth: isSelected ? 1.5 : 0.5
+                            )
+                    }
+                    .overlay(alignment: .topLeading) {
+                        if h >= 15 {
+                            Text(sub.option.title)
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Self.tint(for: sub.option.categoryID))
+                                .lineLimit(1)
+                                .padding(.horizontal, 3)
+                        }
+                    }
+                    .frame(width: width - 8, height: h)
+                    .offset(x: 4, y: y + 2)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private func playheadLine(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
+        let y = geometry.y(forMinute: Double(playheadMinute))
+        return ZStack(alignment: .leading) {
             Rectangle()
                 .fill(Color.tpAccent)
-                .frame(width: 1.5, height: height)
-            Path { path in
-                path.move(to: CGPoint(x: -5, y: 0))
-                path.addLine(to: CGPoint(x: 5, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: 7))
-                path.closeSubpath()
-            }
-            .fill(Color.tpAccent)
-            .frame(width: 10, height: 7)
+                .frame(width: width, height: 1.5)
+            Text(Self.minuteLabel(playheadMinute))
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Color.tpAccent, in: Capsule())
+                .offset(x: gutterWidth + 12, y: -9)
         }
-        .offset(x: x - 0.75)
+        .frame(width: width, height: 1.5, alignment: .leading)
+        .offset(y: y - 0.75)
         .allowsHitTesting(false)
-    }
-
-    // MARK: - 서브클립 줄
-
-    private var subLane: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Text(language.text("서브클립 · 상세활동", "Sub-clips · detailed activity"))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
-                Spacer()
-                if subTrack.isEmpty {
-                    Text(language.text("이 구간에 상세활동이 없습니다", "No detailed activity here"))
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.tpSecondary.opacity(0.8))
-                }
-            }
-            GeometryReader { proxy in
-                let width = max(1, proxy.size.width)
-                let clip = selectedClip
-                let rangeStart = clip?.startMinute ?? 0
-                let rangeEnd = clip?.endMinute ?? NLETrack.dayMinutes
-                let minutes = max(1, rangeEnd - rangeStart)
-                let subWidth = width / CGFloat(minutes)
-                let geometry = NLETimelineGeometry(
-                    minuteWidth: subWidth,
-                    visibleStartMinute: Double(rangeStart),
-                    visibleMinutes: Double(minutes)
-                )
-                ZStack(alignment: .topLeading) {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.tpSurface)
-                    if let clip {
-                        Rectangle()
-                            .fill(Self.tint(for: clip.option.categoryID).opacity(0.12))
-                    }
-                    ForEach(subTrack.clips) { sub in
-                        let x = geometry.x(forMinute: Double(sub.startMinute))
-                        let clipWidth = max(3, geometry.width(minutes: Double(sub.lengthMinutes)))
-                        subClipBody(sub, width: clipWidth)
-                            .frame(width: clipWidth, height: 38)
-                            .offset(x: x, y: 6)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.tpLine, lineWidth: 1)
-                }
-                .contentShape(Rectangle())
-                .gesture(subDragGesture(geometry: geometry))
-            }
-        }
-        .frame(height: 72)
-    }
-
-    private func subClipBody(_ clip: NLEClip, width: CGFloat) -> some View {
-        let tint = Self.tint(for: clip.option.categoryID)
-        let isSelected = clip.id == selectedSubClipID
-        return ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(tint.opacity(0.9))
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .stroke(Color.white.opacity(isSelected ? 0.95 : 0.4), lineWidth: isSelected ? 2 : 1)
-            if width > 40 {
-                Text(clip.option.title)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .padding(.horizontal, 5)
-            }
-            if isSelected {
-                HStack(spacing: 0) {
-                    Rectangle().fill(Color.white).frame(width: 3)
-                    Spacer(minLength: 0)
-                    Rectangle().fill(Color.white).frame(width: 3)
-                }
-            }
-        }
-        .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
     }
 
     // MARK: - 선택 정보
@@ -417,6 +394,17 @@ struct MapHomeNLEClipEditor: View {
                         .padding(.vertical, 3)
                         .background(Color.tpInk.opacity(0.08), in: Capsule())
                         .foregroundStyle(Color.tpSecondary)
+                }
+                if let sub = activeSubClip {
+                    Text("·")
+                        .foregroundStyle(Color.tpSecondary.opacity(0.6))
+                    Text(sub.option.title)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                        .lineLimit(1)
+                    Text(Self.rangeLabel(sub.startMinute, sub.endMinute))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.tpAccent.opacity(0.8))
                 }
             } else {
                 Text(language.text("클립을 고르세요", "Select a clip"))
@@ -471,7 +459,7 @@ struct MapHomeNLEClipEditor: View {
             Spacer(minLength: 0)
             toolButton(
                 title: "",
-                systemImage: "arrow.left.and.right",
+                systemImage: "arrow.up.and.down",
                 isEnabled: true,
                 label: language.text("전체 보기", "Fit whole day")
             ) {
@@ -534,196 +522,74 @@ struct MapHomeNLEClipEditor: View {
         .accessibilityLabel(label ?? title)
     }
 
-    // MARK: - 클립 목록
-
-    /// 하루 전체를 확대하지 않고도 훑을 수 있게 클립을 목록으로도 둔다.
-    /// 목록에서 고르면 타임라인의 재생 헤드도 그 클립 앞으로 따라간다.
-    private var clipList: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Text(language.text("클립 목록", "Clips"))
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
-                Text("\(track.clips.count)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.tpInk.opacity(0.06), in: Capsule())
-                Spacer(minLength: 0)
-                if hasChanges {
-                    Text(language.text("적용 전", "Unsaved"))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpAccent)
-                }
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 34)
-
-            Rectangle()
-                .fill(Color.tpLine)
-                .frame(height: 1)
-
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(track.clips) { clip in
-                        clipListRow(clip)
-                        if clip.id != track.clips.last?.id {
-                            Rectangle()
-                                .fill(Color.tpLine.opacity(0.55))
-                                .frame(height: 1)
-                                .padding(.leading, 30)
-                        }
-                    }
-                }
-                .padding(.bottom, 4)
-            }
-            .scrollIndicators(.hidden)
-            .frame(maxHeight: .infinity)
-        }
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.tpLine, lineWidth: 1)
-        }
-    }
-
-    private func clipListRow(_ clip: NLEClip) -> some View {
-        let isSelected = clip.id == selectedClipID
-        return Button {
-            selectClip(clip)
-        } label: {
-            HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Self.tint(for: clip.option.categoryID))
-                    .frame(width: 4, height: 20)
-                Text(clip.option.title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.tpInk)
-                    .lineLimit(1)
-                if clip.isDirty {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color.tpAccent)
-                }
-                Spacer(minLength: 4)
-                Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.tpSecondary)
-                Text(Self.durationLabel(clip.lengthMinutes, language: language))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
-                    .frame(minWidth: 46, alignment: .trailing)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 38)
-            .background(isSelected ? Color.tpAccent.opacity(0.10) : Color.clear)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - 제스처
 
-    private func dragGesture(geometry: NLETimelineGeometry, width: CGFloat, height: CGFloat) -> some Gesture {
+    /// 한 손가락은 클립 옮기기·자르기·재생 헤드 이동, 두 손가락은 확대다.
+    /// 하루가 세로로 흐르므로 모든 이동은 위아래로 일어난다.
+    private func dragGesture(
+        geometry: NLETimelineGeometry,
+        width: CGFloat,
+        height: CGFloat
+    ) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 // 두 손가락 확대 중에는 클립이 끌려가지 않게 한다.
                 guard zoomBaseWidth <= 0 else { return }
                 if dragMode == .none {
-                    dragMode = resolveDragMode(at: value.startLocation, geometry: geometry, height: height)
+                    dragMode = resolveDragMode(at: value.startLocation, geometry: geometry, width: width)
                     didPushUndoForDrag = false
                     panBaseStartMinute = visibleStartMinute
+                    dragScrollShift = 0
                 }
-                let minute = Int(geometry.minute(forX: value.location.x).rounded())
+                let rawMinute = geometry.minute(forY: value.location.y) + dragScrollShift
+                let minute = Int(rawMinute.rounded())
                 switch dragMode {
                 case .none:
                     break
                 case .pan:
-                    let deltaMinutes = Double(value.translation.width) / Double(max(0.01, minuteWidth))
+                    let deltaMinutes = Double(value.translation.height) / Double(max(0.01, minuteHeight))
                     setVisibleStart(panBaseStartMinute - deltaMinutes)
                 case .scrub:
                     playheadMinute = min(max(minute, 0), NLETrack.dayMinutes)
-                case let .move(id, originMinute, grabMinute):
+                case let .move(lane, id, originMinute, grabMinute):
                     pushUndoIfNeeded()
                     let target = originMinute + (minute - grabMinute)
-                    let snapped = NLESnapPolicy.snapped(
-                        target,
-                        to: NLESnapPolicy.targets(
-                            for: track,
-                            excluding: id,
-                            playheadMinute: playheadMinute
-                        )
-                    )
-                    if track.move(id, toStartMinute: snapped) {
-                        selectedClipID = id
-                    }
-                case let .trimStart(id):
+                    let snapped = NLESnapPolicy.snapped(target, to: snapTargets(lane: lane, excluding: id))
+                    moveClip(lane: lane, id: id, toStartMinute: snapped)
+                case let .trimStart(lane, id):
                     pushUndoIfNeeded()
-                    let snapped = NLESnapPolicy.snapped(
-                        minute,
-                        to: NLESnapPolicy.targets(for: track, excluding: id, playheadMinute: playheadMinute)
-                    )
-                    track.trim(id, edge: .start, toMinute: snapped)
-                case let .trimEnd(id):
+                    let snapped = NLESnapPolicy.snapped(minute, to: snapTargets(lane: lane, excluding: id))
+                    trimClip(lane: lane, id: id, edge: .start, toMinute: snapped)
+                case let .trimEnd(lane, id):
                     pushUndoIfNeeded()
-                    let snapped = NLESnapPolicy.snapped(
-                        minute,
-                        to: NLESnapPolicy.targets(for: track, excluding: id, playheadMinute: playheadMinute)
-                    )
-                    track.trim(id, edge: .end, toMinute: snapped)
+                    let snapped = NLESnapPolicy.snapped(minute, to: snapTargets(lane: lane, excluding: id))
+                    trimClip(lane: lane, id: id, edge: .end, toMinute: snapped)
+                }
+                // 위·아래 끝까지 끌면 화면이 따라 흐른다.
+                if dragMode != .pan {
+                    autoScroll(atY: value.location.y, height: height)
                 }
             }
             .onEnded { _ in
                 dragMode = .none
                 didPushUndoForDrag = false
+                dragScrollShift = 0
             }
     }
 
-    private func subDragGesture(geometry: NLETimelineGeometry) -> some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                let minute = Int(geometry.minute(forX: value.location.x).rounded())
-                if dragMode == .none {
-                    dragMode = resolveSubDragMode(at: value.startLocation.x, geometry: geometry)
-                    didPushUndoForDrag = false
-                }
-                switch dragMode {
-                case let .move(id, originMinute, grabMinute):
-                    pushUndoIfNeeded()
-                    let target = originMinute + (minute - grabMinute)
-                    if subTrack.move(id, toStartMinute: target) {
-                        selectedSubClipID = id
-                    }
-                case let .trimStart(id):
-                    pushUndoIfNeeded()
-                    subTrack.trim(id, edge: .start, toMinute: minute)
-                case let .trimEnd(id):
-                    pushUndoIfNeeded()
-                    subTrack.trim(id, edge: .end, toMinute: minute)
-                default:
-                    break
-                }
-            }
-            .onEnded { _ in
-                dragMode = .none
-                didPushUndoForDrag = false
-            }
-    }
-
-    private func magnifyGesture(width: CGFloat) -> some Gesture {
+    private func magnifyGesture(height: CGFloat) -> some Gesture {
         MagnifyGesture(minimumScaleDelta: 0.01)
             .onChanged { value in
                 if zoomBaseWidth <= 0 {
-                    zoomBaseWidth = minuteWidth
+                    zoomBaseWidth = minuteHeight
                     zoomBaseStartMinute = visibleStartMinute
                 }
                 let base = zoomBaseWidth
-                let anchorX = min(max(value.startAnchor.x, 0), width)
-                let anchorMinute = zoomBaseStartMinute + Double(anchorX) / Double(max(0.01, base))
-                let next = min(max(base * value.magnification, 0.6), 24)
-                minuteWidth = next
-                setVisibleStart(anchorMinute - Double(anchorX) / Double(max(0.01, next)))
+                let anchorY = min(max(value.startAnchor.y, 0), height)
+                let anchorMinute = zoomBaseStartMinute + Double(anchorY) / Double(max(0.01, base))
+                let next = min(max(base * value.magnification, 0.22), 12)
+                minuteHeight = next
+                setVisibleStart(anchorMinute - Double(anchorY) / Double(max(0.01, next)))
             }
             .onEnded { _ in
                 zoomBaseWidth = 0
@@ -739,13 +605,19 @@ struct MapHomeNLEClipEditor: View {
         var selectedSubClipID: String?
     }
 
+    /// 대분류 줄과 서브클립 띠 중 어디를 만지고 있는지.
+    private enum NLEEditorLane: Equatable {
+        case main
+        case sub
+    }
+
     private enum NLEEditorDragMode: Equatable {
         case none
         case pan
         case scrub
-        case move(id: String, originMinute: Int, grabMinute: Int)
-        case trimStart(id: String)
-        case trimEnd(id: String)
+        case move(lane: NLEEditorLane, id: String, originMinute: Int, grabMinute: Int)
+        case trimStart(lane: NLEEditorLane, id: String)
+        case trimEnd(lane: NLEEditorLane, id: String)
     }
 
     private var selectedClip: NLEClip? {
@@ -761,7 +633,11 @@ struct MapHomeNLEClipEditor: View {
     }
 
     private var isSubClipActive: Bool {
-        selectedSubClipID.flatMap { subTrack.clip($0) } != nil
+        activeSubClip != nil
+    }
+
+    private var activeSubClip: NLEClip? {
+        selectedSubClipID.flatMap { subTrack.clip($0) }
     }
 
     private var splitTarget: NLEClip? {
@@ -790,100 +666,154 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    private var rulerStepMinutes: Int {
-        switch minuteWidth {
-        case ..<1.6: 60
-        case ..<4: 30
+    /// 눈금선 간격. 하루 전체를 볼 때는 한 시간, 확대하면 30·15분.
+    private var gridStepMinutes: Int {
+        switch minuteHeight {
+        case ..<0.7: 60
+        case ..<2.2: 30
         default: 15
         }
     }
 
     /// 눈금에 시각을 적는 간격. 하루 전체를 볼 때는 세 시간마다 적는다.
     private var rulerLabelEveryMinutes: Int {
-        switch minuteWidth {
-        case ..<0.5: 180
-        case ..<0.9: 120
-        default: 60
+        switch minuteHeight {
+        case ..<0.55: 180
+        case ..<1.4: 60
+        default: 30
         }
     }
 
     // MARK: - 동작
 
     private func setVisibleStart(_ value: Double) {
-        let visible = Double(max(1, containerWidth)) / Double(max(0.01, minuteWidth))
+        let visible = Double(max(1, containerHeight)) / Double(max(0.01, minuteHeight))
         let maximum = max(0, Double(NLETrack.dayMinutes) - visible)
         visibleStartMinute = min(max(value, 0), maximum)
     }
 
     /// 처음 열면 하루 24시간이 한눈에 들어오게 맞춘다. 확대는 두 손가락으로 한다.
-    private func fitWholeDayIfNeeded(width: CGFloat) {
-        guard !didCenter, width > 1 else { return }
+    private func fitWholeDayIfNeeded(height: CGFloat) {
+        guard !didCenter, height > 1 else { return }
         didCenter = true
-        minuteWidth = max(0.24, width / CGFloat(NLETrack.dayMinutes))
+        if let initialMinuteHeight {
+            minuteHeight = initialMinuteHeight
+            let visible = Double(height) / Double(initialMinuteHeight)
+            setVisibleStart(Double(focusMinute) - visible / 2)
+            return
+        }
+        minuteHeight = max(0.22, height / CGFloat(NLETrack.dayMinutes))
         visibleStartMinute = 0
+    }
+
+    /// 클립을 끄는 동안 위·아래 가장자리에 닿으면 화면을 이어서 흐르게 한다.
+    private func autoScroll(atY y: CGFloat, height: CGFloat) {
+        guard minuteHeight > 0.01, height > 60 else { return }
+        let band: CGFloat = 26
+        var delta: Double = 0
+        if y < band {
+            delta = -Double(band - y) / Double(minuteHeight)
+        } else if y > height - band {
+            delta = Double(y - (height - band)) / Double(minuteHeight)
+        }
+        guard delta != 0 else { return }
+        let before = visibleStartMinute
+        setVisibleStart(visibleStartMinute + delta)
+        dragScrollShift += visibleStartMinute - before
     }
 
     private func fitWholeDay() {
-        guard containerWidth > 1 else { return }
-        minuteWidth = max(0.6, containerWidth / CGFloat(NLETrack.dayMinutes))
+        guard containerHeight > 1 else { return }
+        minuteHeight = max(0.22, containerHeight / CGFloat(NLETrack.dayMinutes))
         visibleStartMinute = 0
-    }
-
-    /// 목록에서 클립을 고른다. 확대해 둔 상태라면 그 클립이 보이도록 화면을 옮긴다.
-    private func selectClip(_ clip: NLEClip) {
-        selectedClipID = clip.id
-        selectedSubClipID = nil
-        playheadMinute = min(max(clip.startMinute, 0), NLETrack.dayMinutes)
-        let visible = Double(max(1, containerWidth)) / Double(max(0.01, minuteWidth))
-        guard visible < Double(NLETrack.dayMinutes) else { return }
-        setVisibleStart(Double(clip.startMinute) - visible / 2)
     }
 
     private func resolveDragMode(
         at point: CGPoint,
         geometry: NLETimelineGeometry,
-        height: CGFloat
+        width: CGFloat
     ) -> NLEEditorDragMode {
-        let minute = Int(geometry.minute(forX: point.x).rounded())
-        // 눈금을 끌면 재생 헤드가 움직인다.
-        if point.y < 22 { return .scrub }
-        if abs(geometry.x(forMinute: Double(playheadMinute)) - point.x) <= 10 { return .scrub }
-        guard point.y <= height - 4, let clip = track.clip(atMinute: minute) else { return .pan }
-        if let selected = selectedClip, selected.id == clip.id {
-            let startX = geometry.x(forMinute: Double(clip.startMinute))
-            let endX = geometry.x(forMinute: Double(clip.endMinute))
-            if abs(point.x - startX) <= 14, clip.lengthMinutes > NLETrack.minimumClipMinutes {
-                return .trimStart(id: clip.id)
+        let minute = Int(geometry.minute(forY: point.y).rounded())
+        // 왼쪽 눈금 띠를 끌면 재생 헤드가 움직인다.
+        if point.x <= gutterWidth { return .scrub }
+        if abs(geometry.y(forMinute: Double(playheadMinute)) - point.y) <= 9 { return .scrub }
+        // 고른 클립의 상세활동 띠를 먼저 본다.
+        if let clip = selectedClip,
+           let sub = subClip(at: point, clip: clip, geometry: geometry, width: width) {
+            if selectedSubClipID == sub.id {
+                let topY = geometry.y(forMinute: Double(sub.startMinute))
+                let bottomY = geometry.y(forMinute: Double(sub.endMinute))
+                if abs(point.y - topY) <= 10, sub.lengthMinutes > 1 {
+                    return .trimStart(lane: .sub, id: sub.id)
+                }
+                if abs(point.y - bottomY) <= 10, sub.lengthMinutes > 1 {
+                    return .trimEnd(lane: .sub, id: sub.id)
+                }
             }
-            if abs(point.x - endX) <= 14, clip.lengthMinutes > NLETrack.minimumClipMinutes {
-                return .trimEnd(id: clip.id)
+            selectedSubClipID = sub.id
+            return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: minute)
+        }
+        guard let clip = track.clip(atMinute: minute) else {
+            selectedSubClipID = nil
+            return .pan
+        }
+        if let selected = selectedClip, selected.id == clip.id {
+            let topY = geometry.y(forMinute: Double(clip.startMinute))
+            let bottomY = geometry.y(forMinute: Double(clip.endMinute))
+            if abs(point.y - topY) <= 12, clip.lengthMinutes > NLETrack.minimumClipMinutes {
+                return .trimStart(lane: .main, id: clip.id)
+            }
+            if abs(point.y - bottomY) <= 12, clip.lengthMinutes > NLETrack.minimumClipMinutes {
+                return .trimEnd(lane: .main, id: clip.id)
             }
         }
         selectedClipID = clip.id
         selectedSubClipID = nil
-        return .move(id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
+        return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
     }
 
-    private func resolveSubDragMode(at x: CGFloat, geometry: NLETimelineGeometry) -> NLEEditorDragMode {
-        let minute = Int(geometry.minute(forX: x).rounded())
-        if let sub = selectedSubClipID.flatMap({ subTrack.clip($0) }) {
-            let startX = geometry.x(forMinute: Double(sub.startMinute))
-            let endX = geometry.x(forMinute: Double(sub.endMinute))
-            if abs(x - startX) <= 12, sub.endMinute - sub.startMinute > 1 {
-                return .trimStart(id: sub.id)
-            }
-            if abs(x - endX) <= 12, sub.endMinute - sub.startMinute > 1 {
-                return .trimEnd(id: sub.id)
-            }
+    /// 상세활동 띠 위를 눌렀는지. 띠는 고른 클립 안쪽 오른편에만 있다.
+    private func subClip(
+        at point: CGPoint,
+        clip: NLEClip,
+        geometry: NLETimelineGeometry,
+        width: CGFloat
+    ) -> NLEClip? {
+        guard !subTrack.isEmpty else { return nil }
+        guard point.x >= width - subStripWidth - 8 else { return nil }
+        let minute = Int(geometry.minute(forY: point.y).rounded())
+        return subTrack.clip(atMinute: minute)
+    }
+
+    private func snapTargets(lane: NLEEditorLane, excluding id: String) -> [Int] {
+        NLESnapPolicy.targets(
+            for: lane == .main ? track : subTrack,
+            excluding: id,
+            playheadMinute: playheadMinute
+        )
+    }
+
+    @discardableResult
+    private func moveClip(lane: NLEEditorLane, id: String, toStartMinute minute: Int) -> Bool {
+        switch lane {
+        case .main:
+            let moved = track.move(id, toStartMinute: minute)
+            if moved { selectedClipID = id }
+            return moved
+        case .sub:
+            let moved = subTrack.move(id, toStartMinute: minute)
+            if moved { selectedSubClipID = id }
+            return moved
         }
-        if let sub = subTrack.clip(atMinute: minute) {
-            // 서브클립은 자기 상세활동 구간에 묶여 있어 통째로 옮기지 않는다.
-            // 몸통을 누르면 고르기만 하고, 양 끝을 잡아야 자를 수 있다.
-            selectedSubClipID = sub.id
-            return .none
+    }
+
+    private func trimClip(lane: NLEEditorLane, id: String, edge: NLEClipEdge, toMinute minute: Int) {
+        switch lane {
+        case .main:
+            track.trim(id, edge: edge, toMinute: minute)
+        case .sub:
+            subTrack.trim(id, edge: edge, toMinute: minute)
         }
-        selectedSubClipID = nil
-        return .none
     }
 
     private func splitAtPlayhead() {
@@ -1189,6 +1119,9 @@ struct NLEClipEditorPreviewHost: View {
             segments: Self.segments,
             details: Self.details,
             focusMinute: 600,
+            initialMinuteHeight: ProcessInfo.processInfo.arguments.contains("-nleZoom")
+                ? 2.6
+                : nil,
             onSaved: {}
         )
     }

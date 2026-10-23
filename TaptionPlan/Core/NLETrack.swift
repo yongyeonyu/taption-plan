@@ -522,5 +522,19 @@ struct NLETimelineGeometry: Hashable, Sendable {
         CGFloat(max(0, minutes) * Double(minuteWidth))
     }
 
+    // 하루는 세로로 흐른다. 같은 계산을 y축 이름으로도 쓴다.
+
+    func y(forMinute minute: Double) -> CGFloat {
+        x(forMinute: minute)
+    }
+
+    func minute(forY y: CGFloat) -> Double {
+        minute(forX: y)
+    }
+
+    func height(minutes: Double) -> CGFloat {
+        width(minutes: minutes)
+    }
+
     var visibleEndMinute: Double { visibleStartMinute + visibleMinutes }
 }

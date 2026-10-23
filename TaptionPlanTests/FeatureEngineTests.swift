@@ -29315,6 +29315,17 @@ final class NLETrackTests: XCTestCase {
     }
 
     /// 스냅은 이웃 클립의 끝, 재생 헤드, 하루의 양 끝에 붙는다.
+    func testVerticalGeometryUsesTheSameMathAsHorizontal() {
+        let geometry = NLETimelineGeometry(
+            minuteWidth: 1.5,
+            visibleStartMinute: 120,
+            visibleMinutes: 300
+        )
+        XCTAssertEqual(geometry.y(forMinute: 180), 90, accuracy: 0.001)
+        XCTAssertEqual(geometry.height(minutes: 60), 90, accuracy: 0.001)
+        XCTAssertEqual(geometry.minute(forY: 90), 180, accuracy: 0.001)
+    }
+
     func testSnapPullsToNeighborEdgesAndPlayhead() {
         let targets = [0, 360, 480, 1_440]
         XCTAssertEqual(NLESnapPolicy.snapped(478, to: targets), 480)
