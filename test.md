@@ -2584,4 +2584,10 @@
 - 빌드 BUILD SUCCEEDED.
 
 ## SUM1022BU01
-- 빌드 BUILD SUCCEEDED.
+- 빌드 BUILD SUCCEEDED(2026-10-22, Debug).
+- 2026-10-23: 빌드 번호 229→230(프로젝트 설정 8곳, 앱·위젯·Watch·Watch 위젯 Info.plist).
+- Release archive SUCCEEDED: `build/validation/SUM1022BU01/BOKKIPlan-230.xcarchive`. 산출물 앱 `com.taption.plan` 230, 포함 제품은 앱·iPhone 위젯뿐(위젯 230), Watch 제품 없음.
+- Export SUCCEEDED → `TaptionPlan.ipa` 44,019,163 bytes. 업로드 `UPLOAD SUCCEEDED`(Delivery UUID a29fc4e7-455b-49e1-b3fd-7d94236c648e).
+- App Store Connect: build 230 `processingState = VALID`. 내부 그룹 `TP Taption Plan 내부 테스트` 연결 POST 204, 그룹 빌드 목록에서 230 확인.
+- 빌드 229는 VALID였으나 그룹 미연결이었고 이번 순서 변경을 포함하지 않음(변경 커밋이 229 빌드 이후). 230이 대체.
+- 실기기에서 하루 요약 시트를 열어 범위 지정이 요약 항목 아래에 오는지 확인은 미실시.
