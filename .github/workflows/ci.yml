@@ -6,6 +6,13 @@ on:
   pull_request:
 
 jobs:
+  architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check architecture metrics against baseline
+        run: python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json
+
   packages:
     runs-on: macos-latest
     steps:
