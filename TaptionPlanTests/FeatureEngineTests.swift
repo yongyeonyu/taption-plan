@@ -354,6 +354,33 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNil(legacyDecoded.currentActivity)
     }
 
+    /// 표시 > 카운터: 연봉은 설정 화면을 열고, 나머지 여섯 개는 켜고 끄기만 한다.
+    func testCounterKindsMapToDayCategories() {
+        XCTAssertEqual(MapHomeCounterKind.allCases.count, 6)
+        XCTAssertEqual(
+            MapHomeCounterKind.allCases.map(\.storageKey),
+            [
+                "mapHomeCounter.steps",
+                "mapHomeCounter.distance",
+                "mapHomeCounter.work",
+                "mapHomeCounter.study",
+                "mapHomeCounter.hobby",
+                "mapHomeCounter.exercise",
+            ]
+        )
+        // 걸음·이동은 대분류가 아니라 따로 세고, 나머지는 하루요약 대분류 시간을 그대로 쓴다.
+        XCTAssertNil(MapHomeCounterKind.steps.categoryID)
+        XCTAssertNil(MapHomeCounterKind.distance.categoryID)
+        XCTAssertEqual(MapHomeCounterKind.work.categoryID, MapHomeSalaryPolicy.workKey)
+        XCTAssertEqual(MapHomeCounterKind.study.categoryID, "study")
+        XCTAssertEqual(MapHomeCounterKind.hobby.categoryID, "hobby")
+        XCTAssertEqual(MapHomeCounterKind.exercise.categoryID, "exercise")
+
+        // 같은 시간을 두 카운터가 나눠 갖지 않는다.
+        let ids = MapHomeCounterKind.allCases.compactMap(\.categoryID)
+        XCTAssertEqual(Set(ids).count, ids.count)
+    }
+
     func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
         let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(

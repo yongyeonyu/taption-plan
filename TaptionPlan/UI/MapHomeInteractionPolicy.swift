@@ -354,9 +354,70 @@ enum MapHomeDaySummaryLayout {
     }
 }
 
+/// 화랑이 위에 쌓아 보여 주는 카운터. 연봉 카운터는 자체 설정 화면을 갖고,
+/// 나머지는 켜고 끄기만 한다.
+enum MapHomeCounterKind: String, CaseIterable, Identifiable {
+    case steps
+    case distance
+    case work
+    case study
+    case hobby
+    case exercise
+
+    var id: String { rawValue }
+
+    /// 켜고 끈 값을 기기에 저장하는 키.
+    var storageKey: String { "mapHomeCounter." + rawValue }
+
+    var systemImage: String {
+        switch self {
+        case .steps: "figure.walk"
+        case .distance: "point.topleft.down.to.point.bottomright.curvepath.fill"
+        case .work: "briefcase.fill"
+        case .study: "book.fill"
+        case .hobby: "paintpalette.fill"
+        case .exercise: "figure.strengthtraining.traditional"
+        }
+    }
+
+    /// 하루요약 대분류 id. 걸음·이동은 대분류가 아니라 따로 센다.
+    var categoryID: String? {
+        switch self {
+        case .steps, .distance: nil
+        case .work: "work"
+        case .study: "study"
+        case .hobby: "hobby"
+        case .exercise: "exercise"
+        }
+    }
+
+    /// 설정 메뉴에 쓰는 이름.
+    func menuTitle(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .steps: language.text("걸음걸이 카운터", "Step counter")
+        case .distance: language.text("이동거리 카운터", "Distance counter")
+        case .work: language.text("업무시간 카운터", "Work time counter")
+        case .study: language.text("학습시간 카운터", "Study time counter")
+        case .hobby: language.text("취미시간 카운터", "Hobby time counter")
+        case .exercise: language.text("운동시간 카운터", "Exercise time counter")
+        }
+    }
+
+    /// 화랑이 위 배지에 쓰는 짧은 이름.
+    func badgeTitle(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .steps: language.text("걸음", "Steps")
+        case .distance: language.text("거리", "Distance")
+        case .work: language.text("업무", "Work")
+        case .study: language.text("학습", "Study")
+        case .hobby: language.text("취미", "Hobby")
+        case .exercise: language.text("운동", "Exercise")
+        }
+    }
+}
+
 enum MapHomeLongPressRoutingMath {
     static let exclusionPadding: CGFloat = 8
-
     @MainActor
     static func isAnnotationTouch(_ view: UIView?) -> Bool {
         var currentView = view

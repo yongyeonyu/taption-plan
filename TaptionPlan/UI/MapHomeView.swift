@@ -2329,6 +2329,7 @@ struct MapHomeView: View {
     @State private var isCategoryMenuExpanded = false
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
+    @State private var isCounterMenuExpanded = false
     @State private var isStrideCalibrationPresented = false
     @State private var isSalarySettingsPresented = false
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var salaryAnnualPay = 0.0
@@ -2386,6 +2387,13 @@ struct MapHomeView: View {
     @State private var photosNeedReadingRetry = false
     @AppStorage("mapHomeShowsPhotos") private var showsPhotosOnMap = true
     @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
+    // 표시 > 카운터에서 켜고 끄는 카운터. 연봉 카운터만 따로 설정 화면을 갖는다.
+    @AppStorage(MapHomeCounterKind.steps.storageKey) private var showsStepCounter = true
+    @AppStorage(MapHomeCounterKind.distance.storageKey) private var showsDistanceCounter = true
+    @AppStorage(MapHomeCounterKind.work.storageKey) private var showsWorkCounter = true
+    @AppStorage(MapHomeCounterKind.study.storageKey) private var showsStudyCounter = true
+    @AppStorage(MapHomeCounterKind.hobby.storageKey) private var showsHobbyCounter = true
+    @AppStorage(MapHomeCounterKind.exercise.storageKey) private var showsExerciseCounter = true
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
@@ -3549,10 +3557,14 @@ struct MapHomeView: View {
         GeometryReader { geometry in
             if let stickman = displayedStickmanViewportPoint,
                CGRect(origin: .zero, size: geometry.size).contains(stickman) {
-                salaryCounterLabel(at: CGPoint(
+                let anchor = CGPoint(
                     x: stickman.x,
                     y: stickman.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42
-                ))
+                )
+                ZStack {
+                    salaryCounterLabel(at: anchor)
+                    counterBadgeStack(above: anchor)
+                }
             }
         }
         .allowsHitTesting(false)
@@ -5612,6 +5624,8 @@ struct MapHomeView: View {
             if let anchor = salaryAnchor(viewport: viewport, stickmanPoint: playback == nil ? nil : stickmanPoint) {
                 salaryCounterLabel(at: anchor)
                     .zIndex(MapHomeLayerPriority.stickman)
+                // 나머지 카운터는 연봉 카운터 위로 쌓는다(표시 > 카운터에서 켠 것만).
+                counterBadgeStack(above: anchor)
             }
 
             if let selectedSearchPin,
@@ -6408,6 +6422,7 @@ struct MapHomeView: View {
         isUserLocationsMenuExpanded = false
         isCategoryMenuExpanded = false
         isDisplayMenuExpanded = false
+        isCounterMenuExpanded = false
         isSettingsMenuExpanded = false
         isGPSLoggingMenuExpanded = false
         withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
@@ -7293,6 +7308,75 @@ struct MapHomeView: View {
               let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return nil }
         // 화랑이가 집에 있으면 핀 안의 화랑이 바로 위, 아니면 집 지붕 위 날씨 배지 위에 둔다.
         return CGPoint(x: pin.x, y: pin.y + MapHomePlacePinLayout.salaryOffsetFromPinCenter)
+    }
+
+    /// 연봉 카운터가 지금 그려지는지. 카운터 배지를 어디서부터 쌓을지 정하는 데 쓴다.
+    private var salaryCounterIsVisible: Bool {
+        salaryLive != nil && recordingShows(\.salary)
+    }
+
+    /// 화랑이 위에 쌓아 보여 줄 카운터 값. 켠 것만, 값이 있는 것만 올린다.
+    private var mapCounterBadges: [MapHomeCounterBadge] {
+        enabledCounterKinds.compactMap { kind in
+            counterText(kind).map { MapHomeCounterBadge(kind: kind, text: $0) }
+        }
+    }
+
+    private func counterText(_ kind: MapHomeCounterKind) -> String? {
+        switch kind {
+        case .steps:
+            guard let steps = dayStepCount, steps > 0 else { return nil }
+            return steps.formatted()
+        case .distance:
+            let meters = MapHomeDayTravelSummary.entries(
+                from: currentDayDataSnapshot?.travel ?? []
+            ).reduce(0) { $0 + $1.meters }
+            guard meters > 0 else { return nil }
+            return MapHomeDayTravelSummary.distanceText(meters)
+        case .work, .study, .hobby, .exercise:
+            guard let categoryID = kind.categoryID,
+                  let seconds = daySummaryCategories.first(where: {
+                      $0.id == categoryID
+                  })?.seconds,
+                  seconds >= 60
+            else { return nil }
+            return DurationText.localized(seconds, english: language == .english)
+        }
+    }
+
+    /// 카운터 배지를 연봉 카운터 위로 쌓는다. 아래에서 위로 자라도록 바닥을 맞춰 놓는다.
+    private func counterBadgeStack(above anchor: CGPoint) -> some View {
+        let badges = mapCounterBadges
+        let bottomY = anchor.y - (salaryCounterIsVisible ? 26 : 8)
+        return ZStack(alignment: .bottom) {
+            Color.clear
+            VStack(spacing: 4) {
+                ForEach(badges) { badge in
+                    counterPill(badge.kind, text: badge.text)
+                }
+            }
+        }
+        .frame(width: 240, height: 320, alignment: .bottom)
+        .position(x: anchor.x, y: bottomY - 160)
+        .allowsHitTesting(false)
+        .zIndex(MapHomeLayerPriority.stickman)
+    }
+
+    private func counterPill(_ kind: MapHomeCounterKind, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: kind.systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.tpAccent)
+            Text(text)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.tpInk)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .mapHomeGlass(in: Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(kind.badgeTitle(language)) \(text)")
     }
 
     private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
@@ -9106,12 +9190,7 @@ struct MapHomeView: View {
                 }
                 .accessibilityLabel(language.text("지도 스타일 선택", "Choose map style"))
 
-                Button {
-                    isSalarySettingsPresented = true
-                } label: {
-                    displaySubRow("wonsign.circle.fill", language.text("연봉 카운터", "Salary counter"))
-                }
-                .buttonStyle(.plain)
+                counterMenuItem
                 Button {
                     isStrideCalibrationPresented = true
                 } label: {
@@ -9182,6 +9261,101 @@ struct MapHomeView: View {
 
             }
         }
+    }
+
+    /// 표시 안의 카운터 하위 메뉴. 연봉 카운터는 지금 설정 화면을 그대로 열고,
+    /// 나머지 여섯 개는 켜고 끄기만 한다.
+    private var counterMenuItem: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                isCounterMenuExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Label(
+                        language.text("카운터", "Counters"),
+                        systemImage: "gauge.with.dots.needle.50percent"
+                    )
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    Spacer()
+                    Text(
+                        language.text(
+                            "\(enabledCounterKinds.count)개 켜짐",
+                            "\(enabledCounterKinds.count) on"
+                        )
+                    )
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    Image(systemName: isCounterMenuExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("카운터 메뉴 열기", "Open counter menu"))
+
+            if isCounterMenuExpanded {
+                VStack(spacing: 2) {
+                    Button {
+                        isSalarySettingsPresented = true
+                    } label: {
+                        displaySubRow(
+                            "wonsign.circle.fill",
+                            language.text("연봉 카운터", "Salary counter")
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    ForEach(MapHomeCounterKind.allCases) { kind in
+                        Toggle(isOn: counterBinding(kind)) {
+                            Label(kind.menuTitle(language), systemImage: kind.systemImage)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        }
+                        .tint(Color.tpAccent)
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .accessibilityLabel(kind.menuTitle(language))
+                    }
+                }
+                .padding(.leading, 10)
+            }
+        }
+    }
+
+    private func counterBinding(_ kind: MapHomeCounterKind) -> Binding<Bool> {
+        Binding(
+            get: { isCounterOn(kind) },
+            set: { setCounter(kind, isOn: $0) }
+        )
+    }
+
+    private func isCounterOn(_ kind: MapHomeCounterKind) -> Bool {
+        switch kind {
+        case .steps: showsStepCounter
+        case .distance: showsDistanceCounter
+        case .work: showsWorkCounter
+        case .study: showsStudyCounter
+        case .hobby: showsHobbyCounter
+        case .exercise: showsExerciseCounter
+        }
+    }
+
+    private func setCounter(_ kind: MapHomeCounterKind, isOn: Bool) {
+        switch kind {
+        case .steps: showsStepCounter = isOn
+        case .distance: showsDistanceCounter = isOn
+        case .work: showsWorkCounter = isOn
+        case .study: showsStudyCounter = isOn
+        case .hobby: showsHobbyCounter = isOn
+        case .exercise: showsExerciseCounter = isOn
+        }
+    }
+
+    private var enabledCounterKinds: [MapHomeCounterKind] {
+        MapHomeCounterKind.allCases.filter { isCounterOn($0) }
     }
 
     private var settingsMenuItem: some View {
@@ -20510,6 +20684,14 @@ struct MapHomeDaySummaryEntry: Identifiable, Hashable {
 
 /// 지도에서 여는 하루 대분류 요약. 세부 활동은 건드리지 않고, 대분류별
 /// 소요 시간과 비중만 막대로 보여준다.
+/// 화랑이 위에 쌓는 카운터 한 줄(걸음·거리·업무·학습·취미·운동).
+struct MapHomeCounterBadge: Identifiable {
+    let kind: MapHomeCounterKind
+    let text: String
+
+    var id: String { kind.rawValue }
+}
+
 /// 하루 요약 맨 위에 보여 주는 집 성장 카드 값. 집 핀의 성장 값과 같은 출처다.
 struct MapHomeGrowthCardInfo: Equatable {
     var level: Int
