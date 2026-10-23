@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaptionPlan 디자인 시스템 · v1.0</title>
+<style>
+:root{
+  /* ── semantic roles (DESIGN_SYSTEM.md §2.1.1) ── */
+  --ink:#3E3320;
+  --ink-2:#6B5D43;
+  --ink-weak:#7A6C50;
+  --bg:#F3EAD6;
+  --surface:#FBF6EA;
+  --surface-cream:#FFF9EC;
+  --line:#E3D6B8;
+  --line-control:#8F8571;
+  --accent:#C65D4D;
+  --accent-text:#A8473A;
+  --accent-wash:rgba(198,93,77,.08);
+  --accent-fill:#B25445;
+  --holiday:#DB454D;
+  --saturday:#3D78C4;
+  --now:#FF3B30;
+  --sky:#B9DDED;
+
+  /* ── category: identity (never carries text) ── */
+  --cat-activity:#43A047; --cat-work:#2E6FDB; --cat-study:#00ACC1;
+  --cat-hobby:#9C4DCC;    --cat-sleep:#3F3D99; --cat-movement:#F57C00;
+  --cat-eating:#E5B800;   --cat-exercise:#D32F2F; --cat-health:#EC407A;
+  --cat-unconfirmed:#8D8D8D;
+  /* ── category: strong (carries white text ≥4.5) ── */
+  --catS-activity:#368039; --catS-work:#2D6ED8; --catS-study:#007D8D;
+  --catS-hobby:#9B4DCB;    --catS-sleep:#3F3D99; --catS-movement:#B15A00;
+  --catS-eating:#896E00;   --catS-exercise:#D32F2F; --catS-health:#CC3769;
+  --catS-unconfirmed:#717171;
+  /* ── category: wash (clip block fill = cat 30% over surface; ink ≥6.8) ── */
+  --catW-activity:#C4DCB9; --catW-work:#BECEE6; --catW-study:#B0E0DE;
+  --catW-hobby:#DEC3E1;    --catW-sleep:#C3BED2; --catW-movement:#F9D1A4;
+  --catW-eating:#F4E3A4;   --catW-exercise:#EFBAB2; --catW-health:#F6BFC8;
+  --catW-unconfirmed:#DAD6CE;
+
+  /* ── space ── */
+  --x1:1px; --x2:2px; --x3:3px; --x4:4px; --x6:6px; --x8:8px;
+  --x10:10px; --x12:12px; --x16:16px; --x20:20px; --x24:24px; --x32:32px;
+  /* ── radius ── */
+  --r4:4px; --r8:8px; --r12:12px; --r16:16px; --r22:22px;
+  /* ── elevation ── */
+  --e1:0 1px 4px rgba(0,0,0,.05);
+  --e2:0 3px 10px rgba(0,0,0,.06);
+  --e3:0 8px 20px rgba(0,0,0,.12);
+
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Helvetica Neue",sans-serif;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{
+  margin:0;background:#EDE4D2;color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.47;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══════════ shell ══════════ */
+.shell{display:grid;grid-template-columns:238px minmax(0,1fr);max-width:1360px;margin:0 auto}
+nav{
+  position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+  padding:var(--x24) var(--x16) var(--x32);border-right:1px solid var(--line);
+}
+nav .brand{font-size:13px;font-weight:600;letter-spacing:-.1px;margin-bottom:var(--x2)}
+nav .ver{font-size:11px;font-weight:600;color:var(--ink-2);letter-spacing:.1px;
+  font-family:var(--mono);margin-bottom:var(--x20)}
+nav a{
+  display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);text-decoration:none;
+  padding:5px var(--x8);border-radius:var(--r8);margin-bottom:var(--x1);
+}
+nav a:hover{background:var(--accent-wash);color:var(--accent-text)}
+nav a.sub{padding-left:var(--x16);font-size:12px;color:var(--ink-weak)}
+nav .grp{font-size:10px;font-weight:700;color:var(--ink-weak);letter-spacing:.08em;
+  margin:var(--x16) 0 var(--x6);padding-left:var(--x8);text-transform:uppercase}
+
+main{padding:var(--x24) var(--x32) 96px;min-width:0}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr}
+  nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  main{padding:var(--x20) var(--x16) 64px}
+}
+
+/* ══════════ typography of the doc itself ══════════ */
+h1{font-size:34px;line-height:1.06;letter-spacing:-.4px;font-weight:700;margin:0 0 var(--x8)}
+h2{font-size:22px;line-height:1.14;letter-spacing:-.3px;font-weight:700;
+   margin:56px 0 var(--x16);padding-top:var(--x24);border-top:1px solid var(--line)}
+h2 .num{font-family:var(--mono);font-size:13px;color:var(--accent-text);
+   font-weight:700;margin-right:var(--x8);letter-spacing:0}
+h3{font-size:17px;line-height:1.24;letter-spacing:-.1px;font-weight:600;margin:32px 0 var(--x10)}
+h4{font-size:14px;font-weight:600;margin:var(--x20) 0 var(--x8);color:var(--ink)}
+p{margin:0 0 var(--x12);max-width:74ch}
+.lede{font-size:17px;line-height:1.5;color:var(--ink-2);max-width:66ch;margin-bottom:var(--x24)}
+code{font-family:var(--mono);font-size:.86em;background:rgba(62,51,32,.055);
+  padding:1px 5px;border-radius:var(--r4);color:var(--ink)}
+strong{font-weight:600}
+a{color:var(--accent-text)}
+hr{border:0;border-top:1px solid var(--line);margin:var(--x24) 0}
+
+/* ══════════ reusable bits ══════════ */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);
+  padding:var(--x20);margin-bottom:var(--x16)}
+.card.tight{padding:var(--x16)}
+.card-h{font-size:13px;font-weight:600;margin-bottom:var(--x2)}
+.card-s{font-size:12px;color:var(--ink-2);margin-bottom:var(--x16)}
+
+.row{display:flex;gap:var(--x12);flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--x16)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--x12)}
+@media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:var(--x16)}
+td,th{overflow-wrap:anywhere}
+th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+   text-transform:uppercase;color:var(--ink-weak);
+   padding:0 var(--x8) var(--x6);border-bottom:1px solid var(--line)}
+td{padding:var(--x6) var(--x8);border-bottom:1px solid rgba(227,214,184,.55);
+   vertical-align:middle}
+td.n,th.n{text-align:right;font-family:var(--mono);font-size:11.5px;
+   font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(198,93,77,.035)}
+td code{background:none;padding:0;font-size:11.5px}
+
+/* contrast badge */
+.cr{display:inline-flex;align-items:center;gap:3px;font-family:var(--mono);
+  font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:var(--r4);
+  font-variant-numeric:tabular-nums}
+.cr.pass{background:rgba(54,128,57,.13);color:#2C6B2F}
+.cr.warn{background:rgba(137,110,0,.14);color:#6E5800}
+.cr.fail{background:rgba(204,55,105,.13);color:#A32A54}
+
+/* callout */
+.note{border-left:3px solid var(--accent-text);background:var(--accent-wash);
+  padding:var(--x12) var(--x16);border-radius:0 var(--r8) var(--r8) 0;
+  margin:var(--x16) 0;font-size:13px;line-height:1.5}
+.note.warn{border-color:#896E00;background:rgba(137,110,0,.07)}
+.note .t{font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent-text);margin-bottom:var(--x4)}
+.note.warn .t{color:#6E5800}
+.note p{margin:0 0 var(--x6);max-width:70ch}
+.note p:last-child{margin:0}
+
+/* ══════════ colour swatches ══════════ */
+.sw{height:38px;border-radius:var(--r8);border:1px solid rgba(62,51,32,.10)}
+.sw-lg{height:64px;border-radius:var(--r12)}
+.chipset{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:var(--x10)}
+.chipset .item{}
+.chipset .nm{font-size:11px;font-weight:600;margin-top:var(--x4)}
+.chipset .hx{font-family:var(--mono);font-size:10.5px;color:var(--ink-2)}
+
+/* ══════════ type specimen ══════════ */
+.spec{display:grid;grid-template-columns:132px minmax(0,1fr) 152px;
+  gap:var(--x12);align-items:baseline;padding:var(--x10) 0;
+  border-bottom:1px solid rgba(227,214,184,.6)}
+.spec:last-child{border-bottom:0}
+.spec .tk{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent-text)}
+.spec .mt{font-family:var(--mono);font-size:10px;color:var(--ink-weak);display:block;margin-top:2px}
+.spec .sm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spec .ms{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);text-align:right}
+@media(max-width:700px){
+  .spec{grid-template-columns:1fr;gap:var(--x4)}
+  .spec .ms{text-align:left}
+}
+
+/* ══════════ spacing / radius / elev demos ══════════ */
+.bar-demo{display:flex;align-items:center;gap:var(--x10);margin-bottom:var(--x6)}
+.bar-demo .lb{font-family:var(--mono);font-size:11px;width:74px;color:var(--accent-text);font-weight:600}
+.bar-demo .bx{height:14px;background:var(--accent);border-radius:2px;opacity:.82}
+.bar-demo .ct{font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.rad-demo{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:var(--x12)}
+.rad-demo .cell{text-align:center}
+.rad-demo .box{height:64px;background:var(--surface-cream);border:1px solid var(--line);
+  box-shadow:var(--e1);margin-bottom:var(--x4)}
+.rad-demo .lb{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent-text)}
+.rad-demo .ct{font-size:10px;color:var(--ink-weak)}
+.elev-demo{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--x16)}
+@media(max-width:640px){.elev-demo{grid-template-columns:repeat(2,1fr)}}
+.elev-demo .box{height:76px;border-radius:var(--r12);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:12px;font-weight:600;color:var(--accent-text)}
+
+/* ══════════ phone frame ══════════ */
+.phone{
+  width:390px;max-width:100%;background:var(--bg);border:1px solid #CFC2A6;
+  border-radius:28px;overflow:hidden;position:relative;
+  font-size:13px;line-height:1.3;
+}
+.phone-cap{font-size:11px;font-weight:600;color:var(--ink-2);margin:var(--x8) 0 var(--x6);
+  font-family:var(--mono)}
+
+/* map home chrome */
+.ph-head{height:46px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 var(--x16);position:relative;z-index:3}
+.iconbtn{width:40px;height:40px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-size:15px;box-shadow:var(--e1);flex:0 0 auto}
+.datebadge{width:44px;height:40px;border-radius:var(--r22);background:var(--surface);
+  border:1px solid var(--line);box-shadow:var(--e1);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;line-height:1}
+.datebadge .wd{font-size:9px;font-weight:600;color:var(--saturday);letter-spacing:.3px}
+.datebadge .dd{font-size:17px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:1px}
+
+/* map body */
+.mapbody{position:relative;height:300px;overflow:hidden;
+  background:
+    radial-gradient(circle at 28% 24%,#DCE8CE 0 20%,transparent 20%),
+    radial-gradient(circle at 74% 66%,#D5E4C6 0 24%,transparent 24%),
+    linear-gradient(#EDF0DE,#E6EAD5);}
+.road{position:absolute;background:#F7F2E4;border:1px solid #E0D8C2}
+.road.h{left:0;right:0;height:16px}
+.road.v{top:0;bottom:0;width:14px}
+
+.house{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:88px;height:88px}
+.house .roof{position:absolute;left:2px;top:2px;width:84px;height:42px;
+  background:var(--accent);clip-path:polygon(50% 0,100% 100%,0 100%);opacity:.92}
+.house .body{position:absolute;left:17px;top:42px;width:54px;height:40px;
+  background:var(--surface);border:1.5px solid var(--ink-2);border-radius:3px}
+.house .door{position:absolute;left:36px;top:60px;width:16px;height:22px;
+  background:var(--ink-2);border-radius:3px 3px 0 0;opacity:.72}
+.house .win{position:absolute;left:24px;top:50px;width:11px;height:11px;
+  background:var(--sky);border:1px solid var(--ink-2);border-radius:2px}
+.mcat{position:absolute;left:50%;top:60%;transform:translateX(-50%) scale(1.25);width:24px;height:22px}
+.mcat .hd{position:absolute;left:4px;top:1px;width:16px;height:14px;
+  background:#F0C987;border:1px solid var(--ink-2);border-radius:8px 8px 7px 7px}
+.mcat .er{position:absolute;top:-2px;width:0;height:0;border-left:4px solid transparent;
+  border-right:4px solid transparent;border-bottom:6px solid #F0C987}
+.mcat .er.l{left:3px} .mcat .er.r{right:3px}
+.mcat .tl{position:absolute;right:-2px;bottom:1px;width:8px;height:6px;
+  border:1.5px solid #F0C987;border-left:0;border-top:0;border-radius:0 0 5px 0}
+
+.mk{position:absolute;width:26px;height:26px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--line);box-shadow:var(--e1);display:flex;align-items:center;
+  justify-content:center;font-size:11px;color:var(--accent-text)}
+
+.siderail{position:absolute;left:var(--x10);bottom:var(--x16);display:flex;
+  flex-direction:column;gap:var(--x10);z-index:2}
+.siderail .b{width:44px;height:44px;border-radius:50%;background:var(--surface);
+  border:1px solid var(--line);box-shadow:var(--e2);display:flex;align-items:center;
+  justify-content:center;font-size:15px;color:var(--ink)}
+.siderail .b.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* time rail — real geometry: 113 = handleLane 69 + rail 44 */
+.timerail{position:absolute;right:var(--x10);top:var(--x16);bottom:var(--x16);width:113px;z-index:2}
+.tr-rail{position:absolute;right:0;top:0;bottom:0;width:44px;border-radius:var(--r22);
+  background:rgba(251,246,234,.72);border:1px solid rgba(227,214,184,.64);
+  box-shadow:var(--e2)}
+.tr-track{position:absolute;left:4px;top:var(--x16);bottom:var(--x16);width:7px;
+  border-radius:var(--r4);background:rgba(243,234,214,.62);overflow:hidden}
+.tr-seg{position:absolute;left:0;right:0}
+.tr-num{position:absolute;right:2px;width:30px;text-align:right;font-size:9px;
+  font-weight:600;color:var(--ink);opacity:.78;font-variant-numeric:tabular-nums;
+  transform:translateY(-50%);line-height:1}
+.tr-now{position:absolute;left:-3px;right:-3px;height:1.5px;background:var(--now);z-index:3}
+.tr-q{position:absolute;right:47px;width:26px;height:26px;border-radius:50%;
+  background:rgba(251,246,234,.96);border:1px solid rgba(227,214,184,.7);
+  box-shadow:var(--e1);display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--ink);z-index:4}
+.tr-handle{position:absolute;right:69px;width:44px;height:44px;border-radius:50%;letter-spacing:-.3px;
+  background:var(--surface-cream);border:1.5px solid #D94772;color:#D94772;
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;
+  box-shadow:var(--e2);z-index:5;font-variant-numeric:tabular-nums;font-size:11px}
+
+/* mode bar */
+.modebar{display:flex;background:var(--surface);border-top:1px solid var(--line);
+  box-shadow:var(--e2);padding:var(--x6) var(--x4) var(--x10)}
+.modebar .m{flex:1;display:flex;flex-direction:column;align-items:center;gap:var(--x3);
+  padding:5px 0;border-radius:var(--r12);color:var(--ink-2)}
+.modebar .m .g{font-size:17px;line-height:1}
+.modebar .m .l{font-size:12px;font-weight:600;line-height:1.33}
+.modebar .m.on{background:var(--accent-wash);color:var(--accent-text)}
+
+/* ══════════ timeline lanes ══════════ */
+.lanes{display:grid;grid-template-columns:36px 137px 75px 100px;gap:5px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);
+  padding:var(--x8);position:relative;font-size:11px}
+.lanes .lh{font-size:12px;font-weight:700;color:var(--ink-2);padding-bottom:var(--x6);
+  border-bottom:1px solid var(--line);margin-bottom:var(--x4);white-space:nowrap}
+.lanes .gutter{position:relative}
+.lanes .gutter .tk{position:absolute;right:2px;font-size:9px;font-weight:600;
+  color:var(--ink-2);font-variant-numeric:tabular-nums;transform:translateY(-50%)}
+.lane{position:relative;height:340px;border-radius:var(--r4)}
+.lane.rule{border-left:1px solid var(--line);padding-left:0}
+.clip{position:absolute;left:0;right:0;border-radius:var(--r8);
+  font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;
+  padding:5px var(--x8) 5px 12px;box-shadow:var(--e1);
+  background:var(--cw,var(--catW-activity));
+  border:.8px solid var(--ce,var(--line));border-left:4px solid var(--cs,var(--cat-activity))}
+.clip .rg{font-size:10px;font-weight:600;opacity:.70;line-height:1.2;
+  font-variant-numeric:tabular-nums}
+/* <18px tall: no room for a glyph. Show the identity bar only. */
+.clip.xs{font-size:0;padding:0;line-height:0}
+.clip.xs .rg{display:none}
+.clip.sel{border:2.5px solid var(--ink);border-left:4px solid var(--cs);box-shadow:var(--e2),0 0 0 1px var(--surface)}
+.clip.dirty::after{content:"";position:absolute;top:4px;right:4px;width:5px;height:5px;
+  border-radius:50%;background:var(--accent);box-shadow:0 0 0 1.5px rgba(251,246,234,.95)}
+.clip.ro{background:transparent;border:.8px solid var(--ce,var(--line));border-left:1px solid var(--ce,var(--line));
+  font-size:9px;font-weight:600;padding:2px var(--x4);box-shadow:none;color:var(--cs,var(--ink-2))}
+.clip.gap{background:repeating-linear-gradient(135deg,var(--catW-unconfirmed) 0 5px,rgba(141,141,141,.22) 5px 10px);
+  border-left-color:var(--catS-unconfirmed);color:var(--ink-2)}
+.clip .qm{position:absolute;top:50%;transform:translateY(-50%);right:4px;width:24px;height:24px;border-radius:50%;
+  background:var(--surface);display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--ink);border:1.5px solid var(--ink)}
+.clip .trim{position:absolute;left:8px;right:8px;height:5px;background:rgba(251,246,234,.95);
+  border-radius:var(--r4);display:flex;align-items:center;justify-content:center;
+  border:.8px solid rgba(62,51,32,.25)}
+.clip .trim::after{content:"";width:16px;height:2px;border-radius:2px;
+  background:rgba(62,51,32,.60)}
+.clip .trim.t{top:2px} .clip .trim.b{bottom:2px}
+
+/* ══════════ calendar ══════════ */
+.cal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);
+  padding:var(--x12)}
+.cal .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:var(--x8)}
+.cal .wk div{text-align:center;font-size:10px;font-weight:700;color:var(--ink-2);
+  letter-spacing:.04em}
+.cal .mo{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.cal .d{height:38px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;position:relative}
+.cal .d .n{font-size:17px;font-weight:400;line-height:1;width:32px;height:28px;
+  display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.cal .d .v{font-size:10px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.cal .d .dot{width:4px;height:4px;border-radius:50%}
+.cal .d.sel .n{background:var(--accent);color:#fff;border-radius:50%;font-weight:700}
+.cal .d.today .n{box-shadow:inset 0 0 0 1.5px rgba(198,93,77,.65);border-radius:50%}
+.cal .d.hol .n,.cal .d.sun .n{color:var(--holiday)}
+.cal .d.sat .n{color:var(--saturday)}
+.cal .d.fut .n{color:var(--ink-2)}
+
+/* metric panel */
+.panel{background:var(--surface);border:.8px solid rgba(227,214,184,.9);
+  border-radius:var(--r12);padding:var(--x12)}
+.panel .hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--x10)}
+.panel .ttl{font-size:15px;font-weight:700}
+.panel .day{font-size:12px;font-weight:500;color:var(--ink-2)}
+.panel .big{font-size:26px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.panel .bars{display:flex;align-items:flex-end;gap:2px;height:44px;position:relative;
+  margin:var(--x10) 0}
+.panel .bars .b{flex:1;border-radius:2px 2px 0 0;min-height:2px}
+.panel .avg{position:absolute;left:0;right:0;height:1px;background:rgba(198,93,77,.5)}
+.panel .stats{display:flex;gap:var(--x8)}
+.panel .stats .s{flex:1}
+.panel .stats .k{font-size:11px;color:var(--ink-2)}
+.panel .stats .v{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* list rows */
+.rows{background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);
+  overflow:hidden}
+.row-i{display:flex;align-items:center;gap:var(--x10);padding:var(--x12);
+  border-bottom:1px solid rgba(227,214,184,.6);min-height:44px}
+.row-i:last-child{border-bottom:0}
+.row-i .cbar{width:4px;height:20px;border-radius:var(--r4);flex:0 0 auto}
+.row-i .nm{flex:1;font-size:14px;font-weight:600}
+.row-i .mt{font-size:13px;font-weight:500;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.pill{font-size:10px;font-weight:700;padding:2px var(--x8);border-radius:var(--r8)}
+
+/* NLE */
+.nle-hd{display:flex;align-items:center;gap:var(--x10);min-height:44px;
+  padding:0 var(--x16);background:var(--surface);border-bottom:1px solid var(--line)}
+.nle-hd .btn{font-size:14px;font-weight:700;padding:0 var(--x16);min-height:38px;
+  border-radius:99px;display:flex;align-items:center}
+.nle-hd .close{color:var(--accent-text);background:rgba(198,93,77,.10)}
+.nle-hd .apply{color:#fff;background:var(--accent-text)}
+.nle-hd .apply.off{opacity:.45}
+.nle-hd .ttl{flex:1;text-align:center;line-height:1.1}
+.nle-hd .ttl .a{font-size:19px;font-weight:700}
+.nle-hd .ttl .b{font-size:12px;font-weight:600;color:var(--ink-2)}
+.sum{display:flex;align-items:center;gap:var(--x8);height:26px;font-size:13px}
+.sum .dt{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+.sum .t{font-size:14px;font-weight:700}
+.sum .r{font-size:13px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.sum .undo{font-size:10px;font-weight:700;color:var(--accent-text);
+  background:rgba(198,93,77,.12);padding:3px 7px;border-radius:99px}
+.sum .ph{margin-left:auto;font-size:13px;font-weight:700;color:var(--accent-text);
+  font-variant-numeric:tabular-nums}
+.tools{display:flex;align-items:center;gap:var(--x8);height:44px}
+.tools .t{width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:17px;color:var(--ink)}
+.tools .t svg{width:17px;height:17px;display:block}
+.tools .t.off{opacity:.35}
+.tools .cat{font-size:14px;font-weight:700;padding:0 var(--x12);height:32px;
+  border-radius:99px;background:var(--surface);border:1px solid var(--line);
+  display:flex;align-items:center;gap:var(--x4)}
+
+/* drawer */
+.drawer{width:290px;background:var(--surface);border-right:1px solid var(--line);
+  box-shadow:var(--e3);padding:var(--x16);font-size:13px}
+.drawer .dh{display:flex;align-items:center;gap:var(--x10);margin-bottom:var(--x16)}
+.drawer .dh .t{flex:1;font-size:22px;font-weight:700;letter-spacing:-.3px}
+.drawer .gl{font-size:12px;font-weight:600;color:var(--ink-2);margin:var(--x16) 0 var(--x6);
+  letter-spacing:.04em}
+.drawer .gc{background:var(--bg);border-radius:var(--r12);overflow:hidden}
+.drawer .gi{display:flex;align-items:center;gap:var(--x10);padding:var(--x12);
+  min-height:44px;border-bottom:1px solid rgba(227,214,184,.6)}
+.drawer .gi:last-child{border-bottom:0}
+.drawer .gi .ic{width:22px;text-align:center;color:var(--accent-text);font-size:14px}
+.drawer .gi .lb{font-size:13px;font-weight:500}
+
+/* states */
+.state{background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);
+  padding:var(--x20);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:var(--x12);min-height:190px;text-align:center}
+.state .ic{font-size:34px;color:rgba(62,51,32,.18);line-height:1}
+.state .t{font-size:15px;font-weight:600}
+.state .s{font-size:13px;color:var(--ink-2);max-width:250px;line-height:1.45}
+.state .act{font-size:14px;font-weight:600;color:var(--accent-text);
+  background:rgba(198,93,77,.10);padding:0 var(--x16);min-height:36px;
+  border-radius:99px;display:inline-flex;align-items:center}
+
+.blocked{background:rgba(198,93,77,.06);border:1px solid rgba(198,93,77,.18);
+  border-radius:var(--r12);padding:var(--x12);text-align:left;
+  display:flex;flex-direction:column;gap:var(--x8);align-items:stretch;min-height:0}
+.blocked .t{font-size:15px;font-weight:600;color:var(--accent-text);
+  display:flex;align-items:center;gap:var(--x6)}
+.blocked .t svg{flex:0 0 auto}
+.blocked .s{font-size:13px;color:var(--ink-2);line-height:1.45}
+.blocked .act{align-self:flex-start;font-size:14px;font-weight:600;color:#fff;
+  background:var(--accent-fill);padding:0 var(--x16);min-height:36px;
+  border-radius:99px;display:inline-flex;align-items:center}
+
+.locked{position:relative;border-radius:var(--r12);overflow:hidden;
+  border:1px solid var(--line);min-height:150px}
+.locked .under{filter:blur(6px);opacity:.55;padding:var(--x16);font-size:13px}
+.locked .over{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:var(--x8);
+  background:rgba(251,246,234,.86);text-align:center;padding:var(--x16)}
+.locked .over .t{font-size:15px;font-weight:600}
+.locked .over .s{font-size:13px;color:var(--ink-2)}
+.locked .over .act{font-size:14px;font-weight:600;color:#fff;background:var(--accent-fill);
+  padding:0 var(--x16);min-height:36px;border-radius:99px;display:inline-flex;
+  align-items:center;margin-top:var(--x4)}
+
+.skel{background:rgba(62,51,32,.075);border-radius:var(--r8);position:relative;
+  overflow:hidden}
+.skel::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(251,246,234,.5),transparent);
+  animation:sh 1.2s linear infinite}
+@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+.err-inline{display:flex;align-items:center;gap:var(--x8);background:#FEF2D6;
+  border-radius:var(--r8);padding:var(--x8) var(--x12);font-size:13px}
+.err-inline .a{margin-left:auto;font-size:13px;font-weight:600;color:var(--accent-text)}
+
+/* a11y table bits */
+.tick{color:#2C6B2F;font-weight:700}
+.cross{color:#A32A54;font-weight:700}
+.mono{font-family:var(--mono);font-size:11.5px}
+.dim{color:var(--ink-2)}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;
+  background:rgba(62,51,32,.055);border-radius:var(--r4);padding:1px 5px;color:var(--ink-2)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--x16)}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--x16)}
+@media (max-width:860px){.grid2,.grid3{grid-template-columns:1fr}}
+/* static clip = list row, used inside cards */
+.clip[style*="position:static"]{position:static;margin:0;display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<nav>
+  <div class="brand">TaptionPlan</div>
+  <div class="ver">design system · v1.0</div>
+
+  <div class="grp">기준</div>
+  <a href="#baseline">1 · 측정 기준</a>
+
+  <div class="grp">Foundations</div>
+  <a href="#color">2.1 Color</a>
+  <a href="#category" class="sub">분류색 3역할</a>
+  <a href="#state-vs-cat" class="sub">state ≠ category</a>
+  <a href="#type">2.2 Typography</a>
+  <a href="#korean" class="sub">한글 계측</a>
+  <a href="#migrate-type" class="sub">41 → 12</a>
+  <a href="#space">2.3 Spacing</a>
+  <a href="#radius">2.4 Radius</a>
+  <a href="#elev">2.5 Elevation · Glass</a>
+  <a href="#motion">2.6 Motion</a>
+
+  <div class="grp">Components</div>
+  <a href="#c-map">3.1–3.4 지도</a>
+  <a href="#c-mode">3.5–3.6 모드 바</a>
+  <a href="#c-rail">3.7 타임 레일</a>
+  <a href="#c-lanes">3.8–3.11 타임라인</a>
+  <a href="#c-cal">3.12–3.15 기록</a>
+  <a href="#c-nle">3.16–3.20 클립 편집</a>
+  <a href="#c-drawer">3.21–3.22 드로어·시트</a>
+
+  <div class="grp">Patterns</div>
+  <a href="#states">4 · 비정상 상태</a>
+  <a href="#a11y">5 · 접근성</a>
+  <a href="#naming">6 · 명명 규칙</a>
+  <a href="#migration">7 · 이행</a>
+</nav>
+
+<main>
+
+<h1>TaptionPlan 디자인 시스템</h1>
+<p class="lede">하루는 하나의 실체다. 지도·타임라인·기록은 같은 하루의 세 가지 투영이다. 이 시스템은 세 가지 일만 한다 — <strong>오늘을 보고, 오늘을 고치고, 오늘을 확정한다.</strong></p>
+
+<div class="card tight" style="display:flex;gap:var(--x24);flex-wrap:wrap;font-size:12px">
+  <div><span class="dim">적용</span><br><strong>TaptionPlan/UI 전량</strong></div>
+  <div><span class="dim">타깃</span><br><strong>iOS 18+ · Swift 6 · SwiftUI</strong></div>
+  <div><span class="dim">테마</span><br><strong>라이트 고정</strong> <code>.preferredColorScheme(.light)</code></div>
+  <div><span class="dim">폰트</span><br><strong>SF Pro Rounded</strong> <code>design: .rounded</code></div>
+</div>
+
+<!-- ═══════════════════════ 1 ═══════════════════════ -->
+<h2 id="baseline"><span class="num">1</span>측정 기준</h2>
+<p>아래 숫자는 스크립트로 뽑았다. 재현 명령은 §7.4. <strong>핵심 발견 두 개:</strong> 폰트 API가 두 벌이고 그중 하나가 조용히 +2pt를 더한다. 그리고 기존 "scale"은 전부 연속된 정수에 이름을 붙인 것이다.</p>
+
+<table>
+<thead><tr><th>지표</th><th class="n">실측</th><th>메모</th></tr></thead>
+<tbody>
+<tr><td><code>Theme.swift</code> 의미 토큰</td><td class="n">71</td><td>팔레트 자체는 건강하다</td></tr>
+<tr><td><code>.system(size:)</code> 호출</td><td class="n">506</td><td>그중 리터럴 488 · 계산값 18</td></tr>
+<tr><td><code>.taption(size:)</code> 호출</td><td class="n">621</td><td>전부 <strong>+2pt</strong> 렌더 · 리터럴 589 · 계산값 32</td></tr>
+<tr><td><strong>폰트 호출 합계</strong></td><td class="n">1,127</td><td>506 + 621</td></tr>
+<tr><td><strong>그중 크기를 리터럴로 넘긴 호출</strong></td><td class="n">1,077</td><td>아래 분포는 이 1,077개 모집단 기준</td></tr>
+<tr><td><strong>실제 렌더 크기</strong></td><td class="n">41</td><td>27이 아니다</td></tr>
+<tr><td>계산된 크기 (정적 집계 불가)</td><td class="n">50</td><td><code>rulerFontSize</code> · <code>size * 0.42</code> · <code>bold ? 15 : 13</code> · <code>SettingsTypography.footnote</code></td></tr>
+<tr><td>11pt 미만 호출</td><td class="n">300</td><td class="cross">27.9%</td></tr>
+<tr><td>11–16pt 호출</td><td class="n">670</td><td>62.2%</td></tr>
+<tr><td><code>cornerRadius</code> 리터럴</td><td class="n">18값 / 281곳</td><td>2–28</td></tr>
+<tr><td><code>TaptionRadius</code> 토큰</td><td class="n">8</td><td>7–14, 이름이 값의 동의어</td></tr>
+<tr><td><code>TaptionSpacing</code> 토큰</td><td class="n">5</td><td>4–8, 같은 병</td></tr>
+<tr><td>spacing/padding 리터럴</td><td class="n">467 / 20값</td><td>4pt 그리드 적중 <strong>40.5%</strong></td></tr>
+<tr><td>2pt 그리드 적중</td><td class="n">70.7%</td><td>그래서 그리드는 2pt</td></tr>
+<tr><td><code>Theme.swift</code> 밖 <code>Color(hex:)</code></td><td class="n">38</td><td>—</td></tr>
+<tr><td>Dynamic Type 지원</td><td class="n">0</td><td class="cross"><code>@ScaledMetric</code>·<code>relativeTo:</code> 전무</td></tr>
+</tbody>
+</table>
+
+<div class="note warn">
+  <div class="t">이게 왜 문제인가</div>
+  <p><code>TaptionSpacing</code>의 다섯 이름은 <code>4,5,6,7,8</code>이다. <code>TaptionRadius</code>의 여덟 이름은 <code>7,8,9,10,11,12,13,14</code>. 이건 scale이 아니라 <strong>모든 정수를 한 번씩 번역한 것</strong>이다. 그래서 165곳의 <code>TaptionRadius.*</code>와 212곳의 <code>TaptionSpacing.*</code>가 여덟/다섯 값에 고르게 흩어져 있고, 하나도 도태되지 않았다. 이름이 제약을 만들지 못했다.</p>
+  <p><strong>새 명명법: 토큰 이름에 값을 넣는다.</strong> <code>Space.x12</code>는 12pt다. <code>Radius.x16</code>은 16pt다. 표를 찾을 필요가 없으니 동의어를 추가할 유인도 없다.</p>
+</div>
+
+<!-- ═══════════════════════ 2.1 COLOR ═══════════════════════ -->
+<h2 id="color"><span class="num">2.1</span>Color</h2>
+<p>기존 팔레트는 한 값도 바꾸지 않는다. 대신 <strong>역할</strong>을 붙이고 실측 대비를 표기한다. 지금 없는 역할이 셋이다: <code>tpAccentText</code>(액센트를 글자로 쓸 때), <code>tpLineControl</code>(경계가 실제로 보여야 할 때), <code>tpCatStrong</code>(분류색 위에 글자를 얹을 때).</p>
+
+<div class="chipset" style="margin-bottom:var(--x20)">
+  <div class="item"><div class="sw" style="background:var(--ink)"></div><div class="nm">ink</div><div class="hx">#3E3320</div></div>
+  <div class="item"><div class="sw" style="background:var(--ink-2)"></div><div class="nm">ink-2 <span class="tag">신규</span></div><div class="hx">#6B5D43</div></div>
+  <div class="item"><div class="sw" style="background:var(--ink-weak)"></div><div class="nm">ink-weak</div><div class="hx">#7A6C50</div></div>
+  <div class="item"><div class="sw" style="background:var(--accent)"></div><div class="nm">accent</div><div class="hx">#C65D4D</div></div>
+  <div class="item"><div class="sw" style="background:var(--accent-fill)"></div><div class="nm">accent.fill</div><div class="hx">#B25445</div></div>
+  <div class="item"><div class="sw" style="background:var(--accent-text)"></div><div class="nm">accent.text</div><div class="hx">#A8473A</div></div>
+  <div class="item"><div class="sw" style="background:var(--accent-text)"></div><div class="nm">accent-text <span class="tag">신규</span></div><div class="hx">#A8473A</div></div>
+  <div class="item"><div class="sw" style="background:var(--line)"></div><div class="nm">line</div><div class="hx">#E3D6B8</div></div>
+  <div class="item"><div class="sw" style="background:var(--line-control)"></div><div class="nm">line-control <span class="tag">신규</span></div><div class="hx">#8F8571</div></div>
+  <div class="item"><div class="sw" style="background:var(--bg)"></div><div class="nm">background</div><div class="hx">#F3EAD6</div></div>
+  <div class="item"><div class="sw" style="background:var(--surface)"></div><div class="nm">surface</div><div class="hx">#FBF6EA</div></div>
+  <div class="item"><div class="sw" style="background:var(--holiday)"></div><div class="nm">holiday</div><div class="hx">#DB454D</div></div>
+  <div class="item"><div class="sw" style="background:var(--saturday)"></div><div class="nm">saturday</div><div class="hx">#3D78C4</div></div>
+  <div class="item"><div class="sw" style="background:var(--now)"></div><div class="nm">now</div><div class="hx">#FF3B30</div></div>
+</div>
+
+<h3>의미 역할 · 실측 대비</h3>
+<table>
+<thead><tr><th>토큰</th><th>HEX</th><th class="n">on background</th><th class="n">on surface</th><th>허용</th><th>금지</th></tr></thead>
+<tbody>
+<tr><td><code>tpInk</code></td><td class="mono">#3E3320</td><td class="n"><span class="cr pass">10.33</span></td><td class="n"><span class="cr pass">11.46</span></td><td>본문·제목·아이콘</td><td>—</td></tr>
+<tr><td><code>tpSecondary</code> <span class="tag">값 변경</span></td><td class="mono">#6B5D43</td><td class="n"><span class="cr pass">5.36</span></td><td class="n"><span class="cr pass">5.95</span></td><td>2차 텍스트</td><td>주 텍스트</td></tr>
+<tr><td><code>tpSecondaryWeak</code></td><td class="mono">#7A6C50</td><td class="n"><span class="cr fail">4.29</span></td><td class="n"><span class="cr pass">4.76</span></td><td>surface 위, ≥13pt</td><td class="cross">background 위 본문</td></tr>
+<tr><td><code>tpAccent</code></td><td class="mono">#C65D4D</td><td class="n"><span class="cr fail">3.46</span></td><td class="n"><span class="cr fail">3.84</span></td><td>채움·테두리·선택</td><td class="cross">본문 텍스트</td></tr>
+<tr><td><code>tpAccentText</code> <span class="tag">신규</span></td><td class="mono">#A8473A</td><td class="n"><span class="cr pass">4.84</span></td><td class="n"><span class="cr pass">5.40</span></td><td>강조 텍스트·링크</td><td>—</td></tr>
+<tr><td><code>tpLine</code></td><td class="mono">#E3D6B8</td><td class="n"><span class="cr fail">1.20</span></td><td class="n"><span class="cr fail">1.34</span></td><td>장식 구분선</td><td class="cross">유일한 컨트롤 경계</td></tr>
+<tr><td><code>tpLineControl</code> <span class="tag">신규</span></td><td class="mono">#8F8571</td><td class="n"><span class="cr pass">3.05</span></td><td class="n"><span class="cr pass">3.35</span></td><td>입력 필드·미선택 경계</td><td>—</td></tr>
+<tr><td><code>tpHoliday</code></td><td class="mono">#DB454D</td><td class="n"><span class="cr fail">3.53</span></td><td class="n"><span class="cr fail">3.92</span></td><td>날짜 숫자 ≥15pt</td><td>작은 본문</td></tr>
+<tr><td><code>tpSaturday</code></td><td class="mono">#3D78C4</td><td class="n"><span class="cr fail">3.75</span></td><td class="n"><span class="cr fail">4.16</span></td><td>날짜 숫자 ≥15pt</td><td>작은 본문</td></tr>
+<tr><td><code>tpNow</code></td><td class="mono">#FF3B30</td><td class="n"><span class="cr fail">2.96</span></td><td class="n">—</td><td>1.5pt 선 / 2pt 점</td><td class="cross">모든 텍스트</td></tr>
+<tr><td><code>tpReferenceBlue</code></td><td class="mono">#2D9BF0</td><td class="n"><span class="cr fail">2.49</span></td><td class="n"><span class="cr fail">2.76</span></td><td>채움·아이콘 ≥18pt</td><td class="cross">텍스트 (지금 NLE 헤더가 사용 중)</td></tr>
+<tr><td><code>tpReferenceRose</code></td><td class="mono">#F15C80</td><td class="n"><span class="cr fail">2.67</span></td><td class="n"><span class="cr fail">2.96</span></td><td>채움·아이콘</td><td class="cross">텍스트 (동일)</td></tr>
+<tr><td><code>tpReferenceGold</code></td><td class="mono">#E1C453</td><td class="n"><span class="cr fail">1.44</span></td><td class="n"><span class="cr fail">1.59</span></td><td>채움</td><td class="cross">텍스트</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+  <div class="t">여기서 나오는 세 규칙</div>
+  <p><strong>1. <code>tpAccent</code>는 채움색이지 글자색이 아니다.</strong> 실측 3.46:1 — AA 본문에 영원히 못 미친다. 강조 글자는 <code>tpAccentText</code>.</p>
+  <p><strong>2. <code>tpReference*</code> 열색은 "표식"색이다.</strong> 전부 3:1 미만. 존재 이유는 아이콘과 큰 색면에 식별 가능한 색상을 주는 것이고, 가독성을 지는 게 아니다.</p>
+  <p><strong>3. <code>tpLine</code>은 컨트롤 경계가 아니다.</strong> 1.20:1은 물리적으로 안 보인다. "여기 입력란이 있다"를 인지시켜야 하는 경계는 <code>tpLineControl</code>.</p>
+</div>
+
+<!-- ── category ── -->
+<h3 id="category">분류색: 세 역할, 왜 반드시 나눠야 하는가</h3>
+<p>지금 분류색 표가 <strong>네 벌</strong> 공존한다: <code>CanonicalCategoryPalette</code>, <code>MapHomePastelPalette</code>, <code>RecordTimelinePalette</code>, <code>PlanCategory.color</code>. 같은 「업무」가 뷰마다 <code>#2563EB</code> / <code>#2E6FDB</code> / <code>#0F766E</code> / <code>#BEDAE3</code>다. 팔레트 문제가 아니라 <strong>역할 정의가 없는 것</strong>이다.</p>
+
+<table>
+<thead><tr><th>id</th><th>한글</th><th><code>tpCat</code> 정체성</th><th><code>tpCatStrong</code> 글자 얹기</th><th class="n">백색 on Strong</th><th class="n">Strong on surface</th></tr></thead>
+<tbody>
+<tr><td><code>activity</code></td><td>활동</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-activity)"></span><span class="mono" style="font-size:10.5px">#43A047</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-activity)"></span><span class="mono" style="font-size:10.5px">#368039</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.51</span></td></tr>
+<tr><td><code>work</code></td><td>업무</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-work)"></span><span class="mono" style="font-size:10.5px">#2E6FDB</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-work)"></span><span class="mono" style="font-size:10.5px">#2D6ED8</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.50</span></td></tr>
+<tr><td><code>study</code></td><td>공부</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-study)"></span><span class="mono" style="font-size:10.5px">#00ACC1</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-study)"></span><span class="mono" style="font-size:10.5px">#007D8D</span></td><td class="n"><span class="cr pass">4.85</span></td><td class="n"><span class="cr pass">4.50</span></td></tr>
+<tr><td><code>hobby</code></td><td>취미</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-hobby)"></span><span class="mono" style="font-size:10.5px">#9C4DCC</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-hobby)"></span><span class="mono" style="font-size:10.5px">#9B4DCB</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.51</span></td></tr>
+<tr><td><code>sleep</code></td><td>수면</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-sleep)"></span><span class="mono" style="font-size:10.5px">#3F3D99</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-sleep)"></span><span class="mono" style="font-size:10.5px">#3F3D99</span></td><td class="n"><span class="cr pass">8.98</span></td><td class="n"><span class="cr pass">8.33</span></td></tr>
+<tr><td><code>movement</code></td><td>이동</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-movement)"></span><span class="mono" style="font-size:10.5px">#F57C00</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-movement)"></span><span class="mono" style="font-size:10.5px">#B15A00</span></td><td class="n"><span class="cr pass">4.87</span></td><td class="n"><span class="cr pass">4.51</span></td></tr>
+<tr><td><code>eating</code></td><td>식사</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-eating)"></span><span class="mono" style="font-size:10.5px">#E5B800</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-eating)"></span><span class="mono" style="font-size:10.5px">#896E00</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.51</span></td></tr>
+<tr><td><code>exercise</code></td><td>운동</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-exercise)"></span><span class="mono" style="font-size:10.5px">#D32F2F</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-exercise)"></span><span class="mono" style="font-size:10.5px">#D32F2F</span></td><td class="n"><span class="cr pass">4.98</span></td><td class="n"><span class="cr pass">4.62</span></td></tr>
+<tr><td><code>health</code></td><td>건강</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-health)"></span><span class="mono" style="font-size:10.5px">#EC407A</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-health)"></span><span class="mono" style="font-size:10.5px">#CC3769</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.50</span></td></tr>
+<tr><td><code>unconfirmed</code></td><td>미확인</td><td><span class="sw" style="display:block;height:22px;background:var(--cat-unconfirmed)"></span><span class="mono" style="font-size:10.5px">#8D8D8D</span></td><td><span class="sw" style="display:block;height:22px;background:var(--catS-unconfirmed)"></span><span class="mono" style="font-size:10.5px">#717171</span></td><td class="n"><span class="cr pass">4.86</span></td><td class="n"><span class="cr pass">4.50</span></td></tr>
+</tbody>
+</table>
+
+<div class="note warn">
+  <div class="t">실측 결함 — 지금 가장 심각한 것</div>
+  <p><code>MapHomeNLEClipEditor.clipBlock</code>은 <code>MapHomePastelPalette</code> <strong>원값</strong>을 바탕에 깔고 <code>.foregroundStyle(.white)</code>로 글자를 쓴다. <strong>10개 분류 중 7개가 백색 글자 미달</strong>이다:</p>
+  <p class="mono" style="font-size:11.5px;line-height:1.9">
+    activity <span class="cr fail">3.30</span> &nbsp; study <span class="cr fail">2.74</span> &nbsp; movement <span class="cr fail">2.70</span> &nbsp;
+    eating <span class="cr fail">1.88</span> &nbsp; health <span class="cr fail">3.76</span> &nbsp; unconfirmed <span class="cr fail">3.32</span> &nbsp; hobby <span class="cr warn">4.83</span>
+  </p>
+  <p>그중 <code>activity</code>(흑자 3.74) · <code>health</code>(3.76) · <code>unconfirmed</code>(3.72)는 <strong>흑자도 미달</strong>이다. 이 세 색은 어떤 경우에도 글자를 얹을 수 없다 — 반드시 <code>tpCatStrong</code>으로 바꿔야 한다.</p>
+  <p><strong>수정:</strong> <code>tpCatStrong</code>으로 바꾸면 7개 실패는 0이 되지만, 그건 <em>맞는</em> 답이 아니다. 137pt 레인에 11개의 포화 블록이 세로로 쌓이면 간트 차트가 되고, 같은 <code>Day</code>를 보여주는 기록 뷰(옅은 칸)와 색이 어긋난다. <strong>그래서 <code>tpCatWash</code> + 4pt 정체성 띠를 쓴다</strong> — 아래 참조.</p>
+</div>
+
+<div class="grid3">
+  <div class="card tight">
+    <div class="card-h">✗ 지금 (원값 + 백색)</div>
+    <div class="card-s">7/10 미달 · 흑자도 3개 미달</div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div style="background:var(--cat-activity);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">활동</div>
+      <div style="background:var(--cat-study);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">공부</div>
+      <div style="background:var(--cat-movement);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">이동</div>
+      <div style="background:var(--cat-eating);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">식사</div>
+      <div style="background:var(--cat-health);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">건강</div>
+    </div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">△ 차선 (tpCatStrong + 백색)</div>
+    <div class="card-s">10/10 통과 · 그러나 채도 부피가 크다</div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div style="background:var(--catS-activity);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">활동</div>
+      <div style="background:var(--catS-study);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">공부</div>
+      <div style="background:var(--catS-movement);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">이동</div>
+      <div style="background:var(--catS-eating);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">식사</div>
+      <div style="background:var(--catS-health);color:#fff;font-size:13px;font-weight:700;padding:5px 8px;border-radius:var(--r8)">건강</div>
+    </div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">✓ 채택 (tpCatWash + 4pt 띠)</div>
+    <div class="card-s">흑자 6.9–9.7 · 따뜻함 유지 · 기록 뷰와 동일</div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div class="clip" style="position:static;--cs:var(--catS-activity);--cw:var(--catW-activity);--ce:color-mix(in srgb,var(--catS-activity) 34%,var(--surface))">활동</div>
+      <div class="clip" style="position:static;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface))">공부</div>
+      <div class="clip" style="position:static;--cs:var(--catS-movement);--cw:var(--catW-movement);--ce:color-mix(in srgb,var(--catS-movement) 34%,var(--surface))">이동</div>
+      <div class="clip" style="position:static;--cs:var(--catS-eating);--cw:var(--catW-eating);--ce:color-mix(in srgb,var(--catS-eating) 34%,var(--surface))">식사</div>
+      <div class="clip" style="position:static;--cs:var(--catS-health);--cw:var(--catW-health);--ce:color-mix(in srgb,var(--catS-health) 34%,var(--surface))">건강</div>
+    </div>
+  </div>
+</div>
+
+<!-- state vs category -->
+<h3 id="state-vs-cat">언제 category이고, 언제 state인가</h3>
+<table>
+<thead><tr><th>category (무엇인가)</th><th>state (지금 어떤가)</th></tr></thead>
+<tbody>
+<tr><td>업무 · 공부 · 식사 · 이동 · 수면 · 활동 · 취미 · 운동 · 건강</td><td>미확인 · 확정 · 수정됨 · 센서와 다름 · 읽기 전용</td></tr>
+<tr><td><code>tpCat*</code> 사용</td><td class="cross"><strong>색상으로 구분하지 않는다.</strong> <code>tpAccent</code>/<code>tpInk</code>의 명도 + 테두리 + 각도</td></tr>
+</tbody>
+</table>
+<p>이유: state와 category가 같은 채널(색상)을 다투면 사용자는 "이 빨강이 '운동'인지 '오류'인지" 읽을 수 없다. 그래서 <strong>state는 영원히 명도·테두리·각도로만 표현하고, 새 색상을 쓰지 않는다.</strong></p>
+
+<div class="card tight">
+  <div class="card-h">다섯 state의 고정 표현</div>
+  <div class="card-s">색을 못 봐도 읽혀야 한다</div>
+  <div style="display:flex;flex-direction:column;gap:var(--x10)">
+    <div style="display:flex;align-items:center;gap:var(--x12)">
+      <div class="clip" style="position:static;width:150px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">업무</div>
+      <div style="font-size:12px"><strong>default</strong> <span class="dim">— 옅은 바탕 + 4pt 정체성 띠 + 0.8pt 경계</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--x12)">
+      <div class="clip sel" style="position:static;width:150px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">업무</div>
+      <div style="font-size:12px"><strong>selected</strong> <span class="dim">— 2.5pt tpInk 테두리 (모양으로 읽힘)</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--x12)">
+      <div class="clip dirty" style="position:static;width:150px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">업무</div>
+      <div style="font-size:12px"><strong>dirty</strong> <span class="dim">— 우상단 5pt tpAccent 점 + lane 헤더 카운트</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--x12)">
+      <div class="clip ro" style="position:static;width:150px;--ce:color-mix(in srgb,var(--catS-work) 58%,var(--surface));color:var(--catS-work)">업무</div>
+      <div style="font-size:12px"><strong>readOnly</strong> <span class="dim">— 무채움 + 0.8pt 테두리 (비어 있음으로 읽힘)</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--x12)">
+      <div class="clip gap" style="position:relative;width:150px;height:30px"><span class="qm">?</span></div>
+      <div style="font-size:12px"><strong>unconfirmed</strong> <span class="dim">— 사선 패턴 + 24pt 물음표 (질감으로 읽힘)</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="t">규칙 C1 — 미확인이 이 시스템에서 가장 중요한 상태인 이유</div>
+  <p><code>MapHomeGrowthPolicy.qualifies</code>는 <code>actualCount &gt; 0 &amp;&amp; unconfirmedCount == 0</code>을 요구한다. <strong>미확인 구간이 하나라도 있으면 그날 정원은 자라지 않는다.</strong> 즉 미확인은 중립적인 기술 상태가 아니라 <strong>감정적 보상을 막는 상태</strong>다.</p>
+  <p>따라서: 미확인은 언제나 화면에서 대비가 가장 높은 요소이고, 해소 동작은 1회 탭 이하여야 한다. "조용한 작은 물음표"여서는 안 된다.</p>
+</div>
+
+<!-- ═══════════════════════ 2.2 TYPE ═══════════════════════ -->
+<h2 id="type"><span class="num">2.2</span>Typography</h2>
+
+<div class="note warn">
+  <div class="t">먼저 고칠 것 — <code>Font.taption</code>이 조용히 +2pt 한다</div>
+  <p class="mono" style="font-size:11.5px;background:rgba(62,51,32,.05);padding:8px 10px;border-radius:var(--r8);line-height:1.6">static func taption(size: CGFloat, weight: Font.Weight = .regular) -&gt; Font {<br>&nbsp;&nbsp;&nbsp;&nbsp;.system(size: <strong>size + 2</strong>, weight: weight)&nbsp;&nbsp;<span style="opacity:.6">// ← 9를 쓰면 11이 된다</span><br>}</p>
+  <p>621곳이 호출한다. <code>.taption(size: 9)</code>는 11pt로, <code>.taption(size: 11)</code>은 13pt로 렌더된다. <strong>코드를 읽는 사람은 실제 크기를 알 수 없다.</strong> 이게 41개 실제 크기가 27개로 집계된 이유다.</p>
+  <p><strong>처리:</strong> <code>@available(*, deprecated, message: "Font.tpLabel / tpCaption … 사용. 이 API는 +2pt")</code>를 붙이고, §2.2.4 매핑표로 일괄 치환한 뒤 삭제한다. 호환 레이어를 남기지 말 것 — 남기면 진실이 두 벌이 된다.</p>
+</div>
+
+<h3>12개 토큰 · 41 → 12 (−71%)</h3>
+<p>9개 텍스트 급 + 3개 숫자 전용 급. 아래는 <strong>실제 크기로 렌더</strong>한 것이다. 한글 샘플로 봐야 한다 — 로렘 입숨은 이 결정에 대해 아무것도 말해주지 않는다.</p>
+
+<div class="card tight">
+  <div class="spec" style="border-bottom:1px solid var(--line)">
+    <div><span class="tk">tpDisplay</span><span class="mt">34 / bold / 1.06</span></div>
+    <div class="sm" style="font-size:34px;font-weight:700;line-height:1.06;letter-spacing:-.4px">하루 요약</div>
+    <div class="ms">온보딩 히어로 · 하루 카드</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpTitle</span><span class="mt">22 / bold / 1.14</span></div>
+    <div class="sm" style="font-size:22px;font-weight:700;line-height:1.14;letter-spacing:-.3px">타임라인</div>
+    <div class="ms">뷰 제목 · 시트 제목</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpHeadline</span><span class="mt">19 / bold / 1.21</span></div>
+    <div class="sm" style="font-size:19px;font-weight:700;line-height:1.21;letter-spacing:-.2px">클립 편집</div>
+    <div class="ms">지표 값 · 섹션 제목</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpSubhead</span><span class="mt">17 / semibold / 1.24</span></div>
+    <div class="sm" style="font-size:17px;font-weight:600;line-height:1.24">10월 24일 토요일</div>
+    <div class="ms">날짜 숫자 · 카드 값</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpBody</span><span class="mt">15 / regular / 1.47</span></div>
+    <div class="sm" style="font-size:15px;font-weight:400;line-height:1.47">센서가 하루를 읽기 시작하면 여기에 시간이 쌓입니다.</div>
+    <div class="ms">본문 · 설명</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpBodyStrong</span><span class="mt">15 / semibold / 1.47</span></div>
+    <div class="sm" style="font-size:15px;font-weight:600;line-height:1.47">위치 권한이 꺼져 있어요</div>
+    <div class="ms">강조 본문 · 패널 제목</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpCallout</span><span class="mt">14 / semibold / 1.36</span></div>
+    <div class="sm" style="font-size:14px;font-weight:600;line-height:1.36">전체 보기 · 적용 · 대분류</div>
+    <div class="ms">버튼 · 행 제목 · 클립 라벨</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpCaption</span><span class="mt">13 / medium / 1.31</span></div>
+    <div class="sm" style="font-size:13px;font-weight:500;line-height:1.31">09:00–12:40 · 3시간 40분</div>
+    <div class="ms">목록 보조 · 클립 보조</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpLabel</span><span class="mt">12 / semibold / 1.33</span></div>
+    <div class="sm" style="font-size:12px;font-weight:600;line-height:1.33">센서 원본 · 상세활동 · 지도 · 기록</div>
+    <div class="ms"><strong>최소 한글 텍스트 (하한)</strong></div>
+  </div>
+  <div class="spec" style="border-top:1px solid var(--line);margin-top:var(--x8)">
+    <div><span class="tk">tpMetric</span><span class="mt">26 / bold · 숫자 전용</span></div>
+    <div class="sm" style="font-size:26px;font-weight:700;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums">6시간 12분</div>
+    <div class="ms">하루 요약 큰 숫자</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpMeter</span><span class="mt">10 / semibold · 숫자 전용</span></div>
+    <div class="sm" style="font-size:10px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums">6:12 · 45m · 12,480 · 3.4km</div>
+    <div class="ms">달력 셀 값 · 지표 보조</div>
+  </div>
+  <div class="spec">
+    <div><span class="tk">tpRuler</span><span class="mt">9 / semibold · 숫자 전용</span></div>
+    <div class="sm" style="font-size:9px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">06 07 08 09 10 11 12 13</div>
+    <div class="ms">시간 눈금 · 틱</div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="t">왜 이 숫자들인가</div>
+  <p><strong><code>tpLabel 12</code>가 한글 하한.</strong> 11pt는 Apple의 절대 하한이지만, 한글 음절은 평균 18획이라 11pt에서 <code>분류</code>·<code>센서</code>의 가로획이 뭉개지기 시작한다. 12pt가 실측으로 버티는 가장 가까운 칸이다(음절 advance 10.38pt, 획 간격 ≥1.4pt).</p>
+  <p><strong><code>tpBody 15</code>이고 16/17이 아닌 이유.</strong> 한글 15pt의 시각 무게 ≈ 라틴 17pt(음절 0.865em vs 라틴 소문자 평균 0.5em). 17을 쓰면 화면 전체가 "너무 크게 말하는" 느낌이 되고, 고양이·정원의 톤과 싸운다.</p>
+  <p><strong><code>tpMetric 26</code>.</strong> <code>6시간 12분</code>이 26pt에서 90.5pt 폭 — 2열 지표 카드(각 ~160pt)에 들어간다. 34pt면 118pt라 1열만 가능하다.</p>
+  <p><strong>세 개의 숫자 급이 11pt 미만인 것은 의도적</strong>이고, 규칙으로 못 박혀 있다. 눈금의 <code>09:30</code>은 라틴 숫자다. 숫자는 9pt에서도 읽힌다. 한글은 아니다.</p>
+</div>
+
+<h3>SwiftUI 표현 · Dynamic Type</h3>
+<p>지금 앱 전체가 Dynamic Type 지원이 <strong>0</strong>이다. <code>.system(size:)</code>는 절대값이라 시스템 글자 크기를 따라가지 않는다. <code>@ScaledMetric</code>은 1,077개 호출점의 구조를 바꿔야 하니, 정적 팩토리 하나로 해결한다.</p>
+
+<div class="card tight" style="font-family:var(--mono);font-size:11.5px;line-height:1.75;white-space:pre;overflow-x:auto;color:var(--ink)">enum TaptionType {
+    struct Spec {
+        let size: CGFloat
+        let weight: Font.Weight
+        let relativeTo: UIFont.TextStyle
+        <span class="dim">/// 고정 높이 컨테이너의 크기는 반드시 상한을 둔다. 안 그러면 트랙을 뚫는다.</span>
+        let maxScale: CGFloat
+    }
+    static let body  = Spec(size: 15, weight: .regular,  relativeTo: .body,     maxScale: 3.0)
+    static let label = Spec(size: 12, weight: .semibold, relativeTo: .caption1, maxScale: 1.8)
+    static let ruler = Spec(size: 9,  weight: .semibold, relativeTo: .caption2, maxScale: <span style="color:var(--accent-text);font-weight:700">1.35</span>)
+    <span class="dim">// … 12개</span>
+}
+
+extension Font {
+    static func tp(_ s: TaptionType.Spec) -&gt; Font {
+        let m = UIFontMetrics(forTextStyle: s.relativeTo)
+        let scaled = min(m.scaledValue(for: s.size), s.size * s.maxScale)
+        return .system(size: scaled, weight: s.weight, design: <span style="color:var(--accent-text);font-weight:700">.rounded</span>)
+    }
+    static var tpBody: Font { tp(TaptionType.body) }
+}</div>
+
+<p style="margin-top:var(--x16)"><strong><code>.rounded</code>는 강제다.</strong> 이 제품의 "따뜻함"을 만드는 주된 축 중 하나다 — 506곳 중 287곳이 이미 쓰고 있고, 나머지 219곳이 누락이다. "모던하게" 보이려고 기본 SF Pro로 바꾸면 즉시 기업 대시보드가 된다.</p>
+
+<div class="note">
+  <div class="t">규칙 T1 — maxScale이 무한이 아닌 이유</div>
+  <p>타임라인의 트랙 높이는 <code>GeometryReader</code>가 계산하고 <code>verticalInset = 28</code>은 상수다. 글자만 3배가 되면 라벨이 서로 눌린다.</p>
+  <p>그래서 <code>tpRuler</code>/<code>tpMeter</code>의 maxScale은 <strong>1.35로 잠근다</strong>. AX1을 넘으면 시간축은 글자를 키우는 대신 <strong>3개 lane을 1개로 접는다</strong>(§5.1). 숫자는 영원히 보조이고, 이름이 정보이기 때문이다.</p>
+</div>
+
+<!-- korean metrics -->
+<h3 id="korean">한글 계측 (실측, SF Pro Rounded / Apple SD Gothic Neo)</h3>
+<p>음절 advance = <strong>0.865em</strong>, 라틴 소문자 평균 ≈ 0.5em. <strong>같은 크기에서 한글이 1.7배 넓다.</strong></p>
+
+<table>
+<thead><tr><th>문자열</th><th class="n">9pt</th><th class="n">11pt</th><th class="n">12pt</th><th class="n">13pt</th><th class="n">15pt</th><th class="n">17pt</th></tr></thead>
+<tbody>
+<tr><td><code>지도</code></td><td class="n">15.6</td><td class="n">19.0</td><td class="n">20.8</td><td class="n">22.5</td><td class="n">25.9</td><td class="n">29.4</td></tr>
+<tr><td><code>타임라인</code></td><td class="n">31.1</td><td class="n">38.1</td><td class="n">41.5</td><td class="n">45.0</td><td class="n">51.9</td><td class="n">58.8</td></tr>
+<tr><td><code>대분류</code></td><td class="n">23.4</td><td class="n">28.5</td><td class="n">31.1</td><td class="n">33.7</td><td class="n">38.9</td><td class="n">44.1</td></tr>
+<tr><td><code>센서 원본</code></td><td class="n">33.7</td><td class="n">41.1</td><td class="n"><strong>44.7</strong></td><td class="n">48.4</td><td class="n">55.7</td><td class="n">62.9</td></tr>
+<tr><td><code>상세활동</code></td><td class="n">31.1</td><td class="n">38.1</td><td class="n">41.5</td><td class="n">45.0</td><td class="n">51.9</td><td class="n">58.8</td></tr>
+<tr><td><code>하루 요약</code></td><td class="n">33.7</td><td class="n">41.1</td><td class="n">44.7</td><td class="n">48.4</td><td class="n">55.7</td><td class="n">62.9</td></tr>
+<tr><td><code>클립 편집</code></td><td class="n">33.7</td><td class="n">41.1</td><td class="n">44.7</td><td class="n">48.4</td><td class="n">55.7</td><td class="n">62.9</td></tr>
+<tr><td><code>전체 보기</code></td><td class="n">33.7</td><td class="n">41.1</td><td class="n">44.7</td><td class="n">48.4</td><td class="n">55.7</td><td class="n">62.9</td></tr>
+<tr><td><code>위치 기록을 기다리는 중</code></td><td class="n">85.5</td><td class="n">104.1</td><td class="n">113.4</td><td class="n">122.6</td><td class="n">141.0</td><td class="n">159.3</td></tr>
+<tr><td><code>09:00–12:40</code></td><td class="n">59.2</td><td class="n">70.9</td><td class="n">76.5</td><td class="n">82.1</td><td class="n">93.1</td><td class="n">103.7</td></tr>
+<tr><td><code>6시간 12분</code></td><td class="n">42.5</td><td class="n">51.4</td><td class="n">55.8</td><td class="n">60.2</td><td class="n">68.8</td><td class="n">77.3</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+  <div class="t">규칙 T2 · T3</div>
+  <p><strong>T2 — 배치 전에 잰다.</strong> 한글 라벨 폭 ≈ <code>글자수 × 0.87 × 크기</code>. 12pt 4글자 라벨은 <strong>42pt</strong>를 예약해야 한다. 24pt가 아니다.</p>
+  <p><strong>T3 — 한글에 <code>minimumScaleFactor</code>로 레이아웃을 "구제"하지 말 것.</strong> <code>0.7</code>은 12pt를 8.4pt로 누르고, 그건 정확히 읽을 수 없는 구간이다. 문구를 고치든가 레이아웃을 고쳐라.</p>
+</div>
+
+<!-- migration -->
+<h3 id="migrate-type">41개 실제 크기 → 12개 토큰</h3>
+<p>호출량 순. <code>.taption</code> 값은 <strong>실제(+2 적용) 크기</strong>로 적었다 — 치환 후 시각이 변하지 않아야 하기 때문이다.</p>
+
+<table>
+<thead><tr><th class="n">실제 pt</th><th class="n">호출</th><th>→ token</th><th>변화</th></tr></thead>
+<tbody>
+<tr><td class="n">11</td><td class="n">162</td><td><code>tpLabel</code></td><td>+1</td></tr>
+<tr><td class="n">12</td><td class="n">135</td><td><code>tpLabel</code></td><td>0</td></tr>
+<tr><td class="n">13</td><td class="n">113</td><td><code>tpCaption</code></td><td>0</td></tr>
+<tr><td class="n">10</td><td class="n">96</td><td><code>tpMeter</code> (숫자) / <code>tpLabel</code> (한글)</td><td>한글 <strong>+2</strong></td></tr>
+<tr><td class="n">14</td><td class="n">84</td><td><code>tpCallout</code></td><td>0</td></tr>
+<tr><td class="n">9.5</td><td class="n">69</td><td><code>tpRuler</code> / <code>tpLabel</code></td><td>한글 <strong>+2.5</strong></td></tr>
+<tr><td class="n">10.5</td><td class="n">64</td><td><code>tpMeter</code> / <code>tpLabel</code></td><td>한글 <strong>+1.5</strong></td></tr>
+<tr><td class="n">15</td><td class="n">53</td><td><code>tpBody</code></td><td>0</td></tr>
+<tr><td class="n">16</td><td class="n">41</td><td><code>tpSubhead</code></td><td>+1</td></tr>
+<tr><td class="n">12.5</td><td class="n">38</td><td><code>tpCaption</code></td><td>+0.5</td></tr>
+<tr><td class="n">11.5</td><td class="n">37</td><td><code>tpLabel</code></td><td>+0.5</td></tr>
+<tr><td class="n">9</td><td class="n">35</td><td><code>tpRuler</code> / <code>tpLabel</code></td><td>한글 <strong>+3</strong></td></tr>
+<tr><td class="n">17</td><td class="n">23</td><td><code>tpSubhead</code></td><td>0</td></tr>
+<tr><td class="n">20</td><td class="n">18</td><td><code>tpHeadline</code></td><td>−1</td></tr>
+<tr><td class="n">18</td><td class="n">15</td><td><code>tpHeadline</code></td><td>+1</td></tr>
+<tr><td class="n">22</td><td class="n">13</td><td><code>tpTitle</code></td><td>0</td></tr>
+<tr><td class="n">8</td><td class="n">12</td><td><code>tpRuler</code> / <code>tpLabel</code></td><td>한글 <strong>+4</strong></td></tr>
+<tr><td class="n">21</td><td class="n">10</td><td><code>tpTitle</code></td><td>+1</td></tr>
+<tr><td class="n">8.5</td><td class="n">7</td><td><code>tpRuler</code></td><td>+0.5</td></tr>
+<tr><td class="n">19</td><td class="n">6</td><td><code>tpHeadline</code></td><td>0</td></tr>
+<tr><td class="n">26</td><td class="n">5</td><td><code>tpMetric</code></td><td>0</td></tr>
+<tr><td class="n">14.5</td><td class="n">5</td><td><code>tpCallout</code></td><td>−0.5</td></tr>
+<tr><td class="n">8.8 · 9.2 · 9.8 · 10.2 · 10.8</td><td class="n">15</td><td><code>tpRuler</code> / <code>tpMeter</code></td><td>≤1</td></tr>
+<tr><td class="n">23 · 24 · 25 · 27</td><td class="n">6</td><td><code>tpMetric</code></td><td>±2</td></tr>
+<tr><td class="n">30 · 34 · 36 · 38</td><td class="n">9</td><td><code>tpDisplay</code></td><td>−4 ~ +4</td></tr>
+<tr><td class="n">5 · 9.3 · 13.5 · 15.5 · 16.5 · 29</td><td class="n">6</td><td>개별 판단</td><td>—</td></tr>
+</tbody>
+</table>
+
+<p><strong>수동 확인이 필요한 4곳</strong> (한글이 작은 글자에서 커지면 컨테이너를 친다):</p>
+<div class="card tight">
+  <table style="margin:0">
+  <tbody>
+  <tr><td style="width:34%"><code>reviewMarker</code> 카운트 각도</td><td>9pt → <code>tpRuler</code> 유지 (숫자)</td></tr>
+  <tr><td><code>dayCell.cellValueText</code></td><td>10pt → <code>tpMeter</code>. 내용은 <code>6:12</code> 라틴 숫자 → 안전</td></tr>
+  <tr><td><code>NLE.laneTitle</code></td><td>9pt 한글 → <code>tpLabel</code> 12pt. <code>센서 원본</code> 12pt = <strong>44.7pt</strong>, lane 폭 <strong>75pt</strong> → <span class="tick">들어간다</span>. <code>minimumScaleFactor</code> 제거</td></tr>
+  <tr><td><code>bottomBarButton</code> 라벨</td><td>10pt → <code>tpLabel</code> 12pt. <code>현재 위치</code> = 45.6pt, 6칸 각 ~60pt → <span class="tick">들어간다</span></td></tr>
+  </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════ 2.3 SPACE ═══════════════════════ -->
+<h2 id="space"><span class="num">2.3</span>Spacing</h2>
+<p>2pt 그리드. 20개 실측값 → 12개 토큰, <strong>433/467 = 92.7% 무변화</strong>.</p>
+
+<div class="grid2">
+  <div class="card tight">
+    <div class="card-h">토큰</div>
+    <div class="card-s">이름에 값이 들어 있다</div>
+    <div class="bar-demo"><span class="lb">Space.hair</span><span class="bx" style="width:1px"></span><span class="ct">1</span></div>
+    <div class="bar-demo"><span class="lb">Space.x2</span><span class="bx" style="width:2px"></span><span class="ct">2</span></div>
+    <div class="bar-demo"><span class="lb">Space.x3</span><span class="bx" style="width:3px"></span><span class="ct">3</span></div>
+    <div class="bar-demo"><span class="lb">Space.x4</span><span class="bx" style="width:4px"></span><span class="ct">4</span></div>
+    <div class="bar-demo"><span class="lb">Space.x6</span><span class="bx" style="width:6px"></span><span class="ct">6</span></div>
+    <div class="bar-demo"><span class="lb">Space.x8</span><span class="bx" style="width:8px"></span><span class="ct">8</span></div>
+    <div class="bar-demo"><span class="lb">Space.x10</span><span class="bx" style="width:10px"></span><span class="ct">10</span></div>
+    <div class="bar-demo"><span class="lb">Space.x12</span><span class="bx" style="width:12px"></span><span class="ct">12</span></div>
+    <div class="bar-demo"><span class="lb">Space.x16</span><span class="bx" style="width:16px"></span><span class="ct">16</span></div>
+    <div class="bar-demo"><span class="lb">Space.x20</span><span class="bx" style="width:20px"></span><span class="ct">20</span></div>
+    <div class="bar-demo"><span class="lb">Space.x24</span><span class="bx" style="width:24px"></span><span class="ct">24</span></div>
+    <div class="bar-demo"><span class="lb">Space.x32</span><span class="bx" style="width:32px"></span><span class="ct">32</span></div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">매핑</div>
+    <div class="card-s">왼쪽이 현재 리터럴, 오른쪽이 처분</div>
+    <table style="margin:0">
+    <tbody>
+    <tr><td class="n">0</td><td class="n">75</td><td>→ 0</td><td class="dim">—</td></tr>
+    <tr><td class="n">2</td><td class="n">59</td><td><code>x2</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">8</td><td class="n">54</td><td><code>x8</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">3</td><td class="n">48</td><td><code>x3</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">10</td><td class="n">45</td><td><code>x10</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">1</td><td class="n">30</td><td><code>hair</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">12</td><td class="n">24</td><td><code>x12</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">9</td><td class="n">23</td><td><code>x10</code></td><td class="dim">+1</td></tr>
+    <tr><td class="n">4</td><td class="n">22</td><td><code>x4</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">6</td><td class="n">19</td><td><code>x6</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">5</td><td class="n">15</td><td><code>x4</code>/<code>x6</code></td><td class="dim">±1</td></tr>
+    <tr><td class="n">14</td><td class="n">13</td><td><code>x16</code></td><td class="dim">+2</td></tr>
+    <tr><td class="n">16</td><td class="n">12</td><td><code>x16</code></td><td class="dim">0</td></tr>
+    <tr><td class="n">13</td><td class="n">9</td><td><code>x12</code></td><td class="dim">−1</td></tr>
+    <tr><td class="n">11</td><td class="n">7</td><td><code>x12</code></td><td class="dim">+1</td></tr>
+    <tr><td class="n">7</td><td class="n">4</td><td><code>x8</code></td><td class="dim">+1</td></tr>
+    <tr><td class="n">18</td><td class="n">4</td><td><code>x16</code>/<code>x20</code></td><td class="dim">±2</td></tr>
+    </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="note">
+  <div class="t">왜 4pt 그리드가 아닌가</div>
+  <p>4pt는 <strong>40.5%</strong>만 적중한다. 즉 278곳을 1–2pt 옮겨야 한다. 이 앱의 정보 밀도는 2/3/6pt가 떠받치고 있다(clip block 간격, lane gap, ruler tick). 4pt로 옮기면 타임라인이 헐거워지고 메뉴 행이 높아진다. <strong>2pt 그리드가 이 UI의 실제 기준이고, 그것을 인정하는 편이 바로잡는 편보다 유용하다.</strong></p>
+</div>
+
+<div class="grid2">
+  <div class="card tight">
+    <div class="card-h">S1 · 3단 간격</div>
+    <div class="card-s">컴포넌트 내부 ≤ x8 · 컴포넌트 사이 x12–x20 · 블록 사이 x24+</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">S2 · 페이지 좌우 여백은 x16 고정</div>
+    <div class="card-s">지금 14 / 16 / 18 / 20 혼용</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">S3 · 44pt는 히트 영역이다</div>
+    <div class="card-s">시각 크기가 아니다. 26pt 버튼은 <code>taptionTouchTarget</code>으로 44까지 넓힌다 (이미 존재, 유지)</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">S4 · <code>Spacer(minLength: 0)</code>을 간격으로 쓰지 말 것</div>
+    <div class="card-s">VStack의 의미 높이를 예측 불가로 만든다</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2.4 RADIUS ═══════════════════════ -->
+<h2 id="radius"><span class="num">2.4</span>Radius</h2>
+<p>18개 값 → <strong>5개 + <code>Capsule</code></strong>. 그리고 표 대신 <strong>규칙 하나</strong>.</p>
+
+<div class="rad-demo">
+  <div class="cell"><div class="box" style="border-radius:4px"></div><div class="lb">x4</div><div class="ct">틱 · 레일 세그먼트 · 서브클립</div></div>
+  <div class="cell"><div class="box" style="border-radius:8px"></div><div class="lb">x8</div><div class="ct">칩 · 태그 · 소형 컨트롤</div></div>
+  <div class="cell"><div class="box" style="border-radius:12px"></div><div class="lb">x12</div><div class="ct">컨트롤 · 필드 · 셀</div></div>
+  <div class="cell"><div class="box" style="border-radius:16px"></div><div class="lb">x16</div><div class="ct">카드 · 클립 블록 · 글래스 패널</div></div>
+  <div class="cell"><div class="box" style="border-radius:22px"></div><div class="lb">x22</div><div class="ct">레일 패널 · 드로어 · 히어로</div></div>
+</div>
+
+<div class="note">
+  <div class="t">규칙 R1 — 반경은 요소의 짧은 변에 비례한다. 의미에 비례하지 않는다.</div>
+  <p>짧은 변 ≤20pt → <code>x4</code>/<code>x8</code> (또는 <code>Capsule</code>) · 20–40pt → <code>x8</code>/<code>x12</code> · &gt;40pt → <code>x12</code>/<code>x16</code> · 전폭 패널/드로어 → <code>x22</code></p>
+  <p>이 규칙의 존재 이유: 개발자가 <strong>"card가 14인지 12인지"를 외울 필요가 없게</strong> 만드는 것. 기존 <code>TaptionRadius</code>는 여덟 이름(<code>tight/small/control/field/compact/panel/tile/card</code>)으로 7–14 여덟 값을 명명했다. 사람 눈은 <code>panel</code>(12)과 <code>tile</code>(13)을 구분하지 못하므로 명명이 아무 제약도 만들지 못했고, 165곳이 여덟 값에 고르게 퍼져 하나도 도태되지 않았다.</p>
+</div>
+
+<table>
+<thead><tr><th class="n">현재</th><th class="n">곳</th><th>→</th><th class="n">변화</th></tr></thead>
+<tbody>
+<tr><td class="n">14</td><td class="n">37</td><td><code>x16</code></td><td class="n">+2</td></tr>
+<tr><td class="n">10</td><td class="n">26</td><td><code>x12</code></td><td class="n">+2</td></tr>
+<tr><td class="n">12</td><td class="n">17</td><td><code>x12</code></td><td class="n">0</td></tr>
+<tr><td class="n">13</td><td class="n">12</td><td><code>x12</code></td><td class="n">−1</td></tr>
+<tr><td class="n">18</td><td class="n">11</td><td><code>x22</code></td><td class="n">+4</td></tr>
+<tr><td class="n">9</td><td class="n">9</td><td><code>x8</code></td><td class="n">−1</td></tr>
+<tr><td class="n">22</td><td class="n">8</td><td><code>x22</code></td><td class="n">0</td></tr>
+<tr><td class="n">15</td><td class="n">8</td><td><code>x16</code></td><td class="n">+1</td></tr>
+<tr><td class="n">4</td><td class="n">7</td><td><code>x4</code></td><td class="n">0</td></tr>
+<tr><td class="n">20</td><td class="n">6</td><td><code>x22</code></td><td class="n">+2</td></tr>
+<tr><td class="n">11</td><td class="n">6</td><td><code>x12</code></td><td class="n">+1</td></tr>
+<tr><td class="n">16</td><td class="n">5</td><td><code>x16</code></td><td class="n">0</td></tr>
+<tr><td class="n">6 · 5 · 3 · 2 · 28 · 8</td><td class="n">20</td><td>가까운 값</td><td class="n">≤6</td></tr>
+</tbody>
+</table>
+
+<!-- ═══════════════════════ 2.5 ELEV ═══════════════════════ -->
+<h2 id="elev"><span class="num">2.5</span>Elevation · Glass</h2>
+<p>지금 그림자는 손으로 쓴 네 쌍이다(<code>black@0.05 r7 y2</code> · <code>black@0.08 r3 y1</code> · <code>black@0.16 r3 y1</code> · <code>tpSky@0.16 r4 y2</code>). 네 단으로 정리한다.</p>
+
+<div class="elev-demo">
+  <div><div class="box" style="box-shadow:none;border:1px solid var(--line)">e0</div><div class="ct" style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.4">흐름 안. 그림자 없음.<br>목록 행 · 달력 셀 · 클립</div></div>
+  <div><div class="box" style="box-shadow:var(--e1)">e1</div><div class="ct" style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.4">칩 · 작은 카드<br>떠 있는 pill</div></div>
+  <div><div class="box" style="box-shadow:var(--e2)">e2</div><div class="ct" style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.4">레일 · 액션 바<br>지도 위 컨트롤</div></div>
+  <div><div class="box" style="box-shadow:var(--e3)">e3</div><div class="ct" style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.4">드로어 · 모달<br>토스트 · 권한 카드</div></div>
+</div>
+
+<div class="note warn">
+  <div class="t">규칙 E1 — <code>mapHomeGlass</code>는 살아 있는 지도 위에서만</div>
+  <p><code>mapHomeGlass</code>는 <code>.glassEffect(.regular)</code> / <code>.ultraThinMaterial</code>이다. <strong>뒤에 있는 것의 색을 가져온다.</strong> 뒤가 크림색 <code>tpBackground</code>면 머티리얼이 회청색 층을 돌려주고, 따뜻한 계열에서 즉시 탁해 보인다.</p>
+  <p><strong>현재 위반:</strong> <code>MapHomeView.sidebarContent</code>의 상태 캡슐(약 8432행)은 드로어 <em>안</em>, 배경이 <code>tpSurface</code>인데 <code>mapHomeGlass(in: Capsule())</code>를 쓴다. <code>Color.tpSurface</code> + <code>e1</code> + <code>tpLine</code> 테두리로 바꾼다.</p>
+</div>
+
+<div class="grid2">
+  <div class="card tight">
+    <div class="card-h tick">✓ 허용</div>
+    <div style="font-size:12.5px;line-height:1.9">
+      <code>dateBadge</code> — 지도 위<br>
+      <code>mapControls</code> 버튼 — 지도 위<br>
+      <code>MapHomeTimeSidebar</code> 트랙 패널 — 지도 위<br>
+      권한 카드 — 지도 위
+    </div>
+  </div>
+  <div class="card tight">
+    <div class="card-h cross">✗ 금지</div>
+    <div style="font-size:12.5px;line-height:1.9">
+      드로어 안의 캡슐 <span class="tag">현재 위반</span><br>
+      달력 시트 안의 카드<br>
+      NLE 편집기 안의 모든 것<br>
+      설정 · 메뉴 행
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 2.6 MOTION ═══════════════════════ -->
+<h2 id="motion"><span class="num">2.6</span>Motion</h2>
+<p>실측 약 20곳, 길이 0.1–0.25, spring 하나. 다섯 개로 정리한다.</p>
+
+<table>
+<thead><tr><th>토큰</th><th>값</th><th>쓰는 곳</th></tr></thead>
+<tbody>
+<tr><td><code>Motion.instant</code></td><td class="mono">.linear(0.10)</td><td>상태 플립, 틴트 변경</td></tr>
+<tr><td><code>Motion.fast</code></td><td class="mono">.easeOut(0.18)</td><td>칩, 선택 테두리, 눌림(scale 0.94)</td></tr>
+<tr><td><code>Motion.standard</code></td><td class="mono">.easeInOut(0.22)</td><td>모드 전환, 시트 detent</td></tr>
+<tr><td><code>Motion.emphasis</code></td><td class="mono">.spring(response: 0.30, dampingFraction: 0.85)</td><td>드로어, 날짜 배지 펼침</td></tr>
+<tr><td><code>Motion.tracking</code></td><td class="mono">.linear(0.12)</td><td>연속 제스처 추종(나침반, 드래그)</td></tr>
+</tbody>
+</table>
+
+<div class="note">
+  <div class="t">M1 · M2</div>
+  <p><strong>M1 — 이산 탭은 spring/ease, 연속 제스처는 <code>tracking</code> 또는 무애니메이션.</strong> 나침반 회전은 이미 <code>.linear(0.12)</code>를 쓴다 — 정답. 클립 드래그·핸들 드래그·핀치 줌에 easeOut을 붙이면 <strong>손가락과 내용이 어긋난다.</strong></p>
+  <p><strong>M2 — <code>accessibilityReduceMotion</code>을 존중한다.</strong> <code>emphasis</code> → <code>standard</code>, <code>standard</code> → 무애니메이션. <code>MapHomeView</code>에 지금 3곳의 <code>withAnimation</code>이 이 플래그를 확인하지 않는다.</p>
+</div>
+
+<!-- ═══════════════════════ 3 COMPONENTS ═══════════════════════ -->
+<h2><span class="num">3</span>Components</h2>
+<p>22개. 각각 <strong>역할 / 해부 / 상태 / 토큰</strong>. 명명은 §6: 문서는 <code>tp.group.name</code>, Swift는 <code>TPGroupName</code>.</p>
+
+<!-- map -->
+<h3 id="c-map">3.1–3.4 지도</h3>
+
+<div class="phone-cap">3.1 dateBadge + 3.2 weekStrip + 3.3 marker + 3.4 sideRail</div>
+<div class="phone">
+  <div class="ph-head">
+    <div class="iconbtn">☰</div>
+    <div class="datebadge"><div class="wd">토</div><div class="dd">24</div></div>
+  </div>
+  <div class="mapbody">
+    <div class="road h" style="top:78px"></div>
+    <div class="road h" style="top:212px"></div>
+    <div class="road v" style="left:92px"></div>
+    <div class="road v" style="left:264px"></div>
+
+    <div class="house"><div class="roof"></div><div class="body"></div><div class="door"></div><div class="win"></div></div>
+    <div class="mcat"><div class="hd"></div><div class="er l"></div><div class="er r"></div><div class="tl"></div></div>
+
+    <div class="mk" style="left:126px;top:58px">●</div>
+    <div class="mk" style="left:286px;top:168px">●</div>
+    <div class="mk" style="left:70px;top:238px;opacity:.45">●</div>
+
+    <div class="siderail">
+      <div class="b">⌕</div>
+      <div class="b on">◎</div>
+      <div class="b">◈</div>
+    </div>
+
+    <div class="timerail">
+      <div class="tr-rail">
+        <div class="tr-track">
+          <div class="tr-seg" style="top:0;height:9%;background:var(--cat-sleep);opacity:.94"></div>
+          <div class="tr-seg" style="top:9%;height:3%;background:var(--cat-movement);opacity:.94"></div>
+          <div class="tr-seg" style="top:12%;height:18%;background:var(--cat-work);opacity:.94"></div>
+          <div class="tr-seg" style="top:30%;height:3%;background:var(--cat-eating);opacity:.94"></div>
+          <div class="tr-seg" style="top:33%;height:11%;background:var(--cat-study);opacity:.94"></div>
+          <div class="tr-seg" style="top:44%;height:4%;background:var(--cat-unconfirmed);opacity:.50"></div>
+          <div class="tr-seg" style="top:48%;height:16%;background:var(--cat-work);opacity:.94"></div>
+          <div class="tr-seg" style="top:64%;height:3%;background:var(--cat-eating);opacity:.94"></div>
+          <div class="tr-seg" style="top:67%;height:11%;background:var(--cat-study);opacity:.94"></div>
+          <div class="tr-seg" style="top:78%;height:5%;background:var(--cat-hobby);opacity:.94"></div>
+          <div class="tr-seg" style="top:83%;height:17%;background:var(--cat-sleep);opacity:.94"></div>
+          <div class="tr-now" style="top:57%"></div>
+        </div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * 0)">06</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * .1667)">09</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * .3333)">12</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * .5)">15</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * .6667)">18</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * .8333)">21</div>
+        <div class="tr-num" style="top:calc(16px + (100% - 32px) * 1)">24</div>
+      </div>
+      <div class="tr-q" style="top:calc(16px + (100% - 32px) * .40)">?</div>
+      <div class="tr-handle" style="top:calc(16px + (100% - 32px) * .57 - 22px)">14:20</div>
+    </div>
+  </div>
+  <div class="modebar">
+    <div class="m on"><div class="g">◎</div><div class="l">지도</div></div>
+    <div class="m"><div class="g">▤</div><div class="l">타임라인</div></div>
+    <div class="m"><div class="g">◷</div><div class="l">기록</div></div>
+  </div>
+</div>
+
+<div class="grid2" style="margin-top:var(--x16)">
+  <div class="card tight">
+    <div class="card-h">3.3 marker 상태</div>
+    <table style="margin:0">
+    <tbody>
+    <tr><td><strong>house</strong></td><td><code>closed</code> / <code>open</code> / <code>noHome</code>(opacity .45)</td></tr>
+    <tr><td><strong>cat</strong></td><td><code>idle</code> / <code>walking</code>(재생 중) / <code>sleeping</code>(야간)</td></tr>
+    <tr><td><strong>garden</strong></td><td><code>seed</code> L1–30 / <code>sprout</code> 31–120 / <code>grown</code> 121–300 / <code>full</code> 301–366</td></tr>
+    </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--ink-2);margin:var(--x8) 0 0">정원은 366단계 아트워크 <code>HomeEvolution001…366</code>. <strong>미확인이 하나라도 있으면 그날 자라지 않는다</strong> — §2.1.2 규칙 C1.</p>
+  </div>
+  <div class="card tight">
+    <div class="card-h">3.1 dateBadge · 요일 색 규칙</div>
+    <div class="card-s">한국 기준</div>
+    <table style="margin:0">
+    <tbody>
+    <tr><td>토</td><td><code>tpSaturday</code> <span class="mono">#3D78C4</span></td></tr>
+    <tr><td>일 · 공휴일</td><td><code>tpHoliday</code> <span class="mono">#DB454D</span></td></tr>
+    <tr><td>평일</td><td><code>tpInk</code></td></tr>
+    </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--ink-2);margin:var(--x8) 0 0">현재 토요일을 <code>tpReferenceBlue</code>(#2D9BF0)로 쓰는 곳이 있어 두 값이 공존한다 → <code>tpSaturday</code>로 통일.</p>
+  </div>
+</div>
+
+<!-- mode bar -->
+<h3 id="c-mode">3.5–3.6 모드 바 · context action</h3>
+<div class="card">
+  <div class="card-h">3.6 <code>tp.modeSwitch</code> — 지도 · 타임라인 · 기록</div>
+  <div class="card-s">탭이 아니다. P2: 시점 전환은 내비게이션이 아니다. 전환해도 <code>selectedDate</code>는 그대로, 각 mode는 자기 스크롤/줌을 기억, push 스택은 각 mode의 루트로.</div>
+  <div style="background:var(--surface);border:1px solid var(--line);border-radius:var(--r16);padding:var(--x6) var(--x4) var(--x10);max-width:390px">
+    <div class="modebar" style="border:0;box-shadow:none;padding:0">
+      <div class="m on"><div class="g">◎</div><div class="l">지도</div></div>
+      <div class="m"><div class="g">▤</div><div class="l">타임라인</div></div>
+      <div class="m"><div class="g">◷</div><div class="l">기록</div></div>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:var(--ink-2);margin-top:var(--x12);margin-bottom:0">
+    <strong>반드시 할 두 가지:</strong> ① 세 칸 모두 글자가 있어야 한다 (P4: 주 진입점은 이름이 있어야 하고 아이콘만으로는 안 된다). ② <code>accessibilityValue</code>로 현재 mode를 알리고, 선택된 칸에 <code>.isSelected</code> 트레이트.
+  </p>
+</div>
+
+<div class="card">
+  <div class="card-h">3.5 <code>tp.contextActionRow</code> — 맥락 액션 줄</div>
+  <div class="card-s">현재 뷰에 대한 동작. <strong>"당신이 어디 있는지"를 바꾸지 않는다.</strong> 기존 <code>bottomActionBar</code>의 7개 버튼은 전부 현재 뷰 조작이고, 하나도 내비게이션이 아니다.</div>
+  <div style="background:var(--surface);border-top:1px solid var(--line);border-radius:var(--r12);padding:var(--x8) var(--x8) var(--x10);max-width:390px;box-shadow:var(--e2)">
+    <div style="display:flex;align-items:center;height:56px">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1">▦</div><div style="font-size:12px;font-weight:600;color:var(--ink-2)">달력</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1">◎</div><div style="font-size:12px;font-weight:600;color:var(--ink-2)">현재 위치</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1">⌂</div><div style="font-size:12px;font-weight:600;color:var(--ink-2)">집</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1;color:var(--accent-text)">❚❚</div><div style="font-size:12px;font-weight:600;color:var(--accent-text)">일시 정지</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1">◉</div><div style="font-size:12px;font-weight:600;color:var(--ink-2)">녹화</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:20px;line-height:1">＋</div><div style="font-size:12px;font-weight:600;color:var(--ink-2)">메모</div></div>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:var(--ink-2);margin-top:var(--x12);margin-bottom:0"><strong>규칙 C2:</strong> 하단 첫 칸은 고정으로 <code>tp.modeSwitch</code>. 나머지가 context action. <strong>어떤 context action도 <code>mode</code>를 바꾸지 않는다.</strong></p>
+</div>
+
+<!-- time rail -->
+<h3 id="c-rail">3.7 타임 레일 (압축형)</h3>
+<p>지도 오른쪽 44pt 시간축. <strong>3 lane 모델의 1 lane 압축</strong>이다 — 다른 물건이 아니다. <code>MapHomeTimeSidebar</code>가 이미 그렇게 생겼다: <code>activeRailWidth: 7</code> 컬러 트랙 + <code>rulerNumericColumnWidth: 32</code> 숫자 열 + <code>handleLaneWidth: 69</code> 핸들 열.</p>
+
+<div class="card tight">
+  <div class="card-h">해부 (실측, 전부 유지)</div>
+  <div class="card-s">총 폭 113pt = handleLane 69 + railWidth 44</div>
+  <table style="margin:0">
+  <tbody>
+  <tr><td class="mono">handleLane</td><td class="n">69</td><td>선택 시각 카드 + 트림 핸들 (44×44, <code>Radius.x22</code>)</td></tr>
+  <tr><td class="mono">activeRailWidth</td><td class="n">7</td><td>컬러 트랙 (<code>Radius.x4</code>)</td></tr>
+  <tr><td class="mono">rulerNumericColumnWidth</td><td class="n">32</td><td>숫자 열</td></tr>
+  <tr><td class="mono">verticalInset</td><td class="n">28</td><td>상하 여백 → trackHeight = railHeight − 56</td></tr>
+  <tr><td class="mono">zoomDurations</td><td class="n">5단</td><td><code>[1440, 720, 360, 180, 60]</code></td></tr>
+  <tr><td class="mono">reviewMarkerHitHeight</td><td class="n">44</td><td>26pt 시각 → 44pt 히트</td></tr>
+  </tbody>
+  </table>
+</div>
+
+<div class="card tight">
+  <div class="card-h">상태</div>
+  <table style="margin:0">
+  <tbody>
+  <tr><td><code>default</code></td><td><code>tpCat(id).opacity(0.94)</code> 트랙</td></tr>
+  <tr><td><code>now</code></td><td>1.5pt <code>tpNow</code> 가로선 + 우측 시간 캡슐</td></tr>
+  <tr><td><code>selected</code></td><td>44×44 핸들, <code>tpSurfaceCream</code> 바탕 + <code>#D94772</code> 글자 (기존 <code>deepPinkHex</code> 유지)</td></tr>
+  <tr><td><code>unconfirmed</code></td><td><code>tpCat.opacity(0.50)</code> + 체커 + 26pt 물음표 원표</td></tr>
+  <tr><td><code>empty</code></td><td><code>tpBackground.opacity(0.62)</code> 트랙 + §4.2/4.3</td></tr>
+  </tbody>
+  </table>
+</div>
+
+<div class="note">
+  <div class="t">규칙 C3</div>
+  <p>미확인 물음표 표는 <strong>시각 26pt / 히트 44pt</strong>이고, <code>accessibilityLabel</code>이 구간과 "몇 개 중 몇 개"를 말해야 한다. 현재 구현 <code>"미확인 구간 \(count)개 선택"</code>은 정답 — 유지.</p>
+</div>
+
+<!-- lanes -->
+<h3 id="c-lanes">3.8–3.11 3 lane 타임라인 · 클립 · 눈금</h3>
+<p>타임라인 모드의 본체. <strong><code>MapHomeTimeSidebar</code>에서 자라난다</strong> — <code>ScheduleView</code>가 아니다. lane 비율은 NLE 편집기와 공유한다(같은 정보 모델이므로).</p>
+
+<div class="card">
+  <div class="card-s" style="margin-bottom:var(--x12)">390pt 화면 / 여백 <code>x16</code>×2 → 358 → gutter 36, gap 10 → usable 312 → <strong>main 137 / sensor 75 / detail 100</strong>.<br><code>센서 원본</code> 12pt = <strong>44.7pt &lt; 75</strong> ✅ — <strong>lane 제목을 9pt에서 12pt로 올릴 수 있다.</strong></div>
+
+  <div class="lanes" style="grid-template-columns:36px 137px 75px 100px;width:390px;max-width:100%;margin:0 auto">
+    <div class="lh"></div>
+    <div class="lh">대분류</div>
+    <div class="lh">센서 원본</div>
+    <div class="lh">상세활동</div>
+
+    <div class="gutter" style="height:420px;position:relative">
+      <div class="tk" style="top:0.0px">06</div>
+      <div class="tk" style="top:70.0px">09</div>
+      <div class="tk" style="top:140.0px">12</div>
+      <div class="tk" style="top:210.0px">15</div>
+      <div class="tk" style="top:280.0px">18</div>
+      <div class="tk" style="top:350.0px">21</div>
+      <div class="tk" style="top:420.0px">24</div>
+    </div>
+
+    <div class="lane" style="height:420px;position:relative">
+      <div class="clip" style="top:1.0px;height:56.3px;--cs:var(--catS-sleep);--cw:var(--catW-sleep);--ce:color-mix(in srgb,var(--catS-sleep) 34%,var(--surface))">수면<div class="rg">06:00–08:30</div></div>
+      <div class="clip xs" style="top:59.3px;height:9.7px;--cs:var(--catS-movement);--cw:var(--catW-movement);--ce:color-mix(in srgb,var(--catS-movement) 34%,var(--surface))">이동</div>
+      <div class="clip sel" style="top:71.0px;height:83.6px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">업무<div class="rg">09:00–12:40</div><div class="trim t"></div><div class="trim b"></div></div>
+      <div class="clip xs" style="top:156.6px;height:9.6px;--cs:var(--catS-eating);--cw:var(--catW-eating);--ce:color-mix(in srgb,var(--catS-eating) 34%,var(--surface))">식사</div>
+      <div class="clip" style="top:168.2px;height:40.8px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface))">공부</div>
+      <div class="clip gap" style="top:211.0px;height:25.2px"><span class="qm">?</span></div>
+      <div class="clip" style="top:238.2px;height:48.6px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">업무<div class="rg">16:10–18:20</div></div>
+      <div class="clip xs" style="top:288.8px;height:15.5px;--cs:var(--catS-eating);--cw:var(--catW-eating);--ce:color-mix(in srgb,var(--catS-eating) 34%,var(--surface))">식사</div>
+      <div class="clip dirty" style="top:306.3px;height:42.7px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface))">공부</div>
+      <div class="clip" style="top:351.0px;height:21.3px;--cs:var(--catS-hobby);--cw:var(--catW-hobby);--ce:color-mix(in srgb,var(--catS-hobby) 34%,var(--surface))">취미</div>
+      <div class="clip" style="top:374.3px;height:44.7px;--cs:var(--catS-sleep);--cw:var(--catW-sleep);--ce:color-mix(in srgb,var(--catS-sleep) 34%,var(--surface))">수면<div class="rg">22:00–24:00</div></div>
+    </div>
+
+    <div class="lane rule" style="height:420px;position:relative">
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-sleep) 58%,var(--surface));top:1.0px;height:56.3px;color:var(--catS-sleep)">수면</div>
+      <div class="clip xs ro" style="--ce:color-mix(in srgb,var(--catS-movement) 58%,var(--surface));top:59.3px;height:9.7px;color:var(--catS-movement)"></div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-work) 58%,var(--surface));top:71.0px;height:83.6px;color:var(--catS-work)">업무</div>
+      <div class="clip xs ro" style="--ce:color-mix(in srgb,var(--catS-eating) 58%,var(--surface));top:156.6px;height:9.6px;color:var(--catS-eating)"></div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-study) 58%,var(--surface));top:168.2px;height:40.8px;color:var(--catS-study)">공부</div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-unconfirmed) 58%,var(--surface));top:211.0px;height:25.2px;color:var(--catS-unconfirmed)">미확인</div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-work) 58%,var(--surface));top:238.2px;height:48.6px;color:var(--catS-work)">업무</div>
+      <div class="clip xs ro" style="--ce:color-mix(in srgb,var(--catS-eating) 58%,var(--surface));top:288.8px;height:15.5px;color:var(--catS-eating)"></div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-study) 58%,var(--surface));top:306.3px;height:42.7px;color:var(--catS-study)">공부</div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-hobby) 58%,var(--surface));top:351.0px;height:21.3px;color:var(--catS-hobby)">취미</div>
+      <div class="clip ro" style="--ce:color-mix(in srgb,var(--catS-sleep) 58%,var(--surface));top:374.3px;height:44.7px;color:var(--catS-sleep)">수면</div>
+    </div>
+
+    <div class="lane rule" style="height:420px;position:relative">
+      <div class="clip" style="top:71.0px;height:21.3px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">회의</div>
+      <div class="clip" style="top:94.3px;height:36.9px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">문서 작성</div>
+      <div class="clip" style="top:133.2px;height:21.4px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">리뷰</div>
+      <div class="clip" style="top:168.2px;height:25.2px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">강의</div>
+      <div class="clip xs" style="top:195.4px;height:13.6px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">노트 정리</div>
+      <div class="clip" style="top:238.2px;height:25.2px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">미팅</div>
+      <div class="clip" style="top:265.4px;height:21.4px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">정리</div>
+      <div class="clip" style="top:306.3px;height:23.3px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">독서</div>
+      <div class="clip xs" style="top:331.6px;height:17.4px;--cs:var(--catS-study);--cw:var(--catW-study);--ce:color-mix(in srgb,var(--catS-study) 34%,var(--surface));font-size:9px;padding:2px 4px;font-weight:600">복습</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-h">3.9 <code>tp.clip</code> — 여섯 상태</div>
+  <div class="card-s">전 제품의 원자. 위 데모에서 sel · dirty · gap · ro 를 모두 볼 수 있다.</div>
+  <table style="margin:0">
+  <thead><tr><th>상태</th><th>채움</th><th>테두리</th><th>각도</th></tr></thead>
+  <tbody>
+  <tr><td><code>default</code></td><td><code>tpCatStrong</code></td><td><code>.white .35</code> 1pt</td><td>—</td></tr>
+  <tr><td><code>selected</code></td><td><code>tpCatStrong</code></td><td><code>.white .95</code> <strong>2.5pt</strong></td><td>—</td></tr>
+  <tr><td><code>dirty</code></td><td><code>tpCatStrong</code></td><td>동일</td><td>우상단 4pt <code>tpAccent</code></td></tr>
+  <tr><td><code>readOnly</code> 센서</td><td><code>tpCat .20</code></td><td><code>tpCat .55</code> 0.8pt</td><td>—</td></tr>
+  <tr><td><code>gap</code> 미확인</td><td><code>tpCatStrong(unconfirmed)</code> @ .55</td><td><code>.white .35</code></td><td><code>?</code> 26pt</td></tr>
+  <tr><td><code>disabled</code></td><td>위 + opacity .45</td><td>—</td><td>—</td></tr>
+  </tbody>
+  </table>
+  <p style="font-size:12.5px;color:var(--ink-2);margin:var(--x12) 0 0"><strong>내용 접힘 임계값(실측):</strong> <code>&lt; 18</code> 띠+바탕만(글자 없음) · <code>18–27</code> 카테고리명만 · <code>≥ 27</code> 이름+시간 · <code>width ≤ 34</code> 글자 없음. 이유: 13pt 행 높이가 18pt 아래로는 안 들어가서, 억지로 넣으면 <code>이동</code>의 절반이 잘려 나온다(현재 9.7pt 블록에서 실제로 발생).</p>
+</div>
+
+<div class="note">
+  <div class="t">규칙 C4 (개정)</div>
+  <p>블록에 글자를 얹을 때 채움은 <code>tpCatStrong</code>이 아니라 <strong><code>tpCatWash</code> + <code>tpInk</code></strong>다. <code>tpCatStrong</code> 위 백색은 4.86으로 겨우 통과하지만, 137pt 레인에 11개가 쌓이면 채도 부피가 시스템을 차갑게 만든다. <code>tpCatWash</code> 위 <code>tpInk</code>는 6.85–9.67 — 두 배 여유.</p>
+</div>
+
+<!-- calendar -->
+<h3 id="c-cal">3.12–3.15 기록</h3>
+<p>기록 모드의 본체. <strong><code>MapHomeCalendarSheet</code>에서 자라난다</strong> — 이미 월 그리드 + 일별 시간/횟수/거리 합계 + 평균을 갖고 있다.</p>
+
+<div class="grid2">
+  <div>
+    <div class="phone-cap">3.12 monthGrid · 10월</div>
+    <div class="cal">
+      <div class="wk"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+      <div class="mo">
+        <div class="d"></div><div class="d"></div><div class="d"></div><div class="d"></div>
+        <div class="d"><div class="n">1</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">2</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d sat"><div class="n">3</div><div class="dot" style="background:rgba(198,93,77,.35)"></div></div>
+        <div class="d sun"><div class="n">4</div><div class="dot" style="background:rgba(62,51,32,.18)"></div></div>
+        <div class="d"><div class="n">5</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">6</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">7</div><div class="dot" style="background:rgba(198,93,77,.35)"></div></div>
+        <div class="d"><div class="n">8</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">9</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">10</div><div class="dot" style="background:rgba(62,51,32,.18)"></div></div>
+        <div class="d"><div class="n">11</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">12</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">13</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">14</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">15</div><div class="dot" style="background:rgba(198,93,77,.35)"></div></div>
+        <div class="d"><div class="n">16</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">17</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d sat"><div class="n">18</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d sun"><div class="n">19</div><div class="dot" style="background:rgba(62,51,32,.18)"></div></div>
+        <div class="d"><div class="n">20</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">21</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d"><div class="n">22</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d today"><div class="n">23</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d sel sat"><div class="n">24</div><div class="dot" style="background:var(--accent)"></div></div>
+        <div class="d fut sun"><div class="n">25</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut"><div class="n">26</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut"><div class="n">27</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut"><div class="n">28</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut"><div class="n">29</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut"><div class="n">30</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d fut sat"><div class="n">31</div><div class="dot" style="background:rgba(62,51,32,.10)"></div></div>
+        <div class="d"></div><div class="d"></div><div class="d"></div>
+      </div>
+    </div>
+    <p style="font-size:11.5px;color:var(--ink-2);margin-top:var(--x8);line-height:1.6">셀 <strong>45.1 × 38</strong> = (358 − 42) / 7. 날짜 <code>tpSubhead 17</code>, 값 <code>tpMeter 10</code>.<br>점 = <code>hasLog.complete</code> <code>tpAccent</code> · <code>incomplete</code> <code>tpAccent .35</code> · <code>noLog</code> <code>tpInk .18</code></p>
+  </div>
+
+  <div>
+    <div class="phone-cap">3.13 dayTotals</div>
+    <div class="panel">
+      <div class="hd"><div class="ttl">업무시간</div><div class="day">10월 24일</div></div>
+      <div class="big" style="color:var(--accent-text)">6:12</div>
+      <div class="bars">
+        <div class="b" style="height:38%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:62%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:44%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:88%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:30%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:70%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:52%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:76%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:24%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:58%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:40%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:66%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:34%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:80%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:46%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:56%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:28%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:72%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:50%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:64%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:36%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:84%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:42%;background:var(--cat-work);opacity:.4"></div>
+        <div class="b" style="height:100%;background:var(--cat-work)"></div>
+        <div class="avg" style="bottom:55%"></div>
+      </div>
+      <div class="stats">
+        <div class="s"><div class="k">이번 달 합계</div><div class="v">128:40</div></div>
+        <div class="s"><div class="k">하루 평균</div><div class="v">5:21</div></div>
+      </div>
+    </div>
+
+    <div class="phone-cap" style="margin-top:var(--x16)">3.15 listRow</div>
+    <div class="rows">
+      <div class="row-i"><div class="cbar" style="background:var(--cat-work)"></div><div class="nm">업무</div><div class="mt">3시간 40분</div></div>
+      <div class="row-i"><div class="cbar" style="background:var(--cat-study)"></div><div class="nm">공부</div><div class="mt">1시간 50분</div></div>
+      <div class="row-i"><div class="cbar" style="background:var(--cat-unconfirmed)"></div><div class="nm">이동</div><div class="pill" style="background:rgba(62,51,32,.08);color:var(--ink-2)">미확인</div></div>
+      <div class="row-i"><div class="cbar" style="background:var(--cat-eating)"></div><div class="nm">식사</div><div class="mt">45분</div></div>
+    </div>
+    <p style="font-size:11.5px;color:var(--ink-2);margin-top:var(--x8);line-height:1.6"><strong>규칙 C6:</strong> 행은 <strong>색 띠 + 중립 바탕</strong>으로 분류를 표현한다. 이유는 워시가 안 갈려서가 아니라 <strong>면적</strong>이다 — 358pt 폭 전체를 워시로 채우면 채도 부피가 너무 커진다. (14% 워시는 실제로 안 갈린다: 최소 ΔE 4.0. 30%는 갈린다: 최소 ΔE 8.3. 클립은 137pt라 30%를 쓸 수 있지만, 행은 아니다.)</p>
+  </div>
+</div>
+
+<div class="card tight">
+  <div class="card-h">3.12 dayCell 상태 (10개)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:var(--x16);font-size:11.5px;line-height:1.8">
+    <div><span class="tag">idle</span> 날짜 <code>tpInk</code>, 점 <code>tpInk .3</code></div>
+    <div><span class="tag">selected</span> 32pt <code>Circle</code> <code>tpAccent</code> + 백색 글자</div>
+    <div><span class="tag">today</span> 1.5pt <code>tpAccent .65</code> 링</div>
+    <div><span class="tag">holiday/sun</span> <code>tpHoliday</code></div>
+    <div><span class="tag">saturday</span> <code>tpSaturday</code></div>
+    <div><span class="tag">hasLog.complete</span> 점 <code>tpAccent</code></div>
+    <div><span class="tag">hasLog.incomplete</span> 점 <code>tpAccent .35</code></div>
+    <div><span class="tag">noLog</span> 점 <code>tpInk .18</code></div>
+    <div><span class="tag">future</span> <code>tpSecondary</code>, 점 없음</div>
+    <div><span class="tag">outsideMonth</span> <code>Color.clear</code></div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="t">규칙 C5</div>
+  <p>날짜 칸의 숫자는 라틴 숫자다 (<code>cellText</code>가 <code>"6:12"</code> / <code>"45m"</code>를 돌려준다). 그래서 <code>tpMeter</code> 10pt가 정당하다. <strong>단, 언젠가 <code>"6시간 12분"</code>으로 바꾸면 10pt에서 47pt 폭 &gt; 45.1pt 칸 폭이라 <code>minimumScaleFactor(0.7)</code>이 걸려 7pt로 눌린다.</strong> 라틴 포맷을 유지하라.</p>
+</div>
+
+<!-- NLE -->
+<h3 id="c-nle">3.16–3.20 클립 편집기</h3>
+
+<div class="card">
+  <div class="phone-cap">3.16 header · 3.17 laneHeader · 3.18 selectionSummary · 3.19 applyBar</div>
+  <div style="width:390px;max-width:100%;border:1px solid var(--line);border-radius:var(--r16);overflow:hidden;box-shadow:var(--e2)">
+  <div class="nle-hd">
+    <div class="btn close">닫기</div>
+    <div class="ttl"><div class="a">클립 편집</div><div class="b">대분류 · 센서 원본 · 상세활동</div></div>
+    <div class="btn apply">적용</div>
+  </div>
+  <div style="padding:var(--x12) var(--x16) var(--x16);background:var(--bg)">
+    <div style="display:grid;grid-template-columns:36px 137px 75px 100px;gap:5px;margin-bottom:var(--x4)">
+      <div></div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink-2);display:flex;align-items:center;gap:var(--x6)">대분류
+        <span style="font-size:9px;font-weight:700;color:var(--accent-text);background:rgba(198,93,77,.14);padding:1px 5px;border-radius:99px">2</span></div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink-2)">센서 원본</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ink-2)">상세활동</div>
+    </div>
+    <div class="sum">
+      <div class="dt" style="background:var(--catS-work)"></div>
+      <div class="t">업무</div>
+      <div class="r">09:00–12:40</div>
+      <div class="undo">↺ 센서 업무</div>
+      <div class="ph">12:40</div>
+    </div>
+    <div class="tools">
+      <div class="cat">▦ 분류</div>
+      <div class="t"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.2 7.8 20 19M8.2 16.2 20 5"/></svg></div>
+      <div class="t"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.6h6V7M6.5 7l.9 12.4h9.2L17.5 7M10 11v5M14 11v5"/></svg></div>
+      <div class="t off">↺</div>
+      <div class="t off">↻</div>
+      <div class="t" style="margin-left:auto">↕</div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card tight">
+    <div class="card-h">3.16 header 상태</div>
+    <table style="margin:0">
+    <tbody>
+    <tr><td><code>clean</code></td><td>적용 비활성 <code>opacity .45</code></td></tr>
+    <tr><td><code>dirty</code></td><td>적용 활성</td></tr>
+    <tr><td><code>saving</code></td><td><code>ProgressView().tint(.white)</code></td></tr>
+    </tbody>
+    </table>
+  </div>
+  <div class="card tight">
+    <div class="card-h">3.18 selectionSummary 상태</div>
+    <table style="margin:0">
+    <tbody>
+    <tr><td><code>none</code></td><td><code>클립을 고르세요</code></td></tr>
+    <tr><td><code>clip</code></td><td>색점 + 제목 + 구간 + 길이</td></tr>
+    <tr><td><code>clip.dirty</code></td><td>+ <code>센서 업무</code> 되돌리기 pill</td></tr>
+    <tr><td><code>pick</code></td><td>센서/상세에서 집어 든 상태</td></tr>
+    <tr><td><code>gap</code></td><td><code>미확인</code> pill</td></tr>
+    </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="note warn">
+  <div class="t">3.16 반드시 고칠 것</div>
+  <p><code>닫기</code>는 지금 <code>tpReferenceRose</code>(2.67:1)로 글자를 쓰고, <code>적용</code>은 <code>tpReferenceBlue</code>(2.49:1)를 바탕으로 백색 글자(4.14)를 쓴다. <strong>둘 다 미달.</strong> <code>닫기</code> → <code>tpAccentText</code>, <code>적용</code> 바탕 → <code>tpAccentText</code>.</p>
+</div>
+
+<div class="card tight">
+  <div class="card-h">3.10 trimHandle · 3.20 zoom</div>
+  <div class="card-s">가장 심각한 접근성 결함이 여기 있다</div>
+  <div class="row" style="gap:var(--x24)">
+    <div>
+      <div class="clip sel" style="position:relative;width:150px;height:64px;--cs:var(--catS-work);--cw:var(--catW-work);--ce:color-mix(in srgb,var(--catS-work) 34%,var(--surface))">
+        <div class="trim t"></div>
+        <div class="trim b" style="top:auto;bottom:2px"></div>
+      </div>
+      <div style="font-size:11px;color:var(--ink-2);margin-top:6px;line-height:1.5">시각: <strong>5pt 높이 · 22pt 폭</strong><br>히트: <strong class="cross">5 × 22 → 거의 못 잡는다</strong><br>바탕은 <code>tpSurface</code> — 순백은 워시 위에서 사라진다</div>
+    </div>
+    <div style="flex:1;min-width:180px">
+      <p style="font-size:12.5px;margin:0 0 var(--x8)"><strong>수정:</strong> <code>.taptionHitOutset(horizontal: 11, vertical: 19.5)</code>로 <strong>44×44</strong>까지 넓힌다. 22 + 11×2 = 44, 5 + 19.5×2 = 44.</p>
+      <p style="font-size:12.5px;margin:0"><strong>줌</strong>은 <code>zoomDurations</code> 5단, 핀치 + 더블탭 리셋 + <code>전체 보기</code> 버튼. VoiceOver에서는 핀치를 쓸 수 없으므로 트랙에 <code>accessibilityAdjustableAction</code>으로 5단 전환을 제공한다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- drawer -->
+<h3 id="c-drawer">3.21–3.22 드로어 · 시트</h3>
+
+<div class="row" style="align-items:flex-start;gap:var(--x24)">
+  <div>
+    <div class="phone-cap">3.21 drawer</div>
+    <div class="drawer">
+      <div class="dh"><div class="t">오늘의 기록</div><div class="iconbtn" style="width:32px;height:32px;font-size:13px">✕</div></div>
+      <div class="gl">기록</div>
+      <div class="gc">
+        <div class="gi"><span class="ic">○</span><span class="lb">위치</span></div>
+        <div class="gi"><span class="ic">◆</span><span class="lb">분류</span></div>
+      </div>
+      <div class="gl">루틴</div>
+      <div class="gc"><div class="gi"><span class="ic">◇</span><span class="lb">루틴 편집</span></div></div>
+      <div class="gl">화면</div>
+      <div class="gc">
+        <div class="gi"><span class="ic">▤</span><span class="lb">표시</span></div>
+        <div class="gi"><span class="ic">文</span><span class="lb">언어</span></div>
+      </div>
+      <div class="gl">앱</div>
+      <div class="gc">
+        <div class="gi"><span class="ic">▦</span><span class="lb">설정</span></div>
+        <div class="gi"><span class="ic">◈</span><span class="lb">알림</span></div>
+        <div class="gi"><span class="ic">▣</span><span class="lb">데이터 보호</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:260px">
+    <div class="card tight" style="margin-bottom:var(--x12)">
+      <div class="card-h">3.21 규격</div>
+      <table style="margin:0">
+      <tbody>
+      <tr><td>폭</td><td class="mono">min(max(vw × 0.72, 260), 300)</td></tr>
+      <tr><td>바탕</td><td><code>tpSurface</code> + 우측 1pt <code>tpLine</code></td></tr>
+      <tr><td>그림자</td><td><code>Elev.e3</code></td></tr>
+      <tr><td>그룹 제목</td><td><code>tpLabel 12</code> · <code>tpSecondary</code> · <code>letterSpacing .04</code></td></tr>
+      <tr><td>그룹 카드</td><td><code>Radius.x12</code> · <code>tpBackground</code></td></tr>
+      <tr><td>행</td><td><code>Space.x12</code> 패딩 · <code>minHeight 44</code> · 아이콘 22pt <code>tpAccentText</code></td></tr>
+      <tr><td>스크림</td><td><code>tpInk.opacity(0.22)</code></td></tr>
+      <tr><td>열림</td><td><code>Motion.emphasis</code></td></tr>
+      </tbody>
+      </table>
+    </div>
+    <div class="note warn" style="margin:0">
+      <div class="t">드로어는 내비게이터가 아니다</div>
+      <p>네 그룹은 전부 <strong>설정</strong>이다: 기록 / 루틴 / 화면 / 앱. <strong>"탐색" 그룹을 새로 만들지 말 것.</strong> 탐색은 <code>tp.modeSwitch</code>가 이미 한다.</p>
+    </div>
+    <div class="card tight" style="margin-top:var(--x12)">
+      <div class="card-h">3.22 sheet</div>
+      <div style="font-size:12px;line-height:1.8">
+        <code>presentationDetents</code> — <code>[.height(contentHeight + 16), .large]</code><br>
+        <code>presentationDragIndicator(.visible)</code><br>
+        <code>presentationBackground(tpBackground)</code><br>
+        상단 <code>Radius.x22</code> · 전환 <code>Motion.standard</code>
+      </div>
+      <p style="font-size:12px;color:var(--accent-text);margin:var(--x8) 0 0;font-weight:600">규칙: 한 시트 안에서 시트를 다시 열지 않는다. 현재 <code>MapHomeCalendarSheet</code> 안에 <code>.sheet</code>가 2개 더 있다. 하위로 내려가려면 <code>DayRoute</code>를 push.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 4 STATES ═══════════════════════ -->
+<h2 id="states"><span class="num">4</span>비정상 상태</h2>
+<p>지금 가장 약한 곳이고, 이 시스템이 가장 단단해야 하는 곳이다. 다섯 가지, 각각 고정된 형태. <strong>여섯 번째를 새로 만들지 않는다.</strong></p>
+
+<div class="grid2">
+  <!-- loading -->
+  <div class="card">
+    <div class="card-h">4.1 <code>loading</code> — 읽는 중</div>
+    <div class="card-s">최초 읽기에만. 새로고침에는 스켈레톤을 띄우지 않는다(깜빡임). <strong>400ms</strong> 넘을 때만 표시.</div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <div class="skel" style="height:34px"></div>
+      <div class="skel" style="height:18px;width:88%"></div>
+      <div class="skel" style="height:52px"></div>
+      <div class="skel" style="height:14px;width:72%"></div>
+      <div class="skel" style="height:40px"></div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-2);margin:var(--x12) 0 0">시간축: 3 lane × 4 블록, 높이는 직전 프레임의 실제 분포를 따른다(빈 공간을 남기지 않는다). 달력: 45×38 42칸.<br><strong class="cross">금지:</strong> 화면 가운데 <code>ProgressView()</code>. 무엇을 얼마나 기다리는지 말하지 않는다.</p>
+  </div>
+
+  <!-- empty -->
+  <div class="card">
+    <div class="card-h">4.2 <code>empty</code> — 기록이 없음</div>
+    <div class="card-s">"여기 원래 뭐가 있어야 하는지"와 "어떻게 하면 생기는지"를 말한다.</div>
+    <div class="state">
+      <div class="ic">◷</div>
+      <div class="t">아직 오늘의 기록이 없어요</div>
+      <div class="s">센서가 하루를 읽기 시작하면 여기에 시간이 쌓입니다.</div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-2);margin:var(--x12) 0 0">
+      아이콘 34pt <code>tpInk .18</code> · 제목 <code>tpBodyStrong</code> · 설명 <code>tpCaption</code> <code>tpSecondary</code> 최대 2줄 폭 ≤250
+    </p>
+  </div>
+
+  <!-- blocked -->
+  <div class="card">
+    <div class="card-h">4.3 <code>blocked</code> — 권한이 없어서 비어 있음</div>
+    <div class="card-s"><strong>가장 중요한 항목.</strong> 지금은 <code>위치 기록을 기다리는 중</code> — 조용한 회색 점. 영원히 오지 않는다.</div>
+    <div class="state blocked">
+      <div class="t"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.6v5.2M12 16.4v.1"/></svg><span>위치 권한이 꺼져 있어요</span></div>
+      <div class="s">이 권한이 없으면 지도에 오늘의 이동이 그려지지 않습니다.</div>
+      <div class="act">설정 열기</div>
+    </div>
+    <table style="margin:var(--x12) 0 0;font-size:11.5px">
+    <thead><tr><th></th><th><code>empty</code></th><th><code>blocked</code></th></tr></thead>
+    <tbody>
+    <tr><td>원인</td><td>아직 데이터가 없다</td><td><strong>있을 수가 없다</strong></td></tr>
+    <tr><td>어조</td><td>중립 · 미래형</td><td>단정 · 현재형 · 실행 가능</td></tr>
+    <tr><td>그래픽</td><td>회색 아이콘</td><td>+ <code>tpAccent</code> 각도</td></tr>
+    <tr><td>필수</td><td>설명 한 줄</td><td><strong>이유 한 줄 + 버튼</strong></td></tr>
+    </tbody>
+    </table>
+  </div>
+
+  <!-- error -->
+  <div class="card">
+    <div class="card-h">4.4 <code>error</code> — 읽지 못함</div>
+    <div class="card-s">"일시 실패"와 "사람이 처리해야 함"을 구분한다.</div>
+    <div class="err-inline" style="margin-bottom:var(--x12)">
+      <span>⚠︎</span><span>날씨를 갱신하지 못했어요</span><span class="a">다시 시도</span>
+    </div>
+    <table style="margin:0;font-size:11.5px">
+    <thead><tr><th>유형</th><th>형태</th><th>예</th></tr></thead>
+    <tbody>
+    <tr><td><code>transient</code></td><td>상단 1줄 인라인 배너 <code>tpWarningTint</code></td><td>날씨 갱신</td></tr>
+    <tr><td><code>persistent</code></td><td>4.2 형태 + <code>exclamationmark.triangle</code> <code>tpAccentText</code></td><td>동기화 실패</td></tr>
+    <tr><td><code>fatal</code></td><td>전체 페이지 <code>tpDisplay</code> + 원인 + <code>다시 시작</code></td><td>스냅샷 손상</td></tr>
+    </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--accent-text);margin:var(--x12) 0 0"><strong>금지:</strong> <code>print</code>로 콘솔에 찍고 조용히 빈 배열을 돌려주기. 지금 <code>try?</code>가 에러를 삼킨 뒤 빈 배열을 반환하는 곳이 3군데 있고, UI에서는 4.2 <code>empty</code>로 보인다 — 사용자가 구분할 수 없다.</p>
+  </div>
+
+  <!-- locked -->
+  <div class="card" style="grid-column:1/-1">
+    <div class="card-h">4.5 <code>locked</code> — 결제가 필요함</div>
+    <div class="card-s">가치를 먼저 보여주고, 그다음에 요구한다. 잠금 상태에서도 <strong>내용의 형태는 보여야 한다.</strong></div>
+    <div class="row" style="gap:var(--x16);align-items:flex-start">
+      <div class="locked" style="flex:1;min-width:240px;max-width:390px">
+        <div class="under">
+          <div style="font-size:15px;font-weight:700;margin-bottom:6px">하루 카드</div>
+          <div style="height:8px;background:rgba(62,51,32,.2);border-radius:4px;margin-bottom:4px;width:80%"></div>
+          <div style="height:8px;background:rgba(62,51,32,.2);border-radius:4px;margin-bottom:4px;width:62%"></div>
+          <div style="height:8px;background:rgba(62,51,32,.2);border-radius:4px;width:70%"></div>
+        </div>
+        <div class="over">
+          <div style="color:var(--accent-text);line-height:0"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/></svg></div>
+          <div class="t">하루 카드를 이미지로 저장</div>
+          <div class="s">한 장의 카드로 하루를 남겨보세요.</div>
+          <div class="act">구매</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:240px;font-size:12.5px;line-height:1.7">
+        <p style="margin:0 0 var(--x8)"><strong>상태</strong> <code>preview</code>(보이지만 못 씀) · <code>exhausted</code>(체험 종료) · <code>restoring</code>(<code>ProgressView</code>)</p>
+        <p style="margin:0 0 var(--x8)"><strong>구조</strong> 실제 콘텐츠 <code>blur 6pt · opacity .55 · allowsHitTesting(false)</code> 위에 <code>tpSurface.opacity(0.92)</code> + <code>Radius.x12</code> 패널.</p>
+        <p style="margin:0;color:var(--accent-text);font-weight:600">규칙: <code>TaptionCommercePolicy.supportsPaidPurchase == false</code>이면 잠금 UI를 <strong>아예 렌더하지 않는다.</strong> 눌러도 반응 없는 자물쇠를 보여주지 말 것.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-h">4.3에 들어갈 10개 권한 이유 문장</div>
+  <div class="card-s">문장을 조립하지 말고 고정해 둔다</div>
+  <table style="margin:0">
+  <tbody>
+  <tr><td style="width:120px">위치</td><td>이 권한이 없으면 지도에 오늘의 이동이 그려지지 않습니다.</td></tr>
+  <tr><td>정확한 위치</td><td>대략 위치만으로는 장소를 구분할 수 없어 방문 기록이 뭉칩니다.</td></tr>
+  <tr><td>동작 및 피트니스</td><td>걷기·뛰기·이동 수단을 구분하려면 필요합니다.</td></tr>
+  <tr><td>건강</td><td>수면과 운동은 건강 앱에서만 읽을 수 있습니다.</td></tr>
+  <tr><td>캘린더</td><td>일정과 약속이 하루에 나타나지 않습니다.</td></tr>
+  <tr><td>사진</td><td>사진이 찍힌 장소와 시각이 기록에 붙지 않습니다.</td></tr>
+  <tr><td>알림</td><td>기록이 끊겼을 때 알려드릴 수 없습니다.</td></tr>
+  <tr><td>스크린타임</td><td>앱 사용 시간이 공부·업무 구간에 반영되지 않습니다.</td></tr>
+  <tr><td>마이크</td><td>소리로 장소를 추정하는 기능을 쓸 수 없습니다.</td></tr>
+  <tr><td>클라우드</td><td>기기를 바꾸면 기록이 이어지지 않습니다.</td></tr>
+  </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════ 5 A11Y ═══════════════════════ -->
+<h2 id="a11y"><span class="num">5</span>접근성</h2>
+
+<h3>5.1 Dynamic Type</h3>
+<p>지금 지원 <strong>0</strong>. <code>Font.tp*</code>가 전부 <code>UIFontMetrics</code>를 탄다. 세 구간:</p>
+<table>
+<thead><tr><th>크기</th><th>동작</th></tr></thead>
+<tbody>
+<tr><td><code>xSmall</code>–<code>large</code></td><td>계단 그대로</td></tr>
+<tr><td><code>xLarge</code>–<code>xxxLarge</code></td><td>텍스트 급 확대, 숫자 급 <strong>1.35 상한</strong>. 타임라인 3 lane 비율 유지</td></tr>
+<tr><td><code>AX1</code>–<code>AX5</code></td><td><strong>타임라인이 3 lane에서 1 lane으로 접힌다</strong>(대분류만). 나머지 lane은 클립 위 1줄 subtitle로. 달력 칸은 "날짜 + 값"에서 "날짜"로 접히고 값은 선택 후 <code>dayTotals</code> 패널로 이동</td></tr>
+</tbody>
+</table>
+<p><strong>이유:</strong> 3 lane은 AX3에서 lane당 30pt만 남고 <code>센서 원본</code>은 44.7 × 2.4 = 107pt가 필요하다. 1 lane으로 접는 것은 타협이 아니라 유일한 정답이다.</p>
+
+<h3>5.2 대비</h3>
+<p>전부 실측(§2.1). 세 개의 단단한 문턱:</p>
+<div class="grid3">
+  <div class="card tight"><div class="card-h">텍스트 ≥ 4.5:1</div><div class="card-s" style="margin:0">≥19pt bold는 3:1까지 허용</div></div>
+  <div class="card tight"><div class="card-h">컨트롤 경계 ≥ 3:1</div><div class="card-s" style="margin:0">입력 필드 · 미선택 토글 · 클릭 가능한 테두리</div></div>
+  <div class="card tight"><div class="card-h">순수 장식 ≥ 1.2:1</div><div class="card-s" style="margin:0"><code>tpLine</code>만 이 범주</div></div>
+</div>
+
+<h3>5.3 44pt 히트 영역</h3>
+<p><code>TaptionMenuMetrics.minimumHitSize = 44</code>와 <code>taptionTouchTarget</code>이 이미 있다. <strong>유지하고 적용 범위를 넓힌다.</strong></p>
+<table>
+<thead><tr><th>요소</th><th>시각</th><th>히트</th><th></th></tr></thead>
+<tbody>
+<tr><td><code>bottomBarButton</code></td><td>26pt 아이콘 + 12pt 라벨</td><td>44</td><td class="tick">✓</td></tr>
+<tr><td><code>dateBadge</code></td><td>44 × 40</td><td>44</td><td class="tick">✓</td></tr>
+<tr><td><code>reviewMarker</code></td><td>26pt 원</td><td>44</td><td class="tick">✓</td></tr>
+<tr><td><code>trimHandle</code></td><td><strong>5pt 높이 · 22pt 폭</strong></td><td><strong>5 × 22</strong></td><td class="cross">✗ 가장 심각</td></tr>
+<tr><td><code>dayCell</code></td><td>45 × 38</td><td>38</td><td class="cross">✗ <code>contentShape</code>로 44</td></tr>
+<tr><td><code>weekBar</code> 기둥</td><td>가변</td><td>—</td><td class="cross">✗ 열 전체 <code>contentShape</code></td></tr>
+<tr><td><code>mapControl</code></td><td>44</td><td>44</td><td class="tick">✓</td></tr>
+</tbody>
+</table>
+
+<h3>5.4 VoiceOver — 아이콘형 컨트롤은 라벨 필수</h3>
+<table>
+<thead><tr><th>컨트롤</th><th><code>accessibilityLabel</code></th><th><code>value</code></th><th><code>hint</code></th></tr></thead>
+<tbody>
+<tr><td>메뉴 버튼</td><td>메뉴</td><td>—</td><td>기록 설정과 앱 설정을 엽니다</td></tr>
+<tr><td>날짜 배지</td><td>날짜 10월 24일 토요일</td><td>—</td><td>한 번 누르면 이번 주, 두 번 누르면 오늘로 이동</td></tr>
+<tr><td>모드 전환 3단</td><td>지도 / 타임라인 / 기록</td><td>선택됨</td><td>같은 날을 다른 각도로 봅니다</td></tr>
+<tr><td>타임라인 클립</td><td>업무, 09:00부터 12:40까지, 3시간 40분</td><td>센서와 다름 / 센서와 같음</td><td>두 번 탭하여 편집</td></tr>
+<tr><td>미확인 마커</td><td>미확인 구간 3개</td><td>—</td><td>두 번 탭하여 분류를 고릅니다</td></tr>
+<tr><td>자르기 손잡이</td><td>시작 자르기</td><td>09시 00분</td><td>위아래로 밀어 조절</td></tr>
+<tr><td>시간 레일</td><td>하루 시간 축</td><td>06시부터 24시까지</td><td>조절 가능</td></tr>
+<tr><td>지도 컨트롤</td><td>현재 위치</td><td>위치 사용 가능 / 위치 없음 / 위치 찾는 중</td><td>—</td></tr>
+<tr><td>적용</td><td>적용</td><td>변경 사항 3개</td><td>센서 원본에 반영합니다</td></tr>
+</tbody>
+</table>
+<p><strong>규칙:</strong> 아이콘형 컨트롤의 라벨은 <strong>동작 또는 대상</strong>이지 아이콘 이름이 아니다. <code>house.fill</code> → <code>집</code>, <code>하우스 필</code>이 아니다. 지금 <code>bottomBarButton</code>이 <code>title</code>을 라벨로 넘기고 있다 — 정답, 유지.</p>
+
+<h3>5.5 Reduce Motion</h3>
+<p><code>emphasis</code> → <code>standard</code>, <code>standard</code> → 무애니메이션. <code>withAnimation</code> 3곳에 검사 추가: <code>dateBadge</code>의 <code>spring(0.3)</code>, <code>mapControls</code>의 <code>easeInOut(0.2)</code>, <code>compassRotationDegrees</code>의 <code>linear(0.12)</code>.</p>
+
+<!-- ═══════════════════════ 6 NAMING ═══════════════════════ -->
+<h2 id="naming"><span class="num">6</span>명명 규칙</h2>
+<p><strong>세 열이 반드시 동기화된다.</strong> 한 열만 바꾸면 버그다.</p>
+
+<table>
+<thead><tr><th>한글 라벨 (UI)</th><th>안정 영문 key (코드/라우트/테스트)</th><th>Swift 토큰</th></tr></thead>
+<tbody>
+<tr><td>지도</td><td><code>map</code></td><td><code>DayMode.map</code></td></tr>
+<tr><td>타임라인</td><td><code>timeline</code></td><td><code>DayMode.timeline</code></td></tr>
+<tr><td>기록</td><td><code>record</code></td><td><code>DayMode.record</code></td></tr>
+<tr><td>하루 요약</td><td><code>daySummary</code></td><td><code>DayRoute.daySummary</code></td></tr>
+<tr><td>클립 편집</td><td><code>clipEditor</code></td><td><code>DayRoute.clipEditor</code></td></tr>
+<tr><td>구간 편집</td><td><code>sectionEditor</code></td><td><code>DayRoute.sectionEditor</code></td></tr>
+<tr><td>장소</td><td><code>place</code></td><td><code>DayRoute.place</code></td></tr>
+<tr><td>메모</td><td><code>memo</code></td><td><code>DayRoute.memo</code></td></tr>
+<tr><td>사진</td><td><code>photos</code></td><td><code>DayRoute.photos</code></td></tr>
+<tr><td>달력</td><td><code>calendar</code></td><td><code>DayRoute.calendar</code></td></tr>
+<tr><td>성장</td><td><code>growth</code></td><td><code>DayRoute.growth</code></td></tr>
+<tr><td>루틴 편집</td><td><code>routineEditor</code></td><td><code>DayRoute.routineEditor</code></td></tr>
+<tr><td>설정</td><td><code>settings</code></td><td><code>DayRoute.settings</code></td></tr>
+<tr><td>대분류</td><td><code>mainCategory</code></td><td><code>Lane.main</code></td></tr>
+<tr><td>센서 원본</td><td><code>sensorSource</code></td><td><code>Lane.sensor</code></td></tr>
+<tr><td>상세활동</td><td><code>detailActivity</code></td><td><code>Lane.detail</code></td></tr>
+<tr><td>미확인</td><td><code>unconfirmed</code></td><td><code>CategoryID.unconfirmed</code></td></tr>
+<tr><td>확정</td><td><code>confirmed</code></td><td><code>ClipState.confirmed</code></td></tr>
+<tr><td>수정됨</td><td><code>edited</code></td><td><code>ClipState.dirty</code></td></tr>
+<tr><td>읽기 전용</td><td><code>readOnly</code></td><td><code>ClipState.readOnly</code></td></tr>
+</tbody>
+</table>
+
+<div class="grid2">
+  <div class="card tight">
+    <div class="card-h">1 · 한글 라벨은 바꾸지 않고 더한다</div>
+    <div class="card-s"><code>language.text("한국어", "English")</code> 이중 표기가 약 400곳에 있다. 이 장치를 유지한다. 새 문자열은 반드시 둘 다 준다.</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">2 · key는 lowerCamelCase</div>
+    <div class="card-s">한글 없음, 공백 없음. <code>DayRoute.clipEditor</code> ✅ / <code>DayRoute.클립편집</code> ❌</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">3 · 토큰 이름은 값 또는 역할을 담는다</div>
+    <div class="card-s">동의어 금지. <code>Space.x12</code> ✅ / <code>Space.cozy</code> ❌ · <code>Radius.x16</code> ✅ / <code>Radius.card</code> ❌</div>
+  </div>
+  <div class="card tight">
+    <div class="card-h">4 · 한 개념 한 단어</div>
+    <div class="card-s">「분류」가 UI에 세 표기로 나온다: <code>분류</code>(NLE 버튼) · <code>대분류</code>(lane 이름) · <code>카테고리</code>(설정). UI는 <code>분류</code>, 코드는 <code>category</code>. <code>대분류</code>는 3 lane 맥락에서만 — "사용자가 편집하는 그 lane"을 뜻한다.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ 7 MIGRATION ═══════════════════════ -->
+<h2 id="migration"><span class="num">7</span>이행</h2>
+
+<h3>7.1 네 단계 · 각각 독립 배포/롤백</h3>
+<table>
+<thead><tr><th>단계</th><th>무엇</th><th>검증</th><th>완료 기준</th></tr></thead>
+<tbody>
+<tr><td><strong>1. 토큰 보강</strong></td><td><code>Theme.swift</code>에 <code>Font.tp*</code>·<code>Space</code>·<code>Radius</code>·<code>Elev</code>·<code>Motion</code>·<code>tpCatStrong</code>·<code>tpAccentText</code>·<code>tpLineControl</code> 추가. <strong>호출점은 하나도 안 바꾼다.</strong></td><td><code>xcodebuild</code> 통과</td><td>새 토큰 존재, 옛 토큰 유지</td></tr>
+<tr><td><strong>2. 고위험 수정</strong></td><td>딱 5곳, 전부 적합성 문제: <code>clipBlock</code> 채움 → <code>tpCatWash</code> + 4pt <code>tpCat</code> 변 + <code>tpInk</code> 글자(규칙 C4/C7) · NLE 헤더 <code>닫기</code>/<code>적용</code> → <code>tpAccentText</code> · 드로어 상태 캡슐 <code>mapHomeGlass</code> 제거 · <code>trimHandle</code> 히트 확장 · <code>dayCell</code>/<code>weekBar</code> <code>contentShape</code> 확장</td><td>스크린샷 대조 + 대비 스크립트</td><td>§2.1.2의 7개 실패 → 0</td></tr>
+<tr><td><strong>3. 폰트 이행</strong></td><td><code>Font.taption</code> deprecated 표시, §2.2.4로 <strong>1,077곳 리터럴</strong> 일괄 치환, <strong>그 다음 §7.4의 계산값 50곳을 사람이 직접</strong> 처리, <code>taption</code> 삭제</td><td>화면별 스크린샷 대조 · <code>grep -c '\.taption('</code> = 0</td><td>41 → 12</td></tr>
+<tr><td><strong>4. 간격/반경</strong></td><td>§2.3 / §2.4 매핑으로 일괄 치환</td><td>스크린샷 대조 · <code>grep -c 'cornerRadius: [0-9]'</code> = 0</td><td>20 → 12, 18 → 5</td></tr>
+</tbody>
+</table>
+
+<h3>7.2 이 시스템과 싸울 것들</h3>
+<table>
+<thead><tr><th>저항</th><th>왜 어려운가</th><th>어떻게</th></tr></thead>
+<tbody>
+<tr><td><strong><code>Font.taption</code> 621곳</strong></td><td>전부 +2라서 치환하면 글자가 작아진다. "앱 전체가 축소된" 느낌</td><td>받아들인다. 지금의 실제 크기가 +2 후의 값이고 <strong>매핑표를 실제값으로</strong> 썼으므로 치환 후 시각은 불변. <code>taption(size:9)</code> → <code>tpLabel(12)</code>이지 <code>tpRuler(9)</code>가 아니다</td></tr>
+<tr><td><strong><code>MapHomeView.swift</code> 943KB / 22k줄</strong></td><td>한 파일에 506곳 중 약 380곳이 몰려 있다. PR 하나로 못 고친다</td><td>§3 컴포넌트 경계로 자른다: <code>dateBadge</code>/<code>mapSideRails</code>/<code>sidebarContent</code>/<code>bottomActionBar</code>를 별도 파일로 먼저 빼고 이행</td></tr>
+<tr><td><strong>분류색 표 4벌 공존</strong></td><td><code>Canonical</code>/<code>Pastel</code>/<code>RecordTimeline</code>/<code>PlanCategory</code> — 같은 「업무」가 4색</td><td><strong>한 번에 통일하지 않는다.</strong> 먼저 <code>tpCat/Strong/Wash</code> 세 함수로 입구를 좁히고, 내부는 잠시 <code>MapHomePastelPalette</code>(런타임에 실제로 쓰는 것)를 읽는다. 색상 통일은 별도 프로젝트</td></tr>
+<tr><td><strong><code>TaptionRadius</code>/<code>TaptionSpacing</code> 377곳</strong></td><td>삭제하면 diff가 거대하다</td><td><code>@available(deprecated)</code> 포워딩으로 유지: <code>TaptionSpacing.cozy</code> → <code>Space.x8</code>. 한 PR 안에서 치환 후 삭제</td></tr>
+<tr><td><strong>25개 <code>.sheet(</code> + 2개 <code>.fullScreenCover(</code></strong></td><td>각각 padding/detent 가정을 갖고 있어 토큰을 바꾸면 위치가 움직인다</td><td>1단계(<code>DayNavigator</code>)에서 <code>path</code>로 먼저 거둔 뒤 시각 이행. <strong>순서를 뒤집으면 안 된다</strong></td></tr>
+<tr><td><strong><code>.preferredColorScheme(.light)</code> × 3</strong></td><td>다크 모드는 오지 않지만, 그 말은 <code>Color(.systemBackground)</code>가 전부 틀렸다는 뜻</td><td><code>.systemBackground</code>/<code>.label</code>/<code>.secondary</code> 금지. 전부 <code>tp*</code>. 지금 <code>.foregroundStyle(.secondary)</code> 12곳이 시스템 색을 쓴다</td></tr>
+<tr><td><strong><code>legacyUIEnabled = false</code> 20,811줄</strong></td><td>컴파일은 되고 있고 <code>ScheduleView</code>에도 폰트 호출이 100곳 넘게 있다</td><td><strong>이행 범위 밖.</strong> 그 뷰 삭제는 다른 프로젝트. 단 이행 스크립트는 <code>--exclude ScheduleView.swift ReviewView.swift GoalsView.swift SettingsView.swift</code> 해야 통계가 3배 부풀지 않는다</td></tr>
+</tbody>
+</table>
+
+<h3>7.3 Lint — 회귀 방지</h3>
+<div class="card tight" style="font-family:var(--mono);font-size:11.5px;line-height:1.8;white-space:pre;overflow-x:auto;color:var(--ink)">#!/usr/bin/env bash
+# scripts/lint-design-tokens.sh
+set -uo pipefail
+ROOT="TaptionPlan/UI"
+LEGACY="ScheduleView.swift|ReviewView.swift|GoalsView.swift|SettingsView.swift"
+fail=0
+
+check () { # pattern, message
+  local hits
+  hits=$(grep -rEn "$1" "$ROOT" --include='*.swift' | grep -Ev "$LEGACY" || true)
+  if [ -n "$hits" ]; then
+    echo "✗ $2"; echo "$hits" | head -10; fail=1
+  fi
+}
+
+check '\.system\(size: *[0-9]'  'Font: Font.tp* 사용 (Theme.swift 전용)'
+check 'cornerRadius: *[0-9]'    'Radius: Radius.x* 사용 (Theme.swift 전용)'
+check 'Color\(hex: *"'          'Color: Color.tp* 사용 (Theme.swift 전용)'
+check '\.taption\(size:'        'Font.taption은 deprecated (+2pt)'
+check 'mapHomeGlass'            'Glass: 살아 있는 지도 위에서만 — 수동 확인'
+exit $fail</div>
+<p style="font-size:12.5px;color:var(--ink-2)">예외는 <code>// design-token-exempt: &lt;이유&gt;</code> 한 줄 주석으로 통과시킨다. 리뷰에서 눈에 보이게 하기 위해서다.</p>
+
+<h3>7.4 측정 재현</h3>
+<div class="card tight" style="font-family:var(--mono);font-size:11.5px;line-height:1.8;white-space:pre;overflow-x:auto;color:var(--ink)"># 유효 글자 크기 분포 (.taption +2 포함)
+python3 - &lt;&lt;'PY'
+import re,os,collections
+c=collections.Counter()
+for dp,_,fs in os.walk("TaptionPlan"):
+    for f in fs:
+        if not f.endswith(".swift"): continue
+        s=open(os.path.join(dp,f),encoding="utf-8",errors="ignore").read()
+        for m in re.finditer(r"\.system\(size:\s*([0-9.]+)",s): c[float(m.group(1))]+=1
+        for m in re.finditer(r"\.taption\(size:\s*([0-9.]+)",s): c[float(m.group(1))+2]+=1
+print("calls",sum(c.values()),"distinct",len(c))
+print("below11",sum(n for v,n in c.items() if v&lt;11))
+PY
+
+grep -rho 'cornerRadius: [0-9.]*' TaptionPlan/UI --include='*.swift' | sort -u | wc -l
+grep -rho 'Color(hex: *"[^"]*"'   TaptionPlan/UI --include='*.swift' | sort -u | wc -l</div>
+
+<h3>7.5 명시적으로 하지 않는 것</h3>
+<div class="grid2">
+  <div class="card tight"><div class="card-h">✗ 새 배색</div><div class="card-s" style="margin:0">기존 팔레트가 제품 정체성. 역할만 보강하고 색상은 안 바꾼다</div></div>
+  <div class="card tight"><div class="card-h">✗ 다크 모드</div><div class="card-s" style="margin:0">측정된 이유가 있다: 이미지 리소스 <strong>442개</strong> 중 <strong>366개</strong>가 <code>HomeEvolution001…366</code>이고, 전부 <code>template</code> 선언이 없는 SVG다. 어두운 배경에서는 원색 그대로 붙는다. 재개 조건은 §8.1</div></div>
+  <div class="card tight"><div class="card-h">✗ <code>ScheduleView</code>/<code>ReviewView</code>/<code>SettingsView</code>/<code>GoalsView</code> 컴포넌트</div><div class="card-s" style="margin:0">런타임 도달 불가. 죽은 코드를 위해 설계하지 않는다</div></div>
+  <div class="card tight"><div class="card-h">✗ 지도·고양이·정원 재작화</div><div class="card-s" style="margin:0">미술 리소스(366장 <code>HomeEvolution</code>)이지 토큰 문제가 아니다</div></div>
+  <div class="card tight"><div class="card-h">✗ iPad / 가로 레이아웃</div><div class="card-s" style="margin:0">타임라인과 3 lane의 기하는 세로 단일 열 가정. 별도 프로젝트</div></div>
+  <div class="card tight"><div class="card-h">✗ 분류색 4벌 통일</div><div class="card-s" style="margin:0">§7.2. 함수 입구를 먼저 좁히고 색상 통일은 독립적으로</div></div>
+  <div class="card tight"><div class="card-h">✗ <code>TaptionRadius</code>/<code>TaptionSpacing</code>을 장기 API로 유지</div><div class="card-s" style="margin:0">"이름만 바꾼 sprawl"이지 scale이 아니다. 과도기 포워딩 후 삭제</div></div>
+  <div class="card tight"><div class="card-h">✗ 아이콘 시스템 / 빈 상태 일러스트</div><div class="card-s" style="margin:0">SF Symbols + 타이포로 표현. 일러스트는 고양이·정원과 시각을 다투고, 366장 성장 그림이 이미 이 앱의 일러스트 예산이다</div></div>
+</div>
+
+<hr>
+<h3>부록 — 반드시 즉시 고칠 결함 3개</h3>
+<table>
+<thead><tr><th class="n">#</th><th>결함</th><th>수정</th></tr></thead>
+<tbody>
+<tr><td class="n">1</td><td><code>clipBlock</code> 백색 글자 미달 (10개 중 7개)</td><td>한 줄: <code>MapHomePastelPalette.hex(id)</code> → <code>Color.tpCatStrong(id)</code></td></tr>
+<tr><td class="n">2</td><td><code>trimHandle</code>이 5pt 높이 · 22pt 폭의 드래그 가능 컨트롤</td><td><code>.taptionHitOutset(horizontal: 11, vertical: 19.5)</code></td></tr>
+<tr><td class="n">3</td><td>권한 누락이 "기다리는 중"으로 표시됨</td><td><code>MapHomeView:8423</code>의 <code>currentCoordinate == nil</code> 분기가 권한을 확인해 §4.3으로, §4.2가 아니라</td></tr>
+</tbody>
+</table>
+
+<p style="font-size:11.5px;color:var(--ink-2);margin-top:var(--x32);padding-top:var(--x16);border-top:1px solid var(--line)">
+TaptionPlan 디자인 시스템 v1.0 · 측정 기준 <code>0f6988b + ARC1024A09</code> · 이 문서의 모든 대비 수치는 WCAG 2.1 상대휘도 공식으로 계산했고, 모든 한글 폭은 AppKit <code>NSFont</code>로 실측했다.
+</p>
+
+</main>
+</div>
+</body>
+</html>
