@@ -2444,6 +2444,10 @@ struct MapHomeView: View {
     @State private var fogOfWarEnabled = true
     @State private var isLongPressMenuPresented = false
     @State private var isDaySummaryPresented = false
+    /// 하루요약 시트 높이. 접으면 화면 절반, 위로 펼치면 지금의 전체 화면이다.
+    @State private var daySummaryDetent: PresentationDetent = MapHomeDaySummarySheet.collapsedDetent
+    /// 지도 카메라에 이미 반영한 "시트가 덮은 비율". 0이면 지도 전체가 보이는 상태다.
+    @State private var daySummaryAppliedCoverage: CGFloat = 0
     @State private var pendingLongPressCoordinate: CLLocationCoordinate2D?
     @State private var requestingPermission: RequiredPermission?
     @State private var selectedUserLocation: MapHomeUserLocationSelection?
@@ -2597,6 +2601,14 @@ struct MapHomeView: View {
         MapHomeUserTrackingMode(rawValue: userTrackingModeRawValue) ?? .idle
     }
 
+    /// 지금 하루요약 시트가 지도를 덮고 있는 비율. 펼치면 지도가 다 가려져 보정하지 않는다.
+    private var daySummaryCoverage: CGFloat {
+        guard isDaySummaryPresented,
+              daySummaryDetent != MapHomeDaySummarySheet.expandedDetent
+        else { return 0 }
+        return MapHomeDaySummaryLayout.collapsedCoverage
+    }
+
     private var isHeadingMode: Bool {
         compassControlState == .compass
     }
@@ -2655,8 +2667,12 @@ struct MapHomeView: View {
         )
     }
 
+    /// 지도에서 "가운데"로 삼을 점. 하루요약 시트가 아래를 덮으면 가려지지 않은 영역의 가운데다.
     private var currentLocationTargetPoint: CGPoint {
-        CGPoint(x: mapViewportSize.width / 2, y: mapViewportSize.height / 2)
+        MapHomeDaySummaryLayout.targetPoint(
+            viewportSize: mapViewportSize,
+            coverage: daySummaryCoverage
+        )
     }
 
     private var topOverlayHeight: CGFloat {
@@ -3005,9 +3021,21 @@ struct MapHomeView: View {
                 salary: salaryLive,
                 memoCounts: dayMemoCounts,
                 model: model,
-                homePlaceID: model.settings.frequentPlaces.first { $0.kind == .home }?.id
+                homePlaceID: model.settings.frequentPlaces.first { $0.kind == .home }?.id,
+                detent: $daySummaryDetent
             )
             .presentationDragIndicator(.visible)
+        }
+        // 시트가 올라오고 내려갈 때마다 집을 가려지지 않은 지도 영역 가운데로 다시 맞춘다.
+        .onChange(of: isDaySummaryPresented) { _, presented in
+            if !presented {
+                // 다음에 열 때는 다시 접힌 높이에서 시작한다.
+                daySummaryDetent = MapHomeDaySummarySheet.collapsedDetent
+            }
+            applyDaySummaryCameraCoverage()
+        }
+        .onChange(of: daySummaryDetent) { _, _ in
+            applyDaySummaryCameraCoverage()
         }
         .sheet(isPresented: $isSalarySettingsPresented) {
             MapHomeSalarySettingsSheet(
@@ -12269,6 +12297,50 @@ struct MapHomeView: View {
         ))
     }
 
+    /// 하루요약 시트가 지도를 덮은 만큼 집을 남은 영역의 가운데로 옮긴다.
+    /// 시트를 내리면 다시 지도 전체 가운데로 돌아온다. 배율·방향은 그대로 둔다.
+    private func applyDaySummaryCameraCoverage() {
+        let coverage = daySummaryCoverage
+        guard abs(coverage - daySummaryAppliedCoverage) > 0.001 else { return }
+        // 재생 중이거나 위치를 따라가는 중에는 카메라가 다른 곳에서 움직인다. 손대지 않는다.
+        guard !isDayPlaybackRunning, userTrackingMode == .idle else { return }
+        guard mapViewportSize.height > 0,
+              let camera = visibleMapCamera,
+              let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point
+        else { return }
+        let shift = MapHomeDaySummaryLayout.centerShift(
+            viewportHeight: mapViewportSize.height,
+            coverage: coverage
+        )
+        let latitudeShift = MapHomeDaySummaryLayout.latitudeShift(
+            shift: shift,
+            viewportHeight: mapViewportSize.height,
+            latitudeDelta: visibleMapSpan.latitudeDelta
+        )
+        // 중심을 아래(남쪽)로 내리면 집은 그만큼 화면 위로 올라온다.
+        let center = CLLocationCoordinate2D(
+            latitude: home.latitude - latitudeShift,
+            longitude: home.longitude
+        )
+        daySummaryAppliedCoverage = coverage
+        setMapPosition(.camera(MapCamera(
+            centerCoordinate: center,
+            distance: camera.distance,
+            heading: camera.heading,
+            pitch: camera.pitch
+        )))
+        // Apple 지도는 아직 반영되지 않은 뷰포트 명령이 있으면 카메라 명령을 건너뛴다.
+        // 같은 중심으로 뷰포트 명령도 보내 어느 쪽이 적용돼도 집이 같은 자리에 오게 한다.
+        if !rendersVectorMap {
+            appleViewportCommand = MapHomeAppleViewportCommand(
+                revision: (appleViewportCommand?.revision ?? 0) &+ 1,
+                centerCoordinate: center,
+                heading: nil,
+                targetPoint: nil
+            )
+        }
+    }
+
     private func focusMapOnAllRoutes() {
         guard MapHomePlaybackCameraPolicy.allowsAutomaticFit(
             isPlaybackRunning: isDayPlaybackRunning,
@@ -20460,9 +20532,19 @@ struct MapHomeDaySummarySheet: View {
     /// 집 범위를 이 화면에서 바꿀 수 있도록 모델과 집 장소 id를 받는다.
     var model: AppModel? = nil
     var homePlaceID: UUID? = nil
+    /// 시트 높이. 접힌 절반과 펼친 전체 두 단계뿐이다.
+    @Binding var detent: PresentationDetent
     @State private var isGrowthPresented = false
-    @State private var contentHeight: CGFloat = 0
     private static let bottomPadding: CGFloat = 40
+
+    /// 집 아이콘을 눌렀을 때 처음 올라오는 높이(화면 절반). 위로 펼치면 지금의 전체 화면이다.
+    static var collapsedDetent: PresentationDetent {
+        .fraction(MapHomeDaySummaryLayout.collapsedCoverage)
+    }
+
+    static let expandedDetent: PresentationDetent = .large
+
+    private var isExpanded: Bool { detent == Self.expandedDetent }
 
     private var totalSeconds: TimeInterval {
         categories.reduce(0) { $0 + $1.seconds }
@@ -20557,11 +20639,13 @@ struct MapHomeDaySummarySheet: View {
                 .padding(22)
                 .padding(.bottom, Self.bottomPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
         }
         .background(Color.tpBackground)
-        // 내용이 늘어도 아래 여백까지 한 화면에 보이도록 시트 높이를 내용에 맞춘다(넘치면 스크롤·큰 시트).
-        .presentationDetents(contentHeight > 0 ? [.height(contentHeight + 16), .large] : [.fraction(0.8), .large])
+        // 처음에는 화면 절반, 위로 펼치면 전체 화면. 내용이 길면 그 안에서 스크롤한다.
+        .presentationDetents(
+            [Self.collapsedDetent, Self.expandedDetent],
+            selection: $detent
+        )
         .sheet(isPresented: $isGrowthPresented) {
             MapHomeGrowthSheet(
                 growthData: $growthData,
@@ -20572,15 +20656,41 @@ struct MapHomeDaySummarySheet: View {
         }
     }
 
+    /// 위로 펼치기 아이콘. 접힌 시트에서 누르면 지금의 전체 화면이 되고, 펼친 상태에서는 다시 접는다.
+    private var expandButton: some View {
+        Button {
+            detent = isExpanded ? Self.collapsedDetent : Self.expandedDetent
+        } label: {
+            Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.tpAccent)
+                .frame(width: 34, height: 34)
+                .background(Color.tpAccent.opacity(0.10), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            isExpanded
+                ? language.text("하루 요약 접기", "Collapse day summary")
+                : language.text("하루 요약 펼치기", "Expand day summary")
+        )
+    }
+
     private var summaryContent: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(language.text("하루 요약", "Day Summary"))
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.tpInk)
-                Text(dateText)
-                    .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.tpSecondary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(language.text("하루 요약", "Day Summary"))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                        Text(dateText)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    Spacer(minLength: 8)
+                    expandButton
+                }
                 HStack {
                     Spacer()
                     Button {

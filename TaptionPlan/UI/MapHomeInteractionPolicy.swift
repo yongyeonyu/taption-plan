@@ -310,6 +310,50 @@ enum MapHomeCameraLayoutMath {
     }
 }
 
+/// 집 아이콘을 눌러 하루요약 시트가 지도 아래쪽을 덮을 때, 가려지지 않고 남는 지도 영역을 계산한다.
+/// 시트는 화면 높이의 `collapsedCoverage`만큼 올라오므로 지도의 세로 가운데도 그만큼 위로 올라간다.
+enum MapHomeDaySummaryLayout {
+    /// 접힌 시트가 덮는 화면 높이 비율. 하루요약 첫 화면이 화면 절반쯤에서 보인다.
+    static let collapsedCoverage: CGFloat = 0.5
+
+    /// 시트가 덮은 만큼을 뺀 지도 영역의 세로 가운데.
+    static func visibleCenterY(viewportHeight: CGFloat, coverage: CGFloat) -> CGFloat {
+        guard viewportHeight > 0 else { return 0 }
+        let covered = min(max(coverage, 0), 1) * viewportHeight
+        return (viewportHeight - covered) / 2
+    }
+
+    /// 시트가 덮은 만큼을 뺀 지도 영역의 가운데 점. 따라가기·재생도 이 점을 가운데로 삼는다.
+    static func targetPoint(viewportSize: CGSize, coverage: CGFloat) -> CGPoint {
+        CGPoint(
+            x: viewportSize.width / 2,
+            y: visibleCenterY(viewportHeight: viewportSize.height, coverage: coverage)
+        )
+    }
+
+    /// 집(지도 가운데)을 남은 영역의 가운데로 옮기려면 카메라 중심을 화면 아래로 몇 포인트
+    /// 내려야 하는지. 시트를 내리면(coverage 0) 0이라 지도 전체 가운데로 돌아온다.
+    static func centerShift(viewportHeight: CGFloat, coverage: CGFloat) -> CGFloat {
+        guard viewportHeight > 0 else { return 0 }
+        return max(
+            0,
+            viewportHeight / 2
+                - visibleCenterY(viewportHeight: viewportHeight, coverage: coverage)
+        )
+    }
+
+    /// 화면에서 `shift`포인트만큼 아래를 보게 만들 때 필요한 위도 변화량.
+    /// 지도 한 화면의 위도 폭을 세로 길이로 나눠 픽셀을 도(degree)로 바꾼다.
+    static func latitudeShift(
+        shift: CGFloat,
+        viewportHeight: CGFloat,
+        latitudeDelta: Double
+    ) -> Double {
+        guard viewportHeight > 0, shift > 0, latitudeDelta.isFinite else { return 0 }
+        return latitudeDelta * Double(shift) / Double(viewportHeight)
+    }
+}
+
 enum MapHomeLongPressRoutingMath {
     static let exclusionPadding: CGFloat = 8
 

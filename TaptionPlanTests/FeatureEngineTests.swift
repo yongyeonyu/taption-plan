@@ -233,6 +233,62 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    /// 하루요약 시트가 지도를 덮으면 집은 가려지지 않은 영역의 가운데로 올라가고,
+    /// 시트를 내리면 다시 지도 전체 가운데로 돌아온다.
+    func testDaySummarySheetCentersHomeInTheRemainingMapArea() {
+        let height: CGFloat = 844
+
+        // 시트를 내린 상태: 보정 없음, 집은 지도 전체 가운데(422)에 있다.
+        XCTAssertEqual(MapHomeDaySummaryLayout.visibleCenterY(viewportHeight: height, coverage: 0), 422)
+        XCTAssertEqual(MapHomeDaySummaryLayout.centerShift(viewportHeight: height, coverage: 0), 0)
+
+        // 접힌 시트(절반)가 올라오면 남은 영역(0~422)의 가운데인 211로 올라간다.
+        XCTAssertEqual(MapHomeDaySummaryLayout.collapsedCoverage, 0.5)
+        XCTAssertEqual(
+            MapHomeDaySummaryLayout.visibleCenterY(viewportHeight: height, coverage: 0.5),
+            211
+        )
+        XCTAssertEqual(MapHomeDaySummaryLayout.centerShift(viewportHeight: height, coverage: 0.5), 211)
+        // 따라가기·재생이 가운데로 삼는 점도 같은 자리로 올라간다.
+        XCTAssertEqual(
+            MapHomeDaySummaryLayout.targetPoint(
+                viewportSize: CGSize(width: 390, height: height),
+                coverage: 0.5
+            ),
+            CGPoint(x: 195, y: 211)
+        )
+        XCTAssertEqual(
+            MapHomeDaySummaryLayout.targetPoint(
+                viewportSize: CGSize(width: 390, height: height),
+                coverage: 0
+            ),
+            CGPoint(x: 195, y: 422)
+        )
+
+        // 위도 보정: 한 화면이 0.025도면 211pt는 그 1/4인 0.00625도다.
+        let latitudeShift = MapHomeDaySummaryLayout.latitudeShift(
+            shift: 211,
+            viewportHeight: height,
+            latitudeDelta: 0.025
+        )
+        XCTAssertEqual(latitudeShift, 0.00625, accuracy: 1e-9)
+
+        // 보정한 중심으로 옮기면 집이 남은 영역 가운데(211)에 온다.
+        let homeLatitude = 37.5
+        let centerLatitude = homeLatitude - latitudeShift
+        let homePointY = height / 2
+            - CGFloat((homeLatitude - centerLatitude) / 0.025) * height
+        XCTAssertEqual(homePointY, 211, accuracy: 0.001)
+
+        // 화면 높이가 0이거나 비율이 범위를 벗어나도 값이 깨지지 않는다.
+        XCTAssertEqual(MapHomeDaySummaryLayout.centerShift(viewportHeight: 0, coverage: 0.5), 0)
+        XCTAssertEqual(MapHomeDaySummaryLayout.visibleCenterY(viewportHeight: height, coverage: -1), 422)
+        XCTAssertEqual(
+            MapHomeDaySummaryLayout.latitudeShift(shift: 0, viewportHeight: height, latitudeDelta: 0.025),
+            0
+        )
+    }
+
     func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {        let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(
             x: homeLocation.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
