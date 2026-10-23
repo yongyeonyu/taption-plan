@@ -2622,3 +2622,12 @@
   - `MapHomeLiveMapTests` 75개 통과·실패 0(`maphome-tests.xcresult`).
   - 기존 규칙 테스트 `testWBSPlaybackDoesNotUseHiddenForecastOrLastLegFallback`(확정 체류가 있으면 stay 유지)와 `testWBSPlaybackBreaksSparseActualRouteGap`(후보가 없으면 nil) 모두 그대로 통과.
 - 미실시: 실기기에서 미확정 경로 재생 확인, 날짜 전환 직후 점선 경로 유지 확인.
+
+## CAL1023A03
+- 코드 확인: `MapHomeTodayCalendarList.load()`가 `GoogleCalendarAccount.shared.todayEvents()`를 인자 없이 호출 → `now: .now` 기본값 → 언제나 오늘 범위(`startOfDay(.now)`~+1일)만 조회. `.task { await load() }`라 날짜 변경과 무관하게 한 번만 실행.
+- 두 번째 원인: `MapHomeView.loadDayCalendarEvents()`는 `.task(id: model.selectedDate)`로 다시 읽지만 성공 시점에만 `dayCalendarEvents`를 갱신하므로, 응답 전까지 이전 날짜 목록이 배지·미리보기·사이드바에 남는다.
+- 수정 후 상태: `events(on:calendar:)`(날짜 인자), 패널 `date` + `.task(id: date)` + `loadedDate`로 날짜 변경 시 `.loading` 전환·늦은 응답 폐기, `dayCalendarEventsDate`+`dayCalendarEventsForSelectedDate`로 화면 표시를 선택 날짜에 묶고 `onChange(of: model.selectedDate)`에서 즉시 비움.
+- 2026-10-23 검증:
+  - Debug 빌드 BUILD SUCCEEDED(`generic/platform=iOS`, `build/ArchiveDD`).
+  - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 임시 `CAL1023A03-Check`, 검증 후 삭제): `MapHomeLiveMapTests` 75개 통과·실패 0·건너뜀 0(`build/validation/CAL1023A03/maphome-tests.xcresult`).
+- 미실시: 구글 계정 연결 상태의 실기기 날짜 전환 확인(네트워크 응답 필요), 패널을 연 채 날짜 변경 확인.

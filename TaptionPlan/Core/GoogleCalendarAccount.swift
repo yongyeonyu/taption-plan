@@ -30,7 +30,7 @@ enum GoogleCalendarError: LocalizedError {
     }
 }
 
-/// 구글 계정 직접 연동. 로그인 → 리프레시 토큰을 키체인에 보관 → 오늘 일정을 읽는다.
+/// 구글 계정 직접 연동. 로그인 → 리프레시 토큰을 키체인에 보관 → 날짜별 일정을 읽는다.
 @MainActor
 @Observable
 final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationContextProviding {
@@ -98,10 +98,11 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
 
     // MARK: 일정
 
-    /// 오늘(시작 자정 ~ 다음 날 자정) 기본 캘린더의 일정을 시작 시각순으로 돌려준다.
-    func todayEvents(calendar: Calendar = .current, now: Date = .now) async throws -> [CalendarRecord] {
+    /// 그날(시작 자정 ~ 다음 날 자정) 기본 캘린더의 일정을 시작 시각순으로 돌려준다.
+    /// 화면에서 고른 날짜를 그대로 넘겨 날짜를 바꿔도 같은 경로로 다시 읽는다.
+    func events(on day: Date, calendar: Calendar = .current) async throws -> [CalendarRecord] {
         let token = try await validAccessToken()
-        let start = calendar.startOfDay(for: now)
+        let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
         var components = URLComponents(string: "https://www.googleapis.com/calendar/v3/calendars/primary/events")!
         components.queryItems = [

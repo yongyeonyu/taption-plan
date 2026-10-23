@@ -2333,6 +2333,8 @@ struct MapHomeView: View {
     @State private var topPanelOrder: [TopPanel] = []
     /// 선택한 날의 일정(구글 계정 연결 시 구글, 아니면 기기 캘린더). 시작 시간에 구글 로고로 표시한다.
     @State private var dayCalendarEvents: [CalendarRecord] = []
+    /// `dayCalendarEvents`가 어느 날짜의 목록인지. 날짜를 바꾼 직후 이전 날 목록이 남지 않게 한다.
+    @State private var dayCalendarEventsDate: Date?
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
     /// 날짜 줄을 끄는 중 손가락을 따라 움직이는 거리와 이미 넘긴 칸 수.
@@ -2880,7 +2882,13 @@ struct MapHomeView: View {
             reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         }
         .onAppear { refreshTimedMemoCache() }
-        .onChange(of: model.selectedDate) { _, _ in refreshTimedMemoCache() }
+        .onChange(of: model.selectedDate) { _, _ in
+            refreshTimedMemoCache()
+            // 날짜가 바뀌면 이전 날짜 일정을 즉시 내린다. 다시 불러오는 동안 옛 목록이
+            // 좌측 상단·사이드바에 남아 있으면 날짜를 바꿔도 그대로인 것처럼 보인다.
+            dayCalendarEvents = []
+            dayCalendarEventsDate = nil
+        }
         .onChange(of: model.snapshot.memos) { _, _ in refreshTimedMemoCache() }
         .onChange(of: showsPhotosOnMap) { _, _ in Task { await loadPhotoMoments() } }
         // 하루 데이터가 늦게 들어오면 위치 없는 사진의 추정 위치도 다시 맞춘다.
@@ -3717,7 +3725,7 @@ struct MapHomeView: View {
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
-                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEvents.count) {
+                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEventsForSelectedDate.count) {
                     withAnimation(.snappy) { todayCalendarExpanded.toggle() }
                 }
             }
@@ -3754,7 +3762,11 @@ struct MapHomeView: View {
                     }
                 case .calendar:
                     if todayCalendarExpanded {
-                        MapHomeTodayCalendarList(language: language, service: calendarService)
+                        MapHomeTodayCalendarList(
+                            language: language,
+                            service: calendarService,
+                            date: model.selectedDate
+                        )
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
@@ -3794,7 +3806,7 @@ struct MapHomeView: View {
                 time: memo.occurredAt.formatted(date: .omitted, time: .shortened)
             ))
         }
-        for event in dayCalendarEvents where !event.isAllDay
+        for event in dayCalendarEventsForSelectedDate where !event.isAllDay
             && abs(event.span.start.timeIntervalSince(center)) <= window {
             rows.append(NearbyPreviewRow(
                 id: "event-\(event.id)",
@@ -3806,23 +3818,40 @@ struct MapHomeView: View {
         return rows
     }
 
+    /// 화면에 쓸 일정. 아직 다른 날짜의 목록을 들고 있으면(날짜를 막 바꾼 직후) 빈 목록으로
+    /// 두어 이전 날짜 일정이 좌측 상단·사이드바에 남지 않게 한다.
+    private var dayCalendarEventsForSelectedDate: [CalendarRecord] {
+        guard let day = dayCalendarEventsDate,
+              Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) else {
+            return []
+        }
+        return dayCalendarEvents
+    }
+
     /// 선택한 날의 일정을 불러온다. 구글 계정이 연결돼 있으면 구글에서, 아니면 기기 캘린더에서 읽는다.
     private func loadDayCalendarEvents() async {
         let day = model.selectedDate
+        let calendar = Calendar.autoupdatingCurrent
+        // 날짜를 바꾼 직후에는 이전 날짜 목록을 즉시 내린다.
+        if let loaded = dayCalendarEventsDate, !calendar.isDate(loaded, inSameDayAs: day) {
+            dayCalendarEvents = []
+            dayCalendarEventsDate = nil
+        }
         var loaded: [CalendarRecord] = []
         if GoogleCalendarAccount.shared.isConnected {
-            loaded = (try? await GoogleCalendarAccount.shared.todayEvents(now: day)) ?? []
+            loaded = (try? await GoogleCalendarAccount.shared.events(on: day, calendar: calendar)) ?? []
         } else if calendarService.permissionState() == .authorized {
-            let start = Calendar.current.startOfDay(for: day)
-            let end = Calendar.current.date(byAdding: .day, value: 1, to: start) ?? start
+            let start = calendar.startOfDay(for: day)
+            let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
             loaded = await calendarService.events(
                 in: TimeSpan(start: start, end: end),
                 selectedCalendarIDs: []
             ) ?? []
         }
         // 날짜를 빠르게 넘기면 이전 날짜의 늦은 응답이 올 수 있으므로 지금 날짜와 같을 때만 반영한다.
-        guard Calendar.autoupdatingCurrent.isDate(day, inSameDayAs: model.selectedDate) else { return }
+        guard calendar.isDate(day, inSameDayAs: model.selectedDate) else { return }
         dayCalendarEvents = loaded
+        dayCalendarEventsDate = day
     }
 
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
@@ -7886,7 +7915,7 @@ struct MapHomeView: View {
                             y: min(max(y, MapHomeTimeSidebarMath.verticalInset), railHeight - MapHomeTimeSidebarMath.verticalInset)
                         )
                     }
-                    ForEach(recordingShows(\.sidebarMemos) ? dayCalendarEvents.filter { !$0.isAllDay } : []) { event in
+                    ForEach(recordingShows(\.sidebarMemos) ? dayCalendarEventsForSelectedDate.filter { !$0.isAllDay } : []) { event in
                         let window = MapHomeTimeSidebarMath.visibleWindow(
                             startMinute: timeSidebarVisibleStartMinute,
                             durationMinutes: timeSidebarVisibleDurationMinutes,
@@ -12128,7 +12157,7 @@ struct MapHomeView: View {
 
     /// 같은 시간(±10분)에 일정과 스티커가 함께 있으면 일정은 왼쪽, 스티커는 오른쪽으로 나눈다. 아니면 기본 위치.
     private func scheduleBadgeOffset(minute: Int, isEvent: Bool) -> CGFloat {
-        let timedEvents = dayCalendarEvents.filter { !$0.isAllDay }.map { minuteOfDay(for: $0.span.start) }
+        let timedEvents = dayCalendarEventsForSelectedDate.filter { !$0.isAllDay }.map { minuteOfDay(for: $0.span.start) }
         let timedStickers = scheduleStickersForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
             + timedMemosForSelectedDate.map { minuteOfDay(for: $0.occurredAt) }
         let others = isEvent ? timedStickers : timedEvents

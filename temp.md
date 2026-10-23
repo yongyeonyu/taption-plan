@@ -1895,3 +1895,16 @@
   2. `MapHomeWBSPlaybackProjection.frame`에서 표시 중인 예상 구간이 없고 후보(stay·확정 이동)도 하나도 없으면, 활동 중인 예상 이동 leg를 그대로 쓴다. 확정 체류가 하나라도 있으면 기존 규칙(숨은 경로를 걷지 않음)이 그대로 유지된다.
 - 검증: Debug 빌드 BUILD SUCCEEDED. `RouteTimelineDataTests` 123개 통과(신규 `testWBSPlaybackKeepsForecastMovementWhenNothingElseIsActive` 포함), `MapHomeLiveMapTests` 75개 통과. 기기 확인 전.
 - 확인 필요: 기기에서 미확정 경로(예상 점선) 위로 타임라인을 옮겼을 때 화랑이가 그 선을 따라 움직이는지, 날짜를 바꾼 직후에도 점선 경로가 남아 있는지.
+
+## CAL1023A03 · 날짜를 바꿔도 구글 일정이 그대로이던 문제
+- 증상: 좌측 상단 구글 일정 패널이 늘 오늘 일정만 보여 주고, 날짜를 바꿔도 목록이 그대로. 사이드바/좌측 상단에서도 날짜 전환 직후 이전 날 일정이 남음.
+- 원인:
+  1. `MapHomeTodayCalendarList`가 `GoogleCalendarAccount.todayEvents()`를 인자 없이 호출해 **항상 `.now`(오늘)** 를 조회했고, `.task { await load() }`라 패널을 닫았다 열기 전에는 다시 불러오지 않았다. 제목도 "오늘 일정" 고정.
+  2. `dayCalendarEvents`는 `.task(id: model.selectedDate)`로 다시 읽었지만, 응답이 올 때까지 **이전 날짜 목록을 그대로 들고 있었다.** 구글 API 응답이 느리면 날짜를 바꿔도 옛 일정이 계속 보인다.
+- 해결:
+  1. `GoogleCalendarAccount.todayEvents(now:)` → `events(on day:calendar:)`로 이름과 의미를 날짜 기준으로 바꿈. 두 호출부(패널·지도) 모두 고른 날짜를 넘긴다.
+  2. `MapHomeTodayCalendarList`에 `date`를 넘기고 `.task(id: date)`로 날짜가 바뀔 때마다 다시 읽는다. 제목은 오늘이면 "오늘 일정", 다른 날이면 "10월 23일 일정"(영어 "Events on Oct 23")으로 표시하고, 빈 목록 문구도 "이 날 일정이 없어요."로 분리. 날짜가 바뀌면 곧바로 `.loading`으로 돌려 옛 목록을 남기지 않고, 늦게 온 이전 날짜 응답은 버린다.
+  3. `dayCalendarEventsDate`를 두고 `dayCalendarEventsForSelectedDate`(선택 날짜와 같을 때만 값)로 화면에 쓴다. 날짜 변경 시 `onChange`에서 즉시 비운다. 적용처: 일정 버튼 배지, 좌측 상단 ±15분 미리보기, 사이드바 일정 배지, 배지 좌우 배치 계산.
+- 메모: 좌측 상단 메모 패널(`queuedMemos`)과 사이드바 메모 배지(`timedMemoCache`)는 이미 선택 날짜로 거르고 날짜 변경 시 갱신되고 있어 변경 없음.
+- 검증: Debug 빌드 BUILD SUCCEEDED. `MapHomeLiveMapTests` 75개 통과·실패 0. 기기 확인 전.
+- 확인 필요: 기기에서 구글 연결 상태로 날짜를 앞뒤로 넘길 때 좌측 상단 패널 제목·목록과 사이드바 구글 로고 배지가 그 날짜 것으로 바뀌는지, 패널을 연 채 날짜를 바꿔도 따라오는지.
