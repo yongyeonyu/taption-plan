@@ -1104,6 +1104,13 @@ enum ActivitySectionEditMode: Hashable, Sendable {
         detailSpan: TimeSpan,
         option: ActivityCorrectionOption
     )
+    /// NLE 클립 편집. 원본 구간을 여러 조각으로 다시 덮는다. 조각 사이에 빈 곳이
+    /// 생기면 `fill`로 채우므로, 하루 전체가 언제나 빈틈없이 이어진다.
+    /// 대분류는 미확인으로, 서브클립은 상위 분류로 메운다.
+    case cover(
+        pieces: [ActivitySectionOverridePiece],
+        fill: ActivityCorrectionOption
+    )
 }
 
 struct ActivitySectionEditRequest: Hashable, Sendable {
@@ -1174,8 +1181,55 @@ enum ActivitySectionOverrideEngine {
                 middleOption: option,
                 outsideOption: request.originalOption
             )
+
+        case let .cover(proposed, fill):
+            values = coveringPieces(proposed, original: original, fill: fill)
         }
         return coalesced(values)
+    }
+
+    /// 제안한 조각들을 원본 구간 안으로 잘라 담고, 남는 곳은 `fill`로 채운다.
+    /// 조각이 겹치면 뒤에 온 조각이 이긴다(타임라인의 위층 클립처럼).
+    static func coveringPieces(
+        _ proposed: [ActivitySectionOverridePiece],
+        original: TimeSpan,
+        fill: ActivityCorrectionOption = unconfirmedOption
+    ) -> [ActivitySectionOverridePiece] {
+        var clipped: [ActivitySectionOverridePiece] = []
+        for piece in proposed {
+            guard let span = piece.span.intersection(with: original) else {
+                continue
+            }
+            var trimmed = piece
+            trimmed.span = span
+            clipped.append(trimmed)
+        }
+        clipped.sort { $0.span.start < $1.span.start }
+
+        var values: [ActivitySectionOverridePiece] = []
+        var cursor = original.start
+        for piece in clipped {
+            if piece.span.start > cursor {
+                values.append(ActivitySectionOverridePiece(
+                    span: TimeSpan(start: cursor, end: piece.span.start),
+                    option: fill
+                ))
+            }
+            let start = max(cursor, piece.span.start)
+            guard start < piece.span.end else { continue }
+            values.append(ActivitySectionOverridePiece(
+                span: TimeSpan(start: start, end: piece.span.end),
+                option: piece.option
+            ))
+            cursor = max(cursor, piece.span.end)
+        }
+        if cursor < original.end {
+            values.append(ActivitySectionOverridePiece(
+                span: TimeSpan(start: cursor, end: original.end),
+                option: fill
+            ))
+        }
+        return values
     }
 
     static func records(

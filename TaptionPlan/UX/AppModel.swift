@@ -2498,6 +2498,31 @@ final class AppModel {
         )
     }
 
+    /// NLE 클립 편집을 순서대로 적용한다.
+    ///
+    /// 대분류 요청을 먼저, 서브클립 요청을 나중에 넣는다. 서브클립 구간은
+    /// 대분류 구간 안에 있으므로, 나중에 덮어야 서브클립이 살아남는다.
+    func applyClipEditRequests(
+        _ requests: [ActivitySectionEditRequest]
+    ) async -> Bool {
+        guard !requests.isEmpty else { return true }
+        guard acceptsDataMutation() else { return false }
+        var applied = 0
+        for request in requests {
+            if await saveActivitySectionEdit(request) != nil {
+                applied += 1
+            }
+        }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "nle_clip_edit_applied",
+            fields: [
+                "request_count": String(requests.count),
+                "applied_count": String(applied),
+            ]
+        )
+        return applied == requests.count
+    }
+
     private func editedOptions(
         in mode: ActivitySectionEditMode
     ) -> [ActivityCorrectionOption] {
@@ -2505,6 +2530,8 @@ final class AppModel {
         case let .replace(_, option), let .cutLowerUnconfirmed(_, option),
              let .insertDetail(_, option):
             return [option]
+        case let .cover(payload):
+            return payload.pieces.map(\.option)
         }
     }
 
@@ -2519,6 +2546,12 @@ final class AppModel {
             return TimeSpan(start: request.originalSpan.start, end: cutAt)
         case let .insertDetail(detailSpan, _):
             return detailSpan.intersection(with: request.originalSpan)
+                ?? request.originalSpan
+        case let .cover(payload):
+            // 가장 긴 조각을 대표 구간으로 삼는다(선택 표시용).
+            return payload.pieces
+                .map(\.span)
+                .max { $0.duration < $1.duration }
                 ?? request.originalSpan
         }
     }

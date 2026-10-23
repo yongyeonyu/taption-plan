@@ -114,6 +114,8 @@
 		5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */; };
 		A51002000000000000000005 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000004 /* PlanDaySealDigest.swift */; };
+		A51002000000000000000006 /* NLETrack.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000005 /* NLETrack.swift */; };
+		A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000006 /* MapHomeNLEClipEditor.swift */; };
 		5A00000000000000000000A4 /* TaptionStoreV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F2 /* TaptionStoreV2.swift */; };
 		5A00000000000000000000A5 /* TaptionStoreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F3 /* TaptionStoreRepository.swift */; };
 		A10150000000000000000001 /* SystemDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10150000000000000000001 /* SystemDiagnostics.swift */; };
@@ -401,6 +403,8 @@
 		F90000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F51002000000000000000004 /* PlanDaySealDigest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDaySealDigest.swift; sourceTree = "<group>"; };
 		F51002000000000000000003 /* PlanDaySeal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDaySeal.swift; sourceTree = "<group>"; };
+		F51002000000000000000005 /* NLETrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrack.swift; sourceTree = "<group>"; };
+		F51002000000000000000006 /* MapHomeNLEClipEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEClipEditor.swift; sourceTree = "<group>"; };
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
@@ -543,6 +547,7 @@
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
 				F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */,
+				F51002000000000000000006 /* MapHomeNLEClipEditor.swift */,
 				F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */,
 				F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
@@ -631,6 +636,7 @@
 				F51002000000000000000001 /* PlanDayDataSnapshot.swift */,
 				F51002000000000000000003 /* PlanDaySeal.swift */,
 				F51002000000000000000004 /* PlanDaySealDigest.swift */,
+				F51002000000000000000005 /* NLETrack.swift */,
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
 				F20000000000000000000001 /* AppLanguagePreference.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
@@ -1075,6 +1081,8 @@
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */,
 				A51002000000000000000003 /* PlanDaySeal.swift in Sources */,
 				A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */,
+				A51002000000000000000006 /* NLETrack.swift in Sources */,
+				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
 				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,

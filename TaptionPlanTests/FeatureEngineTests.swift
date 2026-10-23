@@ -29085,3 +29085,227 @@ private final class StubWeatherAttributionProvider:
         return try result.get()
     }
 }
+
+/// NLE 클립 편집: 대분류 24시간 트랙, 서브클립, 자르기·가르기·옮기기·스냅.
+final class NLETrackTests: XCTestCase {
+    private var calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }()
+
+    private func dayStart() -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: 23))!
+    }
+
+    private func segment(
+        _ start: Int,
+        _ end: Int,
+        _ categoryID: String,
+        sources: [UUID] = []
+    ) -> MapHomeTimeRailSegment {
+        MapHomeTimeRailSegment(
+            startMinute: start,
+            endMinute: end,
+            categoryID: categoryID,
+            title: categoryID,
+            sourceIDs: sources
+        )
+    }
+
+    /// 가운데 구간이 앞뒤 시간을 품지 않는 하루. 경계 시험용이다.
+    private func threeSegmentDay(sources: [UUID]) -> [MapHomeTimeRailSegment] {
+        [
+            segment(0, 300, "sleep"),
+            segment(300, 540, "work", sources: sources),
+            segment(540, 1_440, "activity"),
+        ]
+    }
+
+    /// 하루 트랙은 기록이 없어도 24시간을 빈틈없이 채운다.
+    func testMainTrackAlwaysCoversTwentyFourHours() {
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 360, "sleep"),
+            segment(360, 600, "work"),
+        ])
+
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+        XCTAssertEqual(track.clips.first?.startMinute, 0)
+        XCTAssertEqual(track.clips.last?.endMinute, NLETrack.dayMinutes)
+        XCTAssertEqual(
+            track.clips.filter(\.isGap).reduce(0) { $0 + $1.lengthMinutes },
+            840
+        )
+        // 클립은 겹치지 않고 앞 클립의 끝이 다음 클립의 시작과 맞닿는다.
+        for (lhs, rhs) in zip(track.clips, track.clips.dropFirst()) {
+            XCTAssertEqual(lhs.endMinute, rhs.startMinute)
+        }
+    }
+
+    /// 끝을 자르면 비워진 자리는 미확인으로 남고, 하루는 여전히 24시간이다.
+    func testTrimmingLeavesUnconfirmedAndKeepsTheDayFull() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
+        let clip = try! XCTUnwrap(track.clip(atMinute: 400))
+
+        XCTAssertTrue(track.trim(clip.id, edge: .end, toMinute: 480))
+
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+        let vacated = track.clips.first { $0.startMinute == 480 && $0.endMinute == 540 }
+        XCTAssertEqual(vacated?.isGap, true)
+
+        // 이웃 구간의 시간을 가져오지는 않는다(구간 경계 540에서 멈춘다).
+        track.trim(clip.id, edge: .end, toMinute: 900)
+        XCTAssertEqual(track.clip(clip.id)?.endMinute, 540)
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 옮기기는 원본 구간 안에서만 움직이고 길이를 유지한다.
+    func testMoveStaysInsideItsOriginalSegmentAndKeepsLength() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
+        let clip = try! XCTUnwrap(track.clip(atMinute: 400))
+        // 끝을 잘라 옮길 자리를 만든다.
+        XCTAssertTrue(track.trim(clip.id, edge: .end, toMinute: 480))
+        let length = try! XCTUnwrap(track.clip(clip.id)).lengthMinutes
+
+        XCTAssertTrue(track.move(clip.id, toStartMinute: 360))
+        XCTAssertEqual(track.clip(clip.id)?.startMinute, 360)
+        XCTAssertEqual(track.clip(clip.id)?.lengthMinutes, length)
+
+        track.move(clip.id, toStartMinute: 900)
+        XCTAssertEqual(track.clip(clip.id)?.endMinute, 540)
+        XCTAssertEqual(track.clip(clip.id)?.lengthMinutes, length)
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 가르기는 같은 원본을 물려받은 조각 둘을 만든다.
+    func testSplitCreatesTwoClipsSharingOneOriginalSegment() {
+        let source = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [source]))
+        let clip = try! XCTUnwrap(track.clip(atMinute: 400))
+        let tailID = try! XCTUnwrap(track.split(clip.id, atMinute: 420))
+
+        let pieces = track.clips.filter { $0.parent.sourceIDs == [source] }
+        XCTAssertEqual(pieces.count, 2)
+        XCTAssertEqual(track.clip(tailID)?.startMinute, 420)
+
+        // 분류가 같으면 저장할 것이 없다(가르기는 편집점만 만든다).
+        XCTAssertTrue(track.editRequests(dayStart: dayStart()).isEmpty)
+
+        // 뒤 조각의 분류를 바꾸면 원본 구간 하나에 요청 하나가 나온다.
+        let study = MapHomeNLEClipEditor.option(
+            forCategoryID: "study",
+            title: "공부",
+            behavior: nil
+        )
+        track.setOption(tailID, to: study)
+        let requests = track.editRequests(dayStart: dayStart())
+        XCTAssertEqual(requests.count, 1)
+        let request = try! XCTUnwrap(requests.first)
+        XCTAssertEqual(request.sourceIDs, [source])
+        XCTAssertEqual(request.originalSpan.duration, 240 * 60, accuracy: 0.5)
+        guard case let .cover(payload) = request.mode else {
+            return XCTFail("cover 요청이어야 한다")
+        }
+        XCTAssertEqual(payload.pieces.count, 2)
+        XCTAssertEqual(payload.pieces.map(\.option.categoryID), ["work", "study"])
+        XCTAssertEqual(payload.fill.categoryID, "unconfirmed")
+    }
+
+    /// cover는 원본 구간을 빈틈없이 덮는다. 남는 곳은 넘겨준 분류로 채운다.
+    func testCoverModeFillsTheOriginalSpanWithoutGaps() {
+        let start = dayStart()
+        let original = TimeSpan(start: start, end: start.addingTimeInterval(3_600))
+        let work = MapHomeNLEClipEditor.option(
+            forCategoryID: "work",
+            title: "업무",
+            behavior: nil
+        )
+        let pieces = ActivitySectionOverrideEngine.coveringPieces(
+            [ActivitySectionOverridePiece(
+                span: TimeSpan(
+                    start: start.addingTimeInterval(600),
+                    end: start.addingTimeInterval(1_200)
+                ),
+                option: work
+            )],
+            original: original
+        )
+
+        XCTAssertEqual(pieces.count, 3)
+        XCTAssertEqual(pieces.map(\.span.duration), [600, 600, 2_400])
+        XCTAssertEqual(pieces[0].option.categoryID, "unconfirmed")
+        XCTAssertEqual(pieces[1].option.categoryID, "work")
+        XCTAssertEqual(pieces.first?.span.start, original.start)
+        XCTAssertEqual(pieces.last?.span.end, original.end)
+
+        // 같은 방식으로 만든 기록도 원본을 빈틈없이 덮는다.
+        let request = ActivitySectionEditRequest(
+            sourceIDs: [UUID()],
+            originalSpan: original,
+            originalOption: work,
+            mode: .cover(pieces: pieces, fill: ActivitySectionOverrideEngine.unconfirmedOption)
+        )
+        let records = ActivitySectionOverrideEngine.records(for: request)
+        XCTAssertEqual(records.first?.startedAt, original.start)
+        XCTAssertEqual(records.last?.endedAt, original.end)
+        for (lhs, rhs) in zip(records, records.dropFirst()) {
+            XCTAssertEqual(lhs.endedAt, rhs.startedAt)
+        }
+    }
+
+    /// 서브클립 줄은 빈 자리를 채우지 않는다. 그 자리는 상위 대분류가 보인다.
+    func testSubTrackKeepsOnlyDetailedActivitiesInsideTheClip() {
+        let main = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(540, 660, "hobby", sources: [UUID()]),
+        ]).clip(atMinute: 560)
+
+        let details = [
+            MapHomeSectionDetail(
+                id: UUID(),
+                title: "카페에서 공부",
+                categoryID: "study",
+                behavior: nil,
+                startMinute: 560,
+                endMinute: 600
+            ),
+            // 클립 밖의 상세활동은 이 줄에 오지 않는다.
+            MapHomeSectionDetail(
+                id: UUID(),
+                title: "점심",
+                categoryID: "eating",
+                behavior: nil,
+                startMinute: 720,
+                endMinute: 780
+            ),
+        ]
+        let sub = MapHomeNLEClipEditor.makeSubTrack(
+            details: details,
+            within: main,
+            mainOption: main?.option
+        )
+
+        XCTAssertEqual(sub.clips.count, 1)
+        XCTAssertEqual(sub.clips.first?.startMinute, 560)
+        XCTAssertEqual(sub.clips.first?.endMinute, 600)
+        XCTAssertFalse(sub.clips.contains(where: \.isGap))
+        XCTAssertEqual(sub.clips.first?.parent.fillOption.categoryID, "hobby")
+    }
+
+    /// 스냅은 이웃 클립의 끝, 재생 헤드, 하루의 양 끝에 붙는다.
+    func testSnapPullsToNeighborEdgesAndPlayhead() {
+        let targets = [0, 360, 480, 1_440]
+        XCTAssertEqual(NLESnapPolicy.snapped(478, to: targets), 480)
+        XCTAssertEqual(NLESnapPolicy.snapped(363, to: targets), 360)
+        XCTAssertEqual(NLESnapPolicy.snapped(400, to: targets), 400)
+        XCTAssertEqual(NLESnapPolicy.snapped(2, to: targets), 0)
+
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 360, "sleep"),
+            segment(360, 600, "work"),
+        ])
+        let edges = NLESnapPolicy.targets(for: track, excluding: nil, playheadMinute: 300)
+        XCTAssertTrue(edges.contains(360))
+        XCTAssertTrue(edges.contains(300))
+        XCTAssertTrue(edges.contains(1_440))
+    }
+}

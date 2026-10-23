@@ -13639,6 +13639,8 @@ private struct MapHomeSectionEditSheet: View {
     @State private var detailDragTranslation: CGFloat = 0
     @State private var lastDetailDragRenderUptime: TimeInterval = 0
     @State private var isSaving = false
+    /// 동영상 편집기(NLE) 방식의 클립 편집 화면.
+    @State private var showsClipEditor = false
 
     init(
         model: AppModel,
@@ -13760,6 +13762,40 @@ private struct MapHomeSectionEditSheet: View {
 
     var body: some View {
         sheetBody
+            .fullScreenCover(isPresented: $showsClipEditor) {
+                MapHomeNLEClipEditor(
+                    model: model,
+                    language: language,
+                    date: selection.date,
+                    segments: selection.daySegments.isEmpty
+                        ? [selection.segment]
+                        : selection.daySegments,
+                    details: selection.dayDetails.isEmpty
+                        ? selection.details
+                        : selection.dayDetails,
+                    focusMinute: selection.segment.startMinute,
+                    onSaved: {
+                        // 클립 편집은 하루 전체를 다시 덮으므로, 고른 구간으로 돌아간다.
+                        let calendar = Calendar.autoupdatingCurrent
+                        let dayStart = calendar.startOfDay(for: selection.date)
+                        let start = calendar.date(
+                            byAdding: .minute,
+                            value: selection.segment.startMinute,
+                            to: dayStart
+                        ) ?? dayStart
+                        let end = calendar.date(
+                            byAdding: .minute,
+                            value: selection.segment.endMinute,
+                            to: dayStart
+                        ) ?? dayStart
+                        onSaved(ActivitySectionEditSaveResult(
+                            recordIDs: [],
+                            selectedSpan: TimeSpan(start: start, end: end)
+                        ))
+                        dismiss()
+                    }
+                )
+            }
             .onDisappear {
                 // 화면이 사라지면 드래그 상태를 모두 풀어 스크롤 금지가 남지 않게 한다.
                 isHandleDragging = false
@@ -13869,6 +13905,8 @@ private struct MapHomeSectionEditSheet: View {
             .padding(.horizontal, 6)
             .padding(.bottom, 6)
 
+            clipEditorEntry
+
             HStack {
                 Text(language.text("상세 활동", "Detailed activities"))
                     .frame(maxWidth: .infinity)
@@ -13923,6 +13961,47 @@ private struct MapHomeSectionEditSheet: View {
         .padding(.top, 12)
         .padding(.bottom, 14)
         .background(Color.tpBackground.ignoresSafeArea())
+    }
+
+    /// 동영상 편집기(NLE) 방식의 클립 편집으로 넘어가는 입구.
+    private var clipEditorEntry: some View {
+        Button {
+            showsClipEditor = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "rectangle.split.3x1.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.tpReferenceBlue)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(language.text("클립 편집", "Clip editor"))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                    Text(language.text(
+                        "24시간 대분류 클립과 서브클립을 동영상처럼 편집",
+                        "Edit 24h clips and sub-clips like video"
+                    ))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 52)
+            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.tpLine, lineWidth: 1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("클립 편집", "Clip editor"))
     }
 
     private var categorySelectionMenu: some View {
