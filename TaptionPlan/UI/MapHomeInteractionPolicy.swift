@@ -380,11 +380,16 @@ enum MapHomeCatTapRouting {
     static let homeSummaryIconRadius: CGFloat = 30
     static let homeSummaryLabelSize = CGSize(width: 64, height: 30)
 
+    /// 집 핀 안에서 아이콘 그림 상자의 절반 높이. 집 그림은 48, 화랑이가 함께 서면 78 상자다.
+    static func homeIconHalfHeight(showsCatAtHome: Bool) -> CGFloat {
+        showsCatAtHome ? 39 : 24
+    }
+
     static func homeLevelLabelCenter(pinPoint: CGPoint, showsCatAtHome: Bool) -> CGPoint {
-        let iconHalfHeight: CGFloat = showsCatAtHome ? 58 : 24
-        return CGPoint(
+        CGPoint(
             x: pinPoint.x + homeImageCenterOffset.x,
-            y: pinPoint.y + homeImageCenterOffset.y + iconHalfHeight + 5 + 11
+            y: pinPoint.y + homeImageCenterOffset.y
+                + homeIconHalfHeight(showsCatAtHome: showsCatAtHome) + 5 + 11
         )
     }
 

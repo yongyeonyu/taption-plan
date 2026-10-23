@@ -1067,6 +1067,20 @@ enum MapHomeUserTrackingPolicy {
 enum MapHomePlacePinLayout {
     /// 집 핀의 레벨 라벨 높이. 위쪽에 같은 높이를 비워 아이콘 위치를 유지한다.
     static let levelLabelHeight: CGFloat = 22
+    /// 집 아이콘 위쪽 터치 여유. 레이아웃 높이만 늘고 그림은 제자리에 있다.
+    /// 그래서 아이콘 아래에는 같은 높이의 빈 자리가 남는다.
+    static let iconTopHitExtension: CGFloat = 22
+    /// 레벨 라벨을 아이콘 바로 아래로 당기는 거리. 아이콘 아래에 남는 빈 자리만큼 올린다.
+    /// 집 그림과 화랑이 그림 모두 상자 아래에 같은 높이의 빈 자리가 남는다.
+    static let levelLabelLift: CGFloat = iconTopHitExtension
+    /// 날씨 배지를 집 지붕 바로 위로 올리는 거리(음수 = 위). 화랑이가 집에 있으면
+    /// 집 그림이 78 상자 가운데로 내려가므로 그만큼 더 내려서 같은 지붕 위에 맞춘다.
+    static func weatherLift(showsCatAtHome: Bool) -> CGFloat {
+        let houseImageTopInset: CGFloat = showsCatAtHome ? 15 : 0
+        return houseImageTopInset - 20
+    }
+    /// 연봉 카운터를 집 핀 중심에서 띄우는 거리(음수 = 위). 날씨 배지 위에 둔다.
+    static let salaryOffsetFromPinCenter: CGFloat = -31
     /// Apple 지도 호스팅 뷰의 집 핀 높이: 기존 138 + 위아래 (라벨 높이 + 간격 5) 두 번.
     static let appleHomeHostHeight: CGFloat = 138 + 2 * (levelLabelHeight + 5)
 }
@@ -5566,7 +5580,7 @@ struct MapHomeView: View {
                     )
             }
 
-            // 연봉 카운터는 늘 보인다: 화랑이(또는 화살표)가 밖에 있으면 그 위, 집에 있으면 집 핀 위.
+            // 연봉 카운터는 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
             if let anchor = salaryAnchor(viewport: viewport, stickmanPoint: playback == nil ? nil : stickmanPoint) {
                 salaryCounterLabel(at: anchor)
                     .zIndex(MapHomeLayerPriority.stickman)
@@ -7249,7 +7263,8 @@ struct MapHomeView: View {
         }
         guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
               let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return nil }
-        return CGPoint(x: pin.x, y: pin.y - 84)
+        // 화랑이가 집에 있으면 핀 안의 화랑이 바로 위, 아니면 집 지붕 위 날씨 배지 위에 둔다.
+        return CGPoint(x: pin.x, y: pin.y + MapHomePlacePinLayout.salaryOffsetFromPinCenter)
     }
 
     private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
@@ -16136,10 +16151,14 @@ private struct MapHomePlacePin: View {
                 }
                 .overlay(alignment: .top) {
                     if let weatherBadge {
+                        // 날씨는 집 지붕 위에 둔다(집 그림 위에 얹지 않는다).
                         homeWeatherBadge(weatherBadge)
+                            .offset(y: MapHomePlacePinLayout.weatherLift(showsCatAtHome: showsCatAtHome))
                     }
                 }
                 homeLevelLabel(level: growthLevel)
+                    // 아이콘 아래 터치 여유로 남는 빈 자리만큼 라벨을 올려 아이콘에 붙인다.
+                    .offset(y: -MapHomePlacePinLayout.levelLabelLift)
             } else {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
@@ -16197,7 +16216,7 @@ private struct MapHomePlacePin: View {
         }
     }
 
-    /// 집 위에 얹는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
+    /// 집 지붕 위에 띄우는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
     private func homeWeatherBadge(_ badge: MapHomeHomeWeatherBadge) -> some View {
         let palette = WeatherSymbolKind(symbolName: badge.symbolName).palette
         return HStack(spacing: 2) {
@@ -16219,7 +16238,6 @@ private struct MapHomePlacePin: View {
         .overlay { Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
         .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
         .fixedSize()
-        .offset(y: -9)
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(

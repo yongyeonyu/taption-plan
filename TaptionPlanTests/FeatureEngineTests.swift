@@ -197,8 +197,43 @@ final class FeatureEngineTests: XCTestCase {
             tapPoint: CGPoint(x: pin.x, y: pin.y - 80), pinPoint: pin, showsCatAtHome: false))
     }
 
-    func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
-        let homeLocation = CGPoint(x: 100, y: 200)
+    /// 집 핀 세로 배치: 날씨는 지붕 위, 레벨 라벨은 집 아래, 연봉 카운터는 그 위.
+    /// 화랑이가 집에 있든 없든 같은 자리에 와야 한다.
+    func testHomePinStacksWeatherAboveRoofAndLabelUnderHouse() {
+        // 집 그림은 핀 중심에서 30 아래에 있고 높이는 48이다.
+        let iconCenterY = MapHomeCatTapRouting.homeImageCenterOffset.y
+        let roofY = iconCenterY - 24
+        let imageBottomY = iconCenterY + 24
+        let weatherBadgeHeight: CGFloat = 18
+
+        // 1) 날씨 배지는 집에 화랑이가 있든 없든 지붕 위 같은 자리에 온다.
+        for showsCat in [false, true] {
+            // 핀 안에서 그림 상자의 위쪽 끝. 화랑이가 서면 집 그림이 그 상자 가운데로 내려간다.
+            let groupTopY = showsCat ? roofY - 15 : roofY
+            let badgeTopY = groupTopY
+                + MapHomePlacePinLayout.weatherLift(showsCatAtHome: showsCat)
+            XCTAssertEqual(badgeTopY, roofY - 20, accuracy: 0.5)
+            XCTAssertLessThanOrEqual(badgeTopY + weatherBadgeHeight, roofY)
+        }
+
+        // 2) 레벨 라벨은 집 그림 바로 아래 5pt에 붙는다.
+        let labelCenterY = MapHomeCatTapRouting.homeLevelLabelCenter(
+            pinPoint: .zero, showsCatAtHome: false
+        ).y
+        XCTAssertEqual(
+            labelCenterY - MapHomePlacePinLayout.levelLabelHeight / 2,
+            imageBottomY + 5,
+            accuracy: 0.5
+        )
+
+        // 3) 연봉 카운터는 날씨 배지 위에 온다(집 위로 떠 있지 않다).
+        XCTAssertLessThanOrEqual(
+            MapHomePlacePinLayout.salaryOffsetFromPinCenter + 13,
+            roofY - 20
+        )
+    }
+
+    func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {        let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(
             x: homeLocation.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
             y: homeLocation.y + MapHomeCatTapRouting.homeImageCenterOffset.y

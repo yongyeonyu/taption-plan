@@ -2631,3 +2631,16 @@
   - Debug 빌드 BUILD SUCCEEDED(`generic/platform=iOS`, `build/ArchiveDD`).
   - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 임시 `CAL1023A03-Check`, 검증 후 삭제): `MapHomeLiveMapTests` 75개 통과·실패 0·건너뜀 0(`build/validation/CAL1023A03/maphome-tests.xcresult`).
 - 미실시: 구글 계정 연결 상태의 실기기 날짜 전환 확인(네트워크 응답 필요), 패널을 연 채 날짜 변경 확인.
+
+## HOM1023A04
+- 배치 계산(핀 중심 = 지도 좌표, 아래로 +):
+  - 집 그림 중심 = 핀 +30, 높이 48 → 지붕 +6, 바닥 +54.
+  - 화랑이가 집에 있으면 그림 상자 78, 집 그림이 그 가운데 → 지붕은 상자 위에서 15.
+  - 아이콘 위쪽 터치 여유 22는 레이아웃만 늘고 그림은 상자 위쪽에 붙어, 상자 아래에 22의 빈 자리가 남는다.
+- 수정 전: 레벨 라벨 중심 = 핀 +92(빈 자리 22 + 간격 5 + 11), 탭 판정은 +70 → 22 어긋남. 연봉 카운터 = 핀 -84(지붕 위 90). 날씨 = 지붕을 9 덮음, 화랑이가 서면 15 내려감.
+- 수정 후: 레벨 라벨 = 핀 +70(집)/+85(화랑이), 날씨 = 지붕 위 20(두 경우 동일), 카운터 = 핀 -31(날씨 위, 지붕 위 37).
+- 2026-10-23 검증:
+  - Debug 빌드 BUILD SUCCEEDED(`generic/platform=iOS`, `build/ArchiveDD`).
+  - 시뮬레이터(iOS 27.0, iPhone 18 Pro, 임시 `HOM1023A04-Check`, 검증 후 삭제): `FeatureEngineTests` 643개·`MapHomeLiveMapTests` 75개 통과, 실패 0·건너뜀 0(`build/validation/HOM1023A04/`).
+  - 신규 `testHomePinStacksWeatherAboveRoofAndLabelUnderHouse`가 날씨·레벨·카운터 세로 순서를 고정한다.
+- 미실시: 실기기 화면 확인(픽셀 값은 상수로 모아 두어 한 곳만 고치면 됨).

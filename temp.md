@@ -1908,3 +1908,18 @@
 - 메모: 좌측 상단 메모 패널(`queuedMemos`)과 사이드바 메모 배지(`timedMemoCache`)는 이미 선택 날짜로 거르고 날짜 변경 시 갱신되고 있어 변경 없음.
 - 검증: Debug 빌드 BUILD SUCCEEDED. `MapHomeLiveMapTests` 75개 통과·실패 0. 기기 확인 전.
 - 확인 필요: 기기에서 구글 연결 상태로 날짜를 앞뒤로 넘길 때 좌측 상단 패널 제목·목록과 사이드바 구글 로고 배지가 그 날짜 것으로 바뀌는지, 패널을 연 채 날짜를 바꿔도 따라오는지.
+
+## HOM1023A04 · 집 핀 세로 배치 정리 (연봉·날씨·레벨)
+- 요청: (1) 연봉 카운터는 늘 화랑이 위에 (지금은 집 위로 뜬다). (2) 날씨는 집 위에. (3) 집 레벨이 너무 아래.
+- 원인:
+  1. `salaryAnchor`가 화랑이가 집에 있을 때 `pin.y - 84`를 썼다. 집 그림 중심은 핀 중심 +30이라 카운터가 지붕 위 90pt에 떠 있었다.
+  2. 날씨 배지가 집 그림 위에 그대로 겹치게(`overlay(alignment: .top)` + `offset(y: -9)`) 얹혀 지붕을 덮었다. 화랑이가 집에 있으면 그림 상자가 30 커져 배지가 15pt 더 내려와 위치도 달라졌다.
+  3. 레벨 라벨은 아이콘 위쪽 터치 여유(`padding(.top, 22)` + `offset(y: -22)`) 때문에 아이콘 아래에 남는 22pt 빈 자리 뒤에 붙어 있었다. 탭 판정 상수(`homeLevelLabelCenter`)는 그 22pt를 빼고 계산해 실제 라벨과도 어긋나 있었다.
+- 해결: `MapHomePlacePinLayout`에 세로 배치 값을 모으고, 그림은 옮기지 않고 `.offset`만 쓴다(핀 레이아웃 높이·좌표·Apple 지도 호스트 높이는 그대로).
+  - `weatherLift(showsCatAtHome:)`: 집 지붕 위 20pt(화랑이가 서면 그림이 15pt 내려가므로 보정). 날씨 배지 안에 있던 `offset(y: -9)`는 제거.
+  - `levelLabelLift`(22): 라벨을 아이콘 아래 빈 자리만큼 올려 그림 바로 아래 5pt에 붙임.
+  - `salaryOffsetFromPinCenter`(-31): 카운터를 날씨 배지 위로 내림. 지붕 위 90pt → 지붕 위 20pt 선.
+  - `MapHomeCatTapRouting.homeLevelLabelCenter`를 실제 배치에 맞춤: 그림 상자 절반(집 24·화랑이 39) + 5 + 11.
+- 검증: Debug 빌드 BUILD SUCCEEDED. `FeatureEngineTests` 643개(신규 `testHomePinStacksWeatherAboveRoofAndLabelUnderHouse` 포함), `MapHomeLiveMapTests` 75개 통과·실패 0. 기기 확인 전.
+- 확인 필요: 기기에서 집 핀 위로 날씨 → 연봉 카운터 순서로 겹치지 않고 쌓이는지, 레벨 라벨이 집 그림에 붙었는지, 라벨을 눌러 하루 요약이 열리는지.
+- 남은 것: `homeGrowthCallout`은 `toggleGrowthCallout()`을 부르는 곳이 없어 늘 투명한데도 핀 위쪽에 약 99pt를 차지한다(집 그림이 좌표 아래 +30에 있는 이유). 없애면 집이 지도에서 49pt 위로 올라가므로 탭 판정 상수를 함께 손봐야 한다. 지금은 그대로 두었다.
