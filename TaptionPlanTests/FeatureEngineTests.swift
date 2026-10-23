@@ -29291,6 +29291,29 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(sub.clips.first?.parent.fillOption.categoryID, "hobby")
     }
 
+    /// 눈금 좌표와 분이 서로 어긋나지 않는다(끌기·자르기의 기준).
+    func testTimelineGeometryRoundTripsMinutesAndPoints() {
+        let geometry = NLETimelineGeometry(
+            minuteWidth: 3,
+            visibleStartMinute: 420,
+            visibleMinutes: 300
+        )
+        XCTAssertEqual(geometry.x(forMinute: 420), 0, accuracy: 0.001)
+        XCTAssertEqual(geometry.x(forMinute: 570), 450, accuracy: 0.001)
+        XCTAssertEqual(geometry.width(minutes: 90), 270, accuracy: 0.001)
+        XCTAssertEqual(geometry.minute(forX: 450), 570, accuracy: 0.001)
+        XCTAssertEqual(geometry.visibleEndMinute, 720, accuracy: 0.001)
+
+        // 0으로 나누지 않는다. 확대 폭이 0이어도 값이 무너지지 않으면 된다.
+        let flat = NLETimelineGeometry(
+            minuteWidth: 0,
+            visibleStartMinute: 0,
+            visibleMinutes: 1_440
+        )
+        XCTAssertTrue(flat.minute(forX: 100).isFinite)
+        XCTAssertEqual(flat.x(forMinute: 100), 0, accuracy: 0.001)
+    }
+
     /// 스냅은 이웃 클립의 끝, 재생 헤드, 하루의 양 끝에 붙는다.
     func testSnapPullsToNeighborEdgesAndPlayhead() {
         let targets = [0, 360, 480, 1_440]
