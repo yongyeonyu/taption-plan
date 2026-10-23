@@ -47,7 +47,15 @@ struct TaptionPlanApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-nlePreview") {
+                NLEClipEditorPreviewHost()
+            } else {
+                AppShellView()
+            }
+            #else
             AppShellView()
+            #endif
         }
         .onChange(of: scenePhase) { _, phase in
             // 앱이 백그라운드로 가거나 꺼질 때 현재 설정을 파일에 적는다.

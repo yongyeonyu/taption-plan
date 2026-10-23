@@ -66,12 +66,24 @@ struct MapHomeNLEClipEditor: View {
     // MARK: - 본문
 
     var body: some View {
-        VStack(spacing: 12) {
-            header
-            timeline
-            subLane
-            selectionSummary
-            toolbar
+        // 높이를 직접 나눠 준다. 스크롤 영역은 제 내용 높이를 그대로 원해서,
+        // 그냥 두면 목록이 화면 아래로 넘친다.
+        GeometryReader { proxy in
+            let spacing: CGFloat = 12
+            let reserved: CGFloat = 44 + 72 + 26 + 44 + spacing * 5
+            let trackHeight = min(230, max(140, (proxy.size.height - reserved) * 0.42))
+            let listHeight = max(96, proxy.size.height - reserved - trackHeight)
+            VStack(spacing: spacing) {
+                header
+                timeline
+                    .frame(height: trackHeight)
+                subLane
+                selectionSummary
+                toolbar
+                clipList
+                    .frame(height: listHeight)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
         .padding(.horizontal, 14)
         .padding(.top, 8)
@@ -132,6 +144,8 @@ struct MapHomeNLEClipEditor: View {
     private var timeline: some View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
+            let height = max(80, proxy.size.height)
+            let clipHeight = max(52, height - 34)
             let geometry = NLETimelineGeometry(
                 minuteWidth: minuteWidth,
                 visibleStartMinute: visibleStartMinute,
@@ -140,8 +154,8 @@ struct MapHomeNLEClipEditor: View {
             ZStack(alignment: .topLeading) {
                 Color.tpSurface
                 rulerCanvas(geometry: geometry, width: width)
-                clipRow(geometry: geometry, width: width)
-                playhead(geometry: geometry)
+                clipRow(geometry: geometry, width: width, height: height, clipHeight: clipHeight)
+                playhead(geometry: geometry, height: height)
             }
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
@@ -149,23 +163,24 @@ struct MapHomeNLEClipEditor: View {
                     .stroke(Color.tpLine, lineWidth: 1)
             }
             .contentShape(Rectangle())
-            .gesture(dragGesture(geometry: geometry, width: width))
+            .gesture(dragGesture(geometry: geometry, width: width, height: height))
             .simultaneousGesture(magnifyGesture(width: width))
             .onAppear {
                 containerWidth = width
-                centerOnFocusIfNeeded(width: width)
+                fitWholeDayIfNeeded(width: width)
             }
             .onChange(of: width) { _, newValue in
                 containerWidth = newValue
-                centerOnFocusIfNeeded(width: newValue)
+                fitWholeDayIfNeeded(width: newValue)
             }
         }
-        .frame(height: 118)
+        .frame(maxHeight: .infinity)
     }
 
     private func rulerCanvas(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
         Canvas { context, size in
             let step = rulerStepMinutes
+            let labelEvery = rulerLabelEveryMinutes
             var minute = Int(geometry.visibleStartMinute / Double(step)) * step
             while Double(minute) <= geometry.visibleEndMinute {
                 let x = geometry.x(forMinute: Double(minute))
@@ -179,7 +194,7 @@ struct MapHomeNLEClipEditor: View {
                         with: .color(isHour ? Color.tpInk.opacity(0.16) : Color.tpInk.opacity(0.07)),
                         lineWidth: isHour ? 1 : 0.6
                     )
-                    if isHour, geometry.minuteWidth >= 1.4 {
+                    if minute % labelEvery == 0 {
                         context.draw(
                             Text(Self.hourLabel(minute / 60))
                                 .font(.system(size: 9, weight: .semibold, design: .rounded))
@@ -196,9 +211,13 @@ struct MapHomeNLEClipEditor: View {
         .allowsHitTesting(false)
     }
 
-    private func clipRow(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
+    private func clipRow(
+        geometry: NLETimelineGeometry,
+        width: CGFloat,
+        height: CGFloat,
+        clipHeight: CGFloat
+    ) -> some View {
         let topInset: CGFloat = 26
-        let clipHeight: CGFloat = 74
         return ZStack(alignment: .topLeading) {
             ForEach(visibleClips(geometry: geometry)) { clip in
                 let x = geometry.x(forMinute: Double(clip.startMinute))
@@ -208,7 +227,7 @@ struct MapHomeNLEClipEditor: View {
                     .offset(x: x, y: topInset)
             }
         }
-        .frame(width: width, height: 118, alignment: .topLeading)
+        .frame(width: width, height: height, alignment: .topLeading)
     }
 
     private func clipBody(_ clip: NLEClip, width: CGFloat) -> some View {
@@ -274,12 +293,12 @@ struct MapHomeNLEClipEditor: View {
             )
     }
 
-    private func playhead(geometry: NLETimelineGeometry) -> some View {
+    private func playhead(geometry: NLETimelineGeometry, height: CGFloat) -> some View {
         let x = geometry.x(forMinute: Double(playheadMinute))
         return ZStack(alignment: .top) {
             Rectangle()
                 .fill(Color.tpAccent)
-                .frame(width: 1.5, height: 118)
+                .frame(width: 1.5, height: height)
             Path { path in
                 path.move(to: CGPoint(x: -5, y: 0))
                 path.addLine(to: CGPoint(x: 5, y: 0))
@@ -418,30 +437,34 @@ struct MapHomeNLEClipEditor: View {
         HStack(spacing: 8) {
             categoryMenu
             toolButton(
-                title: language.text("가르기", "Split"),
+                title: "",
                 systemImage: "scissors",
-                isEnabled: splitTarget != nil
+                isEnabled: splitTarget != nil,
+                label: language.text("가르기", "Split")
             ) {
                 splitAtPlayhead()
             }
             toolButton(
-                title: language.text("지우기", "Clear"),
+                title: "",
                 systemImage: "trash",
-                isEnabled: selectedClip != nil && selectedClip?.isGap == false
+                isEnabled: selectedClip != nil && selectedClip?.isGap == false,
+                label: language.text("지우기", "Clear")
             ) {
                 deleteSelection()
             }
             toolButton(
                 title: "",
                 systemImage: "arrow.uturn.backward",
-                isEnabled: !undoStack.isEmpty
+                isEnabled: !undoStack.isEmpty,
+                label: language.text("되돌리기", "Undo")
             ) {
                 undo()
             }
             toolButton(
                 title: "",
                 systemImage: "arrow.uturn.forward",
-                isEnabled: !redoStack.isEmpty
+                isEnabled: !redoStack.isEmpty,
+                label: language.text("다시", "Redo")
             ) {
                 redo()
             }
@@ -449,7 +472,8 @@ struct MapHomeNLEClipEditor: View {
             toolButton(
                 title: "",
                 systemImage: "arrow.left.and.right",
-                isEnabled: true
+                isEnabled: true,
+                label: language.text("전체 보기", "Fit whole day")
             ) {
                 fitWholeDay()
             }
@@ -487,6 +511,7 @@ struct MapHomeNLEClipEditor: View {
         title: String,
         systemImage: String,
         isEnabled: Bool,
+        label: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -498,25 +523,115 @@ struct MapHomeNLEClipEditor: View {
             }
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .foregroundStyle(Color.tpInk)
-            .padding(.horizontal, 10)
-            .frame(height: 36)
+            .padding(.horizontal, title.isEmpty ? 0 : 10)
+            .frame(minWidth: 40, minHeight: 36)
             .background(Color.tpSurface, in: Capsule())
             .overlay { Capsule().stroke(Color.tpLine, lineWidth: 1) }
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
+        .accessibilityLabel(label ?? title)
+    }
+
+    // MARK: - 클립 목록
+
+    /// 하루 전체를 확대하지 않고도 훑을 수 있게 클립을 목록으로도 둔다.
+    /// 목록에서 고르면 타임라인의 재생 헤드도 그 클립 앞으로 따라간다.
+    private var clipList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text(language.text("클립 목록", "Clips"))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                Text("\(track.clips.count)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.tpInk.opacity(0.06), in: Capsule())
+                Spacer(minLength: 0)
+                if hasChanges {
+                    Text(language.text("적용 전", "Unsaved"))
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpAccent)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+
+            Rectangle()
+                .fill(Color.tpLine)
+                .frame(height: 1)
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(track.clips) { clip in
+                        clipListRow(clip)
+                        if clip.id != track.clips.last?.id {
+                            Rectangle()
+                                .fill(Color.tpLine.opacity(0.55))
+                                .frame(height: 1)
+                                .padding(.leading, 30)
+                        }
+                    }
+                }
+                .padding(.bottom, 4)
+            }
+            .scrollIndicators(.hidden)
+            .frame(maxHeight: .infinity)
+        }
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.tpLine, lineWidth: 1)
+        }
+    }
+
+    private func clipListRow(_ clip: NLEClip) -> some View {
+        let isSelected = clip.id == selectedClipID
+        return Button {
+            selectClip(clip)
+        } label: {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Self.tint(for: clip.option.categoryID))
+                    .frame(width: 4, height: 20)
+                Text(clip.option.title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.tpInk)
+                    .lineLimit(1)
+                if clip.isDirty {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.tpAccent)
+                }
+                Spacer(minLength: 4)
+                Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.tpSecondary)
+                Text(Self.durationLabel(clip.lengthMinutes, language: language))
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(minWidth: 46, alignment: .trailing)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 38)
+            .background(isSelected ? Color.tpAccent.opacity(0.10) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 제스처
 
-    private func dragGesture(geometry: NLETimelineGeometry, width: CGFloat) -> some Gesture {
+    private func dragGesture(geometry: NLETimelineGeometry, width: CGFloat, height: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 // 두 손가락 확대 중에는 클립이 끌려가지 않게 한다.
                 guard zoomBaseWidth <= 0 else { return }
                 if dragMode == .none {
-                    dragMode = resolveDragMode(at: value.startLocation, geometry: geometry)
+                    dragMode = resolveDragMode(at: value.startLocation, geometry: geometry, height: height)
                     didPushUndoForDrag = false
                     panBaseStartMinute = visibleStartMinute
                 }
@@ -677,11 +792,18 @@ struct MapHomeNLEClipEditor: View {
 
     private var rulerStepMinutes: Int {
         switch minuteWidth {
-        case ..<0.8: 240
-        case ..<1.6: 120
-        case ..<4: 60
-        case ..<9: 30
+        case ..<1.6: 60
+        case ..<4: 30
         default: 15
+        }
+    }
+
+    /// 눈금에 시각을 적는 간격. 하루 전체를 볼 때는 세 시간마다 적는다.
+    private var rulerLabelEveryMinutes: Int {
+        switch minuteWidth {
+        case ..<0.5: 180
+        case ..<0.9: 120
+        default: 60
         }
     }
 
@@ -693,11 +815,12 @@ struct MapHomeNLEClipEditor: View {
         visibleStartMinute = min(max(value, 0), maximum)
     }
 
-    private func centerOnFocusIfNeeded(width: CGFloat) {
+    /// 처음 열면 하루 24시간이 한눈에 들어오게 맞춘다. 확대는 두 손가락으로 한다.
+    private func fitWholeDayIfNeeded(width: CGFloat) {
         guard !didCenter, width > 1 else { return }
         didCenter = true
-        let visible = Double(width) / Double(max(0.01, minuteWidth))
-        setVisibleStart(Double(focusMinute) - visible / 2)
+        minuteWidth = max(0.24, width / CGFloat(NLETrack.dayMinutes))
+        visibleStartMinute = 0
     }
 
     private func fitWholeDay() {
@@ -706,12 +829,26 @@ struct MapHomeNLEClipEditor: View {
         visibleStartMinute = 0
     }
 
-    private func resolveDragMode(at point: CGPoint, geometry: NLETimelineGeometry) -> NLEEditorDragMode {
+    /// 목록에서 클립을 고른다. 확대해 둔 상태라면 그 클립이 보이도록 화면을 옮긴다.
+    private func selectClip(_ clip: NLEClip) {
+        selectedClipID = clip.id
+        selectedSubClipID = nil
+        playheadMinute = min(max(clip.startMinute, 0), NLETrack.dayMinutes)
+        let visible = Double(max(1, containerWidth)) / Double(max(0.01, minuteWidth))
+        guard visible < Double(NLETrack.dayMinutes) else { return }
+        setVisibleStart(Double(clip.startMinute) - visible / 2)
+    }
+
+    private func resolveDragMode(
+        at point: CGPoint,
+        geometry: NLETimelineGeometry,
+        height: CGFloat
+    ) -> NLEEditorDragMode {
         let minute = Int(geometry.minute(forX: point.x).rounded())
         // 눈금을 끌면 재생 헤드가 움직인다.
         if point.y < 22 { return .scrub }
         if abs(geometry.x(forMinute: Double(playheadMinute)) - point.x) <= 10 { return .scrub }
-        guard point.y <= 108, let clip = track.clip(atMinute: minute) else { return .pan }
+        guard point.y <= height - 4, let clip = track.clip(atMinute: minute) else { return .pan }
         if let selected = selectedClip, selected.id == clip.id {
             let startX = geometry.x(forMinute: Double(clip.startMinute))
             let endX = geometry.x(forMinute: Double(clip.endMinute))
@@ -1038,3 +1175,48 @@ struct MapHomeNLEClipEditor: View {
         String(format: "%02d", hour % 24)
     }
 }
+
+#if DEBUG
+/// 레이아웃 확인용 미리보기. `-nlePreview` 실행 인자로만 열린다.
+struct NLEClipEditorPreviewHost: View {
+    @State private var model = AppModel(startsCommerceLocked: false)
+
+    var body: some View {
+        MapHomeNLEClipEditor(
+            model: model,
+            language: .korean,
+            date: Date(),
+            segments: Self.segments,
+            details: Self.details,
+            focusMinute: 600,
+            onSaved: {}
+        )
+    }
+
+    private static var segments: [MapHomeTimeRailSegment] {
+        [
+            MapHomeTimeRailSegment(startMinute: 0, endMinute: 420, categoryID: "sleep", title: "수면"),
+            MapHomeTimeRailSegment(startMinute: 420, endMinute: 720, categoryID: "work", title: "업무"),
+            MapHomeTimeRailSegment(startMinute: 720, endMinute: 780, categoryID: "eating", title: "식사"),
+            MapHomeTimeRailSegment(startMinute: 780, endMinute: 960, categoryID: "activity", title: "일상"),
+            MapHomeTimeRailSegment(startMinute: 960, endMinute: 1_020, categoryID: "movement", title: "이동"),
+            MapHomeTimeRailSegment(startMinute: 1_020, endMinute: 1_140, categoryID: "activity", title: "일상"),
+            MapHomeTimeRailSegment(startMinute: 1_140, endMinute: 1_320, categoryID: "hobby", title: "취미"),
+            MapHomeTimeRailSegment(startMinute: 1_320, endMinute: 1_440, categoryID: "sleep", title: "수면"),
+        ]
+    }
+
+    private static var details: [MapHomeSectionDetail] {
+        [
+            MapHomeSectionDetail(
+                id: UUID(), title: "회의", categoryID: "work",
+                behavior: nil, startMinute: 480, endMinute: 540
+            ),
+            MapHomeSectionDetail(
+                id: UUID(), title: "메일", categoryID: "work",
+                behavior: nil, startMinute: 600, endMinute: 660
+            ),
+        ]
+    }
+}
+#endif
