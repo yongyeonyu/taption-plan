@@ -29253,12 +29253,12 @@ final class NLETrackTests: XCTestCase {
         }
     }
 
-    /// 서브클립 줄은 빈 자리를 채우지 않는다. 그 자리는 상위 대분류가 보인다.
-    func testSubTrackKeepsOnlyDetailedActivitiesInsideTheClip() {
-        let main = MapHomeNLEClipEditor.makeMainTrack(segments: [
+    /// 상세활동 줄은 하루 전체를 담고, 각 기록은 자기 원본 구간을 울타리로 삼는다.
+    func testDetailTrackSpansTheDayAndClampsToItsOriginalSegment() {
+        let segments = [
             segment(540, 660, "hobby", sources: [UUID()]),
-        ]).clip(atMinute: 560)
-
+            segment(660, 780, "eating", sources: [UUID()]),
+        ]
         let details = [
             MapHomeSectionDetail(
                 id: UUID(),
@@ -29268,27 +29268,38 @@ final class NLETrackTests: XCTestCase {
                 startMinute: 560,
                 endMinute: 600
             ),
-            // 클립 밖의 상세활동은 이 줄에 오지 않는다.
             MapHomeSectionDetail(
                 id: UUID(),
                 title: "점심",
                 categoryID: "eating",
                 behavior: nil,
-                startMinute: 720,
-                endMinute: 780
+                startMinute: 700,
+                endMinute: 740
             ),
         ]
-        let sub = MapHomeNLEClipEditor.makeSubTrack(
-            details: details,
-            within: main,
-            mainOption: main?.option
-        )
+        let sub = MapHomeNLEClipEditor.makeSubTrack(details: details, segments: segments)
 
-        XCTAssertEqual(sub.clips.count, 1)
-        XCTAssertEqual(sub.clips.first?.startMinute, 560)
-        XCTAssertEqual(sub.clips.first?.endMinute, 600)
+        XCTAssertEqual(sub.clips.count, 2)
         XCTAssertFalse(sub.clips.contains(where: \.isGap))
-        XCTAssertEqual(sub.clips.first?.parent.fillOption.categoryID, "hobby")
+
+        let study = sub.clips.first { $0.option.title == "카페에서 공부" }
+        XCTAssertEqual(study?.startMinute, 560)
+        XCTAssertEqual(study?.endMinute, 600)
+        // 울타리는 자기가 속한 원본 구간이다.
+        XCTAssertEqual(study?.parent.startMinute, 540)
+        XCTAssertEqual(study?.parent.endMinute, 660)
+        XCTAssertEqual(study?.parent.fillOption.categoryID, "hobby")
+
+        // 원본 구간 밖으로는 나가지 못한다.
+        guard let studyID = study?.id else { return XCTFail("상세활동이 없다") }
+        var moved = sub
+        moved.move(studyID, toStartMinute: 200)
+        XCTAssertEqual(moved.clip(studyID)?.startMinute, 540)
+
+        // 기록을 지우면 그 자리는 그 구간의 대분류가 이어받는다.
+        var cleared = sub
+        cleared.delete(studyID, fallback: study?.parent.fillOption)
+        XCTAssertEqual(cleared.clip(atMinute: 570)?.option.categoryID, "hobby")
     }
 
     /// 눈금 좌표와 분이 서로 어긋나지 않는다(끌기·자르기의 기준).

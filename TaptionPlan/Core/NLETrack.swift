@@ -257,6 +257,32 @@ struct NLETrack: Hashable, Sendable {
         return true
     }
 
+    /// 이 클립을 지웠을 때 그 자리를 무엇이 이어받는지 바꾼다.
+    ///
+    /// 상세활동을 저장할 때, 비운 자리는 그 시각의 대분류가 이어받아야 한다.
+    /// 대분류를 먼저 고쳤다면 그 최신 분류가 기준이 된다.
+    @discardableResult
+    mutating func setFillOption(_ option: ActivityCorrectionOption, forClipID id: String) -> Bool {
+        guard let index = clipIndex(id),
+              clips[index].parent.fillOption != option else { return false }
+        let clip = clips[index]
+        clips[index] = NLEClip(
+            id: clip.id,
+            option: clip.option,
+            startMinute: clip.startMinute,
+            endMinute: clip.endMinute,
+            parent: NLEClipParent(
+                startMinute: clip.parent.startMinute,
+                endMinute: clip.parent.endMinute,
+                sourceIDs: clip.parent.sourceIDs,
+                option: clip.parent.option,
+                fillOption: option
+            ),
+            origin: clip.origin
+        )
+        return true
+    }
+
     /// 같은 분류끼리 맞닿은 클립을 하나로 합친다. 손으로 가른 흔적을 지울 때 쓴다.
     @discardableResult
     mutating func merge(_ id: String, with neighborID: String) -> Bool {

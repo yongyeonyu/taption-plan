@@ -59,11 +59,7 @@ struct MapHomeNLEClipEditor: View {
         let built = Self.makeMainTrack(segments: segments)
         let initialClip = built.clip(atMinute: min(max(focusMinute, 0), NLETrack.dayMinutes - 1))
         _track = State(initialValue: built)
-        _subTrack = State(initialValue: Self.makeSubTrack(
-            details: details,
-            within: initialClip,
-            mainOption: initialClip?.option
-        ))
+        _subTrack = State(initialValue: Self.makeSubTrack(details: details, segments: segments))
         _playheadMinute = State(initialValue: min(max(focusMinute, 0), NLETrack.dayMinutes))
         _selectedClipID = State(initialValue: initialClip?.id)
         _selectedSubClipID = State(initialValue: nil)
@@ -72,16 +68,20 @@ struct MapHomeNLEClipEditor: View {
     // MARK: - 본문
 
     var body: some View {
-        // 하루는 위에서 아래로 흐른다. 시간 눈금·클립·서브클립이 모두 세로로 놓인다.
-        // 높이를 직접 나눠 주는 이유는 스크롤/제스처 영역이 제 높이를 그대로
-        // 원해서, 그냥 두면 화면 아래로 넘치기 때문이다.
+        // 하루는 위에서 아래로 흐른다. 왼쪽 눈금 옆으로 세 줄이 나란히 선다:
+        // 내가 고치는 대분류, 센서가 그대로 기록한 원본, 그리고 상세활동 기록.
         GeometryReader { proxy in
             let spacing: CGFloat = 12
-            let railHeight = max(220, proxy.size.height - (44 + 26 + 44 + spacing * 3))
+            let headerHeight: CGFloat = 16
+            let railHeight = max(220, proxy.size.height - (44 + headerHeight + 26 + 44 + spacing * 3 + 4))
             VStack(spacing: spacing) {
                 header
-                verticalRail
-                    .frame(height: railHeight)
+                VStack(spacing: 4) {
+                    laneHeader(width: proxy.size.width)
+                        .frame(height: headerHeight)
+                    verticalRail
+                        .frame(height: railHeight)
+                }
                 selectionSummary
                 toolbar
             }
@@ -91,9 +91,6 @@ struct MapHomeNLEClipEditor: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
-        .onChange(of: selectedClipID) { _, _ in
-            rebuildSubTrack()
-        }
     }
 
     private var header: some View {
@@ -113,7 +110,7 @@ struct MapHomeNLEClipEditor: View {
             VStack(spacing: 1) {
                 Text(language.text("클립 편집", "Clip editor"))
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                Text(language.text("대분류 24시간 · 상세활동 서브클립", "24h main clips · sub-clips"))
+                Text(language.text("대분류 · 센서 원본 · 상세활동", "Main · sensor · details"))
                     .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
@@ -146,17 +143,56 @@ struct MapHomeNLEClipEditor: View {
     /// 시각 눈금이 붙는 왼쪽 띠의 너비.
     private var gutterWidth: CGFloat { 36 }
 
-    /// 고른 클립 안에서 상세활동이 붙는 오른쪽 띠의 너비.
-    private var subStripWidth: CGFloat { 64 }
+    /// 줄 사이 틈.
+    private var laneGap: CGFloat { 5 }
+
+    /// 세 줄의 너비. 대분류가 가장 넓고, 센서 원본과 상세활동이 오른쪽에 나란히 선다.
+    private struct NLELaneWidths {
+        let main: CGFloat
+        let sensor: CGFloat
+        let detail: CGFloat
+
+        init(total: CGFloat, gutter: CGFloat, gap: CGFloat) {
+            let usable = max(90, total - gutter - gap * 2)
+            let main = max(40, (usable * 0.44).rounded())
+            let sensor = max(26, (usable * 0.24).rounded())
+            self.main = main
+            self.sensor = sensor
+            self.detail = max(26, usable - main - sensor)
+        }
+    }
+
+    /// 줄 이름표. 타임라인과 같은 너비 계산을 써서 세로줄과 딱 맞춘다.
+    private func laneHeader(width: CGFloat) -> some View {
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
+        return HStack(spacing: laneGap) {
+            Color.clear.frame(width: gutterWidth, height: 1)
+            laneTitle(language.text("대분류", "Main"), width: lanes.main)
+            laneTitle(language.text("센서 원본", "Sensor"), width: lanes.sensor)
+            laneTitle(language.text("상세활동", "Details"), width: lanes.detail)
+        }
+    }
+
+    private func laneTitle(_ text: String, width: CGFloat) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .foregroundStyle(Color.tpSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .frame(width: width, alignment: .leading)
+    }
 
     /// 하루 24시간을 세로로 세운 타임라인.
     ///
     /// 위에서 아래로 시간이 흐르고, 클립은 하루를 빈틈없이 채우며 쌓인다.
-    /// 고른 클립의 오른쪽에는 그 구간 안의 상세활동이 띠로 붙는다.
+    /// 대분류만 고칠 수 있고, 센서 원본은 그대로 두고 견주어 보는 줄이다.
     private var verticalRail: some View {
         GeometryReader { proxy in
             let width = max(1, proxy.size.width)
             let height = max(120, proxy.size.height)
+            let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
+            let sensorX = gutterWidth + lanes.main + laneGap
+            let detailX = sensorX + lanes.sensor + laneGap
             let geometry = NLETimelineGeometry(
                 minuteWidth: minuteHeight,
                 visibleStartMinute: visibleStartMinute,
@@ -165,9 +201,15 @@ struct MapHomeNLEClipEditor: View {
             ZStack(alignment: .topLeading) {
                 Color.tpSurface
                 hourGrid(geometry: geometry, width: width)
-                clipColumn(geometry: geometry, width: width)
+                laneDivider(at: sensorX - laneGap / 2, height: height)
+                laneDivider(at: detailX - laneGap / 2, height: height)
+                mainColumn(geometry: geometry, x: gutterWidth, width: lanes.main)
+                sourceColumn(geometry: geometry, x: sensorX, width: lanes.sensor)
+                detailColumn(geometry: geometry, x: detailX, width: lanes.detail)
                 playheadLine(geometry: geometry, width: width)
             }
+            // 줄 안의 클립이 화면 밖까지 길어도 카드 밖으로 새지 않게 크기를 못 박는다.
+            .frame(width: width, height: height, alignment: .topLeading)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -185,6 +227,14 @@ struct MapHomeNLEClipEditor: View {
                 fitWholeDayIfNeeded(height: newValue)
             }
         }
+    }
+
+    private func laneDivider(at x: CGFloat, height: CGFloat) -> some View {
+        Rectangle()
+            .fill(Color.tpLine)
+            .frame(width: 1, height: height)
+            .offset(x: x)
+            .allowsHitTesting(false)
     }
 
     private func hourGrid(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
@@ -222,31 +272,24 @@ struct MapHomeNLEClipEditor: View {
         .allowsHitTesting(false)
     }
 
-    private func clipColumn(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
-        let columnWidth = max(1, width - gutterWidth)
-        return ZStack(alignment: .topLeading) {
+    private func mainColumn(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
             ForEach(visibleClips(geometry: geometry)) { clip in
                 let y = geometry.y(forMinute: Double(clip.startMinute))
                 // 클립 사이에 1pt 틈을 둔다. 이웃한 클립이 한 덩어리로 보이지 않게.
                 let blockHeight = max(3, geometry.height(minutes: Double(clip.lengthMinutes)) - 2)
-                clipBlock(clip, width: columnWidth, blockHeight: blockHeight, geometry: geometry)
-                    .frame(width: columnWidth, height: blockHeight)
-                    .offset(x: gutterWidth, y: y + 1)
+                clipBlock(clip, width: width, blockHeight: blockHeight)
+                    .frame(width: width, height: blockHeight)
+                    .offset(y: y + 1)
             }
         }
         .frame(width: width, alignment: .topLeading)
+        .offset(x: x)
     }
 
-    private func clipBlock(
-        _ clip: NLEClip,
-        width: CGFloat,
-        blockHeight: CGFloat,
-        geometry: NLETimelineGeometry
-    ) -> some View {
+    private func clipBlock(_ clip: NLEClip, width: CGFloat, blockHeight: CGFloat) -> some View {
         let tint = Self.tint(for: clip.option.categoryID)
         let isSelected = clip.id == selectedClipID
-        let showsSubStrip = isSelected && !subTrack.isEmpty && width > subStripWidth + 80
-        let textWidth = showsSubStrip ? max(40, width - subStripWidth - 22) : width - 16
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(
@@ -258,13 +301,13 @@ struct MapHomeNLEClipEditor: View {
                 )
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .stroke(Color.white.opacity(isSelected ? 0.95 : 0.35), lineWidth: isSelected ? 2.5 : 1)
-            if blockHeight >= 26 {
+            if blockHeight >= 26, width > 34 {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(clip.option.title)
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    if blockHeight >= 44 {
+                    if blockHeight >= 44, width > 78 {
                         Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .opacity(0.88)
@@ -272,14 +315,9 @@ struct MapHomeNLEClipEditor: View {
                     }
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 9)
+                .padding(.horizontal, 8)
                 .padding(.top, 5)
-                .frame(width: textWidth, alignment: .topLeading)
-            }
-            if showsSubStrip {
-                subStrip(clip: clip, width: subStripWidth, geometry: geometry)
-                    .frame(width: subStripWidth, height: blockHeight)
-                    .offset(x: width - subStripWidth - 8, y: 0)
+                .frame(width: width, alignment: .topLeading)
             }
             if isSelected, blockHeight >= 22 {
                 VStack(spacing: 0) {
@@ -312,42 +350,86 @@ struct MapHomeNLEClipEditor: View {
             )
     }
 
-    /// 고른 클립 안쪽 오른쪽 띠. 상세활동은 이 클립 구간 안에서만 그린다.
-    private func subStrip(
-        clip: NLEClip,
-        width: CGFloat,
-        geometry: NLETimelineGeometry
-    ) -> some View {
+    /// 센서가 기록한 그대로의 원본 구간. 고칠 수 없고, 견주어 보기만 한다.
+    private var sourceSegments: [MapHomeTimeRailSegment] {
+        segments
+            .filter { $0.endMinute > $0.startMinute }
+            .sorted { $0.startMinute < $1.startMinute }
+    }
+
+    private func sourceColumn(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.white.opacity(0.22))
-            ForEach(subTrack.clips) { sub in
-                let y = geometry.height(minutes: Double(sub.startMinute - clip.startMinute))
-                let h = max(3, geometry.height(minutes: Double(sub.lengthMinutes)) - 1)
-                let isSelected = sub.id == selectedSubClipID
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Color.white.opacity(isSelected ? 0.96 : 0.62))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .stroke(
-                                Color.white.opacity(isSelected ? 1 : 0.35),
-                                lineWidth: isSelected ? 1.5 : 0.5
-                            )
-                    }
-                    .overlay(alignment: .topLeading) {
-                        if h >= 15 {
-                            Text(sub.option.title)
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Self.tint(for: sub.option.categoryID))
-                                .lineLimit(1)
-                                .padding(.horizontal, 3)
-                        }
-                    }
-                    .frame(width: width - 8, height: h)
-                    .offset(x: 4, y: y + 2)
+            ForEach(sourceSegments) { segment in
+                let y = geometry.y(forMinute: Double(segment.startMinute))
+                let barHeight = max(3, geometry.height(minutes: Double(segment.endMinute - segment.startMinute)) - 2)
+                sourceBar(segment, width: width, height: barHeight)
+                    .frame(width: width, height: barHeight)
+                    .offset(y: y + 1)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .frame(width: width, alignment: .topLeading)
+        .offset(x: x)
+    }
+
+    private func sourceBar(_ segment: MapHomeTimeRailSegment, width: CGFloat, height: CGFloat) -> some View {
+        let tint = Self.tint(for: segment.categoryID)
+        return RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(tint.opacity(0.20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(tint.opacity(0.55), lineWidth: 0.8)
+            }
+            .overlay(alignment: .topLeading) {
+                if height >= 18, width > 30 {
+                    Text(segment.title)
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(tint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 2)
+                }
+            }
+    }
+
+    /// 상세활동 기록. 하루 전체가 자기 원본 구간 안에 놓인다.
+    private func detailColumn(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(subTrack.clips) { clip in
+                let y = geometry.y(forMinute: Double(clip.startMinute))
+                let barHeight = max(3, geometry.height(minutes: Double(clip.lengthMinutes)) - 2)
+                detailBar(clip, width: width, height: barHeight)
+                    .frame(width: width, height: barHeight)
+                    .offset(y: y + 1)
+            }
+        }
+        .frame(width: width, alignment: .topLeading)
+        .offset(x: x)
+    }
+
+    private func detailBar(_ clip: NLEClip, width: CGFloat, height: CGFloat) -> some View {
+        let tint = Self.tint(for: clip.option.categoryID)
+        let isSelected = clip.id == selectedSubClipID
+        return RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(tint.opacity(0.88))
+            .overlay {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .stroke(
+                        Color.white.opacity(isSelected ? 0.95 : 0.35),
+                        lineWidth: isSelected ? 1.6 : 0.7
+                    )
+            }
+            .overlay(alignment: .topLeading) {
+                if height >= 15, width > 28 {
+                    Text(clip.option.title)
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 1)
+                }
+            }
     }
 
     private func playheadLine(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
@@ -737,21 +819,34 @@ struct MapHomeNLEClipEditor: View {
         // 왼쪽 눈금 띠를 끌면 재생 헤드가 움직인다.
         if point.x <= gutterWidth { return .scrub }
         if abs(geometry.y(forMinute: Double(playheadMinute)) - point.y) <= 9 { return .scrub }
-        // 고른 클립의 상세활동 띠를 먼저 본다.
-        if let clip = selectedClip,
-           let sub = subClip(at: point, clip: clip, geometry: geometry, width: width) {
-            if selectedSubClipID == sub.id {
-                let topY = geometry.y(forMinute: Double(sub.startMinute))
-                let bottomY = geometry.y(forMinute: Double(sub.endMinute))
-                if abs(point.y - topY) <= 10, sub.lengthMinutes > 1 {
-                    return .trimStart(lane: .sub, id: sub.id)
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
+        let sensorX = gutterWidth + lanes.main + laneGap
+        let detailX = sensorX + lanes.sensor + laneGap
+        // 상세활동 줄
+        if point.x >= detailX - laneGap {
+            if let sub = subTrack.clip(atMinute: minute) {
+                if selectedSubClipID == sub.id {
+                    let topY = geometry.y(forMinute: Double(sub.startMinute))
+                    let bottomY = geometry.y(forMinute: Double(sub.endMinute))
+                    if abs(point.y - topY) <= 9, sub.lengthMinutes > 1 {
+                        return .trimStart(lane: .sub, id: sub.id)
+                    }
+                    if abs(point.y - bottomY) <= 9, sub.lengthMinutes > 1 {
+                        return .trimEnd(lane: .sub, id: sub.id)
+                    }
                 }
-                if abs(point.y - bottomY) <= 10, sub.lengthMinutes > 1 {
-                    return .trimEnd(lane: .sub, id: sub.id)
-                }
+                selectedSubClipID = sub.id
+                return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: minute)
             }
-            selectedSubClipID = sub.id
-            return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: minute)
+            selectedSubClipID = nil
+            if let clip = track.clip(atMinute: minute) { selectedClipID = clip.id }
+            return .pan
+        }
+        // 센서 원본 줄은 읽기 전용이다. 누르면 같은 시각의 대분류만 골라 준다.
+        if point.x >= sensorX - laneGap {
+            selectedSubClipID = nil
+            if let clip = track.clip(atMinute: minute) { selectedClipID = clip.id }
+            return .pan
         }
         guard let clip = track.clip(atMinute: minute) else {
             selectedSubClipID = nil
@@ -770,19 +865,6 @@ struct MapHomeNLEClipEditor: View {
         selectedClipID = clip.id
         selectedSubClipID = nil
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
-    }
-
-    /// 상세활동 띠 위를 눌렀는지. 띠는 고른 클립 안쪽 오른편에만 있다.
-    private func subClip(
-        at point: CGPoint,
-        clip: NLEClip,
-        geometry: NLETimelineGeometry,
-        width: CGFloat
-    ) -> NLEClip? {
-        guard !subTrack.isEmpty else { return nil }
-        guard point.x >= width - subStripWidth - 8 else { return nil }
-        let minute = Int(geometry.minute(forY: point.y).rounded())
-        return subTrack.clip(atMinute: minute)
     }
 
     private func snapTargets(lane: NLEEditorLane, excluding id: String) -> [Int] {
@@ -838,8 +920,8 @@ struct MapHomeNLEClipEditor: View {
     private func deleteSelection() {
         pushUndo()
         if let selectedSubClipID, let sub = subTrack.clip(selectedSubClipID) {
-            // 서브클립을 지우면 그 자리는 상위 대분류로 돌아간다.
-            subTrack.delete(sub.id, fallback: selectedClip?.option)
+            // 상세활동을 지우면 그 자리는 그 구간의 대분류로 돌아간다.
+            subTrack.delete(sub.id, fallback: sub.parent.fillOption)
             self.selectedSubClipID = nil
             return
         }
@@ -899,21 +981,17 @@ struct MapHomeNLEClipEditor: View {
         selectedSubClipID = snapshot.selectedSubClipID
     }
 
-    private func rebuildSubTrack() {
-        let clip = selectedClip
-        subTrack = Self.makeSubTrack(
-            details: details,
-            within: clip,
-            mainOption: clip?.option
-        )
-        selectedSubClipID = nil
-    }
-
     private func apply() {
         let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: date)
-        // 대분류를 먼저, 서브클립을 나중에 저장한다. 서브클립이 위에 남아야 한다.
+        // 대분류를 먼저, 상세활동을 나중에 저장한다. 상세활동이 위에 남아야 한다.
+        // 상세활동이 비운 자리는 그 시각의 대분류가 이어받는다.
+        var detailTrack = subTrack
+        for clip in detailTrack.clips where clip.isDirty {
+            guard let main = track.clip(atMinute: clip.startMinute) else { continue }
+            detailTrack.setFillOption(main.option, forClipID: clip.id)
+        }
         let requests = track.editRequests(dayStart: dayStart)
-            + subTrack.editRequests(dayStart: dayStart)
+            + detailTrack.editRequests(dayStart: dayStart)
         guard !requests.isEmpty else {
             dismiss()
             return
@@ -993,50 +1071,53 @@ struct MapHomeNLEClipEditor: View {
         return NLETrack(clips: clips)
     }
 
+    /// 상세활동 기록을 하루 전체에 걸쳐 세운다.
+    ///
+    /// 각 기록의 울타리는 자기가 속한 원본 구간이다. 그래서 상세활동을 그 구간
+    /// 안에서 옮기거나 자를 수는 있어도, 다른 구간으로 넘어가지는 않는다.
     static func makeSubTrack(
         details: [MapHomeSectionDetail],
-        within clip: NLEClip?,
-        mainOption: ActivityCorrectionOption?
+        segments: [MapHomeTimeRailSegment]
     ) -> NLETrack {
-        guard let clip else {
-            return NLETrack(clips: [], fillsGaps: false)
-        }
-        let fill = mainOption ?? ActivitySectionOverrideEngine.unconfirmedOption
+        let ordered = segments
+            .filter { $0.endMinute > $0.startMinute }
+            .sorted { $0.startMinute < $1.startMinute }
         let clips = details.compactMap { detail -> NLEClip? in
-            guard detail.endMinute > detail.startMinute,
-                  detail.startMinute >= clip.startMinute,
-                  detail.endMinute <= clip.endMinute else { return nil }
-            let option = option(
+            guard detail.endMinute > detail.startMinute else { return nil }
+            let owner = ordered.first {
+                detail.startMinute >= $0.startMinute && detail.endMinute <= $0.endMinute
+            } ?? ordered.first {
+                detail.startMinute < $0.endMinute && detail.endMinute > $0.startMinute
+            }
+            let detailOption = option(
                 forCategoryID: detail.categoryID,
                 title: detail.title,
                 behavior: detail.behavior
             )
+            let fill = owner.map {
+                option(forCategoryID: $0.categoryID, title: $0.title, behavior: $0.behavior)
+            } ?? ActivitySectionOverrideEngine.unconfirmedOption
             let parent = NLEClipParent(
-                startMinute: detail.startMinute,
-                endMinute: detail.endMinute,
+                startMinute: owner?.startMinute ?? detail.startMinute,
+                endMinute: owner?.endMinute ?? detail.endMinute,
                 sourceIDs: [detail.id],
-                option: option,
+                option: detailOption,
                 fillOption: fill
             )
             return NLEClip(
                 id: "sub|\(detail.id.uuidString)",
-                option: option,
+                option: detailOption,
                 startMinute: detail.startMinute,
                 endMinute: detail.endMinute,
                 parent: parent,
                 origin: NLEClipOrigin(
                     startMinute: detail.startMinute,
                     endMinute: detail.endMinute,
-                    option: option
+                    option: detailOption
                 )
             )
         }
-        return NLETrack(
-            clips: clips,
-            rangeStartMinute: clip.startMinute,
-            rangeEndMinute: clip.endMinute,
-            fillsGaps: false
-        )
+        return NLETrack(clips: clips, fillsGaps: false)
     }
 
     static func option(
