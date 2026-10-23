@@ -2657,3 +2657,8 @@
 - 패키지 테스트: `--disable-sandbox`로 TaptionPlanCore 85, TaptionRouteEngine 54, TaptionActivityEngine 33, TaptionPlanEngine 1 — 실패 0.
 - 구조 게이트: `scripts/architecture-metrics.py --check docs/architecture-baseline.json` → 기준선 통과. `scripts/check-app-engine-import-boundary.sh` → 통과.
 - 빌드 번호: 230 → 231. `CURRENT_PROJECT_VERSION` 8곳과 앱·iPhone 위젯·Watch·Watch 위젯 `Info.plist`의 `CFBundleVersion` 4곳을 모두 231로 맞췄다. App Store Connect 최신 빌드는 230(VALID)이었다.
+- TestFlight: `xcodebuild archive`(Release, generic/platform=iOS) → **ARCHIVE SUCCEEDED**(`archive.log`). 산출물 확인: 앱 `com.taption.plan` 1.0(231), 위젯 `com.taption.plan.widget` 231, **Watch 디렉터리 없음**(DEVELOPMENT.md의 iPhone 배포 조건). `-exportArchive`(ExportOptions.plist, app-store-connect/자동 서명) → **EXPORT SUCCEEDED**, `TaptionPlan.ipa` 44,605,909바이트(`export.log`).
+- 업로드: `altool --upload-app` → **UPLOAD SUCCEEDED**, Delivery UUID `3d6eddd8-9329-487a-8d1a-a9688b5b77c9`(`upload.log`). App Store Connect API에서 빌드 231이 **VALID**(처리 완료)로 확인됐다.
+- 내부 배포: `TP Taption Plan 내부 테스트`(내부 그룹, `isInternalGroup: true`)에 빌드 231을 연결했고, API readback에서 그룹 빌드 목록에 231이 있고(`buildAttached: true`, `processingState: VALID`, `expired: false`) 테스터 1명(`axony99@gmail.com`)이 그룹에 노출되는 것을 확인했다(`testflight-readback.json`).
+- 소스: `main` `18bc943`을 push(`b760509..18bc943`). 워크트리 clean.
+- 하지 않은 것: IAP 판매·계약·심사 제출은 대표 지시대로 별도 재개 요청까지 보류한다. 실기기 화면 확인(녹화 실패 안내, 미확인 배지 터치, UI 테스트 4건)은 이번에도 하지 않았다.
