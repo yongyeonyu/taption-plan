@@ -1329,6 +1329,8 @@ Label(...)
 
 缺 ② 时，命中区会退回到字形边界（`.buttonStyle(.plain)` + 背景色尤其如此），44pt 的 frame 只是画得大，点不到。
 
+> **修法很轻，别当架构问题处理。** 正因为 inset 既不帮也不害，这处**不需要动 `List`、不需要改 `tpListStyle`、不需要重排布局** —— 就是在 `unconfirmedChoice` 上加 `.frame(minHeight: 44)` 和 `.contentShape(Rectangle())`，**两行**（或直接套同文件已有的 `taptionHitOutset`）。"`List` 里做 44pt 很难"是错的印象；难的是"整行可点"，而这个控件从来不需要整行可点。把它写成"需要架构改动"，会让人一直不动它。
+
 > **为什么这条必须写下来：** `MapHomeTimeSidebar.swift` 自己在 **6 处**用了 `.contentShape(Rectangle())`（`:1261, :1353, :1574, :1605, :1783, :1809`）。也就是说这个文件已经知道该怎么做，而 `unconfirmedChoice`（§3.15）是它内部唯一的例外。**这不是风格分歧，是遗漏，而且有 6 个反例。** 反例存在与否，是"发现"和"意见"的分界线。
 
 ### 5.4 VoiceOver（韩文标签，图标型控件必须有）
@@ -1415,6 +1417,8 @@ Label(...)
 | **`legacyUIEnabled = false` 的 20,811 行** | 编译期还在，`ScheduleView` 里也有 100+ 处字体调用 | **不在迁移范围。** 删掉这些视图是另一个项目。但迁移脚本要 `--exclude ScheduleView.swift ReviewView.swift GoalsView.swift SettingsView.swift`，否则统计会虚高 3 倍 |
 | **49 处字号是算出来的，不是字面量** | 批量替换只能匹配字面量。这 49 处会被静默漏掉，而且其中一部分恰恰是**相对缩放**的地方，漏掉后不会报错，只会让层级在某个缩放下悄悄塌掉 | **先人工看一遍，再跑脚本。** 见 §7.3 |
 
+> **写法规则：不要把确定值写成上界。**「표적이 36pt보다 작다」是一句可以被一次测量推翻的断言 —— 第一个去量的人得到**正好 36**，那一节的其余发现（都是真的）就跟着一起被怀疑。这跟 `tpAccent` 的「모든」是同一个失败模式：**一个能被证伪的措辞，会污染它周围所有正确的结论。** 所以确定值就写确定值，并写出差多少：「36pt，比最低值少 8pt」经得起复核；「小于 36pt」是在邀请反驳。这条同样适用于 `7.92pt`、`4.14`、`2.17` —— 这些都是量出来的，就该写成一个数。
+
 ### 7.3 算出来的字号：50 个匹配 = 1 个定义 + **49 处调用**
 
 §1 的表里，1,077 是**字面量**调用数，总调用是 1,127。差的 50 个匹配把字号当变量传，脚本匹配不到。**但其中 1 个是 `Font.taption` 自己的定义**（`Theme.swift:21` 的 `.system(size: size + 2, …)`，那个 `size` 当然是变量）。所以**真实调用点是 49 处**，不是 50。
@@ -1478,7 +1482,7 @@ ratchet () { # label, pattern
   if [ "$n" -gt "$base" ]; then echo "✗ $1: $n > baseline $base"; fail=1
   else echo "· $1: $n (baseline $base)"; fi
 }
-ratchet 'size-under-12' '\.system\(size: *(9|10|10\.5|11)\b'
+ratchet 'size-under-12' '\.system\(size: *(9|10|10\.5|11)[^0-9.]'
 ratchet 'tap-offset'    'taptionHitOutset'
 
 exit $fail
@@ -1486,7 +1490,7 @@ exit $fail
 
 初始基线（实测，live 路径）：`size-under-12 136` · `tap-offset 2`。
 
-`minimumScaleFactor` 是**硬失败**，因为它的唯一作用就是把字缩小，而缩到 12pt 以下没有合法用法（§2.2.5）。当前 23 处，全部要逐个处理。
+`minimumScaleFactor` 是**硬失败**，因为它的唯一作用就是把字缩小，而缩到 12pt 以下没有合法用法（§2.2.5）。当前 **live 路径 23 处** —— 全仓 36 处，其中 13 处在死视图里，脚本已 `--exclude`。数字对不上时先看这 13 处。
 
 **为什么 `contentShape` 不进 lint。** §5.3.1 的"有背景但无 `contentShape`"**不能用 grep 判**：我试过，会命中 **47 处**，因为它分不清 200pt 的卡片和 36pt 的胶囊 —— 两者都"有 background、无 contentShape"，但只有后者错。判它必须知道 frame 尺寸，那是 SwiftSyntax 的活，不是正则的活。
 
