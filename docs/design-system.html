@@ -659,6 +659,25 @@ td code{background:none;padding:0;font-size:11.5px}
   </div>
 </div>
 
+<div class="card tight" style="margin-top:var(--x16)">
+  <div class="card-h">규칙 C7 — 채움 선택 매트릭스</div>
+  <div class="card-s">code review에서 <strong>나에게 묻지 않고</strong> 판정할 수 있어야 한다. 그래서 "면적"을 묻지 않고, 두 가지만 묻는다.</div>
+  <table style="margin:0;font-size:11.5px">
+  <thead><tr><th>① 크기가 데이터에서 나오나<br><span class="dim" style="font-weight:400">clip 높이=시간 · 비율 폭=비중</span></th><th>② 안에 <code>Text</code>가 있나</th><th>무엇으로 채우나</th><th>예</th></tr></thead>
+  <tbody>
+  <tr><td>예</td><td>예</td><td><strong><code>tpCatWash</code> + <code>tpInk</code></strong></td><td>clip block · chip 실底</td></tr>
+  <tr><td>예</td><td>아니오</td><td><strong><code>tpCat</code> 실底</strong> <span class="dim">(만포화, <span class="cross">tpCatStrong 아님</span>)</span></td><td>공유 카드 12pt 비율 바</td></tr>
+  <tr><td>아니오 <span class="dim">(글자가 중성 바탕 위)</span></td><td>—</td><td><strong>중성 바탕 + 4pt <code>tpCat</code> 띠</strong></td><td>list row · 표 행 · 범례 행</td></tr>
+  </tbody>
+  </table>
+  <p style="font-size:11.5px;color:var(--ink-2);margin:var(--x12) 0 0;line-height:1.7">
+    <strong>비합법 조합은 하나뿐:</strong> 포화 바탕 + 백색 글자. 4.86으로 겨우 통과하지만, <strong>분류를 하나 추가할 때마다 백색 대비를 다시 재야 한다</strong> — 영구적인 유지비다.
+  </p>
+  <p style="font-size:11.5px;color:var(--ink-2);margin:var(--x8) 0 0;line-height:1.7">
+    <strong>두 번째 행이 왜 <code>tpCat</code>이고 <code>tpCatStrong</code>이 아닌가:</strong> <code>tpCatStrong</code>의 정의는 "백색 글자가 4.5를 넘는 색"이다. 비율 바에는 글자가 없으니 정의가 성립하지 않는다. 구체적으로 <code>eating</code>은 <code>tpCat</code> <code>#E5B800</code>인데 <code>tpCatStrong</code>은 <code>#896E00</code>(암올리브)다 — 쓰면 <code>식사</code>가 달력에서는 밝은 노랑, 공유 카드에서는 암올리브가 된다. <strong>같은 분류가 두 색이 되는 것</strong>이 §2.1.2가 없애려는 바로 그 문제다.
+  </p>
+</div>
+
 <!-- state vs category -->
 <h3 id="state-vs-cat">언제 category이고, 언제 state인가</h3>
 <table>
@@ -1322,7 +1341,7 @@ extension Font {
 </div>
 
 <!-- calendar -->
-<h3 id="c-cal">3.12–3.15 기록</h3>
+<h3 id="c-cal">3.12–3.13 기록</h3>
 <p>기록 모드의 본체. <strong><code>MapHomeCalendarSheet</code>에서 자라난다</strong> — 이미 월 그리드 + 일별 시간/횟수/거리 합계 + 평균을 갖고 있다.</p>
 
 <div class="grid2">
@@ -1588,6 +1607,95 @@ extension Font {
 </div>
 
 <!-- ═══════════════════════ 4 STATES ═══════════════════════ -->
+<h3 id="c-share">3.15 · 3.23 미확인 칩 · 공유 카드</h3>
+<p>둘 다 <strong>살아있는 코드에서 확인한 표면</strong>이다. 칩은 <code>MapHomeTimeSidebar.swift:2288-2318</code>, 카드는 <code>MapHomeCalendarSheet.swift:2509-2600</code>.</p>
+
+<div class="grid2">
+  <div class="card">
+    <div class="card-h">3.15 <code>tp.unconfirmedChoice</code></div>
+    <div class="card-s">규칙 C1의 집행 지점 — 미확인을 지우는 유일한 수단</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r12)">
+      <div style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:99px;background:var(--catW-work);color:var(--ink);font-size:12px;font-weight:600">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>업무
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:99px;background:var(--catW-study);color:var(--ink);font-size:12px;font-weight:600">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h7v15H4zM13 5h7v15h-7z"/></svg>공부
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:99px;background:var(--catW-movement);color:var(--ink);font-size:12px;font-weight:600">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>이동
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 16px;border-radius:99px;background:var(--catW-exercise);color:var(--ink);font-size:12px;font-weight:600;opacity:.45">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>운동
+      </div>
+    </div>
+    <table style="margin:var(--x12) 0 0;font-size:11.5px">
+    <thead><tr><th>지금</th><th>고칠 값</th><th>근거</th></tr></thead>
+    <tbody>
+    <tr><td>11pt + <code>minimumScaleFactor(0.72)</code></td><td class="cross">12pt, 축소 삭제</td><td>7.9pt까지 줄어든다 — Apple 최소 11pt 미만</td></tr>
+    <tr><td><code>minHeight: 36</code></td><td class="cross">44</td><td>C1이 "1회 탭"을 요구하는데 표적이 8pt 모자람</td></tr>
+    <tr><td><code>tint.opacity(0.18)</code></td><td class="cross">0.30</td><td>18%는 최소 ΔE 5.1, 30%는 8.3</td></tr>
+    </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-h">3.23 <code>tp.share.card</code></div>
+    <div class="card-s">전 App에서 유일하게 <strong>공개 게시되는</strong> 표면 — 리스크가 가장 높다</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <!-- gradient mode (safe) -->
+      <div>
+        <div style="width:200px;height:200px;border-radius:var(--r12);overflow:hidden;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(135deg,#F3EAD6,#FBF6EA);border:1px solid var(--line)">
+          <div style="font-size:15px;font-weight:700;color:var(--ink);line-height:1.1">10월 24일</div>
+          <div style="font-size:8px;font-weight:600;color:var(--ink);opacity:.8;margin-bottom:7px">금요일</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">업무</span><span style="flex:1;height:5px;border-radius:3px;background:var(--line);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:70%;border-radius:3px;background:var(--catS-work)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">4:12</span></div>
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">공부</span><span style="flex:1;height:5px;border-radius:3px;background:var(--line);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:3px;background:var(--catS-study)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">2:30</span></div>
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">이동</span><span style="flex:1;height:5px;border-radius:3px;background:var(--line);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:28%;border-radius:3px;background:var(--catS-movement)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">1:05</span></div>
+          </div>
+          <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:8px;font-weight:700;color:var(--accent-text)">BOKKI Plan</span>
+            <span style="font-size:6.5px;color:var(--ink);opacity:.75">자동 기록으로 만든 하루</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-2);margin-top:6px;text-align:center">기본(gradient) — <span class="cr pass">통과</span></div>
+      </div>
+      <!-- photo mode (fails) -->
+      <div>
+        <div style="width:200px;height:200px;border-radius:var(--r12);overflow:hidden;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;position:relative;border:1px solid var(--line)">
+          <div style="position:absolute;inset:0;background:linear-gradient(160deg,#14110c,#3a3226 45%,#0d0b08)"></div>
+          <div style="position:absolute;inset:0;background:#F3EAD6;opacity:.72"></div>
+          <div style="position:relative;font-size:15px;font-weight:700;color:var(--ink);line-height:1.1">10월 24일</div>
+          <div style="position:relative;font-size:8px;font-weight:600;color:#7A6C50;margin-bottom:7px">금요일</div>
+          <div style="position:relative;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">업무</span><span style="flex:1;height:5px;border-radius:3px;background:rgba(62,51,32,.18);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:70%;border-radius:3px;background:var(--catS-work)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">4:12</span></div>
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">공부</span><span style="flex:1;height:5px;border-radius:3px;background:rgba(62,51,32,.18);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:42%;border-radius:3px;background:var(--catS-study)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">2:30</span></div>
+            <div style="display:flex;align-items:center;gap:4px"><span style="width:16px;font-size:7px;font-weight:600;color:var(--ink)">이동</span><span style="flex:1;height:5px;border-radius:3px;background:rgba(62,51,32,.18);position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:28%;border-radius:3px;background:var(--catS-movement)"></span></span><span style="font-size:7px;color:var(--ink);font-variant-numeric:tabular-nums">1:05</span></div>
+          </div>
+          <div style="position:relative;margin-top:auto;display:flex;justify-content:space-between;align-items:baseline">
+            <span style="font-size:8px;font-weight:700;color:var(--accent)">BOKKI Plan</span>
+            <span style="font-size:6.5px;color:#7A6C50">자동 기록으로 만든 하루</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--ink-2);margin-top:6px;text-align:center">야간 지도 모드 — <span class="cr fail">2.72 / 3.46</span></div>
+      </div>
+    </div>
+    <p style="font-size:11.5px;color:var(--ink-2);margin:var(--x10) 0 0;line-height:1.65">
+      왼쪽은 <code>tpSecondary</code>가 읽힌다. 오른쪽은 <strong>어두운 지도 + 72% 스크림</strong>에서 <code>tpSecondary</code> <span class="cr fail">2.72</span>, <code>tpAccent</code> <span class="cr fail">3.46</span>로 떨어진다 — 요일과 부제가 사라진다.
+      스크림을 1.00까지, 즉 지도를 완전히 덮어도 <code>tpSecondary #7A6C50</code>은 <strong>4.29</strong>다. <strong>스크림으로는 못 고친다.</strong>
+    </p>
+    <p style="font-size:11.5px;color:var(--ink-2);margin:var(--x8) 0 0;line-height:1.65">
+      <strong>그리고 이건 공유 카드만의 문제가 아니다.</strong> 같은 색이 앱의 기본 바탕 <code>tpBackground</code> 위에서 <strong>4.29</strong> — 이미지도 지도도 없는 곳에서 이미 4.5 미만이다. <code>#6B5D43</code>으로의 개정은 취향이 아니라 적합성 수정이다(5.36 / 5.95).
+    </p>
+  </div>
+</div>
+
+<div class="note">
+  <div class="t">규칙 C8 — 배경을 모르는 면 위에서는, 배경을 안다고 가정하는 글자색을 쓰지 않는다</div>
+  <p>공유 카드에는 <code>tpSecondary</code>를 쓰지 않는다. 보조 톤은 <strong>크기와 굵기로만</strong> 표현하고 색은 <code>tpInk</code>로 고정한다. <code>tpInk</code>는 순수 검정 지도에서도 <strong>5.23</strong>으로 통과한다.</p>
+  <p>이건 스타일 선택이 아니다. 게시된 이미지는 <strong>고칠 수 없기 때문</strong>에 생기는 제약이다. 앱 안의 화면은 사용자가 다시 열 수 있지만, SNS에 올라간 카드는 그대로 남는다.</p>
+  <p><strong>배경 출처 정정:</strong> 이 카드의 배경은 사용자 사진이 아니라 <code>Self.routeMap(points:)</code>(<code>MapHomeCalendarSheet.swift:2782</code>)가 그린 <strong>경로 지도 스냅샷</strong>이다. 사진을 배경으로 쓰는 경로는 코드에 없다. 지도는 대체로 밝지만 위성·야간 스타일에서는 어두워질 수 있어 위험은 실재한다 — 다만 "아무 사진이나"는 과장이다.</p>
+</div>
+
 <h2 id="states"><span class="num">4</span>비정상 상태</h2>
 <p>지금 가장 약한 곳이고, 이 시스템이 가장 단단해야 하는 곳이다. 다섯 가지, 각각 고정된 형태. <strong>여섯 번째를 새로 만들지 않는다.</strong></p>
 
@@ -1738,7 +1846,7 @@ extension Font {
 <tr><td><code>reviewMarker</code></td><td>26pt 원</td><td>44</td><td class="tick">✓</td></tr>
 <tr><td><code>trimHandle</code></td><td><strong>5pt 높이 · 22pt 폭</strong></td><td><strong>5 × 22</strong></td><td class="cross">✗ 가장 심각</td></tr>
 <tr><td><code>dayCell</code></td><td>45 × 38</td><td>38</td><td class="cross">✗ <code>contentShape</code>로 44</td></tr>
-<tr><td><code>weekBar</code> 기둥</td><td>가변</td><td>—</td><td class="cross">✗ 열 전체 <code>contentShape</code></td></tr>
+
 <tr><td><code>mapControl</code></td><td>44</td><td>44</td><td class="tick">✓</td></tr>
 </tbody>
 </table>
@@ -1820,7 +1928,7 @@ extension Font {
 <thead><tr><th>단계</th><th>무엇</th><th>검증</th><th>완료 기준</th></tr></thead>
 <tbody>
 <tr><td><strong>1. 토큰 보강</strong></td><td><code>Theme.swift</code>에 <code>Font.tp*</code>·<code>Space</code>·<code>Radius</code>·<code>Elev</code>·<code>Motion</code>·<code>tpCatStrong</code>·<code>tpAccentText</code>·<code>tpLineControl</code> 추가. <strong>호출점은 하나도 안 바꾼다.</strong></td><td><code>xcodebuild</code> 통과</td><td>새 토큰 존재, 옛 토큰 유지</td></tr>
-<tr><td><strong>2. 고위험 수정</strong></td><td>딱 5곳, 전부 적합성 문제: <code>clipBlock</code> 채움 → <code>tpCatWash</code> + 4pt <code>tpCat</code> 변 + <code>tpInk</code> 글자(규칙 C4/C7) · NLE 헤더 <code>닫기</code>/<code>적용</code> → <code>tpAccentText</code> · 드로어 상태 캡슐 <code>mapHomeGlass</code> 제거 · <code>trimHandle</code> 히트 확장 · <code>dayCell</code>/<code>weekBar</code> <code>contentShape</code> 확장</td><td>스크린샷 대조 + 대비 스크립트</td><td>§2.1.2의 7개 실패 → 0</td></tr>
+<tr><td><strong>2. 고위험 수정</strong></td><td>딱 5곳, 전부 적합성 문제: <code>clipBlock</code> 채움 → <code>tpCatWash</code> + 4pt <code>tpCat</code> 변 + <code>tpInk</code> 글자(규칙 C4/C7) · NLE 헤더 <code>닫기</code>/<code>적용</code> → <code>tpAccentText</code> · 드로어 상태 캡슐 <code>mapHomeGlass</code> 제거 · <code>trimHandle</code> 히트 확장 · <code>dayCell</code> <code>contentShape</code> 확장</td><td>스크린샷 대조 + 대비 스크립트</td><td>§2.1.2의 7개 실패 → 0</td></tr>
 <tr><td><strong>3. 폰트 이행</strong></td><td><code>Font.taption</code> deprecated 표시, §2.2.4로 <strong>1,077곳 리터럴</strong> 일괄 치환, <strong>그 다음 §7.4의 계산값 50곳을 사람이 직접</strong> 처리, <code>taption</code> 삭제</td><td>화면별 스크린샷 대조 · <code>grep -c '\.taption('</code> = 0</td><td>41 → 12</td></tr>
 <tr><td><strong>4. 간격/반경</strong></td><td>§2.3 / §2.4 매핑으로 일괄 치환</td><td>스크린샷 대조 · <code>grep -c 'cornerRadius: [0-9]'</code> = 0</td><td>20 → 12, 18 → 5</td></tr>
 </tbody>

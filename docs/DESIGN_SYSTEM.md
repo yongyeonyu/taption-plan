@@ -174,14 +174,20 @@ border = 0.8pt tpCat(id) @ 35%
 
 #### 规则 C7：什么时候用 wash，什么时候用中性底 + 4pt 条
 
-这一条必须能在 code review 里**不问我**就判完。所以它不问"多大面积"，只问一件事：
+这一条必须能在 code review 里**不问我**就判完。所以它不问"多大面积"，只问两件事 —— 都是打开组件就能看见的：
 
-> **填充上有没有用户必须读的字？**
->
-> - **有** → `tpCatWash` + `tpInk`。（clip block、chip 实底、任何"字压在色上"的块）
-> - **没有，只需被识别，字在中性底上** → 中性底 + 4pt `tpCat` 条。（list row、表格行、图例行）
+> **① 这个色块的尺寸是不是由数据算出来的？（clip 高度 = 时长 · 比例条宽度 = 占比）**
+> **② 色块里面有没有 `Text`？**
 
-为什么这条能替代"面积"：它给出的是**两个合法配置**和一个**非法配置**（饱和底 + 白字），而不是一个需要裁量的连续量。任何人打开一个组件，看字压在哪、看填充是 wash 还是中性，就能判。
+| ① 尺寸有意义 | ② 里面有字 | 用什么 | 例 |
+|---|---|---|---|
+| 是 | 是 | **`tpCatWash` + `tpInk`** | clip block、chip 实底 |
+| 是 | 否 | **`tpCat` 实底**（满饱和，**不是** `tpCatStrong`） | 공유 카드 12pt 比例条 |
+| 否 | 否（字在中性底上） | **中性底 + 4pt `tpCat` 条** | list row、表格行、图例行 |
+
+**非法配置只有一个：饱和底 + 白字。** 它在 4.86 勉强通过，但每加一个分类就要重测一次白字对比度 —— 这是永久性的维护成本。
+
+为什么这条能替代"面积"：它给出**三个合法配置和一个非法配置**，而不是一个需要裁量的连续量。任何人打开一个组件，看尺寸怎么来、看里面有没有字，就能判。
 
 再补一个选择依据（不是阈值，是意图）：
 
@@ -190,9 +196,19 @@ border = 0.8pt tpCat(id) @ 35%
 
 list row 之所以是中性底：它一行里有四个不同量级的数字，整条上 wash 会让每个数字都看起来"和分类有关"。不是因为 358pt 太大。
 
+**为什么 wash 优于 strong + 白字（这是首要理由，不是审美）：** `tpInk` 压 `tpCatWash` 是 6.85–9.67，**与分类色相无关**。换成 strong + 白字，每个新分类都要重新测白字是否达标 —— 十个色相永久留在无障碍审查路径上。wash 把色相从这个路径上彻底移走。视觉上"11 块饱和色叠在 137pt 车道里像甘特图"是第三个理由，也是最弱的一个。
+
 **注意最后一列仍然只有 1.19–1.67。** wash 天生低分离度，**所以 wash 块必须带 0.8pt 描边 + 4pt 边条**——这不是装饰，是边界。`eating`(1.19) 尤其依赖描边。
 
-**`tpCatStrong` 仍然需要**，但只用在两处：分类名文字（`업무` 标签）、以及 chip 实底。不要用它做大面积填充。
+**`tpCatStrong` 仍然只用在两处**：分类名文字（`업무` 标签）和 chip 实底。**无字的比例条用 `tpCat`，不用 `tpCatStrong`。**
+
+为什么这一格必须是 `tpCat` 而不是 `tpCatStrong` —— 三条，第三条是决定性的：
+
+1. **`tpCatStrong` 的定义就是"白字能过 4.5"。** 比例条里没有字，这个定义对它不成立。把它用上去，token 的含义就从"能承载白字的深色"漂移成"重要的填充"，而角色系统就是这样烂掉的。
+2. **角色表里 `tpCat` 已经写了"图表柱"。** 比例条就是图表柱，它本来就该在 `tpCat` 这一格。
+3. **具体后果：`eating` 会变成两个颜色。** `tpCat(eating)` = `#E5B800`（亮黄），`tpCatStrong(eating)` = `#896E00`（暗橄榄）。分享卡上若用 strong，`식사` 的比例条是暗橄榄，而同一个分类在日历、时间轴、图例里都是亮黄 —— **同一个分类两种颜色，正是 §2.1.2 存在的理由。** 这一条不需要审美判断，看色值就能否掉。
+
+（上一版这一格写成"`tpCat` 实底（`tpCatStrong`）"，把两个不同的 token 并列，读者无法知道该用哪个。这两个值差很远，不能并列。）
 
 **什么时候是 category，什么时候是 state？**
 
@@ -565,7 +581,7 @@ enum Motion {
 
 ## 3. Components
 
-21 个（原 22 个，`weekBars` 已删除 — 见 §3.14）。每个给：**职责 / 解剖 / 状态 / token / 출처**。
+22 个（原 22 个；`weekBars` 삭제, `unconfirmedChoice`·`share.card` 추가 — §3.14·§3.15·§3.23）。每个给：**职责 / 解剖 / 状态 / token / 출처**。
 
 命名格式见 §6：`tp.<group>.<name>`（文档用），Swift 侧用 `TP<Group><Name>`。
 
@@ -584,6 +600,8 @@ enum Motion {
 ---
 
 ### 3.1 `tp.map.dateBadge` — 날짜 배지
+
+**출처** `MapHomeView.swift` → `dateBadge` (살아있음)
 
 **职责** 显示选中日期，是"哪一天"的唯一常驻锚点。点一下展开本周，双击回今天。
 
@@ -606,6 +624,8 @@ HStack(spacing: Space.x6)
 
 ### 3.2 `tp.map.weekStrip` — 주간 날짜 줄
 
+**출처** `MapHomeView.swift` → `weekStrip` (살아있음)
+
 **解剖** 7 × `VStack(spacing:0){ 요일 tpRuler / 날짜 tpSubhead }`，每格 34×`weekStripHeight-8`，`Radius.x12`。
 
 **状态** `idle` / `selected`（`tpSaturday.opacity(0.22)` 底 + `Radius.x12`）/ `today` / `holiday`
@@ -617,6 +637,8 @@ HStack(spacing: Space.x6)
 ---
 
 ### 3.3 `tp.map.marker` — 집 · 고양이 · 정원
+
+**출처** `MapHomeView.swift` → `MapHomeStickmanMarker` + `MapHomeGrowthPolicy.artworkName(level:)` (살아있음)
 
 **职责** 情绪钩子。它是这个产品区别于"数据面板"的全部。
 
@@ -635,6 +657,8 @@ HStack(spacing: Space.x6)
 
 ### 3.4 `tp.map.sideRail` — 지도 좌측 컨트롤 레일
 
+**출처** `MapHomeView.swift` → `mapSideRails` / `mapControls` (살아있음)
+
 **职责** 地图自身的操作：검색 / 현재 위치 / 나침반 / 확대 / 축소。
 
 **解剖** `VStack(spacing: Space.x10)`，每个按钮 44×44（`Elev.e2` + `mapHomeGlass` + `Circle`），图标 15pt `tpInk`。
@@ -646,6 +670,8 @@ HStack(spacing: Space.x6)
 ---
 
 ### 3.5 `tp.map.contextActionRow` — 맥락 액션 줄
+
+**출처** `MapHomeView.swift` → `bottomActionBar` (살아있음)
 
 **职责** 当前视图相关的动作，**不改变"你在哪"**。这是 `bottomActionBar` 的替代物：原来的 7 个按钮全部是对当前视图的操作，一个都不导航。
 
@@ -660,6 +686,8 @@ HStack(spacing: Space.x6)
 ---
 
 ### 3.6 `tp.modeSwitch` — 지도 · 타임라인 · 기록
+
+**출처** **신규.** 살아있는 구현 없음 — `docs/UX_ARCHITECTURE.md` §4의 3-시점 전환이 아직 안 만들어졌다. 기존 코드에 3분할 전환 컨트롤이 없다(확인함). **이건 감사 결과가 아니라 신규 설계다.**
 
 **职责** 三个投影的切换器。**它不是 Tab**（P2：换视角不是导航）。切换时 `selectedDate` 不变、每个 mode 各自记住滚动/缩放位置、push 栈回到该 mode 的根（`UX_ARCHITECTURE.md` §4.4）。
 
@@ -684,6 +712,8 @@ HStack(spacing: Space.x4)  ← 3 段等宽
 ---
 
 ### 3.7 `tp.timeRail` — 타임라인 축 (압축형, 지도 안)
+
+**출처** `MapHomeTimeSidebar.swift` → 사이드바 레일 (`MapHomeTimeSidebarMath`, `trackCenterX`) (살아있음)
 
 **职责** 地图右侧那条 44pt 的时间轴。它是 **3 lane 模型的 1 lane 压缩**——不是另一个东西。`MapHomeTimeSidebar` 里已经是这样（`activeRailWidth: 7` 的彩色轨道 + `rulerNumericColumnWidth: 32` 的数字列 + `handleLaneWidth: 69` 的把手列）。
 
@@ -714,6 +744,8 @@ HStack(spacing: Space.x4)  ← 3 段等宽
 
 ### 3.8 `tp.timeline.lanes` — 3 lane 타임라인 (타임라인 모드)
 
+**출처** `MapHomeTimeSidebar.swift` → 3-lane 타임라인 + `MapHomeNLEClipEditor.swift` → `lanes` (살아있음)
+
 **职责** 把 3.7 的 1 lane 展开成 3 lane。**这是 타임라인 mode 的主体**，从 `MapHomeTimeSidebar` 长出来，不是从 `ScheduleView`。
 
 **解剖**（复用 NLE 的比例，因为两者是同一个信息模型）
@@ -739,6 +771,8 @@ gap 5, 카드 Radius.x16, 테두리 tpLine
 ---
 
 ### 3.9 `tp.clip` — 클립 블록
+
+**출처** `MapHomeNLEClipEditor.swift` → `clipBlock` (살아있음, 단일 출처)
 
 **职责** 一个时间段。整个产品的原子。
 
@@ -781,6 +815,8 @@ ZStack(alignment: .topLeading)
 
 ### 3.10 `tp.clip.trimHandle` — 자르기 손잡이
 
+**출처** `MapHomeNLEClipEditor.swift` → `trimHandle` (살아있음)
+
 **解剖** `RoundedRectangle(Radius.x4)`，高 5，**`tpSurface` 底（不是纯白）**，`tpInk.opacity(0.25)` 0.8pt 描边，内嵌 `Capsule` 16×2 `tpInk.opacity(0.60)`，水平 padding `Space.x8`，垂直 `Space.x2`。
 
 > 原来是纯白 `#FFFFFF`。在 `tpCatStrong` 的饱和底上白是可见的；换成 `tpCatWash` 之后白与底的对比只有 1.1–1.3，**手柄会消失**。所以必须改成 `tpSurface` + 深色描边 + 深色内条。
@@ -794,6 +830,8 @@ ZStack(alignment: .topLeading)
 
 ### 3.11 `tp.hourRuler` — 시간 눈금
 
+**출처** `MapHomeTimeSidebar.swift:1173-1504` → `rulerTickWidth` / `rulerFontSize(_:)` (살아있음)
+
 **解剖** `Canvas` 绘制：整点 1pt `tpInk.opacity(0.14)`，半点 0.6pt `tpInk.opacity(0.06)`；标签 `tpRuler(9)` `.monospacedDigit`，右对齐，`tpSecondary`。
 
 **状态** `hourOnly`（zoom ≥360분）/ `tenMinute`（zoom <360）/ `minuteTicks`（zoom =60）
@@ -804,6 +842,8 @@ ZStack(alignment: .topLeading)
 ---
 
 ### 3.12 `tp.calendar.grid` — 월간 그리드 (기록 모드)
+
+**출처** `MapHomeCalendarSheet.swift` → `monthGrid` / `dayCell` (살아있음)
 
 **职责** 기록 mode 的主体。从 `MapHomeCalendarSheet` 长出来（它已经是月格 + 每日时间/次数/距离合计 + 平均值）。
 
@@ -837,6 +877,8 @@ LazyVGrid(7 columns, spacing: Space.x7)      ← 실측 7
 ---
 
 ### 3.13 `tp.calendar.dayTotals` — 일 합계 지표
+
+**출처** `MapHomeCalendarSheet.swift` → `timePanel` (살아있음)
 
 **解剖** `VStack(alignment:.leading, spacing: Space.x10)`，`Radius.x12`，`tpSurface`，`tpLine.opacity(0.9)` 0.8pt 描边。
 ```
@@ -903,6 +945,8 @@ Label(category.localizedTitle(language), systemImage: category.systemImage)
 
 ### 3.16 `tp.nle.header` — 클립 편집 헤더
 
+**출처** `MapHomeNLEClipEditor.swift:98` → `header` (살아있음)
+
 **解剖** `HStack`，`minHeight: 44`。
 ```
 Button(닫기)   tpCallout(14) .semibold, 前景 tpAccentText(← 지금 tpReferenceRose 2.67)
@@ -923,6 +967,8 @@ Button(적용)   tpCallout(14) .bold, .white on tpAccentText, Capsule
 
 ### 3.17 `tp.nle.laneHeader` — 레인 제목
 
+**출처** `MapHomeNLEClipEditor.swift:198` → `laneTitle(_:width:)` (살아있음)
+
 **解剖** `HStack(spacing: Space.x5)`，gutter 36 空位 + 3 个 `Text`，`tpLabel(12)` `.bold` `tpSecondary`。
 `대분류` 右侧可挂 dirty 计数角标：`tpRuler(9)` `.bold` `tpAccent`，`tpAccent.opacity(0.14)` 底，`Capsule`。
 
@@ -934,6 +980,8 @@ Button(적용)   tpCallout(14) .bold, .white on tpAccentText, Capsule
 ---
 
 ### 3.18 `tp.nle.selectionSummary` — 선택 요약
+
+**출처** `MapHomeNLEClipEditor.swift` → `selectionSummary` (살아있음)
 
 **解剖** `HStack(spacing: Space.x8)`, `height: 26`。
 ```
@@ -952,6 +1000,8 @@ Text(playhead) tpCaption(13) .bold .monospacedDigit, tpAccent
 
 ### 3.19 `tp.nle.applyBar` — 툴바 + 적용
 
+**출처** `MapHomeNLEClipEditor.swift:626` → `toolbar` (살아있음)
+
 **解剖** `HStack(spacing: Space.x8)`, `height: 44`。
 `categoryMenu`（Capsule, `tpCallout`）· `가르기` · `지우기` · `되돌리기` · `다시` · `Spacer` · `전체 보기`
 图标按钮 = 44×44 命中，图标 17pt。
@@ -963,6 +1013,8 @@ Text(playhead) tpCaption(13) .bold .monospacedDigit, tpAccent
 ---
 
 ### 3.20 `tp.nle.zoom` — 확대/축소
+
+**출처** `MapHomeTimeSidebar.swift` → `MapHomeTimeSidebarMath.zoomDurations` (살아있음)
 
 **解剖** 捏合（`MagnifyGesture`）+ 双击轨道（重置）+ `전체 보기` 按钮。
 `minuteHeight` 从 `2.4`（全天下）到 `24`（10 分钟窗）。
@@ -1010,12 +1062,67 @@ Text(playhead) tpCaption(13) .bold .monospacedDigit, tpAccent
 
 ### 3.22 `tp.sheet` — 시트
 
+**출처** `MapHomeCalendarSheet.swift` → `presentationDetents` (살아있음)
+
 **解剖** `presentationDetents`（现有 `.height(contentHeight + 16)` + `.large`），`presentationDragIndicator(.visible)`，`presentationBackground(tpBackground)`，`Radius.x22` 顶角。
 
 **状态** `detent.small` / `detent.large` / `dismissing`
 
 **Token** `tpBackground`, `Radius.x22`, `Motion.standard`
 **规则** 一个 sheet 内**不得再开 sheet**（现状 `MapHomeCalendarSheet` 内还有 2 个 `.sheet`）。要下钻就 push `DayRoute`。
+
+---
+
+### 3.23 `tp.share.card` — 공유 카드
+
+**출처** `MapHomeCalendarSheet.swift:2509-2600` (`side = 540`, `BOKKI Plan`)
+
+**为什么必须单独成组件：** 这是全 App 唯一一张**会被公开发布**的图。用户在 앱 里看到的偏差可以容忍，发到 SNS 上的偏差会一直存在，而且脱离了 App 的上下文——没有工具提示、没有后续交互、没有重试。**它是产品视觉的最高风险面，而不是最不重要的一面。**
+
+**解剖**（固定 540×540，`padding 36`）
+```
+배경  지도 모드: 경로 지도 스냅샷 scaledToFill + tpBackground.opacity(0.72) 스크림
+      기본 모드: LinearGradient(tpBackground → tpSurface, topLeading → bottomTrailing)
+헤더  dateText    34pt .bold  .rounded        = tpDisplay
+      weekdayText 18pt .semibold .rounded    = tpSubhead
+      stickman    96×96
+지표  최대 4개 stat()  (제목 12pt / 값 14pt)
+분류  최대 5행: 아이콘 22 · 이름 16pt semibold (w90) · 캡슐 바 h12 · 시간 14pt · % 15pt bold
+푸터  "BOKKI Plan" 14pt .bold  tpAccent   +   부제 12pt .medium  tpSecondary
+```
+
+> **출처 정정: 배경은 사용자 사진이 아니라 경로 지도다.** `MapHomeDailyCardSheet`의 `mapImage`는 `Self.routeMap(points: baseData?.routePoints ?? [])`(`MapHomeCalendarSheet.swift:2782`)가 그린 **경로 지도 스냅샷**이다. 사용자가 고른 사진을 배경으로 쓰는 경로는 코드에 없다. 이 구분이 중요하다: 지도는 대체로 밝지만 **위성/야간 스타일에서는 어두워질 수 있고**, 그때 아래 문제가 그대로 발생한다. 위험은 실재하지만, "아무 사진이나"는 과장이다.
+
+**`entry.tint` 实底 캡슐 바는 여기서 옳다.** 바 위에 글자가 없다 — §2.1.2의 `tpCat` 역할(정체성만, 글자 없음)에 정확히 해당한다. 단 **반드시 정규 램프(`tpCat`)에서 와야 한다.** 지금은 `entry.tint`가 어느 팔레트인지에 따라 달라져서, 사용자가 앱에서 본 색과 게시된 카드의 색이 다를 수 있다.
+
+**두 가지 고칠 것 (실측)**
+
+**1. 어두운 지도 위에서 `tpSecondary`가 무너진다.**
+
+스크림은 `tpBackground` 72%다. 지도가 어두울수록 결과 바탕이 어두워진다:
+
+| 지도 바탕 | 스크림 결과 | `tpInk` | `tpSecondary` `#7A6C50` (현행) | `#6B5D43` (개정안) |
+|---|---|---:|---:|---:|
+| 순수 검정 | `#AFA89A` | 5.23 | **2.17** | **2.72** |
+| 진회색 `#333` | `#BDB7A8` | 6.18 | **2.57** | **3.21** |
+| 중간 회색 `#666` | `#CCC5B7` | 7.20 | **2.99** | **3.74** |
+| 흰색 | `#F6F0E1` | 10.87 | 4.52 | 5.64 |
+
+즉 **야간 지도 스타일에서 부제(`자동 기록으로 만든 하루`)와 요일이 안 읽힌다.** 스크림을 올려도 안 된다 — `tpSecondary #7A6C50`은 **alpha 1.00, 즉 지도를 완전히 덮어도 4.29**다. 스크림으로는 해결할 수 없는 문제다.
+
+> **규칙 C8: 배경을 안다고 가정하는 글자색을, 배경을 모르는 면 위에 쓰지 않는다.**
+>
+> 공유 카드에는 **`tpSecondary`를 쓰지 않는다.** 보조 톤은 **크기와 굵기로만** 표현한다(`tpInk` 유지). `tpInk`는 순수 검정 지도에서도 5.23으로 통과한다. 이건 스타일 선택이 아니라, 게시된 이미지는 고칠 수 없기 때문에 생기는 제약이다.
+
+**1-b. 그리고 이건 공유 카드만의 문제가 아니다.** 위 표의 마지막 줄이 핵심이다: `tpSecondary #7A6C50`은 **`tpBackground` 위에서 4.29**다 — 이미지도, 스크림도, 지도도 없는 **앱의 기본 바탕에서 이미 4.5 미만**이다. `tpSurface` 위에서는 4.76으로 겨우 넘는다. 즉 현행 `tpSecondary`는 본문 보조 텍스트 기준을 앱 전역에서 못 맞춘다.
+>
+> 그래서 `#6B5D43`으로의 개정은 취향이 아니라 **적합성 수정**이다(`tpBackground` 위 5.36 / `tpSurface` 위 5.95). §2.1 표의 그 행에 이 근거를 적어 둔다.
+
+**2. `"BOKKI Plan"` 14pt bold가 `tpAccent`(3.46)다.** 14pt bold는 large text라 3:1은 넘지만, 공개 이미지에는 여유를 두고 `tpAccentText`(4.84)를 쓴다.
+
+**Dynamic Type: 여기서는 적용하지 않는다.** `side = 540` 고정 캔버스에 절대 pt로 그린다. `tpDisplay`/`tpSubhead`를 스케일하면 레이아웃이 깨지고, 어차피 결과물은 이미지라서 사용자의 글자 크기 설정이 의미가 없다. **이 컴포넌트는 타입 스케일에서 스케일링만 opting out 한다 — 크기 값은 그대로 쓴다.** (이건 §2.2.3의 `Font.tp()`에 `scales: false` 인자가 필요한 유일한 곳이다.)
+
+**Token** `tpCat`(바), `tpInk`(모든 글자), `tpAccentText`(푸터), `tpBackground`/`tpSurface`(배경·스크림), `tpDisplay`, `tpSubhead`, `Radius.x12`
 
 ---
 
@@ -1163,10 +1270,13 @@ ZStack
 | `reviewMarker` | 26pt 圆 | 44 ✅ |
 | `trimHandle` | 5pt 高 | **44 ❌ 现在是 5** |
 | `dayCell` | 45×38 | 38 ❌ → 用 `contentShape` 扩到 44 |
-| `weekBar` 柱 | 可变 | 44 ❌ → 整列 `contentShape` |
 | `mapControl` | 44 | 44 ✅ |
 
 `trimHandle` 是最严重的：5pt 高、22pt 宽的可拖控件。必须用 `taptionHitOutset(horizontal: 11, vertical: 19.5)` 扩到 44×44，否则几乎不可拖。
+
+> **删掉了一行：`weekBar` 柱。** 上一版这里写着「`weekBar` 柱 · 整列 `contentShape`」。**这个组件不存在** —— 它是 `weekBars`（§3.14，已删）的一部分。曾经想把它改名成 `dayTotals` 的日柱，但那些柱子**不是可交互的**：`MapHomeCalendarSheet.swift:609-611` 是 `RoundedRectangle` + `.frame(height:)`，没有 `onTapGesture`、没有 `Button`、没有 `contentShape`。把一个纯展示元素塞进命中区表格，就是再造一次 `weekBars`。
+>
+> **但这里有一个真的前向风险，值得记下来：** 那 30 根柱子是在约 330pt 里排开的，**每根约 2pt 宽**。今天它们只负责显示，所以不是命中区问题；一旦有人给它们加上点选（"点某天跳到那天"是极可能的下一步），2pt 宽就是全 App 最糟的命中目标，而且会比 `trimHandle` 更糟，因为 30 个目标互相重叠。真要加，必须做**列级** `contentShape`（整条 44pt 高、按 index 均分宽度），不是给每根柱子加 padding。
 
 ### 5.4 VoiceOver（韩文标签，图标型控件必须有）
 
