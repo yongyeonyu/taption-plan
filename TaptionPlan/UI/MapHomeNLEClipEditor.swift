@@ -37,6 +37,8 @@ struct MapHomeNLEClipEditor: View {
     @State private var didCenter = false
     /// 가장자리로 끌어 화면이 흐른 만큼(분). 끄는 동안의 좌표를 같은 기준으로 맞춘다.
     @State private var dragScrollShift: Double = 0
+    /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
+    @State private var pick: NLEPick?
 
     init(
         model: AppModel,
@@ -168,9 +170,29 @@ struct MapHomeNLEClipEditor: View {
         return HStack(spacing: laneGap) {
             Color.clear.frame(width: gutterWidth, height: 1)
             laneTitle(language.text("대분류", "Main"), width: lanes.main)
+                .overlay(alignment: .trailing) {
+                    if differingSegmentCount > 0 {
+                        Text("\(differingSegmentCount)")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.tpAccent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.tpAccent.opacity(0.14), in: Capsule())
+                    }
+                }
             laneTitle(language.text("센서 원본", "Sensor"), width: lanes.sensor)
             laneTitle(language.text("상세활동", "Details"), width: lanes.detail)
         }
+    }
+
+    /// 센서 기록과 달라진 구간 수. 이름표 옆에 작게 붙는다.
+    private var differingSegmentCount: Int {
+        sourceSegments.filter { segment in
+            let last = max(segment.startMinute, segment.endMinute - 1)
+            return [segment.startMinute, last].contains { minute in
+                track.clip(atMinute: minute)?.option.categoryID != segment.categoryID
+            }
+        }.count
     }
 
     private func laneTitle(_ text: String, width: CGFloat) -> some View {
@@ -221,6 +243,11 @@ struct MapHomeNLEClipEditor: View {
             .onAppear {
                 containerHeight = height
                 fitWholeDayIfNeeded(height: height)
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("-nlePick"), pick == nil {
+                    pick = sensorSegment(atMinute: playheadMinute).map { .sensor($0.id) }
+                }
+                #endif
             }
             .onChange(of: height) { _, newValue in
                 containerHeight = newValue
@@ -453,10 +480,18 @@ struct MapHomeNLEClipEditor: View {
 
     // MARK: - 선택 정보
 
+    /// 집어 든 결과. 센서 원본 구간이거나 상세활동 기록이다.
+    private enum NLEPick: Equatable {
+        case sensor(String)
+        case detail(String)
+    }
+
     private var selectionSummary: some View {
         let clip = selectedClip
-        return HStack(spacing: 10) {
-            if let clip {
+        return HStack(spacing: 8) {
+            if let pick {
+                pickRow(pick)
+            } else if let clip {
                 Circle()
                     .fill(Self.tint(for: clip.option.categoryID))
                     .frame(width: 10, height: 10)
@@ -466,9 +501,30 @@ struct MapHomeNLEClipEditor: View {
                 Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
-                Text(Self.durationLabel(clip.lengthMinutes, language: language))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
+                if let sensor = sensorSegment(atMinute: clip.startMinute),
+                   sensor.categoryID != clip.option.categoryID {
+                    // 센서는 이렇게 기록했는데 지금은 다르다. 눌러서 되돌린다.
+                    Button {
+                        self.pick = .sensor(sensor.id)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.uturn.backward")
+                                .font(.system(size: 8, weight: .bold))
+                            Text(language.text("센서 \(sensor.title)", "Sensor \(sensor.title)"))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Color.tpAccent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.tpAccent.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(Self.durationLabel(clip.lengthMinutes, language: language))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.tpSecondary)
+                }
                 if clip.isGap {
                     Text(language.text("미확인", "Unconfirmed"))
                         .font(.system(size: 10, weight: .bold, design: .rounded))
@@ -477,28 +533,92 @@ struct MapHomeNLEClipEditor: View {
                         .background(Color.tpInk.opacity(0.08), in: Capsule())
                         .foregroundStyle(Color.tpSecondary)
                 }
-                if let sub = activeSubClip {
-                    Text("·")
-                        .foregroundStyle(Color.tpSecondary.opacity(0.6))
-                    Text(sub.option.title)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpAccent)
-                        .lineLimit(1)
-                    Text(Self.rangeLabel(sub.startMinute, sub.endMinute))
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.tpAccent.opacity(0.8))
-                }
             } else {
                 Text(language.text("클립을 고르세요", "Select a clip"))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
-            Spacer()
+            Spacer(minLength: 0)
             Text(Self.minuteLabel(playheadMinute))
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.tpAccent)
         }
         .frame(height: 26)
+    }
+
+    @ViewBuilder
+    private func pickRow(_ pick: NLEPick) -> some View {
+        switch pick {
+        case .sensor(let id):
+            if let segment = sourceSegments.first(where: { $0.id == id }) {
+                pickContent(
+                    tint: Self.tint(for: segment.categoryID),
+                    lane: language.text("센서 원본", "Sensor"),
+                    title: segment.title,
+                    range: Self.rangeLabel(segment.startMinute, segment.endMinute)
+                ) {
+                    restoreSensorSegment(segment)
+                }
+            }
+        case .detail(let id):
+            if let sub = subTrack.clip(id) {
+                pickContent(
+                    tint: Self.tint(for: sub.option.categoryID),
+                    lane: language.text("상세활동", "Details"),
+                    title: sub.option.title,
+                    range: Self.rangeLabel(sub.startMinute, sub.endMinute)
+                ) {
+                    promoteDetail(sub)
+                }
+            }
+        }
+    }
+
+    private func pickContent(
+        tint: Color,
+        lane: String,
+        title: String,
+        range: String,
+        apply: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(tint)
+                .frame(width: 9, height: 9)
+            Text(lane)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .lineLimit(1)
+            Text(range)
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+            Button(action: apply) {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.down.to.line")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(language.text("반영", "Use"))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 9)
+                .frame(height: 23)
+                .background(Color.tpAccent, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Button {
+                self.pick = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color.tpSecondary)
+                    .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - 도구
@@ -652,7 +772,11 @@ struct MapHomeNLEClipEditor: View {
                     autoScroll(atY: value.location.y, height: height)
                 }
             }
-            .onEnded { _ in
+            .onEnded { value in
+                let moved = abs(value.translation.width) + abs(value.translation.height)
+                if moved < 4, dragMode != .scrub, dragMode != .none {
+                    handleTap(at: value.startLocation, geometry: geometry, width: width)
+                }
                 dragMode = .none
                 didPushUndoForDrag = false
                 dragScrollShift = 0
@@ -867,6 +991,61 @@ struct MapHomeNLEClipEditor: View {
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
     }
 
+    /// 그 시각을 덮는 센서 원본 구간.
+    private func sensorSegment(atMinute minute: Int) -> MapHomeTimeRailSegment? {
+        sourceSegments.first { minute >= $0.startMinute && minute < $0.endMinute }
+    }
+
+    private func differsFromSensor(_ clip: NLEClip) -> Bool {
+        guard let segment = sensorSegment(atMinute: clip.startMinute) else { return false }
+        return segment.categoryID != clip.option.categoryID
+    }
+
+    /// 센서 원본 구간을 그대로 대분류에 되돌린다. 그 구간은 다시 한 덩어리가 된다.
+    private func restoreSensorSegment(_ segment: MapHomeTimeRailSegment) {
+        guard let anchor = track.clip(atMinute: segment.startMinute) else { return }
+        pushUndo()
+        let option = Self.option(
+            forCategoryID: segment.categoryID,
+            title: segment.title,
+            behavior: segment.behavior
+        )
+        track.replace(segment.startMinute..<segment.endMinute, with: option, parent: anchor.parent)
+        selectedClipID = track.clip(atMinute: segment.startMinute)?.id
+        selectedSubClipID = nil
+        pick = nil
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    /// 상세활동 기록을 그 구간의 대분류로 올린다.
+    private func promoteDetail(_ sub: NLEClip) {
+        guard let anchor = track.clip(atMinute: sub.startMinute) else { return }
+        pushUndo()
+        track.replace(sub.startMinute..<sub.endMinute, with: sub.option, parent: anchor.parent)
+        selectedClipID = track.clip(atMinute: sub.startMinute)?.id
+        selectedSubClipID = nil
+        pick = nil
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
+    /// 손가락이 거의 움직이지 않았으면 누른 것이다. 줄에 따라 집어 든다.
+    private func handleTap(at point: CGPoint, geometry: NLETimelineGeometry, width: CGFloat) {
+        let minute = Int(geometry.minute(forY: point.y).rounded())
+        defer { UISelectionFeedbackGenerator().selectionChanged() }
+        let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
+        let sensorX = gutterWidth + lanes.main + laneGap
+        let detailX = sensorX + lanes.sensor + laneGap
+        if point.x >= detailX - laneGap {
+            pick = subTrack.clip(atMinute: minute).map { .detail($0.id) }
+            return
+        }
+        if point.x >= sensorX - laneGap {
+            pick = sensorSegment(atMinute: minute).map { .sensor($0.id) }
+            return
+        }
+        pick = nil
+    }
+
     private func snapTargets(lane: NLEEditorLane, excluding id: String) -> [Int] {
         NLESnapPolicy.targets(
             for: lane == .main ? track : subTrack,
@@ -933,6 +1112,7 @@ struct MapHomeNLEClipEditor: View {
     private func applyCategory(_ category: MapHomeSidebarMajorCategory) {
         guard let clip = activeClip else { return }
         pushUndo()
+        pick = nil
         let option = Self.option(for: category, language: language)
         if isSubClipActive {
             subTrack.setOption(clip.id, to: option)

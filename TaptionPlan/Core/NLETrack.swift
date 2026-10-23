@@ -283,6 +283,69 @@ struct NLETrack: Hashable, Sendable {
         return true
     }
 
+    /// 구간 하나를 클립 하나로 갈아 끼운다. 그 구간에 걸친 클립은 잘리거나 사라진다.
+    ///
+    /// 새 클립의 기준점은 그 구간의 원래 분류다. 그래서 센서 결과로 되돌리면
+    /// 저장할 것이 없는 상태가 되고, 상세활동을 대분류로 올리면 바뀐 것으로 남는다.
+    @discardableResult
+    mutating func replace(
+        _ range: Range<Int>,
+        with option: ActivityCorrectionOption,
+        parent: NLEClipParent
+    ) -> Bool {
+        let lower = max(range.lowerBound, parent.startMinute)
+        let upper = min(range.upperBound, parent.endMinute)
+        guard lower < upper else { return false }
+
+        var next: [NLEClip] = []
+        for clip in clips {
+            if clip.endMinute <= lower || clip.startMinute >= upper {
+                next.append(clip)
+                continue
+            }
+            // 구간 밖으로 남는 조각은 잘라서 남긴다.
+            if clip.startMinute < lower {
+                next.append(Self.piece(clip, from: clip.startMinute, to: lower))
+            }
+            if clip.endMinute > upper {
+                next.append(Self.piece(clip, from: upper, to: clip.endMinute))
+            }
+        }
+        next.append(
+            NLEClip(
+                id: "main|\(lower)-\(upper)|\(option.categoryID)",
+                option: option,
+                startMinute: lower,
+                endMinute: upper,
+                parent: parent,
+                origin: NLEClipOrigin(
+                    startMinute: lower,
+                    endMinute: upper,
+                    option: parent.option
+                )
+            )
+        )
+        clips = next.sorted { lhs, rhs in
+            lhs.startMinute == rhs.startMinute
+                ? lhs.id < rhs.id
+                : lhs.startMinute < rhs.startMinute
+        }
+        renormalize()
+        return true
+    }
+
+    /// 잘린 조각은 같은 클립의 성격을 물려받되 이름만 새로 얻는다.
+    private static func piece(_ clip: NLEClip, from start: Int, to end: Int) -> NLEClip {
+        NLEClip(
+            id: "\(clip.id)#\(start)",
+            option: clip.option,
+            startMinute: start,
+            endMinute: end,
+            parent: clip.parent,
+            origin: clip.origin
+        )
+    }
+
     /// 같은 분류끼리 맞닿은 클립을 하나로 합친다. 손으로 가른 흔적을 지울 때 쓴다.
     @discardableResult
     mutating func merge(_ id: String, with neighborID: String) -> Bool {

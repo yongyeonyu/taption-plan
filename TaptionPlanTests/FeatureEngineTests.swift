@@ -29302,6 +29302,106 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(cleared.clip(atMinute: 570)?.option.categoryID, "hobby")
     }
 
+    /// 센서 결과로 되돌리면 그 구간은 다시 한 덩어리가 되고, 저장할 것도 없어진다.
+    func testReplaceWithTheSensorResultLeavesNothingToSave() {
+        let segments = threeSegmentDay(sources: [UUID()])
+        var edited = MapHomeNLEClipEditor.makeMainTrack(segments: segments)
+
+        // 업무 300–540을 가운데에서 가르고 뒤쪽을 공부로 바꿔 둔다.
+        guard let workID = edited.clip(atMinute: 400)?.id else { return XCTFail("업무가 없다") }
+        edited.split(workID, atMinute: 420)
+        guard let tailID = edited.clip(atMinute: 480)?.id else { return XCTFail("뒤 조각이 없다") }
+        edited.setOption(
+            tailID,
+            to: MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil)
+        )
+        XCTAssertTrue(edited.clips.contains(where: \.isDirty))
+
+        // 센서가 기록한 그대로(업무 300–540) 되돌린다.
+        guard let anchor = edited.clip(atMinute: 300) else { return XCTFail("기준 클립이 없다") }
+        edited.replace(300..<540, with: anchor.parent.option, parent: anchor.parent)
+
+        let restored = edited.clip(atMinute: 400)
+        XCTAssertEqual(restored?.option.categoryID, "work")
+        XCTAssertEqual(restored?.startMinute, 300)
+        XCTAssertEqual(restored?.endMinute, 540)
+        XCTAssertFalse(edited.clips.contains(where: \.isDirty))
+        XCTAssertEqual(edited.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 상세활동을 대분류로 올리면 그 구간만 바뀐 것으로 남는다.
+    func testReplacePromotesADetailAndKeepsTheRest() {
+        var edited = MapHomeNLEClipEditor.makeMainTrack(
+            segments: threeSegmentDay(sources: [UUID()])
+        )
+        guard let anchor = edited.clip(atMinute: 400) else { return XCTFail("기준 클립이 없다") }
+        let study = MapHomeNLEClipEditor.option(
+            forCategoryID: "study",
+            title: "공부",
+            behavior: nil
+        )
+        edited.replace(420..<480, with: study, parent: anchor.parent)
+
+        let promoted = edited.clip(atMinute: 450)
+        XCTAssertEqual(promoted?.option.categoryID, "study")
+        XCTAssertEqual(promoted?.startMinute, 420)
+        XCTAssertEqual(promoted?.endMinute, 480)
+        XCTAssertEqual(promoted?.isDirty, true)
+        // 앞뒤는 그대로 남고, 하루도 여전히 빈틈없다.
+        XCTAssertEqual(edited.clip(atMinute: 400)?.option.categoryID, "work")
+        XCTAssertEqual(edited.clip(atMinute: 500)?.option.categoryID, "work")
+        XCTAssertEqual(edited.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 센서 결과로 되돌린 구간은 저장 요청을 만들지 않는다(이미 그렇게 저장돼 있다).
+    func testRestoredSegmentProducesNoEditRequest() {
+        var edited = MapHomeNLEClipEditor.makeMainTrack(
+            segments: threeSegmentDay(sources: [UUID()])
+        )
+        guard let workID = edited.clip(atMinute: 400)?.id else { return XCTFail("업무가 없다") }
+        edited.split(workID, atMinute: 420)
+        guard let tailID = edited.clip(atMinute: 480)?.id,
+              let anchor = edited.clip(atMinute: 300) else { return XCTFail("조각이 없다") }
+        edited.setOption(
+            tailID,
+            to: MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil)
+        )
+        XCTAssertEqual(edited.editRequests(dayStart: Date()).count, 1)
+
+        edited.replace(300..<540, with: anchor.parent.option, parent: anchor.parent)
+        XCTAssertTrue(edited.editRequests(dayStart: Date()).isEmpty)
+    }
+
+    /// 상세활동을 대분류로 올리면 그 원본 구간만 덮는 요청 하나가 나간다.
+    func testPromotedDetailProducesOneCoverRequest() {
+        var edited = MapHomeNLEClipEditor.makeMainTrack(
+            segments: threeSegmentDay(sources: [UUID()])
+        )
+        guard let anchor = edited.clip(atMinute: 400) else { return XCTFail("기준 클립이 없다") }
+        edited.replace(
+            420..<480,
+            with: MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil),
+            parent: anchor.parent
+        )
+
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: Date())
+        let requests = edited.editRequests(dayStart: dayStart)
+        XCTAssertEqual(requests.count, 1)
+        guard case let .cover(payload) = requests[0].mode else {
+            return XCTFail("덮어쓰기 요청이 아니다")
+        }
+        // 업무 300–420 · 공부 420–480 · 업무 480–540. 빈 자리 없이 이어진다.
+        XCTAssertEqual(payload.pieces.map(\.option.categoryID), ["work", "study", "work"])
+        XCTAssertEqual(
+            payload.pieces.first?.span.start,
+            dayStart.addingTimeInterval(300 * 60)
+        )
+        XCTAssertEqual(
+            payload.pieces.last?.span.end,
+            dayStart.addingTimeInterval(540 * 60)
+        )
+    }
+
     /// 눈금 좌표와 분이 서로 어긋나지 않는다(끌기·자르기의 기준).
     func testTimelineGeometryRoundTripsMinutesAndPoints() {
         let geometry = NLETimelineGeometry(
