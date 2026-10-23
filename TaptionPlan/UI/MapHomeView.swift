@@ -6239,7 +6239,8 @@ struct MapHomeView: View {
         let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(model.snapshot.settings.frequentPlaces)
         var values = MapHomeCalendarTimeTotalsPolicy.totals(
             actuals: snap?.actuals ?? [], travel: snap?.travel ?? [], stays: snap?.places ?? [],
-            placeKinds: placeKinds, month: start, asOf: .now, calendar: calendar
+            placeKinds: placeKinds, month: start, asOf: .now, calendar: calendar,
+            sealed: model.sealedDays
         )[start] ?? [:]
         if let steps = dayStepCount {
             values[MapHomeCalendarTimeKind.steps.rawValue] = Double(steps)
@@ -6294,20 +6295,44 @@ struct MapHomeView: View {
             memoText: dayMemoCounts.total > 0
                 ? language.text("메모 \(dayMemoCounts.total)개 · 지도 \(dayMemoCounts.map)개", "Memos \(dayMemoCounts.total) · map \(dayMemoCounts.map)")
                 : nil,
-            routePoints: currentDayReadings.compactMap { reading in
-                reading.point.map { GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0) }
-            }
+            routePoints: daySummaryRoutePoints
         )
     }
 
+    /// 요약 카드에 그릴 경로. 확정한 날은 저장해 둔 단순화 경로를 쓴다(센서 원본을 다시 읽지 않는다).
+    private var daySummaryRoutePoints: [GeoPoint] {
+        if let sealed = model.sealedDay(for: model.selectedDate), !sealed.polyline.isEmpty {
+            return sealed.routePoints
+        }
+        return currentDayReadings.compactMap { reading in
+            reading.point.map {
+                GeoPoint(
+                    latitude: $0.latitude,
+                    longitude: $0.longitude,
+                    altitude: 0,
+                    horizontalAccuracy: 0,
+                    verticalAccuracy: 0
+                )
+            }
+        }
+    }
+
     private var dayStepCount: Int? {
-        currentDayReadings.compactMap(\.stepCount).filter { $0 > 0 }.max()
+        // 지나간 날은 확정 요약의 걸음 수를 쓴다(센서 원본을 다시 읽지 않는다).
+        if let sealed = model.sealedDay(for: model.selectedDate), sealed.stepCount > 0 {
+            return sealed.stepCount
+        }
+        return currentDayReadings.compactMap(\.stepCount).filter { $0 > 0 }.max()
     }
 
     /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
     /// 원본(actuals)은 그대로 두고 파생 집계만 만든다. 비중은 관측된 총 시간
     /// 대비로 계산해 합이 100%가 되게 한다.
     private var daySummaryCategories: [MapHomeDaySummaryEntry] {
+        // 확정한 날은 저장해 둔 대분류별 초를 그대로 쓴다(다시 계산하지 않는다).
+        if let sealed = model.sealedDay(for: model.selectedDate), !sealed.categorySeconds.isEmpty {
+            return daySummaryEntries(from: sealed.categoryDurations)
+        }
         let snap = currentDayDataSnapshot
         let actuals = snap?.actuals ?? []
         let travel = snap?.travel ?? []
@@ -6319,62 +6344,19 @@ struct MapHomeView: View {
         let start = calendar.startOfDay(for: model.selectedDate)
         let end = calendar.date(byAdding: .day, value: 1, to: start)
             ?? start.addingTimeInterval(24 * 60 * 60)
-        let phases = DayPhaseEngine.completePhases(
+        let dayWindow = TimeSpan(start: start, end: end)
+        let totalsByID = TaptionSealedDayBuilder.categoryDurations(
             actuals: actuals,
             travel: travel,
             stays: stays,
             placeKinds: placeKinds,
-            in: TimeSpan(start: start, end: end),
+            day: dayWindow,
             asOf: .now
         )
-        var totalsByID: [String: TimeInterval] = [:]
-        for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) {
-            guard entry.actual > 0 else { continue }
-            totalsByID[entry.categoryID, default: 0] += entry.actual
-        }
-        // 식사는 대분류 phase에 없어 '활동'에 흡수된다. 활동 구간과 식사
-        // 기록(원본 actuals)의 겹치는 시간만큼을 활동에서 떼어 '식사'로 옮긴다.
-        // 총합·이동·수면 집계는 그대로 두고 세부 원본도 건드리지 않는다.
-        let dayWindow = TimeSpan(start: start, end: end)
-        let eatingSpans = actuals
-            .filter { RecordAnalysisCategoryPolicy.categoryID(for: $0) == "eating" }
-            .map { $0.span(asOf: .now) }
-            .compactMap { $0.intersection(with: dayWindow) }
-        if !eatingSpans.isEmpty {
-            // 식사 기록 전체를 식사로 센다. 활동과 겹친 만큼은 활동에서 옮기고, 나머지는 그날 가장 긴 다른 분류에서 뗀다.
-            let eatingTotal = Self.unionDuration(eatingSpans)
-            let activityPhaseSpans = phases
-                .filter { RecordAnalysisCategoryPolicy.canonicalPhase($0.phase).rawValue == "activity" }
-                .map(\.span)
-            // 겹치는 식사 기록·인접 활동 phase가 같은 초를 두 번 세지 않도록,
-            // 활동∩식사 교집합 구간을 모아 union으로 병합한 뒤 합산한다.
-            var overlaps: [TimeSpan] = []
-            for phaseSpan in activityPhaseSpans {
-                for eating in eatingSpans {
-                    if let overlap = phaseSpan.intersection(with: eating) {
-                        overlaps.append(overlap)
-                    }
-                }
-            }
-            let overlapSeconds = Self.unionDuration(overlaps)
-            let movedSeconds = min(overlapSeconds, totalsByID["activity"] ?? 0)
-            if movedSeconds > 0 {
-                totalsByID["activity", default: 0] -= movedSeconds
-                if (totalsByID["activity"] ?? 0) <= 0 {
-                    totalsByID["activity"] = nil
-                }
-            }
-            var remaining = max(0, eatingTotal - movedSeconds)
-            while remaining > 0,
-                  let donor = totalsByID.filter({ $0.key != "eating" }).max(by: { $0.value < $1.value }),
-                  donor.value > 0 {
-                let taken = min(remaining, donor.value)
-                totalsByID[donor.key] = donor.value - taken
-                remaining -= taken
-                if (totalsByID[donor.key] ?? 0) <= 0 { totalsByID[donor.key] = nil }
-            }
-            totalsByID["eating", default: 0] += eatingTotal - remaining
-        }
+        return daySummaryEntries(from: totalsByID)
+    }
+
+    private func daySummaryEntries(from totalsByID: [String: TimeInterval]) -> [MapHomeDaySummaryEntry] {
         let total = totalsByID.values.reduce(0) { $0 + max(0, $1) }
         guard total > 0 else { return [] }
         return totalsByID
@@ -7112,6 +7094,7 @@ struct MapHomeView: View {
         let placeKinds = FrequentPlaceResolutionEngine().kindsByPlaceKey(
             model.snapshot.settings.frequentPlaces
         )
+        let sealedDays = model.sealedDays
         var result = await Task.detached(priority: .utility) {
             MapHomeCalendarTimeTotalsPolicy.totals(
                 actuals: actuals,
@@ -7120,7 +7103,8 @@ struct MapHomeView: View {
                 placeKinds: placeKinds,
                 month: month,
                 asOf: .now,
-                calendar: MapHomeGrowthPolicy.localCalendar
+                calendar: MapHomeGrowthPolicy.localCalendar,
+                sealed: sealedDays
             )
         }.value
         // 걸음 수·사진 수는 사용자가 "+"로 켠 때만 읽는다(건강·사진 접근 비용을 아끼기 위해).
@@ -7167,6 +7151,8 @@ struct MapHomeView: View {
         let now = Date.now
         let previous = salaryLive
         let selectedDay = calendar.startOfDay(for: model.selectedDate)
+        // 확정한 지나간 날은 저장해 둔 값을 쓴다(달마다 수십 일을 다시 계산하지 않는다).
+        let sealedDays = model.sealedDays
         let counted = await Task.detached(priority: .utility) { () -> (today: TimeInterval, minuteAgo: TimeInterval, month: [Date: [String: TimeInterval]]?, projected: TimeInterval?, pastMonths: [String: TimeInterval]?, selectedSpans: [TimeSpan], todaySpans: [TimeSpan]) in
             let dayStart = calendar.startOfDay(for: now)
             let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? now
@@ -7187,7 +7173,7 @@ struct MapHomeView: View {
             func monthTotals(_ month: Date) -> [Date: [String: TimeInterval]] {
                 MapHomeCalendarTimeTotalsPolicy.totals(
                     actuals: actuals, travel: travel, stays: stays, placeKinds: placeKinds,
-                    month: month, asOf: now, calendar: calendar
+                    month: month, asOf: now, calendar: calendar, sealed: sealedDays
                 )
             }
             let thisMonth = monthTotals(now)

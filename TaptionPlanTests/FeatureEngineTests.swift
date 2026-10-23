@@ -381,6 +381,248 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(Set(ids).count, ids.count)
     }
 
+    /// 지나간 날은 확정하면 다시 계산하지 않는다. 오늘은 언제나 다시 계산한다.
+    func testSettledDaysAreNotRecalculatedOnceSealed() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let today = calendar.startOfDay(for: now)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today) ?? today
+
+        XCTAssertFalse(PlanDayRecalculationPolicy.isSettled(today, now: now, calendar: calendar))
+        XCTAssertTrue(PlanDayRecalculationPolicy.isSettled(yesterday, now: now, calendar: calendar))
+
+        // 오늘은 확정 여부와 무관하게 다시 계산한다.
+        XCTAssertTrue(PlanDayRecalculationPolicy.allowsRecalculation(
+            day: today, now: now, isSealed: true, calendar: calendar
+        ))
+        // 지나간 날 + 확정 = 다시 계산하지 않는다.
+        XCTAssertFalse(PlanDayRecalculationPolicy.allowsRecalculation(
+            day: yesterday, now: now, isSealed: true, calendar: calendar
+        ))
+        // 사용자가 그 날 기록을 고치면(force) 다시 계산한다.
+        XCTAssertTrue(PlanDayRecalculationPolicy.allowsRecalculation(
+            day: yesterday, now: now, isSealed: true, force: true, calendar: calendar
+        ))
+        // 아직 확정하지 않은 지나간 날은 한 번 계산해 확정한다.
+        XCTAssertTrue(PlanDayRecalculationPolicy.allowsRecalculation(
+            day: yesterday, now: now, isSealed: false, calendar: calendar
+        ))
+
+        XCTAssertFalse(PlanDayRecalculationPolicy.canSeal(
+            day: today, now: now, isComplete: true, calendar: calendar
+        ))
+        XCTAssertFalse(PlanDayRecalculationPolicy.canSeal(
+            day: yesterday, now: now, isComplete: false, calendar: calendar
+        ))
+        XCTAssertTrue(PlanDayRecalculationPolicy.canSeal(
+            day: yesterday, now: now, isComplete: true, calendar: calendar
+        ))
+    }
+
+    /// 확정 경로는 꺾은점만 남기고 좌표를 1e-7도 정수로 담는다. 직선 위의 점은 버리고 양 끝은 지킨다.
+    func testSealedPolylineKeepsOnlyCornersAndRoundTrips() {
+        var points: [GeoPoint] = []
+        for step in 0...20 {
+            points.append(
+                GeoPoint(
+                    latitude: 37.5 + Double(step) * 0.0002,
+                    longitude: 127.0,
+                    altitude: 0,
+                    horizontalAccuracy: 0,
+                    verticalAccuracy: 0
+                )
+            )
+        }
+        points.append(
+            GeoPoint(
+                latitude: 37.5 + 20 * 0.0002,
+                longitude: 127.001,
+                altitude: 0,
+                horizontalAccuracy: 0,
+                verticalAccuracy: 0
+            )
+        )
+
+        let packed = TaptionSealedPolyline.encode(points: points, toleranceMeters: 8)
+        XCTAssertEqual(packed.count % 2, 0)
+        // 22점 → 시작·꺾은점·끝 3점.
+        XCTAssertEqual(packed.count / 2, 3)
+        XCTAssertLessThan(packed.count, points.count * 2)
+
+        let restored = TaptionSealedPolyline.decode(packed)
+        XCTAssertEqual(restored.count, 3)
+        XCTAssertEqual(restored.first?.latitude ?? 0, points.first?.latitude ?? -1, accuracy: 1e-6)
+        XCTAssertEqual(restored.first?.longitude ?? 0, points.first?.longitude ?? -1, accuracy: 1e-6)
+        XCTAssertEqual(restored.last?.latitude ?? 0, points.last?.latitude ?? -1, accuracy: 1e-6)
+        XCTAssertEqual(restored.last?.longitude ?? 0, points.last?.longitude ?? -1, accuracy: 1e-6)
+        XCTAssertTrue(TaptionSealedPolyline.decode([]).isEmpty)
+        XCTAssertEqual(TaptionSealedPolyline.encode(points: []).count, 0)
+    }
+
+    /// 확정 요약은 하루 한 행으로 저장되고, 다시 열어도 값이 그대로다.
+    func testSealedDayDigestPersistsAsASingleCompactRow() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("seal-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try TaptionStoreV2(url: directory.appendingPathComponent(TaptionStoreV2.fileName))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let day = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let sealedAt = Date(timeIntervalSince1970: 1_700_100_000)
+        let digest = TaptionSealedDayBuilder.make(
+            day: day,
+            sealedAt: sealedAt,
+            sourceFingerprint: "fingerprint-1",
+            categories: ["work": 7_200, "movement": 1_800, "sleep": 0],
+            metrics: ["distance": 4_200, "trips": 3],
+            steps: 8_400,
+            distanceMeters: 4_200,
+            readings: [],
+            weather: WeatherContext(
+                observedAt: day.addingTimeInterval(3_600),
+                condition: "Clear",
+                symbolName: "sun.max.fill",
+                temperatureCelsius: 18.5
+            ),
+            memoCount: 2,
+            actualCount: 5,
+            travelCount: 3,
+            placeCount: 2
+        )
+        try await store.upsertSealedDays([digest])
+
+        let countAfterSeal = try await store.sealedDayCount()
+        XCTAssertEqual(countAfterSeal, 1)
+        let storedDay = try await store.sealedDay(for: day)
+        let loaded = try XCTUnwrap(storedDay)
+        XCTAssertEqual(loaded.dayStart, day)
+        XCTAssertEqual(loaded.sealedAt, sealedAt)
+        XCTAssertEqual(loaded.sourceFingerprint, "fingerprint-1")
+        XCTAssertEqual(loaded.categorySeconds["work"], 7_200)
+        XCTAssertNil(loaded.categorySeconds["sleep"])
+        XCTAssertEqual(loaded.metrics["distance"], 4_200)
+        XCTAssertEqual(loaded.workSeconds, 7_200)
+        XCTAssertEqual(loaded.stepCount, 8_400)
+        XCTAssertEqual(loaded.memoCount, 2)
+        XCTAssertEqual(loaded.weather?.symbolName, "sun.max.fill")
+        XCTAssertTrue(loaded.matches(sourceFingerprint: "fingerprint-1"))
+        XCTAssertFalse(loaded.matches(sourceFingerprint: "other"))
+
+        // 같은 날을 다시 확정하면 한 행을 덮어쓴다.
+        var revised = digest
+        revised.workSeconds = 7_500
+        try await store.upsertSealedDays([revised])
+        let countAfterRevision = try await store.sealedDayCount()
+        XCTAssertEqual(countAfterRevision, 1)
+        let revisedDay = try await store.sealedDay(for: day)
+        XCTAssertEqual(revisedDay?.workSeconds, 7_500)
+
+        try await store.deleteSealedDays(
+            numbers: [TaptionReadingRowCodec.dayNumber(for: day, calendar: calendar)]
+        )
+        let countAfterDelete = try await store.sealedDayCount()
+        XCTAssertEqual(countAfterDelete, 0)
+    }
+
+    /// 메모는 별도 파일에 저장하고, 옛 파일에 남아 있던 메모는 한 번만 옮긴다.
+    func testMemosMoveToTheirOwnStore() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("memo-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try TaptionStoreV2(url: directory.appendingPathComponent(TaptionStoreV2.fileName))
+        let memoStore = try TaptionStoreV2(
+            url: directory.appendingPathComponent(TaptionStoreV2.memoFileName)
+        )
+        let memo = ActionMemo(
+            occurredAt: Date(timeIntervalSince1970: 900),
+            kind: .idea,
+            text: "메모 본문"
+        )
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_000)
+        snapshot.memos = [memo]
+
+        // 1) 예전 방식(메모를 본 저장소에 씀).
+        let legacy = TaptionStoreRepository(store: store)
+        try await legacy.save(snapshot)
+        let legacyCount = try await store.recordCount(kind: "memo")
+        let emptyMemoCount = try await memoStore.recordCount(kind: "memo")
+        XCTAssertEqual(legacyCount, 1)
+        XCTAssertEqual(emptyMemoCount, 0)
+
+        // 2) 메모 저장소를 붙이면 읽을 때 옛 행을 옮기고, 본 저장소에는 남기지 않는다.
+        let repository = TaptionStoreRepository(store: store, memoStore: memoStore)
+        let migrated = try await repository.load()
+        XCTAssertEqual(migrated.memos.map(\.id), [memo.id])
+        let memoCountAfterMigration = try await memoStore.recordCount(kind: "memo")
+        let mainCountAfterMigration = try await store.recordCount(kind: "memo")
+        XCTAssertEqual(memoCountAfterMigration, 1)
+        XCTAssertEqual(mainCountAfterMigration, 0)
+
+        // 3) 이후 저장은 메모 파일로만 간다.
+        var edited = snapshot
+        edited.updatedAt = Date(timeIntervalSince1970: 2_000)
+        edited.memos = [
+            memo,
+            ActionMemo(
+                occurredAt: Date(timeIntervalSince1970: 1_500),
+                kind: .blocker,
+                text: "두 번째"
+            ),
+        ]
+        try await repository.save(edited)
+        let memoCountAfterEdit = try await memoStore.recordCount(kind: "memo")
+        let mainCountAfterEdit = try await store.recordCount(kind: "memo")
+        XCTAssertEqual(memoCountAfterEdit, 2)
+        XCTAssertEqual(mainCountAfterEdit, 0)
+
+        // 4) 메모를 지우면 메모 파일에서 지워진다.
+        var deleted = edited
+        deleted.updatedAt = Date(timeIntervalSince1970: 3_000)
+        deleted.memos = [edited.memos[1]]
+        try await repository.save(deleted)
+        let reloaded = try await repository.load()
+        XCTAssertEqual(reloaded.memos.map(\.id), [edited.memos[1].id])
+    }
+
+    /// 달력 합계는 확정한 날을 다시 계산하지 않고 저장된 값을 쓴다(원본을 백업으로 옮긴 달도 값이 나온다).
+    func testCalendarTotalsUseSealedDayValues() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let day = calendar.startOfDay(for: now)
+        let digest = TaptionSealedDayBuilder.make(
+            day: day,
+            sealedAt: now,
+            sourceFingerprint: nil,
+            categories: ["work": 7_200, "unconfirmed": 600],
+            metrics: ["distance": 4_000],
+            steps: 0,
+            distanceMeters: 4_000,
+            readings: [],
+            weather: nil,
+            memoCount: 0,
+            actualCount: 0,
+            travelCount: 0,
+            placeCount: 0
+        )
+        let totals = MapHomeCalendarTimeTotalsPolicy.totals(
+            actuals: [],
+            travel: [],
+            stays: [],
+            placeKinds: [:],
+            month: day,
+            asOf: now,
+            calendar: calendar,
+            sealed: [day: digest]
+        )
+        XCTAssertEqual(totals[day]?["work"], 7_200)
+        XCTAssertEqual(totals[day]?["distance"], 4_000)
+        // 미확인은 달력 지표로 세지 않는다.
+        XCTAssertNil(totals[day]?["unconfirmed"])
+    }
+
     func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
         let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(

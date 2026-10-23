@@ -144,6 +144,9 @@ actor TaptionBackupEngine {
     private static let validDays = 0...(230 * 366)
 
     private let store: TaptionStoreV2
+    /// 메모 전용 저장소. 백업 파일에는 본 저장소 행과 함께 담고, 복원할 때는 종류에 따라 되돌려 쓴다.
+    private let memoStore: TaptionStoreV2?
+    private static let memoKind = "memo"
     private let destination: any TaptionBackupDestination
     private let configuration: Configuration
     private var calendar: Calendar
@@ -155,11 +158,13 @@ actor TaptionBackupEngine {
     /// `calendar`는 후보 시간대를 알려 주는 용도다(없으면 저장소 달력의 시간대). 달력 종류는 항상 그레고리력으로 고친다.
     init(
         store: TaptionStoreV2,
+        memoStore: TaptionStoreV2? = nil,
         destination: any TaptionBackupDestination,
         calendar: Calendar? = nil,
         configuration: Configuration = Configuration()
     ) {
         self.store = store
+        self.memoStore = memoStore
         self.destination = destination
         self.configuration = configuration
         var gregorian = Calendar(identifier: .gregorian)
@@ -540,7 +545,18 @@ actor TaptionBackupEngine {
         if !buffer.records.isEmpty {
             let batch = buffer.records
             buffer.records = []
-            buffer.changedRecords += try await store.upsertRecordsKeepingNewer(batch)
+            // 메모는 별도 파일에 쓰므로 종류로 나눠 되돌린다.
+            var main: [TaptionStoreRecord] = []
+            var memos: [TaptionStoreRecord] = []
+            for record in batch {
+                if record.kind == Self.memoKind, memoStore != nil { memos.append(record) } else { main.append(record) }
+            }
+            if !main.isEmpty {
+                buffer.changedRecords += try await store.upsertRecordsKeepingNewer(main)
+            }
+            if !memos.isEmpty, let memoStore {
+                buffer.changedRecords += try await memoStore.upsertRecordsKeepingNewer(memos)
+            }
         }
     }
 
@@ -639,7 +655,9 @@ actor TaptionBackupEngine {
         ) else {
             return .skipped("\(name) 검증 뒤 로컬이 바뀌어(새 행·편집·삭제 표시) 지우지 않았다.")
         }
-        return .sealed(readings: removed.readings, records: removed.records)
+        // 메모는 다른 파일이라 한 트랜잭션으로 묶을 수 없다. 이미 검증한 백업 파일에 들어 있으므로 지운다.
+        let memoRemoved = try await memoStore?.deleteRecordRange(from: from, to: to) ?? 0
+        return .sealed(readings: removed.readings, records: removed.records + memoRemoved)
     }
 
     // MARK: 파일 쓰기·검증
@@ -738,7 +756,7 @@ actor TaptionBackupEngine {
         for name in Self.recordColumns { recordSchema.string(name) }
         try put(recordSchema.finish())
 
-        let records: [TaptionStoreRecord]
+        var records: [TaptionStoreRecord]
         switch scope {
         case .month(let month):
             let range = try interval(of: month)
@@ -756,8 +774,12 @@ actor TaptionBackupEngine {
             records = try await store.recordsForBackup(
                 from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
             )
+            records += try await memoStore?.recordsForBackup(
+                from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
+            ) ?? []
         case .settings:
             records = try await store.undatedRecordsForBackup()
+            records += try await memoStore?.undatedRecordsForBackup() ?? []
         }
         for record in records {
             try put(try Self.line(for: record))
@@ -980,9 +1002,13 @@ actor TaptionBackupEngine {
             let stats = try await store.rangeStats(
                 from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
             )
-            return stats.readings + stats.records
+            let memos = (try await memoStore?.rangeStats(
+                from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
+            ))?.records ?? 0
+            return stats.readings + stats.records + memos
         case .settings:
             return try await store.undatedRecordCount()
+                + (try await memoStore?.undatedRecordCount() ?? 0)
         }
     }
 

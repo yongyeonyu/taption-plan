@@ -112,6 +112,8 @@
 		5A00000000000000000000A3 /* TaptionStoreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F3 /* TaptionStoreRepository.swift */; };
 		5A00000000000000000000A6 /* TaptionStoreRawEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */; };
 		5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */; };
+		A51002000000000000000005 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
+		A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000004 /* PlanDaySealDigest.swift */; };
 		5A00000000000000000000A4 /* TaptionStoreV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F2 /* TaptionStoreV2.swift */; };
 		5A00000000000000000000A5 /* TaptionStoreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F3 /* TaptionStoreRepository.swift */; };
 		A10150000000000000000001 /* SystemDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10150000000000000000001 /* SystemDiagnostics.swift */; };
@@ -171,6 +173,7 @@
 		A1000000000000000000F0B1 /* MapHomeTodayCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */; };
 		A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
+		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
@@ -396,6 +399,8 @@
 		F90000000000000000000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F90000000000000000000003 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F90000000000000000000004 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		F51002000000000000000004 /* PlanDaySealDigest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDaySealDigest.swift; sourceTree = "<group>"; };
+		F51002000000000000000003 /* PlanDaySeal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDaySeal.swift; sourceTree = "<group>"; };
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
@@ -624,6 +629,8 @@
 				F10000000000000000000088 /* BiometricDataProtection.swift */,
 				F10000000000000000000092 /* PlanDayDatabase.swift */,
 				F51002000000000000000001 /* PlanDayDataSnapshot.swift */,
+				F51002000000000000000003 /* PlanDaySeal.swift */,
+				F51002000000000000000004 /* PlanDaySealDigest.swift */,
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
 				F20000000000000000000001 /* AppLanguagePreference.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
@@ -1066,6 +1073,8 @@
 				A10000000000000000000088 /* BiometricDataProtection.swift in Sources */,
 				A10000000000000000000092 /* PlanDayDatabase.swift in Sources */,
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */,
+				A51002000000000000000003 /* PlanDaySeal.swift in Sources */,
+				A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */,
 				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
@@ -1110,6 +1119,7 @@
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000002 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */,
+				A51002000000000000000005 /* PlanDaySeal.swift in Sources */,
 				5A00000000000000000000A4 /* TaptionStoreV2.swift in Sources */,
 				5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */,
 				5A00000000000000000000A5 /* TaptionStoreRepository.swift in Sources */,

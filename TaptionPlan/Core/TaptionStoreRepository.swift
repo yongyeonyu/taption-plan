@@ -20,6 +20,9 @@ actor TaptionStoreRepository: PlanDataRepository {
     private static let headerID = "snapshot"
 
     private let store: TaptionStoreV2
+    /// 메모 전용 저장소. 파일만 다르고 표 구조·보호 등급은 본 저장소와 같다.
+    /// nil이면(시험용 주입) 예전처럼 본 저장소의 `records` 표에 메모를 둔다.
+    private let memoStore: TaptionStoreV2?
     /// 이 저장소 객체가 알고 있는 전역 삭제 세대. 데이터 삭제가 진행 중이거나 그 뒤에 만들어진 세대와 다르면 쓰지 않는다.
     private var deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
@@ -32,8 +35,9 @@ actor TaptionStoreRepository: PlanDataRepository {
     private var encodedItemCount = 0
     private var saveTail: Task<Void, Error>?
 
-    init(store: TaptionStoreV2) {
+    init(store: TaptionStoreV2, memoStore: TaptionStoreV2? = nil) {
         self.store = store
+        self.memoStore = memoStore
     }
 
     /// 시작 화면용 가벼운 읽기: 헤더 행 하나(설정·갱신 시각)만 읽어 설정만 담은 스냅샷을 돌려준다.
@@ -53,7 +57,23 @@ actor TaptionStoreRepository: PlanDataRepository {
 
     func load() async throws -> TaptionDataSnapshot {
         let readStartedAt = Date()
-        let rows = try await store.allRecordRows()
+        let memoKind = Kind.memo.rawValue
+        var rows = try await store.allRecordRows()
+        if let memoStore {
+            // 메모는 별도 파일에서 읽는다. 옛 파일에 남아 있던 메모는 한 번만 옮긴다(삭제 표시도 함께 옮기고 하드 삭제).
+            let legacy = rows.filter { $0.kind == memoKind }
+            if !legacy.isEmpty {
+                let moved = try await store.recordsIncludingDeleted(kind: memoKind)
+                if !moved.isEmpty { try await memoStore.upsertRecords(moved) }
+                try await store.deleteRecords(kind: memoKind)
+                TaptionPlanDiagnosticsLogger.shared.record(
+                    "memo_store_migrated",
+                    fields: ["moved": String(moved.count)]
+                )
+            }
+            rows.removeAll { $0.kind == memoKind }
+            rows += try await memoStore.allRecordRows()
+        }
         let readMilliseconds = Date().timeIntervalSince(readStartedAt) * 1_000
         let state = Self.groupedRecordRows(rows)
         known = state
@@ -230,12 +250,16 @@ actor TaptionStoreRepository: PlanDataRepository {
         if known == nil { _ = try await load() }
         var upserts: [TaptionStoreRecord] = []
         var deletes: [(kind: String, id: String)] = []
+        /// 메모는 별도 파일에 쓴다(파일이 다르면 한 트랜잭션으로 묶을 수 없다).
+        var memoUpserts: [TaptionStoreRecord] = []
+        var memoDeletes: [(kind: String, id: String)] = []
         var newKnown = known ?? [:]
         var newHashes = knownHashes
         // 바뀐 항목마다 JSONEncoder를 새로 만들지 않고 한 번만 만든다.
         let encoder = Self.encoder()
 
         func sync<T: Encodable & Identifiable & Hashable>(_ kind: Kind, _ items: [T]) throws {
+            let goesToMemoStore = kind == .memo && memoStore != nil
             var previous = newKnown[kind.rawValue] ?? [:]
             var hashes = newHashes[kind.rawValue] ?? [:]
             var seen = Set<String>()
@@ -252,13 +276,15 @@ actor TaptionStoreRepository: PlanDataRepository {
                 if let existing = previous[id], existing.body == body { continue }
                 let ord = previous[id]?.ord ?? takeOrd(kind.rawValue)
                 previous[id] = (ord, body)
-                upserts.append(Self.record(kind: kind.rawValue, id: id, ord: ord, body: body,
-                                           updatedAt: snapshot.updatedAt))
+                let record = Self.record(kind: kind.rawValue, id: id, ord: ord, body: body,
+                                         updatedAt: snapshot.updatedAt)
+                if goesToMemoStore { memoUpserts.append(record) } else { upserts.append(record) }
             }
             for id in previous.keys where !seen.contains(id) {
                 previous[id] = nil
                 hashes[id] = nil
-                deletes.append((kind.rawValue, id))
+                if goesToMemoStore { memoDeletes.append((kind.rawValue, id)) }
+                else { deletes.append((kind.rawValue, id)) }
             }
             newKnown[kind.rawValue] = previous
             newHashes[kind.rawValue] = hashes
@@ -289,12 +315,20 @@ actor TaptionStoreRepository: PlanDataRepository {
         }
 
         try await store.applyRecordChanges(upserts: upserts, deletes: deletes, deletedAt: Date())
+        if let memoStore, !memoUpserts.isEmpty || !memoDeletes.isEmpty {
+            try await memoStore.applyRecordChanges(
+                upserts: memoUpserts,
+                deletes: memoDeletes,
+                deletedAt: Date()
+            )
+        }
         known = newKnown
         knownHashes = newHashes
     }
 
     func deleteAll() async throws {
         try await store.deleteAllRecords()
+        if let memoStore { try await memoStore.deleteAllRecords() }
         known = [:]
         knownHashes = [:]
         nextOrd = [:]
@@ -377,6 +411,12 @@ extension TaptionStoreRepository {
             forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) else { throw RepositoryError.appGroupUnavailable }
         let store = try TaptionStoreV2.shared(at: directory.appendingPathComponent(TaptionStoreV2.fileName))
-        return TaptionStoreRepository(store: store)
+        let memoStore = try TaptionStoreV2.shared(
+            at: directory.appendingPathComponent(TaptionStoreV2.memoFileName)
+        )
+        return TaptionStoreRepository(store: store, memoStore: memoStore)
     }
+
+    /// 메모 저장소(백업 엔진이 메모 행을 함께 담을 때 쓴다).
+    nonisolated var memos: TaptionStoreV2? { memoStore }
 }

@@ -127,6 +127,7 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
 
 enum MapHomeCalendarTimeTotalsPolicy {
     /// `month`가 속한 달의 날짜별·대분류별 시간(초). 오늘 이후와 기록이 없는 날은 담지 않는다.
+    /// `sealed`에 있는 날은 저장해 둔 확정 요약을 그대로 쓰고 다시 계산하지 않는다.
     static func totals(
         actuals: [ActualRecord],
         travel: [TravelSegment],
@@ -134,7 +135,8 @@ enum MapHomeCalendarTimeTotalsPolicy {
         placeKinds: [String: FrequentPlaceKind],
         month: Date,
         asOf now: Date,
-        calendar: Calendar
+        calendar: Calendar,
+        sealed: [Date: TaptionSealedDay] = [:]
     ) -> [Date: [String: TimeInterval]] {
         guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
               let end = calendar.date(byAdding: .month, value: 1, to: first),
@@ -145,48 +147,106 @@ enum MapHomeCalendarTimeTotalsPolicy {
         }
         let monthTravel = travel.filter { $0.span.start < end && first < $0.span.end }
         let monthStays = stays.filter { $0.span.start < end && first < $0.span.end }
-        guard !monthActuals.isEmpty || !monthTravel.isEmpty || !monthStays.isEmpty else { return [:] }
+        // 확정 요약만 있는 달(원본을 백업으로 옮긴 달)도 값이 나와야 한다.
+        guard !monthActuals.isEmpty || !monthTravel.isEmpty || !monthStays.isEmpty || !sealed.isEmpty else {
+            return [:]
+        }
+
         let homeKeys = Set(placeKinds.filter { $0.value == .home }.keys)
         var result: [Date: [String: TimeInterval]] = [:]
         for offset in 0..<days.count {
             guard let day = calendar.date(byAdding: .day, value: offset, to: first),
                   day <= now,
                   let dayEnd = calendar.date(byAdding: .day, value: 1, to: day) else { continue }
-            let phases = DayPhaseEngine.completePhases(
+            // 확정한 날은 다시 계산하지 않는다.
+            if let digest = sealed[calendar.startOfDay(for: day)] {
+                var values = digest.metrics.mapValues { TimeInterval($0) }
+                for (id, seconds) in digest.categorySeconds where id != "unconfirmed" {
+                    values[id] = TimeInterval(seconds)
+                }
+                if !values.isEmpty { result[day] = values }
+                continue
+            }
+            let byID = dayTotals(
                 actuals: monthActuals,
                 travel: monthTravel,
                 stays: monthStays,
                 placeKinds: placeKinds,
-                in: TimeSpan(start: day, end: dayEnd),
+                homeKeys: homeKeys,
+                day: day,
+                dayEnd: dayEnd,
                 asOf: now
             )
-            var byID: [String: TimeInterval] = [:]
-            for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) where entry.actual > 0 && entry.categoryID != "unconfirmed" {
-                byID[entry.categoryID, default: 0] += entry.actual
-            }
-            let meters = distanceMeters(of: monthTravel, in: TimeSpan(start: day, end: dayEnd))
-            if meters >= 10 { byID[MapHomeCalendarTimeKind.distance.rawValue] = meters }
-            let dayStays = monthStays.filter { $0.span.start < dayEnd && day < $0.span.end }
-            let placeCount = Set(dayStays.map(\.placeKey)).count
-            if placeCount > 0 { byID[MapHomeCalendarTimeKind.places.rawValue] = Double(placeCount) }
-            let tripCount = monthTravel.filter { $0.span.start < dayEnd && day < $0.span.end }.count
-            if tripCount > 0 { byID[MapHomeCalendarTimeKind.trips.rawValue] = Double(tripCount) }
-            let daySpan = TimeSpan(start: day, end: dayEnd)
-            let walkMeters = distanceMeters(of: monthTravel.filter { $0.mode == .walking || $0.mode == .running }, in: daySpan)
-            if walkMeters >= 10 { byID[MapHomeCalendarTimeKind.walkDistance.rawValue] = walkMeters }
-            let carMeters = distanceMeters(of: monthTravel.filter { $0.mode == .car || $0.mode == .taxi }, in: daySpan)
-            if carMeters >= 10 { byID[MapHomeCalendarTimeKind.carDistance.rawValue] = carMeters }
-            let transitMeters = distanceMeters(
-                of: monthTravel.filter { $0.mode == .bus || $0.mode == .subway || $0.mode == .train },
-                in: daySpan
-            )
-            if transitMeters >= 10 { byID[MapHomeCalendarTimeKind.transitDistance.rawValue] = transitMeters }
-            if let away = awaySeconds(stays: dayStays, homeKeys: homeKeys, day: day, dayEnd: min(dayEnd, now)), away > 0 {
-                byID[MapHomeCalendarTimeKind.awayTime.rawValue] = away
-            }
             if !byID.isEmpty { result[day] = byID }
         }
         return result
+    }
+
+    /// 하루치 달력 지표(대분류별 초 + 거리·장소·이동 횟수·외출 시간). 확정 요약도 이 값을 그대로 담는다.
+    static func dayTotals(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        day: Date,
+        dayEnd: Date,
+        asOf now: Date
+    ) -> [String: TimeInterval] {
+        dayTotals(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            homeKeys: Set(placeKinds.filter { $0.value == .home }.keys),
+            day: day,
+            dayEnd: dayEnd,
+            asOf: now
+        )
+    }
+
+    private static func dayTotals(
+        actuals: [ActualRecord],
+        travel: [TravelSegment],
+        stays: [PlaceStay],
+        placeKinds: [String: FrequentPlaceKind],
+        homeKeys: Set<String>,
+        day: Date,
+        dayEnd: Date,
+        asOf now: Date
+    ) -> [String: TimeInterval] {
+        let phases = DayPhaseEngine.completePhases(
+            actuals: actuals,
+            travel: travel,
+            stays: stays,
+            placeKinds: placeKinds,
+            in: TimeSpan(start: day, end: dayEnd),
+            asOf: now
+        )
+        var byID: [String: TimeInterval] = [:]
+        for entry in DayPhaseEngine.categoryDurations(phases, scope: .canonical) where entry.actual > 0 && entry.categoryID != "unconfirmed" {
+            byID[entry.categoryID, default: 0] += entry.actual
+        }
+        let meters = distanceMeters(of: travel, in: TimeSpan(start: day, end: dayEnd))
+        if meters >= 10 { byID[MapHomeCalendarTimeKind.distance.rawValue] = meters }
+        let dayStays = stays.filter { $0.span.start < dayEnd && day < $0.span.end }
+        let placeCount = Set(dayStays.map(\.placeKey)).count
+        if placeCount > 0 { byID[MapHomeCalendarTimeKind.places.rawValue] = Double(placeCount) }
+        let tripCount = travel.filter { $0.span.start < dayEnd && day < $0.span.end }.count
+        if tripCount > 0 { byID[MapHomeCalendarTimeKind.trips.rawValue] = Double(tripCount) }
+        let daySpan = TimeSpan(start: day, end: dayEnd)
+        let walkMeters = distanceMeters(of: travel.filter { $0.mode == .walking || $0.mode == .running }, in: daySpan)
+        if walkMeters >= 10 { byID[MapHomeCalendarTimeKind.walkDistance.rawValue] = walkMeters }
+        let carMeters = distanceMeters(of: travel.filter { $0.mode == .car || $0.mode == .taxi }, in: daySpan)
+        if carMeters >= 10 { byID[MapHomeCalendarTimeKind.carDistance.rawValue] = carMeters }
+        let transitMeters = distanceMeters(
+            of: travel.filter { $0.mode == .bus || $0.mode == .subway || $0.mode == .train },
+            in: daySpan
+        )
+        if transitMeters >= 10 { byID[MapHomeCalendarTimeKind.transitDistance.rawValue] = transitMeters }
+        if let away = awaySeconds(stays: dayStays, homeKeys: homeKeys, day: day, dayEnd: min(dayEnd, now)), away > 0 {
+            byID[MapHomeCalendarTimeKind.awayTime.rawValue] = away
+        }
+        return byID
     }
 
     /// 한 구간의 대분류별 시간(초). 연봉 카운터가 오늘 근무 시간만 빠르게 다시 셀 때 쓴다.

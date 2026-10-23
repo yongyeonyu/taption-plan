@@ -1237,6 +1237,14 @@ final class AppModel {
         RawDeviceDataDayArchive?
     @ObservationIgnored private let dayDatabase: PlanDayDatabase?
     @ObservationIgnored private let dayLoadCoordinator: PlanDayLoadCoordinator?
+    /// 확정한 하루 요약을 보관하는 저장소(본 저장소와 같은 파일).
+    @ObservationIgnored private let daySealStore: TaptionStoreV2?
+    /// 확정한 하루 요약. 지나간 날의 경로·시급·날씨·요약을 다시 계산하지 않고 여기서 읽는다.
+    private(set) var sealedDays: [Date: TaptionSealedDay] = [:]
+    /// 확정 요약을 마지막으로 읽은 시각(장면이 다시 활성화될 때 한 번만 읽는다).
+    @ObservationIgnored private var sealedDaysLoadedAt: Date?
+    @ObservationIgnored private var isSealingSettledDays = false
+    @ObservationIgnored private var daySealingTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapTask: Task<Void, Never>?
     @ObservationIgnored private var startupSettingsTask: Task<Void, Never>?
     @ObservationIgnored private var bootstrapPreparationTask: Task<Void, Never>?
@@ -1440,7 +1448,10 @@ final class AppModel {
             let selection: PlanRepositorySelection
             if let store = try? TaptionStoreV2.applicationSupport() {
                 selection = PlanRepositorySelection(
-                    repository: TaptionStoreRepository(store: store),
+                    repository: TaptionStoreRepository(
+                        store: store,
+                        memoStore: try? TaptionStoreV2.applicationSupportMemos()
+                    ),
                     source: "taption-store"
                 )
             } else {
@@ -1485,7 +1496,11 @@ final class AppModel {
             self.backupService = PlanBackupEngineAdapter(engine: backupEngine)
         } else if repository == nil, let store = try? TaptionStoreV2.applicationSupport() {
             self.backupService = PlanBackupEngineAdapter(
-                engine: TaptionBackupEngine(store: store, destination: TaptionICloudDriveBackupDestination()))
+                engine: TaptionBackupEngine(
+                    store: store,
+                    memoStore: try? TaptionStoreV2.applicationSupportMemos(),
+                    destination: TaptionICloudDriveBackupDestination()
+                ))
         } else {
             self.backupService = nil
         }
@@ -1513,6 +1528,8 @@ final class AppModel {
             ?? (try? PlanDayDatabase.applicationSupport())
         self.dayDatabase = resolvedDayDatabase
         self.dayLoadCoordinator = PlanDayLoadCoordinator()
+        // 확정 요약은 본 저장소와 같은 파일에 둔다. 저장소를 주입받은 시험에서는 확정을 쓰지 않는다.
+        self.daySealStore = repository == nil ? (try? TaptionStoreV2.applicationSupport()) : nil
         let watchReceipt = appleWatchDataReceiptStore.load()
         self.appleWatchLastDataReceivedAt = watchReceipt.latestDataAt
         self.appleWatchReceivedDataKinds = watchReceipt.recentKinds()
@@ -3364,6 +3381,21 @@ final class AppModel {
         if postSaveRefreshRequested { schedulePostSaveRefresh() }
         // 앱으로 돌아오면 곧바로 지금 활동을 다시 확인해 밖의 화면과 맞춘다.
         await publishCurrentActivityIfChanged()
+        // 지나간 날은 한 번 확정해 두고 다시 계산하지 않는다.
+        // 확정은 하루치 원본을 읽으므로, 앱을 여는 일과 겹치지 않게 잠시 뒤에 한다.
+        await reloadSealedDaysIfNeeded()
+        scheduleDaySealing()
+    }
+
+    /// 앱이 안정된 뒤에 지나간 날을 확정한다(시작 화면·지도 적재와 겹치지 않게).
+    private func scheduleDaySealing() {
+        daySealingTask?.cancel()
+        daySealingTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled, let self else { return }
+            await self.sealSettledDays()
+            self.daySealingTask = nil
+        }
     }
 
     func handleMemoryPressure() {
@@ -3471,6 +3503,8 @@ final class AppModel {
         selectedDateRefreshGeneration &+= 1
         selectedDateRefreshTask?.cancel()
         selectedDateRefreshTask = nil
+        daySealingTask?.cancel()
+        daySealingTask = nil
         calendarStoreRefreshTask?.cancel()
         calendarStoreRefreshTask = nil
         dayLoadCoordinator?.prepareForBackground()
@@ -10660,6 +10694,178 @@ final class AppModel {
         return value
     }
 
+    // MARK: 확정한 하루(지나간 날은 다시 계산하지 않는다)
+
+    /// 확정한 하루 요약. 없으면 nil이고, 그때는 지금처럼 원본에서 계산한다.
+    func sealedDay(for day: Date) -> TaptionSealedDay? {
+        sealedDays[Calendar.autoupdatingCurrent.startOfDay(for: day)]
+    }
+
+    /// 이 날을 다시 계산해도 되는지. 확정한 지나간 날은 원본이 바뀌지 않는 한 다시 계산하지 않는다.
+    func allowsRecalculation(of day: Date, force: Bool = false) -> Bool {
+        PlanDayRecalculationPolicy.allowsRecalculation(
+            day: day,
+            now: .now,
+            isSealed: sealedDay(for: day) != nil,
+            force: force
+        )
+    }
+
+    /// 확정 요약을 저장소에서 읽어 온다. 1분에 한 번만 읽는다(장면이 자주 활성화된다).
+    func reloadSealedDaysIfNeeded(force: Bool = false) async {
+        guard let daySealStore else { return }
+        if !force, let loadedAt = sealedDaysLoadedAt,
+           Date().timeIntervalSince(loadedAt) < 60 { return }
+        do {
+            let days = try await daySealStore.sealedDays()
+            let calendar = Calendar.autoupdatingCurrent
+            var map: [Date: TaptionSealedDay] = [:]
+            map.reserveCapacity(days.count)
+            for day in days {
+                map[calendar.startOfDay(for: day.dayStart)] = day
+            }
+            sealedDays = map
+            sealedDaysLoadedAt = .now
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sealed_days_loaded",
+                fields: ["days": String(map.count)]
+            )
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sealed_days_load_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
+        }
+    }
+
+    /// 지나간 날 중 아직 확정하지 않은 날을 확정한다. 최근 `limit`일만 본다(오래된 날은 열 때 확정한다).
+    func sealSettledDays(limit: Int = 5) async {
+        guard daySealStore != nil, !isSealingSettledDays, acceptsDataMutation() else { return }
+        isSealingSettledDays = true
+        defer { isSealingSettledDays = false }
+        let calendar = Calendar.autoupdatingCurrent
+        let today = calendar.startOfDay(for: .now)
+        for offset in 1...max(1, limit) {
+            guard !Task.isCancelled, acceptsDataMutation() else { return }
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            if sealedDays[day] != nil { continue }
+            // 캐시에 없는 날은 건너뛴다. 확정은 하루치 원본을 읽으므로, 앱을 열 때마다 여러 날을
+            // 읽으면 시작이 느려진다. 어제는 늘 확정하고, 그 이전은 지도가 미리 읽어 둔 날만 확정한다.
+            if offset > 1, await cachedPlanDayDataSnapshot(for: day) == nil { continue }
+            await sealDay(day)
+        }
+    }
+
+    /// 하루를 확정한다. 이미 같은 원본으로 확정돼 있으면 아무것도 하지 않는다.
+    func sealDay(_ day: Date, now: Date = .now) async {
+        guard let daySealStore, acceptsDataMutation() else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: day)
+        guard PlanDayRecalculationPolicy.isSettled(start, now: now, calendar: calendar) else { return }
+        // 확정에는 하루치 원본이 필요하다. 캐시에 있으면 그대로 쓰고, 없으면 한 번만 읽는다.
+        let snapshot = await planDayDataSnapshot(for: start, forceReload: false)
+        guard PlanDayRecalculationPolicy.canSeal(
+            day: start, now: now, isComplete: snapshot.isComplete, calendar: calendar
+        ) else { return }
+        guard let digest = sealedDigest(from: snapshot, now: now) else { return }
+        if let existing = sealedDays[start],
+           existing.version == digest.version,
+           existing.sourceFingerprint == digest.sourceFingerprint {
+            return
+        }
+        do {
+            try await daySealStore.upsertSealedDays([digest])
+            sealedDays[start] = digest
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "day_sealed",
+                fields: [
+                    "day": String(Int(start.timeIntervalSince1970)),
+                    "readings": String(digest.readingCount),
+                    "polyline": String(digest.polyline.count / 2),
+                    "categories": String(digest.categorySeconds.count),
+                ]
+            )
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "day_seal_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
+        }
+    }
+
+    /// 확정하지 않은 날을 다시 계산하도록 확정을 지운다(사용자가 그 날 기록을 고쳤을 때).
+    func removeSeal(for day: Date) async {
+        guard let daySealStore else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: day)
+        let number = TaptionReadingRowCodec.dayNumber(for: start, calendar: calendar)
+        do {
+            try await daySealStore.deleteSealedDays(numbers: [number])
+            sealedDays[start] = nil
+            TaptionPlanDiagnosticsLogger.shared.record("day_seal_removed", fields: ["day": String(number)])
+        } catch {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "day_seal_remove_failed",
+                level: .error,
+                fields: ["error": String(describing: type(of: error))]
+            )
+        }
+    }
+
+    private func sealedDigest(from snapshot: PlanDayDataSnapshot, now: Date) -> TaptionSealedDay? {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: snapshot.day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400)
+        let window = TimeSpan(start: start, end: end)
+        let placeKinds = FrequentPlaceResolutionEngine()
+            .kindsByPlaceKey(self.snapshot.settings.frequentPlaces)
+        let categories = TaptionSealedDayBuilder.categoryDurations(
+            actuals: snapshot.actuals,
+            travel: snapshot.travel,
+            stays: snapshot.places,
+            placeKinds: placeKinds,
+            day: window,
+            asOf: now
+        )
+        // 달력 지표(거리·장소·이동 횟수·외출)는 대분류가 아닌 값만 따로 담는다.
+        var metrics = MapHomeCalendarTimeTotalsPolicy.dayTotals(
+            actuals: snapshot.actuals,
+            travel: snapshot.travel,
+            stays: snapshot.places,
+            placeKinds: placeKinds,
+            day: start,
+            dayEnd: end,
+            asOf: now
+        )
+        for key in categories.keys { metrics[key] = nil }
+        metrics["unconfirmed"] = nil
+        let steps = snapshot.readings.compactMap(\.stepCount).filter { $0 > 0 }.max() ?? 0
+        let distance = snapshot.travel.reduce(0.0) { $0 + max(0, $1.distanceMeters) }
+        let weather = self.snapshot.weather
+            .filter { context in
+                context.isForecast != true && context.observedAt >= start && context.observedAt < end
+            }
+            .max { $0.observedAt < $1.observedAt }
+        let memos = self.snapshot.memos.filter { $0.occurredAt >= start && $0.occurredAt < end }.count
+        return TaptionSealedDayBuilder.make(
+            day: start,
+            sealedAt: now,
+            sourceFingerprint: snapshot.sourceFingerprint,
+            categories: categories,
+            metrics: metrics,
+            steps: steps,
+            distanceMeters: distance,
+            readings: snapshot.readings,
+            weather: weather,
+            memoCount: memos,
+            actualCount: snapshot.actuals.count,
+            travelCount: snapshot.travel.count,
+            placeCount: snapshot.places.count
+        )
+    }
+
     func cachedPlanDayDataSnapshot(for date: Date) async -> PlanDayDataSnapshot? {
         let generation = dataDeletionGeneration
         guard acceptsDataMutation(), let dayLoadCoordinator else { return nil }
@@ -12605,6 +12811,14 @@ final class AppModel {
         immediately: Bool
     ) {
         let day = Calendar.autoupdatingCurrent.startOfDay(for: date)
+        // 확정한 지나간 날은 경로·이동 구간을 다시 만들지 않는다.
+        guard allowsRecalculation(of: day) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sensor_analysis_skipped_sealed",
+                fields: ["day": String(Int(day.timeIntervalSince1970))]
+            )
+            return
+        }
         sensorAnalysisRequestRevision &+= 1
         pendingSensorAnalysisRevisions[day] = sensorAnalysisRequestRevision
         startSensorAnalysis(immediately: immediately)
@@ -13126,6 +13340,14 @@ final class AppModel {
                     "from": String(span.start.timeIntervalSince1970),
                     "through": String(span.end.timeIntervalSince1970),
                 ]
+            )
+            return
+        }
+        // 확정한 날의 날씨는 저장된 값을 그대로 쓴다(지나간 날을 다시 조회하지 않는다).
+        guard allowsRecalculation(of: span.start) else {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "weather_refresh_skipped_sealed",
+                fields: ["day": String(Int(calendar.startOfDay(for: span.start).timeIntervalSince1970))]
             )
             return
         }

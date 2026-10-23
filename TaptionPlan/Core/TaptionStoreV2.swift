@@ -316,8 +316,11 @@ private final class TaptionSQLiteConnection: @unchecked Sendable {
 }
 
 actor TaptionStoreV2 {
-    static let schemaVersion = 1
+    /// 2: 확정한 하루 요약(`sealed_days`) 표가 늘었다. 1인 파일은 표만 덧붙이고 그대로 쓴다.
+    static let schemaVersion = 2
     static let fileName = "taption-store.sqlite"
+    /// 메모는 따로 보관한다. 파일만 다르고 표·보호 등급·삭제 방식은 같다.
+    static let memoFileName = "taption-memos.sqlite"
 
     /// 사용자의 달력 설정(불교력·연호력 등)과 무관하게 그레고리력 현지 날짜로 `day`를 계산한다.
     static func localGregorianCalendar() -> Calendar {
@@ -331,13 +334,26 @@ actor TaptionStoreV2 {
 
     /// 앱이 쓰는 저장소 하나. 센서·계획·기록이 같은 파일과 같은 연결을 쓴다.
     static func applicationSupport(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
+        try shared(at: try applicationSupportURL(fileName: fileName, fileManager: fileManager))
+    }
+
+    /// 메모 전용 저장소. 앱 그룹 컨테이너의 같은 폴더에 `taption-memos.sqlite`로 둔다.
+    /// 파일이 달라도 여는 방식·표 구조·파일 보호 등급·`secure_delete`가 본 저장소와 같다.
+    static func applicationSupportMemos(fileManager: FileManager = .default) throws -> TaptionStoreV2 {
+        try shared(at: try applicationSupportURL(fileName: memoFileName, fileManager: fileManager))
+    }
+
+    static func applicationSupportURL(
+        fileName: String,
+        fileManager: FileManager = .default
+    ) throws -> URL {
         let root = try fileManager.url(
             for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
         )
         let storeRoot = fileManager.containerURL(
             forSecurityApplicationGroupIdentifier: TaptionPlanSharedContainer.appGroupIdentifier
         ) ?? root.appendingPathComponent("TaptionPlan", isDirectory: true)
-        return try shared(at: storeRoot.appendingPathComponent(fileName, isDirectory: false))
+        return storeRoot.appendingPathComponent(fileName, isDirectory: false)
     }
 
     static func shared(at url: URL) throws -> TaptionStoreV2 {
@@ -813,8 +829,79 @@ actor TaptionStoreV2 {
         try step(db, statement)
     }
 
-    func recordCount(kind: String? = nil) throws -> Int {
-        if let kind {
+    /// 삭제 표시된 행까지 포함한 한 종류의 모든 행. 저장소 이동(메모 분리)에서 삭제 표시도 함께 옮길 때 쓴다.
+    /// 삭제 표시를 두고 오면 백업을 합칠 때 오래된 메모가 되살아난다.
+    func recordsIncludingDeleted(kind: String) throws -> [TaptionStoreRecord] {
+        let db = try handle()
+        let statement = try prepare(db, """
+            SELECT id, kind, start_ts, end_ts, updated_ts, origin, deleted, ord, body
+            FROM records WHERE kind = ? ORDER BY ord, id
+            """)
+        defer { sqlite3_finalize(statement) }
+        bind(statement, 1, .text(kind))
+        var result: [TaptionStoreRecord] = []
+        var code = sqlite3_step(statement)
+        while code == SQLITE_ROW {
+            defer { code = sqlite3_step(statement) }
+            guard let origin = TaptionStoreRecord.Origin(
+                rawValue: String(cString: sqlite3_column_text(statement, 5))
+            ) else { throw TaptionStoreV2Error.corruptRow("unknown origin") }
+            func date(_ column: Int32) -> Date? {
+                sqlite3_column_type(statement, column) == SQLITE_NULL
+                    ? nil : Date(timeIntervalSince1970: sqlite3_column_double(statement, column))
+            }
+            result.append(TaptionStoreRecord(
+                id: String(cString: sqlite3_column_text(statement, 0)),
+                kind: String(cString: sqlite3_column_text(statement, 1)),
+                start: date(2), end: date(3),
+                updatedAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 4)),
+                origin: origin,
+                isDeleted: sqlite3_column_int(statement, 6) != 0,
+                ord: Int(sqlite3_column_int64(statement, 7)),
+                body: String(cString: sqlite3_column_text(statement, 8))
+            ))
+        }
+        guard code == SQLITE_DONE else {
+            throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        return result
+    }
+
+    /// 한 종류의 기록 행을 하드 삭제한다(삭제 표시를 남기지 않는다).    /// 사용자 삭제가 아니라 저장소 이동에만 쓴다: 메모를 별도 파일로 옮길 때 옛 파일에 남은 행을 지운다.
+    /// 삭제 표시를 남기면 백업의 "삭제가 이긴다" 규칙이 옮긴 메모를 다시 지워 버린다.
+    func deleteRecords(kind: String) throws {
+        let db = try handle()
+        let statement = try prepare(db, "DELETE FROM records WHERE kind = ?")
+        defer { sqlite3_finalize(statement) }
+        bind(statement, 1, .text(kind))
+        try step(db, statement)
+    }
+
+    /// `[from, to)`에 시작하는 기록 행을 하드 삭제한다. 백업 파일에 담아 검증한 뒤 로컬에서 지울 때
+    /// 메모 파일처럼 본 저장소 밖에 있는 행에 쓴다(본 저장소는 `deleteRange`가 지문까지 확인하고 지운다).
+    func deleteRecordRange(from: Double, to: Double) throws -> Int {
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            let statement = try prepare(db, """
+                DELETE FROM records
+                WHERE start_ts >= ?1 AND start_ts < ?2
+                  AND NOT (end_ts IS NOT NULL AND end_ts > ?2)
+                """)
+            defer { sqlite3_finalize(statement) }
+            bind(statement, 1, .real(from))
+            bind(statement, 2, .real(to))
+            try step(db, statement)
+            let removed = Int(sqlite3_changes(db))
+            try exec(db, "COMMIT")
+            return removed
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    func recordCount(kind: String? = nil) throws -> Int {        if let kind {
             let db = try handle()
             let statement = try prepare(db, "SELECT COUNT(*) FROM records WHERE kind = ?")
             defer { sqlite3_finalize(statement) }
@@ -1045,6 +1132,119 @@ actor TaptionStoreV2 {
         return days
     }
 
+    // MARK: 확정한 하루 요약
+
+    /// 확정한 하루를 저장한다. 같은 날짜가 있으면 덮어쓴다(다시 확정한 경우).
+    func upsertSealedDays(_ days: [TaptionSealedDay]) throws {
+        guard !days.isEmpty else { return }
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            let statement = try prepare(db, """
+                INSERT INTO sealed_days (day, sealed_ts, fingerprint, payload) VALUES (?, ?, ?, ?)
+                ON CONFLICT(day) DO UPDATE SET
+                  sealed_ts = excluded.sealed_ts,
+                  fingerprint = excluded.fingerprint,
+                  payload = excluded.payload
+                """)
+            defer { sqlite3_finalize(statement) }
+            for day in days {
+                sqlite3_reset(statement)
+                sqlite3_clear_bindings(statement)
+                bind(statement, 1, .int(Int64(Self.dayNumber(for: day.dayStart, calendar: calendar))))
+                bind(statement, 2, .real(day.sealedAt.timeIntervalSince1970))
+                bind(statement, 3, day.sourceFingerprint.map { .text($0) } ?? .null)
+                bind(statement, 4, .blob(try Self.sealedPayload(day)))
+                try step(db, statement)
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    /// `[from, through]`(둘 다 `yyyymmdd`) 범위의 확정 요약. 해석할 수 없는 행은 건너뛴다.
+    func sealedDays(from: Int? = nil, through: Int? = nil) throws -> [TaptionSealedDay] {
+        let db = try handle()
+        var sql = "SELECT payload FROM sealed_days"
+        if from != nil || through != nil { sql += " WHERE 1 = 1" }
+        if from != nil { sql += " AND day >= ?" }
+        if through != nil { sql += " AND day <= ?" }
+        sql += " ORDER BY day"
+        let statement = try prepare(db, sql)
+        defer { sqlite3_finalize(statement) }
+        var index: Int32 = 1
+        if let from { bind(statement, index, .int(Int64(from))); index += 1 }
+        if let through { bind(statement, index, .int(Int64(through))) }
+        var result: [TaptionSealedDay] = []
+        var code = sqlite3_step(statement)
+        while code == SQLITE_ROW {
+            defer { code = sqlite3_step(statement) }
+            guard let blob = Self.blob(statement, 0) else { continue }
+            if let value = Self.decodeSealedDay(blob) { result.append(value) }
+        }
+        guard code == SQLITE_DONE else {
+            throw TaptionStoreV2Error.sqlFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        return result
+    }
+
+    func sealedDay(for day: Date) throws -> TaptionSealedDay? {
+        let db = try handle()
+        let statement = try prepare(db, "SELECT payload FROM sealed_days WHERE day = ?")
+        defer { sqlite3_finalize(statement) }
+        bind(statement, 1, .int(Int64(Self.dayNumber(for: day, calendar: calendar))))
+        guard sqlite3_step(statement) == SQLITE_ROW, let blob = Self.blob(statement, 0) else { return nil }
+        return Self.decodeSealedDay(blob)
+    }
+
+    func sealedDayCount() throws -> Int {
+        try scalarInt("SELECT COUNT(*) FROM sealed_days")
+    }
+
+    func deleteSealedDays(numbers: [Int]) throws {
+        guard !numbers.isEmpty else { return }
+        let db = try handle()
+        try exec(db, "BEGIN IMMEDIATE")
+        do {
+            let statement = try prepare(db, "DELETE FROM sealed_days WHERE day = ?")
+            defer { sqlite3_finalize(statement) }
+            for number in numbers {
+                sqlite3_reset(statement)
+                sqlite3_clear_bindings(statement)
+                bind(statement, 1, .int(Int64(number)))
+                try step(db, statement)
+            }
+            try exec(db, "COMMIT")
+        } catch {
+            try? exec(db, "ROLLBACK")
+            throw error
+        }
+    }
+
+    private static func dayNumber(for date: Date, calendar: Calendar) -> Int {
+        TaptionReadingRowCodec.dayNumber(for: date, calendar: calendar)
+    }
+
+    private static func sealedPayload(_ day: TaptionSealedDay) throws -> Data {
+        let encoded = try TaptionPlanCanonicalStorage.encode(day, compress: true)
+        return TaptionPlanCanonicalStorage.envelope(for: encoded)
+    }
+
+    private static func decodeSealedDay(_ envelope: Data) -> TaptionSealedDay? {
+        guard let payload = try? TaptionPlanCanonicalStorage.encodedPayload(from: envelope),
+              let value = try? TaptionPlanCanonicalStorage.decode(TaptionSealedDay.self, from: payload),
+              value.version <= TaptionSealedDay.currentVersion else { return nil }
+        return value
+    }
+
+    private static func blob(_ statement: OpaquePointer?, _ column: Int32) -> Data? {
+        guard sqlite3_column_type(statement, column) == SQLITE_BLOB,
+              let bytes = sqlite3_column_blob(statement, column) else { return nil }
+        return Data(bytes: bytes, count: Int(sqlite3_column_bytes(statement, column)))
+    }
+
     // MARK: 메타·삭제
 
     func meta(_ key: String) throws -> String? {
@@ -1101,6 +1301,7 @@ actor TaptionStoreV2 {
             try exec(db, "DELETE FROM readings")
             try exec(db, "DELETE FROM records")
             try exec(db, "DELETE FROM raw_events")
+            try exec(db, "DELETE FROM sealed_days")
             try exec(db, "DELETE FROM meta WHERE key <> 'schema_version'")
             // 봉인·달력 같은 백업 보조 값은 함께 지우되, 이전 백업 파일이 무효라는 표시는 남긴다.
             try markBackupsStale(db)
@@ -1186,7 +1387,22 @@ actor TaptionStoreV2 {
         } else {
             try addMissingRecordsColumns(db)
         }
+        // 확정한 하루 요약 표는 1인 파일에도 덧붙인다(기존 행은 건드리지 않는다).
+        try execStatic(db, Self.sealedDaysSchema)
+        if current < schemaVersion {
+            try execStatic(db, "PRAGMA user_version = \(schemaVersion)")
+        }
     }
+
+    /// 확정한 하루 요약. 하루에 한 행이고 본문은 이진 프로퍼티 리스트를 LZFSE로 압축한 덩어리다.
+    private static let sealedDaysSchema = """
+        CREATE TABLE IF NOT EXISTS sealed_days (
+            day INTEGER PRIMARY KEY,
+            sealed_ts REAL NOT NULL,
+            fingerprint TEXT,
+            payload BLOB NOT NULL
+        );
+        """
 
     /// 순서 열(`ord`)이 생기기 전에 만든 저장소는 같은 user_version 1이라, 열이 없으면 한 번 덧붙인다(기존 행은 0).
     private static func addMissingRecordsColumns(_ db: OpaquePointer) throws {
@@ -1211,6 +1427,15 @@ actor TaptionStoreV2 {
     }
 
     func exec(_ db: OpaquePointer, _ sql: String) throws {
+        var error: UnsafeMutablePointer<CChar>?
+        guard sqlite3_exec(db, sql, nil, nil, &error) == SQLITE_OK else {
+            let message = error.map { String(cString: $0) } ?? String(cString: sqlite3_errmsg(db))
+            sqlite3_free(error)
+            throw TaptionStoreV2Error.sqlFailed(message)
+        }
+    }
+
+    private static func execStatic(_ db: OpaquePointer, _ sql: String) throws {
         var error: UnsafeMutablePointer<CChar>?
         guard sqlite3_exec(db, sql, nil, nil, &error) == SQLITE_OK else {
             let message = error.map { String(cString: $0) } ?? String(cString: sqlite3_errmsg(db))
