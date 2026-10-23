@@ -2904,6 +2904,9 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     var catStyle: String
     var reducesMotion: Bool
     var todaySummary: TaptionWatchDaySummary? = nil
+    /// 지금 하고 있는 대분류. 워치 앱과 워치 위젯이 iPhone과 같은 값을 실시간으로 보여 준다.
+    /// 두 언어를 함께 보내 워치가 자기 언어 설정으로 고른다.
+    var currentActivity: TaptionWatchCurrentActivity? = nil
     var accelerationSettings: TaptionWatchAccelerationSettings? = nil
     var dataSyncProfile: TaptionWatchDataSyncProfile? = nil
     var locationTrackingEnabled: Bool? = nil
@@ -2914,6 +2917,20 @@ struct TaptionWatchPayload: Codable, Hashable, Sendable {
     /// Optional so payloads cached by older iPhone builds continue to decode.
     /// `automatic` is resolved on the receiving Watch using its own locale.
     var languagePreference: String? = nil
+}
+
+/// 지금 하고 있는 대분류 하나. iPhone이 계산해 워치로 보내고,
+/// 워치 앱과 워치 위젯이 자기 언어 설정으로 이름을 고른다.
+struct TaptionWatchCurrentActivity: Codable, Hashable, Sendable {
+    var categoryID: String
+    var koreanTitle: String
+    var englishTitle: String
+    /// 이 활동이 시작된 시각. 워치가 "지금 몇 분째"를 스스로 셀 수 있게 함께 보낸다.
+    var startedAt: Date
+
+    func title(for language: AppLanguagePreference.ResolvedLanguage) -> String {
+        language == .korean ? koreanTitle : englishTitle
+    }
 }
 
 struct TaptionWatchHealthSnapshot: Codable, Hashable, Sendable {

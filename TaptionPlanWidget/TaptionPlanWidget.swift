@@ -2298,11 +2298,11 @@ struct SensorCollectionLiveActivity: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     TaptionLiveActivityCat(categoryID: context.state.currentActivityCategoryID ?? "unconfirmed", title: context.state.currentActivityTitle ?? "확인 중", style: context.state.currentActivityCatStyle ?? "white", frame: context.state.currentActivityFrame ?? 0)
-                        .frame(width: 28, height: 28)
+                        .frame(width: 31, height: 31)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
+                        Text(liveActivityTitle(context.state))
                             .font(.headline)
                             .foregroundStyle(.white)
                         Text(sensorCollectionKinds(context.state.collectionKinds))
@@ -2330,15 +2330,15 @@ struct SensorCollectionLiveActivity: Widget {
                     style: context.state.currentActivityCatStyle ?? "white",
                     frame: context.state.currentActivityFrame ?? 0
                 )
-                .frame(width: 32, height: 26)
+                .frame(width: 35, height: 29)
             } compactTrailing: {
-                Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
+                Text(liveActivityTitle(context.state))
                     .font(.caption2.weight(.semibold))
                     .lineLimit(1)
                     .frame(maxWidth: 72)
             } minimal: {
                 TaptionLiveActivityCat(categoryID: context.state.currentActivityCategoryID ?? "unconfirmed", title: context.state.currentActivityTitle ?? "확인 중", style: context.state.currentActivityCatStyle ?? "white", frame: context.state.currentActivityFrame ?? 0)
-                    .frame(width: 26, height: 26)
+                    .frame(width: 29, height: 29)
             }
             .keylineTint(Color(red: 0.18, green: 0.72, blue: 0.59))
         }
@@ -2397,11 +2397,11 @@ private struct SensorCollectionLockScreenView: View {
                 style: context.state.currentActivityCatStyle ?? "white",
                 frame: context.state.currentActivityFrame ?? 0
             )
-            .frame(width: 52, height: 40)
+            .frame(width: 57, height: 44)
 
             // 잠금 화면: 현재 활동 이름을 위에, 연봉 카운터(번 돈)를 아래에 보여 준다.
             VStack(alignment: .leading, spacing: 3) {
-                Text(context.state.currentActivityTitle ?? widgetText("확인 중", "Checking"))
+                Text(liveActivityTitle(context.state))
                     .font(.system(size: 14, weight: .bold))
                     .lineLimit(1)
                 salaryLine(context.state)
@@ -2737,7 +2737,7 @@ private func sensorCollectionAccessibilityLabel(
     case .hidden:
         status = widgetText("센서 수집 종료", "Sensor collection ended")
     }
-    let activityTitle = state.currentActivityTitle ?? widgetText("확인 중", "Checking")
+    let activityTitle = liveActivityTitle(state)
     return "\(activityTitle), \(status), \(kinds)"
 }
 
@@ -2803,6 +2803,24 @@ private func sensorCollectionKinds(_ kinds: [String]) -> String {
 
 private func widgetText(_ korean: String, _ english: String) -> String {
     AppLanguagePreference.text(korean: korean, english: english)
+}
+
+/// 다이나믹 아일랜드·잠금화면에 보여 줄 지금 활동 이름.
+/// 상태에 실린 제목은 한국어라서, 대분류 id로 다시 풀어 영어 설정에서는 영어로 보여 준다.
+private func liveActivityTitle(
+    _ state: SensorCollectionActivityAttributes.ContentState
+) -> String {
+    let action = TaptionLiveActivityStickmanAction.resolve(
+        categoryID: state.currentActivityCategoryID ?? "unconfirmed",
+        title: state.currentActivityTitle ?? ""
+    )
+    let localized = action.localizedTitle
+    // 대분류로 풀리지 않는 사용자 정의 이름은 원래 제목을 그대로 쓴다.
+    if action == .activity, let raw = state.currentActivityTitle, !raw.isEmpty,
+       AppLanguagePreference.current.resolvedLanguage == .korean {
+        return raw
+    }
+    return localized
 }
 
 private struct TaptionLiveActivityCat: View {

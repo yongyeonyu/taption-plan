@@ -74,6 +74,7 @@ struct WatchContentView: View {
     private func dashboard(at date: Date) -> some View {
         let subject = confirmationSubject
         return VStack(alignment: .leading, spacing: 8) {
+            currentActivityCard(at: date)
             transferCard(at: date)
             if let subject {
                 confirmationCard(subject)
@@ -81,6 +82,43 @@ struct WatchContentView: View {
                 waitingCard
             }
         }
+    }
+
+    /// 지금 하고 있는 대분류. iPhone이 바뀐 값을 밀어 주면 몇 초 안에 여기까지 온다.
+    private func currentActivityCard(at date: Date) -> some View {
+        let activity = connectivity.payload?.currentActivity
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: "waveform.path.ecg")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.green)
+                Text(text("지금", "Now"))
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 2)
+                if let activity {
+                    Text(elapsedText(since: activity.startedAt, at: date))
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(activity?.title(for: language) ?? text("확인 중", "Checking"))
+                .font(.system(size: 17, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .foregroundStyle(.white)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.green.opacity(0.14),
+            in: RoundedRectangle(cornerRadius: 13)
+        )
+        .accessibilityElement(children: .combine)
+    }
+
+    private func elapsedText(since start: Date, at date: Date) -> String {
+        durationText(max(0, Int(date.timeIntervalSince(start) / 60)))
     }
 
     private var confirmationSubject: WatchConfirmationSubject? {

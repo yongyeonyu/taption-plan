@@ -289,7 +289,73 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
-    func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {        let homeLocation = CGPoint(x: 100, y: 200)
+    /// 다이나믹 아일랜드·잠금화면·워치가 같은 대분류 이름을 쓴다. 영어 설정이면 영어로 나온다.
+    func testCurrentActivityTitlesFollowTheLanguage() {
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.computer.koreanTitle, "업무")
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.computer.englishTitle, "Work")
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.unconfirmed.koreanTitle, "확인 중")
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.unconfirmed.englishTitle, "Checking")
+        XCTAssertEqual(TaptionLiveActivityStickmanAction.sleeping.englishTitle, "Sleep")
+
+        // 대분류 id로 풀면 화면마다 같은 이름이 나온다.
+        let resolved = TaptionLiveActivityStickmanAction.resolve(
+            categoryID: "work",
+            title: "업무"
+        )
+        XCTAssertEqual(resolved, .computer)
+        XCTAssertEqual(resolved.englishTitle, "Work")
+
+        let activity = TaptionWatchCurrentActivity(
+            categoryID: "work",
+            koreanTitle: resolved.koreanTitle,
+            englishTitle: resolved.englishTitle,
+            startedAt: Date(timeIntervalSince1970: 900)
+        )
+        XCTAssertEqual(activity.title(for: .korean), "업무")
+        XCTAssertEqual(activity.title(for: .english), "Work")
+    }
+
+    /// 워치 페이로드가 지금 대분류를 실어 나르고, 그 값이 없던 예전 페이로드도 읽힌다.
+    func testWatchPayloadCarriesCurrentActivity() throws {
+        let startedAt = Date(timeIntervalSince1970: 900)
+        let payload = TaptionWatchPayload(
+            generatedAt: Date(timeIntervalSince1970: 1_000),
+            viewportStart: Date(timeIntervalSince1970: 0),
+            viewportEnd: Date(timeIntervalSince1970: 86_400),
+            items: [],
+            catStyle: "white",
+            reducesMotion: false,
+            todaySummary: nil,
+            currentActivity: TaptionWatchCurrentActivity(
+                categoryID: "movement.walking",
+                koreanTitle: "이동",
+                englishTitle: "Movement",
+                startedAt: startedAt
+            )
+        )
+        let data = try JSONEncoder().encode(payload)
+        let decoded = try JSONDecoder().decode(TaptionWatchPayload.self, from: data)
+        XCTAssertEqual(decoded.currentActivity?.categoryID, "movement.walking")
+        XCTAssertEqual(decoded.currentActivity?.startedAt, startedAt)
+        XCTAssertEqual(decoded.currentActivity?.title(for: .english), "Movement")
+
+        // 예전 빌드가 보낸 페이로드(currentActivity 키 없음)도 그대로 읽힌다.
+        var legacy = payload
+        legacy.currentActivity = nil
+        let legacyData = try JSONEncoder().encode(legacy)
+        let legacyJSON = try XCTUnwrap(
+            String(data: legacyData, encoding: .utf8)
+        )
+        XCTAssertFalse(legacyJSON.contains("currentActivity"))
+        let legacyDecoded = try JSONDecoder().decode(
+            TaptionWatchPayload.self,
+            from: legacyData
+        )
+        XCTAssertNil(legacyDecoded.currentActivity)
+    }
+
+    func testHomeIconTapRoutingSeparatesHouseFromHomeCat() {
+        let homeLocation = CGPoint(x: 100, y: 200)
         let houseCenter = CGPoint(
             x: homeLocation.x + MapHomeCatTapRouting.homeImageCenterOffset.x,
             y: homeLocation.y + MapHomeCatTapRouting.homeImageCenterOffset.y

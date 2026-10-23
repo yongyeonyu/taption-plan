@@ -7,6 +7,12 @@ enum LiveActivityError: Error, Equatable {
     case missingActivity
 }
 
+/// 지금 대분류를 외부 화면(다이나믹 아일랜드·잠금화면·워치)에 다시 밀어 주는 주기.
+/// 저장·센서 이벤트가 없는 시간 경계에서도 활동 이름이 따라가게 하는 안전망이다.
+enum CurrentActivitySyncPolicy {
+    static let intervalSeconds = 20
+}
+
 enum TaptionCurrentActivityPolicy {
     static func categoryID(
         actuals: [ActualRecord],

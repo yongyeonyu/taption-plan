@@ -1250,6 +1250,12 @@ final class AppModel {
     @ObservationIgnored private var lastForegroundRefreshAt: Date?
     @ObservationIgnored private var foregroundHealthRefreshTask:
         Task<Void, Never>?
+    /// 지금 대분류가 바뀌었는지 30초마다 확인해 다이나믹 아일랜드·잠금화면·워치를 함께 갱신한다.
+    @ObservationIgnored private var currentActivitySyncTask:
+        Task<Void, Never>?
+    /// 마지막으로 외부 화면(아일랜드·잠금화면·워치)에 알린 대분류.
+    @ObservationIgnored private var lastPublishedCurrentActivity:
+        (categoryID: String, title: String)?
     @ObservationIgnored private var calendarStoreRefreshTask:
         Task<Void, Never>?
     @ObservationIgnored private var calendarStoreRefreshRequiresWide = false
@@ -3341,6 +3347,7 @@ final class AppModel {
             await bootstrapLocalSnapshot()
         }
         updateForegroundLiveLocationTracking()
+        startCurrentActivitySyncIfNeeded()
         if isAppLocked {
             await concealExternalSurfaces()
         } else {
@@ -3355,6 +3362,8 @@ final class AppModel {
         scheduleWatchHealthRefresh()
         scheduleForegroundPreparation()
         if postSaveRefreshRequested { schedulePostSaveRefresh() }
+        // 앱으로 돌아오면 곧바로 지금 활동을 다시 확인해 밖의 화면과 맞춘다.
+        await publishCurrentActivityIfChanged()
     }
 
     func handleMemoryPressure() {
@@ -3452,6 +3461,7 @@ final class AppModel {
         defer { backgroundAssertion.end() }
         isSceneActive = false
         isSceneInBackground = true
+        stopCurrentActivitySync()
         updateForegroundLiveLocationTracking()
         let cancelledSensorTimeline = sensorTimelineTask
         sensorTimelineTask?.cancel()
@@ -7191,7 +7201,8 @@ final class AppModel {
     private func currentLiveActivityProjection(at date: Date = .now) -> (
         title: String,
         categoryID: String,
-        systemImage: String
+        systemImage: String,
+        startedAt: Date
     ) {
         if !TaptionExternalPrivacyStore.isLocked,
            let categoryID = TaptionCurrentActivityPolicy.categoryID(
@@ -7209,13 +7220,30 @@ final class AppModel {
                 $0.id == categoryID
             }?.title ?? TimelineRowKind.title(forCategoryID: categoryID)
                 ?? AppLanguagePreference.text(korean: "활동", english: "Activity")
-            return (title, categoryID, systemImage)
+            return (title, categoryID, systemImage, currentActivityStartedAt(at: date))
         }
         return (
             AppLanguagePreference.text(korean: "확인 중", english: "Checking"),
             "unconfirmed",
-            "questionmark"
+            "questionmark",
+            date
         )
+    }
+
+    /// 지금 대분류가 시작된 시각. 같은 대분류가 이어진 구간은 가장 이른 시작을 쓴다.
+    /// 워치가 "몇 분째"를 스스로 셀 수 있게 함께 넘긴다.
+    private func currentActivityStartedAt(at date: Date) -> Date {
+        snapshot.actuals
+            .filter { actual in
+                actual.startedAt <= date
+                    && (actual.endedAt.map { date < $0 } ?? true)
+            }
+            .map(\.startedAt)
+            .min()
+            ?? snapshot.plans
+                .last { $0.status == .running && $0.span.start <= date }?
+                .span.start
+            ?? date
     }
 
     func deleteActual(_ actualID: UUID) async {
@@ -12063,6 +12091,56 @@ final class AppModel {
         await persistDeviceLocalSnapshot()
     }
 
+    /// 지금 대분류가 바뀌는 순간을 놓치지 않도록 짧은 주기로 확인한다.
+    /// 저장·센서 콜백은 몇 초씩 몰아서 오기 때문에, 계획이 끝나고 다음 대분류로 넘어가는
+    /// 경계에서는 아무 이벤트도 오지 않아 아일랜드·잠금화면·워치가 이전 활동에 머물렀다.
+    private func startCurrentActivitySyncIfNeeded() {
+        currentActivitySyncTask?.cancel()
+        currentActivitySyncTask = nil
+        guard isSceneActive else { return }
+
+        currentActivitySyncTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(
+                        for: .seconds(CurrentActivitySyncPolicy.intervalSeconds)
+                    )
+                } catch {
+                    return
+                }
+                guard let self, !Task.isCancelled, self.isSceneActive else {
+                    return
+                }
+                await self.publishCurrentActivityIfChanged()
+            }
+        }
+    }
+
+    private func stopCurrentActivitySync() {
+        currentActivitySyncTask?.cancel()
+        currentActivitySyncTask = nil
+    }
+
+    /// 대분류가 바뀐 경우에만 아일랜드·잠금화면·워치로 밀어 준다.
+    private func publishCurrentActivityIfChanged(now: Date = .now) async {
+        let projection = currentLiveActivityProjection(at: now)
+        let key = (categoryID: projection.categoryID, title: projection.title)
+        if let last = lastPublishedCurrentActivity,
+           last == key {
+            return
+        }
+        lastPublishedCurrentActivity = key
+        await reconcileSensorCollectionLiveActivity(isForeground: isSceneActive)
+        publishWatchPayload(now: now)
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "current_activity_published",
+            fields: [
+                "category": projection.categoryID,
+                "title": projection.title,
+            ]
+        )
+    }
+
     private func startForegroundHealthRefreshIfNeeded() {
         foregroundHealthRefreshTask?.cancel()
         foregroundHealthRefreshTask = nil
@@ -13371,6 +13449,9 @@ final class AppModel {
                     at: now,
                     calendar: calendar
                 ),
+            currentActivity: hidesSensitiveContent
+                ? nil
+                : watchCurrentActivity(now: now),
             accelerationSettings: TaptionWatchAccelerationSettings(
                 profile: isCommerceLocked
                     ? .off
@@ -13434,6 +13515,22 @@ final class AppModel {
                 fields: ["error": String(describing: type(of: error))]
             )
         }
+    }
+
+    /// 워치로 보낼 지금 대분류. 두 언어를 함께 보내 워치가 자기 언어 설정으로 고른다.
+    private func watchCurrentActivity(now: Date) -> TaptionWatchCurrentActivity? {
+        let projection = currentLiveActivityProjection(at: now)
+        guard projection.categoryID != "unconfirmed" else { return nil }
+        let action = TaptionLiveActivityStickmanAction.resolve(
+            categoryID: projection.categoryID,
+            title: projection.title
+        )
+        return TaptionWatchCurrentActivity(
+            categoryID: projection.categoryID,
+            koreanTitle: action.koreanTitle,
+            englishTitle: action.englishTitle,
+            startedAt: projection.startedAt
+        )
     }
 
     private func requestImmediateWidgetRefresh() {
