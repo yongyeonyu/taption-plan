@@ -17,13 +17,13 @@
 | **Component** | §3 的 22 个组件，每个声明它用哪些 token | 复用，不新造 |
 | **Pattern** | §4 的非正常状态 | 只在 §4 里选一个，不自创 |
 
-**一条硬规则：** 任何在 `TaptionPlan/UI` 里新出现的 `.system(size:)`、`cornerRadius: <数字>`、`Color(hex:)`、`padding(<数字>)` 都是回归。加 lint 拦它（§7.3）。
+**一条硬规则：** 任何在 `TaptionPlan/UI` 里新出现的 `.system(size:)`、`cornerRadius: <数字>`、`Color(hex:)`、`padding(<数字>)` 都是回归。加 lint 拦它（§7.4）。
 
 ---
 
 ## 1. 测量基线
 
-以下数字由脚本在 `0f6988b + ARC1024A09` 之后的树上跑出来，可复现（§7.4）。
+以下数字由脚本在 `0f6988b + ARC1024A09` 之后的树上跑出来，可复现（§7.5）。
 
 | 指标 | 实测 | 说明 |
 |---|---:|---|
@@ -184,6 +184,25 @@ border = 0.8pt tpCat(id) @ 35%
 | 是 | 是 | **`tpCatWash` + `tpInk`** | clip block、chip 实底 |
 | 是 | 否 | **`tpCat` 实底**（满饱和，**不是** `tpCatStrong`） | 공유 카드 12pt 比例条 |
 | 否 | 否（字在中性底上） | **中性底 + 4pt `tpCat` 条** | list row、表格行、图例行 |
+
+**每一条怎么机械判定**（review 时照做，不需要理解意图）：
+
+| 分支 | 判定动作 | 判错的后果 |
+|---|---|---|
+| 1 | 取 frame 的表达式里有模型值（`duration` / `ratio`）**且**填充形状内部有 `Text` | 误用 strong + 白字 → 10 个分类里 7 个白字不达标（§2.1.2 的实测） |
+| 2 | 同上第一个测试，内部**无** `Text` | 误判成 1 → wash 掉数据标记，比例条失去"长度即占比"的语义 |
+| 3 | frame 是**常数**（44pt），与数据无关 | 误判成 2 → 整行铺饱和色，一行里四个量级的数字全看起来"和分类有关" |
+
+**state 不是第四种填充 —— 这一点必须写下来，否则两份文档会打架。**
+
+`readOnly`（센서 원본，§3.9）是"无填充"的块，它同时满足 ①（高度=时长）和 ②（里面有字），但没有任何填充。它是**分支 1 的状态修饰**，不是一个新的填充配置：
+
+```
+先走 C7 选填充（branch 1 → tpCatWash + tpInk）
+再叠 state（readOnly → 去掉填充、留 0.8pt tpCat 描边、文字升到 tpCatStrong）
+```
+
+顺序不能反。反过来问会得到"一个没有填充的块该用什么填充"这种无解问题。**C7 只管"底怎么选"，state 只管"底之上怎么变"，两者不重叠。**
 
 **非法配置只有一个：饱和底 + 白字。** 它在 4.86 勉强通过，但每加一个分类就要重测一次白字对比度 —— 这是永久性的维护成本。
 
@@ -798,6 +817,8 @@ ZStack(alignment: .topLeading)
 | `gap`(미확인) | `tpCatWash(unconfirmed)` + 135° 사선 | 4pt `tpCatStrong(unconfirmed)` | 동상 | `?` 24pt (테두리 1.5pt `tpInk`) |
 | `disabled` | 上 + opacity 0.45 | — | — | — |
 
+> **`readOnly`는 채움 선택이 아니라 상태 변형이다.** C7(§2.1.2)로 채움을 먼저 고른 뒤(branch 1 → `tpCatWash` + `tpInk`), `readOnly`가 그 채움을 제거하고 0.8pt `tpCat` 외곽선 + `tpCatStrong` 글자로 바꾼다. 순서를 뒤집으면 "채움이 없는 블록은 무슨 채움을 쓰나"라는 답 없는 질문이 된다.
+
 **Token** `tpCatWash`, `tpCat`, `tpCatStrong`, `tpInk`, `Radius.x8`, `tpCallout`, `tpMeter`, `Space.x8/x5/x2`, `Elev.e1`
 
 **내용 접기 임계값（실측）**
@@ -934,10 +955,22 @@ Label(category.localizedTitle(language), systemImage: category.systemImage)
 | 문제 | 현재 | 고칠 값 | 근거 |
 |---|---|---|---|
 | **글자가 7.9pt까지 줄어든다** | 11pt + `minimumScaleFactor(0.72)` | `tpLabel` 12pt, `minimumScaleFactor` **삭제** | 12pt가 한글 하한(§2.2.5). 0.72를 걸면 `반려동물`·`봉사·커뮤니티`가 7.9pt가 되는데, 이건 Apple 최소(11pt)보다 작다 |
-| **히트 영역 36pt** | `minHeight: 36` | 44pt (`taptionTouchTarget`) | §5.3. 미확인 해소는 1회 탭이어야 하는데(C1) 표적이 8pt 모자란다 |
+| **히트 영역 36pt, `contentShape` 없음** | `minHeight: 36`, `.buttonStyle(.plain)`, 배경 `Capsule` | `frame(minHeight: 44)` + **`.contentShape(Rectangle())`** | §5.3.1. 표적은 **정확히 36pt** (행 inset은 히트 영역을 늘리지도 줄이지도 않는다). 8pt 모자란 것보다 중요한 건 **`contentShape`가 없다는 것** — 같은 파일이 6곳에서 쓰고 있다(`:1261, :1353, :1574, :1605, :1783, :1809`). 6개 반례가 있는 누락이다 |
 | **wash가 경계선** | `tint.opacity(0.18)` | `0.30` | 18%는 최소 ΔE 5.1(`work`/`sleep`)로 겨우 갈린다. 30%는 8.3. §2.1.2 |
 
 **Token** `tpCatWash(0.30)`, `tpInk`, `tpLabel(12)`, `Capsule`, `Space.x12`, `taptionTouchTarget`
+
+**后果链（这是它为什么比其他缺陷更重要）**
+
+```
+7.92pt 라벨  →  36pt 표적  →  오탭
+             →  unconfirmedCount가 0이 되지 않는다
+             →  MapHomeGrowthPolicy.qualifies == false
+             →  그날 정원이 자라지 않는다
+             →  감정적 보상이 아무 피드백 없이 사라진다
+```
+
+하나의 접근성 결함이 **제품 결함**이 되는 지점이 여기다. 다른 44pt 미달은 "불편"이지만, 이 컨트롤의 미달은 **게임 루프가 조용히 멈추는 것**이다.
 
 > **규칙 C1의 집행 지점.** `MapHomeGrowthPolicy.qualifies`는 `unconfirmedCount == 0`을 요구한다 — 미확인이 하나라도 있으면 그날 정원이 자라지 않는다. 이 칩이 그 상태를 지우는 유일한 수단이므로, **이 칩은 44pt이고 글자가 절대 줄어들지 않아야 한다.** 다른 어떤 컴포넌트보다 우선한다.
 
@@ -1278,6 +1311,26 @@ ZStack
 >
 > **但这里有一个真的前向风险，值得记下来：** 那 30 根柱子是在约 330pt 里排开的，**每根约 2pt 宽**。今天它们只负责显示，所以不是命中区问题；一旦有人给它们加上点选（"点某天跳到那天"是极可能的下一步），2pt 宽就是全 App 最糟的命中目标，而且会比 `trimHandle` 更糟，因为 30 个目标互相重叠。真要加，必须做**列级** `contentShape`（整条 44pt 高、按 index 均分宽度），不是给每根柱子加 padding。
 
+#### 5.3.1 `List` 안에서는 "행"이 표적이 아니다
+
+44pt 规则说的是**控件自己的 frame**，不是它所在的行。在 `List` 里这两件事会分开，所以规则要写清楚，否则没法执行：
+
+- `listRowInsets`（系统默认值）**不会缩小控件**，它只是让控件的可点区域**无法伸进 inset 区**。所以"整行可点"是做不到的，"控件自己有 44pt"是能做到的。
+- `.listRowBackground` **不增加命中区**，它只画背景。
+- `tpListStyle()`（`Theme.swift:502-507`）只设 `scrollContentBackground` / `background` / `tint`，**从不碰 `listRowInsets`**。所以**不要假设任何 `List` 是通栏的**。
+
+因此在 `List` 里做 44pt，必须同时满足两条：
+
+```swift
+Label(...)
+    .frame(maxWidth: .infinity, minHeight: 44)   // ① 控件自己 ≥44
+    .contentShape(Rectangle())                    // ② 整个 frame 可点
+```
+
+缺 ② 时，命中区会退回到字形边界（`.buttonStyle(.plain)` + 背景色尤其如此），44pt 的 frame 只是画得大，点不到。
+
+> **为什么这条必须写下来：** `MapHomeTimeSidebar.swift` 自己在 **6 处**用了 `.contentShape(Rectangle())`（`:1261, :1353, :1574, :1605, :1783, :1809`）。也就是说这个文件已经知道该怎么做，而 `unconfirmedChoice`（§3.15）是它内部唯一的例外。**这不是风格分歧，是遗漏，而且有 6 个反例。** 反例存在与否，是"发现"和"意见"的分界线。
+
 ### 5.4 VoiceOver（韩文标签，图标型控件必须有）
 
 | 控件 | `accessibilityLabel` | `accessibilityValue` | `hint` |
@@ -1346,7 +1399,7 @@ ZStack
 |---|---|---|---|
 | **1. Token 补齐** | `Theme.swift` 加 `Font.tp*`、`Space`、`Radius`、`Elev`、`Motion`、`Color.tpCat` / `tpCatStrong` / `tpCatWash`、`tpAccentText`、`tpLineControl`。**不改任何调用点。** | `xcodebuild` 通过；71+30 token 可编译 | 新 token 存在，旧 token 仍在 |
 | **2. 高危修复** | 只改 5 处，全部是达标问题：`clipBlock` 填充 → `tpCatWash` + 4pt `tpCat` 边条 + `tpInk` 字；`trimHandle` 白底 → `tpSurface` + 描边；NLE 头部 `닫기`/`적용` → `tpAccentText`；抽屉状态胶囊去 `mapHomeGlass`；`trimHandle` 扩命中区 | 截图对比 + 对比度脚本 | §2.1.2 的 7 项失败归零 |
-| **3. 字体迁移** | `Font.taption` 标 deprecated；按 §2.2.4 批量替换 1,077 处字面量；**再人工处理 §7.4 的 50 处计算值**；删除 `taption` | 逐屏截图对比；`grep -c '\.taption('` = 0 | 41 → 12 |
+| **3. 字体迁移** | `Font.taption` 标 deprecated；按 §2.2.4 批量替换 1,077 处字面量；**再人工处理 §7.3 的 49 处计算值（活代码 20 处）**；删除 `taption` | 逐屏截图对比；`grep -c '\.taption('` = 0 | 41 → 12 |
 | **4. 间距/圆角** | 按 §2.3 / §2.4 映射批量替换 | 截图对比；`grep -c 'cornerRadius: [0-9]'` = 0 | 20 → 12, 18 → 5 |
 
 ### 7.2 会跟这套系统打架的东西
@@ -1360,53 +1413,90 @@ ZStack
 | **25 个 `.sheet(` + 2 个 `.fullScreenCover(`** | 每个都自带 padding/detent 假设，改 token 会挪位置 | 阶段 1（`DayNavigator`）先把它们收进 `path`，再做视觉迁移。**顺序不能反** |
 | **`.preferredColorScheme(.light)` × 3** | 深色模式永不会来，但也意味着任何 `Color(.systemBackground)` 都是错的 | 禁止 `.systemBackground` / `.label` / `.secondary`。全用 `tp*`。现在有 12 处 `.foregroundStyle(.secondary)` 在用系统色 |
 | **`legacyUIEnabled = false` 的 20,811 行** | 编译期还在，`ScheduleView` 里也有 100+ 处字体调用 | **不在迁移范围。** 删掉这些视图是另一个项目。但迁移脚本要 `--exclude ScheduleView.swift ReviewView.swift GoalsView.swift SettingsView.swift`，否则统计会虚高 3 倍 |
-| **50 处字号是算出来的，不是字面量** | 批量替换只能匹配字面量。这 50 处会被静默漏掉，而且它们恰恰是**相对缩放**的地方，漏掉后不会报错，只会让层级在某个缩放下悄悄塌掉 | **先人工看一遍，再跑脚本。** 见 §7.4 |
+| **49 处字号是算出来的，不是字面量** | 批量替换只能匹配字面量。这 49 处会被静默漏掉，而且其中一部分恰恰是**相对缩放**的地方，漏掉后不会报错，只会让层级在某个缩放下悄悄塌掉 | **先人工看一遍，再跑脚本。** 见 §7.3 |
 
-### 7.4 算出来的字号：50 处，必须人工处理
+### 7.3 算出来的字号：50 个匹配 = 1 个定义 + **49 处调用**
 
-§1 的表里，1,077 是**字面量**调用数，总调用是 1,127。差的 50 处把字号当变量传，脚本匹配不到：
+§1 的表里，1,077 是**字面量**调用数，总调用是 1,127。差的 50 个匹配把字号当变量传，脚本匹配不到。**但其中 1 个是 `Font.taption` 自己的定义**（`Theme.swift:21` 的 `.system(size: size + 2, …)`，那个 `size` 当然是变量）。所以**真实调用点是 49 处**，不是 50。
 
-| 位置 | 写法 | 为什么要小心 |
-|---|---|---|
-| `MapHomeLocationPresentation.swift` ×9 | `size * 0.42` · `size * 0.43` · `size * 0.38` · `size * 0.30` · `size * 0.21` · `size * 0.25` | **这里已经有一套相对缩放。** 地图标注按基准字号的比例排层级。替换成固定 token 会把比例关系压平，不同缩放/机型下标注层级就没了 |
-| `MapHomeTimeSidebar.swift:1486,1524` | `rulerFontSize` | 时间尺字号是算出来的，和刻度密度联动 |
-| `MapHomeCalendarSheet.swift:1878` | `bold ? 15 : 13` | 三元表达式，替换时容易只改一支 |
-| `SettingsView.swift` ×多 | `SettingsTypography.footnote` / `.rowTitle` / `.rowSubtitle` / `.action` | **第五套字号系统**，在死视图里。不在迁移范围，但脚本要确认没被计入 |
-| `DetailViews.swift:2003,2921` | `compact ? 9 : 10.5` · `size` | 同上 |
+**而且其中 29 处在死视图里**，不在迁移范围：
 
-**处理规则：** 这 50 处不套用 §2.2.4 的映射表。相对缩放的地方**保留缩放结构**，只把基准值换成 token（`size * 0.42` → `tpMapLabelBase * 0.42`）；三元表达式按两支分别映射到最接近的 token。改完逐处截图，因为这批没有脚本可依赖。
+| 文件 | 计算值调用 | 死活 |
+|---|---:|---|
+| `SettingsView.swift` | 22 | **死** |
+| `ReviewView.swift` | 4 | **死** |
+| `ScheduleView.swift` | 3 | **死** |
+| **活代码合计** | **20** | ← 真正要处理的 |
 
-### 7.3 Lint（防回归）
+活代码的 20 处，按风险排序：
+
+| 位置 | 处数 | 写法 | 为什么要小心 |
+|---|---:|---|---|
+| `MapHomeLocationPresentation.swift` | **7** | `size * 0.42` · `0.43` · `0.38` · `0.43` · `0.30` · `0.21` · `0.25`（6 种乘数） | **这里已经有一套相对缩放。** 地图标注按基准字号的比例排层级。替换成固定 token 会把比例关系压平，不同缩放/机型下标注层级就没了 |
+| `MapHomeView.swift` | 7 | `Layout.mapControlIcon` ×5 · `min(20, …)` · `playbackIconSize` | 地图控件图标尺寸来自布局常量，不是排版决策 |
+| `MapHomeTimeSidebar.swift:1486,1524` | 2 | `rulerFontSize` | 时间尺字号由刻度密度算出（`MapHomeTimeSidebarMath.rulerFontSize(durationMinutes:)`，`:2720`） |
+| `DetailViews.swift:2003,2921` | 2 | `compact ? 9 : 10.5` · `size` | 三元表达式，替换时容易只改一支 |
+| `DraftComponents.swift:408` | 1 | `fontSize` | 外部传入 |
+| `MapHomeCalendarSheet.swift:1878` | 1 | `bold ? 15 : 13` | 三元表达式 |
+
+**处理规则：** 这 20 处不套用 §2.2.4 的映射表。相对缩放的地方**保留缩放结构**，只把基准值换成 token（`size * 0.42` → `tpMapLabelBase * 0.42`）；三元表达式按两支分别映射到最接近的 token。改完逐处截图，因为这批没有脚本可依赖。
+
+**死视图的 29 处不处理**，但脚本要用 `--exclude` 明确排除，否则要么被误改，要么统计虚高。
+
+### 7.4 Lint（防回归）
+
+分两类。**硬失败**是"出现即错"；**棘轮**是"现在有 N 处，只准减少不准增加"——迁移期的代码库里，一条一上来就报 79 次的规则没人会看，所以它不该当门禁。
 
 ```bash
 #!/usr/bin/env bash
 # scripts/lint-design-tokens.sh
 set -uo pipefail
 ROOT="TaptionPlan/UI"
-LEGACY="ScheduleView.swift|ReviewView.swift|GoalsView.swift|SettingsView.swift"
+LEGACY='ScheduleView.swift|ReviewView.swift|GoalsView.swift|SettingsView.swift'
 fail=0
 
+# ── 硬失败：出现即错 ──
 check () { # pattern, message
   local hits
   hits=$(grep -rEn "$1" "$ROOT" --include='*.swift' | grep -Ev "$LEGACY" || true)
   if [ -n "$hits" ]; then
-    echo "✗ $2"
-    echo "$hits" | head -10
-    fail=1
+    echo "✗ $2"; echo "$hits" | head -10; fail=1
   fi
 }
+check '\.system\(size: *[0-9]'     'Font: use Font.tp* (Theme.swift only)'
+check 'cornerRadius: *[0-9]'        'Radius: use Radius.x* (Theme.swift only)'
+check 'Color\(hex: *"'             'Color: use Color.tp* (Theme.swift only)'
+check '\.taption\(size:'           'Font.taption is deprecated (+2pt)'
+check 'mapHomeGlass'                'Glass: only over the live map — verify manually'
+check '\.minimumScaleFactor'        'Type: never shrink text — fix the copy or give it more width'
 
-check '\.system\(size: *[0-9]'        'Font: use Font.tp* (Theme.swift only)'
-check 'cornerRadius: *[0-9]'          'Radius: use Radius.x* (Theme.swift only)'
-check 'Color\(hex: *"'                'Color: use Color.tp* (Theme.swift only)'
-check '\.taption\(size:'              'Font.taption is deprecated (+2pt)'
-check 'mapHomeGlass'                  'Glass: only over the live map — verify manually'
+# ── 棘轮：只准减少（基线在 .lint-baseline）──
+ratchet () { # label, pattern
+  local n base
+  n=$(grep -rEn "$2" "$ROOT" --include='*.swift' | grep -Ev "$LEGACY" | wc -l | tr -d ' ')
+  base=$(grep "^$1 " .lint-baseline 2>/dev/null | awk '{print $2}'); base=${base:-999999}
+  if [ "$n" -gt "$base" ]; then echo "✗ $1: $n > baseline $base"; fail=1
+  else echo "· $1: $n (baseline $base)"; fi
+}
+ratchet 'size-under-12' '\.system\(size: *(9|10|10\.5|11)\b'
+ratchet 'tap-offset'    'taptionHitOutset'
+
 exit $fail
 ```
 
-例外用 `// design-token-exempt: <reason>` 单行注释放行，方便 review 时看见。
+初始基线（实测，live 路径）：`size-under-12 136` · `tap-offset 2`。
 
-### 7.4 复现测量
+`minimumScaleFactor` 是**硬失败**，因为它的唯一作用就是把字缩小，而缩到 12pt 以下没有合法用法（§2.2.5）。当前 23 处，全部要逐个处理。
+
+**为什么 `contentShape` 不进 lint。** §5.3.1 的"有背景但无 `contentShape`"**不能用 grep 判**：我试过，会命中 **47 处**，因为它分不清 200pt 的卡片和 36pt 的胶囊 —— 两者都"有 background、无 contentShape"，但只有后者错。判它必须知道 frame 尺寸，那是 SwiftSyntax 的活，不是正则的活。
+
+所以这条留给 review checklist，判据写死：
+
+> 控件的 `minHeight` 或 `frame(height:)` **小于 44**，带 `.background(...)`，且无 `.contentShape(Rectangle())` → 驳回。
+
+`unconfirmedChoice`（§3.15）三条全中。
+
+### 7.5 复现测量
 
 ```bash
 cd "taption plan"
