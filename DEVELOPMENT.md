@@ -11,6 +11,7 @@
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
+| 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
@@ -58,7 +59,7 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 센서 조회는 `TimeSpan.contains`와 같은 양 끝 포함 조건을 SQL의 `domain`·`timestamp` 범위에 전달합니다. 날짜 키를 만든 시간대가 바뀌어도 실제 시각이 범위 안이면 가져옵니다. `events_domain_timestamp_index`는 기존 대형 DB의 동기 초기화를 늦추지 않도록 저장소 actor의 첫 범위 조회 때 생성하고, 이후 재사용합니다. payload decode 후 원래 시각 필터·원본 복구·generation·취소 검사는 유지합니다. 한 날짜 전체를 읽고 Swift에서 대부분을 버리는 경로는 사용하지 않습니다.
 
-시작 화면은 복원 journal·잠금·접근 상태를 확인하고 설정 및 지도 shell이 준비되면 열린다. SQLite의 `loadStartupSnapshot()`은 metadata·settings·categories만 읽으며 전체 이력의 성공을 보증하거나 조회 캐시에 빈 이력을 넣지 않는다. pending 복원 journal·legacy 저장소·설정 읽기 실패 때는 기존 전체 로드 절차를 따른다. 전체 로드 전 일자 DB preview는 읽기 전용이며 편집·저장을 차단한다. 전체 로드 실패 때도 기존 원본 덮어쓰기 차단을 유지한다. `prepareLocalDataForDisplay()`는 전체 로컬 원본까지만 기다리고, 데이터 변경에 쓰는 `bootstrap()`은 기록 정리·저장 완료까지 기다린다. 정리 worker는 현재 revision과 일치하는 결과만 반영하며 그 결과를 메인 actor에서 다시 정리하지 않는다. `startup_settings_ready`, `initial_launch_ready`, `bootstrap_local_snapshot` / `bootstrap_preparation`으로 설정·화면 진입·전체 로드·정리 시간을 구분한다.
+시작 화면은 복원 journal·잠금·접근 상태를 확인하고 설정 및 지도 shell이 준비되면 열린다. 초기 진행 표시는 0.36 → 0.86 목표에 닿아도 준비가 끝나지 않았으면 0.97까지 계속 올라가고, 준비가 끝난 뒤 1.0으로 마무리합니다(`AppShellInitialLaunchProgressMath`, `AppShellView`). SQLite의 `loadStartupSnapshot()`은 metadata·settings·categories만 읽으며 전체 이력의 성공을 보증하거나 조회 캐시에 빈 이력을 넣지 않는다. pending 복원 journal·legacy 저장소·설정 읽기 실패 때는 기존 전체 로드 절차를 따른다. 전체 로드 전 일자 DB preview는 읽기 전용이며 편집·저장을 차단한다. 전체 로드 실패 때도 기존 원본 덮어쓰기 차단을 유지한다. `prepareLocalDataForDisplay()`는 전체 로컬 원본까지만 기다리고, 데이터 변경에 쓰는 `bootstrap()`은 기록 정리·저장 완료까지 기다린다. 정리 worker는 현재 revision과 일치하는 결과만 반영하며 그 결과를 메인 actor에서 다시 정리하지 않는다. `startup_settings_ready`, `initial_launch_ready`, `bootstrap_local_snapshot` / `bootstrap_preparation`으로 설정·화면 진입·전체 로드·정리 시간을 구분한다.
 
 권한 새로고침의 동시 요청은 한 작업을 기다립니다. 조회가 끝난 뒤 최신 settings에 실제 변경만 반영하고, 동일 상태의 권한·센서 상태를 다시 공개하거나 저장하지 않습니다. 지도 일자 revision이 같으면 fingerprint를 만들지 않으며, 현재 활동 캐시는 해당 시각의 기록·이동·체류·근접 이동 센서·Watch 수면 근거만 hash합니다. 활성 원본의 모든 필드는 비교에 포함합니다.
 
@@ -89,7 +90,11 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - `TaptionBoundedCache`는 actor 또는 MainActor 소유자가 동기 접근합니다. 조회는 O(1), 용량 초과 삽입 때만 제한된 항목을 검사합니다. `peek`은 recency를 바꾸지 않으며 메모리 압력 시 소유자가 비웁니다.
 - `AppModel`의 일자 fingerprint 캐시는 actuals/places/travel 변경 revision에 연결합니다. 캡처한 revision이 현재와 다르면 비동기 결과를 캐시에 넣지 않습니다. `PlanDayLoadCoordinator`에 공급하는 fingerprint는 동일하게 캡처한 source의 값이어야 합니다.
 - 지도는 날짜·source revision이 바뀔 때 utility worker에서 불변 일자 입력을 준비합니다. 준비 중 전체 과거 이력으로 돌아가지 않으며 UI의 유효성 확인은 revision·날짜·projection version만 비교합니다. 카메라 좌표 콜백에는 준비된 활동·재생 정보를 전달합니다.
-- 재생·시간축 선택의 마커와 카메라는 `MapHomePlaybackLocation`에서 같은 시각으로 조회합니다. 현재 frame(수면 포함)·확정 지하철·표시 중 예상 경로를 반영하고 나머지는 준비된 일자 GPS를 이진 탐색합니다. 시각 없는 위치 캐시·그리기용 경로 cutoff로 돌아가지 않으며 미래 첫 표본이나 다른 날짜 표본을 현재 선택 시각의 GPS로 사용하지 않습니다. 위치 조회마다 전체 센서 정렬·수면 anchor 계산을 반복하지 않습니다.
+- 재생·시간축 선택의 마커와 카메라는 `MapHomePlaybackLocation`에서 같은 시각으로 조회합니다. 현재 frame(수면 포함)·확정 지하철·표시 중 예상 경로를 반영하고 나머지는 준비된 일자 GPS를 이진 탐색합니다. 시각 없는 위치 캐시·그리기용 경로 cutoff로 돌아가지 않으며 미래 첫 표본이나 다른 날짜 표본을 현재 선택 시각의 GPS로 사용하지 않습니다. 위치 조회마다 전체 센서 정렬·수면 anchor 계산을 반복하지 않습니다. 네 갈래가 모두 비어 화랑이가 사라지는 구간은 이동 구간의 출발·도착 장소 좌표를 시각 비율로 보간합니다(`resolveOrGap`, `MapHomePlaybackContinuity.swift`). 장소 좌표가 없으면 좌표를 지어내지 않고 표시하지 않습니다.
+- 재생 배속은 이동 수단이 아니라 **대분류**로 정합니다(`MapHomePlaybackCategoryRanges`). 대분류 '이동'은 이동 배속(걷기는 3배), 수면·업무·식사·취미·운동·활동은 정지 배속입니다. 확정 여부와 센서 유무는 배속을 바꾸지 않으며, 미확인 이동도 이동 구간으로 재생합니다.
+- 지도 카운터는 재생 중에는 재생 시각까지로 잘라 세어(`MapHomeCounterTimelinePolicy`) 시간을 따라 올라갑니다. 하루 전체 합계는 1분 버킷으로 캐시(`MapHomeCounterValueCache`)해 30Hz 재생 틱마다 하루 phase를 다시 계산하지 않습니다. 표시 형태는 `MapHomeCounterTable`이 정합니다(1개=알약, 2개 이상=한 상자에 줄을 붙여 세로로 길어짐).
+- 잠금화면·다이나믹 아일랜드의 현재 활동 이름·아이콘은 앱 화면과 같은 시간 레일 엔진(`MapHomeTimeRailSegmentEngine`)에서 읽습니다. 잠금 상태이거나 그 시각에 미확인뿐이면 기존 '확인 중' 표시로 물러섭니다.
+- 클립 편집기(`MapHomeNLEClipEditor`)는 경계를 고르지 않은 클립에서도 다듬기로 받습니다. 몸통을 끌면 옮기고, 제자리에서 손을 떼면 되돌리기 흔적을 남기지 않습니다. 같은 원본 구간 안에서 맞닿은 미확인 조각은 `NLETrack.normalized`가 하나로 합칩니다.
 - 일자 DB는 원본 digest를 검증한 materialized 값을 한 번 읽고, source가 다르면 그 값의 raw로 다시 projection합니다. stale preview는 별도 읽기 계약을 유지합니다. 같은 날 source가 바뀌어 projection을 취소할 때 진행 중인 센서 원본 읽기는 공유합니다. raw 변경·삭제·전체 무효화·메모리 압력에는 원본 읽기도 취소합니다. 삭제 generation·취소·강제 raw 갱신을 우회하지 않습니다. Watch 원본 replay와 센서 결합·정렬은 utility worker에서 처리하고, 취소 로그는 원문 없이 호출 취소·generation 변경·archive 읽기 실패를 구분합니다.
 - `DayPhaseEngine`은 하루 앞뒤35분의 근거 범위로 기록·이동·체류를 먼저 거른 뒤 제목 판정·장소 그룹을 계산합니다. 자정을 넘는 기록과 출퇴근 경계를 보존하고 원본을 수정하지 않습니다. 수면 위치도 날짜/cutoff 교집합을 확인한 뒤 기존 제목 판정을 적용합니다. 전체 과거 기록에 대한 반복 제목 검색을 화면 계산에 넣지 않습니다.
 - `TaptionLatestValueProjection`과 `TaptionInputFrameGate`가 공통 입력 정책입니다. 동일 상태로 갱신 예산을 소비하지 않고, 종료 이벤트는 최종값을 즉시 반영합니다. UIKit/MapKit 제스처와 표시 좌표는 앱에 남깁니다.
