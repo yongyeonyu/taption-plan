@@ -2804,3 +2804,33 @@
 2. **CI 트리거는 만들지 않았다.** 저장소에 `.p8`과 배포 인증서를 시크릿으로 넣고 macOS 러너에서 automatic signing을 돌리는 설정이 필요한데, 이 환경에서 검증할 수 없어 검증되지 않은 워크플로를 넣지 않았다. 트리거는 `AGENTS.md` 규칙 + `release.sh`로 동작한다.
 3. **알림 메일·외부 테스터 노출은 확인하지 않았다.** 내부 그룹(`isInternalGroup=true`)의 테스터 1명만 읽었다.
 4. 이번 실행은 `--with-tests` 없이 돌았다(아카이브 컴파일로 빌드만 확인). 단위 테스트는 `SLP1024C13`에서 별도로 확인한 상태다.
+
+## HME1024B15 · 집 마커를 원형 아바타로 (2026-10-24)
+
+### 1. 바꾼 것
+- `MapHomePlacePin` 홈 분기: **육각형 + 48pt 집 그림 + 지붕 위 날씨 캡슐** → **원형 발광(140) + 원형 아바타(78) + 위 날씨 배지 + 아래 Lv 필**.
+- **죽은 `homeGrowthCallout` 삭제.** `toggleGrowthCallout()`을 부르는 곳이 없어 늘 `opacity 0` 인데 VStack 안에서 약 99pt를 차지했고, 위쪽 `Color.clear` 22pt까지 더해져 마커 묶음이 좌표보다 아래로 밀려 있었다. 관련 `@State` 2개와 `homeMarkerBackground`·`homeIconTapGesture`도 함께 지웠다.
+- **`homeImageCenterOffset` (0, 30) → `.zero`.** 이 30pt가 바로 그 빈 자리를 보정하던 값이었다. 탭 판정·레벨 라벨 위치·연봉 카운터가 모두 이 값에 기대고 있어 함께 틀어져 있었다.
+- 아바타는 화랑이 유무와 상관없이 **78 원 하나**로 통일했다. 기존 `scaleEffect(1.5)` 확대는 없애고 화랑이를 원 안에 함께 그린다. 아트는 56으로 줄여 원 테두리에 붙지 않게 했고, 화랑이 위치는 `homeArtScale`(56/48)로 같은 비율로 옮겼다.
+- 연봉 카운터 `salaryOffsetFromPinCenter` −31 → **−62**(아바타 위 배지 줄보다 위). Apple 지도 호스트 130×192 → **150×140**.
+
+### 2. 검증
+- **`-pinPreview`(DEBUG) 화면을 새로 만들었다.** 홈 화면을 통째로 띄우면 권한 알림에 가려 마커를 볼 수 없어서, 마커만 단독으로 띄우고 화면 가운데에 십자선(=지도 좌표)을 그렸다.
+- 스크린샷 `build/validation/HME1024B15/pin-after3.png`: **십자선 중심과 아바타 원 중심이 일치**한다. 발광·원형 아바타·위 날씨 배지·아래 Lv 필 구성 확인. 화랑이가 있는 두 마커 모두 원 안에 들어온다.
+- 단위 테스트: `FeatureEngineTests` **661 통과 / 0 실패**. 전체 `TaptionPlanTests` **1,598 통과 / 1 실패 / 2 건너뜀**.
+  - 실패 1건은 `testStoreKitProductPurchaseEntitlementAndRestore` — `test.md`에 기록된 iOS 27 StoreKitTest **기존 실패**다(IAP 보류 중). 이번 변경과 무관.
+  - 건너뜀 2건은 HealthKit entitlement 환경 건너뜀.
+- 바꾼 테스트 3건: `testCatTapRoutingAcceptsOnlyTapsInsideMarkerBounds`(화랑이 위치를 하드코딩 대신 "아바타 원 안"으로 판정), `testHomeSummaryTapCoversIconAndLevelLabelButNotTheMapAround`(라벨 y가 화랑이 유무와 같아짐), `testHomePinCentersAvatarOnCoordinateAndStacksBadgesAround`(기존 `testHomePinStacksWeatherAboveRoofAndLabelUnderHouse`를 새 배치로 재작성).
+- Debug 빌드 `BUILD SUCCEEDED`(`generic/platform=iOS Simulator`).
+- 구조 게이트 통과. `MapHomeView` **22,072줄**(기준선과 같은 값, 증가 0). import boundary 통과.
+
+### 3. 추가 확인 (시뮬레이터 복구 후)
+- Xcode 업데이트로 멈췄던 시뮬레이터가 재부팅 뒤 **복구**되어, 최종 커밋 빌드(19:26)로 다시 찍었다: `pin-final3.png`.
+- 이 화면에서 **연봉 카운터(`0원`)가 날씨 배지(`19°`) 바로 위에 겹치지 않고 놓이는 것**을 확인했다. 두 배지 사이에 간격이 남고 아바타를 덮지 않는다.
+- 십자선과 아바타 원 중심도 그대로 일치한다(가로·세로 모두).
+- 화랑이가 있는 두 마커 모두 원 안에 들어오고, `Lv.365` 필은 아바타 아래에 붙는다.
+
+### 4. 한계
+1. **사진은 돈·날씨 배지가 가로로 나란한데, 여기서는 세로로 쌓았다.** 연봉 카운터를 지도 레이어가 따로 그려 한 뷰에서 x·y를 맞출 수 없다. 금액이 커져도 폭이 변하지 않는 세로 배치가 겹침에 안전하다고 판단했다. (`pin-final3.png`에서 겹치지 않는 것은 확인)
+2. **작업 도중 Xcode가 27.0 → 27.1로 자동 업데이트되어 시뮬레이터가 한때 멈췄다.** `CoreSimulator is out of date (1171.7.0 < 1174.9.2)`가 나오고 `simctl list`가 응답하지 않았다. 재부팅 후 복구되어 최종 확인까지 마쳤지만, 그 사이 마지막 빌드는 `generic/platform=iOS Simulator`로 컴파일만 확인했다.
+3. **홈 화면 전체 스크린샷은 여전히 얻지 못했다.** 위치 권한은 재부팅 뒤 `simctl privacy grant`가 먹었지만 사진 보관함 알림은 계속 뜬다. 실제 지도 위 배치(Apple 지도 호스팅 뷰 안에서 발광이 잘리지 않는지)는 확인하지 못했다.
