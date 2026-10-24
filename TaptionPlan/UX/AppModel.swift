@@ -1041,6 +1041,9 @@ final class AppModel {
     /// 한 번에 하나만 보여 준다.
     private(set) var frequentPlaceSuggestion: FrequentPlaceSuggestion?
     private(set) var sleepSessions: [SleepSession] = []
+    /// 워치 기록이 늦게 도착해 아이폰 추정을 갈아 끼운 기록. 앱을 다시 켜면
+    /// 세션 자체가 HealthKit에서 다시 계산되므로 이 목록도 함께 비워진다.
+    private(set) var sleepReconciliations: [SleepReconciliation] = []
     private(set) var lastHealthRefreshAt: Date?
     private(set) var healthSyncOverview = HealthKitSyncOverview(states: [])
     private(set) var healthSyncProgress: HealthKitSyncProgress?
@@ -4350,6 +4353,7 @@ final class AppModel {
             $0.source == .healthKit || $0.source == .appleWatch
         }
         sleepSessions = []
+        sleepReconciliations = []
         lastHealthRefreshAt = nil
         healthSyncOverview = HealthKitSyncOverview(states: [])
         healthSyncProgress = nil
@@ -5742,6 +5746,7 @@ final class AppModel {
         groupNavigationPath = []
         memoEntry = nil
         sleepSessions = []
+        sleepReconciliations = []
         pendingMapMemoIDs.removeAll()
         finalizedTrackingSessionIDs.removeAll()
         latestWatchSummaryVersion.removeAll()
@@ -8907,12 +8912,14 @@ final class AppModel {
                 let overnightSpan = SleepAnalysisEngine.overnightSpan(
                     containing: snapshot.capturedAt
                 )
-                sleepSessions.removeAll {
-                    $0.isAppleWatchConfirmed
-                        && $0.span.intersection(with: overnightSpan) != nil
-                }
-                sleepSessions.append(contentsOf: sessions)
-                sleepSessions.sort { $0.span.start < $1.span.start }
+                let installation = SleepSessionInstallation.installing(
+                    sessions,
+                    into: sleepSessions,
+                    inside: overnightSpan,
+                    replacing: { $0.isAppleWatchConfirmed }
+                )
+                sleepSessions = installation.sessions
+                applySleepReconciliations(installation.reconciliations)
                 self.snapshot.actuals.removeAll {
                     $0.source == .appleWatch
                         && AutomaticRecordTimelineEngine.isSleep($0)
@@ -12060,6 +12067,14 @@ final class AppModel {
         return true
     }
 
+    /// 워치 기록이 아이폰 추정을 갈아 끼운 결과를 쌓는다.
+    private func applySleepReconciliations(_ records: [SleepReconciliation]) {
+        sleepReconciliations = SleepReconciliationLedger.appending(
+            records,
+            to: sleepReconciliations
+        )
+    }
+
     private func refreshHealthData(
         in requestedSpan: TimeSpan? = nil,
         showErrors: Bool = true,
@@ -12175,11 +12190,13 @@ final class AppModel {
                 )
             }
             if !freshSessions.isEmpty {
-                sleepSessions.removeAll {
-                    $0.span.intersection(with: span) != nil
-                }
-                sleepSessions.append(contentsOf: freshSessions)
-                sleepSessions.sort { $0.span.start < $1.span.start }
+                let installation = SleepSessionInstallation.installing(
+                    freshSessions,
+                    into: sleepSessions,
+                    inside: span
+                )
+                sleepSessions = installation.sessions
+                applySleepReconciliations(installation.reconciliations)
             } else {
                 Self.integrationLogger.notice(
                     "HealthKit returned no sleep sessions; preserving existing records"

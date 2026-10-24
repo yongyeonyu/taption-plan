@@ -72,28 +72,42 @@ struct MapHomeNLEClipEditor: View {
     var body: some View {
         // 하루는 위에서 아래로 흐른다. 왼쪽 눈금 옆으로 세 줄이 나란히 선다:
         // 내가 고치는 대분류, 센서가 그대로 기록한 원본, 그리고 상세활동 기록.
+        //
+        // 클립 줄만 화면 밖까지 넓혀 그린다. 하루가 화면 폭에 끼어 잘리는 대신
+        // 위아래로 끝없이 이어지는 타임라인처럼 보이게 하려는 것이다. 머리말·
+        // 선택 요약·도구 막대는 그대로 안쪽 여백을 지킨다.
         GeometryReader { proxy in
             let spacing: CGFloat = 12
             let headerHeight: CGFloat = 16
             let railHeight = max(220, proxy.size.height - (44 + headerHeight + 26 + 44 + spacing * 3 + 4))
+            let bleed = Self.railBleed
+            let railWidth = proxy.size.width + bleed * 2
             VStack(spacing: spacing) {
                 header
-                VStack(spacing: 4) {
-                    laneHeader(width: proxy.size.width)
-                        .frame(height: headerHeight)
+                    .padding(.horizontal, bleed)
+                VStack(alignment: .leading, spacing: 4) {
+                    laneHeader(width: railWidth)
+                        .frame(width: railWidth, height: headerHeight)
                     verticalRail
-                        .frame(height: railHeight)
+                        .frame(width: railWidth, height: railHeight)
                 }
+                // 왼쪽 눈금은 제자리에 두고 오른쪽으로만 넘치게 한다. 줄이 화면
+                // 밖까지 이어지되 시각 라벨은 잘리지 않는다.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 selectionSummary
+                    .padding(.horizontal, bleed)
                 toolbar
+                    .padding(.horizontal, bleed)
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
-        .padding(.horizontal, 14)
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
     }
+
+    /// 클립 줄이 화면 양옆으로 삐져나오는 폭.
+    private static let railBleed: CGFloat = 14
 
     private var header: some View {
         HStack {

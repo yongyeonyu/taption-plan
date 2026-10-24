@@ -115,6 +115,153 @@ extension SleepSession {
     }
 }
 
+// MARK: - Sleep provenance
+
+/// 수면 기록을 만든 기기의 등급. 값이 클수록 그 주장을 먼저 믿는다.
+///
+/// 애플워치는 몸에 붙어 수면 단계를 직접 재고, 아이폰은 기기 사용 흔적으로
+/// 잠을 추정한다. 그래서 워치가 없는 동안에는 아이폰 기록으로 먼저 결과를
+/// 만들고(`isProvisional`), 워치 기록이 도착하면 그 밤의 수면·기상 주장을
+/// 워치 것으로 갈아 끼운다. `inBed`는 수면 주장이 아니라 "침대에 있었다"는
+/// 별개 사실이고 수면 효율의 분모라서 등급과 무관하게 합친다.
+enum SleepSourceTier: String, Codable, CaseIterable, Hashable, Sendable {
+    case unknown
+    case iPhone
+    case thirdParty
+    case appleWatch
+
+    var priority: Int {
+        switch self {
+        case .unknown: 0
+        case .iPhone: 10
+        case .thirdParty: 20
+        case .appleWatch: 30
+        }
+    }
+
+    /// 이 등급으로 만든 결과를 더 높은 등급이 나중에 보정할 수 있는지.
+    var needsConfirmation: Bool {
+        self != .appleWatch
+    }
+
+    var displayName: String {
+        switch self {
+        case .unknown:
+            AppLanguagePreference.text(korean: "출처 미상", english: "Unknown source")
+        case .iPhone:
+            AppLanguagePreference.text(korean: "아이폰", english: "iPhone")
+        case .thirdParty:
+            AppLanguagePreference.text(korean: "다른 앱", english: "Other app")
+        case .appleWatch:
+            AppLanguagePreference.text(korean: "애플워치", english: "Apple Watch")
+        }
+    }
+}
+
+extension SleepSegment {
+    /// 이 표본을 만든 기기의 등급. HealthKit이 주는 출처 메타데이터만 본다.
+    var sourceTier: SleepSourceTier {
+        Self.sourceTier(
+            sourceName: sourceName,
+            sourceBundleIdentifier: sourceBundleIdentifier,
+            deviceName: deviceName
+        )
+    }
+
+    static func sourceTier(
+        sourceName: String,
+        sourceBundleIdentifier: String,
+        deviceName: String?
+    ) -> SleepSourceTier {
+        let device = (deviceName ?? "").lowercased()
+        let name = sourceName.lowercased()
+        let bundle = sourceBundleIdentifier.lowercased()
+        if device.contains("watch") || name.contains("watch") {
+            return .appleWatch
+        }
+        // 워치·타 기기에서 올라온 HealthKit 표본의 출처 번들은
+        // `com.apple.health.<기기 UUID>` 꼴이고, 아이폰 건강 앱이 직접 만든
+        // 표본은 `com.apple.Health`다.
+        if bundle.hasPrefix("com.apple.health.") {
+            return .appleWatch
+        }
+        if device.contains("iphone") || name.contains("iphone") {
+            return .iPhone
+        }
+        if bundle == "com.apple.health" {
+            return .iPhone
+        }
+        if bundle.isEmpty && name.isEmpty && device.isEmpty {
+            return .unknown
+        }
+        return .thirdParty
+    }
+}
+
+extension SleepSession {
+    /// 이 세션을 이끈 가장 높은 등급. 구간에서 파생하므로 저장하지 않는다.
+    /// 구간이 비어 있는 세션(테스트·복원 경로)은 출처 이름으로 대신 판정한다.
+    var sourceTier: SleepSourceTier {
+        if let fromSegments = segments
+            .map(\.sourceTier)
+            .max(by: { $0.priority < $1.priority }),
+           fromSegments != .unknown {
+            return fromSegments
+        }
+        return sourceNames
+            .map {
+                SleepSegment.sourceTier(
+                    sourceName: $0,
+                    sourceBundleIdentifier: "",
+                    deviceName: nil
+                )
+            }
+            .max(by: { $0.priority < $1.priority }) ?? .unknown
+    }
+
+    /// 워치 기록 없이 만든 잠정 결과인지. 워치 데이터가 오면 보정 대상이다.
+    var isProvisional: Bool {
+        sourceTier.needsConfirmation
+    }
+
+    /// 워치가 이 밤의 수면 시간을 확정했는지.
+    var isWatchAuthoritative: Bool {
+        sourceTier == .appleWatch && asleepDuration > 0
+    }
+}
+
+/// 워치 기록이 늦게 도착해 아이폰 추정 결과를 갈아 끼웠을 때 남기는 기록.
+/// 값 자체를 되돌릴 수는 없으므로, 무엇이 얼마나 달라졌는지만 보관한다.
+struct SleepReconciliation: Identifiable, Codable, Hashable, Sendable {
+    enum Reason: String, Codable, Hashable, Sendable {
+        /// 잠정(아이폰) 추정을 워치가 확정으로 대체했다.
+        case watchReplacedEstimate
+        /// 워치 기록만 있던 밤에 잠정 추정이 없었다가 워치가 채웠다.
+        case watchFilledGap
+    }
+
+    var id: UUID
+    /// 그 밤을 가리키는 날짜(기상일 기준 자정).
+    var overnightDate: Date
+    var estimatedTier: SleepSourceTier
+    var estimatedSpan: TimeSpan?
+    var estimatedAsleepDuration: TimeInterval
+    var authoritativeTier: SleepSourceTier
+    var authoritativeSpan: TimeSpan
+    var authoritativeAsleepDuration: TimeInterval
+    var reason: Reason
+    var reconciledAt: Date
+
+    var asleepDurationDelta: TimeInterval {
+        authoritativeAsleepDuration - estimatedAsleepDuration
+    }
+
+    var spanStartDelta: TimeInterval {
+        guard let estimatedSpan else { return 0 }
+        return authoritativeSpan.start.timeIntervalSince(estimatedSpan.start)
+    }
+}
+
 // MARK: - Motion and pedometer
 
 struct SensorVector3: Codable, Hashable, Sendable {

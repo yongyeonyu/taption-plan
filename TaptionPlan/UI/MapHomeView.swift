@@ -2556,6 +2556,9 @@ struct MapHomeView: View {
         static let horizontalInset: CGFloat = 10
         /// 상단 한 줄의 공통 높이(메모·일정 원형 버튼, 날짜 줄, 날짜 배지).
         static let dateBadgeSize: CGFloat = 40
+        /// 상단 한 줄의 위 여백. 메뉴·메모·일정·날짜 배지가 모두 이 값만큼
+        /// 내려온 같은 높이에 놓인다(가운데 높이 = topRowInset + dateBadgeSize/2).
+        static let topRowInset: CGFloat = 12
         static let headerVisibleHeight: CGFloat = 46
         static let headerHitTarget: CGFloat = 44
         static let headerIcon: CGFloat = 19
@@ -2691,26 +2694,63 @@ struct MapHomeView: View {
         )
     }
 
+    /// 행동구간 편집에 들어갈 때 바로 여는 클립 편집기. 저장하면 고른 구간을
+    /// 그대로 선택해 두고, 미확인 구간을 고쳤으면 그날 보상을 준다.
+    private func clipEditorSheet(
+        for selection: MapHomeSectionEditSelection
+    ) -> some View {
+        MapHomeNLEClipEditor(
+            model: model,
+            language: language,
+            date: selection.date,
+            segments: selection.daySegments.isEmpty
+                ? [selection.segment]
+                : selection.daySegments,
+            details: selection.dayDetails.isEmpty
+                ? selection.details
+                : selection.dayDetails,
+            focusMinute: selection.segment.startMinute,
+            onSaved: {
+                applySectionEditSave(
+                    selection.selectedSpan,
+                    selection: selection
+                )
+            }
+        )
+    }
+
+    /// 구간 편집을 저장한 뒤 선택 시각을 그 구간 가운데로 되돌린다.
+    /// 클립 편집기와 (지금은 숨긴) 행동구간 편집 화면이 같은 규칙을 쓴다.
+    private func applySectionEditSave(
+        _ span: TimeSpan,
+        selection: MapHomeSectionEditSelection
+    ) {
+        refreshTimeRailSegments()
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: selection.date)
+        let midpoint = span.start.addingTimeInterval(span.duration / 2)
+        selectedTimelineMinute = min(
+            1_439,
+            max(0, Int(midpoint.timeIntervalSince(dayStart) / 60))
+        )
+        isTimelineSelectionPinned = true
+        if selection.segment.categoryID == "unconfirmed" {
+            rewardRecentCompletedDay(selection.date)
+        }
+    }
+
+    /// 지금은 쓰지 않는 행동구간 편집 화면. 클립 편집기로 대체되어 호출부가
+    /// 주석 처리되어 있다. 화면을 되돌릴 때 이 함수를 다시 연결한다.
     private func sectionEditSheet(for selection: MapHomeSectionEditSelection) -> some View {
         MapHomeSectionEditSheet(
             model: model,
             selection: selection,
             language: language,
             onSaved: { result in
-                refreshTimeRailSegments()
-                let calendar = Calendar.autoupdatingCurrent
-                let dayStart = calendar.startOfDay(for: selection.date)
-                let midpoint = result.selectedSpan.start.addingTimeInterval(
-                    result.selectedSpan.duration / 2
+                applySectionEditSave(
+                    result.selectedSpan,
+                    selection: selection
                 )
-                selectedTimelineMinute = min(
-                    1_439,
-                    max(0, Int(midpoint.timeIntervalSince(dayStart) / 60))
-                )
-                isTimelineSelectionPinned = true
-                if selection.segment.categoryID == "unconfirmed" {
-                    rewardRecentCompletedDay(selection.date)
-                }
             }
         )
     }
@@ -2871,7 +2911,7 @@ struct MapHomeView: View {
             if !isScreenRecording {
                 dateBadge
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.top, 12)
+                    .padding(.top, Layout.topRowInset)
                     .padding(.trailing, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
             }
@@ -2885,18 +2925,17 @@ struct MapHomeView: View {
                             Image(systemName: "line.3.horizontal")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Color.tpInk)
-                                .frame(width: 40, height: 34)
-                                .background(Color.tpSurface.opacity(0.96), in: Capsule())
-                                .overlay { Capsule().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
+                                .frame(width: Layout.dateBadgeSize, height: Layout.dateBadgeSize)
+                                .background(Color.tpSurface.opacity(0.96), in: Circle())
+                                .overlay { Circle().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
                         }
                         .buttonStyle(.plain)
-                        .padding(.top, 6)
                         .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
                     }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, Layout.horizontalInset)
-                .padding(.top, 2)
+                .padding(.top, Layout.topRowInset)
                 .zIndex(MapHomeLayerPriority.header)
             }
 
@@ -3348,7 +3387,10 @@ struct MapHomeView: View {
                 refreshTimeRailSegments()
             }
         ) { selection in
-            sectionEditSheet(for: selection)
+            // 행동구간 편집에 들어가면 클립 편집기를 바로 연다. 기존 행동구간
+            // 편집 화면은 아래 한 줄을 되살리면 그대로 돌아온다.
+            // sectionEditSheet(for: selection)
+            clipEditorSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
         .onChange(of: isMenuOpen) { _, isOpen in
@@ -3834,7 +3876,7 @@ struct MapHomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, Layout.horizontalInset)
-        .padding(.top, 12)
+        .padding(.top, Layout.topRowInset)
         .onChange(of: memoStackExpanded) { _, open in setTopPanel(.memo, open: open) }
         .onChange(of: todayCalendarExpanded) { _, open in setTopPanel(.calendar, open: open) }
     }
@@ -13246,6 +13288,18 @@ private struct MapHomeSectionEditSelection: Identifiable {
     /// 하루 전체의 상세 활동. 선택한 구간 밖의 활동도 흐리게 보여 준다.
     var dayDetails: [MapHomeSectionDetail] = []
 
+    /// 고른 구간의 실제 시각. 클립 편집기가 하루 전체를 다시 덮으므로,
+    /// 저장 뒤 되돌아갈 자리를 이 값으로 계산한다.
+    var selectedSpan: TimeSpan {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: date)
+        func at(_ minute: Int) -> Date {
+            calendar.date(byAdding: .minute, value: minute, to: dayStart)
+                ?? dayStart
+        }
+        let start = at(segment.startMinute)
+        return TimeSpan(start: start, end: max(start, at(segment.endMinute)))
+    }
 }
 
 enum MapHomeSectionEditLayout {

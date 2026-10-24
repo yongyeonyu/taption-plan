@@ -11913,6 +11913,200 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    func testSleepSourceTierClassifiesWatchIPhoneAndThirdParty() {
+        func tier(_ name: String, bundle: String, device: String?) -> SleepSourceTier {
+            SleepSegment.sourceTier(
+                sourceName: name,
+                sourceBundleIdentifier: bundle,
+                deviceName: device
+            )
+        }
+
+        XCTAssertEqual(
+            tier("Apple Watch", bundle: "com.apple.health", device: "Apple Watch"),
+            .appleWatch
+        )
+        XCTAssertEqual(
+            tier("건강", bundle: "com.apple.health.5B1F0C4E-0000-4000-8000-000000000000", device: nil),
+            .appleWatch
+        )
+        XCTAssertEqual(tier("iPhone", bundle: "com.apple.Health", device: "iPhone"), .iPhone)
+        XCTAssertEqual(tier("건강", bundle: "com.apple.Health", device: nil), .iPhone)
+        XCTAssertEqual(tier("Sleep Cycle", bundle: "com.sleepcycle.app", device: nil), .thirdParty)
+        XCTAssertEqual(tier("", bundle: "", device: nil), .unknown)
+        XCTAssertGreaterThan(
+            SleepSourceTier.appleWatch.priority,
+            SleepSourceTier.thirdParty.priority
+        )
+        XCTAssertGreaterThan(
+            SleepSourceTier.thirdParty.priority,
+            SleepSourceTier.iPhone.priority
+        )
+    }
+
+    func testIPhoneOnlyNightIsMarkedProvisional() {
+        let base = makeDate(2026, 9, 1, 23)
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(7 * hour)),
+                sourceName: "iPhone",
+                sourceBundleIdentifier: "com.apple.Health"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].sourceTier, .iPhone)
+        XCTAssertTrue(sessions[0].isProvisional)
+        XCTAssertFalse(sessions[0].isWatchAuthoritative)
+    }
+
+    /// 워치가 밤을 직접 쟀으면 아이폰 추정이 그 위에 섞이지 않는다.
+    func testWatchStagesReplaceIPhoneEstimateForSameNight() {
+        let base = makeDate(2026, 9, 2, 22)
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(10 * hour)),
+                sourceName: "iPhone",
+                sourceBundleIdentifier: "com.apple.Health"
+            ),
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(hour),
+                    end: base.addingTimeInterval(8 * hour)
+                ),
+                sourceName: "Apple Watch",
+                deviceName: "Apple Watch"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].asleepDuration, 7 * hour)
+        XCTAssertEqual(sessions[0].sourceTier, .appleWatch)
+        XCTAssertFalse(sessions[0].isProvisional)
+        XCTAssertTrue(sessions[0].isWatchAuthoritative)
+    }
+
+    /// 워치가 자지 않은 낮잠까지 지우지는 않는다(겹치는 구간만 워치 것을 쓴다).
+    func testWatchNightKeepsIPhoneNapOutsideItsCoverage() {
+        let base = makeDate(2026, 9, 3, 0)
+        let sessions = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(6 * hour)),
+                sourceName: "Apple Watch",
+                deviceName: "Apple Watch"
+            ),
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(13 * hour),
+                    end: base.addingTimeInterval(14 * hour)
+                ),
+                sourceName: "iPhone",
+                sourceBundleIdentifier: "com.apple.Health"
+            )
+        ])
+
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertEqual(sessions[0].sourceTier, .appleWatch)
+        XCTAssertEqual(sessions[1].sourceTier, .iPhone)
+        XCTAssertTrue(sessions[1].isProvisional)
+        XCTAssertEqual(sessions[1].asleepDuration, hour)
+    }
+
+    /// 요청 구간 밖의 워치 기록이 구간 안의 아이폰 기록을 지우지 않는다.
+    func testSleepSpanClippingKeepsIPhoneEstimateWhenWatchIsOutsideSpan() {
+        let base = makeDate(2026, 9, 6, 22)
+        let sessions = SleepAnalysisEngine().sessions(
+            from: [
+                SleepSegment(
+                    stage: .asleepUnspecified,
+                    span: TimeSpan(start: base, end: base.addingTimeInterval(10 * hour)),
+                    sourceName: "iPhone",
+                    sourceBundleIdentifier: "com.apple.Health"
+                ),
+                SleepSegment(
+                    stage: .core,
+                    span: TimeSpan(
+                        start: base.addingTimeInterval(hour),
+                        end: base.addingTimeInterval(8 * hour)
+                    ),
+                    sourceName: "Apple Watch",
+                    deviceName: "Apple Watch"
+                )
+            ],
+            inside: TimeSpan(
+                start: base.addingTimeInterval(9 * hour),
+                end: base.addingTimeInterval(12 * hour)
+            )
+        )
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].sourceTier, .iPhone)
+        XCTAssertEqual(sessions[0].asleepDuration, hour)
+    }
+
+    func testWatchReconciliationRecordsReplacedIPhoneEstimate() {
+        let base = makeDate(2026, 9, 4, 22)
+        let estimate = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .asleepUnspecified,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(10 * hour)),
+                sourceName: "iPhone",
+                sourceBundleIdentifier: "com.apple.Health"
+            )
+        ])
+        let confirmed = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(
+                    start: base.addingTimeInterval(hour),
+                    end: base.addingTimeInterval(8 * hour)
+                ),
+                sourceName: "Apple Watch",
+                deviceName: "Apple Watch"
+            )
+        ])
+        let records = SleepAnalysisEngine().reconciliations(
+            previous: estimate,
+            resolved: confirmed,
+            now: base.addingTimeInterval(9 * hour)
+        )
+
+        XCTAssertEqual(records.count, 1)
+        let record = records[0]
+        XCTAssertEqual(record.reason, .watchReplacedEstimate)
+        XCTAssertEqual(record.estimatedTier, .iPhone)
+        XCTAssertEqual(record.authoritativeTier, .appleWatch)
+        XCTAssertEqual(record.estimatedAsleepDuration, 10 * hour)
+        XCTAssertEqual(record.authoritativeAsleepDuration, 7 * hour)
+        XCTAssertEqual(record.asleepDurationDelta, -3 * hour)
+        XCTAssertEqual(record.spanStartDelta, hour)
+    }
+
+    /// 워치가 이미 확정한 밤은 다시 보정 기록을 만들지 않는다.
+    func testWatchReconciliationIgnoresAlreadyConfirmedNight() {
+        let base = makeDate(2026, 9, 5, 23)
+        let confirmed = SleepAnalysisEngine().sessions(from: [
+            SleepSegment(
+                stage: .core,
+                span: TimeSpan(start: base, end: base.addingTimeInterval(7 * hour)),
+                sourceName: "Apple Watch",
+                deviceName: "Apple Watch"
+            )
+        ])
+
+        XCTAssertTrue(
+            SleepAnalysisEngine().reconciliations(
+                previous: confirmed,
+                resolved: confirmed
+            ).isEmpty
+        )
+    }
+
     func testSensorArchivePersistsFullHistoryWithoutRetentionPruning() async throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("taption-sensors-\(UUID().uuidString)")

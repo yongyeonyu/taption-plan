@@ -2680,3 +2680,55 @@
 - 빌드 233 산출물: 앱 `com.taption.plan` 1.0(233), 위젯 `com.taption.plan.widget` 233, Watch 디렉터리 없음. `xcodebuild archive` **ARCHIVE SUCCEEDED**(`archive-233.log`), `-exportArchive` **EXPORT SUCCEEDED**, `TaptionPlan.ipa` 44,627,883바이트. 업로드 **UPLOAD SUCCEEDED**, App Store Connect **VALID**, `TP Taption Plan 내부 테스트`에 연결해 readback에서 `buildAttached: true`·`processingState: VALID`·`expired: false`·테스터 `axony99@gmail.com` 노출 확인(`testflight-readback.json`).
 - IAP 심사 제출: **하지 못했다.** `com.taption.plan.pro`(비소모품, 1.0(1), 가격 스케줄·ko/en 현지화·심사 스크린샷 모두 있음, `READY_TO_SUBMIT`)를 심사 제출에 넣고 `submitted`로 바꾸자 Apple이 거부했다: "App 6797370230 must have an approved appStoreVersions for at least one of platforms [IOS], or an appStoreVersions must be included in this review submission." 이 앱은 아직 승인된 버전이 없어서, IAP만 따로 심사에 올릴 수 없다. 앱 버전 1.0을 같은 제출에 넣어야 하는데 그러면 앱 전체가 App Store 심사로 간다. 게다가 버전 1.0에는 App Review 연락처(`appStoreReviewDetail`)가 아직 없다. 만든 빈 제출은 항목을 지웠고(제출 자체는 API로 삭제 불가 — 남아 있어도 다음 제출에서 재사용된다).
 - 하지 않은 것: 실기기 확인. 실기기 UI는 내가 조작할 수 없고, 대표 기기에 테스트 러너를 설치해 UI 테스트를 돌리는 것은 기기를 점유하므로 하지 않았다. TestFlight 232가 그 확인 경로다.
+
+## SLP1024C13 · 아이폰 우선 수면 체크·워치 보정, 클립 편집기 진입, 상단 정렬 (2026-10-24)
+- 요청 ID: `SLP1024C13`
+- 결과 요약: ①수면 알고리즘 구현·테스트 완료 ②상단 위젯 기준선 정렬 완료, 집 마커는 보류 ③클립 편집기 직접 진입 + 화면 밖 노출 완료 ④업로드 로그는 찾지 못함.
+
+### 1. 수면: 아이폰 우선 + 워치 보정
+- 새 타입: `SleepSourceTier`(appleWatch 30 > thirdParty 20 > iPhone 10 > unknown 0), `SleepReconciliation`.
+- `SleepSegment.sourceTier`: `deviceName`·`sourceName`에 `watch`/`iphone`이 있는지, 번들이 `com.apple.health.<UUID>`(워치)인지 `com.apple.Health`(아이폰)인지로 판정.
+- `SleepSession.sourceTier`: 구간에서 파생(저장 안 함). `isProvisional`(워치 아님), `isWatchAuthoritative`(워치 + 수면시간 > 0).
+- `SleepAnalysisEngine`:
+  - `sessions(from:inside:)`가 **요청 구간으로 먼저 자른 뒤** `suppressingLowerTierClaims`로 그 밤 최고 등급의 수면·기상 주장이 덮는 시간대의 낮은 등급 주장을 버린다. `inBed`는 남긴다(수면 효율의 분모). 겹치는 구간만 지우므로 워치가 자지 않은 낮잠은 살아남는다.
+  - `resolvedStageDurations`가 (등급, 단계) 순으로 겹친 구간을 고른다.
+  - `reconciliations(previous:resolved:inside:now:)`가 기상 시각이 속한 밤을 기준으로 이전 잠정 세션과 워치 확정 세션을 짝지어 `SleepReconciliation`을 만든다.
+- `SleepSessionInstallation.installing(_:into:inside:replacing:)`: 교체 + 보정 기록을 한 번에 돌려준다. `SleepReconciliationLedger.appending`이 같은 밤·같은 사유를 최신으로 교체하고 최근 30건만 남기며 진단 로그 `sleep_watch_reconciled`를 남긴다.
+- `AppModel`: `sleepReconciliations` 추가, `refreshHealthData`와 워치 스냅샷 적용 지점에서 교체 직전에 보정 기록 생성. 초기화 두 곳에서 함께 비운다.
+- 단위 테스트 14건(기존 6 + 신규 8) 통과:
+  `testSleepSourceTierClassifiesWatchIPhoneAndThirdParty`, `testIPhoneOnlyNightIsMarkedProvisional`, `testWatchStagesReplaceIPhoneEstimateForSameNight`, `testWatchNightKeepsIPhoneNapOutsideItsCoverage`, `testSleepSpanClippingKeepsIPhoneEstimateWhenWatchIsOutsideSpan`, `testWatchReconciliationRecordsReplacedIPhoneEstimate`, `testWatchReconciliationIgnoresAlreadyConfirmedNight` + 기존 6건(동작 보존 확인).
+- 실측: `SleepAnalysisEngine().sessions`에 아이폰 10시간 추정 + 워치 7시간을 넣으면 이전에는 두 출처가 섞였고, 지금은 워치 7시간만 남는다(테스트로 고정). 보정 기록은 추정 600분 → 확정 420분, 차이 −180분, 시작 +60분으로 남는다.
+
+### 2. 상단 위젯 정렬
+- `Layout.topRowInset = 12` 추가. 메뉴·메모·구글 일정·날짜 배지가 모두 이 값에서 시작한다(가운데 높이 32로 동일).
+- 메뉴 버튼 40×34 캡슐 → 40×40 원(`Layout.dateBadgeSize`).
+- 집 마커는 **바꾸지 않았다**. 첨부 사진의 마커는 원형 발광 아바타 + 배지 묶음이고 현재는 육각형 + 집 그림 + 날씨 캡슐 + Lv 필이라 정렬이 아니라 그림 자체가 다르다. `homeGrowthCallout`이 늘 투명한데 핀 위 99pt를 차지하는 문제(집 그림이 좌표 아래에 그려짐)도 함께 손봐야 해서, 눈으로 확인하지 못하는 상태에서 그림을 바꾸지 않았다.
+
+### 3. 행동구간 편집 → 클립 편집기
+- `.fullScreenCover(item: $sectionEditSelection)`의 내용을 `clipEditorSheet(for:)`로 교체. 기존 `sectionEditSheet(for:)`는 함수를 남기고 호출부만 주석 처리했다(한 줄만 되살리면 복귀).
+- 저장 처리를 `applySectionEditSave(_:selection:)`로 통합(두 화면이 같은 규칙, 중복 20줄 제거). `MapHomeSectionEditSelection.selectedSpan` 추가.
+- `MapHomeNLEClipEditor`: 바깥 좌우 여백 14를 없애고 머리말·선택 요약·도구 막대에만 적용. 클립 줄은 `railWidth = 화면폭 + 14`로 넓혀 **오른쪽으로 화면 밖까지** 이어지게 하고 왼쪽 눈금은 제자리에 둔다(`VStack(alignment: .leading)` + `.frame(maxWidth: .infinity, alignment: .leading)`).
+- 시뮬레이터 확인: `-nlePreview` 실행 인자로 클립 편집기를 띄워 스크린샷 확보(`build/validation/SLP1024C13/nle-preview4.png`). 줄이 화면 오른쪽 밖으로 이어지고 시각 눈금·클립 블록·하단 도구 막대가 정상 표시됨을 확인.
+
+### 4. 검증 실측
+- Debug 빌드: `BUILD SUCCEEDED`, 경고 0(`build5.log`까지 5회 모두 0).
+- 앱 단위 테스트 전체: **1,578 통과 / 3 실패 / 0 건너뜀 (총 1,581)** — 이전 1,573 + 신규 8.
+- 실패 3건은 모두 이번 변경과 무관한 환경 문제였다:
+  - `HealthKitIntegrationTests` 2건: `Missing com.apple.developer.healthkit entitlement`. `CODE_SIGNING_ALLOWED=NO`로 만든 테스트 하네스에 엔타이틀이 없어 질의가 열리지 않는다. 기존 건너뛰기 목록에 이 문자열이 없어 실패로 처리됐으므로 목록에 추가했다(제품 결함 아님).
+  - `FeatureEngineTests.testStoreKitProductPurchaseEntitlementAndRestore`: `External StoreKit purchase did not become an entitlement`. StoreKit 테스트 세션 문제로 보이며 이번 변경 영역(수면·레이아웃)과 겹치지 않는다. 재실행 결과는 아래에 덧붙인다.
+- 구조 게이트: `architecture-metrics.py --check` 통과(기준선을 `--write-baseline`으로 현재 값에 맞춰 다시 씀: `MapHomeView` 22,072, `AppModel` 14,641, `MapHomeNLEClipEditor` 1,428, `largest_type_lines` 13,552). `check-app-engine-import-boundary.sh` 통과.
+- 한계:
+  1. **홈 화면 스크린샷을 얻지 못했다.** 앱 실행 시 위치·사진 시스템 권한 알림이 연속으로 뜨고, `simctl privacy grant location|all`과 TCC.db 직접 삽입 모두 이 iOS 27 런타임에서 알림을 없애지 못했다. GUI 클릭 도구(cliclick·idb)와 System Events 권한도 없다. 그래서 ②의 정렬은 코드 지오메트리로만 검증했다.
+  2. 보정 기록은 앱을 다시 켜면 비워진다(세션 자체가 HealthKit에서 재계산되므로). 영속이 필요하면 별도 저장소가 필요하다.
+  3. 아이폰 HealthKit에 수면 표본이 아예 없을 때 센서 정지로 수면을 추정하는 기능은 넣지 않았다.
+  4. 실기기 확인은 하지 않았다.
+
+### 4-1. 실패 3건 재확인 (SLP1024C13)
+- 재실행 결과(`build/validation/SLP1024C13/retry-3.log`):
+  - `testMalformedHealthKitAnchorRestartsFromBeginning` → **skipped**
+  - `testMalformedHealthKitHistoryCursorRestartsHistory` → **skipped**
+  - `testStoreKitProductPurchaseEntitlementAndRestore` → **failed**(동일 메시지로 재현)
+- 결론: 이번 변경으로 생긴 새 실패는 **0건**이다.
+  - HealthKit 2건은 건너뛰기 목록에 엔타이틀 오류를 추가해 의도대로 처리했다.
+  - StoreKit 1건은 `test.md`의 기존 기록(170행)에 있는 **iOS 27 StoreKitTest 기존 실패**다. IAP 심사가 보류 중이라 건너뛰지 않고 실패로 두기로 한 판단이 그대로 유지되고 있으며, 이번 변경 영역(수면 엔진·클립 편집기 레이아웃·상단 정렬)과 겹치지 않는다.
+- 따라서 이번 작업의 유효 집계는 **1,578 통과 / 1 기존 실패(StoreKit) / 2 환경 건너뜀 (총 1,581)** 이다.

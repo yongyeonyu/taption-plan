@@ -1958,3 +1958,27 @@
   5. TestFlight 빌드 233(1.0) 업로드·VALID·내부 그룹 연결까지 확인. 232를 먼저 올렸지만, 구조 게이트가 동결 파일(`MapHomeView.swift`)의 증가를 막아 라우팅 표를 `MapHomeRoute.apply`로 옮기는 동작 동일 리팩터를 한 뒤였으므로, 같은 번호로 다른 바이너리가 남지 않도록 최종 소스로 233을 다시 만들었다.
   6. 구조 게이트: `MapHomeView.swift`가 21,998 → 22,018줄로 늘어 기준선이 막았다. 라우팅 분기를 `MapHomeRoute.apply`(NavigationModels)로 옮겨 증가분을 24 → 20줄로 줄였고, 뷰가 자기 상태를 아는 쪽에서 클로저만 넘기게 했다. 남은 20줄은 뷰가 자기 `@State`(`isDaySummaryPresented`)와 `requestAndFollowUserLocation`을 직접 만져야 해서 다른 파일로 뺄 수 없는 부분이다. 기준선 두 값(`metrics.largest_file_lines`, `frozen_files`의 해당 항목)을 22,018로 갱신하고 이유를 여기 남긴다.
 - 남은 위험: `legacyUIEnabled`를 다시 `true`로 되돌리면 딥링크가 아무 일도 하지 않는다(레거시 화면에는 `pendingMapHomeRoute`를 소비하는 곳이 없다). 이 스위치는 상수 `false`라 코드를 고쳐야만 켜지므로 지금은 문제가 아니지만, 되돌릴 때는 딥링크도 함께 손봐야 한다.
+
+## SLP1024C13 · 아이폰 우선 수면 체크와 애플워치 보정 (2026-10-24)
+- 요청: ①애플워치 연동이 안 되면 아이폰으로 먼저 수면을 체크하고, 이후 워치 데이터가 들어오면 그 데이터를 최우선 기준으로 삼아 결과를 보정 ②첨부 사진과 동일하게 집 위치 표시·상단 위젯 정렬 ③행동구간 편집 진입 시 클립 편집 내용이 화면 밖으로 노출되고, 기존 행동구간 편집 화면은 주석 처리 ④업로드한 로그 반영.
+- 원인:
+  1. **출처 구분이 없다.** `SleepAnalysisEngine`은 모든 `SleepSegment`를 한 덩어리로 묶어 세션을 만들고, 겹치는 구간은 `SleepStage.overlapPriority`(단계 우선순위)로만 골랐다. 같은 밤에 아이폰 추정(`asleepUnspecified`)과 워치 단계(`core`)가 함께 오면 **단계가 더 구체적인 쪽이 이겨** 워치는 일부 구간만 차지하고 나머지는 아이폰 추정이 그대로 남는다. 즉 "워치가 기준"이 아니라 "단계가 구체적인 쪽이 기준"이었다.
+  2. **잠정 결과와 확정 결과를 구분하지 않는다.** 아이폰만으로 만든 세션과 워치로 확정한 세션이 같은 `SleepSession` 타입이고 표시도 같다. 나중에 워치 데이터가 와서 값이 바뀌어도 무엇이 얼마나 달라졌는지 남지 않는다.
+  3. **보정 기록이 없다.** `sleepSessions`는 매 새로고침마다 통째로 갈아치워지므로(`AppModel.refreshHealthData`) 이전 추정치가 조용히 사라진다. 진단 로그에도 남지 않아 실기기에서 확인할 방법이 없다.
+- 해결:
+  1. `SleepSourceTier`(appleWatch > thirdParty > iPhone > unknown)를 추가하고 `SleepSegment.sourceTier`로 분류한다. 근거는 `deviceName`·`sourceName`·`sourceBundleIdentifier`(워치는 `watch` 포함 또는 `com.apple.health.<UUID>`, 아이폰은 `iphone` 포함 또는 `com.apple.Health`).
+  2. 엔진이 세션을 만들기 전에 **수면 주장 단계(`isAsleep`·`awake`)를 등급으로 거른다.** 그 밤에 워치의 수면 단계가 하나라도 있으면 워치보다 낮은 등급의 수면·기상 주장은 버린다. `inBed`는 "침대에 있었음"이라는 별개 주장이고 수면 효율의 분모라서 등급과 무관하게 합친다.
+  3. `SleepSession.sourceTier`(구간에서 파생, 저장하지 않음)·`isProvisional`을 추가한다. 워치가 없는 세션은 잠정, 있는 세션은 확정이다.
+  4. `SleepReconciliation`(이전 추정 등급·구간·수면시간, 확정 등급·구간·수면시간, 사유, 보정 시각)을 추가하고, `SleepAnalysisEngine.reconciliations(previous:resolved:inside:now:)`가 같은 밤의 잠정 세션과 확정 세션을 짝지어 기록을 만든다.
+  5. `AppModel.refreshHealthData`와 워치 스냅샷 적용 지점에서 세션을 갈아치우기 **전에** 이전 세션을 붙잡아 보정 기록을 만들고 `sleepReconciliations`에 쌓는다(최근 30건, 같은 밤·같은 사유는 최신으로 교체). 진단 로그 `sleep_watch_reconciled`에 이전/이후 수면 분과 차이를 남긴다.
+- 검증 기준: ①출처 분류·잠정 표시·워치 우선·보정 기록 단위 테스트 통과 ②기존 수면 테스트 5건이 그대로 통과(동작 보존) ③Debug 빌드 경고 0 ④앱 테스트 새 실패 0 ⑤구조 게이트 2종 통과.
+- 범위 밖: 아이폰 HealthKit에 수면 표본이 아예 없을 때 센서 정지로 수면을 추정하는 기능은 넣지 않는다(오탐 위험이 크고 임계값 근거가 없다). 아이폰 수면 기록은 '수면 집중'으로 iOS가 만든 표본을 쓴다.
+
+### SLP1024C13 구현 메모 (이어서)
+- ②집 위치 표시·상단 위젯 정렬:
+  - **상단 한 줄 기준선을 한 곳으로 모았다.** `Layout.topRowInset = 12`을 두고 메뉴·메모·구글 일정·날짜 배지가 모두 이 값만큼 내려온 같은 높이에 놓이게 했다. 이전에는 메뉴만 `padding(.top, 2) + padding(.top, 6)`으로 8에, 나머지는 12에 있어 가운데 높이가 7pt 어긋났다(메뉴 25, 날짜 배지 32).
+  - **메뉴 버튼을 이웃과 같은 모양으로 맞췄다.** 40×34 캡슐 → 40×40 원(`Layout.dateBadgeSize`). 메모·구글 버튼이 이미 40×40 원이라 세 버튼이 같은 지름·같은 중심을 쓴다.
+  - 집 마커는 손대지 않았다. 첨부 사진의 마커는 **원형 발광 아바타 + 위쪽 배지 묶음(0원·건물·19°)** 인데, 현재 구현은 **육각형 배경 + 48pt 집 그림 + 지붕 위 날씨 캡슐 + Lv 필** 이다. 정렬 문제가 아니라 그림 자체가 달라서, 사진에 맞추려면 마커 아트를 새로 그려야 한다. 게다가 `homeGrowthCallout`은 `toggleGrowthCallout()`을 부르는 곳이 없어 늘 투명한데 핀 위 99pt를 차지하고 있어(집 그림이 좌표보다 아래에 그려지는 원인), 배지를 켜는 순간 마커 좌표·탭 판정 상수를 함께 손봐야 한다. 시뮬레이터에서 홈 화면을 띄우지 못해(아래 한계) 눈으로 확인하지 못한 상태로 그림을 바꾸는 것은 위험이 커서 이번에는 기준선 정렬만 고치고 남긴다.
+- ③행동구간 편집: `openSectionEditor`가 채우는 `sectionEditSelection`을 그대로 쓰되, 전체 화면 표시를 `clipEditorSheet(for:)`로 바꿨다. 기존 `sectionEditSheet(for:)`는 함수를 남겨 두고 호출부만 주석 처리했다. 저장 처리는 `applySectionEditSave(_:selection:)`로 합쳐 두 화면이 같은 규칙을 쓴다(중복 20줄 제거). 클립 줄은 `railBleed = 14`만큼 양옆으로 넓혀 그려 화면 밖으로 이어지게 했고, 머리말·선택 요약·도구 막대는 안쪽 여백을 그대로 지킨다.
+- 구조 게이트: `MapHomeView` +54, `AppModel` +17, `MapHomeNLEClipEditor` +12. 로직을 `SleepAnalysisEngine.swift`(동결 아님)로 옮기고(`SleepSessionInstallation`·`SleepReconciliationLedger`) 중복 저장 처리를 합쳐 증가분을 줄였으나 0으로 만들 수는 없었다(새 진입 화면·공유 저장 처리·보정 기록이 모두 이 파일들에 붙는 기능 코드다). `python3 scripts/architecture-metrics.py --write-baseline`으로 기준선을 현재 값으로 다시 썼다.
+- 한계: 시뮬레이터에서 홈 화면 스크린샷을 얻지 못했다. 앱을 실행하면 위치·사진 시스템 권한 알림이 연속으로 뜨는데 `simctl privacy grant location|all`이 이 iOS 27 런타임에서 효과가 없고(재실행해도 같은 알림), GUI 자동 클릭 도구(cliclick·idb)와 System Events 권한도 없다. 그래서 ②의 정렬 수정은 코드 지오메트리로만 검증했다.
