@@ -28415,6 +28415,19 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 2, unconfirmedCount: 1))
     }
 
+    /// 장착 장식 스티커는 아바타 원 밖 오른쪽 위에 붙는다(원 안 10pt로는 아트에 묻혔다).
+    /// 가장 안쪽 모서리가 원 밖이어야 하고, 지도 호스트 상자 안에는 남아야 한다.
+    func testAccessoryStickerSitsOutsideAvatarCircleInsideHostBox() {
+        let radius = MapHomePlacePinLayout.avatarSize / 2
+        let offset = MapHomePlacePinLayout.accessoryStickerOffset
+        let size = MapHomePlacePinLayout.accessoryStickerSize
+        let nearest = CGPoint(x: radius - size + offset, y: -radius - offset + size)
+        XCTAssertGreaterThan(hypot(nearest.x, nearest.y), radius)
+        let far = CGPoint(x: radius + offset, y: -radius - offset)
+        XCTAssertLessThan(abs(far.x), MapHomePlacePinLayout.appleHomeHostWidth / 2)
+        XCTAssertLessThan(abs(far.y), MapHomePlacePinLayout.appleHomeHostHeight / 2)
+    }
+
     func testCompletedDayRequiresFullCoverageAndAtLeastOneActual() {
         let start = date(2026, 9, 20)
         let end = date(2026, 9, 21)

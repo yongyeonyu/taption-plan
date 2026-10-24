@@ -3079,3 +3079,33 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - **고침**: 최상위 `/v1/builds`로 바꾸고 `filter[app]`·`sort=-version`을 쓴다. `find_build`는 `filter[app]+filter[version]`으로 정확히 찾고, 업로드 직후 전파 지연을 견디도록 60초까지 5초 간격으로 재시도한다.
 - **검증**: 고친 뒤 `latest-build` → 235, `attach --build 235` → 그룹 연결 성공, `verify` → `ok: true`.
 - `docs/TESTFLIGHT.md` 실패 대응 표에 이 증상과 원인을 넣었다.
+
+## HMR1024B17 · 집 마커 장식 스티커를 원 밖 오른쪽 위로 (2026-10-24)
+
+- 요청 ID: `HMR1024B17`
+- 무엇을: 대표 선택(마커 구조 유지·배지 위 중앙 유지)에 따라, 사진과 어긋나던 마지막 요소인 **장착 장식 스티커**의 자리와 크기를 맞췄다.
+
+### 1. 사진 재판독 — 분홍 건물은 새 요소가 아니다
+- 확대본(`build/validation/HBR1024B16/ref-marker.png`)에서 분홍 건물은 배경 카드가 없고 색이 `#D94772`다. 이 색은 마커가 장착 장식을 그리는 색과 같고, `building.columns.fill`은 랜드마크 카탈로그 `kr.gyeongbokgung`의 심볼이다. 즉 **장착한 장식 스티커**다.
+- 그런데 구현은 그 스티커를 아바타 원 **안쪽 왼쪽 위**에 10pt로 그려, 아트와 겹쳐 무엇인지 읽히지 않았다.
+
+### 2. 바꾼 것
+- `MapHomePlacePinLayout.accessoryStickerSize = 15`, `accessoryStickerOffset = 10` 추가.
+- 장식 오버레이를 `.topLeading`+10pt → `.topTrailing`+15pt, 흰 그림자 2로. 색·심볼·장착 조건(`showsCatAtHome`)은 그대로다.
+- `-pinPreview`가 경복궁 장식(`cat.accessory.kr.gyeongbokgung`)을 단 마커를 보여 주도록 바꿨다.
+- 미리보기 코드를 압축해(호스트 상자·십자선·카운터 목업) 늘어난 4줄을 상쇄했다.
+
+### 3. 결과 (실측)
+| 항목 | 결과 |
+| --- | --- |
+| Debug 빌드 | `BUILD SUCCEEDED`, 경고 **0** (`build/validation/HMR1024B17/build.log`) |
+| 스티커 자리 | 원 밖 오른쪽 위, 날씨 배지·`Lv` 필과 겹치지 않음 (`crop-marker.png`) |
+| 지도 호스트 상자 | 160×160 안에 스티커까지 들어옴 (`pin-acc-2.png` 아래 샘플) |
+| 신규 테스트 | `testAccessoryStickerSitsOutsideAvatarCircleInsideHostBox` **통과**(`test-single.log`) |
+| 기존 테스트 | `FeatureEngineTests`+`MapHomeLiveMapTests` **736 통과·실패 0**(`tests-marker2.log`), 저장소 7개 스위트 **146 통과**(`tests-store.log`) |
+| 구조 게이트 | 통과, `MapHomeView` **22,070줄**(기준선 22,072) |
+
+### 4. 한계
+- 윤년 별(오른쪽 위 11pt)과 스티커가 2월 29일에 5pt쯤 겹친다. 그날만 보이는 요소라 옮기지 않았다.
+- 실제 `MKMapView` 주석 위 배치는 여전히 미확인이다(호스트 상자 재현으로 대체).
+- `-only-testing`에 클래스 이름을 걸면 그 클래스만 돈다. `MapHomeGrowthPolicyTests`는 `FeatureEngineTests`에 포함되지 않으므로 따로 걸어야 한다(이번에 736개에 안 들어간 이유).

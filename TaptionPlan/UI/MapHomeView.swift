@@ -1085,6 +1085,9 @@ enum MapHomePlacePinLayout {
     /// 지도가 상자 경계에서 잘라도 보이는 부분이 잘리지 않게 한다.
     static let appleHomeHostWidth: CGFloat = 160
     static let appleHomeHostHeight: CGFloat = 160
+    /// 장착한 장식 스티커. 원 안 10pt로는 아트에 묻혀 읽히지 않아 원 밖으로 내보내고 키운다.
+    static let accessoryStickerSize: CGFloat = 15
+    static let accessoryStickerOffset: CGFloat = 10
 }
 
 enum MapHomePlaceAnnotationLayout {
@@ -16605,14 +16608,15 @@ private struct MapHomePlacePin: View {
             .clipShape(Circle())
             .overlay { Circle().stroke(Color.white.opacity(0.92), lineWidth: 2) }
             .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-            .overlay(alignment: .topLeading) {
+            .overlay(alignment: .topTrailing) {
                 if showsCatAtHome,
                    let accessory = MapHomeGrowthAccessoryCatalog.symbol(for: equippedAccessoryID) {
                     Image(systemName: accessory)
-                        .font(.system(size: 10, weight: .black))
+                        .font(.system(size: MapHomePlacePinLayout.accessoryStickerSize, weight: .semibold))
                         .foregroundStyle(Color(hex: "#D94772"))
-                        .shadow(color: .white, radius: 1.5)
-                        .offset(x: 1, y: 1)
+                        .shadow(color: .white, radius: 2)
+                        .offset(x: MapHomePlacePinLayout.accessoryStickerOffset,
+                                y: -MapHomePlacePinLayout.accessoryStickerOffset)
                         .allowsHitTesting(false)
                 }
             }
@@ -22017,15 +22021,10 @@ struct MapHomePinPreviewHost: View {
     private var hostBoundsSample: some View {
         VStack(spacing: 6) {
             Text("지도 호스트 \(Int(MapHomePlacePinLayout.appleHomeHostWidth))×\(Int(MapHomePlacePinLayout.appleHomeHostHeight))")
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
             marker(showsCatAtHome: true, weather: true)
-                .frame(width: MapHomePlacePinLayout.appleHomeHostWidth,
-                       height: MapHomePlacePinLayout.appleHomeHostHeight)
-                .overlay {
-                    Rectangle().stroke(Color.white.opacity(0.55),
-                                       style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                }
+                .frame(width: MapHomePlacePinLayout.appleHomeHostWidth, height: MapHomePlacePinLayout.appleHomeHostHeight)
+                .overlay { Rectangle().stroke(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
         }
     }
 
@@ -22049,8 +22048,7 @@ struct MapHomePinPreviewHost: View {
             Rectangle().fill(Color.white.opacity(0.55)).frame(width: 1, height: 260)
             Rectangle().fill(Color.white.opacity(0.55)).frame(width: 260, height: 1)
             Circle().stroke(Color.white.opacity(0.75), lineWidth: 1).frame(width: 10, height: 10)
-        }
-        .allowsHitTesting(false)
+        }.allowsHitTesting(false)
     }
 
     private func marker(showsCatAtHome: Bool, weather: Bool) -> some View {
@@ -22059,7 +22057,7 @@ struct MapHomePinPreviewHost: View {
             isLeapDay: false, growthStatus: "오늘도 채웠어요",
             isGrowthQualifiedToday: true, growthStreak: 12, pendingWeeklyRewards: 1,
             showsCatAtHome: showsCatAtHome, catAction: .activity,
-            equippedAccessoryID: nil,
+            equippedAccessoryID: "cat.accessory.kr.gyeongbokgung",
             weatherBadge: weather
                 ? MapHomeHomeWeatherBadge(
                     symbolName: "cloud.sun.fill", temperatureText: "19°", condition: "구름 조금")
