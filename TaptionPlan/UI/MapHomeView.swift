@@ -1081,9 +1081,10 @@ enum MapHomePlacePinLayout {
     static let avatarCenterCompensation: CGFloat = (levelLabelGap + levelLabelHeight) / 2
     /// 연봉 카운터를 집 핀 중심에서 띄우는 거리(음수 = 위). 아바타 위 배지 줄보다 위에 둔다.
     static let salaryOffsetFromPinCenter: CGFloat = -62
-    /// Apple 지도 호스팅 뷰의 집 핀 크기. 발광과 배지가 잘리지 않을 만큼 잡는다.
-    static let appleHomeHostWidth: CGFloat = 150
-    static let appleHomeHostHeight: CGFloat = 140
+    /// Apple 지도 호스팅 뷰의 집 핀 크기. 발광(140)보다 사방 10pt 넉넉히 잡아
+    /// 지도가 상자 경계에서 잘라도 보이는 부분이 잘리지 않게 한다.
+    static let appleHomeHostWidth: CGFloat = 160
+    static let appleHomeHostHeight: CGFloat = 160
 }
 
 enum MapHomePlaceAnnotationLayout {
@@ -21993,23 +21994,38 @@ struct RouteProjectionInputKey: Hashable {
 #if DEBUG
 
 /// 집 마커 레이아웃 확인용. `-pinPreview` 실행 인자로만 열린다.
-///
-/// iOS 27 시뮬레이터에서 홈 화면을 통째로 띄우면 위치·사진 권한 알림이 화면을
-/// 가려 마커를 눈으로 확인할 수 없다. 마커만 단독으로 띄워 스크린샷을 찍기 위한 화면이다.
-/// 화면 한가운데의 십자선이 지도 좌표가 놓이는 자리다.
+/// 홈 화면을 통째로 띄우면 권한 알림에 가려 마커를 볼 수 없어서, 마커만 단독으로
+/// 띄우고 화면 가운데 십자선으로 지도 좌표를 표시한다.
 struct MapHomePinPreviewHost: View {
     var body: some View {
         ZStack {
             Color(hex: "#6E6A5F").ignoresSafeArea()
-            coordinateCrosshair
-            // 연봉 카운터는 지도 레이어가 따로 그린다. 같은 상수로 여기에 흉내 내어
-            // 아바타·날씨 배지와 겹치지 않는지 눈으로 확인한다.
-            salaryCounterMock
-            HStack(spacing: 46) {
-                marker(showsCatAtHome: false, weather: true)
-                marker(showsCatAtHome: true, weather: true)
-                marker(showsCatAtHome: true, weather: false)
+            VStack(spacing: 24) {
+                ZStack {
+                    coordinateCrosshair
+                    // 연봉 카운터는 지도 레이어가 따로 그린다. 같은 상수로 흉내 내어
+                    // 아바타·날씨 배지와 겹치지 않는지 확인한다.
+                    salaryCounterMock
+                    marker(showsCatAtHome: true, weather: true)
+                }
+                hostBoundsSample
             }
+        }
+    }
+
+    /// Apple 지도가 주석을 담는 상자에 그대로 넣어 본 것. 발광·배지가 밖으로 나가면 잘린다.
+    private var hostBoundsSample: some View {
+        VStack(spacing: 6) {
+            Text("지도 호스트 \(Int(MapHomePlacePinLayout.appleHomeHostWidth))×\(Int(MapHomePlacePinLayout.appleHomeHostHeight))")
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.85))
+            marker(showsCatAtHome: true, weather: true)
+                .frame(width: MapHomePlacePinLayout.appleHomeHostWidth,
+                       height: MapHomePlacePinLayout.appleHomeHostHeight)
+                .overlay {
+                    Rectangle().stroke(Color.white.opacity(0.55),
+                                       style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                }
         }
     }
 
@@ -22030,39 +22046,23 @@ struct MapHomePinPreviewHost: View {
     /// 지도 좌표 자리. 마커의 어느 부분이 좌표에 놓이는지 눈으로 확인한다.
     private var coordinateCrosshair: some View {
         ZStack {
-            Rectangle()
-                .fill(Color.white.opacity(0.55))
-                .frame(width: 1, height: 260)
-            Rectangle()
-                .fill(Color.white.opacity(0.55))
-                .frame(width: 260, height: 1)
-            Circle()
-                .stroke(Color.white.opacity(0.75), lineWidth: 1)
-                .frame(width: 10, height: 10)
+            Rectangle().fill(Color.white.opacity(0.55)).frame(width: 1, height: 260)
+            Rectangle().fill(Color.white.opacity(0.55)).frame(width: 260, height: 1)
+            Circle().stroke(Color.white.opacity(0.75), lineWidth: 1).frame(width: 10, height: 10)
         }
         .allowsHitTesting(false)
     }
 
     private func marker(showsCatAtHome: Bool, weather: Bool) -> some View {
         MapHomePlacePin(
-            name: "집",
-            floor: nil,
-            destination: .home,
-            growthLevel: 365,
-            isLeapDay: false,
-            growthStatus: "오늘도 채웠어요",
-            isGrowthQualifiedToday: true,
-            growthStreak: 12,
-            pendingWeeklyRewards: 1,
-            showsCatAtHome: showsCatAtHome,
-            catAction: .activity,
+            name: "집", floor: nil, destination: .home, growthLevel: 365,
+            isLeapDay: false, growthStatus: "오늘도 채웠어요",
+            isGrowthQualifiedToday: true, growthStreak: 12, pendingWeeklyRewards: 1,
+            showsCatAtHome: showsCatAtHome, catAction: .activity,
             equippedAccessoryID: nil,
             weatherBadge: weather
                 ? MapHomeHomeWeatherBadge(
-                    symbolName: "cloud.sun.fill",
-                    temperatureText: "19°",
-                    condition: "구름 조금"
-                )
+                    symbolName: "cloud.sun.fill", temperatureText: "19°", condition: "구름 조금")
                 : nil,
             onOpenDaySummary: {}
         )
