@@ -80,6 +80,7 @@
 | `번들 버전이 서로 다릅니다` | 4개 plist 중 일부만 수정됨 | `--build-number N`으로 다시 실행(전부 덮어씀) |
 | `이미 App Store Connect에 있습니다` | 같은 빌드 번호 재사용 | 다른 번호 사용. 번호는 되돌리지 않는다 |
 | `아카이브가 이미 있습니다` | 같은 요청 ID 재실행 | 새 요청 ID(`--request-id`) |
+| `Assets.xcassets: error: Failed to write to CAR` (`BOMStorageCompact ... rename`) | actool이 부분 아카이브 DD에 쓰다 실패(메모리 압박에서 관측) | `rm -rf build/<요청 ID>-archive-dd` 후 같은 명령 재실행. 두 번째 시도에서 성공했다(TFB1024A17) |
 | 처리 `FAILED`/`INVALID` | 서명·entitlement·심사 정보 문제 | `upload.log`와 App Store Connect 알림 확인 |
 | `testerCount == 0` | 그룹에 테스터 없음 | App Store Connect에서 내부 테스터 추가 |
 

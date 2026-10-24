@@ -3109,3 +3109,32 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 윤년 별(오른쪽 위 11pt)과 스티커가 2월 29일에 5pt쯤 겹친다. 그날만 보이는 요소라 옮기지 않았다.
 - 실제 `MKMapView` 주석 위 배치는 여전히 미확인이다(호스트 상자 재현으로 대체).
 - `-only-testing`에 클래스 이름을 걸면 그 클래스만 돈다. `MapHomeGrowthPolicyTests`는 `FeatureEngineTests`에 포함되지 않으므로 따로 걸어야 한다(이번에 736개에 안 들어간 이유).
+
+## TFB1024A17 · 빌드 236 내부 배포 (2026-10-24)
+
+- 요청 ID: `TFB1024A17`
+- 무엇을: 대표 선택대로 **장식 스티커(HMR1024B17)와 저장소 파이프라인 P0~P2(DPL1024A01)** 를 함께 담아 236으로 배포했다. 235에는 둘 다 없었다.
+
+### 1. 결과 (전부 실측)
+| 단계 | 결과 |
+| --- | --- |
+| 사전 점검 | **9/9 OK** (`builds_readable: 최고 빌드 235 (VALID) · 200건 조회`, 그룹 `TP Taption Plan 내부 테스트`) |
+| 빌드 번호 | plist 4곳 + `CURRENT_PROJECT_VERSION` 8곳 **모두 236** |
+| 아카이브 | `ARCHIVE SUCCEEDED`, Release, `generic/platform=iOS` |
+| export | `TaptionPlan.ipa`, `2개 번들 모두 236` (Watch·WatchWidget은 별도 target) |
+| 업로드 | `No errors uploading`, Delivery UUID `33b256ae-316f-4fc7-99f2-e5270b235ff6`, 44,516,260바이트 / 5.02초 |
+| 처리 | `NOT_UPLOADED 23:25:30 → VALID 23:27:13` (1분 43초) |
+| 그룹 | 내부 그룹 연결 `buildAttached: true`, 테스터 1명, **`ok: true`** |
+| 비밀 노출 | 로그 7개에서 `PRIVATE KEY` **0건** |
+
+로그: `build/validation/TFB1024A17/{preflight.json,archive.log,export.log,upload.log,processing.log,attach.log,verify.log,testflight-report.json}`
+
+### 2. 첫 시도가 아카이브에서 실패했다
+- 증상: `TaptionPlan/Assets.xcassets: error: Failed to write to CAR`, 그 위에 `BOMStorageCompact(BOMStorage): rename: ...` 한 줄.
+- 원인: 디스크가 아니라 **부분 아카이브 DD**(`build/TFB1024A17-archive-dd`)에 actool이 쓰다 실패한 것. 같은 시각 스왑 4.3GB/5.1GB로 메모리 압박이 있었다.
+- 조치: 시뮬레이터를 내리고 `build/TFB1024A17-archive-dd`를 지운 뒤 같은 명령을 다시 돌려 성공. `docs/TESTFLIGHT.md` 실패 대응 표에 넣었다.
+- 교훈: 아카이브 실패는 **부분 산출물을 지우고 재시도**가 먼저다. 같은 요청 ID로 다시 돌려도 `--no-bump`라 번호가 흔들리지 않는다.
+
+### 3. 이 빌드에 들어간 것
+- `33613ea` 장식 스티커를 원 밖 오른쪽 위로(HMR1024B17)
+- `92b0b98` 저장소 파이프라인 P0~P2: 읽기 134.3 → 61.2~68.7ms, 조용한 손실 3종 계수, 죽은 `insertNewReadings` 삭제
