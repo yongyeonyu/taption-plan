@@ -1982,3 +1982,51 @@
 - ③행동구간 편집: `openSectionEditor`가 채우는 `sectionEditSelection`을 그대로 쓰되, 전체 화면 표시를 `clipEditorSheet(for:)`로 바꿨다. 기존 `sectionEditSheet(for:)`는 함수를 남겨 두고 호출부만 주석 처리했다. 저장 처리는 `applySectionEditSave(_:selection:)`로 합쳐 두 화면이 같은 규칙을 쓴다(중복 20줄 제거). 클립 줄은 `railBleed = 14`만큼 양옆으로 넓혀 그려 화면 밖으로 이어지게 했고, 머리말·선택 요약·도구 막대는 안쪽 여백을 그대로 지킨다.
 - 구조 게이트: `MapHomeView` +54, `AppModel` +17, `MapHomeNLEClipEditor` +12. 로직을 `SleepAnalysisEngine.swift`(동결 아님)로 옮기고(`SleepSessionInstallation`·`SleepReconciliationLedger`) 중복 저장 처리를 합쳐 증가분을 줄였으나 0으로 만들 수는 없었다(새 진입 화면·공유 저장 처리·보정 기록이 모두 이 파일들에 붙는 기능 코드다). `python3 scripts/architecture-metrics.py --write-baseline`으로 기준선을 현재 값으로 다시 썼다.
 - 한계: 시뮬레이터에서 홈 화면 스크린샷을 얻지 못했다. 앱을 실행하면 위치·사진 시스템 권한 알림이 연속으로 뜨는데 `simctl privacy grant location|all`이 이 iOS 27 런타임에서 효과가 없고(재실행해도 같은 알림), GUI 자동 클릭 도구(cliclick·idb)와 System Events 권한도 없다. 그래서 ②의 정렬 수정은 코드 지오메트리로만 검증했다.
+
+## DPL1024A01 · 저장소 파이프라인 진단과 개선 설계 (2026-10-24)
+- 요청: 데이터 파이프라인 최적화, 데이터 품질과 처리 효율 개선. 설계를 먼저 요구.
+- 진단(측정, `build/validation/DPL1024A01/`):
+  1. **질의 계층은 병목이 아니다.** 1분 간격 1년 525,600행 기준 적재 93,684행/초, 하루치(1,441행·60열) 조회 5.52ms.
+  2. **병목은 행 코덱.** `row(for:)`/`reading(from:)`이 행마다 JSON 4통과(encode→parse→data→decode). 대리 측정 왕복 35.9µs/행 → 하루 1,440행이면 코덱 51.7ms(하루 조회의 약 90%).
+  3. **저장 밀도.** 60열 1행 499.4바이트 → 1분 간격 250MB/년, 기본 5분 간격 52.5MB/년. 같은 하루를 6열로 읽으면 0.83ms(60열의 1/6.6).
+  4. **품질 저하가 조용하다.** 열 타입 불일치는 `extra`로 강등되고(`convert` nil), `insertNewReadings`의 `OR IGNORE`는 내용이 다른 같은 id를 버리며, 해독 실패는 로그 1줄만 남는다. `day`는 쓰기 시점 달력의 파생값인데 정본 열로 저장된다.
+  5. **죽은 경로.** `allReadings()`·`backupDateRanges()` 호출부 0곳 → `day_ranges` 5.08× 개선은 이득이 없다.
+- 산출물: `docs/DATA_PIPELINE.md`(진단·목표 구조·P0~P3 로드맵·하지 않을 것), `scripts/pipeline-bench.py`(재현 측정), `scripts/codec-proxy-bench.swift`(코덱 단계 분해).
+- **P0 구현 완료(2026-10-24)**. 새 파일 `TaptionPlan/Core/TaptionStoreQuality.swift`(242줄) + 테스트 `TaptionPlanTests/TaptionStoreQualityTests.swift`(195줄).
+  - G1 열 강등: 열 매핑 `take`/`put`/`convert`를 동결 파일에서 새 파일로 옮기고 거기서 센다. 키가 없으면 정상 빈 값이라 세지 않고, 키는 있는데 타입이 다르면 `store_column_demoted`로 남긴다. 동결 파일은 1,493 → 1,422줄로 줄었다.
+  - G2 해독 실패: `loadReadings`의 catch에서 사유별로 세고, 기존 `sensor_store_unreadable_rows`에 `count`를 붙였다. "고유하게 깨진 행"이 아니라 "읽을 때 빠진 횟수"다.
+  - G4 `day` 불일치: `dayRanges()`가 저장된 `day`와 현재 달력의 `day`를 대조해 `store_day_drift`로 남긴다. 행 수까지 세는 `dayDrift()`는 진단용.
+  - G3은 게이트를 만들지 않았다 — 살아 있는 두 경로(`appendImmutableReadings`는 던지고, `mergeReadingsKeepingLocal`은 `RestoreSummary.readingConflicts`로 센다)가 이미 드러낸다. 조용히 버리던 `insertNewReadings`는 호출부 0곳이라 삭제.
+- 남은 것:
+  - P2 `readings_hot`/`readings_body` 분리(schemaVersion 3, 백업 호환 입증 필요).
+  - P3 이진 컬럼 코덱(백업 디코더 동시 갱신).
+  - `allReadings()`·`backupDateRanges()` 삭제 여부 결정(호출부 0곳).
+  - 실기기에서 재측정(P1 수치는 시뮬레이터 값이다).
+- 검증 기준: P0은 계수 단위 테스트 + Debug 빌드 + 구조 게이트(충족, test.md DPL1024A01). P1은 56열 × 표본 1,000행 왕복 동등성 + 기존 파일 readback. P2는 변환 전후 행·열 동일 + 백업 JSON Lines 바이트 동일 + 중단 재개. 실기기 시간 비교는 별도.
+
+### DPL1024A01 · P1 구현 (2026-10-24)
+- 무엇을: `row(for:)`/`reading(from:)`에서 `JSONSerialization` 2통과 제거. `TaptionPlan/Core/TaptionStoreColumnCoding.swift`(734줄)에 `Encoder`/`Decoder` 쌍을 직접 구현해 같은 모양의 `[String: Any]`를 바로 만든다. 동결 파일 `TaptionStoreV2.swift`는 1,422 → **1,354줄**.
+- **예상(−31%)이 틀렸다.** 실측(시뮬레이터 1,000행, 두 번 실행): 쓰기 **1.20×**(두 번 다 동일), 읽기 0.98×·1.04× = **개선 없음**. 대리 측정이 JSON 단계만 따로 재서 행 경로의 나머지 비용(56열 경로 문자열 분해, `[String: Any]` 복싱)을 놓쳤다.
+- **의도한 부수 변화**: 예전 `JSONSerialization` 파서가 double을 최대 5 ULP 잘랐다(`0.019532305288943785` → `0.01953230528894378`). 지금은 정확하다. 그래서 `sameStoredContent`를 새 파일로 옮기고 실수를 상대 1e-12까지 같은 값으로 보게 했다(넘으면 예전처럼 충돌).
+- 검증: 새 테스트 10개 통과, 저장소 회귀 108개 통과, Debug 빌드 성공(경고 0), 구조 게이트 통과.
+- 결정 필요: 읽기 이득이 0이므로 **P1을 남길지 되돌릴지**. 남기면 쓰기 1.20× + 정밀도 정확성 + P3의 발판, 되돌리면 코드 변경 0. 되돌리는 절차는 `docs/DATA_PIPELINE.md` P1 절에 적었다.
+
+### DPL1024A01 · P2 1단계 — 열 경로 사전 계산 (2026-10-24)
+- 결정: P1은 **남긴다**(쓰기 1.20×가 실재, 값이 정확, P3의 발판). 다음 투자는 P2.
+- P2 원안(핫/콜드 표 분리)에 바로 들어가지 않고 **읽기 경로를 먼저 분해**했다. 134.3ms 중 `column.path.split`이 **53.2ms(40%)**였다 — `columns`는 고정인데 행마다 56번 문자열을 쪼개고 있었다.
+- 한 일: `columnParts`(열 순서 배열) + `columnPartsByName`으로 경로를 한 번만 쪼갠다. `take`/`put`에 `parts`를 받는 오버로드를 두고, 행 루프는 인덱스로 넘긴다. **스키마·파일 형식·백업 포맷 무변경.**
+- 결과: 읽기 **134.3 → 75.7~77.2ms(1.74~1.77×)**, 쓰기는 예전 대비 1.27~1.49×. 남은 76ms는 `put`/사전 30~34ms + 디코더 36~39ms.
+- 검증: 코덱+저장소 6개 스위트 **119개 통과**, Debug 빌드 경고 0, 구조 게이트 통과(동결 파일 1,354줄 그대로).
+- 보류: 표 분리(P2 원안). 근거 — migration 없이 1.74×를 얻었고, 하루 투영이 실제로 쓰는 열 목록을 아직 확인하지 않았다. 다시 꺼낼 조건은 "열당 비용을 다 없앤 뒤에도 예산을 넘을 때".
+- 다음 후보(표 구조 무변경): ① 중첩 열(`point.*` 등)의 사전 복사 묶기 ② 사전 없이 행에서 직접 디코딩.
+
+### DPL1024A01 · P2 2단계 — 읽기에서 사전 제거 (2026-10-24)
+- 한 일: `reading(from:)`이 `[String: Any]`를 만들지 않는다. `TaptionRowDecoder`(+`TaptionRowKeyedDecoding`)가 `Codable` 컨테이너를 직접 구현하고, 키를 열 위치(`columnIndexByPath`·`nestedColumnIndex`)로 바꿔 `Value` enum에서 곧장 꺼낸다. `put`은 `TaptionStoreQuality.swift`에서, `TaptionColumnObjectCoder.reading(from:)`은 코덱 파일에서 삭제. **쓰기 경로는 그대로다**(여전히 사전을 거쳐 열로 펼친다).
+- 결과(1,000행, 표본 3~4개): 읽기 **75.7~77.2 → 61.2~68.7ms**. 두 구간은 겹치지 않는다. 1단계와 합치면 134.3 → **61.2~68.7ms(1.95~2.19×)**. 디코딩 단독은 36~39 → 55~62ms로 **늘었다**(열마다 사전 두 번 조회). 사전 만들기 30~34ms가 사라져 합계는 줄었다.
+- 하루(1,440행) 환산: 코덱 193.4 → **88~99ms**(+ SQL 5.52ms). 기본 5분 간격이면 18~20ms.
+- 검증: 코덱 스위트 11개 × 3회 = **33개 통과**, Debug 빌드 성공(`error:` 0·`warning:` 0), 테스트 타깃 `build-for-testing` 성공, 구조 게이트 통과(동결 파일 1,354줄).
+- 검증(회귀): 품질 10 + SensorDayStore 52 + TaptionBackupV2 41 + AppModelBackupConnection 5 + 저장소 클래스 4개 29 = **137개 통과, 실패 0**. 코덱 11을 더해 **148개 통과, 실패 0**.
+- **`SQLitePlanRepositoryTests`는 파일 이름이지 스위트 이름이 아니다.** 그 이름으로 `-only-testing`을 걸면 **`Executed 0 tests` + `TEST SUCCEEDED`** 가 나온다 — 통과처럼 보이지만 아무것도 안 돌았다. 이 파일에는 클래스가 4개(`CloudKitSnapshotAssetTests`·`UnavailablePlanRepositoryTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`) 있고, **앞선 P0·P1·P2 1단계의 "119개"에도 이 4개 클래스는 들어 있지 않았다**(119 = 11+10+52+41+5). 이번에 처음 돌렸고 29개 모두 통과했다.
+- 환경: 시뮬레이터가 안 되던 원인은 **두 겹**이었다 — (1) 샌드박스가 CoreSimulator 접근을 막아 `simctl`이 SIGKILL(exit 137), (2) 메모리 압박(여유 57MB·스왑 5.75GB/7.1GB)으로 테스트 호스트가 SIGTERM. 샌드박스 밖에서 `xcodebuild -runFirstLaunch`를 돌린 뒤 스위트를 하나씩 끊어 돌려 통과했다.
+- 곁들여 고친 것: `TaptionPlanTests/FeatureEngineTests.swift:58`에 `)        XCTAssertEqual(`로 두 문장이 붙어 테스트 타깃이 컴파일되지 않았다(내 변경이 아닌 미커밋 수정, 33+/30−). 내용은 건드리지 않고 줄만 나눴다.
+- 다음 후보: 열 위치를 `CodingKey`에서 바로 얻어 사전 조회를 없애면 늘어난 디코딩 55~62ms를 다시 줄인다.

@@ -488,9 +488,12 @@ actor SensorReadingArchive {
 
     private func reportIncomplete(_ isComplete: Bool) {
         guard !isComplete else { return }
+        // 몇 행이 빠졌는지 함께 남긴다. 개수 없는 한 줄로는 "조금 빠졌다"와 "거의 다 빠졌다"를 구분할 수 없다.
+        let quality = TaptionStoreQualityLedger.shared.snapshot()
         TaptionPlanDiagnosticsLogger.shared.record(
             "sensor_store_unreadable_rows",
-            level: .error
+            level: .error,
+            metrics: ["count": Double(quality.unreadableRows)]
         )
     }
 }

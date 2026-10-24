@@ -2805,6 +2805,140 @@
 3. **알림 메일·외부 테스터 노출은 확인하지 않았다.** 내부 그룹(`isInternalGroup=true`)의 테스터 1명만 읽었다.
 4. 이번 실행은 `--with-tests` 없이 돌았다(아카이브 컴파일로 빌드만 확인). 단위 테스트는 `SLP1024C13`에서 별도로 확인한 상태다.
 
+## DPL1024A01 · 파이프라인 측정 (2026-10-24)
+
+문서·측정 도구만 추가했다. 앱 코드·스키마·백업 포맷은 바꾸지 않았으므로 앱 테스트·빌드는 돌리지 않았다(AGENTS.md 「문서 전용 변경」).
+
+### 실행한 것
+
+| 명령 | 결과 |
+| --- | --- |
+| `python3 scripts/pipeline-bench.py --rows 20000 --out build/validation/DPL1024A01-smoke` | 스키마·질의·색인 경로 동작 확인(20,000행) |
+| `python3 scripts/pipeline-bench.py --rows 525600 --out build/validation/DPL1024A01` | 26초, 525,600행 기준 측정 완료 |
+| `swift scripts/codec-proxy-bench.swift 20000` | 코덱 4단계 분해 완료 |
+
+### 측정값 (합성 525,600행 = 1분 간격 1년)
+
+- 적재 5.61초 = 93,684행/초. 파일 250.3MB, 행당 499.4바이트(64,084페이지 × 4,096).
+- `day_slice` 5.52ms(1,441행·60열) / `day_slice_hot` 0.83ms(6열) → **6.6배 차이**.
+- `day_ranges` 93.06ms(전체 스캔 + 임시 B-tree) → `readings(day, ts)` 색인 시 18.32ms(5.08배), 대신 파일 +16.2MB.
+- `backup_days`는 색인 추가 후 14.86 → 18.04ms로 **느려졌다**(0.82배). 색인을 늘리면 계획이 바뀐다.
+- 핫 열 커버링 색인은 +76.5MB(30.6%)를 쓰고 하루 0.15ms를 아낀다 → 채택하지 않는다.
+
+### 코덱 (대리 측정)
+
+`JSONEncoder.encode` 11.2µs · `JSONSerialization` 파싱 17.7µs · `JSONSerialization.data` 13.7µs · `JSONDecoder.decode` 13.5µs. 쓰기 경로 31.0µs, 왕복 35.9µs/행.
+
+### 한계
+
+1. 합성 데이터다. 실제 기기 데이터의 열 채움률에 따라 바이트/행이 달라진다.
+2. `all_readings` 2,202ms는 Python이 60열을 튜플로 만드는 비용을 포함해 **과대**다. 크기 비교로만 쓴다.
+3. 코덱은 `SensorReading` 대신 같은 모양의 56필드 구조체를 쓴 **대리 측정**이다. 절대값이 아니라 단계 간 비중만 읽는다.
+4. 실기기·시뮬레이터에서 잰 값이 아니다. Instruments 확인은 P1 구현 뒤로 남긴다.
+5. P0~P3는 설계만 했고 구현하지 않았다. 코드 변경 0줄이므로 "개선됐다"고 주장하지 않는다.
+
+### DPL1024A01 · P0 구현 검증 (2026-10-24)
+
+| 검증 | 명령 | 결과 |
+| --- | --- | --- |
+| 새 단위 테스트 | `xcodebuild test … -only-testing:TaptionPlanTests/TaptionStoreQualityTests` | **10개 통과, 실패 0** |
+| 저장소 회귀 4개 스위트 | `… -only-testing:SQLitePlanRepositoryTests -only-testing:SensorDayStoreTests -only-testing:TaptionBackupV2Tests -only-testing:AppModelBackupConnectionTests` | **98개 통과, 실패 0** |
+| 앱 Debug 빌드 | `xcodebuild build … -destination 'generic/platform=iOS'` | **BUILD SUCCEEDED**, `error:` 0, `warning:` 0 |
+| 구조 게이트 | `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json` | **기준선 통과** (`TaptionStoreV2` 1,493 → 1,422줄) |
+
+로그: `build/validation/DPL1024A01/{build-debug.log,test-quality.log,test-store-regression.log}`.
+
+#### 구현 중 실제로 고친 것
+
+1. **테스트가 `handle()`을 부를 수 없었다.** `OpaquePointer`가 Sendable이 아니라 액터 밖으로 못 나온다(`non-Sendable 'OpaquePointer'-typed result can not be returned from actor-isolated instance method`). 운영 코드에 테스트용 통로를 만드는 대신, 테스트가 별도 `sqlite3_open` 연결로 행을 직접 넣게 바꿨다.
+2. **`testReadableRowIsNotCounted` 픽스처가 틀렸다.** `(id, ts, day)`만 넣은 행은 `SensorReading`의 필수 필드가 없어 해독에 실패한다 — 코드 결함이 아니라 픽스처가 잘못이었다. 실제 `SensorReading`을 `appendImmutableReadings`로 넣도록 고쳤고, 그 김에 "실제 모델 값은 어느 열과도 어긋나지 않는다"(오경보 0)를 함께 단언한다.
+3. **구조 게이트가 주석을 셌다.** 새 파일 주석에 `@unchecked Sendable`이라는 낱말을 그대로 썼더니 `unchecked_sendable`이 25 → 26으로 늘어 게이트가 실패했다. 실제로는 `Mutex`를 써서 그 표시를 쓰지 않는다. 주석 문구를 바꿔 해결.
+
+#### 한계
+
+1. **실기기에서 재지 않았다.** 시뮬레이터(iOS 27.0, `BOKKI-verify`)에서만 돌았다.
+2. **전체 스위트를 돌리지 않았다.** 변경에 직접 맞는 4개 스위트 + 새 테스트만 돌렸다(AGENTS.md 「변경에 직접 맞는 테스트부터」). 전체 회귀는 별도 실행이 필요하다.
+3. **계수는 프로세스 안에만 있다.** 앱을 다시 켜면 0에서 시작하고, 진단 로그에 남은 것만 나중에 읽을 수 있다.
+4. **G4는 `dayRanges()`를 부를 때만 잰다.** 현재 그 함수의 호출부가 0곳이라 실제로는 잠들어 있다. 진단용 `dayDrift()`를 직접 부르면 잰다(테스트가 그 경로를 확인).
+5. P1~P3은 착수하지 않았다.
+
+### DPL1024A01 · P1 구현 검증 (2026-10-24)
+
+| 검증 | 명령 | 결과 |
+| --- | --- | --- |
+| 새 단위 테스트 | `xcodebuild test … -only-testing:TaptionPlanTests/TaptionStoreColumnCodingTests` | **10개 통과, 실패 0** |
+| 저장소 회귀 5개 스위트 | `… -only-testing:TaptionStoreQualityTests -only-testing:SQLitePlanRepositoryTests -only-testing:SensorDayStoreTests -only-testing:TaptionBackupV2Tests -only-testing:AppModelBackupConnectionTests` | **108개 통과, 실패 0** |
+| 앱 Debug 빌드 | `xcodebuild build … -destination 'generic/platform=iOS'` | **BUILD SUCCEEDED**, `error:` 0, `warning:` 0 |
+| 구조 게이트 | `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json` | **기준선 통과** (`TaptionStoreV2` 1,422 → 1,354줄) |
+
+로그: `build/validation/DPL1024A01/{test-codec-4.log,test-store-regression-p1.log,build-debug-p1-final.log}`.
+
+#### 새 테스트가 증명하는 것
+
+| 테스트 | 확인 내용 |
+| --- | --- |
+| `testColumnRowMatchesTheLegacyJSONPath` | 표본 1,000행에서 예전 코덱(테스트 안에 옮겨 둔 4통과 구현)과 새 코덱의 행이 같다. 실수는 **최대 5 ULP** 차이까지만 허용하고 그 이상은 실패. 차이가 실제로 존재하는지도 센다(오경보 방지) |
+| `testExtraJSONKeepsTheSameShapeAndValues` | `extra`의 키 구조가 같고 값이 허용 오차 안. 텍스트는 달라질 수 있음을 명시적으로 확인 |
+| `testRoundTripKeepsEveryColumnExactly` | 열 60개의 값은 **정확히** 왕복. `extra`만 JSON 단계가 남아 몇 ULP 흔들린다 |
+| `testLegacyEncodedFileIsStillReadable` | 예전 코덱이 만든 행 200개를 실제 sqlite 파일에 넣고 `readingsLoadResult`로 읽어 전부 일치 |
+| `testNewlyWrittenFileRoundTripsThroughTheStore` | 새 코덱으로 쓴 파일을 저장소 API로 다시 읽어 일치 |
+| `testSameStoredContentToleratesTheLegacyTruncation` | 예전 파일에서 읽은 값과 원본이 "같은 내용"으로 판정된다(복원 시 거짓 충돌 방지) |
+| `testSameStoredContentRejectsMeaningfulDifference` | 1e-6 차이는 충돌, 1e-15 차이는 충돌 아님 |
+| `testNoColumnIsDemotedForRealModelValues` | 실제 모델 값으로 56열 어디에서도 강등 0 |
+| `testNonFiniteValueThrowsLikeJSONEncoder` | NaN은 예전과 같이 던진다 |
+| `testColumnCodecIsFasterThanTheLegacyJSONPath` | 쓰기 5% 이상 빠름 + 읽기 10% 이상 느려지지 않음 |
+
+#### 구현 중 실제로 고친 것
+
+1. **`JSONSerialization` 파서가 double을 잘랐다.** 예전 코덱은 모델을 JSON 텍스트로 쓴 뒤 `JSONSerialization`으로 다시 읽었는데, 그 파서가 `0.019532305288943785`를 `0.01953230528894378`로 바꿨다(표본 최대 5 ULP). 같은 텍스트를 `Double(_:)`로 읽으면 정확히 복원되므로 손실은 파서 한 곳이다. 새 경로는 그 단계가 없어 값이 정확하다. 그 결과 **예전 파일의 값과 같은 기록을 다시 쓴 값이 마지막 비트에서 다르고**, `sameStoredContent`가 이를 충돌로 오판해 복원할 때마다 "충돌 N건"이 뜰 수 있었다. 그래서 이 함수를 새 파일로 옮기고 실수를 상대 1e-12까지 같은 값으로 보게 했다(넘는 차이는 그대로 충돌).
+2. **예상 −31%가 실현되지 않았다.** 대리 측정(`scripts/codec-proxy-bench.swift`)은 JSON 4단계를 따로 재서 87%로 보였지만, 실제 `SensorReading` 1,000행으로 재면 **쓰기 1.20×, 읽기 0.98×·1.04×(개선 없음)**. 남은 비용은 JSON이 아니라 행마다 56번 `column.path.split(separator: ".")`로 문자열을 쪼개고 `[String: Any]`로 복싱하는 일이었다. 설계 문서 2-3-1에 정정을 적었다.
+3. **시뮬레이터 자산 카탈로그 빌드가 `Operation not permitted`로 실패했다.** `build/ArchiveDD`의 `Debug-iphonesimulator` 산출물에서 `actool`의 rename이 막혔다(디스크 여유 110GB, 같은 폴더에서 `mv`는 성공). P0 때 쓴 `build/validation/DPL1024A01/TestDD`로 파생 데이터를 바꿔 해결했고, 그 뒤로는 같은 오류가 재현되지 않았다.
+
+#### 한계
+
+1. **실기기에서 재지 않았다.** P1 속도 수치는 시뮬레이터(iOS 27.0, `BOKKI-verify`) 값이고 실행마다 절대값이 20~30% 흔들린다. 읽는 것은 배수뿐이다.
+2. **읽기 경로는 빨라지지 않았다.** P1의 근거였던 "코덱이 하루 조회의 90%"가 틀렸다. 다음 근거는 2-3-1의 실측이다.
+3. **전체 스위트를 돌리지 않았다.** 변경에 직접 맞는 5개 스위트 + 새 테스트만 돌렸다.
+4. **`sameStoredContent`의 허용 오차는 새 의미다.** 1e-12 상대오차까지 같은 값으로 본다. 센서 값의 의미 있는 변화보다 훨씬 작지만, 예전에는 정확히 같아야 통과하던 판정이 느슨해졌다.
+5. **P2·P3은 착수하지 않았다.**
+
+### DPL1024A01 · P2 1단계 — 열 경로 사전 계산 (2026-10-24)
+
+P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 읽기 경로를 먼저 분해했다.
+
+#### 분해 측정 (`testReadPathBreakdown`, 1,000행, 최소 3회)
+
+| 항목 | 고치기 전 | 고친 뒤 |
+| --- | ---: | ---: |
+| 전체 | 134.3ms | **75.7~77.2ms** |
+| `extra` 파싱 | 7.1ms | 6.9ms |
+| `put` + 사전 | 79.6ms | 29.5~34.0ms |
+| └ 그중 `path.split` | **53.2ms(전체의 40%)** | **0** (미리 쪼갬) |
+| 디코더 | 47.6ms | 36.3~39.3ms |
+
+#### 검증
+
+| 검증 | 명령 | 결과 |
+| --- | --- | --- |
+| 코덱 + 저장소 6개 스위트 | `xcodebuild test … -only-testing:…` (6개) | **119개 통과, 실패 0** |
+| 앱 Debug 빌드 | `xcodebuild build … -destination 'generic/platform=iOS'` | **BUILD SUCCEEDED**, `error:` 0, `warning:` 0 |
+| 구조 게이트 | `python3 scripts/architecture-metrics.py --check …` | **기준선 통과** (`TaptionStoreV2` 1,354줄 그대로) |
+
+로그: `build/validation/DPL1024A01/{test-read-breakdown.log,test-codec-5.log,test-p2-step1.log,build-debug-p2step1.log}`.
+
+#### 구현 중 실제로 고친 것
+
+1. **`take`/`put`이 행마다 경로를 쪼개고 있었다.** `columns`는 고정인데 `column.path.split(separator: ".").map(String.init)`을 행×56번 호출했다. 1,000행에서 53.2ms(읽기의 40%). `columnParts`(열 순서와 같은 배열) + `columnPartsByName`(테스트가 직접 만든 열용)로 한 번만 쪼개게 바꿨다.
+2. **첫 분해 출력이 틀렸다.** `decodeOnly`를 "디코더 단독"으로 설계했는데 실제로는 `reading(from:)` 전체를 다시 부른 값이라 `put`이 두 번 들어갔다. 뺄셈이 음수(=145.6ms)를 냈다. 지금은 전체 − `extra` − `put`으로 계산한다.
+
+#### 한계
+
+1. **시뮬레이터 값이다.** 실행마다 절대값이 20~30% 흔들려 배수만 읽는다.
+2. **`testColumnCodecIsFasterThanTheLegacyJSONPath`의 읽기 비교는 이제 의미가 없다.** 예전 경로도 같은 `take`/`put`을 쓰므로 둘 다 빨라졌다(1.0×). 이 테스트는 P1의 JSON 제거만 본다.
+3. **표 분리(P2 원안)는 하지 않았다.** 스키마·백업 포맷 무변경. 하루 투영이 실제로 몇 열을 쓰는지 확인하지 않았고, 융합 엔진은 많은 열을 쓴다.
+4. **전체 스위트를 돌리지 않았다.** 변경에 직접 맞는 6개 스위트만 돌렸다.
+5. **실기기에서 재지 않았다.**
+
 ## HME1024B15 · 집 마커를 원형 아바타로 (2026-10-24)
 
 ### 1. 바꾼 것
@@ -2846,6 +2980,74 @@
   - **상자 밖으로 나가는 픽셀 0.** 잘리는 부분이 없다.
 - 같은 화면에서 **십자선(=지도 좌표)과 아바타 원 중심이 가로·세로 모두 일치**하고, `0원`이 `19°` 위에 겹치지 않고 놓이는 것도 다시 확인했다.
 - `FeatureEngineTests` **660 통과 / 0 실패 / 0 건너뜀**(`tests-27.1.log`, `TEST SUCCEEDED`). 테스트 타깃 경고 301건은 전부 `TaptionPlanSmokeUITests.swift`의 Swift 6 액터 격리 경고로 이번 변경과 무관하다.
+
+### DPL1024A01 · P2 2단계 — 읽기에서 사전 제거 (2026-10-24)
+
+`reading(from:)`이 `[String: Any]` 사전을 만들지 않고 행의 열 값에서 `SensorReading`을 바로 채운다.
+
+#### 측정 (`testReadPathBreakdown`, 1,000행, 표본 4개)
+
+| 항목 | 1단계 후 | 2단계 후 |
+| --- | ---: | ---: |
+| 사전 만들기(`put`) | 29.5~34.0ms | **없음** |
+| 디코딩 | 36.3~39.3ms | 55.1~61.7ms |
+| 위 둘의 합 | 65.8~73.3ms | **55.1~61.7ms** |
+| `extra` 파싱 | 6.9ms | 6.2~7.0ms |
+| **전체** | **75.7~77.2ms** | **61.2~68.7ms** |
+
+표본: 61.2 / 66.5 / 68.5 / 68.7ms. 1단계 후 구간(75.7~77.2)과 **겹치지 않는다** → 1.10×~1.26×.
+1단계와 합치면 134.3 → 61.2~68.7ms(**1.95~2.19×**). 디코딩 단독은 늘었지만(열마다 사전 조회 2회)
+사전 만들기가 통째로 사라져 합계가 줄었다.
+
+#### 검증
+
+| 검증 | 명령 | 결과 |
+| --- | --- | --- |
+| 코덱 스위트 11개 × 3회 | `-only-testing:TaptionPlanTests/TaptionStoreColumnCodingTests -test-iterations 3` | **33개 통과, 실패 0** |
+| 품질 스위트 | `-only-testing:TaptionPlanTests/TaptionStoreQualityTests` | **10개 통과, 실패 0** |
+| 저장소 스위트 3개 | `SensorDayStoreTests`·`TaptionBackupV2Tests`·`AppModelBackupConnectionTests` | **98개 통과, 실패 0** (52+41+5) |
+| 저장소 클래스 4개 | `CloudKitSnapshotAssetTests`·`UnavailablePlanRepositoryTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests` | **29개 통과, 실패 0** |
+| 앱 Debug 빌드 | `xcodebuild build … -destination 'generic/platform=iOS'` | **BUILD SUCCEEDED**, `error:` 0·`warning:` 0 |
+| 테스트 타깃 컴파일 | `xcodebuild build-for-testing …` | **TEST BUILD SUCCEEDED** |
+| 구조 게이트 | `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json` | **기준선 통과** (`TaptionStoreV2` 1,354줄 그대로) |
+
+합계 **148개 통과, 실패 0**(코덱 11 + 품질 10 + 저장소 127).
+로그: `build/validation/DPL1024A01/{test-read-repeat-2.log,test-quality-p2step2.log,test-SensorDayStoreTests-p2step2.log,test-TaptionBackupV2Tests-p2step2.log,test-AppModelBackupConnectionTests-p2step2.log,test-store-classes-p2step2.log,build-debug-p2step2.log,build-for-testing-p2step2.log}`.
+
+#### 구현 중 실제로 고친 것
+
+1. **테스트 타깃이 컴파일되지 않았다.** `TaptionPlanTests/FeatureEngineTests.swift:58`에 `)        XCTAssertEqual(`로 두 문장이 붙어 있었다. 내 변경이 아닌 미커밋 수정(33+/30−, 지도 핀 배치 작업)이라 내용은 건드리지 않고 줄만 나눴다.
+2. **`put`이 사라져 동결 파일의 주석이 틀렸다.** `take`·`put`·`convert`를 가리키던 줄에서 `put`을 빼되, 줄 수를 늘리지 않도록 한 줄 안에서 고쳤다(게이트는 동결 파일이 늘어날 때 막는다).
+3. **`SQLitePlanRepositoryTests`는 파일 이름이지 스위트 이름이 아니다.** 그 이름으로 `-only-testing`을 걸면 **`Executed 0 tests` + `TEST SUCCEEDED`** 가 나온다 — 통과처럼 보이지만 아무것도 안 돌았다. 이 파일에는 클래스가 4개(`CloudKitSnapshotAssetTests`·`UnavailablePlanRepositoryTests`·`TaptionStoreV2Tests`·`TaptionStoreRepositoryTests`) 있고, **앞선 P0·P1·P2 1단계의 "119개"에도 이 4개 클래스는 들어 있지 않았다**(119 = 코덱 11 + 품질 10 + 52 + 41 + 5). 이번에 처음 돌렸고 29개 모두 통과했다.
+
+#### 한계
+
+1. **측정 실행이 세 번 무산됐다.** 두 번은 `Test crashed with signal term before establishing connection`, 한 번은 테스트 도중 SIGTERM + 진단 수집 600초 타임아웃이었다. 원인은 코드가 아니라 **메모리 압박**이다(여유 57MB, 스왑 5.75GB/7.1GB, 같은 시각 `chronod`·`financed`·`ScreenTimeSettingsAgent`까지 크래시). 스위트를 하나씩 끊어 돌려 통과시켰다.
+2. **표본이 4개이고 폭이 7.5ms다.** 배율을 1.10~1.26×로만 말하는 이유다. 좁히려면 실기기에서 재야 한다.
+3. **하루 환산(88~99ms)은 선형 환산값이다.** 행당 비용이 일정하다는 가정이다.
+4. **쓰기 경로는 그대로다.** 사전을 여전히 거치므로 1.27~1.49×에서 변하지 않았다.
+
+### DPL1024A01 · P2 2단계 — 최적화 빌드 재측정 (2026-10-24)
+
+앞선 모든 수치가 Debug(`-Onone`)였다는 것을 확인하고 `-O`로 다시 쟀다(1,000행, 3회).
+
+| 항목 | Debug(`-Onone`) | 최적화(`-O`) | 배율 |
+| --- | ---: | ---: | ---: |
+| 전체 | 61.2~68.7ms | **37.3~37.8ms** | 1.6~1.8× |
+| `extra` 파싱 | 6.2~7.0ms | 6.7~6.9ms | **1.0×** |
+| 행→모델 | 55.1~61.7ms | 30.7~31.1ms | 1.8~2.0× |
+| 표본 폭 | 7.5ms | **0.5ms** | — |
+
+명령: `xcodebuild test -configuration Debug SWIFT_OPTIMIZATION_LEVEL=-O SWIFT_COMPILATION_MODE=wholemodule …`
+결과: **33개 통과, 실패 0**. 로그 `build/validation/DPL1024A01/test-codec-opt.log`.
+
+**왜 Release 구성이 아니라 Debug + `-O`인가**: `-configuration Release`는 기존 DerivedData에서 `Unable to resolve Swift module dependency to a compatible module: 'TaptionPlan'`로, 새 DerivedData에서는 `Failed to write to CAR`(에셋 카탈로그)로 실패했다. Debug 구성에 `-O`를 주면 모듈 구성이 어긋나지 않으면서 `-Onone`↔`-O` 차이만 분리된다.
+
+#### 한계
+
+1. **`-O`는 Release와 같지 않다.** Debug 구성이라 `DEBUG` 조건과 일부 assertion이 남는다. 실제 Release는 이보다 조금 더 빠를 수 있다.
+2. **P1 이전 코드의 `-O` 값이 없다.** 그래서 최적화 기준 배율은 모른다. 1.95~2.19×는 Debug 기준 배율이다.
+3. `extra` 파싱 6.7~6.9ms는 `JSONSerialization`(시스템 라이브러리)이라 컴파일 옵션과 무관하게 그대로다. 최적화 빌드에서 읽기의 **18%**를 차지한다.
 
 ## TFB1024A16 · 빌드 235 내부 배포 (2026-10-24)
 

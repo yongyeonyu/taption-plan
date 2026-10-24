@@ -174,132 +174,14 @@ enum TaptionReadingRowCodec {
         return UUID(uuid: uuid).uuidString
     }
 
-    private static func encoder() -> JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .secondsSince1970
-        return encoder
-    }
-
-    private static func decoder() -> JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .secondsSince1970
-        return decoder
-    }
-
     static func dayNumber(for date: Date, calendar: Calendar) -> Int {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return (parts.year ?? 0) * 10_000 + (parts.month ?? 0) * 100 + (parts.day ?? 0)
     }
 
-    static func row(for reading: SensorReading, calendar: Calendar) throws -> Row {
-        var object = try JSONSerialization.jsonObject(
-            with: encoder().encode(reading)
-        ) as? [String: Any] ?? [:]
-        guard let id = object["id"] as? String, uuidData(id) != nil,
-              let timestamp = (object["timestamp"] as? NSNumber)?.doubleValue else {
-            throw TaptionStoreV2Error.corruptRow("reading without a UUID id or timestamp")
-        }
-        object["id"] = nil
-        object["timestamp"] = nil
-        var values: [Value] = []
-        values.reserveCapacity(columns.count)
-        for column in columns {
-            values.append(take(column, from: &object))
-        }
-        let extra: String? = object.isEmpty ? nil : String(
-            decoding: try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]),
-            as: UTF8.self
-        )
-        return Row(
-            id: id,
-            timestamp: timestamp,
-            day: dayNumber(for: Date(timeIntervalSince1970: timestamp), calendar: calendar),
-            values: values,
-            extra: extra
-        )
-    }
-
-    /// 두 기록이 저장소에 같은 내용으로 저장되는지(시각 반올림 같은 표현 차이는 무시).
-    static func sameStoredContent(_ lhs: SensorReading, _ rhs: SensorReading) -> Bool {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-        guard let left = try? row(for: lhs, calendar: calendar),
-              let right = try? row(for: rhs, calendar: calendar) else { return false }
-        return left == right
-    }
-
-    static func reading(from row: Row) throws -> SensorReading {
-        var object: [String: Any] = [:]
-        if let extra = row.extra {
-            guard let parsed = try JSONSerialization.jsonObject(with: Data(extra.utf8)) as? [String: Any] else {
-                throw TaptionStoreV2Error.corruptRow("extra is not an object")
-            }
-            object = parsed
-        }
-        object["id"] = row.id
-        object["timestamp"] = row.timestamp
-        for (column, value) in zip(columns, row.values) {
-            put(column, value, into: &object)
-        }
-        let data = try JSONSerialization.data(withJSONObject: object)
-        do {
-            return try decoder().decode(SensorReading.self, from: data)
-        } catch {
-            throw TaptionStoreV2Error.corruptRow("reading \(row.id): \(error)")
-        }
-    }
-
-    /// 값의 형태가 열과 맞을 때만 열로 옮기고, 맞지 않으면 `extra`에 그대로 둔다.
-    private static func take(_ column: Column, from object: inout [String: Any]) -> Value {
-        let parts = column.path.split(separator: ".").map(String.init)
-        if parts.count == 2 {
-            guard var inner = object[parts[0]] as? [String: Any], let raw = inner[parts[1]],
-                  let value = convert(raw, kind: column.kind) else { return .null }
-            inner[parts[1]] = nil
-            object[parts[0]] = inner.isEmpty ? nil : inner
-            return value
-        }
-        guard let raw = object[parts[0]], let value = convert(raw, kind: column.kind) else { return .null }
-        object[parts[0]] = nil
-        return value
-    }
-
-    private static func put(_ column: Column, _ value: Value, into object: inout [String: Any]) {
-        guard value != .null else { return }
-        let parts = column.path.split(separator: ".").map(String.init)
-        let json: Any
-        switch (column.kind, value) {
-        case (.bool, .int(let number)): json = number != 0
-        case (_, .int(let number)): json = number
-        case (_, .real(let number)): json = number
-        case (_, .text(let text)): json = text
-        default: return
-        }
-        if parts.count == 2 {
-            var inner = object[parts[0]] as? [String: Any] ?? [:]
-            inner[parts[1]] = json
-            object[parts[0]] = inner
-        } else {
-            object[parts[0]] = json
-        }
-    }
-
-    private static func convert(_ raw: Any, kind: Kind) -> Value? {
-        switch kind {
-        case .text:
-            guard let text = raw as? String else { return nil }
-            return .text(text)
-        case .bool:
-            guard let number = raw as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() else { return nil }
-            return .int(number.boolValue ? 1 : 0)
-        case .int:
-            guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() else { return nil }
-            return .int(number.int64Value)
-        case .real:
-            guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() else { return nil }
-            return .real(number.doubleValue)
-        }
-    }
+    // 행 ↔ 모델 변환(`row(for:)`·`reading(from:)`)과 내용 비교(`sameStoredContent`)는
+    // `TaptionStoreColumnCoding.swift`에 있다.
+    // 열 ↔ 값 변환(`take`·`convert`)은 `TaptionStoreQuality.swift`에 있다. 열 강등을 거기서 센다. 읽기는 사전을 거치지 않는다.
 }
 
 /// SQLite 연결을 감싸 해제될 때 닫는다(액터의 deinit에서 포인터를 직접 만질 수 없어서 분리했다).
@@ -526,44 +408,22 @@ actor TaptionStoreV2 {
         return conflicts
     }
 
-    /// 이미 있는 `id`는 건드리지 않고 새 기록만 넣는다. 새로 들어간 `id`를 돌려준다.
-    func insertNewReadings(_ readings: [SensorReading]) throws -> [String] {
-        let db = try handle()
-        try exec(db, "BEGIN IMMEDIATE")
-        var inserted: [String] = []
-        do {
-            let names = TaptionReadingRowCodec.columns.map(\.name)
-            let columnList = (["id", "ts", "day"] + names + ["extra"]).joined(separator: ", ")
-            let placeholders = Array(repeating: "?", count: names.count + 4).joined(separator: ", ")
-            let statement = try prepare(db, "INSERT OR IGNORE INTO readings (\(columnList)) VALUES (\(placeholders))")
-            defer { sqlite3_finalize(statement) }
-            for reading in readings {
-                let row = try TaptionReadingRowCodec.row(for: reading, calendar: calendar)
-                sqlite3_reset(statement)
-                sqlite3_clear_bindings(statement)
-                bindRow(statement, row)
-                try step(db, statement)
-                if sqlite3_changes(db) > 0 { inserted.append(row.id) }
-            }
-            try exec(db, "COMMIT")
-        } catch {
-            try? exec(db, "ROLLBACK")
-            throw error
-        }
-        return inserted
-    }
-
     /// 기록이 있는 현지 날짜마다 첫·마지막 시각 범위.
+    /// 저장된 `day`가 지금 달력과 어긋나면(시간대 이동) 조용히 넘기지 않고 센다. 정확한 행 수는 `dayDrift()`가 센다.
     func dayRanges() throws -> [ClosedRange<Date>] {
         let db = try handle()
-        let statement = try prepare(db, "SELECT MIN(ts), MAX(ts) FROM readings GROUP BY day ORDER BY day")
+        let statement = try prepare(db, "SELECT day, MIN(ts), MAX(ts) FROM readings GROUP BY day ORDER BY day")
         defer { sqlite3_finalize(statement) }
         var ranges: [ClosedRange<Date>] = []
+        var driftedDays = 0
         while sqlite3_step(statement) == SQLITE_ROW {
-            let lower = Date(timeIntervalSince1970: sqlite3_column_double(statement, 0))
-            let upper = Date(timeIntervalSince1970: sqlite3_column_double(statement, 1))
+            let stored = Int(sqlite3_column_int64(statement, 0))
+            let lower = Date(timeIntervalSince1970: sqlite3_column_double(statement, 1))
+            let upper = Date(timeIntervalSince1970: sqlite3_column_double(statement, 2))
+            if TaptionReadingRowCodec.dayNumber(for: lower, calendar: calendar) != stored { driftedDays += 1 }
             ranges.append(lower...max(lower, upper))
         }
+        TaptionStoreQualityLedger.shared.recordDayDrift(days: driftedDays, rows: nil)
         return ranges
     }
 
@@ -608,6 +468,7 @@ actor TaptionStoreV2 {
                 readings.append(try TaptionReadingRowCodec.reading(from: row))
             } catch {
                 failures.append(error)
+                TaptionStoreQualityLedger.shared.recordUnreadableRow(error)
             }
         }
         guard code == SQLITE_DONE else {

@@ -41,5 +41,6 @@
 - `README.md`: 프로젝트 개요와 문서 진입점.
 - `DEVELOPMENT.md`: 소스 경계, 아키텍처 예외와 검증 명령.
 - `docs/TESTFLIGHT.md`: TestFlight 자동 배포의 트리거·설정·검증·실패 대응.
+- `docs/DATA_PIPELINE.md`: 저장소 파이프라인 측정 결과와 개선 설계(P0~P3). 측정 도구는 `scripts/pipeline-bench.py`.
 - `temp.md` / `test.md`: 미완료 요청 / 실제 검증 근거. 요청한 부분만 읽습니다.
 - `*_ARCHIVE.md`와 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.

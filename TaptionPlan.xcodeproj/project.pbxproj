@@ -111,6 +111,10 @@
 		5B0000000000000000000C1A /* AppLockAndPINTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000C1F /* AppLockAndPINTests.swift */; };
 		5A00000000000000000000A3 /* TaptionStoreRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F3 /* TaptionStoreRepository.swift */; };
 		5A00000000000000000000A6 /* TaptionStoreRawEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */; };
+		5A00000000000000000000A8 /* TaptionStoreQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F5 /* TaptionStoreQuality.swift */; };
+		5A00000000000000000000AA /* TaptionStoreColumnCoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */; };
+		5A00000000000000000000A9 /* TaptionStoreQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F5 /* TaptionStoreQuality.swift */; };
+		5A00000000000000000000AB /* TaptionStoreColumnCoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */; };
 		5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */; };
 		A51002000000000000000005 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000004 /* PlanDaySealDigest.swift */; };
@@ -154,6 +158,8 @@
 		A40000000000000000000005 /* TaptionActivityEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */; };
 		A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */; };
 		A40000000000000000000007 /* SQLitePlanRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */; };
+		A4000000000000000000000D /* TaptionStoreQualityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000007 /* TaptionStoreQualityTests.swift */; };
+		A4000000000000000000000E /* TaptionStoreColumnCodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */; };
 		A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000006 /* SensorDayStoreTests.swift */; };
 		A40000000000000000000009 /* TaptionActivityEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000002 /* TaptionActivityEngine */; };
 		A4000000000000000000000A /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
@@ -348,6 +354,8 @@
 		5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelBackupConnectionTests.swift; sourceTree = "<group>"; };
 		5B0000000000000000000C1F /* AppLockAndPINTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLockAndPINTests.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreRawEvents.swift; sourceTree = "<group>"; };
+		5A00000000000000000000F5 /* TaptionStoreQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreQuality.swift; sourceTree = "<group>"; };
+		5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreColumnCoding.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F3 /* TaptionStoreRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreRepository.swift; sourceTree = "<group>"; };
 		F10150000000000000000001 /* SystemDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemDiagnostics.swift; sourceTree = "<group>"; };
 		F1000000000000000000007C /* SubwayCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayCatalog.swift; sourceTree = "<group>"; };
@@ -379,6 +387,8 @@
 		F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapterTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRouteEngineAdapterTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLitePlanRepositoryTests.swift; sourceTree = "<group>"; };
+		F40000000000000000000007 /* TaptionStoreQualityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreQualityTests.swift; sourceTree = "<group>"; };
+		F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreColumnCodingTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000006 /* SensorDayStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDayStoreTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
@@ -531,6 +541,8 @@
 				F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */,
 				F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */,
 				F40000000000000000000005 /* SQLitePlanRepositoryTests.swift */,
+				F40000000000000000000007 /* TaptionStoreQualityTests.swift */,
+				F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */,
 				F40000000000000000000006 /* SensorDayStoreTests.swift */,
 				5B00000000000000000000F4 /* TaptionBackupV2Tests.swift */,
 				5B0000000000000000000C2F /* AppModelBackupConnectionTests.swift */,
@@ -630,6 +642,8 @@
 				5B00000000000000000000F2 /* TaptionBackupDestination.swift */,
 				5B00000000000000000000F1 /* TaptionBackupFormat.swift */,
 				5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */,
+				5A00000000000000000000F5 /* TaptionStoreQuality.swift */,
+				5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */,
 				F10150000000000000000001 /* SystemDiagnostics.swift */,
 				F1000000000000000000007C /* SubwayCatalog.swift */,
 				F10000000000000000000085 /* RouteTimelineData.swift */,
@@ -1075,6 +1089,8 @@
 				5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */,
 				5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */,
 				5A00000000000000000000A6 /* TaptionStoreRawEvents.swift in Sources */,
+				5A00000000000000000000A8 /* TaptionStoreQuality.swift in Sources */,
+				5A00000000000000000000AA /* TaptionStoreColumnCoding.swift in Sources */,
 				A10150000000000000000001 /* SystemDiagnostics.swift in Sources */,
 				A1000000000000000000007C /* SubwayCatalog.swift in Sources */,
 				A10000000000000000000085 /* RouteTimelineData.swift in Sources */,
@@ -1111,6 +1127,8 @@
 				A40000000000000000000005 /* TaptionActivityEngineAdapterTests.swift in Sources */,
 				A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */,
 				A40000000000000000000007 /* SQLitePlanRepositoryTests.swift in Sources */,
+				A4000000000000000000000D /* TaptionStoreQualityTests.swift in Sources */,
+				A4000000000000000000000E /* TaptionStoreColumnCodingTests.swift in Sources */,
 				A40000000000000000000008 /* SensorDayStoreTests.swift in Sources */,
 				5B00000000000000000000A4 /* TaptionBackupV2Tests.swift in Sources */,
 				5B0000000000000000000C2A /* AppModelBackupConnectionTests.swift in Sources */,
@@ -1134,6 +1152,8 @@
 				A51002000000000000000005 /* PlanDaySeal.swift in Sources */,
 				5A00000000000000000000A4 /* TaptionStoreV2.swift in Sources */,
 				5A00000000000000000000A7 /* TaptionStoreRawEvents.swift in Sources */,
+				5A00000000000000000000A9 /* TaptionStoreQuality.swift in Sources */,
+				5A00000000000000000000AB /* TaptionStoreColumnCoding.swift in Sources */,
 				5A00000000000000000000A5 /* TaptionStoreRepository.swift in Sources */,
 				A1000000000000000000003C /* WidgetPayloadFactory.swift in Sources */,
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
