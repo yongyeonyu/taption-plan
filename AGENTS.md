@@ -29,9 +29,17 @@
 - TestFlight는 업로드만으로 완료하지 않습니다. 처리가 `제출 준비 완료`가 된 뒤 `TP Taption Plan 내부 테스트` 그룹에 연결하고 그룹 화면에서 빌드와 테스터 노출을 읽어 확인·기록합니다.
 - IAP 판매·계약·심사 제출은 별도 재개 요청 전까지 보류합니다. 배포·push 등 외부 상태 변경은 현재 요청 범위와 최신 상태를 확인해 수행합니다.
 
+## TestFlight 자동 배포
+
+- **트리거**: "테스트플라이트 연결해서 빌드업해" 요청이 들어오면 `bash scripts/testflight/release.sh --yes`를 실행합니다. 추가 확인 없이 빌드 번호 증가 → 아카이브 → 익스포트 → 업로드 → 내부 그룹 연결 → 검증까지 진행합니다.
+- 설정은 `scripts/testflight/config.json`(Issuer ID·키 ID·번들·그룹 ID, 비밀 없음), 개인키는 `~/.appstoreconnect/private_keys/AuthKey_<키 ID>.p8`에만 둡니다. 키 내용은 출력·커밋하지 않습니다.
+- 사전 점검만 하려면 `--preflight`, 업로드 없이 산출물까지만 확인하려면 `--no-upload`, 이미 올린 빌드를 다시 확인하려면 `bash scripts/testflight/verify.sh --build <번호>`를 씁니다.
+- 완료 기준은 위 TestFlight 규칙과 같습니다. `release.sh`의 9단계가 `VALID`·그룹 연결·테스터 노출을 모두 읽어야 종료 코드 0이 되고, 보고서는 `build/validation/<요청 ID>/testflight-report.json`에 남습니다. 자세한 사용법은 `docs/TESTFLIGHT.md`.
+
 ## 문서 위치
 
 - `README.md`: 프로젝트 개요와 문서 진입점.
 - `DEVELOPMENT.md`: 소스 경계, 아키텍처 예외와 검증 명령.
+- `docs/TESTFLIGHT.md`: TestFlight 자동 배포의 트리거·설정·검증·실패 대응.
 - `temp.md` / `test.md`: 미완료 요청 / 실제 검증 근거. 요청한 부분만 읽습니다.
 - `*_ARCHIVE.md`와 날짜가 붙은 인계문: 지난 시점의 기록으로, 현재 작업 시작 시 읽지 않습니다.

@@ -1982,3 +1982,19 @@
 - ③행동구간 편집: `openSectionEditor`가 채우는 `sectionEditSelection`을 그대로 쓰되, 전체 화면 표시를 `clipEditorSheet(for:)`로 바꿨다. 기존 `sectionEditSheet(for:)`는 함수를 남겨 두고 호출부만 주석 처리했다. 저장 처리는 `applySectionEditSave(_:selection:)`로 합쳐 두 화면이 같은 규칙을 쓴다(중복 20줄 제거). 클립 줄은 `railBleed = 14`만큼 양옆으로 넓혀 그려 화면 밖으로 이어지게 했고, 머리말·선택 요약·도구 막대는 안쪽 여백을 그대로 지킨다.
 - 구조 게이트: `MapHomeView` +54, `AppModel` +17, `MapHomeNLEClipEditor` +12. 로직을 `SleepAnalysisEngine.swift`(동결 아님)로 옮기고(`SleepSessionInstallation`·`SleepReconciliationLedger`) 중복 저장 처리를 합쳐 증가분을 줄였으나 0으로 만들 수는 없었다(새 진입 화면·공유 저장 처리·보정 기록이 모두 이 파일들에 붙는 기능 코드다). `python3 scripts/architecture-metrics.py --write-baseline`으로 기준선을 현재 값으로 다시 썼다.
 - 한계: 시뮬레이터에서 홈 화면 스크린샷을 얻지 못했다. 앱을 실행하면 위치·사진 시스템 권한 알림이 연속으로 뜨는데 `simctl privacy grant location|all`이 이 iOS 27 런타임에서 효과가 없고(재실행해도 같은 알림), GUI 자동 클릭 도구(cliclick·idb)와 System Events 권한도 없다. 그래서 ②의 정렬 수정은 코드 지오메트리로만 검증했다.
+
+## TFB1024A14 · TestFlight 업로드 자동화 (2026-10-24)
+- 요청: Issuer ID `229c124e-7477-462c-b3f0-3180eb81ff25`를 쓰는 이 프로젝트에서 "테스트플라이트 연결해서 빌드업해"라고 하면 TestFlight 업로드·빌드가 자동으로 돌도록 구성한다. 연동 설정·빌드 스크립트·배포 트리거 흐름을 포함하고, Issuer ID와 인증 정보가 올바르게 참조되는지 확인하며, 빌드 성공을 확인하는 검증 절차도 만든다.
+- 원인(현재 상태):
+  1. TestFlight 업로드 절차가 **일회용 스크립트**로만 존재한다. `build/validation/CRV1024A11/asc.py`·`attach.py`에 Issuer·키 ID가 환경변수/하드코딩으로 흩어져 있고, `build/`는 gitignore라 다음 사람에게 남지 않는다.
+  2. 빌드 번호가 `CURRENT_PROJECT_VERSION`(8곳)과 `Info.plist` `CFBundleVersion`(4곳)에 나뉘어 있어 손으로 맞추면 어긋나기 쉽다. AGENTS.md가 네 제품 번들 일치를 요구하지만 확인 절차가 자동화되어 있지 않다.
+  3. 업로드 후 ①처리 완료(`VALID`) 대기 ②내부 그룹 연결 ③그룹 화면에서 빌드·테스터 노출 확인을 매번 손으로 했다. AGENTS.md는 업로드만으로 완료가 아니라고 정하고 있다.
+  4. 트리거가 없다. 같은 요청이 다시 와도 어떤 명령을 어떤 순서로 실행해야 하는지가 문서에 없다.
+- 해결:
+  1. `scripts/testflight/config.json`에 비밀이 아닌 설정(Issuer ID·키 ID·팀 ID·번들 ID·내부 그룹 이름/ID·버전 파일 4개)을 모으고, 비밀 경로는 환경변수로 덮어쓸 수 있게 한다. 개인키는 저장소에 넣지 않고 `~/.appstoreconnect/private_keys/`에서만 읽는다.
+  2. `scripts/testflight/asc.py`: PyJWT 없이 `openssl`로 ES256 JWT를 만들어 App Store Connect API를 호출한다(의존성 0). `preflight`·`builds`·`wait`·`attach`·`verify` 하위 명령.
+  3. `scripts/testflight/release.sh`: 사전 점검 → (선택) 테스트 → 빌드 번호 증가(4+8곳) → 아카이브 → 익스포트 → **산출물 4개 번들 버전 재확인** → 업로드 → `VALID` 대기 → 내부 그룹 연결 → 읽기 검증 → JSON 보고서. 단계마다 `build/validation/<ID>/`에 로그를 남긴다.
+  4. `scripts/testflight/verify.sh`: 이미 올린 빌드 번호로 ②③만 다시 확인하는 절차.
+  5. `docs/TESTFLIGHT.md`: 트리거 문구 → 실행 명령, 인증 정보 위치, 흐름, 검증 기준, 실패 시 대응.
+  6. `AGENTS.md`에 트리거 규칙을 넣어, 요청 문구가 오면 에이전트가 이 스크립트를 실행하도록 한다.
+- 검증 기준: ①`release.sh --preflight`가 설정·키·ASC 인증·번들 버전 일치를 모두 통과 ②Issuer ID가 config와 실제 JWT `iss`에 동일하게 들어가는지 확인 ③`--no-upload`로 아카이브·익스포트·번들 버전 검증까지 성공 ④`verify.sh`가 기존 빌드 233의 `VALID`·그룹 연결·테스터 노출을 읽어 보고 ⑤스크립트가 개인키 내용을 출력하지 않음 ⑥문서·AGENTS.md 트리거 규칙 반영.

@@ -1,0 +1,43 @@
+{
+  "appStoreConnect": {
+    "issuerId": "229c124e-7477-462c-b3f0-3180eb81ff25",
+    "keyId": "AGB82JKGT3",
+    "keyPath": "~/.appstoreconnect/private_keys/AuthKey_{keyId}.p8"
+  },
+  "app": {
+    "bundleId": "com.taption.plan",
+    "teamId": "4FWG8XXYM7",
+    "project": "TaptionPlan.xcodeproj",
+    "scheme": "TaptionPlan",
+    "configuration": "Release",
+    "exportOptionsPlist": "ExportOptions.plist",
+    "products": [
+      {
+        "name": "App",
+        "bundleId": "com.taption.plan",
+        "infoPlist": "TaptionPlan/Info.plist"
+      },
+      {
+        "name": "Widget",
+        "bundleId": "com.taption.plan.widget",
+        "infoPlist": "TaptionPlanWidget/Info.plist"
+      },
+      {
+        "name": "Watch",
+        "bundleId": "com.taption.plan.watchkitapp",
+        "infoPlist": "TaptionPlanWatch/Info.plist"
+      },
+      {
+        "name": "WatchWidget",
+        "bundleId": "com.taption.plan.watchkitapp.widget",
+        "infoPlist": "TaptionPlanWatchWidget/Info.plist"
+      }
+    ]
+  },
+  "testflight": {
+    "internalGroupName": "TP Taption Plan 내부 테스트",
+    "internalGroupId": "b4857e5e-d1ff-4bc2-b9ad-a69bcd4603fd",
+    "processingTimeoutSeconds": 1800,
+    "pollIntervalSeconds": 20
+  }
+}
