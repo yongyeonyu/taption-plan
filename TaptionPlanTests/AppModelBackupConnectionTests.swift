@@ -9,10 +9,17 @@ final class AppModelBackupConnectionTests: XCTestCase {
     private let password = "482915"
     private var directories: [URL] = []
 
-    override func tearDown() {
-        for directory in directories { try? FileManager.default.removeItem(at: directory) }
-        directories = []
-        super.tearDown()
+    /// 동기 `tearDown()`을 재정의하면 nonisolated로 취급돼 메인 액터 상태인
+    /// `directories`를 만질 수 없다(경고). async 변형을 재정의하고 메인 액터로
+    /// 넘겨서 정리한다.
+    override func tearDown() async throws {
+        await MainActor.run {
+            for directory in directories {
+                try? FileManager.default.removeItem(at: directory)
+            }
+            directories = []
+        }
+        try await super.tearDown()
     }
 
     private var calendar: Calendar {

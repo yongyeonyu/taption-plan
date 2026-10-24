@@ -907,6 +907,9 @@ final class AppModel {
     var planEditorRequest: PlanEditorRequest?
     var selectedPhotoCluster: PhotoCluster?
     var detail: AppDetail?
+    /// 지도 홈이 아직 소비하지 않은 이동 요청. 위젯·알림·URL이 남기고,
+    /// `MapHomeView`가 화면을 옮긴 뒤 nil로 되돌린다.
+    var pendingMapHomeRoute: MapHomeRoute?
     var selectedGroupPlanID: UUID?
     var selectedGoalPlanID: UUID?
     var groupNavigationPath: [UUID] = []
@@ -2858,43 +2861,40 @@ final class AppModel {
         }
     }
 
+    /// 위젯·알림·URL에서 들어온 링크를 지도 홈의 상태로 번역한다.
+    ///
+    /// 예전에는 `selectedTab`을 바꿨지만 지도 우선 화면에는 탭이 없다. 지금은
+    /// 날짜를 옮기고 `pendingMapHomeRoute`에 "무엇을 열지"를 남긴다.
     func openDeepLink(_ url: URL) async {
         guard let link = TaptionDeepLink(url: url) else { return }
-        switch link {
-        case .today:
-            selectedTab = .schedule
-            selectedScale = .day
-            selectedDate = .now
-            detail = nil
-            return
-        case .catPicker:
-            selectedTab = .settings
-            detail = .catPicker
-            return
-        case .plan(let planID):
-            guard let plan = await planForDeepLink(planID) else {
-                selectedTab = .schedule
-                selectedScale = .day
-                selectedDate = .now
-                detail = nil
-                selectedAction = nil
-                publishWidgetPayload()
-                return
-            }
-
-            selectedTab = .schedule
-            selectedScale = .day
-            selectedDate = plan.span.start
-            detail = nil
-            selectedAction = QuickActionItem(
-                planID: plan.id,
-                title: plan.title,
-                time:
-                    "\(plan.span.start.formatted(date: .omitted, time: .shortened)) → "
-                    + plan.span.end.formatted(date: .omitted, time: .shortened),
-                context: "계획 \(Int(plan.span.duration / 60))분"
-            )
+        let planStart: Date?
+        if case .plan(let planID) = link {
+            planStart = await planForDeepLink(planID)?.span.start
+        } else {
+            planStart = nil
         }
+        let destination = link.mapHomeDestination(
+            planStart: planStart,
+            now: .now
+        )
+        selectedTab = .schedule
+        selectedScale = .day
+        selectedDate = destination.date
+        detail = nil
+        selectedAction = nil
+        pendingMapHomeRoute = destination.route
+        publishWidgetPayload()
+        // 위젯·알림 딥링크는 화면이 실제로 움직였는지 확인할 방법이 없었다.
+        // 라우팅 결과를 남겨 두면 다음에 "링크가 안 먹는다"는 말이 나올 때
+        // 파싱 실패인지 화면 이동 실패인지 로그만 보고 가를 수 있다.
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "deep_link_routed",
+            fields: [
+                "host": url.host ?? "",
+                "route": destination.route.diagnosticName,
+                "plan_found": String(planStart != nil),
+            ]
+        )
     }
 
     private func planForDeepLink(_ planID: UUID) async -> PlanRecord? {

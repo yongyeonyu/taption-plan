@@ -7,6 +7,43 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// 지도 홈이 뜨고 하단 바가 눌릴 수 있게 될 때까지 기다린다.
+    ///
+    /// 첫 실행에서는 앱이 직접 띄우는 권한 안내 시트가 하단 바를 덮는다. 이건
+    /// 시스템 HealthKit 시트가 아니라 앱이 그리는 시트라서, '허용 안 함'을 눌러도
+    /// 닫히지 않고 '전체 건너뛰기'로만 닫힌다. 사용자 데이터를 바꾸지 않도록
+    /// 허용은 누르지 않고 건너뛰기만 누른다.
+    private func launchMapHome(_ app: XCUIApplication) {
+        app.launch()
+        let skip = app.buttons["전체 건너뛰기"]
+        if skip.waitForExistence(timeout: 12) {
+            skip.tap()
+        }
+        let menu = app.buttons
+            .containing(NSPredicate(format: "label CONTAINS %@", "메뉴"))
+            .firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 40))
+        // 전체 스위트를 한 번에 돌리면 런치 오버레이가 늦게 걷힌다. 그때 메뉴는
+        // 트리에 있지만 눌리지 않아, 이어지는 탭이 조용히 아무 일도 하지 않는다.
+        let hittable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"),
+            object: menu
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [hittable], timeout: 30),
+            .completed,
+            "지도 홈 메뉴가 눌릴 수 있게 되지 않음"
+        )
+    }
+
+    @discardableResult
+    private func openMapHome(_ app: XCUIApplication) -> XCUIElement {
+        launchMapHome(app)
+        return app.buttons
+            .containing(NSPredicate(format: "label CONTAINS %@", "메뉴"))
+            .firstMatch
+    }
+
     func testLaunchShowsHomeWithoutChangingData() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
         app.launch()
@@ -45,16 +82,21 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 메뉴의 '로그 업로드'를 눌러 진단 로그를 iCloud Drive에 내보낸다(데이터는 바꾸지 않는다).
     func testUploadDiagnosticsLogs() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
-        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        let menu = openMapHome(app)
         menu.tap()
         let settings = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "설정")).firstMatch
         if settings.waitForExistence(timeout: 5) { settings.tap() }
-        let sensors = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "GPS 및 센서 데이터")).firstMatch
-        if sensors.waitForExistence(timeout: 5) { sensors.tap() }
-        let upload = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "로그 보내기", "로그 업로드")).firstMatch
+        // '로그 업로드'는 '데이터 보호' 시트 안에 있다. 'GPS 및 센서 데이터'는
+        // 화면을 여는 항목이 아니라 그 자리에서 펼쳐지는 섹션이라 아무 데도 가지 않는다.
+        let dataProtection = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "데이터 보호")).firstMatch
         var tries = 0
+        while !dataProtection.exists && tries < 6 {
+            app.swipeUp()
+            tries += 1
+        }
+        if dataProtection.waitForExistence(timeout: 5) { dataProtection.tap() }
+        let upload = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "로그 보내기", "로그 업로드")).firstMatch
+        tries = 0
         while !upload.exists && tries < 10 {
             app.swipeUp()
             tries += 1
@@ -78,13 +120,15 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 알림 설정을 열고 토글을 한 번 눌러 본다(재현용). 데이터는 바꾸지 않는다.
     func testOpenAlarmSettingsAndToggle() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
-        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        let menu = openMapHome(app)
         menu.tap()
         let alerts = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "알림")).firstMatch
+        // 메뉴 시트는 스크롤 위치가 실행마다 다르다. 한 번 더 기다렸다가 넘긴다.
         var tries = 0
-        while !alerts.exists && tries < 10 { app.swipeUp(); tries += 1 }
+        while !alerts.waitForExistence(timeout: 2) && tries < 15 {
+            app.swipeUp()
+            tries += 1
+        }
         XCTAssertTrue(alerts.waitForExistence(timeout: 5))
         alerts.tap()
         sleep(3)
@@ -100,9 +144,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 하루 카드를 열고 잠시 둔다(재현용). 저장·공유는 누르지 않는다.
     func testOpenDayCard() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
-        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        let menu = openMapHome(app)
         menu.tap()
         let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "하루 카드")).firstMatch
         var tries = 0
@@ -119,9 +161,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 하루 카드의 사진 저장과 공유를 차례로 누른다(재현용).
     func testDayCardSaveAndShare() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
-        let menu = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "메뉴")).firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 20))
+        let menu = openMapHome(app)
         menu.tap()
         let card = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "하루 카드")).firstMatch
         var tries = 0
@@ -144,7 +184,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 메모 추가 화면에서 음성 입력 버튼을 누른다(마이크 충돌 재현). 권한 창은 허용한다.
     func testMemoMicButtonRepro() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        launchMapHome(app)
         let add = app.buttons.containing(NSPredicate(format: "label == %@ OR label == %@", "메모", "Memo")).firstMatch
         XCTAssertTrue(add.waitForExistence(timeout: 20))
         add.tap()
@@ -161,7 +201,7 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     /// 메모 추가 → 음성 첨부 → 녹음 시작·끝내기(충돌 재현). 권한 창은 허용한다.
     func testMemoVoiceRecordReproduction() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
-        app.launch()
+        launchMapHome(app)
         let add = app.buttons.containing(NSPredicate(format: "label == %@ OR label == %@", "메모", "Memo")).firstMatch
         XCTAssertTrue(add.waitForExistence(timeout: 20))
         add.tap()
@@ -179,3 +219,4 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         sleep(8)
     }
 }
+

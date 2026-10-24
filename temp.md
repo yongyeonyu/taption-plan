@@ -1939,3 +1939,22 @@
 - 검증 기준: 앱 테스트 실패 0(환경 의존 2건은 건너뜀으로 표시), 컴파일 경고 0, 패키지 테스트 4개 스위트 실패 0, 아키텍처 게이트 통과, Debug 빌드 성공, TestFlight 업로드 후 처리 완료·내부 테스트 그룹에 빌드와 테스터가 보임.
 - 범위 밖으로 남긴 것: `AppShellView.handleOpenURL`은 `legacyUIEnabled == false`라 딥링크가 동작하지 않는다. 가드를 풀어도 `AppModel.openDeepLink`가 없어진 탭 IA(`selectedTab = .schedule`)로 보내므로 MapHome 상태를 직접 여는 구현이 먼저 필요하다. `MapHomeAppleCameraCommand`의 `as! MKMapCamera` 2곳은 `MKMapCamera.copy()`가 항상 같은 타입을 돌려주므로 그대로 두었다(옵셔널 캐스트로 바꾸면 불가능한 경우에 카메라 갱신을 조용히 건너뛰게 되어 더 나쁘다).
 - 추가 조사(수정 없음): 병렬 실행에서 빠져 있던 `TaptionPlanSmokeUITests` 4건이 병렬을 끄면 실패한다. 원인은 앱 결함이 아니라 첫 실행 HealthKit 권한 시트가 메뉴를 덮는 것이다(실패 시점 접근성 트리 첨부로 확인). '허용 안 함' 탭으로 시트가 닫히지 않아 테스트 수정은 되돌렸고, `TaptionPlanSmokeUITests.swift`는 변경 없음. 실기기에서 권한이 이미 정해진 상태로 재확인이 필요하다.
+
+## DLK1024B12 · 딥링크·알림 라우팅 복구 (2026-10-24)
+- 요청: 남은 항목 모두 실행. ①죽어 있는 딥링크 라우팅 ②실기기 확인 ③TestFlight 재빌드.
+- 원인: `AppShellView.handleOpenURL`·`handlePlanNotification`·`performInitialLaunchPreparation` 세 곳이 `Self.legacyUIEnabled`로 막혀 있다. 그런데 위젯은 계속 `taptionplan://today|sensor|cats|plan/<id>`를 쏘고(`TaptionPlanWidget.swift:390, 568, 570, 2425, 3791`), 알림 탭도 같은 경로를 쓴다. 가드만 풀면 `AppModel.openDeepLink`가 없어진 탭 IA(`selectedTab = .schedule`)로 보내므로 아무 일도 일어나지 않는다. 게다가 `taptionplan://sensor`는 `TaptionDeepLink`가 아예 해석하지 않아 파싱 단계에서 nil이 된다(위젯 sensor 위젯의 `.widgetURL`).
+- 해결:
+  1. `TaptionDeepLink`에 `.sensor`를 추가한다. 위젯이 실제로 보내는 네 호스트를 모두 해석한다.
+  2. 링크 → (날짜, 열 화면) 번역을 `TaptionDeepLink.mapHomeDestination(planStart:now:)` 순수 함수로 둔다. 계획 링크는 계획 조회가 필요하므로 조회 결과만 인자로 받는다. 단위 테스트가 가능한 지점을 여기로 모은다.
+  3. `AppModel.pendingMapHomeRoute`(MapHomeRoute)를 추가하고 `openDeepLink`가 탭 대신 이 값을 채운다. `.today`=오늘로, `.sensor`·`.cats`=오늘로+현재 위치 따라가기(캐릭터가 있는 자리), `.plan`=그 계획 날짜로+하루 요약.
+  4. `MapHomeView`가 `onAppear`와 `onChange`에서 이 값을 한 번만 소비하고 즉시 nil로 되돌린다. 잠금 화면(상점 잠금) 때문에 MapHome이 아직 없을 때 들어온 요청도 잠금 해제 후 onAppear에서 소비된다.
+  5. `AppShellView`의 세 가드에서 `legacyUIEnabled` 조건을 뺀다. `showsMapHome = false`는 레거시 분기에서만 읽히므로 함께 제거한다.
+- 검증 기준: ①`taptionplan://today|sensor|cats|plan/<id>` 파싱과 번역 단위 테스트 통과 ②Debug 빌드 경고 0 ③전체 앱 테스트에서 새 실패 0 ④시뮬레이터에서 `simctl openurl`로 today·plan 링크가 실제로 화면을 옮기는지 확인 ⑤실기기에서 화면 녹화 실패 안내·미확인 배지 터치·UI 테스트 4건 확인 ⑥TestFlight 빌드 232 업로드·내부 그룹 연결 확인.
+- 결과:
+  1. 딥링크 복구 완료. 단위 테스트 2건 통과, 시뮬레이터 E2E에서 `deep_link_routed`(today→today, sensor→live_location) 기록과 지도 이동 스크린샷 확인.
+  2. UI 테스트 4건 실패 원인은 시스템 HealthKit 시트가 아니라 앱이 그리는 첫 실행 권한 시트였다. '전체 건너뛰기'로 닫히므로 `launchMapHome` 헬퍼로 처리했고, `TaptionPlanSmokeUITests` 8건 전부 통과.
+  3. 실기기 확인은 하지 않았다. 실기기 UI를 조작할 수 없고 대표 기기에 테스트 러너를 설치하는 것은 기기를 점유하므로, TestFlight 232를 확인 경로로 남긴다.
+  4. IAP 심사 제출은 Apple이 막았다 — 승인된 앱 버전이 없어 IAP만 따로 제출할 수 없다(`App 6797370230 must have an approved appStoreVersions ... or an appStoreVersions must be included in this review submission`). 앱 버전을 함께 넣으면 앱 전체가 심사로 가고, 버전 1.0에는 App Review 연락처도 아직 없다. 별도 결정이 필요하다.
+  5. TestFlight 빌드 233(1.0) 업로드·VALID·내부 그룹 연결까지 확인. 232를 먼저 올렸지만, 구조 게이트가 동결 파일(`MapHomeView.swift`)의 증가를 막아 라우팅 표를 `MapHomeRoute.apply`로 옮기는 동작 동일 리팩터를 한 뒤였으므로, 같은 번호로 다른 바이너리가 남지 않도록 최종 소스로 233을 다시 만들었다.
+  6. 구조 게이트: `MapHomeView.swift`가 21,998 → 22,018줄로 늘어 기준선이 막았다. 라우팅 분기를 `MapHomeRoute.apply`(NavigationModels)로 옮겨 증가분을 24 → 20줄로 줄였고, 뷰가 자기 상태를 아는 쪽에서 클로저만 넘기게 했다. 남은 20줄은 뷰가 자기 `@State`(`isDaySummaryPresented`)와 `requestAndFollowUserLocation`을 직접 만져야 해서 다른 파일로 뺄 수 없는 부분이다. 기준선 두 값(`metrics.largest_file_lines`, `frozen_files`의 해당 항목)을 22,018로 갱신하고 이유를 여기 남긴다.
+- 남은 위험: `legacyUIEnabled`를 다시 `true`로 되돌리면 딥링크가 아무 일도 하지 않는다(레거시 화면에는 `pendingMapHomeRoute`를 소비하는 곳이 없다). 이 스위치는 상수 `false`라 코드를 고쳐야만 켜지므로 지금은 문제가 아니지만, 되돌릴 때는 딥링크도 함께 손봐야 한다.

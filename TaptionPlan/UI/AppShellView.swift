@@ -511,12 +511,10 @@ struct AppShellView: View {
             lockGeneration &+= 1
             automaticBiometricAttemptedGeneration = nil
         }
-        if Self.legacyUIEnabled,
-           let planID = TaptionPlanAppDelegate.takePendingPlanID(),
+        if let planID = TaptionPlanAppDelegate.takePendingPlanID(),
            let url = URL(
                 string: "taptionplan://plan/\(planID.uuidString)"
            ) {
-            showsMapHome = false
             await model.openDeepLink(url)
         }
         advanceInitialLaunchProgress(to: 0.96)
@@ -570,17 +568,17 @@ struct AppShellView: View {
         await model.activateRequiredSensorCollection()
     }
 
+    /// 위젯·알림·URL이 보낸 링크를 받는다. 지도가 루트 화면이므로 레거시 탭
+    /// 스위치와 상관없이 항상 `AppModel`에 넘긴다. 화면을 옮기는 일은
+    /// `MapHomeView`가 `pendingMapHomeRoute`를 소비하면서 한다.
     private func handleOpenURL(_ url: URL) {
-        guard Self.legacyUIEnabled else { return }
         Task { @MainActor in
-            showsMapHome = false
             await model.bootstrap()
             await model.openDeepLink(url)
         }
     }
 
     private func handlePlanNotification(_ notification: Notification) {
-        guard Self.legacyUIEnabled else { return }
         let pendingID = TaptionPlanAppDelegate.takePendingPlanID()
         let planID = pendingID ?? (notification.object as? UUID)
         guard let planID,

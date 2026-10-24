@@ -16087,6 +16087,65 @@ final class FeatureEngineTests: XCTestCase {
             TaptionDeepLink(url: URL(string: "taptionplan://cats")!),
             .catPicker
         )
+        // 센서 수집 위젯의 widgetURL. 예전에는 해석되지 않아 파싱 단계에서 nil이었다.
+        XCTAssertEqual(
+            TaptionDeepLink(url: URL(string: "taptionplan://sensor")!),
+            .sensor
+        )
+        XCTAssertNil(TaptionDeepLink(url: URL(string: "taptionplan://unknown")!))
+    }
+
+    /// 위젯·알림이 보내는 링크가 지도 홈의 어느 상태로 번역되는지 고정한다.
+    /// 탭 IA가 없어진 뒤로는 이 번역이 유일한 라우팅 규칙이다.
+    func testDeepLinkMapsToMapHomeDestination() {
+        let now = makeDate(2026, 7, 30, 9)
+        let planStart = makeDate(2026, 7, 28, 14)
+
+        let today = TaptionDeepLink.today.mapHomeDestination(
+            planStart: nil,
+            now: now
+        )
+        XCTAssertEqual(today.date, now)
+        XCTAssertEqual(today.route, .today)
+
+        // 센서 수집 위젯과 고양이 링크는 캐릭터가 있는 현재 위치로 데려간다.
+        for link in [TaptionDeepLink.sensor, .catPicker] {
+            let destination = link.mapHomeDestination(planStart: nil, now: now)
+            XCTAssertEqual(destination.date, now)
+            XCTAssertEqual(destination.route, .liveLocation)
+        }
+
+        // 계획 링크는 그 계획이 시작하는 날로 옮기고 하루 요약을 연다.
+        let plan = TaptionDeepLink.plan(UUID()).mapHomeDestination(
+            planStart: planStart,
+            now: now
+        )
+        XCTAssertEqual(plan.date, planStart)
+        XCTAssertEqual(plan.route, .daySummary)
+
+        // 계획을 찾지 못하면 오늘로 떨어지고 시트는 열지 않는다.
+        let missing = TaptionDeepLink.plan(UUID()).mapHomeDestination(
+            planStart: nil,
+            now: now
+        )
+        XCTAssertEqual(missing.date, now)
+        XCTAssertEqual(missing.route, .today)
+    }
+
+    /// 라우트가 어떤 동작을 부르는지 고정한다. 지도 홈 뷰 없이 확인하는 지점이다.
+    func testMapHomeRouteAppliesExpectedAction() {
+        func run(_ route: MapHomeRoute) -> [String] {
+            var calls: [String] = []
+            route.apply(
+                openDaySummary: { calls.append("daySummary") },
+                followLiveLocation: { calls.append("liveLocation") }
+            )
+            return calls
+        }
+
+        XCTAssertEqual(run(.today), [])
+        XCTAssertEqual(run(.daySummary), ["daySummary"])
+        XCTAssertEqual(run(.liveLocation), ["liveLocation"])
     }
 
     func testPlanNotificationPolicyKeepsOnlyUpcomingPlansInOrder() {

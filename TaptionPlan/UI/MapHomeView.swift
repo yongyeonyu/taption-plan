@@ -2919,7 +2919,13 @@ struct MapHomeView: View {
             initialReadyForced = true
             reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
         }
-        .onAppear { refreshTimedMemoCache() }
+        .onAppear {
+            refreshTimedMemoCache()
+            applyPendingMapHomeRoute()
+        }
+        .onChange(of: model.pendingMapHomeRoute) { _, _ in
+            applyPendingMapHomeRoute()
+        }
         .onChange(of: model.selectedDate) { _, _ in
             refreshTimedMemoCache()
             // 날짜가 바뀌면 이전 날짜 일정을 즉시 내린다. 다시 불러오는 동안 옛 목록이
@@ -12804,6 +12810,20 @@ struct MapHomeView: View {
             heading: camera?.heading ?? 0,
             pitch: camera?.pitch ?? 0
         )))
+    }
+
+    /// 위젯·알림·URL이 남긴 이동 요청을 한 번만 적용한다. 소비 즉시 지우지
+    /// 않으면 화면이 다시 나타날 때마다 같은 곳으로 끌려간다. 상점 잠금 때문에
+    /// 지도 홈이 아직 없을 때 들어온 요청도 잠금이 풀린 뒤 `onAppear`에서 온다.
+    private func applyPendingMapHomeRoute() {
+        guard let route = model.pendingMapHomeRoute else { return }
+        model.pendingMapHomeRoute = nil
+        route.apply(
+            openDaySummary: { isDaySummaryPresented = true },
+            followLiveLocation: {
+                requestAndFollowUserLocation(using: nil, fixedScale: true)
+            }
+        )
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy?, fixedScale: Bool = false) {

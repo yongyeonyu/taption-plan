@@ -4,6 +4,7 @@ enum TaptionDeepLink: Equatable {
     case today
     case plan(UUID)
     case catPicker
+    case sensor
 
     init?(url: URL) {
         guard url.scheme?.lowercased() == "taptionplan" else { return nil }
@@ -19,8 +20,78 @@ enum TaptionDeepLink: Equatable {
             self = .plan(id)
         case "cats":
             self = .catPicker
+        case "sensor":
+            self = .sensor
         default:
             return nil
+        }
+    }
+
+    /// 이 링크가 데려갈 날짜와 열 화면.
+    ///
+    /// 계획 링크는 그 계획이 언제인지 알아야 하므로 조회 결과를 `planStart`로
+    /// 받는다. 조회에 실패했으면 오늘로 떨어뜨린다. 위젯·알림이 보내는 링크를
+    /// 지도 홈이 아는 상태로 옮기는 판단을 여기 한 곳에 모아 두면, 뷰 없이도
+    /// 단위 테스트로 확인할 수 있다.
+    func mapHomeDestination(
+        planStart: Date?,
+        now: Date
+    ) -> (date: Date, route: MapHomeRoute) {
+        switch self {
+        case .today:
+            return (now, .today)
+        case .sensor:
+            // 센서 수집 위젯은 지금 수집 상태를 보여준다. 캐릭터도 같은 자리에
+            // 있으므로 현재 위치로 데려간다.
+            return (now, .liveLocation)
+        case .catPicker:
+            // 새 화면에는 고양이 목록이 없다. 캐릭터는 지도 위 현재 위치에 있다.
+            return (now, .liveLocation)
+        case .plan:
+            guard let planStart else { return (now, .today) }
+            return (planStart, .daySummary)
+        }
+    }
+}
+
+/// 앱 밖(위젯·알림·URL)에서 들어온 이동 요청을 지도 홈이 아는 상태로 옮긴 값.
+///
+/// 탭 IA(`selectedTab`)는 더 이상 화면을 정하지 않는다. 딥링크를 그대로 탭에
+/// 넣으면 아무 일도 일어나지 않으므로, "무엇을 열지"만 여기서 정하고 날짜는
+/// `AppModel.selectedDate`가 들고 있는 값을 쓴다.
+enum MapHomeRoute: Equatable, Sendable {
+    /// 오늘로 돌아간다. 열려 있던 시트는 그대로 둔다.
+    case today
+    /// 지금 위치를 따라가며 캐릭터와 수집 상태를 보여준다.
+    case liveLocation
+    /// 그날 하루 요약을 연다.
+    case daySummary
+
+    /// 진단 로그에 남길 짧은 이름.
+    var diagnosticName: String {
+        switch self {
+        case .today: "today"
+        case .liveLocation: "live_location"
+        case .daySummary: "day_summary"
+        }
+    }
+
+    /// 뷰가 넘긴 동작으로 라우트를 적용한다.
+    ///
+    /// 어떤 링크가 무엇을 여는지는 이 표 하나로 끝낸다. 뷰는 자기 상태를 아는
+    /// 쪽에서 클로저만 만들면 되고, 지도 홈이 이미 2만 줄이라 여기에 분기를
+    /// 더 늘리지 않는다.
+    func apply(
+        openDaySummary: () -> Void,
+        followLiveLocation: () -> Void
+    ) {
+        switch self {
+        case .today:
+            break
+        case .daySummary:
+            openDaySummary()
+        case .liveLocation:
+            followLiveLocation()
         }
     }
 }
