@@ -1065,24 +1065,25 @@ enum MapHomeUserTrackingPolicy {
 }
 
 enum MapHomePlacePinLayout {
-    /// 집 핀의 레벨 라벨 높이. 위쪽에 같은 높이를 비워 아이콘 위치를 유지한다.
+    /// 집 마커 아바타의 지름. 지도 좌표에는 이 원의 중심이 놓인다.
+    static let avatarSize: CGFloat = 78
+    /// 아바타 뒤로 번지는 발광의 지름. 레이아웃에는 영향을 주지 않는다.
+    static let glowSize: CGFloat = 140
+    /// 아바타 안쪽에 넣는 레벨 아트의 크기. 원 테두리에 붙지 않게 조금 줄인다.
+    static let artworkSize: CGFloat = 56
+    /// 집 아이콘 아래 레벨 라벨 높이.
     static let levelLabelHeight: CGFloat = 22
-    /// 집 아이콘 위쪽 터치 여유. 레이아웃 높이만 늘고 그림은 제자리에 있다.
-    /// 그래서 아이콘 아래에는 같은 높이의 빈 자리가 남는다.
-    static let iconTopHitExtension: CGFloat = 22
-    /// 레벨 라벨을 아이콘 바로 아래로 당기는 거리. 아이콘 아래에 남는 빈 자리만큼 올린다.
-    /// 집 그림과 화랑이 그림 모두 상자 아래에 같은 높이의 빈 자리가 남는다.
-    static let levelLabelLift: CGFloat = iconTopHitExtension
-    /// 날씨 배지를 집 지붕 바로 위로 올리는 거리(음수 = 위). 화랑이가 집에 있으면
-    /// 집 그림이 78 상자 가운데로 내려가므로 그만큼 더 내려서 같은 지붕 위에 맞춘다.
-    static func weatherLift(showsCatAtHome: Bool) -> CGFloat {
-        let houseImageTopInset: CGFloat = showsCatAtHome ? 15 : 0
-        return houseImageTopInset - 20
-    }
-    /// 연봉 카운터를 집 핀 중심에서 띄우는 거리(음수 = 위). 날씨 배지 위에 둔다.
-    static let salaryOffsetFromPinCenter: CGFloat = -31
-    /// Apple 지도 호스팅 뷰의 집 핀 높이: 기존 138 + 위아래 (라벨 높이 + 간격 5) 두 번.
-    static let appleHomeHostHeight: CGFloat = 138 + 2 * (levelLabelHeight + 5)
+    /// 아바타와 레벨 라벨 사이 간격.
+    static let levelLabelGap: CGFloat = 5
+    /// 날씨 배지를 아바타 위쪽에 걸치는 거리(음수 = 위).
+    static let weatherBadgeLift: CGFloat = -10
+    /// 아바타 중심을 좌표에 맞추기 위해 아래 라벨 블록 높이의 절반만큼 내린다.
+    static let avatarCenterCompensation: CGFloat = (levelLabelGap + levelLabelHeight) / 2
+    /// 연봉 카운터를 집 핀 중심에서 띄우는 거리(음수 = 위). 아바타 위 배지 줄보다 위에 둔다.
+    static let salaryOffsetFromPinCenter: CGFloat = -62
+    /// Apple 지도 호스팅 뷰의 집 핀 크기. 발광과 배지가 잘리지 않을 만큼 잡는다.
+    static let appleHomeHostWidth: CGFloat = 150
+    static let appleHomeHostHeight: CGFloat = 140
 }
 
 enum MapHomePlaceAnnotationLayout {
@@ -16513,38 +16514,14 @@ private struct MapHomePlacePin: View {
     var equippedAccessoryID: String? = nil
     var weatherBadge: MapHomeHomeWeatherBadge? = nil
     var onOpenDaySummary: (() -> Void)? = nil
-    @State private var isGrowthSummaryExpanded = false
-    @State private var isGrowthCalloutVisible = false
 
     var body: some View {
-        VStack(spacing: 5) {
-            if destination == .home, let growthLevel {
-                // 아래 레벨 라벨과 같은 높이를 위에 비워 두어 집 아이콘이 좌표에서 움직이지 않게 한다.
-                Color.clear.frame(width: 1, height: MapHomePlacePinLayout.levelLabelHeight)
-                homeGrowthCallout(level: growthLevel)
-                    .opacity(isGrowthCalloutVisible ? 1 : 0)
-                    .allowsHitTesting(isGrowthCalloutVisible)
-                    .accessibilityHidden(!isGrowthCalloutVisible)
-                Group {
-                    if showsCatAtHome {
-                        // 홈 화면 화랑이도 1.5배. 핀 끝을 기준으로 키운다.
-                        homeCatMarker(level: growthLevel)
-                            .scaleEffect(1.5, anchor: .bottom)
-                    } else {
-                        homeMarkerArtwork(level: growthLevel)
-                    }
-                }
-                .overlay(alignment: .top) {
-                    if let weatherBadge {
-                        // 날씨는 집 지붕 위에 둔다(집 그림 위에 얹지 않는다).
-                        homeWeatherBadge(weatherBadge)
-                            .offset(y: MapHomePlacePinLayout.weatherLift(showsCatAtHome: showsCatAtHome))
-                    }
-                }
-                homeLevelLabel(level: growthLevel)
-                    // 아이콘 아래 터치 여유로 남는 빈 자리만큼 라벨을 올려 아이콘에 붙인다.
-                    .offset(y: -MapHomePlacePinLayout.levelLabelLift)
-            } else {
+        if destination == .home, let growthLevel {
+            homeMarker(level: growthLevel)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("집 레벨 \(growthLevel), \(growthStatus ?? "하루 요약 보기")")
+        } else {
+            VStack(spacing: 5) {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
                     .font(.system(size: 23, weight: .semibold))
@@ -16568,13 +16545,99 @@ private struct MapHomePlacePin: View {
                     .overlay { Capsule().stroke(Color.tpLine, lineWidth: 0.8) }
                     .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(name), 레벨 \(floor ?? 1)")
         }
-        .accessibilityElement(children: destination == .home ? .contain : .ignore)
-        .accessibilityLabel(
-            destination == .home
-                ? "집 레벨 \(growthLevel ?? 1), \(growthStatus ?? "하루 요약 보기")"
-                : "\(name), 레벨 \(floor ?? 1)"
+    }
+
+    /// 집 마커: 원형 발광 위에 원형 아바타를 얹고, 위에 날씨 배지, 아래에 Lv 필을 둔다.
+    /// 보이지 않는 빈 자리를 두지 않고, 아바타 원의 중심이 좌표에 오도록 라벨 높이의 절반만큼 내린다.
+    private func homeMarker(level: Int) -> some View {
+        VStack(spacing: MapHomePlacePinLayout.levelLabelGap) {
+            homeAvatar(level: level)
+                .overlay(alignment: .top) {
+                    if let weatherBadge {
+                        homeWeatherBadge(weatherBadge)
+                            .offset(y: MapHomePlacePinLayout.weatherBadgeLift)
+                    }
+                }
+            homeLevelLabel(level: level)
+        }
+        .offset(y: MapHomePlacePinLayout.avatarCenterCompensation)
+    }
+
+    /// 원형 아바타. 뒤로 부드러운 발광이 번지고, 안쪽에 레벨 아트(집 또는 화랑이)를 넣는다.
+    private func homeAvatar(level: Int) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(hex: "#FFFFFF").opacity(0.95),
+                            Color(hex: "#FBF1DA").opacity(0.55),
+                            Color(hex: "#FBF1DA").opacity(0),
+                        ],
+                        center: .center,
+                        startRadius: 8,
+                        endRadius: MapHomePlacePinLayout.glowSize / 2
+                    )
+                )
+                .frame(
+                    width: MapHomePlacePinLayout.glowSize,
+                    height: MapHomePlacePinLayout.glowSize
+                )
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+
+            ZStack {
+                Circle().fill(Color(hex: "#FDF8EC"))
+                if showsCatAtHome {
+                    homeCatArtwork(level: level)
+                } else {
+                    homeMarkerArtwork(level: level)
+                }
+            }
+            .frame(
+                width: MapHomePlacePinLayout.avatarSize,
+                height: MapHomePlacePinLayout.avatarSize
+            )
+            .clipShape(Circle())
+            .overlay { Circle().stroke(Color.white.opacity(0.92), lineWidth: 2) }
+            .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+            .overlay(alignment: .topLeading) {
+                if showsCatAtHome,
+                   let accessory = MapHomeGrowthAccessoryCatalog.symbol(for: equippedAccessoryID) {
+                    Image(systemName: accessory)
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(Color(hex: "#D94772"))
+                        .shadow(color: .white, radius: 1.5)
+                        .offset(x: 1, y: 1)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isLeapDay {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Color(hex: "#E3B54A"))
+                        .shadow(color: .white, radius: 1.5)
+                        .offset(x: 1, y: 1)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+        // 발광이 레이아웃을 키우지 않게 아바타 크기로 묶는다(그림은 밖으로 번진다).
+        .frame(
+            width: MapHomePlacePinLayout.avatarSize,
+            height: MapHomePlacePinLayout.avatarSize
         )
+        .contentShape(Circle())
+        .onTapGesture { onOpenDaySummary?() }
+        .accessibilityElement()
+        .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
+        .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onOpenDaySummary?() }
     }
 
     /// 집 아이콘 아래에 늘 보이는 레벨 라벨. 누르면 성장 카드와 오늘 하루 요약을 연다.
@@ -16637,177 +16700,29 @@ private struct MapHomePlacePin: View {
         Image(MapHomeGrowthPolicy.artworkName(level: level))
             .resizable()
             .scaledToFit()
-            .frame(width: 48, height: 48)
-            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
-            .background { homeMarkerBackground }
-            .frame(width: 48, height: 48)
-            // 터치 영역을 위로 넓힌다(보이는 위치는 그대로).
-            .padding(.top, 22)
-            .offset(y: -22)
-            .contentShape(Rectangle())
-            .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 48, height: 48), topExtension: 22))
-            .accessibilityElement()
-            .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
-            .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { onOpenDaySummary?() }
-            .overlay(alignment: .topTrailing) {
-                if isLeapDay {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 11, weight: .black))
-                        .foregroundStyle(Color(hex: "#E3B54A"))
-                        .shadow(color: .white, radius: 1.5)
-                        .offset(x: 2, y: -1)
-                        .allowsHitTesting(false)
-                }
-            }
+            .frame(
+                width: MapHomePlacePinLayout.artworkSize,
+                height: MapHomePlacePinLayout.artworkSize
+            )
     }
 
-    private var homeMarkerBackground: some View {
-        Image(systemName: "hexagon.fill")
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(Color.white.opacity(0.5))
-            .frame(width: 56, height: 56)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-
-    /// 집 아이콘 탭: 아이콘 위쪽 여유(topExtension)까지 포함한 영역을 누르면 하루 요약을 연다.
-    private func homeIconTapGesture(markerSize: CGSize, topExtension: CGFloat = 0) -> some Gesture {
-        SpatialTapGesture(coordinateSpace: .local)
-            .onEnded { tap in
-                let inside = tap.location.x >= 0
-                    && tap.location.x <= markerSize.width
-                    && tap.location.y >= 0
-                    && tap.location.y <= topExtension + markerSize.height
-                guard inside else { return }
-                onOpenDaySummary?()
-            }
-    }
-
-    private func toggleGrowthCallout() {
-        withAnimation(.easeInOut(duration: 0.18)) {
-            isGrowthCalloutVisible.toggle()
-        }
-    }
-
-    private func homeGrowthCallout(level: Int) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
-                Button {
-                    onOpenDaySummary?()
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.tpAccent)
-                        Text("Lv.\(level)")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.tpInk)
-                            .monospacedDigit()
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("집 레벨 \(level) · 오늘 하루 요약 열기")
-                .accessibilityHint("하단에서 오늘 하루 요약을 엽니다")
-                Spacer(minLength: 2)
-                Button {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        isGrowthSummaryExpanded.toggle()
-                    }
-                } label: {
-                    Image(systemName: isGrowthSummaryExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(Color.tpSecondary)
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isGrowthSummaryExpanded ? "집 성장 요약 접기" : "집 성장 요약 펼치기")
-            }
-            Text(growthStatus ?? "")
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(isGrowthQualifiedToday ? Color.tpAccent : Color.tpSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.tpLine.opacity(0.55))
-                    if isGrowthQualifiedToday {
-                        Capsule()
-                            .fill(Color.tpPastelMint)
-                            .frame(width: proxy.size.width)
-                    }
-                }
-            }
-            .frame(height: 3)
-            if isGrowthSummaryExpanded {
-                HStack(spacing: 8) {
-                    Label("연속 \(growthStreak)일", systemImage: "flame.fill")
-                    Label("보상 \(pendingWeeklyRewards)", systemImage: "gift.fill")
-                }
-                .font(.system(size: 8, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            }
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .frame(width: isGrowthSummaryExpanded ? 150 : 126)
-        .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.tpSurface.opacity(0.98))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.tpLine.opacity(0.9), lineWidth: 0.9)
-        }
-        .shadow(color: .black.opacity(0.13), radius: 5, y: 2)
-    }
-
-    private func homeCatMarker(level: Int) -> some View {
-        ZStack {
+    /// 집에 있는 화랑이. 아바타 원 안에 레벨 아트와 함께 그린다.
+    private func homeCatArtwork(level: Int) -> some View {
+        let scale = MapHomeCatTapRouting.homeArtScale
+        return ZStack {
             Image(MapHomeGrowthPolicy.artworkName(level: level))
                 .resizable()
                 .scaledToFit()
-                .frame(width: 48, height: 48)
-                .shadow(color: .black.opacity(0.20), radius: 3, y: 1)
-                .background { homeMarkerBackground }
+                .frame(
+                    width: MapHomePlacePinLayout.artworkSize,
+                    height: MapHomePlacePinLayout.artworkSize
+                )
             MapHomeStickmanGlyph(action: catAction, size: MapHomeStickmanMarker.size.width)
                 .offset(
-                    x: MapHomeCatTapRouting.catOffsetInHomeImage.x,
-                    y: MapHomeCatTapRouting.catOffsetInHomeImage.y
+                    x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
+                    y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
                 )
-            if let accessory = MapHomeGrowthAccessoryCatalog.symbol(
-                for: equippedAccessoryID
-            ) {
-                Image(systemName: accessory)
-                    .font(.system(size: 9, weight: .black))
-                    .foregroundStyle(Color(hex: "#D94772"))
-                    .shadow(color: .white, radius: 1.5)
-                    .offset(x: 25, y: -16)
-            }
-            if isLeapDay {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 9, weight: .black))
-                    .foregroundStyle(Color(hex: "#E3B54A"))
-                    .shadow(color: .white, radius: 1.5)
-                    .offset(x: -20, y: -11)
-            }
         }
-        .frame(width: 78, height: 78)
-        .padding(.top, 22)
-        .offset(y: -22)
-        .contentShape(Rectangle())
-        .simultaneousGesture(homeIconTapGesture(markerSize: CGSize(width: 78, height: 78), topExtension: 22))
-        .accessibilityElement()
-        .accessibilityLabel("집 성장과 오늘 하루 요약 보기")
-        .accessibilityHint("집 그림을 눌러 성장 카드와 오늘 하루 요약을 엽니다")
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { onOpenDaySummary?() }
     }
 }
 
@@ -20446,7 +20361,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                         .fixedSize()
                     ),
                     size: CGSize(
-                        width: 130,
+                        width: place.destination == .home
+                            ? MapHomePlacePinLayout.appleHomeHostWidth
+                            : 130,
                         height: place.destination == .home ? MapHomePlacePinLayout.appleHomeHostHeight : 138
                     ),
                     centerOffset: MapHomePlaceAnnotationLayout.appleCenterOffset
@@ -22070,3 +21987,86 @@ struct RouteProjectionInputKey: Hashable {
     let sleepCount: Int
     let confirmedSleepCount: Int
 }
+
+// MARK: - 집 마커 미리보기
+
+#if DEBUG
+
+/// 집 마커 레이아웃 확인용. `-pinPreview` 실행 인자로만 열린다.
+///
+/// iOS 27 시뮬레이터에서 홈 화면을 통째로 띄우면 위치·사진 권한 알림이 화면을
+/// 가려 마커를 눈으로 확인할 수 없다. 마커만 단독으로 띄워 스크린샷을 찍기 위한 화면이다.
+/// 화면 한가운데의 십자선이 지도 좌표가 놓이는 자리다.
+struct MapHomePinPreviewHost: View {
+    var body: some View {
+        ZStack {
+            Color(hex: "#6E6A5F").ignoresSafeArea()
+            coordinateCrosshair
+            // 연봉 카운터는 지도 레이어가 따로 그린다. 같은 상수로 여기에 흉내 내어
+            // 아바타·날씨 배지와 겹치지 않는지 눈으로 확인한다.
+            salaryCounterMock
+            HStack(spacing: 46) {
+                marker(showsCatAtHome: false, weather: true)
+                marker(showsCatAtHome: true, weather: true)
+                marker(showsCatAtHome: true, weather: false)
+            }
+        }
+    }
+
+    /// 지도 레이어가 그리는 연봉 카운터 자리. 좌표(십자선 중심)에서 상수만큼 위.
+    private var salaryCounterMock: some View {
+        Text("0원")
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Color.tpInk)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Color.white.opacity(0.94), in: Capsule())
+            .overlay { Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
+            .offset(y: MapHomePlacePinLayout.salaryOffsetFromPinCenter)
+            .allowsHitTesting(false)
+    }
+
+    /// 지도 좌표 자리. 마커의 어느 부분이 좌표에 놓이는지 눈으로 확인한다.
+    private var coordinateCrosshair: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: 1, height: 260)
+            Rectangle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: 260, height: 1)
+            Circle()
+                .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                .frame(width: 10, height: 10)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func marker(showsCatAtHome: Bool, weather: Bool) -> some View {
+        MapHomePlacePin(
+            name: "집",
+            floor: nil,
+            destination: .home,
+            growthLevel: 365,
+            isLeapDay: false,
+            growthStatus: "오늘도 채웠어요",
+            isGrowthQualifiedToday: true,
+            growthStreak: 12,
+            pendingWeeklyRewards: 1,
+            showsCatAtHome: showsCatAtHome,
+            catAction: .activity,
+            equippedAccessoryID: nil,
+            weatherBadge: weather
+                ? MapHomeHomeWeatherBadge(
+                    symbolName: "cloud.sun.fill",
+                    temperatureText: "19°",
+                    condition: "구름 조금"
+                )
+                : nil,
+            onOpenDaySummary: {}
+        )
+        .fixedSize()
+    }
+}
+#endif

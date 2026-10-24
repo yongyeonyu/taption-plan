@@ -50,6 +50,8 @@ struct TaptionPlanApp: App {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-nlePreview") {
                 NLEClipEditorPreviewHost()
+            } else if ProcessInfo.processInfo.arguments.contains("-pinPreview") {
+                MapHomePinPreviewHost()
             } else {
                 AppShellView()
             }

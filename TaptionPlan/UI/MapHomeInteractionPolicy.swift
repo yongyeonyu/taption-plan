@@ -443,11 +443,16 @@ enum MapHomeLongPressRoutingMath {
 enum MapHomeCatTapRouting {
     static let hitRadius: CGFloat = 36
     static let homeIconHitRadius: CGFloat = 18
-    static let homeImageCenterOffset = CGPoint(x: 0, y: 30)
-    static let catOffsetInHomeImage = CGPoint(x: 23, y: 10)
+    /// 집 아바타의 중심은 지도 좌표와 같다(마커 안에 빈 자리를 두지 않는다).
+    static let homeImageCenterOffset = CGPoint.zero
+    /// 아바타 안에서 화랑이가 놓이는 자리(48pt 아트 기준). 아바타 안에서는
+    /// homeArtScale 만큼 키워 적용하므로, 값이 커지면 원 밖으로 잘린다.
+    static let catOffsetInHomeImage = CGPoint(x: 16, y: 6)
+    /// 아바타 안 아트 크기를 기존 48pt와 비교한 비율.
+    static let homeArtScale: CGFloat = MapHomePlacePinLayout.artworkSize / 48
     static let homeMarkerOffset = CGPoint(
-        x: homeImageCenterOffset.x + catOffsetInHomeImage.x,
-        y: homeImageCenterOffset.y + catOffsetInHomeImage.y
+        x: homeImageCenterOffset.x + catOffsetInHomeImage.x * homeArtScale,
+        y: homeImageCenterOffset.y + catOffsetInHomeImage.y * homeArtScale
     )
     static let roamingMarkerOffset = MapHomeStickmanAnnotationLayout.centerOffset
 
@@ -482,19 +487,22 @@ enum MapHomeCatTapRouting {
 
     /// 집 핀의 "성장 카드 + 하루 요약" 탭 영역. 핀 안쪽 제스처가 벡터 지도 위에서 먹지 않아 지도 단위 탭에서 좌표로 판정한다.
     /// 집 아이콘 둘레와 그 아래 레벨 라벨 사각형이며, 위치는 집 핀의 지도 좌표(핀 중심) 기준이다.
-    static let homeSummaryIconRadius: CGFloat = 30
+    static let homeSummaryIconRadius: CGFloat = MapHomePlacePinLayout.avatarSize / 2
     static let homeSummaryLabelSize = CGSize(width: 64, height: 30)
 
-    /// 집 핀 안에서 아이콘 그림 상자의 절반 높이. 집 그림은 48, 화랑이가 함께 서면 78 상자다.
+    /// 집 아바타의 절반 높이. 아바타는 화랑이 유무와 상관없이 같은 크기라 값도 같다.
+    /// 호출부·테스트가 화랑이 여부를 함께 넘기므로 인자는 유지한다.
     static func homeIconHalfHeight(showsCatAtHome: Bool) -> CGFloat {
-        showsCatAtHome ? 39 : 24
+        MapHomePlacePinLayout.avatarSize / 2
     }
 
     static func homeLevelLabelCenter(pinPoint: CGPoint, showsCatAtHome: Bool) -> CGPoint {
         CGPoint(
             x: pinPoint.x + homeImageCenterOffset.x,
             y: pinPoint.y + homeImageCenterOffset.y
-                + homeIconHalfHeight(showsCatAtHome: showsCatAtHome) + 5 + 11
+                + homeIconHalfHeight(showsCatAtHome: showsCatAtHome)
+                + MapHomePlacePinLayout.levelLabelGap
+                + MapHomePlacePinLayout.levelLabelHeight / 2
         )
     }
 

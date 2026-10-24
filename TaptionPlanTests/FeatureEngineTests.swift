@@ -44,12 +44,17 @@ final class FeatureEngineTests: XCTestCase {
                 markerPoint: marker
             )
         )
-        XCTAssertEqual(
-            MapHomeCatTapRouting.markerPoint(
-                locationPoint: marker,
-                isAtHome: true
-            ),
-            CGPoint(x: 123, y: 240)
+        // 집에 있을 때 화랑이는 아바타 원 안 오른쪽 아래에 있다(핀 좌표 = 아바타 중심).
+        let catAtHome = MapHomeCatTapRouting.markerPoint(
+            locationPoint: marker,
+            isAtHome: true
+        )
+        XCTAssertGreaterThan(catAtHome.x, marker.x)
+        XCTAssertGreaterThan(catAtHome.y, marker.y)
+        XCTAssertLessThan(
+            hypot(catAtHome.x - marker.x, catAtHome.y - marker.y),
+            MapHomePlacePinLayout.avatarSize / 2,
+            "화랑이는 아바타 원 안에 있어야 한다"
         )
         XCTAssertEqual(
             MapHomeCatTapRouting.markerPoint(
@@ -180,15 +185,16 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(tapPoint: icon, pinPoint: pin, showsCatAtHome: false))
         XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(
             tapPoint: CGPoint(x: icon.x + 25, y: icon.y), pinPoint: pin, showsCatAtHome: true))
-        // 레벨 라벨(아이콘 아래)도 열린다. 화랑이가 집에 있으면 아이콘이 커서 라벨이 더 아래다.
+        // 레벨 라벨(아바타 아래)도 열린다. 아바타 크기가 화랑이 유무와 같아 라벨 자리도 같다.
         for showsCat in [false, true] {
             let label = MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: showsCat)
             XCTAssertGreaterThan(label.y, icon.y)
             XCTAssertTrue(MapHomeCatTapRouting.hitsHomeSummary(tapPoint: label, pinPoint: pin, showsCatAtHome: showsCat))
         }
-        XCTAssertGreaterThan(
+        XCTAssertEqual(
             MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: true).y,
-            MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: false).y
+            MapHomeCatTapRouting.homeLevelLabelCenter(pinPoint: pin, showsCatAtHome: false).y,
+            accuracy: 0.5
         )
         // 멀리 떨어진 지도 점은 열리지 않는다.
         XCTAssertFalse(MapHomeCatTapRouting.hitsHomeSummary(
@@ -197,39 +203,37 @@ final class FeatureEngineTests: XCTestCase {
             tapPoint: CGPoint(x: pin.x, y: pin.y - 80), pinPoint: pin, showsCatAtHome: false))
     }
 
-    /// 집 핀 세로 배치: 날씨는 지붕 위, 레벨 라벨은 집 아래, 연봉 카운터는 그 위.
-    /// 화랑이가 집에 있든 없든 같은 자리에 와야 한다.
-    func testHomePinStacksWeatherAboveRoofAndLabelUnderHouse() {
-        // 집 그림은 핀 중심에서 30 아래에 있고 높이는 48이다.
-        let iconCenterY = MapHomeCatTapRouting.homeImageCenterOffset.y
-        let roofY = iconCenterY - 24
-        let imageBottomY = iconCenterY + 24
+    /// 집 핀 세로 배치: 아바타 중심이 좌표에 오고, 날씨는 아바타 위쪽에 걸치고,
+    /// 레벨 라벨은 아바타 아래에 붙고, 연봉 카운터는 그 위에 온다.
+    func testHomePinCentersAvatarOnCoordinateAndStacksBadgesAround() {
+        let avatarRadius = MapHomePlacePinLayout.avatarSize / 2
         let weatherBadgeHeight: CGFloat = 18
 
-        // 1) 날씨 배지는 집에 화랑이가 있든 없든 지붕 위 같은 자리에 온다.
-        for showsCat in [false, true] {
-            // 핀 안에서 그림 상자의 위쪽 끝. 화랑이가 서면 집 그림이 그 상자 가운데로 내려간다.
-            let groupTopY = showsCat ? roofY - 15 : roofY
-            let badgeTopY = groupTopY
-                + MapHomePlacePinLayout.weatherLift(showsCatAtHome: showsCat)
-            XCTAssertEqual(badgeTopY, roofY - 20, accuracy: 0.5)
-            XCTAssertLessThanOrEqual(badgeTopY + weatherBadgeHeight, roofY)
-        }
+        // 1) 아바타 중심은 좌표다. 마커 안에 보이지 않는 빈 자리가 없다.
+        XCTAssertEqual(MapHomeCatTapRouting.homeImageCenterOffset, .zero)
 
-        // 2) 레벨 라벨은 집 그림 바로 아래 5pt에 붙는다.
+        // 2) 날씨 배지는 아바타 위쪽 끝에 걸친다(위로 나오고 아래로 살짝 덮는다).
+        let badgeTopY = -avatarRadius + MapHomePlacePinLayout.weatherBadgeLift
+        XCTAssertLessThan(badgeTopY, -avatarRadius, "배지 위쪽은 아바타 위로 나온다")
+        XCTAssertGreaterThan(
+            badgeTopY + weatherBadgeHeight, -avatarRadius,
+            "배지 아래쪽은 아바타 위쪽 끝을 덮는다"
+        )
+
+        // 3) 레벨 라벨은 아바타 바로 아래 간격만큼 떨어진다.
         let labelCenterY = MapHomeCatTapRouting.homeLevelLabelCenter(
             pinPoint: .zero, showsCatAtHome: false
         ).y
         XCTAssertEqual(
             labelCenterY - MapHomePlacePinLayout.levelLabelHeight / 2,
-            imageBottomY + 5,
+            avatarRadius + MapHomePlacePinLayout.levelLabelGap,
             accuracy: 0.5
         )
 
-        // 3) 연봉 카운터는 날씨 배지 위에 온다(집 위로 떠 있지 않다).
+        // 4) 연봉 카운터는 날씨 배지 위에 온다(아바타를 덮지 않는다).
         XCTAssertLessThanOrEqual(
             MapHomePlacePinLayout.salaryOffsetFromPinCenter + 13,
-            roofY - 20
+            badgeTopY
         )
     }
 
