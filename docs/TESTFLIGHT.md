@@ -73,7 +73,8 @@
 
 | 증상 | 원인 | 조치 |
 | --- | --- | --- |
-| `HTTP 400 ... sort can not be used` | `/v1/apps/{id}/builds`는 sort 미지원 | `asc.py`가 서버 순서를 신뢰하지 않고 직접 정렬한다(수정됨) |
+| `HTTP 400 ... sort can not be used` | `/v1/apps/{id}/builds`는 sort·filter 미지원 | `asc.py`가 최상위 `/v1/builds`에 `filter[app]`·`sort=-version`을 쓴다(수정됨) |
+| `빌드 N을 찾지 못했습니다` | 빌드가 200개를 넘으면 앱 하위 경로 첫 페이지에 최신 빌드가 없다 | 같은 원인. `find_build`가 `filter[version]`으로 정확히 찾고 60초까지 재시도한다(수정됨) |
 | `앱을 찾지 못했습니다` | Issuer ID·키가 다른 팀 것 | `config.json`의 `issuerId`/`keyId` 확인 |
 | `개인키가 없습니다` | 키 파일 부재 | `~/.appstoreconnect/private_keys/AuthKey_<키 ID>.p8` 배치 |
 | `번들 버전이 서로 다릅니다` | 4개 plist 중 일부만 수정됨 | `--build-number N`으로 다시 실행(전부 덮어씀) |

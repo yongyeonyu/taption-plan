@@ -2831,7 +2831,7 @@
 - 화랑이가 있는 두 마커 모두 원 안에 들어오고, `Lv.365` 필은 아바타 아래에 붙는다.
 
 ### 4. 한계
-1. **사진은 돈·날씨 배지가 가로로 나란한데, 여기서는 세로로 쌓았다.** 연봉 카운터를 지도 레이어가 따로 그려 한 뷰에서 x·y를 맞출 수 없다. 금액이 커져도 폭이 변하지 않는 세로 배치가 겹침에 안전하다고 판단했다. (`pin-final3.png`에서 겹치지 않는 것은 확인)
+1. **사진과 배지 묶음 배치가 다르다(확대해 확인하며 정정).** 사진을 340×380으로 확대해 보면 `0원` 알약 **아래**에 `19°` 알약이 있고(세로 배치), `0원` 오른쪽에는 배경 없는 분홍 건물 아이콘이 따로 있다. 즉 **돈·날씨의 위아래 관계는 현재 구현과 같다.** 차이는 ① 묶음이 아바타 **왼쪽 위**에 붙어 있다 ② 건물 아이콘이 하나 더 있다 ③ 마커 그림 자체가 집 일러스트 + 원형 방(화랑이) 합성이다. ①②③ 모두 마커 아트를 다시 그려야 하는 별개 작업이라 이번 범위에서 뺐다. 확대본: `build/validation/HBR1024B16/ref-marker.png`.
 2. **작업 도중 Xcode가 27.0 → 27.1로 자동 업데이트되어 시뮬레이터가 한때 멈췄다.** `CoreSimulator is out of date (1171.7.0 < 1174.9.2)`가 나오고 `simctl list`가 응답하지 않았다. 재부팅 후 복구되어 최종 확인까지 마쳤지만, 그 사이 마지막 빌드는 `generic/platform=iOS Simulator`로 컴파일만 확인했다.
 3. **실제 지도 위 배치는 마커 단독 화면으로만 확인했다.** Apple 지도 호스팅 상자 크기(160×160)를 그대로 재현해 잘리지 않는 것은 확인했지만(5절), `MKMapView` 주석으로 얹었을 때의 `centerOffset`·클러스터링·말풍선 겹침은 확인하지 않았다. 홈 화면 전체 스크린샷도 여전히 얻지 못했다 — 앱을 다시 설치하면 TCC가 초기화되어 사진 보관함 알림이 또 뜨고, `simctl privacy grant photos`는 이 런타임에서 듣지 않는다(시뮬레이터를 재부팅해야 사라진다).
 
@@ -2846,3 +2846,34 @@
   - **상자 밖으로 나가는 픽셀 0.** 잘리는 부분이 없다.
 - 같은 화면에서 **십자선(=지도 좌표)과 아바타 원 중심이 가로·세로 모두 일치**하고, `0원`이 `19°` 위에 겹치지 않고 놓이는 것도 다시 확인했다.
 - `FeatureEngineTests` **660 통과 / 0 실패 / 0 건너뜀**(`tests-27.1.log`, `TEST SUCCEEDED`). 테스트 타깃 경고 301건은 전부 `TaptionPlanSmokeUITests.swift`의 Swift 6 액터 격리 경고로 이번 변경과 무관하다.
+
+## TFB1024A16 · 빌드 235 내부 배포 (2026-10-24)
+
+- 요청 ID: `TFB1024A16`
+- 무엇을: Xcode 27.1에서 검증한 집 마커 수정(커밋 `7f9d028`)을 내부 테스터에게 배포했다. 234는 마커 재설계 이전이라 이 수정이 없다.
+
+### 1. 왜 worktree에서 돌렸나
+- 작업 트리에 다른 스트림(`DPL1024A01`)의 미커밋 변경이 있었다. 그대로 아카이브하면 저장소 파이프라인 WIP가 함께 배포되고, `release.sh`는 깨끗한 트리만 받는다.
+- 빌드 번호만 235로 올려 **먼저 커밋**(`92a5bcd`)하고, `git worktree add /tmp/tf235 HEAD`로 그 커밋의 깨끗한 트리에서 `release.sh --no-bump --yes`를 돌렸다. 메인 트리와 DPL 변경은 그대로다.
+- `project.pbxproj`는 DPL이 같은 파일을 고쳐서 **버전 줄만** 스테이징했다(`git hash-object -w` + `update-index --cacheinfo`).
+
+### 2. 결과 (전부 실측)
+| 단계 | 결과 |
+| --- | --- |
+| 사전 점검 | **9/9 OK** (JWT `iss=229c124e… kid=AGB82JKGT3 alg=ES256 aud=appstoreconnect-v1`) |
+| 아카이브 | `BUILD SUCCEEDED`, Xcode **27.1 (27A9275)**, Release, `generic/platform=iOS` |
+| export | `TaptionPlan.ipa` |
+| 번들 버전 | `com.taption.plan` **235** · `com.taption.plan.widget` **235** (Watch는 별도 target) |
+| 업로드 | `No errors uploading`, Delivery UUID `26cdd443-9e75-4107-b570-c956dcba9fc4`, 44,402,587바이트 / 6.34초 |
+| 처리 | `NOT_UPLOADED 21:16:55 → VALID 21:32:19` (약 15분 24초) |
+| 그룹 | `TP Taption Plan 내부 테스트`에 빌드 235 연결, 테스터 1명(`axony99@gmail.com`), `ok: true` |
+| 비밀 노출 | 로그 7개에서 `PRIVATE KEY` **0건** |
+
+로그: `build/validation/TFB1024A16/{preflight.json,archive.log,export.log,upload.log,processing.log,attach.log,verify.log,testflight-report.json}`
+
+### 3. 배포 중 발견한 도구 버그 (고침)
+- **증상**: 처리 대기가 `VALID`를 찍은 직후 8단계 그룹 연결이 `빌드 235을 찾지 못했습니다`로 실패했다. 수동 `attach`도 같은 오류였다.
+- **원인**: `asc.py`가 `/v1/apps/{id}/builds?limit=200`으로 빌드를 찾았다. 이 앱은 빌드가 **200개를 넘고**, 이 경로는 `sort`·`filter`를 모두 400으로 거부하며 서버가 최신 빌드를 첫 페이지에 주지 않는다. 그래서 `latest-build`도 234를 돌려줬다(235가 VALID인데도).
+- **고침**: 최상위 `/v1/builds`로 바꾸고 `filter[app]`·`sort=-version`을 쓴다. `find_build`는 `filter[app]+filter[version]`으로 정확히 찾고, 업로드 직후 전파 지연을 견디도록 60초까지 5초 간격으로 재시도한다.
+- **검증**: 고친 뒤 `latest-build` → 235, `attach --build 235` → 그룹 연결 성공, `verify` → `ok: true`.
+- `docs/TESTFLIGHT.md` 실패 대응 표에 이 증상과 원인을 넣었다.

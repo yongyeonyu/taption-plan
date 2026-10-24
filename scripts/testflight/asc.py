@@ -196,13 +196,17 @@ def app_id(config: dict) -> str:
 
 
 def list_builds(config: dict, limit: int = 30) -> list[dict]:
-    # `/v1/apps/{id}/builds`는 sort 파라미터를 허용하지 않는다(400 PARAMETER_ERROR).
-    # 서버가 준 순서를 믿지 않고 빌드 번호로 직접 내림차순 정렬한다.
+    # 앱 하위 경로(`/v1/apps/{id}/builds`)는 sort·filter를 모두 거부하고(400
+    # PARAMETER_ERROR), 빌드가 200개를 넘으면 **최신 빌드가 첫 페이지에 없을 수 있다**
+    # (서버가 버전·업로드 순으로 주지 않는다). 실제로 빌드 235가 VALID인데도 이 경로로는
+    # 찾지 못해 그룹 연결이 실패했다. 최상위 `/v1/builds`는 filter[app]·sort를 지원한다.
     data = api(
         config,
         "GET",
-        f"/v1/apps/{app_id(config)}/builds",
+        "/v1/builds",
         {
+            "filter[app]": app_id(config),
+            "sort": "-version",
             "limit": str(limit),
             "fields[builds]": "version,processingState,uploadedDate,expired",
         },
@@ -220,11 +224,34 @@ def list_builds(config: dict, limit: int = 30) -> list[dict]:
     return sorted(builds, key=lambda build: int(build["version"]), reverse=True)
 
 
-def find_build(config: dict, version: int) -> dict | None:
-    for build in list_builds(config, limit=200):
-        if int(build["version"]) == int(version):
-            return build
-    return None
+def find_build(config: dict, version: int, timeout: float = 60) -> dict | None:
+    # 업로드 직후에는 목록에 나타나기까지 몇 초 걸린다. VALID가 된 빌드로 그룹 연결을
+    # 하려다 "찾지 못했습니다"로 죽지 않도록 잠깐 기다린다.
+    deadline = time.monotonic() + timeout
+    while True:
+        data = api(
+            config,
+            "GET",
+            "/v1/builds",
+            {
+                "filter[app]": app_id(config),
+                "filter[version]": str(version),
+                "limit": "10",
+                "fields[builds]": "version,processingState,uploadedDate,expired",
+            },
+        )
+        for row in data.get("data", []):
+            if int(row["attributes"]["version"]) == int(version):
+                return {
+                    "id": row["id"],
+                    "version": row["attributes"]["version"],
+                    "processingState": row["attributes"]["processingState"],
+                    "uploadedDate": row["attributes"].get("uploadedDate"),
+                    "expired": row["attributes"].get("expired"),
+                }
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(5)
 
 
 def find_group(config: dict, group_id: str | None) -> dict:
