@@ -3138,3 +3138,29 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ### 3. 이 빌드에 들어간 것
 - `33613ea` 장식 스티커를 원 밖 오른쪽 위로(HMR1024B17)
 - `92b0b98` 저장소 파이프라인 P0~P2: 읽기 134.3 → 61.2~68.7ms, 조용한 손실 3종 계수, 죽은 `insertNewReadings` 삭제
+
+## REG1024C19 · 전체 스위트 회귀 (2026-10-24)
+
+- 요청 ID: `REG1024C19`
+- 무엇을: 인수인계 문서(`build/validation/DPL1024A01/handoff-prompt.md`)의 "안 된 것 1"이던 **전체 스위트 회귀**를 돌렸다. 236 배포 이후 상태(HEAD `7215a55`)에서 실행했다.
+
+### 1. 결과
+| 대상 | 결과 | 로그 |
+| --- | --- | --- |
+| `TaptionPlanTests` 전체(50개 스위트) | **1,552개 실행 · 실패 0 · 건너뜀 2** (154.8초) | `build/validation/REG1024C19/tests-all2.log` |
+| `TaptionPlanUITests`(`TaptionPlanSmokeUITests`) | **8개 통과 · 실패 0** (430.5초) | `build/validation/REG1024C19/tests-ui.log` |
+
+- 건너뜀 2개는 `HealthKitIntegrationTests`의 앵커·커서 2건이다. 시뮬레이터에 HealthKit 권한이 없어 `XCTSkip`으로 빠지는 것이고, CRV1024A11에서 의도한 처리다(코드 결함 아님).
+- 즉 P0~P2(코덱·품질 원장·`dayRanges` 계측)가 **다른 1,500여 개 테스트를 하나도 깨뜨리지 않았다.**
+
+### 2. 첫 시도는 테스트 호스트 실행에서 실패했다
+- 증상: `Simulator device failed to launch com.taption.plan ... did not return a process handle`.
+- 원인: 기기가 Shutdown 상태였고 xcodebuild가 부팅을 맡은 직후 앱 실행이 실패했다(HMR1024B17에서도 같은 증상).
+- 조치: `simctl boot` → `simctl bootstatus -b`(Finished까지 대기) → 앱 설치·1회 실행·종료 후 테스트. 재발하지 않았다.
+
+### 3. 인수인계 문서에서 바뀐 것
+- 3절(작업 트리): "미커밋" → **커밋 완료**(`92b0b98`)·236 배포됨.
+- 4절: 전체 회귀 "안 됨" → **실행·통과**(위 표).
+- 6절 1번(커밋): 완료 표시.
+- 함정 3(`-configuration Release` 불가): **정정** — CAR 실패는 부분 아카이브 DD 탓이고 235·236 Release 아카이브가 성공했다.
+- 함정 9~11 추가: `simctl launch`의 `--`, 테스트 전 `terminate`, `-only-testing`은 클래스 단위.
