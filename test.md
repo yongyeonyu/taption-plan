@@ -2732,3 +2732,75 @@
   - HealthKit 2건은 건너뛰기 목록에 엔타이틀 오류를 추가해 의도대로 처리했다.
   - StoreKit 1건은 `test.md`의 기존 기록(170행)에 있는 **iOS 27 StoreKitTest 기존 실패**다. IAP 심사가 보류 중이라 건너뛰지 않고 실패로 두기로 한 판단이 그대로 유지되고 있으며, 이번 변경 영역(수면 엔진·클립 편집기 레이아웃·상단 정렬)과 겹치지 않는다.
 - 따라서 이번 작업의 유효 집계는 **1,578 통과 / 1 기존 실패(StoreKit) / 2 환경 건너뜀 (총 1,581)** 이다.
+
+## TFB1024A14 · TestFlight 자동 배포 (2026-10-24)
+
+"테스트플라이트 연결해서 빌드업해" 한 줄로 빌드 번호 증가 → 아카이브 → 익스포트 → 업로드 → 내부 그룹 연결 → 검증까지 실제로 끝까지 돌렸다. 요청이 요구한 다섯 가지 검증 기준은 모두 실측으로 확인했다.
+
+### 1. 사전 점검 (기준 ①, ②)
+
+`bash scripts/testflight/release.sh --preflight` → 9개 검사 전부 `OK` (`build/validation/TFB1024A03/preflight.json`).
+
+| 검사 | 실측값 |
+| --- | --- |
+| `issuer_id` | `229c124e-7477-462c-b3f0-3180eb81ff25` |
+| `key_id` | `AGB82JKGT3` |
+| `private_key` | `~/.appstoreconnect/private_keys/AuthKey_AGB82JKGT3.p8` (257 bytes, PEM=yes) |
+| `jwt_signed` | ES256 서명 생성 |
+| `jwt_claims` | `iss=229c124e-…ff25 kid=AGB82JKGT3 alg=ES256 aud=appstoreconnect-v1` |
+| `tooling` | xcodebuild·xcrun·openssl 모두 있음 |
+| `app_lookup` | `com.taption.plan` → `6797370230` |
+| `builds_readable` | 최고 빌드 233(VALID), 200건 조회 |
+| `internal_group` | `TP Taption Plan 내부 테스트` (`b4857e5e-…03fd`, internal=True) |
+
+- **기준 ②는 서명된 토큰을 되읽어 확인했다.** `jwt_claims` 검사가 만든 JWT의 페이로드를 디코드해 `iss`가 config 값과 같은지, `kid`·`alg`·`aud`가 맞는지 대조한다. Issuer ID가 설정에만 적혀 있고 실제 인증에 다른 값이 쓰이는 상황을 잡기 위한 검사다. 같은 토큰으로 `app_lookup`·`builds_readable`이 통과했으므로 ASC도 이 Issuer ID를 받아들인다.
+- 네 `Info.plist` `CFBundleVersion`과 `project.pbxproj` `CURRENT_PROJECT_VERSION`이 모두 233으로 일치함도 1/9에서 확인.
+
+### 2. 빌드 번호 자동 증가
+
+`--build-number 234`로 4개 plist + pbxproj 8곳을 갱신하고 다시 읽어 확인했다(`TFB1024A04`). 233은 이미 ASC에 있어 재사용할 수 없다.
+
+### 3. 아카이브·익스포트·산출물 검증 (기준 ③)
+
+`--no-upload`로 두 번 실행(`TFB1024A04`, `TFB1024A05`). 두 번째가 최종 통과본이다.
+
+- 아카이브: `TaptionPlan234.xcarchive` (Release, generic/platform=iOS)
+- 익스포트: `TaptionPlan.ipa` 42MB (`app-store-connect`, automatic)
+- 산출물 번들: `com.taption.plan` 234, `com.taption.plan.widget` 234 — 2개 모두 목표 번호 일치
+
+### 4. 전체 실행 (기준 ④)
+
+`bash scripts/testflight/release.sh --reuse-archive build/validation/TFB1024A05/TaptionPlan234.xcarchive --request-id TFB1024A06 --yes`
+
+| 단계 | 결과 |
+| --- | --- |
+| 7/9 업로드 | `No errors uploading archive at '…/TaptionPlan.ipa'` · Delivery UUID `8df28aac-4afc-4d9f-995c-5d1b44f14459` · 44,426,633 bytes / 9.664초 |
+| 8/9 처리 대기 | 15:31:26 `NOT_UPLOADED` → 15:39:10 `VALID` (약 7분 44초, 20초 간격 폴링) |
+| 8/9 그룹 연결 | `빌드 234을 TP Taption Plan 내부 테스트 그룹에 연결했습니다.` |
+| 9/9 검증 | `processingState: VALID`, `buildAttached: true`, `testerCount: 1` → `ok: true` |
+
+보고서: `build/validation/TFB1024A06/testflight-report.json`. 그룹에 연결된 빌드 번호 목록에 234가 추가된 것도 함께 읽었다(…232, 233, **234**).
+
+기존 빌드 재확인 경로도 따로 확인했다: `bash scripts/testflight/verify.sh --build 233` → `VALID`·연결됨·테스터 1명(`axony99@gmail.com`)·`ok: true`.
+
+### 5. 개인키 비노출 (기준 ⑤)
+
+`grep -rc "PRIVATE KEY" build/validation/TFB1024A0*/` → 모든 로그 0건. `private_key` 검사는 경로·바이트 수·PEM 여부만 출력한다.
+
+### 6. 문서·트리거 (기준 ⑥)
+
+- `AGENTS.md` 「TestFlight 자동 배포」 절: 요청 문구 → `bash scripts/testflight/release.sh --yes`, 설정·키 위치, 완료 기준.
+- `docs/TESTFLIGHT.md`: 트리거 표, 인증 정보 위치, 9단계 흐름, 검증 기준 5개, 실패 대응표, 로그 구조.
+
+### 7. 구현 중 고친 것
+
+1. **`/v1/apps/{id}/builds`는 `sort` 파라미터를 거부한다** — `HTTP 400 PARAMETER_ERROR.ILLEGAL "The parameter 'sort' can not be used with this request"`. 서버가 주는 순서도 빌드 번호순이 아니어서, `limit=5`로 읽었을 때 최고 빌드를 123으로 잘못 보고했다(실제 233). 정렬을 클라이언트로 옮기고 조회 수를 200으로 올려 해결.
+2. **산출물 번들 검사가 4개를 요구하면 늘 실패한다** — 이 프로젝트는 Watch 앱을 iOS 앱에 embed하지 않는다. `project.pbxproj`에 `Embed Watch Content` 단계가 없고 `TaptionPlanWatch.app` 참조도 없으며, Watch는 `TaptionPlanWatch.xcscheme`으로 따로 빌드되는 별도 target이다. 그래서 아카이브에는 앱·위젯 2개만 들어간다. 검사를 "포함된 번들 전부 일치 + 앱 번들 필수"로 바꾸고, 빠진 제품은 `산출물에 없는 제품(별도 target)`으로 알리게 했다. 네 plist 버전 일치는 1/9이 소스에서 확인하므로 규칙은 유지된다.
+3. **`--reuse-archive` 추가** — 업로드가 실패하면 4분짜리 아카이브를 다시 할 필요가 없도록 기존 `.xcarchive`로 익스포트·업로드만 재시도한다. 이번 전체 실행도 이 경로로 돌았다.
+
+### 8. 한계
+
+1. **Watch 앱은 TestFlight 산출물에 포함되지 않는다.** 위 2번대로 별도 target이라 iOS 앱 아카이브에 실리지 않는다. 기존 빌드 233도 같은 구조다. Watch 앱을 배포하려면 `Embed Watch Content` 단계와 companion 설정(`WKCompanionAppBundleIdentifier`)을 새로 넣어야 하는데, 서명·번들 구조가 함께 바뀌는 제품 변경이라 이번 요청 범위에서 손대지 않았다.
+2. **CI 트리거는 만들지 않았다.** 저장소에 `.p8`과 배포 인증서를 시크릿으로 넣고 macOS 러너에서 automatic signing을 돌리는 설정이 필요한데, 이 환경에서 검증할 수 없어 검증되지 않은 워크플로를 넣지 않았다. 트리거는 `AGENTS.md` 규칙 + `release.sh`로 동작한다.
+3. **알림 메일·외부 테스터 노출은 확인하지 않았다.** 내부 그룹(`isInternalGroup=true`)의 테스터 1명만 읽었다.
+4. 이번 실행은 `--with-tests` 없이 돌았다(아카이브 컴파일로 빌드만 확인). 단위 테스트는 `SLP1024C13`에서 별도로 확인한 상태다.
