@@ -3164,3 +3164,35 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 6절 1번(커밋): 완료 표시.
 - 함정 3(`-configuration Release` 불가): **정정** — CAR 실패는 부분 아카이브 DD 탓이고 235·236 Release 아카이브가 성공했다.
 - 함정 9~11 추가: `simctl launch`의 `--`, 테스트 전 `terminate`, `-only-testing`은 클래스 단위.
+
+## UXP1024D20 · 지도·클립편집·스플래시 8건 (2026-10-24)
+
+- 요청 ID: `UXP1024D20`
+- 무엇을: 대표가 한 번에 준 8건(①미확인 경로에 화랑이 ②대분류 기준 배속 ③잠금화면·다이나믹 아일랜드 불일치 ④미확인 세그먼트 여러 개 ⑤카운터 시간 동기 ⑥클립편집 세그먼트 편집 ⑦카운터 표 창 ⑧스플래시 0~100 균등).
+
+### 1. 원인과 고친 것
+
+| # | 원인(코드로 확인) | 고친 것 |
+| --- | --- | --- |
+| ① | `MapHomePlaybackLocation.resolve`는 재생 프레임 → 지하철 → 예상 경로 → 센서 순으로 찾는데, 예상 경로 요청은 *센서가 끊긴 틈*에서만 만들어진다(`guard !gaps.isEmpty`). 기록이 아예 없는 미확인 이동은 네 갈래가 모두 비어 화랑이가 사라졌다. | `resolveOrGap` 추가(새 파일 `MapHomePlaybackContinuity.swift`). `resolve`가 nil이면 이동 구간의 출발·도착 장소 좌표 사이를 시각 비율로 보간한다. 장소 좌표를 모르면 지어내지 않고 nil. |
+| ② | 배속이 `dayPlaybackMovementRanges`에서 **확정 이동 + 이동 센서**로만 정해졌다(`segment.isConfirmed \|\| !segment.evidence.isEmpty`). 대분류가 '이동'인데 조건에 안 걸리면 정지 배속(초당 120분)으로 지나갔다. | 확정 게이트를 없애고, 대분류 '이동' 구간을 `MapHomePlaybackCategoryRanges.movementRanges`로 배속 표에 더했다. 이동=이동 배속(걷기 3배 유지), 나머지 대분류=정지 배속. |
+| ③ | 잠금화면·아일랜드는 `TaptionCurrentActivityPolicy`, 앱 화면(시간 레일)은 `MapHomeTimeRailSegmentEngine` — 서로 다른 엔진이라 같은 시각에 다른 이름·아이콘이 떴다. | `AppModel.liveActivityCurrentProjection`(새 파일)으로 앱 화면과 **같은 엔진**에서 이름·대분류·아이콘을 읽는다. 잠금 상태·미확인일 때만 기존 '확인 중'으로 물러선다. |
+| ④ | `NLETrack.normalized`가 원본 구간마다 빈 자리를 미확인 클립으로 채우는데, 끝을 조금씩 여러 번 당기면 당길 때마다 새 미확인 클립이 쌓이고 합쳐지지 않았다(`merge`는 수동 호출뿐). | `mergingAdjacentGaps` — 같은 원본 구간 안에서 맞닿은 미확인 조각을 하나로 합친다. |
+| ⑤ | `counterText`가 하루 전체 합계(`daySummaryCategories`)만 읽어 재생 중에도 값이 구간 단위로 점프했다. | `MapHomeCounterTimelinePolicy`(cutoff·stepCount·travelMeters) + `MapHomeCounterValueCache`(1분 버킷). 재생 중에는 재생 시각까지로 잘라 센다. 30Hz 틱마다 하루치 phase를 다시 계산하지 않도록 분 버킷이 바뀔 때만 계산한다. |
+| ⑥ | `resolveDragMode`가 **이미 고른 클립**에서만 경계 다듬기를 허용해, 경계를 끌어도 클립 전체가 옮겨 갔다. | 선택과 무관하게 경계 16pt를 다듬기로 받는다(짧아 경계가 겹치는 클립은 옮기기). 제자리에서 끝난 드래그는 되돌리기 한 칸을 남기지 않는다. BOKKI STUDIO 계약("경계=Trim, 몸통=Reorder, 제자리 release=무흔적")을 따랐다. |
+| ⑦ | 배지마다 `counterPill` 캡슐을 따로 그려 `VStack(spacing: 4)`로 쌓아 창이 아니라 알약 더미였다. | `MapHomeCounterTable`(새 파일) 하나로 모았다. 1개는 기존 알약 그대로, 2개부터 한 상자(폭 132pt) 안에 줄을 붙이고 1pt 구분선으로 나눈다. `counterPill` 삭제. |
+| ⑧ | `AppShellInitialLaunchProgressMath.next`가 목표(0.86)에 지수적으로 접근해 멈추고, 준비가 끝나면 1.0으로 점프했다. | 목표에 닿았는데 준비가 안 끝났으면 0.97까지 3%씩 계속 올라가게 바꿨다. 진행선: 0.36 → 0.86 → 0.97 → 1.0. |
+
+### 2. 검증
+- Debug 빌드 성공(경고 0). `TEST BUILD SUCCEEDED` → `TEST SUCCEEDED`.
+- `TaptionPlanTests` **1,610개 통과 · 실패 0 · 건너뜀 2**(HealthKit 앵커·커서, 의도한 `XCTSkip`). 신규 9건 포함:
+  - `MapHomeCounterTimelinePolicyTests` 5건(컷오프·하루 끝·걸음·거리 비례·분 버킷 캐시)
+  - `MapHomePlaybackContinuityTests` 3건(구간 보간·끝점 없음·센서 우선)
+  - `NLETrackTests.testRepeatedTrimsKeepSingleUnconfirmedGap` 1건
+- 구조 게이트 통과: `MapHomeView` 22,071 / `AppShellView` 1,645 / `MapHomeNLEClipEditor` 1,429 (기준선 22,072 · 1,646 · 1,430 이하).
+- 재생·카운터·잠금화면은 시뮬레이터에 하루치 센서 기록이 없어 **실기기 화면 확인이 남아 있다**(⑦⑧⑥ 포함).
+
+### 3. 한계
+- ④는 같은 원본 구간 안의 미확인만 합친다. 서로 다른 원본 구간(=다른 기록)의 미확인은 커밋 단위가 달라 각각 남는다.
+- ②의 배속표는 대분류 '이동'만 따로 본다. 나머지 대분류는 예전처럼 정지 배속 하나다.
+- ⑥은 경계 우선순위와 무흔적 release만 가져왔다. BOKKI의 길게 눌러 Reorder(0.4초·18pt)·가장자리 자동 스크롤 360pt/s는 이식하지 않았다.

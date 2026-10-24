@@ -29399,6 +29399,23 @@ final class NLETrackTests: XCTestCase {
         ]
     }
 
+    /// 끝을 여러 번 당겨도 비운 자리는 미확인 하나로 합쳐진다(대표 지적, UXP1024D20 ④).
+    func testRepeatedTrimsKeepSingleUnconfirmedGap() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(
+            segments: threeSegmentDay(sources: [UUID()])
+        )
+        guard let work = track.clip(atMinute: 400) else {
+            return XCTFail("업무 클립이 없다")
+        }
+        track.trim(work.id, edge: .end, toMinute: 520)
+        XCTAssertEqual(track.clips.filter(\.isGap).count, 1)
+        track.trim(work.id, edge: .end, toMinute: 480)
+        let gaps = track.clips.filter(\.isGap)
+        XCTAssertEqual(gaps.count, 1, "끝을 다시 당겨도 미확인은 하나여야 한다")
+        XCTAssertEqual(gaps.first?.startMinute, 480)
+        XCTAssertEqual(gaps.first?.endMinute, 540)
+    }
+
     /// 하루 트랙은 기록이 없어도 24시간을 빈틈없이 채운다.
     func testMainTrackAlwaysCoversTwentyFourHours() {
         let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
@@ -29729,5 +29746,235 @@ final class NLETrackTests: XCTestCase {
         XCTAssertTrue(edges.contains(360))
         XCTAssertTrue(edges.contains(300))
         XCTAssertTrue(edges.contains(1_440))
+    }
+}
+
+@MainActor
+final class MapHomeCounterTimelinePolicyTests: XCTestCase {
+    private let dayStart = Date(timeIntervalSince1970: 1_700_000_000)
+
+    func testCutoffOnlyExistsWhilePlaybackRuns() {
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 90, isRunning: false))
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: nil, isRunning: true))
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 0, isRunning: true))
+        XCTAssertNil(MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: .nan, isRunning: true))
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 90, isRunning: true),
+            dayStart.addingTimeInterval(90 * 60)
+        )
+    }
+
+    func testCutoffStopsAtEndOfDay() {
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.cutoff(dayStart: dayStart, minute: 2_000, isRunning: true),
+            dayStart.addingTimeInterval(24 * 60 * 60)
+        )
+    }
+
+    func testStepsCountOnlyReadingsUpToCutoff() {
+        let readings = [
+            SensorReading(timestamp: dayStart.addingTimeInterval(60), stepCount: 120),
+            SensorReading(timestamp: dayStart.addingTimeInterval(3_600), stepCount: 900),
+            SensorReading(timestamp: dayStart.addingTimeInterval(7_200), stepCount: 2_400),
+        ]
+        XCTAssertEqual(MapHomeCounterTimelinePolicy.stepCount(readings: readings, cutoff: nil), 2_400)
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.stepCount(
+                readings: readings,
+                cutoff: dayStart.addingTimeInterval(3_600)
+            ),
+            900
+        )
+        XCTAssertNil(
+            MapHomeCounterTimelinePolicy.stepCount(
+                readings: readings,
+                cutoff: dayStart.addingTimeInterval(30)
+            )
+        )
+    }
+
+    func testTravelDistanceProratesOngoingSegment() {
+        let segments = [
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(start: dayStart, end: dayStart.addingTimeInterval(600)),
+                distanceMeters: 600,
+                confidence: .high,
+                evidence: []
+            ),
+            TravelSegment(
+                mode: .subway,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(600),
+                    end: dayStart.addingTimeInterval(1_800)
+                ),
+                distanceMeters: 4_000,
+                confidence: .high,
+                evidence: []
+            ),
+        ]
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.travelMeters(segments: segments, cutoff: nil),
+            4_600,
+            accuracy: 0.5
+        )
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.travelMeters(
+                segments: segments,
+                cutoff: dayStart.addingTimeInterval(600)
+            ),
+            600,
+            accuracy: 0.5
+        )
+        // 두 번째 구간을 절반 지난 시점: 600 + 2,000.
+        XCTAssertEqual(
+            MapHomeCounterTimelinePolicy.travelMeters(
+                segments: segments,
+                cutoff: dayStart.addingTimeInterval(1_200)
+            ),
+            2_600,
+            accuracy: 0.5
+        )
+    }
+
+    func testCategorySecondsAreRecomputedOnlyWhenMinuteBucketChanges() {
+        let cache = MapHomeCounterValueCache()
+        let cutoff = dayStart.addingTimeInterval(3_600)
+        var computed = 0
+        func read(_ date: Date?) -> [String: TimeInterval] {
+            cache.categorySeconds(cutoff: date) { _ in
+                computed += 1
+                return ["work": 60]
+            }
+        }
+        XCTAssertEqual(read(cutoff), ["work": 60])
+        XCTAssertEqual(read(cutoff.addingTimeInterval(10)), ["work": 60])
+        XCTAssertEqual(computed, 1, "같은 분 버킷이면 다시 계산하지 않는다")
+        XCTAssertEqual(read(cutoff.addingTimeInterval(60)), ["work": 60])
+        XCTAssertEqual(computed, 2, "분이 바뀌면 다시 계산한다")
+        _ = read(nil)
+        _ = read(nil)
+        XCTAssertEqual(computed, 4, "멈춰 있을 때는 캐시하지 않는다")
+    }
+}
+
+final class MapHomePlaybackContinuityTests: XCTestCase {
+    private let dayStart = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func point(_ latitude: Double, _ longitude: Double) -> GeoPoint {
+        GeoPoint(
+            latitude: latitude,
+            longitude: longitude,
+            altitude: 0,
+            horizontalAccuracy: 10,
+            verticalAccuracy: 10
+        )
+    }
+
+    private func place(
+        _ id: UUID,
+        _ point: GeoPoint,
+        from start: TimeInterval,
+        to end: TimeInterval
+    ) -> PlaceStay {
+        PlaceStay(
+            id: id,
+            placeKey: id.uuidString,
+            displayName: "place",
+            span: TimeSpan(
+                start: dayStart.addingTimeInterval(start),
+                end: dayStart.addingTimeInterval(end)
+            ),
+            confidence: .high,
+            point: point
+        )
+    }
+
+    /// 예상 경로 요청도 센서도 없는 미확인 이동에서 화랑이가 사라지지 않는다(대표 지적, UXP1024D20 ①).
+    func testGapCoordinateWalksBetweenPlaceEndpoints() {
+        let from = UUID()
+        let to = UUID()
+        let places = [
+            place(from, point(37.0, 127.0), from: 0, to: 3_600),
+            place(to, point(37.1, 127.2), from: 7_200, to: 10_800),
+        ]
+        let travel = [
+            TravelSegment(
+                fromPlaceID: from,
+                toPlaceID: to,
+                mode: .walking,
+                span: TimeSpan(
+                    start: dayStart.addingTimeInterval(3_600),
+                    end: dayStart.addingTimeInterval(7_200)
+                ),
+                distanceMeters: 2_000,
+                confidence: .low,
+                evidence: []
+            )
+        ]
+        let middle = MapHomePlaybackLocation.gapCoordinate(
+            at: dayStart.addingTimeInterval(5_400),
+            travel: travel,
+            places: places
+        )
+        XCTAssertEqual(middle?.latitude ?? 0, 37.05, accuracy: 0.000_1)
+        XCTAssertEqual(middle?.longitude ?? 0, 127.1, accuracy: 0.000_1)
+
+        let start = MapHomePlaybackLocation.gapCoordinate(
+            at: dayStart.addingTimeInterval(3_600),
+            travel: travel,
+            places: places
+        )
+        XCTAssertEqual(start?.latitude ?? 0, 37.0, accuracy: 0.000_1)
+
+        // 구간 밖에서는 아무것도 지어내지 않는다.
+        XCTAssertNil(
+            MapHomePlaybackLocation.gapCoordinate(
+                at: dayStart.addingTimeInterval(9_000),
+                travel: travel,
+                places: places
+            )
+        )
+    }
+
+    /// 출발·도착 장소 좌표를 모르면 보간하지 않는다(지어낸 좌표를 만들지 않는다).
+    func testGapCoordinateNeedsBothEndpoints() {
+        let travel = [
+            TravelSegment(
+                mode: .walking,
+                span: TimeSpan(
+                    start: dayStart,
+                    end: dayStart.addingTimeInterval(600)
+                ),
+                distanceMeters: 300,
+                confidence: .low,
+                evidence: []
+            )
+        ]
+        XCTAssertNil(
+            MapHomePlaybackLocation.gapCoordinate(
+                at: dayStart.addingTimeInterval(300),
+                travel: travel,
+                places: []
+            )
+        )
+    }
+
+    /// 재생 프레임이 있으면 그 좌표를 그대로 쓴다(보간이 끼어들지 않는다).
+    func testResolveOrGapPrefersSensorResolution() {
+        let reading = SensorReading(
+            timestamp: dayStart.addingTimeInterval(300),
+            point: point(36.5, 126.5),
+            motion: .walking,
+            motionConfidence: .high
+        )
+        let resolved = MapHomePlaybackLocation.resolveOrGap(
+            at: dayStart.addingTimeInterval(300),
+            frame: nil,
+            normalizedReadings: [reading],
+            travel: [],
+            places: []
+        )
+        XCTAssertEqual(resolved?.coordinate.latitude ?? 0, 36.5, accuracy: 0.000_1)
     }
 }

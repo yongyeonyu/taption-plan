@@ -3833,7 +3833,7 @@ final class AppModel {
     ) async {
         let controller = SensorCollectionLiveActivityController.shared
         let kinds = sensorCollectionKinds
-        let projection = currentLiveActivityProjection()
+        let projection = liveActivityCurrentProjection() ?? currentLiveActivityProjection()
         await liveActivityController.updateCompactActivity(
             title: projection.title,
             categoryID: projection.categoryID,

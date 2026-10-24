@@ -482,12 +482,40 @@ struct NLETrack: Hashable, Sendable {
                 rangeEndMinute: rangeEndMinute
             )
         }
+        result = mergingAdjacentGaps(result)
         return result.sorted { lhs, rhs in
             if lhs.startMinute != rhs.startMinute {
                 return lhs.startMinute < rhs.startMinute
             }
             return lhs.id < rhs.id
         }
+    }
+
+    /// 같은 원본 구간 안에서 맞닿은 미확인 조각을 하나로 합친다.
+    ///
+    /// 클립 끝을 조금씩 여러 번 당기면 당길 때마다 비운 자리가 새 미확인 클립으로
+    /// 쌓여, 타임라인에 '미확인' 상자가 여러 개 늘어섰다(대표 지적, UXP1024D20 ④).
+    /// 미확인은 사람이 일부러 가르는 분류가 아니므로 곧바로 합쳐 하나만 남긴다.
+    private static func mergingAdjacentGaps(_ clips: [NLEClip]) -> [NLEClip] {
+        var merged: [NLEClip] = []
+        for clip in clips.sorted(by: { lhs, rhs in
+            if lhs.startMinute != rhs.startMinute {
+                return lhs.startMinute < rhs.startMinute
+            }
+            return lhs.id < rhs.id
+        }) {
+            if var last = merged.last,
+               last.isGap,
+               clip.isGap,
+               last.parent == clip.parent,
+               last.endMinute == clip.startMinute {
+                last.endMinute = clip.endMinute
+                merged[merged.count - 1] = last
+                continue
+            }
+            merged.append(clip)
+        }
+        return merged
     }
 
     private static func fillUncoveredDay(

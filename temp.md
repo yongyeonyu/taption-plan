@@ -2030,3 +2030,16 @@
 - 환경: 시뮬레이터가 안 되던 원인은 **두 겹**이었다 — (1) 샌드박스가 CoreSimulator 접근을 막아 `simctl`이 SIGKILL(exit 137), (2) 메모리 압박(여유 57MB·스왑 5.75GB/7.1GB)으로 테스트 호스트가 SIGTERM. 샌드박스 밖에서 `xcodebuild -runFirstLaunch`를 돌린 뒤 스위트를 하나씩 끊어 돌려 통과했다.
 - 곁들여 고친 것: `TaptionPlanTests/FeatureEngineTests.swift:58`에 `)        XCTAssertEqual(`로 두 문장이 붙어 테스트 타깃이 컴파일되지 않았다(내 변경이 아닌 미커밋 수정, 33+/30−). 내용은 건드리지 않고 줄만 나눴다.
 - 다음 후보: 열 위치를 `CodingKey`에서 바로 얻어 사전 조회를 없애면 늘어난 디코딩 55~62ms를 다시 줄인다.
+
+## UXP1024D20 · 지도·클립편집·스플래시 8건 (2026-10-24)
+- 요청(대표): ①미확인 경로에 화랑이 없음 ②재생 배속을 대분류 기준으로 ③잠금화면·다이나믹 아일랜드가 앱 표시와 불일치 ④클립편집에서 대분류 길이 조절 시 미확인 세그먼트가 여러 개 ⑤카운터 숫자가 시간에 맞춰 올라가야(길이·업무시간 등) ⑥클립편집 대분류 세그먼트 편집이 잘 안 됨(BOKKI 방식) ⑦카운터를 하나의 네모 창 표로, 2개부터 세로로 붙게 ⑧스플래시가 86%에서 멈췄다가 끝남.
+- ⑧ 원인(확인): `AppShellView`가 `markInitialDestinationRendered()`에서 0.36, 부트스트랩 준비에서 0.86을 목표로 잡고, 준비가 끝나면 `dismissInitialLaunchOverlayIfReady()`가 **한 번에 1.0으로 점프**한다. `AppShellInitialLaunchProgressMath.next`는 목표에 지수적으로 접근해 목표에 닿으면 더 움직이지 않는다 → 86%에서 정지 후 점프.
+- ⑦ 원인(확인): `counterBadgeStack`이 배지마다 `counterPill`(캡슐)을 따로 그려 `VStack(spacing: 4)`로 쌓는다 → 창이 아니라 낱개 알약 여러 개.
+- ⑤ 원인(확인): `counterText(kind)`가 `daySummaryCategories`(하루 전체 합계)만 읽는다. 재생 중에도 값이 구간 단위로 점프한다.
+- ① 원인(확인): `MapHomePlaybackLocation.resolve`는 재생 프레임 → 지하철 → 예상 경로 → 센서 순으로 찾는다. 그런데 예상 경로 요청은 *센서가 끊긴 틈*에서만 만들어지므로(`ExpectedRouteRequestEngine`, `guard !gaps.isEmpty`), 기록이 아예 없는 미확인 이동은 네 갈래가 모두 비어 화랑이가 통째로 사라진다. 게다가 그 구간은 배속 표에 없어 정지 배속(초당 120분)으로 지나가 한순간에 지나간다.
+- ② 원인(확인): 배속이 `dayPlaybackMovementRanges`에서 **확정 이동 + 이동 센서**로만 정해진다(`segment.isConfirmed || !segment.evidence.isEmpty`). 대분류가 '이동'인데도 이 조건에 안 걸리는 구간은 정지 배속이 된다.
+- ③ 원인(확인): 잠금화면·다이나믹 아일랜드용 분류는 `TaptionCurrentActivityPolicy`가 따로 계산하고, 앱 화면(시간 레일)은 `MapHomeTimeRailSegmentEngine`이 계산한다. 두 엔진이 달라 같은 시각에 서로 다른 이름·아이콘이 뜬다.
+- ④ 원인(확인): `NLETrack.normalized`가 원본 구간마다 빈 자리를 미확인 클립으로 채우는데, 끝을 조금씩 여러 번 당기면 당길 때마다 새 미확인 클립이 쌓이고 서로 합쳐지지 않는다(`merge`는 수동 호출뿐).
+- ⑥ 원인(확인): `resolveDragMode`가 **이미 고른 클립**에서만 경계 다듬기를 허용한다(`if let selected = selectedClip, selected.id == clip.id`). 그래서 경계를 끌어도 클립 전체가 옮겨 가고, 다듬으려면 먼저 골라야 한다. BOKKI STUDIO 계약은 "경계는 Trim부터, 몸통은 길게 눌러 Reorder, 제자리에서 끝난 제스처는 흔적 없음"이다.
+- 검증 기준: ①~⑦ 각 항목별로 아래 test.md 기록에 적은 관찰 가능한 조건. 공통으로 Debug 빌드 경고 0, 관련 테스트 통과, 구조 게이트 통과(`MapHomeView` 22,072줄 이하).
+- 진행: ①~⑧ 모두 구현·단위 테스트 통과(1,610건, 신규 9건). 남은 것 = **실기기 화면 확인**(재생 중 화랑이·카운터 상승·잠금화면 이름·카운터 표·스플래시 진행선). 이 항목이 끝나면 이 블록을 지운다.

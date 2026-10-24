@@ -275,22 +275,21 @@ struct AppShellView: View {
         initialLaunchProgressTask = Task { @MainActor in
             defer { initialLaunchProgressTask = nil }
             while !Task.isCancelled {
+                // 목표에 닿았는데 아직 준비가 안 끝났으면 0.97까지 조금씩 계속 간다.
+                // 예전에는 0.86에서 얼어붙었다가 준비가 끝날 때 1.0으로 점프했다.
+                let goal = initialLaunchProgressValue >= initialLaunchProgressTarget
+                    && initialLaunchProgressTarget < 1
+                    ? min(0.97, initialLaunchProgressValue + 0.03) : initialLaunchProgressTarget
                 let next = AppShellInitialLaunchProgressMath.next(
                     current: initialLaunchProgressValue,
-                    target: initialLaunchProgressTarget
+                    target: goal
                 )
                 if next != initialLaunchProgressValue {
                     withAnimation(.linear(duration: 0.12)) {
                         initialLaunchProgressValue = next
                     }
                 }
-                if !isInitialLaunchOverlayVisible,
-                   initialLaunchProgressValue >= 1 {
-                    break
-                }
-                if initialLaunchProgressValue >= initialLaunchProgressTarget {
-                    break
-                }
+                if initialLaunchProgressValue >= 1 { break }
                 try? await Task.sleep(for: .milliseconds(33))
             }
         }

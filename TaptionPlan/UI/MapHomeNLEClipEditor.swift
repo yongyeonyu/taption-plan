@@ -108,6 +108,8 @@ struct MapHomeNLEClipEditor: View {
 
     /// 클립 줄이 화면 양옆으로 삐져나오는 폭.
     private static let railBleed: CGFloat = 14
+    /// 클립 경계를 '다듬기'로 받아 주는 손가락 여유. 예전 12pt는 손가락에 너무 좁았다.
+    private static let trimReach: CGFloat = 16
 
     private var header: some View {
         HStack {
@@ -791,6 +793,9 @@ struct MapHomeNLEClipEditor: View {
                 if moved < 4, dragMode != .scrub, dragMode != .none {
                     handleTap(at: value.startLocation, geometry: geometry, width: width)
                 }
+                // 제자리로 돌아와 손을 떼면 되돌리기 한 칸을 남기지 않는다(BOKKI STUDIO 계약).
+                if didPushUndoForDrag, let before = undoStack.last, before.main == track.snapshot(),
+                   before.sub == subTrack.snapshot() { undoStack.removeLast() }
                 dragMode = .none
                 didPushUndoForDrag = false
                 dragScrollShift = 0
@@ -963,17 +968,13 @@ struct MapHomeNLEClipEditor: View {
         // 상세활동 줄
         if point.x >= detailX - laneGap {
             if let sub = subTrack.clip(atMinute: minute) {
-                if selectedSubClipID == sub.id {
+                selectedSubClipID = sub.id
+                if geometry.height(minutes: Double(sub.lengthMinutes)) >= Self.trimReach * 3 {
                     let topY = geometry.y(forMinute: Double(sub.startMinute))
                     let bottomY = geometry.y(forMinute: Double(sub.endMinute))
-                    if abs(point.y - topY) <= 9, sub.lengthMinutes > 1 {
-                        return .trimStart(lane: .sub, id: sub.id)
-                    }
-                    if abs(point.y - bottomY) <= 9, sub.lengthMinutes > 1 {
-                        return .trimEnd(lane: .sub, id: sub.id)
-                    }
+                    if abs(point.y - topY) <= Self.trimReach { return .trimStart(lane: .sub, id: sub.id) }
+                    if abs(point.y - bottomY) <= Self.trimReach { return .trimEnd(lane: .sub, id: sub.id) }
                 }
-                selectedSubClipID = sub.id
                 return .move(lane: .sub, id: sub.id, originMinute: sub.startMinute, grabMinute: minute)
             }
             selectedSubClipID = nil
@@ -990,18 +991,16 @@ struct MapHomeNLEClipEditor: View {
             selectedSubClipID = nil
             return .pan
         }
-        if let selected = selectedClip, selected.id == clip.id {
-            let topY = geometry.y(forMinute: Double(clip.startMinute))
-            let bottomY = geometry.y(forMinute: Double(clip.endMinute))
-            if abs(point.y - topY) <= 12, clip.lengthMinutes > NLETrack.minimumClipMinutes {
-                return .trimStart(lane: .main, id: clip.id)
-            }
-            if abs(point.y - bottomY) <= 12, clip.lengthMinutes > NLETrack.minimumClipMinutes {
-                return .trimEnd(lane: .main, id: clip.id)
-            }
-        }
         selectedClipID = clip.id
         selectedSubClipID = nil
+        // 경계는 고르지 않은 클립이라도 바로 다듬기다(BOKKI STUDIO 계약: 경계=Trim, 몸통=옮기기).
+        // 짧아 경계 두 곳이 겹치는 클립은 통째로 옮기기로 둔다.
+        if geometry.height(minutes: Double(clip.lengthMinutes)) >= Self.trimReach * 3 {
+            let topY = geometry.y(forMinute: Double(clip.startMinute))
+            let bottomY = geometry.y(forMinute: Double(clip.endMinute))
+            if abs(point.y - topY) <= Self.trimReach { return .trimStart(lane: .main, id: clip.id) }
+            if abs(point.y - bottomY) <= Self.trimReach { return .trimEnd(lane: .main, id: clip.id) }
+        }
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
     }
 

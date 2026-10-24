@@ -2537,6 +2537,7 @@ struct MapHomeView: View {
     @State private var mapControlsFrame = CGRect.zero
     @State private var isDayPlaybackRunning = false
     @State private var dayPlaybackCurrentMinute: Double?
+    @State private var counterValueCache = MapHomeCounterValueCache()
     @State private var isTimelineInteractionActive = false
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
     @State private var lastPlaybackRouteProjectionUptime: TimeInterval = 0
@@ -6372,19 +6373,24 @@ struct MapHomeView: View {
 
     private var dayStepCount: Int? {
         // 지나간 날은 확정 요약의 걸음 수를 쓴다(센서 원본을 다시 읽지 않는다).
-        if let sealed = model.sealedDay(for: model.selectedDate), sealed.stepCount > 0 {
-            return sealed.stepCount
-        }
-        return currentDayReadings.compactMap(\.stepCount).filter { $0 > 0 }.max()
+        if let sealed = model.sealedDay(for: model.selectedDate), sealed.stepCount > 0 { return sealed.stepCount }
+        return MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: nil)
     }
 
     /// 하루를 대분류(수면·업무·이동·식사·취미·운동 등)로 묶은 요약. 세부 기록
     /// 원본(actuals)은 그대로 두고 파생 집계만 만든다. 비중은 관측된 총 시간
     /// 대비로 계산해 합이 100%가 되게 한다.
     private var daySummaryCategories: [MapHomeDaySummaryEntry] {
+        daySummaryEntries(from: daySummaryCategorySeconds(asOf: nil))
+    }
+
+    /// 대분류별 초. `cutoff`를 넘기면 그 시각까지로 잘라 센다(재생 중 카운터가 시간을 따라 올라간다).
+    private func daySummaryCategorySeconds(asOf cutoff: Date?) -> [String: TimeInterval] {
         // 확정한 날은 저장해 둔 대분류별 초를 그대로 쓴다(다시 계산하지 않는다).
-        if let sealed = model.sealedDay(for: model.selectedDate), !sealed.categorySeconds.isEmpty {
-            return daySummaryEntries(from: sealed.categoryDurations)
+        if cutoff == nil,
+           let sealed = model.sealedDay(for: model.selectedDate),
+           !sealed.categorySeconds.isEmpty {
+            return sealed.categoryDurations
         }
         let snap = currentDayDataSnapshot
         let actuals = snap?.actuals ?? []
@@ -6395,8 +6401,7 @@ struct MapHomeView: View {
         )
         let calendar = Calendar.autoupdatingCurrent
         let start = calendar.startOfDay(for: model.selectedDate)
-        let end = calendar.date(byAdding: .day, value: 1, to: start)
-            ?? start.addingTimeInterval(24 * 60 * 60)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60)
         let dayWindow = TimeSpan(start: start, end: end)
         let totalsByID = TaptionSealedDayBuilder.categoryDurations(
             actuals: actuals,
@@ -6404,9 +6409,13 @@ struct MapHomeView: View {
             stays: stays,
             placeKinds: placeKinds,
             day: dayWindow,
-            asOf: .now
+            asOf: cutoff ?? .now
         )
-        return daySummaryEntries(from: totalsByID)
+        // 재생 시각으로 잘라 내려면 원본이 있어야 한다. 없으면 저장해 둔 확정값으로 물러선다.
+        if totalsByID.isEmpty, let sealed = model.sealedDay(for: model.selectedDate) {
+            return sealed.categoryDurations
+        }
+        return totalsByID
     }
 
     private func daySummaryEntries(from totalsByID: [String: TimeInterval]) -> [MapHomeDaySummaryEntry] {
@@ -7356,66 +7365,54 @@ struct MapHomeView: View {
 
     /// 화랑이 위에 쌓아 보여 줄 카운터 값. 켠 것만, 값이 있는 것만 올린다.
     private var mapCounterBadges: [MapHomeCounterBadge] {
-        enabledCounterKinds.compactMap { kind in
-            counterText(kind).map { MapHomeCounterBadge(kind: kind, text: $0) }
+        let cutoff = counterCutoffDate
+        let seconds = counterValueCache.categorySeconds(cutoff: cutoff) { daySummaryCategorySeconds(asOf: $0) }
+        let steps = MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: cutoff)
+        let meters = MapHomeCounterTimelinePolicy.travelMeters(
+            segments: currentDayDataSnapshot?.travel ?? [], cutoff: cutoff)
+        return enabledCounterKinds.compactMap { kind in
+            counterText(kind, seconds: seconds, steps: steps, meters: meters)
+                .map { MapHomeCounterBadge(kind: kind, text: $0) }
         }
     }
 
-    private func counterText(_ kind: MapHomeCounterKind) -> String? {
+    /// 재생 중이면 지금 재생 시각, 멈춰 있으면 nil(하루 전체 합계).
+    private var counterCutoffDate: Date? {
+        MapHomeCounterTimelinePolicy.cutoff(
+            dayStart: MapHomeGrowthPolicy.localCalendar.startOfDay(for: model.selectedDate),
+            minute: dayPlaybackCurrentMinute, isRunning: isDayPlaybackRunning
+        )
+    }
+
+    private func counterText(
+        _ kind: MapHomeCounterKind,
+        seconds categorySeconds: [String: TimeInterval],
+        steps: Int?,
+        meters: Double
+    ) -> String? {
         switch kind {
         case .steps:
-            guard let steps = dayStepCount, steps > 0 else { return nil }
+            guard let steps, steps > 0 else { return nil }
             return steps.formatted()
         case .distance:
-            let meters = MapHomeDayTravelSummary.entries(
-                from: currentDayDataSnapshot?.travel ?? []
-            ).reduce(0) { $0 + $1.meters }
             guard meters > 0 else { return nil }
             return MapHomeDayTravelSummary.distanceText(meters)
         case .work, .study, .hobby, .exercise:
-            guard let categoryID = kind.categoryID,
-                  let seconds = daySummaryCategories.first(where: {
-                      $0.id == categoryID
-                  })?.seconds,
-                  seconds >= 60
+            guard let categoryID = kind.categoryID, let seconds = categorySeconds[categoryID], seconds >= 60
             else { return nil }
             return DurationText.localized(seconds, english: language == .english)
         }
     }
 
-    /// 카운터 배지를 연봉 카운터 위로 쌓는다. 아래에서 위로 자라도록 바닥을 맞춰 놓는다.
+    /// 카운터 배지를 연봉 카운터 위에 붙인다. 창 모양(1개=알약, 2개 이상=표)은 `MapHomeCounterTable`이 정한다.
     private func counterBadgeStack(above anchor: CGPoint) -> some View {
-        let badges = mapCounterBadges
         let bottomY = anchor.y - (salaryCounterIsVisible ? 26 : 8)
         return ZStack(alignment: .bottom) {
             Color.clear
-            VStack(spacing: 4) {
-                ForEach(badges) { badge in
-                    counterPill(badge.kind, text: badge.text)
-                }
-            }
+            MapHomeCounterTable(badges: mapCounterBadges, language: language)
         }
-        .frame(width: 240, height: 320, alignment: .bottom)
-        .position(x: anchor.x, y: bottomY - 160)
-        .allowsHitTesting(false)
-        .zIndex(MapHomeLayerPriority.stickman)
-    }
-
-    private func counterPill(_ kind: MapHomeCounterKind, text: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: kind.systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.tpAccent)
-            Text(text)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.tpInk)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .mapHomeGlass(in: Capsule())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(kind.badgeTitle(language)) \(text)")
+        .frame(width: 240, height: 320, alignment: .bottom).position(x: anchor.x, y: bottomY - 160)
+        .allowsHitTesting(false).zIndex(MapHomeLayerPriority.stickman)
     }
 
     private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
@@ -7661,8 +7658,7 @@ struct MapHomeView: View {
         let calendar = Calendar.autoupdatingCurrent
         let dayData = currentDayDataSnapshot
         let dayStart = calendar.startOfDay(for: model.selectedDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(24 * 60 * 60)
         let readingRanges = dayPlaybackReadingRanges(
             from: routeReadings + model.liveRouteState.readings,
             dayStart: dayStart,
@@ -7683,10 +7679,10 @@ struct MapHomeView: View {
             return nil
         }
         let travelRanges = (dayData?.travel ?? []).flatMap { segment -> [MapHomePlaybackMovementRange] in
+            // 확정되지 않은 이동도 대분류가 '이동'이면 이동 배속으로 지나간다(정지 배속이면 한순간에 사라진다).
             guard segment.distanceMeters > 0
                     || segment.mode == .subway
-                        && ((segment.subwayRoute?.coordinates.count ?? 0) >= 2),
-                  segment.isConfirmed || !segment.evidence.isEmpty
+                        && ((segment.subwayRoute?.coordinates.count ?? 0) >= 2)
             else { return [] }
             let range = MapHomePlaybackMovementRange(
                 startMinute: segment.span.start.timeIntervalSince(dayStart) / 60,
@@ -7695,8 +7691,12 @@ struct MapHomeView: View {
             )
             return MapHomePlaybackMovementRange.carved(range, details: details)
         }
+        // 이동으로 분류된 시간은 확정 여부·센서 유무와 상관없이 이동 배속으로 본다.
+        let categoryRanges = MapHomePlaybackCategoryRanges.movementRanges(
+            snapshot: dayData, frequentPlaces: model.snapshot.settings.frequentPlaces,
+            dayStart: dayStart, dayEnd: dayEnd)
         return MapHomePlaybackMovementRange.normalized(
-            readingRanges + travelRanges
+            readingRanges + travelRanges + categoryRanges
         )
     }
 
@@ -11086,12 +11086,13 @@ struct MapHomeView: View {
         let expectedPoint = frame == nil ? expectedRoutePlaybackCoordinate.flatMap { coordinate in
             CLLocationCoordinate2DIsValid(coordinate) ? wbsGeoPoint(coordinate) : nil
         } : nil
-        return MapHomePlaybackLocation.resolve(
+        return MapHomePlaybackLocation.resolveOrGap(
             at: displayedLocationDate,
             frame: frame,
             normalizedReadings: routeReadingsLoadState.isLoaded(for: model.selectedDate)
                 ? historicalPlaybackReadings : [],
-            confirmedTravel: currentDayDataSnapshot?.travel ?? [],
+            travel: currentDayDataSnapshot?.travel ?? [],
+            places: currentDayDataSnapshot?.places ?? [],
             expectedCoordinate: expectedPoint
         )
     }
