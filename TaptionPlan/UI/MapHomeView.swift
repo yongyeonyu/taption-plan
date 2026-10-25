@@ -2454,7 +2454,8 @@ struct MapHomeView: View {
     @State private var selectedMarkerPlaceID: UUID?
     /// 등록 위치의 범위(주황·빨강 원) 표시 여부. 랜드마크 시트에서 켜고 끈다.
     @AppStorage(MapHomePlaceRangeEditor.showsRangeKey) private var showsPlaceRanges = true
-    @State private var fogOfWarEnabled = true
+    /// 안개 탐험 강도. 앱을 다시 열어도 고른 세기가 남는다.
+    @AppStorage(MapHomeFogStrength.storageKey) private var fogStrengthRaw = MapHomeFogStrength.light.rawValue
     @State private var isLongPressMenuPresented = false
     @State private var isDaySummaryPresented = false
     /// 하루요약 시트 높이. 접으면 화면 절반, 위로 펼치면 지금의 전체 화면이다.
@@ -2922,29 +2923,6 @@ struct MapHomeView: View {
                     .zIndex(MapHomeLayerPriority.header)
             }
 
-            if !isScreenRecording {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !layoutStyle.movesActionsToBottom {
-                        Button {
-                            openMenu()
-                        } label: {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.tpInk)
-                                .frame(width: Layout.dateBadgeSize, height: Layout.dateBadgeSize)
-                                .background(Color.tpSurface.opacity(0.96), in: Circle())
-                                .overlay { Circle().stroke(Color.tpLine.opacity(0.78), lineWidth: 1) }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, Layout.horizontalInset)
-                .padding(.top, Layout.topRowInset)
-                .zIndex(MapHomeLayerPriority.header)
-            }
-
             if !isScreenRecording, !isMenuOpen, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
@@ -3122,7 +3100,8 @@ struct MapHomeView: View {
             language.text("집이 등록돼 있지 않아요", "No home place yet"),
             isPresented: $isHomeMissingAlertPresented
         ) {
-            Button(language.text("확인", "OK"), role: .cancel) {}
+            Button(language.text("나중에", "Not now"), role: .cancel) {}
+            Button(language.text("위치 설정 열기", "Open location settings")) { openLocationSettings() }
         } message: {
             Text(language.text("메뉴 > 위치에서 집을 먼저 등록해 주세요.", "Add your home in Menu > Location first."))
         }
@@ -3826,10 +3805,21 @@ struct MapHomeView: View {
             .min { abs($0.occurredAt.timeIntervalSince(center)) < abs($1.occurredAt.timeIntervalSince(center)) }
     }
 
-    /// 왼쪽 상단: 메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
+    /// 왼쪽 상단: 메뉴·메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
     private var topLeftControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
+                if layoutStyle.movesActionsToBottom {
+                    Button { openMenu() } label: {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Color.tpInk)
+                            .frame(width: 40, height: 40)
+                            .mapHomeGlass(in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
+                }
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
@@ -4468,13 +4458,14 @@ struct MapHomeView: View {
     }
 
 
-    /// 벡터 지도 `fogOfWarOverlay`와 같은 걷어낼 지점(발자국·장소 61pt, 현재 위치 81pt).
+    /// 벡터 지도 `MapHomeFogLayer`와 같은 걷어낼 지점(발자국·장소 72pt, 현재 위치 96pt).
     private var appleFogReveals: [MapHomeFogReveal]? {
-        guard fogOfWarEnabled else { return nil }
-        var reveals = pawprintWaypoints.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: 61) }
-        reveals += placeAnnotations.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: 61) }
+        guard fogStrength != .off else { return nil }
+        let radius = MapHomeFogStrength.revealRadius
+        var reveals = pawprintWaypoints.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: radius) }
+        reveals += placeAnnotations.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: radius) }
         if let displayed = displayedLocationCoordinate {
-            reveals.append(MapHomeFogReveal(coordinate: displayed, radius: 81))
+            reveals.append(MapHomeFogReveal(coordinate: displayed, radius: MapHomeFogStrength.currentLocationRadius))
         }
         return reveals
     }
@@ -4496,6 +4487,7 @@ struct MapHomeView: View {
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             fogReveals: appleFogReveals,
+            fogOpacity: CGFloat(fogStrength.opacity),
             onCameraFrame: { frame, locationPoint, isFinal in
                 let now = ProcessInfo.processInfo.systemUptime
                 if let rendered = mapCameraFrameProjection.submit(
@@ -5352,7 +5344,12 @@ struct MapHomeView: View {
         displayedSpeed: Double?
     ) -> some View {
         ZStack {
-            fogOfWarOverlay(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
+            if fogStrength != .off {
+                MapHomeFogLayer(
+                    opacity: fogStrength.opacity,
+                    reveals: fogReveals(viewport: viewport, waypoints: waypoints, places: places, stickmanPoint: stickmanPoint)
+                )
+            }
             homeLandOverlay(viewport: viewport)
             placeZoneOverlay(viewport: viewport)
             ForEach((recordingShows(\.footprints) ? waypoints : []).sorted {
@@ -5714,46 +5711,28 @@ struct MapHomeView: View {
         .clipped()
     }
 
-    /// 스타크래프트식 안개 탐험(fog of war). 지도 전체를 어둡게 덮고,
-    /// 내가 이동한 경로(발자국 waypoint)와 현재 위치·랜드마크 주변만
-    /// 원형으로 걷어내 "탐험한 곳만 밝은" 느낌을 준다. destinationOut
-    /// 블렌드로 구멍을 뚫으므로 아래 지도 타일이 그 자리에서만 드러난다.
-    @ViewBuilder
-    private func fogOfWarOverlay(
+    /// 안개 탐험에서 걷어낼 지점. 지도 좌표를 화면 좌표로 옮겨 `MapHomeFogLayer`에 넘긴다.
+    private func fogReveals(
         viewport: MapHomeVectorViewport?,
         waypoints: [PawprintWaypoint],
         places: [MapHomePlaceAnnotation],
         stickmanPoint: CGPoint? = nil
-    ) -> some View {
-        if fogOfWarEnabled, let viewport {
-            Canvas { context, size in
-                context.fill(Path(CGRect(origin: .zero, size: size)),
-                    with: .color(.black.opacity(0.55)))
-                context.blendMode = .destinationOut
-                var reveals = waypoints.compactMap {
-                    viewport.markerPoints[vectorPawprintMarkerID($0.index)]
-                }.map { ($0, CGFloat(61)) }
-                reveals += places.compactMap {
-                    viewport.markerPoints[vectorPlaceMarkerID($0.id)]
-                }.map { ($0, CGFloat(61)) }
-                if let point = MapHomeFogRevealPolicy.currentLocationPoint(
-                    stickmanPoint: stickmanPoint,
-                    viewportPoint: viewport.markerPoints[vectorDisplayedMarkerID]
-                ) {
-                    reveals.append((point, 81))
-                }
-                for (point, radius) in reveals {
-                    let rect = CGRect(x: point.x - radius, y: point.y - radius,
-                        width: radius * 2, height: radius * 2)
-                    guard rect.intersects(CGRect(origin: .zero, size: size)) else { continue }
-                    context.fill(Path(ellipseIn: rect), with: .radialGradient(
-                        Gradient(colors: [.black, .black.opacity(0.7), .clear]),
-                        center: point, startRadius: 0, endRadius: radius))
-                }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    ) -> [(point: CGPoint, radius: CGFloat)] {
+        guard let viewport else { return [] }
+        let radius = MapHomeFogStrength.revealRadius
+        var reveals = waypoints.compactMap {
+            viewport.markerPoints[vectorPawprintMarkerID($0.index)]
+        }.map { (point: $0, radius: radius) }
+        reveals += places.compactMap {
+            viewport.markerPoints[vectorPlaceMarkerID($0.id)]
+        }.map { (point: $0, radius: radius) }
+        if let point = MapHomeFogRevealPolicy.currentLocationPoint(
+            stickmanPoint: stickmanPoint,
+            viewportPoint: viewport.markerPoints[vectorDisplayedMarkerID]
+        ) {
+            reveals.append((point: point, radius: MapHomeFogStrength.currentLocationRadius))
         }
+        return reveals
     }
 
         private var vectorDisplayedMarkerID: String { "displayed-location" }
@@ -6461,6 +6440,11 @@ struct MapHomeView: View {
     /// 하단 메뉴 고정: 홈 배치는 하단 탭으로 고정한다(선택 메뉴 제거).
     private var layoutStyle: MapHomeLayoutStyle { .tabBar }
 
+    /// 저장된 안개 세기. 알 수 없는 값이면 옅게로 돌아간다.
+    private var fogStrength: MapHomeFogStrength {
+        MapHomeFogStrength(rawValue: fogStrengthRaw) ?? .light
+    }
+
     private func openMenu() {
         isLocationMenuExpanded = false
         isUserLocationsMenuExpanded = false
@@ -6472,10 +6456,15 @@ struct MapHomeView: View {
         withAnimation(.easeInOut(duration: 0.22)) { isMenuOpen = true }
     }
 
-    /// 하단 탭·떠 있는 독. 기존 버튼 동작을 그대로 호출하고 위치만 아래로 모은다.
+    /// 안내 알림에서 바로 메뉴 > 위치를 연다. 알림이 말한 목적지로 데려간다.
+    private func openLocationSettings() {
+        openMenu()
+        isLocationMenuExpanded = true
+    }
+
+    /// 하단 탭·떠 있는 독. 1급 항목은 다섯 개만 둔다(메뉴는 왼쪽 위, 녹화는 메뉴 > 화면).
     private var bottomActionBar: some View {
         let items = HStack(spacing: 0) {
-            bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) { openMenu() }
             Button {
                 isCalendarPresented = true
             } label: {
@@ -6513,9 +6502,6 @@ struct MapHomeView: View {
                 isDayPlaybackRunning ? language.text("일시 정지", "Pause") : language.text("재생", "Play")
             ) {
                 toggleDayPlayback()
-            }
-            bottomBarButton("record.circle", language.text("녹화", "Record"), tint: .tpHoliday) {
-                openRecordingOptions()
             }
             bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
                 addMemo()
@@ -8436,6 +8422,11 @@ struct MapHomeView: View {
                 displayMenuItem
                 menuGroupDivider
                 languageMenuItem
+                menuGroupDivider
+                menuRowButton("record.circle", language.text("재생 화면 녹화", "Record playback")) {
+                    isMenuOpen = false
+                    openRecordingOptions()
+                }
             }
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
@@ -9249,14 +9240,24 @@ struct MapHomeView: View {
                 .padding(.horizontal, 12)
 
 
-                Toggle(isOn: $fogOfWarEnabled) {
+                VStack(alignment: .leading, spacing: 6) {
                     Label(
                         language.text("안개 탐험", "Fog of Exploration"),
                         systemImage: "cloud.fog.fill"
                     )
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Picker("", selection: Binding(
+                        get: { fogStrength },
+                        set: { fogStrengthRaw = $0.rawValue }
+                    )) {
+                        ForEach(MapHomeFogStrength.allCases) { strength in
+                            Text(language.text(strength.koreanLabel, strength.englishLabel)).tag(strength)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .tint(Color.tpAccent)
                 }
-                .tint(Color.tpAccent)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
@@ -19537,57 +19538,6 @@ private actor MapHomeAppleRouteResolver {
     }
 }
 
-/// Apple 지도용 안개 탐험. 벡터 지도의 `fogOfWarOverlay`와 같은 모양(어둡게 덮고
-/// 발자국·장소 61pt, 현재 위치 81pt 반경만 둥글게 걷어냄)을 MapKit 오버레이로 그린다.
-private struct MapHomeFogReveal: Equatable {
-    let coordinate: CLLocationCoordinate2D
-    let radius: CGFloat
-
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.coordinate.latitude == rhs.coordinate.latitude
-            && lhs.coordinate.longitude == rhs.coordinate.longitude
-            && lhs.radius == rhs.radius
-    }
-}
-
-private final class MapHomeFogOverlay: NSObject, MKOverlay {
-    let coordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
-    let boundingMapRect = MKMapRect.world
-    let reveals: [(point: MKMapPoint, radius: CGFloat)]
-
-    init(reveals: [MapHomeFogReveal]) {
-        self.reveals = reveals.map { (MKMapPoint($0.coordinate), $0.radius) }
-    }
-}
-
-private final class MapHomeFogRenderer: MKOverlayRenderer {
-    private nonisolated(unsafe) static let gradient = CGGradient(
-        colorsSpace: CGColorSpaceCreateDeviceRGB(),
-        colors: [UIColor.black.cgColor,
-                 UIColor.black.withAlphaComponent(0.7).cgColor,
-                 UIColor.clear.cgColor] as CFArray,
-        locations: [0, 0.5, 1]
-    )
-
-    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
-        guard let fog = overlay as? MapHomeFogOverlay else { return }
-        let tile = rect(for: mapRect)
-        context.setFillColor(UIColor.black.withAlphaComponent(0.55).cgColor)
-        context.fill(tile)
-        guard let gradient = Self.gradient else { return }
-        context.setBlendMode(.destinationOut)
-        for reveal in fog.reveals {
-            let center = point(for: reveal.point)
-            // Radius is in screen points; renderer space is map points scaled by zoomScale.
-            let radius = reveal.radius / zoomScale
-            let circle = CGRect(x: center.x - radius, y: center.y - radius,
-                                width: radius * 2, height: radius * 2)
-            guard circle.intersects(tile) else { continue }
-            context.drawRadialGradient(gradient, startCenter: center, startRadius: 0,
-                                       endCenter: center, endRadius: radius, options: [])
-        }
-    }
-}
 
 private struct MapHomeAppleMap: UIViewRepresentable {
     let style: MapDisplayStyle
@@ -19604,6 +19554,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let longPressExclusionFrame: CGRect
     /// nil = 안개 탐험 꺼짐.
     let fogReveals: [MapHomeFogReveal]?
+    /// 안개가 지도를 덮는 불투명도. 벡터 지도와 같은 값을 쓴다.
+    let fogOpacity: CGFloat
     let onCameraFrame: (MapHomeCameraFrame, CGPoint?, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onUserCameraGesture: () -> Void
@@ -19671,6 +19623,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var routePolylines: [String: MKPolyline] = [:]
         private var fogOverlay: MapHomeFogOverlay?
         private var lastFogReveals: [MapHomeFogReveal]?
+        private var lastFogOpacity: CGFloat = 0
         private var routeSignatures: [String: String] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var walkerView: MapHomeAppleHostedAnnotationView?
@@ -20064,12 +20017,13 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateFog(in mapView: MKMapView) {
-            guard parent.fogReveals != lastFogReveals else { return }
+            guard parent.fogReveals != lastFogReveals || parent.fogOpacity != lastFogOpacity else { return }
             lastFogReveals = parent.fogReveals
+            lastFogOpacity = parent.fogOpacity
             if let fogOverlay { mapView.removeOverlay(fogOverlay) }
             fogOverlay = nil
             guard let reveals = parent.fogReveals else { return }
-            let overlay = MapHomeFogOverlay(reveals: reveals)
+            let overlay = MapHomeFogOverlay(reveals: reveals, opacity: parent.fogOpacity)
             fogOverlay = overlay
             // Index 0 keeps the fog under the route polylines, like the vector map.
             mapView.insertOverlay(overlay, at: 0, level: .aboveRoads)

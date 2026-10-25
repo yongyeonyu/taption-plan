@@ -11,6 +11,7 @@
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
+| 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
 | SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
@@ -100,6 +101,14 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - `DayPhaseEngine`은 하루 앞뒤35분의 근거 범위로 기록·이동·체류를 먼저 거른 뒤 제목 판정·장소 그룹을 계산합니다. 자정을 넘는 기록과 출퇴근 경계를 보존하고 원본을 수정하지 않습니다. 수면 위치도 날짜/cutoff 교집합을 확인한 뒤 기존 제목 판정을 적용합니다. 전체 과거 기록에 대한 반복 제목 검색을 화면 계산에 넣지 않습니다.
 - `TaptionLatestValueProjection`과 `TaptionInputFrameGate`가 공통 입력 정책입니다. 동일 상태로 갱신 예산을 소비하지 않고, 종료 이벤트는 최종값을 즉시 반영합니다. UIKit/MapKit 제스처와 표시 좌표는 앱에 남깁니다.
 - Release에서 패키지 경계를 넘는 제네릭 캐시가 특수화되도록 작은 조회 함수는 `@inlinable`입니다. Debug 측정만으로 성능 개선을 판단하지 않습니다. 공통 UUID 비교는 기존 대문자 UUID 문자열 순서와 같아 fingerprint 호환성을 유지합니다.
+
+## 화면 규칙
+
+- 지도 안개는 `MapHomeFogStrength`(끄기 0.0 · 옅게 0.28 · 진하게 0.55) 세 단계만 두고 `@AppStorage(MapHomeFogStrength.storageKey)`에 저장합니다. 기본은 옅게입니다. 걷어내는 반경(`revealRadius` 72pt · `currentLocationRadius` 96pt)과 세기는 `MapHomeFogLayer.swift`의 값 하나를 벡터 지도와 Apple 지도가 함께 씁니다. 지도 스타일을 추가해도 안개 정책을 따로 만들지 않습니다.
+- 하단 1급 항목은 다섯 개까지입니다(현재 `달력 · 현재 위치 · 집 · 재생 · 메모`). 메뉴는 좌상단 원형 버튼에 두고, 녹화처럼 자주 쓰지 않는 동작은 메뉴 안으로 내립니다. 항목을 늘려야 하면 먼저 무엇을 내릴지 정합니다.
+- 안내 알림은 말한 목적지로 갈 수 있는 버튼을 반드시 함께 둡니다. "메뉴 > 위치에서 등록하세요"라고 하면서 확인 버튼만 두지 않습니다(`openLocationSettings()`가 메뉴를 열고 해당 그룹을 펼칩니다).
+- 글자·배지 색은 배경 대비 4.5:1(WCAG AA)을 지킵니다. 토큰을 바꾸면 `build/validation/UIX1025A01/contrast.py` 같은 계산으로 실제 조합을 확인하고, 눈으로 판단하지 않습니다. `tpSecondary`·`tpAccent`·`tpNow`는 9~10pt 글자와 흰 글자 배지에 쓰이므로 명도를 낮춰 맞춰 두었습니다.
+- 화면 캡처로 판단할 때는 한 장에 기대지 않습니다. 시뮬레이터는 실행 직후 캡처가 검게 나올 수 있고, 알림·시트가 뒤 화면을 어둡게 만듭니다. 세기·밝기 비교는 같은 조건의 두 장을 평균 밝기로 재서 남깁니다.
 
 ## 검증 명령
 

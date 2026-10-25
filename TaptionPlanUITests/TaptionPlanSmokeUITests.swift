@@ -218,6 +218,44 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         if stop.waitForExistence(timeout: 5) { stop.tap() }
         sleep(8)
     }
+
+    /// 집이 없을 때 알림이 안내한 목적지(메뉴 > 위치)로 바로 데려가는지 확인한다.
+    /// 집이 등록된 기기에서는 이 테스트가 성립하지 않으므로 알림이 없으면 건너뛴다.
+    func testHomeMissingAlertOpensLocationSettings() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        launchMapHome(app)
+        // 하단 바의 집 버튼은 화면에서 가장 아래에 있다(지도 마커와 구분).
+        let homes = app.buttons
+            .matching(NSPredicate(format: "label == %@", "집"))
+            .allElementsBoundByIndex
+        guard let home = homes.max(by: { $0.frame.minY < $1.frame.minY }) else {
+            return XCTFail("하단 집 버튼이 없다")
+        }
+        home.tap()
+        let alert = app.alerts.firstMatch
+        guard alert.waitForExistence(timeout: 5) else {
+            throw XCTSkip("집이 이미 등록돼 있어 알림이 뜨지 않는다")
+        }
+        attach(app, name: "home-missing-alert")
+        let open = alert.buttons["위치 설정 열기"]
+        XCTAssertTrue(open.waitForExistence(timeout: 3), "알림에 다음 행동 버튼이 없다")
+        open.tap()
+        XCTAssertTrue(
+            app.staticTexts
+                .matching(NSPredicate(format: "label CONTAINS %@", "등록된 사용자 위치"))
+                .firstMatch
+                .waitForExistence(timeout: 5),
+            "메뉴 > 위치가 펼쳐지지 않았다"
+        )
+        attach(app, name: "menu-location")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
 }
 
 /// 클립 편집기의 대분류 경계가 롤로 움직이는지 화면에서 확인한다.

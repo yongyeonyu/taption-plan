@@ -27,7 +27,8 @@ extension Color {
     // accents keep the timeline calm without lowering text contrast.
     // RA 웜 양피지: RPG 양피지 지도와 통일. 크림 배경·세피아 잉크·테라코타 액센트.
     static let tpInk = Color(red: 62 / 255, green: 51 / 255, blue: 32 / 255)
-    static let tpSecondary = Color(red: 122 / 255, green: 108 / 255, blue: 80 / 255)
+    /// 9~10pt 보조 글자에 쓰이므로 배경 대비 5.3:1을 지킨다(예전 #7A6C50은 4.29:1이었다).
+    static let tpSecondary = Color(red: 107 / 255, green: 94 / 255, blue: 69 / 255)
     static let tpBackground = Color(red: 243 / 255, green: 234 / 255, blue: 214 / 255)
     static let tpSurface = Color(red: 251 / 255, green: 246 / 255, blue: 234 / 255)
     static let tpSurfaceBlue = Color(red: 241 / 255, green: 248 / 255, blue: 252 / 255)
@@ -39,7 +40,8 @@ extension Color {
     static let tpLine = Color(red: 227 / 255, green: 214 / 255, blue: 184 / 255)
     static let tpHoliday = Color(red: 0.86, green: 0.27, blue: 0.30)
     static let tpSaturday = Color(red: 0.24, green: 0.47, blue: 0.77)
-    static let tpAccent = Color(red: 198 / 255, green: 93 / 255, blue: 77 / 255)
+    /// 강조 글자·배지에 쓰인다. 흰 글자를 얹어도 5.9:1이 되도록 명도를 낮췄다.
+    static let tpAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
 
     // The original product guide's ten-color set, softened by the postcard
     // surfaces above. Map Home uses these as accents rather than repainting
@@ -96,7 +98,8 @@ extension Color {
     static let tpPhotoDark = Color(red: 142 / 255, green: 90 / 255, blue: 168 / 255)
     static let tpPlaceDark = Color(red: 53 / 255, green: 124 / 255, blue: 165 / 255)
     static let tpTransitDark = Color(red: 154 / 255, green: 106 / 255, blue: 45 / 255)
-    static let tpNow = Color(red: 1.00, green: 59 / 255, blue: 48 / 255)
+    /// 지금 시각 표시. 흰 글자를 얹으므로 5.6:1이 되도록 어둡게 잡는다.
+    static let tpNow = Color(red: 198 / 255, green: 40 / 255, blue: 40 / 255)
 
     // Neutral control surfaces shared by the non-home screens.
     static let tpControlFill = Color(red: 0.94, green: 0.94, blue: 0.95)
