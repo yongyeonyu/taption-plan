@@ -423,3 +423,70 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
         attach(app, name: "after-undo")
     }
 }
+
+/// 재생 단추가 실제로 상태를 바꾸는지, 그리고 그때 HUD와 「일시 정지」·「종료」가 함께 서는지.
+/// 달력 시트를 닫은 직후에 눌렀던 앞선 시도는 시트가 하단을 덮은 채여서 눌림이 닿지 않았을 수 있다.
+/// 여기서는 시트를 건드리지 않고 바로 누른다.
+final class TaptionPlanPlaybackHUDUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
+
+    func testPlayTurnsIntoPauseAndStopWithHUD() throws {
+        // 오늘 하루를 24초에 재생하므로 남은 하루가 짧으면 재생이 1초 만에 스스로 끝나
+        // 「일시 정지」를 볼 수 없다. 그런 시각에는 재지 않고 건너뛴다.
+        let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let minuteOfDay = (now.hour ?? 0) * 60 + (now.minute ?? 0)
+        try XCTSkipIf(minuteOfDay < 300, "자정에서 5시간이 안 지나 재생 구간이 2.5초보다 짧다")
+
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let skip = app.buttons["전체 건너뛰기"]
+        if skip.waitForExistence(timeout: 12) { skip.tap() }
+
+        let play = app.buttons["재생"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 40), "하단 재생 단추가 없다")
+        sleep(3)
+        attach(app, name: "play-idle")
+
+        // 재생을 누르면 「일시 정지」와 「종료」가 나란히 서고 HUD가 뜬다.
+        play.tap()
+        XCTAssertTrue(app.buttons["일시 정지"].firstMatch.waitForExistence(timeout: 8), "재생을 눌러도 「일시 정지」로 바뀌지 않는다")
+        XCTAssertTrue(app.buttons["종료"].firstMatch.exists, "재생 중에 「종료」가 없다")
+        XCTAssertFalse(app.buttons["재생"].exists, "재생 중인데 「재생」이 남아 있다")
+        // HUD는 '하루 24초'라는 문구로 찾는다(지도 손가락을 막지 않게 hitTesting을 껐다).
+        let hud = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "하루 24초")).firstMatch
+        XCTAssertTrue(hud.waitForExistence(timeout: 5), "재생 중인데 HUD가 없다")
+        attach(app, name: "play-running")
+
+        // 「일시 정지」는 재생만 멈추고 「재생」 자리로 돌아온다. HUD도 함께 사라진다.
+        app.buttons["일시 정지"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "일시 정지해도 「재생」으로 돌아오지 않는다")
+        XCTAssertFalse(app.buttons["일시 정지"].exists, "일시 정지했는데 「일시 정지」가 남아 있다")
+        XCTAssertFalse(hud.exists, "일시 정지했는데 HUD가 남아 있다")
+        attach(app, name: "play-paused")
+
+        // 「종료」도 「재생」으로 돌아온다. 하루가 24초라 재생이 하루 끝에 닿으면 스스로
+        // 끝나므로, 두 번째 재생은 앱을 새로 켜서 처음(자정)부터 시작한다.
+        app.terminate()
+        app.launch()
+        let skipAgain = app.buttons["전체 건너뛰기"]
+        if skipAgain.waitForExistence(timeout: 12) { skipAgain.tap() }
+        let playAgain = app.buttons["재생"].firstMatch
+        XCTAssertTrue(playAgain.waitForExistence(timeout: 40), "다시 켠 뒤 하단 재생 단추가 없다")
+        sleep(2)
+        playAgain.tap()
+        XCTAssertTrue(app.buttons["종료"].firstMatch.waitForExistence(timeout: 8), "다시 켜고 재생해도 「종료」가 없다")
+        attach(app, name: "play-resumed")
+        app.buttons["종료"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "종료해도 「재생」으로 돌아오지 않는다")
+        attach(app, name: "play-stopped")
+    }
+}
