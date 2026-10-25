@@ -12,6 +12,7 @@
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
 | 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
+| 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
 | SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
@@ -94,7 +95,7 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 - 재생 배속은 이동 수단이 아니라 **대분류**로 정합니다(`MapHomePlaybackCategoryRanges`). 대분류 '이동'은 이동 배속(걷기는 3배), 수면·업무·식사·취미·운동·활동은 정지 배속입니다. 확정 여부와 센서 유무는 배속을 바꾸지 않으며, 미확인 이동도 이동 구간으로 재생합니다.
 - 지도 카운터는 재생 중에는 재생 시각까지로 잘라 세어(`MapHomeCounterTimelinePolicy`) 시간을 따라 올라갑니다. 하루 전체 합계는 1분 버킷으로 캐시(`MapHomeCounterValueCache`)해 30Hz 재생 틱마다 하루 phase를 다시 계산하지 않습니다. 표시 형태는 `MapHomeCounterTable`이 정합니다(1개=알약, 2개 이상=한 상자에 줄을 붙여 세로로 길어짐).
 - 잠금화면·다이나믹 아일랜드의 현재 활동 이름·아이콘은 앱 화면과 같은 시간 레일 엔진(`MapHomeTimeRailSegmentEngine`)에서 읽습니다. 잠금 상태이거나 그 시각에 미확인뿐이면 기존 '확인 중' 표시로 물러섭니다.
-- 클립 편집기(`MapHomeNLEClipEditor`)는 경계를 고르지 않은 클립에서도 다듬기로 받습니다. 몸통을 끌면 옮기고, 제자리에서 손을 떼면 되돌리기 흔적을 남기지 않습니다. 같은 원본 구간 안에서 맞닿은 미확인 조각은 `NLETrack.normalized`가 하나로 합칩니다.
+- 클립 편집기(`MapHomeNLEClipEditor`)는 경계를 고르지 않은 클립에서도 다듬기로 받습니다. 몸통은 0.4초를 누르고 있어야 집어 들고(`NLEReorderHoldPolicy`), 그 전에 18pt 넘게 움직이면 클립을 딸고 가지 않고 화면이 흐릅니다. 집어 든 클립은 그림자로 표시하고, 제자리에서 손을 떼면 되돌리기 흔적을 남기지 않습니다. 가장자리 자동 스크롤은 손가락이 닿은 깊이와 무관하게 60Hz 타이머로 360pt/s를 유지합니다. 같은 원본 구간 안에서 맞닿은 미확인 조각은 `NLETrack.normalized`가 하나로 합칩니다.
 - 일자 DB는 원본 digest를 검증한 materialized 값을 한 번 읽고, source가 다르면 그 값의 raw로 다시 projection합니다. stale preview는 별도 읽기 계약을 유지합니다. 같은 날 source가 바뀌어 projection을 취소할 때 진행 중인 센서 원본 읽기는 공유합니다. raw 변경·삭제·전체 무효화·메모리 압력에는 원본 읽기도 취소합니다. 삭제 generation·취소·강제 raw 갱신을 우회하지 않습니다. Watch 원본 replay와 센서 결합·정렬은 utility worker에서 처리하고, 취소 로그는 원문 없이 호출 취소·generation 변경·archive 읽기 실패를 구분합니다.
 - `DayPhaseEngine`은 하루 앞뒤35분의 근거 범위로 기록·이동·체류를 먼저 거른 뒤 제목 판정·장소 그룹을 계산합니다. 자정을 넘는 기록과 출퇴근 경계를 보존하고 원본을 수정하지 않습니다. 수면 위치도 날짜/cutoff 교집합을 확인한 뒤 기존 제목 판정을 적용합니다. 전체 과거 기록에 대한 반복 제목 검색을 화면 계산에 넣지 않습니다.
 - `TaptionLatestValueProjection`과 `TaptionInputFrameGate`가 공통 입력 정책입니다. 동일 상태로 갱신 예산을 소비하지 않고, 종료 이벤트는 최종값을 즉시 반영합니다. UIKit/MapKit 제스처와 표시 좌표는 앱에 남깁니다.

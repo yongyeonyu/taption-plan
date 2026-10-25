@@ -615,6 +615,29 @@ enum NLESnapPolicy {
     }
 }
 
+/// 길게 눌러 집어 들기와 가장자리 자동 스크롤의 손가락 계약.
+///
+/// 동영상 편집기(BOKKI STUDIO)의 값을 그대로 쓴다. 0.4초를 누르고 있으면 클립을
+/// 집어 들고, 그 전에 18pt 넘게 움직이면 집어 들지 않고 화면을 흐르게 한다.
+/// 가장자리에서는 시간에 비례해 360pt/s로 흐르므로 프레임 간격이 달라도 속도가 같다.
+enum NLEReorderHoldPolicy {
+    static let delay: TimeInterval = 0.4
+    static let tolerance: CGFloat = 18
+    static let pointsPerSecond: CGFloat = 360
+    /// 한 번에 반영하는 최대 경과(초). 멈췄다 돌아와도 화면이 튀지 않는다.
+    static let maximumStep: TimeInterval = 0.1
+
+    /// 집어 들 때인가. 누른 지 오래되고 손가락이 거의 안 움직였을 때만 참이다.
+    static func shouldLift(after elapsed: TimeInterval, distance: CGFloat) -> Bool {
+        elapsed >= delay && distance <= tolerance
+    }
+
+    /// 가장자리에서 흐를 거리(pt). 경과 시간에 비례한다.
+    static func scrollPoints(elapsed: TimeInterval) -> CGFloat {
+        pointsPerSecond * CGFloat(min(max(elapsed, 0), maximumStep))
+    }
+}
+
 /// 타임라인 좌표 ↔ 분 변환. 확대·스크롤은 여기 한 곳에서만 계산한다.
 struct NLETimelineGeometry: Hashable, Sendable {
     var minuteWidth: CGFloat

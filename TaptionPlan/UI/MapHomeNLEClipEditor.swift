@@ -37,6 +37,16 @@ struct MapHomeNLEClipEditor: View {
     @State private var didCenter = false
     /// 가장자리로 끌어 화면이 흐른 만큼(분). 끄는 동안의 좌표를 같은 기준으로 맞춘다.
     @State private var dragScrollShift: Double = 0
+    /// 길게 눌러 집어 들기를 기다리는 클립. 0.4초를 채우면 옮기기로 바뀐다.
+    @State private var reorderCandidate: NLEEditorDragMode?
+    @State private var liftTask: Task<Void, Never>?
+    @State private var isLifted = false
+    @State private var lastDragMinute = 0
+    /// 팬을 시작한 손가락 높이. 집어 들기 전에 팬으로 바뀌어도 화면이 튀지 않게 한다.
+    @State private var panAnchorY: CGFloat = 0
+    /// 가장자리 자동 스크롤 타이머와 방향.
+    @State private var scrollTask: Task<Void, Never>?
+    @State private var scrollDirection: CGFloat = 0
     /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
     @State private var pick: NLEPick?
 
@@ -333,6 +343,7 @@ struct MapHomeNLEClipEditor: View {
     private func clipBlock(_ clip: NLEClip, width: CGFloat, blockHeight: CGFloat) -> some View {
         let tint = Self.tint(for: clip.option.categoryID)
         let isSelected = clip.id == selectedClipID
+        let isLifted = clip.id == liftedClipID
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(
@@ -372,7 +383,11 @@ struct MapHomeNLEClipEditor: View {
             }
         }
         .opacity(clip.isGap ? 0.55 : 1)
-        .shadow(color: .black.opacity(isSelected ? 0.16 : 0.05), radius: isSelected ? 3 : 1, y: 1)
+        .shadow(
+            color: .black.opacity(isLifted ? 0.3 : (isSelected ? 0.16 : 0.05)),
+            radius: isLifted ? 8 : (isSelected ? 3 : 1),
+            y: isLifted ? 4 : 1
+        )
     }
 
     private func trimHandle(isStart: Bool) -> some View {
@@ -757,19 +772,32 @@ struct MapHomeNLEClipEditor: View {
                     dragMode = resolveDragMode(at: value.startLocation, geometry: geometry, width: width)
                     didPushUndoForDrag = false
                     panBaseStartMinute = visibleStartMinute
+                    panAnchorY = value.startLocation.y
                     dragScrollShift = 0
+                    beginLiftHoldIfNeeded()
                 }
                 let rawMinute = geometry.minute(forY: value.location.y) + dragScrollShift
                 let minute = Int(rawMinute.rounded())
+                lastDragMinute = minute
+                // 집어 들기 전에 크게 움직이면 클립을 딸고 가지 않고 화면을 흐르게 한다.
+                if case .move = dragMode, !isLifted,
+                   hypot(value.translation.width, value.translation.height) > NLEReorderHoldPolicy.tolerance {
+                    cancelLiftHold()
+                    dragMode = .pan
+                    panBaseStartMinute = visibleStartMinute
+                    panAnchorY = value.location.y
+                }
                 switch dragMode {
                 case .none:
                     break
                 case .pan:
-                    let deltaMinutes = Double(value.translation.height) / Double(max(0.01, minuteHeight))
+                    let deltaMinutes = Double(value.location.y - panAnchorY) / Double(max(0.01, minuteHeight))
                     setVisibleStart(panBaseStartMinute - deltaMinutes)
                 case .scrub:
                     playheadMinute = min(max(minute, 0), NLETrack.dayMinutes)
                 case let .move(lane, id, originMinute, grabMinute):
+                    // 몸통은 0.4초를 누르고 있어야 집어 든다(BOKKI STUDIO 계약).
+                    guard isLifted else { break }
                     pushUndoIfNeeded()
                     let target = originMinute + (minute - grabMinute)
                     let snapped = NLESnapPolicy.snapped(target, to: snapTargets(lane: lane, excluding: id))
@@ -784,12 +812,12 @@ struct MapHomeNLEClipEditor: View {
                     trimClip(lane: lane, id: id, edge: .end, toMinute: snapped)
                 }
                 // 위·아래 끝까지 끌면 화면이 따라 흐른다.
-                if dragMode != .pan {
-                    autoScroll(atY: value.location.y, height: height)
-                }
+                updateAutoScroll(atY: value.location.y, height: height)
             }
             .onEnded { value in
                 let moved = abs(value.translation.width) + abs(value.translation.height)
+                cancelLiftHold()
+                stopAutoScroll()
                 if moved < 4, dragMode != .scrub, dragMode != .none {
                     handleTap(at: value.startLocation, geometry: geometry, width: width)
                 }
@@ -797,6 +825,7 @@ struct MapHomeNLEClipEditor: View {
                 if didPushUndoForDrag, let before = undoStack.last, before.main == track.snapshot(),
                    before.sub == subTrack.snapshot() { undoStack.removeLast() }
                 dragMode = .none
+                isLifted = false
                 didPushUndoForDrag = false
                 dragScrollShift = 0
             }
@@ -932,19 +961,71 @@ struct MapHomeNLEClipEditor: View {
     }
 
     /// 클립을 끄는 동안 위·아래 가장자리에 닿으면 화면을 이어서 흐르게 한다.
-    private func autoScroll(atY y: CGFloat, height: CGFloat) {
-        guard minuteHeight > 0.01, height > 60 else { return }
+    ///
+    /// 가장자리에 닿은 깊이가 아니라 시간에 비례해 360pt/s로 흐른다(BOKKI STUDIO 계약).
+    /// 손가락을 가장자리에 세워 두어도 계속 흐르도록 타이머로 민다.
+    private func updateAutoScroll(atY y: CGFloat, height: CGFloat) {
+        guard minuteHeight > 0.01, height > 60, shouldAutoScroll else { return stopAutoScroll() }
         let band: CGFloat = 26
-        var delta: Double = 0
-        if y < band {
-            delta = -Double(band - y) / Double(minuteHeight)
-        } else if y > height - band {
-            delta = Double(y - (height - band)) / Double(minuteHeight)
+        let direction: CGFloat = y < band ? -1 : (y > height - band ? 1 : 0)
+        guard direction != scrollDirection else { return }
+        stopAutoScroll()
+        guard direction != 0 else { return }
+        scrollDirection = direction
+        scrollTask = Task { @MainActor in
+            var last = Date().timeIntervalSinceReferenceDate
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(17))
+                guard !Task.isCancelled else { return }
+                let now = Date().timeIntervalSinceReferenceDate
+                let points = NLEReorderHoldPolicy.scrollPoints(elapsed: now - last)
+                last = now
+                let before = visibleStartMinute
+                setVisibleStart(visibleStartMinute + Double(points * scrollDirection) / Double(minuteHeight))
+                dragScrollShift += visibleStartMinute - before
+            }
         }
-        guard delta != 0 else { return }
-        let before = visibleStartMinute
-        setVisibleStart(visibleStartMinute + delta)
-        dragScrollShift += visibleStartMinute - before
+    }
+
+    private func stopAutoScroll() {
+        scrollTask?.cancel()
+        scrollTask = nil
+        scrollDirection = 0
+    }
+
+    /// 지금 손가락을 따라 화면이 흘러야 하는가. 팬과 집어 들기 전에는 흐르지 않는다.
+    private var shouldAutoScroll: Bool {
+        switch dragMode {
+        case .none, .pan: false
+        case .scrub, .trimStart, .trimEnd: true
+        case .move: isLifted
+        }
+    }
+
+    /// 몸통을 잡았으면 0.4초를 세어 집어 든다. 경계 다듬기와 재생 헤드는 곧바로 움직인다.
+    private func beginLiftHoldIfNeeded() {
+        guard case let .move(lane, id, originMinute, _) = dragMode else { return }
+        reorderCandidate = dragMode
+        liftTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(NLEReorderHoldPolicy.delay))
+            guard !Task.isCancelled, reorderCandidate != nil else { return }
+            // 집어 든 뒤에는 지금 손가락 아래를 기준으로 삼아 클립이 튀지 않게 한다.
+            dragMode = .move(lane: lane, id: id, originMinute: originMinute, grabMinute: lastDragMinute)
+            isLifted = true
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
+    }
+
+    private func cancelLiftHold() {
+        liftTask?.cancel()
+        liftTask = nil
+        reorderCandidate = nil
+    }
+
+    /// 지금 손가락에 들려 있는 클립.
+    private var liftedClipID: String? {
+        guard isLifted, case let .move(_, id, _, _) = dragMode else { return nil }
+        return id
     }
 
     private func fitWholeDay() {
@@ -1197,186 +1278,6 @@ struct MapHomeNLEClipEditor: View {
             onSaved()
             dismiss()
         }
-    }
-
-    // MARK: - 만들기
-
-    /// 하루 구간을 클립으로 만든다.
-    ///
-    /// 클립의 원본 구간은 자기 기록뿐 아니라 옆의 빈 시간까지 품는다. 그래야
-    /// 동영상 편집기처럼 클립을 빈 자리로 끌어 옮기거나 늘릴 수 있다. 빈 시간에는
-    /// 원본 기록이 없으므로 지어내는 데이터도 없다.
-    static func makeMainTrack(segments: [MapHomeTimeRailSegment]) -> NLETrack {
-        let ordered = segments
-            .filter { $0.endMinute > $0.startMinute }
-            .sorted { $0.startMinute < $1.startMinute }
-        var spans: [(segment: MapHomeTimeRailSegment, start: Int, end: Int)] = []
-        var cursor = 0
-        for segment in ordered {
-            let start = max(segment.startMinute, cursor)
-            let end = min(segment.endMinute, NLETrack.dayMinutes)
-            guard start < end else { continue }
-            spans.append((segment, start, end))
-            cursor = end
-        }
-        guard !spans.isEmpty else {
-            return NLETrack(clips: [])
-        }
-
-        // 원본 구간을 하루 전체로 늘려 잇는다. 가운데 빈 시간은 앞 구간이,
-        // 맨 앞·맨 뒤 빈 시간은 그 구간이 품는다.
-        var parents: [Range<Int>] = spans.map { $0.start..<$0.end }
-        for index in parents.indices {
-            if index > 0 {
-                parents[index - 1] = parents[index - 1].lowerBound..<parents[index].lowerBound
-            }
-        }
-        parents[0] = 0..<parents[0].upperBound
-        parents[parents.count - 1] = parents[parents.count - 1].lowerBound..<NLETrack.dayMinutes
-
-        let clips = spans.enumerated().compactMap { index, span -> NLEClip? in
-            let option = option(
-                forCategoryID: span.segment.categoryID,
-                title: span.segment.title,
-                behavior: span.segment.behavior
-            )
-            let region = parents[index]
-            let parent = NLEClipParent(
-                startMinute: region.lowerBound,
-                endMinute: region.upperBound,
-                sourceIDs: span.segment.sourceIDs,
-                option: option,
-                fillOption: ActivitySectionOverrideEngine.unconfirmedOption
-            )
-            return NLEClip(
-                id: "main|\(span.segment.id)",
-                option: option,
-                startMinute: span.start,
-                endMinute: span.end,
-                parent: parent,
-                origin: NLEClipOrigin(
-                    startMinute: span.start,
-                    endMinute: span.end,
-                    option: option
-                )
-            )
-        }
-        return NLETrack(clips: clips)
-    }
-
-    /// 상세활동 기록을 하루 전체에 걸쳐 세운다.
-    ///
-    /// 각 기록의 울타리는 자기가 속한 원본 구간이다. 그래서 상세활동을 그 구간
-    /// 안에서 옮기거나 자를 수는 있어도, 다른 구간으로 넘어가지는 않는다.
-    static func makeSubTrack(
-        details: [MapHomeSectionDetail],
-        segments: [MapHomeTimeRailSegment]
-    ) -> NLETrack {
-        let ordered = segments
-            .filter { $0.endMinute > $0.startMinute }
-            .sorted { $0.startMinute < $1.startMinute }
-        let clips = details.compactMap { detail -> NLEClip? in
-            guard detail.endMinute > detail.startMinute else { return nil }
-            let owner = ordered.first {
-                detail.startMinute >= $0.startMinute && detail.endMinute <= $0.endMinute
-            } ?? ordered.first {
-                detail.startMinute < $0.endMinute && detail.endMinute > $0.startMinute
-            }
-            let detailOption = option(
-                forCategoryID: detail.categoryID,
-                title: detail.title,
-                behavior: detail.behavior
-            )
-            let fill = owner.map {
-                option(forCategoryID: $0.categoryID, title: $0.title, behavior: $0.behavior)
-            } ?? ActivitySectionOverrideEngine.unconfirmedOption
-            let parent = NLEClipParent(
-                startMinute: owner?.startMinute ?? detail.startMinute,
-                endMinute: owner?.endMinute ?? detail.endMinute,
-                sourceIDs: [detail.id],
-                option: detailOption,
-                fillOption: fill
-            )
-            return NLEClip(
-                id: "sub|\(detail.id.uuidString)",
-                option: detailOption,
-                startMinute: detail.startMinute,
-                endMinute: detail.endMinute,
-                parent: parent,
-                origin: NLEClipOrigin(
-                    startMinute: detail.startMinute,
-                    endMinute: detail.endMinute,
-                    option: detailOption
-                )
-            )
-        }
-        return NLETrack(clips: clips, fillsGaps: false)
-    }
-
-    static func option(
-        forCategoryID categoryID: String,
-        title: String,
-        behavior: String?
-    ) -> ActivityCorrectionOption {
-        ActivityCorrectionOption(
-            id: "clip.\(categoryID).\(behavior ?? "none")",
-            title: title,
-            behavior: behavior,
-            categoryID: categoryID,
-            systemImage: MapHomeSidebarMajorCategory.all
-                .first { $0.id == categoryID }?
-                .systemImage ?? "circle.fill",
-            isAutomatic: false,
-            isCustom: false
-        )
-    }
-
-    static func option(
-        for category: MapHomeSidebarMajorCategory,
-        language: MapHomeLanguage
-    ) -> ActivityCorrectionOption {
-        if category.id.hasPrefix("custom:") {
-            return ActivityCorrectionOption.custom(category.title)
-        }
-        return ActivityCorrectionOption(
-            id: "phase.\(category.id)",
-            title: category.localizedTitle(language),
-            behavior: category.id == "unconfirmed" ? "unconfirmed-gap" : nil,
-            categoryID: category.id,
-            systemImage: category.systemImage,
-            isAutomatic: false,
-            isCustom: false
-        )
-    }
-
-    static func tint(for categoryID: String) -> Color {
-        Color(hex: MapHomePastelPalette.hex(categoryID))
-    }
-
-    static func minuteLabel(_ minute: Int) -> String {
-        let clamped = min(max(minute, 0), NLETrack.dayMinutes)
-        return String(format: "%02d:%02d", clamped / 60, clamped % 60)
-    }
-
-    static func rangeLabel(_ start: Int, _ end: Int) -> String {
-        "\(minuteLabel(start))–\(minuteLabel(end))"
-    }
-
-    static func durationLabel(_ minutes: Int, language: MapHomeLanguage) -> String {
-        let hours = minutes / 60
-        let remainder = minutes % 60
-        if language == .english {
-            if hours > 0, remainder > 0 { return "\(hours)h \(remainder)m" }
-            if hours > 0 { return "\(hours)h" }
-            return "\(remainder)m"
-        }
-        if hours > 0, remainder > 0 { return "\(hours)시간 \(remainder)분" }
-        if hours > 0 { return "\(hours)시간" }
-        return "\(remainder)분"
-    }
-
-    static func hourLabel(_ hour: Int) -> String {
-        String(format: "%02d", hour % 24)
     }
 }
 

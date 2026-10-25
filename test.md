@@ -3200,3 +3200,38 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 ### 4. 문서 동기화(2026-10-25)
 - `DEVELOPMENT.md`: 새 파일 3개를 프로젝트 경계 표에 추가하고, 재생 위치 조회(`resolveOrGap`)·대분류 배속·카운터 캐시·라이브액티비티 동일 엔진·클립 경계 규칙·초기 진행 표시 규칙을 본문에 적었다.
 - `build/validation/UXP1024D20/handoff-prompt.md`: 새 채팅 이어가기 프롬프트(현재 상태·이미 한 일·검증 결과·남은 일·환경 함정·검증 명령).
+
+## NLE1025R20 · 클립 길게 눌러 Reorder와 가장자리 자동 스크롤 (2026-10-25)
+
+- 요청 ID: `NLE1025R20`
+- 무엇을: UXP1024D20 ⑥의 한계로 남겨 둔 BOKKI STUDIO 계약 두 가지를 이식했다 — 몸통은 **0.4초를 눌러야** 집어 들고(18pt 허용), 가장자리 자동 스크롤은 **360pt/s**로 일정하다.
+
+### 1. 원인과 고친 것
+
+| # | 원인(코드로 확인) | 고친 것 |
+| --- | --- | --- |
+| ① | `resolveDragMode`가 몸통을 만지면 곧바로 `.move`를 돌려주고 `dragGesture`가 그 자리에서 `moveClip`을 불렀다. 그래서 클립 위에서 세로로 밀면 타임라인이 흐르지 않고 클립이 딸려 갔고, 집어 들었다는 표시도 없었다. | `NLEReorderHoldPolicy`(Core `NLETrack.swift`, 0.4초·18pt·360pt/s)를 추가하고, 몸통 `.move`는 후보로만 잡아 두었다가 0.4초를 채우면 `isLifted`로 승격한다(중간 햅틱 + 그림자). 18pt를 넘기면 후보를 버리고 `.pan`으로 바꾼다. |
+| ② | 집어 들 시점의 기준 분이 제스처 시작 분이라, 누르고 있던 18pt 안의 미세한 움직임이 그대로 클립 이동으로 붙었다. | 승격할 때 `grabMinute`을 지금 손가락 아래 분(`lastDragMinute`)으로 다시 잡는다. 클립이 튀지 않는다. |
+| ③ | 팬 전환 시 `panBaseStartMinute`가 제스처 시작 시점 값이라, 18pt를 넘긴 순간 화면이 그만큼 튀었다. | `panAnchorY`를 두고 팬 시작 높이를 그때그때 다시 잡는다. 빈 곳에서 시작한 팬도 같은 식으로 계산해 동작이 같다. |
+| ④ | `autoScroll`이 가장자리에 닿은 **깊이**에 비례해 `onChanged`가 올 때만 흘렀다. 손가락을 가장자리에 세워 두면 화면이 멈추고, 이벤트 간격에 따라 속도가 달라졌다. | 60Hz(17ms) 타이머(`scrollTask`)로 바꾸고 `NLEReorderHoldPolicy.scrollPoints`로 경과 시간에 비례한 360pt/s를 적용한다. 한 번에 반영하는 양은 0.1초분(36pt)으로 제한해 멈췄다 돌아와도 튀지 않는다. |
+
+### 2. 줄 예산
+
+- `MapHomeNLEClipEditor.swift`는 1,430줄 상한(구조 게이트 동결)이었다. 만들기·표기 정적 함수를 `MapHomeNLEClipFactory.swift`(187줄, `extension MapHomeNLEClipEditor`)로 옮겨 **1,429 → 1,330줄**로 줄인 뒤 새 로직을 넣었다. 새 파일은 pbxproj 4곳(PBXBuildFile·PBXFileReference·UI 그룹 children·Sources phase)에 등록했고 `plutil -lint`로 문법을 확인했다.
+
+### 3. 검증
+
+- 앱 Debug 빌드: `BUILD SUCCEEDED`, **경고 0**(`build/validation/NLE1025R20/build.log`).
+- `NLETrackTests` 전체 통과 — 신규 2건 포함(`build/validation/NLE1025R20/nletrack-tests.log`).
+  - `testLiftNeedsFourTenthsOfASecondAndSmallMovement`: 0.39초는 안 들림, 0.4초는 들림, 18pt는 들림, 18.5pt는 안 들림.
+  - `testEdgeScrollKeepsThreeHundredSixtyPointsPerSecond`: 1/60초=6pt, 0.05초=18pt, 음수=0, 0.5초는 0.1초분(36pt)으로 제한.
+- 전체 `TaptionPlanTests`: **1,608개 통과 · 실패 0 · 건너뜀 2**(HealthKit 앵커·커서, 의도한 `XCTSkip`) = 1,610 실행, `TEST SUCCEEDED`(`build/validation/NLE1025R20/full-tests.log`).
+- 구조 게이트 통과: `MapHomeNLEClipEditor` 1,330(기준선 1,430) · `MapHomeView` 22,071 · `AppShellView` 1,645. 새 파일 187줄은 1,200줄 예산 안이라 동결 대상이 아니다.
+- `bash scripts/check-app-engine-import-boundary.sh` 통과.
+
+### 4. 한계
+
+- 화면 동작(집어 들기 그림자·햅틱, 가장자리에서 계속 흐르는지, 18pt 넘길 때 팬으로 바뀌는지)은 시뮬레이터로 확인할 수 없다. 하루치 센서 기록이 있는 **실기기 확인이 남아 있다**.
+- 길게 눌러 집어 들기는 몸통에만 적용된다. 경계 다듬기(16pt)와 재생 헤드는 예전처럼 즉시 움직인다.
+- Reorder는 기존 `NLETrack.move`의 밀어내기 규칙을 그대로 쓴다. 클립끼리 자리를 맞바꾸는 스왑 애니메이션이나 다른 원본 구간으로 넘기는 동작은 없다.
+- 자동 스크롤 타이머는 17ms 주기다. 화면 갱신 상한(60Hz)에 맞췄지만 기기 부하에 따라 실제 간격은 조금 늘어날 수 있고, 그만큼 이동 거리도 함께 늘어 속도는 유지된다.

@@ -183,6 +183,7 @@
 		A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */; };
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A100000000000000000000C1 /* MapHomeCounterTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C1 /* MapHomeCounterTable.swift */; };
+		A100000000000000000000E7 /* MapHomeNLEClipFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */; };
 		A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */; };
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
@@ -407,6 +408,7 @@
 		F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePhotoLayer.swift; sourceTree = "<group>"; };
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F100000000000000000000C1 /* MapHomeCounterTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTable.swift; sourceTree = "<group>"; };
+		F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEClipFactory.swift; sourceTree = "<group>"; };
 		F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCurrentActivity.swift; sourceTree = "<group>"; };
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -572,6 +574,7 @@
 				F1000000000000000000F0A2 /* MapHomePhotoLayer.swift */,
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F100000000000000000000C1 /* MapHomeCounterTable.swift */,
+				F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
@@ -1044,6 +1047,7 @@
 				A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */,
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A100000000000000000000C1 /* MapHomeCounterTable.swift in Sources */,
+				A100000000000000000000E7 /* MapHomeNLEClipFactory.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,

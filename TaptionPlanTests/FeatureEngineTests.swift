@@ -29747,6 +29747,28 @@ final class NLETrackTests: XCTestCase {
         XCTAssertTrue(edges.contains(300))
         XCTAssertTrue(edges.contains(1_440))
     }
+
+    /// 몸통은 0.4초를 누르고 있어야 집어 들고, 18pt 넘게 움직이면 집어 들지 않는다.
+    func testLiftNeedsFourTenthsOfASecondAndSmallMovement() {
+        XCTAssertFalse(NLEReorderHoldPolicy.shouldLift(after: 0.39, distance: 0))
+        XCTAssertTrue(NLEReorderHoldPolicy.shouldLift(after: 0.4, distance: 0))
+        XCTAssertTrue(NLEReorderHoldPolicy.shouldLift(after: 1.2, distance: 18))
+        XCTAssertFalse(NLEReorderHoldPolicy.shouldLift(after: 1.2, distance: 18.5))
+    }
+
+    /// 가장자리 자동 스크롤은 경과 시간에 비례해 360pt/s로 흐르고, 한 번에 반영하는 양에는 상한이 있다.
+    func testEdgeScrollKeepsThreeHundredSixtyPointsPerSecond() {
+        XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 1.0 / 60), 6, accuracy: 0.01)
+        XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 0.05), 18, accuracy: 0.01)
+        XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: -1), 0, accuracy: 0.01)
+        // 0.5초를 한 번에 반영하지 않는다. 멈췄다 돌아와도 화면이 튀지 않는다.
+        XCTAssertEqual(
+            NLEReorderHoldPolicy.scrollPoints(elapsed: 0.5),
+            NLEReorderHoldPolicy.scrollPoints(elapsed: NLEReorderHoldPolicy.maximumStep),
+            accuracy: 0.01
+        )
+        XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 0.5), 36, accuracy: 0.01)
+    }
 }
 
 @MainActor
