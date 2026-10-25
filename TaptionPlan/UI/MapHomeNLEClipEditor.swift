@@ -1075,14 +1075,40 @@ struct MapHomeNLEClipEditor: View {
         selectedClipID = clip.id
         selectedSubClipID = nil
         // 경계는 고르지 않은 클립이라도 바로 다듬기다(BOKKI STUDIO 계약: 경계=Trim, 몸통=옮기기).
-        // 짧아 경계 두 곳이 겹치는 클립은 통째로 옮기기로 둔다.
+        // 짧아 경계 두 곳이 겹치는 클립은 맞닿은 이웃의 경계로 대신 민다.
         if geometry.height(minutes: Double(clip.lengthMinutes)) >= Self.trimReach * 3 {
             let topY = geometry.y(forMinute: Double(clip.startMinute))
             let bottomY = geometry.y(forMinute: Double(clip.endMinute))
             if abs(point.y - topY) <= Self.trimReach { return .trimStart(lane: .main, id: clip.id) }
             if abs(point.y - bottomY) <= Self.trimReach { return .trimEnd(lane: .main, id: clip.id) }
         }
+        if let boundary = shortClipBoundary(at: point, clip: clip, geometry: geometry) {
+            return boundary
+        }
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
+    }
+
+    /// 하루 전체를 볼 때처럼 클립이 짧아 자기 손잡이를 둘 수 없으면,
+    /// 맞닿은 이웃의 경계를 잡는다. 같은 경계라 롤 결과는 어느 쪽에서 잡아도 같다.
+    private func shortClipBoundary(
+        at point: CGPoint,
+        clip: NLEClip,
+        geometry: NLETimelineGeometry
+    ) -> NLEEditorDragMode? {
+        let startDistance = abs(point.y - geometry.y(forMinute: Double(clip.startMinute)))
+        let endDistance = abs(point.y - geometry.y(forMinute: Double(clip.endMinute)))
+        let useStart = startDistance <= endDistance
+        guard (useStart ? startDistance : endDistance) <= Self.trimReach else { return nil }
+        let boundary = useStart ? clip.startMinute : clip.endMinute
+        let neighbor = track.clips.first {
+            $0.id != clip.id && (useStart ? $0.endMinute == boundary : $0.startMinute == boundary)
+        }
+        guard let neighbor,
+              geometry.height(minutes: Double(neighbor.lengthMinutes)) >= Self.trimReach * 3
+        else { return nil }
+        return useStart
+            ? .trimEnd(lane: .main, id: neighbor.id)
+            : .trimStart(lane: .main, id: neighbor.id)
     }
 
     /// 그 시각을 덮는 센서 원본 구간.

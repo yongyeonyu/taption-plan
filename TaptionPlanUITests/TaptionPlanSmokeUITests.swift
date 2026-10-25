@@ -220,3 +220,85 @@ final class TaptionPlanSmokeUITests: XCTestCase {
     }
 }
 
+/// 클립 편집기의 대분류 경계가 롤로 움직이는지 화면에서 확인한다.
+///
+/// `-nlePreview`로 하루 예시 구간(수면 00–07, 업무 07–12 …)을 바로 연다.
+/// 경계를 위로 밀면 업무가 늘고 수면이 줄어야 한다 — 예전에는 업무만 줄고 늘지는 못했다.
+final class TaptionPlanClipRollUITests: XCTestCase {
+    /// 화면에 그려진 클립 구간 표시(예: `00:00–07:00`)를 모두 모은다.
+    private func ranges(_ app: XCUIApplication) -> [String] {
+        let predicate = NSPredicate(format: "label MATCHES %@", "\\d\\d:\\d\\d–\\d\\d:\\d\\d")
+        return app.staticTexts.matching(predicate).allElementsBoundByIndex.map { $0.label }
+    }
+
+    private func launchEditor() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments = ["-nlePreview"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.staticTexts["00:00–07:00"].waitForExistence(timeout: 10))
+        return app
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
+
+    /// 긴 클립(업무)의 시작 손잡이를 위로 밀면 수면이 그만큼 줄고 업무는 늘어난다.
+    func testRollEditMovesBothClipsAtTheBoundary() throws {
+        let app = launchEditor()
+        attach(app, name: "roll-before")
+
+        let handle = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "시작 자르기"))
+            .firstMatch
+        XCTAssertTrue(handle.waitForExistence(timeout: 5), "경계 손잡이가 접근성에 드러나지 않는다")
+        let start = handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -10)))
+        sleep(1)
+        attach(app, name: "roll-after")
+
+        let after = ranges(app)
+        XCTAssertFalse(after.contains("00:00–07:00"), "수면 끝이 따라 줄지 않았다: \(after)")
+        XCTAssertFalse(after.contains("07:00–12:00"), "업무 시작이 움직이지 않았다: \(after)")
+        XCTAssertTrue(
+            after.contains { $0.hasSuffix("–12:00") && $0 != "07:00–12:00" },
+            "업무 끝이 12:00에서 따라 움직였다: \(after)"
+        )
+    }
+
+    /// 하루 전체를 볼 때 1시간짜리 클립(식사)은 제목도 손잡이도 그리지 않는다(높이 22pt).
+    /// 그래도 경계를 잡으면 맞닿은 이웃과 맞물려 밀려야 한다(통째로 옮겨지면 안 된다).
+    func testRollWorksFromAShortClipWithoutHandles() throws {
+        let app = launchEditor()
+        // 고른 클립(업무)의 끝 손잡이는 경계 바로 3pt 위에 놓인다. 그 아래가 12:00 경계다.
+        let endHandle = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "끝 자르기"))
+            .firstMatch
+        XCTAssertTrue(endHandle.waitForExistence(timeout: 5), "업무 끝 손잡이가 없다")
+        let boundaryY = endHandle.frame.maxY + 3
+
+        // 경계에서 2pt 아래, 대분류 줄 한가운데를 잡는다 — 제목이 없어 좌표로만 닿는다.
+        let start = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 100, dy: boundaryY + 2))
+        start.press(forDuration: 0.15, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -40)))
+        sleep(1)
+        attach(app, name: "short-clip-after")
+
+        let after = ranges(app)
+        XCTAssertFalse(after.contains("07:00–12:00"), "업무 끝이 그대로다: \(after)")
+        guard let work = after.first(where: { $0.hasPrefix("07:00–") }) else {
+            return XCTFail("업무 구간이 사라졌다: \(after)")
+        }
+        // "07:00–10:2x" → 경계는 10:2x. 식사는 그 경계에서 시작해 13:00에서 끝나야 한다.
+        let boundary = String(work.dropFirst(6))
+        XCTAssertNotEqual(boundary, "12:00", "업무 끝이 움직이지 않았다: \(after)")
+        XCTAssertTrue(
+            after.contains { $0 == "\(boundary)–13:00" },
+            "식사가 같은 경계(\(boundary))에서 시작하지 않는다 — 한쪽만 움직였다: \(after)"
+        )
+    }
+}
