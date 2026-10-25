@@ -73,7 +73,8 @@ enum NLEClipEdge: String, Sendable {
 ///
 /// 동영상 편집기와 같은 규칙을 쓴다.
 /// * 클립은 겹치지 않고, 자르거나 옮기면 빈 자리는 미확인으로 남는다.
-/// * 모든 편집은 원본 구간 안에서만 일어난다.
+/// * 옮기기·다듬기는 원본 구간 안에서만 일어난다. 경계를 맞물려 미는 롤만 예외로,
+///   넘어선 시간은 그 시간을 소유한 원본 구간의 요청에 조각으로 실린다.
 /// * 편집 결과는 원본 구간마다 `cover` 요청 하나로 커밋된다.
 struct NLETrack: Hashable, Sendable {
     static let dayMinutes = 1_440
@@ -156,6 +157,41 @@ struct NLETrack: Hashable, Sendable {
         guard clip.startMinute != before.startMinute
             || clip.endMinute != before.endMinute else { return false }
         clips[index] = clip
+        renormalize()
+        return true
+    }
+
+    /// 경계를 맞물려 민다(롤 편집). 한쪽 끝을 밀면 맞닿은 이웃의 반대 끝이 따라 움직인다.
+    ///
+    /// 동영상 편집기의 롤과 같다. 두 클립 사이에는 빈 시간이 생기지 않고, 클립은
+    /// 자기 원본 구간을 넘어설 수 있다. 넘어선 시간은 그 시간을 소유한 원본 구간의
+    /// 요청에 조각으로 실리므로 원본 기록의 출처는 그대로 남는다.
+    @discardableResult
+    mutating func roll(_ id: String, edge: NLEClipEdge, toMinute: Int) -> Bool {
+        guard let index = clipIndex(id) else { return false }
+        var clip = clips[index]
+        switch edge {
+        case .start:
+            let neighbor = clips.first { $0.id != id && $0.endMinute == clip.startMinute }
+            let lower = neighbor.map { $0.startMinute + Self.minimumClipMinutes } ?? rangeStartMinute
+            let newStart = min(max(toMinute, lower), clip.endMinute - Self.minimumClipMinutes)
+            guard newStart != clip.startMinute else { return false }
+            clip.startMinute = newStart
+            clips[index] = clip
+            if let neighbor, let neighborIndex = clipIndex(neighbor.id) {
+                clips[neighborIndex].endMinute = newStart
+            }
+        case .end:
+            let neighbor = clips.first { $0.id != id && $0.startMinute == clip.endMinute }
+            let upper = neighbor.map { $0.endMinute - Self.minimumClipMinutes } ?? rangeEndMinute
+            let newEnd = max(min(toMinute, upper), clip.startMinute + Self.minimumClipMinutes)
+            guard newEnd != clip.endMinute else { return false }
+            clip.endMinute = newEnd
+            clips[index] = clip
+            if let neighbor, let neighborIndex = clipIndex(neighbor.id) {
+                clips[neighborIndex].startMinute = newEnd
+            }
+        }
         renormalize()
         return true
     }
@@ -384,21 +420,33 @@ struct NLETrack: Hashable, Sendable {
         dayStart: Date,
         calendar: Calendar = .autoupdatingCurrent
     ) -> [ActivitySectionEditRequest] {
-        let dirtyParents = Set(clips.filter(\.isDirty).map(\.parent))
-        guard !dirtyParents.isEmpty else { return [] }
-        return dirtyParents
+        let dirty = clips.filter(\.isDirty)
+        guard !dirty.isEmpty else { return [] }
+        // 롤로 원본 구간을 넘어선 클립은 그 시간을 소유한 이웃 구간에도 조각을 남긴다.
+        var touched = Set(dirty.map(\.parent))
+        for clip in dirty {
+            for parent in Set(clips.map(\.parent)) where parent.startMinute < clip.endMinute
+                && parent.endMinute > clip.startMinute {
+                touched.insert(parent)
+            }
+        }
+        return touched
             .sorted { $0.startMinute < $1.startMinute }
             .compactMap { parent in
-                let pieces = clips(inParent: parent)
+                // 이 구간의 요청은 이 구간의 시간만 덮는다. 넘어온 조각은 여기서 잘린다.
+                let pieces = clips
+                    .filter { $0.startMinute < parent.endMinute && $0.endMinute > parent.startMinute }
                     .sorted { $0.startMinute < $1.startMinute }
                     .compactMap { clip -> ActivitySectionOverridePiece? in
+                        let lower = max(clip.startMinute, parent.startMinute)
+                        let upper = min(clip.endMinute, parent.endMinute)
                         guard let start = calendar.date(
                             byAdding: .minute,
-                            value: clip.startMinute,
+                            value: lower,
                             to: dayStart
                         ), let end = calendar.date(
                             byAdding: .minute,
-                            value: clip.endMinute,
+                            value: upper,
                             to: dayStart
                         ), start < end else { return nil }
                         return ActivitySectionOverridePiece(
@@ -442,37 +490,39 @@ struct NLETrack: Hashable, Sendable {
         rangeEndMinute: Int,
         fillsGaps: Bool
     ) -> [NLEClip] {
-        var byParent: [NLEClipParent: [NLEClip]] = [:]
-        for var clip in input {
-            clip.startMinute = max(clip.startMinute, clip.parent.startMinute)
-            clip.endMinute = min(clip.endMinute, clip.parent.endMinute)
+        // 클립은 자기 원본 구간을 넘어설 수 있다(경계를 맞물려 미는 롤 편집).
+        // 대신 서로 겹치지 않게 정리하고, 비어 있는 시간은 그 시간을 소유한 원본 구간의
+        // 미확인으로 채운다. 그래야 넘어선 클립이 이웃 구간에 구멍을 내지 않는다.
+        var ordered: [NLEClip] = []
+        var parents: Set<NLEClipParent> = []
+        var cursor = rangeStartMinute
+        for var clip in input.sorted(by: { lhs, rhs in
+            if lhs.startMinute != rhs.startMinute {
+                return lhs.startMinute < rhs.startMinute
+            }
+            return lhs.id < rhs.id
+        }) {
+            clip.startMinute = max(clip.startMinute, rangeStartMinute)
+            clip.endMinute = min(clip.endMinute, rangeEndMinute)
             guard clip.startMinute < clip.endMinute else { continue }
-            byParent[clip.parent, default: []].append(clip)
+            if clip.startMinute < cursor {
+                clip.startMinute = cursor
+            }
+            guard clip.startMinute < clip.endMinute else { continue }
+            parents.insert(clip.parent)
+            ordered.append(clip)
+            cursor = clip.endMinute
         }
 
         var result: [NLEClip] = []
-        for (parent, group) in byParent {
-            var cursor = parent.startMinute
-            for var clip in group.sorted(by: { lhs, rhs in
-                if lhs.startMinute != rhs.startMinute {
-                    return lhs.startMinute < rhs.startMinute
+        if fillsGaps {
+            for parent in parents {
+                for gap in uncovered(parent: parent, coveredBy: ordered) {
+                    result.append(gapClip(parent: parent, from: gap.lowerBound, to: gap.upperBound))
                 }
-                return lhs.id < rhs.id
-            }) {
-                if clip.startMinute < cursor {
-                    clip.startMinute = cursor
-                }
-                guard clip.startMinute < clip.endMinute else { continue }
-                if fillsGaps, clip.startMinute > cursor {
-                    result.append(gapClip(parent: parent, from: cursor, to: clip.startMinute))
-                }
-                result.append(clip)
-                cursor = clip.endMinute
-            }
-            if fillsGaps, cursor < parent.endMinute {
-                result.append(gapClip(parent: parent, from: cursor, to: parent.endMinute))
             }
         }
+        result.append(contentsOf: ordered)
 
         // 원본 구간이 비어 있는 날(아직 아무 기록도 없는 날)도 하루를 채운다.
         if fillsGaps {
@@ -489,6 +539,31 @@ struct NLETrack: Hashable, Sendable {
             }
             return lhs.id < rhs.id
         }
+    }
+
+    /// 그 원본 구간 안에서 아무 클립도 덮지 않은 자리.
+    ///
+    /// 클립이 원본 구간을 넘어설 수 있게 되면서, 빈자리는 구간 하나만 보고 판단할 수
+    /// 없어졌다. 이웃 구간에서 넘어온 클립까지 함께 보고 남은 자리만 돌려준다.
+    private static func uncovered(
+        parent: NLEClipParent,
+        coveredBy clips: [NLEClip]
+    ) -> [Range<Int>] {
+        var gaps: [Range<Int>] = []
+        var cursor = parent.startMinute
+        for clip in clips where clip.endMinute > parent.startMinute
+            && clip.startMinute < parent.endMinute {
+            let start = max(clip.startMinute, parent.startMinute)
+            let end = min(clip.endMinute, parent.endMinute)
+            if start > cursor {
+                gaps.append(cursor..<start)
+            }
+            cursor = max(cursor, end)
+        }
+        if cursor < parent.endMinute {
+            gaps.append(cursor..<parent.endMinute)
+        }
+        return gaps
     }
 
     /// 같은 원본 구간 안에서 맞닿은 미확인 조각을 하나로 합친다.

@@ -1162,10 +1162,11 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
+    /// 대분류 경계는 맞닿은 이웃과 맞물려 민다(롤). 서브클립은 자기 구간 안에서만 다듬는다.
     private func trimClip(lane: NLEEditorLane, id: String, edge: NLEClipEdge, toMinute minute: Int) {
         switch lane {
         case .main:
-            track.trim(id, edge: edge, toMinute: minute)
+            track.roll(id, edge: edge, toMinute: minute)
         case .sub:
             subTrack.trim(id, edge: edge, toMinute: minute)
         }

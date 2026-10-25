@@ -29769,6 +29769,77 @@ final class NLETrackTests: XCTestCase {
         )
         XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 0.5), 36, accuracy: 0.01)
     }
+
+    /// 경계를 밀면 양쪽 클립이 함께 움직이고 빈 시간은 생기지 않는다(롤 편집).
+    /// 뒤쪽 클립의 시작을 위로 밀면 앞 클립이 줄고, 아래로 밀면 앞 클립이 늘어난다.
+    func testRollMovesBothClipsAtTheSharedBoundary() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep"),
+            segment(300, 1_440, "work"),
+        ])
+        guard let sleep = track.clip(atMinute: 100), let work = track.clip(atMinute: 400) else {
+            return XCTFail("클립이 없다")
+        }
+        XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 280))
+        XCTAssertEqual(track.clip(sleep.id)?.endMinute, 280)
+        XCTAssertEqual(track.clip(work.id)?.startMinute, 280)
+        XCTAssertTrue(track.clips.filter(\.isGap).isEmpty, "롤은 빈 시간을 만들지 않는다")
+
+        // 앞 클립의 원본 구간(0~300)을 넘어서도 늘어난다.
+        XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 320))
+        XCTAssertEqual(track.clip(sleep.id)?.endMinute, 320)
+        XCTAssertEqual(track.clip(work.id)?.startMinute, 320)
+        XCTAssertTrue(track.clips.filter(\.isGap).isEmpty)
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 원본 구간을 넘어선 시간은 그 시간을 소유한 이웃 구간의 요청에 조각으로 실린다.
+    func testRollAcrossOriginalSegmentsKeepsThePieceInTheOwningRequest() {
+        let sleepSource = UUID()
+        let workSource = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep", sources: [sleepSource]),
+            segment(300, 1_440, "work", sources: [workSource]),
+        ])
+        guard let work = track.clip(atMinute: 400) else { return XCTFail("업무 클립이 없다") }
+        XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 320))
+
+        let start = dayStart()
+        let requests = track.editRequests(dayStart: start, calendar: calendar)
+        XCTAssertEqual(requests.count, 2, "넘어선 시간을 소유한 이웃 구간에도 요청이 나가야 한다")
+        guard let owner = requests.first(where: { $0.sourceIDs == [workSource] }) else {
+            return XCTFail("업무 원본 구간 요청이 없다")
+        }
+        let pieces = ActivitySectionOverrideEngine.pieces(for: owner)
+        XCTAssertEqual(pieces.first?.option.categoryID, "sleep")
+        XCTAssertEqual(pieces.first?.span.start, calendar.date(byAdding: .minute, value: 300, to: start))
+        XCTAssertEqual(pieces.first?.span.end, calendar.date(byAdding: .minute, value: 320, to: start))
+    }
+
+    /// 이웃이 1분보다 짧아지는 자리에서는 경계가 더 밀리지 않는다.
+    func testRollStopsWhenTheNeighborReachesOneMinute() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep"),
+            segment(300, 1_440, "work"),
+        ])
+        guard let work = track.clip(atMinute: 400) else { return XCTFail("업무 클립이 없다") }
+        XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 0))
+        XCTAssertEqual(track.clip(atMinute: 0)?.lengthMinutes, NLETrack.minimumClipMinutes)
+    }
+
+    /// 미확인 자리를 밀어도 미확인은 하나로 남는다.
+    func testRollIntoUnconfirmedGapKeepsOneGap() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
+        guard let work = track.clip(atMinute: 400) else { return XCTFail("업무 클립이 없다") }
+        track.trim(work.id, edge: .end, toMinute: 480)
+        XCTAssertEqual(track.clips.filter(\.isGap).count, 1)
+
+        XCTAssertTrue(track.roll(work.id, edge: .end, toMinute: 500))
+        let gaps = track.clips.filter(\.isGap)
+        XCTAssertEqual(gaps.count, 1, "밀어도 미확인은 하나여야 한다")
+        XCTAssertEqual(gaps.first?.startMinute, 500)
+        XCTAssertEqual(gaps.first?.endMinute, 540)
+    }
 }
 
 @MainActor
