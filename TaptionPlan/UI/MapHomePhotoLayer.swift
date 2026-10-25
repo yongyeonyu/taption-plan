@@ -236,7 +236,7 @@ struct MapHomePhotoPin: View {
             .overlay(alignment: .topTrailing) {
                 if count > 1 {
                     Text("\(count)")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -306,7 +306,7 @@ struct MapHomePhotoPager: View {
                         MapHomePhotoThumbnail(localIdentifier: moment.id, side: 380, contentMode: .fit)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         Text(moment.capturedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
                     }
                     .tag(offset)
@@ -315,7 +315,7 @@ struct MapHomePhotoPager: View {
             .tabViewStyle(.page(indexDisplayMode: .automatic))
             Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 30))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(30))))
                     .foregroundStyle(.white.opacity(0.9))
                     .padding(16)
             }

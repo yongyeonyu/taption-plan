@@ -1094,7 +1094,7 @@ struct MapHomeStickmanMarker: View {
                     for: equippedAccessoryID
                 ) {
                     Image(systemName: accessorySymbol)
-                        .font(.system(size: 9, weight: .black))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .black))
                         .foregroundStyle(Color(hex: "#D94772"))
                         .shadow(color: .white.opacity(0.95), radius: 1.5)
                         .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.34)
@@ -1102,7 +1102,7 @@ struct MapHomeStickmanMarker: View {
                 // 피카츄 구간 — 번개 스파크.
                 if tier.isPikachu {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 12, weight: .black))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .black))
                         .foregroundStyle(.yellow)
                         .shadow(color: .orange.opacity(0.8), radius: 2)
                         .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.26)

@@ -2882,7 +2882,7 @@ struct MapHomeView: View {
                         .controlSize(.small)
                     Text(language.text("날짜 데이터 불러오는 중", "Loading day data"))
                 }
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -2921,6 +2921,20 @@ struct MapHomeView: View {
                     .padding(.top, Layout.topRowInset)
                     .padding(.trailing, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
+            }
+
+            // 재생 중에는 상단에 얇은 진행 바를 띄운다. 정지 화면과 구분되게 하는 표시다.
+            if isDayPlaybackRunning, !isScreenRecording {
+                MapHomePlaybackHUD(
+                    minute: dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0),
+                    endMinute: playbackHUDEndMinute,
+                    language: language
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + 8)
+                .padding(.horizontal, Layout.horizontalInset)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(MapHomeLayerPriority.header)
             }
 
             if !isScreenRecording, !isMenuOpen, layoutStyle.movesActionsToBottom {
@@ -3712,23 +3726,23 @@ struct MapHomeView: View {
     private func scheduleMemoPreview(_ memo: MapSticker) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: memo.systemImage)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                 .foregroundStyle(Color(hex: memo.colorHex))
                 .frame(width: 30, height: 30)
                 .background(Color.white.opacity(0.96), in: Circle())
                 .overlay(Circle().stroke(Color(hex: memo.colorHex), lineWidth: 1))
             VStack(alignment: .leading, spacing: 3) {
                 Text(memo.title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .lineLimit(1)
                 if let text = memo.memo, !text.isEmpty {
                     Text(text)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                         .lineLimit(2)
                 }
                 Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
             .foregroundStyle(Color.tpInk)
@@ -3737,7 +3751,7 @@ struct MapHomeView: View {
                 dismissedMemoPreviewIDs.insert(memo.id)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(width: 28, height: 28)
                     .contentShape(Rectangle())
@@ -3812,7 +3826,7 @@ struct MapHomeView: View {
                 if layoutStyle.movesActionsToBottom {
                     Button { openMenu() } label: {
                         Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                             .foregroundStyle(Color.tpInk)
                             .frame(width: 40, height: 40)
                             .mapHomeGlass(in: Circle())
@@ -3833,15 +3847,15 @@ struct MapHomeView: View {
                     ForEach(nearbyPreviewRows, id: \.id) { row in
                         HStack(spacing: 6) {
                             Image(systemName: row.systemImage)
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                                 .foregroundStyle(Color.tpReferenceBlue)
                             Text(row.title)
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.tpInk)
                                 .lineLimit(1)
                             Spacer(minLength: 4)
                             Text(row.time)
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.tpSecondary)
                         }
                     }
@@ -3978,7 +3992,7 @@ struct MapHomeView: View {
                         queueExpanded ? language.text("접기", "Collapse") : "+\(queuedMemos.count - 3)",
                         systemImage: queueExpanded ? "chevron.up" : "chevron.down"
                     )
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -4003,14 +4017,14 @@ struct MapHomeView: View {
             withAnimation(.snappy) { memoStackExpanded.toggle() }
         } label: {
             Image(systemName: memoStackExpanded ? "xmark" : "note.text")
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 40, height: 40)
                 .mapHomeGlass(in: Circle())
                 .overlay(alignment: .topTrailing) {
                     if count > 0, !memoStackExpanded {
                         Text("\(count)")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -4025,18 +4039,18 @@ struct MapHomeView: View {
     private func memoCard(_ memo: ActionMemo, showsTime: Bool) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: showsTime ? "clock.fill" : "note.text")
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpReferenceBlue)
                 .frame(width: 26, height: 26)
                 .background(Color.white.opacity(0.9), in: Circle())
             VStack(alignment: .leading, spacing: 3) {
                 Text(memo.text)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(2)
                 if showsTime {
                     Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -4109,7 +4123,7 @@ struct MapHomeView: View {
         ZStack {
             VStack {
                 Text(language.text("지도를 움직여 핀 위치를 맞추세요", "Move the map to place the pin"))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
@@ -4129,7 +4143,7 @@ struct MapHomeView: View {
                         if pendingMemoLocationID != nil { finishMemoLocationPick(apply: false) }
                     } label: {
                         Text(language.text("취소", "Cancel"))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpInk)
                             .padding(.horizontal, 18)
                             .frame(minHeight: 40)
@@ -4147,7 +4161,7 @@ struct MapHomeView: View {
                         Text(pendingMemoLocationID != nil
                              ? language.text("이 위치로", "Use this spot")
                              : language.text("여기에 메모", "Memo here"))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .frame(minHeight: 40)
@@ -5387,10 +5401,10 @@ struct MapHomeView: View {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
                         VStack(spacing: 2) {
                             Image(systemName: "tram.fill")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                                 .foregroundStyle(Color.tpReferenceBlue.opacity(0.72))
                             Text(language.text("임시 위치", "Temporary"))
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.tpInk.opacity(0.72))
                         }
                         .padding(5)
@@ -5686,7 +5700,7 @@ struct MapHomeView: View {
                         isSearchPinMenuPresented = true
                     } label: {
                         Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 36, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(36)), weight: .bold))
                             .foregroundStyle(Color.tpPastelRose)
                             .background(Circle().fill(.white))
                             .frame(width: 48, height: 48)
@@ -5758,7 +5772,7 @@ struct MapHomeView: View {
         let isSelected = !waypoint.isPredicted && waypoint.timestamp != nil
             && waypoint.timestamp == highlightedPawprintTimestamp
         return Image(systemName: "pawprint.fill")
-            .font(.system(size: 12, weight: .bold))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
             .foregroundStyle(waypoint.predictedRoute?.id == selectedPredictedRoute?.id && waypoint.isPredicted
                 ? Color.orange : waypoint.isPredicted ? Color.gray.opacity(0.68)
                 : MapHomePawprintSpeedColor.color(forMetersPerSecond: waypoint.speedMetersPerSecond))
@@ -6445,6 +6459,11 @@ struct MapHomeView: View {
         MapHomeFogStrength(rawValue: fogStrengthRaw) ?? .light
     }
 
+    /// 재생 HUD가 쓰는 종료 분. 오늘이면 지금 시각, 지난 날이면 하루 끝(1440)이다.
+    private var playbackHUDEndMinute: Double {
+        MapHomeDayPlaybackMath.playbackEndMinute(for: model.selectedDate, now: .now)
+    }
+
     private func openMenu() {
         isLocationMenuExpanded = false
         isUserLocationsMenuExpanded = false
@@ -6472,7 +6491,7 @@ struct MapHomeView: View {
                     MapHomeCalendarGlyph(date: model.selectedDate, language: language)
                         .frame(width: 26, height: 26)
                     Text(language.text("달력", "Calendar"))
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(height: 12)
                 }
@@ -6497,11 +6516,19 @@ struct MapHomeView: View {
                 // 집으로 옮긴 뒤 하루 요약을 바로 연다.
                 isDaySummaryPresented = true
             }
-            bottomBarButton(
-                isDayPlaybackRunning ? "pause.fill" : "play.fill",
-                isDayPlaybackRunning ? language.text("일시 정지", "Pause") : language.text("재생", "Play")
-            ) {
-                toggleDayPlayback()
+            // 재생 중에는 「일시 정지」와 「종료」를 나란히 둔다. 한 버튼으로 두 가지를
+            // 겸하면 재생을 끝내려는 사람이 일시 정지를 누르고 한 번 더 찾아야 한다.
+            if isDayPlaybackRunning {
+                bottomBarButton("pause.fill", language.text("일시 정지", "Pause")) {
+                    toggleDayPlayback()
+                }
+                bottomBarButton("stop.fill", language.text("종료", "Stop")) {
+                    stopDayPlayback(resetProgress: true)
+                }
+            } else {
+                bottomBarButton("play.fill", language.text("재생", "Play")) {
+                    startDayPlayback()
+                }
             }
             bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
                 addMemo()
@@ -6528,11 +6555,11 @@ struct MapHomeView: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .semibold))
                     .foregroundStyle(tint)
                     .frame(width: 26, height: 26)
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(height: 12)
             }
@@ -6556,18 +6583,19 @@ struct MapHomeView: View {
         )
         let badge = VStack(spacing: 0) {
             Text(weekdayText)
-                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                 .foregroundStyle(color)
             Text(String(calendar.component(.day, from: model.selectedDate)))
-                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .monospacedDigit()
         }
         .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // 더블탭은 오늘 날짜로 이동해 경로를 화면에 맞추고, 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
-        // 한 번 탭과 두 번 탭을 하나의 제스처로 묶어, 두 번 탭할 때 한 번 탭 동작이 먼저 실행되지 않게 한다.
+        // 보이는 크기는 그대로 두고 터치 영역만 44pt까지 넓힌다.
+        .taptionHitOutset(vertical: max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2))
+        // 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
         }
@@ -6581,7 +6609,7 @@ struct MapHomeView: View {
             }
         }
         .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
-        .accessibilityHint(language.text("한 번 누르면 이번 주, 두 번 누르면 오늘로 이동", "Tap for the week, double-tap for today"))
+        .accessibilityHint(language.text("한 번 누르면 이번 주를 펼칩니다", "Tap to show this week"))
         return HStack(spacing: 6) {
             if isDateWeekExpanded { weekStrip(calendar: calendar) }
             badge
@@ -6604,10 +6632,10 @@ struct MapHomeView: View {
                 } label: {
                     VStack(spacing: 0) {
                         Text(day.formatted(Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                             .foregroundStyle(tint)
                         Text(String(calendar.component(.day, from: day)))
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
                             .foregroundStyle(Color.tpInk)
                             .monospacedDigit()
                     }
@@ -6677,7 +6705,7 @@ struct MapHomeView: View {
                     openRecordingOptions()
                 } label: {
                     Image(systemName: "record.circle")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                         .frame(width: 34, height: Layout.headerHitTarget)
                         .contentShape(Rectangle())
                 }
@@ -6863,11 +6891,12 @@ struct MapHomeView: View {
         case .simplified: language.text("간략화", "Simplified")
         case .hybrid: language.text("하이브리드", "Hybrid")
         case .imagery: language.text("위성", "Satellite")
-        case .mapLibreNight: language.text("벡터 야간", "Vector Night")
-        case .mapLibreLight: language.text("벡터 밝은 지도", "Vector Light")
-        case .mapLibreContrast: language.text("벡터 고대비", "Vector Contrast")
-        case .mapLibrePastel: language.text("벡터 파스텔", "Vector Pastel")
-        case .mapLibreCasual: language.text("벡터 캐주얼", "Vector Casual")
+        // 스타일 이름은 재질이 아니라 상황으로 적는다. "벡터 야간"을 고르려는 사람은 없다.
+        case .mapLibreNight: language.text("야간", "Night")
+        case .mapLibreLight: language.text("밝게", "Bright")
+        case .mapLibreContrast: language.text("실외(고대비)", "Outdoor (high contrast)")
+        case .mapLibrePastel: language.text("파스텔", "Pastel")
+        case .mapLibreCasual: language.text("산책(부드럽게)", "Walk (soft)")
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         }
     }
@@ -6895,15 +6924,15 @@ struct MapHomeView: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .frame(width: 22)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     if !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.system(size: 11, weight: .regular, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .regular, design: .rounded))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
@@ -7048,7 +7077,7 @@ struct MapHomeView: View {
                         .frame(width: 18, height: 18)
                 } else {
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .medium))
                 }
             }
                 .frame(width: 31, height: Layout.headerHitTarget)
@@ -7409,7 +7438,7 @@ struct MapHomeView: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
-        .font(.system(size: 13, weight: .bold, design: .rounded))
+        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
         .foregroundStyle(Color.tpInk)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -8014,7 +8043,7 @@ struct MapHomeView: View {
                             selectedMapStickerEditor = .sticker(sticker.id)
                         } label: {
                             Image(systemName: sticker.systemImage)
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color(hex: sticker.colorHex))
                                 .frame(width: 22, height: 22)
                                 .background(Color.white.opacity(0.96), in: Circle())
@@ -8054,7 +8083,7 @@ struct MapHomeView: View {
                             selectedMapStickerEditor = .memo(memo.id)
                         } label: {
                             Image(systemName: memo.stickerSymbol ?? "note.text")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                                 .foregroundStyle(memo.isSticker ? Color(hex: memo.stickerColorHex ?? "#F28FA9") : Color.tpInk)
                                 .frame(width: 22, height: 22)
                                 .background(Color.white.opacity(0.96), in: Circle())
@@ -8153,7 +8182,7 @@ struct MapHomeView: View {
                         }
                     } label: {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                             .foregroundStyle(Color.tpInk)
                             .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                     }
@@ -8206,7 +8235,7 @@ struct MapHomeView: View {
                                 fitMapToRoutes()
                             } label: {
                                 Text("\(scale)")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                                     .monospacedDigit()
                                     .foregroundStyle(Color.tpSecondary)
                                     .frame(width: Layout.mapControlSize, height: 24)
@@ -8259,7 +8288,7 @@ struct MapHomeView: View {
                         isLeftControlsExpanded = false
                     } label: {
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
                             .frame(width: 26, height: 26)
                             .background(Circle().fill(Color.gray.opacity(0.28)))
@@ -8276,7 +8305,7 @@ struct MapHomeView: View {
                     isLeftControlsExpanded = true
                 } label: {
                     Image(systemName: "chevron.up")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                         .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
                         .mapHomeGlass(in: Circle())
@@ -8389,20 +8418,21 @@ struct MapHomeView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text("오늘의 기록", "Today's Record"))
-                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
                     Text(language.text("자동으로 남은 하루의 기록", "Today's activity, automatically recorded"))
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button { isMenuOpen = false } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                         .foregroundStyle(Color.tpInk.opacity(0.7))
-                        .frame(width: 36, height: 36)
+                        .frame(width: TaptionMenuMetrics.minimumHitSize, height: TaptionMenuMetrics.minimumHitSize)
                         .mapHomeGlass(in: Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(language.text("메뉴 닫기", "Close menu"))
             }
             .padding(.bottom, 8)
 
@@ -8423,7 +8453,7 @@ struct MapHomeView: View {
                 menuGroupDivider
                 languageMenuItem
                 menuGroupDivider
-                menuRowButton("record.circle", language.text("재생 화면 녹화", "Record playback")) {
+                menuRowButton("record.circle", language.text("재생 화면 녹화", "Record playback"), tint: .tpNow) {
                     isMenuOpen = false
                     openRecordingOptions()
                 }
@@ -8436,11 +8466,11 @@ struct MapHomeView: View {
             menuGroupCard {
                 settingsMenuItem
                 menuGroupDivider
-                menuRowButton("bell.badge", language.text("알림", "Alerts")) { isAlarmSettingsPresented = true }
+                menuRowButton("bell.badge", language.text("알림", "Alerts"), tint: .tpReferenceGold) { isAlarmSettingsPresented = true }
                 menuGroupDivider
-                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드", "Day card")) { isDailyCardPresented = true }
+                menuRowButton("photo.on.rectangle.angled", language.text("하루 카드", "Day card"), tint: .tpReferenceRose) { isDailyCardPresented = true }
                 menuGroupDivider
-                menuRowButton("info.circle", language.text("지도 출처", "Map attribution")) { isMapAttributionPresented = true }
+                menuRowButton("info.circle", language.text("지도 출처", "Map attribution"), tint: .tpReferenceGray) { isMapAttributionPresented = true }
             }
 
             Spacer(minLength: 28)
@@ -8467,7 +8497,7 @@ struct MapHomeView: View {
                         ? language.text("위치 기록을 기다리는 중", "Waiting for location")
                         : language.text("현재 위치 기록 중", "Recording current location")
                 )
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .padding(.vertical, 9)
@@ -8495,15 +8525,15 @@ struct MapHomeView: View {
     private func displayDropdownRow(_ systemImage: String, _ title: String, _ value: String) -> some View {
         HStack(spacing: 8) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             Spacer()
             Text(value)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 8)
@@ -8515,11 +8545,11 @@ struct MapHomeView: View {
     private func displaySubRow(_ systemImage: String, _ title: String) -> some View {
         HStack(spacing: 8) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             Spacer()
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 8)
@@ -8528,19 +8558,20 @@ struct MapHomeView: View {
     }
 
     /// 메뉴 한 줄: 아이콘 상자 + 제목 + 오른쪽 화살표. 지도 출처와 같은 모양이다.
-    private func menuRowButton(_ systemImage: String, _ title: String, action: @escaping () -> Void) -> some View {
+    private func menuRowButton(
+        _ systemImage: String,
+        _ title: String,
+        tint: Color = .tpAccent,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 13) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.tpAccent)
-                    .frame(width: 32, height: 32)
-                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                MapHomeMenuIconChip(systemImage: systemImage, tint: tint)
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.tpInk)
@@ -8553,7 +8584,7 @@ struct MapHomeView: View {
 
     private func menuGroupLabel(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
             .foregroundStyle(Color.tpSecondary)
             .padding(.top, 16)
             .padding(.bottom, 6)
@@ -8589,7 +8620,7 @@ struct MapHomeView: View {
                 "BOKKI Plan \(version) (Build \(build))"
             )
         )
-        .font(.system(size: 11, weight: .medium, design: .rounded))
+        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .textSelection(.enabled)
@@ -8601,16 +8632,12 @@ struct MapHomeView: View {
                 isCategoryMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "paintpalette.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 32, height: 32)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    MapHomeMenuIconChip(systemImage: "paintpalette.fill", tint: .tpReferencePurple)
                     Text(language.text("행동 분류", "Activity categories"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                     Spacer()
                     Image(systemName: isCategoryMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
@@ -8639,7 +8666,7 @@ struct MapHomeView: View {
                                 )
                                     .frame(width: 20)
                                 Text(category.localizedTitle(language))
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                                 Spacer()
                                 Button {
                                     if activePaletteCategoryID == category.id {
@@ -8659,7 +8686,7 @@ struct MapHomeView: View {
                                             Image(systemName: activePaletteCategoryID == category.id
                                                 ? "chevron.up"
                                                 : "paintpalette.fill")
-                                                .font(.system(size: 9, weight: .bold))
+                                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                                                 .foregroundStyle(.white)
                                         }
                                 }
@@ -8706,7 +8733,7 @@ struct MapHomeView: View {
                                         ),
                                         supportsOpacity: false
                                     )
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                                     .frame(maxWidth: .infinity, minHeight: 28)
                                     .padding(.horizontal, 5)
                                     .background(Color.tpInk.opacity(0.07), in: Capsule())
@@ -8733,9 +8760,9 @@ struct MapHomeView: View {
                     } label: {
                         HStack(spacing: 9) {
                             Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                             Text(language.text("사용자 추가", "Add custom"))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             Spacer()
                         }
                         .foregroundStyle(Color.tpReferenceBlue)
@@ -8751,11 +8778,11 @@ struct MapHomeView: View {
                                     .fill(Color(hex: category.hex))
                                     .frame(width: 10, height: 10)
                                 Image(systemName: category.systemImage)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                                     .foregroundStyle(Color(hex: category.hex))
                                     .frame(width: 20)
                                 Text(category.title)
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                                 Spacer()
                                 Button {
                                     if activePaletteCategoryID == category.id.uuidString {
@@ -8766,7 +8793,7 @@ struct MapHomeView: View {
                                     }
                                 } label: {
                                     Image(systemName: "paintpalette.fill")
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                                         .foregroundStyle(Color(hex: category.hex))
                                         .frame(width: 28, height: 28)
                                 }
@@ -8808,7 +8835,7 @@ struct MapHomeView: View {
                 }
                 .padding(.leading, 12)
                 Text(language.text("색상을 선택하면 즉시 저장됩니다.", "Colors save immediately."))
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 20)
             }
@@ -8821,16 +8848,12 @@ struct MapHomeView: View {
                 isLocationMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 32, height: 32)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    MapHomeMenuIconChip(systemImage: "mappin.and.ellipse", tint: .tpReferenceBlue)
                     Text(language.text("위치", "Location"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                     Spacer()
                     Image(systemName: isLocationMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
@@ -8865,19 +8888,19 @@ struct MapHomeView: View {
                     )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(language.text("사용자", "User"))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                         Text(
                             language.text(
                                 "등록된 사용자 위치 " + String(userLocationCount) + "개",
                                 String(userLocationCount) + " saved user locations"
                             )
                         )
-                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: isUserLocationsMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
@@ -8898,7 +8921,7 @@ struct MapHomeView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if userLocationCount == 0 {
                         Text(language.text("등록된 사용자 위치가 없습니다.", "No saved user locations."))
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 9)
                             .padding(.vertical, 6)
@@ -8919,7 +8942,7 @@ struct MapHomeView: View {
                             language.text("사용자 위치 관리", "Manage user locations"),
                             systemImage: "slider.horizontal.3"
                         )
-                        .font(.system(size: 11.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpReferenceBlue)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 6)
@@ -8953,7 +8976,7 @@ struct MapHomeView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: place.kind.systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(
                         MapHomeLocationDestination(placeKind: place.kind)?.tint
                             ?? MapHomeLocationDestination.user.tint
@@ -8961,7 +8984,7 @@ struct MapHomeView: View {
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(displayedFrequentPlaceName(place))
-                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12.5)), weight: .semibold, design: .rounded))
                         .lineLimit(1)
                     Text(
                         place.point == nil
@@ -8970,12 +8993,12 @@ struct MapHomeView: View {
                                 ? language.text("등록 식당", "Restaurant")
                                 : language.text("사용자 위치", "User location")
                     )
-                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: place.point == nil ? "pencil" : "location.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.primary)
@@ -8992,20 +9015,20 @@ struct MapHomeView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: location.kind.systemImage)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(location.name)
-                        .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12.5)), weight: .semibold, design: .rounded))
                         .lineLimit(1)
                     Text(language.text(location.kind.title, location.kind.englishTitle))
-                        .font(.system(size: 9.5, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "location.fill")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.primary)
@@ -9026,9 +9049,9 @@ struct MapHomeView: View {
                     MapHomeLocationThumbnail(destination: destination, size: 34)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(language.text(destination.koreanName, destination.englishName))
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                         Text(locationDestinationSubtitle(destination))
-                            .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                             .foregroundStyle(destination == .user ? destination.tint : .secondary)
                     }
                     Spacer()
@@ -9045,7 +9068,7 @@ struct MapHomeView: View {
                     selectedLocationDestination = destination
                 } label: {
                     Image(systemName: "pencil")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                         .foregroundStyle(destination.tint)
                         .frame(width: 38, height: 42)
                         .contentShape(Rectangle())
@@ -9141,19 +9164,15 @@ struct MapHomeView: View {
             }
         } label: {
             HStack(spacing: 13) {
-                Image(systemName: "globe")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.tpAccent)
-                    .frame(width: 32, height: 32)
-                    .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                MapHomeMenuIconChip(systemImage: "globe", tint: .tpReferenceCyan)
                 Text(language.text("언어", "Language"))
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                 Spacer()
                 Text(languagePreferenceTitle(languagePreference))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(Color.tpInk)
@@ -9182,16 +9201,12 @@ struct MapHomeView: View {
                 isDisplayMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "square.3.layers.3d")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 32, height: 32)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    MapHomeMenuIconChip(systemImage: "square.3.layers.3d", tint: .tpReferenceSand)
                     Text(language.text("표시", "Display"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                     Spacer()
                     Image(systemName: isDisplayMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
@@ -9202,6 +9217,15 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                // 실외 프리셋을 맨 위에 둔다. 스타일 이름 여섯 개를 훑지 않고 한 번에 켠다.
+                MapHomeDisplayPresetRow(
+                    isOutdoor: model.settings.mapDisplayStyle == .mapLibreContrast,
+                    language: language
+                ) {
+                    let isOutdoor = model.settings.mapDisplayStyle == .mapLibreContrast
+                    model.setMapDisplayStyle(isOutdoor ? .mapLibreRPG : .mapLibreContrast)
+                }
+
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
                     ForEach(MapDisplayStyle.allCases, id: \.self) { style in
@@ -9233,7 +9257,7 @@ struct MapHomeView: View {
                     set: { playbackZoomModeRaw = ($0 ? MapHomePlaybackZoomMode.adaptive : .fixed).rawValue }
                 )) {
                     Label(language.text("속도에 따라 가변", "Vary zoom with speed"), systemImage: "plus.magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpAccent)
                 .padding(.vertical, 8)
@@ -9245,7 +9269,7 @@ struct MapHomeView: View {
                         language.text("안개 탐험", "Fog of Exploration"),
                         systemImage: "cloud.fog.fill"
                     )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     Picker("", selection: Binding(
                         get: { fogStrength },
                         set: { fogStrengthRaw = $0.rawValue }
@@ -9271,7 +9295,7 @@ struct MapHomeView: View {
                         language.text("날씨", "Weather"),
                         systemImage: "cloud.sun.fill"
                     )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpReferenceBlue)
                 .padding(.vertical, 8)
@@ -9282,7 +9306,7 @@ struct MapHomeView: View {
                         language.text("사진", "Photos"),
                         systemImage: "photo.fill"
                     )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpReferenceBlue)
                 .padding(.vertical, 8)
@@ -9293,7 +9317,7 @@ struct MapHomeView: View {
                     set: { memoDisplayRaw = ($0 ? MapHomeMemoDisplayMode.all : .hidden).rawValue }
                 )) {
                     Label(language.text("메모 표시", "Show memos"), systemImage: "note.text")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpAccent)
                 .padding(.vertical, 8)
@@ -9315,7 +9339,7 @@ struct MapHomeView: View {
                         language.text("카운터", "Counters"),
                         systemImage: "gauge.with.dots.needle.50percent"
                     )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     Spacer()
                     Text(
@@ -9324,10 +9348,10 @@ struct MapHomeView: View {
                             "\(enabledCounterKinds.count) on"
                         )
                     )
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     Image(systemName: isCounterMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 8)
@@ -9352,7 +9376,7 @@ struct MapHomeView: View {
                     ForEach(MapHomeCounterKind.allCases) { kind in
                         Toggle(isOn: counterBinding(kind)) {
                             Label(kind.menuTitle(language), systemImage: kind.systemImage)
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                         }
                         .tint(Color.tpAccent)
                         .padding(.vertical, 6)
@@ -9402,16 +9426,12 @@ struct MapHomeView: View {
         VStack(alignment: .leading, spacing: 5) {
             Button { isSettingsMenuExpanded.toggle() } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 32, height: 32)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    MapHomeMenuIconChip(systemImage: "gearshape.fill", tint: .tpReferenceGray)
                     Text(language.text("설정", "Settings"))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                     Spacer()
                     Image(systemName: isSettingsMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
@@ -9427,19 +9447,19 @@ struct MapHomeView: View {
                 Button { isDataProtectionPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "lock.shield.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceRose)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(language.text("데이터 보호", "Data Protection"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                             Text(dataProtectionStatusText)
-                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                             .foregroundStyle(.secondary)
                     }
                     .foregroundStyle(Color.primary)
@@ -9454,19 +9474,19 @@ struct MapHomeView: View {
                 Button { isSettingsResetConfirmationPresented = true } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceRose)
                             .frame(width: 24)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(language.text("설정 초기화", "Reset settings"))
-                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                             Text(language.text("화면·연동 설정을 기본값으로 복원", "Restore display and integration settings"))
-                                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                             .foregroundStyle(.secondary)
                     }
                     .foregroundStyle(Color.primary)
@@ -9490,21 +9510,17 @@ struct MapHomeView: View {
                 isAppleWatchMenuExpanded.toggle()
             } label: {
                 HStack(spacing: 13) {
-                    Image(systemName: "applewatch")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.tpAccent)
-                        .frame(width: 32, height: 32)
-                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    MapHomeMenuIconChip(systemImage: "applewatch", tint: .tpReferenceLeaf)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(language.text("Apple Watch 데이터", "Apple Watch data"))
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                         Text(appleWatchDataStatusText)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Image(systemName: isAppleWatchMenuExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.tpInk)
@@ -9517,7 +9533,7 @@ struct MapHomeView: View {
             if isAppleWatchMenuExpanded {
                 Toggle(isOn: $isAppleWatchLinkEnabled) {
                     Text(language.text("Apple Watch 연동", "Apple Watch link"))
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                 }
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 12)
@@ -9528,7 +9544,7 @@ struct MapHomeView: View {
                         Task { await model.requestHealth() }
                     }
                 }
-                .font(.system(size: 12, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpAccent)
                 .lineLimit(1)
                 .fixedSize()
@@ -9590,7 +9606,7 @@ struct MapHomeView: View {
                 language.text("자동 기록 권한", "Automatic recording permissions"),
                 systemImage: "sensor.fill"
             )
-            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
             .foregroundStyle(Color.tpAccent)
 
             Text(
@@ -9599,7 +9615,7 @@ struct MapHomeView: View {
                     "Manual records and map memos are available now. Allow only the permissions needed for automatic recording."
                 )
             )
-            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
 
@@ -9622,10 +9638,10 @@ struct MapHomeView: View {
                                 .controlSize(.small)
                         } else {
                             Text(sensorPermissionActionTitle(permission))
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                         }
                     }
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.primary)
                     .padding(.horizontal, 9)
                     .frame(minHeight: 36)
@@ -9698,14 +9714,14 @@ struct MapHomeView: View {
             } label: {
                 HStack(spacing: 13) {
                     Image(systemName: isLogging ? "location.fill" : "location.viewfinder")
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .semibold))
                         .foregroundStyle(tint)
                         .frame(width: 24)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(language.text("GPS 및 센서 데이터", "GPS & Sensor Data"))
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded))
                         Text(sensorCollectionStatusText)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -9714,7 +9730,7 @@ struct MapHomeView: View {
                             ? "chevron.up"
                             : "chevron.down"
                     )
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(Color.primary)
@@ -9754,7 +9770,7 @@ struct MapHomeView: View {
                             )
                             Spacer()
                             Text(gpsLoggingIntervalText(preferences.effectiveIntervalSeconds))
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                                 .foregroundStyle(.secondary)
                             if preferences.isBatteryMinimal {
                                 Image(systemName: "checkmark.circle.fill")
@@ -9792,7 +9808,7 @@ struct MapHomeView: View {
                             Spacer()
                             Text(gpsLoggingIntervalText(900))
                         }
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     }
                 }
@@ -9829,15 +9845,15 @@ struct MapHomeView: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold))
                     .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk.opacity(0.55))
                     .frame(width: 26, alignment: .center)
                 Text(title)
-                    .font(.system(size: 16, weight: isSelected ? .bold : .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: isSelected ? .bold : .medium, design: .rounded))
                     .foregroundStyle(isSelected ? Color.tpAccent : Color.tpInk)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(Color.tpInk.opacity(0.28))
             }
             .padding(.vertical, 13)
@@ -12326,7 +12342,7 @@ struct MapHomeView: View {
         let weekdayName = MapHomeDateText.string(
             from: model.selectedDate, format: language.weekdayFormat, locale: language.locale)
         let weekdayText = Text(" \(weekdayName)")
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .semibold, design: .rounded))
             .foregroundStyle(dateColor(weekday: weekday))
         return datePartTitleLabel + weekdayText
     }
@@ -12335,7 +12351,7 @@ struct MapHomeView: View {
         let datePart = MapHomeDateText.string(
             from: model.selectedDate, format: language.datePartFormat, locale: language.locale)
         return Text(datePart)
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .semibold, design: .rounded))
             .foregroundStyle(
                 dateColor(
                     weekday: Calendar.autoupdatingCurrent.component(
@@ -13803,7 +13819,7 @@ private struct MapHomeSectionEditSheet: View {
                 dismiss()
             } label: {
                 Text(language.text("닫기", "Close"))
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpReferenceRose)
                     .padding(.horizontal, 15)
                     .frame(minHeight: 38)
@@ -13815,7 +13831,7 @@ private struct MapHomeSectionEditSheet: View {
             .buttonStyle(.plain)
             Spacer()
             Text(language.text("행동 구간 편집", "Edit activity section"))
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer()
@@ -13823,7 +13839,7 @@ private struct MapHomeSectionEditSheet: View {
                 save()
             } label: {
                 Text(language.text("저장", "Save"))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 15)
                     .frame(minHeight: 38)
@@ -13933,7 +13949,7 @@ private struct MapHomeSectionEditSheet: View {
                             ? "xmark.circle.fill"
                             : "rectangle.split.1x2"
                     )
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     .foregroundStyle(isSlicing ? Color.white : sliceTint)
                     .padding(.horizontal, 14)
                     .frame(minHeight: 36)
@@ -13994,7 +14010,7 @@ private struct MapHomeSectionEditSheet: View {
                 Text(language.text("대분류", "Category"))
                     .frame(width: 118)
             }
-            .font(.system(size: 13, weight: .bold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
             .foregroundStyle(.secondary)
 
             GeometryReader { proxy in
@@ -14051,25 +14067,25 @@ private struct MapHomeSectionEditSheet: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "rectangle.split.3x1.fill")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .semibold))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(language.text("클립 편집", "Clip editor"))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                         .foregroundStyle(Color.tpInk)
                     Text(language.text(
                         "24시간 대분류 클립과 서브클립을 동영상처럼 편집",
                         "Edit 24h clips and sub-clips like video"
                     ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 }
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
             }
             .padding(.horizontal, 14)
@@ -14144,10 +14160,10 @@ private struct MapHomeSectionEditSheet: View {
                 Label(title, systemImage: systemImage)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
@@ -14198,7 +14214,7 @@ private struct MapHomeSectionEditSheet: View {
         } label: {
             VStack(spacing: 1) {
                 Text(title).font(.caption2).foregroundStyle(.secondary)
-                Text(timeLabel(minute)).font(.system(size: 13, weight: .bold, design: .rounded))
+                Text(timeLabel(minute)).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
             }
             .frame(width: 70, height: 44)
             .background(Color.tpSurface, in: Capsule())
@@ -14215,7 +14231,7 @@ private struct MapHomeSectionEditSheet: View {
                 }
                 .stroke(Color.tpLine.opacity(0.45), lineWidth: 1)
                 Text(timeLabel(minute))
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 5)
                     .position(x: 23, y: max(7, y + 7))
@@ -14268,7 +14284,7 @@ private struct MapHomeSectionEditSheet: View {
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
             }
             .font(.system(
                 size: isCompact ? 9 : 11,
@@ -14388,7 +14404,7 @@ private struct MapHomeSectionEditSheet: View {
                 ZStack {
                     Capsule().fill(Color.white)
                     Image(systemName: "scissors")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                 }
                 .frame(width: width - 12, height: 12)
@@ -14474,10 +14490,10 @@ private struct MapHomeSectionEditSheet: View {
                     Text(piece.category.localizedTitle(language)).lineLimit(1)
                     if blockHeight >= 54 {
                         Text("\(timeLabel(piece.startMinute))–\(timeLabel(piece.endMinute))")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold, design: .rounded))
                     }
                 }
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                 .foregroundStyle(adaptiveLabelColor(on: piece.category.tint))
             }
         }
@@ -14911,7 +14927,7 @@ private struct MapHomeCategoryAddSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Text(language.text("행동분류 추가", "Add activity category"))
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
                 Spacer()
                 Button(language.text("닫기", "Close")) { dismiss() }
             }
@@ -14957,7 +14973,7 @@ private struct MapHomeCategoryAddSheet: View {
 
             Button(action: save) {
                 Text(language.text("추가", "Add"))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
             }
@@ -14971,7 +14987,7 @@ private struct MapHomeCategoryAddSheet: View {
                         "No unused icons are available."
                     )
                 )
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -15027,7 +15043,7 @@ private struct MapHomeDataProtectionSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                     .foregroundStyle(Color.tpReferenceRose)
                     .frame(width: 46, height: 46)
                     .background(
@@ -15037,16 +15053,16 @@ private struct MapHomeDataProtectionSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(language.text("데이터 보호", "Data Protection"))
-                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
                     Text(statusTitle)
-                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
                 Button(language.text("닫기", "Close")) { dismiss() }
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
             }
 
             Text(
@@ -15055,7 +15071,7 @@ private struct MapHomeDataProtectionSheet: View {
                     "Creates an on-device protected copy by LZFSE-compressing and AES-GCM-encrypting your current records."
                 )
             )
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
             Text(
@@ -15064,7 +15080,7 @@ private struct MapHomeDataProtectionSheet: View {
                     "Face ID or Touch ID only authorizes access to the Keychain encryption key. Biometric data is never stored in the app, iCloud, or the backup."
                 )
             )
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(12)
                 .background(
@@ -15074,7 +15090,7 @@ private struct MapHomeDataProtectionSheet: View {
 
             if let resultMessage {
                 Text(resultMessage)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                     .foregroundStyle(isProtected ? Color.tpReferenceBlue : Color.tpReferenceRose)
             }
 
@@ -15095,7 +15111,7 @@ private struct MapHomeDataProtectionSheet: View {
                             : language.text("생체 인증으로 보호 시작", "Protect with biometrics")
                     )
                 }
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
                 .foregroundStyle(.white)
@@ -15112,7 +15128,7 @@ private struct MapHomeDataProtectionSheet: View {
                         language.text("생체 인증으로 보호 사본 확인", "Verify protected copy with biometrics"),
                         systemImage: "checkmark.shield.fill"
                     )
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 }
@@ -15222,7 +15238,7 @@ private struct MapHomeSecuritySheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 12) {
                     Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                         .foregroundStyle(Color.tpReferenceRose)
                         .frame(width: 46, height: 46)
                         .background(
@@ -15231,17 +15247,17 @@ private struct MapHomeSecuritySheet: View {
                         )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(language.text("데이터 보호", "Data Protection"))
-                            .font(.system(size: 21, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
                         Text(hasPIN
                             ? language.text("\(securityPINDigits)자리 비밀번호 등록됨", "\(securityPINDigits)-digit password registered")
                             : language.text("백업 전 비밀번호 등록 필요", "Set a password before backup")
                         )
-                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Button(language.text("닫기", "Close")) { dismiss() }
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
 
                 card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
@@ -15249,7 +15265,7 @@ private struct MapHomeSecuritySheet: View {
                         "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
                         "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
                     ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
 
                     HStack(spacing: 10) {
@@ -15266,12 +15282,12 @@ private struct MapHomeSecuritySheet: View {
                         .disabled(model.isExportingDiagnostics)
 
                         Text(model.diagnosticsExportStatus)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpReferenceBlue)
                     }
 
                     Text(model.diagnosticsLatestLogSummary)
-                        .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
 
@@ -15297,7 +15313,7 @@ private struct MapHomeSecuritySheet: View {
                         "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
                         "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time."
                     ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 }
 
@@ -15322,7 +15338,7 @@ private struct MapHomeSecuritySheet: View {
                         "생체 인증은 빠른 잠금 해제용이며, 생체 정보는 앱이나 백업에 저장되지 않습니다.",
                         "Biometrics are only a fast local unlock; biometric data is never stored."
                     ))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 }
 
@@ -15332,7 +15348,7 @@ private struct MapHomeSecuritySheet: View {
 
                 if let message {
                     Text(message)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
             }
@@ -15387,7 +15403,7 @@ private struct MapHomeSecuritySheet: View {
                 "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
                 "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now."
             ))
-            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
             if needsPasswordEntry {
                 SecureField(language.text("비밀번호", "Password"), text: $backupPassword)
@@ -15405,13 +15421,13 @@ private struct MapHomeSecuritySheet: View {
                     "마지막 백업: \(latestBackupText)",
                     "Last backup: \(latestBackupText)"
                 ))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.tpReferenceBlue)
             }
             if case .backingUp(let completed, let total) = activity {
                 ProgressView(value: Double(completed), total: Double(max(total, 1)))
                 Text(language.text("백업 중 \(completed)/\(total)", "Backing up \(completed)/\(total)"))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             Button(language.text(isBusy ? "작업 중입니다" : "지금 백업", isBusy ? "Working" : "Back up now")) {
@@ -15423,7 +15439,7 @@ private struct MapHomeSecuritySheet: View {
             .disabled(!canUseBackupPassword || !model.backupDestinationAvailable)
             if let reason = backupDisabledReason {
                 Text(reason)
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             if let report = model.lastBackupReport, report.operation == .backup {
@@ -15445,13 +15461,13 @@ private struct MapHomeSecuritySheet: View {
                     "이 기기에 남길 최근 \(security.localMonthsToKeep)개 달(이번 달 포함)",
                     "Keep the latest \(security.localMonthsToKeep) months on this device (this month included)"
                 ))
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
             }
             Text(language.text(
                 "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
                 "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed."
             ))
-            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
             if case .offloading = activity {
                 ProgressView().controlSize(.small)
@@ -15473,7 +15489,7 @@ private struct MapHomeSecuritySheet: View {
                 "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 백업은 앱 비밀번호와 같은 비밀번호로 열립니다.",
                 "Row counts and times appear once the password is known. Backups open with your app password."
             ))
-            .font(.system(size: 11, weight: .medium, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
             .foregroundStyle(.secondary)
             if case .restoring(let name) = activity {
                 ProgressView(language.text("\(name) 불러오는 중", "Restoring \(name)"))
@@ -15482,7 +15498,7 @@ private struct MapHomeSecuritySheet: View {
             if model.backupListings.isEmpty {
                 Text(model.backupListingError
                     ?? language.text("iCloud에 백업 파일이 없습니다.", "No backup files in iCloud."))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             ForEach(model.backupListings) { row in
@@ -15506,13 +15522,13 @@ private struct MapHomeSecuritySheet: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title(of: row))
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
                 Text(listingDetail(row))
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 if row.isOffloaded {
                     Text(language.text("이 기기에서는 정리됨 · 불러올 수 있음", "Cleared from this device · can be restored"))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
             }
@@ -15535,15 +15551,15 @@ private struct MapHomeSecuritySheet: View {
     private func reportView(_ report: PlanBackupReport) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(report.summary)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(report.succeeded ? Color.tpReferenceBlue : Color.tpReferenceRose)
             ForEach(report.items) { item in
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: icon(for: item.kind))
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                         .foregroundStyle(item.kind == .rejected ? Color.tpReferenceRose : Color.tpReferenceBlue)
                     Text("\(item.name == "settings" ? language.text("설정", "Settings") : item.name) · \(item.detail)")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -15567,7 +15583,7 @@ private struct MapHomeSecuritySheet: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
             content()
         }
         .padding(13)
@@ -15705,14 +15721,14 @@ private struct MapHomeLocationSheet: View {
                         language.text(destination.koreanName, destination.englishName)
                             + language.text(" 위치 설정", " location")
                     )
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                     if let place, place.point != nil {
                         Text(
                             language.text("현재 저장 상태", "Saved")
                                 + " · "
                                 + FloorLabel.korean(place.floor ?? 1)
                         )
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     } else {
                         Text(
@@ -15721,7 +15737,7 @@ private struct MapHomeLocationSheet: View {
                                 "Save this place from your current location"
                             )
                         )
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -15739,7 +15755,7 @@ private struct MapHomeLocationSheet: View {
                         "Waiting for location. Save becomes available when a location is recorded."
                     )
             )
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
 
             Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
@@ -15765,7 +15781,7 @@ private struct MapHomeLocationSheet: View {
                         : language.text("현재 위치로 다시 저장", "Update current location"),
                     systemImage: "location.fill"
                 )
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .foregroundStyle(.white)
@@ -15782,7 +15798,7 @@ private struct MapHomeLocationSheet: View {
                     language.text("저장된 위치 삭제", "Delete saved location"),
                     systemImage: "trash"
                 )
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .foregroundStyle(Color.red)
@@ -16530,7 +16546,7 @@ private struct MapHomePlacePin: View {
             VStack(spacing: 5) {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
                 Image(systemName: destination.rpgSystemImage)
-                    .font(.system(size: 23, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(23)), weight: .semibold))
                     .foregroundStyle(destination.tint)
                     .frame(width: 48, height: 48)
                     .background(
@@ -16543,7 +16559,7 @@ private struct MapHomePlacePin: View {
                     }
                     .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
                 Text("Lv.\(floor ?? 1)")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
@@ -16625,7 +16641,7 @@ private struct MapHomePlacePin: View {
             .overlay(alignment: .topTrailing) {
                 if isLeapDay {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 11, weight: .black))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .black))
                         .foregroundStyle(Color(hex: "#E3B54A"))
                         .shadow(color: .white, radius: 1.5)
                         .offset(x: 1, y: 1)
@@ -16652,7 +16668,7 @@ private struct MapHomePlacePin: View {
     @ViewBuilder
     private func homeLevelLabel(level: Int) -> some View {
         let label = Text("Lv.\(level)")
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 12)
@@ -16676,14 +16692,14 @@ private struct MapHomePlacePin: View {
         let palette = WeatherSymbolKind(symbolName: badge.symbolName).palette
         return HStack(spacing: 2) {
             Image(systemName: badge.symbolName)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(
                     Color(red: palette.primary.red, green: palette.primary.green, blue: palette.primary.blue),
                     Color(red: palette.secondary.red, green: palette.secondary.green, blue: palette.secondary.blue)
                 )
             Text(badge.temperatureText)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
         }
@@ -16741,7 +16757,7 @@ private struct MapHomeTransitPlacePin: View {
         VStack(spacing: 4) {
             MapHomeMarkerLabel(title: name, color: Color.tpTransitDark)
             Image(systemName: kind.systemImage)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
                 .background(Color.tpTransitDark, in: Circle())
@@ -16760,7 +16776,7 @@ private struct MapHomeTransitBoardingCandidatePin: View {
         VStack(spacing: 4) {
             MapHomeMarkerLabel(title: name, color: Color.tpTransitDark)
             Image(systemName: kind.systemImage)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 28, height: 28)
                 .background(Color.tpTransitDark, in: Circle())
@@ -16860,7 +16876,7 @@ private struct MapHomeLocationButtonIcon: View {
     var body: some View {
         ZStack {
             Image(systemName: "scope")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .semibold))
                 .foregroundStyle(targetColor)
 
             if state.showsTrackingDot {
@@ -17142,7 +17158,7 @@ private struct MapHomeMarkerLabel: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 13)
             .padding(.vertical, 7)
@@ -17309,7 +17325,7 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 Image(systemName: candidate.kind.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold))
                     .foregroundStyle(Color.tpTransitDark)
                     .frame(width: 38, height: 38)
                     .background(
@@ -17318,7 +17334,7 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
                     )
                 VStack(alignment: .leading, spacing: 3) {
                     Text(candidate.name)
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
                         .lineLimit(1)
                     Text(
                         language.text(
@@ -17326,7 +17342,7 @@ private struct MapHomeTransitBoardingCandidateSheet: View {
                             "\(candidate.kind.englishTitle) · \(dwellText)"
                         )
                     )
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -17417,9 +17433,9 @@ private struct MapHomeMapStickerMarker: View {
     var body: some View {
         VStack(spacing: 3) {
             Image(systemName: sticker.systemImage)
-                .font(.system(size: 15, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
             Text(sticker.title)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                 .lineLimit(1)
         }
         .foregroundStyle(Color.tpInk)
@@ -17449,12 +17465,12 @@ private struct MapHomeMapMemoMarker: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: "note.text")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
             }
             Text(memo.text)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                 .lineLimit(1)
                 .frame(maxWidth: 118, alignment: .leading)
         }
@@ -17643,14 +17659,14 @@ private struct MapHomeStickerEditorSheet: View {
         VStack(spacing: 6) {
             if let message = dictation.errorMessage {
                 Text(message)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpHoliday)
                     .multilineTextAlignment(.center)
                 if MapHomeDictation.isPermissionDenied {
                     Button(language.text("설정 열기", "Open Settings")) {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 }
             }
             if dictation.isListening {
@@ -17668,7 +17684,7 @@ private struct MapHomeStickerEditorSheet: View {
                 toggleDictation()
             } label: {
                 Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                    .font(.system(size: 26, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .semibold))
                     .foregroundStyle(dictation.isListening ? Color.tpHoliday : Color.tpAccent)
                     .frame(width: 68, height: 68)
                     .background(Color.tpAccent.opacity(0.14), in: Circle())
@@ -17706,7 +17722,7 @@ private struct MapHomeStickerEditorSheet: View {
         ZStack(alignment: .topLeading) {
             if memoText.isEmpty {
                 (prompt ?? Text(language.text("메모 내용", "Memo text")))
-                    .font(.system(size: 17))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(17))))
                     .foregroundStyle(Color.tpSecondary)
                     .allowsHitTesting(false)
             }
@@ -17754,7 +17770,7 @@ private struct MapHomeStickerEditorSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             if let title {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
             content()
@@ -17814,7 +17830,7 @@ private struct MapHomeStickerEditorSheet: View {
                 .frame(height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 Text(String(format: "%.5f, %.5f", point.latitude, point.longitude))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                 Button(language.text("위치 다시 고르기", "Choose again")) { requestLocation() }
                 Button(language.text("위치 지우기", "Remove location"), role: .destructive) {
@@ -17835,7 +17851,7 @@ private struct MapHomeStickerEditorSheet: View {
                     revertStickerToMemo()
                 }
                 Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -17904,7 +17920,7 @@ private struct MapHomeStickerEditorSheet: View {
                     systemImage = symbol
                 } label: {
                     Image(systemName: symbol)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                         .foregroundStyle(Color(hex: colorHex))
                         .frame(width: 34, height: 34)
                         .background(
@@ -18125,7 +18141,7 @@ private struct MapHomeUserLocationActionSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: locationIcon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold))
                     .foregroundStyle(locationTint)
                     .frame(width: 34, height: 34)
                     .background(
@@ -18134,10 +18150,10 @@ private struct MapHomeUserLocationActionSheet: View {
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(locationName)
-                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
                         .lineLimit(1)
                     Text(locationSubtitle)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -18241,13 +18257,13 @@ private struct MapHomeSearchPinLocationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("위치 추가", "Add location"))
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
             VStack(alignment: .leading, spacing: 3) {
                 Text(result.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
                 if !result.subtitle.isEmpty {
                     Text(result.subtitle)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -18273,10 +18289,10 @@ private struct MapHomeSearchPinLocationSheet: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: destination.systemImage)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                                 .foregroundStyle(destination.tint)
                             Text(language.text(destination.koreanName, destination.englishName))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             Spacer()
                         }
                         .padding(.horizontal, 10)
@@ -18293,7 +18309,7 @@ private struct MapHomeSearchPinLocationSheet: View {
             Divider()
 
             Text(language.text("대중교통 위치", "Transit location"))
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
 
             LazyVGrid(
@@ -18306,7 +18322,7 @@ private struct MapHomeSearchPinLocationSheet: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: kind.systemImage)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                                 .foregroundStyle(Color.tpReferenceBlue)
                             Text(
                                 language.text(
@@ -18314,7 +18330,7 @@ private struct MapHomeSearchPinLocationSheet: View {
                                     kind.englishTitle
                                 )
                             )
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             Spacer()
                         }
                         .padding(.horizontal, 10)
@@ -18512,7 +18528,7 @@ private struct MapHomeTransitLocationsSheet: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(language.text("사용자 위치", "User locations"))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(24)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Text(
                     language.text(
@@ -18520,13 +18536,13 @@ private struct MapHomeTransitLocationsSheet: View {
                         "Manage subway stations, bus stops, train stations, airports, and harbors on the map."
                     )
                 )
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
             }
             Spacer()
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .frame(width: 42, height: 42)
                     .background(Color.tpInk.opacity(0.07), in: Circle())
@@ -18567,7 +18583,7 @@ private struct MapHomeTransitLocationsSheet: View {
                 .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
 
                 Button(language.text("검색", "Search")) { search() }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
                     .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
@@ -18595,7 +18611,7 @@ private struct MapHomeTransitLocationsSheet: View {
                                 if name.isEmpty { name = result.title }
                                 searchResults = []
                             }
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpReferenceBlue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -18685,7 +18701,7 @@ private struct MapHomeTransitLocationsSheet: View {
                     .frame(height: 44)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
                 Button(language.text("추가", "Add")) { addLocation() }
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
                     .background(
@@ -18705,11 +18721,11 @@ private struct MapHomeTransitLocationsSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(language.text("등록된 위치", "Saved locations"))
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
                 Text(String(model.settings.userTransitLocations.count))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
@@ -18725,7 +18741,7 @@ private struct MapHomeTransitLocationsSheet: View {
                         "No transit locations are saved."
                     )
                 )
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 18)
@@ -18745,7 +18761,7 @@ private struct MapHomeTransitLocationsSheet: View {
                     } label: {
                         HStack(spacing: 11) {
                             Image(systemName: location.kind.systemImage)
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                                 .foregroundStyle(Color.tpReferenceBlue)
                                 .frame(width: 38, height: 38)
                                 .background(
@@ -18754,7 +18770,7 @@ private struct MapHomeTransitLocationsSheet: View {
                                 )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(location.name)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color.tpInk)
                                     .lineLimit(1)
                                 Text(
@@ -18763,17 +18779,17 @@ private struct MapHomeTransitLocationsSheet: View {
                                         location.kind.englishTitle
                                     )
                                 )
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 if let floor = location.floor {
                                     Text(FloorLabel.korean(floor))
-                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                                         .foregroundStyle(Color.tpReferenceBlue)
                                 }
                             }
                             Spacer()
                             Image(systemName: "location.fill")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                                 .foregroundStyle(
                                     selectedLocationID == location.id
                                         ? Color.tpReferenceRose
@@ -18788,7 +18804,7 @@ private struct MapHomeTransitLocationsSheet: View {
                         editingLocation = location
                     } label: {
                         Image(systemName: "pencil")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(Color.tpReferenceBlue)
                             .frame(width: 36, height: 38)
                     }
@@ -18801,7 +18817,7 @@ private struct MapHomeTransitLocationsSheet: View {
                         deletingLocation = location
                     } label: {
                         Image(systemName: "trash")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                             .foregroundStyle(Color.red)
                             .frame(width: 36, height: 38)
                     }
@@ -18928,7 +18944,7 @@ private struct MapHomeTransitLocationNameEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(language.text("위치 이름 수정", "Edit location name"))
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             TextField(language.text("이름", "Name"), text: $name)
                 .padding(.horizontal, 12)
@@ -18946,7 +18962,7 @@ private struct MapHomeTransitLocationNameEditor: View {
             .tint(Color.tpReferenceBlue)
             HStack(spacing: 8) {
                 Button(language.text("취소", "Cancel")) { dismiss() }
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
                     .background(Color.tpInk.opacity(0.07), in: RoundedRectangle(cornerRadius: 13))
@@ -18958,7 +18974,7 @@ private struct MapHomeTransitLocationNameEditor: View {
                     onSaved(cleanName)
                     dismiss()
                 }
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
@@ -20282,10 +20298,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                     rootView: AnyView(
                         VStack(spacing: 2) {
                             Image(systemName: "tram.fill")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                                 .foregroundStyle(Color.tpReferenceBlue.opacity(0.72))
                             Text(title)
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.tpInk.opacity(0.72))
                         }
                         .padding(5)
@@ -20368,7 +20384,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 return MapHomeAppleHostedDescriptor(
                     rootView: AnyView(
                         Image(systemName: "pawprint.fill")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(color)
                             .rotationEffect(.degrees(paw.angle))
                     ),
@@ -20379,7 +20395,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
                 return MapHomeAppleHostedDescriptor(
                     rootView: AnyView(
                         Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 36, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(36)), weight: .bold))
                             .foregroundStyle(Color.tpPastelRose)
                             .background(Circle().fill(.white))
                     ),
@@ -20510,7 +20526,7 @@ struct MapHomePlaceNameEditor: View {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             VStack(alignment: .leading, spacing: 10) {
                 Text(language.text("이름", "Name"))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                 TextField(language.text("장소 이름", "Place name"), text: $name)
                     .textFieldStyle(.roundedBorder)
                 Button(language.text("이름 저장", "Save name")) {
@@ -20551,13 +20567,13 @@ struct MapHomePlaceRangeEditor: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(language.text("범위 지정", "Range"))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     Spacer()
                     Toggle(language.text("지도에 범위 표시", "Show on map"), isOn: $showsRanges)
                         .labelsHidden()
                         .tint(Color.tpAccent)
                     Text(language.text("지도 표시", "Map"))
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 Map(
@@ -20576,10 +20592,10 @@ struct MapHomePlaceRangeEditor: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 HStack {
                     Text(language.text("반경", "Radius"))
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     Spacer()
                     Text("\(Int(radiusMeters.rounded()))m")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
                 }
                 Slider(value: $radiusMeters, in: 30...500, step: 10)
                     .tint(Color.tpAccent)
@@ -20613,17 +20629,17 @@ struct MapHomeMarkerInfoSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 12) {
                     Image(systemName: symbol)
-                        .font(.system(size: 26, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .bold))
                         .foregroundStyle(Color.tpAccent)
                         .frame(width: 52, height: 52)
                         .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     Text(title)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                         .foregroundStyle(Color.tpInk)
                     Spacer()
                 }
                 Text(detail)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let model, let placeID {
@@ -20756,20 +20772,20 @@ struct MapHomeDaySummarySheet: View {
                 Label(language.text("오늘 번 돈", "Earned today"), systemImage: "wonsign.circle.fill")
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
-                Text(MapHomeSalaryPolicy.wonText(today)).font(.system(size: 16, weight: .bold, design: .rounded))
+                Text(MapHomeSalaryPolicy.wonText(today)).font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
             }
             HStack {
                 Text(language.text("이번 달 예상 월급", "Expected this month"))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
-                Text(MapHomeSalaryPolicy.wonText(salary.expectedMonthPay)).font(.system(size: 14, weight: .semibold, design: .rounded))
+                Text(MapHomeSalaryPolicy.wonText(salary.expectedMonthPay)).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
             }
             if let month = salary.month {
                 HStack {
                     Text(language.text("이번 달 \(Int(month.workSeconds / 3_600))시간 근무", "This month \(Int(month.workSeconds / 3_600)) h"))
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
-                    Text(MapHomeSalaryPolicy.wonText(month.earnings)).font(.system(size: 14, weight: .semibold, design: .rounded))
+                    Text(MapHomeSalaryPolicy.wonText(month.earnings)).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }
             }
             HStack {
@@ -20780,12 +20796,12 @@ struct MapHomeDaySummarySheet: View {
                         .foregroundStyle(Color.tpAccent)
                 }
             }
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
             Text(salary.showsNet ? language.text("세후 추정", "After-tax estimate") : language.text("세전 추정", "Pre-tax estimate"))
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
-        .font(.system(size: 13, weight: .medium, design: .rounded))
+        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -20801,19 +20817,19 @@ struct MapHomeDaySummarySheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "house.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(Color.tpAccent)
                 Text("Lv.\(card.level)")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 8)
                 Label(language.text("연속 \(card.streak)일", "\(card.streak)-day streak"), systemImage: "flame.fill")
                 Label(language.text("보상 \(card.pendingWeeklyRewards)", "Rewards \(card.pendingWeeklyRewards)"), systemImage: "gift.fill")
             }
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
             Text(card.status)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                 .foregroundStyle(card.isQualifiedToday ? Color.tpAccent : Color.tpSecondary)
                 .lineLimit(2)
             Capsule()
@@ -20860,7 +20876,7 @@ struct MapHomeDaySummarySheet: View {
             detent = isExpanded ? Self.collapsedDetent : Self.expandedDetent
         } label: {
             Image(systemName: isExpanded ? "chevron.down" : "chevron.up")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                 .foregroundStyle(Color.tpAccent)
                 .frame(width: 34, height: 34)
                 .background(Color.tpAccent.opacity(0.10), in: Circle())
@@ -20880,10 +20896,10 @@ struct MapHomeDaySummarySheet: View {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(language.text("하루 요약", "Day Summary"))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
                             .foregroundStyle(Color.tpInk)
                         Text(dateText)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer(minLength: 8)
@@ -20898,7 +20914,7 @@ struct MapHomeDaySummarySheet: View {
                             language.text("집 성장", "Home growth"),
                             systemImage: "house.and.flag.fill"
                         )
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpAccent)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -20925,7 +20941,7 @@ struct MapHomeDaySummarySheet: View {
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
                     Text(language.text("\(memoCounts.total)개 · 지도 \(memoCounts.map)개", "\(memoCounts.total) · map \(memoCounts.map)"))
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
                 }
             }
 
@@ -20941,16 +20957,16 @@ struct MapHomeDaySummarySheet: View {
                         .monospacedDigit()
                         .foregroundStyle(Color.tpInk)
                 }
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
             }
 
             if categories.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.pie")
-                        .font(.system(size: 30, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(30)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                     Text(language.text("이 날의 기록이 아직 없습니다", "No records for this day yet"))
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 160)
@@ -20961,7 +20977,7 @@ struct MapHomeDaySummarySheet: View {
                         "\(DurationText.english(totalSeconds)) recorded"
                     )
                 )
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
 
                 VStack(spacing: 12) {
@@ -20985,20 +21001,20 @@ struct MapHomeDaySummarySheet: View {
     private var travelDistanceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(language.text("이동 거리", "Distance by mode"))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
             ForEach(travelDistances) { entry in
                 HStack(spacing: 10) {
                     Image(systemName: entry.mode.summarySystemImage)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle))
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.tpInk)
                     Spacer()
                     Text(MapHomeDayTravelSummary.distanceText(entry.meters))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                         .monospacedDigit()
                         .foregroundStyle(Color.tpInk)
                 }
@@ -21010,18 +21026,18 @@ struct MapHomeDaySummarySheet: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
                 Image(systemName: entry.systemImage)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                     .foregroundStyle(entry.tint)
                     .frame(width: 24)
                 Text(entry.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
                 Text("\(Int((entry.ratio * 100).rounded()))%")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Text(DurationText.localized(entry.seconds, english: language == .english))
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
             GeometryReader { proxy in
@@ -21088,14 +21104,14 @@ private struct MapHomeGrowthSheet: View {
     private var header: some View {
         HStack(spacing: 10) {
             Image(systemName: "house.and.flag.fill")
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
                 .foregroundStyle(Color.tpAccent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(language.text("우리 집 성장", "Home growth"))
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Text(verbatim: "\(season.year) · Lv.\(season.level)")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
             .contentShape(Rectangle())
@@ -21104,7 +21120,7 @@ private struct MapHomeGrowthSheet: View {
             Spacer()
             if season.pendingWeeklyRewards > 0 {
                 Text(language.text("보상 \(season.pendingWeeklyRewards)", "Rewards \(season.pendingWeeklyRewards)"))
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpAccent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
@@ -21126,15 +21142,15 @@ private struct MapHomeGrowthSheet: View {
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             VStack(alignment: .leading, spacing: 7) {
                 Text(language.text("올해의 집", "This year's home"))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Text(language.text("Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))", "Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))"))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                 ProgressView(value: Double(season.level), total: Double(MapHomeGrowthPolicy.maximumLevel(year: season.year)))
                     .tint(Color.tpPastelMint)
                 Text(language.text("연속 달성 \(season.streak)일", "\(season.streak)-day streak"))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -21163,7 +21179,7 @@ private struct MapHomeGrowthSheet: View {
                                 } else {
                                     // 그림이 아직 없는 랜드마크는 무늬 심볼로 대신한다.
                                     Image(systemName: candidate.systemImage)
-                                        .font(.system(size: 20, weight: .bold))
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                                         .foregroundStyle(Color(hex: "#D94772"))
                                 }
                             }
@@ -21171,15 +21187,15 @@ private struct MapHomeGrowthSheet: View {
                             .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(displayName(candidate))
-                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                                     .foregroundStyle(Color.tpInk)
                                 Text("\(countryName(candidate.country)) · \(categoryName(candidate.category))")
-                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
                                     .foregroundStyle(Color.tpSecondary)
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         .padding(11)
@@ -21190,7 +21206,7 @@ private struct MapHomeGrowthSheet: View {
             } else {
                 let remaining = MapHomeGrowthPolicy.daysUntilNextWeeklyReward(streak: season.streak)
                 Text(language.text("다음 보상까지 연속 \(remaining)일 남았어요.", "\(remaining) consecutive days until your next reward."))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -21207,7 +21223,7 @@ private struct MapHomeGrowthSheet: View {
             )
             if placements.isEmpty && unplacedPlots.isEmpty {
                 Text(language.text("첫 주간 보상을 받으면 땅 조각이 생겨요.", "Your first weekly reward will add a land plot."))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 landGrid
@@ -21215,20 +21231,20 @@ private struct MapHomeGrowthSheet: View {
                     "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.",
                     "Zoom all the way in near your home on the map to see this land and attach plots there."
                 ))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 if let next = unplacedPlots.first {
                     Text(language.text(
                         "붙이지 않은 땅 \(unplacedPlots.count)개 · 점선 칸을 눌러 이어 붙여요.",
                         "\(unplacedPlots.count) plots left · tap a dashed cell to attach."
                     ))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                     Button {
                         place(next)
                     } label: {
                         Label(language.text("자동으로 붙이기", "Place automatically"), systemImage: "wand.and.stars")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpAccent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
@@ -21267,7 +21283,7 @@ private struct MapHomeGrowthSheet: View {
                                             .padding(3)
                                     } else {
                                         Image(systemName: "leaf.fill")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                                             .foregroundStyle(Color.tpAccent)
                                     }
                                 }
@@ -21281,7 +21297,7 @@ private struct MapHomeGrowthSheet: View {
                                         .strokeBorder(Color.tpAccent.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, dash: [4, 3]))
                                         .overlay {
                                             Image(systemName: "plus")
-                                                .font(.system(size: 13, weight: .bold))
+                                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                                                 .foregroundStyle(Color.tpAccent)
                                         }
                                         .frame(width: cell, height: cell)
@@ -21321,14 +21337,14 @@ private struct MapHomeGrowthSheet: View {
                     language.text(showsAllAccessories ? "전체 도감 접기" : "전체 도감 보기", showsAllAccessories ? "Hide all" : "Show all"),
                     systemImage: showsAllAccessories ? "chevron.up" : "square.grid.3x3.fill"
                 )
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.tpAccent)
             }
             .buttonStyle(.plain)
             if showsAllAccessories { accessoryCollectionGrid }
             if season.accessories.isEmpty {
                 Text(language.text("아직 모은 액세서리가 없어요.", "No accessories collected yet."))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(season.accessories, id: \.self) { accessoryID in
@@ -21338,24 +21354,24 @@ private struct MapHomeGrowthSheet: View {
                         HStack(spacing: 10) {
                             // 화랑이 아이콘에 달리는 무늬(랜드마크 심볼).
                             Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                                 .foregroundStyle(Color(hex: "#D94772"))
                                 .frame(width: 36, height: 36)
                                 .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(accessoryName(accessoryID))
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color.tpInk)
                                 if let landmark = MapHomeGrowthAccessoryCatalog.landmark(for: accessoryID) {
                                     Text("\(countryName(landmark.country)) · \(categoryName(landmark.category))")
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                         .foregroundStyle(Color.tpSecondary)
                                 }
                             }
                             Spacer()
                             if season.equippedAccessory == accessoryID {
                                 Text(language.text("착용 중", "Equipped"))
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                                     .foregroundStyle(Color.tpAccent)
                             }
                             // 지도에서 쓰는 화랑이 아이콘에 이 장식을 단 모습.
@@ -21382,10 +21398,10 @@ private struct MapHomeGrowthSheet: View {
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: isOwned ? candidate.systemImage : "lock.fill")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                             .foregroundStyle(isOwned ? Color(hex: "#D94772") : Color.tpSecondary.opacity(0.5))
                         Text(language == .english ? candidate.englishName : candidate.name)
-                            .font(.system(size: 8, weight: .medium))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -21420,7 +21436,7 @@ private struct MapHomeGrowthSheet: View {
             )
             if history.archives.isEmpty {
                 Text(language.text("아직 보관된 집이 없어요.", "No archived homes yet."))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(history.archives.reversed(), id: \.year) { archive in
@@ -21431,15 +21447,15 @@ private struct MapHomeGrowthSheet: View {
                             .frame(width: 42, height: 42)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: "\(archive.year)")
-                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.tpInk)
                             Text("Lv.\(archive.level) · \(archive.chosenEvolutions.count) \(language.text("진화", "evolutions"))")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         Spacer()
                         Text("\(archive.landPlots.count) \(language.text("땅", "plots"))")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     .padding(10)
@@ -21452,10 +21468,10 @@ private struct MapHomeGrowthSheet: View {
     private func sectionTitle(_ title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             Text(subtitle)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
     }
@@ -21467,7 +21483,7 @@ private struct MapHomeGrowthSheet: View {
                 subtitle: language.text("레벨·보상·저장 형식을 임의로 바꿔 기능을 시험해요", "Change level, rewards, and storage shape to test")
             )
             Text(language.text("집 레벨", "Home level"))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             testStepper(
                 value: "Lv.\(season.level)",
@@ -21477,7 +21493,7 @@ private struct MapHomeGrowthSheet: View {
                 largeUp: { setTestLevel(season.level + 10) }
             )
             Text(language.text("연속 달성일", "Streak days"))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             testStepper(
                 value: language.text("\(season.streak)일", "\(season.streak) days"),
@@ -21487,10 +21503,10 @@ private struct MapHomeGrowthSheet: View {
                 largeUp: { adjustTestStreak(7) }
             )
             Text(language.text("연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.", "Each multiple of 7 streak days adds a weekly reward."))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             Text(language.text("레벨 바로 가기", "Level presets"))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                 ForEach([1, 100, 200, 300, MapHomeGrowthPolicy.maximumLevel(year: season.year), 366], id: \.self) { level in
@@ -21498,18 +21514,18 @@ private struct MapHomeGrowthSheet: View {
                 }
             }
             Text(language.text("보상·연속", "Rewards and streak"))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
                 testButton(language.text("보상 +1", "Reward +1")) { addTestRewards(streakDays: 0) }
                 testButton(language.text("연속 +7일(보상 +1)", "Streak +7 (reward +1)")) { addTestRewards(streakDays: 7) }
             }
             Text(language.text("저장 형식", "Storage shape"))
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             testButton(language.text("이전 형식으로 저장 후 다시 읽기", "Save in the old shape and reload")) { saveLegacyShape() }
             Text(language.text("2026은 365일이라 최대 365입니다. 366은 그림 미리보기용이고, 다음 기록 때 365로 돌아갑니다.", "2026 has 365 days, so the cap is 365. Lv.366 is an artwork preview and returns to the cap on the next record."))
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
     }
@@ -21526,7 +21542,7 @@ private struct MapHomeGrowthSheet: View {
             testButton("−\(value.contains("일") || value.contains("days") ? 7 : 10)", action: large)
             testButton("−1", action: small)
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .frame(minWidth: 72)
                 .monospacedDigit()
@@ -21549,7 +21565,7 @@ private struct MapHomeGrowthSheet: View {
     private func testButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
@@ -21730,7 +21746,7 @@ struct MapHomeAttributionSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("지도 출처", "Map attribution"))
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             attributionRow("OpenFreeMap", "© OpenMapTiles · Data from OpenStreetMap")
             attributionRow(
@@ -21740,7 +21756,7 @@ struct MapHomeAttributionSheet: View {
             attributionRow(language.text("지도 표시", "Map rendering"), "MapLibre Native")
             Link(destination: URL(string: "https://www.openstreetmap.org/copyright")!) {
                 Label(language.text("OpenStreetMap 저작권 보기", "OpenStreetMap copyright"), systemImage: "arrow.up.right.square")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
             }
             .tint(Color.tpAccent)
             Spacer(minLength: 0)
@@ -21753,10 +21769,10 @@ struct MapHomeAttributionSheet: View {
     private func attributionRow(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
             Text(text)
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
                 .foregroundStyle(Color.tpInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -21976,7 +21992,7 @@ struct MapHomePinPreviewHost: View {
     private var hostBoundsSample: some View {
         VStack(spacing: 6) {
             Text("지도 호스트 \(Int(MapHomePlacePinLayout.appleHomeHostWidth))×\(Int(MapHomePlacePinLayout.appleHomeHostHeight))")
-                .font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
             marker(showsCatAtHome: true, weather: true)
                 .frame(width: MapHomePlacePinLayout.appleHomeHostWidth, height: MapHomePlacePinLayout.appleHomeHostHeight)
                 .overlay { Rectangle().stroke(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }
@@ -21986,7 +22002,7 @@ struct MapHomePinPreviewHost: View {
     /// 지도 레이어가 그리는 연봉 카운터 자리. 좌표(십자선 중심)에서 상수만큼 위.
     private var salaryCounterMock: some View {
         Text("0원")
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 7)

@@ -1239,7 +1239,7 @@ struct MapHomeTimeSidebar: View {
                     } label: {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "questionmark")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                                 .foregroundStyle(Color.tpInk)
                                 .frame(width: 26, height: 26)
                                 .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
@@ -1247,7 +1247,7 @@ struct MapHomeTimeSidebar: View {
                                 .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
                             if group.count > 1 {
                                 Text("\(group.count)")
-                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 4)
                                     .background(Color.tpReferenceBlue, in: Capsule())
@@ -2291,7 +2291,7 @@ Group {
                                                     }
                                                 } label: {
                                                     Label(category.localizedTitle(language), systemImage: category.systemImage)
-                                                        .font(.system(size: 11, weight: .semibold))
+                                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                                                         .lineLimit(1)
                                                         .minimumScaleFactor(0.72)
                                                         .frame(maxWidth: .infinity, minHeight: 44)

@@ -89,7 +89,12 @@ struct MapHomeNLEClipEditor: View {
         GeometryReader { proxy in
             let spacing: CGFloat = 12
             let headerHeight: CGFloat = 16
-            let railHeight = max(220, proxy.size.height - (44 + headerHeight + 26 + 44 + spacing * 3 + 4))
+            let railHeight = max(
+                220,
+                proxy.size.height
+                    - (Self.headerRowHeight + headerHeight + Self.selectionRowHeight
+                        + Self.toolbarHeight + spacing * 3 + 4)
+            )
             let bleed = Self.railBleed
             let railWidth = proxy.size.width + bleed * 2
             VStack(spacing: spacing) {
@@ -120,6 +125,10 @@ struct MapHomeNLEClipEditor: View {
     private static let railBleed: CGFloat = 14
     /// 클립 경계를 '다듬기'로 받아 주는 손가락 여유. 예전 12pt는 손가락에 너무 좁았다.
     private static let trimReach: CGFloat = 16
+    /// 머리말·선택 요약·도구 막대의 높이. 셋 다 손가락이 닿는 44pt를 지킨다.
+    private static let headerRowHeight: CGFloat = 44
+    private static let selectionRowHeight: CGFloat = 44
+    private static let toolbarHeight: CGFloat = 44
 
     private var header: some View {
         HStack {
@@ -127,7 +136,7 @@ struct MapHomeNLEClipEditor: View {
                 dismiss()
             } label: {
                 Text(language.text("닫기", "Close"))
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpReferenceRose)
                     .padding(.horizontal, 15)
                     .frame(minHeight: 38)
@@ -137,10 +146,12 @@ struct MapHomeNLEClipEditor: View {
             Spacer()
             VStack(spacing: 1) {
                 Text(language.text("클립 편집", "Clip editor"))
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                Text(language.text("대분류 · 센서 원본 · 상세활동", "Main · sensor · details"))
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                Text(headerSubtitle)
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .foregroundStyle(hasChanges ? Color.tpAccent : Color.tpSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Spacer()
             Button {
@@ -153,7 +164,7 @@ struct MapHomeNLEClipEditor: View {
                         Text(language.text("적용", "Apply"))
                     }
                 }
-                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 15)
                 .frame(minHeight: 38)
@@ -169,7 +180,12 @@ struct MapHomeNLEClipEditor: View {
     // MARK: - 세로 타임라인
 
     /// 시각 눈금이 붙는 왼쪽 띠의 너비.
-    private var gutterWidth: CGFloat { 36 }
+    ///
+    /// 줄은 화면 밖까지 넓혀 그리므로(`railBleed`) 눈금 띠도 그만큼 안쪽에서 시작한다.
+    /// 이걸 빼먹으면 30분 눈금 "08:30"의 앞자리가 화면 밖으로 밀려 "30"만 남는다.
+    private var gutterWidth: CGFloat {
+        (rulerLabelEveryMinutes <= 30 ? 46 : 36) + Self.railBleed
+    }
 
     /// 줄 사이 틈.
     private var laneGap: CGFloat { 5 }
@@ -199,7 +215,7 @@ struct MapHomeNLEClipEditor: View {
                 .overlay(alignment: .trailing) {
                     if differingSegmentCount > 0 {
                         Text("\(differingSegmentCount)")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
                             .foregroundStyle(Color.tpAccent)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
@@ -223,7 +239,7 @@ struct MapHomeNLEClipEditor: View {
 
     private func laneTitle(_ text: String, width: CGFloat) -> some View {
         Text(text)
-            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
             .foregroundStyle(Color.tpSecondary)
             .lineLimit(1)
             .minimumScaleFactor(0.7)
@@ -312,7 +328,7 @@ struct MapHomeNLEClipEditor: View {
                         let labelY = min(max(y, 7), size.height - 7)
                         context.draw(
                             Text(isHour ? String(format: "%02d", minute / 60) : Self.minuteLabel(minute))
-                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.tpSecondary),
                             at: CGPoint(x: gutterWidth - 7, y: labelY),
                             anchor: .trailing
@@ -358,12 +374,12 @@ struct MapHomeNLEClipEditor: View {
             if blockHeight >= 26, width > 34 {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(clip.option.title)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     if blockHeight >= 44, width > 78 {
                         Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
                             .opacity(0.88)
                             .lineLimit(1)
                     }
@@ -393,14 +409,15 @@ struct MapHomeNLEClipEditor: View {
     private func trimHandle(isStart: Bool) -> some View {
         RoundedRectangle(cornerRadius: 3, style: .continuous)
             .fill(Color.white)
-            .frame(height: 5)
+            .frame(height: 8)
             .overlay {
+                // 손잡이라는 것을 알아보게 가운데에 짧은 선을 긋는다.
                 Capsule()
                     .fill(Color.tpInk.opacity(0.45))
-                    .frame(width: 16, height: 2)
+                    .frame(width: 22, height: 3)
             }
             .padding(.horizontal, 5)
-            .padding(.vertical, 2)
+            .padding(.vertical, 1)
             .accessibilityLabel(
                 isStart
                     ? language.text("시작 자르기", "Trim start")
@@ -440,7 +457,7 @@ struct MapHomeNLEClipEditor: View {
             .overlay(alignment: .topLeading) {
                 if height >= 18, width > 30 {
                     Text(segment.title)
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                         .foregroundStyle(tint)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -480,7 +497,7 @@ struct MapHomeNLEClipEditor: View {
             .overlay(alignment: .topLeading) {
                 if height >= 15, width > 28 {
                     Text(clip.option.title)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -497,7 +514,7 @@ struct MapHomeNLEClipEditor: View {
                 .fill(Color.tpAccent)
                 .frame(width: width, height: 1.5)
             Text(Self.minuteLabel(playheadMinute))
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .monospaced))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
@@ -527,10 +544,10 @@ struct MapHomeNLEClipEditor: View {
                     .fill(Self.tint(for: clip.option.categoryID))
                     .frame(width: 10, height: 10)
                 Text(clip.option.title)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .lineLimit(1)
                 Text(Self.rangeLabel(clip.startMinute, clip.endMinute))
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
                 if let sensor = sensorSegment(atMinute: clip.startMinute),
                    sensor.categoryID != clip.option.categoryID {
@@ -540,9 +557,9 @@ struct MapHomeNLEClipEditor: View {
                     } label: {
                         HStack(spacing: 3) {
                             Image(systemName: "arrow.uturn.backward")
-                                .font(.system(size: 8, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
                             Text(language.text("센서 \(sensor.title)", "Sensor \(sensor.title)"))
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                                 .lineLimit(1)
                         }
                         .foregroundStyle(Color.tpAccent)
@@ -553,12 +570,12 @@ struct MapHomeNLEClipEditor: View {
                     .buttonStyle(.plain)
                 } else {
                     Text(Self.durationLabel(clip.lengthMinutes, language: language))
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 if clip.isGap {
                     Text(language.text("미확인", "Unconfirmed"))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
                         .background(Color.tpInk.opacity(0.08), in: Capsule())
@@ -566,15 +583,15 @@ struct MapHomeNLEClipEditor: View {
                 }
             } else {
                 Text(language.text("클립을 고르세요", "Select a clip"))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.tpSecondary)
             }
             Spacer(minLength: 0)
             Text(Self.minuteLabel(playheadMinute))
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.tpAccent)
         }
-        .frame(height: 26)
+        .frame(height: Self.selectionRowHeight)
     }
 
     @ViewBuilder
@@ -617,89 +634,114 @@ struct MapHomeNLEClipEditor: View {
                 .fill(tint)
                 .frame(width: 9, height: 9)
             Text(lane)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Text(title)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
                 .lineLimit(1)
             Text(range)
-                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .monospaced))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Button(action: apply) {
                 HStack(spacing: 3) {
                     Image(systemName: "arrow.down.to.line")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                     Text(language.text("반영", "Use"))
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .fixedSize()
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 9)
-                .frame(height: 23)
+                .padding(.horizontal, 12)
+                .frame(minWidth: 64, minHeight: TaptionMenuMetrics.minimumHitSize)
                 .background(Color.tpAccent, in: Capsule())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(language.text("이 구간을 대분류로 반영", "Use this range as main"))
             Button {
                 self.pick = nil
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(Color.tpSecondary)
-                    .frame(width: 20, height: 20)
+                    .frame(width: TaptionMenuMetrics.minimumHitSize, height: TaptionMenuMetrics.minimumHitSize)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(language.text("집기 취소", "Cancel pick"))
         }
     }
 
     // MARK: - 도구
 
+    /// 도구 막대. 아이콘만 두면 무엇을 하는 단추인지 눌러 봐야 알 수 있어 이름을 함께 적는다.
+    /// 확대는 두 손가락만으로는 찾기 어려워서 단추로도 돌 수 있게 했다.
     private var toolbar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             categoryMenu
-            toolButton(
-                title: "",
+            NLEToolButton(
                 systemImage: "scissors",
-                isEnabled: splitTarget != nil,
-                label: language.text("가르기", "Split")
+                title: language.text("가르기", "Split"),
+                isEnabled: splitTarget != nil
             ) {
                 splitAtPlayhead()
             }
-            toolButton(
-                title: "",
+            NLEToolButton(
                 systemImage: "trash",
-                isEnabled: selectedClip != nil && selectedClip?.isGap == false,
-                label: language.text("지우기", "Clear")
+                title: language.text("지우기", "Clear"),
+                isEnabled: canDelete
             ) {
                 deleteSelection()
             }
-            toolButton(
-                title: "",
+            NLEToolButton(
                 systemImage: "arrow.uturn.backward",
+                title: language.text("되돌리기", "Undo"),
                 isEnabled: !undoStack.isEmpty,
-                label: language.text("되돌리기", "Undo")
+                isHighlighted: true
             ) {
                 undo()
             }
-            toolButton(
-                title: "",
+            NLEToolButton(
                 systemImage: "arrow.uturn.forward",
+                title: language.text("다시", "Redo"),
                 isEnabled: !redoStack.isEmpty,
-                label: language.text("다시", "Redo")
+                isHighlighted: true
             ) {
                 redo()
             }
-            Spacer(minLength: 0)
-            toolButton(
-                title: "",
-                systemImage: "arrow.up.and.down",
-                isEnabled: true,
-                label: language.text("전체 보기", "Fit whole day")
+            NLEToolButton(
+                systemImage: "plus.magnifyingglass",
+                title: zoomButtonTitle,
+                isEnabled: containerHeight > 1
             ) {
-                fitWholeDay()
+                cycleZoom()
             }
         }
-        .frame(height: 44)
+        .frame(height: Self.toolbarHeight)
+    }
+
+    private var zoomButtonTitle: String {
+        // 아직 줄 높이를 재기 전에는 배율을 알 수 없다. 이름이 깜빡이지 않게 기본값을 쓴다.
+        guard containerHeight > 1 else { return language.text("확대", "Zoom") }
+        return NLEZoomPolicy.nextTitle(
+            currentMinuteHeight: minuteHeight,
+            fitMinuteHeight: NLEZoomPolicy.fitMinuteHeight(height: containerHeight),
+            language: language
+        )
+    }
+
+    /// 다음 배율로 벌리거나 하루 전체로 되돌린다. 지금 고른 클립을 화면 가운데에 둔다.
+    private func cycleZoom() {
+        guard containerHeight > 1 else { return }
+        let fit = NLEZoomPolicy.fitMinuteHeight(height: containerHeight)
+        let level = NLEZoomPolicy.nextLevel(currentMinuteHeight: minuteHeight, fitMinuteHeight: fit)
+        let next = min(max(fit * level, 0.22), 12)
+        let anchor = selectedClip.map { Double($0.startMinute + $0.lengthMinutes / 2) } ?? Double(playheadMinute)
+        minuteHeight = next
+        setVisibleStart(anchor - Double(containerHeight) / Double(next) / 2)
+        UISelectionFeedbackGenerator().selectionChanged()
     }
 
     private var categoryMenu: some View {
@@ -712,47 +754,20 @@ struct MapHomeNLEClipEditor: View {
                 }
             }
         } label: {
-            HStack(spacing: 5) {
+            VStack(spacing: 2) {
                 Image(systemName: "square.grid.2x2")
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 Text(language.text("분류", "Category"))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
             .foregroundStyle(Color.tpInk)
-            .padding(.horizontal, 12)
-            .frame(height: 36)
-            .background(Color.tpSurface, in: Capsule())
-            .overlay { Capsule().stroke(Color.tpLine, lineWidth: 1) }
+            .frame(minWidth: 52, minHeight: TaptionMenuMetrics.minimumHitSize)
+            .contentShape(Rectangle())
         }
         .disabled(activeClip == nil)
         .opacity(activeClip == nil ? 0.45 : 1)
-    }
-
-    private func toolButton(
-        title: String,
-        systemImage: String,
-        isEnabled: Bool,
-        label: String? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: systemImage)
-                if !title.isEmpty {
-                    Text(title).lineLimit(1)
-                }
-            }
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
-            .foregroundStyle(Color.tpInk)
-            .padding(.horizontal, title.isEmpty ? 0 : 10)
-            .frame(minWidth: 40, minHeight: 36)
-            .background(Color.tpSurface, in: Capsule())
-            .overlay { Capsule().stroke(Color.tpLine, lineWidth: 1) }
-        }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.4)
-        .accessibilityLabel(label ?? title)
     }
 
     // MARK: - 제스처
@@ -908,6 +923,43 @@ struct MapHomeNLEClipEditor: View {
         track.clips.contains(where: \.isDirty) || subTrack.clips.contains(where: \.isDirty)
     }
 
+    /// 고쳐서 아직 저장하지 않은 클립 수. '적용'이 흐려 있는 이유를 알려 주는 데 쓴다.
+    private var dirtyClipCount: Int {
+        track.clips.filter(\.isDirty).count + subTrack.clips.filter(\.isDirty).count
+    }
+
+    /// 머리말 아래 한 줄. 지금 상태에서 다음에 할 일을 적는다.
+    private var headerSubtitle: String {
+        if dirtyClipCount > 0 {
+            return language.text(
+                "바뀐 클립 \(dirtyClipCount)개 · 적용하면 저장",
+                "\(dirtyClipCount) changed · Apply to save"
+            )
+        }
+        if isFittedToWholeDay {
+            // 하루 전체가 한눈에 들어오는 배율에서는 클립이 몇 pt라 경계를 잡을 수 없다.
+            // 손가락을 벌려야 편집이 된다는 사실을 이 자리에서 알려 준다.
+            return language.text(
+                "두 손가락으로 벌려 확대 · 경계를 잡아 자르기",
+                "Pinch to zoom · grab an edge to trim"
+            )
+        }
+        return language.text("대분류 · 센서 원본 · 상세활동", "Main · sensor · details")
+    }
+
+    private var isFittedToWholeDay: Bool {
+        NLEZoomPolicy.isFitted(
+            currentMinuteHeight: minuteHeight,
+            fitMinuteHeight: NLEZoomPolicy.fitMinuteHeight(height: containerHeight)
+        )
+    }
+
+    /// 지우기가 향하는 클립. 상세활동을 골랐으면 상세활동이 먼저다.
+    private var canDelete: Bool {
+        if activeSubClip != nil { return true }
+        return selectedClip.map { !$0.isGap } ?? false
+    }
+
     private var categoryOptions: [MapHomeSidebarMajorCategory] {
         MapHomeSidebarMajorCategory.all(categoryColors: model.settings.mapCategoryColors)
             + model.settings.mapUserActivityCategories.map(MapHomeSidebarMajorCategory.custom)
@@ -1028,12 +1080,6 @@ struct MapHomeNLEClipEditor: View {
         return id
     }
 
-    private func fitWholeDay() {
-        guard containerHeight > 1 else { return }
-        minuteHeight = max(0.22, containerHeight / CGFloat(NLETrack.dayMinutes))
-        visibleStartMinute = 0
-    }
-
     private func resolveDragMode(
         at point: CGPoint,
         geometry: NLETimelineGeometry,
@@ -1042,7 +1088,12 @@ struct MapHomeNLEClipEditor: View {
         let minute = Int(geometry.minute(forY: point.y).rounded())
         // 왼쪽 눈금 띠를 끌면 재생 헤드가 움직인다.
         if point.x <= gutterWidth { return .scrub }
-        if abs(geometry.y(forMinute: Double(playheadMinute)) - point.y) <= 9 { return .scrub }
+        // 재생 헤드 선을 잡으면 어느 줄에서든 헤드가 따라온다. 다만 손가락이 클립 경계에
+        // 닿아 있으면 자르기가 먼저다. 경계에서 가르고 바로 다듬는 흐름이 막히면 안 된다.
+        if abs(geometry.y(forMinute: Double(playheadMinute)) - point.y) <= 9,
+           !isNearClipBoundary(at: point, geometry: geometry) {
+            return .scrub
+        }
         let lanes = NLELaneWidths(total: width, gutter: gutterWidth, gap: laneGap)
         let sensorX = gutterWidth + lanes.main + laneGap
         let detailX = sensorX + lanes.sensor + laneGap
@@ -1086,6 +1137,14 @@ struct MapHomeNLEClipEditor: View {
             return boundary
         }
         return .move(lane: .main, id: clip.id, originMinute: clip.startMinute, grabMinute: minute)
+    }
+
+    /// 손가락이 어느 클립의 시작·끝 가까이에 있는가. 경계를 잡으려는 손인지 가리는 데 쓴다.
+    private func isNearClipBoundary(at point: CGPoint, geometry: NLETimelineGeometry) -> Bool {
+        track.clips.contains { clip in
+            abs(point.y - geometry.y(forMinute: Double(clip.startMinute))) <= Self.trimReach
+                || abs(point.y - geometry.y(forMinute: Double(clip.endMinute))) <= Self.trimReach
+        }
     }
 
     /// 하루 전체를 볼 때처럼 클립이 짧아 자기 손잡이를 둘 수 없으면,
@@ -1218,14 +1277,16 @@ struct MapHomeNLEClipEditor: View {
     }
 
     private func deleteSelection() {
-        pushUndo()
+        // 지울 것이 없는데 되돌리기 칸을 쌓으면, 눌러도 화면이 그대로인 '빈 되돌리기'가 생긴다.
         if let selectedSubClipID, let sub = subTrack.clip(selectedSubClipID) {
             // 상세활동을 지우면 그 자리는 그 구간의 대분류로 돌아간다.
+            pushUndo()
             subTrack.delete(sub.id, fallback: sub.parent.fillOption)
             self.selectedSubClipID = nil
             return
         }
         guard let clip = selectedClip, !clip.isGap else { return }
+        pushUndo()
         track.delete(clip.id)
         selectedClipID = track.clip(atMinute: clip.startMinute)?.id
     }

@@ -41,16 +41,16 @@ private struct MapHomeCounterRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: kind.systemImage)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
                 .frame(width: 12)
             Text(kind.badgeTitle(language))
-                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
             Text(text)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
                 .contentTransition(.numericText())
@@ -132,10 +132,10 @@ private struct MapHomeCounterPill: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: kind.systemImage)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
             Text(text)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
                 .contentTransition(.numericText())

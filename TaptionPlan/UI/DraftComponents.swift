@@ -816,7 +816,7 @@ private struct PreviewActionCat: View {
         switch action {
         case .sleeping:
             Text(phase.isMultiple(of: 2) ? "z" : "zZ")
-                .font(.system(size: 10, weight: .black, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .black, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
                 .offset(x: 22, y: -15)
         case .eating:
@@ -834,7 +834,7 @@ private struct PreviewActionCat: View {
         case .startled:
             Image(systemName: "exclamationmark")
                 .accessibilityHidden(true)
-                .font(.system(size: 11, weight: .black))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .black))
                 .foregroundStyle(Color.tpNow)
                 .offset(x: 21, y: -17)
         case .ballPlay:
@@ -858,7 +858,7 @@ private struct PreviewActionCat: View {
                 )
                 Image(systemName: "fish.fill")
                     .accessibilityHidden(true)
-                    .font(.system(size: 9))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9))))
                     .foregroundStyle(Color.tpPlaceDark)
                     .offset(
                         x: 21,
@@ -869,7 +869,7 @@ private struct PreviewActionCat: View {
         case .grooming:
             Image(systemName: "sparkles")
                 .accessibilityHidden(true)
-                .font(.system(size: 8, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
                 .foregroundStyle(Color.tpWeatherDark)
                 .offset(x: 20, y: -14)
         default:

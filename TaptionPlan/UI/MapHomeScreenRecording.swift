@@ -399,10 +399,10 @@ struct MapHomeRecordingOptionsSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("재생 화면 녹화", "Record playback"))
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
             Text(language.text("지도는 항상 보입니다. 영상에 넣을 항목을 고르세요.", "The map is always shown. Choose what to include."))
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             permissionRow
             toggle(language.text("시간 사이드바", "Time sidebar"), $layers.timeSidebar)
@@ -416,7 +416,7 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("연봉 카운터", "Salary counter"), $layers.salary)
             Button(action: onStart) {
                 Label(language.text("녹화하며 재생", "Record and play"), systemImage: "record.circle")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
                     .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -443,20 +443,20 @@ struct MapHomeRecordingOptionsSheet: View {
             Text(photoAllowed
                  ? language.text("사진 저장 권한 허용됨 · 화면 녹화 권한은 녹화 시작 때 시스템이 묻습니다", "Photo saving allowed · The system asks for screen recording when it starts")
                  : language.text("사진 저장 권한이 필요합니다", "Photo saving permission is needed"))
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             Spacer(minLength: 0)
             if !photoAllowed, photoStatus != .notDetermined,
                let url = URL(string: UIApplication.openSettingsURLString) {
                 Button(language.text("설정 열기", "Open Settings")) { UIApplication.shared.open(url) }
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
             }
         }
     }
 
     private func toggle(_ title: String, _ isOn: Binding<Bool>) -> some View {
         Toggle(title, isOn: isOn)
-            .font(.system(size: 15, weight: .semibold, design: .rounded))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
             .tint(Color.tpAccent)
     }
 }

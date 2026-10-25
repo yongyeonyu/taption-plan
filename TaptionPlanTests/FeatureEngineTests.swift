@@ -29770,6 +29770,51 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 0.5), 36, accuracy: 0.01)
     }
 
+    /// 확대 단추는 '전체 → 4배 → 12배 → 전체'로 돈다.
+    /// 하루 전체에서는 1시간짜리 클립이 몇 pt라 경계를 잡을 수 없어서, 한 단추로 편집 가능한 배율까지 간다.
+    func testZoomButtonCyclesWholeDayFourTimesAndTwelveTimes() {
+        let fit = NLEZoomPolicy.fitMinuteHeight(height: 400)
+        XCTAssertEqual(fit, 400 / 1_440, accuracy: 0.0001)
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit, fitMinuteHeight: fit), 4)
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 4, fitMinuteHeight: fit), 12)
+        // 가장 크게 벌린 뒤에는 하루 전체로 돌아온다.
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 12, fitMinuteHeight: fit), 1)
+        // 손가락으로 어중간하게 벌려 둔 상태에서도 다음 칸으로 넘어간다.
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 2, fitMinuteHeight: fit), 4)
+    }
+
+    /// 단추에 적히는 이름은 '누르면 될 일'이다. 지금 상태가 아니라 다음 상태를 적는다.
+    func testZoomButtonNamesTheNextStep() {
+        let fit = NLEZoomPolicy.fitMinuteHeight(height: 400)
+        XCTAssertEqual(
+            NLEZoomPolicy.nextTitle(currentMinuteHeight: fit, fitMinuteHeight: fit, language: .korean),
+            "확대"
+        )
+        XCTAssertEqual(
+            NLEZoomPolicy.nextTitle(currentMinuteHeight: fit * 4, fitMinuteHeight: fit, language: .korean),
+            "더 확대"
+        )
+        XCTAssertEqual(
+            NLEZoomPolicy.nextTitle(currentMinuteHeight: fit * 12, fitMinuteHeight: fit, language: .korean),
+            "전체"
+        )
+    }
+
+    /// 줄 높이가 0에 가까워도 배율이 0이 되지 않는다. 0으로 나누면 화면이 사라진다.
+    func testZoomFitKeepsAFloorWhenTheRailHasNoHeight() {
+        XCTAssertEqual(NLEZoomPolicy.fitMinuteHeight(height: 0), 0.22, accuracy: 0.0001)
+        XCTAssertEqual(NLEZoomPolicy.fitMinuteHeight(height: 1_440), 1, accuracy: 0.0001)
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: 1, fitMinuteHeight: 0), 4)
+    }
+
+    /// '하루 전체를 보고 있다'는 판단은 20% 여유까지만 인정한다. 조금 벌린 상태에서 안내 문구가 남으면 안 된다.
+    func testZoomReportsWholeDayOnlyNearTheFitScale() {
+        let fit = NLEZoomPolicy.fitMinuteHeight(height: 400)
+        XCTAssertTrue(NLEZoomPolicy.isFitted(currentMinuteHeight: fit, fitMinuteHeight: fit))
+        XCTAssertTrue(NLEZoomPolicy.isFitted(currentMinuteHeight: fit * 1.2, fitMinuteHeight: fit))
+        XCTAssertFalse(NLEZoomPolicy.isFitted(currentMinuteHeight: fit * 1.3, fitMinuteHeight: fit))
+    }
+
     /// 경계를 밀면 양쪽 클립이 함께 움직이고 빈 시간은 생기지 않는다(롤 편집).
     /// 뒤쪽 클립의 시작을 위로 밀면 앞 클립이 줄고, 아래로 밀면 앞 클립이 늘어난다.
     func testRollMovesBothClipsAtTheSharedBoundary() {

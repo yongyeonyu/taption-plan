@@ -2028,13 +2028,13 @@ struct ReviewView: View {
                 .foregroundStyle(Color.tpInk)
         }
         return Text(parts.weather)
-            .font(.system(size: 8))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8))))
             .foregroundStyle(Color.tpInk)
             + Text(" \(parts.temperature)°")
                 .font(.taption(size: 7, weight: .semibold))
                 .foregroundStyle(Color.tpInk)
             + Text(" \(parts.air)")
-                .font(.system(size: 5))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(5))))
                 .foregroundStyle(Color.tpInk)
     }
 

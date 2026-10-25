@@ -13,12 +13,47 @@ enum MapHomeWBSTripStyle {
     static let routeDash: [NSNumber] = [4, 3]
 }
 
+/// 글자 크기 8단계. 화면마다 흩어져 있던 27가지 크기를 이 여덟 값으로 모은다.
+/// 새 코드는 이 이름을 쓰고, 예전 호출부는 `snapped`가 가까운 단계로 맞춘다.
+enum TaptionType {
+    static let caption: CGFloat = 11
+    static let label: CGFloat = 12
+    static let body: CGFloat = 14
+    static let bodyStrong: CGFloat = 15
+    static let title: CGFloat = 17
+    static let headline: CGFloat = 20
+    static let display: CGFloat = 24
+    static let hero: CGFloat = 34
+
+    static let steps: [CGFloat] = [caption, label, body, bodyStrong, title, headline, display, hero]
+
+    /// 8단계 중 가장 가까운 값으로 맞춘다.
+    /// 11pt 아래는 올리고(읽히지 않는 크기), 24pt 위는 그대로 둔다(아이콘·큰 숫자라 단계에 묶을 이유가 없다).
+    static func snapped(_ value: CGFloat) -> CGFloat {
+        guard value.isFinite else { return body }
+        if value <= caption { return caption }
+        if value >= display { return value }
+        return steps.min { abs($0 - value) < abs($1 - value) } ?? value
+    }
+
+    /// 시스템 글자 크기 설정을 반영한다.
+    ///
+    /// 고정 크기만 쓰던 화면이라 설정을 키워도 글자가 그대로였다. 접근성 최대 크기에서
+    /// 고정 높이 레이아웃이 깨지지 않도록 1.3배에서 멈춘다(전체 레이아웃 감사는 별도 작업).
+    static func scaled(_ size: CGFloat, textStyle: UIFont.TextStyle = .body) -> CGFloat {
+        let scaled = UIFontMetrics(forTextStyle: textStyle).scaledValue(for: size)
+        return min(scaled, size * 1.3)
+    }
+}
+
 extension Font {
+    /// 예전 호출부가 넘기던 값에는 +2가 숨어 있었다(12를 넘기면 14로 그려졌다).
+    /// 그 +2를 여기서 더한 뒤 8단계에 맞추므로, 이미 단계에 있던 글자는 크기가 바뀌지 않는다.
     static func taption(
         size: CGFloat,
         weight: Font.Weight = .regular
     ) -> Font {
-        .system(size: size + 2, weight: weight)
+        .system(size: TaptionType.scaled(TaptionType.snapped(size + 2)), weight: weight)
     }
 }
 
@@ -188,6 +223,23 @@ enum TaptionMenuMetrics {
     static let compactButtonVerticalPadding: CGFloat = 6
     static let sectionHeaderVerticalPadding: CGFloat = 8
     static let scaleControlVerticalPadding: CGFloat = 4.5
+}
+
+/// 메뉴 행 왼쪽의 아이콘 칩.
+///
+/// 예전에는 모든 행이 같은 로즈색이라 색이 아무 정보도 담지 못했다. 행마다 분류 색을
+/// 넘겨, 무엇을 여는 행인지 색으로 먼저 읽히게 한다.
+struct MapHomeMenuIconChip: View {
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 32, height: 32)
+            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
 }
 
 extension View {

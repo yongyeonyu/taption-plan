@@ -340,7 +340,7 @@ struct AppShellView: View {
                         .scaledToFit()
                         .frame(width: 230, height: 230)
                     Text("BOKKI Plan")
-                        .font(.system(size: 25, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(25)), weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     ProgressView(value: initialLaunchProgress, total: 1)
                         .progressViewStyle(.linear)
@@ -359,9 +359,9 @@ struct AppShellView: View {
                             )
                         )
                     Text("\(Int((initialLaunchProgress * 100).rounded()))%")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
                     Text(launchStatusText)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.85))
                         .foregroundStyle(.white.opacity(0.82))
                 }
@@ -835,7 +835,7 @@ private struct AppLockPINSheet: View {
                 .keyboardType(.numberPad)
                 .textContentType(.password)
                 .multilineTextAlignment(.center)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 18)
                 .frame(width: 210, height: 48)
@@ -908,7 +908,7 @@ private struct RequiredPermissionGateView: View {
         VStack(alignment: .leading, spacing: TaptionSpacing.regular) {
             Image(systemName: "sensor.fill")
                 .accessibilityHidden(true)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(30)), weight: .bold))
                 .foregroundStyle(Color.tpReferenceRose)
             Text(text("필수 권한 설정", "Required permissions"))
                 .font(.taption(size: 27, weight: .black))
@@ -935,7 +935,7 @@ private struct RequiredPermissionGateView: View {
         return HStack(spacing: 12) {
             Image(systemName: metadata(permission).icon)
                 .accessibilityHidden(true)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold))
                 .foregroundStyle(
                     missing ? Color.tpReferenceRose : Color.tpReferenceMint
                 )
@@ -978,7 +978,7 @@ private struct RequiredPermissionGateView: View {
             } else {
                 Image(systemName: "checkmark.circle.fill")
                     .accessibilityLabel(text("허용됨", "Granted"))
-                    .font(.system(size: 22))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22))))
                     .foregroundStyle(Color.tpReferenceMint)
             }
         }
@@ -1338,7 +1338,7 @@ struct TaptionProAccessView: View {
                             dismiss()
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                                 .frame(width: 40, height: 40)
                                 .background(
                                     Color.black.opacity(0.06),
@@ -1352,7 +1352,7 @@ struct TaptionProAccessView: View {
                 }
 
                 Image(systemName: "sparkles")
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(34)), weight: .bold))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .frame(width: 72, height: 72)
                     .background(
@@ -1365,14 +1365,13 @@ struct TaptionProAccessView: View {
 
                 VStack(spacing: TaptionSpacing.cozy) {
                     Text(title)
-                        .font(.system(
-                            size: 25,
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(25)),
                             weight: .bold,
                             design: .rounded
                         ))
                         .foregroundStyle(Color.tpInk)
                     Text(detail)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1501,7 +1500,7 @@ struct TaptionProAccessView: View {
                     controller.startTrial()
                 } label: {
                     Text(text("14일 무료 체험 시작", "Start 14-day free trial"))
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                 }
@@ -1519,7 +1518,7 @@ struct TaptionProAccessView: View {
                         "개발자 체험 14일 초기화",
                         "Reset developer trial for 14 days"
                     ))
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                 }
@@ -1535,14 +1534,14 @@ struct TaptionProAccessView: View {
                 } label: {
                     VStack(spacing: 3) {
                         Text(purchaseTitle)
-                            .font(.system(size: 16, weight: .bold))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                         Text(
                             text(
                                 "한 번 결제 · 자동 갱신 없음",
                                 "One-time purchase · No auto-renewal"
                             )
                         )
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -1552,12 +1551,12 @@ struct TaptionProAccessView: View {
                 Button(text("구매 복원", "Restore purchase")) {
                     Task { await controller.restore() }
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.tpReferenceBlue)
             } else if allowsDismiss {
                 Button(text("계속 사용", "Continue")) { dismiss() }
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpInk)
             }
@@ -1630,11 +1629,11 @@ struct TaptionProAccessView: View {
     private func featureRow(_ icon: String, _ title: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
                 .foregroundStyle(Color.tpReferenceBlue)
                 .frame(width: 24)
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
         }
     }

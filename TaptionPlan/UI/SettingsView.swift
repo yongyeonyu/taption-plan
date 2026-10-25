@@ -563,7 +563,7 @@ struct SettingsView: View {
                 .foregroundStyle(Color.tpSecondary)
             }
             Text(value.report)
-                .font(.system(size: 8, design: .monospaced))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), design: .monospaced))
                 .foregroundStyle(Color.tpInk)
                 .textSelection(.enabled)
                 .lineLimit(12)

@@ -538,8 +538,7 @@ struct MemoDetailView: View {
                                             ? "stop.fill" : "play.fill"
                                     )
                                     .font(
-                                        .system(
-                                            size: 7.5,
+                                        .system(size: TaptionType.scaled(TaptionType.snapped(7.5)),
                                             weight: .bold
                                         )
                                     )
