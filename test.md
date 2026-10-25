@@ -3235,3 +3235,30 @@ P1 결정(남긴다)에 따라 P2로 넘어갔으나, 표를 쪼개기 전에 �
 - 길게 눌러 집어 들기는 몸통에만 적용된다. 경계 다듬기(16pt)와 재생 헤드는 예전처럼 즉시 움직인다.
 - Reorder는 기존 `NLETrack.move`의 밀어내기 규칙을 그대로 쓴다. 클립끼리 자리를 맞바꾸는 스왑 애니메이션이나 다른 원본 구간으로 넘기는 동작은 없다.
 - 자동 스크롤 타이머는 17ms 주기다. 화면 갱신 상한(60Hz)에 맞췄지만 기기 부하에 따라 실제 간격은 조금 늘어날 수 있고, 그만큼 이동 거리도 함께 늘어 속도는 유지된다.
+
+## TFB1025A02 · 빌드 237 내부 배포 (2026-10-25)
+
+- 요청 ID: `TFB1025A02`
+- 무엇을: `392b1ba`(NLE1025R20 — 길게 눌러 Reorder·360pt/s 자동 스크롤)와 그 아래 `14ce232`·`adc492a`(UXP1024D20 8건)를 함께 담아 237로 배포했다. 236에는 이 10건이 모두 없었다.
+
+### 1. 결과 (전부 실측)
+| 단계 | 결과 |
+| --- | --- |
+| 사전 점검 | **9/9 OK** (`builds_readable: 최고 빌드 236 (VALID) · 200건 조회`, 그룹 `TP Taption Plan 내부 테스트`) |
+| 빌드 번호 | 236 → 237, plist 4곳 + `CURRENT_PROJECT_VERSION` 8곳 모두 237(236 잔여 0) |
+| 아카이브 | `ARCHIVE SUCCEEDED` (`TaptionPlan237.xcarchive`) |
+| export | `TaptionPlan.ipa`, `2개 번들 모두 237` (Watch·WatchWidget은 별도 target) |
+| 업로드 | `No errors uploading`, Delivery UUID `9e3f5e6b-9dee-4aeb-a3e9-5c3cf22a5db5`, 44,563,737바이트 / 15.98초(2.8MB/s) |
+| 처리 | 21:08 업로드 → **21:11:44 `VALID`** |
+| 그룹 | 내부 그룹 연결 `buildAttached: true`, 테스터 1명, **`ok: true`** |
+| 비밀 노출 | 로그에 개인키 내용 출력 없음(경로·바이트 수만) |
+
+로그: `build/validation/TFB1025A02/{preflight.json,release.log,archive.log,export.log,upload.log,processing.log,attach.log,verify.log,testflight-report.json}`
+
+### 2. 관찰
+- 아카이브 단계가 20:47 → 21:06으로 약 19분 걸렸다(직전 236 배포보다 길다). 실패는 아니었고 export·업로드·처리는 정상이었다. 원인은 이번에 확인하지 않았다.
+- 전체 소요는 20:46 시작 → 21:11 완료로 약 25분이다.
+- 이 빌드는 기기에 **TestFlight로 설치**해 확인해야 한다. 앞서 설치한 Debug 빌드는 236이고, `devicectl`로 넣은 개발 서명 빌드라 TestFlight 237로 덮어써야 배포본과 같은 상태가 된다.
+
+### 3. 다음
+- 대표가 237을 설치해 UXP1024D20 7항목과 NLE1025R20 2항목(집어 들기·자동 스크롤)을 확인한다. 통과하면 `temp.md`의 두 블록을 지운다.
