@@ -174,3 +174,57 @@
 1. 위 "우선 확인" 섹션에서 **[확인]** 항목과 데이터 유실 항목부터 줄 단위로 다시 읽어 재현 조건을 확정합니다.
 2. 범위 밖 파일을 2,000줄 단위로 나눠 다시 리뷰합니다. 특히 `ScheduleView.swift`, `AppModel.swift`, `WatchWorkoutManager.swift`입니다.
 3. 수정은 항목별로 `temp.md`에 요청 ID를 만든 뒤 진행합니다 (AGENTS.md 규칙).
+
+---
+
+# 2026-10-26 · 다방면 재검토 (REV1026A01)
+
+이번 회차는 읽기만 하지 않고 **측정 → 확인 → 수정**까지 했다. 고친 것은 5건이고, 나머지는 보고만 한다.
+
+## 1. 측정한 일곱 축
+
+| 축 | 방법 | 결과 |
+| --- | --- | --- |
+| 구조·경계 | `architecture-metrics.py --check`, `check-app-engine-import-boundary.sh` | 통과. `MapHomeView` 22,057 / 상한 22,072 |
+| 빌드 | Debug 빌드 로그의 `: warning:` | 경고 0 · 오류 0 |
+| 위험 패턴 | `try!` `as!` `fatalError` `preconditionFailure` `unsafelyUnwrapped` `main.sync` `print(` `TODO` `@unchecked Sendable` | 2절 |
+| 접근성 | `Button { } label: { }`의 label 블록을 중괄호 짝으로 잘라, 글자가 없고 `accessibilityLabel`도 없는 단추를 셈 | 후보 11 → 실제 3건 |
+| 지역화 | `Text("한글")`·`Label("한글")` 중 `language.text`를 거치지 않은 것 | 292건(6개 화면) |
+| 테스트 | `sleep(`, `XCTSkip`, 전체 실행 | 1,637건 중 1,635 통과 · 건너뜀 2, UI 테스트 `sleep` 18 |
+| 렌더 비용 | body 블록 안의 `Date()`/`Date.now`, `.id(UUID())` | `.id(UUID())` 0건, body 안 `Date.now` 3건(타임라인의 오늘 판정) — 문제 없음 |
+
+## 2. 위험 패턴 측정값
+
+| 패턴 | 건수 | 판정 |
+| --- | --- | --- |
+| `try!` | 0 | — |
+| `as!` | 2 | **고침**(3절 1·2) |
+| `fatalError` | 1 | `required init?(coder:)` — 스토리보드를 쓰지 않는 선언, 표준 |
+| `preconditionFailure` | 4 | 도달 불가. 인자로 받는 `cancellationCheck`가 빈 클로저(`{}`)라 던질 수 없다 |
+| `.unsafelyUnwrapped` | 0 | — |
+| `DispatchQueue.main.sync` | 0 | — |
+| `print(` | 1 | 진단 로거가 stdout으로 내보내는 줄, 의도된 것 |
+| `TODO/FIXME/HACK` | 0 | — |
+| `@unchecked Sendable` | 23 | 16건은 잠금·격리(`NSLock`·`OSAllocatedUnfairLock`·`@MainActor`)를 동반. 나머지 7건 확인 — 모두 `let` 프레임워크 객체만 든 무상태 래퍼라 정당 |
+| `Task.detached` | 29 | 설계 선택, 이번 검토 대상 아님 |
+
+## 3. 고친 것
+
+| # | 어디 | 무엇 | 왜 |
+| --- | --- | --- | --- |
+| 1 | `MapHomeView.swift` · `MapHomeAppleCameraCommand.center` | `as!` → `if let … as?` | 캐스팅이 실패하면 앱이 종료됐다. 실패해도 거리만 못 바꾸고 중심 이동은 하도록 |
+| 2 | 같은 파일 · `.heading` | `as!` → `guard let … else { return }` | 같음. 카메라를 못 얻으면 각도만 못 바꾼다 |
+| 3 | 지도 검색창 지우기 단추 | 누름 영역 17 → 45pt(`taptionHitOutset`), 이름 `검색 지우기` | 그림만 있는 단추라 손가락이 닿지 않았고 VoiceOver가 읽을 이름이 없었다 |
+| 4 | 마커 편집 색 단추 6개 | 이름 `색 N`, 고른 것에 `isSelected`, 누름 영역 24 → 44pt | 색만 그린 단추는 이름이 아예 없어 VoiceOver가 "버튼"만 읽었다 |
+| 5 | 마커 편집 기호 단추 5개 | 고른 것에 `isSelected`, 누름 영역 34 → 44pt | 이름은 SF Symbol이 주지만 선택 상태를 알릴 수 없었다 |
+
+## 4. 보고만 하는 것 (이번에 고치지 않음)
+
+1. **영어 설정에서 화면 절반이 한국어다.** 지역화 통로가 둘(`AppLanguagePreference.text`, `MapHomeLanguage.text`)인데 적용이 지도·알림에만 됐다. 하드코딩 한글 292건 — `SettingsView` 57 · `DetailViews` 48 · `ScheduleView` 47 · `AddPlanSheet` 41 · `GoalsView` 34 · `ReviewView` 31. 6개 파일 292곳이라 배포 직전 빌드에 넣지 않았다. 통로를 하나로 정하고(권장 `AppLanguagePreference.text`) 화면 단위로 옮기는 별도 작업이 필요하다.
+2. **UI 테스트의 고정 `sleep` 18곳.** 상태 변화를 기다리지 않고 시간을 재는 곳이다. 느린 기기에서 흔들릴 수 있다. 이번에 추가한 재생 시험은 `waitForExistence`만 쓴다.
+3. **`preconditionFailure` 4건**은 지금은 도달 불가지만, 나중에 `cancellationCheck`에 실제 취소 검사를 넣는 순간 취소가 앱 종료가 된다. 그때는 `throw`로 바꾼다.
+4. **2026-10-21자 항목은 다시 보지 않았다.** 위쪽의 센서·백업 데이터 유실 의심 항목은 여전히 미확인이다.
+
+## 5. 검증
+
+Debug 빌드 경고 0 · 오류 0, 구조 게이트 통과(`MapHomeView` 22,057), import 경계 통과.

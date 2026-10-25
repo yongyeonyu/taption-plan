@@ -6782,8 +6782,11 @@ struct MapHomeView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
+                            // 그림은 17pt라 그대로 두면 손가락이 닿지 않는다. 누름 영역만 넓힌다.
+                            .taptionHitOutset(horizontal: 14, vertical: 14)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(language.text("검색 지우기", "Clear search"))
                 }
             }
             .padding(.horizontal, 12)
@@ -17929,8 +17932,10 @@ private struct MapHomeStickerEditorSheet: View {
                                 : Color.black.opacity(0.05),
                             in: RoundedRectangle(cornerRadius: 8)
                         )
+                        .taptionHitOutset(horizontal: 5, vertical: 5)
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(systemImage == symbol ? .isSelected : [])
             }
         }
     }
@@ -17951,8 +17956,17 @@ private struct MapHomeStickerEditorSheet: View {
                                     lineWidth: colorHex == color ? 2 : 1
                                 )
                         }
+                        .taptionHitOutset(horizontal: 10, vertical: 10)
                 }
                 .buttonStyle(.plain)
+                // 색만 그린 단추는 읽어 줄 이름이 없다. 순서로 이름을 붙이고 고른 것을 알린다.
+                .accessibilityLabel(
+                    language.text(
+                        "색 \((colors.firstIndex(of: color) ?? 0) + 1)",
+                        "Color \((colors.firstIndex(of: color) ?? 0) + 1)"
+                    )
+                )
+                .accessibilityAddTraits(colorHex == color ? .isSelected : [])
             }
         }
     }
@@ -19106,8 +19120,10 @@ enum MapHomeAppleCameraCommand {
         distance: CLLocationDistance? = nil,
         on mapView: MKMapView
     ) {
-        if let distance, distance.isFinite, distance > 0 {
-            let camera = mapView.camera.copy() as! MKMapCamera
+        // 복사본은 언제나 MKMapCamera지만, 캐스팅이 실패해 앱이 죽는 것보다는
+        // 거리만 못 바꾸고 중심 이동은 그대로 하는 편이 낫다.
+        if let distance, distance.isFinite, distance > 0,
+           let camera = mapView.camera.copy() as? MKMapCamera {
             camera.centerCoordinateDistance = distance
             mapView.setCamera(camera, animated: false)
         }
@@ -19129,7 +19145,7 @@ enum MapHomeAppleCameraCommand {
         distance requestedDistance: CLLocationDistance? = nil,
         on mapView: MKMapView
     ) {
-        let camera = mapView.camera.copy() as! MKMapCamera
+        guard let camera = mapView.camera.copy() as? MKMapCamera else { return }
         let distance = requestedDistance.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
             ?? camera.centerCoordinateDistance
         let pitch = camera.pitch
