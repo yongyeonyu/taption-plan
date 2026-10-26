@@ -4051,3 +4051,47 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - 테스트 개수를 **로그 정규식으로 세면 2건 적게** 나온다. xcodebuild 잡음 줄이 `Test case '...'` 문장 중간에 끼어들기 때문이다. `xcrun xcresulttool get test-results summary --path <xcresult>`로 세야 정확하다 — 실제 값은 **1,640 / 1,638 / 0 / 2**이고, 앞선 블록의 "1,638건 중 1,636 통과"도 같은 이유로 2건 적게 적힌 것이다.
 - 이 엔진을 직접 부르는 단위 테스트는 없다(백업 복원 경로에서만 쓰인다). 코드를 그대로 옮겼으므로 동작은 같지만, 백업 복원 장면을 이번에 다시 돌려보지는 않았다.
+
+## TFB1026A05 · 빌드 241을 내부 테스터에게 배포 (2026-10-27)
+
+- 요청 ID: `TFB1026A05`
+- 무엇을: 빌드 240 이후 쌓인 커밋 5개(`5956952` 97%→90% 천장, `f33b931` 저장 측정 정정, `d548f8` 빈 진행선 제거, `ea2418e` 적재 규모 측정, `ca33a68` 백업 경로 엔진 분리)를 포함한 빌드 241을 TestFlight 내부 그룹에 올린다.
+- 시작 상태: 작업 트리 깨끗함(`ca33a68`), 네 제품 번들 + `project.pbxproj` 모두 **240**으로 일치. App Store Connect 최고 빌드 240(VALID).
+
+### 1. 실행
+
+`bash scripts/testflight/release.sh --yes --request-id TFB1026A05` (9단계 전체).
+
+| 단계 | 결과 |
+| --- | --- |
+| 1/9 사전 점검 | 인증·키·툴·앱 조회(`6797370230`)·최고 빌드 240·내부 그룹(`b4857e5e…`, internal) 모두 OK, 트리 깨끗함 |
+| 2/9 빌드 번호 | 240 → **241** (네 Info.plist + `project.pbxproj` 8곳) |
+| 3/9 테스트 | `--with-tests` 없음 → 생략(아카이브 컴파일로 빌드만 확인) |
+| 4/9 아카이브 | `build/validation/TFB1026A05/TaptionPlan241.xcarchive` — Release 전체 모듈 컴파일이 이번 실행의 대부분(약 27분)을 썼다 |
+| 5/9 익스포트 | `build/validation/TFB1026A05/export/TaptionPlan.ipa` |
+| 6/9 번들 검증 | `com.taption.plan` 241 · `com.taption.plan.widget` 241 (2/2) |
+| 7/9 업로드 | 44,829,377 bytes / **7.349초(6.1MB/s, 48.8Mbps)** · Delivery UUID `a07f302b-cd89-4971-a58a-f4d95fcc13d5` |
+| 8/9 처리·그룹 | `00:13:53` 업로드 → `00:16:54` **VALID**(약 3분 1초). **그룹 연결이 404로 실패** → 재시도로 성공(아래 2절) |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 241, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+
+- 보고서: `build/validation/TFB1026A05/testflight-report.json`, 로그: `build/validation/TFB1026A05/`.
+
+### 2. 함정 — `VALID` 직후 관계 엔드포인트가 아직 빌드를 모른다
+
+- `8/9`의 그룹 연결이 이렇게 죽었다:
+  ```
+  HTTP 404 POST /v1/betaGroups/b4857e5e-…/relationships/builds
+  "There is no resource of type 'builds' with id 'a07f302b-cd89-4971-a58a-f4d95fcc13d5'"
+  ```
+- **id가 틀린 것이 아니었다.** 같은 id로 `/v1/builds` 조회는 되고 `builds --limit 4`에도 241 VALID로 나온다. `processingState`가 VALID로 바뀐 직후 몇 초 동안 **관계 엔드포인트만** 그 빌드를 아직 모른다. 약 3분 뒤 같은 명령을 그대로 다시 실행하니 한 번에 붙었다.
+- 그래서 스크립트를 고쳤다(`scripts/testflight/asc.py`): `api()`에 `retry_404` 인자를 두고, `cmd_attach`만 `retries=10`·`retry_404=True`로 부른다(2·4·…·18초, 약 90초). 다른 4xx는 그대로 즉시 실패시킨다 — 진짜 없는 리소스를 90초 붙잡고 있지 않게.
+- **업로드가 성공했는데 스크립트가 실패로 끝나는 것이 이 버그의 진짜 비용이다.** 릴리스가 실패로 보이면 같은 번들을 다시 올리려다 "이미 있는 빌드"로 막힌다. 8/9 실패를 봤을 때는 먼저 `asc.py builds`로 빌드가 VALID인지 확인하고, VALID면 `attach`만 다시 부르면 된다.
+
+### 3. 확인하지 못한 것
+
+- 기기에서의 실제 설치·실행. 이번 빌드가 열어 주는 확인 항목은 아래 넷이고, 전부 `python3 scripts/analyze-diagnostics.py <로그>`의 **시작(launch)** 절 하나로 판정된다.
+  - `launch_gate`의 `elapsed_ms`(기록이 쌓인 기기) — LCH1026A01부터 세 번째 미확인.
+  - 진행선이 97% 대신 **90%에 머무는 장면**(지금은 단위 테스트로만 확인).
+  - `map_shell_grace`가 실제로 발동하는 장면(시뮬레이터에서 한 번도 나지 않았다).
+  - `repository_local_load`의 `rows`·`total_ms` — LCH1026A04의 「오늘 창 적재」를 다시 열지 정하는 조건.
+- 그 밖의 기기 확인 항목(「현재 위치」 재생 중 취소, 날짜 줄 쓸기 손맛, 카운터 숫자가 오르는 장면, `1,234,567원` 폭, 백업 복원)은 각 블록에 그대로 남아 있다.

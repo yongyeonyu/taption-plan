@@ -134,6 +134,7 @@ def api(
     params: dict | None = None,
     body: dict | None = None,
     retries: int = 3,
+    retry_404: bool = False,
 ) -> dict:
     url = BASE + path
     if params:
@@ -162,7 +163,10 @@ def api(
                 return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as error:
             detail = error.read().decode("utf-8", errors="replace")
-            if error.code in (429, 500, 502, 503, 504) and attempt < retries:
+            retryable = error.code in (429, 500, 502, 503, 504) or (
+                retry_404 and error.code == 404
+            )
+            if retryable and attempt < retries:
                 last_error = f"HTTP {error.code}"
                 time.sleep(2 * attempt)
                 continue
@@ -402,11 +406,17 @@ def cmd_attach(config: dict, version: int, group_id: str | None) -> int:
     if build is None:
         raise SystemExit(f"빌드 {version}을 찾지 못했습니다.")
     group = find_group(config, group_id)
+    # `processingState`가 VALID로 바뀐 직후 몇 초 동안은 관계 엔드포인트가 그 빌드를
+    # 아직 모른다. 빌드 241에서 실제로 여기서 죽었다(404 "There is no resource of
+    # type 'builds'"). 같은 id로 조회는 되는데 관계만 거부하므로, 곧 풀리는 신호로 보고
+    # 404만 재시도한다(약 90초). 다른 4xx는 그대로 실패시킨다.
     api(
         config,
         "POST",
         f"/v1/betaGroups/{group['id']}/relationships/builds",
         body={"data": [{"type": "builds", "id": build["id"]}]},
+        retries=10,
+        retry_404=True,
     )
     print(f"빌드 {version}을 {group['name']} 그룹에 연결했습니다.")
     return 0
