@@ -2357,11 +2357,8 @@ struct MapHomeView: View {
     @State private var dayCalendarEventsDate: Date?
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
-    /// 날짜 줄을 끄는 중 손가락을 따라 움직이는 거리와 이미 넘긴 칸 수.
+    /// 날짜 줄을 끄는 동안 손가락을 따라 움직이는 거리(한 칸을 넘지 않는다).
     @State private var weekDragOffset: CGFloat = 0
-    @State private var weekDragStepsApplied = 0
-    /// 날짜 줄 드래그가 끝난 시각(끝난 직후의 탭을 무시하려고).
-    @State private var weekDragEndedAt: Date?
     /// 시작 시간 제한이 지났는지(DB나 경로가 끝나지 않아도 홈을 연다).
     @State private var initialReadyForced = false
     @State private var calendarService = AppleCalendarService()
@@ -6569,7 +6566,8 @@ struct MapHomeView: View {
         .accessibilityLabel(title)
     }
 
-    /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜. 누르면 달력을 연다.
+    /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
+    /// 누르면 이번 주 날짜 줄을 펼치고, 그 줄을 좌우로 밀면 하루씩 넘어간다.
     private var dateBadge: some View {
         let calendar = TimelineAxisGrid.normalizedCalendar()
         let weekday = calendar.component(.weekday, from: model.selectedDate)
@@ -6609,6 +6607,8 @@ struct MapHomeView: View {
         }
         .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
         .accessibilityHint(language.text("한 번 누르면 이번 주를 펼칩니다", "Tap to show this week"))
+        // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
+        .accessibilityIdentifier("mapHomeDateBadge")
         return HStack(spacing: 6) {
             if isDateWeekExpanded { weekStrip(calendar: calendar) }
             badge
@@ -6654,27 +6654,39 @@ struct MapHomeView: View {
         .simultaneousGesture(weekSwipeGesture(calendar: calendar))
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .transition(.move(edge: .trailing).combined(with: .opacity))
+        // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("mapHomeDateWeekStrip")
     }
 
-    /// 펼쳐진 날짜 줄을 손가락에 붙여 좌우로 민다. 한 칸을 넘을 때마다 하루씩 바뀌고, 줄은 손가락을 따라 움직인다.
+    /// 펼쳐진 날짜 줄을 좌우로 밀면 **한 번에 하루**씩 넘긴다.
+    ///
+    /// 예전에는 손가락이 움직인 거리에 비례해 날짜를 넘겼다(`dx / dayPitch`).
+    /// 줄 폭이 한 주(칸 34pt × 7 + 간격 + 여백 = 274pt)라, 한 번 쓸어 넘기면
+    /// 6~7일이 지나 손짓 하나가 '주 단위'로 보였다(대표 지적). 손가락은 한 칸까지만
+    /// 따라오고, 실제로 넘어가는 날은 손짓 하나에 하루다.
     private func weekSwipeGesture(calendar: Calendar) -> some Gesture {
         DragGesture(minimumDistance: 14)
             .onChanged { value in
                 let dx = value.translation.width
-                guard abs(dx) > abs(value.translation.height) * 1.5 || weekDragStepsApplied != 0 else { return }
+                guard abs(dx) > abs(value.translation.height) * 1.5 else { return }
                 let pitch = MapHomeWeekStripMath.dayPitch
-                let steps = Int((dx / pitch).rounded(.towardZero))
-                let delta = steps - weekDragStepsApplied
-                if delta != 0, let next = calendar.date(byAdding: .day, value: -delta, to: model.selectedDate) {
+                weekDragOffset = min(pitch, max(-pitch, dx))
+            }
+            .onEnded { value in
+                let dx = value.translation.width
+                let isHorizontal = abs(dx) > abs(value.translation.height) * 1.5
+                // 반 칸을 넘겨야 넘긴다. 스치듯 지나간 손짓에 날짜가 바뀌면
+                // 화면을 보려고 쓸었을 뿐인 손이 날짜를 바꾼다.
+                if isHorizontal, abs(dx) >= MapHomeWeekStripMath.dayPitch / 2,
+                   let next = calendar.date(
+                       byAdding: .day,
+                       value: dx < 0 ? 1 : -1,
+                       to: model.selectedDate
+                   ) {
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = next
-                    weekDragStepsApplied = steps
                 }
-                weekDragOffset = dx - CGFloat(steps) * pitch
-            }
-            .onEnded { _ in
-                weekDragEndedAt = Date()
-                weekDragStepsApplied = 0
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { weekDragOffset = 0 }
             }
     }

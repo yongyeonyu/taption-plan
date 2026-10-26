@@ -658,3 +658,133 @@ final class TaptionPlanOverwriteUITests: XCTestCase {
         return atLeast ? count >= expected : count == expected
     }
 }
+
+/// 날짜 배지를 눌러 펼친 날짜 줄을 한 번 쓸어 넘기면 **하루**만 넘어간다.
+///
+/// 예전에는 손가락이 움직인 거리에 비례해 날짜를 넘겼다(`dx / dayPitch`). 줄 폭이
+/// 한 주(274pt)라 한 번 쓸어 넘기면 6~7일이 지나, 손짓 하나가 '주 단위'로 보였다
+/// (대표 지적). 그래서 줄 폭만큼 크게 쓸어도 하루만 움직이는지 잠근다.
+final class TaptionPlanDateStripSwipeUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    /// 지도 홈을 열고 날짜 배지가 실제로 눌릴 때까지 기다린다.
+    ///
+    /// 첫 실행에서는 앱이 직접 그리는 권한 안내 시트가 날짜 배지를 덮는다. 그래서
+    /// 배지가 트리에 있어도 탭이 시트에 먹히고 날짜 줄이 펼쳐지지 않는다. 사용자
+    /// 데이터를 바꾸지 않도록 허용은 누르지 않고 '전체 건너뛰기'로만 닫는다.
+    private func launch() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let skip = app.buttons["전체 건너뛰기"]
+        if skip.waitForExistence(timeout: 20) {
+            skip.tap()
+        }
+        let badge = dateBadge(app)
+        XCTAssertTrue(badge.waitForExistence(timeout: 60), "날짜 배지가 없다")
+        let hittable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"),
+            object: badge
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [hittable], timeout: 30),
+            .completed,
+            "날짜 배지가 눌릴 수 있게 되지 않음"
+        )
+        return app
+    }
+
+    /// 오른쪽 위 날짜 배지. 날짜가 든 이름은 날마다 달라지므로 식별자로 집는다.
+    private func dateBadge(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)["mapHomeDateBadge"]
+    }
+
+    private func weekStrip(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)["mapHomeDateWeekStrip"]
+    }
+
+    /// 배지 이름에서 (월, 일)을 읽는다.
+    private func monthDay(_ label: String) -> (month: Int, day: Int)? {
+        let numbers = label.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        guard numbers.count >= 2 else { return nil }
+        return (numbers[0], numbers[1])
+    }
+
+    /// 오늘로부터 `offset`일 뒤의 (월, 일). 윤년·월말을 직접 셈하지 않는다.
+    private func monthDay(offset: Int) -> (month: Int, day: Int) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+        let parts = calendar.dateComponents([.month, .day], from: date)
+        return (parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// 날짜 줄 위에서 좌우로 민다. 줄 폭 안에서 움직여 손짓이 지도로 새지 않게 한다.
+    private func swipe(_ app: XCUIApplication, on strip: XCUIElement, dx: CGFloat) {
+        let start = strip.coordinate(withNormalizedOffset: CGVector(dx: dx < 0 ? 0.9 : 0.1, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: dx, dy: 0)))
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
+
+    /// 배지의 날짜가 바뀔 때까지 기다렸다가 새 (월, 일)을 돌려준다.
+    private func waitForDateChange(
+        _ badge: XCUIElement,
+        from previous: (month: Int, day: Int),
+        timeout: TimeInterval
+    ) -> (month: Int, day: Int)? {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let now = monthDay(badge.label), now != previous { return now }
+            usleep(200_000)
+        }
+        return monthDay(badge.label).flatMap { $0 == previous ? nil : $0 }
+    }
+
+    func testOneLongSwipeMovesExactlyOneDay() throws {
+        let app = launch()
+        let badge = dateBadge(app)
+
+        let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
+        XCTAssertEqual(today.month, monthDay(offset: 0).month, "앱이 오늘로 열리지 않았다")
+        XCTAssertEqual(today.day, monthDay(offset: 0).day, "앱이 오늘로 열리지 않았다")
+
+        badge.tap()
+        let strip = weekStrip(app)
+        XCTAssertTrue(strip.waitForExistence(timeout: 5), "날짜 배지를 눌러도 날짜 줄이 펼쳐지지 않는다")
+        // 펼쳐지는 스프링(0.3초)이 끝난 뒤에 잰다.
+        usleep(500_000)
+        attach(app, name: "date-strip-expanded")
+
+        // 줄 폭(한 주)만큼 크게 쓴다. 예전 구현이면 6일 넘게 지나갔을 거리다.
+        swipe(app, on: strip, dx: -250)
+        let tomorrow = try XCTUnwrap(
+            waitForDateChange(badge, from: today, timeout: 5),
+            "쓸었는데 날짜가 그대로다"
+        )
+        attach(app, name: "date-strip-after-swipe")
+        XCTAssertEqual(
+            [tomorrow.month, tomorrow.day],
+            [monthDay(offset: 1).month, monthDay(offset: 1).day],
+            "한 번 쓸었는데 \(today.month)월 \(today.day)일 → \(tomorrow.month)월 \(tomorrow.day)일로 움직였다"
+        )
+
+        // 반대쪽으로 한 번 쓸면 하루 돌아온다.
+        swipe(app, on: strip, dx: 250)
+        let back = try XCTUnwrap(
+            waitForDateChange(badge, from: tomorrow, timeout: 5),
+            "되돌아오지 않았다"
+        )
+        XCTAssertEqual(
+            [back.month, back.day],
+            [today.month, today.day],
+            "한 번 쓸었는데 \(tomorrow.month)월 \(tomorrow.day)일 → \(back.month)월 \(back.day)일로 움직였다"
+        )
+    }
+}
