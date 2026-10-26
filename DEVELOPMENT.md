@@ -14,7 +14,7 @@
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
-| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
+| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `PlanBackupRouteFallbackEngine.swift`(백업에 원본 경로 점이 없을 때 장소·이동에서 되살리는 계산), `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
@@ -24,6 +24,8 @@
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
 앱 전용 프레임워크와 화면은 Swift Package로 옮기지 않습니다. package import 경계 검사는 `bash scripts/check-app-engine-import-boundary.sh`로 확인합니다.
+
+동결 예산(`docs/architecture-baseline.json`의 `frozen_files`)에 붙은 파일에는 기능을 더하지 않습니다. 계산만 하고 그 파일의 사설 상태에 닿지 않는 타입은 새 파일로 떼어 내고(예: `AppShellLaunchGate.swift`, `PlanBackupRouteFallbackEngine.swift`), 뺀 만큼 예산을 낮춰 다시 잠급니다 — 남겨 둔 여유는 다음 기능이 조용히 들어오는 자리가 됩니다. 확인은 `python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json`.
 
 HealthKit의 앱 읽기/import 허용 목록은 `TaptionHealthReadScope`의 8개 항목(운동·수면·심박·걸음·걷기/달리기 거리·자전거 거리·활동 에너지·운동 경로)입니다. 전체 타입 카탈로그는 기존 원본 해석용이며 신규 권한/수집 범위가 아닙니다. 임상·투약·영양·시력·특성·활동 요약 신규 조회는 하지 않고 기존 저장 원본은 보존합니다.
 

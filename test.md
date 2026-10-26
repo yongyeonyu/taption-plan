@@ -4013,3 +4013,41 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - Release 빌드의 같은 값. 이번에는 Debug만 쟀다(시뮬레이터 절대값으로 기기 체감을 판단하지 않는다는 기존 규칙 그대로).
 - 실기기의 `repository_local_load` 값. 여전히 로그가 없다.
+
+## LCH1026A05 · 동결 예산에 붙은 AppModel에서 백업 경로 엔진을 떼어 낸다 (2026-10-26)
+
+- 요청 ID: `LCH1026A05`
+- 무엇을: `PlanBackupRouteFallbackEngine`(362줄)을 `TaptionPlan/UX/AppModel.swift`에서 `TaptionPlan/Core/PlanBackupRouteFallbackEngine.swift`로 옮겼다. **동작 변경 없음.**
+
+### 1. 왜
+
+`AppModel`이 동결 예산에 정확히 붙어 있었다(14,641 / 14,641). LCH1026A04에서 "오늘 창 적재"를 접은 이유도 그 예산이었다 — 부분 스냅샷을 게시하는 지점(`bootstrapLocalSnapshot`)이 그 파일의 `private`이라 다른 파일 확장으로도 닿지 않는다. 다음 시작 최적화를 하려면 자리가 필요하다.
+
+### 2. 무엇을 떼어 냈나
+
+최상위 선언 중 **계산만 하고 파일 사설 상태에 닿지 않는** 것을 골랐다.
+
+| 기준 | 이 엔진 |
+| --- | --- |
+| 쓰는 타입 | `TravelSegment`·`PlaceStay`·`TimeSpan`·`SensorReading`(`Core/FeatureModels.swift`), `RouteTimelineTimestamp`·`RouteTimelineLongitude`(`Core/RouteTimelineData.swift`) |
+| 중첩 타입 | `RouteEndpointIndex`·`RouteCoverageIndex`·`RouteSample` — 함께 이동 |
+| 파일 사설 상태 | 없음(전부 `static`) |
+| 바깥 사용처 | `AppModel.swift` 하나뿐 |
+
+### 3. 결과
+
+- `AppModel` 14,641 → **14,279줄**(−362). 새 파일 371줄(문서 주석 8줄 포함).
+- 예산을 **14,400**으로 낮춰 잠갔다. 다음 작업 몫으로 121줄만 남긴다(예산에 여유를 크게 두면 기능이 조용히 들어온다).
+- pbxproj 4곳 등록: `PBXBuildFile`(`A100000000000000000000F1`), `PBXFileReference`(`F100000000000000000000F1`), Core 그룹 children, Sources. `plutil -lint` 통과.
+- `DEVELOPMENT.md`에 "동결 예산에 붙은 파일에는 기능을 더하지 않고, 계산만 하는 타입은 새 파일로 떼어 낸 뒤 예산을 낮춰 잠근다"를 규칙으로 남겼다.
+
+### 4. 확인
+
+- 전체 `TaptionPlanTests` **1,640건 중 1,638 통과 · 실패 0 · 건너뜀 2** (`build/unit-2026-10-26-split.xcresult`).
+- 구조 게이트 통과(`AppModel` 14,279 / 예산 14,400), import 경계 통과.
+- 시뮬레이터 실행: `initial_launch_ready` 1,592ms, 게이트 순서 그대로(`destination_rendered` 34 → `startup_settings` 552 → `security_state` 648 → `bootstrapped` 1,015 → `map_shell` 1,592).
+
+### 5. 함정 (기록 정정)
+
+- 테스트 개수를 **로그 정규식으로 세면 2건 적게** 나온다. xcodebuild 잡음 줄이 `Test case '...'` 문장 중간에 끼어들기 때문이다. `xcrun xcresulttool get test-results summary --path <xcresult>`로 세야 정확하다 — 실제 값은 **1,640 / 1,638 / 0 / 2**이고, 앞선 블록의 "1,638건 중 1,636 통과"도 같은 이유로 2건 적게 적힌 것이다.
+- 이 엔진을 직접 부르는 단위 테스트는 없다(백업 복원 경로에서만 쓰인다). 코드를 그대로 옮겼으므로 동작은 같지만, 백업 복원 장면을 이번에 다시 돌려보지는 않았다.
