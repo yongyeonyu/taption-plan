@@ -6481,7 +6481,7 @@ struct MapHomeView: View {
         isLocationMenuExpanded = true
     }
 
-    /// 하단 탭·떠 있는 독. 1급 항목은 다섯 개만 둔다(메뉴는 왼쪽 위, 녹화는 메뉴 > 화면).
+    /// 하단 탭·떠 있는 독. 1급 항목은 여섯 개다(메뉴만 왼쪽 위로 뺐다).
     private var bottomActionBar: some View {
         let items = HStack(spacing: 0) {
             Button {
@@ -6529,6 +6529,11 @@ struct MapHomeView: View {
                 bottomBarButton("play.fill", language.text("재생", "Play")) {
                     startDayPlayback()
                 }
+            }
+            // 녹화는 재생 바로 옆에 둔다. 재생을 마친 사람이 다음에 누르는 버튼이라
+            // 메뉴 안으로 옮기면 찾지 못한다(0f2987d에서 내렸다가 되돌림).
+            bottomBarButton("record.circle", language.text("녹화", "Record"), tint: .tpHoliday) {
+                openRecordingOptions()
             }
             bottomBarButton("plus", language.text("메모", "Memo"), tint: .tpReferenceBlue) {
                 addMemo()
@@ -8455,11 +8460,6 @@ struct MapHomeView: View {
                 displayMenuItem
                 menuGroupDivider
                 languageMenuItem
-                menuGroupDivider
-                menuRowButton("record.circle", language.text("재생 화면 녹화", "Record playback"), tint: .tpNow) {
-                    isMenuOpen = false
-                    openRecordingOptions()
-                }
             }
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {

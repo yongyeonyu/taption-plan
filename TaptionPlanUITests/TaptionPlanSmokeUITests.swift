@@ -490,3 +490,64 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
         attach(app, name: "play-stopped")
     }
 }
+
+/// 하단 1급 메뉴에 「녹화」가 다시 서 있는지, 메뉴 안에 같은 일을 하는 줄이 남아 있지 않은지.
+///
+/// 0f2987d에서 하단 항목을 다섯 개로 줄이며 녹화를 메뉴 > 화면으로 내렸는데,
+/// 재생을 마친 사람이 다음에 누르는 버튼이라 메뉴 안에서는 찾지 못한다.
+final class TaptionPlanBottomBarRecordUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
+
+    func testRecordSitsInTheBottomBarNextToPlay() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let skip = app.buttons["전체 건너뛰기"]
+        if skip.waitForExistence(timeout: 12) { skip.tap() }
+
+        let play = app.buttons["재생"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 40), "하단 재생 단추가 없다")
+        // 「메모」는 왼쪽 위 원형 단추에도 있어 같은 이름이 둘이다. 하단 것은 화면에서
+        // 가장 아래에 있으므로 minY가 큰 쪽을 고른다.
+        func bottomBarButton(_ label: String) -> XCUIElement? {
+            let all = app.buttons
+                .matching(NSPredicate(format: "label == %@", label))
+                .allElementsBoundByIndex
+            return all.max(by: { $0.frame.minY < $1.frame.minY })
+        }
+        guard let record = bottomBarButton("녹화") else {
+            return XCTFail("하단에 「녹화」가 없다")
+        }
+        guard let memo = bottomBarButton("메모") else {
+            return XCTFail("하단에 「메모」가 없다")
+        }
+
+        XCTAssertGreaterThanOrEqual(record.frame.height, 44, "녹화 단추 높이가 \(record.frame.height)pt다")
+        XCTAssertGreaterThan(record.frame.minX, play.frame.minX, "녹화가 재생보다 왼쪽에 있다")
+        XCTAssertLessThan(record.frame.minX, memo.frame.minX, "녹화가 메모보다 오른쪽에 있다")
+        attach(app, name: "bottom-bar-record")
+
+        // 같은 일을 하는 줄이 메뉴 > 화면에 겹쳐 남아 있으면 안 된다.
+        let menu = app.buttons
+            .containing(NSPredicate(format: "label CONTAINS %@", "메뉴"))
+            .firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 5), "메뉴 단추가 없다")
+        menu.tap()
+        let close = app.buttons["메뉴 닫기"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "메뉴가 열리지 않았다")
+        XCTAssertFalse(
+            app.buttons["재생 화면 녹화"].exists,
+            "하단에 녹화가 있는데 메뉴 > 화면에도 같은 줄이 남아 있다"
+        )
+        attach(app, name: "menu-without-record")
+        close.tap()
+    }
+}
