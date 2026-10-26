@@ -2151,3 +2151,11 @@
 - 이번 빌드에 들어간 것: `BTM1026A01`(하단 메뉴 맨 왼쪽·재생 한 칸·이어지는 날짜 줄) + `LCH1026A01`(시작 로딩 유예·권한 준비 지연).
 - 순서 함정(재확인): `release.sh`는 **작업 트리가 깨끗해야** 하고, 빌드 번호 증가분은 스크립트가 커밋하지 않는다 → 배포 후 문서와 함께 `git add -A`로 커밋.
 - 남은 것: 기기에서 ①「현재 위치」로 재생 취소 ②날짜 줄 연속 쓸기 손맛 ③`launch_gate` 실기기 값(진단 로그).
+
+## CNT1026A02 · 카운터 숫자가 시계를 따라 움직인다 (2026-10-26)
+- 요청(대표): "카운터 위젯의 숫자는 실시간으로 변경되어야 함."
+- 원인(확인): 카운터 창의 `TimelineView`가 `if let salaryLive, recordingShows(\.salary)` 안에만 있었다. 연봉 카운터를 끄면 창이 다시 그려지지 않아, 진행 중인 업무·학습 시간이 흘러도 숫자가 멈춰 있었다. 계산은 이미 `asOf: .now`였다 → 문제는 계산식이 아니라 **그리는 박자**.
+- 바꾼 것: `MapHomeCounterClock`(창 전체를 감싸는 시계, 10초 `refreshSeconds`, 오늘/재생 중에만) · `isCounterLive` · `counterWindowContent(now:)` · `mapCounterBadges(asOf:)` · `daySummaryCategorySeconds(asOf:now:)` · `MapHomeCounterValueCache`(지금 시각 1분 버킷 + `dayProjectionRevision` 무효화). 연봉 전용 `TimelineView`는 삭제(시계 하나).
+- 함정(시험): `Date(timeIntervalSince1970: (1_700_000_000 / 60) * 60)`은 Double 추론이라 정수 나눗셈이 아니다 → `(1_700_000_000.0 / 60).rounded(.down) * 60`. 재생 시각 고정 상태에서 `now`만 흘리면 버킷이 안 바뀐다(cutoff를 함께 옮겨야 한다).
+- 검증: 전체 1,638건 중 1,636 통과 · 실패 0 · 건너뜀 2. UI 4건(지도 회귀) 통과. 구조 게이트·import 경계 통과. `MapHomeView` 22,009줄.
+- 남은 것: 화면에서 숫자가 올라가는 장면(시뮬레이터에 오늘 기록 없음 — 기록을 지어내지 않았다). 걸음·거리는 새 기록이 들어올 때 갱신.

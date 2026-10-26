@@ -49,6 +49,44 @@ struct MapHomeCounterTable: View {
     }
 }
 
+/// 카운터 창에 박자를 주는 시계.
+///
+/// 예전에는 연봉 줄이 켜져 있을 때만 `TimelineView`가 돌았다. 연봉 카운터를 끄거나
+/// 시급을 비우면 나머지 줄(걸음·거리·업무·학습·취미·운동)은 **다시 그려지지 않아**,
+/// 업무 시간은 계속 흐르는데 화면 숫자는 멈춰 있었다(대표 지적: "카운터 위젯의 숫자는
+/// 실시간으로 변경되어야 함", 2026-10-26). 이제 창 전체가 같은 시계를 쓰고, 지난 날처럼
+/// 값이 변하지 않는 화면에서는 시계를 돌리지 않는다.
+struct MapHomeCounterClock<Content: View>: View {
+    /// 오늘을 보고 있거나 재생 중이면 값이 흐른다.
+    let isLive: Bool
+    let interval: TimeInterval
+    private let content: (Date) -> Content
+
+    @State private var anchor = Date()
+
+    init(
+        isLive: Bool,
+        interval: TimeInterval = MapHomeCounterTimelinePolicy.refreshSeconds,
+        @ViewBuilder content: @escaping (Date) -> Content
+    ) {
+        self.isLive = isLive
+        self.interval = max(1, interval)
+        self.content = content
+    }
+
+    var body: some View {
+        if isLive {
+            // 시작점을 붙들어 둔다. `.now`를 그때그때 넘기면 본문이 평가될 때마다
+            // 일정이 새로 만들어져 박자가 처음으로 되감긴다.
+            TimelineView(.periodic(from: anchor, by: interval)) { context in
+                content(context.date)
+            }
+        } else {
+            content(.now)
+        }
+    }
+}
+
 /// 창의 연봉 줄에 넘기는 값. 계산은 화면이 하고, 창은 글자만 받는다.
 struct MapHomeCounterSalary: Equatable {
     let text: String
@@ -95,6 +133,14 @@ enum MapHomeCounterTimelinePolicy {
     /// 표시 단위. 카운터 글자가 분까지만 보여 주므로 1분이면 충분하다.
     static let bucketSeconds: TimeInterval = 60
 
+    /// 카운터 창이 스스로 깨어나는 박자.
+    ///
+    /// 값이 분 단위라 분 경계만 넘기면 되지만, 걸음·거리는 센서가 들어오는 대로
+    /// 바뀌어야 하고, 분 경계를 10초 늦게 잡으면 숫자도 그만큼 늦게 움직인다.
+    /// 계산은 분 버킷으로 캐시하므로(`MapHomeCounterValueCache`) 10초마다 깨어나도
+    /// 실제로 하루를 다시 세는 일은 1분에 한 번이다.
+    static let refreshSeconds: TimeInterval = 10
+
     /// 재생 중일 때만 자를 시각을 준다(멈춰 있으면 하루 전체 합계).
     static func cutoff(dayStart: Date, minute: Double?, isRunning: Bool) -> Date? {
         guard isRunning, let minute, minute.isFinite, minute > 0 else { return nil }
@@ -122,26 +168,30 @@ enum MapHomeCounterTimelinePolicy {
     }
 }
 
+/// 카운터 값을 분 버킷으로 캐시한다.
+///
 /// 재생 틱(30Hz)마다 하루치 phase를 다시 계산하면 프레임이 무너진다.
 /// 표시 단위(1분)가 바뀔 때만 다시 계산하고 그 사이에는 같은 값을 돌려준다.
+/// 멈춰 있을 때도 **지금 시각**을 버킷으로 쓴다 — 10초마다 깨어나는 시계가 매번
+/// 하루 전체를 다시 세지 않게 하기 위해서다. 기록이 바뀌면(클립 편집·새 센서)
+/// 버킷이 같아도 다시 센다.
 @MainActor
 final class MapHomeCounterValueCache {
     private var bucket: Int?
+    private var revision: UInt64?
     private var cached: [String: TimeInterval] = [:]
 
     func categorySeconds(
         cutoff: Date?,
-        compute: (Date) -> [String: TimeInterval]
+        now: Date,
+        revision: UInt64,
+        compute: (Date?) -> [String: TimeInterval]
     ) -> [String: TimeInterval] {
-        guard let cutoff else {
-            // 멈춰 있으면 하루 전체 합계다. 기록이 늘어날 수 있으니 캐시하지 않는다.
-            bucket = nil
-            return compute(.now)
-        }
-        let key = Int(cutoff.timeIntervalSince1970 / MapHomeCounterTimelinePolicy.bucketSeconds)
-        if key == bucket { return cached }
+        let key = Int((cutoff ?? now).timeIntervalSince1970 / MapHomeCounterTimelinePolicy.bucketSeconds)
+        if key == bucket, revision == self.revision { return cached }
         let value = compute(cutoff)
         bucket = key
+        self.revision = revision
         cached = value
         return value
     }

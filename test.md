@@ -3856,3 +3856,45 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ### 3. 확인하지 못한 것
 - 기기에서의 실제 설치·실행. 이번 빌드에 들어간 두 변경(`BTM1026A01`·`LCH1026A01`)의 기기 확인 항목은 각 블록에 적어 두었다 — 「현재 위치」 취소, 날짜 줄 연속 쓸기 손맛, `launch_gate`의 실기기 값.
+
+## CNT1026A02 · 카운터 숫자가 시계를 따라 움직인다 (2026-10-26)
+
+- 요청 ID: `CNT1026A02`
+- 요청(대표): "카운터 위젯의 숫자는 실시간으로 변경되어야 함."
+
+### 1. 원인
+
+카운터 창은 `if let salaryLive, recordingShows(\.salary)` 안에서만 `TimelineView`를 돌렸다. **연봉 카운터를 끄거나 시급을 비우면 창이 다시 그려질 계기가 사라져**, 진행 중인 업무·학습 시간이 계속 흘러도 화면 숫자는 멈춰 있었다. 값 계산(`asOf: .now`)은 이미 지금까지로 세고 있었으므로 계산식이 아니라 **그리는 박자**가 문제였다. 지도가 다시 그려지는 계기(카메라 이동·새 기록)가 있어야만 숫자가 따라왔다.
+
+### 2. 바꾼 것
+
+| 위치 | 이전 | 지금 |
+| --- | --- | --- |
+| 창의 시계 | 연봉 줄이 켜져 있을 때만 `TimelineView` | `MapHomeCounterClock`이 창 전체를 감싼다. 오늘이거나 재생 중이면 10초(`refreshSeconds`)마다 |
+| 지난 날 | 값이 고정인데도 시계가 돌았다 | 시계 없이 한 번만 그린다(`isCounterLive`) |
+| 값의 기준 시각 | 연봉만 `context.date` | 모든 줄이 같은 `now`로 센다(`daySummaryCategorySeconds(asOf:now:)`) |
+| 캐시 | 멈춰 있으면 캐시하지 않음(그릴 때마다 하루 재계산) | 지금 시각으로 1분 버킷. `dayProjectionRevision`이 바뀌면 같은 분이라도 다시 센다 |
+
+- 시계를 하나로 합쳤다. 연봉 줄 전용 `TimelineView`(시작점이 `salaryLive.measuredAt`이라 30초마다 되감겼다)를 없애 박자가 하나가 됐다.
+- 10초인 이유: 값이 분 단위라 분 경계만 넘기면 되지만, 걸음·거리는 센서가 들어오는 대로 바뀌어야 하고, 분 경계를 늦게 잡으면 숫자도 그만큼 늦게 움직인다. 계산은 1분 버킷 캐시가 막으므로 실제 재계산은 1분에 한 번이다.
+- 시작점(`anchor`)을 `@State`로 붙들었다. `.periodic(from: .now, ...)`처럼 그때그때 넘기면 본문이 평가될 때마다 일정이 새로 만들어져 박자가 되감긴다.
+
+### 3. 확인
+
+- 단위 테스트 4건(`MapHomeCounterTimelinePolicyTests`):
+  - `testCategorySecondsAreCachedPerMinuteOnTheLiveClock` — 같은 분 안에서 10초 간격으로 불러도 한 번만 센다.
+  - `testCategorySecondsFollowDataChangesWithinTheSameMinute` — 기록 revision이 바뀌면 같은 분이라도 다시 센다.
+  - `testPlaybackCutoffStillDrivesTheBucket` — 재생 중에는 지금 시각이 아니라 재생 시각이 버킷을 정한다.
+  - `testOpenWorkRecordGrowsWithTheClock` — 끝나지 않은 업무 기록은 시계가 흐른 만큼 늘어난다(600초 → 1,200초). 카운터 숫자가 오르는 근거다.
+- 전체 `TaptionPlanTests` **1,638건 중 1,636 통과 · 실패 0 · 건너뜀 2** (`build/unit-2026-10-26-counter.xcresult`).
+- 지도 화면 회귀 UI 4건 통과(`build/ui-2026-10-26-counter.xcresult`): 재생 토글·지도 끌기 취소·하단 메뉴 위치·날짜 줄 닷새 연속.
+- Debug 빌드 성공, 구조 게이트 통과(`MapHomeView` 22,009줄 · 동결 예산 22,072), import 경계 통과.
+
+### 4. 함정
+
+- 시험에서 `Date(timeIntervalSince1970: (1_700_000_000 / 60) * 60)`은 **정수 나눗셈이 아니다.** 인자가 `TimeInterval`(Double)이라 리터럴이 Double로 추론돼 `1_700_000_000.0`이 그대로 나온다. 분 경계를 맞추려면 `(1_700_000_000.0 / 60).rounded(.down) * 60`처럼 내림을 명시해야 한다. 이 때문에 처음 두 번은 "같은 분"이 실제로는 다른 분이었다.
+- 재생 시각이 고정이면 `now`를 아무리 흘려도 버킷이 바뀌지 않는다(설계대로다). "재생 시각이 넘어가면 다시 센다"를 시험하려면 **cutoff를 함께 옮겨야** 한다.
+
+### 5. 확인하지 못한 것
+- **화면에서 숫자가 올라가는 장면**. 시뮬레이터 저장소에 오늘 기록이 없다(`records` 34행이 모두 분류 정의). 진행 중인 활동 기록을 만들어야 보이는데, 그 기록을 지어내면 시험이 아니라 조작이 된다. 계산·캐시·박자는 단위 테스트로, 지도가 깨지지 않는 것은 UI 시험으로 확인했다.
+- 걸음·거리는 새 기록이 들어올 때 갱신된다(센서 저장 주기). 측정기(CMPedometer)에서 오늘 누적을 직접 읽게 하려면 `AppModel`(동결 14,641줄)이 아니라 새 파일로 빼야 한다 — 이번에는 하지 않았다.

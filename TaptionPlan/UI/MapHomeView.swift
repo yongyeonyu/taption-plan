@@ -6358,7 +6358,9 @@ struct MapHomeView: View {
     }
 
     /// 대분류별 초. `cutoff`를 넘기면 그 시각까지로 잘라 센다(재생 중 카운터가 시간을 따라 올라간다).
-    private func daySummaryCategorySeconds(asOf cutoff: Date?) -> [String: TimeInterval] {
+    /// 멈춰 있을 때(`cutoff == nil`)는 `now`까지로 센다 — 창의 시계가 10초마다 넘겨 주는
+    /// 그 순간이라, 진행 중인 활동이 분 단위로 올라간다.
+    private func daySummaryCategorySeconds(asOf cutoff: Date?, now: Date = .now) -> [String: TimeInterval] {
         // 확정한 날은 저장해 둔 대분류별 초를 그대로 쓴다(다시 계산하지 않는다).
         if cutoff == nil,
            let sealed = model.sealedDay(for: model.selectedDate),
@@ -6382,7 +6384,7 @@ struct MapHomeView: View {
             stays: stays,
             placeKinds: placeKinds,
             day: dayWindow,
-            asOf: cutoff ?? .now
+            asOf: cutoff ?? now
         )
         // 재생 시각으로 잘라 내려면 원본이 있어야 한다. 없으면 저장해 둔 확정값으로 물러선다.
         if totalsByID.isEmpty, let sealed = model.sealedDay(for: model.selectedDate) {
@@ -7268,37 +7270,11 @@ struct MapHomeView: View {
 
     /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.
     /// 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
-    @ViewBuilder
+    /// 창은 **스스로 박자**를 가진다 — 연봉 줄을 껐어도 나머지 숫자가 시간을 따라 움직인다.
     private func counterWindow(at anchor: CGPoint) -> some View {
         let bottomY = anchor.y - 8
-        Group {
-            if let salaryLive, recordingShows(\.salary) {
-                let tick = TimeInterval(max(1, salaryTickSeconds))
-                let calendar = MapHomeGrowthPolicy.localCalendar
-                let day = calendar.startOfDay(for: model.selectedDate)
-                if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute {
-                    let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: day + minute * 60)
-                    counterTable(salarySeconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), isWorking: false)
-                } else if calendar.isDateInToday(model.selectedDate) {
-                    TimelineView(.periodic(from: salaryLive.measuredAt, by: tick)) { context in
-                        counterTable(
-                            salarySeconds: MapHomeSalaryPolicy.liveWorkSeconds(
-                                base: salaryLive.todayWorkSeconds,
-                                baseDate: salaryLive.measuredAt,
-                                isWorking: salaryLive.isWorking,
-                                now: context.date,
-                                tick: tick
-                            ),
-                            isWorking: salaryLive.isWorking
-                        )
-                    }
-                } else {
-                    let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: .distantFuture)
-                    counterTable(salarySeconds: seconds, isWorking: false)
-                }
-            } else {
-                counterTable(salarySeconds: nil, isWorking: false)
-            }
+        return MapHomeCounterClock(isLive: isCounterLive) { now in
+            counterWindowContent(now: now)
         }
         .frame(width: 240, height: 320, alignment: .bottom)
         .position(x: anchor.x, y: bottomY - 160)
@@ -7306,8 +7282,45 @@ struct MapHomeView: View {
         .zIndex(MapHomeLayerPriority.stickman)
     }
 
+    /// 오늘을 보고 있거나 재생 중이면 카운터 값이 흐른다. 지난 날은 값이 변하지 않는다.
+    private var isCounterLive: Bool {
+        isDayPlaybackRunning
+            || MapHomeGrowthPolicy.localCalendar.isDateInToday(model.selectedDate)
+    }
+
+    /// 창에 넣을 값. `now`는 시계가 준 순간이라 연봉과 나머지 줄이 같은 박자로 갱신된다.
+    @ViewBuilder
+    private func counterWindowContent(now: Date) -> some View {
+        if let salaryLive, recordingShows(\.salary) {
+            let tick = TimeInterval(max(1, salaryTickSeconds))
+            let calendar = MapHomeGrowthPolicy.localCalendar
+            let day = calendar.startOfDay(for: model.selectedDate)
+            if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute {
+                let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: day + minute * 60)
+                counterTable(now: now, salarySeconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), isWorking: false)
+            } else if calendar.isDateInToday(model.selectedDate) {
+                counterTable(
+                    now: now,
+                    salarySeconds: MapHomeSalaryPolicy.liveWorkSeconds(
+                        base: salaryLive.todayWorkSeconds,
+                        baseDate: salaryLive.measuredAt,
+                        isWorking: salaryLive.isWorking,
+                        now: now,
+                        tick: tick
+                    ),
+                    isWorking: salaryLive.isWorking
+                )
+            } else {
+                let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: .distantFuture)
+                counterTable(now: now, salarySeconds: seconds, isWorking: false)
+            }
+        } else {
+            counterTable(now: now, salarySeconds: nil, isWorking: false)
+        }
+    }
+
     /// 창에 넣을 값. 연봉이 없으면 나머지 카운터만 담는다.
-    private func counterTable(salarySeconds: TimeInterval?, isWorking: Bool) -> some View {
+    private func counterTable(now: Date, salarySeconds: TimeInterval?, isWorking: Bool) -> some View {
         let salary = salarySeconds.flatMap { seconds in
             salaryLive.map { live in
                 MapHomeCounterSalary(
@@ -7319,7 +7332,7 @@ struct MapHomeView: View {
                 )
             }
         }
-        return MapHomeCounterTable(salary: salary, badges: mapCounterBadges, language: language)
+        return MapHomeCounterTable(salary: salary, badges: mapCounterBadges(asOf: now), language: language)
     }
 
     private func salaryAnchor(viewport: MapHomeVectorViewport?, stickmanPoint: CGPoint?) -> CGPoint? {
@@ -7333,9 +7346,16 @@ struct MapHomeView: View {
     }
 
     /// 화랑이 위에 쌓아 보여 줄 카운터 값. 켠 것만, 값이 있는 것만 올린다.
-    private var mapCounterBadges: [MapHomeCounterBadge] {
+    ///
+    /// `now`는 창의 시계가 준 순간이다. 재생 중이면 재생 시각까지, 멈춰 있으면 지금까지로
+    /// 잘라 센다. 이 값이 매번 새로 계산되더라도 분 버킷 캐시가 하루 전체 재계산을 막는다.
+    private func mapCounterBadges(asOf now: Date) -> [MapHomeCounterBadge] {
         let cutoff = counterCutoffDate
-        let seconds = counterValueCache.categorySeconds(cutoff: cutoff) { daySummaryCategorySeconds(asOf: $0) }
+        let seconds = counterValueCache.categorySeconds(
+            cutoff: cutoff,
+            now: now,
+            revision: model.dayProjectionRevision
+        ) { daySummaryCategorySeconds(asOf: $0, now: now) }
         let steps = MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: cutoff)
         let meters = MapHomeCounterTimelinePolicy.travelMeters(
             segments: currentDayDataSnapshot?.travel ?? [], cutoff: cutoff)
