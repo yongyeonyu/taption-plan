@@ -387,17 +387,92 @@ struct NLETrack: Hashable, Sendable {
     mutating func merge(_ id: String, with neighborID: String) -> Bool {
         guard let index = clipIndex(id),
               let otherIndex = clipIndex(neighborID) else { return false }
-        let a = clips[min(index, otherIndex)]
-        let b = clips[max(index, otherIndex)]
-        guard a.endMinute == b.startMinute,
-              a.option.categoryID == b.option.categoryID,
-              a.option.title == b.option.title,
-              a.option.behavior == b.option.behavior,
-              a.parent == b.parent else { return false }
-        clips[min(index, otherIndex)].endMinute = b.endMinute
-        clips.remove(at: max(index, otherIndex))
+        let first = min(index, otherIndex)
+        let second = max(index, otherIndex)
+        guard let union = Self.merged(clips[first], clips[second]) else { return false }
+        clips[first] = union
+        clips.remove(at: second)
         renormalize()
         return true
+    }
+
+    /// 여러 클립을 한 번에 같은 분류로 덮는다.
+    ///
+    /// 대표 요청(2026-10-26): BOKKI STUDIO의 자막 합치기처럼, 여러 개로 나뉜 클립을
+    /// 하나씩 고치지 않고 한 번에 바꾼다. `matchingCategoryID`를 주면 그 분류의
+    /// 클립만 바꾼다(같은 것끼리 모아 바꾸기).
+    ///
+    /// 원본 기록이 없는 빈 시간(`parent.sourceIDs`가 빈 날 구멍)은 건드리지 않는다.
+    /// 센서에 없는 시간을 지어내지 않는다는 이 트랙의 규칙과 같은 이유다.
+    @discardableResult
+    mutating func overwrite(
+        with option: ActivityCorrectionOption,
+        matchingCategoryID: String? = nil
+    ) -> Int {
+        var changed = 0
+        for index in clips.indices {
+            guard !clips[index].parent.sourceIDs.isEmpty,
+                  clips[index].option != option,
+                  matchingCategoryID == nil
+                    || clips[index].option.categoryID == matchingCategoryID else { continue }
+            clips[index].option = option
+            changed += 1
+        }
+        guard changed > 0 else { return 0 }
+        renormalize()
+        return changed
+    }
+
+    /// 맞닿은 같은 분류·같은 원본 구간 클립을 모두 하나로 합친다.
+    ///
+    /// 손으로 가른 클립을 되돌리는 일이다(자막 합치기와 같다). 덮기와 함께 쓰면
+    /// 같은 분류가 된 이웃이 하나로 붙어, 하루가 원본 구간 수만큼의 띠로 정리된다.
+    @discardableResult
+    mutating func mergeAdjacent() -> Int {
+        var merged = 0
+        var result: [NLEClip] = []
+        for clip in clips.sorted(by: { lhs, rhs in
+            lhs.startMinute == rhs.startMinute
+                ? lhs.id < rhs.id
+                : lhs.startMinute < rhs.startMinute
+        }) {
+            if let last = result.last, let union = Self.merged(last, clip) {
+                result[result.count - 1] = union
+                merged += 1
+                continue
+            }
+            result.append(clip)
+        }
+        guard merged > 0 else { return 0 }
+        clips = result
+        renormalize()
+        return merged
+    }
+
+    /// 두 클립을 하나로 합칠 수 있으면 합친 클립을 돌려준다.
+    ///
+    /// 기준점(`origin`)이 이어져 있으면(가르기만 한 상태) 합친 구간으로 넓힌다.
+    /// 그래야 가르기→합치기가 '저장할 것이 없는' 왕복이 되고, 한쪽이라도 분류를
+    /// 바꿨으면 합친 구간 전체가 바뀐 것으로 남는다.
+    private static func merged(_ a: NLEClip, _ b: NLEClip) -> NLEClip? {
+        guard a.endMinute == b.startMinute,
+              a.parent == b.parent,
+              a.option == b.option else { return nil }
+        let origin = NLEClipOrigin(
+            startMinute: a.origin.startMinute,
+            endMinute: a.origin.endMinute == b.origin.startMinute
+                ? b.origin.endMinute
+                : a.origin.endMinute,
+            option: a.origin.option
+        )
+        return NLEClip(
+            id: a.id,
+            option: a.option,
+            startMinute: a.startMinute,
+            endMinute: b.endMinute,
+            parent: a.parent,
+            origin: origin
+        )
     }
 
     /// 되돌리기용 스냅숏. 클립 배열이 값 타입이라 통째로 담아 두면 된다.

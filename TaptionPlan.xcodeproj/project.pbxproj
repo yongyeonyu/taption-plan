@@ -189,6 +189,8 @@
 		A100000000000000000000EA /* MapHomeDisplayPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EA /* MapHomeDisplayPreset.swift */; };
 		A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EB /* MapHomeCalendarChipValue.swift */; };
 		A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EC /* MapHomeNLEToolbar.swift */; };
+		A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */; };
+		A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */; };
 		A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */; };
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
@@ -419,6 +421,8 @@
 		F100000000000000000000EA /* MapHomeDisplayPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDisplayPreset.swift; sourceTree = "<group>"; };
 		F100000000000000000000EB /* MapHomeCalendarChipValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarChipValue.swift; sourceTree = "<group>"; };
 		F100000000000000000000EC /* MapHomeNLEToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEToolbar.swift; sourceTree = "<group>"; };
+		F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwriteSheet.swift; sourceTree = "<group>"; };
+		F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEPreviewHost.swift; sourceTree = "<group>"; };
 		F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCurrentActivity.swift; sourceTree = "<group>"; };
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -590,6 +594,8 @@
 				F100000000000000000000EA /* MapHomeDisplayPreset.swift */,
 				F100000000000000000000EB /* MapHomeCalendarChipValue.swift */,
 				F100000000000000000000EC /* MapHomeNLEToolbar.swift */,
+				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
+				F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
@@ -1068,6 +1074,8 @@
 				A100000000000000000000EA /* MapHomeDisplayPreset.swift in Sources */,
 				A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */,
 				A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */,
+				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,
+				A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,

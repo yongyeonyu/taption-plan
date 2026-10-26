@@ -551,3 +551,110 @@ final class TaptionPlanBottomBarRecordUITests: XCTestCase {
         close.tap()
     }
 }
+
+/// 여러 개로 나뉜 클립을 한 번에 덮는 창이 실제로 그렇게 하는지 화면에서 확인한다.
+///
+/// BOKKI STUDIO의 자막 합치기와 같은 자리다. 예전에는 클립마다 분류를 하나씩
+/// 골라야 해서, 센서가 잘게 나눈 하루는 손으로 고칠 수 없을 만큼 일이 많았다.
+final class TaptionPlanOverwriteUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func launchEditor() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments = ["-nlePreview"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["클립 편집"].waitForExistence(timeout: 30))
+        return app
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.lifetime = .keepAlways
+        shot.name = name
+        add(shot)
+    }
+
+    /// 분류 메뉴에서 '전체 덮기'를 열고, 몇 개가 바뀌는지 먼저 보여 준 뒤 한 번에 덮는다.
+    func testOverwriteAllChangesEveryClipAtOnce() throws {
+        let app = launchEditor()
+        attach(app, name: "overwrite-before")
+
+        let categoryButton = app.buttons["분류"]
+        XCTAssertTrue(categoryButton.waitForExistence(timeout: 10), "분류 단추가 없다")
+        categoryButton.tap()
+        let entry = app.buttons["전체 덮기"].firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 5), "분류 메뉴에 '전체 덮기'가 없다")
+        entry.tap()
+
+        // 창은 분류를 고르기 전에 '무엇을 할지'만 보여 주고 덮기 단추를 잠근다.
+        XCTAssertTrue(
+            app.staticTexts["덮을 분류를 고르세요"].waitForExistence(timeout: 10),
+            "덮기 창이 열리지 않았다"
+        )
+        let overwrite = app.buttons["덮기"]
+        XCTAssertTrue(overwrite.exists, "덮기 단추가 없다")
+        XCTAssertFalse(overwrite.isEnabled, "분류를 고르기 전에는 덮을 수 없어야 한다")
+        XCTAssertFalse(
+            app.buttons["합치기만"].exists,
+            "합칠 곳이 없는데 '합치기만'을 내밀면 누르고 아무 일도 일어나지 않는다"
+        )
+        attach(app, name: "overwrite-sheet-empty")
+
+        // 분류를 고르면 바뀔 클립 수가 바로 나온다(예시 하루는 기록이 있는 8구간).
+        let exercise = app.buttons["운동"]
+        XCTAssertTrue(exercise.waitForExistence(timeout: 5), "분류 칩이 없다")
+        exercise.tap()
+        XCTAssertTrue(
+            app.staticTexts["클립 8개를 '운동' 분류로 덮습니다"].waitForExistence(timeout: 5),
+            "바뀔 클립 수가 보이지 않는다"
+        )
+        XCTAssertTrue(overwrite.isEnabled, "분류를 골랐는데 덮기 단추가 잠겨 있다")
+        attach(app, name: "overwrite-sheet-picked")
+
+        overwrite.tap()
+
+        // 창이 닫히고, 여러 클립이 한 번에 한 분류가 되고, 되돌리기가 켜진다.
+        // '덮기' 단추는 이 창에만 있으므로 그것이 사라지는 것이 창이 닫혔다는 신호다.
+        XCTAssertTrue(overwrite.waitForNonExistence(timeout: 15), "덮은 뒤에도 창이 남아 있다")
+        XCTAssertTrue(
+            waitForExerciseCount(app, 3, atLeast: true, timeout: 10),
+            "한 번에 바뀌지 않았다 — 대분류 줄의 운동이 \(exerciseCount(app))개뿐이다"
+        )
+        XCTAssertTrue(app.buttons["되돌리기"].isEnabled, "덮었는데 되돌릴 수 없다")
+        attach(app, name: "overwrite-after")
+
+        // 한 번에 되돌리면 원래 하루로 돌아온다.
+        // (센서 원본 줄은 원래 분류를 그대로 보여 주므로 대분류 줄의 운동 개수로 본다.)
+        app.buttons["되돌리기"].tap()
+        XCTAssertTrue(
+            waitForExerciseCount(app, 0, atLeast: false, timeout: 10),
+            "되돌리기가 한 번에 끝나지 않는다 — 운동이 \(exerciseCount(app))개 남았다"
+        )
+    }
+
+    /// 대분류 줄에 그려진 분류 이름의 개수.
+    ///
+    /// 같은 이름이 '센서 원본' 줄에도 있으므로, 덮기가 대분류 줄에만 적용됐는지는
+    /// 이 개수로만 판단한다(원본 줄은 원본이므로 바뀌면 오히려 잘못이다).
+    private func exerciseCount(_ app: XCUIApplication) -> Int {
+        app.staticTexts.matching(NSPredicate(format: "label == %@", "운동")).count
+    }
+
+    private func waitForExerciseCount(
+        _ app: XCUIApplication,
+        _ expected: Int,
+        atLeast: Bool,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let count = exerciseCount(app)
+            if atLeast ? count >= expected : count == expected { return true }
+            usleep(200_000)
+        }
+        let count = exerciseCount(app)
+        return atLeast ? count >= expected : count == expected
+    }
+}

@@ -49,6 +49,8 @@ struct MapHomeNLEClipEditor: View {
     @State private var scrollDirection: CGFloat = 0
     /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
     @State private var pick: NLEPick?
+    /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
+    @State private var isOverwritePresented = false
 
     init(
         model: AppModel,
@@ -119,6 +121,14 @@ struct MapHomeNLEClipEditor: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
+        .sheet(isPresented: $isOverwritePresented) {
+            MapHomeNLEOverwriteSheet(
+                language: language,
+                track: track,
+                selectedCategoryID: selectedClip?.option.categoryID,
+                categories: categoryOptions
+            ) { applyOverwrite($0) }
+        }
     }
 
     /// 클립 줄이 화면 양옆으로 삐져나오는 폭.
@@ -753,6 +763,14 @@ struct MapHomeNLEClipEditor: View {
                     Label(category.localizedTitle(language), systemImage: category.systemImage)
                 }
             }
+            // 고른 클립 하나가 아니라 나뉜 클립 전부를 바꾸는 문. 같은 메뉴에 두어
+            // '하나 고치기'와 '전체 덮기'를 같은 자리에서 고르게 한다.
+            Divider()
+            Button {
+                isOverwritePresented = true
+            } label: {
+                Label(language.text("전체 덮기", "Overwrite all"), systemImage: "rectangle.on.rectangle")
+            }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: "square.grid.2x2")
@@ -1175,11 +1193,6 @@ struct MapHomeNLEClipEditor: View {
         sourceSegments.first { minute >= $0.startMinute && minute < $0.endMinute }
     }
 
-    private func differsFromSensor(_ clip: NLEClip) -> Bool {
-        guard let segment = sensorSegment(atMinute: clip.startMinute) else { return false }
-        return segment.categoryID != clip.option.categoryID
-    }
-
     /// 센서 원본 구간을 그대로 대분류에 되돌린다. 그 구간은 다시 한 덩어리가 된다.
     private func restoreSensorSegment(_ segment: MapHomeTimeRailSegment) {
         guard let anchor = track.clip(atMinute: segment.startMinute) else { return }
@@ -1303,6 +1316,23 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
+    /// 전체 덮기·합치기를 적용한다. 실제로 바뀐 것이 없으면 되돌리기를 쌓지 않는다.
+    private func applyOverwrite(_ request: NLEOverwriteRequest) {
+        let result = NLEOverwritePolicy.apply(
+            track,
+            option: request.category.map { Self.option(for: $0, language: language) },
+            scope: request.scope,
+            selectedCategoryID: selectedClip?.option.categoryID,
+            mergesAfter: request.mergesAfter
+        )
+        guard result.changed + result.merged > 0 else { return }
+        pushUndo()
+        track = result.track
+        // 합쳐져 사라진 클립을 가리키지 않게 재생 헤드 자리의 클립으로 옮긴다.
+        selectedClipID = track.clip(atMinute: playheadMinute)?.id
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
     private func pushUndo() {
         undoStack.append(currentSnapshot)
         if undoStack.count > 40 { undoStack.removeFirst() }
@@ -1369,50 +1399,3 @@ struct MapHomeNLEClipEditor: View {
     }
 }
 
-#if DEBUG
-/// 레이아웃 확인용 미리보기. `-nlePreview` 실행 인자로만 열린다.
-struct NLEClipEditorPreviewHost: View {
-    @State private var model = AppModel(startsCommerceLocked: false)
-
-    var body: some View {
-        MapHomeNLEClipEditor(
-            model: model,
-            language: .korean,
-            date: Date(),
-            segments: Self.segments,
-            details: Self.details,
-            focusMinute: 600,
-            initialMinuteHeight: ProcessInfo.processInfo.arguments.contains("-nleZoom")
-                ? 2.6
-                : nil,
-            onSaved: {}
-        )
-    }
-
-    private static var segments: [MapHomeTimeRailSegment] {
-        [
-            MapHomeTimeRailSegment(startMinute: 0, endMinute: 420, categoryID: "sleep", title: "수면"),
-            MapHomeTimeRailSegment(startMinute: 420, endMinute: 720, categoryID: "work", title: "업무"),
-            MapHomeTimeRailSegment(startMinute: 720, endMinute: 780, categoryID: "eating", title: "식사"),
-            MapHomeTimeRailSegment(startMinute: 780, endMinute: 960, categoryID: "activity", title: "일상"),
-            MapHomeTimeRailSegment(startMinute: 960, endMinute: 1_020, categoryID: "movement", title: "이동"),
-            MapHomeTimeRailSegment(startMinute: 1_020, endMinute: 1_140, categoryID: "activity", title: "일상"),
-            MapHomeTimeRailSegment(startMinute: 1_140, endMinute: 1_320, categoryID: "hobby", title: "취미"),
-            MapHomeTimeRailSegment(startMinute: 1_320, endMinute: 1_440, categoryID: "sleep", title: "수면"),
-        ]
-    }
-
-    private static var details: [MapHomeSectionDetail] {
-        [
-            MapHomeSectionDetail(
-                id: UUID(), title: "회의", categoryID: "work",
-                behavior: nil, startMinute: 480, endMinute: 540
-            ),
-            MapHomeSectionDetail(
-                id: UUID(), title: "메일", categoryID: "work",
-                behavior: nil, startMinute: 600, endMinute: 660
-            ),
-        ]
-    }
-}
-#endif

@@ -29885,6 +29885,153 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(gaps.first?.startMinute, 500)
         XCTAssertEqual(gaps.first?.endMinute, 540)
     }
+
+    // MARK: - 전체 덮기·합치기 (OVW1026A01)
+
+    private func studyOption() -> ActivityCorrectionOption {
+        MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil)
+    }
+
+    /// 하루 전체를 덮어도 원본 기록이 없는 시간은 건드리지 않는다.
+    /// 센서에 없는 시간을 지어내지 않는다는 이 트랙의 규칙 그대로다.
+    func testOverwriteLeavesInventedTimeAlone() {
+        // 가운데 업무 구간만 센서 기록이 있다. 앞뒤는 기록 없이 채운 시간이다.
+        var track = MapHomeNLEClipEditor.makeMainTrack(
+            segments: threeSegmentDay(sources: [UUID()])
+        )
+        XCTAssertEqual(track.clips.count, 3)
+
+        let changed = track.overwrite(with: studyOption())
+
+        XCTAssertEqual(changed, 1, "기록이 있는 클립만 바뀐다")
+        XCTAssertEqual(track.clip(atMinute: 400)?.option.categoryID, "study")
+        XCTAssertEqual(track.clip(atMinute: 100)?.option.categoryID, "sleep", "기록 없는 시간은 그대로")
+        XCTAssertEqual(track.clip(atMinute: 900)?.option.categoryID, "activity")
+        XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
+    }
+
+    /// 기록이 있는 하루는 클립 수만큼 바뀌고, 두 번째 덮기는 바뀐 것이 없다.
+    func testOverwriteCountsEveryRecordedClipOnce() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep", sources: [UUID()]),
+            segment(300, 540, "work", sources: [UUID()]),
+            segment(540, 1_440, "activity", sources: [UUID()]),
+        ])
+
+        XCTAssertEqual(track.overwrite(with: studyOption()), 3)
+        XCTAssertTrue(track.clips.allSatisfy { $0.option.categoryID == "study" })
+        XCTAssertEqual(track.overwrite(with: studyOption()), 0, "이미 같은 분류면 다시 세지 않는다")
+    }
+
+    /// '같은 분류만'은 고른 분류의 클립만 바꾼다. 나머지 분류는 손대지 않는다.
+    func testOverwriteCanLimitItselfToTheSelectedCategory() {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "work", sources: [UUID()]),
+            segment(300, 540, "work", sources: [UUID()]),
+            segment(540, 1_440, "activity", sources: [UUID()]),
+        ])
+
+        let changed = track.overwrite(with: studyOption(), matchingCategoryID: "work")
+
+        XCTAssertEqual(changed, 2)
+        XCTAssertEqual(track.clips.filter { $0.option.categoryID == "study" }.count, 2)
+        XCTAssertEqual(track.clip(atMinute: 900)?.option.categoryID, "activity")
+    }
+
+    /// 손으로 가른 클립을 합치면 하나로 돌아오고, 저장할 것도 남지 않는다.
+    func testMergingHandSplitClipsSavesNothing() {
+        let source = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [source]))
+        let work = try! XCTUnwrap(track.clip(atMinute: 400))
+        _ = track.split(work.id, atMinute: 420)
+        XCTAssertEqual(track.clips.count, 4)
+
+        XCTAssertEqual(track.mergeAdjacent(), 1)
+        XCTAssertEqual(track.clips.count, 3)
+
+        let fused = try! XCTUnwrap(track.clip(atMinute: 400))
+        XCTAssertEqual(fused.startMinute, 300)
+        XCTAssertEqual(fused.endMinute, 540)
+        XCTAssertFalse(fused.isDirty, "가르기→합치기는 왕복이라 바뀐 것이 없다")
+        XCTAssertTrue(track.editRequests(dayStart: dayStart()).isEmpty)
+    }
+
+    /// 한쪽 조각만 분류를 바꾼 뒤 덮고 합치면, 합쳐진 구간 전체가 바뀐 것으로 남는다.
+    func testOverwriteThenMergeDirtiesTheWholeFusedSpan() {
+        let source = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [source]))
+        let work = try! XCTUnwrap(track.clip(atMinute: 400))
+        let tailID = try! XCTUnwrap(track.split(work.id, atMinute: 420))
+        XCTAssertTrue(track.setOption(tailID, to: studyOption()))
+
+        XCTAssertEqual(track.overwrite(with: studyOption()), 1, "앞 조각만 바뀐다")
+        XCTAssertEqual(track.mergeAdjacent(), 1)
+
+        let fused = try! XCTUnwrap(track.clip(atMinute: 400))
+        XCTAssertEqual(fused.startMinute, 300)
+        XCTAssertEqual(fused.endMinute, 540)
+        XCTAssertTrue(fused.isDirty)
+
+        // 요청은 여전히 원본 구간 하나에 하나다.
+        let requests = track.editRequests(dayStart: dayStart())
+        XCTAssertEqual(requests.count, 1)
+        let request = try! XCTUnwrap(requests.first)
+        XCTAssertEqual(request.sourceIDs, [source])
+        XCTAssertEqual(request.originalSpan.duration, 240 * 60, accuracy: 0.5)
+        let pieces = ActivitySectionOverrideEngine.pieces(for: request)
+        XCTAssertEqual(pieces.count, 1, "합친 구간은 조각 하나로 덮는다")
+        XCTAssertEqual(pieces.first?.option.categoryID, "study")
+    }
+
+    /// 창이 보여 주는 수와 실제로 바뀌는 수가 같아야 한다. 다르면 누르기 전 안내가 거짓말이 된다.
+    func testOverwritePolicyReportsTheSameCountItApplies() {
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep", sources: [UUID()]),
+            segment(300, 540, "work", sources: [UUID()]),
+            segment(540, 1_440, "activity", sources: [UUID()]),
+        ])
+        let option = studyOption()
+
+        let wholeDay = NLEOverwritePolicy.affectedCount(
+            track, scope: .wholeDay, selectedCategoryID: nil
+        )
+        XCTAssertEqual(wholeDay, 3)
+        let applied = NLEOverwritePolicy.apply(
+            track, option: option, scope: .wholeDay,
+            selectedCategoryID: nil, mergesAfter: false
+        )
+        XCTAssertEqual(applied.changed, wholeDay)
+        XCTAssertEqual(applied.merged, 0, "합치기를 끄면 합치지 않는다")
+
+        // '같은 분류만'인데 기준 분류가 없으면 바꿀 것이 없다.
+        XCTAssertEqual(
+            NLEOverwritePolicy.affectedCount(track, scope: .sameCategory, selectedCategoryID: nil),
+            0
+        )
+        XCTAssertEqual(
+            NLEOverwritePolicy.affectedCount(track, scope: .sameCategory, selectedCategoryID: "work"),
+            1
+        )
+    }
+
+    /// 분류를 고르지 않은 요청은 합치기만 한다(자막 합치기와 같은 단추).
+    func testOverwritePolicyMergesOnlyWhenNoCategoryIsPicked() {
+        let source = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [source]))
+        let work = try! XCTUnwrap(track.clip(atMinute: 400))
+        _ = track.split(work.id, atMinute: 420)
+        XCTAssertEqual(NLEOverwritePolicy.mergeableCount(track), 1)
+
+        let result = NLEOverwritePolicy.apply(
+            track, option: nil, scope: .wholeDay,
+            selectedCategoryID: nil, mergesAfter: true
+        )
+
+        XCTAssertEqual(result.changed, 0)
+        XCTAssertEqual(result.merged, 1)
+        XCTAssertEqual(result.track.clips.count, 3)
+        XCTAssertTrue(result.track.editRequests(dayStart: dayStart()).isEmpty)
+    }
 }
 
 @MainActor
