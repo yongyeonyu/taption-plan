@@ -2177,3 +2177,10 @@
 - 시뮬레이터 측정(임시, HealthKit 20만+스냅샷 2천): 전체 읽기 110ms → 걸러 읽기 1ms 미만. 측정 코드는 지웠다.
 - 이 로그로 **닫힌 항목 셋**: ①`launch_gate` 실기기 값 ②`map_shell_grace` 발동 장면(9,944 → 10,570 = 626ms로 600ms 문턱 초과, `initial_launch_ready`도 같은 순간, 지도 shell은 13,937ms로 3.4초 늦음) ③`repository_local_load`의 `rows`·`total_ms`.
 - 남은 것: ①빌드 242를 올려 `rows`가 2만6천 규모로, `bootstrapped`가 1초 안쪽으로 오는지 확인(같은 행당 비율이면 읽기 약 190ms) ②같은 세션에 `repository_local_load`가 **두 번** 찍히는 이유(원인 미상, 걸러 읽기 뒤에는 손해가 작음) ③90% 천장은 이 로그가 빌드 240이라 아직 확인 못 함 — 241/242에서 봐야 한다.
+
+## TFB1027A01 · 빌드 242 배포 (2026-10-27)
+- `bash scripts/testflight/release.sh --yes --request-id TFB1027A01`. `LCH1027A01`(시작 적재가 HealthKit 표본 126만 행을 읽지 않는다)을 포함.
+- 241 → **242**(네 Info.plist + pbxproj 8곳). IPA 44,833,231 bytes, 업로드 5.641초(7.9MB/s), 처리 13분 만에 **VALID**, 그룹 연결·검증 `ok: true`·테스터 1명. Delivery UUID `2bde2e88-6cde-41ef-838e-cd1a7fb86720`. 전체 32분 6초.
+- **그룹 연결이 404 없이 한 번에 붙었다** — TFB1026A05의 `retry_404`는 이번에 타지 않았다. 지연이 매번 생기는 게 아니라는 뜻이고, 수정이 불필요하다는 뜻은 아니다.
+- **처리 시간이 3분 → 13분**. 10회 연속 `NOT_UPLOADED`였다가 한 번에 VALID. 업로드는 오히려 더 빨랐으니 ASC 큐 대기다. 처리 시간은 예측하지 말 것.
+- 남은 것: 기기 로그로 ①`repository_local_load`의 `rows`가 2만6천 규모인지 ②`bootstrapped`가 1초 안쪽인지 ③`map_shell_grace`가 이번에도 발동하는지 ④**90% 천장**(241의 진행선 수정이 이 빌드에 처음 들어가므로 이번에 처음 볼 수 있다).

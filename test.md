@@ -4140,3 +4140,40 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `launch_gate`의 실기기 값 — LCH1026A01부터 세 번 미뤄 둔 항목.
 - `map_shell_grace` 발동 장면 — `bootstrapped`(9,944) → `map_shell_grace`(10,570) = **626ms**로 600ms 문턱을 넘겨 발동했다. `initial_launch_ready`도 같은 순간(10,570ms)에 찍혔다. 지도 shell은 13,937ms에 도착해 **3.4초 늦게** 그려졌다.
 - `repository_local_load`의 `rows`·`total_ms` — LCH1026A04의 재개 조건 판정.
+
+## TFB1027A01 · 빌드 242를 내부 테스터에게 배포 (2026-10-27)
+
+- 요청 ID: `TFB1027A01`
+- 무엇을: `LCH1027A01`(시작 적재가 HealthKit 표본 126만 행을 읽지 않는다)을 포함한 빌드 242를 TestFlight 내부 그룹에 올린다.
+- 시작 상태: 작업 트리 깨끗함(`1129821`), 네 제품 번들 + `project.pbxproj` 모두 **241**. App Store Connect 최고 빌드 241(VALID).
+
+### 1. 실행
+
+`bash scripts/testflight/release.sh --yes --request-id TFB1027A01` (9단계 전체, 32분 6초).
+
+| 단계 | 결과 |
+| --- | --- |
+| 1/9 사전 점검 | 인증·키·툴·앱 조회(`6797370230`)·최고 빌드 241·내부 그룹(`b4857e5e…`) 모두 OK, 트리 깨끗함 |
+| 2/9 빌드 번호 | 241 → **242** (네 Info.plist + `project.pbxproj` 8곳) |
+| 3/9 테스트 | `--with-tests` 없음 → 생략(아카이브 컴파일로 빌드만 확인) |
+| 4/9 아카이브 | `build/validation/TFB1027A01/TaptionPlan242.xcarchive` (약 19분) |
+| 5/9 익스포트 | `build/validation/TFB1027A01/export/TaptionPlan.ipa` |
+| 6/9 번들 검증 | `com.taption.plan` 242 · `com.taption.plan.widget` 242 (2/2) |
+| 7/9 업로드 | 44,833,231 bytes / **5.641초(7.9MB/s, 63.6Mbps)** · Delivery UUID `2bde2e88-6cde-41ef-838e-cd1a7fb86720` |
+| 8/9 처리·그룹 | 업로드 → `02:00:44` **VALID**(약 13분). 그룹 연결 **한 번에 성공** |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 242, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+
+- 보고서: `build/validation/TFB1027A01/testflight-report.json`, 로그: `build/validation/TFB1027A01/`.
+
+### 2. 지난 빌드와 달라진 점
+
+- **그룹 연결이 404 없이 한 번에 붙었다.** TFB1026A05에서 넣은 `retry_404`(약 90초 재시도)는 이번에 **실제로 타지 않았다** — VALID 직후 관계 엔드포인트가 바로 받아 줬다. 수정이 필요 없다는 뜻이 아니라, 그 지연이 매번 생기는 것은 아니라는 뜻이다. 다음에 또 404가 나면 그때 재시도가 일하는 것을 볼 수 있다.
+- **처리가 3분 → 13분으로 늘었다.** 10번 연속 `NOT_UPLOADED`(목록에 빌드가 아예 없음)였다가 한 번에 VALID가 됐다. 업로드 자체는 5.6초로 더 빨랐으므로 ASC 처리 큐 대기다. **`wait`의 기본 타임아웃을 넘길 수 있으니 처리 시간은 예측하지 않는다.**
+
+### 3. 확인하지 못한 것
+
+- 기기에서의 실제 효과. 이 빌드의 목적은 `LCH1027A01`이 기기에서 실제로 줄어드는지 보는 것이다. 로그를 받아 확인할 것:
+  - `repository_local_load`의 `rows`가 1,284,890 → **2만6천 규모**로 줄었는지.
+  - `launch_gate`의 `bootstrapped`가 9,944ms → **1초 안쪽**으로 왔는지.
+  - `map_shell_grace`가 이번에도 발동하는지(발동하면 지도 shell이 여전히 늦다는 뜻).
+- 90% 천장은 이 빌드가 241의 진행선 수정을 포함하므로, **이번 로그에서 처음 확인할 수 있다.**
