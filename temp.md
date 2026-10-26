@@ -2122,3 +2122,24 @@
 - 배포: 이 8건은 빌드 237(`TFB1025A02`)로 내부 그룹에 올라갔다(236에는 없음).
 - 검증 기준: ①~⑦ 각 항목별로 아래 test.md 기록에 적은 관찰 가능한 조건. 공통으로 Debug 빌드 경고 0, 관련 테스트 통과, 구조 게이트 통과(`MapHomeView` 22,072줄 이하).
 - 진행: ①~⑧ 모두 구현·단위 테스트 통과(1,610건, 신규 9건). 남은 것 = **실기기 화면 확인**(재생 중 화랑이·카운터 상승·잠금화면 이름·카운터 표·스플래시 진행선). 이 항목이 끝나면 이 블록을 지운다.
+
+## BTM1026A01 · 하단 메뉴·재생 한 칸·이어지는 날짜 줄 (2026-10-26)
+- 요청(대표): ①재생 단추를 「멈춤 - 재생」 반복으로(재생 중 단추 늘리지 말 것) ②현재 위치를 누르거나 지도를 움직이면 정지(취소), 아이콘은 늘리지 말 것 ③좌상단 메인 메뉴를 하단 맨 왼쪽으로 ④날짜 배지로 펼친 위젯을 스크롤하면 좌우로 계속 날짜가 나오게.
+- ① 하단 재생 칸을 한 칸으로 되돌렸다. 재생 중에는 같은 자리에서 `play.fill`→`pause.fill`, 이름 `재생`→`멈춤`. 「종료」(`stop.fill`) 삭제. 하단 항목은 이제 **7개 고정**(메뉴·달력·현재 위치·집·재생·녹화·메모).
+- ② `cancelDayPlaybackIfRunning()`(= `stopDayPlayback(resetProgress: true)`)을 세 곳에 붙였다: `handleUserMapPan`(기존), `handleUserCameraGesture`(확대·축소·회전, 신규), `requestAndFollowUserLocation`(현재 위치, 두 레이아웃 공통, 신규). 단추는 늘리지 않았다.
+- ③ `topLeftControls`의 메뉴 원형 단추를 삭제하고 `bottomActionBar` 맨 앞에 `bottomBarButton("line.3.horizontal", "메뉴")`로 넣었다. `bottomActionBar`는 `isMenuOpen`일 때 숨겨지므로 메뉴를 닫는 길은 메뉴 안의 「메뉴 닫기」다(기존과 같다).
+- ④ 날짜 줄을 달력 주(일~토)에서 **선택일 중심 7칸 창**으로 바꿨다(`MapHomeWeekStripMath.window`). 하루 넘길 때 `dragOffset`에 ±38pt를 미리 상쇄하고 `Task { @MainActor }`로 한 턴 뒤 0으로 되돌려 줄이 끊기지 않고 흐른다. `DispatchQueue.main.async`는 구조 게이트 `main_queue`를 올려 쓰지 않았다.
+- 파일 분리: `MapHomeDateStrip.swift`(146줄) 신규. `MapHomeView`가 동결 예산(22,072)에 붙어 있어 기능 추가분을 상쇄해야 했다 → 21,989줄. `AppShellView`도 동결(1,646)이라 `AppShellLaunchGate.swift`(80줄)로 게이트·진행선 수학·생체 인증 게이트를 옮겨 1,643줄.
+- pbxproj: 두 신규 파일을 4곳(PBXBuildFile·PBXFileReference·group children·Sources)에 `EF`/`F0` ID로 등록.
+- 검증: 전체 1,635건 중 **1,633 통과 · 실패 0 · 건너뜀 2**. UI 3스위트 4건 통과(재생 토글·지도 끌기 취소·메뉴 왼쪽 끝·닷새 연속 쓸기). 구조 게이트·import 경계 통과.
+- 함정(시험): 재생은 하루 24초라 오후에 시험하면 단언 전에 끝난다 → 시간 레일을 이른 아침으로 먼저 옮긴다. HUD처럼 시간에 민감한 단언을 먼저 둔다. 하단 항목 비교는 이름이 아니라 **개수**로 한다(재생↔멈춤).
+- 남은 것: 실기기에서 ②(현재 위치 취소)와 날짜 줄 연속 쓸기 손맛.
+
+## LCH1026A01 · 시작 로딩을 재고 줄인다 (2026-10-26)
+- 요청(대표): "시작할 때 로딩이 너무 길어서 최적화 필요."
+- 먼저 쟀다: 게이트마다 `launch_gate`(elapsed_ms)를 남겼다(`AppShellLaunchGateRecorder`). 단조 시계 차이라 기록 순서와 무관.
+- 측정(시뮬레이터, Debug): 마지막까지 남는 것은 **지도 첫 화면**이었다 — `bootstrapped` 788ms인데 `map_shell` 1,492ms(찬 캐시), 따뜻한 캐시에서도 332 → 462ms. `initial_launch_ready` 1,637 / 1,044 / 460~481ms.
+- 원인: `reportInitialMapShellReadyIfNeeded`가 `dayDataSnapshot?.isComplete`를 요구하고, 하루 적재는 `bootstrap` 뒤에 시작한다. `repository_local_load`의 실제 작업은 12.9ms(34행)뿐인데 `bootstrap_local_snapshot`은 334ms — 저장소 첫 접근 + `snapshot` 게시 뒤 SwiftUI 본문 재평가(Debug)가 대부분이다.
+- 바꾼 것: ①스플래시에 **0.6초 유예**(`mapShellGraceElapsed`) — 앱을 쓸 수 있으면 걷고 경로는 그 위에 채운다. 15초 하드 타임아웃은 유지. ②권한 준비(이벤트킷·건강·안내 시트)를 스플래시가 걷힌 뒤로 이동 — 시작 중 메인 스레드를 잡던 일을 없앴다. ③게이트 수학·판정을 `AppShellLaunchGate.swift`로 분리(동결 예산).
+- 단위 테스트 2건 신규. 전체 1,635건 중 1,633 통과 · 실패 0.
+- **주의**: 시뮬레이터 캐시 상태 차이가 개선폭보다 크다(4~6차 460~481ms). 유예는 이 시뮬레이터에서 한 번도 작동하지 않았다(매번 지도가 949~978ms 유예보다 먼저 준비). 효과는 실기기 `launch_gate` 로그로 확인해야 한다.

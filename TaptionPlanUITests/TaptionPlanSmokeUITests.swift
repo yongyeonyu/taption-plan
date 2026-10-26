@@ -439,9 +439,21 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
         add(shot)
     }
 
-    func testPlayTurnsIntoPauseAndStopWithHUD() throws {
+    /// 하단 단추 가운데 화면 아래쪽(하단 독)에 있는 것들의 이름.
+    ///
+    /// 재생 중에 항목이 늘었는지 재는 데 쓴다. 대표 요청은 "재생은 같은 자리에서
+    /// 「멈춤」으로만 바뀌고 단추를 늘리지 말 것"이었다.
+    private func bottomBarLabels(_ app: XCUIApplication) -> [String] {
+        let bottomEdge = app.frame.height * 0.8
+        return app.buttons.allElementsBoundByIndex
+            .filter { $0.exists && $0.frame.minY > bottomEdge }
+            .map { $0.label }
+            .sorted()
+    }
+
+    func testPlayTogglesInOneSlotAndMapMoveCancelsIt() throws {
         // 오늘 하루를 24초에 재생하므로 남은 하루가 짧으면 재생이 1초 만에 스스로 끝나
-        // 「일시 정지」를 볼 수 없다. 그런 시각에는 재지 않고 건너뛴다.
+        // 「멈춤」을 볼 수 없다. 그런 시각에는 재지 않고 건너뛴다.
         let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
         let minuteOfDay = (now.hour ?? 0) * 60 + (now.minute ?? 0)
         try XCTSkipIf(minuteOfDay < 300, "자정에서 5시간이 안 지나 재생 구간이 2.5초보다 짧다")
@@ -453,41 +465,49 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
 
         let play = app.buttons["재생"].firstMatch
         XCTAssertTrue(play.waitForExistence(timeout: 40), "하단 재생 단추가 없다")
-        sleep(3)
+        // 재생은 하루를 24초에 그린다. 지금 시각에서 시작하면 남은 하루가 짧아 몇 초 만에
+        // 스스로 끝나므로, 시간 레일을 이른 아침으로 옮겨 재생 구간을 넉넉히 만든다.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.2)).tap()
+        usleep(600_000)
+        let idleLabels = bottomBarLabels(app)
         attach(app, name: "play-idle")
 
-        // 재생을 누르면 「일시 정지」와 「종료」가 나란히 서고 HUD가 뜬다.
+        // 재생을 누르면 **같은 자리**가 「멈춤」이 된다. 「종료」는 없다.
         play.tap()
-        XCTAssertTrue(app.buttons["일시 정지"].firstMatch.waitForExistence(timeout: 8), "재생을 눌러도 「일시 정지」로 바뀌지 않는다")
-        XCTAssertTrue(app.buttons["종료"].firstMatch.exists, "재생 중에 「종료」가 없다")
-        XCTAssertFalse(app.buttons["재생"].exists, "재생 중인데 「재생」이 남아 있다")
-        // HUD는 '하루 24초'라는 문구로 찾는다(지도 손가락을 막지 않게 hitTesting을 껐다).
+        // 하루가 24초라 재생은 몇 초 만에 스스로 끝난다. 시간에 민감한 HUD를 먼저 본다.
         let hud = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "하루 24초")).firstMatch
-        XCTAssertTrue(hud.waitForExistence(timeout: 5), "재생 중인데 HUD가 없다")
+        XCTAssertTrue(hud.waitForExistence(timeout: 6), "재생 중인데 HUD가 없다")
         attach(app, name: "play-running")
+        XCTAssertTrue(app.buttons["멈춤"].firstMatch.exists, "재생을 눌러도 「멈춤」으로 바뀌지 않는다")
+        XCTAssertFalse(app.buttons["재생"].exists, "재생 중인데 「재생」이 남아 있다")
+        XCTAssertFalse(app.buttons["종료"].exists, "재생 중에 「종료」가 또 있다(단추를 늘리지 않기로 했다)")
+        XCTAssertEqual(
+            bottomBarLabels(app).count,
+            idleLabels.count,
+            "재생 중에 하단 항목 수가 달라졌다(단추를 늘리지 않기로 했다): \(bottomBarLabels(app))"
+        )
 
-        // 「일시 정지」는 재생만 멈추고 「재생」 자리로 돌아온다. HUD도 함께 사라진다.
-        app.buttons["일시 정지"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "일시 정지해도 「재생」으로 돌아오지 않는다")
-        XCTAssertFalse(app.buttons["일시 정지"].exists, "일시 정지했는데 「일시 정지」가 남아 있다")
-        XCTAssertFalse(hud.exists, "일시 정지했는데 HUD가 남아 있다")
+        // 같은 자리를 다시 누르면 재생이 멈추고 「재생」으로 돌아온다. HUD도 함께 사라진다.
+        app.buttons["멈춤"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "멈춤을 눌러도 「재생」으로 돌아오지 않는다")
+        XCTAssertFalse(app.buttons["멈춤"].exists, "멈췄는데 「멈춤」이 남아 있다")
+        XCTAssertFalse(hud.exists, "멈췄는데 HUD가 남아 있다")
         attach(app, name: "play-paused")
 
-        // 「종료」도 「재생」으로 돌아온다. 하루가 24초라 재생이 하루 끝에 닿으면 스스로
-        // 끝나므로, 두 번째 재생은 앱을 새로 켜서 처음(자정)부터 시작한다.
-        app.terminate()
-        app.launch()
-        let skipAgain = app.buttons["전체 건너뛰기"]
-        if skipAgain.waitForExistence(timeout: 12) { skipAgain.tap() }
-        let playAgain = app.buttons["재생"].firstMatch
-        XCTAssertTrue(playAgain.waitForExistence(timeout: 40), "다시 켠 뒤 하단 재생 단추가 없다")
-        sleep(2)
-        playAgain.tap()
-        XCTAssertTrue(app.buttons["종료"].firstMatch.waitForExistence(timeout: 8), "다시 켜고 재생해도 「종료」가 없다")
-        attach(app, name: "play-resumed")
-        app.buttons["종료"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["재생"].firstMatch.waitForExistence(timeout: 5), "종료해도 「재생」으로 돌아오지 않는다")
-        attach(app, name: "play-stopped")
+        // 재생 중에 지도를 끌면 재생이 취소된다. 취소 단추를 따로 두지 않는다.
+        app.buttons["재생"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["멈춤"].firstMatch.waitForExistence(timeout: 8), "다시 재생되지 않는다")
+        let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42))
+        from.press(
+            forDuration: 0.1,
+            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.78, dy: 0.42))
+        )
+        XCTAssertTrue(
+            app.buttons["재생"].firstMatch.waitForExistence(timeout: 6),
+            "지도를 끌어도 재생이 취소되지 않는다"
+        )
+        XCTAssertFalse(hud.exists, "지도를 끌었는데 HUD가 남아 있다")
+        attach(app, name: "play-cancelled-by-map")
     }
 }
 
@@ -533,14 +553,16 @@ final class TaptionPlanBottomBarRecordUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(record.frame.height, 44, "녹화 단추 높이가 \(record.frame.height)pt다")
         XCTAssertGreaterThan(record.frame.minX, play.frame.minX, "녹화가 재생보다 왼쪽에 있다")
         XCTAssertLessThan(record.frame.minX, memo.frame.minX, "녹화가 메모보다 오른쪽에 있다")
+        // 메뉴는 하단 맨 왼쪽이다(2026-10-26에 왼쪽 위에서 내렸다).
+        guard let menuInBar = bottomBarButton("메뉴") else {
+            return XCTFail("하단에 「메뉴」가 없다")
+        }
+        XCTAssertLessThan(menuInBar.frame.minX, play.frame.minX, "메뉴가 하단 맨 왼쪽이 아니다")
+        XCTAssertGreaterThanOrEqual(menuInBar.frame.height, 44, "메뉴 단추 높이가 \(menuInBar.frame.height)pt다")
         attach(app, name: "bottom-bar-record")
 
         // 같은 일을 하는 줄이 메뉴 > 화면에 겹쳐 남아 있으면 안 된다.
-        let menu = app.buttons
-            .containing(NSPredicate(format: "label CONTAINS %@", "메뉴"))
-            .firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 5), "메뉴 단추가 없다")
-        menu.tap()
+        menuInBar.tap()
         let close = app.buttons["메뉴 닫기"]
         XCTAssertTrue(close.waitForExistence(timeout: 5), "메뉴가 열리지 않았다")
         XCTAssertFalse(
@@ -786,5 +808,36 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
             [today.month, today.day],
             "한 번 쓸었는데 \(tomorrow.month)월 \(tomorrow.day)일 → \(back.month)월 \(back.day)일로 움직였다"
         )
+    }
+
+    /// 날짜 줄은 주(일~토)가 아니라 **선택일을 가운데 두는 창**이라, 계속 쓸어도 날짜가
+    /// 이어진다. 예전에는 한 주가 지나면 줄이 튀고 주말에서 멈췄다(대표 지적).
+    func testDateStripKeepsProducingDatesPastTheWeek() throws {
+        let app = launch()
+        let badge = dateBadge(app)
+        let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
+
+        badge.tap()
+        let strip = weekStrip(app)
+        XCTAssertTrue(strip.waitForExistence(timeout: 5), "날짜 배지를 눌러도 날짜 줄이 펼쳐지지 않는다")
+        usleep(500_000)
+        attach(app, name: "date-strip-start")
+
+        // 한 주를 넘겨 닷새를 더 간다. 창이 하루씩 옮겨 가므로 매번 하루만 움직인다.
+        var previous = today
+        for step in 1...5 {
+            swipe(app, on: strip, dx: -250)
+            guard let next = waitForDateChange(badge, from: previous, timeout: 6) else {
+                return XCTFail("\(step)번째 쓸기에 날짜가 그대로다(\(previous.month)월 \(previous.day)일)")
+            }
+            let expected = monthDay(offset: step)
+            XCTAssertEqual(
+                [next.month, next.day],
+                [expected.month, expected.day],
+                "\(step)번째 쓸기에서 \(next.month)월 \(next.day)일로 움직였다"
+            )
+            previous = next
+        }
+        attach(app, name: "date-strip-five-days-later")
     }
 }

@@ -21,6 +21,9 @@ struct AppShellView: View {
     @State private var hasCompletedInitialMapShellPreparation = false
     /// 전체 로딩이 너무 오래 걸리면 시간 제한 후 홈을 연다.
     @State private var launchTimeoutPassed = false
+    /// 오늘 경로(하루 데이터)를 기다리는 유예가 지났다. 스플래시를 붙잡지 않는다.
+    @State private var mapShellGraceElapsed = false
+    @State private var mapShellGraceTask: Task<Void, Never>?
     @State private var hasRenderedInitialDestination = false
     @State private var isInitialLaunchOverlayVisible = true
     @State private var initialLaunchProgressValue = 0.0
@@ -114,14 +117,17 @@ struct AppShellView: View {
             }
         }
         .onChange(of: model.isBootstrapped) { _, _ in
+            recordLaunchGate("bootstrapped")
             advanceInitialLaunchProgress(to: 0.86)
             dismissInitialLaunchOverlayIfReady()
         }
         .onChange(of: model.hasPreparedStartupSettings) { _, _ in
+            recordLaunchGate("startup_settings")
             advanceInitialLaunchProgress(to: 0.86)
             dismissInitialLaunchOverlayIfReady()
         }
         .onChange(of: isSecurityStateReady) { _, _ in
+            recordLaunchGate("security_state")
             dismissInitialLaunchOverlayIfReady()
         }
         .onChange(of: model.sensorCollectionSessionState) { _, _ in
@@ -254,9 +260,27 @@ struct AppShellView: View {
             hasRenderedInitialDestination: hasRenderedInitialDestination,
             hasCompletedInitialMapShellPreparation:
                 hasCompletedInitialMapShellPreparation,
+            mapShellGraceElapsed: mapShellGraceElapsed,
             isBootstrapped: model.isBootstrapped || launchTimeoutPassed,
             grantsAccess: proAccess.grantsAccess
         )
+    }
+
+    /// 지도 첫 화면이 오늘 경로를 다 읽을 때까지 스플래시를 붙잡지 않는다.
+    /// 앱을 쓸 수 있는 상태는 갖춰졌는데 지도만 경로를 더 읽는 중이면, 0.6초 뒤
+    /// 스플래시를 걷고 경로는 그 위에 채운다(대표 요청: 시작 로딩 최적화).
+    private func scheduleMapShellGraceIfNeeded() {
+        guard mapShellGraceTask == nil, isInitialLaunchOverlayVisible,
+              !hasCompletedInitialMapShellPreparation, hasCompletedInitialProRefresh,
+              isSecurityStateReady, hasRenderedInitialDestination,
+              model.isBootstrapped, proAccess.grantsAccess else { return }
+        mapShellGraceTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            mapShellGraceElapsed = true
+            recordLaunchGate("map_shell_grace")
+            dismissInitialLaunchOverlayIfReady()
+        }
     }
 
     private var initialLaunchProgress: Double {
@@ -298,11 +322,20 @@ struct AppShellView: View {
     private func markInitialDestinationRendered() {
         guard !hasRenderedInitialDestination else { return }
         hasRenderedInitialDestination = true
+        recordLaunchGate("destination_rendered")
         advanceInitialLaunchProgress(to: 0.36)
         dismissInitialLaunchOverlayIfReady()
     }
 
+    /// 시작 게이트가 하나씩 열릴 때마다 걸린 시간을 남긴다(자세한 설명은 `AppShellLaunchGateRecorder`).
+    private func recordLaunchGate(_ gate: String) {
+        AppShellLaunchGateRecorder.record(gate, startedAt: initialLaunchStartedAt)
+    }
+
     private func dismissInitialLaunchOverlayIfReady() {
+        // 아직 안 걷혔으면, 오늘 경로를 기다리느라 스플래시에 갇히지 않도록
+        // 짧은 유예를 걸어 둔다(아래).
+        scheduleMapShellGraceIfNeeded()
         guard isInitialLaunchOverlayVisible, initialLaunchReady else { return }
         initialLaunchProgressTask?.cancel()
         initialLaunchProgressTarget = 1
@@ -310,6 +343,9 @@ struct AppShellView: View {
             initialLaunchProgressValue = 1
             isInitialLaunchOverlayVisible = false
         }
+        // 권한 시트는 스플래시가 걷힌 뒤에 띄운다. 시작 화면 뒤에서 이벤트킷·건강
+        // 권한을 읽고 시트를 올리면 메인 스레드를 먼저 잡아 지도 첫 화면이 늦어진다.
+        scheduleDeferredPermissionPreparation()
         if let initialLaunchStartedAt {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "initial_launch_ready",
@@ -486,6 +522,7 @@ struct AppShellView: View {
     private func performInitialLaunchPreparation() async {
         initialLaunchStartedAt = ProcessInfo.processInfo.systemUptime
         TaptionPlanDiagnosticsLogger.shared.record("initial_launch_started")
+        recordLaunchGate("launch_task_started")
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 15_000_000_000)
             launchTimeoutPassed = true
@@ -495,13 +532,15 @@ struct AppShellView: View {
         advanceInitialLaunchProgress(to: 0.04)
         await proAccess.refreshAccess()
         hasCompletedInitialProRefresh = true
+        recordLaunchGate("pro_refresh")
         advanceInitialLaunchProgress(to: 0.18)
         scheduleDeferredStoreKitProductLoad()
         if proAccess.grantsAccess {
             advanceInitialLaunchProgress(to: 0.20)
             await model.sceneBecameActive()
+            recordLaunchGate("scene_became_active")
             advanceInitialLaunchProgress(to: 0.86)
-            scheduleDeferredPermissionPreparation()
+            // 권한 준비는 스플래시가 걷힌 뒤로 미룬다(dismissInitialLaunchOverlayIfReady).
         } else {
             advanceInitialLaunchProgress(to: 0.80)
             await model.suspendForCommerceLock()
@@ -650,6 +689,7 @@ struct AppShellView: View {
                 proAccess: proAccess,
                 onInitialDataReady: {
                     hasCompletedInitialMapShellPreparation = true
+                    recordLaunchGate("map_shell")
                     advanceInitialLaunchProgress(to: 0.98)
                     dismissInitialLaunchOverlayIfReady()
                 }
@@ -669,47 +709,6 @@ struct AppShellView: View {
         case .settings:
             SettingsView(model: model)
         }
-    }
-}
-
-enum AppShellInitialLaunchProgressMath {
-    static func next(
-        current: Double,
-        target: Double,
-        minimumStep: Double = 0.004
-    ) -> Double {
-        let current = min(max(current, 0), 1)
-        let target = min(max(target, current), 1)
-        guard target > current else { return current }
-        let step = max(minimumStep, (target - current) * 0.18)
-        return min(target, current + step)
-    }
-}
-
-enum AppShellInitialLaunchGate {
-    static func isReady(
-        hasCompletedInitialProRefresh: Bool,
-        isSecurityStateReady: Bool,
-        hasRenderedInitialDestination: Bool,
-        hasCompletedInitialMapShellPreparation: Bool,
-        isBootstrapped: Bool,
-        grantsAccess: Bool
-    ) -> Bool {
-        hasCompletedInitialProRefresh
-            && isSecurityStateReady
-            && hasRenderedInitialDestination
-            && (hasCompletedInitialMapShellPreparation || !grantsAccess)
-            && (isBootstrapped || !grantsAccess)
-    }
-}
-
-struct AppLockBiometricAttemptGate {
-    static func shouldStart(
-        generation: Int,
-        attemptedGeneration: Int?,
-        isInFlight: Bool
-    ) -> Bool {
-        !isInFlight && attemptedGeneration != generation
     }
 }
 

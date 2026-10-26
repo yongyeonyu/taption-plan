@@ -2358,7 +2358,6 @@ struct MapHomeView: View {
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
     /// 날짜 줄을 끄는 동안 손가락을 따라 움직이는 거리(한 칸을 넘지 않는다).
-    @State private var weekDragOffset: CGFloat = 0
     /// 시작 시간 제한이 지났는지(DB나 경로가 끝나지 않아도 홈을 연다).
     @State private var initialReadyForced = false
     @State private var calendarService = AppleCalendarService()
@@ -3812,21 +3811,11 @@ struct MapHomeView: View {
             .min { abs($0.occurredAt.timeIntervalSince(center)) < abs($1.occurredAt.timeIntervalSince(center)) }
     }
 
-    /// 왼쪽 상단: 메뉴·메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
+    /// 왼쪽 상단: 메모 원형 버튼과 구글 일정 버튼. 일정을 누르면 오늘 일정 목록이 펼쳐진다.
+    /// 메뉴 단추는 하단 맨 왼쪽으로 내렸다(대표 요청, 2026-10-26).
     private var topLeftControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                if layoutStyle.movesActionsToBottom {
-                    Button { openMenu() } label: {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
-                            .foregroundStyle(Color.tpInk)
-                            .frame(width: 40, height: 40)
-                            .mapHomeGlass(in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(language.text("메뉴 열기", "Open menu"))
-                }
                 if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                     memoCircleButton
                 }
@@ -6472,9 +6461,15 @@ struct MapHomeView: View {
         isLocationMenuExpanded = true
     }
 
-    /// 하단 탭·떠 있는 독. 1급 항목은 여섯 개다(메뉴만 왼쪽 위로 뺐다).
+    /// 하단 탭·떠 있는 독. 1급 항목은 일곱 개이고 **맨 왼쪽이 메뉴**다.
+    ///
+    /// 메뉴는 2026-10-26까지 왼쪽 위 원형 단추였다. 지도와 날짜 줄을 가리고,
+    /// 손이 닿지 않는 구석이라 아래로 내렸다(대표 요청). 항목은 늘리지 않았다.
     private var bottomActionBar: some View {
         let items = HStack(spacing: 0) {
+            bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) {
+                openMenu()
+            }
             Button {
                 isCalendarPresented = true
             } label: {
@@ -6507,14 +6502,12 @@ struct MapHomeView: View {
                 // 집으로 옮긴 뒤 하루 요약을 바로 연다.
                 isDaySummaryPresented = true
             }
-            // 재생 중에는 「일시 정지」와 「종료」를 나란히 둔다. 한 버튼으로 두 가지를
-            // 겸하면 재생을 끝내려는 사람이 일시 정지를 누르고 한 번 더 찾아야 한다.
+            // 재생 중에는 **같은 자리에서** 「멈춤」으로만 바뀐다. 예전에는
+            // 「일시 정지」와 「종료」를 나란히 두어 하단 항목이 하나 늘었는데,
+            // 재생을 끝내려는 사람이 두 단추를 헷갈렸다(대표 요청: 단추를 늘리지 말 것).
             if isDayPlaybackRunning {
-                bottomBarButton("pause.fill", language.text("일시 정지", "Pause")) {
+                bottomBarButton("pause.fill", language.text("멈춤", "Pause")) {
                     toggleDayPlayback()
-                }
-                bottomBarButton("stop.fill", language.text("종료", "Stop")) {
-                    stopDayPlayback(resetProgress: true)
                 }
             } else {
                 bottomBarButton("play.fill", language.text("재생", "Play")) {
@@ -6567,7 +6560,7 @@ struct MapHomeView: View {
     }
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
-    /// 누르면 이번 주 날짜 줄을 펼치고, 그 줄을 좌우로 밀면 하루씩 넘어간다.
+    /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
     private var dateBadge: some View {
         let calendar = TimelineAxisGrid.normalizedCalendar()
         let weekday = calendar.component(.weekday, from: model.selectedDate)
@@ -6592,7 +6585,7 @@ struct MapHomeView: View {
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 보이는 크기는 그대로 두고 터치 영역만 44pt까지 넓힌다.
         .taptionHitOutset(vertical: max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2))
-        // 한 번 탭하면 선택일이 속한 주를 왼쪽으로 펼친다.
+        // 한 번 탭하면 날짜 줄을 왼쪽으로 펼친다.
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
         }
@@ -6606,89 +6599,22 @@ struct MapHomeView: View {
             }
         }
         .accessibilityLabel(language.text("날짜 \(dateTitle)", "Date \(dateTitle)"))
-        .accessibilityHint(language.text("한 번 누르면 이번 주를 펼칩니다", "Tap to show this week"))
+        .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
         return HStack(spacing: 6) {
-            if isDateWeekExpanded { weekStrip(calendar: calendar) }
-            badge
-        }
-    }
-
-    private func weekStrip(calendar: Calendar) -> some View {
-        let start = calendar.dateInterval(of: .weekOfYear, for: model.selectedDate)?.start ?? model.selectedDate
-        let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
-        return HStack(spacing: 4) {
-            ForEach(days, id: \.self) { day in
-                let weekday = calendar.component(.weekday, from: day)
-                let isHoliday = MapHomeCalendarDayStyle(date: day, calendar: calendar) == .holiday
-                let tint: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
-                let isSelected = calendar.isDate(day, inSameDayAs: model.selectedDate)
-                Button {
-                    // 날짜 줄은 오른쪽 위 날짜 배지를 눌러서만 닫는다. 날짜 칸을 누르면 날짜만 바뀐다.
+            if isDateWeekExpanded {
+                MapHomeDateStrip(
+                    language: language,
+                    selectedDate: model.selectedDate
+                ) { day in
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day
-                } label: {
-                    VStack(spacing: 0) {
-                        Text(day.formatted(Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
-                            .foregroundStyle(tint)
-                        Text(String(calendar.component(.day, from: day)))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.tpInk)
-                            .monospacedDigit()
-                    }
-                    .frame(width: 34, height: MapHomeWeekStripMath.height - 8)
-                    .background {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.tpReferenceBlue.opacity(0.22))
-                        }
-                    }
                 }
-                .buttonStyle(.plain)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+            badge
         }
-        .padding(.horizontal, 6)
-        .frame(height: MapHomeWeekStripMath.height)
-        .offset(x: weekDragOffset)
-        .simultaneousGesture(weekSwipeGesture(calendar: calendar))
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .transition(.move(edge: .trailing).combined(with: .opacity))
-        // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("mapHomeDateWeekStrip")
-    }
-
-    /// 펼쳐진 날짜 줄을 좌우로 밀면 **한 번에 하루**씩 넘긴다.
-    ///
-    /// 예전에는 손가락이 움직인 거리에 비례해 날짜를 넘겼다(`dx / dayPitch`).
-    /// 줄 폭이 한 주(칸 34pt × 7 + 간격 + 여백 = 274pt)라, 한 번 쓸어 넘기면
-    /// 6~7일이 지나 손짓 하나가 '주 단위'로 보였다(대표 지적). 손가락은 한 칸까지만
-    /// 따라오고, 실제로 넘어가는 날은 손짓 하나에 하루다.
-    private func weekSwipeGesture(calendar: Calendar) -> some Gesture {
-        DragGesture(minimumDistance: 14)
-            .onChanged { value in
-                let dx = value.translation.width
-                guard abs(dx) > abs(value.translation.height) * 1.5 else { return }
-                let pitch = MapHomeWeekStripMath.dayPitch
-                weekDragOffset = min(pitch, max(-pitch, dx))
-            }
-            .onEnded { value in
-                let dx = value.translation.width
-                let isHorizontal = abs(dx) > abs(value.translation.height) * 1.5
-                // 반 칸을 넘겨야 넘긴다. 스치듯 지나간 손짓에 날짜가 바뀌면
-                // 화면을 보려고 쓸었을 뿐인 손이 날짜를 바꾼다.
-                if isHorizontal, abs(dx) >= MapHomeWeekStripMath.dayPitch / 2,
-                   let next = calendar.date(
-                       byAdding: .day,
-                       value: dx < 0 ? 1 : -1,
-                       to: model.selectedDate
-                   ) {
-                    shouldFitRoutesAfterDateChange = true
-                    model.selectedDate = next
-                }
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { weekDragOffset = 0 }
-            }
     }
 
     private var header: some View {
@@ -7806,6 +7732,14 @@ struct MapHomeView: View {
             try? await Task.sleep(for: .seconds(1.4))
             isPlaybackIntroActive = false
         }
+    }
+
+    /// 재생 중이면 **취소**한다. 재생을 시작하기 전 시각으로 되돌리므로
+    /// (`resetProgress: true`) '멈춤'이 아니라 '취소'다. 지도를 움직이거나
+    /// 현재 위치로 갈 때 부른다 — 하단 단추는 늘리지 않는다(대표 요청, 2026-10-26).
+    private func cancelDayPlaybackIfRunning() {
+        guard isDayPlaybackRunning else { return }
+        stopDayPlayback(resetProgress: true)
     }
 
     private func stopDayPlayback(resetProgress: Bool) {
@@ -12888,6 +12822,9 @@ struct MapHomeView: View {
     }
 
     private func requestAndFollowUserLocation(using proxy: MapProxy?, fixedScale: Bool = false) {
+        // 현재 위치로 가면 재생을 취소한다. 두 레이아웃의 위치 단추가 모두 여기를
+        // 지나므로 한 곳에서 처리한다(대표 요청, 2026-10-26).
+        cancelDayPlaybackIfRunning()
         // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
         liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false
@@ -12997,16 +12934,16 @@ struct MapHomeView: View {
     }
 
     private func handleUserMapPan() {
-        // 재생 중 지도를 직접 끌면 재생을 멈추고 그 시각에 머문다.
-        if isDayPlaybackRunning {
-            stopDayPlayback(resetProgress: true)
-        }
+        // 재생 중 지도를 직접 끌면 재생을 취소하고 시작 전 시각으로 되돌린다.
+        cancelDayPlaybackIfRunning()
         recordUserMapAdjustment()
         setUserTrackingMode(.idle)
         isMapCenteredOnUser = false
     }
 
     private func handleUserCameraGesture() {
+        // 확대·축소·회전도 지도를 옮기는 손짓이라 재생을 취소한다(대표 요청).
+        cancelDayPlaybackIfRunning()
         recordUserMapAdjustment()
     }
 
@@ -21951,12 +21888,6 @@ func adaptiveLabelColor(on background: Color) -> Color {
     return luminance > 0.6 ? Color(white: 0.25) : .white
 }
 
-enum MapHomeWeekStripMath {
-    /// 날짜 한 칸의 너비(칸 34pt + 간격 4pt).
-    static let dayPitch: CGFloat = 38
-    /// 날짜 줄 높이. 양옆 원형 버튼과 같은 높이(40pt).
-    static let height: CGFloat = 40
-}
 
 /// 경로 계산 입력 요약. 이 값이 같으면 같은 경로 결과다.
 struct RouteProjectionInputKey: Hashable {
