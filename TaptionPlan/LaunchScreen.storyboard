@@ -24,11 +24,6 @@
                                 <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <progressView opaque="NO" contentMode="scaleToFill" progress="0.0" translatesAutoresizingMaskIntoConstraints="NO" id="LSP-1">
-                                <rect key="frame" x="91.5" y="518.0" width="210" height="4"/>
-                                <color key="progressTintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                                <color key="trackTintColor" white="1" alpha="0.25" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
-                            </progressView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="LSG-1"/>
                         <color key="backgroundColor" red="0.788235" green="0.431373" blue="0.533333" alpha="1" colorSpace="calibratedRGB"/>
@@ -39,9 +34,6 @@
                             <constraint firstItem="LSI-1" firstAttribute="height" secondItem="LSI-1" secondAttribute="width" multiplier="1:1" id="LSC-5"/>
                             <constraint firstItem="LSL-1" firstAttribute="top" secondItem="LSI-1" secondAttribute="bottom" constant="22" id="LSC-6"/>
                             <constraint firstItem="LSL-1" firstAttribute="centerX" secondItem="LSV-2" secondAttribute="centerX" id="LSC-7"/>
-                            <constraint firstItem="LSP-1" firstAttribute="top" secondItem="LSL-1" secondAttribute="bottom" constant="24" id="LSC-8"/>
-                            <constraint firstItem="LSP-1" firstAttribute="centerX" secondItem="LSV-2" secondAttribute="centerX" id="LSC-9"/>
-                            <constraint firstItem="LSP-1" firstAttribute="width" constant="210" id="LSC-10"/>
                         </constraints>
                     </view>
                 </viewController>
