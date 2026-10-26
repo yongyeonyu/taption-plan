@@ -3826,3 +3826,33 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 4. 확인하지 못한 것
 - 실기기(기록이 쌓인 상태)의 `launch_gate` 값. 다음 빌드를 기기에 올린 뒤 진단 로그에서 `launch_gate`의 `elapsed_ms`를 읽어야 한다.
 - 유예가 실제로 작동하는 장면(지도가 600ms 넘게 늦는 경우). 시뮬레이터에서는 재현되지 않았다.
+
+## TFB1026A04 · 빌드 240을 내부 테스터에게 배포 (2026-10-26)
+
+- 요청 ID: `TFB1026A04`
+- 무엇을: 이번에 끝낸 두 요청(`BTM1026A01` 하단 메뉴·재생 한 칸·이어지는 날짜 줄, `LCH1026A01` 시작 로딩)을 포함한 빌드 240을 TestFlight 내부 그룹에 올린다.
+- 시작 상태: 작업 트리 깨끗함(`0dc0819`), 네 제품 번들 + `project.pbxproj` 모두 **239**로 일치. App Store Connect 최고 빌드 239(VALID).
+
+### 1. 실행
+
+`bash scripts/testflight/release.sh --yes --request-id TFB1026A04` (9단계 전체).
+
+| 단계 | 결과 |
+| --- | --- |
+| 1/9 사전 점검 | 인증·키·툴·앱 조회(`6797370230`)·최고 빌드 239·내부 그룹(`b4857e5e…`, internal) 모두 OK, 트리 깨끗함 |
+| 2/9 빌드 번호 | 239 → **240** (네 Info.plist + `project.pbxproj` 8곳) |
+| 3/9 테스트 | `--with-tests` 없음 → 생략(아카이브 컴파일로 빌드만 확인) |
+| 4/9 아카이브 | `build/validation/TFB1026A04/TaptionPlan240.xcarchive` |
+| 5/9 익스포트 | `build/validation/TFB1026A04/export/TaptionPlan.ipa` |
+| 6/9 번들 검증 | `com.taption.plan` 240 · `com.taption.plan.widget` 240 (2/2) |
+| 7/9 업로드 | 44,827,397 bytes / **5.018초(8.9MB/s, 71.5Mbps)** · Delivery UUID `5cd46493-af6b-46af-a26d-a7fb45287cad` |
+| 8/9 처리·그룹 | `15:40:54` 업로드 → `15:43:42` **VALID**(약 2분 48초), 내부 그룹 연결 완료 |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+
+- 보고서: `build/validation/TFB1026A04/testflight-report.json`, 로그: `build/validation/TFB1026A04/`.
+
+### 2. 산출물에 Watch가 없는 이유
+- `6/9`가 "산출물에 없는 제품(별도 target): Watch(`com.taption.plan.watchkitapp`), WatchWidget(…)`"을 안내한다. 두 target은 이 앱에 embed되지 않는 별도 배포 대상이라 IPA에 없는 것이 정상이다. **실패가 아니다** — 스크립트도 2/2 통과로 센다.
+
+### 3. 확인하지 못한 것
+- 기기에서의 실제 설치·실행. 이번 빌드에 들어간 두 변경(`BTM1026A01`·`LCH1026A01`)의 기기 확인 항목은 각 블록에 적어 두었다 — 「현재 위치」 취소, 날짜 줄 연속 쓸기 손맛, `launch_gate`의 실기기 값.
