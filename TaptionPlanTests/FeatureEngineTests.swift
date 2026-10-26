@@ -1996,6 +1996,94 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    /// 저장소 적재가 도는 동안에는 90%가 천장이다. 예전에는 목표(0.86)에 닿은 뒤
+    /// 0.97까지 밀려 올라가, 데이터를 읽는 내내 "97%에서 멈춘" 것처럼 보였다.
+    func testLaunchProgressGoalStopsAtTheCapWhileTheStoreIsLoading() {
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.crawlCap(bootstrapped: false),
+            0.90,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.crawlCap(bootstrapped: true),
+            0.97,
+            accuracy: 0.000_001
+        )
+        // 0.96·0.98은 적재가 끝나기 전에 불린다. 목표가 천장 위여도 90%까지만 간다.
+        for target in [0.96, 0.98] {
+            XCTAssertEqual(
+                AppShellInitialLaunchProgressMath.goal(
+                    current: 0.60,
+                    target: target,
+                    bootstrapped: false
+                ),
+                0.90,
+                accuracy: 0.000_001
+            )
+        }
+        // 목표가 천장 아래면 먼저 목표까지 간다. 천장은 그 다음 박자부터 걸린다.
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.goal(
+                current: 0.60,
+                target: 0.86,
+                bootstrapped: false
+            ),
+            0.86,
+            accuracy: 0.000_001
+        )
+        // 적재가 끝나면 지도 첫 화면만 남으므로 97%까지 기어갈 수 있다.
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.goal(
+                current: 0.92,
+                target: 0.98,
+                bootstrapped: true
+            ),
+            0.97,
+            accuracy: 0.000_001
+        )
+        // 1.0은 스플래시를 걷는 순간이다. 천장에 막히면 안 된다.
+        XCTAssertEqual(
+            AppShellInitialLaunchProgressMath.goal(
+                current: 0.97,
+                target: 1,
+                bootstrapped: false
+            ),
+            1,
+            accuracy: 0.000_001
+        )
+    }
+
+    /// 같은 박자로 400번 돌려도 90%를 넘지 않고, 그 자리에서 멈춘다(멈춘 게 아니라 기다리는 중).
+    func testLaunchProgressParksAtTheCapUntilTheStoreIsLoaded() {
+        var progress = 0.0
+        for _ in 0..<400 {
+            progress = AppShellInitialLaunchProgressMath.next(
+                current: progress,
+                target: AppShellInitialLaunchProgressMath.goal(
+                    current: progress,
+                    target: 0.98,
+                    bootstrapped: false
+                )
+            )
+            XCTAssertLessThanOrEqual(progress, 0.90 + 0.000_001)
+        }
+        XCTAssertEqual(progress, 0.90, accuracy: 0.000_001)
+
+        // 적재가 끝난 뒤에는 97%까지 올라가고, 1.0은 걷는 순간에만 온다.
+        for _ in 0..<400 {
+            progress = AppShellInitialLaunchProgressMath.next(
+                current: progress,
+                target: AppShellInitialLaunchProgressMath.goal(
+                    current: progress,
+                    target: 0.98,
+                    bootstrapped: true
+                )
+            )
+            XCTAssertLessThanOrEqual(progress, 0.97 + 0.000_001)
+        }
+        XCTAssertEqual(progress, 0.97, accuracy: 0.000_001)
+    }
+
     func testRouteReadingsTaskRestartsOnlyForBootstrapDayOrRawDataChange() {
         let day = makeDate(2026, 8, 25, 8)
         let sameDay = makeDate(2026, 8, 25, 20)

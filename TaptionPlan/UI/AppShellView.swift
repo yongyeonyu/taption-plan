@@ -299,11 +299,13 @@ struct AppShellView: View {
         initialLaunchProgressTask = Task { @MainActor in
             defer { initialLaunchProgressTask = nil }
             while !Task.isCancelled {
-                // 목표에 닿았는데 아직 준비가 안 끝났으면 0.97까지 조금씩 계속 간다.
-                // 예전에는 0.86에서 얼어붙었다가 준비가 끝날 때 1.0으로 점프했다.
-                let goal = initialLaunchProgressValue >= initialLaunchProgressTarget
-                    && initialLaunchProgressTarget < 1
-                    ? min(0.97, initialLaunchProgressValue + 0.03) : initialLaunchProgressTarget
+                // 목표에 닿았는데 준비가 안 끝났으면 조금씩 계속 간다(예전에는 0.86에서 얼어붙었다).
+                // 천장은 적재 전 0.90, 적재 뒤 0.97 — 읽는 내내 97%에 있으면 멈춘 것처럼 보인다.
+                let goal = AppShellInitialLaunchProgressMath.goal(
+                    current: initialLaunchProgressValue,
+                    target: initialLaunchProgressTarget,
+                    bootstrapped: model.isBootstrapped
+                )
                 let next = AppShellInitialLaunchProgressMath.next(
                     current: initialLaunchProgressValue,
                     target: goal

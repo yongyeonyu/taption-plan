@@ -4,8 +4,32 @@ import Foundation
 ///
 /// 예전에는 목표에 가까워질수록 걸음이 0에 수렴해 진행선이 0.86에서 얼어붙었다가
 /// 준비가 끝날 때 1.0으로 점프했다. 지금은 목표에 닿았는데 준비가 안 끝났으면
-/// 화면 쪽에서 목표를 0.97까지 밀어 올린다(`AppShellView.startInitialLaunchProgressTicker`).
+/// 화면 쪽에서 목표를 조금씩 밀어 올린다(`AppShellView.startInitialLaunchProgressTicker`).
+/// 저장소 적재 전에는 0.90, 적재 뒤 지도만 남았으면 0.97이 천장이다. 97%는 "거의
+/// 끝났다"는 뜻이지 "더 채울 게 없다"는 뜻이 아니므로, 읽는 내내 97%에 두면 멈춘 것처럼 보인다.
 enum AppShellInitialLaunchProgressMath {
+    /// 준비를 기다리는 동안 진행선이 기어갈 수 있는 천장.
+    ///
+    /// 저장소 적재가 끝나기 전에는 0.90이다. 예전에는 적재가 도는 내내 0.97까지
+    /// 밀어 올려서, 데이터를 읽는 몇 초 동안 화면이 "97%에서 멈춘" 것처럼 보였다
+    /// (대표 지적, 2026-10-26). 적재가 끝나면 남은 일은 지도 첫 화면뿐이라
+    /// 0.97까지 올려도 된다.
+    static func crawlCap(bootstrapped: Bool) -> Double {
+        bootstrapped ? 0.97 : 0.90
+    }
+
+    /// 이번 박자에 진행선이 향할 곳. 목표에 닿기 전에는 목표로 곧장 가고,
+    /// 닿은 뒤에는 천장까지 3%씩 기어간다. 목표가 천장보다 높아도(0.96·0.98은
+    /// 저장소 적재가 끝나기 전에 불린다) 천장이 막는다. 1.0만 예외다 — 그건
+    /// 스플래시를 걷는 순간이라 기어갈 이유가 없다.
+    static func goal(current: Double, target: Double, bootstrapped: Bool) -> Double {
+        guard target < 1 else { return 1 }
+        let cap = crawlCap(bootstrapped: bootstrapped)
+        let clamped = min(cap, target)
+        guard current >= clamped else { return clamped }
+        return min(cap, current + 0.03)
+    }
+
     static func next(
         current: Double,
         target: Double,

@@ -44,6 +44,39 @@ def local(timestamp):
     return datetime.fromisoformat(timestamp.replace("Z", "+00:00")).astimezone(KST)
 
 
+def print_launch(events):
+    """마지막 실행의 시작 단계별 시간과, 그때 저장소를 몇 행 읽었는지 보여준다.
+
+    "시작이 느리다"는 말은 어느 단계가 마지막까지 남는지를 봐야 고칠 수 있다.
+    `launch_gate`는 단계가 열린 순서대로 남으므로 마지막 줄이 곧 병목이다.
+    """
+    starts = [i for i, e in enumerate(events) if e["event"] == "initial_launch_started"]
+    if not starts:
+        print("  (없음)")
+        return
+    gates = []
+    total = None
+    for event in events[starts[-1]:]:
+        if event["event"] == "launch_gate":
+            gates.append((event.get("fields", {}).get("gate", "?"),
+                          int(event.get("fields", {}).get("elapsed_ms", 0))))
+        elif event["event"] == "initial_launch_ready":
+            total = int(event.get("fields", {}).get("duration_ms", 0))
+            break
+    if not gates:
+        print("  (없음)")
+        return
+    for name, elapsed in gates:
+        print(f"  {name:24s} {elapsed:6d}ms")
+    if total is not None:
+        print(f"  {'합계':24s} {total:6d}ms")
+    loads = [e for e in events if e["event"] == "repository_local_load"]
+    if loads:
+        m, f = loads[-1].get("metrics", {}), loads[-1].get("fields", {})
+        print(f"  저장소 {m.get('rows', '?')}행 읽기 {m.get('read_ms', 0):.1f}ms "
+              f"해독 {m.get('decode_ms', 0):.1f}ms 합 {m.get('total_ms', 0):.1f}ms — {f.get('kinds', '')}")
+
+
 def report(header, events):
     print(f"이벤트 {len(events)}개, 빌드 {sorted({e.get('build') for e in events})}, "
           f"스키마 {sorted({e.get('schema', 1) for e in events})}")
@@ -64,6 +97,9 @@ def report(header, events):
     for name, count in counts.most_common(15):
         extra = f" (+억제 {suppressed[name]})" if suppressed[name] else ""
         print(f"  {name:45s} {count:5d}{extra}")
+
+    print("\n시작(launch) — 마지막 실행의 게이트 순서")
+    print_launch(events)
 
     print("\n튄 위치(map_route_readings_prepared의 largest_jump_*) — 큰 순서")
     jumps = [e for e in events if e["event"] == "map_route_readings_prepared" and "largest_jump_m" in e.get("fields", {})]
