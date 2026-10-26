@@ -1,35 +1,59 @@
 import SwiftUI
 
-/// 화랑이 위에 쌓는 카운터 창.
+/// 화랑이 머리 위에 세우는 카운터 창.
 ///
-/// 하나면 지금까지처럼 알약 하나로 두고, 둘부터는 **한 상자 안에 줄을 붙여** 세로로 길어지게 한다.
-/// (예전에는 배지마다 캡슐을 따로 그려 `VStack`으로 띄웠기 때문에 창이 아니라 낱개 알약 더미로 보였다.)
+/// 연봉과 나머지 카운터를 **한 상자**에 담는다. 예전에는 연봉을 알약으로 따로 띄우고
+/// 그 위에 표를 쌓아 두 덩어리로 보였는데, 연봉을 표의 마지막 줄(머리에 가장 가까운 줄)로
+/// 넣어 창 하나로 만들었다.
+///
+/// 줄이 하나면 지금까지처럼 알약 하나로 두고, 둘부터는 한 상자 안에 줄을 붙여 세로로 길어지게 한다.
 struct MapHomeCounterTable: View {
+    /// 창의 맨 아래(머리에 가장 가까운) 줄에 놓는 연봉. 없으면 나머지 카운터만 담는다.
+    let salary: MapHomeCounterSalary?
     let badges: [MapHomeCounterBadge]
     let language: MapHomeLanguage
 
     /// 두 줄 이상일 때 창의 폭. 값 자리수가 바뀌어도 창 폭이 흔들리지 않게 고정한다.
     static let boxWidth: CGFloat = 132
+    /// 연봉 줄이 들어가면 값이 `1,234,567원`(영어 `1,234,567 USD`)까지 길어져 132pt에 들어가지 않는다.
+    static let boxWidthWithSalary: CGFloat = 176
+
+    private var rowCount: Int { badges.count + (salary == nil ? 0 : 1) }
 
     var body: some View {
-        if badges.count == 1, let badge = badges.first {
+        if rowCount == 1, let salary {
+            MapHomeCounterSalaryPill(salary: salary, language: language)
+        } else if rowCount == 1, let badge = badges.first {
             MapHomeCounterPill(kind: badge.kind, text: badge.text, language: language)
-        } else if !badges.isEmpty {
+        } else if rowCount > 1 {
             VStack(spacing: 0) {
                 ForEach(Array(badges.enumerated()), id: \.element.id) { index, badge in
-                    if index > 0 {
-                        Rectangle()
-                            .fill(Color.tpLine.opacity(0.55))
-                            .frame(height: 1)
-                    }
+                    if index > 0 { divider }
                     MapHomeCounterRow(kind: badge.kind, text: badge.text, language: language)
                 }
+                if let salary {
+                    if !badges.isEmpty { divider }
+                    MapHomeCounterSalaryRow(salary: salary, language: language)
+                }
             }
-            .frame(width: Self.boxWidth)
+            .frame(width: salary == nil ? Self.boxWidth : Self.boxWidthWithSalary)
             .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .animation(.snappy, value: badges.count)
+            .animation(.snappy, value: rowCount)
         }
     }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.tpLine.opacity(0.55))
+            .frame(height: 1)
+    }
+}
+
+/// 창의 연봉 줄에 넘기는 값. 계산은 화면이 하고, 창은 글자만 받는다.
+struct MapHomeCounterSalary: Equatable {
+    let text: String
+    /// 지금 근무 중이면 아이콘을 민트로 칠한다.
+    let isWorking: Bool
 }
 
 /// 창 안의 한 줄: 아이콘 · 이름 · 값(오른쪽 정렬). 값은 monospaced로 자리수가 변해도 흔들리지 않는다.
@@ -145,5 +169,66 @@ private struct MapHomeCounterPill: View {
         .mapHomeGlass(in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(kind.badgeTitle(language)) \(text)")
+    }
+}
+
+/// 창 안의 연봉 줄. 다른 줄과 같은 격자(아이콘 12 · 이름 · 값)를 써서 표로 읽힌다.
+private struct MapHomeCounterSalaryRow: View {
+    let salary: MapHomeCounterSalary
+    let language: MapHomeLanguage
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: MapHomeCounterSalary.symbol(language: language))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+                .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpAccent)
+                .frame(width: 12)
+            Text(language.text("번 돈", "Earned"))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            Text(salary.text)
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.tpInk)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(language.text("번 돈", "Earned")) \(salary.text)")
+    }
+}
+
+/// 연봉이 유일한 줄일 때의 알약. 창으로 묶기 전과 같은 모양이다.
+private struct MapHomeCounterSalaryPill: View {
+    let salary: MapHomeCounterSalary
+    let language: MapHomeLanguage
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: MapHomeCounterSalary.symbol(language: language))
+                .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpSecondary)
+            Text(salary.text)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+        .foregroundStyle(Color.tpInk)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .mapHomeGlass(in: Capsule())
+        .animation(.snappy, value: salary.text)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(language.text("번 돈", "Earned")) \(salary.text)")
+    }
+}
+
+extension MapHomeCounterSalary {
+    /// 통화에 맞는 아이콘. 영어 설정이면 달러, 아니면 원.
+    static func symbol(language: MapHomeLanguage) -> String {
+        language == .english ? "dollarsign.circle.fill" : "wonsign.circle.fill"
     }
 }

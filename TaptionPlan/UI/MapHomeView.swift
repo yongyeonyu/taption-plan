@@ -3599,19 +3599,15 @@ struct MapHomeView: View {
         }
     }
 
-    /// Apple 지도에서도 연봉 카운터를 화랑이 위에 띄운다(벡터 지도와 같은 위치 규칙).
+    /// Apple 지도에서도 카운터 창을 화랑이 머리 위에 띄운다(벡터 지도와 같은 위치 규칙).
     private var appleSalaryOverlay: some View {
         GeometryReader { geometry in
             if let stickman = displayedStickmanViewportPoint,
                CGRect(origin: .zero, size: geometry.size).contains(stickman) {
-                let anchor = CGPoint(
+                counterWindow(at: CGPoint(
                     x: stickman.x,
                     y: stickman.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42
-                )
-                ZStack {
-                    salaryCounterLabel(at: anchor)
-                    counterBadgeStack(above: anchor)
-                }
+                ))
             }
         }
         .allowsHitTesting(false)
@@ -5685,12 +5681,10 @@ struct MapHomeView: View {
                     )
             }
 
-            // 연봉 카운터는 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
+            // 카운터 창은 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
+            // 연봉과 나머지 카운터는 한 상자에 담는다(표시 > 카운터에서 켠 것만).
             if let anchor = salaryAnchor(viewport: viewport, stickmanPoint: playback == nil ? nil : stickmanPoint) {
-                salaryCounterLabel(at: anchor)
-                    .zIndex(MapHomeLayerPriority.stickman)
-                // 나머지 카운터는 연봉 카운터 위로 쌓는다(표시 > 카운터에서 켠 것만).
-                counterBadgeStack(above: anchor)
+                counterWindow(at: anchor)
             }
 
             if let selectedSearchPin,
@@ -7334,41 +7328,60 @@ struct MapHomeView: View {
         defaults.set(max(1, salaryTickSeconds), forKey: "mapHomeSalaryLiveTick")
     }
 
-    /// 화랑이(집에 있으면 집 핀) 위 연봉 카운터. 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
+    /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.
+    /// 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
     @ViewBuilder
-    private func salaryCounterLabel(at point: CGPoint) -> some View {
-        if let salaryLive, recordingShows(\.salary) {
-            let tick = TimeInterval(max(1, salaryTickSeconds))
-            let calendar = MapHomeGrowthPolicy.localCalendar
-            let day = calendar.startOfDay(for: model.selectedDate)
-            Group {
+    private func counterWindow(at anchor: CGPoint) -> some View {
+        let bottomY = anchor.y - 8
+        Group {
+            if let salaryLive, recordingShows(\.salary) {
+                let tick = TimeInterval(max(1, salaryTickSeconds))
+                let calendar = MapHomeGrowthPolicy.localCalendar
+                let day = calendar.startOfDay(for: model.selectedDate)
                 if isDayPlaybackRunning, let minute = dayPlaybackCurrentMinute {
                     let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: day + minute * 60)
-                    salaryPill(seconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), rate: salaryLive.hourlyRate, isWorking: false)
+                    counterTable(salarySeconds: MapHomeSalaryPolicy.quantized(seconds, tick: tick), isWorking: false)
                 } else if calendar.isDateInToday(model.selectedDate) {
                     TimelineView(.periodic(from: salaryLive.measuredAt, by: tick)) { context in
-                        salaryPill(
-                            seconds: MapHomeSalaryPolicy.liveWorkSeconds(
+                        counterTable(
+                            salarySeconds: MapHomeSalaryPolicy.liveWorkSeconds(
                                 base: salaryLive.todayWorkSeconds,
                                 baseDate: salaryLive.measuredAt,
                                 isWorking: salaryLive.isWorking,
                                 now: context.date,
                                 tick: tick
                             ),
-                            rate: salaryLive.hourlyRate,
                             isWorking: salaryLive.isWorking
                         )
                     }
                 } else {
                     let seconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[day] ?? [], until: .distantFuture)
-                    salaryPill(seconds: seconds, rate: salaryLive.hourlyRate, isWorking: false)
+                    counterTable(salarySeconds: seconds, isWorking: false)
                 }
+            } else {
+                counterTable(salarySeconds: nil, isWorking: false)
             }
-            .fixedSize()
-            .position(point)
-            .allowsHitTesting(false)
-            .accessibilityLabel(language.text("번 돈", "Earned"))
         }
+        .frame(width: 240, height: 320, alignment: .bottom)
+        .position(x: anchor.x, y: bottomY - 160)
+        .allowsHitTesting(false)
+        .zIndex(MapHomeLayerPriority.stickman)
+    }
+
+    /// 창에 넣을 값. 연봉이 없으면 나머지 카운터만 담는다.
+    private func counterTable(salarySeconds: TimeInterval?, isWorking: Bool) -> some View {
+        let salary = salarySeconds.flatMap { seconds in
+            salaryLive.map { live in
+                MapHomeCounterSalary(
+                    text: MapHomeSalaryPolicy.wonText(
+                        MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: live.hourlyRate),
+                        language: language
+                    ),
+                    isWorking: isWorking
+                )
+            }
+        }
+        return MapHomeCounterTable(salary: salary, badges: mapCounterBadges, language: language)
     }
 
     private func salaryAnchor(viewport: MapHomeVectorViewport?, stickmanPoint: CGPoint?) -> CGPoint? {
@@ -7379,11 +7392,6 @@ struct MapHomeView: View {
               let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) else { return nil }
         // 화랑이가 집에 있으면 핀 안의 화랑이 바로 위, 아니면 집 지붕 위 날씨 배지 위에 둔다.
         return CGPoint(x: pin.x, y: pin.y + MapHomePlacePinLayout.salaryOffsetFromPinCenter)
-    }
-
-    /// 연봉 카운터가 지금 그려지는지. 카운터 배지를 어디서부터 쌓을지 정하는 데 쓴다.
-    private var salaryCounterIsVisible: Bool {
-        salaryLive != nil && recordingShows(\.salary)
     }
 
     /// 화랑이 위에 쌓아 보여 줄 카운터 값. 켠 것만, 값이 있는 것만 올린다.
@@ -7425,33 +7433,6 @@ struct MapHomeView: View {
             else { return nil }
             return DurationText.localized(seconds, english: language == .english)
         }
-    }
-
-    /// 카운터 배지를 연봉 카운터 위에 붙인다. 창 모양(1개=알약, 2개 이상=표)은 `MapHomeCounterTable`이 정한다.
-    private func counterBadgeStack(above anchor: CGPoint) -> some View {
-        let bottomY = anchor.y - (salaryCounterIsVisible ? 26 : 8)
-        return ZStack(alignment: .bottom) {
-            Color.clear
-            MapHomeCounterTable(badges: mapCounterBadges, language: language)
-        }
-        .frame(width: 240, height: 320, alignment: .bottom).position(x: anchor.x, y: bottomY - 160)
-        .allowsHitTesting(false).zIndex(MapHomeLayerPriority.stickman)
-    }
-
-    private func salaryPill(seconds: TimeInterval, rate: Double, isWorking: Bool) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: language == .english ? "dollarsign.circle.fill" : "wonsign.circle.fill")
-                .foregroundStyle(isWorking ? Color.tpReferenceMint : Color.tpSecondary)
-            Text(MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: rate), language: language))
-                .monospacedDigit()
-                .contentTransition(.numericText())
-        }
-        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
-        .foregroundStyle(Color.tpInk)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .mapHomeGlass(in: Capsule())
-        .animation(.snappy, value: seconds)
     }
 
     /// 날짜별 기록(지도가 쓰는 출처)으로 한 달 합계를 만든다. 오늘까지의 날짜만 본다.
@@ -22015,18 +21996,26 @@ struct MapHomePinPreviewHost: View {
         }
     }
 
-    /// 지도 레이어가 그리는 연봉 카운터 자리. 좌표(십자선 중심)에서 상수만큼 위.
+    /// 지도 레이어가 그리는 카운터 창 자리. 좌표(십자선 중심)에서 상수만큼 위.
+    ///
+    /// 알약을 흉내 내지 않고 **실제 창**을 그대로 얹는다. 연봉이 표의 마지막 줄로 들어간 뒤
+    /// 폭(176pt)과 줄맞춤이 지도와 같은지 여기서 눈으로 본다.
     private var salaryCounterMock: some View {
-        Text("0원")
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(Color.tpInk)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.white.opacity(0.94), in: Capsule())
-            .overlay { Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
-            .offset(y: MapHomePlacePinLayout.salaryOffsetFromPinCenter)
-            .allowsHitTesting(false)
+        MapHomeCounterTable(
+            salary: MapHomeCounterSalary(text: "1,234,567원", isWorking: true),
+            badges: [
+                MapHomeCounterBadge(kind: .steps, text: "8,432"),
+                MapHomeCounterBadge(kind: .distance, text: "4.2km"),
+                MapHomeCounterBadge(kind: .work, text: "3시간 12분"),
+                MapHomeCounterBadge(kind: .study, text: "42분"),
+                MapHomeCounterBadge(kind: .hobby, text: "1시간 5분"),
+                MapHomeCounterBadge(kind: .exercise, text: "25분"),
+            ],
+            language: .korean
+        )
+        .frame(width: 240, height: 320, alignment: .bottom)
+        .offset(y: MapHomePlacePinLayout.salaryOffsetFromPinCenter - 160)
+        .allowsHitTesting(false)
     }
 
     /// 지도 좌표 자리. 마커의 어느 부분이 좌표에 놓이는지 눈으로 확인한다.
