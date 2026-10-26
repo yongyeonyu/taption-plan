@@ -2168,3 +2168,12 @@
 - 이 실패의 비용: 업로드가 성공했는데 스크립트가 실패로 끝나면 같은 번들을 다시 올리려다 "이미 있는 빌드"로 막힌다. 8/9이 실패하면 먼저 `python3 scripts/testflight/asc.py builds`로 VALID인지 보고, VALID면 `attach`만 다시 부를 것.
 - 관찰: 이번 아카이브가 실행 시간의 대부분(약 27분)을 썼다. 240은 전체 9분 9초였으니 3배다. 원인은 특정하지 못했다(같은 Release 전체 모듈 컴파일인데 이번에 새 파일 1개가 늘었을 뿐). **Release 아카이브는 30분을 잡고 기다리는 것이 안전하다.**
 - 남은 것: 기기 확인 넷 — `launch_gate`의 `elapsed_ms`, 진행선이 97% 대신 **90%**에 머무는 장면, `map_shell_grace` 발동 장면, `repository_local_load`의 `rows`·`total_ms`. 전부 `python3 scripts/analyze-diagnostics.py <로그>`의 **시작(launch)** 절 하나로 판정된다. 마지막 값이 LCH1026A04의 「오늘 창 적재」를 다시 열지 정한다.
+
+## LCH1027A01 · 시작 적재가 스냅샷 밖의 행(HealthKit 표본 126만)을 읽지 않는다 (2026-10-27)
+- 계기: 빌드 240 실기기 로그(`TFB1026A05`). LCH1026A04의 「다시 열 조건」(`rows ≥ 5만` 또는 `total_ms > 1초`) 충족 — 실측 `rows 1,284,890`, `read 9,369ms`, `total 9,438ms`(같은 세션 두 번째 load는 13,882ms).
+- 원인: `TaptionStoreRepository.load()`가 `store.allRecordRows()`로 `records` 표의 **모든** 행을 읽었다. 그중 `healthkit-sample=1,258,394`(97.9%)는 스냅샷 해독 목록 13종에 없어 **읽고 버려지고 있었다**. 해독은 69~89ms뿐이고 시간은 전부 읽기였다.
+- 해결: `TaptionStoreV2.allRecordRows(kinds:)`를 더해 `kind IN (…)`로 거르고, `load()`가 `Kind.allCases + header`를 넘긴다. 인덱스 `records_kind_start`(kind, start_ts)를 타서 전체 스캔을 하지 않는다. 남는 행 1,284,890 → **26,496**.
+- 검증: 새 시험 2건 — `testLoadSkipsRowsOutsideTheSnapshotAndSaveKeepsThem`(HealthKit 500행이 `load()`·`save()` 뒤에도 그대로; **읽지 않은 행을 삭제로 오해하지 않는지**가 핵심 위험), `testAllRecordRowsKindFilterReturnsOnlyRequestedKinds`. 전체 1,642건 중 1,639 통과·실패 1·건너뜀 2인데, 실패는 `testStoreKitProductPurchaseEntitlementAndRestore`로 단독 재실행에서 통과(환경 문제). 게이트·경계 통과.
+- 시뮬레이터 측정(임시, HealthKit 20만+스냅샷 2천): 전체 읽기 110ms → 걸러 읽기 1ms 미만. 측정 코드는 지웠다.
+- 이 로그로 **닫힌 항목 셋**: ①`launch_gate` 실기기 값 ②`map_shell_grace` 발동 장면(9,944 → 10,570 = 626ms로 600ms 문턱 초과, `initial_launch_ready`도 같은 순간, 지도 shell은 13,937ms로 3.4초 늦음) ③`repository_local_load`의 `rows`·`total_ms`.
+- 남은 것: ①빌드 242를 올려 `rows`가 2만6천 규모로, `bootstrapped`가 1초 안쪽으로 오는지 확인(같은 행당 비율이면 읽기 약 190ms) ②같은 세션에 `repository_local_load`가 **두 번** 찍히는 이유(원인 미상, 걸러 읽기 뒤에는 손해가 작음) ③90% 천장은 이 로그가 빌드 240이라 아직 확인 못 함 — 241/242에서 봐야 한다.

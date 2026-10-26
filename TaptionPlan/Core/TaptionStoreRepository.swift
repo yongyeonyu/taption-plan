@@ -58,7 +58,12 @@ actor TaptionStoreRepository: PlanDataRepository {
     func load() async throws -> TaptionDataSnapshot {
         let readStartedAt = Date()
         let memoKind = Kind.memo.rawValue
-        var rows = try await store.allRecordRows()
+        // 스냅샷에 담기는 종류만 읽는다. 같은 `records` 표에 사는 HealthKit 원본 표본은
+        // `HealthKitImportStore`가 직접 쓰고 읽으므로 시작 경로에서 읽을 이유가 없다.
+        // 실기기 로그: 1,284,890행 중 1,258,394행이 그 표본이었고, 읽기 13,793ms 중
+        // 거의 전부가 그것이었다(해독은 89ms). 종류를 걸러 읽으면 26,496행만 남는다.
+        let snapshotKinds = Kind.allCases.map(\.rawValue) + [Self.headerKind]
+        var rows = try await store.allRecordRows(kinds: snapshotKinds)
         if let memoStore {
             // 메모는 별도 파일에서 읽는다. 옛 파일에 남아 있던 메모는 한 번만 옮긴다(삭제 표시도 함께 옮기고 하드 삭제).
             let legacy = rows.filter { $0.kind == memoKind }

@@ -450,6 +450,61 @@ final class TaptionStoreRepositoryTests: XCTestCase {
                           categoryID: "activity")
     }
 
+    /// HealthKit 원본 표본은 같은 `records` 표에 살지만 스냅샷에는 담기지 않는다.
+    /// 시작 적재가 그 행들을 읽지 않아야 하고(실기기에서 128만 행 중 126만 행이었다),
+    /// 저장이 그 행들을 "사라진 행"으로 오해해 지우지도 않아야 한다.
+    func testLoadSkipsRowsOutsideTheSnapshotAndSaveKeepsThem() async throws {
+        let store = try makeStore()
+        let base = Date(timeIntervalSince1970: 1_792_300_000)
+        let healthRows = (0..<500).map { index in
+            TaptionStoreRecord(
+                id: "hk-\(index)",
+                kind: "healthkit-sample",
+                start: base.addingTimeInterval(TimeInterval(index)),
+                end: base.addingTimeInterval(TimeInterval(index) + 1),
+                updatedAt: base,
+                origin: .imported,
+                ord: index,
+                body: "{\"index\":\(index)}"
+            )
+        }
+        try await store.upsertRecords(healthRows)
+        let seeded = try await store.allRecordRows(kinds: ["healthkit-sample"])
+        XCTAssertEqual(seeded.count, 500)
+
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = base
+        snapshot.plans = [plan("계획", at: 0)]
+        try await repository.save(snapshot)
+
+        let loaded = try await TaptionStoreRepository(store: store).load()
+        XCTAssertEqual(loaded.plans.count, 1)
+        XCTAssertEqual(loaded.updatedAt.timeIntervalSince1970, base.timeIntervalSince1970, accuracy: 0.001)
+
+        // 저장이 HealthKit 표본을 건드리지 않았다.
+        let remaining = try await store.allRecordRows(kinds: ["healthkit-sample"])
+        XCTAssertEqual(remaining.count, 500, "저장이 스냅샷 밖의 행을 지웠다")
+    }
+
+    /// 종류를 걸러 읽으면 요청한 종류만 나온다(걸러 읽기가 조용히 전부를 읽지 않는지).
+    func testAllRecordRowsKindFilterReturnsOnlyRequestedKinds() async throws {
+        let store = try makeStore()
+        let base = Date(timeIntervalSince1970: 1_792_300_000)
+        try await store.upsertRecords([
+            TaptionStoreRecord(id: "a", kind: "plan", start: base, end: base, updatedAt: base,
+                               origin: .user, ord: 0, body: "{}"),
+            TaptionStoreRecord(id: "b", kind: "healthkit-sample", start: base, end: base,
+                               updatedAt: base, origin: .imported, ord: 0, body: "{}"),
+        ])
+        let onlyPlans = try await store.allRecordRows(kinds: ["plan"])
+        XCTAssertEqual(onlyPlans.map(\.id), ["a"])
+        let all = try await store.allRecordRows()
+        XCTAssertEqual(Set(all.map(\.id)), ["a", "b"])
+        let none = try await store.allRecordRows(kinds: [])
+        XCTAssertEqual(none.count, 2, "빈 목록은 '전부'로 본다")
+    }
+
     func testSaveEncodesOnlyChangedItemsAndStillPersistsEveryChange() async throws {
         let store = try makeStore()
         let repository = TaptionStoreRepository(store: store)

@@ -606,11 +606,34 @@ actor TaptionStoreV2 {
 
     /// 지워지지 않은 모든 기록 행(종류, id, 순서, 본문). 불러오기와 변경 비교의 기준으로 쓴다.
     func allRecordRows() throws -> [(kind: String, id: String, ord: Int, body: String)] {
+        try allRecordRows(kinds: nil)
+    }
+
+    /// 지정한 종류의 행만 읽는다(`kinds`가 nil이면 모든 종류).
+    ///
+    /// 시작 적재는 스냅샷에 담기는 종류만 필요하다. HealthKit 원본 표본은
+    /// `HealthKitImportStore`가 따로 쓰고 읽으므로 시작 경로에서 읽을 이유가 없다 —
+    /// 실기기 로그에서 1,284,890행 중 1,258,394행이 그 표본이었고, 읽기에만 13.8초를 썼다.
+    func allRecordRows(kinds: [String]?) throws -> [(kind: String, id: String, ord: Int, body: String)] {
         let db = try handle()
+        let filter: String
+        if let kinds, !kinds.isEmpty {
+            let placeholders = Array(repeating: "?", count: kinds.count).joined(separator: ", ")
+            filter = " AND kind IN (\(placeholders))"
+        } else {
+            filter = ""
+        }
         let statement = try prepare(
-            db, "SELECT kind, id, ord, body FROM records WHERE deleted = 0 ORDER BY kind, ord, id"
+            db,
+            "SELECT kind, id, ord, body FROM records WHERE deleted = 0\(filter) ORDER BY kind, ord, id"
         )
         defer { sqlite3_finalize(statement) }
+        if let kinds, !kinds.isEmpty {
+            let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            for (offset, kind) in kinds.enumerated() {
+                sqlite3_bind_text(statement, Int32(offset + 1), kind, -1, transient)
+            }
+        }
         var rows: [(kind: String, id: String, ord: Int, body: String)] = []
         var code = sqlite3_step(statement)
         while code == SQLITE_ROW {

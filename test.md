@@ -4095,3 +4095,48 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
   - `map_shell_grace`가 실제로 발동하는 장면(시뮬레이터에서 한 번도 나지 않았다).
   - `repository_local_load`의 `rows`·`total_ms` — LCH1026A04의 「오늘 창 적재」를 다시 열지 정하는 조건.
 - 그 밖의 기기 확인 항목(「현재 위치」 재생 중 취소, 날짜 줄 쓸기 손맛, 카운터 숫자가 오르는 장면, `1,234,567원` 폭, 백업 복원)은 각 블록에 그대로 남아 있다.
+
+## LCH1027A01 · 시작 적재가 스냅샷 밖의 행(HealthKit 표본 126만)을 읽지 않는다 (2026-10-27)
+
+- 요청 ID: `LCH1027A01`
+- 무엇을: `TaptionStoreRepository.load()`가 `records` 표의 **모든** 행을 읽던 것을, 스냅샷에 담기는 14종(13종 + header)만 읽도록 바꿨다. **동작 변경 없음** — 스냅샷에 들어가지 않는 행을 읽지 않을 뿐이다.
+- 계기: 빌드 240 실기기 진단 로그(`TFB1026A05`). LCH1026A04가 남긴 「다시 열 조건」(`rows ≥ 5만` 또는 `total_ms > 1초`)이 크게 충족됐다.
+
+### 1. 실기기 측정 (빌드 240, 세션 `0CCFC5CF`)
+
+| 게이트 | elapsed_ms |
+| --- | --- |
+| destination_rendered | 1 |
+| startup_settings | 69 |
+| security_state | 69 |
+| scene_became_active | 9,441 |
+| bootstrapped | 9,944 |
+| map_shell_grace | 10,570 |
+| map_shell | 13,937 |
+
+- `repository_local_load`: **rows 1,284,890 · read 9,369ms · decode 69ms · total 9,438ms**. 같은 세션에 한 번 더: read 13,793ms · decode 89ms · total 13,882ms.
+- 종류: `healthkit-sample=1,258,394` · `place=22,264` · `floorTransition=3,043` · `actual=462`.
+- 즉 **읽은 행의 97.9%가 HealthKit 원본 표본**인데, 그 종류는 스냅샷 해독 목록 13종에 없다. 읽고 버린 셈이다.
+
+### 2. 바꾼 것
+
+- `TaptionStoreV2.allRecordRows(kinds:)` — `kind IN (…)`로 거른다. 인덱스 `records_kind_start`(kind, start_ts)를 타므로 표를 전부 훑지 않는다. 인자 없는 `allRecordRows()`는 그대로 둔다(백업 회귀 시험이 쓴다).
+- `TaptionStoreRepository.load()`가 `Kind.allCases + header`를 넘긴다. 남는 행은 1,284,890 → **26,496**(place 22,264 + floorTransition 3,043 + actual 462 + 나머지).
+
+### 3. 확인
+
+- 새 시험 2건: `testLoadSkipsRowsOutsideTheSnapshotAndSaveKeepsThem` — HealthKit 500행을 넣고 `load()`·`save()`를 거쳐도 500행이 그대로인지. **읽지 않은 행을 "사라진 행"으로 오해해 지우는 것**이 이 변경의 핵심 위험이다. `testAllRecordRowsKindFilterReturnsOnlyRequestedKinds`는 요청한 종류만 나오는지, 빈 목록이 "전부"인지.
+- 시뮬레이터 측정(임시 시험, HealthKit 20만 + 스냅샷 2천): 전체 읽기 **110ms** → 걸러 읽기 **1ms 미만**. 필터가 인덱스를 타고 전체 스캔을 하지 않는다는 뜻이다. 측정 코드는 확인 뒤 지웠다.
+- 전체 `TaptionPlanTests` **1,642건 중 1,639 통과 · 실패 1 · 건너뜀 2**. 실패 1건은 `testStoreKitProductPurchaseEntitlementAndRestore`("External StoreKit purchase did not become an entitlement")이고, **단독 재실행에서 통과**했다(`build/unit-2026-10-27-storekit.xcresult`) — 이 변경과 무관한 환경 문제다.
+- 구조 게이트·import 경계 통과.
+
+### 4. 확인하지 못한 것
+
+- **기기에서 줄어든 시간**. 빌드 242를 올려 `repository_local_load`의 `rows`가 2만6천 규모로, `bootstrapped`가 1초 안쪽으로 오는지 봐야 한다. 같은 행당 비율(7.3µs)이면 읽기는 약 190ms가 된다.
+- 같은 세션에 `repository_local_load`가 **두 번** 찍혔다(9,438ms·13,882ms, 둘 다 rows 1,284,890). 원인은 특정하지 못했다. 걸러 읽기 뒤에는 둘 다 수백 ms라 손해가 작지만, 두 번 읽는 것 자체는 남은 문제다.
+
+### 5. 이 로그로 닫힌 항목
+
+- `launch_gate`의 실기기 값 — LCH1026A01부터 세 번 미뤄 둔 항목.
+- `map_shell_grace` 발동 장면 — `bootstrapped`(9,944) → `map_shell_grace`(10,570) = **626ms**로 600ms 문턱을 넘겨 발동했다. `initial_launch_ready`도 같은 순간(10,570ms)에 찍혔다. 지도 shell은 13,937ms에 도착해 **3.4초 늦게** 그려졌다.
+- `repository_local_load`의 `rows`·`total_ms` — LCH1026A04의 재개 조건 판정.
