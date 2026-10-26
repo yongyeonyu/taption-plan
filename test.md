@@ -3699,3 +3699,29 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 4. 확인하지 못한 것
 - 실기기 손맛: 반 칸(19pt)이 짧게 느껴지는지, 한 칸에서 멈추는 줄이 답답하지 않은지. 시뮬레이터의 합성 드래그로는 손맛을 알 수 없다.
 - 날짜 줄이 펼쳐진 채로 지도가 함께 밀리는지(줄에 `simultaneousGesture`가 걸려 있다)는 이번에 재지 않았다.
+
+## TFB1026A03 · 빌드 239를 내부 테스터에게 배포 (2026-10-26)
+
+- 요청 ID: `TFB1026A03`
+- 무엇을: 이번에 끝낸 두 요청(`OVW1026A01` 나뉜 클립 한 번에 덮기, `DTW1026A01` 날짜 줄 스와이프 하루 단위)을 포함한 빌드 239를 TestFlight 내부 그룹에 올린다.
+- 시작 상태: 작업 트리 깨끗함(`b58a684`), 네 제품 번들 + `project.pbxproj` 모두 **238**로 일치. App Store Connect 최고 빌드 238(VALID).
+
+### 1. 실행
+
+`bash scripts/testflight/release.sh --yes --request-id TFB1026A03` (9단계 전체).
+
+| 단계 | 결과 |
+| --- | --- |
+| 1 사전 점검 | 인증·JWT(ES256)·툴체인·앱 조회(`6797370230`)·내부 그룹 모두 OK |
+| 2 빌드 번호 | 238 → **239** (네 `Info.plist` + `project.pbxproj` 8곳) |
+| 3 테스트 | 생략(`--with-tests` 없음). 같은 커밋에서 단위 1,629건을 이미 돌려 1,627 통과·실패 0·건너뜀 2 |
+| 4 아카이브 | `Release`/`generic/platform=iOS`, 성공 |
+| 5 익스포트 | `TaptionPlan.ipa` 44,827,405바이트(44.8MB) |
+| 6 산출물 검증 | `com.taption.plan`·`com.taption.plan.widget` 둘 다 239. Watch·WatchWidget은 이 앱에 embed되지 않는 별도 target이라 산출물에 없다(실패 아님) |
+| 7 업로드 | `UPLOAD SUCCEEDED`, Delivery UUID `4b2dc9f9-bebb-4faf-9e81-4d18514852ae`, 5.756초(7.8MB/s) |
+| 8 처리·그룹 | `NOT_UPLOADED`(13:41:46) → **VALID**(13:43:12), 내부 그룹 연결 완료 |
+| 9 검증 | `ok: true`, `buildAttached: true`, 테스터 1명(`axony99@gmail.com`) |
+
+### 2. 남은 것
+- 빌드 번호 변경분(네 `Info.plist` + `project.pbxproj`)은 스크립트가 커밋하지 않는다. 이 기록과 함께 커밋한다.
+- 실기기에서 TestFlight 239로 확인할 것: ① 클립 편집기 「전체 덮기」(분류 메뉴 → 전체 덮기 → 분류 선택 → 덮기)가 저장까지 한 번에 가는지, ② 날짜 배지를 눌러 펼친 줄을 쓸면 **하루**만 넘어가는지, ③ 상단 카운터 표의 연봉 줄과 하단 여섯 칸이 그대로인지(직전 빌드 238의 회귀 확인).
