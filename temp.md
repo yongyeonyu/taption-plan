@@ -2159,3 +2159,12 @@
 - 함정(시험): `Date(timeIntervalSince1970: (1_700_000_000 / 60) * 60)`은 Double 추론이라 정수 나눗셈이 아니다 → `(1_700_000_000.0 / 60).rounded(.down) * 60`. 재생 시각 고정 상태에서 `now`만 흘리면 버킷이 안 바뀐다(cutoff를 함께 옮겨야 한다).
 - 검증: 전체 1,638건 중 1,636 통과 · 실패 0 · 건너뜀 2. UI 4건(지도 회귀) 통과. 구조 게이트·import 경계 통과. `MapHomeView` 22,009줄.
 - 남은 것: 화면에서 숫자가 올라가는 장면(시뮬레이터에 오늘 기록 없음 — 기록을 지어내지 않았다). 걸음·거리는 새 기록이 들어올 때 갱신.
+
+## TFB1026A05 · 빌드 241 배포 (2026-10-27)
+- `bash scripts/testflight/release.sh --yes --request-id TFB1026A05`. 240 이후 커밋 5개(97%→90% 천장·저장 측정 정정·빈 진행선 제거·적재 규모 측정·백업 경로 엔진 분리)를 한 번에 올렸다.
+- 240 → **241**(네 Info.plist + pbxproj 8곳). IPA 44,829,377 bytes, 업로드 7.349초(6.1MB/s), 처리 00:13:53 → 00:16:54 **VALID**(약 3분 1초), 최종 검증 `ok: true`·테스터 1명. Delivery UUID `a07f302b-cd89-4971-a58a-f4d95fcc13d5`. 보고서 `build/validation/TFB1026A05/testflight-report.json`.
+- **함정: 8/9 그룹 연결이 404로 죽었다.** `POST /v1/betaGroups/{id}/relationships/builds` → `There is no resource of type 'builds' with id a07f302b…`. **id는 맞다** — 같은 id로 `/v1/builds` 조회도 되고 목록에도 VALID로 나온다. VALID 직후 몇 초 동안 관계 엔드포인트만 그 빌드를 모른다. 3분 뒤 같은 `attach`를 다시 부르니 한 번에 붙었다.
+- 고친 것: `asc.py`의 `api()`에 `retry_404` 인자를 두고 `cmd_attach`만 `retries=10`(2·4·…·18초, 약 90초)로 404를 재시도. 다른 4xx는 즉시 실패 유지. 다음 빌드부터 이 실패는 사라진다.
+- 이 실패의 비용: 업로드가 성공했는데 스크립트가 실패로 끝나면 같은 번들을 다시 올리려다 "이미 있는 빌드"로 막힌다. 8/9이 실패하면 먼저 `python3 scripts/testflight/asc.py builds`로 VALID인지 보고, VALID면 `attach`만 다시 부를 것.
+- 관찰: 이번 아카이브가 실행 시간의 대부분(약 27분)을 썼다. 240은 전체 9분 9초였으니 3배다. 원인은 특정하지 못했다(같은 Release 전체 모듈 컴파일인데 이번에 새 파일 1개가 늘었을 뿐). **Release 아카이브는 30분을 잡고 기다리는 것이 안전하다.**
+- 남은 것: 기기 확인 넷 — `launch_gate`의 `elapsed_ms`, 진행선이 97% 대신 **90%**에 머무는 장면, `map_shell_grace` 발동 장면, `repository_local_load`의 `rows`·`total_ms`. 전부 `python3 scripts/analyze-diagnostics.py <로그>`의 **시작(launch)** 절 하나로 판정된다. 마지막 값이 LCH1026A04의 「오늘 창 적재」를 다시 열지 정한다.
