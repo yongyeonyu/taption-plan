@@ -3492,3 +3492,37 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 5. 확인하지 못한 것
 - 다이나믹 타입은 1.3배 상한까지만 대응했다. 큰 글자 설정에서 고정 높이 줄(하단 바 56pt·배지 40pt)이 깨지지 않는 것을 목표로 했고, 전체 배율 레이아웃은 하지 않았다.
 - 칩 값은 기록이 있는 날에서만 실제 숫자로 확인된다. 시뮬레이터에는 그 날 기록이 없어 `–` 상태만 보았다.
+
+## TFB1026A02 · 빌드 238 내부 배포 (2026-10-26)
+
+- 요청 ID: `TFB1026A02`
+- 무엇을: `e7c855b`(REV1026A01 — 다방면 재검토에서 고친 접근성·캐스팅 5건)와 그 아래 `c26ff0c`(재생 화면 확인·시험), `3dc5fb6`(UIX1026A01 클립 편집기), `0f2987d`(UIX1025A01 P0)를 함께 담아 238로 배포했다. 237에는 이 네 건이 없다.
+
+### 1. 결과 (전부 실측)
+
+| 단계 | 결과 |
+| --- | --- |
+| 사전 점검 | **9/9 OK** (`builds_readable: 최고 빌드 237 (VALID) · 200건 조회`, 그룹 `TP Taption Plan 내부 테스트`) |
+| 빌드 번호 | 237 → 238. plist 4곳 + `CURRENT_PROJECT_VERSION` 8곳 모두 238(237 잔여 0) |
+| 아카이브 | `ARCHIVE SUCCEEDED` (`TaptionPlan238.xcarchive`), **경고 0** |
+| export | `TaptionPlan.ipa`, `2개 번들 모두 238` (Watch·WatchWidget은 별도 target) |
+| 업로드 | `UPLOAD SUCCEEDED with no errors`, Delivery UUID `0f2f7cc6-569d-4ee5-b4ae-26e34119fa9a`, 44,764,329바이트 / 12.56초(3.6MB/s) |
+| 처리 | 09:08:54 업로드 → **09:17:49 `VALID`**(약 8분 55초) |
+| 그룹 | 내부 그룹 연결 `buildAttached: true`, 테스터 1명, **`ok: true`** |
+| 비밀 노출 | 로그에 개인키 내용 없음(경로·바이트 수만) |
+
+로그: `build/validation/TFB1026A02/{preflight.json,release.log,archive.log,export.log,upload.log,processing.log,attach.log,verify.log,testflight-report.json}`
+
+### 2. 이 빌드에 들어간 변경
+
+| 요청 | 내용 | 그때의 검증 |
+| --- | --- | --- |
+| REV1026A01 | `as!` 2건 → `as?`, 검색 지우기·색·기호 단추의 이름과 누름 영역 | Debug 경고 0, 게이트 22,057, `TimeScaleTests` 175건(카메라 명령 포함) 통과 |
+| UID1026A01 | 터치 영역 44pt, 재생 HUD, 달력 지표 값, 시트 detent, 실외 프리셋, 메뉴 칩 색, 타입 스케일 | iPhone 11 캡처, `TaptionPlanPlaybackHUDUITests` |
+| UIX1026A01 | 클립 편집기 도구 이름·확대 단추·눈금 띠·경계 양보·빈 되돌리기 | iPhone 11 캡처 6장, UI 테스트 3건 |
+| UIX1025A01 | 안개 3단계, 대비 토큰, 하단 5항목, 알림 목적지 | 대비 6조합, 안개 밝기 202.6/155.5/110.3 |
+
+### 3. 한계
+
+- `--with-tests` 없이 돌렸다. 아카이브 컴파일로 빌드만 확인했고, 전체 스위트는 40분 전 `c26ff0c`에서 1,637건 중 1,635 통과였다. 그 뒤 변경은 `e7c855b`의 5건뿐이고 그중 카메라 명령은 `TimeScaleTests` 175건으로 다시 확인했다.
+- 실기기 확인(안개 야외 가독성, 롤 저장 반영, 클립 집어 들기 손맛, 재생 전환, 큰 글자 설정)은 여전히 대표 몫이다.
