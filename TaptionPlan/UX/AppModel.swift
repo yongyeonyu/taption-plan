@@ -3387,16 +3387,14 @@ final class AppModel {
             "background_refresh",
             fields: ["wake_reason": wakeReason.rawValue]
         )
+        // 배너는 앞선 실패가 남아 있거나 적재가 회복되며 지워지기도 한다.
+        // 이번 작업이 오류를 새로 세웠는지만 성패로 본다.
+        let errorAtStart = userFacingError
+        var succeeded = false
         defer {
-            let outcome: String
-            if Task.isCancelled {
-                outcome = "cancelled"
-            } else {
-                outcome = userFacingError == nil ? "success" : "failure"
-            }
             logger.finishOperation(
                 operation,
-                outcome: outcome,
+                outcome: Task.isCancelled ? "cancelled" : (succeeded ? "success" : "failure"),
                 fields: [
                     "wake_reason": wakeReason.rawValue,
                     "sensor_collecting": String(isSensorCollecting),
@@ -3454,11 +3452,12 @@ final class AppModel {
         await persist()
         await reconcileSensorCollectionLiveActivity(isForeground: false)
         await scheduleSensorWakeNotificationIfNeeded()
-        let success = userFacingError == nil
+        // 새 오류가 서지 않았으면 성공이다. 앞서 남은 배너는 이번 작업의 실패가 아니다.
+        succeeded = userFacingError == errorAtStart || userFacingError == nil
         Self.integrationLogger.notice(
-            "Background model refresh finished: success=\(success, privacy: .public), snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public)"
+            "Background model refresh finished: success=\(succeeded, privacy: .public), snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public)"
         )
-        return success
+        return succeeded
     }
 
     func performHealthBackgroundRefresh() async {
@@ -4399,7 +4398,8 @@ final class AppModel {
                     "HealthKit authorization refresh failed: \(error.localizedDescription, privacy: .public)"
                 )
             }
-            await refreshHealthData(in: healthSpan)
+            // 잠긴 기기에서 HealthKit이 답하지 못하는 것은 배경에서 정상이다.
+            await refreshHealthData(in: healthSpan, showErrors: isSceneActive)
         }
         guard !Task.isCancelled, acceptsDataMutation() else { return }
         let appUsageSpan = selectedScale == .day

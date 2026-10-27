@@ -1002,6 +1002,56 @@ final class FeatureEngineTests: XCTestCase {
         )
     }
 
+    /// 배경 갱신은 전역 배너가 아니라 "이번 작업이 오류를 새로 세웠는가"로 성패를
+    /// 가른다. 앞서 화면에 남은 배너 때문에 iOS에 실패를 보고하면 안 된다.
+    @MainActor
+    func testBackgroundRefreshDoesNotTreatALeftoverBannerAsFailure() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let model = AppModel(
+            repository: InMemoryPlanRepository(snapshot: .empty),
+            sensorService: AppleSensorDataService(
+                archive: archive,
+                archivedReadingsLoader: { _ in [] }
+            ),
+            cloudSyncService: nil
+        )
+        model.userFacingError = "기존 오류"
+        let success = await model.performBackgroundRefresh(
+            wakeReason: .bgAppRefresh
+        )
+        XCTAssertTrue(success)
+        XCTAssertEqual(model.userFacingError, "기존 오류")
+    }
+
+    /// 반대로 이번 작업이 오류를 새로 세우면 실패로 보고해야 한다.
+    @MainActor
+    func testBackgroundRefreshReportsANewError() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let model = AppModel(
+            repository: FailingPlanRepository(),
+            sensorService: AppleSensorDataService(
+                archive: archive,
+                archivedReadingsLoader: { _ in [] }
+            ),
+            cloudSyncService: nil
+        )
+        let success = await model.performBackgroundRefresh(
+            wakeReason: .bgAppRefresh
+        )
+        XCTAssertFalse(success)
+        XCTAssertNotNil(model.userFacingError)
+    }
+
     @MainActor
     func testPersistenceCancellationDoesNotSurfaceAsSaveError() async throws {
         let day = makeDate(2026, 8, 12)
@@ -30533,4 +30583,15 @@ final class MapHomeDateStripTests: XCTestCase {
         // 꽉 밀었을 때: 상쇄값이 정확히 0이라 튀지 않는다.
         XCTAssertEqual(-pitch + pitch, 0)
     }
+}
+
+/// 적재가 늘 실패하는 저장소. 배경 갱신이 "새로 선 오류"를 실패로 보고하는지 본다.
+private actor FailingPlanRepository: PlanDataRepository {
+    func load() async throws -> TaptionDataSnapshot {
+        throw CocoaError(.fileReadCorruptFile)
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {}
+
+    func deleteAll() async throws {}
 }

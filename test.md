@@ -4471,3 +4471,35 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 5. 확인하지 못한 것
 
 - 시간선 확대 단추·손잡이·메뉴 왕복·「현재 위치」는 **계측이 없다.** 로그에 `sidebar_double_tap` 1건뿐이라 값으로 판정할 수 없다.
+
+## LCH1027A07 · 배경 갱신의 성패를 전역 배너가 아니라 "새로 선 오류"로 가른다 (2026-10-28)
+
+- 요청 ID: `LCH1027A07`
+- 무엇을: `LCH1027A06`이 찾은 문제 — 배경 갱신이 iOS에 실패로 보고되던 것 — 을 고쳤다.
+- 계기: 빌드 244 실기기 로그에서 `background_refresh` 26회 중 17회가 `outcome=failure`였는데, 실패한 창 안에서도 `integration_refresh_finished`는 `actuals`·`travel`·`weather`를 모두 채우고 끝났다.
+
+### 1. 원인
+
+- `refreshEnabledData`가 `refreshHealthData(in: healthSpan)`를 부르는데 이 함수의 기본값이 `showErrors: true`다. 잠긴 기기에서 HealthKit이 `Protected health data is inaccessible`(code 6)을 던지면 **배경인데도 사용자 오류 배너**가 섰다.
+- `performBackgroundRefresh`의 성공 판정이 `userFacingError == nil` — **전역 배너 문자열**이었다. 앞서 켜진 배너가 남아 있으면 이번 갱신이 성공해도 실패로 봤다.
+- 로그가 이 설명과 맞는다: 첫 건강 오류(06:44:20) 뒤 전부 실패 → 12:00·12:15 두 번만 성공(배너가 내려간 구간) → 12:31:23 재발 뒤로는 건강 오류가 없는 창까지 전부 실패.
+
+### 2. 바꾼 것
+
+- `performBackgroundRefresh` — 시작 시점의 배너를 `errorAtStart`로 잡고, 성패를 `userFacingError == errorAtStart || userFacingError == nil`로 판정한다. **새 오류가 서지 않았으면 성공**이고, 적재가 회복되며 배너가 지워진 경우도 성공이다(이전에는 실패로 봤다).
+- `refreshEnabledData` — `refreshHealthData(in:showErrors:)`에 `isSceneActive`를 넘긴다. 화면을 보고 있을 때만 건강 오류 배너를 세운다.
+- 크기: `AppModel` 14,278줄 그대로, `class AppModel`은 13,552 → **13,551**(순감). 구조 게이트·import 경계 통과.
+
+### 3. 확인
+
+- 새 시험 두 개가 양쪽 방향을 잠근다.
+  - `testBackgroundRefreshDoesNotTreatALeftoverBannerAsFailure` — 배너에 "기존 오류"가 남아 있어도 배경 갱신은 `true`, 배너는 건드리지 않는다(2.6초).
+  - `testBackgroundRefreshReportsANewError` — 적재가 실패해 배너가 새로 서면 `false`(0.09초). `FailingPlanRepository` 스텁을 시험 파일에 두었다.
+- 전체 시험 `build/validation/LCH1027A07/app-tests.xcresult` — **1,666건 중 1,662 통과 · 실패 1 · 건너뜀 3**(14분 35초).
+  - 실패 1건은 `TaptionPlanClipEditorToolsUITests.testPromotingDetailIsOneStepAndUndoPutsItBack`("상세활동을 눌러도 집기 줄이 열리지 않는다"). 단독 재실행에서 **19.5초에 통과** — 이번 변경과 무관한 화면시험 간헐 실패로 본다.
+  - 건너뜀 3건은 기존 HealthKit 2건 + `testPlayTogglesInOneSlotAndMapMoveCancelsIt`.
+
+### 4. 확인하지 못한 것
+
+- 기기에서 `background_refresh`가 실제로 `success`로 바뀌는지는 다음 빌드 로그로만 확인된다. 판정 기준은 `outcome=success` 비율과 `health_refresh_failed` 뒤에도 실패가 번지지 않는지다.
+- iOS가 배경 갱신 간격을 되돌리는지는 며칠 걸린다(지금은 15분 간격 유지).

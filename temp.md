@@ -2236,3 +2236,9 @@
 - 적재: 26,726~26,826행, read 136~765ms, decode 62~1,066ms, `bootstrapped` 554ms(단독)/1,975ms(배경 갱신 겹침).
 - **새 문제**: `background_refresh` 26회 중 17회 `outcome=failure`. 실패 창 안에서도 `integration_refresh_finished`는 정상. 원인 ①`refreshEnabledData` → `refreshHealthData(showErrors: true)` 기본값 때문에 잠긴 기기에서 배경인데 사용자 배너가 섬 ②`performBackgroundRefresh`가 전역 `userFacingError`로 성공 판정. → iOS에 `setTaskCompleted(success: false)` 반복.
 - 남은 것: ①배경 갱신 성공 판정 고치기(이번 회차 후보) ②시간선 계측 추가 ③`map_shell` 게이트 의미 변경을 문서에 반영.
+
+## LCH1027A07 · 배경 갱신 성패 판정 (2026-10-28)
+- 원인: `refreshEnabledData`가 `refreshHealthData(showErrors: true 기본값)`를 불러 잠긴 기기의 HealthKit 오류(code 6)가 배경에서도 배너를 세움 + `performBackgroundRefresh`가 그 전역 배너로 성공 판정.
+- 해결: `errorAtStart` 스냅숏 비교(`== errorAtStart || == nil`), 건강 오류는 `showErrors: isSceneActive`. `AppModel` 순감(13,552 → 13,551), 게이트 통과.
+- 검증: 새 시험 2건(남은 배너 → true, 새 오류 → false) 통과. 전체 1,666건 중 1,662 통과·실패 1·건너뜀 3. 실패 1건은 클립 편집기 화면시험이며 단독 재실행 19.5초 통과(간헐).
+- 남은 것: ①기기 로그에서 `outcome=success` 비율 확인 ②배경 갱신이 시작 적재와 겹칠 때 `bootstrapped`가 2배(554ms → 1,975ms)가 되는 문제.
