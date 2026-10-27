@@ -82,7 +82,10 @@
 | `아카이브가 이미 있습니다` | 같은 요청 ID 재실행 | 새 요청 ID(`--request-id`) |
 | `Assets.xcassets: error: Failed to write to CAR` (`BOMStorageCompact ... rename`) | actool이 부분 아카이브 DD에 쓰다 실패(메모리 압박에서 관측) | `rm -rf build/<요청 ID>-archive-dd` 후 같은 명령 재실행. 두 번째 시도에서 성공했다(TFB1024A17) |
 | 처리 `FAILED`/`INVALID` | 서명·entitlement·심사 정보 문제 | `upload.log`와 App Store Connect 알림 확인 |
+| `HTTP 404 ... There is no resource of type 'builds' with id …` (8/9 그룹 연결) | 업로드는 성공했고 빌드도 `VALID`인데, VALID 직후 ASC의 관계 엔드포인트(`/v1/buildGroups/{id}/relationships/builds`)가 그 빌드를 아직 모른다. 같은 id를 `/v1/builds`로는 읽을 수 있다 | `asc.py`의 `cmd_attach`가 `retry_404=True`·`retries=10`(2·4·…·18초 ≈ 90초)로 재시도한다(TFB1026A05에서 수정, 빌드 241에서 실패 후 같은 방법으로 붙었다). **다시 업로드하지 않는다** — 같은 번호는 "이미 있습니다"로 막힌다 |
 | `testerCount == 0` | 그룹에 테스터 없음 | App Store Connect에서 내부 테스터 추가 |
+
+**소요 시간은 예측하지 않는다.** TFB1026A05~TFB1027A03 다섯 번에서 아카이브가 8~27분, ASC 처리가 1분 46초~13분으로 흔들렸다. 업로드(5.6~6.8초)만 안정적이다. 실행 중에는 작업 트리를 건드리지 않는다 — 1/9이 깨끗한 트리를 요구하고 2/9가 `Info.plist`·`project.pbxproj`를 고친다.
 
 ## 로그와 산출물
 

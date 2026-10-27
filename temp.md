@@ -2209,3 +2209,23 @@
 - IPA 44,827,368 bytes / 업로드 6.120초(7.3MB/s). 처리 `11:32:48` NOT_UPLOADED → `11:34:34` VALID(1분 46초). 그룹 연결 한 번에 성공, 검증 `ok: true`. 전체 **9분 49초**(아카이브 약 8분). Delivery UUID `66294236-ac6d-431a-af21-30f46a6cd582`.
 - **아카이브 시간이 8~27분으로 흔들린다**(243=8분, 242=19분, 241=27분). 처리도 1분 46초~13분. 둘 다 예측하지 말 것.
 - 남은 것(기기): ①확대 후 손잡이가 눈금을 따라 내려가는지 ②「현재 위치」로 시간선이 지금으로 돌아오는지 ③메뉴 왕복 후 확대 유지·캡슐·날씨 띠 정렬 ④같은 날짜에서 「현재 위치」 후 날씨 띠가 안 튀는지 ⑤90% 천장 ⑥`repository_local_load`의 `rows`(2만6천 규모).
+
+## LCH1027A04 · 읽는 동안 개정이 올라가도 다 읽은 하루를 버리지 않는다 (2026-10-27)
+- 계기: 빌드 243 로그(12:38 업로드). 적재 수정은 확인됐다 — `repository_local_load` 26,702행(place 22,414·floorTransition 3,073·actual 493·weather 322), read 352.7~654.9ms, decode 71~120ms. 240의 1,284,890행/9,369ms에서 **48배 적은 행, 15~27배 빠른 읽기**. `bootstrapped` 830ms(240은 9,944ms), `map_shell_grace` 1,443ms(240은 10,570ms). 90% 천장 항목 종결.
+- **새 문제**: `map_shell` 게이트 15,141ms는 데이터가 아니라 15초 안전장치(`initialReadyForced`) 값. 같은 초 `day_snapshot_load_finished`는 `readings=930`인데 `map_day_snapshot_loaded`는 `is_complete=false`. `display_readings`가 1.0초에 1 → **3,630초까지 1** → 3,631초에 810. 앱을 켠 뒤 60분 동안 지도에 점 하나.
+- 원인: `AppModel.planDayDataSnapshot`이 `sourceRevision == dayProjectionRevision`을 요구하고 어긋나면 `empty()`. 개정은 **다른 날 기록이 바뀌어도 오르는 전역 값**이라 1.0초의 `day_load_invalidated(raw_data_changed)` 한 번에 방금 다 읽은 하루를 버렸고, 다시 읽을 계기(foreground resume)가 없었다.
+- 해결: `PlanDayDataSnapshot.keepsLoadedSnapshot` — 완전히 읽은 하루(`isComplete`)면 개정이 어긋나도 유지, 못 읽은 날만 버린다. `AppModel` 두 경로에 적용, 화면은 `rebase`로 원본만 맞춘다. 크기 순감(예산 안).
+- 검증: `testCompleteDaySnapshotSurvivesARevisionBumpButIncompleteDoesNot`, `SensorDayStoreTests` 53/53, 전체 **1,664건 중 1,662 통과·실패 0·건너뜀 2**. 게이트·경계 통과.
+- 남은 것: ①빌드 244에서 `display_readings`가 처음부터 800대인지 ②`day_load_invalidated`가 왜 1.0초에 떴는지(이제 손해 없음) ③`repository_local_load`가 세션당 3번 찍히는 이유.
+
+## LCH1027A05 · 시간선 확대를 단추로도 (2026-10-27)
+- 계기: 확대 수단이 두 손가락뿐이라 시뮬레이터에서 확대 장면을 만들 수 없었다(`LCH1027A02`·`LCH1027A03` 검증의 걸림돌).
+- 해결: 레일 눈금 위 여백(28pt)에 `＋ / －` 18pt 원 두 개. `MapHomeTimeSidebar`에 이미 있던 죽은 `zoomStepToken` 경로를 부모가 실제로 올린다. 단계 `zoomDurations = [1440, 720, 360, 180, 60]`, 끝에서 흐려짐. 동결 파일 미변경(`MapHomeView` 예산 안).
+- 검증: 화면시험 `testTimelineZoomButtonsStepThroughTheLadder` 통과(25.851초) — 실제로 눌러 하루→12시간→하루를 확인. 12시간 창 화면 첨부 확인. 전체 시험 1,664건 중 1,662 통과·실패 0·건너뜀 2(화면시험 20건 포함).
+- 남은 것: 단추로 확대한 뒤 손잡이 위치(기기), 6·3·1시간 창의 눈금 밀도(화면).
+
+## TFB1027A03 · 빌드 244 배포 (2026-10-27)
+- `bash scripts/testflight/release.sh --yes --request-id TFB1027A03`. `LCH1027A04`(지도가 하루를 버리지 않음) + `LCH1027A05`(시간선 확대 단추). 243 → **244**.
+- IPA 44,841,441 bytes / 업로드 6.804초(6.6MB/s, 52.7Mbps). `13:43:55` **VALID**, 그룹 연결 한 번에 성공, 검증 `ok: true`. 전체 **13분 44초**. Delivery UUID `96e1d12b-5e88-4210-90d8-ca0ad331ce3d`.
+- 배포 뒤 같은 트리에서 전체 시험을 다시 돌려 **1,664건 중 1,662 통과·실패 0·건너뜀 2**(19분 16초, `build/validation/LCH1027A06/app-tests.xcresult`). 간헐 실패 두 건(StoreKit·30일 부하)도 이번에는 통과.
+- 남은 것(기기): ①`display_readings`가 처음부터 800대인지(=이번 수정의 핵심) ②확대 단추로 눈금이 바뀌고 손잡이가 그 시각에 서는지 ③확대 상태로 메뉴 왕복 유지·캡슐·날씨 띠 정렬 ④「현재 위치」가 시간선도 지금으로 ⑤`repository_local_load` 2만6천 규모·`bootstrapped` 1초 안쪽.

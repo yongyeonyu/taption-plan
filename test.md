@@ -4288,3 +4288,140 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - **메뉴를 열었다 닫아도 확대 단계가 유지되는지**, 그 상태에서 선택 캡슐·날씨 띠가 레일과 같은 자리에 있는지(`LCH1027A03`).
 - 같은 날짜에서 「현재 위치」를 눌러도 날씨 띠가 하루 전체로 튀지 않는지.
 - 90% 천장(241의 진행선 수정)과 `repository_local_load`의 `rows`(242의 적재 필터)는 이 빌드에도 들어 있으므로, 로그 한 번으로 함께 판정된다.
+
+## LCH1027A04 · 읽는 동안 개정이 올라가도 다 읽은 하루를 버리지 않는다 (2026-10-27)
+
+- 요청 ID: `LCH1027A04`
+- 무엇을: 빌드 243 실기기 로그에서 **지도가 오늘 점을 60분 동안 잃고 있던** 원인을 찾아 고쳤다. `AppModel.planDayDataSnapshot`이 `sourceRevision == dayProjectionRevision`을 요구하고 어긋나면 빈 스냅샷을 돌려주던 것.
+- 계기: 로그 업로드(`TaptionLogs-20261027-123802-2E0306DD.txt.gz`, 5,121줄·빌드 240/242/243·세션 7개). 마지막 실행 11:36:53(KST), 세션 `AA95AB31`.
+
+### 1. 로그가 확인해 준 것 — 적재 수정은 들어갔다
+
+| 항목 | 빌드 240 | 빌드 243 |
+| --- | --- | --- |
+| `repository_local_load` rows | 1,284,890 | **26,702 / 26,702 / 26,701** |
+| read | 9,369ms(같은 세션 2회째 13,793ms) | **634.5 / 654.9 / 352.7ms** |
+| decode | 69 / 89ms | 78.6 / 120.5 / 71.3ms |
+| total | 9,438ms | **713.1 / 775.4 / 423.9ms** |
+| `bootstrapped` | 9,944ms | **830ms** |
+| `map_shell_grace` | 10,570ms | **1,443ms** |
+
+- 종류 분포: `place=22,414 · floorTransition=3,073 · actual=493 · weather=322`. 빌드 240에서 97.9%를 차지하던 `healthkit-sample=1,258,394`가 통째로 빠졌다.
+- 읽기가 9.4초 → 0.35~0.65초, 시작 게이트가 9.9초 → 0.83초. **90% 천장은 이제 볼 일이 없다**(진행선이 1.4초 만에 걷힌다) — LCH1026A02가 남긴 마지막 항목이 닫혔다.
+- 같은 세션에 `repository_local_load`가 3번 찍혔다(1.0초에 2번, 943초에 1번). 원인은 여전히 특정하지 못했지만 이제 한 번에 0.4~0.8초다.
+
+### 2. 새로 드러난 문제 — 지도가 오늘 점을 잃었다
+
+- `map_shell` 게이트 **15,141ms**. 이 값은 데이터가 준비된 시각이 아니라 15초 안전장치가 연 시각이다(`MapHomeView`의 `.task`에서 `Task.sleep(15s)` → `initialReadyForced`).
+- 같은 초: `day_snapshot_load_finished`는 `readings=930 · duration_ms=190 · source=rebuilt_superseded`인데, `map_day_snapshot_loaded`는 **`is_complete=false`** 였다.
+- `map_route_readings_prepared`의 `display_readings`: 1.0초에 **1** → 3,630초까지 **1** → 3,631초에 **810**.
+- 즉 앱을 켠 뒤 **60분 동안 지도에 점이 하나**였고, 3,630초에 앱이 다시 앞으로 나오자(`sensor_background_wake reason=foregroundResume`) 그제야 810개가 됐다. 그 사이 943초에 저장소는 다시 읽었지만(`repository_local_load`) 지도는 하루를 다시 읽지 않았다.
+- 원인: 1.0초에 `day_load_invalidated(reason=raw_data_changed)`가 떴다. 개정 `dayProjectionRevision`은 **다른 날 기록이 바뀌어도 오르는 전역 값**이라 그날 원본이 그대로여도 어긋난다. `planDayDataSnapshot`은 어긋나면 `empty()`를 돌려주고, 지도는 그 빈 스냅샷을 `rebase`해 들고 **다시 읽을 계기가 없었다**(다시 읽는 계기는 foreground resume 하나뿐이었다).
+
+### 3. 바꾼 것
+
+- `PlanDayDataSnapshot.keepsLoadedSnapshot(_:currentRevision:)` — `isComplete`면 개정이 어긋나도 그대로 쓰고, 못 읽은 날만 버린다.
+- `AppModel`의 두 경로(코디네이터 경로·직접 경로)에 적용. 완전한 하루는 화면이 개정 차이를 보고 `rebase`로 원본만 다시 맞춘다(`MapHomeView` 11,385 · 11,405).
+- 크기: `AppModel` 예산(14,400) 안에서 순감.
+
+### 4. 확인
+
+- 새 시험 `testCompleteDaySnapshotSurvivesARevisionBumpButIncompleteDoesNot` — 개정 7로 읽은 완전한 하루는 개정 8에서도 유지, 못 읽은 날은 개정과 무관하게 버린다.
+- 전체 `TaptionPlanTests` **1,664건 중 1,662 통과 · 실패 0 · 건너뜀 2**(`build/validation/LCH1027A06/app-tests.xcresult`, 19분 16초). `SensorDayStoreTests` 53/53, 화면시험 20건 통과. 지난 실행에서 간헐 실패하던 `testThirtyDayAppColdAndWarmLoadP95StaysInteractive`와 `testStoreKitProductPurchaseEntitlementAndRestore`도 이번에는 통과했다.
+- 구조 게이트·import 경계 통과.
+
+### 5. 확인하지 못한 것
+
+- **기기에서 점이 처음부터 보이는지.** 빌드 244에 들어갔다. 판정 기준은 `map_route_readings_prepared.display_readings`가 1이 아니라 800대에서 시작하는지.
+- `day_load_invalidated`가 왜 1.0초에 떴는지(어느 쓰기가 개정을 올렸는지)는 로그에 없다. 이제 손해가 없으므로 추적을 미룬다.
+- `repository_local_load`가 한 세션에 3번 찍히는 이유.
+
+## LCH1027A05 · 시간선 확대를 단추로도 할 수 있게 한다 (2026-10-27)
+
+- 요청 ID: `LCH1027A05`
+- 무엇을: 시간 레일 눈금 위 여백에 `＋ / －` 단추를 붙여 확대 단계를 돌 수 있게 했다. 지금까지 확대 수단은 **두 손가락 집기뿐**이라 시뮬레이터에서 확대 단계를 확인할 수 없었다.
+- 계기: `LCH1027A02`·`LCH1027A03`이 둘 다 "확대했을 때"의 문제인데, 그 장면을 화면시험으로 만들 수단이 없었다.
+
+### 1. 바꾼 것
+
+- `MapHomeTimeSidebar`에는 이미 `zoomStepToken` 경로가 있었다(`.onChange(of: zoomStepToken)` → `zoomTimeline(direction:)`, 1,661행). 부모가 토큰을 한 번도 올리지 않아 **죽은 코드**였다.
+- `MapHomeView`에 `@State private var zoomStepToken = 0`을 만들고, `timelineZoomControls`(`timelineZoomButton(systemImage:direction:)`)가 `zoomStepToken += direction`만 한다.
+- 자리: 레일 위쪽 여백(`MapHomeTimeSidebarMath.verticalInset` 28pt) 안, 캡슐 중심 x. 지도 확대(±) 단추와 헷갈리지 않게 눈금에 붙였다. 18pt 원 두 개.
+- 단계: `MapHomeTimeSidebarMath.zoomDurations = [1,440, 720, 360, 180, 60]`. 끝 단계에서는 단추가 흐려지고 `.disabled`.
+- **동결 파일을 건드리지 않았다** — `MapHomeView`(예산 22,072)에 두었고 사이드바는 손대지 않았다. 창 소유는 여전히 `MapHomeView` 하나다(단추는 토큰만 올린다).
+
+### 2. 확인
+
+- 새 화면시험 `testTimelineZoomButtonsStepThroughTheLadder` — 하루 전체에서 '축소'가 꺼져 있고, '확대'를 누르면 '축소'가 열리고, 되돌리면 다시 꺼지는지 **실제로 눌러서** 확인. 통과(**25.851초**).
+- 시험 중 첨부 화면으로 12시간 창(07:30~19:30)이 실제로 그려지는 것도 확인했다.
+
+### 3. 확인하지 못한 것
+
+- 단추로 확대한 상태에서 손잡이가 눈금을 따라 내려가는 장면(`LCH1027A02`)은 여전히 단위 시험으로만 잠갔다. 화면은 기기에서 본다.
+- 6시간·3시간·1시간 창에서 눈금 글자 밀도가 읽히는지는 화면을 봐야 한다.
+
+## TFB1027A03 · 빌드 244를 내부 테스터에게 배포 (2026-10-27)
+
+- 요청 ID: `TFB1027A03`
+- 무엇을: 오늘 고친 두 건 — `LCH1027A04`(읽는 동안 개정이 올라가도 다 읽은 하루를 버리지 않는다)와 `LCH1027A05`(시간선 확대 단추) — 을 한 번에 올린다.
+- 시작 상태: 작업 트리 깨끗함(`20073e0`), 네 제품 번들 + `project.pbxproj` 모두 **243**. ASC 최고 빌드 243(VALID).
+
+### 1. 실행
+
+`bash scripts/testflight/release.sh --yes --request-id TFB1027A03` (9단계, **13분 44초**).
+
+| 단계 | 결과 |
+| --- | --- |
+| 1/9 사전 점검 | 9항목 OK · 최고 빌드 243(VALID) · 내부 그룹 `b4857e5e…` · 트리 깨끗함 |
+| 2/9 빌드 번호 | 243 → **244** (네 Info.plist + `project.pbxproj` 8곳) |
+| 3/9 테스트 | `--with-tests` 없음 → 생략(아카이브 컴파일로 빌드만 확인) |
+| 4/9 아카이브 | `build/validation/TFB1027A03/TaptionPlan244.xcarchive` |
+| 5–6/9 익스포트·번들 | `com.taption.plan` 244 · `…widget` 244 |
+| 7/9 업로드 | 44,841,441 bytes / **6.804초**(6.6MB/s, 52.7Mbps) · Delivery UUID `96e1d12b-5e88-4210-90d8-ca0ad331ce3d` |
+| 8/9 처리·그룹 | `13:43:55` **VALID** · 그룹 연결 **한 번에 성공** |
+| 9/9 검증 | `ok: true`, `buildAttached: true`, `groupBuildVersions` 최대 244, 테스터 1명(`axony99@gmail.com`, EMAIL) |
+
+- 보고서: `build/validation/TFB1027A03/testflight-report.json`, 로그: `build/validation/TFB1027A03/`.
+
+### 2. 전체 시험 (배포 뒤 같은 트리에서 다시 돌림)
+
+- 배포 시점에는 전체 시험이 끝나지 않은 상태였다(`LCH1027A04` 뒤 실행이 13:04에 중간에 끊겼다). 배포가 끝난 뒤 같은 커밋에서 전체를 다시 돌려 확인했다.
+- `build/validation/LCH1027A06/app-tests.xcresult` — **1,664건 중 1,662 통과 · 실패 0 · 건너뜀 2**(19분 16초). 건너뜀 2건은 `HealthKitIntegrationTests`의 기존 항목이다.
+- 간헐 실패로 남아 있던 두 건(`testStoreKitProductPurchaseEntitlementAndRestore`, `testThirtyDayAppColdAndWarmLoadP95StaysInteractive`)이 이번에는 **둘 다 통과**했다. 단독 재실행에서도 통과했던 이력과 합치면 환경 문제로 본다.
+- 새로 넣은 두 시험(`testCompleteDaySnapshotSurvivesARevisionBumpButIncompleteDoesNot`, `testTimelineZoomButtonsStepThroughTheLadder`)도 이 실행에서 통과했다.
+
+### 3. 이 빌드가 열어 주는 기기 확인
+
+- **지도에 오늘 점이 처음부터 보이는지** — `LCH1027A04`의 핵심. 로그의 `map_route_readings_prepared.display_readings`가 1이 아니라 800대에서 시작해야 한다.
+- 확대 단추로 눈금이 바뀌고, 그 상태에서 손잡이가 선택 시각 자리에 서는지(`LCH1027A02`).
+- 확대 상태로 메뉴를 열었다 닫아도 유지되는지, 캡슐·날씨 띠가 레일과 같은 창인지(`LCH1027A03`).
+- 「현재 위치」가 시간선도 지금으로 되돌리는지, 같은 날짜에서 날씨 띠가 하루 전체로 튀지 않는지.
+- `repository_local_load`의 `rows`(2만6천 규모)·`bootstrapped`(1초 안쪽).
+
+### 4. 확인하지 못한 것
+
+- 위 다섯 가지는 모두 실기기 화면·로그 판정이다. 시뮬레이터 시험은 배선까지만 잠근다.
+- 아카이브 시간은 이번에도 예측하지 않았다(전체 13분 44초 중 아카이브가 대부분).
+
+## DOC1027A01 · 개발 문서를 오늘 바뀐 사실에 맞춘다 (2026-10-27)
+
+- 요청 ID: `DOC1027A01`
+- 무엇을: 오늘 하루에 바뀐 동작·측정을 개발 문서에 반영했다. 코드 변경 없음(문서 6개).
+- 계기: `LCH1027A04`·`LCH1027A05`와 빌드 243 로그가 만든 새 사실이 `DEVELOPMENT.md`(10:52 저장) 이후 것이라 문서가 한 세대 뒤처져 있었다.
+
+### 1. 바꾼 곳
+
+- `DEVELOPMENT.md` — ①하루를 읽는 동안 전역 `dayProjectionRevision`이 올라가도 **다 읽은 하루를 버리지 않는다**(`keepsLoadedSnapshot`, 60분 유실 실측) ②`map_shell` 게이트 15,000ms 언저리는 데이터가 아니라 `initialReadyForced` 안전장치 값이므로 `map_day_snapshot_loaded`와 함께 본다 ③시간선 확대 단추(`timelineZoomControls`)와 `zoomDurations` 단계, 단추는 토큰만 올린다는 규칙. 프로젝트 경계표의 `PlanDayDataSnapshot` 설명에 "다 읽은 하루 보존 판정" 추가.
+- `docs/DATA_PIPELINE.md` 8장 신설 — 시작 시간의 병목은 `readings`가 아니라 `records` 표였다. 1,258,394행(97.9%)이 해독 목록 밖이라 읽고 버려졌고, 시뮬레이터 벤치가 그것을 못 잡은 이유(표본 DB에 `healthkit-sample`이 없음)를 남겼다.
+- `docs/TESTFLIGHT.md` — VALID 직후 그룹 연결 404(`There is no resource of type 'builds'`)와 `retry_404` 대응을 실패 표에 추가, 아카이브 8~27분·처리 1분46초~13분 편차를 명시.
+- `docs/ARCHITECTURE_ROADMAP.md` — 기준선을 10-27 측정으로 갱신(143파일·161,252줄, 5,000줄 초과는 여전히 4개). `MapHomeView`가 동결 예산 22,072에 **15줄까지** 붙었다는 경고를 넣었다.
+- `test.md` / `temp.md` — `LCH1027A04`·`LCH1027A05`·`TFB1027A03` 기록 추가.
+
+### 2. 확인
+
+- 문서 전용 변경이라 앱 테스트·빌드는 요구되지 않는다(`AGENTS.md`). 다만 문서에 적은 수치의 근거는 실제 실행에서 가져왔다: 전체 시험 **1,664건 중 1,662 통과·실패 0·건너뜀 2**(19분 16초, `build/validation/LCH1027A06/app-tests.xcresult`), 구조 게이트·import 경계 통과, `python3 scripts/architecture-metrics.py`로 파일 수·줄 수 재측정.
+- `git status`에 코드 파일 변경 0건.
+
+### 3. 확인하지 못한 것
+
+- 문서에 적은 실기기 수치(`display_readings`, `repository_local_load`)는 **빌드 244 로그가 아직 없다.** 다음 로그가 오면 이 문서의 60분 유실 서술을 "고쳐졌다"로 바꿔야 한다.

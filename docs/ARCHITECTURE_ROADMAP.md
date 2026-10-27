@@ -89,6 +89,17 @@ python3 scripts/architecture-metrics.py --check docs/architecture-baseline.json
 테스트는 별도로 58,023줄이고, 그중 `FeatureEngineTests.swift` 하나가 29,456줄에
 테스트 함수 756개를 담고 있다.
 
+**2026-10-27 갱신.** 위 수치는 10-24 측정이다. 같은 스크립트(`python3 scripts/architecture-metrics.py`)로 다시 재면:
+
+```
+파일 143개 · 161,252줄
+크기 분포: <500 87개 · 500-1000 20개 · 1000-2000 15개 · 2000-5000 17개 · 5000+ 4개
+  22,057  TaptionPlan/UI/MapHomeView.swift
+  14,278  TaptionPlan/UX/AppModel.swift
+```
+
+늘어난 17개 중 16개가 500줄 미만이고 5,000줄 초과 파일은 그대로 4개다 — 거대 파일에서 계산·정책을 떼어 낸 결과다. 다만 `MapHomeView`는 22,057로 동결 예산 22,072에 **15줄까지** 붙었다. 이 파일에 화면을 더할 때는 새 파일로 빼는 것이 먼저다.
+
 ---
 
 ## 3. 진단

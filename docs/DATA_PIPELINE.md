@@ -405,3 +405,21 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 ```
 
 `--rows`를 바꾸면 규모별 곡선을 볼 수 있다. 스크립트는 저장소 밖 임시 파일만 만들고 `build/validation/`에 결과를 남긴다.
+
+---
+
+## 8. 2026-10-27 실기기 측정이 정정한 것 — 시작 시간의 병목은 `records` 표였다
+
+이 문서의 측정 대상은 `readings`(센서 60열)였다. 그런데 실기기 시작 로그에서 시간을 잡아먹은 것은 같은 파일의 **`records` 표**였다.
+
+| 항목 | 빌드 240 (수정 전) | 빌드 243 (수정 후) |
+| --- | --- | --- |
+| `repository_local_load` rows | 1,284,890 | **26,702** |
+| 그중 `healthkit-sample` | 1,258,394 (**97.9%**) | 0 |
+| read / decode | 9,369ms / 69ms | **634.5ms / 78.6ms** |
+| `bootstrapped` | 9,944ms | **830ms** |
+
+- `TaptionStoreRepository.load()`가 `allRecordRows()`로 `records` 전체를 읽고, 그중 97.9%를 "스냅샷 해독 목록 13종에 없다"는 이유로 버리고 있었다. 해독은 69ms인데 읽기가 9.4초 — 시간은 전부 SQL 읽기였다.
+- `kind IN (…)`로 거르자(`records_kind_start` 색인) 26,702행 / 0.35~0.65초가 됐다. 스냅샷에 종류를 더할 때는 `TaptionStoreRepository.Kind`에도 넣어야 한다 — 빠뜨리면 그 행이 조용히 적재에서 사라진다.
+- **교훈**: 시뮬레이터 벤치가 이 병목을 못 잡은 이유는 표본 DB에 `healthkit-sample`이 없었기 때문이다. 코덱·질의를 아무리 재도 **읽는 행 수가 실제와 다르면** 시작 시간은 보이지 않는다. 시작 시간을 판정할 때는 코덱 벤치가 아니라 실기기 `repository_local_load`의 `rows`·`read_ms`를 먼저 본다.
+- 이 문서의 P1·P2 결론(행 하나를 싸게 만드는 일)은 그대로 유효하다. 다만 그것은 하루 조회·쓰기 경로의 이야기이고, **시작 시간의 지배 항은 읽는 행 수**였다.
