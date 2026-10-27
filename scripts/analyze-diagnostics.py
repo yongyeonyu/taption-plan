@@ -147,6 +147,19 @@ def report(header, events):
     else:
         print("  (없음)")
 
+    print("\n시간선 창(timeline_window) — 확대·손잡이·「현재 위치」")
+    timeline = [e for e in events if e["event"] == "timeline_window"]
+    if timeline:
+        for event in timeline:
+            m, f = event.get("metrics", {}), event.get("fields", {})
+            ratio = m.get("handle_ratio", -1)
+            ratio_text = "없음" if ratio < 0 else f"{ratio:.3f}"
+            print(f"  {local(event['timestamp']):%H:%M:%S} {f.get('source', '?'):14s} "
+                  f"창 {f.get('window', '?'):>10s} ({m.get('duration_minutes', 0):.0f}분) "
+                  f"선택 {f.get('selected', '?'):>5s} 손잡이 {ratio_text}")
+    else:
+        print("  (없음)")
+
     print("\n사용자 동작")
     for name in ("sidebar_double_tap", "section_edit_open_requested", "map_style_changed"):
         print(f"  {name}: {counts.get(name, 0)}")

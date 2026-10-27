@@ -4503,3 +4503,30 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - 기기에서 `background_refresh`가 실제로 `success`로 바뀌는지는 다음 빌드 로그로만 확인된다. 판정 기준은 `outcome=success` 비율과 `health_refresh_failed` 뒤에도 실패가 번지지 않는지다.
 - iOS가 배경 갱신 간격을 되돌리는지는 며칠 걸린다(지금은 15분 간격 유지).
+
+## LCH1027A08 · 시간선 창을 진단에 남긴다 (2026-10-28)
+
+- 요청 ID: `LCH1027A08`
+- 무엇을: 확대 단계·손잡이 위치·「현재 위치」 되돌림을 **로그 값으로** 판정할 수 있게 `timeline_window` 이벤트를 넣었다.
+- 계기: `LCH1027A06`에서 "시간선 확대 단추·손잡이·메뉴 왕복·「현재 위치」는 계측이 없어 로그로 판정할 수 없다"고 남긴 항목.
+
+### 1. 무엇을 남기나
+
+- 이벤트 `timeline_window`, 필드 `source`·`window`(예 `576-636`)·`selected`, 숫자 `start_minute`·`duration_minutes`·`handle_ratio`.
+- `source` 값: `zoom`(확대 단계가 바뀜) · `select`(재생·드래그 중이 아닐 때 선택이 바뀜) · `handle_end`(손잡이 드래그를 놓음) · `recenter_before`/`recenter_after`(「현재 위치」).
+- **`handle_ratio`는 화면이 손잡이를 그리는 것과 같은 `MapHomeTimeSidebarMath.position`으로 계산한다.** 로그 값과 눈에 보이는 위치가 갈라지면 그 자체가 버그다. 선택이 없으면 `-1`.
+- `scripts/analyze-diagnostics.py`에 `시간선 창` 절을 추가해 시간·source·창·선택·손잡이 비율을 한 줄씩 보여 준다.
+
+### 2. 어디에 넣었나
+
+- `MapHomeTimelineWindowRecord`(payload 계산 + 기록)를 `MapHomeTimeSidebarHandleMath.swift`에 두었다. 27 → 81줄, 동결 파일 아님.
+- `MapHomeView`에는 6줄짜리 `recordTimelineWindow(_:)`와 호출 4곳만 넣었다. **22,057 → 22,072로 동결 예산에 정확히 맞췄다**(여유 0줄). `appear`(메뉴 왕복) 이벤트는 그 1줄을 넣으면 예산을 넘겨 포기했다 — 창 소유가 부모로 옮겨져 있어 되돌아가는 경로 자체가 없다.
+
+### 3. 확인
+
+- 새 시험 `testTimelineWindowRecordMatchesTheHandleRatio` — 60분 창(09:36~10:36)에서 10:30을 고르면 `handle_ratio=0.9`, 창 문자열 `576-636`, 선택 없으면 `-1`·`selected=none`. 기존 손잡이 시험과 같은 기대값을 쓴다.
+- `MapHomePawprintInteractionTests` 2건 통과(2/2). 구조 게이트·경계 통과.
+
+### 4. 확인하지 못한 것
+
+- **이벤트가 실제로 찍히는 것은 기기 로그로만 확인된다.** 시뮬레이터 시험은 화면을 만질 수 없고, xcodebuild는 복제 시뮬레이터를 써서 시험 뒤 앱 컨테이너를 읽을 수 없다. 다음 로그에서 `시간선 창` 절이 비어 있지 않은지 먼저 본다.

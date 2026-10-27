@@ -3477,6 +3477,10 @@ struct MapHomeView: View {
             persistMapDayCache()
         }
         .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
+        .onChange(of: timeSidebarVisibleDurationMinutes) { _, _ in recordTimelineWindow("zoom") }
+        .onChange(of: selectedTimelineMinute) { _, _ in
+            if !isTimelineInteractionActive, !isDayPlaybackRunning { recordTimelineWindow("select") }
+        }
         // 잠금 화면 활동 카드에 같은 연봉 글자를 보여 주기 위해 기기 설정에 적어 둔다.
         .onChange(of: salaryLive) { _, _ in
             persistSalaryForLockScreen()
@@ -7960,6 +7964,7 @@ struct MapHomeView: View {
                             isTimelineInteractionActive = isInteracting
                             if !isInteracting {
                                 flushDeferredWBSPlaybackProjection()
+                                recordTimelineWindow("handle_end")
                             }
                         },
                         onSectionEdit: { selectedMinute in
@@ -12878,10 +12883,19 @@ struct MapHomeView: View {
         )
     }
 
+    /// 시간선 창을 진단에 남긴다(확대 단계·손잡이·「현재 위치」 확인용).
+    private func recordTimelineWindow(_ source: String) {
+        MapHomeTimelineWindowRecord.write(
+            source: source, startMinute: timeSidebarVisibleStartMinute,
+            durationMinutes: timeSidebarVisibleDurationMinutes, selectedMinute: selectedTimelineMinute
+        )
+    }
+
     private func requestAndFollowUserLocation(using proxy: MapProxy?, fixedScale: Bool = false) {
         // 현재 위치로 가면 재생을 취소한다. 두 레이아웃의 위치 단추가 모두 여기를
         // 지나므로 한 곳에서 처리한다(대표 요청, 2026-10-26).
         cancelDayPlaybackIfRunning()
+        recordTimelineWindow("recenter_before")
         // 지도만 지금으로 옮기고 시간선은 보던 시각에 두면, 확대해 둔 사이드바가
         // 지금과 다른 시각을 가리킨다. 날짜와 선택을 함께 지금으로 되돌린다
         // (대표 지적, 2026-10-27). 날짜를 오늘로 맞추는 일도 여기서만 한다.
@@ -12893,6 +12907,7 @@ struct MapHomeView: View {
             selectedTimelineMinute = nil
             isTimelineSelectionPinned = false
         }
+        recordTimelineWindow("recenter_after")
         // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
         liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false

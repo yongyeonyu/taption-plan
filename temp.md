@@ -2242,3 +2242,10 @@
 - 해결: `errorAtStart` 스냅숏 비교(`== errorAtStart || == nil`), 건강 오류는 `showErrors: isSceneActive`. `AppModel` 순감(13,552 → 13,551), 게이트 통과.
 - 검증: 새 시험 2건(남은 배너 → true, 새 오류 → false) 통과. 전체 1,666건 중 1,662 통과·실패 1·건너뜀 3. 실패 1건은 클립 편집기 화면시험이며 단독 재실행 19.5초 통과(간헐).
 - 남은 것: ①기기 로그에서 `outcome=success` 비율 확인 ②배경 갱신이 시작 적재와 겹칠 때 `bootstrapped`가 2배(554ms → 1,975ms)가 되는 문제.
+
+## LCH1027A08 · 시간선 창 계측 (2026-10-28)
+- `timeline_window` 이벤트 신설 — `source`(zoom/select/handle_end/recenter_before/recenter_after), `window`, `selected`, `start_minute`, `duration_minutes`, **`handle_ratio`(화면과 같은 `MapHomeTimeSidebarMath.position`)**.
+- `MapHomeTimelineWindowRecord`는 `MapHomeTimeSidebarHandleMath.swift`(27→81줄). `MapHomeView`는 22,057 → **22,072(예산 정확히 소진, 여유 0)**. `appear` 이벤트는 1줄 초과로 포기.
+- `scripts/analyze-diagnostics.py`에 `시간선 창` 절 추가.
+- 검증: `testTimelineWindowRecordMatchesTheHandleRatio` 통과(2/2). 게이트·경계 통과.
+- 남은 것: ①기기 로그에서 이벤트가 실제로 찍히는지 ②`MapHomeView`는 이제 한 줄도 못 늘리므로 다음 화면 변경은 새 파일로.

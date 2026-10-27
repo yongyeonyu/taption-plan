@@ -4481,4 +4481,24 @@ final class MapHomePawprintInteractionTests: XCTestCase {
             isViewportDragging: false
         ), 110, accuracy: 0.001)
     }
+
+    /// 진단 로그의 `handle_ratio`는 화면이 손잡이를 그리는 비율과 같은 값이어야 한다.
+    /// 로그를 눈으로 본 위치와 맞춰 보는 판정이라, 두 값이 갈라지면 그 자체가 버그다.
+    func testTimelineWindowRecordMatchesTheHandleRatio() {
+        let zoomed = MapHomeTimelineWindowRecord.payload(
+            source: "select", startMinute: 576, durationMinutes: 60, selectedMinute: 630
+        )
+        XCTAssertEqual(zoomed.metrics["handle_ratio"] ?? -1, 0.9, accuracy: 0.0001)
+        XCTAssertEqual(zoomed.metrics["duration_minutes"], 60)
+        XCTAssertEqual(zoomed.fields["window"], "576-636")
+        XCTAssertEqual(zoomed.fields["selected"], "630")
+
+        // 「현재 위치」로 선택을 지운 뒤에는 비율을 만들지 않는다(-1).
+        let cleared = MapHomeTimelineWindowRecord.payload(
+            source: "recenter_after", startMinute: 0, durationMinutes: 1_440, selectedMinute: nil
+        )
+        XCTAssertEqual(cleared.metrics["handle_ratio"], -1)
+        XCTAssertEqual(cleared.fields["selected"], "none")
+        XCTAssertEqual(cleared.fields["window"], "0-1440")
+    }
 }

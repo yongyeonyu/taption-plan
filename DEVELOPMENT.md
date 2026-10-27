@@ -71,6 +71,8 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 백그라운드 갱신의 성패는 **전역 오류 배너(`userFacingError`)가 아니라 이번 작업이 오류를 새로 세웠는지**로 판정한다. 배너는 앞선 실패가 남아 있거나 적재가 회복되며 지워지기도 해서, 그것을 성공 조건으로 쓰면 일을 다 하고도 `BGTask.setTaskCompleted(success: false)`를 부른다 — iOS는 그 앱의 배경 갱신을 뒤로 미룬다. 빌드 244 실기기 로그에서는 26회 중 17회가 실패로 기록됐는데, 실패한 창 안에서도 `integration_refresh_finished`는 `actuals`·`travel`·`weather`를 모두 채우고 끝났다. 배경에서는 HealthKit 오류도 배너를 세우지 않는다(`refreshEnabledData` → `refreshHealthData(showErrors: isSceneActive)`) — 잠긴 기기의 `Protected health data is inaccessible`(code 6)은 정상이다. `testBackgroundRefreshDoesNotTreatALeftoverBannerAsFailure`와 `testBackgroundRefreshReportsANewError`가 두 방향을 잠근다.
 
+시간선 창은 `timeline_window`로 남긴다(`MapHomeTimelineWindowRecord`). `source`(`zoom`·`select`·`handle_end`·`recenter_before`·`recenter_after`)와 `window`·`selected`·`duration_minutes`를 기록하고, **`handle_ratio`는 화면이 손잡이를 그리는 것과 같은 `MapHomeTimeSidebarMath.position`으로 계산한다.** 확대 단계·손잡이 위치·「현재 위치」 되돌림은 그동안 화면으로만 확인할 수 있었다. `handle_ratio`가 -1이면 선택이 없다는 뜻이다. 화면과 로그가 갈라지면 그 자체가 버그이므로 `testTimelineWindowRecordMatchesTheHandleRatio`가 두 값을 묶어 둔다.
+
 권한 새로고침의 동시 요청은 한 작업을 기다립니다. 조회가 끝난 뒤 최신 settings에 실제 변경만 반영하고, 동일 상태의 권한·센서 상태를 다시 공개하거나 저장하지 않습니다. 지도 일자 revision이 같으면 fingerprint를 만들지 않으며, 현재 활동 캐시는 해당 시각의 기록·이동·체류·근접 이동 센서·Watch 수면 근거만 hash합니다. 활성 원본의 모든 필드는 비교에 포함합니다.
 
 GPS 경로는 낮은 정확도의 경계 표본도 시간·거리 검사를 거치며, 급이탈을 거른 뒤에도 마지막 정상 위치를 비교 기준으로 유지합니다. 정지 표본을 줄일 때 마지막 시각과 15분 이하의 경로 체크포인트를 남깁니다. 현재 위치 마커는 일자 worker가 검증한 위치를 사용합니다. 원본 저장 형식은 그대로이며 파생 일자 projection은 버전 3, 지도 문서 캐시 키는 `route-document-v9`입니다.
