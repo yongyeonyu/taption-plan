@@ -4425,3 +4425,49 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 3. 확인하지 못한 것
 
 - 문서에 적은 실기기 수치(`display_readings`, `repository_local_load`)는 **빌드 244 로그가 아직 없다.** 다음 로그가 오면 이 문서의 60분 유실 서술을 "고쳐졌다"로 바꿔야 한다.
+
+## LCH1027A06 · 빌드 244 실기기 로그를 유선으로 직접 받아 확인한다 (2026-10-28)
+
+- 요청 ID: `LCH1027A06`
+- 무엇을: 아이폰(iPhone 18 Pro Max, UDID `00008160-000E195A1140000A`)이 유선 연결된 상태에서, 앱이 만든 진단 패키지를 **iCloud를 거치지 않고 기기 컨테이너에서 직접** 받아 빌드 244를 확인했다.
+- 계기: `TFB1027A03`(빌드 244)의 기기 확인 5항목이 남아 있었다.
+
+### 1. 어떻게 받았나
+
+- `xcrun devicectl device copy from --domain-type appDataContainer --domain-identifier com.taption.plan --source "Library/Application Support/TaptionPlan/Diagnostics/Packages"`.
+- 받은 파일과 iCloud 사본의 SHA-256이 같다(`c5778a7a…`) — 두 경로가 같은 파일이다.
+- 로그: `TaptionLogs-20261028-005322-D58C8864.txt.gz`, 5,304줄, 빌드 240/242/243/244, 세션 5개. 마지막 실행 23:24:16(KST), 세션 `B5B0FDD3`.
+
+### 2. 확인된 것 — 지도 기록 유실은 고쳐졌다
+
+| 항목 | 빌드 243 | 빌드 244 |
+| --- | --- | --- |
+| 지도가 처음 그릴 때 점 | 1 → **60분간 1** | **10 → 1,086**(같은 초) / 1 → 1,658(같은 초) |
+| `map_day_snapshot_loaded.is_complete` | false | **true** (5회 모두) |
+| `repository_local_load` rows | 26,702 | **26,726~26,826** |
+| read / decode | 352~655ms / 71~120ms | **136~765ms / 62~1,066ms** |
+| `bootstrapped` | 830ms | **554ms**(단독) / 1,975ms(배경 갱신과 겹침) |
+
+- 세션 `8FC77E81`(7.8시간)에서 지도가 처음 열린 19:09에 `readings=1265 / is_complete=true`로 바로 1,086점이 그려졌고, 이후 1,088 → 1,096 → 1,110으로 늘기만 했다. **줄어든 적이 없다.**
+- 90% 천장은 보이지 않는다. 스플래시는 `map_shell_grace` 1,158ms / 3,142ms에 걷혔다.
+
+### 3. 새로 찾은 문제 — 배경 갱신이 iOS에 "실패"로 보고된다
+
+- 세션 `8FC77E81`의 `background_refresh` 26회 중 **17회가 `outcome=failure`**, 5회 취소, 성공은 2회.
+- 그런데 실패한 창 안에서도 `integration_refresh_finished`가 `actuals=527 / travel=286 / weather=347`로 **정상 종료**했다. 일은 다 했는데 실패로 기록된다.
+- 원인 두 가지:
+  1. `refreshEnabledData`가 `refreshHealthData(in: healthSpan)`를 부르는데 이 함수의 기본값이 `showErrors: true`다. 잠긴 기기에서 HealthKit이 `Protected health data is inaccessible`(code 6)을 던지면 **배경인데도 사용자 오류 배너**가 선다.
+  2. `performBackgroundRefresh`의 성공 판정이 `userFacingError == nil` — 즉 **전역 배너 문자열**이다. 앞서 켜진 배너가 남아 있으면 이번 갱신이 성공해도 실패로 본다.
+- 근거: 첫 `health_refresh_failed`(06:44:20) 이후 모든 갱신이 실패로 바뀌었고, 12:00·12:15 두 번만 성공했다(그 사이 배너가 내려간 구간). 12:31:23에 다시 건강 오류가 뜨자 그 뒤로는 건강 오류가 없는 창까지 전부 실패로 남았다.
+- 영향: `task.setTaskCompleted(success: false)`가 반복되면 iOS가 이 앱의 배경 갱신을 뒤로 미룬다. 지금은 15분 간격을 유지하고 있지만, 유지된다는 보장이 없다.
+
+### 4. 곁들여 본 것
+
+- `map_shell` 게이트는 이제 "지도가 처음 그려진 시각"이다(14,119,005ms / 5,338,158ms). 15초 안전장치가 더는 대신 열지 않으므로, 시작 시간 지표로 쓰려면 `map_initial_shell_ready`와 함께 읽어야 한다.
+- 시작이 느린 회차(`B5B0FDD3`)는 `background_refresh`가 `bootstrap_local_snapshot`과 **같은 초에** 시작했다. `bootstrap_preparation`이 46ms → 4,657ms로 늘었다.
+- `sensor_background_sample_not_persisted` 14회(1.5/h) — 243과 같은 비율. 잠긴 기기에서 15초 안에 표본을 못 받는 경우다.
+- 앱 크래시 리포트 없음(`systemCrashLogs` 확인).
+
+### 5. 확인하지 못한 것
+
+- 시간선 확대 단추·손잡이·메뉴 왕복·「현재 위치」는 **계측이 없다.** 로그에 `sidebar_double_tap` 1건뿐이라 값으로 판정할 수 없다.

@@ -2229,3 +2229,10 @@
 - IPA 44,841,441 bytes / 업로드 6.804초(6.6MB/s, 52.7Mbps). `13:43:55` **VALID**, 그룹 연결 한 번에 성공, 검증 `ok: true`. 전체 **13분 44초**. Delivery UUID `96e1d12b-5e88-4210-90d8-ca0ad331ce3d`.
 - 배포 뒤 같은 트리에서 전체 시험을 다시 돌려 **1,664건 중 1,662 통과·실패 0·건너뜀 2**(19분 16초, `build/validation/LCH1027A06/app-tests.xcresult`). 간헐 실패 두 건(StoreKit·30일 부하)도 이번에는 통과.
 - 남은 것(기기): ①`display_readings`가 처음부터 800대인지(=이번 수정의 핵심) ②확대 단추로 눈금이 바뀌고 손잡이가 그 시각에 서는지 ③확대 상태로 메뉴 왕복 유지·캡슐·날씨 띠 정렬 ④「현재 위치」가 시간선도 지금으로 ⑤`repository_local_load` 2만6천 규모·`bootstrapped` 1초 안쪽.
+
+## LCH1027A06 · 빌드 244 실기기 로그 (유선 직접 확인, 2026-10-28)
+- 아이폰 유선 연결 상태에서 `devicectl device copy from`으로 진단 패키지를 직접 받았다(iCloud 사본과 SHA-256 동일).
+- **지도 유실 수정 확인**: 지도가 처음 그릴 때 `display_readings` 10 → 1,086 / 1 → 1,658(같은 초), `map_day_snapshot_loaded.is_complete=true` 5회 모두. 243의 "1 → 60분간 1"이 재현되지 않는다.
+- 적재: 26,726~26,826행, read 136~765ms, decode 62~1,066ms, `bootstrapped` 554ms(단독)/1,975ms(배경 갱신 겹침).
+- **새 문제**: `background_refresh` 26회 중 17회 `outcome=failure`. 실패 창 안에서도 `integration_refresh_finished`는 정상. 원인 ①`refreshEnabledData` → `refreshHealthData(showErrors: true)` 기본값 때문에 잠긴 기기에서 배경인데 사용자 배너가 섬 ②`performBackgroundRefresh`가 전역 `userFacingError`로 성공 판정. → iOS에 `setTaskCompleted(success: false)` 반복.
+- 남은 것: ①배경 갱신 성공 판정 고치기(이번 회차 후보) ②시간선 계측 추가 ③`map_shell` 게이트 의미 변경을 문서에 반영.
