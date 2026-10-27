@@ -2511,6 +2511,8 @@ struct MapHomeView: View {
     )
     @State private var sharedZoomLevel: CGFloat = 1
     @State private var zoomResetToken = 0
+    /// 시간선 확대·축소 단추가 올리는 값. 레일은 이 값의 변화량만큼 단계를 밟는다.
+    @State private var zoomStepToken = 0
     /// 시간선이 보이는 창(시작 분·길이). 시간 레일·날씨 띠·선택 캡슐이 이 값 하나를
     /// 함께 쓴다. 두 벌로 두면 한쪽만 되돌아가 두 시간축이 어긋난다(2026-10-27).
     @State private var timeSidebarVisibleStartMinute = 0
@@ -7947,6 +7949,7 @@ struct MapHomeView: View {
                         segments: timeRailSegments,
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
+                        zoomStepToken: zoomStepToken,
                         railWidth: Layout.timeRailWidth,
                         maximumSelectableMinute: nil,
                         trailingInteractionWidth: Layout.horizontalInset,
@@ -7969,6 +7972,14 @@ struct MapHomeView: View {
                             isUnconfirmedReviewPresented = true
                         }
                     )
+                    // 눈금 위쪽 여백(28pt)에 붙는 확대·축소 단추. 두 손가락 집기 말고도
+                    // 같은 단계(하루→12시간→6시간→3시간→1시간)를 밟을 수 있어야 한다.
+                    timelineZoomControls
+                        .position(
+                            x: proxy.size.width - Layout.horizontalInset
+                                - (Layout.timeRailWidth - 12) / 2,
+                            y: 13
+                        )
                     }
 
                     ForEach(recordingShows(\.sidebarMemos) ? scheduleStickersForSelectedDate : []) { sticker in
@@ -8264,6 +8275,39 @@ struct MapHomeView: View {
         }
         .frame(width: Layout.timeRailWidth, height: railHeight)
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
+    }
+
+    /// 시간선 확대·축소. 지도 확대 단추와 헷갈리지 않게 눈금 위에 붙여 둔다.
+    private var timelineZoomControls: some View {
+        HStack(spacing: 2) {
+            timelineZoomButton(systemImage: "plus", direction: 1)
+            timelineZoomButton(systemImage: "minus", direction: -1)
+        }
+    }
+
+    private func timelineZoomButton(systemImage: String, direction: Int) -> some View {
+        let durations = MapHomeTimeSidebarMath.zoomDurations
+        let enabled = direction > 0
+            ? timeSidebarVisibleDurationMinutes > (durations.last ?? 60)
+            : timeSidebarVisibleDurationMinutes < (durations.first ?? 1_440)
+        return Button {
+            zoomStepToken += direction
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
+                .foregroundStyle(enabled ? Color.tpInk : Color.tpSecondary.opacity(0.4))
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.tpSurface.opacity(0.92)))
+                .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(
+            direction > 0
+                ? language.text("시간선 확대", "Zoom timeline in")
+                : language.text("시간선 축소", "Zoom timeline out")
+        )
     }
 
     private func mapZoomButton(

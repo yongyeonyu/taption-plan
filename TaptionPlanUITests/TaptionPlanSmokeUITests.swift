@@ -250,6 +250,42 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         attach(app, name: "menu-location")
     }
 
+    /// 시간선 확대·축소가 두 손가락 없이도 단계를 밟는지 확인한다.
+    /// 확대하면 '축소'가 열리고, 되돌리면 다시 하루 전체라 '축소'가 닫히는지로 본다.
+    func testTimelineZoomButtonsStepThroughTheLadder() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        launchMapHome(app)
+        let zoomIn = app.buttons["시간선 확대"]
+        let zoomOut = app.buttons["시간선 축소"]
+        XCTAssertTrue(zoomIn.waitForExistence(timeout: 15), "시간선 확대 단추가 없다")
+        XCTAssertTrue(zoomIn.isEnabled, "하루 전체에서는 확대할 수 있어야 한다")
+        XCTAssertFalse(zoomOut.isEnabled, "하루 전체에서는 더 줄일 수 없다")
+        attach(app, name: "timeline-zoom-full-day")
+        zoomIn.tap()
+        XCTAssertTrue(
+            XCTWaiter().wait(
+                for: [XCTNSPredicateExpectation(
+                    predicate: NSPredicate(format: "isEnabled == true"),
+                    object: zoomOut
+                )],
+                timeout: 5
+            ) == .completed,
+            "확대했는데 축소 단추가 열리지 않는다"
+        )
+        attach(app, name: "timeline-zoom-half-day")
+        zoomOut.tap()
+        XCTAssertTrue(
+            XCTWaiter().wait(
+                for: [XCTNSPredicateExpectation(
+                    predicate: NSPredicate(format: "isEnabled == false"),
+                    object: zoomOut
+                )],
+                timeout: 5
+            ) == .completed,
+            "되돌렸는데 하루 전체로 돌아오지 않는다"
+        )
+    }
+
     private func attach(_ app: XCUIApplication, name: String) {
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.lifetime = .keepAlways
