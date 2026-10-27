@@ -10,7 +10,7 @@
 | 일자 데이터 값·원본 정렬·fingerprint | `TaptionPlan/Core/PlanDayDataSnapshot.swift` |
 | 공통 캐시·입력 예산·UUID 순서 | `Packages/TaptionPlanCore/Sources/TaptionPlanCore/RuntimeEfficiency.swift` |
 | 지도 카메라·터치 정책 | `TaptionPlan/UI/MapHomeInteractionPolicy.swift` |
-| 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `ScheduleView.swift` |
+| 지도·시간축·시간표 UI | `TaptionPlan/UI/MapHomeView.swift`, `MapHomeTimeSidebar.swift`, `MapHomeTimeSidebarHandleMath.swift`(손잡이 세로 위치), `ScheduleView.swift` |
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
@@ -113,7 +113,8 @@ HealthKit 운동 경로를 보완할 때는 기존 위치와 20초 시간 중복
 
 - 지도 안개는 `MapHomeFogStrength`(끄기 0.0 · 옅게 0.28 · 진하게 0.55) 세 단계만 두고 `@AppStorage(MapHomeFogStrength.storageKey)`에 저장합니다. 기본은 옅게입니다. 걷어내는 반경(`revealRadius` 72pt · `currentLocationRadius` 96pt)과 세기는 `MapHomeFogLayer.swift`의 값 하나를 벡터 지도와 Apple 지도가 함께 씁니다. 지도 스타일을 추가해도 안개 정책을 따로 만들지 않습니다.
 - 하단 1급 항목은 `메뉴 · 달력 · 현재 위치 · 집 · 재생 · 녹화 · 메모` 일곱 개이고 **맨 왼쪽이 메뉴**입니다(`bottomActionBar`). 메뉴는 2026-10-26까지 좌상단 원형 버튼이었는데, 지도와 날짜 줄을 가리고 손이 닿지 않는 구석이라 아래로 내렸습니다. 「녹화」는 재생 바로 오른쪽에 둡니다 — 재생을 마친 사람이 다음에 누르는 버튼이라 메뉴 안(메뉴 열기 → 화면 그룹)에 두면 그 자리에서 보이지 않습니다. 0f2987d에서 다섯 개로 줄이며 메뉴로 내렸다가 되돌렸습니다. 항목을 더 늘려야 하면 먼저 무엇을 내릴지 정합니다.
-- 재생 단추는 **한 자리에서** `재생`↔`멈춤`으로만 바뀝니다. 예전에는 재생 중에 「일시 정지」와 「종료」를 나란히 두어 하단 항목이 하나 늘었는데, 둘을 헷갈린다는 지적을 받아 한 칸으로 되돌렸습니다(대표 요청). 재생을 취소하는 길은 단추를 늘리지 않고 **지도를 움직이는 손짓**(끌기·확대·축소·회전)과 **「현재 위치」**입니다 — `cancelDayPlaybackIfRunning()`이 `stopDayPlayback(resetProgress: true)`로 재생 시작 전 시각으로 되돌립니다. 화면 시험은 재생 중 하단 항목 **수**가 그대로인지 셉니다(`bottomBarLabels`).
+- 재생 단추는 **한 자리에서** `재생`↔`멈춤`으로만 바뀝니다. 예전에는 재생 중에 「일시 정지」와 「종료」를 나란히 두어 하단 항목이 하나 늘었는데, 둘을 헷갈린다는 지적을 받아 한 칸으로 되돌렸습니다(대표 요청). 재생을 취소하는 길은 단추를 늘리지 않고 **지도를 움직이는 손짓**(끌기·확대·축소·회전)과 **「현재 위치」**입니다 — `cancelDayPlaybackIfRunning()`이 재생을 멈추고, 「현재 위치」는 `requestAndFollowUserLocation`에서 날짜와 시간선 선택을 함께 지금으로 되돌립니다(`selectedTimelineMinute = nil`, `isTimelineSelectionPinned = false`). 지도만 지금으로 옮기고 시간선을 보던 시각에 두면, 확대해 둔 사이드바가 지금과 다른 시각을 가리킵니다(대표 지적, 2026-10-27). 화면 시험은 재생 중 하단 항목 **수**가 그대로인지 셉니다(`bottomBarLabels`).
+- 시간 사이드바 손잡이는 **선택 시각의 자리**에 둡니다(`MapHomeTimeSidebarHandleMath.y`). 창을 세로로 끄는 동안에만 트랙 가운데에 고정합니다. 확대만 했을 때까지 가운데에 붙이던 때에는, 선택 시각이 창의 가운데가 아닐 때(시간이 흘러 지금이 창 아래쪽으로 내려갔거나, 「현재 위치」로 선택이 지금으로 돌아왔거나, 자정·지금 경계에서 창이 밀린 경우) 손잡이의 시각과 그 자리의 눈금이 어긋났습니다 — 지도는 선택 시각을, 사이드바는 창의 가운데 시각을 보여 주었습니다(대표 지적, 2026-10-27). 하루 전체(창 = 하루)에서는 두 계산이 같은 자리라 예전과 같습니다. 손잡이가 자기 캡슐 밖으로 나가면 이 규칙이 깨진 것입니다.
 - 화면 항목을 되돌릴 때는 그때 대신 넣었던 줄도 함께 지웁니다. 하단에 「녹화」를 되살리면서 메뉴 > 화면의 「재생 화면 녹화」를 남겨 두면 같은 동작이 두 곳에 있어 어느 쪽이 정본인지 알 수 없습니다.
 - 안내 알림은 말한 목적지로 갈 수 있는 버튼을 반드시 함께 둡니다. "메뉴 > 위치에서 등록하세요"라고 하면서 확인 버튼만 두지 않습니다(`openLocationSettings()`가 메뉴를 열고 해당 그룹을 펼칩니다).
 - 글자·배지 색은 배경 대비 4.5:1(WCAG AA)을 지킵니다. 토큰을 바꾸면 `build/validation/UIX1025A01/contrast.py` 같은 계산으로 실제 조합을 확인하고, 눈으로 판단하지 않습니다. `tpSecondary`·`tpAccent`·`tpNow`는 9~10pt 글자와 흰 글자 배지에 쓰이므로 명도를 낮춰 맞춰 두었습니다.

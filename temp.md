@@ -2184,3 +2184,12 @@
 - **그룹 연결이 404 없이 한 번에 붙었다** — TFB1026A05의 `retry_404`는 이번에 타지 않았다. 지연이 매번 생기는 게 아니라는 뜻이고, 수정이 불필요하다는 뜻은 아니다.
 - **처리 시간이 3분 → 13분**. 10회 연속 `NOT_UPLOADED`였다가 한 번에 VALID. 업로드는 오히려 더 빨랐으니 ASC 큐 대기다. 처리 시간은 예측하지 말 것.
 - 남은 것: 기기 로그로 ①`repository_local_load`의 `rows`가 2만6천 규모인지 ②`bootstrapped`가 1초 안쪽인지 ③`map_shell_grace`가 이번에도 발동하는지 ④**90% 천장**(241의 진행선 수정이 이 빌드에 처음 들어가므로 이번에 처음 볼 수 있다).
+
+## LCH1027A02 · 확대한 시간 사이드바의 손잡이가 선택 시각 자리에 선다 (2026-10-27)
+- 요청(대표): "사이드바 확대하고 현재 위치 누르면 시간이 현재 시간이랑 확대된 사이드바랑 안맞음"
+- 원인: `MapHomeTimeSidebar.isViewportInteraction`이 **확대 상태 전체**를 참으로 봤고(`visibleDurationMinutes < fullDayMinutes && !isHandleDragging`), 본문이 그 값으로 손잡이 y를 `trackHeight / 2`로 고정했다. 확대해 둔 동안 손잡이는 늘 트랙 가운데 → 그 자리 눈금은 창의 가운데 시각. 선택 시각이 창 가운데를 벗어나면(시간 경과·「현재 위치」·경계 클램프) 지도는 A시각, 사이드바 손잡이는 B시각.
+- 하루 전체에서는 1분이 0.4pt라 안 보이고, 60분 창에서는 1분이 약 10pt라 30분 어긋나면 300pt. 그래서 "확대하면 안 맞는다"로 보였다. 손잡이가 자기 캡슐 밖으로 나가기도 했다.
+- 해결: `TaptionPlan/UI/MapHomeTimeSidebarHandleMath.swift`(새 파일)의 `y(minute:window:trackHeight:verticalInset:isViewportDragging:)`. 가운데 고정은 **실제로 창을 끄는 동안**(`viewportDragStartMinute != nil`)에만. `isViewportInteraction` 삭제. 사이드바 3,093 → **3,090**, 예산 3,090으로 재잠금. `MapHomeView` 22,009 → 22,019(예산 22,072).
+- 함께: `requestAndFollowUserLocation`이 날짜·시간선 선택을 함께 지금으로 되돌린다(`selectedTimelineMinute = nil`, `isTimelineSelectionPinned = false`). 예전엔 하단 바의 `model.selectedDate = Date()` 부수 효과로만 풀렸고, 딥링크·클래식 단추는 지도만 지금으로 갔다. 그 줄은 하단 바에서 지우고 한 곳에만 둔다.
+- 검증: 새 시험 `testZoomedSidebarKeepsTheHandleOnTheSelectedMinuteNotTheMiddle`(0.9 / 0.5 / 0.5). 전체 1,643건 중 1,640 통과·실패 1·건너뜀 2 — 실패는 `testStoreKitProductPurchaseEntitlementAndRestore`(환경 문제, 단독 재실행에서 통과). 게이트·경계 통과.
+- 남은 것: ①기기에서 확대 후 손잡이가 눈금을 따라 내려가는 장면(시뮬레이터에 핀치 수단 없음) ②「현재 위치」로 시간선이 지금으로 돌아오는 장면 ③**시간선 창의 정본이 둘**: 메뉴를 열면 사이드바가 언마운트돼 하루 전체로 돌아오는데 부모의 `timeSidebarVisibleStartMinute`/`Duration`은 확대 상태로 남고, 같은 날짜에서 `model.selectedDate`만 바뀌면 `weatherVisible*`만 하루 전체로 돌아간다 → 캡슐·날씨 띠가 사이드바와 다른 창을 쓴다. 「창은 한 곳에서만 정한다」로 정리해야 한다.

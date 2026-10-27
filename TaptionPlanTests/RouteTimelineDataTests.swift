@@ -4460,4 +4460,25 @@ final class MapHomePawprintInteractionTests: XCTestCase {
             selectedMinute: 600, visibleStartMinute: 0, durationMinutes: 1_440
         ), 0)
     }
+
+    func testZoomedSidebarKeepsTheHandleOnTheSelectedMinuteNotTheMiddle() {
+        // 60분 창(09:36–10:36)에서 선택이 10:30이면 손잡이는 가운데(0.5)가 아니라
+        // 0.9 지점이다. 확대만 해도 손잡이를 가운데에 붙이던 때에는 손잡이의 시각과
+        // 그 자리의 눈금이 어긋나, 지도는 선택 시각을 사이드바는 창의 가운데 시각을
+        // 보여 주었다(대표 지적, 2026-10-27).
+        XCTAssertEqual(MapHomeTimeSidebarHandleMath.y(
+            minute: 630, window: 576...636, trackHeight: 200, verticalInset: 10,
+            isViewportDragging: false
+        ), 190, accuracy: 0.001)
+        // 창을 세로로 끄는 동안에는 손가락 밑에 머물도록 가운데에 고정한다.
+        XCTAssertEqual(MapHomeTimeSidebarHandleMath.y(
+            minute: 630, window: 576...636, trackHeight: 200, verticalInset: 10,
+            isViewportDragging: true
+        ), 110, accuracy: 0.001)
+        // 하루 전체를 볼 때는 예전과 같은 자리다.
+        XCTAssertEqual(MapHomeTimeSidebarHandleMath.y(
+            minute: 720, window: 0...1_440, trackHeight: 200, verticalInset: 10,
+            isViewportDragging: false
+        ), 110, accuracy: 0.001)
+    }
 }

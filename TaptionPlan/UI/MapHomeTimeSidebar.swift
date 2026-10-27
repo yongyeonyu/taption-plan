@@ -1311,12 +1311,13 @@ struct MapHomeTimeSidebar: View {
                     trackHeight: trackHeight,
                     verticalInset: verticalInset
                 )
-            let selectedY = isViewportInteraction
-                ? verticalInset + trackHeight / 2
-                : verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
-                    minute: minute,
-                    window: visibleWindow
-                )
+            let selectedY = MapHomeTimeSidebarHandleMath.y(
+                minute: minute,
+                window: visibleWindow,
+                trackHeight: trackHeight,
+                verticalInset: verticalInset,
+                isViewportDragging: viewportDragStartMinute != nil
+            )
             let railOriginX = MapHomeTimeSidebarMath.handleLaneWidth
             let trackX = MapHomeTimeSidebarMath.trackCenterX(
                 railOriginX: railOriginX,
@@ -1937,10 +1938,6 @@ struct MapHomeTimeSidebar: View {
                     onSectionEdit?(tappedMinute)
                 }
             }
-    }
-
-    private var isViewportInteraction: Bool {
-        visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes && !isHandleDragging
     }
 
     private func viewportDragGesture(trackHeight: CGFloat) -> some Gesture {

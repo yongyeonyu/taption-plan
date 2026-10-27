@@ -6489,8 +6489,7 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(language.text("달력", "Calendar"))
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
-                // 현재 위치를 누르면 날짜도 오늘로 맞춘다.
-                model.selectedDate = Date()
+                // 날짜를 오늘로 맞추는 일은 requestAndFollowUserLocation이 함께 한다.
                 requestAndFollowUserLocation(using: nil, fixedScale: true)
             }
             // 하단 가운데 집 버튼: 지도를 집으로 옮기고 땅 타일이 보이는 배율까지 확대한다(요약·성장 시트는 지도의 집 아이콘).
@@ -12845,6 +12844,17 @@ struct MapHomeView: View {
         // 현재 위치로 가면 재생을 취소한다. 두 레이아웃의 위치 단추가 모두 여기를
         // 지나므로 한 곳에서 처리한다(대표 요청, 2026-10-26).
         cancelDayPlaybackIfRunning()
+        // 지도만 지금으로 옮기고 시간선은 보던 시각에 두면, 확대해 둔 사이드바가
+        // 지금과 다른 시각을 가리킨다. 날짜와 선택을 함께 지금으로 되돌린다
+        // (대표 지적, 2026-10-27). 날짜를 오늘로 맞추는 일도 여기서만 한다.
+        let now = Date()
+        if !Calendar.autoupdatingCurrent.isDate(model.selectedDate, inSameDayAs: now) {
+            model.selectedDate = now
+        }
+        if isTimelineSelectionPinned || selectedTimelineMinute != nil {
+            selectedTimelineMinute = nil
+            isTimelineSelectionPinned = false
+        }
         // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
         liveZoomGovernor.reset()
         hasCancelledInitialLocationFocus = false

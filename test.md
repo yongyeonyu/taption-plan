@@ -4177,3 +4177,50 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
   - `launch_gate`의 `bootstrapped`가 9,944ms → **1초 안쪽**으로 왔는지.
   - `map_shell_grace`가 이번에도 발동하는지(발동하면 지도 shell이 여전히 늦다는 뜻).
 - 90% 천장은 이 빌드가 241의 진행선 수정을 포함하므로, **이번 로그에서 처음 확인할 수 있다.**
+
+## LCH1027A02 · 확대한 시간 사이드바의 손잡이가 선택 시각 자리에 선다 (2026-10-27)
+
+- 요청(대표): "사이드바 확대하고 현재 위치 누르면 시간이 현재 시간이랑 확대된 사이드바랑 안맞음"
+- 무엇을: 시간 사이드바 손잡이(선택 시각)의 세로 위치를 **선택 시각의 자리**로 계산한다. 창을 세로로 끄는 동안에만 트랙 가운데에 고정한다.
+
+### 1. 원인
+
+- `MapHomeTimeSidebar`의 `isViewportInteraction`은 **확대 상태 전체**를 참으로 봤다:
+  ```swift
+  private var isViewportInteraction: Bool {
+      visibleDurationMinutes < MapHomeTimeSidebarMath.fullDayMinutes && !isHandleDragging
+  }
+  ```
+  그리고 본문이 그 값으로 손잡이 y를 갈랐다: 참이면 `verticalInset + trackHeight / 2`, 거짓이면 `position(minute:window:)`.
+- 그래서 확대해 둔 동안에는 손잡이가 **언제나 트랙 가운데**에 있었고, 그 자리의 눈금은 창의 가운데 시각이었다. 선택 시각이 창의 가운데가 아니면 손잡이의 시각과 그 자리 눈금이 어긋난다. 지도·경로·날씨는 선택 시각을 따르므로 **지도는 A시각, 사이드바 손잡이는 B시각**이 된다.
+- 선택 시각이 창 가운데를 벗어나는 길은 흔하다: ①시간이 흘러 지금이 창 아래쪽으로 내려갈 때(60분 창이면 30분 만에 아래 끝까지 간다) ②「현재 위치」로 선택이 지금으로 돌아왔는데 창은 보던 자리에 남아 있을 때 ③자정·지금 경계에서 창이 밀렸을 때(`startMinuteRevealingSelection`은 선택이 창 안에 있으면 창을 옮기지 않는다).
+- **하루 전체에서는 보이지 않는다.** 1,440분이 트랙 약 600pt라 1분이 0.4pt다. 60분 창에서는 1분이 약 10pt라 30분 어긋나면 300pt — 화면 절반이 어긋난다. 그래서 "확대하면 안 맞는다"로 보였다.
+- 같은 원인으로 손잡이가 자기 캡슐(부모가 `selectedMinute`로 그리는 2시간 띠) 밖으로 나가기도 했다.
+
+### 2. 바꾼 것
+
+- 새 파일 `TaptionPlan/UI/MapHomeTimeSidebarHandleMath.swift`:
+  ```swift
+  enum MapHomeTimeSidebarHandleMath {
+      static func y(minute: Int, window: ClosedRange<Int>, trackHeight: CGFloat,
+                    verticalInset: CGFloat, isViewportDragging: Bool) -> CGFloat {
+          guard !isViewportDragging else { return verticalInset + trackHeight / 2 }
+          return verticalInset + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
+      }
+  }
+  ```
+  가운데 고정은 **실제로 창을 끄는 동안**(`viewportDragStartMinute != nil`)에만 한다. 그때는 창이 손가락을 따라가고 선택 시각이 가운데 시각으로 다시 계산되므로 가운데에 붙여야 손가락 밑에 머문다.
+- `MapHomeTimeSidebar`의 `isViewportInteraction`을 지우고 위 함수를 부른다. 파일 3,093 → **3,090**줄, 동결 예산도 3,090으로 다시 잠갔다.
+- 「현재 위치」(`requestAndFollowUserLocation`)가 날짜와 시간선 선택을 함께 지금으로 되돌린다(`selectedTimelineMinute = nil`, `isTimelineSelectionPinned = false`). 예전에는 날짜를 오늘로 맞추는 부수 효과로만 선택이 풀렸고, 하단 바에만 그 줄이 있어 다른 호출부(위젯·알림 딥링크, 클래식 레이아웃 단추)는 지도만 지금으로 가고 시간선은 보던 시각에 남았다. 날짜를 오늘로 맞추는 줄은 하단 바에서 지우고 한 곳에만 둔다.
+
+### 3. 확인
+
+- 새 시험 `testZoomedSidebarKeepsTheHandleOnTheSelectedMinuteNotTheMiddle` — 60분 창(09:36–10:36)에서 선택 10:30이면 손잡이는 0.5가 아니라 0.9 지점(200pt 트랙에서 190), 창을 끄는 동안은 0.5(110), 하루 전체(720/0…1440)는 예전과 같은 0.5(110).
+- 전체 `TaptionPlanTests` **1,643건 중 1,640 통과 · 실패 1 · 건너뜀 2**. 실패 1건은 `testStoreKitProductPurchaseEntitlementAndRestore`("External StoreKit purchase did not become an entitlement")로, LCH1027A01에서도 같은 건이 단독 재실행에서 통과한 환경 문제다.
+- 구조 게이트(`MapHomeView` 22,019/22,072 · `MapHomeTimeSidebar` 3,090/3,090)와 import 경계 통과.
+
+### 4. 확인하지 못한 것
+
+- **기기에서 확대한 뒤 손잡이가 눈금을 따라 내려가는 장면**. 시뮬레이터에는 두 손가락 확대를 넣을 수단이 없어(UI 시험 타깃 없음, `idb`/`cliclick` 없음) 계산과 단위 시험으로만 확인했다. 확인 방법: 지도 홈에서 시간 사이드바를 두 손가락으로 확대한 뒤 5분쯤 기다리면 손잡이가 가운데에서 아래로 내려가고 그 자리 눈금이 손잡이의 시각과 같아야 한다.
+- 「현재 위치」를 눌렀을 때 시간선이 지금으로 돌아오는 장면(시뮬레이터에 오늘 기록이 없다). 재생 중 취소와 함께 기기에서 볼 항목이다.
+- 곁들여 발견한 것(고치지 않음): 메뉴를 열면 `mapSideRails`가 사라져 사이드바가 언마운트되고, 다시 닫으면 사이드바는 하루 전체로 돌아가지만 부모가 들고 있는 `timeSidebarVisibleStartMinute`/`Duration`은 확대 상태 그대로 남는다. 그 상태에서는 부모가 그리는 선택 캡슐·날씨 띠가 사이드바와 다른 창을 쓴다. 같은 날짜에서 `model.selectedDate`만 바뀔 때도 `weatherVisible*`만 하루 전체로 되돌아간다. 둘 다 「시간선 창은 한 곳에서만 정한다」로 정리해야 하는 별개 항목이다.
