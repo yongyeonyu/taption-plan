@@ -2511,8 +2511,8 @@ struct MapHomeView: View {
     )
     @State private var sharedZoomLevel: CGFloat = 1
     @State private var zoomResetToken = 0
-    @State private var weatherVisibleStartMinute = 0
-    @State private var weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
+    /// 시간선이 보이는 창(시작 분·길이). 시간 레일·날씨 띠·선택 캡슐이 이 값 하나를
+    /// 함께 쓴다. 두 벌로 두면 한쪽만 되돌아가 두 시간축이 어긋난다(2026-10-27).
     @State private var timeSidebarVisibleStartMinute = 0
     @State private var timeSidebarVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
     @State private var cachedWeatherContexts: [WeatherContext]
@@ -3485,8 +3485,6 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
             selectedTimelineMinute = nil
             isTimelineSelectionPinned = false
-            weatherVisibleStartMinute = 0
-            weatherVisibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
 
             if dayChanged {
                 resetDayScopedMapState(for: newDate)
@@ -7922,8 +7920,8 @@ struct MapHomeView: View {
                             contexts: railWeather,
                             selectedMinute: minute,
                             language: language,
-                            visibleStartMinute: weatherVisibleStartMinute,
-                            visibleDurationMinutes: weatherVisibleDurationMinutes
+                            visibleStartMinute: timeSidebarVisibleStartMinute,
+                            visibleDurationMinutes: timeSidebarVisibleDurationMinutes
                         )
                         .offset(x: weatherOriginX)
                         .allowsHitTesting(false)
@@ -7941,6 +7939,8 @@ struct MapHomeView: View {
                                 selectedTimelineMinute = minute
                             }
                         ),
+                        visibleStartMinute: $timeSidebarVisibleStartMinute,
+                        visibleDurationMinutes: $timeSidebarVisibleDurationMinutes,
                         activity: model.isBootstrapped
                             ? currentActivity(at: minute)
                             : nil,
@@ -7950,12 +7950,6 @@ struct MapHomeView: View {
                         railWidth: Layout.timeRailWidth,
                         maximumSelectableMinute: nil,
                         trailingInteractionWidth: Layout.horizontalInset,
-                        onViewportChanged: { start, duration in
-                            weatherVisibleStartMinute = start
-                            weatherVisibleDurationMinutes = duration
-                            timeSidebarVisibleStartMinute = start
-                            timeSidebarVisibleDurationMinutes = duration
-                        },
                         onInteractionChanged: { isInteracting in
                             if isInteracting, isDayPlaybackRunning {
                                 stopDayPlayback(resetProgress: true)

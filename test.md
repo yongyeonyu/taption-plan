@@ -4224,3 +4224,30 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - **기기에서 확대한 뒤 손잡이가 눈금을 따라 내려가는 장면**. 시뮬레이터에는 두 손가락 확대를 넣을 수단이 없어(UI 시험 타깃 없음, `idb`/`cliclick` 없음) 계산과 단위 시험으로만 확인했다. 확인 방법: 지도 홈에서 시간 사이드바를 두 손가락으로 확대한 뒤 5분쯤 기다리면 손잡이가 가운데에서 아래로 내려가고 그 자리 눈금이 손잡이의 시각과 같아야 한다.
 - 「현재 위치」를 눌렀을 때 시간선이 지금으로 돌아오는 장면(시뮬레이터에 오늘 기록이 없다). 재생 중 취소와 함께 기기에서 볼 항목이다.
 - 곁들여 발견한 것(고치지 않음): 메뉴를 열면 `mapSideRails`가 사라져 사이드바가 언마운트되고, 다시 닫으면 사이드바는 하루 전체로 돌아가지만 부모가 들고 있는 `timeSidebarVisibleStartMinute`/`Duration`은 확대 상태 그대로 남는다. 그 상태에서는 부모가 그리는 선택 캡슐·날씨 띠가 사이드바와 다른 창을 쓴다. 같은 날짜에서 `model.selectedDate`만 바뀔 때도 `weatherVisible*`만 하루 전체로 되돌아간다. 둘 다 「시간선 창은 한 곳에서만 정한다」로 정리해야 하는 별개 항목이다.
+
+## LCH1027A03 · 시간선 창을 한 곳에서만 정한다 (2026-10-27)
+
+- 무엇을: 시간선이 보이는 창(시작 분·길이)을 `MapHomeView`가 **하나만** 들고, 시간 레일·날씨 띠·선택 캡슐이 같은 값을 함께 쓰게 했다. `MapHomeTimeSidebar`의 `@State visibleStartMinute`/`visibleDurationMinutes`를 `@Binding`으로 바꾸고 `onViewportChanged` 콜백을 없앴다.
+- 계기: `LCH1027A02`에서 곁들여 발견한 두 어긋남. 둘 다 "같은 창을 두 곳이 따로 들고 있다"에서 나왔다.
+
+### 1. 어긋나던 두 장면
+
+- **메뉴를 열었다 닫으면**: `mapSideRails`가 `if !isMenuOpen`이라 사이드바가 언마운트되고, 다시 닫으면 `@State`가 새로 시작해 **하루 전체**로 돌아간다. 그런데 부모의 `timeSidebarVisibleStartMinute`/`Duration`은 확대 상태 그대로 남는다(그 값은 자식이 `onViewportChanged`로만 갱신). 그래서 부모가 그리는 선택 캡슐(2시간 띠)과 날씨 띠는 60분 창 기준으로, 레일은 하루 전체 기준으로 그려져 서로 다른 곳을 가리켰다.
+- **같은 날짜에서 날짜만 바뀔 때**(예: 「현재 위치」가 `model.selectedDate = Date()`를 넣는 순간): `onChange(of: model.selectedDate)`가 `weatherVisible*`만 하루 전체로 되돌리고 `timeSidebarVisible*`는 건드리지 않았다. 두 시간축이 갈라졌다.
+
+### 2. 바꾼 것
+
+- `MapHomeTimeSidebar`: `@State` 두 개 → `@Binding` 두 개, `init`에 `visibleStartMinute:`/`visibleDurationMinutes:` 추가, `onViewportChanged`(속성·인자·할당·호출 4곳) 삭제. `body`의 `onChange` 두 개(부모에게 알리던 것)도 삭제.
+- `MapHomeView`: `weatherVisibleStartMinute`/`weatherVisibleDurationMinutes` `@State` 삭제, 날짜 변경 때 그 둘만 되돌리던 두 줄 삭제, 날씨 띠에 `timeSidebarVisible*`를 넘김, 사이드바에 `$timeSidebarVisibleStartMinute`/`$timeSidebarVisibleDurationMinutes`를 넘김.
+- 결과: 창을 쓰는 곳이 하나라 두 시간축이 갈라질 자리가 없다. 메뉴를 열었다 닫아도 **확대 단계가 유지된다**(예전에는 레일만 하루 전체로 돌아갔다).
+- 크기: `MapHomeTimeSidebar` 3,090 → **3,081**줄(동결 예산도 3,081로 재잠금), `MapHomeView` 22,019 → **22,013**줄(예산 22,072 그대로).
+
+### 3. 확인
+
+- 전체 `TaptionPlanTests` **1,643건 중 1,641 통과 · 실패 0 · 건너뜀 2**. 지난 두 실행에서 실패하던 `testStoreKitProductPurchaseEntitlementAndRestore`도 이번에는 통과했다 — 환경 문제라는 판단이 맞다.
+- 구조 게이트(`MapHomeTimeSidebar` 3,081/3,081 · `MapHomeView` 22,013/22,072)와 import 경계 통과.
+
+### 4. 확인하지 못한 것
+
+- **화면에서 세 곳이 같은 창을 쓰는 장면**. SwiftUI 상태 소유를 옮긴 변경이라 단위 시험으로 잠글 수 없다(순수 계산이 아니라 배선이다). 기기에서 볼 것: ①시간 사이드바를 확대한 뒤 메뉴를 열었다 닫으면 확대 단계가 그대로인지 ②그 상태에서 선택 캡슐·날씨 띠가 레일과 같은 자리에 있는지 ③같은 날짜에서 「현재 위치」를 눌러도 날씨 띠가 하루 전체로 튀지 않는지.
+- `onViewportChanged`가 사라지면서 자식이 부모에게 알리던 시점이 없어졌다. 자식이 창을 쓰는 곳은 제스처·`onChange`·`zoomResetToken` 처리뿐이고 모두 뷰 갱신 밖이라 문제가 없어야 하지만, "Modifying state during view update" 경고가 실제로 나오지 않는지는 화면을 띄워 봐야 한다.

@@ -2193,3 +2193,13 @@
 - 함께: `requestAndFollowUserLocation`이 날짜·시간선 선택을 함께 지금으로 되돌린다(`selectedTimelineMinute = nil`, `isTimelineSelectionPinned = false`). 예전엔 하단 바의 `model.selectedDate = Date()` 부수 효과로만 풀렸고, 딥링크·클래식 단추는 지도만 지금으로 갔다. 그 줄은 하단 바에서 지우고 한 곳에만 둔다.
 - 검증: 새 시험 `testZoomedSidebarKeepsTheHandleOnTheSelectedMinuteNotTheMiddle`(0.9 / 0.5 / 0.5). 전체 1,643건 중 1,640 통과·실패 1·건너뜀 2 — 실패는 `testStoreKitProductPurchaseEntitlementAndRestore`(환경 문제, 단독 재실행에서 통과). 게이트·경계 통과.
 - 남은 것: ①기기에서 확대 후 손잡이가 눈금을 따라 내려가는 장면(시뮬레이터에 핀치 수단 없음) ②「현재 위치」로 시간선이 지금으로 돌아오는 장면 ③**시간선 창의 정본이 둘**: 메뉴를 열면 사이드바가 언마운트돼 하루 전체로 돌아오는데 부모의 `timeSidebarVisibleStartMinute`/`Duration`은 확대 상태로 남고, 같은 날짜에서 `model.selectedDate`만 바뀌면 `weatherVisible*`만 하루 전체로 돌아간다 → 캡슐·날씨 띠가 사이드바와 다른 창을 쓴다. 「창은 한 곳에서만 정한다」로 정리해야 한다.
+
+## LCH1027A03 · 시간선 창을 한 곳에서만 정한다 (2026-10-27)
+- 계기: LCH1027A02에서 곁들여 발견한 두 어긋남 — 둘 다 "같은 창을 두 곳이 따로 든다"에서 나왔다.
+  1. **메뉴를 열었다 닫으면**: `mapSideRails`가 `if !isMenuOpen`이라 사이드바가 언마운트되고, 돌아오면 `@State`가 하루 전체로 새로 시작한다. 부모의 `timeSidebarVisible*`는 자식이 `onViewportChanged`로만 갱신되므로 확대 상태로 남아, 선택 캡슐·날씨 띠는 60분 창, 레일은 하루 전체 기준으로 그려졌다.
+  2. **같은 날짜에서 날짜만 바뀔 때**: `onChange(of: model.selectedDate)`가 `weatherVisible*`만 하루 전체로 되돌려 두 시간축이 갈라졌다.
+- 해결: 창을 `MapHomeView` 하나가 들고 `MapHomeTimeSidebar`는 `@Binding`으로 받는다. `onViewportChanged` 삭제, `weatherVisible*` `@State` 삭제, 날짜 변경 때의 두 줄 삭제, 날씨 띠·캡슐이 `timeSidebarVisible*`를 함께 씀.
+- 부수 효과: 메뉴를 열었다 닫아도 **확대 단계가 유지된다**(예전엔 레일만 하루 전체로 돌아갔다).
+- 크기: `MapHomeTimeSidebar` 3,090 → **3,081**(예산 3,081 재잠금), `MapHomeView` 22,019 → **22,013**(예산 22,072).
+- 검증: 전체 1,643건 중 **1,641 통과 · 실패 0 · 건너뜀 2**. StoreKit 시험도 이번엔 통과(환경 문제 확정). 게이트·경계 통과.
+- 남은 것: 화면에서 세 곳(레일·캡슐·날씨 띠)이 같은 창을 쓰는 장면, 메뉴 왕복 후 확대 유지, 「현재 위치」 후 날씨 띠가 안 튀는지 — SwiftUI 상태 소유를 옮긴 배선 변경이라 단위 시험으로 잠글 수 없다. "Modifying state during view update" 경고가 실제로 없는지도 화면에서 확인해야 한다.

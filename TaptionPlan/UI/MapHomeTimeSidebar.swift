@@ -1140,15 +1140,18 @@ struct MapHomeTimeSidebar: View {
     let zoomResetToken: Int
     let zoomStepToken: Int
     let maximumSelectableMinute: Int?
-    var onViewportChanged: ((Int, Int) -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
 
-    @State private var visibleDurationMinutes = MapHomeTimeSidebarMath.fullDayMinutes
-    @State private var visibleStartMinute = 0
+    /// 보이는 시간 창. 지도 홈이 들고 있는 값 하나를 시간 레일·날씨 띠·선택 캡슐이
+    /// 함께 쓴다. 예전에는 이 화면이 `@State`로 따로 들고 `onViewportChanged`로
+    /// 알렸는데, 메뉴를 열어 이 화면이 사라졌다 돌아오면 레일만 하루 전체로 돌아가고
+    /// 부모가 든 창은 확대 상태로 남아 캡슐·날씨 띠가 다른 창을 썼다(2026-10-27).
+    @Binding var visibleStartMinute: Int
+    @Binding var visibleDurationMinutes: Int
     @State private var dragStartMinute: Int?
     @State private var viewportDragStartMinute: Int?
     @State private var gestureBaseState: MapHomeTimeSidebarNLEState?
@@ -1187,6 +1190,8 @@ struct MapHomeTimeSidebar: View {
     init(
         date: Date,
         selectedMinute: Binding<Int>,
+        visibleStartMinute: Binding<Int>,
+        visibleDurationMinutes: Binding<Int>,
         activity: MapHomeTimeSidebarActivity? = nil,
         segments: [MapHomeTimeRailSegment] = [],
         categoryColors: [String: String] = [:],
@@ -1195,13 +1200,14 @@ struct MapHomeTimeSidebar: View {
         railWidth: CGFloat = 44,
         maximumSelectableMinute: Int? = nil,
         trailingInteractionWidth: CGFloat = 0,
-        onViewportChanged: ((Int, Int) -> Void)? = nil,
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
         self.date = date
         self._selectedMinute = selectedMinute
+        self._visibleStartMinute = visibleStartMinute
+        self._visibleDurationMinutes = visibleDurationMinutes
         self.activity = activity
         self.segments = segments
         self.categoryColors = categoryColors
@@ -1210,7 +1216,6 @@ struct MapHomeTimeSidebar: View {
         self.railWidth = max(44, railWidth)
         self.maximumSelectableMinute = maximumSelectableMinute
         self.trailingInteractionWidth = max(0, trailingInteractionWidth)
-        self.onViewportChanged = onViewportChanged
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
         self.onUnconfirmedReview = onUnconfirmedReview
@@ -1272,14 +1277,7 @@ struct MapHomeTimeSidebar: View {
     }
 
     var body: some View {
-        // 사이드바가 확대·축소하는 중에도 상위 화면의 배지 위치가 같은 범위를 쓰도록 매번 알린다.
         sidebarBody
-            .onChange(of: visibleStartMinute) { _, start in
-                onViewportChanged?(start, visibleDurationMinutes)
-            }
-            .onChange(of: visibleDurationMinutes) { _, duration in
-                onViewportChanged?(visibleStartMinute, duration)
-            }
     }
 
     private var sidebarBody: some View {
@@ -1658,10 +1656,6 @@ struct MapHomeTimeSidebar: View {
             if visibleStartMinute != reset.visibleStartMinute {
                 visibleStartMinute = reset.visibleStartMinute
             }
-            onViewportChanged?(
-                visibleStartMinute,
-                visibleDurationMinutes
-            )
             nleProjection.synchronize(with: nleState)
         }
         .onChange(of: zoomStepToken) { oldValue, newValue in
@@ -1681,7 +1675,6 @@ struct MapHomeTimeSidebar: View {
             )
             if start != visibleStartMinute {
                 visibleStartMinute = start
-                onViewportChanged?(start, visibleDurationMinutes)
             }
             nleProjection.synchronize(with: nleState)
         }
@@ -2000,7 +1993,6 @@ struct MapHomeTimeSidebar: View {
             centerMinute: selected,
             durationMinutes: duration
         )
-        onViewportChanged?(visibleStartMinute, visibleDurationMinutes)
         viewportDragStartMinute = nil
         nleProjection.synchronize(with: nleState)
     }
@@ -2070,7 +2062,6 @@ struct MapHomeTimeSidebar: View {
             if visibleDurationMinutes != state.visibleDurationMinutes {
                 visibleDurationMinutes = state.visibleDurationMinutes
             }
-            onViewportChanged?(state.visibleStartMinute, state.visibleDurationMinutes)
         }
         if selectionChanged {
             selectedMinute = state.selectedMinute
