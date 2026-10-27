@@ -10293,18 +10293,17 @@ final class AppModel {
                 },
                 forceReload: forceReload || refreshRawReadings
             )
-            return acceptsDataMutation() && sourceRevision == dayProjectionRevision ? loaded : empty()
+            return acceptsDataMutation() && PlanDayDataSnapshot.keepsLoadedSnapshot(
+                loaded, currentRevision: dayProjectionRevision) ? loaded : empty()
         }
         let result = await sensorReadingsLoadResult(
             in: daySpan(containing: date)
         )
-        guard acceptsDataMutation(), sourceRevision == dayProjectionRevision else { return empty() }
-        return PlanDayDataSnapshot.make(
-            date: date,
-            sourceRevision: sourceRevision,
-            source: source,
-            sensorResult: result
-        )
+        guard acceptsDataMutation() else { return empty() }
+        let made = PlanDayDataSnapshot.make(date: date, sourceRevision: sourceRevision,
+            source: source, sensorResult: result)
+        return PlanDayDataSnapshot.keepsLoadedSnapshot(made, currentRevision: dayProjectionRevision)
+            ? made : empty()
     }
 
     func rebasePlanDayDataSnapshot(

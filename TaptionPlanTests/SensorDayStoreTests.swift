@@ -2522,6 +2522,20 @@ final class SensorDayStoreTests: XCTestCase {
         XCTAssertEqual(Array(result.readings.dropFirst()), Array(readings.dropFirst()))
     }
 
+    func testCompleteDaySnapshotSurvivesARevisionBumpButIncompleteDoesNot() {
+        let date = Date(timeIntervalSince1970: 2_100_000_000)
+        let complete = PlanDayDataSnapshot.make(date: date, sourceRevision: 7, source: .empty,
+            sensorResult: SensorReadingsLoadResult(readings: [makeReading(date)], isComplete: true))
+        // 읽는 동안 다른 날 기록이 바뀌면 전역 개정만 올라간다. 그날 원본은 그대로다.
+        XCTAssertTrue(PlanDayDataSnapshot.keepsLoadedSnapshot(complete, currentRevision: 8))
+        XCTAssertTrue(PlanDayDataSnapshot.keepsLoadedSnapshot(complete, currentRevision: 7))
+
+        // 끝까지 못 읽은 날은 개정과 무관하게 버린다(빈 하루로 확정하면 안 된다).
+        let incomplete = PlanDayDataSnapshot.incomplete(date: date, sourceRevision: 7, source: .empty)
+        XCTAssertFalse(PlanDayDataSnapshot.keepsLoadedSnapshot(incomplete, currentRevision: 8))
+        XCTAssertTrue(PlanDayDataSnapshot.keepsLoadedSnapshot(incomplete, currentRevision: 7))
+    }
+
     @MainActor
     func testConcurrentDayLoadsDoNotCancelEachOther() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("day-independent-\(UUID())")

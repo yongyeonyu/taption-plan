@@ -123,6 +123,20 @@ struct PlanDayDataSnapshot: Equatable, Sendable {
         return sourceFingerprint == fingerprint
     }
 
+    /// 읽는 동안 원본 개정이 올라갔더라도, 완전한 하루를 읽었으면 그대로 쓴다.
+    ///
+    /// 개정은 다른 날의 기록이 바뀌어도 오르는 전역 값이라, 내가 읽는 날의 원본은
+    /// 그대로인데도 어긋난다. 그때 빈 스냅샷으로 갈아치우면 지도는 그날 기록을
+    /// 통째로 잃고(2026-10-27 실기기: 810개 점이 60분 동안 사라짐), 다음 계기가
+    /// 생길 때까지 아무도 다시 읽지 않는다. 화면은 개정이 다르면 `rebase`로
+    /// 원본만 다시 맞추므로, 여기서는 읽은 값을 버리지 않는다.
+    static func keepsLoadedSnapshot(
+        _ snapshot: Self,
+        currentRevision: UInt64
+    ) -> Bool {
+        snapshot.isComplete || snapshot.sourceRevision == currentRevision
+    }
+
     static func make(
         date: Date,
         sourceRevision: UInt64,
