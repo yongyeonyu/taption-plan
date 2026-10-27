@@ -4526,6 +4526,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - 새 시험 `testTimelineWindowRecordMatchesTheHandleRatio` — 60분 창(09:36~10:36)에서 10:30을 고르면 `handle_ratio=0.9`, 창 문자열 `576-636`, 선택 없으면 `-1`·`selected=none`. 기존 손잡이 시험과 같은 기대값을 쓴다.
 - `MapHomePawprintInteractionTests` 2건 통과(2/2). 구조 게이트·경계 통과.
+- 단위 시험 `build/validation/LCH1027A08/unit-tests.xcresult` — **1,647건 중 1,645 통과 · 실패 0 · 건너뜀 2**(4분 47초). 건너뜀 2건은 기존 HealthKit 시험이다.
+- 화면 시험 `build/validation/LCH1027A08/ui-tests.xcresult` — **20건 중 19 통과 · 실패 1**(11분). 실패는 `TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`("Failed to tap 「멈춤」: No matches found", 527행).
+  - **이번 변경 탓이 아니다.** 변경 전 커밋 `9215234`를 `git worktree`로 따로 받아 같은 시험을 돌렸더니 그쪽에서도 실패했다(535행 "다시 재생되지 않는다", `/tmp/pre-a08/pre-hud.xcresult`). 하루를 24초에 재생하는 화면을 그대로 재는 시험이라 남은 하루 길이에 따라 「멈춤」이 사라지는 시각이 달라진다. 05:00 전에는 스스로 건너뛰므로 오전 일찍 돌린 회차(빌드 244 때)에서는 초록으로 보였다.
+- 전체 scheme을 한 번에 돌린 회차는 **끝나지 않았다**. 화면 시험 실패 뒤 xcodebuild가 재시도 단계로 넘어가 `Failed to launch app with identifier: com.taption.plan`만 반복하며 22분 넘게 로그가 멈춰 있었다. 그래서 단위/화면을 나눠 돌렸고, 이 함정을 `DEVELOPMENT.md` 검증 명령 절에 적어 두었다.
 
 ### 4. 확인하지 못한 것
 

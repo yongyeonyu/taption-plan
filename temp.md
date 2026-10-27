@@ -2247,5 +2247,7 @@
 - `timeline_window` 이벤트 신설 — `source`(zoom/select/handle_end/recenter_before/recenter_after), `window`, `selected`, `start_minute`, `duration_minutes`, **`handle_ratio`(화면과 같은 `MapHomeTimeSidebarMath.position`)**.
 - `MapHomeTimelineWindowRecord`는 `MapHomeTimeSidebarHandleMath.swift`(27→81줄). `MapHomeView`는 22,057 → **22,072(예산 정확히 소진, 여유 0)**. `appear` 이벤트는 1줄 초과로 포기.
 - `scripts/analyze-diagnostics.py`에 `시간선 창` 절 추가.
-- 검증: `testTimelineWindowRecordMatchesTheHandleRatio` 통과(2/2). 게이트·경계 통과.
+- 검증: `testTimelineWindowRecordMatchesTheHandleRatio` 통과(2/2). 게이트·경계 통과. 단위 1,647건 중 1,645 통과·실패 0·건너뜀 2(4분 47초), 화면 20건 중 19 통과·실패 1.
+- 화면 실패 1건(`testPlayTogglesInOneSlotAndMapMoveCancelsIt`)은 변경 전 커밋 `9215234`에서도 실패 — 시각에 따라 재생이 먼저 끝나는 시험 쪽 문제다.
+- 전체 scheme 한 번 실행은 화면 실패 뒤 재시도 단계에서 앱 실행 실패만 반복하며 멈춘다(22분). 단위/화면을 나눠 돌릴 것.
 - 남은 것: ①기기 로그에서 이벤트가 실제로 찍히는지 ②`MapHomeView`는 이제 한 줄도 못 늘리므로 다음 화면 변경은 새 파일로.

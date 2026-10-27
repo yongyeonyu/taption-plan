@@ -191,3 +191,7 @@ xcodebuild test -project TaptionPlan.xcodeproj -scheme TaptionPlan \
 ```
 
 `TASK_ID`는 요청의 10자리 ID, `SIMULATOR_UDID`는 위 목록의 값, `TEST_CLASS`는 변경에 맞는 테스트 클래스로 설정합니다. 전체 앱 테스트를 실행했다면 xcresult의 실제 테스트 수·실패·건너뜀을 확인합니다. 시뮬레이터 결과는 설치·실기기 기능 검증이나 TestFlight 결과를 뜻하지 않습니다.
+
+전체 scheme을 한 번에 돌리면 화면 시험이 하나라도 실패할 때 xcodebuild가 재시도 단계로 넘어가고, 그 단계에서 `Failed to launch app with identifier: com.taption.plan`만 반복하며 **끝나지 않는다**(2026-10-28에 두 번 겪었다. 22분을 기다려도 로그가 멈춰 있었다). 그래서 `-only-testing:TaptionPlanTests`와 `-only-testing:TaptionPlanUITests`를 나눠 돌린다. 단위 시험은 5분, 화면 시험은 11분쯤 걸린다.
+
+`TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`은 하루를 24초에 재생하는 화면을 그대로 재는 시험이라 **시각에 따라 실패한다**. 05:00 전에는 스스로 건너뛰고, 그 뒤에는 남은 하루 길이에 따라 「멈춤」을 누르기 전에 재생이 끝난다. 2026-10-28에 이 시험 하나 때문에 두 번 실패했는데, 변경 전 커밋(`9215234`)에서도 같은 시험이 다른 줄(535행 「다시 재생되지 않는다」)에서 실패했다 — 코드 회귀가 아니라 시험 쪽 문제로 본다.
