@@ -96,6 +96,43 @@ def print_launch(events):
     print(f"  {'준비 반복':24s} {passes:9d}회")
 
 
+def print_loads(events):
+    """저장소 적재(`repository_local_load`)를 세션별로 갈라 어느 경로가 늘렸는지 보여준다.
+
+    적재는 `bootstrap_local_snapshot`에서 한 번 도는 것이 정상이다. 그보다 많으면
+    같은 프로세스에 모델이 둘 생겼거나(그 세션에 bootstrap이 2회), 위젯 확장이 같은
+    로그 파일에 자기 세션으로 쓴 것이거나(그 세션에 bootstrap이 없음), 위젯 명령
+    재적용이 한 번 더 부른 것이다(bootstrap 1회 + 적재 2회).
+    """
+    loads = [e for e in events if e["event"] == "repository_local_load"]
+    if not loads:
+        print("  (없음)")
+        return
+    by_session = collections.OrderedDict()
+    for event in loads:
+        by_session.setdefault(event.get("session_id", "(없음)"), []).append(event)
+    bootstraps = collections.Counter(
+        e.get("session_id") for e in events
+        if e["event"] == "operation_started"
+        and e.get("fields", {}).get("operation") == "bootstrap_local_snapshot"
+    )
+    for session, items in by_session.items():
+        passes = bootstraps.get(session, 0)
+        if passes >= 2:
+            reason = "같은 프로세스에 모델 둘"
+        elif passes == 0:
+            reason = "위젯 등 다른 프로세스"
+        elif len(items) > passes:
+            reason = "위젯 명령 재적용 등 추가 호출"
+        else:
+            reason = "정상"
+        print(f"  {session} 적재 {len(items)}회 · bootstrap {passes}회 → {reason}")
+        for event in items:
+            m = event.get("metrics", {})
+            print(f"    {local(event['timestamp']):%H:%M:%S} {m.get('rows', 0):.0f}행 "
+                  f"읽기 {m.get('read_ms', 0):.1f}ms 해독 {m.get('decode_ms', 0):.1f}ms")
+
+
 def report(header, events):
     print(f"이벤트 {len(events)}개, 빌드 {sorted({e.get('build') for e in events})}, "
           f"스키마 {sorted({e.get('schema', 1) for e in events})}")
@@ -121,6 +158,9 @@ def report(header, events):
     print_launch(events)
     yielded = sum(1 for e in events if e["event"] == "background_refresh_yielded")
     print(f"  배경 갱신이 화면에 자리를 내준 횟수 {yielded}회")
+
+    print("\n저장소 적재(repository_local_load) — 세션별")
+    print_loads(events)
 
     print("\n튄 위치(map_route_readings_prepared의 largest_jump_*) — 큰 순서")
     jumps = [e for e in events if e["event"] == "map_route_readings_prepared" and "largest_jump_m" in e.get("fields", {})]

@@ -2356,3 +2356,13 @@
 - 기준선: `python3 scripts/architecture-metrics.py --write-baseline docs/architecture-baseline.json` → `largest_file_lines` **22,072 → 21,895**, `largest_type_lines` 13,552 → 13,551. 동결 파일 예산이 실제 줄 수로 내려가 다시 잠겼다(`MapHomeView` 22,072→21,895, `RouteTimelineData` 3,410→3,406, `AppModel` 14,400→14,278, `MapHomeNLEClipEditor` 1,430→1,401, `TaptionStoreV2` 1,493→1,377, `AppShellView` 1,646→1,645, `DetailViews` 2,950→2,949). 위험 표시 수는 그대로, 빠진 동결 파일 없음.
 - 워크트리: 이미 하나(`main`)뿐이고 `git worktree prune`·`git remote prune origin` 모두 지울 것이 없었다. 브랜치도 `main` 하나, 작업 트리 깨끗함.
 - 검증: 구조 지표·엔진 경계 검사 통과(`21,895 / 1,200` 목표 대비 그대로). 커밋 `303fab5` 푸시.
+
+## LOG1028A01 · 저장소 적재 로그를 세션별로 갈라 판정 (2026-10-28)
+- 지시: "기기 로그로 먼저 판정" — `repository_local_load`가 세션당 3번 찍히는 이유(원인 미상).
+- 원인 후보 셋(코드로 확인):
+  1. **다른 프로세스가 같은 파일에 쓴다** — 진단 로그 primary가 앱 그룹 컨테이너(`DiagnosticsLogSupport.defaultDirectories`)이고 위젯 target(pbxproj Sources phase `9200…003`)도 `TaptionStoreRepository.swift`·`DiagnosticsLogSupport.swift`를 컴파일한다. 위젯 AppIntent의 `load()`가 같은 `iphone.jsonl`에 **위젯 자신의 `session_id`**로 남는다.
+  2. **모델이 둘이면 적재도 둘** — `AppShellView`가 `AppModel()`을 무조건 새로 만든다. 백그라운드 깨어남이 먼저 모델을 만들면(`AppModel.backgroundTaskInstance`) 같은 프로세스에 둘이 되고, 중복 방지(`bootstrapTask`·`isBootstrapped`)가 모델 단위라 각자 `load()`를 한 번씩 부른다.
+  3. **조건부 재적재** — `applyPendingWidgetCommands(repositoryAlreadyLoaded: false)`(3408·2545)가 위젯 명령이 남아 있으면 한 번 더 부른다.
+- 고침: `scripts/analyze-diagnostics.py`에 `print_loads` 절 추가 — 세션별 적재 횟수와 `bootstrap_local_snapshot` 시작 횟수를 함께 읽어 ①②③/정상으로 가른다.
+- 검증: 합성 로그 네 세션(적재/부트스트랩 2/2 · 1/0 · 2/1 · 1/1)으로 네 갈래 판정 확인. 구조 지표·엔진 경계 검사 통과. 기기 로그가 아직 없어 실제 판정은 대기.
+- 남은 것: 빌드 246 기기 로그로 판정 → ②면 모델 중복 생성, ①이면 위젯 로그 분리.
