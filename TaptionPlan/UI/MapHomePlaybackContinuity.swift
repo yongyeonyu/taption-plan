@@ -10,6 +10,9 @@ import Foundation
 // ② 재생 배속은 지금까지 '확정 이동 + 이동 센서'에서만 이동 속도를 받았다. 그래서 미확인
 //    이동은 정지 배속(초당 120분)으로 지나가 한순간에 사라졌다. 배속을 대분류로 정한다:
 //    대분류 '이동'이면 이동 배속, 나머지(수면·업무·식사·취미·운동·활동)는 정지 배속.
+//
+// ③ 지하철은 자동 분류 구간이 늘 `isConfirmed == false`라 노선 위에 올라가지 못했다.
+//    확정 여부와 상관없이 노선 위를 달리게 한다(지하 GPS가 없어 프레임도 비는 구간).
 
 extension MapHomePlaybackLocation {
     /// `resolve`가 nil일 때 이동 구간 위의 점으로 이어 준다.
@@ -69,6 +72,33 @@ extension MapHomePlaybackLocation {
             )
         }
         return nil
+    }
+
+    /// 지하철 구간이면 **확정 여부와 상관없이** 노선 위의 점을 준다.
+    ///
+    /// `resolve`는 오랫동안 `isConfirmed`인 지하철만 노선 위에 올렸다. 그런데 그 값은
+    /// "사용자가 모드를 직접 고쳤다"는 뜻이라, 자동으로 분류된 지하철은 늘 false다.
+    /// 그래서 지하철을 타고 이동한 시간에는 재생 프레임도(지하 GPS 없음) 확정 노선도
+    /// 없어 화랑이가 통째로 사라지거나 출발역 GPS에 붙어 있었다(대표 지적, 2026-10-28).
+    /// 지도에 예상 노선이 그려져 있으면 화랑이는 그 선을 타고 가야 한다.
+    static func subwayCoordinate(
+        at date: Date,
+        travel: [TravelSegment]
+    ) -> GeoPoint? {
+        let active = travel.filter { segment in
+            segment.mode == .subway
+                && segment.span.contains(date)
+                && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
+        }
+        guard var segment = active.max(by: { $0.span.start < $1.span.start }) else {
+            return nil
+        }
+        // 확정 구간과 **같은 계산**을 쓰려고 확정 표시만 세운다. 좌표 계산에는 쓰이지 않는다.
+        segment.isConfirmed = true
+        return RouteTimelineDataEngine.confirmedSubwayCoordinates(
+            for: segment,
+            through: date
+        ).last
     }
 }
 

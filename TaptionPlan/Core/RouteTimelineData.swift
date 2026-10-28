@@ -524,13 +524,9 @@ struct MapHomePlaybackLocation: Equatable {
         if let frame, frame.date == date {
             return Self(coordinate: frame.coordinate, cameraCoordinate: frame.cameraCoordinate)
         }
-        let subwayPoint = confirmedTravel.lazy.filter { segment in
-            segment.mode == .subway && segment.isConfirmed
-                && segment.span.contains(date)
-                && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true
-        }.max { $0.span.start < $1.span.start }.flatMap { segment in
-            RouteTimelineDataEngine.confirmedSubwayCoordinates(for: segment, through: date).last
-        }
+        // 지하철은 확정 여부와 상관없이 노선 위에 올린다. 자동 분류 구간은 `isConfirmed`가
+        // 늘 false라, 예전에는 노선이 그려져 있어도 화랑이가 그 구간에서 사라졌다.
+        let subwayPoint = Self.subwayCoordinate(at: date, travel: confirmedTravel)
         if let point = subwayPoint ?? expectedCoordinate {
             return Self(coordinate: point)
         }

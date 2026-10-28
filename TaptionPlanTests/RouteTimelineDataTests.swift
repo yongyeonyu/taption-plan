@@ -99,6 +99,37 @@ final class RouteTimelineDataTests: XCTestCase {
         XCTAssertEqual(location.cameraCoordinate, expected)
     }
 
+    /// 자동으로 분류된 지하철(사용자가 확정하지 않은 구간)도 재생 중에는 노선 위를 달린다.
+    /// `isConfirmed`는 "모드를 직접 고쳤다"는 뜻이라 자동 구간은 늘 false이고, 예전에는
+    /// 그 구간에서 재생 프레임도 확정 노선도 없어 화랑이가 사라졌다(대표 지적, 2026-10-28).
+    func testPlaybackRidesSubwayRouteEvenWhenNotConfirmed() throws {
+        let (fixture, _) = confirmedSubwayFixture()
+        var confirmed = fixture
+        confirmed.subwayRoute = try XCTUnwrap(
+            SubwayStationCatalog.route(for: ["가정역", "마곡나루역"])
+        )
+        var estimated = confirmed
+        estimated.isConfirmed = false
+        let first = try XCTUnwrap(confirmed.subwayRoute?.coordinates.first)
+
+        let confirmedLocation = try XCTUnwrap(MapHomePlaybackLocation.resolve(
+            at: date(425), frame: nil, normalizedReadings: [],
+            confirmedTravel: [confirmed], calendar: calendar
+        ))
+        let estimatedLocation = try XCTUnwrap(MapHomePlaybackLocation.resolve(
+            at: date(425), frame: nil, normalizedReadings: [],
+            confirmedTravel: [estimated], calendar: calendar
+        ))
+        XCTAssertEqual(estimatedLocation.coordinate, confirmedLocation.coordinate)
+        XCTAssertNotEqual(estimatedLocation.coordinate, first, "출발역에 붙어 있으면 안 된다")
+
+        // 지하철 구간이 아예 없을 때는 예전처럼 아무것도 지어내지 않는다.
+        XCTAssertNil(MapHomePlaybackLocation.resolve(
+            at: date(425), frame: nil, normalizedReadings: [],
+            confirmedTravel: [], calendar: calendar
+        ))
+    }
+
     func testPlaybackForecastUsesOneLocationForMarkerAndCamera() throws {
         let oldGPS = reading(30, latitude: 37)
         let forecast = try XCTUnwrap(reading(600, latitude: 37.1).point)
