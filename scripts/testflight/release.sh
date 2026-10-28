@@ -226,9 +226,19 @@ fi
 
 step "3/9 테스트"
 if [[ "$WITH_TESTS" -eq 1 ]]; then
+  # 단위 테스트는 구체적인 시뮬레이터에서만 돈다. generic destination은
+  # "Tests must be run on a concrete device"로 끝난다(2026-10-28).
+  TEST_SIMULATOR_UDID="${TEST_SIMULATOR_UDID:-$(xcrun simctl list devices available \
+    | awk -F '[()]' '/iPhone/ {print $2; exit}')}"
+  [[ -n "$TEST_SIMULATOR_UDID" ]] \
+    || fail "사용 가능한 iPhone 시뮬레이터가 없습니다. TEST_SIMULATOR_UDID로 지정하세요."
+  printf '  시뮬레이터 %s\n' "$TEST_SIMULATOR_UDID"
+  # CODE_SIGNING_ALLOWED=NO로 돌리면 서명이 필요한 시험(StoreKit 구매·백업 연결·
+  # HealthKit 이력·GPS 로그)이 한꺼번에 실패한다(2026-10-28). 시뮬레이터는
+  # 서명 없이도 빌드되므로 이 플래그를 빼고 돌린다.
   xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
-    -destination 'generic/platform=iOS Simulator' \
-    -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO \
+    -destination "platform=iOS Simulator,id=${TEST_SIMULATOR_UDID}" \
+    -skipPackagePluginValidation \
     COMPILER_INDEX_STORE_ENABLE=NO \
     OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox' \
     -only-testing:TaptionPlanTests \
