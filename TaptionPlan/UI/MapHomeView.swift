@@ -7851,8 +7851,10 @@ struct MapHomeView: View {
 
     private var currentTimeRail: some View {
         GeometryReader { proxy in
+            // 확대·축소 단추가 들어갈 바닥 자리. 시간선·날씨 띠를 이만큼 줄여 아래를 비운다.
+            let zoomReserve = min(52, proxy.size.height / 3)
             let railHeight = MapHomeOverlayLayoutMath.timeSidebarHeight(
-                availableHeight: proxy.size.height
+                availableHeight: proxy.size.height - zoomReserve
             )
             TimelineView(.periodic(from: .now, by: 60)) { timeline in
                 let minute = timelineSelectionMinute(at: timeline.date)
@@ -7876,7 +7878,7 @@ struct MapHomeView: View {
                     max(selectedTimeCard.midY, selectedCardHeight / 2),
                     railHeight - selectedCardHeight / 2
                 )
-                let timeRailTop = max(0, proxy.size.height - railHeight)
+                let timeRailTop = max(0, proxy.size.height - zoomReserve - railHeight)
                 ZStack(alignment: .topLeading) {
                     if recordingShows(\.timeSidebar) {
                     Capsule()
@@ -7977,11 +7979,11 @@ struct MapHomeView: View {
                             isUnconfirmedReviewPresented = true
                         }
                     )
-                    // 확대·축소는 사이드바 왼쪽 바깥에 세로로(＋ 위, − 아래) 세운다. 눈금·날씨 띠·손잡이를 덮지 않게 왼쪽 끝에서 2pt 띄운다.
+                    // 확대·축소는 시간선 아래 비워 둔 자리에 알약 하나로 붙인다(＋ 위, − 아래, 가운데 선).
                     timelineZoomControls
                         .position(
-                            x: proxy.size.width - timeSidebarInteractionWidth - 11,
-                            y: proxy.size.height - 23
+                            x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth + 22,
+                            y: proxy.size.height - 26
                         )
                     }
 
@@ -8094,7 +8096,7 @@ struct MapHomeView: View {
                     x: proxy.size.width - timeSidebarInteractionWidth / 2,
                     y: max(
                         railHeight / 2,
-                        proxy.size.height - railHeight / 2
+                        proxy.size.height - zoomReserve - railHeight / 2
                     )
                 )
             }
@@ -8280,12 +8282,14 @@ struct MapHomeView: View {
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
 
-    /// 시간선 확대·축소. 세로로 세워(＋ 위, − 아래) 사이드바 왼쪽 바깥 아래에 붙인다.
     private var timelineZoomControls: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
             timelineZoomButton(systemImage: "plus", direction: 1)
             timelineZoomButton(systemImage: "minus", direction: -1)
         }
+        .background(Capsule().fill(Color.tpSurface.opacity(0.94)))
+        .overlay(Capsule().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+        .overlay(Rectangle().fill(Color.tpLine.opacity(0.45)).frame(width: 12, height: 0.6))
     }
 
     private func timelineZoomButton(systemImage: String, direction: Int) -> some View {
@@ -8299,10 +8303,8 @@ struct MapHomeView: View {
             Image(systemName: systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                 .foregroundStyle(enabled ? Color.tpInk : Color.tpSecondary.opacity(0.4))
-                .frame(width: 18, height: 18)
-                .background(Circle().fill(Color.tpSurface.opacity(0.92)))
-                .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
-                .contentShape(Circle())
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
