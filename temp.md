@@ -2264,3 +2264,12 @@
 - 계측: `bootstrap_preparation_pass`(준비 반복 횟수), 분석기 시작 절에 적재·준비 시간과 반복·양보 횟수.
 - 검증: `testBackgroundRefreshYieldsWhileTheSceneIsActive`(대조군 포함) 통과. 단위 1,648건 중 1,646 통과·실패 0·건너뜀 2. AppModel 클래스 13,551줄 유지.
 - 남은 것: 실제 개선 폭은 빌드 245 로그로만 확인된다. 해독 12.5배는 iOS 백그라운드 기동 QoS 몫이 섞였을 수 있다.
+
+## TFB1028A06 · 빌드 245 배포 (2026-10-28)
+- 담긴 것: `LCH1027A07`(배경 갱신 성패 판정) · `LCH1027A08`(시간선 창 계측) · `UIT1028A01`(재생 화면시험 시각 의존) · `LCH1028A01`(시작 겹침 양보). 244 → **245**.
+- `bash scripts/testflight/release.sh --reuse-archive build/validation/TFB1028A05/TaptionPlan245.xcarchive --no-bump --yes --request-id TFB1028A06` → **4분 25초**, `ok: true`. 빌드 `613e1cf2-8ce5-47e8-abd4-41be15068153` **VALID**, 그룹 「TP Taption Plan 내부 테스트」(`b4857e5e`) 연결 확인, 테스터 1명(`axony99@gmail.com`).
+- 시험은 `--with-tests` 없이 올렸다. 같은 소스(`de61338`)에서 단위 전체가 이미 초록이었다 — **1,648건 중 1,646 통과 · 실패 0 · 건너뜀 2**(`build/validation/LCH1028A01/unit-all.xcresult`, 4분 35초). 그 뒤 바뀐 것은 `CFBundleVersion` 문자열뿐이라 시험 결과에 영향이 없다.
+- **막힌 두 회차와 원인**(다음에 같은 데서 헤매지 않도록):
+  - `TFB1028A04`: `** TEST FAILED **`인데 `Failing tests:` 목록이 비어 있었다. 시험 실패가 아니라 **디스크 고갈**이다 — `App installation failed … No space left on device`. `~/Library/Developer/XCTestDevices`에 xcodebuild가 남긴 시뮬레이터 복제본이 **97개·134GB**. 그래서 `release.sh` 시험 단계에 `-parallel-testing-enabled NO` + `-maximum-concurrent-test-simulator-destinations 1`을 넣고, 로그에 `No space left on device`가 보이면 「시험 실패 아님」으로 갈라 알리게 했다.
+  - `TFB1028A05`: 아카이브(139MB)는 다 만들어졌는데 그 직후 `syntax error near unexpected token '('`(271행)로 죽었다. **돌고 있는 `release.sh`를 편집해서** bash가 읽던 바이트 위치가 어긋난 탓이다. 실행 중인 스크립트는 고치지 말 것. 아카이브는 남아 있어 `--reuse-archive`로 이어서 올렸다.
+- 남은 것(빌드 245 기기 로그가 오면): ①`timeline_window`가 실제로 찍히는지 ②`background_refresh`의 `outcome=success` 비율 ③`background_refresh_yielded` 등장 ④`bootstrap_preparation_pass` 반복 횟수 ⑤겹친 회차의 `bootstrap_preparation`이 4,657ms에서 46ms 쪽으로 내려왔는지.
