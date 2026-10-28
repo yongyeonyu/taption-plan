@@ -4534,3 +4534,35 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ### 4. 확인하지 못한 것
 
 - **이벤트가 실제로 찍히는 것은 기기 로그로만 확인된다.** 시뮬레이터 시험은 화면을 만질 수 없고, xcodebuild는 복제 시뮬레이터를 써서 시험 뒤 앱 컨테이너를 읽을 수 없다. 다음 로그에서 `시간선 창` 절이 비어 있지 않은지 먼저 본다.
+
+## UIT1028A01 · 시각에 따라 실패하던 재생 화면시험을 고친다 (2026-10-28)
+
+- 요청 ID: `UIT1028A01`
+- 무엇을: `TaptionPlanPlaybackHUDUITests.testPlayTogglesInOneSlotAndMapMoveCancelsIt`이 시각에 따라 실패하던 것을 고쳤다.
+- 계기: `LCH1027A08` 전체 시험에서 이 시험이 실패했고, 변경 전 커밋(`9215234`)에서도 실패해 코드 회귀가 아님을 먼저 확인했다.
+
+### 1. 원인
+
+- 재생 구간은 `[선택 시각, 지금]`이다. `playbackEndMinute`는 오늘이면 **지금**을 끝으로 주고, `playbackStartMinute`는 선택이 지금보다 뒤면 0을 준다.
+- 시험은 시간 레일 위쪽을 눌러 선택을 01:35로 옮긴다. 그래서 구간은 01:35~지금이고, 08:20에 돌리면 390분이다.
+- 정지 구간은 초당 120분이라 **3.2초**에 끝난다. 그 사이에 시험이 HUD 확인·스크린샷·하단 단추 세기를 하는데, 셋 다 접근성 스냅숏을 떠서 2~3초가 걸린다. 「멈춤」이 사라진 뒤에 눌러 실패했다.
+- 05:00 전에는 `XCTSkipIf`로 건너뛰므로 오전 이른 회차에서는 초록으로 보였다. 그래서 "간헐 실패"로 보였다.
+
+### 2. 고친 것
+
+- `MapHomeDayPlaybackTestHooks.rateScale`(새 파일 `TaptionPlan/UI/MapHomeDayPlaybackTestHooks.swift`) — `-slowDayPlayback` 인자가 있을 때만 0.1, 없으면 1.
+- `MapHomeDayPlaybackMath.stationaryMinutesPerSecond`에 이 값을 곱한다. 줄 수가 늘지 않아 `MapHomeView`는 **22,072줄 그대로**다. `movingMinutesPerSecond`도 함께 늦어진다.
+- HUD 글자(`durationSeconds` = 24)는 건드리지 않았다. 시험이 "하루 24초"라는 글자로 재생 중임을 확인하기 때문이다. 그래서 시험 모드에서만 글자와 실제 길이가 어긋나는데, 시험은 글자를 확인용으로만 쓴다.
+- 시험: `app.launchArguments += ["-slowDayPlayback"]`. 낡은 주석("재생은 몇 초 만에 스스로 끝난다")도 실제에 맞게 고쳤다.
+
+### 3. 확인
+
+- 인자를 넣고 **4회 연속 통과** — 28.9초 / 34.1초 / 29.9초 / 85.9초(`build/validation/UIT1028A01/hud.xcresult`·`hud-2`·`hud-3`·`hud-final`). 마지막 회차가 85.9초였는데도 통과했다.
+- **인자를 빼면 같은 자리에서 다시 실패한다** — `hud-noflag.log` 532행 "Failed to tap 「멈춤」: No matches found"(27.7초). 인자가 실제로 앱에 닿아 배속을 늦춘다는 증거다.
+- 배속 잠금: `TimeScaleTests.testMapHomeDayPlaybackMapsTwentyFourSecondsToTwentyFourHours`에 `rateScale == 1`·`stationaryMinutesPerSecond == 120`·`movingMinutesPerSecond == 2.5`를 더했다(통과). 인자 없이 빌드된 앱이 늦은 배속으로 나가는 일을 막는다.
+- 구조 게이트·엔진 경계 통과.
+
+### 4. 확인하지 못한 것
+
+- 05:00 이전에는 여전히 건너뛴다(그때 구간이 17초 미만이다). 그 시간대의 「멈춤」 동작은 시험으로 덮이지 않는다.
+- 실기기에서 재생 배속이 그대로인지는 빌드 245 로그로 확인할 수 없다(배속을 남기지 않는다). 인자 없는 앱이 1을 쓰는 것은 단위 시험이 잠근다.

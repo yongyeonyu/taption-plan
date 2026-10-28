@@ -4284,6 +4284,19 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 23.999), 1_439)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 24), 1_440)
         XCTAssertEqual(MapHomeDayPlaybackMath.minute(elapsedSeconds: 30), 1_440)
+        // 시험용 `-slowDayPlayback` 인자가 없으면 실사용 배속은 그대로여야 한다.
+        // 화면 시험이 재생을 관찰하려고 늦추는 것과 실사용 배속을 섞으면 안 된다.
+        XCTAssertEqual(MapHomeDayPlaybackTestHooks.rateScale, 1, accuracy: 0.000_001)
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.stationaryMinutesPerSecond,
+            120,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            MapHomeDayPlaybackMath.movingMinutesPerSecond,
+            2.5,
+            accuracy: 0.000_001
+        )
     }
 
     func testMapHomeDayPlaybackStopsAtNowOnlyForToday() {

@@ -488,21 +488,26 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
     }
 
     func testPlayTogglesInOneSlotAndMapMoveCancelsIt() throws {
-        // 오늘 하루를 24초에 재생하므로 남은 하루가 짧으면 재생이 1초 만에 스스로 끝나
-        // 「멈춤」을 볼 수 없다. 그런 시각에는 재지 않고 건너뛴다.
+        // 하루 재생은 24초짜리라, 「멈춤」을 찾고 스크린샷을 붙이고 하단 단추를 세는
+        // 사이에 재생이 스스로 끝나 버린다. 실제로 2026-10-28에 이 시험이 시각에 따라
+        // 두 번 실패했고(변경 전 커밋에서도 실패), 코드 회귀가 아니었다.
+        // `-slowDayPlayback`은 재생 배속만 10분의 1로 늦춰 그 경합을 없앤다.
+        // 재생 구간은 [선택 시각, 지금]이다. 지금 시각에 붙어 있으면 구간이 짧아 몇 초 만에
+        // 스스로 끝나므로, 시간 레일을 이른 아침(01:35 무렵)으로 옮겨 구간을 넉넉히 만든다.
+        // 05:00 전에는 그 구간조차 17초가 안 되므로 재지 않고 건너뛴다.
         let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
         let minuteOfDay = (now.hour ?? 0) * 60 + (now.minute ?? 0)
-        try XCTSkipIf(minuteOfDay < 300, "자정에서 5시간이 안 지나 재생 구간이 2.5초보다 짧다")
+        try XCTSkipIf(minuteOfDay < 300, "자정에서 5시간이 안 지나 재생 구간이 17초보다 짧다")
 
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launchArguments += ["-slowDayPlayback"]
         app.launch()
         let skip = app.buttons["전체 건너뛰기"]
         if skip.waitForExistence(timeout: 12) { skip.tap() }
 
         let play = app.buttons["재생"].firstMatch
         XCTAssertTrue(play.waitForExistence(timeout: 40), "하단 재생 단추가 없다")
-        // 재생은 하루를 24초에 그린다. 지금 시각에서 시작하면 남은 하루가 짧아 몇 초 만에
-        // 스스로 끝나므로, 시간 레일을 이른 아침으로 옮겨 재생 구간을 넉넉히 만든다.
+        // 시간 레일(오른쪽 세로줄) 위쪽을 눌러 선택을 이른 아침으로 옮긴다.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.2)).tap()
         usleep(600_000)
         let idleLabels = bottomBarLabels(app)
@@ -510,7 +515,7 @@ final class TaptionPlanPlaybackHUDUITests: XCTestCase {
 
         // 재생을 누르면 **같은 자리**가 「멈춤」이 된다. 「종료」는 없다.
         play.tap()
-        // 하루가 24초라 재생은 몇 초 만에 스스로 끝난다. 시간에 민감한 HUD를 먼저 본다.
+        // HUD는 재생이 끝나면 함께 사라진다. 다른 것을 보기 전에 먼저 확인한다.
         let hud = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "하루 24초")).firstMatch
         XCTAssertTrue(hud.waitForExistence(timeout: 6), "재생 중인데 HUD가 없다")
         attach(app, name: "play-running")
