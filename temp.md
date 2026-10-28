@@ -2341,3 +2341,11 @@
 - **구조**: 엔진과 `MapHomeSectionDetail`을 `TaptionPlan/UI/MapHomeSectionDetailEngine.swift`(231줄)로 옮겼다. `MapHomeView`가 22,072/22,072로 한 줄도 못 늘리는 상태였기 때문 — 이 화면의 다음 변경도 이 파일에서 한다. `MapHomeView` **22,072 → 21,895줄**(여유 177). pbxproj에 `A100000000000000000000F4`/`F100000000000000000000F4` 4곳 등록.
 - 검증: 새 시험 2건 `testDayDetailsKeepARecordThatCrossesASectionBoundary`(구간 목록은 600에서 잘리고, 하루 목록은 590–620 그대로), `testSectionDetailsDoNotInflateAdjacentRecords`(540–585 / 585–600, 경계가 정확히 맞닿음) + 기존 4건 → 6/6(`build/validation/DET1028A03/detail.xcresult`). 단위 전체 **1,652건 중 1,650 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A04/unit.xcresult`, 3분 49초). 화면: 클립 롤 편집·덮기·확대 단추 3건 통과(`DET1028A05/ui.xcresult`, `DET1028A06/ui.xcresult`). 구조 지표·경계 검사 통과. 커밋 `4a1cc22`.
 - 주의: `-only-testing`의 클래스 이름을 틀리면 0건 실행으로 초록이 된다. `testOverwriteAllChangesEveryClipAtOnce`는 `TaptionPlanClipRollUITests`가 아니라 **`TaptionPlanOverwriteUITests`**에 있다.
+
+## TFB1028A07 · 빌드 246 배포 (2026-10-28)
+- 담긴 것: `SUB1028A01`(지하철 재생 화랑이) · `SBZ1028A01`~`A05`(확대·축소 가로 알약, 사이드바 폭 44) · `DET1028A01`(합쳐진 구간의 상세활동) · `DET1028A02`(경계 잘림·1분 겹침 + 엔진 파일 분리). 245 → **246**.
+- `bash scripts/testflight/release.sh --preflight` → 전 항목 OK(빌드 245 VALID·그룹 `b4857e5e`·트리 깨끗함 `5a3dec7`) → `bash scripts/testflight/release.sh --yes --request-id TFB1028A07` **14분 22초**, `ok: true`.
+- 결과: 빌드 246 **VALID**, 내부 그룹 「TP Taption Plan 내부 테스트」 연결 확인(`buildAttached: true`), 테스터 1명(`axony99@gmail.com`). 산출물 번들 2개 모두 246(`TaptionPlan`·`TaptionPlanWidget`), Watch·WatchWidget은 별도 target이라 ipa에 없다.
+- 시험은 `--with-tests` 없이 올렸다. 같은 소스(`4a1cc22`)에서 단위 **1,652건 중 1,650 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A04/unit.xcresult`)였고, 그 뒤로는 기록(temp.md)만 바뀌었다.
+- 커밋: 버전 올림 `1d552c2`.
+- 이제 기기에서 확인할 것: ①지하철 구간 재생에서 화랑이 등장(`playback_focus_sample.metrics.stickman_offset_px` ≠ -1) ②클립 편집기 하단 상세 줄에 합쳐진 구간의 기록이 보이고, 맞닿은 경계가 겹치지 않는지 ③빌드 245 로그 미확인 5항목(`timeline_window`, `background_refresh` success 비율, `background_refresh_yielded`, `bootstrap_preparation_pass`, 겹친 회차의 `bootstrap_preparation`).
