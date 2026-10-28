@@ -2025,6 +2025,99 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    /// 여러 기록이 하나의 대분류 구간으로 합쳐져도 그 기록들이 상세활동으로 남아야 한다.
+    /// 예전에는 구간의 sourceIDs를 **전부** 상세에서 빼서, 업무 세 건이 합쳐진 5시간짜리
+    /// 구간의 상세 목록이 비어 있었다(클립 편집기 하단 줄이 빈 채로 보임).
+    func testSectionDetailsKeepEverySourceOfAMergedSegment() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        func at(_ minute: Int) -> Date {
+            dayStart.addingTimeInterval(TimeInterval(minute * 60))
+        }
+        let mailID = UUID()
+        let meetingID = UUID()
+        let codingID = UUID()
+        let records = [
+            ActualRecord(
+                id: mailID,
+                planID: nil,
+                title: "메일",
+                categoryID: "work",
+                startedAt: at(7 * 60),
+                endedAt: at(8 * 60 + 10),
+                source: .location,
+                behavior: WatchBehaviorKind.sitting.rawValue
+            ),
+            ActualRecord(
+                id: meetingID,
+                planID: nil,
+                title: "회의",
+                categoryID: "work",
+                startedAt: at(8 * 60 + 10),
+                endedAt: at(10 * 60 + 30),
+                source: .location,
+                behavior: WatchBehaviorKind.sitting.rawValue
+            ),
+            ActualRecord(
+                id: codingID,
+                planID: nil,
+                title: "코딩",
+                categoryID: "work",
+                startedAt: at(10 * 60 + 30),
+                endedAt: at(12 * 60),
+                source: .location,
+                behavior: WatchBehaviorKind.sitting.rawValue
+            ),
+        ]
+        // 세 기록이 하나로 합쳐진 구간 — sourceIDs에 셋이 모두 들어 있다.
+        let segment = MapHomeTimeRailSegment(
+            startMinute: 7 * 60,
+            endMinute: 12 * 60,
+            categoryID: "work",
+            title: "업무",
+            sourceIDs: [mailID, meetingID, codingID]
+        )
+
+        let details = MapHomeSectionDetailEngine.details(
+            actuals: records,
+            travel: [],
+            segment: segment,
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: at(13 * 60)
+        )
+
+        XCTAssertEqual(details.map(\.id), [mailID, meetingID, codingID])
+        XCTAssertEqual(details.map(\.startMinute), [420, 490, 630])
+        XCTAssertEqual(details.map(\.endMinute), [490, 630, 720])
+        XCTAssertEqual(details.map(\.title), ["메일", "회의", "코딩"])
+
+        // 한 기록짜리 구간은 그 기록이 곧 구간이므로 여전히 상세에서 빠진다.
+        let single = MapHomeTimeRailSegment(
+            startMinute: 7 * 60,
+            endMinute: 8 * 60 + 10,
+            categoryID: "work",
+            title: "메일",
+            sourceIDs: [mailID]
+        )
+        XCTAssertTrue(
+            MapHomeSectionDetailEngine.details(
+                actuals: [records[0]],
+                travel: [],
+                segment: single,
+                dayStart: dayStart,
+                dayEnd: dayStart.addingTimeInterval(86_400),
+                asOf: at(13 * 60)
+            ).isEmpty
+        )
+    }
+
     func testSectionDetailsDeduplicateExactSourcesByPriorityWithoutMutatingInputs() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

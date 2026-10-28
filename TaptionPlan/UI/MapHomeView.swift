@@ -13199,9 +13199,9 @@ enum MapHomeSectionDetailEngine {
             to: dayStart
         ) else { return [] }
         let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
-        let majorSourceIDs = Set(segment.sourceIDs)
         var candidates = actuals.compactMap { actual -> Candidate? in
-            guard !majorSourceIDs.contains(actual.id),
+            // 한 기록짜리 구간은 그 기록이 곧 구간이라 상세에서 뺀다. 여러 기록을 합친 구간은 그 기록들이 상세활동이다.
+            guard !(segment.sourceIDs.count == 1 && segment.sourceIDs.contains(actual.id)),
                   let clipped = actual.span(asOf: asOf).intersection(with: segmentSpan),
                   clipped.start < dayEnd,
                   clipped.end > dayStart
@@ -13222,7 +13222,7 @@ enum MapHomeSectionDetailEngine {
             )
         }
         candidates.append(contentsOf: travel.compactMap { item -> Candidate? in
-            guard !majorSourceIDs.contains(item.id),
+            guard !(segment.sourceIDs.count == 1 && segment.sourceIDs.contains(item.id)),
                   let clipped = item.span.intersection(with: segmentSpan),
                   clipped.start < dayEnd,
                   clipped.end > dayStart
