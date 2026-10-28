@@ -2281,3 +2281,12 @@
 - 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 1분 35초, `build/validation/SBZ1028A01/zoom-uitest.xcresult`). 첨부 스크린샷으로 위치 확인 — 반나절 화면에서 "19:30" 눈금 아래에 겹치지 않고 붙는다.
 - `MapHomeView` 22,072 → **22,071줄**(예산 이내), 구조 게이트·경계 검사 통과. 커밋 `5965899`.
 - 환경: 기존 시뮬레이터 UDID가 사라져 `BOKKI-iPhone11`(iPhone 11 + iOS 27.0, `90B1EB80`)을 새로 만들었다. **iOS 27.1 런타임은 기기 생성이 안 된다**("Incompatible device").
+
+## SBZ1028A02 · 확대·축소를 세로로, 사이드바 바깥 왼쪽으로 (2026-10-28)
+- 지시: "＋가 위, −가 아래로 사이드바 왼쪽 하단에. 사이드바와 겹치면 안 됨. 지금 겹침".
+- 전: `HStack`(가로) + `x: railOrigin + 19, y: height - 13` → 단추가 시간 눈금(19:30·24)과 레일 바닥을 덮었다.
+- 후: `VStack(spacing: 2)`(＋ 위, − 아래) + `x: width - timeSidebarInteractionWidth - 11`(= 사이드바 왼쪽 끝에서 2pt 바깥, 단추 반지름 9), `y: height - 23`(바닥에서 4pt, 스택 높이 38).
+- **왜 사이드바 안쪽에 못 넣나**: 사이드바 폭 123 = 손잡이 레인 69 + 시간 레일 44 + 바깥 여백 10. 시간 레일 폭 44 안에는 눈금 글자 열(32)이 366~398을 다 쓰고 남는 폭이 좌우 6pt뿐이다. 손잡이 레인 69는 손잡이 노브(44, 레일 왼쪽에 붙음)와 **날씨 띠(62, 레인 왼쪽 4pt부터)** 가 번갈아 쓴다. 그래서 겹치지 않는 자리는 사이드바 왼쪽 끝 바깥 하나뿐이다.
+- 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 3분 29초, `build/validation/SBZ1028A02/zoom.xcresult`). 첨부 스크린샷 `after-half-day.png` · `after-full-day.png`(확대본 `*-zoom.png`) — 하루 전체에서 −가 흐리게(비활성), 반나절에서 둘 다 활성, 눈금·캡슐과 겹침 없음.
+- `MapHomeView` 22,071 → **22,070줄**. 구조 지표·엔진 경계 검사 통과. 커밋 `9e0bfad`.
+- 더 바짝 붙이려면: 시간선 높이를 46pt 줄이고 그 아래에 단추를 넣는 방법이 있다(레일이 짧아짐). 지금은 그렇게 하지 않았다.
