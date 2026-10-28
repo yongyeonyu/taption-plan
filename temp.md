@@ -2365,4 +2365,9 @@
   3. **조건부 재적재** — `applyPendingWidgetCommands(repositoryAlreadyLoaded: false)`(3408·2545)가 위젯 명령이 남아 있으면 한 번 더 부른다.
 - 고침: `scripts/analyze-diagnostics.py`에 `print_loads` 절 추가 — 세션별 적재 횟수와 `bootstrap_local_snapshot` 시작 횟수를 함께 읽어 ①②③/정상으로 가른다.
 - 검증: 합성 로그 네 세션(적재/부트스트랩 2/2 · 1/0 · 2/1 · 1/1)으로 네 갈래 판정 확인. 구조 지표·엔진 경계 검사 통과. 기기 로그가 아직 없어 실제 판정은 대기.
-- 남은 것: 빌드 246 기기 로그로 판정 → ②면 모델 중복 생성, ①이면 위젯 로그 분리.
+- 판정(빌드 245 기기 로그, iPhone 18 Pro Max, 오늘 13:15 패키지 `TaptionLogs-20261028-131555-D006A8D5`): **세션당 3회는 고정값이 아니었다.** 세션 3개 중 하나(`92A870BA`, 11:52~13:15)에 적재 **34회**가 찍혔고, 그중 **26회가 `section_edit_save`와 1:1로 짝**을 이룬다(11:53:48~11:53:57 9초에 26회). 나머지는 시작 2회(11:52:17)와 주기 갱신 6회(11:54·11:56·12:56·13:06·13:10·13:15).
+- **진짜 원인**: `saveActivitySectionEdit`이 저장 뒤 `repository.load()`(AppModel 2092)로 되읽어 확인하는데, 이 되읽기가 **28,000행 전체**를 다시 읽는다(읽기 126ms + 해독 67ms ≈ 200ms). 구간 손잡이를 드래그하면 단계마다 저장→전체 재적재가 붙어 5회/초로 저장소를 포화시킨다. 세션 전체 적재 35회·**9.6초**(평균 276ms, 읽기 평균 200ms).
+- 위젯·모델 중복 가설은 이 로그에서 **배제**: 세션마다 `bootstrap_local_snapshot` 1회, 위젯 세션(다른 `session_id`에 부트스트랩 없음)은 없었다.
+- 245부터 미확인 5항목도 같은 로그로 판정: ①`timeline_window` 있음(20건, 창·선택·손잡이 값 정상) ②`background_refresh` **1회·실패**(09:31:47~09:32:05, 17,490ms, 성공 0%) ③`background_refresh_yielded` **0회** ④`bootstrap_preparation_pass` **1회**(반복 없음) ⑤겹친 회차 `bootstrap_preparation` **1,406ms**(245의 4,657ms 아님).
+- 지하철 `playback_focus_sample.metrics.stickman_offset_px`는 이 로그가 245라 확인 불가(246 필요).
+- 남은 것: 구간 편집 되읽기를 좁은 조회로 바꿀지 결정. `TaptionStoreV2.records(kind:from:to:)`로 그 구간만 읽으면 전체 적재를 피할 수 있다.
