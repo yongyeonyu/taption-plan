@@ -236,13 +236,29 @@ if [[ "$WITH_TESTS" -eq 1 ]]; then
   # CODE_SIGNING_ALLOWED=NO로 돌리면 서명이 필요한 시험(StoreKit 구매·백업 연결·
   # HealthKit 이력·GPS 로그)이 한꺼번에 실패한다(2026-10-28). 시뮬레이터는
   # 서명 없이도 빌드되므로 이 플래그를 빼고 돌린다.
+  #
+  # 병렬 시험은 끈다. xcodebuild는 병렬 워커마다 시뮬레이터를 통째로 복제해
+  # ~/Library/Developer/XCTestDevices에 남기고 지우지 않는다. 2026-10-28에 그
+  # 복제본이 97개·134GB까지 쌓여 디스크가 차고, 설치 단계가
+  # "No space left on device"로 죽었다(시험 실패로 보였지만 코드 문제가 아니었다).
   xcodebuild test -project "$PROJECT" -scheme "$SCHEME" \
     -destination "platform=iOS Simulator,id=${TEST_SIMULATOR_UDID}" \
     -skipPackagePluginValidation \
+    -parallel-testing-enabled NO \
+    -maximum-concurrent-test-simulator-destinations 1 \
     COMPILER_INDEX_STORE_ENABLE=NO \
     OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -disable-sandbox' \
     -only-testing:TaptionPlanTests \
-    > "${LOG_DIR}/tests.log" 2>&1 || fail "단위 테스트가 실패했습니다: ${LOG_DIR}/tests.log"
+    > "${LOG_DIR}/tests.log" 2>&1 || {
+      # 디스크가 찬 것과 시험이 깨진 것은 대응이 전혀 다르다. 로그를 읽는
+      # 사람이 헛짚지 않도록 원인을 갈라서 알린다.
+      if grep -qa "No space left on device" "${LOG_DIR}/tests.log"; then
+        fail "시뮬레이터 디스크가 가득 찼습니다(시험 실패 아님): ${LOG_DIR}/tests.log
+  정리: rm -rf ~/Library/Developer/XCTestDevices/*
+  현재 크기: $(du -sh ~/Library/Developer/XCTestDevices 2>/dev/null | cut -f1)"
+      fi
+      fail "단위 테스트가 실패했습니다: ${LOG_DIR}/tests.log"
+    }
   printf '  단위 테스트 통과\n'
 else
   printf '  --with-tests 없음: 생략(아카이브 컴파일로 빌드만 확인)\n'
