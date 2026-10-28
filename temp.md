@@ -2314,3 +2314,13 @@
   2. **경계에서 잘린다** — 상세는 대분류 구간에 클립되므로 두 구간에 걸친 활동은 잘린 채 한 번만 남는다(하루 전체 목록 `allDaySectionDetails`는 id로 중복 제거).
   3. **분 단위 반올림** — `clippedMinutes`가 시작은 내림, 끝은 올림이라 1분씩 늘어나 이웃 상세와 겹쳐 보인다.
 - 대표가 본 증상(시간이 어긋남/종류가 틀림/빠짐/겹침)을 확인해야 어느 쪽을 고칠지 정할 수 있어 질문으로 남겼다.
+
+## SBZ1028A05 · 확대·축소 알약을 가로로, 사이드바 폭·모서리에 맞춤 (2026-10-28)
+- 지시: "사이드바 아래에 + - 알약을 가로로 배치하고 폭은 사이드바 폭하고 R값에 맞춰".
+- 사이드바 패널 실측: `MapHomeTimeSidebar` 마스크가 `RoundedRectangle(cornerRadius: 22, style: .continuous).frame(width: railWidth)`이고 `Layout.timeRailWidth = 44` → **폭 44 · 모서리 22**(= 폭의 절반이라 양 끝이 반원).
+- 바꾼 것: `VStack` → `HStack`(＋ 왼쪽, − 오른쪽), 단추 폭을 `Layout.timeRailWidth / 2`(= 22)로 잡아 **알약 폭이 44로 사이드바와 정확히 같아지게** 했다. 높이는 22라 R 22는 반지름 11로 클램프되므로 `Capsule()`이 곧 "R = 폭의 절반"인 같은 모양이다. 가운데 선은 `12×0.6` → `0.6×12`로 세웠다.
+- 자리: `zoomReserve` 52 → **32**(알약 높이 22 + 위아래 5pt), `y: height - 16`(중심), `x: width - inset - timeRailWidth / 2`(레일 중앙).
+- 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 3분 2초, `build/validation/SBZ1028A05/zoom.xcresult`). 스크린샷 `after-half-day.png` · `after-full-day.png`(+`bottom-*.png` 확대).
+- **픽셀 실측으로 확인**(2배 스크린샷 828×1792): 알약 x 720~807px = **360~404pt(폭 44.0)**, 레일과 좌우 끝이 정확히 일치. 레일 밑변 784pt(= 높이 816 - 32), 알약 790~810pt → 위 6pt·아래 16pt 여백, **겹침 없음**. 하루 전체에서 −는 흐리게(비활성), 반나절에서 둘 다 활성.
+- `MapHomeView` **22,072줄 그대로**(예산 22,072, 여유 0). 구조 지표·엔진 경계 검사 통과. 커밋 `f95ff2a`.
+- 환경: `~/Library/Developer/XCTestDevices`에 시뮬레이터 복제본 96개·136GB가 다시 쌓여 있어 지우고 시험했다(디스크 51GB 확보).
