@@ -4560,6 +4560,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 인자를 넣고 **4회 연속 통과** — 28.9초 / 34.1초 / 29.9초 / 85.9초(`build/validation/UIT1028A01/hud.xcresult`·`hud-2`·`hud-3`·`hud-final`). 마지막 회차가 85.9초였는데도 통과했다.
 - **인자를 빼면 같은 자리에서 다시 실패한다** — `hud-noflag.log` 532행 "Failed to tap 「멈춤」: No matches found"(27.7초). 인자가 실제로 앱에 닿아 배속을 늦춘다는 증거다.
 - 배속 잠금: `TimeScaleTests.testMapHomeDayPlaybackMapsTwentyFourSecondsToTwentyFourHours`에 `rateScale == 1`·`stationaryMinutesPerSecond == 120`·`movingMinutesPerSecond == 2.5`를 더했다(통과). 인자 없이 빌드된 앱이 늦은 배속으로 나가는 일을 막는다.
+- **화면 시험 전체가 20/20 통과** — `build/validation/UIT1028A01/ui-all.xcresult`(9분 25초). `LCH1027A08`에서 실패했던 그 시험도 들어 있다.
 - 구조 게이트·엔진 경계 통과.
 
 ### 4. 확인하지 못한 것
