@@ -2324,3 +2324,12 @@
 - **픽셀 실측으로 확인**(2배 스크린샷 828×1792): 알약 x 720~807px = **360~404pt(폭 44.0)**, 레일과 좌우 끝이 정확히 일치. 레일 밑변 784pt(= 높이 816 - 32), 알약 790~810pt → 위 6pt·아래 16pt 여백, **겹침 없음**. 하루 전체에서 −는 흐리게(비활성), 반나절에서 둘 다 활성.
 - `MapHomeView` **22,072줄 그대로**(예산 22,072, 여유 0). 구조 지표·엔진 경계 검사 통과. 커밋 `f95ff2a`.
 - 환경: `~/Library/Developer/XCTestDevices`에 시뮬레이터 복제본 96개·136GB가 다시 쌓여 있어 지우고 시험했다(디스크 51GB 확보).
+
+## DET1028A01 · 합쳐진 대분류 구간이 자기 기록을 상세활동으로 남긴다 (2026-10-28)
+- 지시: "1번 고쳐" — 앞서 점검한 상세활동 결함 셋 중 ①(병합 구간이 자기 기록을 전부 숨김).
+- **원인**: `MapHomeSectionDetailEngine.details`가 `majorSourceIDs = Set(segment.sourceIDs)`를 만들어 `guard !majorSourceIDs.contains(...)`로 **구간의 원본 기록을 전부** 상세에서 뺐다. 기록 하나짜리 구간에서는 그 기록이 곧 구간이라 맞는 규칙이지만, 업무 세 건이 하나로 합쳐진 구간(`SegmentAccumulator.append`가 `sourceIDs.formUnion`)에서는 셋 다 빠져 상세 목록이 통째로 비었다 → 클립 편집기 하단 줄·구간 편집 시트가 빈 채로 보였다.
+- **고침**: 조건을 "한 기록짜리 구간일 때만 자기 자신을 뺀다"로 좁혔다. `!(segment.sourceIDs.count == 1 && segment.sourceIDs.contains(id))` — actual·travel 두 갈래 모두. `majorSourceIDs` 집합은 없앴다(줄 수 유지).
+- 부수 효과: unconfirmed 구간(`sourceIDs` 비어 있음)은 예전에도 아무것도 빼지 않았고 지금도 같다. 기록이 하나뿐인 구간은 그대로 빈 목록이다.
+- 검증: 새 시험 `testSectionDetailsKeepEverySourceOfAMergedSegment`(합쳐진 세 기록의 id·시작·끝·제목, 한 기록짜리 구간은 여전히 빈 목록) + 기존 상세 시험 3건 → 4/4(`build/validation/DET1028A01/detail.xcresult`). 단위 전체 **1,650건 중 1,648 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A02/unit.xcresult`, 3분 52초).
+- `MapHomeView` **22,072줄 유지**(예산 여유 0), 구조 지표·엔진 경계 검사 통과. 커밋 `de3fbc8`.
+- 남은 것(②③): ②구간 경계에 걸친 기록이 잘려 한 번만 남음(`allDaySectionDetails`가 id로 중복 제거) ③`clippedMinutes`가 시작 내림·끝 올림이라 최대 1분 부풀어 이웃과 겹침.
