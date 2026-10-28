@@ -7852,7 +7852,7 @@ struct MapHomeView: View {
     private var currentTimeRail: some View {
         GeometryReader { proxy in
             // 확대·축소 단추가 들어갈 바닥 자리. 시간선·날씨 띠를 이만큼 줄여 아래를 비운다.
-            let zoomReserve = min(52, proxy.size.height / 3)
+            let zoomReserve = min(32, proxy.size.height / 3)
             let railHeight = MapHomeOverlayLayoutMath.timeSidebarHeight(
                 availableHeight: proxy.size.height - zoomReserve
             )
@@ -7979,11 +7979,11 @@ struct MapHomeView: View {
                             isUnconfirmedReviewPresented = true
                         }
                     )
-                    // 확대·축소는 시간선 아래 비워 둔 자리에 알약 하나로 붙인다(＋ 위, − 아래, 가운데 선).
+                    // 확대·축소는 시간선 아래 비워 둔 자리에 사이드바와 같은 폭·모서리의 알약으로 눕힌다.
                     timelineZoomControls
                         .position(
-                            x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth + 22,
-                            y: proxy.size.height - 26
+                            x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth / 2,
+                            y: proxy.size.height - 16
                         )
                     }
 
@@ -8283,13 +8283,13 @@ struct MapHomeView: View {
     }
 
     private var timelineZoomControls: some View {
-        VStack(spacing: 0) {
+        HStack(spacing: 0) {
             timelineZoomButton(systemImage: "plus", direction: 1)
             timelineZoomButton(systemImage: "minus", direction: -1)
         }
         .background(Capsule().fill(Color.tpSurface.opacity(0.94)))
         .overlay(Capsule().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
-        .overlay(Rectangle().fill(Color.tpLine.opacity(0.45)).frame(width: 12, height: 0.6))
+        .overlay(Rectangle().fill(Color.tpLine.opacity(0.45)).frame(width: 0.6, height: 12))
     }
 
     private func timelineZoomButton(systemImage: String, direction: Int) -> some View {
@@ -8303,7 +8303,7 @@ struct MapHomeView: View {
             Image(systemName: systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                 .foregroundStyle(enabled ? Color.tpInk : Color.tpSecondary.opacity(0.4))
-                .frame(width: 22, height: 22)
+                .frame(width: Layout.timeRailWidth / 2, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
