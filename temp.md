@@ -2333,3 +2333,11 @@
 - 검증: 새 시험 `testSectionDetailsKeepEverySourceOfAMergedSegment`(합쳐진 세 기록의 id·시작·끝·제목, 한 기록짜리 구간은 여전히 빈 목록) + 기존 상세 시험 3건 → 4/4(`build/validation/DET1028A01/detail.xcresult`). 단위 전체 **1,650건 중 1,648 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A02/unit.xcresult`, 3분 52초).
 - `MapHomeView` **22,072줄 유지**(예산 여유 0), 구조 지표·엔진 경계 검사 통과. 커밋 `de3fbc8`.
 - 남은 것(②③): ②구간 경계에 걸친 기록이 잘려 한 번만 남음(`allDaySectionDetails`가 id로 중복 제거) ③`clippedMinutes`가 시작 내림·끝 올림이라 최대 1분 부풀어 이웃과 겹침.
+
+## DET1028A02 · 상세활동 ②경계 잘림 · ③1분 겹침 (2026-10-28)
+- 지시: "둘까지 정리" — DET1028A01에서 남긴 결함 ②③.
+- **② 경계에서 잘림**: `allDaySectionDetails`가 `timeRailSegments`를 돌며 구간마다 잘라 만든 목록을 id로 중복 제거해 합쳤다. 그래서 09:50–10:20 기록은 10:00 경계에서 잘린 앞토막(09:50–10:00)만 남고 뒤 20분이 사라졌다. → 엔진에 `dayDetails(actuals:travel:dayStart:dayEnd:asOf:)`를 두고 **하루 범위로 한 번만** 만든다. 구간별 `details(...)`는 구간 편집 시트가 그 구간 안에 그리는 용도라 그대로 클립한다.
+- **③ 1분 겹침**: `clippedMinutes`가 시작 `.down`·끝 `.up`이라 최대 1분씩 부풀렸다. 09:45:20에 끝나고 09:45:20에 시작하는 두 기록이 A 09:45–09:46 / B 09:45–… 로 겹쳤다. → 양끝 `.rounded()`(반올림). 같은 시각은 같은 분이 되므로 **맞닿은 경계는 그대로 맞닿고**, 진짜 겹치는 기록은 예전처럼 겹친다(`testSectionDetailsKeepsOverlappingDetailsWithDifferentKeys` 유지).
+- **구조**: 엔진과 `MapHomeSectionDetail`을 `TaptionPlan/UI/MapHomeSectionDetailEngine.swift`(231줄)로 옮겼다. `MapHomeView`가 22,072/22,072로 한 줄도 못 늘리는 상태였기 때문 — 이 화면의 다음 변경도 이 파일에서 한다. `MapHomeView` **22,072 → 21,895줄**(여유 177). pbxproj에 `A100000000000000000000F4`/`F100000000000000000000F4` 4곳 등록.
+- 검증: 새 시험 2건 `testDayDetailsKeepARecordThatCrossesASectionBoundary`(구간 목록은 600에서 잘리고, 하루 목록은 590–620 그대로), `testSectionDetailsDoNotInflateAdjacentRecords`(540–585 / 585–600, 경계가 정확히 맞닿음) + 기존 4건 → 6/6(`build/validation/DET1028A03/detail.xcresult`). 단위 전체 **1,652건 중 1,650 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A04/unit.xcresult`, 3분 49초). 화면: 클립 롤 편집·덮기·확대 단추 3건 통과(`DET1028A05/ui.xcresult`, `DET1028A06/ui.xcresult`). 구조 지표·경계 검사 통과. 커밋 `4a1cc22`.
+- 주의: `-only-testing`의 클래스 이름을 틀리면 0건 실행으로 초록이 된다. `testOverwriteAllChangesEveryClipAtOnce`는 `TaptionPlanClipRollUITests`가 아니라 **`TaptionPlanOverwriteUITests`**에 있다.
