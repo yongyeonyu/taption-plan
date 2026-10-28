@@ -4567,3 +4567,41 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - 05:00 이전에는 여전히 건너뛴다(그때 구간이 17초 미만이다). 그 시간대의 「멈춤」 동작은 시험으로 덮이지 않는다.
 - 실기기에서 재생 배속이 그대로인지는 빌드 245 로그로 확인할 수 없다(배속을 남기지 않는다). 인자 없는 앱이 1을 쓰는 것은 단위 시험이 잠근다.
+
+## LCH1028A01 · 시작 겹침 — 배경 갱신이 화면에 자리를 내준다 (2026-10-28)
+
+- 요청 ID: `LCH1028A01`
+- 무엇을: 콜드 스타트에서 BGAppRefresh가 앱을 깨우고 곧바로 사용자가 앱을 열면, 배경 갱신이 화면 쪽과 같은 일을 나눠 하며 시작을 느리게 만들던 것을 고쳤다.
+- 계기: `LCH1027A06`에서 "`background_refresh`가 `bootstrap_local_snapshot`과 같은 초에 시작하면 `bootstrapped`가 554ms → 1,975ms"로 남긴 항목.
+
+### 1. 무엇이 문제였나 (실기기 로그)
+
+- 10-27 23:24 세션(`B5B0FDD3`, 빌드 244)에서 `background_refresh`가 `bootstrap_local_snapshot`과 **같은 초**에 시작했다. 같은 앱·같은 빌드의 06:14 세션(`8FC77E81`)과 비교하면:
+
+| 항목 | 겹치지 않은 회차 | 겹친 회차 |
+|---|---|---|
+| `bootstrap_local_snapshot` | 517ms | 1,946ms |
+| `repository_local_load` 읽기 / 해독 | 428 / 85ms | 765 / **1,066ms** |
+| `bootstrap_preparation` | 46ms | **4,657ms** |
+| 첫 화면(`initial_launch_ready`) | 1,158ms | 3,142ms |
+
+- 데이터가 늘어서가 아니다. 행 수는 26,726 → 26,826으로 100행 차이다. **해독(decode)만 12.5배**가 됐다 — CPU를 나눠 쓴 흔적이다.
+
+### 2. 고친 것
+
+- `performBackgroundRefresh`가 `bootstrap()` 뒤에 장면이 떠 있는지 본다. 떠 있으면 `background_refresh_yielded`를 남기고 **성공으로 끝낸다**.
+- 근거: 화면 쪽(`sceneBecameActive` → `scheduleForegroundPreparation`·`scheduleForegroundRefresh`·`updateForegroundLiveLocationTracking`)이 같은 일을 곧바로 한다. 배경 갱신이 또 하면 권한 갱신·센서 추적 재개·통합 갱신·저장을 두 번 하고, 특히 `waitForPersistedReading`은 `samplingWindow + 2`초까지 기다린다. 로그에서 그 회차의 배경 갱신은 6,819ms 만에 취소됐는데, 그 시간이 정확히 `bootstrap_preparation` 4,657ms와 겹쳤다.
+- 계측 추가: `bootstrap_preparation_pass`(준비가 몇 번 돌았는지). 4,657ms가 "도중에 개정이 올라와 여러 번 돌아서"인지 "CPU가 밀려서"인지 다음 로그로 가른다.
+- `AppModel` 클래스 줄 예산(13,552)이 1줄 남아 있어 주석과 `defer`의 `fields`를 압축해 자리를 만들었다. 클래스 **13,551줄 유지**.
+
+### 3. 확인
+
+- 새 시험 `testBackgroundRefreshYieldsWhileTheSceneIsActive` — 화면이 없을 때는 저장까지 가고(대조군, `saveCount > 0`), `sceneBecameActive()` 뒤에는 저장 횟수가 늘지 않는다. `CountingPlanRepository` 스텁으로 저장 횟수를 센다.
+- 단위 전체 `build/validation/LCH1028A01/unit-all.xcresult` — **1,648건 중 1,646 통과 · 실패 0 · 건너뜀 2**(4분 35초).
+- `scripts/analyze-diagnostics.py`의 시작 절에 적재·준비 시간과 `준비 반복` 횟수, `배경 갱신이 화면에 자리를 내준 횟수`를 더했다.
+- 구조 게이트·엔진 경계 통과.
+
+### 4. 확인하지 못한 것
+
+- **실제로 얼마나 빨라지는지는 빌드 245 기기 로그로만 확인된다.** `background_refresh_yielded`가 찍히고, 겹친 회차의 `bootstrap_preparation`이 46ms대에 가까워지는지 본다.
+- 해독 12.5배 지연 자체는 앱 코드의 동시성만으로 설명되지 않는다. BGAppRefresh가 앱을 백그라운드로 깨울 때 iOS가 프로세스 QoS를 낮추는 몫이 섞여 있을 수 있는데, 그건 앱에서 잴 수 없다. `bootstrap_preparation_pass`가 1회로 나오면 남은 지연은 "밀린 것"이라는 뜻이다.

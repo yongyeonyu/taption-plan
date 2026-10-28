@@ -76,6 +76,25 @@ def print_launch(events):
         print(f"  저장소 {m.get('rows', '?')}행 읽기 {m.get('read_ms', 0):.1f}ms "
               f"해독 {m.get('decode_ms', 0):.1f}ms 합 {m.get('total_ms', 0):.1f}ms — {f.get('kinds', '')}")
 
+    # 그 실행에서 적재·준비가 얼마나 걸렸고, 준비가 몇 번 돌았는지.
+    # 배경 갱신과 겹치면 같은 준비가 여러 번 돌거나 몇 배로 느려진다(2026-10-28).
+    session = events[starts[-1]].get("session_id")
+    items = [e for e in events if e.get("session_id") == session]
+    finished = {e.get("fields", {}).get("operation_id"): e for e in items
+                if e["event"] == "operation_finished"}
+    for event in items:
+        if event["event"] != "operation_started":
+            continue
+        name = event.get("fields", {}).get("operation")
+        if name not in ("bootstrap_local_snapshot", "bootstrap_preparation",
+                        "background_refresh"):
+            continue
+        done = finished.get(event.get("fields", {}).get("operation_id"))
+        fields = done.get("fields", {}) if done else {}
+        print(f"  {name:24s} {fields.get('duration_ms', '미완료'):>9}ms {fields.get('outcome', '')}")
+    passes = sum(1 for e in items if e["event"] == "bootstrap_preparation_pass")
+    print(f"  {'준비 반복':24s} {passes:9d}회")
+
 
 def report(header, events):
     print(f"이벤트 {len(events)}개, 빌드 {sorted({e.get('build') for e in events})}, "
@@ -100,6 +119,8 @@ def report(header, events):
 
     print("\n시작(launch) — 마지막 실행의 게이트 순서")
     print_launch(events)
+    yielded = sum(1 for e in events if e["event"] == "background_refresh_yielded")
+    print(f"  배경 갱신이 화면에 자리를 내준 횟수 {yielded}회")
 
     print("\n튄 위치(map_route_readings_prepared의 largest_jump_*) — 큰 순서")
     jumps = [e for e in events if e["event"] == "map_route_readings_prepared" and "largest_jump_m" in e.get("fields", {})]

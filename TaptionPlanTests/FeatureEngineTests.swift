@@ -1052,6 +1052,52 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertNotNil(model.userFacingError)
     }
 
+    /// 화면이 떠 있는 동안에는 배경 갱신이 무거운 작업을 다시 하지 않는다.
+    ///
+    /// 콜드 스타트에서 BGAppRefresh가 앱을 깨우고 곧바로 사용자가 앱을 열면 두 경로가
+    /// 같은 저장소·센서·통합 갱신을 나눠 써 시작이 느려졌다(2026-10-28 실기기 로그:
+    /// `bootstrap_local_snapshot` 517 → 1,946ms, 첫 화면 1,158 → 3,142ms).
+    /// 화면 쪽이 같은 일을 곧바로 하므로 배경 갱신은 물러난다.
+    @MainActor
+    func testBackgroundRefreshYieldsWhileTheSceneIsActive() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let archive = try SensorReadingArchive(
+            fileURL: directory.appendingPathComponent("readings.jsonl")
+        )
+        let repository = CountingPlanRepository(snapshot: .empty)
+        let model = AppModel(
+            repository: repository,
+            sensorService: AppleSensorDataService(
+                archive: archive,
+                archivedReadingsLoader: { _ in [] }
+            ),
+            cloudSyncService: nil
+        )
+
+        // 대조군: 화면이 없을 때는 저장까지 간다(무거운 경로를 실제로 돈다).
+        let background = await model.performBackgroundRefresh(
+            wakeReason: .bgAppRefresh
+        )
+        XCTAssertTrue(background)
+        let savesWhileBackground = await repository.saveCount
+        XCTAssertGreaterThan(savesWhileBackground, 0, "배경에서는 저장까지 간다")
+
+        // 화면이 떠 있으면 같은 갱신을 다시 하지 않는다.
+        await model.sceneBecameActive()
+        let foreground = await model.performBackgroundRefresh(
+            wakeReason: .bgAppRefresh
+        )
+        XCTAssertTrue(foreground)
+        let savesAfterForeground = await repository.saveCount
+        XCTAssertEqual(
+            savesAfterForeground,
+            savesWhileBackground,
+            "화면이 떠 있는데 배경 갱신이 저장까지 갔다"
+        )
+    }
+
     @MainActor
     func testPersistenceCancellationDoesNotSurfaceAsSaveError() async throws {
         let day = makeDate(2026, 8, 12)
@@ -30592,6 +30638,26 @@ private actor FailingPlanRepository: PlanDataRepository {
     }
 
     func save(_ snapshot: TaptionDataSnapshot) async throws {}
+
+    func deleteAll() async throws {}
+}
+
+/// 저장 횟수를 세는 저장소. 배경 갱신이 무거운 경로(저장까지)를 돌았는지 본다.
+private actor CountingPlanRepository: PlanDataRepository {
+    private let snapshot: TaptionDataSnapshot
+    private(set) var saveCount = 0
+
+    init(snapshot: TaptionDataSnapshot) {
+        self.snapshot = snapshot
+    }
+
+    func load() async throws -> TaptionDataSnapshot {
+        snapshot
+    }
+
+    func save(_ snapshot: TaptionDataSnapshot) async throws {
+        saveCount += 1
+    }
 
     func deleteAll() async throws {}
 }

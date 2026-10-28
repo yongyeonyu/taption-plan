@@ -2257,3 +2257,10 @@
 - 고침: `MapHomeDayPlaybackTestHooks.rateScale`(`-slowDayPlayback`일 때만 0.1, 없으면 1) → `stationaryMinutesPerSecond`에 곱함. `MapHomeView` 22,072줄 유지(새 파일 1개 + 상수 1줄 수정).
 - 검증: 인자 넣고 4회 연속 통과(28.9/34.1/29.9/85.9초), **인자 빼면 같은 자리에서 실패**(`hud-noflag.log`). `TimeScaleTests`에 배속 기본값 잠금 추가. 화면 시험 전체 20/20 통과(`ui-all.xcresult`, 9분 25초).
 - 남은 것: 05:00 이전은 여전히 건너뛴다.
+
+## LCH1028A01 · 시작 겹침 (2026-10-28)
+- 겹친 회차(B5B0FDD3, 빌드 244): 적재 517→1,946ms, **해독 85→1,066ms**, 준비 46→4,657ms, 첫 화면 1,158→3,142ms. 행 수는 100행 차이라 데이터 탓이 아니다.
+- 고침: `performBackgroundRefresh`가 `bootstrap()` 뒤 `isSceneActive`면 `background_refresh_yielded` 남기고 성공 종료. 화면 쪽이 같은 일을 곧바로 한다.
+- 계측: `bootstrap_preparation_pass`(준비 반복 횟수), 분석기 시작 절에 적재·준비 시간과 반복·양보 횟수.
+- 검증: `testBackgroundRefreshYieldsWhileTheSceneIsActive`(대조군 포함) 통과. 단위 1,648건 중 1,646 통과·실패 0·건너뜀 2. AppModel 클래스 13,551줄 유지.
+- 남은 것: 실제 개선 폭은 빌드 245 로그로만 확인된다. 해독 12.5배는 iOS 백그라운드 기동 QoS 몫이 섞였을 수 있다.

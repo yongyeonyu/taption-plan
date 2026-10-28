@@ -2974,6 +2974,8 @@ final class AppModel {
             do {
                 while true {
                     let revision = snapshotRevision
+                    // 준비가 몇 번 돌았는지 남긴다. 도중에 개정이 올라오면 처음부터 다시 한다.
+                    logger.record("bootstrap_preparation_pass", fields: ["revision": String(revision)])
                     source = try await Self.preparedLoadedSnapshotInBackground(
                         source,
                         lockingAutomaticClassifications: true
@@ -3378,7 +3380,7 @@ final class AppModel {
     }
 
     /// Refreshes device-backed records and republishes the shared widget
-    /// payload when iOS wakes the app without presenting its UI.
+    /// payload when iOS wakes the app without presenting its UI. 화면이 떠 있으면 물러난다.
     func performBackgroundRefresh(
         wakeReason: SensorWakeReason = .bgAppRefresh
     ) async -> Bool {
@@ -3387,24 +3389,22 @@ final class AppModel {
             "background_refresh",
             fields: ["wake_reason": wakeReason.rawValue]
         )
-        // 배너는 앞선 실패가 남아 있거나 적재가 회복되며 지워지기도 한다.
-        // 이번 작업이 오류를 새로 세웠는지만 성패로 본다.
+        // 배너는 앞선 실패나 적재 회복으로 지워지기도 한다. 이번 작업이 오류를 새웠는지만 성패로 본다.
         let errorAtStart = userFacingError
         var succeeded = false
         defer {
             logger.finishOperation(
                 operation,
                 outcome: Task.isCancelled ? "cancelled" : (succeeded ? "success" : "failure"),
-                fields: [
-                    "wake_reason": wakeReason.rawValue,
-                    "sensor_collecting": String(isSensorCollecting),
-                ]
+                fields: ["wake_reason": wakeReason.rawValue, "sensor_collecting": String(isSensorCollecting)]
             )
         }
         Self.integrationLogger.notice("Background model refresh started")
         receiveSensorWake(wakeReason)
         await bootstrap()
         await waitForBootstrapPreparation()
+        // 화면이 떠 있으면 배경 갱신은 물러난다. 같은 일을 화면 쪽이 곧바로 하므로, 여기서 또 하면 저장소와 CPU를 나눠 써 시작이 느려진다(2026-10-28 로그).
+        if isSceneActive { logger.record("background_refresh_yielded"); succeeded = true; return succeeded }
         await applyPendingWidgetCommands(repositoryAlreadyLoaded: false)
         await refreshPermissionStates()
         let samplingWindow = settings.sensorCollectionProfile.samplingWindowDuration
