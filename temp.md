@@ -2290,3 +2290,12 @@
 - 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 3분 29초, `build/validation/SBZ1028A02/zoom.xcresult`). 첨부 스크린샷 `after-half-day.png` · `after-full-day.png`(확대본 `*-zoom.png`) — 하루 전체에서 −가 흐리게(비활성), 반나절에서 둘 다 활성, 눈금·캡슐과 겹침 없음.
 - `MapHomeView` 22,071 → **22,070줄**. 구조 지표·엔진 경계 검사 통과. 커밋 `9e0bfad`.
 - 더 바짝 붙이려면: 시간선 높이를 46pt 줄이고 그 아래에 단추를 넣는 방법이 있다(레일이 짧아짐). 지금은 그렇게 하지 않았다.
+
+## SBZ1028A04 · 확대·축소를 알약 하나로, 사이드바 아래에 (2026-10-28)
+- 지시: "사이드바 아래에 + - 알약으로 합친 다음 가운데 선 긋고 추가".
+- 시간선 아래에 **52pt 자리**를 비우고(`zoomReserve`), 그 안에 **22×44 알약**을 세로로 붙였다. ＋ 위, − 아래, 가운데에 12×0.6 선. 알약 왼쪽/오른쪽은 레일 캡슐(32) 안쪽에 맞춰 가운데 정렬(`x = 레일 왼쪽 + 22`).
+- 단추는 각 22×22, 개별 원 배경을 걷어내고 알약이 배경·테두리를 맡는다(`Capsule` + `stroke` + 가운데 `Rectangle`).
+- **시간선 기준점 주의**: `timeRailTop = max(0, proxy.size.height - railHeight)`은 지금까지 항상 0이었다(레일 높이 = 프레임 높이). 높이를 줄이자 52가 되어 선택 카드 캡슐이 아래로 밀리므로 `- zoomReserve`를 넣어 0으로 되돌렸다. 블록도 `.position(y: proxy.height - zoomReserve - railHeight/2)`로 올렸다.
+- 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 1분 29초, `build/validation/SBZ1028A04/zoom.xcresult`). 스크린샷 `after-half-day.png` · `after-full-day.png`(+`*-zoom.png`).
+- `MapHomeView` **22,072줄**(예산 22,072, 여유 0). 구조 지표·엔진 경계 검사 통과. 커밋 `1d41616`.
+- 줄 예산을 지키려고 `timelineZoomControls`의 `///` 주석을 걷어냈다(호출부 주석이 대신한다). 단추에서 원 배경 2줄을 빼고 알약 쪽에서 2줄을 더해 순증 0.
