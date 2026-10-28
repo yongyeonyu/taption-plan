@@ -3396,7 +3396,8 @@ final class AppModel {
             logger.finishOperation(
                 operation,
                 outcome: Task.isCancelled ? "cancelled" : (succeeded ? "success" : "failure"),
-                fields: ["wake_reason": wakeReason.rawValue, "sensor_collecting": String(isSensorCollecting)]
+                fields: ["wake_reason": wakeReason.rawValue, "sensor_collecting": String(isSensorCollecting),
+                         "user_error": userFacingError.map { String($0.prefix(80)) } ?? "none"]
             )
         }
         Self.integrationLogger.notice("Background model refresh started")
@@ -3416,6 +3417,7 @@ final class AppModel {
             // BG refresh tasks may be terminated as soon as this method
             // returns. Wait for the archive consumer to confirm one write,
             // rather than assuming the sampling window completed it.
+            let waitStartedAt = Date()
             let didPersist = await sensorService.waitForPersistedReading(
                 after: persistenceToken,
                 timeout: samplingWindow + 2
@@ -3436,6 +3438,10 @@ final class AppModel {
                         ),
                         "archive_error": sensorService
                             .lastPersistenceErrorDescription ?? "none",
+                        "wait_ms": String(
+                            Int(Date().timeIntervalSince(waitStartedAt) * 1_000)
+                        ),
+                        "window_s": String(Int(samplingWindow)),
                     ]
                 )
                 if !sensorService.isCollectionLive() {

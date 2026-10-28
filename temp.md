@@ -2379,3 +2379,13 @@
 - **검증 기준**: ①새 시험 `testExistingActualIDsFindsOnlySavedRecords`(저장된 id만·빈 요청은 0·지워진 행 제외) ②구간 편집 관련 기존 시험 4건(취소·동시 편집·부분 편집) 통과 ③`TaptionStoreRepositoryTests` 전체 통과 ④구조 지표·경계 검사 통과 ⑤기기 로그에서 `section_edit_save`당 `repository_local_load`가 사라지는지는 다음 빌드에서 확인.
 - 검증: 새 시험 `testExistingActualIDsFindsOnlySavedRecords` 포함 관련 19건 통과(`build/validation/RBK1028A01/unit.xcresult`, 2분 39초). 단위 전체 **1,653건 중 1,651 통과 · 실패 0 · 건너뜀 2**(`RBK1028A02/unit.xcresult`, 3분 18초). 앱 Debug 빌드 성공·경고 0. 구조 지표·경계 검사 통과(기준선 재잠금: `PlanRepository.swift` 1,366→1,374, 전체 161,418→161,434줄).
 - 남은 것: 다음 빌드 기기 로그에서 `section_edit_save`당 `repository_local_load`가 사라지고 저장 지연이 200ms→수 ms로 줄었는지 확인. 앱 그룹 루트 로그는 devicectl로 못 읽으므로 「로그 보내기」 패키지로 받는다.
+
+## BGR1028A01 · 배경 갱신 실패 이유를 로그에 남긴다 (2026-10-28)
+- 지시: "실패 파고들자" — 빌드 245 기기 로그에서 `background_refresh` **1회·실패**(09:31:47~09:32:05, 17,490ms, 성공 0%).
+- **확인한 것**: 그 회차의 error 등급 이벤트는 `operation_finished` 하나뿐이었다. `succeeded = userFacingError == errorAtStart || userFacingError == nil`이므로 실패는 "배너가 새로 섰다"는 뜻인데, 세운 곳이 기록을 남기지 않는 경로다. 오류 등급은 잡음 억제를 거치지 않으므로(`writeRecord`의 `level == .error` 갈래) 누락이 아니라 원래 안 남긴 것이다.
+- **용의자(코드 확인, 모두 무기록)**: ①`persist`의 알림 동기화 실패(AppModel 13623) ②`applyPendingWidgetCommands`의 위젯 명령 적용 실패(13153) ③`persistDeviceLocalSnapshot` 실패(14013) ④`applyWatchSensorSummary`의 워치 요약 미저장(7741). 저장 실패·HealthKit·화면시간·센서 타임라인·위젯 payload·클라우드 실패는 모두 error 기록이 있어 이번 로그에 없다.
+- **고침**: `background_refresh` 종료 기록에 `user_error`(앞 80자)를 넣어 어느 배너가 섰는지 남긴다. `sensor_background_sample_not_persisted`에 `wait_ms`·`window_s`를 넣어 대기 예산 소진 여부를 남긴다.
+- **검증 기준**: 배경 갱신 시험 3건 통과, 단위 전체 통과, Debug 빌드, 구조·경계 검사 통과.
+- 부수 확인: 17.5초 중 09:31:50~09:31:59 **9초가 표본 저장 대기**였고 끝내 저장되지 않았다(`stream_live=true`, `archive_error=none`). 저장 실패가 아니라 표본이 오지 않은 경우다.
+- 검증: 배경 갱신 시험 3건 통과(`build/validation/BGR1028A01/bg.xcresult`, 1분 35초). 단위 전체 **1,653건 중 1,651 통과 · 실패 0 · 건너뜀 2**(`BGR1028A02/unit.xcresult`, 3분 23초). 앱 Debug 빌드 성공·경고 0. 구조 지표·경계 검사 통과(기준선 재잠금: `AppModel` 14,278→14,284, 가장 큰 타입 13,551→13,557).
+- 남은 것: 다음 빌드 기기 로그의 `background_refresh` 종료 기록에서 `user_error`를 읽어 실제 배너를 확인하고, 그 경로에 error 기록을 넣는다. 표본 미저장은 `wait_ms`·`window_s`로 대기 예산 소진인지 판정한다.
