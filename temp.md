@@ -2273,3 +2273,11 @@
   - `TFB1028A04`: `** TEST FAILED **`인데 `Failing tests:` 목록이 비어 있었다. 시험 실패가 아니라 **디스크 고갈**이다 — `App installation failed … No space left on device`. `~/Library/Developer/XCTestDevices`에 xcodebuild가 남긴 시뮬레이터 복제본이 **97개·134GB**. 그래서 `release.sh` 시험 단계에 `-parallel-testing-enabled NO` + `-maximum-concurrent-test-simulator-destinations 1`을 넣고, 로그에 `No space left on device`가 보이면 「시험 실패 아님」으로 갈라 알리게 했다.
   - `TFB1028A05`: 아카이브(139MB)는 다 만들어졌는데 그 직후 `syntax error near unexpected token '('`(271행)로 죽었다. **돌고 있는 `release.sh`를 편집해서** bash가 읽던 바이트 위치가 어긋난 탓이다. 실행 중인 스크립트는 고치지 말 것. 아카이브는 남아 있어 `--reuse-archive`로 이어서 올렸다.
 - 남은 것(빌드 245 기기 로그가 오면): ①`timeline_window`가 실제로 찍히는지 ②`background_refresh`의 `outcome=success` 비율 ③`background_refresh_yielded` 등장 ④`bootstrap_preparation_pass` 반복 횟수 ⑤겹친 회차의 `bootstrap_preparation`이 4,657ms에서 46ms 쪽으로 내려왔는지.
+
+## SBZ1028A01 · 사이드바 확대·축소를 왼쪽 아래로 (2026-10-28)
+- 지시: "사이드바 확대 축소 아이콘 사이드바 왼쪽 하단으로 이동".
+- 전: `.position(x: 오른쪽 레일 중앙, y: 13)` → 후: `x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth + 19`(레일 왼쪽 끝에 단추 폭 38의 절반), `y: proxy.size.height - 13`.
+- **두 번 헛짚음**: ①`.position` 안에 `MapHomeTimeSidebarMath.weatherOriginX(...)` 호출을 넣었더니 **타입 검사 시간 초과**로 컴파일 실패(`MapHomeView.swift:7981`). 그 자리에서는 산술식으로 바꿔야 한다. ②첫 배치는 사이드바 영역의 왼쪽 끝(x=23)이라, 날씨 띠가 숨겨진 날에는 단추가 지도 위에 떠 보였다 → 레일 왼쪽 끝으로 붙였다.
+- 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 1분 35초, `build/validation/SBZ1028A01/zoom-uitest.xcresult`). 첨부 스크린샷으로 위치 확인 — 반나절 화면에서 "19:30" 눈금 아래에 겹치지 않고 붙는다.
+- `MapHomeView` 22,072 → **22,071줄**(예산 이내), 구조 게이트·경계 검사 통과. 커밋 `5965899`.
+- 환경: 기존 시뮬레이터 UDID가 사라져 `BOKKI-iPhone11`(iPhone 11 + iOS 27.0, `90B1EB80`)을 새로 만들었다. **iOS 27.1 런타임은 기기 생성이 안 된다**("Incompatible device").
