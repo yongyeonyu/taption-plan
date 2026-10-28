@@ -7977,13 +7977,12 @@ struct MapHomeView: View {
                             isUnconfirmedReviewPresented = true
                         }
                     )
-                    // 눈금 위쪽 여백(28pt)에 붙는 확대·축소 단추. 두 손가락 집기 말고도
-                    // 같은 단계(하루→12시간→6시간→3시간→1시간)를 밟을 수 있어야 한다.
+                    // 확대·축소는 사이드바 왼쪽 아래로 옮겼다(대표 지시). 위쪽 여백은 고른 시각 카드가 쓴다.
                     timelineZoomControls
                         .position(
                             x: proxy.size.width - Layout.horizontalInset
-                                - (Layout.timeRailWidth - 12) / 2,
-                            y: 13
+                                - Layout.timeRailWidth + 19,
+                            y: proxy.size.height - 13
                         )
                     }
 
@@ -8282,7 +8281,7 @@ struct MapHomeView: View {
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
 
-    /// 시간선 확대·축소. 지도 확대 단추와 헷갈리지 않게 눈금 위에 붙여 둔다.
+    /// 시간선 확대·축소. 지도 확대 단추와 헷갈리지 않게 눈금 아래 왼쪽에 붙여 둔다.
     private var timelineZoomControls: some View {
         HStack(spacing: 2) {
             timelineZoomButton(systemImage: "plus", direction: 1)
