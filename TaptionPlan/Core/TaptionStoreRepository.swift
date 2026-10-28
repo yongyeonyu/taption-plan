@@ -156,6 +156,14 @@ actor TaptionStoreRepository: PlanDataRepository {
         return snapshot
     }
 
+    /// 저장 직후 확인용. `actual` 종류만 읽어(수백 행) 2만 행대 전체 재적재를 피한다.
+    /// 지워지지 않은 행만 돌려주므로, 저장이 반영되지 않았으면 빈 결과가 나온다.
+    func existingActualIDs(_ ids: Set<UUID>) async throws -> Set<UUID> {
+        guard !ids.isEmpty else { return [] }
+        let stored = Set(try await store.records(kind: Kind.actual.rawValue).map(\.id))
+        return Set(ids.map { "\($0)" }.filter(stored.contains).compactMap(UUID.init(uuidString:)))
+    }
+
     /// 시작 적재 비용을 읽기와 해석으로 나눠 남긴다. 본문·좌표는 남기지 않고 행 수와 시간만 기록한다.
     private nonisolated static func recordLoad(
         rowCount: Int,

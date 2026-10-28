@@ -1,6 +1,6 @@
 {
   "files": 145,
-  "lines": 161418,
+  "lines": 161434,
   "buckets": {
     "<500": 89,
     "500-1000": 20,
@@ -20,7 +20,7 @@
     "state_properties": 556,
     "observable_types": 7,
     "view_types": 172,
-    "funcs": 5174,
+    "funcs": 5177,
     "singleton_reach": 303
   },
   "metrics": {
@@ -32,7 +32,7 @@
     "TaptionPlan/Core/AppleIntegrations.swift": 4831,
     "TaptionPlan/Core/FeatureModels.swift": 4661,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
-    "TaptionPlan/Core/PlanRepository.swift": 1366,
+    "TaptionPlan/Core/PlanRepository.swift": 1374,
     "TaptionPlan/Core/PlanningEngine.swift": 3134,
     "TaptionPlan/Core/RecordSummaryEngine.swift": 3287,
     "TaptionPlan/Core/RouteTimelineData.swift": 3406,

@@ -450,6 +450,13 @@ final class TaptionStoreRepositoryTests: XCTestCase {
                           categoryID: "activity")
     }
 
+    private func actual(_ title: String, at seconds: TimeInterval) -> ActualRecord {
+        let start = Date(timeIntervalSince1970: 1_792_300_000 + seconds)
+        return ActualRecord(planID: nil, title: title, categoryID: "work",
+                            startedAt: start, endedAt: start.addingTimeInterval(600),
+                            source: .manual)
+    }
+
     /// HealthKit 원본 표본은 같은 `records` 표에 살지만 스냅샷에는 담기지 않는다.
     /// 시작 적재가 그 행들을 읽지 않아야 하고(실기기에서 128만 행 중 126만 행이었다),
     /// 저장이 그 행들을 "사라진 행"으로 오해해 지우지도 않아야 한다.
@@ -503,6 +510,32 @@ final class TaptionStoreRepositoryTests: XCTestCase {
         XCTAssertEqual(Set(all.map(\.id)), ["a", "b"])
         let none = try await store.allRecordRows(kinds: [])
         XCTAssertEqual(none.count, 2, "빈 목록은 '전부'로 본다")
+    }
+
+    /// 저장 직후 확인은 방금 쓴 기록만 조회한다. 전체 스냅샷을 다시 읽지 않으면서
+    /// 반영 여부는 그대로 가려야 한다(2만 행 재적재가 구간 편집 저장마다 붙던 원인).
+    func testExistingActualIDsFindsOnlySavedRecords() async throws {
+        let store = try makeStore()
+        let repository = TaptionStoreRepository(store: store)
+        var snapshot = TaptionDataSnapshot.empty
+        snapshot.updatedAt = Date(timeIntervalSince1970: 1_792_300_000)
+        let kept = actual("업무", at: 0)
+        let removed = actual("메일", at: 600)
+        snapshot.actuals = [kept, removed]
+        snapshot.plans = [plan("계획", at: 0)]
+        try await repository.save(snapshot)
+
+        let found = try await repository.existingActualIDs([kept.id, removed.id, UUID()])
+        XCTAssertEqual(found, Set([kept.id, removed.id]))
+        let empty = try await repository.existingActualIDs(Set<UUID>())
+        XCTAssertEqual(empty, [], "빈 요청은 저장소를 읽지 않는다")
+
+        // 저장소에서 빠진 기록은 나오지 않는다 — 되읽기 확인이 실패를 그대로 잡는다.
+        snapshot.actuals = [kept]
+        snapshot.updatedAt = snapshot.updatedAt.addingTimeInterval(1)
+        try await repository.save(snapshot)
+        let afterDelete = try await repository.existingActualIDs([kept.id, removed.id])
+        XCTAssertEqual(afterDelete, Set([kept.id]))
     }
 
     func testSaveEncodesOnlyChangedItemsAndStillPersistsEveryChange() async throws {

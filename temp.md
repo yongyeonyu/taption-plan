@@ -2371,3 +2371,11 @@
 - 245부터 미확인 5항목도 같은 로그로 판정: ①`timeline_window` 있음(20건, 창·선택·손잡이 값 정상) ②`background_refresh` **1회·실패**(09:31:47~09:32:05, 17,490ms, 성공 0%) ③`background_refresh_yielded` **0회** ④`bootstrap_preparation_pass` **1회**(반복 없음) ⑤겹친 회차 `bootstrap_preparation` **1,406ms**(245의 4,657ms 아님).
 - 지하철 `playback_focus_sample.metrics.stickman_offset_px`는 이 로그가 245라 확인 불가(246 필요).
 - 남은 것: 구간 편집 되읽기를 좁은 조회로 바꿀지 결정. `TaptionStoreV2.records(kind:from:to:)`로 그 구간만 읽으면 전체 적재를 피할 수 있다.
+
+## RBK1028A01 · 구간 편집 저장의 되읽기를 좁은 조회로 (2026-10-28)
+- 지시: "미완료 작업 이어서" — LOG1028A01 판정에서 남긴 항목.
+- **원인**: `saveActivitySectionEdit`이 저장 뒤 `repository.load()`(AppModel 2092)로 반영을 확인했다. 이 되읽기가 스냅샷 전체(실기기 28,072행)를 다시 읽어 **읽기 126ms + 해독 67ms**를 썼고, 구간 손잡이를 드래그하면 단계마다 붙어 9초에 26회(세션 합계 9.6초) 돌았다.
+- **고침**: `PlanDataRepository`에 `existingActualIDs(_:)`를 넣고(기본 구현은 전체 `load()`), `TaptionStoreRepository`가 `actual` 종류만 읽어(591행) 교집합을 돌려준다. AppModel은 그 값을 되읽기 확인에 쓴다. 확인 대상은 `records + preservedPieces`(기존 `expectedRecords + preservedPieces`의 상위집합)라 판정 결과는 같다.
+- **검증 기준**: ①새 시험 `testExistingActualIDsFindsOnlySavedRecords`(저장된 id만·빈 요청은 0·지워진 행 제외) ②구간 편집 관련 기존 시험 4건(취소·동시 편집·부분 편집) 통과 ③`TaptionStoreRepositoryTests` 전체 통과 ④구조 지표·경계 검사 통과 ⑤기기 로그에서 `section_edit_save`당 `repository_local_load`가 사라지는지는 다음 빌드에서 확인.
+- 검증: 새 시험 `testExistingActualIDsFindsOnlySavedRecords` 포함 관련 19건 통과(`build/validation/RBK1028A01/unit.xcresult`, 2분 39초). 단위 전체 **1,653건 중 1,651 통과 · 실패 0 · 건너뜀 2**(`RBK1028A02/unit.xcresult`, 3분 18초). 앱 Debug 빌드 성공·경고 0. 구조 지표·경계 검사 통과(기준선 재잠금: `PlanRepository.swift` 1,366→1,374, 전체 161,418→161,434줄).
+- 남은 것: 다음 빌드 기기 로그에서 `section_edit_save`당 `repository_local_load`가 사라지고 저장 지연이 200ms→수 ms로 줄었는지 확인. 앱 그룹 루트 로그는 devicectl로 못 읽으므로 「로그 보내기」 패키지로 받는다.

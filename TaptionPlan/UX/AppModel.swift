@@ -2089,8 +2089,8 @@ final class AppModel {
         }
 
         do {
-            let stored = try await repository.load()
-            let storedIDs = Set(stored.actuals.map(\.id))
+            let storedIDs = try await repository.existingActualIDs(
+                Set((records + preservedPieces).map(\.id)))
             let replacedByConfirmedSleep = records
                 .filter { $0.categoryID == "sleep" }
             let expectedRecords = records.filter {
