@@ -2349,3 +2349,10 @@
 - 시험은 `--with-tests` 없이 올렸다. 같은 소스(`4a1cc22`)에서 단위 **1,652건 중 1,650 통과 · 실패 0 · 건너뜀 2**(`build/validation/DET1028A04/unit.xcresult`)였고, 그 뒤로는 기록(temp.md)만 바뀌었다.
 - 커밋: 버전 올림 `1d552c2`.
 - 이제 기기에서 확인할 것: ①지하철 구간 재생에서 화랑이 등장(`playback_focus_sample.metrics.stickman_offset_px` ≠ -1) ②클립 편집기 하단 상세 줄에 합쳐진 구간의 기록이 보이고, 맞닿은 경계가 겹치지 않는지 ③빌드 245 로그 미확인 5항목(`timeline_window`, `background_refresh` success 비율, `background_refresh_yielded`, `bootstrap_preparation_pass`, 겹친 회차의 `bootstrap_preparation`).
+
+## DOC1028A01 · 개발 안내 갱신과 기준선 재잠금 (2026-10-28)
+- 지시: "개발문서 업데이트 하고 워크트리 클린 메인 커밋 푸쉬".
+- `DEVELOPMENT.md` 네 곳: ①지도 파일 표에 `MapHomeSectionDetailEngine.swift`(상세활동 목록) 추가 ②동결 예산 항목의 "새 파일로 떼어 내기" 예시에 같은 파일 추가 ③`MapHomePlaybackLocation` 항목에 **지하철은 확정 여부 무관** 규칙 ④확대·축소 단추를 **시간선 아래 가로 알약(44×22 캡슐, `zoomReserve` 32)**으로, ⑤상세활동 목록 규칙(합쳐진 구간=구성 기록, `dayDetails` 하루 단위, 분 반올림) 새 항목, ⑥검증 절에 `-only-testing` 클래스 이름 함정.
+- 기준선: `python3 scripts/architecture-metrics.py --write-baseline docs/architecture-baseline.json` → `largest_file_lines` **22,072 → 21,895**, `largest_type_lines` 13,552 → 13,551. 동결 파일 예산이 실제 줄 수로 내려가 다시 잠겼다(`MapHomeView` 22,072→21,895, `RouteTimelineData` 3,410→3,406, `AppModel` 14,400→14,278, `MapHomeNLEClipEditor` 1,430→1,401, `TaptionStoreV2` 1,493→1,377, `AppShellView` 1,646→1,645, `DetailViews` 2,950→2,949). 위험 표시 수는 그대로, 빠진 동결 파일 없음.
+- 워크트리: 이미 하나(`main`)뿐이고 `git worktree prune`·`git remote prune origin` 모두 지울 것이 없었다. 브랜치도 `main` 하나, 작업 트리 깨끗함.
+- 검증: 구조 지표·엔진 경계 검사 통과(`21,895 / 1,200` 목표 대비 그대로). 커밋 `303fab5` 푸시.
