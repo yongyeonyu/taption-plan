@@ -2299,3 +2299,18 @@
 - 검증: `TaptionPlanSmokeUITests/testTimelineZoomButtonsStepThroughTheLadder` 통과(1/1, 1분 29초, `build/validation/SBZ1028A04/zoom.xcresult`). 스크린샷 `after-half-day.png` · `after-full-day.png`(+`*-zoom.png`).
 - `MapHomeView` **22,072줄**(예산 22,072, 여유 0). 구조 지표·엔진 경계 검사 통과. 커밋 `1d41616`.
 - 줄 예산을 지키려고 `timelineZoomControls`의 `///` 주석을 걷어냈다(호출부 주석이 대신한다). 단추에서 원 배경 2줄을 빼고 알약 쪽에서 2줄을 더해 순증 0.
+
+## SUB1028A01 · 지하철 재생에서 화랑이가 사라지던 원인 (2026-10-28)
+- 지시: "지하철 타고 온 경우에 재생하면 화랑이 아이콘 안 나옴. 수정".
+- **원인**: `MapHomePlaybackLocation.resolve`의 지하철 갈래가 `segment.isConfirmed`를 요구했다. 그 값은 "사용자가 모드를 직접 고쳤다"는 뜻이라 **자동 분류 구간은 늘 false**(`SensorFusion.swift:3743  isConfirmed: correctedMode != nil`). 지하철은 지하에서 GPS가 끊겨 재생 프레임(actual leg)도 없으므로, 세 갈래(프레임·확정 노선·센서)가 모두 비어 화랑이가 통째로 사라지거나 출발역 GPS에 붙어 있었다.
+- **고친 것**: `MapHomePlaybackLocation.subwayCoordinate(at:travel:)`를 `MapHomePlaybackContinuity.swift`에 추가 — 확정 여부와 무관하게, 유효한 노선(`SubwayStationCatalog.isValid`)이 있고 그 시각을 덮는 지하철 구간을 골라 노선 위 점을 준다. 좌표 계산은 확정 구간과 **같은 함수**(`confirmedSubwayCoordinates`)를 쓰려고 `isConfirmed`만 세워 복사본을 넘긴다(계산에는 안 쓰임). `resolve`는 그 한 줄을 부르도록 바꿨다(6줄 → 3줄, `RouteTimelineData.swift` 3410 → 3406줄).
+- **첫 시도가 틀렸던 것**: 보간을 직접 다시 구현했더니 `altitude`/`horizontalAccuracy` 병합 규칙(`blendFinite`·`mergedAccuracy`)이 미세하게 달라 `testPlaybackLocationPreservesConfirmedSubwayOverOldGPS`가 깨졌다. 같은 함수를 재사용하는 쪽으로 바꿔 해결.
+- 검증: 새 시험 `testPlaybackRidesSubwayRouteEvenWhenNotConfirmed`(확정/미확정이 같은 좌표, 출발역에 붙지 않음, 지하철 구간이 없으면 여전히 nil) + 기존 확정 지하철·GPS 우선 시험 3건 통과(`build/validation/SUB1028A02/subway.xcresult`). 단위 전체 **1,649건 중 1,647 통과 · 실패 0 · 건너뜀 2**(`build/validation/SUB1028A03/unit.xcresult`, 4분 46초). 구조 지표·경계 검사 통과. 커밋 `a6a877f`.
+- 남은 것: 기기에서 지하철 구간 재생 확인(로그 `playback_focus_sample`의 `stickman_offset_px`가 -1이 아닌지).
+
+## 상세 활동 알고리즘 점검 (같은 날, 조사만)
+- `MapHomeSectionDetailEngine.details`(MapHomeView)가 대분류 구간에 actual·travel을 잘라 상세 목록을 만든다. 확인한 약점 셋:
+  1. **합쳐진 대분류 구간은 자기 재료를 다 숨긴다** — `MapHomeTimeRailSegmentEngine`이 병합할 때 `sourceIDs.formUnion`으로 모든 원본 id를 담고, `details`는 `majorSourceIDs.contains(actual.id)`면 전부 제외한다. 업무 3건이 하나로 합쳐진 구간에서는 상세 목록이 비어 보인다.
+  2. **경계에서 잘린다** — 상세는 대분류 구간에 클립되므로 두 구간에 걸친 활동은 잘린 채 한 번만 남는다(하루 전체 목록 `allDaySectionDetails`는 id로 중복 제거).
+  3. **분 단위 반올림** — `clippedMinutes`가 시작은 내림, 끝은 올림이라 1분씩 늘어나 이웃 상세와 겹쳐 보인다.
+- 대표가 본 증상(시간이 어긋남/종류가 틀림/빠짐/겹침)을 확인해야 어느 쪽을 고칠지 정할 수 있어 질문으로 남겼다.
