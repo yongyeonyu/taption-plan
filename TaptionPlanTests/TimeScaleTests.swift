@@ -2118,6 +2118,119 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
+    /// 구간 경계에 걸친 기록이 잘리지 않는다. 구간별 목록은 경계에서 자르지만,
+    /// 하루 목록(`dayDetails`)은 자르지 않아야 한다 — 예전에는 잘린 앞토막만 남았다.
+    func testDayDetailsKeepARecordThatCrossesASectionBoundary() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        func at(_ minute: Int) -> Date {
+            dayStart.addingTimeInterval(TimeInterval(minute * 60))
+        }
+        let dayEnd = at(1_440)
+        let crossing = ActualRecord(
+            id: UUID(),
+            planID: nil,
+            title: "보고서",
+            categoryID: "work",
+            startedAt: at(9 * 60 + 50),
+            endedAt: at(10 * 60 + 20),
+            source: .location,
+            behavior: WatchBehaviorKind.sitting.rawValue
+        )
+        func segment(_ start: Int, _ end: Int) -> MapHomeTimeRailSegment {
+            MapHomeTimeRailSegment(
+                startMinute: start,
+                endMinute: end,
+                categoryID: "work",
+                title: "업무",
+                sourceIDs: []
+            )
+        }
+
+        let before = MapHomeSectionDetailEngine.details(
+            actuals: [crossing],
+            travel: [],
+            segment: segment(9 * 60, 10 * 60),
+            dayStart: dayStart,
+            dayEnd: dayEnd,
+            asOf: at(13 * 60)
+        )
+        let after = MapHomeSectionDetailEngine.details(
+            actuals: [crossing],
+            travel: [],
+            segment: segment(10 * 60, 11 * 60),
+            dayStart: dayStart,
+            dayEnd: dayEnd,
+            asOf: at(13 * 60)
+        )
+        XCTAssertEqual(before.map(\.endMinute), [600], "구간 목록은 경계에서 잘린다")
+        XCTAssertEqual(after.map(\.startMinute), [600])
+
+        let day = MapHomeSectionDetailEngine.dayDetails(
+            actuals: [crossing],
+            travel: [],
+            dayStart: dayStart,
+            dayEnd: dayEnd,
+            asOf: at(13 * 60)
+        )
+        XCTAssertEqual(day.map(\.startMinute), [590])
+        XCTAssertEqual(day.map(\.endMinute), [620], "경계에서 잘리면 뒤 20분이 사라진다")
+        XCTAssertEqual(day.count, 1)
+    }
+
+    /// 맞닿은 두 기록이 1분씩 겹쳐 보이지 않는다.
+    /// 예전에는 시작을 내림·끝을 올림해서, 09:45:20에 끝나고 시작하는 두 기록이
+    /// 09:45–09:46에서 겹쳤다.
+    func testSectionDetailsDoNotInflateAdjacentRecords() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dayStart = calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: 2026,
+            month: 8,
+            day: 24
+        ))!
+        let shared = dayStart.addingTimeInterval(9 * 3_600 + 45 * 60 + 20)
+        let first = ActualRecord(
+            id: UUID(),
+            planID: nil,
+            title: "회의",
+            categoryID: "work",
+            startedAt: dayStart.addingTimeInterval(9 * 3_600),
+            endedAt: shared,
+            source: .location,
+            behavior: WatchBehaviorKind.sitting.rawValue
+        )
+        let second = ActualRecord(
+            id: UUID(),
+            planID: nil,
+            title: "코딩",
+            categoryID: "work",
+            startedAt: shared,
+            endedAt: dayStart.addingTimeInterval(10 * 3_600),
+            source: .location,
+            behavior: WatchBehaviorKind.sitting.rawValue
+        )
+
+        let details = MapHomeSectionDetailEngine.dayDetails(
+            actuals: [first, second],
+            travel: [],
+            dayStart: dayStart,
+            dayEnd: dayStart.addingTimeInterval(86_400),
+            asOf: dayStart.addingTimeInterval(13 * 3_600)
+        )
+
+        XCTAssertEqual(details.map(\.startMinute), [540, 585])
+        XCTAssertEqual(details.map(\.endMinute), [585, 600])
+        XCTAssertEqual(details[0].endMinute, details[1].startMinute, "맞닿은 경계는 겹치지도 벌어지지도 않는다")
+    }
+
     func testSectionDetailsDeduplicateExactSourcesByPriorityWithoutMutatingInputs() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!

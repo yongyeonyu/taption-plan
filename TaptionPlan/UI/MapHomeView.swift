@@ -11302,27 +11302,19 @@ struct MapHomeView: View {
         return TimeSpan(start: start, end: end)
     }
 
-    /// 하루 전체의 상세 활동(모든 구간의 세부 활동을 합친다).
+    /// 하루 전체의 상세 활동. 구간 경계에서 자르지 않으므로 경계에 걸친 기록도 온전히 남는다.
     private func allDaySectionDetails() -> [MapHomeSectionDetail] {
-        var seen = Set<UUID>()
-        var result: [MapHomeSectionDetail] = []
-        for segment in timeRailSegments {
-            let calendar = Calendar.autoupdatingCurrent
-            let dayStart = calendar.startOfDay(for: model.selectedDate)
-            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
-            let dayData = currentDayDataSnapshot
-            for detail in MapHomeSectionDetailEngine.details(
-                actuals: dayData?.actuals ?? [],
-                travel: dayData?.travel ?? [],
-                segment: segment,
-                dayStart: dayStart,
-                dayEnd: dayEnd,
-                asOf: .now
-            ) where seen.insert(detail.id).inserted {
-                result.append(detail)
-            }
-        }
-        return result
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { return [] }
+        let dayData = currentDayDataSnapshot
+        return MapHomeSectionDetailEngine.dayDetails(
+            actuals: dayData?.actuals ?? [],
+            travel: dayData?.travel ?? [],
+            dayStart: dayStart,
+            dayEnd: dayEnd,
+            asOf: .now
+        )
     }
 
     private func sectionDetails(at minute: Int) -> [MapHomeSectionDetail] {
@@ -13143,175 +13135,6 @@ struct MapHomeView: View {
         (-90...90).contains(point.latitude)
             && (-180...180).contains(point.longitude)
             && point.horizontalAccuracy >= 0
-    }
-}
-
-struct MapHomeSectionDetail: Identifiable, Hashable {
-    let id: UUID
-    let title: String
-    let categoryID: String
-    let behavior: String?
-    let startMinute: Int
-    let endMinute: Int
-}
-
-enum MapHomeSectionDetailEngine {
-    private struct DuplicateKey: Hashable {
-        let categoryID: String
-        let title: String
-        let behavior: String?
-        let startMinute: Int
-        let endMinute: Int
-    }
-
-    private struct Candidate {
-        let detail: MapHomeSectionDetail
-        let priority: Int
-        let tieBreak: String
-
-        var key: DuplicateKey {
-            DuplicateKey(
-                categoryID: detail.categoryID,
-                title: detail.title,
-                behavior: detail.behavior,
-                startMinute: detail.startMinute,
-                endMinute: detail.endMinute
-            )
-        }
-    }
-
-    static func details(
-        actuals: [ActualRecord],
-        travel: [TravelSegment],
-        segment: MapHomeTimeRailSegment,
-        dayStart: Date,
-        dayEnd: Date,
-        asOf: Date
-    ) -> [MapHomeSectionDetail] {
-        let calendar = Calendar.autoupdatingCurrent
-        guard let segmentStart = calendar.date(
-            byAdding: .minute,
-            value: segment.startMinute,
-            to: dayStart
-        ), let segmentEnd = calendar.date(
-            byAdding: .minute,
-            value: segment.endMinute,
-            to: dayStart
-        ) else { return [] }
-        let segmentSpan = TimeSpan(start: segmentStart, end: segmentEnd)
-        var candidates = actuals.compactMap { actual -> Candidate? in
-            // 한 기록짜리 구간은 그 기록이 곧 구간이라 상세에서 뺀다. 여러 기록을 합친 구간은 그 기록들이 상세활동이다.
-            guard !(segment.sourceIDs.count == 1 && segment.sourceIDs.contains(actual.id)),
-                  let clipped = actual.span(asOf: asOf).intersection(with: segmentSpan),
-                  clipped.start < dayEnd,
-                  clipped.end > dayStart
-            else { return nil }
-            let minutes = clippedMinutes(clipped, dayStart: dayStart)
-            let detail = MapHomeSectionDetail(
-                    id: actual.id,
-                    title: actual.title,
-                    categoryID: RecordAnalysisCategoryPolicy.categoryID(for: actual),
-                    behavior: actual.behavior,
-                    startMinute: minutes.start,
-                    endMinute: minutes.end
-            )
-            return Candidate(
-                detail: detail,
-                priority: actualPriority(actual),
-                tieBreak: "actual|\(actual.source.rawValue)|\(actual.id.uuidString)"
-            )
-        }
-        candidates.append(contentsOf: travel.compactMap { item -> Candidate? in
-            guard !(segment.sourceIDs.count == 1 && segment.sourceIDs.contains(item.id)),
-                  let clipped = item.span.intersection(with: segmentSpan),
-                  clipped.start < dayEnd,
-                  clipped.end > dayStart
-            else { return nil }
-            let minutes = clippedMinutes(clipped, dayStart: dayStart)
-            let detail = MapHomeSectionDetail(
-                    id: item.id,
-                    title: AppLanguagePreference.text(korean: "\(MovementPresentation.title(for: item.mode)) 탑승", english: "\(MovementPresentation.englishTitle(for: item.mode)) ride"),
-                    categoryID: "movement",
-                    behavior: item.mode.rawValue,
-                    startMinute: minutes.start,
-                    endMinute: minutes.end
-            )
-            return Candidate(
-                detail: detail,
-                priority: 0,
-                tieBreak: "travel|\(item.mode.rawValue)|\(item.id.uuidString)"
-            )
-        })
-
-        var selected: [DuplicateKey: Candidate] = [:]
-        for candidate in candidates {
-            guard let current = selected[candidate.key] else {
-                selected[candidate.key] = candidate
-                continue
-            }
-            if isPreferred(candidate, over: current) {
-                selected[candidate.key] = candidate
-            }
-        }
-        return selected.values.map(\.detail).sorted { lhs, rhs in
-            if lhs.startMinute != rhs.startMinute {
-                return lhs.startMinute < rhs.startMinute
-            }
-            if lhs.endMinute != rhs.endMinute {
-                return lhs.endMinute < rhs.endMinute
-            }
-            if lhs.categoryID != rhs.categoryID {
-                return lhs.categoryID < rhs.categoryID
-            }
-            if lhs.title != rhs.title {
-                return lhs.title < rhs.title
-            }
-            if lhs.behavior != rhs.behavior {
-                return (lhs.behavior ?? "") < (rhs.behavior ?? "")
-            }
-            return lhs.id.uuidString < rhs.id.uuidString
-        }
-    }
-
-    private static func actualPriority(_ actual: ActualRecord) -> Int {
-        if actual.manuallyCorrected || actual.source == .manual {
-            return 4
-        }
-        switch actual.source {
-        case .healthKit, .appleWatch:
-            return 3
-        case .motion:
-            return 2
-        case .location:
-            return 1
-        default:
-            return 0
-        }
-    }
-
-    private static func isPreferred(
-        _ candidate: Candidate,
-        over current: Candidate
-    ) -> Bool {
-        if candidate.priority != current.priority {
-            return candidate.priority > current.priority
-        }
-        return candidate.tieBreak < current.tieBreak
-    }
-
-    private static func clippedMinutes(
-        _ span: TimeSpan,
-        dayStart: Date
-    ) -> (start: Int, end: Int) {
-        let start = min(
-            1_440,
-            max(0, Int((span.start.timeIntervalSince(dayStart) / 60).rounded(.down)))
-        )
-        let end = min(
-            1_440,
-            max(start + 1, Int((span.end.timeIntervalSince(dayStart) / 60).rounded(.up)))
-        )
-        return (start, end)
     }
 }
 
