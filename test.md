@@ -4646,3 +4646,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - `-only-testing` TimeScale·MapHomeLiveMap·MapHomePlaybackContinuity·MapHomeStickman → **301건 통과·실패 0**(`build/validation/PLY1029A02/focused.xcresult`).
 - 기기용 Debug 빌드 경고 0(`device-build.log`), iPhone 18 Pro Max 설치 종료 0(`install.log`, 번들 248). 재생 체감·`playback_frame_stats`는 기기에서 아직 확인하지 않았다.
 - CADisplayLink는 시뮬레이터 단위 시험에서 돌지 않는다(재생 루프는 시험 밖). 실제 프레임 간격은 기기 로그로만 안다.
+
+## TFB1029A03/A04 · 빌드 249 (2026-10-29 밤)
+- A03 `run.out`: 1~6/9 통과, 7/9 업로드 실패(altool -43, `upload.log`). A04 `run2.out`: 재업로드 성공, 8/9에서 `TimeoutError: The read operation timed out`. `verify-*.out` 폴링 → VALID(그룹 미연결) → `attach.log` 연결 → `verify-final.out` **VALID·buildAttached·테스터 1**.

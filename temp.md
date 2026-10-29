@@ -2511,3 +2511,8 @@
 - 고침: `MapHomePlaybackClock`(CADisplayLink 80~120Hz, 프레임마다 한 번 깨우고 표시 링크가 잰 경과 시간을 줌)이 `Task.sleep`을 대신한다. 재생 중 벡터 지도는 `easesCamera`로 `setCamera(withDuration: 1/60, linear)` — 목표가 불규칙하게 와도 엔진이 한 프레임 동안 잇는다. 프레임 계측 `playback_frame_stats`는 그대로.
 - 검증: 재생 관련 단위 301건 통과(`build/validation/PLY1029A02/focused.xcresult`), 기기용 Debug 빌드 경고 0·설치 종료 0(`install.log`). 전체 단위는 직전 묶음(`CAR1029A01/unit2.xcresult`, 1,671 통과) 뒤 재생 루프·카메라만 바뀌었다. 구조 게이트 재잠금·경계 통과.
 - 남은 것: 실기기에서 재생 체감과 로그 `playback_frame_stats`(12ms 초과 비율) 확인. ②④⑤.
+
+## TFB1029A03/A04 · 빌드 249 배포 (2026-10-29 밤)
+- 지시(대표): "푸시하고 249". 푸시 `f098224..85ef6bf`(3커밋). 담긴 것: WRK1029A01·PLY1029A01·EXP1029A01·CAR1029A01·PLY1029A02.
+- A03: 아카이브·익스포트까지 정상, 7/9 업로드에서 altool `-43 The temporary copy of 'TaptionPlan.ipa' no longer exists`(일시 오류). A04: 버전 올림 커밋(`aa5e908`) 뒤 `--reuse-archive`로 재업로드 성공(`No errors uploading`), 8/9 처리 대기 중 네트워크 읽기 시간 초과로 스크립트 종료. `verify.sh` 1분 폴링으로 **VALID** 확인 → `asc.py attach --build 249`로 내부 그룹 연결 → 최종 `ok: true`(`build/validation/TFB1029A04/testflight-report.json`).
+- 교훈: 업로드 뒤 처리 대기가 끊기면 다시 올리지 말고 `verify.sh --build N` → `asc.py attach --build N` → `verify.sh` 순으로 잇는다.
