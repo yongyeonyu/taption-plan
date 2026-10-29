@@ -2598,3 +2598,8 @@
 - 재생 중 분 값을 읽는 지도·사이드바·HUD·좌상단 컨트롤·`onChange`를 `MapHomeObservingView` 조각으로 분리하고 지도 갱신 프로브(`updateUIView`·`mapSetShape`·`mapMarkerCompare`)를 추가했다.
 - 남음: 분 콜백 때마다 프로브 밖 SwiftUI 갱신으로 25ms 이상 틱이 약 168개/43초 남는다. 사이드바 playhead 등 분 소비자를 틱 단위로 분리하는 구조 작업 필요.
 - 구조 기준선 재고정: MapHomeView 22,078→22,215줄, MapHomeVectorMap 1,305→1,317줄, detached_tasks 30→31(안정 캐시 재계산).
+
+### ARC1030A01 진행(2단계 커밋)
+- 사이드바 영역 이분: 숨김 실험(`-benchHide=rails|topleft|weather|timebar|controls`)으로 좌측 컨트롤·날씨 띠·시간 막대·좌상단이 각각 몇 ms씩 합쳐 약 30ms임을 확인. 재생 중 컨트롤·날씨 띠·좌상단은 `MapHomeCoarseView`(초당 1회)로 늦춘다.
+- 남음: 시간 막대(움직이는 playhead)·지도 오버레이 갱신 비용. 25ms 이상 틱 64개/43초.
+- 구조 기준선 재고정: MapHomeView 22,215→22,246줄, MapHomeLiveMapPolicies 1,213줄(예산 1,200 초과).

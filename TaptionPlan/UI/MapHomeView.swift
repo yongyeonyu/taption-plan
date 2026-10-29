@@ -2434,8 +2434,15 @@ struct MapHomeView: View {
     @State private var playbackProgress = MapHomePlaybackProgress()
     /// 선택한 분. 값은 관찰 저장소에 있어, 읽는 화면 조각만 다시 그려진다(ARC1030A01).
     private var selectedTimelineMinute: Int? {
-        get { MapHomePlaybackProbe.noteMinuteRead(); return playbackProgress.selectedMinute }
-        nonmutating set { playbackProgress.selectedMinute = newValue }
+        get {
+            if MapHomeMinuteFreeze.isFrozen { return playbackProgress.rawSelectedMinute }
+            MapHomePlaybackProbe.noteMinuteRead()
+            return playbackProgress.selectedMinute
+        }
+        nonmutating set {
+            playbackProgress.rawSelectedMinute = newValue
+            playbackProgress.selectedMinute = newValue
+        }
     }
     @State private var selectedPawprintTimestamp: Date?
     /// 발자국을 누르면 강조하는 발자국의 시각. 재생·시간 조정으로 지워지는 선택과 따로 둔다.
@@ -2553,8 +2560,15 @@ struct MapHomeView: View {
     @State private var mapControlsFrame = CGRect.zero
     @State private var isDayPlaybackRunning = false
     private var dayPlaybackCurrentMinute: Double? {
-        get { MapHomePlaybackProbe.noteMinuteRead(); return playbackProgress.currentMinute }
-        nonmutating set { playbackProgress.currentMinute = newValue }
+        get {
+            if MapHomeMinuteFreeze.isFrozen { return playbackProgress.rawCurrentMinute }
+            MapHomePlaybackProbe.noteMinuteRead()
+            return playbackProgress.currentMinute
+        }
+        nonmutating set {
+            playbackProgress.rawCurrentMinute = newValue
+            playbackProgress.currentMinute = newValue
+        }
     }
     @State private var counterValueCache = MapHomeCounterValueCache()
     @State private var isTimelineInteractionActive = false
@@ -2888,6 +2902,20 @@ struct MapHomeView: View {
         }
     }
 
+    /// 측정용: `-benchHide=rails,topleft`로 영역을 빼고 끊김이 어디서 오는지 가른다(ARC1030A01).
+    private static func benchHidden(_ name: String) -> Bool {
+        ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
+    }
+
+    /// 재생 중에는 초당 한 번만 다시 그리는 영역. 정지 중에는 token이 매번 달라 즉시 갱신된다.
+    private func coarseRegion<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
+        EquatableView(content: MapHomeCoarseView(
+            progress: playbackProgress,
+            token: isDayPlaybackRunning ? 0 : Int.random(in: 1...Int.max),
+            content: content
+        ))
+    }
+
     private var foregroundContent: some View {
         ZStack(alignment: .top) {
             // 지도·사이드 레일·재생 HUD는 분을 읽는다. 분이 바뀔 때 이 조각만 다시 그리게 따로 감싼다(ARC1030A01).
@@ -2900,15 +2928,15 @@ struct MapHomeView: View {
                 .ignoresSafeArea()
                 .zIndex(MapHomeLayerPriority.map)
 
-            MapHomeObservingView { mapSideRails }
+            if !Self.benchHidden("rails") { MapHomeObservingView { mapSideRails } }
 
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
-            if !isScreenRecording {
-                MapHomeObservingView { topLeftControls }
+            if !isScreenRecording, !Self.benchHidden("topleft") {
+                coarseRegion { topLeftControls }
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -7924,6 +7952,7 @@ struct MapHomeView: View {
             if benchMinute == nil || benchMinute == "cur" {
                 dayPlaybackCurrentMinute = Double(whole)
             }
+            playbackProgress.advanceCoarseTickIfNeeded(nowUptime: ProcessInfo.processInfo.systemUptime)
             // 경로 투영은 지도 경로 전체를 다시 그린다. 재생 중에는 1초에 한 번만(PLY1029A06).
             if benchMinute == nil || benchMinute == "proj", TimelineInteractionFrameGate.shouldRender(
                 lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -8036,8 +8065,8 @@ struct MapHomeView: View {
             trailingInteractionWidth: Layout.horizontalInset
         )
         return HStack(alignment: .top, spacing: 0) {
-            if !isScreenRecording {
-            mapControls(proxy: nil, railHeight: frame.height)
+            if !isScreenRecording, !Self.benchHidden("controls") {
+            coarseRegion { mapControls(proxy: nil, railHeight: frame.height) }
                 .onGeometryChange(
                     for: CGRect.self,
                     of: { geometry in
@@ -8114,7 +8143,7 @@ struct MapHomeView: View {
                         )
                         .allowsHitTesting(false)
                     }
-                    if model.settings.weatherSidebarVisible, recordingShows(\.weatherSidebar) {
+                    if model.settings.weatherSidebarVisible, recordingShows(\.weatherSidebar), !Self.benchHidden("weather") {
                         let railWeather = displayWeatherContexts
                         if let notice = MapHomeWeatherNoticePolicy.notice(
                             status: model.weatherStatus,
@@ -8135,18 +8164,20 @@ struct MapHomeView: View {
                                 )
                                 .allowsHitTesting(false)
                         }
-                        MapHomeWeatherSidebar(
-                            date: model.selectedDate,
-                            contexts: railWeather,
-                            selectedMinute: minute,
-                            language: language,
-                            visibleStartMinute: timeSidebarVisibleStartMinute,
-                            visibleDurationMinutes: timeSidebarVisibleDurationMinutes
-                        )
+                        coarseRegion {
+                            MapHomeWeatherSidebar(
+                                date: model.selectedDate,
+                                contexts: railWeather,
+                                selectedMinute: timelineSelectionMinute(at: timeline.date),
+                                language: language,
+                                visibleStartMinute: timeSidebarVisibleStartMinute,
+                                visibleDurationMinutes: timeSidebarVisibleDurationMinutes
+                            )
+                        }
                         .offset(x: weatherOriginX)
                         .allowsHitTesting(false)
                     }
-                    if recordingShows(\.timeSidebar) {
+                    if recordingShows(\.timeSidebar), !Self.benchHidden("timebar") {
                     MapHomeTimeSidebar(
                         date: model.selectedDate,
                         selectedMinute: Binding(

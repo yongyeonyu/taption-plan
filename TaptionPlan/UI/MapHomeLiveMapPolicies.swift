@@ -1164,6 +1164,41 @@ struct MapHomeHomeWeatherKey: Equatable {
 final class MapHomePlaybackProgress {
     var selectedMinute: Int?
     var currentMinute: Double?
+    /// 관찰되지 않는 같은 값. 재생 중 느리게 갱신하는 조각이 의존성 없이 읽는다.
+    @ObservationIgnored var rawSelectedMinute: Int?
+    @ObservationIgnored var rawCurrentMinute: Double?
+    /// 재생 중 초당 한 번만 오르는 박자. 느린 조각만 이것을 읽는다(ARC1030A01).
+    var coarseTick = 0
+    @ObservationIgnored private var lastCoarseUptime: TimeInterval = 0
+
+    func advanceCoarseTickIfNeeded(nowUptime: TimeInterval, minimumInterval: TimeInterval = 1) {
+        guard nowUptime - lastCoarseUptime >= minimumInterval else { return }
+        lastCoarseUptime = nowUptime
+        coarseTick &+= 1
+    }
+}
+
+/// 켜져 있는 동안 분 읽기는 관찰 저장소를 건드리지 않고 원본 값을 돌려준다.
+enum MapHomeMinuteFreeze {
+    @MainActor static var isFrozen = false
+}
+
+/// 재생 중에는 초당 한 번(`coarseTick`)과 `token`이 바뀔 때만 다시 평가하는 조각.
+/// 정지 상태의 token은 매번 달라 예전처럼 부모를 따라 갱신된다.
+struct MapHomeCoarseView<Content: View>: View, Equatable {
+    let progress: MapHomePlaybackProgress
+    let token: Int
+    let content: () -> Content
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool { lhs.token == rhs.token }
+
+    @MainActor var body: some View {
+        let _ = progress.coarseTick
+        let _ = { MapHomeMinuteFreeze.isFrozen = true }()
+        let view = content()
+        let _ = { MapHomeMinuteFreeze.isFrozen = false }()
+        return view
+    }
 }
 
 /// 안쪽 클로저가 읽는 관찰 값이 바뀔 때 이 조각만 다시 평가한다. 바깥 본문의 의존성에는 들어가지 않는다(ARC1030A01).

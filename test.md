@@ -4663,3 +4663,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 테스트(시뮬레이터 BOKKI-iPhone11): 1,688개 중 통과 1,685, 실패 0, 건너뜀 3. 로그 `build/validation/ARC1030A01/t1/`.
 - 엔진 import 경계 통과. 아키텍처 기준선은 위 증가분으로 재고정.
 - 실기기(iPhone 18 Pro Max) Release 벤치 `build/validation/ARC1030A01/s4`·`s5`: 약 101fps, 25ms 이상 틱 168개. 분 읽기 분리만으로는 개선되지 않았다. 지도 갱신(updateUIView 26ms/497회)은 원인이 아님.
+
+## ARC1030A01 2단계 검증(2026-10-30)
+- 실기기 Release 벤치 `build/validation/ARC1030A01/s8`: 111fps, 25ms 이상 틱 64개(이전 168개), overlay 평가 330(이전 643).
+- 숨김 실험 `s6`·`s7`: rails 숨김 20개, 컨트롤+날씨+시간막대 숨김 86개 등.
+- 단위 테스트 `t2`: 1,688개 중 통과 1,684, 실패 1, 건너뜀 3. 실패는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(시간 기준 P95). 단독 재실행 `t3`은 통과(전체 부하 때 흔들림). UI 변경과 무관한 저장소 시간 테스트라 전체 통과로 묶지 않고 따로 기록한다.
