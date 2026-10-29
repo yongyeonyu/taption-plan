@@ -4668,3 +4668,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 실기기 Release 벤치 `build/validation/ARC1030A01/s8`: 111fps, 25ms 이상 틱 64개(이전 168개), overlay 평가 330(이전 643).
 - 숨김 실험 `s6`·`s7`: rails 숨김 20개, 컨트롤+날씨+시간막대 숨김 86개 등.
 - 단위 테스트 `t2`: 1,688개 중 통과 1,684, 실패 1, 건너뜀 3. 실패는 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(시간 기준 P95). 단독 재실행 `t3`은 통과(전체 부하 때 흔들림). UI 변경과 무관한 저장소 시간 테스트라 전체 통과로 묶지 않고 따로 기록한다.
+
+## TFB1030A01 빌드 250 배포(2026-10-30)
+- `release.sh --yes --request-id TFB1030A01` 종료 코드 0. 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출 확인. 보고서 `build/validation/TFB1030A01/testflight-report.json`.
+- 포함 내용: ARC1030A01 1·2단계(재생 UI 끊김 감소). 실기기 저장·영상 렌더·차량 오디오는 이 배포로 검증되지 않았다.
