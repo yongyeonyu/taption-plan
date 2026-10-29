@@ -392,6 +392,8 @@ struct MapHomeRecordingOptionsSheet: View {
     @Binding var layers: MapHomeRecordingLayers
     let language: MapHomeLanguage
     let onStart: () -> Void
+    /// 있으면 「끊김 없는 영상 만들기」를 보여 준다(벡터 지도에서만, VID1029A01).
+    var onRenderVideo: (() -> Void)? = nil
     @State private var photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
 
     private var photoAllowed: Bool { photoStatus == .authorized || photoStatus == .limited }
@@ -422,6 +424,22 @@ struct MapHomeRecordingOptionsSheet: View {
                     .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.plain)
+            if let onRenderVideo {
+                Button(action: onRenderVideo) {
+                    Label(language.text("끊김 없는 영상 만들기", "Render smooth video"), systemImage: "film")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .foregroundStyle(Color.tpAccent)
+                        .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                Text(language.text(
+                    "프레임을 한 장씩 그려 60fps 영상으로 만듭니다. 화면 녹화와 달리 끊기지 않지만 만드는 데 몇 분 걸립니다.",
+                    "Draws every frame into a 60 fps video. Unlike screen recording it never stutters, but takes a few minutes."
+                ))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+            }
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)

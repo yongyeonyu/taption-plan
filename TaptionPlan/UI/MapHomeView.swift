@@ -2417,6 +2417,7 @@ struct MapHomeView: View {
     @State private var photoAlbumSelection: MapHomePhotoAlbumSelection?
     private let photoLibrary = ApplePhotoLibraryService()
     @State private var isRecordingOptionsPresented = false
+    @State private var isPlaybackVideoPresented = false
     @State private var recordedVideoShare: URL?
     @State private var recordingFailureMessage: String?
 
@@ -2997,10 +2998,22 @@ struct MapHomeView: View {
                     set: { recordingLayersRaw = $0.rawValue }
                 ),
                 language: language,
-                onStart: startRecordingPlayback
+                onStart: startRecordingPlayback,
+                onRenderVideo: rendersVectorMap ? {
+                    isRecordingOptionsPresented = false
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 450_000_000)
+                        isPlaybackVideoPresented = true
+                    }
+                } : nil
             )
-            .presentationDetents([.height(560), .large])
+            .presentationDetents([.height(640), .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isPlaybackVideoPresented) {
+            MapHomePlaybackVideoSheet(model: model, language: language, makeRenderer: makePlaybackVideoRenderer)
+                .presentationDetents([.medium])
+                .interactiveDismissDisabled()
         }
         .alert(
             language.text("화면 녹화", "Screen recording"),
@@ -7541,23 +7554,7 @@ struct MapHomeView: View {
         var playbackMinute = currentMinute
         dayPlaybackCurrentMinute = currentMinute
         let movingRanges = dayPlaybackMovementRanges
-        let zoomDayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
-        let zoomReadings = routeReadings + model.liveRouteState.readings
-        let zoomPlaces = model.settings.frequentPlaces.compactMap(\.point)
-        playbackZoomPlan = MapHomePlaybackZoomPlan(
-            inputs: MapHomePlaybackZoomInputBuilder.inputs(
-                ranges: movingRanges,
-                dayStart: zoomDayStart,
-                travel: currentDayDataSnapshot?.travel ?? [],
-                readings: zoomReadings,
-                places: zoomPlaces
-            ),
-            profile: MapHomePlaybackZoomProfile.build(
-                readings: zoomReadings,
-                places: zoomPlaces,
-                dayStart: zoomDayStart
-            )
-        )
+        playbackZoomPlan = makePlaybackZoomPlan(movingRanges: movingRanges)
         if currentMinute == 0 {
             selectedTimelineMinute = 0
         }
@@ -7784,16 +7781,70 @@ struct MapHomeView: View {
     }
 
     /// 재생 구동기를 세운다. 프레임 계산은 구동기, 화면 갱신은 정수 분마다(PLY1029A03).
-    private func startDriverPlayback(
-        startMinute: Double, endMinute: Double, movingRanges: [MapHomePlaybackMovementRange]
-    ) {
-        let driver = MapHomePlaybackDriver(inputs: .init(
+    private func makePlaybackZoomPlan(movingRanges: [MapHomePlaybackMovementRange]) -> MapHomePlaybackZoomPlan {
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
+        let readings = routeReadings + model.liveRouteState.readings
+        let places = model.settings.frequentPlaces.compactMap(\.point)
+        return MapHomePlaybackZoomPlan(
+            inputs: MapHomePlaybackZoomInputBuilder.inputs(
+                ranges: movingRanges, dayStart: dayStart, travel: currentDayDataSnapshot?.travel ?? [],
+                readings: readings, places: places
+            ),
+            profile: MapHomePlaybackZoomProfile.build(readings: readings, places: places, dayStart: dayStart)
+        )
+    }
+
+    /// 실시간 재생과 영상 렌더링이 같은 입력을 쓴다(VID1029A01).
+    private func playbackDriverInputs(
+        startMinute: Double, endMinute: Double, movingRanges: [MapHomePlaybackMovementRange],
+        zoomPlan: MapHomePlaybackZoomPlan
+    ) -> MapHomePlaybackDriver.Inputs {
+        .init(
             startMinute: startMinute, endMinute: endMinute, movingRanges: movingRanges,
             dayStart: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
             readings: routeReadingsLoadState.isLoaded(for: model.selectedDate) ? historicalPlaybackReadings : [],
             travel: currentDayDataSnapshot?.travel ?? [],
             places: currentDayDataSnapshot?.places ?? [],
-            zoomPlan: playbackZoomPlan
+            zoomPlan: zoomPlan
+        )
+    }
+
+    /// 하루 재생을 프레임마다 그려 끊김 없는 60fps 영상으로 만든다(VID1029A01). 화랑이는 정중앙 고정.
+    private func makePlaybackVideoRenderer() -> MapHomePlaybackVideoRenderer? {
+        guard let style = model.settings.mapDisplayStyle.runtimeStyle.mapHomeVectorStyle else { return nil }
+        let ranges = dayPlaybackMovementRanges
+        let end = MapHomeDayPlaybackMath.playbackEndMinute(for: model.selectedDate, now: .now)
+        var timeline = MapHomePlaybackTimeline(
+            inputs: playbackDriverInputs(
+                startMinute: 0, endMinute: end, movingRanges: ranges, zoomPlan: makePlaybackZoomPlan(movingRanges: ranges)
+            ),
+            projection: wbsPlaybackProjection
+        )
+        timeline.preferredForecastLegIDs = visibleForecastPlaybackLegIDs
+        timeline.expectedCoordinate = expectedRouteCoordinateLookup()
+        timeline.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed
+        let day = currentDayDataSnapshot
+        let dayStart = Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
+        let frequentPlaces = model.settings.frequentPlaces
+        let sleepSessions = model.sleepSessions
+        let accessory = homeGrowthHistory.season.equippedAccessory
+        return MapHomePlaybackVideoRenderer(style: style, timeline: timeline) { minute in
+            MapHomePlaybackVideoStickman(
+                action: MapHomeStickmanActionResolver.action(
+                    at: dayStart.addingTimeInterval(minute * 60), actuals: day?.actuals ?? [],
+                    travel: day?.travel ?? [], places: day?.places ?? [], frequentPlaces: frequentPlaces,
+                    sleepSessions: sleepSessions
+                ),
+                equippedAccessoryID: accessory
+            )
+        }
+    }
+
+    private func startDriverPlayback(
+        startMinute: Double, endMinute: Double, movingRanges: [MapHomePlaybackMovementRange]
+    ) {
+        let driver = MapHomePlaybackDriver(inputs: playbackDriverInputs(
+            startMinute: startMinute, endMinute: endMinute, movingRanges: movingRanges, zoomPlan: playbackZoomPlan
         ))
         syncPlaybackDriverProjection(driver)
         driver.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed
@@ -7821,9 +7872,14 @@ struct MapHomeView: View {
         guard let driver = driver ?? playbackDriver else { return }
         driver.projection = wbsPlaybackProjection
         driver.preferredForecastLegIDs = visibleForecastPlaybackLegIDs
+        driver.expectedCoordinate = expectedRouteCoordinateLookup()
+    }
+
+    /// 화면에 그려진 예상 경로 위의 좌표를 시각으로 찾는다(구동기·영상 공용).
+    private func expectedRouteCoordinateLookup() -> (Date) -> GeoPoint? {
         let overlays = expectedRouteOverlays
         let visibleIDs = Set(displayedExpectedRouteOverlays.map(\.id))
-        driver.expectedCoordinate = { date in
+        return { date in
             let route = overlays.filter {
                 visibleIDs.contains($0.id) && $0.coordinates.count >= 2
                     && $0.departureDate <= date && date <= $0.arrivalDate

@@ -128,10 +128,10 @@ final class MapHomePlaybackDriver {
     /// 재생 경로 다듬기(대표 선택 "재생만 다듬기", PLY1029A07). 이미 기록된 하루라 앞뒤를 안다.
     /// 지금 시각 앞뒤 ±2스텝(스텝 3초)의 위치를 이항 가중치 1·4·6·4·1로 평균한다. 앞뒤를 똑같이 보므로
     /// 실시간 필터와 달리 화랑이가 경로보다 뒤처지지 않고, GPS가 몇 초 사이 튀는 것만 눌린다. 원본은 그대로다.
-    static let smoothingStep: TimeInterval = 3
-    private static let smoothingWeights: [Double] = [1, 4, 6, 4, 1]
+    nonisolated static let smoothingStep: TimeInterval = 3
+    nonisolated private static let smoothingWeights: [Double] = [1, 4, 6, 4, 1]
     /// 이보다 멀리 떨어진 점(순간이동·다른 구간)은 평균에 넣지 않는다(약 1km).
-    private static let smoothingMaximumDegrees = 0.01
+    nonisolated private static let smoothingMaximumDegrees = 0.01
 
     private func position(at date: Date) -> CLLocationCoordinate2D? {
         let frame = projection?.frame(at: date, preferredForecastLegIDs: preferredForecastLegIDs)
@@ -152,11 +152,19 @@ final class MapHomePlaybackDriver {
     #endif
 
     func smoothedPosition(at date: Date) -> CLLocationCoordinate2D? {
-        guard let center = position(at: date) else { return nil }
+        Self.smoothed(at: date, position: position(at:))
+    }
+
+    /// 실시간 재생과 영상 렌더링이 같은 다듬기를 쓴다(VID1029A01).
+    nonisolated static func smoothed(
+        at date: Date,
+        position: (Date) -> CLLocationCoordinate2D?
+    ) -> CLLocationCoordinate2D? {
+        guard let center = position(date) else { return nil }
         var latitude = 0.0, longitude = 0.0, total = 0.0
         for (index, weight) in Self.smoothingWeights.enumerated() {
             let offset = Double(index - Self.smoothingWeights.count / 2) * Self.smoothingStep
-            guard let point = offset == 0 ? center : position(at: date.addingTimeInterval(offset)),
+            guard let point = offset == 0 ? center : position(date.addingTimeInterval(offset)),
                   abs(point.latitude - center.latitude) < Self.smoothingMaximumDegrees,
                   abs(point.longitude - center.longitude) < Self.smoothingMaximumDegrees else { continue }
             latitude += point.latitude * weight

@@ -199,6 +199,9 @@
 		A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F0 /* AppShellLaunchGate.swift */; };
 		A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */; };
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
+		A1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */; };
+		A1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */; };
+		A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */; };
 		A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */; };
 		A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */; };
 		A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */; };
@@ -441,6 +444,9 @@
 		F100000000000000000000F0 /* AppShellLaunchGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellLaunchGate.swift; sourceTree = "<group>"; };
 		F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCurrentActivity.swift; sourceTree = "<group>"; };
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
+		F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackVideoRenderer.swift; sourceTree = "<group>"; };
+		F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackVideoSheet.swift; sourceTree = "<group>"; };
+		F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackVideoTimelineTests.swift; sourceTree = "<group>"; };
 		F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEMultiDay.swift; sourceTree = "<group>"; };
 		F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEEditorViewport.swift; sourceTree = "<group>"; };
 		F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDriver.swift; sourceTree = "<group>"; };
@@ -578,6 +584,7 @@
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
+				F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */,
 				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
@@ -624,6 +631,8 @@
 				F100000000000000000000F0 /* AppShellLaunchGate.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
+				F1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift */,
+				F1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift */,
 				F1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift */,
 				F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */,
 				F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */,
@@ -1115,6 +1124,8 @@
 				A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
+				A1VID1029A0100000000001 /* MapHomePlaybackVideoRenderer.swift in Sources */,
+				A1VID1029A0100000000002 /* MapHomePlaybackVideoSheet.swift in Sources */,
 				A1AB1029A0200000000000D1 /* MapHomeNLEMultiDay.swift in Sources */,
 				A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */,
 				A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */,
@@ -1208,6 +1219,7 @@
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
+				A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */,
 				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,

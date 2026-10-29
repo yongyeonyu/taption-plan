@@ -2558,3 +2558,10 @@
 - 남은 것: 실기기에서 위로 스크롤·전날 편집·저장.
 - PLY1029A07 · 재생 경로 다듬기(대표 선택 "재생만 다듬기"): 구동기가 지금 시각 앞뒤 ±6초(3초 간격 5점)의 위치를 이항 가중치 1·4·6·4·1로 평균한다(`smoothedPosition`). 이미 기록된 하루라 앞뒤를 똑같이 보므로 실시간 필터와 달리 경로보다 뒤처지지 않고, 몇 초 사이 GPS 튐만 줄인다. 1km 넘게 떨어진 점은 평균에 넣지 않는다. 원본은 그대로. 새 시험 `testCenteredSmoothingDampsZigzagWithoutLag`(±30m 지그재그가 절반 아래로, 진행 방향 지연 평균 2m 미만).
 - 검증(묶음: PLY1029A04~A07·ZMP1029A01·WRK1029A02·NLE1029A01/A02): 단위 전체 **1,680건 중 1,677 통과·실패 0·건너뜀 3**(`build/validation/PLY1029A06/unit.xcresult`, 다듬기 전) + 다듬기 포함 집중 254건 통과(`PLY1029A07/focused.xcresult`). 기기용 Debug 빌드 경고 0. 구조 게이트 재잠금(`MapHomeView` 21,944→22,022, `MapHomeVectorMap` 1,275→1,305, `MapHomeTimeSidebar` 3,081→3,095, `AppModel` 14,319→14,323)·경계 통과.
+
+## VID1029A01 · 재생을 앱 안에서 프레임마다 그려 끊김 없는 영상으로 (2026-10-30)
+- 지시(대표): "재생하는 방법 자체를 좀 더 빠르고 부드러운 걸로 해서 영상으로 남기는 게 목적". 대표 선택: 앱 안에서 영상 렌더링, 재생만 다듬기, 화랑이 화면 정중앙 고정.
+- 원인: 지금 녹화는 ReplayKit 화면 실시간 녹화라, 재생이 한 번이라도 끊기면 영상에 그대로 남는다.
+- 고침: `MapHomePlaybackVideoRenderer.swift` — `MapHomePlaybackTimeline`(구동기와 같은 배속·좌표·줌·경로 다듬기를 재생 시간 1/60초씩 결정적으로 계산), `MapHomePlaybackVideoRenderer`(숨은 창의 MapLibre 지도에 프레임마다 카메라를 놓고 완전히 그려질 때까지 기다린 뒤 캡처, 화랑이를 정중앙에 합성, `AVAssetWriter` HEVC 1080×1920 60fps, 진행·취소, 사진에 저장, `playback_video_render` 기록). `MapHomePlaybackVideoSheet.swift` — 진행·취소·결과. 녹화 옵션에 「끊김 없는 영상 만들기」(벡터 지도에서만). 구동기의 경로 다듬기를 `nonisolated static smoothed(at:position:)`로 빼서 실시간과 영상이 같은 계산을 쓴다. 입력 만들기(`playbackDriverInputs`·`makePlaybackZoomPlan`·`expectedRouteCoordinateLookup`)를 한 곳으로 모았다.
+- 한계(알고 있는 것): 숨은 지도에는 기본 지도와 화랑이만 있다 — 경로·발자국·카운터는 영상에 아직 안 나온다. MapLibre(Metal)를 가려진 창에서 `drawHierarchy`로 캡처할 수 있는지는 실기기에서 확인해야 한다(검은 화면이면 `MLNMapSnapshotter`로 바꾼다). 예상 렌더 시간 하루 30~60초 영상에 2~4분(추정).
+- 검증: 기기용 Debug 빌드 경고 0·설치 종료 0(`build/validation/VID1029A01/`). `PlaybackVideoTimelineTests` 7건 포함 단위 전체 **1,688건 중 1,685 통과·실패 0·건너뜀 3**(`unit.xcresult`). 구조 게이트 재잠금·경계 통과. 실기기에서 영상을 실제로 만들어 보지는 않았다.

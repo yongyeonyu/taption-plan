@@ -4654,3 +4654,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 전체 **1,680건 중 1,677 통과 · 실패 0 · 건너뜀 3**(`build/validation/PLY1029A06/unit.xcresult`). 그 전 회차(`PLY1029A04/unit2.xcresult`) 실패 1건은 `testJoinedSleepYieldsOneRequestAcrossMidnight`의 기대값 오류(고정자료 전날 수면 22:00인데 23:00으로 단언) — 고쳐서 `NLEMultiDayTests`+`NLETrackTests` 36건 통과(`nle.xcresult`).
 - 경로 다듬기 포함 집중: `PlaybackPathSmoothingTests`·`TimeScaleTests`·`MapHomeLiveMapTests` **254건 통과**(`PLY1029A07/focused.xcresult`).
 - 기기 재생 측정(빌드 249 기록, A05 설치 뒤): 재생 2회 틱 12ms 초과 87%·98%, 틱 242~263개. 원인(분 알림이 정지 구간에서 매 프레임)을 A06에서 고쳤고, A06 이후 기기 측정은 아직 없다.
+
+## VID1029A01 · 앱 안 영상 렌더링 (2026-10-30)
+- 단위 전체 **1,688건 중 1,685 통과 · 실패 0 · 건너뜀 3**(`build/validation/VID1029A01/unit.xcresult`). 새 `PlaybackVideoTimelineTests` 7건(정지 600분=300프레임, 이동 구간 감속, 분 단조 증가, 다듬기 끈 좌표=`resolveOrGap`, 좌표 없으면 거리 유지, 결정적 출력, 길이 0) 포함.
+- 기기용 Debug 빌드 경고 0, iPhone 18 Pro Max 설치 종료 0. 실제 영상 생성(숨은 창 MapLibre 캡처)은 기기에서 아직 해 보지 않았다.
