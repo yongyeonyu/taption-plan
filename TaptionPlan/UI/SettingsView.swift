@@ -1218,21 +1218,19 @@ struct SettingsView: View {
 
     private var watchDataSyncRow: some View {
         VStack(alignment: .leading, spacing: TaptionSpacing.cozy) {
-            HStack {
-                Text("Apple Watch 데이터 가져오기")
-                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
-                Spacer()
-                Button("지금 가져오기") {
-                    model.requestWatchDataSync()
-                }
-                .disabled(!model.settings.healthEnabled)
-            }
+            Text("Apple Watch 데이터 가져오기")
+                .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
             Text("앱을 열면 바로 조회 · 건강·운동·수면")
                 .font(.taption(size: SettingsTypography.rowSubtitle))
                 .foregroundStyle(Color.tpSecondary)
             Text("iPhone 건강 앱에 동기화된 데이터를 읽습니다. 별도 Watch 앱이나 가져오기 간격 설정은 필요하지 않습니다.")
                 .font(.taption(size: SettingsTypography.footnote))
                 .foregroundStyle(Color.tpSecondary)
+            Button { model.requestWatchDataSync() } label: {
+                Text("지금 가져오기").frame(maxWidth: .infinity).padding(.vertical, 10)
+            }
+            .buttonStyle(.bordered)
+            .disabled(!model.settings.healthEnabled)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

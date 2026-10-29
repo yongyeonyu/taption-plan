@@ -49,6 +49,7 @@ struct MapHomeNLEClipEditor: View {
     @State private var scrollDirection: CGFloat = 0
     /// 센서 원본이나 상세활동에서 집어 든 결과. 대분류에 바로 반영할 수 있다.
     @State private var pick: NLEPick?
+    @State private var sensorEvidence: [MapHomeTimeRailSegment] = []
     /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
     @State private var isOverwritePresented = false
 
@@ -121,6 +122,7 @@ struct MapHomeNLEClipEditor: View {
         .padding(.top, 8)
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
+        .task(id: date) { sensorEvidence = await loadSensorEvidence() }
         .sheet(isPresented: $isOverwritePresented) {
             MapHomeNLEOverwriteSheet(
                 language: language,
@@ -435,9 +437,9 @@ struct MapHomeNLEClipEditor: View {
             )
     }
 
-    /// 센서가 기록한 그대로의 원본 구간. 고칠 수 없고, 견주어 보기만 한다.
+    /// HealthKit·iPhone 모션·GPS 원본만으로 세운 구간(CAT1029A02). 고칠 수 없고, 견주어 보기만 한다.
     private var sourceSegments: [MapHomeTimeRailSegment] {
-        segments
+        sensorEvidence
             .filter { $0.endMinute > $0.startMinute }
             .sorted { $0.startMinute < $1.startMinute }
     }

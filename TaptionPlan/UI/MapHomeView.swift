@@ -9529,20 +9529,20 @@ struct MapHomeView: View {
                 }
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 12)
-                Button(language.text("지금 가져오기", "Import now")) {
+                Button {
                     if model.settings.healthEnabled {
                         model.requestWatchDataSync(source: "map_watch_card")
                     } else {
                         Task { await model.requestHealth() }
                     }
+                } label: {
+                    Text(language.text("지금 가져오기", "Import now")).frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .background(Color.tpAccent.opacity(0.10), in: Capsule()).contentShape(Capsule())
                 }
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpAccent)
                 .lineLimit(1)
-                .fixedSize()
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.tpAccent.opacity(0.10), in: Capsule())
+                .padding(.horizontal, 12)
             }
         }
     }

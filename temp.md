@@ -2422,3 +2422,14 @@
   - 화랑이: 이미 HealthKit·Watch 수면을 먼저 본다. 이번 수정으로 그 시간의 시간선 대분류도 수면이 되어 둘이 맞는다.
 - 검증: 새 시험 3건(`testWatchSleepRemovesCoveredAutomaticTravelButKeepsConfirmedAndOutsideTravel`·`testWatchSleepTrimsAutomaticMovementRecords`·`testPlaybackSpeedFollowsSleepCategoryOverMovement`) 포함 집중 50건 통과(`build/validation/CAT1029A01/focused.xcresult`). 단위 전체 **1,656건 중 1,654 통과 · 실패 0 · 건너뜀 2**(`unit.xcresult`, 약 3분). 시험 빌드(Debug) 경고 0. 구조 지표·경계 통과(기준선 재잠금: `AppModel` 14,284→14,288, 가장 큰 타입 13,557→13,561, 전체 161,440→161,516줄).
 - 남은 것: **실기기 확인** — 오늘 새벽 그 밤이 수면으로 다시 판정되고 지하철이 사라지는지, 화랑이·시간선·재생속도가 같은지. 그 밤 로그·원본은 Mac iCloud에 아직 동기화되지 않았다(받으면 `sleep_travel_removed`와 근거를 확인). 배포 전이라 기기에는 아직 없다.
+
+## CAT1029A02 · 센서 원본 열을 실제 원본으로, Apple Watch 「지금 가져오기」를 가로로 꽉 차게 (2026-10-29)
+- 지시(대표): "애플워치 지금가져오기 버튼은 가로로 꽉차게. 패딩값 추가해서 넣고" · "센서 원본은 진짜 핼스킷하고 아이폰 센서. Gps데이터 기반으로 분석한 내용을 보여줘"
+- 실제 하루(대표): 01:30쯤 잠 · 07:20쯤 기상 · 09:10 집에서 자차 출근 · 10:07 회사 도착 · 11:50–12:20 식사 · 그 뒤 회사. 앱 클립 편집기(19:32)는 대분류 `지하철 탑승 01:25–10:08` · `걷기 10:08–19:32`.
+- **원인(코드 확인)**: 클립 편집기의 「센서 원본」 열(`sourceSegments`)이 대분류와 같은 `segments`를 다시 그렸다. 원본이 아니었다.
+- **고침**:
+  - `MapHomeNLESensorEvidence`(`MapHomeNLEClipFactory.swift`) — 분 단위로 HealthKit 수면 > HealthKit 기록 > iPhone 모션·GPS 속도(6m/s 이상이면 「차량 · GPS 속도」) 순으로 라벨을 세운다. 표본 하나는 다음 표본까지 최대 10분 이어지고, 3분 미만 조각은 앞에 붙인다. 원본이 없는 시간은 비운다. 라벨마다 출처(`· HealthKit`·`· iPhone`·`· GPS 속도`)를 붙인다.
+  - 편집기는 열 때 그날 스냅샷 표본과 `model.sleepSessions`로 이 열을 채운다(`.task(id: date)`).
+  - 「지금 가져오기」: 지도 메뉴 Apple Watch 카드는 캡슐을 가로 전체로(`maxWidth: .infinity`, 위아래 10pt, 양옆 12pt), 설정 화면은 설명 아래 가로 전체 `bordered` 단추(위아래 10pt)로.
+- 검증: 새 시험 `testSensorEvidenceLaneUsesHealthKitSleepThenIPhoneMotionAndGPSSpeed` 포함 집중 76건 통과(`build/validation/CAT1029A01/evidence.xcresult`). 단위 전체 **1,657건 중 1,655 통과 · 실패 0 · 건너뜀 2**(`build/validation/CAT1029A02/unit.xcresult`). Debug 빌드 성공·경고 0(`build/validation/WBT1029A01/build.log`). 구조 게이트 재잠금(`MapHomeNLEClipEditor` 1,401→1,403)·경계 통과.
+- 남은 것: 실기기에서 센서 원본 열이 그날 원본(수면·정지·차량)을 보여 주는지, 버튼 모양 확인. 시뮬레이터 캡처는 하지 않았다(원본 자료가 없는 화면).

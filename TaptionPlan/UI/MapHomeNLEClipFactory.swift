@@ -155,6 +155,15 @@ extension MapHomeNLEClipEditor {
         )
     }
 
+    /// 「센서 원본」 열을 그날의 원본 표본·HealthKit 수면으로 세운다.
+    func loadSensorEvidence() async -> [MapHomeTimeRailSegment] {
+        let day = await model.planDayDataSnapshot(for: date, forceReload: false)
+        return MapHomeNLESensorEvidence.segments(
+            readings: day.readings, sleepSessions: model.sleepSessions,
+            healthActuals: day.actuals, dayStart: Calendar.autoupdatingCurrent.startOfDay(for: date)
+        )
+    }
+
     static func tint(for categoryID: String) -> Color {
         Color(hex: MapHomePastelPalette.hex(categoryID))
     }
@@ -183,5 +192,103 @@ extension MapHomeNLEClipEditor {
 
     static func hourLabel(_ hour: Int) -> String {
         String(format: "%02d", hour % 24)
+    }
+}
+
+/// 클립 편집기의 「센서 원본」 열(CAT1029A02).
+///
+/// 대분류를 다시 그리지 않고, 실제 원본만으로 분 단위 라벨을 세운다.
+/// 우선순위는 HealthKit 수면 > HealthKit 기록(운동 등) > iPhone 모션·GPS 속도다.
+/// 원본이 없는 시간은 비워 두고, 라벨마다 출처를 붙인다.
+enum MapHomeNLESensorEvidence {
+    /// 표본 하나가 다음 표본 없이도 이어진다고 보는 최대 시간(분).
+    static let maximumHoldMinutes = 10
+    /// 이보다 짧은 조각은 앞 조각에 붙인다(센서 흔들림).
+    static let minimumRunMinutes = 3
+    /// GPS 속도가 이 이상이면 걷기가 아닌 차량 이동으로 본다(약 22km/h).
+    static let vehicleSpeedMetersPerSecond = 6.0
+
+    private struct Label: Equatable {
+        let title: String
+        let categoryID: String
+        let behavior: String?
+    }
+
+    static func segments(
+        readings: [SensorReading],
+        sleepSessions: [SleepSession],
+        healthActuals: [ActualRecord],
+        dayStart: Date,
+        now: Date = .now
+    ) -> [MapHomeTimeRailSegment] {
+        var slots = [Label?](repeating: nil, count: NLETrack.dayMinutes)
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        for (index, reading) in ordered.enumerated() {
+            guard let label = label(for: reading) else { continue }
+            let start = minute(reading.timestamp, dayStart)
+            let next = index + 1 < ordered.count ? minute(ordered[index + 1].timestamp, dayStart) : start + 1
+            fill(&slots, start, min(max(next, start + 1), start + maximumHoldMinutes), label)
+        }
+        for actual in healthActuals where actual.source == .healthKit && !AutomaticRecordTimelineEngine.isSleep(actual) {
+            let label = Label(title: "\(actual.title) · HealthKit", categoryID: actual.categoryID, behavior: actual.behavior)
+            fill(&slots, minute(actual.startedAt, dayStart), minute(actual.endedAt ?? now, dayStart), label)
+        }
+        for session in sleepSessions where session.asleepDuration > 0 {
+            let label = Label(title: "수면 · HealthKit", categoryID: "sleep", behavior: WatchBehaviorKind.sleep.rawValue)
+            fill(&slots, minute(session.span.start, dayStart), minute(min(session.span.end, now), dayStart), label)
+        }
+        return runs(slots)
+    }
+
+    private static func label(for reading: SensorReading) -> Label? {
+        if reading.gpsAvailable, let speed = reading.speedMetersPerSecond,
+           speed >= vehicleSpeedMetersPerSecond, reading.motion != .walking, reading.motion != .running {
+            return Label(title: "차량 · GPS 속도", categoryID: "movement", behavior: MotionKind.automotive.rawValue)
+        }
+        switch reading.motion {
+        case .stationary: return Label(title: "정지 · iPhone", categoryID: "activity", behavior: MotionKind.stationary.rawValue)
+        case .walking: return Label(title: "걷기 · iPhone", categoryID: "movement", behavior: MotionKind.walking.rawValue)
+        case .running: return Label(title: "달리기 · iPhone", categoryID: "exercise", behavior: MotionKind.running.rawValue)
+        case .cycling: return Label(title: "자전거 · iPhone", categoryID: "movement", behavior: MotionKind.cycling.rawValue)
+        case .automotive: return Label(title: "차량 · iPhone", categoryID: "movement", behavior: MotionKind.automotive.rawValue)
+        case .unknown: return nil
+        }
+    }
+
+    private static func minute(_ date: Date, _ dayStart: Date) -> Int {
+        min(max(Int((date.timeIntervalSince(dayStart) / 60).rounded()), 0), NLETrack.dayMinutes)
+    }
+
+    private static func fill(_ slots: inout [Label?], _ start: Int, _ end: Int, _ label: Label) {
+        let lower = max(0, start), upper = min(NLETrack.dayMinutes, end)
+        guard lower < upper else { return }
+        for index in lower..<upper { slots[index] = label }
+    }
+
+    private static func runs(_ slots: [Label?]) -> [MapHomeTimeRailSegment] {
+        var runs: [(start: Int, end: Int, label: Label?)] = []
+        for (index, label) in slots.enumerated() {
+            if let last = runs.last, last.label == label, last.end == index {
+                runs[runs.count - 1].end = index + 1
+            } else {
+                runs.append((index, index + 1, label))
+            }
+        }
+        var merged: [(start: Int, end: Int, label: Label?)] = []
+        for run in runs {
+            if let last = merged.last, last.end == run.start,
+               run.end - run.start < minimumRunMinutes || last.label == run.label {
+                merged[merged.count - 1].end = run.end
+            } else {
+                merged.append(run)
+            }
+        }
+        return merged.compactMap { run in
+            guard let label = run.label else { return nil }
+            return MapHomeTimeRailSegment(
+                startMinute: run.start, endMinute: run.end, categoryID: label.categoryID,
+                title: label.title, behavior: label.behavior
+            )
+        }
     }
 }

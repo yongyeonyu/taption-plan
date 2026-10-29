@@ -26916,6 +26916,29 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(ranges.map(\.endMinute), [60, 400])
     }
 
+    // CAT1029A02: 센서 원본 열은 대분류가 아니라 HealthKit·iPhone 모션·GPS 원본으로 선다.
+    func testSensorEvidenceLaneUsesHealthKitSleepThenIPhoneMotionAndGPSSpeed() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func at(_ minute: Int) -> Date { dayStart.addingTimeInterval(Double(minute) * 60) }
+        let still = stride(from: 60, through: 475, by: 5).map {
+            SensorReading(timestamp: at($0), motion: .stationary)
+        }
+        // 자차 출근: 모션은 모름이어도 GPS 속도가 차량을 말한다.
+        let drive = (550...607).map {
+            SensorReading(timestamp: at($0), speedMetersPerSecond: 15, motion: .unknown)
+        }
+        let sleep = watchSleepSession(TimeSpan(start: at(90), end: at(440)))
+
+        let lane = MapHomeNLESensorEvidence.segments(
+            readings: still + drive, sleepSessions: [sleep], healthActuals: [],
+            dayStart: dayStart, now: at(1_000)
+        )
+
+        XCTAssertEqual(lane.map(\.title), ["정지 · iPhone", "수면 · HealthKit", "정지 · iPhone", "차량 · GPS 속도"])
+        XCTAssertEqual(lane.map(\.startMinute), [60, 90, 440, 550])
+        XCTAssertEqual(lane.map(\.endMinute), [90, 440, 485, 608])
+    }
+
     func testLegacyWatchSleepBehaviorStillOverridesTravel() {
         let start = Date(timeIntervalSinceReferenceDate: 800_050_000)
         let span = TimeSpan(
