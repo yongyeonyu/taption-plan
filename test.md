@@ -4628,3 +4628,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 전체: **1,659건 중 1,657 통과 · 실패 0 · 건너뜀 2**(`build/validation/CAT1029A03/unit2.xcresult`), `warning:` 0건.
 - 구조: `--write-baseline` 재잠금 뒤 통과, 경계 통과.
 - 확인하지 못한 것: 실기기, 연봉 스위치 화면.
+
+## SUB1029A01 · 지하철 고도 조건 + 실제 원본 대조 (2026-10-29)
+- 원본: 기기 `tmp/TaptionPlanRawExport/Taption-Raw-2Days-AE321FD9-….json`(11,146,746바이트)을 `devicectl device copy from`으로 받음. 10-28 표본 1,937(기압 1,912)·이동 20, 10-29 표본 3,707(기압 3,670)·이동 17.
+- 재생: `TEST_RUNNER_TAPTION_RAW_REPLAY=<경로> … -only-testing:TaptionPlanTests/RawSensorReplayTests`(`replay2.log`·`replay3.log`). 어제 09:20–09:56·20:17–21:04 지하철 유지, 오늘 09:03–10:07 기존 지하철 → 자동차, 오늘 19:42–20:27 자동차 유지. 판정은 출력만 하고 단정하지 않는 시험이다.
+- 기압 고도: 자동차 출근 09:00 −4.6m → 09:04 −77.1m, 10:01 −88.7m. 어제 지하철 09:23→09:26 −13m, 09:31→09:34 +31m. 둘 다 5m 조건을 넘는다.
+- 단위 전체: 1회차 1,661건 중 실패 18(`unit.xcresult`) → 2회차 실패 4(`unit2.xcresult`, 기압 없음은 확인 불가로) → 시험 자료 4건 수정 후 **1,662건 중 1,659 통과 · 실패 0 · 건너뜀 3**(`unit3.xcresult`), 경고 0.
+- 기기: Debug 빌드 3회 경고 0, USB 설치 3회 종료 0(`install.log`·`install2.log`·`install3.log`). 기기 화면 확인은 하지 않았다.

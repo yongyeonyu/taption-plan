@@ -1786,9 +1786,13 @@ enum ActivityClassificationLockEngine {
             let previousSubwayIsValidated = previous.mode != .subway
                 || previous.isConfirmed
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
+            // 새 판정이 고도 변화가 없어 지하철을 뺐으면 잠긴 자동 지하철을 물려받지 않는다(SUB1029A01).
+            let rejectsLockedSubway = previous.mode == .subway && !previous.isConfirmed
+                && candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
             if previousSubwayIsValidated,
                !candidate.isConfirmed,
-               !isResolvedSubway {
+               !isResolvedSubway,
+               !rejectsLockedSubway {
                 value.mode = previous.mode
                 value.subwayRoute = previous.subwayRoute ?? value.subwayRoute
                 value.isConfirmed = previous.isConfirmed

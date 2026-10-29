@@ -6761,7 +6761,8 @@ final class FeatureEngineTests: XCTestCase {
                 speedMetersPerSecond: 12,
                 motion: .automotive,
                 motionConfidence: .high,
-                relativeAltitudeMeters: Double(index) * -0.8,
+                // 지하철은 고도 변화가 5m 이상이어야 한다(SUB1029A01). 실제 역 출입은 13~31m였다.
+                relativeAltitudeMeters: Double(index) * -2,
                 gpsAvailable: index < 2,
                 nearbyStation: true,
                 matchesRailRoute: true
@@ -6781,7 +6782,7 @@ final class FeatureEngineTests: XCTestCase {
                 speedMetersPerSecond: index < 2 ? 14 : nil,
                 motion: .automotive,
                 motionConfidence: .high,
-                relativeAltitudeMeters: Double(index) * -0.8,
+                relativeAltitudeMeters: Double(index) * -2,
                 stepCount: 100,
                 watchAccelerationStandardDeviationG: 0.04,
                 watchAccelerationMeanJerkGPerSecond: 0.16,
@@ -9367,7 +9368,8 @@ final class FeatureEngineTests: XCTestCase {
                 speedMetersPerSecond: 12,
                 motion: .automotive,
                 motionConfidence: .high,
-                relativeAltitudeMeters: 0,
+                // 검암 환승 구간은 지하 승강장(-12m)을 지난다(SUB1029A01 고도 조건).
+                relativeAltitudeMeters: minute == 12 || minute == 24 ? -12 : 0,
                 stepCount: steps
             )
         }
@@ -10091,7 +10093,7 @@ final class FeatureEngineTests: XCTestCase {
                 speedMetersPerSecond: 11,
                 motion: .automotive,
                 motionConfidence: .high,
-                relativeAltitudeMeters: 3,
+                relativeAltitudeMeters: -5,
                 nearbyStation: true,
                 nearbyStationName: "마곡나루역",
                 matchesRailRoute: true
@@ -10598,6 +10600,37 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.span.start, at(540))
         XCTAssertEqual(result.first?.span.end, at(608))
         XCTAssertNotEqual(result.first?.mode, .subway, "\(result.first?.evidence ?? [])")
+    }
+
+    // SUB1029A01: 역 좌표를 스치는 도로 주행은 고도 변화가 없으면 지하철이 아니다.
+    private func seoulDrive(pressure: (Int) -> Double?) -> [SensorReading] {
+        let day = makeDate(2026, 8, 1, 9, 0)
+        return stride(from: 0, through: 56, by: 2).map { minute in
+            SensorReading(
+                timestamp: day.addingTimeInterval(Double(minute) * 60),
+                point: GeoPoint(latitude: 37.50 + Double(minute) / 600, longitude: 127, altitude: 0,
+                                horizontalAccuracy: 10, verticalAccuracy: 10),
+                speedMetersPerSecond: 15, motion: .automotive, motionConfidence: .high,
+                pressureKilopascals: pressure(minute)
+            )
+        }
+    }
+
+    func testSubwayRequiresAltitudeChangeEvenOnStationTrajectory() {
+        let flat = TravelModeClassifier().classify(readings: seoulDrive { _ in 101.0 })
+
+        XCTAssertNotEqual(flat.mode, .subway, "\(flat.evidence)")
+        XCTAssertTrue(flat.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence), "\(flat.evidence)")
+    }
+
+    func testSubwayStaysWhenPressureShowsStationDescent() {
+        // 출발 4분 사이 기압이 0.15kPa 올라간다(약 12m 하강 — 지하 승강장).
+        let descended = TravelModeClassifier().classify(readings: seoulDrive { $0 < 4 ? 101.0 : 101.15 })
+
+        XCTAssertGreaterThanOrEqual(
+            TravelModeClassifier.altitudeChangeMeters(seoulDrive { $0 < 4 ? 101.0 : 101.15 }), 10
+        )
+        XCTAssertEqual(descended.mode, .subway, "\(descended.evidence)")
     }
 
     func testDepartureSpanKeepsUndergroundGapWithoutStillnessAtOrigin() {
@@ -30797,4 +30830,41 @@ private actor CountingPlanRepository: PlanDataRepository {
     }
 
     func deleteAll() async throws {}
+}
+
+/// 기기에서 내보낸 「어제·오늘 센서 원본」을 지금 분류기로 다시 판정해 출력한다(SUB1029A01).
+/// `TEST_RUNNER_TAPTION_RAW_REPLAY=<json 경로>`로 실행할 때만 돈다. 판정은 출력만 하고 단정하지 않는다.
+final class RawSensorReplayTests: XCTestCase {
+    func testReplayExportedRawDays() throws {
+        guard let path = ProcessInfo.processInfo.environment["TAPTION_RAW_REPLAY"], !path.isEmpty else {
+            throw XCTSkip("TAPTION_RAW_REPLAY 없음")
+        }
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let days: [TodaySensorRawExport]
+        if let pair = try? JSONDecoder().decode([TodaySensorRawExport].self, from: data) {
+            days = pair
+        } else {
+            days = [try JSONDecoder().decode(TodaySensorRawExport.self, from: data)]
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        for day in days {
+            let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
+            let pressure = readings.filter { $0.pressureKilopascals != nil }.count
+            print("REPLAY day \(formatter.string(from: day.day)) readings=\(readings.count) pressure=\(pressure) travel=\(day.travel.count)")
+            for segment in day.travel.sorted(by: { $0.span.start < $1.span.start }) {
+                let inside = readings.filter { segment.span.contains($0.timestamp) }
+                let around = readings.filter {
+                    TravelModeClassifier.altitudeContextSpan(segment.span).contains($0.timestamp)
+                }
+                let fresh = TravelModeClassifier().classify(readings: inside, inside: segment.span, altitudeContext: around)
+                let altitude = TravelModeClassifier.altitudeChangeMeters(around)
+                print("REPLAY \(formatter.string(from: segment.span.start))–\(formatter.string(from: segment.span.end)) "
+                    + "stored=\(segment.mode.rawValue) fresh=\(fresh.mode.rawValue) altitude=\(Int(altitude.rounded()))m "
+                    + "readings=\(inside.count) pressure=\(inside.filter { $0.pressureKilopascals != nil }.count) "
+                    + "evidence=\(fresh.evidence.prefix(4).joined(separator: "|"))")
+            }
+        }
+    }
 }

@@ -87,12 +87,27 @@ struct RealtimeSensorMapProjection: Hashable, Sendable {
 }
 
 struct TravelModeClassifier: Sendable {
+    /// 지하철은 고도 변화가 있어야 탑승으로 본다(대표 지시, SUB1029A01). 역 출입(계단·에스컬레이터)은
+    /// 지하·고가 모두 몇 미터 이상 오르내린다. 20분 안에 5m 이상 바뀌지 않으면 지하철에서 뺀다.
+    /// 필요조건일 뿐이다: 실제 기록에서 자동차 출근도 엘리베이터·지하 주차장으로 70m 넘게 오르내렸다.
+    static let subwayAltitudeChangeMeters = 5.0
+    static let subwayAltitudeWindow: TimeInterval = 20 * 60
+    static let noAltitudeChangeEvidence = "고도 변화 없음 · 지하철 제외"
+    /// 승차 전·하차 후로 고도를 함께 보는 여유.
+    static let altitudeContextMargin: TimeInterval = 10 * 60
+
+    static func altitudeContextSpan(_ span: TimeSpan) -> TimeSpan {
+        TimeSpan(start: span.start.addingTimeInterval(-altitudeContextMargin),
+                 end: span.end.addingTimeInterval(altitudeContextMargin))
+    }
+
     func classify(
         readings: [SensorReading],
         inside requestedSpan: TimeSpan? = nil,
         healthEvidence: [AppleMovementEvidence] = [],
         correctedMode: TravelMode? = nil,
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        altitudeContext: [SensorReading] = []
     ) -> MovementInference {
         if let correctedMode {
             return MovementInference(
@@ -486,6 +501,14 @@ struct TravelModeClassifier: Sendable {
                 || coordinateTrajectory?.isSparseEndpointTrajectory == true
                     && repeatedRailMatch
             )
+        // 역 출입의 오르내림은 승차 전·하차 후에 일어나므로 앞뒤 표본도 함께 본다.
+        // 기압계 표본이 하나도 없으면 "변화 없음"이 아니라 "확인 불가"라 막지 않는다.
+        let altitudeSamples = ordered + altitudeContext
+        let hasAltitudeData = altitudeSamples.contains {
+            $0.pressureKilopascals != nil || $0.relativeAltitudeMeters != nil
+        }
+        let hasSubwayAltitudeChange = !hasAltitudeData
+            || Self.altitudeChangeMeters(altitudeSamples) >= Self.subwayAltitudeChangeMeters
         let undergroundSignal = gpsLossRatio >= 0.35
             || altitudeDelta <= -2
         let displacementMeters = firstLastDisplacement(ordered)
@@ -604,7 +627,7 @@ struct TravelModeClassifier: Sendable {
         // 지도 보강값이 있으면 역·역 이동과 지하 신호를 함께 확인한다.
         // 과거처럼 보강값이 비어 있으면 세 역 이상의 좌표 순서와 철도 속도가
         // 일치할 때만 복원해, 환승 보행 때문에 전체 걸음 수가 늘어도 놓치지 않는다.
-        if stationToStationSubway {
+        if stationToStationSubway, hasSubwayAltitudeChange {
             let first = stationJourney?.startStationName
                 ?? railStations.first
                 ?? "출발역"
@@ -684,6 +707,7 @@ struct TravelModeClassifier: Sendable {
            railContext,
            trustedStationSequence,
            railStations.count >= 2,
+           hasSubwayAltitudeChange,
            (repeatedRailMatch || stationAltitudeDrop || undergroundDescent) {
             var evidence = [
                 "지하철 노선 후보 확정",
@@ -709,7 +733,7 @@ struct TravelModeClassifier: Sendable {
         // 사용자 등록 역 하나는 역 자체만으로 확정하지 않는다. 독립적인
         // 철도 신호가 하나 이상 붙은 경우에만 자동차 후보보다 먼저 처리한다.
         // 두 역 이상 경로는 위의 노선·역 순서 판정에서 높은 신뢰도로 확정한다.
-        if prioritizedSingleUserStation {
+        if prioritizedSingleUserStation, hasSubwayAltitudeChange {
             var evidence = [
                 "사용자 지정 지하철역 일치 1곳",
                 "독립 철도 신호 \(userStationIndependentSignals)개",
@@ -840,6 +864,8 @@ struct TravelModeClassifier: Sendable {
         for mode in impossibleModes {
             candidates.removeValue(forKey: mode)
         }
+        let rejectedSubway = !hasSubwayAltitudeChange
+            && candidates.removeValue(forKey: .subway) != nil
         if candidates.isEmpty {
             add(
                 displacementSpeed > 8.5 ? .car : .cycling,
@@ -866,6 +892,9 @@ struct TravelModeClassifier: Sendable {
         )
         let subwayRoute = winner.key == .subway ? resolvedSubwayRoute : nil
         var winnerEvidence = winner.value.1
+        if rejectedSubway || stationToStationSubway && !hasSubwayAltitudeChange {
+            winnerEvidence.append(Self.noAltitudeChangeEvidence)
+        }
         if let subwayRoute {
             winnerEvidence.append(
                 "노선 " + subwayRoute.lineNames.joined(separator: " → ")
@@ -928,6 +957,31 @@ struct TravelModeClassifier: Sendable {
             dropMeters: max(0, drop),
             recoveryMeters: max(0, recovery)
         )
+    }
+
+    /// 20분 창 안에서 가장 크게 바뀐 고도(m). 기압(kPa)은 센서 창이 끊겨도 절대값이라
+    /// 창을 넘어 비교하고, 상대고도는 같은 기압계 세션 안에서만 비교한다(켤 때마다 0부터 다시 센다).
+    static func altitudeChangeMeters(_ readings: [SensorReading]) -> Double {
+        let ordered = readings.sorted { $0.timestamp < $1.timestamp }
+        let pressure = ordered.compactMap { reading -> (Date, Double)? in
+            guard let kPa = reading.pressureKilopascals, kPa.isFinite, kPa > 0 else { return nil }
+            return (reading.timestamp, 44_330 * (1 - pow(kPa / 101.325, 0.1903)))
+        }
+        let relative = Dictionary(grouping: ordered.filter { $0.relativeAltitudeMeters?.isFinite == true },
+                                  by: { $0.altimeterSessionID })
+            .values.map { $0.map { ($0.timestamp, $0.relativeAltitudeMeters ?? 0) } }
+        return ([pressure] + relative).map(windowedRange).max() ?? 0
+    }
+
+    private static func windowedRange(_ values: [(Date, Double)]) -> Double {
+        var best = 0.0
+        var start = 0
+        for end in values.indices {
+            while values[end].0.timeIntervalSince(values[start].0) > subwayAltitudeWindow { start += 1 }
+            let window = values[start...end].map(\.1)
+            best = max(best, (window.max() ?? 0) - (window.min() ?? 0))
+        }
+        return best
     }
 
     private func maxAltitudeDrop(_ readings: [SensorReading]) -> Double {
@@ -3723,7 +3777,11 @@ struct MovementRouteBuilder: Sendable {
                 inside: span,
                 healthEvidence: segmentHealthEvidence,
                 correctedMode: correctedMode,
-                userTransitLocations: userTransitLocations
+                userTransitLocations: userTransitLocations,
+                altitudeContext: evidenceIndex.readings(
+                    in: TravelModeClassifier.altitudeContextSpan(span),
+                    inspectionCount: &inspectionCount
+                )
             )
             let sensorDistance = pathDistance(segmentReadings.compactMap(\.point))
             let endpointDistance = from.point.flatMap { origin in
@@ -4035,10 +4093,12 @@ enum SubwayTravelSegmentEngine {
                 end: span.end.addingTimeInterval(2 * 60)
             )
             let context = group.filter { contextSpan.contains($0.timestamp) }
+            let altitudeSpan = TravelModeClassifier.altitudeContextSpan(span)
             let inference = TravelModeClassifier().classify(
                 readings: context,
                 inside: span,
-                userTransitLocations: userTransitLocations
+                userTransitLocations: userTransitLocations,
+                altitudeContext: group.filter { altitudeSpan.contains($0.timestamp) }
             )
             guard inference.mode == .subway || inference.mode == .train else {
                 continue
@@ -4886,7 +4946,11 @@ enum AppleDeviceGroundTruthEngine {
                         overlapping: activity.span,
                         inspectionCount: &inspectionCount
                     ),
-                    userTransitLocations: userTransitLocations
+                    userTransitLocations: userTransitLocations,
+                    altitudeContext: evidenceIndex.readings(
+                        in: TravelModeClassifier.altitudeContextSpan(activity.span),
+                        inspectionCount: &inspectionCount
+                    )
                 )
                 return (activity, inference)
             }
@@ -4949,6 +5013,9 @@ enum AppleDeviceGroundTruthEngine {
                 result.append(segment)
                 continue
             }
+            // 새 판정이 고도 변화가 없어 지하철을 뺐으면 예전 자동 지하철로 되돌리지 않는다.
+            if result[index].evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence),
+               !segment.isConfirmed { continue }
             result[index] = preferredSubwaySegment(
                 result[index],
                 over: segment

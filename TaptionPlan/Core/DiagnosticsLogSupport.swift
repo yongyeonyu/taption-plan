@@ -820,7 +820,8 @@ struct TaptionPlanDiagnosticsICloudExporter {
         }
     }
 
-    func export(_ packageURL: URL) throws -> URL {
+    /// `updatesLatest`가 false면 `latest.json`(최근 로그 표시)을 건드리지 않는다 — 센서 원본 업로드용.
+    func export(_ packageURL: URL, updatesLatest: Bool = true) throws -> URL {
         guard let container = ubiquityContainerURL() else {
             throw TaptionPlanDiagnosticsICloudError.unavailable
         }
@@ -852,7 +853,7 @@ struct TaptionPlanDiagnosticsICloudExporter {
         )
         do {
             try transferItem(staged, destination)
-            try exportLatestManifest(
+            if updatesLatest { try exportLatestManifest(
                 TaptionDiagnosticsLatestLogManifest(
                     fileName: destination.lastPathComponent,
                     byteCount: (try? packageURL.resourceValues(
@@ -860,7 +861,7 @@ struct TaptionPlanDiagnosticsICloudExporter {
                     ).fileSize) ?? 0
                 ),
                 to: destinationDirectory
-            )
+            ) }
             try? fileManager.removeItem(at: stagingDirectory)
             return destination
         } catch {

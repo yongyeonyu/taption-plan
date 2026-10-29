@@ -15041,6 +15041,7 @@ private struct MapHomeSecuritySheet: View {
     @State private var message: String?
     @State private var restoreTarget: PlanBackupListingRow?
     @State private var isOffloadConfirmationPresented = false
+    @State private var rawExportStatus = ""
     @FocusState private var focusedField: PINField?
 
     private enum PINField { case pin, confirmation, backup }
@@ -15140,6 +15141,21 @@ private struct MapHomeSecuritySheet: View {
                     Text(model.diagnosticsLatestLogSummary)
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
+                    // 어제·오늘 센서 원본(GPS·모션·기압)을 같은 TaptionLogs 폴더에 바로 저장한다(SUB1029A01).
+                    HStack(spacing: 10) {
+                        Button {
+                            rawExportStatus = language.text("저장 중…", "Saving…")
+                            Task { rawExportStatus = await model.exportSensorRawToICloud() }
+                        } label: {
+                            Label(language.text("어제·오늘 원본 업로드", "Upload raw (2 days)"), systemImage: "location.square")
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Color.tpReferenceBlue)
+                        Text(rawExportStatus)
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpReferenceBlue)
+                            .lineLimit(2)
+                    }
                 }
 
                 card(language.text("\(PlanPINVerifier.currentDigits)자리 비밀번호", "\(PlanPINVerifier.currentDigits)-digit password")) {

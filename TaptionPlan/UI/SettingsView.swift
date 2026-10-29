@@ -336,8 +336,8 @@ struct SettingsView: View {
                         }
                         settingsRow(
                             icon: "location.square",
-                            title: "오늘 센서 원본 내보내기",
-                            subtitle: "오늘 위치·이동 센서 원본을 별도 JSON 파일로 공유",
+                            title: "어제·오늘 센서 원본 내보내기",
+                            subtitle: "어제·오늘 위치·이동·기압 센서 원본을 JSON 파일 하나로 공유",
                             value: ""
                         ) {
                             Task {

@@ -5126,15 +5126,18 @@ final class AppModel {
 
     func exportTodaySensorRawURL() async throws -> URL {
         let now = Date.now
-        let day = await planDayDataSnapshot(for: now, forceReload: true, refreshRawReadings: true)
-        let readings = TodaySensorRawExport.readings(day.readings, on: now)
-        let payload = TodaySensorRawExport(day: day.day, isComplete: day.isComplete,
-            readings: readings, travel: day.travel)
+        // 어제·오늘을 한 파일에 담는다(SUB1029A01 — 어제 지하철·오늘 자동차 대조).
+        var payload: [TodaySensorRawExport] = []
+        for date in [Calendar.autoupdatingCurrent.date(byAdding: .day, value: -1, to: now) ?? now, now] {
+            let day = await planDayDataSnapshot(for: date, forceReload: true, refreshRawReadings: true)
+            payload.append(TodaySensorRawExport(day: day.day, isComplete: day.isComplete,
+                readings: TodaySensorRawExport.readings(day.readings, on: date), travel: day.travel))
+        }
         return try await Task.detached(priority: .utility) {
             let directory = FileManager.default.temporaryDirectory
                 .appendingPathComponent("TaptionPlanRawExport", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let url = directory.appendingPathComponent("Taption-Today-Raw-\(UUID().uuidString).json")
+            let url = directory.appendingPathComponent("Taption-Raw-2Days-\(UUID().uuidString).json")
             try JSONEncoder().encode(payload).write(to: url, options: [.atomic, .completeFileProtection])
             return url
         }.value
@@ -5152,6 +5155,19 @@ final class AppModel {
         let url = directory.appendingPathComponent("Taption-Plan-Data.json")
         try data.write(to: url, options: [.atomic, .completeFileProtection])
         return url
+    }
+
+    /// 어제·오늘 센서 원본을 iCloud Drive › TaptionLogs에 바로 저장하고 결과 문구를 돌려준다(SUB1029A01).
+    func exportSensorRawToICloud() async -> String {
+        do {
+            let url = try await exportTodaySensorRawURL()
+            let saved = try await Task.detached(priority: .utility) {
+                try TaptionPlanDiagnosticsICloudExporter().export(url, updatesLatest: false)
+            }.value
+            return AppLanguagePreference.text(korean: "저장됨 · \(saved.lastPathComponent)", english: "Saved · \(saved.lastPathComponent)")
+        } catch {
+            return AppLanguagePreference.text(korean: "실패 · \(error.localizedDescription)", english: "Failed · \(error.localizedDescription)")
+        }
     }
 
     func exportDiagnosticsToICloud() async {
