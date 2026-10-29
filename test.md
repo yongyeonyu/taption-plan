@@ -4621,3 +4621,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 전체: `-only-testing:TaptionPlanTests` → **1,656건 중 1,654 통과 · 실패 0 · 건너뜀 2**(`unit.xcresult`). 로그 `warning:` 0건.
 - 구조: `--write-baseline` 재잠금 뒤 `--check` 통과, 엔진 import 경계 통과.
 - 확인하지 못한 것: 실기기. 오늘 새벽 그 밤의 로그·원본이 Mac iCloud에 아직 없어(마지막 동기화 00:27) 실제 근거로 재판정하지 못했다. 앱 빌드 단독 실행·설치는 하지 않았다(시험 빌드가 Debug로 앱을 컴파일).
+
+## CAT1029A03 · 출발 전 머무름을 이동에서 뗀다 + CNT1029A01 연봉 스위치 (2026-10-29)
+- 새 시험: `testOvernightStayGapStartsTravelAtDepartureNotAtLastHomeFix`(집 00:00–01:25, 정지 표본 01:30–09:00, 차량 09:10–10:06, 회사 10:08 → 이동 09:00–10:08·지하철 아님) · `testDepartureSpanKeepsUndergroundGapWithoutStillnessAtOrigin` 통과(`probe5.xcresult`).
+- 처음 시험은 좌표를 서울(경도 127)에 두어 실패했다: 차량 모션·15m/s인데 `역 좌표 궤적 일치 · 신반포→을지로4가`로 지하철. 좌표를 역이 없는 경도 129.8로 옮겨 이번 변경만 검증했다. 이 판정은 별도 결함으로 남긴다.
+- 단위 전체: **1,659건 중 1,657 통과 · 실패 0 · 건너뜀 2**(`build/validation/CAT1029A03/unit2.xcresult`), `warning:` 0건.
+- 구조: `--write-baseline` 재잠금 뒤 통과, 경계 통과.
+- 확인하지 못한 것: 실기기, 연봉 스위치 화면.

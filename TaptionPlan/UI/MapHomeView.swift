@@ -2395,6 +2395,7 @@ struct MapHomeView: View {
     @AppStorage(MapHomeCounterKind.study.storageKey) private var showsStudyCounter = true
     @AppStorage(MapHomeCounterKind.hobby.storageKey) private var showsHobbyCounter = true
     @AppStorage(MapHomeCounterKind.exercise.storageKey) private var showsExerciseCounter = true
+    @AppStorage("mapHomeCounter.salary") private var showsSalaryCounter = true
     @State private var pendingMemoLocationID: UUID?
     @State private var isMapAttributionPresented = false
     @State private var isAlarmSettingsPresented = false
@@ -7294,7 +7295,7 @@ struct MapHomeView: View {
     /// 창에 넣을 값. `now`는 시계가 준 순간이라 연봉과 나머지 줄이 같은 박자로 갱신된다.
     @ViewBuilder
     private func counterWindowContent(now: Date) -> some View {
-        if let salaryLive, recordingShows(\.salary) {
+        if let salaryLive, showsSalaryCounter, recordingShows(\.salary) {
             let tick = TimeInterval(max(1, salaryTickSeconds))
             let calendar = MapHomeGrowthPolicy.localCalendar
             let day = calendar.startOfDay(for: model.selectedDate)
@@ -9336,8 +9337,8 @@ struct MapHomeView: View {
                     Spacer()
                     Text(
                         language.text(
-                            "\(enabledCounterKinds.count)개 켜짐",
-                            "\(enabledCounterKinds.count) on"
+                            "\(enabledCounterKinds.count + (showsSalaryCounter && salaryLive != nil ? 1 : 0))개 켜짐",
+                            "\(enabledCounterKinds.count + (showsSalaryCounter && salaryLive != nil ? 1 : 0)) on"
                         )
                     )
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
@@ -9355,15 +9356,26 @@ struct MapHomeView: View {
 
             if isCounterMenuExpanded {
                 VStack(spacing: 2) {
-                    Button {
-                        isSalarySettingsPresented = true
-                    } label: {
-                        displaySubRow(
-                            "wonsign.circle.fill",
-                            language.text("연봉 카운터", "Salary counter")
-                        )
+                    // 연봉도 다른 카운터처럼 켜고 끈다. 금액 설정은 옆 톱니로 연다(아직 설정이 없으면 켤 때 연다).
+                    HStack(spacing: 6) {
+                        Toggle(isOn: Binding(get: { showsSalaryCounter }, set: { isOn in
+                            showsSalaryCounter = isOn
+                            if isOn, salaryLive == nil { isSalarySettingsPresented = true }
+                        })) {
+                            Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        }
+                        .tint(Color.tpAccent)
+                        Button { isSalarySettingsPresented = true } label: {
+                            Image(systemName: "gearshape.fill").foregroundStyle(Color.tpSecondary).frame(width: 32, height: 32)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(language.text("연봉 카운터 설정", "Salary counter settings"))
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 6)
+                    .padding(.leading, 12)
+                    .padding(.trailing, 4)
+                    .accessibilityElement(children: .contain)
 
                     ForEach(MapHomeCounterKind.allCases) { kind in
                         Toggle(isOn: counterBinding(kind)) {

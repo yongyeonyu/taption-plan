@@ -3673,12 +3673,14 @@ struct MovementRouteBuilder: Sendable {
 
         return zip(orderedStays, orderedStays.dropFirst()).compactMap { from, to in
             guard from.placeKey != to.placeKey else { return nil }
-            let span = TimeSpan(start: from.span.end, end: to.span.start)
-            guard span.duration > 0 else { return nil }
-            let segmentReadings = evidenceIndex.readings(
-                in: span,
+            let gap = TimeSpan(start: from.span.end, end: to.span.start)
+            guard gap.duration > 0 else { return nil }
+            let gapReadings = evidenceIndex.readings(
+                in: gap,
                 inspectionCount: &inspectionCount
             )
+            let span = Self.departureSpan(gap, readings: gapReadings, origin: from.point)
+            let segmentReadings = gapReadings.filter { $0.timestamp >= span.start }
             let originReadings = evidenceIndex.readings(
                 in: from.span,
                 inspectionCount: &inspectionCount
@@ -3744,6 +3746,32 @@ struct MovementRouteBuilder: Sendable {
                 subwayRoute: inference.subwayRoute
             )
         }
+    }
+
+    /// 출발 전 머무름을 이동에서 뗀다(CAT1029A03).
+    ///
+    /// 자는 동안 GPS가 끊기면 앞 머무름이 마지막 표본에서 끝나, 잠든 시각부터 도착까지가
+    /// 한 이동이 되고 GPS 손실이 지하철 점수로 읽혔다. 출발지에 머문 근거(출발지 200m 안의
+    /// 정지 표본, 또는 2시간 넘게 이어진 정지)가 있고 출발 근거가 30분 넘게 늦으면,
+    /// 이동은 마지막 정지 표본에서 시작한다. 지하에서 GPS만 끊긴 이동은 그 근거가 없어 그대로다.
+    static func departureSpan(_ gap: TimeSpan, readings: [SensorReading], origin: GeoPoint?) -> TimeSpan {
+        func isNearOrigin(_ reading: SensorReading) -> Bool {
+            guard let origin, let point = reading.point, point.horizontalAccuracy <= 100 else { return false }
+            return distanceMeters(origin, point) <= 200
+        }
+        guard let departure = readings.firstIndex(where: { reading in
+            let awayFromOrigin = reading.point.map { $0.horizontalAccuracy <= 100 } == true
+                && origin != nil && !isNearOrigin(reading)
+            return awayFromOrigin || reading.motion == .automotive || reading.motion == .cycling
+                || (reading.motion != .stationary && (reading.speedMetersPerSecond ?? 0) >= 1.5)
+        }) else { return gap }
+        let still = readings[..<departure].filter { $0.motion == .stationary }
+        guard let lastStill = still.last,
+              readings[departure].timestamp.timeIntervalSince(gap.start) > 30 * 60,
+              still.contains(where: isNearOrigin)
+                || lastStill.timestamp.timeIntervalSince(still[0].timestamp) >= 2 * 60 * 60,
+              lastStill.timestamp > gap.start, lastStill.timestamp < gap.end else { return gap }
+        return TimeSpan(start: lastStill.timestamp, end: gap.end)
     }
 
     private func pathDistance(_ points: [GeoPoint]) -> Double {

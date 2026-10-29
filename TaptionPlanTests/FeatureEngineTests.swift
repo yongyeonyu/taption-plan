@@ -10570,6 +10570,46 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertGreaterThan(result[0].distanceMeters, 300)
     }
 
+    // CAT1029A03: 밤새 GPS가 끊겨 집 머무름이 01:25에 끝나도, 이동은 실제 출발(09:00 이후)에서 시작한다.
+    func testOvernightStayGapStartsTravelAtDepartureNotAtLastHomeFix() {
+        let day = makeDate(2026, 8, 1, 0, 0)
+        func at(_ minute: Int) -> Date { day.addingTimeInterval(Double(minute) * 60) }
+        func geo(_ latitude: Double) -> GeoPoint {
+            // 역이 없는 좌표(동해). 서울 도심을 지나면 도로 주행도 역 좌표 궤적으로 지하철이 된다(따로 본다).
+            GeoPoint(latitude: latitude, longitude: 129.8, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        let stays = [
+            PlaceStay(placeKey: "home", displayName: "집", span: TimeSpan(start: at(0), end: at(85)),
+                      confidence: .high, point: geo(37.50)),
+            PlaceStay(placeKey: "office", displayName: "회사", span: TimeSpan(start: at(608), end: at(720)),
+                      confidence: .high, point: geo(37.60)),
+        ]
+        let night = stride(from: 90, through: 540, by: 10).map {
+            SensorReading(timestamp: at($0), motion: .stationary, motionConfidence: .high, gpsAvailable: false)
+        }
+        let drive = stride(from: 550, through: 606, by: 2).map {
+            SensorReading(timestamp: at($0), point: geo(37.50 + Double($0 - 548) / 600), speedMetersPerSecond: 15,
+                          motion: .automotive, motionConfidence: .high)
+        }
+
+        let result = MovementRouteBuilder().build(stays: stays, readings: night + drive)
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.span.start, at(540))
+        XCTAssertEqual(result.first?.span.end, at(608))
+        XCTAssertNotEqual(result.first?.mode, .subway, "\(result.first?.evidence ?? [])")
+    }
+
+    func testDepartureSpanKeepsUndergroundGapWithoutStillnessAtOrigin() {
+        let day = makeDate(2026, 8, 1, 8, 0)
+        let gap = TimeSpan(start: day, end: day.addingTimeInterval(80 * 60))
+        // 지하에서 GPS만 끊긴 이동: 출발지에 머문 근거가 없으므로 처음부터 이동이다.
+        let readings = [SensorReading(timestamp: day.addingTimeInterval(75 * 60), motion: .walking,
+                                      motionConfidence: .high)]
+
+        XCTAssertEqual(MovementRouteBuilder.departureSpan(gap, readings: readings, origin: nil), gap)
+    }
+
     func testMovementRouteBuilderBoundsDisjointEvidenceInspection() {
         let start = makeDate(2026, 8, 1, 0, 0)
         let count = 1_000
