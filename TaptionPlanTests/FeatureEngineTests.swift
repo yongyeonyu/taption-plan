@@ -30871,7 +30871,19 @@ final class RawSensorReplayTests: XCTestCase {
         for day in days {
             let readings = day.readings.sorted { $0.timestamp < $1.timestamp }
             let pressure = readings.filter { $0.pressureKilopascals != nil }.count
-            print("REPLAY day \(formatter.string(from: day.day)) readings=\(readings.count) pressure=\(pressure) travel=\(day.travel.count)")
+            print("REPLAY day \(formatter.string(from: day.day)) readings=\(readings.count) pressure=\(pressure) travel=\(day.travel.count) places=\(day.places?.count ?? -1) actuals=\(day.actuals?.count ?? -1)")
+            for stay in (day.places ?? []).sorted(by: { $0.span.start < $1.span.start }) {
+                print("REPLAY stay \(formatter.string(from: stay.span.start))–\(formatter.string(from: stay.span.end)) key=\(stay.placeKey.prefix(24)) name=\(stay.displayName) confirmed=\(stay.isConfirmed)")
+            }
+            for actual in (day.actuals ?? []).sorted(by: { $0.startedAt < $1.startedAt }) where actual.source != .healthKit {
+                print("REPLAY actual \(formatter.string(from: actual.startedAt))–\(formatter.string(from: actual.endedAt ?? actual.startedAt)) \(actual.categoryID) src=\(actual.source.rawValue) model=\(actual.modelVersion ?? "-") locked=\(actual.isClassificationLocked ?? false) manual=\(actual.manuallyCorrected)")
+            }
+            // 원본 표본만으로 역 궤적 엔진이 지하철을 새로 찾는지 본다(EXP1029A02 — 자차 출근에 회색 지하철 경로).
+            for detected in SubwayTravelSegmentEngine.segments(from: readings) {
+                print("REPLAY detected-subway \(formatter.string(from: detected.span.start))–\(formatter.string(from: detected.span.end)) "
+                    + "conf=\(detected.confidence) route=\(detected.subwayRoute?.stops.map(\.stationName).joined(separator: ">") ?? "-") "
+                    + "evidence=\(detected.evidence.prefix(6).joined(separator: "|"))")
+            }
             for segment in day.travel.sorted(by: { $0.span.start < $1.span.start }) {
                 let inside = readings.filter { segment.span.contains($0.timestamp) }
                 let around = readings.filter {
@@ -30890,6 +30902,30 @@ final class RawSensorReplayTests: XCTestCase {
 
 /// 회사 하루가 실내 GPS 흔들림으로 조각나도 근무 한 줄이어야 한다(WRK1029A01).
 final class OfficeStayAbsorptionTests: XCTestCase {
+    // WRK1029A02: 잠긴 예전 자동 '휴식' 조각이 새로 판정한 회사 업무를 덮지 않는다.
+    func testRegisteredCompanyWorkReplacesLockedGenericRest() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(9 * 3_600))
+        let locked = ActualRecord(
+            planID: nil, title: "집에서 휴식", categoryID: "rest",
+            startedAt: start.addingTimeInterval(600), endedAt: start.addingTimeInterval(3 * 3_600),
+            source: .location, behavior: "homeRest", modelVersion: StationaryContextClassifier.modelVersion,
+            isClassificationLocked: true
+        )
+        let fresh = ActualRecord(
+            planID: nil, title: "근무", categoryID: "work",
+            startedAt: start, endedAt: span.end,
+            source: .location, behavior: StationaryContextKind.work.rawValue,
+            evidence: ["자주가는 곳: 회사"], modelVersion: StationaryContextClassifier.modelVersion
+        )
+
+        let merged = ActivityClassificationLockEngine.mergingLockedClassifications(
+            existing: [locked], fresh: [fresh], inside: span
+        )
+
+        XCTAssertEqual(merged.map(\.categoryID), ["work"])
+    }
+
     private let officeKey = "frequent-office"
     private let hour: TimeInterval = 3_600
 
@@ -31238,5 +31274,185 @@ final class CarAudioTravelConfirmationTests: XCTestCase {
         )
         XCTAssertEqual(legacy.registeredCarAudioNames, [])
         XCTAssertEqual(legacy.recentCarAudioNames, [])
+    }
+}
+
+/// 클립 편집기의 여러 날 창(NLE1029A02): 전날을 음수 분으로 앞에 잇고, 자정을 넘는 기록은 클립 하나다.
+@MainActor
+final class NLEMultiDayTests: XCTestCase {
+    private var calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return calendar
+    }()
+
+    private func dayStart() -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 10, day: 23))!
+    }
+
+    private func segment(
+        _ start: Int,
+        _ end: Int,
+        _ categoryID: String,
+        sources: [UUID] = []
+    ) -> MapHomeTimeRailSegment {
+        MapHomeTimeRailSegment(
+            startMinute: start,
+            endMinute: end,
+            categoryID: categoryID,
+            title: categoryID,
+            sourceIDs: sources
+        )
+    }
+
+    private let sleepID = UUID()
+
+    /// 오늘: 수면 00:00–07:00(어제에서 이어짐), 업무 07:00–24:00.
+    private func todayTrack() -> NLETrack {
+        MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 420, "sleep", sources: [sleepID]),
+            segment(420, 1_440, "work", sources: [UUID()]),
+        ])
+    }
+
+    /// 어제: 일상 00:00–22:00, 수면 22:00–24:00(오늘 수면과 같은 기록).
+    private func yesterdayClips() -> NLEDayClips {
+        NLEDayWindow.clips(
+            segments: [
+                segment(0, 1_320, "activity", sources: [UUID()]),
+                segment(1_320, 1_440, "sleep", sources: [sleepID]),
+            ],
+            details: [],
+            dayOffset: -1
+        )
+    }
+
+    /// 어제는 −1,440…0으로 옮겨져 하루를 빈틈없이 채운다.
+    func testYesterdayShiftsToNegativeMinutes() {
+        let clips = yesterdayClips().main
+        XCTAssertEqual(clips.first?.startMinute, -1_440)
+        XCTAssertEqual(clips.last?.endMinute, 0)
+        XCTAssertEqual(clips.reduce(0) { $0 + $1.lengthMinutes }, NLETrack.dayMinutes)
+        XCTAssertTrue(clips.allSatisfy { $0.id.hasPrefix("main|d-1|") })
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [], dayOffset: -1)
+        XCTAssertEqual(track.rangeStartMinute, -1_440)
+        XCTAssertEqual(track.rangeEndMinute, 0)
+    }
+
+    /// 자정을 넘는 수면은 앞에 이은 뒤 클립 하나·원본 구간 하나가 된다.
+    func testOvernightSleepJoinsIntoOneClip() throws {
+        let joined = NLEDayWindow.prepending(yesterdayClips().main, to: todayTrack())
+        XCTAssertEqual(joined.rangeStartMinute, -1_440)
+        XCTAssertEqual(joined.clips.count, 3)
+        let sleep = try XCTUnwrap(joined.clip(atMinute: -60))
+        XCTAssertEqual(sleep.id, joined.clip(atMinute: 60)?.id)
+        XCTAssertEqual(sleep.startMinute, -120)
+        XCTAssertEqual(sleep.endMinute, 420)
+        XCTAssertEqual(sleep.parent.startMinute, -120)
+        XCTAssertEqual(sleep.parent.endMinute, 420)
+        XCTAssertEqual(sleep.parent.sourceIDs, [sleepID])
+        XCTAssertFalse(sleep.isDirty, "이어 붙이기만 한 상태는 저장할 것이 없어야 한다")
+    }
+
+    /// 이은 수면의 분류를 바꾸면 23:00→07:00을 덮는 요청 하나가 나간다.
+    func testJoinedSleepYieldsOneRequestAcrossMidnight() throws {
+        var joined = NLEDayWindow.prepending(yesterdayClips().main, to: todayTrack())
+        let sleep = try XCTUnwrap(joined.clip(atMinute: -60))
+        let rest = MapHomeNLEClipEditor.option(forCategoryID: "hobby", title: "hobby", behavior: nil)
+        XCTAssertTrue(joined.setOption(sleep.id, to: rest))
+
+        let requests = joined.editRequests(dayStart: dayStart(), calendar: calendar)
+        XCTAssertEqual(requests.count, 1)
+        let request = try XCTUnwrap(requests.first)
+        XCTAssertEqual(request.sourceIDs, [sleepID])
+        XCTAssertEqual(
+            request.originalSpan.start,
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 22, hour: 22))
+        )
+        XCTAssertEqual(
+            request.originalSpan.end,
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 23, hour: 7))
+        )
+        guard case let .cover(pieces, _) = request.mode else { return XCTFail("cover 요청이어야 한다") }
+        XCTAssertEqual(pieces.count, 1)
+        XCTAssertEqual(pieces.first?.option.categoryID, "hobby")
+    }
+
+    /// 눈금은 전날로 넘어가도 24시간으로 감는다.
+    func testRulerWrapsIntoPreviousDay() {
+        XCTAssertEqual(MapHomeNLEClipEditor.minuteLabel(-30), "23:30")
+        XCTAssertEqual(MapHomeNLEClipEditor.minuteLabel(-1_440), "00:00")
+        XCTAssertEqual(MapHomeNLEClipEditor.minuteLabel(1_440), "24:00")
+        XCTAssertEqual(NLEDayWindow.wrappedHour(-60), 23)
+        XCTAssertEqual(NLEDayWindow.wrappedHour(-1_440), 0)
+        XCTAssertEqual(NLEDayWindow.dayIndex(-30), -1)
+        XCTAssertEqual(NLEDayWindow.dayIndex(0), 0)
+        XCTAssertEqual(NLEDayWindow.dayIndex(-1_440), -1)
+        XCTAssertEqual(NLEDayWindow.dayIndex(-1_441), -2)
+        XCTAssertEqual(NLEDayWindow.dayLabel(dayIndex: -1, baseDate: dayStart(), calendar: calendar), "10/22")
+        XCTAssertEqual(NLEDayWindow.dayLabel(dayIndex: 0, baseDate: dayStart(), calendar: calendar), "10/23")
+    }
+
+    /// 이미 고친 클립은 전날을 앞에 이어도 그대로 남고, 창은 하루씩 넓어진다.
+    func testPrependingKeepsEditedClip() throws {
+        var track = todayTrack()
+        let work = try XCTUnwrap(track.clip(atMinute: 600))
+        let hobby = MapHomeNLEClipEditor.option(forCategoryID: "hobby", title: "hobby", behavior: nil)
+        XCTAssertTrue(track.setOption(work.id, to: hobby))
+
+        let joined = NLEDayWindow.prepending(yesterdayClips().main, to: track)
+        let kept = try XCTUnwrap(joined.clip(work.id))
+        XCTAssertEqual(kept.option.categoryID, "hobby")
+        XCTAssertTrue(kept.isDirty)
+        XCTAssertEqual(kept.startMinute, 420)
+        XCTAssertEqual(kept.endMinute, 1_440)
+        XCTAssertEqual(joined.rangeStartMinute, -1_440)
+        XCTAssertEqual(joined.rangeEndMinute, 1_440)
+
+        let window = NLEDayWindow(baseDate: dayStart(), loadedDays: 2, calendar: calendar)
+        XCTAssertEqual(window.rangeStartMinute, -1_440)
+        XCTAssertEqual(window.nextEarlierOffset, -2)
+        XCTAssertEqual(
+            window.nextEarlierDate,
+            calendar.date(from: DateComponents(year: 2026, month: 10, day: 21))
+        )
+        XCTAssertTrue(NLEDayWindow.needsEarlierDay(visibleStartMinute: -1_000, visibleMinutes: 600, rangeStartMinute: -1_440))
+        XCTAssertFalse(NLEDayWindow.needsEarlierDay(visibleStartMinute: -800, visibleMinutes: 600, rangeStartMinute: -1_440))
+    }
+}
+
+// PLY1029A07: 재생 경로 다듬기는 앞뒤를 똑같이 봐서 GPS 튐만 누르고 경로에서 뒤처지지 않는다.
+@MainActor
+final class PlaybackPathSmoothingTests: XCTestCase {
+    func testCenteredSmoothingDampsZigzagWithoutLag() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        let dayStart = calendar.date(from: DateComponents(year: 2026, month: 10, day: 29))!
+        let start = dayStart.addingTimeInterval(9 * 3_600)
+        // 동쪽으로 초당 약 10m, 2초마다 표본, 남북으로 ±30m 번갈아 튄다.
+        let readings = (0..<120).map { index -> SensorReading in
+            let zigzag = index.isMultiple(of: 2) ? 0.00027 : -0.00027
+            return SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 2),
+                point: GeoPoint(latitude: 37.5 + zigzag, longitude: 126.9 + Double(index) * 0.000226,
+                                altitude: 0, horizontalAccuracy: 5, verticalAccuracy: 5),
+                speedMetersPerSecond: 10, motion: .automotive, motionConfidence: .high
+            )
+        }
+        let driver = MapHomePlaybackDriver(inputs: .init(
+            startMinute: 540, endMinute: 545, movingRanges: [], dayStart: dayStart,
+            readings: readings, travel: [], places: [], zoomPlan: MapHomePlaybackZoomPlan(inputs: [])
+        ))
+        var rawDeviation = 0.0, smoothDeviation = 0.0, lag = 0.0
+        for second in stride(from: 30.0, through: 200.0, by: 1.0) {
+            let date = start.addingTimeInterval(second)
+            let raw = try XCTUnwrap(driver.smoothedPositionForTesting(raw: true, at: date))
+            let smooth = try XCTUnwrap(driver.smoothedPosition(at: date))
+            rawDeviation += abs(raw.latitude - 37.5)
+            smoothDeviation += abs(smooth.latitude - 37.5)
+            lag += abs(smooth.longitude - raw.longitude)
+        }
+        XCTAssertLessThan(smoothDeviation, rawDeviation * 0.5, "남북 튐이 절반 아래로 줄어야 한다")
+        XCTAssertLessThan(lag / 171, 0.00002, "동서 방향으로는 뒤처지지 않는다(평균 2m 미만)")
     }
 }

@@ -382,9 +382,9 @@ final class MapHomeLiveMapTests: XCTestCase {
         // 시작 화면도 85.
         XCTAssertEqual(MapHomeStartupCameraPolicy.distance, Policy.baselineDistance, accuracy: 0.001)
         // 탈것 곡선: 느리면 92, 빠르면 42, 그 사이는 단조 감소.
-        XCTAssertEqual(Policy.scale(forVehicleSpeed: 0.2), 92, accuracy: 0.001)
-        XCTAssertEqual(Policy.scale(forVehicleSpeed: 40), 30, accuracy: 0.001)
-        XCTAssertEqual(Policy.scale(forVehicleSpeed: 200), 30, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 0.2), 85, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 40), 50, accuracy: 0.001)
+        XCTAssertEqual(Policy.scale(forVehicleSpeed: 200), 50, accuracy: 0.001)
         XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 3), Policy.scale(forVehicleSpeed: 12))
         XCTAssertGreaterThan(Policy.scale(forVehicleSpeed: 12), Policy.scale(forVehicleSpeed: 30))
         // 센서 속도만 아는 경우: 정지·걷기는 85, 그 위는 탈것 곡선, 모르면 nil.
@@ -456,8 +456,8 @@ final class MapHomeLiveMapTests: XCTestCase {
             MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 60_000),
             MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 250_000)
         )
-        XCTAssertEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 5_000_000), 15, "하한")
-        XCTAssertLessThanOrEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 100), 60, "상한")
+        XCTAssertEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 5_000_000), 35, "하한")
+        XCTAssertLessThanOrEqual(MapHomePlaybackZoomPolicy.fitScale(forExtentMeters: 100), 70, "상한")
         // 1km 미만 탈것은 85 고정, 1~50km는 속도 비례.
         let hop = Plan(inputs: [.init(
             startMinute: 0, endMinute: 10, mode: .bus, speedMetersPerSecond: 6,

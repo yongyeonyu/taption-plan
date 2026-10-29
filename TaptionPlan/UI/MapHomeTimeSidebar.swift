@@ -1361,6 +1361,20 @@ struct MapHomeTimeSidebar: View {
                                 visibleWindow: visibleWindow
                             )
                         )
+                        // 손잡이뿐 아니라 줄 어디를 두 번 눌러도 그 시각의 클립 편집으로 들어간다(대표 지시, NLE1029A01).
+                        .simultaneousGesture(
+                            SpatialTapGesture(count: 2).onEnded { value in
+                                let minute = MapHomeTimeSidebarMath.minuteByLocation(
+                                    y: value.location.y, trackHeight: trackHeight, verticalInset: verticalInset,
+                                    maxMinute: maxMinute, visibleStartMinute: visibleWindow.lowerBound,
+                                    visibleDurationMinutes: visibleWindow.upperBound - visibleWindow.lowerBound
+                                )
+                                TaptionPlanDiagnosticsLogger.shared.record(
+                                    "sidebar_double_tap", fields: ["where": "rail"], metrics: ["minute": Double(minute)]
+                                )
+                                onSectionEdit?(minute)
+                            }
+                        )
                         .simultaneousGesture(viewportDragGesture(trackHeight: trackHeight))
                         .simultaneousGesture(timelineMagnificationGesture)
 

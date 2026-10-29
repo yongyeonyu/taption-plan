@@ -12,7 +12,12 @@ extension MapHomeNLEClipEditor {
     /// 클립의 원본 구간은 자기 기록뿐 아니라 옆의 빈 시간까지 품는다. 그래야
     /// 동영상 편집기처럼 클립을 빈 자리로 끌어 옮기거나 늘릴 수 있다. 빈 시간에는
     /// 원본 기록이 없으므로 지어내는 데이터도 없다.
-    static func makeMainTrack(segments: [MapHomeTimeRailSegment]) -> NLETrack {
+    ///
+    /// `dayOffset`은 기준일에서 뺀 날 수다(어제 = −1). 구간은 0…1,440에 묶여 있으므로
+    /// 클립을 세울 때 그만큼 옮기고, 트랙 범위도 그 날로 둔다(NLE1029A02).
+    static func makeMainTrack(segments: [MapHomeTimeRailSegment], dayOffset: Int = 0) -> NLETrack {
+        let shift = dayOffset * NLETrack.dayMinutes
+        let dayEnd = shift + NLETrack.dayMinutes
         let ordered = segments
             .filter { $0.endMinute > $0.startMinute }
             .sorted { $0.startMinute < $1.startMinute }
@@ -22,11 +27,11 @@ extension MapHomeNLEClipEditor {
             let start = max(segment.startMinute, cursor)
             let end = min(segment.endMinute, NLETrack.dayMinutes)
             guard start < end else { continue }
-            spans.append((segment, start, end))
+            spans.append((segment, start + shift, end + shift))
             cursor = end
         }
         guard !spans.isEmpty else {
-            return NLETrack(clips: [])
+            return NLETrack(clips: [], rangeStartMinute: shift, rangeEndMinute: dayEnd)
         }
 
         // 원본 구간을 하루 전체로 늘려 잇는다. 가운데 빈 시간은 앞 구간이,
@@ -37,8 +42,8 @@ extension MapHomeNLEClipEditor {
                 parents[index - 1] = parents[index - 1].lowerBound..<parents[index].lowerBound
             }
         }
-        parents[0] = 0..<parents[0].upperBound
-        parents[parents.count - 1] = parents[parents.count - 1].lowerBound..<NLETrack.dayMinutes
+        parents[0] = shift..<parents[0].upperBound
+        parents[parents.count - 1] = parents[parents.count - 1].lowerBound..<dayEnd
 
         let clips = spans.enumerated().compactMap { index, span -> NLEClip? in
             let option = option(
@@ -55,7 +60,7 @@ extension MapHomeNLEClipEditor {
                 fillOption: ActivitySectionOverrideEngine.unconfirmedOption
             )
             return NLEClip(
-                id: "main|\(span.segment.id)",
+                id: "main|\(clipIDPrefix(dayOffset))\(span.segment.id)",
                 option: option,
                 startMinute: span.start,
                 endMinute: span.end,
@@ -67,7 +72,12 @@ extension MapHomeNLEClipEditor {
                 )
             )
         }
-        return NLETrack(clips: clips)
+        return NLETrack(clips: clips, rangeStartMinute: shift, rangeEndMinute: dayEnd)
+    }
+
+    /// 지난 날의 클립 ID 앞머리. 기준일은 예전 ID를 그대로 쓴다.
+    private static func clipIDPrefix(_ dayOffset: Int) -> String {
+        dayOffset == 0 ? "" : "d\(dayOffset)|"
     }
 
     /// 상세활동 기록을 하루 전체에 걸쳐 세운다.
@@ -76,8 +86,10 @@ extension MapHomeNLEClipEditor {
     /// 안에서 옮기거나 자를 수는 있어도, 다른 구간으로 넘어가지는 않는다.
     static func makeSubTrack(
         details: [MapHomeSectionDetail],
-        segments: [MapHomeTimeRailSegment]
+        segments: [MapHomeTimeRailSegment],
+        dayOffset: Int = 0
     ) -> NLETrack {
+        let shift = dayOffset * NLETrack.dayMinutes
         let ordered = segments
             .filter { $0.endMinute > $0.startMinute }
             .sorted { $0.startMinute < $1.startMinute }
@@ -97,26 +109,31 @@ extension MapHomeNLEClipEditor {
                 option(forCategoryID: $0.categoryID, title: $0.title, behavior: $0.behavior)
             } ?? ActivitySectionOverrideEngine.unconfirmedOption
             let parent = NLEClipParent(
-                startMinute: owner?.startMinute ?? detail.startMinute,
-                endMinute: owner?.endMinute ?? detail.endMinute,
+                startMinute: (owner?.startMinute ?? detail.startMinute) + shift,
+                endMinute: (owner?.endMinute ?? detail.endMinute) + shift,
                 sourceIDs: [detail.id],
                 option: detailOption,
                 fillOption: fill
             )
             return NLEClip(
-                id: "sub|\(detail.id.uuidString)",
+                id: "sub|\(clipIDPrefix(dayOffset))\(detail.id.uuidString)",
                 option: detailOption,
-                startMinute: detail.startMinute,
-                endMinute: detail.endMinute,
+                startMinute: detail.startMinute + shift,
+                endMinute: detail.endMinute + shift,
                 parent: parent,
                 origin: NLEClipOrigin(
-                    startMinute: detail.startMinute,
-                    endMinute: detail.endMinute,
+                    startMinute: detail.startMinute + shift,
+                    endMinute: detail.endMinute + shift,
                     option: detailOption
                 )
             )
         }
-        return NLETrack(clips: clips, fillsGaps: false)
+        return NLETrack(
+            clips: clips,
+            rangeStartMinute: shift,
+            rangeEndMinute: shift + NLETrack.dayMinutes,
+            fillsGaps: false
+        )
     }
 
     static func option(
@@ -168,9 +185,11 @@ extension MapHomeNLEClipEditor {
         Color(hex: MapHomePastelPalette.hex(categoryID))
     }
 
+    /// 시각 글자. 지난 날의 음수 분도 24시간으로 감는다(−30 → "23:30"). 기준일 끝만 "24:00"이다.
     static func minuteLabel(_ minute: Int) -> String {
-        let clamped = min(max(minute, 0), NLETrack.dayMinutes)
-        return String(format: "%02d:%02d", clamped / 60, clamped % 60)
+        if minute == NLETrack.dayMinutes { return "24:00" }
+        let wrapped = NLEDayWindow.minuteOfDay(minute)
+        return String(format: "%02d:%02d", wrapped / 60, wrapped % 60)
     }
 
     static func rangeLabel(_ start: Int, _ end: Int) -> String {
@@ -191,7 +210,7 @@ extension MapHomeNLEClipEditor {
     }
 
     static func hourLabel(_ hour: Int) -> String {
-        String(format: "%02d", hour % 24)
+        String(format: "%02d", NLEDayWindow.wrappedHour(hour * 60))
     }
 }
 

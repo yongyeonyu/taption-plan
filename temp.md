@@ -2516,3 +2516,45 @@
 - 지시(대표): "푸시하고 249". 푸시 `f098224..85ef6bf`(3커밋). 담긴 것: WRK1029A01·PLY1029A01·EXP1029A01·CAR1029A01·PLY1029A02.
 - A03: 아카이브·익스포트까지 정상, 7/9 업로드에서 altool `-43 The temporary copy of 'TaptionPlan.ipa' no longer exists`(일시 오류). A04: 버전 올림 커밋(`aa5e908`) 뒤 `--reuse-archive`로 재업로드 성공(`No errors uploading`), 8/9 처리 대기 중 네트워크 읽기 시간 초과로 스크립트 종료. `verify.sh` 1분 폴링으로 **VALID** 확인 → `asc.py attach --build 249`로 내부 그룹 연결 → 최종 `ok: true`(`build/validation/TFB1029A04/testflight-report.json`).
 - 교훈: 업로드 뒤 처리 대기가 끊기면 다시 올리지 말고 `verify.sh --build N` → `asc.py attach --build N` → `verify.sh` 순으로 잇는다.
+
+## PLY1029A03 · 재생을 지도 엔진이 직접 구동한다 (2026-10-29 밤)
+- 지시(대표): "지도 엔진 직접 구동" 선택. 재생 상태를 2만 줄 `MapHomeView`에서 떼어낸다.
+- 원인(코드 확인): 틱마다 `dayPlaybackCurrentMinute`(@State)가 바뀌어 화면 전체 body가 다시 평가되고, 그 결과로 `focusMap`→`mapPosition`→`updateUIView`→`setCamera`가 프레임마다 SwiftUI를 한 바퀴 돌았다. 화랑이 화면 좌표도 지도→`publishViewport`→SwiftUI 저장소→오버레이로 한 프레임 늦게 돌아왔다.
+- 고침: `MapHomePlaybackDriver`(새 파일) — 표시 링크 시계로 분을 전진시키고 `frame(at:)`→`resolveOrGap`→줌 계획·스무딩까지 계산해 `MapHomePlaybackSink`(벡터 지도 코디네이터)에 바로 준다. 코디네이터는 `setCamera(withDuration: 1/60, linear)`로 잇고 화랑이 화면 좌표를 `vectorMapViewportStore`에 직접 쓴다. SwiftUI에는 정수 분이 바뀔 때만 알린다(`selectedTimelineMinute`·`dayPlaybackCurrentMinute`·경로 투영 갱신). 재생 중 `applyVectorMapViewport`는 화랑이 점·화면 되읽기를 건너뛴다(구동기 소유). 화랑이 걷기 동작은 재생 중 `animationPhase: nil`로 자체 시간 애니메이션. Apple 지도 경로는 예전 루프 그대로(대표 기기는 벡터).
+- 검증: 기기용 Debug 빌드 경고 0·설치 종료 0(`build/validation/PLY1029A03/`), 단위 전체 **1,674건 중 1,671 통과·실패 0·건너뜀 3**(`unit.xcresult`; 로그의 warning 853건은 모두 기존 `TaptionPlanSmokeUITests`의 actor 격리 경고로 이번 변경과 무관). Instruments 'Animation Hitches'는 기기에 붙지 못했다(두 번 모두 "Timed out waiting for device to boot") — 계측은 앱 안 `playback_frame_stats`로.
+- 남은 것: 기기에서 재생 체감·`playback_frame_stats`. ④경로 투영 1회 계산 ⑤장소 핀 지도 레이어는 측정 뒤.
+
+## ZMP1029A01 · 재생 줌 범위 축소 (2026-10-29 밤)
+- 지시(대표): "줌인도 너무 줌인하지 말고 줌아웃도 너무 줌아웃하지 말자고 … 민맥스 값을 조정".
+- 고침: `MapHomePlaybackZoomPolicy` slowest 92→**85**(정지 배율보다 더 들어가지 않음), fastest 30→**50**, 긴 이동 경로 전체 맞춤 15~60→**35~70**. 시험 기대값 갱신(`MapHomeLiveMapTests`).
+
+## WRK1029A02 · 잠긴 예전 자동 머무름이 회사 업무를 덮지 않게 + 원본에 머무름·기록 포함 (2026-10-29 밤)
+- 지시(대표): "여전히 오늘자 데이터로 업무가 측정이 안 되는데 회사가 지정되어 있는데 왜 업무가 측정 안 되는지 확인".
+- 원인(코드 확인): `applyStationaryContextRecords`가 새 기록을 `mergingLockedClassifications`로 합치는데, 겹치는 **잠긴** 예전 자동 기록이 있으면 새 기록의 분류를 예전 것으로 되돌린다(`value.categoryID = previous.categoryID`). 예외는 예전 기록 이름이 정확히 "머무름"일 때뿐이라, 오늘 아침 일찍 잠긴 '휴식/활동' 조각이 WRK1029A01로 새로 만든 '근무'를 계속 덮었다.
+- 고침: `shouldAdoptFreshDestinationClassification` — 등록 장소 근거(「자주가는 곳:」)가 있는 새 기록은 예전 자동 `activity`/`rest`/`routine`/미확인 머무름(사용자 수정 아님)을 대신한다. 「어제·오늘 원본 업로드」에 `places`·`actuals`를 넣어(`TodaySensorRawExport`, 옛 파일은 nil) 재생 시험이 머무름 조각과 기록을 출력한다.
+- 검증 기준: 새 시험 `testRegisteredCompanyWorkReplacesLockedGenericRest`, 단위 전체, 기기에서 오늘 회사 시간이 업무로(새 원본 업로드로 확인).
+
+## NLE1029A01 · 사이드바 어디를 두 번 눌러도 클립 편집 (2026-10-29 밤)
+- 지시(대표): "사이드바 핸들을 더블탭해서 들어가는 거 플러스 그냥 사이드바 전체를 더블탭하면 들어가게".
+- 고침: 시간 줄의 터치 면에 `SpatialTapGesture(count: 2)`를 더해 그 y의 분으로 `onSectionEdit`를 부른다(`sidebar_double_tap where=rail`). 손잡이 두 번 누르기는 그대로.
+- 검증 기준: 빌드·기존 시간 줄 UI 시험, 실기기에서 줄 두 번 누르기.
+
+## PLY1029A04 · 재생 이동 배속 2배 (2026-10-29 밤)
+- 지시(대표): "재생할 때 이동속도를 지금보다 2배 빠르게 하자."
+- 고침: `movementPlaybackMultiplier` 1/48→**1/24**(이동 초당 2.5분→5분). 걷기는 PLY1029A01에서 정한 초당 15분을 유지하려고 배수 6→3. 시험 기대값 갱신(`TimeScaleTests`).
+
+## PLY1029A05 · PLY1029A06 · 재생 끊김·화랑이 좌우 튐의 근본 원인 (2026-10-30)
+- 지시(대표): "재생하는 방법 자체를 좀 더 빠르고 부드러운 걸로 해서 영상으로 남기는 게 목적인데 … 너무 끊기고 화랑이가 가운데 있어야 되는데 가운데에서 양옆으로 자꾸 튀는데 … 근본 원인을 수정해줘."
+- 측정(기기 로그 `playback_frame_stats`, 빌드 249): PLY1029A03 구동기 설치 전 재생 4회 틱 12ms 초과 19~71% → 구동기·관찰 분리(A05) 뒤 재생 2회 **87%·98%**, 재생 한 번 틱 242~263개(실제 약 10fps), `map_viewport_performance` 최대 프레임 간격 355ms.
+- **원인 1(끊김)**: 구동기는 "정수 분이 바뀔 때만" SwiftUI에 알렸는데, 정지 구간 배속이 초당 120분이라 120Hz에서는 **매 프레임 분이 바뀐다**. 그래서 `selectedTimelineMinute`·`dayPlaybackCurrentMinute`가 매 프레임 바뀌어 2만 줄 `MapHomeView` 본문 전체와 경로 투영(지도 경로 다시 그리기 포함)이 매 프레임 돌았다.
+- **원인 2(좌우 튐)**: 카메라를 `setCamera(withDuration: 1/60)`로 옮기면서 화랑이 화면 좌표는 카메라가 움직이기 **전**에 `convert`로 계산했다. 화랑이가 매 프레임 이동 반대쪽으로 밀렸다 돌아왔다. 카메라 중심 = 화랑이 좌표라 정답은 늘 정중앙이다.
+- 고침: A05 — 재생 중 화랑이 점은 관찰하지 않는 `livePoint`로, 마커만 `TimelineView(.animation)`이 매 프레임 읽는다. 관찰 값(지도 화면·화랑이 점)은 0.25초마다. A06 — 구동기의 분 알림을 **벽시계 0.25초 간격**으로(`minuteCallbackInterval`), 재생 중 경로 투영은 1초에 한 번, 카메라는 애니메이션 없이 바로 놓고 그 카메라 기준으로 화랑이 좌표를 구한다(정중앙).
+- 검증: 기기용 Debug 빌드 경고 0·설치 종료 0(`build/validation/PLY1029A06/`). 기기 재생 측정은 아직.
+
+## NLE1029A02 · 클립 편집기에서 전날로 이어 스크롤하며 여러 날 편집 (2026-10-29~30)
+- 지시(대표): "클립 편집에서 축소해서 위아래로 … 00시 넘어가면 이전 날 … 00시 뒤에 23, 22, 21 … 이전 날 클립도 가지고 오는 거야 … 다음날은 필요 없겠다." 대표 선택: 계속 위로(여러 날), 자정 걸친 기록은 한 클립, 전날 클립은 전날에 저장.
+- 고침: `MapHomeNLEMultiDay.swift`(절대 분: 기준일 00:00=0, 전날 −1440…0; `clips(dayOffset:)`·`prepending`·`joinAcrossMidnight`·`loadDay`·눈금 감기), `MapHomeNLEEditorViewport.swift`(스크롤·하루 맞춤·눈금을 편집기 밖으로; 위로 스크롤이 범위 끝 한 화면 안으로 오면 전날을 읽어 앞에 잇고 되돌리기 기록에도 잇는다; 1440 배수마다 날짜 줄·"10/28"). 「적용」은 한 번에 요청을 만들고 절대 시각이라 각 날로 저장된다. 자정 걸친 수면은 원본 구간(parent) 단위로 합쳐 요청 하나. `MapHomeNLEClipEditor` 1,403→**1,325줄**. 미리보기 `-nlePreviewMultiDay`.
+- 검증: `NLEMultiDayTests` 5건·`NLETrackTests` 포함 36건 통과(`build/validation/PLY1029A06/nle.xcresult`; 처음 1건은 시험 기대값 오류 — 고정자료 전날 수면이 22:00인데 23:00으로 적었다). 기기용 빌드 경고 0(처음 2건 액터 격리 경고는 `@MainActor`로 해결).
+- 남은 것: 실기기에서 위로 스크롤·전날 편집·저장.
+- PLY1029A07 · 재생 경로 다듬기(대표 선택 "재생만 다듬기"): 구동기가 지금 시각 앞뒤 ±6초(3초 간격 5점)의 위치를 이항 가중치 1·4·6·4·1로 평균한다(`smoothedPosition`). 이미 기록된 하루라 앞뒤를 똑같이 보므로 실시간 필터와 달리 경로보다 뒤처지지 않고, 몇 초 사이 GPS 튐만 줄인다. 1km 넘게 떨어진 점은 평균에 넣지 않는다. 원본은 그대로. 새 시험 `testCenteredSmoothingDampsZigzagWithoutLag`(±30m 지그재그가 절반 아래로, 진행 방향 지연 평균 2m 미만).
+- 검증(묶음: PLY1029A04~A07·ZMP1029A01·WRK1029A02·NLE1029A01/A02): 단위 전체 **1,680건 중 1,677 통과·실패 0·건너뜀 3**(`build/validation/PLY1029A06/unit.xcresult`, 다듬기 전) + 다듬기 포함 집중 254건 통과(`PLY1029A07/focused.xcresult`). 기기용 Debug 빌드 경고 0. 구조 게이트 재잠금(`MapHomeView` 21,944→22,022, `MapHomeVectorMap` 1,275→1,305, `MapHomeTimeSidebar` 3,081→3,095, `AppModel` 14,319→14,323)·경계 통과.

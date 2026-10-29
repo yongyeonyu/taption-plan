@@ -5138,7 +5138,8 @@ final class AppModel {
         for date in [Calendar.autoupdatingCurrent.date(byAdding: .day, value: -1, to: now) ?? now, now] {
             let day = await planDayDataSnapshot(for: date, forceReload: true, refreshRawReadings: true)
             payload.append(TodaySensorRawExport(day: day.day, isComplete: day.isComplete,
-                readings: TodaySensorRawExport.readings(day.readings, on: date), travel: day.travel))
+                readings: TodaySensorRawExport.readings(day.readings, on: date), travel: day.travel,
+                places: day.places, actuals: day.actuals))
         }
         return try await Task.detached(priority: .utility) {
             let directory = FileManager.default.temporaryDirectory
@@ -14279,6 +14280,9 @@ struct TodaySensorRawExport: Codable, Sendable {
     let isComplete: Bool
     let readings: [SensorReading]
     let travel: [TravelSegment]
+    /// 머무름·자동 기록도 함께 담아 업무 분류를 기기 밖에서 재판정한다(WRK1029A02). 옛 파일에는 없다.
+    var places: [PlaceStay]? = nil
+    var actuals: [ActualRecord]? = nil
 
     static func readings(_ source: [SensorReading], on date: Date,
         calendar: Calendar = .autoupdatingCurrent) -> [SensorReading] {

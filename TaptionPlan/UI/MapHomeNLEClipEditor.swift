@@ -18,23 +18,25 @@ struct MapHomeNLEClipEditor: View {
     let initialMinuteHeight: CGFloat?
     var onSaved: () -> Void
 
-    @State private var track: NLETrack
-    @State private var subTrack: NLETrack
+    @State var track: NLETrack
+    @State var subTrack: NLETrack
     @State private var selectedClipID: String?
     @State private var selectedSubClipID: String?
     @State private var playheadMinute: Int
-    @State private var minuteHeight: CGFloat = 2.4
-    @State private var visibleStartMinute: Double = 0
-    @State private var containerHeight: CGFloat = 0
+    @State var minuteHeight: CGFloat = 2.4
+    @State var visibleStartMinute: Double = 0
+    @State var containerHeight: CGFloat = 0
     @State private var zoomBaseWidth: CGFloat = 0
     @State private var zoomBaseStartMinute: Double = 0
     @State private var panBaseStartMinute: Double = 0
-    @State private var undoStack: [NLEEditorSnapshot] = []
-    @State private var redoStack: [NLEEditorSnapshot] = []
+    @State var undoStack: [NLEEditorSnapshot] = []
+    @State var redoStack: [NLEEditorSnapshot] = []
     @State private var dragMode: NLEEditorDragMode = .none
     @State private var didPushUndoForDrag = false
     @State private var isSaving = false
-    @State private var didCenter = false
+    @State var didCenter = false
+    /// 위로 넘겨 전날을 읽는 중인 작업. 하나씩만 읽는다(NLE1029A02).
+    @State var previousDayLoad: Task<Void, Never>?
     /// 가장자리로 끌어 화면이 흐른 만큼(분). 끄는 동안의 좌표를 같은 기준으로 맞춘다.
     @State private var dragScrollShift: Double = 0
     /// 길게 눌러 집어 들기를 기다리는 클립. 0.4초를 채우면 옮기기로 바뀐다.
@@ -195,7 +197,7 @@ struct MapHomeNLEClipEditor: View {
     ///
     /// 줄은 화면 밖까지 넓혀 그리므로(`railBleed`) 눈금 띠도 그만큼 안쪽에서 시작한다.
     /// 이걸 빼먹으면 30분 눈금 "08:30"의 앞자리가 화면 밖으로 밀려 "30"만 남는다.
-    private var gutterWidth: CGFloat {
+    var gutterWidth: CGFloat {
         (rulerLabelEveryMinutes <= 30 ? 46 : 36) + Self.railBleed
     }
 
@@ -316,41 +318,6 @@ struct MapHomeNLEClipEditor: View {
             .frame(width: 1, height: height)
             .offset(x: x)
             .allowsHitTesting(false)
-    }
-
-    private func hourGrid(geometry: NLETimelineGeometry, width: CGFloat) -> some View {
-        Canvas { context, size in
-            let step = gridStepMinutes
-            let labelEvery = rulerLabelEveryMinutes
-            var minute = Int(geometry.visibleStartMinute / Double(step)) * step
-            while Double(minute) <= geometry.visibleEndMinute {
-                let y = geometry.y(forMinute: Double(minute))
-                if y >= -1, y <= size.height + 1 {
-                    let isHour = minute % 60 == 0
-                    var line = Path()
-                    line.move(to: CGPoint(x: isHour ? gutterWidth : gutterWidth + 10, y: y))
-                    line.addLine(to: CGPoint(x: size.width, y: y))
-                    context.stroke(
-                        line,
-                        with: .color(isHour ? Color.tpInk.opacity(0.14) : Color.tpInk.opacity(0.06)),
-                        lineWidth: isHour ? 1 : 0.6
-                    )
-                    if minute % labelEvery == 0 {
-                        // 맨 위 00시가 카드 모서리에 잘리지 않게 안쪽으로 붙인다.
-                        let labelY = min(max(y, 7), size.height - 7)
-                        context.draw(
-                            Text(isHour ? String(format: "%02d", minute / 60) : Self.minuteLabel(minute))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.tpSecondary),
-                            at: CGPoint(x: gutterWidth - 7, y: labelY),
-                            anchor: .trailing
-                        )
-                    }
-                }
-                minute += step
-            }
-        }
-        .allowsHitTesting(false)
     }
 
     private func mainColumn(geometry: NLETimelineGeometry, x: CGFloat, width: CGFloat) -> some View {
@@ -829,7 +796,7 @@ struct MapHomeNLEClipEditor: View {
                     let deltaMinutes = Double(value.location.y - panAnchorY) / Double(max(0.01, minuteHeight))
                     setVisibleStart(panBaseStartMinute - deltaMinutes)
                 case .scrub:
-                    playheadMinute = min(max(minute, 0), NLETrack.dayMinutes)
+                    playheadMinute = min(max(minute, track.rangeStartMinute), track.rangeEndMinute)
                 case let .move(lane, id, originMinute, grabMinute):
                     // 몸통은 0.4초를 누르고 있어야 집어 든다(BOKKI STUDIO 계약).
                     guard isLifted else { break }
@@ -886,13 +853,6 @@ struct MapHomeNLEClipEditor: View {
     }
 
     // MARK: - 상태
-
-    private struct NLEEditorSnapshot: Equatable {
-        var main: [NLEClip]
-        var sub: [NLEClip]
-        var selectedClipID: String?
-        var selectedSubClipID: String?
-    }
 
     /// 대분류 줄과 서브클립 띠 중 어디를 만지고 있는지.
     private enum NLEEditorLane: Equatable {
@@ -992,45 +952,7 @@ struct MapHomeNLEClipEditor: View {
         }
     }
 
-    /// 눈금선 간격. 하루 전체를 볼 때는 한 시간, 확대하면 30·15분.
-    private var gridStepMinutes: Int {
-        switch minuteHeight {
-        case ..<0.7: 60
-        case ..<2.2: 30
-        default: 15
-        }
-    }
-
-    /// 눈금에 시각을 적는 간격. 하루 전체를 볼 때는 세 시간마다 적는다.
-    private var rulerLabelEveryMinutes: Int {
-        switch minuteHeight {
-        case ..<0.55: 180
-        case ..<1.4: 60
-        default: 30
-        }
-    }
-
     // MARK: - 동작
-
-    private func setVisibleStart(_ value: Double) {
-        let visible = Double(max(1, containerHeight)) / Double(max(0.01, minuteHeight))
-        let maximum = max(0, Double(NLETrack.dayMinutes) - visible)
-        visibleStartMinute = min(max(value, 0), maximum)
-    }
-
-    /// 처음 열면 하루 24시간이 한눈에 들어오게 맞춘다. 확대는 두 손가락으로 한다.
-    private func fitWholeDayIfNeeded(height: CGFloat) {
-        guard !didCenter, height > 1 else { return }
-        didCenter = true
-        if let initialMinuteHeight {
-            minuteHeight = initialMinuteHeight
-            let visible = Double(height) / Double(initialMinuteHeight)
-            setVisibleStart(Double(focusMinute) - visible / 2)
-            return
-        }
-        minuteHeight = max(0.22, height / CGFloat(NLETrack.dayMinutes))
-        visibleStartMinute = 0
-    }
 
     /// 클립을 끄는 동안 위·아래 가장자리에 닿으면 화면을 이어서 흐르게 한다.
     ///

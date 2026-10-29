@@ -663,6 +663,10 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let displayedCoordinate: CLLocationCoordinate2D?
     /// 재생 중이면 카메라를 바로 놓지 않고 한 프레임 길이로 이어 움직인다(PLY1029A02).
     var easesCamera: Bool = false
+    /// 재생 구동기. 있으면 코디네이터가 프레임을 직접 받아 카메라·화랑이를 움직인다(PLY1029A03).
+    var playbackDriver: MapHomePlaybackDriver? = nil
+    /// 구동기가 계산한 화랑이의 화면 좌표. SwiftUI 오버레이가 이 점에 화랑이를 둔다.
+    var onPlaybackStickmanPoint: (CGPoint) -> Void = { _ in }
     let onViewportChange: (MapHomeVectorViewport, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onSingleFingerPanEnded: () -> Void
@@ -705,6 +709,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyHeadingIfNeeded(to: mapView)
+        playbackDriver?.sink = context.coordinator
     }
 
     static func dismantleUIView(_ mapView: MLNMapView, coordinator: Coordinator) {
@@ -712,8 +717,33 @@ struct MapHomeVectorMap: UIViewRepresentable {
         mapView.delegate = nil
     }
 
-    final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate, UIGestureRecognizerDelegate,
+        MapHomePlaybackSink {
         var parent: MapHomeVectorMap
+
+        var playbackCameraDistance: Double? {
+            mapView.map { max($0.camera.altitude, 1) }
+        }
+
+        /// 재생 한 프레임: 카메라를 그 자리에 바로 놓고, 화랑이는 그 카메라 기준 화면 좌표(곧 정중앙)에 둔다.
+        ///
+        /// 예전에는 카메라를 1/60초 애니메이션으로 옮기면서, 화랑이 좌표는 카메라가 움직이기 **전**에 계산했다.
+        /// 그래서 화랑이가 매 프레임 이동 반대쪽으로 한 걸음 밀렸다가 돌아와 좌우로 튀었다(PLY1029A06).
+        /// 표시 링크가 매 프레임 새 위치를 주므로 애니메이션 없이 놓아도 부드럽다.
+        func applyPlaybackFrame(_ frame: MapHomePlaybackDriverFrame) {
+            guard let mapView, mapView.bounds.width > 0, let coordinate = frame.coordinate else { return }
+            let camera = mapView.camera
+            mapView.setCamera(
+                MLNMapCamera(
+                    lookingAtCenter: coordinate,
+                    altitude: frame.cameraDistance,
+                    pitch: camera.pitch,
+                    heading: camera.heading
+                ),
+                animated: false
+            )
+            parent.onPlaybackStickmanPoint(mapView.convert(coordinate, toPointTo: mapView))
+        }
         private weak var mapView: MLNMapView?
         private var lastCameraRevision = Int.min
         private var lastContentSignature: MapHomeVectorContentKey?

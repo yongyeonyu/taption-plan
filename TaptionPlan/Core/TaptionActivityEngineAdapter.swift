@@ -1688,16 +1688,14 @@ enum ActivityClassificationLockEngine {
         previous: ActualRecord,
         candidate: ActualRecord
     ) -> Bool {
+        // 등록 장소(회사·학교·운동)에서 새로 판정한 기록은 예전 자동 '머무름·휴식·활동·일상'을 대신한다(WRK1029A02).
+        // 전에는 이름이 정확히 "머무름"일 때만 바꿔서, 하루 전에 잠긴 '집에서 휴식' 조각이 업무를 계속 덮었다.
+        let genericPrevious = previous.behavior == StationaryContextKind.unknownStay.rawValue
+            || ["activity", "rest", "routine"].contains(previous.categoryID)
         guard previous.source == .location,
               candidate.source == .location,
               !previous.manuallyCorrected,
-              (
-                  previous.behavior == StationaryContextKind.unknownStay.rawValue
-                      || (
-                          previous.categoryID == "activity"
-                              && previous.title == "머무름"
-                      )
-              ),
+              genericPrevious,
               let behavior = candidate.behavior.flatMap(
                   StationaryContextKind.init(rawValue:)
               ),

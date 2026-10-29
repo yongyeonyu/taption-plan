@@ -4500,7 +4500,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeDayPlaybackMath.movingMinutesPerSecond,
-            2.5,
+            5,
             accuracy: 0.000_001
         )
     }
@@ -4627,7 +4627,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            61.25,
+            62.5,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4636,12 +4636,12 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            62.5,
+            65.0,
             accuracy: 0.000_001
         )
     }
 
-    /// 걷기는 이동 기본 배속(초당 2.5분)의 6배(초당 15분)로 재생한다(WLK1022I01 3배 → PLY1029A01 6배).
+    /// 걷기는 초당 15분(PLY1029A01). 이동 기본 배속이 초당 5분이 되면서(PLY1029A04) 배수는 3배다.
     /// 차량·달리기는 기본 배속 그대로다. 이름의 1/24는 정지 배속이 60분/초이던 시절 기준이라
     /// 지금 값(정지 120분/초의 1/48)과 맞지 않아 이름과 기대값을 함께 고쳤다.
     func testMapHomeDayPlaybackRunsWalkingSixTimesFasterThanVehicles() {
@@ -4664,7 +4664,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .car),
                 ]
             ),
-            62.5,
+            65.0,
             accuracy: 0.000_001
         )
     }
@@ -4680,7 +4680,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            61.875,
+            63.75,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4689,7 +4689,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            112.5,
+            115.0,
             accuracy: 0.000_001
         )
     }

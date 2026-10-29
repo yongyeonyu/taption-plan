@@ -657,8 +657,8 @@ enum MapHomeDayPlaybackMath {
     static let mapFocusInterval: TimeInterval = 0.008
     /// 정지 구간(업무·수면·활동 등)은 초당 120분으로 지나간다(대표 지시, PLY1020W01). 화면 시험은 `-slowDayPlayback`으로 이 배속만 늦춘다.
     static let stationaryMinutesPerSecond = 120.0 * MapHomeDayPlaybackTestHooks.rateScale
-    /// 이동 구간은 초당 2.5분, 곧 정지 배속 120분의 1/48로 재생한다(대표 지시, PLY1020C01). 정지 배속이 60분/초이던 시절에는 1/24였다.
-    static let movementPlaybackMultiplier = 1.0 / 48.0
+    /// 이동 구간은 초당 5분, 곧 정지 배속 120분의 1/24로 재생한다(대표 지시 PLY1029A04 "2배 빠르게"; 그 전 PLY1020C01은 1/48).
+    static let movementPlaybackMultiplier = 1.0 / 24.0
     static let movingMinutesPerSecond = stationaryMinutesPerSecond * movementPlaybackMultiplier
 
     static func playbackEndMinute(
@@ -772,8 +772,8 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
     var minutesPerSecond: Double {
         switch mode {
         case .walking:
-            // 걷기는 다른 이동보다 빠르게 재생한다. 3배(WLK1022I01)에서 2배 더 올려 6배 = 초당 15분(대표 지시, PLY1029A01).
-            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 6
+            // 걷기는 초당 15분(PLY1029A01). 이동 배속이 2배가 되면서(PLY1029A04) 배수는 6→3으로 같은 값을 유지한다.
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 3
         case .running, nil:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
         case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
@@ -1153,8 +1153,10 @@ enum MapHomePresencePolicy {
 /// 그 밖의 탈것만 속도에 따라 느리면 92(약 220m)까지 확대, 빠르면 42(약 140km)까지 축소한다.
 enum MapHomePlaybackZoomPolicy {
     static let baselineScale = 85.0
-    static let slowestScale = 92.0
-    static let fastestScale = 30.0
+    /// 재생 줌 범위를 좁혔다(대표 지시, ZMP1029A01): 느린 탈것도 정지 배율(85)보다 더 들어가지 않고,
+    /// 빠른 탈것도 30(아주 멀리)까지 빠지지 않는다. 92/30 → 85/50.
+    static let slowestScale = 85.0
+    static let fastestScale = 50.0
     /// 이 속도(m/s)에서 `slowestScale`, `vehicleSpeed`에서 `fastestScale`(로그 비율).
     static let slowSpeed = 1.0
     static let vehicleSpeed = 40.0
@@ -1184,7 +1186,8 @@ enum MapHomePlaybackZoomPolicy {
     static func fitScale(forExtentMeters extent: Double) -> Double {
         guard extent.isFinite, extent > 0,
               let scale = MapHomeCameraZoomMath.scale(distance: extent * 2.43) else { return fastestScale }
-        return min(60, max(15, Double(scale)))
+        // 긴 이동의 경로 전체 맞춤도 35~70으로 좁힌다(ZMP1029A01, 전에는 15~60).
+        return min(70, max(35, Double(scale)))
     }
 
     static func eased(current: Double, target: Double) -> Double {
@@ -2553,6 +2556,8 @@ struct MapHomeView: View {
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
     @State private var playbackClock = MapHomePlaybackClock()
+    /// 벡터 지도에서는 재생을 구동기가 맡는다(PLY1029A03). Apple 지도는 아직 예전 루프.
+    @State private var playbackDriver: MapHomePlaybackDriver?
     @State private var mapDayCacheWriteSignature: Int?
 
     private static let categoryPaletteHexes = [
@@ -4359,6 +4364,10 @@ struct MapHomeView: View {
             headingDegrees: -compassRotationDegrees,
             displayedCoordinate: displayedLocationCoordinate,
             easesCamera: isDayPlaybackRunning,
+            playbackDriver: playbackDriver,
+            onPlaybackStickmanPoint: { point in
+                vectorMapViewportStore.publishPlaybackPoint(point, nowUptime: ProcessInfo.processInfo.systemUptime)
+            },
             onViewportChange: { viewport, isFinal in
                 guard cameraRevision == mapCameraRevision else { return }
                 applyVectorMapViewport(viewport, isFinal: isFinal)
@@ -4424,7 +4433,7 @@ struct MapHomeView: View {
                         minimumInterval: interval
                     )
                 }
-                guard shouldFocus else { return }
+                guard shouldFocus, playbackDriver == nil else { return }
                 guard let point = displayedPlaybackFocusPoint else { return }
                 focusMap(on: point, using: nil, followsTracking: true)
             } else {
@@ -4432,8 +4441,8 @@ struct MapHomeView: View {
             }
         }
         .onChange(of: dayPlaybackCurrentMinute) { _, _ in
-            // 정수 분이 바뀔 때만이 아니라 재생 틱(30Hz)마다 화랑이를 가운데에 두고 속도에 맞춰 줌을 맞춘다.
-            guard isDayPlaybackRunning,
+            // 벡터 지도에서는 구동기가 프레임마다 카메라를 놓는다(PLY1029A03). 여기는 Apple 지도 재생용이다.
+            guard isDayPlaybackRunning, playbackDriver == nil,
                   TimelineInteractionFrameGate.shouldRender(
                       lastUptime: &lastPlaybackMapFocusUptime,
                       nowUptime: ProcessInfo.processInfo.systemUptime,
@@ -5652,10 +5661,13 @@ struct MapHomeView: View {
 
             if let playback,
                recordingShows(\.cat),
-               let point = stickmanPoint {
+               stickmanPoint != nil || vectorMapViewportStore.livePoint != nil {
+                // 재생 중에는 화면 틱마다 `livePoint`를 다시 읽는다. 이 줄만 매 프레임 다시 그리고 오버레이 본문은 그대로다(PLY1029A05).
+                TimelineView(.animation(paused: playbackDriver == nil)) { _ in
+                let point = vectorMapViewportStore.livePoint ?? stickmanPoint ?? .zero
                 MapHomeStickmanMarker(
                     action: playback.action,
-                    animationPhase: playback.stickmanAnimationPhase,
+                    animationPhase: playbackDriver == nil ? playback.stickmanAnimationPhase : nil,
                     routePhase: playback.phase == .forecast
                         ? .forecast
                         : .actual,
@@ -5682,6 +5694,7 @@ struct MapHomeView: View {
                     .accessibilityLabel(
                         "\(playback.accessibilityLabel), \(language.text("설명 보기","Show info"))"
                     )
+                }
             }
 
             // 카운터 창은 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
@@ -6087,6 +6100,11 @@ struct MapHomeView: View {
     ) {
         guard scenePhase == .active else { return }
         let now = ProcessInfo.processInfo.systemUptime
+        // 구동기 재생 중에는 화면 값을 간격마다만 관찰 값으로 올리고, 화랑이 점은 구동기가 맡는다(PLY1029A03·PLY1029A05).
+        if playbackDriver != nil, !isFinal {
+            vectorMapViewportStore.updateViewportThrottled(viewport, nowUptime: now)
+            return
+        }
         vectorMapViewportStore.update(viewport)
         let displayedPoint = viewport.markerPoints[vectorDisplayedMarkerID]
         if let displayedPoint {
@@ -7560,6 +7578,12 @@ struct MapHomeView: View {
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         startPlaybackIntro()
+        if rendersVectorMap {
+            startDriverPlayback(
+                startMinute: currentMinute, endMinute: playbackEndMinute, movingRanges: movingRanges
+            )
+            return
+        }
         var frameStats = MapHomePlaybackFrameStats()
         let clock = playbackClock
         clock.stop()
@@ -7604,24 +7628,7 @@ struct MapHomeView: View {
                     refreshRouteProjection()
                 }
                 guard playbackMinute < playbackEndMinute else {
-                    selectedTimelineMinute = playbackEndMinute
-                        >= Double(MapHomeTimeSidebarMath.fullDayMinutes)
-                        ? MapHomeTimeSidebarMath.fullDayMinutes
-                        : min(
-                            MapHomeTimeSidebarMath.fullDayMinutes - 1,
-                            max(0, Int(playbackEndMinute.rounded(.down)))
-                        )
-                    isDayPlaybackRunning = false
-                    isTimelineInteractionActive = false
-                    dayPlaybackCurrentMinute = nil
-                    _ = flushDeferredRouteProjection()
-                        ?? refreshRouteProjection()
-                    flushDeferredWBSPlaybackProjection()
-                    recordCurrentPlaybackAlignment()
-                    dayPlaybackTask = nil
-                    lastPlaybackRouteProjectionUptime = 0
-                    lastPlaybackMapFocusUptime = 0
-                    lastPlaybackMarkerUptime = 0
+                    finishDayPlayback(endMinute: playbackEndMinute)
                     frameStats.record()
                     clock.stop()
                     return
@@ -7776,7 +7783,77 @@ struct MapHomeView: View {
         stopDayPlayback(resetProgress: true)
     }
 
+    /// 재생 구동기를 세운다. 프레임 계산은 구동기, 화면 갱신은 정수 분마다(PLY1029A03).
+    private func startDriverPlayback(
+        startMinute: Double, endMinute: Double, movingRanges: [MapHomePlaybackMovementRange]
+    ) {
+        let driver = MapHomePlaybackDriver(inputs: .init(
+            startMinute: startMinute, endMinute: endMinute, movingRanges: movingRanges,
+            dayStart: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+            readings: routeReadingsLoadState.isLoaded(for: model.selectedDate) ? historicalPlaybackReadings : [],
+            travel: currentDayDataSnapshot?.travel ?? [],
+            places: currentDayDataSnapshot?.places ?? [],
+            zoomPlan: playbackZoomPlan
+        ))
+        syncPlaybackDriverProjection(driver)
+        driver.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed
+        driver.isCameraSuppressed = { isPlaybackIntroActive }
+        driver.onMinute = { minute in
+            let whole = min(MapHomeTimeSidebarMath.fullDayMinutes, max(0, Int(minute.rounded(.down))))
+            if selectedTimelineMinute != whole { selectedTimelineMinute = whole }
+            dayPlaybackCurrentMinute = Double(whole)
+            // 경로 투영은 지도 경로 전체를 다시 그린다. 재생 중에는 1초에 한 번만(PLY1029A06).
+            if TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastPlaybackRouteProjectionUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime,
+                minimumInterval: 1
+            ) {
+                refreshRouteProjection()
+            }
+        }
+        driver.onFinished = { finishDayPlayback(endMinute: endMinute) }
+        playbackDriver = driver
+        driver.start()
+    }
+
+    /// 예상 경로가 풀려 투영이 바뀌면 구동기에도 넘긴다.
+    private func syncPlaybackDriverProjection(_ driver: MapHomePlaybackDriver? = nil) {
+        guard let driver = driver ?? playbackDriver else { return }
+        driver.projection = wbsPlaybackProjection
+        driver.preferredForecastLegIDs = visibleForecastPlaybackLegIDs
+        let overlays = expectedRouteOverlays
+        let visibleIDs = Set(displayedExpectedRouteOverlays.map(\.id))
+        driver.expectedCoordinate = { date in
+            let route = overlays.filter {
+                visibleIDs.contains($0.id) && $0.coordinates.count >= 2
+                    && $0.departureDate <= date && date <= $0.arrivalDate
+            }.min { $0.departureDate < $1.departureDate }
+            guard let coordinate = route?.coordinate(at: date), CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+            return wbsGeoPoint(coordinate)
+        }
+    }
+
+    /// 재생이 끝까지 간 뒤의 마무리(예전 루프와 구동기가 함께 쓴다).
+    private func finishDayPlayback(endMinute: Double) {
+        selectedTimelineMinute = endMinute >= Double(MapHomeTimeSidebarMath.fullDayMinutes)
+            ? MapHomeTimeSidebarMath.fullDayMinutes
+            : min(MapHomeTimeSidebarMath.fullDayMinutes - 1, max(0, Int(endMinute.rounded(.down))))
+        isDayPlaybackRunning = false
+        isTimelineInteractionActive = false
+        dayPlaybackCurrentMinute = nil
+        _ = flushDeferredRouteProjection() ?? refreshRouteProjection()
+        flushDeferredWBSPlaybackProjection()
+        recordCurrentPlaybackAlignment()
+        dayPlaybackTask = nil
+        playbackDriver = nil
+        lastPlaybackRouteProjectionUptime = 0
+        lastPlaybackMapFocusUptime = 0
+        lastPlaybackMarkerUptime = 0
+    }
+
     private func stopDayPlayback(resetProgress: Bool) {
+        playbackDriver?.stop()
+        playbackDriver = nil
         playbackIntroTask?.cancel()
         isPlaybackIntroActive = false
         selectedPawprintTimestamp = nil
@@ -12209,6 +12286,7 @@ struct MapHomeView: View {
         if wbsPlaybackProjection != next {
             wbsPlaybackProjection = next
         }
+        syncPlaybackDriverProjection()
     }
 
     /// 예상 경로 요청을 만드는 쪽과 같은 하루 범위를 쓴다. 범위가 어긋나면 같은

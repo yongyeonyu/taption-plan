@@ -4649,3 +4649,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1029A03/A04 · 빌드 249 (2026-10-29 밤)
 - A03 `run.out`: 1~6/9 통과, 7/9 업로드 실패(altool -43, `upload.log`). A04 `run2.out`: 재업로드 성공, 8/9에서 `TimeoutError: The read operation timed out`. `verify-*.out` 폴링 → VALID(그룹 미연결) → `attach.log` 연결 → `verify-final.out` **VALID·buildAttached·테스터 1**.
+
+## PLY1029A04~A07 · ZMP1029A01 · WRK1029A02 · NLE1029A01/A02 (2026-10-30)
+- 단위 전체 **1,680건 중 1,677 통과 · 실패 0 · 건너뜀 3**(`build/validation/PLY1029A06/unit.xcresult`). 그 전 회차(`PLY1029A04/unit2.xcresult`) 실패 1건은 `testJoinedSleepYieldsOneRequestAcrossMidnight`의 기대값 오류(고정자료 전날 수면 22:00인데 23:00으로 단언) — 고쳐서 `NLEMultiDayTests`+`NLETrackTests` 36건 통과(`nle.xcresult`).
+- 경로 다듬기 포함 집중: `PlaybackPathSmoothingTests`·`TimeScaleTests`·`MapHomeLiveMapTests` **254건 통과**(`PLY1029A07/focused.xcresult`).
+- 기기 재생 측정(빌드 249 기록, A05 설치 뒤): 재생 2회 틱 12ms 초과 87%·98%, 틱 242~263개. 원인(분 알림이 정지 구간에서 매 프레임)을 A06에서 고쳤고, A06 이후 기기 측정은 아직 없다.
