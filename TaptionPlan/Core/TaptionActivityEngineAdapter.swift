@@ -1787,8 +1787,10 @@ enum ActivityClassificationLockEngine {
                 || previous.isConfirmed
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
             // 새 판정이 고도 변화가 없어 지하철을 뺐으면 잠긴 자동 지하철을 물려받지 않는다(SUB1029A01).
+            // 새 판정이 고신뢰 자동차(차량 모션·속도)여도 잠긴 자동 지하철을 물려받지 않는다(EXP1029A01 — 오늘 아침 자차 출근).
             let rejectsLockedSubway = previous.mode == .subway && !previous.isConfirmed
-                && candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
+                && (candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
+                    || TravelModeClassifier.isMotionBackedCar(candidate))
             if previousSubwayIsValidated,
                !candidate.isConfirmed,
                !isResolvedSubway,

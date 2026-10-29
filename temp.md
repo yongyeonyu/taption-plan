@@ -2477,3 +2477,30 @@
 - 담긴 것: CAT1029A01~A03(수면 우선·센서 원본 열·밤 머무름 분리) · CNT1029A01(연봉 스위치) · SUB1029A01(지하철 고도 조건·원본 업로드). 247 → **248**.
 - 결과: 빌드 248 **VALID**, 내부 그룹 연결(`buildAttached: true`), 테스터 1명. 보고서 `build/validation/TFB1029A02/testflight-report.json`. 시험은 `--with-tests` 없이 올렸다(같은 소스 `f098224`에서 단위 1,659 통과·실패 0).
 - 버전 올림 커밋은 네 Info.plist·pbxproj만 담았다(같은 시각 작업 중이던 ProMotion 키 등은 다음 커밋).
+
+## WRK1029A01 · 회사 안 걷기를 흡수해 업무가 잡히게 (2026-10-29)
+- 지시(대표): "오늘 업무 시간 구분 안되는 이슈 있음". 회사는 자주 가는 곳에 '회사'로 등록돼 있다(대표 확인).
+- 원인(코드 확인): 업무는 회사로 등록된 장소 반경 안 머무름에서만 생긴다(`StationaryContextClassifier` 225). 실내 GPS 튐으로 머무름이 70m 반경·15분 조각으로 쪼개지고, 사이에 `walking:` 조각·짧은 걷기 이동이 끼어 `joiningContinuousStays`가 잇지 못했다(원본 키 조각은 회사 키를 못 받고, 반경 밖 점 하나면 거부). 회사 머무름이 없으니 업무 기록도 없고, 걷기(우선순위 5)가 머무름(2)을 이겨 빈칸 추정까지 걷기로 메워 10:08–19:32 걷기 한 덩어리가 됐다.
+- 고침: `joiningContinuousStays`/`stayedThrough` — 잇기 반경 `max(등록 반경, 150m)`; 빈 시간 ≤20분이면 잇고, 그보다 길면 `walking:` 제외 사이 조각 중심·빈 시간 위치 점의 70% 이상이 반경 안이면 잇는다. 원본 키 조각도 등록 장소 반경 안이면 그 장소로 붙이고 이름표를 받는다. 등록 장소(집·학교 포함) 공통. 센서 원본은 그대로.
+- 검증 기준: 새 시험 3건(`OfficeStayAbsorptionTests` — 조각 3개+걷기 사이 → 근무 10:07→19:32 / 원본 키 조각 합류 / 400m 밖 40분은 분리), 단위 전체, 실기기에서 내일 회사 시간이 업무로.
+
+## PLY1029A01 · 재생 120Hz·걷기 배속·줌 응답 (2026-10-29)
+- 지시(대표): "재생을 했는데 너무 끊김이 심함 120hz 재생 되게 변경. 그리고 걷기는 빠르게 진행. 화면 줌인 줌 아웃은 지금보다 빠르게."
+- 확인: 재생 틱은 이미 8.33ms(120Hz, PLY1020R01). 끊김 원인 후보 ①`Info.plist`에 `CADisableMinimumFrameDurationOnPhone`이 없어 ProMotion 기기에서 60Hz로 묶일 수 있음 ②재생 중 경로 투영을 0.25초마다 전체 재계산·메인 스레드 적용 ③줌 스무딩 시정수 0.6/0.9초.
+- 고침: ①plist 키 추가 ②투영 컷오프를 재생 중 분 단위로 양자화하고 갱신 간격 0.25→0.5초(완전히 틱에서 떼지는 못했다 — 투영 결과를 시각으로 잘라 그리는 쪽은 `MapHomeView` 구조상 다음에) ③시정수 0.25/0.35초, 변화 상한 3.2/2.0배/초 ④걷기 배속 3배→6배(초당 15분, 대표 선택) ⑤`playback_frame_stats`(틱 수·12ms 초과·20ms 초과·최대 ms)를 재생 끝에 기록해 실제 프레임 간격을 기기 로그로 본다.
+- 검증 기준: 단위 전체·빌드, 실기기 재생 뒤 로그의 `playback_frame_stats`로 12ms 초과 비율 확인(0에 가까워야 120Hz).
+
+## EXP1029A01 · 임시 경로는 GPS 공백 3배 규칙, 잠긴 지하철이 자동차를 덮지 않게 (2026-10-29)
+- 지시(대표): "임시경로는 이동 구간 사이에 GPS신호가 없을 때 생성해야 함. GPS 로그 주기의 3배의 시간 동안 GPS신호가 없는 경우만 생성". 지하철은 역 순서로만(대표 선택).
+- 원인(코드·원본 확인): 오늘 아침은 GPS가 64분 내내 있어(1,791개) 경로 엔진은 임시 경로를 만들지 않았다. 지하철 선은 저장된 지하철 구간이 `mergingLockedTravel`(잠긴 분류 물려받기)과 `stabilizedSubwaySegments`(예전 지하철 되살리기)로 남은 것이다 — 새 판정이 자동차여도 덮어썼다.
+- 고침: `ExpectedRouteRequestEngine.requests`에 `gpsLoggingInterval`(설정 `gpsLoggingPreferences.interval`, 1~15분·기본 5분)을 넣고 틈 기준을 15분 고정/5분+1km에서 **3×주기 이상**으로 바꿨다(세 호출처·WBS 투영 모두). 잠긴 자동 지하철은 새 판정이 고신뢰 자동차면 물려받지 않고, 새로 감지되지 않은 예전 자동 지하철도 같은 시간이 고신뢰 자동차면 되살리지 않는다. 사용자 확인 지하철은 그대로. 지하철 추정 선(`MapHomeSubwayRouteOverlayEngine`)은 원래 역 순서(`SubwayTravelSegmentEngine`)로만 그린다 — 바꾸지 않았다.
+- 검증 기준: 새 시험 `testExpectedRouteGapNeedsThreeLoggingIntervals`(10분 틈: 기본 주기면 없음, 3분 주기면 1개), 기존 희소 틈 시험은 주기 3분으로, 단위 전체, 실기기에서 오늘 아침 지하철 선 사라짐.
+
+## CAR1029A01 · 차량 오디오(블루투스·CarPlay) 연결로 자동차 확정 (2026-10-29)
+- 지시(대표): "자동차 이동은 자동차 블루투스 연결되면 확정되게 하자 … 1. 블루투스 아이디를 직접 선택해서 입력 … 2. 출발시간에 블루투스 연결되고 종료시간에 블루투스 연결이 해제가 되면 자동차 확정." 대표 선택: 차량 블루투스 오디오·CarPlay 둘 다, 둘 다 쓰되 1번 우선, 연결 기록이 없으면 지금처럼 판정.
+- 제약: iOS는 앱이 클래식 블루투스를 직접 못 본다. `AVAudioSession` 출력 경로(`carAudio`·`bluetoothA2DP/HFP/LE`)와 포트 이름으로 잡는다. 앱이 살아 있을 때(배경 센서 수집 포함)만 기록된다.
+- 고침: `SensorReading.carAudioRouteName`(원본에 보고된 이름 그대로, nil=없음/모름) — 센서 수집기가 `AVAudioSession.routeChangeNotification`을 수집기 수명 동안 관찰해 표본마다 붙이고 바뀔 때 `car_audio_route_changed`를 남긴다. 설정 `registeredCarAudioNames`·`recentCarAudioNames`(최근 10개). 순수 판정기 `CarAudioTravelConfirmation`: 등록 기기가 구간 안에 연결돼 있으면 `.car`·확정·근거 「사용자 확인 차량 블루투스 · 이름」(사용자 확인 접두어라 잠긴 지하철·수면 조정보다 앞선다); 미등록 기기는 시작+10분 안 연결·끝−10분까지 지속·끝+10분 안에 **해제 표본을 실제로 봤을 때**만 `.car`·확정·근거 「차량 오디오 연결·해제 일치 · 이름」, 그 이름을 최근 목록에 넣는다. 하루 종일 켜 둔 기기(해제 없음)나 경로 표본이 없으면 손대지 않는다. 지도 설정 → 연결 → 「내 차 등록」 시트(등록 목록·최근 기기·지금 연결된 출력), 닫으면 오늘 이동을 다시 판정.
+- 저장: 실제 저장소(SQLite `readings`)는 열로 빼지 않은 필드를 `extra` JSON에 그대로 남기므로 새 필드는 스키마 변경 없이 저장·복원된다. 이진 `TSR` 형식은 운영 코드에서 쓰는 곳이 없고 시험 전용이라(`SensorReadingStorage.swift` 유일 conformer, 호출은 `SensorDayStoreTests`뿐) **TSR2 하나만 읽고 쓴다**(대표 선택 "일회 변환"은 변환할 운영 데이터가 없어 적용 대상 없음). 
+- 검증 기준: `CarAudioTravelConfirmationTests` 7건(등록 확정·미등록 일치·종일 연결 무시·표본 없음·최근 순서·JSON 왕복·설정 기본값), 단위 전체, 기기에서 차 연결 뒤 로그 `car_audio_route_changed`와 이동 근거.
+
+- 검증(WRK·PLY·EXP·CAR 묶음): 집중 245건 통과(`build/validation/CAR1029A01/focused.xcresult`) → 단위 전체 **1,674건 중 1,671 통과 · 실패 0 · 건너뜀 3**(`unit2.xcresult`), 경고 0. 첫 회차 실패 6건은 기대값 갱신(저장 필드 53개·투영 0.5초·걷기 6배)과 잠긴 지하철 규칙을 "iPhone 모션이 차량이라고 한 고신뢰 자동차"로 좁힌 것(`TravelModeClassifier.isMotionBackedCar`, 새 시험 `testMotionBackedCarIsNotOverriddenByPreservedAutomaticSubway`)으로 해결. 구조 게이트 재잠금·경계 통과.

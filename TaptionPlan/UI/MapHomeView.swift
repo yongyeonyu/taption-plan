@@ -649,7 +649,10 @@ enum MapHomeDayPlaybackMath {
     static let durationSeconds: TimeInterval = 24
     /// 재생 틱은 120Hz 예산(대표 지시, PLY1020R01). 60Hz 기기는 시스템이 프레임을 합친다.
     static let frameIntervalNanoseconds: UInt64 = 8_333_333
-    static let routeProjectionInterval: TimeInterval = 0.25
+    /// 재생 중 경로 투영 갱신은 0.5초·분 단위 컷오프. 0.25초마다 전체 투영을 다시 만들어 메인 스레드에 올리던 것을 줄인다(PLY1029A01).
+    static let routeProjectionInterval: TimeInterval = 0.5
+    /// 틱 간격이 이보다 길면 프레임을 놓친 것으로 센다(120Hz 틱 8.33ms + 여유).
+    static let droppedFrameInterval: TimeInterval = 0.012
     /// 8ms 문턱: 8.33ms 틱의 지터에도 매 프레임 지도 중심을 갱신한다.
     static let mapFocusInterval: TimeInterval = 0.008
     /// 정지 구간(업무·수면·활동 등)은 초당 120분으로 지나간다(대표 지시, PLY1020W01). 화면 시험은 `-slowDayPlayback`으로 이 배속만 늦춘다.
@@ -769,8 +772,8 @@ struct MapHomePlaybackMovementRange: Hashable, Sendable {
     var minutesPerSecond: Double {
         switch mode {
         case .walking:
-            // 걷기는 다른 이동보다 빠르게 재생한다. 2배(PLY1020Z01)에서 1.5배 더 올려 3배(대표 지시, WLK1022I01).
-            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 3
+            // 걷기는 다른 이동보다 빠르게 재생한다. 3배(WLK1022I01)에서 2배 더 올려 6배 = 초당 15분(대표 지시, PLY1029A01).
+            return MapHomeDayPlaybackMath.movingMinutesPerSecond * 6
         case .running, nil:
             return MapHomeDayPlaybackMath.movingMinutesPerSecond
         case .cycling, .bus, .subway, .taxi, .car, .train, .airplane, .ship:
@@ -2337,6 +2340,7 @@ struct MapHomeView: View {
     @State private var isCounterMenuExpanded = false
     @State private var isStrideCalibrationPresented = false
     @State private var isSalarySettingsPresented = false
+    @State private var isCarAudioSheetPresented = false
     @AppStorage(MapHomeSalaryPolicy.annualKey) private var salaryAnnualPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var salaryMonthlyPay = 0.0
     @AppStorage(MapHomeSalaryPolicy.isNetInputKey) private var salaryIsNetInput = false
@@ -3086,6 +3090,12 @@ struct MapHomeView: View {
         }
         .onChange(of: daySummaryDetent) { _, _ in
             applyDaySummaryCameraCoverage()
+        }
+        .sheet(isPresented: $isCarAudioSheetPresented, onDismiss: {
+            // 등록을 바꾸면 오늘 이동을 다시 판정한다.
+            Task { _ = await model.refreshSensorTimeline() }
+        }) {
+            MapHomeCarAudioSheet(model: model, language: language)
         }
         .sheet(isPresented: $isSalarySettingsPresented) {
             MapHomeSalarySettingsSheet(
@@ -7549,6 +7559,7 @@ struct MapHomeView: View {
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         startPlaybackIntro()
         var lastUptime = ProcessInfo.processInfo.systemUptime
+        var frameStats = MapHomePlaybackFrameStats()
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
                 do {
@@ -7557,6 +7568,7 @@ struct MapHomeView: View {
                             .frameIntervalNanoseconds
                     )
                 } catch {
+                    frameStats.record()
                     return
                 }
                 let uptime = ProcessInfo.processInfo.systemUptime
@@ -7565,6 +7577,7 @@ struct MapHomeView: View {
                     0.1
                 )
                 lastUptime = uptime
+                frameStats.add(elapsed)
                 playbackMinute = min(
                     MapHomeDayPlaybackMath.advancedMinute(
                         from: playbackMinute,
@@ -7614,6 +7627,7 @@ struct MapHomeView: View {
                     lastPlaybackRouteProjectionUptime = 0
                     lastPlaybackMapFocusUptime = 0
                     lastPlaybackMarkerUptime = 0
+                    frameStats.record()
                     return
                 }
             }
@@ -8454,6 +8468,9 @@ struct MapHomeView: View {
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
                 appleWatchMenuItem
+                menuGroupDivider
+                // 차량 오디오(블루투스·CarPlay)가 연결된 이동은 자동차로 확정한다(CAR1029A01).
+                menuRowButton("car.fill", language.text("내 차 등록", "My car"), tint: .tpReferenceBlue) { isCarAudioSheetPresented = true }
             }
             menuGroupLabel(language.text("앱", "App"))
             menuGroupCard {
@@ -10451,6 +10468,7 @@ struct MapHomeView: View {
         let normalizedReadings = normalizedRouteReadings
         let playbackReadings = currentDayReadings
         let day = TimeSpan(start: selectedDay, end: dayEnd)
+        let gpsLoggingInterval = model.settings.gpsLoggingPreferences.interval
         let worker = Task.detached(priority: .utility) {
             try Task.checkCancellation()
             var overlayOperationCount = 0
@@ -10461,6 +10479,7 @@ struct MapHomeView: View {
                 in: day,
                 through: dayEnd,
                 frequentPlaces: [],
+                gpsLoggingInterval: gpsLoggingInterval,
                 operationCount: &overlayOperationCount
             )
             try Task.checkCancellation()
@@ -10472,6 +10491,7 @@ struct MapHomeView: View {
                 in: day,
                 through: dayEnd,
                 frequentPlaces: [],
+                gpsLoggingInterval: gpsLoggingInterval,
                 operationCount: &playbackOperationCount
             )
             try Task.checkCancellation()
@@ -11981,11 +12001,15 @@ struct MapHomeView: View {
         let dayStart = calendar.startOfDay(for: model.selectedDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
             ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let projectionDate = MapHomeRouteOverlayCutoffPolicy.cutoff(
+        let rawProjectionDate = MapHomeRouteOverlayCutoffPolicy.cutoff(
             selectedDayEnd: dayEnd,
             timelineDate: timelineDate,
             isPlaybackRunning: isDayPlaybackRunning
         )
+        // 재생 중에는 분 단위로 잘라, 같은 분 안의 틱이 투영을 다시 만들지 않게 한다(PLY1029A01).
+        let projectionDate = isDayPlaybackRunning
+            ? Date(timeIntervalSinceReferenceDate: (rawProjectionDate.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
+            : rawProjectionDate
         let selectedSpan = isDayPlaybackRunning ? nil : timelineSelectionSpan
         let readings = displayRouteReadings
         let inputKey = RouteProjectionInputKey(
@@ -12224,7 +12248,8 @@ struct MapHomeView: View {
                 readings: normalizedRouteReadings,
                 in: daySpan,
                 through: daySpan.end,
-                frequentPlaces: []
+                frequentPlaces: [],
+                gpsLoggingInterval: model.settings.gpsLoggingPreferences.interval
             )
         }
         let expectedRoutes = expected.map { overlay in

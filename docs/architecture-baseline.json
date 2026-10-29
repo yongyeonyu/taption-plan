@@ -1,8 +1,8 @@
 {
-  "files": 145,
-  "lines": 161767,
+  "files": 147,
+  "lines": 162335,
   "buckets": {
-    "<500": 89,
+    "<500": 91,
     "500-1000": 20,
     "1000-2000": 15,
     "2000-5000": 17,
@@ -14,30 +14,30 @@
     "detached_tasks": 30,
     "force_try": 0,
     "fatal_error": 1,
-    "main_queue": 5
+    "main_queue": 6
   },
   "size": {
-    "state_properties": 558,
+    "state_properties": 560,
     "observable_types": 7,
-    "view_types": 172,
-    "funcs": 5193,
-    "singleton_reach": 304
+    "view_types": 174,
+    "funcs": 5217,
+    "singleton_reach": 306
   },
   "metrics": {
-    "largest_file_lines": 21923,
-    "largest_type_lines": 13577
+    "largest_file_lines": 21948,
+    "largest_type_lines": 13592
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
-    "TaptionPlan/Core/AppleIntegrations.swift": 4831,
-    "TaptionPlan/Core/FeatureModels.swift": 4661,
+    "TaptionPlan/Core/AppleIntegrations.swift": 4870,
+    "TaptionPlan/Core/FeatureModels.swift": 4697,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
     "TaptionPlan/Core/PlanRepository.swift": 1374,
     "TaptionPlan/Core/PlanningEngine.swift": 3134,
     "TaptionPlan/Core/RecordSummaryEngine.swift": 3287,
-    "TaptionPlan/Core/RouteTimelineData.swift": 3406,
-    "TaptionPlan/Core/SensorFusion.swift": 6355,
-    "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1885,
+    "TaptionPlan/Core/RouteTimelineData.swift": 3409,
+    "TaptionPlan/Core/SensorFusion.swift": 6408,
+    "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1887,
     "TaptionPlan/Core/TaptionStoreV2.swift": 1377,
     "TaptionPlan/Core/WatchConnectivitySupport.swift": 1358,
     "TaptionPlan/Core/WatchSyncModels.swift": 3562,
@@ -51,11 +51,11 @@
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1403,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3081,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1265,
-    "TaptionPlan/UI/MapHomeView.swift": 21923,
+    "TaptionPlan/UI/MapHomeView.swift": 21948,
     "TaptionPlan/UI/ReviewView.swift": 4817,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
     "TaptionPlan/UI/SettingsView.swift": 2322,
-    "TaptionPlan/UX/AppModel.swift": 14304,
+    "TaptionPlan/UX/AppModel.swift": 14319,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1627,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349,
     "TaptionPlanWidget/TaptionPlanWidget.swift": 3839
@@ -63,16 +63,16 @@
   "largest_files": [
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
-      "lines": 21923,
+      "lines": 21948,
       "largest_type": "struct MapHomeView",
-      "largest_type_lines": 10839,
+      "largest_type_lines": 10861,
       "types": 183
     },
     {
       "path": "TaptionPlan/UX/AppModel.swift",
-      "lines": 14304,
+      "lines": 14319,
       "largest_type": "class AppModel",
-      "largest_type_lines": 13577,
+      "largest_type_lines": 13592,
       "types": 26
     },
     {
@@ -84,16 +84,16 @@
     },
     {
       "path": "TaptionPlan/Core/SensorFusion.swift",
-      "lines": 6355,
+      "lines": 6408,
       "largest_type": "struct TravelModeClassifier",
-      "largest_type_lines": 1359,
+      "largest_type_lines": 1380,
       "types": 49
     },
     {
       "path": "TaptionPlan/Core/AppleIntegrations.swift",
-      "lines": 4831,
+      "lines": 4870,
       "largest_type": "class AppleSensorCollector",
-      "largest_type_lines": 1417,
+      "largest_type_lines": 1456,
       "types": 56
     },
     {
@@ -105,9 +105,9 @@
     },
     {
       "path": "TaptionPlan/Core/FeatureModels.swift",
-      "lines": 4661,
+      "lines": 4697,
       "largest_type": "struct AppFeatureSettings",
-      "largest_type_lines": 483,
+      "largest_type_lines": 514,
       "types": 131
     },
     {
@@ -126,7 +126,7 @@
     },
     {
       "path": "TaptionPlan/Core/RouteTimelineData.swift",
-      "lines": 3406,
+      "lines": 3409,
       "largest_type": "enum RouteTimelineDataEngine",
       "largest_type_lines": 1392,
       "types": 40
@@ -150,12 +150,12 @@
     {
       "path": "TaptionPlan/UX/AppModel.swift",
       "type": "class AppModel",
-      "lines": 13577
+      "lines": 13592
     },
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
       "type": "struct MapHomeView",
-      "lines": 10839
+      "lines": 10861
     },
     {
       "path": "TaptionPlan/UI/ScheduleView.swift",
@@ -188,14 +188,14 @@
       "lines": 1568
     },
     {
+      "path": "TaptionPlan/Core/AppleIntegrations.swift",
+      "type": "class AppleSensorCollector",
+      "lines": 1456
+    },
+    {
       "path": "TaptionPlan/Core/TaptionActivityEngineAdapter.swift",
       "type": "enum TaptionActivityEngineAdapter",
       "lines": 1443
-    },
-    {
-      "path": "TaptionPlan/Core/AppleIntegrations.swift",
-      "type": "class AppleSensorCollector",
-      "lines": 1417
     },
     {
       "path": "TaptionPlan/UI/MapHomeNLEClipEditor.swift",

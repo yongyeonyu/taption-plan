@@ -3006,6 +3006,25 @@ final class RouteTimelineDataTests: XCTestCase {
         ).isEmpty)
     }
 
+    // EXP1029A01: 틈은 거리와 상관없이 GPS 로깅 주기의 3배 이상일 때만 임시 경로가 된다.
+    // 10분 틈은 기본 주기(5분)에서는 15분에 못 미치고, 주기를 3분으로 두면 9분을 넘어 만들어진다.
+    func testExpectedRouteGapNeedsThreeLoggingIntervals() {
+        let segment = TravelSegment(
+            mode: .car, span: TimeSpan(start: date(10), end: date(30)), distanceMeters: 2_500,
+            confidence: .medium, evidence: ["자동차"]
+        )
+        let readings = [reading(10, latitude: 37.00), reading(20, latitude: 37.02)]
+        let day = TimeSpan(start: date(0), end: date(1_440))
+
+        XCTAssertTrue(ExpectedRouteRequestEngine.requests(
+            travel: [segment], places: [], readings: readings, in: day, through: date(1_440)
+        ).isEmpty)
+        XCTAssertEqual(ExpectedRouteRequestEngine.requests(
+            travel: [segment], places: [], readings: readings, in: day, through: date(1_440),
+            gpsLoggingInterval: 180
+        ).count, 1)
+    }
+
     func testExpectedRouteCoversSparseLongDistanceGPSGap() throws {
         let segment = TravelSegment(
             mode: .car,
@@ -3026,7 +3045,8 @@ final class RouteTimelineDataTests: XCTestCase {
                     reading(30, latitude: 37.021),
                 ],
                 in: TimeSpan(start: date(0), end: date(1_440)),
-                through: date(1_440)
+                through: date(1_440),
+                gpsLoggingInterval: 180
             ).first
         )
 

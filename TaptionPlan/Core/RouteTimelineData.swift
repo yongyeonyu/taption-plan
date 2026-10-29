@@ -606,6 +606,7 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
         actuals: [ActualRecord] = [],
         confirmedSleepSpans: [TimeSpan] = [],
         sleepSessions: [SleepSession] = [],
+        gpsLoggingInterval: TimeInterval = GPSLoggingPreferences.standard.interval,
         calendar: Calendar = .autoupdatingCurrent
     ) -> Self {
         let dayStart = calendar.startOfDay(for: selectedDate)
@@ -651,7 +652,8 @@ struct MapHomeWBSPlaybackProjection: Hashable, Sendable {
                 places: places,
                 readings: readings,
                 in: day,
-                through: dayEnd
+                through: dayEnd,
+                gpsLoggingInterval: gpsLoggingInterval
             )
         let forecastMovements = expectedRequests.compactMap {
             request -> MapHomeWBSPlaybackLeg? in
@@ -1501,7 +1503,8 @@ enum ExpectedRouteRequestEngine {
         readings: [SensorReading],
         in day: TimeSpan,
         through cutoff: Date,
-        frequentPlaces _: [FrequentPlace] = []
+        frequentPlaces _: [FrequentPlace] = [],
+        gpsLoggingInterval: TimeInterval = GPSLoggingPreferences.standard.interval
     ) -> [ExpectedRouteRequest] {
         var ignoredOperationCount = 0
         return requests(
@@ -1511,6 +1514,7 @@ enum ExpectedRouteRequestEngine {
             in: day,
             through: cutoff,
             frequentPlaces: [],
+            gpsLoggingInterval: gpsLoggingInterval,
             operationCount: &ignoredOperationCount
         )
     }
@@ -1522,6 +1526,7 @@ enum ExpectedRouteRequestEngine {
         in day: TimeSpan,
         through cutoff: Date,
         frequentPlaces _: [FrequentPlace],
+        gpsLoggingInterval: TimeInterval = GPSLoggingPreferences.standard.interval,
         operationCount: inout Int
     ) -> [ExpectedRouteRequest] {
         (try? requests(
@@ -1531,6 +1536,7 @@ enum ExpectedRouteRequestEngine {
             in: day,
             through: cutoff,
             frequentPlaces: [],
+            gpsLoggingInterval: gpsLoggingInterval,
             operationCount: &operationCount,
             cancellationCheck: { try Task.checkCancellation() }
         )) ?? []
@@ -1543,6 +1549,7 @@ enum ExpectedRouteRequestEngine {
         in day: TimeSpan,
         through cutoff: Date,
         frequentPlaces _: [FrequentPlace],
+        gpsLoggingInterval: TimeInterval = GPSLoggingPreferences.standard.interval,
         operationCount: inout Int,
         cancellationCheck: () throws -> Void
     ) throws -> [ExpectedRouteRequest] {
@@ -1630,6 +1637,7 @@ enum ExpectedRouteRequestEngine {
             let gaps = try missingRouteGaps(
                 readings: readingsInSegment,
                 sessionEndIndex: sessionEndIndex,
+                minimumGap: max(60, 3 * gpsLoggingInterval),
                 operationCount: &operationCount,
                 cancellationCheck: cancellationCheck
             )
@@ -1776,9 +1784,12 @@ enum ExpectedRouteRequestEngine {
             && point.horizontalAccuracy <= 150
     }
 
+    /// 임시 경로는 GPS 로깅 주기의 3배 넘게 신호가 없는 틈에만 만든다(대표 지시, EXP1029A01).
+    /// 전에는 15분 고정(또는 5분 넘고 1km 넘음)이라 로깅 주기를 1분으로 줄여도 틈을 늦게 알아봤다.
     private static func missingRouteGaps(
         readings: ArraySlice<SensorReading>,
         sessionEndIndex: ExpectedRouteRequestSessionEndIndex,
+        minimumGap: TimeInterval,
         operationCount: inout Int,
         cancellationCheck: () throws -> Void
     ) rethrows -> [RouteGap] {
@@ -1809,15 +1820,7 @@ enum ExpectedRouteRequestEngine {
                 operationCount: &operationCount
             ) else { continue }
             let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
-            guard duration > MapHomeWBSPlaybackProjection.maximumActualGap
-                    || RouteSparseConnectionPolicy.breaksConnection(
-                        gapDuration: duration,
-                        distanceMeters: duration
-                                > RouteSparseConnectionPolicy.minimumSparseGapDuration
-                            ? distanceMeters(lhsPoint, rhsPoint)
-                            : nil
-                    )
-            else { continue }
+            guard duration >= minimumGap else { continue }
             // 물리적으로 불가능한 속도의 끊김은 빠진 이동이 아니라 튄 위치다.
             // 이런 구간에 예상 경로를 이으면 회사↔멀리 떨어진 곳 직선이 그려진다.
             guard !isImpossibleJump(

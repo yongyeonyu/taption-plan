@@ -260,7 +260,7 @@ final class SensorDayStoreTests: XCTestCase {
         value.trackingWasAutomaticallyDetected = true
         value.sourceDevice = .appleWatch
         value.trackingSessionEnded = false
-        XCTAssertEqual(Mirror(reflecting: value).children.count, 52, "New model fields require a storage format review")
+        XCTAssertEqual(Mirror(reflecting: value).children.count, 53, "New model fields require a storage format review")
         for reading in [value, SensorReading(timestamp: .distantPast)] {
             let encoded = try TaptionPlanCanonicalStorage.encode(reading)
             let restored = try TaptionPlanCanonicalStorage.decode(SensorReading.self, from: encoded)
@@ -291,8 +291,12 @@ final class SensorDayStoreTests: XCTestCase {
         trailing.append(0)
         XCTAssertThrowsError(try SensorReading.fromStorageBytes(trailing))
         var version = raw
-        version[3] = 0x32
+        version[3] = 0x33
         XCTAssertThrowsError(try SensorReading.fromStorageBytes(version))
+        // TSR1(carAudioRouteName 이전)은 운영 저장소가 쓴 적이 없어 받지 않는다(CAR1029A01).
+        var legacy = Data(raw.dropLast())
+        legacy[3] = 0x31
+        XCTAssertThrowsError(try SensorReading.fromStorageBytes(legacy))
         // Header(4), UUID(16), timestamp(8), then the point presence tag.
         var badPresence = raw
         badPresence[28] = 2

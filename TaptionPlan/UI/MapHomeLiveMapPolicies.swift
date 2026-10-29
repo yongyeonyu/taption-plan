@@ -361,14 +361,15 @@ enum MapHomeLiveFollowSpeed {
     }
 }
 
-/// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고(시정수 1.2초),
-/// 초당 로그 변화량에 상한(약 2.5배/초)을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
+/// 재생 중 줌 거리 변화를 시간 기준으로 부드럽게 한다. 틱 횟수가 아니라 경과 시간으로 따라가고,
+/// 초당 로그 변화량에 상한을 둬서 정지와 이동이 짧게 번갈아도 확대·축소가 튀지 않게 한다.
+/// 시정수 0.6/0.9초 → 0.25/0.35초, 상한 1.6/0.9 → 3.2/2.0배/초: 확대·축소가 지금보다 빨리 따라온다(대표 지시, PLY1029A01).
 final class MapHomePlaybackZoomSmoother {
-    static let timeConstant: TimeInterval = 0.6
-    static let maximumLogRate = 1.6
+    static let timeConstant: TimeInterval = 0.25
+    static let maximumLogRate = 3.2
     /// 속도가 줄어 다가갈 때(줌인)는 조금 천천히 따라가되, 너무 늦지 않게 짧은 시간 상수를 쓴다.
-    static let zoomInTimeConstant: TimeInterval = 0.9
-    static let zoomInMaximumLogRate = 0.9
+    static let zoomInTimeConstant: TimeInterval = 0.35
+    static let zoomInMaximumLogRate = 2.0
     static let maximumStep: TimeInterval = 0.5
 
     private var lastUptime: TimeInterval?
@@ -836,5 +837,29 @@ struct MapHomeWeatherNoticeView: View {
                 .stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// 재생 틱 간격 계측(PLY1029A01). 재생이 끝날 때 `playback_frame_stats`로 남겨 실제 120Hz인지 기기 로그에서 본다.
+struct MapHomePlaybackFrameStats {
+    var ticks = 0
+    var over12ms = 0
+    var over20ms = 0
+    var maximumMs = 0.0
+
+    mutating func add(_ elapsed: TimeInterval) {
+        ticks += 1
+        if elapsed > MapHomeDayPlaybackMath.droppedFrameInterval { over12ms += 1 }
+        if elapsed > 0.020 { over20ms += 1 }
+        maximumMs = max(maximumMs, elapsed * 1_000)
+    }
+
+    func record() {
+        guard ticks > 0 else { return }
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "playback_frame_stats",
+            metrics: ["ticks": Double(ticks), "over_12ms": Double(over12ms),
+                      "over_20ms": Double(over20ms), "max_ms": maximumMs.rounded()]
+        )
     }
 }

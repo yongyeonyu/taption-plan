@@ -1309,6 +1309,13 @@ final class AppModel {
         snapshot.settings
     }
 
+    /// 차량 오디오 기기 등록 목록을 바꾼다(CAR1029A01). 다음 이동 분류부터 반영된다.
+    func updateCarAudioNames(registered: [String], recent: [String]) async {
+        snapshot.settings.registeredCarAudioNames = registered
+        snapshot.settings.recentCarAudioNames = recent
+        await persist()
+    }
+
     func refreshBiometricDataProtectionStatus() {
         biometricDataProtectionStatus = biometricProtectedSnapshotStore?.status
             ?? .unavailable
@@ -9376,7 +9383,8 @@ final class AppModel {
             stays: basePlaces,
             readings: readings,
             healthEvidence: healthMovementEvidence,
-            userTransitLocations: settings.userTransitLocations
+            userTransitLocations: settings.userTransitLocations,
+            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
         )
         let previousSubwaySegments = snapshot.travel.filter {
             $0.mode == .subway
@@ -9389,7 +9397,8 @@ final class AppModel {
             healthEvidence: healthMovementEvidence,
             readings: readings,
             preservedSubwaySegments: previousSubwaySegments,
-            userTransitLocations: settings.userTransitLocations
+            userTransitLocations: settings.userTransitLocations,
+            registeredCarAudioNames: Set(settings.registeredCarAudioNames)
         )
         let correctedTravel = AppleDeviceGroundTruthEngine.resolvingOverlaps(
             AppleDeviceGroundTruthEngine.enforcingMotionFamily(
@@ -9413,6 +9422,12 @@ final class AppModel {
                 snapshot.settings.sensorCollectionProfile.interval + 60
             )
         )
+        let recentCarAudio = CarAudioTravelConfirmation.recentNames(
+            from: generatedTravel, merging: snapshot.settings.recentCarAudioNames
+        )
+        if recentCarAudio != snapshot.settings.recentCarAudioNames {
+            snapshot.settings.recentCarAudioNames = recentCarAudio
+        }
         let travel = ActivityClassificationLockEngine.mergingLockedTravel(
             existing: snapshot.travel,
             fresh: generatedTravel,

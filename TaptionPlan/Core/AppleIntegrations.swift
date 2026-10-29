@@ -2498,6 +2498,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
     private var trackingSequence = 0
     /// nil이 아니면 층 보정용 표본을 모으는 중이다.
     private var altitudeBurstSamples: [AltitudeBurstSample]?
+    /// 지금 연결된 차량 오디오(CarPlay·블루투스) 출력 이름. iOS 보고값 그대로(CAR1029A01).
+    private var latestCarAudioRouteName: String?
+    private var audioRouteObserver: NSObjectProtocol?
 
     override init() {
         super.init()
@@ -2506,6 +2509,41 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         locationManager.distanceFilter = 50
         locationManager.pausesLocationUpdatesAutomatically = true
+        observeCarAudioRoute()
+    }
+
+    /// 차량 오디오 연결은 수집 중이 아니어도 수집기가 사는 동안 계속 지켜본다.
+    private func observeCarAudioRoute() {
+        refreshCarAudioRoute()
+        audioRouteObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.refreshCarAudioRoute() }
+        }
+    }
+
+    private func refreshCarAudioRoute() {
+        let output = AVAudioSession.sharedInstance().currentRoute.outputs.first {
+            Self.isCarAudioPort($0.portType)
+        }
+        let name = output?.portName
+        guard name != latestCarAudioRouteName else { return }
+        latestCarAudioRouteName = name
+        TaptionPlanDiagnosticsLogger.shared.record(
+            "car_audio_route_changed",
+            fields: [
+                "connected": String(name != nil),
+                "port_type": output?.portType.rawValue ?? "",
+                "name": name ?? "",
+            ]
+        )
+    }
+
+    /// iOS는 클래식 블루투스를 직접 보여 주지 않아 오디오 출력 종류로 차량을 본다.
+    private static func isCarAudioPort(_ port: AVAudioSession.Port) -> Bool {
+        [.carAudio, .bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains(port)
     }
 
     func hardwareAvailability() async -> SensorHardwareAvailability {
@@ -3570,7 +3608,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     session?.wasAutomaticallyDetected,
                 sourceDevice: .iPhone,
                 sequence: session == nil ? nil : trackingSequence,
-                trackingSessionEnded: completedSession != nil
+                trackingSessionEnded: completedSession != nil,
+                carAudioRouteName: latestCarAudioRouteName
             )
         )
         if foregroundLiveLocationUpdate {

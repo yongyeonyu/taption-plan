@@ -93,6 +93,12 @@ struct TravelModeClassifier: Sendable {
     static let subwayAltitudeChangeMeters = 5.0
     static let subwayAltitudeWindow: TimeInterval = 20 * 60
     static let noAltitudeChangeEvidence = "고도 변화 없음 · 지하철 제외"
+    /// iPhone 모션이 차량이라고 말한 고신뢰 자동차. 예전 자동 지하철이 이 판정을 덮지 못한다(EXP1029A01).
+    /// 근거 문자열만으로 가르는 이유: 모션 없이 속도만 본 자동차(지하 GPS 튐)는 여전히 지하철이 이긴다.
+    static func isMotionBackedCar(_ segment: TravelSegment) -> Bool {
+        segment.mode == .car && segment.confidence == .high
+            && segment.evidence.contains { $0.contains("Core Motion 자동차") }
+    }
     /// 승차 전·하차 후로 고도를 함께 보는 여유.
     static let altitudeContextMargin: TimeInterval = 10 * 60
 
@@ -107,7 +113,8 @@ struct TravelModeClassifier: Sendable {
         healthEvidence: [AppleMovementEvidence] = [],
         correctedMode: TravelMode? = nil,
         userTransitLocations: [UserTransitLocation] = [],
-        altitudeContext: [SensorReading] = []
+        altitudeContext: [SensorReading] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> MovementInference {
         if let correctedMode {
             return MovementInference(
@@ -131,6 +138,20 @@ struct TravelModeClassifier: Sendable {
 
         let ordered = validReadings.sorted { $0.timestamp < $1.timestamp }
         let inferenceSpan = requestedSpan ?? sensorSpan(for: ordered)
+        // 차량 오디오 연결은 사용자 교정 다음으로 강한 근거다(CAR1029A01).
+        if let carAudio = CarAudioTravelConfirmation.evaluate(
+            readings: ordered,
+            context: altitudeContext,
+            span: inferenceSpan,
+            registered: registeredCarAudioNames
+        ) {
+            return MovementInference(
+                mode: .car,
+                confidence: .high,
+                score: carAudio.isRegistered ? 1 : 0.95,
+                evidence: [carAudio.evidence]
+            )
+        }
         if let watchWorkout = authoritativeWatchWorkout(
             in: inferenceSpan,
             evidence: healthEvidence
@@ -3675,7 +3696,8 @@ struct MovementRouteBuilder: Sendable {
         readings: [SensorReading],
         healthEvidence: [AppleMovementEvidence] = [],
         correctedModes: [String: TravelMode] = [:],
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         var inspectionCount: Int? = nil
         return build(
@@ -3684,6 +3706,7 @@ struct MovementRouteBuilder: Sendable {
             healthEvidence: healthEvidence,
             correctedModes: correctedModes,
             userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames,
             inspectionCount: &inspectionCount
         )
     }
@@ -3694,6 +3717,7 @@ struct MovementRouteBuilder: Sendable {
         healthEvidence: [AppleMovementEvidence] = [],
         correctedModes: [String: TravelMode] = [:],
         userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = [],
         candidateInspectionCount: inout Int
     ) -> [TravelSegment] {
         var inspectionCount: Int? = candidateInspectionCount
@@ -3703,6 +3727,7 @@ struct MovementRouteBuilder: Sendable {
             healthEvidence: healthEvidence,
             correctedModes: correctedModes,
             userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames,
             inspectionCount: &inspectionCount
         )
         candidateInspectionCount = inspectionCount
@@ -3716,6 +3741,7 @@ struct MovementRouteBuilder: Sendable {
         healthEvidence: [AppleMovementEvidence],
         correctedModes: [String: TravelMode],
         userTransitLocations: [UserTransitLocation],
+        registeredCarAudioNames: Set<String>,
         inspectionCount: inout Int?
     ) -> [TravelSegment] {
         let orderedStays = stays.sorted { $0.span.start < $1.span.start }
@@ -3781,7 +3807,8 @@ struct MovementRouteBuilder: Sendable {
                 altitudeContext: evidenceIndex.readings(
                     in: TravelModeClassifier.altitudeContextSpan(span),
                     inspectionCount: &inspectionCount
-                )
+                ),
+                registeredCarAudioNames: registeredCarAudioNames
             )
             let sensorDistance = pathDistance(segmentReadings.compactMap(\.point))
             let endpointDistance = from.point.flatMap { origin in
@@ -3800,7 +3827,8 @@ struct MovementRouteBuilder: Sendable {
                 distanceMeters: distance,
                 confidence: inference.confidence,
                 evidence: inference.evidence,
-                isConfirmed: correctedMode != nil,
+                isConfirmed: correctedMode != nil
+                    || CarAudioTravelConfirmation.confirms(inference.evidence),
                 subwayRoute: inference.subwayRoute
             )
         }
@@ -3955,14 +3983,16 @@ enum SubwayTravelSegmentEngine {
     static func segments(
         from readings: [SensorReading],
         maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         let maximumGap = maximumReadingGap.isFinite
             ? max(0, maximumReadingGap)
             : defaultMaximumReadingGap
         return inferSegments(
             from: groups(from: readings, maximumGap: maximumGap),
-            userTransitLocations: userTransitLocations
+            userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames
         )
     }
 
@@ -3974,20 +4004,23 @@ enum SubwayTravelSegmentEngine {
         from readings: [SensorReading],
         within candidateSpans: [TimeSpan],
         maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         guard !candidateSpans.isEmpty else {
             return segments(
                 from: readings,
                 maximumReadingGap: maximumReadingGap,
-                userTransitLocations: userTransitLocations
+                userTransitLocations: userTransitLocations,
+                registeredCarAudioNames: registeredCarAudioNames
             )
         }
         return segments(
             from: SensorEvidenceTimeIndex(readings: readings),
             within: candidateSpans,
             maximumReadingGap: maximumReadingGap,
-            userTransitLocations: userTransitLocations
+            userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames
         )
     }
 
@@ -3995,7 +4028,8 @@ enum SubwayTravelSegmentEngine {
         from readingIndex: SensorEvidenceTimeIndex,
         within candidateSpans: [TimeSpan],
         maximumReadingGap: TimeInterval = defaultMaximumReadingGap,
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         guard !candidateSpans.isEmpty else { return [] }
         let maximumGap = maximumReadingGap.isFinite
@@ -4013,7 +4047,8 @@ enum SubwayTravelSegmentEngine {
         }
         return inferSegments(
             from: candidateGroups,
-            userTransitLocations: userTransitLocations
+            userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames
         )
             .filter { segment in
                 candidateSpans.contains { span in
@@ -4067,7 +4102,8 @@ enum SubwayTravelSegmentEngine {
 
     private static func inferSegments(
         from groups: [[SensorReading]],
-        userTransitLocations: [UserTransitLocation]
+        userTransitLocations: [UserTransitLocation],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         var result: [TravelSegment] = []
         for group in groups {
@@ -4098,7 +4134,8 @@ enum SubwayTravelSegmentEngine {
                 readings: context,
                 inside: span,
                 userTransitLocations: userTransitLocations,
-                altitudeContext: group.filter { altitudeSpan.contains($0.timestamp) }
+                altitudeContext: group.filter { altitudeSpan.contains($0.timestamp) },
+                registeredCarAudioNames: registeredCarAudioNames
             )
             guard inference.mode == .subway || inference.mode == .train else {
                 continue
@@ -4765,7 +4802,8 @@ enum AppleDeviceGroundTruthEngine {
         healthEvidence: [AppleMovementEvidence] = [],
         readings: [SensorReading] = [],
         preservedSubwaySegments: [TravelSegment] = [],
-        userTransitLocations: [UserTransitLocation] = []
+        userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = []
     ) -> [TravelSegment] {
         var inspectionCount: Int? = nil
         return mergingTravel(
@@ -4776,6 +4814,7 @@ enum AppleDeviceGroundTruthEngine {
             readings: readings,
             preservedSubwaySegments: preservedSubwaySegments,
             userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames,
             inspectionCount: &inspectionCount
         )
     }
@@ -4788,6 +4827,7 @@ enum AppleDeviceGroundTruthEngine {
         readings: [SensorReading] = [],
         preservedSubwaySegments: [TravelSegment] = [],
         userTransitLocations: [UserTransitLocation] = [],
+        registeredCarAudioNames: Set<String> = [],
         candidateInspectionCount: inout Int
     ) -> [TravelSegment] {
         var inspectionCount: Int? = candidateInspectionCount
@@ -4799,6 +4839,7 @@ enum AppleDeviceGroundTruthEngine {
             readings: readings,
             preservedSubwaySegments: preservedSubwaySegments,
             userTransitLocations: userTransitLocations,
+            registeredCarAudioNames: registeredCarAudioNames,
             inspectionCount: &inspectionCount
         )
         candidateInspectionCount = inspectionCount
@@ -4814,6 +4855,7 @@ enum AppleDeviceGroundTruthEngine {
         readings: [SensorReading],
         preservedSubwaySegments: [TravelSegment],
         userTransitLocations: [UserTransitLocation],
+        registeredCarAudioNames: Set<String>,
         inspectionCount: inout Int?
     ) -> [TravelSegment] {
         inspectionCount? += gpsSegments.count
@@ -4830,16 +4872,19 @@ enum AppleDeviceGroundTruthEngine {
         let detectedSubwaySegments = candidateSpans.isEmpty
             ? SubwayTravelSegmentEngine.segments(
                 from: readings,
-                userTransitLocations: userTransitLocations
+                userTransitLocations: userTransitLocations,
+                registeredCarAudioNames: registeredCarAudioNames
             )
             : SubwayTravelSegmentEngine.segments(
                 from: evidenceIndex,
                 within: candidateSpans,
-                userTransitLocations: userTransitLocations
+                userTransitLocations: userTransitLocations,
+                registeredCarAudioNames: registeredCarAudioNames
             )
         let trajectorySubwaySegments = stabilizedSubwaySegments(
             detected: detectedSubwaySegments,
-            preserved: preservedSubwaySegments
+            preserved: preservedSubwaySegments,
+            freshVehicle: gpsSegments.filter(TravelModeClassifier.isMotionBackedCar)
         )
             .map { segment in
                 guard let matched = gpsIndex
@@ -4950,7 +4995,8 @@ enum AppleDeviceGroundTruthEngine {
                     altitudeContext: evidenceIndex.readings(
                         in: TravelModeClassifier.altitudeContextSpan(activity.span),
                         inspectionCount: &inspectionCount
-                    )
+                    ),
+                    registeredCarAudioNames: registeredCarAudioNames
                 )
                 return (activity, inference)
             }
@@ -4977,7 +5023,8 @@ enum AppleDeviceGroundTruthEngine {
             if usesPedometerDistance, pedometer?.distanceMeters != nil {
                 evidence.append("iPhone 걸음·거리 기록")
             }
-            if activity.motion == .automotive {
+            if activity.motion == .automotive,
+               !CarAudioTravelConfirmation.confirms(inference.evidence) {
                 evidence.append("차량 종류는 사용자 확인 필요")
             }
             evidence.append(contentsOf: inference.evidence)
@@ -4987,6 +5034,7 @@ enum AppleDeviceGroundTruthEngine {
                 distanceMeters: distance,
                 confidence: inference.confidence,
                 evidence: Array(Set(evidence)).sorted(),
+                isConfirmed: CarAudioTravelConfirmation.confirms(inference.evidence),
                 subwayRoute: inference.subwayRoute
             )
         }
@@ -4997,7 +5045,8 @@ enum AppleDeviceGroundTruthEngine {
 
     private static func stabilizedSubwaySegments(
         detected: [TravelSegment],
-        preserved: [TravelSegment]
+        preserved: [TravelSegment],
+        freshVehicle: [TravelSegment] = []
     ) -> [TravelSegment] {
         var result = detected
         for segment in preserved where segment.mode == .subway {
@@ -5010,6 +5059,10 @@ enum AppleDeviceGroundTruthEngine {
             guard let index = result.firstIndex(where: {
                 overlappingEnough($0.span, segment.span)
             }) else {
+                // 새로 감지되지 않은 예전 자동 지하철은, 같은 시간이 고신뢰 자동차로 판정됐으면 되살리지 않는다(EXP1029A01).
+                guard segment.isConfirmed
+                        || !freshVehicle.contains(where: { overlappingEnough($0.span, segment.span) })
+                else { continue }
                 result.append(segment)
                 continue
             }

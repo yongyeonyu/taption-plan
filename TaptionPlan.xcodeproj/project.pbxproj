@@ -199,6 +199,8 @@
 		A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F0 /* AppShellLaunchGate.swift */; };
 		A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */; };
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
+		A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */; };
+		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
@@ -436,6 +438,8 @@
 		F100000000000000000000F0 /* AppShellLaunchGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellLaunchGate.swift; sourceTree = "<group>"; };
 		F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCurrentActivity.swift; sourceTree = "<group>"; };
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
+		F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmation.swift; sourceTree = "<group>"; };
+		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
 		F10000000000000000000074 /* WatchObjCExceptionCatcher.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WatchObjCExceptionCatcher.m; sourceTree = "<group>"; };
@@ -614,6 +618,7 @@
 				F100000000000000000000F0 /* AppShellLaunchGate.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
+				F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */,
 				F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */,
 				F10000000000000000000087 /* MapHomeLocationPresentation.swift */,
 				F10000000000000000000005 /* AppShellView.swift */,
@@ -668,6 +673,7 @@
 				F60000000000000000000004 /* HealthKitBehaviorProjection.swift */,
 				F10000000000000000000015 /* LiveActivitySupport.swift */,
 				F1000000000000000000001B /* HealthAndSensorModels.swift */,
+				F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */,
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
 				F10000000000000000000040 /* CatAnimationShared.swift */,
@@ -1100,6 +1106,8 @@
 				A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
+				A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */,
+				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
 				A10000000000000000000008 /* ReviewView.swift in Sources */,

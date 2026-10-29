@@ -13922,6 +13922,25 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.subwayRoute?.transferStationNames, ["검암"])
     }
 
+    // EXP1029A01: iPhone 모션이 차량이라고 한 고신뢰 자동차는 예전 자동 지하철이 덮지 않는다(오늘 아침 자차 출근).
+    func testMotionBackedCarIsNotOverriddenByPreservedAutomaticSubway() throws {
+        let base = makeDate(2026, 10, 29, 9, 3)
+        let span = TimeSpan(start: base, end: base.addingTimeInterval(64 * 60))
+        let route = try XCTUnwrap(SubwayStationCatalog.route(for: ["가정역", "검암역", "마곡나루역"]))
+        let car = TravelSegment(mode: .car, span: span, distanceMeters: 18_000, confidence: .high,
+                                evidence: ["Core Motion 자동차 후보", "차량 가능 속도"])
+        let subway = TravelSegment(mode: .subway, span: span, distanceMeters: 18_000, confidence: .high,
+                                   evidence: ["원본 GPS 철도 궤적 복원"], subwayRoute: route, isClassificationLocked: true)
+
+        let merged = AppleDeviceGroundTruthEngine.mergingTravel(
+            gpsSegments: [car], motionActivities: [], pedometer: nil, readings: [], preservedSubwaySegments: [subway]
+        )
+        let locked = ActivityClassificationLockEngine.mergingLockedTravel(existing: [subway], fresh: [car], inside: span)
+
+        XCTAssertEqual(merged.map(\.mode), [.car])
+        XCTAssertEqual(locked.map(\.mode), [.car])
+    }
+
     func testMergingTravelKeepsFirstGPSOnEqualSubwayOverlap() throws {
         let base = makeDate(2026, 8, 11, 9, 35)
         let span = TimeSpan(
@@ -30866,5 +30885,358 @@ final class RawSensorReplayTests: XCTestCase {
                     + "evidence=\(fresh.evidence.prefix(4).joined(separator: "|"))")
             }
         }
+    }
+}
+
+/// 회사 하루가 실내 GPS 흔들림으로 조각나도 근무 한 줄이어야 한다(WRK1029A01).
+final class OfficeStayAbsorptionTests: XCTestCase {
+    private let officeKey = "frequent-office"
+    private let hour: TimeInterval = 3_600
+
+    /// 회사 조각 셋 사이에 걷기 조각과 짧은 빈 시간, 반경 밖으로 튄 한 점이
+    /// 있어도 출근부터 퇴근까지 근무 하나다.
+    func testOfficeDaySplitByWalkingPiecesBecomesOneWorkRecord() {
+        let arrival = makeDate(2026, 10, 29, 10, 7)
+        let leave = makeDate(2026, 10, 29, 19, 32)
+        let stays = [
+            officeStay(start: arrival, end: makeDate(2026, 10, 29, 11, 0)),
+            walkingStay(
+                start: makeDate(2026, 10, 29, 11, 3),
+                end: makeDate(2026, 10, 29, 11, 8),
+                metersNorth: 60
+            ),
+            officeStay(
+                start: makeDate(2026, 10, 29, 11, 30),
+                end: makeDate(2026, 10, 29, 14, 0)
+            ),
+            walkingStay(
+                start: makeDate(2026, 10, 29, 14, 2),
+                end: makeDate(2026, 10, 29, 14, 9),
+                metersNorth: 200
+            ),
+            officeStay(start: makeDate(2026, 10, 29, 14, 20), end: leave),
+        ]
+        // 10:07부터 5분마다 한 점. 11:17 한 점만 220m로 튄다(사이 6점 중 1점).
+        let readings = officeReadings(from: arrival, to: leave) { date in
+            date == makeDate(2026, 10, 29, 11, 17) ? 220 : 40
+        }
+        let records = officeRecords(stays: stays, readings: readings)
+
+        XCTAssertEqual(records.map(\.title), ["근무"])
+        XCTAssertEqual(records.first?.startedAt, arrival)
+        XCTAssertEqual(records.first?.endedAt, leave)
+    }
+
+    /// 이름표를 받지 못한 좌표 키 조각도 중심이 회사 반경 안이면 앞뒤로 붙는다.
+    func testRawKeyPieceInsideCompanyRadiusJoinsTheWorkStay() {
+        let start = makeDate(2026, 10, 29, 9, 0)
+        let end = makeDate(2026, 10, 29, 13, 0)
+        let stays = [
+            rawStay(
+                start: start,
+                end: makeDate(2026, 10, 29, 9, 20),
+                metersNorth: 130
+            ),
+            officeStay(
+                start: makeDate(2026, 10, 29, 9, 25),
+                end: makeDate(2026, 10, 29, 12, 0)
+            ),
+            rawStay(
+                start: makeDate(2026, 10, 29, 12, 10),
+                end: end,
+                metersNorth: 50
+            ),
+        ]
+        let readings = officeReadings(from: start, to: end) { _ in 30 }
+        let records = officeRecords(stays: stays, readings: readings)
+
+        XCTAssertEqual(records.map(\.title), ["근무"])
+        XCTAssertEqual(records.first?.startedAt, start)
+        XCTAssertEqual(records.first?.endedAt, end)
+    }
+
+    /// 20분 넘게 비고 그동안 위치가 150m 밖에 찍혔으면 나갔다 온 것이다.
+    func testGenuineDepartureStillSplitsTheWorkDay() {
+        let start = makeDate(2026, 10, 29, 9, 0)
+        let end = makeDate(2026, 10, 29, 18, 0)
+        let stays = [
+            officeStay(start: start, end: makeDate(2026, 10, 29, 12, 0)),
+            officeStay(start: makeDate(2026, 10, 29, 12, 40), end: end),
+        ]
+        let away = TimeSpan(
+            start: makeDate(2026, 10, 29, 12, 5),
+            end: makeDate(2026, 10, 29, 12, 35)
+        )
+        let readings = officeReadings(from: start, to: end) { date in
+            away.contains(date) ? 400 : 30
+        }
+        let records = officeRecords(stays: stays, readings: readings)
+
+        XCTAssertEqual(records.map(\.title), ["근무", "근무"])
+        XCTAssertEqual(records.first?.endedAt, stays[0].span.end)
+        XCTAssertEqual(records.last?.startedAt, stays[1].span.start)
+    }
+
+    // MARK: - 재료
+
+    private var utcCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.firstWeekday = 2
+        return calendar
+    }
+
+    private func makeDate(
+        _ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int
+    ) -> Date {
+        utcCalendar.date(from: DateComponents(
+            year: year, month: month, day: day, hour: hour, minute: minute
+        ))!
+    }
+
+    private func officePoint(_ metersNorth: Double) -> GeoPoint {
+        GeoPoint(
+            latitude: 37.5 + metersNorth / 111_320,
+            longitude: 127,
+            altitude: 40,
+            horizontalAccuracy: 12,
+            verticalAccuracy: 8
+        )
+    }
+
+    private func officeStay(start: Date, end: Date) -> PlaceStay {
+        PlaceStay(
+            placeKey: officeKey,
+            displayName: "회사",
+            span: TimeSpan(start: start, end: end),
+            confidence: .high,
+            point: officePoint(0),
+            isConfirmed: true
+        )
+    }
+
+    private func walkingStay(
+        start: Date, end: Date, metersNorth: Double
+    ) -> PlaceStay {
+        PlaceStay(
+            placeKey: "walking:\(start.timeIntervalSince1970)",
+            displayName: "걷기",
+            span: TimeSpan(start: start, end: end),
+            confidence: .medium,
+            point: officePoint(metersNorth)
+        )
+    }
+
+    private func rawStay(
+        start: Date, end: Date, metersNorth: Double
+    ) -> PlaceStay {
+        let point = officePoint(metersNorth)
+        return PlaceStay(
+            placeKey: String(
+                format: "%.4f,%.4f", point.latitude, point.longitude
+            ),
+            displayName: "장소",
+            span: TimeSpan(start: start, end: end),
+            confidence: .medium,
+            point: point
+        )
+    }
+
+    private func officeReadings(
+        from start: Date,
+        to end: Date,
+        metersFromAnchor: (Date) -> Double
+    ) -> [SensorReading] {
+        stride(from: 0, through: end.timeIntervalSince(start), by: 300).map {
+            let date = start.addingTimeInterval($0)
+            return SensorReading(
+                timestamp: date,
+                point: officePoint(metersFromAnchor(date)),
+                motion: .stationary,
+                motionConfidence: .high
+            )
+        }
+    }
+
+    /// 설정 반경 70m·하루 범위. 잇기 바닥 반경 150m가 실내 흔들림을 받는다.
+    private func officeRecords(
+        stays: [PlaceStay],
+        readings: [SensorReading]
+    ) -> [ActualRecord] {
+        let day = TimeSpan(
+            start: makeDate(2026, 10, 29, 0, 0),
+            end: makeDate(2026, 10, 30, 0, 0)
+        )
+        return StationaryContextActualEngine.records(
+            stays: stays,
+            placeKinds: [officeKey: .company],
+            placeAnchors: [
+                officeKey: FrequentPlaceAnchor(
+                    point: officePoint(0),
+                    radiusMeters: 70
+                ),
+            ],
+            readings: readings,
+            inside: day,
+            calendar: utcCalendar,
+            now: day.end
+        )
+    }
+}
+
+// MARK: - CAR1029A01 차량 오디오 연결로 자동차 확정
+
+final class CarAudioTravelConfirmationTests: XCTestCase {
+    private let base = Date(timeIntervalSinceReferenceDate: 800_000_000)
+    private var span: TimeSpan { TimeSpan(start: base, end: base.addingTimeInterval(30 * 60)) }
+
+    /// 지하철처럼 보이는 표본(역 근처·철도 경로)에 분 단위로 차량 오디오 이름을 붙인다.
+    private func reading(minute: Double, carAudio: String?, subwayLike: Bool = true) -> SensorReading {
+        SensorReading(
+            timestamp: base.addingTimeInterval(minute * 60),
+            point: GeoPoint(
+                latitude: 37.5 + minute * 0.001,
+                longitude: 126.9 + minute * 0.001,
+                altitude: 20,
+                horizontalAccuracy: 10,
+                verticalAccuracy: 8
+            ),
+            speedMetersPerSecond: 12,
+            motion: .automotive,
+            motionConfidence: .high,
+            nearbyStation: subwayLike,
+            matchesRailRoute: subwayLike,
+            sourceDevice: .iPhone,
+            carAudioRouteName: carAudio
+        )
+    }
+
+    private func readings(_ name: (Double) -> String?, minutes: StrideThrough<Double>) -> [SensorReading] {
+        minutes.map { reading(minute: $0, carAudio: name($0)) }
+    }
+
+    func testRegisteredCarConnectedThroughSpanConfirmsCar() {
+        let samples = readings({ _ in "KIA K5" }, minutes: stride(from: 0, through: 30, by: 2))
+
+        let inference = TravelModeClassifier().classify(
+            readings: samples,
+            inside: span,
+            registeredCarAudioNames: ["KIA K5"]
+        )
+
+        XCTAssertEqual(inference.mode, .car)
+        XCTAssertEqual(inference.confidence, .high)
+        XCTAssertEqual(inference.evidence, ["사용자 확인 차량 블루투스 · KIA K5"])
+        XCTAssertTrue(CarAudioTravelConfirmation.confirms(inference.evidence))
+    }
+
+    func testUnregisteredConnectAndDisconnectMatchingSpanConfirmsCar() {
+        let samples = readings({ minute in (2...28).contains(minute) ? "KIA K5" : nil },
+                               minutes: stride(from: -10, through: 40, by: 2))
+        let inside = samples.filter { span.contains($0.timestamp) }
+
+        let inference = TravelModeClassifier().classify(
+            readings: inside,
+            inside: span,
+            altitudeContext: samples
+        )
+
+        XCTAssertEqual(inference.mode, .car)
+        XCTAssertEqual(inference.evidence, ["차량 오디오 연결·해제 일치 · KIA K5"])
+        XCTAssertTrue(CarAudioTravelConfirmation.confirms(inference.evidence))
+        XCTAssertEqual(CarAudioTravelConfirmation.matchedName(in: inference.evidence[0]), "KIA K5")
+    }
+
+    func testUnregisteredDeviceConnectedAllDayDoesNotConfirm() {
+        let samples = readings({ _ in "홈 스피커" }, minutes: stride(from: -120, through: 150, by: 2))
+        let inside = samples.filter { span.contains($0.timestamp) }
+
+        let inference = TravelModeClassifier().classify(
+            readings: inside,
+            inside: span,
+            altitudeContext: samples
+        )
+        let unchanged = TravelModeClassifier().classify(
+            readings: inside.map { var value = $0; value.carAudioRouteName = nil; return value },
+            inside: span,
+            altitudeContext: samples.map { var value = $0; value.carAudioRouteName = nil; return value }
+        )
+
+        XCTAssertNil(CarAudioTravelConfirmation.evaluate(
+            readings: inside, context: samples, span: span, registered: []
+        ))
+        XCTAssertEqual(inference.mode, unchanged.mode)
+        XCTAssertFalse(CarAudioTravelConfirmation.confirms(inference.evidence))
+    }
+
+    func testConnectionWithoutAnyRouteReadingsChangesNothing() {
+        let samples = readings({ _ in nil }, minutes: stride(from: 0, through: 30, by: 2))
+
+        XCTAssertNil(CarAudioTravelConfirmation.evaluate(
+            readings: samples, span: span, registered: ["KIA K5"]
+        ))
+    }
+
+    func testRecentNamesCollectMatchedDevicesMostRecentFirst() {
+        let older = TravelSegment(
+            mode: .car, span: span, distanceMeters: 1, confidence: .high,
+            evidence: ["차량 오디오 연결·해제 일치 · KIA K5"], isConfirmed: true
+        )
+        let newer = TravelSegment(
+            mode: .car,
+            span: TimeSpan(start: base.addingTimeInterval(3600), end: base.addingTimeInterval(5400)),
+            distanceMeters: 1, confidence: .high,
+            evidence: ["차량 오디오 연결·해제 일치 · 렌터카"], isConfirmed: true
+        )
+        let registered = TravelSegment(
+            mode: .car, span: span, distanceMeters: 1, confidence: .high,
+            evidence: ["사용자 확인 차량 블루투스 · 내 차"], isConfirmed: true
+        )
+
+        let names = CarAudioTravelConfirmation.recentNames(
+            from: [older, newer, registered], merging: ["KIA K5", "예전 기기"]
+        )
+
+        XCTAssertEqual(names, ["렌터카", "KIA K5", "예전 기기"])
+    }
+
+    func testSensorReadingCarAudioRouteNameRoundTripsAndDecodesNilFromOldJSON() throws {
+        let reading = SensorReading(timestamp: base, carAudioRouteName: "KIA K5")
+        let data = try JSONEncoder().encode(reading)
+        let decoded = try JSONDecoder().decode(SensorReading.self, from: data)
+        XCTAssertEqual(decoded.carAudioRouteName, "KIA K5")
+
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "carAudioRouteName")
+        let legacy = try JSONDecoder().decode(
+            SensorReading.self,
+            from: try JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNil(legacy.carAudioRouteName)
+        XCTAssertEqual(legacy.timestamp, reading.timestamp)
+    }
+
+    func testSettingsCarAudioNamesDefaultEmptyAndNormalize() throws {
+        let settings = AppFeatureSettings(
+            startScale: .day, rememberLastScale: false, catStyle: .calico, reduceMotion: false,
+            showsPhotos: false, showsPhotosInWidgets: false, selectedCalendarIDs: [],
+            healthEnabled: false, locationEnabled: false, backgroundPreciseLocationEnabled: false,
+            sensorCollectionProfile: .balanced, weatherEnabled: false, notificationsEnabled: false,
+            permissions: [:], registeredCarAudioNames: [" KIA K5 ", "KIA K5", ""]
+        )
+        XCTAssertEqual(settings.registeredCarAudioNames, ["KIA K5"])
+        XCTAssertEqual(settings.recentCarAudioNames, [])
+
+        var object = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode(settings)) as? [String: Any]
+        )
+        object.removeValue(forKey: "registeredCarAudioNames")
+        object.removeValue(forKey: "recentCarAudioNames")
+        let legacy = try JSONDecoder().decode(
+            AppFeatureSettings.self,
+            from: try JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertEqual(legacy.registeredCarAudioNames, [])
+        XCTAssertEqual(legacy.recentCarAudioNames, [])
     }
 }

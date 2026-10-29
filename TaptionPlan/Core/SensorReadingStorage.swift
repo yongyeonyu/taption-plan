@@ -1,12 +1,16 @@
 import Foundation
 import TaptionPlanCore
 
-// TSR1 is an explicit field-order contract. Change its version when changing the layout.
+// TSR2 is an explicit field-order contract. Change its version when changing the layout.
+// TSR1 (before carAudioRouteName, CAR1029A01) is rejected: no production store ever wrote it
+// (the SQLite store keeps readings as columns + `extra` JSON; this format is test-only).
 // Portable JSON/Codable backups keep their independent model representation.
 extension SensorReading: TaptionPlanBinaryRecord {
+    private static let currentMagic: UInt32 = 0x32525354 // "TSR2"
+
     func storageBytes() throws -> Data {
         var writer = SensorRecordWriter()
-        try writer.write(UInt32(0x31525354))
+        try writer.write(Self.currentMagic)
         try writeRecord(to: &writer)
         return writer.data
     }
@@ -14,7 +18,7 @@ extension SensorReading: TaptionPlanBinaryRecord {
     static func fromStorageBytes(_ data: Data) throws -> Self {
         try data.withUnsafeBytes { bytes in
             var reader = SensorRecordReader(bytes: bytes)
-            guard try reader.read() as UInt32 == 0x31525354 else {
+            guard try reader.read() as UInt32 == currentMagic else {
                 throw TaptionPlanCanonicalStorageError.invalidPayload
             }
             let value = try readRecord(from: &reader)
@@ -247,6 +251,7 @@ extension SensorReading: SensorRecordValue {
         try writer.write(sourceDevice)
         try writer.write(sequence)
         try writer.write(trackingSessionEnded)
+        try writer.write(carAudioRouteName)
     }
 
     fileprivate static func readRecord(from reader: inout SensorRecordReader) throws -> Self {
@@ -301,6 +306,7 @@ extension SensorReading: SensorRecordValue {
         value.sourceDevice = try reader.read()
         value.sequence = try reader.read()
         value.trackingSessionEnded = try reader.read()
+        value.carAudioRouteName = try reader.read()
         return value
     }
 }

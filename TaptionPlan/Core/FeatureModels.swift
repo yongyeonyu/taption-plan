@@ -3322,6 +3322,9 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
     var sourceDevice: TrackingDevice?
     var sequence: Int?
     var trackingSessionEnded: Bool?
+    /// 표본 시각에 연결돼 있던 차량 오디오(CarPlay·블루투스) 출력 이름. iOS가 보고한
+    /// 그대로 보관하고, nil은 차량 경로 없음 또는 알 수 없음이다(CAR1029A01).
+    var carAudioRouteName: String?
 
     init(
         id: UUID = UUID(),
@@ -3375,7 +3378,8 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         trackingWasAutomaticallyDetected: Bool? = nil,
         sourceDevice: TrackingDevice? = nil,
         sequence: Int? = nil,
-        trackingSessionEnded: Bool? = nil
+        trackingSessionEnded: Bool? = nil,
+        carAudioRouteName: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -3435,6 +3439,7 @@ struct SensorReading: Identifiable, Codable, Hashable, Sendable {
         self.sourceDevice = sourceDevice
         self.sequence = sequence
         self.trackingSessionEnded = trackingSessionEnded
+        self.carAudioRouteName = carAudioRouteName
     }
 }
 
@@ -3954,6 +3959,10 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
     var customActivityLabels: [String]
     /// UUID가 바뀌는 자동 재분류 뒤에도 유지되는 사용자 확인 수면 구간.
     var confirmedSleepSpans: [TimeSpan]
+    /// 내 차로 등록한 차량 오디오 기기 이름. 연결된 이동은 자동차로 확정한다(CAR1029A01).
+    var registeredCarAudioNames: [String]
+    /// 연결·해제가 이동과 맞아떨어진 미등록 기기, 최근 순 최대 10개.
+    var recentCarAudioNames: [String]
 
     static let defaults = AppFeatureSettings(
         startScale: .day,
@@ -3993,7 +4002,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         timelineRowOrder: TimelineRowOrder.defaults,
         activityCorrections: [:],
         customActivityLabels: [],
-        confirmedSleepSpans: []
+        confirmedSleepSpans: [],
+        registeredCarAudioNames: [],
+        recentCarAudioNames: []
     )
 
     init(
@@ -4033,7 +4044,9 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         timelineRowOrder: [String] = TimelineRowOrder.defaults,
         activityCorrections: [UUID: ActivityCorrection] = [:],
         customActivityLabels: [String] = [],
-        confirmedSleepSpans: [TimeSpan] = []
+        confirmedSleepSpans: [TimeSpan] = [],
+        registeredCarAudioNames: [String] = [],
+        recentCarAudioNames: [String] = []
     ) {
         self.startScale = startScale
         self.rememberLastScale = rememberLastScale
@@ -4082,6 +4095,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         self.confirmedSleepSpans = Self.normalizedConfirmedSleepSpans(
             confirmedSleepSpans
         )
+        self.registeredCarAudioNames = Self.normalizedCarAudioNames(registeredCarAudioNames)
+        self.recentCarAudioNames = Self.normalizedCarAudioNames(recentCarAudioNames)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -4122,6 +4137,8 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
         case activityCorrections
         case customActivityLabels
         case confirmedSleepSpans
+        case registeredCarAudioNames
+        case recentCarAudioNames
     }
 
     init(from decoder: Decoder) throws {
@@ -4286,6 +4303,14 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                 forKey: .confirmedSleepSpans
             ) ?? defaults.confirmedSleepSpans
         )
+        registeredCarAudioNames = Self.normalizedCarAudioNames(
+            try values.decodeIfPresent([String].self, forKey: .registeredCarAudioNames)
+                ?? defaults.registeredCarAudioNames
+        )
+        recentCarAudioNames = Self.normalizedCarAudioNames(
+            try values.decodeIfPresent([String].self, forKey: .recentCarAudioNames)
+                ?? defaults.recentCarAudioNames
+        )
         for feature in PermissionFeature.allCases
         where permissions[feature] == nil {
             permissions[feature] = .notDetermined
@@ -4321,6 +4346,17 @@ struct AppFeatureSettings: Codable, Hashable, Sendable {
                   !result.contains(where: {
                       $0.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
                   }) else { continue }
+            result.append(trimmed)
+        }
+        return result
+    }
+
+    /// 기기 이름은 iOS가 보고한 그대로 두고 공백·중복만 거른다.
+    static func normalizedCarAudioNames(_ names: [String]) -> [String] {
+        var result: [String] = []
+        for name in names {
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !result.contains(trimmed) else { continue }
             result.append(trimmed)
         }
         return result

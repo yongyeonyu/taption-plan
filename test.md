@@ -4635,3 +4635,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 기압 고도: 자동차 출근 09:00 −4.6m → 09:04 −77.1m, 10:01 −88.7m. 어제 지하철 09:23→09:26 −13m, 09:31→09:34 +31m. 둘 다 5m 조건을 넘는다.
 - 단위 전체: 1회차 1,661건 중 실패 18(`unit.xcresult`) → 2회차 실패 4(`unit2.xcresult`, 기압 없음은 확인 불가로) → 시험 자료 4건 수정 후 **1,662건 중 1,659 통과 · 실패 0 · 건너뜀 3**(`unit3.xcresult`), 경고 0.
 - 기기: Debug 빌드 3회 경고 0, USB 설치 3회 종료 0(`install.log`·`install2.log`·`install3.log`). 기기 화면 확인은 하지 않았다.
+
+## WRK1029A01 · PLY1029A01 · EXP1029A01 · CAR1029A01 (2026-10-29 밤)
+- 집중: 잠긴 지하철 3건 + 새 1건, `SensorDayStoreTests`, `TimeScaleTests`, `CarAudioTravelConfirmationTests`, `OfficeStayAbsorptionTests` → **245건 통과·실패 0**(`build/validation/CAR1029A01/focused.xcresult`).
+- 단위 전체: **1,674건 중 1,671 통과 · 실패 0 · 건너뜀 3**(`unit2.xcresult`), `warning:` 0.
+- 첫 회차(`unit.xcresult`) 실패 6건: ①`testMergingTravelRetainsStableSubway…`·`…RetainsLockedMediumSubway…`·`…KeepsFirstGPSOnEqualSubwayOverlap` — 자동차 고신뢰면 무조건 지하철을 버리던 첫 규칙이 기존 고정자료(근거에 모션 없음)까지 바꿔서, iPhone 모션 근거가 있는 자동차로 좁혔다 ②저장 필드 수 52→53 ③투영 간격 0.25→0.5 ④걷기 3배→6배 기대값.
+- 확인하지 못한 것: 실기기(업무 분류·재생 체감·임시 경로·차량 연결). 차량 오디오는 시뮬레이터에 없어 단위 시험으로만 검증.

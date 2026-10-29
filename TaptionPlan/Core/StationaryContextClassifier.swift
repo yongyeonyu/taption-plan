@@ -620,6 +620,18 @@ enum StationaryContextActualEngine {
     /// 이어 주되, 보이지 않는 하루를 통째로 지어내지는 않는다.
     static let unprovenJoinLimit: TimeInterval = 60 * 60
 
+    /// 등록한 곳에서 이보다 짧게 비면 자리를 떠난 것으로 보지 않는다. 건물
+    /// 안을 걸어 다닌 시간은 그 곳에 있는 것이다(WRK1029A01).
+    static let indoorBreakTolerance: TimeInterval = 20 * 60
+
+    /// 실내 GPS 흔들림은 설정 반경을 넘기 일쑤다. 잇기 판단에서만 이 바닥
+    /// 반경을 쓰고, 자주가는 곳 판정 자체의 반경은 손대지 않는다.
+    static let indoorDriftRadiusMeters: Double = 150
+
+    /// 사이 시간의 위치·조각 중심 가운데 이만큼이 반경 안이면 머문 것이다.
+    /// 흘러 나간 한두 점이 하루를 쪼개지 않게 한다.
+    static let insideShareToJoin: Double = 0.7
+
     static func records(
         stays: [PlaceStay],
         placeKinds: [String: FrequentPlaceKind],
@@ -733,8 +745,9 @@ enum StationaryContextActualEngine {
 
     /// 등록해 둔 곳 안에 계속 있었다면 시간표도 한 줄이어야 한다. 층이
     /// 바뀌어도, 자리를 떠나 건물 안을 걸어 다녀도 그 곳을 벗어난 것이 아니다.
-    /// 반경 밖에서 찍힌 위치가 하나라도 있으면 그때는 나갔다 온 것이라 잇지
+    /// 사이 시간의 위치가 대부분 반경 밖이면 그때는 나갔다 온 것이라 잇지
     /// 않는다 — 그래야 출근·퇴근과 일과 고리가 뜻을 잃지 않는다.
+    /// 이름표를 받지 못한 조각도 중심이 반경 안이면 같은 곳의 조각이다.
     private static func joiningContinuousStays(
         _ stays: [PlaceStay],
         anchors: [String: FrequentPlaceAnchor],
@@ -748,15 +761,21 @@ enum StationaryContextActualEngine {
                     && $0.point != nil
             }
             .sorted { $0.timestamp < $1.timestamp }
+        func joinKey(_ stay: PlaceStay) -> String {
+            anchorKey(for: stay, anchors: anchors, registeredKeys: registeredKeys)
+                ?? stay.placeKey
+        }
         var result: [PlaceStay] = []
         for stay in stays {
+            let key = joinKey(stay)
             guard let hostIndex = result.lastIndex(where: {
-                $0.placeKey == stay.placeKey
+                joinKey($0) == key
             }), stayedThrough(
                 between: result[hostIndex],
                 and: stay,
                 passing: Array(result[(hostIndex + 1)...]),
-                anchor: anchors[stay.placeKey],
+                placeKey: key,
+                anchor: anchors[key],
                 registeredKeys: registeredKeys,
                 readings: located
             ) else {
@@ -771,9 +790,36 @@ enum StationaryContextActualEngine {
                 start: result[hostIndex].span.start,
                 end: ends.max() ?? stay.span.end
             )
+            // 앞 조각이 이름표를 못 받았어도 이어진 체류는 등록된 곳이다.
+            if result[hostIndex].placeKey != key, stay.placeKey == key {
+                result[hostIndex].placeKey = key
+                result[hostIndex].displayName = stay.displayName
+            }
             result.removeSubrange((hostIndex + 1)...)
         }
         return result
+    }
+
+    /// 등록된 조각은 제 키, 이름표 없는 조각은 중심이 들어가는 등록된 곳의
+    /// 키. 걷기 조각은 어디에도 붙이지 않는다.
+    private static func anchorKey(
+        for stay: PlaceStay,
+        anchors: [String: FrequentPlaceAnchor],
+        registeredKeys: Set<String>
+    ) -> String? {
+        if registeredKeys.contains(stay.placeKey) { return stay.placeKey }
+        guard !stay.isWalkingLocation, let point = stay.point else {
+            return nil
+        }
+        return anchors
+            .filter {
+                registeredKeys.contains($0.key) && !outside(point, $0.value)
+            }
+            .min { lhs, rhs in
+                distanceMeters(point, lhs.value.point)
+                    < distanceMeters(point, rhs.value.point)
+            }?
+            .key
     }
 
     /// 두 체류 사이에 그 곳을 벗어난 자취가 없는지 본다.
@@ -781,13 +827,14 @@ enum StationaryContextActualEngine {
         between host: PlaceStay,
         and next: PlaceStay,
         passing: [PlaceStay],
+        placeKey: String,
         anchor: FrequentPlaceAnchor?,
         registeredKeys: Set<String>,
         readings: [SensorReading]
     ) -> Bool {
         // 사이에 다른 등록된 곳에 머문 자국이 있으면 그리로 옮겨 간 것이다.
         if passing.contains(where: {
-            $0.placeKey != host.placeKey && registeredKeys.contains($0.placeKey)
+            $0.placeKey != placeKey && registeredKeys.contains($0.placeKey)
         }) {
             return false
         }
@@ -799,26 +846,28 @@ enum StationaryContextActualEngine {
             return passing.isEmpty
                 && gap.duration <= unregisteredJoinTolerance
         }
-        // 사이에 낀 체류도 사용자가 맞춘 반경 안이어야 한다.
-        if passing.contains(where: { outside($0.point, anchor) }) {
-            return false
-        }
+        // 잠깐 빈 시간은 건물 안을 걸은 것이다. 걷기 조각은 세지 않는다.
+        if gap.duration <= indoorBreakTolerance { return true }
+        let pieces = passing.filter { !$0.isWalkingLocation }
         let sampled = readings.filter { gap.contains($0.timestamp) }
-        if sampled.contains(where: { outside($0.point, anchor) }) {
-            return false
+        let points = pieces.compactMap(\.point) + sampled.compactMap(\.point)
+        guard !points.isEmpty else {
+            return gap.duration <= unprovenJoinLimit
         }
-        // 반경 안에서 찍힌 위치가 있으면 얼마나 벌어졌든 머문 것이다.
+        // 반경 안에서 찍힌 위치가 대부분이면 얼마나 벌어졌든 머문 것이다.
         // 점심을 먹으러 건물 안을 돌아다닌 시간이 여기에 들어온다.
-        if !sampled.isEmpty { return true }
-        return gap.duration <= unprovenJoinLimit
+        let inside = points.filter { !outside($0, anchor) }.count
+        return Double(inside) >= Double(points.count) * insideShareToJoin
     }
 
+    /// 잇기 판단의 반경. 실내 흔들림을 받아 주되 설정 반경보다 좁히지 않는다.
     private static func outside(
         _ point: GeoPoint?,
         _ anchor: FrequentPlaceAnchor
     ) -> Bool {
         guard let point else { return false }
-        return distanceMeters(point, anchor.point) > anchor.radiusMeters
+        return distanceMeters(point, anchor.point)
+            > max(anchor.radiusMeters, indoorDriftRadiusMeters)
     }
 
     /// `covered` 는 시작 시각 순으로 정렬되고 서로 겹치지 않는다.
