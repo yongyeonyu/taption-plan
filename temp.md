@@ -2504,3 +2504,10 @@
 - 검증 기준: `CarAudioTravelConfirmationTests` 7건(등록 확정·미등록 일치·종일 연결 무시·표본 없음·최근 순서·JSON 왕복·설정 기본값), 단위 전체, 기기에서 차 연결 뒤 로그 `car_audio_route_changed`와 이동 근거.
 
 - 검증(WRK·PLY·EXP·CAR 묶음): 집중 245건 통과(`build/validation/CAR1029A01/focused.xcresult`) → 단위 전체 **1,674건 중 1,671 통과 · 실패 0 · 건너뜀 3**(`unit2.xcresult`), 경고 0. 첫 회차 실패 6건은 기대값 갱신(저장 필드 53개·투영 0.5초·걷기 6배)과 잠긴 지하철 규칙을 "iPhone 모션이 차량이라고 한 고신뢰 자동차"로 좁힌 것(`TravelModeClassifier.isMotionBackedCar`, 새 시험 `testMotionBackedCarIsNotOverriddenByPreservedAutomaticSubway`)으로 해결. 구조 게이트 재잠금·경계 통과.
+
+## PLY1029A02 · 재생 틱을 화면 주사율에 맞추고 카메라는 엔진이 잇는다 (2026-10-29)
+- 지시(대표): "재생을 좀 더 매끄럽게 하는 방법 찾아줘. 지금은 뚝뚝 끊기는 느낌이 너무 많이 난다." 제안 다섯 중 ①③ 먼저(대표 선택).
+- 원인(코드 확인): ①`Task.sleep(8.33ms)` 루프는 깨어나는 시각이 화면 갱신(vsync)과 어긋나 어떤 프레임엔 두 번, 어떤 프레임엔 한 번도 못 움직였다. ③MapLibre 카메라를 틱마다 `setCamera(animated:false)`로 뚝뚝 놓았다. (남은 셋: ②재생 상태가 `MapHomeView` 전체 body를 틱마다 다시 평가 ④경로 투영을 재생 중 다시 계산 ⑤화랑이가 SwiftUI 오버레이라 지도 렌더와 한 프레임 어긋남 — 다음 차례.)
+- 고침: `MapHomePlaybackClock`(CADisplayLink 80~120Hz, 프레임마다 한 번 깨우고 표시 링크가 잰 경과 시간을 줌)이 `Task.sleep`을 대신한다. 재생 중 벡터 지도는 `easesCamera`로 `setCamera(withDuration: 1/60, linear)` — 목표가 불규칙하게 와도 엔진이 한 프레임 동안 잇는다. 프레임 계측 `playback_frame_stats`는 그대로.
+- 검증: 재생 관련 단위 301건 통과(`build/validation/PLY1029A02/focused.xcresult`), 기기용 Debug 빌드 경고 0·설치 종료 0(`install.log`). 전체 단위는 직전 묶음(`CAR1029A01/unit2.xcresult`, 1,671 통과) 뒤 재생 루프·카메라만 바뀌었다. 구조 게이트 재잠금·경계 통과.
+- 남은 것: 실기기에서 재생 체감과 로그 `playback_frame_stats`(12ms 초과 비율) 확인. ②④⑤.

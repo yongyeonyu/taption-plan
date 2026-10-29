@@ -4641,3 +4641,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 전체: **1,674건 중 1,671 통과 · 실패 0 · 건너뜀 3**(`unit2.xcresult`), `warning:` 0.
 - 첫 회차(`unit.xcresult`) 실패 6건: ①`testMergingTravelRetainsStableSubway…`·`…RetainsLockedMediumSubway…`·`…KeepsFirstGPSOnEqualSubwayOverlap` — 자동차 고신뢰면 무조건 지하철을 버리던 첫 규칙이 기존 고정자료(근거에 모션 없음)까지 바꿔서, iPhone 모션 근거가 있는 자동차로 좁혔다 ②저장 필드 수 52→53 ③투영 간격 0.25→0.5 ④걷기 3배→6배 기대값.
 - 확인하지 못한 것: 실기기(업무 분류·재생 체감·임시 경로·차량 연결). 차량 오디오는 시뮬레이터에 없어 단위 시험으로만 검증.
+
+## PLY1029A02 · 재생 시계·카메라 보간 (2026-10-29)
+- `-only-testing` TimeScale·MapHomeLiveMap·MapHomePlaybackContinuity·MapHomeStickman → **301건 통과·실패 0**(`build/validation/PLY1029A02/focused.xcresult`).
+- 기기용 Debug 빌드 경고 0(`device-build.log`), iPhone 18 Pro Max 설치 종료 0(`install.log`, 번들 248). 재생 체감·`playback_frame_stats`는 기기에서 아직 확인하지 않았다.
+- CADisplayLink는 시뮬레이터 단위 시험에서 돌지 않는다(재생 루프는 시험 밖). 실제 프레임 간격은 기기 로그로만 안다.

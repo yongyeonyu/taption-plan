@@ -661,6 +661,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let followsHeading: Bool
     let headingDegrees: CLLocationDirection
     let displayedCoordinate: CLLocationCoordinate2D?
+    /// 재생 중이면 카메라를 바로 놓지 않고 한 프레임 길이로 이어 움직인다(PLY1029A02).
+    var easesCamera: Bool = false
     let onViewportChange: (MapHomeVectorViewport, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onSingleFingerPanEnded: () -> Void
@@ -843,15 +845,23 @@ struct MapHomeVectorMap: UIViewRepresentable {
                     completionHandler: nil
                 )
             } else if let camera = parent.cameraPosition.camera {
-                mapView.setCamera(
-                    MLNMapCamera(
-                        lookingAtCenter: camera.centerCoordinate,
-                        altitude: camera.distance,
-                        pitch: camera.pitch,
-                        heading: camera.heading
-                    ),
-                    animated: false
+                let target = MLNMapCamera(
+                    lookingAtCenter: camera.centerCoordinate,
+                    altitude: camera.distance,
+                    pitch: camera.pitch,
+                    heading: camera.heading
                 )
+                if parent.easesCamera {
+                    // 틱마다 새 목표를 주되 지도 엔진이 한 프레임(1/60초) 동안 선형으로 잇는다.
+                    // 목표가 조금 불규칙하게 와도 화면에서는 끊기지 않는다.
+                    mapView.setCamera(
+                        target,
+                        withDuration: 1.0 / 60.0,
+                        animationTimingFunction: CAMediaTimingFunction(name: .linear)
+                    )
+                } else {
+                    mapView.setCamera(target, animated: false)
+                }
             } else {
                 mapView.setCamera(
                     MLNMapCamera(

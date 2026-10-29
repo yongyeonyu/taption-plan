@@ -2552,6 +2552,7 @@ struct MapHomeView: View {
     @State private var lastPlaybackMarkerUptime: TimeInterval = 0
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
+    @State private var playbackClock = MapHomePlaybackClock()
     @State private var mapDayCacheWriteSignature: Int?
 
     private static let categoryPaletteHexes = [
@@ -4357,6 +4358,7 @@ struct MapHomeView: View {
             followsHeading: isHeadingMode && userTrackingMode.keepsCameraLocked,
             headingDegrees: -compassRotationDegrees,
             displayedCoordinate: displayedLocationCoordinate,
+            easesCamera: isDayPlaybackRunning,
             onViewportChange: { viewport, isFinal in
                 guard cameraRevision == mapCameraRevision else { return }
                 applyVectorMapViewport(viewport, isFinal: isFinal)
@@ -7558,25 +7560,18 @@ struct MapHomeView: View {
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         startPlaybackIntro()
-        var lastUptime = ProcessInfo.processInfo.systemUptime
         var frameStats = MapHomePlaybackFrameStats()
+        let clock = playbackClock
+        clock.stop()
         dayPlaybackTask = Task { @MainActor in
             while !Task.isCancelled {
-                do {
-                    try await Task.sleep(
-                        nanoseconds: MapHomeDayPlaybackMath
-                            .frameIntervalNanoseconds
-                    )
-                } catch {
+                // 화면 프레임마다 한 번 깨어난다(PLY1029A02). 경과 시간은 표시 링크가 잰 값이다.
+                guard let frameElapsed = await clock.nextFrame() else {
                     frameStats.record()
                     return
                 }
                 let uptime = ProcessInfo.processInfo.systemUptime
-                let elapsed = min(
-                    max(0, uptime - lastUptime),
-                    0.1
-                )
-                lastUptime = uptime
+                let elapsed = min(frameElapsed, 0.1)
                 frameStats.add(elapsed)
                 playbackMinute = min(
                     MapHomeDayPlaybackMath.advancedMinute(
@@ -7628,6 +7623,7 @@ struct MapHomeView: View {
                     lastPlaybackMapFocusUptime = 0
                     lastPlaybackMarkerUptime = 0
                     frameStats.record()
+                    clock.stop()
                     return
                 }
             }

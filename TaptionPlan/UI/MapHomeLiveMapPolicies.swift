@@ -863,3 +863,49 @@ struct MapHomePlaybackFrameStats {
         )
     }
 }
+
+/// 재생 틱을 화면 주사율(CADisplayLink, 80~120Hz)에 맞춘다(PLY1029A02).
+/// `Task.sleep(8.33ms)`는 깨어나는 시각이 화면 갱신과 어긋나 어떤 프레임은 두 번, 어떤 프레임은 한 번도
+/// 못 움직여 뚝뚝 끊겼다. 한 프레임에 한 번 깨우고, 지난 프레임부터의 실제 경과 시간을 돌려준다.
+@MainActor
+final class MapHomePlaybackClock {
+    private var link: CADisplayLink?
+    private var continuation: CheckedContinuation<TimeInterval?, Never>?
+    private var lastTimestamp: CFTimeInterval = 0
+
+    /// 다음 화면 프레임까지 기다린다. 작업이 취소되면 nil.
+    func nextFrame() async -> TimeInterval? {
+        if link == nil { start() }
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (next: CheckedContinuation<TimeInterval?, Never>) in
+                continuation?.resume(returning: nil)
+                continuation = next
+            }
+        } onCancel: {
+            Task { @MainActor in self.stop() }
+        }
+    }
+
+    func stop() {
+        link?.invalidate()
+        link = nil
+        lastTimestamp = 0
+        continuation?.resume(returning: nil)
+        continuation = nil
+    }
+
+    private func start() {
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.preferredFrameRateRange = CAFrameRateRange(minimum: 80, maximum: 120, preferred: 120)
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        let elapsed = lastTimestamp == 0 ? link.duration : link.timestamp - lastTimestamp
+        lastTimestamp = link.timestamp
+        let pending = continuation
+        continuation = nil
+        pending?.resume(returning: max(0, elapsed))
+    }
+}
