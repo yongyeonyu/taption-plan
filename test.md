@@ -4658,3 +4658,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## VID1029A01 · 앱 안 영상 렌더링 (2026-10-30)
 - 단위 전체 **1,688건 중 1,685 통과 · 실패 0 · 건너뜀 3**(`build/validation/VID1029A01/unit.xcresult`). 새 `PlaybackVideoTimelineTests` 7건(정지 600분=300프레임, 이동 구간 감속, 분 단조 증가, 다듬기 끈 좌표=`resolveOrGap`, 좌표 없으면 거리 유지, 결정적 출력, 길이 0) 포함.
 - 기기용 Debug 빌드 경고 0, iPhone 18 Pro Max 설치 종료 0. 실제 영상 생성(숨은 창 MapLibre 캡처)은 기기에서 아직 해 보지 않았다.
+
+## ARC1030A01 1단계 검증(2026-10-30)
+- 단위 테스트(시뮬레이터 BOKKI-iPhone11): 1,688개 중 통과 1,685, 실패 0, 건너뜀 3. 로그 `build/validation/ARC1030A01/t1/`.
+- 엔진 import 경계 통과. 아키텍처 기준선은 위 증가분으로 재고정.
+- 실기기(iPhone 18 Pro Max) Release 벤치 `build/validation/ARC1030A01/s4`·`s5`: 약 101fps, 25ms 이상 틱 168개. 분 읽기 분리만으로는 개선되지 않았다. 지도 갱신(updateUIView 26ms/497회)은 원인이 아님.

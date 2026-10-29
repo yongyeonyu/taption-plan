@@ -68,6 +68,8 @@ final class MapHomePlaybackDriver {
         stop()
         smoother.reset()
         lastWholeMinute = -1
+        frameStats.begin()
+        MapHomePlaybackProbe.start()
         task = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
                 guard let elapsed = await clock.nextFrame() else { return }
@@ -77,6 +79,7 @@ final class MapHomePlaybackDriver {
     }
 
     func stop() {
+        MapHomePlaybackProbe.stopAndRecord()
         task?.cancel()
         task = nil
         clock.stop()
@@ -85,6 +88,8 @@ final class MapHomePlaybackDriver {
     }
 
     private func step(elapsed: TimeInterval) {
+        let stepStart = ProcessInfo.processInfo.systemUptime
+        defer { frameStats.addStep(ProcessInfo.processInfo.systemUptime - stepStart) }
         frameStats.add(elapsed)
         minute = min(
             MapHomeDayPlaybackMath.advancedMinute(
@@ -96,7 +101,9 @@ final class MapHomePlaybackDriver {
         )
         let date = inputs.dayStart.addingTimeInterval(minute * 60)
         let coordinate = smoothedPosition(at: date)
+        if isCameraSuppressed() || sink == nil { frameStats.cameraSkips += 1 }
         if !isCameraSuppressed(), let sink {
+            frameStats.cameraApplies += 1
             let current = sink.playbackCameraDistance
             let distance: Double
             if isAdaptiveZoom, let current {

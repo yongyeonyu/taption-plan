@@ -327,6 +327,9 @@ private final class MapHomeMapRenderCache {
     private(set) var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay]?
     private(set) var visibleExpectedRouteCutoff: Date?
     private(set) var routeBounds: MapHomeRouteCoordinateBounds?
+
+    /// 지하철 구간이 새로 풀리면 "경로 전체 보기" 범위를 다시 계산하게 한다(ARC1030A01).
+    func invalidateRouteBounds() { routeBounds = nil }
     private var transitBoardingCandidateCache:
         (key: MapHomeTransitBoardingCandidateCacheKey, candidates: [TransitBoardingCandidate])?
     private var gradientSliceCache: [String: (key: Int, slices: [MapHomeRouteGradientSlice]?)] = [:]
@@ -2428,7 +2431,12 @@ struct MapHomeView: View {
     @State private var compassControlState: MapHomeCompassControlState = .directionArrow
     @State private var headingMonitor = MapHomeHeadingMonitor()
     @State private var selectedScope: TimeScale = .day
-    @State private var selectedTimelineMinute: Int?
+    @State private var playbackProgress = MapHomePlaybackProgress()
+    /// 선택한 분. 값은 관찰 저장소에 있어, 읽는 화면 조각만 다시 그려진다(ARC1030A01).
+    private var selectedTimelineMinute: Int? {
+        get { MapHomePlaybackProbe.noteMinuteRead(); return playbackProgress.selectedMinute }
+        nonmutating set { playbackProgress.selectedMinute = newValue }
+    }
     @State private var selectedPawprintTimestamp: Date?
     /// 발자국을 누르면 강조하는 발자국의 시각. 재생·시간 조정으로 지워지는 선택과 따로 둔다.
     @State private var highlightedPawprintTimestamp: Date?
@@ -2544,7 +2552,10 @@ struct MapHomeView: View {
     @State private var searchFieldFrame = CGRect.zero
     @State private var mapControlsFrame = CGRect.zero
     @State private var isDayPlaybackRunning = false
-    @State private var dayPlaybackCurrentMinute: Double?
+    private var dayPlaybackCurrentMinute: Double? {
+        get { MapHomePlaybackProbe.noteMinuteRead(); return playbackProgress.currentMinute }
+        nonmutating set { playbackProgress.currentMinute = newValue }
+    }
     @State private var counterValueCache = MapHomeCounterValueCache()
     @State private var isTimelineInteractionActive = false
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
@@ -2557,6 +2568,15 @@ struct MapHomeView: View {
     @State private var lastTimelineMapFocusUptime: TimeInterval = 0
     @State private var dayPlaybackTask: Task<Void, Never>?
     @State private var playbackClock = MapHomePlaybackClock()
+    @State private var dayReadingsCache = MapHomeDayReadingsCache()
+    @State private var temporaryLocationsMemo = MapHomeMemo<MapHomeReadingsSignature, [SubwayStationCatalog.TemporaryLocation]>()
+    @State private var predictedGapsMemo = MapHomeMemo<MapHomeReadingsSignature, [MapHomePredictedGPSGap]>()
+    @State private var subwayOverlayDerived = MapHomeStaleWhileRevalidate<MapHomeReadingsSignature, Int, [MapHomeSubwayRouteOverlay]>()
+    @State private var derivedUpdateTick = 0
+    @State private var homeWeatherBadgeMemo = MapHomeMemo<MapHomeHomeWeatherKey, MapHomeHomeWeatherBadge?>()
+    @State private var stickmanActionMemo = MapHomeMemo<MapHomeStickmanActionKey, MapHomeStickmanAction>()
+    @State private var transitBoardingDerived = MapHomeStaleWhileRevalidate<MapHomeTransitBoardingGroup, Date, [TransitBoardingCandidate]>()
+    @State private var transitBoardingReadingsMemo = MapHomeMemo<MapHomeReadingsSignature, [SensorReading]>()
     /// 벡터 지도에서는 재생을 구동기가 맡는다(PLY1029A03). Apple 지도는 아직 예전 루프.
     @State private var playbackDriver: MapHomePlaybackDriver?
     @State private var mapDayCacheWriteSignature: Int?
@@ -2870,11 +2890,17 @@ struct MapHomeView: View {
 
     private var foregroundContent: some View {
         ZStack(alignment: .top) {
-            map
+            // 지도·사이드 레일·재생 HUD는 분을 읽는다. 분이 바뀔 때 이 조각만 다시 그리게 따로 감싼다(ARC1030A01).
+            MapHomeObservingView {
+                map.onChange(of: selectedTimelineMinute) { _, _ in
+                    // 선택한 분을 읽는 수식어는 부모 본문이 아니라 이 조각에 둔다(ARC1030A01).
+                    if !isTimelineInteractionActive, !isDayPlaybackRunning { recordTimelineWindow("select") }
+                }
+            }
                 .ignoresSafeArea()
                 .zIndex(MapHomeLayerPriority.map)
 
-            mapSideRails
+            MapHomeObservingView { mapSideRails }
 
             if isPlacingMapMemo {
                 mapMemoPlacementOverlay
@@ -2882,7 +2908,7 @@ struct MapHomeView: View {
             }
 
             if !isScreenRecording {
-                topLeftControls
+                MapHomeObservingView { topLeftControls }
                     .zIndex(MapHomeLayerPriority.loading)
             }
 
@@ -2935,11 +2961,13 @@ struct MapHomeView: View {
 
             // 재생 중에는 상단에 얇은 진행 바를 띄운다. 정지 화면과 구분되게 하는 표시다.
             if isDayPlaybackRunning, !isScreenRecording {
-                MapHomePlaybackHUD(
-                    minute: dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0),
-                    endMinute: playbackHUDEndMinute,
-                    language: language
-                )
+                MapHomeObservingView {
+                    MapHomePlaybackHUD(
+                        minute: dayPlaybackCurrentMinute ?? Double(selectedTimelineMinute ?? 0),
+                        endMinute: playbackHUDEndMinute,
+                        language: language
+                    )
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + 8)
                 .padding(.horizontal, Layout.horizontalInset)
@@ -3034,7 +3062,10 @@ struct MapHomeView: View {
     }
 
     var body: some View {
-        lifecycleModifiers(presentationModifiers(baseContent))
+        let probe = MapHomePlaybackProbe.begin("body")
+        MapHomePlaybackProbe.inBody = true
+        defer { MapHomePlaybackProbe.inBody = false; MapHomePlaybackProbe.end(probe) }
+        return lifecycleModifiers(presentationModifiers(baseContent))
     }
 
     /// `body`의 수정자 체인이 길면 타입 검사가 느려져(CI에서 시간 초과) 세 덩어리로 나눈다.
@@ -3508,9 +3539,6 @@ struct MapHomeView: View {
         }
         .onChange(of: isNearHomeLand) { _, near in applyAutoLandStyle(near: near) }
         .onChange(of: timeSidebarVisibleDurationMinutes) { _, _ in recordTimelineWindow("zoom") }
-        .onChange(of: selectedTimelineMinute) { _, _ in
-            if !isTimelineInteractionActive, !isDayPlaybackRunning { recordTimelineWindow("select") }
-        }
         // 잠금 화면 활동 카드에 같은 연봉 글자를 보여 주기 위해 기기 설정에 적어 둔다.
         .onChange(of: salaryLive) { _, _ in
             persistSalaryForLockScreen()
@@ -4420,6 +4448,26 @@ struct MapHomeView: View {
         .task {
             applyInitialLocationIfAvailable(using: nil)
             beginInitialLocationRequest(using: nil)
+            // 측정용: `-autoStartDayPlayback`으로 켜면 지도가 뜬 뒤 재생을 저절로 시작한다(Instruments 기록, PLY1029A08).
+            if ProcessInfo.processInfo.arguments.contains("-autoStartDayPlayback") {
+                // `-autoPlaybackYesterday`면 어제 하루 전체를 재생해 측정한다(오늘은 새벽이면 너무 짧다).
+                if ProcessInfo.processInfo.arguments.contains("-autoPlaybackYesterday"),
+                   let yesterday = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -1, to: Date()) {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    model.selectedDate = yesterday
+                    // 어제 데이터·경로·예상 경로를 다 읽을 때까지 기다린다(먼저 재생하면 읽기 끝에 재생이 끊긴다).
+                    try? await Task.sleep(nanoseconds: 14_000_000_000)
+                }
+                try? await Task.sleep(nanoseconds: 6_000_000_000)
+                startDayPlayback(fromMidnight: true)
+                // 재생이 끝나면 로그 패키지를 저절로 만든다(USB로 받아 본다). 어제처럼 긴 하루는 1분을 넘길 수 있어 끝까지 기다린다.
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                for _ in 0..<120 where isDayPlaybackRunning {
+                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await model.exportDiagnosticsToICloud()
+            }
         }
         .onChange(of: mapViewportSize) { _, size in
             guard size.width > 0, size.height > 0 else { return }
@@ -5109,6 +5157,7 @@ struct MapHomeView: View {
     }
 
     private func vectorMapMarkers(waypoints: [PawprintWaypoint]) -> [MapHomeVectorMarker] {
+        let probe = MapHomePlaybackProbe.begin("vectorMapMarkers"); defer { MapHomePlaybackProbe.end(probe) }
         var markers = temporaryLocationAnnotations.map {
             MapHomeVectorMarker(
                 id: vectorTemporaryMarkerID($0.id),
@@ -5229,11 +5278,20 @@ struct MapHomeView: View {
     }
 
     private var predictedMapRoutes: [MapPredictedRoute] {
+        let probe = MapHomePlaybackProbe.begin("predictedMapRoutes"); defer { MapHomePlaybackProbe.end(probe) }
         let cutoff = routeOverlayCutoff
         var routes = expectedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
         routes += wbsGeneratedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
         routes += subwayRouteOverlays.compactMap { predictedRoute(for: $0) }
-        routes += MapHomeGPSGapPredictionPolicy.predictedGaps(from: normalizedRouteReadings, through: cutoff).compactMap { gap in
+        // 하루 전체에서 한 번 구한 틈을 컷오프로 거른다. 틈은 앞뒤 두 위치로 정해지므로 컷오프로 먼저 자르는 것과 같다(ARC1030A01).
+        let allGaps = predictedGapsMemo.value(for: MapHomeReadingsSignature(
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate), sourceRevision: nil,
+            storedCount: normalizedRouteReadings.count, storedLastID: normalizedRouteReadings.last?.id,
+            liveCount: 0, liveLastID: nil, latestID: nil
+        )) {
+            MapHomeGPSGapPredictionPolicy.predictedGaps(from: normalizedRouteReadings)
+        }
+        routes += allGaps.filter { $0.end.timestamp <= cutoff }.compactMap { gap in
             guard let first = gap.start.point, let last = gap.end.point else { return nil }
             return MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking,
                 span: TimeSpan(start: gap.start.timestamp, end: gap.end.timestamp),
@@ -5378,7 +5436,8 @@ struct MapHomeView: View {
         playback: MapHomeApplePlayback?,
         displayedSpeed: Double?
     ) -> some View {
-        ZStack {
+        _ = MapHomePlaybackFrameStats.noteOverlayEvaluation()
+        return ZStack {
             if fogStrength != .off {
                 MapHomeFogLayer(
                     opacity: fogStrength.opacity,
@@ -5808,6 +5867,7 @@ struct MapHomeView: View {
 
     /// 실제 경로의 좌표와 시각을 함께 샘플링하며 예상 발자국에는 시각을 부여하지 않는다.
     private var pawprintWaypoints: [PawprintWaypoint] {
+        let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
         let segments = timelineRouteOverlays
             .filter { $0.coordinates.count >= 2 }
         let hardCap = MapHomePawprintInteractionPolicy.markerLimit
@@ -6114,7 +6174,9 @@ struct MapHomeView: View {
         guard scenePhase == .active else { return }
         let now = ProcessInfo.processInfo.systemUptime
         // 구동기 재생 중에는 화면 값을 간격마다만 관찰 값으로 올리고, 화랑이 점은 구동기가 맡는다(PLY1029A03·PLY1029A05).
-        if playbackDriver != nil, !isFinal {
+        // "이동 완료"(isFinal)도 예외가 아니다: 애니메이션 없이 놓은 카메라는 매 프레임 이동 완료를 알려,
+        // 예전에는 여기서 매 프레임 화면 전체를 다시 그렸다(틱 하나에 오버레이 4번, PLY1029A09).
+        if playbackDriver != nil {
             vectorMapViewportStore.updateViewportThrottled(viewport, nowUptime: now)
             return
         }
@@ -7397,6 +7459,7 @@ struct MapHomeView: View {
     /// `now`는 창의 시계가 준 순간이다. 재생 중이면 재생 시각까지, 멈춰 있으면 지금까지로
     /// 잘라 센다. 이 값이 매번 새로 계산되더라도 분 버킷 캐시가 하루 전체 재계산을 막는다.
     private func mapCounterBadges(asOf now: Date) -> [MapHomeCounterBadge] {
+        let probe = MapHomePlaybackProbe.begin("counterBadges"); defer { MapHomePlaybackProbe.end(probe) }
         let cutoff = counterCutoffDate
         let seconds = counterValueCache.categorySeconds(
             cutoff: cutoff,
@@ -7849,12 +7912,20 @@ struct MapHomeView: View {
         syncPlaybackDriverProjection(driver)
         driver.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed
         driver.isCameraSuppressed = { isPlaybackIntroActive }
+        // 측정용: `-benchMinute=none|sel|cur|proj`면 분 알림이 하는 일을 골라서 한다(정지 원인을 가를 때만 쓴다, ARC1030A01).
+        let benchMinute = ProcessInfo.processInfo.arguments.first { $0.hasPrefix("-benchMinute=") }?
+            .dropFirst("-benchMinute=".count)
         driver.onMinute = { minute in
+            let probe = MapHomePlaybackProbe.begin("onMinute"); defer { MapHomePlaybackProbe.end(probe) }
             let whole = min(MapHomeTimeSidebarMath.fullDayMinutes, max(0, Int(minute.rounded(.down))))
-            if selectedTimelineMinute != whole { selectedTimelineMinute = whole }
-            dayPlaybackCurrentMinute = Double(whole)
+            if benchMinute == nil || benchMinute == "sel" {
+                if selectedTimelineMinute != whole { selectedTimelineMinute = whole }
+            }
+            if benchMinute == nil || benchMinute == "cur" {
+                dayPlaybackCurrentMinute = Double(whole)
+            }
             // 경로 투영은 지도 경로 전체를 다시 그린다. 재생 중에는 1초에 한 번만(PLY1029A06).
-            if TimelineInteractionFrameGate.shouldRender(
+            if benchMinute == nil || benchMinute == "proj", TimelineInteractionFrameGate.shouldRender(
                 lastUptime: &lastPlaybackRouteProjectionUptime,
                 nowUptime: ProcessInfo.processInfo.systemUptime,
                 minimumInterval: 1
@@ -8044,10 +8115,7 @@ struct MapHomeView: View {
                         .allowsHitTesting(false)
                     }
                     if model.settings.weatherSidebarVisible, recordingShows(\.weatherSidebar) {
-                        let railWeather = MapHomeWeatherDisplayCache.contexts(
-                            incoming: model.snapshot.weather,
-                            cached: cachedWeatherContexts
-                        )
+                        let railWeather = displayWeatherContexts
                         if let notice = MapHomeWeatherNoticePolicy.notice(
                             status: model.weatherStatus,
                             hasDisplayableWeather: railWeather.contains {
@@ -10017,10 +10085,15 @@ struct MapHomeView: View {
     }
 
     private var placeAnnotations: [MapHomePlaceAnnotation] {
-        let homeWeather = MapHomeHomeWeatherBadgePolicy.badge(
-            from: model.snapshot.weather,
-            now: .now
-        )
+        let probe = MapHomePlaybackProbe.begin("placeAnnotations"); defer { MapHomePlaybackProbe.end(probe) }
+        // 날씨는 분 단위로만 본다. 매 호출마다 날씨 전체를 훑지 않는다(ARC1030A01).
+        let homeWeather = homeWeatherBadgeMemo.value(for: MapHomeHomeWeatherKey(
+            minute: Int(Date.now.timeIntervalSinceReferenceDate / 60),
+            weatherCount: model.snapshot.weather.count,
+            lastObservedAt: model.snapshot.weather.last?.observedAt
+        )) {
+            MapHomeHomeWeatherBadgePolicy.badge(from: model.snapshot.weather, now: .now)
+        }
         return model.settings.frequentPlaces.compactMap { place in
             guard let destination = MapHomeLocationDestination(placeKind: place.kind),
                   let point = place.point,
@@ -10134,13 +10207,14 @@ struct MapHomeView: View {
     }
 
     private var transitBoardingCandidates: [TransitBoardingCandidate] {
+        let probe = MapHomePlaybackProbe.begin("boardingCandidates"); defer { MapHomePlaybackProbe.end(probe) }
         let dayData = currentDayDataSnapshot
         let registeredLocations = model.settings.userTransitLocations
         let nearbyPlaces = nearbyTransitPlaces
         let travel = dayData?.travel ?? []
         let decisions = model.settings.transitBoardingDecisions
         let cutoff = routeOverlayCutoff
-        let key = MapHomeTransitBoardingCandidateCacheKey(
+        let group = MapHomeTransitBoardingGroup(
             dayProjectionRevision: model.dayProjectionRevision,
             settingsHash: {
                 var hasher = Hasher()
@@ -10150,18 +10224,18 @@ struct MapHomeView: View {
             }(),
             readingsRevision: transitBoardingReadingsRevision,
             nearbyPlacesRevision: nearbyTransitPlacesRevision,
-            cutoff: MapHomeTransitBoardingRefreshPolicy.cutoffBucket(cutoff)
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate)
         )
-        return mapRenderCache.transitBoardingCandidates(key: key) {
-            let readings = transitBoardingReadings
-            let candidates = TransitBoardingCandidateEngine.candidates(
-                readings: readings,
-                registeredLocations: registeredLocations,
-                nearbyPlaces: nearbyPlaces,
-                travel: travel,
-                decisions: decisions,
-                through: cutoff
-            )
+        let step = MapHomeTransitBoardingRefreshPolicy.cutoffBucket(cutoff)
+        // 분이 바뀔 때마다 후보를 다시 찾으면 한 번에 50ms씩 메인 스레드를 막았다. 같은 묶음 안에서는 이전 값을 먼저 보여 주고
+        // 새 분의 값은 뒤에서 만든다(ARC1030A01). 하루 기록 정리도 묶음이 바뀔 때만 한다.
+        let readings = transitBoardingReadingsMemo.value(
+            for: readingsSignature(sourceRevision: group.readingsRevision)
+        ) { transitBoardingReadings }
+        // 진단 기록은 재생 중이 아닐 때 그 자리 계산분에만 남긴다(기록용 계산도 하루 기록을 여러 번 훑는다).
+        let isPlaying = isDayPlaybackRunning
+        transitBoardingDerived.onFresh = { candidates in
+            guard !isPlaying else { return }
             var fields = transitBoardingDiagnostics(
                 readings: readings,
                 registeredLocations: registeredLocations,
@@ -10170,18 +10244,23 @@ struct MapHomeView: View {
                 through: cutoff
             )
             fields["candidate_count"] = String(candidates.count)
-            fields["candidate_names"] = Array(
-                Set(candidates.map(\.name))
-            ).sorted().joined(separator: ";")
-            fields["candidate_travel_segment_count"] = String(
-                Set(candidates.flatMap(\.travelSegmentIDs)).count
-            )
+            fields["candidate_names"] = Array(Set(candidates.map(\.name))).sorted().joined(separator: ";")
+            fields["candidate_travel_segment_count"] = String(Set(candidates.flatMap(\.travelSegmentIDs)).count)
             fields["decision_count"] = String(decisions.count)
-            TaptionPlanDiagnosticsLogger.shared.record(
-                "transit_boarding_candidates_evaluated",
-                fields: fields
+            TaptionPlanDiagnosticsLogger.shared.record("transit_boarding_candidates_evaluated", fields: fields)
+        }
+        transitBoardingDerived.onUpdate = {
+            if !isDayPlaybackRunning { derivedUpdateTick &+= 1 }
+        }
+        return transitBoardingDerived.value(group: group, step: step) {
+            TransitBoardingCandidateEngine.candidates(
+                readings: readings,
+                registeredLocations: registeredLocations,
+                nearbyPlaces: nearbyPlaces,
+                travel: travel,
+                decisions: decisions,
+                through: cutoff
             )
-            return candidates
         }
     }
 
@@ -10415,20 +10494,31 @@ struct MapHomeView: View {
         )
     }
 
+    /// 하루 센서 기록(저장분 + 실시간분)을 합쳐 정렬한 값. 합치기는 기록 수천 개를 복사·정렬해서, 본문이 매번 부르면
+    /// 재생 중 메인 스레드의 28%를 썼다(Time Profiler, ARC1030A01). 입력이 같으면 만들어 둔 값을 그대로 돌려준다.
     private var currentDayReadings: [SensorReading] {
+        let probe = MapHomePlaybackProbe.begin("currentDayReadings"); defer { MapHomePlaybackProbe.end(probe) }
         guard let dayData = currentDayDataSnapshot else {
             return historicalPlaybackReadings
         }
         let calendar = Calendar.autoupdatingCurrent
         let start = calendar.startOfDay(for: model.selectedDate)
+        let key = MapHomeDayReadingsCache.Key(
+            day: start, sourceRevision: dayData.sourceRevision, storedCount: dayData.readings.count,
+            liveCount: model.liveRouteState.readings.count, liveLastID: model.liveRouteState.readings.last?.id,
+            latestID: model.latestSensorReading?.id
+        )
+        if let cached = dayReadingsCache.value(for: key) { return cached }
         let end = calendar.date(byAdding: .day, value: 1, to: start)
             ?? start.addingTimeInterval(24 * 60 * 60)
-        return MapHomeRouteReadingsPolicy.merging(
+        let merged = MapHomeRouteReadingsPolicy.merging(
             existing: dayData.readings,
             loaded: model.liveRouteState.readings
                 + (model.latestSensorReading.map { [$0] } ?? []),
             in: TimeSpan(start: start, end: end)
         )
+        dayReadingsCache.store(merged, for: key)
+        return merged
     }
 
     private func refreshSelectedTimelineMapPosition(
@@ -11130,6 +11220,7 @@ struct MapHomeView: View {
     }
 
     private var subwayRouteOverlays: [MapHomeSubwayRouteOverlay] {
+        let probe = MapHomePlaybackProbe.begin("subwayOverlays"); defer { MapHomePlaybackProbe.end(probe) }
         let dayData = currentDayDataSnapshot
         let calendar = Calendar.autoupdatingCurrent
         guard let dayStart = calendar.startOfDay(for: model.selectedDate) as Date?,
@@ -11142,27 +11233,49 @@ struct MapHomeView: View {
             from: dayStart,
             to: cutoff
         ).minute ?? effectiveTimelineMinute
-        return mapRenderCache.subwayRoutes(
-            day: dayStart,
-            minute: cutoffMinute,
-            sourceRevision: dayData?.sourceRevision
+        // 분이 바뀔 때마다 지하철 구간을 다시 풀면 재생이 100ms씩 멈췄다. 같은 날·같은 기록이면 이전 값을 먼저 보여 주고
+        // 새 분의 값은 뒤에서 만든다(ARC1030A01).
+        let travel = dayData?.travel ?? []
+        let stored = routeReadings
+        let live = model.liveRouteState.readings
+        let latest = model.latestSensorReading
+        subwayOverlayDerived.onUpdate = { [mapRenderCache] in
+            mapRenderCache.invalidateRouteBounds()
+            // 재생 중에는 0.25초마다 오는 분 알림이 화면을 다시 그린다. 재생이 아닐 때만 직접 깨운다.
+            if !isDayPlaybackRunning { derivedUpdateTick &+= 1 }
+        }
+        return subwayOverlayDerived.value(
+            group: readingsSignature(sourceRevision: dayData?.sourceRevision),
+            step: cutoffMinute
         ) {
             MapHomeSubwayRouteOverlayEngine.overlays(
-                travel: dayData?.travel ?? [],
-                readings: routeReadings
-                    + model.liveRouteState.readings
-                    + (model.latestSensorReading.map { [$0] } ?? []),
+                travel: travel,
+                readings: stored + live + (latest.map { [$0] } ?? []),
                 day: day,
                 through: cutoff
             )
         }
     }
 
+    /// 센서 기록 묶음의 변경 표지. 개수·마지막 번호만 봐서 값 비교가 O(1)이다.
+    private func readingsSignature(sourceRevision: UInt64?) -> MapHomeReadingsSignature {
+        MapHomeReadingsSignature(
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+            sourceRevision: sourceRevision,
+            storedCount: routeReadings.count, storedLastID: routeReadings.last?.id,
+            liveCount: model.liveRouteState.readings.count, liveLastID: model.liveRouteState.readings.last?.id,
+            latestID: model.latestSensorReading?.id
+        )
+    }
+
     private var temporaryLocationAnnotations: [MapHomeTemporaryLocationAnnotation] {
-        let readings = routeReadings
-            + model.liveRouteState.readings
-            + (model.latestSensorReading.map { [$0] } ?? [])
-        let derived = SubwayStationCatalog.temporaryLocations(from: readings)
+        let probe = MapHomePlaybackProbe.begin("temporaryLocations"); defer { MapHomePlaybackProbe.end(probe) }
+        // 임시 위치는 하루 기록만으로 정해지고 컷오프와 무관하다(컷오프는 아래에서 거른다). 매번 다시 뽑지 않는다(ARC1030A01).
+        let derived = temporaryLocationsMemo.value(for: readingsSignature(sourceRevision: currentDayDataSnapshot?.sourceRevision)) {
+            SubwayStationCatalog.temporaryLocations(
+                from: routeReadings + model.liveRouteState.readings + (model.latestSensorReading.map { [$0] } ?? [])
+            )
+        }
         let locations = derived.isEmpty ? cachedTemporaryLocations : derived
         return locations
             .filter { $0.timestamp <= routeOverlayCutoff }
@@ -11202,6 +11315,7 @@ struct MapHomeView: View {
     }
 
     private var wbsPlaybackFrame: MapHomeWBSPlaybackFrame? {
+        let probe = MapHomePlaybackProbe.begin("wbsFrame"); defer { MapHomePlaybackProbe.end(probe) }
         guard selectedTimelineMinute != nil else { return nil }
         return wbsPlaybackProjection?.frame(
             at: displayedLocationDate,
@@ -11330,7 +11444,24 @@ struct MapHomeView: View {
         return model.latestSensorReading?.speedMetersPerSecond
     }
 
+    /// 화랑이 동작. 한 화면을 그리는 동안 여러 번 불리고, 마지막 분기는 하루 기록 전체를 이어 붙여 복사한다. 입력이 같으면(초 단위)
+    /// 이전 값을 쓴다(재생 중 3천 번 넘게 불렸다, ARC1030A01).
     private var displayedStickmanAction: MapHomeStickmanAction {
+        let probe = MapHomePlaybackProbe.begin("stickmanAction"); defer { MapHomePlaybackProbe.end(probe) }
+        let key = MapHomeStickmanActionKey(
+            second: Int(displayedLocationDate.timeIntervalSinceReferenceDate),
+            sourceRevision: currentDayDataSnapshot?.sourceRevision,
+            sleepCount: model.sleepSessions.count,
+            frequentPlaceCount: model.settings.frequentPlaces.count,
+            legCount: wbsPlaybackProjection?.legs.count ?? 0,
+            expectedCount: expectedRouteOverlays.count,
+            latestID: model.latestSensorReading?.id,
+            hasSelection: selectedTimelineMinute != nil
+        )
+        return stickmanActionMemo.value(for: key) { computeDisplayedStickmanAction() }
+    }
+
+    private func computeDisplayedStickmanAction() -> MapHomeStickmanAction {
         let actuals = currentDayDataSnapshot?.actuals ?? []
         let sleepSessions = model.sleepSessions
         if MapHomeStickmanActionResolver.hasAppleWatchConfirmedSleep(
@@ -12567,14 +12698,17 @@ struct MapHomeView: View {
         setMapPosition(.camera(camera))
     }
 
+    /// 날씨 표시 값. `onChange(of: model.snapshot.weather)`가 이미 합쳐 두므로 본문에서 다시 합치지 않는다.
+    /// 예전에는 화면이 그려질 때마다 최대 512개를 다시 합쳐 재생 중 메인 스레드의 15%를 썼다(ARC1030A01).
+    private var displayWeatherContexts: [WeatherContext] {
+        cachedWeatherContexts.isEmpty ? model.snapshot.weather : cachedWeatherContexts
+    }
+
     /// 일정·스티커 배지의 기준 x. 날씨 배지가 켜져 있으면 날씨 왼쪽(왼쪽 정렬), 꺼져 있으면 시간 레일 오른쪽(오른쪽 정렬).
     private var scheduleBadgeBaseX: CGFloat {
         // 날씨 칩이 실제로 보일 때만 왼쪽에 붙이고, 날씨 칩이 없으면 오른쪽에 붙인다.
         let hasWeatherChips = recordingShows(\.weatherSidebar)
-            && !MapHomeWeatherDisplayCache.contexts(
-                incoming: model.snapshot.weather,
-                cached: cachedWeatherContexts
-            ).isEmpty
+            && !displayWeatherContexts.isEmpty
         return hasWeatherChips
             ? MapHomeTimeSidebarMath.handleLaneWidth - 41
             : MapHomeTimeSidebarMath.handleLaneWidth + 8
@@ -12908,6 +13042,9 @@ struct MapHomeView: View {
     }
 
     private func focusDisplayedLocation(using proxy: MapProxy?) {
+        // 재생 구동기가 카메라를 맡는 동안은 센서·경로 갱신이 와도 카메라를 다시 놓지 않는다. 그 호출은 카메라 번호를 올려
+        // 화면 전체를 다시 그리고 구동기가 놓은 카메라를 되돌렸다(PLY1029A10).
+        guard playbackDriver == nil else { return }
         if selectedTimelineMinute != nil {
             guard let point = displayedPlaybackFocusPoint else { return }
             focusMap(on: point, using: proxy, followsTracking: true)

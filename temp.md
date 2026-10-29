@@ -2565,3 +2565,36 @@
 - 고침: `MapHomePlaybackVideoRenderer.swift` — `MapHomePlaybackTimeline`(구동기와 같은 배속·좌표·줌·경로 다듬기를 재생 시간 1/60초씩 결정적으로 계산), `MapHomePlaybackVideoRenderer`(숨은 창의 MapLibre 지도에 프레임마다 카메라를 놓고 완전히 그려질 때까지 기다린 뒤 캡처, 화랑이를 정중앙에 합성, `AVAssetWriter` HEVC 1080×1920 60fps, 진행·취소, 사진에 저장, `playback_video_render` 기록). `MapHomePlaybackVideoSheet.swift` — 진행·취소·결과. 녹화 옵션에 「끊김 없는 영상 만들기」(벡터 지도에서만). 구동기의 경로 다듬기를 `nonisolated static smoothed(at:position:)`로 빼서 실시간과 영상이 같은 계산을 쓴다. 입력 만들기(`playbackDriverInputs`·`makePlaybackZoomPlan`·`expectedRouteCoordinateLookup`)를 한 곳으로 모았다.
 - 한계(알고 있는 것): 숨은 지도에는 기본 지도와 화랑이만 있다 — 경로·발자국·카운터는 영상에 아직 안 나온다. MapLibre(Metal)를 가려진 창에서 `drawHierarchy`로 캡처할 수 있는지는 실기기에서 확인해야 한다(검은 화면이면 `MLNMapSnapshotter`로 바꾼다). 예상 렌더 시간 하루 30~60초 영상에 2~4분(추정).
 - 검증: 기기용 Debug 빌드 경고 0·설치 종료 0(`build/validation/VID1029A01/`). `PlaybackVideoTimelineTests` 7건 포함 단위 전체 **1,688건 중 1,685 통과·실패 0·건너뜀 3**(`unit.xcresult`). 구조 게이트 재잠금·경계 통과. 실기기에서 영상을 실제로 만들어 보지는 않았다.
+
+## ARC1030A01 · 지도 화면 구조 갈아엎기 (2026-10-30)
+- 지시(대표): "지금 지도 움직임하고 재생하고 사이드바 이동해 보면 너무 느림. 이거 근본 구조 갈아엎자". 대표 선택: 네 단계를 한 번에 진행하되 시험을 통과한 단계마다 main에 커밋, 벡터 지도와 Apple 지도 둘 다.
+- 측정 근거: Time Profiler(재생 중 메인 스레드) — `MapHomeView.body` 20%, 시간 줄 17%, 날씨 표시 합치기 15%, 장소 핀 9%, 지도 마커 5%. 자동 재생 기록 — 오버레이 재계산이 틱당 3.9번(PLY1029A09로 0.63번). `AppModel.snapshot`이 통째로 하나의 관찰 값이라 센서 기록·시각만 바뀌어도 지도 화면 전체가 다시 그려진다.
+- 구조 문제: ①2만 2천 줄 `MapHomeView` 하나가 상태 약 200개를 들고, 어떤 값 하나만 바뀌어도 본문 전체를 다시 계산 ②본문 안에서 무거운 파생 계산(날씨·시간 줄·핀·마커)을 매번 새로 ③발자국·장소 핀·안개·화랑이가 지도 엔진 레이어가 아니라 SwiftUI 오버레이.
+- 단계: 1 파생 데이터를 변경 번호 기준으로 저장해 두고 화면은 읽기만 / 2 화면을 갱신 빈도별 작은 화면·저장소로 나눔(사이드바·재생 HUD·지도·하단) / 3 지도 위 표시를 MapLibre·MapKit 레이어로 / 4 실시간 재생과 영상이 한 시간표.
+- 측정: `scripts/playback-bench.sh <UDID> <dir>` — 어제 하루 자동 재생(`-autoStartDayPlayback -autoPlaybackYesterday`) 뒤 로그 패키지를 USB로 받아 `playback_frame_stats`(틱·12ms 초과·오버레이 재계산·지도 프레임·실제 초)를 출력. 단계마다 전후 비교.
+
+## ARC1030A02 · 밤샘 작업 계획 (2026-10-30 새벽 시작, 대표 취침 중)
+- 승인 범위(대표 선택): 시험을 통과한 단계는 main에 커밋·푸시하고 아이폰(UDID `00008160-000E195A1140000A`, 연결·잠금 해제 유지)에 USB로 설치해 측정한다. 끝나면 **빌드 250을 TestFlight에 올려 내부 그룹에 연결**한다. 우선순위는 성능 구조 먼저, 남은 기능은 그 뒤. 어느 단계가 시험을 통과하지 못하면 마지막 통과 커밋을 main에 유지하고 못 끝낸 작업은 커밋하지 않은 채 남겨 아침에 설명한다.
+- 단계마다 같은 측정: `scripts/playback-bench.sh`(어제 하루 자동 재생 → 틱 수·12ms 초과 비율·오버레이 재계산·실제 초·fps) + 필요하면 Time Profiler.
+- **A. 측정 기반 복구**(먼저): 두 번째 기준 측정이 새 패키지를 만들지 못했다 → 원인 확인·수정, 기준값 확정.
+- **B. 성능 구조(1~4단계)**: 1 파생 데이터 캐시(날씨 합치기 제거 완료·시간 줄·장소 핀·마커·화랑이 동작을 변경 번호 기준으로) → 2 사이드바·재생 HUD·지도·하단 메뉴를 작은 화면/저장소로 분리 → 3 발자국·장소 핀·안개·화랑이를 지도 레이어로(MapLibre, Apple 지도) → 4 실시간 재생과 영상이 한 시간표.
+- **C. 확인할 버그·미완료**: 영상 만들기 실기기 동작(검은 화면 여부), 차량 오디오 연결 실기기 확인(`car_audio_route_changed`), 업무 분류 재판정(WRK1029A01/A02)과 어제·오늘 이동 판정 재확인, 임시 경로 3배 규칙, 오늘 새벽 수면 판정, 연봉 스위치·클립 편집 위로 스크롤·사이드바 두 번 누르기 실기기, 기압·고도 로깅 보강, 사이드바 UI 시험 실행.
+- **D. 마무리**: 전체 단위 테스트·화면 시험 일부, 구조 게이트 재잠금, 기록(`temp.md`·`test.md`), 빌드 250 TestFlight(`release.sh --preflight` → `--yes` → 처리 지연 시 `verify.sh`·`asc.py attach`), 아침 보고.
+- **ARC1030A01 진행 기록(기기: iPhone 18 Pro Max, Debug 빌드, 어제 하루 자동 재생 `scripts/playback-bench.sh`)**:
+
+  | 단계 | fps | 12ms 초과 | 20ms 초과 | 핵심 원인·고침 |
+  |---|---|---|---|---|
+  | A09 직후(참고) | 8~10 | 84% | 170 | 분 알림·카메라 되돌림·"이동 완료" 알림이 화면 전체를 매 프레임 |
+  | 기준 | 43 | 20% | 371 | `focusDisplayedLocation`이 센서 갱신마다 옛 카메라 경로를 다시 호출 → 막음 |
+  | `currentDayReadings` 캐시 | 62 | 11% | 207 | 하루 기록 3천여 개를 매번 합쳐 복사(메인 28%) |
+  | 임시 위치·예측 구간 캐시, 지하철 오버레이 stale-while-revalidate | 82 | 6% | 170 | 컷오프와 무관한 값을 한 번만, 분별 값은 뒤에서 |
+  | 탑승 후보 stale-while-revalidate | 90 | 7% | 172 | `boardingCandidates` 5,221ms→104ms |
+  | 화랑이 동작·날씨 배지 캐시 | **93** | 6% | 175 | `stickmanAction` 1,455→246ms, `placeAnnotations` 1,983→538ms |
+
+  틱 간격 분포(<9/9-12/12-17/17-25/25-50/50ms+): [3647, 72, 88, 8, 10, 162] — 91%가 120Hz(<9ms)인데 **162개가 50ms 이상 멈춘다**(전체 시간의 약 1/4). 구동기 계산은 평균 0.9ms·최대 5ms. 남은 후보: 분 알림(0.25초)마다 `MapHomeView` 본문 전체 재평가(Debug는 SwiftUI가 몇 배 느려 과장됨 → Release로 재측정), `counterBadges` 1,860ms.
+- 측정 도구: `MapHomePlaybackProbe`(함수별 합계·호출 수·최대 ms, 재생이 끝날 때 `playback_probe` 기록), `playback_frame_stats`에 `drv_*`(구동기 계산)·틱 간격 분포·오버레이 재계산·지도 프레임·실제 초. 로그 정리 규칙이 키에 "step"(걸음)이 들어가면 지우므로 `drv`로 썼다. 자동 재생 옵션 `-autoStartDayPlayback -autoPlaybackYesterday`(끝난 뒤 로그 패키지를 스스로 만든다).
+
+### ARC1030A01 진행(1단계 커밋)
+- 재생 중 분 값을 읽는 지도·사이드바·HUD·좌상단 컨트롤·`onChange`를 `MapHomeObservingView` 조각으로 분리하고 지도 갱신 프로브(`updateUIView`·`mapSetShape`·`mapMarkerCompare`)를 추가했다.
+- 남음: 분 콜백 때마다 프로브 밖 SwiftUI 갱신으로 25ms 이상 틱이 약 168개/43초 남는다. 사이드바 playhead 등 분 소비자를 틱 단위로 분리하는 구조 작업 필요.
+- 구조 기준선 재고정: MapHomeView 22,078→22,215줄, MapHomeVectorMap 1,305→1,317줄, detached_tasks 30→31(안정 캐시 재계산).

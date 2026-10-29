@@ -702,6 +702,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MLNMapView, context: Context) {
+        let probe = MapHomePlaybackProbe.begin("updateUIView"); defer { MapHomePlaybackProbe.end(probe) }
         context.coordinator.parent = self
         if mapView.contentInset != contentInsets {
             mapView.contentInset = contentInsets
@@ -823,11 +824,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 activeSegments: parent.activeRouteSegments.map(\.contentKey)
             )
             guard signature != lastContentSignature else {
+                let markerProbe = MapHomePlaybackProbe.begin("mapMarkerCompare"); defer { MapHomePlaybackProbe.end(markerProbe) }
                 if lastProjectedMarkers != parent.markers || lastProjectionBounds != mapView.bounds {
                     publishViewport(from: mapView, force: true)
                 }
                 return
             }
+            let shapeProbe = MapHomePlaybackProbe.begin("mapSetShape"); defer { MapHomePlaybackProbe.end(shapeProbe) }
             setShape(
                 routes: parent.historicalRoutes,
                 sourceID: LayerID.historicalSource,
@@ -855,6 +858,13 @@ struct MapHomeVectorMap: UIViewRepresentable {
         func applyCameraCommandIfNeeded(to mapView: MLNMapView) {
             guard mapView.bounds.width > 0, mapView.bounds.height > 0,
                   cameraRevisionChanged else { return }
+            // 재생 구동기가 카메라를 맡는 동안 SwiftUI 카메라 명령은 버린다. 받으면 구동기가 놓은 카메라를
+            // 예전 위치로 되돌려 화랑이가 튀고 끊겨 보인다(PLY1029A08).
+            if parent.playbackDriver != nil {
+                lastCameraRevision = parent.cameraRevision
+                MapHomePlaybackFrameStats.blockedCameraCommands &+= 1
+                return
+            }
             if let region = parent.cameraPosition.region {
                 let halfLatitude = region.span.latitudeDelta / 2
                 let halfLongitude = region.span.longitudeDelta / 2
@@ -953,13 +963,15 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func mapViewDidFinishRenderingFrame(_ mapView: MLNMapView, fullyRendered: Bool) {
+            if parent.playbackDriver != nil { MapHomePlaybackFrameStats.mapRenderedFrames &+= 1 }
             guard lastCameraRevision != parent.cameraRevision else { return }
             applyCameraCommandIfNeeded(to: mapView)
             applyHeadingIfNeeded(to: mapView)
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
-            publishViewport(from: mapView, force: true)
+            // 재생 중에는 구동기가 매 프레임 카메라를 놓아 이 알림이 매 프레임 온다. 최종 화면으로 보내지 않는다(PLY1029A09).
+            publishViewport(from: mapView, force: parent.playbackDriver == nil)
         }
 
         func gestureRecognizer(
