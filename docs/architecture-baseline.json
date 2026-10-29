@@ -1,6 +1,6 @@
 {
   "files": 145,
-  "lines": 161440,
+  "lines": 161516,
   "buckets": {
     "<500": 89,
     "500-1000": 20,
@@ -20,12 +20,12 @@
     "state_properties": 556,
     "observable_types": 7,
     "view_types": 172,
-    "funcs": 5177,
-    "singleton_reach": 303
+    "funcs": 5181,
+    "singleton_reach": 304
   },
   "metrics": {
     "largest_file_lines": 21895,
-    "largest_type_lines": 13557
+    "largest_type_lines": 13561
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
@@ -55,7 +55,7 @@
     "TaptionPlan/UI/ReviewView.swift": 4817,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
     "TaptionPlan/UI/SettingsView.swift": 2324,
-    "TaptionPlan/UX/AppModel.swift": 14284,
+    "TaptionPlan/UX/AppModel.swift": 14288,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1627,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349,
     "TaptionPlanWidget/TaptionPlanWidget.swift": 3839
@@ -70,9 +70,9 @@
     },
     {
       "path": "TaptionPlan/UX/AppModel.swift",
-      "lines": 14284,
+      "lines": 14288,
       "largest_type": "class AppModel",
-      "largest_type_lines": 13557,
+      "largest_type_lines": 13561,
       "types": 26
     },
     {
@@ -150,7 +150,7 @@
     {
       "path": "TaptionPlan/UX/AppModel.swift",
       "type": "class AppModel",
-      "lines": 13557
+      "lines": 13561
     },
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",

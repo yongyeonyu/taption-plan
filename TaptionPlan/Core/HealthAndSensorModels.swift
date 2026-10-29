@@ -115,6 +115,61 @@ extension SleepSession {
     }
 }
 
+/// HealthKit 수면은 자동 이동 추정보다 앞선다(대표 확정, CAT1029A01).
+///
+/// 자는 동안 실내 GPS가 끊기거나 튀면 지하철·이동 구간이 만들어진다. 그 시간의
+/// 대분류는 수면이므로, 수면에 대부분 덮인 **자동** 이동 구간은 지운다. 사용자가
+/// 확인·교정한 이동은 남기고, GPS 원본은 이 구간과 따로 보관되어 그대로 남는다.
+enum SleepTravelReconciliationEngine {
+    /// 구간 길이 중 이 비율 이상이 수면에 덮이면 자동 이동을 지운다.
+    static let coveredFraction = 0.5
+
+    static func removingAutomaticTravel(
+        _ travel: [TravelSegment],
+        sessions: [SleepSession],
+        inside span: TimeSpan,
+        asOf date: Date = .now
+    ) -> [TravelSegment] {
+        let sleep = sessions.compactMap { session -> TimeSpan? in
+            guard session.asleepDuration > 0,
+                  let clipped = session.span.intersection(with: span),
+                  min(clipped.end, date) > clipped.start else { return nil }
+            return TimeSpan(start: clipped.start, end: min(clipped.end, date))
+        }
+        guard !sleep.isEmpty else { return travel }
+        return travel.filter { segment in
+            guard !isUserConfirmed(segment), segment.span.duration > 0 else { return true }
+            let covered = ActualIntervalMergeEngine.union(
+                sleep.compactMap { segment.span.intersection(with: $0) },
+                mergeGap: 0
+            ).reduce(0) { $0 + $1.duration }
+            return covered < segment.span.duration * coveredFraction
+        }
+    }
+
+    /// HealthKit 갱신 경로용. 지운 수를 진단에 남긴다.
+    static func reconciled(
+        _ travel: [TravelSegment],
+        sessions: [SleepSession],
+        inside span: TimeSpan
+    ) -> [TravelSegment] {
+        let kept = removingAutomaticTravel(travel, sessions: sessions, inside: span, asOf: min(span.end, .now))
+        if kept.count != travel.count {
+            TaptionPlanDiagnosticsLogger.shared.record(
+                "sleep_travel_removed",
+                fields: ["removed": String(travel.count - kept.count)]
+            )
+        }
+        return kept
+    }
+
+    static func isUserConfirmed(_ segment: TravelSegment) -> Bool {
+        segment.isConfirmed || segment.evidence.contains {
+            $0.hasPrefix("사용자 확인") || $0 == "사용자 교정"
+        }
+    }
+}
+
 // MARK: - Sleep provenance
 
 /// 수면 기록을 만든 기기의 등급. 값이 클수록 그 주장을 먼저 믿는다.

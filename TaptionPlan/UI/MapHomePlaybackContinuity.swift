@@ -103,6 +103,23 @@ extension MapHomePlaybackLocation {
 }
 
 enum MapHomePlaybackCategoryRanges {
+    /// 대분류가 수면인 시간은 이동 범위에서 뺀다. 센서·이동 구간이 겹쳐도 정지 배속으로 지나간다(CAT1029A01).
+    static func removingSleep(
+        _ ranges: [MapHomePlaybackMovementRange],
+        snapshot: PlanDayDataSnapshot?,
+        dayStart: Date
+    ) -> [MapHomePlaybackMovementRange] {
+        let sleep = (snapshot?.actuals ?? []).filter(AutomaticRecordTimelineEngine.isSleep).map { actual in
+            (start: actual.startedAt.timeIntervalSince(dayStart) / 60,
+             end: (actual.endedAt ?? actual.startedAt).timeIntervalSince(dayStart) / 60,
+             mode: TravelMode?.none, isStationary: true)
+        }
+        guard !sleep.isEmpty else { return ranges }
+        return ranges.flatMap { range in
+            MapHomePlaybackMovementRange.carved(range, details: sleep)
+        }
+    }
+
     /// 대분류 '이동' 구간을 재생 속도 범위로 만든다.
     ///
     /// 확정 여부·센서 유무와 상관없이 이동으로 분류된 시간은 모두 이동 배속으로 지나간다.

@@ -4605,3 +4605,19 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 - **실제로 얼마나 빨라지는지는 빌드 245 기기 로그로만 확인된다.** `background_refresh_yielded`가 찍히고, 겹친 회차의 `bootstrap_preparation`이 46ms대에 가까워지는지 본다.
 - 해독 12.5배 지연 자체는 앱 코드의 동시성만으로 설명되지 않는다. BGAppRefresh가 앱을 백그라운드로 깨울 때 iOS가 프로세스 QoS를 낮추는 몫이 섞여 있을 수 있는데, 그건 앱에서 잴 수 없다. `bootstrap_preparation_pass`가 1회로 나오면 남은 지연은 "밀린 것"이라는 뜻이다.
+
+## TFB1029A01 · 빌드 247 배포 (2026-10-29)
+- 사전 점검: `bash scripts/testflight/release.sh --preflight` — 인증·앱 조회·그룹·네 Info.plist와 pbxproj 246 일치·트리 깨끗함(`365fe88`) 모두 OK.
+- 배포: `bash scripts/testflight/release.sh --yes --request-id TFB1029A01` 종료 코드 0(`build/validation/TFB1029A01/run.out`). 9단계 검증: `processingState: VALID`, `buildAttached: true`, 테스터 1명(`testflight-report.json`, `checkedAt 2026-10-29T00:16:26+0900`).
+- 시험: `--with-tests` 없이 올렸다. 같은 소스(`365fe88`)에서 단위 1,653건 중 1,651 통과·실패 0·건너뜀 2(`build/validation/BGR1028A02/unit.xcresult`). 그 뒤 바뀐 것은 버전 번호뿐이다.
+- 설치: devicectl로 iPhone 18 Pro Max(`00008160-000E195A1140000A`) `Bundle Version 247` 확인. 기기 기능은 이것으로 통과 처리하지 않는다.
+- 로그: `TaptionLogs-20261029-002644-44E35183.txt.gz`(100,935바이트)가 iCloud Drive와 기기 Packages에 있고 `cmp` 동일. 247 구간에는 `background_refresh`가 없어 `user_error`는 아직 미확인.
+
+## CAT1029A01 · 수면이 자동 이동을 이긴다 — 시간선·화랑이·재생속도 (2026-10-29)
+- 집중 시험: `-only-testing` `MapHomeStickmanTests`·`MapHomePlaybackContinuityTests`·수면 조정 3건 → **50건 통과·실패 0**(`build/validation/CAT1029A01/focused.xcresult`). 새 시험 3건 모두 통과.
+  - 수면에 덮인 자동 지하철은 지워지고, 사용자 확정 지하철과 잠들기 전 대부분이 수면 밖인 걷기는 남는다.
+  - 빈칸 추정 `movement` 기록은 수면 시간에서 잘려 수면만 남는다.
+  - 30–400분 지하철 범위가 60–300분 수면에 깎여 30–60·300–400분만 이동 배속으로 남는다.
+- 단위 전체: `-only-testing:TaptionPlanTests` → **1,656건 중 1,654 통과 · 실패 0 · 건너뜀 2**(`unit.xcresult`). 로그 `warning:` 0건.
+- 구조: `--write-baseline` 재잠금 뒤 `--check` 통과, 엔진 import 경계 통과.
+- 확인하지 못한 것: 실기기. 오늘 새벽 그 밤의 로그·원본이 Mac iCloud에 아직 없어(마지막 동기화 00:27) 실제 근거로 재판정하지 못했다. 앱 빌드 단독 실행·설치는 하지 않았다(시험 빌드가 Debug로 앱을 컴파일).

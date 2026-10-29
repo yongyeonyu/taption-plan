@@ -26842,6 +26842,80 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(normalized.first?.source, .appleWatch)
     }
 
+    // CAT1029A01: 수면 시간의 대분류는 수면이다. 자동 이동은 지우고, 재생도 정지 배속으로 지나간다.
+    private func watchSleepSession(_ span: TimeSpan) -> SleepSession {
+        SleepSession(
+            id: UUID(), span: span, asleepDuration: span.duration, awakeDuration: 0,
+            inBedDuration: span.duration, stageDurations: [.core: span.duration],
+            sourceNames: ["Apple Watch"], segments: []
+        )
+    }
+
+    func testWatchSleepRemovesCoveredAutomaticTravelButKeepsConfirmedAndOutsideTravel() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let hour = 60 * 60.0
+        let night = TimeSpan(start: start, end: start.addingTimeInterval(7 * hour))
+        let covered = TravelSegment(
+            mode: .subway, span: TimeSpan(start: start.addingTimeInterval(2 * hour), end: start.addingTimeInterval(3 * hour)),
+            distanceMeters: 4_000, confidence: .high, evidence: [], isClassificationLocked: true
+        )
+        let confirmed = TravelSegment(
+            mode: .subway, span: covered.span, distanceMeters: 4_000, confidence: .high,
+            evidence: [], isConfirmed: true
+        )
+        // 잠들기 직전 귀가: 대부분이 수면 밖이라 남는다.
+        let walkHome = TravelSegment(
+            mode: .walking, span: TimeSpan(start: start.addingTimeInterval(-50 * 60), end: start.addingTimeInterval(10 * 60)),
+            distanceMeters: 900, confidence: .high, evidence: []
+        )
+
+        let result = SleepTravelReconciliationEngine.removingAutomaticTravel(
+            [walkHome, covered, confirmed],
+            sessions: [watchSleepSession(night)],
+            inside: TimeSpan(start: start.addingTimeInterval(-hour), end: start.addingTimeInterval(8 * hour)),
+            asOf: start.addingTimeInterval(8 * hour)
+        )
+
+        XCTAssertEqual(result.map(\.id), [walkHome.id, confirmed.id])
+    }
+
+    func testWatchSleepTrimsAutomaticMovementRecords() {
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let night = TimeSpan(start: start, end: start.addingTimeInterval(6 * 60 * 60))
+        let gapSubway = ActualRecord(
+            planID: nil, title: "지하철", categoryID: "movement",
+            startedAt: start.addingTimeInterval(60 * 60), endedAt: start.addingTimeInterval(2 * 60 * 60),
+            source: .motion, modelVersion: TaptionActivityEngineAdapter.inferredGapModelVersion
+        )
+
+        let result = SleepActualReconciliationEngine.applying(
+            [gapSubway], sessions: [watchSleepSession(night)], inside: night, asOf: night.end
+        )
+
+        XCTAssertEqual(result.map(\.categoryID), ["sleep"])
+    }
+
+    func testPlaybackSpeedFollowsSleepCategoryOverMovement() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let sleep = ActualRecord(
+            planID: nil, title: "수면", categoryID: "sleep",
+            startedAt: dayStart.addingTimeInterval(60 * 60), endedAt: dayStart.addingTimeInterval(5 * 60 * 60),
+            source: .appleWatch
+        )
+        let snapshot = PlanDayDataSnapshot(
+            day: dayStart, sourceRevision: 1, sourceUpdatedAt: dayStart,
+            actuals: [sleep], places: [], travel: [], readings: [], isComplete: true
+        )
+
+        let ranges = MapHomePlaybackCategoryRanges.removingSleep(
+            [MapHomePlaybackMovementRange(startMinute: 30, endMinute: 400, mode: .subway)],
+            snapshot: snapshot, dayStart: dayStart
+        )
+
+        XCTAssertEqual(ranges.map(\.startMinute), [30, 300])
+        XCTAssertEqual(ranges.map(\.endMinute), [60, 400])
+    }
+
     func testLegacyWatchSleepBehaviorStillOverridesTravel() {
         let start = Date(timeIntervalSinceReferenceDate: 800_050_000)
         let span = TimeSpan(

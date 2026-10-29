@@ -9448,7 +9448,8 @@ final class AppModel {
             }
             snapshot.places.append(contentsOf: places)
             snapshot.floorTransitions.append(contentsOf: floors)
-            snapshot.travel.append(contentsOf: travel)
+            snapshot.travel.append(contentsOf: SleepTravelReconciliationEngine
+                .removingAutomaticTravel(travel, sessions: sleepSessions, inside: span))
         }
         snapshot.places.sort { $0.span.start < $1.span.start }
         snapshot.travel.sort { $0.span.start < $1.span.start }
@@ -11861,6 +11862,9 @@ final class AppModel {
             if reconciledActuals != snapshot.actuals {
                 snapshot.actuals = reconciledActuals
             }
+            // 잠금 중 못 읽은 수면이 나중에 들어와도 그 밤의 자동 이동을 다시 판정한다(CAT1029A01).
+            let sleepTravel = SleepTravelReconciliationEngine.reconciled(snapshot.travel, sessions: sleepSessions, inside: span)
+            if sleepTravel != snapshot.travel { snapshot.travel = sleepTravel }
             // A previous manual correction can otherwise be reapplied by the
             // next persistence pass and turn the authoritative sleep window
             // back into an activity. Keep its time edit only when the record

@@ -2389,3 +2389,36 @@
 - 부수 확인: 17.5초 중 09:31:50~09:31:59 **9초가 표본 저장 대기**였고 끝내 저장되지 않았다(`stream_live=true`, `archive_error=none`). 저장 실패가 아니라 표본이 오지 않은 경우다.
 - 검증: 배경 갱신 시험 3건 통과(`build/validation/BGR1028A01/bg.xcresult`, 1분 35초). 단위 전체 **1,653건 중 1,651 통과 · 실패 0 · 건너뜀 2**(`BGR1028A02/unit.xcresult`, 3분 23초). 앱 Debug 빌드 성공·경고 0. 구조 지표·경계 검사 통과(기준선 재잠금: `AppModel` 14,278→14,284, 가장 큰 타입 13,551→13,557).
 - 남은 것: 다음 빌드 기기 로그의 `background_refresh` 종료 기록에서 `user_error`를 읽어 실제 배너를 확인하고, 그 경로에 error 기록을 넣는다. 표본 미저장은 `wait_ms`·`window_s`로 대기 예산 소진인지 판정한다.
+
+## TFB1029A01 · 빌드 247 배포 (2026-10-29)
+- 지시: "예, 247 올리기" — 246(`1d552c2`)에는 BGR1028A01(`365fe88`)이 없어 `user_error`가 찍히지 않으므로, 계측을 담아 다시 올린다.
+- 담긴 것: `LOG1028A01`(적재 원인 판정 분석) · `RBK1028A01`(구간 편집 저장 되읽기 축소) · `BGR1028A01`(배경 갱신 `user_error`·표본 `wait_ms`/`window_s`). 246 → **247**.
+- `release.sh --preflight` 전 항목 OK(246 VALID·그룹 `b4857e5e`·트리 깨끗함 `365fe88`) → `release.sh --yes --request-id TFB1029A01` 종료 코드 0.
+- 결과: 빌드 247 **VALID**, 내부 그룹 연결(`buildAttached: true`), 테스터 1명. 보고서 `build/validation/TFB1029A01/testflight-report.json`. 커밋: 버전 올림 `544678e`.
+- 기기: iPhone 18 Pro Max에 247 설치 확인(devicectl `Bundle Version 247`). 00:26 「로그 보내기」 패키지가 iCloud Drive `TaptionLogs`에 저장되고 `latest.json`이 가리키며 기기 사본과 바이트 동일.
+- 남은 것: 그 패키지에는 247의 `background_refresh`가 아직 없다. 247에서 배경 갱신이 한 번 돈 뒤의 패키지로 `user_error`를 읽는다(BGR1028A01).
+
+## CAT1029A01 · 대분류 / 센서원본 / 상세활동을 정의하고 화랑이·재생속도를 대분류에 묶는다 (2026-10-29)
+- 지시(대표): "애플워치 데이터랑 헬스킷 데이터 센서 gps데이터가 우선순위가 제일 높아야 함. … 애플워치 끼고 잤는데 수면 기록이 안됨. 이동에 묶여서 지하철 탑승으로 나옴. 근데 화랑이는 수면 아이콘이 뜨고 이게 싱크가 안맞음. 즉, 대분류 / 센서원본 / 상세활동에 대한 정의 필요. 화랑이 상태는 대분류에 연결. 재생시 재생속도도 대분류에 따르게 해야함."
+- **원인(코드 확인)**: 세 화면이 서로 다른 저장소를 읽는다.
+  - 시간선은 `snapshot.actuals`에 수면 `ActualRecord`가 있어야 수면으로 그린다(`MapHomeTimeSidebar` 700–799). 지하철은 `snapshot.travel`의 `TravelSegment`라 따로 산다.
+  - 화랑이는 `hasAppleWatchConfirmedSleep`(`MapHomeLocationPresentation` 447)이 `sleepSessions`(HealthKit 원본)를 **먼저** 읽어 수면을 띄운다.
+  - 재생속도는 `dayPlaybackMovementRanges`(`MapHomeView` 7622)가 센서 범위 ∪ **모든 travel** ∪ DayPhase 이동의 합집합이라, 수면과 겹친 지하철도 이동 배속으로 지나간다.
+  - 수면과 이동을 서로 맞춰 보는 곳이 없다. `SleepActualReconciliationEngine`은 이동을 자르지 않고(`PlanningEngine` 782–905), 지하철은 한 번 잡히면 `stabilizedSubwaySegments`·`mergingLockedTravel`로 다시 살아나며, 빈칸 Viterbi에는 수면 상태가 없다(`ActivityGapInference` 259).
+- **원인(로그 확인, 00:26 패키지)**: Watch 앱이 TestFlight에 없다(`1fe06ab`, 빌드 169부터. 247 ipa에도 `TaptionPlan.app`·위젯뿐). `watch_data_sync_skipped reason=watch_app_not_installed`, `watch_day_raw_loaded` 169회 모두 `samples 0`. Apple Watch 자료는 HealthKit으로만 들어온다. 잠금 중 HealthKit 읽기 실패 8회(`code 6 Protected health data is inaccessible`) — 자는 동안 판정은 GPS·모션만 본다.
+- **아직 못 본 것**: 오늘 새벽 로그·원본이 Mac iCloud에 동기화되지 않았다(마지막 동기화 00:27, 기기 연결 끊김). 실제 그 밤의 지하철 근거(GPS 손실 비율·역 순서)는 받은 뒤 판정한다.
+- **정의안(대표 확인 전)**:
+  - 센서원본: HealthKit(수면 단계·심박·운동, Apple Watch 기록 포함) · iPhone GPS · CoreMotion · 충전·화면 상태. 고치지 않고 출처를 남긴다.
+  - 대분류: 하루의 한 시각에 하나. 수면 / 이동 / 운동 / 업무 / 머무름. **한 판정기**가 정하고 시간선·화랑이·재생속도가 모두 그 값만 읽는다.
+  - 상세활동: 대분류 안의 세부(이동 → 걷기·지하철·버스·차, 수면 → 단계). 부모 대분류와 어긋날 수 없다 — 수면 시간 안에는 지하철 상세가 서지 않는다.
+  - 우선순위: 사용자 수정 > Apple Watch·HealthKit 수면/운동 > GPS 실측 이동 > 추정(지하철 점수·빈칸 Viterbi·충전 수면 규칙) > 빈칸.
+- **검증 기준(안)**: Watch 수면과 지하철 추정이 겹친 하루 고정자료로 시간선 대분류·화랑이 상태·재생속도가 같은 값을 내는 단위 시험, 사용자 수정이 수면을 이기는 시험, 원본 travel이 지워지지 않고 남는지 시험, 단위 전체·Debug 빌드·구조 게이트, 실기기 그 밤 재판정.
+- **대표 답(2026-10-29)**: ①Watch·HealthKit 수면과 GPS 이동이 겹치면 **수면 우선**(사용자 수정만 그 위) ②수면에 덮인 자동 이동 기록은 **삭제**(원본 GPS는 남김, 사용자 확정 이동은 지우지 않음) ③잠금 해제 뒤 HealthKit 수면이 들어오면 **그 밤 다시 판정** ④Watch 앱은 넣지 않고 **HealthKit만 유지**.
+- **고침**:
+  - `SleepTravelReconciliationEngine`(`HealthAndSensorModels.swift`) — 수면(`asleepDuration > 0`) 세션에 구간 길이의 50% 이상 덮인 **자동** 이동을 지운다. `isConfirmed`·「사용자 확인/교정」 근거가 있는 이동은 남긴다. HealthKit 갱신 경로용 `reconciled`는 지운 수를 `sleep_travel_removed`로 남긴다.
+  - 두 곳에서 부른다: ①센서 이동 추론이 `snapshot.travel`에 새 구간을 붙일 때(지하철 안정화·잠금 분류가 다시 살리지 못하게) ②HealthKit 갱신 끝(잠금 해제 뒤 들어온 수면으로 그 밤을 다시 판정, 기본 범위 31일).
+  - `SleepActualReconciliationEngine.shouldTrim`이 자동(`motion`·`location`) **이동** 기록도 수면 시간에서 자른다(빈칸 Viterbi의 `movement.subway` 등). 운동·확정 운동은 그대로 둔다.
+  - 재생속도: `MapHomePlaybackCategoryRanges.removingSleep`이 수면 대분류 시간을 이동 범위에서 빼, 센서·이동이 겹쳐도 정지 배속(초당 120분)으로 지나간다. `MapHomeView`는 같은 줄 수 안에서 감쌌다.
+  - 화랑이: 이미 HealthKit·Watch 수면을 먼저 본다. 이번 수정으로 그 시간의 시간선 대분류도 수면이 되어 둘이 맞는다.
+- 검증: 새 시험 3건(`testWatchSleepRemovesCoveredAutomaticTravelButKeepsConfirmedAndOutsideTravel`·`testWatchSleepTrimsAutomaticMovementRecords`·`testPlaybackSpeedFollowsSleepCategoryOverMovement`) 포함 집중 50건 통과(`build/validation/CAT1029A01/focused.xcresult`). 단위 전체 **1,656건 중 1,654 통과 · 실패 0 · 건너뜀 2**(`unit.xcresult`, 약 3분). 시험 빌드(Debug) 경고 0. 구조 지표·경계 통과(기준선 재잠금: `AppModel` 14,284→14,288, 가장 큰 타입 13,557→13,561, 전체 161,440→161,516줄).
+- 남은 것: **실기기 확인** — 오늘 새벽 그 밤이 수면으로 다시 판정되고 지하철이 사라지는지, 화랑이·시간선·재생속도가 같은지. 그 밤 로그·원본은 Mac iCloud에 아직 동기화되지 않았다(받으면 `sleep_travel_removed`와 근거를 확인). 배포 전이라 기기에는 아직 없다.

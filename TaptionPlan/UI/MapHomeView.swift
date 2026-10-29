@@ -7660,9 +7660,9 @@ struct MapHomeView: View {
         let categoryRanges = MapHomePlaybackCategoryRanges.movementRanges(
             snapshot: dayData, frequentPlaces: model.snapshot.settings.frequentPlaces,
             dayStart: dayStart, dayEnd: dayEnd)
-        return MapHomePlaybackMovementRange.normalized(
+        return MapHomePlaybackCategoryRanges.removingSleep(MapHomePlaybackMovementRange.normalized(
             readingRanges + travelRanges + categoryRanges
-        )
+        ), snapshot: dayData, dayStart: dayStart)
     }
 
     private func dayPlaybackReadingRanges(

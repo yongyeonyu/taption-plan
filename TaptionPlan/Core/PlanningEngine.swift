@@ -938,12 +938,12 @@ enum SleepActualReconciliationEngine {
             return false
         }
         guard actual.categoryID != "appUsage",
-              actual.categoryID != "movement",
               actual.categoryID != "exercise",
               !AutomaticRecordTimelineEngine.isConfirmedWorkout(actual) else {
             return false
         }
-        return actual.categoryID == "activity"
+        // 자동 이동(지하철 추정·빈칸 추정)도 수면 시간에서는 잘린다(CAT1029A01).
+        return actual.categoryID == "activity" || actual.categoryID == "movement"
             || actual.categoryID == "rest"
             || actual.categoryID == "routine"
             || actual.behavior == "stationary"
