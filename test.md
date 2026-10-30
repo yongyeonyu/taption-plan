@@ -4748,3 +4748,4 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## ARC1030A11 지도 스타일·달력·메뉴 정리(2026-10-30)
 - 변경: 간략화·기존 위성 삭제(hybrid를 "위성"으로 표시, 옛 저장값은 표준으로 복귀), 밝게/파스텔/야간/고대비 팔레트 재구성, 안개 탐험을 지도 스타일 아래로, "실외에서 보기" 삭제, 하루 카드 기본 4개 채움 제거, 카운터 위젯 탭→카운터 메뉴, 연봉 스위치 정렬·톱니 이동, 보폭 보정 위치 이동, 방문 장소(10분 이상·30 m 합침) 목록, 달력 "한달 평균"·좌우 스와이프.
 - 시뮬레이터(BOKKI-iPhone11) 전체 단위 테스트(`build/validation/ARC1030A11/unit.log`): 실패 1건 `SensorDayStoreTests.testThirtyDayAppColdAndWarmLoadP95StaysInteractive`(전체 실행 중 시간 기준), 단독 재실행 통과. 연결된 실기기 없음 → 실기기 검증 아님. 방문 장소 정책 전용 테스트는 없음. 화면 눈 확인 전.
+- 실기기(iPhone 11 Pro) 단위 테스트 전체(`build/validation/ARC1030A11/dev11/unit.log`): 1644개 중 실패 1건 `TaptionActivityEngineAdapterTests.evidenceTravelLookupPreservesFirstMatchAndInclusiveBoundaries`(NaN 시각 케이스, 기기 Foundation 동작 차이로 이전부터 있던 실패). 나머지 통과, 1건 건너뜀. 눈 확인 전.
