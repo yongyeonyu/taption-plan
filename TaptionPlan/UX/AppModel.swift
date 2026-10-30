@@ -9406,7 +9406,8 @@ final class AppModel {
                 MovementCorrectionEngine.applying(
                     snapshot.settings.movementCorrections,
                     to: inferredTravel,
-                    places: basePlaces
+                    places: basePlaces,
+                    readings: readings
                 ),
                 activities: motionActivities,
                 readings: readings

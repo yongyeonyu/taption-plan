@@ -676,7 +676,9 @@ final class MapHomeCameraFrameProjection {
         nowUptime: TimeInterval,
         isFinal: Bool
     ) -> Bool {
-        guard isFinal || nowUptime - lastParentReadbackUptime >= 1.0 / 30.0
+        // Apple 지도는 움직이는 동안 카메라 값을 부모 화면으로 올릴 때마다 화면 전체가 다시 평가돼 느렸다.
+        // 움직이는 동안은 초당 4번만 올리고, 손을 떼면(isFinal) 바로 올린다. 판타지 지도에서 효과를 본 방식이다(ARC1030A04).
+        guard isFinal || nowUptime - lastParentReadbackUptime >= 0.25
         else { return false }
         lastParentReadbackUptime = nowUptime
         return true

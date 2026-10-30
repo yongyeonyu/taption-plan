@@ -904,8 +904,25 @@ struct MapHomePlaybackFrameStats {
                       "map_frames": Double(Self.mapRenderedFrames - (mapRenderedFramesAtStart ?? Self.mapRenderedFrames)),
                       "blocked_camera": Double(Self.blockedCameraCommands - (blockedCameraCommandsAtStart ?? Self.blockedCameraCommands)),
                       "camera_applies": Double(cameraApplies), "camera_skips": Double(cameraSkips),
-                      "wall_s": startUptime.map { ((ProcessInfo.processInfo.systemUptime - $0) * 10).rounded() / 10 } ?? -1]
+                      "wall_s": startUptime.map { ((ProcessInfo.processInfo.systemUptime - $0) * 10).rounded() / 10 } ?? -1,
+                      // 비용 지표: 앱 메모리 점유(MB)와 기기 열 상태(0 정상~3 심각). 오래된 기기에서 재생 비용을 가린다(ARC1030A04).
+                      "mem_mb": MapHomeMemoryFootprint.megabytes().rounded(),
+                      "thermal": Double(ProcessInfo.processInfo.thermalState.rawValue)]
         )
+    }
+}
+
+/// 이 앱이 쓰는 물리 메모리(phys_footprint, MB). 메모리 경고가 나기 전에 재생·지도의 메모리 비용을 본다.
+enum MapHomeMemoryFootprint {
+    static func megabytes() -> Double {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? Double(info.phys_footprint) / 1_048_576 : -1
     }
 }
 

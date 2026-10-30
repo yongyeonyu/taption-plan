@@ -119,6 +119,8 @@ final class MapHomeFogView: UIView {
         isUserInteractionEnabled = false
         isAccessibilityElement = false
         autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // 안개는 부드러운 그라데이션이라 1배 해상도로 그려도 차이가 없고, 3배 화면에서 그리는 픽셀이 9분의 1로 준다.
+        contentScaleFactor = 1
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }

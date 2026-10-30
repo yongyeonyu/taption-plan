@@ -7537,6 +7537,34 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertTrue(result[0].isClassificationLocked)
     }
 
+    /// 다른 날 확인한 보정이 옮겨 와 "확정"으로 저장된 지하철은, 새 판정이 자동차면 잠겨 있어도 물려받지 않는다(ARC1030A04).
+    func testRememberedOnlyLockedSubwayYieldsToFreshCar() {
+        let start = makeDate(2026, 10, 30, 9, 30)
+        let remembered = TravelSegment(
+            mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            distanceMeters: 20_000, confidence: .high, evidence: ["사용자 확인 기억"],
+            isConfirmed: true, isClassificationLocked: true
+        )
+        let railBacked = TravelSegment(
+            mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            distanceMeters: 20_000, confidence: .high, evidence: ["사용자 확인 기억", "철도 경로"],
+            isConfirmed: true, isClassificationLocked: true
+        )
+        let fresh = TravelSegment(
+            mode: .car, span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
+            distanceMeters: 21_000, confidence: .medium, evidence: ["iPhone Core Motion 자동차"]
+        )
+        let inside = TimeSpan(start: start, end: start.addingTimeInterval(2 * hour))
+
+        let result = ActivityClassificationLockEngine.mergingLockedTravel(existing: [remembered], fresh: [fresh], inside: inside)
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].mode, .car)
+
+        let kept = ActivityClassificationLockEngine.mergingLockedTravel(existing: [railBacked], fresh: [fresh], inside: inside)
+        XCTAssertEqual(kept.count, 1)
+        XCTAssertEqual(kept[0].mode, .subway)
+    }
+
     func testLockedTravelMergeBoundsDisjointCandidateInspection() {
         let start = makeDate(2026, 8, 1, 0, 0)
         let count = 1_000
@@ -8534,6 +8562,52 @@ final class FeatureEngineTests: XCTestCase {
                 from: corrections
             ).isEmpty
         )
+    }
+
+    /// 과거에 "집→회사 = 지하철"로 확인한 기억이, 센서가 자동차 모션이고 철도 신호가 없는 날에는 덮어쓰지 않는다(ARC1030A04).
+    func testRememberedSubwayCorrectionDoesNotOverrideAutomotiveEvidence() throws {
+        let base = makeDate(2026, 10, 30, 9, 0)
+        let places = [
+            PlaceStay(placeKey: "home", displayName: "집",
+                span: TimeSpan(start: base.addingTimeInterval(-hour), end: base), confidence: .high),
+            PlaceStay(placeKey: "office", displayName: "회사",
+                span: TimeSpan(start: base.addingTimeInterval(hour), end: base.addingTimeInterval(2 * hour)), confidence: .high),
+        ]
+        let segment = TravelSegment(
+            fromPlaceID: places[0].id, toPlaceID: places[1].id, mode: .car,
+            span: TimeSpan(start: base, end: base.addingTimeInterval(hour)),
+            distanceMeters: 21_000, confidence: .medium, evidence: ["iPhone Core Motion 자동차"]
+        )
+        // 어제 같은 두 장소 사이를 지하철로 확인해 둔 보정(다른 날의 구간).
+        var yesterday = segment
+        yesterday.mode = .subway
+        yesterday.span = TimeSpan(
+            start: segment.span.start.addingTimeInterval(-24 * hour),
+            end: segment.span.end.addingTimeInterval(-24 * hour)
+        )
+        let corrections = MovementCorrectionEngine.recording(
+            mode: .subway, for: yesterday, places: places, existing: [], at: base.addingTimeInterval(-12 * hour)
+        )
+        func reading(_ minute: Int, motion: MotionKind, rail: Bool = false) -> SensorReading {
+            var value = SensorReading(timestamp: base.addingTimeInterval(Double(minute) * 60), motion: motion)
+            value.matchesRailRoute = rail
+            return value
+        }
+        let automotive = (0..<40).map { reading($0, motion: .automotive) }
+        // 자동차 모션뿐이고 철도 신호가 없으면 기억을 적용하지 않는다.
+        let vetoed = try XCTUnwrap(MovementCorrectionEngine.applying(
+            corrections, to: [segment], places: places, readings: automotive).first)
+        XCTAssertEqual(vetoed.mode, .car)
+        XCTAssertFalse(vetoed.evidence.contains("사용자 확인 기억"))
+        // 센서 근거가 없으면 예전처럼 기억을 적용한다.
+        let applied = try XCTUnwrap(MovementCorrectionEngine.applying(
+            corrections, to: [segment], places: places, readings: []).first)
+        XCTAssertEqual(applied.mode, .subway)
+        // 철도 경로가 맞는 기록이 하나라도 있으면 기억을 적용한다.
+        let withRail = automotive + [reading(41, motion: .automotive, rail: true)]
+        let appliedWithRail = try XCTUnwrap(MovementCorrectionEngine.applying(
+            corrections, to: [segment], places: places, readings: withRail).first)
+        XCTAssertEqual(appliedWithRail.mode, .subway)
     }
 
     func testMovementCorrectionTieUsesStableIDRegardlessOfInputOrder() throws {
@@ -21518,8 +21592,17 @@ final class FeatureEngineTests: XCTestCase {
         stored.settings.locationEnabled = false
         stored.settings.healthEnabled = false
         stored.settings.weatherEnabled = false
+        // 센서 보관소를 지정하지 않으면 AppModel이 앱의 실제 센서 저장소를 연다. 실기기에서는 그 안의 실제 기록을 분석하느라
+        // 5초 안에 통합 새로고침이 끝나지 않았다. 시험은 늘 비어 있는 임시 보관소를 쓴다(대표 지시, ARC1030A04).
+        let sensorDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("integration-model-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: sensorDirectory) }
+        let sensorService = (try? SensorReadingArchive(
+            fileURL: sensorDirectory.appendingPathComponent("readings.jsonl")
+        )).map { AppleSensorDataService(archive: $0) }
         let model = AppModel(
             repository: InMemoryPlanRepository(snapshot: stored),
+            sensorService: sensorService,
             cloudSyncService: nil,
             registersHealthBackgroundHandler: false
         )

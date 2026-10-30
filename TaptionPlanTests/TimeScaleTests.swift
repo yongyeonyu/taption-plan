@@ -1046,15 +1046,21 @@ final class TimeScaleTests: XCTestCase {
                 isFinal: false
             )
         )
-        XCTAssertTrue(
+        XCTAssertFalse(
             projection.shouldPublishParentReadback(
-                nowUptime: 1.04,
+                nowUptime: 1.2,
                 isFinal: false
             )
         )
         XCTAssertTrue(
             projection.shouldPublishParentReadback(
-                nowUptime: 1.041,
+                nowUptime: 1.26,
+                isFinal: false
+            )
+        )
+        XCTAssertTrue(
+            projection.shouldPublishParentReadback(
+                nowUptime: 1.261,
                 isFinal: true
             )
         )

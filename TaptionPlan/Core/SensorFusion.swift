@@ -4338,17 +4338,46 @@ enum MovementCorrectionEngine {
         return result
     }
 
+    /// 기억해 둔 지하철·기차 보정이 이 구간의 센서 근거와 정면으로 부딪치는지.
+    /// 구간 안 기록의 대부분이 자동차 모션이고 철도 경로·역 근처·지하철 Wi-Fi 신호가 하나도 없으면 철도가 아니다.
+    /// 예전에는 과거에 "집→회사 = 지하철"로 확인한 기억이 자동차로 간 날에도 그대로 덮어써져 지하철 경로(미확인 경로)가 떴다(대표 지적, ARC1030A04).
+    static func isContradictedByAutomotive(
+        _ correction: TravelModeCorrection,
+        segment: TravelSegment,
+        readings: [SensorReading]
+    ) -> Bool {
+        guard correction.mode == .subway || correction.mode == .train else { return false }
+        // 이 구간 자체에 건 보정(같은 시간대)은 사용자가 직접 고른 것이라 센서 근거가 달라도 따른다.
+        // 막는 것은 다른 날의 보정이 장소 이름이 같다는 이유로 옮겨 오는 경우뿐이다.
+        if let overlap = correction.span.intersection(with: segment.span),
+           overlap.duration >= min(correction.span.duration, segment.span.duration) * 0.5 {
+            return false
+        }
+        let inSpan = readings.filter {
+            $0.timestamp >= segment.span.start && $0.timestamp <= segment.span.end
+        }
+        guard inSpan.count >= 20 else { return false }
+        let automotive = inSpan.filter { $0.motion == .automotive }.count
+        guard Double(automotive) / Double(inSpan.count) >= 0.6 else { return false }
+        let hasRailEvidence = inSpan.contains {
+            $0.matchesRailRoute || $0.matchesPublicTransitRoute || $0.nearbyStation
+                || ($0.subwayWiFiObservationStreak ?? 0) > 0
+        }
+        return !hasRailEvidence
+    }
+
     static func applying(
         _ corrections: [TravelModeCorrection],
         to segments: [TravelSegment],
-        places: [PlaceStay]
+        places: [PlaceStay],
+        readings: [SensorReading] = []
     ) -> [TravelSegment] {
         segments.map { segment in
             guard let correction = bestCorrection(
                 for: segment,
                 places: places,
                 in: corrections
-            ) else {
+            ), !isContradictedByAutomotive(correction, segment: segment, readings: readings) else {
                 return segment
             }
             var value = segment

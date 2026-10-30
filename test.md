@@ -4698,3 +4698,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1030A03 빌드 252 배포(2026-10-30)
 - `release.sh --yes --request-id TFB1030A03` 종료 코드 0. VALID, 내부 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A03/testflight-report.json`.
 - 포함: ARC1030A03(현재 위치 카메라 충돌, 라이브 발자국 꼬리, 달력 점 채움, 8시 카드 예약 기록). 실기기 눈 확인 전.
+
+## ARC1030A04 아이폰 11 Pro 실기기 검증(2026-10-30, `xcrun devicectl`·물리 기기 기본 규칙)
+- 전체 단위 테스트 `build/validation/ARC1030A04/dev11d`: 1,690개 중 통과 1,688, 실패 1, 건너뜀 1. 실패 `TaptionActivityEngineAdapterTests.evidenceTravelLookupPreservesFirstMatchAndInclusiveBoundaries`는 `NaN` 시각 비교가 기기와 시뮬레이터에서 달라 생기며, 수정 전 커밋(`781b63b`)에서도 같은 기기에서 같게 실패(`base11b`)해 이번 변경과 무관.
+- 날짜 선택 2건(`testSelectedDate…`)은 수정 전에도 기기에서 실패(`base11`). 원인은 테스트가 센서 보관소를 지정하지 않아 앱의 실제 보관소를 여는 격리 부족이었고, 임시 보관소로 바꾼 뒤 통과(`dev11c`). 같은 문제가 있는 `AppModel(` 생성 테스트 약 66곳은 이번에 고치지 않았다.
+- 화랑이 행동 캐시 속도 테스트(`testStickmanActionCacheSpeedup`)는 부하 시 ×1.9로 흔들리고 단독·최종 실행은 통과.
+- 시뮬레이터 결과와는 별개로 기록. 미확인 경로 수정 관련 테스트 4개는 시뮬레이터 통과(`t2`)와 기기 전체 실행 통과.
+- 재생 측정(아이폰 11 Pro 60Hz, 어제 재생 59초): Apple 지도 53fps·25ms 이상 틱 284개(9%)·메모리 238MB·열 1 / 판타지 지도 52fps·335개(11%)·252MB·열 2 (`n11_standard`, `n11_mapLibreRPG`). 두 지도가 비슷해 남은 끊김은 공통 UI 쪽.
+- 실기기 눈 확인 전: Apple 지도 재생 구동기, 미확인 경로 수정(사용자 폰 로그 필요), 설정 변경.

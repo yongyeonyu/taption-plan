@@ -2926,6 +2926,37 @@ struct MapHomeView: View {
         ))
     }
 
+    /// 측정용: `-autoStartDayPlayback`으로 켜면 지도가 뜬 뒤 재생을 저절로 시작하고 끝나면 로그 패키지를 만든다(PLY1029A08).
+    /// 벡터 지도 뷰가 아니라 화면 공통 위치에서 돈다. 지도 스타일을 바꾸면 벡터 지도 뷰가 사라져 안에 둔 작업이 취소됐다(ARC1030A04).
+    private func runBenchAutoPlayback() async {
+        if ProcessInfo.processInfo.arguments.contains("-autoStartDayPlayback") {
+            // 측정용: `-benchMapStyle=standard` 등으로 지도 스타일을 골라 Apple 지도와 판타지 지도를 같은 조건에서 비교한다(ARC1030A04).
+            if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchMapStyle=") })?
+                .dropFirst("-benchMapStyle=".count),
+               let style = MapDisplayStyle(rawValue: String(value)) {
+                model.setMapDisplayStyle(style)
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+            // `-autoPlaybackYesterday`면 어제 하루 전체를 재생해 측정한다(오늘은 새벽이면 너무 짧다).
+            if ProcessInfo.processInfo.arguments.contains("-autoPlaybackYesterday"),
+               let yesterday = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -1, to: Date()) {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                model.selectedDate = yesterday
+                // 어제 데이터·경로·예상 경로를 다 읽을 때까지 기다린다(먼저 재생하면 읽기 끝에 재생이 끊긴다).
+                try? await Task.sleep(nanoseconds: 14_000_000_000)
+            }
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            startDayPlayback(fromMidnight: true)
+            // 재생이 끝나면 로그 패키지를 저절로 만든다(USB로 받아 본다). 어제처럼 긴 하루는 1분을 넘길 수 있어 끝까지 기다린다.
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            for _ in 0..<120 where isDayPlaybackRunning {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+            }
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            await model.exportDiagnosticsToICloud()
+        }
+    }
+
     private var foregroundContent: some View {
         ZStack(alignment: .top) {
             // 지도·사이드 레일·재생 HUD는 분을 읽는다. 분이 바뀔 때 이 조각만 다시 그리게 따로 감싼다(ARC1030A01).
@@ -3024,6 +3055,7 @@ struct MapHomeView: View {
         .onChange(of: isDayPlaybackRunning) { _, isRunning in
             if !isRunning { finishRecordingPlayback() }
         }
+        .task { await runBenchAutoPlayback() }
         .task(id: model.selectedDate) { await loadPhotoMoments() }
         .task(id: model.selectedDate) { await loadDayCalendarEvents() }
         .task {
@@ -3508,6 +3540,10 @@ struct MapHomeView: View {
         }
         .onChange(of: model.dayProjectionRevision) { _, _ in
             routeActualIndex = nil
+        }
+        .onChange(of: playbackZoomModeRaw) { _, raw in
+            // 재생 중에 설정을 바꿔도 곧바로 적용한다.
+            playbackDriver?.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: raw) != .fixed
         }
         .onChange(of: model.isBootstrapped) { _, isReady in
             if isReady { refreshHomeGrowth(at: .now) }
@@ -4491,26 +4527,6 @@ struct MapHomeView: View {
         .task {
             applyInitialLocationIfAvailable(using: nil)
             beginInitialLocationRequest(using: nil)
-            // 측정용: `-autoStartDayPlayback`으로 켜면 지도가 뜬 뒤 재생을 저절로 시작한다(Instruments 기록, PLY1029A08).
-            if ProcessInfo.processInfo.arguments.contains("-autoStartDayPlayback") {
-                // `-autoPlaybackYesterday`면 어제 하루 전체를 재생해 측정한다(오늘은 새벽이면 너무 짧다).
-                if ProcessInfo.processInfo.arguments.contains("-autoPlaybackYesterday"),
-                   let yesterday = Calendar.autoupdatingCurrent.date(byAdding: .day, value: -1, to: Date()) {
-                    try? await Task.sleep(nanoseconds: 3_000_000_000)
-                    model.selectedDate = yesterday
-                    // 어제 데이터·경로·예상 경로를 다 읽을 때까지 기다린다(먼저 재생하면 읽기 끝에 재생이 끊긴다).
-                    try? await Task.sleep(nanoseconds: 14_000_000_000)
-                }
-                try? await Task.sleep(nanoseconds: 6_000_000_000)
-                startDayPlayback(fromMidnight: true)
-                // 재생이 끝나면 로그 패키지를 저절로 만든다(USB로 받아 본다). 어제처럼 긴 하루는 1분을 넘길 수 있어 끝까지 기다린다.
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
-                for _ in 0..<120 where isDayPlaybackRunning {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
-                }
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                await model.exportDiagnosticsToICloud()
-            }
         }
         .onChange(of: mapViewportSize) { _, size in
             guard size.width > 0, size.height > 0 else { return }
@@ -4610,6 +4626,7 @@ struct MapHomeView: View {
                 || isTimelineInteractionActive
                 || userTrackingMode.keepsCameraLocked,
             playbackTargetPoint: currentLocationTargetPoint,
+            playbackDriver: playbackDriver,
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             fogReveals: appleFogReveals,
@@ -7751,63 +7768,10 @@ struct MapHomeView: View {
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         loadPlaybackFullOverlays()
         startPlaybackIntro()
-        if rendersVectorMap {
-            startDriverPlayback(
-                startMinute: currentMinute, endMinute: playbackEndMinute, movingRanges: movingRanges
-            )
-            return
-        }
-        var frameStats = MapHomePlaybackFrameStats()
-        let clock = playbackClock
-        clock.stop()
-        dayPlaybackTask = Task { @MainActor in
-            while !Task.isCancelled {
-                // 화면 프레임마다 한 번 깨어난다(PLY1029A02). 경과 시간은 표시 링크가 잰 값이다.
-                guard let frameElapsed = await clock.nextFrame() else {
-                    frameStats.record()
-                    return
-                }
-                let uptime = ProcessInfo.processInfo.systemUptime
-                let elapsed = min(frameElapsed, 0.1)
-                frameStats.add(elapsed)
-                playbackMinute = min(
-                    MapHomeDayPlaybackMath.advancedMinute(
-                        from: playbackMinute,
-                        elapsedSeconds: elapsed,
-                        normalizedMovingRanges: movingRanges
-                    ),
-                    playbackEndMinute
-                )
-                let minute = min(
-                    MapHomeTimeSidebarMath.fullDayMinutes,
-                    max(0, Int(playbackMinute.rounded(.down)))
-                )
-                if selectedTimelineMinute != minute {
-                    selectedTimelineMinute = minute
-                }
-                if TimelineInteractionFrameGate.shouldRender(
-                    lastUptime: &lastPlaybackMarkerUptime,
-                    nowUptime: uptime,
-                    minimumInterval: MapHomeDayPlaybackMath.mapFocusInterval
-                ) {
-                    dayPlaybackCurrentMinute = playbackMinute
-                }
-                if TimelineInteractionFrameGate.shouldRender(
-                    lastUptime: &lastPlaybackRouteProjectionUptime,
-                    nowUptime: uptime,
-                    minimumInterval: MapHomeDayPlaybackMath
-                        .routeProjectionInterval
-                ) {
-                    refreshRouteProjection()
-                }
-                guard playbackMinute < playbackEndMinute else {
-                    finishDayPlayback(endMinute: playbackEndMinute)
-                    frameStats.record()
-                    clock.stop()
-                    return
-                }
-            }
-        }
+        // 벡터 지도와 Apple 지도 모두 구동기가 프레임마다 지도 엔진에 카메라를 바로 놓는다(대표 지시, ARC1030A04).
+        startDriverPlayback(
+            startMinute: currentMinute, endMinute: playbackEndMinute, movingRanges: movingRanges
+        )
     }
 
     private var dayPlaybackMovementRanges: [MapHomePlaybackMovementRange] {
@@ -9585,7 +9549,8 @@ struct MapHomeView: View {
 
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
-                    ForEach(MapDisplayStyle.allCases, id: \.self) { style in
+                    // 판타지 지도를 맨 위에 두고, 나머지 벡터 스타일, Apple 스타일 순으로 보여 준다(대표 지시, ARC1030A04).
+                    ForEach(MapDisplayStyle.openFreeMapStyles + MapDisplayStyle.appleStyles, id: \.self) { style in
                         Button {
                             model.setMapDisplayStyle(style)
                         } label: {
@@ -9721,20 +9686,23 @@ struct MapHomeView: View {
             if isCounterMenuExpanded {
                 VStack(spacing: 2) {
                     // 연봉도 다른 카운터처럼 켜고 끈다. 금액 설정은 옆 톱니로 연다(아직 설정이 없으면 켤 때 연다).
+                    // 설정 톱니는 스위치 왼쪽에 둔다(대표 지시, ARC1030A04).
                     HStack(spacing: 6) {
-                        Toggle(isOn: Binding(get: { showsSalaryCounter }, set: { isOn in
-                            showsSalaryCounter = isOn
-                            if isOn, salaryLive == nil { isSalarySettingsPresented = true }
-                        })) {
-                            Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                        }
-                        .tint(Color.tpAccent)
+                        Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        Spacer(minLength: 0)
                         Button { isSalarySettingsPresented = true } label: {
                             Image(systemName: "gearshape.fill").foregroundStyle(Color.tpSecondary).frame(width: 32, height: 32)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(language.text("연봉 카운터 설정", "Salary counter settings"))
+                        Toggle("", isOn: Binding(get: { showsSalaryCounter }, set: { isOn in
+                            showsSalaryCounter = isOn
+                            if isOn, salaryLive == nil { isSalarySettingsPresented = true }
+                        }))
+                        .labelsHidden()
+                        .tint(Color.tpAccent)
+                        .accessibilityLabel(language.text("연봉 카운터", "Salary counter"))
                     }
                     .padding(.vertical, 6)
                     .padding(.leading, 12)
@@ -13157,7 +13125,10 @@ struct MapHomeView: View {
 
     /// 오늘의 실시간 따라가기에서 속도에 맞춘 거리. 바꾸지 않아야 하면 nil.
     private func liveFollowDistance(current: Double) -> Double? {
-        guard !isDayPlaybackRunning,
+        // 설정의 "속도에 따라 가변"이 꺼져 있으면 실시간 따라가기에서도 배율을 바꾸지 않는다.
+        // 예전에는 이 설정이 재생에만 적용돼 실시간 따라가기는 켜고 꺼도 늘 속도에 따라 줌이 바뀌었다(대표 지적, ARC1030A04).
+        guard MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) != .fixed,
+              !isDayPlaybackRunning,
               selectedTimelineMinute == nil,
               userTrackingMode == .following,
               Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate),
@@ -19971,6 +19942,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let playback: MapHomeApplePlayback?
     let centersPlayback: Bool
     let playbackTargetPoint: CGPoint
+    /// 재생 구동기. 있으면 코디네이터가 프레임을 직접 받아 카메라·화랑이를 움직인다(ARC1030A04).
+    var playbackDriver: MapHomePlaybackDriver? = nil
     let contentInsets: UIEdgeInsets
     let longPressExclusionFrame: CGRect
     /// nil = 안개 탐험 꺼짐.
@@ -20021,6 +19994,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyViewportCommandIfNeeded(to: mapView)
+        playbackDriver?.sink = context.coordinator
     }
 
     static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
@@ -20028,7 +20002,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         mapView.delegate = nil
     }
 
-    final class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
+    final class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate, MapHomePlaybackSink {
         var parent: MapHomeAppleMap
         private weak var mapView: MKMapView?
         private var lastCameraRevision = Int.min
@@ -20043,6 +20017,26 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var routePolylines: [String: MKPolyline] = [:]
         private var fogView: MapHomeFogView?
+        private var lastFogDrawUptime: TimeInterval = 0
+        private var isFogRedrawScheduled = false
+
+        /// 지도가 움직이는 동안 안개는 최대 30Hz로 다시 그린다. 마지막 값은 0.034초 뒤 한 번 더 그려 놓치지 않는다.
+        private func redrawFogThrottled() {
+            guard let fogView else { return }
+            let now = ProcessInfo.processInfo.systemUptime
+            if now - lastFogDrawUptime >= 1.0 / 30.0 {
+                lastFogDrawUptime = now
+                fogView.setNeedsDisplay()
+            } else if !isFogRedrawScheduled {
+                isFogRedrawScheduled = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 30.0) { [weak self] in
+                    guard let self else { return }
+                    self.isFogRedrawScheduled = false
+                    self.lastFogDrawUptime = ProcessInfo.processInfo.systemUptime
+                    self.fogView?.setNeedsDisplay()
+                }
+            }
+        }
         private var lastFogReveals: [MapHomeFogReveal]?
         private var lastFogOpacity: CGFloat = 0
         private var routeSignatures: [String: String] = [:]
@@ -20184,9 +20178,32 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             updateWalkerPosition(in: mapView)
         }
 
+        var playbackCameraDistance: Double? {
+            mapView.map { max($0.camera.centerCoordinateDistance, 1) }
+        }
+
+        /// 재생 한 프레임: 카메라를 그 자리에 바로 놓고 화랑이와 안개 구멍을 같은 좌표로 옮긴다. SwiftUI를 거치지 않는다.
+        func applyPlaybackFrame(_ frame: MapHomePlaybackDriverFrame) {
+            guard let mapView, mapView.bounds.width > 0, let coordinate = frame.coordinate else { return }
+            MapHomeAppleCameraCommand.center(
+                coordinate, at: parent.playbackTargetPoint, distance: frame.cameraDistance, on: mapView
+            )
+            if let walkerAnnotation {
+                walkerAnnotation.coordinate = coordinate
+                updateWalkerPosition(in: mapView)
+            }
+            if let fogView, let last = fogView.reveals.last, last.radius == MapHomeFogStrength.currentLocationRadius {
+                var reveals = fogView.reveals
+                reveals[reveals.count - 1] = MapHomeFogReveal(coordinate: coordinate, radius: last.radius)
+                fogView.reveals = reveals
+            }
+        }
+
         func applyCameraCommandIfNeeded(to mapView: MKMapView) {
             guard lastCameraRevision != parent.cameraRevision else { return }
             lastCameraRevision = parent.cameraRevision
+            // 구동기가 카메라를 맡는 동안 SwiftUI 카메라 명령은 버린다. 받으면 구동기가 놓은 카메라가 되돌려진다.
+            if parent.playbackDriver != nil { return }
             if let revision = parent.viewportCommand?.revision,
                revision != lastViewportCommandRevision {
                 return
@@ -20216,6 +20233,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             guard let command = parent.viewportCommand,
                   command.revision != lastViewportCommandRevision else { return }
             lastViewportCommandRevision = command.revision
+            if parent.playbackDriver != nil { return }
             if let heading = command.heading {
                 MapHomeAppleCameraCommand.heading(
                     heading,
@@ -20236,7 +20254,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
-            fogView?.setNeedsDisplay()
+            redrawFogThrottled()
             publishCameraFrame(from: mapView, isFinal: false)
         }
 
@@ -20533,7 +20551,10 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             let walker: MapHomeAppleWalkerAnnotation
             if let walkerAnnotation {
                 walker = walkerAnnotation
+                // 구동기 재생 중 화랑이 좌표는 프레임마다 구동기가 정한다. 초당 4번 오는 SwiftUI 값으로 되돌리지 않는다.
+                let keptCoordinate = walker.coordinate
                 walker.update(with: playback)
+                if parent.playbackDriver != nil { walker.coordinate = keptCoordinate }
             } else {
                 walker = MapHomeAppleWalkerAnnotation(playback: playback)
                 walkerAnnotation = walker
@@ -20550,7 +20571,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             if !parent.centersPlayback {
                 lastCenteredPlaybackCoordinate = nil
                 lastCenteredPlaybackTargetPoint = nil
-            } else if MapHomePlaybackCenterPolicy.shouldCenter(
+            } else if parent.playbackDriver == nil, MapHomePlaybackCenterPolicy.shouldCenter(
                 previousCoordinate: lastCenteredPlaybackCoordinate,
                 previousTargetPoint: lastCenteredPlaybackTargetPoint,
                 coordinate: playback.cameraCoordinate,

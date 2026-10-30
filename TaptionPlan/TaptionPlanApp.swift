@@ -43,6 +43,9 @@ struct TaptionPlanApp: App {
                 identifier: TaptionPlanSharedContainer.defaultAppGroupIdentifier
             )
         )
+        #if DEBUG || BENCH
+        BenchSeed.runIfRequested()
+        #endif
     }
 
     var body: some Scene {
@@ -381,3 +384,28 @@ extension Notification.Name {
     )
     static let taptionPlanAlarmTapped = Notification.Name("TaptionPlanAlarmTapped")
 }
+
+#if DEBUG || BENCH
+/// 측정용: `-seedRawExport=<경로>`로 켜면 어제·오늘 원본 센서 기록(`Taption-Raw-2Days-*.json`)을 이 기기 저장소에 넣는다.
+/// 넣은 뒤 앱을 다시 켜면 평소 경로로 분류·경로·재생이 돌아, 다른 기기에서 같은 데이터로 성능과 판정을 잴 수 있다.
+/// `OTHER_SWIFT_FLAGS=-D BENCH`로 만든 측정 빌드와 Debug에만 들어가고 배포 빌드에는 없다(ARC1030A04).
+enum BenchSeed {
+    static func runIfRequested() {
+        guard let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-seedRawExport=") }) else { return }
+        let path = String(argument.dropFirst("-seedRawExport=".count))
+        Task.detached(priority: .utility) {
+            do {
+                let url = path.hasPrefix("/")
+                    ? URL(fileURLWithPath: path)
+                    : FileManager.default.temporaryDirectory.appendingPathComponent(path)
+                let days = try JSONDecoder().decode([TodaySensorRawExport].self, from: Data(contentsOf: url))
+                let readings = days.flatMap(\.readings)
+                try await SensorReadingArchive.applicationSupport().append(readings)
+                TaptionPlanDiagnosticsLogger.shared.record("bench_seed_done", metrics: ["readings": Double(readings.count)])
+            } catch {
+                TaptionPlanDiagnosticsLogger.shared.record("bench_seed_failed", fields: ["error": String(describing: error)])
+            }
+        }
+    }
+}
+#endif
