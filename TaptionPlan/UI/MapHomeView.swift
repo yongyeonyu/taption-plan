@@ -2622,6 +2622,8 @@ struct MapHomeView: View {
         static let horizontalInset: CGFloat = 10
         /// 상단 한 줄의 공통 높이(메모·일정 원형 버튼, 날짜 줄, 날짜 배지).
         static let dateBadgeSize: CGFloat = 40
+        /// 집 아이콘이 붙은 날짜 배지의 전체 높이(집 26 + 간격 2 + 날짜 40 + 위아래 여백 8). 사이드바가 이 아래에 붙어 합쳐진다.
+        static let dateBadgeStackHeight: CGFloat = 76
         /// 상단 한 줄의 위 여백. 메뉴·메모·일정·날짜 배지가 모두 이 값만큼
         /// 내려온 같은 높이에 놓인다(가운데 높이 = topRowInset + dateBadgeSize/2).
         static let topRowInset: CGFloat = 12
@@ -3054,7 +3056,7 @@ struct MapHomeView: View {
                 dateBadge
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .padding(.top, Layout.topRowInset)
-                    .padding(.trailing, Layout.horizontalInset)
+                    .padding(.horizontal, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
             }
 
@@ -3996,18 +3998,21 @@ struct MapHomeView: View {
     /// 메뉴 단추는 하단 맨 왼쪽으로 내렸다(대표 요청, 2026-10-26).
     private var topLeftControls: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
-                    memoCircleButton
-                }
-                MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEventsForSelectedDate.count) {
-                    switch calendarAccessProblem {
-                    case .googleFailed:
-                        model.selectTab(.settings)
-                    case .permissionDenied:
-                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                    case nil:
-                        withAnimation(.snappy) { todayCalendarExpanded.toggle() }
+            // 날짜 줄을 펼치면 이 자리를 날짜 줄이 덮는다.
+            if !isDateWeekExpanded {
+                HStack(spacing: 8) {
+                    if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
+                        memoCircleButton
+                    }
+                    MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEventsForSelectedDate.count) {
+                        switch calendarAccessProblem {
+                        case .googleFailed:
+                            model.selectTab(.settings)
+                        case .permissionDenied:
+                            if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                        case nil:
+                            withAnimation(.snappy) { todayCalendarExpanded.toggle() }
+                        }
                     }
                 }
             }
@@ -6954,16 +6959,17 @@ struct MapHomeView: View {
         .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
-        let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
-        // 오늘이 아니면 위에 집 아이콘, 사이드바가 접혀 있으면 아래에 펼치기 화살표를 붙여 날짜 배지와 한 알약으로 묶는다.
-        let isPlain = isToday && isSidebarVisible
+        // 펼친 동안에는 날짜 칸만 남긴다. 집 아이콘과 화살표는 날짜 줄과 겹치지 않게 숨긴다.
+        let showsHome = dateBadgeShowsHome
+        let showsArrow = !isSidebarVisible && !isDateWeekExpanded
+        let isPlain = !showsHome && !showsArrow
         let badge = VStack(spacing: 2) {
-            if !isToday {
+            if showsHome {
                 homeButton
                     .transition(.scale.combined(with: .opacity))
             }
             face
-            if !isSidebarVisible {
+            if showsArrow {
                 sidebarExpandArrow
             }
         }
@@ -6971,7 +6977,7 @@ struct MapHomeView: View {
         .frame(width: Layout.timeRailWidth)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
         .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
-        return HStack(spacing: 6) {
+        return HStack(alignment: .top, spacing: 6) {
             if isDateWeekExpanded {
                 MapHomeDateStrip(
                     language: language,
@@ -6985,6 +6991,16 @@ struct MapHomeView: View {
             badge
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate))
+    }
+
+    /// 오늘이 아니고 펼치지 않은 때 집 아이콘이 날짜 배지 위에 붙는다.
+    private var dateBadgeShowsHome: Bool {
+        !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) && !isDateWeekExpanded
+    }
+
+    /// 집 아이콘이 붙은 날짜 배지가 사이드바 맨 위와 한 알약으로 합쳐진 상태. 이때 사이드바 접기 버튼은 숨긴다.
+    private var isDateBadgeMerged: Bool {
+        isSidebarVisible && dateBadgeShowsHome
     }
 
     private var header: some View {
@@ -8282,7 +8298,9 @@ struct MapHomeView: View {
         let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
             viewportHeight: viewportSize.height,
             topOverlayHeight: 0,
-            topMargin: Layout.horizontalInset * 2 + Layout.dateBadgeSize,
+            topMargin: isDateBadgeMerged
+                ? Layout.topRowInset + Layout.dateBadgeStackHeight
+                : Layout.horizontalInset * 2 + Layout.dateBadgeSize,
             bottomMargin: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
@@ -8318,6 +8336,8 @@ struct MapHomeView: View {
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
+        // 날짜 배지와 합칠 때 사이드바가 살짝 튕기며 내려왔다 올라앉는다(떨어지는 방울 느낌).
+        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: isDateBadgeMerged)
         .position(x: viewportSize.width / 2, y: frame.midY)
     }
 
@@ -8450,7 +8470,8 @@ struct MapHomeView: View {
                             guard model.isBootstrapped else { return }
                             openSectionEditor(at: selectedMinute)
                         },
-                        onCollapse: {
+                        // 날짜 배지와 합쳐진 동안에는 접기 버튼을 숨긴다.
+                        onCollapse: isDateBadgeMerged ? nil : {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { isSidebarVisible = false }
                         },
                         onUnconfirmedReview: { segment in

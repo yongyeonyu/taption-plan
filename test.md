@@ -4797,3 +4797,16 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## UIX1031A02 오늘 집 아이콘을 날짜 배지와 한 알약으로(2026-10-31)
 - 오늘이 아닐 때만 날짜 배지 위에 집 아이콘을 두고 한 알약으로 묶음. 누르면 오늘과 현재 위치(jumpToTodayAndFitRoutes). 오늘이면 사라짐. 식별자 mapHomeTodayPill 유지.
 - 시뮬레이터 빌드 통과, UI 테스트 testTodayPillAppearsOnPastDatesAndReturnsToToday 통과(`build/validation/UIX1031A02/ui.log`). 화면·실기기 확인 전.
+
+## INS1031A01 아이폰 11 Pro Debug 설치 (2026-10-31)
+- 대상: 실기기 iPhone 11 Pro (`00008030-001628201AD2802E`, physical, available)
+- 빌드: generic iOS Debug 빌드 성공 (`build/validation/INS1031A01/build-device.log`), 번들 `CFBundleVersion` 255
+- 설치: `xcrun devicectl device install app` 성공, `device info apps`에서 BOKKI Plan 1.0 (255) 확인
+- 실행: `devicectl process launch` 성공
+- 제한: 설치·실행만 확인. 날짜 배지·집 아이콘·사이드바 애니메이션의 화면 동작은 기기에서 아직 확인하지 않음. TestFlight 빌드(255)는 최신 UI(8182507, 4034699) 이전 것.
+
+## UIX1031A03 날짜 줄 확대·정렬·사이드바 합침 (2026-10-31)
+- 시뮬레이터 Debug 빌드 성공 (`build/validation/UIX1031A03/build-sim.log`)
+- 시뮬레이터 UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`ui-test.log`)
+- 실기기 iPhone 11 Pro Debug 빌드 성공, 설치·실행 성공 (`build/validation/UIX1031A03/install.log`)
+- 제한: 펼친 날짜 줄의 너비·정렬, 합침 애니메이션은 기기 화면에서 아직 눈으로 확인하지 않음. 물방울식 점성 합침이 아니라 스프링 튕김으로 구현.

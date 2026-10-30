@@ -16,23 +16,10 @@ struct MapHomeDateStrip: View {
     private var calendar: Calendar { TimelineAxisGrid.normalizedCalendar() }
 
     var body: some View {
-        // 시스템 가로 스크롤이라 손가락을 끊김 없이 따라가고 관성도 있다. 손을 뗄 때만 가장 가까운 칸에 스냅한다.
-        let days = MapHomeWeekStripMath.window(
-            around: selectedDate, calendar: calendar, radius: MapHomeWeekStripMath.scrollWindowRadius
-        )
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: MapHomeWeekStripMath.daySpacing) {
-                ForEach(days, id: \.self) { day in
-                    dayCell(day)
-                }
-            }
-            .scrollTargetLayout()
+        // 주어진 폭을 모두 채워 왼쪽 여백 끝까지 펼쳐진다. 날 수는 폭에 따라 달라진다.
+        GeometryReader { proxy in
+            strip(width: proxy.size.width)
         }
-        .contentMargins(.horizontal, (MapHomeWeekStripMath.visibleWidth - MapHomeWeekStripMath.dayWidth) / 2, for: .scrollContent)
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $centeredDay, anchor: .center)
-        .frame(width: MapHomeWeekStripMath.visibleWidth)
-        .padding(.horizontal, 6)
         .frame(height: MapHomeWeekStripMath.height)
         .onAppear { centeredDay = calendar.startOfDay(for: selectedDate) }
         .onChange(of: selectedDate) { _, date in
@@ -40,11 +27,31 @@ struct MapHomeDateStrip: View {
                 centeredDay = calendar.startOfDay(for: date)
             }
         }
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("mapHomeDateWeekStrip")
+    }
+
+    private func strip(width: CGFloat) -> some View {
+        // 시스템 가로 스크롤이라 손가락을 끊김 없이 따라가고 관성도 있다. 손을 뗄 때만 가장 가까운 칸에 스냅한다.
+        let days = MapHomeWeekStripMath.window(
+            around: selectedDate, calendar: calendar, radius: MapHomeWeekStripMath.scrollWindowRadius
+        )
+        return ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: MapHomeWeekStripMath.daySpacing) {
+                ForEach(days, id: \.self) { day in
+                    dayCell(day)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .contentMargins(.horizontal, (width - MapHomeWeekStripMath.dayWidth) / 2, for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $centeredDay, anchor: .center)
+        .frame(width: width)
+        .frame(height: MapHomeWeekStripMath.height)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func dayCell(_ day: Date) -> some View {
