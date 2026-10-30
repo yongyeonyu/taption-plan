@@ -4752,3 +4752,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1030A05 TestFlight 254(2026-10-30)
 - `release.sh --yes` 종료 0: 빌드 254 처리 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A05/testflight-report.json`. 기기 설치·기능 확인은 별도.
+
+## RVW1030A01 코드 리뷰 반영 검증(2026-10-30)
+- 시뮬레이터(BOKKI-iPhone11): TaptionActivityEngineAdapterTests·TaptionBackupV2Tests·MapHomeLiveMapTests 통과(`build/validation/RVW1030A01/targeted3.log`).
+- 실기기(소설가유모씨의 iPhone 11 Pro, devicectl 기본): 같은 3묶음 116개 전부 통과, NaN 테스트 `evidenceTravelLookupPreservesFirstMatchAndInclusiveBoundaries` 포함(`build/validation/RVW1030A01/dev11-targeted.log`). 이전 기기 NaN 실패는 이 변경으로 해결됨. 전체 기기 스위트는 아직 안 돌림.
+- 디스크가 꽉 차 실패 → 대표 승인 후 DerivedData만 비움(8.6GB). build/ 산출물·시뮬레이터는 그대로.

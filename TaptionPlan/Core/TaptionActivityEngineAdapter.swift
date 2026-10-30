@@ -828,31 +828,19 @@ enum TaptionActivityEngineAdapter {
             return lhs < rhs
         }
 
-        // Date's <= treats NaN as true, so normalize NaN interval edges to infinities.
-        let negativeInfinity = Date(timeIntervalSinceReferenceDate: -.infinity)
-        let positiveInfinity = Date(timeIntervalSinceReferenceDate: .infinity)
+        // NaN 경계 구간은 어떤 판독과도 매칭하지 않는다(TimeSpan.contains와 같은 규칙).
         var intervalStarts: [Date] = []
         var intervalEnds: [Date] = []
         intervalStarts.reserveCapacity(travel.count)
         intervalEnds.reserveCapacity(travel.count)
-        for segment in travel {
-            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
-            intervalStarts.append(
-                segment.span.start.timeIntervalSinceReferenceDate.isNaN
-                    ? negativeInfinity
-                    : segment.span.start
-            )
-            intervalEnds.append(
-                segment.span.end.timeIntervalSinceReferenceDate.isNaN
-                    ? positiveInfinity
-                    : segment.span.end
-            )
-        }
         var travelIndices: [Int] = []
         travelIndices.reserveCapacity(travel.count)
         for index in travel.indices {
             try recordWork(&operationCount, cancellationCheck: cancellationCheck)
-            travelIndices.append(index)
+            let span = travel[index].span
+            intervalStarts.append(span.start)
+            intervalEnds.append(span.end)
+            if !span.isNaNBounded { travelIndices.append(index) }
         }
         let orderedTravel = try cancellableSort(
             travelIndices,
@@ -870,13 +858,6 @@ enum TaptionActivityEngineAdapter {
         for _ in readings.indices {
             try recordWork(&operationCount, cancellationCheck: cancellationCheck)
             matches.append(nil)
-        }
-        // A NaN reading satisfied both original span comparisons for every interval.
-        for index in readings.indices {
-            try recordWork(&operationCount, cancellationCheck: cancellationCheck)
-            if readings[index].timestamp.timeIntervalSinceReferenceDate.isNaN {
-                matches[index] = 0
-            }
         }
         guard !orderedReadings.isEmpty else {
             try cancellationCheck()

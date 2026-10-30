@@ -947,11 +947,13 @@ actor TaptionBackupEngine {
         try openHeader(public: try TaptionBackupFileReader.readPublicHeader(at: url), scope: scope, password: password)
     }
 
-    /// 같은 솔트·반복 횟수의 키는 작업 하나 안에서 한 번만 유도한다(작업이 끝나면 버린다).
+    /// 같은 솔트·반복 횟수·비밀번호의 키는 작업 하나 안에서 한 번만 유도한다(작업이 끝나면 버린다).
+    /// 비밀번호 해시를 캐시 키에 넣어, 틀린 비밀번호가 캐시된 키로 통과하지 않게 한다.
     private func openHeader(
         public publicHeader: TaptionBackupPublicHeader, scope: TaptionBackupScope, password: String
     ) throws -> (header: TaptionBackupHeader, key: SymmetricKey) {
-        let cacheID = "\(publicHeader.kdf.salt)|\(publicHeader.kdf.iterations)"
+        let passwordDigest = SHA256.hash(data: Data(password.utf8)).map { String(format: "%02x", $0) }.joined()
+        let cacheID = "\(publicHeader.kdf.salt)|\(publicHeader.kdf.iterations)|\(passwordDigest)"
         let opened = try TaptionBackupFileReader.open(
             public: publicHeader, scopeKey: scope.key, password: password,
             minimumIterations: configuration.minimumIterations, cachedKey: keyCache[cacheID]

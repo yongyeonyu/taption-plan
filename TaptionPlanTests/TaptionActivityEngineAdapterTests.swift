@@ -181,19 +181,21 @@ struct TaptionActivityEngineAdapterTests {
 
         #expect(evidence.map(\.id) == readings.map(\.id))
         #expect(indexedMatches.indices == referenceMatches)
+        // NaN 시각과 NaN 경계 구간은 어떤 구간에도 매칭되지 않는다(기기·시뮬레이터 공통 규칙).
+        #expect(referenceMatches == [1, 0, 0, nil, 2, nil, nil, nil])
         #expect(evidence.map(\.detailHint) == [
             "movement.bus",
             "movement.subway",
             "movement.subway",
-            "movement.running",
+            nil,
             "movement.walking",
-            "movement.running",
-            "movement.cycling",
-            "movement.subway"
+            nil,
+            nil,
+            nil
         ])
         #expect(evidence.map(\.categoryHint) == [
-            "movement", "movement", "movement", "movement",
-            "movement", "movement", "movement", "movement"
+            "movement", "movement", "movement", nil,
+            "movement", nil, nil, nil
         ])
     }
 

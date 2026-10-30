@@ -1945,17 +1945,15 @@ enum MapHomeGrowthAccessoryCatalog {
 /// playback marker), so decode the stored JSON once per stored value.
 @MainActor
 final class MapHomeGrowthHistoryCache {
-    private var data = Data()
+    private var data: Data?
+    /// 실패한 디코딩도 캐시한다. 빈 데이터(새 사용자)마다 디코더를 다시 만들지 않게 한다.
     private var decoded: MapHomeGrowthHistory?
 
     func history(for data: Data) -> MapHomeGrowthHistory? {
-        if let decoded, self.data == data { return decoded }
-        guard let value = try? JSONDecoder().decode(MapHomeGrowthHistory.self, from: data) else {
-            return nil
-        }
+        if self.data == data { return decoded }
         self.data = data
-        decoded = value
-        return value
+        decoded = try? JSONDecoder().decode(MapHomeGrowthHistory.self, from: data)
+        return decoded
     }
 }
 

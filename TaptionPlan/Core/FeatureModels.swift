@@ -766,8 +766,14 @@ struct TimeSpan: Codable, Hashable, Sendable {
         return TimeSpan(start: lower, end: upper)
     }
 
+    /// NaN 시각이나 NaN 경계는 어떤 구간에도 속하지 않는다. Date 비교의 NaN 결과는 기기 런타임마다 다르다.
     func contains(_ date: Date) -> Bool {
-        start <= date && date <= end
+        guard !date.timeIntervalSinceReferenceDate.isNaN, !isNaNBounded else { return false }
+        return start <= date && date <= end
+    }
+
+    var isNaNBounded: Bool {
+        start.timeIntervalSinceReferenceDate.isNaN || end.timeIntervalSinceReferenceDate.isNaN
     }
 }
 

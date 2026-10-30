@@ -1,6 +1,6 @@
 {
   "files": 151,
-  "lines": 165222,
+  "lines": 165209,
   "buckets": {
     "<500": 94,
     "500-1000": 20,
@@ -24,20 +24,20 @@
     "singleton_reach": 331
   },
   "metrics": {
-    "largest_file_lines": 22527,
+    "largest_file_lines": 22525,
     "largest_type_lines": 13594
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/AppleIntegrations.swift": 4870,
-    "TaptionPlan/Core/FeatureModels.swift": 4694,
+    "TaptionPlan/Core/FeatureModels.swift": 4700,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
     "TaptionPlan/Core/PlanRepository.swift": 1374,
     "TaptionPlan/Core/PlanningEngine.swift": 3134,
     "TaptionPlan/Core/RecordSummaryEngine.swift": 3287,
     "TaptionPlan/Core/RouteTimelineData.swift": 3409,
     "TaptionPlan/Core/SensorFusion.swift": 6502,
-    "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1892,
+    "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1873,
     "TaptionPlan/Core/TaptionStoreV2.swift": 1377,
     "TaptionPlan/Core/WatchConnectivitySupport.swift": 1358,
     "TaptionPlan/Core/WatchSyncModels.swift": 3562,
@@ -52,7 +52,7 @@
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1378,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3145,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1342,
-    "TaptionPlan/UI/MapHomeView.swift": 22527,
+    "TaptionPlan/UI/MapHomeView.swift": 22525,
     "TaptionPlan/UI/ReviewView.swift": 4817,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
     "TaptionPlan/UI/SettingsView.swift": 2322,
@@ -64,7 +64,7 @@
   "largest_files": [
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
-      "lines": 22527,
+      "lines": 22525,
       "largest_type": "struct MapHomeView",
       "largest_type_lines": 11322,
       "types": 184
@@ -106,7 +106,7 @@
     },
     {
       "path": "TaptionPlan/Core/FeatureModels.swift",
-      "lines": 4694,
+      "lines": 4700,
       "largest_type": "struct AppFeatureSettings",
       "largest_type_lines": 514,
       "types": 131
@@ -196,7 +196,7 @@
     {
       "path": "TaptionPlan/Core/TaptionActivityEngineAdapter.swift",
       "type": "enum TaptionActivityEngineAdapter",
-      "lines": 1443
+      "lines": 1424
     },
     {
       "path": "TaptionPlan/Core/RouteTimelineData.swift",
