@@ -3230,7 +3230,7 @@ struct MapHomeView: View {
                 logStatuses: { month in
                     let actuals = model.snapshot.actuals
                     let travel = model.snapshot.travel
-                    return await Task.detached(priority: .userInitiated) {
+                    let base = await Task.detached(priority: .userInitiated) {
                         MapHomeCalendarLogStatusPolicy.statuses(
                             actuals: actuals,
                             travel: travel,
@@ -3239,6 +3239,7 @@ struct MapHomeView: View {
                             calendar: MapHomeGrowthPolicy.localCalendar
                         )
                     }.value
+                    return await calendarLogStatusesFillingGaps(base, month: month)
                 },
                 timeTotals: { month in await calendarTimeTotals(month: month, includePhotos: true) },
                 liveTotals: { month in await calendarTimeTotals(month: month, includePhotos: false) },
@@ -5985,6 +5986,33 @@ struct MapHomeView: View {
                 )
             }
         }
+        // 오늘 라이브 화면에서는 경로 계산(분류된 기록)이 현재 위치보다 늦게 따라온다. 마지막 발자국 뒤의 최신 위치를 바로 이어 붙여
+        // 발자국이 화랑이 발밑까지 닿게 한다. 재생 중에는 구동기가 따로 맡는다(대표 지적 "발자국이 늦게 생성", ARC1030A03).
+        if playbackDriver == nil, Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
+            let tailCutoff = routeOverlayCutoff
+            var tailStart = result.compactMap(\.timestamp).max() ?? .distantPast
+            var previous = result.last?.coordinate
+            var tailCount = 0
+            for reading in normalizedRouteReadings.suffix(120) where reading.timestamp > tailStart && reading.timestamp <= tailCutoff {
+                guard let point = reading.point, isValid(point) else { continue }
+                let coordinate = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
+                if let previous, hypot(
+                    coordinate.latitude - previous.latitude,
+                    RouteTimelineLongitude.shortestDelta(from: previous.longitude, to: coordinate.longitude)
+                ) < 0.00035 { continue }
+                let angle = previous.map {
+                    atan2(coordinate.longitude - $0.longitude, coordinate.latitude - $0.latitude) * 180 / .pi
+                } ?? 0
+                result.append(PawprintWaypoint(
+                    index: result.count, coordinate: coordinate, angle: angle, isPredicted: false,
+                    timestamp: reading.timestamp, speedMetersPerSecond: reading.speedMetersPerSecond
+                ))
+                previous = coordinate
+                tailStart = reading.timestamp
+                tailCount += 1
+                if tailCount >= 40 { break }
+            }
+        }
         let inferredBudgets = MapHomePawprintInteractionPolicy.distributedCounts(sampleCounts: inferredCounts,
             latestTimestamps: confirmedSegments.map { $0.route.span.end } + predictedSegments.map { $0.route.span.end },
             limit: hardCap - result.count)
@@ -7562,6 +7590,31 @@ struct MapHomeView: View {
     }
 
     /// 날짜별 기록(지도가 쓰는 출처)으로 한 달 합계를 만든다. 오늘까지의 날짜만 본다.
+    /// 저장된 기록 목록에 없는 날(최근 이틀처럼 지도에는 보이는 날)은 날짜별 기록에서 다시 판정해 달력 점을 채운다.
+    /// 지도와 같은 출처를 쓰므로, 지도에는 기록이 있는데 달력 점만 비는 일이 없다(대표 지적 "달력 점 안나옴", ARC1030A03).
+    private func calendarLogStatusesFillingGaps(
+        _ base: [Date: MapHomeCalendarLogStatus], month: Date
+    ) async -> [Date: MapHomeCalendarLogStatus] {
+        let calendar = MapHomeGrowthPolicy.localCalendar
+        guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
+              let days = calendar.range(of: .day, in: .month, for: first) else { return base }
+        var result = base
+        var filled = 0
+        for offset in 0..<days.count {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: first), day <= .now,
+                  result[day] == nil,
+                  let data = await model.cachedPlanDayDataSnapshot(for: day) else { continue }
+            let statuses = MapHomeCalendarLogStatusPolicy.statuses(
+                actuals: data.actuals, travel: data.travel, month: day, asOf: .now, calendar: calendar
+            )
+            if let status = statuses[day] { result[day] = status; filled += 1 }
+        }
+        if filled > 0 {
+            TaptionPlanDiagnosticsLogger.shared.record("calendar_log_status_filled", metrics: ["filled": Double(filled)])
+        }
+        return result
+    }
+
     private func dayFallbackTotals(month: Date) async -> [Date: [String: TimeInterval]] {
         let calendar = MapHomeGrowthPolicy.localCalendar
         guard let first = calendar.date(from: calendar.dateComponents([.year, .month], from: month)),
@@ -11056,10 +11109,13 @@ struct MapHomeView: View {
         )
         guard didApply else { return }
         applyInitialMapFocusIfNeeded()
-        if MapHomePlaybackCameraPolicy.allowsAutomaticFit(
-            isPlaybackRunning: isDayPlaybackRunning,
-            hasUserAdjustedMap: hasUserAdjustedMap
-        ) {
+        // 현재 위치를 따라가는 중에는 예상 경로가 갱신돼도 "경로 전체 보기"로 카메라를 끌어가지 않는다.
+        // 갱신이 끝날 때마다 전체 보기와 현재 위치 따라가기가 번갈아 카메라를 옮겨 화면이 왔다 갔다 했다(대표 영상, ARC1030A02).
+        if !userTrackingMode.keepsCameraLocked,
+           MapHomePlaybackCameraPolicy.allowsAutomaticFit(
+               isPlaybackRunning: isDayPlaybackRunning,
+               hasUserAdjustedMap: hasUserAdjustedMap
+           ) {
             focusMapOnAllRoutes()
         }
         persistMapDayCache()

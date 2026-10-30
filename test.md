@@ -4690,3 +4690,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1030A02 빌드 251 배포(2026-10-30)
 - `release.sh --yes --request-id TFB1030A02` 종료 코드 0. 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A02/testflight-report.json`.
 - 포함: ARC1030A02 재생 버그·날짜 줄 스크롤·Apple 지도 안개 뷰. 아이폰은 출근 중이라 USB 설치는 하지 못했고 실기기 눈 확인은 아직이다.
+
+## ARC1030A03 검증(2026-10-30)
+- 단위 테스트 `build/validation/ARC1030A03/t2`: 1,688개 중 통과 1,684, 실패 1(`testStoreKitProductPurchaseEntitlementAndRestore`, 시뮬레이터 앱 실행 오류와 함께 24초 지연), 건너뜀 3. 단독 재실행 `t3` 통과. 이전 전체 실행 `t1`은 1,685 통과·실패 0(앞 두 수정 시점).
+- 실기기 눈 확인 전: 카메라 충돌 해소, 발자국 꼬리, 달력 점 채움.

@@ -1952,7 +1952,7 @@ enum MapHomeAlarmKind: String, CaseIterable, Codable, Identifiable {
         case .arriveHome: language.text("집에 왔어요", "Home")
         case .leaveHome: language.text("외출했어요", "Left home")
         case .wakeUp: language.text("일어났어요", "Woke up")
-        case .dailyCard: language.text("자정 하루 요약 카드", "Midnight day card")
+        case .dailyCard: language.text("어제 하루 요약 카드", "Yesterday's day card")
         case .rateChange: language.text("시급 변동(±3%)", "Hourly rate moved (±3%)")
         case .breakEven: language.text("퇴근 손익분기", "Overtime break-even")
         }
@@ -1965,7 +1965,7 @@ enum MapHomeAlarmKind: String, CaseIterable, Codable, Identifiable {
         case .leaveCompany, .leaveSchool, .leaveAcademy, .leaveHome:
             language.text("장소를 떠나 3분이 지나면 알려요.", "Three minutes after leaving the place.")
         case .wakeUp: language.text("수면 구간이 끝나면 알려요(하루 한 번).", "When the sleep span ends (once a day).")
-        case .dailyCard: language.text("자정 5분 뒤 어제 카드를 보고 저장·공유할 수 있어요.", "At 00:05 open yesterday's card to save or share.")
+        case .dailyCard: language.text("설정한 시각(기본 오전 8시)에 어제 카드를 보고 저장·공유할 수 있어요.", "At your set time (8:00 by default) open yesterday's card to save or share.")
         case .rateChange: language.text("추정 시급이 3% 이상 움직이면 알려요(30분에 한 번).", "When the estimated rate moves 3%+ (max every 30 min).")
         case .breakEven: language.text("근무 중 1시간 안에 시급이 기준의 90% 아래로 내려가면 알려요.", "When another hour of work would push the rate below 90% of base.")
         }
@@ -2201,6 +2201,7 @@ final class MapHomeAlarmCenter {
     static let deliveredKey = "mapHomeAlarmDelivered"
     static let lastRateKey = "mapHomeAlarmLastRate"
     static let dailyCardIdentifier = "taption-alarm-dailyCard"
+    private var lastDailyCardSignature = ""
     static let userInfoKind = "taptionAlarm"
     static let userInfoDay = "taptionAlarmDay"
     static let userInfoAt = "taptionAlarmAt"
@@ -2299,10 +2300,41 @@ final class MapHomeAlarmCenter {
         let time = MapHomeAlarmSettings.dailyCardTime
         components.hour = time.hour
         components.minute = time.minute
-        try? await center.add(UNNotificationRequest(
-            identifier: Self.dailyCardIdentifier, content: content,
-            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-        ))
+        var failure = "none"
+        do {
+            try await center.add(UNNotificationRequest(
+                identifier: Self.dailyCardIdentifier, content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+            ))
+        } catch {
+            failure = String(describing: error)
+        }
+        await logDailyCardSchedule(center: center, failure: failure)
+    }
+
+    /// 하루 카드가 실제로 예약돼 있는지와 알림 설정을 남긴다. 알림은 iOS가 앱 밖에서 보내 로그에 남지 않으므로,
+    /// 안 왔을 때 "예약이 있었는가·다음 시각·요약 전달에 묶였는가"를 이 기록으로 가린다(ARC1030A03). 값이 바뀔 때만 남긴다.
+    private func logDailyCardSchedule(center: UNUserNotificationCenter, failure: String) async {
+        let settings = await center.notificationSettings()
+        let pending = await center.pendingNotificationRequests().first { $0.identifier == Self.dailyCardIdentifier }
+        let next = (pending?.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate()
+        let nextText = next.map { String(Int($0.timeIntervalSince1970)) } ?? "none"
+        let signature = [
+            String(settings.authorizationStatus.rawValue), String(settings.alertSetting.rawValue),
+            String(settings.scheduledDeliverySetting.rawValue), String(settings.lockScreenSetting.rawValue),
+            pending == nil ? "no" : "yes", nextText, failure,
+        ].joined(separator: "|")
+        guard signature != lastDailyCardSignature else { return }
+        lastDailyCardSignature = signature
+        TaptionPlanDiagnosticsLogger.shared.record("daily_card_schedule", fields: [
+            "auth": String(settings.authorizationStatus.rawValue),
+            "alert": String(settings.alertSetting.rawValue),
+            "scheduled_delivery": String(settings.scheduledDeliverySetting.rawValue),
+            "lock_screen": String(settings.lockScreenSetting.rawValue),
+            "pending": pending == nil ? "false" : "true",
+            "next_epoch": nextText,
+            "error": failure,
+        ])
     }
 
     @discardableResult
