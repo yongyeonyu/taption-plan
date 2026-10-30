@@ -4500,7 +4500,7 @@ final class TimeScaleTests: XCTestCase {
         )
         XCTAssertEqual(
             MapHomeDayPlaybackMath.movingMinutesPerSecond,
-            5,
+            2.5,
             accuracy: 0.000_001
         )
     }
@@ -4616,7 +4616,7 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testMapHomeDayPlaybackUsesOneTwentyFourthSpeedInsideMovement() {
+    func testMapHomeDayPlaybackUsesOneFortyEighthSpeedInsideMovement() {
         let ranges = [
             MapHomePlaybackMovementRange(startMinute: 60, endMinute: 120)
         ]
@@ -4627,7 +4627,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            62.5,
+            61.25,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4636,12 +4636,12 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            65.0,
+            62.5,
             accuracy: 0.000_001
         )
     }
 
-    /// 걷기는 초당 15분(PLY1029A01). 이동 기본 배속이 초당 5분이 되면서(PLY1029A04) 배수는 3배다.
+    /// 걷기는 초당 7.5분(PLY1029A01). 이동 기본 배속이 초당 2.5분이 되면서(ARC1030A02, 지금의 절반) 배수는 3배다.
     /// 차량·달리기는 기본 배속 그대로다. 이름의 1/24는 정지 배속이 60분/초이던 시절 기준이라
     /// 지금 값(정지 120분/초의 1/48)과 맞지 않아 이름과 기대값을 함께 고쳤다.
     func testMapHomeDayPlaybackRunsWalkingSixTimesFasterThanVehicles() {
@@ -4653,7 +4653,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .walking),
                 ]
             ),
-            75.0,
+            67.5,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4664,7 +4664,7 @@ final class TimeScaleTests: XCTestCase {
                     .init(startMinute: 60, endMinute: 120, mode: .car),
                 ]
             ),
-            65.0,
+            62.5,
             accuracy: 0.000_001
         )
     }
@@ -4680,7 +4680,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            63.75,
+            61.875,
             accuracy: 0.000_001
         )
         XCTAssertEqual(
@@ -4689,7 +4689,7 @@ final class TimeScaleTests: XCTestCase {
                 elapsedSeconds: 1,
                 normalizedMovingRanges: ranges
             ),
-            115.0,
+            112.5,
             accuracy: 0.000_001
         )
     }

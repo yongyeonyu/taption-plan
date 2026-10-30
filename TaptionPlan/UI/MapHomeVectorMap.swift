@@ -667,6 +667,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     var playbackDriver: MapHomePlaybackDriver? = nil
     /// 구동기가 계산한 화랑이의 화면 좌표. SwiftUI 오버레이가 이 점에 화랑이를 둔다.
     var onPlaybackStickmanPoint: (CGPoint) -> Void = { _ in }
+    /// 재생 중 프레임마다(최대 60Hz) 투영한 뷰포트. 장소·발자국 오버레이가 지도와 함께 움직이게 한다.
+    var onPlaybackViewport: (MapHomeVectorViewport) -> Void = { _ in }
     let onViewportChange: (MapHomeVectorViewport, Bool) -> Void
     let onSingleFingerPanBegan: () -> Void
     let onSingleFingerPanEnded: () -> Void
@@ -744,6 +746,28 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 animated: false
             )
             parent.onPlaybackStickmanPoint(mapView.convert(coordinate, toPointTo: mapView))
+            let now = ProcessInfo.processInfo.systemUptime
+            guard now - lastPlaybackViewportUptime >= 1.0 / 60.0 else { return }
+            lastPlaybackViewportUptime = now
+            parent.onPlaybackViewport(currentViewport(of: mapView))
+        }
+
+        private var lastPlaybackViewportUptime: TimeInterval = 0
+
+        private func currentViewport(of mapView: MLNMapView) -> MapHomeVectorViewport {
+            let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds)
+            let camera = mapView.camera
+            return MapHomeVectorViewport(
+                center: mapView.centerCoordinate,
+                span: MKCoordinateSpan(latitudeDelta: span.latitudeDelta, longitudeDelta: span.longitudeDelta),
+                cameraDistance: max(camera.altitude, 1),
+                heading: camera.heading,
+                pitch: camera.pitch,
+                markerPoints: Dictionary(
+                    parent.markers.map { ($0.id, mapView.convert($0.coordinate, toPointTo: mapView)) },
+                    uniquingKeysWith: { first, _ in first }
+                )
+            )
         }
         private weak var mapView: MLNMapView?
         private var lastCameraRevision = Int.min

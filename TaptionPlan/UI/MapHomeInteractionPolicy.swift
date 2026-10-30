@@ -735,6 +735,8 @@ final class MapHomeVectorViewportStore {
     private var stickmanProjection = MapHomeStickmanViewportProjection()
     /// 재생 중 화랑이 점. 관찰하지 않는다: 매 프레임 바뀌어도 오버레이 전체를 다시 그리지 않는다(PLY1029A05).
     @ObservationIgnored private(set) var livePoint: CGPoint?
+    /// 재생 중 지도 엔진이 프레임마다 투영한 뷰포트. 오버레이(발자국·장소 아이콘·화살표)가 이 값으로 지도와 함께 움직인다(ARC1030A02).
+    @ObservationIgnored var livePlaybackViewport: MapHomeVectorViewport?
     @ObservationIgnored private var lastObservedUptime: TimeInterval = 0
     /// 재생 중 관찰되는 값(안개·급여 위치 등)을 갱신하는 간격. 화랑이 마커는 `livePoint`로 매 프레임 움직인다.
     static let playbackObservedInterval: TimeInterval = 0.25

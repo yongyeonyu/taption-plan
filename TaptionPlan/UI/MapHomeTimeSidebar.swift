@@ -1187,7 +1187,11 @@ struct MapHomeTimeSidebar: View {
         )
     }
 
+    /// 구동기 재생 중이면 4Hz로 오는 분 변화를 선형 애니메이션으로 이어, 손잡이·눈금이 끊기지 않고 내려간다(ARC1030A02).
+    private let smoothsPlayback: Bool
+
     init(
+        smoothsPlayback: Bool = false,
         date: Date,
         selectedMinute: Binding<Int>,
         visibleStartMinute: Binding<Int>,
@@ -1204,6 +1208,7 @@ struct MapHomeTimeSidebar: View {
         onSectionEdit: ((Int) -> Void)? = nil,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
+        self.smoothsPlayback = smoothsPlayback
         self.date = date
         self._selectedMinute = selectedMinute
         self._visibleStartMinute = visibleStartMinute
@@ -1276,6 +1281,11 @@ struct MapHomeTimeSidebar: View {
                 }
     }
 
+    /// 측정용: `-benchHide=glass,segments,labels`(ARC1030A01).
+    static func benchHidden(_ name: String) -> Bool {
+        ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
+    }
+
     var body: some View {
         sidebarBody
     }
@@ -1326,6 +1336,7 @@ struct MapHomeTimeSidebar: View {
 
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
+                    if !Self.benchHidden("glass") {
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(Color.clear)
                         .frame(width: railWidth, height: railHeight)
@@ -1345,6 +1356,7 @@ struct MapHomeTimeSidebar: View {
                         }
                         .shadow(color: .black.opacity(0.05), radius: 7, y: 2)
                         .allowsHitTesting(false)
+                    }
 
                     Rectangle()
                         .fill(.clear)
@@ -1395,7 +1407,7 @@ struct MapHomeTimeSidebar: View {
                     Rectangle()
                         .fill(MapHomeTimeSidebarStyle.trackBackground)
 
-                    ForEach(visibleSegments) { segment in
+                    ForEach(Self.benchHidden("segments") ? [] : visibleSegments) { segment in
                         let start = max(min(segment.startMinute, visibleWindow.upperBound), visibleWindow.lowerBound)
                         let end = min(max(segment.endMinute, visibleWindow.lowerBound), visibleWindow.upperBound)
                         if start < end {
@@ -1459,6 +1471,20 @@ struct MapHomeTimeSidebar: View {
                     let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
                         durationMinutes: visibleDurationMinutes
                     )
+                    if smoothsPlayback {
+                        ForEach(minuteMarks.filter { showsMinuteTicks || $0.isMultiple(of: 10) }, id: \.self) { mark in
+                            let isTenMinute = mark.isMultiple(of: 10)
+                            let width = isTenMinute ? rulerTickWidth : rulerTickWidth / 2
+                            Rectangle()
+                                .fill(Color.tpSecondary.opacity(isTenMinute ? 0.54 : 0.22))
+                                .frame(width: width, height: 1)
+                                .position(
+                                    x: railOriginX + railWidth - numericColumnWidth + width / 2,
+                                    y: verticalInset + trackHeight * MapHomeTimeSidebarMath.position(minute: mark, window: visibleWindow)
+                                )
+                                .allowsHitTesting(false)
+                        }
+                    } else {
                     Canvas { context, size in
                         for minuteMark in minuteMarks {
                             guard showsMinuteTicks || minuteMark.isMultiple(of: 10) else {
@@ -1488,8 +1514,9 @@ struct MapHomeTimeSidebar: View {
                         y: railHeight / 2
                     )
                     .allowsHitTesting(false)
+                    }
 
-                    ForEach(rulerRows) { row in
+                    ForEach(Self.benchHidden("labels") ? [] : rulerRows) { row in
                         let minuteMark = row.minute
                         let y = verticalInset + trackHeight * MapHomeTimeSidebarMath.position(
                             minute: minuteMark,
@@ -1614,6 +1641,7 @@ struct MapHomeTimeSidebar: View {
                 height: railHeight,
                 alignment: .topLeading
             )
+            .animation(smoothsPlayback ? .linear(duration: 0.26) : nil, value: minute)
             .coordinateSpace(name: "mapHomeTimeSidebarRail")
             .contentShape(Rectangle())
             .confirmationDialog(

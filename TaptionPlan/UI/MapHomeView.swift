@@ -660,8 +660,8 @@ enum MapHomeDayPlaybackMath {
     static let mapFocusInterval: TimeInterval = 0.008
     /// 정지 구간(업무·수면·활동 등)은 초당 120분으로 지나간다(대표 지시, PLY1020W01). 화면 시험은 `-slowDayPlayback`으로 이 배속만 늦춘다.
     static let stationaryMinutesPerSecond = 120.0 * MapHomeDayPlaybackTestHooks.rateScale
-    /// 이동 구간은 초당 5분, 곧 정지 배속 120분의 1/24로 재생한다(대표 지시 PLY1029A04 "2배 빠르게"; 그 전 PLY1020C01은 1/48).
-    static let movementPlaybackMultiplier = 1.0 / 24.0
+    /// 이동 구간은 초당 2.5분, 곧 정지 배속 120분의 1/48로 재생한다(대표 지시 ARC1030A02 "지금의 절반"; PLY1029A04에서 1/24였다).
+    static let movementPlaybackMultiplier = 1.0 / 48.0
     static let movingMinutesPerSecond = stationaryMinutesPerSecond * movementPlaybackMultiplier
 
     static func playbackEndMinute(
@@ -2505,6 +2505,16 @@ struct MapHomeView: View {
     /// 마지막 경로 계산의 입력 요약. 같으면 다시 계산하지 않는다.
     @State private var routeProjectionInputKey: RouteProjectionInputKey?
     @State private var routeProjectionTask: Task<Void, Never>?
+    @State private var routeProjectionRunID = 0
+    /// 재생 시작 때 한 번 계산한 하루 전체 경로. 발자국은 이것을 화랑이의 현재 시각까지만 보여 준다(ARC1030A02).
+    @State private var playbackFullOverlays: [MapHomeTimelineRouteOverlay]?
+    @State private var playbackFullOverlaysTask: Task<Void, Never>?
+    @State private var routeProjectionApplied = 0
+    @State private var routeProjectionSkips = [0, 0, 0]
+    @State private var routeProjectionLastMS = 0.0
+    @State private var lastPlaybackTraceUptime: TimeInterval = 0
+    @State private var routeProjectionInFlight = false
+    @State private var routeProjectionDirty = false
     @State private var routeActualIndex: RouteTimelineDataEngine.ActualIndex?
     @State private var wbsPlaybackProjection: MapHomeWBSPlaybackProjection?
     @State private var dayDataSnapshot: PlanDayDataSnapshot?
@@ -4288,7 +4298,8 @@ struct MapHomeView: View {
         guard let prepared = await model.planDaySourceSnapshot(for: date, reusing: dayDataSnapshot),
               !Task.isCancelled, prepared.sourceRevision == model.dayProjectionRevision,
               Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: model.selectedDate) else { return }
-        if currentDayDataSnapshot == nil {
+        if currentDayDataSnapshot == nil
+            || (prepared.isComplete && prepared.sourceRevision != dayDataSnapshot?.sourceRevision) {
             dayDataSnapshot = prepared
             dayDataIsPreview = !prepared.isComplete
             reportInitialMapShellReadyIfNeeded(for: model.selectedDate)
@@ -4437,6 +4448,9 @@ struct MapHomeView: View {
             onPlaybackStickmanPoint: { point in
                 vectorMapViewportStore.publishPlaybackPoint(point, nowUptime: ProcessInfo.processInfo.systemUptime)
             },
+            onPlaybackViewport: { viewport in
+                vectorMapViewportStore.livePlaybackViewport = viewport
+            },
             onViewportChange: { viewport, isFinal in
                 guard cameraRevision == mapCameraRevision else { return }
                 applyVectorMapViewport(viewport, isFinal: isFinal)
@@ -4452,7 +4466,7 @@ struct MapHomeView: View {
         )
         .id(style.rawValue)
         .overlay {
-            MapHomeVectorViewportOverlay(store: vectorMapViewportStore) {
+            MapHomeVectorViewportOverlay(store: vectorMapViewportStore, isLive: playbackDriver != nil) {
                 viewport, stickmanPoint in
                 vectorMapAnnotationOverlay(
                     style: style,
@@ -5308,8 +5322,14 @@ struct MapHomeView: View {
     private var predictedMapRoutes: [MapPredictedRoute] {
         let probe = MapHomePlaybackProbe.begin("predictedMapRoutes"); defer { MapHomePlaybackProbe.end(probe) }
         let cutoff = routeOverlayCutoff
-        var routes = expectedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
-        routes += wbsGeneratedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
+        // 지난 날짜에는 예상 경로(일정·학습으로 만든 회색 경로)와 공백 추정을 만들지 않는다. 실제 이동에서 풀린 지하철 구간만 남긴다.
+        // 예전에는 지하철 예상 경로가 "rail"로 남아, 차로 이동한 날에도 지하철 회색 발자국이 계속 나왔다(ARC1030A02).
+        let isPastDay = !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+        var routes: [MapPredictedRoute] = []
+        if !isPastDay {
+            routes += expectedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
+            routes += wbsGeneratedRouteOverlays.filter { $0.departureDate < cutoff }.map { predictedRoute(for: $0) }
+        }
         routes += subwayRouteOverlays.compactMap { predictedRoute(for: $0) }
         // 하루 전체에서 한 번 구한 틈을 컷오프로 거른다. 틈은 앞뒤 두 위치로 정해지므로 컷오프로 먼저 자르는 것과 같다(ARC1030A01).
         let allGaps = predictedGapsMemo.value(for: MapHomeReadingsSignature(
@@ -5319,7 +5339,7 @@ struct MapHomeView: View {
         )) {
             MapHomeGPSGapPredictionPolicy.predictedGaps(from: normalizedRouteReadings)
         }
-        routes += allGaps.filter { $0.end.timestamp <= cutoff }.compactMap { gap in
+        routes += (isPastDay ? [] : allGaps).filter { $0.end.timestamp <= cutoff }.compactMap { gap in
             guard let first = gap.start.point, let last = gap.end.point else { return nil }
             return MapPredictedRoute(source: "gps-gap", travelID: nil, mode: .walking,
                 span: TimeSpan(start: gap.start.timestamp, end: gap.end.timestamp),
@@ -5459,12 +5479,20 @@ struct MapHomeView: View {
         style: MapHomeVectorStyle,
         viewport: MapHomeVectorViewport?,
         stickmanPoint: CGPoint?,
-        waypoints: [PawprintWaypoint],
+        waypoints allWaypoints: [PawprintWaypoint],
         places: [MapHomePlaceAnnotation],
         playback: MapHomeApplePlayback?,
         displayedSpeed: Double?
     ) -> some View {
         _ = MapHomePlaybackFrameStats.noteOverlayEvaluation()
+        // 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 화면 틱마다 보여, 발자국이 화랑이 발밑에 바로 찍힌다(ARC1030A02).
+        let waypoints: [PawprintWaypoint]
+        if let driver = playbackDriver {
+            let now = driver.inputs.dayStart.addingTimeInterval(driver.minute * 60)
+            waypoints = allWaypoints.filter { $0.timestamp.map { $0 <= now } ?? true }
+        } else {
+            waypoints = allWaypoints
+        }
         return ZStack {
             if fogStrength != .off {
                 MapHomeFogLayer(
@@ -5749,7 +5777,9 @@ struct MapHomeView: View {
 
             if selectedTimelineMinute != nil,
                !isDisplayedCatAtHome,
-               let point = vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
+               let point = (playbackDriver != nil ? vectorMapViewportStore.livePoint : nil)
+                   ?? vectorPoint(in: viewport, for: vectorDisplayedMarkerID) {
+                // 구동기 재생 중에는 화살표를 화랑이와 같은 점에 둔다(대표 지시, ARC1030A02).
                 MapHomeVectorPlayerMarker(
                     heading: playback?.headingDegrees ?? 0,
                     backgroundHex: style.backgroundHex
@@ -5896,7 +5926,7 @@ struct MapHomeView: View {
     /// 실제 경로의 좌표와 시각을 함께 샘플링하며 예상 발자국에는 시각을 부여하지 않는다.
     private var pawprintWaypoints: [PawprintWaypoint] {
         let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
-        let segments = timelineRouteOverlays
+        let segments = ((playbackDriver != nil ? playbackFullOverlays : nil) ?? timelineRouteOverlays)
             .filter { $0.coordinates.count >= 2 }
         let hardCap = MapHomePawprintInteractionPolicy.markerLimit
         let predictedSegments = predictedMapRoutes.map { route in
@@ -7617,7 +7647,8 @@ struct MapHomeView: View {
         }
     }
 
-    private func startDayPlayback(fromMidnight: Bool = false) {
+    /// 재생은 사이드바 시각과 상관없이 늘 자정(00시)부터 시작한다(대표 지시, ARC1030A02).
+    private func startDayPlayback(fromMidnight: Bool = true) {
         dayPlaybackTask?.cancel()
         let currentDate = Date.now
         let playbackEndMinute = MapHomeDayPlaybackMath.playbackEndMinute(
@@ -7665,6 +7696,7 @@ struct MapHomeView: View {
         refreshRouteProjection()
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
+        loadPlaybackFullOverlays()
         startPlaybackIntro()
         if rendersVectorMap {
             startDriverPlayback(
@@ -7953,6 +7985,34 @@ struct MapHomeView: View {
                 dayPlaybackCurrentMinute = Double(whole)
             }
             playbackProgress.advanceCoarseTickIfNeeded(nowUptime: ProcessInfo.processInfo.systemUptime)
+            if TimelineInteractionFrameGate.shouldRender(
+                lastUptime: &lastPlaybackTraceUptime,
+                nowUptime: ProcessInfo.processInfo.systemUptime,
+                minimumInterval: 5
+            ) {
+                // 재생 중 경로가 실제로 쌓이는지 로그로 남긴다(발자국이 안 나오던 문제 확인용, ARC1030A02).
+                TaptionPlanDiagnosticsLogger.shared.record("playback_route_trace", fields: [:], metrics: [
+                    "minute": minute,
+                    "overlays": Double(timelineRouteOverlays.count),
+                    "overlay_points": Double(timelineRouteOverlays.reduce(0) { $0 + $1.coordinates.count }),
+                    "live_markers": Double(vectorMapViewportStore.livePlaybackViewport?.markerPoints.count ?? 0),
+                    "in_flight": routeProjectionInFlight ? 1 : 0,
+                    "runs": Double(routeProjectionRunID),
+                    "applied": Double(routeProjectionApplied),
+                    "last_ms": routeProjectionLastMS,
+                    "segments": Double(routeProjection?.segments.count ?? -1),
+                    "skip_nosnapshot": Double(routeProjectionSkips[0]),
+                    "scene_active": scenePhase == .active ? 1 : 0,
+                    "has_snapshot": dayDataSnapshot != nil ? 1 : 0,
+                    "snapshot_complete": dayDataSnapshot?.isComplete == true ? 1 : 0,
+                    "snapshot_version": Double(dayDataSnapshot?.projectionVersion ?? 0),
+                    "same_day": dayDataSnapshot.map { Calendar.autoupdatingCurrent.isDate($0.day, inSameDayAs: model.selectedDate) ? 1.0 : 0.0 } ?? -1,
+                    "rev_model": Double(model.dayProjectionRevision),
+                    "rev_snapshot": Double(dayDataSnapshot?.sourceRevision ?? 0),
+                    "skip_samekey": Double(routeProjectionSkips[1]),
+                    "skip_inflight": Double(routeProjectionSkips[2]),
+                ])
+            }
             // 경로 투영은 지도 경로 전체를 다시 그린다. 재생 중에는 1초에 한 번만(PLY1029A06).
             if benchMinute == nil || benchMinute == "proj", TimelineInteractionFrameGate.shouldRender(
                 lastUptime: &lastPlaybackRouteProjectionUptime,
@@ -7963,6 +8023,7 @@ struct MapHomeView: View {
             }
         }
         driver.onFinished = { finishDayPlayback(endMinute: endMinute) }
+        vectorMapViewportStore.livePlaybackViewport = nil
         playbackDriver = driver
         driver.start()
     }
@@ -7997,6 +8058,8 @@ struct MapHomeView: View {
         isDayPlaybackRunning = false
         isTimelineInteractionActive = false
         dayPlaybackCurrentMinute = nil
+        playbackFullOverlaysTask?.cancel()
+        playbackFullOverlays = nil
         _ = flushDeferredRouteProjection() ?? refreshRouteProjection()
         flushDeferredWBSPlaybackProjection()
         recordCurrentPlaybackAlignment()
@@ -8025,6 +8088,8 @@ struct MapHomeView: View {
         dayPlaybackTask = nil
         isDayPlaybackRunning = false
         dayPlaybackCurrentMinute = nil
+        playbackFullOverlaysTask?.cancel()
+        playbackFullOverlays = nil
         lastPlaybackRouteProjectionUptime = 0
         lastPlaybackMapFocusUptime = 0
         lastPlaybackMarkerUptime = 0
@@ -8179,6 +8244,7 @@ struct MapHomeView: View {
                     }
                     if recordingShows(\.timeSidebar), !Self.benchHidden("timebar") {
                     MapHomeTimeSidebar(
+                        smoothsPlayback: isDayPlaybackRunning && playbackDriver != nil,
                         date: model.selectedDate,
                         selectedMinute: Binding(
                             get: { timelineSelectionMinute(at: timeline.date) },
@@ -8226,7 +8292,7 @@ struct MapHomeView: View {
                     timelineZoomControls
                         .position(
                             x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth / 2,
-                            y: proxy.size.height - 16
+                            y: proxy.size.height - 11
                         )
                     }
 
@@ -10162,7 +10228,9 @@ struct MapHomeView: View {
     }
 
     private var isDisplayedCatAtHome: Bool {
-        guard let current = displayedLocationCoordinate,
+        // 구동기 재생 중에는 집 반경에 들어와도 화랑이를 숨기지 않고 마지막 위치까지 보여 준다(대표 지시, ARC1030A02).
+        guard playbackDriver == nil,
+              let current = displayedLocationCoordinate,
               let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
               let point = home.point else { return false }
         return MapHomePresencePolicy.isAtHome(
@@ -10504,9 +10572,12 @@ struct MapHomeView: View {
     }
 
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
+        // 오늘 기록이 쌓일 때마다 revision이 올라 지난 날짜 스냅샷이 매번 낡은 것으로 판정돼, 사이드바 대분류와
+        // 재생 경로가 비었다. 지난 날짜의 완전한 스냅샷은 낡았어도 새로 만들어질 때까지 그대로 쓴다(ARC1030A02).
         guard let dayDataSnapshot,
               dayDataSnapshot.sourceRevision == model.dayProjectionRevision
-                || (!model.isBootstrapped && dayDataIsPreview && model.hasPreparedStartupSettings),
+                || (!model.isBootstrapped && dayDataIsPreview && model.hasPreparedStartupSettings)
+                || (dayDataSnapshot.isComplete && !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)),
               dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
               Calendar.autoupdatingCurrent.isDate(
                   dayDataSnapshot.day,
@@ -10592,6 +10663,7 @@ struct MapHomeView: View {
     }
 
     private var visibleExpectedRouteOverlays: [MapHomeExpectedRouteOverlay] {
+        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else { return [] }
         let cutoff = routeOverlayCutoff
         return mapRenderCache.visibleExpectedRoutes(cutoff: cutoff) {
             expectedRouteOverlays.compactMap {
@@ -10611,6 +10683,7 @@ struct MapHomeView: View {
     }
 
     private var visibleWBSGeneratedRouteOverlays: [MapHomeWBSGeneratedRouteOverlay] {
+        guard Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) else { return [] }
         let cutoff = routeOverlayCutoff
         return wbsGeneratedRouteOverlays.filter { !hasRouteDecision(predictedRoute(for: $0)) }.compactMap {
             $0.visible(through: cutoff)
@@ -12277,7 +12350,10 @@ struct MapHomeView: View {
     /// 계산이 끝났을 때 입력이 이미 바뀌었다면 결과를 버린다(늦은 결과가 최신 경로를 덮지 않도록).
     private func scheduleRouteProjection() {
         guard scenePhase == .active,
-              let dayData = currentDayDataSnapshot else { return }
+              let dayData = currentDayDataSnapshot else {
+            routeProjectionSkips[0] += 1
+            return
+        }
         let calendar = Calendar.autoupdatingCurrent
         let actuals = dayData.actuals
         let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
@@ -12317,6 +12393,14 @@ struct MapHomeView: View {
             confirmedSleepCount: model.settings.confirmedSleepSpans.count
         )
         if inputKey == routeProjectionInputKey, routeProjection != nil {
+            routeProjectionSkips[1] += 1
+            return
+        }
+        // 재생 중에는 계산이 끝나기 전에 입력이 바뀌어도 작업을 끊지 않는다. 매초 끊으면 결과가 한 번도 반영되지 않아
+        // 발자국과 경로가 재생이 끝날 때까지 나오지 않았다. 끝나면 가장 최근 입력으로 한 번 더 계산한다(ARC1030A02).
+        if isDayPlaybackRunning, routeProjectionInFlight {
+            routeProjectionDirty = true
+            routeProjectionSkips[2] += 1
             return
         }
         routeProjectionInputKey = inputKey
@@ -12325,6 +12409,10 @@ struct MapHomeView: View {
         let sleepSessions = model.sleepSessions
         let selectedDate = model.selectedDate
         routeProjectionTask?.cancel()
+        routeProjectionRunID &+= 1
+        let runID = routeProjectionRunID
+        routeProjectionInFlight = true
+        let runStart = ProcessInfo.processInfo.systemUptime
         routeProjectionTask = Task { @MainActor in
             let next = await Task.detached(priority: .userInitiated) {
                 RouteTimelineDataEngine.project(
@@ -12342,11 +12430,60 @@ struct MapHomeView: View {
                     calendar: calendar
                 )
             }.value
-            guard !Task.isCancelled, routeProjectionInputKey == inputKey else { return }
+            if routeProjectionRunID == runID { routeProjectionInFlight = false }
+            routeProjectionLastMS = (ProcessInfo.processInfo.systemUptime - runStart) * 1000
+            guard !Task.isCancelled else { return }
+            // 재생 중에는 조금 늦은 결과도 쓴다(같은 재생이면 입력이 이미 다음 분으로 넘어가 있어도 괜찮다).
+            guard routeProjectionInputKey == inputKey || (isDayPlaybackRunning && inputKey.isPlaying) else { return }
             let overlays = makeTimelineRouteOverlays(next)
             mapRenderCache.invalidateRouteData()
             routeProjection = next
             timelineRouteOverlays = overlays
+            routeProjectionApplied += 1
+            if routeProjectionDirty, isDayPlaybackRunning {
+                routeProjectionDirty = false
+                scheduleRouteProjection()
+            }
+        }
+    }
+
+    /// 재생용 하루 전체 경로를 한 번 만든다. 계산은 메인 스레드 밖에서 하고, 끝나면 발자국이 이것을 쓴다.
+    private func loadPlaybackFullOverlays() {
+        playbackFullOverlaysTask?.cancel()
+        playbackFullOverlays = nil
+        guard let dayData = currentDayDataSnapshot else { return }
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
+            ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let actuals = dayData.actuals
+        let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
+            selectedDate: model.selectedDate, actuals: actuals, calendar: calendar
+        )
+        let travel = dayData.travel
+        let readings = displayRouteReadings
+        let confirmedSleepSpans = model.settings.confirmedSleepSpans
+        let sleepSessions = model.sleepSessions
+        let selectedDate = model.selectedDate
+        playbackFullOverlaysTask = Task { @MainActor in
+            let projection = await Task.detached(priority: .userInitiated) {
+                RouteTimelineDataEngine.project(
+                    selectedDate: selectedDate,
+                    through: dayEnd,
+                    selectedSpan: nil,
+                    actuals: actuals,
+                    actualIndex: actualIndex,
+                    travel: travel,
+                    readings: readings,
+                    readingsAreNormalized: true,
+                    filtersSparseRouteConnections: true,
+                    confirmedSleepSpans: confirmedSleepSpans,
+                    sleepSessions: sleepSessions,
+                    calendar: calendar
+                )
+            }.value
+            guard !Task.isCancelled, isDayPlaybackRunning else { return }
+            playbackFullOverlays = makeTimelineRouteOverlays(projection)
         }
     }
 
@@ -16979,11 +17116,20 @@ private struct MapHomeTransitBoardingCandidatePin: View {
 
 private struct MapHomeVectorViewportOverlay<Content: View>: View {
     let store: MapHomeVectorViewportStore
+    var isLive = false
     let content: (MapHomeVectorViewport?, CGPoint?) -> Content
 
     var body: some View {
-        content(store.viewport, store.stickmanPoint)
-            .clipped()
+        if isLive {
+            // 구동기 재생 중에는 화면 틱(최대 60Hz)마다 지도 엔진이 투영한 뷰포트로 그려, 아이콘이 지도에 붙어 움직인다.
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { _ in
+                content(store.livePlaybackViewport ?? store.viewport, store.livePoint ?? store.stickmanPoint)
+                    .clipped()
+            }
+        } else {
+            content(store.viewport, store.stickmanPoint)
+                .clipped()
+        }
     }
 }
 
@@ -19841,6 +19987,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var routePolylines: [String: MKPolyline] = [:]
         private var fogOverlay: MapHomeFogOverlay?
+        private var lastFogUpdateUptime: TimeInterval = 0
+        private var isFogUpdateScheduled = false
         private var lastFogReveals: [MapHomeFogReveal]?
         private var lastFogOpacity: CGFloat = 0
         private var routeSignatures: [String: String] = [:]
@@ -20237,11 +20385,38 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         private func updateFog(in mapView: MKMapView) {
             guard parent.fogReveals != lastFogReveals || parent.fogOpacity != lastFogOpacity else { return }
+            guard let reveals = parent.fogReveals else {
+                lastFogReveals = nil
+                lastFogOpacity = parent.fogOpacity
+                if let fogOverlay { mapView.removeOverlay(fogOverlay) }
+                fogOverlay = nil
+                return
+            }
+            // 이미 있는 오버레이는 지우지 않고 값만 바꿔 다시 그린다. 지웠다 다시 넣으면 타일이 하얗게 깜빡인다.
+            // 탐험 중 값이 자주 바뀌므로 0.4초에 한 번만 반영하고 나머지는 마지막 값으로 한 번 더 확인한다.
+            if let fogOverlay {
+                let now = ProcessInfo.processInfo.systemUptime
+                guard now - lastFogUpdateUptime >= 0.4 else {
+                    if !isFogUpdateScheduled {
+                        isFogUpdateScheduled = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak mapView] in
+                            guard let self, let mapView else { return }
+                            self.isFogUpdateScheduled = false
+                            self.updateFog(in: mapView)
+                        }
+                    }
+                    return
+                }
+                lastFogUpdateUptime = now
+                lastFogReveals = parent.fogReveals
+                lastFogOpacity = parent.fogOpacity
+                fogOverlay.update(reveals: reveals, opacity: parent.fogOpacity)
+                (mapView.renderer(for: fogOverlay) as? MapHomeFogRenderer)?.setNeedsDisplay()
+                return
+            }
             lastFogReveals = parent.fogReveals
             lastFogOpacity = parent.fogOpacity
-            if let fogOverlay { mapView.removeOverlay(fogOverlay) }
-            fogOverlay = nil
-            guard let reveals = parent.fogReveals else { return }
+            lastFogUpdateUptime = ProcessInfo.processInfo.systemUptime
             let overlay = MapHomeFogOverlay(reveals: reveals, opacity: parent.fogOpacity)
             fogOverlay = overlay
             // Index 0 keeps the fog under the route polylines, like the vector map.

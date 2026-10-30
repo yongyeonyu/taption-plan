@@ -13,11 +13,15 @@ struct MapHomeDateStrip: View {
 
     /// 손가락을 따라 움직인 거리. 한 칸(38pt)까지만 따라온다.
     @State private var dragOffset: CGFloat = 0
+    /// 밀어서 둘러보는 중인 칸 수. 선택한 날짜는 그대로 두고 줄만 옮긴다. 날짜를 탭해야 그날로 이동한다(대표 지시, ARC1030A02).
+    @State private var browseDays = 0
 
     private var calendar: Calendar { TimelineAxisGrid.normalizedCalendar() }
 
     var body: some View {
-        let days = MapHomeWeekStripMath.window(around: selectedDate, calendar: calendar)
+        // 보이는 7칸보다 넓게 만들어 두고, 손가락을 따라 줄이 끊김 없이 밀리게 한다(대표 지시, ARC1030A02).
+        let center = calendar.date(byAdding: .day, value: browseDays, to: selectedDate) ?? selectedDate
+        let days = MapHomeWeekStripMath.window(around: center, calendar: calendar, radius: MapHomeWeekStripMath.dragWindowRadius)
         HStack(spacing: MapHomeWeekStripMath.daySpacing) {
             ForEach(days, id: \.self) { day in
                 dayCell(day)
@@ -25,10 +29,12 @@ struct MapHomeDateStrip: View {
         }
         // 창 밖으로 나간 날짜는 잘라 낸다. 그래야 줄이 통째로 밀려 유리창이 어긋나 보이지 않는다.
         .offset(x: dragOffset)
+        .frame(width: MapHomeWeekStripMath.visibleWidth)
         .clipped()
         .padding(.horizontal, 6)
         .frame(height: MapHomeWeekStripMath.height)
         .simultaneousGesture(swipeGesture)
+        .onChange(of: selectedDate) { _, _ in browseDays = 0 }
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
@@ -45,6 +51,8 @@ struct MapHomeDateStrip: View {
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         return Button {
             // 날짜 줄은 오른쪽 위 날짜 배지를 눌러서만 닫는다. 날짜 칸을 누르면 날짜만 바뀐다.
+            // 둘러보던 줄은 고른 날짜가 가운데 오도록 되돌린다.
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { browseDays = 0 }
             onSelect(day)
         } label: {
             VStack(spacing: 0) {
@@ -81,31 +89,28 @@ struct MapHomeDateStrip: View {
     /// 줄은 선택일을 가운데 두는 창이라, 하루 넘길 때 내용이 손가락 반대쪽으로
     /// 한 칸 튄다. 그만큼을 `dragOffset`에 미리 더해 두고 0으로 되돌리면 날짜가
     /// 끊기지 않고 이어져 흐른다.
+    /// 줄이 손가락을 1:1로 따라 움직이고(날짜 데이터는 건드리지 않는다), 손을 뗄 때 가장 가까운 칸에 멈추며 날짜를 한 번만 바꾼다.
+    /// 칸마다 날짜를 바꾸면 하루치 지도 데이터를 매번 다시 읽어 뚝뚝 끊겼다.
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 14)
+        DragGesture(minimumDistance: 8)
             .onChanged { value in
                 let dx = value.translation.width
                 guard abs(dx) > abs(value.translation.height) * 1.5 else { return }
-                let pitch = MapHomeWeekStripMath.dayPitch
-                dragOffset = min(pitch, max(-pitch, dx))
+                let limit = MapHomeWeekStripMath.dayPitch * Double(MapHomeWeekStripMath.dragWindowRadius - MapHomeWeekStripMath.windowRadius)
+                dragOffset = min(limit, max(-limit, dx))
             }
             .onEnded { value in
                 let dx = value.translation.width
                 let isHorizontal = abs(dx) > abs(value.translation.height) * 1.5
                 let pitch = MapHomeWeekStripMath.dayPitch
-                // 반 칸을 넘겨야 넘긴다. 스치듯 지나간 손짓에 날짜가 바뀌면
-                // 화면을 보려고 쓸었을 뿐인 손이 날짜를 바꾼다.
-                if isHorizontal, abs(dx) >= pitch / 2,
-                   let next = calendar.date(
-                       byAdding: .day,
-                       value: dx < 0 ? 1 : -1,
-                       to: selectedDate
-                   ) {
-                    // 창이 하루 옮겨 간 만큼을 미리 상쇄한다(위 설명). 반 칸만 밀었으면
-                    // 손가락 자리에 그대로 서 있다가 다음 런루프에서 제자리로 미끄러진다.
-                    // 같은 런루프에서 되돌리면 두 변경이 한 번에 합쳐져 애니메이션이 사라진다.
-                    dragOffset += dx < 0 ? pitch : -pitch
-                    onSelect(next)
+                let maximumDays = MapHomeWeekStripMath.dragWindowRadius - MapHomeWeekStripMath.windowRadius
+                // 손가락이 지나간 만큼의 칸 수. 오른쪽으로 밀면 지난 날이 가운데로 온다.
+                let days = isHorizontal ? max(-maximumDays, min(maximumDays, Int((-dx / pitch).rounded()))) : 0
+                if days != 0 {
+                    // 줄 창이 그만큼 옮겨 가므로, 보이는 위치가 그대로이도록 미리 상쇄한 뒤 제자리로 미끄러진다.
+                    // 같은 런루프에서 되돌리면 두 변경이 합쳐져 애니메이션이 사라진다. 선택한 날짜는 바꾸지 않는다.
+                    dragOffset = dragOffset + Double(days) * pitch
+                    browseDays += days
                     Task { @MainActor in
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
                             dragOffset = 0
@@ -137,9 +142,14 @@ enum MapHomeWeekStripMath {
     /// 달력 주(일~토)를 그대로 그리면 선택일이 줄의 가장자리에 걸려
     /// '여기서 더 못 간다'처럼 보인다. 창을 선택일에 붙여 두면 하루 넘길
     /// 때마다 새 날짜가 좌우에서 계속 들어온다.
-    static func window(around date: Date, calendar: Calendar) -> [Date] {
+    /// 드래그 중 보여 줄 넓은 창의 반폭. 보이는 반폭(3칸)보다 7칸 더 만들어 두어 한 번에 최대 7일을 밀 수 있다.
+    static let dragWindowRadius = windowRadius + 7
+    /// 보이는 7칸의 폭.
+    static let visibleWidth: CGFloat = CGFloat(visibleDays) * dayWidth + CGFloat(visibleDays - 1) * daySpacing
+
+    static func window(around date: Date, calendar: Calendar, radius: Int = windowRadius) -> [Date] {
         let base = calendar.startOfDay(for: date)
-        return (-windowRadius...windowRadius).compactMap {
+        return (-radius...radius).compactMap {
             calendar.date(byAdding: .day, value: $0, to: base)
         }
     }

@@ -4672,3 +4672,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1030A01 빌드 250 배포(2026-10-30)
 - `release.sh --yes --request-id TFB1030A01` 종료 코드 0. 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결, 테스터 1명 노출 확인. 보고서 `build/validation/TFB1030A01/testflight-report.json`.
 - 포함 내용: ARC1030A01 1·2단계(재생 UI 끊김 감소). 실기기 저장·영상 렌더·차량 오디오는 이 배포로 검증되지 않았다.
+
+## ARC1030A02 검증(2026-10-30)
+- 단위 테스트 `build/validation/ARC1030A02/t3`: 1,688개 중 통과 1,685, 실패 0, 건너뜀 3(이동 속도 테스트 4개 기대값을 1/48에 맞춤). 동시 빌드가 있을 때 `testThirtyDayAppColdAndWarmLoadP95StaysInteractive`가 한 번 흔들렸으나 단독 실행에서 통과.
+- 기기 Release 벤치 `s1`~`s5`: 재생 중 경로 추적 로그(`playback_route_trace`)로 지난 날짜 스냅샷 허용 뒤 오버레이가 1→66개로 늘어남을 확인. 오버레이 60Hz 투영 후 fps 113, 25ms 이상 틱 약 30~95개.
+- 기기에 최종 빌드(s7) 설치만 했고, 발자국 실시간 찍힘·날짜 줄·안개 깜빡임·+/- 위치는 눈으로 확인하지 않았다.

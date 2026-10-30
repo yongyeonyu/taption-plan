@@ -95,15 +95,29 @@ struct MapHomeFogReveal: Equatable {
     }
 }
 
-final class MapHomeFogOverlay: NSObject, MKOverlay {
+/// 오버레이를 지우고 다시 만들면 MapKit이 타일을 비우고 다시 그려 화면이 하얗게 깜빡였다.
+/// 그래서 오버레이는 하나를 두고 값만 바꾼 뒤 렌더러를 무효화한다(대표 지시, ARC1030A02).
+/// MapKit이 타일을 백그라운드에서 그리므로 값은 잠금으로 지킨다.
+final class MapHomeFogOverlay: NSObject, MKOverlay, @unchecked Sendable {
+    typealias Snapshot = (reveals: [(point: MKMapPoint, radius: CGFloat)], opacity: CGFloat)
+
     let coordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
     let boundingMapRect = MKMapRect.world
-    let reveals: [(point: MKMapPoint, radius: CGFloat)]
-    let opacity: CGFloat
+    private let lock = NSLock()
+    private var current: Snapshot
 
     init(reveals: [MapHomeFogReveal], opacity: CGFloat) {
-        self.reveals = reveals.map { (MKMapPoint($0.coordinate), $0.radius) }
-        self.opacity = opacity
+        current = (reveals.map { (MKMapPoint($0.coordinate), $0.radius) }, opacity)
+    }
+
+    var snapshot: Snapshot {
+        lock.lock(); defer { lock.unlock() }
+        return current
+    }
+
+    func update(reveals: [MapHomeFogReveal], opacity: CGFloat) {
+        let next: Snapshot = (reveals.map { (MKMapPoint($0.coordinate), $0.radius) }, opacity)
+        lock.lock(); current = next; lock.unlock()
     }
 }
 
@@ -118,12 +132,13 @@ final class MapHomeFogRenderer: MKOverlayRenderer {
 
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
         guard let fog = overlay as? MapHomeFogOverlay else { return }
+        let snapshot = fog.snapshot
         let tile = rect(for: mapRect)
-        context.setFillColor(UIColor.black.withAlphaComponent(fog.opacity).cgColor)
+        context.setFillColor(UIColor.black.withAlphaComponent(snapshot.opacity).cgColor)
         context.fill(tile)
         guard let gradient = Self.gradient else { return }
         context.setBlendMode(.destinationOut)
-        for reveal in fog.reveals {
+        for reveal in snapshot.reveals {
             let center = point(for: reveal.point)
             // Radius is in screen points; renderer space is map points scaled by zoomScale.
             let radius = reveal.radius / zoomScale
