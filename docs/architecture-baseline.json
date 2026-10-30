@@ -1,8 +1,8 @@
 {
-  "files": 152,
-  "lines": 165074,
+  "files": 151,
+  "lines": 165222,
   "buckets": {
-    "<500": 95,
+    "<500": 94,
     "500-1000": 20,
     "1000-2000": 16,
     "2000-5000": 17,
@@ -11,26 +11,26 @@
   "risk": {
     "unchecked_sendable": 25,
     "nonisolated_unsafe": 10,
-    "detached_tasks": 32,
+    "detached_tasks": 33,
     "force_try": 0,
     "fatal_error": 2,
     "main_queue": 7
   },
   "size": {
-    "state_properties": 587,
+    "state_properties": 590,
     "observable_types": 8,
-    "view_types": 180,
-    "funcs": 5340,
+    "view_types": 179,
+    "funcs": 5346,
     "singleton_reach": 331
   },
   "metrics": {
-    "largest_file_lines": 22515,
+    "largest_file_lines": 22527,
     "largest_type_lines": 13594
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
     "TaptionPlan/Core/AppleIntegrations.swift": 4870,
-    "TaptionPlan/Core/FeatureModels.swift": 4697,
+    "TaptionPlan/Core/FeatureModels.swift": 4694,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
     "TaptionPlan/Core/PlanRepository.swift": 1374,
     "TaptionPlan/Core/PlanningEngine.swift": 3134,
@@ -46,13 +46,13 @@
     "TaptionPlan/UI/AppShellView.swift": 1645,
     "TaptionPlan/UI/DetailViews.swift": 2949,
     "TaptionPlan/UI/GoalsView.swift": 1848,
-    "TaptionPlan/UI/MapHomeCalendarSheet.swift": 2952,
+    "TaptionPlan/UI/MapHomeCalendarSheet.swift": 3127,
     "TaptionPlan/UI/MapHomeLiveMapPolicies.swift": 1341,
     "TaptionPlan/UI/MapHomeLocationPresentation.swift": 2157,
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1378,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3145,
-    "TaptionPlan/UI/MapHomeVectorMap.swift": 1341,
-    "TaptionPlan/UI/MapHomeView.swift": 22515,
+    "TaptionPlan/UI/MapHomeVectorMap.swift": 1342,
+    "TaptionPlan/UI/MapHomeView.swift": 22527,
     "TaptionPlan/UI/ReviewView.swift": 4817,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
     "TaptionPlan/UI/SettingsView.swift": 2322,
@@ -64,9 +64,9 @@
   "largest_files": [
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
-      "lines": 22515,
+      "lines": 22527,
       "largest_type": "struct MapHomeView",
-      "largest_type_lines": 11305,
+      "largest_type_lines": 11322,
       "types": 184
     },
     {
@@ -106,7 +106,7 @@
     },
     {
       "path": "TaptionPlan/Core/FeatureModels.swift",
-      "lines": 4697,
+      "lines": 4694,
       "largest_type": "struct AppFeatureSettings",
       "largest_type_lines": 514,
       "types": 131
@@ -156,7 +156,7 @@
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
       "type": "struct MapHomeView",
-      "lines": 11305
+      "lines": 11322
     },
     {
       "path": "TaptionPlan/UI/ScheduleView.swift",

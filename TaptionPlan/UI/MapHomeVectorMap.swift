@@ -19,10 +19,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var backgroundHex: String {
         switch self {
-        case .night: "#0A1B2A"
-        case .light: "#F7F6F4"
+        case .night: "#0B0B24"
+        case .light: "#F4F1EA"
         case .contrast: "#FFFFFF"
-        case .pastel: "#FFF0F5"
+        case .pastel: "#FFF1F8"
         case .casual: "#FFF8EC"
         case .rpg: "#ECDFC0"
         }
@@ -30,10 +30,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var waterHex: String {
         switch self {
-        case .night: "#07131F"
-        case .light: "#DDEFF4"
-        case .contrast: "#C9DFF5"
-        case .pastel: "#B8DDF5"
+        case .night: "#16164A"
+        case .light: "#7FC4F0"
+        case .contrast: "#0057FF"
+        case .pastel: "#CFE6FF"
         case .casual: "#BFE8F0"
         case .rpg: "#A7CFD4"
         }
@@ -41,10 +41,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var landuseHex: String {
         switch self {
-        case .night: "#102838"
-        case .light: "#E7EFE4"
-        case .contrast: "#F3F3F3"
-        case .pastel: "#D4F2E0"
+        case .night: "#1A1A38"
+        case .light: "#BFE3A6"
+        case .contrast: "#FFF200"
+        case .pastel: "#E6F7DC"
         case .casual: "#DDF2D2"
         case .rpg: "#DCCB9E"
         }
@@ -52,10 +52,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var buildingHex: String {
         switch self {
-        case .night: "#66727D"
-        case .light: "#CBD5E1"
-        case .contrast: "#9A9A9A"
-        case .pastel: "#E8CCF2"
+        case .night: "#4B3A7A"
+        case .light: "#DDD6C8"
+        case .contrast: "#000000"
+        case .pastel: "#EAD7FA"
         case .casual: "#F1D0B4"
         case .rpg: "#CBAE7C"
         }
@@ -63,8 +63,9 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var roadCasingHex: String {
         switch self {
-        case .night: "#163C47"
-        case .light, .pastel: "#FFFFFF"
+        case .night: "#2B1B5C"
+        case .light: "#C9C2B2"
+        case .pastel: "#FFFFFF"
         case .contrast: "#000000"
         case .casual: "#FFFDF7"
         case .rpg: "#F3E7C8"
@@ -73,10 +74,10 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var roadHex: String {
         switch self {
-        case .night: "#35C6B1"
-        case .light: "#73C9A6"
-        case .contrast: "#FFC400"
-        case .pastel: "#F7A7BE"
+        case .night: "#FF4FD8"
+        case .light: "#FFFFFF"
+        case .contrast: "#FF2D2D"
+        case .pastel: "#FFC9B0"
         case .casual: "#F2A37F"
         case .rpg: "#9A7B4A"
         }
@@ -527,7 +528,7 @@ extension MapDisplayStyle {
         case .mapLibrePastel: .pastel
         case .mapLibreCasual: .casual
         case .mapLibreRPG: .rpg
-        case .standard, .simplified, .hybrid, .imagery: nil
+        case .standard, .hybrid: nil
         }
     }
 }

@@ -190,7 +190,6 @@
 		A100000000000000000000E7 /* MapHomeNLEClipFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */; };
 		A100000000000000000000E8 /* MapHomeFogLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000E8 /* MapHomeFogLayer.swift */; };
 		A100000000000000000000E9 /* MapHomePlaybackHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000E9 /* MapHomePlaybackHUD.swift */; };
-		A100000000000000000000EA /* MapHomeDisplayPreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EA /* MapHomeDisplayPreset.swift */; };
 		A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EB /* MapHomeCalendarChipValue.swift */; };
 		A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EC /* MapHomeNLEToolbar.swift */; };
 		A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */; };
@@ -435,7 +434,6 @@
 		F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEClipFactory.swift; sourceTree = "<group>"; };
 		F100000000000000000000E8 /* MapHomeFogLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeFogLayer.swift; sourceTree = "<group>"; };
 		F100000000000000000000E9 /* MapHomePlaybackHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackHUD.swift; sourceTree = "<group>"; };
-		F100000000000000000000EA /* MapHomeDisplayPreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDisplayPreset.swift; sourceTree = "<group>"; };
 		F100000000000000000000EB /* MapHomeCalendarChipValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarChipValue.swift; sourceTree = "<group>"; };
 		F100000000000000000000EC /* MapHomeNLEToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEToolbar.swift; sourceTree = "<group>"; };
 		F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwriteSheet.swift; sourceTree = "<group>"; };
@@ -622,7 +620,6 @@
 				F100000000000000000000E7 /* MapHomeNLEClipFactory.swift */,
 				F100000000000000000000E8 /* MapHomeFogLayer.swift */,
 				F100000000000000000000E9 /* MapHomePlaybackHUD.swift */,
-				F100000000000000000000EA /* MapHomeDisplayPreset.swift */,
 				F100000000000000000000EB /* MapHomeCalendarChipValue.swift */,
 				F100000000000000000000EC /* MapHomeNLEToolbar.swift */,
 				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
@@ -1115,7 +1112,6 @@
 				A100000000000000000000E7 /* MapHomeNLEClipFactory.swift in Sources */,
 				A100000000000000000000E8 /* MapHomeFogLayer.swift in Sources */,
 				A100000000000000000000E9 /* MapHomePlaybackHUD.swift in Sources */,
-				A100000000000000000000EA /* MapHomeDisplayPreset.swift in Sources */,
 				A100000000000000000000EB /* MapHomeCalendarChipValue.swift in Sources */,
 				A100000000000000000000EC /* MapHomeNLEToolbar.swift in Sources */,
 				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,

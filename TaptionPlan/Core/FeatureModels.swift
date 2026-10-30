@@ -3765,9 +3765,8 @@ enum MapDisplayProvider: CaseIterable, Hashable, Sendable {
 
 enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     case standard
-    case simplified
+    /// 화면 이름은 "위성"(항공 사진 + 도로·지명). 저장값 호환을 위해 hybrid를 유지한다.
     case hybrid
-    case imagery
     case mapLibreNight
     case mapLibreLight
     case mapLibreContrast
@@ -3834,9 +3833,7 @@ struct MapSticker: Identifiable, Codable, Hashable, Sendable {
 extension MapDisplayStyle {
     static let appleStyles: [Self] = [
         .standard,
-        .simplified,
         .hybrid,
-        .imagery,
     ]
 
     static let openFreeMapStyles: [Self] = [
@@ -3850,7 +3847,7 @@ extension MapDisplayStyle {
 
     var provider: MapDisplayProvider {
         switch self {
-        case .standard, .simplified, .hybrid, .imagery:
+        case .standard, .hybrid:
             .apple
         case .mapLibreNight,
              .mapLibreLight,

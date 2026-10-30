@@ -4269,9 +4269,7 @@ final class TimeScaleTests: XCTestCase {
             MapDisplayStyle.allCases,
             [
                 .standard,
-                .simplified,
                 .hybrid,
-                .imagery,
                 .mapLibreNight,
                 .mapLibreLight,
                 .mapLibreContrast,
@@ -5149,9 +5147,7 @@ final class TimeScaleTests: XCTestCase {
 
         for style in [
             MapDisplayStyle.standard,
-            .simplified,
             .hybrid,
-            .imagery,
         ] {
             XCTAssertNil(style.mapHomeVectorStyle)
         }
@@ -5160,7 +5156,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapStylesRemainDecodableAndRuntimePreservesSelection() {
         XCTAssertEqual(
             MapDisplayStyle.appleStyles,
-            [.standard, .simplified, .hybrid, .imagery]
+            [.standard, .hybrid]
         )
         XCTAssertEqual(
             MapDisplayStyle.openFreeMapStyles,

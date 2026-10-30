@@ -2344,6 +2344,8 @@ struct MapHomeView: View {
     @State private var isCategoryAddPresented = false
     @State private var isDisplayMenuExpanded = false
     @State private var isCounterMenuExpanded = false
+    /// 화랑이 위 카운터 위젯이 지도 화면 좌표에서 차지하는 영역. 위젯을 누르면 카운터 메뉴를 연다(ARC1030A11).
+    @State private var counterWindowFrame = CGRect.zero
     @State private var isStrideCalibrationPresented = false
     @State private var isSalarySettingsPresented = false
     @State private var isCarAudioSheetPresented = false
@@ -3277,6 +3279,13 @@ struct MapHomeView: View {
                 },
                 timeTotals: { month in await calendarTimeTotals(month: month, includePhotos: true) },
                 liveTotals: { month in await calendarTimeTotals(month: month, includePhotos: false) },
+                placeVisits: { day in
+                    let stays = model.snapshot.places
+                    guard let dayEnd = MapHomeGrowthPolicy.localCalendar.date(byAdding: .day, value: 1, to: day) else { return [] }
+                    return await Task.detached(priority: .userInitiated) {
+                        MapHomeCalendarPlaceVisitPolicy.visits(stays: stays, day: day, dayEnd: dayEnd)
+                    }.value
+                },
                 timeTint: { categoryID in
                     MapHomeSidebarMajorCategory.presentation(
                         for: categoryID,
@@ -5418,12 +5427,29 @@ struct MapHomeView: View {
 
     /// 화랑이를 누르면 하루 요약 카드를 연다. 발자국·집 아이콘보다 먼저 판정한다(대표 지시, ARC1030A07).
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
+        if isCounterWindowTapped(at: tapPoint) {
+            openCounterMenu()
+            return
+        }
         if isStickmanTapped(at: tapPoint) {
             isDaySummaryPresented = true
             return
         }
         guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
         if isHomeSummaryTapped(at: tapPoint) { isDaySummaryPresented = true }
+    }
+
+    /// 화랑이 위 카운터 위젯을 눌렀는지. 위젯을 눌러도 지도 이동이 막히지 않게 지도 탭에서 영역으로 판정한다.
+    private func isCounterWindowTapped(at tapPoint: CGPoint) -> Bool {
+        counterWindowFrame.width > 0 && counterWindowFrame.height > 0
+            && counterWindowFrame.insetBy(dx: -8, dy: -8).contains(tapPoint)
+    }
+
+    /// 왼쪽 메뉴를 열고 표시 > 카운터 항목을 펼친다(위젯을 누르면 카운터 메뉴로 볼 수 있는 내용만 보여 준다).
+    private func openCounterMenu() {
+        openMenu()
+        isDisplayMenuExpanded = true
+        isCounterMenuExpanded = true
     }
 
     /// 화랑이가 화면에 그려지는 점. 재생 중에는 구동기가 프레임마다 정한 점이 가장 정확하다.
@@ -5476,7 +5502,7 @@ struct MapHomeView: View {
         positions: [String: CGPoint]
     ) {
         // 화랑이는 발자국 위에 서 있는 일이 많아, 화랑이를 누른 손짓은 발자국 선택으로 새지 않는다.
-        guard !isStickmanTapped(at: point),
+        guard !isCounterWindowTapped(at: point), !isStickmanTapped(at: point),
               let waypoint = pawprintTarget(at: point, waypoints: waypoints, positions: positions)
         else { return }
         selectPawprint(waypoint)
@@ -7046,9 +7072,7 @@ struct MapHomeView: View {
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: language.text("표준", "Standard")
-        case .simplified: language.text("간략화", "Simplified")
-        case .hybrid: language.text("하이브리드", "Hybrid")
-        case .imagery: language.text("위성", "Satellite")
+        case .hybrid: language.text("위성", "Satellite")
         // 스타일 이름은 재질이 아니라 상황으로 적는다. "벡터 야간"을 고르려는 사람은 없다.
         case .mapLibreNight: language.text("야간", "Night")
         case .mapLibreLight: language.text("밝게", "Bright")
@@ -7062,9 +7086,7 @@ struct MapHomeView: View {
     private func mapStyleSystemImage(_ style: MapDisplayStyle) -> String {
         switch style {
         case .standard: "map"
-        case .simplified: "map.fill"
-        case .hybrid: "square.3.layers.3d"
-        case .imagery: "globe.asia.australia.fill"
+        case .hybrid: "globe.asia.australia.fill"
         case .mapLibreNight: "moon.stars.fill"
         case .mapLibreLight: "sun.max.fill"
         case .mapLibreContrast: "circle.lefthalf.filled"
@@ -7493,6 +7515,10 @@ struct MapHomeView: View {
         let bottomY = anchor.y - 8
         return MapHomeCounterClock(isLive: isCounterLive) { now in
             counterWindowContent(now: now)
+                .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
+                    if counterWindowFrame != frame { counterWindowFrame = frame }
+                }
+                .onDisappear { counterWindowFrame = .zero }
         }
         .frame(width: 240, height: 320, alignment: .bottom)
         .position(x: anchor.x, y: bottomY - 160)
@@ -9520,15 +9546,6 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
-                // 실외 프리셋을 맨 위에 둔다. 스타일 이름 여섯 개를 훑지 않고 한 번에 켠다.
-                MapHomeDisplayPresetRow(
-                    isOutdoor: model.settings.mapDisplayStyle == .mapLibreContrast,
-                    language: language
-                ) {
-                    let isOutdoor = model.settings.mapDisplayStyle == .mapLibreContrast
-                    model.setMapDisplayStyle(isOutdoor ? .mapLibreRPG : .mapLibreContrast)
-                }
-
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
                     // 판타지 지도를 맨 위에 두고, 나머지 벡터 스타일, Apple 스타일 순으로 보여 준다(대표 지시, ARC1030A04).
@@ -9548,26 +9565,7 @@ struct MapHomeView: View {
                 }
                 .accessibilityLabel(language.text("지도 스타일 선택", "Choose map style"))
 
-                counterMenuItem
-                Button {
-                    isStrideCalibrationPresented = true
-                } label: {
-                    displaySubRow("shoeprints.fill", language.text("보폭 보정(걸음 → 거리)", "Stride calibration"))
-                }
-                .buttonStyle(.plain)
-
-                Toggle(isOn: Binding(
-                    get: { (MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive) == .adaptive },
-                    set: { playbackZoomModeRaw = ($0 ? MapHomePlaybackZoomMode.adaptive : .fixed).rawValue }
-                )) {
-                    Label(language.text("속도에 따라 가변", "Vary zoom with speed"), systemImage: "plus.magnifyingglass")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpAccent)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-
-
+                // 안개 탐험은 지도 스타일 바로 아래에 둔다(대표 지시, ARC1030A11).
                 VStack(alignment: .leading, spacing: 6) {
                     Label(
                         language.text("안개 탐험", "Fog of Exploration"),
@@ -9588,6 +9586,26 @@ struct MapHomeView: View {
                 }
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
+
+
+                counterMenuItem
+                Toggle(isOn: Binding(
+                    get: { (MapHomePlaybackZoomMode(rawValue: playbackZoomModeRaw) ?? .adaptive) == .adaptive },
+                    set: { playbackZoomModeRaw = ($0 ? MapHomePlaybackZoomMode.adaptive : .fixed).rawValue }
+                )) {
+                    Label(language.text("속도에 따라 가변", "Vary zoom with speed"), systemImage: "plus.magnifyingglass")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpAccent)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Button {
+                    isStrideCalibrationPresented = true
+                } label: {
+                    displaySubRow("shoeprints.fill", language.text("보폭 보정(걸음 → 거리)", "Stride calibration"))
+                }
+                .buttonStyle(.plain)
 
                 Toggle(
                     isOn: Binding(
@@ -9703,7 +9721,7 @@ struct MapHomeView: View {
                 VStack(spacing: 2) {
                     // 연봉도 다른 카운터처럼 켜고 끈다. 금액 설정은 옆 톱니로 연다(아직 설정이 없으면 켤 때 연다).
                     // 설정 톱니는 스위치 왼쪽에 둔다(대표 지시, ARC1030A04).
-                    HStack(spacing: 6) {
+                    HStack(spacing: 18) {
                         Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                         Spacer(minLength: 0)
@@ -9721,8 +9739,7 @@ struct MapHomeView: View {
                         .accessibilityLabel(language.text("연봉 카운터", "Salary counter"))
                     }
                     .padding(.vertical, 6)
-                    .padding(.leading, 12)
-                    .padding(.trailing, 4)
+                    .padding(.horizontal, 12)
                     .accessibilityElement(children: .contain)
 
                     ForEach(MapHomeCounterKind.allCases) { kind in
@@ -20152,13 +20169,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             mapView.pointOfInterestFilter = .excludingAll
             mapView.showsTraffic = false
             switch style {
-            case .imagery:
-                // 위성: 항공 사진만. 이전에는 선택과 무관하게 흐린 표준 지도로 고정돼 있었다.
-                mapView.mapType = .satellite
-                mapView.backgroundColor = .black
-                mapView.preferredConfiguration = MKImageryMapConfiguration(elevationStyle: .flat)
             case .hybrid:
-                // 하이브리드: 항공 사진 위에 도로·지명.
+                // 위성(하이브리드): 항공 사진 위에 도로·지명.
                 mapView.mapType = .hybrid
                 mapView.backgroundColor = .black
                 let configuration = MKHybridMapConfiguration(elevationStyle: .flat)

@@ -125,6 +125,74 @@ enum MapHomeCalendarTimeKind: String, CaseIterable, Identifiable {
     var usesAccentTint: Bool { isDistance || isCount }
 }
 
+/// 달력 "방문 장소"에 세는 한 곳. 같은 곳(30 m 이내)을 여러 번 들렀으면 한 줄로 합친다.
+struct MapHomeCalendarPlaceVisit: Identifiable, Hashable, Sendable {
+    var id: String
+    var name: String
+    var buildingName: String?
+    var arrival: Date
+    var departure: Date
+    var visitCount: Int
+    var seconds: TimeInterval
+}
+
+enum MapHomeCalendarPlaceVisitPolicy {
+    /// 한 번 머문 시간이 이 값보다 짧으면 방문으로 세지 않는다(스쳐 지난 곳).
+    static let minimumStaySeconds: TimeInterval = 10 * 60
+    /// 이 거리 안의 머묾은 같은 장소로 본다.
+    static let samePlaceMeters: Double = 30
+
+    /// `day`~`dayEnd`와 겹친 머묾 중 10분 이상인 것만, 30 m 안은 한 곳으로 묶어 도착 순서로 돌려준다.
+    static func visits(stays: [PlaceStay], day: Date, dayEnd: Date) -> [MapHomeCalendarPlaceVisit] {
+        struct Cluster {
+            var anchor: GeoPoint?
+            var key: String
+            var names: [String: TimeInterval] = [:]
+            var building: String?
+            var arrival: Date
+            var departure: Date
+            var count = 0
+            var seconds: TimeInterval = 0
+        }
+        var clusters: [Cluster] = []
+        let ordered = stays
+            .filter { $0.span.start < dayEnd && day < $0.span.end }
+            .sorted { $0.span.start < $1.span.start }
+        for stay in ordered {
+            let start = max(stay.span.start, day)
+            let end = min(stay.span.end, dayEnd)
+            let duration = end.timeIntervalSince(start)
+            guard duration >= minimumStaySeconds else { continue }
+            let index = clusters.firstIndex { cluster in
+                if let a = cluster.anchor, let b = stay.point { return distanceMeters(a, b) <= samePlaceMeters }
+                return cluster.key == stay.placeKey
+            }
+            var cluster = index.map { clusters[$0] } ?? Cluster(
+                anchor: stay.point, key: stay.placeKey, arrival: start, departure: end
+            )
+            cluster.names[stay.displayName, default: 0] += duration
+            if cluster.building == nil { cluster.building = stay.buildingName }
+            cluster.arrival = min(cluster.arrival, start)
+            cluster.departure = max(cluster.departure, end)
+            cluster.count += 1
+            cluster.seconds += duration
+            if let index { clusters[index] = cluster } else { clusters.append(cluster) }
+        }
+        return clusters.map { cluster in
+            MapHomeCalendarPlaceVisit(
+                id: cluster.key + "|\(cluster.arrival.timeIntervalSince1970)",
+                name: cluster.names.max { $0.value < $1.value }?.key ?? cluster.key,
+                buildingName: cluster.building,
+                arrival: cluster.arrival,
+                departure: cluster.departure,
+                visitCount: cluster.count,
+                seconds: cluster.seconds
+            )
+        }
+        .sorted { $0.arrival < $1.arrival }
+    }
+}
+
 enum MapHomeCalendarTimeTotalsPolicy {
     /// `month`가 속한 달의 날짜별·대분류별 시간(초). 오늘 이후와 기록이 없는 날은 담지 않는다.
     /// `sealed`에 있는 날은 저장해 둔 확정 요약을 그대로 쓰고 다시 계산하지 않는다.
@@ -229,7 +297,7 @@ enum MapHomeCalendarTimeTotalsPolicy {
         let meters = distanceMeters(of: travel, in: TimeSpan(start: day, end: dayEnd))
         if meters >= 10 { byID[MapHomeCalendarTimeKind.distance.rawValue] = meters }
         let dayStays = stays.filter { $0.span.start < dayEnd && day < $0.span.end }
-        let placeCount = Set(dayStays.map(\.placeKey)).count
+        let placeCount = MapHomeCalendarPlaceVisitPolicy.visits(stays: dayStays, day: day, dayEnd: dayEnd).count
         if placeCount > 0 { byID[MapHomeCalendarTimeKind.places.rawValue] = Double(placeCount) }
         let tripCount = travel.filter { $0.span.start < dayEnd && day < $0.span.end }.count
         if tripCount > 0 { byID[MapHomeCalendarTimeKind.trips.rawValue] = Double(tripCount) }
@@ -367,6 +435,7 @@ struct MapHomeCalendarSheet: View {
     private let holidayName: (Date) -> String?
     private let logStatuses: (Date) async -> [Date: MapHomeCalendarLogStatus]
     private let timeTotals: (Date) async -> [Date: [String: TimeInterval]]
+    private let placeVisits: (Date) async -> [MapHomeCalendarPlaceVisit]
     private let timeTint: (String) -> Color
     private let language: MapHomeLanguage
     private let calendar: Calendar
@@ -381,6 +450,9 @@ struct MapHomeCalendarSheet: View {
     private let liveToken: Double
     private let liveTotals: (Date) async -> [Date: [String: TimeInterval]]
     @State private var totals: [Date: [String: TimeInterval]] = [:]
+    @State private var visits: [MapHomeCalendarPlaceVisit] = []
+    /// 켜면 지표 칩과 큰 숫자를 고른 날이 아니라 이번 달 하루 평균으로 보여 준다.
+    @State private var showsMonthAverage = false
 
     init(
         selectedDate: Binding<Date>,
@@ -388,6 +460,7 @@ struct MapHomeCalendarSheet: View {
         logStatuses: @escaping (Date) async -> [Date: MapHomeCalendarLogStatus] = { _ in [:] },
         timeTotals: @escaping (Date) async -> [Date: [String: TimeInterval]] = { _ in [:] },
         liveTotals: (@escaping (Date) async -> [Date: [String: TimeInterval]]) = { _ in [:] },
+        placeVisits: @escaping (Date) async -> [MapHomeCalendarPlaceVisit] = { _ in [] },
         timeTint: @escaping (String) -> Color = { _ in Color.tpAccent },
         language: MapHomeLanguage = .korean,
         liveToken: Double = 0
@@ -398,6 +471,7 @@ struct MapHomeCalendarSheet: View {
         self.logStatuses = logStatuses
         self.timeTotals = timeTotals
         self.liveTotals = liveTotals
+        self.placeVisits = placeVisits
         self.timeTint = timeTint
         self.language = language
 
@@ -427,6 +501,15 @@ struct MapHomeCalendarSheet: View {
                 monthGrid
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
+                    // 좌우로 쓸면 다음 달/지난 달. 날짜 탭과 세로 스크롤은 그대로 둔다.
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 24)
+                            .onEnded { value in
+                                let dx = value.translation.width, dy = value.translation.height
+                                guard abs(dx) > 50, abs(dx) > abs(dy) * 1.5 else { return }
+                                withAnimation(.easeInOut(duration: 0.2)) { shiftMonth(by: dx < 0 ? 1 : -1) }
+                            }
+                    )
 
                 timeMenu
                     .padding(.horizontal, 16)
@@ -436,6 +519,11 @@ struct MapHomeCalendarSheet: View {
                     timePanel(for: selectedKind)
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
+                    if selectedKind == .places {
+                        placeVisitList
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                    }
                 }
             }
             .padding(.bottom, 40)
@@ -449,6 +537,13 @@ struct MapHomeCalendarSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.tpBackground)
         // 달이 바뀔 때뿐 아니라 "+"로 지표를 켜고 끌 때도 다시 읽는다(걸음·사진은 켠 때만 읽기 때문).
+        .task(id: "\(selectedKind == .places)|\(selectedDate.timeIntervalSince1970)") {
+            guard selectedKind == .places else { visits = []; return }
+            let day = calendar.startOfDay(for: selectedDate)
+            let value = await placeVisits(day)
+            guard !Task.isCancelled else { return }
+            visits = value
+        }
         .task(id: "\(displayedMonth.timeIntervalSince1970)|\(extraKindsRaw)") {
             totals = [:]
             if !statuses.isEmpty { statuses = [:] }
@@ -503,6 +598,19 @@ struct MapHomeCalendarSheet: View {
             : MapHomeCalendarTimeTotalsPolicy.cellText(seconds: value)
     }
 
+    /// 보고 있는 달의 하루 평균(오늘까지 지난 날 기준).
+    private func monthAverage(of kind: MapHomeCalendarTimeKind) -> TimeInterval {
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)) ?? displayedMonth
+        let count = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+        let days = (0..<count).compactMap { calendar.date(byAdding: .day, value: $0, to: monthStart) }.filter { $0 <= Date.now }
+        guard !days.isEmpty else { return 0 }
+        return days.reduce(0) { $0 + seconds(of: kind, on: $1) } / Double(days.count)
+    }
+
+    private func chipSeconds(of kind: MapHomeCalendarTimeKind) -> TimeInterval {
+        showsMonthAverage ? monthAverage(of: kind) : seconds(of: kind, on: selectedDate)
+    }
+
     private func seconds(of kind: MapHomeCalendarTimeKind, on date: Date) -> TimeInterval {
         totals[calendar.startOfDay(for: date)]?[kind.rawValue] ?? 0
     }
@@ -520,7 +628,7 @@ struct MapHomeCalendarSheet: View {
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
-                        Text(MapHomeCalendarChipValue.text(kind: kind, value: seconds(of: kind, on: selectedDate), language: language) ?? "–")
+                        Text(MapHomeCalendarChipValue.text(kind: kind, value: chipSeconds(of: kind), language: language) ?? "–")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.tpSecondary)
                     }
@@ -537,7 +645,34 @@ struct MapHomeCalendarSheet: View {
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }
             addMetricMenu
+            monthAverageToggle
         }
+    }
+
+    /// "+ 추가" 오른쪽 칸: 누르면 지표를 한 달 평균으로 본다.
+    private var monthAverageToggle: some View {
+        Button {
+            showsMonthAverage.toggle()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                Text(language.text("한달 평균", "Month avg"))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(showsMonthAverage ? Color.tpAccent : Color.tpSecondary)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(showsMonthAverage ? Color.tpAccent.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(showsMonthAverage ? Color.tpAccent : Color.tpLine, lineWidth: showsMonthAverage ? 1.2 : 0.8)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("한달 평균 보기", "Show month average"))
+        .accessibilityAddTraits(showsMonthAverage ? .isSelected : [])
     }
 
     /// "+" 타일: 걸음 수·사진 수·수단별 거리·외출 시간을 골라 달력 지표로 더하거나 뺀다.
@@ -595,14 +730,18 @@ struct MapHomeCalendarSheet: View {
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
-                if selectedInMonth {
+                if showsMonthAverage {
+                    Text(language.text("\(calendar.component(.month, from: monthStart))월 하루 평균", "Monthly daily average"))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                        .foregroundStyle(Color.tpSecondary)
+                } else if selectedInMonth {
                     Text(language.text("\(calendar.component(.month, from: selected))월 \(calendar.component(.day, from: selected))일",
                                        selected.formatted(.dateTime.month(.abbreviated).day())))
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
-            Text(panelText(selectedInMonth ? seconds(of: kind, on: selected) : 0, for: kind))
+            Text(panelText(showsMonthAverage ? sum / Double(elapsedDays) : (selectedInMonth ? seconds(of: kind, on: selected) : 0), for: kind))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .bold, design: .rounded))
                 .foregroundStyle(tint)
             HStack(alignment: .bottom, spacing: 2) {
@@ -630,6 +769,59 @@ struct MapHomeCalendarSheet: View {
         .padding(12)
         .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine.opacity(0.9), lineWidth: 0.8) }
+    }
+
+    /// 고른 날 방문한 곳(10분 이상, 30 m 안은 한 곳). 달력 시트 전체 스크롤에 이어 내려가며 본다.
+    private var placeVisitList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(language.text("방문한 곳 (10분 이상 · 30m 이내는 한 곳)", "Visited (10+ min, within 30 m merged)"))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.bottom, 8)
+            if visits.isEmpty {
+                Text(language.text("조건에 맞는 방문 장소가 없어요", "No places match"))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+                    .padding(.vertical, 8)
+            }
+            ForEach(visits) { visit in
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "mappin.circle.fill").foregroundStyle(Color.tpAccent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(visit.name)
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.tpInk)
+                        if let building = visit.buildingName, !building.isEmpty, building != visit.name {
+                            Text(building)
+                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                                .foregroundStyle(Color.tpSecondary)
+                        }
+                        Text("\(visit.arrival.formatted(date: .omitted, time: .shortened)) – \(visit.departure.formatted(date: .omitted, time: .shortened))"
+                             + (visit.visitCount > 1 ? language.text(" · \(visit.visitCount)번", " · \(visit.visitCount)x") : ""))
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                            .foregroundStyle(Color.tpSecondary)
+                    }
+                    Spacer(minLength: 8)
+                    Text(Self.durationText(visit.seconds, language: language))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                }
+                .padding(.vertical, 8)
+                Divider()
+            }
+        }
+        .padding(12)
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.tpLine.opacity(0.9), lineWidth: 0.8) }
+    }
+
+    private static func durationText(_ seconds: TimeInterval, language: MapHomeLanguage) -> String {
+        let minutes = Int(seconds / 60)
+        if minutes >= 60 {
+            let h = minutes / 60, m = minutes % 60
+            return language.text(m == 0 ? "\(h)시간" : "\(h)시간 \(m)분", m == 0 ? "\(h)h" : "\(h)h \(m)m")
+        }
+        return language.text("\(minutes)분", "\(minutes)m")
     }
 
     private func timeStat(_ title: String, _ value: String) -> some View {
@@ -2490,7 +2682,7 @@ struct MapHomeDailyCardData: Equatable {
     var accessoryID: String?
     var memoText: String? = nil
     var routePoints: [GeoPoint] = []
-    /// 사용자가 골라 넣은 항목(최대 4개). 비어 있으면 기본 통계를 쓴다.
+    /// 사용자가 골라 넣은 항목(최대 4개). 비어 있으면 통계 줄을 그리지 않는다.
     var metrics: [MapHomeCardMetric] = []
 }
 
@@ -2574,25 +2766,8 @@ struct MapHomeDailyCardView: View {
                             stat(metric.title, metric.value, metric.systemImage)
                         }
                     }
-                } else {
-                HStack(spacing: 12) {
-                    if let earned = data.earnedText {
-                        stat(language.text("오늘 번 돈", "Earned"), earned, "wonsign.circle.fill")
-                    }
-                    if let work = data.workText {
-                        stat(language.text("근무", "Work"), work, "briefcase.fill")
-                    }
-                    if let steps = data.steps {
-                        stat(language.text("걸음", "Steps"), steps.formatted(.number.grouping(.automatic)), "figure.walk")
-                    }
-                    if let memo = data.memoText {
-                        stat(language.text("메모", "Memos"), memo, "note.text")
-                    }
-                    if let distance = data.distanceText {
-                        stat(language.text("이동", "Travel"), distance, "point.topleft.down.to.point.bottomright.curvepath")
-                    }
                 }
-                }
+                // 고른 항목이 없으면 통계 줄을 아예 그리지 않는다. 예전에는 비어 있으면 기본 항목이 채워졌다(대표 지시, ARC1030A11).
                 VStack(alignment: .leading, spacing: 10) {
                     Text(data.totalText).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
                     ForEach(data.categories.prefix(5)) { entry in
