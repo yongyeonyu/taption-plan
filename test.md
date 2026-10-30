@@ -4769,3 +4769,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 빌드 통과, TimeScaleTests·MapHomeLiveMapTests 통과(`build/validation/RVW1030A01/ui-sim.log`). 실기기 손 확인 전.
 - RVW1030A01 기기 전체 스위트(`dev11-full.log`): 실패 2건(testStickmanActionCacheSpeedup, testForegroundLiveLocationEmitsNewFixesInsideNormalSamplingInterval) — 기기 단독 재실행 둘 다 통과(`dev11-rerun.log`). NaN 테스트 통과. 이 실행은 위 UI 수정이 들어가던 중에 시작해 섞인 소스로 빌드됐을 수 있음.
 - 기존 iCloud 백업 47개 삭제(대표 지시). 4개는 휴지통으로 옮긴 뒤 휴지통에서 사라졌고, 43개는 rm으로 삭제. 폴더 0개.
+- (UIX1030A01 후속) 사이드바 접기 버튼을 날짜 배지 아래에서 사이드바 알약 맨 위 여백 안의 원형 아이콘으로 옮김(연필과 같은 모양). 접힌 동안은 사이드바 자리 맨 위에 펼치기 원형 버튼만 남김. 사이드바 시작 위치는 원래대로.
+- 왼쪽 하단 펼치는 컨트롤을 검색(돋보기) 원형 버튼 하나로 줄임(대표 선택: 검색만). 현재 위치·방향 고정·나침반·배율·실행취소/다시실행·메모 추가 버튼 삭제.
+- 시뮬레이터 TimeScaleTests·MapHomeLiveMapTests 통과(`ui-sim2.log`). 화면·실기기 손 확인 전.

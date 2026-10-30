@@ -1142,6 +1142,8 @@ struct MapHomeTimeSidebar: View {
     let maximumSelectableMinute: Int?
     var onInteractionChanged: ((Bool) -> Void)?
     var onSectionEdit: ((Int) -> Void)?
+    /// 있으면 알약 맨 위 여백에 사이드바 접기 원형 버튼을 둔다(연필과 같은 모양).
+    var onCollapse: (() -> Void)?
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
@@ -1206,6 +1208,7 @@ struct MapHomeTimeSidebar: View {
         trailingInteractionWidth: CGFloat = 0,
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
+        onCollapse: (() -> Void)? = nil,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
         self.smoothsPlayback = smoothsPlayback
@@ -1223,6 +1226,7 @@ struct MapHomeTimeSidebar: View {
         self.trailingInteractionWidth = max(0, trailingInteractionWidth)
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
+        self.onCollapse = onCollapse
         self.onUnconfirmedReview = onUnconfirmedReview
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
@@ -1653,6 +1657,25 @@ struct MapHomeTimeSidebar: View {
                     .accessibilityLabel("클립 편집")
                     .accessibilityIdentifier("mapHomeTimelineEditButton")
                     .position(x: railOriginX + railWidth / 2, y: railHeight - verticalInset / 2)
+                    .zIndex(5)
+                }
+
+                // 알약 맨 위 여백 안의 접기 버튼: 사이드바 전체를 닫는다(대표 지시).
+                if let onCollapse {
+                    Button(action: onCollapse) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                            .foregroundStyle(Color.tpInk.opacity(0.85))
+                            .frame(width: 26, height: 26)
+                            .background(Circle().fill(Color.tpSurface.opacity(0.94)))
+                            .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
+                            .frame(width: railWidth, height: verticalInset)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("사이드바 닫기")
+                    .accessibilityIdentifier("mapHomeSidebarCollapseButton")
+                    .position(x: railOriginX + railWidth / 2, y: verticalInset / 2)
                     .zIndex(5)
                 }
 

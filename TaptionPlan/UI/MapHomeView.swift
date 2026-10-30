@@ -2391,8 +2391,6 @@ struct MapHomeView: View {
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
     @AppStorage(MapHomePlaybackZoomMode.storageKey)
     private var playbackZoomModeRaw = MapHomePlaybackZoomMode.adaptive.rawValue
-    @AppStorage("mapHomeLeftControlsExpanded")
-    private var isLeftControlsExpanded = false
     @AppStorage(MapHomeLayoutStyle.storageKey)
     private var layoutStyleRaw = MapHomeLayoutStyle.classic.rawValue
     @AppStorage(MapHomeRecordingLayers.storageKey)
@@ -3032,11 +3030,6 @@ struct MapHomeView: View {
                     .padding(.top, Layout.topRowInset)
                     .padding(.trailing, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
-                sidebarToggleButton
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + Layout.horizontalInset)
-                    .padding(.trailing, Layout.horizontalInset)
-                    .zIndex(MapHomeLayerPriority.header)
             }
 
             // 재생 중에는 상단에 얇은 진행 바를 띄운다. 정지 화면과 구분되게 하는 표시다.
@@ -3049,7 +3042,7 @@ struct MapHomeView: View {
                     )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize * 2 + Layout.horizontalInset + 8)
+                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + 8)
                 .padding(.horizontal, Layout.horizontalInset)
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(MapHomeLayerPriority.header)
@@ -6842,24 +6835,21 @@ struct MapHomeView: View {
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
     /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
-    /// 오른쪽 사이드바 전체 켜기/끄기. 날짜 배지와 같은 크기의 원형 버튼이다.
-    private var sidebarToggleButton: some View {
+    /// 접힌 사이드바를 다시 펼치는 원형 버튼. 사이드바 안 접기 버튼과 같은 모양이다.
+    private var sidebarExpandButton: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible.toggle() }
+            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible = true }
         } label: {
-            Image(systemName: isSidebarVisible ? "sidebar.right" : "sidebar.squares.right")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
-                .foregroundStyle(isSidebarVisible ? Color.tpAccent : Color.tpInk)
-                .frame(width: Layout.dateBadgeSize, height: Layout.dateBadgeSize)
+            Image(systemName: "chevron.left")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                .foregroundStyle(Color.tpInk.opacity(0.85))
+                .frame(width: 32, height: 32)
                 .mapHomeGlass(in: Circle())
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(
-            isSidebarVisible
-                ? language.text("사이드바 닫기", "Hide sidebar")
-                : language.text("사이드바 펼치기", "Show sidebar")
-        )
+        .accessibilityLabel(language.text("사이드바 펼치기", "Show sidebar"))
+        .accessibilityIdentifier("mapHomeSidebarExpandButton")
     }
 
     private var dateBadge: some View {
@@ -8219,8 +8209,7 @@ struct MapHomeView: View {
         let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
             viewportHeight: viewportSize.height,
             topOverlayHeight: 0,
-            // 날짜 배지와 그 아래 사이드바 켜기/끄기 버튼 자리를 비운다.
-            topMargin: Layout.horizontalInset * 3 + Layout.dateBadgeSize * 2,
+            topMargin: Layout.horizontalInset * 2 + Layout.dateBadgeSize,
             bottomMargin: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
@@ -8254,6 +8243,11 @@ struct MapHomeView: View {
                     .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
                     .offset(y: timeSidebarFrame.minY - frame.minY)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else if !isScreenRecording {
+                // 접힌 동안에는 사이드바가 있던 자리 맨 위에 펼치기 원형 버튼만 남긴다.
+                sidebarExpandButton
+                    .padding(.trailing, Layout.horizontalInset)
+                    .offset(y: timeSidebarFrame.minY - frame.minY)
             }
         }
         .position(x: viewportSize.width / 2, y: frame.midY)
@@ -8387,6 +8381,9 @@ struct MapHomeView: View {
                         onSectionEdit: { selectedMinute in
                             guard model.isBootstrapped else { return }
                             openSectionEditor(at: selectedMinute)
+                        },
+                        onCollapse: {
+                            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible = false }
                         },
                         onUnconfirmedReview: { segment in
                             guard model.isBootstrapped else { return }
@@ -8529,169 +8526,26 @@ struct MapHomeView: View {
         proxy: MapProxy?,
         railHeight: CGFloat
     ) -> some View {
-        let locationState = MapHomeLocationButtonState.resolve(
-            hasLocation: displayedLocationCoordinate != nil,
-            trackingMode: userTrackingMode,
-            isCentered: isMapCenteredOnUser
-        )
-        let locationStateLabel: String
-        switch locationState {
-        case .unavailable:
-            locationStateLabel = language.text("위치 없음", "Unavailable")
-        case .locating:
-            locationStateLabel = language.text("위치 찾는 중", "Locating")
-        case .available:
-            locationStateLabel = language.text("위치 사용 가능", "Available")
-        case .following:
-            locationStateLabel = language.text("현재 위치 따라가기", "Following")
-        }
+        // 왼쪽 하단에는 검색(돋보기)만 둔다(대표 지시). 누르면 상단 입력창이 펼쳐진다.
         return VStack(alignment: .leading, spacing: 10) {
             Spacer(minLength: 0)
-
-            if isLeftControlsExpanded {
-                VStack(spacing: 2) {
-                    // 접힌 검색: 돋보기 버튼을 좌하단에 두고, 누르면 상단 입력창이 펼쳐진다.
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isSearchExpanded = true
-                        }
-                        // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
-                        DispatchQueue.main.async {
-                            isMapSearchFocused = true
-                        }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
-                            .foregroundStyle(Color.tpInk)
-                            .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    }
-                    .accessibilityLabel(language.text("장소 검색", "Search places"))
-
-                    if !layoutStyle.movesActionsToBottom {
-                        Button {
-                            requestAndFollowUserLocation(using: proxy, fixedScale: true)
-                        } label: {
-                            MapHomeLocationButtonIcon(
-                                state: locationState,
-                                showsGPSDot: hasConfirmedCurrentGPS
-                            )
-                            .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        }
-                        .accessibilityLabel(language.text("현재 위치", "Current location"))
-                        .accessibilityValue(locationStateLabel)
-                    }
-
-                    if isHeadingMode {
-                        Button {
-                            toggleMapHeadingMode(using: proxy)
-                        } label: {
-                            Image("MapHomeCompass")
-                                .resizable()
-                                .scaledToFit()
-                                .padding(9)
-                                .rotationEffect(.degrees(compassRotationDegrees))
-                                .animation(.linear(duration: 0.12), value: compassRotationDegrees)
-                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                                .allowsHitTesting(false)
-                        }
-                        .accessibilityLabel(language.text("지도 방향 고정", "Fix map direction"))
-                    } else {
-                        Button {
-                            toggleMapHeadingMode(using: proxy)
-                        } label: {
-                            Image(systemName: "location.north.line")
-                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                                .foregroundStyle(Color.tpPastelRose)
-                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        }
-                        .accessibilityLabel(language.text("나침반 표시", "Show compass"))
-                    }
-
-                    VStack(spacing: 0) {
-                        mapZoomButton(systemImage: "plus", direction: 1, proxy: proxy)
-                        if let scale = MapHomeCameraZoomMath.scale(distance: visibleMapCamera?.distance) {
-                            Button {
-                                fitMapToRoutes()
-                            } label: {
-                                Text("\(scale)")
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
-                                    .monospacedDigit()
-                                    .foregroundStyle(Color.tpSecondary)
-                                    .frame(width: Layout.mapControlSize, height: 24)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(language.text("지도 배율 \(scale)", "Map zoom \(scale)"))
-                            .accessibilityHint(language.text("이동 경로에 맞춰 화면 배율을 조정합니다", "Fits the map to the route"))
-                        }
-                        mapZoomButton(systemImage: "minus", direction: -1, proxy: proxy)
-                    }
-
-                    VStack(spacing: 0) {
-                        Button {
-                            model.undoLastUserEdit()
-                        } label: {
-                            Image(systemName: "arrow.uturn.backward")
-                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                                .foregroundStyle(model.canUndo ? Color.tpInk : Color.tpSecondary.opacity(0.48))
-                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        }
-                        .accessibilityLabel(language.text("실행취소", "Undo"))
-                        .disabled(!model.canUndo)
-
-                        Button {
-                            model.redoLastUserEdit()
-                        } label: {
-                            Image(systemName: "arrow.uturn.forward")
-                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                                .foregroundStyle(model.canRedo ? Color.tpInk : Color.tpSecondary.opacity(0.48))
-                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        }
-                        .accessibilityLabel(language.text("다시실행", "Redo"))
-                        .disabled(!model.canRedo)
-                    }
-
-                    if !layoutStyle.movesActionsToBottom {
-                        Button {
-                            addMemo()
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: Layout.mapControlIcon, weight: .bold))
-                                .foregroundStyle(Color.tpReferenceBlue)
-                                .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        }
-                        .accessibilityLabel(language.text("메모 추가", "Add memo"))
-                    }
-
-                    Button {
-                        isLeftControlsExpanded = false
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-                            .foregroundStyle(Color.tpSecondary)
-                            .frame(width: 26, height: 26)
-                            .background(Circle().fill(Color.gray.opacity(0.28)))
-                            .frame(width: Layout.mapControlSize, height: 28)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(language.text("컨트롤 접기", "Collapse controls"))
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSearchExpanded = true
                 }
-                .padding(.vertical, 4)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            } else {
-                Button {
-                    isLeftControlsExpanded = true
-                } label: {
-                    Image(systemName: "chevron.up")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
-                        .foregroundStyle(Color.tpInk)
-                        .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                        .mapHomeGlass(in: Circle())
+                // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
+                DispatchQueue.main.async {
+                    isMapSearchFocused = true
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("컨트롤 펼치기", "Expand controls"))
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
+                    .foregroundStyle(Color.tpInk)
+                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
+                    .mapHomeGlass(in: Circle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("장소 검색", "Search places"))
         }
         .frame(width: Layout.timeRailWidth, height: railHeight)
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
