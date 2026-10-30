@@ -211,6 +211,17 @@ final class TaptionBackupV2Tests: XCTestCase {
             record("other-month", start: date(2026, 11, 2, 9), ord: 3),
         ]
         try await source.store.upsertRecords(records)
+        let rawEvents = [
+            TaptionRawEvent(
+                kind: TaptionRawEvent.Kind.watchSummary, id: "w-oct", timestamp: date(2026, 10, 4, 8), sequence: 3,
+                origin: .auto, provenance: ["watch", "summary"], payload: "{\"steps\":12}"
+            ),
+            TaptionRawEvent(
+                kind: TaptionRawEvent.Kind.watchAcceleration, id: "w-nov", timestamp: date(2026, 11, 2, 8), sequence: 1,
+                origin: .auto, provenance: [], payload: "[]"
+            ),
+        ]
+        _ = try await source.store.appendRawEvents(rawEvents)
 
         let backupEngine = engine(source, chunkBytes: 4_096)
         let result = try await backupEngine.backup(month: TaptionBackupMonth(year: 2026, month: 10), password: password, now: date(2026, 10, 10))
@@ -232,6 +243,14 @@ final class TaptionBackupV2Tests: XCTestCase {
         let restoredRecords = try await target.store.recordsForBackup(from: 0, to: .greatestFiniteMagnitude)
         let expected = records.filter { $0.id != "undated" && $0.id != "other-month" }
         XCTAssertEqual(restoredRecords.sorted { $0.id < $1.id }, expected.sorted { $0.id < $1.id })
+        let restoredRaw = try await target.store.rawEvents(
+            kind: TaptionRawEvent.Kind.watchSummary, from: date(2026, 10, 1), through: date(2026, 10, 31)
+        )
+        XCTAssertEqual(restoredRaw, [rawEvents[0]], "원본 이벤트는 같은 달 것만 복원하고 내용·출처를 그대로 둔다")
+        let restoredNovember = try await target.store.rawEvents(
+            kind: TaptionRawEvent.Kind.watchAcceleration, from: date(2026, 11, 1), through: date(2026, 11, 30)
+        )
+        XCTAssertTrue(restoredNovember.isEmpty)
 
         // 같은 파일을 다시 복원해도 변하지 않는다.
         let again = try await copy.restore(month: TaptionBackupMonth(year: 2026, month: 10), password: password)

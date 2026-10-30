@@ -509,6 +509,9 @@ actor TaptionBackupEngine {
                 index.records["\(record.kind)\u{0}\(record.id)"] = record.updatedAt.timeIntervalSince1970
                 buffer.records.append(record)
                 if buffer.records.count >= Self.restoreBatch { try await self.flush(&buffer) }
+            case "w":
+                buffer.rawEvents.append(try Self.rawEvent(from: fields))
+                if buffer.rawEvents.count >= Self.restoreBatch { try await self.flush(&buffer) }
             default:
                 break
             }
@@ -528,6 +531,7 @@ actor TaptionBackupEngine {
         var columns: [Int?] = []
         var readings: [SensorReading] = []
         var records: [TaptionStoreRecord] = []
+        var rawEvents: [TaptionRawEvent] = []
         var changedRecords = 0
         var readingConflicts = 0
     }
@@ -541,6 +545,11 @@ actor TaptionBackupEngine {
             } else {
                 buffer.readingConflicts += try await store.mergeReadingsKeepingLocal(batch)
             }
+        }
+        if !buffer.rawEvents.isEmpty {
+            let batch = buffer.rawEvents
+            buffer.rawEvents = []
+            _ = try await store.appendRawEvents(batch)
         }
         if !buffer.records.isEmpty {
             let batch = buffer.records
@@ -777,6 +786,7 @@ actor TaptionBackupEngine {
             records += try await memoStore?.recordsForBackup(
                 from: range.start.timeIntervalSince1970, to: range.end.timeIntervalSince1970
             ) ?? []
+            try await exportRawEvents(from: range, put: put)
         case .settings:
             records = try await store.undatedRecordsForBackup()
             records += try await memoStore?.undatedRecordsForBackup() ?? []
@@ -800,6 +810,52 @@ actor TaptionBackupEngine {
         try trailer.optionalDouble(summary.latestRecordUpdate)
         try emit(trailer.finish())
         return summary
+    }
+
+    /// 원본 이벤트는 한 번 받으면 바뀌지 않는 값이라 ID로 중복을 거른다(복원은 INSERT OR IGNORE).
+    private func exportRawEvents(from range: (start: Date, end: Date), put: (Data) throws -> Void) async throws {
+        var schema = TaptionBackupJSONLine.Builder()
+        schema.string("#raw")
+        for name in Self.rawColumns { schema.string(name) }
+        try put(schema.finish())
+        for kind in [
+            TaptionRawEvent.Kind.deviceEnvelope, TaptionRawEvent.Kind.watchSummary, TaptionRawEvent.Kind.watchAcceleration,
+        ] {
+            for event in try await store.rawEvents(kind: kind, from: range.start, through: range.end)
+                where event.timestamp < range.end {
+                var row = TaptionBackupJSONLine.Builder()
+                row.string("w")
+                row.string(event.kind)
+                row.string(event.id)
+                try row.double(event.timestamp.timeIntervalSince1970)
+                row.int(event.sequence)
+                row.string(event.origin.rawValue)
+                row.string(try Self.provenanceText(event.provenance))
+                row.string(event.payload)
+                try put(row.finish())
+            }
+        }
+    }
+
+    private static let rawColumns = ["#raw", "kind", "id", "ts", "seq", "origin", "provenance", "payload"]
+
+    private static func provenanceText(_ provenance: [String]) throws -> String {
+        let data = try JSONEncoder().encode(provenance)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func rawEvent(from fields: [TaptionBackupJSONLine.Field]) throws -> TaptionRawEvent {
+        guard fields.count == 8, let kind = fields[1].string, let id = fields[2].string,
+              let ts = fields[3].double, let seq = fields[4].int64, let originName = fields[5].string,
+              let origin = TaptionStoreRecord.Origin(rawValue: originName),
+              let provenanceText = fields[6].string, let payload = fields[7].string else {
+            throw TaptionBackupError.malformed("raw event row")
+        }
+        let provenance = try JSONDecoder().decode([String].self, from: Data(provenanceText.utf8))
+        return TaptionRawEvent(
+            kind: kind, id: id, timestamp: Date(timeIntervalSince1970: ts), sequence: seq,
+            origin: origin, provenance: provenance, payload: payload
+        )
     }
 
     private static let recordColumns = [

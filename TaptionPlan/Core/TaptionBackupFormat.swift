@@ -13,6 +13,7 @@ import Foundation
 // 프레임 평문 = JSON Lines(한 줄에 배열 하나). 표마다 스키마 줄(`["#readings",열...]`) 뒤에 행 줄이 온다.
 //   센서 원본 행  ["r", id, ts, 열값..., extra]   기록 행  ["c", id, kind, start, end, updated, origin, deleted, ord, body]
 //   마지막 줄(트레일러) ["#end", 센서 수, 기록 수, 첫 시각, 마지막 시각, 내용 SHA-256, 기록 최신 수정 시각]
+//   원본 이벤트 행  ["w", 종류, id, ts, seq, origin, provenance(JSON 배열 문자열), payload]  (스키마 ["#raw", ...])
 //   기록 행의 deleted=1은 삭제 표시(톰스톤)다. 센서 원본에는 삭제 표시가 없다.
 //   월 파일은 시작 시각이 그 달인 행을, 설정 파일(taption-settings.taptionbackup)은 시작 시각이 없는 기록을 담는다.
 // 키 = PBKDF2-HMAC-SHA256(비밀번호, 헤더의 솔트, 헤더의 반복 횟수, 32바이트). 압축한 뒤 암호화한다.
@@ -142,7 +143,8 @@ struct TaptionBackupHeader: Codable, Equatable, Sendable {
     }
 
     static let formatName = "taption-backup"
-    static let currentVersion = 1
+    /// 2: 워치·기기 원본 이벤트(`#raw` 구간)를 담는다. 버전 1 백업은 읽지 않는다(출시 전 기존 백업 삭제에 합의).
+    static let currentVersion = 2
 
     var format = Self.formatName
     var version = Self.currentVersion

@@ -1,6 +1,6 @@
 {
   "files": 151,
-  "lines": 165209,
+  "lines": 165267,
   "buckets": {
     "<500": 94,
     "500-1000": 20,
@@ -20,7 +20,7 @@
     "state_properties": 590,
     "observable_types": 8,
     "view_types": 179,
-    "funcs": 5346,
+    "funcs": 5349,
     "singleton_reach": 331
   },
   "metrics": {
