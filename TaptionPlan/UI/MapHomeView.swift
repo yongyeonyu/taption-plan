@@ -2397,6 +2397,9 @@ struct MapHomeView: View {
     @State private var photoMoments: [PhotoMoment] = []
     @State private var photosNeedReadingRetry = false
     @AppStorage("mapHomeShowsPhotos") private var showsPhotosOnMap = true
+    /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
+    @AppStorage("mapHomeShowsRoutes") private var showsRoutesOnMap = true
+    @AppStorage("mapHomeShowsFootprints") private var showsFootprintsOnMap = true
     @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
     // 표시 > 카운터에서 켜고 끄는 카운터. 연봉 카운터만 따로 설정 화면을 갖는다.
     @AppStorage(MapHomeCounterKind.steps.storageKey) private var showsStepCounter = true
@@ -4619,7 +4622,7 @@ struct MapHomeView: View {
             cameraPosition: mapPosition,
             cameraRevision: mapCameraRevision,
             viewportCommand: appleViewportCommand,
-            routes: appleMapRoutes,
+            routes: recordingShows(\.routes) ? appleMapRoutes : [],
             annotations: appleMapAnnotations,
             playback: appleMapPlayback,
             centersPlayback: selectedTimelineMinute != nil
@@ -5022,7 +5025,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        for waypoint in playbackVisibleWaypoints(pawprintWaypoints) {
+        for waypoint in playbackVisibleWaypoints(recordingShows(\.footprints) ? pawprintWaypoints : []) {
             let isSelectedRoute = waypoint.isPredicted
                 && waypoint.predictedRoute?.id == selectedPredictedRoute?.id
             let isInteractive = waypoint.predictedRoute != nil
@@ -7316,7 +7319,9 @@ struct MapHomeView: View {
 
     /// 녹화 중에는 고른 레이어만 보이고, 녹화 중이 아니면 항상 보인다.
     private func recordingShows(_ layer: KeyPath<MapHomeRecordingLayers, Bool>) -> Bool {
-        !isScreenRecording || recordingLayers[keyPath: layer]
+        if layer == \MapHomeRecordingLayers.routes, !showsRoutesOnMap { return false }
+        if layer == \MapHomeRecordingLayers.footprints, !showsFootprintsOnMap { return false }
+        return !isScreenRecording || recordingLayers[keyPath: layer]
     }
 
     /// 달력 지표 합계. 사진 수는 비싸고 천천히 바뀌어 `includePhotos`가 true일 때만 읽는다.
@@ -9605,6 +9610,28 @@ struct MapHomeView: View {
                     Label(
                         language.text("사진", "Photos"),
                         systemImage: "photo.fill"
+                    )
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Toggle(isOn: $showsRoutesOnMap) {
+                    Label(
+                        language.text("경로", "Routes"),
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
+                    )
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
+                Toggle(isOn: $showsFootprintsOnMap) {
+                    Label(
+                        language.text("발자국", "Footprints"),
+                        systemImage: "pawprint.fill"
                     )
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
                 }

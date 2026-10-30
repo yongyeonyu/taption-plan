@@ -4719,3 +4719,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## ARC1030A06 사이드바 연필 원형·안쪽 여백(2026-10-30)
 - 연필을 원형 배경으로 감싸고 트랙 위·아래 여백(`MapHomeTimeSidebarMath.verticalInset`)을 28→40으로 늘려 안쪽 내용을 줄임. 여백에 의존하던 테스트 3곳은 상수 기반으로 수정.
 - 시뮬레이터 전체 단위 테스트 `build/validation/ARC1030A06/t1`: TEST SUCCEEDED(실패 0). 시뮬레이터 스크린샷으로 배치 확인. 실기기 눈 확인 전.
+
+## ARC1030A06 표시 메뉴 경로·발자국 스위치(2026-10-30, 실기기 아이폰 11 Pro)
+- 표시 메뉴에 "경로"·"발자국" 스위치 추가(`@AppStorage mapHomeShowsRoutes/Footprints`, 판타지·Apple 지도 모두 적용, 녹화 레이어와 별개).
+- 실기기 전체 단위 테스트 `build/validation/ARC1030A06/dev11`: 1,692개 중 통과 1,689, 실패 2, 건너뜀 1. 실패 `evidenceTravelLookup…`는 수정 전에도 같은 기기에서 실패하던 `NaN` 비교 차이. `testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`는 단독 실행(`dev11b`)에서 통과해 전체 부하 때의 타이밍 흔들림.
+- 표시 메뉴 화면은 시뮬레이터에서 첫 실행 권한 안내에 가려 확인하지 못했고 실기기 확인 전. 사이드바 변경 포함 시뮬레이터 전체 테스트는 통과(`ARC1030A06/t1`).
