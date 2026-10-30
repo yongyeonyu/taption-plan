@@ -4789,3 +4789,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1030A06 TestFlight 255(2026-10-30)
 - `release.sh --yes` 종료 0: 빌드 255 처리 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A06/testflight-report.json`. 네 번들 CFBundleVersion·CURRENT_PROJECT_VERSION 모두 255. 기기 설치·기능 확인은 별도.
+
+## UIX1031A01 사이드바 접힘 시 날짜 배지와 펼치기 화살표를 한 알약으로(2026-10-31)
+- 사이드바가 접히면 날짜 배지 아래에 아래 화살표를 붙여 세로 알약(날짜 배지와 같은 바탕)으로 묶음. 펼치면 알약이 풀리고 사이드바가 오른쪽에서 스프링으로 나옴. 사이드바 안 접기 버튼은 위 화살표.
+- 시뮬레이터 빌드·TimeScaleTests·MapHomeLiveMapTests 통과(`build/validation/UIX1031A01/sim.log`). 화면 확인과 실기기 확인 전.

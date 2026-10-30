@@ -6883,29 +6883,20 @@ struct MapHomeView: View {
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
     /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
-    /// 접힌 사이드바를 다시 펼치는 원형 버튼. 사이드바 안 접기 버튼과 중심점·크기·모양을 맞춘다.
-    /// 숨김 상태에서는 아래 화살표다.
-    private func sidebarExpandButton(width: CGFloat, height: CGFloat) -> some View {
+    /// 접힌 사이드바를 펼치는 화살표. 날짜 배지와 한 알약에 붙어 있다(숨김 상태에서는 아래 화살표).
+    private var sidebarExpandArrow: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible = true }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { isSidebarVisible = true }
         } label: {
             Image(systemName: "chevron.down")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .foregroundStyle(Color.tpInk.opacity(0.85))
                 .frame(width: 26, height: 26)
-                .background(Circle().fill(Color.tpSurface.opacity(0.94)))
-                .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("사이드바 펼치기", "Show sidebar"))
         .accessibilityIdentifier("mapHomeSidebarExpandButton")
-        // 사이드바 안 접기 버튼과 같은 식: 레일 가로 가운데, 맨 위 여백 가운데.
-        .position(
-            x: MapHomeTimeSidebarMath.handleLaneWidth + Layout.timeRailWidth / 2,
-            y: MapHomeTimeSidebarMath.verticalInset / 2
-        )
-        .frame(width: width, height: height, alignment: .topLeading)
     }
 
     private var dateBadge: some View {
@@ -6918,7 +6909,7 @@ struct MapHomeView: View {
                 .weekday(.abbreviated)
                 .locale(Locale(identifier: language.text("ko_KR", "en_US")))
         )
-        let badge = VStack(spacing: 0) {
+        let face = VStack(spacing: 0) {
             Text(weekdayText)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
                 .foregroundStyle(color)
@@ -6928,10 +6919,7 @@ struct MapHomeView: View {
                 .monospacedDigit()
         }
         .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // 보이는 크기는 그대로 두고 터치 영역만 44pt까지 넓힌다.
-        .taptionHitOutset(vertical: max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2))
         // 한 번 탭하면 날짜 줄을 왼쪽으로 펼친다.
         .onTapGesture {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
@@ -6949,6 +6937,23 @@ struct MapHomeView: View {
         .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
+        // 사이드바가 접히면 날짜 배지와 펼치기 화살표를 세로 알약 하나로 묶는다(달력 배지와 같은 바탕).
+        let badge = Group {
+            if isSidebarVisible {
+                face
+                    .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    // 보이는 크기는 그대로 두고 터치 영역만 44pt까지 넓힌다.
+                    .taptionHitOutset(vertical: max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2))
+            } else {
+                VStack(spacing: 2) {
+                    face
+                    sidebarExpandArrow
+                }
+                .padding(.vertical, 4)
+                .frame(width: Layout.timeRailWidth)
+                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            }
+        }
         return HStack(spacing: 6) {
             if isDateWeekExpanded {
                 MapHomeDateStrip(
@@ -8313,10 +8318,6 @@ struct MapHomeView: View {
                     .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
                     .offset(y: timeSidebarFrame.minY - frame.minY)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
-            } else if !isScreenRecording {
-                // 접힌 동안에는 사이드바와 같은 자리(같은 프레임·정렬)에 펼치기 버튼만 남긴다.
-                sidebarExpandButton(width: timeSidebarWidth, height: timeSidebarFrame.height)
-                    .offset(y: timeSidebarFrame.minY - frame.minY)
             }
         }
         .position(x: viewportSize.width / 2, y: frame.midY)
@@ -8452,7 +8453,7 @@ struct MapHomeView: View {
                             openSectionEditor(at: selectedMinute)
                         },
                         onCollapse: {
-                            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible = false }
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { isSidebarVisible = false }
                         },
                         onUnconfirmedReview: { segment in
                             guard model.isBootstrapped else { return }
