@@ -4686,3 +4686,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - Apple 지도 안개를 `MKOverlayRenderer` 타일에서 지도 위 `MapHomeFogView` 직접 그리기로 교체(타일 비동기 재그리기로 안개가 빠진 순간 지도가 하얗게 번쩍이던 구조 제거). 기기 눈 확인 전.
 - 단위 테스트 `build/validation/ARC1030A02/t5`: 1,688개 중 통과 1,685, 실패 0, 건너뜀 3.
 - 이 시점에 아이폰이 연결되어 있지 않아 USB 설치는 하지 못했다(사용자 출근 중). TestFlight 빌드 251로 대신 전달한다.
+
+## TFB1030A02 빌드 251 배포(2026-10-30)
+- `release.sh --yes --request-id TFB1030A02` 종료 코드 0. 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A02/testflight-report.json`.
+- 포함: ARC1030A02 재생 버그·날짜 줄 스크롤·Apple 지도 안개 뷰. 아이폰은 출근 중이라 USB 설치는 하지 못했고 실기기 눈 확인은 아직이다.
