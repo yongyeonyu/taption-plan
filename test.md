@@ -4793,3 +4793,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## UIX1031A01 사이드바 접힘 시 날짜 배지와 펼치기 화살표를 한 알약으로(2026-10-31)
 - 사이드바가 접히면 날짜 배지 아래에 아래 화살표를 붙여 세로 알약(날짜 배지와 같은 바탕)으로 묶음. 펼치면 알약이 풀리고 사이드바가 오른쪽에서 스프링으로 나옴. 사이드바 안 접기 버튼은 위 화살표.
 - 시뮬레이터 빌드·TimeScaleTests·MapHomeLiveMapTests 통과(`build/validation/UIX1031A01/sim.log`). 화면 확인과 실기기 확인 전.
+
+## UIX1031A02 오늘 집 아이콘을 날짜 배지와 한 알약으로(2026-10-31)
+- 오늘이 아닐 때만 날짜 배지 위에 집 아이콘을 두고 한 알약으로 묶음. 누르면 오늘과 현재 위치(jumpToTodayAndFitRoutes). 오늘이면 사라짐. 식별자 mapHomeTodayPill 유지.
+- 시뮬레이터 빌드 통과, UI 테스트 testTodayPillAppearsOnPastDatesAndReturnsToToday 통과(`build/validation/UIX1031A02/ui.log`). 화면·실기기 확인 전.

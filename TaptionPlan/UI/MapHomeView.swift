@@ -6883,6 +6883,23 @@ struct MapHomeView: View {
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
     /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
+    /// 오늘이 아닐 때 날짜 배지 위에 뜨는 집 아이콘. 누르면 오늘과 현재 위치로 돌아가고, 오늘이 되면 사라진다.
+    private var homeButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
+        } label: {
+            Image(systemName: "house.fill")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 26, height: 26)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("오늘로 이동", "Go to today"))
+        .accessibilityIdentifier("mapHomeTodayPill")
+    }
+
     /// 접힌 사이드바를 펼치는 화살표. 날짜 배지와 한 알약에 붙어 있다(숨김 상태에서는 아래 화살표).
     private var sidebarExpandArrow: some View {
         Button {
@@ -6937,23 +6954,23 @@ struct MapHomeView: View {
         .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
-        // 사이드바가 접히면 날짜 배지와 펼치기 화살표를 세로 알약 하나로 묶는다(달력 배지와 같은 바탕).
-        let badge = Group {
-            if isSidebarVisible {
-                face
-                    .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    // 보이는 크기는 그대로 두고 터치 영역만 44pt까지 넓힌다.
-                    .taptionHitOutset(vertical: max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2))
-            } else {
-                VStack(spacing: 2) {
-                    face
-                    sidebarExpandArrow
-                }
-                .padding(.vertical, 4)
-                .frame(width: Layout.timeRailWidth)
-                .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        let isToday = Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate)
+        // 오늘이 아니면 위에 집 아이콘, 사이드바가 접혀 있으면 아래에 펼치기 화살표를 붙여 날짜 배지와 한 알약으로 묶는다.
+        let isPlain = isToday && isSidebarVisible
+        let badge = VStack(spacing: 2) {
+            if !isToday {
+                homeButton
+                    .transition(.scale.combined(with: .opacity))
+            }
+            face
+            if !isSidebarVisible {
+                sidebarExpandArrow
             }
         }
+        .padding(.vertical, isPlain ? 0 : 4)
+        .frame(width: Layout.timeRailWidth)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
+        .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
         return HStack(spacing: 6) {
             if isDateWeekExpanded {
                 MapHomeDateStrip(
@@ -6964,25 +6981,6 @@ struct MapHomeView: View {
                     model.selectedDate = day
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
-            // 오늘이 아닌 날짜를 볼 때만 "오늘" 알약이 뜨고, 한 번 누르면 오늘로 간다(대표 지시, ARC1030A09).
-            if !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
-                } label: {
-                    Text(language.text("오늘", "Today"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.tpInk)
-                        .padding(.horizontal, 12)
-                        .frame(height: 30)
-                        .mapHomeGlass(in: Capsule())
-                        .taptionHitOutset(horizontal: 4, vertical: 7)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(language.text("오늘로 이동", "Go to today"))
-                .accessibilityIdentifier("mapHomeTodayPill")
-                .transition(.scale.combined(with: .opacity))
             }
             badge
         }
