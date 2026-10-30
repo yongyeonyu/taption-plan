@@ -1663,7 +1663,7 @@ struct MapHomeTimeSidebar: View {
                 // 알약 맨 위 여백 안의 접기 버튼: 사이드바 전체를 닫는다(대표 지시).
                 if let onCollapse {
                     Button(action: onCollapse) {
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.up")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                             .foregroundStyle(Color.tpInk.opacity(0.85))
                             .frame(width: 26, height: 26)
