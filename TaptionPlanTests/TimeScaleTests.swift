@@ -1239,7 +1239,7 @@ final class TimeScaleTests: XCTestCase {
             MapHomeOverlayLayoutMath.timeSidebarHeight(availableHeight: 1_400),
             1_400
         )
-        XCTAssertEqual(MapHomeTimeSidebarMath.verticalInset, 28)
+        XCTAssertEqual(MapHomeTimeSidebarMath.verticalInset, 40)
     }
 
     func testMapSearchUsesMenuEdgeAndClampsForCompactScreens() {

@@ -1,6 +1,6 @@
 {
   "files": 152,
-  "lines": 164765,
+  "lines": 164769,
   "buckets": {
     "<500": 95,
     "500-1000": 20,
@@ -50,7 +50,7 @@
     "TaptionPlan/UI/MapHomeLiveMapPolicies.swift": 1230,
     "TaptionPlan/UI/MapHomeLocationPresentation.swift": 2157,
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1378,
-    "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3141,
+    "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3145,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1341,
     "TaptionPlan/UI/MapHomeView.swift": 22460,
     "TaptionPlan/UI/ReviewView.swift": 4817,
@@ -141,9 +141,9 @@
     },
     {
       "path": "TaptionPlan/UI/MapHomeTimeSidebar.swift",
-      "lines": 3141,
+      "lines": 3145,
       "largest_type": "struct MapHomeTimeSidebar",
-      "largest_type_lines": 1037,
+      "largest_type_lines": 1040,
       "types": 31
     }
   ],

@@ -28791,7 +28791,7 @@ final class MapHomeTimeRailCardTests: XCTestCase {
         XCTAssertEqual(lowered.maxY, previous.maxY + 28, accuracy: 0.1)
     }
 
-    /// 트랙 높이는 1,000에서 위·아래 여백 28씩을 뺀 944다(MapHomeTimeSidebarMath.verticalInset).
+    /// 트랙 높이는 1,000에서 위·아래 여백(MapHomeTimeSidebarMath.verticalInset)을 뺀 값이다.
     /// 선택 카드는 2시간(120분)이라 트랙의 1/12을 차지한다.
     func testSelectedCardHighlightsTwoHoursOnFullDayRail() {
         let frame = MapHomeTimeSidebarMath.selectedTimeCardFrame(
@@ -28801,7 +28801,8 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 1_440
         )
 
-        XCTAssertEqual(frame.height, 944.0 / 12, accuracy: 0.1)
+        let track = 1_000 - 2 * MapHomeTimeSidebarMath.verticalInset
+        XCTAssertEqual(frame.height, track / 12, accuracy: 0.1)
         XCTAssertEqual(frame.midY, 500, accuracy: 0.1)
     }
 
@@ -28821,8 +28822,9 @@ final class MapHomeTimeRailCardTests: XCTestCase {
             visibleDurationMinutes: 60
         )
 
-        XCTAssertEqual(dayBoundaryFrame.height, 944.0 / 24, accuracy: 0.1)
-        XCTAssertEqual(zoomedFrame.height, 944, accuracy: 0.1)
+        let track = 1_000 - 2 * MapHomeTimeSidebarMath.verticalInset
+        XCTAssertEqual(dayBoundaryFrame.height, track / 24, accuracy: 0.1)
+        XCTAssertEqual(zoomedFrame.height, track, accuracy: 0.1)
     }
 }
 

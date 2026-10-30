@@ -4715,3 +4715,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 전체 단위 테스트 `build/validation/ARC1030A05/t2`: TEST SUCCEEDED(실패 0). 새 테스트 `testHandleReachingNeighborFarEndOffersMergeAndAdoptsDraggedCategory`·`testMergeIsNotOfferedForGapOrSameCategoryNeighbors` 포함.
 - 사이드바 연필 위치는 시뮬레이터(BOKKI-iPhone11) 스크린샷으로 확인(알약 맨 아래, 눈금 "24" 아래). 합치기 대화상자·재생 시작 포커싱·발자국 순차 표시는 실기기 눈 확인 전.
 - 이번 변경 뒤 실기기(아이폰 11 Pro) 전체 테스트는 다시 돌리지 않았다(직전 실기기 전체 실행은 `dev11d`).
+
+## ARC1030A06 사이드바 연필 원형·안쪽 여백(2026-10-30)
+- 연필을 원형 배경으로 감싸고 트랙 위·아래 여백(`MapHomeTimeSidebarMath.verticalInset`)을 28→40으로 늘려 안쪽 내용을 줄임. 여백에 의존하던 테스트 3곳은 상수 기반으로 수정.
+- 시뮬레이터 전체 단위 테스트 `build/validation/ARC1030A06/t1`: TEST SUCCEEDED(실패 0). 시뮬레이터 스크린샷으로 배치 확인. 실기기 눈 확인 전.

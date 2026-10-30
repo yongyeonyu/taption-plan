@@ -1642,7 +1642,10 @@ struct MapHomeTimeSidebar: View {
                     } label: {
                         Image(systemName: "pencil")
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
-                            .foregroundStyle(Color.tpInk.opacity(0.78))
+                            .foregroundStyle(Color.tpInk.opacity(0.85))
+                            .frame(width: 26, height: 26)
+                            .background(Circle().fill(Color.tpSurface.opacity(0.94)))
+                            .overlay(Circle().stroke(Color.tpLine.opacity(0.5), lineWidth: 0.6))
                             .frame(width: railWidth, height: verticalInset)
                             .contentShape(Rectangle())
                     }
@@ -2634,7 +2637,8 @@ struct MapHomeSidebarDoubleTapDetector: Equatable {
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
-    static let verticalInset: CGFloat = 28
+    /// 트랙 위·아래 여백. 아래 여백 안에 원형 연필 단추가 들어가, 안쪽 내용(눈금·트랙)을 28에서 40으로 줄였다(ARC1030A05).
+    static let verticalInset: CGFloat = 40
     static let reviewMarkerHitHeight: CGFloat = 44
     static let standardDragSensitivity: CGFloat = 1.6
     static let precisionDragSensitivity: CGFloat = 0.25
