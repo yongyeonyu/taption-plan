@@ -4740,3 +4740,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 날짜 배지 옆에 "오늘" 알약 추가(오늘이 아닌 날짜를 볼 때만, 한 번 누르면 오늘로 이동·경로 맞춤). 이전에 "날짜 배지 더블탭으로 오늘로 간다"고 한 설명은 오류였다(함수만 있고 배지에 연결되지 않았음).
 - UI 테스트 `TaptionPlanDateStripSwipeUITests` 3개 통과(`build/validation/ARC1030A09/ui`): `testTodayPillAppearsOnPastDatesAndReturnsToToday`(신규), `testSwipeOnlyBrowsesAndTapSelects`, `testDateStripKeepsScrollingPastTheWeekWithoutChangingTheDate`(새 동작에 맞게 수정). 이 UI 테스트들은 이번에 처음 실행.
 - 단위 테스트는 이 변경 뒤 다시 돌리지 않았다(화면 요소만 추가). 직전 실기기 전체 실행은 `ARC1030A08/dev11`. 실기기 눈 확인 전.
+
+## ARC1030A10 표시 메뉴 장소 반경 스위치(2026-10-30)
+- 표시 메뉴에 "장소 반경" 스위치 추가. 이미 있던 `mapHomeShowsPlaceRanges` 값(장소 편집 화면의 스위치와 같은 키)에 연결했을 뿐 새 상태는 없다. 반경 원은 판타지 지도(벡터)에서만 그려진다.
+- Debug 시뮬레이터 빌드 통과(`ARC1030A05/sim/build4.log`). 화면만 추가한 변경이라 단위 테스트는 다시 돌리지 않았다. 실기기 눈 확인 전.

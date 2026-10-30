@@ -9638,6 +9638,18 @@ struct MapHomeView: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
+                // 등록한 장소의 반경 원(집·회사 등)을 켜고 끈다(대표 지시, ARC1030A10). 판타지 지도에서 그려진다.
+                Toggle(isOn: $showsPlaceRanges) {
+                    Label(
+                        language.text("장소 반경", "Place radius"),
+                        systemImage: "circle.dashed"
+                    )
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                }
+                .tint(Color.tpReferenceBlue)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+
                 Toggle(isOn: Binding(
                     get: { memoDisplayMode != .hidden },
                     set: { memoDisplayRaw = ($0 ? MapHomeMemoDisplayMode.all : .hidden).rawValue }
