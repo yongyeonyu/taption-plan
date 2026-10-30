@@ -4677,3 +4677,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 테스트 `build/validation/ARC1030A02/t3`: 1,688개 중 통과 1,685, 실패 0, 건너뜀 3(이동 속도 테스트 4개 기대값을 1/48에 맞춤). 동시 빌드가 있을 때 `testThirtyDayAppColdAndWarmLoadP95StaysInteractive`가 한 번 흔들렸으나 단독 실행에서 통과.
 - 기기 Release 벤치 `s1`~`s5`: 재생 중 경로 추적 로그(`playback_route_trace`)로 지난 날짜 스냅샷 허용 뒤 오버레이가 1→66개로 늘어남을 확인. 오버레이 60Hz 투영 후 fps 113, 25ms 이상 틱 약 30~95개.
 - 기기에 최종 빌드(s7) 설치만 했고, 발자국 실시간 찍힘·날짜 줄·안개 깜빡임·+/- 위치는 눈으로 확인하지 않았다.
+
+## ARC1030A02 날짜 줄 스크롤 전환(2026-10-30)
+- 날짜 줄을 시스템 가로 스크롤(`scrollTargetBehavior(.viewAligned)`)로 바꿔 끊김 없이 밀리고 손을 뗄 때만 스냅. 선택일은 탭해야 바뀜. 기기에 설치(s8), 눈 확인 전.
+- `FeatureEngineTests` 672개 모두 통과(`build/validation/ARC1030A02/t4`). 전체 스위트는 이 변경 뒤 다시 돌리지 않았다(날짜 줄 외 변경 없음).
