@@ -4694,3 +4694,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## ARC1030A03 검증(2026-10-30)
 - 단위 테스트 `build/validation/ARC1030A03/t2`: 1,688개 중 통과 1,684, 실패 1(`testStoreKitProductPurchaseEntitlementAndRestore`, 시뮬레이터 앱 실행 오류와 함께 24초 지연), 건너뜀 3. 단독 재실행 `t3` 통과. 이전 전체 실행 `t1`은 1,685 통과·실패 0(앞 두 수정 시점).
 - 실기기 눈 확인 전: 카메라 충돌 해소, 발자국 꼬리, 달력 점 채움.
+
+## TFB1030A03 빌드 252 배포(2026-10-30)
+- `release.sh --yes --request-id TFB1030A03` 종료 코드 0. VALID, 내부 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A03/testflight-report.json`.
+- 포함: ARC1030A03(현재 위치 카메라 충돌, 라이브 발자국 꼬리, 달력 점 채움, 8시 카드 예약 기록). 실기기 눈 확인 전.
