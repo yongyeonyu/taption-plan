@@ -1144,6 +1144,8 @@ struct MapHomeTimeSidebar: View {
     var onSectionEdit: ((Int) -> Void)?
     /// 있으면 알약 맨 위 여백에 사이드바 접기 원형 버튼을 둔다(연필과 같은 모양).
     var onCollapse: (() -> Void)?
+    /// 날짜 배지와 한 줄로 이어진 상태. 위 모서리를 직각으로 두어 배지와 붙어 보이게 한다.
+    var isJoinedToTop = false
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
@@ -1209,6 +1211,7 @@ struct MapHomeTimeSidebar: View {
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
         onCollapse: (() -> Void)? = nil,
+        isJoinedToTop: Bool = false,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
         self.smoothsPlayback = smoothsPlayback
@@ -1227,6 +1230,7 @@ struct MapHomeTimeSidebar: View {
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
         self.onCollapse = onCollapse
+        self.isJoinedToTop = isJoinedToTop
         self.onUnconfirmedReview = onUnconfirmedReview
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
@@ -1290,6 +1294,15 @@ struct MapHomeTimeSidebar: View {
         ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
     }
 
+    /// 사이드바 패널 모양. 날짜 배지와 이어졌을 때는 위 모서리를 직각으로 둔다.
+    private var panelShape: UnevenRoundedRectangle {
+        let top: CGFloat = isJoinedToTop ? 0 : 22
+        return UnevenRoundedRectangle(
+            cornerRadii: .init(topLeading: top, bottomLeading: 22, bottomTrailing: 22, topTrailing: top),
+            style: .continuous
+        )
+    }
+
     var body: some View {
         sidebarBody
     }
@@ -1341,24 +1354,26 @@ struct MapHomeTimeSidebar: View {
             ZStack(alignment: .topLeading) {
                 ZStack(alignment: .topLeading) {
                     if !Self.benchHidden("glass") {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    panelShape
                         .fill(Color.clear)
                         .frame(width: railWidth, height: railHeight)
-                        .mapHomeGlass(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .mapHomeGlass(in: panelShape)
                         .position(
                             x: railOriginX + railWidth / 2,
                             y: railHeight / 2
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            panelShape
                                 .stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1)
+                                // 날짜 배지와 이어진 동안 테두리를 빼 두 면이 한 줄로 보이게 한다.
+                                .opacity(isJoinedToTop ? 0 : 1)
                                 .frame(width: railWidth, height: railHeight)
                                 .position(
                                     x: railOriginX + railWidth / 2,
                                     y: railHeight / 2
                                 )
                         }
-                        .shadow(color: .black.opacity(0.05), radius: 7, y: 2)
+                        .shadow(color: .black.opacity(isJoinedToTop ? 0 : 0.05), radius: 7, y: 2)
                         .allowsHitTesting(false)
                     }
 
@@ -1598,10 +1613,7 @@ struct MapHomeTimeSidebar: View {
                 .mask(alignment: .leading) {
                     HStack(spacing: 0) {
                         Rectangle().frame(width: railOriginX)
-                        RoundedRectangle(
-                            cornerRadius: 22,
-                            style: .continuous
-                        )
+                        panelShape
                         .frame(width: railWidth)
                         Rectangle().frame(width: trailingInteractionWidth)
                     }
@@ -3164,5 +3176,26 @@ enum KnownActivityTitleLocalizer {
             return (english[base] ?? base) + " ride"
         }
         return title
+    }
+}
+
+/// 사이드바 세로 펼침·접힘: 위쪽 기준으로 높이만 늘고 줄며 투명도가 함께 바뀐다.
+private struct SidebarVerticalStretch: ViewModifier {
+    let amount: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(x: 1, y: max(amount, 0.001), anchor: .top)
+            .opacity(Double(min(max(amount, 0), 1)))
+    }
+}
+
+extension AnyTransition {
+    /// 사이드바가 날짜 배지 아래에서 쫙 펼쳐지고, 접힐 때는 아래부터 배지 쪽으로 줄어든다.
+    static var sidebarDrop: AnyTransition {
+        .modifier(
+            active: SidebarVerticalStretch(amount: 0),
+            identity: SidebarVerticalStretch(amount: 1)
+        )
     }
 }

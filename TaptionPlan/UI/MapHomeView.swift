@@ -4706,6 +4706,10 @@ struct MapHomeView: View {
             onCameraFrame: { frame, locationPoint, isFinal in
                 MapHomeInteractionMonitor.shared.touch("map_gesture")
                 let now = ProcessInfo.processInfo.systemUptime
+                // 화랑이 점은 지도와 같은 프레임에 옮긴다. 아래 읽기 값은 0.25초마다라 여기서 기다리면 카운터가 뒤처진다.
+                if let locationPoint {
+                    submitDisplayedStickmanViewportPoint(locationPoint)
+                }
                 if let rendered = mapCameraFrameProjection.submit(
                     frame,
                     nowUptime: now,
@@ -6908,7 +6912,7 @@ struct MapHomeView: View {
     /// 접힌 사이드바를 펼치는 화살표. 날짜 배지와 한 알약에 붙어 있다(숨김 상태에서는 아래 화살표).
     private var sidebarExpandArrow: some View {
         Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { isSidebarVisible = true }
+            withAnimation(MapHomeView.sidebarToggleSpring) { isSidebarVisible = true }
         } label: {
             Image(systemName: "chevron.down")
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
@@ -6963,6 +6967,13 @@ struct MapHomeView: View {
         let showsHome = dateBadgeShowsHome
         let showsArrow = !isSidebarVisible && !isDateWeekExpanded
         let isPlain = !showsHome && !showsArrow
+        // 사이드바와 합쳐진 동안에는 아래 모서리를 직각으로 두어 한 줄로 이어 보이게 한다.
+        let topRadius: CGFloat = isPlain ? 18 : 22
+        let bottomRadius: CGFloat = isDateBadgeMerged ? 0 : topRadius
+        let badgeShape = UnevenRoundedRectangle(
+            cornerRadii: .init(topLeading: topRadius, bottomLeading: bottomRadius, bottomTrailing: bottomRadius, topTrailing: topRadius),
+            style: .continuous
+        )
         let badge = VStack(spacing: 2) {
             if showsHome {
                 homeButton
@@ -6975,7 +6986,7 @@ struct MapHomeView: View {
         }
         .padding(.vertical, isPlain ? 0 : 4)
         .frame(width: Layout.timeRailWidth)
-        .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
+        .mapHomeGlass(in: badgeShape)
         .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
         return HStack(alignment: .top, spacing: 6) {
             if isDateWeekExpanded {
@@ -6994,6 +7005,9 @@ struct MapHomeView: View {
     }
 
     /// 오늘이 아니고 펼치지 않은 때 집 아이콘이 날짜 배지 위에 붙는다.
+    /// 사이드바를 펼치고 접는 튕김. 펼칠 때는 위에서 아래로 쫙 내려오고, 접을 때는 아래부터 위로 줄어든다.
+    static let sidebarToggleSpring = Animation.spring(response: 0.5, dampingFraction: 0.62)
+
     private var dateBadgeShowsHome: Bool {
         !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) && !isDateWeekExpanded
     }
@@ -8333,7 +8347,7 @@ struct MapHomeView: View {
                 currentTimeRail
                     .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
                     .offset(y: timeSidebarFrame.minY - frame.minY)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.sidebarDrop)
             }
         }
         // 날짜 배지와 합칠 때 사이드바가 살짝 튕기며 내려왔다 올라앉는다(떨어지는 방울 느낌).
@@ -8472,8 +8486,9 @@ struct MapHomeView: View {
                         },
                         // 날짜 배지와 합쳐진 동안에는 접기 버튼을 숨긴다.
                         onCollapse: isDateBadgeMerged ? nil : {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { isSidebarVisible = false }
+                            withAnimation(MapHomeView.sidebarToggleSpring) { isSidebarVisible = false }
                         },
+                        isJoinedToTop: isDateBadgeMerged,
                         onUnconfirmedReview: { segment in
                             guard model.isBootstrapped else { return }
                             focusedUnconfirmedReviewSegment = segment

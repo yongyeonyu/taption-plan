@@ -4810,3 +4810,21 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`ui-test.log`)
 - 실기기 iPhone 11 Pro Debug 빌드 성공, 설치·실행 성공 (`build/validation/UIX1031A03/install.log`)
 - 제한: 펼친 날짜 줄의 너비·정렬, 합침 애니메이션은 기기 화면에서 아직 눈으로 확인하지 않음. 물방울식 점성 합침이 아니라 스프링 튕김으로 구현.
+
+## UIX1031A04 이음새 정리와 펼친 날짜 줄의 달 표시 (2026-10-31)
+- 시뮬레이터 Debug 빌드 성공, 날짜 UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`build/validation/UIX1031A04/`)
+- 실기기 iPhone 11 Pro Debug 빌드·설치·실행 성공
+- 제한: 기기 화면에서 이음새와 달 표시 위치는 아직 눈으로 확인하지 않음
+
+## UIX1031A05 날짜 줄 조각 배치·사이드바 세로 펼침 (2026-10-31)
+- 날짜 줄을 스크롤 뷰 없이 칸 위치 계산으로 바꿔 칸이 겹쳐 보이지 않게 함. 사이드바 펼침은 위에서 아래로 늘고, 접힘은 아래부터 줄어드는 세로 전환으로 변경(스프링 response 0.5, damping 0.62).
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, 단위 테스트 `testWindowCentersTheSelectedDay` 통과 (`build/validation/UIX1031A05/`)
+- 실기기 iPhone 11 Pro Debug 빌드·설치·실행 성공
+- 제한: 겹침 해소·세로 전환·이음새는 기기 화면에서 아직 눈으로 확인하지 않음. 녹화 영상 `ScreenRecording_10-31-2026 02-29-04_1.mov`는 열어 보지 않음.
+
+## UIX1031A06 Apple 지도 카운터·화랑이 점 뒤처짐 (2026-10-31)
+- 원인: Apple 지도의 화랑이 점은 카메라 읽기 값(0.25초 간격)을 기다려 갱신됨. MapLibre는 프레임마다 갱신.
+- 수정: Apple 카메라 프레임마다 화랑이 점을 바로 제출. 읽기 값 간격은 그대로.
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`build/validation/UIX1031A06/`)
+- 실기기 iPhone 11 Pro Debug 빌드·설치·실행 성공
+- 제한: 기기에서 팬 시 카운터 추종 지연이 사라졌는지는 대표 확인 전까지 미검증. 60Hz 제출이라 완전한 프레임 동기는 아님.

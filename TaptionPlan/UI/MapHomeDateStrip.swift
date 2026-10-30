@@ -2,30 +2,32 @@ import SwiftUI
 
 /// 오른쪽 위 날짜 배지를 눌러 펼치는 날짜 줄.
 ///
-/// 선택일 앞뒤 120일을 가로 스크롤로 둘러본다. 손가락을 끊김 없이 따라가고 관성도 있으며, 손을 뗄 때만
-/// 가장 가까운 칸에 스냅한다(대표 지시, ARC1030A02). 밀어도 선택일은 그대로이고 칸을 탭해야 날짜가 바뀐다.
+/// 선택일 앞뒤 날짜를 고정 간격으로 놓고, 손가락 이동만큼 옮긴다. 밀면 가운데 날짜만 바뀌고
+/// 선택일은 그대로이며, 칸을 탭해야 날짜가 바뀐다(대표 지시, ARC1030A02).
+/// 스크롤 뷰 대신 칸 위치를 직접 계산해 칸이 겹쳐 보이거나 배경이 어긋나지 않게 한다.
 struct MapHomeDateStrip: View {
     let language: MapHomeLanguage
     let selectedDate: Date
-    /// 날짜 칸을 눌렀거나 쓸어 넘겨 날짜가 바뀌었을 때. 부모가 선택일을 바꾼다.
+    /// 날짜 칸을 눌렀을 때. 부모가 선택일을 바꾼다.
     let onSelect: (Date) -> Void
 
-    /// 줄 가운데에 와 있는 날짜(날짜 id). 밀면 계속 바뀌지만 선택한 날짜는 바뀌지 않는다. 날짜 칸을 탭해야 그날로 이동한다(대표 지시, ARC1030A02).
+    /// 줄 가운데에 와 있는 날짜. 밀면 바뀌지만 선택일은 바뀌지 않는다.
     @State private var centeredDay: Date?
+    /// 손가락을 따라가는 중의 가로 이동량. 손을 떼면 칸 한 개 단위로 스냅한다.
+    @State private var dragOffset: CGFloat = 0
 
     private var calendar: Calendar { TimelineAxisGrid.normalizedCalendar() }
 
     var body: some View {
-        // 주어진 폭을 모두 채워 왼쪽 여백 끝까지 펼쳐진다. 날 수는 폭에 따라 달라진다.
         GeometryReader { proxy in
             strip(width: proxy.size.width)
         }
         .frame(height: MapHomeWeekStripMath.height)
         .onAppear { centeredDay = calendar.startOfDay(for: selectedDate) }
         .onChange(of: selectedDate) { _, date in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
-                centeredDay = calendar.startOfDay(for: date)
-            }
+            // 선택일이 바뀌면 그 날을 가운데에 둔다. 애니메이션 없이 바로 맞춘다.
+            centeredDay = calendar.startOfDay(for: date)
+            dragOffset = 0
         }
         // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
         .accessibilityElement(children: .contain)
@@ -33,25 +35,66 @@ struct MapHomeDateStrip: View {
     }
 
     private func strip(width: CGFloat) -> some View {
-        // 시스템 가로 스크롤이라 손가락을 끊김 없이 따라가고 관성도 있다. 손을 뗄 때만 가장 가까운 칸에 스냅한다.
-        let days = MapHomeWeekStripMath.window(
-            around: selectedDate, calendar: calendar, radius: MapHomeWeekStripMath.scrollWindowRadius
-        )
-        return ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: MapHomeWeekStripMath.daySpacing) {
-                ForEach(days, id: \.self) { day in
-                    dayCell(day)
-                }
-            }
-            .scrollTargetLayout()
+        let dayAreaWidth = width - MapHomeWeekStripMath.monthLabelWidth
+        return HStack(spacing: 0) {
+            monthLabel
+                .frame(width: MapHomeWeekStripMath.monthLabelWidth)
+            dayArea(width: dayAreaWidth)
         }
-        .contentMargins(.horizontal, (width - MapHomeWeekStripMath.dayWidth) / 2, for: .scrollContent)
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $centeredDay, anchor: .center)
-        .frame(width: width)
-        .frame(height: MapHomeWeekStripMath.height)
+        .frame(width: width, height: MapHomeWeekStripMath.height)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    /// 펼친 줄의 맨 왼쪽에 보이는 선택 날짜의 달. 어느 달인지 헷갈리지 않게 한다.
+    private var monthLabel: some View {
+        let month = calendar.component(.month, from: selectedDate)
+        return Text(language.text("\(month)월", monthAbbreviation))
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+            .foregroundStyle(Color.tpInk)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .accessibilityIdentifier("mapHomeDateStripMonth")
+    }
+
+    private var monthAbbreviation: String {
+        selectedDate.formatted(Date.FormatStyle().month(.abbreviated).locale(Locale(identifier: "en_US")))
+    }
+
+    /// 칸은 가운데 날짜를 기준으로 고정 간격에 놓는다. 화면 밖 칸은 그리지 않는다.
+    private func dayArea(width: CGFloat) -> some View {
+        let pitch = MapHomeWeekStripMath.dayPitch
+        let center = centeredDay ?? calendar.startOfDay(for: selectedDate)
+        let reach = Int((width / 2 / pitch).rounded(.up)) + 1
+        return ZStack {
+            ForEach(-reach...reach, id: \.self) { step in
+                if let day = calendar.date(byAdding: .day, value: step, to: center) {
+                    dayCell(day)
+                        .position(
+                            x: width / 2 + CGFloat(step) * pitch + dragOffset,
+                            y: MapHomeWeekStripMath.height / 2
+                        )
+                }
+            }
+        }
+        .frame(width: width, height: MapHomeWeekStripMath.height)
+        .clipped()
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 6)
+                .onChanged { value in
+                    dragOffset = value.translation.width
+                }
+                .onEnded { value in
+                    let flick = value.predictedEndTranslation.width
+                    let steps = -Int((flick / pitch).rounded())
+                    let next = calendar.date(byAdding: .day, value: steps, to: center) ?? center
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                        centeredDay = next
+                        dragOffset = 0
+                    }
+                }
+        )
     }
 
     private func dayCell(_ day: Date) -> some View {
@@ -62,7 +105,6 @@ struct MapHomeDateStrip: View {
             : (weekday == 7 ? .tpReferenceBlue : .tpInk)
         let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
         return Button {
-            // 날짜 줄은 오른쪽 위 날짜 배지를 눌러서만 닫는다. 날짜 칸을 누르면 날짜만 바뀐다.
             onSelect(day)
         } label: {
             VStack(spacing: 0) {
@@ -99,18 +141,12 @@ enum MapHomeWeekStripMath {
     static let dayPitch: CGFloat = dayWidth + daySpacing
     /// 날짜 줄 높이. 양옆 원형 버튼과 같은 높이(40pt).
     static let height: CGFloat = 40
-    /// 날짜 줄에 한 번에 보이는 날 수. 홀수라야 선택일이 가운데 온다.
+    /// 날짜 줄에 한 번에 보이는 날 수 기준. 홀수라야 선택일이 가운데 온다.
     static let visibleDays = 7
+    /// 줄 맨 왼쪽의 달 표시 칸 너비.
+    static let monthLabelWidth: CGFloat = 36
     /// 선택일 앞뒤로 보여 줄 날 수(창 반폭).
     static let windowRadius = visibleDays / 2
-
-    /// 선택일을 가운데 두고 앞뒤로 같은 수의 날을 만든다.
-    ///
-    /// 달력 주(일~토)를 그대로 그리면 선택일이 줄의 가장자리에 걸려
-    /// '여기서 더 못 간다'처럼 보인다. 창을 선택일에 붙여 두면 하루 넘길
-    /// 때마다 새 날짜가 좌우에서 계속 들어온다.
-    /// 스크롤로 둘러볼 수 있는 선택일 앞뒤 날 수.
-    static let scrollWindowRadius = 120
     /// 보이는 7칸의 폭.
     static let visibleWidth: CGFloat = CGFloat(visibleDays) * dayWidth + CGFloat(visibleDays - 1) * daySpacing
 
