@@ -1,6 +1,6 @@
 {
   "files": 151,
-  "lines": 165267,
+  "lines": 165356,
   "buckets": {
     "<500": 94,
     "500-1000": 20,
@@ -17,14 +17,14 @@
     "main_queue": 7
   },
   "size": {
-    "state_properties": 590,
+    "state_properties": 591,
     "observable_types": 8,
     "view_types": 179,
-    "funcs": 5349,
-    "singleton_reach": 331
+    "funcs": 5351,
+    "singleton_reach": 332
   },
   "metrics": {
-    "largest_file_lines": 22525,
+    "largest_file_lines": 22608,
     "largest_type_lines": 13594
   },
   "frozen_files": {
@@ -52,7 +52,7 @@
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1378,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3145,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1342,
-    "TaptionPlan/UI/MapHomeView.swift": 22525,
+    "TaptionPlan/UI/MapHomeView.swift": 22608,
     "TaptionPlan/UI/ReviewView.swift": 4817,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
     "TaptionPlan/UI/SettingsView.swift": 2322,
@@ -64,9 +64,9 @@
   "largest_files": [
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
-      "lines": 22525,
+      "lines": 22608,
       "largest_type": "struct MapHomeView",
-      "largest_type_lines": 11322,
+      "largest_type_lines": 11405,
       "types": 184
     },
     {
@@ -156,7 +156,7 @@
     {
       "path": "TaptionPlan/UI/MapHomeView.swift",
       "type": "struct MapHomeView",
-      "lines": 11322
+      "lines": 11405
     },
     {
       "path": "TaptionPlan/UI/ScheduleView.swift",

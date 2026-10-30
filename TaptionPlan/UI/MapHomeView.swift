@@ -2365,6 +2365,10 @@ struct MapHomeView: View {
     @State private var dayCalendarEvents: [CalendarRecord] = []
     /// `dayCalendarEvents`가 어느 날짜의 목록인지. 날짜를 바꾼 직후 이전 날 목록이 남지 않게 한다.
     @State private var dayCalendarEventsDate: Date?
+    /// 오른쪽 사이드바(시간·날씨 띠) 전체를 켜고 끈다. 날짜 배지 아래 원형 버튼으로 바꾼다.
+    @AppStorage("mapHomeSidebarVisible") private var isSidebarVisible = true
+    /// 일정을 읽지 못한 이유. 있으면 구글 캘린더 버튼이 목록 대신 고칠 수 있는 설정을 연다.
+    @State private var calendarAccessProblem: MapHomeCalendarAccessProblem?
     /// 선택한 날의 시간 메모 캐시(배지 계산용).
     @State private var timedMemoCache: [ActionMemo] = []
     /// 날짜 줄을 끄는 동안 손가락을 따라 움직이는 거리(한 칸을 넘지 않는다).
@@ -3028,6 +3032,11 @@ struct MapHomeView: View {
                     .padding(.top, Layout.topRowInset)
                     .padding(.trailing, Layout.horizontalInset)
                     .zIndex(MapHomeLayerPriority.header)
+                sidebarToggleButton
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + Layout.horizontalInset)
+                    .padding(.trailing, Layout.horizontalInset)
+                    .zIndex(MapHomeLayerPriority.header)
             }
 
             // 재생 중에는 상단에 얇은 진행 바를 띄운다. 정지 화면과 구분되게 하는 표시다.
@@ -3040,7 +3049,7 @@ struct MapHomeView: View {
                     )
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize + 8)
+                .padding(.top, Layout.topRowInset + Layout.dateBadgeSize * 2 + Layout.horizontalInset + 8)
                 .padding(.horizontal, Layout.horizontalInset)
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .zIndex(MapHomeLayerPriority.header)
@@ -3973,7 +3982,14 @@ struct MapHomeView: View {
                     memoCircleButton
                 }
                 MapHomeCalendarButton(isExpanded: todayCalendarExpanded, count: dayCalendarEventsForSelectedDate.count) {
-                    withAnimation(.snappy) { todayCalendarExpanded.toggle() }
+                    switch calendarAccessProblem {
+                    case .googleFailed:
+                        model.selectTab(.settings)
+                    case .permissionDenied:
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    case nil:
+                        withAnimation(.snappy) { todayCalendarExpanded.toggle() }
+                    }
                 }
             }
             // 현재 시간 ±15분 안의 메모·일정은 목록을 펼치지 않아도 왼쪽 상단에 보인다.
@@ -4085,8 +4101,15 @@ struct MapHomeView: View {
             dayCalendarEventsDate = nil
         }
         var loaded: [CalendarRecord] = []
+        var problem: MapHomeCalendarAccessProblem?
         if GoogleCalendarAccount.shared.isConnected {
-            loaded = (try? await GoogleCalendarAccount.shared.events(on: day, calendar: calendar)) ?? []
+            do {
+                loaded = try await GoogleCalendarAccount.shared.events(on: day, calendar: calendar)
+            } catch {
+                problem = .googleFailed
+            }
+        } else if [.denied, .unavailable].contains(calendarService.permissionState()) {
+            problem = .permissionDenied
         } else if calendarService.permissionState() == .authorized {
             let start = calendar.startOfDay(for: day)
             let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
@@ -4099,6 +4122,7 @@ struct MapHomeView: View {
         guard calendar.isDate(day, inSameDayAs: model.selectedDate) else { return }
         dayCalendarEvents = loaded
         dayCalendarEventsDate = day
+        if calendarAccessProblem != problem { calendarAccessProblem = problem }
     }
 
     /// 메모 목록 패널. 폭은 일정 패널과 같은 280으로 맞춘다.
@@ -5433,8 +5457,49 @@ struct MapHomeView: View {
             isDaySummaryPresented = true
             return
         }
+        if handleMapMarkerTap(at: tapPoint) { return }
         guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
         if isHomeSummaryTapped(at: tapPoint) { isDaySummaryPresented = true }
+    }
+
+    /// 지도 위 핀(메모·사진·탑승 후보·대중교통·장소)은 터치를 받지 않고 여기서 위치로 판정한다.
+    /// 핀이 두 손가락 핀치를 가로채지 않게 하려는 것이다(대표 지시). 위에 그려진 것부터 본다.
+    private func handleMapMarkerTap(at tapPoint: CGPoint) -> Bool {
+        guard let viewport = vectorMapViewportStore.viewport else { return false }
+        func hit(_ id: String, width: CGFloat = 56, height: CGFloat = 64) -> Bool {
+            guard let point = vectorPoint(in: viewport, for: id) else { return false }
+            return CGRect(x: point.x - width / 2, y: point.y - height, width: width, height: height + 10).contains(tapPoint)
+        }
+        if recordingShows(\.mapMemos), let memo = mapMemosOnMap.last(where: { hit(vectorMapMemoMarkerID($0.id)) }) {
+            selectedMapStickerEditor = .memo(memo.id)
+            return true
+        }
+        if !isDayPlaybackRunning, !isScreenRecording,
+           let cluster = photoClusters.last(where: { hit(vectorPhotoMarkerID($0.id)) }) {
+            photoAlbumSelection = MapHomePhotoAlbumSelection(id: cluster.id, moments: cluster.moments)
+            return true
+        }
+        if let candidate = transitBoardingCandidates.last(where: { hit(vectorBoardingCandidateMarkerID($0.id)) }) {
+            selectedTransitBoardingCandidate = candidate
+            return true
+        }
+        if let place = transitAnnotations.last(where: { hit(vectorTransitMarkerID($0.id)) }) {
+            selectedUserLocation = .transit(place.id)
+            return true
+        }
+        // 집 핀은 아래 `isHomeSummaryTapped`가 맡는다.
+        if let place = placeAnnotations.last(where: {
+            $0.destination != .home && hit(vectorPlaceMarkerID($0.id), width: 80, height: 90)
+        }) {
+            if place.destination == .user {
+                selectedUserLocation = .frequentPlace(place.id)
+            } else {
+                selectedMarkerPlaceID = place.id
+                selectedMarkerInfo = .landmark(place.destination)
+            }
+            return true
+        }
+        return false
     }
 
     /// 화랑이 위 카운터 위젯을 눌렀는지. 위젯을 눌러도 지도 이동이 막히지 않게 지도 탭에서 영역으로 판정한다.
@@ -5645,13 +5710,8 @@ struct MapHomeView: View {
                                 equippedAccessoryID: place.equippedAccessoryID
                             )
                             .fixedSize()
-                            // simultaneousGesture: 탭으로 사용자 위치 메뉴를 열되
-                            // 지도 팬·핀치줌은 랜드마크 위에서도 그대로 통과.
-                            .simultaneousGesture(
-                                TapGesture().onEnded {
-                                    selectedUserLocation = .frequentPlace(place.id)
-                                }
-                            )
+                            // 탭은 지도 탭에서 위치로 판정한다(두 손가락 핀치가 핀에 막히지 않게).
+                            .allowsHitTesting(false)
                             .accessibilityAddTraits(.isButton)
                             .accessibilityLabel(
                                 language.text(
@@ -5678,6 +5738,7 @@ struct MapHomeView: View {
                                     onOpenDaySummary: { isDaySummaryPresented = true }
                                 )
                                 .fixedSize()
+                                .allowsHitTesting(false)
                                 .accessibilityAddTraits(.isButton)
                             } else {
                                 MapHomePlacePin(
@@ -5695,12 +5756,7 @@ struct MapHomeView: View {
                                     equippedAccessoryID: place.equippedAccessoryID
                                 )
                                 .fixedSize()
-                                .simultaneousGesture(
-                                    TapGesture().onEnded {
-                                        selectedMarkerPlaceID = place.id
-                                        selectedMarkerInfo = .landmark(place.destination)
-                                    }
-                                )
+                                .allowsHitTesting(false)
                                 .accessibilityAddTraits(.isButton)
                                 .accessibilityLabel(
                                     language.text(
@@ -5727,6 +5783,7 @@ struct MapHomeView: View {
                                 .fixedSize()
                         }
                         .buttonStyle(.plain)
+                        .allowsHitTesting(false)
                         .accessibilityLabel(
                             language.text(
                                 place.name + " 사용자 위치 메뉴",
@@ -5753,6 +5810,7 @@ struct MapHomeView: View {
                             .fixedSize()
                         }
                         .buttonStyle(.plain)
+                        .allowsHitTesting(false)
                         .accessibilityLabel(
                             language.text(
                                 "\(candidate.name) \(candidate.kind.title) 탑승 확인",
@@ -5804,7 +5862,7 @@ struct MapHomeView: View {
                             .transition(.scale.combined(with: .opacity))
                         }
                         .buttonStyle(.plain)
-                        .allowsHitTesting(!isDayPlaybackRunning && !isScreenRecording)
+                        .allowsHitTesting(false)
                     }
                     .animation(.easeOut(duration: 0.25), value: info.coverID)
                 }
@@ -5822,6 +5880,7 @@ struct MapHomeView: View {
                             MapHomeMapMemoMarker(memo: memo)
                         }
                         .buttonStyle(.plain)
+                        .allowsHitTesting(false)
                         .accessibilityLabel(
                             language.text(
                                 "\(memo.text) 지도 메모, \(memo.occurredAt.formatted(date: .omitted, time: .shortened))",
@@ -6783,6 +6842,26 @@ struct MapHomeView: View {
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
     /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
+    /// 오른쪽 사이드바 전체 켜기/끄기. 날짜 배지와 같은 크기의 원형 버튼이다.
+    private var sidebarToggleButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { isSidebarVisible.toggle() }
+        } label: {
+            Image(systemName: isSidebarVisible ? "sidebar.right" : "sidebar.squares.right")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+                .foregroundStyle(isSidebarVisible ? Color.tpAccent : Color.tpInk)
+                .frame(width: Layout.dateBadgeSize, height: Layout.dateBadgeSize)
+                .mapHomeGlass(in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(
+            isSidebarVisible
+                ? language.text("사이드바 닫기", "Hide sidebar")
+                : language.text("사이드바 펼치기", "Show sidebar")
+        )
+    }
+
     private var dateBadge: some View {
         let calendar = TimelineAxisGrid.normalizedCalendar()
         let weekday = calendar.component(.weekday, from: model.selectedDate)
@@ -8140,7 +8219,8 @@ struct MapHomeView: View {
         let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
             viewportHeight: viewportSize.height,
             topOverlayHeight: 0,
-            topMargin: Layout.horizontalInset * 2 + Layout.dateBadgeSize,
+            // 날짜 배지와 그 아래 사이드바 켜기/끄기 버튼 자리를 비운다.
+            topMargin: Layout.horizontalInset * 3 + Layout.dateBadgeSize * 2,
             bottomMargin: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
@@ -8169,9 +8249,12 @@ struct MapHomeView: View {
         .frame(maxWidth: .infinity)
         .frame(height: frame.height)
         .overlay(alignment: .topTrailing) {
-            currentTimeRail
-                .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
-                .offset(y: timeSidebarFrame.minY - frame.minY)
+            if isSidebarVisible {
+                currentTimeRail
+                    .frame(width: timeSidebarWidth, height: timeSidebarFrame.height)
+                    .offset(y: timeSidebarFrame.minY - frame.minY)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
         }
         .position(x: viewportSize.width / 2, y: frame.midY)
     }

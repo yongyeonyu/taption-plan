@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// 일정을 읽지 못한 이유. 구글 연결 실패는 앱 설정, 기기 캘린더 권한 꺼짐은 iOS 설정에서 고친다.
+enum MapHomeCalendarAccessProblem: Equatable {
+    case googleFailed
+    case permissionDenied
+}
+
 /// 왼쪽 상단의 일정 버튼. 구글 캘린더(구글 계정이 추가된 기기 캘린더) 아이콘이다.
 struct MapHomeCalendarButton: View {
     let isExpanded: Bool

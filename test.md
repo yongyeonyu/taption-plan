@@ -4761,3 +4761,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## RVW1030A01 백업 원본(raw_events) 포함 + 형식 버전 2(2026-10-30)
 - 시뮬레이터: TaptionBackupV2Tests 전체 통과(`build/validation/RVW1030A01/backup.log`). 왕복 테스트에 원본 이벤트(같은 달 복원, 다른 달 제외) 검증 추가.
 - 미검증: 실기기 백업·복원, 버전 1 파일을 여는 앱 동작(기존 백업 47개는 그대로 남아 있음).
+
+## UIX1030A01 핀치 우선·사이드바 토글·구글 캘린더 설정 연결(2026-10-30)
+- 지도 위 핀(장소·대중교통·탑승 후보·사진·메모)이 터치를 받지 않게 하고, 탭은 지도 탭에서 화면 위치로 판정(`handleMapMarkerTap`). 두 손가락 핀치가 핀 위에서 시작해도 지도로 간다. 스티커(스티커 모드)·검색 핀은 그대로.
+- 오른쪽 상단 날짜 배지 아래 원형 버튼으로 사이드바 전체 켜기/끄기(`mapHomeSidebarVisible`). 사이드바는 버튼 자리만큼 아래에서 시작.
+- 구글 캘린더 버튼: 구글 연결 일정 읽기 실패 → 앱 설정 탭, 기기 캘린더 권한 꺼짐 → iOS 설정.
+- 시뮬레이터 빌드 통과, TimeScaleTests·MapHomeLiveMapTests 통과(`build/validation/RVW1030A01/ui-sim.log`). 실기기 손 확인 전.
+- RVW1030A01 기기 전체 스위트(`dev11-full.log`): 실패 2건(testStickmanActionCacheSpeedup, testForegroundLiveLocationEmitsNewFixesInsideNormalSamplingInterval) — 기기 단독 재실행 둘 다 통과(`dev11-rerun.log`). NaN 테스트 통과. 이 실행은 위 UI 수정이 들어가던 중에 시작해 섞인 소스로 빌드됐을 수 있음.
+- 기존 iCloud 백업 47개 삭제(대표 지시). 4개는 휴지통으로 옮긴 뒤 휴지통에서 사라졌고, 43개는 rm으로 삭제. 폴더 0개.
