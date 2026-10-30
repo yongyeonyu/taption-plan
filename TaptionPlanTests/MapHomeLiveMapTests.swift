@@ -4,6 +4,30 @@ import XCTest
 
 /// MAP1019C01: 날씨 상태·집 날씨 아이콘·경로 속도 그라데이션·실시간 자동 줌·GPS 로그.
 final class MapHomeLiveMapTests: XCTestCase {
+    // MARK: - Counter badge throttle (PRF1030A01)
+
+    @MainActor
+    func testCounterBadgeThrottleReusesValueWithinPlaybackIntervalOnly() {
+        let throttle = MapHomeCounterBadgeThrottle()
+        let key = MapHomeCounterBadgeThrottle.Key(
+            revision: 1, day: Date(timeIntervalSince1970: 0), kinds: [.work], english: false
+        )
+        var computeCount = 0
+        func read(_ uptime: TimeInterval, playing: Bool = true, key: MapHomeCounterBadgeThrottle.Key = key) -> String? {
+            throttle.badges(key: key, isPlaying: playing, uptime: uptime) {
+                computeCount += 1
+                return [MapHomeCounterBadge(kind: .work, text: "\(computeCount)")]
+            }.first?.text
+        }
+        XCTAssertEqual(read(10.00), "1")
+        XCTAssertEqual(read(10.10), "1", "재생 중 0.25초 안에는 직전 값을 쓴다")
+        XCTAssertEqual(read(10.30), "2", "0.25초가 지나면 다시 계산한다")
+        XCTAssertEqual(read(10.31, playing: false), "3", "재생이 아니면 묶지 않는다")
+        var changed = key
+        changed.revision = 2
+        XCTAssertEqual(read(10.32, key: changed), "4", "기록이 바뀌면 바로 다시 계산한다")
+    }
+
     // MARK: - Weather status
 
     func testWeatherStatusRecordsFailureKindAndClearsOnSuccess() {

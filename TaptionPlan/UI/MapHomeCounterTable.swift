@@ -197,6 +197,44 @@ final class MapHomeCounterValueCache {
     }
 }
 
+/// 재생 중 카운터 값 계산을 1초에 몇 번으로 묶는다.
+///
+/// 오버레이는 재생 중 최대 60Hz로 다시 그려지고 카운터 창도 그때마다 값을 읽는다. 재생 시각은 0.25초에
+/// 약 8분씩 넘어가 분 버킷 캐시가 매번 빗나가므로, 아이폰 11에서 이 계산만 재생 시간의 12%를 썼다
+/// (125초 재생 중 15.3초, 호출당 2.9ms, PRF1030A01). 표시가 분 단위라 4Hz면 눈에 띄지 않는다.
+/// 재생이 멈추면(`isPlaying == false`) 묶지 않고 바로 정확한 값을 계산한다.
+@MainActor
+final class MapHomeCounterBadgeThrottle {
+    static let playbackInterval: TimeInterval = 0.25
+
+    struct Key: Equatable {
+        var revision: UInt64
+        var day: Date
+        var kinds: [MapHomeCounterKind]
+        var english: Bool
+    }
+
+    private var lastKey: Key?
+    private var lastAt: TimeInterval = -.infinity
+    private var lastBadges: [MapHomeCounterBadge] = []
+
+    func badges(
+        key: Key,
+        isPlaying: Bool,
+        uptime: TimeInterval,
+        compute: () -> [MapHomeCounterBadge]
+    ) -> [MapHomeCounterBadge] {
+        if isPlaying, key == lastKey, uptime - lastAt < Self.playbackInterval, uptime >= lastAt {
+            return lastBadges
+        }
+        let value = compute()
+        lastKey = key
+        lastAt = uptime
+        lastBadges = value
+        return value
+    }
+}
+
 /// 카운터가 하나뿐일 때의 알약. 창으로 묶기 전과 같은 모양이다.
 private struct MapHomeCounterPill: View {
     let kind: MapHomeCounterKind

@@ -2585,6 +2585,7 @@ struct MapHomeView: View {
         }
     }
     @State private var counterValueCache = MapHomeCounterValueCache()
+    @State private var counterBadgeThrottle = MapHomeCounterBadgeThrottle()
     @State private var isTimelineInteractionActive = false
     @State private var routeDocumentProjectionGate = MapHomeRouteDocumentProjectionGate()
     @State private var lastPlaybackRouteProjectionUptime: TimeInterval = 0
@@ -4164,7 +4165,8 @@ struct MapHomeView: View {
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
     private var memoCircleButton: some View {
-        let count = queuedMemos.count + (nearbyTimedMemo == nil ? 0 : 1)
+        // 지금 시각 근처 메모는 그날 메모 목록에도 들어 있으므로 ID로 합쳐 한 번만 센다.
+        let count = Set(queuedMemos.map(\.id) + [nearbyTimedMemo?.id].compactMap { $0 }).count
         return Button {
             withAnimation(.snappy) { memoStackExpanded.toggle() }
         } label: {
@@ -4495,7 +4497,12 @@ struct MapHomeView: View {
     private func vectorMap(style: MapHomeVectorStyle) -> some View {
         let cameraRevision = mapCameraRevision
         let waypoints = pawprintWaypoints
-        let places = placeAnnotations
+        // 오버레이는 이 순서(예상 경로 먼저, 그다음 번호순)로 그린다. 프레임마다 정렬하지 않게 한 번만 정렬한다.
+        let drawOrderWaypoints = waypoints.sorted {
+            $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
+        }
+        let inputs = mapOverlayInputs()
+        let places = inputs.places
         let playback = appleMapPlayback
         let displayedSpeed = displayedSpeedMetersPerSecond
         let activeSegments = vectorActiveRouteSegments
@@ -4507,7 +4514,7 @@ struct MapHomeView: View {
             activeRoute: recordingShows(\.routes) && activeSegments.isEmpty ? vectorActiveRoute : nil,
             expectedRoutes: recordingShows(\.routes) ? vectorExpectedRoutes : [],
             subwayRoutes: recordingShows(\.routes) ? vectorSubwayRoutes + vectorUserSelectedRoutes : [],
-            markers: vectorMapMarkers(waypoints: waypoints),
+            markers: vectorMapMarkers(waypoints: waypoints, inputs: inputs),
             contentInsets: vectorMapContentInsets,
             longPressExclusionFrame: isMenuOpen ? .zero : mapControlsFrame,
             followsHeading: isHeadingMode && userTrackingMode.keepsCameraLocked,
@@ -4542,8 +4549,8 @@ struct MapHomeView: View {
                     style: style,
                     viewport: viewport,
                     stickmanPoint: stickmanPoint,
-                    waypoints: waypoints,
-                    places: places,
+                    waypoints: drawOrderWaypoints,
+                    inputs: inputs,
                     playback: playback,
                     displayedSpeed: displayedSpeed
                 )
@@ -5251,27 +5258,41 @@ struct MapHomeView: View {
         }
     }
 
-    private func vectorMapMarkers(waypoints: [PawprintWaypoint]) -> [MapHomeVectorMarker] {
+    /// 지도 위 표시에 쓰는 값을 화면 갱신마다 한 번만 계산한다. 마커 목록과 60Hz 오버레이가 같은 값을 쓴다
+    /// (성능 리뷰: 오버레이가 매 프레임 계산 프로퍼티를 다시 읽던 낭비).
+    private func mapOverlayInputs() -> MapHomeOverlayInputs {
+        MapHomeOverlayInputs(
+            places: placeAnnotations,
+            temporaryLocations: temporaryLocationAnnotations,
+            transit: transitAnnotations,
+            boarding: transitBoardingCandidates,
+            stickers: mapStickersOnMap,
+            photos: photoClusters,
+            memos: recordingShows(\.mapMemos) ? mapMemosOnMap : []
+        )
+    }
+
+    private func vectorMapMarkers(waypoints: [PawprintWaypoint], inputs: MapHomeOverlayInputs) -> [MapHomeVectorMarker] {
         let probe = MapHomePlaybackProbe.begin("vectorMapMarkers"); defer { MapHomePlaybackProbe.end(probe) }
-        var markers = temporaryLocationAnnotations.map {
+        var markers = inputs.temporaryLocations.map {
             MapHomeVectorMarker(
                 id: vectorTemporaryMarkerID($0.id),
                 coordinate: $0.coordinate
             )
         }
-        markers += placeAnnotations.map {
+        markers += inputs.places.map {
             MapHomeVectorMarker(
                 id: vectorPlaceMarkerID($0.id),
                 coordinate: $0.coordinate
             )
         }
-        markers += transitAnnotations.map {
+        markers += inputs.transit.map {
             MapHomeVectorMarker(
                 id: vectorTransitMarkerID($0.id),
                 coordinate: $0.coordinate
             )
         }
-        markers += transitBoardingCandidates.map {
+        markers += inputs.boarding.map {
             MapHomeVectorMarker(
                 id: vectorBoardingCandidateMarkerID($0.id),
                 coordinate: CLLocationCoordinate2D(
@@ -5280,7 +5301,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        markers += mapStickersOnMap.compactMap { sticker in
+        markers += inputs.stickers.compactMap { sticker in
             guard let point = sticker.point else { return nil }
             return MapHomeVectorMarker(
                 id: vectorMapStickerMarkerID(sticker.id),
@@ -5290,10 +5311,10 @@ struct MapHomeView: View {
                 )
             )
         }
-        markers += photoClusters.map {
+        markers += inputs.photos.map {
             MapHomeVectorMarker(id: vectorPhotoMarkerID($0.id), coordinate: $0.coordinate)
         }
-        markers += mapMemosOnMap.compactMap { memo in
+        markers += inputs.memos.compactMap { memo in
             guard let point = memo.mapPoint else { return nil }
             return MapHomeVectorMarker(
                 id: vectorMapMemoMarkerID(memo.id),
@@ -5601,13 +5622,14 @@ struct MapHomeView: View {
         viewport: MapHomeVectorViewport?,
         stickmanPoint: CGPoint?,
         waypoints allWaypoints: [PawprintWaypoint],
-        places: [MapHomePlaceAnnotation],
+        inputs: MapHomeOverlayInputs,
         playback: MapHomeApplePlayback?,
         displayedSpeed: Double?
     ) -> some View {
         _ = MapHomePlaybackFrameStats.noteOverlayEvaluation()
         // 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 화면 틱마다 보여, 발자국이 화랑이 발밑에 바로 찍힌다(ARC1030A02).
         let waypoints = playbackVisibleWaypoints(allWaypoints)
+        let places = inputs.places
         return ZStack {
             if fogStrength != .off {
                 MapHomeFogLayer(
@@ -5617,9 +5639,8 @@ struct MapHomeView: View {
             }
             homeLandOverlay(viewport: viewport)
             placeZoneOverlay(viewport: viewport)
-            ForEach((recordingShows(\.footprints) ? waypoints : []).sorted {
-                $0.isPredicted != $1.isPredicted ? $0.isPredicted : $0.index < $1.index
-            }) { waypoint in
+            // `waypoints`는 이미 그리는 순서로 정렬돼 있다(`vectorMap(style:)`).
+            ForEach(recordingShows(\.footprints) ? waypoints : []) { waypoint in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorPawprintMarkerID(waypoint.index)
@@ -5644,7 +5665,7 @@ struct MapHomeView: View {
                     }
                 }
             }
-            ForEach(temporaryLocationAnnotations) { location in
+            ForEach(inputs.temporaryLocations) { location in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorTemporaryMarkerID(location.id)
@@ -5763,7 +5784,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(transitAnnotations) { place in
+            ForEach(inputs.transit) { place in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorTransitMarkerID(place.id)
@@ -5787,7 +5808,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(transitBoardingCandidates) { candidate in
+            ForEach(inputs.boarding) { candidate in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorBoardingCandidateMarkerID(candidate.id)
@@ -5814,7 +5835,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(mapStickersOnMap) { sticker in
+            ForEach(inputs.stickers) { sticker in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorMapStickerMarkerID(sticker.id)
@@ -5837,7 +5858,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(photoClusters) { cluster in
+            ForEach(inputs.photos) { cluster in
                 if let info = photoPinInfo(for: cluster),
                    let point = vectorPoint(in: viewport, for: vectorPhotoMarkerID(cluster.id)) {
                     MapHomeProjectedAnnotation(point: point, anchor: .bottom) {
@@ -5861,7 +5882,7 @@ struct MapHomeView: View {
                 }
             }
 
-            ForEach(recordingShows(\.mapMemos) ? mapMemosOnMap : []) { memo in
+            ForEach(recordingShows(\.mapMemos) ? inputs.memos : []) { memo in
                 if let projected = vectorPoint(
                     in: viewport,
                     for: vectorMapMemoMarkerID(memo.id)
@@ -7662,6 +7683,20 @@ struct MapHomeView: View {
     /// 잘라 센다. 이 값이 매번 새로 계산되더라도 분 버킷 캐시가 하루 전체 재계산을 막는다.
     private func mapCounterBadges(asOf now: Date) -> [MapHomeCounterBadge] {
         let probe = MapHomePlaybackProbe.begin("counterBadges"); defer { MapHomePlaybackProbe.end(probe) }
+        let key = MapHomeCounterBadgeThrottle.Key(
+            revision: model.dayProjectionRevision,
+            day: model.selectedDate,
+            kinds: enabledCounterKinds,
+            english: language == .english
+        )
+        return counterBadgeThrottle.badges(
+            key: key,
+            isPlaying: isDayPlaybackRunning,
+            uptime: ProcessInfo.processInfo.systemUptime
+        ) { computeMapCounterBadges(asOf: now) }
+    }
+
+    private func computeMapCounterBadges(asOf now: Date) -> [MapHomeCounterBadge] {
         let cutoff = counterCutoffDate
         let seconds = counterValueCache.categorySeconds(
             cutoff: cutoff,
@@ -16787,6 +16822,17 @@ private struct MapHomeTemporaryLocationAnnotation: Identifiable {
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
     }
+}
+
+/// 지도 위 표시 입력. `mapOverlayInputs()`가 화면 갱신마다 한 번 만든다.
+private struct MapHomeOverlayInputs {
+    var places: [MapHomePlaceAnnotation]
+    var temporaryLocations: [MapHomeTemporaryLocationAnnotation]
+    var transit: [MapHomeTransitAnnotation]
+    var boarding: [TransitBoardingCandidate]
+    var stickers: [MapSticker]
+    var photos: [MapHomePhotoCluster]
+    var memos: [ActionMemo]
 }
 
 private struct MapHomePlaceAnnotation: Identifiable {
