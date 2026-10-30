@@ -4681,3 +4681,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## ARC1030A02 날짜 줄 스크롤 전환(2026-10-30)
 - 날짜 줄을 시스템 가로 스크롤(`scrollTargetBehavior(.viewAligned)`)로 바꿔 끊김 없이 밀리고 손을 뗄 때만 스냅. 선택일은 탭해야 바뀜. 기기에 설치(s8), 눈 확인 전.
 - `FeatureEngineTests` 672개 모두 통과(`build/validation/ARC1030A02/t4`). 전체 스위트는 이 변경 뒤 다시 돌리지 않았다(날짜 줄 외 변경 없음).
+
+## ARC1030A02 Apple 지도 안개 뷰 전환(2026-10-30)
+- Apple 지도 안개를 `MKOverlayRenderer` 타일에서 지도 위 `MapHomeFogView` 직접 그리기로 교체(타일 비동기 재그리기로 안개가 빠진 순간 지도가 하얗게 번쩍이던 구조 제거). 기기 눈 확인 전.
+- 단위 테스트 `build/validation/ARC1030A02/t5`: 1,688개 중 통과 1,685, 실패 0, 건너뜀 3.
+- 이 시점에 아이폰이 연결되어 있지 않아 USB 설치는 하지 못했다(사용자 출근 중). TestFlight 빌드 251로 대신 전달한다.

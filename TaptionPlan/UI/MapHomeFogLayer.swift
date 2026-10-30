@@ -95,33 +95,10 @@ struct MapHomeFogReveal: Equatable {
     }
 }
 
-/// 오버레이를 지우고 다시 만들면 MapKit이 타일을 비우고 다시 그려 화면이 하얗게 깜빡였다.
-/// 그래서 오버레이는 하나를 두고 값만 바꾼 뒤 렌더러를 무효화한다(대표 지시, ARC1030A02).
-/// MapKit이 타일을 백그라운드에서 그리므로 값은 잠금으로 지킨다.
-final class MapHomeFogOverlay: NSObject, MKOverlay, @unchecked Sendable {
-    typealias Snapshot = (reveals: [(point: MKMapPoint, radius: CGFloat)], opacity: CGFloat)
-
-    let coordinate = CLLocationCoordinate2D(latitude: 0, longitude: 0)
-    let boundingMapRect = MKMapRect.world
-    private let lock = NSLock()
-    private var current: Snapshot
-
-    init(reveals: [MapHomeFogReveal], opacity: CGFloat) {
-        current = (reveals.map { (MKMapPoint($0.coordinate), $0.radius) }, opacity)
-    }
-
-    var snapshot: Snapshot {
-        lock.lock(); defer { lock.unlock() }
-        return current
-    }
-
-    func update(reveals: [MapHomeFogReveal], opacity: CGFloat) {
-        let next: Snapshot = (reveals.map { (MKMapPoint($0.coordinate), $0.radius) }, opacity)
-        lock.lock(); current = next; lock.unlock()
-    }
-}
-
-final class MapHomeFogRenderer: MKOverlayRenderer {
+/// Apple 지도용 안개 탐험. 예전에는 `MKOverlayRenderer` 타일로 그렸는데, 값이 바뀔 때마다 타일이 비동기로 다시 그려져
+/// 그 사이 안개가 빠진 타일에서 밝은 지도가 하얗게 번쩍였다. 지도 위에 올린 뷰가 같은 프레임에 직접 그리므로
+/// 안개가 빠진 순간이 없다(대표 지시, ARC1030A02).
+final class MapHomeFogView: UIView {
     private nonisolated(unsafe) static let gradient = CGGradient(
         colorsSpace: CGColorSpaceCreateDeviceRGB(),
         colors: [UIColor.black.cgColor,
@@ -130,23 +107,38 @@ final class MapHomeFogRenderer: MKOverlayRenderer {
         locations: [0, 0.5, 1]
     )
 
-    override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
-        guard let fog = overlay as? MapHomeFogOverlay else { return }
-        let snapshot = fog.snapshot
-        let tile = rect(for: mapRect)
-        context.setFillColor(UIColor.black.withAlphaComponent(snapshot.opacity).cgColor)
-        context.fill(tile)
-        guard let gradient = Self.gradient else { return }
+    var reveals: [MapHomeFogReveal] = []
+    var opacity: CGFloat = 0
+    /// 지도 좌표를 이 뷰의 화면 좌표로 옮긴다.
+    var project: ((CLLocationCoordinate2D) -> CGPoint)?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isOpaque = false
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
+        isAccessibilityElement = false
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    override func draw(_ rect: CGRect) {
+        guard let context = UIGraphicsGetCurrentContext(), let project, let gradient = Self.gradient else { return }
+        context.setFillColor(UIColor.black.withAlphaComponent(opacity).cgColor)
+        context.fill(rect)
         context.setBlendMode(.destinationOut)
-        for reveal in snapshot.reveals {
-            let center = point(for: reveal.point)
-            // Radius is in screen points; renderer space is map points scaled by zoomScale.
-            let radius = reveal.radius / zoomScale
-            let circle = CGRect(x: center.x - radius, y: center.y - radius,
-                                width: radius * 2, height: radius * 2)
-            guard circle.intersects(tile) else { continue }
-            context.drawRadialGradient(gradient, startCenter: center, startRadius: 0,
-                                       endCenter: center, endRadius: radius, options: [])
+        for reveal in reveals {
+            let center = project(reveal.coordinate)
+            let circle = CGRect(
+                x: center.x - reveal.radius, y: center.y - reveal.radius,
+                width: reveal.radius * 2, height: reveal.radius * 2
+            )
+            guard circle.intersects(rect) else { continue }
+            context.drawRadialGradient(
+                gradient, startCenter: center, startRadius: 0,
+                endCenter: center, endRadius: reveal.radius, options: []
+            )
         }
     }
 }

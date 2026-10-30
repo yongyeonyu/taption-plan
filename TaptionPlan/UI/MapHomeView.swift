@@ -19986,9 +19986,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private var lastCenteredPlaybackTargetPoint: CGPoint?
         private var routeStyles: [ObjectIdentifier: MapHomeAppleRouteStyle] = [:]
         private var routePolylines: [String: MKPolyline] = [:]
-        private var fogOverlay: MapHomeFogOverlay?
-        private var lastFogUpdateUptime: TimeInterval = 0
-        private var isFogUpdateScheduled = false
+        private var fogView: MapHomeFogView?
         private var lastFogReveals: [MapHomeFogReveal]?
         private var lastFogOpacity: CGFloat = 0
         private var routeSignatures: [String: String] = [:]
@@ -20182,6 +20180,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+            fogView?.setNeedsDisplay()
             publishCameraFrame(from: mapView, isFinal: false)
         }
 
@@ -20191,6 +20190,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            fogView?.setNeedsDisplay()
             updateWalkerPosition(in: mapView)
             publishCameraFrame(from: mapView, isFinal: true)
         }
@@ -20255,9 +20255,6 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             _ mapView: MKMapView,
             rendererFor overlay: MKOverlay
         ) -> MKOverlayRenderer {
-            if let fog = overlay as? MapHomeFogOverlay {
-                return MapHomeFogRenderer(overlay: fog)
-            }
             guard let polyline = overlay as? MKPolyline,
                   let style = routeStyles[ObjectIdentifier(polyline)] else {
                 return MKOverlayRenderer(overlay: overlay)
@@ -20385,42 +20382,29 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         private func updateFog(in mapView: MKMapView) {
             guard parent.fogReveals != lastFogReveals || parent.fogOpacity != lastFogOpacity else { return }
-            guard let reveals = parent.fogReveals else {
-                lastFogReveals = nil
-                lastFogOpacity = parent.fogOpacity
-                if let fogOverlay { mapView.removeOverlay(fogOverlay) }
-                fogOverlay = nil
-                return
-            }
-            // 이미 있는 오버레이는 지우지 않고 값만 바꿔 다시 그린다. 지웠다 다시 넣으면 타일이 하얗게 깜빡인다.
-            // 탐험 중 값이 자주 바뀌므로 0.4초에 한 번만 반영하고 나머지는 마지막 값으로 한 번 더 확인한다.
-            if let fogOverlay {
-                let now = ProcessInfo.processInfo.systemUptime
-                guard now - lastFogUpdateUptime >= 0.4 else {
-                    if !isFogUpdateScheduled {
-                        isFogUpdateScheduled = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self, weak mapView] in
-                            guard let self, let mapView else { return }
-                            self.isFogUpdateScheduled = false
-                            self.updateFog(in: mapView)
-                        }
-                    }
-                    return
-                }
-                lastFogUpdateUptime = now
-                lastFogReveals = parent.fogReveals
-                lastFogOpacity = parent.fogOpacity
-                fogOverlay.update(reveals: reveals, opacity: parent.fogOpacity)
-                (mapView.renderer(for: fogOverlay) as? MapHomeFogRenderer)?.setNeedsDisplay()
-                return
-            }
             lastFogReveals = parent.fogReveals
             lastFogOpacity = parent.fogOpacity
-            lastFogUpdateUptime = ProcessInfo.processInfo.systemUptime
-            let overlay = MapHomeFogOverlay(reveals: reveals, opacity: parent.fogOpacity)
-            fogOverlay = overlay
-            // Index 0 keeps the fog under the route polylines, like the vector map.
-            mapView.insertOverlay(overlay, at: 0, level: .aboveRoads)
+            guard let reveals = parent.fogReveals else {
+                fogView?.removeFromSuperview()
+                fogView = nil
+                return
+            }
+            let view: MapHomeFogView
+            if let fogView {
+                view = fogView
+            } else {
+                view = MapHomeFogView(frame: mapView.bounds)
+                view.project = { [weak mapView, weak view] coordinate in
+                    guard let mapView, let view else { return .zero }
+                    return mapView.convert(coordinate, toPointTo: view)
+                }
+                mapView.addSubview(view)
+                fogView = view
+            }
+            view.reveals = reveals
+            view.opacity = parent.fogOpacity
+            mapView.bringSubviewToFront(view)
+            view.setNeedsDisplay()
         }
 
         private func updateAnnotations(in mapView: MKMapView) {
