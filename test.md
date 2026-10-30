@@ -4735,3 +4735,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 새 테스트 `testTravelDistanceIgnoresStationaryGPSJitterButCountsRealMovement`: 1시간 ±15m 지터는 3km 미만(예전 20km 이상), 1km 이동은 ±60m, 튄 점은 제외 — 시뮬레이터 통과(`ARC1030A07/s1/test4.log`).
 - 손짓 계측은 시뮬레이터 UI 자동 손짓으로 값이 기록되는 것만 확인(달력 시트 첫 틱 약 100ms, 메뉴 약 22ms). 실기기 UI 자동화는 기기 설정(개발자 > UI 자동화)이 꺼져 있어 못 돌렸다. 실사용 로그 분석 전이라 병목 판단은 하지 않음.
 - 실기기 눈 확인 전: 거리 카운터 값, 화랑이 탭, 시간 카운터, 발자국 고정.
+
+## ARC1030A09 "오늘" 알약·날짜 줄 UI 테스트(2026-10-30, 시뮬레이터 UI 테스트)
+- 날짜 배지 옆에 "오늘" 알약 추가(오늘이 아닌 날짜를 볼 때만, 한 번 누르면 오늘로 이동·경로 맞춤). 이전에 "날짜 배지 더블탭으로 오늘로 간다"고 한 설명은 오류였다(함수만 있고 배지에 연결되지 않았음).
+- UI 테스트 `TaptionPlanDateStripSwipeUITests` 3개 통과(`build/validation/ARC1030A09/ui`): `testTodayPillAppearsOnPastDatesAndReturnsToToday`(신규), `testSwipeOnlyBrowsesAndTapSelects`, `testDateStripKeepsScrollingPastTheWeekWithoutChangingTheDate`(새 동작에 맞게 수정). 이 UI 테스트들은 이번에 처음 실행.
+- 단위 테스트는 이 변경 뒤 다시 돌리지 않았다(화면 요소만 추가). 직전 실기기 전체 실행은 `ARC1030A08/dev11`. 실기기 눈 확인 전.

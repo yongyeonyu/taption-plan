@@ -6811,8 +6811,28 @@ struct MapHomeView: View {
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+            // 오늘이 아닌 날짜를 볼 때만 "오늘" 알약이 뜨고, 한 번 누르면 오늘로 간다(대표 지시, ARC1030A09).
+            if !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
+                } label: {
+                    Text(language.text("오늘", "Today"))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                        .padding(.horizontal, 12)
+                        .frame(height: 30)
+                        .mapHomeGlass(in: Capsule())
+                        .taptionHitOutset(horizontal: 4, vertical: 7)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(language.text("오늘로 이동", "Go to today"))
+                .accessibilityIdentifier("mapHomeTodayPill")
+                .transition(.scale.combined(with: .opacity))
+            }
             badge
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate))
     }
 
     private var header: some View {

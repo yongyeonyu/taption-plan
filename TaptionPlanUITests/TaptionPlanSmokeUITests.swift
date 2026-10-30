@@ -839,6 +839,31 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         attach(app, name: "date-strip-after-tap")
     }
 
+    /// 오늘이 아닌 날짜를 볼 때만 "오늘" 알약이 뜨고, 누르면 오늘로 돌아온다(대표 지시, ARC1030A09).
+    func testTodayPillAppearsOnPastDatesAndReturnsToToday() throws {
+        let app = launch()
+        let badge = dateBadge(app)
+        let pill = app.descendants(matching: .any)["mapHomeTodayPill"]
+        let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
+        XCTAssertFalse(pill.exists, "오늘을 보는 중에는 알약이 없어야 한다")
+
+        badge.tap()
+        let strip = weekStrip(app)
+        XCTAssertTrue(strip.waitForExistence(timeout: 5))
+        usleep(500_000)
+        strip.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5)).tap()
+        _ = try XCTUnwrap(waitForDateChange(badge, from: today, timeout: 6), "과거 날짜로 이동하지 않았다")
+        XCTAssertTrue(pill.waitForExistence(timeout: 5), "지난 날짜를 볼 때 오늘 알약이 떠야 한다")
+        attach(app, name: "today-pill")
+
+        pill.tap()
+        let deadline = Date().addingTimeInterval(8)
+        while Date() < deadline, monthDay(badge.label).map({ $0 != today }) ?? true { usleep(200_000) }
+        let back = try XCTUnwrap(monthDay(badge.label))
+        XCTAssertEqual([back.month, back.day], [today.month, today.day], "알약을 눌렀는데 오늘로 돌아오지 않았다")
+        XCTAssertFalse(pill.waitForExistence(timeout: 1.5), "오늘로 돌아오면 알약이 사라져야 한다")
+    }
+
     /// 날짜 줄은 선택일 앞뒤를 길게 이어 두어, 계속 밀어도 날짜 칸이 이어진다. 밀기만으로는 날짜가 바뀌지 않는다.
     func testDateStripKeepsScrollingPastTheWeekWithoutChangingTheDate() throws {
         let app = launch()
