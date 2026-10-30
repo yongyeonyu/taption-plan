@@ -4724,3 +4724,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 표시 메뉴에 "경로"·"발자국" 스위치 추가(`@AppStorage mapHomeShowsRoutes/Footprints`, 판타지·Apple 지도 모두 적용, 녹화 레이어와 별개).
 - 실기기 전체 단위 테스트 `build/validation/ARC1030A06/dev11`: 1,692개 중 통과 1,689, 실패 2, 건너뜀 1. 실패 `evidenceTravelLookup…`는 수정 전에도 같은 기기에서 실패하던 `NaN` 비교 차이. `testSensorAnalysisDefersBackgroundReadingsAndCoalescesOnForeground`는 단독 실행(`dev11b`)에서 통과해 전체 부하 때의 타이밍 흔들림.
 - 표시 메뉴 화면은 시뮬레이터에서 첫 실행 권한 안내에 가려 확인하지 못했고 실기기 확인 전. 사이드바 변경 포함 시뮬레이터 전체 테스트는 통과(`ARC1030A06/t1`).
+
+## ARC1030A07 검증(2026-10-30, 실기기 아이폰 11 Pro)
+- 실기기 전체 단위 테스트 `build/validation/ARC1030A07/dev11c`: 1,694개 중 통과 1,692, 실패 1, 건너뜀 1. 실패는 수정 전에도 같은 기기에서 실패하던 `evidenceTravelLookup…`(`NaN` 비교 차이).
+- 새 테스트 `testPawprintLedger…` 2개(앞 발자국 불변·간격·속도·제외)와 클립 합치기 2개는 `NLETrackTests`에서 통과(`ARC1030A07/s1/test2.log`). 이전에 합치기 테스트를 `FeatureEngineTests/…`로 지정해 실제로는 돌지 않았던 단독 확인 보고는 정정.
+- 화랑이 탭·시간 카운터·발자국 고정·날짜 줄 UI 테스트는 아직 눈/UI 테스트로 확인 전.

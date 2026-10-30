@@ -692,6 +692,80 @@ final class MapHomeCameraFrameProjection {
     }
 }
 
+/// 발자국 장부. GPS가 기록된 순간의 위치·방향·속도로 발자국을 한 번 정하면, 이후 새로고침·분류 갱신에도 바뀌지 않는다(대표 지시, ARC1030A07).
+///
+/// 예전에는 하루 경로를 220개 안으로 솎아 내고(새 기록이 쌓이면 뽑히는 지점이 달라졌다), 색은 앞뒤 기록을 함께 본 속도로
+/// 정해서(뒤에 기록이 붙으면 앞 발자국 색이 바뀌었다) 새로고침마다 발자국과 색이 변했다.
+/// 장부는 시간순으로 앞에서부터만 판단한다: 이미 놓은 발자국은 뒤의 기록에 영향받지 않는다.
+enum MapHomePawprintLedger {
+    struct Entry: Equatable {
+        let latitude: Double
+        let longitude: Double
+        /// 직전 발자국에서 이 발자국으로 향하는 방위(도). 첫 발자국은 0.
+        let angle: Double
+        let timestamp: Date
+        /// 기록 당시 속도(m/s). GPS가 준 속도가 있으면 그것, 없으면 직전 기록에서 이 기록까지의 평균.
+        let speed: Double?
+
+        var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: latitude, longitude: longitude) }
+    }
+
+    /// 발자국 사이 최소 간격(도). 약 100m.
+    static let spacingDegrees = 0.0009
+    /// 한 하루에 놓는 발자국의 상한. 넘으면 뒤는 놓지 않는다(앞의 것은 그대로다).
+    static let maximumEntries = 2_000
+    /// 화면에 올리는 최근 발자국 수. 오래된 것은 장부에 남지만 그리지 않아 지도 계산량을 묶는다.
+    static let displayLimit = 600
+    /// 이보다 부정확한 위치는 발자국으로 놓지 않는다(m).
+    static let maximumAccuracyMeters = 200.0
+
+    static func entries(readings: [SensorReading], excluding excluded: [TimeSpan]) -> [Entry] {
+        var result: [Entry] = []
+        var lastPaw: (latitude: Double, longitude: Double)?
+        var previous: (latitude: Double, longitude: Double, timestamp: Date)?
+        for reading in readings.sorted(by: { $0.timestamp < $1.timestamp }) {
+            guard let point = reading.point,
+                  point.latitude.isFinite, point.longitude.isFinite,
+                  abs(point.latitude) <= 90, abs(point.longitude) <= 180,
+                  point.horizontalAccuracy >= 0, point.horizontalAccuracy <= maximumAccuracyMeters,
+                  RouteTimelineTimestamp.isValid(reading.timestamp) else { continue }
+            if excluded.contains(where: { $0.start <= reading.timestamp && reading.timestamp <= $0.end }) {
+                previous = nil
+                continue
+            }
+            defer { previous = (point.latitude, point.longitude, reading.timestamp) }
+            if let lastPaw, distance(lastPaw.latitude, lastPaw.longitude, point.latitude, point.longitude) < spacingDegrees {
+                continue
+            }
+            let recorded = reading.speedMetersPerSecond.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+            let speed = recorded ?? previous.flatMap { earlier -> Double? in
+                let seconds = reading.timestamp.timeIntervalSince(earlier.timestamp)
+                guard seconds > 0, seconds <= 180 else { return nil }
+                let meters = CLLocation(latitude: earlier.latitude, longitude: earlier.longitude)
+                    .distance(from: CLLocation(latitude: point.latitude, longitude: point.longitude))
+                return meters / seconds
+            }
+            let angle = lastPaw.map {
+                atan2(
+                    RouteTimelineLongitude.shortestDelta(from: $0.longitude, to: point.longitude),
+                    point.latitude - $0.latitude
+                ) * 180 / .pi
+            } ?? 0
+            result.append(Entry(
+                latitude: point.latitude, longitude: point.longitude, angle: angle,
+                timestamp: reading.timestamp, speed: speed
+            ))
+            lastPaw = (point.latitude, point.longitude)
+            if result.count >= maximumEntries { break }
+        }
+        return result
+    }
+
+    private static func distance(_ lat1: Double, _ lon1: Double, _ lat2: Double, _ lon2: Double) -> Double {
+        hypot(lat2 - lat1, RouteTimelineLongitude.shortestDelta(from: lon1, to: lon2))
+    }
+}
+
 /// 안개에서 현재 위치를 걷어 내는 원의 중심. 화랑이가 실제로 그려지는 화면 점이 있으면 그 점을 쓴다.
 /// 화랑이 점은 입력 예산(최대 60Hz)으로 갱신되고 지도 뷰포트는 프레임마다 바뀌어, 지도가 빨리 움직이는 재생 중에
 /// 둘을 따로 쓰면 안개 구멍이 화랑이와 어긋나 보인다(2026-10-20 재생 녹화 08:28 프레임).

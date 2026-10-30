@@ -2509,9 +2509,8 @@ struct MapHomeView: View {
     @State private var routeProjectionInputKey: RouteProjectionInputKey?
     @State private var routeProjectionTask: Task<Void, Never>?
     @State private var routeProjectionRunID = 0
-    /// 재생 시작 때 한 번 계산한 하루 전체 경로. 발자국은 이것을 화랑이의 현재 시각까지만 보여 준다(ARC1030A02).
-    @State private var playbackFullOverlays: [MapHomeTimelineRouteOverlay]?
-    @State private var playbackFullOverlaysTask: Task<Void, Never>?
+    /// 발자국 장부 캐시. 기록이 늘 때만 새로 만든다(ARC1030A07).
+    @State private var pawprintLedgerMemo = MapHomeMemo<MapHomePawprintLedgerKey, [MapHomePawprintLedger.Entry]>()
     @State private var routeProjectionApplied = 0
     @State private var routeProjectionSkips = [0, 0, 0]
     @State private var routeProjectionLastMS = 0.0
@@ -4650,7 +4649,8 @@ struct MapHomeView: View {
             onSingleFingerPanBegan: handleUserMapPan,
             onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu,
-            onAnnotationSelected: handleAppleMapAnnotation
+            onAnnotationSelected: handleAppleMapAnnotation,
+            onWalkerTapped: { isDaySummaryPresented = true }
         )
         .simultaneousGesture(
             SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
@@ -5025,7 +5025,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        for waypoint in playbackVisibleWaypoints(recordingShows(\.footprints) ? pawprintWaypoints : []) {
+        for waypoint in playbackVisibleWaypoints(recordingShows(\.footprints) ? pawprintWaypoints : []).suffix(300) {
             let isSelectedRoute = waypoint.isPredicted
                 && waypoint.predictedRoute?.id == selectedPredictedRoute?.id
             let isInteractive = waypoint.predictedRoute != nil
@@ -5408,18 +5408,26 @@ struct MapHomeView: View {
         return routes
     }
 
+    /// 화랑이를 누르면 하루 요약 카드를 연다. 발자국·집 아이콘보다 먼저 판정한다(대표 지시, ARC1030A07).
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
-        guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
-        if let stickmanPoint = vectorMapViewportStore.stickmanPoint ?? displayedStickmanViewportPoint,
-           MapHomeCatTapRouting.shouldPresentCatDetails(
-               tapPoint: tapPoint,
-               locationPoint: stickmanPoint,
-               isAtHome: isDisplayedCatAtHome
-           ) {
-            selectedMarkerInfo = .cat(displayedStickmanAction)
+        if isStickmanTapped(at: tapPoint) {
+            isDaySummaryPresented = true
             return
         }
+        guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
         if isHomeSummaryTapped(at: tapPoint) { isDaySummaryPresented = true }
+    }
+
+    /// 화랑이가 화면에 그려지는 점. 재생 중에는 구동기가 프레임마다 정한 점이 가장 정확하다.
+    private func isStickmanTapped(at tapPoint: CGPoint) -> Bool {
+        guard let stickmanPoint = vectorMapViewportStore.livePoint
+                ?? vectorMapViewportStore.stickmanPoint
+                ?? displayedStickmanViewportPoint else { return false }
+        return MapHomeCatTapRouting.shouldPresentCatDetails(
+            tapPoint: tapPoint,
+            locationPoint: stickmanPoint,
+            isAtHome: isDisplayedCatAtHome
+        )
     }
 
     /// 집 아이콘·레벨 라벨 탭. 핀 안쪽 제스처에 기대지 않고 지도 단위 탭에서 집 핀 좌표로 판정한다.
@@ -5459,7 +5467,9 @@ struct MapHomeView: View {
         waypoints: [PawprintWaypoint],
         positions: [String: CGPoint]
     ) {
-        guard let waypoint = pawprintTarget(at: point, waypoints: waypoints, positions: positions)
+        // 화랑이는 발자국 위에 서 있는 일이 많아, 화랑이를 누른 손짓은 발자국 선택으로 새지 않는다.
+        guard !isStickmanTapped(at: point),
+              let waypoint = pawprintTarget(at: point, waypoints: waypoints, positions: positions)
         else { return }
         selectPawprint(waypoint)
     }
@@ -5947,10 +5957,24 @@ struct MapHomeView: View {
         return all.filter { $0.timestamp.map { $0 <= now } ?? true }
     }
 
+    /// 하루 발자국 장부(기록이 늘 때만 다시 만든다). 확정된 지하철 구간은 선으로 그려져 발자국을 놓지 않는다.
+    private func pawprintLedger() -> [MapHomePawprintLedger.Entry] {
+        let readings = currentDayReadings
+        let excluded = (displayDayDataSnapshot?.travel ?? [])
+            .filter { ($0.mode == .subway || $0.mode == .train) && $0.isConfirmed }
+            .map(\.span)
+        let key = MapHomePawprintLedgerKey(
+            day: Calendar.autoupdatingCurrent.startOfDay(for: model.selectedDate),
+            count: readings.count, firstID: readings.first?.id, lastID: readings.last?.id,
+            excluded: excluded.flatMap { [$0.start.timeIntervalSinceReferenceDate, $0.end.timeIntervalSinceReferenceDate] }
+        )
+        return pawprintLedgerMemo.value(for: key) {
+            MapHomePawprintLedger.entries(readings: readings, excluding: excluded)
+        }
+    }
+
     private var pawprintWaypoints: [PawprintWaypoint] {
         let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
-        let segments = ((playbackDriver != nil ? playbackFullOverlays : nil) ?? timelineRouteOverlays)
-            .filter { $0.coordinates.count >= 2 }
         let hardCap = MapHomePawprintInteractionPolicy.markerLimit
         let predictedSegments = predictedMapRoutes.map { route in
             (route: route, points: MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(
@@ -5969,75 +5993,21 @@ struct MapHomeView: View {
             return (route: route, points: visible.map { samples[$0] }, timestamps: visible.map { timestamps[$0] })
         }
         let inferredCounts = confirmedSegments.map { $0.points.count } + predictedSegments.map { $0.points.count }
-        let recordedSamples = MapHomePawprintInteractionPolicy.sampleIndices(
-            segments: segments.map { MapHomePawprintTrace(coordinates: $0.coordinates, timestamps: $0.coordinateTimestamps) },
-            limit: MapHomePawprintInteractionPolicy.recordedBudget(inferredDemand: inferredCounts.reduce(0, +))
-        )
+        // 기록된 발자국은 장부에서 가져온다. GPS가 기록된 순간의 위치·방향·속도 색이 그대로 유지된다(ARC1030A07).
+        let calendarForDay = Calendar.autoupdatingCurrent
+        let dayEnd = calendarForDay.date(byAdding: .day, value: 1, to: calendarForDay.startOfDay(for: model.selectedDate))
+            ?? .distantFuture
+        let ledgerCutoff = playbackDriver != nil ? dayEnd : routeOverlayCutoff
         var result: [PawprintWaypoint] = []
-        for (segment, indices) in zip(segments, recordedSamples) {
-            let coords = segment.coordinates
-            for i in indices {
-                let c = coords[i]
-                let nextIndex = min(coords.count - 1, i + 1)
-                let n = coords[nextIndex]
-                let a = (n.longitude - c.longitude == 0 && n.latitude - c.latitude == 0)
-                    ? (i > 0
-                        ? atan2(c.longitude - coords[i - 1].longitude,
-                                c.latitude - coords[i - 1].latitude) * 180 / .pi
-                        : 0)
-                    : atan2(n.longitude - c.longitude, n.latitude - c.latitude) * 180 / .pi
-                let previousIndex = max(0, i - 1)
-                result.append(
-                    PawprintWaypoint(
-                        index: result.count,
-                        coordinate: c,
-                        angle: a,
-                        isPredicted: false,
-                        timestamp: segment.coordinateTimestamps[i],
-                        speedMetersPerSecond: MapHomePawprintSpeedColor.windowedSpeed(
-                            coordinates: coords,
-                            timestamps: segment.coordinateTimestamps,
-                            index: i
-                        ) ?? MapHomePawprintSpeedColor.speed(
-                            from: coords[previousIndex],
-                            at: segment.coordinateTimestamps[previousIndex],
-                            to: n,
-                            at: segment.coordinateTimestamps[nextIndex]
-                        )
-                    )
-                )
-            }
-        }
-        // 오늘 라이브 화면에서는 경로 계산(분류된 기록)이 현재 위치보다 늦게 따라온다. 마지막 발자국 뒤의 최신 위치를 바로 이어 붙여
-        // 발자국이 화랑이 발밑까지 닿게 한다. 재생 중에는 구동기가 따로 맡는다(대표 지적 "발자국이 늦게 생성", ARC1030A03).
-        if playbackDriver == nil, Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
-            let tailCutoff = routeOverlayCutoff
-            var tailStart = result.compactMap(\.timestamp).max() ?? .distantPast
-            var previous = result.last?.coordinate
-            var tailCount = 0
-            for reading in normalizedRouteReadings.suffix(120) where reading.timestamp > tailStart && reading.timestamp <= tailCutoff {
-                guard let point = reading.point, isValid(point) else { continue }
-                let coordinate = CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude)
-                if let previous, hypot(
-                    coordinate.latitude - previous.latitude,
-                    RouteTimelineLongitude.shortestDelta(from: previous.longitude, to: coordinate.longitude)
-                ) < 0.00035 { continue }
-                let angle = previous.map {
-                    atan2(coordinate.longitude - $0.longitude, coordinate.latitude - $0.latitude) * 180 / .pi
-                } ?? 0
-                result.append(PawprintWaypoint(
-                    index: result.count, coordinate: coordinate, angle: angle, isPredicted: false,
-                    timestamp: reading.timestamp, speedMetersPerSecond: reading.speedMetersPerSecond
-                ))
-                previous = coordinate
-                tailStart = reading.timestamp
-                tailCount += 1
-                if tailCount >= 40 { break }
-            }
+        for entry in pawprintLedger().filter({ $0.timestamp <= ledgerCutoff }).suffix(MapHomePawprintLedger.displayLimit) {
+            result.append(PawprintWaypoint(
+                index: result.count, coordinate: entry.coordinate, angle: entry.angle, isPredicted: false,
+                timestamp: entry.timestamp, speedMetersPerSecond: entry.speed
+            ))
         }
         let inferredBudgets = MapHomePawprintInteractionPolicy.distributedCounts(sampleCounts: inferredCounts,
             latestTimestamps: confirmedSegments.map { $0.route.span.end } + predictedSegments.map { $0.route.span.end },
-            limit: hardCap - result.count)
+            limit: max(0, hardCap - result.count))
         for (segmentIndex, segment) in confirmedSegments.enumerated() {
             // 확인된 이동은 구간 전체 길이를 시간으로 나눈 평균 속도를 쓴다.
             var segmentSpeed: Double?
@@ -6585,7 +6555,7 @@ struct MapHomeView: View {
            !sealed.categorySeconds.isEmpty {
             return sealed.categoryDurations
         }
-        let snap = currentDayDataSnapshot
+        let snap = displayDayDataSnapshot
         let actuals = snap?.actuals ?? []
         let travel = snap?.travel ?? []
         let stays = snap?.places ?? []
@@ -7578,7 +7548,7 @@ struct MapHomeView: View {
         ) { daySummaryCategorySeconds(asOf: $0, now: now) }
         let steps = MapHomeCounterTimelinePolicy.stepCount(readings: currentDayReadings, cutoff: cutoff)
         let meters = MapHomeCounterTimelinePolicy.travelMeters(
-            segments: currentDayDataSnapshot?.travel ?? [], cutoff: cutoff)
+            segments: displayDayDataSnapshot?.travel ?? [], cutoff: cutoff)
         return enabledCounterKinds.compactMap { kind in
             counterText(kind, seconds: seconds, steps: steps, meters: meters)
                 .map { MapHomeCounterBadge(kind: kind, text: $0) }
@@ -7607,9 +7577,9 @@ struct MapHomeView: View {
             guard meters > 0 else { return nil }
             return MapHomeDayTravelSummary.distanceText(meters)
         case .work, .study, .hobby, .exercise:
-            guard let categoryID = kind.categoryID, let seconds = categorySeconds[categoryID], seconds >= 60
-            else { return nil }
-            return DurationText.localized(seconds, english: language == .english)
+            // 켜 둔 시간 카운터는 위치와 상관없이 늘 보인다. 값이 없으면 0으로 보이고, 사라졌다 나타나지 않는다(대표 지시, ARC1030A07).
+            guard let categoryID = kind.categoryID else { return nil }
+            return DurationText.localized(max(0, categorySeconds[categoryID] ?? 0), english: language == .english)
         }
     }
 
@@ -7773,7 +7743,6 @@ struct MapHomeView: View {
         refreshRouteProjection()
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
-        loadPlaybackFullOverlays()
         // 재생은 개요 연출 없이 00시 위치로 바로 포커싱한다(대표 지시, ARC1030A05).
         isPlaybackIntroActive = false
         playbackIntroTask?.cancel()
@@ -8058,8 +8027,6 @@ struct MapHomeView: View {
         isDayPlaybackRunning = false
         isTimelineInteractionActive = false
         dayPlaybackCurrentMinute = nil
-        playbackFullOverlaysTask?.cancel()
-        playbackFullOverlays = nil
         _ = flushDeferredRouteProjection() ?? refreshRouteProjection()
         flushDeferredWBSPlaybackProjection()
         recordCurrentPlaybackAlignment()
@@ -8088,8 +8055,6 @@ struct MapHomeView: View {
         dayPlaybackTask = nil
         isDayPlaybackRunning = false
         dayPlaybackCurrentMinute = nil
-        playbackFullOverlaysTask?.cancel()
-        playbackFullOverlays = nil
         lastPlaybackRouteProjectionUptime = 0
         lastPlaybackMapFocusUptime = 0
         lastPlaybackMarkerUptime = 0
@@ -10597,6 +10562,16 @@ struct MapHomeView: View {
         mapRenderCache.invalidateRouteData()
     }
 
+    /// 표시 전용 하루 기록(카운터·요약). 오늘은 기록이 쌓일 때마다 revision이 올라 `currentDayDataSnapshot`이 순간순간 nil이 되고,
+    /// 그때마다 카운터 합계가 0으로 떨어져 업무시간 카운터가 사라졌다 생겼다 했다. 낡았어도 같은 날의 마지막 기록을 쓴다(대표 지적, ARC1030A07).
+    private var displayDayDataSnapshot: PlanDayDataSnapshot? {
+        if let current = currentDayDataSnapshot { return current }
+        guard let dayDataSnapshot,
+              dayDataSnapshot.projectionVersion == TaptionPlanV3Store.projectionVersion,
+              Calendar.autoupdatingCurrent.isDate(dayDataSnapshot.day, inSameDayAs: model.selectedDate) else { return nil }
+        return dayDataSnapshot
+    }
+
     private var currentDayDataSnapshot: PlanDayDataSnapshot? {
         // 오늘 기록이 쌓일 때마다 revision이 올라 지난 날짜 스냅샷이 매번 낡은 것으로 판정돼, 사이드바 대분류와
         // 재생 경로가 비었다. 지난 날짜의 완전한 스냅샷은 낡았어도 새로 만들어질 때까지 그대로 쓴다(ARC1030A02).
@@ -12473,46 +12448,6 @@ struct MapHomeView: View {
                 routeProjectionDirty = false
                 scheduleRouteProjection()
             }
-        }
-    }
-
-    /// 재생용 하루 전체 경로를 한 번 만든다. 계산은 메인 스레드 밖에서 하고, 끝나면 발자국이 이것을 쓴다.
-    private func loadPlaybackFullOverlays() {
-        playbackFullOverlaysTask?.cancel()
-        playbackFullOverlays = nil
-        guard let dayData = currentDayDataSnapshot else { return }
-        let calendar = Calendar.autoupdatingCurrent
-        let dayStart = calendar.startOfDay(for: model.selectedDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)
-            ?? dayStart.addingTimeInterval(24 * 60 * 60)
-        let actuals = dayData.actuals
-        let actualIndex = routeActualIndex ?? RouteTimelineDataEngine.actualIndex(
-            selectedDate: model.selectedDate, actuals: actuals, calendar: calendar
-        )
-        let travel = dayData.travel
-        let readings = displayRouteReadings
-        let confirmedSleepSpans = model.settings.confirmedSleepSpans
-        let sleepSessions = model.sleepSessions
-        let selectedDate = model.selectedDate
-        playbackFullOverlaysTask = Task { @MainActor in
-            let projection = await Task.detached(priority: .userInitiated) {
-                RouteTimelineDataEngine.project(
-                    selectedDate: selectedDate,
-                    through: dayEnd,
-                    selectedSpan: nil,
-                    actuals: actuals,
-                    actualIndex: actualIndex,
-                    travel: travel,
-                    readings: readings,
-                    readingsAreNormalized: true,
-                    filtersSparseRouteConnections: true,
-                    confirmedSleepSpans: confirmedSleepSpans,
-                    sleepSessions: sleepSessions,
-                    calendar: calendar
-                )
-            }.value
-            guard !Task.isCancelled, isDayPlaybackRunning else { return }
-            playbackFullOverlays = makeTimelineRouteOverlays(projection)
         }
     }
 
@@ -19960,6 +19895,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let onUserCameraGesture: () -> Void
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let onAnnotationSelected: (MapHomeAppleAnnotationKind) -> Void
+    /// 화랑이를 눌렀을 때(하루 요약 카드를 연다).
+    var onWalkerTapped: () -> Void = {}
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -20074,9 +20011,38 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             longPress.delegate = self
             mapView.addGestureRecognizer(longPress)
             longPressGesture = longPress
+
+            // 화랑이를 누르면 하루 요약 카드를 연다. 화랑이는 상호작용이 꺼진 겹침 뷰라 지도 탭에서 위치로 판정한다.
+            let walkerTap = UITapGestureRecognizer(target: self, action: #selector(handleWalkerTap(_:)))
+            walkerTap.cancelsTouchesInView = false
+            walkerTap.delegate = self
+            mapView.addGestureRecognizer(walkerTap)
+            walkerTapGesture = walkerTap
+        }
+
+        private var walkerTapGesture: UITapGestureRecognizer?
+        private static let walkerHitRadius: CGFloat = 36
+
+        /// 화랑이가 그려지는 점(지도 뷰 좌표). 없으면 nil.
+        private func walkerPoint(in mapView: MKMapView) -> CGPoint? {
+            guard let walkerAnnotation else { return nil }
+            let point = mapView.convert(walkerAnnotation.coordinate, toPointTo: mapView)
+            return CGPoint(
+                x: point.x + MapHomeStickmanAnnotationLayout.centerOffset.x,
+                y: point.y + MapHomeStickmanAnnotationLayout.centerOffset.y
+            )
+        }
+
+        @objc private func handleWalkerTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let mapView, let center = walkerPoint(in: mapView) else { return }
+            let location = gesture.location(in: mapView)
+            guard hypot(location.x - center.x, location.y - center.y) <= Self.walkerHitRadius else { return }
+            parent.onWalkerTapped()
         }
 
         func detach(from mapView: MKMapView) {
+            if let walkerTapGesture { mapView.removeGestureRecognizer(walkerTapGesture) }
+            walkerTapGesture = nil
             walkerView?.removeFromSuperview()
             walkerView = nil
             for gesture in observedPanGestures {
@@ -20323,7 +20289,12 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             guard let annotation = view.annotation as? MapHomeAppleMapAnnotation else {
                 return
             }
-            if annotation.isInteractive {
+            // 화랑이 바로 아래에 있는 표식은 화랑이가 먼저 눌린다. 같은 손짓이 발자국·장소 선택으로 새지 않게 한다.
+            let coveredByWalker = walkerPoint(in: mapView).map { center in
+                let point = mapView.convert(annotation.coordinate, toPointTo: mapView)
+                return hypot(point.x - center.x, point.y - center.y) <= Self.walkerHitRadius
+            } ?? false
+            if annotation.isInteractive, !coveredByWalker {
                 parent.onAnnotationSelected(annotation.kind)
             }
             mapView.deselectAnnotation(annotation, animated: false)
@@ -22485,3 +22456,12 @@ struct MapHomePinPreviewHost: View {
     }
 }
 #endif
+
+/// 발자국 장부 캐시 키.
+struct MapHomePawprintLedgerKey: Equatable {
+    let day: Date
+    let count: Int
+    let firstID: UUID?
+    let lastID: UUID?
+    let excluded: [Double]
+}

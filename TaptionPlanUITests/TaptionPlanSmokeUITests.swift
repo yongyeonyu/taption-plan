@@ -810,50 +810,37 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         return monthDay(badge.label).flatMap { $0 == previous ? nil : $0 }
     }
 
-    func testOneLongSwipeMovesExactlyOneDay() throws {
+    /// 날짜 줄은 밀어도 선택한 날짜가 바뀌지 않고, 날짜 칸을 탭해야 그날로 이동한다(대표 지시, ARC1030A02).
+    func testSwipeOnlyBrowsesAndTapSelects() throws {
         let app = launch()
         let badge = dateBadge(app)
-
         let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
-        XCTAssertEqual(today.month, monthDay(offset: 0).month, "앱이 오늘로 열리지 않았다")
-        XCTAssertEqual(today.day, monthDay(offset: 0).day, "앱이 오늘로 열리지 않았다")
 
         badge.tap()
         let strip = weekStrip(app)
         XCTAssertTrue(strip.waitForExistence(timeout: 5), "날짜 배지를 눌러도 날짜 줄이 펼쳐지지 않는다")
-        // 펼쳐지는 스프링(0.3초)이 끝난 뒤에 잰다.
         usleep(500_000)
         attach(app, name: "date-strip-expanded")
 
-        // 줄 폭(한 주)만큼 크게 쓴다. 예전 구현이면 6일 넘게 지나갔을 거리다.
+        // 크게 밀어도 날짜는 그대로여야 한다(둘러보기만 한다).
         swipe(app, on: strip, dx: -250)
-        let tomorrow = try XCTUnwrap(
-            waitForDateChange(badge, from: today, timeout: 5),
-            "쓸었는데 날짜가 그대로다"
-        )
+        usleep(1_200_000)
+        let afterSwipe = try XCTUnwrap(monthDay(badge.label))
+        XCTAssertEqual([afterSwipe.month, afterSwipe.day], [today.month, today.day], "밀기만 했는데 날짜가 바뀌었다")
         attach(app, name: "date-strip-after-swipe")
-        XCTAssertEqual(
-            [tomorrow.month, tomorrow.day],
-            [monthDay(offset: 1).month, monthDay(offset: 1).day],
-            "한 번 쓸었는데 \(today.month)월 \(today.day)일 → \(tomorrow.month)월 \(tomorrow.day)일로 움직였다"
-        )
 
-        // 반대쪽으로 한 번 쓸면 하루 돌아온다.
-        swipe(app, on: strip, dx: 250)
-        let back = try XCTUnwrap(
-            waitForDateChange(badge, from: tomorrow, timeout: 5),
-            "되돌아오지 않았다"
+        // 날짜 칸을 탭하면 그날로 이동한다.
+        strip.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
+        let selected = try XCTUnwrap(
+            waitForDateChange(badge, from: today, timeout: 6),
+            "날짜 칸을 탭했는데 날짜가 그대로다"
         )
-        XCTAssertEqual(
-            [back.month, back.day],
-            [today.month, today.day],
-            "한 번 쓸었는데 \(tomorrow.month)월 \(tomorrow.day)일 → \(back.month)월 \(back.day)일로 움직였다"
-        )
+        XCTAssertNotEqual([selected.month, selected.day], [today.month, today.day])
+        attach(app, name: "date-strip-after-tap")
     }
 
-    /// 날짜 줄은 주(일~토)가 아니라 **선택일을 가운데 두는 창**이라, 계속 쓸어도 날짜가
-    /// 이어진다. 예전에는 한 주가 지나면 줄이 튀고 주말에서 멈췄다(대표 지적).
-    func testDateStripKeepsProducingDatesPastTheWeek() throws {
+    /// 날짜 줄은 선택일 앞뒤를 길게 이어 두어, 계속 밀어도 날짜 칸이 이어진다. 밀기만으로는 날짜가 바뀌지 않는다.
+    func testDateStripKeepsScrollingPastTheWeekWithoutChangingTheDate() throws {
         let app = launch()
         let badge = dateBadge(app)
         let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
@@ -862,23 +849,96 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         let strip = weekStrip(app)
         XCTAssertTrue(strip.waitForExistence(timeout: 5), "날짜 배지를 눌러도 날짜 줄이 펼쳐지지 않는다")
         usleep(500_000)
-        attach(app, name: "date-strip-start")
 
-        // 한 주를 넘겨 닷새를 더 간다. 창이 하루씩 옮겨 가므로 매번 하루만 움직인다.
-        var previous = today
-        for step in 1...5 {
-            swipe(app, on: strip, dx: -250)
-            guard let next = waitForDateChange(badge, from: previous, timeout: 6) else {
-                return XCTFail("\(step)번째 쓸기에 날짜가 그대로다(\(previous.month)월 \(previous.day)일)")
-            }
-            let expected = monthDay(offset: step)
-            XCTAssertEqual(
-                [next.month, next.day],
-                [expected.month, expected.day],
-                "\(step)번째 쓸기에서 \(next.month)월 \(next.day)일로 움직였다"
-            )
-            previous = next
+        for _ in 1...5 { swipe(app, on: strip, dx: -250); usleep(400_000) }
+        usleep(800_000)
+        let after = try XCTUnwrap(monthDay(badge.label))
+        XCTAssertEqual([after.month, after.day], [today.month, today.day], "밀기만 했는데 날짜가 바뀌었다")
+        attach(app, name: "date-strip-five-swipes")
+    }
+}
+
+/// 손짓별 끊김(hitch)을 실기기에서 잰다(대표 지시 "터치·팝업·드래그 최적화", ARC1030A07).
+/// 지연이 큰 손짓부터 구조를 바꾸기 위한 계측이라 사용자 데이터는 바꾸지 않는다.
+final class TaptionPlanInteractionPerfUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    private func launch() -> XCUIApplication {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        app.launch()
+        let skip = app.buttons["전체 건너뛰기"]
+        if skip.waitForExistence(timeout: 12) { skip.tap() }
+        let menu = button(app, "메뉴")
+        XCTAssertTrue(menu.waitForExistence(timeout: 40), "지도 홈이 뜨지 않음")
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: menu)
+        XCTAssertEqual(XCTWaiter.wait(for: [hittable], timeout: 30), .completed, "메뉴가 눌릴 수 없음")
+        sleep(3)
+        return app
+    }
+
+    private func button(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", name)).firstMatch
+    }
+
+    private func point(_ app: XCUIApplication, _ dx: CGFloat, _ dy: CGFloat) -> XCUICoordinate {
+        app.coordinate(withNormalizedOffset: CGVector(dx: dx, dy: dy))
+    }
+
+    /// 손짓 하나를 여러 번 반복하며 hitch 비율을 잰다.
+    private func measureHitches(_ app: XCUIApplication, _ gesture: () -> Void) {
+        let options = XCTMeasureOptions()
+        options.iterationCount = 3
+        measure(metrics: [XCTHitchMetric(application: app)], options: options, block: gesture)
+    }
+
+    private func dismissSheet(_ app: XCUIApplication) {
+        usleep(700_000)
+        point(app, 0.5, 0.62).press(forDuration: 0.05, thenDragTo: point(app, 0.5, 0.99))
+        usleep(700_000)
+    }
+
+    /// 하단 단추로 시트(달력·하루 요약)를 열고 닫는다.
+    func testPerfOpenAndCloseSheets() throws {
+        let app = launch()
+        measureHitches(app) {
+            button(app, "달력").tap()
+            dismissSheet(app)
+            button(app, "집").tap()
+            dismissSheet(app)
         }
-        attach(app, name: "date-strip-five-days-later")
+    }
+
+    /// 왼쪽 메뉴를 열고 닫는다.
+    func testPerfOpenAndCloseMenu() throws {
+        let app = launch()
+        measureHitches(app) {
+            button(app, "메뉴").tap()
+            usleep(900_000)
+            point(app, 0.97, 0.5).tap()
+            usleep(700_000)
+        }
+    }
+
+    /// 사이드바 손잡이를 위아래로 끈다.
+    func testPerfSidebarHandleDrag() throws {
+        let app = launch()
+        measureHitches(app) {
+            let handle = point(app, 0.93, 0.50)
+            handle.press(forDuration: 0.1, thenDragTo: point(app, 0.93, 0.72))
+            point(app, 0.93, 0.72).press(forDuration: 0.1, thenDragTo: point(app, 0.93, 0.34))
+        }
+    }
+
+    /// 지도를 손가락으로 움직이고 핀치로 확대·축소한다.
+    func testPerfMapPanAndPinch() throws {
+        let app = launch()
+        measureHitches(app) {
+            point(app, 0.40, 0.40).press(forDuration: 0.05, thenDragTo: point(app, 0.40, 0.62))
+            point(app, 0.40, 0.62).press(forDuration: 0.05, thenDragTo: point(app, 0.25, 0.40))
+            app.pinch(withScale: 2.2, velocity: 2)
+            app.pinch(withScale: 0.45, velocity: -2)
+        }
     }
 }

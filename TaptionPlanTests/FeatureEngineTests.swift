@@ -30402,6 +30402,58 @@ final class NLETrackTests: XCTestCase {
         XCTAssertNil(sameTrack.mergeCandidate(of: second.id, edge: .start, reachedMinute: 0))
     }
 
+    /// 발자국은 GPS가 기록된 순간의 값으로 고정된다. 뒤에 기록이 붙어도 앞 발자국의 위치·방향·속도는 바뀌지 않는다(ARC1030A07).
+    func testPawprintLedgerKeepsEarlierEntriesWhenReadingsAreAppended() {
+        let base = Date(timeIntervalSinceReferenceDate: 815_000_000)
+        func reading(_ second: Int, lat: Double, speed: Double?) -> SensorReading {
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(second)),
+                point: GeoPoint(latitude: lat, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10),
+                speedMetersPerSecond: speed
+            )
+        }
+        // 0.001도(약 111m)씩 북쪽으로 움직이는 기록.
+        let first = (0..<6).map { reading($0 * 10, lat: 37 + Double($0) * 0.001, speed: 5 + Double($0)) }
+        let before = MapHomePawprintLedger.entries(readings: first, excluding: [])
+        XCTAssertEqual(before.count, 6)
+        XCTAssertEqual(before[2].speed, 7, "기록 당시 GPS 속도를 그대로 쓴다")
+
+        let more = first + (6..<10).map { reading($0 * 10, lat: 37 + Double($0) * 0.001, speed: 20) }
+        let after = MapHomePawprintLedger.entries(readings: more, excluding: [])
+        XCTAssertEqual(Array(after.prefix(before.count)), before, "새 기록이 붙어도 앞 발자국은 그대로다")
+        XCTAssertEqual(after.count, 10)
+        // 같은 입력은 늘 같은 결과(순서를 섞어 넣어도 시간순으로 판단한다).
+        XCTAssertEqual(MapHomePawprintLedger.entries(readings: Array(more.reversed()), excluding: []), after)
+    }
+
+    /// 간격 안의 기록은 발자국이 되지 않고, GPS 속도가 없으면 직전 기록에서 구한 평균 속도를 쓰며, 지하철 구간은 건너뛴다.
+    func testPawprintLedgerSpacingDerivedSpeedAndExclusion() throws {
+        let base = Date(timeIntervalSinceReferenceDate: 815_000_000)
+        func reading(_ second: Int, lat: Double) -> SensorReading {
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(second)),
+                point: GeoPoint(latitude: lat, longitude: 127, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+            )
+        }
+        let readings = [
+            reading(0, lat: 37.0000),
+            reading(10, lat: 37.0002),   // 간격 안: 발자국 없음
+            reading(20, lat: 37.0010),   // 약 111m: 발자국, 속도는 직전 기록(0.0002도)에서 20초 → 구한 값
+            reading(30, lat: 37.0020),
+        ]
+        let entries = MapHomePawprintLedger.entries(readings: readings, excluding: [])
+        XCTAssertEqual(entries.count, 3)
+        let derived = try XCTUnwrap(entries[1].speed)
+        XCTAssertEqual(derived, CLLocation(latitude: 37.0002, longitude: 127)
+            .distance(from: CLLocation(latitude: 37.0010, longitude: 127)) / 10, accuracy: 0.01)
+
+        let skipped = MapHomePawprintLedger.entries(
+            readings: readings,
+            excluding: [TimeSpan(start: base.addingTimeInterval(15), end: base.addingTimeInterval(35))]
+        )
+        XCTAssertEqual(skipped.count, 1)
+    }
+
     /// 이웃이 1분보다 짧아지는 자리에서는 경계가 더 밀리지 않는다.
     func testRollStopsWhenTheNeighborReachesOneMinute() {
         var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
