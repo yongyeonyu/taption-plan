@@ -3543,6 +3543,13 @@ struct MapHomeView: View {
         .onChange(of: model.dayProjectionRevision) { _, _ in
             routeActualIndex = nil
         }
+        // 팝업·시트가 열리는 1.2초 동안의 화면 틱을 잰다(ARC1030A07).
+        .onChange(of: isCalendarPresented) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_calendar", duration: 1.2) } }
+        .onChange(of: isDaySummaryPresented) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_day_summary", duration: 1.2) } }
+        .onChange(of: isMenuOpen) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_menu", duration: 1.2) } }
+        .onChange(of: isDateWeekExpanded) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_date_strip", duration: 1.2) } }
+        .onChange(of: isRecordingOptionsPresented) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_recording", duration: 1.2) } }
+        .onChange(of: sectionEditSelection != nil) { _, on in if on { MapHomeInteractionMonitor.shared.begin("popup_clip_editor", duration: 1.2) } }
         .onChange(of: playbackZoomModeRaw) { _, raw in
             // 재생 중에 설정을 바꿔도 곧바로 적용한다.
             playbackDriver?.isAdaptiveZoom = MapHomePlaybackZoomMode(rawValue: raw) != .fixed
@@ -4634,6 +4641,7 @@ struct MapHomeView: View {
             fogReveals: appleFogReveals,
             fogOpacity: CGFloat(fogStrength.opacity),
             onCameraFrame: { frame, locationPoint, isFinal in
+                MapHomeInteractionMonitor.shared.touch("map_gesture")
                 let now = ProcessInfo.processInfo.systemUptime
                 if let rendered = mapCameraFrameProjection.submit(
                     frame,
@@ -6250,6 +6258,7 @@ struct MapHomeView: View {
         isFinal: Bool
     ) {
         guard scenePhase == .active else { return }
+        MapHomeInteractionMonitor.shared.touch("map_gesture")
         let now = ProcessInfo.processInfo.systemUptime
         // 구동기 재생 중에는 화면 값을 간격마다만 관찰 값으로 올리고, 화랑이 점은 구동기가 맡는다(PLY1029A03·PLY1029A05).
         // "이동 완료"(isFinal)도 예외가 아니다: 애니메이션 없이 놓은 카메라는 매 프레임 이동 완료를 알려,
@@ -8238,6 +8247,11 @@ struct MapHomeView: View {
                                 stopDayPlayback(resetProgress: true)
                             }
                             isTimelineInteractionActive = isInteracting
+                            if isInteracting {
+                                MapHomeInteractionMonitor.shared.begin("sidebar_drag", idleTimeout: 8)
+                            } else {
+                                MapHomeInteractionMonitor.shared.end("sidebar_drag")
+                            }
                             if !isInteracting {
                                 flushDeferredWBSPlaybackProjection()
                                 recordTimelineWindow("handle_end")
@@ -13448,6 +13462,7 @@ struct MapHomeView: View {
     }
 
     private func handleUserMapPan() {
+        MapHomeInteractionMonitor.shared.begin("map_gesture", idleTimeout: 0.5)
         // 재생 중 지도를 직접 끌면 재생을 취소하고 시작 전 시각으로 되돌린다.
         cancelDayPlaybackIfRunning()
         recordUserMapAdjustment()
@@ -13456,6 +13471,7 @@ struct MapHomeView: View {
     }
 
     private func handleUserCameraGesture() {
+        MapHomeInteractionMonitor.shared.begin("map_gesture", idleTimeout: 0.5)
         // 확대·축소·회전도 지도를 옮기는 손짓이라 재생을 취소한다(대표 요청).
         cancelDayPlaybackIfRunning()
         recordUserMapAdjustment()

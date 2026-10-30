@@ -890,7 +890,11 @@ final class TaptionPlanInteractionPerfUITests: XCTestCase {
     private func measureHitches(_ app: XCUIApplication, _ gesture: () -> Void) {
         let options = XCTMeasureOptions()
         options.iterationCount = 3
-        measure(metrics: [XCTHitchMetric(application: app)], options: options, block: gesture)
+        if #available(iOS 26.0, *) {
+            measure(metrics: [XCTHitchMetric(application: app)], options: options, block: gesture)
+        } else {
+            measure(metrics: [XCTClockMetric()], options: options, block: gesture)
+        }
     }
 
     private func dismissSheet(_ app: XCUIApplication) {

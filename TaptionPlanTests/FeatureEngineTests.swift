@@ -10643,7 +10643,9 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result[0].mode, .airplane)
-        XCTAssertGreaterThan(result[0].distanceMeters, 300)
+        // 거리는 시간순(0 → 0.001 → 0.002도, 약 222m)으로 센다. 입력 순서대로 더하면 되돌아간 거리까지 333m로 부풀어
+        // 실제 이동보다 크게 나온다(ARC1030A08, 지터에 강한 거리 계산).
+        XCTAssertEqual(result[0].distanceMeters, 222, accuracy: 6)
     }
 
     // CAT1029A03: 밤새 GPS가 끊겨 집 머무름이 01:25에 끝나도, 이동은 실제 출발(09:00 이후)에서 시작한다.
@@ -30400,6 +30402,38 @@ final class NLETrackTests: XCTestCase {
         let second = try XCTUnwrap(sameTrack.clip(atMinute: 400))
         _ = sameTrack.roll(second.id, edge: .start, toMinute: 0)
         XCTAssertNil(sameTrack.mergeCandidate(of: second.id, edge: .start, reachedMinute: 0))
+    }
+
+    /// 가만히 있어도 GPS가 흔들리면 이동 거리가 쌓이지 않는다. 실제로 움직이면 거의 그대로 센다(ARC1030A08).
+    func testTravelDistanceIgnoresStationaryGPSJitterButCountsRealMovement() {
+        let base = Date(timeIntervalSinceReferenceDate: 815_000_000)
+        func reading(_ second: Int, lat: Double, lon: Double, accuracy: Double = 10) -> SensorReading {
+            SensorReading(
+                timestamp: base.addingTimeInterval(Double(second)),
+                point: GeoPoint(latitude: lat, longitude: lon, altitude: 0, horizontalAccuracy: accuracy, verticalAccuracy: 10)
+            )
+        }
+        // 한 자리에서 ±15m쯤 흔들리는 1시간(1초 간격) 기록.
+        var generator = SystemRandomNumberGenerator()
+        let jitter = (0..<3_600).map { second -> SensorReading in
+            let dLat = Double.random(in: -0.00013...0.00013, using: &generator)
+            let dLon = Double.random(in: -0.00016...0.00016, using: &generator)
+            return reading(second, lat: 37.5 + dLat, lon: 127 + dLon)
+        }
+        let jitterMeters = TravelDistanceMath.pathMeters(readings: jitter)
+        let naive = zip(jitter.compactMap(\.point), jitter.compactMap(\.point).dropFirst())
+            .reduce(0.0) { $0 + distanceMeters($1.0, $1.1) }
+        XCTAssertGreaterThan(naive, 20_000, "예전 방식이면 가만히 있어도 수십 km가 쌓인다")
+        XCTAssertLessThan(jitterMeters, 3_000, "흔들림은 거리로 세지 않는다(\(Int(jitterMeters))m)")
+
+        // 북쪽으로 1km를 15초마다 ~100m씩 가는 실제 이동은 거의 그대로 센다.
+        let walk = (0...10).map { reading($0 * 15, lat: 37.5 + Double($0) * 0.0009, lon: 127) }
+        let walkMeters = TravelDistanceMath.pathMeters(readings: walk)
+        XCTAssertEqual(walkMeters, 1_000, accuracy: 60)
+
+        // 튄 점(1초에 수 km)은 세지 않는다.
+        let jump = [reading(0, lat: 37.5, lon: 127), reading(1, lat: 37.6, lon: 127), reading(60, lat: 37.5009, lon: 127)]
+        XCTAssertLessThan(TravelDistanceMath.pathMeters(readings: jump), 300)
     }
 
     /// 발자국은 GPS가 기록된 순간의 값으로 고정된다. 뒤에 기록이 붙어도 앞 발자국의 위치·방향·속도는 바뀌지 않는다(ARC1030A07).

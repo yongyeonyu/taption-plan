@@ -4729,3 +4729,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 실기기 전체 단위 테스트 `build/validation/ARC1030A07/dev11c`: 1,694개 중 통과 1,692, 실패 1, 건너뜀 1. 실패는 수정 전에도 같은 기기에서 실패하던 `evidenceTravelLookup…`(`NaN` 비교 차이).
 - 새 테스트 `testPawprintLedger…` 2개(앞 발자국 불변·간격·속도·제외)와 클립 합치기 2개는 `NLETrackTests`에서 통과(`ARC1030A07/s1/test2.log`). 이전에 합치기 테스트를 `FeatureEngineTests/…`로 지정해 실제로는 돌지 않았던 단독 확인 보고는 정정.
 - 화랑이 탭·시간 카운터·발자국 고정·날짜 줄 UI 테스트는 아직 눈/UI 테스트로 확인 전.
+
+## ARC1030A08 검증(2026-10-30)
+- 실기기(아이폰 11 Pro) 전체 단위 테스트 `build/validation/ARC1030A08/dev11`: 1,695개 중 통과 1,692, 실패 2, 건너뜀 1. 실패 `evidenceTravelLookup…`는 수정 전에도 같은 기기에서 실패하던 `NaN` 비교 차이. `testMovementRouteBuilderPreservesReadingOrderAndInclusiveBoundaries`는 거리 계산이 시간순 합산으로 바뀌어(333m→222m) 기대값을 222m로 고쳤고 시뮬레이터에서 통과(`ARC1030A08/s1.log`).
+- 새 테스트 `testTravelDistanceIgnoresStationaryGPSJitterButCountsRealMovement`: 1시간 ±15m 지터는 3km 미만(예전 20km 이상), 1km 이동은 ±60m, 튄 점은 제외 — 시뮬레이터 통과(`ARC1030A07/s1/test4.log`).
+- 손짓 계측은 시뮬레이터 UI 자동 손짓으로 값이 기록되는 것만 확인(달력 시트 첫 틱 약 100ms, 메뉴 약 22ms). 실기기 UI 자동화는 기기 설정(개발자 > UI 자동화)이 꺼져 있어 못 돌렸다. 실사용 로그 분석 전이라 병목 판단은 하지 않음.
+- 실기기 눈 확인 전: 거리 카운터 값, 화랑이 탭, 시간 카운터, 발자국 고정.
