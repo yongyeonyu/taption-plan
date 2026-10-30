@@ -30358,6 +30358,48 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(pieces.first?.span.end, calendar.date(byAdding: .minute, value: 320, to: start))
     }
 
+    /// 손잡이를 이웃의 먼 쪽 끝까지 가져가면 합치기를 묻고, 합치면 이웃이 끌어온 클립의 분류를 따른다(ARC1030A05).
+    func testHandleReachingNeighborFarEndOffersMergeAndAdoptsDraggedCategory() throws {
+        let sleepSource = UUID()
+        let workSource = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "sleep", sources: [sleepSource]),
+            segment(300, 1_440, "work", sources: [workSource]),
+        ])
+        let work = try XCTUnwrap(track.clip(atMinute: 400))
+        let sleep = try XCTUnwrap(track.clip(atMinute: 100))
+
+        // 이웃의 먼 쪽 끝(0분)까지 간 손은 합치기를 묻는다.
+        XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 0))
+        XCTAssertEqual(track.mergeCandidate(of: work.id, edge: .start, reachedMinute: 0)?.id, sleep.id)
+        // 중간까지만 간 손은 묻지 않는다.
+        XCTAssertNil(track.mergeCandidate(of: work.id, edge: .start, reachedMinute: 120))
+
+        XCTAssertTrue(track.mergeIntoDragged(work.id, neighborID: sleep.id))
+        XCTAssertEqual(track.clip(sleep.id)?.option.categoryID, "work")
+        // 이웃의 원본 구간 요청이 빠지지 않고 끌어온 분류로 나간다.
+        let requests = track.editRequests(dayStart: dayStart(), calendar: calendar)
+        let owner = try XCTUnwrap(requests.first(where: { $0.sourceIDs == [sleepSource] }))
+        XCTAssertEqual(ActivitySectionOverrideEngine.pieces(for: owner).first?.option.categoryID, "work")
+    }
+
+    /// 이웃이 기록 없는 빈 시간이거나 이미 같은 분류면 묻지 않는다.
+    func testMergeIsNotOfferedForGapOrSameCategoryNeighbors() throws {
+        var gapTrack = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
+        let work = try XCTUnwrap(gapTrack.clip(atMinute: 400))
+        gapTrack.trim(work.id, edge: .end, toMinute: 480)
+        XCTAssertTrue(gapTrack.roll(work.id, edge: .end, toMinute: NLETrack.dayMinutes))
+        XCTAssertNil(gapTrack.mergeCandidate(of: work.id, edge: .end, reachedMinute: NLETrack.dayMinutes))
+
+        var sameTrack = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(0, 300, "work", sources: [UUID()]),
+            segment(300, 1_440, "work", sources: [UUID()]),
+        ])
+        let second = try XCTUnwrap(sameTrack.clip(atMinute: 400))
+        _ = sameTrack.roll(second.id, edge: .start, toMinute: 0)
+        XCTAssertNil(sameTrack.mergeCandidate(of: second.id, edge: .start, reachedMinute: 0))
+    }
+
     /// 이웃이 1분보다 짧아지는 자리에서는 경계가 더 밀리지 않는다.
     func testRollStopsWhenTheNeighborReachesOneMinute() {
         var track = MapHomeNLEClipEditor.makeMainTrack(segments: [

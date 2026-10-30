@@ -1635,6 +1635,24 @@ struct MapHomeTimeSidebar: View {
                     segments: reviewableVisibleSegments
                 )
 
+                // 알약 맨 아래 여백 안의 연필: 누르면 지금 시각의 클립 편집을 연다(대표 지시, ARC1030A05).
+                if onSectionEdit != nil {
+                    Button {
+                        onSectionEdit?(minute)
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                            .foregroundStyle(Color.tpInk.opacity(0.78))
+                            .frame(width: railWidth, height: verticalInset)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("클립 편집")
+                    .accessibilityIdentifier("mapHomeTimelineEditButton")
+                    .position(x: railOriginX + railWidth / 2, y: railHeight - verticalInset / 2)
+                    .zIndex(5)
+                }
+
             }
             .frame(
                 width: interactionWidth,

@@ -196,6 +196,35 @@ struct NLETrack: Hashable, Sendable {
         return true
     }
 
+    /// 경계 손잡이를 이웃 클립의 먼 쪽 끝까지 가져갔을 때, 합칠지 물어볼 이웃 클립.
+    ///
+    /// 롤은 이웃의 먼 쪽 끝에서 멈춘다(이웃은 최소 길이만 남는다). 거기까지 간 손짓은 "이웃을 통째로
+    /// 덮겠다"는 뜻이다. 이웃이 기록 없는 빈 시간이거나 이미 같은 분류면 물을 필요가 없어 nil이다(대표 지시, ARC1030A05).
+    func mergeCandidate(of id: String, edge: NLEClipEdge, reachedMinute: Int) -> NLEClip? {
+        guard let clip = clip(id) else { return nil }
+        let neighbor: NLEClip?
+        switch edge {
+        case .start:
+            neighbor = clips.first { $0.id != id && $0.endMinute == clip.startMinute }
+            guard let neighbor, reachedMinute <= neighbor.startMinute + Self.minimumClipMinutes else { return nil }
+        case .end:
+            neighbor = clips.first { $0.id != id && $0.startMinute == clip.endMinute }
+            guard let neighbor, reachedMinute >= neighbor.endMinute - Self.minimumClipMinutes else { return nil }
+        }
+        guard let neighbor,
+              !neighbor.isGap,
+              !neighbor.parent.sourceIDs.isEmpty,
+              neighbor.option.categoryID != clip.option.categoryID else { return nil }
+        return neighbor
+    }
+
+    /// 합치기: 이웃 클립이 끌어온 클립의 분류를 따른다. 이웃의 원본 구간은 그대로 남아 요청이 빠지지 않는다.
+    @discardableResult
+    mutating func mergeIntoDragged(_ id: String, neighborID: String) -> Bool {
+        guard let option = clip(id)?.option else { return false }
+        return setOption(neighborID, to: option)
+    }
+
     /// 길이를 유지한 채 통째로 옮긴다. 원본 구간 안에서만 움직인다.
     /// 옮겨 간 자리에 다른 클립이 있으면 그 클립이 밀려나고, 완전히 덮이면 사라진다.
     @discardableResult

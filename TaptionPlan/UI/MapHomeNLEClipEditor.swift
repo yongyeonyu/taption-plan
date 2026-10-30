@@ -54,6 +54,9 @@ struct MapHomeNLEClipEditor: View {
     @State private var sensorEvidence: [MapHomeTimeRailSegment] = []
     /// 전체 덮기 창. 여러 개로 나뉜 클립을 한 번에 같은 분류로 바꾼다.
     @State private var isOverwritePresented = false
+    /// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
+    @State private var mergePrompt: NLEMergePrompt?
+    @State private var lastTrimMinute = 0
 
     init(
         model: AppModel,
@@ -125,6 +128,19 @@ struct MapHomeNLEClipEditor: View {
         .padding(.bottom, 10)
         .background(Color.tpBackground.ignoresSafeArea())
         .task(id: date) { sensorEvidence = await loadSensorEvidence() }
+        .alert(
+            language.text("합칠까요?", "Merge?"),
+            isPresented: Binding(get: { mergePrompt != nil }, set: { if !$0 { mergePrompt = nil } }),
+            presenting: mergePrompt
+        ) { prompt in
+            Button(language.text("합치기", "Merge")) { confirmMerge(prompt) }
+            Button(language.text("취소", "Cancel"), role: .cancel) {}
+        } message: { prompt in
+            Text(language.text(
+                "‘\(prompt.neighborTitle)’ 구간을 ‘\(prompt.clipTitle)’로 합칩니다. 센서 원본은 그대로 남습니다.",
+                "Merge ‘\(prompt.neighborTitle)’ into ‘\(prompt.clipTitle)’. Sensor data is kept."
+            ))
+        }
         .sheet(isPresented: $isOverwritePresented) {
             MapHomeNLEOverwriteSheet(
                 language: language,
@@ -807,10 +823,12 @@ struct MapHomeNLEClipEditor: View {
                 case let .trimStart(lane, id):
                     pushUndoIfNeeded()
                     let snapped = NLESnapPolicy.snapped(minute, to: snapTargets(lane: lane, excluding: id))
+                    lastTrimMinute = minute
                     trimClip(lane: lane, id: id, edge: .start, toMinute: snapped)
                 case let .trimEnd(lane, id):
                     pushUndoIfNeeded()
                     let snapped = NLESnapPolicy.snapped(minute, to: snapTargets(lane: lane, excluding: id))
+                    lastTrimMinute = minute
                     trimClip(lane: lane, id: id, edge: .end, toMinute: snapped)
                 }
                 // 위·아래 끝까지 끌면 화면이 따라 흐른다.
@@ -826,11 +844,38 @@ struct MapHomeNLEClipEditor: View {
                 // 제자리로 돌아와 손을 떼면 되돌리기 한 칸을 남기지 않는다(BOKKI STUDIO 계약).
                 if didPushUndoForDrag, let before = undoStack.last, before.main == track.snapshot(),
                    before.sub == subTrack.snapshot() { undoStack.removeLast() }
+                askToMergeIfReachedNeighborEnd()
                 dragMode = .none
                 isLifted = false
                 didPushUndoForDrag = false
                 dragScrollShift = 0
             }
+    }
+
+    /// 대분류 경계 손잡이를 이웃의 먼 쪽 끝까지 가져간 채 손을 뗐으면 "합칠까요?"를 묻는다.
+    private func askToMergeIfReachedNeighborEnd() {
+        let target: (id: String, edge: NLEClipEdge)
+        switch dragMode {
+        case let .trimStart(.main, id): target = (id, .start)
+        case let .trimEnd(.main, id): target = (id, .end)
+        default: return
+        }
+        guard let clip = track.clip(target.id),
+              let neighbor = track.mergeCandidate(of: target.id, edge: target.edge, reachedMinute: lastTrimMinute)
+        else { return }
+        mergePrompt = NLEMergePrompt(
+            clipID: clip.id, neighborID: neighbor.id,
+            clipTitle: clip.option.title, neighborTitle: neighbor.option.title
+        )
+    }
+
+    private func confirmMerge(_ prompt: NLEMergePrompt) {
+        guard track.clip(prompt.clipID) != nil else { return }
+        pushUndo()
+        if track.mergeIntoDragged(prompt.clipID, neighborID: prompt.neighborID) {
+            selectedClipID = prompt.clipID
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        }
     }
 
     private func magnifyGesture(height: CGFloat) -> some Gesture {
@@ -1323,3 +1368,11 @@ struct MapHomeNLEClipEditor: View {
     }
 }
 
+
+/// 경계 손잡이를 이웃의 먼 쪽 끝까지 가져갔을 때 묻는 합치기 확인.
+struct NLEMergePrompt: Equatable {
+    let clipID: String
+    let neighborID: String
+    let clipTitle: String
+    let neighborTitle: String
+}

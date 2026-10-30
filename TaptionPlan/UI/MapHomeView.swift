@@ -4604,7 +4604,7 @@ struct MapHomeView: View {
     private var appleFogReveals: [MapHomeFogReveal]? {
         guard fogStrength != .off else { return nil }
         let radius = MapHomeFogStrength.revealRadius
-        var reveals = pawprintWaypoints.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: radius) }
+        var reveals = playbackVisibleWaypoints(pawprintWaypoints).map { MapHomeFogReveal(coordinate: $0.coordinate, radius: radius) }
         reveals += placeAnnotations.map { MapHomeFogReveal(coordinate: $0.coordinate, radius: radius) }
         if let displayed = displayedLocationCoordinate {
             reveals.append(MapHomeFogReveal(coordinate: displayed, radius: MapHomeFogStrength.currentLocationRadius))
@@ -5022,7 +5022,7 @@ struct MapHomeView: View {
                 )
             )
         }
-        for waypoint in pawprintWaypoints {
+        for waypoint in playbackVisibleWaypoints(pawprintWaypoints) {
             let isSelectedRoute = waypoint.isPredicted
                 && waypoint.predictedRoute?.id == selectedPredictedRoute?.id
             let isInteractive = waypoint.predictedRoute != nil
@@ -5504,13 +5504,7 @@ struct MapHomeView: View {
     ) -> some View {
         _ = MapHomePlaybackFrameStats.noteOverlayEvaluation()
         // 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 화면 틱마다 보여, 발자국이 화랑이 발밑에 바로 찍힌다(ARC1030A02).
-        let waypoints: [PawprintWaypoint]
-        if let driver = playbackDriver {
-            let now = driver.inputs.dayStart.addingTimeInterval(driver.minute * 60)
-            waypoints = allWaypoints.filter { $0.timestamp.map { $0 <= now } ?? true }
-        } else {
-            waypoints = allWaypoints
-        }
+        let waypoints = playbackVisibleWaypoints(allWaypoints)
         return ZStack {
             if fogStrength != .off {
                 MapHomeFogLayer(
@@ -5942,6 +5936,14 @@ struct MapHomeView: View {
     }
 
     /// 실제 경로의 좌표와 시각을 함께 샘플링하며 예상 발자국에는 시각을 부여하지 않는다.
+    /// 구동기 재생 중에는 화랑이가 지나간 시각까지의 발자국만 보여, 발자국이 화랑이가 지나가면서 깔린다(대표 지시, ARC1030A05).
+    /// 재생을 누르자마자 하루치 발자국이 한꺼번에 깔리던 것을 막는다. 벡터 지도는 화면 틱마다, Apple 지도는 분 알림마다 부른다.
+    private func playbackVisibleWaypoints(_ all: [PawprintWaypoint]) -> [PawprintWaypoint] {
+        guard let driver = playbackDriver else { return all }
+        let now = driver.inputs.dayStart.addingTimeInterval(driver.minute * 60)
+        return all.filter { $0.timestamp.map { $0 <= now } ?? true }
+    }
+
     private var pawprintWaypoints: [PawprintWaypoint] {
         let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
         let segments = ((playbackDriver != nil ? playbackFullOverlays : nil) ?? timelineRouteOverlays)
@@ -7767,7 +7769,9 @@ struct MapHomeView: View {
         recordCurrentPlaybackAlignment()
         lastPlaybackRouteProjectionUptime = ProcessInfo.processInfo.systemUptime
         loadPlaybackFullOverlays()
-        startPlaybackIntro()
+        // 재생은 개요 연출 없이 00시 위치로 바로 포커싱한다(대표 지시, ARC1030A05).
+        isPlaybackIntroActive = false
+        playbackIntroTask?.cancel()
         // 벡터 지도와 Apple 지도 모두 구동기가 프레임마다 지도 엔진에 카메라를 바로 놓는다(대표 지시, ARC1030A04).
         startDriverPlayback(
             startMinute: currentMinute, endMinute: playbackEndMinute, movingRanges: movingRanges
@@ -7883,32 +7887,6 @@ struct MapHomeView: View {
         case .cycling: return .cycling
         case .automotive: return .car
         case .stationary, .unknown: return nil
-        }
-    }
-
-    /// 재생 시작 연출: 전체 경로를 먼저 보여 주고, 시작 지점으로 줌인한 뒤 재생 카메라에 넘긴다.
-    private func startPlaybackIntro() {
-        playbackIntroTask?.cancel()
-        guard let region = mapRouteFitRegion else { return }
-        isPlaybackIntroActive = true
-        setMapPosition(.region(region))
-        playbackIntroTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(1.6))
-            guard !Task.isCancelled, isDayPlaybackRunning,
-                  let point = displayedPlaybackFocusPoint else {
-                isPlaybackIntroActive = false
-                return
-            }
-            setMapPosition(.camera(
-                MapCamera(
-                    centerCoordinate: CLLocationCoordinate2D(latitude: point.latitude, longitude: point.longitude),
-                    distance: MapHomePlaybackZoomPolicy.baselineDistance,
-                    heading: 0,
-                    pitch: 0
-                )
-            ))
-            try? await Task.sleep(for: .seconds(1.4))
-            isPlaybackIntroActive = false
         }
     }
 

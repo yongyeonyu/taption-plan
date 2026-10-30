@@ -4710,3 +4710,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1030A04 빌드 253 배포(2026-10-30)
 - `release.sh --yes --request-id TFB1030A04` 종료 코드 0. VALID, 내부 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A04/testflight-report.json`.
 - 포함: ARC1030A04(미확인 경로 오판 두 원인 수정, Apple 지도 재생 구동기·안개 경량화, 설정 변경). 실기기 눈 확인 전.
+
+## ARC1030A05 검증(2026-10-30)
+- 시뮬레이터 전체 단위 테스트 `build/validation/ARC1030A05/t2`: TEST SUCCEEDED(실패 0). 새 테스트 `testHandleReachingNeighborFarEndOffersMergeAndAdoptsDraggedCategory`·`testMergeIsNotOfferedForGapOrSameCategoryNeighbors` 포함.
+- 사이드바 연필 위치는 시뮬레이터(BOKKI-iPhone11) 스크린샷으로 확인(알약 맨 아래, 눈금 "24" 아래). 합치기 대화상자·재생 시작 포커싱·발자국 순차 표시는 실기기 눈 확인 전.
+- 이번 변경 뒤 실기기(아이폰 11 Pro) 전체 테스트는 다시 돌리지 않았다(직전 실기기 전체 실행은 `dev11d`).

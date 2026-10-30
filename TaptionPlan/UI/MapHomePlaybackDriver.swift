@@ -58,6 +58,10 @@ final class MapHomePlaybackDriver {
     private var task: Task<Void, Never>?
     private var lastWholeMinute = -1
     private var frameStats = MapHomePlaybackFrameStats()
+    /// 마지막으로 알려진 위치. 위치를 못 구하는 구간(기록 공백)에서는 카메라가 멈추지 않고 이 점에 머문다.
+    private var lastCoordinate: CLLocationCoordinate2D?
+    /// 첫 카메라 프레임은 부드럽게 다가가지 않고 바로 놓는다.
+    private var hasSnappedInitialCamera = false
 
     init(inputs: Inputs) {
         self.inputs = inputs
@@ -68,6 +72,8 @@ final class MapHomePlaybackDriver {
         stop()
         smoother.reset()
         lastWholeMinute = -1
+        lastCoordinate = nil
+        hasSnappedInitialCamera = false
         frameStats.begin()
         MapHomePlaybackProbe.start()
         task = Task { @MainActor [weak self] in
@@ -100,13 +106,19 @@ final class MapHomePlaybackDriver {
             inputs.endMinute
         )
         let date = inputs.dayStart.addingTimeInterval(minute * 60)
-        let coordinate = smoothedPosition(at: date)
+        // 00시에 위치 기록이 없어도 하루의 첫 위치로 바로 포커싱한다. 예전에는 이동이 시작돼서야 카메라가 움직였다(ARC1030A05).
+        let coordinate = smoothedPosition(at: date) ?? lastCoordinate ?? firstKnownCoordinate()
+        if let coordinate { lastCoordinate = coordinate }
         if isCameraSuppressed() || sink == nil { frameStats.cameraSkips += 1 }
         if !isCameraSuppressed(), let sink {
             frameStats.cameraApplies += 1
             let current = sink.playbackCameraDistance
             let distance: Double
-            if isAdaptiveZoom, let current {
+            if !hasSnappedInitialCamera {
+                hasSnappedInitialCamera = true
+                let stay = inputs.zoomPlan.targetDistance(atMinute: minute, speedMetersPerSecond: 0)
+                distance = isAdaptiveZoom ? stay : (current ?? stay)
+            } else if isAdaptiveZoom, let current {
                 let speed = MapHomePlaybackSpeed.speed(at: date, travel: inputs.travel, readings: inputs.readings)
                 let target = inputs.zoomPlan.targetDistance(atMinute: minute, speedMetersPerSecond: speed)
                 distance = smoother.next(current: current, target: target, uptime: ProcessInfo.processInfo.systemUptime)
@@ -130,6 +142,17 @@ final class MapHomePlaybackDriver {
             stop()
             onFinished()
         }
+    }
+
+    /// 하루에서 처음 알 수 있는 위치(첫 위치 기록, 없으면 머문 장소). 00시 위치를 모를 때 쓴다.
+    private func firstKnownCoordinate() -> CLLocationCoordinate2D? {
+        if let point = inputs.readings.lazy.compactMap(\.point).first {
+            return Self.coordinate(MapHomePlaybackLocation(coordinate: point))
+        }
+        if let point = inputs.places.lazy.compactMap(\.point).first {
+            return Self.coordinate(MapHomePlaybackLocation(coordinate: point))
+        }
+        return nil
     }
 
     /// 재생 경로 다듬기(대표 선택 "재생만 다듬기", PLY1029A07). 이미 기록된 하루라 앞뒤를 안다.
