@@ -4706,3 +4706,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 결과와는 별개로 기록. 미확인 경로 수정 관련 테스트 4개는 시뮬레이터 통과(`t2`)와 기기 전체 실행 통과.
 - 재생 측정(아이폰 11 Pro 60Hz, 어제 재생 59초): Apple 지도 53fps·25ms 이상 틱 284개(9%)·메모리 238MB·열 1 / 판타지 지도 52fps·335개(11%)·252MB·열 2 (`n11_standard`, `n11_mapLibreRPG`). 두 지도가 비슷해 남은 끊김은 공통 UI 쪽.
 - 실기기 눈 확인 전: Apple 지도 재생 구동기, 미확인 경로 수정(사용자 폰 로그 필요), 설정 변경.
+
+## TFB1030A04 빌드 253 배포(2026-10-30)
+- `release.sh --yes --request-id TFB1030A04` 종료 코드 0. VALID, 내부 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A04/testflight-report.json`.
+- 포함: ARC1030A04(미확인 경로 오판 두 원인 수정, Apple 지도 재생 구동기·안개 경량화, 설정 변경). 실기기 눈 확인 전.
