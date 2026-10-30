@@ -4786,3 +4786,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 자동 이동 결과(아이폰 11 Pro): 판타지 59.1fps(20ms 초과 1), Apple 표준 59.7fps(0), 판타지+20:50 선택 55.9~56.1fps(50ms 초과 6, 최대 145~152ms). 오버레이·사이드바·발자국을 각각 숨겨도 50ms 초과 6번 그대로 → 우리 화면 요소가 아님. 2초 왕복 주기와 같아 지도 엔진(MapLibre) 쪽으로 추정, 미확인. Time Profiler는 기기에 붙지 않음("기기 부팅 대기" 시간 초과).
 - 수정: 예상 경로가 모두 캐시에 있으면 직선 임시 경로 단계(투영·지도 갱신 1회)를 건너뜀. 자동 이동은 센서 갱신을 재현하지 않아 이 수정의 효과는 측정하지 못함 — 실사용 `interaction_stats`로 확인 필요.
 - 테스트: 실기기 MapHomeLiveMapTests·TimeScaleTests·RouteTimelineDataTests 378개 통과(`dev11-tests.log`). 시뮬레이터 빌드 통과.
+
+## TFB1030A06 TestFlight 255(2026-10-30)
+- `release.sh --yes` 종료 0: 빌드 255 처리 VALID, `TP Taption Plan 내부 테스트` 그룹 연결·테스터 노출 확인. 보고서 `build/validation/TFB1030A06/testflight-report.json`. 네 번들 CFBundleVersion·CURRENT_PROJECT_VERSION 모두 255. 기기 설치·기능 확인은 별도.
