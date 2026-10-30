@@ -781,6 +781,12 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var maximumViewportProjectionMS: Double = 0
         private var maximumViewportFrameGapMS: Double = 0
         private var lastViewportPublishUptime: TimeInterval = 0
+        /// 측정용 자동 지도 이동(`-autoBenchMapPan`, PRF1030A02). 손가락 팬처럼 프레임마다 지도를 옮기고
+        /// 뷰포트를 `force: false`로 내보낸다. 실행 인자가 없으면 쓰이지 않는다.
+        private var benchPanLink: CADisplayLink?
+        private var benchPanStart: (uptime: TimeInterval, center: CLLocationCoordinate2D, span: Double)?
+        private weak var benchMapView: MLNMapView?
+        private var benchObserver: NSObjectProtocol?
         private var pendingViewport:
             (viewport: MapHomeVectorViewport, force: Bool, cameraRevision: Int)?
         private var isViewportDeliveryScheduled = false
@@ -980,10 +986,52 @@ struct MapHomeVectorMap: UIViewRepresentable {
             attachPanGestures(in: mapView)
             attachCameraGestures(in: mapView)
             attachTapDependencies(in: mapView)
+            observeBenchPan(on: mapView)
             publishViewport(from: mapView, force: true)
         }
 
         func mapViewRegionIsChanging(_ mapView: MLNMapView) {
+            publishViewport(from: mapView, force: false)
+        }
+
+        static let benchPanNotification = Notification.Name("MapHomeVectorMapBenchPan")
+        static let benchPanSeconds: TimeInterval = 12
+
+        func observeBenchPan(on mapView: MLNMapView) {
+            guard ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan"), benchObserver == nil else { return }
+            benchMapView = mapView
+            benchObserver = NotificationCenter.default.addObserver(
+                forName: Self.benchPanNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.startBenchPan() }
+            }
+        }
+
+        private func startBenchPan() {
+            guard let mapView = benchMapView, benchPanLink == nil else { return }
+            let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds).longitudeDelta
+            benchPanStart = (ProcessInfo.processInfo.systemUptime, mapView.centerCoordinate, span)
+            let link = CADisplayLink(target: self, selector: #selector(benchPanTick))
+            link.add(to: .main, forMode: .common)
+            benchPanLink = link
+        }
+
+        @objc private func benchPanTick() {
+            guard let mapView = benchMapView, let start = benchPanStart else { return }
+            let elapsed = ProcessInfo.processInfo.systemUptime - start.uptime
+            guard elapsed < Self.benchPanSeconds else {
+                benchPanLink?.invalidate()
+                benchPanLink = nil
+                benchPanStart = nil
+                publishViewport(from: mapView, force: true)
+                return
+            }
+            // 화면 폭의 절반만큼 좌우로 2초 주기 왕복(손가락으로 지도를 계속 미는 것과 비슷한 속도).
+            let offset = sin(elapsed * .pi) * start.span * 0.5
+            mapView.setCenter(
+                CLLocationCoordinate2D(latitude: start.center.latitude, longitude: start.center.longitude + offset),
+                animated: false
+            )
             publishViewport(from: mapView, force: false)
         }
 
@@ -995,6 +1043,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
+            // 측정용 자동 이동 중에는 손가락 팬처럼 "이동 완료"를 내보내지 않는다(끝날 때 한 번만).
+            guard benchPanLink == nil else { return }
             // 재생 중에는 구동기가 매 프레임 카메라를 놓아 이 알림이 매 프레임 온다. 최종 화면으로 보내지 않는다(PLY1029A09).
             publishViewport(from: mapView, force: parent.playbackDriver == nil)
         }

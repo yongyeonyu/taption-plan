@@ -2934,6 +2934,31 @@ struct MapHomeView: View {
     /// 측정용: `-autoStartDayPlayback`으로 켜면 지도가 뜬 뒤 재생을 저절로 시작하고 끝나면 로그 패키지를 만든다(PLY1029A08).
     /// 벡터 지도 뷰가 아니라 화면 공통 위치에서 돈다. 지도 스타일을 바꾸면 벡터 지도 뷰가 사라져 안에 둔 작업이 취소됐다(ARC1030A04).
     private func runBenchAutoPlayback() async {
+        // 측정용: `-autoBenchMapPan`이면 지도가 뜬 뒤 12초 동안 지도를 자동으로 좌우로 밀고(손가락 팬과 같은 경로),
+        // 함수별 시간(`playback_probe`)과 프레임 간격(`interaction_stats` bench_pan)을 남긴 뒤 로그 패키지를 만든다(PRF1030A02).
+        if ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan") {
+            if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchMapStyle=") })?
+                .dropFirst("-benchMapStyle=".count),
+               let style = MapDisplayStyle(rawValue: String(value)) {
+                model.setMapDisplayStyle(style)
+            }
+            try? await Task.sleep(nanoseconds: 25_000_000_000)
+            // `-benchSelectMinute=1250`이면 사이드바에서 그 시각을 고른 상태로 민다(실사용 기록과 같은 조건).
+            if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchSelectMinute=") })?
+                .dropFirst("-benchSelectMinute=".count), let minute = Int(value) {
+                selectedTimelineMinute = minute
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            }
+            MapHomePlaybackProbe.start()
+            MapHomeInteractionMonitor.shared.begin("bench_pan")
+            NotificationCenter.default.post(name: MapHomeVectorMap.Coordinator.benchPanNotification, object: nil)
+            try? await Task.sleep(nanoseconds: UInt64(MapHomeVectorMap.Coordinator.benchPanSeconds * 1_000_000_000))
+            MapHomeInteractionMonitor.shared.end("bench_pan")
+            MapHomePlaybackProbe.stopAndRecord()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            await model.exportDiagnosticsToICloud()
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("-autoStartDayPlayback") {
             // 측정용: `-benchMapStyle=standard` 등으로 지도 스타일을 골라 Apple 지도와 판타지 지도를 같은 조건에서 비교한다(ARC1030A04).
             if let value = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-benchMapStyle=") })?
@@ -4543,6 +4568,7 @@ struct MapHomeView: View {
         )
         .id(style.rawValue)
         .overlay {
+            if !Self.benchHidden("overlay") {
             MapHomeVectorViewportOverlay(store: vectorMapViewportStore, isLive: playbackDriver != nil) {
                 viewport, stickmanPoint in
                 vectorMapAnnotationOverlay(
@@ -4554,6 +4580,7 @@ struct MapHomeView: View {
                     playback: playback,
                     displayedSpeed: displayedSpeed
                 )
+            }
             }
         }
         .simultaneousGesture(
@@ -5640,7 +5667,7 @@ struct MapHomeView: View {
             homeLandOverlay(viewport: viewport)
             placeZoneOverlay(viewport: viewport)
             // `waypoints`는 이미 그리는 순서로 정렬돼 있다(`vectorMap(style:)`).
-            ForEach(recordingShows(\.footprints) ? waypoints : []) { waypoint in
+            ForEach(recordingShows(\.footprints) && !Self.benchHidden("paws") ? waypoints : []) { waypoint in
                 if let point = vectorPoint(
                     in: viewport,
                     for: vectorPawprintMarkerID(waypoint.index)
@@ -10909,54 +10936,59 @@ struct MapHomeView: View {
                 MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
             )
         )
-        let fallbackExpected = limitedRequests.map {
-            expectedRouteOverlay(for: $0, coordinates: [
-                CLLocationCoordinate2D(
-                    latitude: $0.start.latitude,
-                    longitude: $0.start.longitude
-                ),
-                CLLocationCoordinate2D(
-                    latitude: $0.end.latitude,
-                    longitude: $0.end.longitude
-                ),
-            ])
-        }
-        let fallbackProjection = makeWBSPlaybackProjection(
-            expected: fallbackExpected,
-            generated: [],
-            expectedRouteRequests: batch.playbackRequests
-        )
-        let excludedLegIDs = Set(
-            fallbackExpected.map { "movement-\($0.id.uuidString)" }
-                + storedWBSResolvedRoutes.map(\.legID)
-        )
-        let fallbackGenerated = Array(
-            generatedWBSRouteOverlays(
-                from: fallbackProjection,
-                excluding: excludedLegIDs
-            ).prefix(
-                max(
-                    0,
-                    MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
-                        - fallbackExpected.count
+        // 예상 경로가 모두 캐시에 있으면 직선 임시 경로를 먼저 그리지 않는다. 센서 갱신마다 투영을 두 번 만들고
+        // 지도를 두 번 다시 그리던 것이 손짓 중 끊김으로 이어졌다(실사용 기록, PRF1030A02).
+        let allExpectedCached = limitedRequests.allSatisfy { (expectedRouteCache[$0]?.count ?? 0) >= 2 }
+        if !allExpectedCached {
+            let fallbackExpected = limitedRequests.map {
+                expectedRouteOverlay(for: $0, coordinates: [
+                    CLLocationCoordinate2D(
+                        latitude: $0.start.latitude,
+                        longitude: $0.start.longitude
+                    ),
+                    CLLocationCoordinate2D(
+                        latitude: $0.end.latitude,
+                        longitude: $0.end.longitude
+                    ),
+                ])
+            }
+            let fallbackProjection = makeWBSPlaybackProjection(
+                expected: fallbackExpected,
+                generated: [],
+                expectedRouteRequests: batch.playbackRequests
+            )
+            let excludedLegIDs = Set(
+                fallbackExpected.map { "movement-\($0.id.uuidString)" }
+                    + storedWBSResolvedRoutes.map(\.legID)
+            )
+            let fallbackGenerated = Array(
+                generatedWBSRouteOverlays(
+                    from: fallbackProjection,
+                    excluding: excludedLegIDs
+                ).prefix(
+                    max(
+                        0,
+                        MapHomeForecastRouteDisplayPolicy.maximumVisibleRoutes
+                            - fallbackExpected.count
+                    )
                 )
             )
-        )
-        recordExpectedRouteProjectionDiagnostics(
-            phase: "fallback",
-            projection: fallbackProjection,
-            expected: fallbackExpected,
-            generated: fallbackGenerated,
-            excludedLegIDs: excludedLegIDs
-        )
-        _ = applyForecastRouteState(
-            MapHomeForecastRouteState(
+            recordExpectedRouteProjectionDiagnostics(
+                phase: "fallback",
+                projection: fallbackProjection,
                 expected: fallbackExpected,
                 generated: fallbackGenerated,
-                refreshGeneration: generation,
-                inputKey: inputKey
+                excludedLegIDs: excludedLegIDs
             )
-        )
+            _ = applyForecastRouteState(
+                MapHomeForecastRouteState(
+                    expected: fallbackExpected,
+                    generated: fallbackGenerated,
+                    refreshGeneration: generation,
+                    inputKey: inputKey
+                )
+            )
+        }
 
         var resolvedExpected: [MapHomeExpectedRouteOverlay] = []
         for request in limitedRequests {
@@ -20046,6 +20078,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         func attach(to mapView: MKMapView) {
             self.mapView = mapView
             refreshGestureAttachments(in: mapView, force: true)
+            observeBenchPan()
 
             let longPress = UILongPressGestureRecognizer(
                 target: self,
@@ -20266,6 +20299,49 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+            guard benchPanLink == nil else { return }
+            redrawFogThrottled()
+            publishCameraFrame(from: mapView, isFinal: false)
+        }
+
+        // 측정용 자동 지도 이동(`-autoBenchMapPan`, PRF1030A02). 손가락 팬처럼 프레임마다 "보이는 영역 바뀜"만 내보내고
+        // "이동 완료"는 끝에 한 번만 보낸다. 실행 인자가 없으면 쓰이지 않는다.
+        private var benchPanLink: CADisplayLink?
+        private var benchPanStart: (uptime: TimeInterval, center: CLLocationCoordinate2D, span: Double)?
+        private var benchObserver: NSObjectProtocol?
+
+        private func observeBenchPan() {
+            guard ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan"), benchObserver == nil else { return }
+            benchObserver = NotificationCenter.default.addObserver(
+                forName: MapHomeVectorMap.Coordinator.benchPanNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.startBenchPan() }
+            }
+        }
+
+        private func startBenchPan() {
+            guard let mapView, benchPanLink == nil else { return }
+            benchPanStart = (ProcessInfo.processInfo.systemUptime, mapView.centerCoordinate, mapView.region.span.longitudeDelta)
+            let link = CADisplayLink(target: self, selector: #selector(benchPanTick))
+            link.add(to: .main, forMode: .common)
+            benchPanLink = link
+        }
+
+        @objc private func benchPanTick() {
+            guard let mapView, let start = benchPanStart else { return }
+            let elapsed = ProcessInfo.processInfo.systemUptime - start.uptime
+            guard elapsed < MapHomeVectorMap.Coordinator.benchPanSeconds else {
+                benchPanLink?.invalidate()
+                benchPanLink = nil
+                benchPanStart = nil
+                self.mapView(mapView, regionDidChangeAnimated: false)
+                return
+            }
+            let offset = sin(elapsed * .pi) * start.span * 0.5
+            mapView.setCenter(
+                CLLocationCoordinate2D(latitude: start.center.latitude, longitude: start.center.longitude + offset),
+                animated: false
+            )
             redrawFogThrottled()
             publishCameraFrame(from: mapView, isFinal: false)
         }
@@ -20276,6 +20352,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            guard benchPanLink == nil else { return }
             fogView?.setNeedsDisplay()
             updateWalkerPosition(in: mapView)
             publishCameraFrame(from: mapView, isFinal: true)

@@ -4779,3 +4779,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 측정(아이폰 11 Pro, `scripts/playback-bench.sh`, 어제 하루 자동 재생): 카운터 묶음 전 fps 41·카운터 15.3초/125초 → 후 fps 51·카운터 1.45초/73초(2.0%). 20ms 초과 프레임 8.4%→10%(두 재생 길이가 달라 비교 한계). 오버레이 입력 변경만의 효과는 따로 재지 않음(수정 전 HEAD 기준선 미측정). 로그 `build/validation/PRF1030A01/after`, `after2`.
 - 메모 위젯 개수 중복: 지금 시각 근처 메모가 그날 메모 목록에도 들어 있어 두 번 셈 → ID로 합쳐 한 번만.
 - 테스트: 시뮬레이터 MapHomeLiveMapTests·TimeScaleTests 통과(`sim-tests.log`), 실기기 같은 2묶음 254개 통과(`dev11-tests.log`). 카운터 묶음 단위 테스트 추가. 손으로 지도 이동할 때의 끊김은 아직 재지 않음.
+
+## PRF1030A02 지도 손짓 끊김 측정·수정(2026-10-30)
+- 실사용 기록(아이폰 11 Pro, 판타지 지도, 마커 225개, 사이드바 20:50 선택): 지도 손짓 중 약 20~40fps, 한 프레임 최대 100~1,800ms. 같은 시간에 센서 갱신 → 경로 판독 준비·예상 경로 계산이 돌았고, 예상 경로는 직선 임시본 적용 → 경로 받은 뒤 다시 적용으로 투영 2번·지도 갱신 2번.
+- 측정 장치 추가: `-autoBenchMapPan`(12초 자동 좌우 이동, 손가락 팬과 같은 뷰포트 경로; 벡터·Apple 지도 모두), `-benchSelectMinute=`, 숨김 키 `overlay`·`paws`, 스크립트 `scripts/map-pan-bench.sh`.
+- 자동 이동 결과(아이폰 11 Pro): 판타지 59.1fps(20ms 초과 1), Apple 표준 59.7fps(0), 판타지+20:50 선택 55.9~56.1fps(50ms 초과 6, 최대 145~152ms). 오버레이·사이드바·발자국을 각각 숨겨도 50ms 초과 6번 그대로 → 우리 화면 요소가 아님. 2초 왕복 주기와 같아 지도 엔진(MapLibre) 쪽으로 추정, 미확인. Time Profiler는 기기에 붙지 않음("기기 부팅 대기" 시간 초과).
+- 수정: 예상 경로가 모두 캐시에 있으면 직선 임시 경로 단계(투영·지도 갱신 1회)를 건너뜀. 자동 이동은 센서 갱신을 재현하지 않아 이 수정의 효과는 측정하지 못함 — 실사용 `interaction_stats`로 확인 필요.
+- 테스트: 실기기 MapHomeLiveMapTests·TimeScaleTests·RouteTimelineDataTests 378개 통과(`dev11-tests.log`). 시뮬레이터 빌드 통과.
