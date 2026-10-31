@@ -48,33 +48,6 @@ public enum RouteTravelMode: String, Codable, Hashable, Sendable {
     }
 }
 
-public enum ExpectedRouteSource: String, Codable, CaseIterable, Hashable, Sendable {
-    case subwayCatalog
-    case busCatalog
-    case operatingSystemRoute
-    case airportDirect
-}
-
-public struct ExpectedRoute: Codable, Hashable, Sendable {
-    public let span: DateInterval
-    public let mode: RouteTravelMode
-    public let coordinates: [RouteCoordinate]
-    public let source: ExpectedRouteSource
-    public let confidence: Double
-    public let provenance: [String]
-
-    public init(span: DateInterval, mode: RouteTravelMode, coordinates: [RouteCoordinate], source: ExpectedRouteSource, confidence: Double, provenance: [String] = []) {
-        self.span = span
-        self.mode = mode
-        self.coordinates = coordinates
-        self.source = source
-        self.confidence = min(1, max(0, confidence))
-        self.provenance = provenance
-    }
-
-    public var isHighConfidence: Bool { confidence >= 0.80 }
-}
-
 public struct RouteSample: Codable, Hashable, Sendable, Identifiable {
     public let id: UUID
     public let timestamp: Date
