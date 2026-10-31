@@ -53,6 +53,9 @@
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
+		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
+		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
+		C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */; };
 		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
@@ -67,6 +70,7 @@
 		A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
+		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
@@ -100,8 +104,6 @@
 		A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000077 /* WatchMeasurementAlertTests.swift */; };
 		A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		5A00000000000000000000A2 /* TaptionStoreV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F2 /* TaptionStoreV2.swift */; };
-		5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F1 /* TaptionBackupFormat.swift */; };
-		5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F2 /* TaptionBackupDestination.swift */; };
 		5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F3 /* TaptionBackupEngine.swift */; };
 		5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */; };
 		5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B3F /* PlanBackupPresentation.swift */; };
@@ -135,12 +137,7 @@
 		A10000000000000000000092 /* PlanDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000092 /* PlanDayDatabase.swift */; };
 		A10000000000000000000093 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
 		A10000000000000000000094 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
-		A20000000000000000000001 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000002 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000003 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000004 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
 		A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* SensorBackgroundCoordinator.swift */; };
-		A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* AppLanguagePreferenceTests.swift */; };
 		A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */; };
 		A20000000000000000000008 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* Localizable.xcstrings */; };
 		A20000000000000000000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* Localizable.xcstrings */; };
@@ -178,6 +175,13 @@
 		A60000000000000000000004 /* HealthKitBehaviorProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000004 /* HealthKitBehaviorProjection.swift */; };
 		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
+		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000005 /* TaptionWatchBehaviorML */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */; };
 		A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */; };
@@ -336,6 +340,9 @@
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionLiveActivityCat.swift; sourceTree = "<group>"; };
 		F10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000022 /* TaptionPlanWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidget.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000023 /* StoreKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSupport.swift; sourceTree = "<group>"; };
@@ -347,6 +354,7 @@
 		F10000000000000000000029 /* WatchSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
@@ -373,8 +381,6 @@
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
 		F1000000000000000000007A /* DiagnosticsLogSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupport.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F2 /* TaptionStoreV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreV2.swift; sourceTree = "<group>"; };
-		5B00000000000000000000F1 /* TaptionBackupFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupFormat.swift; sourceTree = "<group>"; };
-		5B00000000000000000000F2 /* TaptionBackupDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupDestination.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F3 /* TaptionBackupEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupEngine.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupEngineAdapter.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B3F /* PlanBackupPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupPresentation.swift; sourceTree = "<group>"; };
@@ -399,9 +405,7 @@
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000093 /* WatchDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000090 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		F20000000000000000000001 /* AppLanguagePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreference.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
-		F20000000000000000000003 /* AppLanguagePreferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreferenceTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -488,9 +492,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */,
 				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
+				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -508,7 +514,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */,
 				A4000000000000000000000C /* TaptionPlanCore in Frameworks */,
+				C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,6 +524,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */,
+				C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */,
 				A30000000000000000000004 /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -524,6 +534,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */,
 				A30000000000000000000005 /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -594,7 +605,6 @@
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
 				F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */,
-				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
@@ -716,6 +726,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
 				F1000000000000000000007A /* DiagnosticsLogSupport.swift */,
 				5A00000000000000000000F2 /* TaptionStoreV2.swift */,
@@ -726,8 +737,6 @@
 				F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */,
 				5B0000000000000000000B2F /* PlanSecurityService.swift */,
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
-				5B00000000000000000000F2 /* TaptionBackupDestination.swift */,
-				5B00000000000000000000F1 /* TaptionBackupFormat.swift */,
 				5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */,
 				5A00000000000000000000F5 /* TaptionStoreQuality.swift */,
 				5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */,
@@ -742,7 +751,6 @@
 				F51002000000000000000004 /* PlanDaySealDigest.swift */,
 				F51002000000000000000005 /* NLETrack.swift */,
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
-				F20000000000000000000001 /* AppLanguagePreference.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
 				F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */,
@@ -755,6 +763,9 @@
 			children = (
 				F10000000000000000000078 /* Assets.xcassets */,
 				F10000000000000000000020 /* TaptionPlanWidget.swift */,
+				C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */,
+				C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */,
+				C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */,
 				F10000000000000000000021 /* Info.plist */,
 				F90000000000000000000002 /* PrivacyInfo.xcprivacy */,
 				F10000000000000000000022 /* TaptionPlanWidget.entitlements */,
@@ -830,8 +841,10 @@
 			);
 			name = TaptionPlan;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X70000000000000000000002 /* TaptionPlanEngine */,
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X50000000000000000000002 /* MapLibre */,
 			);
 			productName = TaptionPlan;
@@ -875,7 +888,9 @@
 			);
 			name = TaptionPlanWidget;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				X30000000000000000000002 /* TaptionPlanCore */,
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 			);
 			productName = TaptionPlanWidget;
 			productReference = C10000000000000000000003 /* TaptionPlanWidget.appex */;
@@ -897,6 +912,8 @@
 			);
 			name = TaptionPlanWatch;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
+				C0FFEE000000000000000005 /* TaptionWatchBehaviorML */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlanWatch;
@@ -917,6 +934,7 @@
 			);
 			name = TaptionPlanWatchWidget;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlanWatchWidget;
@@ -1018,6 +1036,8 @@
 				X40000000000000000000001 /* XCLocalSwiftPackageReference "TaptionActivityEngine" */,
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
 				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
+				C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */,
+				C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
@@ -1185,6 +1205,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000032 /* PhotoGalleryView.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
 				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
@@ -1200,8 +1221,6 @@
 				A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */,
 				5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */,
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
-				5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */,
-				5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */,
 				5A00000000000000000000A6 /* TaptionStoreRawEvents.swift in Sources */,
 				5A00000000000000000000A8 /* TaptionStoreQuality.swift in Sources */,
 				5A00000000000000000000AA /* TaptionStoreColumnCoding.swift in Sources */,
@@ -1217,7 +1236,6 @@
 				A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */,
 				A51002000000000000000006 /* NLETrack.swift in Sources */,
 				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
-				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
 				A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */,
@@ -1236,7 +1254,6 @@
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
 				A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */,
-				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,
@@ -1258,6 +1275,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */,
+				C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */,
+				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
+				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
@@ -1275,7 +1295,6 @@
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
 				A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */,
-				A20000000000000000000002 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1295,7 +1314,6 @@
 				A10000000000000000000030 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000038 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000093 /* WatchDayDatabase.swift in Sources */,
-				A20000000000000000000003 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1307,7 +1325,6 @@
 				A10000000000000000000035 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000036 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000094 /* WatchDayDatabase.swift in Sources */,
-				A20000000000000000000004 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1796,6 +1813,14 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionPlanEngine;
 		};
+		C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionPlanStore;
+		};
+		C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionWatchSync;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1834,6 +1859,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
 			productName = MapLibre;
+		};
+		C0FFEE000000000000000002 /* TaptionPlanStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */;
+			productName = TaptionPlanStore;
+		};
+		C0FFEE000000000000000004 /* TaptionWatchSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */;
+			productName = TaptionWatchSync;
+		};
+		C0FFEE000000000000000005 /* TaptionWatchBehaviorML */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */;
+			productName = TaptionWatchBehaviorML;
 		};
 /* End XCSwiftPackageProductDependency section */
 

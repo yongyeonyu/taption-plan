@@ -892,7 +892,7 @@ private struct RequiredPermissionGateView: View {
                         }
                     }
                     Text(
-                        text(
+                        language.text(
                             "모든 권한이 확인되면 GPS와 센서 기록이 5분 간격으로 자동 시작됩니다.",
                             "GPS and sensor recording starts automatically every 5 minutes after all permissions are verified."
                         )
@@ -915,11 +915,11 @@ private struct RequiredPermissionGateView: View {
                 .accessibilityHidden(true)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(30)), weight: .bold))
                 .foregroundStyle(Color.tpReferenceRose)
-            Text(text("필수 권한 설정", "Required permissions"))
+            Text(language.text("필수 권한 설정", "Required permissions"))
                 .font(.taption(size: 27, weight: .black))
                 .foregroundStyle(Color.tpInk)
             Text(
-                text(
+                language.text(
                     "자동 기록에 필요한 권한입니다. 빠진 권한이 있으면 기록 화면을 사용할 수 없습니다.",
                     "These permissions are required for automatic recording. The timeline remains locked until all are enabled."
                 )
@@ -956,8 +956,8 @@ private struct RequiredPermissionGateView: View {
                     .foregroundStyle(Color.tpInk)
                 Text(
                     missing
-                        ? text("설정 필요", "Required")
-                        : text("허용됨", "Allowed")
+                        ? language.text("설정 필요", "Required")
+                        : language.text("허용됨", "Allowed")
                 )
                 .font(.taption(size: 11, weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
@@ -982,7 +982,7 @@ private struct RequiredPermissionGateView: View {
                 .disabled(requesting != nil)
             } else {
                 Image(systemName: "checkmark.circle.fill")
-                    .accessibilityLabel(text("허용됨", "Granted"))
+                    .accessibilityLabel(language.text("허용됨", "Granted"))
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(22))))
                     .foregroundStyle(Color.tpReferenceMint)
             }
@@ -1003,9 +1003,9 @@ private struct RequiredPermissionGateView: View {
     private func actionTitle(_ permission: RequiredPermission) -> String {
         switch permission {
         case .locationPrecise, .liveActivities:
-            text("설정 열기", "Open Settings")
+            language.text("설정 열기", "Open Settings")
         default:
-            text("허용하기", "Allow")
+            language.text("허용하기", "Allow")
         }
     }
 
@@ -1014,28 +1014,24 @@ private struct RequiredPermissionGateView: View {
     ) -> (icon: String, title: String) {
         switch permission {
         case .locationAlways:
-            ("location.fill", text("위치 항상 허용", "Always Location"))
+            ("location.fill", language.text("위치 항상 허용", "Always Location"))
         case .locationPrecise:
-            ("scope", text("정확한 위치", "Precise Location"))
+            ("scope", language.text("정확한 위치", "Precise Location"))
         case .motion:
-            ("figure.walk.motion", text("동작 및 피트니스", "Motion & Fitness"))
+            ("figure.walk.motion", language.text("동작 및 피트니스", "Motion & Fitness"))
         case .healthKitRequestCompleted:
-            ("heart.fill", text("건강 데이터", "Health Data"))
+            ("heart.fill", language.text("건강 데이터", "Health Data"))
         case .calendar:
-            ("calendar", text("캘린더 전체 접근", "Full Calendar Access"))
+            ("calendar", language.text("캘린더 전체 접근", "Full Calendar Access"))
         case .notifications:
-            ("bell.fill", text("알림", "Notifications"))
+            ("bell.fill", language.text("알림", "Notifications"))
         case .liveActivities:
-            ("iphone.radiowaves.left.and.right", text("실시간 현황", "Live Activities"))
+            ("iphone.radiowaves.left.and.right", language.text("실시간 현황", "Live Activities"))
         }
     }
 
-    private func text(_ korean: String, _ english: String) -> String {
-        AppLanguagePreference.text(
-            korean: korean,
-            english: english,
-            rawPreference: languageRawValue
-        )
+    private var language: AppLanguagePreference.ResolvedLanguage {
+        AppLanguagePreference.resolve(rawValue: languageRawValue)
     }
 }
 
@@ -1352,7 +1348,7 @@ struct TaptionProAccessView: View {
                                 .taptionTouchTarget(visualWidth: 40, visualHeight: 40)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(text("닫기", "Close"))
+                        .accessibilityLabel(language.text("닫기", "Close"))
                     }
                 }
 
@@ -1385,19 +1381,19 @@ struct TaptionProAccessView: View {
                 VStack(alignment: .leading, spacing: 11) {
                     featureRow(
                         "cloud.sun.fill",
-                        text("시간대별 날씨 기록", "Hourly weather records")
+                        language.text("시간대별 날씨 기록", "Hourly weather records")
                     )
                     featureRow(
                         "location.fill",
-                        text("실시간 GPS와 이동 경로", "Live GPS and travel routes")
+                        language.text("실시간 GPS와 이동 경로", "Live GPS and travel routes")
                     )
                     featureRow(
                         "tram.fill",
-                        text("지하철·버스 자동 판정", "Automatic subway and bus detection")
+                        language.text("지하철·버스 자동 판정", "Automatic subway and bus detection")
                     )
                     featureRow(
                         "icloud.fill",
-                        text("iCloud 백업과 기기 연동", "iCloud backup and device sync")
+                        language.text("iCloud 백업과 기기 연동", "iCloud backup and device sync")
                     )
                 }
                 .padding(18)
@@ -1411,7 +1407,7 @@ struct TaptionProAccessView: View {
                 )
 
                 if controller.state == .loading {
-                    ProgressView(text("Pro 상태 확인 중", "Checking Pro status"))
+                    ProgressView(language.text("Pro 상태 확인 중", "Checking Pro status"))
                         .padding(.vertical, 18)
                 } else {
                     actionButtons
@@ -1435,7 +1431,7 @@ struct TaptionProAccessView: View {
                 set: { if !$0 { controller.message = nil } }
             )
         ) {
-            Button(text("확인", "OK")) { controller.message = nil }
+            Button(language.text("확인", "OK")) { controller.message = nil }
         } message: {
             proMessage
         }
@@ -1446,55 +1442,51 @@ struct TaptionProAccessView: View {
         case .loading:
             "Taption Plan Pro"
         case .trialNotStarted:
-            text("14일 무료 체험", "14-day free trial")
+            language.text("14일 무료 체험", "14-day free trial")
         case .trial(_, let remainingDays):
-            text(
+            language.text(
                 "14일 무료 체험 · \(remainingDays)일 남음",
                 "14-day free trial · \(remainingDays) days left"
             )
         case .purchased:
-            text("Pro를 영구 이용 중입니다", "You own Pro permanently")
+            language.text("Pro를 영구 이용 중입니다", "You own Pro permanently")
         case .expired:
-            text("14일 무료 체험이 종료되었습니다", "Your 14-day free trial has ended")
+            language.text("14일 무료 체험이 종료되었습니다", "Your 14-day free trial has ended")
         }
     }
 
     private var detail: String {
         switch controller.state {
         case .loading:
-            text(
+            language.text(
                 "구매 및 체험 상태를 확인하고 있습니다.",
                 "Checking your purchase and trial status."
             )
         case .trialNotStarted:
-            text(
+            language.text(
                 "버튼을 누르면 14일 무료 체험이 시작됩니다. 자동 결제는 없습니다.",
                 "Tap the button to start a 14-day free trial. You will not be charged automatically."
             )
         case .trial:
-            text(
+            language.text(
                 "14일 무료 체험이 끝나도 자동 결제되지 않으며, 한 번 구매하면 계속 사용할 수 있습니다.",
                 "The trial does not renew automatically. A single purchase unlocks Pro permanently."
             )
         case .purchased:
-            text(
+            language.text(
                 "추가 결제나 자동 갱신 없이 모든 기능을 계속 사용할 수 있습니다.",
                 "Keep using every feature with no additional payment or renewal."
             )
         case .expired:
-            text(
+            language.text(
                 "계속 사용하려면 Pro를 한 번 구매하거나 기존 구매 내역을 복원해 주세요.",
                 "Purchase Pro once or restore an existing purchase to continue."
             )
         }
     }
 
-    private func text(_ korean: String, _ english: String) -> String {
-        AppLanguagePreference.text(
-            korean: korean,
-            english: english,
-            rawPreference: languageRawValue
-        )
+    private var language: AppLanguagePreference.ResolvedLanguage {
+        AppLanguagePreference.resolve(rawValue: languageRawValue)
     }
 
     @ViewBuilder
@@ -1504,7 +1496,7 @@ struct TaptionProAccessView: View {
                 Button {
                     controller.startTrial()
                 } label: {
-                    Text(text("14일 무료 체험 시작", "Start 14-day free trial"))
+                    Text(language.text("14일 무료 체험 시작", "Start 14-day free trial"))
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -1518,7 +1510,7 @@ struct TaptionProAccessView: View {
                 Button {
                     controller.resetTrialForTesting()
                 } label: {
-                    Text(text(
+                    Text(language.text(
                         "개발자 체험 14일 초기화",
                         "Reset developer trial for 14 days"
                     ))
@@ -1540,7 +1532,7 @@ struct TaptionProAccessView: View {
                         Text(purchaseTitle)
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                         Text(
-                            text(
+                            language.text(
                                 "한 번 결제 · 자동 갱신 없음",
                                 "One-time purchase · No auto-renewal"
                             )
@@ -1552,14 +1544,14 @@ struct TaptionProAccessView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Button(text("구매 복원", "Restore purchase")) {
+                Button(language.text("구매 복원", "Restore purchase")) {
                     Task { await controller.restore() }
                 }
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.tpReferenceBlue)
             } else if allowsDismiss {
-                Button(text("계속 사용", "Continue")) { dismiss() }
+                Button(language.text("계속 사용", "Continue")) { dismiss() }
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpInk)
@@ -1575,53 +1567,53 @@ struct TaptionProAccessView: View {
 
     private var purchaseTitle: String {
         if let displayPrice = controller.product?.displayPrice {
-            return text(
+            return language.text(
                 "\(displayPrice)로 Pro 영구 구매",
                 "Buy Pro permanently for \(displayPrice)"
             )
         }
-        return text("Pro 영구 구매", "Buy Pro permanently")
+        return language.text("Pro 영구 구매", "Buy Pro permanently")
     }
 
     @ViewBuilder
     private var proMessage: some View {
         switch controller.message {
         case .trialStarted:
-            Text(text("14일 무료 체험이 시작되었습니다.", "Your 14-day free trial has started."))
+            Text(language.text("14일 무료 체험이 시작되었습니다.", "Your 14-day free trial has started."))
         case .trialAlreadyUsed:
-            Text(text(
+            Text(language.text(
                 "이 기기 또는 iCloud에 저장된 기록에서 14일 무료 체험을 이미 사용했습니다.",
                 "The 14-day free trial has already been used on this device or in its synced iCloud record."
             ))
 #if DEBUG
         case .trialResetFailed:
-            Text(text(
+            Text(language.text(
                 "개발자 체험 기록을 초기화하지 못했습니다.",
                 "The developer trial record could not be reset."
             ))
 #endif
         case .purchaseCompleted:
-            Text(text("Pro 영구 구매가 완료되었습니다.", "Your permanent Pro purchase is complete."))
+            Text(language.text("Pro 영구 구매가 완료되었습니다.", "Your permanent Pro purchase is complete."))
         case .purchasePending:
-            Text(text("구매 승인을 기다리고 있습니다.", "Waiting for purchase approval."))
+            Text(language.text("구매 승인을 기다리고 있습니다.", "Waiting for purchase approval."))
         case .purchaseUnavailable:
-            Text(text(
+            Text(language.text(
                 "App Store에서 구매 항목을 아직 불러오지 못했습니다.",
                 "The purchase is not available from the App Store yet."
             ))
         case .receiptVerificationFailed:
-            Text(text("구매 영수증을 확인하지 못했습니다.", "The purchase receipt could not be verified."))
+            Text(language.text("구매 영수증을 확인하지 못했습니다.", "The purchase receipt could not be verified."))
         case .purchaseFailed:
-            Text(text(
+            Text(language.text(
                 "구매를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
                 "The purchase could not be completed. Please try again later."
             ))
         case .restoreCompleted:
-            Text(text("구매 내역을 복원했습니다.", "Your purchase was restored."))
+            Text(language.text("구매 내역을 복원했습니다.", "Your purchase was restored."))
         case .restoreNotFound:
-            Text(text("복원할 Pro 구매 내역이 없습니다.", "No Pro purchase was found to restore."))
+            Text(language.text("복원할 Pro 구매 내역이 없습니다.", "No Pro purchase was found to restore."))
         case .restoreFailed:
-            Text(text(
+            Text(language.text(
                 "구매 내역을 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
                 "Your purchase could not be restored. Please try again later."
             ))

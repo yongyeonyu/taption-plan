@@ -1,30 +1,35 @@
 import Foundation
 import TaptionPlanCore
 
-enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
+public enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
     case automatic
     case korean
     case english
 
-    enum ResolvedLanguage: String, Codable, CaseIterable, Sendable {
+    public enum ResolvedLanguage: String, Codable, CaseIterable, Sendable {
         case korean
         case english
 
-        var locale: Locale {
+        public var locale: Locale {
             switch self {
             case .korean: Locale(identifier: "ko_KR")
             case .english: Locale(identifier: "en_US")
             }
         }
+
+        /// 이 언어에 맞는 쪽 문구. 화면이 이미 언어를 알고 있을 때 쓴다.
+        public func text(_ korean: String, _ english: String) -> String {
+            self == .korean ? korean : english
+        }
     }
 
-    static let appGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
-    static let sharedDefaultsKey = "taption.app.language.preference"
-    static let legacyDefaultsKey = "taption.mapHome.language"
+    public static let appGroupIdentifier = TaptionPlanSharedContainer.appGroupIdentifier
+    public static let sharedDefaultsKey = "taption.app.language.preference"
+    public static let legacyDefaultsKey = "taption.mapHome.language"
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .automatic: "자동"
         case .korean: "한국어"
@@ -32,15 +37,15 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         }
     }
 
-    var resolvedLanguage: ResolvedLanguage {
+    public var resolvedLanguage: ResolvedLanguage {
         Self.resolve(rawValue: rawValue)
     }
 
-    var watchPayloadValue: String? {
+    public var watchPayloadValue: String? {
         self == .automatic ? nil : rawValue
     }
 
-    static var current: Self {
+    public static var current: Self {
         if let groupDefaults = UserDefaults(suiteName: appGroupIdentifier),
            let rawValue = groupDefaults.string(forKey: sharedDefaultsKey) {
             return Self(rawValue: rawValue) ?? .automatic
@@ -58,14 +63,14 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         return .automatic
     }
 
-    static func load(
+    public static func load(
         from defaults: UserDefaults,
         key: String = sharedDefaultsKey
     ) -> Self {
         storedPreference(in: defaults, key: key) ?? .automatic
     }
 
-    static func save(
+    public static func save(
         _ preference: Self,
         to defaults: UserDefaults? = nil
     ) {
@@ -84,7 +89,7 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         }
     }
 
-    static func resolve(
+    public static func resolve(
         rawValue: String?,
         locale: Locale = .current
     ) -> ResolvedLanguage {
@@ -101,7 +106,12 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         }
     }
 
-    static func text(
+    /// 지금 설정(`current`)에 맞는 쪽 문구.
+    public static func text(_ korean: String, _ english: String) -> String {
+        current.resolvedLanguage.text(korean, english)
+    }
+
+    public static func text(
         korean: String,
         english: String,
         preference: Self = .current
@@ -109,7 +119,7 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
         preference.resolvedLanguage == .korean ? korean : english
     }
 
-    static func text(
+    public static func text(
         korean: String,
         english: String,
         rawPreference: String?,
@@ -120,7 +130,7 @@ enum AppLanguagePreference: String, Codable, CaseIterable, Identifiable, Sendabl
             : english
     }
 
-    static func localized(
+    public static func localized(
         _ key: String,
         rawPreference: String? = nil,
         locale: Locale = .current,

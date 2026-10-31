@@ -38,12 +38,11 @@
     "TaptionPlan/Core/RouteTimelineData.swift": 3409,
     "TaptionPlan/Core/SensorFusion.swift": 6502,
     "TaptionPlan/Core/TaptionActivityEngineAdapter.swift": 1873,
-    "TaptionPlan/Core/TaptionStoreV2.swift": 1377,
+    "TaptionPlan/Core/TaptionStoreV2.swift": 1307,
     "TaptionPlan/Core/WatchConnectivitySupport.swift": 1358,
-    "TaptionPlan/Core/WatchSyncModels.swift": 3562,
     "TaptionPlan/Core/WidgetShared.swift": 3005,
     "TaptionPlan/UI/AddPlanSheet.swift": 2128,
-    "TaptionPlan/UI/AppShellView.swift": 1648,
+    "TaptionPlan/UI/AppShellView.swift": 1640,
     "TaptionPlan/UI/DetailViews.swift": 2925,
     "TaptionPlan/UI/GoalsView.swift": 1848,
     "TaptionPlan/UI/MapHomeCalendarSheet.swift": 3127,
@@ -56,9 +55,8 @@
     "TaptionPlan/UI/ScheduleView.swift": 11817,
     "TaptionPlan/UI/SettingsView.swift": 2238,
     "TaptionPlan/UX/AppModel.swift": 14324,
-    "TaptionPlanWatch/WatchConnectivityController.swift": 1627,
-    "TaptionPlanWatch/WatchWorkoutManager.swift": 2349,
-    "TaptionPlanWidget/TaptionPlanWidget.swift": 3839
+    "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
+    "TaptionPlanWatch/WatchWorkoutManager.swift": 2349
   },
   "largest_files": [
     {

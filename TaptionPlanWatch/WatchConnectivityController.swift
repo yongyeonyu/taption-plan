@@ -76,10 +76,6 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         AppLanguagePreference.resolve(rawValue: payload?.languagePreference)
     }
 
-    private func text(_ korean: String, _ english: String) -> String {
-        language == .korean ? korean : english
-    }
-
     override init() {
         dayDatabase = WatchDayDatabase()
         super.init()
@@ -178,7 +174,7 @@ final class WatchConnectivityController: NSObject, ObservableObject {
         didActivateConnectivity = true
         guard WCSession.isSupported() else {
             WatchLaunchDiagnostics.mark("connectivity unsupported")
-            statusText = text("연결을 지원하지 않음", "Connectivity unavailable")
+            statusText = language.text("연결을 지원하지 않음", "Connectivity unavailable")
             return
         }
         // WCSession.delegate는 weak 참조다. SwiftUI가 소유권을 넘기기 전에
@@ -1275,15 +1271,15 @@ final class WatchConnectivityController: NSObject, ObservableObject {
     ) {
         switch activationRawValue {
         case WCSessionActivationState.notActivated.rawValue:
-            statusText = text("iPhone 연결 중", "Connecting to iPhone")
+            statusText = language.text("iPhone 연결 중", "Connecting to iPhone")
         case WCSessionActivationState.inactive.rawValue:
-            statusText = text("연결 대기", "Waiting for connection")
+            statusText = language.text("연결 대기", "Waiting for connection")
         case WCSessionActivationState.activated.rawValue:
             statusText = isReachable
-                ? text("iPhone 실시간 연결", "iPhone connected")
-                : text("백그라운드 동기화", "Background sync")
+                ? language.text("iPhone 실시간 연결", "iPhone connected")
+                : language.text("백그라운드 동기화", "Background sync")
         default:
-            statusText = text("연결 상태 확인 중", "Checking connection")
+            statusText = language.text("연결 상태 확인 중", "Checking connection")
         }
     }
 
