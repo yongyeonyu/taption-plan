@@ -39,6 +39,32 @@ public enum SleepFusion {
         return phoneSession(phone.filter { $0.timestamp >= night.start && $0.timestamp <= night.end }).map { [$0] } ?? []
     }
 
+    /// 여러 휴대폰 수면 감지기의 후보를 한 번에 고른다. `tiers`는 우선순위 순서다.
+    /// 첫 층에 후보가 있으면 그 층만 쓰고(`exclusiveFirstTier`), 아니면 다음 층들을 차례로
+    /// 보며 이미 고른 것과 겹치지 않는 후보만 더한다. 마지막으로 워치·HealthKit 수면과
+    /// 겹치는 후보는 모두 버린다(웨어러블 우선). 결과는 (층, 층 안 순번).
+    public static func arbitrate(
+        wearable: [ClassifierInterval],
+        tiers: [[ClassifierInterval]],
+        exclusiveFirstTier: Bool = true
+    ) -> [(tier: Int, index: Int)] {
+        var chosen: [(tier: Int, index: Int)] = []
+        var accepted: [ClassifierInterval] = []
+        for (tier, candidates) in tiers.enumerated() {
+            if exclusiveFirstTier, tier > 0, let first = tiers.first, !first.isEmpty { break }
+            for (index, candidate) in candidates.enumerated()
+            where !accepted.contains(where: { $0.overlap(with: candidate) > 0 || $0 == candidate }) {
+                chosen.append((tier, index))
+                accepted.append(candidate)
+            }
+        }
+        let wearable = ClassifierInterval.union(wearable)
+        return chosen.filter { pick in
+            let candidate = tiers[pick.tier][pick.index]
+            return !wearable.contains { $0.overlap(with: candidate) > 0 }
+        }
+    }
+
     static func isQuiet(_ sample: ClassifierSample) -> Bool {
         guard sample.screenIsOn != true else { return false }
         switch sample.motion {

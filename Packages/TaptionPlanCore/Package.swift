@@ -18,7 +18,8 @@ let package = Package(
         ),
         .target(
             name: "TaptionPlanCore",
-            dependencies: ["CSQLite"]
+            dependencies: ["CSQLite"],
+            resources: [.process("Resources/record-classification.json")]
         ),
         .testTarget(
             name: "TaptionPlanCoreTests",

@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// 대분류·상세분류 표 하나. 앱·엔진·위젯이 같은 JSON(v3)을 읽는다.
 public struct ClassifierTaxonomy: Codable, Hashable, Sendable {
@@ -32,8 +33,7 @@ public struct ClassifierTaxonomy: Codable, Hashable, Sendable {
     public static let current: ClassifierTaxonomy = load()
 
     public static func load() -> ClassifierTaxonomy {
-        guard let url = Bundle.module.url(forResource: "record-classification", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
+        guard let data = ActivityTaxonomyResource.data,
               let value = try? JSONDecoder().decode(ClassifierTaxonomy.self, from: data) else {
             return ClassifierTaxonomy(version: 0, categories: [])
         }

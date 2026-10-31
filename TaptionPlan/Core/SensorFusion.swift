@@ -2612,8 +2612,11 @@ struct PlaceDetectionEngine: Sendable {
             .sorted { $0.timestamp < $1.timestamp }
         guard !sorted.isEmpty else { return [] }
 
+        // Zheng/Li stay point: 기준은 첫 점이 아니라 지금까지 묶인 표본의 중심이다(ALG1101A01).
+        // 첫 점이 GPS로 튀어 있으면 실제 자리에서 반경을 넘었다고 보고 체류가 쪼개졌다.
         var groups: [[SensorReading]] = []
         var current: [SensorReading] = []
+        var sumLatitude = 0.0, sumLongitude = 0.0
 
         for reading in sorted {
             guard let point = reading.point else { continue }
@@ -2621,15 +2624,19 @@ struct PlaceDetectionEngine: Sendable {
                 reading.timestamp.timeIntervalSince($0.timestamp)
                     > maximumSampleGap
             } ?? false
-            let movedTooFar = current.first?.point.map {
-                distanceMeters($0, point) > radiusMeters
-            } ?? false
+            let count = Double(current.count)
+            let movedTooFar = !current.isEmpty && ClassifierPoint(
+                latitude: sumLatitude / count, longitude: sumLongitude / count
+            ).distance(to: ClassifierPoint(latitude: point.latitude, longitude: point.longitude)) > radiusMeters
             if sampleGapTooLarge || movedTooFar {
                 if !current.isEmpty { groups.append(current) }
-                current = [reading]
-            } else {
-                current.append(reading)
+                current = []
+                sumLatitude = 0
+                sumLongitude = 0
             }
+            current.append(reading)
+            sumLatitude += point.latitude
+            sumLongitude += point.longitude
         }
         if !current.isEmpty { groups.append(current) }
 
@@ -2641,7 +2648,8 @@ struct PlaceDetectionEngine: Sendable {
             }
             let span = TimeSpan(start: first.timestamp, end: last.timestamp)
             guard span.duration >= minimumDwell else { return nil }
-            let key = placeKey(for: point)
+            let key = Self.aliasKey(near: point, in: knownNames, radius: radiusMeters / 2)
+                ?? placeKey(for: point)
             let floor = stableSystemFloor(in: group)
             let displayName = knownNames[key]
                 ?? (floor.map { "장소 · \($0)층 추정" } ?? "자동 감지 장소")
@@ -2673,6 +2681,18 @@ struct PlaceDetectionEngine: Sendable {
 
     private func placeKey(for point: GeoPoint) -> String {
         String(format: "%.4f,%.4f", point.latitude, point.longitude)
+    }
+
+    /// 예전 장소 키(소수 넷째 자리 좌표)를 별칭으로 지킨다. 중심점 기준으로 바뀌어 좌표가
+    /// 조금 움직여도, 반경 안에 이미 아는 키가 있으면 그 키(와 이름)를 그대로 쓴다.
+    static func aliasKey(near point: GeoPoint, in knownNames: [String: String], radius: Double) -> String? {
+        let target = ClassifierPoint(latitude: point.latitude, longitude: point.longitude)
+        return knownNames.keys.compactMap { key -> (String, Double)? in
+            let parts = key.split(separator: ",")
+            guard parts.count == 2, let latitude = Double(parts[0]), let longitude = Double(parts[1]) else { return nil }
+            let distance = ClassifierPoint(latitude: latitude, longitude: longitude).distance(to: target)
+            return distance <= radius ? (key, distance) : nil
+        }.min { $0.1 == $1.1 ? $0.0 < $1.0 : $0.1 < $1.1 }?.0
     }
 }
 
@@ -5678,7 +5698,7 @@ enum AppleWatchSensorActivityEngine {
 /// 무활동을 수면 후보로 쓴다. 원본 센서와 앱 사용 기록은 그대로
 /// 두고, 한 시간 이상 이어진 구간만 수정 불가 파생 기록으로 만든다.
 enum ChargingInactivitySleepEngine {
-    static let modelVersion = "charging-inactivity-sleep-v1"
+    static let modelVersion = AutomaticModelVersion.phoneSleep
     static let minimumDuration: TimeInterval = 60 * 60
 
     static func records(
@@ -5791,7 +5811,7 @@ enum ChargingInactivitySleepEngine {
 /// same explicit one-hour confirmation and is cancelled when the phone settles
 /// again, allowing an interrupted sleep to continue.
 enum PhoneSleepWakeEngine {
-    static let modelVersion = "iphone-sleep-wake-v1"
+    static let modelVersion = AutomaticModelVersion.phoneSleep
     static let inactivityDuration: TimeInterval = 5 * 60
     static let confirmationDuration: TimeInterval = 60 * 60
     static let chargingConfirmationDuration: TimeInterval = 30 * 60
@@ -6010,76 +6030,6 @@ enum PhoneSleepWakeEngine {
     }
 }
 
-enum PhoneSleepFallbackEngine {
-    static let maximumBackgroundSampleGap: TimeInterval = 4 * 60 * 60
-
-    static func records(
-        readings: [SensorReading],
-        actuals: [ActualRecord],
-        inside span: TimeSpan,
-        nominalMaximumSampleGap: TimeInterval,
-        authoritativeSleepSpans: [TimeSpan] = [],
-        asOf: Date = .now
-    ) -> [ActualRecord] {
-        let iPhoneReadings = readings.filter { $0.sourceDevice != .appleWatch }
-        let healthKitSleepSpans = ActualIntervalMergeEngine.union(
-            authoritativeSleepSpans
-                + actuals.compactMap { actual in
-                    guard (actual.source == .healthKit
-                        || actual.source == .appleWatch),
-                          AutomaticRecordTimelineEngine.isSleep(actual) else {
-                        return nil
-                    }
-                    return actual.span(asOf: asOf).intersection(with: span)
-                },
-            mergeGap: 0
-        )
-        let maximumSampleGap = max(
-            nominalMaximumSampleGap,
-            maximumBackgroundSampleGap
-        )
-        let screenBased = PhoneSleepWakeEngine.records(
-            readings: iPhoneReadings,
-            actuals: actuals,
-            inside: span,
-            watchAvailable: false,
-            maximumSampleGap: maximumSampleGap,
-            asOf: asOf
-        )
-        let chargingBased = ChargingInactivitySleepEngine.records(
-            readings: iPhoneReadings,
-            actuals: actuals,
-            inside: span,
-            watchAvailable: false,
-            maximumSampleGap: maximumSampleGap,
-            asOf: asOf
-        )
-        let candidates: [ActualRecord]
-        if screenBased.isEmpty {
-            candidates = chargingBased
-        } else {
-            let supplemental = chargingBased.filter { candidate in
-                !screenBased.contains {
-                    $0.span(asOf: asOf)
-                        .intersection(with: candidate.span(asOf: asOf)) != nil
-                }
-            }
-            candidates = screenBased + supplemental
-        }
-        return candidates.filter { candidate in
-            let candidateSpan = candidate.span(asOf: asOf)
-            return !healthKitSleepSpans.contains {
-                $0.intersection(with: candidateSpan) != nil
-            }
-        }.sorted {
-            if $0.startedAt != $1.startedAt {
-                return $0.startedAt < $1.startedAt
-            }
-            return $0.id.uuidString < $1.id.uuidString
-        }
-    }
-}
-
 /// Turns the iPhone's passive Core Motion intervals into immutable activity
 /// records. A HealthKit workout or an explicit tracking session wins when it
 /// covers the same interval, so the activity lane never shows two copies of
@@ -6218,7 +6168,7 @@ enum MotionActivityActualEngine {
                         "iPhone Core Motion",
                         "행동 구간 \(Int(activity.span.duration))초",
                     ],
-                    modelVersion: "iphone-core-motion-v1"
+                    modelVersion: AutomaticModelVersion.motion
                 )
             }
     }

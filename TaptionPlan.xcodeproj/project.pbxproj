@@ -29,9 +29,6 @@
 		A90000000000000000000003 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000003 /* PrivacyInfo.xcprivacy */; };
 		A90000000000000000000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000004 /* PrivacyInfo.xcprivacy */; };
 		A90000000000000000000005 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000091 /* Products.storekit */; };
-		A10000000000000000000080 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
-		A10000000000000000000081 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
-		A10000000000000000000082 /* record-classification.json in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000080 /* record-classification.json */; };
 		A1000000000000000000000C /* TimeScaleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000C /* TimeScaleTests.swift */; };
 		A1000000000000000000000D /* DraftComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000D /* DraftComponents.swift */; };
 		A1000000000000000000000E /* DetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000E /* DetailViews.swift */; };
@@ -471,7 +468,6 @@
 		F10000000000000000000075 /* TaptionPlanWatch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TaptionPlanWatch-Bridging-Header.h"; sourceTree = "<group>"; };
 		F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlanTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000077 /* WatchMeasurementAlertTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMeasurementAlertTests.swift; sourceTree = "<group>"; };
-		F10000000000000000000080 /* record-classification.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "record-classification.json"; sourceTree = "<group>"; };
 		F90000000000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F90000000000000000000002 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F90000000000000000000003 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -698,7 +694,6 @@
 			children = (
 				F10000000000000000000003 /* PlanItem.swift */,
 				F1000000000000000000000F /* FeatureModels.swift */,
-				F10000000000000000000080 /* record-classification.json */,
 				F10000000000000000000010 /* PlanRepository.swift */,
 				FBD100600000000000000001 /* PlanActualStorage.swift */,
 				FBD100700000000000000001 /* SensorReadingStorage.swift */,
@@ -1066,7 +1061,6 @@
 			files = (
 				A1000000000000000000000B /* Assets.xcassets in Resources */,
 				A10000000000000000000090 /* LaunchScreen.storyboard in Resources */,
-				A10000000000000000000080 /* record-classification.json in Resources */,
 				A20000000000000000000008 /* Localizable.xcstrings in Resources */,
 				A2000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
@@ -1077,7 +1071,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10000000000000000000081 /* record-classification.json in Resources */,
 				A90000000000000000000005 /* Products.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1087,7 +1080,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000078 /* Assets.xcassets in Resources */,
-				A10000000000000000000082 /* record-classification.json in Resources */,
 				A20000000000000000000009 /* Localizable.xcstrings in Resources */,
 				A2000000000000000000000D /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000002 /* PrivacyInfo.xcprivacy in Resources */,

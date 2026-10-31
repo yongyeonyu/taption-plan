@@ -7,7 +7,7 @@ repository_root="$(cd "${script_directory}/.." && pwd)"
 failed=0
 
 # 1) 앱 소스는 엔진 패키지를 직접 부르지 않는다. TaptionPlanEngine 하나만 통과시킨다.
-forbidden_engine='^[[:space:]]*(@_exported[[:space:]]+)?import[[:space:]]+(TaptionRouteEngine|TaptionActivityEngine)([.[:space:]]|$)'
+forbidden_engine='^[[:space:]]*(@_exported[[:space:]]+)?import[[:space:]]+(TaptionRouteEngine|TaptionActivityEngine|TaptionClassifierEngine)([.[:space:]]|$)'
 if rg -n --glob '*.swift' "$forbidden_engine" "${repository_root}/TaptionPlan"; then
     printf '%s\n' 'TaptionPlan app sources must import TaptionPlanEngine, not a concrete engine package.' >&2
     failed=1

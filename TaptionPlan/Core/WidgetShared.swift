@@ -1505,6 +1505,52 @@ struct SensorCollectionActivityAttributes: ActivityAttributes {
 }
 
 /// 잠금 화면 연봉 카운터 글자. 앱이 준 기준값에서 지금 시각까지 흐른 근무 시간을 더해 간격 단위로 맞춘다.
+/// 잠금 화면 연봉 카운터가 읽는 기준값. 앱이 쓰고 Live Activity가 읽는 키를 여기 하나에 둔다.
+struct SalaryLiveSnapshot: Equatable {
+    static let textKey = "mapHomeSalaryLiveText"
+    static let baseKey = "mapHomeSalaryLiveBase"
+    static let rateKey = "mapHomeSalaryLiveRate"
+    static let measuredAtKey = "mapHomeSalaryLiveMeasuredAt"
+    static let workingKey = "mapHomeSalaryLiveWorking"
+    static let tickKey = "mapHomeSalaryLiveTick"
+    static let keys = [textKey, baseKey, rateKey, measuredAtKey, workingKey, tickKey]
+
+    var text: String?
+    /// 측정 시각이 없으면 나머지 수치는 없다(문자열만 보여 준다).
+    var baseSeconds: Double?
+    var hourlyRate: Double?
+    var measuredAt: Date?
+    var isWorking: Bool?
+    var tickSeconds: Int?
+
+    static func read(_ defaults: UserDefaults = .standard) -> SalaryLiveSnapshot {
+        let measuredAt = defaults.object(forKey: measuredAtKey) as? Date
+        let measured = measuredAt != nil
+        return SalaryLiveSnapshot(
+            text: defaults.string(forKey: textKey),
+            baseSeconds: measured ? defaults.double(forKey: baseKey) : nil,
+            hourlyRate: measured ? defaults.double(forKey: rateKey) : nil,
+            measuredAt: measuredAt,
+            isWorking: measured ? defaults.bool(forKey: workingKey) : nil,
+            tickSeconds: measured ? defaults.integer(forKey: tickKey) : nil
+        )
+    }
+
+    /// nil이면 모든 키를 지운다.
+    static func write(_ value: SalaryLiveSnapshot?, to defaults: UserDefaults = .standard) {
+        guard let value else {
+            keys.forEach(defaults.removeObject(forKey:))
+            return
+        }
+        defaults.set(value.text, forKey: textKey)
+        defaults.set(value.baseSeconds, forKey: baseKey)
+        defaults.set(value.hourlyRate, forKey: rateKey)
+        defaults.set(value.measuredAt, forKey: measuredAtKey)
+        defaults.set(value.isWorking, forKey: workingKey)
+        defaults.set(value.tickSeconds.map { max(1, $0) }, forKey: tickKey)
+    }
+}
+
 enum SensorCollectionSalaryText {
     static func text(
         baseSeconds: Double,
