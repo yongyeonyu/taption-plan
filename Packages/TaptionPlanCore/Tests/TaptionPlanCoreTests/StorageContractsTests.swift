@@ -111,7 +111,8 @@ final class StorageContractsTests: XCTestCase {
         let spike = filter.decisions(for: [0, 0, 0, 10, 0, 0, 0].map(Optional.some))
         XCTAssertEqual(spike[3].reason, .isolatedOutlier)
 
-        let transition = filter.filteredValues([0, 0, 0, 10, 10, 10, 10].map(Optional.some))
+        let transition = filter.decisions(for: [0, 0, 0, 10, 10, 10, 10].map(Optional.some))
+            .map(\.acceptedValue)
         XCTAssertEqual(transition.compactMap { $0 }.count, 7)
     }
 

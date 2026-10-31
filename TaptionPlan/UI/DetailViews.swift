@@ -2462,30 +2462,6 @@ struct WidgetPreviewView: View {
         .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
     }
 
-    private func widgetAction(
-        _ icon: String,
-        _ title: String,
-        action: WidgetAction
-    ) -> some View {
-        Button {
-            guard let planID = activeWidgetPlan?.id else { return }
-            Task {
-                await model.performQuickAction(action, planID: planID)
-            }
-        } label: {
-            Label(title, systemImage: icon)
-                .font(.taption(size: 10, weight: .bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(
-                    Color.tpTrackFill,
-                    in: RoundedRectangle(cornerRadius: TaptionRadius.field)
-                )
-        }
-        .buttonStyle(.plain)
-        .disabled(activeWidgetPlan == nil)
-    }
-
     private var liveCard: some View {
         VStack(spacing: 0) {
             HStack {

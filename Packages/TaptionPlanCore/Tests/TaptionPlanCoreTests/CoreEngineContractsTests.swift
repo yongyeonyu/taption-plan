@@ -61,26 +61,8 @@ final class CoreEngineContractsTests: XCTestCase {
         )
 
         XCTAssertEqual(index.timestamps, [start, start.addingTimeInterval(10), start.addingTimeInterval(20)])
-        XCTAssertEqual(index.prefixCount(through: start.addingTimeInterval(10)), 2)
+        XCTAssertEqual(index.upperBound(start.addingTimeInterval(10)), 2)
         XCTAssertEqual(index.range(from: start.addingTimeInterval(5), through: start.addingTimeInterval(20)), 1..<3)
-    }
-
-    func testSnapshotRevisionIsImmutableAndComparable() {
-        let first = TaptionPlanDayDataSnapshot(
-            day: .init(year: 2026, month: 8, day: 25),
-            revision: 1,
-            generation: 2,
-            timestamps: []
-        )
-        let second = TaptionPlanDayDataSnapshot(
-            day: first.day,
-            revision: 2,
-            generation: 1,
-            timestamps: []
-        )
-
-        XCTAssertTrue(second.isNewer(than: first))
-        XCTAssertFalse(first.isNewer(than: second))
     }
 
     func testBudgetPublishesAtMostSixtyHertzAndFinalImmediately() {
@@ -96,7 +78,7 @@ final class CoreEngineContractsTests: XCTestCase {
     func testCancelledGenerationDoesNotPublishLateEvents() {
         var engine = TaptionPlanNLEInputBudgetEngine()
         let cancelled = engine.activeGeneration
-        engine.cancelGeneration(cancelled)
+        _ = engine.beginGeneration()
 
         XCTAssertFalse(engine.submit(at: 1, generation: cancelled).shouldPublish)
         XCTAssertEqual(engine.activeGeneration, cancelled + 1)

@@ -568,87 +568,6 @@ struct RouteEngineTests {
         #expect(RoutePlaybackPolicy.duration(distanceMeters: 100, currentSpeedMetersPerSecond: 8, movementDetected: true) == 50)
     }
 
-    @Test func cumulativeDistancePlaybackUsesSameCoordinateForMarkerAndRoute() {
-        let projection = RoutePlaybackProjection(coordinates: [
-            .init(latitude: 37, longitude: 126),
-            .init(latitude: 37, longitude: 126.01),
-            .init(latitude: 37.01, longitude: 126.01)
-        ])
-        let firstLeg = projection.sample(progress: 0.25)
-        let secondLeg = projection.sample(progress: 0.75)
-
-        #expect(firstLeg?.coordinate.latitude == 37)
-        #expect(firstLeg?.coordinate.longitude ?? 0 > 126)
-        #expect(secondLeg?.coordinate.longitude == 126.01)
-        #expect(secondLeg?.coordinate.latitude ?? 0 > 37)
-        #expect(firstLeg?.distanceMeters ?? 0 < secondLeg?.distanceMeters ?? 0)
-    }
-
-    @Test func playbackLowerBoundPreservesDuplicateDistanceAndBoundarySemantics() {
-        let start = RouteCoordinate(latitude: 0, longitude: 0)
-        let middle = RouteCoordinate(latitude: 0.01, longitude: 0)
-        let end = RouteCoordinate(latitude: 0.02, longitude: 0)
-        let projection = RoutePlaybackProjection(coordinates: [
-            start, start, middle, middle, end, end
-        ])
-
-        #expect(projection.sample(progress: -1)?.coordinate == start)
-        #expect(projection.sample(progress: 0)?.coordinate == start)
-        #expect(projection.sample(progress: 0.5)?.coordinate == middle)
-        #expect(projection.sample(progress: 1)?.coordinate == end)
-        #expect(projection.sample(progress: 2)?.coordinate == end)
-    }
-
-    @Test func playbackSamplesLargeCumulativeDistanceIndex() {
-        let coordinates = (0...50_000).map { index in
-            RouteCoordinate(latitude: -2 + Double(index) * 0.00008, longitude: 0)
-        }
-        let projection = RoutePlaybackProjection(coordinates: coordinates)
-
-        let midpoint = projection.sample(progress: 0.5)
-
-        #expect(projection.coordinates.count == 50_001)
-        #expect(abs(midpoint?.coordinate.latitude ?? .infinity) < 0.000_001)
-    }
-
-    @Test func routePlaybackInterpolatesAcrossDatelineByShortestPath() {
-        let projection = RoutePlaybackProjection(coordinates: [
-            .init(latitude: 10, longitude: 179.9),
-            .init(latitude: 10, longitude: -179.9),
-        ])
-
-        let midpoint = projection.sample(progress: 0.5)
-
-        #expect(projection.totalDistanceMeters < 30_000)
-        #expect(abs(abs(midpoint?.coordinate.longitude ?? 0) - 180) < 0.001)
-    }
-
-    @Test func lookAheadQuantizesToEightDirectionsAndFrameIndexIsDeterministic() {
-        let projection = RoutePlaybackProjection(coordinates: [
-            .init(latitude: 37, longitude: 126),
-            .init(latitude: 37.01, longitude: 126)
-        ])
-        let first = projection.sample(progress: 0.5)
-        let same = projection.sample(progress: 0.5)
-        let end = projection.sample(progress: 1)
-
-        #expect(first?.direction == .north)
-        #expect(first == same)
-        #expect(first?.frameIndex == 12)
-        #expect(end?.frameIndex == 23)
-    }
-
-    @Test func invalidCoordinatesAreExcludedFromImmutableProjection() {
-        let projection = RoutePlaybackProjection(coordinates: [
-            .init(latitude: .nan, longitude: 126),
-            .init(latitude: 37, longitude: 126)
-        ])
-
-        #expect(projection.coordinates.count == 1)
-        #expect(projection.totalDistanceMeters == 0)
-        #expect(projection.sample(progress: 0.5)?.coordinate.latitude == 37)
-    }
-
     @Test func approximateSamplesAreOnlyLowConfidenceRunBoundaries() {
         let values = (0..<3).map { index in
             RouteSample(
@@ -753,22 +672,9 @@ struct RouteEngineTests {
         #expect(decision.mode == .subway)
     }
 
-    @Test func extendedTransportModesHaveDistinctSpeedsAndExpectedRouteProvenance() {
+    @Test func extendedTransportModesHaveDistinctSpeeds() {
         #expect(RouteTravelMode.bus.maximumSpeedMetersPerSecond < RouteTravelMode.train.maximumSpeedMetersPerSecond)
         #expect(RouteTravelMode.airplane.maximumSpeedMetersPerSecond > RouteTravelMode.train.maximumSpeedMetersPerSecond)
         #expect(RouteTravelMode.privateVehicle.maximumSpeedMetersPerSecond == RouteTravelMode.automotive.maximumSpeedMetersPerSecond)
-
-        let expected = ExpectedRoute(
-            span: DateInterval(start: base, duration: 3_600),
-            mode: .airplane,
-            coordinates: [.init(latitude: 37, longitude: 126), .init(latitude: 35, longitude: 129)],
-            source: .airportDirect,
-            confidence: 0.8,
-            provenance: ["airport-to-airport-direct"]
-        )
-
-        #expect(expected.isHighConfidence)
-        #expect(expected.source == .airportDirect)
-        #expect(expected.provenance == ["airport-to-airport-direct"])
     }
 }

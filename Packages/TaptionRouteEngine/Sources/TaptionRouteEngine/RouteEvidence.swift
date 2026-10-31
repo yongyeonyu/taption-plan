@@ -30,11 +30,6 @@ public enum RouteEvidenceGate {
         let signals = [evidence.motionDetected, evidence.cellularContinuity, evidence.subwayWiFi].filter { $0 }.count
         return signals >= 2 && evidence.observedDistanceMeters > 0
     }
-
-    public static func preferredMode(_ evidence: MissingRouteEvidence) -> RouteTravelMode {
-        if allowsDottedRoute(evidence), evidence.subway != nil { return .subway }
-        return .unknown
-    }
 }
 
 public enum SubwayRoutePrecedence {

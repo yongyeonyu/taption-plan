@@ -90,40 +90,10 @@ public struct TaptionPlanTimestampIndex: Hashable, Sendable {
         return lower
     }
 
-    public func prefixCount(through date: Date) -> Int {
-        upperBound(date)
-    }
-
     public func range(from start: Date, through end: Date) -> Range<Int> {
         let lower = lowerBound(start)
         let upper = upperBound(end)
         return lower..<max(lower, upper)
-    }
-}
-
-public struct TaptionPlanDayDataSnapshot: Hashable, Sendable {
-    public let day: TaptionPlanDayKey
-    public let revision: UInt64
-    public let generation: UInt64
-    public let createdAt: Date
-    public let timestampIndex: TaptionPlanTimestampIndex
-
-    public init(
-        day: TaptionPlanDayKey,
-        revision: UInt64,
-        generation: UInt64,
-        createdAt: Date = .now,
-        timestamps: [Date] = []
-    ) {
-        self.day = day
-        self.revision = revision
-        self.generation = generation
-        self.createdAt = createdAt
-        self.timestampIndex = TaptionPlanTimestampIndex(timestamps: timestamps)
-    }
-
-    public func isNewer(than other: Self) -> Bool {
-        revision > other.revision || (revision == other.revision && generation > other.generation)
     }
 }
 
@@ -166,13 +136,6 @@ public struct TaptionPlanNLEInputBudgetEngine: Sendable {
         lastPublishedAt = nil
         nextSequence = 0
         return activeGeneration
-    }
-
-    public mutating func cancelGeneration(_ generation: UInt64) {
-        guard generation == activeGeneration else { return }
-        activeGeneration &+= 1
-        lastPublishedAt = nil
-        nextSequence = 0
     }
 
     public mutating func submit(

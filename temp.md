@@ -2723,3 +2723,14 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
+
+## CLN1101A01 미사용 코드·나머지 UI 정리(ALL1101A01 D, 2026-11-01)
+- 요청: 계획 표 D행. 소유 파일(`ReviewView`·`GoalsView`·`SettingsView`·`DetailViews`·`AddPlanSheet`·`DraftComponents`·`MapHomeNLE*`·`MapHomeLocationPresentation`·`Packages/TaptionRouteEngine`·`Packages/TaptionPlanCore`(저장소 제외)·`scripts/`)의 미사용 타입·함수·프로퍼티·변수 제거, 사용처 없는 패키지 공개 API 정리, 소유 UI의 중복 터치 코드 정리, 쓰이지 않는 스크립트 목록.
+- 원인: 기능 교체가 이어지며 정의 파일 밖 참조가 없거나 테스트에서만 쓰는 코드가 남았다.
+- 해결: `rg`로 정의 밖 참조 0·테스트 전용을 판별해 지우고(`@objc`·Codable 키·UserDefaults 키·접근성 식별자·화면 시험 사용은 유지), `SubwayRoutePrecedence`처럼 ALG가 쓸 수 있는 것은 지우지 않고 `internal`로 낮추거나 남긴다. 다른 세션 소유 파일의 미사용 코드는 아래에 목록만 둔다. 줄인 만큼 `docs/architecture-baseline.json` 예산을 낮춘다.
+- 검증 기준: 바꾼 패키지 `swift test` 통과, 관련 `TaptionPlanTests` 클래스 통과(xcresult 실행 수), 앱 Debug 빌드 성공, `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 지운 목록·줄 수 변화를 test.md에.
+- 남김(지우지 않음): `SubwayRoutePrecedence`(RouteEngine, 앱 사용처 0·패키지 테스트만) — ALG1101A01이 새 패키지에서 정류장 특징으로 쓸 수 있어 `public`을 유지했다. 합칠 때 ALG가 쓰지 않으면 테스트와 함께 지운다.
+- 다른 세션 소유 파일(넘김): 구간 편집기 동시 제스처 `MapHomeView.swift`의 `sectionMagnifyGesture`·`sectionPanGesture` 동시 부착(현재 14726–14727)과 상세 행의 `simultaneousGesture(TapGesture…)`(14980), 검색 핀 Button+LongPress 중복은 PRF1101A01 소유. 앱 빌드 경고 2건도 `MapHomeView.swift`(쓰지 않는 `places` 4599, `playbackMinute` 8147). 지운 UI 코드 때문에 쓰이지 않게 된 것일 수 있는 `AppModel.clearWatchLaunchReport`·`appleWatchDataSyncRequestedAt`·`AppleWatchDataSyncRequestStatus`는 AppModel 소유 세션 몫. 그 밖의 후보 240건(휴리스틱, 빌드 미검증)은 `build/validation/CLN1101A01/others-unused-candidates.txt`.
+- 가드: `architecture-metrics.py --check`가 이 작업 전부터 `MapHomeTimeSidebar.swift` 3,296→3,301로 실패한다(c04a4a0의 사이드바 손잡이 변경, PRF 소유). 예산은 올리지 않았다.
+- scripts: 코드·현행 문서(AGENTS·DEVELOPMENT·docs) 참조가 없는 것은 `analyze-diagnostics.py`·`map-pan-bench.sh`·`playback-bench.sh`·`with-device-lock.sh` 넷인데, 모두 temp.md·test.md 기록과 현재 계획(시뮬레이터 잠금, 재생·지도 벤치)에서 쓰여 지우지 않았다. DEVELOPMENT.md에 사용법을 올릴 후보.
+- 진행: 구현·검증 완료(test.md CLN1101A01). 남은 것 = 구조 가드의 `MapHomeTimeSidebar` 초과(PRF 몫)가 풀리면 합칠 때 `--check` 재확인, `SubwayRoutePrecedence` 처리. 확인 뒤 블록을 지운다.

@@ -3,7 +3,6 @@ import SwiftUI
 
 private enum SettingsTypography {
     static let accountTitle: CGFloat = 13
-    static let cardTitle: CGFloat = 12
     static let rowTitle: CGFloat = 10.5
     static let action: CGFloat = 9.5
     static let value: CGFloat = 9
@@ -532,43 +531,6 @@ struct SettingsView: View {
                     .padding(.leading, 37)
             }
         }
-    }
-
-    private func watchLaunchReportView(
-        _ value: (report: String, receivedAt: Date)
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: TaptionSpacing.compact) {
-                Text("Watch 실행 기록")
-                    .font(.taption(size: 9, weight: .bold))
-                    .foregroundStyle(Color.tpSecondary)
-                Text(
-                    value.receivedAt,
-                    format: .dateTime.month().day().hour().minute()
-                )
-                .font(.taption(size: 8))
-                .foregroundStyle(Color.tpSecondary)
-                Spacer(minLength: 4)
-                Button("복사") {
-                    UIPasteboard.general.string = value.report
-                }
-                .font(.taption(size: 8, weight: .bold))
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.tpInk)
-                Button("지우기") {
-                    model.clearWatchLaunchReport()
-                }
-                .font(.taption(size: 8, weight: .bold))
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.tpSecondary)
-            }
-            Text(value.report)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), design: .monospaced))
-                .foregroundStyle(Color.tpInk)
-                .textSelection(.enabled)
-                .lineLimit(12)
-        }
-        .padding(.leading, 37)
     }
 
     private var locationIntegrationRow: some View {
@@ -1234,52 +1196,6 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-    }
-
-    private func watchDataSyncStatusText(
-        _ status: AppleWatchDataSyncRequestStatus
-    ) -> String {
-        let requestedAt = model.appleWatchDataSyncRequestedAt.map {
-            " · \($0.formatted(date: .abbreviated, time: .shortened))"
-        } ?? ""
-        switch status {
-        case .pending:
-            return "수신 요청됨\(requestedAt)"
-        case .backgroundQueued:
-            return "즉시 전송 실패 · 백그라운드 수신 대기\(requestedAt)"
-        case .noResponse:
-            return "Watch 응답 없음 · 연결 상태 확인\(requestedAt)"
-        case .rejected:
-            return "가져오기 요청 실패 · Watch 연결·설치 상태 확인"
-        }
-    }
-
-    private func watchProfileLabel(
-        _ text: String,
-        alignment: Alignment
-    ) -> some View {
-        Text(text)
-            .font(.taption(size: SettingsTypography.footnote))
-            .foregroundStyle(Color.tpSecondary)
-            .frame(maxWidth: .infinity, alignment: alignment)
-    }
-
-    private func sensorProfileLabel(
-        _ title: String,
-        minutes: Int
-    ) -> some View {
-        VStack(
-            alignment: minutes == 15
-                ? .leading
-                : (minutes == 1 ? .trailing : .center),
-            spacing: 0
-        ) {
-            Text(title)
-            Text("\(minutes)분")
-                .fontWeight(.bold)
-        }
-        .font(.taption(size: SettingsTypography.footnote))
-        .foregroundStyle(Color.tpSecondary)
     }
 
     private var accountCard: some View {

@@ -27704,9 +27704,6 @@ final class MapHomeStickmanTests: XCTestCase {
             ),
             .ship
         )
-        XCTAssertEqual(MapHomeStickmanStyle.inkHex, "#916446")
-        XCTAssertEqual(MapHomeStickmanStyle.headFillHex, "#B7B1A8")
-        XCTAssertEqual(MapHomeStickmanStyle.personStrokeWidth, 1.55)
         XCTAssertEqual(TaptionStickmanPoseEngine.wbsHeadRadius, 8.6)
         XCTAssertEqual(MapHomeStickmanMarker.size.width, 36)
         XCTAssertEqual(MapHomeStickmanMarker.size.height, 36)

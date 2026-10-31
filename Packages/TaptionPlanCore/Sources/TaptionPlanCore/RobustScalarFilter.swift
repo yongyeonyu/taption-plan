@@ -17,8 +17,6 @@ public struct TaptionScalarQualityDecision: Codable, Hashable, Sendable {
         self.acceptedValue = acceptedValue
         self.reason = reason
     }
-
-    public var isAccepted: Bool { acceptedValue != nil }
 }
 
 public struct TaptionRobustScalarFilterConfiguration: Codable, Hashable, Sendable {
@@ -104,10 +102,6 @@ public struct TaptionRobustScalarFilter: Sendable {
         }
         try cancellationCheck()
         return decisions
-    }
-
-    public func filteredValues(_ values: [Double?]) -> [Double?] {
-        decisions(for: values).map(\.acceptedValue)
     }
 
     private func physicalDecision(_ value: Double?) -> (value: Double?, reason: TaptionScalarQualityReason?) {

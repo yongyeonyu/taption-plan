@@ -274,45 +274,6 @@ private enum RecentActivitySelectionStore {
     }
 }
 
-enum ActivityQuickSelectionPolicy {
-    private static let placeholderTitles = [
-        "", "활동", "머무름", "미확인",
-    ]
-
-    static func needsSelection(_ record: ActualRecord) -> Bool {
-        let behavior = normalized(record.behavior)
-        if behavior == WatchBehaviorKind.unknown.rawValue.lowercased()
-            || behavior == StationaryContextKind.unknownStay.rawValue.lowercased() {
-            return true
-        }
-        guard behavior == nil,
-              ActualRecordCategoryResolver.categoryID(for: record) == "activity"
-        else { return false }
-        return placeholderTitles.contains(normalized(record.title))
-    }
-
-    static func isDetailedOption(_ option: ActivityCorrectionOption) -> Bool {
-        let behavior = normalized(option.behavior)
-        if behavior == WatchBehaviorKind.unknown.rawValue.lowercased()
-            || behavior == StationaryContextKind.unknownStay.rawValue.lowercased() {
-            return false
-        }
-        return !placeholderTitles.contains(normalized(option.title))
-    }
-
-    private static func normalized(_ value: String?) -> String? {
-        guard let value else { return nil }
-        let normalized = value
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        return normalized.isEmpty ? nil : normalized
-    }
-
-    private static func normalized(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-}
-
 struct ReviewView: View {
     @Bindable var model: AppModel
 
@@ -4240,60 +4201,6 @@ private enum ActivityCorrectionCatalog {
         customLabels: [String]
     ) -> [ActivityCorrectionOption] {
         options(for: record, actuals: actuals, customLabels: customLabels)
-    }
-
-    private static func automaticOption(for record: ActualRecord) -> ActivityCorrectionOption {
-        if let behavior = record.behavior,
-           let kind = WatchBehaviorKind.fromModelLabel(behavior) {
-            return option(for: kind, automatic: true)
-        }
-        if let behavior = record.behavior,
-           let context = StationaryContextKind(rawValue: behavior) {
-            return option(for: context, automatic: true)
-        }
-        return ActivityCorrectionOption(
-            id: "automatic.\(record.id.uuidString)",
-            title: record.title.isEmpty ? "활동" : record.title,
-            behavior: record.behavior,
-            categoryID: record.categoryID,
-            systemImage: activitySystemImage(
-                title: record.title,
-                behavior: record.behavior,
-                categoryID: record.categoryID
-            ),
-            isAutomatic: true,
-            isCustom: false
-        )
-    }
-
-    private static func option(
-        for kind: WatchBehaviorKind,
-        automatic: Bool = false
-    ) -> ActivityCorrectionOption {
-        ActivityCorrectionOption(
-            id: "watch.\(kind.rawValue)",
-            title: kind.title,
-            behavior: kind.rawValue,
-            categoryID: kind.isMovement ? "movement" : (kind == .sleep ? "sleep" : "activity"),
-            systemImage: kind.systemImage,
-            isAutomatic: automatic,
-            isCustom: false
-        )
-    }
-
-    private static func option(
-        for context: StationaryContextKind,
-        automatic: Bool = false
-    ) -> ActivityCorrectionOption {
-        ActivityCorrectionOption(
-            id: "context.\(context.rawValue)",
-            title: context.title,
-            behavior: context.rawValue,
-            categoryID: context.categoryID,
-            systemImage: context.systemImage,
-            isAutomatic: automatic,
-            isCustom: false
-        )
     }
 
     static func activitySystemImage(
