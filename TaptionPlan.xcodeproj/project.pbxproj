@@ -132,12 +132,7 @@
 		A10000000000000000000092 /* PlanDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000092 /* PlanDayDatabase.swift */; };
 		A10000000000000000000093 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
 		A10000000000000000000094 /* WatchDayDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000093 /* WatchDayDatabase.swift */; };
-		A20000000000000000000001 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000002 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000003 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
-		A20000000000000000000004 /* AppLanguagePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000001 /* AppLanguagePreference.swift */; };
 		A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002 /* SensorBackgroundCoordinator.swift */; };
-		A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000003 /* AppLanguagePreferenceTests.swift */; };
 		A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */; };
 		A20000000000000000000008 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000005 /* Localizable.xcstrings */; };
 		A20000000000000000000009 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000006 /* Localizable.xcstrings */; };
@@ -214,6 +209,12 @@
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
 		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000005 /* TaptionWatchBehaviorML */; };
+		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -393,9 +394,7 @@
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000093 /* WatchDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000090 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		F20000000000000000000001 /* AppLanguagePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreference.swift; sourceTree = "<group>"; };
 		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
-		F20000000000000000000003 /* AppLanguagePreferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguagePreferenceTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
 		F20000000000000000000005 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F20000000000000000000006 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
@@ -473,6 +472,7 @@
 		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -480,6 +480,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */,
 				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
@@ -501,6 +502,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */,
 				C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */,
 				A4000000000000000000000C /* TaptionPlanCore in Frameworks */,
 			);
@@ -510,6 +512,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */,
+				C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */,
 				A30000000000000000000004 /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -518,6 +522,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */,
 				A30000000000000000000005 /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -588,7 +593,6 @@
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
 				F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */,
-				F20000000000000000000003 /* AppLanguagePreferenceTests.swift */,
 				F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */,
 				F2000000000000000000000D /* LocalizationCatalogTests.swift */,
 				F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */,
@@ -707,6 +711,7 @@
 				F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */,
 				F10000000000000000000029 /* WatchSyncModels.swift */,
 				F1000000000000000000002A /* WatchConnectivitySupport.swift */,
+				C0FFEE000000000000000032 /* WatchActivityReplay.swift */,
 				F10000000000000000000072 /* WatchSensorQueryPlan.swift */,
 				F1000000000000000000007A /* DiagnosticsLogSupport.swift */,
 				5A00000000000000000000F2 /* TaptionStoreV2.swift */,
@@ -731,7 +736,6 @@
 				F51002000000000000000004 /* PlanDaySealDigest.swift */,
 				F51002000000000000000005 /* NLETrack.swift */,
 				F10000000000000000000093 /* WatchDayDatabase.swift */,
-				F20000000000000000000001 /* AppLanguagePreference.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
 				F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */,
@@ -819,6 +823,7 @@
 			);
 			name = TaptionPlan;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X70000000000000000000002 /* TaptionPlanEngine */,
@@ -865,6 +870,7 @@
 			);
 			name = TaptionPlanWidget;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
@@ -888,6 +894,8 @@
 			);
 			name = TaptionPlanWatch;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
+				C0FFEE000000000000000005 /* TaptionWatchBehaviorML */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlanWatch;
@@ -908,6 +916,7 @@
 			);
 			name = TaptionPlanWatchWidget;
 			packageProductDependencies = (
+				C0FFEE000000000000000004 /* TaptionWatchSync */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlanWatchWidget;
@@ -1010,6 +1019,7 @@
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
 				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
 				C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */,
+				C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
@@ -1174,6 +1184,7 @@
 				A1000000000000000000002A /* WatchSyncModels.swift in Sources */,
 				A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */,
 				A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */,
+				C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */,
 				A10000000000000000000032 /* PhotoGalleryView.swift in Sources */,
 				A10000000000000000000039 /* TimelineBoardModels.swift in Sources */,
 				A1000000000000000000003A /* TimelineBlockStyleViews.swift in Sources */,
@@ -1204,7 +1215,6 @@
 				A51002000000000000000004 /* PlanDaySealDigest.swift in Sources */,
 				A51002000000000000000006 /* NLETrack.swift in Sources */,
 				A51002000000000000000007 /* MapHomeNLEClipEditor.swift in Sources */,
-				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
 				A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */,
@@ -1223,7 +1233,6 @@
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
 				A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */,
-				A20000000000000000000006 /* AppLanguagePreferenceTests.swift in Sources */,
 				A20000000000000000000007 /* SensorBackgroundCoordinatorTests.swift in Sources */,
 				A20000000000000000000010 /* LocalizationCatalogTests.swift in Sources */,
 				A20000000000000000000011 /* DiagnosticsLogSupportTests.swift in Sources */,
@@ -1262,7 +1271,6 @@
 				A1000000000000000000003D /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000041 /* CatAnimationShared.swift in Sources */,
 				A1000000000000000000007B /* DiagnosticsLogSupport.swift in Sources */,
-				A20000000000000000000002 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1282,7 +1290,6 @@
 				A10000000000000000000030 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000038 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000093 /* WatchDayDatabase.swift in Sources */,
-				A20000000000000000000003 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1294,7 +1301,6 @@
 				A10000000000000000000035 /* WatchWidgetShared.swift in Sources */,
 				A10000000000000000000036 /* WatchSyncModels.swift in Sources */,
 				A10000000000000000000094 /* WatchDayDatabase.swift in Sources */,
-				A20000000000000000000004 /* AppLanguagePreference.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1787,6 +1793,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionPlanStore;
 		};
+		C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionWatchSync;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1830,6 +1840,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */;
 			productName = TaptionPlanStore;
+		};
+		C0FFEE000000000000000004 /* TaptionWatchSync */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */;
+			productName = TaptionWatchSync;
+		};
+		C0FFEE000000000000000005 /* TaptionWatchBehaviorML */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000003 /* XCLocalSwiftPackageReference "TaptionWatchSync" */;
+			productName = TaptionWatchBehaviorML;
 		};
 /* End XCSwiftPackageProductDependency section */
 

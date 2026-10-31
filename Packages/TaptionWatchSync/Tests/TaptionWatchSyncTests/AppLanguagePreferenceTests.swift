@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import TaptionPlan
+import TaptionWatchSync
 
 final class AppLanguagePreferenceTests: XCTestCase {
     func testUnknownStoredValueFallsBackToAutomatic() {
@@ -122,5 +122,14 @@ final class AppLanguagePreferenceTests: XCTestCase {
         XCTAssertNil(decoded.languagePreference)
         XCTAssertNil(decoded.commerceLocked)
         XCTAssertEqual(decoded.generatedAt, now)
+    }
+
+    func testPositionalTextFollowsResolvedLanguage() {
+        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.korean.text("가", "A"), "가")
+        XCTAssertEqual(AppLanguagePreference.ResolvedLanguage.english.text("가", "A"), "A")
+        XCTAssertEqual(
+            AppLanguagePreference.text("가", "A"),
+            AppLanguagePreference.text(korean: "가", english: "A")
+        )
     }
 }

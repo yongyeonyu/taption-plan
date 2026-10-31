@@ -1,7 +1,7 @@
 import CoreMotion
 import CoreLocation
-import Foundation
 import HealthKit
+import TaptionWatchBehaviorML
 import WatchKit
 import WidgetKit
 
