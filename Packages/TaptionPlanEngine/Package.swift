@@ -8,13 +8,15 @@ let package = Package(
     dependencies: [
         .package(path: "../TaptionPlanCore"),
         .package(path: "../TaptionActivityEngine"),
-        .package(path: "../TaptionRouteEngine")
+        .package(path: "../TaptionRouteEngine"),
+        .package(path: "../TaptionClassifierEngine")
     ],
     targets: [
         .target(name: "TaptionPlanEngine", dependencies: [
             .product(name: "TaptionPlanCore", package: "TaptionPlanCore"),
             .product(name: "TaptionActivityEngine", package: "TaptionActivityEngine"),
-            .product(name: "TaptionRouteEngine", package: "TaptionRouteEngine")
+            .product(name: "TaptionRouteEngine", package: "TaptionRouteEngine"),
+            .product(name: "TaptionClassifierEngine", package: "TaptionClassifierEngine")
         ]),
         .testTarget(
             name: "TaptionPlanEngineTests",

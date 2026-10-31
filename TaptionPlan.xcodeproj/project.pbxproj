@@ -1009,6 +1009,7 @@
 				X40000000000000000000001 /* XCLocalSwiftPackageReference "TaptionActivityEngine" */,
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
 				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
+				X80000000000000000000001 /* XCLocalSwiftPackageReference "TaptionClassifierEngine" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
@@ -1783,6 +1784,10 @@
 		X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionPlanEngine;
+		};
+		X80000000000000000000001 /* XCLocalSwiftPackageReference "TaptionClassifierEngine" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionClassifierEngine;
 		};
 /* End XCLocalSwiftPackageReference section */
 

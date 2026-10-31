@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "categories": [
     {
       "id": "activity",
@@ -26,6 +26,8 @@
       "systemImage": "book.fill",
       "details": [
         { "id": "study.route", "title": "수업(집 - 학교·학원)", "behavior": "study", "systemImage": "book.fill" },
+        { "id": "study.class", "title": "수업", "behavior": "class", "systemImage": "graduationcap.fill" },
+        { "id": "study.academy", "title": "학원", "behavior": "academy", "systemImage": "books.vertical.fill" },
         { "id": "study.rest", "title": "휴식", "behavior": "stationary", "systemImage": "pause.circle.fill" },
         { "id": "study.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" }
       ]
@@ -57,8 +59,10 @@
       "systemImage": "figure.walk.motion",
       "details": [
         { "id": "movement.walking", "title": "걷기", "behavior": "walking", "systemImage": "figure.walk" },
+        { "id": "movement.running", "title": "달리기", "behavior": "running", "systemImage": "figure.run" },
         { "id": "movement.car", "title": "자동차", "behavior": "automotive", "systemImage": "car.fill" },
         { "id": "movement.subway", "title": "지하철", "behavior": "subway", "systemImage": "tram.fill" },
+        { "id": "movement.train", "title": "기차", "behavior": "train", "systemImage": "train.side.front.car" },
         { "id": "movement.privateVehicle", "title": "자가용", "behavior": "privateVehicle", "systemImage": "car.fill" },
         { "id": "movement.bus", "title": "버스", "behavior": "bus", "systemImage": "bus.fill" },
         { "id": "movement.ship", "title": "배", "behavior": "ship", "systemImage": "ferry.fill" },

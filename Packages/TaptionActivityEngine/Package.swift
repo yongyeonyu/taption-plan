@@ -10,10 +10,15 @@ let package = Package(
     products: [
         .library(name: "TaptionActivityEngine", targets: ["TaptionActivityEngine"])
     ],
+    dependencies: [
+        .package(path: "../TaptionClassifierEngine")
+    ],
     targets: [
         .target(
             name: "TaptionActivityEngine",
-            dependencies: []
+            dependencies: [
+                .product(name: "TaptionClassifierEngine", package: "TaptionClassifierEngine")
+            ]
         ),
         .testTarget(
             name: "TaptionActivityEngineTests",

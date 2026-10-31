@@ -2723,3 +2723,9 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
+
+## ALG1101A01 분류 알고리즘 고도화(세션 A, ALL1101A01 하위)
+- 원인: 분류가 규칙 기반이고 중복이 많다. 분류표 2벌(`ActivityTaxonomy` v1 ↔ `record-classification.json` v2), 키워드 판정 3벌이 부분 문자열이라 `"배"`가 배달·배드민턴을, `rem`·`work`가 다른 단어를 잡는다. 공항·항구 이름만으로 비행기·배 0.95, 비행 거리 0, 외출시간이 기록 공백까지 외출로 셈, 걸음 수가 아이폰·워치 max 혼합, 식사가 `DayPhaseEngine`에서 빠짐, 모든 자동 기록이 생기자마자 잠겨 재계산이 불가능.
+- 해결: 새 패키지 `Packages/TaptionClassifierEngine`(분류표 v3 리소스, 단어 경계 키워드, `IdleThresholds`, 30초 창 특징, 10개 수단 창 점수, 10상태 HMM, 구간·대권 거리, stay point·장소 묶음, 맥락, `SleepFusion`, 파생 지표, `TaptionClassifier.classifyDay`)를 `TaptionPlanEngine`이 다시 내보낸다. 앱은 키워드·거리·걸음·외출·식사·끝점 규칙을 이 패키지로 바꾸고, `ActualRecord`에 `classificationScore`·`lockReason`(decodeIfPresent·encodeIfPresent)과 `userOwned(_:)`를 더한다. projectionVersion 4→5, `ClassificationRecomputeCoordinator`가 날짜별 `classifier-v1:<날짜>` 표식으로 한 번만, 사용자 소유 기록은 그대로 두고 원본 없는 날은 유지한다.
+- 검증 기준: `swift test`(분류·활동 패키지) 통과, 관련 `TaptionPlanTests` 클래스 통과(xcresult 실행 수), 앱 Debug 빌드, `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, `build/validation/ALG1101A01/golden-diff.json`(실기기 원본 없으면 합성 자료와 한계 명시).
+- 다른 세션에 넘길 것: (아래에 추가)
