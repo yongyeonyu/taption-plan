@@ -160,6 +160,8 @@ extension Color {
     /// 강조 글자·배지에 쓰인다. 흰 글자를 얹어도 5.9:1이 되도록 명도를 낮췄다.
     static var tpAccent: Color { TaptionUITheme.current.palette?.accent ?? classicAccent }
     static let classicAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
+    /// 카운터 창 아이콘. 어두운 테마의 액센트는 면과 대비가 2.6~2.9:1이라 보조 글자 색(5.7~6.3:1)을 쓴다.
+    static var tpCounterIcon: Color { TaptionUITheme.current.palette?.secondary ?? classicAccent }
 
     // The original product guide's ten-color set, softened by the postcard
     // surfaces above. Map Home uses these as accents rather than repainting

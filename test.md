@@ -4960,3 +4960,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## DOC1101A01 개발 문서 업데이트(문서 전용)
 - DEVELOPMENT.md: 대분류 합치기 규칙(`squeezedMergePair`, 끌기 중 묻기, 1분 클립), 1분 확대 단계와 눈금·자석, 지도 스타일 정리, 표시 > 사이드바·UI 테마 토큰 규칙, 현재 위치 고정 배율, 기기 빌드 디스크·콘솔 명령을 반영.
 - 문서만 바꿔 앱 테스트·빌드는 실행하지 않음(AGENTS.md 문서 전용 규칙).
+
+## CTR1101A01 카운터 창·사이드바 손잡이 대비 (UI 테마 남색·보라·갈색)
+- 수정: `Theme.swift`에 `tpCounterIcon`(양피지는 액센트, 어두운 테마는 보조 글자 색) 추가. `MapHomeCounterTable.swift`의 카운터 줄·알약 3곳 바탕을 `mapHomeCounterPlate`(`tpSurface` 0.92)로 바꾸고 아이콘을 `tpCounterIcon`으로 씀. `MapHomeTimeSidebar.swift`의 시간 손잡이 바탕을 고정 크림(`tpSurfaceCream`)에서 `tpSurface`로, 글자·테두리를 어두운 테마에서 `tpInk`·`tpLine`으로 바꿈(양피지는 분홍 유지).
+- 계산(스크립트, 테스트 아님): 어두운 테마 액센트/면 대비 2.6~2.9:1(수정 전 아이콘), 잉크/면 9.9~11.7:1, 보조 글자/면 5.7~6.3:1.
+- 빌드: `xcodebuild build` Debug, iOS Simulator (generic), 두 번 모두 BUILD SUCCEEDED. 로그 `build/validation/CTR1101A01/build.log`, `build2.log`.
+- 테스트: `TimeScaleTests` 시뮬레이터(BOKKI-iPhoneDuo) TEST SUCCEEDED. 로그 `build/validation/CTR1101A01/unit.log`. 대비 단위 테스트는 추가하지 않음.
+- 제한: 세 어두운 테마와 기본 테마의 실제 화면은 확인하지 않음(시뮬레이터 화면 캡처·실기기 확인 없음). 유리 효과 대신 면 색을 깔아 바뀐 모습이므로 대표 기기 확인 필요. 사이드바의 지난 칸(회색 바탕·흰 글자)과 빨간 텍스트는 테마와 무관하게 그대로 둠.

@@ -37,7 +37,7 @@ struct MapHomeCounterTable: View {
                 }
             }
             .frame(width: salary == nil ? Self.boxWidth : Self.boxWidthWithSalary)
-            .mapHomeGlass(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .mapHomeCounterPlate(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .animation(.snappy, value: rowCount)
         }
     }
@@ -104,7 +104,7 @@ private struct MapHomeCounterRow: View {
         HStack(spacing: 6) {
             Image(systemName: kind.systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                .foregroundStyle(Color.tpAccent)
+                .foregroundStyle(Color.tpCounterIcon)
                 .frame(width: 12)
             Text(kind.badgeTitle(language))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
@@ -245,7 +245,7 @@ private struct MapHomeCounterPill: View {
         HStack(spacing: 4) {
             Image(systemName: kind.systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                .foregroundStyle(Color.tpAccent)
+                .foregroundStyle(Color.tpCounterIcon)
             Text(text)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
                 .monospacedDigit()
@@ -254,7 +254,7 @@ private struct MapHomeCounterPill: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .mapHomeGlass(in: Capsule())
+        .mapHomeCounterPlate(in: Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(kind.badgeTitle(language)) \(text)")
     }
@@ -269,7 +269,7 @@ private struct MapHomeCounterSalaryRow: View {
         HStack(spacing: 6) {
             Image(systemName: MapHomeCounterSalary.symbol(language: language))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
-                .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpAccent)
+                .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpCounterIcon)
                 .frame(width: 12)
             Text(language.text("번 돈", "Earned"))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
@@ -307,10 +307,17 @@ private struct MapHomeCounterSalaryPill: View {
         .foregroundStyle(Color.tpInk)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .mapHomeGlass(in: Capsule())
+        .mapHomeCounterPlate(in: Capsule())
         .animation(.snappy, value: salary.text)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(language.text("번 돈", "Earned")) \(salary.text)")
+    }
+}
+
+extension View {
+    /// 카운터 창 바탕. 지도 위 유리는 밝은 지도 색이 비치면 밝은 글자가 묻혀, 테마 면 색을 깔아 읽히게 한다.
+    func mapHomeCounterPlate<S: Shape>(in shape: S) -> some View {
+        background(Color.tpSurface.opacity(0.92), in: shape)
     }
 }
 
