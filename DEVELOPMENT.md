@@ -14,13 +14,14 @@
 | 지도 안개(세기 정책·벡터/Apple 지도 렌더러) | `TaptionPlan/UI/MapHomeFogLayer.swift` |
 | 지도 카운터 표·재생 끊김 보정·라이브액티비티 현재 활동 | `TaptionPlan/UI/MapHomeCounterTable.swift`, `MapHomePlaybackContinuity.swift`, `LiveActivityCurrentActivity.swift` |
 | 클립 만들기·표기 도우미(편집기 화면 본문과 분리) | `TaptionPlan/UI/MapHomeNLEClipFactory.swift`, `TaptionPlan/UI/MapHomeNLEClipEditor.swift` |
-| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`·`TaptionBackupFormat.swift`·`TaptionBackupDestination.swift`(월 단위 백업), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `PlanBackupRouteFallbackEngine.swift`(백업에 원본 경로 점이 없을 때 장소·이동에서 되살리는 계산), `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
+| SQLite 저장소(파일 하나 `taption-store.sqlite`: readings·records·raw_events)·워치 원본·암호화 백업 | `TaptionPlan/Core/TaptionStoreV2.swift`, `TaptionStoreRawEvents.swift`, `TaptionStoreRepository.swift`, `PlanDayDatabase.swift`, `TaptionBackupEngine.swift`(월 단위 백업), 모델 의존이 없는 백업 형식·암호·목적지와 기록 행·병합 규칙·원본 이벤트·품질 원장은 `Packages/TaptionPlanStore/`(`TaptionStoreRepository.swift`가 앱·위젯에 다시 내보낸다. 저장소 actor·열 코덱은 `SensorReading`이 `FeatureModels`에 있어 아직 앱에 둔다), `PlanBackupEngineAdapter.swift`(앱이 엔진을 부르는 유일한 곳), `PlanBackupPresentation.swift`, `PlanBackupRouteFallbackEngine.swift`(백업에 원본 경로 점이 없을 때 장소·이동에서 되살리는 계산), `AppLockAndPIN.swift`·`PlanSecurityService.swift`(비밀번호·앱 잠금) |
 | 활동 기록 배열의 저장소 공유·바이트 단위 동일성 비교 | `TaptionPlan/Core/PlanActualStorage.swift` |
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
 | 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
-| 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionPlanEngine/` |
-| Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`, `TaptionPlanWatchWidget/` |
+| 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionPlanEngine/`, `Packages/TaptionPlanStore/`, `Packages/TaptionWatchSync/` |
+| Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`(일정 위젯·`SensorCollectionLiveActivity`·`TaptionPlanLiveActivity`·고양이는 앱 아틀라스), `TaptionPlanWatchWidget/` |
+| 워치 공유 모델·언어 설정 | `Packages/TaptionWatchSync/`(명령 프로토콜·측정값·outbox/spool·행동 규칙·`AppLanguagePreference`, `Core/WatchSyncModels.swift`가 네 target에 다시 내보낸다), CoreML 행동 모델은 `TaptionWatchBehaviorML`(워치 앱만 링크), replay·개인화는 `TaptionPlan/Core/WatchActivityReplay.swift` |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
 앱 전용 프레임워크와 화면은 Swift Package로 옮기지 않습니다. package import 경계 검사는 `bash scripts/check-app-engine-import-boundary.sh`로 확인합니다.
