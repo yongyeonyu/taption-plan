@@ -4953,3 +4953,6 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## UIX1101A02~A04
 - 단위 테스트 314개 통과(build/validation/UIX1101A03/unit.log: TimeScaleTests·MapHomeSidebarDisplaySettingsTests·MapHomeLiveMapTests·NLETrackTests·전환 저장 테스트). TimeScaleTests의 판타지 지도 레이어 실패(이전 변경의 기대값 누락)도 함께 고침.
 - 시뮬레이터 Debug 빌드 통과(UIX1101A04/sim-build.log), 기기 Debug 빌드 통과·아이폰 11 Pro 설치·실행. 시뮬레이터 부팅 실패(Invalid argument)로 화면 캡처 없음. 기기 화면 미확인.
+
+## TFB1101A01 TestFlight 빌드 256
+- `scripts/testflight/release.sh --yes` 종료 코드 0. 처리 상태 VALID, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인. 보고서 build/validation/TFB1101A01/testflight-report.json. 커밋 9d2166b 기준.
