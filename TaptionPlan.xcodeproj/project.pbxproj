@@ -52,6 +52,9 @@
 		A1000000000000000000001D /* SensorDataServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001D /* SensorDataServices.swift */; };
 		A1000000000000000000001E /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
 		A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000020 /* TaptionPlanWidget.swift */; };
+		C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */; };
+		C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */; };
+		C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */; };
 		A10000000000000000000020 /* WidgetShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001F /* WidgetShared.swift */; };
 		A10000000000000000000021 /* TaptionPlanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C10000000000000000000003 /* TaptionPlanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000022 /* FeatureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000F /* FeatureModels.swift */; };
@@ -66,6 +69,7 @@
 		A80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A80000000000000000000002 /* WatchAmbientSummaryAccumulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */; };
 		A1000000000000000000002B /* WatchConnectivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002A /* WatchConnectivitySupport.swift */; };
+		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 		A10000000000000000000060 /* WatchLaunchDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000060 /* WatchLaunchDiagnostics.swift */; };
 		A1000000000000000000002C /* TaptionPlanWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002B /* TaptionPlanWatchApp.swift */; };
 		A1000000000000000000002D /* WatchConnectivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000002C /* WatchConnectivityController.swift */; };
@@ -170,6 +174,13 @@
 		A60000000000000000000004 /* HealthKitBehaviorProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000004 /* HealthKitBehaviorProjection.swift */; };
 		A60000000000000000000005 /* HealthKitIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000005 /* HealthKitIntegrationTests.swift */; };
 		A70000000000000000000001 /* TaptionPlanEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X70000000000000000000002 /* TaptionPlanEngine */; };
+		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
+		C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000005 /* TaptionWatchBehaviorML */; };
 		A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007F /* MapHomeCalendarSheet.swift */; };
 		A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */; };
 		A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */; };
@@ -207,14 +218,6 @@
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
-		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
-		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
-		C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
-		C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
-		C0FFEE000000000000000024 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
-		C0FFEE000000000000000025 /* TaptionWatchSync in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000004 /* TaptionWatchSync */; };
-		C0FFEE000000000000000026 /* TaptionWatchBehaviorML in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000005 /* TaptionWatchBehaviorML */; };
-		C0FFEE000000000000000031 /* WatchActivityReplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FFEE000000000000000032 /* WatchActivityReplay.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -333,6 +336,9 @@
 		F1000000000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F1000000000000000000001F /* WidgetShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetShared.swift; sourceTree = "<group>"; };
 		F10000000000000000000020 /* TaptionPlanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWidget.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorCollectionLiveActivity.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanLiveActivity.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionLiveActivityCat.swift; sourceTree = "<group>"; };
 		F10000000000000000000021 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10000000000000000000022 /* TaptionPlanWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlanWidget.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000023 /* StoreKitSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSupport.swift; sourceTree = "<group>"; };
@@ -344,6 +350,7 @@
 		F10000000000000000000029 /* WatchSyncModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSyncModels.swift; sourceTree = "<group>"; };
 		F80000000000000000000001 /* WatchAmbientSummaryAccumulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAmbientSummaryAccumulator.swift; sourceTree = "<group>"; };
 		F1000000000000000000002A /* WatchConnectivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivitySupport.swift; sourceTree = "<group>"; };
+		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 		F1000000000000000000002B /* TaptionPlanWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWatchApp.swift; sourceTree = "<group>"; };
 		F1000000000000000000002C /* WatchConnectivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityController.swift; sourceTree = "<group>"; };
 		F10000000000000000000060 /* WatchLaunchDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLaunchDiagnostics.swift; sourceTree = "<group>"; };
@@ -472,7 +479,6 @@
 		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		C0FFEE000000000000000032 /* WatchActivityReplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchActivityReplay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -481,10 +487,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0FFEE000000000000000021 /* TaptionWatchSync in Frameworks */,
-				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
+				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -503,8 +509,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0FFEE000000000000000023 /* TaptionWatchSync in Frameworks */,
-				C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */,
 				A4000000000000000000000C /* TaptionPlanCore in Frameworks */,
+				C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -748,6 +754,9 @@
 			children = (
 				F10000000000000000000078 /* Assets.xcassets */,
 				F10000000000000000000020 /* TaptionPlanWidget.swift */,
+				C0FFEE000000000000000042 /* SensorCollectionLiveActivity.swift */,
+				C0FFEE000000000000000044 /* TaptionPlanLiveActivity.swift */,
+				C0FFEE000000000000000046 /* TaptionLiveActivityCat.swift */,
 				F10000000000000000000021 /* Info.plist */,
 				F90000000000000000000002 /* PrivacyInfo.xcprivacy */,
 				F10000000000000000000022 /* TaptionPlanWidget.entitlements */,
@@ -824,9 +833,9 @@
 			name = TaptionPlan;
 			packageProductDependencies = (
 				C0FFEE000000000000000004 /* TaptionWatchSync */,
-				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X70000000000000000000002 /* TaptionPlanEngine */,
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X50000000000000000000002 /* MapLibre */,
 			);
 			productName = TaptionPlan;
@@ -871,8 +880,8 @@
 			name = TaptionPlanWidget;
 			packageProductDependencies = (
 				C0FFEE000000000000000004 /* TaptionWatchSync */,
-				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 			);
 			productName = TaptionPlanWidget;
 			productReference = C10000000000000000000003 /* TaptionPlanWidget.appex */;
@@ -1254,6 +1263,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000001F /* TaptionPlanWidget.swift in Sources */,
+				C0FFEE000000000000000041 /* SensorCollectionLiveActivity.swift in Sources */,
+				C0FFEE000000000000000043 /* TaptionPlanLiveActivity.swift in Sources */,
+				C0FFEE000000000000000045 /* TaptionLiveActivityCat.swift in Sources */,
 				A10000000000000000000020 /* WidgetShared.swift in Sources */,
 				A10000000000000000000022 /* FeatureModels.swift in Sources */,
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,

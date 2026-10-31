@@ -61,10 +61,6 @@ struct PlanBackupListingRow: Equatable, Identifiable, Sendable {
 }
 
 enum PlanBackupPresenter {
-    private static func text(_ korean: String, _ english: String) -> String {
-        AppLanguagePreference.text(korean: korean, english: english)
-    }
-
     static func name(of scope: TaptionBackupScope) -> String { scope.key }
 
     static func item(for result: TaptionBackupEngine.BackupResult) -> PlanBackupItem {
@@ -72,20 +68,20 @@ enum PlanBackupPresenter {
         let rows = result.header?.rowCount ?? 0
         switch result.outcome {
         case .written:
-            return .init(name: name, kind: .done, detail: text("\(rows)행을 올렸습니다.", "Uploaded \(rows) rows."))
+            return .init(name: name, kind: .done, detail: AppLanguagePreference.text("\(rows)행을 올렸습니다.", "Uploaded \(rows) rows."))
         case .unchanged:
-            return .init(name: name, kind: .unchanged, detail: text("바뀐 데이터가 없어 그대로 둡니다.", "No changes, left as is."))
+            return .init(name: name, kind: .unchanged, detail: AppLanguagePreference.text("바뀐 데이터가 없어 그대로 둡니다.", "No changes, left as is."))
         case .keptExisting(let reason):
             return .init(name: name, kind: .rejected, detail: keepDetail(reason))
         case .skippedSealed:
             return .init(
                 name: name, kind: .skipped,
-                detail: text("이 기기에서 정리된 달이라 기존 백업을 건드리지 않았습니다.", "This month was cleared from this device; the backup was not touched.")
+                detail: AppLanguagePreference.text("이 기기에서 정리된 달이라 기존 백업을 건드리지 않았습니다.", "This month was cleared from this device; the backup was not touched.")
             )
         case .skippedNoData:
             return .init(
                 name: name, kind: .skipped,
-                detail: text("이 기기에 데이터가 없어 기존 백업을 건드리지 않았습니다.", "No data on this device; the existing backup was not touched.")
+                detail: AppLanguagePreference.text("이 기기에 데이터가 없어 기존 백업을 건드리지 않았습니다.", "No data on this device; the existing backup was not touched.")
             )
         case .failed(let message):
             return .init(name: name, kind: .rejected, detail: message)
@@ -95,32 +91,32 @@ enum PlanBackupPresenter {
     static func keepDetail(_ reason: TaptionBackupEngine.KeepReason) -> String {
         switch reason {
         case .fewerRows(let existing, let new):
-            text(
+            AppLanguagePreference.text(
                 "기존 백업(\(existing)행)보다 이 기기의 행(\(new))이 적어 기존 백업을 지켰습니다.",
                 "This device has fewer rows (\(new)) than the existing backup (\(existing)), so the backup was kept."
             )
         case .earlierLastTimestamp:
-            text(
+            AppLanguagePreference.text(
                 "이 기기의 마지막 기록 시각이 기존 백업보다 앞서 기존 백업을 지켰습니다.",
                 "The last record on this device is older than the backup's, so the backup was kept."
             )
         case .olderRecordUpdates:
-            text(
+            AppLanguagePreference.text(
                 "이 기기 기록의 수정 시각이 기존 백업보다 오래되어 기존 백업을 지켰습니다.",
                 "Records on this device were edited earlier than the backup's, so the backup was kept."
             )
         case .existingUnreadable:
-            text(
+            AppLanguagePreference.text(
                 "기존 백업 파일을 읽을 수 없어 덮어쓰지 않았습니다.",
                 "The existing backup file could not be read, so it was not overwritten."
             )
         case .existingCorrupted:
-            text(
+            AppLanguagePreference.text(
                 "기존 백업 파일이 손상되었고 이 기기에 그 내용이 모두 없어 덮어쓰지 않았습니다.",
                 "The existing backup is damaged and this device does not hold all of it, so it was not overwritten."
             )
         case .staleAfterDataWipe:
-            text(
+            AppLanguagePreference.text(
                 "전체 데이터 삭제 전에 만든 백업이라 합치지도 덮어쓰지도 않았습니다. 복원하거나 백업을 삭제하세요.",
                 "This backup predates a full data deletion, so it was neither merged nor overwritten. Restore it or delete the backups."
             )
@@ -133,7 +129,7 @@ enum PlanBackupPresenter {
         case .sealed(let readings, let records):
             return .init(
                 name: name, kind: .done,
-                detail: text(
+                detail: AppLanguagePreference.text(
                     "백업을 다시 확인한 뒤 이 기기에서 정리했습니다(센서 \(readings)행, 기록 \(records)행).",
                     "Verified the backup and cleared it from this device (\(readings) sensor rows, \(records) records)."
                 )
@@ -146,67 +142,64 @@ enum PlanBackupPresenter {
     /// 엔진의 건너뛴 이유(한국어 문장)를 사용자 문구로 옮긴다. 알 수 없는 이유는 일반 문구로 대신한다.
     static func skipDetail(_ message: String) -> String {
         if message.contains("백업이 없거나") {
-            return text("백업 파일이 없거나 읽을 수 없어 지우지 않았습니다.", "No readable backup file, so nothing was removed.")
+            return AppLanguagePreference.text("백업 파일이 없거나 읽을 수 없어 지우지 않았습니다.", "No readable backup file, so nothing was removed.")
         }
         if message.contains("달이 끝나기 전에") {
-            return text("달이 끝나기 전에 만든 백업이라 지우지 않았습니다. 지금 백업을 다시 하세요.", "The backup was made before the month ended, so nothing was removed. Back up again.")
+            return AppLanguagePreference.text("달이 끝나기 전에 만든 백업이라 지우지 않았습니다. 지금 백업을 다시 하세요.", "The backup was made before the month ended, so nothing was removed. Back up again.")
         }
         if message.contains("내용이 로컬과 달라") {
-            return text("백업 내용이 이 기기와 달라 지우지 않았습니다. 지금 백업을 다시 하세요.", "The backup differs from this device, so nothing was removed. Back up again.")
+            return AppLanguagePreference.text("백업 내용이 이 기기와 달라 지우지 않았습니다. 지금 백업을 다시 하세요.", "The backup differs from this device, so nothing was removed. Back up again.")
         }
         if message.contains("새 행이 들어와") {
-            return text("확인하는 동안 새 데이터가 들어와 지우지 않았습니다.", "New data arrived during verification, so nothing was removed.")
+            return AppLanguagePreference.text("확인하는 동안 새 데이터가 들어와 지우지 않았습니다.", "New data arrived during verification, so nothing was removed.")
         }
         if message.contains("검증 실패") {
-            return text("백업 확인에 실패해(비밀번호가 다르거나 파일이 손상됨) 지우지 않았습니다.", "Backup verification failed (wrong password or damaged file), so nothing was removed.")
+            return AppLanguagePreference.text("백업 확인에 실패해(비밀번호가 다르거나 파일이 손상됨) 지우지 않았습니다.", "Backup verification failed (wrong password or damaged file), so nothing was removed.")
         }
-        return text("안전을 위해 지우지 않았습니다.", "Not removed, to be safe.")
+        return AppLanguagePreference.text("안전을 위해 지우지 않았습니다.", "Not removed, to be safe.")
     }
 
     static func message(for error: Error) -> String {
         if let error = error as? TaptionBackupError { return error.userMessage }
         if let error = error as? PlanSecurityError { return error.localizedDescription() }
-        if error is CancellationError { return text("작업이 취소되었습니다.", "The operation was cancelled.") }
+        if error is CancellationError { return AppLanguagePreference.text("작업이 취소되었습니다.", "The operation was cancelled.") }
         return error.localizedDescription
     }
 }
 
 extension TaptionBackupError {
     var userMessage: String {
-        func text(_ korean: String, _ english: String) -> String {
-            AppLanguagePreference.text(korean: korean, english: english)
-        }
         switch self {
         case .emptyPassword:
-            return text("비밀번호를 입력해 주세요.", "Enter your password.")
+            return AppLanguagePreference.text("비밀번호를 입력해 주세요.", "Enter your password.")
         case .wrongPassword:
-            return text(
+            return AppLanguagePreference.text(
                 "이 백업을 만들 때 쓴 비밀번호와 다릅니다. 비밀번호를 바꾸기 전에 만든 백업은 이전 비밀번호로 열립니다.",
                 "This is not the password used for this backup. Backups made before a password change open with the old password."
             )
         case .authenticationFailed, .checksumMismatch, .notABackup, .malformed, .unsupportedVersion:
-            return text("백업 파일이 손상되었거나 지원하지 않는 형식입니다.", "The backup file is damaged or in an unsupported format.")
+            return AppLanguagePreference.text("백업 파일이 손상되었거나 지원하지 않는 형식입니다.", "The backup file is damaged or in an unsupported format.")
         case .keyDerivationFailed:
-            return text("암호 키를 만들지 못했습니다.", "Could not derive the encryption key.")
+            return AppLanguagePreference.text("암호 키를 만들지 못했습니다.", "Could not derive the encryption key.")
         case .fileMissing:
-            return text("백업 파일을 찾지 못했습니다.", "The backup file was not found.")
+            return AppLanguagePreference.text("백업 파일을 찾지 못했습니다.", "The backup file was not found.")
         case .destinationUnavailable:
-            return text(
+            return AppLanguagePreference.text(
                 "iCloud Drive를 사용할 수 없습니다. iCloud 로그인과 설정의 iCloud Drive를 확인해 주세요.",
                 "iCloud Drive is unavailable. Check that you are signed in to iCloud and iCloud Drive is on."
             )
         case .verificationFailed:
-            return text(
+            return AppLanguagePreference.text(
                 "올린 파일을 다시 확인하지 못했습니다. 기존 백업은 그대로입니다.",
                 "The uploaded file could not be verified. The existing backup is unchanged."
             )
         case .passwordDiffersFromExistingBackup:
-            return text(
+            return AppLanguagePreference.text(
                 "기존 백업을 만들 때 쓴 비밀번호와 달라 올리지 않았습니다. 비밀번호를 다시 확인해 주세요.",
                 "This password differs from the one used for the existing backup, so nothing was uploaded. Check your password."
             )
         case .conflictingVersions:
-            return text(
+            return AppLanguagePreference.text(
                 "iCloud에 같은 백업의 충돌 버전이 있어 건드리지 않았습니다. 다른 기기의 백업을 정리해 주세요.",
                 "iCloud has conflicting versions of this backup, so it was left untouched. Resolve them on your other devices."
             )

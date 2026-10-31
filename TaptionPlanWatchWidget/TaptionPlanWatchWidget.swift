@@ -136,10 +136,6 @@ private struct TaptionWatchWidgetView: View {
         AppLanguagePreference.resolve(rawValue: resolvedPayload?.languagePreference)
     }
 
-    private func text(_ korean: String, _ english: String) -> String {
-        language == .korean ? korean : english
-    }
-
     init(entry: TaptionWatchWidgetEntry) {
         self.entry = entry
         resolvedPayload = Self.freshest(
@@ -292,10 +288,10 @@ private struct TaptionWatchWidgetView: View {
 
     private var sourceTitle: String {
         if confirmationSuggestion != nil {
-            return text("확인 요청", "Confirmation requested")
+            return language.text("확인 요청", "Confirmation requested")
         }
         return measurement?.source.localizedTitle(language)
-            ?? text("측정 대기", "Waiting to measure")
+            ?? language.text("측정 대기", "Waiting to measure")
     }
 
     private var sourceSymbolName: String {
@@ -308,15 +304,15 @@ private struct TaptionWatchWidgetView: View {
 
     private var activityTitle: String {
         if let suggestion = confirmationSuggestion {
-            return text(
+            return language.text(
                 "\(suggestion.proposedBehavior.localizedTitle(.korean)) 맞나요?",
                 "Was this \(suggestion.proposedBehavior.localizedTitle(.english))?"
             )
         }
         guard let behavior = measurement?.behavior else {
             return measurement?.isRecordingRequested == false
-                ? text("기록 꺼짐", "Recording off")
-                : text("측정 대기", "Waiting to measure")
+                ? language.text("기록 꺼짐", "Recording off")
+                : language.text("측정 대기", "Waiting to measure")
         }
         return behavior.localizedTitle(language)
     }
@@ -328,10 +324,10 @@ private struct TaptionWatchWidgetView: View {
 
     private var confidenceText: String {
         if confirmationSuggestion != nil {
-            return text("Watch에서 확인", "Confirm on Watch")
+            return language.text("Watch에서 확인", "Confirm on Watch")
         }
         guard measurement?.behavior != nil else {
-            return text("손목 움직임을 모으는 중", "Collecting wrist motion")
+            return language.text("손목 움직임을 모으는 중", "Collecting wrist motion")
         }
         return language == .korean
             ? "신뢰도 \(Int((confidence * 100).rounded()))%"
@@ -341,7 +337,7 @@ private struct TaptionWatchWidgetView: View {
     private var freshnessText: String {
         guard let measuredAt = measurement?.measuredAt else { return "—" }
         let seconds = Int(max(0, playbackDate.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return text("방금", "Just now") }
+        if seconds < 60 { return language.text("방금", "Just now") }
         if seconds < 3_600 {
             return language == .korean
                 ? "\(seconds / 60)분 전"

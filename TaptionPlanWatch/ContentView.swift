@@ -29,10 +29,6 @@ struct WatchContentView: View {
         )
     }
 
-    private func text(_ korean: String, _ english: String) -> String {
-        language == .korean ? korean : english
-    }
-
     var body: some View {
         NavigationStack {
             TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -55,13 +51,13 @@ struct WatchContentView: View {
                 correctionList(for: subject)
             }
             .alert(
-                text("확인해 주세요", "Please check"),
+                language.text("확인해 주세요", "Please check"),
                 isPresented: Binding(
                     get: { workout.errorMessage != nil },
                     set: { if !$0 { workout.dismissError() } }
                 )
             ) {
-                Button(text("확인", "OK"), role: .cancel) {
+                Button(language.text("확인", "OK"), role: .cancel) {
                     workout.dismissError()
                 }
             } message: {
@@ -92,7 +88,7 @@ struct WatchContentView: View {
                 Image(systemName: "waveform.path.ecg")
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.green)
-                Text(text("지금", "Now"))
+                Text(language.text("지금", "Now"))
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 2)
@@ -102,7 +98,7 @@ struct WatchContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            Text(activity?.title(for: language) ?? text("확인 중", "Checking"))
+            Text(activity?.title(for: language) ?? language.text("확인 중", "Checking"))
                 .font(.system(size: 17, weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -154,7 +150,7 @@ struct WatchContentView: View {
                 HStack(spacing: 5) {
                     Image(systemName: "iphone.and.arrow.forward")
                         .foregroundStyle(.green)
-                        Text(text("센서 수집 · iPhone 전송", "Collect sensors · Send to iPhone"))
+                        Text(language.text("센서 수집 · iPhone 전송", "Collect sensors · Send to iPhone"))
                         .font(.caption.weight(.semibold))
                     Spacer(minLength: 2)
                     Image(systemName: "arrow.clockwise")
@@ -164,16 +160,16 @@ struct WatchContentView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            statusRow(text("수집", "Collection"), value: collectionStatus(measurement))
-            statusRow(text("전송", "Transfer"), value: connectivity.statusText)
-            statusRow(text("최근 측정", "Last measurement"), value: freshnessText(at: date))
+            statusRow(language.text("수집", "Collection"), value: collectionStatus(measurement))
+            statusRow(language.text("전송", "Transfer"), value: connectivity.statusText)
+            statusRow(language.text("최근 측정", "Last measurement"), value: freshnessText(at: date))
             if let summary = connectivity.payload?.todaySummary {
-                statusRow(text("일과", "Day"), value: durationText(summary.recordedMinutes))
-                statusRow(text("활동", "Active"), value: durationText(summary.activeMinutes))
+                statusRow(language.text("일과", "Day"), value: durationText(summary.recordedMinutes))
+                statusRow(language.text("활동", "Active"), value: durationText(summary.activeMinutes))
             }
             if workout.isActive {
                 statusRow(
-                    text("원시 표본", "Raw samples"),
+                    language.text("원시 표본", "Raw samples"),
                     value: language == .korean
                         ? "\(workout.sensorSampleCount)개"
                         : "\(workout.sensorSampleCount)"
@@ -196,10 +192,10 @@ struct WatchContentView: View {
 
     private func confirmationCard(_ subject: WatchConfirmationSubject) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(text("활동 확인", "Confirm activity"), systemImage: "questionmark.bubble.fill")
+            Label(language.text("활동 확인", "Confirm activity"), systemImage: "questionmark.bubble.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.orange)
-            Text(text(
+            Text(language.text(
                 "\(subject.behavior.localizedTitle(.korean)) 맞나요?",
                 "Was this \(subject.behavior.localizedTitle(.english))?"
             ))
@@ -218,14 +214,14 @@ struct WatchContentView: View {
             } else {
                 HStack(spacing: 6) {
                     Button { confirm(subject) } label: {
-                        Text(text("맞아요", "That's right"))
+                        Text(language.text("맞아요", "That's right"))
                             .font(.caption.weight(.bold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     Button { correctionSubject = subject } label: {
-                        Text(text("다른 활동", "Another activity"))
+                        Text(language.text("다른 활동", "Another activity"))
                             .font(.caption.weight(.bold))
                             .frame(maxWidth: .infinity)
                     }
@@ -244,10 +240,10 @@ struct WatchContentView: View {
 
     private var waitingCard: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Label(text("확인할 활동 없음", "No activity to confirm"), systemImage: "checkmark.circle")
+            Label(language.text("확인할 활동 없음", "No activity to confirm"), systemImage: "checkmark.circle")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.green)
-            Text(text(
+            Text(language.text(
                 "특정 가능한 활동이 생기면 여기에서 확인을 요청합니다.",
                 "When an activity can be identified, we will ask you to confirm it here."
             ))
@@ -265,7 +261,7 @@ struct WatchContentView: View {
     private func correctionList(for subject: WatchConfirmationSubject) -> some View {
         NavigationStack {
             List {
-                Section(text("실제로 무엇을 했나요?", "What did you actually do?")) {
+                Section(language.text("실제로 무엇을 했나요?", "What did you actually do?")) {
                     ForEach(correctionOptions(for: subject), id: \.self) { kind in
                         Button { correct(subject, to: kind) } label: {
                             Label(
@@ -276,7 +272,7 @@ struct WatchContentView: View {
                     }
                 }
             }
-            .navigationTitle(text("활동 선택", "Choose activity"))
+            .navigationTitle(language.text("활동 선택", "Choose activity"))
         }
     }
 
@@ -295,7 +291,7 @@ struct WatchContentView: View {
     private func confirm(_ subject: WatchConfirmationSubject) {
         guard acknowledgedSubjectID != subject.id else { return }
         acknowledgedSubjectID = subject.id
-        acknowledgedLabel = text("확인했습니다", "Confirmed")
+        acknowledgedLabel = language.text("확인했습니다", "Confirmed")
         sendConfirmation(subject, correctedBehavior: nil)
     }
 
@@ -306,7 +302,7 @@ struct WatchContentView: View {
         guard acknowledgedSubjectID != subject.id else { return }
         sendConfirmation(subject, correctedBehavior: kind)
         acknowledgedSubjectID = subject.id
-        acknowledgedLabel = text(
+        acknowledgedLabel = language.text(
             "\(kind.localizedTitle(.korean))(으)로 확인했습니다",
             "Confirmed as \(kind.localizedTitle(.english))"
         )
@@ -335,26 +331,26 @@ struct WatchContentView: View {
     private func collectionStatus(
         _ measurement: TaptionWatchMeasurementSnapshot
     ) -> String {
-        if workout.isActive { return text("고정밀 수집 중", "High-precision collection") }
+        if workout.isActive { return language.text("고정밀 수집 중", "High-precision collection") }
         guard let settings = workout.accelerationSettings else {
-            return text("iPhone 설정 대기", "Waiting for iPhone settings")
+            return language.text("iPhone 설정 대기", "Waiting for iPhone settings")
         }
-        guard settings.isEnabled else { return text("꺼짐 · iPhone 설정", "Off · iPhone settings") }
+        guard settings.isEnabled else { return language.text("꺼짐 · iPhone 설정", "Off · iPhone settings") }
         if measurement.isMotionAccessDenied {
-            return text("동작 권한 없음", "Motion access unavailable")
+            return language.text("동작 권한 없음", "Motion access unavailable")
         }
         guard measurement.isRecorderAvailable else {
-            return text("이 Watch에서 불가", "Unavailable on this Watch")
+            return language.text("이 Watch에서 불가", "Unavailable on this Watch")
         }
         return settings.profile.localizedDisplayName(language)
     }
 
     private func freshnessText(at date: Date) -> String {
         guard let measuredAt = workout.measurement.measuredAt else {
-            return text("측정 없음", "No measurement")
+            return language.text("측정 없음", "No measurement")
         }
         let seconds = Int(max(0, date.timeIntervalSince(measuredAt)))
-        if seconds < 60 { return text("방금", "Just now") }
+        if seconds < 60 { return language.text("방금", "Just now") }
         if seconds < 3_600 {
             return language == .korean
                 ? "\(seconds / 60)분 전"
