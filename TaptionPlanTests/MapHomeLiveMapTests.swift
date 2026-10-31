@@ -1220,7 +1220,7 @@ extension MapHomeLiveMapTests {
         XCTAssertEqual(MapHomeLandmarkCatalog.weeklyChoices(for: season).count, 3, "다 모으면 전체에서 다시 돈다")
     }
 
-    func testMergedStepCountsKeepsTheLargerOfHealthAndSensor() {
+    func testMergedStepCountsPrefersHealthAndFallsBackToSensor() {
         let day1 = Date(timeIntervalSince1970: 1_800_000_000)
         let day2 = day1.addingTimeInterval(86_400)
         let day3 = day2.addingTimeInterval(86_400)
@@ -1229,7 +1229,7 @@ extension MapHomeLiveMapTests {
             sensor: [day2: 5_000, day3: 1_200]
         )
         XCTAssertEqual(merged[day1], 8_000, "건강 앱만 있으면 그 값")
-        XCTAssertEqual(merged[day2], 5_000, "둘 다 있으면 큰 값(더하지 않는다)")
+        XCTAssertEqual(merged[day2], 3_000, "둘 다 있으면 건강 앱 합계(기기 간 겹침 정리됨, max 금지)")
         XCTAssertEqual(merged[day3], 1_200, "센서만 있으면 그 값")
     }
 

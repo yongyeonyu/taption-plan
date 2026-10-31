@@ -147,10 +147,11 @@ enum MapHomeCounterTimelinePolicy {
         return dayStart.addingTimeInterval(min(minute, 24 * 60) * 60)
     }
 
-    /// 걸음 수: 자른 시각까지 들어온 측정값 중 가장 큰 값(하루 누적값이다).
+    /// 걸음 수: 자른 시각까지 들어온 기기별 누적값을 구간 증가분으로 바꿔 워치 우선으로 더한다.
     static func stepCount(readings: [SensorReading], cutoff: Date?) -> Int? {
         let scoped = cutoff.map { limit in readings.filter { $0.timestamp <= limit } } ?? readings
-        return scoped.compactMap(\.stepCount).filter { $0 > 0 }.max()
+        guard let first = scoped.map(\.timestamp).min(), let last = scoped.map(\.timestamp).max() else { return nil }
+        return ClassifierAdapter.stepCount(readings: scoped, in: TimeSpan(start: first, end: last.addingTimeInterval(1)))
     }
 
     /// 이동 거리: 끝난 구간은 그대로, 지나가는 중인 구간은 지난 만큼만 센다.

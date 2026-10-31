@@ -311,7 +311,8 @@ enum MapHomeCalendarTimeTotalsPolicy {
             in: daySpan
         )
         if transitMeters >= 10 { byID[MapHomeCalendarTimeKind.transitDistance.rawValue] = transitMeters }
-        if let away = awaySeconds(stays: dayStays, homeKeys: homeKeys, day: day, dayEnd: min(dayEnd, now)), away > 0 {
+        let dayTravel = travel.filter { $0.span.start < dayEnd && day < $0.span.end }
+        if let away = awaySeconds(stays: dayStays, travel: dayTravel, homeKeys: homeKeys, day: day, dayEnd: min(dayEnd, now)), away > 0 {
             byID[MapHomeCalendarTimeKind.awayTime.rawValue] = away
         }
         return byID
@@ -341,9 +342,9 @@ enum MapHomeCalendarTimeTotalsPolicy {
         return byID
     }
 
-    /// 날짜별 걸음 수 합치기: 건강 앱 값과 센서 값 중 큰 쪽(둘 다 같은 걸음의 다른 측정이라 더하지 않는다).
+    /// 날짜별 걸음 수 합치기: 건강 앱 값(기기 간 겹침을 HealthKit이 정리한 합계)을 우선하고, 없는 날만 센서 값.
     static func mergedStepCounts(health: [Date: Double], sensor: [Date: Double]) -> [Date: Double] {
-        health.merging(sensor) { max($0, $1) }
+        ClassifierAdapter.mergedDailySteps(health: health, sensor: sensor)
     }
 
     /// 그 달 날짜별 사진 수. `moments`는 기간 안 사진을 읽는 함수(사진 접근 권한이 없으면 빈 배열).
@@ -361,13 +362,11 @@ enum MapHomeCalendarTimeTotalsPolicy {
         return result
     }
 
-    /// 집 밖에 있던 시간(초). 집으로 등록한 장소의 체류를 뺀 나머지이고, 그날 체류 기록이나 집 등록이 없으면 nil.
-    static func awaySeconds(stays: [PlaceStay], homeKeys: Set<String>, day: Date, dayEnd: Date) -> TimeInterval? {
-        guard !homeKeys.isEmpty, !stays.isEmpty, dayEnd > day else { return nil }
-        let homeSeconds = stays.filter { homeKeys.contains($0.placeKey) }.reduce(0.0) { sum, stay in
-            sum + max(0, min(stay.span.end, dayEnd).timeIntervalSince(max(stay.span.start, day)))
-        }
-        return max(0, dayEnd.timeIntervalSince(day) - homeSeconds)
+    /// 집 밖에 있던 시간(초) = 집 밖 체류 + 이동. 기록 공백은 외출로 세지 않는다.
+    /// 그날 체류 기록이나 집 등록이 없으면 nil.
+    static func awaySeconds(stays: [PlaceStay], travel: [TravelSegment] = [], homeKeys: Set<String>, day: Date, dayEnd: Date) -> TimeInterval? {
+        guard dayEnd > day else { return nil }
+        return ClassifierAdapter.awaySeconds(stays: stays, travel: travel, homeKeys: homeKeys, in: TimeSpan(start: day, end: dayEnd))
     }
 
     /// 하루와 겹치는 이동 구간의 거리(미터). 구간이 날을 걸치면 겹친 시간 비율만큼만 더한다.
