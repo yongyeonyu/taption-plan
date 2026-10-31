@@ -1,5 +1,11 @@
 # 남은 요청
 
+## SPL1102A01 · MapHomeView·ScheduleView 분해 (2026-11-01, ALL1101A01 2차)
+- 요청(허브 세션): 계획 「리팩토링 상위 10」 8·10번. 동작 변경 없이 두 동결 파일을 기능별 파일로 나눈다.
+- 원인: `MapHomeView.swift` 22,877줄·`ScheduleView.swift` 11,817줄에 화면 사설 상태에 닿지 않는 정책·계산·캐시·시트 타입이 함께 있어 동결 예산이 크고 기능이 조용히 붙을 자리가 남는다.
+- 해결: 화면 struct 밖의 최상위 타입을 줄 범위 그대로 새 파일로 옮긴다(MapHome 25개, Schedule 5개 파일). 다른 파일에서 쓰는 `private` 최상위 타입만 internal로 넓힌다. `MapHomeLanguage.text`는 `AppLanguagePreference.ResolvedLanguage.text`에 위임한다. 새 파일은 앱 target에 넣고 뺀 만큼 `docs/architecture-baseline.json` 예산을 낮춘다. 패키지 이동은 하지 않는다(모델 의존 때문에 public 확장이 커짐).
+- 검증 기준: `-only-testing:TaptionPlanTests` 전체 통과(xcresult 실행 수), 앱 Debug 빌드 성공, `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 두 파일 줄 수 전후를 `test.md`에. 로그 `build/validation/SPL1102A01/`.
+
 ## DTW1026A01 · 날짜 줄 스와이프를 하루 단위로 (2026-10-26)
 - 요청(대표): 상단 오른쪽 날짜 배지를 눌러 스와이프하면 주 단위로 넘어가는데, 그냥 일 단위로 이동하게.
 - 원인(확인): `db717f2`(DAT1022BD01)가 스와이프를 손가락에 붙여 **거리에 비례**해 넘기도록 바꿨다(`dx / dayPitch`). 줄 폭이 한 주(칸 34pt × 7 + 간격 + 여백 = 274pt)라 한 번 쓸면 6~7일이 지나, 손짓 하나가 '주 단위'로 보였다. 날짜 계산 자체(`moveDate`)는 `selectedScope == .day`라 원래 하루 단위다 — 문제는 손짓이지 눈금이 아니었다.

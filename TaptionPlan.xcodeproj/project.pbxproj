@@ -165,6 +165,37 @@
 		A30000000000000000000004 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A30000000000000000000005 /* TaptionPlanCore in Frameworks */ = {isa = PBXBuildFile; productRef = X30000000000000000000002 /* TaptionPlanCore */; };
 		A1000000000000000000007D /* MapHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007D /* MapHomeView.swift */; };
+		A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */; };
+		A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A01 /* AirQualityDetailSheet.swift */; };
+		A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */; };
+		A100000000000000C1102A03 /* MapHomeAppleMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A03 /* MapHomeAppleMap.swift */; };
+		A100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */; };
+		A100000000000000C1102A05 /* MapHomeDayCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A05 /* MapHomeDayCache.swift */; };
+		A100000000000000C1102A06 /* MapHomeDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A06 /* MapHomeDiagnostics.swift */; };
+		A100000000000000C1102A07 /* MapHomeExpectedRouteOverlays.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A07 /* MapHomeExpectedRouteOverlays.swift */; };
+		A100000000000000C1102A08 /* MapHomeGrowthPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A08 /* MapHomeGrowthPolicy.swift */; };
+		A100000000000000C1102A09 /* MapHomeGrowthSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A09 /* MapHomeGrowthSheet.swift */; };
+		A100000000000000C1102A0A /* MapHomeInfoSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0A /* MapHomeInfoSheets.swift */; };
+		A100000000000000C1102A0B /* MapHomeLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0B /* MapHomeLanguage.swift */; };
+		A100000000000000C1102A0C /* MapHomeLayoutMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0C /* MapHomeLayoutMath.swift */; };
+		A100000000000000C1102A0D /* MapHomeLocationServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0D /* MapHomeLocationServices.swift */; };
+		A100000000000000C1102A0E /* MapHomeLocationSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0E /* MapHomeLocationSheets.swift */; };
+		A100000000000000C1102A0F /* MapHomeMapAnnotations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A0F /* MapHomeMapAnnotations.swift */; };
+		A100000000000000C1102A10 /* MapHomeMapRenderCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A10 /* MapHomeMapRenderCache.swift */; };
+		A100000000000000C1102A11 /* MapHomePlaybackMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A11 /* MapHomePlaybackMath.swift */; };
+		A100000000000000C1102A12 /* MapHomeRouteReadings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A12 /* MapHomeRouteReadings.swift */; };
+		A100000000000000C1102A13 /* MapHomeSectionEditMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A13 /* MapHomeSectionEditMath.swift */; };
+		A100000000000000C1102A14 /* MapHomeSectionEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */; };
+		A100000000000000C1102A15 /* MapHomeSettingsSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */; };
+		A100000000000000C1102A16 /* MapHomeStickerEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A16 /* MapHomeStickerEditor.swift */; };
+		A100000000000000C1102A17 /* MapHomeSupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A17 /* MapHomeSupportViews.swift */; };
+		A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */; };
+		A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A19 /* MapHomeTransitSheets.swift */; };
+		A100000000000000C1102A1A /* MapHomeWeatherTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */; };
+		A100000000000000C1102A1B /* ScheduleLinkSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1B /* ScheduleLinkSheets.swift */; };
+		A100000000000000C1102A1C /* ScheduleTimelineCaches.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */; };
+		A100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */; };
+		A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */; };
 		A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50000000000000000000001 /* MapHomeVectorMap.swift */; };
 		A50000000000000000000002 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = X50000000000000000000002 /* MapLibre */; };
 		A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F60000000000000000000001 /* HealthKitTypeCatalog.swift */; };
@@ -425,6 +456,37 @@
 		F40000000000000000000008 /* TaptionStoreColumnCodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreColumnCodingTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000006 /* SensorDayStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorDayStoreTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000007D /* MapHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeView.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMapAnnotations.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A01 /* AirQualityDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityDetailSheet.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAnnotationPolicies.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A03 /* MapHomeAppleMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAppleMap.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeApplePlaybackMath.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A05 /* MapHomeDayCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDayCache.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A06 /* MapHomeDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDiagnostics.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A07 /* MapHomeExpectedRouteOverlays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeExpectedRouteOverlays.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A08 /* MapHomeGrowthPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeGrowthPolicy.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A09 /* MapHomeGrowthSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeGrowthSheet.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0A /* MapHomeInfoSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInfoSheets.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0B /* MapHomeLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLanguage.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0C /* MapHomeLayoutMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLayoutMath.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0D /* MapHomeLocationServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationServices.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0E /* MapHomeLocationSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLocationSheets.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A0F /* MapHomeMapAnnotations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMapAnnotations.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A10 /* MapHomeMapRenderCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMapRenderCache.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A11 /* MapHomePlaybackMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackMath.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A12 /* MapHomeRouteReadings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeRouteReadings.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A13 /* MapHomeSectionEditMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionEditMath.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionEditSheet.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSettingsSheets.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A16 /* MapHomeStickerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickerEditor.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A17 /* MapHomeSupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSupportViews.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitRefreshPolicy.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A19 /* MapHomeTransitSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTransitSheets.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherTimeline.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1B /* ScheduleLinkSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleLinkSheets.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleTimelineCaches.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineFrameBudgetProbe.swift; sourceTree = "<group>"; };
+		F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TwoFingerGestureAttachments.swift; sourceTree = "<group>"; };
 		F50000000000000000000001 /* MapHomeVectorMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeVectorMap.swift; sourceTree = "<group>"; };
 		F60000000000000000000001 /* HealthKitTypeCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitTypeCatalog.swift; sourceTree = "<group>"; };
 		F60000000000000000000002 /* HealthKitImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImportStore.swift; sourceTree = "<group>"; };
@@ -624,6 +686,37 @@
 			isa = PBXGroup;
 			children = (
 				F1000000000000000000007D /* MapHomeView.swift */,
+				F100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift */,
+				F100000000000000C1102A01 /* AirQualityDetailSheet.swift */,
+				F100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift */,
+				F100000000000000C1102A03 /* MapHomeAppleMap.swift */,
+				F100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift */,
+				F100000000000000C1102A05 /* MapHomeDayCache.swift */,
+				F100000000000000C1102A06 /* MapHomeDiagnostics.swift */,
+				F100000000000000C1102A07 /* MapHomeExpectedRouteOverlays.swift */,
+				F100000000000000C1102A08 /* MapHomeGrowthPolicy.swift */,
+				F100000000000000C1102A09 /* MapHomeGrowthSheet.swift */,
+				F100000000000000C1102A0A /* MapHomeInfoSheets.swift */,
+				F100000000000000C1102A0B /* MapHomeLanguage.swift */,
+				F100000000000000C1102A0C /* MapHomeLayoutMath.swift */,
+				F100000000000000C1102A0D /* MapHomeLocationServices.swift */,
+				F100000000000000C1102A0E /* MapHomeLocationSheets.swift */,
+				F100000000000000C1102A0F /* MapHomeMapAnnotations.swift */,
+				F100000000000000C1102A10 /* MapHomeMapRenderCache.swift */,
+				F100000000000000C1102A11 /* MapHomePlaybackMath.swift */,
+				F100000000000000C1102A12 /* MapHomeRouteReadings.swift */,
+				F100000000000000C1102A13 /* MapHomeSectionEditMath.swift */,
+				F100000000000000C1102A14 /* MapHomeSectionEditSheet.swift */,
+				F100000000000000C1102A15 /* MapHomeSettingsSheets.swift */,
+				F100000000000000C1102A16 /* MapHomeStickerEditor.swift */,
+				F100000000000000C1102A17 /* MapHomeSupportViews.swift */,
+				F100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift */,
+				F100000000000000C1102A19 /* MapHomeTransitSheets.swift */,
+				F100000000000000C1102A1A /* MapHomeWeatherTimeline.swift */,
+				F100000000000000C1102A1B /* ScheduleLinkSheets.swift */,
+				F100000000000000C1102A1C /* ScheduleTimelineCaches.swift */,
+				F100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift */,
+				F100000000000000C1102A1E /* TwoFingerGestureAttachments.swift */,
 				F51002000000000000000002 /* MapHomeInteractionPolicy.swift */,
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
@@ -1129,6 +1222,37 @@
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
 				A10000000000000000000006 /* ScheduleView.swift in Sources */,
 				A1000000000000000000007D /* MapHomeView.swift in Sources */,
+				A100000000000000C1102A1F /* MapHomeAppleMapAnnotations.swift in Sources */,
+				A100000000000000C1102A01 /* AirQualityDetailSheet.swift in Sources */,
+				A100000000000000C1102A02 /* MapHomeAnnotationPolicies.swift in Sources */,
+				A100000000000000C1102A03 /* MapHomeAppleMap.swift in Sources */,
+				A100000000000000C1102A04 /* MapHomeApplePlaybackMath.swift in Sources */,
+				A100000000000000C1102A05 /* MapHomeDayCache.swift in Sources */,
+				A100000000000000C1102A06 /* MapHomeDiagnostics.swift in Sources */,
+				A100000000000000C1102A07 /* MapHomeExpectedRouteOverlays.swift in Sources */,
+				A100000000000000C1102A08 /* MapHomeGrowthPolicy.swift in Sources */,
+				A100000000000000C1102A09 /* MapHomeGrowthSheet.swift in Sources */,
+				A100000000000000C1102A0A /* MapHomeInfoSheets.swift in Sources */,
+				A100000000000000C1102A0B /* MapHomeLanguage.swift in Sources */,
+				A100000000000000C1102A0C /* MapHomeLayoutMath.swift in Sources */,
+				A100000000000000C1102A0D /* MapHomeLocationServices.swift in Sources */,
+				A100000000000000C1102A0E /* MapHomeLocationSheets.swift in Sources */,
+				A100000000000000C1102A0F /* MapHomeMapAnnotations.swift in Sources */,
+				A100000000000000C1102A10 /* MapHomeMapRenderCache.swift in Sources */,
+				A100000000000000C1102A11 /* MapHomePlaybackMath.swift in Sources */,
+				A100000000000000C1102A12 /* MapHomeRouteReadings.swift in Sources */,
+				A100000000000000C1102A13 /* MapHomeSectionEditMath.swift in Sources */,
+				A100000000000000C1102A14 /* MapHomeSectionEditSheet.swift in Sources */,
+				A100000000000000C1102A15 /* MapHomeSettingsSheets.swift in Sources */,
+				A100000000000000C1102A16 /* MapHomeStickerEditor.swift in Sources */,
+				A100000000000000C1102A17 /* MapHomeSupportViews.swift in Sources */,
+				A100000000000000C1102A18 /* MapHomeTransitRefreshPolicy.swift in Sources */,
+				A100000000000000C1102A19 /* MapHomeTransitSheets.swift in Sources */,
+				A100000000000000C1102A1A /* MapHomeWeatherTimeline.swift in Sources */,
+				A100000000000000C1102A1B /* ScheduleLinkSheets.swift in Sources */,
+				A100000000000000C1102A1C /* ScheduleTimelineCaches.swift in Sources */,
+				A100000000000000C1102A1D /* TimelineFrameBudgetProbe.swift in Sources */,
+				A100000000000000C1102A1E /* TwoFingerGestureAttachments.swift in Sources */,
 				A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */,
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
