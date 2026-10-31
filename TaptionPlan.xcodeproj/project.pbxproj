@@ -13,6 +13,31 @@
 		ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
+		A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000032 /* AppModelPolicies.swift */; };
+		A5B1102A0200000000000031 /* AppModelSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000030 /* AppModelSupportTypes.swift */; };
+		A5B1102A020000000000002F /* AppModel+ActualEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002E /* AppModel+ActualEditing.swift */; };
+		A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002C /* AppModel+Backup.swift */; };
+		A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002A /* AppModel+Bootstrap.swift */; };
+		A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000028 /* AppModel+Classification.swift */; };
+		A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000026 /* AppModel+DayData.swift */; };
+		A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000024 /* AppModel+EditHistory.swift */; };
+		A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000022 /* AppModel+Export.swift */; };
+		A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000020 /* AppModel+ExternalData.swift */; };
+		A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */; };
+		A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001C /* AppModel+Lifecycle.swift */; };
+		A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001A /* AppModel+LocationCollection.swift */; };
+		A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000018 /* AppModel+MapEditing.swift */; };
+		A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000016 /* AppModel+Memos.swift */; };
+		A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000014 /* AppModel+Navigation.swift */; };
+		A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000012 /* AppModel+Permissions.swift */; };
+		A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000010 /* AppModel+Persistence.swift */; };
+		A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000E /* AppModel+Plans.swift */; };
+		A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000C /* AppModel+Settings.swift */; };
+		A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000A /* AppModel+Steps.swift */; };
+		A5B1102A0200000000000009 /* AppModel+WatchHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */; };
+		A5B1102A0200000000000007 /* AppModel+WatchSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */; };
+		A5B1102A0200000000000005 /* AppModel+Weather.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000004 /* AppModel+Weather.swift */; };
+		A5B1102A0200000000000003 /* AppModel+WidgetLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */; };
 		A10000000000000000000003 /* PlanItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* PlanItem.swift */; };
 		A10000000000000000000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* Theme.swift */; };
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
@@ -319,6 +344,31 @@
 		C10000000000000000000005 /* TaptionPlanWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaptionPlanWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000001 /* TaptionPlanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000032 /* AppModelPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelPolicies.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000030 /* AppModelSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelSupportTypes.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000002E /* AppModel+ActualEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ActualEditing.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002C /* AppModel+Backup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Backup.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002A /* AppModel+Bootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Bootstrap.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000028 /* AppModel+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Classification.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000026 /* AppModel+DayData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+DayData.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000024 /* AppModel+EditHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditHistory.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000022 /* AppModel+Export.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Export.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000020 /* AppModel+ExternalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ExternalData.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+FrequentPlaces.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001C /* AppModel+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Lifecycle.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001A /* AppModel+LocationCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+LocationCollection.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000018 /* AppModel+MapEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+MapEditing.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000016 /* AppModel+Memos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Memos.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000014 /* AppModel+Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Navigation.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000012 /* AppModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Permissions.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000010 /* AppModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Persistence.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000E /* AppModel+Plans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Plans.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000C /* AppModel+Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Settings.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000A /* AppModel+Steps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Steps.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WatchHealth.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WatchSummary.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000004 /* AppModel+Weather.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Weather.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WidgetLiveActivity.swift"; sourceTree = "<group>"; };
 		F10000000000000000000003 /* PlanItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanItem.swift; sourceTree = "<group>"; };
 		F10000000000000000000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
@@ -709,6 +759,31 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000002 /* AppModel.swift */,
+				F5B1102A0200000000000032 /* AppModelPolicies.swift */,
+				F5B1102A0200000000000030 /* AppModelSupportTypes.swift */,
+				F5B1102A020000000000002E /* AppModel+ActualEditing.swift */,
+				F5B1102A020000000000002C /* AppModel+Backup.swift */,
+				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
+				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
+				F5B1102A0200000000000026 /* AppModel+DayData.swift */,
+				F5B1102A0200000000000024 /* AppModel+EditHistory.swift */,
+				F5B1102A0200000000000022 /* AppModel+Export.swift */,
+				F5B1102A0200000000000020 /* AppModel+ExternalData.swift */,
+				F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */,
+				F5B1102A020000000000001C /* AppModel+Lifecycle.swift */,
+				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
+				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
+				F5B1102A0200000000000016 /* AppModel+Memos.swift */,
+				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
+				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
+				F5B1102A0200000000000010 /* AppModel+Persistence.swift */,
+				F5B1102A020000000000000E /* AppModel+Plans.swift */,
+				F5B1102A020000000000000C /* AppModel+Settings.swift */,
+				F5B1102A020000000000000A /* AppModel+Steps.swift */,
+				F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */,
+				F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */,
+				F5B1102A0200000000000004 /* AppModel+Weather.swift */,
+				F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */,
 				F10000000000000000000018 /* NavigationModels.swift */,
 				F10000000000000000000019 /* CatPresentation.swift */,
 				F1000000000000000000001A /* TimelineInteractionEngine.swift */,
@@ -1166,6 +1241,31 @@
 			files = (
 				A10000000000000000000001 /* TaptionPlanApp.swift in Sources */,
 				A10000000000000000000002 /* AppModel.swift in Sources */,
+				A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */,
+				A5B1102A0200000000000031 /* AppModelSupportTypes.swift in Sources */,
+				A5B1102A020000000000002F /* AppModel+ActualEditing.swift in Sources */,
+				A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */,
+				A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */,
+				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
+				A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */,
+				A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */,
+				A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */,
+				A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */,
+				A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */,
+				A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */,
+				A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */,
+				A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */,
+				A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */,
+				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
+				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
+				A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */,
+				A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */,
+				A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */,
+				A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */,
+				A5B1102A0200000000000009 /* AppModel+WatchHealth.swift in Sources */,
+				A5B1102A0200000000000007 /* AppModel+WatchSummary.swift in Sources */,
+				A5B1102A0200000000000005 /* AppModel+Weather.swift in Sources */,
+				A5B1102A0200000000000003 /* AppModel+WidgetLiveActivity.swift in Sources */,
 				A10000000000000000000003 /* PlanItem.swift in Sources */,
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
