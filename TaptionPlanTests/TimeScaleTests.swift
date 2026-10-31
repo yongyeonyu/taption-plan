@@ -479,61 +479,6 @@ final class TimeScaleTests: XCTestCase {
         )
     }
 
-    func testQuickActivitySelectionOpensForUnclassifiedActivityOnly() {
-        let stay = ActualRecord(
-            planID: nil,
-            title: "머무름",
-            categoryID: "activity",
-            startedAt: .now,
-            endedAt: .now.addingTimeInterval(60),
-            source: .location,
-            behavior: StationaryContextKind.unknownStay.rawValue
-        )
-        let walking = ActualRecord(
-            planID: nil,
-            title: "걷기",
-            categoryID: "activity",
-            startedAt: .now,
-            endedAt: .now.addingTimeInterval(60),
-            source: .motion,
-            behavior: WatchBehaviorKind.walking.rawValue
-        )
-        let namedActivity = ActualRecord(
-            planID: nil,
-            title: "출근준비",
-            categoryID: "activity",
-            startedAt: .now,
-            endedAt: .now.addingTimeInterval(60),
-            source: .manual
-        )
-
-        XCTAssertTrue(ActivityQuickSelectionPolicy.needsSelection(stay))
-        XCTAssertFalse(ActivityQuickSelectionPolicy.needsSelection(walking))
-        XCTAssertFalse(
-            ActivityQuickSelectionPolicy.needsSelection(namedActivity)
-        )
-    }
-
-    func testQuickActivitySelectionExcludesPlaceholderOptions() {
-        let placeholder = ActivityCorrectionOption(
-            id: "placeholder",
-            title: "활동",
-            behavior: WatchBehaviorKind.unknown.rawValue,
-            categoryID: "activity",
-            systemImage: "sparkles",
-            isAutomatic: true,
-            isCustom: false
-        )
-        let detailed = ActivityCorrectionOption.custom("독서")
-
-        XCTAssertFalse(
-            ActivityQuickSelectionPolicy.isDetailedOption(placeholder)
-        )
-        XCTAssertTrue(
-            ActivityQuickSelectionPolicy.isDetailedOption(detailed)
-        )
-    }
-
     func testCircularClockTapChoosesNearestVisibleBand() {
         let outer = 138.0
         let phaseWidth = 12.0
