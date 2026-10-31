@@ -57,6 +57,16 @@ extension Font {
     }
 }
 
+extension View {
+    /// 글자 바깥에 테마 배경색 테두리(기본 1pt)를 둘러 지도·색 띠 위에서도 읽히게 한다(UIX1101B02, 대표).
+    func taptionTextOutline(_ color: Color = .tpBackground, width: CGFloat = 1) -> some View {
+        shadow(color: color, radius: 0, x: width, y: 0)
+            .shadow(color: color, radius: 0, x: -width, y: 0)
+            .shadow(color: color, radius: 0, x: 0, y: width)
+            .shadow(color: color, radius: 0, x: 0, y: -width)
+    }
+}
+
 /// UI 색 테마(표시 > UI 테마, UIX1101A04). 기본은 웜 양피지, 나머지 셋은 대표가 준 어두운 6단 색상표다.
 /// 핵심 색(글자·보조 글자·배경·면·선·강조)만 바꾸고 활동 분류 색은 그대로 둔다.
 enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {

@@ -373,25 +373,21 @@ struct AppShellView: View {
     @ViewBuilder
     private var initialLaunchOverlay: some View {
         if isInitialLaunchOverlayVisible {
-            ZStack {
-                Color("LaunchBackground")
-                    .ignoresSafeArea()
-                VStack(spacing: 20) {
-                    Image("TaptionSplashIcon")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 230, height: 230)
+            // LaunchScreen.storyboard와 같게 고정(아이콘 190pt·중심 -70pt·제목 시스템 25pt)해 이어 그릴 때 커지지 않게 한다(UIX1101B03).
+            GeometryReader { proxy in
+                VStack(spacing: 12) {
+                    Image("TaptionSplashIcon").resizable().scaledToFit()
+                        .frame(width: 190, height: 190)
                     Text("BOKKI Plan")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(25)), weight: .semibold, design: .rounded))
+                        .font(.system(size: 25, weight: .semibold))
                         .foregroundStyle(.white)
+                        .frame(height: 32)
+                        .padding(.top, 10)
                     ProgressView(value: initialLaunchProgress, total: 1)
                         .progressViewStyle(.linear)
                         .frame(width: 220)
                         .tint(.white)
-                        .background(
-                            Capsule()
-                                .fill(.white.opacity(0.22))
-                        )
+                        .background(Capsule().fill(.white.opacity(0.22)))
                         .accessibilityValue("\(Int((initialLaunchProgress * 100).rounded()))%")
                         .accessibilityLabel(
                             AppLanguagePreference.text(
@@ -401,14 +397,16 @@ struct AppShellView: View {
                             )
                         )
                     Text("\(Int((initialLaunchProgress * 100).rounded()))%")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                     Text(launchStatusText)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(.white.opacity(0.85))
-                        .foregroundStyle(.white.opacity(0.82))
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, proxy.size.height / 2 - 70 - 95)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .ignoresSafeArea()
+            .background(Color("LaunchBackground").ignoresSafeArea())
             .transition(.opacity)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(
@@ -445,8 +443,10 @@ struct AppShellView: View {
                 Image("TaptionSplashIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 250, height: 250)
+                    .frame(width: 190, height: 190)
+                    .offset(y: -70)
             }
+                .ignoresSafeArea()
                 .accessibilityHidden(true)
         }
     }

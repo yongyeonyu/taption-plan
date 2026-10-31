@@ -5001,7 +5001,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 `MapHomeTimeSidebar.swift`(3,296 → 3,301, 출발 커밋부터 있던 B 소유 초과) 하나만 남고 이번 변경으로 늘어난 항목 없음(`arch-3.log`).
 - 미검증: 실기기, 재계산이 실제 사용자 DB에서 날짜별 한 번만 도는지(시험 실행에서는 꺼짐), 위젯·워치 빌드(바꾼 공유 파일은 `FeatureModels.swift`의 `ActualRecord`뿐).
 
-## ALL1101A01 1차 합치기 검증 (2026-11-02, main bccec69)
+## ALL1101A01 1차 합치기 검증 (2026-11-01, main bccec69)
 - 합친 순서: CLN1101A01 → PRF1101A01 → PKG1101A01 → ALG1101A01. 충돌은 `docs/architecture-baseline.json`(파일별 작은 예산을 고름), `temp.md`·`test.md`(양쪽 절 보존), `DEVELOPMENT.md` 패키지 표, `project.pbxproj` 로컬 패키지 참조(세 패키지 모두 보존)뿐. `plutil -lint` 통과.
 - 가드: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
 - 패키지 `swift test`: TaptionPlanCore 86, TaptionActivityEngine 33, TaptionRouteEngine 48, TaptionClassifierEngine 26, TaptionPlanStore 6, TaptionWatchSync 7, TaptionPlanEngine 1 — 실패 0(`build/validation/ALL1101A01/swift-test-*.log`).
@@ -5009,7 +5009,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 단위 전체(`-only-testing:TaptionPlanTests`, BOKKI-iPhone11, 병렬 끔, device lock): `unit-all.xcresult` 1,720건 중 통과 1,716 · 실패 0 · 건너뜀 4.
 - 미검증: 화면 시험 전체(재생 HUD는 PRF에서 새벽이라 건너뜀), 실기기 설치·재생/팬 벤치·발열·배터리, 위젯·워치 실제 화면, 분류 실기기 원본 replay. 분류 2차(AppModel 파이프라인을 `classifyDay` 출력 하나로, 수면 4벌 통합, 중심점 체류, 연봉 키 통합)와 2차 큰 파일 분해는 남음.
 
-## ALG1101A01 2차 · 분류 적용 하나·수면 조정·체류 중심점·버전 별칭 (2026-11-02)
+## ALG1101A01 2차 · 분류 적용 하나·수면 조정·체류 중심점·버전 별칭 (2026-11-01)
 - 출발: 로컬 main 833f71a로 앞당김(`git merge --ff-only main`, origin에는 그 커밋이 없어 동기화 도구 대신).
 - 패키지: `TaptionClassifierEngine` 27건·`TaptionActivityEngine` 33건·`TaptionPlanCore` 86건 통과(`*-swift-test-2-1.log`, macOS).
 - Debug 빌드(generic, `build/DerivedData-ALG`): TaptionPlan·TaptionPlanWidget(iOS)·TaptionPlanWatch·TaptionPlanWatchWidget(watchOS) 모두 성공(`build2-*.log`).
@@ -5017,3 +5017,21 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 가드: `check-app-engine-import-boundary.sh`(분류 패키지 금지 추가) 통과, `architecture-metrics.py --check` 통과(`arch-2-1.log`).
 - golden-diff 갱신(`golden-diff.json`): 라벨 415분 중 새 415 · 이전 370, 사용자 기록 회귀 0. 1차와 같은 **합성 자료**(실기기 원본 없음)이고, 이번 2차는 앱의 이동 판정 자체를 바꾸지 않아(HMM은 점수만) 숫자가 그대로다.
 - 미검증: 실기기, 실제 원본 replay, 재계산이 실제 저장소에서 날짜별 한 번만 도는지(저장소 표식 왕복은 단위 시험으로만), 잠금 화면 연봉 표시.
+
+## WTH1101A01 · UIX1101B01 · UIX1101B02 · UIX1101B03 (2026-11-01)
+- 지난 날씨 칩(오늘 칩을 지금 시각에서 나눔), 지도 유리 → 반투명 면 + 0.6pt 테마 선, 사이드바 시간 글자 테마 배경색 1pt 테두리, 스플래시를 storyboard와 같은 크기·자리로 고정.
+- 단위(시뮬레이터 BOKKI-iPhone11): `MapHomeLiveMapTests`·`TimeScaleTests` 260건 통과(새 시험 `testWeatherSpanCrossingNowSplitsIntoPastAndRemainingParts` 포함, `build/validation/WTH1101A01/unit.xcresult`). 스플래시 수정 뒤에는 단위 시험을 다시 돌리지 않았다(화면 코드만).
+- 기기: 아이폰 11 Pro(00008030-001628201AD2802E)에 Debug 빌드 256 설치 성공(`build/validation/UIX1101B03/device-*.log`). 화면 확인은 대표.
+- 가드: `architecture-metrics.py --check` 통과(`MapHomeTimeSidebar` 2,780 · `AppShellView` 1,640).
+
+## ALL1101A01 실기기 재생 벤치 전후 (아이폰 11 Pro, 60Hz 화면, 어제 하루 자동 재생 13.5초)
+| 항목 | 빌드 255(변경 전) | main + 위 수정(빌드 256 Debug) |
+| --- | --- | --- |
+| fps | 57 | 58 |
+| 20ms 초과 | 23 | 25 |
+| 최대 프레임 | 83ms | 50ms |
+| 드라이버 평균/최대 | 0.50 / 2.59ms | 0.39 / 1.82ms |
+| 열 상태 | 0 | 0 |
+| counterBadges 호출/합계 | 107회 / 30ms | 810회 / 124ms |
+- 해석: 최대 프레임·드라이버 비용은 줄었고 20ms 초과는 그대로다. 카운터 값 계산 호출이 초당 약 60회로 늘었다(오버레이가 프레임마다 평가됨, `overlay_evals` 810). 2차 분해를 합친 뒤 카운터 창 평가 경로를 다시 본다.
+- 한계: 아이폰 11 Pro는 60Hz 화면이라 120Hz(ProMotion) 효과는 잴 수 없다. Release가 아닌 Debug 빌드 비교, 1회씩 측정. 로그 `build/validation/ALL1101A01/device/bench-*`.

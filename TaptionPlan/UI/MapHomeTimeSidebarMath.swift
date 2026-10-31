@@ -491,6 +491,15 @@ enum MapHomeTimeSidebarMath {
 
 }
 
+/// 오늘 날씨 칩이 지금을 가로지르면 지난 부분과 남은 부분으로 나눈다.
+/// 같은 날씨가 길게 이어져 한 칩이 지난 시간까지 덮으면 끝 시각이 미래라 지난 칸 비활성이 사라졌다(WTH1101A01).
+enum MapHomeWeatherPastSplit {
+    static func ranges(start: Int, end: Int, currentMinute: Int?) -> [Range<Int>] {
+        guard let now = currentMinute, start < now, now < end else { return [start..<end] }
+        return [start..<now, now..<end]
+    }
+}
+
 private extension Array where Element == Int {
     func closestIndex(to value: Int) -> Int {
         enumerated().min(by: { abs($0.element - value) < abs($1.element - value) })?.offset ?? 0

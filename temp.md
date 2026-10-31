@@ -2723,7 +2723,7 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
-- 진행(2026-11-02): 1차 4개 세션을 main에 합침(bccec69). 패키지·네 제품 빌드·단위 1,716건 통과(test.md). 남은 것: 분류 2차, 2차 큰 파일 분해, 화면 시험 전체, 실기기 검증(대표 승인 후).
+- 진행(2026-11-01): 1차 4개 세션을 main에 합침(bccec69). 패키지·네 제품 빌드·단위 1,716건 통과(test.md). 남은 것: 분류 2차, 2차 큰 파일 분해, 화면 시험 전체, 실기기 검증(대표 승인 후).
 
 ## CLN1101A01 미사용 코드·나머지 UI 정리(ALL1101A01 D, 2026-11-01)
 - 요청: 계획 표 D행. 소유 파일(`ReviewView`·`GoalsView`·`SettingsView`·`DetailViews`·`AddPlanSheet`·`DraftComponents`·`MapHomeNLE*`·`MapHomeLocationPresentation`·`Packages/TaptionRouteEngine`·`Packages/TaptionPlanCore`(저장소 제외)·`scripts/`)의 미사용 타입·함수·프로퍼티·변수 제거, 사용처 없는 패키지 공개 API 정리, 소유 UI의 중복 터치 코드 정리, 쓰이지 않는 스크립트 목록.
@@ -2753,7 +2753,7 @@
 - 해결: 새 패키지 `Packages/TaptionClassifierEngine`(분류표 v3 리소스, 단어 경계 키워드, `IdleThresholds`, 30초 창 특징, 10개 수단 창 점수, 10상태 HMM, 구간·대권 거리, stay point·장소 묶음, 맥락, `SleepFusion`, 파생 지표, `TaptionClassifier.classifyDay`)를 `TaptionPlanEngine`이 다시 내보낸다. 앱은 키워드·거리·걸음·외출·식사·끝점 규칙을 이 패키지로 바꾸고, `ActualRecord`에 `classificationScore`·`lockReason`(decodeIfPresent·encodeIfPresent)과 `userOwned(_:)`를 더한다. projectionVersion 4→5, `ClassificationRecomputeCoordinator`가 날짜별 `classifier-v1:<날짜>` 표식으로 한 번만, 사용자 소유 기록은 그대로 두고 원본 없는 날은 유지한다.
 - 검증 기준: `swift test`(분류·활동 패키지) 통과, 관련 `TaptionPlanTests` 클래스 통과(xcresult 실행 수), 앱 Debug 빌드, `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, `build/validation/ALG1101A01/golden-diff.json`(실기기 원본 없으면 합성 자료와 한계 명시).
 - 진행(1차): 패키지·키워드·끝점 규칙 삭제·비행 대권 거리·식사 미확인·걸음(워치 우선)·외출(공백 제외)·`ActualRecord` 새 필드·재계산 표식·죽은 코드(`commutes`·`evenings`·`mergedBlocks`·`destinations`·`chains`·`NamedDestination`·`MovementRouteBuilder.pathDistance`·`PhoneSleepWakeEngine.status`) 완료. 남은 것: 기존 AppModel 파이프라인(`apply*Records`)을 `classifyDay` 출력 하나(`applyClassifierOutput`)로 바꾸기, 수면 엔진 4벌을 `SleepFusion`으로 합치기, `PlaceDetectionEngine.detectStays`를 중심점 stay point로 바꾸기(장소 키 별칭 시험 필요), 자동 `modelVersion`을 `classifier-v1/<단계>`로·`legacyAutomaticModelVersions`, 연봉 문자열 키 통합, 실기기 원본 replay. `ActivitySensorEvidenceFusion`은 `ActivityClassificationProjection`이 쓰므로 죽은 코드가 아니어서 두었다.
-- 2차(2026-11-02, 대표 "분류 2차 먼저"): 파일 소유 제한 없음(MapHomeView·ScheduleView·AppleIntegrations 대규모 분해 제외).
+- 2차(2026-11-01, 대표 "분류 2차 먼저"): 파일 소유 제한 없음(MapHomeView·ScheduleView·AppleIntegrations 대규모 분해 제외).
   - 원인: 1차는 패키지만 만들고 앱 파이프라인은 그대로라 수면 엔진 4벌·첫 점 기준 체류·옛 modelVersion·연봉 문자열 키 여러 벌·오늘 걸음 max가 남았다.
   - 해결: 가드에 분류 패키지 추가, 앱 분류표 JSON 삭제(패키지 리소스 하나), 재계산 표식을 저장소로, 자동 modelVersion `classifier-v1/<단계>`·`legacyAutomaticModelVersions`, 오늘 걸음 워치 우선, 연봉 키 정책 하나, 수면을 `SleepFusion` 하나로, 체류를 중심점 stay point로(장소 키 별칭 시험), 엔진별 `apply*Records`를 `applyClassifierOutput` 하나로.
   - 검증 기준: 분류·활동 패키지 `swift test`, `-only-testing:TaptionPlanTests` 전체 통과(xcresult 실행 수), 앱·위젯·워치·워치 위젯 Debug 빌드, 가드 2개, golden-diff 갱신(실기기 원본 없으면 한계 명시). 끝나면 `build/DerivedData-ALG` 삭제.
@@ -2763,3 +2763,22 @@
   - D(CLN1101A01): `scripts/check-app-engine-import-boundary.sh`의 금지 목록에 `TaptionClassifierEngine`을 더하면 앱이 `TaptionPlanEngine`만 거치는지 같이 지킨다. `DayStoreV3.projectionVersion`을 4→5로 올렸다(TaptionPlanCore 한 줄).
   - B(PRF1101A01): `LiveActivitySupport`·`SensorCollectionSalaryText`의 연봉 문자열 키를 하나로 합치는 일은 손대지 않았다. 업무 시간은 `DayMetrics.earnings`/`categorySeconds`를 쓰면 된다. AppModel 4573의 오늘 걸음 `max(merged, live)`는 기기 간 max라 워치 우선 정책과 어긋난다(AppModel 데이터 갱신부라 A 범위 밖).
   - 2차: AppModel 데이터 갱신(4428) 뒤에 지난 7일 재계산 sweep(`ClassificationRecomputeCoordinator.run`)을 걸 자리. 지금은 날짜를 갱신할 때만 그날을 재계산한다.
+
+## WTH1101A01 지난 날씨 칩 비활성이 안 보임(대표)
+- 원인: 날씨 칩은 같은 날씨가 이어지면 하나로 묶인다. 오늘 묶인 칩이 지금을 가로지르면 끝 시각이 미래라 `isPastSpan`이 거짓이 되어 지난 부분도 활성으로 보였다.
+- 해결: 오늘이면 칩을 지금 시각에서 지난 부분·남은 부분으로 나눈다(`MapHomeWeatherPastSplit`, `MapHomeTimeSidebarMath.swift`).
+- 검증 기준: 단위 테스트, Debug 빌드·아이폰 11 Pro 설치, 기기 화면(대표).
+
+## UIX1101B01 지도 위 유리 테두리(대표 "테두리 이상함")
+- 원인: 리퀴드 글래스(`glassEffect(.regular)`)가 가장자리에서 지도를 굴절시켜 두꺼운 띠로 보임.
+- 해결(대표 선택 "반투명 면 + 얇은 선"): `mapHomeGlass`를 `ultraThinMaterial` + 테마 선 색 0.6pt 테두리로. 버튼·날짜 배지·사이드바·날씨 칩 등 모든 사용처에 적용.
+- 검증 기준: Debug 빌드·기기 설치, 기기 화면(대표).
+
+## UIX1101B02 사이드바 시간 글자 테두리(대표 "텍스트 테두리 ui색상으로 1픽셀")
+- 해결: 시간 눈금 글자 두 곳에 테마 배경색 1pt 테두리(`taptionTextOutline`, Theme.swift). 1픽셀은 1pt로 해석.
+- 검증 기준: Debug 빌드·기기 설치, 기기 화면(대표).
+
+## UIX1101B03 스플래시가 커지는 부분(대표 "사이즈 변경 안되게")
+- 원인: 정지 그림(LaunchScreen.storyboard)은 아이콘 190pt·중심 -70pt·제목 시스템 25pt인데, 이어 나오는 SwiftUI 스플래시는 아이콘 230pt·가운데 정렬·제목이 글자 크기 설정을 따라 커졌다. 앱 가림 화면은 아이콘 250pt.
+- 해결: SwiftUI 스플래시와 가림 화면을 storyboard와 같은 크기·자리·글꼴로 고정(글자 크기 설정 무시).
+- 검증 기준: Debug 빌드·기기 설치, 기기 화면(대표).

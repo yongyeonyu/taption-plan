@@ -4,6 +4,15 @@ import XCTest
 
 /// MAP1019C01: 날씨 상태·집 날씨 아이콘·경로 속도 그라데이션·실시간 자동 줌·GPS 로그.
 final class MapHomeLiveMapTests: XCTestCase {
+    // MARK: - Past weather split (WTH1101A01)
+
+    func testWeatherSpanCrossingNowSplitsIntoPastAndRemainingParts() {
+        XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 0, end: 1_440, currentMinute: 600), [0..<600, 600..<1_440])
+        XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 0, end: 600, currentMinute: 600), [0..<600])
+        XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 700, end: 900, currentMinute: 600), [700..<900])
+        XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 0, end: 1_440, currentMinute: nil), [0..<1_440])
+    }
+
     // MARK: - Counter badge throttle (PRF1030A01)
 
     @MainActor

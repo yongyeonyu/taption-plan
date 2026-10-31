@@ -2,14 +2,10 @@ import SwiftUI
 import UIKit
 
 extension View {
-    /// Apple 리퀴드 글래스(iOS 26 이상). 그 이전 버전은 반투명 재질로 대신한다.
-    @ViewBuilder
+    /// 반투명 면 + 테마 선 색 얇은 테두리. 리퀴드 글래스는 가장자리 굴절 띠가 두꺼워 보여 쓰지 않는다(UIX1101B01, 대표).
     func mapHomeGlass<S: Shape>(in shape: S) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular, in: shape)
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
-        }
+        background(.ultraThinMaterial, in: shape)
+            .overlay(shape.stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6))
     }
 }
 
@@ -1544,6 +1540,7 @@ struct MapHomeTimeSidebar: View {
                         .minimumScaleFactor(0.55)
                         .allowsTightening(true)
                         .foregroundStyle(Color.tpInk.opacity(0.78))
+                        .taptionTextOutline()
                         .lineLimit(1)
                         .frame(width: numericColumnWidth, alignment: .trailing)
                         .position(
@@ -1581,6 +1578,7 @@ struct MapHomeTimeSidebar: View {
                                 .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
+                                .taptionTextOutline()
                                 .frame(width: 20, alignment: .trailing)
                                 .offset(x: -MapHomeTimeSidebarMath.rulerLabelTrailingInset)
                         }
@@ -2459,21 +2457,18 @@ struct MapHomeWeatherSidebar: View {
         GeometryReader { proxy in
             let railHeight = max(220, proxy.size.height)
             let trackHeight = max(1, railHeight - verticalInset * 2)
-            let entries = weatherEntries
             let window = MapHomeTimeSidebarMath.visibleWindow(
                 startMinute: visibleStartMinute,
                 durationMinutes: visibleDurationMinutes,
                 centerMinute: selectedMinute
             )
             let clampedSelectedMinute = min(max(selectedMinute, 0), 1_439)
-            let nowComponents = Calendar.autoupdatingCurrent.dateComponents(
-                [.hour, .minute],
-                from: Date.now
-            )
+            let nowComponents = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: Date.now)
             let currentMinute = (nowComponents.hour ?? 0) * 60 + (nowComponents.minute ?? 0)
             let isToday = Calendar.autoupdatingCurrent.isDate(date, inSameDayAs: Date.now)
             let isPastDay = Calendar.autoupdatingCurrent.startOfDay(for: date)
                 < Calendar.autoupdatingCurrent.startOfDay(for: Date.now)
+            let entries = weatherEntries(splittingAt: isToday ? currentMinute : nil)
             let selectedIndex = entries.firstIndex {
                 clampedSelectedMinute >= $0.startMinute
                     && clampedSelectedMinute < $0.endMinute
@@ -2603,7 +2598,7 @@ struct MapHomeWeatherSidebar: View {
         .frame(width: railWidth)
     }
 
-    private var weatherEntries: [Entry] {
+    private func weatherEntries(splittingAt currentMinute: Int?) -> [Entry] {
         let calendar = Calendar.autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: date)
         return MapHomeWeatherTimelineMath.persistentSpans(
@@ -2612,7 +2607,7 @@ struct MapHomeWeatherSidebar: View {
             calendar: calendar,
             minimumTemperatureChangeCelsius:
                 MapHomeWeatherTimelineMath.fullDayTemperatureChangeCelsius
-        ).compactMap { entry in
+        ).flatMap { entry in
             let start = entry.span.start
             let end = entry.span.end
             let startMinute = min(
@@ -2623,11 +2618,9 @@ struct MapHomeWeatherSidebar: View {
                 max(Int(ceil(end.timeIntervalSince(dayStart) / 60)), startMinute + 1),
                 1_440
             )
-            return Entry(
-                context: entry.context,
-                startMinute: startMinute,
-                endMinute: endMinute
-            )
+            return MapHomeWeatherPastSplit.ranges(start: startMinute, end: endMinute, currentMinute: currentMinute).map {
+                Entry(context: entry.context, startMinute: $0.lowerBound, endMinute: $0.upperBound)
+            }
         }
     }
 }
