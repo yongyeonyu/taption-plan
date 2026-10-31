@@ -42,6 +42,7 @@
 		A10000000000000000000013 /* SensorFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SensorFusion.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A10000000000000000000014 /* AppleIntegrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* AppleIntegrations.swift */; };
+		A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */; };
 		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
 		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
@@ -321,6 +322,7 @@
 		F10000000000000000000013 /* SensorFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorFusion.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F10000000000000000000014 /* AppleIntegrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrations.swift; sourceTree = "<group>"; };
+		F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEfficiencyPolicies.swift; sourceTree = "<group>"; };
 		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
 		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
@@ -690,6 +692,7 @@
 				F10000000000000000000013 /* SensorFusion.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F10000000000000000000014 /* AppleIntegrations.swift */,
+				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
 				F60000000000000000000002 /* HealthKitImportStore.swift */,
@@ -1155,6 +1158,7 @@
 				A10000000000000000000013 /* SensorFusion.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A10000000000000000000014 /* AppleIntegrations.swift in Sources */,
+				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
 				A60000000000000000000002 /* HealthKitImportStore.swift in Sources */,
