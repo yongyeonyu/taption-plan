@@ -1,11 +1,11 @@
 {
-  "files": 152,
-  "lines": 167138,
+  "files": 151,
+  "lines": 165426,
   "buckets": {
-    "<500": 94,
+    "<500": 93,
     "500-1000": 21,
-    "1000-2000": 16,
-    "2000-5000": 17,
+    "1000-2000": 17,
+    "2000-5000": 16,
     "5000+": 4
   },
   "risk": {
@@ -17,10 +17,10 @@
     "main_queue": 7
   },
   "size": {
-    "state_properties": 604,
+    "state_properties": 603,
     "observable_types": 8,
-    "view_types": 181,
-    "funcs": 5416,
+    "view_types": 180,
+    "funcs": 5352,
     "singleton_reach": 335
   },
   "metrics": {
@@ -44,18 +44,17 @@
     "TaptionPlan/Core/WidgetShared.swift": 3005,
     "TaptionPlan/UI/AddPlanSheet.swift": 2128,
     "TaptionPlan/UI/AppShellView.swift": 1648,
-    "TaptionPlan/UI/DetailViews.swift": 2949,
+    "TaptionPlan/UI/DetailViews.swift": 2925,
     "TaptionPlan/UI/GoalsView.swift": 1848,
     "TaptionPlan/UI/MapHomeCalendarSheet.swift": 3127,
     "TaptionPlan/UI/MapHomeLiveMapPolicies.swift": 1341,
-    "TaptionPlan/UI/MapHomeLocationPresentation.swift": 2157,
     "TaptionPlan/UI/MapHomeNLEClipEditor.swift": 1567,
     "TaptionPlan/UI/MapHomeTimeSidebar.swift": 3296,
     "TaptionPlan/UI/MapHomeVectorMap.swift": 1461,
     "TaptionPlan/UI/MapHomeView.swift": 22914,
-    "TaptionPlan/UI/ReviewView.swift": 4817,
+    "TaptionPlan/UI/ReviewView.swift": 4724,
     "TaptionPlan/UI/ScheduleView.swift": 11822,
-    "TaptionPlan/UI/SettingsView.swift": 2322,
+    "TaptionPlan/UI/SettingsView.swift": 2238,
     "TaptionPlan/UX/AppModel.swift": 14324,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1627,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349,
@@ -99,10 +98,10 @@
     },
     {
       "path": "TaptionPlan/UI/ReviewView.swift",
-      "lines": 4817,
+      "lines": 4724,
       "largest_type": "struct ReviewView",
       "largest_type_lines": 3340,
-      "types": 27
+      "types": 26
     },
     {
       "path": "TaptionPlan/Core/FeatureModels.swift",
@@ -184,14 +183,14 @@
       "lines": 1620
     },
     {
-      "path": "TaptionPlan/UI/SettingsView.swift",
-      "type": "struct SettingsView",
-      "lines": 1568
-    },
-    {
       "path": "TaptionPlan/UI/MapHomeNLEClipEditor.swift",
       "type": "struct MapHomeNLEClipEditor",
       "lines": 1507
+    },
+    {
+      "path": "TaptionPlan/UI/SettingsView.swift",
+      "type": "struct SettingsView",
+      "lines": 1485
     },
     {
       "path": "TaptionPlan/Core/AppleIntegrations.swift",

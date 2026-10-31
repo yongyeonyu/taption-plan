@@ -4967,3 +4967,16 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 빌드: `xcodebuild build` Debug, iOS Simulator (generic), 두 번 모두 BUILD SUCCEEDED. 로그 `build/validation/CTR1101A01/build.log`, `build2.log`.
 - 테스트: `TimeScaleTests` 시뮬레이터(BOKKI-iPhoneDuo) TEST SUCCEEDED. 로그 `build/validation/CTR1101A01/unit.log`. 대비 단위 테스트는 추가하지 않음.
 - 제한: 세 어두운 테마와 기본 테마의 실제 화면은 확인하지 않음(시뮬레이터 화면 캡처·실기기 확인 없음). 유리 효과 대신 면 색을 깔아 바뀐 모습이므로 대표 기기 확인 필요. 사이드바의 지난 칸(회색 바탕·흰 글자)과 빨간 텍스트는 테마와 무관하게 그대로 둠.
+
+## CLN1101A01 · 미사용 코드 정리(ALL1101A01 D, 2026-11-01)
+- 판별: 정의 파일 밖 참조 0 또는 테스트만 참조(rg 토큰 계수 + private은 파일 안 참조 1), 삭제 후 다시 돌려 연쇄로 남은 것까지 지웠다. 빌드로 확인.
+- 지운 앱 코드(1,499줄): `ReviewView` — 테스트만 쓰던 `ActivityQuickSelectionPolicy`, 안 쓰던 `ActivityCorrectionCatalog.automaticOption`과 그것만 부르던 `option(for:)` 두 개. `SettingsView` — `watchLaunchReportView`·`watchDataSyncStatusText`·`watchProfileLabel`·`sensorProfileLabel`·`SettingsTypography.cardTitle`. `DetailViews` — `widgetAction`. `DraftComponents` — `PreviewActionCat`(285줄)·`Triangle`·`RunningCatView`의 `hopping`·`outline`·`eye`. `MapHomeLocationPresentation` — 그리지 않던 `MapHomeStickmanRenderer`(약 960줄)·`MapHomeStickmanCanvas`·`MapHomeStickmanStyle`(값은 `TaptionLiveActivityStickmanStyle` 시험이 이미 잠근다).
+- 지운 앱 테스트(58줄): 위 정책의 시험 2건(`TimeScaleTests`), `MapHomeStickmanStyle` 중복 단언 3줄.
+- 패키지(소스 227줄): RouteEngine — `RoutePlayback.swift` 전체(`RoutePlaybackProjection`·`RoutePlaybackSample`·`RoutePlaybackDirection`), `ExpectedRoute`·`ExpectedRouteSource`, `RouteEvidenceGate.preferredMode`와 관련 시험 7건. `SubwayRoutePrecedence`는 ALG가 쓸 수 있어 남겼다. TaptionPlanCore(저장소 제외) — `TaptionPlanDayDataSnapshot`, `TaptionPlanTimestampIndex.prefixCount`(시험은 `upperBound`로), `TaptionPlanNLEInputBudgetEngine.cancelGeneration`(시험은 `beginGeneration`으로 같은 세대 차단을 확인), `TaptionRobustScalarFilter.filteredValues`, `TaptionScalarQualityDecision.isAccepted`.
+- 줄 수: 삭제 1,896줄·추가 5줄. 구조 지표 `lines` 167,138→165,426, `funcs` 5,416→5,352, `view_types` 181→180. 예산: `ReviewView` 4,817→4,724, `SettingsView` 2,322→2,238, `DetailViews` 2,949→2,925, `MapHomeLocationPresentation`(2,157→1,164)은 동결 목록에서 빠졌다.
+- 터치: 소유 UI 파일에서 중복 제스처는 찾지 못했다(`MapHomeNLEClipEditor`의 드래그+확대 동시 제스처는 확대 중 드래그를 막는 의도된 구성). 구간 편집기·검색 핀은 `MapHomeView`(PRF 소유)라 temp.md에 넘겼다. scripts는 지운 것 없음(목록은 temp.md).
+- 패키지 시험: `swift test` RouteEngine 48건 통과(`route-swift-test.log`), TaptionPlanCore XCTest 84건 실패 0(`core-swift-test.log`).
+- 앱 시험(시뮬레이터 BOKKI-iPhone11, iOS 27.0, `-parallel-testing-enabled NO`, with-device-lock): 1차는 시뮬레이터가 앱을 띄우지 못해(`The system shell probably crashed`) 0건 실행·실패(`app-tests-1.xcresult`, 시험 실패 아님). 시뮬레이터를 다시 띄워 `TimeScaleTests`·`MapHomeStickmanTests` 222건 통과·실패 0·건너뜀 0(`app-tests-2.xcresult`).
+- 앱 Debug 빌드(generic iOS, `build/DerivedData-CLN`): 성공, 경고 2건은 모두 `MapHomeView.swift`(PRF 소유, 기존)(`app-build-2.log`).
+- 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 **실패** — 이 작업 전부터 있던 `MapHomeTimeSidebar.swift` 3,296→3,301(PRF 소유) 한 건뿐이고 내 변경 파일은 모두 예산 안.
+- 미검증: 전체 단위 시험·화면 시험, 실기기. Watch·위젯 빌드는 바꾼 파일이 없어 돌리지 않았다.
