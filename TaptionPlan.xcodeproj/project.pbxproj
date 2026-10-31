@@ -81,6 +81,37 @@
 		A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */; };
 		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
+		A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */; };
+		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
+		A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */; };
+		A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */; };
+		A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */; };
+		A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */; };
+		A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */; };
+		A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */; };
+		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
+		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
+		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
+		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
+		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
+		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
+		A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */; };
+		A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */; };
+		A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003B /* NLEMultiDayTests.swift */; };
+		A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */; };
+		A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */; };
+		A5B1102A0200000000000036 /* FeatureEngineTests+Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */; };
+		A5B1102A0200000000000034 /* FeatureEngineTests+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */; };
+		A5B1102A0200000000000032 /* FeatureEngineTests+Movement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */; };
+		A5B1102A0200000000000030 /* FeatureEngineTests+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */; };
+		A5B1102A020000000000002E /* FeatureEngineTests+Places.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */; };
+		A5B1102A020000000000002C /* FeatureEngineTests+Planning.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */; };
+		A5B1102A020000000000002A /* FeatureEngineTests+Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */; };
+		A5B1102A0200000000000028 /* FeatureEngineTests+Sleep.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */; };
+		A5B1102A0200000000000026 /* FeatureEngineTests+Transit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */; };
+		A5B1102A0200000000000024 /* FeatureEngineTests+Watch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */; };
+		A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */; };
+		A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */; };
 		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
 		A10000000000000000000019 /* CatPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* CatPresentation.swift */; };
 		A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* TimelineInteractionEngine.swift */; };
@@ -406,6 +437,37 @@
 		F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEfficiencyPolicies.swift; sourceTree = "<group>"; };
 		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTestFixtures.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCacheBenchmarkTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeRailCardTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherRailLayoutTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePresencePolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeGrowthPolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingPersistenceTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficeStayAbsorptionTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmationTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003B /* NLEMultiDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLEMultiDayTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPathSmoothingTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Classification.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Health.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Map.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Movement.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Persistence.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Places.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Planning.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Sensors.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Sleep.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Transit.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Watch.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Weather.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Widget.swift"; sourceTree = "<group>"; };
 		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000018 /* NavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000019 /* CatPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPresentation.swift; sourceTree = "<group>"; };
@@ -675,6 +737,37 @@
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
+				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
+				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
+				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
+				F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */,
+				F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */,
+				F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */,
+				F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */,
+				F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */,
+				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
+				F5B1102A0200000000000049 /* NLETrackTests.swift */,
+				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
+				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
+				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
+				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
+				F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */,
+				F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */,
+				F5B1102A020000000000003B /* NLEMultiDayTests.swift */,
+				F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */,
+				F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */,
+				F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */,
+				F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */,
+				F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */,
+				F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */,
+				F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */,
+				F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */,
+				F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */,
+				F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */,
+				F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */,
+				F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */,
+				F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */,
+				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */,
@@ -1401,6 +1494,37 @@
 			files = (
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
+				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
+				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
+				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,
+				A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */,
+				A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */,
+				A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */,
+				A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */,
+				A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */,
+				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
+				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
+				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
+				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
+				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
+				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
+				A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */,
+				A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */,
+				A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */,
+				A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */,
+				A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */,
+				A5B1102A0200000000000036 /* FeatureEngineTests+Health.swift in Sources */,
+				A5B1102A0200000000000034 /* FeatureEngineTests+Map.swift in Sources */,
+				A5B1102A0200000000000032 /* FeatureEngineTests+Movement.swift in Sources */,
+				A5B1102A0200000000000030 /* FeatureEngineTests+Persistence.swift in Sources */,
+				A5B1102A020000000000002E /* FeatureEngineTests+Places.swift in Sources */,
+				A5B1102A020000000000002C /* FeatureEngineTests+Planning.swift in Sources */,
+				A5B1102A020000000000002A /* FeatureEngineTests+Sensors.swift in Sources */,
+				A5B1102A0200000000000028 /* FeatureEngineTests+Sleep.swift in Sources */,
+				A5B1102A0200000000000026 /* FeatureEngineTests+Transit.swift in Sources */,
+				A5B1102A0200000000000024 /* FeatureEngineTests+Watch.swift in Sources */,
+				A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */,
+				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */,
