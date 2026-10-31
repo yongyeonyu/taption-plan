@@ -2757,6 +2757,7 @@
   - 원인: 1차는 패키지만 만들고 앱 파이프라인은 그대로라 수면 엔진 4벌·첫 점 기준 체류·옛 modelVersion·연봉 문자열 키 여러 벌·오늘 걸음 max가 남았다.
   - 해결: 가드에 분류 패키지 추가, 앱 분류표 JSON 삭제(패키지 리소스 하나), 재계산 표식을 저장소로, 자동 modelVersion `classifier-v1/<단계>`·`legacyAutomaticModelVersions`, 오늘 걸음 워치 우선, 연봉 키 정책 하나, 수면을 `SleepFusion` 하나로, 체류를 중심점 stay point로(장소 키 별칭 시험), 엔진별 `apply*Records`를 `applyClassifierOutput` 하나로.
   - 검증 기준: 분류·활동 패키지 `swift test`, `-only-testing:TaptionPlanTests` 전체 통과(xcresult 실행 수), 앱·위젯·워치·워치 위젯 Debug 빌드, 가드 2개, golden-diff 갱신(실기기 원본 없으면 한계 명시). 끝나면 `build/DerivedData-ALG` 삭제.
+  - 진행(2차): 위 항목 반영, 검증 기준 충족(test.md). 남은 것: 엔진별 감지기 자체(정지 문맥·장소 활동·엄격/화면/충전 수면·활동 분류·공백 추정)는 그대로이고 분류 패키지 HMM은 이동 기록의 `classificationScore`로만 반영된다 — 이동 수단 판정을 HMM 결과로 바꾸는 것은 실기기 원본 replay로 회귀를 본 뒤에 한다. 지난 날짜 일괄 재계산 sweep(갱신한 날만 재계산), 실기기 원본 replay.
 - 다른 세션에 넘길 것:
   - C(PKG1101A01): 앱 저장소(`TaptionStoreV2`)에 `migration_markers`가 없어 재계산 표식을 UserDefaults(`classifierRecomputeMarkers.v1`)에 둔다. `ClassificationRecomputeMarkerStore`만 구현하면 새 `TaptionPlanStore`로 옮길 수 있다. 위젯·워치 번들의 `record-classification.json`은 분류 패키지 리소스와 같은 바이트(v3)여야 한다. 위젯이 패키지를 링크하게 되면 앱 JSON을 지우고 `RecordClassificationCatalog.load`(FeatureModels)를 `ClassifierTaxonomy.current`로 바꾼다. pbxproj에 `ClassifierAdapter.swift`(앱 Sources, id `AC1A55…`/`FC1A55…`)와 분류 패키지 참조(`X8…01`)를 더했다.
   - D(CLN1101A01): `scripts/check-app-engine-import-boundary.sh`의 금지 목록에 `TaptionClassifierEngine`을 더하면 앱이 `TaptionPlanEngine`만 거치는지 같이 지킨다. `DayStoreV3.projectionVersion`을 4→5로 올렸다(TaptionPlanCore 한 줄).

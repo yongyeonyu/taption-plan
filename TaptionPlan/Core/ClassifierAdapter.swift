@@ -234,9 +234,54 @@ enum ClassifierAdapter {
     }
 
     /// 하루 수단 구간을 앱 타입으로(정지는 mode nil). 시험·진단이 패키지 타입을 몰라도 된다.
-    static func travelTimeline(readings: [SensorReading], in span: TimeSpan) throws -> [(span: TimeSpan, mode: TravelMode?, meters: Double)] {
+    static func travelTimeline(readings: [SensorReading], in span: TimeSpan) throws -> [TimelineSegment] {
         try classifyDay(readings: readings, in: span).segments.map {
-            (TimeSpan(start: $0.interval.start, end: $0.interval.end), travelMode($0.mode), $0.distanceMeters)
+            TimelineSegment(span: TimeSpan(start: $0.interval.start, end: $0.interval.end),
+                            mode: travelMode($0.mode), meters: $0.distanceMeters, score: $0.score)
+        }
+    }
+
+    /// 주 행위자 밖(전역 실행기)에서 계산한다. 비격리 async 함수라 호출한 MainActor를 비운다.
+    static func travelTimelineInBackground(readings: [SensorReading], in span: TimeSpan) async throws -> [TimelineSegment] {
+        try travelTimeline(readings: readings, in: span)
+    }
+
+    struct TimelineSegment: Equatable, Sendable {
+        var span: TimeSpan
+        /// 정지는 nil.
+        var mode: TravelMode?
+        var meters: Double
+        /// 구간 사후 확률 평균(0…1).
+        var score: Double
+    }
+
+    /// 자동 이동 기록에 HMM 점수를 붙인다: 기록 시간 중 같은 수단으로 본 구간의 사후 확률을
+    /// 겹친 시간으로 가중 평균한다. 원본이 기록의 절반도 덮지 못하면 점수를 두지 않는다.
+    /// 분류(범주·제목·behavior)는 바꾸지 않고, 사용자 소유 기록은 그대로 둔다.
+    static func scoring(
+        _ actuals: [ActualRecord],
+        timeline: [TimelineSegment],
+        inside span: TimeSpan,
+        activityCorrections: [UUID: ActivityCorrection]
+    ) -> [ActualRecord] {
+        guard !timeline.isEmpty else { return actuals }
+        return actuals.map { actual in
+            let recordSpan = actual.span(asOf: span.end)
+            guard actual.source.usesAutomaticClassification, recordSpan.duration > 0,
+                  recordSpan.intersection(with: span) != nil,
+                  !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
+                  let mode = ClassifierKeywords.mode(in: "\(actual.behavior ?? "") \(actual.title)").flatMap(travelMode)
+            else { return actual }
+            var covered = 0.0, weighted = 0.0
+            for segment in timeline {
+                guard let overlap = segment.span.intersection(with: recordSpan)?.duration, overlap > 0 else { continue }
+                covered += overlap
+                if segment.mode == mode { weighted += overlap * segment.score }
+            }
+            guard covered >= recordSpan.duration / 2 else { return actual }
+            var value = actual
+            value.classificationScore = (weighted / covered * 100).rounded() / 100
+            return value
         }
     }
 
@@ -376,4 +421,21 @@ enum PhoneSleepFusion {
             $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.id.uuidString < $1.id.uuidString
         }
     }
+}
+
+/// 하루 갱신이 `applyClassifierOutput`에 넘기는 입력. 지문이 같은 갱신과 전체 갱신이 같은 순서를 쓴다.
+struct ClassifierRefreshInput {
+    var span: TimeSpan
+    var mealReadings: [SensorReading]
+    var contextStays: [PlaceStay]
+    var contextTravel: [TravelSegment]
+    var contextReadings: [SensorReading]
+    var motionActivities: [MotionActivityRecord]
+    var archivedReadings: [SensorReading]
+    var watchSummaries: [TaptionWatchSensorSummary]
+    var watchAccelerationSamples: [TaptionWatchAccelerationSample]
+    var sleepReadings: [SensorReading]
+    var sleepSpan: TimeSpan
+    var classifiedReadings: [SensorReading]
+    var gapReadings: [SensorReading]
 }

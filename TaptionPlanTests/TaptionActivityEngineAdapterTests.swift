@@ -520,7 +520,7 @@ struct TaptionActivityEngineAdapterTests {
         )
 
         #expect(actual?.categoryID == "work")
-        #expect(actual?.modelVersion == "place-activity-v1")
+        #expect(actual?.modelVersion == "classifier-v1/place")
         #expect(actual.map { TaptionActivityEngineAdapter.trustLabel(for: $0) } == "예상 데이터 · 자동확정")
     }
 
@@ -1093,6 +1093,21 @@ final class ClassifierMigrationTests: XCTestCase {
                                                authoritativeSleepSpans: [span], asOf: span.end).isEmpty)
     }
 
+    func testClassificationScoreComesFromMatchingTimelineAndSkipsUserRecords() {
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(86_400))
+        var bus = automatic("버스", minutes: 0)
+        bus.behavior = "bus"
+        let user = automatic("버스", minutes: 0, manuallyCorrected: true)
+        let timeline = [
+            ClassifierAdapter.TimelineSegment(span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)), mode: .bus, meters: 8_000, score: 0.9),
+            ClassifierAdapter.TimelineSegment(span: TimeSpan(start: start.addingTimeInterval(20 * 60), end: start.addingTimeInterval(30 * 60)), mode: .car, meters: 4_000, score: 0.7),
+        ]
+        let scored = ClassifierAdapter.scoring([bus, user], timeline: timeline, inside: span, activityCorrections: [:])
+        XCTAssertEqual(scored[0].classificationScore, 0.6, "20분×0.9 / 30분")
+        XCTAssertEqual(scored[0].categoryID, bus.categoryID)
+        XCTAssertNil(scored[1].classificationScore)
+    }
+
     func testAwaySecondsDoesNotCountRecordingGaps() {
         let home = PlaceStay(placeKey: "home", displayName: "집", span: TimeSpan(start: start, end: start.addingTimeInterval(8 * 3_600)), confidence: .high)
         let office = PlaceStay(placeKey: "office", displayName: "회사", span: TimeSpan(start: start.addingTimeInterval(9 * 3_600), end: start.addingTimeInterval(12 * 3_600)), confidence: .high)
@@ -1207,7 +1222,7 @@ final class ClassifierGoldenReplayTests: XCTestCase {
                 let old: TravelMode? = label == nil ? nil : TravelModeClassifier().classify(readings: inside, inside: legSpan).mode
                 if label == .airplane {
                     oldFlightMeters = TravelDistanceMath.pathMeters(readings: inside)
-                    newFlightMeters = timeline.filter { $0.mode == .airplane }.map { $0.meters }.reduce(0, +)
+                    newFlightMeters = timeline.filter { $0.mode == .airplane }.map(\.meters).reduce(0, +)
                 }
                 for minute in 0..<Int(legSpan.duration / 60) {
                     let moment = legSpan.start.addingTimeInterval(Double(minute) * 60 + 30)

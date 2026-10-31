@@ -9138,56 +9138,15 @@ final class AppModel {
             // A restaurant can be registered after the last sensor pass. The
             // archived GPS samples are enough to backfill its meal record
             // without rebuilding the route and place lanes.
-            applyRestaurantMealRecords(
-                readings: filteredArchivedReadings,
-                watchSummaries: watchSummaries,
+            guard await applyClassifierOutput(ClassifierRefreshInput(
+                span: span, mealReadings: filteredArchivedReadings,
+                contextStays: snapshot.places, contextTravel: snapshot.travel,
+                contextReadings: sensorQuality.readings, motionActivities: motionActivities,
+                archivedReadings: archivedReadings, watchSummaries: watchSummaries,
                 watchAccelerationSamples: watchAccelerationSamples,
-                inside: span
-            )
-            await applyStationaryContextRecords(
-                stays: snapshot.places,
-                stationarySpans: motionActivities
-                    .filter { $0.motion == .stationary }
-                    .map(\.span),
-                travel: snapshot.travel,
-                readings: sensorQuality.readings,
-                watchSummaries: watchSummaries,
-                watchAccelerationSamples: watchAccelerationSamples,
-                evidence: ClassifierAdapter.sensorEvidenceSpan(
-                    readings: archivedReadings,
-                    activities: motionActivities,
-                    inside: span
-                ),
-                inside: span
-            )
-            applyPlaceActivityRecords(stays: snapshot.places, inside: span)
-            // Sleep inference depends on the current observation cutoff, not
-            // only on new samples. Re-run it on refresh so an earlier sparse
-            // pass can become valid as today's sensor window completes.
-            applyChargingInactivitySleepRecords(
-                readings: sleepReadings,
-                inside: sleepSpan
-            )
-            snapshot.settings.confirmedSleepSpans =
-                TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
-                    existing: snapshot.settings.confirmedSleepSpans,
-                    corrections: snapshot.settings.activityCorrections,
-                    actuals: snapshot.actuals
-                )
-            snapshot.actuals =
-                TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
-                    snapshot.settings.confirmedSleepSpans,
-                    to: snapshot.actuals
-                )
-            guard await applyClassifiedActivityRecords(
-                readings: sensorQuality.routeReadings,
-                inside: span
-            ) else { return false }
-            applyInferredGapRecords(
-                readings: sensorQuality.readings,
-                travel: snapshot.travel,
-                inside: span
-            )
+                sleepReadings: sleepReadings, sleepSpan: sleepSpan,
+                classifiedReadings: sensorQuality.routeReadings, gapReadings: sensorQuality.readings
+            )) else { return false }
             await classificationRecompute?.complete(recomputeOutcome, day: span.start)
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
@@ -9483,63 +9442,18 @@ final class AppModel {
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
-        applyRestaurantMealRecords(
-            readings: readings,
-            watchSummaries: watchSummaries,
-            watchAccelerationSamples: watchAccelerationSamples,
-            inside: span
-        )
         // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
         // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
-        let contextStays = hasPrimaryLocationEvidence
-            ? places
-            : snapshot.places
-        let contextTravel = hasPrimaryLocationEvidence
-            ? travel
-            : snapshot.travel
-        await applyStationaryContextRecords(
-            stays: contextStays,
-            stationarySpans: motionActivities
-                .filter { $0.motion == .stationary }
-                .map(\.span),
-            travel: contextTravel,
-            readings: readings,
-            watchSummaries: watchSummaries,
+        guard await applyClassifierOutput(ClassifierRefreshInput(
+            span: span, mealReadings: readings,
+            contextStays: hasPrimaryLocationEvidence ? places : snapshot.places,
+            contextTravel: hasPrimaryLocationEvidence ? travel : snapshot.travel,
+            contextReadings: readings, motionActivities: motionActivities,
+            archivedReadings: archivedReadings, watchSummaries: watchSummaries,
             watchAccelerationSamples: watchAccelerationSamples,
-            evidence: ClassifierAdapter.sensorEvidenceSpan(
-                readings: archivedReadings,
-                activities: motionActivities,
-                inside: span
-            ),
-            inside: span
-        )
-        guard !Task.isCancelled, acceptsDataMutation() else { return false }
-        applyPlaceActivityRecords(stays: contextStays, inside: span)
-        applyChargingInactivitySleepRecords(
-            // Sleep inference also consumes motion-only samples that have no
-            // GPS point; keep the raw sensor stream as its input.
-            readings: sleepReadings,
-            inside: sleepSpan
-        )
-        snapshot.settings.confirmedSleepSpans =
-            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
-                existing: snapshot.settings.confirmedSleepSpans,
-                corrections: snapshot.settings.activityCorrections,
-                actuals: snapshot.actuals
-            )
-        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
-            snapshot.settings.confirmedSleepSpans,
-            to: snapshot.actuals
-        )
-        guard await applyClassifiedActivityRecords(
-            readings: readings,
-            inside: span
-        ) else { return false }
-        applyInferredGapRecords(
-            readings: sensorQuality.readings,
-            travel: snapshot.travel,
-            inside: span
-        )
+            sleepReadings: sleepReadings, sleepSpan: sleepSpan,
+            classifiedReadings: readings, gapReadings: sensorQuality.readings
+        )) else { return false }
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -9572,6 +9486,64 @@ final class AppModel {
             from: snapshot.actuals,
             suppressedIDs: snapshot.settings.suppressedActualIDs
         )
+    }
+
+    /// 하루 자동 분류를 한 순서로 적용한다(식사 → 정지 문맥 → 장소 활동 → 수면 → 확정 수면
+    /// → 활동 분류 → 공백 추정 → 분류 점수). 갱신 경로 둘이 같은 순서를 따로 들고 있던 것을 합쳤다.
+    private func applyClassifierOutput(_ input: ClassifierRefreshInput) async -> Bool {
+        let span = input.span
+        applyRestaurantMealRecords(
+            readings: input.mealReadings,
+            watchSummaries: input.watchSummaries,
+            watchAccelerationSamples: input.watchAccelerationSamples,
+            inside: span
+        )
+        await applyStationaryContextRecords(
+            stays: input.contextStays,
+            stationarySpans: input.motionActivities.filter { $0.motion == .stationary }.map(\.span),
+            travel: input.contextTravel,
+            readings: input.contextReadings,
+            watchSummaries: input.watchSummaries,
+            watchAccelerationSamples: input.watchAccelerationSamples,
+            evidence: ClassifierAdapter.sensorEvidenceSpan(
+                readings: input.archivedReadings, activities: input.motionActivities, inside: span
+            ),
+            inside: span
+        )
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        applyPlaceActivityRecords(stays: input.contextStays, inside: span)
+        // Sleep inference depends on the current observation cutoff and also
+        // consumes motion-only samples without a GPS point.
+        applyChargingInactivitySleepRecords(readings: input.sleepReadings, inside: input.sleepSpan)
+        snapshot.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: snapshot.settings.confirmedSleepSpans,
+                corrections: snapshot.settings.activityCorrections,
+                actuals: snapshot.actuals
+            )
+        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            snapshot.settings.confirmedSleepSpans,
+            to: snapshot.actuals
+        )
+        guard await applyClassifiedActivityRecords(readings: input.classifiedReadings, inside: span) else {
+            return false
+        }
+        applyInferredGapRecords(readings: input.gapReadings, travel: snapshot.travel, inside: span)
+        await applyClassificationScores(readings: input.classifiedReadings, inside: span)
+        return !Task.isCancelled
+    }
+
+    /// 분류 패키지 HMM의 사후 확률을 자동 이동 기록의 `classificationScore`로 남긴다.
+    /// 분류(범주·제목)는 바꾸지 않고, 사용자 소유 기록은 건드리지 않는다.
+    private func applyClassificationScores(readings: [SensorReading], inside span: TimeSpan) async {
+        guard !readings.isEmpty else { return }
+        guard let timeline = try? await ClassifierAdapter.travelTimelineInBackground(readings: readings, in: span),
+              !Task.isCancelled else { return }
+        let scored = ClassifierAdapter.scoring(
+            snapshot.actuals, timeline: timeline, inside: span,
+            activityCorrections: snapshot.settings.activityCorrections
+        )
+        if scored != snapshot.actuals { snapshot.actuals = scored }
     }
 
     private func applyInferredGapRecords(
