@@ -5000,3 +5000,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - replay 비교표 `build/validation/ALG1101A01/golden-diff.json`: 라벨 415분 중 새 415 · 이전 370(버스 20분·지하철 25분이 이전 0), 비행 거리 새 1,237km · 이전 0, 사용자 기록 회귀 0분. **한계**: 실기기 원본이 맥에 남아 있지 않아(기기 복사는 범위 밖) 합성 하루 4개(출퇴근·비행·배·자동차/달리기)다. 이전 분류에는 정답 구간 경계를 주었고, 새 점수표가 같은 속도 분포로 만든 자료라 낙관적이다. 실제 원본 replay(`TEST_RUNNER_TAPTION_RAW_REPLAY`)는 미검증.
 - 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 `MapHomeTimeSidebar.swift`(3,296 → 3,301, 출발 커밋부터 있던 B 소유 초과) 하나만 남고 이번 변경으로 늘어난 항목 없음(`arch-3.log`).
 - 미검증: 실기기, 재계산이 실제 사용자 DB에서 날짜별 한 번만 도는지(시험 실행에서는 꺼짐), 위젯·워치 빌드(바꾼 공유 파일은 `FeatureModels.swift`의 `ActualRecord`뿐).
+
+## ALL1101A01 1차 합치기 검증 (2026-11-02, main bccec69)
+- 합친 순서: CLN1101A01 → PRF1101A01 → PKG1101A01 → ALG1101A01. 충돌은 `docs/architecture-baseline.json`(파일별 작은 예산을 고름), `temp.md`·`test.md`(양쪽 절 보존), `DEVELOPMENT.md` 패키지 표, `project.pbxproj` 로컬 패키지 참조(세 패키지 모두 보존)뿐. `plutil -lint` 통과.
+- 가드: `architecture-metrics.py --check` 통과, `check-app-engine-import-boundary.sh` 통과.
+- 패키지 `swift test`: TaptionPlanCore 86, TaptionActivityEngine 33, TaptionRouteEngine 48, TaptionClassifierEngine 26, TaptionPlanStore 6, TaptionWatchSync 7, TaptionPlanEngine 1 — 실패 0(`build/validation/ALL1101A01/swift-test-*.log`).
+- Debug 빌드(`build/DerivedData-ALL`): TaptionPlan·TaptionPlanWidget(generic iOS)·TaptionPlanWatch·TaptionPlanWatchWidget(generic watchOS) 모두 BUILD SUCCEEDED(`build-*.log`).
+- 단위 전체(`-only-testing:TaptionPlanTests`, BOKKI-iPhone11, 병렬 끔, device lock): `unit-all.xcresult` 1,720건 중 통과 1,716 · 실패 0 · 건너뜀 4.
+- 미검증: 화면 시험 전체(재생 HUD는 PRF에서 새벽이라 건너뜀), 실기기 설치·재생/팬 벤치·발열·배터리, 위젯·워치 실제 화면, 분류 실기기 원본 replay. 분류 2차(AppModel 파이프라인을 `classifyDay` 출력 하나로, 수면 4벌 통합, 중심점 체류, 연봉 키 통합)와 2차 큰 파일 분해는 남음.

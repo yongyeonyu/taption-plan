@@ -2723,6 +2723,7 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
+- 진행(2026-11-02): 1차 4개 세션을 main에 합침(bccec69). 패키지·네 제품 빌드·단위 1,716건 통과(test.md). 남은 것: 분류 2차, 2차 큰 파일 분해, 화면 시험 전체, 실기기 검증(대표 승인 후).
 
 ## CLN1101A01 미사용 코드·나머지 UI 정리(ALL1101A01 D, 2026-11-01)
 - 요청: 계획 표 D행. 소유 파일(`ReviewView`·`GoalsView`·`SettingsView`·`DetailViews`·`AddPlanSheet`·`DraftComponents`·`MapHomeNLE*`·`MapHomeLocationPresentation`·`Packages/TaptionRouteEngine`·`Packages/TaptionPlanCore`(저장소 제외)·`scripts/`)의 미사용 타입·함수·프로퍼티·변수 제거, 사용처 없는 패키지 공개 API 정리, 소유 UI의 중복 터치 코드 정리, 쓰이지 않는 스크립트 목록.
