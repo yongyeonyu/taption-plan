@@ -1,5 +1,15 @@
 # 검증 기록
 
+## SPL1102A02 · AppModel·AppleIntegrations·FeatureEngineTests 분해 (2026-11-01)
+- 변경: 선언을 그대로 옮겼다(본문 수정 없음). 파일을 넘어 쓰이게 된 `private` 멤버는 internal로(AppModel 237개, `AppleSensorCollector` 62개, 테스트 49개), 다른 파일에서 쓰는 `private(set)` 저장 프로퍼티 68개는 setter를 internal로 넓혔다. 저장 프로퍼티 2개(`watchHealthRefreshTask`·`classificationRecompute`)는 클래스 본문으로 올렸다. `WatchHealthSnapshotRetryPolicy`(Foundation만 쓰는 순수 계산)는 `TaptionPlanCore`로 옮겨 public으로 열었다. `TimeScale(timelineLevel:)` 사설 확장은 `SettingsView`에 다른 값(.year→.month)의 같은 이름이 있어 넓히지 않고, 쓰는 함수 둘(`reloadSnapshotAfterStoreChange`·`resetSettingsToDefaults`)을 `AppModel+Bootstrap.swift`로 모았다. 테스트 공용 `utcCalendar`·`makeDate`는 두 클래스(FeatureEngineTests·OfficeStayAbsorptionTests)에 같은 본문으로 있던 것을 `UTCDateFixture` 하나로, 파일 수준 스텁 저장소 13종은 `FeatureEngineTestFixtures.swift`로 모았다.
+- 줄 수(전 → 후): `AppModel.swift` 14,281 → 921 + `AppModel+*.swift` 23개(68~1,026) + `AppModelPolicies` 105·`AppModelSupportTypes` 282. `AppleIntegrations.swift` 4,860 → 삭제, 15개 파일(AppleHealthService 1,074 · AppleSensorCollector 845 + `+Updates` 718 · AppleTransportContextService 501 · AppleWeatherContextService 321 · AirPodsActivityService 215 · AppleCalendarService 199 · VoiceMemoServices 195 · AirQualityContextService 190 · PlanNotificationScheduler 145 · AppleMotionHistoryService 143 · AppleIntegrationPolicies 141 · ApplePhotoLibraryService 134 · DeviceStillnessTracker 53 · CurrentConnectedWiFiService 31). `FeatureEngineTests.swift` 31,824 → 2,751(도우미·분류 밖 시험) + `FeatureEngineTests+*.swift` 13개(Transit 3,738 · Movement 3,502 · Places 3,495 · Planning 2,874 · Classification 2,001 · Sleep 1,906 · Watch 1,689 · Persistence 1,609 · Widget 855 · Sensors 803 · Map 637 · Weather 514 · Health 453) + 다른 클래스 17개 각자 파일 + fixture 372. 앱 쪽 새 파일은 모두 1,200줄 이하.
+- 시험 이름: 분할 전후 `func test…` 845개 이름 목록이 같다(정렬 diff 0).
+- 단위 전체(BOKKI-iPhone11 시뮬레이터, `with-device-lock.sh`, 병렬 끔): 1회차 `unit-1`은 시험 분할 경계 오류로 컴파일 실패(본문 안 4칸 들여쓴 줄을 멤버 시작으로 읽음 → 중괄호 깊이로 경계를 다시 잡음). 2회차 `unit-2.xcresult` **1,727건 중 1,723 통과 · 실패 0 · 건너뜀 4**(main 기준과 같음, XCTest 1,676 + Swift Testing 51).
+- Debug 빌드(generic): 앱 `TaptionPlan`·`TaptionPlanWidget`(iOS), `TaptionPlanWatch`·`TaptionPlanWatchWidget`(watchOS) 모두 `BUILD SUCCEEDED`. 경고는 기존 `MapHomeView.swift` 2건과 매크로 1건뿐, 새 파일 경고 0.
+- 가드: `architecture-metrics.py --check` 통과(동결 목록에서 `AppModel.swift`·`AppleIntegrations.swift` 삭제, `largest_type_lines` 13,594 → 11,626), `check-app-engine-import-boundary.sh` 통과.
+- 미검증: 실기기 실행·설치는 하지 않았다(요청 범위 밖). 접근 수준을 넓힌 멤버가 다른 화면 코드에서 새로 쓰일 여지가 생겼다(동작 변화 없음).
+- 로그: `build/validation/SPL1102A02/`. DerivedData(`build/DerivedData-SPL2`)는 지웠다.
+
 ## UXP1019C01 · 데이터 보호 키패드·메뉴·Apple 지도 안개·GPS 간격·Apple Watch 상태 (2026-10-19)
 - 앱 Debug 빌드(generic iOS, 별도 DerivedData `/tmp/tp-uxp1019c01-dd`): 1차 실패(`CGGradient` 정적 상수 동시성 오류) → `nonisolated(unsafe)`로 고친 뒤 `BUILD SUCCEEDED`(`build/validation/UXP1019C01/app-build2.log`).
 - 단위 테스트: 임시 시뮬레이터 iPhone 17(iOS 27)에서 `FeatureEngineTests/testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes` 1개 통과(`gps-tests.xcresult`). 1분 단위 값과 4·6·9·11·14분 스냅을 단언에 추가했다.

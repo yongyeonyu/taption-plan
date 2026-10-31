@@ -25,11 +25,10 @@
   },
   "metrics": {
     "largest_file_lines": 22914,
-    "largest_type_lines": 13594
+    "largest_type_lines": 11626
   },
   "frozen_files": {
     "Packages/TaptionPlanCore/Sources/TaptionPlanCore/DayStoreV3.swift": 2408,
-    "TaptionPlan/Core/AppleIntegrations.swift": 4863,
     "TaptionPlan/Core/FeatureModels.swift": 4701,
     "TaptionPlan/Core/HealthKitImportCoordinator.swift": 1387,
     "TaptionPlan/Core/PlanRepository.swift": 1374,
@@ -54,7 +53,6 @@
     "TaptionPlan/UI/ReviewView.swift": 4724,
     "TaptionPlan/UI/ScheduleView.swift": 11817,
     "TaptionPlan/UI/SettingsView.swift": 2238,
-    "TaptionPlan/UX/AppModel.swift": 14324,
     "TaptionPlanWatch/WatchConnectivityController.swift": 1623,
     "TaptionPlanWatch/WatchWorkoutManager.swift": 2349
   },
