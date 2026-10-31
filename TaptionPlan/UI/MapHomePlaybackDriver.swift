@@ -35,6 +35,11 @@ final class MapHomePlaybackDriver {
     }
 
     let inputs: Inputs
+    /// 장소 사전·지하철 구간·측정값 시각 색인. 재생 동안 바뀌지 않아 한 번만 만든다(PRF1101A01).
+    private let lookup: MapHomePlaybackLookup
+    private let firstCoordinate: CLLocationCoordinate2D?
+    /// 속도는 초 단위로 한 번만 계산한다. 120Hz면 같은 초 안에서 수십 번 같은 값을 구했다.
+    private var speedCache: (second: Int, value: Double?)?
     /// 예상 경로가 뒤늦게 풀리면 바뀐다.
     var projection: MapHomeWBSPlaybackProjection?
     var preferredForecastLegIDs: Set<String> = []
@@ -65,6 +70,8 @@ final class MapHomePlaybackDriver {
 
     init(inputs: Inputs) {
         self.inputs = inputs
+        lookup = MapHomePlaybackLookup(readings: inputs.readings, travel: inputs.travel, places: inputs.places)
+        firstCoordinate = Self.firstKnownCoordinate(inputs)
         minute = inputs.startMinute
     }
 
@@ -107,7 +114,7 @@ final class MapHomePlaybackDriver {
         )
         let date = inputs.dayStart.addingTimeInterval(minute * 60)
         // 00시에 위치 기록이 없어도 하루의 첫 위치로 바로 포커싱한다. 예전에는 이동이 시작돼서야 카메라가 움직였다(ARC1030A05).
-        let coordinate = smoothedPosition(at: date) ?? lastCoordinate ?? firstKnownCoordinate()
+        let coordinate = smoothedPosition(at: date) ?? lastCoordinate ?? firstCoordinate
         if let coordinate { lastCoordinate = coordinate }
         if isCameraSuppressed() || sink == nil { frameStats.cameraSkips += 1 }
         if !isCameraSuppressed(), let sink {
@@ -119,7 +126,7 @@ final class MapHomePlaybackDriver {
                 let stay = inputs.zoomPlan.targetDistance(atMinute: minute, speedMetersPerSecond: 0)
                 distance = isAdaptiveZoom ? stay : (current ?? stay)
             } else if isAdaptiveZoom, let current {
-                let speed = MapHomePlaybackSpeed.speed(at: date, travel: inputs.travel, readings: inputs.readings)
+                let speed = speed(at: date)
                 let target = inputs.zoomPlan.targetDistance(atMinute: minute, speedMetersPerSecond: speed)
                 distance = smoother.next(current: current, target: target, uptime: ProcessInfo.processInfo.systemUptime)
             } else {
@@ -145,7 +152,15 @@ final class MapHomePlaybackDriver {
     }
 
     /// 하루에서 처음 알 수 있는 위치(첫 위치 기록, 없으면 머문 장소). 00시 위치를 모를 때 쓴다.
-    private func firstKnownCoordinate() -> CLLocationCoordinate2D? {
+    private func speed(at date: Date) -> Double? {
+        let second = Int(date.timeIntervalSinceReferenceDate.rounded(.down))
+        if let speedCache, speedCache.second == second { return speedCache.value }
+        let value = lookup.speed(at: date, travel: inputs.travel)
+        speedCache = (second, value)
+        return value
+    }
+
+    private static func firstKnownCoordinate(_ inputs: Inputs) -> CLLocationCoordinate2D? {
         if let point = inputs.readings.lazy.compactMap(\.point).first {
             return Self.coordinate(MapHomePlaybackLocation(coordinate: point))
         }
@@ -170,7 +185,7 @@ final class MapHomePlaybackDriver {
             frame: frame,
             normalizedReadings: inputs.readings,
             travel: inputs.travel,
-            places: inputs.places,
+            lookup: lookup,
             expectedCoordinate: frame == nil ? expectedCoordinate(date) : nil
         ).flatMap(Self.coordinate)
     }

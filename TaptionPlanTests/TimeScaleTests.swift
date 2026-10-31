@@ -3724,10 +3724,11 @@ final class TimeScaleTests: XCTestCase {
         XCTAssertNil(rows[4].minuteComponent)
     }
 
-    func testMapHomeTimeSidebarHandleStartsOnTouchLikeWBS() {
+    /// 손잡이 드래그는 4pt부터. 탭은 드래그 종료로 한 번 더 알려지지 않는다(PRF1101A01).
+    func testMapHomeTimeSidebarHandleDragStartsAfterFourPoints() {
         XCTAssertEqual(
             MapHomeTimeSidebarMath.handleDragMinimumDistance,
-            0,
+            4,
             accuracy: 0.001
         )
     }

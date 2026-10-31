@@ -22,7 +22,8 @@ enum MapHomeTimeSidebarMath {
     static let handleDoubleTapHitScale: CGFloat = 1.5
     static let selectionTimeBlockHitWidth: CGFloat =
         selectionTimeBlockWidth * handleDoubleTapHitScale
-    static let handleDragMinimumDistance: CGFloat = 0
+    /// 4pt 움직여야 손잡이 드래그가 시작된다. 그 아래는 탭(한 번 알림·두 번 편집)으로 처리한다(PRF1101A01).
+    static let handleDragMinimumDistance: CGFloat = 4
     static let handleDragHitHeight: CGFloat = 88
     static let trailingHandleDragHitHeight: CGFloat = handleDragHitHeight * 1.5
     static let handleLaneWidth: CGFloat = 69

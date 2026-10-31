@@ -1163,7 +1163,6 @@ struct MapHomeTimeSidebar: View {
     @State private var viewportDragStartMinute: Int?
     @State private var gestureBaseState: MapHomeTimeSidebarNLEState?
     @State private var isHandleDragging = false
-    @State private var handleTouchStartUptime: TimeInterval?
     @State private var handleDoubleTapDetector = MapHomeSidebarDoubleTapDetector()
     @State private var nleProjection = TimelineNLEProjection<MapHomeTimeSidebarNLEState>()
     @State private var handleDrag = MapHomeTimeSidebarHandleDrag()
@@ -1172,7 +1171,7 @@ struct MapHomeTimeSidebar: View {
     @State private var pinchStepOffset = 0
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) private var timeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
     @AppStorage(MapHomeSidebarRulerInterval.storageKey) private var rulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
-    @State private var lastPinchRenderUptime: TimeInterval = 0
+    @State private var pinchGate = TimelineTrailingInputGate<Int>()
 
     private let railWidth: CGFloat
     private let trailingInteractionWidth: CGFloat
@@ -1727,12 +1726,11 @@ struct MapHomeTimeSidebar: View {
             viewportDragStartMinute = nil
             gestureBaseState = nil
             isHandleDragging = false
-            handleTouchStartUptime = nil
             nleProjection.reset()
             handleDrag.reset()
             pendingRailSegments = nil
             pinchStepOffset = 0
-            lastPinchRenderUptime = 0
+            pinchGate.reset()
         }
         .onChange(of: segments) { _, newSegments in
             if isTimelineInteractionActive {
@@ -1881,11 +1879,7 @@ struct MapHomeTimeSidebar: View {
                     )
                 )
                 .zIndex(3)
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        publish(minute)
-                    }
-                )
+                .simultaneousGesture(handleTapGesture(minute: minute, maxMinute: maxMinute))
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
@@ -1907,11 +1901,7 @@ struct MapHomeTimeSidebar: View {
                     )
                 )
                 .zIndex(3)
-                .simultaneousGesture(
-                    TapGesture().onEnded {
-                        publish(minute)
-                    }
-                )
+                .simultaneousGesture(handleTapGesture(minute: minute, maxMinute: maxMinute))
                 .accessibilityLabel(
                     activity?.accessibilityLabel ?? fallbackActivity.accessibilityLabel
                 )
@@ -1954,9 +1944,6 @@ struct MapHomeTimeSidebar: View {
             coordinateSpace: .named("mapHomeTimeSidebarRail")
         )
             .onChanged { value in
-                if handleTouchStartUptime == nil {
-                    handleTouchStartUptime = ProcessInfo.processInfo.systemUptime
-                }
                 if !isHandleDragging {
                     isHandleDragging = true
                     onInteractionChanged?(true)
@@ -2005,29 +1992,27 @@ struct MapHomeTimeSidebar: View {
                     }
                     render(projected, nowUptime: nowUptime, force: true)
                 }
-                let tappedMinute = min(max(selectedMinute, 0), maxMinute)
-                let endUptime = ProcessInfo.processInfo.systemUptime
-                let isDoubleTap = handleDoubleTapDetector.registerEnd(
-                    startUptime: handleTouchStartUptime ?? endUptime,
-                    endUptime: endUptime,
-                    translation: value.translation,
-                    location: value.location
-                )
-                handleTouchStartUptime = nil
                 dragStartMinute = nil
                 isHandleDragging = false
                 gestureBaseState = nil
                 handleDrag.reset()
                 commitPendingRailSnapshot()
                 onInteractionChanged?(false)
-                if isDoubleTap {
-                    TaptionPlanDiagnosticsLogger.shared.record(
-                        "sidebar_double_tap",
-                        metrics: ["minute": Double(tappedMinute)]
-                    )
-                    onSectionEdit?(tappedMinute)
-                }
             }
+    }
+
+    /// 손잡이 탭 한 경로: 한 번이면 그 시각을 한 번만 알리고, 가까이 연달아 두 번이면 섹션 편집을 연다.
+    /// 드래그는 4pt 움직여야 시작하므로 탭이 드래그 종료로 한 번 더 알려지지 않는다(PRF1101A01).
+    private func handleTapGesture(minute: Int, maxMinute: Int) -> some Gesture {
+        SpatialTapGesture().onEnded { value in
+            let now = ProcessInfo.processInfo.systemUptime
+            let tappedMinute = min(max(minute, 0), maxMinute)
+            guard handleDoubleTapDetector.registerEnd(
+                startUptime: now, endUptime: now, translation: .zero, location: value.location
+            ) else { return publish(tappedMinute) }
+            TaptionPlanDiagnosticsLogger.shared.record("sidebar_double_tap", metrics: ["minute": Double(tappedMinute)])
+            onSectionEdit?(tappedMinute)
+        }
     }
 
     private func viewportDragGesture(trackHeight: CGFloat) -> some Gesture {
@@ -2101,27 +2086,23 @@ struct MapHomeTimeSidebar: View {
                     magnification: scale
                 )
                 guard offset != pinchStepOffset else { return }
-                guard TimelineInteractionFrameGate.shouldRender(
-                    lastUptime: &lastPinchRenderUptime,
-                    nowUptime: ProcessInfo.processInfo.systemUptime
-                ) else { return }
-                let delta = offset - pinchStepOffset
-                for _ in 0..<abs(delta) {
-                    zoomTimeline(direction: delta > 0 ? 1 : -1)
-                }
-                pinchStepOffset = offset
+                // 걸러진 마지막 단계는 창 끝에 한 번 반영한다(손가락이 멈춰도 다음 입력을 기다리지 않음, PRF1101A01).
+                pinchGate.deliver = { applyPinchStepOffset($0) }
+                pinchGate.submit(offset)
             }
             .onEnded { scale in
-                let offset = MapHomeTimeSidebarPinchMath.stepOffset(
-                    magnification: scale
-                )
-                let delta = offset - pinchStepOffset
-                for _ in 0..<abs(delta) {
-                    zoomTimeline(direction: delta > 0 ? 1 : -1)
-                }
+                pinchGate.reset()
+                applyPinchStepOffset(MapHomeTimeSidebarPinchMath.stepOffset(magnification: scale))
                 pinchStepOffset = 0
-                lastPinchRenderUptime = 0
             }
+    }
+
+    private func applyPinchStepOffset(_ offset: Int) {
+        let delta = offset - pinchStepOffset
+        for _ in 0..<abs(delta) {
+            zoomTimeline(direction: delta > 0 ? 1 : -1)
+        }
+        pinchStepOffset = offset
     }
 
     private func publish(_ minute: Int) {

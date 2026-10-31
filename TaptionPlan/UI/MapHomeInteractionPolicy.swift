@@ -807,7 +807,11 @@ final class MapHomeStickmanViewportProjection {
 /// 카운터 창만 화면 틱마다 읽어 화랑이(UIKit이 같은 프레임에 옮기는 뷰)와 함께 움직인다(UIX1031A06).
 @MainActor
 final class MapHomeAppleStickmanLivePoint {
-    var point: CGPoint?
+    let channel = MapHomeLivePointChannel()
+    var point: CGPoint? {
+        get { channel.point }
+        set { channel.send(newValue) }
+    }
 }
 
 @MainActor
@@ -817,7 +821,8 @@ final class MapHomeVectorViewportStore {
     private(set) var stickmanPoint: CGPoint?
     private var stickmanProjection = MapHomeStickmanViewportProjection()
     /// 재생 중 화랑이 점. 관찰하지 않는다: 매 프레임 바뀌어도 오버레이 전체를 다시 그리지 않는다(PLY1029A05).
-    @ObservationIgnored private(set) var livePoint: CGPoint?
+    @ObservationIgnored let liveChannel = MapHomeLivePointChannel()
+    var livePoint: CGPoint? { liveChannel.point }
     /// 재생 중 지도 엔진이 프레임마다 투영한 뷰포트. 오버레이(발자국·장소 아이콘·화살표)가 이 값으로 지도와 함께 움직인다(ARC1030A02).
     @ObservationIgnored var livePlaybackViewport: MapHomeVectorViewport?
     @ObservationIgnored private var lastObservedUptime: TimeInterval = 0
@@ -838,7 +843,7 @@ final class MapHomeVectorViewportStore {
 
     /// 재생 구동기가 매 프레임 화랑이 점을 넘긴다. 마커는 `livePoint`를 직접 읽고, 관찰 값은 간격마다만 바꾼다.
     func publishPlaybackPoint(_ point: CGPoint, nowUptime: TimeInterval) {
-        livePoint = point
+        liveChannel.send(point)
         guard nowUptime - lastObservedUptime >= Self.playbackObservedInterval else { return }
         lastObservedUptime = nowUptime
         if stickmanPoint != point {
@@ -850,7 +855,7 @@ final class MapHomeVectorViewportStore {
         _ point: CGPoint,
         nowUptime: TimeInterval
     ) {
-        livePoint = nil
+        liveChannel.send(nil)
         guard let rendered = stickmanProjection.submit(
             point,
             nowUptime: nowUptime

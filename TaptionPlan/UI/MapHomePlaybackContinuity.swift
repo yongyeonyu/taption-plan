@@ -41,16 +41,41 @@ extension MapHomePlaybackLocation {
         return Self(coordinate: point)
     }
 
+    /// 재생 프레임용: 장소 좌표 사전과 지하철 구간을 미리 만든 `lookup`을 쓴다(PRF1101A01).
+    static func resolveOrGap(
+        at date: Date,
+        frame: MapHomeWBSPlaybackFrame?,
+        normalizedReadings: [SensorReading],
+        travel: [TravelSegment],
+        lookup: MapHomePlaybackLookup,
+        expectedCoordinate: GeoPoint? = nil
+    ) -> Self? {
+        if let resolved = resolve(
+            at: date,
+            frame: frame,
+            normalizedReadings: normalizedReadings,
+            confirmedTravel: lookup.subwayTravel,
+            expectedCoordinate: expectedCoordinate
+        ) {
+            return resolved
+        }
+        return gapCoordinate(at: date, travel: travel, placePoints: lookup.placePoints).map { Self(coordinate: $0) }
+    }
+
     /// 이동 구간의 출발·도착 장소 좌표를 시각 비율로 잇는다. 여러 구간이 겹치면 늦게 시작한 쪽을 쓴다.
     static func gapCoordinate(
         at date: Date,
         travel: [TravelSegment],
         places: [PlaceStay]
     ) -> GeoPoint? {
-        let points = Dictionary(
-            places.compactMap { place in place.point.map { (place.id, $0) } },
-            uniquingKeysWith: { first, _ in first }
-        )
+        gapCoordinate(at: date, travel: travel, placePoints: MapHomePlaybackLookup.placePoints(places))
+    }
+
+    static func gapCoordinate(
+        at date: Date,
+        travel: [TravelSegment],
+        placePoints points: [UUID: GeoPoint]
+    ) -> GeoPoint? {
         let active = travel
             .filter { $0.span.contains(date) }
             .sorted { $0.span.start < $1.span.start }

@@ -782,6 +782,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         context.coordinator.updateContent(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyHeadingIfNeeded(to: mapView)
+        context.coordinator.updateFrameRate(of: mapView)
         playbackDriver?.sink = context.coordinator
     }
 
@@ -824,6 +825,17 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         private var lastPlaybackViewportUptime: TimeInterval = 0
 
+        private func projectedMarkerPoints(in mapView: MLNMapView) -> [String: CGPoint] {
+            let camera = mapView.camera, bounds = mapView.visibleCoordinateBounds
+            return markerProjector.points(
+                markers: parent.markers,
+                camera: .init(latitude: camera.centerCoordinate.latitude, longitude: camera.centerCoordinate.longitude,
+                              altitude: camera.altitude, heading: camera.heading, pitch: camera.pitch, size: mapView.bounds.size),
+                visible: .init(south: bounds.sw.latitude, west: bounds.sw.longitude, north: bounds.ne.latitude, east: bounds.ne.longitude),
+                project: { mapView.convert($0, toPointTo: mapView) }
+            )
+        }
+
         private func currentViewport(of mapView: MLNMapView) -> MapHomeVectorViewport {
             let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds)
             let camera = mapView.camera
@@ -833,10 +845,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 cameraDistance: max(camera.altitude, 1),
                 heading: camera.heading,
                 pitch: camera.pitch,
-                markerPoints: Dictionary(
-                    parent.markers.map { ($0.id, mapView.convert($0.coordinate, toPointTo: mapView)) },
-                    uniquingKeysWith: { first, _ in first }
-                )
+                markerPoints: projectedMarkerPoints(in: mapView)
             )
         }
         private weak var mapView: MLNMapView?
@@ -850,12 +859,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
         private var maximumViewportProjectionMS: Double = 0
         private var maximumViewportFrameGapMS: Double = 0
         private var lastViewportPublishUptime: TimeInterval = 0
-        /// 측정용 자동 지도 이동(`-autoBenchMapPan`, PRF1030A02). 손가락 팬처럼 프레임마다 지도를 옮기고
-        /// 뷰포트를 `force: false`로 내보낸다. 실행 인자가 없으면 쓰이지 않는다.
-        private var benchPanLink: CADisplayLink?
-        private var benchPanStart: (uptime: TimeInterval, center: CLLocationCoordinate2D, span: Double)?
-        private weak var benchMapView: MLNMapView?
-        private var benchObserver: NSObjectProtocol?
+        private let benchPan = MapHomeVectorBenchPan()
+        private var markerProjector = MapHomeMarkerProjector()
         private var pendingViewport:
             (viewport: MapHomeVectorViewport, force: Bool, cameraRevision: Int)?
         private var isViewportDeliveryScheduled = false
@@ -1063,45 +1068,22 @@ struct MapHomeVectorMap: UIViewRepresentable {
             publishViewport(from: mapView, force: false)
         }
 
-        static let benchPanNotification = Notification.Name("MapHomeVectorMapBenchPan")
-        static let benchPanSeconds: TimeInterval = 12
+        static let benchPanNotification = MapHomeVectorBenchPan.notification
+        static let benchPanSeconds = MapHomeVectorBenchPan.seconds
 
         func observeBenchPan(on mapView: MLNMapView) {
-            guard ProcessInfo.processInfo.arguments.contains("-autoBenchMapPan"), benchObserver == nil else { return }
-            benchMapView = mapView
-            benchObserver = NotificationCenter.default.addObserver(
-                forName: Self.benchPanNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.startBenchPan() }
+            benchPan.observe(on: mapView) { [weak self] mapView, isFinal in
+                self?.publishViewport(from: mapView, force: isFinal)
+                if isFinal { self?.updateFrameRate(of: mapView) }
             }
         }
 
-        private func startBenchPan() {
-            guard let mapView = benchMapView, benchPanLink == nil else { return }
-            let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds).longitudeDelta
-            benchPanStart = (ProcessInfo.processInfo.systemUptime, mapView.centerCoordinate, span)
-            let link = CADisplayLink(target: self, selector: #selector(benchPanTick))
-            link.add(to: .main, forMode: .common)
-            benchPanLink = link
-        }
-
-        @objc private func benchPanTick() {
-            guard let mapView = benchMapView, let start = benchPanStart else { return }
-            let elapsed = ProcessInfo.processInfo.systemUptime - start.uptime
-            guard elapsed < Self.benchPanSeconds else {
-                benchPanLink?.invalidate()
-                benchPanLink = nil
-                benchPanStart = nil
-                publishViewport(from: mapView, force: true)
-                return
-            }
-            // 화면 폭의 절반만큼 좌우로 2초 주기 왕복(손가락으로 지도를 계속 미는 것과 비슷한 속도).
-            let offset = sin(elapsed * .pi) * start.span * 0.5
-            mapView.setCenter(
-                CLLocationCoordinate2D(latitude: start.center.latitude, longitude: start.center.longitude + offset),
-                animated: false
-            )
-            publishViewport(from: mapView, force: false)
+        /// 움직이는 동안(재생·손가락·측정 이동)만 지도를 최대 프레임률로 그린다(PRF1101A01).
+        func updateFrameRate(of mapView: MLNMapView) {
+            let moving = parent.playbackDriver != nil || benchPan.isRunning
+                || observedPanGestures.contains(where: MapHomeMapFrameRate.isActive)
+                || observedCameraGestures.contains(where: MapHomeMapFrameRate.isActive)
+            MapHomeMapFrameRate.apply(to: mapView, isMoving: moving)
         }
 
         func mapViewDidFinishRenderingFrame(_ mapView: MLNMapView, fullyRendered: Bool) {
@@ -1113,7 +1095,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
 
         func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
             // 측정용 자동 이동 중에는 손가락 팬처럼 "이동 완료"를 내보내지 않는다(끝날 때 한 번만).
-            guard benchPanLink == nil else { return }
+            guard !benchPan.isRunning else { return }
+            updateFrameRate(of: mapView)
             // 재생 중에는 구동기가 매 프레임 카메라를 놓아 이 알림이 매 프레임 온다. 최종 화면으로 보내지 않는다(PLY1029A09).
             publishViewport(from: mapView, force: parent.playbackDriver == nil)
         }
@@ -1122,7 +1105,12 @@ struct MapHomeVectorMap: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            true
+            // 우리 탭·길게 누르기는 지도 자체 팬·핀치와만 함께 인식한다. 우리끼리는 순서대로(PRF1101A01).
+            !isOwnGesture(otherGestureRecognizer)
+        }
+
+        private func isOwnGesture(_ gesture: UIGestureRecognizer) -> Bool {
+            gesture === longPressGesture || gesture === singleTapGesture
         }
 
         func gestureRecognizer(
@@ -1138,6 +1126,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            if let mapView { updateFrameRate(of: mapView) }
             if gesture.state == .began, gesture.numberOfTouches == 1 {
                 parent.onSingleFingerPanBegan()
             } else if gesture.state == .ended
@@ -1148,6 +1137,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
         }
 
         @objc private func handleCameraGesture(_ gesture: UIGestureRecognizer) {
+            if let mapView { updateFrameRate(of: mapView) }
             guard gesture.state == .began else { return }
             parent.onUserCameraGesture()
         }
@@ -1372,15 +1362,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             lastProjectionBounds = mapView.bounds
             let bounds = mapView.visibleCoordinateBounds
             let span = MLNCoordinateBoundsGetCoordinateSpan(bounds)
-            let points = Dictionary(
-                parent.markers.map { marker in
-                    (
-                        marker.id,
-                        mapView.convert(marker.coordinate, toPointTo: mapView)
-                    )
-                },
-                uniquingKeysWith: { first, _ in first }
-            )
+            let points = projectedMarkerPoints(in: mapView)
             let camera = mapView.camera
             let viewport = MapHomeVectorViewport(
                 center: mapView.centerCoordinate,

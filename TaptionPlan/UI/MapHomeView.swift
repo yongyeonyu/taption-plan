@@ -1149,9 +1149,6 @@ enum MapHomePresencePolicy {
     }
 }
 
-/// 정지 상태 확대용 2초 간격 신호. body마다 새로 만들면 다시 구독돼 멈추므로 하나를 공유한다.
-@MainActor private let mapHomeStationaryZoomTicker = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
-
 /// 지도 거리 기준(배율 0~100, 대표 지시 ZMP1020A01). 정지·걷기·등록 장소에서 이어지는 이동·시작 화면은 85로 고정하고,
 /// 그 밖의 탈것만 속도에 따라 느리면 92(약 220m)까지 확대, 빠르면 42(약 140km)까지 축소한다.
 enum MapHomePlaybackZoomPolicy {
@@ -2343,7 +2340,7 @@ struct MapHomeView: View {
     @State private var isDisplayMenuExpanded = false
     @State private var isCounterMenuExpanded = false
     /// 화랑이 위 카운터 위젯이 지도 화면 좌표에서 차지하는 영역. 위젯을 누르면 카운터 메뉴를 연다(ARC1030A11).
-    @State private var counterWindowFrame = CGRect.zero
+    @State private var counterWindowFrame = MapHomeCounterFrameBox()
     /// 카운터 창 줄을 위에서 아래 순서로 늘어놓은 목록. 창을 눌렀을 때 몇 번째 줄인지 이 순서로 고른다.
     @State private var counterRowTargets: [MapHomeCounterDetailTarget] = []
     /// 지금 열려 있는 카운터 상세 화면.
@@ -2524,6 +2521,7 @@ struct MapHomeView: View {
     @State private var routeProjectionRunID = 0
     /// 발자국 장부 캐시. 기록이 늘 때만 새로 만든다(ARC1030A07).
     @State private var pawprintLedgerMemo = MapHomeMemo<MapHomePawprintLedgerKey, [MapHomePawprintLedger.Entry]>()
+    @State private var pawprintWaypointsMemo = MapHomeMemo<MapHomePawprintWaypointsKey, [PawprintWaypoint]>()
     @State private var routeProjectionApplied = 0
     @State private var routeProjectionSkips = [0, 0, 0]
     @State private var routeProjectionLastMS = 0.0
@@ -2937,11 +2935,11 @@ struct MapHomeView: View {
         ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
     }
 
-    /// 재생 중에는 초당 한 번만 다시 그리는 영역. 정지 중에는 token이 매번 달라 즉시 갱신된다.
+    /// 재생 중에는 초당 한 번만 다시 그리는 영역. 정지 중에는 늘 다시 그린다.
     private func coarseRegion<Content: View>(@ViewBuilder _ content: @escaping () -> Content) -> some View {
         EquatableView(content: MapHomeCoarseView(
             progress: playbackProgress,
-            token: isDayPlaybackRunning ? 0 : Int.random(in: 1...Int.max),
+            isFrozen: isDayPlaybackRunning,
             content: content
         ))
     }
@@ -3006,7 +3004,14 @@ struct MapHomeView: View {
         ZStack(alignment: .top) {
             // 지도·사이드 레일·재생 HUD는 분을 읽는다. 분이 바뀔 때 이 조각만 다시 그리게 따로 감싼다(ARC1030A01).
             MapHomeObservingView {
-                map.onChange(of: selectedTimelineMinute) { _, _ in
+                // 정지 상태 확대는 지도 화면이 떠 있는 동안만 2초마다 한 걸음(전역 타이머·지도별 중복 구독 대신, PRF1101A01).
+                map.task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(2))
+                        advanceStationaryZoomIfNeeded()
+                    }
+                }
+                .onChange(of: selectedTimelineMinute) { _, _ in
                     // 선택한 분을 읽는 수식어는 부모 본문이 아니라 이 조각에 둔다(ARC1030A01).
                     if !isTimelineInteractionActive, !isDayPlaybackRunning { recordTimelineWindow("select") }
                 }
@@ -4631,7 +4636,7 @@ struct MapHomeView: View {
             onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu,
             onSingleTap: { point, positions in
-                selectPawprintIfTapped(at: point, waypoints: waypoints, positions: positions)
+                handleMapTap(atLocal: point, waypoints: waypoints, positions: positions)
             },
             activeRouteSegments: recordingShows(\.routes) ? activeSegments : []
         )
@@ -4652,14 +4657,6 @@ struct MapHomeView: View {
             }
             }
         }
-        // 마스크 `.subviews`는 이 제스처 자체를 끈다. 검색이 열려 있지 않으면 지도 탭 판정이 전혀 돌지 않았다(TAP1031A01 기기 로그).
-        .simultaneousGesture(
-            SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
-                .onEnded { tap in
-                    presentCatDetailsIfTapped(at: tap.location)
-                    if isSearchDismissable { dismissMapSearchOverlay() }
-                }
-        )
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
             if mapFrameInViewport != frame { mapFrameInViewport = frame }
         }
@@ -4733,9 +4730,6 @@ struct MapHomeView: View {
             ) else { return }
             focusDisplayedLocation(using: nil)
         }
-        .onReceive(mapHomeStationaryZoomTicker) { _ in
-            advanceStationaryZoomIfNeeded()
-        }
     }
 
 
@@ -4798,15 +4792,10 @@ struct MapHomeView: View {
             onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation,
-            onWalkerTapped: { presentDaySummary(fromCat: true) }
-        )
-        // 마스크 `.subviews`는 이 제스처 자체를 끈다. 검색이 열려 있지 않으면 지도 탭 판정이 전혀 돌지 않았다(TAP1031A01 기기 로그).
-        .simultaneousGesture(
-            SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
-                .onEnded { tap in
-                    presentCatDetailsIfTapped(at: tap.location)
-                    if isSearchDismissable { dismissMapSearchOverlay() }
-                }
+            onMapTap: { local, hitsWalker in
+                if hitsWalker { presentDaySummary(fromCat: true) }
+                handleMapTap(atLocal: local, waypoints: pawprintWaypoints, positions: nil)
+            }
         )
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
             if mapFrameInViewport != frame { mapFrameInViewport = frame }
@@ -4843,9 +4832,6 @@ struct MapHomeView: View {
                 in: userTrackingMode
             ) else { return }
             focusDisplayedLocation(using: nil)
-        }
-        .onReceive(mapHomeStationaryZoomTicker) { _ in
-            advanceStationaryZoomIfNeeded()
         }
     }
 
@@ -5574,24 +5560,24 @@ struct MapHomeView: View {
     }
 
     /// 화랑이를 누르면 하루 요약 카드를 연다. 발자국·집 아이콘보다 먼저 판정한다(대표 지시, ARC1030A07).
-    private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
-        // 카운터 창 프레임은 뷰포트 공간, 핀·화랑이 점은 지도 로컬 공간이다.
-        if isCounterWindowTapped(at: tapPoint) {
-            openCounterDetail(at: tapPoint)
+    /// 지도 탭 한 경로(UIKit 탭이 부른다). 좌표는 지도 로컬 하나만 쓴다. 예전에는 SwiftUI 탭(뷰포트 좌표)과
+    /// UIKit 탭(지도 로컬 좌표)이 같은 손짓을 두 번 판정했고, 카운터 창 판정에 서로 다른 좌표가 섞였다(PRF1101A01).
+    private func handleMapTap(atLocal local: CGPoint, waypoints: [PawprintWaypoint], positions: [String: CGPoint]?) {
+        defer { if isSearchDismissable { dismissMapSearchOverlay() } }
+        if isCounterWindowTapped(at: local) {
+            openCounterDetail(at: local)
             return
         }
-        let local = mapLocalPoint(fromViewport: tapPoint)
         if isStickmanTapped(at: local) {
             presentDaySummary(fromCat: true)
             return
         }
         if handleMapMarkerTap(at: local) { return }
-        guard pawprintTarget(at: local, waypoints: pawprintWaypoints) == nil else { return }
+        if let waypoint = pawprintTarget(at: local, waypoints: waypoints, positions: positions) {
+            selectPawprint(waypoint)
+            return
+        }
         if isHomeSummaryTapped(at: local) { isDaySummaryPresented = true }
-    }
-
-    private func mapLocalPoint(fromViewport point: CGPoint) -> CGPoint {
-        CGPoint(x: point.x - mapFrameInViewport.minX, y: point.y - mapFrameInViewport.minY)
     }
 
     private func viewportPoint(fromMapLocal point: CGPoint) -> CGPoint {
@@ -5639,9 +5625,10 @@ struct MapHomeView: View {
     }
 
     /// 화랑이 위 카운터 위젯을 눌렀는지. 위젯을 눌러도 지도 이동이 막히지 않게 지도 탭에서 영역으로 판정한다.
+    /// 카운터 창 자리는 지도 오버레이(=지도 로컬) 좌표로 기록된다.
     private func isCounterWindowTapped(at tapPoint: CGPoint) -> Bool {
-        counterWindowFrame.width > 0 && counterWindowFrame.height > 0
-            && counterWindowFrame.insetBy(dx: -8, dy: -8).contains(tapPoint)
+        let frame = counterWindowFrame.frame
+        return frame.width > 0 && frame.height > 0 && frame.insetBy(dx: -8, dy: -8).contains(tapPoint)
     }
 
     /// 누른 줄의 카운터 상세 화면을 연다. 줄은 위에서 아래로 같은 높이로 쌓여 있어 높이 비율로 고른다.
@@ -5649,7 +5636,7 @@ struct MapHomeView: View {
     private func openCounterDetail(at tapPoint: CGPoint) {
         let targets = counterRowTargets
         guard let index = MapHomeCounterDetailBuilder.rowIndex(
-            tapY: tapPoint.y, frame: counterWindowFrame, count: targets.count
+            tapY: tapPoint.y, frame: counterWindowFrame.frame, count: targets.count
         ) else {
             openCounterMenu()
             return
@@ -5758,18 +5745,6 @@ struct MapHomeView: View {
             to: point, targets: targets, selectedDate: model.selectedDate
         ) else { return nil }
         return waypoints.first { $0.index == id }
-    }
-
-    private func selectPawprintIfTapped(
-        at point: CGPoint,
-        waypoints: [PawprintWaypoint],
-        positions: [String: CGPoint]
-    ) {
-        // 화랑이는 발자국 위에 서 있는 일이 많아, 화랑이를 누른 손짓은 발자국 선택으로 새지 않는다.
-        guard !isCounterWindowTapped(at: point), !isStickmanTapped(at: point),
-              let waypoint = pawprintTarget(at: point, waypoints: waypoints, positions: positions)
-        else { return }
-        selectPawprint(waypoint)
     }
 
     private func selectPawprint(_ waypoint: PawprintWaypoint) {
@@ -6109,9 +6084,14 @@ struct MapHomeView: View {
             if let playback,
                recordingShows(\.cat),
                stickmanPoint != nil || vectorMapViewportStore.livePoint != nil {
-                // 재생 중에는 화면 틱마다 `livePoint`를 다시 읽는다. 이 줄만 매 프레임 다시 그리고 오버레이 본문은 그대로다(PLY1029A05).
-                TimelineView(.animation(paused: playbackDriver == nil)) { _ in
+                // 재생 중에는 UIKit 뷰가 `liveChannel` 점으로 위치만 옮긴다. SwiftUI는 매 프레임 다시 그리지 않는다(PRF1101A01).
                 let point = vectorMapViewportStore.livePoint ?? stickmanPoint ?? .zero
+                let offset = MapHomeStickmanAnnotationLayout.centerOffset
+                MapHomeLivePointFollower(
+                    channel: playbackDriver == nil ? nil : vectorMapViewportStore.liveChannel,
+                    fallback: CGPoint(x: point.x + offset.x, y: point.y + offset.y),
+                    offset: CGSize(width: offset.x, height: offset.y)
+                ) {
                 MapHomeStickmanMarker(
                     action: playback.action,
                     animationPhase: playbackDriver == nil ? playback.stickmanAnimationPhase : nil,
@@ -6123,12 +6103,7 @@ struct MapHomeView: View {
                     )
                     // 지도 위 화랑이는 1.5배로 보이게 한다.
                     .scaleEffect(1.5)
-                    .position(
-                        x: point.x
-                            + MapHomeStickmanAnnotationLayout.centerOffset.x,
-                        y: point.y
-                            + MapHomeStickmanAnnotationLayout.centerOffset.y
-                    )
+                }
                     .zIndex(MapHomeLayerPriority.stickman)
                     // 화랑이 위에서도 지도 팬·핀치줌이 최우선이 되도록 마커는
                     // 히트테스트에서 제외한다(다른 마커와 동일). UIKit 지도 위의
@@ -6141,7 +6116,6 @@ struct MapHomeView: View {
                     .accessibilityLabel(
                         "\(playback.accessibilityLabel), \(language.text("설명 보기","Show info"))"
                     )
-                }
             }
 
             // 카운터 창은 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
@@ -6164,12 +6138,6 @@ struct MapHomeView: View {
                             .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
-                    .simultaneousGesture(
-                        LongPressGesture(minimumDuration: 0.45)
-                            .onEnded { _ in
-                                isSearchPinMenuPresented = true
-                            }
-                    )
                     .accessibilityLabel(
                         language.text(
                             "\(selectedSearchPin.title) 위치 추가",
@@ -6265,14 +6233,35 @@ struct MapHomeView: View {
         }
     }
 
+    /// 한 화면에서 여러 번 읽힌다. 입력(예상·확인 경로, 장부, 컷오프)이 같으면 이전 값을 쓴다(PRF1101A01).
     private var pawprintWaypoints: [PawprintWaypoint] {
         let probe = MapHomePlaybackProbe.begin("pawprintWaypoints"); defer { MapHomePlaybackProbe.end(probe) }
+        let predicted = predictedMapRoutes, confirmed = confirmedPredictedRoutes, ledger = pawprintLedger()
+        let cutoff = routeOverlayCutoff
+        let calendarForDay = Calendar.autoupdatingCurrent
+        let dayEnd = calendarForDay.date(byAdding: .day, value: 1, to: calendarForDay.startOfDay(for: model.selectedDate))
+            ?? .distantFuture
+        let ledgerCutoff = playbackDriver != nil ? dayEnd : cutoff
+        let key = MapHomePawprintWaypointsKey(
+            day: model.selectedDate, cutoff: cutoff, ledgerCutoff: ledgerCutoff, predicted: predicted, confirmed: confirmed,
+            ledgerCount: ledger.count, ledgerFirst: ledger.first?.timestamp, ledgerLast: ledger.last?.timestamp
+        )
+        return pawprintWaypointsMemo.value(for: key) {
+            makePawprintWaypoints(predicted: predicted, confirmed: confirmed, ledger: ledger,
+                                  cutoff: cutoff, ledgerCutoff: ledgerCutoff)
+        }
+    }
+
+    private func makePawprintWaypoints(
+        predicted: [MapPredictedRoute], confirmed: [MapPredictedRoute], ledger: [MapHomePawprintLedger.Entry],
+        cutoff routeOverlayCutoff: Date, ledgerCutoff: Date
+    ) -> [PawprintWaypoint] {
         let hardCap = MapHomePawprintInteractionPolicy.markerLimit
-        let predictedSegments = predictedMapRoutes.map { route in
+        let predictedSegments = predicted.map { route in
             (route: route, points: MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(
                 along: coordinates(for: route, through: routeOverlayCutoff)))
         }
-        let confirmedSegments = confirmedPredictedRoutes.map { route in
+        let confirmedSegments = confirmed.map { route in
             let samples = MapHomeGPSGapPredictionPolicy.predictedRailCoordinates(along: coordinates(for: route))
             let timestamps = samples.indices.map { index in
                 route.span.start.addingTimeInterval(route.span.duration
@@ -6286,12 +6275,8 @@ struct MapHomeView: View {
         }
         let inferredCounts = confirmedSegments.map { $0.points.count } + predictedSegments.map { $0.points.count }
         // 기록된 발자국은 장부에서 가져온다. GPS가 기록된 순간의 위치·방향·속도 색이 그대로 유지된다(ARC1030A07).
-        let calendarForDay = Calendar.autoupdatingCurrent
-        let dayEnd = calendarForDay.date(byAdding: .day, value: 1, to: calendarForDay.startOfDay(for: model.selectedDate))
-            ?? .distantFuture
-        let ledgerCutoff = playbackDriver != nil ? dayEnd : routeOverlayCutoff
         var result: [PawprintWaypoint] = []
-        for entry in pawprintLedger().filter({ $0.timestamp <= ledgerCutoff }).suffix(MapHomePawprintLedger.displayLimit) {
+        for entry in ledger.filter({ $0.timestamp <= ledgerCutoff }).suffix(MapHomePawprintLedger.displayLimit) {
             result.append(PawprintWaypoint(
                 index: result.count, coordinate: entry.coordinate, angle: entry.angle, isPredicted: false,
                 timestamp: entry.timestamp, speedMetersPerSecond: entry.speed
@@ -7839,39 +7824,31 @@ struct MapHomeView: View {
     /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.
     /// 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
     /// 창은 **스스로 박자**를 가진다 — 연봉 줄을 껐어도 나머지 숫자가 시간을 따라 움직인다.
-    private func counterWindowPoint(anchor: CGPoint, follows: Bool, followsAppleCamera: Bool) -> CGPoint {
-        let live = follows ? vectorMapViewportStore.livePoint
-            : followsAppleCamera ? appleStickmanLivePoint.point
-            : nil
-        guard let live else { return anchor }
-        return CGPoint(x: live.x, y: live.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42)
-    }
-
-    /// `tracksPlaybackPoint`가 켜져 있고 재생 중이면 위치를 화면 틱마다 `livePoint`에서 다시 읽는다.
-    /// 관찰 값(`anchor`)은 재생 중 0.25초에 한 번만 바뀌어, 그 값만 따라가면 화랑이 마커(매 프레임)보다
-    /// 카운터가 뒤처지며 4Hz로 끊겨 흔들려 보였다. 창 내용은 한 번만 만들고 틱마다 위치만 바꾼다.
-    /// `tracksAppleCamera`는 Apple 지도가 움직이는 동안 같은 방식으로 `appleStickmanLivePoint`를 읽는다.
+    ///
+    /// 재생 중(`tracksPlaybackPoint`)이나 Apple 지도가 움직이는 동안(`tracksAppleCamera`)에는 화랑이 점 채널을
+    /// 구독한 UIKit 뷰가 창의 위치만 옮긴다. 창 내용은 한 번만 만들고, 자리는 관찰되지 않는 상자에 적는다(PRF1101A01).
     private func counterWindow(
         at anchor: CGPoint,
         tracksPlaybackPoint: Bool = false,
         tracksAppleCamera: Bool = false
     ) -> some View {
-        let content = MapHomeCounterClock(isLive: isCounterLive) { now in
-            counterWindowContent(now: now)
-                .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
-                    if counterWindowFrame != frame { counterWindowFrame = frame }
-                }
-                .onDisappear { counterWindowFrame = .zero }
+        let box = counterWindowFrame
+        let channel = tracksPlaybackPoint && playbackDriver != nil ? vectorMapViewportStore.liveChannel
+            : tracksAppleCamera && isAppleCameraMoving ? appleStickmanLivePoint.channel
+            : nil
+        return MapHomeLivePointFollower(
+            channel: channel,
+            fallback: CGPoint(x: anchor.x, y: anchor.y - 8 - 160),
+            offset: CGSize(width: 0, height: MapHomeStickmanAnnotationLayout.centerOffset.y - 42 - 8 - 160),
+            onFrame: { box.hostFrame = $0 }
+        ) {
+            MapHomeCounterClock(isLive: isCounterLive) { now in
+                counterWindowContent(now: now)
+                    .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+            }
+            .frame(width: 240, height: 320, alignment: .bottom)
         }
-        .frame(width: 240, height: 320, alignment: .bottom)
-        let follows = tracksPlaybackPoint && playbackDriver != nil
-        let followsAppleCamera = tracksAppleCamera && isAppleCameraMoving
-        return TimelineView(.animation(paused: !(follows || followsAppleCamera))) { _ in
-            let point = counterWindowPoint(
-                anchor: anchor, follows: follows, followsAppleCamera: followsAppleCamera
-            )
-            content.position(x: point.x, y: point.y - 8 - 160)
-        }
+        .onDisappear { box.reset() }
         .allowsHitTesting(false)
         .zIndex(MapHomeLayerPriority.stickman)
     }
@@ -20302,7 +20279,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let onAnnotationSelected: (MapHomeAppleAnnotationKind) -> Void
     /// 화랑이를 눌렀을 때(하루 요약 카드를 연다).
-    var onWalkerTapped: () -> Void = {}
+    /// 지도 탭(지도 로컬 좌표, 화랑이를 눌렀는지). 지도 탭은 UIKit 한 경로로만 받는다(PRF1101A01).
+    var onMapTap: (CGPoint, Bool) -> Void = { _, _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -20355,10 +20333,11 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private weak var mapView: MKMapView?
         private var lastCameraRevision = Int.min
         private var lastViewportCommandRevision = 0
-        private var lastRoutesSignature = ""
+        // 내용 비교는 문자열을 이어 붙이지 않고 해시 revision으로 한다(PRF1101A01).
+        private var lastRoutesSignature: Int?
         private var lastMapStyleRawValue: String?
-        private var lastAnnotationsSignature = ""
-        private var lastPlaybackSignature: String?
+        private var lastAnnotationsSignature: Int?
+        private var lastPlaybackSignature: Int?
         private var lastCentersPlayback: Bool?
         private var lastCenteredPlaybackCoordinate: CLLocationCoordinate2D?
         private var lastCenteredPlaybackTargetPoint: CGPoint?
@@ -20387,7 +20366,7 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
         private var lastFogReveals: [MapHomeFogReveal]?
         private var lastFogOpacity: CGFloat = 0
-        private var routeSignatures: [String: String] = [:]
+        private var routeSignatures: [String: Int] = [:]
         private var walkerAnnotation: MapHomeAppleWalkerAnnotation?
         private var walkerView: MapHomeAppleHostedAnnotationView?
         private var observedPanGestures: [UIPanGestureRecognizer] = []
@@ -20441,10 +20420,12 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         @objc private func handleWalkerTap(_ gesture: UITapGestureRecognizer) {
-            guard gesture.state == .ended, let mapView, let center = walkerPoint(in: mapView) else { return }
+            guard gesture.state == .ended, let mapView else { return }
             let location = gesture.location(in: mapView)
-            guard hypot(location.x - center.x, location.y - center.y) <= Self.walkerHitRadius else { return }
-            parent.onWalkerTapped()
+            let hitsWalker = walkerPoint(in: mapView).map {
+                hypot(location.x - $0.x, location.y - $0.y) <= Self.walkerHitRadius
+            } ?? false
+            parent.onMapTap(location, hitsWalker)
         }
 
         func detach(from mapView: MKMapView) {
@@ -20481,6 +20462,9 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             lastGestureAttachmentScanUptime = now
             attachPanGestures(in: mapView)
             attachCameraGestures(in: mapView)
+            // 두 번 탭(확대)이 한 번 탭으로도 처리되지 않게 한다.
+            for tap in allSubviews(in: mapView).flatMap({ $0.gestureRecognizers ?? [] }).compactMap({ $0 as? UITapGestureRecognizer })
+            where tap !== walkerTapGesture && tap.numberOfTapsRequired > 1 { walkerTapGesture?.require(toFail: tap) }
         }
 
         func attachPanGestures(in view: UIView) {
@@ -20770,7 +20754,8 @@ private struct MapHomeAppleMap: UIViewRepresentable {
             _ gestureRecognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            true
+            // 우리 탭·길게 누르기는 지도 자체 제스처와만 함께 인식한다(PRF1101A01).
+            otherGestureRecognizer !== longPressGesture && otherGestureRecognizer !== walkerTapGesture
         }
 
         func gestureRecognizer(
@@ -20822,19 +20807,15 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         private func updateRoutes(in mapView: MKMapView) {
             let routeSignatures = Dictionary(
                 parent.routes.map { route in
-                    (route.id, [
-                    route.id,
-                    route.phase == .actual ? "actual" : "forecast",
-                    String(route.geometrySignature),
-                    route.colorHex,
-                    String(route.opacity),
-                    ].joined(separator: "|"))
+                    (route.id, MapHomeContentRevision.of(
+                        route.id, route.phase == .actual, route.geometrySignature, route.colorHex, route.opacity
+                    ))
                 },
                 uniquingKeysWith: { first, _ in first }
             )
-            let signature = parent.routes.compactMap {
-                routeSignatures[$0.id]
-            }.joined(separator: ";")
+            var hasher = Hasher()
+            for route in parent.routes { hasher.combine(routeSignatures[route.id]) }
+            let signature = hasher.finalize()
             guard signature != lastRoutesSignature else { return }
             lastRoutesSignature = signature
             let staleIDs = Set(self.routePolylines.keys).filter {
@@ -20904,16 +20885,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
         }
 
         private func updateAnnotations(in mapView: MKMapView) {
-            let signature = parent.annotations.map { annotation in
-                [
-                    annotation.id,
-                    String(annotation.coordinate.latitude),
-                    String(annotation.coordinate.longitude),
-                    String(annotation.isInteractive),
-                    annotation.accessibilityLabel,
-                    String(describing: annotation.kind),
-                ].joined(separator: "|")
-            }.joined(separator: ";")
+            var hasher = Hasher()
+            for annotation in parent.annotations {
+                hasher.combine(MapHomeContentRevision.of(
+                    annotation.id, annotation.coordinate.latitude, annotation.coordinate.longitude,
+                    annotation.isInteractive, annotation.accessibilityLabel, String(describing: annotation.kind)
+                ))
+            }
+            let signature = hasher.finalize()
             guard signature != lastAnnotationsSignature else { return }
             lastAnnotationsSignature = signature
             let existing = mapView.annotations.compactMap { $0 as? MapHomeAppleMapAnnotation }
@@ -20939,22 +20918,14 @@ private struct MapHomeAppleMap: UIViewRepresentable {
 
         private func updateWalker(in mapView: MKMapView) {
             let playback = parent.playback
-            let playbackSignature: String? = playback.map { playback in
-                let parts: [String] = [
-                    String(playback.coordinate.latitude),
-                    String(playback.coordinate.longitude),
-                    String(playback.cameraCoordinate.latitude),
-                    String(playback.cameraCoordinate.longitude),
-                    String(playback.headingDegrees),
-                    String(describing: playback.action),
-                    playback.accessibilityLabel,
-                    String(describing: playback.phase),
-                    String(playback.followsUserLocation),
-                    String(describing: playback.stickmanAnimationPhase),
-                    String(describing: parent.playbackTargetPoint.x),
-                    String(describing: parent.playbackTargetPoint.y),
-                ]
-                return parts.joined(separator: "|")
+            let playbackSignature: Int? = playback.map { playback in
+                MapHomeContentRevision.of(
+                    playback.coordinate.latitude, playback.coordinate.longitude,
+                    playback.cameraCoordinate.latitude, playback.cameraCoordinate.longitude,
+                    playback.headingDegrees, playback.action, playback.accessibilityLabel,
+                    playback.phase == .actual, playback.followsUserLocation, playback.stickmanAnimationPhase,
+                    parent.playbackTargetPoint.x, parent.playbackTargetPoint.y
+                )
             }
             guard playbackSignature != lastPlaybackSignature
                     || parent.centersPlayback != lastCentersPlayback else {
