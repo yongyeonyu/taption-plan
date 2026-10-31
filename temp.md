@@ -2723,3 +2723,8 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
+
+## PRF1101A01 성능·지도·터치(ALL1101A01 세션 B)
+- 원인: 재생 드라이버가 프레임마다 하루 측정값 선형 탐색·장소 사전 재생성, 화랑이·카운터가 재생 중 SwiftUI `.position`/`@State`로 매 프레임 레이아웃, MapLibre 프레임률 미설정, 마커 화면좌표·`pawprintWaypoints` 매번 재계산, 포그라운드 GPS Best 상시·모션 main queue·HealthKit `.immediate`·위젯 reload 중복·`body` 안 `Timer.publish`, 지도 탭 UIKit·SwiftUI 이중 처리와 전부 동시 인식, 사이드바 손잡이 `minimumDistance: 0`+별도 탭, 시간표 핀치 이중, `MapHomeTimeSidebar.swift` 동결 예산 초과(3301>3296).
+- 해결: 계획 「성능·터치 (세션 B)」 1–8. 사이드바 계산(`MapHomeTimeSidebarMath`)을 새 파일로(pbxproj에 파일 1개 추가). 입력 240Hz 수용·지도 카메라·화랑이·카운터 120Hz·SwiftUI 상태 60Hz로 AGENTS.md 문구 수정.
+- 검증 기준: `TimeScaleTests`·`MapHomeLiveMapTests` 등 관련 단위 테스트 통과(xcresult 실행 수 확인), 사이드바·재생 화면 시험 통과, 앱 Debug 빌드, 가드 스크립트 2개 통과. 실기기 프레임·발열 벤치는 대표 승인 후(미검증으로 남김).
