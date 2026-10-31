@@ -1,13 +1,23 @@
 import Foundation
 
-struct TaptionBackupFileInfo: Equatable, Sendable {
-    var name: String
-    var size: Int
-    var modifiedAt: Date
+public struct TaptionBackupFileInfo: Equatable, Sendable {
+    public var name: String
+    public var size: Int
+    public var modifiedAt: Date
+
+    public init(
+        name: String,
+        size: Int,
+        modifiedAt: Date
+    ) {
+        self.name = name
+        self.size = size
+        self.modifiedAt = modifiedAt
+    }
 }
 
 /// 백업 파일을 두는 곳. 월 파일 하나를 이름으로 다루는 파일 복사 수준의 추상화다.
-protocol TaptionBackupDestination: Sendable {
+public protocol TaptionBackupDestination: Sendable {
     /// `.taptionbackup` 파일 목록(업로드 중인 임시 파일은 제외).
     func list() async throws -> [TaptionBackupFileInfo]
     /// 읽을 수 있는 로컬 파일 주소를 돌려준다. 내려받아야 하면 받은 뒤에 돌려준다.
@@ -25,10 +35,10 @@ protocol TaptionBackupDestination: Sendable {
 }
 
 extension TaptionBackupDestination {
-    func release(fetched: URL) async {}
-    func cleanupStaleUploads() async {}
+    public func release(fetched: URL) async {}
+    public func cleanupStaleUploads() async {}
 
-    func fetchPrefix(name: String, length: Int) async throws -> Data {
+    public func fetchPrefix(name: String, length: Int) async throws -> Data {
         let url = try await fetch(name: name)
         let data: Data
         do {
@@ -98,20 +108,20 @@ enum TaptionBackupStaging {
 }
 
 /// 폴더 하나를 목적지로 쓴다. 폴더 밖에서 복사해 둔 임시 파일을 한 번에 바꿔 놓는다.
-struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
-    let directory: URL
+public struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
+    public let directory: URL
     /// 업로드 임시 파일을 둘 폴더. nil이면 대상과 같은 볼륨의 항목 교체 폴더(없으면 임시 폴더).
-    let stagingDirectory: URL?
+    public let stagingDirectory: URL?
     /// 임시 파일을 쓴 뒤 교체하기 직전에 부른다(테스트에서 임시 파일 위치를 확인한다).
-    let beforeCommit: (@Sendable (URL) throws -> Void)?
+    public let beforeCommit: (@Sendable (URL) throws -> Void)?
 
-    init(directory: URL, stagingDirectory: URL? = nil, beforeCommit: (@Sendable (URL) throws -> Void)? = nil) {
+    public init(directory: URL, stagingDirectory: URL? = nil, beforeCommit: (@Sendable (URL) throws -> Void)? = nil) {
         self.directory = directory
         self.stagingDirectory = stagingDirectory
         self.beforeCommit = beforeCommit
     }
 
-    func list() async throws -> [TaptionBackupFileInfo] {
+    public func list() async throws -> [TaptionBackupFileInfo] {
         guard FileManager.default.fileExists(atPath: directory.path) else { return [] }
         let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]
         return try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: keys)
@@ -127,13 +137,13 @@ struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
             .sorted { $0.name < $1.name }
     }
 
-    func fetch(name: String) async throws -> URL {
+    public func fetch(name: String) async throws -> URL {
         let url = directory.appendingPathComponent(name, isDirectory: false)
         guard FileManager.default.fileExists(atPath: url.path) else { throw TaptionBackupError.fileMissing(name) }
         return url
     }
 
-    func replace(name: String, with localFile: URL) async throws {
+    public func replace(name: String, with localFile: URL) async throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         let target = directory.appendingPathComponent(name, isDirectory: false)
@@ -144,7 +154,7 @@ struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
     }
 
     /// 임시 파일에 복사·동기화한 뒤 대상과 바꾼다. 임시 파일이 대상 폴더 밖이어도 `replaceItemAt`이 알아서 처리한다.
-    static func commit(
+    public static func commit(
         _ localFile: URL, as staging: URL, to target: URL, beforeCommit: (@Sendable (URL) throws -> Void)?
     ) throws {
         let fileManager = FileManager.default
@@ -159,20 +169,20 @@ struct TaptionLocalFolderBackupDestination: TaptionBackupDestination {
         try? TaptionBackupDurability.sync(target)
     }
 
-    func remove(name: String) async throws {
+    public func remove(name: String) async throws {
         let url = directory.appendingPathComponent(name, isDirectory: false)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.removeItem(at: url)
     }
 
-    func cleanupStaleUploads() async {
+    public func cleanupStaleUploads() async {
         TaptionBackupStaging.removeStaleUploads(in: directory)
     }
 }
 
 // MARK: iCloud Drive
 
-enum TaptionUbiquityItemState: Equatable, Sendable {
+public enum TaptionUbiquityItemState: Equatable, Sendable {
     /// 파일이 없다(자리표시자만 있을 수 있다).
     case missing
     /// 내려받는 중이거나 아직 받지 않았다.
@@ -183,7 +193,7 @@ enum TaptionUbiquityItemState: Equatable, Sendable {
 
 /// iCloud(ubiquity) 관련 시스템 호출을 감싼 얇은 층. 실제 구현은 기기에서만 동작하므로, 테스트는 같은 규약을 흉내 내는
 /// 구현을 끼워 넣어 목적지 로직(자리표시자·다운로드 대기·충돌·조정 읽기)을 로컬 폴더에서 확인한다.
-protocol TaptionUbiquityFileSystem: Sendable {
+public protocol TaptionUbiquityFileSystem: Sendable {
     func containerURL(identifier: String?) async -> URL?
     func state(of url: URL) -> TaptionUbiquityItemState
     func startDownloading(_ url: URL) throws
@@ -196,35 +206,37 @@ protocol TaptionUbiquityFileSystem: Sendable {
     func coordinatedRemove(_ url: URL) throws
 }
 
-struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
-    func containerURL(identifier: String?) async -> URL? {
+public struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
+    public init() {}
+
+    public func containerURL(identifier: String?) async -> URL? {
         await Task.detached { FileManager.default.url(forUbiquityContainerIdentifier: identifier) }.value
     }
 
-    func state(of url: URL) -> TaptionUbiquityItemState {
+    public func state(of url: URL) -> TaptionUbiquityItemState {
         guard FileManager.default.fileExists(atPath: url.path) else { return .missing }
         let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
         // 상태를 알 수 없으면(ubiquity 항목이 아니거나 읽기 실패) 로컬 파일로 본다.
         return status == nil || status == .current ? .current : .notDownloaded
     }
 
-    func startDownloading(_ url: URL) throws {
+    public func startDownloading(_ url: URL) throws {
         try FileManager.default.startDownloadingUbiquitousItem(at: url)
     }
 
-    func hasUnresolvedConflicts(at url: URL) -> Bool {
+    public func hasUnresolvedConflicts(at url: URL) -> Bool {
         if (try? url.resourceValues(forKeys: [.ubiquitousItemHasUnresolvedConflictsKey]))?
             .ubiquitousItemHasUnresolvedConflicts == true { return true }
         return !(NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? []).isEmpty
     }
 
-    func coordinatedCopy(from url: URL, to destination: URL) throws {
+    public func coordinatedCopy(from url: URL, to destination: URL) throws {
         try Self.coordinatedRead(url) { coordinated in
             try FileManager.default.copyItem(at: coordinated, to: destination)
         }
     }
 
-    func coordinatedReadPrefix(of url: URL, length: Int) throws -> Data {
+    public func coordinatedReadPrefix(of url: URL, length: Int) throws -> Data {
         var data = Data()
         try Self.coordinatedRead(url) { coordinated in
             let handle = try FileHandle(forReadingFrom: coordinated)
@@ -234,7 +246,7 @@ struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
         return data
     }
 
-    func coordinatedReplace(target: URL, with staging: URL) throws {
+    public func coordinatedReplace(target: URL, with staging: URL) throws {
         try Self.coordinatedWrite(target, options: .forReplacing) { url in
             if FileManager.default.fileExists(atPath: url.path) {
                 _ = try FileManager.default.replaceItemAt(url, withItemAt: staging)
@@ -244,7 +256,7 @@ struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
         }
     }
 
-    func coordinatedRemove(_ url: URL) throws {
+    public func coordinatedRemove(_ url: URL) throws {
         try Self.coordinatedWrite(url, options: .forDeleting) { try FileManager.default.removeItem(at: $0) }
     }
 
@@ -289,17 +301,17 @@ struct TaptionSystemUbiquityFileSystem: TaptionUbiquityFileSystem {
 ///   한 번만 열고 `release(fetched:)`로 돌려준다.
 /// - 풀리지 않은 충돌 버전(`ubiquitousItemHasUnresolvedConflicts`/`NSFileVersion`)이 있으면 읽기·쓰기를
 ///   `conflictingVersions`로 거부한다. 어느 버전이 맞는지 자동으로 고르지 않는다(사용자가 파일 앱에서 해결해야 한다).
-struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
-    let containerIdentifier: String?
-    let folderName: String
+public struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
+    public let containerIdentifier: String?
+    public let folderName: String
     /// 내려받기를 기다리는 최대 시간(초).
-    let downloadTimeout: TimeInterval
-    let pollInterval: TimeInterval
-    let fileSystem: any TaptionUbiquityFileSystem
-    let temporaryDirectory: URL
-    let stagingDirectory: URL?
+    public let downloadTimeout: TimeInterval
+    public let pollInterval: TimeInterval
+    public let fileSystem: any TaptionUbiquityFileSystem
+    public let temporaryDirectory: URL
+    public let stagingDirectory: URL?
 
-    init(
+    public init(
         containerIdentifier: String? = "iCloud.com.taption.plan", folderName: String = "TaptionBackup", downloadTimeout: TimeInterval = 120,
         pollInterval: TimeInterval = 0.5,
         fileSystem: any TaptionUbiquityFileSystem = TaptionSystemUbiquityFileSystem(),
@@ -324,16 +336,16 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
             .appendingPathComponent(folderName, isDirectory: true)
     }
 
-    static func placeholderName(for name: String) -> String { ".\(name).icloud" }
+    public static func placeholderName(for name: String) -> String { ".\(name).icloud" }
 
-    static func realName(fromPlaceholder placeholder: String) -> String? {
+    public static func realName(fromPlaceholder placeholder: String) -> String? {
         let suffix = ".icloud"
         guard placeholder.hasPrefix("."), placeholder.hasSuffix(suffix) else { return nil }
         let name = String(placeholder.dropFirst().dropLast(suffix.count))
         return name.hasSuffix("." + TaptionBackupMonth.fileExtension) ? name : nil
     }
 
-    func list() async throws -> [TaptionBackupFileInfo] {
+    public func list() async throws -> [TaptionBackupFileInfo] {
         let directory = try await folder()
         var infos = try await TaptionLocalFolderBackupDestination(directory: directory).list()
         // 내려받지 않은 파일은 실제 이름이 아닌 자리표시자로만 보인다.
@@ -367,7 +379,7 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         return target
     }
 
-    func fetch(name: String) async throws -> URL {
+    public func fetch(name: String) async throws -> URL {
         let directory = try await folder()
         let source = try await downloadedURL(name: name, in: directory)
         try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
@@ -381,19 +393,19 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         return copy
     }
 
-    func release(fetched: URL) async {
+    public func release(fetched: URL) async {
         // 우리가 만든 임시 사본만 지운다.
         guard fetched.deletingLastPathComponent().standardizedFileURL == temporaryDirectory.standardizedFileURL else { return }
         try? FileManager.default.removeItem(at: fetched)
     }
 
-    func fetchPrefix(name: String, length: Int) async throws -> Data {
+    public func fetchPrefix(name: String, length: Int) async throws -> Data {
         let directory = try await folder()
         let source = try await downloadedURL(name: name, in: directory)
         return try fileSystem.coordinatedReadPrefix(of: source, length: length)
     }
 
-    func replace(name: String, with localFile: URL) async throws {
+    public func replace(name: String, with localFile: URL) async throws {
         let directory = try await folder()
         let target = directory.appendingPathComponent(name, isDirectory: false)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -405,7 +417,7 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         try fileSystem.coordinatedReplace(target: target, with: staged.file)
     }
 
-    func remove(name: String) async throws {
+    public func remove(name: String) async throws {
         let directory = try await folder()
         let target = directory.appendingPathComponent(name, isDirectory: false)
         if FileManager.default.fileExists(atPath: target.path) {
@@ -417,7 +429,7 @@ struct TaptionICloudDriveBackupDestination: TaptionBackupDestination {
         }
     }
 
-    func cleanupStaleUploads() async {
+    public func cleanupStaleUploads() async {
         guard let directory = try? await folder() else { return }
         TaptionBackupStaging.removeStaleUploads(in: directory)
     }

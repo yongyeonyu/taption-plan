@@ -99,8 +99,6 @@
 		A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000077 /* WatchMeasurementAlertTests.swift */; };
 		A1000000000000000000007A /* DiagnosticsLogSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000007A /* DiagnosticsLogSupport.swift */; };
 		5A00000000000000000000A2 /* TaptionStoreV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F2 /* TaptionStoreV2.swift */; };
-		5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F1 /* TaptionBackupFormat.swift */; };
-		5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F2 /* TaptionBackupDestination.swift */; };
 		5B00000000000000000000A3 /* TaptionBackupEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B00000000000000000000F3 /* TaptionBackupEngine.swift */; };
 		5B0000000000000000000B4A /* PlanBackupEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */; };
 		5B0000000000000000000B3A /* PlanBackupPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B0000000000000000000B3F /* PlanBackupPresentation.swift */; };
@@ -214,6 +212,8 @@
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
+		C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
+		C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */ = {isa = PBXBuildFile; productRef = C0FFEE000000000000000002 /* TaptionPlanStore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -369,8 +369,6 @@
 		F10000000000000000000072 /* WatchSensorQueryPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSensorQueryPlan.swift; sourceTree = "<group>"; };
 		F1000000000000000000007A /* DiagnosticsLogSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupport.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F2 /* TaptionStoreV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionStoreV2.swift; sourceTree = "<group>"; };
-		5B00000000000000000000F1 /* TaptionBackupFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupFormat.swift; sourceTree = "<group>"; };
-		5B00000000000000000000F2 /* TaptionBackupDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupDestination.swift; sourceTree = "<group>"; };
 		5B00000000000000000000F3 /* TaptionBackupEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionBackupEngine.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B4F /* PlanBackupEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupEngineAdapter.swift; sourceTree = "<group>"; };
 		5B0000000000000000000B3F /* PlanBackupPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanBackupPresentation.swift; sourceTree = "<group>"; };
@@ -482,6 +480,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000011 /* TaptionPlanStore in Frameworks */,
 				A50000000000000000000002 /* MapLibre in Frameworks */,
 				A30000000000000000000001 /* TaptionPlanCore in Frameworks */,
 				A70000000000000000000001 /* TaptionPlanEngine in Frameworks */,
@@ -502,6 +501,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0FFEE000000000000000013 /* TaptionPlanStore in Frameworks */,
 				A4000000000000000000000C /* TaptionPlanCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -717,8 +717,6 @@
 				F100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift */,
 				5B0000000000000000000B2F /* PlanSecurityService.swift */,
 				5B0000000000000000000B1F /* AppLockAndPIN.swift */,
-				5B00000000000000000000F2 /* TaptionBackupDestination.swift */,
-				5B00000000000000000000F1 /* TaptionBackupFormat.swift */,
 				5A00000000000000000000F4 /* TaptionStoreRawEvents.swift */,
 				5A00000000000000000000F5 /* TaptionStoreQuality.swift */,
 				5A00000000000000000000F6 /* TaptionStoreColumnCoding.swift */,
@@ -821,6 +819,7 @@
 			);
 			name = TaptionPlan;
 			packageProductDependencies = (
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 				X70000000000000000000002 /* TaptionPlanEngine */,
 				X50000000000000000000002 /* MapLibre */,
@@ -866,6 +865,7 @@
 			);
 			name = TaptionPlanWidget;
 			packageProductDependencies = (
+				C0FFEE000000000000000002 /* TaptionPlanStore */,
 				X30000000000000000000002 /* TaptionPlanCore */,
 			);
 			productName = TaptionPlanWidget;
@@ -1009,6 +1009,7 @@
 				X40000000000000000000001 /* XCLocalSwiftPackageReference "TaptionActivityEngine" */,
 				X40000000000000000000003 /* XCLocalSwiftPackageReference "TaptionRouteEngine" */,
 				X70000000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanEngine" */,
+				C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */,
 				X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 			);
 			mainGroup = 810000000000000000000001;
@@ -1188,8 +1189,6 @@
 				A100000000000000000000F1 /* PlanBackupRouteFallbackEngine.swift in Sources */,
 				5B0000000000000000000B2A /* PlanSecurityService.swift in Sources */,
 				5B0000000000000000000B1A /* AppLockAndPIN.swift in Sources */,
-				5B00000000000000000000A2 /* TaptionBackupDestination.swift in Sources */,
-				5B00000000000000000000A1 /* TaptionBackupFormat.swift in Sources */,
 				5A00000000000000000000A6 /* TaptionStoreRawEvents.swift in Sources */,
 				5A00000000000000000000A8 /* TaptionStoreQuality.swift in Sources */,
 				5A00000000000000000000AA /* TaptionStoreColumnCoding.swift in Sources */,
@@ -1784,6 +1783,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/TaptionPlanEngine;
 		};
+		C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TaptionPlanStore;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -1822,6 +1825,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = X50000000000000000000001 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
 			productName = MapLibre;
+		};
+		C0FFEE000000000000000002 /* TaptionPlanStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0FFEE000000000000000001 /* XCLocalSwiftPackageReference "TaptionPlanStore" */;
+			productName = TaptionPlanStore;
 		};
 /* End XCSwiftPackageProductDependency section */
 

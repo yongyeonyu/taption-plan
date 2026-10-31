@@ -1,5 +1,8 @@
 import Foundation
 import TaptionPlanCore
+// 저장소 패키지를 앱·위젯 전체에 다시 내보낸다. 저장소 actor·열 코덱이 `FeatureModels`와 함께
+// 패키지로 옮겨 가기 전(ALL1101A01 2차)까지, 다른 파일이 import 한 줄씩 늘리지 않게 한다.
+@_exported import TaptionPlanStore
 
 /// 계획·기록 저장소. `TaptionStoreV2`의 `records` 표에 스냅샷의 모든 항목을 행 하나씩 저장한다.
 /// 저장할 때는 직전 상태와 비교해 바뀐 행만 쓰고 사라진 행은 지운다.
@@ -35,7 +38,13 @@ actor TaptionStoreRepository: PlanDataRepository {
     private var encodedItemCount = 0
     private var saveTail: Task<Void, Error>?
 
+    /// 패키지 저장소의 진단 이벤트를 앱 진단 로그로 잇는다(처음 한 번).
+    private static let storeDiagnosticsConnected: Void = TaptionStoreDiagnostics.install { event, fields, metrics in
+        TaptionPlanDiagnosticsLogger.shared.record(event, level: .notice, fields: fields, metrics: metrics)
+    }
+
     init(store: TaptionStoreV2, memoStore: TaptionStoreV2? = nil) {
+        _ = Self.storeDiagnosticsConnected
         self.store = store
         self.memoStore = memoStore
     }
