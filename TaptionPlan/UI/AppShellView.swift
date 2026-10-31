@@ -5,6 +5,7 @@ import UIKit
 
 struct AppShellView: View {
     private static let legacyUIEnabled = false
+    private static let liveActivityTicker = Timer.publish(every: 30, on: .main, in: .common).autoconnect() // body마다 새로 만들지 않는다(PRF1101A01)
 
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(
@@ -142,7 +143,7 @@ struct AppShellView: View {
         .onChange(of: model.snapshot.updatedAt) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
-        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(Self.liveActivityTicker) { _ in
             guard scenePhase == .active else { return }
             Task { await reconcileSensorLiveActivity() }
         }
@@ -1511,7 +1512,6 @@ struct TaptionProAccessView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(Color.tpInk)
             }
-
 
 #if DEBUG
             if case .expired = controller.state {

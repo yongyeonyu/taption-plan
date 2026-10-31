@@ -240,6 +240,99 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertNil(MapHomePlaybackSpeed.speed(at: base, travel: [], readings: []))
     }
 
+    /// 재생 드라이버의 색인 속도는 선형 탐색과 같은 값을 낸다(PRF1101A01).
+    func testPlaybackLookupSpeedMatchesLinearScan() {
+        let base = Date(timeIntervalSince1970: 1_800_000_000)
+        var readings: [SensorReading] = []
+        for index in 0..<400 {
+            var value = SensorReading(timestamp: base.addingTimeInterval(Double(index / 2) * 7))
+            if index % 5 != 0 {
+                value.point = GeoPoint(latitude: 37.5, longitude: 127 + Double(index) * 0.0001, altitude: 0,
+                                       horizontalAccuracy: 5, verticalAccuracy: 5)
+            }
+            value.speedMetersPerSecond = Double(index % 7)
+            readings.append(value)
+        }
+        let lookup = MapHomePlaybackLookup(readings: readings, travel: [], places: [])
+        for offset in stride(from: -30.0, through: 1_500, by: 3.5) {
+            let date = base.addingTimeInterval(offset)
+            XCTAssertEqual(
+                lookup.speed(at: date, travel: []),
+                MapHomePlaybackSpeed.speed(at: date, travel: [], readings: readings),
+                "offset \(offset)"
+            )
+        }
+        XCTAssertNil(MapHomePlaybackLookup(readings: [], travel: [], places: []).speed(at: base, travel: []))
+    }
+
+    /// 카메라가 그대로면 바뀐 마커만 다시 투영하고, 화면에서 멀리 벗어난 발자국은 건너뛴다(PRF1101A01).
+    func testMarkerProjectorReprojectsOnlyChangedMarkersAndCullsFarPawprints() {
+        var projector = MapHomeMarkerProjector()
+        let camera = MapHomeMarkerProjector.Camera(
+            latitude: 37.5, longitude: 127, altitude: 1_000, heading: 0, pitch: 0, size: CGSize(width: 390, height: 844)
+        )
+        let visible = MapHomeMarkerProjector.Bounds(south: 37.49, west: 126.99, north: 37.51, east: 127.01)
+        func marker(_ id: String, _ latitude: Double, _ longitude: Double) -> MapHomeVectorMarker {
+            MapHomeVectorMarker(id: id, coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude))
+        }
+        let project: (CLLocationCoordinate2D) -> CGPoint = { CGPoint(x: $0.longitude * 1_000, y: $0.latitude * 1_000) }
+        var markers = [
+            marker("displayed-location", 38.5, 128), // 화면 밖이어도 늘 투영
+            marker("pawprint-0", 37.5, 127),
+            marker("pawprint-1", 38.5, 128), // 멀리 벗어난 발자국은 건너뜀
+        ]
+        let first = projector.points(markers: markers, camera: camera, visible: visible, project: project)
+        XCTAssertEqual(projector.lastProjectionCount, 2)
+        XCTAssertNotNil(first["displayed-location"])
+        XCTAssertNotNil(first["pawprint-0"])
+        XCTAssertNil(first["pawprint-1"])
+
+        markers[1] = marker("pawprint-0", 37.501, 127)
+        let second = projector.points(markers: markers, camera: camera, visible: visible, project: project)
+        XCTAssertEqual(projector.lastProjectionCount, 1, "카메라가 같으면 바뀐 마커만")
+        XCTAssertEqual(second["pawprint-0"], project(markers[1].coordinate))
+        XCTAssertEqual(second["displayed-location"], first["displayed-location"])
+
+        var moved = camera
+        moved.longitude += 0.001
+        _ = projector.points(markers: markers, camera: moved, visible: visible, project: project)
+        XCTAssertEqual(projector.lastProjectionCount, 2, "카메라가 움직이면 보이는 것 전부 다시")
+    }
+
+    func testContentRevisionChangesWithAnyField() {
+        let base = MapHomeContentRevision.of("route", true, 3, 0.5)
+        XCTAssertEqual(base, MapHomeContentRevision.of("route", true, 3, 0.5))
+        XCTAssertNotEqual(base, MapHomeContentRevision.of("route", false, 3, 0.5))
+        XCTAssertNotEqual(base, MapHomeContentRevision.of("route", true, 3, 0.6))
+    }
+
+    func testMapFrameRateIsMaximumOnlyWhileMoving() {
+        XCTAssertEqual(MapHomeMapFrameRate.preferred(isMoving: true), .maximum)
+        XCTAssertEqual(MapHomeMapFrameRate.preferred(isMoving: false), .default)
+    }
+
+    func testForegroundLocationRelaxesWhenStationary() {
+        XCTAssertTrue(ForegroundLiveLocationPolicy.isStationary(motionIsStationary: true, speed: 0.2))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.isStationary(motionIsStationary: true, speed: 1.5))
+        XCTAssertFalse(ForegroundLiveLocationPolicy.isStationary(motionIsStationary: false, speed: nil))
+        XCTAssertEqual(ForegroundLiveLocationPolicy.accuracy(stationary: true).distanceFilter, 15)
+        XCTAssertEqual(ForegroundLiveLocationPolicy.accuracy(stationary: false).distanceFilter, 5)
+    }
+
+    func testDeviceMotionBatchFlushesFirstSampleThenOncePerInterval() {
+        let batch = DeviceMotionBatch(flushInterval: 1)
+        let zero = SensorVector3(x: 0, y: 0, z: 0)
+        let sample = DeviceMotionSnapshot(
+            gravity: zero, userAcceleration: zero, rotationRate: zero, attitudeRadians: zero,
+            magneticFieldMicroteslas: zero, magneticFieldAccuracy: 0, headingDegrees: nil
+        )
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(batch.append(sample, at: start)?.count, 1)
+        XCTAssertNil(batch.append(sample, at: start.addingTimeInterval(0.25)))
+        XCTAssertNil(batch.append(sample, at: start.addingTimeInterval(0.5)))
+        XCTAssertEqual(batch.append(sample, at: start.addingTimeInterval(1))?.count, 3)
+    }
+
     func testDayTravelSummaryGroupsByModeAndSortsByDistance() {
         func segment(_ mode: TravelMode, _ meters: Double) -> TravelSegment {
             TravelSegment(

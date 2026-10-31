@@ -133,11 +133,14 @@ public struct TaptionLatestValueProjection<Value: Equatable & Sendable>: Sendabl
     }
 }
 
+/// 입력은 240Hz까지 받고, SwiftUI 레이아웃 상태는 60Hz로 합친다.
+/// 지도 카메라·화랑이·카운터처럼 UIKit/Core Animation이 직접 그리는 것은 `maximumDirectRenderRate`(120Hz)까지 쓴다.
 public enum TaptionInputFrameGate {
     public static let maximumInputRate: Double = 240
     public static let inputInterval = 1 / maximumInputRate
     public static let maximumRenderRate: Double = 60
     public static let minimumInterval = 1 / maximumRenderRate
+    public static let maximumDirectRenderRate: Double = 120
 
     public static func shouldRender(
         lastUptime: inout TimeInterval,
@@ -158,3 +161,98 @@ public enum TaptionInputFrameGate {
         return true
     }
 }
+
+/// 창 안에서 걸러진 마지막 입력을 창 끝에 한 번 보낸다(PRF1101A01).
+/// `TaptionInputFrameGate`만 쓰면 손가락이 멈춘 순간의 값이 다음 입력이나 손을 뗄 때까지 화면에 오르지 않았다.
+public struct TaptionTrailingInputGate<Value> {
+    public enum Decision {
+        /// 지금 반영한다.
+        case deliver(Value)
+        /// 값을 붙잡아 두었다. 이 시각에 `flush`를 부른다(이미 예약했으면 `nil`).
+        case deferred(flushAtUptime: TimeInterval?)
+    }
+
+    public let minimumInterval: TimeInterval
+    private var lastUptime: TimeInterval = 0
+    private var pending: Value?
+    private var isFlushScheduled = false
+
+    public init(minimumInterval: TimeInterval = TaptionInputFrameGate.minimumInterval) {
+        self.minimumInterval = minimumInterval
+    }
+
+    public var hasPendingValue: Bool { pending != nil }
+
+    public mutating func submit(_ value: Value, nowUptime: TimeInterval, force: Bool = false) -> Decision {
+        if TaptionInputFrameGate.shouldRender(
+            lastUptime: &lastUptime,
+            nowUptime: nowUptime,
+            force: force,
+            minimumInterval: minimumInterval
+        ) {
+            pending = nil
+            return .deliver(value)
+        }
+        pending = value
+        guard !isFlushScheduled else { return .deferred(flushAtUptime: nil) }
+        isFlushScheduled = true
+        return .deferred(flushAtUptime: lastUptime + minimumInterval)
+    }
+
+    /// 예약한 시각에 부른다. 그사이 새 값이 반영됐으면 `nil`.
+    public mutating func flush(nowUptime: TimeInterval) -> Value? {
+        isFlushScheduled = false
+        guard let value = pending else { return nil }
+        pending = nil
+        lastUptime = nowUptime
+        return value
+    }
+
+    public mutating func reset() {
+        lastUptime = 0
+        pending = nil
+        isFlushScheduled = false
+    }
+}
+
+/// `TaptionTrailingInputGate`를 메인 액터에서 예약까지 맡는 상자. 화면 쪽은 `submit`만 부른다.
+@MainActor
+public final class TaptionTrailingInputScheduler<Value> {
+    private var gate: TaptionTrailingInputGate<Value>
+    private var flushTask: Task<Void, Never>?
+    /// 화면 쪽이 제스처마다 최신 클로저로 바꿔 끼울 수 있다(SwiftUI 화면 값은 매번 새로 만들어진다).
+    public var deliver: (Value) -> Void
+
+    public init(
+        minimumInterval: TimeInterval = TaptionInputFrameGate.minimumInterval,
+        deliver: @escaping (Value) -> Void = { _ in }
+    ) {
+        gate = TaptionTrailingInputGate(minimumInterval: minimumInterval)
+        self.deliver = deliver
+    }
+
+    public func submit(_ value: Value, force: Bool = false) {
+        let now = ProcessInfo.processInfo.systemUptime
+        switch gate.submit(value, nowUptime: now, force: force) {
+        case .deliver(let value):
+            deliver(value)
+        case .deferred(let flushAt?):
+            flushTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(max(0, flushAt - now)))
+                guard let self, !Task.isCancelled else { return }
+                if let value = self.gate.flush(nowUptime: ProcessInfo.processInfo.systemUptime) {
+                    self.deliver(value)
+                }
+            }
+        case .deferred(nil):
+            break
+        }
+    }
+
+    public func reset() {
+        flushTask?.cancel()
+        flushTask = nil
+        gate.reset()
+    }
+}
+

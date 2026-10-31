@@ -119,4 +119,26 @@ final class RuntimeEfficiencyTests: XCTestCase {
         print("CACHE_100K_HITS_LEGACY_MS=\(Double(oldDuration) / 1_000_000)")
         print("CACHE_100K_HITS_BOUNDED_MS=\(Double(duration) / 1_000_000)")
     }
+
+    func testTrailingInputGateDeliversLastFilteredValueOnceAtWindowEnd() {
+        var gate = TaptionTrailingInputGate<Int>(minimumInterval: 1.0 / 60)
+        guard case .deliver(1) = gate.submit(1, nowUptime: 10) else { return XCTFail("첫 값은 바로") }
+        // 같은 창 안 240Hz 입력 3개: 첫 번째만 예약을 돌려주고 마지막 값만 남는다.
+        guard case .deferred(let flushAt?) = gate.submit(2, nowUptime: 10.004) else { return XCTFail("예약") }
+        XCTAssertEqual(flushAt, 10 + 1.0 / 60, accuracy: 1e-9)
+        guard case .deferred(nil) = gate.submit(3, nowUptime: 10.008) else { return XCTFail("중복 예약 없음") }
+        guard case .deferred(nil) = gate.submit(4, nowUptime: 10.012) else { return XCTFail("중복 예약 없음") }
+        XCTAssertEqual(gate.flush(nowUptime: flushAt), 4)
+        XCTAssertNil(gate.flush(nowUptime: flushAt + 0.001), "한 번만 보낸다")
+        XCTAssertFalse(gate.hasPendingValue)
+    }
+
+    func testTrailingInputGateDropsPendingWhenNewerValueIsDelivered() {
+        var gate = TaptionTrailingInputGate<Int>(minimumInterval: 1.0 / 60)
+        _ = gate.submit(1, nowUptime: 1)
+        _ = gate.submit(2, nowUptime: 1.005)
+        guard case .deliver(3) = gate.submit(3, nowUptime: 1.02) else { return XCTFail("창이 지나면 바로") }
+        XCTAssertNil(gate.flush(nowUptime: 1.0167), "이미 더 새 값을 보냈다")
+        guard case .deliver(9) = gate.submit(9, nowUptime: 1.021, force: true) else { return XCTFail("force") }
+    }
 }

@@ -2734,3 +2734,9 @@
 - 가드: `architecture-metrics.py --check`가 이 작업 전부터 `MapHomeTimeSidebar.swift` 3,296→3,301로 실패한다(c04a4a0의 사이드바 손잡이 변경, PRF 소유). 예산은 올리지 않았다.
 - scripts: 코드·현행 문서(AGENTS·DEVELOPMENT·docs) 참조가 없는 것은 `analyze-diagnostics.py`·`map-pan-bench.sh`·`playback-bench.sh`·`with-device-lock.sh` 넷인데, 모두 temp.md·test.md 기록과 현재 계획(시뮬레이터 잠금, 재생·지도 벤치)에서 쓰여 지우지 않았다. DEVELOPMENT.md에 사용법을 올릴 후보.
 - 진행: 구현·검증 완료(test.md CLN1101A01). 남은 것 = 구조 가드의 `MapHomeTimeSidebar` 초과(PRF 몫)가 풀리면 합칠 때 `--check` 재확인, `SubwayRoutePrecedence` 처리. 확인 뒤 블록을 지운다.
+## PRF1101A01 성능·지도·터치(ALL1101A01 세션 B)
+- 원인: 재생 드라이버가 프레임마다 하루 측정값 선형 탐색·장소 사전 재생성, 화랑이·카운터가 재생 중 SwiftUI `.position`/`@State`로 매 프레임 레이아웃, MapLibre 프레임률 미설정, 마커 화면좌표·`pawprintWaypoints` 매번 재계산, 포그라운드 GPS Best 상시·모션 main queue·HealthKit `.immediate`·위젯 reload 중복·`body` 안 `Timer.publish`, 지도 탭 UIKit·SwiftUI 이중 처리와 전부 동시 인식, 사이드바 손잡이 `minimumDistance: 0`+별도 탭, 시간표 핀치 이중, `MapHomeTimeSidebar.swift` 동결 예산 초과(3301>3296).
+- 해결: 계획 「성능·터치 (세션 B)」 1–8. 사이드바 계산(`MapHomeTimeSidebarMath`)을 새 파일로(pbxproj에 파일 1개 추가). 입력 240Hz 수용·지도 카메라·화랑이·카운터 120Hz·SwiftUI 상태 60Hz로 AGENTS.md 문구 수정.
+- 검증 기준: `TimeScaleTests`·`MapHomeLiveMapTests` 등 관련 단위 테스트 통과(xcresult 실행 수 확인), 사이드바·재생 화면 시험 통과, 앱 Debug 빌드, 가드 스크립트 2개 통과. 실기기 프레임·발열 벤치는 대표 승인 후(미검증으로 남김).
+- 진행: 1–8 구현·단위 283건·화면 4건·Debug 빌드·가드 통과(test.md). 남은 것: 재생 HUD 화면 시험(새벽이라 건너뜀) 재실행, 실기기 벤치·발열(대표 승인 후).
+- 남긴 일(다른 세션 소유·이번 범위 밖): 지도 화면이 가려졌을 때 포그라운드 GPS를 끄는 신호(AppModel이 지도 표시 여부를 모름), `MapHomePlaybackVideoRenderer`도 `MapHomePlaybackLookup`을 쓰면 영상 렌더 비용이 준다, `RouteTimelineData.swift`의 `MapHomePlaybackLocation.resolve`는 Core 소유라 그대로 둠.

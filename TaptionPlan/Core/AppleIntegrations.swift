@@ -460,19 +460,6 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
 
 // MARK: - Health and Apple Watch data mirrored to iPhone
 
-enum HealthRefreshPolicy {
-    static let broadRawSyncInterval: TimeInterval = 15 * 60
-    static let foregroundInterval = broadRawSyncInterval
-    static let periodicLookback: TimeInterval = 2 * 86_400
-    static let backgroundFrequency: HKUpdateFrequency = .immediate
-    static let backgroundObservedTypeIdentifiers: Set<String> = [
-        HKObjectType.workoutType().identifier,
-        HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
-        HKQuantityTypeIdentifier.heartRate.rawValue,
-        HKQuantityTypeIdentifier.stepCount.rawValue,
-    ]
-}
-
 actor HealthBackgroundRefreshCoordinator {
     typealias Handler = @Sendable () async -> Bool
 
@@ -1403,7 +1390,7 @@ final class AppleHealthService: @unchecked Sendable {
             if enabled {
                 store.enableBackgroundDelivery(
                     for: sampleType,
-                    frequency: HealthRefreshPolicy.backgroundFrequency,
+                    frequency: HealthRefreshPolicy.backgroundFrequency(for: sampleType.identifier),
                     withCompletion: completion
                 )
             } else {
@@ -2423,29 +2410,19 @@ enum StationaryLocationGate {
 }
 
 @MainActor
-enum ForegroundLiveLocationPolicy {
-    static let distanceFilterMeters: CLLocationDistance = 5
-    static let minimumEmissionInterval: TimeInterval = 0.5
-
-    static func shouldTrack(
-        sceneIsActive: Bool,
-        locationCollectionEnabled: Bool,
-        hasLocationPermission: Bool
-    ) -> Bool {
-        sceneIsActive && locationCollectionEnabled && hasLocationPermission
-    }
-
-    static func isNewFix(_ timestamp: Date, after previous: Date?) -> Bool {
-        previous.map { timestamp > $0 } ?? true
-    }
-}
-
-@MainActor
 final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     private let activityManager = CMMotionActivityManager()
     private let deviceMotionManager = CMMotionManager()
     private let altimeter = CMAltimeter()
+    /// 모션·고도 갱신은 메인 큐 대신 이 직렬 큐에서 받고, 모션은 묶어서 메인으로 보낸다(PRF1101A01).
+    private let sensorUpdateQueue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.name = "TaptionPlan.sensorUpdates"
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .utility
+        return queue
+    }()
     private let pedometer = CMPedometer()
 
     private var continuation: AsyncStream<SensorReading>.Continuation?
@@ -2984,7 +2961,8 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                     self.latestMotion = Self.motionKind(activity)
                     self.latestMotionConfidence = Self.confidence(activity.confidence)
                     self.updateAutomaticTracking(for: self.latestMotion)
-                    if self.configuration.highAccuracyDuringMovement {
+                    if self.configuration.highAccuracyDuringMovement
+                        || self.isForegroundLiveLocationTrackingEnabled {
                         self.applyLocationPolicy(
                             isMoving: !activity.stationary
                         )
@@ -3004,9 +2982,10 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                 availableFrames.contains(.xArbitraryCorrectedZVertical)
                     ? .xArbitraryCorrectedZVertical
                     : .xArbitraryZVertical
+            let batch = DeviceMotionBatch(flushInterval: DeviceMotionBatch.flushInterval)
             deviceMotionManager.startDeviceMotionUpdates(
                 using: referenceFrame,
-                to: .main
+                to: sensorUpdateQueue
             ) { [weak self] motion, _ in
                 guard let motion else { return }
                 let snapshot = DeviceMotionSnapshot(
@@ -3041,28 +3020,34 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                         ? motion.heading
                         : nil
                 )
+                // 이 큐 안에서만 쌓고, 1초마다(또는 처음 한 번) 묶음을 메인으로 넘긴다. 정확도 모드(4Hz)에서
+                // 표본마다 메인 작업을 만들던 것을 줄인다. 시각은 받은 순간으로 남겨 정지 판정이 그대로다.
+                guard let samples = batch.append(snapshot, at: Date.now) else { return }
                 Task { @MainActor in
                     guard let self,
                           self.isCollecting,
                           self.sensorStreamsRunning,
-                          self.sensorStreamGeneration == generation else {
+                          self.sensorStreamGeneration == generation,
+                          let last = samples.last else {
                         return
                     }
-                    self.latestDeviceMotion = snapshot
-                    self.deviceMotionAccumulator.append(snapshot)
-                    self.stillnessTracker.append(
-                        userAccelerationMagnitudeG: sqrt(
-                            snapshot.userAcceleration.x * snapshot.userAcceleration.x
-                                + snapshot.userAcceleration.y * snapshot.userAcceleration.y
-                                + snapshot.userAcceleration.z * snapshot.userAcceleration.z
-                        ),
-                        rotationRateMagnitude: sqrt(
-                            snapshot.rotationRate.x * snapshot.rotationRate.x
-                                + snapshot.rotationRate.y * snapshot.rotationRate.y
-                                + snapshot.rotationRate.z * snapshot.rotationRate.z
-                        ),
-                        at: Date.now
-                    )
+                    self.latestDeviceMotion = last.snapshot
+                    for (snapshot, receivedAt) in samples {
+                        self.deviceMotionAccumulator.append(snapshot)
+                        self.stillnessTracker.append(
+                            userAccelerationMagnitudeG: sqrt(
+                                snapshot.userAcceleration.x * snapshot.userAcceleration.x
+                                    + snapshot.userAcceleration.y * snapshot.userAcceleration.y
+                                    + snapshot.userAcceleration.z * snapshot.userAcceleration.z
+                            ),
+                            rotationRateMagnitude: sqrt(
+                                snapshot.rotationRate.x * snapshot.rotationRate.x
+                                    + snapshot.rotationRate.y * snapshot.rotationRate.y
+                                    + snapshot.rotationRate.z * snapshot.rotationRate.z
+                            ),
+                            at: receivedAt
+                        )
+                    }
                     self.emit()
                 }
             }
@@ -3071,7 +3056,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         if CMAltimeter.isRelativeAltitudeAvailable() {
             let sessionID = UUID()
             altimeterSessionID = sessionID
-            altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, _ in
+            altimeter.startRelativeAltitudeUpdates(to: sensorUpdateQueue) { [weak self] data, _ in
                 let update = AltimeterSensorUpdate(
                     relativeAltitudeMeters:
                         data?.relativeAltitude.doubleValue,
@@ -3823,9 +3808,14 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
         locationManager.activityType = .other
         if isForegroundLiveLocationTrackingEnabled {
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            locationManager.distanceFilter =
-                ForegroundLiveLocationPolicy.distanceFilterMeters
+            let policy = ForegroundLiveLocationPolicy.accuracy(
+                stationary: ForegroundLiveLocationPolicy.isStationary(
+                    motionIsStationary: latestMotion == .stationary,
+                    speed: latestLocation.map { $0.speed >= 0 ? $0.speed : 0 }
+                )
+            )
+            if locationManager.desiredAccuracy != policy.desired { locationManager.desiredAccuracy = policy.desired }
+            if locationManager.distanceFilter != policy.distanceFilter { locationManager.distanceFilter = policy.distanceFilter }
             locationManager.pausesLocationUpdatesAutomatically = false
             return
         }

@@ -7590,13 +7590,8 @@ private struct TimelineBoard: View {
                 .simultaneousGesture(
                     viewportDragGesture(width: contentTimelineWidth)
                 )
-                // ScrollView owns the touch arena on a real device. Give
-                // the two-finger gesture priority so its pan recognizer
-                // cannot swallow a pinch before the viewport sees it.
-                .highPriorityGesture(
-                    viewportMagnifyGesture,
-                    including: .subviews
-                )
+                // 시간표 핀치는 UIKit 인식기 한 경로로만 받는다. SwiftUI `MagnifyGesture`도 함께 걸려
+                // 한 손짓이 두 번 반영됐다(PRF1101A01). 아래 눈금자는 이 인식기 밖이라 SwiftUI 핀치를 쓴다.
                 .background {
                     TwoFingerPinchAttachment(
                         onChanged: { scale, anchor in

@@ -13506,6 +13506,9 @@ final class FeatureEngineTests: XCTestCase {
             HealthRefreshPolicy.backgroundFrequency,
             .immediate
         )
+        XCTAssertEqual(HealthRefreshPolicy.backgroundFrequency(for: "HKQuantityTypeIdentifierHeartRate"), .hourly)
+        XCTAssertEqual(HealthRefreshPolicy.backgroundFrequency(for: "HKQuantityTypeIdentifierStepCount"), .hourly)
+        XCTAssertEqual(HealthRefreshPolicy.backgroundFrequency(for: "HKCategoryTypeIdentifierSleepAnalysis"), .immediate)
     }
 
     func testAppleDeviceMotionHistoryProjectsWithoutMutatingSource() {

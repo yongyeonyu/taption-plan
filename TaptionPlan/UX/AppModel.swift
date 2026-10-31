@@ -982,6 +982,7 @@ final class AppModel {
     @ObservationIgnored private var lastIntegrationSkipLogUptime: TimeInterval = 0
     @ObservationIgnored private var lastWidgetPayloadIdentity:
         TaptionWidgetPayload?
+    @ObservationIgnored private var lastWidgetPayloadInput: [Double]?
     @ObservationIgnored private var lastWatchPayloadIdentity:
         TaptionWatchPayload?
     @ObservationIgnored private var widgetPayloadSkipCount = 0
@@ -13245,6 +13246,11 @@ final class AppModel {
         let now = Date.now
         let hidesSensitiveContent = hidesSensitiveContent
             ?? TaptionExternalPrivacyStore.isLocked
+        // 같은 기록·같은 분·같은 잠금이면 위젯 payload를 다시 만들지 않는다(PRF1101A01).
+        let input = [snapshot.updatedAt.timeIntervalSinceReferenceDate, (now.timeIntervalSinceReferenceDate / 60).rounded(.down),
+                     hidesSensitiveContent ? 1 : 0]
+        guard input != lastWidgetPayloadInput else { return publishWatchPayload(now: now, calendar: calendar) }
+        lastWidgetPayloadInput = input
         let payload = TaptionWidgetPayloadFactory.make(
             from: snapshot,
             now: now,
@@ -13271,12 +13277,8 @@ final class AppModel {
         do {
             try TaptionWidgetSharedStore.writePayload(payload)
             lastWidgetPayloadIdentity = identity
-            let locationCount = payload.items.filter {
-                $0.resolvedLane == .location
-            }.count
-            let movementCount = payload.items.filter {
-                $0.resolvedLane == .movement
-            }.count
+            let locationCount = payload.items.filter { $0.resolvedLane == .location }.count
+            let movementCount = payload.items.filter { $0.resolvedLane == .movement }.count
             Self.integrationLogger.notice(
                 "Widget ground-truth publish: snapshotUpdated=\(self.snapshot.updatedAt.timeIntervalSince1970, privacy: .public), generated=\(payload.generatedAt.timeIntervalSince1970, privacy: .public), fingerprint=\(payload.sourceFingerprint ?? "none", privacy: .public), items=\(payload.items.count, privacy: .public), locations=\(locationCount, privacy: .public), movements=\(movementCount, privacy: .public)"
             )
@@ -13290,6 +13292,7 @@ final class AppModel {
             )
             requestImmediateWidgetRefresh()
         } catch {
+            lastWidgetPayloadInput = nil
             Self.integrationLogger.error(
                 "Widget ground-truth publish failed: \(error.localizedDescription, privacy: .public)"
             )
@@ -13485,19 +13488,15 @@ final class AppModel {
         )
     }
 
+    /// payload가 바뀌었을 때만 불린다. 잇따른 변경을 0.3초 묶어 모든 위젯을 한 번만 다시 읽힌다
+    /// (예전: 바로 schedule+전체, 0.7초 뒤 또 schedule+전체로 4번, PRF1101A01).
     private func requestImmediateWidgetRefresh() {
         widgetReloadFollowupTask?.cancel()
-        Self.integrationLogger.notice("Widget timeline reload requested")
-        WidgetCenter.shared.reloadTimelines(ofKind: TaptionWidgetKind.schedule)
-        WidgetCenter.shared.reloadAllTimelines()
         widgetReloadFollowupTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 700_000_000)
+            try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
-            WidgetCenter.shared.reloadTimelines(
-                ofKind: TaptionWidgetKind.schedule
-            )
             WidgetCenter.shared.reloadAllTimelines()
-            Self.integrationLogger.notice("Widget timeline reload follow-up requested")
+            Self.integrationLogger.notice("Widget timeline reload requested")
         }
     }
 
