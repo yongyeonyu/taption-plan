@@ -27116,6 +27116,45 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertEqual(lane.map(\.endMinute), [90, 440, 485, 608])
     }
 
+    /// 센서 원본 열은 움직임·헬스·화면·연결·장소 다섯 줄로 갈라 서서, 한 분에 값이 여럿이어도 서로 가리지 않는다(UIX1031A17).
+    func testSensorEvidenceChannelsKeepScreenNetworkPlaceAndHealthSeparate() {
+        let dayStart = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func at(_ minute: Int) -> Date { dayStart.addingTimeInterval(Double(minute) * 60) }
+        let readings: [SensorReading] = (600...620).map { minute in
+            var reading = SensorReading(timestamp: at(minute), motion: .walking)
+            reading.screenIsOn = true
+            reading.connectedWiFiSSID = "HomeWiFi"
+            reading.nearbyStationName = "강남"
+            reading.watchWorkoutKind = "running"
+            reading.stepCount = 1_000 + minute
+            return reading
+        }
+        let sleep = watchSleepSession(TimeSpan(start: at(0), end: at(300)))
+        let segments = MapHomeNLESensorEvidence.channelSegments(
+            readings: readings, sleepSessions: [sleep], healthActuals: [], dayStart: dayStart, now: at(1_000)
+        )
+        func titles(_ channel: MapHomeNLESensorChannel) -> [String] {
+            segments.filter { $0.channel == channel }.map(\.title)
+        }
+        XCTAssertEqual(titles(.motion), ["걷기 · iPhone"])
+        XCTAssertEqual(titles(.screen), ["화면 켜짐"])
+        XCTAssertEqual(titles(.network), ["Wi-Fi · HomeWiFi"])
+        XCTAssertEqual(titles(.place), ["정류장 근처 · 강남"])
+        XCTAssertEqual(titles(.health), ["수면 · HealthKit", "운동 running · 워치"])
+        XCTAssertTrue(MapHomeNLESensorChannel.motion.isRestorable)
+        XCTAssertFalse(MapHomeNLESensorChannel.screen.isRestorable)
+
+        // 고른 분의 원본 값은 가장 가까운 측정값에서 풀어 쓴다. 10분을 넘게 떨어지면 없다.
+        let near = MapHomeNLESensorEvidence.nearestReading(atMinute: 610, in: readings, dayStart: dayStart)
+        XCTAssertEqual(near?.timestamp, at(610))
+        XCTAssertNil(MapHomeNLESensorEvidence.nearestReading(atMinute: 700, in: readings, dayStart: dayStart))
+        let lines = MapHomeNLESensorEvidence.rawLines(for: readings[10], language: .korean)
+        XCTAssertTrue(lines.contains("걸음 1,610"))
+        XCTAssertTrue(lines.contains("Wi-Fi HomeWiFi"))
+        XCTAssertTrue(lines.contains("가까운 정류장 강남"))
+        XCTAssertTrue(lines.contains("워치 운동 running"))
+    }
+
     func testLegacyWatchSleepBehaviorStillOverridesTravel() {
         let start = Date(timeIntervalSinceReferenceDate: 800_050_000)
         let span = TimeSpan(
@@ -29546,12 +29585,12 @@ final class TransitBoardingPersistenceTests: XCTestCase {
         let task = Task { await model.deleteTransitBoardingCandidate(candidate) }
         await repository.waitForConfirmationWrite()
         XCTAssertTrue(model.snapshot.settings.transitBoardingDecisions.isEmpty)
-        model.setMapDisplayStyle(.mapLibrePastel)
+        model.setMapDisplayStyle(.mapLibreCasual)
         await repository.releaseConfirmation()
         let success = await task.value
         XCTAssertTrue(success)
         let stored = try await repository.load()
-        XCTAssertEqual(stored.settings.mapDisplayStyle, .mapLibrePastel)
+        XCTAssertEqual(stored.settings.mapDisplayStyle, .mapLibreCasual)
         XCTAssertEqual(stored.travel, previousTravel)
         XCTAssertEqual(stored.settings.transitBoardingDecisions.count, 1)
         XCTAssertNil(stored.settings.transitBoardingDecisions[0].mode)
@@ -29682,14 +29721,14 @@ final class TransitBoardingPersistenceTests: XCTestCase {
         await repository.holdConfirmations()
         let task = Task { await model.confirmTransitBoarding(candidate) }
         await repository.waitForConfirmationWrite()
-        model.setMapDisplayStyle(.mapLibrePastel)
+        model.setMapDisplayStyle(.mapLibreCasual)
         await repository.releaseConfirmation()
         let success = await task.value
         XCTAssertTrue(success)
         let stored = try await repository.load()
-        XCTAssertEqual(stored.settings.mapDisplayStyle, .mapLibrePastel)
+        XCTAssertEqual(stored.settings.mapDisplayStyle, .mapLibreCasual)
         XCTAssertEqual(stored.travel.first?.subwayRoute, candidate.subwayRoutes.first?.route)
-        XCTAssertEqual(model.settings.mapDisplayStyle, .mapLibrePastel)
+        XCTAssertEqual(model.settings.mapDisplayStyle, .mapLibreCasual)
     }
 }
 
@@ -29800,11 +29839,11 @@ final class PredictedRoutePersistenceTests: XCTestCase {
         let task = Task { await model.savePredictedRouteDecision(route, deleting: true) }
         await repo.waitForConfirmationWrite()
         XCTAssertTrue(model.snapshot.settings.predictedRouteDecisions.isEmpty)
-        model.setMapDisplayStyle(.mapLibrePastel)
+        model.setMapDisplayStyle(.mapLibreCasual)
         await repo.releaseConfirmation()
         let saved = await task.value
         XCTAssertTrue(saved)
-        XCTAssertEqual(model.snapshot.settings.mapDisplayStyle, .mapLibrePastel)
+        XCTAssertEqual(model.snapshot.settings.mapDisplayStyle, .mapLibreCasual)
         XCTAssertTrue(try XCTUnwrap(model.snapshot.settings.predictedRouteDecisions.first).isDeleted)
     }
 }
@@ -30271,15 +30310,19 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(NLEReorderHoldPolicy.scrollPoints(elapsed: 0.5), 36, accuracy: 0.01)
     }
 
-    /// 확대 단추는 '전체 → 4배 → 12배 → 전체'로 돈다.
+    /// 확대 단추는 '전체 → 4배 → 12배 → 1분 → 전체'로 돈다.
     /// 하루 전체에서는 1시간짜리 클립이 몇 pt라 경계를 잡을 수 없어서, 한 단추로 편집 가능한 배율까지 간다.
     func testZoomButtonCyclesWholeDayFourTimesAndTwelveTimes() {
         let fit = NLEZoomPolicy.fitMinuteHeight(height: 400)
         XCTAssertEqual(fit, 400 / 1_440, accuracy: 0.0001)
         XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit, fitMinuteHeight: fit), 4)
         XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 4, fitMinuteHeight: fit), 12)
-        // 가장 크게 벌린 뒤에는 하루 전체로 돌아온다.
-        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 12, fitMinuteHeight: fit), 1)
+        // 12배 다음은 1분을 잡을 수 있는 배율, 그다음은 하루 전체로 돌아온다.
+        XCTAssertEqual(
+            NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 12, fitMinuteHeight: fit) * fit,
+            NLEZoomPolicy.minuteEditHeight, accuracy: 0.001
+        )
+        XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: NLEZoomPolicy.minuteEditHeight, fitMinuteHeight: fit), 1)
         // 손가락으로 어중간하게 벌려 둔 상태에서도 다음 칸으로 넘어간다.
         XCTAssertEqual(NLEZoomPolicy.nextLevel(currentMinuteHeight: fit * 2, fitMinuteHeight: fit), 4)
     }
@@ -30297,6 +30340,10 @@ final class NLETrackTests: XCTestCase {
         )
         XCTAssertEqual(
             NLEZoomPolicy.nextTitle(currentMinuteHeight: fit * 12, fitMinuteHeight: fit, language: .korean),
+            "1분"
+        )
+        XCTAssertEqual(
+            NLEZoomPolicy.nextTitle(currentMinuteHeight: NLEZoomPolicy.minuteEditHeight, fitMinuteHeight: fit, language: .korean),
             "전체"
         )
     }
@@ -30362,7 +30409,7 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(pieces.first?.span.end, calendar.date(byAdding: .minute, value: 320, to: start))
     }
 
-    /// 손잡이를 이웃의 먼 쪽 끝까지 가져가면 합치기를 묻고, 합치면 이웃이 끌어온 클립의 분류를 따른다(ARC1030A05).
+    /// 경계를 끌어 이웃이 최소 길이까지 눌리면 합치기를 묻고, 합치면 끌어온 클립이 이웃 자리까지 한 덩어리가 된다(ARC1030A05, UIX1031A18).
     func testHandleReachingNeighborFarEndOffersMergeAndAdoptsDraggedCategory() throws {
         let sleepSource = UUID()
         let workSource = UUID()
@@ -30373,27 +30420,35 @@ final class NLETrackTests: XCTestCase {
         let work = try XCTUnwrap(track.clip(atMinute: 400))
         let sleep = try XCTUnwrap(track.clip(atMinute: 100))
 
-        // 이웃의 먼 쪽 끝(0분)까지 간 손은 합치기를 묻는다.
+        // 중간까지만 간 손은 묻지 않는다(이웃이 아직 최소 길이보다 길다).
+        var midway = track
+        XCTAssertTrue(midway.roll(work.id, edge: .start, toMinute: 120))
+        XCTAssertNil(midway.squeezedMergePair(of: work.id, edge: .start, clipLengthAtStart: 1_140, neighborLengthAtStart: 300))
+        // 이웃의 먼 쪽 끝까지 간 손은 합치기를 묻는다.
         XCTAssertTrue(track.roll(work.id, edge: .start, toMinute: 0))
-        XCTAssertEqual(track.mergeCandidate(of: work.id, edge: .start, reachedMinute: 0)?.id, sleep.id)
-        // 중간까지만 간 손은 묻지 않는다.
-        XCTAssertNil(track.mergeCandidate(of: work.id, edge: .start, reachedMinute: 120))
+        let pair = try XCTUnwrap(track.squeezedMergePair(of: work.id, edge: .start, clipLengthAtStart: 1_140, neighborLengthAtStart: 300))
+        XCTAssertEqual(pair.survivor.id, work.id)
+        XCTAssertEqual(pair.absorbed.id, sleep.id)
+        // 끌기 전부터 최소 길이였던 이웃은 묻지 않는다.
+        XCTAssertNil(track.squeezedMergePair(of: work.id, edge: .start, clipLengthAtStart: 1_140, neighborLengthAtStart: NLETrack.minimumClipMinutes))
 
         XCTAssertTrue(track.mergeIntoDragged(work.id, neighborID: sleep.id))
-        XCTAssertEqual(track.clip(sleep.id)?.option.categoryID, "work")
+        XCTAssertNil(track.clip(sleep.id), "합친 이웃은 따로 남지 않는다")
+        XCTAssertEqual(track.clip(work.id)?.startMinute, 0)
+        XCTAssertEqual(track.clips.filter { !$0.isGap }.count, 1)
         // 이웃의 원본 구간 요청이 빠지지 않고 끌어온 분류로 나간다.
         let requests = track.editRequests(dayStart: dayStart(), calendar: calendar)
         let owner = try XCTUnwrap(requests.first(where: { $0.sourceIDs == [sleepSource] }))
         XCTAssertEqual(ActivitySectionOverrideEngine.pieces(for: owner).first?.option.categoryID, "work")
     }
 
-    /// 이웃이 기록 없는 빈 시간이거나 이미 같은 분류면 묻지 않는다.
+    /// 이웃이 기록 없는 빈 시간이면 묻지 않고, 같은 분류로 나뉜 두 덩어리는 묻고 하나로 합친다(UIX1031A21).
     func testMergeIsNotOfferedForGapOrSameCategoryNeighbors() throws {
         var gapTrack = MapHomeNLEClipEditor.makeMainTrack(segments: threeSegmentDay(sources: [UUID()]))
         let work = try XCTUnwrap(gapTrack.clip(atMinute: 400))
         gapTrack.trim(work.id, edge: .end, toMinute: 480)
         XCTAssertTrue(gapTrack.roll(work.id, edge: .end, toMinute: NLETrack.dayMinutes))
-        XCTAssertNil(gapTrack.mergeCandidate(of: work.id, edge: .end, reachedMinute: NLETrack.dayMinutes))
+        XCTAssertNil(gapTrack.squeezedMergePair(of: work.id, edge: .end, clipLengthAtStart: 120, neighborLengthAtStart: 960))
 
         var sameTrack = MapHomeNLEClipEditor.makeMainTrack(segments: [
             segment(0, 300, "work", sources: [UUID()]),
@@ -30401,7 +30456,122 @@ final class NLETrackTests: XCTestCase {
         ])
         let second = try XCTUnwrap(sameTrack.clip(atMinute: 400))
         _ = sameTrack.roll(second.id, edge: .start, toMinute: 0)
-        XCTAssertNil(sameTrack.mergeCandidate(of: second.id, edge: .start, reachedMinute: 0))
+        let pair = try XCTUnwrap(sameTrack.squeezedMergePair(of: second.id, edge: .start, clipLengthAtStart: 1_140, neighborLengthAtStart: 300))
+        XCTAssertTrue(sameTrack.mergeIntoDragged(pair.survivor.id, neighborID: pair.absorbed.id))
+        XCTAssertEqual(sameTrack.clips.filter { !$0.isGap }.count, 1)
+    }
+
+    /// 분류가 같아도 이름이 다른 이웃(「머무름」과 「집에서 휴식」)은 끝까지 끌면 합치기를 묻는다(UIX1031A16).
+    /// 경계 바로 위를 잡아 위 클립의 끝 손잡이가 잡혀도, 끌어 올려 위 클립이 눌리면 묻는다(UIX1031A18: 대표 영상).
+    func testMergeIsOfferedForSameCategoryNeighborWithDifferentTitle() throws {
+        func clipSegment(_ start: Int, _ end: Int, title: String) -> MapHomeTimeRailSegment {
+            MapHomeTimeRailSegment(
+                startMinute: start, endMinute: end, categoryID: "rest", title: title, sourceIDs: [UUID()]
+            )
+        }
+        let base = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            clipSegment(20, 59, title: "머무름"),
+            clipSegment(59, 115, title: "집에서 휴식"),
+        ])
+        let stay = try XCTUnwrap(base.clip(atMinute: 30))
+        let rest = try XCTUnwrap(base.clip(atMinute: 80))
+        XCTAssertEqual(stay.option.categoryID, rest.option.categoryID)
+
+        // 아래 클립의 시작 손잡이를 잡고 올린 경우.
+        var fromBelow = base
+        XCTAssertTrue(fromBelow.roll(rest.id, edge: .start, toMinute: 0))
+        let below = try XCTUnwrap(fromBelow.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 56, neighborLengthAtStart: 39))
+        XCTAssertEqual(below.survivor.id, rest.id)
+        XCTAssertEqual(below.absorbed.id, stay.id)
+
+        // 위 클립의 끝 손잡이를 잡고 올린 경우: 잡은 클립이 스스로 눌렸으니 그 클립을 아래로 합친다.
+        var fromAbove = base
+        XCTAssertTrue(fromAbove.roll(stay.id, edge: .end, toMinute: 0))
+        let above = try XCTUnwrap(fromAbove.squeezedMergePair(of: stay.id, edge: .end, clipLengthAtStart: 39, neighborLengthAtStart: 56))
+        XCTAssertEqual(above.survivor.id, rest.id)
+        XCTAssertEqual(above.absorbed.id, stay.id)
+
+        XCTAssertTrue(fromAbove.mergeIntoDragged(above.survivor.id, neighborID: above.absorbed.id))
+        XCTAssertNil(fromAbove.clip(stay.id))
+        XCTAssertEqual(fromAbove.clip(rest.id)?.startMinute, 20)
+        XCTAssertEqual(fromAbove.clip(rest.id)?.option.title, "집에서 휴식")
+    }
+
+    /// 아래로 끌어 아래 클립을 누를 때도 묻고, 화면에서 거의 사라질 만큼만 눌러도 묻는다.
+    /// 원본 ID가 아직 없는 진행 중 구간도 합칠 수 있다(UIX1031A19).
+    func testMergeDownwardWithSqueezeThresholdAndLiveNeighbor() throws {
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            MapHomeTimeRailSegment(startMinute: 0, endMinute: 300, categoryID: "rest", title: "집에서 휴식", sourceIDs: [UUID()]),
+            MapHomeTimeRailSegment(startMinute: 300, endMinute: 400, categoryID: "work", title: "일", sourceIDs: []),
+        ])
+        let rest = try XCTUnwrap(track.clip(atMinute: 100))
+        let work = try XCTUnwrap(track.clip(atMinute: 350))
+
+        // 위 클립의 끝을 아래로 끌어 아래 클립을 6분만 남겼다.
+        XCTAssertTrue(track.roll(rest.id, edge: .end, toMinute: 394))
+        XCTAssertNil(track.squeezedMergePair(of: rest.id, edge: .end, clipLengthAtStart: 300, neighborLengthAtStart: 100))
+        let pair = try XCTUnwrap(track.squeezedMergePair(
+            of: rest.id, edge: .end, clipLengthAtStart: 300, neighborLengthAtStart: 100, squeezeMinutes: 8
+        ))
+        XCTAssertEqual(pair.survivor.id, rest.id)
+        XCTAssertEqual(pair.absorbed.id, work.id)
+        XCTAssertTrue(track.mergeIntoDragged(pair.survivor.id, neighborID: pair.absorbed.id))
+        XCTAssertEqual(track.clip(rest.id)?.endMinute, 400)
+        XCTAssertNil(track.clip(work.id))
+    }
+
+    /// 하루 전체 배율처럼 화면 두께 기준이 이웃보다 길어도, 이웃을 끝까지 밀면 묻고 조금만 밀면 묻지 않는다(UIX1031A20).
+    func testMergeThresholdLargerThanNeighborStillWorks() throws {
+        func clipSegment(_ start: Int, _ end: Int, title: String) -> MapHomeTimeRailSegment {
+            MapHomeTimeRailSegment(startMinute: start, endMinute: end, categoryID: "rest", title: title, sourceIDs: [UUID()])
+        }
+        let base = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            clipSegment(20, 59, title: "머무름"),
+            clipSegment(59, 115, title: "집에서 휴식"),
+        ])
+        let stay = try XCTUnwrap(base.clip(atMinute: 30))
+        let rest = try XCTUnwrap(base.clip(atMinute: 80))
+
+        var slight = base
+        XCTAssertTrue(slight.roll(rest.id, edge: .start, toMinute: 50))
+        XCTAssertNil(slight.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 56, neighborLengthAtStart: 39, squeezeMinutes: 60))
+
+        var full = base
+        XCTAssertTrue(full.roll(rest.id, edge: .start, toMinute: 0))
+        XCTAssertEqual(full.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 56, neighborLengthAtStart: 39, squeezeMinutes: 60)?.absorbed.id, stay.id)
+
+        var near = base
+        XCTAssertTrue(near.roll(rest.id, edge: .start, toMinute: 27))
+        XCTAssertEqual(near.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 56, neighborLengthAtStart: 39, squeezeMinutes: 60)?.absorbed.id, stay.id, "7분 남기면(처음의 4분의 1 이하) 묻는다")
+
+        var down = base
+        XCTAssertTrue(down.roll(stay.id, edge: .end, toMinute: 200))
+        XCTAssertEqual(down.squeezedMergePair(of: stay.id, edge: .end, clipLengthAtStart: 39, neighborLengthAtStart: 56, squeezeMinutes: 60)?.absorbed.id, rest.id)
+    }
+
+    /// 처음부터 1분인 이웃은 더 줄지 않으므로, 손가락이 그 클립을 지나쳐 밀면 묻는다(UIX1031A22: 기기 로그 「걷기」 1분).
+    func testOneMinuteNeighborMergesWhenFingerPushesThrough() throws {
+        func clipSegment(_ start: Int, _ end: Int, category: String, title: String) -> MapHomeTimeRailSegment {
+            MapHomeTimeRailSegment(startMinute: start, endMinute: end, categoryID: category, title: title, sourceIDs: [UUID()])
+        }
+        let track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            clipSegment(0, 88, category: "rest", title: "집에서 휴식"),
+            clipSegment(88, 89, category: "move", title: "걷기"),
+            clipSegment(89, 203, category: "rest", title: "집에서 휴식"),
+        ])
+        let walk = try XCTUnwrap(track.clip(atMinute: 88))
+        let rest = try XCTUnwrap(track.clip(atMinute: 100))
+        XCTAssertEqual(walk.lengthMinutes, 1)
+
+        // 경계에 손가락만 대고 있으면 묻지 않는다.
+        XCTAssertNil(track.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 114, neighborLengthAtStart: 1, squeezeMinutes: 17, fingerMinute: 89))
+        // 1분 클립을 지나쳐 밀면 묻는다.
+        let pair = try XCTUnwrap(track.squeezedMergePair(of: rest.id, edge: .start, clipLengthAtStart: 114, neighborLengthAtStart: 1, squeezeMinutes: 17, fingerMinute: 80))
+        XCTAssertEqual(pair.survivor.id, rest.id)
+        XCTAssertEqual(pair.absorbed.id, walk.id)
+        // 1분 클립의 끝 손잡이를 잡고 아래로 밀어도(잡은 클립이 1분) 묻는다.
+        let fromWalk = try XCTUnwrap(track.squeezedMergePair(of: walk.id, edge: .end, clipLengthAtStart: 1, neighborLengthAtStart: 114, squeezeMinutes: 17, fingerMinute: 87))
+        XCTAssertEqual(fromWalk.absorbed.id, walk.id)
     }
 
     /// 가만히 있어도 GPS가 흔들리면 이동 거리가 쌓이지 않는다. 실제로 움직이면 거의 그대로 센다(ARC1030A08).

@@ -41,17 +41,22 @@ struct NLEToolButton: View {
 /// 그래서 '전체 → 4배 → 12배 → 전체'를 한 단추에서 돌린다.
 enum NLEZoomPolicy {
     static let levels: [CGFloat] = [1, 4, 12]
+    /// 1분을 손가락으로 잡을 수 있는 줄 높이(분당 pt). 단추의 마지막 단계다.
+    static let minuteEditHeight: CGFloat = 32
+    /// 두 손가락으로 벌릴 수 있는 최대 줄 높이(분당 pt).
+    static let maxMinuteHeight: CGFloat = 48
 
     /// 하루 24시간이 화면 높이에 딱 들어가는 배율.
     static func fitMinuteHeight(height: CGFloat) -> CGFloat {
         max(0.22, height / CGFloat(NLETrack.dayMinutes))
     }
 
-    /// 지금 배율에서 다음에 갈 배율. 배율은 '하루 전체 대비'다.
+    /// 지금 배율에서 다음에 갈 배율. 배율은 '하루 전체 대비'다. 마지막 단계는 1분 편집 배율이다.
     static func nextLevel(currentMinuteHeight: CGFloat, fitMinuteHeight: CGFloat) -> CGFloat {
         guard fitMinuteHeight > 0.01, currentMinuteHeight.isFinite else { return 4 }
         let ratio = currentMinuteHeight / fitMinuteHeight
-        return levels.first { $0 > ratio * 1.15 } ?? 1
+        let steps = levels + [minuteEditHeight / fitMinuteHeight]
+        return steps.first { $0 > ratio * 1.15 } ?? 1
     }
 
     /// 다음 단추에 적을 이름. 이미 가장 크게 벌려 있으면 '전체'로 돌아간다.
@@ -63,7 +68,8 @@ enum NLEZoomPolicy {
         switch nextLevel(currentMinuteHeight: currentMinuteHeight, fitMinuteHeight: fitMinuteHeight) {
         case 1: return language.text("전체", "Fit")
         case 4: return language.text("확대", "Zoom")
-        default: return language.text("더 확대", "Zoom+")
+        case 12: return language.text("더 확대", "Zoom+")
+        default: return language.text("1분", "1 min")
         }
     }
 

@@ -1362,4 +1362,20 @@ extension MapHomeLiveMapTests {
         let leaving = [at(0, 40), at(1, 40), at(2, 300, moving: true), at(5, 400, moving: true)]
         XCTAssertTrue(Z.events(samples: leaving, radius: 100).contains { if case .departed = $0 { return true } else { return false } })
     }
+
+    /// 벡터 지도 스타일 JSON이 모두 올바르고 레이어 id가 겹치지 않는다. 판타지(RPG) 지도에는 갈색 바탕 위에
+    /// 대비되는 색(노랑·파랑·보라 등)의 보조 레이어가 들어 있다(UIX1031A15).
+    func testVectorStyleJSONIsValidAndRPGHasAccentLayers() throws {
+        for style in MapHomeVectorStyle.allCases {
+            let object = try JSONSerialization.jsonObject(with: Data(style.json.utf8)) as? [String: Any]
+            let layers = try XCTUnwrap(object?["layers"] as? [[String: Any]], "\(style)")
+            let ids = layers.compactMap { $0["id"] as? String }
+            XCTAssertEqual(ids.count, Set(ids).count, "\(style) 레이어 id 중복")
+        }
+        let rpg = try JSONSerialization.jsonObject(with: Data(MapHomeVectorStyle.rpg.json.utf8)) as? [String: Any]
+        let ids = Set((rpg?["layers"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String })
+        for accent in ["rpg-landuse-accent", "rpg-landcover-extra", "rpg-building-tall", "rpg-road-main", "rpg-road-highway", "rpg-rail"] {
+            XCTAssertTrue(ids.contains(accent), accent)
+        }
+    }
 }

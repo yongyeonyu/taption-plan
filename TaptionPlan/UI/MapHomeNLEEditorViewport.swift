@@ -98,12 +98,14 @@ extension MapHomeNLEClipEditor {
 
     // MARK: - 눈금
 
-    /// 눈금선 간격. 하루 전체를 볼 때는 한 시간, 확대하면 30·15분.
+    /// 눈금선 간격. 하루 전체를 볼 때는 한 시간, 확대하면 30·15·5분, 1분 편집 배율에서는 1분.
     var gridStepMinutes: Int {
         switch minuteHeight {
         case ..<0.7: 60
         case ..<2.2: 30
-        default: 15
+        case ..<6: 15
+        case ..<16: 5
+        default: 1
         }
     }
 
@@ -112,7 +114,9 @@ extension MapHomeNLEClipEditor {
         switch minuteHeight {
         case ..<0.55: 180
         case ..<1.4: 60
-        default: 30
+        case ..<6: 30
+        case ..<16: 15
+        default: 5
         }
     }
 

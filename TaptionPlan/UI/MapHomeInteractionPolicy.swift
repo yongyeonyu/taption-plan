@@ -803,6 +803,13 @@ final class MapHomeStickmanViewportProjection {
     }
 }
 
+/// Apple 지도가 프레임마다 넘기는 화랑이 점을 담는 상자. 관찰하지 않는다: 값이 바뀌어도 부모 화면을 다시 그리지 않고,
+/// 카운터 창만 화면 틱마다 읽어 화랑이(UIKit이 같은 프레임에 옮기는 뷰)와 함께 움직인다(UIX1031A06).
+@MainActor
+final class MapHomeAppleStickmanLivePoint {
+    var point: CGPoint?
+}
+
 @MainActor
 @Observable
 final class MapHomeVectorViewportStore {

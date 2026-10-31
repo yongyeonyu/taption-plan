@@ -3774,15 +3774,20 @@ enum MapDisplayStyle: String, Codable, CaseIterable, Sendable {
     /// 화면 이름은 "위성"(항공 사진 + 도로·지명). 저장값 호환을 위해 hybrid를 유지한다.
     case hybrid
     case mapLibreNight
-    case mapLibreLight
     case mapLibreContrast
-    case mapLibrePastel
     case mapLibreCasual
     case mapLibreRPG
 
+    /// 없앤 스타일(밝게·파스텔, UIX1101A03)로 저장된 값은 가장 비슷한 산책 지도로 읽는다.
+    static let retiredRawValues: Set<String> = ["mapLibreLight", "mapLibrePastel"]
+
     init(from decoder: Decoder) throws {
         let value = try decoder.singleValueContainer().decode(String.self)
-        self = Self(rawValue: value) ?? .standard
+        if Self.retiredRawValues.contains(value) {
+            self = .mapLibreCasual
+        } else {
+            self = Self(rawValue: value) ?? .standard
+        }
     }
 }
 
@@ -3845,8 +3850,6 @@ extension MapDisplayStyle {
     static let openFreeMapStyles: [Self] = [
         .mapLibreRPG,
         .mapLibreCasual,
-        .mapLibrePastel,
-        .mapLibreLight,
         .mapLibreNight,
         .mapLibreContrast,
     ]
@@ -3856,9 +3859,7 @@ extension MapDisplayStyle {
         case .standard, .hybrid:
             .apple
         case .mapLibreNight,
-             .mapLibreLight,
              .mapLibreContrast,
-             .mapLibrePastel,
              .mapLibreCasual,
              .mapLibreRPG:
             .openFreeMap

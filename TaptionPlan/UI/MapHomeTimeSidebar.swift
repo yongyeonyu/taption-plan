@@ -1144,8 +1144,6 @@ struct MapHomeTimeSidebar: View {
     var onSectionEdit: ((Int) -> Void)?
     /// 있으면 알약 맨 위 여백에 사이드바 접기 원형 버튼을 둔다(연필과 같은 모양).
     var onCollapse: (() -> Void)?
-    /// 날짜 배지와 한 줄로 이어진 상태. 위 모서리를 직각으로 두어 배지와 붙어 보이게 한다.
-    var isJoinedToTop = false
     var onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)?
     /// 묶인 미확인 아이콘을 누르면 여기 담긴 구간들을 작은 메뉴로 고른다.
     @State private var reviewChoices: [MapHomeTimeRailSegment]?
@@ -1167,6 +1165,8 @@ struct MapHomeTimeSidebar: View {
     @State private var railSnapshot: MapHomeTimeSidebarRailSnapshot
     @State private var pendingRailSegments: [MapHomeTimeRailSegment]?
     @State private var pinchStepOffset = 0
+    @AppStorage(MapHomeSidebarTimeFormat.storageKey) private var timeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
+    @AppStorage(MapHomeSidebarRulerInterval.storageKey) private var rulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
     @State private var lastPinchRenderUptime: TimeInterval = 0
 
     private let railWidth: CGFloat
@@ -1211,7 +1211,6 @@ struct MapHomeTimeSidebar: View {
         onInteractionChanged: ((Bool) -> Void)? = nil,
         onSectionEdit: ((Int) -> Void)? = nil,
         onCollapse: (() -> Void)? = nil,
-        isJoinedToTop: Bool = false,
         onUnconfirmedReview: ((MapHomeTimeRailSegment) -> Void)? = nil
     ) {
         self.smoothsPlayback = smoothsPlayback
@@ -1230,7 +1229,6 @@ struct MapHomeTimeSidebar: View {
         self.onInteractionChanged = onInteractionChanged
         self.onSectionEdit = onSectionEdit
         self.onCollapse = onCollapse
-        self.isJoinedToTop = isJoinedToTop
         self.onUnconfirmedReview = onUnconfirmedReview
         self._railSnapshot = State(
             initialValue: MapHomeTimeSidebarRailSnapshot(segments)
@@ -1294,13 +1292,9 @@ struct MapHomeTimeSidebar: View {
         ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-benchHide=") && $0.contains(name) }
     }
 
-    /// 사이드바 패널 모양. 날짜 배지와 이어졌을 때는 위 모서리를 직각으로 둔다.
-    private var panelShape: UnevenRoundedRectangle {
-        let top: CGFloat = isJoinedToTop ? 0 : 22
-        return UnevenRoundedRectangle(
-            cornerRadii: .init(topLeading: top, bottomLeading: 22, bottomTrailing: 22, topTrailing: top),
-            style: .continuous
-        )
+    /// 사이드바 패널 모양.
+    private var panelShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 22, style: .continuous)
     }
 
     var body: some View {
@@ -1365,15 +1359,13 @@ struct MapHomeTimeSidebar: View {
                         .overlay {
                             panelShape
                                 .stroke(MapHomeTimeSidebarStyle.panelBorder, lineWidth: 1)
-                                // 날짜 배지와 이어진 동안 테두리를 빼 두 면이 한 줄로 보이게 한다.
-                                .opacity(isJoinedToTop ? 0 : 1)
                                 .frame(width: railWidth, height: railHeight)
                                 .position(
                                     x: railOriginX + railWidth / 2,
                                     y: railHeight / 2
                                 )
                         }
-                        .shadow(color: .black.opacity(isJoinedToTop ? 0 : 0.05), radius: 7, y: 2)
+                        .shadow(color: .black.opacity(0.05), radius: 7, y: 2)
                         .allowsHitTesting(false)
                     }
 
@@ -1485,7 +1477,8 @@ struct MapHomeTimeSidebar: View {
                     let rulerRows = MapHomeTimeSidebarMath.visibleRulerRows(
                         window: visibleWindow,
                         durationMinutes: visibleDurationMinutes,
-                        trackHeight: trackHeight
+                        trackHeight: trackHeight,
+                        minimumStep: rulerIntervalRaw
                     )
                     let rulerFontSize = MapHomeTimeSidebarMath.rulerFontSize(
                         durationMinutes: visibleDurationMinutes
@@ -1541,7 +1534,7 @@ struct MapHomeTimeSidebar: View {
                             minute: minuteMark,
                             window: visibleWindow
                         )
-                        Text(String(format: "%02d:%02d", minuteMark / 60, minuteMark % 60))
+                        Text(rulerLabel(minuteMark))
                         .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .minimumScaleFactor(0.55)
@@ -1579,7 +1572,8 @@ struct MapHomeTimeSidebar: View {
                             Capsule()
                                 .fill(Color.tpSecondary.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
                                 .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
-                            Text(String(format: "%02d", hour))
+                            Text(timeFormat.hourLabel(hour))
+                                .minimumScaleFactor(0.6)
                                 .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
@@ -1833,7 +1827,7 @@ struct MapHomeTimeSidebar: View {
             categoryColors: categoryColors
         )
         return ZStack(alignment: .topLeading) {
-            Text(timeLabel(for: minute))
+            handleTimeText(minute)
             .font(.system(
                 size: MapHomeTimeSidebarStyle.handleFontSize,
                 weight: MapHomeTimeSidebarStyle.handleFontWeight,
@@ -2201,8 +2195,33 @@ struct MapHomeTimeSidebar: View {
         )
     }
 
+    private var timeFormat: MapHomeSidebarTimeFormat {
+        MapHomeSidebarTimeFormat(rawValue: timeFormatRaw) ?? .twentyFourHour
+    }
+
     private func timeLabel(for minute: Int) -> String {
-        String(format: "%02d:%02d", minute / 60, minute % 60)
+        timeFormat.timeLabel(minute)
+    }
+
+    /// 손잡이 시각. 12시간이면 칸(44pt)이 좁아 오전·오후를 위에 작게 적는다.
+    @ViewBuilder
+    private func handleTimeText(_ minute: Int) -> some View {
+        if timeFormat == .twelveHour {
+            VStack(spacing: -1) {
+                Text(minute / 60 % 24 < 12 ? MapHomeLanguage.current.text("오전", "AM") : MapHomeLanguage.current.text("오후", "PM"))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold, design: .rounded))
+                Text(timeFormat.timeLabel(minute, includesPeriod: false))
+            }
+        } else {
+            Text(timeLabel(for: minute))
+        }
+    }
+
+    /// 눈금 글자. 정시는 시 글자, 그 사이는 시:분. 12시간이면 칸이 좁아 오전·오후는 정시 글자에만 적는다.
+    private func rulerLabel(_ minute: Int) -> String {
+        minute.isMultiple(of: 60) && timeFormat == .twelveHour
+            ? timeFormat.hourLabel(minute / 60)
+            : timeFormat.timeLabel(minute, includesPeriod: false)
     }
 
 }
@@ -2669,6 +2688,75 @@ struct MapHomeSidebarDoubleTapDetector: Equatable {
     }
 }
 
+/// 사이드바 시각 표시 방식(표시 > 사이드바). 기본은 24시간.
+enum MapHomeSidebarTimeFormat: String, CaseIterable, Identifiable {
+    case twentyFourHour
+    case twelveHour
+
+    static let storageKey = "mapHomeSidebarTimeFormat"
+    static var current: MapHomeSidebarTimeFormat {
+        UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .twentyFourHour
+    }
+
+    var id: String { rawValue }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .twentyFourHour: language.text("24시간", "24-hour")
+        case .twelveHour: language.text("12시간", "12-hour")
+        }
+    }
+
+    /// 눈금의 정시 글자. 12시간이면 0시·12시에 오전·오후를 적고 나머지는 1~11로 적는다.
+    func hourLabel(_ hour: Int, language: MapHomeLanguage = .current) -> String {
+        let hour = ((hour % 24) + 24) % 24
+        switch self {
+        case .twentyFourHour:
+            return String(format: "%02d", hour)
+        case .twelveHour:
+            if hour == 0 { return language.text("오전", "AM") }
+            if hour == 12 { return language.text("오후", "PM") }
+            return String(hour % 12)
+        }
+    }
+
+    /// 시각 글자. 12시간이면 "오후 3:05"처럼 적는다(24:00은 자정).
+    func timeLabel(_ minute: Int, includesPeriod: Bool = true, language: MapHomeLanguage = .current) -> String {
+        let hour = (minute / 60) % 24
+        let minutePart = minute % 60
+        switch self {
+        case .twentyFourHour:
+            return String(format: "%02d:%02d", minute / 60, minutePart)
+        case .twelveHour:
+            let clock = String(format: "%d:%02d", hour % 12 == 0 ? 12 : hour % 12, minutePart)
+            guard includesPeriod else { return clock }
+            return (hour < 12 ? language.text("오전 ", "AM ") : language.text("오후 ", "PM ")) + clock
+        }
+    }
+}
+
+/// 사이드바 눈금에 시각 글자를 적는 최소 간격(표시 > 사이드바). 자동이면 화면 높이에 맞춘다.
+enum MapHomeSidebarRulerInterval: Int, CaseIterable, Identifiable {
+    case automatic = 0
+    case five = 5
+    case ten = 10
+    case fifteen = 15
+    case thirty = 30
+    case hour = 60
+
+    static let storageKey = "mapHomeSidebarRulerInterval"
+
+    var id: Int { rawValue }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .automatic: language.text("자동", "Auto")
+        case .hour: language.text("1시간", "1 hour")
+        default: language.text("\(rawValue)분", "\(rawValue) min")
+        }
+    }
+}
+
 enum MapHomeTimeSidebarMath {
     static let fullDayMinutes = 1_440
     static let zoomDurations = [1_440, 720, 360, 180, 60]
@@ -3002,7 +3090,8 @@ enum MapHomeTimeSidebarMath {
     static func visibleRulerLabels(
         window: ClosedRange<Int>,
         durationMinutes: Int,
-        trackHeight: CGFloat
+        trackHeight: CGFloat,
+        minimumStep: Int = 0
     ) -> MapHomeTimeRulerLabels {
         let hours = visibleHourLabels(
             window: window,
@@ -3012,7 +3101,8 @@ enum MapHomeTimeSidebarMath {
 
         let minuteStep = minuteRulerStep(
             durationMinutes: durationMinutes,
-            trackHeight: trackHeight
+            trackHeight: trackHeight,
+            minimumStep: minimumStep
         )
         let firstMinute = max(
             0,
@@ -3032,27 +3122,32 @@ enum MapHomeTimeSidebarMath {
         return MapHomeTimeRulerLabels(hours: hours, minutes: minutes)
     }
 
+    /// 분 글자 간격. 화면 높이로 정한 간격과 사용자가 고른 최소 간격(`minimumStep`) 중 넓은 쪽을 쓴다.
     static func minuteRulerStep(
         durationMinutes: Int,
-        trackHeight: CGFloat
+        trackHeight: CGFloat,
+        minimumStep: Int = 0
     ) -> Int {
         let duration = CGFloat(min(max(durationMinutes, 1), fullDayMinutes))
         let pointsPerMinute = max(trackHeight, 1) / duration
         let spacing = minimumRulerLabelSpacing(durationMinutes: durationMinutes)
-        return [1, 5, 10, 15, 20, 30, 60, 120].first {
+        let fitted = [1, 5, 10, 15, 20, 30, 60, 120].first {
             pointsPerMinute * CGFloat($0) >= spacing
         } ?? 30
+        return max(fitted, minimumStep)
     }
 
     static func visibleRulerRows(
         window: ClosedRange<Int>,
         durationMinutes: Int,
-        trackHeight: CGFloat
+        trackHeight: CGFloat,
+        minimumStep: Int = 0
     ) -> [MapHomeTimeRulerRow] {
         let labels = visibleRulerLabels(
             window: window,
             durationMinutes: durationMinutes,
-            trackHeight: trackHeight
+            trackHeight: trackHeight,
+            minimumStep: minimumStep
         )
         let hourMinutes = labels.hours.map { $0 * 60 }
         let marks = Set(hourMinutes + labels.minutes).sorted()

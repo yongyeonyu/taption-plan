@@ -195,6 +195,7 @@
 		A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */; };
 		A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */; };
 		A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000EF /* MapHomeDateStrip.swift */; };
+		A1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift */; };
 		A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F0 /* AppShellLaunchGate.swift */; };
 		A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */; };
 		A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */; };
@@ -211,6 +212,7 @@
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
+		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
 /* End PBXBuildFile section */
 
@@ -439,6 +441,7 @@
 		F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEOverwriteSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEPreviewHost.swift; sourceTree = "<group>"; };
 		F100000000000000000000EF /* MapHomeDateStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStrip.swift; sourceTree = "<group>"; };
+		F1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000F0 /* AppShellLaunchGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellLaunchGate.swift; sourceTree = "<group>"; };
 		F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCurrentActivity.swift; sourceTree = "<group>"; };
 		F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuity.swift; sourceTree = "<group>"; };
@@ -469,6 +472,7 @@
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -580,6 +584,7 @@
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
+				F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
 				F1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift */,
@@ -625,6 +630,7 @@
 				F100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift */,
 				F100000000000000000000EE /* MapHomeNLEPreviewHost.swift */,
 				F100000000000000000000EF /* MapHomeDateStrip.swift */,
+				F1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift */,
 				F100000000000000000000F0 /* AppShellLaunchGate.swift */,
 				F100000000000000000000C3 /* LiveActivityCurrentActivity.swift */,
 				F100000000000000000000C2 /* MapHomePlaybackContinuity.swift */,
@@ -1117,6 +1123,7 @@
 				A100000000000000000000ED /* MapHomeNLEOverwriteSheet.swift in Sources */,
 				A100000000000000000000EE /* MapHomeNLEPreviewHost.swift in Sources */,
 				A100000000000000000000EF /* MapHomeDateStrip.swift in Sources */,
+				A1000000000000000000F5D1 /* MapHomeCounterDetailSheet.swift in Sources */,
 				A100000000000000000000F0 /* AppShellLaunchGate.swift in Sources */,
 				A100000000000000000000C3 /* LiveActivityCurrentActivity.swift in Sources */,
 				A100000000000000000000C2 /* MapHomePlaybackContinuity.swift in Sources */,
@@ -1213,6 +1220,7 @@
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
+				A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
 				A1VID1029A0100000000003 /* PlaybackVideoTimelineTests.swift in Sources */,

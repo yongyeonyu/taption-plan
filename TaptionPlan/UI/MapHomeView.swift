@@ -2344,6 +2344,12 @@ struct MapHomeView: View {
     @State private var isCounterMenuExpanded = false
     /// 화랑이 위 카운터 위젯이 지도 화면 좌표에서 차지하는 영역. 위젯을 누르면 카운터 메뉴를 연다(ARC1030A11).
     @State private var counterWindowFrame = CGRect.zero
+    /// 카운터 창 줄을 위에서 아래 순서로 늘어놓은 목록. 창을 눌렀을 때 몇 번째 줄인지 이 순서로 고른다.
+    @State private var counterRowTargets: [MapHomeCounterDetailTarget] = []
+    /// 지금 열려 있는 카운터 상세 화면.
+    @State private var counterDetail: MapHomeCounterDetailTarget?
+    /// 지도 뷰의 뷰포트 공간 프레임. 지도는 위 안전 영역까지 덮어 뷰포트보다 위에서 시작하므로(18 Pro Max에서 62pt), 지도 안 점과 뷰포트 탭을 이 원점으로 맞춘다.
+    @State private var mapFrameInViewport = CGRect.zero
     @State private var isStrideCalibrationPresented = false
     @State private var isSalarySettingsPresented = false
     @State private var isCarAudioSheetPresented = false
@@ -2402,6 +2408,9 @@ struct MapHomeView: View {
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") private var showsRoutesOnMap = true
     @AppStorage("mapHomeShowsFootprints") private var showsFootprintsOnMap = true
+    @AppStorage(TaptionUITheme.storageKey) private var uiThemeRaw = TaptionUITheme.classic.rawValue
+    @AppStorage(MapHomeSidebarTimeFormat.storageKey) private var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
+    @AppStorage(MapHomeSidebarRulerInterval.storageKey) private var sidebarRulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
     @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
     // 표시 > 카운터에서 켜고 끄는 카운터. 연봉 카운터만 따로 설정 화면을 갖는다.
     @AppStorage(MapHomeCounterKind.steps.storageKey) private var showsStepCounter = true
@@ -2483,6 +2492,8 @@ struct MapHomeView: View {
     @AppStorage(MapHomeFogStrength.storageKey) private var fogStrengthRaw = MapHomeFogStrength.light.rawValue
     @State private var isLongPressMenuPresented = false
     @State private var isDaySummaryPresented = false
+    /// 하루 요약을 화랑이에서 열었는지. 열려 있는 동안 카메라 맞춤의 기준이 집 대신 화랑이가 된다.
+    @State private var daySummaryFocusesCat = false
     /// 하루요약 시트 높이. 접으면 화면 절반, 위로 펼치면 지금의 전체 화면이다.
     @State private var daySummaryDetent: PresentationDetent = MapHomeDaySummarySheet.collapsedDetent
     /// 지도 카메라에 이미 반영한 "시트가 덮은 비율". 0이면 지도 전체가 보이는 상태다.
@@ -2568,6 +2579,10 @@ struct MapHomeView: View {
     @State private var hasUserAdjustedMap = false
     @State private var stickmanViewportProjection = MapHomeStickmanViewportProjection()
     @State private var displayedStickmanViewportPoint: CGPoint?
+    /// Apple 지도가 움직이는 동안 프레임마다 받은 화랑이 점(관찰 안 함)과 "움직이는 중" 표시.
+    /// 카운터 창은 움직이는 동안 이 상자를 화면 틱마다 읽고, 관찰 값은 읽기 값 간격과 손을 뗄 때만 따라온다(UIX1031A06).
+    @State private var appleStickmanLivePoint = MapHomeAppleStickmanLivePoint()
+    @State private var isAppleCameraMoving = false
     @State private var mapViewportSize = CGSize.zero
     @State private var headerFrame = CGRect.zero
     @State private var searchFieldFrame = CGRect.zero
@@ -2622,8 +2637,6 @@ struct MapHomeView: View {
         static let horizontalInset: CGFloat = 10
         /// 상단 한 줄의 공통 높이(메모·일정 원형 버튼, 날짜 줄, 날짜 배지).
         static let dateBadgeSize: CGFloat = 40
-        /// 집 아이콘이 붙은 날짜 배지의 전체 높이(집 26 + 간격 2 + 날짜 40 + 위아래 여백 8). 사이드바가 이 아래에 붙어 합쳐진다.
-        static let dateBadgeStackHeight: CGFloat = 76
         /// 상단 한 줄의 위 여백. 메뉴·메모·일정·날짜 배지가 모두 이 값만큼
         /// 내려온 같은 높이에 놓인다(가운데 높이 = topRowInset + dateBadgeSize/2).
         static let topRowInset: CGFloat = 12
@@ -3083,6 +3096,12 @@ struct MapHomeView: View {
                 }
                 .zIndex(MapHomeLayerPriority.header)
             }
+
+            // 화랑이 탭은 모든 층보다 위에서 먼저 받는다(대표 지시). 여기서 하루 요약을 연다.
+            if !isScreenRecording, !isMenuOpen {
+                MapHomeObservingView { stickmanTapTarget }
+                    .zIndex(MapHomeLayerPriority.header + 1)
+            }
         }
         .onChange(of: isDayPlaybackRunning) { _, isRunning in
             if !isRunning { finishRecordingPlayback() }
@@ -3197,7 +3216,7 @@ struct MapHomeView: View {
                 }
             }
         )
-        .preferredColorScheme(.light)
+        .preferredColorScheme(TaptionUITheme.current.colorScheme)
     }
 
     private func presentationModifiers(_ content: some View) -> some View {
@@ -3206,6 +3225,18 @@ struct MapHomeView: View {
             MapHomeMarkerInfoSheet(kind: info, language: language, model: model, placeID: selectedMarkerPlaceID)
                 .presentationDetents([.height(320), .medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $counterDetail) { focus in
+            // 창에 보이는 카운터를 탭으로 늘어놓고, 누른 줄의 탭을 먼저 고른다.
+            let targets = counterRowTargets.contains(focus) ? counterRowTargets : [focus]
+            MapHomeCounterDetailSheet(
+                contents: targets.map { counterDetailContent(for: $0) },
+                initialIndex: targets.firstIndex(of: focus) ?? 0,
+                dateText: model.selectedDate.formatted(
+                    Date.FormatStyle().month(.wide).day().weekday(.wide)
+                        .locale(Locale(identifier: language.text("ko_KR", "en_US")))
+                )
+            )
         }
         .sheet(isPresented: $isDaySummaryPresented) {
             MapHomeDaySummarySheet(
@@ -3235,6 +3266,7 @@ struct MapHomeView: View {
         // 시트가 올라오고 내려갈 때마다 집을 가려지지 않은 지도 영역 가운데로 다시 맞춘다.
         .onChange(of: isDaySummaryPresented) { _, presented in
             if !presented {
+                daySummaryFocusesCat = false
                 // 다음에 열 때는 다시 접힌 높이에서 시작한다.
                 daySummaryDetent = MapHomeDaySummarySheet.collapsedDetent
             }
@@ -3779,6 +3811,7 @@ struct MapHomeView: View {
     }
 
     /// Apple 지도에서도 카운터 창을 화랑이 머리 위에 띄운다(벡터 지도와 같은 위치 규칙).
+    /// 지도가 움직이는 동안은 프레임마다 받은 점(`appleStickmanLivePoint`)을 화면 틱마다 읽어 화랑이와 함께 옮긴다.
     private var appleSalaryOverlay: some View {
         GeometryReader { geometry in
             if let stickman = displayedStickmanViewportPoint,
@@ -3786,7 +3819,7 @@ struct MapHomeView: View {
                 counterWindow(at: CGPoint(
                     x: stickman.x,
                     y: stickman.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42
-                ))
+                ), tracksAppleCamera: true)
             }
         }
         .allowsHitTesting(false)
@@ -4001,6 +4034,7 @@ struct MapHomeView: View {
             // 날짜 줄을 펼치면 이 자리를 날짜 줄이 덮는다.
             if !isDateWeekExpanded {
                 HStack(spacing: 8) {
+                    searchCircleButton
                     if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
                         memoCircleButton
                     }
@@ -4191,6 +4225,36 @@ struct MapHomeView: View {
             }
         }
         .frame(width: 280, alignment: .leading)
+    }
+
+    /// 검색(돋보기) 원형 버튼. 누르면 상단 입력창이 펼쳐진다.
+    private var searchCircleButton: some View {
+        Button {
+            // 검색창이 열려 있으면 한 번 더 눌러 닫는다. 다른 곳을 눌러 닫히는 동작은 그대로다.
+            if isSearchDismissable {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    dismissMapSearchOverlay()
+                    isMapSearchFocused = false
+                    isSearchExpanded = false
+                }
+                return
+            }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isSearchExpanded = true
+            }
+            // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
+            DispatchQueue.main.async {
+                isMapSearchFocused = true
+            }
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .frame(width: 40, height: 40)
+                .mapHomeGlass(in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(language.text("장소 검색", "Search places"))
     }
 
     /// 메모를 원형 아이콘 하나로 모은다. 누르면 펼쳐서 목록을 보여 준다.
@@ -4588,14 +4652,17 @@ struct MapHomeView: View {
             }
             }
         }
+        // 마스크 `.subviews`는 이 제스처 자체를 끈다. 검색이 열려 있지 않으면 지도 탭 판정이 전혀 돌지 않았다(TAP1031A01 기기 로그).
         .simultaneousGesture(
             SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
                 .onEnded { tap in
                     presentCatDetailsIfTapped(at: tap.location)
-                    dismissMapSearchOverlay()
-                },
-            including: isSearchDismissable ? .all : .subviews
+                    if isSearchDismissable { dismissMapSearchOverlay() }
+                }
         )
+        .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
+            if mapFrameInViewport != frame { mapFrameInViewport = frame }
+        }
         .task {
             applyInitialLocationIfAvailable(using: nil)
             beginInitialLocationRequest(using: nil)
@@ -4707,9 +4774,11 @@ struct MapHomeView: View {
                 MapHomeInteractionMonitor.shared.touch("map_gesture")
                 let now = ProcessInfo.processInfo.systemUptime
                 // 화랑이 점은 지도와 같은 프레임에 옮긴다. 아래 읽기 값은 0.25초마다라 여기서 기다리면 카운터가 뒤처진다.
-                if let locationPoint {
-                    submitDisplayedStickmanViewportPoint(locationPoint)
-                }
+                // 관찰 값(@State)으로 프레임마다 올리면 2만 줄 화면 전체가 다시 평가돼, UIKit이 같은 프레임에 옮기는
+                // 화랑이 뷰보다 카운터가 늦게 따라왔다. 상자에만 담고 카운터 창이 화면 틱마다 읽는다.
+                appleStickmanLivePoint.point = locationPoint
+                let moving = !isFinal || playbackDriver != nil
+                if isAppleCameraMoving != moving { isAppleCameraMoving = moving }
                 if let rendered = mapCameraFrameProjection.submit(
                     frame,
                     nowUptime: now,
@@ -4720,21 +4789,28 @@ struct MapHomeView: View {
                 ) {
                     applyMapCameraFrame(rendered, locationPoint: locationPoint)
                 }
+                // 손을 뗀 마지막 점은 입력 예산에 걸려도 버리지 않는다(탭 판정·안개 기준).
+                if isFinal, playbackDriver == nil {
+                    finishDisplayedStickmanViewportProjection()
+                }
             },
             onSingleFingerPanBegan: handleUserMapPan,
             onUserCameraGesture: handleUserCameraGesture,
             onLongPress: presentMapLongPressMenu,
             onAnnotationSelected: handleAppleMapAnnotation,
-            onWalkerTapped: { isDaySummaryPresented = true }
+            onWalkerTapped: { presentDaySummary(fromCat: true) }
         )
+        // 마스크 `.subviews`는 이 제스처 자체를 끈다. 검색이 열려 있지 않으면 지도 탭 판정이 전혀 돌지 않았다(TAP1031A01 기기 로그).
         .simultaneousGesture(
             SpatialTapGesture(coordinateSpace: .named("mapHomeViewport"))
                 .onEnded { tap in
                     presentCatDetailsIfTapped(at: tap.location)
-                    dismissMapSearchOverlay()
-                },
-            including: isSearchDismissable ? .all : .subviews
+                    if isSearchDismissable { dismissMapSearchOverlay() }
+                }
         )
+        .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
+            if mapFrameInViewport != frame { mapFrameInViewport = frame }
+        }
         .task {
             applyInitialLocationIfAvailable(using: nil)
             beginInitialLocationRequest(using: nil)
@@ -5499,17 +5575,27 @@ struct MapHomeView: View {
 
     /// 화랑이를 누르면 하루 요약 카드를 연다. 발자국·집 아이콘보다 먼저 판정한다(대표 지시, ARC1030A07).
     private func presentCatDetailsIfTapped(at tapPoint: CGPoint) {
+        // 카운터 창 프레임은 뷰포트 공간, 핀·화랑이 점은 지도 로컬 공간이다.
         if isCounterWindowTapped(at: tapPoint) {
-            openCounterMenu()
+            openCounterDetail(at: tapPoint)
             return
         }
-        if isStickmanTapped(at: tapPoint) {
-            isDaySummaryPresented = true
+        let local = mapLocalPoint(fromViewport: tapPoint)
+        if isStickmanTapped(at: local) {
+            presentDaySummary(fromCat: true)
             return
         }
-        if handleMapMarkerTap(at: tapPoint) { return }
-        guard pawprintTarget(at: tapPoint, waypoints: pawprintWaypoints) == nil else { return }
-        if isHomeSummaryTapped(at: tapPoint) { isDaySummaryPresented = true }
+        if handleMapMarkerTap(at: local) { return }
+        guard pawprintTarget(at: local, waypoints: pawprintWaypoints) == nil else { return }
+        if isHomeSummaryTapped(at: local) { isDaySummaryPresented = true }
+    }
+
+    private func mapLocalPoint(fromViewport point: CGPoint) -> CGPoint {
+        CGPoint(x: point.x - mapFrameInViewport.minX, y: point.y - mapFrameInViewport.minY)
+    }
+
+    private func viewportPoint(fromMapLocal point: CGPoint) -> CGPoint {
+        CGPoint(x: point.x + mapFrameInViewport.minX, y: point.y + mapFrameInViewport.minY)
     }
 
     /// 지도 위 핀(메모·사진·탑승 후보·대중교통·장소)은 터치를 받지 않고 여기서 위치로 판정한다.
@@ -5558,6 +5644,73 @@ struct MapHomeView: View {
             && counterWindowFrame.insetBy(dx: -8, dy: -8).contains(tapPoint)
     }
 
+    /// 누른 줄의 카운터 상세 화면을 연다. 줄은 위에서 아래로 같은 높이로 쌓여 있어 높이 비율로 고른다.
+    /// 줄 목록을 아직 모르면(창이 막 생긴 때) 예전처럼 카운터 메뉴를 연다.
+    private func openCounterDetail(at tapPoint: CGPoint) {
+        let targets = counterRowTargets
+        guard let index = MapHomeCounterDetailBuilder.rowIndex(
+            tapY: tapPoint.y, frame: counterWindowFrame, count: targets.count
+        ) else {
+            openCounterMenu()
+            return
+        }
+        counterDetail = targets[index]
+    }
+
+    /// 상세 화면 내용. 연 순간의 값으로 만든다.
+    private func counterDetailContent(for target: MapHomeCounterDetailTarget) -> MapHomeCounterDetailContent {
+        let calendar = Calendar.autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: model.selectedDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(24 * 60 * 60)
+        let now = Date()
+        let badges = mapCounterBadges(asOf: now)
+        switch target {
+        case .salary:
+            let live = salaryLive
+            let workSeconds: TimeInterval
+            if calendar.isDateInToday(model.selectedDate), let live {
+                workSeconds = MapHomeSalaryPolicy.liveWorkSeconds(
+                    base: live.todayWorkSeconds, baseDate: live.measuredAt, isWorking: live.isWorking, now: now, tick: 1
+                )
+            } else {
+                workSeconds = MapHomeSalaryPolicy.workSeconds(in: salaryWorkSpans[dayStart] ?? [], until: .distantFuture)
+            }
+            let rate = live?.hourlyRate ?? 0
+            return MapHomeCounterDetailBuilder.salary(
+                spans: salaryWorkSpans[dayStart] ?? [],
+                earned: MapHomeSalaryPolicy.wonText(
+                    MapHomeSalaryPolicy.earnings(workSeconds: workSeconds, hourlyRate: rate), language: language
+                ),
+                hourlyRateText: MapHomeSalaryPolicy.wonText(rate, language: language),
+                language: language
+            )
+        case .kind(let kind):
+            let total = badges.first(where: { $0.kind == kind })?.text ?? "–"
+            switch kind {
+            case .steps:
+                return MapHomeCounterDetailBuilder.steps(
+                    readings: currentDayReadings, total: total, dayStart: dayStart, language: language
+                )
+            case .distance:
+                return MapHomeCounterDetailBuilder.distance(
+                    segments: displayDayDataSnapshot?.travel ?? [], total: total, language: language
+                )
+            case .work, .study, .hobby, .exercise:
+                let seconds = kind.categoryID.flatMap { daySummaryCategorySeconds(asOf: nil, now: now)[$0] } ?? 0
+                return MapHomeCounterDetailBuilder.time(
+                    kind: kind,
+                    actuals: displayDayDataSnapshot?.actuals ?? [],
+                    totalSeconds: seconds,
+                    total: total,
+                    dayStart: dayStart,
+                    dayEnd: dayEnd,
+                    now: now,
+                    language: language
+                )
+            }
+        }
+    }
+
     /// 왼쪽 메뉴를 열고 표시 > 카운터 항목을 펼친다(위젯을 누르면 카운터 메뉴로 볼 수 있는 내용만 보여 준다).
     private func openCounterMenu() {
         openMenu()
@@ -5567,9 +5720,7 @@ struct MapHomeView: View {
 
     /// 화랑이가 화면에 그려지는 점. 재생 중에는 구동기가 프레임마다 정한 점이 가장 정확하다.
     private func isStickmanTapped(at tapPoint: CGPoint) -> Bool {
-        guard let stickmanPoint = vectorMapViewportStore.livePoint
-                ?? vectorMapViewportStore.stickmanPoint
-                ?? displayedStickmanViewportPoint else { return false }
+        guard let stickmanPoint = displayedCatViewportPoint else { return false }
         return MapHomeCatTapRouting.shouldPresentCatDetails(
             tapPoint: tapPoint,
             locationPoint: stickmanPoint,
@@ -5996,7 +6147,7 @@ struct MapHomeView: View {
             // 카운터 창은 늘 보인다: 화랑이가 밖에 있으면 그 위, 집에 있으면 집 핀 안의 화랑이 위.
             // 연봉과 나머지 카운터는 한 상자에 담는다(표시 > 카운터에서 켠 것만).
             if let anchor = salaryAnchor(viewport: viewport, stickmanPoint: playback == nil ? nil : stickmanPoint) {
-                counterWindow(at: anchor)
+                counterWindow(at: anchor, tracksPlaybackPoint: playback != nil)
             }
 
             if let selectedSearchPin,
@@ -6233,7 +6384,7 @@ struct MapHomeView: View {
         let current = model.settings.mapDisplayStyle.runtimeStyle
         if near {
             guard autoLandStyleState.isEmpty, current.mapHomeVectorStyle == nil else { return }
-            let target = MapDisplayStyle.mapLibreLight
+            let target = MapDisplayStyle.mapLibreCasual
             autoLandStyleState = "\(current.rawValue)|\(target.rawValue)"
             model.setMapDisplayStyle(target)
         } else {
@@ -6892,23 +7043,6 @@ struct MapHomeView: View {
 
     /// 오른쪽 위 날짜 배지: 요일(토 파랑, 일·공휴일 빨강)과 큰 날짜.
     /// 누르면 앞뒤 날짜가 이어지는 날짜 줄을 펼친다. 그 줄을 좌우로 밀면 하루씩 넘어간다.
-    /// 오늘이 아닐 때 날짜 배지 위에 뜨는 집 아이콘. 누르면 오늘과 현재 위치로 돌아가고, 오늘이 되면 사라진다.
-    private var homeButton: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
-        } label: {
-            Image(systemName: "house.fill")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
-                .foregroundStyle(Color.tpInk)
-                .frame(width: 26, height: 26)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(language.text("오늘로 이동", "Go to today"))
-        .accessibilityIdentifier("mapHomeTodayPill")
-    }
-
     /// 접힌 사이드바를 펼치는 화살표. 날짜 배지와 한 알약에 붙어 있다(숨김 상태에서는 아래 화살표).
     private var sidebarExpandArrow: some View {
         Button {
@@ -6947,9 +7081,7 @@ struct MapHomeView: View {
         .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 한 번 탭하면 날짜 줄을 왼쪽으로 펼친다.
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
-        }
+        .onTapGesture { handleDateBadgeTap() }
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityAdjustableAction { direction in
@@ -6963,22 +7095,10 @@ struct MapHomeView: View {
         .accessibilityHint(language.text("한 번 누르면 날짜 줄을 펼칩니다", "Tap to show the date strip"))
         // 화면 시험에서 이 배지를 이름으로 집는다. 날짜가 든 이름은 날마다 달라진다.
         .accessibilityIdentifier("mapHomeDateBadge")
-        // 펼친 동안에는 날짜 칸만 남긴다. 집 아이콘과 화살표는 날짜 줄과 겹치지 않게 숨긴다.
-        let showsHome = dateBadgeShowsHome
+        // 사이드바가 접혀 있으면 아래에 펼치기 화살표를 붙여 날짜 배지와 한 알약으로 묶는다. 펼친 날짜 줄 동안에는 숨긴다.
         let showsArrow = !isSidebarVisible && !isDateWeekExpanded
-        let isPlain = !showsHome && !showsArrow
-        // 사이드바와 합쳐진 동안에는 아래 모서리를 직각으로 두어 한 줄로 이어 보이게 한다.
-        let topRadius: CGFloat = isPlain ? 18 : 22
-        let bottomRadius: CGFloat = isDateBadgeMerged ? 0 : topRadius
-        let badgeShape = UnevenRoundedRectangle(
-            cornerRadii: .init(topLeading: topRadius, bottomLeading: bottomRadius, bottomTrailing: bottomRadius, topTrailing: topRadius),
-            style: .continuous
-        )
+        let isPlain = !showsArrow
         let badge = VStack(spacing: 2) {
-            if showsHome {
-                homeButton
-                    .transition(.scale.combined(with: .opacity))
-            }
             face
             if showsArrow {
                 sidebarExpandArrow
@@ -6986,13 +7106,14 @@ struct MapHomeView: View {
         }
         .padding(.vertical, isPlain ? 0 : 4)
         .frame(width: Layout.timeRailWidth)
-        .mapHomeGlass(in: badgeShape)
+        .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
         .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
         return HStack(alignment: .top, spacing: 6) {
             if isDateWeekExpanded {
                 MapHomeDateStrip(
                     language: language,
-                    selectedDate: model.selectedDate
+                    selectedDate: model.selectedDate,
+                    markedDays: dataDayStarts
                 ) { day in
                     shouldFitRoutesAfterDateChange = true
                     model.selectedDate = day
@@ -7004,17 +7125,72 @@ struct MapHomeView: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate))
     }
 
-    /// 오늘이 아니고 펼치지 않은 때 집 아이콘이 날짜 배지 위에 붙는다.
+    /// 화랑이가 실제로 그려지는 화면 점. 집에 있으면 집 핀(아바타 중심)이고, 아니면 위치 점이다.
+    /// 집에 있을 때 위치 점은 집 반경 안 어딘가라 화랑이와 수십 pt 어긋날 수 있다(TAP1031A01 기기 로그).
+    /// Apple 지도의 점은 걷는 화랑이 좌표(집에 있으면 집 핀)로 이미 투영돼 있다. 벡터 저장소의 점은
+    /// 벡터 지도에서만 유효하므로 Apple 지도에서는 읽지 않는다(지난 재생 값이 남아 엉뚱한 곳을 가리킨다).
+    private var displayedCatViewportPoint: CGPoint? {
+        guard rendersVectorMap else { return displayedStickmanViewportPoint }
+        if isDisplayedCatAtHome,
+           let home = model.settings.frequentPlaces.first(where: { $0.kind == .home }),
+           let viewport = vectorMapViewportStore.viewport,
+           let pin = vectorPoint(in: viewport, for: vectorPlaceMarkerID(home.id)) {
+            return pin
+        }
+        return vectorMapViewportStore.livePoint
+            ?? vectorMapViewportStore.stickmanPoint
+            ?? displayedStickmanViewportPoint
+    }
+
+    /// 화랑이 아이콘 위 터치 영역. 지도 위 다른 층이 탭을 가로채도 화랑이는 여기서 먼저 받아 하루 요약을 연다.
+    /// 집에 있으면 아바타 원(지름 78), 돌아다닐 때는 1.5배로 그린 화랑이 마커(36×1.5) 크기다.
+    @ViewBuilder
+    private var stickmanTapTarget: some View {
+        if let point = displayedCatViewportPoint {
+            let atHome = isDisplayedCatAtHome
+            // 지도 로컬 점을 뷰포트 공간으로 옮겨 놓는다(이 층은 뷰포트 공간에 있다).
+            let center = viewportPoint(fromMapLocal: atHome ? point : MapHomeCatTapRouting.markerPoint(locationPoint: point, isAtHome: false))
+            let size: CGFloat = atHome
+                ? MapHomePlacePinLayout.avatarSize
+                : MapHomeStickmanMarker.size.width * 1.5 + 6
+            Color.clear
+                .frame(width: size, height: size)
+                .contentShape(Circle())
+                .position(x: center.x, y: center.y)
+                .onTapGesture { presentDaySummary(fromCat: true) }
+                .accessibilityElement()
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel(language.text("화랑이 하루 요약", "Today summary"))
+        }
+    }
+
+    /// 하루 요약을 연다. 화랑이에서 열면 시트가 올라올 때 집이 아니라 화랑이를 화면에 남긴다.
+    private func presentDaySummary(fromCat: Bool) {
+        daySummaryFocusesCat = fromCat
+        isDaySummaryPresented = true
+    }
+
+    /// 메모나 계획이 있는 날(하루의 시작 시각). 날짜 줄에 점으로 보여 준다.
+    private var dataDayStarts: Set<Date> {
+        let calendar = Calendar.autoupdatingCurrent
+        var days = Set(model.snapshot.memos.map {
+            calendar.startOfDay(for: $0.isTimeless == true ? $0.createdAt : $0.occurredAt)
+        })
+        days.formUnion(model.snapshot.plans.map { calendar.startOfDay(for: $0.span.start) })
+        return days
+    }
+
     /// 사이드바를 펼치고 접는 튕김. 펼칠 때는 위에서 아래로 쫙 내려오고, 접을 때는 아래부터 위로 줄어든다.
     static let sidebarToggleSpring = Animation.spring(response: 0.5, dampingFraction: 0.62)
 
-    private var dateBadgeShowsHome: Bool {
-        !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) && !isDateWeekExpanded
-    }
-
-    /// 집 아이콘이 붙은 날짜 배지가 사이드바 맨 위와 한 알약으로 합쳐진 상태. 이때 사이드바 접기 버튼은 숨긴다.
-    private var isDateBadgeMerged: Bool {
-        isSidebarVisible && dateBadgeShowsHome
+    /// 오늘이 아니면 한 번 눌러 오늘로 돌아가고, 오늘이면 옆으로 날짜 줄을 펼친다.
+    private func handleDateBadgeTap() {
+        if !Calendar.autoupdatingCurrent.isDateInToday(model.selectedDate) {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { jumpToTodayAndFitRoutes() }
+            return
+        }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { isDateWeekExpanded.toggle() }
     }
 
     private var header: some View {
@@ -7227,13 +7403,11 @@ struct MapHomeView: View {
 
     private func mapStyleTitle(_ style: MapDisplayStyle) -> String {
         switch style {
-        case .standard: language.text("표준", "Standard")
+        case .standard: language.text("애플맵", "Apple Maps")
         case .hybrid: language.text("위성", "Satellite")
         // 스타일 이름은 재질이 아니라 상황으로 적는다. "벡터 야간"을 고르려는 사람은 없다.
         case .mapLibreNight: language.text("야간", "Night")
-        case .mapLibreLight: language.text("밝게", "Bright")
         case .mapLibreContrast: language.text("실외(고대비)", "Outdoor (high contrast)")
-        case .mapLibrePastel: language.text("파스텔", "Pastel")
         case .mapLibreCasual: language.text("산책(부드럽게)", "Walk (soft)")
         case .mapLibreRPG: language.text("판타지 지도", "Fantasy Map")
         }
@@ -7244,9 +7418,7 @@ struct MapHomeView: View {
         case .standard: "map"
         case .hybrid: "globe.asia.australia.fill"
         case .mapLibreNight: "moon.stars.fill"
-        case .mapLibreLight: "sun.max.fill"
         case .mapLibreContrast: "circle.lefthalf.filled"
-        case .mapLibrePastel: "paintpalette.fill"
         case .mapLibreCasual: "sparkles"
         case .mapLibreRPG: "map.circle.fill"
         }
@@ -7667,9 +7839,24 @@ struct MapHomeView: View {
     /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.
     /// 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
     /// 창은 **스스로 박자**를 가진다 — 연봉 줄을 껐어도 나머지 숫자가 시간을 따라 움직인다.
-    private func counterWindow(at anchor: CGPoint) -> some View {
-        let bottomY = anchor.y - 8
-        return MapHomeCounterClock(isLive: isCounterLive) { now in
+    private func counterWindowPoint(anchor: CGPoint, follows: Bool, followsAppleCamera: Bool) -> CGPoint {
+        let live = follows ? vectorMapViewportStore.livePoint
+            : followsAppleCamera ? appleStickmanLivePoint.point
+            : nil
+        guard let live else { return anchor }
+        return CGPoint(x: live.x, y: live.y + MapHomeStickmanAnnotationLayout.centerOffset.y - 42)
+    }
+
+    /// `tracksPlaybackPoint`가 켜져 있고 재생 중이면 위치를 화면 틱마다 `livePoint`에서 다시 읽는다.
+    /// 관찰 값(`anchor`)은 재생 중 0.25초에 한 번만 바뀌어, 그 값만 따라가면 화랑이 마커(매 프레임)보다
+    /// 카운터가 뒤처지며 4Hz로 끊겨 흔들려 보였다. 창 내용은 한 번만 만들고 틱마다 위치만 바꾼다.
+    /// `tracksAppleCamera`는 Apple 지도가 움직이는 동안 같은 방식으로 `appleStickmanLivePoint`를 읽는다.
+    private func counterWindow(
+        at anchor: CGPoint,
+        tracksPlaybackPoint: Bool = false,
+        tracksAppleCamera: Bool = false
+    ) -> some View {
+        let content = MapHomeCounterClock(isLive: isCounterLive) { now in
             counterWindowContent(now: now)
                 .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .named("mapHomeViewport")) }) { frame in
                     if counterWindowFrame != frame { counterWindowFrame = frame }
@@ -7677,7 +7864,14 @@ struct MapHomeView: View {
                 .onDisappear { counterWindowFrame = .zero }
         }
         .frame(width: 240, height: 320, alignment: .bottom)
-        .position(x: anchor.x, y: bottomY - 160)
+        let follows = tracksPlaybackPoint && playbackDriver != nil
+        let followsAppleCamera = tracksAppleCamera && isAppleCameraMoving
+        return TimelineView(.animation(paused: !(follows || followsAppleCamera))) { _ in
+            let point = counterWindowPoint(
+                anchor: anchor, follows: follows, followsAppleCamera: followsAppleCamera
+            )
+            content.position(x: point.x, y: point.y - 8 - 160)
+        }
         .allowsHitTesting(false)
         .zIndex(MapHomeLayerPriority.stickman)
     }
@@ -7732,7 +7926,12 @@ struct MapHomeView: View {
                 )
             }
         }
-        return MapHomeCounterTable(salary: salary, badges: mapCounterBadges(asOf: now), language: language)
+        let badges = mapCounterBadges(asOf: now)
+        let targets = badges.map { MapHomeCounterDetailTarget.kind($0.kind) } + (salary == nil ? [] : [.salary])
+        return MapHomeCounterTable(salary: salary, badges: badges, language: language)
+            .onChange(of: targets, initial: true) { _, next in
+                if counterRowTargets != next { counterRowTargets = next }
+            }
     }
 
     private func salaryAnchor(viewport: MapHomeVectorViewport?, stickmanPoint: CGPoint?) -> CGPoint? {
@@ -8312,9 +8511,7 @@ struct MapHomeView: View {
         let timeSidebarFrame = MapHomeOverlayLayoutMath.timeSidebarFrame(
             viewportHeight: viewportSize.height,
             topOverlayHeight: 0,
-            topMargin: isDateBadgeMerged
-                ? Layout.topRowInset + Layout.dateBadgeStackHeight
-                : Layout.horizontalInset * 2 + Layout.dateBadgeSize,
+            topMargin: Layout.horizontalInset * 2 + Layout.dateBadgeSize,
             bottomMargin: Layout.horizontalInset + layoutStyle.bottomReservedHeight
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
@@ -8350,8 +8547,6 @@ struct MapHomeView: View {
                     .transition(.sidebarDrop)
             }
         }
-        // 날짜 배지와 합칠 때 사이드바가 살짝 튕기며 내려왔다 올라앉는다(떨어지는 방울 느낌).
-        .animation(.spring(response: 0.5, dampingFraction: 0.6), value: isDateBadgeMerged)
         .position(x: viewportSize.width / 2, y: frame.midY)
     }
 
@@ -8484,11 +8679,9 @@ struct MapHomeView: View {
                             guard model.isBootstrapped else { return }
                             openSectionEditor(at: selectedMinute)
                         },
-                        // 날짜 배지와 합쳐진 동안에는 접기 버튼을 숨긴다.
-                        onCollapse: isDateBadgeMerged ? nil : {
+                        onCollapse: {
                             withAnimation(MapHomeView.sidebarToggleSpring) { isSidebarVisible = false }
                         },
-                        isJoinedToTop: isDateBadgeMerged,
                         onUnconfirmedReview: { segment in
                             guard model.isBootstrapped else { return }
                             focusedUnconfirmedReviewSegment = segment
@@ -8630,28 +8823,10 @@ struct MapHomeView: View {
         proxy: MapProxy?,
         railHeight: CGFloat
     ) -> some View {
-        // 왼쪽 하단에는 검색(돋보기)만 둔다(대표 지시). 누르면 상단 입력창이 펼쳐진다.
-        return VStack(alignment: .leading, spacing: 10) {
-            Spacer(minLength: 0)
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isSearchExpanded = true
-                }
-                // 창이 마운트된 다음 런루프에 포커스를 줘야 @FocusState가 무시되지 않는다.
-                DispatchQueue.main.async {
-                    isMapSearchFocused = true
-                }
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold))
-                    .foregroundStyle(Color.tpInk)
-                    .frame(width: Layout.mapControlSize, height: Layout.mapControlSize)
-                    .mapHomeGlass(in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(language.text("장소 검색", "Search places"))
-        }
-        .frame(width: Layout.timeRailWidth, height: railHeight)
+        // 검색·메모·일정은 왼쪽 상단 한 줄에 둔다(대표 지시). 아래 왼쪽 자리는 비운다.
+        return Color.clear
+            .frame(width: Layout.timeRailWidth, height: railHeight)
+            .allowsHitTesting(false)
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
 
@@ -8890,6 +9065,120 @@ struct MapHomeView: View {
     /// 메인 메뉴 묶음 제목과 카드. 항목은 카드 안에서 얇은 구분선으로 나눈다.
     /// 표시 메뉴 안의 이동 항목: 아래 토글·선택 행과 같은 글자 크기·여백·아이콘 색으로 맞춘다.
     /// 드롭다운 행: 제목과 현재 값, 위아래 화살표. 다른 메뉴 행과 같은 크기를 쓴다.
+    /// 표시 > UI 테마: 기본(양피지)과 대표가 준 남색·보라·갈색 색상표. 고르면 화면 색이 바로 바뀐다(UIX1101A04).
+    private var uiThemeRow: some View {
+        Menu {
+            Picker("", selection: Binding(
+                get: { TaptionUITheme(rawValue: uiThemeRaw) ?? .classic },
+                set: { TaptionUITheme.apply($0) }
+            )) {
+                ForEach(TaptionUITheme.allCases) { theme in
+                    Text(theme.title(language)).tag(theme)
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                displayDropdownRow(
+                    "paintpalette.fill",
+                    language.text("UI 테마", "UI theme"),
+                    (TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).title(language)
+                )
+                .overlay(alignment: .bottomLeading) {
+                    HStack(spacing: 2) {
+                        ForEach(Array((TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).swatches.enumerated()), id: \.offset) { _, color in
+                            Capsule().fill(color).frame(width: 10, height: 4)
+                        }
+                    }
+                    .padding(.leading, 38)
+                    .padding(.bottom, 3)
+                }
+            }
+        }
+        .accessibilityLabel(language.text("UI 테마 선택", "Choose UI theme"))
+    }
+
+    /// 표시 > 사이드바: 사이드바에 함께 그려지는 항목과 시각 표시를 한 묶음으로 둔다(대표 지시, UIX1101A02).
+    private var sidebarDisplayGroup: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Label(language.text("사이드바", "Sidebar"), systemImage: "sidebar.right")
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .foregroundStyle(Color.tpSecondary)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 2)
+
+                    Toggle(
+                        isOn: Binding(
+                            get: { model.settings.weatherSidebarVisible },
+                            set: { model.setWeatherSidebarVisible($0) }
+                        )
+                    ) {
+                        Label(
+                            language.text("날씨", "Weather"),
+                            systemImage: "cloud.sun.fill"
+                        )
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    }
+                    .tint(Color.tpReferenceBlue)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+
+                    Toggle(isOn: $showsPhotosOnMap) {
+                        Label(
+                            language.text("사진", "Photos"),
+                            systemImage: "photo.fill"
+                        )
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    }
+                    .tint(Color.tpReferenceBlue)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+
+                    Toggle(isOn: Binding(
+                        get: { memoDisplayMode != .hidden },
+                        set: { memoDisplayRaw = ($0 ? MapHomeMemoDisplayMode.all : .hidden).rawValue }
+                    )) {
+                        Label(language.text("메모 표시", "Show memos"), systemImage: "note.text")
+                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    }
+                    .tint(Color.tpAccent)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+
+            Menu {
+                Picker("", selection: $sidebarTimeFormatRaw) {
+                    ForEach(MapHomeSidebarTimeFormat.allCases) { format in
+                        Text(format.title(language)).tag(format.rawValue)
+                    }
+                }
+            } label: {
+                displayDropdownRow(
+                    "clock",
+                    language.text("시간 표시", "Time format"),
+                    (MapHomeSidebarTimeFormat(rawValue: sidebarTimeFormatRaw) ?? .twentyFourHour).title(language)
+                )
+            }
+            .padding(.vertical, 3)
+
+            Menu {
+                Picker("", selection: $sidebarRulerIntervalRaw) {
+                    ForEach(MapHomeSidebarRulerInterval.allCases) { interval in
+                        Text(interval.title(language)).tag(interval.rawValue)
+                    }
+                }
+            } label: {
+                displayDropdownRow(
+                    "ruler",
+                    language.text("시간 간격", "Time interval"),
+                    (MapHomeSidebarRulerInterval(rawValue: sidebarRulerIntervalRaw) ?? .automatic).title(language)
+                )
+            }
+            .padding(.vertical, 3)
+        }
+        .padding(.vertical, 4)
+        .background(Color.tpReferenceBlue.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
     private func displayDropdownRow(_ systemImage: String, _ title: String, _ value: String) -> some View {
         HStack(spacing: 8) {
             Label(title, systemImage: systemImage)
@@ -9585,6 +9874,8 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
+                uiThemeRow
+
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
                     // 판타지 지도를 맨 위에 두고, 나머지 벡터 스타일, Apple 스타일 순으로 보여 준다(대표 지시, ARC1030A04).
@@ -9646,32 +9937,7 @@ struct MapHomeView: View {
                 }
                 .buttonStyle(.plain)
 
-                Toggle(
-                    isOn: Binding(
-                        get: { model.settings.weatherSidebarVisible },
-                        set: { model.setWeatherSidebarVisible($0) }
-                    )
-                ) {
-                    Label(
-                        language.text("날씨", "Weather"),
-                        systemImage: "cloud.sun.fill"
-                    )
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpReferenceBlue)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-
-                Toggle(isOn: $showsPhotosOnMap) {
-                    Label(
-                        language.text("사진", "Photos"),
-                        systemImage: "photo.fill"
-                    )
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpReferenceBlue)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
+                sidebarDisplayGroup
 
                 Toggle(isOn: $showsRoutesOnMap) {
                     Label(
@@ -9707,16 +9973,6 @@ struct MapHomeView: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
 
-                Toggle(isOn: Binding(
-                    get: { memoDisplayMode != .hidden },
-                    set: { memoDisplayRaw = ($0 ? MapHomeMemoDisplayMode.all : .hidden).rawValue }
-                )) {
-                    Label(language.text("메모 표시", "Show memos"), systemImage: "note.text")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
-                }
-                .tint(Color.tpAccent)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
 
             }
         }
@@ -13054,6 +13310,15 @@ struct MapHomeView: View {
 
     /// 하루요약 시트가 지도를 덮은 만큼 집을 남은 영역의 가운데로 옮긴다.
     /// 시트를 내리면 다시 지도 전체 가운데로 돌아온다. 배율·방향은 그대로 둔다.
+    /// 하루 요약 시트가 올라올 때 화면 위쪽에 남길 기준점. 화랑이에서 열었고 집 밖이면 화랑이, 아니면 집.
+    private var daySummaryCameraAnchor: CLLocationCoordinate2D? {
+        if daySummaryFocusesCat, !isDisplayedCatAtHome, let cat = displayedLocationCoordinate {
+            return cat
+        }
+        guard let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point else { return nil }
+        return CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude)
+    }
+
     private func applyDaySummaryCameraCoverage() {
         let coverage = daySummaryCoverage
         guard abs(coverage - daySummaryAppliedCoverage) > 0.001 else { return }
@@ -13061,7 +13326,7 @@ struct MapHomeView: View {
         guard !isDayPlaybackRunning, userTrackingMode == .idle else { return }
         guard mapViewportSize.height > 0,
               let camera = visibleMapCamera,
-              let home = model.settings.frequentPlaces.first(where: { $0.kind == .home })?.point
+              let anchor = daySummaryCameraAnchor
         else { return }
         let shift = MapHomeDaySummaryLayout.centerShift(
             viewportHeight: mapViewportSize.height,
@@ -13072,10 +13337,10 @@ struct MapHomeView: View {
             viewportHeight: mapViewportSize.height,
             latitudeDelta: visibleMapSpan.latitudeDelta
         )
-        // 중심을 아래(남쪽)로 내리면 집은 그만큼 화면 위로 올라온다.
+        // 중심을 아래(남쪽)로 내리면 기준점(집 또는 화랑이)은 그만큼 화면 위로 올라온다.
         let center = CLLocationCoordinate2D(
-            latitude: home.latitude - latitudeShift,
-            longitude: home.longitude
+            latitude: anchor.latitude - latitudeShift,
+            longitude: anchor.longitude
         )
         daySummaryAppliedCoverage = coverage
         setMapPosition(.camera(MapCamera(
@@ -13398,13 +13663,30 @@ struct MapHomeView: View {
     /// 현재 위치 버튼: 배율은 80으로 고정한다(현재 배율에서 80으로 옮긴다). 방향과 기울기는 그대로 둔다.
     private func focusCurrentLocationAtFixedScale() {
         let camera = visibleMapCamera
-        let center = currentCoordinate ?? visibleMapCenter
+        let coordinate = currentCoordinate ?? visibleMapCenter
+        let distance = MapHomeCameraZoomMath.distance(forScale: 80)
+        // 하루요약 시트가 아래를 덮으면 가려지지 않은 영역의 가운데에 오도록 중심을 남쪽으로 내린다.
+        var center = coordinate
+        if let camera, camera.distance > 0, mapViewportSize.height > 0 {
+            let shift = MapHomeDaySummaryLayout.centerShift(
+                viewportHeight: mapViewportSize.height,
+                coverage: daySummaryCoverage
+            )
+            center.latitude -= MapHomeDaySummaryLayout.latitudeShift(
+                shift: shift,
+                viewportHeight: mapViewportSize.height,
+                latitudeDelta: visibleMapSpan.latitudeDelta * distance / camera.distance
+            )
+        }
         setMapPosition(.camera(MapCamera(
             centerCoordinate: center,
-            distance: MapHomeCameraZoomMath.distance(forScale: 80),
+            distance: distance,
             heading: camera?.heading ?? 0,
             pitch: camera?.pitch ?? 0
         )))
+        if !rendersVectorMap {
+            requestAppleMapCenter(coordinate, distance: distance)
+        }
     }
 
     /// 위젯·알림·URL이 남긴 이동 요청을 한 번만 적용한다. 소비 즉시 지우지
@@ -13448,6 +13730,10 @@ struct MapHomeView: View {
         recordTimelineWindow("recenter_after")
         // 위치 버튼으로 다시 따라가기 시작하면 자동 줌 일시 정지를 푼다.
         liveZoomGovernor.reset()
+        // 배율 80으로 맞추는 버튼이므로 속도 비례 자동 줌이 곧바로 배율을 덮어쓰지 않게 잠시 멈춘다.
+        if fixedScale {
+            liveZoomGovernor.pauseForUserAdjustment(uptime: ProcessInfo.processInfo.systemUptime)
+        }
         hasCancelledInitialLocationFocus = false
         setUserTrackingMode(.locating)
         // GPS를 기다리는 동안에도 가장 최근 위치로 먼저 이동해 화랑이를 보여준다.
@@ -22455,7 +22741,7 @@ enum MapHomeDayTravelSummary {
     }
 }
 
-private extension TravelMode {
+extension TravelMode {
     var summarySystemImage: String {
         switch self {
         case .walking: "figure.walk"
@@ -22625,3 +22911,4 @@ struct MapHomePawprintLedgerKey: Equatable {
     let lastID: UUID?
     let excluded: [Double]
 }
+

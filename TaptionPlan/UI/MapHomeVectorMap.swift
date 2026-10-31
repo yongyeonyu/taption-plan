@@ -6,9 +6,7 @@ import UIKit
 
 enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     case night
-    case light
     case contrast
-    case pastel
     case casual
     case rpg
 
@@ -19,66 +17,54 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
 
     var backgroundHex: String {
         switch self {
-        case .night: "#0B0B24"
-        case .light: "#F4F1EA"
+        case .night: "#05070D"
         case .contrast: "#FFFFFF"
-        case .pastel: "#FFF1F8"
-        case .casual: "#FFF8EC"
+        case .casual: "#FFFEF8"
         case .rpg: "#ECDFC0"
         }
     }
 
     var waterHex: String {
         switch self {
-        case .night: "#16164A"
-        case .light: "#7FC4F0"
+        case .night: "#06264D"
         case .contrast: "#0057FF"
-        case .pastel: "#CFE6FF"
-        case .casual: "#BFE8F0"
-        case .rpg: "#A7CFD4"
+        case .casual: "#9FE3FF"
+        case .rpg: "#86C3E0"
         }
     }
 
     var landuseHex: String {
         switch self {
-        case .night: "#1A1A38"
-        case .light: "#BFE3A6"
-        case .contrast: "#FFF200"
-        case .pastel: "#E6F7DC"
-        case .casual: "#DDF2D2"
+        case .night: "#0B1424"
+        case .contrast: "#CDEBC0"
+        case .casual: "#C9F5B8"
         case .rpg: "#DCCB9E"
         }
     }
 
     var buildingHex: String {
         switch self {
-        case .night: "#4B3A7A"
-        case .light: "#DDD6C8"
+        case .night: "#13223D"
         case .contrast: "#000000"
-        case .pastel: "#EAD7FA"
-        case .casual: "#F1D0B4"
+        case .casual: "#FFE0C2"
         case .rpg: "#CBAE7C"
         }
     }
 
     var roadCasingHex: String {
         switch self {
-        case .night: "#2B1B5C"
-        case .light: "#C9C2B2"
-        case .pastel: "#FFFFFF"
+        case .night: "#0A3A7A"
         case .contrast: "#000000"
-        case .casual: "#FFFDF7"
+        case .casual: "#FFFFFF"
         case .rpg: "#F3E7C8"
         }
     }
 
     var roadHex: String {
         switch self {
-        case .night: "#FF4FD8"
-        case .light: "#FFFFFF"
-        case .contrast: "#FF2D2D"
-        case .pastel: "#FFC9B0"
-        case .casual: "#F2A37F"
+        case .night: "#2FD6FF"
+        case .contrast: "#FFD400"
+        case .casual: "#FFB37F"
         case .rpg: "#9A7B4A"
         }
     }
@@ -86,9 +72,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     private var name: String {
         switch self {
         case .night: "Taption Vector Night"
-        case .light: "Taption Vector Light"
         case .contrast: "Taption Vector Contrast"
-        case .pastel: "Taption Vector Pastel"
         case .casual: "Taption Vector Casual"
         case .rpg: "Taption Vector RPG"
         }
@@ -117,6 +101,40 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
               "paint": {
                 "fill-color": "#A6BE7C",
                 "fill-opacity": 0.7
+              }
+            },
+            {
+              "id": "rpg-landuse-accent",
+              "type": "fill",
+              "source": "openmaptiles",
+              "source-layer": "landuse",
+              "filter": ["in", "class", "school", "university", "college", "kindergarten", "hospital", "cemetery", "commercial", "retail", "industrial", "railway", "pitch", "playground", "stadium", "track", "sports_centre"],
+              "paint": {
+                "fill-color": ["match", ["get", "class"],
+                  ["school", "university", "college", "kindergarten"], "#F0D56E",
+                  "hospital", "#E8A99B",
+                  "cemetery", "#B7C99A",
+                  ["commercial", "retail"], "#EBBE80",
+                  ["industrial", "railway"], "#C9BBD6",
+                  ["pitch", "playground", "stadium", "track", "sports_centre"], "#8FCB7A",
+                  "#DCCB9E"],
+                "fill-opacity": 0.72
+              }
+            },
+            {
+              "id": "rpg-landcover-extra",
+              "type": "fill",
+              "source": "openmaptiles",
+              "source-layer": "landcover",
+              "filter": ["in", "class", "sand", "wetland", "farmland", "rock", "ice"],
+              "paint": {
+                "fill-color": ["match", ["get", "class"],
+                  "sand", "#F2DE9C",
+                  "wetland", "#9ED0BE",
+                  "farmland", "#DAD37E",
+                  "ice", "#E4F0F6",
+                  "#CFC3B2"],
+                "fill-opacity": 0.66
               }
             },
             {
@@ -165,6 +183,18 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             return #"""
             ,
             {
+              "id": "rpg-building-tall",
+              "type": "fill",
+              "source": "openmaptiles",
+              "source-layer": "building",
+              "minzoom": 14,
+              "filter": [">", ["to-number", ["get", "render_height"], 0], 25],
+              "paint": {
+                "fill-color": "#D98E6E",
+                "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0.25, 17, 0.62]
+              }
+            },
+            {
               "id": "rpg-building-outline",
               "type": "line",
               "source": "openmaptiles",
@@ -203,6 +233,47 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
             return #"""
             ,
             {
+              "id": "rpg-road-main",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "transportation",
+              "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "primary", "secondary"]],
+              "layout": { "line-cap": "round", "line-join": "round" },
+              "paint": {
+                "line-color": "#E9C46A",
+                "line-opacity": 0.95,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.5, 11, 1.5, 16, 4.6, 20, 11]
+              }
+            },
+            {
+              "id": "rpg-road-highway",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "transportation",
+              "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "trunk"]],
+              "layout": { "line-cap": "round", "line-join": "round" },
+              "paint": {
+                "line-color": "#E8963A",
+                "line-opacity": 0.96,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.7, 11, 2.2, 16, 6.4, 20, 14]
+              }
+            },
+            {
+              "id": "rpg-rail",
+              "type": "line",
+              "source": "openmaptiles",
+              "source-layer": "transportation",
+              "minzoom": 9,
+              "filter": ["all", ["==", "$type", "LineString"], ["==", "class", "rail"]],
+              "layout": { "line-join": "round" },
+              "paint": {
+                "line-color": "#8E6FB5",
+                "line-opacity": 0.85,
+                "line-dasharray": [3, 2],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 14, 1.4, 18, 3]
+              }
+            },
+            {
               "id": "rpg-waterway",
               "type": "line",
               "source": "openmaptiles",
@@ -210,8 +281,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
               "minzoom": 8,
               "layout": { "line-cap": "round", "line-join": "round" },
               "paint": {
-                "line-color": "#6FA6B0",
-                "line-opacity": 0.8,
+                "line-color": "#5FA8CF",
+                "line-opacity": 0.85,
                 "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 2.6]
               }
             },
@@ -302,8 +373,8 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
                 "text-padding": 4
               },
               "paint": {
-                "text-color": "#4A7C86",
-                "text-halo-color": "#A7CFD4",
+                "text-color": "#2F6F90",
+                "text-halo-color": "#86C3E0",
                 "text-halo-width": 1.8
               }
             }
@@ -523,9 +594,7 @@ extension MapDisplayStyle {
     var mapHomeVectorStyle: MapHomeVectorStyle? {
         switch self {
         case .mapLibreNight: .night
-        case .mapLibreLight: .light
         case .mapLibreContrast: .contrast
-        case .mapLibrePastel: .pastel
         case .mapLibreCasual: .casual
         case .mapLibreRPG: .rpg
         case .standard, .hybrid: nil

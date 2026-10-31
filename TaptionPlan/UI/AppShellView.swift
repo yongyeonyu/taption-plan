@@ -11,6 +11,8 @@ struct AppShellView: View {
         AppLanguagePreference.sharedDefaultsKey,
         store: UserDefaults(suiteName: AppLanguagePreference.appGroupIdentifier)
     ) private var languageRawValue = AppLanguagePreference.current.rawValue
+    /// 테마를 바꾸면 화면을 새로 그려 모든 색을 다시 읽는다(UIX1101A04).
+    @AppStorage(TaptionUITheme.storageKey) private var uiThemeRaw = TaptionUITheme.classic.rawValue
     @State private var model = AppModel(startsCommerceLocked: true)
     @State private var proAccess = TaptionProAccessController()
     private let sensorLiveActivityController =
@@ -44,6 +46,7 @@ struct AppShellView: View {
                     Color.tpSurface.ignoresSafeArea()
                 }
             }
+            .id(uiThemeRaw)
             .onAppear {
                 markInitialDestinationRendered()
             }
@@ -73,7 +76,7 @@ struct AppShellView: View {
         }
         .font(.taption(size: 17))
         .tint(.tpInk)
-        .preferredColorScheme(.light)
+        .preferredColorScheme((TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).colorScheme)
         .task {
             await performInitialLaunchPreparation()
         }

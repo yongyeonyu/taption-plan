@@ -4828,3 +4828,128 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`build/validation/UIX1031A06/`)
 - 실기기 iPhone 11 Pro Debug 빌드·설치·실행 성공
 - 제한: 기기에서 팬 시 카운터 추종 지연이 사라졌는지는 대표 확인 전까지 미검증. 60Hz 제출이라 완전한 프레임 동기는 아님.
+
+## INS1031A02 아이폰 18 Pro Max Debug 설치 (2026-10-31)
+- 대상: 실기기 iPhone 18 Pro Max (`00008160-000E195A1140000A`, physical, available)
+- 빌드: generic iOS Debug 빌드 성공 (`build/validation/INS1031A02/build-device.log`), HEAD `4fe7f6b`, 번들 `CFBundleVersion` 255
+- 설치: `devicectl device install app` 성공, `device info apps`에서 BOKKI Plan 1.0 (255) 확인
+- 실행: `devicectl process launch` 성공
+- 제한: 설치·실행만 확인. 화면 동작은 기기에서 아직 확인하지 않음.
+
+## TAP1031A01 비교 빌드 (7c76821, 2026-10-31)
+- 목적: 화랑이 탭 팝업이 되던 기준과 현재 빌드 비교
+- 빌드: 임시 worktree에서 7c76821을 generic iOS Debug로 빌드 성공 (`build/validation/TAP1031A01/build-7c76821.log`)
+- 설치·실행: iPhone 11 Pro (`00008030-001628201AD2802E`) 설치 성공 (`install-7c76821.log`), 실행 명령 성공
+- 제한: 설치·실행만 확인. 팝업 동작은 대표 테스트 결과로 판정 필요. 현재 작업 트리의 진단 줄은 이 빌드에 없음.
+
+## UIX1031A07 집 아이콘 삭제·탭 동작·날짜 줄 강조 (2026-10-31)
+- 날짜 배지의 집 아이콘 삭제. 오늘이 아니면 배지 탭은 오늘로 돌아가고, 오늘이면 날짜 줄을 펼침.
+- 사이드바와 날짜 배지의 합침(이음새·접기 버튼 숨김·튕김 시트) 로직 제거. 사이드바 접기 버튼은 항상 표시.
+- 날짜 줄: 손가락 이동 중 화면 가운데 칸을 강조하고 달 표시도 따름. 손을 떼면 가까운 칸으로 스냅.
+- 진단 줄(`TAPDBG`) 제거.
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, 단위 테스트 `testWindowCentersTheSelectedDay` 통과 (`build/validation/UIX1031A07/`)
+- 실기기 설치는 하지 않음: 기기에 4501c22 비교 빌드가 올라가 있어 대표의 비교 결과를 먼저 받기로 함.
+- 제한: 스와이프 부드러움과 스냅 감각은 기기에서 아직 확인하지 않음.
+- 실기기 설치(UIX1031A07, 작업 트리): iPhone 11 Pro(`00008030-001628201AD2802E`)와 iPhone 18 Pro Max(`00008160-000E195A1140000A`)에 Debug 빌드 설치·실행 성공. 화면 동작은 대표 확인 대기.
+
+## UIX1031A08 날짜 줄 빠른 스와이프·데이터 점·메모 버튼 위치 (2026-10-31)
+- 날짜 줄: 칸 목록을 가운데 날짜가 바뀔 때만 만들고, 끌 때는 위치만 바꿈. 손을 떼면 같은 순간 날짜를 고르고(`onSelect`), 데이터 불러오기는 부모가 그다음에 함.
+- 데이터 점: 메모(시간 없는 메모는 만든 날, 있으면 발생일)와 계획(시작일)이 있는 날에 칸 아래 점. 센서·타임라인만 있는 날은 아직 표시하지 않음.
+- 메모 버튼: 위쪽 줄에서 빼서 왼쪽 아래 검색 버튼 바로 위로 옮김. 메모 목록 패널은 위쪽에 그대로 열림.
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, 단위 테스트 `testWindowCentersTheSelectedDay` 통과 (`build/validation/UIX1031A08/`)
+- 실기기 설치 안 함. 스와이프 속도, 점 위치, 메모 버튼 위치는 기기에서 아직 확인하지 않음.
+- 실기기 설치(UIX1031A08, 작업 트리): iPhone 11 Pro(`00008030-001628201AD2802E`), iPhone 18 Pro Max(`00008160-000E195A1140000A`)에 Debug 빌드 설치·실행 성공. 화면 동작은 대표 확인 대기.
+
+## UIX1031A09 왼쪽 상단 검색·메모·일정 줄, 화랑이 최상위 터치 (2026-10-31)
+- 왼쪽 상단 한 줄을 검색 → 메모 → 일정 순서로 둠. 아래 왼쪽 검색·메모 자리는 비움(잘못 옮긴 것을 되돌림).
+- 화랑이 터치 영역을 모든 지도 층보다 위(zIndex header+1)에 두고, 누르면 하루 요약을 염. 96pt 영역이 화랑이 마커 중심 기준.
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과 (`build/validation/UIX1031A09/`)
+- 실기기 iPhone 11 Pro·iPhone 18 Pro Max에 Debug 빌드 설치·실행. 화랑이 탭 팝업과 버튼 위치는 기기 확인 대기.
+
+## TAP1031A01 화랑이 탭 팝업 안 뜸 — 원인·수정 (2026-10-31)
+- 원인(기기 로그): 화랑이가 집에 있으면 집 핀 아바타 안에 그려지는데, 탭 판정은 실제 위치 점(집 반경 안)을 기준으로 해 수십 pt 어긋남. 탭 (240,350) vs 판정 중심 (206,413).
+- 수정: `displayedCatViewportPoint` — 집에 있으면 집 핀 점, 아니면 위치 점. 최상위 터치 영역(`stickmanTapTarget`, 아바타 원+18pt)과 지도 단계 판정(`isStickmanTapped`)이 같은 점을 씀.
+- 임시 진단(tapdbg·TAPDBG2·0.35초 지연) 모두 제거. 진단 로그 원본: `build/validation/UIX1031A09/console-tap*.txt`, `tapfile/tapdbg.log`.
+- 실기기 iPhone 11 Pro: 수정 빌드에서 화랑이 탭 → 절반 높이 요약 시트 올라옴(대표 확인, 진단 줄 포함 빌드).
+- 진단 제거 후: 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/TAP1031A01/`). 진단 제거 빌드의 기기 재확인은 대기.
+- 참고: 앱 시작 직후 뷰포트가 준비되기 전에는 집 핀 투영이 화면 밖 값으로 나와 터치 영역이 잠시 화면 밖에 놓임(무해).
+- 추가 수정(같은 날): 터치 영역을 화랑이 아이콘 크기에 맞춤(집: 아바타 원 78, 밖: 마커 36×1.5+6). Apple 지도에서는 벡터 저장소의 묵은 점을 읽지 않고 걷는 화랑이 투영점만 씀(터치 영역이 위치 화살표 자리에 놓이던 원인 후보). 화랑이에서 요약을 열면 카메라 맞춤 기준을 집 대신 화랑이로 두어 시트가 올라올 때 화랑이가 화면 밖으로 밀리지 않게 함(`daySummaryFocusesCat`). 터치 영역은 `MapHomeObservingView`로 감싸 뷰포트 변화가 본문 전체를 다시 평가하지 않게 함.
+- 검증: 시뮬레이터 Debug 빌드·UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/TAP1031A01/*2*`). 「터치하면 화랑이가 사라짐」 재현 여부는 기기 확인 대기.
+- 아이폰 18 Pro Max 기기 로그(`console-18b.txt`)로 두 원인 추가 확인:
+  1. 지도 탭 제스처가 `including: .subviews` 마스크로 묶여 있어 검색이 열려 있지 않으면 제스처 자체가 꺼짐(`.subviews`는 추가한 제스처를 끄는 마스크). 화랑이·핀·집 라벨·발자국·카운터 탭 판정이 전혀 돌지 않았고, 아이폰 11은 검색 상태가 남아 있어 우연히 켜져 있었던 것으로 추정. → 마스크를 빼고 항상 켜되 검색 닫기는 열려 있을 때만 호출.
+  2. 지도 뷰는 위 안전 영역까지 덮어(`ignoresSafeArea`) 뷰포트 공간보다 위에서 시작(18 Pro Max 62pt). 지도 로컬 점(핀·화랑이)과 뷰포트 탭을 그대로 비교해 터치 영역이 62pt 아래에 놓였고, 최상위 터치 영역도 어긋남. → 지도 프레임(`mapFrameInViewport`)을 재서 탭은 로컬로, 터치 영역은 뷰포트로 변환.
+- 「터치하면 화랑이가 사라짐」은 탭이 위 두 이유로 어느 판정에도 걸리지 않아 MapLibre 기본 탭 처리로 흘러간 결과로 추정(직접 증거 없음).
+- 진단 로그(TAPDBG3) 제거. 시뮬레이터 Debug 빌드·UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/TAP1031A01/*3*`). 두 기기 화면 확인 대기.
+
+## UIX1031A10 카운터 줄 상세 화면 (2026-10-31)
+- 새 파일 `MapHomeCounterDetailSheet.swift`(시트·계산 `MapHomeCounterDetailBuilder`), 테스트 `MapHomeCounterDetailTests`(7건). 프로젝트 파일에 두 파일 등록.
+- 줄 선택: 창 높이를 줄 수로 나눈 비율(`rowIndex`). 줄은 같은 높이라는 가정이며 기기에서 어긋나면 줄별 프레임 측정으로 바꿔야 함.
+- 한계: 시간 카운터의 합계에는 장소 체류에서 센 시간이 들어 있어 목록과 다를 수 있고, 차이는 「그 밖의 자동 집계」 줄로 보여 줌. 상세 값은 시트를 연 순간 값이며 열려 있는 동안 갱신하지 않음.
+- 단위 테스트 `MapHomeCounterDetailTests` 통과, 시뮬레이터 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A10/`). 기기 화면 확인 대기.
+
+## UIX1031A11 검색 버튼을 한 번 더 누르면 검색창 닫힘 (2026-10-31)
+- 검색 버튼: 검색창이 열려 있으면(`isSearchDismissable`) 누를 때 닫고, 아니면 기존처럼 열고 입력에 포커스. 다른 곳을 눌러 닫히는 동작(지도 탭 `dismissMapSearchOverlay`)은 그대로.
+- 시뮬레이터 Debug 빌드 성공, UI 테스트 `testTodayPillAppearsOnPastDatesAndReturnsToToday` 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A11/`). 열림·닫힘 동작은 기기 확인 대기.
+
+## UIX1031A12 카운터 창을 누르면 모든 카운터의 상세 (2026-10-31)
+- 카운터 창을 누르면 창에 보이는 모든 카운터(걸음·거리·시간 카운터·번 돈)의 상세를 창 순서대로 한 시트에 이어 보이고, 누른 줄의 상세가 맨 위로 스크롤됨(`MapHomeCounterDetailSheet(contents:focusIndex:)`). 줄 목록을 모를 때는 누른 줄만.
+- 단위 테스트 `MapHomeCounterDetailTests` 통과, 시뮬레이터 빌드·UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A12/`). 기기 화면 확인 대기.
+
+## UIX1031A13 카운터 상세를 탭 메뉴로 재구성 (2026-10-31)
+- 카운터 상세 시트: 위에 카운터 탭(걸음·거리·업무·학습·취미·운동·번 돈), 아래에 고른 카운터의 상세. 좌우로 밀어도 넘어가고, 누른 줄의 탭이 먼저 골라짐. 제목줄에 날짜. 상세는 큰 값 카드·한 줄 요약(캡션)·걸음 시간대별 막대 그래프·줄별 비율 막대(수단별·구간·활동·근무).
+- 눈으로 확인: 단위 테스트 호스트에서 시트를 그림으로 내보내(`testRenderSheetImagesWhenRequested`, `/private/tmp/taption-render-counter-detail` 파일이 있을 때만 실행) 걸음·거리·업무·번 돈 화면을 읽어 봄 (`build/validation/UIX1031A13/sheet-*.png`). 샘플 데이터이고 시뮬레이터 화면이라 기기 실제 값·글꼴 크기는 확인 전.
+- 단위 테스트 `MapHomeCounterDetailTests` 8건 통과(그림 내보내기는 기본 건너뜀), 시뮬레이터 빌드·UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행. 기기 화면 확인 대기.
+
+## UIX1031A14 재생 중 카운터 위젯 흔들림 (2026-10-31)
+- 원인: 벡터(오픈맵) 지도에서 카운터 창 위치가 재생 중 0.25초에 한 번만 바뀌는 관찰 값(`stickmanPoint`)을 따라가, 화랑이 마커(매 프레임 `livePoint`)보다 뒤처지고 4Hz로 끊겨 흔들려 보임.
+- 수정: 카운터 창을 한 번만 만들고, 재생 중에는 화면 틱마다 `livePoint`로 위치만 옮김(`counterWindow(at:tracksPlaybackPoint:)`). Apple 지도는 이 경로가 아니라 그대로.
+- 측정(iPhone 11 Pro, 재생 벤치 `scripts/playback-bench.sh`): 수정 전 fps 48(over20 1128), 수정 후 fps 48(over20 1200) — 프레임 성능은 변화 없음. 흔들림 자체는 기기 육안 확인 대기(벤치가 위치 오차를 재지 않음). 같은 빌드로 측정한 첫 「after」는 컴파일 실패로 옛 빌드였고(fps 60, 변동), 컴파일 수정 후 다시 측정해 위 값을 씀. (`build/validation/UIX1031A14/`)
+
+## UIX1031A15 판타지 지도 색 다양화 (2026-10-31)
+- 판타지(RPG) 벡터 스타일에 대비 색 보조 레이어 추가: 학교·대학 노랑, 병원 분홍, 묘지 연두, 상업 주황, 산업·철도부지 연보라, 운동장·경기장 초록, 모래·습지·농지·바위·얼음, 고층 건물 살구색, 간선도로(primary/secondary) 황금, 고속도로(motorway/trunk) 주황, 철도 보라 점선. 물은 청록(#A7CFD4)에서 더 푸른 하늘색(#86C3E0), 물길·물 이름도 파랑 계열로.
+- 단위 테스트 `testVectorStyleJSONIsValidAndRPGHasAccentLayers`(모든 스타일 JSON 유효·레이어 id 중복 없음·보조 레이어 포함) 포함 `MapHomeLiveMapTests` 77건 통과, 시뮬레이터 빌드·UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A15/`).
+- 한계: MapLibre가 실제로 이 표현식을 그려 내는지, 색 균형이 보기 좋은지는 기기 화면 확인 대기(시뮬레이터에서 지도 타일을 그려 보지 못함).
+
+## UIX1031A16 클립 편집 — 이웃 클립 끝까지 끌면 합치기 묻기 (2026-10-31)
+- 대표 녹화(`ScreenRecording_10-31-2026_14-59-39_1.mov`, 2.2초)를 프레임으로 뽑아 확인: 「집에서 휴식」 위 손잡이를 앞 클립 「머무름」(00:20–00:59)의 먼 쪽 끝까지 끌어 00:59→00:21까지 갔지만(이웃은 최소 1분만 남음) 「합칠까요?」가 뜨지 않음.
+- 원인(추정, 영상으로는 옵션 값을 볼 수 없음): `NLETrack.mergeCandidate`가 이웃과 **분류(categoryID)가 다를 때만** 물었다. 두 클립은 대분류 열에서 같은 초록이라 분류가 같고 이름만 다르므로 nil이 되어 묻지 않았다고 판단.
+- 수정: 분류·이름·행동 중 하나라도 다르면 묻는다(`looksDifferent`). 같은 클립(셋 다 같음)·기록 없는 빈 시간은 그대로 묻지 않음. 합치기(`mergeIntoDragged`)는 이웃이 끌어온 클립의 이름·분류를 따르며, 이웃의 원본 구간 요청이 빠지지 않는 기존 규칙 유지.
+- 테스트: `NLETrackTests` 37건 통과(새 `testMergeIsOfferedForSameCategoryNeighborWithDifferentTitle` 포함), 시뮬레이터 UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A16/`).
+- 한계: 모델에서만 검증. 클립 편집 화면에서 실제로 손잡이를 끌어 「합칠까요?」 창이 뜨고 합쳐지는지는 기기 확인 대기. 합친 뒤 이웃은 최소 1분 클립으로 남아 같은 이름·색으로 이어져 보임(원본 구간 요청을 지키는 기존 설계).
+- UIX1031A16 추가 수정(대표 재요청: 「그냥 끝까지 올리면 합치기 메뉴가 나오게」): 손가락 위치만 보면, 롤이 이웃 끝(최소 1분 남김)에서 멈춰 손가락이 몇 분 못 미쳐 떼는 경우를 놓쳤다. 이제 **이웃이 최소 길이까지 줄었으면** 손가락 위치와 상관없이 묻는다(`mergeCandidate`). 단 끌기를 시작할 때 이미 최소 길이였던 이웃은 묻지 않는다(`trimNeighborLengthAtStart`). `adjacentClip(of:edge:)` 추가.
+- `NLETrackTests` 37건 통과(기존 두 합치기 시험을 새 규칙에 맞춰 고침), iPhone 11 Pro·18 Pro Max 재설치·실행. 편집 화면에서 끌어 보는 확인은 대기.
+
+## UIX1031A17 센서 원본 다섯 줄·원본 값 창 (2026-10-31)
+- `MapHomeNLESensorEvidence.channelSegments`(움직임·헬스·화면·연결·장소), `nearestReading`, `rawLines` 추가. 기존 `segments`(한 줄)와 그 시험은 그대로.
+- 클립 편집기: 센서 열을 5등분한 막대(줄 머리에 아이콘), 줄 비율 조정(대분류 36%·센서 34%), 구간을 누르면 카드, 「원본 값」 단추로 `NLERawDetailSheet`. 움직임·헬스 줄만 대분류로 「반영」 가능, 나머지는 읽기 전용.
+- 시험: `NLETrackTests` 37건 + `MapHomeStickmanTests` 46건(새 `testSensorEvidenceChannelsKeepScreenNetworkPlaceAndHealthSeparate` 포함) 통과, 시뮬레이터 UI 테스트 통과, iPhone 11 Pro·18 Pro Max 설치·실행 (`build/validation/UIX1031A17/`).
+- 한계: 편집 화면 모양(줄 너비·막대 가독성)은 눈으로 확인하지 못했고, 얻을 수 있는 정보 중 HealthKit 심박·활동 에너지 같은 값은 앱이 측정값에 저장하지 않아 표시 대상이 아님. 어떤 값이 실제 기기에 쌓였는지는 기기 확인 대기.
+
+## LOC1031A01
+- 시뮬레이터 Debug 빌드 통과(build/validation/LOC1031A01/build.log). 단위 테스트·기기 확인은 하지 않음.
+- LOC1031A01 추가(대표 영상): 현재 위치 버튼 후 배율이 흔들림 → 배율 80 버튼에서 자동 줌을 20초 멈춤. 기기 빌드 통과, 기기 동작은 대표 확인 대기.
+
+## UIX1031A18
+- NLETrackTests 37개 통과(시뮬레이터, build/validation/UIX1031A18/unit2.log). 위·아래 손잡이 양쪽 경우, 합친 뒤 한 덩어리·원본 구간 요청 유지 확인.
+- 기기 Debug 빌드 통과, 아이폰 11 Pro·18 Pro Max 설치. 편집기 실제 동작은 미확인.
+
+## UIX1031A19
+- NLETrackTests 38개 통과(build/validation/UIX1031A18/unit3.log, 아래로 합치기·임계값·원본 ID 없는 이웃 테스트 추가). 기기 빌드 통과·두 아이폰 설치. 기기 동작 미확인.
+
+## UIX1031A20
+- NLETrackTests 39개 통과(build/validation/UIX1031A18/unit4.log, 기준이 이웃보다 긴 배율 테스트 추가). 끄는 도중 묻기 변경 후 기기 Debug 빌드 통과, 두 아이폰 설치. 기기 동작 미확인.
+
+## UIX1031A21
+- NLETrackTests 39개 통과(build/validation/UIX1031A18/unit5.log, 같은 분류 두 덩어리 합치기 확인). 기기 Debug 빌드 통과, 두 아이폰 설치. 기기 진단 묶음은 10/31 14:57 것이 최신이라 이번 동작 로그는 없음.
+
+## UIX1031A21~22
+- 아이폰 11 Pro 실기기 콘솔(build/validation/UIX1031A18/console-iphone11.log): 같은 분류 합치기 시도 중 이웃 「걷기」가 처음부터 1분이라 offered=0 확인.
+- NLETrackTests 40개 통과(unit6.log). 기기 Debug 빌드 통과, 아이폰 11 설치. 18 Pro Max는 이전 빌드.
+
+## UIX1101A01
+- NLETrackTests 40개 통과(build/validation/UIX1101A01/unit.log, 확대 단추 순서 테스트 갱신). 기기 Debug 빌드 통과, 아이폰 11 Pro 설치·실행. 화면 확인은 안 함.
+- UIX1031A22: 대표가 아이폰 11에서 1분 클립 합치기 동작 확인.
+
+## UIX1101A02~A04
+- 단위 테스트 314개 통과(build/validation/UIX1101A03/unit.log: TimeScaleTests·MapHomeSidebarDisplaySettingsTests·MapHomeLiveMapTests·NLETrackTests·전환 저장 테스트). TimeScaleTests의 판타지 지도 레이어 실패(이전 변경의 기대값 누락)도 함께 고침.
+- 시뮬레이터 Debug 빌드 통과(UIX1101A04/sim-build.log), 기기 Debug 빌드 통과·아이폰 11 Pro 설치·실행. 시뮬레이터 부팅 실패(Invalid argument)로 화면 캡처 없음. 기기 화면 미확인.

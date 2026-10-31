@@ -4271,13 +4271,18 @@ final class TimeScaleTests: XCTestCase {
                 .standard,
                 .hybrid,
                 .mapLibreNight,
-                .mapLibreLight,
                 .mapLibreContrast,
-                .mapLibrePastel,
                 .mapLibreCasual,
                 .mapLibreRPG,
             ]
         )
+        // 없앤 밝게·파스텔로 저장된 값은 산책 지도로 읽는다(UIX1101A03).
+        for retired in ["mapLibreLight", "mapLibrePastel"] {
+            XCTAssertEqual(
+                try JSONDecoder().decode(MapDisplayStyle.self, from: JSONEncoder().encode(retired)),
+                .mapLibreCasual
+            )
+        }
         for style in MapDisplayStyle.allCases {
             XCTAssertEqual(
                 try JSONDecoder().decode(
@@ -4998,7 +5003,7 @@ final class TimeScaleTests: XCTestCase {
     func testMapHomeVectorStylesKeepOnlyStyledRoadMapLayers() throws {
         XCTAssertEqual(
             MapHomeVectorStyle.allCases,
-            [.night, .light, .contrast, .pastel, .casual, .rpg]
+            [.night, .contrast, .casual, .rpg]
         )
 
         let baseLayerIDs = [
@@ -5047,11 +5052,17 @@ final class TimeScaleTests: XCTestCase {
                     "landuse",
                     "rpg-landcover",
                     "rpg-park",
+                    "rpg-landuse-accent",
+                    "rpg-landcover-extra",
                     "rpg-coastline",
                     "building",
+                    "rpg-building-tall",
                     "rpg-building-outline",
                     "road-casing",
                     "road",
+                    "rpg-road-main",
+                    "rpg-road-highway",
+                    "rpg-rail",
                     "rpg-waterway",
                     "rpg-place-marker",
                     "rpg-poi-marker",
@@ -5128,16 +5139,8 @@ final class TimeScaleTests: XCTestCase {
             .night
         )
         XCTAssertEqual(
-            MapDisplayStyle.mapLibreLight.mapHomeVectorStyle,
-            .light
-        )
-        XCTAssertEqual(
             MapDisplayStyle.mapLibreContrast.mapHomeVectorStyle,
             .contrast
-        )
-        XCTAssertEqual(
-            MapDisplayStyle.mapLibrePastel.mapHomeVectorStyle,
-            .pastel
         )
         XCTAssertEqual(
             MapDisplayStyle.mapLibreCasual.mapHomeVectorStyle,
@@ -5163,8 +5166,6 @@ final class TimeScaleTests: XCTestCase {
             [
                 .mapLibreRPG,
                 .mapLibreCasual,
-                .mapLibrePastel,
-                .mapLibreLight,
                 .mapLibreNight,
                 .mapLibreContrast,
             ]
@@ -6056,5 +6057,34 @@ final class StationaryLocationGateTests: XCTestCase {
             isTrulyStill: true, motionIsStationary: true, hasPreviousLocation: true,
             hasManualTrackingSession: false, lastAcceptedAt: nil, now: now
         ))
+    }
+}
+
+/// 표시 > 사이드바의 시간 표시·시간 간격(UIX1101A02).
+final class MapHomeSidebarDisplaySettingsTests: XCTestCase {
+    func testTwelveHourLabelsMarkMorningAndAfternoon() {
+        let format = MapHomeSidebarTimeFormat.twelveHour
+        XCTAssertEqual(format.hourLabel(0, language: .korean), "오전")
+        XCTAssertEqual(format.hourLabel(12, language: .korean), "오후")
+        XCTAssertEqual(format.hourLabel(15, language: .korean), "3")
+        XCTAssertEqual(format.timeLabel(15 * 60 + 5, language: .korean), "오후 3:05")
+        XCTAssertEqual(format.timeLabel(5, language: .korean), "오전 12:05")
+        XCTAssertEqual(format.timeLabel(15 * 60 + 5, includesPeriod: false), "3:05")
+        XCTAssertEqual(MapHomeSidebarTimeFormat.twentyFourHour.timeLabel(15 * 60 + 5), "15:05")
+        XCTAssertEqual(MapHomeSidebarTimeFormat.twentyFourHour.hourLabel(7), "07")
+    }
+
+    func testRulerIntervalNeverGetsDenserThanTheChosenMinimum() {
+        let fitted = MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 60, trackHeight: 600)
+        XCTAssertEqual(MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 60, trackHeight: 600, minimumStep: 0), fitted)
+        XCTAssertEqual(MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 60, trackHeight: 600, minimumStep: 30), max(fitted, 30))
+        // 1시간이면 분 글자는 없고 정시만 남는다.
+        let labels = MapHomeTimeSidebarMath.visibleRulerLabels(
+            window: 600...720, durationMinutes: 120, trackHeight: 600, minimumStep: 60
+        )
+        XCTAssertTrue(labels.minutes.isEmpty)
+        // 화면이 좁아 자동 간격이 더 넓으면 자동 간격을 쓴다(글자가 겹치지 않게).
+        XCTAssertEqual(MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 720, trackHeight: 300, minimumStep: 5),
+                       MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 720, trackHeight: 300))
     }
 }

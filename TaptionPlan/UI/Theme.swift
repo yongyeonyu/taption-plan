@@ -57,26 +57,109 @@ extension Font {
     }
 }
 
+/// UI 색 테마(표시 > UI 테마, UIX1101A04). 기본은 웜 양피지, 나머지 셋은 대표가 준 어두운 6단 색상표다.
+/// 핵심 색(글자·보조 글자·배경·면·선·강조)만 바꾸고 활동 분류 색은 그대로 둔다.
+enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
+    case classic
+    case navy
+    case purple
+    case brown
+
+    struct Palette: Sendable {
+        let background: Color
+        let surface: Color
+        let line: Color
+        let accent: Color
+        let secondary: Color
+        let ink: Color
+    }
+
+    static let storageKey = "taptionUITheme"
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var cached: TaptionUITheme?
+
+    /// 색을 읽을 때마다 저장소를 열지 않도록 한 번 읽은 값을 쓴다. 바꿀 때는 `apply`로 함께 고친다.
+    static var current: TaptionUITheme {
+        lock.lock(); defer { lock.unlock() }
+        if let cached { return cached }
+        let value = UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .classic
+        cached = value
+        return value
+    }
+
+    static func apply(_ theme: TaptionUITheme) {
+        lock.lock()
+        cached = theme
+        lock.unlock()
+        UserDefaults.standard.set(theme.rawValue, forKey: storageKey)
+    }
+
+    var id: String { rawValue }
+
+    /// 어두운 테마는 유리·시트도 어둡게 그려야 밝은 글자가 읽힌다.
+    var colorScheme: ColorScheme { self == .classic ? .light : .dark }
+
+    func title(_ language: MapHomeLanguage) -> String {
+        switch self {
+        case .classic: language.text("기본(양피지)", "Classic")
+        case .navy: language.text("남색", "Navy")
+        case .purple: language.text("보라", "Purple")
+        case .brown: language.text("갈색", "Brown")
+        }
+    }
+
+    /// 6단 색상표: 가장 어두운 색부터 배경·면·선·강조·보조 글자·글자.
+    var palette: Palette? {
+        switch self {
+        case .classic: nil
+        case .navy: Self.palette("#111522", "#1E263B", "#303D59", "#536684", "#98A9C4", "#DCE3EF")
+        case .purple: Self.palette("#17151C", "#292531", "#45404F", "#716879", "#AAA2B3", "#E2DDE7")
+        case .brown: Self.palette("#211B1A", "#382A28", "#60433D", "#916B60", "#C1A094", "#E8D8CE")
+        }
+    }
+
+    /// 미리보기 칩에 쓰는 6색(어두운 것부터).
+    var swatches: [Color] {
+        guard let palette else {
+            return [.classicBackground, .classicSurface, .classicLine, .classicAccent, .classicSecondary, .classicInk]
+        }
+        return [palette.background, palette.surface, palette.line, palette.accent, palette.secondary, palette.ink]
+    }
+
+    private static func palette(_ hexes: String...) -> Palette {
+        Palette(
+            background: Color(hex: hexes[0]), surface: Color(hex: hexes[1]), line: Color(hex: hexes[2]),
+            accent: Color(hex: hexes[3]), secondary: Color(hex: hexes[4]), ink: Color(hex: hexes[5])
+        )
+    }
+}
+
 extension Color {
     // Tokyo postcard palette: a cool sky, warm paper and soft botanical
     // accents keep the timeline calm without lowering text contrast.
     // RA 웜 양피지: RPG 양피지 지도와 통일. 크림 배경·세피아 잉크·테라코타 액센트.
-    static let tpInk = Color(red: 62 / 255, green: 51 / 255, blue: 32 / 255)
+    static var tpInk: Color { TaptionUITheme.current.palette?.ink ?? classicInk }
     /// 9~10pt 보조 글자에 쓰이므로 배경 대비 5.3:1을 지킨다(예전 #7A6C50은 4.29:1이었다).
-    static let tpSecondary = Color(red: 107 / 255, green: 94 / 255, blue: 69 / 255)
-    static let tpBackground = Color(red: 243 / 255, green: 234 / 255, blue: 214 / 255)
-    static let tpSurface = Color(red: 251 / 255, green: 246 / 255, blue: 234 / 255)
+    static var tpSecondary: Color { TaptionUITheme.current.palette?.secondary ?? classicSecondary }
+    static var tpBackground: Color { TaptionUITheme.current.palette?.background ?? classicBackground }
+    static var tpSurface: Color { TaptionUITheme.current.palette?.surface ?? classicSurface }
+    static let classicInk = Color(red: 62 / 255, green: 51 / 255, blue: 32 / 255)
+    static let classicSecondary = Color(red: 107 / 255, green: 94 / 255, blue: 69 / 255)
+    static let classicBackground = Color(red: 243 / 255, green: 234 / 255, blue: 214 / 255)
+    static let classicSurface = Color(red: 251 / 255, green: 246 / 255, blue: 234 / 255)
     static let tpSurfaceBlue = Color(red: 241 / 255, green: 248 / 255, blue: 252 / 255)
     static let tpSurfacePink = Color(red: 255 / 255, green: 242 / 255, blue: 245 / 255)
     static let tpSurfaceSage = Color(red: 241 / 255, green: 248 / 255, blue: 240 / 255)
     static let tpSurfaceLavender = Color(red: 247 / 255, green: 243 / 255, blue: 251 / 255)
     static let tpSurfaceCream = Color(red: 255 / 255, green: 249 / 255, blue: 236 / 255)
     static let tpSky = Color(red: 185 / 255, green: 221 / 255, blue: 237 / 255)
-    static let tpLine = Color(red: 227 / 255, green: 214 / 255, blue: 184 / 255)
+    static var tpLine: Color { TaptionUITheme.current.palette?.line ?? classicLine }
+    static let classicLine = Color(red: 227 / 255, green: 214 / 255, blue: 184 / 255)
     static let tpHoliday = Color(red: 0.86, green: 0.27, blue: 0.30)
     static let tpSaturday = Color(red: 0.24, green: 0.47, blue: 0.77)
     /// 강조 글자·배지에 쓰인다. 흰 글자를 얹어도 5.9:1이 되도록 명도를 낮췄다.
-    static let tpAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
+    static var tpAccent: Color { TaptionUITheme.current.palette?.accent ?? classicAccent }
+    static let classicAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
 
     // The original product guide's ten-color set, softened by the postcard
     // surfaces above. Map Home uses these as accents rather than repainting

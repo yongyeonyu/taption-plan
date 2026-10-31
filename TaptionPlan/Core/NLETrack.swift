@@ -85,6 +85,8 @@ struct NLETrack: Hashable, Sendable {
     let rangeEndMinute: Int
     /// 빈 자리를 미확인 클립으로 채울지. 하루 타임라인은 채우고, 서브클립 줄은 비워 둔다.
     let fillsGaps: Bool
+    /// 합치기로 클립이 모두 사라진 원본 구간. 그 시간을 덮은 클립의 분류로 요청을 남겨야 원본 기록이 빠지지 않는다.
+    private var mergedAwayParents: Set<NLEClipParent> = []
 
     init(
         clips: [NLEClip],
@@ -196,33 +198,75 @@ struct NLETrack: Hashable, Sendable {
         return true
     }
 
-    /// 경계 손잡이를 이웃 클립의 먼 쪽 끝까지 가져갔을 때, 합칠지 물어볼 이웃 클립.
-    ///
-    /// 롤은 이웃의 먼 쪽 끝에서 멈춘다(이웃은 최소 길이만 남는다). 거기까지 간 손짓은 "이웃을 통째로
-    /// 덮겠다"는 뜻이다. 이웃이 기록 없는 빈 시간이거나 이미 같은 분류면 물을 필요가 없어 nil이다(대표 지시, ARC1030A05).
-    func mergeCandidate(of id: String, edge: NLEClipEdge, reachedMinute: Int) -> NLEClip? {
+    /// 손잡이 쪽에 맞닿은 이웃 클립.
+    func adjacentClip(of id: String, edge: NLEClipEdge) -> NLEClip? {
         guard let clip = clip(id) else { return nil }
-        let neighbor: NLEClip?
         switch edge {
-        case .start:
-            neighbor = clips.first { $0.id != id && $0.endMinute == clip.startMinute }
-            guard let neighbor, reachedMinute <= neighbor.startMinute + Self.minimumClipMinutes else { return nil }
-        case .end:
-            neighbor = clips.first { $0.id != id && $0.startMinute == clip.endMinute }
-            guard let neighbor, reachedMinute >= neighbor.endMinute - Self.minimumClipMinutes else { return nil }
+        case .start: return clips.first { $0.id != id && $0.endMinute == clip.startMinute }
+        case .end: return clips.first { $0.id != id && $0.startMinute == clip.endMinute }
         }
-        guard let neighbor,
-              !neighbor.isGap,
-              !neighbor.parent.sourceIDs.isEmpty,
-              neighbor.option.categoryID != clip.option.categoryID else { return nil }
-        return neighbor
     }
 
-    /// 합치기: 이웃 클립이 끌어온 클립의 분류를 따른다. 이웃의 원본 구간은 그대로 남아 요청이 빠지지 않는다.
+    /// 경계를 끌어 한쪽 클립이 최소 길이까지 눌렸을 때 합칠 쌍. 눌린 쪽이 남은 쪽으로 들어간다.
+    ///
+    /// 손잡이를 잡은 클립이 어느 쪽인지와 상관없다. 경계 바로 위를 잡으면 위 클립의 끝 손잡이가 잡혀
+    /// 끌어 올릴 때 잡은 클립이 스스로 줄어든다. 그때도 줄어든 클립을 이웃에 합칠지 묻는다(UIX1031A18).
+    /// 끌기 전부터 최소 길이였던 클립은 이번 손짓으로 눌린 게 아니므로 묻지 않는다.
+    func squeezedMergePair(
+        of id: String,
+        edge: NLEClipEdge,
+        clipLengthAtStart: Int,
+        neighborLengthAtStart: Int,
+        squeezeMinutes: Int = NLETrack.minimumClipMinutes,
+        fingerMinute: Int? = nil
+    ) -> (survivor: NLEClip, absorbed: NLEClip)? {
+        guard let clip = clip(id), let neighbor = adjacentClip(of: id, edge: edge) else { return nil }
+        // 처음부터 최소 길이(1분)인 클립은 더 줄어들 수 없다. 손가락이 그 클립을 지나쳐 밀었으면 합칠지 묻는다(UIX1031A22).
+        if let fingerMinute {
+            let pushedThroughNeighbor = neighborLengthAtStart <= Self.minimumClipMinutes
+                && (edge == .start ? fingerMinute <= neighbor.startMinute : fingerMinute >= neighbor.endMinute)
+            let pushedThroughClip = clipLengthAtStart <= Self.minimumClipMinutes
+                && (edge == .start ? fingerMinute >= clip.endMinute : fingerMinute <= clip.startMinute)
+            if pushedThroughNeighbor, !neighbor.isGap, !clip.isGap { return (clip, neighbor) }
+            if pushedThroughClip, !neighbor.isGap, !clip.isGap { return (neighbor, clip) }
+        }
+        // 화면에서 거의 사라질 만큼 눌렸으면 끝까지 간 것으로 본다. 1분까지 밀지 않아도 묻는다.
+        // 기준은 화면 두께(squeezeMinutes)와 처음 길이의 4분의 1 중 작은 쪽이다. 하루 전체 배율에서는
+        // 화면 두께가 수십 분이라, 그보다 짧은 클립이 대상에서 빠지거나 조금만 끌어도 묻지 않게 한다(UIX1031A20).
+        func squeezed(_ length: Int, from startLength: Int) -> Bool {
+            guard startLength > Self.minimumClipMinutes, length < startLength else { return false }
+            let limit = max(Self.minimumClipMinutes, min(squeezeMinutes, startLength / 4))
+            return length <= limit
+        }
+        let pair: (survivor: NLEClip, absorbed: NLEClip)
+        if squeezed(neighbor.lengthMinutes, from: neighborLengthAtStart) {
+            pair = (clip, neighbor)
+        } else if squeezed(clip.lengthMinutes, from: clipLengthAtStart) {
+            pair = (neighbor, clip)
+        } else {
+            return nil
+        }
+        // 기록 없는 미확인 자리는 합칠 대상이 아니다. 아직 원본 ID가 없는 진행 중 구간(아래쪽 마지막 클립)은 합칠 수 있다(UIX1031A19).
+        // 같은 분류·이름이어도 두 덩어리로 나뉘어 있으면 하나로 합칠 수 있다(UIX1031A21).
+        guard !pair.survivor.isGap, !pair.absorbed.isGap else { return nil }
+        return pair
+    }
+
+    /// 합치기: 남는 클립이 이웃 자리까지 늘어나 한 덩어리가 되고 이웃 클립은 사라진다.
+    /// 넘어선 시간은 그 시간을 소유한 원본 구간의 요청에 조각으로 실리므로 이웃의 원본 기록은 빠지지 않는다.
     @discardableResult
     mutating func mergeIntoDragged(_ id: String, neighborID: String) -> Bool {
-        guard let option = clip(id)?.option else { return false }
-        return setOption(neighborID, to: option)
+        guard let index = clipIndex(id), let neighbor = clip(neighborID),
+              clips[index].endMinute == neighbor.startMinute || clips[index].startMinute == neighbor.endMinute
+        else { return false }
+        clips[index].startMinute = min(clips[index].startMinute, neighbor.startMinute)
+        clips[index].endMinute = max(clips[index].endMinute, neighbor.endMinute)
+        clips.removeAll { $0.id == neighborID }
+        renormalize()
+        if !clips.contains(where: { $0.parent == neighbor.parent }) {
+            mergedAwayParents.insert(neighbor.parent)
+        }
+        return true
     }
 
     /// 길이를 유지한 채 통째로 옮긴다. 원본 구간 안에서만 움직인다.
@@ -529,7 +573,7 @@ struct NLETrack: Hashable, Sendable {
         // 롤로 원본 구간을 넘어선 클립은 그 시간을 소유한 이웃 구간에도 조각을 남긴다.
         var touched = Set(dirty.map(\.parent))
         for clip in dirty {
-            for parent in Set(clips.map(\.parent)) where parent.startMinute < clip.endMinute
+            for parent in Set(clips.map(\.parent)).union(mergedAwayParents) where parent.startMinute < clip.endMinute
                 && parent.endMinute > clip.startMinute {
                 touched.insert(parent)
             }
