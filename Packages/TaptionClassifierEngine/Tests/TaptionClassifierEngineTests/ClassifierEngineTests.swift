@@ -226,6 +226,17 @@ final class ClassifierSleepAndMetricTests: XCTestCase {
         XCTAssertFalse(unknown.first!.evidence.contains("어두운 화면"))
     }
 
+    func testArbitrationPrefersStrictTierThenSupplementsAndDropsWearableOverlap() {
+        let span = { (a: Double, b: Double) in ClassifierInterval(start: Synthetic.start.addingTimeInterval(a * 3_600), end: Synthetic.start.addingTimeInterval(b * 3_600)) }
+        let strict = [span(1, 7)]
+        let screen = [span(1, 6.5), span(13, 14)]
+        let charging = [span(2, 7), span(15, 16)]
+        XCTAssertEqual(SleepFusion.arbitrate(wearable: [], tiers: [strict, screen, charging]).map { $0.tier }, [0])
+        let fallback = SleepFusion.arbitrate(wearable: [], tiers: [[], screen, charging])
+        XCTAssertEqual(fallback.map { "\($0.tier):\($0.index)" }, ["1:0", "1:1", "2:1"], "충전 후보는 화면 후보와 겹치지 않을 때만")
+        XCTAssertTrue(SleepFusion.arbitrate(wearable: [span(0, 8)], tiers: [strict, screen]).isEmpty, "워치·HealthKit 수면이 있으면 휴대폰 추정은 버린다")
+    }
+
     func testScreenOnBreaksPhoneSleep() {
         var samples = phoneNight(brightness: 0, charging: true)
         samples[samples.count / 2].screenIsOn = true

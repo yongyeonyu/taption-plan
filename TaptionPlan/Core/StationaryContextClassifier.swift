@@ -165,7 +165,7 @@ struct StationaryContextInput: Sendable {
 }
 
 struct StationaryContextClassifier: Sendable {
-    static let modelVersion = "stationary-context-v2"
+    static let modelVersion = AutomaticModelVersion.context
 
     func classify(_ input: StationaryContextInput) -> StationaryContextInference {
         let stay = input.stay.span
@@ -947,7 +947,7 @@ enum StationaryContextActualEngine {
 /// 투영한다. 장소 체류 감지의 기본 반경(70m)과 등록 식당 반경이 달라도
 /// 식당 기준을 그대로 적용하기 위해 원본 위치 표본을 직접 읽는다.
 enum RestaurantMealActualEngine {
-    static let modelVersion = "registered-restaurant-meal-v1"
+    static let modelVersion = AutomaticModelVersion.restaurantMeal
     static let minimumDuration: TimeInterval = 15 * 60
     static let maximumSampleGap: TimeInterval = 20 * 60
 

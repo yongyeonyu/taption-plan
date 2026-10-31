@@ -7803,22 +7803,14 @@ struct MapHomeView: View {
 
     /// 잠금 화면 활동 카드가 연봉을 실시간으로 올릴 수 있게 기준값(근무 초·시급·측정 시각)을 기기 설정에 적는다.
     private func persistSalaryForLockScreen() {
-        let defaults = UserDefaults.standard
-        guard let salaryLive else {
-            for key in ["mapHomeSalaryLiveText", "mapHomeSalaryLiveBase", "mapHomeSalaryLiveRate",
-                        "mapHomeSalaryLiveMeasuredAt", "mapHomeSalaryLiveWorking", "mapHomeSalaryLiveTick"] {
-                defaults.removeObject(forKey: key)
-            }
-            return
-        }
-        let text = MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(
-            workSeconds: salaryLive.todayWorkSeconds, hourlyRate: salaryLive.hourlyRate))
-        defaults.set(text, forKey: "mapHomeSalaryLiveText")
-        defaults.set(salaryLive.todayWorkSeconds, forKey: "mapHomeSalaryLiveBase")
-        defaults.set(salaryLive.hourlyRate, forKey: "mapHomeSalaryLiveRate")
-        defaults.set(salaryLive.measuredAt, forKey: "mapHomeSalaryLiveMeasuredAt")
-        defaults.set(salaryLive.isWorking, forKey: "mapHomeSalaryLiveWorking")
-        defaults.set(max(1, salaryTickSeconds), forKey: "mapHomeSalaryLiveTick")
+        SalaryLiveSnapshot.write(salaryLive.map { live in
+            SalaryLiveSnapshot(
+                text: MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(
+                    workSeconds: live.todayWorkSeconds, hourlyRate: live.hourlyRate)),
+                baseSeconds: live.todayWorkSeconds, hourlyRate: live.hourlyRate,
+                measuredAt: live.measuredAt, isWorking: live.isWorking, tickSeconds: salaryTickSeconds
+            )
+        })
     }
 
     /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.

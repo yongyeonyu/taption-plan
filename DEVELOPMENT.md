@@ -35,8 +35,10 @@ Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionP
 
 ## 보존해야 할 데이터 계약
 
-- 분류표는 `Packages/TaptionClassifierEngine/Sources/TaptionClassifierEngine/Resources/record-classification.json`(v3) 하나입니다. 앱·위젯·워치 번들의 `TaptionPlan/Core/record-classification.json`은 같은 바이트여야 하고(`ClassifierMigrationTests.testAppTaxonomyMatchesClassifierPackageResource`), `ActivityTaxonomy.default`도 이 표에서 만듭니다. 제목·behavior 키워드 판정은 `ClassifierKeywords` 하나(단어 경계)만 씁니다.
-- `ActualRecord.classificationScore`·`lockReason`은 `decodeIfPresent`/`encodeIfPresent`라 예전 기록은 다시 저장해도 바이트가 같습니다. 자동 재계산이 지키는 것은 `ActualRecord.userOwned(_:)`(수동 입력·`manuallyCorrected`·`lockReason == .user`·교정표, 한국어 '사용자 확인/교정' 근거는 대체 경로)뿐입니다. 분류 파이프라인(`classifier-v1`)이 바뀐 날은 하루 갱신 때 한 번만 안정 잠금을 풀고 다시 분류하며 `classifier-v1:<yyyy-MM-dd>` 표식을 남깁니다. 원본 표본이 30개 미만인 날은 기존 결과를 그대로 두고 표식만 남깁니다(`skipped-no-raw`). 표식은 지금 UserDefaults(`classifierRecomputeMarkers.v1`)이고 시험 실행에서는 꺼져 있습니다.
+- 분류표는 `Packages/TaptionPlanCore/Sources/TaptionPlanCore/Resources/record-classification.json`(v3) 하나입니다. 앱·위젯 카탈로그(`RecordClassificationCatalog`)와 분류 패키지(`ClassifierTaxonomy.current`)·`ActivityTaxonomy.default`가 모두 `ActivityTaxonomyResource.data`로 이 바이트를 읽습니다. 앱 번들에 따로 두지 않습니다. 제목·behavior 키워드 판정은 `ClassifierKeywords` 하나(단어 경계)만 씁니다.
+- `ActualRecord.classificationScore`·`lockReason`은 `decodeIfPresent`/`encodeIfPresent`라 예전 기록은 다시 저장해도 바이트가 같습니다. 자동 재계산이 지키는 것은 `ActualRecord.userOwned(_:)`(수동 입력·`manuallyCorrected`·`lockReason == .user`·교정표, 한국어 '사용자 확인/교정' 근거는 대체 경로)뿐입니다. 분류 파이프라인(`classifier-v1`)이 바뀐 날은 하루 갱신 때 한 번만 안정 잠금을 풀고 다시 분류하며 `classifier-v1:<yyyy-MM-dd>` 표식을 `taption-store.sqlite`의 `meta` 표에 남깁니다(전체 삭제 때 함께 지워짐). 원본 표본이 30개 미만인 날은 기존 결과를 그대로 두고 표식만 남깁니다(`skipped-no-raw`, 오늘은 제외). 저장소를 주입한 시험에서는 재계산이 꺼집니다.
+- 자동 분류 기록의 `modelVersion`은 `classifier-v1/<단계>`(`AutomaticModelVersion`)입니다. 예전 문자열은 `legacyAutomaticModelVersions`로 같은 단계의 별칭이며, 비교는 반드시 `AutomaticModelVersion.matches`를 거칩니다. HealthKit·워치 원본과 사용자 확정 수면의 버전은 바꾸지 않습니다.
+- 하루 자동 분류 적용 순서는 `AppModel.applyClassifierOutput` 하나입니다. 휴대폰 수면 후보 고르기는 `SleepFusion.arbitrate`(앱 쪽 `PhoneSleepFusion`) 하나이고, 워치·HealthKit 수면과 겹치는 휴대폰 추정은 버립니다. 체류 감지는 중심점 기준이고 예전 장소 키는 반경 절반 안에서 별칭으로 유지합니다. 연봉 잠금 화면 키는 `SalaryLiveSnapshot` 하나입니다.
 
 - `PlanRepository`와 `HealthKitImportStore`는 기존 날짜 없는 snapshot 키 `0000-00-00`을 읽기 위해 `allowsUndatedSnapshots`를 켭니다. 일반 날짜, event, map 검증은 이 예외를 물려받지 않아야 합니다.
 - `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. 백업 파일(`yyyy-MM.taptionbackup`)은 `TaptionBackupFormat` 헤더 버전을 따르며 이전 백업 포맷은 읽지 않습니다.

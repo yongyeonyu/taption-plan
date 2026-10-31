@@ -49,37 +49,26 @@ extension ActivityClassificationLockEngine {
     }
 }
 
-/// 날짜별 재계산 표식. 앱 저장소에 `migration_markers`가 생기면 그쪽으로 바꾼다.
+/// 날짜별 재계산 표식.
 protocol ClassificationRecomputeMarkerStore: AnyObject, Sendable {
-    func isCompleted(_ key: String) -> Bool
-    func markCompleted(_ key: String)
+    func isCompleted(_ key: String) async -> Bool
+    func markCompleted(_ key: String, outcome: String) async
 }
 
-final class UserDefaultsClassificationRecomputeMarkers: ClassificationRecomputeMarkerStore, Sendable {
-    static let defaultsKey = "classifierRecomputeMarkers.v1"
-    /// UserDefaults는 Sendable이 아니라 이름만 들고 매번 연다(nil이면 standard).
-    private let suiteName: String?
-    private let lock = NSLock()
+/// 앱 저장소(`taption-store.sqlite`)의 `meta` 표에 표식을 둔다. 전체 삭제 때 함께 지워진다.
+final class StoreClassificationRecomputeMarkers: ClassificationRecomputeMarkerStore {
+    private let store: TaptionStoreV2
 
-    init(suiteName: String? = nil) {
-        self.suiteName = suiteName
+    init(store: TaptionStoreV2) {
+        self.store = store
     }
 
-    private var defaults: UserDefaults {
-        suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
+    func isCompleted(_ key: String) async -> Bool {
+        ((try? await store.meta(key)) ?? nil) != nil
     }
 
-    func isCompleted(_ key: String) -> Bool {
-        lock.withLock { (defaults.stringArray(forKey: Self.defaultsKey) ?? []).contains(key) }
-    }
-
-    func markCompleted(_ key: String) {
-        lock.withLock {
-            var keys = defaults.stringArray(forKey: Self.defaultsKey) ?? []
-            guard !keys.contains(key) else { return }
-            keys.append(key)
-            defaults.set(keys, forKey: Self.defaultsKey)
-        }
+    func markCompleted(_ key: String, outcome: String) async {
+        try? await store.setMeta(key, outcome)
     }
 }
 
@@ -98,13 +87,6 @@ struct ClassificationRecomputeCoordinator: Sendable {
     }
 
     let markers: any ClassificationRecomputeMarkerStore
-
-    /// 앱 기본값: UserDefaults 표식. 시험 실행에서는 nil(시험이 직접 만든다).
-    static var automatic: ClassificationRecomputeCoordinator? {
-        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
-            ? ClassificationRecomputeCoordinator(markers: UserDefaultsClassificationRecomputeMarkers())
-            : nil
-    }
 
     /// 원본이 충분하면 그날 사용자 소유가 아닌 자동 기록의 안정 잠금을 푼다.
     /// 부족하면 기존 결과를 그대로 둔다. 되돌림은 갱신 전 스냅숏이 맡는다.
@@ -128,10 +110,10 @@ struct ClassificationRecomputeCoordinator: Sendable {
     }
 
     /// 갱신이 성공한 뒤에만 표식을 남긴다. 실패·취소한 날은 다음에 이어 한다.
-    func complete(_ outcome: Outcome?, day: Date) {
+    func complete(_ outcome: Outcome?, day: Date) async {
         // 오늘은 원본이 아직 쌓이는 중이라 '원본 부족'으로 닫지 않는다.
         guard let outcome, outcome != .skippedNoRaw || !Calendar.autoupdatingCurrent.isDateInToday(day) else { return }
-        markers.markCompleted(Self.markerKey(for: day))
+        await markers.markCompleted(Self.markerKey(for: day), outcome: outcome.rawValue)
         TaptionPlanDiagnosticsLogger.shared.record(
             "classifier_recompute_day",
             fields: ["outcome": outcome.rawValue]
@@ -143,8 +125,8 @@ struct ClassificationRecomputeCoordinator: Sendable {
         return String(format: "%@:%04d-%02d-%02d", ClassifierPipeline.version, parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
-    func needsRecompute(_ day: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
-        !markers.isCompleted(Self.markerKey(for: day, calendar: calendar))
+    func needsRecompute(_ day: Date, calendar: Calendar = .autoupdatingCurrent) async -> Bool {
+        await !markers.isCompleted(Self.markerKey(for: day, calendar: calendar))
     }
 
     /// 최신 날부터 하나씩. `rawSampleCount`·`recompute`는 앱이 넘긴다.
@@ -162,17 +144,17 @@ struct ClassificationRecomputeCoordinator: Sendable {
                 continue
             }
             let key = Self.markerKey(for: day, calendar: calendar)
-            guard !markers.isCompleted(key) else {
+            guard await !markers.isCompleted(key) else {
                 results.append((day, .alreadyDone))
                 continue
             }
             guard TaptionClassifier.hasEnoughRawData(sampleCount: await rawSampleCount(day)) else {
-                markers.markCompleted(key)
+                await markers.markCompleted(key, outcome: Outcome.skippedNoRaw.rawValue)
                 results.append((day, .skippedNoRaw))
                 continue
             }
             if await recompute(day) {
-                markers.markCompleted(key)
+                await markers.markCompleted(key, outcome: Outcome.recomputed.rawValue)
                 results.append((day, .recomputed))
             } else {
                 results.append((day, Task.isCancelled ? .cancelled : .failed))
@@ -252,9 +234,54 @@ enum ClassifierAdapter {
     }
 
     /// 하루 수단 구간을 앱 타입으로(정지는 mode nil). 시험·진단이 패키지 타입을 몰라도 된다.
-    static func travelTimeline(readings: [SensorReading], in span: TimeSpan) throws -> [(span: TimeSpan, mode: TravelMode?, meters: Double)] {
+    static func travelTimeline(readings: [SensorReading], in span: TimeSpan) throws -> [TimelineSegment] {
         try classifyDay(readings: readings, in: span).segments.map {
-            (TimeSpan(start: $0.interval.start, end: $0.interval.end), travelMode($0.mode), $0.distanceMeters)
+            TimelineSegment(span: TimeSpan(start: $0.interval.start, end: $0.interval.end),
+                            mode: travelMode($0.mode), meters: $0.distanceMeters, score: $0.score)
+        }
+    }
+
+    /// 주 행위자 밖(전역 실행기)에서 계산한다. 비격리 async 함수라 호출한 MainActor를 비운다.
+    static func travelTimelineInBackground(readings: [SensorReading], in span: TimeSpan) async throws -> [TimelineSegment] {
+        try travelTimeline(readings: readings, in: span)
+    }
+
+    struct TimelineSegment: Equatable, Sendable {
+        var span: TimeSpan
+        /// 정지는 nil.
+        var mode: TravelMode?
+        var meters: Double
+        /// 구간 사후 확률 평균(0…1).
+        var score: Double
+    }
+
+    /// 자동 이동 기록에 HMM 점수를 붙인다: 기록 시간 중 같은 수단으로 본 구간의 사후 확률을
+    /// 겹친 시간으로 가중 평균한다. 원본이 기록의 절반도 덮지 못하면 점수를 두지 않는다.
+    /// 분류(범주·제목·behavior)는 바꾸지 않고, 사용자 소유 기록은 그대로 둔다.
+    static func scoring(
+        _ actuals: [ActualRecord],
+        timeline: [TimelineSegment],
+        inside span: TimeSpan,
+        activityCorrections: [UUID: ActivityCorrection]
+    ) -> [ActualRecord] {
+        guard !timeline.isEmpty else { return actuals }
+        return actuals.map { actual in
+            let recordSpan = actual.span(asOf: span.end)
+            guard actual.source.usesAutomaticClassification, recordSpan.duration > 0,
+                  recordSpan.intersection(with: span) != nil,
+                  !ActualRecord.userOwned(actual, activityCorrections: activityCorrections),
+                  let mode = ClassifierKeywords.mode(in: "\(actual.behavior ?? "") \(actual.title)").flatMap(travelMode)
+            else { return actual }
+            var covered = 0.0, weighted = 0.0
+            for segment in timeline {
+                guard let overlap = segment.span.intersection(with: recordSpan)?.duration, overlap > 0 else { continue }
+                covered += overlap
+                if segment.mode == mode { weighted += overlap * segment.score }
+            }
+            guard covered >= recordSpan.duration / 2 else { return actual }
+            var value = actual
+            value.classificationScore = (weighted / covered * 100).rounded() / 100
+            return value
         }
     }
 
@@ -303,9 +330,112 @@ enum ClassifierAdapter {
         return away.awaySeconds
     }
 
+    /// 오늘 걸음: 건강 앱 합계(워치 포함)가 있으면 그것, 없으면 아이폰 실시간 값(기기 간 max 금지).
+    static func todaySteps(health: Double?, liveIPhone: Double) -> Double {
+        if let health, health > 0 { return health }
+        return liveIPhone
+    }
+
     /// 날짜별 걸음: 건강 앱 값은 HealthKit이 이미 기기 간 겹침을 정리한 합계라 우선한다.
     /// 건강 앱 값이 없는 날만 센서 값을 쓴다(둘의 max는 다른 시간의 걸음을 버린다).
     static func mergedDailySteps(health: [Date: Double], sensor: [Date: Double]) -> [Date: Double] {
         health.filter { $0.value > 0 }.merging(sensor.filter { $0.value > 0 }) { health, _ in health }
     }
+}
+
+/// 자동 분류 기록의 `modelVersion`. 새 기록은 `classifier-v1/<단계>`이고, 예전 문자열은
+/// 같은 단계의 별칭으로 읽는다. 원본(HealthKit·워치)과 사용자 확정 기록의 버전은 바꾸지 않는다.
+enum AutomaticModelVersion {
+    static let context = ClassifierPipeline.modelVersion("context")
+    static let restaurantMeal = ClassifierPipeline.modelVersion("meal")
+    static let placeActivity = ClassifierPipeline.modelVersion("place")
+    static let inferredGap = ClassifierPipeline.modelVersion("gap")
+    static let classifiedActivity = ClassifierPipeline.modelVersion("activity")
+    static let strictSleep = ClassifierPipeline.modelVersion("sleep-rule")
+    static let phoneSleep = ClassifierPipeline.modelVersion("sleep")
+    static let motion = ClassifierPipeline.modelVersion("motion")
+
+    /// 예전 자동 기록 문자열 → 지금 단계.
+    static let legacyAutomaticModelVersions: [String: String] = [
+        "stationary-context-v1": context,
+        "stationary-context-v2": context,
+        "registered-restaurant-meal-v1": restaurantMeal,
+        "place-activity-v1": placeActivity,
+        "activity-gap-viterbi-v1": inferredGap,
+        "activity-classifier-v1": classifiedActivity,
+        "sleep-rule-v1": strictSleep,
+        "charging-inactivity-sleep-v1": phoneSleep,
+        "iphone-sleep-wake-v1": phoneSleep,
+        "iphone-core-motion-v1": motion,
+    ]
+
+    /// 예전 문자열이면 지금 단계로, 아니면 그대로.
+    static func normalized(_ value: String?) -> String? {
+        value.map { legacyAutomaticModelVersions[$0] ?? $0 }
+    }
+
+    static func matches(_ value: String?, _ stage: String) -> Bool {
+        normalized(value) == stage
+    }
+
+    static func isAutomaticClassification(_ value: String?) -> Bool {
+        normalized(value)?.hasPrefix(ClassifierPipeline.version + "/") == true
+    }
+}
+
+/// 휴대폰 수면 하나. 감지기(엄격 규칙·화면 꺼짐·충전 정지)는 후보만 내고, 어느 것을 쓸지는
+/// `SleepFusion.arbitrate`가 정한다: 엄격 규칙 후보가 있으면 그것만, 없으면 화면 후보에
+/// 겹치지 않는 충전 후보를 더한다. 워치·HealthKit 수면과 겹치는 후보는 버린다.
+enum PhoneSleepFusion {
+    /// 배경 수집 간격이 길어도 밤 한 번은 이어서 본다.
+    static let maximumBackgroundSampleGap: TimeInterval = 4 * 60 * 60
+
+    static func records(
+        readings: [SensorReading],
+        actuals: [ActualRecord],
+        inside span: TimeSpan,
+        nominalMaximumSampleGap: TimeInterval,
+        authoritativeSleepSpans: [TimeSpan] = [],
+        strict: [ActualRecord] = [],
+        asOf: Date = .now
+    ) -> [ActualRecord] {
+        let iPhoneReadings = readings.filter { $0.sourceDevice != .appleWatch }
+        let wearable = authoritativeSleepSpans + actuals.compactMap { actual -> TimeSpan? in
+            guard actual.source == .healthKit || actual.source == .appleWatch,
+                  AutomaticRecordTimelineEngine.isSleep(actual) else { return nil }
+            return actual.span(asOf: asOf).intersection(with: span)
+        }
+        let maximumSampleGap = max(nominalMaximumSampleGap, maximumBackgroundSampleGap)
+        let detectors: [[ActualRecord]] = [
+            strict,
+            PhoneSleepWakeEngine.records(readings: iPhoneReadings, actuals: actuals, inside: span,
+                                         watchAvailable: false, maximumSampleGap: maximumSampleGap, asOf: asOf),
+            ChargingInactivitySleepEngine.records(readings: iPhoneReadings, actuals: actuals, inside: span,
+                                                  watchAvailable: false, maximumSampleGap: maximumSampleGap, asOf: asOf),
+        ]
+        let picks = SleepFusion.arbitrate(
+            wearable: wearable.map(ClassifierAdapter.interval),
+            tiers: detectors.map { $0.map { ClassifierAdapter.interval($0.span(asOf: asOf)) } }
+        )
+        return picks.map { detectors[$0.tier][$0.index] }.sorted {
+            $0.startedAt != $1.startedAt ? $0.startedAt < $1.startedAt : $0.id.uuidString < $1.id.uuidString
+        }
+    }
+}
+
+/// 하루 갱신이 `applyClassifierOutput`에 넘기는 입력. 지문이 같은 갱신과 전체 갱신이 같은 순서를 쓴다.
+struct ClassifierRefreshInput {
+    var span: TimeSpan
+    var mealReadings: [SensorReading]
+    var contextStays: [PlaceStay]
+    var contextTravel: [TravelSegment]
+    var contextReadings: [SensorReading]
+    var motionActivities: [MotionActivityRecord]
+    var archivedReadings: [SensorReading]
+    var watchSummaries: [TaptionWatchSensorSummary]
+    var watchAccelerationSamples: [TaptionWatchAccelerationSample]
+    var sleepReadings: [SensorReading]
+    var sleepSpan: TimeSpan
+    var classifiedReadings: [SensorReading]
+    var gapReadings: [SensorReading]
 }

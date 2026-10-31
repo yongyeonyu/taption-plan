@@ -1175,6 +1175,9 @@ final class AppModel {
         self.dayLoadCoordinator = PlanDayLoadCoordinator()
         // 확정 요약은 본 저장소와 같은 파일에 둔다. 저장소를 주입받은 시험에서는 확정을 쓰지 않는다.
         self.daySealStore = repository == nil ? (try? TaptionStoreV2.applicationSupport()) : nil
+        self.classificationRecompute = daySealStore.map {
+            ClassificationRecomputeCoordinator(markers: StoreClassificationRecomputeMarkers(store: $0))
+        }
         let watchReceipt = appleWatchDataReceiptStore.load()
         self.appleWatchLastDataReceivedAt = watchReceipt.latestDataAt
         self.appleWatchReceivedDataKinds = watchReceipt.recentKinds()
@@ -4572,11 +4575,12 @@ final class AppModel {
             metrics: ["health_days": Double(health.count), "sensor_days": Double(sensor.count)]
         )
         var merged = MapHomeCalendarTimeTotalsPolicy.mergedStepCounts(health: health, sensor: sensor)
-        // 오늘 걸음은 센서 기록(활동이 끝나야 저장됨)이 늦으므로 CMPedometer로 바로 읽어 더 큰 값을 쓴다.
+        // 오늘 걸음은 센서 기록(활동이 끝나야 저장됨)이 늦어 CMPedometer로 바로 읽는다. 워치 우선이라
+        // 건강 앱 합계(워치·아이폰 겹침 정리됨)가 있으면 그것을, 없을 때만 아이폰 실시간 값을 쓴다.
         let today = calendar.startOfDay(for: .now)
         if calendar.isDate(first, equalTo: today, toGranularity: .month),
            let live = await Self.todayPedometerSteps(from: today, calendar: calendar) {
-            merged[today] = max(merged[today] ?? 0, live)
+            merged[today] = ClassifierAdapter.todaySteps(health: health[today], liveIPhone: live)
         }
         return merged
     }
@@ -8827,8 +8831,7 @@ final class AppModel {
             + [evidence].compactMap { $0?.intersection(with: span) }
         snapshot.actuals.removeAll { actual in
             guard actual.source == .location,
-                  (actual.modelVersion == StationaryContextClassifier.modelVersion
-                    || actual.modelVersion == "stationary-context-v1"),
+                  AutomaticModelVersion.matches(actual.modelVersion, StationaryContextClassifier.modelVersion),
                   !isAutomaticRestaurantMeal(actual) else {
                 return false
             }
@@ -8868,11 +8871,10 @@ final class AppModel {
 
     private func isAutomaticRestaurantMeal(_ actual: ActualRecord) -> Bool {
         guard actual.source == .location else { return false }
-        if actual.modelVersion == RestaurantMealActualEngine.modelVersion {
+        if AutomaticModelVersion.matches(actual.modelVersion, RestaurantMealActualEngine.modelVersion) {
             return true
         }
-        return (actual.modelVersion == StationaryContextClassifier.modelVersion
-            || actual.modelVersion == "stationary-context-v1")
+        return AutomaticModelVersion.matches(actual.modelVersion, StationaryContextClassifier.modelVersion)
             && actual.behavior == StationaryContextKind.mealPlace.rawValue
             && actual.evidence.contains { $0.contains("자주가는 곳: 식당") }
     }
@@ -8902,14 +8904,14 @@ final class AppModel {
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
-    /// 분류 파이프라인 재계산(날짜별 한 번). 시험 실행에서는 nil이라 기존 잠금 동작이 그대로다.
-    @ObservationIgnored var classificationRecompute: ClassificationRecomputeCoordinator? = .automatic
+    /// 분류 파이프라인 재계산(날짜별 한 번, 표식은 앱 저장소 meta). 저장소를 주입한 시험에서는 nil이다.
+    @ObservationIgnored var classificationRecompute: ClassificationRecomputeCoordinator?
 
     @discardableResult
     func refreshSensorTimeline(containing date: Date? = nil) async -> Bool {
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let day = Calendar.autoupdatingCurrent.startOfDay(for: date ?? selectedDate)
-        let recomputes = classificationRecompute?.needsRecompute(day) ?? false
+        let recomputes = await classificationRecompute?.needsRecompute(day) ?? false
         let key = "\(day.timeIntervalSince1970):\(rawDataRevision(for: day)):\(settings.hashValue):\(recomputes)"
         if sensorTimelineRequestKey == key, let sensorTimelineTask {
             return await sensorTimelineTask.value
@@ -9136,57 +9138,16 @@ final class AppModel {
             // A restaurant can be registered after the last sensor pass. The
             // archived GPS samples are enough to backfill its meal record
             // without rebuilding the route and place lanes.
-            applyRestaurantMealRecords(
-                readings: filteredArchivedReadings,
-                watchSummaries: watchSummaries,
+            guard await applyClassifierOutput(ClassifierRefreshInput(
+                span: span, mealReadings: filteredArchivedReadings,
+                contextStays: snapshot.places, contextTravel: snapshot.travel,
+                contextReadings: sensorQuality.readings, motionActivities: motionActivities,
+                archivedReadings: archivedReadings, watchSummaries: watchSummaries,
                 watchAccelerationSamples: watchAccelerationSamples,
-                inside: span
-            )
-            await applyStationaryContextRecords(
-                stays: snapshot.places,
-                stationarySpans: motionActivities
-                    .filter { $0.motion == .stationary }
-                    .map(\.span),
-                travel: snapshot.travel,
-                readings: sensorQuality.readings,
-                watchSummaries: watchSummaries,
-                watchAccelerationSamples: watchAccelerationSamples,
-                evidence: ClassifierAdapter.sensorEvidenceSpan(
-                    readings: archivedReadings,
-                    activities: motionActivities,
-                    inside: span
-                ),
-                inside: span
-            )
-            applyPlaceActivityRecords(stays: snapshot.places, inside: span)
-            // Sleep inference depends on the current observation cutoff, not
-            // only on new samples. Re-run it on refresh so an earlier sparse
-            // pass can become valid as today's sensor window completes.
-            applyChargingInactivitySleepRecords(
-                readings: sleepReadings,
-                inside: sleepSpan
-            )
-            snapshot.settings.confirmedSleepSpans =
-                TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
-                    existing: snapshot.settings.confirmedSleepSpans,
-                    corrections: snapshot.settings.activityCorrections,
-                    actuals: snapshot.actuals
-                )
-            snapshot.actuals =
-                TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
-                    snapshot.settings.confirmedSleepSpans,
-                    to: snapshot.actuals
-                )
-            guard await applyClassifiedActivityRecords(
-                readings: sensorQuality.routeReadings,
-                inside: span
-            ) else { return false }
-            applyInferredGapRecords(
-                readings: sensorQuality.readings,
-                travel: snapshot.travel,
-                inside: span
-            )
-            classificationRecompute?.complete(recomputeOutcome, day: span.start)
+                sleepReadings: sleepReadings, sleepSpan: sleepSpan,
+                classifiedReadings: sensorQuality.routeReadings, gapReadings: sensorQuality.readings
+            )) else { return false }
+            await classificationRecompute?.complete(recomputeOutcome, day: span.start)
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
                 committed = true
@@ -9215,8 +9176,7 @@ final class AppModel {
             }
             let existingMotionActuals = snapshot.actuals.filter {
                 $0.source == .motion
-                    && $0.modelVersion != ChargingInactivitySleepEngine.modelVersion
-                    && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
+                    && !AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.phoneSleep)
             }
             let mergedMotionActuals = ActivityClassificationLockEngine
                 .mergingLockedClassifications(
@@ -9229,9 +9189,7 @@ final class AppModel {
             )
             snapshot.actuals.removeAll {
                 $0.source == .motion
-                    && $0.modelVersion
-                        != ChargingInactivitySleepEngine.modelVersion
-                    && $0.modelVersion != PhoneSleepWakeEngine.modelVersion
+                    && !AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.phoneSleep)
                     && $0.span(asOf: span.end).intersection(with: span) != nil
             }
             snapshot.actuals.append(contentsOf: mergedMotionActuals)
@@ -9306,7 +9264,7 @@ final class AppModel {
                 ]
             )
             sensorRefreshFingerprints[span.start] = refreshFingerprint
-            classificationRecompute?.complete(recomputeOutcome, day: span.start)
+            await classificationRecompute?.complete(recomputeOutcome, day: span.start)
             committed = true
             return true
         }
@@ -9484,63 +9442,18 @@ final class AppModel {
         snapshot.travel.sort { $0.span.start < $1.span.start }
         snapshot.floorTransitions.sort { $0.span.start < $1.span.start }
 
-        applyRestaurantMealRecords(
-            readings: readings,
-            watchSummaries: watchSummaries,
-            watchAccelerationSamples: watchAccelerationSamples,
-            inside: span
-        )
         // 이번 갱신에서 만든 이동과 장소를 모두 확정한 다음에 정지 구간
         // 문맥을 붙인다. 예전 이동만 보고 있으면 "대기"를 찾을 수 없었다.
-        let contextStays = hasPrimaryLocationEvidence
-            ? places
-            : snapshot.places
-        let contextTravel = hasPrimaryLocationEvidence
-            ? travel
-            : snapshot.travel
-        await applyStationaryContextRecords(
-            stays: contextStays,
-            stationarySpans: motionActivities
-                .filter { $0.motion == .stationary }
-                .map(\.span),
-            travel: contextTravel,
-            readings: readings,
-            watchSummaries: watchSummaries,
+        guard await applyClassifierOutput(ClassifierRefreshInput(
+            span: span, mealReadings: readings,
+            contextStays: hasPrimaryLocationEvidence ? places : snapshot.places,
+            contextTravel: hasPrimaryLocationEvidence ? travel : snapshot.travel,
+            contextReadings: readings, motionActivities: motionActivities,
+            archivedReadings: archivedReadings, watchSummaries: watchSummaries,
             watchAccelerationSamples: watchAccelerationSamples,
-            evidence: ClassifierAdapter.sensorEvidenceSpan(
-                readings: archivedReadings,
-                activities: motionActivities,
-                inside: span
-            ),
-            inside: span
-        )
-        guard !Task.isCancelled, acceptsDataMutation() else { return false }
-        applyPlaceActivityRecords(stays: contextStays, inside: span)
-        applyChargingInactivitySleepRecords(
-            // Sleep inference also consumes motion-only samples that have no
-            // GPS point; keep the raw sensor stream as its input.
-            readings: sleepReadings,
-            inside: sleepSpan
-        )
-        snapshot.settings.confirmedSleepSpans =
-            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
-                existing: snapshot.settings.confirmedSleepSpans,
-                corrections: snapshot.settings.activityCorrections,
-                actuals: snapshot.actuals
-            )
-        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
-            snapshot.settings.confirmedSleepSpans,
-            to: snapshot.actuals
-        )
-        guard await applyClassifiedActivityRecords(
-            readings: readings,
-            inside: span
-        ) else { return false }
-        applyInferredGapRecords(
-            readings: sensorQuality.readings,
-            travel: snapshot.travel,
-            inside: span
-        )
+            sleepReadings: sleepReadings, sleepSpan: sleepSpan,
+            classifiedReadings: readings, gapReadings: sensorQuality.readings
+        )) else { return false }
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(
@@ -9550,7 +9463,7 @@ final class AppModel {
         }
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         sensorRefreshFingerprints[span.start] = refreshFingerprint
-        classificationRecompute?.complete(recomputeOutcome, day: span.start)
+        await classificationRecompute?.complete(recomputeOutcome, day: span.start)
         committed = true
         return true
     }
@@ -9575,13 +9488,71 @@ final class AppModel {
         )
     }
 
+    /// 하루 자동 분류를 한 순서로 적용한다(식사 → 정지 문맥 → 장소 활동 → 수면 → 확정 수면
+    /// → 활동 분류 → 공백 추정 → 분류 점수). 갱신 경로 둘이 같은 순서를 따로 들고 있던 것을 합쳤다.
+    private func applyClassifierOutput(_ input: ClassifierRefreshInput) async -> Bool {
+        let span = input.span
+        applyRestaurantMealRecords(
+            readings: input.mealReadings,
+            watchSummaries: input.watchSummaries,
+            watchAccelerationSamples: input.watchAccelerationSamples,
+            inside: span
+        )
+        await applyStationaryContextRecords(
+            stays: input.contextStays,
+            stationarySpans: input.motionActivities.filter { $0.motion == .stationary }.map(\.span),
+            travel: input.contextTravel,
+            readings: input.contextReadings,
+            watchSummaries: input.watchSummaries,
+            watchAccelerationSamples: input.watchAccelerationSamples,
+            evidence: ClassifierAdapter.sensorEvidenceSpan(
+                readings: input.archivedReadings, activities: input.motionActivities, inside: span
+            ),
+            inside: span
+        )
+        guard !Task.isCancelled, acceptsDataMutation() else { return false }
+        applyPlaceActivityRecords(stays: input.contextStays, inside: span)
+        // Sleep inference depends on the current observation cutoff and also
+        // consumes motion-only samples without a GPS point.
+        applyChargingInactivitySleepRecords(readings: input.sleepReadings, inside: input.sleepSpan)
+        snapshot.settings.confirmedSleepSpans =
+            TaptionActivityEngineAdapter.migratedConfirmedSleepSpans(
+                existing: snapshot.settings.confirmedSleepSpans,
+                corrections: snapshot.settings.activityCorrections,
+                actuals: snapshot.actuals
+            )
+        snapshot.actuals = TaptionActivityEngineAdapter.applyingConfirmedSleepSpans(
+            snapshot.settings.confirmedSleepSpans,
+            to: snapshot.actuals
+        )
+        guard await applyClassifiedActivityRecords(readings: input.classifiedReadings, inside: span) else {
+            return false
+        }
+        applyInferredGapRecords(readings: input.gapReadings, travel: snapshot.travel, inside: span)
+        await applyClassificationScores(readings: input.classifiedReadings, inside: span)
+        return !Task.isCancelled
+    }
+
+    /// 분류 패키지 HMM의 사후 확률을 자동 이동 기록의 `classificationScore`로 남긴다.
+    /// 분류(범주·제목)는 바꾸지 않고, 사용자 소유 기록은 건드리지 않는다.
+    private func applyClassificationScores(readings: [SensorReading], inside span: TimeSpan) async {
+        guard !readings.isEmpty else { return }
+        guard let timeline = try? await ClassifierAdapter.travelTimelineInBackground(readings: readings, in: span),
+              !Task.isCancelled else { return }
+        let scored = ClassifierAdapter.scoring(
+            snapshot.actuals, timeline: timeline, inside: span,
+            activityCorrections: snapshot.settings.activityCorrections
+        )
+        if scored != snapshot.actuals { snapshot.actuals = scored }
+    }
+
     private func applyInferredGapRecords(
         readings: [SensorReading],
         travel: [TravelSegment],
         inside span: TimeSpan
     ) {
         let existing = snapshot.actuals.filter {
-            $0.modelVersion == TaptionActivityEngineAdapter.inferredGapModelVersion
+            AutomaticModelVersion.matches($0.modelVersion, TaptionActivityEngineAdapter.inferredGapModelVersion)
                 && $0.span(asOf: span.end).intersection(with: span) != nil
         }
         let fresh = TaptionActivityEngineAdapter.inferredGapActuals(
@@ -9599,7 +9570,7 @@ final class AppModel {
                 inside: span
             )
         snapshot.actuals.removeAll {
-            $0.modelVersion == TaptionActivityEngineAdapter.inferredGapModelVersion
+            AutomaticModelVersion.matches($0.modelVersion, TaptionActivityEngineAdapter.inferredGapModelVersion)
                 && $0.span(asOf: span.end).intersection(with: span) != nil
         }
         snapshot.actuals.append(contentsOf: merged)
@@ -9643,7 +9614,7 @@ final class AppModel {
                         if index.isMultiple(of: 512), Task.isCancelled { return nil }
                         let isInSpan = actual.span(asOf: span.end)
                             .intersection(with: span) != nil
-                        if actual.modelVersion == classifiedModelVersion {
+                        if AutomaticModelVersion.matches(actual.modelVersion, classifiedModelVersion) {
                             if isInSpan {
                                 existing.append(actual)
                             } else {
@@ -9760,21 +9731,15 @@ final class AppModel {
                 $0.span.intersection(with: span)
             }
         ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
-        let fallbackRecords: [ActualRecord]
-        if strictRecords.isEmpty {
-            fallbackRecords = PhoneSleepFallbackEngine.records(
-                readings: readings,
-                actuals: snapshot.actuals,
-                inside: span,
-                nominalMaximumSampleGap: maximumSampleGap,
-                authoritativeSleepSpans: sleepSessions.map(\.span)
-            ).filter {
-                !snapshot.settings.suppressedActualIDs.contains($0.id)
-            }
-        } else {
-            fallbackRecords = []
-        }
-        let records = strictRecords + fallbackRecords
+        let records = PhoneSleepFusion.records(
+            readings: readings,
+            actuals: snapshot.actuals,
+            inside: span,
+            nominalMaximumSampleGap: maximumSampleGap,
+            authoritativeSleepSpans: sleepSessions.map(\.span),
+            strict: strictRecords
+        ).filter { !snapshot.settings.suppressedActualIDs.contains($0.id) }
+        let fusedStrictCount = records.filter { strictRecords.contains($0) }.count
         let ordered = readings
             .filter { RouteTimelineTimestamp.isValid($0.timestamp) }
             .sorted { $0.timestamp < $1.timestamp }
@@ -9788,9 +9753,7 @@ final class AppModel {
                     $0.powerState?.isCharging == true
                 }.count),
                 "first": String(evidenceSpan.start.timeIntervalSince1970),
-                "engine": strictRecords.isEmpty
-                    ? (fallbackRecords.isEmpty ? "none" : "iphone-fallback")
-                    : "strict",
+                "engine": records.isEmpty ? "none" : (fusedStrictCount > 0 ? "strict" : "iphone-fallback"),
                 "health_enabled": String(settings.healthEnabled),
                 "home_point": String(homePoint != nil),
                 "large_gaps": String(largeGapCount),
@@ -9807,8 +9770,8 @@ final class AppModel {
                 "reason": records.isEmpty
                     ? "conditions_or_continuity_not_met"
                     : "recorded",
-                "strict_records": String(strictRecords.count),
-                "fallback_records": String(fallbackRecords.count),
+                "strict_records": String(fusedStrictCount),
+                "fallback_records": String(records.count - fusedStrictCount),
                 "screen_missing": String(readings.filter {
                     $0.screenIsOn == nil
                 }.count),
@@ -9821,13 +9784,12 @@ final class AppModel {
             ]
         )
         snapshot.actuals.removeAll { actual in
-            (actual.modelVersion == ChargingInactivitySleepEngine.modelVersion
-                || actual.modelVersion == PhoneSleepWakeEngine.modelVersion)
+            AutomaticModelVersion.matches(actual.modelVersion, AutomaticModelVersion.phoneSleep)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }
         snapshot.actuals.removeAll { actual in
-            actual.modelVersion == TaptionActivityEngineAdapter.strictSleepModelVersion
+            AutomaticModelVersion.matches(actual.modelVersion, TaptionActivityEngineAdapter.strictSleepModelVersion)
                 && actual.span(asOf: span.end)
                     .intersection(with: evidenceSpan) != nil
         }

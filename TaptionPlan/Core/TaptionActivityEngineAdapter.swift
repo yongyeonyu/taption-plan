@@ -32,9 +32,9 @@ struct TaptionDataTrustProjection: Sendable {
 enum TaptionActivityEngineAdapter {
     static let engine = ActivityClassificationEngine()
     static let confirmedSleepModelVersion = "manual-confirmed-sleep-v1"
-    static let inferredGapModelVersion = "activity-gap-viterbi-v1"
-    static let classifiedActivityModelVersion = "activity-classifier-v1"
-    static let strictSleepModelVersion = "sleep-rule-v1"
+    static let inferredGapModelVersion = AutomaticModelVersion.inferredGap
+    static let classifiedActivityModelVersion = AutomaticModelVersion.classifiedActivity
+    static let strictSleepModelVersion = AutomaticModelVersion.strictSleep
 
     static func dataTrustProjection(
         readings: [SensorReading],
@@ -336,7 +336,7 @@ enum TaptionActivityEngineAdapter {
             createdAt: createdAt,
             behavior: inference.detailID,
             evidence: unique(inference.provenance.evidence + ["장소 의미 예상"]),
-            modelVersion: "place-activity-v1"
+            modelVersion: AutomaticModelVersion.placeActivity
         )
     }
 
@@ -1013,7 +1013,7 @@ enum TaptionActivityEngineAdapter {
         inside span: TimeSpan,
         createdAt: Date = .now
     ) -> [ActualRecord] {
-        let protected = actuals.filter { $0.modelVersion != inferredGapModelVersion }
+        let protected = actuals.filter { !AutomaticModelVersion.matches($0.modelVersion, inferredGapModelVersion) }
         let gaps = ReviewCoverageEngine.unconfirmedRecords(
             actuals: protected,
             in: [span],
@@ -1848,11 +1848,11 @@ enum PlaceActivityRefreshEngine {
     static func merge(existing: [ActualRecord], candidates: [ActualRecord],
         inside span: TimeSpan, suppressedIDs: Set<UUID> = []) -> [ActualRecord] {
         let protectedIDs = Set(existing.filter {
-            $0.modelVersion == "place-activity-v1" && $0.manuallyCorrected
+            AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.placeActivity) && $0.manuallyCorrected
         }.map(\.id))
         let blockers = existing.filter {
             $0.source.usesAutomaticClassification
-                && ($0.modelVersion != "place-activity-v1" || $0.manuallyCorrected)
+                && (!AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.placeActivity) || $0.manuallyCorrected)
                 && ($0.categoryID != "unconfirmed" || $0.manuallyCorrected)
                 && $0.span(asOf: span.end).intersection(with: span) != nil
         }
@@ -1865,7 +1865,7 @@ enum PlaceActivityRefreshEngine {
                 }
         }
         return existing.filter {
-            $0.modelVersion != "place-activity-v1" || protectedIDs.contains($0.id)
+            !AutomaticModelVersion.matches($0.modelVersion, AutomaticModelVersion.placeActivity) || protectedIDs.contains($0.id)
                 || $0.span(asOf: span.end).intersection(with: span) == nil
         } + fresh
     }

@@ -7851,7 +7851,7 @@ final class FeatureEngineTests: XCTestCase {
             end: start.addingTimeInterval(8 * hour)
         )
 
-        let records = PhoneSleepFallbackEngine.records(
+        let records = PhoneSleepFusion.records(
             readings: readings,
             actuals: [],
             inside: span,
@@ -7884,7 +7884,7 @@ final class FeatureEngineTests: XCTestCase {
             end: start.addingTimeInterval(2 * hour)
         )
 
-        let records = PhoneSleepFallbackEngine.records(
+        let records = PhoneSleepFusion.records(
             readings: readings,
             actuals: [],
             inside: span,
@@ -7926,7 +7926,7 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            PhoneSleepFallbackEngine.records(
+            PhoneSleepFusion.records(
                 readings: readings,
                 actuals: [healthSleep],
                 inside: span,
@@ -7959,7 +7959,7 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            PhoneSleepFallbackEngine.records(
+            PhoneSleepFusion.records(
                 readings: readings,
                 actuals: [],
                 inside: span,

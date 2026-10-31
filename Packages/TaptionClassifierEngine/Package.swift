@@ -7,11 +7,13 @@ let package = Package(
     products: [
         .library(name: "TaptionClassifierEngine", targets: ["TaptionClassifierEngine"])
     ],
+    dependencies: [
+        .package(path: "../TaptionPlanCore")
+    ],
     targets: [
         .target(
             name: "TaptionClassifierEngine",
-            dependencies: [],
-            resources: [.process("Resources/record-classification.json")]
+            dependencies: [.product(name: "TaptionPlanCore", package: "TaptionPlanCore")]
         ),
         .testTarget(
             name: "TaptionClassifierEngineTests",

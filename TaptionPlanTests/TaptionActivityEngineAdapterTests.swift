@@ -520,7 +520,7 @@ struct TaptionActivityEngineAdapterTests {
         )
 
         #expect(actual?.categoryID == "work")
-        #expect(actual?.modelVersion == "place-activity-v1")
+        #expect(actual?.modelVersion == "classifier-v1/place")
         #expect(actual.map { TaptionActivityEngineAdapter.trustLabel(for: $0) } == "예상 데이터 · 자동확정")
     }
 
@@ -887,8 +887,8 @@ final class ClassifierMigrationTests: XCTestCase {
 
     private final class Markers: ClassificationRecomputeMarkerStore, @unchecked Sendable {
         var keys = Set<String>()
-        func isCompleted(_ key: String) -> Bool { keys.contains(key) }
-        func markCompleted(_ key: String) { keys.insert(key) }
+        func isCompleted(_ key: String) async -> Bool { keys.contains(key) }
+        func markCompleted(_ key: String, outcome: String) async { keys.insert(key) }
     }
 
     private func automatic(_ title: String, minutes: Double, evidence: [String] = [], manuallyCorrected: Bool = false) -> ActualRecord {
@@ -1004,14 +1004,10 @@ final class ClassifierMigrationTests: XCTestCase {
         XCTAssertNotEqual(RecordAnalysisCategoryPolicy.categoryID(for: automatic("remote 회의 준비", minutes: 0)), "sleep")
     }
 
-    func testAppTaxonomyMatchesClassifierPackageResource() throws {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let app = try Data(contentsOf: root.appendingPathComponent("TaptionPlan/Core/record-classification.json"))
-        let package = try Data(contentsOf: root.appendingPathComponent(
-            "Packages/TaptionClassifierEngine/Sources/TaptionClassifierEngine/Resources/record-classification.json"
-        ))
-        XCTAssertEqual(app, package, "분류표는 하나다(v3)")
+    func testAppCatalogReadsTheSingleTaxonomyResource() {
+        XCTAssertNotNil(ActivityTaxonomyResource.data, "분류표는 TaptionPlanCore 리소스 하나다(v3)")
         XCTAssertEqual(RecordClassificationCatalog.file.version, 3)
+        XCTAssertTrue(RecordClassificationCatalog.options.contains { $0.id == "detail.study.academy" })
     }
 
     func testStepCountPrefersWatchAndAddsUncoveredPhoneSteps() {
@@ -1026,6 +1022,90 @@ final class ClassifierMigrationTests: XCTestCase {
         ]
         // 0~60분: 워치 2,250 + 시작점 50, 60~180분: 아이폰 500, 아이폰 시작점은 워치가 덮어 뺀다.
         XCTAssertEqual(ClassifierAdapter.stepCount(readings: readings, in: TimeSpan(start: start, end: start.addingTimeInterval(86_400))), 2_800)
+    }
+
+    func testStoreMarkersPersistInAppStoreMeta() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("alg-markers-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let markers = StoreClassificationRecomputeMarkers(store: try TaptionStoreV2(url: url))
+        let key = ClassificationRecomputeCoordinator.markerKey(for: start)
+        let before = await markers.isCompleted(key)
+        XCTAssertFalse(before)
+        await markers.markCompleted(key, outcome: "recomputed")
+        let reopened = StoreClassificationRecomputeMarkers(store: try TaptionStoreV2(url: url))
+        let after = await reopened.isCompleted(key)
+        XCTAssertTrue(after, "표식은 앱 저장소 meta 표에 남는다")
+    }
+
+    func testLegacyModelVersionsMapToClassifierStages() {
+        XCTAssertEqual(AutomaticModelVersion.normalized("stationary-context-v1"), "classifier-v1/context")
+        XCTAssertEqual(AutomaticModelVersion.normalized("iphone-sleep-wake-v1"), AutomaticModelVersion.phoneSleep)
+        XCTAssertEqual(AutomaticModelVersion.normalized("charging-inactivity-sleep-v1"), AutomaticModelVersion.phoneSleep)
+        XCTAssertTrue(AutomaticModelVersion.matches("place-activity-v1", AutomaticModelVersion.placeActivity))
+        XCTAssertEqual(AutomaticModelVersion.normalized("healthkit-sleep-v1"), "healthkit-sleep-v1", "원본 버전은 그대로")
+        XCTAssertFalse(AutomaticModelVersion.isAutomaticClassification("manual-confirmed-sleep-v1"))
+        XCTAssertEqual(StationaryContextClassifier.modelVersion, "classifier-v1/context")
+    }
+
+    func testTodayStepsPreferHealthTotalOverLiveIPhone() {
+        XCTAssertEqual(ClassifierAdapter.todaySteps(health: 6_000, liveIPhone: 7_500), 6_000)
+        XCTAssertEqual(ClassifierAdapter.todaySteps(health: nil, liveIPhone: 7_500), 7_500)
+        XCTAssertEqual(ClassifierAdapter.todaySteps(health: 0, liveIPhone: 120), 120)
+    }
+
+    func testSalaryLiveSnapshotRoundTripsAndClears() throws {
+        let suite = "alg-salary-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let value = SalaryLiveSnapshot(text: "12,000원", baseSeconds: 3_600, hourlyRate: 12_000, measuredAt: start, isWorking: true, tickSeconds: 10)
+        SalaryLiveSnapshot.write(value, to: defaults)
+        XCTAssertEqual(SalaryLiveSnapshot.read(defaults), value)
+        SalaryLiveSnapshot.write(nil, to: defaults)
+        XCTAssertEqual(SalaryLiveSnapshot.read(defaults), SalaryLiveSnapshot())
+    }
+
+    func testStayDetectionUsesCentroidAndKeepsKnownKeyAsAlias() {
+        func reading(_ minute: Double, east: Double) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(minute * 60), motion: .stationary, motionConfidence: .high)
+            value.point = GeoPoint(latitude: 37.5, longitude: 127.0 + east / (111_320 * cos(37.5 * .pi / 180)), altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+            return value
+        }
+        // 첫 점이 동쪽 60m로 튀어 있다. 예전(첫 점 기준 70m)에는 서쪽 20m 표본에서 체류가 쪼개졌다.
+        let readings = [reading(0, east: 60)] + (1...40).map { reading(Double($0), east: $0.isMultiple(of: 2) ? -20 : 0) }
+        let stays = PlaceDetectionEngine().detectStays(readings: readings)
+        XCTAssertEqual(stays.count, 1)
+        // 이미 아는 키가 반경 절반(35m) 안이면 그 키·이름을 그대로 쓴다.
+        let known = "37.5000,127.0002"
+        let named = PlaceDetectionEngine().detectStays(readings: readings, knownNames: [known: "사무실"])
+        XCTAssertEqual(named.first?.placeKey, known)
+        XCTAssertEqual(named.first?.displayName, "사무실")
+    }
+
+    func testPhoneSleepFusionDropsCandidatesOverlappingWearableSleep() {
+        let night = start
+        let readings = (0...16).map { index in
+            SensorReading(timestamp: night.addingTimeInterval(Double(index) * 5 * 60), motion: .stationary, motionConfidence: .high,
+                          stepCount: 0, powerState: .charging, screenBrightness: 0.1, screenIsOn: false)
+        }
+        let span = TimeSpan(start: night, end: night.addingTimeInterval(3 * 3_600))
+        XCTAssertFalse(PhoneSleepFusion.records(readings: readings, actuals: [], inside: span, nominalMaximumSampleGap: 20 * 60, asOf: span.end).isEmpty)
+        XCTAssertTrue(PhoneSleepFusion.records(readings: readings, actuals: [], inside: span, nominalMaximumSampleGap: 20 * 60,
+                                               authoritativeSleepSpans: [span], asOf: span.end).isEmpty)
+    }
+
+    func testClassificationScoreComesFromMatchingTimelineAndSkipsUserRecords() {
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(86_400))
+        var bus = automatic("버스", minutes: 0)
+        bus.behavior = "bus"
+        let user = automatic("버스", minutes: 0, manuallyCorrected: true)
+        let timeline = [
+            ClassifierAdapter.TimelineSegment(span: TimeSpan(start: start, end: start.addingTimeInterval(20 * 60)), mode: .bus, meters: 8_000, score: 0.9),
+            ClassifierAdapter.TimelineSegment(span: TimeSpan(start: start.addingTimeInterval(20 * 60), end: start.addingTimeInterval(30 * 60)), mode: .car, meters: 4_000, score: 0.7),
+        ]
+        let scored = ClassifierAdapter.scoring([bus, user], timeline: timeline, inside: span, activityCorrections: [:])
+        XCTAssertEqual(scored[0].classificationScore, 0.6, "20분×0.9 / 30분")
+        XCTAssertEqual(scored[0].categoryID, bus.categoryID)
+        XCTAssertNil(scored[1].classificationScore)
     }
 
     func testAwaySecondsDoesNotCountRecordingGaps() {
@@ -1142,7 +1222,7 @@ final class ClassifierGoldenReplayTests: XCTestCase {
                 let old: TravelMode? = label == nil ? nil : TravelModeClassifier().classify(readings: inside, inside: legSpan).mode
                 if label == .airplane {
                     oldFlightMeters = TravelDistanceMath.pathMeters(readings: inside)
-                    newFlightMeters = timeline.filter { $0.mode == .airplane }.map { $0.meters }.reduce(0, +)
+                    newFlightMeters = timeline.filter { $0.mode == .airplane }.map(\.meters).reduce(0, +)
                 }
                 for minute in 0..<Int(legSpan.duration / 60) {
                     let moment = legSpan.start.addingTimeInterval(Double(minute) * 60 + 30)

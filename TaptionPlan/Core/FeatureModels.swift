@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanCore
 
 /// The first product surface is an automatic life log. Manual planning data
 /// remains in storage for compatibility, but is intentionally kept out of the
@@ -139,11 +140,8 @@ struct RecordClassificationDetail: Codable, Identifiable, Sendable {
     var automaticOnly: Bool?
 }
 
-private final class RecordClassificationBundleToken {}
-
-/// 앱·위젯·테스트가 함께 읽는 유일한 일과/상세활동 카탈로그다. 번들에서
-/// JSON을 찾지 못하는 개발 중 상황에는 상위 일과만 남겨 안전하게 화면을
-/// 열고, 실제 배포 타깃은 프로젝트 리소스로 같은 파일을 포함한다.
+/// 앱·위젯·테스트가 함께 읽는 유일한 일과/상세활동 카탈로그다. 원본은
+/// `TaptionPlanCore`의 분류표 JSON(v3) 하나이고, 읽지 못하면 상위 일과만 남긴다.
 enum RecordClassificationCatalog {
     static let file: RecordClassificationFile = load()
 
@@ -188,22 +186,9 @@ enum RecordClassificationCatalog {
     }
 
     private static func load() -> RecordClassificationFile {
-        let bundles = [
-            Bundle.main,
-            Bundle(for: RecordClassificationBundleToken.self),
-        ]
-        for bundle in bundles {
-            guard let url = bundle.url(
-                forResource: "record-classification",
-                withExtension: "json"
-            ), let data = try? Data(contentsOf: url),
-                let value = try? JSONDecoder().decode(
-                    RecordClassificationFile.self,
-                    from: data
-                ) else { continue }
-            return value
-        }
-        return fallback
+        ActivityTaxonomyResource.data.flatMap {
+            try? JSONDecoder().decode(RecordClassificationFile.self, from: $0)
+        } ?? fallback
     }
 
     private static let fallback = RecordClassificationFile(

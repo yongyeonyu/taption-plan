@@ -5008,3 +5008,12 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - Debug 빌드(`build/DerivedData-ALL`): TaptionPlan·TaptionPlanWidget(generic iOS)·TaptionPlanWatch·TaptionPlanWatchWidget(generic watchOS) 모두 BUILD SUCCEEDED(`build-*.log`).
 - 단위 전체(`-only-testing:TaptionPlanTests`, BOKKI-iPhone11, 병렬 끔, device lock): `unit-all.xcresult` 1,720건 중 통과 1,716 · 실패 0 · 건너뜀 4.
 - 미검증: 화면 시험 전체(재생 HUD는 PRF에서 새벽이라 건너뜀), 실기기 설치·재생/팬 벤치·발열·배터리, 위젯·워치 실제 화면, 분류 실기기 원본 replay. 분류 2차(AppModel 파이프라인을 `classifyDay` 출력 하나로, 수면 4벌 통합, 중심점 체류, 연봉 키 통합)와 2차 큰 파일 분해는 남음.
+
+## ALG1101A01 2차 · 분류 적용 하나·수면 조정·체류 중심점·버전 별칭 (2026-11-02)
+- 출발: 로컬 main 833f71a로 앞당김(`git merge --ff-only main`, origin에는 그 커밋이 없어 동기화 도구 대신).
+- 패키지: `TaptionClassifierEngine` 27건·`TaptionActivityEngine` 33건·`TaptionPlanCore` 86건 통과(`*-swift-test-2-1.log`, macOS).
+- Debug 빌드(generic, `build/DerivedData-ALG`): TaptionPlan·TaptionPlanWidget(iOS)·TaptionPlanWatch·TaptionPlanWatchWidget(watchOS) 모두 성공(`build2-*.log`).
+- 단위 전체(BOKKI-iPhone11, 병렬 끔, `with-device-lock.sh`): 1회차 `unit2-1.xcresult` 1,727건 중 실패 1 — `registeredPlaceActivityUsesPlaceInferenceWithoutReplacingPlaceRecord`가 옛 문자열 `place-activity-v1`을 기대(이번 버전 변경 그대로). 기대값을 `classifier-v1/place`로 고친 뒤 `unit2-2.xcresult` **1,727건 중 1,723 통과 · 실패 0 · 건너뜀 4**.
+- 가드: `check-app-engine-import-boundary.sh`(분류 패키지 금지 추가) 통과, `architecture-metrics.py --check` 통과(`arch-2-1.log`).
+- golden-diff 갱신(`golden-diff.json`): 라벨 415분 중 새 415 · 이전 370, 사용자 기록 회귀 0. 1차와 같은 **합성 자료**(실기기 원본 없음)이고, 이번 2차는 앱의 이동 판정 자체를 바꾸지 않아(HMM은 점수만) 숫자가 그대로다.
+- 미검증: 실기기, 실제 원본 replay, 재계산이 실제 저장소에서 날짜별 한 번만 도는지(저장소 표식 왕복은 단위 시험으로만), 잠금 화면 연봉 표시.
