@@ -2723,3 +2723,9 @@
 - 대표 결정: 자동 분류는 projection을 올려 과거까지 재계산하되 직접 고친 기록(수동 입력·manuallyCorrected·교정표·사용자 확인/교정 근거)만 보존, 원본이 부족한 날은 기존 결과 유지. 새 패키지 허용. 영역별 세션 4개(각자 worktree, 로컬 커밋까지, 푸시·TestFlight·기기 설치·빌드 번호 변경 없음).
 - 1차 세션: ALG1101A01(분류 알고리즘), PRF1101A01(성능·지도·터치), PKG1101A01(저장소 패키지·위젯/워치 정리), CLN1101A01(미사용 코드·나머지 UI). 2차(큰 파일 분해)는 합친 뒤.
 - 검증 기준: 세션별 패키지·관련 단위 테스트 통과, Debug 빌드(앱·위젯·워치), `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 합친 뒤 전체 단위 테스트·화면 시험. 알고리즘은 replay 비교표에서 새 ≥ 이전·사용자 기록 회귀 0. 기기 설치·벤치는 대표 확인 후.
+
+## CLN1101A01 미사용 코드·나머지 UI 정리(ALL1101A01 D, 2026-11-01)
+- 요청: 계획 표 D행. 소유 파일(`ReviewView`·`GoalsView`·`SettingsView`·`DetailViews`·`AddPlanSheet`·`DraftComponents`·`MapHomeNLE*`·`MapHomeLocationPresentation`·`Packages/TaptionRouteEngine`·`Packages/TaptionPlanCore`(저장소 제외)·`scripts/`)의 미사용 타입·함수·프로퍼티·변수 제거, 사용처 없는 패키지 공개 API 정리, 소유 UI의 중복 터치 코드 정리, 쓰이지 않는 스크립트 목록.
+- 원인: 기능 교체가 이어지며 정의 파일 밖 참조가 없거나 테스트에서만 쓰는 코드가 남았다.
+- 해결: `rg`로 정의 밖 참조 0·테스트 전용을 판별해 지우고(`@objc`·Codable 키·UserDefaults 키·접근성 식별자·화면 시험 사용은 유지), `SubwayRoutePrecedence`처럼 ALG가 쓸 수 있는 것은 지우지 않고 `internal`로 낮추거나 남긴다. 다른 세션 소유 파일의 미사용 코드는 아래에 목록만 둔다. 줄인 만큼 `docs/architecture-baseline.json` 예산을 낮춘다.
+- 검증 기준: 바꾼 패키지 `swift test` 통과, 관련 `TaptionPlanTests` 클래스 통과(xcresult 실행 수), 앱 Debug 빌드 성공, `check-app-engine-import-boundary.sh`·`architecture-metrics.py --check` 통과, 지운 목록·줄 수 변화를 test.md에.
