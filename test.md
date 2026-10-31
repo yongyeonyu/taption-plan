@@ -4967,3 +4967,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 빌드: `xcodebuild build` Debug, iOS Simulator (generic), 두 번 모두 BUILD SUCCEEDED. 로그 `build/validation/CTR1101A01/build.log`, `build2.log`.
 - 테스트: `TimeScaleTests` 시뮬레이터(BOKKI-iPhoneDuo) TEST SUCCEEDED. 로그 `build/validation/CTR1101A01/unit.log`. 대비 단위 테스트는 추가하지 않음.
 - 제한: 세 어두운 테마와 기본 테마의 실제 화면은 확인하지 않음(시뮬레이터 화면 캡처·실기기 확인 없음). 유리 효과 대신 면 색을 깔아 바뀐 모습이므로 대표 기기 확인 필요. 사이드바의 지난 칸(회색 바탕·흰 글자)과 빨간 텍스트는 테마와 무관하게 그대로 둠.
+
+## PRF1101A01 성능·지도·터치 (2026-11-01, 세션 B worktree `claude/festive-easley-28e7c8`)
+- 가드: `architecture-metrics.py --check` 통과(사이드바 3301→2787, MapHomeView 22914→22885, VectorMap 1461→1443, LiveMapPolicies 1341→1304, AppleIntegrations 4870→4863, ScheduleView 11822→11817 예산 낮춤), `check-app-engine-import-boundary.sh` 통과.
+- 패키지: `swift test --package-path Packages/TaptionPlanCore --filter RuntimeEfficiencyTests` 10건 통과(창 끝 마지막 값 1회 전달 2건 추가).
+- 단위(시뮬레이터 BOKKI-iPhone11, 병렬 끔): `build/validation/PRF1101A01/unit-4.xcresult` 283건 전부 통과(MapHomeLiveMapTests·TimeScaleTests·MapHomeSidebarAndPlaybackPolicyTests·MapHomePerformanceHelperTests·MapHomeSidebarDisplaySettingsTests·MapHomePlaybackContinuityTests·PlaybackPathSmoothingTests·PlaybackVideoTimelineTests·FeatureEngineTests/testHealthRefresh…). 새 시험: 색인 속도=선형 탐색 동일, 마커 투영(카메라 같으면 바뀐 것만 1건·먼 발자국 제외), revision, 프레임률 정책, 정지 GPS 완화, 모션 묶음.
+- 화면(시뮬레이터): `ui-1.xcresult` 5건 중 4 통과·1 건너뜀 — testPerfSidebarHandleDrag·testPerfMapPanAndPinch·testLaunchShowsHome·testTimelineZoomButtons 통과, `testPlayTogglesInOneSlotAndMapMoveCancelsIt`은 새벽(자정 후 5시간 미만)이라 시험 자체가 건너뜀 → 재생 HUD 화면 시험은 미검증.
+- 빌드: 앱 Debug(generic iOS) `build-3.log` 성공.
+- 미검증: 실기기 설치·`playback-bench.sh`/`map-pan-bench.sh` 프레임(drv_avg_ms·tk_12_17+·map_frames÷ticks)·발열(thermal) 수치는 대표 승인 전이라 측정하지 않음. 위젯 reload 1회·HealthKit hourly·GPS 정지 완화의 실기기 배터리 효과도 미측정.
