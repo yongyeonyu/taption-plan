@@ -4967,3 +4967,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 빌드: `xcodebuild build` Debug, iOS Simulator (generic), 두 번 모두 BUILD SUCCEEDED. 로그 `build/validation/CTR1101A01/build.log`, `build2.log`.
 - 테스트: `TimeScaleTests` 시뮬레이터(BOKKI-iPhoneDuo) TEST SUCCEEDED. 로그 `build/validation/CTR1101A01/unit.log`. 대비 단위 테스트는 추가하지 않음.
 - 제한: 세 어두운 테마와 기본 테마의 실제 화면은 확인하지 않음(시뮬레이터 화면 캡처·실기기 확인 없음). 유리 효과 대신 면 색을 깔아 바뀐 모습이므로 대표 기기 확인 필요. 사이드바의 지난 칸(회색 바탕·흰 글자)과 빨간 텍스트는 테마와 무관하게 그대로 둠.
+
+## ALG1101A01 · 분류 알고리즘 패키지·이행 (세션 A, 2026-11-01)
+- 패키지: `swift test --package-path Packages/TaptionClassifierEngine` 26건 통과(`classifier-swift-test-2.log`), `Packages/TaptionActivityEngine` 33건 통과(`activity-swift-test-2.log`). 맥(macOS)에서 실행.
+- 앱 Debug 빌드(generic iOS, `build/DerivedData-ALG`): 1회차 `UserDefaults` Sendable 오류 → 고친 뒤 `BUILD SUCCEEDED`(`app-build-3.log`), 바꾼 파일의 경고 0.
+- 단위 전체(시뮬레이터 BOKKI-iPhone11, 병렬 끔, `with-device-lock.sh`): `unit-2.xcresult` **1,725건 중 1,720 통과 · 실패 1 · 건너뜀 4**. 실패는 `testMovementRouteBuilderPreservesReadingOrderAndInclusiveBoundaries`로, 공항 근처 표시가 붙은 222m 걷기를 비행기로 기대하던 시험(이번에 지운 끝점 규칙 그 자체)이다. 기대값을 걷기로 바꾼 뒤 그 시험과 `ClassifierMigrationTests`(11)·`ClassifierGoldenReplayTests`(1)·`MapHomeCounterTimelinePolicyTests` 합쳐 21건 통과(`unit-3.xcresult`). 전체 재실행은 하지 않았다.
+- replay 비교표 `build/validation/ALG1101A01/golden-diff.json`: 라벨 415분 중 새 415 · 이전 370(버스 20분·지하철 25분이 이전 0), 비행 거리 새 1,237km · 이전 0, 사용자 기록 회귀 0분. **한계**: 실기기 원본이 맥에 남아 있지 않아(기기 복사는 범위 밖) 합성 하루 4개(출퇴근·비행·배·자동차/달리기)다. 이전 분류에는 정답 구간 경계를 주었고, 새 점수표가 같은 속도 분포로 만든 자료라 낙관적이다. 실제 원본 replay(`TEST_RUNNER_TAPTION_RAW_REPLAY`)는 미검증.
+- 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 `MapHomeTimeSidebar.swift`(3,296 → 3,301, 출발 커밋부터 있던 B 소유 초과) 하나만 남고 이번 변경으로 늘어난 항목 없음(`arch-3.log`).
+- 미검증: 실기기, 재계산이 실제 사용자 DB에서 날짜별 한 번만 도는지(시험 실행에서는 꺼짐), 위젯·워치 빌드(바꾼 공유 파일은 `FeatureModels.swift`의 `ActualRecord`뿐).

@@ -1534,9 +1534,7 @@ private struct ActivityClassificationIntervalIndex<Value> {
 /// destination resolves an earlier unknown stay. Explicit activity corrections
 /// remain the only user override.
 enum ActivityClassificationLockEngine {
-    static func lockingAutomaticClassifications(
-        _ actuals: [ActualRecord]
-    ) -> [ActualRecord] {
+    static func lockingAutomaticClassifications(_ actuals: [ActualRecord]) -> [ActualRecord] {
         lockingAutomaticClassifications(actuals, cancellationCheck: {})
     }
 
@@ -1554,6 +1552,7 @@ enum ActivityClassificationLockEngine {
                 continue
             }
             var value = actual
+            if !value.isClassificationLocked { value.lockReason = value.lockReason ?? value.defaultLockReason }
             value.isClassificationLocked = true
             locked.append(value)
         }
@@ -1619,6 +1618,7 @@ enum ActivityClassificationLockEngine {
             }
             var value = candidate
             value.isClassificationLocked = true
+            value.lockReason = value.lockReason ?? value.defaultLockReason
             var bestMatch: (record: ActualRecord, overlap: TimeInterval, inputOrder: Int)?
             indexes[candidate.source.rawValue]?.forEachCandidate(
                 overlapping: classificationSpan(candidate),
@@ -1648,9 +1648,8 @@ enum ActivityClassificationLockEngine {
             value.categoryID = previous.categoryID
             value.title = previous.title
             value.behavior = previous.behavior
-            if previous.manuallyCorrected {
-                value.manuallyCorrected = true
-            }
+            if previous.manuallyCorrected { value.manuallyCorrected = true }
+            if ActualRecord.userOwned(previous) { value.lockReason = .user }
             return value
         }
         let retained = locked.enumerated().compactMap { inputOrder, previous in

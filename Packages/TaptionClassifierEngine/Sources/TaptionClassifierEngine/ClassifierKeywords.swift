@@ -33,7 +33,7 @@ public enum ClassifierKeywords {
         (.ship, ["배", "선박", "페리", "여객선", "유람선", "ship", "ferry", "boat"]),
         (.airplane, ["비행기", "비행", "항공", "airplane", "flight", "plane"]),
     ]
-    public static let genericMovement: Set<String> = ["이동", "통근", "출근", "퇴근", "transit", "commute", "movement"]
+    public static let genericMovement: Set<String> = ["이동", "통근", "transit", "commute"]
 
     /// 두 글자 이상 키워드가 앞부분으로 걸려도 다른 뜻이 되는 낱말.
     public static let exclusions: Set<String> = [

@@ -869,6 +869,9 @@ struct GoalRepeatRule: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
+/// 자동 기록이 잠긴 이유. `stability`는 분류 파이프라인이 바뀌면 풀리고, `user`는 사용자가 고친 것이다.
+enum ActualLockReason: String, Codable, Hashable, Sendable { case stability, user }
+
 struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     var id: UUID
     var planID: UUID?
@@ -896,12 +899,16 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
     /// refreshes may extend its evidence but may not replace its category.
     /// Manual corrections remain the only override.
     var isClassificationLocked: Bool
+    /// 분류 파이프라인의 사후 확률 평균(0…1). 예전 기록에는 없다.
+    var classificationScore: Double?
+    /// 예전 기록은 nil(안정 잠금으로 본다). 새 필드는 값이 있을 때만 써서 다시 저장해도 바이트가 같다.
+    var lockReason: ActualLockReason?
 
     private enum CodingKeys: String, CodingKey {
         case id, planID, routineID, title, categoryID, startedAt, endedAt
         case source, confidence, createdAt, behavior, evidence, routeID
         case sensorChunkID, modelVersion, manuallyCorrected
-        case isClassificationLocked
+        case isClassificationLocked, classificationScore, lockReason
     }
 
     init(
@@ -921,7 +928,9 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         sensorChunkID: UUID? = nil,
         modelVersion: String? = nil,
         manuallyCorrected: Bool = false,
-        isClassificationLocked: Bool? = nil
+        isClassificationLocked: Bool? = nil,
+        classificationScore: Double? = nil,
+        lockReason: ActualLockReason? = nil
     ) {
         self.id = id
         self.planID = planID
@@ -941,6 +950,8 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         self.manuallyCorrected = manuallyCorrected
         self.isClassificationLocked = isClassificationLocked
             ?? source.usesAutomaticClassification
+        self.classificationScore = classificationScore
+        self.lockReason = lockReason
     }
 
     init(from decoder: Decoder) throws {
@@ -953,31 +964,18 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         startedAt = try values.decode(Date.self, forKey: .startedAt)
         endedAt = try values.decodeIfPresent(Date.self, forKey: .endedAt)
         source = try values.decode(ActualSource.self, forKey: .source)
-        confidence = try values.decode(
-            ConfidenceLevel.self,
-            forKey: .confidence
-        )
+        confidence = try values.decode(ConfidenceLevel.self, forKey: .confidence)
         createdAt = try values.decode(Date.self, forKey: .createdAt)
         behavior = try values.decodeIfPresent(String.self, forKey: .behavior)
-        evidence = try values.decodeIfPresent([String].self, forKey: .evidence)
-            ?? []
+        evidence = try values.decodeIfPresent([String].self, forKey: .evidence) ?? []
         routeID = try values.decodeIfPresent(UUID.self, forKey: .routeID)
-        sensorChunkID = try values.decodeIfPresent(
-            UUID.self,
-            forKey: .sensorChunkID
-        )
-        modelVersion = try values.decodeIfPresent(
-            String.self,
-            forKey: .modelVersion
-        )
-        manuallyCorrected = try values.decodeIfPresent(
-            Bool.self,
-            forKey: .manuallyCorrected
-        ) ?? false
-        isClassificationLocked = try values.decodeIfPresent(
-            Bool.self,
-            forKey: .isClassificationLocked
-        ) ?? source.usesAutomaticClassification
+        sensorChunkID = try values.decodeIfPresent(UUID.self, forKey: .sensorChunkID)
+        modelVersion = try values.decodeIfPresent(String.self, forKey: .modelVersion)
+        manuallyCorrected = try values.decodeIfPresent(Bool.self, forKey: .manuallyCorrected) ?? false
+        isClassificationLocked = try values.decodeIfPresent(Bool.self, forKey: .isClassificationLocked)
+            ?? source.usesAutomaticClassification
+        classificationScore = try values.decodeIfPresent(Double.self, forKey: .classificationScore)
+        lockReason = try values.decodeIfPresent(ActualLockReason.self, forKey: .lockReason)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -999,6 +997,8 @@ struct ActualRecord: Identifiable, Codable, Hashable, Sendable {
         try values.encodeIfPresent(modelVersion, forKey: .modelVersion)
         try values.encode(manuallyCorrected, forKey: .manuallyCorrected)
         try values.encode(isClassificationLocked, forKey: .isClassificationLocked)
+        try values.encodeIfPresent(classificationScore, forKey: .classificationScore)
+        try values.encodeIfPresent(lockReason, forKey: .lockReason)
     }
 
     func span(asOf date: Date = .now) -> TimeSpan {

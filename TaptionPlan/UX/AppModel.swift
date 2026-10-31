@@ -8769,19 +8769,6 @@ final class AppModel {
 
     /// 이번 갱신이 실제로 신호를 들여다본 구간. 사진·건강 앱에서 메운 점은
     /// 연속 수집이 아니라 드문드문한 복원이므로 근거로 세지 않는다.
-    private static func sensorEvidenceSpan(
-        readings: [SensorReading],
-        activities: [MotionActivityRecord],
-        inside span: TimeSpan
-    ) -> TimeSpan? {
-        let moments = readings.map(\.timestamp)
-            + activities.flatMap { [$0.span.start, $0.span.end] }
-        guard let start = moments.min(), let end = moments.max() else {
-            return nil
-        }
-        return TimeSpan(start: start, end: end).intersection(with: span)
-    }
-
     /// 정지 구간을 "정지·휴식" 한 덩어리로 남기지 않고 장소·캘린더·시간
     /// 문맥으로 바꾼다. 새 권한이나 새 수집 없이 이미 모은 신호만 쓴다.
     private func applyStationaryContextRecords(
@@ -8914,11 +8901,15 @@ final class AppModel {
         snapshot.actuals.sort { $0.startedAt < $1.startedAt }
     }
 
+    /// 분류 파이프라인 재계산(날짜별 한 번). 시험 실행에서는 nil이라 기존 잠금 동작이 그대로다.
+    @ObservationIgnored var classificationRecompute: ClassificationRecomputeCoordinator? = .automatic
+
     @discardableResult
     func refreshSensorTimeline(containing date: Date? = nil) async -> Bool {
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let day = Calendar.autoupdatingCurrent.startOfDay(for: date ?? selectedDate)
-        let key = "\(day.timeIntervalSince1970):\(rawDataRevision(for: day)):\(settings.hashValue)"
+        let recomputes = classificationRecompute?.needsRecompute(day) ?? false
+        let key = "\(day.timeIntervalSince1970):\(rawDataRevision(for: day)):\(settings.hashValue):\(recomputes)"
         if sensorTimelineRequestKey == key, let sensorTimelineTask {
             return await sensorTimelineTask.value
         }
@@ -8928,7 +8919,7 @@ final class AppModel {
         let task = Task { @MainActor [weak self] in
             _ = await previous?.value
             guard let self, !Task.isCancelled else { return false }
-            return await self.performSensorTimelineRefresh(containing: day)
+            return await self.performSensorTimelineRefresh(containing: day, recomputing: recomputes)
         }
         sensorTimelineTask = task
         sensorTimelineRequestID = requestID
@@ -8947,7 +8938,7 @@ final class AppModel {
         }
     }
 
-    private func performSensorTimelineRefresh(containing date: Date) async -> Bool {
+    private func performSensorTimelineRefresh(containing date: Date, recomputing: Bool = false) async -> Bool {
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         let snapshotBeforeRefresh = snapshot
         let latestSensorReadingBeforeRefresh = latestSensorReading
@@ -9132,8 +9123,10 @@ final class AppModel {
         let latestReadingWithPoint = filteredArchivedReadings
             .filter { $0.point != nil }
             .max { $0.timestamp < $1.timestamp }
-        let fingerprintUnchanged =
-            sensorRefreshFingerprints[span.start] == refreshFingerprint
+        var recomputeOutcome: ClassificationRecomputeCoordinator.Outcome?
+        if recomputing { (snapshot.actuals, recomputeOutcome) = ClassificationRecomputeCoordinator.prepare(snapshot.actuals, rawSampleCount: archivedReadings.count + motionActivities.count, inside: span, activityCorrections: snapshot.settings.activityCorrections) }
+        let fingerprintUnchanged = recomputeOutcome != .recomputed
+            && sensorRefreshFingerprints[span.start] == refreshFingerprint
         if fingerprintUnchanged {
             TaptionPlanDiagnosticsLogger.shared.record(
                 "sensor_timeline_refresh_skipped",
@@ -9157,7 +9150,7 @@ final class AppModel {
                 readings: sensorQuality.readings,
                 watchSummaries: watchSummaries,
                 watchAccelerationSamples: watchAccelerationSamples,
-                evidence: Self.sensorEvidenceSpan(
+                evidence: ClassifierAdapter.sensorEvidenceSpan(
                     readings: archivedReadings,
                     activities: motionActivities,
                     inside: span
@@ -9192,6 +9185,7 @@ final class AppModel {
                 travel: snapshot.travel,
                 inside: span
             )
+            classificationRecompute?.complete(recomputeOutcome, day: span.start)
             guard (settings.locationEnabled || settings.weatherEnabled),
                   weatherNeedsRefresh(for: latestReadingWithPoint) else {
                 committed = true
@@ -9311,6 +9305,7 @@ final class AppModel {
                 ]
             )
             sensorRefreshFingerprints[span.start] = refreshFingerprint
+            classificationRecompute?.complete(recomputeOutcome, day: span.start)
             committed = true
             return true
         }
@@ -9511,7 +9506,7 @@ final class AppModel {
             readings: readings,
             watchSummaries: watchSummaries,
             watchAccelerationSamples: watchAccelerationSamples,
-            evidence: Self.sensorEvidenceSpan(
+            evidence: ClassifierAdapter.sensorEvidenceSpan(
                 readings: archivedReadings,
                 activities: motionActivities,
                 inside: span
@@ -9554,6 +9549,7 @@ final class AppModel {
         }
         guard !Task.isCancelled, acceptsDataMutation() else { return false }
         sensorRefreshFingerprints[span.start] = refreshFingerprint
+        classificationRecompute?.complete(recomputeOutcome, day: span.start)
         committed = true
         return true
     }

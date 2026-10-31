@@ -155,6 +155,7 @@
 		A40000000000000000000001 /* TaptionActivityEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000002 /* TaptionActivityEngine */; };
 		A40000000000000000000002 /* TaptionRouteEngine in Frameworks */ = {isa = PBXBuildFile; productRef = X40000000000000000000004 /* TaptionRouteEngine */; };
 		A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */; };
+		AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1A55000000000000000001 /* ClassifierAdapter.swift */; };
 		A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */; };
 		A40000000000000000000005 /* TaptionActivityEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */; };
 		A40000000000000000000006 /* TaptionRouteEngineAdapterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */; };
@@ -410,6 +411,7 @@
 		F2000000000000000000000D /* LocalizationCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationCatalogTests.swift; sourceTree = "<group>"; };
 		F2000000000000000000000E /* DiagnosticsLogSupportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsLogSupportTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapter.swift; sourceTree = "<group>"; };
+		FC1A55000000000000000001 /* ClassifierAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassifierAdapter.swift; sourceTree = "<group>"; };
 		F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRouteEngineAdapter.swift; sourceTree = "<group>"; };
 		F40000000000000000000003 /* TaptionActivityEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionActivityEngineAdapterTests.swift; sourceTree = "<group>"; };
 		F40000000000000000000004 /* TaptionRouteEngineAdapterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionRouteEngineAdapterTests.swift; sourceTree = "<group>"; };
@@ -736,6 +738,7 @@
 				F20000000000000000000001 /* AppLanguagePreference.swift */,
 				F20000000000000000000002 /* SensorBackgroundCoordinator.swift */,
 				F40000000000000000000001 /* TaptionActivityEngineAdapter.swift */,
+				FC1A55000000000000000001 /* ClassifierAdapter.swift */,
 				F40000000000000000000002 /* TaptionRouteEngineAdapter.swift */,
 			);
 			path = Core;
@@ -1209,6 +1212,7 @@
 				A20000000000000000000001 /* AppLanguagePreference.swift in Sources */,
 				A20000000000000000000005 /* SensorBackgroundCoordinator.swift in Sources */,
 				A40000000000000000000003 /* TaptionActivityEngineAdapter.swift in Sources */,
+				AC1A55000000000000000001 /* ClassifierAdapter.swift in Sources */,
 				A40000000000000000000004 /* TaptionRouteEngineAdapter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

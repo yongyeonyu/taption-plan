@@ -1,4 +1,5 @@
 import Foundation
+import TaptionPlanEngine
 
 /// Display-only position projection for live map updates. It interpolates
 /// between adjacent valid fixes and falls back to a catalog station anchor
@@ -184,19 +185,6 @@ struct TravelModeClassifier: Sendable {
                 return behavior
             }
             .first
-        if let explicitWatchBehavior {
-            switch explicitWatchBehavior {
-            case .subway:
-                // Keep the sensor fusion pass alive so altitude/route evidence
-                // can confirm or reject the Watch hint below.
-                break
-            case .publicTransit, .automotive:
-                break
-            default:
-                break
-            }
-        }
-
         let speeds = speedSeries(for: ordered)
         let averageSpeed = trimmedMean(speeds)
         let maxSpeed = percentile(speeds, fraction: 0.9) ?? 0
@@ -3795,8 +3783,8 @@ struct MovementRouteBuilder: Sendable {
                     confidence: .high,
                     score: 0.95,
                     evidence: [$0 == .airplane
-                        ? "WBS 항공 이동 규칙: 공항 endpoint"
-                        : "WBS 이동 규칙: 항구 endpoint"]
+                        ? "체류 사이 점프: 지상 불가 속도 · 비행"
+                        : "체류 사이 점프"]
                 )
             } ?? classifier.classify(
                 readings: segmentReadings,
@@ -3816,9 +3804,10 @@ struct MovementRouteBuilder: Sendable {
                     distanceMeters(origin, destination)
                 }
             } ?? 0
-            let distance = sensorDistance > 0
-                ? sensorDistance
-                : (wbsMode != nil ? endpointDistance : 0)
+            // 비행은 끝점 대권 거리. 예전 70m/s 컷 때문에 GPS 점 사이 거리가 0이 됐다.
+            let distance = inference.mode == .airplane
+                ? endpointDistance
+                : (sensorDistance > 0 ? sensorDistance : (wbsMode != nil ? endpointDistance : 0))
             return TravelSegment(
                 fromPlaceID: from.id,
                 toPlaceID: to.id,
@@ -3860,17 +3849,12 @@ struct MovementRouteBuilder: Sendable {
         return TimeSpan(start: lastStill.timestamp, end: gap.end)
     }
 
-    private func pathDistance(_ points: [GeoPoint]) -> Double {
-        zip(points, points.dropFirst()).reduce(0) {
-            $0 + distanceMeters($1.0, $1.1)
-        }
-    }
 }
 
-/// Taption WBS와 같은 endpoint 기반 이동 판정이다. 비행 중에는 GPS가
-/// 비어 있을 수 있으므로 중간 센서 표본이 없어도 장소 메타데이터와 출발·
-/// 도착 시점의 지도 보강값만으로 항공 구간을 만든다. 원본 표본은 수정하지
-/// 않는다.
+/// 비행 중 GPS가 비어도 두 체류 사이 점프로 항공 구간을 만든다. 끝점 이름(공항·항구)만으로는
+/// 정하지 않는다: 지상에서 불가능한 속도(70m/s 초과)이고 100km 넘게 떨어졌거나 양끝이
+/// 공항 근처일 때만 비행이다(`TravelDistance.isFlightJump`). 배는 물 위 속도 근거가 있어야
+/// 하므로 여기서 만들지 않는다. 원본 표본은 수정하지 않는다.
 enum WBSMovementTransportPolicy {
     static func recommendedMode(
         from origin: PlaceStay,
@@ -3878,49 +3862,14 @@ enum WBSMovementTransportPolicy {
         originReadings: [SensorReading] = [],
         destinationReadings: [SensorReading] = []
     ) -> TravelMode? {
-        let originMetadata = metadata(for: origin)
-        let destinationMetadata = metadata(for: destination)
-        let isPort = containsPort(originMetadata)
-            || containsPort(destinationMetadata)
-            || originReadings.contains(where: \.nearPort)
-            || destinationReadings.contains(where: \.nearPort)
-        if isPort {
-            return .ship
-        }
-
-        let isAirport = containsAirport(originMetadata)
-            || containsAirport(destinationMetadata)
-            || originReadings.contains(where: \.nearAirport)
-            || destinationReadings.contains(where: \.nearAirport)
-        return isAirport ? .airplane : nil
-    }
-
-    private static func metadata(for stay: PlaceStay) -> String {
-        [stay.placeKey, stay.displayName, stay.buildingName]
-            .compactMap { $0 }
-            .joined(separator: " ")
-            .lowercased()
-    }
-
-    private static func containsAirport(_ metadata: String) -> Bool {
-        [
-            "airport",
-            "공항",
-            "incheon international",
-            "인천공항",
-            "인천국제공항",
-            "icn",
-            "suvarnabhumi",
-            "수완나품",
-            "수바르나부미",
-            "bkk",
-        ].contains { metadata.contains($0) }
-    }
-
-    private static func containsPort(_ metadata: String) -> Bool {
-        ["marina", "ferry", "항구", "선착장"].contains {
-            metadata.contains($0)
-        }
+        guard let start = origin.point, let end = destination.point else { return nil }
+        let duration = destination.span.start.timeIntervalSince(origin.span.end)
+        return TravelDistance.isFlightJump(
+            distanceMeters: distanceMeters(start, end),
+            duration: duration,
+            originNearAirport: originReadings.contains(where: \.nearAirport),
+            destinationNearAirport: destinationReadings.contains(where: \.nearAirport)
+        ) ? .airplane : nil
     }
 }
 
@@ -5835,20 +5784,6 @@ enum ChargingInactivitySleepEngine {
     }
 }
 
-enum PhoneSleepWakePhase: String, Codable, Hashable, Sendable {
-    case awake
-    case sleepExpected
-    case sleeping
-    case wakeExpected
-}
-
-struct PhoneSleepWakeStatus: Equatable, Sendable {
-    var phase: PhoneSleepWakePhase
-    var expectedAt: Date?
-    var sleepStartedAt: Date?
-    var charging: Bool
-}
-
 /// Infers sleep and wake transitions from iPhone-only observations. A sleep
 /// candidate needs five minutes of inactivity while the display is dark/off;
 /// the candidate is confirmed after one hour (or thirty minutes when charging)
@@ -5866,25 +5801,6 @@ enum PhoneSleepWakeEngine {
     static let fastWakeStepIncrease = 30
     static let darkBrightness = 0.25
     static let brightBrightness = 0.60
-
-    static func status(
-        readings: [SensorReading],
-        maximumSampleGap: TimeInterval = 20 * 60,
-        asOf: Date = .now
-    ) -> PhoneSleepWakeStatus {
-        let ordered = readings
-            .filter {
-                RouteTimelineTimestamp.isValid($0.timestamp)
-                    && $0.timestamp <= asOf
-            }
-            .sorted { $0.timestamp < $1.timestamp }
-        var state = InferenceState()
-        for (index, reading) in ordered.enumerated() {
-            let previous = index > 0 ? ordered[index - 1] : nil
-            advance(&state, reading: reading, previous: previous, maximumSampleGap: maximumSampleGap)
-        }
-        return state.status
-    }
 
     static func records(
         readings: [SensorReading],
@@ -5976,23 +5892,6 @@ enum PhoneSleepWakeEngine {
         var wakeCandidateStart: Date?
         var wakeCandidateSteps: Int?
         var lastWakeExpectedAt: Date?
-
-        var status: PhoneSleepWakeStatus {
-            if sleepStartedAt != nil {
-                return PhoneSleepWakeStatus(
-                    phase: wakeCandidateStart == nil ? .sleeping : .wakeExpected,
-                    expectedAt: wakeCandidateStart,
-                    sleepStartedAt: sleepStartedAt,
-                    charging: sleepCharging
-                )
-            }
-            return PhoneSleepWakeStatus(
-                phase: sleepExpectedAt == nil ? .awake : .sleepExpected,
-                expectedAt: sleepExpectedAt,
-                sleepStartedAt: nil,
-                charging: sleepCharging
-            )
-        }
     }
 
     private static func advance(

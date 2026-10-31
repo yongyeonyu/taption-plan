@@ -19,7 +19,8 @@
 | 센서 레코드 직접 바이너리 저장·복원 | `TaptionPlan/Core/SensorReadingStorage.swift`, `Packages/TaptionPlanCore/Sources/TaptionPlanCore/CanonicalStorage.swift` |
 | 센서·HealthKit·Apple 연동 | `TaptionPlan/Core/SensorDataServices.swift`, `HealthKitImportCoordinator.swift`, `HealthKitImportStore.swift`, `AppleIntegrations.swift` |
 | 앱과 엔진 연결 | `TaptionPlan/Core/RouteTimelineData.swift`, `TaptionRouteEngineAdapter.swift`, `TaptionActivityEngineAdapter.swift` |
-| 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionPlanEngine/` |
+| 공유 엔진 | `Packages/TaptionPlanCore/`, `Packages/TaptionActivityEngine/`, `Packages/TaptionRouteEngine/`, `Packages/TaptionClassifierEngine/`, `Packages/TaptionPlanEngine/` |
+| 분류 알고리즘(분류표 v3·키워드·창 특징·수단 점수·HMM·구간·장소·맥락·수면·파생 지표) | `Packages/TaptionClassifierEngine/`, 앱 쪽 어댑터는 `TaptionActivityEngineAdapter.swift`의 `ClassifierAdapter`·`ClassificationRecomputeCoordinator` |
 | Watch·위젯 | `TaptionPlanWatch/`, `TaptionPlanWidget/`, `TaptionPlanWatchWidget/` |
 | 회귀 테스트 | `TaptionPlanTests/`, 각 package의 `Tests/` |
 
@@ -32,6 +33,9 @@ HealthKit의 앱 읽기/import 허용 목록은 `TaptionHealthReadScope`의 8개
 Apple Watch 데이터는 iPhone HealthKit으로 읽습니다. iPhone의 TaptionPlan target은 Watch 앱을 빌드·임베딩하지 않습니다. 기존 Watch 소스와 독립 target은 역사·호환 유지용으로 보존합니다. 앱 활성화 시 건강 연결이 켜져 있으면 즉시 증분 조회하고, 페어링된 Watch가 있으며 아직 건강 연결을 요청하지 않은 경우 사용자 승인을 요청합니다. Watch 앱 설치·실시간 메시지 응답은 조회 조건이 아닙니다. 건강 데이터의 Watch→iPhone 동기화 시점과 읽기 허용 여부는 앱이 강제로 제어하거나 판별할 수 없습니다.
 
 ## 보존해야 할 데이터 계약
+
+- 분류표는 `Packages/TaptionClassifierEngine/Sources/TaptionClassifierEngine/Resources/record-classification.json`(v3) 하나입니다. 앱·위젯·워치 번들의 `TaptionPlan/Core/record-classification.json`은 같은 바이트여야 하고(`ClassifierMigrationTests.testAppTaxonomyMatchesClassifierPackageResource`), `ActivityTaxonomy.default`도 이 표에서 만듭니다. 제목·behavior 키워드 판정은 `ClassifierKeywords` 하나(단어 경계)만 씁니다.
+- `ActualRecord.classificationScore`·`lockReason`은 `decodeIfPresent`/`encodeIfPresent`라 예전 기록은 다시 저장해도 바이트가 같습니다. 자동 재계산이 지키는 것은 `ActualRecord.userOwned(_:)`(수동 입력·`manuallyCorrected`·`lockReason == .user`·교정표, 한국어 '사용자 확인/교정' 근거는 대체 경로)뿐입니다. 분류 파이프라인(`classifier-v1`)이 바뀐 날은 하루 갱신 때 한 번만 안정 잠금을 풀고 다시 분류하며 `classifier-v1:<yyyy-MM-dd>` 표식을 남깁니다. 원본 표본이 30개 미만인 날은 기존 결과를 그대로 두고 표식만 남깁니다(`skipped-no-raw`). 표식은 지금 UserDefaults(`classifierRecomputeMarkers.v1`)이고 시험 실행에서는 꺼져 있습니다.
 
 - `PlanRepository`와 `HealthKitImportStore`는 기존 날짜 없는 snapshot 키 `0000-00-00`을 읽기 위해 `allowsUndatedSnapshots`를 켭니다. 일반 날짜, event, map 검증은 이 예외를 물려받지 않아야 합니다.
 - `TaptionPlanCore`의 정본 Codable envelope는 현재 포맷만 읽고 변환을 한 번만 수행합니다. 백업 파일(`yyyy-MM.taptionbackup`)은 `TaptionBackupFormat` 헤더 버전을 따르며 이전 백업 포맷은 읽지 않습니다.

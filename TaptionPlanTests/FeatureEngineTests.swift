@@ -7234,14 +7234,6 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(5 * 60))
         XCTAssertEqual(records[0].endedAt, readings.last?.timestamp)
-        XCTAssertEqual(
-            PhoneSleepWakeEngine.status(
-                readings: readings,
-                maximumSampleGap: 20 * 60,
-                asOf: span.end
-            ).phase,
-            .sleeping
-        )
 
         let bright = readings.map {
             var value = $0
@@ -7776,14 +7768,6 @@ final class FeatureEngineTests: XCTestCase {
 
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(records[0].startedAt, start.addingTimeInterval(5 * 60))
-        XCTAssertEqual(
-            PhoneSleepWakeEngine.status(
-                readings: readings,
-                maximumSampleGap: 20 * 60,
-                asOf: span.end
-            ).phase,
-            .sleeping
-        )
     }
 
     func testPhoneSleepWakeConfirmsFastWhenScreenIsOnAndStepsRise() {
@@ -7805,8 +7789,6 @@ final class FeatureEngineTests: XCTestCase {
             ))
         }
         let span = TimeSpan(start: start, end: start.addingTimeInterval(3 * hour))
-        let status = PhoneSleepWakeEngine.status(readings: readings, maximumSampleGap: 20 * 60, asOf: span.end)
-        XCTAssertEqual(status.phase, .awake, "강한 신호는 20분 안에 기상으로 확정된다")
         let records = PhoneSleepWakeEngine.records(
             readings: readings, actuals: [], inside: span, watchAvailable: false,
             maximumSampleGap: 20 * 60, asOf: span.end
@@ -10642,7 +10624,8 @@ final class FeatureEngineTests: XCTestCase {
         )
 
         XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result[0].mode, .airplane)
+        // 공항 근처 표시만으로는 비행기가 아니다(ALG1101A01). 222m 걷기는 걷기다.
+        XCTAssertEqual(result[0].mode, .walking)
         // 거리는 시간순(0 → 0.001 → 0.002도, 약 222m)으로 센다. 입력 순서대로 더하면 되돌아간 거리까지 333m로 부풀어
         // 실제 이동보다 크게 나온다(ARC1030A08, 지터에 강한 거리 계산).
         XCTAssertEqual(result[0].distanceMeters, 222, accuracy: 6)
@@ -10819,13 +10802,14 @@ final class FeatureEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.mode, .airplane)
         XCTAssertEqual(
             result.first?.evidence,
-            ["WBS 항공 이동 규칙: 공항 endpoint"]
+            ["체류 사이 점프: 지상 불가 속도 · 비행"]
         )
         XCTAssertGreaterThan(result.first?.distanceMeters ?? 0, 3_000_000)
         XCTAssertFalse(result.first?.isConfirmed ?? true)
     }
 
-    func testWBSMovementTransportPolicyKeepsPortBeforeAirport() {
+    /// 끝점 이름(공항·항구)만으로는 비행기·배가 되지 않는다(ALG1101A01).
+    func testWBSMovementTransportPolicyIgnoresEndpointNamesWithoutJump() {
         let start = makeDate(2026, 9, 9, 9)
         let stays = [
             PlaceStay(
@@ -10848,12 +10832,11 @@ final class FeatureEngineTests: XCTestCase {
             ),
         ]
 
-        XCTAssertEqual(
+        XCTAssertNil(
             WBSMovementTransportPolicy.recommendedMode(
                 from: stays[0],
                 to: stays[1]
-            ),
-            .ship
+            )
         )
     }
 

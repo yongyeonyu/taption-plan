@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import TaptionPlanEngine
 
 /// 기록 화면이 쓰는 "N시간 N분" 표기. 화면마다 같은 계산을 다시 쓰지 않도록
 /// 한 곳에 둔다.
@@ -41,12 +42,6 @@ enum DurationText {
 /// 묶을지 판단하는 규칙을 화면마다 따로 두면 시간표와 기록이 어긋나므로
 /// 한 곳에서만 정한다.
 enum ActualRecordCategoryResolver {
-    private static let movementWords = [
-        "걷", "달리", "러닝", "자전거", "사이클", "계단", "차량", "자동차",
-        "버스", "지하철", "택시", "기차", "비행기", "배", "이동", "walking",
-        "running", "cycling", "automotive", "subway", "transit",
-    ]
-
     static func categoryID(for actual: ActualRecord) -> String {
         if let context = actual.behavior.flatMap(
             StationaryContextKind.init(rawValue:)
@@ -58,11 +53,12 @@ enum ActualRecordCategoryResolver {
             return StationaryContextKind.unknownStay.categoryID
         }
         guard actual.categoryID == "activity" else { return actual.categoryID }
-        let value = "\(actual.title) \(actual.behavior ?? "")".lowercased()
-        if value.contains("수면") || value.contains("sleep") { return "sleep" }
-        return movementWords.contains(where: value.contains)
-            ? "movement"
-            : "activity"
+        // 단어 경계 판정(ClassifierKeywords): "배달"·"배드민턴"이 이동이 되지 않는다.
+        switch ClassifierKeywords.categoryID(in: "\(actual.title) \(actual.behavior ?? "")") {
+        case "sleep": return "sleep"
+        case "movement": return "movement"
+        default: return "activity"
+        }
     }
 }
 
@@ -186,34 +182,15 @@ enum RecordAnalysisCategoryPolicy {
             }
         }
 
-        if value.contains("코어") || value.contains("깊은")
-            || value.contains("rem") || value.contains("수면")
-            || value.contains("sleep") {
+        if value.contains("깊은수면") {
             return "sleep"
         }
-        if value.contains("업무") || value.contains("근무") || value.contains("work") {
-            return "work"
-        }
-        if value.contains("수업") || value.contains("학습") || value.contains("study") {
-            return "study"
-        }
-        if value.contains("취미") || value.contains("hobby") {
-            return "hobby"
-        }
-        if value.contains("식사") || value.contains("밥")
-            || value.contains("요리") || value.contains("meal")
-            || value.contains("eating") || value.contains("cooking") {
-            return "eating"
-        }
-        if value.contains("운동") || value.contains("exercise") {
-            return "exercise"
-        }
-        if value.contains("걷") || value.contains("자동차") || value.contains("자가용")
-            || value.contains("지하철") || value.contains("버스") || value.contains("배")
-            || value.contains("비행기") || value.contains("자전거")
-            || value.contains("walking") || value.contains("automotive")
-            || value.contains("subway") || value.contains("transit") {
-            return "movement"
+        // 단어 경계 판정 하나(ClassifierKeywords)로 정한다. 부분 문자열로 보면
+        // "배달"·"배드민턴"이 이동, "remote"가 수면이 됐다.
+        if let keywordCategory = ClassifierKeywords.categoryID(
+            in: "\(actual.title) \(actual.behavior ?? "")"
+        ), keywordCategory != "activity" {
+            return keywordCategory
         }
 
         switch actual.categoryID {
@@ -2252,9 +2229,10 @@ enum DayPhaseEngine {
                 actuals,
                 in: window,
                 asOf: asOf,
+                // "eating"이 빠지면 자동 식사 기록이 미확인으로 남았다.
                 categoryIDs: [
-                    "activity", "rest", "routine", "food", "relationship",
-                    "health", "appUsage",
+                    "activity", "rest", "routine", "food", "eating",
+                    "relationship", "health", "appUsage",
                 ]
             ),
             mergeGap: 60
@@ -2428,20 +2406,6 @@ enum DayPhaseEngine {
         }
     }
 
-    /// 층이 바뀌어 둘로 갈린 체류처럼 맞닿은 같은 문맥만 하나로 붙인다.
-    /// 점심처럼 사이가 벌어진 시간은 메우지 않고 빈칸으로 남긴다.
-    private static func mergedBlocks(
-        _ contexts: [(kind: StationaryContextKind, span: TimeSpan)],
-        kind: StationaryContextKind,
-        as phase: DayPhase
-    ) -> [DayPhaseSpan] {
-        ActualIntervalMergeEngine.union(
-            contexts.filter { $0.kind == kind }.map(\.span),
-            mergeGap: 60
-        )
-        .map { DayPhaseSpan(phase: phase, span: $0) }
-    }
-
     /// 같은 목적지(회사, 학교, 학원)에 실제로 머물렀으면 오타 없이 업무/수업 문맥을
     /// 유지한다. 체류 근거가 있으면 문맥이 잠깐 비워도 같은 장소면 같은 일과를
     /// 이어서 본다.
@@ -2477,202 +2441,6 @@ enum DayPhaseEngine {
             mergeGap: 60
         )
         .map { DayPhaseSpan(phase: phase, span: $0) }
-    }
-
-    // MARK: - 오감
-
-    /// 걷고·타고·걷는 한 번의 오감은 이동 구간 여럿으로 들어온다. 사이가
-    /// 짧고 그 사이에 들른 곳이 없으면 한 줄로 잇는다.
-    private static func chains(
-        travel: [TravelSegment],
-        contexts: [(kind: StationaryContextKind, span: TimeSpan)],
-        window: TimeSpan
-    ) -> [TimeSpan] {
-        var result: [TimeSpan] = []
-        for leg in travel
-            .compactMap({ $0.span.intersection(with: window) })
-            .sorted(by: { $0.start < $1.start }) {
-            guard var current = result.popLast() else {
-                result.append(leg)
-                continue
-            }
-            let gap = TimeSpan(
-                start: current.end,
-                end: max(current.end, leg.start)
-            )
-            if leg.start <= current.end.addingTimeInterval(transferGap),
-               !visited(during: gap, contexts: contexts) {
-                current.end = max(current.end, leg.end)
-                result.append(current)
-            } else {
-                result.append(current)
-                result.append(leg)
-            }
-        }
-        return result
-    }
-
-    /// 갈아타며 기다린 시간은 아직 오는 길이지만, 카페나 운동시설처럼 들른
-    /// 곳이 있으면 거기서 오감이 끊긴다. 대기·머무름은 갈 곳을 가리키지
-    /// 않으므로 길을 끊지 않는다.
-    private static func visited(
-        during gap: TimeSpan,
-        contexts: [(kind: StationaryContextKind, span: TimeSpan)]
-    ) -> Bool {
-        guard gap.duration > 0 else { return false }
-        return contexts.contains {
-            $0.kind != .waiting
-                && $0.kind != .unknownStay
-                && $0.span.intersection(with: gap) != nil
-        }
-    }
-
-    /// 집 반대편에 등록해 둔 곳에 머문 시간. 오감의 이름을 여기서 가져온다.
-    private struct NamedDestination {
-        let there: DayPhase
-        let back: DayPhase
-        let span: TimeSpan
-    }
-
-    /// 자주가는 곳으로 확정된 체류만 이름을 갖는다. 집과 이름 없는 종류는
-    /// 여기 들어오지 않아 오감의 이름을 만들지 못한다.
-    private static func destinations(
-        stays: [PlaceStay],
-        placeKinds: [String: FrequentPlaceKind],
-        window: TimeSpan
-    ) -> [NamedDestination] {
-        stays.compactMap { stay in
-            guard let kind = placeKinds[stay.placeKey],
-                  let pair = DayPhase.roundTrip(to: kind),
-                  let visible = stay.span.intersection(with: window) else {
-                return nil
-            }
-            return NamedDestination(
-                there: pair.there,
-                back: pair.back,
-                span: visible
-            )
-        }
-        .sorted { $0.span.start < $1.span.start }
-    }
-
-    /// 오감의 이름은 어디서 떠나 어디에 닿았는지가 정한다. 집을 나서 등록해
-    /// 둔 곳에 닿으면 그 곳의 종류가 이름을 정하고, 그 반대가 돌아오는 길이다.
-    /// 둘 중 어느 쪽도 아니면 이름을 붙이지 않는다.
-    private static func commutes(
-        travel: [TravelSegment],
-        contexts: [(kind: StationaryContextKind, span: TimeSpan)],
-        window: TimeSpan,
-        workBlocks: [DayPhaseSpan],
-        homeSpans: [TimeSpan],
-        destinations: [NamedDestination]
-    ) -> [DayPhaseSpan] {
-        chains(travel: travel, contexts: contexts, window: window)
-        .compactMap { chain in
-            if left(homeSpans, at: chain.start),
-               let phase = phaseGoingOut(
-                   after: chain.end,
-                   destinations: destinations,
-                   workBlocks: workBlocks
-               ) {
-                return DayPhaseSpan(phase: phase, span: chain)
-            }
-            if arrived(homeSpans, at: chain.end),
-               let phase = phaseComingHome(
-                   before: chain.start,
-                   destinations: destinations,
-                   workBlocks: workBlocks
-               ) {
-                return DayPhaseSpan(phase: phase, span: chain)
-            }
-            return nil
-        }
-    }
-
-    /// 등록해 둔 곳에 닿았으면 그 종류가 이름을 정한다. 등록하지 않은 곳이나
-    /// 이름 없는 종류에 닿았으면 도착해서 무엇이 시작되는지를 보고 정하던
-    /// 예전 규칙으로 돌아가고, 그마저 없으면 이름을 짓지 않는다.
-    private static func phaseGoingOut(
-        after boundary: Date,
-        destinations: [NamedDestination],
-        workBlocks: [DayPhaseSpan]
-    ) -> DayPhase? {
-        if let arrival = destinations.first(where: {
-            follows($0.span, boundary)
-        }) {
-            return arrival.there
-        }
-        guard let arrival = workBlocks.first(where: {
-            follows($0.span, boundary)
-        }) else {
-            return nil
-        }
-        return arrival.phase == .work ? .commuteToWork : .commuteToSchool
-    }
-
-    private static func phaseComingHome(
-        before boundary: Date,
-        destinations: [NamedDestination],
-        workBlocks: [DayPhaseSpan]
-    ) -> DayPhase? {
-        if let departure = destinations.last(where: {
-            precedes($0.span, boundary)
-        }) {
-            return departure.back
-        }
-        guard let departure = workBlocks.last(where: {
-            precedes($0.span, boundary)
-        }) else {
-            return nil
-        }
-        return departure.phase == .work
-            ? .commuteHomeFromWork
-            : .commuteHomeFromSchool
-    }
-
-    /// 그 경계 직전까지 이어지던 시간인지. 오차만큼은 맞닿은 것으로 본다.
-    private static func precedes(_ span: TimeSpan, _ boundary: Date) -> Bool {
-        span.start < boundary
-            && span.end >= boundary.addingTimeInterval(-joinTolerance)
-    }
-
-    /// 그 경계 직후부터 이어지는 시간인지.
-    private static func follows(_ span: TimeSpan, _ boundary: Date) -> Bool {
-        span.end > boundary
-            && span.start <= boundary.addingTimeInterval(joinTolerance)
-    }
-
-    private static func left(_ spans: [TimeSpan], at boundary: Date) -> Bool {
-        spans.contains { precedes($0, boundary) }
-    }
-
-    private static func arrived(_ spans: [TimeSpan], at boundary: Date) -> Bool {
-        spans.contains { follows($0, boundary) }
-    }
-
-    /// 저녁은 그날의 일과를 마치고 돌아온 뒤 집에 있었다는 근거에서만 나온다.
-    /// 돌아온 길이 없으면 저녁도 없다. 취미·운동을 다녀온 길은 여기 들지
-    /// 않는다 — 저녁에 잠깐 나갔다 왔다고 그 전에 집에서 보낸 저녁이 없던
-    /// 일이 되면 안 된다.
-    private static func evenings(
-        after commutes: [DayPhaseSpan],
-        homeSpans: [TimeSpan],
-        in span: TimeSpan
-    ) -> [DayPhaseSpan] {
-        guard let returned = commutes
-            .filter({
-                $0.phase == .commuteHomeFromWork
-                    || $0.phase == .commuteHomeFromSchool
-                    || $0.phase == .commuteHomeFromAcademy
-            })
-            .map(\.span.end)
-            .max() else {
-            return []
-        }
-        let evening = TimeSpan(start: returned, end: max(returned, span.end))
-        return homeSpans
-            .compactMap { $0.intersection(with: evening) }
-            .map { DayPhaseSpan(phase: .evening, span: $0) }
     }
 
     // MARK: - 한 줄로 펴기

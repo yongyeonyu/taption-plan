@@ -50,7 +50,11 @@ public enum TaptionClassifier {
     public static let minimumSamples = 30
 
     public static func hasEnoughRawData(_ samples: [ClassifierSample]) -> Bool {
-        samples.count >= minimumSamples
+        hasEnoughRawData(sampleCount: samples.count)
+    }
+
+    public static func hasEnoughRawData(sampleCount: Int) -> Bool {
+        sampleCount >= minimumSamples
     }
 
     public static func classifyDay(_ input: ClassifierDayInput) -> ClassifierDayOutput {
