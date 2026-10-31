@@ -4956,3 +4956,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 
 ## TFB1101A01 TestFlight 빌드 256
 - `scripts/testflight/release.sh --yes` 종료 코드 0. 처리 상태 VALID, 「TP Taption Plan 내부 테스트」 그룹 연결·테스터 1명 노출 확인. 보고서 build/validation/TFB1101A01/testflight-report.json. 커밋 9d2166b 기준.
+
+## DOC1101A01 개발 문서 업데이트(문서 전용)
+- DEVELOPMENT.md: 대분류 합치기 규칙(`squeezedMergePair`, 끌기 중 묻기, 1분 클립), 1분 확대 단계와 눈금·자석, 지도 스타일 정리, 표시 > 사이드바·UI 테마 토큰 규칙, 현재 위치 고정 배율, 기기 빌드 디스크·콘솔 명령을 반영.
+- 문서만 바꿔 앱 테스트·빌드는 실행하지 않음(AGENTS.md 문서 전용 규칙).
