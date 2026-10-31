@@ -5017,3 +5017,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 가드: `check-app-engine-import-boundary.sh`(분류 패키지 금지 추가) 통과, `architecture-metrics.py --check` 통과(`arch-2-1.log`).
 - golden-diff 갱신(`golden-diff.json`): 라벨 415분 중 새 415 · 이전 370, 사용자 기록 회귀 0. 1차와 같은 **합성 자료**(실기기 원본 없음)이고, 이번 2차는 앱의 이동 판정 자체를 바꾸지 않아(HMM은 점수만) 숫자가 그대로다.
 - 미검증: 실기기, 실제 원본 replay, 재계산이 실제 저장소에서 날짜별 한 번만 도는지(저장소 표식 왕복은 단위 시험으로만), 잠금 화면 연봉 표시.
+
+## SPL1102A01 · MapHomeView·ScheduleView 분해 (2026-11-01, ALL1101A01 2차)
+- 줄 수: `MapHomeView.swift` 22,877 → 11,635, `ScheduleView.swift` 11,817 → 9,727. 새 파일 31개(MapHome 26·시간표 5, 모두 1,200줄 이하, 가장 큰 것 `MapHomeSectionEditSheet` 1,200·`MapHomeAppleMap` 1,075). 동결 예산을 두 값으로 낮췄다.
+- 이동 확인: 옮기기 전후 두 파일+새 파일의 줄 다중집합을 비교(import·`private`/`fileprivate` 접두 제외)해 차이는 `MapHomeLanguage.text`를 `AppLanguagePreference.ResolvedLanguage.text`에 위임한 5줄뿐이었다. 넓힌 접근: 다른 파일이 쓰는 private 최상위 타입과 `MapHomeExpectedRouteOverlay`의 fileprivate 멤버 3개. `TimelineSelection`·`PhotoCluster`의 private 확장은 `ScheduleView.swift`에 남겼다.
+- 앱 Debug 빌드(generic iOS, `build/DerivedData-SPL1`): 1차 fileprivate 접근 오류 30줄 → 고친 뒤 `BUILD SUCCEEDED`(`build2.log`). 옮긴 파일에서 새 경고 없음.
+- 가드: `check-app-engine-import-boundary.sh` 통과, `architecture-metrics.py --check` 통과.
+- 단위 전체(`-only-testing:TaptionPlanTests`, BOKKI-iPhone11 시뮬레이터, 병렬 끔, device lock): 1회차 `unit-tests.xcresult` 1,727건 중 통과 1,722·실패 1·건너뜀 4 — 실패는 기존 흔들림 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(모든 줌에서 레이어 0개, app state 2). 단독 재실행 `vector-rerun.xcresult` 1/1 통과, 2회차 전체 `unit-tests-2.xcresult` 1,727건 중 통과 1,723·실패 0·건너뜀 4.
+- 미검증: 화면 시험, 실기기 설치·동작, 위젯·워치 빌드(해당 소스 변경 없음). 순수 계산의 패키지 이동은 하지 않았다(모델 타입 의존 때문에 public 표면이 커짐).
