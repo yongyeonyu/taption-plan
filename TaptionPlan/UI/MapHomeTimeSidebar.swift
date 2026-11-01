@@ -2518,8 +2518,8 @@ struct MapHomeWeatherSidebar: View {
                                 ))
                                 .symbolRenderingMode(.palette)
                                 .foregroundStyle(
-                                    isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .primary),
-                                    isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .secondary)
+                                    !isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .primary),
+                                    !isPastSpan ? Color.white : mapHomeWeatherSymbolColor(entry.context, component: .secondary)
                                 )
                             Text("\(Int(entry.context.temperatureCelsius.rounded()))°")
                                 .font(.system(
@@ -2528,18 +2528,18 @@ struct MapHomeWeatherSidebar: View {
                                     design: .rounded
                                 ))
                                 .monospacedDigit()
-                                .foregroundStyle(isPastSpan ? Color.white : (isSelected || isCurrent ? Color.tpAccent : Color.tpInk))
+                                .foregroundStyle(!isPastSpan ? Color.white : (isSelected || isCurrent ? Color.tpAccent : Color.tpInk))
                         }
-                        // 지난 시간대는 예보로 받은 값이어도 글자·아이콘을 또렷하게 둔다(배경만 흐리게).
-                        .opacity(isPastSpan ? 1 : MapHomeWeatherDisplayPolicy.opacity(for: entry.context))
+                        // 지난 시간대는 유리 칸을 흐리게, 남은 시간대는 채운 칸에 흰 글자로 또렷하게 둔다(대표 지시로 반전).
+                        .opacity(isPastSpan ? MapHomeWeatherDisplayPolicy.forecastOpacity : 1)
                         .padding(.horizontal, MapHomeWeatherRailLayout.scaled(8))
                         .frame(
                             width: itemWidth,
                             height: MapHomeWeatherRailLayout.itemHeight
                         )
                         .background {
-                            if isPastSpan {
-                                // 비활성(지난) 칸은 회색 배경에 검정 30%를 덮어 디밍하고, 글자·아이콘은 흰색.
+                            if !isPastSpan {
+                                // 활성(남은) 칸은 회색 배경에 검정 30%를 덮고, 글자·아이콘은 흰색.
                                 Capsule().fill(Color.gray)
                                 Capsule().fill(Color.black.opacity(0.3))
                             } else {

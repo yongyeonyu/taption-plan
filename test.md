@@ -5090,3 +5090,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## UIX1101B07 (2026-11-01)
 - 가드 `architecture-metrics.py --check` 통과. 아이폰 11 Pro Debug 빌드·설치 성공(`build/validation/UIX1101B07/`). 화면 배치만 바꿔 단위 시험은 돌리지 않았다. 화면 확인은 대표.
 - 기기 화면(대표, 2026-11-01): 모든 시간 글자가 같은 자리에 맞춰 보임 확인 → 완료.
+
+## WTH1101A03 (2026-11-01)
+- 단위(시뮬레이터): `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(`build/validation/WTH1101A03/unit.xcresult`). 가드 통과.
+- 기기: 아이폰 11 Pro Debug 빌드·설치 성공. 화면 확인은 대표.
