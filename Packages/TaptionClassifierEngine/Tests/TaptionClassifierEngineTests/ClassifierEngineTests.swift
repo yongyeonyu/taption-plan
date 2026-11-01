@@ -95,6 +95,11 @@ final class ClassifierModeTests: XCTestCase {
         XCTAssertEqual(Synthetic.dominantMode(Synthetic.track(seconds: 900, speed: 14, motion: .automotive)), .car)
     }
 
+    /// 실제 원본에서 막히는 도로의 자차가 버스로 읽혔다(RPL1101A01).
+    func testSlowRoadTravelWithoutStopEvidenceIsCar() {
+        XCTAssertEqual(Synthetic.dominantMode(Synthetic.track(seconds: 900, speed: 7, motion: .automotive)), .car)
+    }
+
     func testSubwayWithoutGPS() {
         XCTAssertEqual(Synthetic.dominantMode(Synthetic.track(seconds: 900, speed: 10, gps: false, motion: .automotive, accel: 0.04)), .subway)
     }

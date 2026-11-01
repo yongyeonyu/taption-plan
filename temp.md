@@ -2783,3 +2783,8 @@
 - 원인: PRF1101A01이 모션·고도 갱신을 메인 큐에서 직렬 `sensorUpdateQueue`로 옮겼는데, `@MainActor` 메서드 안에서 만든 처리 클로저가 메인 액터로 추론됐다. 백그라운드 큐에서 불리는 순간 Swift 런타임 격리 검사(`_swift_task_checkIsolatedSwift` → `dispatch_assert_queue_fail`)가 SIGTRAP으로 앱을 멈췄다. 단위 테스트·시뮬레이터에서는 모션이 오지 않아 잡히지 않았다.
 - 해결: 두 클로저를 `@Sendable`로 명시해 격리를 끊는다(값만 만들고 상태는 기존대로 `Task { @MainActor }`에서 바꾼다).
 - 검증 기준: Debug 빌드, 관련 단위 테스트, 아이폰 11 Pro에서 `--console` 실행 시 종료 없음 + 재생 벤치 로그 생성.
+
+## HMM1101A01 이동 수단 판정을 HMM으로 바꾸기 전 남은 일(RPL1101A01 결론, 대표 결정 대기)
+- 근거: test.md RPL1101A01. 저장 원본에는 정류장·철도 표시(`frequentStops`·`matchesPublicTransitRoute`·`nearbyStation`·`matchesRailRoute`)가 11,127건 중 0건이라 HMM이 버스·지하철을 구분할 근거가 없다.
+- 해결안: 수단은 HMM으로 바꾸지 않고, 지하철은 기존 역 궤적 감지기(`SubwayTravelSegmentEngine`)를 우선하는 혼합으로 간다. 버스는 정류장 근거를 좌표·노선 자료에서 만들어야 판정 가능.
+- 검증 기준: 사람이 확인한 정답이 있는 날(버스 탄 날 포함)의 replay에서 수단별 분 일치가 예전 규칙 이상, 사용자 수정 기록 회귀 0.

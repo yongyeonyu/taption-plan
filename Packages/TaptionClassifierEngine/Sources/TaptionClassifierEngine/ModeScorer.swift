@@ -68,6 +68,9 @@ public enum ModeScorer {
         if window.nearTransitStop {
             add(.bus, 0.9, "버스 정류장 근처")
             add(.car, -0.3)
+        } else {
+            // 정류장 근거 없이 느린 도로 이동만으로 버스로 보지 않는다(자차가 기본).
+            add(.bus, -1.2)
         }
         if window.nearRailStation {
             add(.subway, 0.6, "역 근처")
