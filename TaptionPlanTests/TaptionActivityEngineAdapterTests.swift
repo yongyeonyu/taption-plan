@@ -1108,6 +1108,51 @@ final class ClassifierMigrationTests: XCTestCase {
         XCTAssertNil(scored[1].classificationScore)
     }
 
+    private func hybrid(_ rule: TravelMode, hmm: TravelMode?, seconds: TimeInterval = 600, score: Double = 0.9,
+                        evidence: [String] = [], confirmed: Bool = false, locked: Bool = false) -> TravelSegment {
+        var segment = TravelSegment(mode: rule, span: TimeSpan(start: start, end: start.addingTimeInterval(600)),
+                                    distanceMeters: 100, confidence: .low, evidence: evidence)
+        segment.isConfirmed = confirmed
+        segment.isClassificationLocked = locked
+        let timeline = [ClassifierAdapter.TimelineSegment(span: TimeSpan(start: start, end: start.addingTimeInterval(seconds)),
+                                                          mode: hmm, meters: 5_000, score: score)]
+        return ClassifierAdapter.resolvingTravelModes([segment], timeline: timeline)[0]
+    }
+
+    func testHybridLetsHMMCorrectRuleModeAndKeepsEvidence() {
+        let value = hybrid(.subway, hmm: .car, evidence: ["동력 이동"])
+        XCTAssertEqual(value.mode, .car)
+        XCTAssertNil(value.subwayRoute)
+        XCTAssertEqual(value.confidence, .high)
+        XCTAssertEqual(value.distanceMeters, 5_000)
+        XCTAssertEqual(value.evidence.first, "동력 이동")
+        XCTAssertEqual(value.evidence.count, 2)
+        XCTAssertEqual(hybrid(.car, hmm: .airplane).mode, .airplane)
+        XCTAssertEqual(hybrid(.walking, hmm: .car).mode, .car)
+    }
+
+    func testHybridKeepsRuleWhereHMMHasNoEvidence() {
+        XCTAssertEqual(hybrid(.bus, hmm: .car).mode, .bus, "HMM은 정류장 근거가 없어 버스를 뒤집지 않는다")
+        XCTAssertEqual(hybrid(.taxi, hmm: .car).mode, .taxi)
+        XCTAssertEqual(hybrid(.train, hmm: .car).mode, .train)
+        XCTAssertEqual(hybrid(.subway, hmm: .car, confirmed: true).mode, .subway)
+        XCTAssertEqual(hybrid(.subway, hmm: .car, locked: true).mode, .subway)
+        XCTAssertEqual(hybrid(.subway, hmm: .car, evidence: ["Apple Watch 3축 가속도 철도 진동"]).mode, .subway)
+        XCTAssertEqual(hybrid(.subway, hmm: .car, evidence: ["사용자 지정 지하철역 일치"]).mode, .subway)
+    }
+
+    func testHybridDoesNotInventSubwayTrainOrDemoteVehicles() {
+        XCTAssertEqual(hybrid(.car, hmm: .subway).mode, .car)
+        XCTAssertEqual(hybrid(.car, hmm: .train).mode, .car)
+        XCTAssertEqual(hybrid(.car, hmm: .walking).mode, .car)
+        XCTAssertEqual(hybrid(.car, hmm: nil).mode, .car)
+    }
+
+    func testHybridNeedsCoverageAndConfidence() {
+        XCTAssertEqual(hybrid(.subway, hmm: .car, seconds: 200).mode, .subway, "원본이 구간 절반을 덮지 못함")
+        XCTAssertEqual(hybrid(.subway, hmm: .car, score: 0.3).mode, .subway, "사후 확률 부족")
+    }
+
     func testAwaySecondsDoesNotCountRecordingGaps() {
         let home = PlaceStay(placeKey: "home", displayName: "집", span: TimeSpan(start: start, end: start.addingTimeInterval(8 * 3_600)), confidence: .high)
         let office = PlaceStay(placeKey: "office", displayName: "회사", span: TimeSpan(start: start.addingTimeInterval(9 * 3_600), end: start.addingTimeInterval(12 * 3_600)), confidence: .high)

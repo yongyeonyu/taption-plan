@@ -255,6 +255,65 @@ enum ClassifierAdapter {
         var score: Double
     }
 
+    /// 혼합 판정: 지하철은 역 궤적 감지기, 나머지 수단은 HMM으로 정한다(HMM1101A01).
+    /// HMM이 볼 수 없는 근거(사용자 확인·잠금·워치·유효 노선)가 있는 구간, 버스·택시·기차는
+    /// 규칙 결과를 지킨다. HMM은 지하철·기차를 새로 만들지 않고, 차량을 걷기로 내리지도 않는다.
+    static func resolvingTravelModes(_ travel: [TravelSegment], timeline: [TimelineSegment]) -> [TravelSegment] {
+        travel.map { segment in
+            guard let decision = hybridDecision(for: segment, timeline: timeline) else { return segment }
+            var value = segment
+            value.mode = decision.mode
+            value.subwayRoute = nil
+            value.confidence = decision.score >= 0.8 ? .high : (decision.score >= 0.55 ? .medium : .low)
+            value.distanceMeters = max(segment.distanceMeters, decision.meters)
+            value.evidence.append("혼합 판정: 규칙 \(segment.mode.rawValue) → HMM \(decision.mode.rawValue)")
+            return value
+        }
+    }
+
+    private static func hybridDecision(
+        for segment: TravelSegment,
+        timeline: [TimelineSegment]
+    ) -> (mode: TravelMode, score: Double, meters: Double)? {
+        guard !segment.isConfirmed, !segment.isClassificationLocked, segment.span.duration > 0,
+              ![.bus, .taxi, .train].contains(segment.mode),
+              !(segment.mode == .subway && segment.subwayRoute.map(SubwayStationCatalog.isValid) == true),
+              !segment.evidence.contains(where: { $0.contains("Apple Watch") || $0.contains("사용자") })
+        else { return nil }
+        var covered = 0.0
+        var byMode: [TravelMode: (seconds: Double, weighted: Double, meters: Double)] = [:]
+        for item in timeline {
+            guard let overlap = item.span.intersection(with: segment.span)?.duration, overlap > 0 else { continue }
+            covered += overlap
+            guard let mode = item.mode else { continue }
+            let share = item.span.duration > 0 ? overlap / item.span.duration : 0
+            var total = byMode[mode] ?? (0, 0, 0)
+            total.seconds += overlap
+            total.weighted += overlap * item.score
+            total.meters += item.meters * share
+            byMode[mode] = total
+        }
+        guard covered >= segment.span.duration * hybridMinimumCoverage,
+              let best = byMode.max(by: { $0.value.seconds < $1.value.seconds }),
+              best.key != segment.mode, best.value.seconds >= covered * hybridMinimumShare,
+              best.value.weighted / best.value.seconds >= hybridMinimumScore,
+              hybridAllows(from: segment.mode, to: best.key)
+        else { return nil }
+        return (best.key, best.value.weighted / best.value.seconds, best.value.meters)
+    }
+
+    static let hybridMinimumCoverage = 0.5
+    static let hybridMinimumShare = 0.6
+    static let hybridMinimumScore = 0.5
+
+    private static func hybridAllows(from rule: TravelMode, to hmm: TravelMode) -> Bool {
+        switch hmm {
+        case .car, .bus, .airplane, .ship: true
+        case .walking, .running, .cycling: [.walking, .running, .cycling].contains(rule)
+        case .subway, .train, .taxi: false
+        }
+    }
+
     /// 자동 이동 기록에 HMM 점수를 붙인다: 기록 시간 중 같은 수단으로 본 구간의 사후 확률을
     /// 겹친 시간으로 가중 평균한다. 원본이 기록의 절반도 덮지 못하면 점수를 두지 않는다.
     /// 분류(범주·제목·behavior)는 바꾸지 않고, 사용자 소유 기록은 그대로 둔다.

@@ -113,6 +113,24 @@ final class RawSensorReplayTests: XCTestCase {
                         "minutes": Int(segment.span.duration / 60), "stored": segment.mode.rawValue,
                         "rule": fresh.mode.rawValue, "hmm": hmm.mode, "hmmShare": hmm.share]
             }
+            // 규칙(새로 판정) + 역 궤적 감지기 + 혼합을 실제 경로 순서로 거친 최종 구간(HMM1101A01).
+            let ruleSegments = day.travel.map { segment -> TravelSegment in
+                let inside = readings.filter { segment.span.contains($0.timestamp) }
+                let around = readings.filter { TravelModeClassifier.altitudeContextSpan(segment.span).contains($0.timestamp) }
+                let fresh = TravelModeClassifier().classify(readings: inside, inside: segment.span, altitudeContext: around)
+                return TravelSegment(mode: fresh.mode, span: segment.span, distanceMeters: segment.distanceMeters,
+                                     confidence: fresh.confidence, evidence: fresh.evidence, subwayRoute: fresh.subwayRoute)
+            }
+            let merged = AppleDeviceGroundTruthEngine.mergingTravel(gpsSegments: ruleSegments, motionActivities: [], pedometer: nil, readings: readings)
+            let hybrid: [[String: Any]] = ClassifierAdapter.resolvingTravelModes(merged, timeline: timeline).map { segment in
+                let rule = merged.first { $0.id == segment.id }?.mode.rawValue ?? "-"
+                if segment.mode != .walking || rule != "walking" {
+                    print("RPL hybrid \(formatter.string(from: segment.span.start))–\(formatter.string(from: segment.span.end)) rule=\(rule) final=\(segment.mode.rawValue) "
+                        + "route=\(segment.subwayRoute?.stops.map(\.stationName).joined(separator: ">") ?? "-")")
+                }
+                return ["start": formatter.string(from: segment.span.start), "end": formatter.string(from: segment.span.end),
+                        "rule": rule, "final": segment.mode.rawValue]
+            }
             let extra: [[String: Any]] = timeline.filter { segment in
                 segment.mode != nil && segment.span.duration >= 180
                     && !day.travel.contains { $0.span.intersection(with: segment.span) != nil }
@@ -132,7 +150,7 @@ final class RawSensorReplayTests: XCTestCase {
             print("RPL day \(formatter.string(from: day.day)) minutes=\(total) agree=\(agreement)% segments=\(timeline.count) userOwned=\(userOwned.count)")
             report.append(["day": formatter.string(from: day.day), "isComplete": day.isComplete, "readings": readings.count,
                            "minutes": total, "agreementPercent": agreement, "confusionMinutes": confusion,
-                           "storedSegments": segments, "hmmOnlySegments": extra, "userOwned": userOwned])
+                           "storedSegments": segments, "hybridSegments": hybrid, "hmmOnlySegments": extra, "userOwned": userOwned])
         }
         if let out = ProcessInfo.processInfo.environment["TAPTION_REPLAY_OUT"], !out.isEmpty {
             let json = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])

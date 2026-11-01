@@ -582,11 +582,13 @@ extension AppModel {
             userTransitLocations: settings.userTransitLocations,
             registeredCarAudioNames: Set(settings.registeredCarAudioNames)
         )
+        guard let travelTimeline = try? await ClassifierAdapter.travelTimelineInBackground(readings: readings, in: span),
+              !Task.isCancelled, acceptsDataMutation() else { return false }
         let correctedTravel = AppleDeviceGroundTruthEngine.resolvingOverlaps(
             AppleDeviceGroundTruthEngine.enforcingMotionFamily(
                 MovementCorrectionEngine.applying(
                     snapshot.settings.movementCorrections,
-                    to: inferredTravel,
+                    to: ClassifierAdapter.resolvingTravelModes(inferredTravel, timeline: travelTimeline),
                     places: basePlaces,
                     readings: readings
                 ),
