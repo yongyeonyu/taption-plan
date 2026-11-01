@@ -5137,3 +5137,10 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 구조 지표 통과. 시뮬레이터 Debug 빌드 성공.
 - 모자 위치는 `build/validation/ACC1101A01/check.html` 72프레임 점검표로 봤고, 먹기 일부 프레임은 어긋날 수 있다. 앱 화면에서 배경 제거·크기·왼쪽 달리기는 아직 보지 못했고 기기 설치도 안 했다. 재생 영상의 화랑이는 오른쪽만 본다.
 - 벡터 화랑이 시안(rig.html→rig-2→rig-3→rig-4)은 HTML 시안이며 앱에 들어가지 않았다.
+
+## RIG1101A01 코드로 그리는 화랑이 앱 적용
+- 단위 전체 `RIG1101A01-unit-all.log`: 실행 1,688건 중 통과 1,682·실패 1·건너뜀 5(로그 집계, 시험 후 xcodebuild가 재시도 단계에서 멈춰 내가 중단했으므로 xcresult 없음). 머리 위 공간 수정 전 코드 기준.
+- 실패 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`: `MapHomeVectorRouteRenderingTests`·`MapHomeStickmanTests`만 다시 돌려 49건 모두 통과(`RIG1101A01-recheck.xcresult`). FLK1020A01의 간헐 실패로 보지만 원인을 확인하지는 않았다.
+- 시뮬레이터 화면(BOKKI-iPhone11): 지도 마커·행동 분류 메뉴 장면 확인. 메뉴 글리프 자리 넓힌 뒤 화면, 모자 쓴 모습, 왼쪽 달리기, 재생 중 움직임은 앱에서 못 봄. 모자 52개는 `build/validation/ACC1101A01/hats-52.html`에서 앉은 자세로 점검.
+- 기기: 아이폰 11 Pro Debug 빌드·설치 성공(첫 시도). 기기 화면·발열은 대표 확인 전. 화면 시험은 다시 돌리지 않았다.
+- 알려진 문제: N서울타워 모자 글자가 M처럼 보이고, 일부 모자는 머리 위에 떠 보인다.

@@ -577,29 +577,32 @@ final class MapHomeStickmanTests: XCTestCase {
         XCTAssertTrue(MapHomeStickmanAction.sleeping.animatesPresentation)
     }
 
-    func testCatActivityScenesUseRequestedActionsAndQuarterSpeed() {
-        XCTAssertEqual(MapHomeStickmanAction.company.catAccessory, .tie)
-        XCTAssertEqual(MapHomeStickmanAction.school.catAccessory, .glasses)
-        XCTAssertEqual(MapHomeStickmanAction.computer.catAccessory, .laptop)
-        XCTAssertEqual(MapHomeStickmanAction.reading.catAccessory, .book)
-        XCTAssertNil(MapHomeStickmanAction.activity.catAccessory)
-        // 행동 분류마다 화랑이 동작이 전부 다르다(대표 지시, CAT1101A02).
-        let majors = MapHomeSidebarMajorCategory.all.map(\.stickmanAction.catAction)
+    func testEveryMajorCategoryHasItsOwnHwarangScene() {
+        // 행동 분류마다 화랑이 장면이 전부 다르다(대표 지시, RIG1101A01).
+        let majors = MapHomeSidebarMajorCategory.all.map(\.stickmanAction.hwarangScene)
         XCTAssertGreaterThanOrEqual(majors.count, 10)
         XCTAssertEqual(Set(majors).count, majors.count, "\(majors)")
-        XCTAssertEqual(Set([0, 6, 12, 18].map { MapHomeCatActivityMotion.hobbyNote(for: $0) }).count, 4)
-        XCTAssertEqual(
-            MapHomeStickmanAnimationEngine.catFrameDuration,
-            MapHomeStickmanAnimationEngine.frameDuration * 4
+        XCTAssertEqual(MapHomeSpeedTier.walking.scene, .walkLoop)
+        XCTAssertEqual(MapHomeSpeedTier.running.scene, .runLoop)
+    }
+
+    func testHatIsDrawnOnTheHwarangHead() {
+        let hat = "Hat_kr_gyeongbokgung"
+        XCTAssertGreaterThan(
+            HwarangDiagnostics.paintedPixels(scene: .walkLoop, sec: 1, hat: hat),
+            HwarangDiagnostics.paintedPixels(scene: .walkLoop, sec: 1) + 100
         )
-        let epoch = Date(timeIntervalSinceReferenceDate: 0)
-        XCTAssertEqual(MapHomeStickmanAnimationEngine.catPhase(at: epoch), 0)
-        XCTAssertEqual(
-            MapHomeStickmanAnimationEngine.catPhase(
-                at: epoch.addingTimeInterval(MapHomeStickmanAnimationEngine.catFrameDuration)
-            ),
-            1
-        )
+    }
+
+    func testEveryHwarangSceneDrawsThroughItsWholeLoop() {
+        for scene in HwarangScene.allCases {
+            XCTAssertGreaterThan(scene.totalDuration, 0)
+            var time = 0.0
+            while time < Double(scene.totalDuration) + 1 {
+                XCTAssertGreaterThan(HwarangDiagnostics.paintedPixels(scene: scene, sec: time), 500, "\(scene) \(time)")
+                time += 0.73
+            }
+        }
     }
 
     func testStickmanFacingFollowsScreenDirectionAndHoldsWhenVertical() {
@@ -610,22 +613,6 @@ final class MapHomeStickmanTests: XCTestCase {
         // 거의 위아래로 가면 이전 방향을 유지한다.
         XCTAssertTrue(MapHomeStickmanFacing.resolve(headingDegrees: 5, cameraHeading: 0, previous: true))
         XCTAssertFalse(MapHomeStickmanFacing.resolve(headingDegrees: 185, cameraHeading: 0, previous: false))
-    }
-
-    func testCatSpriteScaleIsConsistentAcrossCanvasSizes() {
-        for size: CGFloat in [30, 36, 42] {
-            let displayedWidthRatio =
-                MapHomeCatSceneSizing.spriteWidth
-                    * MapHomeCatSceneSizing.spriteScale(forCanvasSize: size)
-                    / size
-            XCTAssertEqual(
-                displayedWidthRatio,
-                MapHomeCatSceneSizing.spriteWidthToCanvasRatio,
-                accuracy: 0.001
-            )
-        }
-        XCTAssertEqual(MapHomeCatSceneSizing.spriteScale(forCanvasSize: 0), 0)
-        XCTAssertEqual(MapHomeCatSceneSizing.spriteScale(forCanvasSize: .infinity), 0)
     }
 
     func testArticulatedStickmanPoseCoversEveryActionAndStaysOnCanvas() {

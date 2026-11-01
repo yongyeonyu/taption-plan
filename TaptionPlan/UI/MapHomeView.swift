@@ -6955,6 +6955,7 @@ struct MapHomeView: View {
                                     action: category.stickmanAction,
                                     size: 44
                                 )
+                                .frame(width: 72)
                                 Text(category.localizedTitle(language))
                                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                                 Spacer()

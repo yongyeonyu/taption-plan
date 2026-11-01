@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""화랑이 모자 52개(랜드마크별)를 SVG 이미지 세트로 만들고, 동작·프레임별 머리 위치 표를 Swift로 쓴다(ACC1101A01)."""
+"""화랑이 모자 52개(랜드마크별)를 SVG 이미지 세트로 만든다(ACC1101A01)."""
 import json, os, sys
-from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "TaptionPlan/Assets.xcassets/Hats")
@@ -116,54 +115,7 @@ def write_assets():
                        "info": {"author": "xcode", "version": 1},
                        "properties": {"preserves-vector-representation": True}}, f, indent=2)
 
-# 동작별 머리 대략 x(칸 156×96 기준). 표는 귀 끝을 찾아 프레임마다 다듬는다.
-HEAD_X = {"walking": [95,110,104,112,105,110], "running": [108,106,102,110,108,112], "sitting": [78]*6,
-          "sleeping": [52,50,52,50,50,55], "grooming": [90]*6, "eating": [90,70,68,68,70,92],
-          "startled": [65,62,62,60,62,62], "ballPlay": [62]*6, "fishingPlay": [72,65,72,65,72,70],
-          "stretching": [95,90,92,90,85,90], "kneading": [70,70,70,70,70,70], "yawning": [76]*6}
-# 몸이 머리보다 높은 동작은 귀 끝을 찾지 못하므로 (x, y)를 직접 적는다.
-MANUAL = {"sleeping": [(58,30),(56,28),(58,32),(57,28),(56,32),(55,30)],
-          "eating": [(85,28),(89,50),(83,60),(87,62),(86,52),(85,28)],
-          "stretching": [(95,31),(89,31),(88,26),(97,31),(76,16),(85,31)]}
-ORDER = ["walking","running","sitting","sleeping","grooming","eating","startled","ballPlay","fishingPlay","stretching","kneading","yawning"]
-
-def head_anchors():
-    atlas = Image.open(os.path.join(ROOT, "TaptionPlan/Assets.xcassets/TaptionCatAtlasWhite.imageset/atlas.png")).convert("RGBA")
-    alpha = atlas.getchannel("A")
-    rows = []
-    for r, name in enumerate(ORDER):
-        row = []
-        for c in range(6):
-            if name in MANUAL:
-                row.append((round(MANUAL[name][c][0] / 3, 1), round(MANUAL[name][c][1] / 3, 1)))
-                continue
-            cx = HEAD_X[name][c]
-            x0, x1 = max(0, cx - 26), min(156, cx + 26)
-            top = None
-            for y in range(96):
-                if any(alpha.getpixel((c * 156 + x, r * 96 + y)) > 180 for x in range(x0, x1)):
-                    top = y
-                    break
-            top = top if top is not None else 0
-            y2 = min(95, top + 14)
-            xs = [x for x in range(x0, x1) if alpha.getpixel((c * 156 + x, r * 96 + y2)) > 180]
-            mid = (min(xs) + max(xs)) / 2 if xs else cx
-            row.append((round(mid / 3, 1), round(top / 3, 1)))
-        rows.append(row)
-    return rows
-
-def write_swift(rows):
-    lines = ["// tools/generate_hwarang_hats.py가 만든 파일. 직접 고치지 않는다.", "import CoreGraphics", "",
-             "/// 화랑이 스프라이트(52×32pt) 동작·프레임별 귀 사이 중앙과 귀 끝 높이.",
-             "enum MapHomeHatHeadAnchors {", "    static let table: [[CGPoint]] = ["]
-    for row in rows:
-        lines.append("        [" + ", ".join(f"CGPoint(x: {x}, y: {y})" for x, y in row) + "],")
-    lines += ["    ]", "}", ""]
-    with open(os.path.join(ROOT, "TaptionPlan/UI/MapHomeHatHeadAnchors.swift"), "w") as f:
-        f.write("\n".join(lines))
-
 if __name__ == "__main__":
     assert len(HATS) == 52, len(HATS)
     write_assets()
-    write_swift(head_anchors())
     print("hats", len(HATS))
