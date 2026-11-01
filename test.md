@@ -5084,3 +5084,4 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## WTH1101A02 · UIX1101B04~B06 (2026-11-01)
 - 단위: `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(`build/validation/UIX1101B06/unit.xcresult`). 가드 `architecture-metrics.py --check` 통과.
 - 기기: 아이폰 11 Pro Debug 빌드·설치 성공. 화면 확인은 대표(날씨 칩은 시뮬레이터에 날씨 자료가 없어 화면으로 보지 못함).
+- 기기 화면(대표, 2026-11-01): 아이폰 11 Pro에서 지난 날씨 칩이 회색으로 보임 확인 → WTH1101A01·A02 완료. 사이드바·주말 색(B04~B06)은 아직 대표 화면 확인 전.

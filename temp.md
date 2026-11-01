@@ -2764,11 +2764,6 @@
   - B(PRF1101A01): `LiveActivitySupport`·`SensorCollectionSalaryText`의 연봉 문자열 키를 하나로 합치는 일은 손대지 않았다. 업무 시간은 `DayMetrics.earnings`/`categorySeconds`를 쓰면 된다. AppModel 4573의 오늘 걸음 `max(merged, live)`는 기기 간 max라 워치 우선 정책과 어긋난다(AppModel 데이터 갱신부라 A 범위 밖).
   - 2차: AppModel 데이터 갱신(4428) 뒤에 지난 7일 재계산 sweep(`ClassificationRecomputeCoordinator.run`)을 걸 자리. 지금은 날짜를 갱신할 때만 그날을 재계산한다.
 
-## WTH1101A01 지난 날씨 칩 비활성이 안 보임(대표)
-- 원인: 날씨 칩은 같은 날씨가 이어지면 하나로 묶인다. 오늘 묶인 칩이 지금을 가로지르면 끝 시각이 미래라 `isPastSpan`이 거짓이 되어 지난 부분도 활성으로 보였다.
-- 해결: 오늘이면 칩을 지금 시각에서 지난 부분·남은 부분으로 나눈다(`MapHomeWeatherPastSplit`, `MapHomeTimeSidebarMath.swift`).
-- 검증 기준: 단위 테스트, Debug 빌드·아이폰 11 Pro 설치, 기기 화면(대표).
-
 ## UIX1101B01 지도 위 유리 테두리(대표 "테두리 이상함")
 - 원인: 리퀴드 글래스(`glassEffect(.regular)`)가 가장자리에서 지도를 굴절시켜 두꺼운 띠로 보임.
 - 해결(대표 선택 "반투명 면 + 얇은 선"): `mapHomeGlass`를 `ultraThinMaterial` + 테마 선 색 0.6pt 테두리로. 버튼·날짜 배지·사이드바·날씨 칩 등 모든 사용처에 적용.
@@ -2792,11 +2787,6 @@
 - 원인: PRF1101A01이 모션·고도 갱신을 메인 큐에서 직렬 `sensorUpdateQueue`로 옮겼는데, `@MainActor` 메서드 안에서 만든 처리 클로저가 메인 액터로 추론됐다. 백그라운드 큐에서 불리는 순간 Swift 런타임 격리 검사(`_swift_task_checkIsolatedSwift` → `dispatch_assert_queue_fail`)가 SIGTRAP으로 앱을 멈췄다. 단위 테스트·시뮬레이터에서는 모션이 오지 않아 잡히지 않았다.
 - 해결: 두 클로저를 `@Sendable`로 명시해 격리를 끊는다(값만 만들고 상태는 기존대로 `Task { @MainActor }`에서 바꾼다).
 - 검증 기준: Debug 빌드, 관련 단위 테스트, 아이폰 11 Pro에서 `--console` 실행 시 종료 없음 + 재생 벤치 로그 생성.
-
-## WTH1101A02 지난 날씨 칩 디밍이 여전히 안 보임(대표 "다시 확인")
-- 추정 원인: 지금 시각에서 나눈 지난 부분 칩이 지금 칩과 가까우면 칩 간격 규칙(`MapHomeWeatherRailLayout.visibleIndices`)이 선택·지금 칩만 앞세워 지난 칩을 숨겼다. 시뮬레이터에는 날씨 자료가 없어 화면으로 확인하지 못했다.
-- 해결: 오늘이면 방금 지난 칩도 우선 표시 목록에 넣는다.
-- 검증 기준: 단위 테스트·빌드·기기 설치, 기기 화면(대표).
 
 ## UIX1101B04~B06 사이드바 시간 글자·날짜 배지 주말 색(대표, 남색·보라)
 - B04: 시간 글자 테두리 1pt → 1.5pt, 8방향.
