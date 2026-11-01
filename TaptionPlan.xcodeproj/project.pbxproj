@@ -13,6 +13,31 @@
 		ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		A10000000000000000000001 /* TaptionPlanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000001 /* TaptionPlanApp.swift */; };
 		A10000000000000000000002 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* AppModel.swift */; };
+		A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000032 /* AppModelPolicies.swift */; };
+		A5B1102A0200000000000031 /* AppModelSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000030 /* AppModelSupportTypes.swift */; };
+		A5B1102A020000000000002F /* AppModel+ActualEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002E /* AppModel+ActualEditing.swift */; };
+		A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002C /* AppModel+Backup.swift */; };
+		A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002A /* AppModel+Bootstrap.swift */; };
+		A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000028 /* AppModel+Classification.swift */; };
+		A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000026 /* AppModel+DayData.swift */; };
+		A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000024 /* AppModel+EditHistory.swift */; };
+		A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000022 /* AppModel+Export.swift */; };
+		A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000020 /* AppModel+ExternalData.swift */; };
+		A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */; };
+		A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001C /* AppModel+Lifecycle.swift */; };
+		A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001A /* AppModel+LocationCollection.swift */; };
+		A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000018 /* AppModel+MapEditing.swift */; };
+		A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000016 /* AppModel+Memos.swift */; };
+		A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000014 /* AppModel+Navigation.swift */; };
+		A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000012 /* AppModel+Permissions.swift */; };
+		A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000010 /* AppModel+Persistence.swift */; };
+		A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000E /* AppModel+Plans.swift */; };
+		A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000C /* AppModel+Settings.swift */; };
+		A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000A /* AppModel+Steps.swift */; };
+		A5B1102A0200000000000009 /* AppModel+WatchHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */; };
+		A5B1102A0200000000000007 /* AppModel+WatchSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */; };
+		A5B1102A0200000000000005 /* AppModel+Weather.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000004 /* AppModel+Weather.swift */; };
+		A5B1102A0200000000000003 /* AppModel+WidgetLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */; };
 		A10000000000000000000003 /* PlanItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000003 /* PlanItem.swift */; };
 		A10000000000000000000004 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000004 /* Theme.swift */; };
 		A10000000000000000000005 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000005 /* AppShellView.swift */; };
@@ -38,10 +63,55 @@
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
 		A10000000000000000000013 /* SensorFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SensorFusion.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
-		A10000000000000000000014 /* AppleIntegrations.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000014 /* AppleIntegrations.swift */; };
+		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
+		A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001B /* AppleCalendarService.swift */; };
+		A5B1102A020000000000001A /* ApplePhotoLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000019 /* ApplePhotoLibraryService.swift */; };
+		A5B1102A0200000000000018 /* AppleHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000017 /* AppleHealthService.swift */; };
+		A5B1102A0200000000000016 /* AppleWeatherContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000015 /* AppleWeatherContextService.swift */; };
+		A5B1102A0200000000000014 /* AirQualityContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000013 /* AirQualityContextService.swift */; };
+		A5B1102A0200000000000012 /* AirPodsActivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000011 /* AirPodsActivityService.swift */; };
+		A5B1102A0200000000000010 /* CurrentConnectedWiFiService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000F /* CurrentConnectedWiFiService.swift */; };
+		A5B1102A020000000000000E /* DeviceStillnessTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000D /* DeviceStillnessTracker.swift */; };
+		A5B1102A020000000000000C /* AppleSensorCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000000B /* AppleSensorCollector.swift */; };
+		A5B1102A020000000000000A /* AppleSensorCollector+Updates.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000009 /* AppleSensorCollector+Updates.swift */; };
+		A5B1102A0200000000000008 /* AppleMotionHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000007 /* AppleMotionHistoryService.swift */; };
+		A5B1102A0200000000000006 /* AppleTransportContextService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000005 /* AppleTransportContextService.swift */; };
+		A5B1102A0200000000000004 /* VoiceMemoServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000003 /* VoiceMemoServices.swift */; };
+		A5B1102A0200000000000002 /* PlanNotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */; };
 		A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */; };
 		A10000000000000000000015 /* LiveActivitySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000015 /* LiveActivitySupport.swift */; };
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
+		A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */; };
+		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
+		A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */; };
+		A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */; };
+		A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */; };
+		A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */; };
+		A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */; };
+		A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */; };
+		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
+		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
+		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
+		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
+		A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */; };
+		A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000041 /* RawSensorReplayTests.swift */; };
+		A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */; };
+		A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */; };
+		A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000003B /* NLEMultiDayTests.swift */; };
+		A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */; };
+		A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */; };
+		A5B1102A0200000000000036 /* FeatureEngineTests+Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */; };
+		A5B1102A0200000000000034 /* FeatureEngineTests+Map.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */; };
+		A5B1102A0200000000000032 /* FeatureEngineTests+Movement.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */; };
+		A5B1102A0200000000000030 /* FeatureEngineTests+Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */; };
+		A5B1102A020000000000002E /* FeatureEngineTests+Places.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */; };
+		A5B1102A020000000000002C /* FeatureEngineTests+Planning.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */; };
+		A5B1102A020000000000002A /* FeatureEngineTests+Sensors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */; };
+		A5B1102A0200000000000028 /* FeatureEngineTests+Sleep.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */; };
+		A5B1102A0200000000000026 /* FeatureEngineTests+Transit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */; };
+		A5B1102A0200000000000024 /* FeatureEngineTests+Watch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */; };
+		A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */; };
+		A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */; };
 		A10000000000000000000018 /* NavigationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000018 /* NavigationModels.swift */; };
 		A10000000000000000000019 /* CatPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000019 /* CatPresentation.swift */; };
 		A1000000000000000000001A /* TimelineInteractionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000001A /* TimelineInteractionEngine.swift */; };
@@ -305,6 +375,31 @@
 		C10000000000000000000005 /* TaptionPlanWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaptionPlanWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000001 /* TaptionPlanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanApp.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000032 /* AppModelPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelPolicies.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000030 /* AppModelSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelSupportTypes.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000002E /* AppModel+ActualEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ActualEditing.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002C /* AppModel+Backup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Backup.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002A /* AppModel+Bootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Bootstrap.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000028 /* AppModel+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Classification.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000026 /* AppModel+DayData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+DayData.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000024 /* AppModel+EditHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+EditHistory.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000022 /* AppModel+Export.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Export.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000020 /* AppModel+ExternalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+ExternalData.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+FrequentPlaces.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001C /* AppModel+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Lifecycle.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001A /* AppModel+LocationCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+LocationCollection.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000018 /* AppModel+MapEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+MapEditing.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000016 /* AppModel+Memos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Memos.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000014 /* AppModel+Navigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Navigation.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000012 /* AppModel+Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Permissions.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000010 /* AppModel+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Persistence.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000E /* AppModel+Plans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Plans.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000C /* AppModel+Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Settings.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000000A /* AppModel+Steps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Steps.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WatchHealth.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WatchSummary.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000004 /* AppModel+Weather.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Weather.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+WidgetLiveActivity.swift"; sourceTree = "<group>"; };
 		F10000000000000000000003 /* PlanItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanItem.swift; sourceTree = "<group>"; };
 		F10000000000000000000004 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F10000000000000000000005 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
@@ -324,10 +419,55 @@
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
 		F10000000000000000000013 /* SensorFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorFusion.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
-		F10000000000000000000014 /* AppleIntegrations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrations.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000001B /* AppleCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCalendarService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000019 /* ApplePhotoLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplePhotoLibraryService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000017 /* AppleHealthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleHealthService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000015 /* AppleWeatherContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWeatherContextService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000013 /* AirQualityContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirQualityContextService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000011 /* AirPodsActivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AirPodsActivityService.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000000F /* CurrentConnectedWiFiService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrentConnectedWiFiService.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000000D /* DeviceStillnessTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceStillnessTracker.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000000B /* AppleSensorCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSensorCollector.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000009 /* AppleSensorCollector+Updates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppleSensorCollector+Updates.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000007 /* AppleMotionHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMotionHistoryService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000005 /* AppleTransportContextService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTransportContextService.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000003 /* VoiceMemoServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMemoServices.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanNotificationScheduler.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEfficiencyPolicies.swift; sourceTree = "<group>"; };
 		F10000000000000000000015 /* LiveActivitySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivitySupport.swift; sourceTree = "<group>"; };
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTestFixtures.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCacheBenchmarkTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeRailCardTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherRailLayoutTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePresencePolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeGrowthPolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingPersistenceTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDateStripTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000041 /* RawSensorReplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RawSensorReplayTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficeStayAbsorptionTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmationTests.swift; sourceTree = "<group>"; };
+		F5B1102A020000000000003B /* NLEMultiDayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLEMultiDayTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackPathSmoothingTests.swift; sourceTree = "<group>"; };
+		F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Classification.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Health.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Map.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Movement.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Persistence.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Places.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Planning.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Sensors.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Sleep.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Transit.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Watch.swift"; sourceTree = "<group>"; };
+		F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Weather.swift"; sourceTree = "<group>"; };
+		F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FeatureEngineTests+Widget.swift"; sourceTree = "<group>"; };
 		F10000000000000000000017 /* TaptionPlan.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TaptionPlan.entitlements; sourceTree = "<group>"; };
 		F10000000000000000000018 /* NavigationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationModels.swift; sourceTree = "<group>"; };
 		F10000000000000000000019 /* CatPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatPresentation.swift; sourceTree = "<group>"; };
@@ -597,6 +737,37 @@
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
+				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
+				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
+				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
+				F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */,
+				F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */,
+				F5B1102A0200000000000051 /* MapHomePresencePolicyTests.swift */,
+				F5B1102A020000000000004F /* MapHomeGrowthPolicyTests.swift */,
+				F5B1102A020000000000004D /* TransitBoardingPersistenceTests.swift */,
+				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
+				F5B1102A0200000000000049 /* NLETrackTests.swift */,
+				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
+				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
+				F5B1102A0200000000000043 /* MapHomeDateStripTests.swift */,
+				F5B1102A0200000000000041 /* RawSensorReplayTests.swift */,
+				F5B1102A020000000000003F /* OfficeStayAbsorptionTests.swift */,
+				F5B1102A020000000000003D /* CarAudioTravelConfirmationTests.swift */,
+				F5B1102A020000000000003B /* NLEMultiDayTests.swift */,
+				F5B1102A0200000000000039 /* PlaybackPathSmoothingTests.swift */,
+				F5B1102A0200000000000037 /* FeatureEngineTests+Classification.swift */,
+				F5B1102A0200000000000035 /* FeatureEngineTests+Health.swift */,
+				F5B1102A0200000000000033 /* FeatureEngineTests+Map.swift */,
+				F5B1102A0200000000000031 /* FeatureEngineTests+Movement.swift */,
+				F5B1102A020000000000002F /* FeatureEngineTests+Persistence.swift */,
+				F5B1102A020000000000002D /* FeatureEngineTests+Places.swift */,
+				F5B1102A020000000000002B /* FeatureEngineTests+Planning.swift */,
+				F5B1102A0200000000000029 /* FeatureEngineTests+Sensors.swift */,
+				F5B1102A0200000000000027 /* FeatureEngineTests+Sleep.swift */,
+				F5B1102A0200000000000025 /* FeatureEngineTests+Transit.swift */,
+				F5B1102A0200000000000023 /* FeatureEngineTests+Watch.swift */,
+				F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */,
+				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */,
@@ -681,6 +852,31 @@
 			isa = PBXGroup;
 			children = (
 				F10000000000000000000002 /* AppModel.swift */,
+				F5B1102A0200000000000032 /* AppModelPolicies.swift */,
+				F5B1102A0200000000000030 /* AppModelSupportTypes.swift */,
+				F5B1102A020000000000002E /* AppModel+ActualEditing.swift */,
+				F5B1102A020000000000002C /* AppModel+Backup.swift */,
+				F5B1102A020000000000002A /* AppModel+Bootstrap.swift */,
+				F5B1102A0200000000000028 /* AppModel+Classification.swift */,
+				F5B1102A0200000000000026 /* AppModel+DayData.swift */,
+				F5B1102A0200000000000024 /* AppModel+EditHistory.swift */,
+				F5B1102A0200000000000022 /* AppModel+Export.swift */,
+				F5B1102A0200000000000020 /* AppModel+ExternalData.swift */,
+				F5B1102A020000000000001E /* AppModel+FrequentPlaces.swift */,
+				F5B1102A020000000000001C /* AppModel+Lifecycle.swift */,
+				F5B1102A020000000000001A /* AppModel+LocationCollection.swift */,
+				F5B1102A0200000000000018 /* AppModel+MapEditing.swift */,
+				F5B1102A0200000000000016 /* AppModel+Memos.swift */,
+				F5B1102A0200000000000014 /* AppModel+Navigation.swift */,
+				F5B1102A0200000000000012 /* AppModel+Permissions.swift */,
+				F5B1102A0200000000000010 /* AppModel+Persistence.swift */,
+				F5B1102A020000000000000E /* AppModel+Plans.swift */,
+				F5B1102A020000000000000C /* AppModel+Settings.swift */,
+				F5B1102A020000000000000A /* AppModel+Steps.swift */,
+				F5B1102A0200000000000008 /* AppModel+WatchHealth.swift */,
+				F5B1102A0200000000000006 /* AppModel+WatchSummary.swift */,
+				F5B1102A0200000000000004 /* AppModel+Weather.swift */,
+				F5B1102A0200000000000002 /* AppModel+WidgetLiveActivity.swift */,
 				F10000000000000000000018 /* NavigationModels.swift */,
 				F10000000000000000000019 /* CatPresentation.swift */,
 				F1000000000000000000001A /* TimelineInteractionEngine.swift */,
@@ -701,7 +897,21 @@
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
 				F10000000000000000000013 /* SensorFusion.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
-				F10000000000000000000014 /* AppleIntegrations.swift */,
+				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
+				F5B1102A020000000000001B /* AppleCalendarService.swift */,
+				F5B1102A0200000000000019 /* ApplePhotoLibraryService.swift */,
+				F5B1102A0200000000000017 /* AppleHealthService.swift */,
+				F5B1102A0200000000000015 /* AppleWeatherContextService.swift */,
+				F5B1102A0200000000000013 /* AirQualityContextService.swift */,
+				F5B1102A0200000000000011 /* AirPodsActivityService.swift */,
+				F5B1102A020000000000000F /* CurrentConnectedWiFiService.swift */,
+				F5B1102A020000000000000D /* DeviceStillnessTracker.swift */,
+				F5B1102A020000000000000B /* AppleSensorCollector.swift */,
+				F5B1102A0200000000000009 /* AppleSensorCollector+Updates.swift */,
+				F5B1102A0200000000000007 /* AppleMotionHistoryService.swift */,
+				F5B1102A0200000000000005 /* AppleTransportContextService.swift */,
+				F5B1102A0200000000000003 /* VoiceMemoServices.swift */,
+				F5B1102A0200000000000001 /* PlanNotificationScheduler.swift */,
 				F1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift */,
 				F1000000000000000000F0C1 /* GoogleCalendarAccount.swift */,
 				F60000000000000000000001 /* HealthKitTypeCatalog.swift */,
@@ -1124,6 +1334,31 @@
 			files = (
 				A10000000000000000000001 /* TaptionPlanApp.swift in Sources */,
 				A10000000000000000000002 /* AppModel.swift in Sources */,
+				A5B1102A0200000000000033 /* AppModelPolicies.swift in Sources */,
+				A5B1102A0200000000000031 /* AppModelSupportTypes.swift in Sources */,
+				A5B1102A020000000000002F /* AppModel+ActualEditing.swift in Sources */,
+				A5B1102A020000000000002D /* AppModel+Backup.swift in Sources */,
+				A5B1102A020000000000002B /* AppModel+Bootstrap.swift in Sources */,
+				A5B1102A0200000000000029 /* AppModel+Classification.swift in Sources */,
+				A5B1102A0200000000000027 /* AppModel+DayData.swift in Sources */,
+				A5B1102A0200000000000025 /* AppModel+EditHistory.swift in Sources */,
+				A5B1102A0200000000000023 /* AppModel+Export.swift in Sources */,
+				A5B1102A0200000000000021 /* AppModel+ExternalData.swift in Sources */,
+				A5B1102A020000000000001F /* AppModel+FrequentPlaces.swift in Sources */,
+				A5B1102A020000000000001D /* AppModel+Lifecycle.swift in Sources */,
+				A5B1102A020000000000001B /* AppModel+LocationCollection.swift in Sources */,
+				A5B1102A0200000000000019 /* AppModel+MapEditing.swift in Sources */,
+				A5B1102A0200000000000017 /* AppModel+Memos.swift in Sources */,
+				A5B1102A0200000000000015 /* AppModel+Navigation.swift in Sources */,
+				A5B1102A0200000000000013 /* AppModel+Permissions.swift in Sources */,
+				A5B1102A0200000000000011 /* AppModel+Persistence.swift in Sources */,
+				A5B1102A020000000000000F /* AppModel+Plans.swift in Sources */,
+				A5B1102A020000000000000D /* AppModel+Settings.swift in Sources */,
+				A5B1102A020000000000000B /* AppModel+Steps.swift in Sources */,
+				A5B1102A0200000000000009 /* AppModel+WatchHealth.swift in Sources */,
+				A5B1102A0200000000000007 /* AppModel+WatchSummary.swift in Sources */,
+				A5B1102A0200000000000005 /* AppModel+Weather.swift in Sources */,
+				A5B1102A0200000000000003 /* AppModel+WidgetLiveActivity.swift in Sources */,
 				A10000000000000000000003 /* PlanItem.swift in Sources */,
 				A10000000000000000000004 /* Theme.swift in Sources */,
 				A10000000000000000000005 /* AppShellView.swift in Sources */,
@@ -1177,7 +1412,21 @@
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A10000000000000000000013 /* SensorFusion.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
-				A10000000000000000000014 /* AppleIntegrations.swift in Sources */,
+				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
+				A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */,
+				A5B1102A020000000000001A /* ApplePhotoLibraryService.swift in Sources */,
+				A5B1102A0200000000000018 /* AppleHealthService.swift in Sources */,
+				A5B1102A0200000000000016 /* AppleWeatherContextService.swift in Sources */,
+				A5B1102A0200000000000014 /* AirQualityContextService.swift in Sources */,
+				A5B1102A0200000000000012 /* AirPodsActivityService.swift in Sources */,
+				A5B1102A0200000000000010 /* CurrentConnectedWiFiService.swift in Sources */,
+				A5B1102A020000000000000E /* DeviceStillnessTracker.swift in Sources */,
+				A5B1102A020000000000000C /* AppleSensorCollector.swift in Sources */,
+				A5B1102A020000000000000A /* AppleSensorCollector+Updates.swift in Sources */,
+				A5B1102A0200000000000008 /* AppleMotionHistoryService.swift in Sources */,
+				A5B1102A0200000000000006 /* AppleTransportContextService.swift in Sources */,
+				A5B1102A0200000000000004 /* VoiceMemoServices.swift in Sources */,
+				A5B1102A0200000000000002 /* PlanNotificationScheduler.swift in Sources */,
 				A1000000000000000B1101A3 /* SensorEfficiencyPolicies.swift in Sources */,
 				A1000000000000000000F0C1 /* GoogleCalendarAccount.swift in Sources */,
 				A60000000000000000000001 /* HealthKitTypeCatalog.swift in Sources */,
@@ -1245,6 +1494,37 @@
 			files = (
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
+				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
+				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
+				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,
+				A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */,
+				A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */,
+				A5B1102A0200000000000052 /* MapHomePresencePolicyTests.swift in Sources */,
+				A5B1102A0200000000000050 /* MapHomeGrowthPolicyTests.swift in Sources */,
+				A5B1102A020000000000004E /* TransitBoardingPersistenceTests.swift in Sources */,
+				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
+				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
+				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
+				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,
+				A5B1102A0200000000000044 /* MapHomeDateStripTests.swift in Sources */,
+				A5B1102A0200000000000042 /* RawSensorReplayTests.swift in Sources */,
+				A5B1102A0200000000000040 /* OfficeStayAbsorptionTests.swift in Sources */,
+				A5B1102A020000000000003E /* CarAudioTravelConfirmationTests.swift in Sources */,
+				A5B1102A020000000000003C /* NLEMultiDayTests.swift in Sources */,
+				A5B1102A020000000000003A /* PlaybackPathSmoothingTests.swift in Sources */,
+				A5B1102A0200000000000038 /* FeatureEngineTests+Classification.swift in Sources */,
+				A5B1102A0200000000000036 /* FeatureEngineTests+Health.swift in Sources */,
+				A5B1102A0200000000000034 /* FeatureEngineTests+Map.swift in Sources */,
+				A5B1102A0200000000000032 /* FeatureEngineTests+Movement.swift in Sources */,
+				A5B1102A0200000000000030 /* FeatureEngineTests+Persistence.swift in Sources */,
+				A5B1102A020000000000002E /* FeatureEngineTests+Places.swift in Sources */,
+				A5B1102A020000000000002C /* FeatureEngineTests+Planning.swift in Sources */,
+				A5B1102A020000000000002A /* FeatureEngineTests+Sensors.swift in Sources */,
+				A5B1102A0200000000000028 /* FeatureEngineTests+Sleep.swift in Sources */,
+				A5B1102A0200000000000026 /* FeatureEngineTests+Transit.swift in Sources */,
+				A5B1102A0200000000000024 /* FeatureEngineTests+Watch.swift in Sources */,
+				A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */,
+				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */,
