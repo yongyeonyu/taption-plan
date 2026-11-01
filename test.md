@@ -5094,3 +5094,4 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## WTH1101A03 (2026-11-01)
 - 단위(시뮬레이터): `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(`build/validation/WTH1101A03/unit.xcresult`). 가드 통과.
 - 기기: 아이폰 11 Pro Debug 빌드·설치 성공. 화면 확인은 대표.
+- 기기 화면(대표, 2026-11-01): 지난 칸이 흐리게, 남은 칸이 또렷하게 보임 확인 → 완료.
