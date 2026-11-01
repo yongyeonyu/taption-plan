@@ -148,6 +148,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case ship
     case airplane
     case cycling
+    case health
 
     var isMoving: Bool {
         switch self {
@@ -159,95 +160,39 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
-    var sceneBackgroundSymbol: String {
-        switch self {
-        case .activity: "house.fill"
-        case .computer, .company: "desktopcomputer"
-        case .school, .reading: "books.vertical.fill"
-        case .hobby: "sparkles"
-        case .sleeping: "bed.double.fill"
-        case .movement, .walking, .running, .cycling: "figure.walk"
-        case .eating: "fork.knife"
-        case .exercise: "dumbbell.fill"
-        case .unconfirmed: "questionmark"
-        case .car, .privateVehicle: "car.fill"
-        case .subway: "tram.fill"
-        case .bus: "bus.fill"
-        case .ship: "water.waves"
-        case .airplane: "airplane"
-        }
-    }
-
-    var sceneBackgroundTintHex: String {
-        switch self {
-        case .activity: "#C67A3E"
-        case .computer, .company: "#4A6FA5"
-        case .school, .reading: "#5B8C6E"
-        case .hobby: "#C99A3E"
-        case .sleeping: "#777FA8"
-        case .movement, .walking, .running, .cycling: "#71A393"
-        case .eating: "#D28B57"
-        case .exercise: "#C25548"
-        case .unconfirmed: "#8A8174"
-        case .car, .subway, .privateVehicle, .bus, .ship, .airplane: "#6887A7"
-        }
-    }
-
     var catAccessory: MapHomeCatWorkAccessory? {
         switch self {
         case .company: .tie
+        case .computer: .laptop
         case .school: .glasses
+        case .reading: .book
+        case .exercise: .dumbbell
+        case .health: .heart
         default: nil
         }
     }
 
-        /// 지도 배지의 흰 고양이 스프라이트로 매핑한다. 졸라맨 동작을 고양이
-    /// 동작으로 옮겨 같은 상황(이동·업무·수면 등)에서 어울리는 포즈를 쓴다.
+    /// 대표 지시: 행동 분류마다 화랑이 동작이 전부 달라야 한다. 시간에 따라 섞지 않고 하나로 고정한다.
     var catAction: TaptionCatAnimationAction {
-        catAction(seed: 0)
-    }
-
-    /// 정지 상태 카테고리도 살아 움직이도록 다양한 고양이 동작으로 매핑한다.
-    /// `seed`(위치·시간 기반)로 여러 동작을 안정적으로 골라, 운동 등은
-    /// 낚시대·공놀이·스트레칭·꾹꾹이 등을 번갈아 보여준다.
-    func catAction(seed: Int) -> TaptionCatAnimationAction {
         switch self {
-        case .running: return .running
-        case .movement, .walking, .car, .subway,
-             .privateVehicle, .bus, .ship, .airplane, .cycling:
-            return .walking
-        case .sleeping: return .sleeping
-        // 식사: 먹기 위주로 가끔 그루밍
-        case .eating:
-            let meal: [TaptionCatAnimationAction] = [
-                .eating, .eating, .eating, .grooming, .eating, .sitting,
-            ]
-            return meal[abs(seed) % meal.count]
-        case .computer, .reading: return .walking
-        case .company, .school: return .sitting
-        // 취미: 놀이 동작을 최대한 다양하게
-        case .hobby:
-            let play: [TaptionCatAnimationAction] = [
-                .ballPlay, .fishingPlay, .stretching, .kneading,
-                .ballPlay, .startled, .fishingPlay, .stretching,
-            ]
-            return play[abs(seed) % play.count]
-        case .exercise: return .running
-        // 활동: 그루밍 위주로 앉기·스트레칭·하품 섞어 자연스럽게
-        case .activity:
-            let idle: [TaptionCatAnimationAction] = [
-                .grooming, .sitting, .stretching, .grooming,
-                .yawning, .kneading, .grooming, .sitting,
-            ]
-            return idle[abs(seed) % idle.count]
-        case .unconfirmed: return .startled
+        case .running: .running
+        case .movement, .walking, .car, .subway, .privateVehicle, .bus, .ship, .airplane, .cycling: .walking
+        case .sleeping: .sleeping
+        case .eating: .eating
+        case .computer, .company: .kneading
+        case .reading, .school: .sitting
+        case .hobby: .fishingPlay
+        case .exercise: .stretching
+        case .health: .yawning
+        case .activity: .grooming
+        case .unconfirmed: .startled
         }
     }
 
     var animatesPresentation: Bool {
         switch self {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .eating,
-             .activity, .exercise, .unconfirmed:
+             .activity, .exercise, .health, .unconfirmed:
             true
         default:
             isMoving
@@ -279,6 +224,7 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         case .ship: return t("배", "Ship")
         case .airplane: return t("비행기", "Airplane")
         case .cycling: return t("자전거", "Cycling")
+        case .health: return t("건강", "Health")
         }
     }
 }
@@ -286,6 +232,10 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
 enum MapHomeCatWorkAccessory: Equatable, Sendable {
     case tie
     case glasses
+    case laptop
+    case book
+    case dumbbell
+    case heart
 }
 
 enum MapHomeStickmanActionResolver {
@@ -597,6 +547,7 @@ enum MapHomeStickmanActionResolver {
         case "movement": .movement
         case "eating", "food": .eating
         case "exercise": .exercise
+        case "health": .health
         case "unconfirmed", "unknown": .unconfirmed
         default: nil
         }
@@ -802,47 +753,30 @@ enum MapHomeCatActivityMotion {
     }
 }
 
+/// 화면에서 화랑이가 왼쪽·오른쪽 어디로 가는지 정한다. 거의 위아래로 가면 이전 방향을 유지해 좌우로 튀지 않게 한다.
+@MainActor
+enum MapHomeStickmanFacing {
+    private static var last = false
+
+    static func facesLeft(headingDegrees: Double, cameraHeading: Double) -> Bool {
+        last = resolve(headingDegrees: headingDegrees, cameraHeading: cameraHeading, previous: last)
+        return last
+    }
+
+    nonisolated static func resolve(headingDegrees: Double, cameraHeading: Double, previous: Bool) -> Bool {
+        guard headingDegrees.isFinite, cameraHeading.isFinite else { return previous }
+        let horizontal = sin((headingDegrees - cameraHeading) * .pi / 180)
+        return abs(horizontal) < 0.26 ? previous : horizontal < 0
+    }
+}
+
 enum MapHomeCatSceneSizing {
     static let spriteWidth: CGFloat = 52
-    static let spriteWidthToCanvasRatio: CGFloat = 0.86
+    static let spriteWidthToCanvasRatio: CGFloat = 1.5
 
     static func spriteScale(forCanvasSize size: CGFloat) -> CGFloat {
         guard size.isFinite, size > 0 else { return 0 }
         return size * spriteWidthToCanvasRatio / spriteWidth
-    }
-}
-
-private struct MapHomeCatSceneBackdrop: View {
-    let action: MapHomeStickmanAction
-    let size: CGFloat
-
-    private var tint: Color { Color(hex: action.sceneBackgroundTintHex) }
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [tint.opacity(0.22), Color.tpSurface.opacity(0.96)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            Circle()
-                .stroke(tint.opacity(0.34), lineWidth: size * 0.035)
-                .padding(size * 0.07)
-            Image(systemName: action.sceneBackgroundSymbol)
-                .font(.system(size: size * 0.43, weight: .semibold))
-                .foregroundStyle(tint.opacity(0.28))
-                .offset(x: size * 0.19, y: -size * 0.17)
-            Capsule()
-                .fill(tint.opacity(0.38))
-                .frame(width: size * 0.62, height: max(1, size * 0.04))
-                .offset(y: size * 0.31)
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
     }
 }
 
@@ -853,6 +787,8 @@ private struct MapHomeCatActivityScene: View {
     let size: CGFloat
     let reducesMotion: Bool
     var leanDegrees = 0.0
+    var facesLeft = false
+    var hatAssetName: String? = nil
 
     private var wave: CGFloat {
         reducesMotion ? 0 : CGFloat(MapHomeStickmanAnimationEngine.oscillation(for: phase))
@@ -860,32 +796,23 @@ private struct MapHomeCatActivityScene: View {
 
     var body: some View {
         ZStack {
-            MapHomeCatSceneBackdrop(action: action, size: size)
-            if action == .exercise {
-                Circle()
-                    .stroke(Color.tpSecondary.opacity(0.75), lineWidth: 2)
-                    .overlay {
-                        ForEach(0..<3, id: \.self) { spoke in
-                            Capsule()
-                                .fill(Color.tpSecondary.opacity(0.55))
-                                .frame(width: size * 0.72, height: 1)
-                                .rotationEffect(.degrees(Double(spoke) * 60))
-                        }
-                        .rotationEffect(.degrees(reducesMotion ? 0 : Double(phase) * 60))
-                    }
-                    .frame(width: size * 0.80, height: size * 0.80)
+            ZStack(alignment: .topLeading) {
+                let sprite = TaptionCatAtlasSprite(style: "white", action: catAction, frame: phase)
+                sprite
+                if let hatAssetName {
+                    let anchor = MapHomeHatHeadAnchors.table[sprite.actionIndex][((phase % 6) + 6) % 6]
+                    Image(hatAssetName)
+                        .resizable()
+                        .frame(width: 19, height: 19 * 60 / 68)
+                        // 모자 아래쪽이 귀 끝보다 7pt 내려와 머리에 씌워진다.
+                        .position(x: anchor.x, y: anchor.y + 7 - 19 * 30 / 68)
+                }
             }
-            TaptionCatAtlasSprite(style: "white", action: catAction, frame: phase)
+            .frame(width: MapHomeCatSceneSizing.spriteWidth, height: 32)
                 .scaleEffect(MapHomeCatSceneSizing.spriteScale(forCanvasSize: size))
-                .offset(
-                    x: action == .computer || action == .company || action == .school || action == .reading
-                        ? wave * size * 0.11
-                        : 0,
-                    y: action == .computer || action == .company || action == .school || action == .reading
-                        ? size * 0.12
-                        : size * 0.10
-                )
-                .rotationEffect(.degrees(action == .unconfirmed ? Double(wave) * 9 : leanDegrees))
+                .scaleEffect(x: facesLeft ? -1 : 1, y: 1)
+                .offset(y: size * (action == .computer || action == .company || action == .school || action == .reading ? 0.12 : 0.10))
+                .rotationEffect(.degrees(action == .unconfirmed ? Double(wave) * 9 : facesLeft ? -leanDegrees : leanDegrees))
             if let accessory = action.catAccessory {
                 catWorkAccessory(accessory)
             }
@@ -909,27 +836,27 @@ private struct MapHomeCatActivityScene: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(Circle())
     }
 
     @ViewBuilder
     private func catWorkAccessory(_ accessory: MapHomeCatWorkAccessory) -> some View {
         switch accessory {
-        case .tie:
-            Image(systemName: "tie.fill")
-                .font(.system(size: size * 0.21, weight: .black))
-                .foregroundStyle(Color(hex: "#C74D57"))
-                .shadow(color: .white.opacity(0.95), radius: 1)
-                .offset(x: -size * 0.02, y: size * 0.12)
-                .accessibilityHidden(true)
-        case .glasses:
-            Image(systemName: "eyeglasses")
-                .font(.system(size: size * 0.25, weight: .bold))
-                .foregroundStyle(Color(hex: "#493B35"))
-                .shadow(color: .white.opacity(0.95), radius: 1)
-                .offset(x: 0, y: -size * 0.16)
-                .accessibilityHidden(true)
+        case .tie: prop("tie.fill", "#C74D57", size: 0.21, x: -0.07, y: 0.22)
+        case .glasses: prop("eyeglasses", "#493B35", size: 0.30, x: 0, y: 0.02)
+        case .laptop: prop("laptopcomputer", "#5A6B7C", size: 0.36, x: -0.02, y: 0.34)
+        case .book: prop("book.fill", "#3F6FB0", size: 0.26, x: 0, y: 0.28)
+        case .dumbbell: prop("dumbbell.fill", "#493B35", size: 0.26, x: 0.32, y: -0.26)
+        case .heart: prop("heart.fill", "#E2506A", size: 0.24, x: 0.30, y: -0.24)
         }
+    }
+
+    private func prop(_ symbol: String, _ hex: String, size ratio: CGFloat, x: CGFloat, y: CGFloat) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * ratio, weight: .bold))
+            .foregroundStyle(Color(hex: hex))
+            .shadow(color: .white.opacity(0.95), radius: 1)
+            .offset(x: size * x, y: size * y)
+            .accessibilityHidden(true)
     }
 }
 
@@ -1031,6 +958,7 @@ struct MapHomeStickmanMarker: View {
     var routePhase: MapHomeStickmanRoutePhase = .actual
     var speedMetersPerSecond: Double? = nil
     var equippedAccessoryID: String? = nil
+    var facesLeft = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
@@ -1056,11 +984,8 @@ struct MapHomeStickmanMarker: View {
             let phase = action.isMoving && animationPhase == nil
                 ? Int(Double(basePhase) * tier.frameRateMultiplier)
                 : basePhase
-            let seed = Int(context.date.timeIntervalSinceReferenceDate / 16)
-            // 이동 중이면 속도 구간 동작, 정지면 활동별 다양한 동작.
-            let catAction = action.isMoving
-                ? tier.catAction
-                : action.catAction(seed: seed)
+            // 이동 중이면 속도 구간 동작, 정지면 활동별 동작.
+            let catAction = action.isMoving ? tier.catAction : action.catAction
             ZStack {
                 // 스피드 라인 — 빠를수록 뒤로 더 많이 끌린다.
                 if tier.speedLines > 0 {
@@ -1074,7 +999,7 @@ struct MapHomeStickmanMarker: View {
                                 .frame(width: 6 + CGFloat(i) * 2, height: 1.6)
                         }
                     }
-                    .offset(x: -Self.size.width * 0.5)
+                    .offset(x: Self.size.width * (facesLeft ? 0.5 : -0.5))
                 }
                 MapHomeCatActivityScene(
                     action: action,
@@ -1082,11 +1007,12 @@ struct MapHomeStickmanMarker: View {
                     phase: phase,
                     size: Self.size.width,
                     reducesMotion: isStatic,
-                    leanDegrees: tier.leanDegrees
+                    leanDegrees: tier.leanDegrees,
+                    facesLeft: facesLeft && action.isMoving,
+                    hatAssetName: MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
                 )
-                if let accessorySymbol = MapHomeGrowthAccessoryCatalog.symbol(
-                    for: equippedAccessoryID
-                ) {
+                if MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID) == nil,
+                   let accessorySymbol = MapHomeGrowthAccessoryCatalog.symbol(for: equippedAccessoryID) {
                     Image(systemName: accessorySymbol)
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .black))
                         .foregroundStyle(Color(hex: "#D94772"))
@@ -1104,16 +1030,7 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .background(
-            (tier.isPikachu ? Color.yellow.opacity(0.16) : Color(hex: "#FBF6EA").opacity(0.96)),
-            in: Circle()
-        )
-        .overlay {
-            Circle().stroke(
-                tier.isPikachu ? Color.yellow.opacity(0.9) : routePhase.color.opacity(0.90),
-                lineWidth: tier.isPikachu ? 1.6 : 1.25
-            )
-        }
+        .opacity(routePhase == .forecast ? 0.8 : 1)
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
     }
@@ -1133,15 +1050,9 @@ struct MapHomeStickmanGlyph: View {
                 paused: isStatic
             )
         ) { context in
-            // CATM0926A04: 대분류마다 자기 동작 배열을 시간에 따라 순환시켜
-            // 각기 다른 동작으로 움직이게 한다. 카테고리별 위상 오프셋으로
-            // 같은 화면의 화랑이들이 동시에 같은 포즈로 겹치지 않게 한다.
-            let cyclingAction = isStatic
-                ? action.catAction
-                : action.catAction(seed: MapHomeStickmanGlyph.actionSeed(at: context.date, for: action))
             MapHomeCatActivityScene(
                 action: action,
-                catAction: cyclingAction,
+                catAction: action.catAction,
                 phase: MapHomeStickmanAnimationEngine.catPhase(
                     at: context.date,
                     reducesMotion: isStatic
@@ -1152,13 +1063,5 @@ struct MapHomeStickmanGlyph: View {
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
-    }
-
-    /// 동작 하나를 약 9.6초 유지한 뒤 다음 동작으로 넘어가고, 카테고리별
-    /// 위상 오프셋을 더해 여러 화랑이가 동시에 같은 포즈가 되지 않게 한다.
-    private static func actionSeed(at date: Date, for action: MapHomeStickmanAction) -> Int {
-        let step = Int(date.timeIntervalSinceReferenceDate / 9.6)
-        let offset = MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0
-        return step + offset
     }
 }

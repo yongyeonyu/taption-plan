@@ -146,6 +146,11 @@ enum MapHomeGrowthAccessoryCatalog {
         return MapHomeLandmarkCatalog.candidates.first { $0.accessoryID == accessoryID }
     }
 
+    /// 화랑이 머리에 쓰는 모자 그림(ACC1101A01). 옛 장식 id처럼 랜드마크를 못 찾으면 nil이다.
+    static func hatAssetName(for accessoryID: String?) -> String? {
+        landmark(for: accessoryID).map { "Hat_" + $0.id.replacingOccurrences(of: ".", with: "_") }
+    }
+
     /// 화랑이 아이콘에 달리는 무늬. 랜드마크 장식은 그 랜드마크의 심볼(건축·자연·문화)을 쓰고,
     /// 옛 장식 id처럼 랜드마크를 못 찾으면 예전처럼 id로 고른 기본 심볼을 쓴다.
     static func symbol(for accessoryID: String?) -> String? {

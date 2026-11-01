@@ -434,6 +434,16 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(history.season.streak, 0)
     }
 
+    func testEveryLandmarkHasHatAndOldAccessoryFallsBackToSymbol() {
+        XCTAssertEqual(MapHomeLandmarkCatalog.candidates.count, 52)
+        for candidate in MapHomeLandmarkCatalog.candidates {
+            let name = MapHomeGrowthAccessoryCatalog.hatAssetName(for: candidate.accessoryID)
+            XCTAssertNotNil(name.flatMap { UIImage(named: $0) }, candidate.id)
+        }
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.hatAssetName(for: "cat.accessory.001"))
+        XCTAssertNotNil(MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.001"))
+    }
+
     func testWeeklyRewardUnlocksAndEquipsAccessory() {
         var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
         history.season.pendingWeeklyRewards = 1

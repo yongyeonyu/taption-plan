@@ -711,7 +711,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
                 view = MapHomeAppleHostedAnnotationView(annotation: nil, reuseIdentifier: nil)
                 walkerView = view
             }
-            configureWalker(view, annotation: walker)
+            configureWalker(view, annotation: walker, cameraHeading: mapView.camera.heading)
             updateWalkerPosition(in: mapView)
             if !parent.centersPlayback {
                 lastCenteredPlaybackCoordinate = nil
@@ -759,7 +759,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
 
         private func configureWalker(
             _ view: MapHomeAppleHostedAnnotationView,
-            annotation: MapHomeAppleWalkerAnnotation
+            annotation: MapHomeAppleWalkerAnnotation,
+            cameraHeading: CLLocationDirection
         ) {
             view.annotation = annotation
             view.update(
@@ -771,7 +772,11 @@ struct MapHomeAppleMap: UIViewRepresentable {
                             ? .forecast
                             : .actual,
                         speedMetersPerSecond: annotation.speedMetersPerSecond,
-                        equippedAccessoryID: annotation.equippedAccessoryID
+                        equippedAccessoryID: annotation.equippedAccessoryID,
+                        facesLeft: MapHomeStickmanFacing.facesLeft(
+                            headingDegrees: annotation.headingDegrees,
+                            cameraHeading: cameraHeading
+                        )
                     )
                 ),
                 size: MapHomeStickmanMarker.size,

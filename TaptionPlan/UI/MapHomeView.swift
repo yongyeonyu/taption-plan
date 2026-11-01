@@ -3791,7 +3791,11 @@ struct MapHomeView: View {
                         ? .forecast
                         : .actual,
                     speedMetersPerSecond: displayedSpeed,
-                    equippedAccessoryID: homeGrowthHistory.season.equippedAccessory
+                    equippedAccessoryID: homeGrowthHistory.season.equippedAccessory,
+                    facesLeft: MapHomeStickmanFacing.facesLeft(
+                        headingDegrees: playback.headingDegrees,
+                        cameraHeading: viewport?.heading ?? 0
+                    )
                     )
                     // 지도 위 화랑이는 1.5배로 보이게 한다.
                     .scaleEffect(1.5)
@@ -6949,9 +6953,8 @@ struct MapHomeView: View {
                                     .frame(width: 10, height: 10)
                                 MapHomeStickmanGlyph(
                                     action: category.stickmanAction,
-                                    size: 22
+                                    size: 44
                                 )
-                                    .frame(width: 20)
                                 Text(category.localizedTitle(language))
                                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
                                 Spacer()

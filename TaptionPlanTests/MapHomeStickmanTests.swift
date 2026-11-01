@@ -578,22 +578,15 @@ final class MapHomeStickmanTests: XCTestCase {
     }
 
     func testCatActivityScenesUseRequestedActionsAndQuarterSpeed() {
-        XCTAssertEqual(MapHomeStickmanAction.company.sceneBackgroundSymbol, "desktopcomputer")
-        XCTAssertEqual(MapHomeStickmanAction.school.sceneBackgroundSymbol, "books.vertical.fill")
         XCTAssertEqual(MapHomeStickmanAction.company.catAccessory, .tie)
         XCTAssertEqual(MapHomeStickmanAction.school.catAccessory, .glasses)
-        XCTAssertNil(MapHomeStickmanAction.computer.catAccessory)
-        XCTAssertNil(MapHomeStickmanAction.reading.catAccessory)
+        XCTAssertEqual(MapHomeStickmanAction.computer.catAccessory, .laptop)
+        XCTAssertEqual(MapHomeStickmanAction.reading.catAccessory, .book)
         XCTAssertNil(MapHomeStickmanAction.activity.catAccessory)
-        for seed in 0..<12 {
-            XCTAssertEqual(MapHomeStickmanAction.company.catAction(seed: seed), .sitting)
-            XCTAssertEqual(MapHomeStickmanAction.school.catAction(seed: seed), .sitting)
-            XCTAssertEqual(MapHomeStickmanAction.computer.catAction(seed: seed), .walking)
-            XCTAssertEqual(MapHomeStickmanAction.reading.catAction(seed: seed), .walking)
-            XCTAssertEqual(MapHomeStickmanAction.exercise.catAction(seed: seed), .running)
-            XCTAssertEqual(MapHomeStickmanAction.sleeping.catAction(seed: seed), .sleeping)
-            XCTAssertEqual(MapHomeStickmanAction.unconfirmed.catAction(seed: seed), .startled)
-        }
+        // 행동 분류마다 화랑이 동작이 전부 다르다(대표 지시, CAT1101A02).
+        let majors = MapHomeSidebarMajorCategory.all.map(\.stickmanAction.catAction)
+        XCTAssertGreaterThanOrEqual(majors.count, 10)
+        XCTAssertEqual(Set(majors).count, majors.count, "\(majors)")
         XCTAssertEqual(Set([0, 6, 12, 18].map { MapHomeCatActivityMotion.hobbyNote(for: $0) }).count, 4)
         XCTAssertEqual(
             MapHomeStickmanAnimationEngine.catFrameDuration,
@@ -609,18 +602,17 @@ final class MapHomeStickmanTests: XCTestCase {
         )
     }
 
-    func testCatSceneBackgroundCoversEveryActionWithConsistentSpriteScale() {
-        XCTAssertEqual(
-            MapHomeStickmanAction.allCases.count,
-            MapHomeStickmanAction.allCases.filter {
-                !$0.sceneBackgroundSymbol.isEmpty && !$0.sceneBackgroundTintHex.isEmpty
-            }.count
-        )
-        XCTAssertEqual(MapHomeStickmanAction.company.sceneBackgroundSymbol, "desktopcomputer")
-        XCTAssertEqual(MapHomeStickmanAction.school.sceneBackgroundSymbol, "books.vertical.fill")
-        XCTAssertEqual(MapHomeStickmanAction.sleeping.sceneBackgroundSymbol, "bed.double.fill")
-        XCTAssertEqual(MapHomeStickmanAction.ship.sceneBackgroundSymbol, "water.waves")
+    func testStickmanFacingFollowsScreenDirectionAndHoldsWhenVertical() {
+        XCTAssertFalse(MapHomeStickmanFacing.resolve(headingDegrees: 90, cameraHeading: 0, previous: true))
+        XCTAssertTrue(MapHomeStickmanFacing.resolve(headingDegrees: 270, cameraHeading: 0, previous: false))
+        // 지도가 돌아가 있으면 화면 기준으로 뒤집힌다.
+        XCTAssertTrue(MapHomeStickmanFacing.resolve(headingDegrees: 90, cameraHeading: 180, previous: false))
+        // 거의 위아래로 가면 이전 방향을 유지한다.
+        XCTAssertTrue(MapHomeStickmanFacing.resolve(headingDegrees: 5, cameraHeading: 0, previous: true))
+        XCTAssertFalse(MapHomeStickmanFacing.resolve(headingDegrees: 185, cameraHeading: 0, previous: false))
+    }
 
+    func testCatSpriteScaleIsConsistentAcrossCanvasSizes() {
         for size: CGFloat in [30, 36, 42] {
             let displayedWidthRatio =
                 MapHomeCatSceneSizing.spriteWidth
@@ -923,9 +915,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 20)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 20)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 20)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 21)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 21)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 21)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

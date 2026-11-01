@@ -296,10 +296,16 @@ struct MapHomeGrowthSheet: View {
                         equip(accessoryID)
                     } label: {
                         HStack(spacing: 10) {
-                            // 화랑이 아이콘에 달리는 무늬(랜드마크 심볼).
-                            Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
-                                .foregroundStyle(Color(hex: "#D94772"))
+                            // 화랑이가 쓰는 모자. 옛 장식은 심볼로 보인다.
+                            Group {
+                                if let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: accessoryID) {
+                                    Image(hat).resizable().scaledToFit().padding(3)
+                                } else {
+                                    Image(systemName: MapHomeGrowthAccessoryCatalog.symbol(for: accessoryID) ?? "sparkles")
+                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
+                                        .foregroundStyle(Color(hex: "#D94772"))
+                                }
+                            }
                                 .frame(width: 36, height: 36)
                                 .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
@@ -341,9 +347,16 @@ struct MapHomeGrowthSheet: View {
                     if isOwned { equip(candidate.accessoryID) }
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: isOwned ? candidate.systemImage : "lock.fill")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
-                            .foregroundStyle(isOwned ? Color(hex: "#D94772") : Color.tpSecondary.opacity(0.5))
+                        Group {
+                            if isOwned, let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: candidate.accessoryID) {
+                                Image(hat).resizable().scaledToFit()
+                            } else {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                                    .foregroundStyle(Color.tpSecondary.opacity(0.5))
+                            }
+                        }
+                        .frame(height: 26)
                         Text(language == .english ? candidate.englishName : candidate.name)
                             .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
