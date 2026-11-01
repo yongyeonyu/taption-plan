@@ -4556,7 +4556,7 @@ private struct TimelineDetailPanel: View {
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 6)
-                    .background(Color.tpInk, in: Capsule())
+                    .background(Color.tpPrimaryFill, in: Capsule())
             }
             .accessibilityLabel("이동수단 변경")
             .accessibilityValue(routeModeName(travel.mode))

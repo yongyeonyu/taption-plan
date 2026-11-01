@@ -643,7 +643,7 @@ struct MemoDetailView: View {
             }
         }
         .padding(10)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 15))
         .overlay {
             RoundedRectangle(cornerRadius: 15)
                 .stroke(Color.tpControlStroke, lineWidth: 1)
@@ -837,7 +837,7 @@ struct CatPickerView: View {
                                 }
                                 .padding(.horizontal, 8)
                                 .frame(maxWidth: .infinity, minHeight: 59)
-                                .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
+                                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: TaptionRadius.panel)
                                         .stroke(
@@ -852,7 +852,7 @@ struct CatPickerView: View {
                                             .font(.taption(size: 8, weight: .black))
                                             .foregroundStyle(.white)
                                             .frame(width: 15, height: 15)
-                                            .background(Color.tpInk, in: Circle())
+                                            .background(Color.tpPrimaryFill, in: Circle())
                                             .padding(5)
                                     }
                                 }
@@ -869,7 +869,7 @@ struct CatPickerView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
+                            .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                     }
                     .buttonStyle(.plain)
 
@@ -917,7 +917,7 @@ struct CatPickerView: View {
                 .font(.taption(size: 12, weight: .black))
                 .foregroundStyle(Color.tpInk)
                 .frame(width: 34, height: 34)
-                .background(.white.opacity(0.78), in: Circle())
+                .background(Color.tpCard.opacity(0.78), in: Circle())
                 .overlay { Circle().stroke(Color.tpLine, lineWidth: 1) }
                 .taptionTouchTarget(visualWidth: 34, visualHeight: 34)
         }
@@ -1583,7 +1583,7 @@ struct InferenceDetailView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(9)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
         .overlay {
             RoundedRectangle(cornerRadius: TaptionRadius.compact)
                 .stroke(Color.tpControlStroke, lineWidth: 1)
@@ -1706,7 +1706,7 @@ struct LocationTimelineView: View {
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(9)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.compact))
                     .overlay {
                         RoundedRectangle(cornerRadius: TaptionRadius.compact)
                             .stroke(Color.tpControlStroke, lineWidth: 1)
@@ -1715,7 +1715,7 @@ struct LocationTimelineView: View {
                     .padding(.vertical, 8)
                 }
             }
-            .background(Color.white)
+            .background(Color.tpCard)
         }
         .task(id: model.selectedDate) {
             await model.refreshSensorTimeline()
@@ -2339,7 +2339,7 @@ struct LocationTimelineView: View {
                 .foregroundStyle(Color.tpPlaceDark)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
-                .background(.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tight))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.tight))
                 .overlay {
                     RoundedRectangle(cornerRadius: TaptionRadius.tight)
                         .stroke(Color.tpPlaceDark.opacity(0.35))
@@ -2415,7 +2415,7 @@ struct WidgetPreviewView: View {
                         .foregroundStyle(Color.tpSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(.white, in: Capsule())
+                        .background(Color.tpCard, in: Capsule())
                         .overlay { Capsule().stroke(Color.tpLine) }
                 }
                 Spacer()
@@ -2458,7 +2458,7 @@ struct WidgetPreviewView: View {
             .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
         }
         .padding(14)
-        .background(.white.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.tpCard.opacity(0.94), in: RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.12), radius: 12, y: 8)
     }
 
@@ -2636,7 +2636,7 @@ struct CategorySetupView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.white)
+            .background(Color.tpCard)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(Color.tpLine).frame(height: 0.5)
             }
@@ -2742,7 +2742,7 @@ private struct DetailHeader: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 12)
-        .background(Color.white)
+        .background(Color.tpCard)
         .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
     }
 }

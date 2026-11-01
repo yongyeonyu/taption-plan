@@ -73,7 +73,7 @@ struct GoalsView: View {
                             } label: {
                                 Label("수정", systemImage: "pencil")
                             }
-                            .tint(Color.tpInk)
+                            .tint(Color.tpPrimaryFill)
                         }
                 }
 
@@ -892,7 +892,7 @@ struct GoalDetailView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.white)
+        .background(Color.tpCard)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Color.tpLine).frame(height: 0.5)
         }
@@ -1262,7 +1262,7 @@ struct GoalDetailView: View {
             }
             .font(.taption(size: 9, weight: .bold))
             .buttonStyle(.borderedProminent)
-            .tint(.tpInk)
+            .tint(Color.tpPrimaryFill)
         }
         .padding(12)
         .draftCard()
@@ -1277,7 +1277,7 @@ struct GoalDetailView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.tpInk)
+            .tint(Color.tpPrimaryFill)
             Button {
                 showsActionLinkSheet = true
             } label: {
@@ -1588,7 +1588,7 @@ struct GoalActionControls: View {
             }
             .font(.taption(size: 8.5, weight: .bold))
             .buttonStyle(.borderedProminent)
-            .tint(.tpInk)
+            .tint(Color.tpPrimaryFill)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -1672,7 +1672,7 @@ struct InlineMemoField: View {
                         : Color.tpSecondary.opacity(0.35)
                 )
                 .frame(width: 22, height: 22)
-                .background(Color.white.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
+                .background(Color.tpCard.opacity(enabled ? 0.8 : 0.35), in: RoundedRectangle(cornerRadius: 5))
                 // 버튼 간격이 3pt라 가로는 이웃과 겹치지 않는 만큼만 넓힌다.
                 .taptionHitOutset(horizontal: 1.5, vertical: 11)
         }

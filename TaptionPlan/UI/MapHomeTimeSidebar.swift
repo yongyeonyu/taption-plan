@@ -4,7 +4,8 @@ import UIKit
 extension View {
     /// 반투명 면 + 테마 선 색 얇은 테두리. 리퀴드 글래스는 가장자리 굴절 띠가 두꺼워 보여 쓰지 않는다(UIX1101B01, 대표).
     func mapHomeGlass<S: Shape>(in shape: S) -> some View {
-        background(.ultraThinMaterial, in: shape)
+        background(Color.tpGlassTint, in: shape)
+            .background(.ultraThinMaterial, in: shape)
             .overlay(shape.stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6))
     }
 }
@@ -140,10 +141,10 @@ enum MapHomeTimeSidebarViewportProjection {
 }
 
 enum MapHomeTimeSidebarStyle {
-    static let panelBackground = Color.tpSurface.opacity(0.10)
-    static let panelBorder = Color.tpLine.opacity(0.64)
-    static let numericColumnBackground = Color.tpSurface.opacity(0.10)
-    static let trackBackground = Color.tpBackground.opacity(0.62)
+    static var panelBackground: Color { Color.tpSurface.opacity(0.10) }
+    static var panelBorder: Color { Color.tpLine.opacity(0.64) }
+    static var numericColumnBackground: Color { Color.tpSurface.opacity(0.10) }
+    static var trackBackground: Color { Color.tpBackground.opacity(0.62) }
     static var handleBackground: Color { Color.tpSurface }
     static let deepPinkHex = "#D94772"
     /// 기본 테마는 분홍 손잡이, 어두운 테마는 면 위에서 읽히도록 글자 색과 같은 밝은 계열을 쓴다.
@@ -2539,9 +2540,8 @@ struct MapHomeWeatherSidebar: View {
                         )
                         .background {
                             if !isPastSpan {
-                                // 활성(남은) 칸은 회색 배경에 검정 30%를 덮고, 글자·아이콘은 흰색.
-                                Capsule().fill(Color.gray)
-                                Capsule().fill(Color.black.opacity(0.3))
+                                // 활성(남은) 칸은 테마 색으로 채우고, 글자·아이콘은 흰색.
+                                Capsule().fill(Color.tpWeatherActiveFill)
                             } else {
                                 Color.clear.mapHomeGlass(in: Capsule())
                             }

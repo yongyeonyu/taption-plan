@@ -1208,7 +1208,7 @@ struct SettingsView: View {
                     .font(.taption(size: 17))
                     .foregroundStyle(.white)
                     .frame(width: 34, height: 34)
-                    .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("내 시간표")
@@ -1234,7 +1234,7 @@ struct SettingsView: View {
                     .foregroundStyle(Color.tpSecondary)
             }
             .padding(10)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(true)
@@ -1299,7 +1299,7 @@ struct SettingsView: View {
                 content()
             }
         }
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
     }
 
@@ -2195,7 +2195,7 @@ private extension View {
     func detailCard() -> some View {
         self
             .padding(TaptionMenuMetrics.contentInset)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
+            .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card, style: .continuous))
     }
 }
 

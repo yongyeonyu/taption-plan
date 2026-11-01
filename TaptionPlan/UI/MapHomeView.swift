@@ -98,7 +98,6 @@ struct MapHomeView: View {
     /// 표시 메뉴의 경로·발자국 켜기/끄기(대표 지시, ARC1030A06). 녹화 레이어와는 별개로, 평소 화면에 적용된다.
     @AppStorage("mapHomeShowsRoutes") private var showsRoutesOnMap = true
     @AppStorage("mapHomeShowsFootprints") private var showsFootprintsOnMap = true
-    @AppStorage(TaptionUITheme.storageKey) private var uiThemeRaw = TaptionUITheme.classic.rawValue
     @AppStorage(MapHomeSidebarTimeFormat.storageKey) private var sidebarTimeFormatRaw = MapHomeSidebarTimeFormat.twentyFourHour.rawValue
     @AppStorage(MapHomeSidebarRulerInterval.storageKey) private var sidebarRulerIntervalRaw = MapHomeSidebarRulerInterval.automatic.rawValue
     @AppStorage("mapHomeMemoDisplay") private var memoDisplayRaw = MapHomeMemoDisplayMode.all.rawValue
@@ -4068,6 +4067,7 @@ struct MapHomeView: View {
         } else {
             let parts = autoLandStyleState.split(separator: "|").map(String.init)
             autoLandStyleState = ""
+            defer { TaptionUITheme.follow(mapStyle: model.settings.mapDisplayStyle) }
             guard parts.count == 2, parts[1] == current.rawValue,
                   let previous = MapDisplayStyle(rawValue: parts[0]) else { return }
             model.setMapDisplayStyle(previous)
@@ -6727,38 +6727,6 @@ struct MapHomeView: View {
     /// 메인 메뉴 묶음 제목과 카드. 항목은 카드 안에서 얇은 구분선으로 나눈다.
     /// 표시 메뉴 안의 이동 항목: 아래 토글·선택 행과 같은 글자 크기·여백·아이콘 색으로 맞춘다.
     /// 드롭다운 행: 제목과 현재 값, 위아래 화살표. 다른 메뉴 행과 같은 크기를 쓴다.
-    /// 표시 > UI 테마: 기본(양피지)과 대표가 준 남색·보라·갈색 색상표. 고르면 화면 색이 바로 바뀐다(UIX1101A04).
-    private var uiThemeRow: some View {
-        Menu {
-            Picker("", selection: Binding(
-                get: { TaptionUITheme(rawValue: uiThemeRaw) ?? .classic },
-                set: { TaptionUITheme.apply($0) }
-            )) {
-                ForEach(TaptionUITheme.allCases) { theme in
-                    Text(theme.title(language)).tag(theme)
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                displayDropdownRow(
-                    "paintpalette.fill",
-                    language.text("UI 테마", "UI theme"),
-                    (TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).title(language)
-                )
-                .overlay(alignment: .bottomLeading) {
-                    HStack(spacing: 2) {
-                        ForEach(Array((TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).swatches.enumerated()), id: \.offset) { _, color in
-                            Capsule().fill(color).frame(width: 10, height: 4)
-                        }
-                    }
-                    .padding(.leading, 38)
-                    .padding(.bottom, 3)
-                }
-            }
-        }
-        .accessibilityLabel(language.text("UI 테마 선택", "Choose UI theme"))
-    }
-
     /// 표시 > 사이드바: 사이드바에 함께 그려지는 항목과 시각 표시를 한 묶음으로 둔다(대표 지시, UIX1101A02).
     private var sidebarDisplayGroup: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -7536,8 +7504,6 @@ struct MapHomeView: View {
             .buttonStyle(.plain)
 
             if isDisplayMenuExpanded {
-                uiThemeRow
-
                 // 지도 스타일을 맨 위에 둔다. 드롭다운은 같은 행 모양으로 통일한다.
                 Menu {
                     // 판타지 지도를 맨 위에 두고, 나머지 벡터 스타일, Apple 스타일 순으로 보여 준다(대표 지시, ARC1030A04).

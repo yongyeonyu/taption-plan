@@ -107,7 +107,7 @@ struct PhotoClusterSheet: View {
                             .foregroundStyle(Color.tpInk)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 5)
-                            .background(Color.white, in: Capsule())
+                            .background(Color.tpCard, in: Capsule())
                     }
                 }
             }

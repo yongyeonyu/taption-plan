@@ -2812,7 +2812,7 @@ struct MapHomeDailyCardView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpCard.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

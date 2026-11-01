@@ -5125,3 +5125,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 전: 406개, 지움 152개, 후: 254개. 지운 것 = 기준 충족 63 + 대체됨 87 + CRS1101A01·PRF1101B01.
 - 유지: 대표 기기 확인 195, 실제 할 일·결정 32, 근거 불명 2, 대조 대상이 아닌 이번 세션 요청 25.
 - 분류는 에이전트 5개가 ID별 test.md·git·코드 검색으로 했다. 전체 379건 중 표본 28건만 직접 확인했으므로 오분류가 있을 수 있다. 원문 `build/validation/TMP1101A01/removed-entries.md`, 근거 `removed-evidence.tsv`, 전체 분류 `triage-all.json`, 내용은 git 이력에도 있다.
+
+## THM1101A01 지도 스타일과 UI 테마 통합
+- 단위 전체 `unit-all.xcresult`: 1,736건 중 통과 1,730·실패 1·건너뜀 5. 실패 `testColorTokensKeepReplacedLiterals`는 내가 시뮬레이터에 갈색 테마를 남겨 둔 상태에서 양피지 값을 비교해서 났다. 시험에서 테마를 양피지로 고정하도록 고친 뒤 `TaptionUIThemeMapTests`·`TimeScaleTests` 178건 통과(`unit-3.xcresult`). 고친 뒤 전체를 다시 돌리지는 않았다.
+- 가드: 구조 지표(AppShellView 초과는 쓰이지 않던 하단 inset 삭제로 해소)·import 경계 통과.
+- 시뮬레이터 화면(BOKKI-iPhone11): 판타지→양피지, 야간→남색, 산책→보라, 실외→갈색 전환과 지도 위치 유지를 눈으로 확인. 어두운 테마의 밝은 단추+흰 글자 결함을 찾아 `tpPrimaryFill`로 고침. 위치 권한이 없으면 테마를 바꿀 때 권한 안내가 다시 뜨고, 권한을 준 뒤 보라→갈색 전환에서는 뜨지 않았다. 달력·시간표·클립 편집기와 연한 활동 색 위 글자는 못 봄.
+- 기기: 아이폰 11 Pro Debug 빌드·설치 성공(첫 시도, 위 시험 수정·inset 삭제 전 빌드). 기기 화면은 대표 확인 전. 위젯·워치·스플래시는 테마를 따르지 않는다.

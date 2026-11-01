@@ -53,11 +53,6 @@ struct AppShellView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if Self.legacyUIEnabled && model.showsBottomBar && !showsMapHome {
-                DraftBottomNavigationBar(model: model)
-            }
-        }
         .sheet(isPresented: addPlanSheetBinding) {
             AddPlanSheet(model: model)
         }
@@ -76,10 +71,14 @@ struct AppShellView: View {
             .presentationDragIndicator(.visible)
         }
         .font(.taption(size: 17))
-        .tint(.tpInk)
+        .tint(Color.tpPrimaryFill)
         .preferredColorScheme((TaptionUITheme(rawValue: uiThemeRaw) ?? .classic).colorScheme)
         .task {
             await performInitialLaunchPreparation()
+            TaptionUITheme.follow(mapStyle: model.settings.mapDisplayStyle)
+        }
+        .onChange(of: model.settings.mapDisplayStyle) { _, style in
+            TaptionUITheme.follow(mapStyle: style)
         }
         .onOpenURL { url in
             handleOpenURL(url)
@@ -930,7 +929,7 @@ private struct RequiredPermissionGateView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func permissionCard(
@@ -977,7 +976,7 @@ private struct RequiredPermissionGateView: View {
                 .font(.taption(size: 12, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(minWidth: 78, minHeight: 38)
-                .background(Color.tpInk, in: Capsule())
+                .background(Color.tpPrimaryFill, in: Capsule())
                 .buttonStyle(.plain)
                 .disabled(requesting != nil)
             } else {
@@ -988,7 +987,7 @@ private struct RequiredPermissionGateView: View {
             }
         }
         .padding(13)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private func request(_ permission: RequiredPermission) {
@@ -1144,7 +1143,7 @@ struct PermissionOnboardingSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.white)
+        .background(Color.tpCard)
     }
 
     private var footer: some View {
@@ -1153,7 +1152,7 @@ struct PermissionOnboardingSheet: View {
                 Button("시작하기") { finish() }
                     .font(.taption(size: 11, weight: .bold))
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.tpInk)
+                    .tint(Color.tpPrimaryFill)
                     .frame(maxWidth: .infinity)
             } else {
                 Button("모두 허용") { requestRemaining() }
@@ -1174,7 +1173,7 @@ struct PermissionOnboardingSheet: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.white)
+        .background(Color.tpCard)
     }
 
     private func stepCard(
@@ -1214,7 +1213,7 @@ struct PermissionOnboardingSheet: View {
                     }
                     .font(.taption(size: 10, weight: .bold))
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.tpInk)
+                    .tint(Color.tpPrimaryFill)
                     Button("건너뛰기") {
                         skipped.insert(step.id)
                         requestError = nil
@@ -1502,7 +1501,7 @@ struct TaptionProAccessView: View {
                         .padding(.vertical, 15)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.tpInk)
+                .tint(Color.tpPrimaryFill)
             }
 
 #if DEBUG
@@ -1519,7 +1518,7 @@ struct TaptionProAccessView: View {
                         .padding(.vertical, 15)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.tpInk)
+                .tint(Color.tpPrimaryFill)
             }
 #endif
 
@@ -1554,7 +1553,7 @@ struct TaptionProAccessView: View {
                 Button(language.text("계속 사용", "Continue")) { dismiss() }
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.tpInk)
+                    .tint(Color.tpPrimaryFill)
             }
         }
         .disabled(controller.isActionInFlight)

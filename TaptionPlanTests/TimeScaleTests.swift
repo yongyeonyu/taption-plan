@@ -5512,6 +5512,10 @@ final class DesignTokenValueTests: XCTestCase {
     }
 
     func testColorTokensKeepReplacedLiterals() {
+        // 토큰 값은 양피지 기준이다. 시험 기기에 남은 지도 테마에 흔들리지 않게 고정한다.
+        let savedTheme = TaptionUITheme.current
+        TaptionUITheme.apply(.classic)
+        defer { TaptionUITheme.apply(savedTheme) }
         let expected: [(Color, Color)] = [
             (.tpControlFill, Color(red: 0.94, green: 0.94, blue: 0.95)),
             (.tpControlFillSoft, Color(red: 0.95, green: 0.95, blue: 0.96)),
@@ -6032,5 +6036,42 @@ final class MapHomeSidebarDisplaySettingsTests: XCTestCase {
         // 화면이 좁아 자동 간격이 더 넓으면 자동 간격을 쓴다(글자가 겹치지 않게).
         XCTAssertEqual(MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 720, trackHeight: 300, minimumStep: 5),
                        MapHomeTimeSidebarMath.minuteRulerStep(durationMinutes: 720, trackHeight: 300))
+    }
+}
+
+/// 지도 스타일이 테마를 정한다(THM1101A01).
+final class TaptionUIThemeMapTests: XCTestCase {
+    func testEachMapStyleHasOneTheme() {
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreRPG), .classic)
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreNight), .navy)
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreCasual), .purple)
+        XCTAssertEqual(TaptionUITheme.forMap(.mapLibreContrast), .brown)
+        XCTAssertEqual(TaptionUITheme.forMap(.standard), .classic)
+        XCTAssertEqual(TaptionUITheme.forMap(.hybrid), .classic)
+    }
+
+    func testDarkPalettesKeepReadableContrast() throws {
+        for theme in [TaptionUITheme.navy, .purple, .brown] {
+            let palette = try XCTUnwrap(theme.palette)
+            XCTAssertGreaterThanOrEqual(contrast(.white, palette.accent), 4.5, "\(theme) 강조 위 흰 글자")
+            XCTAssertGreaterThanOrEqual(contrast(palette.accent, palette.surface), 3, "\(theme) 면 위 강조")
+            XCTAssertGreaterThanOrEqual(contrast(palette.secondary, palette.surface), 4.5, "\(theme) 면 위 보조 글자")
+            XCTAssertGreaterThanOrEqual(contrast(palette.ink, palette.surface), 7, "\(theme) 면 위 글자")
+        }
+    }
+
+    private func contrast(_ first: Color, _ second: Color) -> Double {
+        let values = [luminance(first), luminance(second)].sorted(by: >)
+        return (values[0] + 0.05) / (values[1] + 0.05)
+    }
+
+    private func luminance(_ color: Color) -> Double {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let channel: (CGFloat) -> Double = { value in
+            let value = Double(value)
+            return value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
     }
 }

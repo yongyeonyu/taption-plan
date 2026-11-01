@@ -86,7 +86,7 @@ struct CategoryManagerView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.card))
     }
 
     private func detailRow(

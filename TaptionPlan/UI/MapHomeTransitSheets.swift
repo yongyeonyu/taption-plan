@@ -313,13 +313,13 @@ struct MapHomeTransitLocationsSheet: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 44)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
 
                 Button(language.text("검색", "Search")) { search() }
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
-                    .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 13))
                     .buttonStyle(.plain)
                     .disabled(
                         searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -432,7 +432,7 @@ struct MapHomeTransitLocationsSheet: View {
                 TextField(language.text("이름", "Name"), text: $name)
                     .padding(.horizontal, 12)
                     .frame(height: 44)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
                 Button(language.text("추가", "Add")) { addLocation() }
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
@@ -682,7 +682,7 @@ struct MapHomeTransitLocationNameEditor: View {
             TextField(language.text("이름", "Name"), text: $name)
                 .padding(.horizontal, 12)
                 .frame(height: 44)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
             Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
                 HStack {
                     Text(language.text("층수", "Floor"))
@@ -711,7 +711,7 @@ struct MapHomeTransitLocationNameEditor: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
-                .background(Color.tpInk, in: RoundedRectangle(cornerRadius: 13))
+                .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 13))
                 .buttonStyle(.plain)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }

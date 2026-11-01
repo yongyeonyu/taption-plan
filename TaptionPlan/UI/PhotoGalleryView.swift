@@ -143,7 +143,7 @@ private struct PhotoGalleryClusterTile: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(10)
-        .background(Color.white)
+        .background(Color.tpCard)
         .clipShape(
             RoundedRectangle(
                 cornerRadius: TaptionRadius.card,

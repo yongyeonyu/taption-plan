@@ -55,7 +55,7 @@ struct PlanEditorSheet: View {
                     hierarchyCard
                     Toggle("중요 계획", isOn: $isImportant)
                         .font(.taption(size: 10.5, weight: .bold))
-                        .tint(Color.tpInk)
+                        .tint(Color.tpPrimaryFill)
                         .padding(11)
                         .draftCard(radius: 13)
 

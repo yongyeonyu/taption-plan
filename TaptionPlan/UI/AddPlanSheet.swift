@@ -235,7 +235,7 @@ struct AddPlanSheet: View {
         .padding(.horizontal, 18)
         .padding(.top, 12)
         .padding(.bottom, 14)
-        .background(Color.white)
+        .background(Color.tpCard)
     }
 
     private var quickSheetContent: some View {
@@ -1170,7 +1170,7 @@ struct GoalRepeatRulesEditor: View {
                 .textInputAutocapitalization(.sentences)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 7)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
+                .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
 
             HStack(spacing: TaptionSpacing.tight) {
                 ForEach(weekdayOrder, id: \.value) { day in
@@ -1233,7 +1233,7 @@ struct GoalRepeatRulesEditor: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
+        .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.small))
     }
 
     private func ruleBinding(_ index: Int) -> Binding<GoalRepeatRule> {
@@ -1689,7 +1689,7 @@ private struct CustomCategoryScreen: View {
                         Spacer()
                     }
                     .padding(13)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 15))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 15))
 
                     HStack {
                         Text("이름")
@@ -1700,7 +1700,7 @@ private struct CustomCategoryScreen: View {
                             .multilineTextAlignment(.trailing)
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.panel))
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("아이콘 · \(CategoryIcon.allCases.count)개")
@@ -1726,7 +1726,7 @@ private struct CustomCategoryScreen: View {
                         }
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
 
                     VStack(alignment: .leading, spacing: 9) {
                         Text("색상")
@@ -1756,7 +1756,7 @@ private struct CustomCategoryScreen: View {
                         }
                     }
                     .padding(11)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
+                    .background(Color.tpCard, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
 
                     Button {
                         onSave(name, selectedIcon, colorHex)
@@ -1766,7 +1766,7 @@ private struct CustomCategoryScreen: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 13)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
+                            .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                     }
                     .buttonStyle(.plain)
                 }
@@ -1860,7 +1860,7 @@ private struct TimeSliderScreen: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
-                            .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.field))
+                            .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.field))
                             .position(
                                 x: min(
                                     proxy.size.width - 31,
@@ -1927,20 +1927,20 @@ private struct TimeSliderScreen: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
-                        .background(Color.tpInk, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
+                        .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: TaptionRadius.tile))
                 }
                 .buttonStyle(.plain)
             }
             .padding(18)
             Spacer()
         }
-        .background(Color.white)
+        .background(Color.tpCard)
         .toolbar(.hidden, for: .navigationBar)
     }
 
     private var sliderHandle: some View {
         RoundedRectangle(cornerRadius: 6)
-            .fill(.white)
+            .fill(Color.white)
             .frame(width: 15, height: 30)
             .shadow(color: .black.opacity(0.30), radius: 3, y: 1)
             .overlay {
@@ -2119,7 +2119,7 @@ private func pickerHeader(
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 12)
-    .background(Color.white)
+    .background(Color.tpCard)
     .overlay(alignment: .bottom) { Rectangle().fill(Color.tpLine).frame(height: 0.5) }
 }
 
