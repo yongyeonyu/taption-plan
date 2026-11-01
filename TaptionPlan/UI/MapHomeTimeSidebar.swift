@@ -1572,7 +1572,7 @@ struct MapHomeTimeSidebar: View {
                         HStack(spacing: 3) {
                             Capsule()
                                 .fill(Color.tpSecondary.opacity(hour.isMultiple(of: 6) ? 0.38 : 0.18))
-                                .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5)
+                                .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5).frame(width: 8, alignment: .leading)
                             Text(timeFormat.hourLabel(hour))
                                 .minimumScaleFactor(0.6)
                                 .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
