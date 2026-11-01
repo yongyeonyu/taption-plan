@@ -425,8 +425,12 @@ final class TaptionPlanClipEditorToolsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["더 확대"].waitForExistence(timeout: 5), "한 번 눌러도 4배로 가지 않는다")
         attach(app, name: "zoom-4x")
         app.buttons["더 확대"].tap()
-        XCTAssertTrue(app.buttons["전체"].waitForExistence(timeout: 5), "두 번 눌러도 12배로 가지 않는다")
+        XCTAssertTrue(app.buttons["1분"].waitForExistence(timeout: 5), "두 번 눌러도 12배로 가지 않는다")
         attach(app, name: "zoom-12x")
+        // 마지막 단계는 1분 편집 배율이다(NLEZoomPolicy.minuteEditHeight).
+        app.buttons["1분"].tap()
+        XCTAssertTrue(app.buttons["전체"].waitForExistence(timeout: 5), "세 번 눌러도 1분 배율로 가지 않는다")
+        attach(app, name: "zoom-minute")
         app.buttons["전체"].tap()
         XCTAssertTrue(app.buttons["확대"].waitForExistence(timeout: 5), "전체를 눌러도 하루 전체로 돌아오지 않는다")
         attach(app, name: "zoom-fit")
@@ -810,8 +814,8 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         return monthDay(badge.label).flatMap { $0 == previous ? nil : $0 }
     }
 
-    /// 날짜 줄은 밀어도 선택한 날짜가 바뀌지 않고, 날짜 칸을 탭해야 그날로 이동한다(대표 지시, ARC1030A02).
-    func testSwipeOnlyBrowsesAndTapSelects() throws {
+    /// 날짜 줄은 민 거리·속도만큼 넘어가고 손을 떼면 그날이 선택된다. 날짜 칸을 탭해도 그날로 간다(대표 확인, 2026-11-01).
+    func testSwipeMovesByDistanceAndTapSelects() throws {
         let app = launch()
         let badge = dateBadge(app)
         let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
@@ -822,30 +826,22 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         usleep(500_000)
         attach(app, name: "date-strip-expanded")
 
-        // 크게 밀어도 날짜는 그대로여야 한다(둘러보기만 한다).
+        // 왼쪽으로 밀면 뒤 날짜로 넘어가고, 손을 뗀 순간 그날이 선택된다.
         swipe(app, on: strip, dx: -250)
-        usleep(1_200_000)
-        let afterSwipe = try XCTUnwrap(monthDay(badge.label))
-        XCTAssertEqual([afterSwipe.month, afterSwipe.day], [today.month, today.day], "밀기만 했는데 날짜가 바뀌었다")
+        let afterSwipe = try XCTUnwrap(waitForDateChange(badge, from: today, timeout: 6), "밀었는데 날짜가 그대로다")
         attach(app, name: "date-strip-after-swipe")
 
         // 날짜 칸을 탭하면 그날로 이동한다.
         strip.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
-        let selected = try XCTUnwrap(
-            waitForDateChange(badge, from: today, timeout: 6),
-            "날짜 칸을 탭했는데 날짜가 그대로다"
-        )
-        XCTAssertNotEqual([selected.month, selected.day], [today.month, today.day])
+        _ = try XCTUnwrap(waitForDateChange(badge, from: afterSwipe, timeout: 6), "날짜 칸을 탭했는데 날짜가 그대로다")
         attach(app, name: "date-strip-after-tap")
     }
 
-    /// 오늘이 아닌 날짜를 볼 때만 "오늘" 알약이 뜨고, 누르면 오늘로 돌아온다(대표 지시, ARC1030A09).
-    func testTodayPillAppearsOnPastDatesAndReturnsToToday() throws {
+    /// 오늘이 아닌 날짜를 볼 때 날짜 배지를 한 번 누르면 오늘로 돌아온다(오늘 알약 대신, UIX1031A, 9d2166b).
+    func testDateBadgeTapReturnsToTodayFromPastDate() throws {
         let app = launch()
         let badge = dateBadge(app)
-        let pill = app.descendants(matching: .any)["mapHomeTodayPill"]
         let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
-        XCTAssertFalse(pill.exists, "오늘을 보는 중에는 알약이 없어야 한다")
 
         badge.tap()
         let strip = weekStrip(app)
@@ -853,33 +849,32 @@ final class TaptionPlanDateStripSwipeUITests: XCTestCase {
         usleep(500_000)
         strip.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5)).tap()
         _ = try XCTUnwrap(waitForDateChange(badge, from: today, timeout: 6), "과거 날짜로 이동하지 않았다")
-        XCTAssertTrue(pill.waitForExistence(timeout: 5), "지난 날짜를 볼 때 오늘 알약이 떠야 한다")
-        attach(app, name: "today-pill")
+        attach(app, name: "past-date")
 
-        pill.tap()
+        badge.tap()
         let deadline = Date().addingTimeInterval(8)
         while Date() < deadline, monthDay(badge.label).map({ $0 != today }) ?? true { usleep(200_000) }
         let back = try XCTUnwrap(monthDay(badge.label))
-        XCTAssertEqual([back.month, back.day], [today.month, today.day], "알약을 눌렀는데 오늘로 돌아오지 않았다")
-        XCTAssertFalse(pill.waitForExistence(timeout: 1.5), "오늘로 돌아오면 알약이 사라져야 한다")
+        XCTAssertEqual([back.month, back.day], [today.month, today.day], "배지를 눌렀는데 오늘로 돌아오지 않았다")
     }
 
-    /// 날짜 줄은 선택일 앞뒤를 길게 이어 두어, 계속 밀어도 날짜 칸이 이어진다. 밀기만으로는 날짜가 바뀌지 않는다.
-    func testDateStripKeepsScrollingPastTheWeekWithoutChangingTheDate() throws {
+    /// 날짜 줄은 선택일 앞뒤 칸을 다시 만들어, 여러 번 밀어도 칸이 끊기지 않고 계속 넘어간다.
+    func testDateStripKeepsMovingAcrossRepeatedSwipes() throws {
         let app = launch()
         let badge = dateBadge(app)
-        let today = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
+        var previous = try XCTUnwrap(monthDay(badge.label), "날짜를 읽지 못했다: \(badge.label)")
 
         badge.tap()
         let strip = weekStrip(app)
         XCTAssertTrue(strip.waitForExistence(timeout: 5), "날짜 배지를 눌러도 날짜 줄이 펼쳐지지 않는다")
         usleep(500_000)
 
-        for _ in 1...5 { swipe(app, on: strip, dx: -250); usleep(400_000) }
-        usleep(800_000)
-        let after = try XCTUnwrap(monthDay(badge.label))
-        XCTAssertEqual([after.month, after.day], [today.month, today.day], "밀기만 했는데 날짜가 바뀌었다")
-        attach(app, name: "date-strip-five-swipes")
+        for index in 1...3 {
+            swipe(app, on: strip, dx: -250)
+            previous = try XCTUnwrap(waitForDateChange(badge, from: previous, timeout: 6), "\(index)번째로 밀었는데 날짜가 그대로다")
+            XCTAssertTrue(strip.exists, "\(index)번째로 민 뒤 날짜 줄이 사라졌다")
+        }
+        attach(app, name: "date-strip-repeated-swipes")
     }
 }
 

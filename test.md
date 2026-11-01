@@ -5035,3 +5035,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 | counterBadges 호출/합계 | 107회 / 30ms | 810회 / 124ms |
 - 해석: 최대 프레임·드라이버 비용은 줄었고 20ms 초과는 그대로다. 카운터 값 계산 호출이 초당 약 60회로 늘었다(오버레이가 프레임마다 평가됨, `overlay_evals` 810). 2차 분해를 합친 뒤 카운터 창 평가 경로를 다시 본다.
 - 한계: 아이폰 11 Pro는 60Hz 화면이라 120Hz(ProMotion) 효과는 잴 수 없다. Release가 아닌 Debug 빌드 비교, 1회씩 측정. 로그 `build/validation/ALL1101A01/device/bench-*`.
+
+## ALL1101A01 화면 시험 전체 (시뮬레이터 BOKKI-iPhone11, main a95c050)
+- 1회차 `ui-all.xcresult` 25건 중 18 통과·7 실패.
+- 일시 실패 3건(다시 돌려 통과): `testPerfSidebarHandleDrag`·`testHomeMissingAlertOpensLocationSettings`(`ui-recheck-1`), `testPerfOpenAndCloseSheets`(`ui-recheck-2`). 같은 시뮬레이터를 다른 세션 시험이 잠금 순서대로 쓰던 때라 첫 실행 지연으로 본다(원인 확정은 아님).
+- 낡은 시험 4건: 9d2166b(10-31~11-01 UI 변경)에서 의도적으로 바뀐 동작을 시험만 따라가지 않았다. 「오늘」 알약 삭제(배지 탭으로 오늘 복귀), 날짜 줄이 민 거리만큼 이동(대표 확인 "지금처럼 거리만큼 이동"), 확대 단계에 「1분」 추가. 시험을 지금 동작에 맞게 고쳤다(`testSwipeMovesByDistanceAndTapSelects`, `testDateBadgeTapReturnsToTodayFromPastDate`, `testDateStripKeepsMovingAcrossRepeatedSwipes`, `testZoomButtonCyclesFromWholeDayAndBack`) → `ui-recheck-3.xcresult` 4건 통과. DEVELOPMENT.md 날짜 줄 설명도 지금 동작으로 고쳤다.
+- 미검증: 고친 뒤 화면 시험 전체를 한 번에 다시 돌리지는 않았다.
