@@ -1,4 +1,5 @@
 import CoreLocation
+import SwiftUI
 import XCTest
 @testable import TaptionPlan
 
@@ -11,6 +12,18 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 0, end: 600, currentMinute: 600), [0..<600])
         XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 700, end: 900, currentMinute: 600), [700..<900])
         XCTAssertEqual(MapHomeWeatherPastSplit.ranges(start: 0, end: 1_440, currentMinute: nil), [0..<1_440])
+    }
+
+    // MARK: - Counter content gate (PRF1101B01)
+
+    @MainActor
+    func testCounterContentGateSkipsOnlyWithinTheSamePlaybackTick() {
+        XCTAssertEqual(MapHomeCounterBadgeThrottle.playbackTick(isPlaying: false, uptime: 10), nil)
+        XCTAssertEqual(MapHomeCounterBadgeThrottle.playbackTick(isPlaying: true, uptime: 10.1), 40)
+        let gate = { (tick: Int?) in MapHomeCounterContentGate(playbackTick: tick) { EmptyView() } }
+        XCTAssertTrue(gate(40) == gate(40))
+        XCTAssertFalse(gate(40) == gate(41))
+        XCTAssertFalse(gate(nil) == gate(nil), "재생 중이 아니면 늘 다시 그린다")
     }
 
     // MARK: - Counter badge throttle (PRF1030A01)

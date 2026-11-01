@@ -234,6 +234,27 @@ final class MapHomeCounterBadgeThrottle {
         lastBadges = value
         return value
     }
+
+    /// 재생 중이면 `playbackInterval` 단위 박자 번호, 아니면 nil.
+    static func playbackTick(isPlaying: Bool, uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Int? {
+        isPlaying ? Int(uptime / playbackInterval) : nil
+    }
+}
+
+/// 재생 중에는 같은 박자 안에서 카운터 창 내용을 다시 만들지 않는 상자.
+///
+/// 재생 중 지도 위 표시층은 카메라를 따라 프레임마다 다시 그려지고, 그때마다 창 내용과 값 계산이 불렸다
+/// (아이폰 11 Pro 13.5초 재생에 810회, PRF1101B01). 창 위치는 UIKit 뷰가 옮기므로 내용은 0.25초 박자면 된다.
+/// 재생 중이 아니면(`playbackTick == nil`) 늘 다시 그린다.
+struct MapHomeCounterContentGate<Content: View>: View, Equatable {
+    let playbackTick: Int?
+    let content: () -> Content
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.playbackTick != nil && lhs.playbackTick == rhs.playbackTick
+    }
+
+    var body: some View { content() }
 }
 
 /// 카운터가 하나뿐일 때의 알약. 창으로 묶기 전과 같은 모양이다.

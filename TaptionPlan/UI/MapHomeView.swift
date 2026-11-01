@@ -5509,9 +5509,7 @@ struct MapHomeView: View {
     /// 화랑이(집에 있으면 집 핀) 머리 위 카운터 창. 연봉과 나머지 카운터를 **한 상자**에 담는다.
     /// 업무 구간에서만 오르고, 재생 중에는 재생 시각까지 번 돈을 표시 간격 단위로 보여 준다.
     /// 창은 **스스로 박자**를 가진다 — 연봉 줄을 껐어도 나머지 숫자가 시간을 따라 움직인다.
-    ///
-    /// 재생 중(`tracksPlaybackPoint`)이나 Apple 지도가 움직이는 동안(`tracksAppleCamera`)에는 화랑이 점 채널을
-    /// 구독한 UIKit 뷰가 창의 위치만 옮긴다. 창 내용은 한 번만 만들고, 자리는 관찰되지 않는 상자에 적는다(PRF1101A01).
+    /// 재생·Apple 지도 이동 중에는 UIKit 뷰가 위치만 옮기고(PRF1101A01), 내용은 0.25초 박자로만 다시 만든다(PRF1101B01).
     private func counterWindow(
         at anchor: CGPoint,
         tracksPlaybackPoint: Bool = false,
@@ -5527,10 +5525,12 @@ struct MapHomeView: View {
             offset: CGSize(width: 0, height: MapHomeStickmanAnnotationLayout.centerOffset.y - 42 - 8 - 160),
             onFrame: { box.hostFrame = $0 }
         ) {
-            MapHomeCounterClock(isLive: isCounterLive) { now in
-                counterWindowContent(now: now)
-                    .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
-            }
+            EquatableView(content: MapHomeCounterContentGate(playbackTick: MapHomeCounterBadgeThrottle.playbackTick(isPlaying: isDayPlaybackRunning)) {
+                MapHomeCounterClock(isLive: isCounterLive) { now in
+                    counterWindowContent(now: now)
+                        .onGeometryChange(for: CGSize.self, of: \.size) { box.contentSize = $0 }
+                }
+            })
             .frame(width: 240, height: 320, alignment: .bottom)
         }
         .onDisappear { box.reset() }

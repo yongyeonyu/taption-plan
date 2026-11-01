@@ -5058,3 +5058,12 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 가드: `check-app-engine-import-boundary.sh` 통과, `architecture-metrics.py --check` 통과.
 - 단위 전체(`-only-testing:TaptionPlanTests`, BOKKI-iPhone11 시뮬레이터, 병렬 끔, device lock): 1회차 `unit-tests.xcresult` 1,727건 중 통과 1,722·실패 1·건너뜀 4 — 실패는 기존 흔들림 `MapHomeVectorRouteRenderingTests.testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(모든 줌에서 레이어 0개, app state 2). 단독 재실행 `vector-rerun.xcresult` 1/1 통과, 2회차 전체 `unit-tests-2.xcresult` 1,727건 중 통과 1,723·실패 0·건너뜀 4.
 - 미검증: 화면 시험, 실기기 설치·동작, 위젯·워치 빌드(해당 소스 변경 없음). 순수 계산의 패키지 이동은 하지 않았다(모델 타입 의존 때문에 public 표면이 커짐).
+
+## SPL1102A01·SPL1102A02 합친 뒤 검증 (main d362e8e, 2026-11-01)
+- 충돌은 `test.md`뿐. `plutil -lint` pbxproj 통과, 가드 2개 통과.
+- Debug 빌드: TaptionPlan·TaptionPlanWidget·TaptionPlanWatch·TaptionPlanWatchWidget 모두 성공(`build/validation/SPL1102A00/build-*.log`).
+- 단위 전체(BOKKI-iPhone11, 병렬 끔): `unit-all.xcresult` 1,728건 중 통과 1,724·실패 0·건너뜀 4.
+
+## PRF1101B01 재생 중 카운터 창 내용 박자 묶기
+- 단위: `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(새 시험 `testCounterContentGateSkipsOnlyWithinTheSamePlaybackTick`, `build/validation/PRF1101B01/unit-2.xcresult`). 1회차는 시험 파일에 `import SwiftUI`가 없어 컴파일 실패.
+- 기기: 아이폰 11 Pro에 Debug 빌드 설치 성공. 재생 벤치는 앱이 실행됐지만 10분 안에 새 로그 패키지가 나오지 않아(기기 화면 잠김 추정) 이전 패키지를 다시 읽었다 → **호출 수 감소는 미검증**.
