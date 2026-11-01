@@ -1539,7 +1539,7 @@ struct MapHomeTimeSidebar: View {
                         .monospacedDigit()
                         .minimumScaleFactor(0.55)
                         .allowsTightening(true)
-                        .foregroundStyle(Color.tpInk.opacity(0.78))
+                        .foregroundStyle(Color.tpSidebarTime(0.78))
                         .taptionTextOutline()
                         .lineLimit(1)
                         .frame(width: numericColumnWidth, alignment: .trailing)
@@ -1577,7 +1577,7 @@ struct MapHomeTimeSidebar: View {
                                 .minimumScaleFactor(0.6)
                                 .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
-                                .foregroundStyle(Color.tpInk.opacity(hour.isMultiple(of: 6) ? 0.82 : 0.52))
+                                .foregroundStyle(Color.tpSidebarTime(hour.isMultiple(of: 6) ? 0.82 : 0.52))
                                 .taptionTextOutline()
                                 .frame(width: 20, alignment: .trailing)
                                 .offset(x: -MapHomeTimeSidebarMath.rulerLabelTrailingInset)
@@ -2490,7 +2490,8 @@ struct MapHomeWeatherSidebar: View {
             let visibleIndices = MapHomeWeatherRailLayout.visibleIndices(
                 yPositions: yPositions,
                 candidateIndices: candidateIndices,
-                priorityIndices: [selectedIndex, currentIndex].compactMap { $0 }
+                // 방금 지난 칩도 앞세운다. 지금 칸과 가까워 간격 규칙에 밀리면 지난 칸 비활성이 보이지 않았다(WTH1101A02).
+                priorityIndices: [selectedIndex, currentIndex, isToday ? entries.lastIndex { $0.endMinute <= currentMinute } : nil].compactMap { $0 }
             )
             ZStack(alignment: .topLeading) {
                 ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in

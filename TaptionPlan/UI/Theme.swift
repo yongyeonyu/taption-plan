@@ -58,12 +58,17 @@ extension Font {
 }
 
 extension View {
-    /// 글자 바깥에 테마 배경색 테두리(기본 1pt)를 둘러 지도·색 띠 위에서도 읽히게 한다(UIX1101B02, 대표).
-    func taptionTextOutline(_ color: Color = .tpBackground, width: CGFloat = 1) -> some View {
-        shadow(color: color, radius: 0, x: width, y: 0)
+    /// 글자 바깥에 테마 배경색 테두리(기본 1.5pt, 8방향)를 둘러 지도·색 띠 위에서도 읽히게 한다(UIX1101B02·B04, 대표).
+    func taptionTextOutline(_ color: Color = .tpBackground, width: CGFloat = 1.5) -> some View {
+        let d = width * 0.7
+        return shadow(color: color, radius: 0, x: width, y: 0)
             .shadow(color: color, radius: 0, x: -width, y: 0)
             .shadow(color: color, radius: 0, x: 0, y: width)
             .shadow(color: color, radius: 0, x: 0, y: -width)
+            .shadow(color: color, radius: 0, x: d, y: d)
+            .shadow(color: color, radius: 0, x: -d, y: d)
+            .shadow(color: color, radius: 0, x: d, y: -d)
+            .shadow(color: color, radius: 0, x: -d, y: -d)
     }
 }
 
@@ -170,6 +175,13 @@ extension Color {
     /// 강조 글자·배지에 쓰인다. 흰 글자를 얹어도 5.9:1이 되도록 명도를 낮췄다.
     static var tpAccent: Color { TaptionUITheme.current.palette?.accent ?? classicAccent }
     static let classicAccent = Color(red: 168 / 255, green: 68 / 255, blue: 47 / 255)
+    /// 사이드바 시간 글자. 어두운 테마에서는 투명도 때문에 회색으로 가라앉아 흰 톤으로 올린다(UIX1101B05, 대표).
+    static func tpSidebarTime(_ opacity: Double) -> Color {
+        TaptionUITheme.current.palette == nil ? classicInk.opacity(opacity) : Color.white.opacity(0.8 + opacity * 0.2)
+    }
+    /// 날짜 배지·날짜 줄의 토요일·일요일 글자. 어두운 테마에서는 밝은 파랑·밝은 분홍(UIX1101B06, 대표).
+    static var tpSaturdayText: Color { TaptionUITheme.current.palette == nil ? tpReferenceBlue : Color(hex: "#8CCBFF") }
+    static var tpSundayText: Color { TaptionUITheme.current.palette == nil ? tpHoliday : Color(hex: "#FF9EC4") }
     /// 카운터 창 아이콘. 어두운 테마의 액센트는 면과 대비가 2.6~2.9:1이라 보조 글자 색(5.7~6.3:1)을 쓴다.
     static var tpCounterIcon: Color { TaptionUITheme.current.palette?.secondary ?? classicAccent }
 

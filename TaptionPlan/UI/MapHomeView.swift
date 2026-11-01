@@ -4741,7 +4741,7 @@ struct MapHomeView: View {
         let calendar = TimelineAxisGrid.normalizedCalendar()
         let weekday = calendar.component(.weekday, from: model.selectedDate)
         let isHoliday = MapHomeCalendarDayStyle(date: model.selectedDate, calendar: calendar) == .holiday
-        let color: Color = isHoliday || weekday == 1 ? .tpHoliday : (weekday == 7 ? .tpReferenceBlue : .tpInk)
+        let color: Color = isHoliday || weekday == 1 ? .tpSundayText : (weekday == 7 ? .tpSaturdayText : .tpInk)
         let weekdayText = model.selectedDate.formatted(
             Date.FormatStyle()
                 .weekday(.abbreviated)

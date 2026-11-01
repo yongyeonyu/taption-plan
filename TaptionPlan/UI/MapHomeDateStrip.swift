@@ -137,8 +137,8 @@ struct MapHomeDateStrip: View {
             let weekday = calendar.component(.weekday, from: day)
             let isHoliday = MapHomeCalendarDayStyle(date: day, calendar: calendar) == .holiday
             let tint: Color = isHoliday || weekday == 1
-                ? .tpHoliday
-                : (weekday == 7 ? .tpReferenceBlue : .tpInk)
+                ? .tpSundayText
+                : (weekday == 7 ? .tpSaturdayText : .tpInk)
             return StripDay(
                 step: step,
                 date: day,

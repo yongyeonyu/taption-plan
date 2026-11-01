@@ -5080,3 +5080,7 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
   | 드라이버 평균/최대 | 0.50 / 2.59ms | 0.19 / 0.73ms |
   | counterBadges 호출/합계 | 107회 / 30ms | 111회 / 50ms (PRF1101B01 전 810회 / 124ms) |
 - 한계: 60Hz 기기·Debug 빌드·각 1회 측정. 120Hz와 장시간 발열은 미측정. 이 충돌은 시뮬레이터·단위 시험이 못 잡는 종류라 실기기 실행이 필요하다.
+
+## WTH1101A02 · UIX1101B04~B06 (2026-11-01)
+- 단위: `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(`build/validation/UIX1101B06/unit.xcresult`). 가드 `architecture-metrics.py --check` 통과.
+- 기기: 아이폰 11 Pro Debug 빌드·설치 성공. 화면 확인은 대표(날씨 칩은 시뮬레이터에 날씨 자료가 없어 화면으로 보지 못함).
