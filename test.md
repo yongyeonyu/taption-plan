@@ -5067,3 +5067,16 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## PRF1101B01 재생 중 카운터 창 내용 박자 묶기
 - 단위: `MapHomeLiveMapTests`·`TimeScaleTests` 261건 통과(새 시험 `testCounterContentGateSkipsOnlyWithinTheSamePlaybackTick`, `build/validation/PRF1101B01/unit-2.xcresult`). 1회차는 시험 파일에 `import SwiftUI`가 없어 컴파일 실패.
 - 기기: 아이폰 11 Pro에 Debug 빌드 설치 성공. 재생 벤치는 앱이 실행됐지만 10분 안에 새 로그 패키지가 나오지 않아(기기 화면 잠김 추정) 이전 패키지를 다시 읽었다 → **호출 수 감소는 미검증**.
+
+## CRS1101A01 백그라운드 센서 큐 강제 종료 수정
+- 충돌 기록(아이폰 11 Pro, `systemCrashLogs`): 2026-11-01 09:14~13:51 TaptionPlan 7회, 모두 `closure #2 in AppleSensorCollector.startHardwareStreams()` → `_swift_task_checkIsolatedSwift` → `dispatch_assert_queue_fail`(EXC_BREAKPOINT/SIGTRAP). `--console` 실행에서도 "App terminated due to signal 5".
+- 수정 뒤: 기기 Debug 빌드·설치 성공, 재생 벤치 새 로그 패키지 생성(14:06), 13:51 이후 새 충돌 기록 없음. 단위 전체 `unit-all.xcresult` 1,729건 중 통과 1,725·실패 0·건너뜀 4.
+- 재생 벤치(아이폰 11 Pro, 어제 하루 13.5초, Debug): 빌드 255 → 지금
+  | 항목 | 빌드 255 | 수정 후 |
+  | --- | --- | --- |
+  | fps | 57 | 59 |
+  | 20ms 초과 | 23 | 12 |
+  | 최대 프레임 | 83ms | 40ms |
+  | 드라이버 평균/최대 | 0.50 / 2.59ms | 0.19 / 0.73ms |
+  | counterBadges 호출/합계 | 107회 / 30ms | 111회 / 50ms (PRF1101B01 전 810회 / 124ms) |
+- 한계: 60Hz 기기·Debug 빌드·각 1회 측정. 120Hz와 장시간 발열은 미측정. 이 충돌은 시뮬레이터·단위 시험이 못 잡는 종류라 실기기 실행이 필요하다.

@@ -652,7 +652,9 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             deviceMotionManager.startDeviceMotionUpdates(
                 using: referenceFrame,
                 to: sensorUpdateQueue
-            ) { [weak self] motion, _ in
+            ) { @Sendable [weak self] motion, _ in
+                // `@Sendable`이 없으면 이 클로저가 메인 액터로 추론돼, 백그라운드 큐에서 불릴 때 Swift 런타임 격리 검사가
+                // 앱을 멈춘다(SIGTRAP, 아이폰 11 Pro 7회, CRS1101A01). 여기서는 값만 만들고 상태는 메인 작업에서 바꾼다.
                 guard let motion else { return }
                 let snapshot = DeviceMotionSnapshot(
                     gravity: SensorVector3(
@@ -722,7 +724,7 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         if CMAltimeter.isRelativeAltitudeAvailable() {
             let sessionID = UUID()
             altimeterSessionID = sessionID
-            altimeter.startRelativeAltitudeUpdates(to: sensorUpdateQueue) { [weak self] data, _ in
+            altimeter.startRelativeAltitudeUpdates(to: sensorUpdateQueue) { @Sendable [weak self] data, _ in
                 let update = AltimeterSensorUpdate(
                     relativeAltitudeMeters:
                         data?.relativeAltitude.doubleValue,

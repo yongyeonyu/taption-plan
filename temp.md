@@ -2787,3 +2787,8 @@
 - 원인: 재생 중 지도 위 표시층이 카메라를 따라 프레임마다 다시 그려지고, 그때마다 카운터 창 내용과 값 계산이 불렸다(아이폰 11 Pro 13.5초 재생 810회·124ms, 빌드 255는 107회·30ms).
 - 해결: 재생 중에는 0.25초 박자가 같으면 창 내용을 다시 만들지 않는다(`MapHomeCounterContentGate`, `MapHomeCounterBadgeThrottle.playbackTick`). 재생이 아니면 그대로 늘 다시 그린다. 위치는 UIKit 뷰가 옮기므로 영향 없음.
 - 검증 기준: 단위 테스트, Debug 빌드, 아이폰 11 Pro 재생 벤치에서 counterBadges 호출 수 감소.
+
+## CRS1101A01 백그라운드 센서 큐에서 앱 강제 종료(아이폰 11 Pro 충돌 7회, 09:14~13:51)
+- 원인: PRF1101A01이 모션·고도 갱신을 메인 큐에서 직렬 `sensorUpdateQueue`로 옮겼는데, `@MainActor` 메서드 안에서 만든 처리 클로저가 메인 액터로 추론됐다. 백그라운드 큐에서 불리는 순간 Swift 런타임 격리 검사(`_swift_task_checkIsolatedSwift` → `dispatch_assert_queue_fail`)가 SIGTRAP으로 앱을 멈췄다. 단위 테스트·시뮬레이터에서는 모션이 오지 않아 잡히지 않았다.
+- 해결: 두 클로저를 `@Sendable`로 명시해 격리를 끊는다(값만 만들고 상태는 기존대로 `Task { @MainActor }`에서 바꾼다).
+- 검증 기준: Debug 빌드, 관련 단위 테스트, 아이폰 11 Pro에서 `--console` 실행 시 종료 없음 + 재생 벤치 로그 생성.
