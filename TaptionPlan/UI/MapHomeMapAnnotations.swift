@@ -73,6 +73,8 @@ struct MapHomePlaceAnnotation: Identifiable {
     let coordinate: CLLocationCoordinate2D
     /// 집 핀 위에 올리는 현재 날씨(집에만, 데이터가 없으면 nil).
     var weatherBadge: MapHomeHomeWeatherBadge? = nil
+    /// 집 하늘의 위치와 시각 출처(집에만).
+    var homeSky: MapHomeHomeSkyInput? = nil
 }
 
 struct MapHomeTransitAnnotation: Identifiable {
@@ -96,6 +98,7 @@ struct MapHomePlacePin: View {
     var catAction: MapHomeStickmanAction = .activity
     var equippedAccessoryID: String? = nil
     var weatherBadge: MapHomeHomeWeatherBadge? = nil
+    var homeSky: MapHomeHomeSkyInput? = nil
     var onOpenDaySummary: (() -> Void)? = nil
 
     var body: some View {
@@ -257,13 +260,27 @@ struct MapHomePlacePin: View {
         if let weatherBadge {
             MapHomeHomeWeatherArt(
                 kind: MapHomeHomeWeatherKind(symbolName: weatherBadge.symbolName),
-                windSpeed: weatherBadge.windSpeedMetersPerSecond ?? 0
+                windSpeed: weatherBadge.windSpeedMetersPerSecond ?? 0,
+                sky: homeSky
+            )
+        }
+    }
+
+    /// 집 뒤의 하늘. 날씨가 없어도 시간대는 보여 준다.
+    @ViewBuilder
+    private var homeSkyArt: some View {
+        if let homeSky {
+            MapHomeHomeSkyArt(
+                input: homeSky,
+                kind: weatherBadge.map { MapHomeHomeWeatherKind(symbolName: $0.symbolName) },
+                windSpeed: weatherBadge?.windSpeedMetersPerSecond ?? 0
             )
         }
     }
 
     private func homeMarkerArtwork(level: Int) -> some View {
         ZStack {
+            homeSkyArt
             Image(MapHomeGrowthPolicy.artworkName(level: level))
                 .resizable()
                 .scaledToFit()

@@ -921,7 +921,8 @@ struct MapHomeAppleMap: UIViewRepresentable {
                             showsCatAtHome: place.isCatAtHome,
                             catAction: place.catAction,
                             equippedAccessoryID: place.equippedAccessoryID,
-                            weatherBadge: place.weatherBadge
+                            weatherBadge: place.weatherBadge,
+                            homeSky: place.homeSky
                         )
                         .fixedSize()
                     ),
