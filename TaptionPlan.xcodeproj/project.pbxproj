@@ -125,6 +125,7 @@
 		A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */; };
 		A5B1102A020000000000004A /* NLETrackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000049 /* NLETrackTests.swift */; };
 		A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */; };
+		A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */; };
 		A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */; };
 		A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */; };
 		A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */; };
@@ -366,6 +367,8 @@
 		A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */; };
 		1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */; };
 		A1102A0100000000000000A1 /* RailRideLikelihood.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F1 /* RailRideLikelihood.swift */; };
+		A1102A0100000000000000A2 /* UnobservedStayEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F4 /* UnobservedStayEngine.swift */; };
+		A1102A0100000000000000A3 /* AppleSensorCollector+LocationPause.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F5 /* AppleSensorCollector+LocationPause.swift */; };
 		A1102A0100000000000000A4 /* WalkingDistanceBreakdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */; };
 		A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */; };
 		1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */; };
@@ -562,6 +565,7 @@
 		F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictedRoutePersistenceTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000049 /* NLETrackTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NLETrackTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihoodTests.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnobservedStayEngineTests.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTrackerTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterTimelinePolicyTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackContinuityTests.swift; sourceTree = "<group>"; };
@@ -779,6 +783,8 @@
 		F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmation.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayEvidenceGate.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F1 /* RailRideLikelihood.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailRideLikelihood.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F4 /* UnobservedStayEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnobservedStayEngine.swift; sourceTree = "<group>"; };
+		A1102A0100000000000000F5 /* AppleSensorCollector+LocationPause.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppleSensorCollector+LocationPause.swift"; sourceTree = "<group>"; };
 		A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalkingDistanceBreakdown.swift; sourceTree = "<group>"; };
 		A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceZoneStayTracker.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailJourneyRecognizer.swift; sourceTree = "<group>"; };
@@ -947,6 +953,7 @@
 				F5B1102A020000000000004B /* PredictedRoutePersistenceTests.swift */,
 				F5B1102A0200000000000049 /* NLETrackTests.swift */,
 				A1102A0100000000000000F2 /* RailRideLikelihoodTests.swift */,
+				A1102A0100000000000000F6 /* UnobservedStayEngineTests.swift */,
 				A1102A0100000000000000FA /* PlaceZoneStayTrackerTests.swift */,
 				F5B1102A0200000000000047 /* MapHomeCounterTimelinePolicyTests.swift */,
 				F5B1102A0200000000000045 /* MapHomePlaybackContinuityTests.swift */,
@@ -1195,6 +1202,8 @@
 				F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */,
 				224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */,
 				A1102A0100000000000000F1 /* RailRideLikelihood.swift */,
+				A1102A0100000000000000F4 /* UnobservedStayEngine.swift */,
+				A1102A0100000000000000F5 /* AppleSensorCollector+LocationPause.swift */,
 				A1102A0100000000000000F7 /* WalkingDistanceBreakdown.swift */,
 				A1102A0100000000000000F9 /* PlaceZoneStayTracker.swift */,
 				224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */,
@@ -1736,6 +1745,8 @@
 				A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */,
 				1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */,
 				A1102A0100000000000000A1 /* RailRideLikelihood.swift in Sources */,
+				A1102A0100000000000000A2 /* UnobservedStayEngine.swift in Sources */,
+				A1102A0100000000000000A3 /* AppleSensorCollector+LocationPause.swift in Sources */,
 				A1102A0100000000000000A4 /* WalkingDistanceBreakdown.swift in Sources */,
 				A1102A0100000000000000A5 /* PlaceZoneStayTracker.swift in Sources */,
 				1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */,
@@ -1870,6 +1881,7 @@
 				A5B1102A020000000000004C /* PredictedRoutePersistenceTests.swift in Sources */,
 				A5B1102A020000000000004A /* NLETrackTests.swift in Sources */,
 				A1102A0100000000000000B1 /* RailRideLikelihoodTests.swift in Sources */,
+				A1102A0100000000000000B3 /* UnobservedStayEngineTests.swift in Sources */,
 				A1102A0100000000000000B5 /* PlaceZoneStayTrackerTests.swift in Sources */,
 				A5B1102A0200000000000048 /* MapHomeCounterTimelinePolicyTests.swift in Sources */,
 				A5B1102A0200000000000046 /* MapHomePlaybackContinuityTests.swift in Sources */,

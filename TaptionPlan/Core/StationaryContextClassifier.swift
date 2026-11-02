@@ -974,17 +974,11 @@ enum RestaurantMealActualEngine {
                     && $0.point != nil
             }
             .flatMap { restaurant in
-                runs(for: restaurant, in: ordered)
-                    .compactMap { run -> ActualRecord? in
-                        guard let first = run.first,
-                              let last = run.last,
-                              last.timestamp.timeIntervalSince(first.timestamp)
-                                >= minimumDuration else {
-                            return nil
-                        }
+                stays(for: restaurant, among: restaurants, in: ordered)
+                    .compactMap { stay -> ActualRecord? in
                         let span = TimeSpan(
-                            start: max(first.timestamp, observed.start),
-                            end: min(last.timestamp, observed.end)
+                            start: max(stay.span.start, observed.start),
+                            end: min(stay.span.end, observed.end)
                         )
                         guard span.duration >= minimumDuration else {
                             return nil
@@ -993,6 +987,9 @@ enum RestaurantMealActualEngine {
                             "등록 식당: \(restaurant.name)",
                             "반경 내 15분 이상 연속 체류",
                         ]
+                        if !stay.unobserved.isEmpty {
+                            evidence.append("관측 안 된 시간 \(Int((stay.span.duration - stay.observedDuration) / 60))분")
+                        }
                         evidence.append(contentsOf: watchEvidence(
                             summaries: watchSummaries,
                             rawSamples: watchAccelerationSamples,
@@ -1024,8 +1021,12 @@ enum RestaurantMealActualEngine {
         activityCorrections: [UUID: ActivityCorrection] = [:],
         asOf: Date = .now
     ) -> [ActualRecord] {
+        // 관측 안 된 체류의 식사 후보는 사용자가 확인한 뒤에만 업무를 자른다.
         let meals = actuals.filter {
-            $0.source == .location && AutomaticModelVersion.matches($0.modelVersion, modelVersion)
+            guard $0.source == .location else { return false }
+            if AutomaticModelVersion.matches($0.modelVersion, modelVersion) { return true }
+            return AutomaticModelVersion.matches($0.modelVersion, UnobservedStayEngine.modelVersion)
+                && ActualRecord.userOwned($0, activityCorrections: activityCorrections)
         }.map { $0.span(asOf: asOf) }.sorted { $0.start < $1.start }
         guard !meals.isEmpty else { return actuals }
         return actuals.flatMap { actual -> [ActualRecord] in
@@ -1078,36 +1079,33 @@ enum RestaurantMealActualEngine {
         return rawCount >= 3 ? ["Apple Watch 가속도 활동"] : []
     }
 
-    private static func runs(
+    /// 지도의 세 원과 같은 판정으로 체류를 찾는다. 겹친 장소와 높이가 어긋나는 체류는 뺀다.
+    /// 간격은 식당 기준(`maximumSampleGap`)으로 끊어, 오래 비운 뒤 돌아온 것을 한 끼로 잇지 않는다.
+    private static func stays(
         for restaurant: FrequentPlace,
+        among places: [FrequentPlace],
         in readings: [SensorReading]
-    ) -> [[SensorReading]] {
+    ) -> [PlaceZoneStayTracker.Stay] {
         guard let anchor = restaurant.point else { return [] }
-        var result: [[SensorReading]] = []
-        var current: [SensorReading] = []
-        func finish() {
-            if !current.isEmpty { result.append(current) }
-            current.removeAll(keepingCapacity: true)
-        }
+        var pieces: [[SensorReading]] = []
         for reading in readings {
-            guard let point = reading.point else {
-                finish()
-                continue
+            if let last = pieces.last?.last,
+               reading.timestamp.timeIntervalSince(last.timestamp) <= maximumSampleGap {
+                pieces[pieces.count - 1].append(reading)
+            } else {
+                pieces.append([reading])
             }
-            let isInside = distanceMeters(point, anchor) <= restaurant.radiusMeters
-            guard isInside else {
-                finish()
-                continue
-            }
-            if let previous = current.last,
-               reading.timestamp.timeIntervalSince(previous.timestamp)
-                    > maximumSampleGap {
-                finish()
-            }
-            current.append(reading)
         }
-        finish()
-        return result
+        let overlapping = places.filter { place in
+            guard let point = place.point else { return false }
+            return PlaceZoneStayTracker.centerDistance(point, anchor) <= place.radiusMeters + restaurant.radiusMeters
+        }
+        return pieces.flatMap { piece in
+            PlaceZoneStayTracker.stays(readings: piece, center: anchor, radius: restaurant.radiusMeters)
+        }.filter { stay in
+            let inside = readings.filter { stay.span.contains($0.timestamp) }
+            return !PlaceHeightMatch.isAtOtherHeight(restaurant, among: overlapping, readings: inside)
+        }
     }
 
     private static func stableID(
