@@ -5397,7 +5397,10 @@ struct MapHomeView: View {
             .map { MapHomePhotoPlacement.obstacle(center: $0, side: MapHomePlacePinLayout.avatarSize) }
         if !isDayPlaybackRunning, let cat = displayedCatViewportPoint {
             obstacles.append(MapHomePhotoPlacement.obstacle(center: cat, side: MapHomeCatTapRouting.hitRadius * 2))
+            if counterWindowFrame.frame.width > 0 { obstacles.append(counterWindowFrame.frame) }
         }
+        obstacles += mapMemosOnMap.compactMap { vectorPoint(in: viewport, for: vectorMapMemoMarkerID($0.id)) }
+            .map { MapHomePhotoPlacement.obstacle(center: $0, side: 56) }
         return MapHomePhotoPlacement.point(for: pin, avoiding: obstacles)
     }
 

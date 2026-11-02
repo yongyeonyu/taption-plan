@@ -221,7 +221,8 @@ struct MapHomePhotoThumbnail: View {
 }
 
 /// 지도에 놓이는 사진 묶음 핀: 썸네일 + 개수 배지. 선택 시각 주변 사진이면 테두리가 강조된다.
-/// 사진 핀을 화랑이와 등록 지점 아이콘에 겹치지 않는 가까운 자리로 옮긴다. 핀은 아래쪽이 기준점이다(대표 요청).
+/// 사진 핀을 화랑이·카운터 창·등록 지점·메모에 겹치지 않는 가까운 자리로 옮긴다. 핀은 아래쪽이 기준점이다.
+/// 사진 위치는 정확하지 않아도 된다(대표 요청).
 enum MapHomePhotoPlacement {
     private static let pinSide: CGFloat = 54
     private static let directions: [CGPoint] = [
@@ -240,7 +241,7 @@ enum MapHomePhotoPlacement {
     static func point(for pin: CGPoint, avoiding obstacles: [CGRect]) -> CGPoint {
         func isClear(_ point: CGPoint) -> Bool { !obstacles.contains { $0.intersects(rect(at: point)) } }
         if isClear(pin) { return pin }
-        for distance in stride(from: CGFloat(30), through: 150, by: 30) {
+        for distance in stride(from: CGFloat(30), through: 300, by: 30) {
             for direction in directions {
                 let candidate = CGPoint(x: pin.x + direction.x * distance, y: pin.y + direction.y * distance)
                 if isClear(candidate) { return candidate }

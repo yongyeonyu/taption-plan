@@ -173,7 +173,8 @@ enum RailJourneyRecognizer {
             sensedStationCount: Set(visits.map(\.name)).count,
             hasAltitudeChange: !hasAltitudeData
                 || TravelModeClassifier.altitudeChangeMeters(altitudeContext) >= TravelModeClassifier.subwayAltitudeChangeMeters,
-            transitSpecificSignals: max(0, stops - offStationStops) + (gpsLost ? 1 : 0),
+            // 지하철은 역 사이에 거의 서지 않는다. 역 밖 정차 하나가 역 정차 둘을 지운다.
+            transitSpecificSignals: max(0, stops - offStationStops * 2) + (gpsLost ? 1 : 0),
             supportingSignals: stepsPerMinute(inside) <= maximumStepsPerMinute ? 1 : 0,
             boardingDwell: isDwellExempt ? nil : first.last.timeIntervalSince(first.first) + leftAfter(first, readings: readings),
             alightingDwell: isDwellExempt || !hasAlighted ? nil : last.last.timeIntervalSince(last.first)

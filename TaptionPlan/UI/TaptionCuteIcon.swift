@@ -366,8 +366,8 @@ private enum Glyph {
     }
 }
 
-/// 하단 메뉴 스티커 색. 어두운 테마에서 글자색(거의 흰색)을 테두리로 쓰면 하얀 선이 도드라져,
-/// 그 테마의 가장 어두운 색을 테두리로 쓰고 면 색을 밝혀 지도 위에서 또렷하게 한다.
+/// 하단 메뉴 스티커 색. 어두운 테마에서 글자색(거의 흰색)을 테두리로 쓰면 하얀 선이 도드라진다.
+/// 대표 지시: 야간은 지도의 하늘색 선, 산책은 밝은 연보라 선, 실외는 진한 선.
 struct TaptionBarPalette {
     let outline, coral, honey, brick, mint, rose, sky, cream, cocoa, weekday: Color
 
@@ -387,9 +387,9 @@ struct TaptionBarPalette {
     }
 
     private static let classic = TaptionBarPalette(["#3E3320", "#EE8A5E", "#F3C766", "#D9694F", "#62B7A6", "#E7708F", "#9CC6E8", "#FBF6EA", "#8A5A3C", "#B9A98F"])
-    private static let night = TaptionBarPalette(["#0A101E", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#E2F2FF", "#4A6FA8", "#93B6DA"])
-    private static let walk = TaptionBarPalette(["#191426", "#FFA68F", "#FFDF8A", "#E98AA0", "#8FE3CF", "#FF9CC4", "#B9A8FF", "#EDE7F9", "#7A5FC6", "#BBADDD"])
-    private static let outdoor = TaptionBarPalette(["#1C160E", "#FF9A5C", "#FFD35C", "#F07A4F", "#66D4B5", "#FF8FA3", "#8FC4FF", "#FFF2CC", "#99690F", "#DDBF7E"])
+    private static let night = TaptionBarPalette(["#5CCBF0", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#F5F9FF", "#4A6FA8", "#93B6DA"])
+    private static let walk = TaptionBarPalette(["#D6CBF2", "#FFA68F", "#FFDF8A", "#E98AA0", "#8FE3CF", "#FF9CC4", "#B9A8FF", "#F8F5FF", "#7A5FC6", "#BBADDD"])
+    private static let outdoor = TaptionBarPalette(["#0E0B07", "#FF9A5C", "#FFD35C", "#F07A4F", "#66D4B5", "#FF8FA3", "#8FC4FF", "#FFFBF4", "#A0701C", "#D8CBB4"])
 }
 
 /// 하단 메뉴 전용 색 스티커. 화랑이처럼 진한 테두리에 면을 칠하고 작은 광택을 얹는다(대표 시안 B).

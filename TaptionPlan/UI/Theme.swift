@@ -136,9 +136,9 @@ enum TaptionUITheme: String, CaseIterable, Identifiable, Sendable {
     var palette: Palette? {
         switch self {
         case .classic: nil
-        case .navy: Self.palette("#0A101E", "#141D33", "#2A3D63", "#2A74C6", "#93B6DA", "#E2F2FF")
-        case .purple: Self.palette("#191426", "#2A2240", "#4A3E6B", "#7A5FC6", "#BBADDD", "#EDE7F9")
-        case .brown: Self.palette("#1C160E", "#2E2415", "#5C4620", "#99690F", "#DDBF7E", "#FFF2CC")
+        case .navy: Self.palette("#0A101E", "#141D33", "#2A3D63", "#2A74C6", "#A9C4E0", "#F5F9FF")
+        case .purple: Self.palette("#191426", "#2A2240", "#4A3E6B", "#7A5FC6", "#CBC0E6", "#F8F5FF")
+        case .brown: Self.palette("#17130E", "#2A241C", "#54483A", "#99690F", "#D8CBB4", "#FFFBF4")
         }
     }
 
@@ -162,7 +162,7 @@ extension Color {
     static let classicInk = Color(red: 62 / 255, green: 51 / 255, blue: 32 / 255)
     static let classicSecondary = Color(red: 107 / 255, green: 94 / 255, blue: 69 / 255)
     static let classicBackground = Color(red: 243 / 255, green: 234 / 255, blue: 214 / 255)
-    static let classicSurface = Color(red: 251 / 255, green: 246 / 255, blue: 234 / 255)
+    static let classicSurface = Color(red: 253 / 255, green: 250 / 255, blue: 243 / 255)
     static var tpSurfaceBlue: Color { TaptionUITheme.current.palette?.surface ?? Color(red: 241 / 255, green: 248 / 255, blue: 252 / 255) }
     static var tpSurfacePink: Color { TaptionUITheme.current.palette?.surface ?? Color(red: 255 / 255, green: 242 / 255, blue: 245 / 255) }
     static var tpSurfaceSage: Color { TaptionUITheme.current.palette?.surface ?? Color(red: 241 / 255, green: 248 / 255, blue: 240 / 255) }
@@ -192,7 +192,7 @@ extension Color {
     static var tpPrimaryFill: Color { TaptionUITheme.current.palette?.accent ?? classicInk }
     /// 지도 위 유리에 입히는 테마 색.
     static var tpGlassTint: Color {
-        TaptionUITheme.current.palette.map { $0.surface.opacity(0.62) } ?? classicSurface.opacity(0.42)
+        TaptionUITheme.current.palette.map { $0.surface.opacity(0.97) } ?? classicSurface.opacity(0.42)
     }
     /// 날씨 칩의 남은 시간대 칸. 흰 글자를 얹는다.
     static var tpWeatherActiveFill: Color { TaptionUITheme.current.palette?.accent ?? classicSecondary }

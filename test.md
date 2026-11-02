@@ -5286,3 +5286,9 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 이 커밋 시점 검증: 시뮬레이터용 `build-for-testing` 성공(`build/validation/UIK1102A01/pre-split-build.log`), 가드 확인. **이 코드 그대로의 전체 단위 테스트 결과는 아직 없다.** 직전 코드로 아이폰 11 Pro에서 돌린 실행은 최신 수정을 넣으려고 중간에 끊었고, 끊을 때까지 813건 통과·실패 0이었다(`device-unit2.log`).
 - 원본 재생(11-02 18:11 내보낸 원본, 시뮬레이터, 정차 조건을 엄격히 하기 전 코드): 17:43–18:11 마곡나루>계양>검암>검바위 인식, 아침 자동차는 유지. 엄격화 후 재생은 아직 안 했다.
 - 알려진 제한: 아이패드에 깔린 앱은 빌드 256(아이폰 호환 모드)이었다. 빌드 258 산출물은 `UIDeviceFamily` 1·2로 확인했다.
+
+## 11-03 실기기 검증 (아이폰 11 Pro 00008030…, SUB1102A01·UIK1102A01·ALT1102A01·GCL1102A01)
+- 전체 단위(실기기): 1,773건 실행, 건너뜀 4, 실패 3건(판정 13개) (`build/validation/UIK1102A01/device-unit5.log`, 커밋 전 작업 트리). 실패: `testRailJourneyIsJudgedOverTheWholeRide`(실제 결함, 역 밖 정차 규칙 수정), `testStickmanActionCacheSpeedup`(기준 2.0 대 1.95), `testRoutesRemainVisibleAcrossZoomAndOffscreenRoundTrip`(FLK1020A01 간헐 실패 기록 있음).
+- 재실행(실기기): 위 3개 테스트 클래스 22건 통과, 실패 0(`device-recheck.log`). 두 간헐 실패의 원인은 확인하지 않았다. 수정 뒤 전체를 다시 돌리지는 않았다.
+- 시뮬레이터: 같은 묶음과 원본 재생 24건 통과. 재생에서 11-02 17:43–18:11 지하철(마곡나루>계양>검암>검바위), 다른 탑승 없음. 원본 재생은 실기기에서 돌리지 않았다.
+- 설치: 아이폰 11 Pro Debug 설치·실행 성공. 화면 결과는 대표 확인 대기. 저장된 기록이 실제로 지하철로 바뀌는지, 구글 메모, 사진 핀 배치, 테마 색은 기기에서 내가 보지 못했다.

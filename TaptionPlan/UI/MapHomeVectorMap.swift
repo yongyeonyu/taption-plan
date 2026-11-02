@@ -63,7 +63,7 @@ enum MapHomeVectorStyle: String, CaseIterable, Sendable {
     var roadHex: String {
         switch self {
         case .night: "#2FD6FF"
-        case .contrast: "#FFD400"
+        case .contrast: "#D9BE6A"
         case .casual: "#FFB37F"
         case .rpg: "#9A7B4A"
         }
