@@ -7,6 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */; };
+		A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */; };
+		A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */; };
+		A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */; };
+		A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */; };
+		A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */; };
+		A1FA110A2C1A611F96DD0ED7 /* TravelSegmentGroupingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */; };
+		A1FA110EBBED07CD4916D6CC /* SubwayTravelSegmentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */; };
+		A1FA11F4130A02CEBA74BA89 /* MovementRouteBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */; };
+		A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */; };
+		A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */; };
+		A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */; };
+		A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */; };
+		A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */; };
+		A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */; };
+		A1FA11E4380CB5D4F762AEC2 /* FloorCalibrationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */; };
+		A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */; };
+		A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */; };
+		A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */; };
+		A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */; };
 		ABD100600000000000000001 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
 		ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100700000000000000001 /* SensorReadingStorage.swift */; };
 		ABD100600000000000000002 /* PlanActualStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD100600000000000000001 /* PlanActualStorage.swift */; };
@@ -74,7 +94,6 @@
 		A10000000000000000000010 /* PlanRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000010 /* PlanRepository.swift */; };
 		A10000000000000000000011 /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* PlanningEngine.swift */; };
 		A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* TemplatesAndSettings.swift */; };
-		A10000000000000000000013 /* SensorFusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* SensorFusion.swift */; };
 		A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000071 /* StationaryContextClassifier.swift */; };
 		A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */; };
 		A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000001B /* AppleCalendarService.swift */; };
@@ -435,6 +454,26 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationPrivacyAndTravelDistance.swift; sourceTree = "<group>"; };
+		F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionActivityActualEngine.swift; sourceTree = "<group>"; };
+		F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InferredSleepEngines.swift; sourceTree = "<group>"; };
+		F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleWatchSensorActivityEngine.swift; sourceTree = "<group>"; };
+		F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleDeviceGroundTruthEngine.swift; sourceTree = "<group>"; };
+		F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementCorrectionEngine.swift; sourceTree = "<group>"; };
+		F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelSegmentGroupingEngine.swift; sourceTree = "<group>"; };
+		F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayTravelSegmentEngine.swift; sourceTree = "<group>"; };
+		F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementRouteBuilder.swift; sourceTree = "<group>"; };
+		F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorEvidenceTimeIndex.swift; sourceTree = "<group>"; };
+		F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitBoardingEngines.swift; sourceTree = "<group>"; };
+		F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceDetectionEngine.swift; sourceTree = "<group>"; };
+		F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnregisteredPlaceSuggestionEngine.swift; sourceTree = "<group>"; };
+		F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrequentPlaceResolutionEngine.swift; sourceTree = "<group>"; };
+		F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorTimelineEngine.swift; sourceTree = "<group>"; };
+		F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorCalibrationEngine.swift; sourceTree = "<group>"; };
+		F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthRouteMergeEngine.swift; sourceTree = "<group>"; };
+		F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloorEstimator.swift; sourceTree = "<group>"; };
+		F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelModeClassifier.swift; sourceTree = "<group>"; };
+		F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSensorMapProjection.swift; sourceTree = "<group>"; };
 		FBD100600000000000000001 /* PlanActualStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanActualStorage.swift; sourceTree = "<group>"; };
 		FBD100700000000000000001 /* SensorReadingStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorReadingStorage.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* TaptionPlan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaptionPlan.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -487,7 +526,6 @@
 		F10000000000000000000010 /* PlanRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanRepository.swift; sourceTree = "<group>"; };
 		F10000000000000000000011 /* PlanningEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanningEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* TemplatesAndSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplatesAndSettings.swift; sourceTree = "<group>"; };
-		F10000000000000000000013 /* SensorFusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorFusion.swift; sourceTree = "<group>"; };
 		F10000000000000000000071 /* StationaryContextClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationaryContextClassifier.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntegrationPolicies.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000001B /* AppleCalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleCalendarService.swift; sourceTree = "<group>"; };
@@ -1098,7 +1136,26 @@
 				FBD100700000000000000001 /* SensorReadingStorage.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
-				F10000000000000000000013 /* SensorFusion.swift */,
+				F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */,
+				F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */,
+				F1FA11666D556A4283945D7E /* InferredSleepEngines.swift */,
+				F1FA1151247FC986DC41E95E /* AppleWatchSensorActivityEngine.swift */,
+				F1FA11708F96142164B021A5 /* AppleDeviceGroundTruthEngine.swift */,
+				F1FA119DA32DBD6AB39B3BE3 /* MovementCorrectionEngine.swift */,
+				F1FA11A12192E38998ADD56B /* TravelSegmentGroupingEngine.swift */,
+				F1FA119B2AC36CF8F4E6694B /* SubwayTravelSegmentEngine.swift */,
+				F1FA1122B2E958DFAB98D0F4 /* MovementRouteBuilder.swift */,
+				F1FA1114DFD1B4E129D9D260 /* SensorEvidenceTimeIndex.swift */,
+				F1FA1191E387639DDBE62829 /* TransitBoardingEngines.swift */,
+				F1FA11F6DF3994BF0EFB09B0 /* PlaceDetectionEngine.swift */,
+				F1FA112726691A677BFF352A /* UnregisteredPlaceSuggestionEngine.swift */,
+				F1FA11317768AD20F051874E /* FrequentPlaceResolutionEngine.swift */,
+				F1FA118E292B101C6B3AA5B8 /* FloorTimelineEngine.swift */,
+				F1FA11B1FD975D785F7EC03B /* FloorCalibrationEngine.swift */,
+				F1FA1129C5ED9AABE2A196A8 /* HealthRouteMergeEngine.swift */,
+				F1FA11592F09D5F78DE5B901 /* FloorEstimator.swift */,
+				F1FA11CF2BF9E0148DBF14F0 /* TravelModeClassifier.swift */,
+				F1FA11F59DB022FC67C16D22 /* RealtimeSensorMapProjection.swift */,
 				F10000000000000000000071 /* StationaryContextClassifier.swift */,
 				F5B1102A020000000000001D /* AppleIntegrationPolicies.swift */,
 				F5B1102A020000000000001B /* AppleCalendarService.swift */,
@@ -1680,7 +1737,26 @@
 				ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
-				A10000000000000000000013 /* SensorFusion.swift in Sources */,
+				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
+				A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */,
+				A1FA11E1742C84FD2F207091 /* InferredSleepEngines.swift in Sources */,
+				A1FA11A00497E7D3361DB92E /* AppleWatchSensorActivityEngine.swift in Sources */,
+				A1FA111C1F655A1871DB4D34 /* AppleDeviceGroundTruthEngine.swift in Sources */,
+				A1FA1193B2C4F0AD672B142C /* MovementCorrectionEngine.swift in Sources */,
+				A1FA110A2C1A611F96DD0ED7 /* TravelSegmentGroupingEngine.swift in Sources */,
+				A1FA110EBBED07CD4916D6CC /* SubwayTravelSegmentEngine.swift in Sources */,
+				A1FA11F4130A02CEBA74BA89 /* MovementRouteBuilder.swift in Sources */,
+				A1FA11E346325DE9124646F2 /* SensorEvidenceTimeIndex.swift in Sources */,
+				A1FA11E73D8EF4A0D46BA75B /* TransitBoardingEngines.swift in Sources */,
+				A1FA11E539E87EF9BECCEED3 /* PlaceDetectionEngine.swift in Sources */,
+				A1FA116E94306EBCD83FA237 /* UnregisteredPlaceSuggestionEngine.swift in Sources */,
+				A1FA11F2247EED1E851FD89B /* FrequentPlaceResolutionEngine.swift in Sources */,
+				A1FA110A399BEE8BE6C8AE89 /* FloorTimelineEngine.swift in Sources */,
+				A1FA11E4380CB5D4F762AEC2 /* FloorCalibrationEngine.swift in Sources */,
+				A1FA112F8C296037CA105A07 /* HealthRouteMergeEngine.swift in Sources */,
+				A1FA115CC4A39B133D2E9310 /* FloorEstimator.swift in Sources */,
+				A1FA112678FE13ABA3A562E7 /* TravelModeClassifier.swift in Sources */,
+				A1FA1117E59F5515E80AEB17 /* RealtimeSensorMapProjection.swift in Sources */,
 				A10000000000000000000071 /* StationaryContextClassifier.swift in Sources */,
 				A5B1102A020000000000001E /* AppleIntegrationPolicies.swift in Sources */,
 				A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */,
