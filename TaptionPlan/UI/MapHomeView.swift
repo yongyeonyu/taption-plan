@@ -342,7 +342,6 @@ struct MapHomeView: View {
         static let mapControlSize = MapHomeOverlayLayoutMath.controlSize
         static let mapControlIcon: CGFloat = 15
         static let mapControlSpacing = MapHomeOverlayLayoutMath.controlSpacing
-        static let timeRailWidth: CGFloat = 44
         static let weatherRailWidth: CGFloat = 62
         static let timeRailTopMargin: CGFloat = 46
         static let topOverlayFallbackHeight: CGFloat = 104
@@ -391,10 +390,24 @@ struct MapHomeView: View {
 
     /// 지금 하루요약 시트가 지도를 덮고 있는 비율. 펼치면 지도가 다 가려져 보정하지 않는다.
     private var daySummaryCoverage: CGFloat {
-        guard isDaySummaryPresented,
+        guard isDaySummaryPresented, !isWideLayout,
               daySummaryDetent != MapHomeDaySummarySheet.expandedDetent
         else { return 0 }
         return MapHomeDaySummaryLayout.collapsedCoverage
+    }
+
+    private var isWideLayout: Bool { MapHomeWideLayoutPolicy.isWide(viewportWidth: mapViewportSize.width) }
+    private var timeRailWidth: CGFloat { MapHomeWideLayoutPolicy.timeRailWidth(viewportWidth: mapViewportSize.width) }
+
+    /// 왼쪽 패널이 열려 있으면 지도를 그만큼 줄여 가리지 않는다.
+    private var mapLeadingInset: CGFloat {
+        let panel: MapHomeWidePanelKind? = isCalendarPresented ? .calendar : isMenuOpen ? menuPanelKind
+            : isDaySummaryPresented || isDailyCardPresented ? .standard : nil
+        return MapHomeWideLayoutPolicy.mapLeadingInset(viewportWidth: mapViewportSize.width, openPanel: panel)
+    }
+
+    private var menuPanelKind: MapHomeWidePanelKind {
+        MapHomeWideLayoutPolicy.menuPanelKind(viewportSize: mapViewportSize, hasPermissionCard: !sensorCollectionPermissionGate.sensorCollectionReady)
     }
 
     private var isHeadingMode: Bool {
@@ -409,7 +422,7 @@ struct MapHomeView: View {
     }
 
     private var sidebarInteractionWidth: CGFloat {
-        MapHomeTimeSidebarMath.totalWidth(railWidth: Layout.timeRailWidth)
+        MapHomeTimeSidebarMath.totalWidth(railWidth: timeRailWidth)
             + Layout.horizontalInset
     }
 
@@ -458,7 +471,7 @@ struct MapHomeView: View {
         MapHomeDaySummaryLayout.targetPoint(
             viewportSize: mapViewportSize,
             coverage: daySummaryCoverage
-        )
+        ).applying(CGAffineTransform(translationX: mapLeadingInset / 2, y: 0))
     }
 
     private var topOverlayHeight: CGFloat {
@@ -644,6 +657,8 @@ struct MapHomeView: View {
     /// 벡터 지도 뷰가 아니라 화면 공통 위치에서 돈다. 지도 스타일을 바꾸면 벡터 지도 뷰가 사라져 안에 둔 작업이 취소됐다(ARC1030A04).
     private func runBenchAutoPlayback() async {
         #if DEBUG || BENCH
+        if ProcessInfo.processInfo.arguments.contains("-debugOpenDaySummary") { try? await Task.sleep(for: .seconds(15)); isDaySummaryPresented = true }
+        if ProcessInfo.processInfo.arguments.contains("-debugOpenClipEditor") { try? await Task.sleep(for: .seconds(15)); openSectionEditor(at: 600) }
         if MapHomeSheetBench.isRequested {
             await MapHomeSheetBench.run(selectDate: { model.selectedDate = $0 }, sheets: [
                 ("calendar", { isCalendarPresented = $0 }),
@@ -723,6 +738,9 @@ struct MapHomeView: View {
                     if !isTimelineInteractionActive, !isDayPlaybackRunning { recordTimelineWindow("select") }
                 }
             }
+                .padding(.leading, mapLeadingInset)
+                .animation(.easeInOut(duration: 0.22), value: mapLeadingInset)
+                .background(Color.tpBackground)
                 .ignoresSafeArea()
                 .zIndex(MapHomeLayerPriority.map)
 
@@ -774,7 +792,7 @@ struct MapHomeView: View {
             .zIndex(MapHomeLayerPriority.search)
 
             if isMenuOpen, !isScreenRecording {
-                menu
+                Group { if isWideLayout { sidebarContent.mapHomeWidePanelFrame(viewportWidth: mapViewportSize.width, kind: menuPanelKind) } else { menu } }
                     .transition(.move(edge: .leading).combined(with: .opacity))
                     .zIndex(MapHomeLayerPriority.menu)
             }
@@ -804,7 +822,7 @@ struct MapHomeView: View {
                 .zIndex(MapHomeLayerPriority.header)
             }
 
-            if !isScreenRecording, !isMenuOpen, layoutStyle.movesActionsToBottom {
+            if !isScreenRecording, !isMenuOpen || isWideLayout, layoutStyle.movesActionsToBottom {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     bottomActionBar
@@ -814,7 +832,7 @@ struct MapHomeView: View {
             }
 
             // 화랑이 탭은 모든 층보다 위에서 먼저 받는다(대표 지시). 여기서 하루 요약을 연다.
-            if !isScreenRecording, !isMenuOpen {
+            if !isScreenRecording, !isMenuOpen || isWideLayout {
                 MapHomeObservingView { stickmanTapTarget }
                     .zIndex(MapHomeLayerPriority.header + 1)
             }
@@ -913,7 +931,7 @@ struct MapHomeView: View {
         let probe = MapHomePlaybackProbe.begin("body")
         MapHomePlaybackProbe.inBody = true
         defer { MapHomePlaybackProbe.inBody = false; MapHomePlaybackProbe.end(probe) }
-        return lifecycleModifiers(presentationModifiers(baseContent))
+        return lifecycleModifiers(presentationModifiers(baseContent)).mapHomeDebugViewportWidth()
     }
 
     /// `body`의 수정자 체인이 길면 타입 검사가 느려져(CI에서 시간 초과) 세 덩어리로 나눈다.
@@ -972,7 +990,7 @@ struct MapHomeView: View {
                 dateText: snapshot.dateText
             )
         }
-        .sheet(isPresented: $isDaySummaryPresented) {
+        .mapHomeWidePanel(isPresented: $isDaySummaryPresented, viewportWidth: mapViewportSize.width, language: language) {
             MapHomeDaySummarySheet(
                 date: model.selectedDate,
                 categories: daySummaryCategories,
@@ -1051,7 +1069,7 @@ struct MapHomeView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isCalendarPresented) {
+        .mapHomeWidePanel(isPresented: $isCalendarPresented, kind: .calendar, title: language.text("달력", "Calendar"), viewportWidth: mapViewportSize.width, language: language) {
             MapHomeCalendarSheet(
                 selectedDate: $model.selectedDate,
                 holidayName: { date in
@@ -1172,7 +1190,7 @@ struct MapHomeView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isDailyCardPresented) {
+        .mapHomeWidePanel(isPresented: $isDailyCardPresented, title: language.text("하루 카드", "Day card"), viewportWidth: mapViewportSize.width, language: language) {
             MapHomeDailyCardSheet(
                 initialDay: model.selectedDate,
                 language: language,
@@ -1328,6 +1346,7 @@ struct MapHomeView: View {
             clipEditorSheet(for: selection)
         }
         .animation(.easeInOut(duration: 0.22), value: isMenuOpen)
+        .mapHomeWidePanelsExclusive(viewportWidth: mapViewportSize.width, [$isMenuOpen, $isCalendarPresented, $isDaySummaryPresented, $isDailyCardPresented, $isSearchExpanded, $todayCalendarExpanded])
         .onChange(of: isMenuOpen) { _, isOpen in
             guard isOpen else { return }
             Task { @MainActor in await model.refreshPermissions() }
@@ -1772,8 +1791,8 @@ struct MapHomeView: View {
     /// 메뉴 단추는 하단 맨 왼쪽으로 내렸다(대표 요청, 2026-10-26).
     private var topLeftControls: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // 날짜 줄을 펼치면 이 자리를 날짜 줄이 덮는다.
-            if !isDateWeekExpanded {
+            // 날짜 줄이 이 자리를 덮을 때만(아이폰 폭) 숨긴다.
+            if !isDateWeekExpanded || !MapHomeWideLayoutPolicy.dateStripOverlapsTopLeftControls(viewportWidth: mapViewportSize.width) {
                 HStack(spacing: 8) {
                     searchCircleButton
                     if recordingShows(\.sidebarMemos), memoDisplayMode == .all {
@@ -4719,9 +4738,9 @@ struct MapHomeView: View {
     private var bottomActionBar: some View {
         HStack(spacing: 0) {
             bottomBarButton("line.3.horizontal", language.text("메뉴", "Menu")) {
-                openMenu()
+                if isMenuOpen { isMenuOpen = false } else { openMenu() }
             }
-            MapHomeBottomBarButton(title: language.text("달력", "Calendar"), action: { isCalendarPresented = true }) {
+            MapHomeBottomBarButton(title: language.text("달력", "Calendar"), action: { isCalendarPresented.toggle() }) {
                 MapHomeCalendarGlyph(date: model.selectedDate, language: language)
             }
             bottomBarButton("location.fill", language.text("현재 위치", "Location")) {
@@ -4804,7 +4823,7 @@ struct MapHomeView: View {
                 .foregroundStyle(Color.tpInk)
                 .monospacedDigit()
         }
-        .frame(width: Layout.timeRailWidth, height: Layout.dateBadgeSize)
+        .frame(width: timeRailWidth, height: Layout.dateBadgeSize)
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         // 한 번 탭하면 날짜 줄을 왼쪽으로 펼친다.
         .onTapGesture { handleDateBadgeTap() }
@@ -4831,7 +4850,7 @@ struct MapHomeView: View {
             }
         }
         .padding(.vertical, isPlain ? 0 : 4)
-        .frame(width: Layout.timeRailWidth)
+        .frame(width: timeRailWidth)
         .mapHomeGlass(in: RoundedRectangle(cornerRadius: isPlain ? 18 : 22, style: .continuous))
         .taptionHitOutset(vertical: isPlain ? max(0, (TaptionMenuMetrics.minimumHitSize - Layout.dateBadgeSize) / 2) : 0)
         return HStack(alignment: .top, spacing: 6) {
@@ -6222,7 +6241,7 @@ struct MapHomeView: View {
 
     @ViewBuilder
     private var mapSideRails: some View {
-        if !isMenuOpen {
+        if !isMenuOpen || isWideLayout {
             GeometryReader { proxy in
                 mapSideRailsContent(viewportSize: proxy.size)
             }
@@ -6243,7 +6262,7 @@ struct MapHomeView: View {
             bottomMargin: Layout.horizontalInset + MapHomeWideLayoutPolicy.sidebarBottomReserve(viewportWidth: viewportSize.width, actionBarHeight: layoutStyle.bottomReservedHeight)
         )
         let timeSidebarWidth = MapHomeTimeSidebarMath.interactionWidth(
-            railWidth: Layout.timeRailWidth,
+            railWidth: timeRailWidth,
             trailingInteractionWidth: Layout.horizontalInset
         )
         return HStack(alignment: .top, spacing: 0) {
@@ -6289,12 +6308,12 @@ struct MapHomeView: View {
                 let minute = timelineSelectionMinute(at: timeline.date)
                 let timeSidebarInteractionWidth =
                     MapHomeTimeSidebarMath.interactionWidth(
-                        railWidth: Layout.timeRailWidth,
+                        railWidth: timeRailWidth,
                         trailingInteractionWidth: Layout.horizontalInset
                     )
                 let weatherOriginX = MapHomeWeatherRailAlignmentMath.weatherOriginX(
                     weatherRailWidth: Layout.weatherRailWidth,
-                    timeRailWidth: Layout.timeRailWidth
+                    timeRailWidth: timeRailWidth
                 )
                 let selectedTimeCard = MapHomeTimeSidebarMath.selectedTimeCardFrame(
                     availableHeight: railHeight,
@@ -6317,13 +6336,13 @@ struct MapHomeView: View {
                                 .stroke(Color.tpAccent.opacity(0.20), lineWidth: 0.8)
                         }
                         .frame(
-                            width: Layout.timeRailWidth - 12,
+                            width: timeRailWidth - 12,
                             height: selectedCardHeight
                         )
                         .position(
                             x: proxy.size.width
                                 - Layout.horizontalInset
-                                - (Layout.timeRailWidth - 12) / 2,
+                                - (timeRailWidth - 12) / 2,
                             y: timeRailTop + selectedCardCenterY
                         )
                         .allowsHitTesting(false)
@@ -6385,7 +6404,7 @@ struct MapHomeView: View {
                         categoryColors: model.settings.mapCategoryColors,
                         zoomResetToken: zoomResetToken,
                         zoomStepToken: zoomStepToken,
-                        railWidth: Layout.timeRailWidth,
+                        railWidth: timeRailWidth,
                         maximumSelectableMinute: nil,
                         trailingInteractionWidth: Layout.horizontalInset,
                         onInteractionChanged: { isInteracting in
@@ -6419,7 +6438,7 @@ struct MapHomeView: View {
                     // 확대·축소는 시간선 아래 비워 둔 자리에 사이드바와 같은 폭·모서리의 알약으로 눕힌다.
                     timelineZoomControls
                         .position(
-                            x: proxy.size.width - Layout.horizontalInset - Layout.timeRailWidth / 2,
+                            x: proxy.size.width - Layout.horizontalInset - timeRailWidth / 2,
                             y: proxy.size.height - 11
                         )
                     }
@@ -6561,7 +6580,7 @@ struct MapHomeView: View {
         }
         .frame(
             width: MapHomeTimeSidebarMath.interactionWidth(
-                railWidth: Layout.timeRailWidth,
+                railWidth: timeRailWidth,
                 trailingInteractionWidth: Layout.horizontalInset
             )
         )
@@ -6574,7 +6593,7 @@ struct MapHomeView: View {
     ) -> some View {
         // 검색·메모·일정은 왼쪽 상단 한 줄에 둔다(대표 지시). 아래 왼쪽 자리는 비운다.
         return Color.clear
-            .frame(width: Layout.timeRailWidth, height: railHeight)
+            .frame(width: timeRailWidth, height: railHeight)
             .allowsHitTesting(false)
         .shadow(color: .black.opacity(0.045), radius: 5, y: 1)
     }
@@ -6600,7 +6619,7 @@ struct MapHomeView: View {
             Image(systemName: systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                 .foregroundStyle(enabled ? Color.tpInk : Color.tpSecondary.opacity(0.4))
-                .frame(width: Layout.timeRailWidth / 2, height: 22)
+                .frame(width: timeRailWidth / 2, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -6675,7 +6694,7 @@ struct MapHomeView: View {
                     .onTapGesture { isMenuOpen = false }
 
                 let menuHeight = max(0, proxy.size.height)
-                let menuTop = MapHomeWideLayoutPolicy.menuTop(viewportWidth: proxy.size.width, viewportHeight: menuHeight, minimumTop: max(Layout.headerVisibleHeight, headerFrame.maxY))
+                let menuTop = max(Layout.headerVisibleHeight, headerFrame.maxY)
                 sidebarContent
                 .frame(
                     width: Layout.menuWidth(for: proxy.size.width),
@@ -6699,7 +6718,7 @@ struct MapHomeView: View {
 
     private var sidebarContent: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
+            MapHomeWidePanelColumns(columns: menuPanelKind.columns, spacing: 14, alignment: .leading, trailingTopInset: 0) {
             HStack(spacing: 12) {
                 MapHomeMenuHeaderCat(size: 58)
 
@@ -6736,6 +6755,7 @@ struct MapHomeView: View {
                 menuGroupDivider
                 TaptionFontMenuRow(language: language)
             }
+            } trailing: {
             menuGroupLabel(language.text("연결", "Connections"))
             menuGroupCard {
                 appleWatchMenuItem
