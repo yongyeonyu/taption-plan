@@ -1334,7 +1334,12 @@ struct MapHomeView: View {
         }
     }
 
+    /// 사슬이 길면 타입 검사가 수십 초 걸려(43초, ARC1103A01) 세 덩어리로 나눈다. 수식어 순서는 그대로다.
     private func lifecycleModifiers(_ content: some View) -> some View {
+        lifecycleLiveRouteModifiers(lifecycleDataModifiers(lifecycleSessionModifiers(content)))
+    }
+
+    private func lifecycleSessionModifiers(_ content: some View) -> some View {
         content
         .onAppear {
             if scenePhase == .active { restoreInitialMapZoom() }
@@ -1390,6 +1395,10 @@ struct MapHomeView: View {
             stopDayPlayback(resetProgress: true)
             headingMonitor.stop()
         }
+    }
+
+    private func lifecycleDataModifiers(_ content: some View) -> some View {
+        content
         .task(id: daySourceTaskKey) { await runDaySourceTask() }
         .task(id: routeReadingsTaskKey) { await runRouteReadingsTask() }
         .onChange(
@@ -1436,6 +1445,10 @@ struct MapHomeView: View {
         .onChange(of: salaryLive) { _, _ in
             persistSalaryForLockScreen()
         }
+    }
+
+    private func lifecycleLiveRouteModifiers(_ content: some View) -> some View {
+        content
         .onChange(of: model.selectedDate) { oldDate, newDate in
             let calendar = Calendar.autoupdatingCurrent
             let dayChanged = !calendar.isDate(oldDate, inSameDayAs: newDate)
