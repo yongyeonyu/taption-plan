@@ -524,6 +524,154 @@ private extension TimelineSelection {
     }
 }
 
+/// 플레이헤드 시각의 항목을 고른다. 일정 화면과 그룹 화면이 같은 순서를 쓴다.
+@MainActor
+private enum TimelineSelectionResolver {
+    static func selection(
+        at date: Date,
+        model: AppModel,
+        cache: TimelineSelectionIndexCache,
+        photoCluster: PhotoCluster?
+    ) -> TimelineSelection? {
+        cache.prepare(
+            timelineRevision: model.timelineRevision,
+            plans: model.snapshot.plans,
+            travel: model.snapshot.travel,
+            calendarEvents: model.snapshot.calendarEvents,
+            categories: model.snapshot.categories,
+            actuals: model.snapshot.actuals
+        )
+        let playheadMatch = TimelinePlayheadSynchronizer.match(
+            at: date,
+            plans: model.snapshot.plans,
+            actuals: model.snapshot.actuals,
+            places: model.snapshot.places,
+            travel: model.snapshot.travel,
+            calendarEvents: model.snapshot.calendarEvents,
+            weather: model.snapshot.weather
+        )
+
+        if let photoCluster {
+            return .photo(photoCluster)
+        }
+
+        if let travel = cache.travel(containing: date) {
+            return TimelineSelection(
+                title: timelineTravelModeName(travel.mode),
+                span: travel.span,
+                planID: nil,
+                travelID: travel.id,
+                recordNodeID: "automatic.travel.\(travel.id.uuidString)",
+                isRoute: true,
+                categoryID: "movement",
+                categoryName: "이동"
+            )
+        }
+
+        if let actual = playheadMatch.automaticActuals.sorted(by: {
+            if $0.startedAt == $1.startedAt {
+                return $0.span(asOf: max(Date.now, date)).duration
+                    < $1.span(asOf: max(Date.now, date)).duration
+            }
+            return $0.startedAt < $1.startedAt
+        }).first {
+            let span = actual.span(asOf: max(Date.now, date))
+            return TimelineSelection(
+                title: isMovementActual(actual)
+                    ? movementActualTitle(actual)
+                    : actual.title,
+                span: span,
+                planID: actual.routineID ?? actual.planID,
+                actualID: actual.id,
+                recordNodeID: "automatic.actual.\(actual.id.uuidString)",
+                isRoute: false,
+                categoryID: actual.categoryID,
+                categoryName: cache.categoryName(
+                    for: actual.categoryID
+                )
+            )
+        }
+
+        if let weather = timelineWeather(at: date, in: model.snapshot.weather) {
+            return timelineWeatherSelection(weather)
+        }
+
+        // Generated repeat segments are rendered as concrete timeline blocks,
+        // but they are not root action items. Include them in playhead
+        // selection so a 23:00–06:30 routine remains visible after midnight.
+        if !TaptionProductScope.automaticLoggingOnly,
+           let routine = cache.routinePlan(containing: date) {
+            return TimelineSelection(
+                title: routine.title,
+                span: routine.span,
+                planID: routine.id,
+                isRoute: false,
+                categoryID: routine.categoryID,
+                categoryName: cache.categoryName(
+                    for: routine.categoryID
+                )
+            )
+        }
+
+        // A calendar item can cover an entire day. Prefer the automatic
+        // record at the playhead so the detail panel follows the visible
+        // sleep/activity block instead of showing the all-day event.
+        if !TaptionProductScope.automaticLoggingOnly,
+           let event = cache.eventPlan(containing: date) {
+            return TimelineSelection(
+                title: event.title,
+                span: event.span,
+                planID: event.id,
+                isRoute: false,
+                categoryID: "event",
+                categoryName: "이벤트"
+            )
+        }
+
+        if let calendarEvent = cache.calendarEvent(containing: date) {
+            return TimelineSelection(
+                title: calendarEvent.title,
+                span: calendarEvent.span,
+                planID: nil,
+                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
+                isRoute: false,
+                categoryID: "calendar",
+                categoryName: "일정"
+            )
+        }
+
+        if !TaptionProductScope.automaticLoggingOnly,
+           let plan = cache.actionPlan(containing: date) {
+            return TimelineSelection(
+                title: plan.title,
+                span: plan.span,
+                planID: plan.id,
+                isRoute: false,
+                categoryID: plan.categoryID,
+                categoryName: cache.categoryName(
+                    for: plan.categoryID
+                )
+            )
+        }
+
+        return nil
+    }
+}
+
+private extension TimelineSelection {
+    static func photo(_ cluster: PhotoCluster) -> TimelineSelection {
+        TimelineSelection(
+            title: "사진",
+            span: cluster.detailSpan,
+            planID: nil,
+            recordNodeID: "automatic.photo.\(cluster.id)",
+            isRoute: false,
+            categoryID: "photo",
+            categoryName: "사진"
+        )
+    }
+}
+
 private extension PhotoCluster {
     var detailSpan: TimeSpan {
         // PhotoClusterer keeps each cluster chronological. Avoid allocating
@@ -642,15 +790,7 @@ struct ScheduleView: View {
                     editingPlanID = nil
                     mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
-                    selectedTimelineItem = TimelineSelection(
-                        title: "사진",
-                        span: cluster.detailSpan,
-                        planID: nil,
-                        recordNodeID: "automatic.photo.\(cluster.id)",
-                        isRoute: false,
-                        categoryID: "photo",
-                        categoryName: "사진"
-                    )
+                    selectedTimelineItem = .photo(cluster)
                     detailSection = .photo
                 }
             )
@@ -946,139 +1086,16 @@ struct ScheduleView: View {
     }
 
     private func timelineSelection(at date: Date) -> TimelineSelection? {
-        selectionIndexCache.prepare(
-            timelineRevision: model.timelineRevision,
-            plans: model.snapshot.plans,
-            travel: model.snapshot.travel,
-            calendarEvents: model.snapshot.calendarEvents,
-            categories: model.snapshot.categories,
-            actuals: model.snapshot.actuals
-        )
-        let playheadMatch = TimelinePlayheadSynchronizer.match(
+        let cluster = photoCluster(at: date)
+        if let cluster, selectedPhotoCluster?.id != cluster.id {
+            selectedPhotoCluster = cluster
+        }
+        return TimelineSelectionResolver.selection(
             at: date,
-            plans: model.snapshot.plans,
-            actuals: model.snapshot.actuals,
-            places: model.snapshot.places,
-            travel: model.snapshot.travel,
-            calendarEvents: model.snapshot.calendarEvents,
-            weather: model.snapshot.weather
+            model: model,
+            cache: selectionIndexCache,
+            photoCluster: cluster
         )
-
-        if let cluster = photoCluster(at: date) {
-            if selectedPhotoCluster?.id != cluster.id {
-                selectedPhotoCluster = cluster
-            }
-            return TimelineSelection(
-                title: "사진",
-                span: cluster.detailSpan,
-                planID: nil,
-                recordNodeID: "automatic.photo.\(cluster.id)",
-                isRoute: false,
-                categoryID: "photo",
-                categoryName: "사진"
-            )
-        }
-
-        if let travel = selectionIndexCache.travel(containing: date) {
-            return TimelineSelection(
-                title: timelineTravelModeName(travel.mode),
-                span: travel.span,
-                planID: nil,
-                travelID: travel.id,
-                recordNodeID: "automatic.travel.\(travel.id.uuidString)",
-                isRoute: true,
-                categoryID: "movement",
-                categoryName: "이동"
-            )
-        }
-
-        if let actual = playheadMatch.automaticActuals.sorted(by: {
-            if $0.startedAt == $1.startedAt {
-                return $0.span(asOf: max(Date.now, date)).duration
-                    < $1.span(asOf: max(Date.now, date)).duration
-            }
-            return $0.startedAt < $1.startedAt
-        }).first {
-            let span = actual.span(asOf: max(Date.now, date))
-            return TimelineSelection(
-                title: isMovementActual(actual)
-                    ? movementActualTitle(actual)
-                    : actual.title,
-                span: span,
-                planID: actual.routineID ?? actual.planID,
-                actualID: actual.id,
-                recordNodeID: "automatic.actual.\(actual.id.uuidString)",
-                isRoute: false,
-                categoryID: actual.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: actual.categoryID
-                )
-            )
-        }
-
-        if let weather = timelineWeather(at: date, in: model.snapshot.weather) {
-            return timelineWeatherSelection(weather)
-        }
-
-        // Generated repeat segments are rendered as concrete timeline blocks,
-        // but they are not root action items. Include them in playhead
-        // selection so a 23:00–06:30 routine remains visible after midnight.
-        if !TaptionProductScope.automaticLoggingOnly,
-           let routine = selectionIndexCache.routinePlan(containing: date) {
-            return TimelineSelection(
-                title: routine.title,
-                span: routine.span,
-                planID: routine.id,
-                isRoute: false,
-                categoryID: routine.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: routine.categoryID
-                )
-            )
-        }
-
-        // A calendar item can cover an entire day. Prefer the automatic
-        // record at the playhead so the detail panel follows the visible
-        // sleep/activity block instead of showing the all-day event.
-        if !TaptionProductScope.automaticLoggingOnly,
-           let event = selectionIndexCache.eventPlan(containing: date) {
-            return TimelineSelection(
-                title: event.title,
-                span: event.span,
-                planID: event.id,
-                isRoute: false,
-                categoryID: "event",
-                categoryName: "이벤트"
-            )
-        }
-
-        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
-            return TimelineSelection(
-                title: calendarEvent.title,
-                span: calendarEvent.span,
-                planID: nil,
-                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
-                isRoute: false,
-                categoryID: "calendar",
-                categoryName: "일정"
-            )
-        }
-
-        if !TaptionProductScope.automaticLoggingOnly,
-           let plan = selectionIndexCache.actionPlan(containing: date) {
-            return TimelineSelection(
-                title: plan.title,
-                span: plan.span,
-                planID: plan.id,
-                isRoute: false,
-                categoryID: plan.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: plan.categoryID
-                )
-            )
-        }
-
-        return nil
     }
 
     private func photoCluster(at date: Date) -> PhotoCluster? {
@@ -5003,15 +5020,7 @@ struct GroupGanttView: View {
                     editingPlanID = nil
                     mapPlayheadDate = nil
                     selectedPhotoCluster = cluster
-                    selectedTimelineItem = TimelineSelection(
-                        title: "사진",
-                        span: cluster.detailSpan,
-                        planID: nil,
-                        recordNodeID: "automatic.photo.\(cluster.id)",
-                        isRoute: false,
-                        categoryID: "photo",
-                        categoryName: "사진"
-                    )
+                    selectedTimelineItem = .photo(cluster)
                     detailSection = .photo
                 }
             )
@@ -5125,135 +5134,16 @@ struct GroupGanttView: View {
     }
 
     private func timelineSelection(at date: Date) -> TimelineSelection? {
-        selectionIndexCache.prepare(
-            timelineRevision: model.timelineRevision,
-            plans: model.snapshot.plans,
-            travel: model.snapshot.travel,
-            calendarEvents: model.snapshot.calendarEvents,
-            categories: model.snapshot.categories,
-            actuals: model.snapshot.actuals
-        )
-        let playheadMatch = TimelinePlayheadSynchronizer.match(
+        let cluster = photoCluster(at: date)
+        if let cluster, selectedPhotoCluster?.id != cluster.id {
+            selectedPhotoCluster = cluster
+        }
+        return TimelineSelectionResolver.selection(
             at: date,
-            plans: model.snapshot.plans,
-            actuals: model.snapshot.actuals,
-            places: model.snapshot.places,
-            travel: model.snapshot.travel,
-            calendarEvents: model.snapshot.calendarEvents,
-            weather: model.snapshot.weather
+            model: model,
+            cache: selectionIndexCache,
+            photoCluster: cluster
         )
-
-        if let cluster = photoCluster(at: date) {
-            if selectedPhotoCluster?.id != cluster.id {
-                selectedPhotoCluster = cluster
-            }
-            return TimelineSelection(
-                title: "사진",
-                span: cluster.detailSpan,
-                planID: nil,
-                recordNodeID: "automatic.photo.\(cluster.id)",
-                isRoute: false,
-                categoryID: "photo",
-                categoryName: "사진"
-            )
-        }
-
-        if let travel = selectionIndexCache.travel(containing: date) {
-            return TimelineSelection(
-                title: timelineTravelModeName(travel.mode),
-                span: travel.span,
-                planID: nil,
-                travelID: travel.id,
-                recordNodeID: "automatic.travel.\(travel.id.uuidString)",
-                isRoute: true,
-                categoryID: "movement",
-                categoryName: "이동"
-            )
-        }
-
-        if let actual = playheadMatch.automaticActuals.sorted(by: {
-            if $0.startedAt == $1.startedAt {
-                return $0.span(asOf: max(Date.now, date)).duration
-                    < $1.span(asOf: max(Date.now, date)).duration
-            }
-            return $0.startedAt < $1.startedAt
-        }).first {
-            let span = actual.span(asOf: max(Date.now, date))
-            return TimelineSelection(
-                title: isMovementActual(actual)
-                    ? movementActualTitle(actual)
-                    : actual.title,
-                span: span,
-                planID: actual.routineID ?? actual.planID,
-                actualID: actual.id,
-                recordNodeID: "automatic.actual.\(actual.id.uuidString)",
-                isRoute: false,
-                categoryID: actual.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: actual.categoryID
-                )
-            )
-        }
-
-        if let weather = timelineWeather(at: date, in: model.snapshot.weather) {
-            return timelineWeatherSelection(weather)
-        }
-
-        if !TaptionProductScope.automaticLoggingOnly,
-           let routine = selectionIndexCache.routinePlan(containing: date) {
-            return TimelineSelection(
-                title: routine.title,
-                span: routine.span,
-                planID: routine.id,
-                isRoute: false,
-                categoryID: routine.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: routine.categoryID
-                )
-            )
-        }
-
-        // Keep the group timeline selection order identical to the main
-        // timeline: automatic records win over all-day calendar blocks.
-        if !TaptionProductScope.automaticLoggingOnly,
-           let event = selectionIndexCache.eventPlan(containing: date) {
-            return TimelineSelection(
-                title: event.title,
-                span: event.span,
-                planID: event.id,
-                isRoute: false,
-                categoryID: "event",
-                categoryName: "이벤트"
-            )
-        }
-
-        if let calendarEvent = selectionIndexCache.calendarEvent(containing: date) {
-            return TimelineSelection(
-                title: calendarEvent.title,
-                span: calendarEvent.span,
-                planID: nil,
-                recordNodeID: "automatic.calendar.\(calendarEvent.id)",
-                isRoute: false,
-                categoryID: "calendar",
-                categoryName: "일정"
-            )
-        }
-
-        if !TaptionProductScope.automaticLoggingOnly,
-           let plan = selectionIndexCache.actionPlan(containing: date) {
-            return TimelineSelection(
-                title: plan.title,
-                span: plan.span,
-                planID: plan.id,
-                isRoute: false,
-                categoryID: plan.categoryID,
-                categoryName: selectionIndexCache.categoryName(
-                    for: plan.categoryID
-                )
-            )
-        }
-
-        return nil
     }
 
     private func photoCluster(at date: Date) -> PhotoCluster? {
