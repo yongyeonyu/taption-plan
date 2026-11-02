@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */; };
+		A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */; };
+		A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */; };
+		A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11501F768BFA9562791B /* MapHomeStride.swift */; };
+		A1FA114B649575874095E7E4 /* MapHomeCalendarPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */; };
 		A1FA1112A607AAE0D257EB50 /* ReviewView+Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */; };
 		A1FA1157BD1F0CCB182AD1A6 /* ReviewView+Records.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */; };
 		A1FA11B6B565DF24CA6FBDD1 /* ReviewView+Charts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */; };
@@ -500,6 +505,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDailyCard.swift; sourceTree = "<group>"; };
+		F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarm.swift; sourceTree = "<group>"; };
+		F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalaryPolicy.swift; sourceTree = "<group>"; };
+		F1FA11501F768BFA9562791B /* MapHomeStride.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStride.swift; sourceTree = "<group>"; };
+		F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCalendarPolicies.swift; sourceTree = "<group>"; };
 		F1FA11C7507774332BFCF985 /* ReviewView+Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Data.swift"; sourceTree = "<group>"; };
 		F1FA11A657AF32CE7A175D27 /* ReviewView+Records.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Records.swift"; sourceTree = "<group>"; };
 		F1FA1159882F936CEF458785 /* ReviewView+Charts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReviewView+Charts.swift"; sourceTree = "<group>"; };
@@ -1098,6 +1108,11 @@
 				F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */,
 				F50000000000000000000001 /* MapHomeVectorMap.swift */,
 				F1000000000000000000007F /* MapHomeCalendarSheet.swift */,
+				F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */,
+				F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */,
+				F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */,
+				F1FA11501F768BFA9562791B /* MapHomeStride.swift */,
+				F1FA1117C18536CF5C5AE2C0 /* MapHomeCalendarPolicies.swift */,
 				F1000000000000000000F0A1 /* MapHomeScreenRecording.swift */,
 				F51002000000000000000006 /* MapHomeNLEClipEditor.swift */,
 				F1000000000000000000F0B1 /* MapHomeTodayCalendar.swift */,
@@ -1788,6 +1803,11 @@
 				A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */,
 				A50000000000000000000001 /* MapHomeVectorMap.swift in Sources */,
 				A1000000000000000000007F /* MapHomeCalendarSheet.swift in Sources */,
+				A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */,
+				A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */,
+				A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */,
+				A1FA119C943D414BBBC9CDA9 /* MapHomeStride.swift in Sources */,
+				A1FA114B649575874095E7E4 /* MapHomeCalendarPolicies.swift in Sources */,
 				A1000000000000000000F0A1 /* MapHomeScreenRecording.swift in Sources */,
 				A1000000000000000000F0B1 /* MapHomeTodayCalendar.swift in Sources */,
 				A1000000000000000000F0A2 /* MapHomePhotoLayer.swift in Sources */,
