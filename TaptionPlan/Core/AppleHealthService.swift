@@ -53,26 +53,6 @@ actor HealthBackgroundRefreshCoordinator {
     }
 }
 
-private final class HealthObserverCompletion: @unchecked Sendable {
-    private let callback: () -> Void
-    private let lock = NSLock()
-    private var hasCompleted = false
-
-    init(_ callback: @escaping () -> Void) {
-        self.callback = callback
-    }
-
-    /// HealthKit accepts one completion per delivery, so a deadline and the
-    /// finished work can both call this safely.
-    func callAsFunction() {
-        lock.lock()
-        let isFirst = !hasCompleted
-        hasCompleted = true
-        lock.unlock()
-        if isFirst { callback() }
-    }
-}
-
 struct HealthKitObservedChangeQueue: Sendable, Equatable {
     private var pending: Set<String> = []
 
@@ -125,24 +105,6 @@ final class AppleHealthService: @unchecked Sendable {
             let result = values
             lock.unlock()
             return result
-        }
-    }
-
-    private final class RouteLocationsReplyGate: @unchecked Sendable {
-        private let lock = NSLock()
-        private var continuation:
-            CheckedContinuation<[CLLocation], Never>?
-
-        init(_ continuation: CheckedContinuation<[CLLocation], Never>) {
-            self.continuation = continuation
-        }
-
-        func finish(_ value: [CLLocation]) {
-            lock.lock()
-            let pending = continuation
-            continuation = nil
-            lock.unlock()
-            pending?.resume(returning: value)
         }
     }
 
@@ -231,17 +193,18 @@ final class AppleHealthService: @unchecked Sendable {
                 sampleType: sampleType,
                 predicate: nil
             ) { [weak self] _, completion, error in
-                let completion = HealthObserverCompletion(completion)
+                // HealthKit은 전달마다 완료 호출을 한 번만 받는다. 마감 시간과 작업 끝이 모두 부를 수 있다.
+                let finish = OneShotReply<Void> { _ in completion() }
                 Task {
                     guard error == nil else {
-                        completion()
+                        finish.finish(())
                         return
                     }
                     // Release HealthKit even if the refresh outlives the wake
                     // window, so delivery is not throttled for slow work.
                     let deadline = Task {
                         try await Task.sleep(for: .seconds(20))
-                        completion()
+                        finish.finish(())
                     }
                     #if os(iOS) && !TAPTION_WIDGET
                     let assertion = await MainActor.run {
@@ -253,7 +216,7 @@ final class AppleHealthService: @unchecked Sendable {
                     self?.markObservedChange(typeIdentifier)
                     await onUpdate()
                     deadline.cancel()
-                    completion()
+                    finish.finish(())
                     #if os(iOS) && !TAPTION_WIDGET
                     await assertion.end()
                     #endif
@@ -634,7 +597,7 @@ final class AppleHealthService: @unchecked Sendable {
             let collected = RouteLocationsAccumulator(
                 maximumCount: Self.maximumRouteLocations
             )
-            let gate = RouteLocationsReplyGate(continuation)
+            let gate = OneShotReply(continuation)
             let query = HKWorkoutRouteQuery(
                 route: route
             ) { _, locations, done, error in

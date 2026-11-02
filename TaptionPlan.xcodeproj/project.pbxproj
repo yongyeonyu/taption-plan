@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F96060E8351D906AA8 /* OneShotReply.swift */; };
 		A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */; };
 		A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */; };
 		A1FA11D67A6BAA407D371199 /* MapHomeSalaryPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */; };
@@ -505,6 +506,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA11F96060E8351D906AA8 /* OneShotReply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotReply.swift; sourceTree = "<group>"; };
 		F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDailyCard.swift; sourceTree = "<group>"; };
 		F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarm.swift; sourceTree = "<group>"; };
 		F1FA11B9733FBC139C6D2716 /* MapHomeSalaryPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalaryPolicy.swift; sourceTree = "<group>"; };
@@ -1282,6 +1284,7 @@
 				F5B1102A020000000000001B /* AppleCalendarService.swift */,
 				F5B1102A0200000000000019 /* ApplePhotoLibraryService.swift */,
 				F5B1102A0200000000000017 /* AppleHealthService.swift */,
+				F1FA11F96060E8351D906AA8 /* OneShotReply.swift */,
 				F5B1102A0200000000000015 /* AppleWeatherContextService.swift */,
 				F5B1102A0200000000000013 /* AirQualityContextService.swift */,
 				F5B1102A0200000000000011 /* AirPodsActivityService.swift */,
@@ -1919,6 +1922,7 @@
 				A5B1102A020000000000001C /* AppleCalendarService.swift in Sources */,
 				A5B1102A020000000000001A /* ApplePhotoLibraryService.swift in Sources */,
 				A5B1102A0200000000000018 /* AppleHealthService.swift in Sources */,
+				A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */,
 				A5B1102A0200000000000016 /* AppleWeatherContextService.swift in Sources */,
 				A5B1102A0200000000000014 /* AirQualityContextService.swift in Sources */,
 				A5B1102A0200000000000012 /* AirPodsActivityService.swift in Sources */,
