@@ -13,6 +13,9 @@ enum MapHomeLocationDestination: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// 앱 그림체로 그린 위치 아이콘(`tools/generate_place_icons.py`).
+    var iconAssetName: String { "PlaceIcon_\(rawValue)" }
+
     var placeKind: FrequentPlaceKind? {
         switch self {
         case .home: .home
@@ -118,9 +121,10 @@ struct MapHomeLocationThumbnail: View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                 .fill(destination.tint.opacity(0.14))
-            Image(systemName: destination.rpgSystemImage)
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(destination.tint)
+            Image(destination.iconAssetName)
+                .resizable()
+                .scaledToFit()
+                .padding(size * 0.1)
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -143,16 +147,19 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     case running
     case car
     case subway
+    case train
     case privateVehicle
     case bus
     case ship
     case airplane
     case cycling
     case health
+    case shower
+    case housework
 
     var isMoving: Bool {
         switch self {
-        case .movement, .walking, .running, .car, .subway,
+        case .movement, .walking, .running, .car, .subway, .train,
              .privateVehicle, .bus, .ship, .airplane, .cycling:
             true
         default:
@@ -164,7 +171,16 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
     var hwarangScene: HwarangScene {
         switch self {
         case .running: .runLoop
-        case .movement, .walking, .car, .subway, .privateVehicle, .bus, .ship, .airplane, .cycling: .stroll
+        case .cycling: .bicycle
+        case .train: .train
+        case .movement, .walking: .stroll
+        case .car, .privateVehicle: .carFront
+        case .subway: .subway
+        case .bus: .bus
+        case .ship: .boat
+        case .airplane: .airplane
+        case .shower: .shower
+        case .housework: .robotVacuum
         case .sleeping: .sleep
         case .eating: .eat
         case .computer, .company: .work
@@ -177,10 +193,22 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
     }
 
+    /// 설정 키: 재생 때 탈것을 탄 화랑이를 보여 줄지.
+    static let vehicleDisplayKey = "mapHome.showsVehicleRides"
+    static let runningSpeedMetersPerSecond = 2.2
+
+    /// 지도 마커 장면. 탈것 표시가 꺼져 있으면 속도에 따라 걷거나 뛰기만 한다.
+    func markerScene(speedMetersPerSecond: Double?, showsVehicles: Bool) -> HwarangScene {
+        guard isMoving else { return hwarangScene }
+        if self == .running { return .runLoop }
+        if showsVehicles, hwarangScene.isVehicleScene { return hwarangScene }
+        return (speedMetersPerSecond ?? 0) >= Self.runningSpeedMetersPerSecond ? .runLoop : .walkLoop
+    }
+
     var animatesPresentation: Bool {
         switch self {
         case .computer, .company, .school, .reading, .hobby, .sleeping, .eating,
-             .activity, .exercise, .health, .unconfirmed:
+             .activity, .exercise, .health, .unconfirmed, .shower, .housework:
             true
         default:
             isMoving
@@ -193,6 +221,9 @@ enum MapHomeStickmanAction: String, CaseIterable, Hashable, Sendable {
         }
         switch self {
         case .activity: return t("활동", "Activity")
+        case .train: return t("기차", "Train")
+        case .shower: return t("샤워", "Shower")
+        case .housework: return t("집안일", "Housework")
         case .computer: return t("업무", "Work")
         case .company: return t("회사 업무", "Office work")
         case .school: return t("학교 학습", "School")
@@ -330,6 +361,13 @@ enum MapHomeStickmanActionResolver {
             return .sleeping
         }
 
+        // 사용자가 직접 정한 머무는 분류는 센서가 이동으로 본 구간에서도 그대로 보여 준다.
+        if let chosen = activeActuals
+            .filter({ ($0.0.manuallyCorrected || $0.0.source == .manual) && !$0.1.isMoving })
+            .max(by: higherPriority) {
+            return chosen.1
+        }
+
         if let segment = travel
             .filter({ $0.span.contains(date) })
             .max(by: { $0.span.start < $1.span.start }) {
@@ -421,7 +459,8 @@ enum MapHomeStickmanActionResolver {
         case .running: .running
         case .cycling: .cycling
         case .car, .taxi: .car
-        case .subway, .train: .subway
+        case .subway: .subway
+        case .train: .train
         case .bus: .bus
         case .airplane: .airplane
         case .ship: .ship
@@ -448,6 +487,9 @@ enum MapHomeStickmanActionResolver {
         if categoryRoot == "study", value.contains("학교") {
             return .school
         }
+        // 사용자가 추가한 분류 이름. "housework"가 아래 "work"에 걸리지 않게 먼저 본다.
+        if value.contains("샤워") || value.contains("shower") { return .shower }
+        if value.contains("집안일") || value.contains("청소") || value.contains("housework") { return .housework }
         let detailMappings: [(String, MapHomeStickmanAction)] = [
             ("movement.walking", .walking),
             ("movement.running", .running),
@@ -527,6 +569,8 @@ enum MapHomeStickmanActionResolver {
         case "eating", "food": .eating
         case "exercise": .exercise
         case "health": .health
+        case "shower": .shower
+        case "housework": .housework
         case "unconfirmed", "unknown": .unconfirmed
         default: nil
         }
@@ -827,12 +871,14 @@ struct MapHomeStickmanMarker: View {
     var speedMetersPerSecond: Double? = nil
     var equippedAccessoryID: String? = nil
     var facesLeft = false
+    @AppStorage(MapHomeStickmanAction.vehicleDisplayKey) private var showsVehicles = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
-        let tier = action.isMoving
+        let scene = action.markerScene(speedMetersPerSecond: speedMetersPerSecond, showsVehicles: showsVehicles)
+        let tier = action.isMoving && !scene.isVehicleScene
             ? MapHomeSpeedTier.tier(forMetersPerSecond: speedMetersPerSecond)
             : .idle
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
@@ -861,21 +907,15 @@ struct MapHomeStickmanMarker: View {
                     .offset(x: Self.size.width * (facesLeft ? 0.9 : -0.9))
                 }
                 HwarangSceneView(
-                    scene: action.isMoving ? tier.scene : action.hwarangScene,
+                    scene: scene,
                     sec: sec,
-                    width: Self.size.width * 1.9,
+                    width: Self.size.width * 1.6,
+                    anchorHeight: Self.size.height,
                     facesLeft: facesLeft && action.isMoving,
                     hatAssetName: hat,
                     showsBackdrop: false
                 )
                 .rotationEffect(.degrees(facesLeft ? -tier.leanDegrees * 0.5 : tier.leanDegrees * 0.5))
-                if hat == nil, let accessorySymbol = MapHomeGrowthAccessoryCatalog.symbol(for: equippedAccessoryID) {
-                    Image(systemName: accessorySymbol)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .black))
-                        .foregroundStyle(Color(hex: "#D94772"))
-                        .shadow(color: .white.opacity(0.95), radius: 1.5)
-                        .offset(x: Self.size.width * 0.28, y: -Self.size.height * 0.34)
-                }
                 // 피카츄 구간 — 번개 스파크.
                 if tier.isPikachu {
                     Image(systemName: "bolt.fill")
@@ -887,7 +927,6 @@ struct MapHomeStickmanMarker: View {
             }
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .opacity(routePhase == .forecast ? 0.8 : 1)
         .shadow(color: .black.opacity(0.14), radius: 3, y: 1)
         .accessibilityHidden(true)
     }
@@ -896,11 +935,13 @@ struct MapHomeStickmanMarker: View {
 struct MapHomeStickmanGlyph: View {
     let action: MapHomeStickmanAction
     var size: CGFloat = 30
+    var equippedAccessoryID: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
+        let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
         // 같은 화면의 화랑이들이 동시에 같은 자세로 겹치지 않게 분류별로 시작을 어긋낸다.
         let offset = Double(MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0) * 3.7
         TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic)) { context in
@@ -908,7 +949,30 @@ struct MapHomeStickmanGlyph: View {
                 scene: action.hwarangScene,
                 sec: isStatic ? 0 : HwarangClock.seconds(at: context.date) + offset,
                 width: size * 1.6,
-                showsBackdrop: size >= 36
+                anchorHeight: size,
+                hatAssetName: hat,
+                showsBackdrop: size >= 36,
+                keepsBodySize: false
+            )
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// 메뉴 머리글의 화랑이: 지도를 펼쳐 든 모습과 발자국.
+struct MapHomeMenuHeaderCat: View {
+    let size: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: reduceMotion)) { context in
+            HwarangSceneView(
+                scene: .atlas,
+                sec: reduceMotion ? 0 : HwarangClock.seconds(at: context.date),
+                width: size * 1.3,
+                anchorHeight: size,
+                showsBackdrop: false
             )
         }
         .frame(width: size, height: size)

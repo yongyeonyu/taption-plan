@@ -390,6 +390,8 @@ enum MapHomeSubwayRouteOverlayEngine {
             .filter {
                 ($0.mode == .train || ($0.mode == .subway && $0.isConfirmed
                     && $0.subwayRoute.map(SubwayStationCatalog.isValid) != true))
+                    // 다른 날 기억으로만 지하철이 된 구간에는 추정 노선을 그리지 않는다(PAW1102A03).
+                    && !ActivityClassificationLockEngine.isRememberedOnlySubway($0)
                     && $0.span.start <= cutoff
                     && $0.span.intersection(with: day) != nil
             }

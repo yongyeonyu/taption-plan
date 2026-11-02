@@ -23,19 +23,6 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertFalse(MapHomeGrowthPolicy.qualifies(actualCount: 2, unconfirmedCount: 1))
     }
 
-    /// 장착 장식 스티커는 아바타 원 밖 오른쪽 위에 붙는다(원 안 10pt로는 아트에 묻혔다).
-    /// 가장 안쪽 모서리가 원 밖이어야 하고, 지도 호스트 상자 안에는 남아야 한다.
-    func testAccessoryStickerSitsOutsideAvatarCircleInsideHostBox() {
-        let radius = MapHomePlacePinLayout.avatarSize / 2
-        let offset = MapHomePlacePinLayout.accessoryStickerOffset
-        let size = MapHomePlacePinLayout.accessoryStickerSize
-        let nearest = CGPoint(x: radius - size + offset, y: -radius - offset + size)
-        XCTAssertGreaterThan(hypot(nearest.x, nearest.y), radius)
-        let far = CGPoint(x: radius + offset, y: -radius - offset)
-        XCTAssertLessThan(abs(far.x), MapHomePlacePinLayout.appleHomeHostWidth / 2)
-        XCTAssertLessThan(abs(far.y), MapHomePlacePinLayout.appleHomeHostHeight / 2)
-    }
-
     func testCompletedDayRequiresFullCoverageAndAtLeastOneActual() {
         let start = date(2026, 9, 20)
         let end = date(2026, 9, 21)
@@ -444,6 +431,37 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertNotNil(MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.001"))
     }
 
+    func testEveryLocationDestinationHasDrawnIcon() {
+        XCTAssertEqual(MapHomeLocationDestination.allCases.count, 8)
+        for destination in MapHomeLocationDestination.allCases {
+            XCTAssertNotNil(UIImage(named: destination.iconAssetName), destination.rawValue)
+        }
+    }
+
+    func testPawprintsStayOnSubwaySegmentWithoutDrawnRoute() {
+        let span = TimeSpan(start: Date(timeIntervalSince1970: 1_000), end: Date(timeIntervalSince1970: 2_000))
+        var segment = TravelSegment(mode: .subway, span: span, distanceMeters: 1_000, confidence: .high, evidence: ["사용자 확인 기억"])
+        segment.isConfirmed = true
+        XCTAssertTrue(MapHomePawprintLedger.lineDrawnSpans(in: [segment]).isEmpty)
+    }
+
+    func testNoMoreRewardsAfterAllFiftyTwoCollected() {
+        var history = MapHomeGrowthHistory(season: MapHomeGrowthSeason(year: 2026))
+        history.season.pendingWeeklyRewards = 60
+        for candidate in MapHomeLandmarkCatalog.candidates {
+            XCTAssertTrue(MapHomeGrowthPolicy.redeemWeeklyReward(
+                evolutionID: candidate.id, landPlotID: "plot-\(candidate.id)", accessoryID: candidate.accessoryID, in: &history
+            ))
+        }
+        XCTAssertEqual(history.season.accessories.count, 52)
+        XCTAssertEqual(history.season.pendingWeeklyRewards, 0)
+        history.season.pendingWeeklyRewards = 1
+        XCTAssertFalse(MapHomeGrowthPolicy.redeemWeeklyReward(
+            evolutionID: "kr.namsan", landPlotID: "plot-extra", accessoryID: "cat.accessory.kr.namsan", in: &history
+        ))
+        XCTAssertEqual(history.season.accessories.count, 52)
+    }
+
     func testWeeklyRewardUnlocksAndEquipsAccessory() {
         var history = MapHomeGrowthHistory.initial(for: date(2026, 1, 1), calendar: calendar)
         history.season.pendingWeeklyRewards = 1
@@ -534,5 +552,72 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
             abs(positions[0].x - positions[1].x) + abs(positions[0].y - positions[1].y),
             1
         )
+    }
+
+    func testCalendarMonthMemoryKeepsValuesAndEvictsOldestMonth() {
+        var memory = MapHomeCalendarMonthMemory(limit: 2)
+        let months = (0..<3).map { Date(timeIntervalSince1970: Double($0) * 2_678_400) }
+        let day = months[0]
+
+        memory.store(statuses: [day: .complete], for: months[0])
+        memory.store(totals: [day: ["work": 60]], for: months[0])
+        XCTAssertEqual(memory.statuses(for: months[0]), [day: .complete])
+        XCTAssertEqual(memory.totals(for: months[0]), [day: ["work": 60]])
+
+        memory.store(statuses: [:], for: months[1])
+        memory.store(statuses: [:], for: months[2])
+        XCTAssertTrue(memory.statuses(for: months[0]).isEmpty)
+        XCTAssertTrue(memory.totals(for: months[0]).isEmpty)
+    }
+
+    func testCalendarMonthMemoryComputesMonthValuesOnce() {
+        var memory = MapHomeCalendarMonthMemory()
+        let month = Date(timeIntervalSince1970: 0)
+        var calls = 0
+
+        for _ in 0..<3 {
+            _ = memory.days(for: month) { calls += 1; return [nil, month] }
+            _ = memory.title(for: month, key: "ko") { calls += 1; return "1월" }
+            _ = memory.dayInfo(for: month, in: month) {
+                calls += 1
+                return .init(day: 1, weekday: 5, holiday: nil)
+            }
+        }
+        XCTAssertEqual(calls, 3)
+        // 언어가 바뀌면 제목은 다시 만든다.
+        XCTAssertEqual(memory.title(for: month, key: "en") { "Jan" }, "Jan")
+    }
+
+    func testCounterDetailSnapshotKeepsFirstValueUntilCleared() {
+        let snapshot = MapHomeCounterDetailSnapshot()
+        var calls = 0
+        let make: () -> MapHomeCounterDetailSnapshot.Value = {
+            calls += 1
+            return .init(contents: [], initialIndex: calls, dateText: "")
+        }
+
+        XCTAssertEqual(snapshot.value(for: .salary, make: make).initialIndex, 1)
+        XCTAssertEqual(snapshot.value(for: .salary, make: make).initialIndex, 1)
+        XCTAssertEqual(snapshot.value(for: .kind(.steps), make: make).initialIndex, 2)
+        snapshot.clear()
+        XCTAssertEqual(snapshot.value(for: .kind(.steps), make: make).initialIndex, 3)
+    }
+
+    @MainActor
+    func testDateBadgeInfoFollowsDateAndHoliday() {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = .current
+        let newYear = seoul.date(from: DateComponents(year: 2027, month: 1, day: 1))!
+        let info = MapHomeDateBadgeInfo.resolve(date: newYear, localeIdentifier: "ko_KR")
+        XCTAssertEqual(info.day, 1)
+        XCTAssertEqual(info.weekday, 6)
+        XCTAssertEqual(info.weekdayText, "금")
+        XCTAssertTrue(info.isHoliday)
+
+        let next = seoul.date(byAdding: .day, value: 4, to: newYear)!
+        let other = MapHomeDateBadgeInfo.resolve(date: next, localeIdentifier: "en_US")
+        XCTAssertEqual(other.day, 5)
+        XCTAssertEqual(other.weekdayText, "Tue")
+        XCTAssertFalse(other.isHoliday)
     }
 }

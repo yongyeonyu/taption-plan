@@ -47,6 +47,7 @@
 		A10000000000000000000009 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000009 /* SettingsView.swift */; };
 		A1000000000000000000000A /* AddPlanSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000A /* AddPlanSheet.swift */; };
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
+		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
 		A10000000000000000000090 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000090 /* LaunchScreen.storyboard */; };
 		A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000001 /* PrivacyInfo.xcprivacy */; };
@@ -83,6 +84,7 @@
 		A10000000000000000000016 /* FeatureEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000016 /* FeatureEngineTests.swift */; };
 		A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */; };
 		A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */; };
+		A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */; };
 		A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */; };
 		A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */; };
 		A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */; };
@@ -289,6 +291,17 @@
 		A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000083 /* MapHomeTimeSidebar.swift */; };
 		A1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */; };
 		A1000000000000000B1101C1 /* HwarangRig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101C1 /* HwarangRig.swift */; };
+		A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */; };
+		A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E2 /* FirstRunTutorialView.swift */; };
+		A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */; };
+		A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */; };
+		A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */; };
+		A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */; };
+		A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */; };
+		A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */; };
+		A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */; };
+		A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */; };
+		A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F2 /* HwarangRigVehicles.swift */; };
 		A1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */; };
 		A100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */; };
 		A100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */; };
@@ -313,14 +326,20 @@
 		A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */; };
 		A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */; };
 		A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */; };
+		1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */; };
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
 		A51002000000000000000002 /* MapHomeInteractionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000002 /* MapHomeInteractionPolicy.swift */; };
 		A52000000000000000000001 /* MapHomeLiveMapPolicies.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */; };
+		A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */; };
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
+		A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */; };
+		A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */; };
 		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
+		A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */; };
+		A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -441,6 +460,7 @@
 		F10000000000000000000009 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F1000000000000000000000A /* AddPlanSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPlanSheet.swift; sourceTree = "<group>"; };
 		5A00000000000000000000F1 /* PlanTextSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTextSuggestion.swift; sourceTree = "<group>"; };
+		F1A11102A0100000000000F1 /* MemoTextPolish.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolish.swift; sourceTree = "<group>"; };
 		F1000000000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F1000000000000000000000C /* TimeScaleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeScaleTests.swift; sourceTree = "<group>"; };
 		F1000000000000000000000D /* DraftComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftComponents.swift; sourceTree = "<group>"; };
@@ -471,6 +491,7 @@
 		F10000000000000000000016 /* FeatureEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTests.swift; sourceTree = "<group>"; };
 		F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureEngineTestFixtures.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeStickmanTests.swift; sourceTree = "<group>"; };
+		F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextPolishTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryCacheBenchmarkTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeRailCardTests.swift; sourceTree = "<group>"; };
 		F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWeatherRailLayoutTests.swift; sourceTree = "<group>"; };
@@ -642,6 +663,17 @@
 		F10000000000000000000083 /* MapHomeTimeSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebar.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackPerformance.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101C1 /* HwarangRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRig.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E2 /* FirstRunTutorialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialView.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionOnboardingSheet.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowancePolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalarySettingsSheet.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionMonitor.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSidebarNote.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPSLoggingIntervalSlider.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeWeatherArt.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102F2 /* HwarangRigVehicles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HwarangRigVehicles.swift; sourceTree = "<group>"; };
 		F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebarMath.swift; sourceTree = "<group>"; };
 		F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeTimeSidebarHandleMath.swift; sourceTree = "<group>"; };
 		F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDayPlaybackTestHooks.swift; sourceTree = "<group>"; };
@@ -665,6 +697,7 @@
 		F1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLEEditorViewport.swift; sourceTree = "<group>"; };
 		F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDriver.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmation.swift; sourceTree = "<group>"; };
+		224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayEvidenceGate.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -683,9 +716,14 @@
 		F51002000000000000000001 /* PlanDayDataSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDataSnapshot.swift; sourceTree = "<group>"; };
 		F51002000000000000000002 /* MapHomeInteractionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionPolicy.swift; sourceTree = "<group>"; };
 		F52000000000000000000001 /* MapHomeLiveMapPolicies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapPolicies.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstRunTutorialTests.swift; sourceTree = "<group>"; };
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowanceTests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicyTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanAllowanceUITests.swift; sourceTree = "<group>"; };
+		F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanWideLayoutUITests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000012 /* TaptionPlanUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaptionPlanUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -803,6 +841,7 @@
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
+				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
 				F5B1102A0200000000000057 /* CategoryCacheBenchmarkTests.swift */,
 				F5B1102A0200000000000055 /* MapHomeTimeRailCardTests.swift */,
 				F5B1102A0200000000000053 /* MapHomeWeatherRailLayoutTests.swift */,
@@ -833,7 +872,10 @@
 				F5B1102A0200000000000021 /* FeatureEngineTests+Weather.swift */,
 				F5B1102A020000000000001F /* FeatureEngineTests+Widget.swift */,
 				F10000000000000000000076 /* WatchSensorQueryPlanTests.swift */,
+				F1000000000000000B1102E3 /* FirstRunTutorialTests.swift */,
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
+				F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */,
+				F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */,
 				F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
@@ -901,6 +943,17 @@
 				F10000000000000000000083 /* MapHomeTimeSidebar.swift */,
 				F1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift */,
 				F1000000000000000B1101C1 /* HwarangRig.swift */,
+				F1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift */,
+				F1000000000000000B1102E2 /* FirstRunTutorialView.swift */,
+				F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */,
+				F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */,
+				F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */,
+				F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */,
+				F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */,
+				F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */,
+				F1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift */,
+				F1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift */,
+				F1000000000000000B1102F2 /* HwarangRigVehicles.swift */,
 				F1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift */,
 				F100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift */,
 				F100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift */,
@@ -932,6 +985,7 @@
 				F10000000000000000000009 /* SettingsView.swift */,
 				F1000000000000000000000A /* AddPlanSheet.swift */,
 				5A00000000000000000000F1 /* PlanTextSuggestion.swift */,
+				F1A11102A0100000000000F1 /* MemoTextPolish.swift */,
 				F1000000000000000000000D /* DraftComponents.swift */,
 				F1000000000000000000000E /* DetailViews.swift */,
 				F10000000000000000000004 /* Theme.swift */,
@@ -1017,6 +1071,7 @@
 				F10000000000000000000015 /* LiveActivitySupport.swift */,
 				F1000000000000000000001B /* HealthAndSensorModels.swift */,
 				F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */,
+				224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */,
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
 				F10000000000000000000040 /* CatAnimationShared.swift */,
@@ -1122,6 +1177,8 @@
 			isa = PBXGroup;
 			children = (
 				5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */,
+				F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */,
+				F5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift */,
 			);
 			path = TaptionPlanUITests;
 			sourceTree = "<group>";
@@ -1501,6 +1558,17 @@
 				A10000000000000000000083 /* MapHomeTimeSidebar.swift in Sources */,
 				A1000000000000000B1101A2 /* MapHomePlaybackPerformance.swift in Sources */,
 				A1000000000000000B1101C1 /* HwarangRig.swift in Sources */,
+				A1000000000000000B1102E1 /* FirstRunTutorialPolicy.swift in Sources */,
+				A1000000000000000B1102E2 /* FirstRunTutorialView.swift in Sources */,
+				A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */,
+				A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */,
+				A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */,
+				A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */,
+				A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */,
+				A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */,
+				A1000000000000000B1102E7 /* GPSLoggingIntervalSlider.swift in Sources */,
+				A1000000000000000B1102F1 /* MapHomeHomeWeatherArt.swift in Sources */,
+				A1000000000000000B1102F2 /* HwarangRigVehicles.swift in Sources */,
 				A1000000000000000B1101A1 /* MapHomeTimeSidebarMath.swift in Sources */,
 				A100000000000000000000F2 /* MapHomeTimeSidebarHandleMath.swift in Sources */,
 				A100000000000000000000F3 /* MapHomeDayPlaybackTestHooks.swift in Sources */,
@@ -1523,6 +1591,7 @@
 				A1AB1029A0200000000000D2 /* MapHomeNLEEditorViewport.swift in Sources */,
 				A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */,
 				A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */,
+				1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */,
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,
@@ -1530,6 +1599,7 @@
 				A10000000000000000000009 /* SettingsView.swift in Sources */,
 				A1000000000000000000000A /* AddPlanSheet.swift in Sources */,
 				5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */,
+				A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */,
 				A1000000000000000000000D /* DraftComponents.swift in Sources */,
 				A1000000000000000000000E /* DetailViews.swift in Sources */,
 				A1000000000000000000000F /* FeatureModels.swift in Sources */,
@@ -1624,6 +1694,7 @@
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
+				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
 				A5B1102A0200000000000058 /* CategoryCacheBenchmarkTests.swift in Sources */,
 				A5B1102A0200000000000056 /* MapHomeTimeRailCardTests.swift in Sources */,
 				A5B1102A0200000000000054 /* MapHomeWeatherRailLayoutTests.swift in Sources */,
@@ -1654,7 +1725,10 @@
 				A5B1102A0200000000000022 /* FeatureEngineTests+Weather.swift in Sources */,
 				A5B1102A0200000000000020 /* FeatureEngineTests+Widget.swift in Sources */,
 				A10000000000000000000075 /* WatchSensorQueryPlanTests.swift in Sources */,
+				A1000000000000000B1102E3 /* FirstRunTutorialTests.swift in Sources */,
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
+				A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */,
+				A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */,
 				A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
@@ -1738,6 +1812,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */,
+				A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */,
+				A5200000000000000000F5F8 /* TaptionPlanWideLayoutUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1912,7 +1988,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -1940,7 +2016,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -1961,7 +2037,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TaptionPlan.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TaptionPlan";
 			};
 			name = Debug;
@@ -1983,7 +2059,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TaptionPlan.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TaptionPlan";
 			};
 			name = Release;
@@ -2012,7 +2088,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -2040,7 +2116,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -2178,7 +2254,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = TaptionPlan;
 			};
 			name = Debug;
@@ -2194,7 +2270,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = TaptionPlan;
 			};
 			name = Release;

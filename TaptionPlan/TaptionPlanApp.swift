@@ -57,9 +57,11 @@ struct TaptionPlanApp: App {
                 MapHomePinPreviewHost()
             } else {
                 AppShellView()
+                    .refreshesSupportedOrientations()
             }
             #else
             AppShellView()
+                .refreshesSupportedOrientations()
             #endif
         }
         .onChange(of: scenePhase) { _, phase in
@@ -221,6 +223,13 @@ final class TaptionPlanAppDelegate:
     private static let pendingPlanKey =
         "TaptionPlan.pendingNotificationPlanID"
     private var sensorRecoveryTask: Task<Void, Never>?
+
+    func application(
+        _ application: UIApplication,
+        supportedInterfaceOrientationsFor window: UIWindow?
+    ) -> UIInterfaceOrientationMask {
+        AppOrientationPolicy.mask(screenSize: window?.windowScene?.screen.bounds.size ?? .zero)
+    }
 
     func application(
         _ application: UIApplication,

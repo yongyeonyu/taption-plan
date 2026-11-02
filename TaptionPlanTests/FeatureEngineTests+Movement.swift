@@ -1674,7 +1674,7 @@ extension FeatureEngineTests {
                 confidence: .high
             ),
         ]
-        let refreshed = TravelSegment(
+        var refreshed = TravelSegment(
             fromPlaceID: refreshedPlaces[0].id,
             toPlaceID: refreshedPlaces[1].id,
             mode: .bus,
@@ -1686,6 +1686,7 @@ extension FeatureEngineTests {
             confidence: .low,
             evidence: ["새 센서 판정"]
         )
+        refreshed.subwayRoute = SubwayStationCatalog.route(for: ["마곡나루역", "검암역", "가정역"])
 
         let applied = try XCTUnwrap(
             MovementCorrectionEngine.applying(

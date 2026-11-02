@@ -1719,6 +1719,11 @@ enum ActivityClassificationLockEngine {
         return result
     }
 
+    static func isRememberedOnlySubway(_ segment: TravelSegment) -> Bool {
+        segment.mode == .subway && segment.isConfirmed && segment.evidence.contains("사용자 확인 기억")
+            && segment.subwayRoute.map(SubwayStationCatalog.isValid) != true
+    }
+
     private static func mergingLockedTravel(
         existing: [TravelSegment],
         fresh: [TravelSegment],
@@ -1766,16 +1771,11 @@ enum ActivityClassificationLockEngine {
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
             // 새 판정이 고도 변화가 없어 지하철을 뺐으면 잠긴 자동 지하철을 물려받지 않는다(SUB1029A01).
             // 새 판정이 고신뢰 자동차(차량 모션·속도)여도 잠긴 자동 지하철을 물려받지 않는다(EXP1029A01 — 오늘 아침 자차 출근).
-            // 다른 날 확인한 보정이 옮겨 와 확정으로 보이는 잠긴 지하철("사용자 확인 기억", 철도 근거 없음)도 같다.
-            // 새 판정이 자동차면 물려받지 않는다. 확정으로 보여 지하철이 자동차로 간 날에도 영영 남았다(대표 지적, ARC1030A04).
-            let isRememberedOnlySubway = previous.mode == .subway && previous.isConfirmed
-                && previous.evidence.contains("사용자 확인 기억")
-                && !previous.evidence.contains { $0.contains("철도") }
-                && previous.subwayRoute == nil
-            let rejectsLockedSubway = previous.mode == .subway && (!previous.isConfirmed || isRememberedOnlySubway)
-                && (candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
-                    || TravelModeClassifier.isMotionBackedCar(candidate)
-                    || (isRememberedOnlySubway && (candidate.mode == .car || candidate.mode == .taxi)))
+            // 탑승·하차역 노선 없이 기억으로만 확정된 지하철은 어떤 새 판정에도 넘긴다(PAW1102A03).
+            let rejectsLockedSubway = Self.isRememberedOnlySubway(previous)
+                || (previous.mode == .subway && !previous.isConfirmed
+                    && (candidate.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence)
+                        || TravelModeClassifier.isMotionBackedCar(candidate)))
             if previousSubwayIsValidated,
                !candidate.isConfirmed,
                !isResolvedSubway,
@@ -1791,7 +1791,8 @@ enum ActivityClassificationLockEngine {
             let validatedSubway = previous.mode != .subway
                 || previous.isConfirmed
                 || previous.subwayRoute.map(SubwayStationCatalog.isValid) == true
-            return validatedSubway && !matchedLockedIndices.contains(inputOrder)
+            return validatedSubway && !isRememberedOnlySubway(previous)
+                && !matchedLockedIndices.contains(inputOrder)
                 ? previous
                 : nil
         }

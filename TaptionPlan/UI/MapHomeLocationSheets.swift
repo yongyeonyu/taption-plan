@@ -231,9 +231,10 @@ struct MapHomeSearchPinLocationSheet: View {
                         save(destination)
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: destination.systemImage)
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
-                                .foregroundStyle(destination.tint)
+                            Image(destination.iconAssetName)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
                             Text(language.text(destination.koreanName, destination.englishName))
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
                             Spacer()

@@ -4,11 +4,13 @@ import SwiftUI
 enum MapHomeCounterDetailTarget: Hashable, Identifiable {
     case kind(MapHomeCounterKind)
     case salary
+    case allowance
 
     var id: String {
         switch self {
         case .kind(let kind): kind.rawValue
         case .salary: "salary"
+        case .allowance: "allowance"
         }
     }
 }
@@ -244,6 +246,31 @@ enum MapHomeCounterDetailBuilder {
 ///
 /// 위에는 창에 보이는 카운터를 탭으로 늘어놓고, 아래에는 고른 카운터의 상세를 보여 준다.
 /// 좌우로 밀어도 카운터가 넘어가며, 누른 줄의 탭이 처음에 골라져 열린다.
+/// 열려 있는 카운터 상세의 내용. 같은 대상이면 처음 만든 값을 그대로 쓴다(SHT1102A01).
+final class MapHomeCounterDetailSnapshot {
+    struct Value {
+        let contents: [MapHomeCounterDetailContent]
+        let initialIndex: Int
+        let dateText: String
+    }
+
+    private var focus: MapHomeCounterDetailTarget?
+    private var stored: Value?
+
+    func value(for target: MapHomeCounterDetailTarget, make: () -> Value) -> Value {
+        if focus == target, let stored { return stored }
+        let value = make()
+        focus = target
+        stored = value
+        return value
+    }
+
+    func clear() {
+        focus = nil
+        stored = nil
+    }
+}
+
 struct MapHomeCounterDetailSheet: View {
     let contents: [MapHomeCounterDetailContent]
     /// 보고 있는 날짜 글자(예: 10월 31일 토요일).

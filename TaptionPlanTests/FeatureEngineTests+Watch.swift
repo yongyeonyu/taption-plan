@@ -60,7 +60,7 @@ extension FeatureEngineTests {
         )
     }
 
-    func testAppleWatchAccelerationAndUndergroundWindowIdentifySubway() {
+    func testAppleWatchVibrationAloneDoesNotConfirmSubway() {
         let base = makeDate(2026, 7, 30, 8, 0)
         let readings: [SensorReading] = (0..<6).map { index -> SensorReading in
             SensorReading(
@@ -78,12 +78,10 @@ extension FeatureEngineTests {
             )
         }
 
+        // 워치 진동과 지하 신호만으로는 탑승·하차역을 알 수 없어 지하철로 확정하지 않는다(PAW1102A03).
         let result = TravelModeClassifier().classify(readings: readings)
-        XCTAssertEqual(result.mode, .subway)
-        XCTAssertTrue(
-            result.evidence.contains("Apple Watch 3축 가속도 철도 진동")
-        )
-        XCTAssertTrue(result.evidence.contains("걸음 거의 없음 · 지하 구간"))
+        XCTAssertNotEqual(result.mode, .subway)
+        XCTAssertTrue(result.evidence.contains { $0.hasPrefix("지하철 조건 부족") })
     }
 
     func testWatchVibrationWithoutUndergroundContextDoesNotBecomeSubway() {

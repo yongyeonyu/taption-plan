@@ -195,7 +195,7 @@ extension FeatureEngineTests {
             .map(\.title)
         XCTAssertEqual(
             phaseTitles,
-            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "샤워", "집안일", "미확인"]
         )
 
         let detailTitles = Set(
@@ -850,6 +850,9 @@ extension FeatureEngineTests {
     func testAutomaticTrackingPromotionAndStopPolicy() {
         XCTAssertFalse(
             TrackingSessionPolicy.allowsAutomaticTracking(interval: 1)
+        )
+        XCTAssertTrue(
+            TrackingSessionPolicy.allowsAutomaticTracking(interval: 30)
         )
         XCTAssertTrue(
             TrackingSessionPolicy.allowsAutomaticTracking(interval: 60)

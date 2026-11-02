@@ -719,6 +719,15 @@ enum MapHomePawprintLedger {
     /// 이보다 부정확한 위치는 발자국으로 놓지 않는다(m).
     static let maximumAccuracyMeters = 200.0
 
+    /// 노선 선을 실제로 그리는 철도 구간만 발자국에서 뺀다. 노선 없이 지하철로 저장된 구간까지 빼면
+    /// 선도 발자국도 없어 그 시간이 비어 보인다(PAW1102A02, 10-30 출근).
+    static func lineDrawnSpans(in travel: [TravelSegment]) -> [TimeSpan] {
+        travel.filter {
+            ($0.mode == .subway || $0.mode == .train) && $0.isConfirmed
+                && $0.subwayRoute.map(SubwayStationCatalog.isValid) == true
+        }.map(\.span)
+    }
+
     static func entries(readings: [SensorReading], excluding excluded: [TimeSpan]) -> [Entry] {
         var result: [Entry] = []
         var lastPaw: (latitude: Double, longitude: Double)?

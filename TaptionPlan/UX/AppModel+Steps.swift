@@ -56,7 +56,9 @@ extension AppModel {
     /// 자정부터 지금까지의 걸음 수(CMPedometer). 지원되지 않거나 실패하거나 3초 안에 응답이 없으면 nil.
     /// 측정기를 계속 들고 있어야 응답이 오고, 시간 제한이 없으면 달력 계산이 영원히 멈출 수 있다.
     private nonisolated static func todayPedometerSteps(from start: Date, calendar: Calendar) async -> Double? {
-        guard CMPedometer.isStepCountingAvailable() else { return nil }
+        // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다. 묻는 곳은 권한 안내 한 곳이다.
+        guard CMPedometer.isStepCountingAvailable(), !FirstRunTutorialStore().defersPermissionPrompts,
+              CMPedometer.authorizationStatus() == .authorized else { return nil }
         return await withCheckedContinuation { continuation in
             let once = PedometerResumeOnce(continuation)
             todayPedometer.queryPedometerData(from: start, to: .now) { data, _ in

@@ -98,6 +98,7 @@ extension AppModel {
         }
 
         var state = sensorService.locationPermissionState()
+        if state == .notDetermined, FirstRunTutorialStore().defersPermissionPrompts { return false }
         if state == .notDetermined {
             sensorService.requestLocationPermission(always: false)
             for _ in 0..<120 where state == .notDetermined {
@@ -181,15 +182,12 @@ extension AppModel {
         _ profile: SensorCollectionProfile
     ) {
         let intervalSeconds = Int(profile.interval)
-        let batteryMinimal = profile == .batterySaver
         guard snapshot.settings.sensorCollectionProfile != profile
-                || snapshot.settings.gpsLoggingPreferences.intervalSeconds != intervalSeconds
-                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != batteryMinimal else {
+                || snapshot.settings.gpsLoggingPreferences.intervalSeconds != intervalSeconds else {
             return
         }
         snapshot.settings.sensorCollectionProfile = profile
         snapshot.settings.gpsLoggingPreferences.intervalSeconds = intervalSeconds
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = batteryMinimal
         if settings.locationEnabled,
            permissionState(for: .location).isGranted,
            let sensorService {
@@ -204,55 +202,12 @@ extension AppModel {
         Task { await persist() }
     }
 
-    func setGPSLoggingBatteryMinimal(_ enabled: Bool) {
-        guard snapshot.settings.gpsLoggingPreferences.isBatteryMinimal != enabled else {
-            return
-        }
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = enabled
-        if enabled {
-            snapshot.settings.sensorCollectionProfile = .batterySaver
-            snapshot.settings.gpsLoggingPreferences.intervalSeconds =
-                GPSLoggingPreferences.batteryMinimalIntervalSeconds
-        } else {
-            let interval = snapshot.settings.gpsLoggingPreferences.intervalSeconds
-            if interval >= GPSLoggingPreferences.batteryMinimalIntervalSeconds {
-                snapshot.settings.sensorCollectionProfile = .balanced
-                snapshot.settings.gpsLoggingPreferences.intervalSeconds =
-                    GPSLoggingPreferences.Preset.balanced.intervalSeconds
-            } else {
-                snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
-                    for: interval
-                )
-            }
-        }
-        refreshActiveGPSLoggingPreferences()
-        Task { await persist() }
-    }
-
-    /// 센싱 주기를 1~15분 중에서 고른다(모드 없이 분 단위로 바로 설정).
-    func setSensorIntervalMinutes(_ minutes: Int) {
-        let clamped = min(max(minutes, 1), 15)
-        let seconds = clamped * 60
-        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != seconds
-                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal else {
-            return
-        }
-        snapshot.settings.gpsLoggingPreferences.intervalSeconds = seconds
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal = false
-        snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(for: seconds)
-        refreshActiveGPSLoggingPreferences()
-        Task { await persist() }
-    }
-
     func setGPSLoggingIntervalSeconds(_ seconds: Int) {
         let clamped = GPSLoggingPreferences.clampedSeconds(seconds)
-        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != clamped
-                || snapshot.settings.gpsLoggingPreferences.isBatteryMinimal else {
+        guard snapshot.settings.gpsLoggingPreferences.intervalSeconds != clamped else {
             return
         }
         snapshot.settings.gpsLoggingPreferences.intervalSeconds = clamped
-        snapshot.settings.gpsLoggingPreferences.isBatteryMinimal =
-            clamped == GPSLoggingPreferences.batteryMinimalIntervalSeconds
         snapshot.settings.sensorCollectionProfile = sensorCollectionProfile(
             for: clamped
         )
@@ -272,8 +227,8 @@ extension AppModel {
 
     func sensorCollectionProfile(for intervalSeconds: Int) -> SensorCollectionProfile {
         switch intervalSeconds {
-        case 900...: .batterySaver
-        case 120...600: .balanced
+        case GPSLoggingPreferences.batteryMinimalIntervalSeconds...: .batterySaver
+        case 120...: .balanced
         default: .accuracy
         }
     }
@@ -659,7 +614,7 @@ extension AppModel {
         TrackingSessionRecoveryStore.save(restored)
         if restored.wasAutomaticallyDetected,
            settings.gpsLoggingPreferences.effectiveIntervalSeconds
-                == GPSLoggingPreferences.Preset.realtime.intervalSeconds {
+                <= GPSLoggingPreferences.Preset.realtime.intervalSeconds {
             _ = sensorBackgroundCoordinator.beginAutomaticSession(at: now)
             syncSensorBackgroundState()
         }
@@ -832,7 +787,7 @@ extension AppModel {
             )
         } else if session?.wasAutomaticallyDetected == true,
                   settings.gpsLoggingPreferences.effectiveIntervalSeconds
-                    == GPSLoggingPreferences.Preset.realtime.intervalSeconds {
+                    <= GPSLoggingPreferences.Preset.realtime.intervalSeconds {
             _ = sensorBackgroundCoordinator.beginAutomaticSession(
                 at: reading.timestamp
             )

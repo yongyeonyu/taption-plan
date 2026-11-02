@@ -1,9 +1,94 @@
 import AVFoundation
 import Photos
+import os
 import ReplayKit
 import Speech
 import SwiftUI
 import UIKit
+
+/// 받아쓰기 글자 모으기. 부분 결과는 매번 그 구간의 전체 전사이므로 덧붙이지 않고 대체한다.
+/// 인식기가 새 구간을 시작했거나 다시 시작되면 앞 구간을 확정해 그 뒤에 이어 붙인다.
+struct MapHomeDictationTranscript: Equatable {
+    private(set) var committed = ""
+    private(set) var current = ""
+
+    var text: String { Self.joined(committed, current) }
+
+    mutating func receive(_ partial: String) {
+        guard !partial.isEmpty else { return }
+        if !committed.isEmpty, Self.compact(partial).hasPrefix(Self.compact(committed)) {
+            // 앞 구간까지 포함한 전체가 왔다.
+            committed = ""
+        } else if Self.isNewSegment(previous: current, next: partial) {
+            committed = text
+        }
+        current = partial
+    }
+
+    /// 인식 작업이 끝나 새로 시작하기 전에 지금까지 글자를 확정한다.
+    mutating func commitSegment() {
+        committed = text
+        current = ""
+    }
+
+    /// 녹음 시작 전 메모 뒤에 전사를 이어 붙일 기준 글자.
+    static func base(from memo: String) -> String {
+        guard let last = memo.last, !last.isWhitespace else { return memo }
+        return memo + " "
+    }
+
+    /// 인식기는 앞 단어를 자주 고쳐 쓴다. 앞부분이 비슷하면 수정이고, 전혀 다르거나 크게 줄면 새 구간이다.
+    private static func isNewSegment(previous: String, next: String) -> Bool {
+        let old = Array(compact(previous))
+        let new = Array(compact(next))
+        // 말 첫머리의 짧은 결과는 통째로 바뀌는 일이 많다.
+        guard old.count >= 3, !new.isEmpty else { return false }
+        let head = zip(old, new).prefix(while: { $0.0 == $0.1 }).count
+        if head * 2 >= min(old.count, new.count) {
+            return old.count >= 8 && new.count * 3 <= old.count
+        }
+        let oldWindow = Array(old.prefix(min(new.count, 64)))
+        let newWindow = Array(new.prefix(64))
+        return commonLength(oldWindow, newWindow) * 3 < min(oldWindow.count, newWindow.count) * 2
+    }
+
+    /// 최장 공통 부분 수열의 길이.
+    private static func commonLength(_ lhs: [Character], _ rhs: [Character]) -> Int {
+        var row = [Int](repeating: 0, count: rhs.count + 1)
+        for left in lhs {
+            var diagonal = 0
+            for (index, right) in rhs.enumerated() {
+                let above = row[index + 1]
+                row[index + 1] = left == right ? diagonal + 1 : max(above, row[index])
+                diagonal = above
+            }
+        }
+        return row[rhs.count]
+    }
+
+    private static func compact(_ text: String) -> String {
+        text.filter { !$0.isWhitespace }
+    }
+
+    private static func joined(_ left: String, _ right: String) -> String {
+        if left.isEmpty { return right }
+        if right.isEmpty { return left }
+        return left + " " + right
+    }
+}
+
+/// 마이크 탭이 지금 인식 요청으로 소리를 넘기게 한다. 인식이 다시 시작되면 요청만 바꾼다.
+private final class MapHomeDictationRequestBox: Sendable {
+    private let request = OSAllocatedUnfairLock<SFSpeechAudioBufferRecognitionRequest?>(uncheckedState: nil)
+
+    func set(_ next: SFSpeechAudioBufferRecognitionRequest?) {
+        request.withLockUnchecked { $0 = next }
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        request.withLockUnchecked { $0?.append(buffer) }
+    }
+}
 
 /// 메모 입력용 음성 받아쓰기. 말하는 동안 실시간 글자를 보여 주고, 같은 소리를 메모 첨부 파일로도 남긴다.
 @MainActor
@@ -27,9 +112,13 @@ final class MapHomeDictation {
     var onRecorded: ((URL) -> Void)?
 
     private var engine: AVAudioEngine?
-    /// 말을 멈췄다 다시 시작하면 인식 결과가 새 구간으로 리셋된다. 끝난 구간은 여기에 쌓아 둔다.
-    private var committedText = ""
-    private var lastPartial = ""
+    private var collected = MapHomeDictationTranscript()
+    private var isStarting = false
+    private var recognizer: SFSpeechRecognizer?
+    private var requestBox: MapHomeDictationRequestBox?
+    /// 이전 인식 작업이 늦게 보낸 결과를 버린다.
+    private var taskToken = 0
+    private var taskStartedAt: TimeInterval = 0
     private var interruptionObserver: NSObjectProtocol?
     private var liveRequest: SFSpeechAudioBufferRecognitionRequest?
     private var liveTask: SFSpeechRecognitionTask?
@@ -70,12 +159,12 @@ final class MapHomeDictation {
 
     /// 마이크 입력을 받아 실시간 인식과 파일 저장을 함께 한다. 음성 스레드에서 돈다.
     private nonisolated static func tapBlock(
-        request: SFSpeechAudioBufferRecognitionRequest,
+        requestBox: MapHomeDictationRequestBox,
         file: AVAudioFile,
         level: @escaping @Sendable (Double) -> Void
     ) -> AVAudioNodeTapBlock {
         { buffer, _ in
-            request.append(buffer)
+            requestBox.append(buffer)
             try? file.write(from: buffer)
             guard let data = buffer.floatChannelData?[0] else { return }
             let count = Int(buffer.frameLength)
@@ -89,7 +178,10 @@ final class MapHomeDictation {
 
     /// 녹음을 시작한다. 말하는 동안 중간 글자를 onPartial로 보낸다.
     func start(localeIdentifier: String) async {
-        guard !isListening, !isTranscribing else { return }
+        // 권한을 기다리는 사이 또 불리면 인식이 둘 돌아 글자가 뒤섞인다.
+        guard !isListening, !isTranscribing, !isStarting else { return }
+        isStarting = true
+        defer { isStarting = false }
         TaptionPlanDiagnosticsLogger.shared.record("voice_memo_start_requested")
         errorMessage = nil
         transcript = ""
@@ -128,11 +220,9 @@ final class MapHomeDictation {
                 AVNumberOfChannelsKey: 1,
                 AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
             ])
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.shouldReportPartialResults = true
-            request.requiresOnDeviceRecognition = true
+            let requestBox = MapHomeDictationRequestBox()
             input.installTap(onBus: 0, bufferSize: 1_024, format: format, block: Self.tapBlock(
-                request: request,
+                requestBox: requestBox,
                 file: file,
                 level: { [weak self] value in
                     Task { @MainActor [weak self] in self?.level = value }
@@ -142,17 +232,12 @@ final class MapHomeDictation {
             try engine.start()
             self.engine = engine
             self.file = file
-            self.liveRequest = request
+            self.requestBox = requestBox
+            self.recognizer = recognizer
             recordedURL = url
             isListening = true
-            committedText = ""
-            lastPartial = ""
-            liveTask = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.receive(text ?? "", finished: finished)
-                }
-            })
+            collected = MapHomeDictationTranscript()
+            startRecognitionTask()
             // 전화 등으로 오디오가 끊기면 녹음을 바로 멈춘다(자동으로 다시 시작하지 않는다).
             interruptionObserver = NotificationCenter.default.addObserver(
                 forName: AVAudioSession.interruptionNotification,
@@ -177,29 +262,43 @@ final class MapHomeDictation {
         }
     }
 
-    /// 인식 결과를 받아 끊긴 구간을 이어 붙인다. 결과가 앞부분과 맞지 않으면 새 구간으로 본다.
-    private func receive(_ text: String, finished: Bool) {
-        if !lastPartial.isEmpty, !text.hasPrefix(lastPartial), !text.isEmpty {
-            committedText = Self.joined(committedText, lastPartial)
-        }
-        let current = text.isEmpty ? lastPartial : text
-        lastPartial = current
-        let full = Self.joined(committedText, current)
-        if finished {
-            isTranscribing = false
-            transcript = full
-            committedText = ""
-            lastPartial = ""
-            if !full.isEmpty { onTranscribed?(full) }
-        } else if !full.isEmpty {
-            onPartial?(full)
-        }
+    private func startRecognitionTask() {
+        guard let recognizer, let requestBox else { return }
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.requiresOnDeviceRecognition = true
+        requestBox.set(request)
+        liveRequest = request
+        taskToken &+= 1
+        let token = taskToken
+        taskStartedAt = ProcessInfo.processInfo.systemUptime
+        liveTask = recognizer.recognitionTask(with: request, resultHandler: Self.resultBlock { [weak self] text, finished in
+            Task { @MainActor [weak self] in
+                guard let self, token == self.taskToken else { return }
+                self.receive(text ?? "", finished: finished)
+            }
+        })
     }
 
-    private static func joined(_ left: String, _ right: String) -> String {
-        if left.isEmpty { return right }
-        if right.isEmpty { return left }
-        return left + " " + right
+    private func receive(_ text: String, finished: Bool) {
+        collected.receive(text)
+        let full = collected.text
+        guard finished else {
+            if !full.isEmpty { onPartial?(full) }
+            return
+        }
+        liveTask = nil
+        if isListening {
+            // 녹음 중에 인식만 끝났다(긴 침묵 등). 확정한 글자 뒤로 이어서 다시 인식한다. 바로 또 끝나면 되풀이하지 않는다.
+            collected.commitSegment()
+            if !full.isEmpty { onPartial?(full) }
+            if ProcessInfo.processInfo.systemUptime - taskStartedAt >= 1 { startRecognitionTask() }
+            return
+        }
+        isTranscribing = false
+        transcript = full
+        collected = MapHomeDictationTranscript()
+        if !full.isEmpty { onTranscribed?(full) }
     }
 
     /// 녹음을 끝낸다. 마지막 글자는 인식이 확정되면 onTranscribed로 간다.
@@ -219,6 +318,7 @@ final class MapHomeDictation {
         engine = nil
         file = nil
         liveRequest = nil
+        requestBox = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         if let url = recordedURL { onRecorded?(url) }
     }
@@ -236,10 +336,18 @@ struct MapHomeRecordingLayers: Codable, Equatable {
     var photos = false
     /// 꺼 두면 화랑이 대신 화살표만 보인다.
     var cat = false
-    /// 연봉 카운터(재생 시각까지 번 돈).
-    var salary = true
+    /// 화랑이 위 카운터 창 전체.
+    var counterWidget = true
+    /// 집·회사 같은 등록 지점 아이콘.
+    var placeIcons = true
 
     static let storageKey = "mapHomeRecordingLayers"
+
+    private enum CodingKeys: String, CodingKey {
+        case timeSidebar, weatherSidebar, sidebarMemos, mapMemos, routes, footprints, photos, cat, placeIcons
+        /// 예전 「연봉 카운터」 저장값을 그대로 읽는다.
+        case counterWidget = "salary"
+    }
 
     init() {}
 
@@ -253,7 +361,8 @@ struct MapHomeRecordingLayers: Codable, Equatable {
         footprints = try c.decodeIfPresent(Bool.self, forKey: .footprints) ?? footprints
         photos = try c.decodeIfPresent(Bool.self, forKey: .photos) ?? photos
         cat = try c.decodeIfPresent(Bool.self, forKey: .cat) ?? cat
-        salary = try c.decodeIfPresent(Bool.self, forKey: .salary) ?? salary
+        counterWidget = try c.decodeIfPresent(Bool.self, forKey: .counterWidget) ?? counterWidget
+        placeIcons = try c.decodeIfPresent(Bool.self, forKey: .placeIcons) ?? placeIcons
     }
 
     init(rawValue: String) {
@@ -388,17 +497,35 @@ struct MapHomeShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
+/// 녹화 메뉴의 지도 선택 항목.
+struct MapHomeRecordingMapStyleChoice: Identifiable {
+    let id: String
+    let title: String
+    let systemImage: String
+    let select: () -> Void
+}
+
 struct MapHomeRecordingOptionsSheet: View {
     @Binding var layers: MapHomeRecordingLayers
     let language: MapHomeLanguage
     let onStart: () -> Void
     /// 있으면 「끊김 없는 영상 만들기」를 보여 준다(벡터 지도에서만, VID1029A01).
     var onRenderVideo: (() -> Void)? = nil
-    @State private var photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
+    @Binding var adaptiveZoom: Bool
+    let mapStyleTitle: String
+    let mapStyles: [MapHomeRecordingMapStyleChoice]
+    /// 부모 본문이 다시 계산될 때마다 권한을 묻지 않게 마지막 값으로 시작하고, 화면에 들어온 뒤 다시 읽는다(SHT1102A01).
+    @MainActor private static var lastPhotoStatus: PHAuthorizationStatus?
+    @State private var photoStatus = Self.lastPhotoStatus ?? {
+        let status = MapHomeScreenRecordingStore.photoAddStatus()
+        Self.lastPhotoStatus = status
+        return status
+    }()
 
     private var photoAllowed: Bool { photoStatus == .authorized || photoStatus == .limited }
 
     var body: some View {
+        ScrollView(showsIndicators: false) {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("재생 화면 녹화", "Record playback"))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
@@ -407,6 +534,24 @@ struct MapHomeRecordingOptionsSheet: View {
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             permissionRow
+            Menu {
+                ForEach(mapStyles) { choice in
+                    Button(action: choice.select) { Label(choice.title, systemImage: choice.systemImage) }
+                }
+            } label: {
+                HStack {
+                    Text(language.text("지도", "Map"))
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.tpInk)
+                    Spacer()
+                    Text(mapStyleTitle)
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.tpSecondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
             toggle(language.text("시간 사이드바", "Time sidebar"), $layers.timeSidebar)
             toggle(language.text("날씨 사이드바", "Weather sidebar"), $layers.weatherSidebar)
             toggle(language.text("사이드바 메모", "Sidebar memos"), $layers.sidebarMemos)
@@ -415,7 +560,9 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("경로", "Route"), $layers.routes)
             toggle(language.text("발자국", "Footprints"), $layers.footprints)
             toggle(language.text("화랑이 (끄면 화살표)", "Character (arrow when off)"), $layers.cat)
-            toggle(language.text("연봉 카운터", "Salary counter"), $layers.salary)
+            toggle(language.text("카운터 위젯", "Counter widget"), $layers.counterWidget)
+            toggle(language.text("등록 지점 아이콘", "Saved place icons"), $layers.placeIcons)
+            toggle(language.text("속도에 따라 가변", "Vary zoom with speed"), $adaptiveZoom)
             Button(action: onStart) {
                 Label(language.text("녹화하며 재생", "Record and play"), systemImage: "record.circle")
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
@@ -443,6 +590,7 @@ struct MapHomeRecordingOptionsSheet: View {
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
+        }
         .background(Color.tpBackground)
         .task {
             // 화면에 들어올 때 권한이 없으면 바로 묻는다(결정 전일 때만 시스템 창이 뜬다).
@@ -450,6 +598,7 @@ struct MapHomeRecordingOptionsSheet: View {
                 _ = await MapHomeScreenRecordingStore.requestPhotoAddAccess()
             }
             photoStatus = MapHomeScreenRecordingStore.photoAddStatus()
+            Self.lastPhotoStatus = photoStatus
         }
     }
 
@@ -515,6 +664,8 @@ struct MapHomeMemoTextView: UIViewRepresentable {
         }
         if context.coordinator.suppresses != suppressesKeyboard {
             context.coordinator.suppresses = suppressesKeyboard
+            // 녹음이 끝나도 키보드를 다시 올리지 않는다. 타자는 입력칸을 눌러 시작한다.
+            if !suppressesKeyboard { view.resignFirstResponder() }
             view.inputView = suppressesKeyboard ? UIView(frame: .zero) : nil
             if view.isFirstResponder { view.reloadInputViews() }
         }

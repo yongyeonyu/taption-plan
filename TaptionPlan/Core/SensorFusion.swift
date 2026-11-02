@@ -875,6 +875,28 @@ struct TravelModeClassifier: Sendable {
         }
         let rejectedSubway = !hasSubwayAltitudeChange
             && candidates.removeValue(forKey: .subway) != nil
+        let routeEnds = resolvedSubwayRoute?.coordinates
+        let dwellReadings = altitudeContext.isEmpty ? [] : ordered + altitudeContext.filter { reading in
+            !ordered.contains { $0.id == reading.id }
+        }
+        func stationDwell(_ station: GeoPoint?) -> TimeInterval? {
+            guard !dwellReadings.isEmpty, let station else { return nil }
+            return SubwayEvidenceGate.stationDwell(readings: dwellReadings, station: station)
+        }
+        let missingSubwayConditions = SubwayEvidenceGate.missingConditions(.init(
+            hasBoardingToAlightingRoute: resolvedSubwayRoute.map(SubwayStationCatalog.isValid) == true,
+            sensedStationCount: Set(railStations).count,
+            hasAltitudeChange: hasSubwayAltitudeChange,
+            transitSpecificSignals: [
+                gpsLossRatio >= 0.35, subwayWiFiSignal, stationStopConfirmation, stationStateConfirmation,
+                stationAltitudeDrop, userStationRouteConfirmation,
+            ].filter { $0 }.count,
+            supportingSignals: [repeatedRailMatch, observedLowStepsSignal, watchVibration].filter { $0 }.count,
+            boardingDwell: stationDwell(routeEnds?.first),
+            alightingDwell: stationDwell(routeEnds?.last)
+        ))
+        let subwayNotProven = !missingSubwayConditions.isEmpty
+            && candidates.removeValue(forKey: .subway) != nil
         if candidates.isEmpty {
             add(
                 displacementSpeed > 8.5 ? .car : .cycling,
@@ -903,6 +925,9 @@ struct TravelModeClassifier: Sendable {
         var winnerEvidence = winner.value.1
         if rejectedSubway || stationToStationSubway && !hasSubwayAltitudeChange {
             winnerEvidence.append(Self.noAltitudeChangeEvidence)
+        }
+        if subwayNotProven, !rejectedSubway {
+            winnerEvidence.append("지하철 조건 부족: " + missingSubwayConditions.joined(separator: ", "))
         }
         if let subwayRoute {
             winnerEvidence.append(
@@ -4261,8 +4286,18 @@ enum TravelSegmentGroupingEngine {
     }
 }
 
+extension TimeSpan {
+    /// 짧은 쪽의 절반 이상이 겹치면 같은 구간으로 본다.
+    func overlapsMostly(_ other: TimeSpan) -> Bool {
+        guard let overlap = intersection(with: other) else { return false }
+        return overlap.duration >= min(duration, other.duration) * 0.5
+    }
+}
+
 enum MovementCorrectionEngine {
     private static let maximumRememberedCorrections = 200
+    /// 기억한 철도 보정을 믿으려면 구간 기록의 이만큼은 철도 경로·지하철 Wi-Fi에 맞아야 한다.
+    static let minimumRailEvidenceShare = 0.3
 
     static func recording(
         mode: TravelMode,
@@ -4278,7 +4313,7 @@ enum MovementCorrectionEngine {
             in: existing
         )
         let correction = TravelModeCorrection(
-            id: previous?.id ?? UUID(),
+            id: previous.flatMap { $0.span.overlapsMostly(segment.span) ? $0.id : nil } ?? UUID(),
             fromPlaceKey: placeKeys.from,
             toPlaceKey: placeKeys.to,
             span: segment.span,
@@ -4289,15 +4324,10 @@ enum MovementCorrectionEngine {
             updatedAt: date
         )
 
+        // 다른 날에 고친 보정은 그 날의 수정이므로 남긴다. 같은 구간을 다시 고칠 때만 바꾼다(PAW1102A03).
         var result = existing.filter { value in
-            guard let previous else {
-                return !matchesSameTarget(
-                    value,
-                    segment: segment,
-                    places: places
-                )
-            }
-            return value.id != previous.id
+            guard value.span.overlapsMostly(segment.span) else { return true }
+            return !matchesSameTarget(value, segment: segment, places: places) && value.id != previous?.id
         }
         result.append(correction)
         result.sort { $0.updatedAt < $1.updatedAt }
@@ -4308,7 +4338,8 @@ enum MovementCorrectionEngine {
     }
 
     /// 기억해 둔 지하철·기차 보정이 이 구간의 센서 근거와 정면으로 부딪치는지.
-    /// 구간 안 기록의 대부분이 자동차 모션이고 철도 경로·역 근처·지하철 Wi-Fi 신호가 하나도 없으면 철도가 아니다.
+    /// 구간 안 기록의 대부분이 자동차 모션이고 철도 경로·지하철 Wi-Fi 신호가 일부 순간뿐이면 철도가 아니다.
+    /// 역 근처 신호는 근거로 치지 않는다. 차로 한 시간 달리면 역 옆을 한 번은 지나가 막는 장치가 풀렸다(대표 지적, PAW1102A03).
     /// 예전에는 과거에 "집→회사 = 지하철"로 확인한 기억이 자동차로 간 날에도 그대로 덮어써져 지하철 경로(미확인 경로)가 떴다(대표 지적, ARC1030A04).
     static func isContradictedByAutomotive(
         _ correction: TravelModeCorrection,
@@ -4318,21 +4349,26 @@ enum MovementCorrectionEngine {
         guard correction.mode == .subway || correction.mode == .train else { return false }
         // 이 구간 자체에 건 보정(같은 시간대)은 사용자가 직접 고른 것이라 센서 근거가 달라도 따른다.
         // 막는 것은 다른 날의 보정이 장소 이름이 같다는 이유로 옮겨 오는 경우뿐이다.
-        if let overlap = correction.span.intersection(with: segment.span),
-           overlap.duration >= min(correction.span.duration, segment.span.duration) * 0.5 {
-            return false
-        }
+        if correction.span.overlapsMostly(segment.span) { return false }
         let inSpan = readings.filter {
             $0.timestamp >= segment.span.start && $0.timestamp <= segment.span.end
         }
         guard inSpan.count >= 20 else { return false }
         let automotive = inSpan.filter { $0.motion == .automotive }.count
         guard Double(automotive) / Double(inSpan.count) >= 0.6 else { return false }
-        let hasRailEvidence = inSpan.contains {
-            $0.matchesRailRoute || $0.matchesPublicTransitRoute || $0.nearbyStation
-                || ($0.subwayWiFiObservationStreak ?? 0) > 0
-        }
-        return !hasRailEvidence
+        let railReadings = inSpan.filter {
+            $0.matchesRailRoute || ($0.subwayWiFiObservationStreak ?? 0) > 0
+        }.count
+        return Double(railReadings) / Double(inSpan.count) < minimumRailEvidenceShare
+    }
+
+    /// 다른 날 기억만으로는 지하철을 확정하지 않는다. 탑승·하차역이 있는 유효한 노선이 있어야 하고,
+    /// 고도 변화가 없으면 역을 지나간 것이다(대표 지시, PAW1102A03). 이 구간에 직접 고른 보정은 따른다.
+    private static func lacksSubwayProof(_ correction: TravelModeCorrection, segment: TravelSegment) -> Bool {
+        guard correction.mode == .subway else { return false }
+        if correction.span.overlapsMostly(segment.span) { return false }
+        if segment.evidence.contains(TravelModeClassifier.noAltitudeChangeEvidence) { return true }
+        return segment.subwayRoute.map(SubwayStationCatalog.isValid) != true
     }
 
     static func applying(
@@ -4346,7 +4382,8 @@ enum MovementCorrectionEngine {
                 for: segment,
                 places: places,
                 in: corrections
-            ), !isContradictedByAutomotive(correction, segment: segment, readings: readings) else {
+            ), !isContradictedByAutomotive(correction, segment: segment, readings: readings),
+               !lacksSubwayProof(correction, segment: segment) else {
                 return segment
             }
             var value = segment

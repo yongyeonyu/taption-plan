@@ -242,6 +242,8 @@ enum RecordAnalysisCategoryPolicy {
         case "study": return "수업(집 - 학교·학원)"
         case "hobby": return "취미(집 - 취미)"
         case "exercise": return "운동"
+        case "shower": return "샤워"
+        case "housework": return "집안일"
         case "sleep":
             return SleepStage(rawValue: actual.behavior ?? "")?.displayName ?? "수면"
         case "movement": return movementTitle(for: actual)

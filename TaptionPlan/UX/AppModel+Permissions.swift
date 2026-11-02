@@ -178,7 +178,6 @@ extension AppModel {
 
     func activateRequiredSensorCollection() async {
         snapshot.settings.sensorCollectionProfile = .balanced
-        snapshot.settings.gpsLoggingPreferences = .standard
         await enableLocationCollection(always: true)
     }
 
@@ -255,7 +254,8 @@ extension AppModel {
     /// 안내 시트가 없을 때 위치 권한이 비어 있으면 시작하자마자 시스템 팝업으로 묻는다.
     /// '항상' 승격 팝업은 iOS가 한 번만 보여 주므로 설치당 한 번만 요청한다.
     func requestMissingLocationPermissionAtLaunch() async {
-        guard !isPermissionOnboardingPresented, let sensorService else { return }
+        guard !isPermissionOnboardingPresented, FirstRunTutorialStore().allowsUnaskedPermissionPrompts,
+              let sensorService else { return }
         let upgradeKey = "taption.locationAlwaysUpgradeRequested"
         switch sensorService.locationAuthorizationStatus() {
         case .notDetermined:
@@ -624,7 +624,10 @@ extension AppModel {
                   acceptsDataMutation() else { return }
         }
 
-        let photoState = photoService.permissionState()
+        // 사진 상태 조회만으로 시스템 팝업이 뜨는 런타임이 있어 튜토리얼 전에는 묻지 않는다.
+        let photoState = FirstRunTutorialStore().defersPermissionPrompts
+            ? permissionState(for: .photos)
+            : photoService.permissionState()
         let calendarState = calendarService.permissionState()
         let locationState = sensorService?.locationPermissionState() ?? .unavailable
         var updatedSettings = snapshot.settings

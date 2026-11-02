@@ -16,16 +16,18 @@ final class AppleMotionHistoryService: @unchecked Sendable {
         self.pedometer = pedometer
     }
 
+    private static let askedKey = "taption.firstRunTutorial.motionAsked"
+
     func permissionState() -> PermissionState {
-        switch CMMotionActivityManager.authorizationStatus() {
-        case .notDetermined:
+        // 튜토리얼에서 묻기 전에는 상태도 읽지 않는다. 읽기만 해도 시스템 팝업이 뜨는 런타임이 있다.
+        if FirstRunTutorialStore().defersPermissionPrompts, !UserDefaults.standard.bool(forKey: Self.askedKey) {
             return .notDetermined
-        case .restricted, .denied:
-            return .denied
-        case .authorized:
-            return .authorized
-        @unknown default:
-            return .unavailable
+        }
+        return switch CMMotionActivityManager.authorizationStatus() {
+        case .notDetermined: .notDetermined
+        case .restricted, .denied: .denied
+        case .authorized: .authorized
+        @unknown default: .unavailable
         }
     }
 
@@ -33,6 +35,7 @@ final class AppleMotionHistoryService: @unchecked Sendable {
         guard CMMotionActivityManager.isActivityAvailable() else {
             return .unavailable
         }
+        UserDefaults.standard.set(true, forKey: Self.askedKey)
         let end = Date.now
         return await withCheckedContinuation { continuation in
             activityManager.queryActivityStarting(
@@ -54,7 +57,8 @@ final class AppleMotionHistoryService: @unchecked Sendable {
         // the future and inflate the review totals. Historical days retain
         // their original boundary.
         let queryEnd = min(span.end, Date.now)
-        guard span.start < queryEnd else { return [] }
+        // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다.
+        guard span.start < queryEnd, permissionState() == .authorized else { return [] }
         return try await withCheckedThrowingContinuation { continuation in
             activityManager.queryActivityStarting(
                 from: span.start,
@@ -88,7 +92,7 @@ final class AppleMotionHistoryService: @unchecked Sendable {
     }
 
     func pedometerSummary(in span: TimeSpan) async throws -> PedometerSummary? {
-        guard CMPedometer.isStepCountingAvailable() else { return nil }
+        guard CMPedometer.isStepCountingAvailable(), permissionState() == .authorized else { return nil }
         return try await withCheckedThrowingContinuation { continuation in
             pedometer.queryPedometerData(
                 from: span.start,

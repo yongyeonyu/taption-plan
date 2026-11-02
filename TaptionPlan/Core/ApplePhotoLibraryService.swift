@@ -48,6 +48,8 @@ final class ApplePhotoLibraryService: @unchecked Sendable {
     }
 
     func moments(in span: TimeSpan) -> [PhotoMoment] {
+        // 권한이 정해지기 전의 조회는 시스템 팝업을 띄운다.
+        guard permissionState().isGranted else { return [] }
         let options = PHFetchOptions()
         options.predicate = NSPredicate(
             format: "creationDate >= %@ AND creationDate <= %@",

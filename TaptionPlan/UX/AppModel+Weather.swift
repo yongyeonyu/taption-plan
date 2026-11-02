@@ -303,7 +303,7 @@ extension AppModel {
         // Keep environment samples on the same cadence as the configured
         // GPS/sensor duty cycle.  The provider caches the value, so a one-
         // minute accuracy profile does not imply a one-minute network call.
-        let collectionInterval = settings.sensorCollectionProfile.interval
+        let collectionInterval = max(60, settings.gpsLoggingPreferences.interval)
         let agedEnough = lastLiveEnvironmentAt.map {
             date.timeIntervalSince($0) >= collectionInterval
         } ?? true
@@ -455,7 +455,7 @@ extension AppModel {
             .max { $0.observedAt < $1.observedAt }
         guard let latest else { return true }
         return reading.timestamp.timeIntervalSince(latest.observedAt)
-            >= settings.sensorCollectionProfile.interval
+            >= max(60, settings.gpsLoggingPreferences.interval)
     }
 
     func refreshWeather(

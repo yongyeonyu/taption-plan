@@ -604,7 +604,7 @@ extension AppModel {
             stays: basePlaces,
             maximumGap: max(
                 5 * 60,
-                snapshot.settings.sensorCollectionProfile.interval + 60
+                snapshot.settings.gpsLoggingPreferences.interval + 60
             )
         )
         let recentCarAudio = CarAudioTravelConfirmation.recentNames(
@@ -613,10 +613,15 @@ extension AppModel {
         if recentCarAudio != snapshot.settings.recentCarAudioNames {
             snapshot.settings.recentCarAudioNames = recentCarAudio
         }
-        let travel = ActivityClassificationLockEngine.mergingLockedTravel(
-            existing: snapshot.travel,
-            fresh: generatedTravel,
-            inside: span
+        let travel = CarAudioTravelConfirmation.enforcingRegisteredCar(
+            ActivityClassificationLockEngine.mergingLockedTravel(
+                existing: snapshot.travel,
+                fresh: generatedTravel,
+                inside: span
+            ),
+            readings: readings,
+            registered: Set(settings.registeredCarAudioNames),
+            corrections: snapshot.settings.movementCorrections
         )
 
         // A photo location is only a fallback anchor. It must not erase a
@@ -922,7 +927,7 @@ extension AppModel {
     ) {
         let maximumSampleGap = max(
             20 * 60,
-            settings.sensorCollectionProfile.interval * 1.6 + 60
+            settings.gpsLoggingPreferences.interval * 1.6 + 60
         )
         guard !readings.isEmpty else {
             TaptionPlanDiagnosticsLogger.shared.record(

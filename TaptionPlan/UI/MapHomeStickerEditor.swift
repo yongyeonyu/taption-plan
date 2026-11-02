@@ -112,6 +112,7 @@ struct MapHomeBubbleTail: Shape {
 
 struct MapHomeStickerEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var model: AppModel
     let target: MapHomeStickerEditorTarget
     let language: MapHomeLanguage
@@ -135,7 +136,10 @@ struct MapHomeStickerEditorSheet: View {
     @State private var didSave = false
     @State private var dictation = MapHomeDictation()
     @State private var dictationBase = ""
+    /// 권한·마이크를 준비하는 동안에도 키보드를 막는다.
+    @State private var isDictationStarting = false
     @State private var memoFocusToken = 0
+    @State private var polish = MemoPolishController()
 
     private let symbols = [
         "star.fill", "heart.fill", "flag.fill", "pin.fill",
@@ -238,8 +242,17 @@ struct MapHomeStickerEditorSheet: View {
                 }
                 Button(language.text("취소", "Cancel"), role: .cancel) {}
             }
-            .onAppear(perform: load)
+            .onAppear {
+                load()
+                polish.refreshAvailability()
+            }
+            // 설정에서 Apple Intelligence를 켜고 돌아오면 바로 반영한다.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { polish.refreshAvailability() }
+            }
+            .onChange(of: memoText) { polish.clearNotice() }
             .onDisappear {
+                polish.cancel()
                 if isNewMemo, !didSave, !keepsDraft {
                     deleteNewMemoIfNeeded()
                 }
@@ -284,11 +297,96 @@ struct MapHomeStickerEditorSheet: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            .disabled(polish.isPolishing)
             .accessibilityLabel(language.text(dictation.isListening ? "녹음 끝내기" : "음성 첨부", dictation.isListening ? "Finish recording" : "Voice attachment"))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+
+    private var isDictationBusy: Bool {
+        isDictationStarting || dictation.isListening || dictation.isTranscribing
+    }
+
+    /// 다듬기 줄. 미지원 기기·OS에서는 아무것도 보이지 않는다.
+    @ViewBuilder
+    private var memoPolishRow: some View {
+        if polish.availability.showsButton || polish.history.canSwap {
+            VStack(alignment: .trailing, spacing: 6) {
+                HStack(spacing: 12) {
+                    if polish.history.canSwap {
+                        Button(polish.history.isShowingOriginal
+                            ? language.text("다듬은 글로", "Use polished")
+                            : language.text("되돌리기", "Undo")) {
+                            if let text = polish.swap(current: memoText) { memoText = text }
+                        }
+                        .disabled(polish.isPolishing || isDictationBusy)
+                        .accessibilityIdentifier("memo-polish-undo")
+                    }
+                    Spacer(minLength: 0)
+                    if polish.availability.showsButton {
+                        memoPolishButton
+                    }
+                }
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                if let message = memoPolishMessage {
+                    Text(message.text)
+                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                        .foregroundStyle(message.isFailure ? Color.tpHoliday : Color.tpSecondary)
+                        .multilineTextAlignment(.trailing)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("memo-polish-message")
+                }
+            }
+        }
+    }
+
+    private var memoPolishButton: some View {
+        Button {
+            polish.polish(currentText: { memoText }, apply: { memoText = $0 })
+        } label: {
+            HStack(spacing: 5) {
+                if polish.isPolishing {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "sparkles")
+                }
+                Text(polish.isPolishing
+                    ? language.text("다듬는 중…", "Polishing…")
+                    : language.text("AI 다듬기", "AI polish"))
+            }
+            .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(polish.canPolish(memoText) && !isDictationBusy ? Color.tpAccent : Color.tpSecondary)
+        .disabled(!polish.canPolish(memoText) || isDictationBusy)
+        .accessibilityLabel(language.text("AI로 문장 다듬기", "Polish text with AI"))
+        .accessibilityIdentifier("memo-polish-button")
+    }
+
+    /// 쓸 수 없는 이유가 먼저고, 그다음 마지막 다듬기 결과 안내를 보여 준다.
+    private var memoPolishMessage: (text: String, isFailure: Bool)? {
+        switch polish.availability {
+        case .appleIntelligenceOff:
+            return (language.text("설정에서 Apple Intelligence를 켜면 쓸 수 있어요.", "Turn on Apple Intelligence in Settings to use this."), false)
+        case .modelNotReady:
+            return (language.text("Apple Intelligence 모델을 준비하는 중이에요.", "The Apple Intelligence model is getting ready."), false)
+        case .available, .unsupported:
+            break
+        }
+        guard let notice = polish.notice else { return nil }
+        let text = switch notice {
+        case .unchanged: language.text("고칠 곳을 찾지 못했어요.", "Nothing to fix.")
+        case .textChanged: language.text("글이 바뀌어 다듬기를 멈췄어요.", "The text changed, so polishing stopped.")
+        case .tooLong: language.text("글이 길어 다듬지 못했어요. 1,500자 이하로 줄여 주세요.", "This is too long to polish. Keep it under 1,500 characters.")
+        case .rejected: language.text("결과가 원문과 달라 적용하지 않았어요.", "The result differed from your text, so it wasn't applied.")
+        case .blockedContent: language.text("이 내용은 Apple Intelligence가 다듬지 못해요.", "Apple Intelligence can't polish this content.")
+        case .unsupportedLanguage: language.text("이 언어는 다듬지 못해요.", "This language isn't supported.")
+        case .failed: language.text("다듬지 못했어요. 잠시 뒤 다시 해 주세요.", "Couldn't polish this. Try again later.")
+        }
+        return (text, notice.isFailure)
     }
 
     /// 스티커를 메모로 되돌린다. 시간은 스티커 시간을 그대로 쓴다.
@@ -321,7 +419,7 @@ struct MapHomeStickerEditorSheet: View {
             }
             MapHomeMemoTextView(
                 text: $memoText,
-                suppressesKeyboard: dictation.isListening || dictation.isTranscribing,
+                suppressesKeyboard: isDictationStarting || dictation.isListening || dictation.isTranscribing,
                 focusToken: memoFocusToken
             )
             .frame(minHeight: 120)
@@ -333,8 +431,11 @@ struct MapHomeStickerEditorSheet: View {
         if dictation.isListening {
             dictation.stop()
         } else {
-            dictationBase = memoText.isEmpty ? "" : memoText + " "
-            // 녹음을 누르면 입력칸에 커서를 두고, 글자 변환이 끝나면 그 글자를 메모에 붙인다.
+            // 준비 중이거나 마지막 글자를 기다릴 때 기준 글자를 다시 잡으면 같은 말이 두 번 붙는다.
+            guard !isDictationStarting, !dictation.isTranscribing, !polish.isPolishing else { return }
+            dictationBase = MapHomeDictationTranscript.base(from: memoText)
+            // 키보드를 먼저 막고 입력칸에 커서를 둔다. 글자 변환이 끝나면 그 글자를 메모에 붙인다.
+            isDictationStarting = true
             memoFocusToken += 1
             dictation.onPartial = { text in
                 memoText = dictationBase + text
@@ -353,7 +454,10 @@ struct MapHomeStickerEditorSheet: View {
             dictation.onRecorded = { url in
                 if let memoID { model.attachAudio(toMemo: memoID, localIdentifier: url.path) }
             }
-            Task { await dictation.start(localeIdentifier: identifier) }
+            Task {
+                await dictation.start(localeIdentifier: identifier)
+                isDictationStarting = false
+            }
         }
     }
 
@@ -381,6 +485,7 @@ struct MapHomeStickerEditorSheet: View {
                 TextField(language.text("제목", "Title"), text: $title)
             }
             memoInputField(prompt: Text(language.text("새 메모", "New memo")))
+            memoPolishRow
         }
         if isSticker {
             editorCard {

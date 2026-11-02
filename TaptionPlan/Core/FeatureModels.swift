@@ -56,6 +56,8 @@ enum RecordAnalysisCategoryNormalizer {
         )
         let rawValue = rawCategoryID.lowercased()
             .replacingOccurrences(of: " ", with: "")
+        // 사용자가 직접 고르는 분류라 글자 추정으로 바꾸지 않는다.
+        if rawValue == "shower" || rawValue == "housework" { return rawValue }
         if rawCategoryID == "unconfirmed"
             || value.contains("unconfirmed-activity")
             || value.contains("unconfirmed-movement")
@@ -203,6 +205,8 @@ enum RecordClassificationCatalog {
             category("eating", "식사", "fork.knife"),
             category("exercise", "운동", "figure.strengthtraining.traditional"),
             category("health", "건강관리", "heart.text.square.fill"),
+            category("shower", "샤워", "shower.fill"),
+            category("housework", "집안일", "house.fill"),
             category("unconfirmed", "미확인", "questionmark.circle.fill"),
         ]
     )
@@ -1532,6 +1536,8 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
     var point: GeoPoint?
     var isContextOnly: Bool
     var airQuality: AirQualityContext?
+    /// 옛 기록에는 없다.
+    var windSpeedMetersPerSecond: Double?
 
     init(
         id: UUID = UUID(),
@@ -1549,8 +1555,10 @@ struct WeatherContext: Identifiable, Codable, Hashable, Sendable {
         placeName: String? = nil,
         point: GeoPoint? = nil,
         isContextOnly: Bool = true,
-        airQuality: AirQualityContext? = nil
+        airQuality: AirQualityContext? = nil,
+        windSpeedMetersPerSecond: Double? = nil
     ) {
+        self.windSpeedMetersPerSecond = windSpeedMetersPerSecond
         self.id = id
         self.observedAt = observedAt
         self.validUntil = validUntil

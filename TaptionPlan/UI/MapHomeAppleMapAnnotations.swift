@@ -93,6 +93,8 @@ final class MapHomeAppleHostedAnnotationView: MKAnnotationView {
             let controller = UIHostingController(rootView: rootView)
             controller.view.backgroundColor = .clear
             controller.view.isOpaque = false
+            // 안쪽 SwiftUI가 터치를 잡으면 핀 위에 닿은 손가락이 지도 핀치에서 빠진다.
+            controller.view.isUserInteractionEnabled = false
             addSubview(controller.view)
             hostingController = controller
         }

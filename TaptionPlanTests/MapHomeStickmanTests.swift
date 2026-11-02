@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 import UIKit
 import CoreLocation
@@ -565,7 +566,7 @@ final class MapHomeStickmanTests: XCTestCase {
     func testOnlyMovementStickmanActionsAnimate() {
         XCTAssertEqual(
             Set(MapHomeStickmanAction.allCases.filter(\.isMoving)),
-            [.movement, .walking, .running, .car, .subway, .privateVehicle,
+            [.movement, .walking, .running, .car, .subway, .train, .privateVehicle,
              .bus, .ship, .airplane, .cycling]
         )
     }
@@ -592,6 +593,108 @@ final class MapHomeStickmanTests: XCTestCase {
             HwarangDiagnostics.paintedPixels(scene: .walkLoop, sec: 1, hat: hat),
             HwarangDiagnostics.paintedPixels(scene: .walkLoop, sec: 1) + 100
         )
+    }
+
+    /// 집 그림 안 화랑이도 재생 마커처럼 착용한 모자를 쓴다(HAT1102A01).
+    @MainActor
+    func testHomeGlyphDrawsEquippedHat() throws {
+        let action = try XCTUnwrap(Optional(MapHomeStickmanAction.activity))
+        func pixels(_ accessoryID: String?) throws -> [UInt8] {
+            let renderer = ImageRenderer(content: MapHomeStickmanGlyph(action: action, size: 36, equippedAccessoryID: accessoryID)
+                .environment(\.isLuminanceReduced, true)
+                .frame(width: 80, height: 80))
+            renderer.scale = 2
+            let image = try XCTUnwrap(renderer.cgImage)
+            var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
+            let context = try XCTUnwrap(CGContext(
+                data: &bytes, width: image.width, height: image.height, bitsPerComponent: 8, bytesPerRow: image.width * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            return bytes
+        }
+        let plain = try pixels(nil), hat = try pixels("cat.accessory.kr.gyeongbokgung")
+        let changed = stride(from: 3, to: plain.count, by: 4).filter { plain[$0] != hat[$0] }.count
+        XCTAssertGreaterThan(changed, 100)
+    }
+
+    /// 탈것마다 자기 장면이 나오고 속도 구간의 걷기·달리기로 바뀌지 않는다(CAT1102A02).
+    func testVehiclesAndChoresHaveTheirOwnScenes() {
+        let expected: [(MapHomeStickmanAction, HwarangScene)] = [
+            (.car, .carFront), (.privateVehicle, .carFront), (.subway, .subway), (.train, .train), (.cycling, .bicycle), (.bus, .bus),
+            (.airplane, .airplane), (.ship, .boat), (.shower, .shower), (.housework, .robotVacuum)
+        ]
+        for (action, scene) in expected { XCTAssertEqual(action.hwarangScene, scene, action.rawValue) }
+        for scene in [HwarangScene.carFront, .subway, .train, .bus, .bicycle, .airplane, .boat] { XCTAssertTrue(scene.isVehicleScene) }
+        XCTAssertFalse(HwarangScene.walkLoop.isVehicleScene)
+    }
+
+    func testEveryMajorCategoryDrawsItsOwnSceneThroughTheResolver() {
+        let scenes = MapHomeSidebarMajorCategory.all.map(\.stickmanAction.hwarangScene)
+        XCTAssertEqual(Set(scenes).count, scenes.count)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "shower", label: ""), .shower)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "housework", label: ""), .housework)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: "custom:1", label: "집안일"), .housework)
+    }
+
+    /// 직접 고른 분류가 이동 구간보다 앞서고, 자동 집안일 기록은 활동으로 남는다.
+    func testChosenCategoryWinsOverTravelAndHouseworkIsNotAutomatic() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        func actual(category: String, source: ActualSource, title: String) -> ActualRecord {
+            ActualRecord(planID: nil, title: title, categoryID: category, startedAt: now.addingTimeInterval(-60), endedAt: now.addingTimeInterval(60), source: source)
+        }
+        let travel = TravelSegment(
+            mode: .car, span: TimeSpan(start: now.addingTimeInterval(-60), end: now.addingTimeInterval(60)),
+            distanceMeters: 1_000, confidence: .high, evidence: []
+        )
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(
+            at: now, actuals: [actual(category: "shower", source: .manual, title: "샤워")], travel: [travel], places: [], frequentPlaces: []
+        ), .shower)
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(
+            at: now, actuals: [actual(category: "activity", source: .appleWatch, title: "집안일")], travel: [], places: [], frequentPlaces: []
+        ), .activity)
+    }
+
+    /// 탈것 표시를 켜면 탈것 장면, 끄면 속도에 따라 걷기·달리기. 달리기는 항상 달린다.
+    func testMarkerSceneFollowsVehicleSettingAndSpeed() {
+        XCTAssertEqual(MapHomeStickmanAction.running.markerScene(speedMetersPerSecond: 1, showsVehicles: true), .runLoop)
+        XCTAssertEqual(MapHomeStickmanAction.walking.markerScene(speedMetersPerSecond: nil, showsVehicles: true), .walkLoop)
+        XCTAssertEqual(MapHomeStickmanAction.walking.markerScene(speedMetersPerSecond: 1.2, showsVehicles: true), .walkLoop)
+        XCTAssertEqual(MapHomeStickmanAction.walking.markerScene(speedMetersPerSecond: 3, showsVehicles: true), .runLoop)
+        let rides: [(MapHomeStickmanAction, HwarangScene)] = [
+            (.cycling, .bicycle), (.car, .carFront), (.bus, .bus), (.subway, .subway),
+            (.train, .train), (.airplane, .airplane), (.ship, .boat)
+        ]
+        for (action, scene) in rides {
+            XCTAssertEqual(action.markerScene(speedMetersPerSecond: 20, showsVehicles: true), scene)
+            XCTAssertEqual(action.markerScene(speedMetersPerSecond: 20, showsVehicles: false), .runLoop)
+            XCTAssertEqual(action.markerScene(speedMetersPerSecond: 1, showsVehicles: false), .walkLoop)
+        }
+        XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.train), .train)
+        XCTAssertEqual(MapHomeStickmanAction.eating.markerScene(speedMetersPerSecond: 5, showsVehicles: false), .eat)
+    }
+
+    /// 집 아이콘 날씨 그림: 기호를 그림 종류로 나누고 종류마다 다르게 그린다(WTH1102A01).
+    func testHomeWeatherKindsFromSymbols() {
+        let expected: [(String, MapHomeHomeWeatherKind)] = [
+            ("sun.max.fill", .sun), ("cloud.sun.fill", .partlyCloudy), ("moon.stars.fill", .moon), ("cloud.fill", .cloud),
+            ("cloud.fog.fill", .fog), ("cloud.drizzle.fill", .rain), ("cloud.heavyrain.fill", .heavyRain), ("cloud.snow.fill", .snow),
+            ("cloud.bolt.rain.fill", .thunder), ("wind", .wind), ("hurricane", .typhoon), ("tropicalstorm", .typhoon)
+        ]
+        for (symbol, kind) in expected { XCTAssertEqual(MapHomeHomeWeatherKind(symbolName: symbol), kind, symbol) }
+    }
+
+    /// 풍속이 셀수록 바람 그림이 빨라지고, 옛 날씨 기록은 풍속 없이 읽힌다.
+    func testWindMotionFollowsSpeedAndOldWeatherStillDecodes() throws {
+        XCTAssertLessThan(MapHomeHomeWeatherFrame.windMotion(speed: 2), MapHomeHomeWeatherFrame.windMotion(speed: 8))
+        XCTAssertLessThan(MapHomeHomeWeatherFrame.windMotion(speed: 8), MapHomeHomeWeatherFrame.windMotion(speed: 15))
+        XCTAssertEqual(MapHomeHomeWeatherFrame.windMotion(speed: 40), 4)
+        let current = WeatherContext(observedAt: .now, condition: "windy", symbolName: "wind", temperatureCelsius: 9, windSpeedMetersPerSecond: 11)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+        XCTAssertEqual(object["windSpeedMetersPerSecond"] as? Double, 11)
+        object["windSpeedMetersPerSecond"] = nil
+        let old = try JSONDecoder().decode(WeatherContext.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(old.windSpeedMetersPerSecond)
     }
 
     func testEveryHwarangSceneDrawsThroughItsWholeLoop() {
@@ -902,9 +1005,9 @@ final class MapHomeStickmanTests: XCTestCase {
                 "\(title) 상세가 이동 대분류를 덮었습니다."
             )
         }
-        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 21)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 21)
-        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 21)
+        XCTAssertEqual(MapHomeStickmanAction.allCases.count, 24)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases).count, 24)
+        XCTAssertEqual(Set(MapHomeStickmanAction.allCases.map(\.title)).count, 24)
         XCTAssertEqual(MapHomeStickmanActionResolver.action(for: TravelMode.running), .running)
         XCTAssertEqual(
             MapHomeStickmanActionResolver.action(

@@ -385,7 +385,7 @@ extension View {
 enum CanonicalCategoryPalette {
     static let orderedIDs = [
         "activity", "work", "study", "hobby",
-        "sleep", "movement", "eating", "exercise", "health", "unconfirmed",
+        "sleep", "movement", "eating", "exercise", "health", "shower", "housework", "unconfirmed",
     ]
 
     static let hexes: [String: String] = [
@@ -398,6 +398,8 @@ enum CanonicalCategoryPalette {
         "eating": "#E1C453",
         "exercise": "#DC2626",
         "health": "#C0268E",
+        "shower": "#38BDF8",
+        "housework": "#92400E",
         "unconfirmed": "#94A3B8",
     ]
 
@@ -411,7 +413,7 @@ enum CanonicalCategoryPalette {
 }
 
 enum MapHomePastelPalette {
-    // 열 개 기본 분류는 색상(hue)이 겹치지 않게 골랐다: 초록·파랑·청록·보라·남색·주황·노랑·빨강·분홍·회색.
+    // 기본 분류는 색상(hue)이 겹치지 않게 골랐다: 초록·파랑·청록·보라·남색·주황·노랑·빨강·분홍·하늘·갈색·회색.
     static let hexes: [String: String] = [
         "activity": "#43A047",
         "work": "#2E6FDB",
@@ -422,6 +424,8 @@ enum MapHomePastelPalette {
         "eating": "#E5B800",
         "exercise": "#D32F2F",
         "health": "#EC407A",
+        "shower": "#4FC3F7",
+        "housework": "#8D6E63",
         "unconfirmed": "#8D8D8D",
     ]
 

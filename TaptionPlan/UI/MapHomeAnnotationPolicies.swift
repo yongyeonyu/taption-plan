@@ -40,7 +40,7 @@ enum MapHomePlacePinLayout {
     /// 아바타와 레벨 라벨 사이 간격.
     static let levelLabelGap: CGFloat = 5
     /// 날씨 배지를 아바타 위쪽에 걸치는 거리(음수 = 위).
-    static let weatherBadgeLift: CGFloat = -10
+    static let temperatureTopInset: CGFloat = 5
     /// 아바타 중심을 좌표에 맞추기 위해 아래 라벨 블록 높이의 절반만큼 내린다.
     static let avatarCenterCompensation: CGFloat = (levelLabelGap + levelLabelHeight) / 2
     /// 연봉 카운터를 집 핀 중심에서 띄우는 거리(음수 = 위). 아바타 위 배지 줄보다 위에 둔다.
@@ -50,8 +50,6 @@ enum MapHomePlacePinLayout {
     static let appleHomeHostWidth: CGFloat = 160
     static let appleHomeHostHeight: CGFloat = 160
     /// 장착한 장식 스티커. 원 안 10pt로는 아트에 묻혀 읽히지 않아 원 밖으로 내보내고 키운다.
-    static let accessoryStickerSize: CGFloat = 15
-    static let accessoryStickerOffset: CGFloat = 10
 }
 
 enum MapHomePlaceAnnotationLayout {

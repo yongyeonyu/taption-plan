@@ -524,7 +524,7 @@ struct SensorCollectionConfiguration: Codable, Hashable, Sendable {
     var normalized: SensorCollectionConfiguration {
         var copy = self
         copy.minimumEmissionInterval = TimeInterval(
-            GPSLoggingPreferences.clampedSeconds(
+            GPSLoggingPreferences.restoredSeconds(
                 Int(minimumEmissionInterval.rounded())
             )
         )
@@ -542,22 +542,27 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         var intervalSeconds: Int { rawValue }
     }
 
-    /// 1분 단위로 1~15분. 5분 눈금(5·10·15분) 근처 ±1분은 그 눈금에 붙는다.
-    static let supportedIntervalSeconds = Array(stride(from: 60, through: 900, by: 60))
-    static let snapIntervalSeconds = [300, 600, 900]
+    /// 30초 단위로 30초~30분.
+    static let intervalStepSeconds = 30
+    static let supportedIntervalSeconds = Array(
+        stride(from: intervalStepSeconds, through: 1_800, by: intervalStepSeconds)
+    )
+    /// 슬라이더 큰 눈금과 그 위치. 30초·1분이 겹치지 않게 시간에 비례시키지 않는다.
+    static let majorTickSeconds = [30, 60, 300, 600, 900, 1_800]
+    static let majorTickPositions: [Double] = [0, 1, 2, 3, 4, 6]
     static let batteryMinimalIntervalSeconds = 900
 
-    var isBatteryMinimal: Bool
     var intervalSeconds: Int
 
     static let standard = GPSLoggingPreferences(intervalSeconds: 300)
 
-    init(
-        isBatteryMinimal: Bool = false,
-        intervalSeconds: Int = 300
-    ) {
-        self.isBatteryMinimal = isBatteryMinimal
+    init(intervalSeconds: Int = 300) {
         self.intervalSeconds = Self.clampedSeconds(intervalSeconds)
+    }
+
+    /// 15분 이상이면 저전력 수집(낮은 정확도 표본도 저장)을 쓴다.
+    var isBatteryMinimal: Bool {
+        intervalSeconds >= Self.batteryMinimalIntervalSeconds
     }
 
     var interval: TimeInterval {
@@ -565,7 +570,7 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     var effectiveIntervalSeconds: Int {
-        isBatteryMinimal ? Self.batteryMinimalIntervalSeconds : intervalSeconds
+        intervalSeconds
     }
 
     var preset: Preset {
@@ -575,13 +580,8 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
                     ? .batterySaver : .realtime)
         }
         set {
-            isBatteryMinimal = newValue == .batterySaver
             intervalSeconds = newValue.intervalSeconds
         }
-    }
-
-    var isContinuous: Bool {
-        effectiveIntervalSeconds < 60
     }
 
     @available(*, deprecated, message: "Use intervalSeconds")
@@ -612,9 +612,11 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
         ) ?? (try values.decodeIfPresent(Int.self, forKey: .intervalMinutes))
             .map { $0 * 60 }
             ?? Self.standard.intervalSeconds
+        // 이전 빌드의 최소 모드는 저장된 간격과 상관없이 15분으로 수집했다.
         self.init(
-            isBatteryMinimal: isBatteryMinimal,
-            intervalSeconds: seconds
+            intervalSeconds: isBatteryMinimal
+                ? max(seconds, Self.batteryMinimalIntervalSeconds)
+                : Self.restoredSeconds(seconds)
         )
     }
 
@@ -625,13 +627,49 @@ struct GPSLoggingPreferences: Codable, Hashable, Sendable {
     }
 
     static func clampedSeconds(_ value: Int) -> Int {
-        let minute = supportedIntervalSeconds.min {
-            abs($0 - value) < abs($1 - value)
-        } ?? standard.intervalSeconds
-        if let snap = snapIntervalSeconds.first(where: { abs($0 - minute) <= 60 }) {
-            return snap
-        }
-        return minute
+        let step = intervalStepSeconds
+        let snapped = (value + step / 2) / step * step
+        return min(max(snapped, step), supportedIntervalSeconds.last ?? snapped)
+    }
+
+    /// 예전 연속 수집 값(30초 미만)은 이전 빌드처럼 1분으로 읽는다.
+    static func restoredSeconds(_ value: Int) -> Int {
+        value < intervalStepSeconds
+            ? Preset.realtime.intervalSeconds
+            : clampedSeconds(value)
+    }
+
+    static func sliderPosition(forSeconds seconds: Int) -> Double {
+        let clamped = clampedSeconds(seconds)
+        let upper = majorTickSeconds.firstIndex { $0 >= clamped } ?? 0
+        guard upper > 0 else { return majorTickPositions[0] }
+        let span = Double(majorTickSeconds[upper] - majorTickSeconds[upper - 1])
+        let progress = Double(clamped - majorTickSeconds[upper - 1]) / span
+        return majorTickPositions[upper - 1]
+            + progress * (majorTickPositions[upper] - majorTickPositions[upper - 1])
+    }
+
+    static func seconds(forSliderPosition position: Double) -> Int {
+        let upper = majorTickPositions.firstIndex { $0 >= position }
+            ?? majorTickPositions.count - 1
+        guard upper > 0 else { return majorTickSeconds[0] }
+        let span = majorTickPositions[upper] - majorTickPositions[upper - 1]
+        let progress = (position - majorTickPositions[upper - 1]) / span
+        let seconds = Double(majorTickSeconds[upper - 1])
+            + progress * Double(majorTickSeconds[upper] - majorTickSeconds[upper - 1])
+        return clampedSeconds(Int(seconds.rounded()))
+    }
+
+    /// 30초, 1분, 2분 30초처럼 짧게 적는다.
+    static func intervalText(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let rest = seconds % 60
+        return AppLanguagePreference.text(
+            korean: [minutes > 0 ? "\(minutes)분" : nil, rest > 0 ? "\(rest)초" : nil]
+                .compactMap { $0 }.joined(separator: " "),
+            english: [minutes > 0 ? "\(minutes)m" : nil, rest > 0 ? "\(rest)s" : nil]
+                .compactMap { $0 }.joined(separator: " ")
+        )
     }
 
     @available(*, deprecated, message: "Use clampedSeconds")
@@ -713,8 +751,8 @@ enum TrackingSessionPolicy {
     static func allowsAutomaticTracking(
         interval: TimeInterval
     ) -> Bool {
-        interval == TimeInterval(GPSLoggingPreferences.Preset.realtime.intervalSeconds)
-            || interval == TimeInterval(GPSLoggingPreferences.Preset.balanced.intervalSeconds)
+        interval >= TimeInterval(GPSLoggingPreferences.intervalStepSeconds)
+            && interval <= TimeInterval(GPSLoggingPreferences.Preset.balanced.intervalSeconds)
     }
 
     static func allowsPersistingLocation(

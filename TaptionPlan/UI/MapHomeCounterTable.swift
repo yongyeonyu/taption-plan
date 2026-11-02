@@ -10,6 +10,8 @@ import SwiftUI
 struct MapHomeCounterTable: View {
     /// 창의 맨 아래(머리에 가장 가까운) 줄에 놓는 연봉. 없으면 나머지 카운터만 담는다.
     let salary: MapHomeCounterSalary?
+    /// 연봉 줄 바로 위에 놓는 용돈.
+    var allowance: MapHomeCounterSalary? = nil
     let badges: [MapHomeCounterBadge]
     let language: MapHomeLanguage
 
@@ -18,11 +20,12 @@ struct MapHomeCounterTable: View {
     /// 연봉 줄이 들어가면 값이 `1,234,567원`(영어 `1,234,567 USD`)까지 길어져 132pt에 들어가지 않는다.
     static let boxWidthWithSalary: CGFloat = 176
 
-    private var rowCount: Int { badges.count + (salary == nil ? 0 : 1) }
+    private var moneyRows: [MapHomeCounterSalary] { [allowance, salary].compactMap { $0 } }
+    private var rowCount: Int { badges.count + moneyRows.count }
 
     var body: some View {
-        if rowCount == 1, let salary {
-            MapHomeCounterSalaryPill(salary: salary, language: language)
+        if rowCount == 1, let money = moneyRows.first {
+            MapHomeCounterSalaryPill(salary: money, language: language)
         } else if rowCount == 1, let badge = badges.first {
             MapHomeCounterPill(kind: badge.kind, text: badge.text, language: language)
         } else if rowCount > 1 {
@@ -31,12 +34,12 @@ struct MapHomeCounterTable: View {
                     if index > 0 { divider }
                     MapHomeCounterRow(kind: badge.kind, text: badge.text, language: language)
                 }
-                if let salary {
-                    if !badges.isEmpty { divider }
-                    MapHomeCounterSalaryRow(salary: salary, language: language)
+                ForEach(Array(moneyRows.enumerated()), id: \.offset) { index, money in
+                    if index > 0 || !badges.isEmpty { divider }
+                    MapHomeCounterSalaryRow(salary: money, language: language)
                 }
             }
-            .frame(width: salary == nil ? Self.boxWidth : Self.boxWidthWithSalary)
+            .frame(width: moneyRows.isEmpty ? Self.boxWidth : Self.boxWidthWithSalary)
             .mapHomeCounterPlate(in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .animation(.snappy, value: rowCount)
         }
@@ -92,6 +95,8 @@ struct MapHomeCounterSalary: Equatable {
     let text: String
     /// 지금 근무 중이면 아이콘을 민트로 칠한다.
     let isWorking: Bool
+    /// 근무와 상관없이 쌓이는 용돈 줄인지.
+    var isAllowance = false
 }
 
 /// 창 안의 한 줄: 아이콘 · 이름 · 값(오른쪽 정렬). 값은 monospaced로 자리수가 변해도 흔들리지 않는다.
@@ -289,11 +294,11 @@ private struct MapHomeCounterSalaryRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: MapHomeCounterSalary.symbol(language: language))
+            Image(systemName: salary.symbol(language: language))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                 .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpCounterIcon)
                 .frame(width: 12)
-            Text(language.text("번 돈", "Earned"))
+            Text(salary.title(language: language))
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
@@ -308,7 +313,7 @@ private struct MapHomeCounterSalaryRow: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(language.text("번 돈", "Earned")) \(salary.text)")
+        .accessibilityLabel("\(salary.title(language: language)) \(salary.text)")
     }
 }
 
@@ -319,7 +324,7 @@ private struct MapHomeCounterSalaryPill: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: MapHomeCounterSalary.symbol(language: language))
+            Image(systemName: salary.symbol(language: language))
                 .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpSecondary)
             Text(salary.text)
                 .monospacedDigit()
@@ -332,7 +337,7 @@ private struct MapHomeCounterSalaryPill: View {
         .mapHomeCounterPlate(in: Capsule())
         .animation(.snappy, value: salary.text)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(language.text("번 돈", "Earned")) \(salary.text)")
+        .accessibilityLabel("\(salary.title(language: language)) \(salary.text)")
     }
 }
 
@@ -347,5 +352,25 @@ extension MapHomeCounterSalary {
     /// 통화에 맞는 아이콘. 영어 설정이면 달러, 아니면 원.
     static func symbol(language: MapHomeLanguage) -> String {
         language == .english ? "dollarsign.circle.fill" : "wonsign.circle.fill"
+    }
+
+    static let allowanceSymbol = "banknote.fill"
+
+    func symbol(language: MapHomeLanguage) -> String {
+        isAllowance ? Self.allowanceSymbol : Self.symbol(language: language)
+    }
+
+    func title(language: MapHomeLanguage) -> String {
+        isAllowance ? language.text("용돈", "Allowance") : language.text("번 돈", "Earned")
+    }
+
+    /// 근무 시간과 시급으로 만든 번 돈 줄.
+    static func earned(seconds: TimeInterval, hourlyRate: Double, isWorking: Bool, language: MapHomeLanguage) -> Self {
+        Self(
+            text: MapHomeSalaryPolicy.wonText(
+                MapHomeSalaryPolicy.earnings(workSeconds: seconds, hourlyRate: hourlyRate), language: language
+            ),
+            isWorking: isWorking
+        )
     }
 }

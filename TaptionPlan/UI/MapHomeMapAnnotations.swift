@@ -106,9 +106,10 @@ struct MapHomePlacePin: View {
         } else {
             VStack(spacing: 5) {
                 MapHomeMarkerLabel(title: name, color: destination.tint)
-                Image(systemName: destination.rpgSystemImage)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(23)), weight: .semibold))
-                    .foregroundStyle(destination.tint)
+                Image(destination.iconAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(6)
                     .frame(width: 48, height: 48)
                     .background(
                         Color.tpSurface.opacity(0.98),
@@ -138,12 +139,6 @@ struct MapHomePlacePin: View {
     private func homeMarker(level: Int) -> some View {
         VStack(spacing: MapHomePlacePinLayout.levelLabelGap) {
             homeAvatar(level: level)
-                .overlay(alignment: .top) {
-                    if let weatherBadge {
-                        homeWeatherBadge(weatherBadge)
-                            .offset(y: MapHomePlacePinLayout.weatherBadgeLift)
-                    }
-                }
             homeLevelLabel(level: level)
         }
         .offset(y: MapHomePlacePinLayout.avatarCenterCompensation)
@@ -179,6 +174,12 @@ struct MapHomePlacePin: View {
                 } else {
                     homeMarkerArtwork(level: level)
                 }
+                if let weatherBadge {
+                    VStack {
+                        homeTemperature(weatherBadge)
+                        Spacer(minLength: 0)
+                    }
+                }
             }
             .frame(
                 width: MapHomePlacePinLayout.avatarSize,
@@ -187,18 +188,6 @@ struct MapHomePlacePin: View {
             .clipShape(Circle())
             .overlay { Circle().stroke(Color.white.opacity(0.92), lineWidth: 2) }
             .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-            .overlay(alignment: .topTrailing) {
-                if showsCatAtHome,
-                   let accessory = MapHomeGrowthAccessoryCatalog.symbol(for: equippedAccessoryID) {
-                    Image(systemName: accessory)
-                        .font(.system(size: MapHomePlacePinLayout.accessoryStickerSize, weight: .semibold))
-                        .foregroundStyle(Color(hex: "#D94772"))
-                        .shadow(color: .white, radius: 2)
-                        .offset(x: MapHomePlacePinLayout.accessoryStickerOffset,
-                                y: -MapHomePlacePinLayout.accessoryStickerOffset)
-                        .allowsHitTesting(false)
-                }
-            }
             .overlay(alignment: .topTrailing) {
                 if isLeapDay {
                     Image(systemName: "star.fill")
@@ -248,46 +237,45 @@ struct MapHomePlacePin: View {
         }
     }
 
-    /// 집 지붕 위에 띄우는 현재 날씨(아이콘 + 기온). 집·화랑이 크기와 위치는 바꾸지 않는다.
-    private func homeWeatherBadge(_ badge: MapHomeHomeWeatherBadge) -> some View {
-        let palette = WeatherSymbolKind(symbolName: badge.symbolName).palette
-        return HStack(spacing: 2) {
-            Image(systemName: badge.symbolName)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(
-                    Color(red: palette.primary.red, green: palette.primary.green, blue: palette.primary.blue),
-                    Color(red: palette.secondary.red, green: palette.secondary.green, blue: palette.secondary.blue)
+    /// 원 위쪽 가운데의 현재 기온. 날씨는 원 안 그림으로 보여 준다.
+    private func homeTemperature(_ badge: MapHomeHomeWeatherBadge) -> some View {
+        Text(badge.temperatureText)
+            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .heavy, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Color(hex: "#3E2C22"))
+            .shadow(color: .white, radius: 1.2)
+            .shadow(color: .white, radius: 1.2)
+            .padding(.top, MapHomePlacePinLayout.temperatureTopInset)
+            .allowsHitTesting(false)
+            .accessibilityLabel(
+                AppLanguagePreference.text(
+                    korean: "현재 날씨 \(badge.condition), \(badge.temperatureText)",
+                    english: "Current weather \(badge.condition), \(badge.temperatureText)"
                 )
-            Text(badge.temperatureText)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.tpInk)
-        }
-        .padding(.horizontal, 5)
-        .padding(.vertical, 2)
-        .background(Color.white.opacity(0.94), in: Capsule())
-        .overlay { Capsule().stroke(Color.tpLine.opacity(0.8), lineWidth: 0.6) }
-        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-        .fixedSize()
-        .allowsHitTesting(false)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            AppLanguagePreference.text(
-                korean: "현재 날씨 \(badge.condition), \(badge.temperatureText)",
-                english: "Current weather \(badge.condition), \(badge.temperatureText)"
             )
-        )
+    }
+
+    @ViewBuilder
+    private var homeWeatherArt: some View {
+        if let weatherBadge {
+            MapHomeHomeWeatherArt(
+                kind: MapHomeHomeWeatherKind(symbolName: weatherBadge.symbolName),
+                windSpeed: weatherBadge.windSpeedMetersPerSecond ?? 0
+            )
+        }
     }
 
     private func homeMarkerArtwork(level: Int) -> some View {
-        Image(MapHomeGrowthPolicy.artworkName(level: level))
-            .resizable()
-            .scaledToFit()
-            .frame(
-                width: MapHomePlacePinLayout.artworkSize,
-                height: MapHomePlacePinLayout.artworkSize
-            )
+        ZStack {
+            Image(MapHomeGrowthPolicy.artworkName(level: level))
+                .resizable()
+                .scaledToFit()
+                .frame(
+                    width: MapHomePlacePinLayout.artworkSize,
+                    height: MapHomePlacePinLayout.artworkSize
+                )
+            homeWeatherArt
+        }
     }
 
     /// 집에 있는 화랑이. 아바타 원 안에 레벨 아트와 함께 그린다.
@@ -301,7 +289,12 @@ struct MapHomePlacePin: View {
                     width: MapHomePlacePinLayout.artworkSize,
                     height: MapHomePlacePinLayout.artworkSize
                 )
-            MapHomeStickmanGlyph(action: catAction, size: MapHomeStickmanMarker.size.width)
+            homeWeatherArt
+            MapHomeStickmanGlyph(
+                action: catAction,
+                size: MapHomeStickmanMarker.size.width,
+                equippedAccessoryID: equippedAccessoryID
+            )
                 .offset(
                     x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
                     y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
@@ -757,6 +750,38 @@ struct MapHomeScrollBounceDisabler: UIViewRepresentable {
                 ancestor = current.superview
             }
         }
+    }
+}
+
+/// 날짜 배지 글자와 요일. 본문이 다시 계산될 때마다 ICU 달력을 돌리지 않게 같은 날짜면 재사용한다(SHT1102A01).
+struct MapHomeDateBadgeInfo: Equatable {
+    let date: Date
+    let localeIdentifier: String
+    let weekdayText: String
+    let weekday: Int
+    let day: Int
+    let isHoliday: Bool
+
+    @MainActor private static var last: MapHomeDateBadgeInfo?
+
+    init(date: Date, localeIdentifier: String) {
+        let calendar = TimelineAxisGrid.normalizedCalendar()
+        self.date = date
+        self.localeIdentifier = localeIdentifier
+        weekdayText = date.formatted(
+            Date.FormatStyle().weekday(.abbreviated).locale(Locale(identifier: localeIdentifier))
+        )
+        weekday = calendar.component(.weekday, from: date)
+        day = calendar.component(.day, from: date)
+        isHoliday = MapHomeCalendarDayStyle(date: date, calendar: calendar) == .holiday
+    }
+
+    @MainActor
+    static func resolve(date: Date, localeIdentifier: String) -> MapHomeDateBadgeInfo {
+        if let last, last.date == date, last.localeIdentifier == localeIdentifier { return last }
+        let info = MapHomeDateBadgeInfo(date: date, localeIdentifier: localeIdentifier)
+        last = info
+        return info
     }
 }
 

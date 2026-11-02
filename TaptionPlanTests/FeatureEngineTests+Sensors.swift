@@ -565,44 +565,23 @@ extension FeatureEngineTests {
     func testGPSLoggingPreferencesClampCadenceAndKeepApproximateFixes() throws {
         XCTAssertEqual(GPSLoggingPreferences.standard.intervalSeconds, 300)
         XCTAssertFalse(GPSLoggingPreferences.standard.isBatteryMinimal)
-        XCTAssertEqual(
-            GPSLoggingPreferences(intervalSeconds: 0).intervalSeconds,
-            60
-        )
-        XCTAssertEqual(
-            GPSLoggingPreferences(intervalSeconds: 16).intervalSeconds,
-            60
-        )
-        XCTAssertEqual(
-            GPSLoggingPreferences(intervalSeconds: 30).interval,
-            60
-        )
-        let batteryMinimal = GPSLoggingPreferences(
-            isBatteryMinimal: true,
-            intervalSeconds: 900
-        )
-        XCTAssertEqual(batteryMinimal.effectiveIntervalSeconds, 900)
-        XCTAssertEqual(batteryMinimal.interval, 900)
-        XCTAssertFalse(batteryMinimal.isContinuous)
-        var restoredRealtime = GPSLoggingPreferences(intervalSeconds: 1)
-        restoredRealtime.isBatteryMinimal = true
-        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 900)
-        restoredRealtime.isBatteryMinimal = false
-        XCTAssertEqual(restoredRealtime.effectiveIntervalSeconds, 60)
-        XCTAssertFalse(GPSLoggingPreferences(intervalSeconds: 1).isContinuous)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 0).intervalSeconds, 30)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 30).interval, 30)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 9_999).intervalSeconds, 1_800)
         XCTAssertEqual(
             GPSLoggingPreferences.supportedIntervalSeconds,
-            Array(stride(from: 60, through: 900, by: 60))
+            Array(stride(from: 30, through: 1_800, by: 30))
         )
-        // 1-minute steps, snapped to the 5-minute marks within one minute.
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 120).intervalSeconds, 120)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 180).intervalSeconds, 180)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 240).intervalSeconds, 300)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 360).intervalSeconds, 300)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 420).intervalSeconds, 420)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 540).intervalSeconds, 600)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 780).intervalSeconds, 780)
-        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 840).intervalSeconds, 900)
+        // 30-second steps with no pull toward the major ticks.
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 44).intervalSeconds, 30)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 45).intervalSeconds, 60)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 240).intervalSeconds, 240)
+        XCTAssertEqual(GPSLoggingPreferences(intervalSeconds: 270).intervalSeconds, 270)
+        XCTAssertFalse(GPSLoggingPreferences(intervalSeconds: 870).isBatteryMinimal)
+        XCTAssertTrue(GPSLoggingPreferences(intervalSeconds: 900).isBatteryMinimal)
+        let thirtyMinutes = GPSLoggingPreferences(intervalSeconds: 1_800)
+        XCTAssertEqual(thirtyMinutes.effectiveIntervalSeconds, 1_800)
+        XCTAssertEqual(thirtyMinutes.interval, 1_800)
         var legacyConfiguration = SensorCollectionConfiguration.standard
         legacyConfiguration.minimumEmissionInterval = 1
         XCTAssertEqual(legacyConfiguration.normalized.minimumEmissionInterval, 60)
@@ -638,6 +617,26 @@ extension FeatureEngineTests {
                 .intervalSeconds,
             300
         )
+        // Saved by earlier builds: minimum mode always collected every 15 minutes.
+        let cases: [(String, Int)] = [
+            (#"{"isBatteryMinimal":true,"intervalSeconds":900}"#, 900),
+            (#"{"isBatteryMinimal":true,"intervalSeconds":60}"#, 900),
+            (#"{"isBatteryMinimal":false,"intervalSeconds":420}"#, 420),
+            (#"{"isBatteryMinimal":false,"intervalSeconds":1}"#, 60),
+            (#"{"isBatteryMinimal":true,"intervalSeconds":1200}"#, 1_200),
+        ]
+        for (json, seconds) in cases {
+            XCTAssertEqual(
+                try JSONDecoder().decode(GPSLoggingPreferences.self, from: Data(json.utf8))
+                    .intervalSeconds,
+                seconds,
+                json
+            )
+        }
+        let saved = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(GPSLoggingPreferences(intervalSeconds: 1_200))
+        ) as? [String: Any]
+        XCTAssertEqual(saved?["isBatteryMinimal"] as? Bool, true)
 
         let approximate = SensorReading(
             timestamp: makeDate(2026, 8, 18, 12),
@@ -654,6 +653,53 @@ extension FeatureEngineTests {
         XCTAssertNotNil(approximate.point)
         XCTAssertEqual(approximate.locationFixQuality, .approximate)
         XCTAssertFalse(approximate.gpsAvailable)
+    }
+
+    func testGPSLoggingSliderMapsEveryIntervalAndMajorTicks() {
+        for (seconds, position) in zip(
+            GPSLoggingPreferences.majorTickSeconds,
+            GPSLoggingPreferences.majorTickPositions
+        ) {
+            XCTAssertEqual(GPSLoggingPreferences.sliderPosition(forSeconds: seconds), position)
+            XCTAssertEqual(GPSLoggingPreferences.seconds(forSliderPosition: position), seconds)
+        }
+        XCTAssertEqual(GPSLoggingPreferences.majorTickSeconds, [30, 60, 300, 600, 900, 1_800])
+        var previous = -1.0
+        for seconds in GPSLoggingPreferences.supportedIntervalSeconds {
+            let position = GPSLoggingPreferences.sliderPosition(forSeconds: seconds)
+            XCTAssertGreaterThan(position, previous)
+            XCTAssertEqual(GPSLoggingPreferences.seconds(forSliderPosition: position), seconds)
+            previous = position
+        }
+        XCTAssertEqual(GPSLoggingPreferences.seconds(forSliderPosition: -1), 30)
+        XCTAssertEqual(GPSLoggingPreferences.seconds(forSliderPosition: 99), 1_800)
+    }
+
+    @MainActor
+    func testGPSLoggingIntervalSelectsCollectionProfile() {
+        let model = AppModel(
+            repository: InMemoryPlanRepository(),
+            cloudSyncService: nil
+        )
+        let expected: [(Int, SensorCollectionProfile)] = [
+            (30, .accuracy), (60, .accuracy), (90, .accuracy),
+            (120, .balanced), (300, .balanced), (660, .balanced), (870, .balanced),
+            (900, .batterySaver), (1_800, .batterySaver),
+        ]
+        for (seconds, profile) in expected {
+            model.setGPSLoggingIntervalSeconds(seconds)
+            XCTAssertEqual(model.settings.gpsLoggingPreferences.intervalSeconds, seconds)
+            XCTAssertEqual(model.settings.sensorCollectionProfile, profile, "\(seconds)")
+        }
+    }
+
+    func testGPSLoggingIntervalTextUsesSecondsAndMinutes() {
+        let expect = { (korean: String, english: String) in
+            AppLanguagePreference.text(korean: korean, english: english)
+        }
+        XCTAssertEqual(GPSLoggingPreferences.intervalText(30), expect("30초", "30s"))
+        XCTAssertEqual(GPSLoggingPreferences.intervalText(60), expect("1분", "1m"))
+        XCTAssertEqual(GPSLoggingPreferences.intervalText(150), expect("2분 30초", "2m 30s"))
     }
 
     func testSensorCollectionProgressUsesHalfIntervalIncludingOneSecond() {

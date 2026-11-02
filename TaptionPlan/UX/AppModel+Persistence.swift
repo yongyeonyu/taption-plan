@@ -405,7 +405,7 @@ extension AppModel {
     ) async {
         let interval = max(
             60,
-            snapshot.settings.sensorCollectionProfile.interval
+            snapshot.settings.gpsLoggingPreferences.interval
         )
         if !force, let lastReviewArchiveRefreshAt,
            lastReviewArchiveRefreshRevision == timelineRevision,

@@ -6075,3 +6075,22 @@ final class TaptionUIThemeMapTests: XCTestCase {
         return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
     }
 }
+
+/// 사이드바 옆 일정·메모 말풍선(SBN1102A01).
+final class MapHomeSidebarNoteTests: XCTestCase {
+    func testBubbleSitsLeftOfBadgeWithoutOverlap() {
+        let badgeX: CGFloat = 300
+        let center = MapHomeSidebarNoteLayout.centerX(badgeX: badgeX)
+        XCTAssertLessThanOrEqual(center + MapHomeSidebarNoteLayout.width / 2, badgeX - MapHomeSidebarNoteLayout.badgeRadius)
+    }
+
+    func testEventHasNoEditorButMemoAndStickerDo() {
+        let id = UUID()
+        func note(_ source: MapHomeSidebarNote.Source) -> MapHomeSidebarNote {
+            MapHomeSidebarNote(id: "x", source: source, title: "t", time: "9:00", minute: 540, badgeOffset: 0)
+        }
+        XCTAssertNil(note(.event).editorTarget)
+        XCTAssertNotNil(note(.memo(id)).editorTarget)
+        XCTAssertNotNil(note(.sticker(id)).editorTarget)
+    }
+}

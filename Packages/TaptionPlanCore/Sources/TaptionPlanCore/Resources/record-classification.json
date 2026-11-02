@@ -101,6 +101,22 @@
       ]
     },
     {
+      "id": "shower",
+      "title": "샤워",
+      "systemImage": "shower.fill",
+      "details": [
+        { "id": "shower.wash", "title": "샤워", "behavior": "shower", "systemImage": "shower.fill" }
+      ]
+    },
+    {
+      "id": "housework",
+      "title": "집안일",
+      "systemImage": "house.fill",
+      "details": [
+        { "id": "housework.chores", "title": "집안일", "behavior": "chores", "systemImage": "house.fill" }
+      ]
+    },
+    {
       "id": "unconfirmed",
       "title": "미확인",
       "systemImage": "questionmark.circle.fill",

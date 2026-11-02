@@ -171,7 +171,7 @@ enum TaptionLiveActivityStickmanAction: String, CaseIterable, Codable, Hashable,
             if let action = details[detail] { return action }
         }
         switch categoryRoot {
-        case "activity": return .activity
+        case "activity", "shower", "housework": return .activity
         case "computer", "work": return .computer
         case "reading", "study": return .reading
         case "hobby": return .hobby

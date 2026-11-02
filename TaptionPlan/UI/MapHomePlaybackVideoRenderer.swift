@@ -212,6 +212,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
                 try Task.checkCancellation()
                 try await waitUntilActive()
                 await placeCamera(frame)
+                try Task.checkCancellation()
                 let buffer = try writer.makeBuffer()
                 draw(into: buffer, minute: frame.minute, videoSeconds: Double(index) / Double(Self.fps))
                 try await writer.append(buffer, frameIndex: index)
@@ -256,8 +257,10 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         window.isHidden = false
         self.window = window
         self.mapView = mapView
-        if !isStyleLoaded, !(await wait(timeout: Self.styleTimeout)) {
-            throw MapHomePlaybackVideoError.mapLoadFailed
+        if !isStyleLoaded {
+            let loaded = await wait(timeout: Self.styleTimeout)
+            try Task.checkCancellation()
+            if !loaded { throw MapHomePlaybackVideoError.mapLoadFailed }
         }
     }
 
@@ -314,16 +317,21 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
 
     // MARK: - 렌더 대기
 
+    /// 취소되면 시간 초과를 기다리지 않고 바로 끝난다.
     private func wait(timeout: TimeInterval) async -> Bool {
-        await withCheckedContinuation { continuation in
-            finishWait(token: nil, rendered: false)
-            waitToken &+= 1
-            let token = waitToken
-            waiter = continuation
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                self?.finishWait(token: token, rendered: false)
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                finishWait(token: nil, rendered: false)
+                waitToken &+= 1
+                let token = waitToken
+                waiter = continuation
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    self?.finishWait(token: token, rendered: false)
+                }
             }
+        } onCancel: { [weak self] in
+            Task { @MainActor [weak self] in self?.finishWait(token: nil, rendered: false) }
         }
     }
 
@@ -405,7 +413,7 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
         let key = "\(state.action.rawValue)|\(state.isForecast)|\(tier.rawValue)|\(state.equippedAccessoryID ?? "")|\(phase)"
         if let cached = stickmanCache[key] { return cached }
         if stickmanCache.count >= Self.stickmanCacheLimit { stickmanCache.removeAll() }
-        let side = MapHomeStickmanMarker.size.width * 1.5 * 2
+        let side = MapHomeStickmanMarker.size.width * 2
         let renderer = ImageRenderer(content:
             MapHomeStickmanMarker(
                 action: state.action,
@@ -414,8 +422,6 @@ final class MapHomePlaybackVideoRenderer: NSObject, @preconcurrency MLNMapViewDe
                 speedMetersPerSecond: state.speedMetersPerSecond,
                 equippedAccessoryID: state.equippedAccessoryID
             )
-            // 지도 위 화랑이와 같은 1.5배.
-            .scaleEffect(1.5)
             .frame(width: side, height: side)
         )
         renderer.scale = scale

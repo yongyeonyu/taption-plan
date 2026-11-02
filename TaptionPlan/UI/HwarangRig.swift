@@ -6,6 +6,7 @@ import UIKit
 enum HwarangScene: CaseIterable, Hashable, Sendable {
     case walkLoop, runLoop
     case stroll, groom, work, study, yarn, sleep, eat, wheel, stretch, confused
+    case shower, robotVacuum, carFront, subway, train, bus, bicycle, airplane, boat, atlas
 
     /// 장면의 동작별 길이(초)와 배경 이동 속도.
     fileprivate var beats: [(duration: CGFloat, speed: CGFloat)] {
@@ -21,16 +22,33 @@ enum HwarangScene: CaseIterable, Hashable, Sendable {
         case .wheel: [(2.6, 1.1), (3.4, 2.6), (2.6, 4.4), (1.8, 2), (2, 0.2)]
         case .stretch: [(3.4, 0), (2.6, 0), (2.6, 0), (2.4, 0), (3.2, 0)]
         case .confused: [(2.2, 0), (2.2, 0), (2, 0), (2.4, 0), (2, 0)]
+        case .shower: [(3.6, 0), (1.4, 0), (3, 0), (1.6, 0)]
+        case .robotVacuum: [(7, 0)]
+        case .carFront: [(4, 60), (2.4, 60), (3, 60)]
+        case .subway, .train: [(4, 90), (3, 90)]
+        case .bicycle: [(5, 46)]
+        case .bus: [(4, 55), (3, 55)]
+        case .airplane: [(5, 26)]
+        case .boat: [(5, 22)]
+        case .atlas: [(6, 0)]
         }
     }
 
     var totalDuration: CGFloat { beats.reduce(0) { $0 + $1.duration } }
     var beatCount: Int { beats.count }
+
+    /// 화랑이가 탈것 안에 있는 장면. 속도와 상관없이 같은 장면을 보여 준다.
+    var isVehicleScene: Bool {
+        switch self {
+        case .carFront, .subway, .train, .bus, .bicycle, .airplane, .boat: true
+        default: false
+        }
+    }
 }
 
-private enum Eye { case open, half, closed, happy }
+enum Eye { case open, half, closed, happy }
 
-private struct HeadPose {
+struct HeadPose {
     var tilt: CGFloat = 0
     var ear: CGFloat = 0
     var look: CGFloat = 0
@@ -39,12 +57,14 @@ private struct HeadPose {
     var turn: CGFloat = 0
     var eye: Eye = .open
     var blink = false
+    var wet = false
 }
 
 private enum PoseProp {
     case none
     case book(flip: CGFloat)
     case lickDrops(s: CGFloat, along: CGFloat, dip: CGFloat)
+    case map
 }
 
 private struct Pose {
@@ -65,20 +85,20 @@ private struct Pose {
     var breath: CGFloat = 0, drop: CGFloat = 0
 }
 
-private let groundY: CGFloat = 104
-private let tau = CGFloat.pi * 2
+let groundY: CGFloat = 104
+let tau = CGFloat.pi * 2
 private let wheelCenter = CGPoint(x: 58, y: 62)
 private let wheelRadius: CGFloat = 48
 private let wheelGround: CGFloat = 106
 private let wheelScale: CGFloat = 0.76
 private let bookCenter: CGFloat = 66, bookY: CGFloat = groundY + 8, bookWidth: CGFloat = 34
 
-private func lerp(_ a: CGFloat, _ b: CGFloat, _ t: CGFloat) -> CGFloat { a + (b - a) * t }
+func lerp(_ a: CGFloat, _ b: CGFloat, _ t: CGFloat) -> CGFloat { a + (b - a) * t }
 private func lerp(_ a: CGPoint, _ b: CGPoint, _ t: CGFloat) -> CGPoint { CGPoint(x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t)) }
 private func ease(_ t: CGFloat) -> CGFloat { t * t * (3 - 2 * t) }
-private func clamp(_ v: CGFloat, _ a: CGFloat, _ b: CGFloat) -> CGFloat { max(a, min(b, v)) }
-private func wrap(_ v: CGFloat, _ m: CGFloat) -> CGFloat { let r = v.truncatingRemainder(dividingBy: m); return r < 0 ? r + m : r }
-private func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x, y: y) }
+func clamp(_ v: CGFloat, _ a: CGFloat, _ b: CGFloat) -> CGFloat { max(a, min(b, v)) }
+func wrap(_ v: CGFloat, _ m: CGFloat) -> CGFloat { let r = v.truncatingRemainder(dividingBy: m); return r < 0 ? r + m : r }
+func P(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x, y: y) }
 private func blink(_ s: CGFloat, _ every: CGFloat = 3.1) -> Eye { wrap(s, every) < 0.14 ? .closed : .open }
 
 private func blend(_ a: HeadPose, _ b: HeadPose, _ u: CGFloat) -> HeadPose {
@@ -209,6 +229,19 @@ private func eating(_ s: CGFloat, dip: CGFloat, _ h: HeadPose) -> Pose {
     p.bn = P(30, groundY); p.bf = P(44, groundY); p.fn = P(62, groundY); p.ff = P(76, groundY)
     p.ta = -2.1; p.tc = 0.9; p.tw = 0.3; p.tp = s * 2
     p.h = h
+    return p
+}
+
+/// 자전거 안장에 앉아 페달을 밟는다. 뒷발은 크랭크를 따라 돈다.
+private func riding(_ s: CGFloat) -> Pose {
+    let a = s * 6, sway = sin(a) * 0.8
+    var p = Pose()
+    p.hip = P(38, 70 + sway * 0.4); p.mid = P(50, 67); p.sh = P(64, 70); p.rh = 10; p.rs = 9
+    p.head = P(68, 46 - sway * 0.5); p.headX = 0; p.headY = 3
+    p.bn = P(58 + cos(a) * 9, 96 + sin(a) * 9); p.bf = P(52 + cos(a + .pi) * 9, 96 + sin(a + .pi) * 9)
+    p.fn = P(100, 62); p.ff = P(96, 62)
+    p.ta = 3.0; p.tc = -0.4; p.tw = 0.3; p.tp = s * 3
+    p.h = HeadPose(tilt: sway * 0.03, look: 1.8, mouthOpen: 0.2, eye: wrap(s, 4) < 3 ? blink(s) : .happy)
     return p
 }
 
@@ -385,6 +418,39 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
             return p
         default: return sit(s, HeadPose(tilt: 0.1, look: 1.4, mouthOpen: 0.2, eye: .closed))
         }
+    case .shower:
+        var h: HeadPose
+        switch i {
+        case 0: h = HeadPose(tilt: sin(s * 1.3) * 0.05, look: 0.6, mouthOpen: 0.15, eye: .closed)
+        case 1: h = HeadPose(tilt: sin(s * 26) * 0.24, eye: .happy)
+        case 2: h = HeadPose(tilt: -0.08, look: 1, mouthOpen: 0.35, eye: .half)
+        default: h = HeadPose(tilt: sin(s * 2) * 0.06, look: -1, tongue: 0.4, eye: blink(s, 1.3))
+        }
+        h.wet = true
+        var p = sit(s, h)
+        p.head = P(66, 56); p.ta = 3.3; p.tc = -0.2; p.tw = 0.06
+        return p
+    case .robotVacuum:
+        return sit(s, HeadPose(tilt: sin(s * 1.7) * 0.1, look: 1.4, mouthOpen: 0.2, eye: wrap(s, 5) < 2.5 ? .open : .happy))
+    case .carFront:
+        var p = Pose()
+        p.h = HeadPose(tilt: sin(s * 0.9) * 0.08, look: sin(s * 0.7) * 2, mouthOpen: i == 1 ? 0.35 : 0, eye: i == 1 ? .happy : blink(s))
+        return p
+    case .bicycle:
+        return riding(s)
+    case .subway, .train, .bus:
+        var p = Pose()
+        p.h = HeadPose(tilt: sin(s * 0.8) * 0.1, look: i == 0 ? 2.4 : sin(s * 1.2) * 3, eye: blink(s, 2.6))
+        return p
+    case .airplane, .boat:
+        var p = Pose()
+        let cock = sin(s * 1.6)
+        p.h = HeadPose(tilt: cock * 0.3, ear: cock * 0.12, look: cock * 2.4, mouthOpen: 0.15, eye: blink(s, 2.2))
+        return p
+    case .atlas:
+        var p = study(s, turn: sin(s * 0.7) * 0.5, flip: 0, eye: blink(s, 2.9))
+        p.prop = .map
+        return p
     }
 }
 
@@ -421,25 +487,25 @@ private func sceneState(_ scene: HwarangScene, _ sec: CGFloat) -> SceneState {
 
 private struct Blob { var x: CGFloat, y: CGFloat, r: CGFloat }
 
-private struct HwarangPainter {
+struct HwarangPainter {
     let c: CGContext
     let small: Bool
     var hatImage: UIImage?
     var lineScale: CGFloat = 1
     var toes: [CGPoint] = []
 
-    private func rgb(_ hex: UInt32, _ alpha: CGFloat = 1) -> (CGFloat, CGFloat, CGFloat, CGFloat) {
+    func rgb(_ hex: UInt32, _ alpha: CGFloat = 1) -> (CGFloat, CGFloat, CGFloat, CGFloat) {
         (CGFloat(hex >> 16 & 0xFF) / 255, CGFloat(hex >> 8 & 0xFF) / 255, CGFloat(hex & 0xFF) / 255, alpha)
     }
-    private func fill(_ hex: UInt32, _ alpha: CGFloat = 1) { let v = rgb(hex, alpha); c.setFillColor(red: v.0, green: v.1, blue: v.2, alpha: v.3) }
-    private func stroke(_ hex: UInt32, _ width: CGFloat, _ alpha: CGFloat = 1) { let v = rgb(hex, alpha); c.setStrokeColor(red: v.0, green: v.1, blue: v.2, alpha: v.3); c.setLineWidth(width) }
-    private func circle(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat) { c.addEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)) }
-    private func oval(_ x: CGFloat, _ y: CGFloat, _ rx: CGFloat, _ ry: CGFloat) { c.addEllipse(in: CGRect(x: x - rx, y: y - ry, width: rx * 2, height: ry * 2)) }
-    private func quad(_ cx: CGFloat, _ cy: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addQuadCurve(to: P(x, y), control: P(cx, cy)) }
-    private func cubic(_ a: CGFloat, _ b: CGFloat, _ d: CGFloat, _ e: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addCurve(to: P(x, y), control1: P(a, b), control2: P(d, e)) }
-    private func poly(_ points: [CGPoint]) { c.beginPath(); c.addLines(between: points); c.closePath() }
-    private let outline: UInt32 = 0x5A4033
-    private let white: UInt32 = 0xFFFFFF
+    func fill(_ hex: UInt32, _ alpha: CGFloat = 1) { let v = rgb(hex, alpha); c.setFillColor(red: v.0, green: v.1, blue: v.2, alpha: v.3) }
+    func stroke(_ hex: UInt32, _ width: CGFloat, _ alpha: CGFloat = 1) { let v = rgb(hex, alpha); c.setStrokeColor(red: v.0, green: v.1, blue: v.2, alpha: v.3); c.setLineWidth(width) }
+    func circle(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat) { c.addEllipse(in: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)) }
+    func oval(_ x: CGFloat, _ y: CGFloat, _ rx: CGFloat, _ ry: CGFloat) { c.addEllipse(in: CGRect(x: x - rx, y: y - ry, width: rx * 2, height: ry * 2)) }
+    func quad(_ cx: CGFloat, _ cy: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addQuadCurve(to: P(x, y), control: P(cx, cy)) }
+    func cubic(_ a: CGFloat, _ b: CGFloat, _ d: CGFloat, _ e: CGFloat, _ x: CGFloat, _ y: CGFloat) { c.addCurve(to: P(x, y), control1: P(a, b), control2: P(d, e)) }
+    func poly(_ points: [CGPoint]) { c.beginPath(); c.addLines(between: points); c.closePath() }
+    let outline: UInt32 = 0x5A4033
+    let white: UInt32 = 0xFFFFFF
     private let farLimb: UInt32 = 0xEFE9E0
 
     private var outlineWidth: CGFloat { (small ? 3.3 : 2.2) * lineScale }
@@ -460,7 +526,7 @@ private struct HwarangPainter {
         toes = []
     }
 
-    private func ik(_ a: CGPoint, _ b: CGPoint, _ l1: CGFloat, _ l2: CGFloat, _ bend: CGFloat) -> CGPoint {
+    func ik(_ a: CGPoint, _ b: CGPoint, _ l1: CGFloat, _ l2: CGFloat, _ bend: CGFloat) -> CGPoint {
         let dx = b.x - a.x, dy = b.y - a.y
         let raw = hypot(dx, dy), len = raw == 0 ? 1 : raw
         let d = clamp(len, 0.01, l1 + l2 - 0.01)
@@ -481,7 +547,7 @@ private struct HwarangPainter {
         }
     }
 
-    private func catmull(_ p: [CGPoint], seg: Int = 6) -> [CGPoint] {
+    func catmull(_ p: [CGPoint], seg: Int = 6) -> [CGPoint] {
         var o: [CGPoint] = []
         for i in 0..<(p.count - 1) {
             let a = p[max(i - 1, 0)], b = p[i], d = p[i + 1], e = p[min(i + 2, p.count - 1)]
@@ -548,7 +614,7 @@ private struct HwarangPainter {
         fill(white); c.beginPath(); circle(ex - 1.8 + t, ey - 2.5, 2); circle(ex + 2 + t, ey + 1.8, 1); circle(ex + 1.9 + t, ey - 3, 0.6); c.fillPath()
     }
 
-    private func head(_ x: CGFloat, _ y: CGFloat, _ o: HeadPose) {
+    func head(_ x: CGFloat, _ y: CGFloat, _ o: HeadPose) {
         let eye: Eye = o.eye == .open && o.blink ? .closed : o.eye
         let hs: CGFloat = small ? 1.72 : 1.5, t = clamp(o.turn, 0, 1), look = o.look
         c.saveGState(); c.translateBy(x: x, y: y); c.rotate(by: o.tilt); c.scaleBy(x: hs, y: hs)
@@ -596,6 +662,13 @@ private struct HwarangPainter {
                 let a = side < 0 ? lerp(-19, -14, t) : lerp(19, 20, t), b = side < 0 ? lerp(-24, -20, t) : lerp(24, 26, t)
                 c.move(to: P(a, 5.4)); c.addLine(to: P(b, 4.6)); c.move(to: P(a, 7.6)); c.addLine(to: P(b, 8.2))
             }
+            c.strokePath()
+        }
+        if o.wet {
+            // 물에 젖어 이마와 볼 털이 뾰족하게 뭉친다.
+            fill(white); c.beginPath(); c.move(to: P(-10, -13)); c.addLine(to: P(-7, -19.5)); c.addLine(to: P(-3.6, -14)); c.addLine(to: P(0, -21)); c.addLine(to: P(3.6, -14)); c.addLine(to: P(7, -19.5)); c.addLine(to: P(10, -13)); c.closePath(); c.fillPath()
+            stroke(outline, lineWidth); c.beginPath(); c.move(to: P(-10, -14)); c.addLine(to: P(-7, -19.5)); c.addLine(to: P(-3.6, -14)); c.addLine(to: P(0, -21)); c.addLine(to: P(3.6, -14)); c.addLine(to: P(7, -19.5)); c.addLine(to: P(10, -14))
+            for side: CGFloat in [-1, 1] { c.move(to: P(side * 19, 1)); c.addLine(to: P(side * 25, 5)); c.addLine(to: P(side * 19.5, 6)); c.addLine(to: P(side * 24, 11)); c.addLine(to: P(side * 17, 11)) }
             c.strokePath()
         }
         if let hatImage {
@@ -687,6 +760,7 @@ private struct HwarangPainter {
         case .none: break
         case let .book(flip): book(flip)
         case let .lickDrops(s, along, dip): lickDrops(s, along, dip)
+        case .map: foldedMap()
         }
         if raw.foreOver {
             var top: [Blob] = []
@@ -864,6 +938,93 @@ private struct HwarangPainter {
         }
     }
 
+    private func showerFixture() {
+        stroke(outline, 5.6); c.setLineCap(.round); c.beginPath(); c.move(to: P(106, 66)); c.addLine(to: P(106, 8)); quad(106, 3, 100, 3); c.addLine(to: P(72, 3)); quad(67, 3, 67, 10); c.strokePath()
+        stroke(0xC9D3DC, 2.2); c.beginPath(); c.move(to: P(106, 66)); c.addLine(to: P(106, 8)); quad(106, 3, 100, 3); c.addLine(to: P(72, 3)); quad(67, 3, 67, 10); c.strokePath()
+        rounded(98, 62, 16, 7, 3, fillHex: 0xC9D3DC, line: 1.8)
+        fill(0xC9D3DC); stroke(outline, 2.2); c.beginPath(); c.move(to: P(45, 19)); quad(67, 3, 89, 19); c.closePath(); c.drawPath(using: .fillStroke)
+        fill(0x9FB0BD); stroke(outline, 2); c.beginPath(); oval(67, 19, 22, 3.6); c.drawPath(using: .fillStroke)
+    }
+
+    private func waterStreams(_ sec: CGFloat, xs: [CGFloat], alpha: CGFloat) {
+        stroke(0x5DB7EA, 1.9, alpha); c.setLineCap(.round); c.setLineDash(phase: -sec * 70, lengths: [7, 6]); c.beginPath()
+        for x in xs { c.move(to: P(x, 23)); c.addLine(to: P(67 + (x - 67) * 1.25, groundY - 2)) }
+        c.strokePath(); c.setLineDash(phase: 0, lengths: [])
+    }
+
+    /// 젖은 털: 등과 가슴 윤곽에 뭉친 털끝을 세우고 물방울을 떨어뜨린다.
+    private func wetFur(_ raw: Pose, sec: CGFloat, shaking: Bool) {
+        let hip = mapBody(raw.hip), mid = mapBody(raw.mid), sh = mapBody(raw.sh)
+        let spine = catmull([hip, mid, sh])
+        c.setLineJoin(.round); c.setLineCap(.round)
+        for side: CGFloat in [1, -1] {
+            let first = side > 0 ? 2 : 6
+            for i in stride(from: first, to: spine.count - 1, by: 3) {
+                let u = CGFloat(i) / CGFloat(spine.count - 1), q = spine[i], next = spine[i + 1]
+                let len = max(0.01, hypot(next.x - q.x, next.y - q.y))
+                let nx = (next.y - q.y) / len * side, ny = -(next.x - q.x) / len * side
+                let r = lerp(raw.rh + 5, raw.rs + 4.4, u) + sin(u * .pi) * raw.rm
+                func at(_ d: CGFloat, _ along: CGFloat) -> CGPoint { P(q.x + nx * d + (next.x - q.x) / len * along, q.y + ny * d + (next.y - q.y) / len * along) }
+                let a = at(r - 1.5, -3), tip = at(r + 5.5, -4.5), b = at(r - 1.5, 3)
+                fill(white); poly([a, tip, b]); c.fillPath()
+                stroke(outline, outlineWidth * 0.8); c.beginPath(); c.move(to: at(r, -3)); c.addLine(to: tip); c.addLine(to: at(r, 3)); c.strokePath()
+            }
+        }
+        fill(0x8FD0F2); stroke(outline, 0.9)
+        c.beginPath()
+        for (i, x) in [CGFloat(34), 46, 62, 80, 88].enumerated() {
+            let z = wrap(sec * 1.2 + CGFloat(i) * 0.23, 1)
+            if shaking {
+                let a = CGFloat(i) * 1.26 + 0.4
+                oval(60 + cos(a) * (24 + z * 30), 66 + sin(a) * (20 + z * 24), 2, 2.4)
+            } else {
+                oval(x, 72 + z * (groundY - 74), 1.6, 2.6)
+            }
+        }
+        c.drawPath(using: .fillStroke)
+    }
+
+    /// 로봇 청소기. x가 움직이면 옆 솔이 돌고 뒤에 먼지가 일어난다.
+    private func vacuum(_ x: CGFloat, _ sec: CGFloat, dir: CGFloat) {
+        fill(0x000000, 0.14); c.beginPath(); oval(x, groundY + 1, 42, 5); c.fillPath()
+        fill(0x3A4048); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 5, 38, 8); c.drawPath(using: .fillStroke)
+        c.beginPath(); c.addRect(CGRect(x: x - 38, y: groundY - 12, width: 76, height: 7)); fill(0x3A4048); c.fillPath()
+        stroke(outline, 2.2); c.beginPath(); c.move(to: P(x - 38, groundY - 12)); c.addLine(to: P(x - 38, groundY - 5)); c.move(to: P(x + 38, groundY - 12)); c.addLine(to: P(x + 38, groundY - 5)); c.strokePath()
+        fill(0x68727E); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 12, 38, 8); c.drawPath(using: .fillStroke)
+        let on = wrap(sec, 1) < 0.5
+        fill(on ? 0x62E08A : 0x2F8F54); stroke(outline, 1); c.beginPath(); circle(x + dir * 29, groundY - 12, 2.2); c.drawPath(using: .fillStroke)
+        // 옆 솔
+        let bx = x + dir * 33, by = groundY + 1
+        stroke(outline, 1.3); c.beginPath()
+        for i in 0..<3 { let a = sec * 16 + CGFloat(i) * tau / 3; c.move(to: P(bx, by)); c.addLine(to: P(bx + cos(a) * 7, by + sin(a) * 2.2)) }
+        c.strokePath()
+        // 먼지
+        for i in 0..<3 {
+            let z = wrap(sec * 0.9 + CGFloat(i) * 0.33, 1)
+            fill(0xB9B2A4, 0.8 * (1 - z)); c.beginPath(); circle(x - dir * (40 + z * 14), groundY - 1 - z * 7, 2 + z * 2.4); c.fillPath()
+        }
+    }
+
+    private func foldedMap() {
+        let top: CGFloat = 78, bottom: CGFloat = 110
+        let xs: [CGFloat] = [28, 46, 64, 82, 100]
+        c.setLineJoin(.round); c.setLineCap(.round)
+        for i in 0..<4 {
+            let lift: CGFloat = i % 2 == 0 ? 0 : 4
+            let next: CGFloat = i % 2 == 0 ? 4 : 0
+            fill(i % 2 == 0 ? 0xFFFDF4 : 0xF3E8CC); stroke(outline, 2.2)
+            poly([P(xs[i], top + lift), P(xs[i + 1], top + next), P(xs[i + 1], bottom + next), P(xs[i], bottom + lift)]); c.drawPath(using: .fillStroke)
+        }
+        fill(0xBFD9A0); c.beginPath(); oval(40, 94, 8, 6); oval(88, 100, 7, 5); c.fillPath()
+        stroke(0xE96A8A, 1.8); c.setLineDash(phase: 0, lengths: [3, 3]); c.beginPath(); c.move(to: P(34, 104)); quad(52, 84, 66, 98); quad(78, 106, 92, 88); c.strokePath(); c.setLineDash(phase: 0, lengths: [])
+    }
+
+    private func pawprint(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat, alpha: CGFloat) {
+        fill(0xF08DA6, alpha); c.beginPath(); oval(x, y + 2.4 * k, 4 * k, 3.2 * k)
+        for d in [P(-4.2, -1.4), P(-1.4, -4), P(1.6, -4), P(4.4, -1.4)] { circle(x + d.x * k, y + d.y * k, 1.5 * k) }
+        c.fillPath()
+    }
+
     /// 세계 좌표(가로 146)로 장면 하나를 그린다.
     mutating func render(_ scene: HwarangScene, sec: CGFloat, facesLeft: Bool, showsBackdrop: Bool) {
         var st = sceneState(scene, sec)
@@ -882,12 +1043,38 @@ private struct HwarangPainter {
         if showsBackdrop, scene == .stroll { trees(st.progress) }
         if scene == .wheel { wheel(st.progress) }
         if scene == .work { laptop(sec) }
-        if scene == .sleep {
+        if scene == .shower {
+            fill(0xBFE3F2, 0.8); stroke(0x8FC6E2, 1.2); c.beginPath(); oval(62, groundY + 1, 46, 5); c.drawPath(using: .fillStroke)
+            showerFixture()
+            waterStreams(sec, xs: [50, 56, 62, 68, 74, 80, 86], alpha: 0.85)
+        }
+        let turn = cos(sec * 0.9), vacuumX = 58 + sin(sec * 0.9) * 14
+        if scene == .robotVacuum { vacuum(vacuumX, sec, dir: turn >= 0 ? 1 : -1) }
+        if scene == .bicycle { bicycle(sec, progress: st.progress) }
+        switch scene {
+        case .carFront: carFront(st.pose.h, sec: sec, progress: st.progress)
+        case .subway: railTrain(st.pose.h, sec: sec, progress: st.progress, stripe: 0x2FA84F, pantograph: false)
+        case .train: railTrain(st.pose.h, sec: sec, progress: st.progress, stripe: 0xC8473A, pantograph: true)
+        case .bus: cityBus(st.pose.h, sec: sec, progress: st.progress)
+        case .airplane: airplane(st.pose.h, sec: sec, progress: st.progress)
+        case .boat: boat(st.pose.h, sec: sec, progress: st.progress)
+        case .sleep:
             loaf(st.pose)
             sleepLetters(sec)
-        } else {
+        default:
             let q = st.pose.squash
             c.saveGState()
+            if scene == .bicycle {
+                let k: CGFloat = 0.7
+                lineScale = 1 / k
+                c.translateBy(x: 58, y: groundY - 12); c.scaleBy(x: k, y: k); c.translateBy(x: -58, y: -groundY)
+            }
+            if scene == .robotVacuum {
+                // 청소기 위에 앉아 가는 쪽으로 몸을 돌린다.
+                let k: CGFloat = 0.86
+                lineScale = 1 / k
+                c.translateBy(x: vacuumX, y: groundY - 15); c.scaleBy(x: clamp(turn * 5, -1, 1) * k, y: k); c.translateBy(x: -62, y: -groundY)
+            }
             if scene == .wheel {
                 lineScale = 1 / wheelScale
                 c.translateBy(x: wheelCenter.x, y: wheelGround); c.scaleBy(x: wheelScale, y: wheelScale); c.translateBy(x: -58, y: -groundY)
@@ -896,6 +1083,7 @@ private struct HwarangPainter {
             }
             c.translateBy(x: 58, y: groundY); c.scaleBy(x: 1 / sqrt(q), y: q); c.translateBy(x: -58, y: -groundY)
             cat(st.pose)
+            if scene == .shower { wetFur(st.pose, sec: sec, shaking: st.beat == 1) }
             c.restoreGState()
             lineScale = 1
         }
@@ -905,6 +1093,11 @@ private struct HwarangPainter {
             yarn(y.0, y.1, y.2)
         case .eat: bowl()
         case .confused: questionMark(sec)
+        case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)
+        case .atlas:
+            for (i, q) in [P(96, 40), P(110, 26), P(118, 46)].enumerated() {
+                pawprint(q.x, q.y, 1.5, alpha: 0.65 + 0.35 * sin(sec * 1.6 + CGFloat(i)))
+            }
         default: break
         }
         c.restoreGState()
@@ -913,17 +1106,21 @@ private struct HwarangPainter {
 
 // MARK: - 화면
 
-/// 장면 하나를 정한 시각으로 그린다. 세계 좌표 146×134를 `width`에 맞춘다.
+/// 장면 하나를 정한 시각으로 그린다. 발이 `anchorHeight` 틀의 바닥에 닿게 놓는다.
+/// `width`는 세계 가로 146에 해당하는 폭이라 장면이 달라도 몸통 크기가 같다.
 struct HwarangSceneView: View {
     let scene: HwarangScene
     let sec: Double
     let width: CGFloat
+    var anchorHeight: CGFloat
     var facesLeft = false
     var hatAssetName: String? = nil
     var showsBackdrop = true
+    /// 캣휠 안 화랑이도 다른 장면과 같은 몸통 크기로 그린다. 좁은 메뉴 칸에서는 끈다.
+    var keepsBodySize = true
 
     static let worldWidth: CGFloat = 146
-    static let aspect: CGFloat = 0.92
+    static let worldHeight: CGFloat = 134
     /// 머리 위 모자가 잘리지 않게 위쪽에 남기는 세계 좌표 높이.
     static let hatHeadroom: CGFloat = 40
 
@@ -931,7 +1128,10 @@ struct HwarangSceneView: View {
         let hat = hatAssetName.flatMap { UIImage(named: $0) }
         let small = width < 70
         let headroom = hat == nil ? 0 : Self.hatHeadroom
-        let scale = width / Self.worldWidth
+        let isWheel = scene == .wheel
+        let scale = width / Self.worldWidth * (isWheel && keepsBodySize ? 1 / wheelScale : 1)
+        let height = (Self.worldHeight + headroom) * scale
+        let ground = ((isWheel ? wheelGround : groundY) + headroom - 8) * scale
         Canvas { context, size in
             context.withCGContext { cg in
                 let k = size.width / Self.worldWidth
@@ -941,8 +1141,8 @@ struct HwarangSceneView: View {
                 painter.render(scene, sec: CGFloat(sec), facesLeft: facesLeft, showsBackdrop: showsBackdrop)
             }
         }
-        .frame(width: width, height: width * Self.aspect + headroom * scale)
-        .offset(y: -headroom * scale / 2)
+        .frame(width: Self.worldWidth * scale, height: height)
+        .offset(y: anchorHeight / 2 - (ground - height / 2))
     }
 }
 

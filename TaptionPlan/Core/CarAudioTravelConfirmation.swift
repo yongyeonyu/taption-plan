@@ -44,6 +44,40 @@ enum CarAudioTravelConfirmation {
         return Result(name: name, isRegistered: false)
     }
 
+    /// 구간 기록 중 등록한 차에 연결된 몫이 이만큼이면 차를 탄 것이다.
+    static let registeredConnectionShare = 0.5
+
+    /// 등록한 차 연결은 수단 판정의 1순위 근거다. 다른 날 기억이나 잠긴 판정보다 앞선다.
+    /// 사용자가 이 구간에 직접 고른 수단과 걷기·달리기(차에서 내려 걷는 중)만 건드리지 않는다(대표 지시, PAW1102A03).
+    static func enforcingRegisteredCar(
+        _ segments: [TravelSegment],
+        readings: [SensorReading],
+        registered: Set<String>,
+        corrections: [TravelModeCorrection]
+    ) -> [TravelSegment] {
+        guard !registered.isEmpty else { return segments }
+        return segments.map { segment in
+            guard segment.mode != .car, segment.mode != .taxi,
+                  segment.mode != .walking, segment.mode != .running else { return segment }
+            // 탑승 확인 카드로 고른 수단("사용자 확인 · …")과 이 구간에 직접 고친 보정은 사용자의 결정이다.
+            guard !segment.evidence.contains(where: { $0.hasPrefix("사용자 확인 ·") }),
+                  !corrections.contains(where: { $0.span.overlapsMostly(segment.span) }) else { return segment }
+            let inside = readings.filter { segment.span.contains($0.timestamp) }
+            guard !inside.isEmpty else { return segment }
+            let connected = inside.compactMap(\.carAudioRouteName).filter(registered.contains)
+            guard Double(connected.count) / Double(inside.count) >= registeredConnectionShare,
+                  let name = connected.first else { return segment }
+            var value = segment
+            value.mode = .car
+            value.subwayRoute = nil
+            value.confidence = .high
+            value.isConfirmed = true
+            value.evidence.removeAll { $0.hasPrefix("사용자 확인") }
+            value.evidence.append(Result(name: name, isRegistered: true).evidence)
+            return value
+        }
+    }
+
     static func confirms(_ evidence: [String]) -> Bool {
         evidence.contains {
             $0.hasPrefix(registeredEvidencePrefix) || $0.hasPrefix(matchedEvidencePrefix)

@@ -508,7 +508,7 @@ final class AppModel {
     static let liveRouteHardLimit = 4_000
     static let liveRouteSoftLimit = 4_512
 
-    static let permissionOnboardingKey =
+    nonisolated static let permissionOnboardingKey =
         "taption.permission-onboarding.v1"
     static let healthAuthorizationRequestedKey =
         "taption.health-authorization-requested.v1"

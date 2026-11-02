@@ -571,7 +571,7 @@ struct SettingsView: View {
                                 && !model.settings.backgroundPreciseLocationEnabled
                                 ? "앱 사용 중만 기록 · ‘항상’ 위치 허용 필요"
                                 : model.isSensorCollecting
-                                    ? "기록 중 · \(model.settings.sensorCollectionProfile.intervalMinutes)분 간격 · 탭해서 경로 보기"
+                                    ? "기록 중 · \(GPSLoggingPreferences.intervalText(model.settings.gpsLoggingPreferences.intervalSeconds)) 간격 · 탭해서 경로 보기"
                                     : "장소와 이동수단 자동 추정"
                         )
                         .font(
@@ -1059,7 +1059,7 @@ struct SettingsView: View {
                         )
                         .foregroundStyle(Color.tpInk)
                     Text(
-                        "\(model.settings.sensorCollectionProfile.intervalMinutes)분마다 "
+                        "\(GPSLoggingPreferences.intervalText(model.settings.gpsLoggingPreferences.intervalSeconds))마다 "
                             + "\(Int(model.settings.sensorCollectionProfile.samplingWindowDuration))초만 수집 · 사이에는 센서 종료"
                     )
                         .font(
@@ -1069,40 +1069,17 @@ struct SettingsView: View {
                 }
 
                 Spacer(minLength: 4)
-
-                Text(
-                    "\(model.settings.sensorCollectionProfile.displayName) · "
-                    + "\(model.settings.sensorCollectionProfile.intervalMinutes)분"
-                )
-                .font(
-                    .taption(
-                        size: SettingsTypography.value,
-                        weight: .bold
-                    )
-                )
-                .foregroundStyle(Color.tpMovementDark)
             }
 
-            HStack {
+            GPSLoggingIntervalSlider(
+                seconds: model.settings.gpsLoggingPreferences.intervalSeconds,
+                tint: Color.tpMovementDark,
+                onCommit: model.setGPSLoggingIntervalSeconds
+            ) {
                 Text("센싱 주기")
                     .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
                     .foregroundStyle(Color.tpInk)
-                Spacer()
-                Text("\(currentSensingMinutes)분")
-                    .font(.taption(size: SettingsTypography.rowTitle, weight: .bold))
-                    .foregroundStyle(Color.tpMovementDark)
             }
-            Slider(
-                value: Binding(
-                    get: { Double(currentSensingMinutes) },
-                    set: { model.setSensorIntervalMinutes(Int($0.rounded())) }
-                ),
-                in: 1...15,
-                step: 1
-            )
-            .tint(Color.tpMovementDark)
-            .accessibilityLabel("센싱 주기")
-            .accessibilityValue("\(currentSensingMinutes)분")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -1111,11 +1088,6 @@ struct SettingsView: View {
                 .fill(Color.tpControlFill)
                 .frame(height: 0.5)
         }
-    }
-
-    /// 현재 센싱 주기(분). 저장된 초 단위 값을 1~15분으로 맞춰 보여 준다.
-    private var currentSensingMinutes: Int {
-        min(max(model.settings.gpsLoggingPreferences.intervalSeconds / 60, 1), 15)
     }
 
     private var watchAccelerationCollectionRow: some View {

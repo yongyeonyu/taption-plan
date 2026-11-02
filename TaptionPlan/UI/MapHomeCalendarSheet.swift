@@ -429,7 +429,81 @@ enum MapHomeCalendarTimeTotalsPolicy {
 /// The sheet deliberately owns only calendar presentation. Holiday dates are
 /// supplied by the caller so the same verified holiday source can be reused by
 /// the timeline and other date pickers.
+/// 달력을 다시 열 때 첫 화면부터 값이 차 있고 달 계산을 되풀이하지 않게 달별로 기억한다(SHT1102A01).
+/// 최근 `limit`개월만 둔다. 값은 시트가 다 올라온 뒤 새로 읽어 덮어쓴다.
+struct MapHomeCalendarMonthMemory {
+    struct DayInfo: Equatable {
+        let day: Int
+        let weekday: Int
+        let holiday: String?
+    }
+
+    private struct Month {
+        var statuses: [Date: MapHomeCalendarLogStatus] = [:]
+        var totals: [Date: [String: TimeInterval]] = [:]
+        var days: [Date?]?
+        var dayInfo: [Date: DayInfo] = [:]
+        var titles: [String: String] = [:]
+    }
+
+    @MainActor static var shared = MapHomeCalendarMonthMemory()
+
+    let limit: Int
+    /// 내용 높이. 처음 레이아웃부터 시트 높이 후보를 맞춰 올라오는 도중 다시 계산하지 않게 한다.
+    var contentHeight: CGFloat = 0
+    private var months: [Date: Month] = [:]
+    private var order: [Date] = []
+
+    init(limit: Int = 6) {
+        self.limit = limit
+    }
+
+    func statuses(for month: Date) -> [Date: MapHomeCalendarLogStatus] { months[month]?.statuses ?? [:] }
+    func totals(for month: Date) -> [Date: [String: TimeInterval]] { months[month]?.totals ?? [:] }
+
+    mutating func store(statuses: [Date: MapHomeCalendarLogStatus], for month: Date) {
+        update(month) { $0.statuses = statuses }
+    }
+
+    mutating func store(totals: [Date: [String: TimeInterval]], for month: Date) {
+        update(month) { $0.totals = totals }
+    }
+
+    mutating func days(for month: Date, make: () -> [Date?]) -> [Date?] {
+        if let days = months[month]?.days { return days }
+        let days = make()
+        update(month) { $0.days = days }
+        return days
+    }
+
+    mutating func dayInfo(for date: Date, in month: Date, make: () -> DayInfo) -> DayInfo {
+        if let info = months[month]?.dayInfo[date] { return info }
+        let info = make()
+        update(month) { $0.dayInfo[date] = info }
+        return info
+    }
+
+    mutating func title(for month: Date, key: String, make: () -> String) -> String {
+        if let title = months[month]?.titles[key] { return title }
+        let title = make()
+        update(month) { $0.titles[key] = title }
+        return title
+    }
+
+    private mutating func update(_ month: Date, _ change: (inout Month) -> Void) {
+        order.removeAll { $0 == month }
+        order.append(month)
+        change(&months[month, default: Month()])
+        while order.count > limit {
+            months[order.removeFirst()] = nil
+        }
+    }
+}
+
 struct MapHomeCalendarSheet: View {
+    /// 시트가 올라오는 시간. 그동안은 달 계산을 시작하지 않는다(SHT1102A01).
+    private static let riseDuration: TimeInterval = 0.45
+
     @Binding private var selectedDate: Date
     private let holidayName: (Date) -> String?
     private let logStatuses: (Date) async -> [Date: MapHomeCalendarLogStatus]
@@ -444,15 +518,17 @@ struct MapHomeCalendarSheet: View {
     @Environment(\.displayScale) private var displayScale
     @AppStorage(MapHomeCalendarTimeKind.extraStorageKey) private var extraKindsRaw = ""
     @State private var selectedKind: MapHomeCalendarTimeKind?
-    @State private var contentHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat
+    @State private var openedAt = ProcessInfo.processInfo.systemUptime
     /// 새 센서 기록이 들어올 때마다 바뀌는 값. 바뀌면 이번 달 지표를 바로 다시 읽는다.
     private let liveToken: Double
     private let liveTotals: (Date) async -> [Date: [String: TimeInterval]]
-    @State private var totals: [Date: [String: TimeInterval]] = [:]
+    @State private var totals: [Date: [String: TimeInterval]]
     @State private var visits: [MapHomeCalendarPlaceVisit] = []
     /// 켜면 지표 칩과 큰 숫자를 고른 날이 아니라 이번 달 하루 평균으로 보여 준다.
     @State private var showsMonthAverage = false
 
+    @MainActor
     init(
         selectedDate: Binding<Date>,
         holidayName: @escaping (Date) -> String?,
@@ -481,9 +557,11 @@ struct MapHomeCalendarSheet: View {
         self.calendar = calendar
 
         let day = calendar.startOfDay(for: selectedDate.wrappedValue)
-        self._displayedMonth = State(initialValue: calendar.date(
-            from: calendar.dateComponents([.year, .month], from: day)
-        ) ?? day)
+        let month = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? day
+        self._displayedMonth = State(initialValue: month)
+        self._statuses = State(initialValue: MapHomeCalendarMonthMemory.shared.statuses(for: month))
+        self._totals = State(initialValue: MapHomeCalendarMonthMemory.shared.totals(for: month))
+        self._contentHeight = State(initialValue: MapHomeCalendarMonthMemory.shared.contentHeight)
     }
 
     var body: some View {
@@ -526,7 +604,11 @@ struct MapHomeCalendarSheet: View {
                 }
             }
             .padding(.bottom, 40)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                guard abs(height - contentHeight) >= 0.5 else { return }
+                contentHeight = height
+                MapHomeCalendarMonthMemory.shared.contentHeight = height
+            }
         }
         .frame(maxWidth: .infinity)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -544,14 +626,21 @@ struct MapHomeCalendarSheet: View {
             visits = value
         }
         .task(id: "\(displayedMonth.timeIntervalSince1970)|\(extraKindsRaw)") {
-            totals = [:]
-            if !statuses.isEmpty { statuses = [:] }
             let month = displayedMonth
+            let rememberedStatuses = MapHomeCalendarMonthMemory.shared.statuses(for: month)
+            let rememberedTotals = MapHomeCalendarMonthMemory.shared.totals(for: month)
+            if statuses != rememberedStatuses { statuses = rememberedStatuses }
+            if totals != rememberedTotals { totals = rememberedTotals }
+            let remaining = Self.riseDuration - (ProcessInfo.processInfo.systemUptime - openedAt)
+            if remaining > 0 { try? await Task.sleep(for: .seconds(remaining)) }
+            guard !Task.isCancelled else { return }
             let monthStatuses = await logStatuses(month)
             guard !Task.isCancelled, month == displayedMonth else { return }
+            MapHomeCalendarMonthMemory.shared.store(statuses: monthStatuses, for: month)
             if statuses != monthStatuses { statuses = monthStatuses }
             let value = await timeTotals(month)
             guard !Task.isCancelled, month == displayedMonth else { return }
+            MapHomeCalendarMonthMemory.shared.store(totals: value, for: month)
             if totals != value { totals = value }
         }
         // 이번 달을 보고 있으면 걸음 수·이동 거리처럼 GPS로 빨리 바뀌는 값은 새 센서 기록이 들어올 때마다(약 1초 안에) 다시 읽는다.
@@ -579,8 +668,10 @@ struct MapHomeCalendarSheet: View {
                 let monthStatuses = await logStatuses(month)
                 let value = await timeTotals(month)
                 guard !Task.isCancelled, month == displayedMonth else { return }
-                statuses = monthStatuses
-                totals = value
+                MapHomeCalendarMonthMemory.shared.store(statuses: monthStatuses, for: month)
+                MapHomeCalendarMonthMemory.shared.store(totals: value, for: month)
+                if statuses != monthStatuses { statuses = monthStatuses }
+                if totals != value { totals = value }
             }
         }
     }
@@ -901,10 +992,13 @@ struct MapHomeCalendarSheet: View {
     }
 
     private var monthGrid: some View {
-        LazyVGrid(columns: gridColumns, spacing: 7) {
+        // 칸마다 달력 계산을 되풀이하지 않게 한 번만 구한다(SHT1102A01).
+        let selectedDay = calendar.startOfDay(for: selectedDate)
+        let today = calendar.startOfDay(for: .now)
+        return LazyVGrid(columns: gridColumns, spacing: 7) {
             ForEach(monthDays, id: \.self) { date in
                 if let date {
-                    dayCell(for: date)
+                    dayCell(for: date, selectedDay: selectedDay, today: today)
                 } else {
                     Color.clear
                         .frame(maxWidth: .infinity, minHeight: 38)
@@ -913,13 +1007,20 @@ struct MapHomeCalendarSheet: View {
         }
     }
 
-    private func dayCell(for date: Date) -> some View {
-        let day = calendar.component(.day, from: date)
-        let weekday = calendar.component(.weekday, from: date)
-        let holiday = holidayName(date)
-        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-        let isToday = calendar.isDateInToday(date)
-        let status = statuses[calendar.startOfDay(for: date)]
+    private func dayCell(for date: Date, selectedDay: Date, today: Date) -> some View {
+        let info = MapHomeCalendarMonthMemory.shared.dayInfo(for: date, in: displayedMonth) {
+            .init(
+                day: calendar.component(.day, from: date),
+                weekday: calendar.component(.weekday, from: date),
+                holiday: holidayName(date)
+            )
+        }
+        let day = info.day
+        let weekday = info.weekday
+        let holiday = info.holiday
+        let isSelected = date == selectedDay
+        let isToday = date == today
+        let status = statuses[date]
 
         return Button {
             selectedDate = date
@@ -958,6 +1059,10 @@ struct MapHomeCalendarSheet: View {
     }
 
     private var monthDays: [Date?] {
+        MapHomeCalendarMonthMemory.shared.days(for: displayedMonth) { makeMonthDays() }
+    }
+
+    private func makeMonthDays() -> [Date?] {
         guard let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth)),
               let dayRange = calendar.range(of: .day, in: .month, for: firstDay)
         else { return [] }
@@ -971,11 +1076,13 @@ struct MapHomeCalendarSheet: View {
     }
 
     private var monthTitle: String {
-        let formatter = DateFormatter()
-        formatter.locale = language.locale
-        formatter.calendar = calendar
-        formatter.dateFormat = language.monthTitleFormat
-        return formatter.string(from: displayedMonth)
+        MapHomeCalendarMonthMemory.shared.title(for: displayedMonth, key: language.monthTitleFormat) {
+            let formatter = DateFormatter()
+            formatter.locale = language.locale
+            formatter.calendar = calendar
+            formatter.dateFormat = language.monthTitleFormat
+            return formatter.string(from: displayedMonth)
+        }
     }
 
     private var gridColumns: [GridItem] {
@@ -1781,324 +1888,6 @@ enum MapHomeSalaryPolicy {
     }
 }
 
-/// 연봉 카운터 설정: 연봉(세전/세후)·월급·이번 달 누적 금액·누적 시급·간격별 금액. 값은 이 기기에만 저장한다.
-struct MapHomeSalarySettingsSheet: View {
-    let language: MapHomeLanguage
-    /// 이번 달 지금까지 잡힌 근무 시간(초)과 추세로 예측한 이번 달 총 근무 시간.
-    let monthWorkSeconds: TimeInterval
-    let projectedMonthWorkSeconds: TimeInterval
-    /// 지난 석 달 근무 시간(월 키 → 초).
-    var pastMonthWorkSeconds: [String: TimeInterval] = [:]
-    @AppStorage(MapHomeSalaryPolicy.annualKey) private var annualPay = 0.0
-    @AppStorage(MapHomeSalaryPolicy.isNetInputKey) private var isNetInput = false
-    @AppStorage(MapHomeSalaryPolicy.monthlyPayKey) private var monthlyPay = 0.0
-    @AppStorage(MapHomeSalaryPolicy.showsNetKey) private var showsNet = true
-    @AppStorage(MapHomeSalaryPolicy.isHourlyKey) private var isHourly = false
-    @AppStorage(MapHomeSalaryPolicy.hourlyKey) private var hourlyPay = 0.0
-    @AppStorage(MapHomeSalaryPolicy.hourlyTaxKey) private var hourlyTaxRaw = MapHomeSalaryPolicy.HourlyTax.threePointThree.rawValue
-    @AppStorage(MapHomeSalaryPolicy.weeklyHolidayKey) private var weeklyHoliday = false
-    @AppStorage(MapHomeSalaryPolicy.hourlyIsNetKey) private var hourlyIsNet = false
-    @AppStorage(MapHomeSalaryPolicy.monthAccumKey) private var monthAccum = 0.0
-    @AppStorage(MapHomeSalaryPolicy.monthAccumMonthKey) private var monthAccumMonth = ""
-    @AppStorage(MapHomeSalaryPolicy.tickKey) private var tickSeconds = 10
-    @AppStorage(MapHomeSalaryPolicy.payHistoryKey) private var payHistoryRaw = ""
-    @State private var payTexts: [String: String] = [:]
-    @State private var annualText = ""
-    @State private var monthlyText = ""
-    @State private var hourlyText = ""
-    @State private var accumText = ""
-
-    private var settings: MapHomeSalaryPolicy.Settings {
-        MapHomeSalaryPolicy.Settings(
-            annualPay: annualPay,
-            isNetInput: isNetInput,
-            monthlyPay: monthlyPay,
-            showsNet: showsNet,
-            monthAccumOverride: monthAccumMonth == MapHomeSalaryPolicy.monthKey(.now) ? monthAccum : 0,
-            payHistory: MapHomeSalaryPolicy.decodePayHistory(payHistoryRaw),
-            isHourly: isHourly,
-            hourly: hourlyPay,
-            hourlyTax: MapHomeSalaryPolicy.HourlyTax(rawValue: hourlyTaxRaw) ?? .threePointThree,
-            includesWeeklyHoliday: weeklyHoliday,
-            hourlyIsNet: hourlyIsNet
-        )
-    }
-
-    /// 연봉 또는 시급 중 하나를 고른다.
-    private enum InputKind: Hashable { case annual, hourly }
-
-    private var inputKind: Binding<InputKind> {
-        Binding(
-            get: { isHourly ? .hourly : .annual },
-            set: { isHourly = $0 == .hourly }
-        )
-    }
-
-    /// 지난 석 달의 월 키(최근 달부터).
-    private var pastMonthKeys: [String] {
-        (1...3).compactMap { offset in
-            MapHomeGrowthPolicy.localCalendar.date(byAdding: .month, value: -offset, to: .now).map { MapHomeSalaryPolicy.monthKey($0) }
-        }
-    }
-
-    private var paySamples: [MapHomeSalaryPolicy.PaySample] {
-        MapHomeSalaryPolicy.paySamples(settings, pastMonthWorkSeconds: pastMonthWorkSeconds)
-    }
-
-    private func monthLabel(_ key: String) -> String {
-        let parts = key.split(separator: "-")
-        guard parts.count == 2, let month = Int(parts[1]) else { return key }
-        return language.text("\(month)월", "\(parts[0])-\(parts[1])")
-    }
-
-    private func won(_ value: Double) -> String { MapHomeSalaryPolicy.wonText(value) }
-
-    var body: some View {
-        let settings = settings
-        let samples = paySamples
-        let rate = MapHomeSalaryPolicy.hourlyRate(settings, monthWorkSeconds: monthWorkSeconds, projectedMonthWorkSeconds: projectedMonthWorkSeconds, samples: samples)
-        let model = MapHomeSalaryPolicy.fitPayModel(baseMonthly: MapHomeSalaryPolicy.inputMonthly(settings), samples: samples)
-        let expectedPay = MapHomeSalaryPolicy.expectedMonthPay(settings, projectedMonthWorkSeconds: max(projectedMonthWorkSeconds, monthWorkSeconds), samples: samples)
-        let basis = settings.showsNetAmounts ? language.text("세후", "net") : language.text("세전", "gross")
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(language.text("연봉 카운터", "Salary counter"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
-                Text(language.text(
-                    "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.",
-                    "Earnings grow only during work time. Stored only on this device."
-                ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
-                .foregroundStyle(Color.tpSecondary)
-
-                // 1. 연봉 또는 시급. 세전/세후는 표시 기준 하나로 고르고, 입력은 세전·세후 어느 쪽이든 된다.
-                card {
-                    Picker("", selection: inputKind) {
-                        Text(language.text("연봉", "Annual")).tag(InputKind.annual)
-                        Text(language.text("시급", "Hourly")).tag(InputKind.hourly)
-                    }
-                    .pickerStyle(.segmented)
-                    if isHourly {
-                        let weekly = max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600 * 7 / 30.4
-                        let hourlyGrossNow = hourlyText.isEmpty && hourlyPay <= 0
-                            ? MapHomeSalaryPolicy.linkedHourlyGross(settings)
-                            : MapHomeSalaryPolicy.hourlyGross(settings, weeklyHours: weekly)
-                        field(language.text("세전 시급", "Gross hourly"), text: Binding(
-                            get: { hourlyIsNet ? "" : hourlyText },
-                            set: { hourlyText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(hourlyGrossNow.rounded()))) {
-                            hourlyIsNet = false
-                            hourlyPay = number(hourlyText)
-                        }
-                        field(language.text("세후 시급", "Net hourly"), text: Binding(
-                            get: { hourlyIsNet ? hourlyText : "" },
-                            set: { hourlyText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int((hourlyGrossNow * settings.hourlyTax.keepRate).rounded()))) {
-                            hourlyIsNet = true
-                            hourlyPay = number(hourlyText)
-                        }
-                        Picker("", selection: $hourlyTaxRaw) {
-                            Text(language.text("3.3% 공제", "3.3%")).tag(MapHomeSalaryPolicy.HourlyTax.threePointThree.rawValue)
-                            Text(language.text("4대보험", "Insurance")).tag(MapHomeSalaryPolicy.HourlyTax.fourInsurance.rawValue)
-                            Text(language.text("세금 없음", "None")).tag(MapHomeSalaryPolicy.HourlyTax.none.rawValue)
-                        }
-                        .pickerStyle(.segmented)
-                        Toggle(language.text("주휴수당 포함(주 15시간 이상)", "Include weekly holiday pay"), isOn: $weeklyHoliday)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                            .tint(Color.tpAccent)
-                        Text(language.text(
-                            "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.",
-                            "Time = money. Earnings rise with work hours. The other field is computed from the tax method."
-                        ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                    } else {
-                        let grossWon = MapHomeSalaryPolicy.linkedAnnualGross(settings)
-                        let netWon = MapHomeSalaryPolicy.netOfGross(grossWon)
-                        field(language.text("세전 연봉", "Gross annual"), text: Binding(
-                            get: { isNetInput ? "" : annualText },
-                            set: { annualText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(grossWon.rounded()))) {
-                            isNetInput = false
-                            annualPay = number(annualText)
-                            monthlyPay = 0
-                        }
-                        field(language.text("세후 연봉", "Net annual"), text: Binding(
-                            get: { isNetInput ? annualText : "" },
-                            set: { annualText = $0 }
-                        ), unit: language.text("원", "USD"), placeholder: String(Int(netWon.rounded()))) {
-                            isNetInput = true
-                            annualPay = number(annualText)
-                            monthlyPay = 0
-                        }
-                        field(language.text("월급", "Monthly pay"), text: $monthlyText, unit: language.text("원", "USD"),
-                              placeholder: String(Int(MapHomeSalaryPolicy.inputMonthly(settings).rounded()))) {
-                            annualPay = number(monthlyText) * 12
-                            monthlyPay = 0
-                            annualText = String(Int(annualPay.rounded()))
-                        }
-                        Text(language.text("연봉이나 월급 중 하나만 적으면 나머지는 자동 계산돼요(월급제면 월급만).", "Enter either annual or monthly; the other is computed."))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                    }
-                }
-
-                // 1-1. 표시 기준: 세전 또는 세후
-                card {
-                    Picker("", selection: $showsNet) {
-                        Text(language.text("세전", "Gross")).tag(false)
-                        Text(language.text("세후", "Net")).tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    Text(language.text("연봉·시급 모두 여기서 고른 기준으로 카운터와 누적 금액을 보여 줘요.", "Counter and totals use this basis for annual and hourly pay."))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                }
-
-                if !isHourly {
-                // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
-                card {
-                    Text(language.text("받은 월급 기록(실수령 세후, 수당 포함)", "Pay received (net, incl. overtime)"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                    ForEach(pastMonthKeys, id: \.self) { key in
-                        let hours = (pastMonthWorkSeconds[key] ?? 0) / 3_600
-                        HStack {
-                            Text(monthLabel(key)).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                            Text(language.text("근무 \(String(format: "%.0f", hours))시간", "\(String(format: "%.0f", hours)) h"))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)))).foregroundStyle(Color.tpSecondary)
-                            Spacer()
-                            TextField(language.text("받은 금액", "Received"), text: Binding(
-                                get: { grouped(payTexts[key] ?? "") },
-                                set: { payTexts[key] = $0.filter(\.isNumber); savePayHistory() }
-                            ))
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 130)
-                            Text(language.text("원", "USD")).font(.system(size: TaptionType.scaled(TaptionType.snapped(13))))
-                        }
-                    }
-                    Text(model.sampleCount == 0
-                         ? language.text("기록이 없어 법정 기준(통상시급 × 1.5)으로 수당을 봐요. 받은 월급을 넣을수록 정확해져요.", "No records: overtime at 1.5× base. Add months to refine.")
-                         : language.text(
-                            "기록 \(model.sampleCount)개월로 맞춤: 고정 \(won(model.fixedMonthly)) + 209시간 초과 1시간당 \(won(model.overtimeHourly)).",
-                            "Fitted from \(model.sampleCount) months: fixed \(won(model.fixedMonthly)) + \(won(model.overtimeHourly)) per hour over 209."
-                         ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                    if let expectedPay {
-                        row(language.text("이번 달 예상 월급(\(basis))", "Expected this month (\(basis))"), won(expectedPay), bold: true)
-                    }
-                }
-
-                }
-
-                // 3. 이번 달 누적 금액(고칠 수 있음)
-                card {
-                    let computed = MapHomeSalaryPolicy.earnings(workSeconds: monthWorkSeconds, hourlyRate: rate ?? 0)
-                    field(language.text("이번 달 누적(\(basis))", "This month (\(basis))"), text: $accumText, unit: language.text("원", "USD"),
-                          placeholder: String(Int(computed.rounded()))) {
-                        monthAccum = number(accumText)
-                        monthAccumMonth = MapHomeSalaryPolicy.monthKey(.now)
-                    }
-                    Text(language.text(
-                        "근무 \(String(format: "%.1f", monthWorkSeconds / 3_600))시간 기준 계산값 \(won(computed)). 실제와 다르면 고쳐 주세요(비우면 계산값).",
-                        "Computed \(won(computed)) for \(String(format: "%.1f", monthWorkSeconds / 3_600)) h. Edit if different."
-                    ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                }
-
-                // 4. 누적 시급(고칠 수 없음)
-                card {
-                    row(language.text("누적 시급(\(basis))", "Hourly (\(basis))"), rate.map(won) ?? "-", bold: true)
-                    Text(language.text(
-                        "이번 달 예상 월급 ÷ 예상 근무 \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600))시간(지금까지 \(String(format: "%.0f", monthWorkSeconds / 3_600))시간 + 최근 8주 요일별 추세). 야근이 늘면 수당도 같이 늘고, 월말엔 그 달 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
-                        "Expected pay ÷ projected \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)) h (\(String(format: "%.0f", monthWorkSeconds / 3_600)) h so far + 8-week trend). Overtime raises both; exact at month end."
-                    ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-                }
-
-                // 5. 간격별 금액
-                Text(language.text("표시 간격", "Update every"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                Picker("", selection: $tickSeconds) {
-                    ForEach(MapHomeSalaryPolicy.tickChoices, id: \.self) { seconds in
-                        Text(MapHomeSalaryPolicy.intervalTitle(seconds, language: language)).tag(seconds)
-                    }
-                }
-                .pickerStyle(.menu)
-                if let rate {
-                    card {
-                        row(language.text("\(MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language))마다", "Every \(MapHomeSalaryPolicy.intervalTitle(tickSeconds, language: language))"),
-                            won(rate / 3_600 * Double(tickSeconds)), bold: true)
-                        row(language.text("초급", "Per second"), String(format: "%.1f원", rate / 3_600))
-                        row(language.text("분급", "Per minute"), won(rate / 60))
-                        row(language.text("시급", "Per hour"), won(rate))
-                        row(language.text("일급(8시간)", "Per day (8 h)"), won(rate * 8))
-                    }
-                }
-
-                if settings.isConfigured {
-                    Button(language.text("연봉 카운터 끄기", "Turn off"), role: .destructive) {
-                        annualPay = 0; monthlyPay = 0; monthAccum = 0
-                        isHourly = false; hourlyPay = 0; hourlyIsNet = false
-                        annualText = ""; hourlyText = ""; monthlyText = ""; accumText = ""
-                    }
-                }
-            }
-            .padding(22)
-        }
-        .background(Color.tpBackground)
-        .onAppear {
-            payTexts = settings.payHistory.mapValues { String(Int($0.rounded())) }
-            annualText = annualPay > 0 ? String(Int(annualPay.rounded())) : ""
-            monthlyText = monthlyPay > 0 ? String(Int(monthlyPay.rounded())) : ""
-            hourlyText = hourlyPay > 0 ? String(Int(hourlyPay.rounded())) : ""
-            accumText = settings.monthAccumOverride > 0 ? String(Int(settings.monthAccumOverride.rounded())) : ""
-        }
-    }
-
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) { content() }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private func row(_ title: String, _ value: String, bold: Bool = false) -> some View {
-        HStack {
-            Text(title).foregroundStyle(Color.tpSecondary)
-            Spacer()
-            Text(value).monospacedDigit().fontWeight(bold ? .bold : .medium)
-        }
-        .font(.system(size: bold ? 15 : 13, design: .rounded))
-    }
-
-    /// 입력은 바로 저장한다(따로 저장 버튼 없음).
-    private func field(_ title: String, text: Binding<String>, unit: String, placeholder: String, onChange: @escaping () -> Void) -> some View {
-        HStack {
-            Text(title).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-            Spacer()
-            TextField(grouped(placeholder), text: Binding(
-                get: { grouped(text.wrappedValue) },
-                set: { text.wrappedValue = $0.filter(\.isNumber) }
-            ))
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 130)
-                .onChange(of: text.wrappedValue) { _, _ in onChange() }
-            Text(unit).font(.system(size: TaptionType.scaled(TaptionType.snapped(13))))
-        }
-    }
-
-    private func number(_ text: String) -> Double { Double(text.filter(\.isNumber)) ?? 0 }
-
-    private func grouped(_ text: String) -> String { MapHomeSalaryPolicy.grouped(text) }
-
-    private func savePayHistory() {
-        var history = settings.payHistory
-        for (key, text) in payTexts { history[key] = number(text) }
-        payHistoryRaw = MapHomeSalaryPolicy.encodePayHistory(history)
-    }
-}
-
 // MARK: - 알림
 
 /// 사용자가 받을 수 있는 알림 종류. 장소 도착·출발은 등록한 장소 기록으로, 기상은 수면 구간 종료로, 시급은 연봉 카운터로 만든다.
@@ -2696,6 +2485,105 @@ extension MapHomeDailyCardData {
     }
 }
 
+/// 하루 카드 한 장의 값: 카드 그림 데이터와 항목 고르기 값(항목 id → 값).
+struct MapHomeDailyCardContent {
+    var data: MapHomeDailyCardData
+    var values: [String: Double]
+
+    /// 지도가 보고 있지 않은 날의 카드를 그날 기록으로 만든다. 확정한 날은 저장해 둔 값을 먼저 쓴다.
+    @MainActor
+    static func make(
+        day: Date,
+        snapshot: PlanDayDataSnapshot,
+        sealedDays: [Date: TaptionSealedDay],
+        placeKinds: [String: FrequentPlaceKind],
+        hourlyRate: Double?,
+        accessoryID: String?,
+        memos: [ActionMemo],
+        language: MapHomeLanguage,
+        now: Date = .now,
+        entries: ([String: TimeInterval]) -> [MapHomeDaySummaryEntry]
+    ) -> MapHomeDailyCardContent {
+        let calendar = Calendar.autoupdatingCurrent
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(24 * 60 * 60)
+        let sealed = sealedDays[start]
+        let seconds: [String: TimeInterval]
+        if let sealed, !sealed.categorySeconds.isEmpty {
+            seconds = sealed.categoryDurations
+        } else {
+            seconds = TaptionSealedDayBuilder.categoryDurations(
+                actuals: snapshot.actuals, travel: snapshot.travel, stays: snapshot.places,
+                placeKinds: placeKinds, day: TimeSpan(start: start, end: end), asOf: now
+            )
+        }
+        let categories = entries(seconds)
+        let total = categories.reduce(0) { $0 + $1.seconds }
+        let distance = MapHomeDayTravelSummary.entries(from: snapshot.travel).reduce(0) { $0 + $1.meters }
+        let work = categories.first { $0.id == MapHomeSalaryPolicy.workKey }?.seconds
+        let steps = sealed.flatMap { $0.stepCount > 0 ? $0.stepCount : nil }
+            ?? MapHomeCounterTimelinePolicy.stepCount(readings: snapshot.readings, cutoff: nil)
+        let dayMemos = memos.filter { memo in
+            let when = memo.isTimeless == true ? memo.createdAt : memo.occurredAt
+            return when >= start && when < end
+        }
+        let mapMemoCount = dayMemos.filter { $0.mapPoint != nil }.count
+        let routePoints: [GeoPoint]
+        if let sealed, !sealed.polyline.isEmpty {
+            routePoints = sealed.routePoints
+        } else {
+            routePoints = snapshot.readings.compactMap { reading in
+                reading.point.map {
+                    GeoPoint(latitude: $0.latitude, longitude: $0.longitude, altitude: 0, horizontalAccuracy: 0, verticalAccuracy: 0)
+                }
+            }
+        }
+        let isObservedToEnd = now >= end
+        let data = MapHomeDailyCardData(
+            dateText: start.formatted(Date.FormatStyle().month().day().locale(language.locale)),
+            weekdayText: start.formatted(Date.FormatStyle().weekday(.wide).locale(language.locale)),
+            earnedText: hourlyRate.map { rate in
+                MapHomeSalaryPolicy.wonText(MapHomeSalaryPolicy.earnings(workSeconds: work ?? 0, hourlyRate: rate), language: language)
+            },
+            workText: work.map(MapHomeAlarmPolicy.hoursText),
+            steps: steps,
+            distanceText: distance > 0 ? MapHomeDayTravelSummary.distanceText(distance) : nil,
+            categories: categories,
+            totalText: language.text(
+                "관측 \(MapHomeAlarmPolicy.hoursText(total))" + (isObservedToEnd ? "" : " · 나머지는 미확인"),
+                "Observed \(MapHomeAlarmPolicy.hoursText(total))" + (isObservedToEnd ? "" : " · rest unconfirmed")
+            ),
+            accessoryID: accessoryID,
+            memoText: dayMemos.isEmpty
+                ? nil
+                : language.text("메모 \(dayMemos.count)개 · 지도 \(mapMemoCount)개", "Memos \(dayMemos.count) · map \(mapMemoCount)"),
+            routePoints: routePoints
+        )
+        var values = MapHomeCalendarTimeTotalsPolicy.totals(
+            actuals: snapshot.actuals, travel: snapshot.travel, stays: snapshot.places,
+            placeKinds: placeKinds, month: start, asOf: now, calendar: calendar, sealed: sealedDays
+        )[start] ?? [:]
+        if let steps { values[MapHomeCalendarTimeKind.steps.rawValue] = Double(steps) }
+        return MapHomeDailyCardContent(data: data, values: values)
+    }
+}
+
+/// 하루 카드에서 고를 수 있는 날짜. 오늘까지만 고른다.
+enum MapHomeDailyCardDayPolicy {
+    static func clamped(_ day: Date, now: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        calendar.startOfDay(for: min(day, now))
+    }
+
+    static func canMoveForward(from day: Date, now: Date, calendar: Calendar = .autoupdatingCurrent) -> Bool {
+        calendar.startOfDay(for: day) < calendar.startOfDay(for: now)
+    }
+
+    static func moved(_ day: Date, by days: Int, now: Date, calendar: Calendar = .autoupdatingCurrent) -> Date {
+        let target = calendar.date(byAdding: .day, value: days, to: calendar.startOfDay(for: day)) ?? day
+        return clamped(target, now: now, calendar: calendar)
+    }
+}
+
 struct MapHomeCardMetric: Identifiable, Equatable {
     let id: String
     let title: String
@@ -2818,10 +2706,16 @@ struct MapHomeDailyCardView: View {
 
 /// 카드 미리보기와 저장·공유.
 struct MapHomeDailyCardSheet: View {
-    /// 화면이 바뀔 때마다 다시 만들지 않도록, 시트가 열릴 때 한 번만 부른다.
-    let makeData: () -> MapHomeDailyCardData
-    let makeValues: () -> [String: Double]
     let language: MapHomeLanguage
+    /// 화면이 바뀔 때마다 다시 만들지 않도록, 시트가 열릴 때와 날짜를 바꿀 때만 부른다.
+    let makeContent: @MainActor (Date) async -> MapHomeDailyCardContent
+    /// 카드 안에서 고른 날짜. 지도 날짜와 별개다.
+    @State private var selectedDay: Date
+    @State private var loadedDay: Date?
+    /// 날짜를 하나 읽을 때마다 오른다. 경로 지도를 그날 것으로 다시 그리는 신호다.
+    @State private var loadGeneration = 0
+    /// 카드 그림이 고른 날짜로 다 그려졌는지. 그 전에는 저장·공유를 막는다.
+    @State private var isDayReady = false
     @State private var baseData: MapHomeDailyCardData?
     /// 하루 달력 값(항목 id → 값). 고르기 목록과 카드에 쓴다.
     @State private var dayValues: [String: Double] = [:]
@@ -2831,6 +2725,16 @@ struct MapHomeDailyCardSheet: View {
     @State private var message: String?
     @State private var selectedIDs: [String] = MapHomeCardMetricSelection.load()
     @State private var isPickerPresented = false
+
+    init(
+        initialDay: Date,
+        language: MapHomeLanguage,
+        makeContent: @escaping @MainActor (Date) async -> MapHomeDailyCardContent
+    ) {
+        self.language = language
+        self.makeContent = makeContent
+        _selectedDay = State(initialValue: MapHomeDailyCardDayPolicy.clamped(initialDay, now: .now))
+    }
 
     private var data: MapHomeDailyCardData {
         var copy = baseData ?? .placeholder
@@ -2844,6 +2748,52 @@ struct MapHomeDailyCardSheet: View {
             )
         }
         return copy
+    }
+
+    /// 제목 오른쪽의 날짜 고르기와 전날·다음날 이동.
+    private var header: some View {
+        HStack(spacing: 4) {
+            Text(language.text("하루 카드", "Day card"))
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 4)
+            dayStepButton("chevron.left", label: language.text("전날", "Previous day"), by: -1, isEnabled: true)
+            DatePicker(
+                language.text("날짜", "Date"),
+                selection: Binding(
+                    get: { selectedDay },
+                    set: { selectedDay = MapHomeDailyCardDayPolicy.clamped($0, now: .now) }
+                ),
+                in: ...Date.now,
+                displayedComponents: .date
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .tint(Color.tpAccent)
+            .environment(\.locale, language.locale)
+            dayStepButton(
+                "chevron.right",
+                label: language.text("다음날", "Next day"),
+                by: 1,
+                isEnabled: MapHomeDailyCardDayPolicy.canMoveForward(from: selectedDay, now: .now)
+            )
+        }
+    }
+
+    private func dayStepButton(_ symbol: String, label: String, by days: Int, isEnabled: Bool) -> some View {
+        Button {
+            selectedDay = MapHomeDailyCardDayPolicy.moved(selectedDay, by: days, now: .now)
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                .foregroundStyle(isEnabled ? Color.tpInk : Color.tpLine)
+                .frame(width: 32, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(label)
     }
 
     private func toggle(_ id: String) {
@@ -2943,9 +2893,7 @@ struct MapHomeDailyCardSheet: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Text(language.text("하루 카드", "Day card"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                header
                 metricPanel
                 if let image {
                     Image(uiImage: image)
@@ -2953,6 +2901,8 @@ struct MapHomeDailyCardSheet: View {
                         .scaledToFit()
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+                        .opacity(isDayReady ? 1 : 0.45)
+                        .overlay { if !isDayReady { ProgressView() } }
                 } else {
                     ProgressView().frame(height: 300)
                 }
@@ -2969,7 +2919,7 @@ struct MapHomeDailyCardSheet: View {
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpAccent)
                 }
-                .disabled(image == nil)
+                .disabled(image == nil || !isDayReady)
                 if let message {
                     Text(message).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium)).foregroundStyle(Color.tpAccent)
                 }
@@ -2979,17 +2929,29 @@ struct MapHomeDailyCardSheet: View {
             .padding(22)
         }
         .background(Color.tpBackground)
-        .task {
-            // 열릴 때 한 번 불러온다. 이후에는 항목을 고를 때만 카드가 다시 그려진다.
-            baseData = makeData()
-            dayValues = makeValues()
+        // 열릴 때와 날짜를 바꿀 때 그날 값을 읽는다. 이후에는 항목을 고를 때만 카드가 다시 그려진다.
+        .task(id: selectedDay) {
+            isDayReady = false
+            message = nil
+            let content = await makeContent(selectedDay)
+            guard !Task.isCancelled else { return }
+            mapImage = nil
+            baseData = content.data
+            dayValues = content.values
+            loadedDay = selectedDay
+            loadGeneration += 1
         }
-        // 지도는 경로가 바뀔 때만 다시 그리고, 카드 그림은 항목이 바뀔 때마다 새로 그린다.
-        .task(id: baseData?.routePoints.count ?? -1) {
-            mapImage = await Self.routeMap(points: baseData?.routePoints ?? [])
-            image = Self.render(data: data, language: language, mapImage: mapImage)
+        // 지도는 날짜를 읽었을 때만 다시 그리고, 다 그린 뒤에야 저장·공유를 연다(앞 날짜의 경로가 섞이지 않게).
+        .task(id: loadGeneration) {
+            guard loadGeneration > 0 else { return }
+            let map = await Self.routeMap(points: baseData?.routePoints ?? [])
+            guard !Task.isCancelled else { return }
+            mapImage = map
+            image = Self.render(data: data, language: language, mapImage: map)
+            if loadedDay == selectedDay { isDayReady = true }
         }
         .task(id: data) {
+            guard isDayReady else { return }
             image = Self.render(data: data, language: language, mapImage: mapImage)
         }
         .sheet(item: $shareURL) { url in MapHomeShareSheet(url: url) }

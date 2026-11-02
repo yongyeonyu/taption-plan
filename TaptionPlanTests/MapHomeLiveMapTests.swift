@@ -458,6 +458,93 @@ final class MapHomeLiveMapTests: XCTestCase {
         XCTAssertEqual(MapHomeRecordingLayers(rawValue: "not json"), defaults)
     }
 
+    func testRecordingLayersCounterWidgetKeepsStoredSalaryKey() {
+        XCTAssertTrue(MapHomeRecordingLayers(rawValue: "{}").counterWidget)
+        XCTAssertFalse(MapHomeRecordingLayers(rawValue: #"{"salary":false}"#).counterWidget)
+        var changed = MapHomeRecordingLayers()
+        changed.counterWidget = false
+        XCTAssertTrue(changed.rawValue.contains(#""salary":false"#))
+        XCTAssertEqual(MapHomeRecordingLayers(rawValue: changed.rawValue), changed)
+    }
+
+    // MARK: - 메모 받아쓰기
+
+    func testDictationRepeatedPartialsDoNotDuplicate() {
+        var transcript = MapHomeDictationTranscript()
+        for partial in ["오늘", "오늘 회의", "오늘 회의", "오늘 회의는", "오늘 회의는"] {
+            transcript.receive(partial)
+        }
+        XCTAssertEqual(transcript.text, "오늘 회의는")
+    }
+
+    func testDictationRevisedPartialReplacesInsteadOfAppending() {
+        var transcript = MapHomeDictationTranscript()
+        for partial in ["오늘 회의는", "오늘의 회의는", "오늘의 회의는 열시", "오늘 회의는 열 시에"] {
+            transcript.receive(partial)
+        }
+        XCTAssertEqual(transcript.text, "오늘 회의는 열 시에")
+        XCTAssertEqual(transcript.committed, "")
+    }
+
+    func testDictationShortFirstPartialIsRevisedNotKept() {
+        var transcript = MapHomeDictationTranscript()
+        transcript.receive("네")
+        transcript.receive("내일 회의")
+        XCTAssertEqual(transcript.text, "내일 회의")
+    }
+
+    func testDictationSegmentResetContinuesInOrder() {
+        var transcript = MapHomeDictationTranscript()
+        transcript.receive("오늘 회의는 열시")
+        transcript.receive("그리고")
+        transcript.receive("그리고 점심은")
+        XCTAssertEqual(transcript.text, "오늘 회의는 열시 그리고 점심은")
+    }
+
+    func testDictationContinuesAfterRecognizerRestart() {
+        var transcript = MapHomeDictationTranscript()
+        transcript.receive("첫 문장")
+        transcript.commitSegment()
+        XCTAssertEqual(transcript.text, "첫 문장")
+        transcript.receive("둘째")
+        transcript.receive("둘째 문장")
+        transcript.receive("둘째 문장")
+        XCTAssertEqual(transcript.text, "첫 문장 둘째 문장")
+    }
+
+    func testDictationWholeTranscriptAfterResetDoesNotDuplicate() {
+        var transcript = MapHomeDictationTranscript()
+        transcript.receive("오늘 회의는 열시")
+        transcript.receive("그리고 점심은")
+        transcript.receive("오늘 회의는 열시 그리고 점심은")
+        XCTAssertEqual(transcript.text, "오늘 회의는 열시 그리고 점심은")
+    }
+
+    func testDictationBaseKeepsMemoBeforeStart() {
+        XCTAssertEqual(MapHomeDictationTranscript.base(from: ""), "")
+        XCTAssertEqual(MapHomeDictationTranscript.base(from: "장보기"), "장보기 ")
+        XCTAssertEqual(MapHomeDictationTranscript.base(from: "장보기\n"), "장보기\n")
+    }
+
+    // MARK: - 하루 카드 날짜
+
+    func testDailyCardDayPolicyBlocksFutureDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 9 * 3_600))
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 2, hour: 15)))
+        let today = calendar.startOfDay(for: now)
+        let yesterday = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: today))
+        let tomorrow = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: today))
+
+        XCTAssertEqual(MapHomeDailyCardDayPolicy.clamped(tomorrow, now: now, calendar: calendar), today)
+        XCTAssertEqual(MapHomeDailyCardDayPolicy.clamped(yesterday.addingTimeInterval(3_600), now: now, calendar: calendar), yesterday)
+        XCTAssertEqual(MapHomeDailyCardDayPolicy.moved(today, by: -1, now: now, calendar: calendar), yesterday)
+        XCTAssertEqual(MapHomeDailyCardDayPolicy.moved(yesterday, by: 1, now: now, calendar: calendar), today)
+        XCTAssertEqual(MapHomeDailyCardDayPolicy.moved(today, by: 1, now: now, calendar: calendar), today)
+        XCTAssertTrue(MapHomeDailyCardDayPolicy.canMoveForward(from: yesterday, now: now, calendar: calendar))
+        XCTAssertFalse(MapHomeDailyCardDayPolicy.canMoveForward(from: today, now: now, calendar: calendar))
+    }
+
     func testPlaybackZoomModeRoundTripsAndDefaultsToAdaptive() {
         XCTAssertEqual(MapHomePlaybackZoomMode(rawValue: "fixed"), .fixed)
         XCTAssertNil(MapHomePlaybackZoomMode(rawValue: "unknown"))
@@ -1239,7 +1326,8 @@ extension MapHomeLiveMapTests {
             season.chosenEvolutions.append(picked.id)
         }
         XCTAssertEqual(seen.count, 52)
-        XCTAssertEqual(MapHomeLandmarkCatalog.weeklyChoices(for: season).count, 3, "다 모으면 전체에서 다시 돈다")
+        XCTAssertTrue(MapHomeLandmarkCatalog.weeklyChoices(for: season).isEmpty, "다 모으면 후보가 없다")
+        XCTAssertTrue(MapHomeLandmarkCatalog.isCollectionComplete(season))
     }
 
     func testMergedStepCountsPrefersHealthAndFallsBackToSensor() {

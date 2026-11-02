@@ -433,8 +433,26 @@ extension FeatureEngineTests {
                 title: "건강관리",
                 categoryID: "health",
                 startedAt: day.addingTimeInterval(22 * hour),
-                endedAt: day.addingTimeInterval(23 * hour),
+                endedAt: day.addingTimeInterval(22.5 * hour),
                 source: .healthKit
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "샤워",
+                categoryID: "shower",
+                startedAt: day.addingTimeInterval(22.5 * hour),
+                endedAt: day.addingTimeInterval(22.75 * hour),
+                source: .manual,
+                manuallyCorrected: true
+            ),
+            ActualRecord(
+                planID: nil,
+                title: "집안일",
+                categoryID: "housework",
+                startedAt: day.addingTimeInterval(22.75 * hour),
+                endedAt: day.addingTimeInterval(23 * hour),
+                source: .manual,
+                manuallyCorrected: true
             ),
             ActualRecord(
                 planID: nil,
@@ -754,10 +772,10 @@ extension FeatureEngineTests {
                 matchesRailRoute: true
             )
         }
+        // 복합 신호가 있어도 역을 특정하지 못하면 지하철이 아니다(PAW1102A03).
         let result = TravelModeClassifier().classify(readings: readings)
-        XCTAssertEqual(result.mode, .subway)
-        XCTAssertEqual(result.confidence, .high)
-        XCTAssertTrue(result.evidence.contains("지하철 복합 신호 충족"))
+        XCTAssertNotEqual(result.mode, .subway)
+        XCTAssertTrue(result.evidence.contains { $0.contains("탑승·하차역") })
     }
 
     func testStationToStationUndergroundTravelIdentifiesSubwayWithoutVibration() {
@@ -887,11 +905,12 @@ extension FeatureEngineTests {
             distanceMeters: 20_000, confidence: .high, evidence: ["사용자 확인 기억"],
             isConfirmed: true, isClassificationLocked: true
         )
-        let railBacked = TravelSegment(
+        var railBacked = TravelSegment(
             mode: .subway, span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
             distanceMeters: 20_000, confidence: .high, evidence: ["사용자 확인 기억", "철도 경로"],
             isConfirmed: true, isClassificationLocked: true
         )
+        railBacked.subwayRoute = SubwayStationCatalog.route(for: ["마곡나루역", "검암역", "가정역"])
         let fresh = TravelSegment(
             mode: .car, span: TimeSpan(start: start, end: start.addingTimeInterval(hour)),
             distanceMeters: 21_000, confidence: .medium, evidence: ["iPhone Core Motion 자동차"]
@@ -1089,15 +1108,149 @@ extension FeatureEngineTests {
             corrections, to: [segment], places: places, readings: automotive).first)
         XCTAssertEqual(vetoed.mode, .car)
         XCTAssertFalse(vetoed.evidence.contains("사용자 확인 기억"))
-        // 센서 근거가 없으면 예전처럼 기억을 적용한다.
-        let applied = try XCTUnwrap(MovementCorrectionEngine.applying(
+        // 탑승·하차역 노선이 없으면 센서 근거가 없어도 다른 날 기억으로 지하철을 확정하지 않는다.
+        let noRoute = try XCTUnwrap(MovementCorrectionEngine.applying(
             corrections, to: [segment], places: places, readings: []).first)
+        XCTAssertEqual(noRoute.mode, .car)
+        var withRoute = segment
+        withRoute.subwayRoute = SubwayStationCatalog.route(for: ["마곡나루역", "검암역", "가정역"])
+        let applied = try XCTUnwrap(MovementCorrectionEngine.applying(
+            corrections, to: [withRoute], places: places, readings: []).first)
         XCTAssertEqual(applied.mode, .subway)
-        // 철도 경로가 맞는 기록이 하나라도 있으면 기억을 적용한다.
-        let withRail = automotive + [reading(41, motion: .automotive, rail: true)]
+        // 고도 변화가 없으면 노선이 있어도 역을 지나간 것이다.
+        var noAltitude = withRoute
+        noAltitude.evidence.append(TravelModeClassifier.noAltitudeChangeEvidence)
+        XCTAssertEqual(MovementCorrectionEngine.applying(
+            corrections, to: [noAltitude], places: places, readings: []).first?.mode, .car)
+        // 차로 달리며 역 옆을 지나거나 철도 경로에 잠깐 겹친 정도로는 기억을 적용하지 않는다(PAW1102A03).
+        var passingStation = automotive
+        for index in stride(from: 0, to: passingStation.count, by: 5) { passingStation[index].nearbyStation = true }
+        passingStation[3].matchesRailRoute = true
+        let stillCar = try XCTUnwrap(MovementCorrectionEngine.applying(
+            corrections, to: [segment], places: places, readings: passingStation).first)
+        XCTAssertEqual(stillCar.mode, .car)
+        // 철도 경로가 구간의 상당 부분과 맞으면 기억을 적용한다.
+        let withRail = (0..<40).map { reading($0, motion: .automotive, rail: $0 % 2 == 0) }
         let appliedWithRail = try XCTUnwrap(MovementCorrectionEngine.applying(
-            corrections, to: [segment], places: places, readings: withRail).first)
+            corrections, to: [withRoute], places: places, readings: withRail).first)
         XCTAssertEqual(appliedWithRail.mode, .subway)
+    }
+
+    /// 지하철은 조건이 모두 겹쳐야 한다. 하나라도 빠지면 그 조건을 알려 준다(PAW1102A03).
+    func testSubwayGateRequiresEveryCondition() {
+        let proven = SubwayEvidenceGate.Input(
+            hasBoardingToAlightingRoute: true, sensedStationCount: 3, hasAltitudeChange: true,
+            transitSpecificSignals: 1, supportingSignals: 1
+        )
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(proven), [])
+        var input = proven
+        input.hasBoardingToAlightingRoute = false
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["탑승·하차역"])
+        input = proven
+        input.sensedStationCount = 1
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["경로 역 감지"])
+        input = proven
+        input.hasAltitudeChange = false
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["고도 변화"])
+        // 도로가 철도와 나란해도 걸음이 없다는 것만으로는 지하철이 아니다.
+        input = proven
+        input.transitSpecificSignals = 0
+        input.supportingSignals = 2
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["지하철 전용 신호"])
+        input = proven
+        input.supportingSignals = 0
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["독립 근거 2개"])
+        input = proven
+        input.boardingDwell = 120
+        input.alightingDwell = 300
+        XCTAssertEqual(SubwayEvidenceGate.missingConditions(input), ["탑승역 5분 체류"])
+    }
+
+    /// 역 근처 체류: 차로 스치면 짧고, 승강장에서 위치가 끊겨도 체류로 이어진다.
+    func testStationDwellSeparatesPassingFromBoarding() {
+        let start = makeDate(2026, 11, 2, 8, 0)
+        func geo(_ latitude: Double) -> GeoPoint {
+            GeoPoint(latitude: latitude, longitude: 127.0, altitude: 0, horizontalAccuracy: 10, verticalAccuracy: 10)
+        }
+        let station = geo(37.5)
+        func reading(_ minute: Double, latitude: Double?) -> SensorReading {
+            var value = SensorReading(timestamp: start.addingTimeInterval(minute * 60), motion: .automotive)
+            value.gpsAvailable = latitude != nil
+            value.point = latitude.map(geo)
+            return value
+        }
+        let passing = (0..<10).map { reading(Double($0), latitude: 37.49 + Double($0) * 0.002) }
+        XCTAssertLessThan(SubwayEvidenceGate.stationDwell(readings: passing, station: station) ?? .infinity, SubwayEvidenceGate.minimumStationDwell)
+        let boarding = [reading(0, latitude: 37.5), reading(2, latitude: 37.5005)]
+            + [reading(4, latitude: nil), reading(6, latitude: nil)]
+            + [reading(8, latitude: 37.53)]
+        XCTAssertEqual(SubwayEvidenceGate.stationDwell(readings: boarding, station: station) ?? 0, 6 * 60, accuracy: 0.5)
+        // 위치 기록이 하나도 없으면 잴 수 없는 것이지 머물지 않은 것이 아니다.
+        XCTAssertNil(SubwayEvidenceGate.stationDwell(readings: [reading(0, latitude: nil), reading(2, latitude: nil)], station: station))
+    }
+
+    /// 다른 날 고친 보정은 새 날의 수정으로 지워지지 않고, 같은 구간을 다시 고칠 때만 바뀐다.
+    func testRecordingKeepsCorrectionsFromOtherDays() {
+        let start = makeDate(2026, 11, 2, 8, 0)
+        func segment(day: Int) -> TravelSegment {
+            let begin = start.addingTimeInterval(Double(day) * 86_400)
+            return TravelSegment(mode: .car, span: TimeSpan(start: begin, end: begin.addingTimeInterval(3_600)),
+                                 distanceMeters: 10_000, confidence: .high, evidence: [])
+        }
+        let monday = MovementCorrectionEngine.recording(mode: .subway, for: segment(day: 0), places: [], existing: [], at: start)
+        let tuesday = MovementCorrectionEngine.recording(mode: .bus, for: segment(day: 1), places: [], existing: monday, at: start.addingTimeInterval(86_400))
+        XCTAssertEqual(tuesday.count, 2)
+        XCTAssertEqual(tuesday.first?.mode, .subway)
+        let redone = MovementCorrectionEngine.recording(mode: .car, for: segment(day: 1), places: [], existing: tuesday, at: start.addingTimeInterval(90_000))
+        XCTAssertEqual(redone.count, 2)
+        XCTAssertEqual(redone.last?.mode, .car)
+    }
+
+    /// 등록한 차에 연결된 구간은 다른 날 지하철 기억이 있어도 자동차로 확정한다(PAW1102A03).
+    func testRegisteredCarConnectionBeatsRememberedSubway() throws {
+        let start = makeDate(2026, 11, 2, 8, 0)
+        let span = TimeSpan(start: start, end: start.addingTimeInterval(68 * 60))
+        let remembered = TravelSegment(
+            mode: .subway, span: span, distanceMeters: 17_900, confidence: .high,
+            evidence: ["사용자 확인 기억"], isConfirmed: true
+        )
+        func readings(_ route: String?) -> [SensorReading] {
+            (0..<40).map {
+                var value = SensorReading(timestamp: start.addingTimeInterval(Double($0) * 60), motion: .automotive)
+                value.carAudioRouteName = route
+                return value
+            }
+        }
+        let otherDay = TravelModeCorrection(
+            id: UUID(), fromPlaceKey: "home", toPlaceKey: "work",
+            span: TimeSpan(start: start.addingTimeInterval(-86_400), end: span.end.addingTimeInterval(-86_400)),
+            mode: .subway, inferredMode: .car, inferredConfidence: .high, updatedAt: start
+        )
+        let car = try XCTUnwrap(CarAudioTravelConfirmation.enforcingRegisteredCar(
+            [remembered], readings: readings("CarPlay"), registered: ["CarPlay"], corrections: [otherDay]
+        ).first)
+        XCTAssertEqual(car.mode, .car)
+        XCTAssertTrue(car.isConfirmed)
+        XCTAssertFalse(car.evidence.contains("사용자 확인 기억"))
+        XCTAssertTrue(CarAudioTravelConfirmation.confirms(car.evidence))
+
+        // 등록하지 않은 기기, 연결 없음, 사용자가 이 구간에 직접 고른 수단은 그대로 둔다.
+        XCTAssertEqual(CarAudioTravelConfirmation.enforcingRegisteredCar(
+            [remembered], readings: readings("Buds"), registered: ["CarPlay"], corrections: []
+        ).first?.mode, .subway)
+        XCTAssertEqual(CarAudioTravelConfirmation.enforcingRegisteredCar(
+            [remembered], readings: readings(nil), registered: ["CarPlay"], corrections: []
+        ).first?.mode, .subway)
+        var boardingChoice = remembered
+        boardingChoice.evidence = ["사용자 확인 · 지하철 탑승"]
+        XCTAssertEqual(CarAudioTravelConfirmation.enforcingRegisteredCar(
+            [boardingChoice], readings: readings("CarPlay"), registered: ["CarPlay"], corrections: []
+        ).first?.mode, .subway)
+        var sameSpan = otherDay
+        sameSpan.span = span
+        XCTAssertEqual(CarAudioTravelConfirmation.enforcingRegisteredCar(
+            [remembered], readings: readings("CarPlay"), registered: ["CarPlay"], corrections: [sameSpan]
+        ).first?.mode, .subway)
     }
 
     func testSubwayCatalogBuildsMagongnaruTransferToGajeong() {

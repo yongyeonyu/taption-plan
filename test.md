@@ -5144,3 +5144,99 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 시뮬레이터 화면(BOKKI-iPhone11): 지도 마커·행동 분류 메뉴 장면 확인. 메뉴 글리프 자리 넓힌 뒤 화면, 모자 쓴 모습, 왼쪽 달리기, 재생 중 움직임은 앱에서 못 봄. 모자 52개는 `build/validation/ACC1101A01/hats-52.html`에서 앉은 자세로 점검.
 - 기기: 아이폰 11 Pro Debug 빌드·설치 성공(첫 시도). 기기 화면·발열은 대표 확인 전. 화면 시험은 다시 돌리지 않았다.
 - 알려진 문제: N서울타워 모자 글자가 M처럼 보이고, 일부 모자는 머리 위에 떠 보인다.
+- 아이폰 18 Pro Max: 5edd5857 Debug 빌드·설치 성공(첫 시도, 대표 요청). 실행·기기 화면·120Hz·발열은 확인 전.
+
+## SBN1102A01 · ACC1102A01 · RIG1102A02 (2026-11-02, 커밋 전)
+- 단위: `MapHomeSidebarNoteTests`·`TimeScaleTests` 178건(`SBN1102A01-unit.xcresult`), `MapHomeGrowthPolicyTests`·`MapHomeLiveMapTests`·`MapHomeSidebarNoteTests` 111건(`ACC1102A01-unit.xcresult`), 마커 크기 변경 뒤 `MapHomeStickmanTests`·`MapHomeLiveMapTests`·발 위치 시험 134건(`RIG1102A02-unit.xcresult`) 모두 통과. 전체 단위·화면 시험은 다시 돌리지 않았다. 구조 지표 통과.
+- 시뮬레이터 화면: 현재 위치 마커가 새 크기로 나오는 것 확인. 재생 화면은 같은 마커 코드지만 직접 보지 못했다. 카운터 창과 머리 사이가 조금 벌어졌다.
+- 미확인: 말풍선은 시뮬레이터에 메모를 만들지 못해(글자 입력 실패) 화면으로 못 봤다. 52개 완료 문구, N 모자 그림도 앱 화면으로 못 봤다. 기기 설치 안 함.
+- 아이폰 18 Pro Max: 위 변경(커밋 전, 5edd5857 기준 작업 트리) Debug 빌드·설치 성공(첫 시도, `RIG1102A02-device18.log`). 기기 화면·발열은 대표 확인 전.
+
+## ICN1102A01 · RIG1102A02 메뉴 · PAW1102A02 (2026-11-02, 커밋 전)
+- 위치 아이콘 8종을 집 그림과 같은 연두색 받침·갈색 윤곽·하이라이트로 다시 그림. 미리보기 `build/validation/ACC1101A01/place-icons.html`.
+- 단위: `MapHomeGrowthPolicyTests`·`MapHomeLiveMapTests` 111건 통과(`build/validation/ICN1102A01/refine-unit-002524.xcresult`). 전체 단위·화면 시험은 다시 돌리지 않았다.
+- 시뮬레이터 화면(TaptionPlan-Check, 아이폰 실기기 아님): 위치 메뉴 아이콘 8개, 행동 분류 9칸의 화랑이가 칸 안에 있음을 확인. 이동 칸은 나무 조각과 땅 띠가 그림 틀에서 네모나게 잘려 보인다.
+- 미확인: 지도 위 장소 아이콘, 재생 중 화랑이 불투명, 10-30 출근 발자국(시뮬레이터에 원본 없음). 이 변경은 기기에 설치하지 않았다.
+
+## ALW1102A01 · 연봉 카운터 용돈 (2026-11-02, 커밋 전)
+- 단위: `MapHomeAllowanceTests`·`MapHomeCounterDetailTests` 17건 중 16건 통과, 1건 건너뜀, 실패 0(`build/validation/ALW1102A01/unit-3.xcresult`). 월·주·일 환산, 윤달 2월 29일 나눗셈, 0시부터 누적, 지난 날·앞날, 재생 시각까지 자르기, 저장 키 포함. 전체 단위 테스트는 돌리지 않았다.
+- 앱 Debug 빌드: 성공(`build-3.log`, ALW-iPhone17Pro 시뮬레이터 대상).
+- UI 테스트(시뮬레이터 iOS 27.0, 실기기 아님): `TaptionPlanAllowanceUITests` 통과(`ui-6.xcresult`, 화면 `ui-6-shots/`). 30만 원 입력 시 환산 시급 월 417원·주 1,786원·일 12,500원, 6:50 지도 카운터 '용돈 2,852원', 용돈 줄을 누르면 상세가 열림. 앞선 ui-1·2(앱 실행 시간 초과)와 ui-3·4(입력칸에 남은 값을 못 지운 테스트 문제)는 실패했고 테스트를 고쳐 다시 돌렸다.
+- 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 실패(unchecked_sendable 25→26, largest_type_lines, `MapHomeLiveMapPolicies.swift` 1,304→1,324, `MapHomeView.swift` 11,635→11,651). 이 변경은 `MapHomeView.swift`를 2줄 줄였고 나머지 항목의 파일은 건드리지 않았다. 다른 세션의 커밋 전 변경으로 보며, 가드 통과는 아직 확인하지 못했다.
+- 미확인: 재생·지난 날짜의 금액은 단위 테스트로만 확인했고 화면으로는 보지 못했다. 연봉과 용돈을 함께 켠 화면도 보지 못했다. 실기기 설치 안 함.
+
+## HAT1102A01 · CAT1102A02 · WTH1102A01·A02 · PIN1102A01 (2026-11-02, 커밋 전)
+- 단위: `MapHomeStickmanTests`·`MapHomeLiveMapTests` 150건 통과(`build/validation/HAT1102A01/unit8.log`). 그림은 테스트 미리보기(`build/validation/ACC1101A01/scenes-preview*.png`)로 확인. 이 뒤의 자전거 자세·검색창 조건 수정과 미리보기 테스트 삭제 후에는 앱 Debug 빌드 전이다. 전체 단위·화면 시험은 다시 돌리지 않았다.
+- 시뮬레이터(TaptionPlan-Check, 실기기 아님, 벡터 지도): 수정 전 화랑이 위 핀치는 줌이 안 되고 지도가 끌리거나 하루 요약이 열림, 빈 지도는 줌됨. 수정 후 화랑이 위 핀치 줌과 한 번 탭(하루 요약) 정상. 길게 누르기 메뉴 뜸. 사이드바 날씨 색·아이콘, 메뉴 머리글 없이 지도 화면까지 확인.
+- 미확인: 집에 있을 때의 핀치(집 미등록), Apple 지도 핀 위 핀치, 집 아이콘 날씨의 지도 화면, 재생 중 탈것·걷기/달리기 장면, 메뉴 표시 그룹 화면, 녹화 메뉴 새 항목, 모든 기기 확인.
+
+## BAT1102A01 · 메뉴 위치 확인 간격 슬라이더 30초~30분 (2026-11-02, 커밋 전)
+- 단위: 간격 스냅·슬라이더 변환·값 글자·프로필 매핑·이전 저장값·자동 추적·Live Activity 8건 통과(`build/validation/BAT1102A01/app-tests-5.xcresult`). 시뮬레이터 실행이며 실기기가 아니다.
+- 빌드: 앱 Debug `BUILD SUCCEEDED`(`app-build-2.log`, BAT-Interval 시뮬레이터 대상). 실기기 빌드·설치는 하지 않았다.
+- 화면(시뮬레이터 BAT-Interval, iPhone 18 Pro, iOS 27.0, 실기기 아님): `testMenuGPSIntervalSlider` 통과(`ui-23.xcresult`). 메뉴에 배터리 아이콘·현재 값·슬라이더·큰 눈금 6개가 보이고 예전 글자는 없다. 실제 드래그로 30초와 30분 양 끝에 도달했고 30초·30분 캡처에서 손잡이와 눈금이 맞는다. 저장값은 앱을 다시 켠 뒤에도 남았다.
+- 관찰: 합성 드래그에서 손잡이가 손가락보다 덜 움직였다. 오른쪽 끝은 트랙 폭의 110%까지 끌면 26분 30초에서 멈췄고 130%까지 끌면 30분이 됐다. 드래그 중 스냅을 뺀 뒤에도 같아 시스템 슬라이더 동작으로 추정하며, 손가락 체감은 실기기에서 보지 못했다.
+- 가드: `check-app-engine-import-boundary.sh` 통과. `architecture-metrics.py --check`는 실패(unchecked_sendable 25→26, largest_type_lines 11,626→11,643, `MapHomeLiveMapPolicies.swift` 1,304→1,324, `MapHomeView.swift` 11,635→11,652). 이 변경은 `MapHomeView.swift`를 줄이고 나머지 항목은 건드리지 않았다. 작업 트리의 다른 세션 변경에서 온 값으로 보며, 이 변경만 따로 떼어 측정하지는 않았다.
+- 미확인: 위치 권한이 없는 시뮬레이터라 설정한 간격으로 실제 위치를 수집하는지는 보지 못했다(실기기 필요). 백그라운드 간격은 iOS가 정한다. 20분을 넘는 간격에서는 위치 보간 상한(20분)에 걸릴 수 있다. 설정 화면의 같은 슬라이더는 화면으로 보지 못했다. 관련 8건 외 전체 테스트는 돌리지 않았다.
+
+## AIM1102A01 메모 AI 문장 다듬기 (2026-11-02, 커밋 전)
+- 단위: `MemoTextPolishTests` 20건 통과(`build/validation/AIM1102A01/unit-065705.xcresult`). 전체 단위 시험은 돌리지 않았다.
+- 빌드: 앱 Debug 시뮬레이터 빌드 성공(`build/validation/AIM1102A01/build.log`), 새 파일·편집기 파일 경고 0.
+- 가드: import 경계 통과. 구조 지표는 실패(`metrics.log`): `unchecked_sendable` 25→26, `largest_type_lines`, `MapHomeLiveMapPolicies.swift`, `MapHomeView.swift` 초과. 이 작업이 건드리지 않은 다른 세션의 커밋 전 변경에서 나온 항목이고, `MemoTextPolish`·`MapHomeStickerEditor`는 지표 위반에 없다. 공용 작업 트리 기준 가드는 아직 통과가 아니다.
+- 시뮬레이터 화면(AIM-iPhone17Pro, UI 시험 `testMemoPolishRow`, `ui2-074622.xcresult`, 캡처 `shots-ui2`): 빈 메모에서 버튼 꺼짐, 글을 쓰면 켜짐, 누르면 진행 표시, 실패 시 글 유지와 안내 문구 확인.
+- 시뮬레이터 제한: `availability`는 available이지만 시뮬레이터에 모델 자산이 없어 생성이 실패한다(UnifiedAssetFramework 5000). 그래서 다듬은 글 적용과 되돌리기 단추는 시뮬레이터 화면으로 못 봤고 단위 시험으로만 확인했다. Apple Intelligence 꺼짐·모델 준비 중 문구와 미지원 기기의 숨김도 화면으로 못 봤다.
+- Mac 온디바이스 모델(앱 밖 임시 실행, 실기기 아님): 같은 지시문으로 6건을 돌렸다. 한국어 맞춤법 수정, 영어 유지, 숫자 유지, 질문 글에 답하지 않고 그대로 반환을 확인. 한국어 2건은 어미가 존댓말로 바뀌었다("해야 합니다", "맛있었어요").
+- 실기기: 미확인. 설치하지 않았다. 아이폰에서 실제 생성·속도·되돌리기 확인이 남았다.
+- 알려진 제한: 다듬은 뒤 「위치 추가」로 화면을 닫았다 돌아오면 되돌리기 기록이 사라진다. 기존 메모는 이 동작이 지금 글을 저장한다.
+
+## FRT1102A01 처음 실행 튜토리얼 7단계 (2026-11-02, 커밋 전)
+- 환경: 전용 시뮬레이터 BOKKI-FRT(iPhone 11 Pro Max, iOS 27.0). **실기기 설치·확인 안 함.** main 작업 트리에 다른 세션의 커밋 전 변경이 함께 있는 상태로 빌드했다.
+- 빌드: 앱 Debug 시뮬레이터 빌드 성공(`build/validation/FRT1102A01/build-13.log`).
+- 단위: `FirstRunTutorialTests` 11건 모두 통과 — 마지막 수정 뒤 코드(`unit-final.xcresult`). 전체 단위 `unit-all.xcresult`는 마지막 화면 문구 수정 전 코드로 1,809건 중 통과 1,801·실패 3·건너뜀 5.
+- 실패 3건은 이번 변경이 아니다: `testRecordAnalysisPolicyUsesOnlyCanonicalAutomaticCategories`, `testRecordTimelineColorsStayDistinctWithinEachRing`, `testMapHomeTimeRailUsesOneNonOverlappingSegmentForEachCanonicalCategory`. 다른 세션의 커밋 전 `record-classification.json`이 넣은 샤워·집안일 분류와 시험 기대값이 어긋난 것(실패 메시지로 확인, 이번 세션에서 고치지 않음).
+- 가드: import 경계 통과. 구조 지표 실패 4건(unchecked_sendable 26/25, largest_type_lines 11,642/11,626, `MapHomeLiveMapPolicies` 1,324/1,304, `MapHomeView` 11,651/11,635) — `MapHomeDictationRequestBox`와 다른 세션의 지도 변경이 원인. 이번 변경은 `MapHomeView` 줄 수를 늘리지 않았고 `AppShellView`·`MapHomeCalendarSheet`는 권한 시트·연봉 시트를 파일로 분리해 줄였다.
+- 시뮬레이터 화면에서 확인: 새 설치 첫 화면이 튜토리얼이고 시스템 팝업이 먼저 뜨지 않음(tccd 로그 `AUTHREQ_PROMPTING` 없음), 위치 요청 뒤 다음 줄, 집 검색·지도 미리보기 저장, 회사·학교 화면, 연봉 입력 저장(값 3000), 비밀번호 자리 수 부족 차단·건너뛰기, 새 비밀번호 저장 뒤 앱 잠금이 그 번호(123456)로 풀림, 클립 소개, 카운터 끄기 저장·미리보기 반영, 단계 건너뛰기, 이전 버튼, 도중 강제 종료 뒤 3단계 이어 보기, 전체 건너뛰기, 완료·건너뛴 뒤 다시 실행해도 튜토리얼·권한 팝업 없음, 권한 안내를 끝낸 설치는 튜토리얼 없이 `existingUser` 저장.
+- 초기 비밀번호: 전체 건너뛰기 뒤 메뉴가 `비밀번호 등록됨`, 앱 잠금 꺼짐. 값이 000000인 것은 단위 시험으로 확인했고 화면에서 000000으로 풀어 보지는 않았다.
+- 못 본 것: 건강·사진·캘린더·알림 줄의 시스템 팝업 허용, 항상 허용 승격, 기록이 있는 기존 설치(권한 안내 키만 넣어 흉내 냄), 잠금 뒤 튜토리얼 재개, 시작 순간 화면 비활성일 때 재판단, 영어 문구, 다크 지도 테마, 작은 화면. 카운터 스위치는 시뮬레이터 도구의 짧은 탭으로는 안 움직이고 끌기로만 움직였다(실기기 탭 확인 필요).
+- 관찰: 시뮬레이터에서 동작 요청(`queryActivity`)은 팝업 없이 끝난다. 팝업은 위치 수집이 시작될 때 나왔다. 단위 시험 뒤에는 답하지 않은 시스템 팝업이 남아 재설치 첫 실행을 가릴 수 있다.
+
+## PAW1102A03 · SAL1102A01 (2026-11-02, 커밋 전)
+- 원본 근거: iCloud `Taption-Raw-2Days-9724E116…json`(저장소 밖, 복사 안 함). 11-02 08:00~09:08, 17.9km가 `사용자 확인 기억`의 노선 없는 지하철 확정, 자동차 모션 95%(1,627건 중), GPS 1,625건, CarPlay 08:00:11~09:11:26. 내보낸 원본에는 역 근처 보강값이 없어, 막는 장치가 풀린 원인은 코드 추론이다. 수정 후 이 원본으로 재생해 보지는 않았다.
+- 단위: 전체 1,761건 중 통과 1,752, 실패 4, 건너뜀 5(`build/validation/PAW1102A03/all.log`). 실패 4건을 고친 뒤 `FeatureEngineTests`·`MapHomeVectorRouteRenderingTests` 681건 통과(`r.log`). 고친 뒤 전체는 다시 돌리지 않았다. 지도 경로 시험은 이번에 통과했으나 앞선 실패의 원인(창 없음)은 고치지 않았다.
+- 지하철 관문으로 기존 시험 2건의 기대값을 바꿨다(워치 진동만, 복합 신호만으로는 지하철이 아님). 실제 지하철 탑승 기록으로는 검증하지 않았다.
+- 시뮬레이터(TaptionPlan-Check, 실기기 아님): 메뉴 머리글 화랑이, 표시 메뉴 카운터·사이드바·지도 그룹 펼침, 연봉 입력칸 탭 시 키보드 유지·밖 탭 시 내려감·저장 버튼. 지도 그룹 안 항목과 사이드바 항목 화면은 스크롤해서 보지 않았다.
+- 미확인: 기기에서 다음 출근의 수단·발자국·임시 경로, 저장된 지하철의 자동차 전환.
+
+## SHT1102A01 하단 시트 끊김 (2026-11-02, 커밋 전, 측정 도중 중단)
+메인 세션 지시로 측정을 끝내지 못하고 중단했다. 아래 효과는 **미확정**이며 120Hz 달성은 확인하지 못했다.
+- 측정 방법: 시뮬레이터 SHT-iPhone17Pro(iOS 27.0, 실기기 아님, 화면 틱 60Hz), Release + `-D BENCH`, 원본 2일 분량을 넣고 `-autoBenchSheets`로 달력·카운터 상세·녹화·하루 요약 시트를 6회씩 연다. 지표 `cpu_ms`는 연 뒤 1.2초 동안 메인 스레드 CPU, 중앙값. 로그는 `build/validation/SHT1102A01/`.
+- 표본 분석(수정 전, 메인 스레드): 시간 대부분이 `UISheetPresentationController._sheetLayoutInfoLayout`, `SheetBridge.present`, `_UIHostingView.layoutSubviews` 등 시스템 시트 띄우기 안의 SwiftUI 레이아웃이다. `MapHomeView.body`는 약 10%이고 그중 약 30%가 날짜 배지(ICU). 내용이 단순한 녹화 시트의 비용이 달력과 비슷해, 시트 내용 계산은 주원인이 아니다. 지도 렌더는 시트를 여는 동안 메인 스레드 표본에 나타나지 않았다.
+- 실기기 기존 로그(2026-10-30 `TAP1031A01`, 달력 1회): 첫 틱까지 258ms, 최대 간격 32ms. 측정 링크가 60Hz라 120Hz 여부는 알 수 없다.
+- 고친 것: 달력 달별 값·칸 정보·제목·내용 높이 기억(최근 6개월), 달 계산을 시트가 올라온 뒤 0.45초로 미룸, 카운터 상세 내용 1회 생성, 날짜 배지·사진 권한 조회 재사용, 시트 4종이 열리고 닫히는 1.2초 동안 120Hz 요청(`MapHomeInteractionMonitor`, 다른 시트는 미적용).
+- 분리 비교(같은 소스에서 위 수정만 뺀 앱, 다시 열기 `cpu_ms`, 믿을 수 있는 1쌍 `iso1`): 달력 151→118(-22%), 카운터 118→103(-13%), 하루 요약 109→103(-6%), 녹화 115→129(+12%). 수정 없는 앱끼리도 회차 차이가 약 ±10%(`iso2-base2`: 135/124/104/121)라 **효과가 확인된 것은 달력뿐이고 나머지 3종은 오차 안**이다. 처음 여는 경우는 쌍이 부족해 판단하지 않는다.
+- 쓰지 않는 값: `iso2-after2`, `iso3-base2`는 다른 작업 부하(load 약 50)로 값이 2~3배 뛰어 제외. `iso3-after2`는 측정 전에 중단.
+- 효과로 보지 않는 값: `compare.txt`의 약 50% 감소(달력 328→162, 녹화 274→132)는 빌드 시점이 약 3시간 다른 앱의 비교다. 다른 세션 변경과 부하 차이가 섞여 있고, 분리 비교에서 같은 폭으로 재현되지 않았다.
+- 단위: `MapHomeGrowthPolicyTests` 29건 통과(새 시험 4건 포함, `unit3.log`). 첫 두 번은 시험 실행기 연결 멈춤·앱 실행 실패로 시험이 돌지 않았다(`unit.log`, `unit2.log`). 전체 단위 테스트는 실행하지 않았다.
+- 빌드: 앱 Debug 시뮬레이터 빌드 성공(`debug-build.log`), Release 측정 빌드 성공(`build-after2.log`).
+- 가드: 앱·엔진 경계 통과. 구조 지표는 이번 점검(13시경) 통과. 12시경에는 `unchecked_sendable` 25→26(`MapHomeDictationRequestBox`), `TaptionActivityEngineAdapter.swift` +2줄이 걸렸으나 둘 다 이 작업의 변경이 아니다. 이 작업으로 커진 `MapHomeLiveMapPolicies.swift`·`MapHomeView.swift`는 모니터와 측정기를 `MapHomeInteractionMonitor.swift`로 옮겨 기준선 아래로 낮췄다.
+- 미확인: ProMotion 실기기에서 시트가 실제 120Hz로 올라오는지, 달력·카운터·녹화·하루 요약의 체감 개선, 달력을 다시 열 때 이전 값이 보였다가 바뀌는 모습과 빈 화면 번쩍임 여부(화면 확인 안 함).
+
+## DUO1102A01 · 아이폰 듀오·아이패드 전체 화면 (2026-11-02, 시뮬레이터만)
+- 변경: 앱·위젯·테스트 target `TARGETED_DEVICE_FAMILY = "1,2"`, `Info.plist` 가로 방향·`~ipad` 방향 추가, `UIApplicationSupportsMultipleScenes = false`, 방향 규칙(짧은 변 600pt 이상만 회전), 폭 600pt 이상 넓은 배치(`MapHomeWideLayoutPolicy.swift`).
+- 단위: `MapHomeWideLayoutPolicyTests` 4건 통과(iPad 11, `ipad-v3`). 전체 단위 테스트는 돌리지 않았다.
+- 앱 Debug 시뮬레이터 빌드: 성공(`build-1.log`, 테스트 실행 빌드 포함).
+- 화면 시험 `TaptionPlanWideLayoutUITests`:
+  - 아이패드 11 iOS 27.0, 세로 834×1210·가로 1210×834: 2건 통과(`ipad-v3.log`, `shots-ipad-v3/`). 메뉴 왼쪽 아래·폭 402pt, 사이드바 오른쪽 전체 길이, 날짜 줄 332pt 이하, 달력·메뉴 패널 폭 제한, 회전 뒤 선택 날짜·달력 시트·재생 유지.
+  - 듀오 바깥 466×678 iOS 27.1: 1건 통과·회전 시험 건너뜀(세로 전용, `duo-final-5.log`, `shots-duo-final/`). 가로 요청에도 세로 유지. 오른쪽 안전 영역까지 하단 메뉴 배경을 칠한 뒤다.
+  - 일반 아이폰 17 Pro 402×874 iOS 27.0: 1건 통과·회전 시험 건너뜀(`iphone-final-5.log`, `shots-iphone-final/`). 세로 배치 변화 없음, 가로 요청에도 세로 유지.
+  - 듀오·아이폰 결과는 시험 코드를 마지막으로 고치기 전 실행분이다. 그 뒤 앱 코드는 이 작업에서 바꾸지 않았으나 다른 세션 변경이 같은 작업 트리에 들어왔을 수 있다.
+- 가드: 구조 지표 기준선 통과, 앱·엔진 경계 통과(이번 점검). 앞선 점검의 구조 지표 실패는 다른 세션 변경분이었고 지금은 통과한다.
+- 미확인(그대로 남김):
+  - **듀오 펼침(안쪽 669×951) 화면·가로/세로**: 시뮬레이터를 펼칠 수단이 없었다. Device Hub 접근 요청이 거절됐고, `simctl io --display=3` 캡처는 전부 검은 화면이다(`duo-display3-attempt.png`). 폭 계산 단위 테스트로만 확인했다.
+  - **접고 펴는 전환 중 상태 유지**: 아이패드 회전으로 같은 크기 변경 경로만 확인했고 실제 접힘 전환은 못 봤다. 접을 때 허용 방향을 다시 묻는 코드도 동작 미확인이다.
+  - **듀오 안쪽의 시트 폭**: 안쪽 화면의 size class를 몰라 시트가 폭만큼 늘어나는지 미확인이다. 아이패드에서는 늘어나지 않았다.
+  - **아이패드 분할 화면**: 실제 분할 폭 화면 미확인, 폭 계산 단위 테스트만 있다.
+  - **회귀 UI 테스트**: `TaptionPlanBottomBarRecordUITests`·`TaptionPlanDateStripSwipeUITests`·`MapHomeDateStripTests`는 실행 도중 중단돼 결과가 없다.
+  - **실기기**: 설치·실행 안 함.
+  - **달력 시트 아이패드 가로**: 시트가 화면 아래로 잘려 나머지는 스크롤해야 한다.
+- 출시 영향: 아이패드 지원으로 App Store에 아이패드 스크린샷이 필요하고 심사도 아이패드 기준을 받는다.
+- 로그·스크린샷: `build/validation/DUO1102A01/`.

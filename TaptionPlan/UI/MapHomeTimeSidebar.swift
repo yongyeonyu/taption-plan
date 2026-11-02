@@ -340,6 +340,8 @@ struct MapHomeSidebarMajorCategory: Identifiable, Hashable {
         case "eating": return "Eating"
         case "exercise": return "Exercise"
         case "health": return "Health"
+        case "shower": return "Shower"
+        case "housework": return "Housework"
         case "unconfirmed": return "Unconfirmed"
         default: return title
         }
@@ -2512,7 +2514,7 @@ struct MapHomeWeatherSidebar: View {
                         )
 
                         HStack(spacing: MapHomeWeatherRailLayout.scaled(4)) {
-                            Image(systemName: entry.context.symbolName)
+                            Image(systemName: MapHomeHomeWeatherKind(symbolName: entry.context.symbolName).sidebarSymbol)
                                 .font(.system(
                                     size: MapHomeWeatherRailLayout.scaled(13),
                                     weight: .semibold
@@ -2541,7 +2543,7 @@ struct MapHomeWeatherSidebar: View {
                         .background {
                             if !isPastSpan {
                                 // 활성(남은) 칸은 테마 색으로 채우고, 글자·아이콘은 흰색.
-                                Capsule().fill(Color.tpWeatherActiveFill)
+                                Capsule().fill(Color(hex: MapHomeHomeWeatherKind(symbolName: entry.context.symbolName).sidebarFillHex))
                             } else {
                                 Color.clear.mapHomeGlass(in: Capsule())
                             }

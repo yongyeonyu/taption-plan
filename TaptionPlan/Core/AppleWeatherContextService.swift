@@ -175,7 +175,8 @@ actor AppleWeatherContextService {
             symbolName: value.symbolName,
             temperatureCelsius: value.temperature.converted(to: .celsius).value,
             precipitationChance: value.precipitationChance,
-            isContextOnly: true
+            isContextOnly: true,
+            windSpeedMetersPerSecond: value.wind.speed.converted(to: .metersPerSecond).value
         )
     }
 
@@ -199,7 +200,8 @@ actor AppleWeatherContextService {
             condition: String(describing: current.condition),
             symbolName: current.symbolName,
             temperatureCelsius: current.temperature.converted(to: .celsius).value,
-            precipitationChance: closestHour?.precipitationChance
+            precipitationChance: closestHour?.precipitationChance,
+            windSpeedMetersPerSecond: current.wind.speed.converted(to: .metersPerSecond).value
         )
     }
 

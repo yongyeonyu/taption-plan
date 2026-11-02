@@ -48,7 +48,7 @@ HATS = {
     "kr.seongsan": wide("#6DAA6B", "#5A9458", "#3F7F52", SUN + WAVE),
     "kr.haeundae": wide("#F7DD93", "#F0D07C", "#3BA6DC", WAVE),
     "kr.hahoe": S('<path d="M10 44c-2-22 10-34 22-34s24 12 22 34c-13-5-31-5-44 0z" fill="#2F4C86"/><ellipse cx="32" cy="32" rx="11" ry="10" fill="#F2DDB0"/><path d="M24 30q3-3 6 0M34 30q3-3 6 0M25 36q7 6 14 0" fill="none" stroke-width="2"/>'),
-    "kr.namsan": cap("#C8473A", "#8E2F27", '<path d="M26 34V22l6 8 6-8v12" fill="none" stroke="#FFFFFF" stroke-width="3"/>', '<path d="M32 14V3M28 7h8" fill="none" stroke-width="2.6"/>'),
+    "kr.namsan": cap("#C8473A", "#8E2F27", '<path d="M26 34V22l12 12V22" fill="none" stroke="#FFFFFF" stroke-width="3"/>', '<path d="M32 14V3M28 7h8" fill="none" stroke-width="2.6"/>'),
     "kr.hallasan": beanie("#F0992C", "#D97F17", "", None) .replace('<g stroke', '<g stroke', 1) + S('<path d="M32 12c-2-6 2-9 8-9 0 6-3 9-8 9z" fill="#5F9E4F" stroke-width="2"/>'),
     "jp.fuji": beanie("#5E78C4", "#E8EEF9", '<path d="M22 18c6-4 14-4 20 0l5 12-6-3-5 5-4-5-4 5-5-5-6 3z" fill="#FFF" stroke-width="2.5"/>'),
     "jp.himeji": helmet("#F2F0E8", '<path d="M32 16 20 2M32 16 44 2" fill="none" stroke="#D9B45F" stroke-width="5"/>', '<circle cx="32" cy="24" r="3.5" fill="#D9B45F" stroke-width="2"/>'),

@@ -783,10 +783,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
             locationManager.allowsBackgroundLocationUpdates = false
             locationManager.showsBackgroundLocationIndicator = false
         }
-        activityManager.stopActivityUpdates()
-        deviceMotionManager.stopDeviceMotionUpdates()
-        altimeter.stopRelativeAltitudeUpdates()
-        pedometer.stopUpdates()
+        // 시작한 적 없는 스트림을 멈추면 CoreMotion이 동작 권한을 물을 수 있다.
+        if sensorStreamsRunning {
+            activityManager.stopActivityUpdates()
+            deviceMotionManager.stopDeviceMotionUpdates()
+            altimeter.stopRelativeAltitudeUpdates()
+            pedometer.stopUpdates()
+        }
         UIDevice.current.isBatteryMonitoringEnabled = false
         sensorStreamsRunning = false
         currentWiFiFetchInFlight = false

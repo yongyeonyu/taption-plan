@@ -117,6 +117,83 @@ final class TaptionPlanSmokeUITests: XCTestCase {
         add(attachment)
     }
 
+    /// 메뉴의 위치 확인 간격 슬라이더: 예전 글자가 없고, 드래그가 값을 바꾸며, 끝값이 30초·30분이다.
+    func testMenuGPSIntervalSlider() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        launchMapHome(app)
+        app.buttons.matching(NSPredicate(format: "label == %@", "메뉴")).firstMatch.tap()
+        let settings = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "설정")).firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+        let gps = app.buttons.matching(NSPredicate(format: "label == %@", "GPS 및 센서 데이터 설정")).firstMatch
+        XCTAssertTrue(gps.waitForExistence(timeout: 10))
+        var swipes = 0
+        while !gps.isHittable && swipes < 4 {
+            settings.swipeUp(velocity: .slow)
+            swipes += 1
+        }
+        gps.tap()
+        let slider = app.sliders["위치 확인 간격"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 5))
+        swipes = 0
+        while slider.frame.maxY > app.windows.firstMatch.frame.maxY - 90 && swipes < 4 {
+            gps.swipeUp(velocity: .slow)
+            swipes += 1
+        }
+        XCTAssertFalse(app.staticTexts["배터리 최소"].exists)
+        XCTAssertFalse(app.staticTexts["5분마다 위치 확인"].exists)
+        attachScreenshot("gps-interval-default")
+
+        // 손잡이를 실제로 끌어 본다. 트랙 끝을 지나도록 끌면 30초·30분이 되어야 한다.
+        drag(slider, to: 0)
+        XCTAssertEqual(slider.value as? String, "30초")
+        attachScreenshot("gps-interval-30s")
+        drag(slider, to: 1)
+        XCTAssertEqual(slider.value as? String, "30분")
+        attachScreenshot("gps-interval-30m")
+        drag(slider, to: 2.0 / 6.0)
+        attachScreenshot("gps-interval-near-5m")
+    }
+
+    private func drag(_ slider: XCUIElement, to end: Double) {
+        let inset = 19 / slider.frame.width
+        let offset = { (position: Double) in
+            CGVector(dx: inset + position * (1 - 2 * inset), dy: 0.5)
+        }
+        let start = sliderPosition(of: slider)
+        slider.coordinate(withNormalizedOffset: offset(start)).press(
+            forDuration: 0.1,
+            thenDragTo: slider.coordinate(withNormalizedOffset: offset(end == 0 ? -0.3 : end == 1 ? 1.3 : end)),
+            withVelocity: .slow,
+            thenHoldForDuration: 0.3
+        )
+    }
+
+    /// 접근성 값은 글자라서 손잡이 위치를 직접 계산한다.
+    private func sliderPosition(of slider: XCUIElement) -> Double {
+        let parts = (slider.value as? String ?? "").split(separator: " ")
+        let seconds = parts.reduce(0) { total, part in
+            let number = Int(part.dropLast()) ?? 0
+            return total + (part.hasSuffix("분") ? number * 60 : number)
+        }
+        let ticks: [(seconds: Int, position: Double)] = [
+            (30, 0), (60, 1), (300, 2), (600, 3), (900, 4), (1_800, 6),
+        ]
+        guard let upper = ticks.firstIndex(where: { $0.seconds >= seconds }), upper > 0 else {
+            return 0
+        }
+        let low = ticks[upper - 1], high = ticks[upper]
+        let progress = Double(seconds - low.seconds) / Double(high.seconds - low.seconds)
+        return (low.position + progress * (high.position - low.position)) / 6
+    }
+
+    private func attachScreenshot(_ name: String) {
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+
     /// 알림 설정을 열고 토글을 한 번 눌러 본다(재현용). 데이터는 바꾸지 않는다.
     func testOpenAlarmSettingsAndToggle() throws {
         let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
@@ -196,6 +273,52 @@ final class TaptionPlanSmokeUITests: XCTestCase {
             if allow.waitForExistence(timeout: 4) { allow.tap() }
         }
         sleep(5)
+    }
+
+    /// 메모 AI 다듬기 줄: 빈 글에서는 꺼지고, 글이 있으면 켜지며, 모델이 있으면 다듬고 되돌린다.
+    /// 모델을 쓸 수 없는 환경이면 보이는 이유만 기록한다.
+    func testMemoPolishRow() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.taption.plan")
+        launchMapHome(app)
+        // 「메모」는 왼쪽 위 원형 단추에도 있다. 메모를 추가하는 것은 하단 단추다.
+        let memoButtons = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", "메모", "Memo"))
+        XCTAssertTrue(memoButtons.firstMatch.waitForExistence(timeout: 20))
+        let add = try XCTUnwrap(memoButtons.allElementsBoundByIndex.max { $0.frame.minY < $1.frame.minY })
+        add.tap()
+        let field = app.textViews.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 8))
+        let polish = app.buttons["memo-polish-button"]
+        let message = app.staticTexts["memo-polish-message"]
+        attach(app, name: "memo-polish-empty")
+        guard polish.waitForExistence(timeout: 3) else {
+            print("MEMO_POLISH state=hidden")
+            return
+        }
+        XCTAssertFalse(polish.isEnabled, "빈 메모에서 버튼이 켜져 있다")
+        let original = "see u tmrw at 3pm, im gona bring teh docs"
+        field.tap()
+        field.typeText(original)
+        attach(app, name: "memo-polish-typed")
+        guard polish.isEnabled else {
+            print("MEMO_POLISH state=disabled reason=\(message.exists ? message.label : "none")")
+            return
+        }
+        polish.tap()
+        attach(app, name: "memo-polish-running")
+        let undo = app.buttons["memo-polish-undo"]
+        let finished = NSPredicate { _, _ in undo.exists || message.exists }
+        wait(for: [expectation(for: finished, evaluatedWith: nil)], timeout: 90)
+        attach(app, name: "memo-polish-finished")
+        guard undo.exists else {
+            print("MEMO_POLISH state=notice message=\(message.label)")
+            XCTAssertEqual(field.value as? String, original)
+            return
+        }
+        print("MEMO_POLISH state=polished text=\(field.value as? String ?? "")")
+        XCTAssertNotEqual(field.value as? String, original)
+        undo.tap()
+        XCTAssertEqual(field.value as? String, original)
+        attach(app, name: "memo-polish-undone")
     }
 
     /// 메모 추가 → 음성 첨부 → 녹음 시작·끝내기(충돌 재현). 권한 창은 허용한다.

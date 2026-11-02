@@ -122,12 +122,17 @@ enum MapHomeLandmarkCatalog {
         .init(id: "au.harbour_bridge", country: "호주", name: "시드니 하버 브리지", englishName: "Sydney Harbour Bridge", category: "건축", systemImage: "bridge.fill"),
     ]
 
-    /// 이번 시즌에 이미 고른 랜드마크는 후보에서 뺀다. 50개를 다 모으면(한 해 보상은 최대 52번) 전체에서 다시 돌린다.
-    static func weeklyChoices(for season: MapHomeGrowthSeason) -> [MapHomeLandmarkCandidate] {
-        guard !candidates.isEmpty else { return [] }
+    /// 이번 시즌에 52개를 다 골랐는지. 다 고르면 주간 보상을 더 받지 않는다(대표 지시, ACC1102A01).
+    static func isCollectionComplete(_ season: MapHomeGrowthSeason) -> Bool {
         let chosen = Set(season.chosenEvolutions)
-        let remaining = candidates.filter { !chosen.contains($0.id) }
-        let pool = remaining.isEmpty ? candidates : remaining
+        return !candidates.isEmpty && candidates.allSatisfy { chosen.contains($0.id) }
+    }
+
+    /// 이번 시즌에 이미 고른 랜드마크는 후보에서 뺀다. 다 모으면 후보가 없다.
+    static func weeklyChoices(for season: MapHomeGrowthSeason) -> [MapHomeLandmarkCandidate] {
+        let chosen = Set(season.chosenEvolutions)
+        let pool = candidates.filter { !chosen.contains($0.id) }
+        guard !pool.isEmpty else { return [] }
         let start = (season.year &+ season.chosenEvolutions.count * 3) % pool.count
         return (0..<min(3, pool.count)).map {
             pool[(start + $0) % pool.count]
@@ -409,6 +414,7 @@ enum MapHomeGrowthPolicy {
         in history: inout MapHomeGrowthHistory
     ) -> Bool {
         guard history.season.pendingWeeklyRewards > 0,
+              !MapHomeLandmarkCatalog.isCollectionComplete(history.season),
               !evolutionID.isEmpty,
               !landPlotID.isEmpty,
               !accessoryID.isEmpty else { return false }
@@ -417,6 +423,9 @@ enum MapHomeGrowthPolicy {
         history.season.landPlots.append(landPlotID)
         if !history.season.accessories.contains(accessoryID) {
             history.season.accessories.append(accessoryID)
+        }
+        if MapHomeLandmarkCatalog.isCollectionComplete(history.season) {
+            history.season.pendingWeeklyRewards = 0
         }
         return true
     }
@@ -515,7 +524,7 @@ enum MapHomeGrowthPolicy {
                 history.season.level + 1
             )
             history.season.streak += 1
-            if history.season.streak.isMultiple(of: 7) {
+            if history.season.streak.isMultiple(of: 7), !MapHomeLandmarkCatalog.isCollectionComplete(history.season) {
                 history.season.pendingWeeklyRewards += 1
             }
             var rewardedDays = history.season.recentCompletionRewardedDays ?? []

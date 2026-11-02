@@ -109,7 +109,11 @@ struct MapHomeGrowthSheet: View {
                 language.text("주간 진화 선택", "Weekly evolution"),
                 subtitle: language.text("7일 연속 달성 보상 · 하나를 골라요", "7-day streak reward · choose one")
             )
-            if season.pendingWeeklyRewards > 0 {
+            if MapHomeLandmarkCatalog.isCollectionComplete(season) {
+                Text(language.text("액세서리 52개를 모두 모았어요.", "You collected all 52 accessories."))
+                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .foregroundStyle(Color.tpSecondary)
+            } else if season.pendingWeeklyRewards > 0 {
                 ForEach(MapHomeLandmarkCatalog.weeklyChoices(for: season)) { candidate in
                     Button {
                         claim(candidate)
@@ -514,7 +518,9 @@ struct MapHomeGrowthSheet: View {
         let after = max(0, before + delta)
         updated.season.streak = after
         if after > before {
-            updated.season.pendingWeeklyRewards += after / 7 - before / 7
+            if !MapHomeLandmarkCatalog.isCollectionComplete(updated.season) {
+                updated.season.pendingWeeklyRewards += after / 7 - before / 7
+            }
         }
         save(updated)
     }
@@ -540,7 +546,9 @@ struct MapHomeGrowthSheet: View {
     private func addTestRewards(streakDays: Int) {
         var updated = history
         updated.season.streak += streakDays
-        updated.season.pendingWeeklyRewards += 1
+        if !MapHomeLandmarkCatalog.isCollectionComplete(updated.season) {
+            updated.season.pendingWeeklyRewards += 1
+        }
         save(updated)
     }
 

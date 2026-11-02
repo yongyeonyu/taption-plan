@@ -37,18 +37,9 @@ extension FeatureEngineTests {
     /// 레벨 라벨은 아바타 아래에 붙고, 연봉 카운터는 그 위에 온다.
     func testHomePinCentersAvatarOnCoordinateAndStacksBadgesAround() {
         let avatarRadius = MapHomePlacePinLayout.avatarSize / 2
-        let weatherBadgeHeight: CGFloat = 18
 
         // 1) 아바타 중심은 좌표다. 마커 안에 보이지 않는 빈 자리가 없다.
         XCTAssertEqual(MapHomeCatTapRouting.homeImageCenterOffset, .zero)
-
-        // 2) 날씨 배지는 아바타 위쪽 끝에 걸친다(위로 나오고 아래로 살짝 덮는다).
-        let badgeTopY = -avatarRadius + MapHomePlacePinLayout.weatherBadgeLift
-        XCTAssertLessThan(badgeTopY, -avatarRadius, "배지 위쪽은 아바타 위로 나온다")
-        XCTAssertGreaterThan(
-            badgeTopY + weatherBadgeHeight, -avatarRadius,
-            "배지 아래쪽은 아바타 위쪽 끝을 덮는다"
-        )
 
         // 3) 레벨 라벨은 아바타 바로 아래 간격만큼 떨어진다.
         let labelCenterY = MapHomeCatTapRouting.homeLevelLabelCenter(
@@ -60,10 +51,10 @@ extension FeatureEngineTests {
             accuracy: 0.5
         )
 
-        // 4) 연봉 카운터는 날씨 배지 위에 온다(아바타를 덮지 않는다).
+        // 4) 연봉 카운터는 아바타 위에 온다(아바타를 덮지 않는다).
         XCTAssertLessThanOrEqual(
             MapHomePlacePinLayout.salaryOffsetFromPinCenter + 13,
-            badgeTopY
+            -avatarRadius
         )
     }
 
@@ -171,11 +162,11 @@ extension FeatureEngineTests {
         let categories = MapHomeSidebarMajorCategory.all
 
         XCTAssertEqual(categories.map(\.id), CanonicalCategoryPalette.orderedIDs)
-        XCTAssertEqual(Set(categories.map(\.hex)).count, 10)
-        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 10)
+        XCTAssertEqual(Set(categories.map(\.hex)).count, 12)
+        XCTAssertEqual(Set(categories.map(\.systemImage)).count, 12)
         XCTAssertEqual(
             categories.map(\.title),
-            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "미확인"]
+            ["활동", "업무", "수업", "취미", "수면", "이동", "식사", "운동", "건강관리", "샤워", "집안일", "미확인"]
         )
     }
 
