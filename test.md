@@ -5296,3 +5296,8 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 ## TFB1103A01 TestFlight 빌드 259 (2026-11-03)
 - `release.sh --yes`: 빌드 259 업로드, 처리 상태 VALID, `TP Taption Plan 내부 테스트` 그룹 연결 확인(`build/validation/TFB1103A01/testflight-report.json`). 코드 기준 `80a2103e`.
 - 기기에서 TestFlight 빌드로 설치·동작은 확인하지 않았다.
+
+## 11-03 아이콘 테두리·글꼴·층수·클립 반영 (UIK1102A01·NLB1103A01, 아이폰 11 Pro)
+- 실기기 단위: `NLETrackTests`·`MapHomeCounterTimelinePolicyTests` 58건 통과, 실패 0(`build/validation/UIK1102A01/device-final.log`). 전체 단위 테스트는 이 변경 뒤 돌리지 않았다.
+- 아이폰 11 Pro Debug 설치·실행 성공. 화면 확인은 대표 대기(테두리 2겹, 카운터 글꼴 즉시 변경, 층수 저장, 경계 넘는 클립 반영).
+- 미해결: 사이드바 구글 아이콘 말풍선 원인을 찾지 못했다. 구글 메모를 말풍선에 넘기는 코드만 넣었고 재현은 못 했다.

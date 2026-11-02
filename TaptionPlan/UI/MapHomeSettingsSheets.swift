@@ -893,6 +893,24 @@ struct MapHomeLocationSheet: View {
             }
             .tint(destination.tint)
 
+            // 위치는 그대로 두고 층수만 저장한다. 시트 밖을 누르면 바꾼 층수는 저장되지 않는다.
+            Button {
+                guard let place else { return }
+                model.setFrequentPlaceFloor(place.id, floor: floor)
+                onSaved()
+                dismiss()
+            } label: {
+                Text(language.text("층수 저장", "Save floor"))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(destination.tint)
+                    .background(destination.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+            }
+            .buttonStyle(.plain)
+            .disabled(place?.point == nil || floor == place?.floor)
+            .opacity(place?.point == nil || floor == place?.floor ? 0.46 : 1)
+
             Button {
                 guard let place else { return }
                 model.setFrequentPlaceToCurrentLocation(place.id, floor: floor)
@@ -936,7 +954,8 @@ struct MapHomeLocationSheet: View {
             .opacity(place?.point == nil ? 0.38 : 1)
         }
         .padding(22)
-        .background(Color.tpSurface)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .presentationBackground(Color.tpSurface)
         .onAppear {
             floor = place?.floor ?? 1
         }

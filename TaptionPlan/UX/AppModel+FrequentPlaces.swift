@@ -67,6 +67,15 @@ extension AppModel {
         scheduleFrequentPlaceDerivedRefresh()
     }
 
+    /// 위치는 그대로 두고 층수만 바꾼다.
+    func setFrequentPlaceFloor(_ placeID: UUID, floor: Int) {
+        guard FloorCalibrationPrompt.range.contains(floor),
+              let index = snapshot.settings.frequentPlaces.firstIndex(where: { $0.id == placeID }),
+              snapshot.settings.frequentPlaces[index].floor != floor else { return }
+        snapshot.settings.frequentPlaces[index].floor = floor
+        scheduleFrequentPlaceDerivedRefresh()
+    }
+
     func setFrequentPlaceLocation(
         _ placeID: UUID,
         latitude: Double,

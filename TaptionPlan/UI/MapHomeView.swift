@@ -589,7 +589,7 @@ struct MapHomeView: View {
             setMapPosition(.automatic)
             focusMapIfNeeded()
         }
-        .presentationDetents([.height(440)])
+        .presentationDetents([.height(510)])
         .presentationDragIndicator(.visible)
     }
 
@@ -1988,11 +1988,9 @@ struct MapHomeView: View {
                 isMapSearchFocused = true
             }
         } label: {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
-                .foregroundStyle(Color.tpInk)
+            TaptionBarIcon(systemImage: "magnifyingglass", size: 25)
                 .frame(width: 40, height: 40)
-                .mapHomeGlass(in: Circle())
+                .background { TaptionStickerDisc() }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(language.text("장소 검색", "Search places"))
@@ -2005,11 +2003,9 @@ struct MapHomeView: View {
         return Button {
             withAnimation(.snappy) { memoStackExpanded.toggle() }
         } label: {
-            Image(systemName: memoStackExpanded ? "xmark" : "note.text")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
-                .foregroundStyle(Color.tpInk)
+            TaptionBarIcon(systemImage: memoStackExpanded ? "xmark" : "note.text", size: 25)
                 .frame(width: 40, height: 40)
-                .mapHomeGlass(in: Circle())
+                .background { TaptionStickerDisc() }
                 .overlay(alignment: .topTrailing) {
                     if count > 0, !memoStackExpanded {
                         Text("\(count)")
@@ -6511,7 +6507,7 @@ struct MapHomeView: View {
                         let y = MapHomeTimeSidebarMath.verticalInset
                             + trackHeight * MapHomeTimeSidebarMath.position(minute: minute, window: window)
                         Button {
-                            toggleSidebarNote(.event(id: "\(event.id)", title: event.title, span: event.span, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: true)))
+                            toggleSidebarNote(.event(id: "\(event.id)", title: event.title, notes: event.notes, span: event.span, minute: minute, badgeOffset: scheduleBadgeOffset(minute: minute, isEvent: true)))
                         } label: {
                             Image("GoogleGLogo")
                                 .resizable()
@@ -7294,7 +7290,7 @@ struct MapHomeView: View {
 
     private var userFrequentPlaces: [FrequentPlace] {
         model.settings.frequentPlaces.filter {
-            $0.kind == .custom || $0.kind == .restaurant
+            $0.kind == .custom
         }
     }
 
@@ -7463,7 +7459,7 @@ struct MapHomeView: View {
             return language.text("현재 위치로 설정", "Set from current location")
         }
         if place.point != nil {
-            return language.text("설정됨", "Set") + " · Lv.\(place.floor ?? 1)"
+            return language.text("설정됨", "Set") + " · " + language.text(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
         }
         return language.text("현재 위치로 설정", "Set from current location")
     }

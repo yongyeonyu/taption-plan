@@ -8,6 +8,8 @@ import SwiftUI
 ///
 /// 줄이 하나면 지금까지처럼 알약 하나로 두고, 둘부터는 한 상자 안에 줄을 붙여 세로로 길어지게 한다.
 struct MapHomeCounterTable: View {
+    /// 값이 같으면 다시 그리지 않는 층 아래에 있어, 글꼴을 고르면 바로 새로 그리게 직접 지켜본다.
+    @AppStorage(TaptionFont.storageKey) private var fontSelection = TaptionFont.jua.rawValue
     /// 창의 맨 아래(머리에 가장 가까운) 줄에 놓는 연봉. 없으면 나머지 카운터만 담는다.
     let salary: MapHomeCounterSalary?
     /// 연봉 줄 바로 위에 놓는 용돈.

@@ -1330,7 +1330,7 @@ struct MapHomeNLEClipEditor: View {
             title: segment.title,
             behavior: segment.behavior
         )
-        track.replace(segment.startMinute..<segment.endMinute, with: option, parent: anchor.parent)
+        track.replace(segment.startMinute..<segment.endMinute, with: option, parent: anchor.parent, crossesParents: true)
         selectedClipID = track.clip(atMinute: segment.startMinute)?.id
         selectedSubClipID = nil
         pick = nil
@@ -1341,7 +1341,7 @@ struct MapHomeNLEClipEditor: View {
     private func promoteDetail(_ sub: NLEClip) {
         guard let anchor = track.clip(atMinute: sub.startMinute) else { return }
         pushUndo()
-        track.replace(sub.startMinute..<sub.endMinute, with: sub.option, parent: anchor.parent)
+        track.replace(sub.startMinute..<sub.endMinute, with: sub.option, parent: anchor.parent, crossesParents: true)
         selectedClipID = track.clip(atMinute: sub.startMinute)?.id
         selectedSubClipID = nil
         pick = nil

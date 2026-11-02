@@ -18,8 +18,8 @@ struct MapHomeSidebarNote: Equatable {
 
     private static func clock(_ date: Date) -> String { date.formatted(date: .omitted, time: .shortened) }
 
-    static func event(id: String, title: String, span: TimeSpan, minute: Int, badgeOffset: CGFloat) -> Self {
-        Self(id: "event-\(id)", source: .event, title: title, time: "\(clock(span.start))–\(clock(span.end))", minute: minute, badgeOffset: badgeOffset)
+    static func event(id: String, title: String, notes: String? = nil, span: TimeSpan, minute: Int, badgeOffset: CGFloat) -> Self {
+        Self(id: "event-\(id)", source: .event, title: title, time: "\(clock(span.start))–\(clock(span.end))", detail: notes, minute: minute, badgeOffset: badgeOffset)
     }
 
     static func memo(_ memo: ActionMemo, minute: Int, badgeOffset: CGFloat) -> Self {
@@ -77,7 +77,7 @@ struct MapHomeSidebarNoteBubble: View {
                     Text(detail)
                         .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
-                        .lineLimit(3)
+                        .lineLimit(6)
                 }
             }
             .frame(width: MapHomeSidebarNoteLayout.width - 20, alignment: .leading)

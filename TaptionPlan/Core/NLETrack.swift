@@ -400,11 +400,15 @@ struct NLETrack: Hashable, Sendable {
     mutating func replace(
         _ range: Range<Int>,
         with option: ActivityCorrectionOption,
-        parent: NLEClipParent
+        parent: NLEClipParent,
+        crossesParents: Bool = false
     ) -> Bool {
-        let lower = max(range.lowerBound, parent.startMinute)
-        let upper = min(range.upperBound, parent.endMinute)
+        // 상세활동이 대분류 경계에 걸치면 그 구간 전체로 넓힌다. 이웃 구간에 넘어간 시간은
+        // 롤 편집과 같이 그 시간을 소유한 원본 구간의 요청에 조각으로 실린다.
+        let lower = max(range.lowerBound, crossesParents ? rangeStartMinute : parent.startMinute)
+        let upper = min(range.upperBound, crossesParents ? rangeEndMinute : parent.endMinute)
         guard lower < upper else { return false }
+        let parentsBefore = Set(clips.map(\.parent))
 
         var next: [NLEClip] = []
         for clip in clips {
@@ -440,6 +444,8 @@ struct NLETrack: Hashable, Sendable {
                 : lhs.startMinute < rhs.startMinute
         }
         renormalize()
+        // 통째로 덮인 이웃 구간의 원본도 저장 때 함께 처리되게 남긴다.
+        mergedAwayParents.formUnion(parentsBefore.subtracting(clips.map(\.parent)))
         return true
     }
 

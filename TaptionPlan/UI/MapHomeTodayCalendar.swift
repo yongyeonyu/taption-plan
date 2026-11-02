@@ -18,9 +18,10 @@ struct MapHomeCalendarButton: View {
             Image("GoogleGLogo")
                 .resizable()
                 .scaledToFit()
+                .shadow(color: .black.opacity(0.28), radius: 1, y: 1)
                 .padding(10)
                 .frame(width: 40, height: 40)
-                .mapHomeGlass(in: Circle())
+                .background { TaptionStickerDisc() }
                 .overlay(alignment: .topTrailing) {
                     if count > 0 {
                         Text("\(count)")

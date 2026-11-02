@@ -117,6 +117,39 @@ final class NLETrackTests: XCTestCase {
         XCTAssertEqual(track.totalLengthMinutes, NLETrack.dayMinutes)
     }
 
+    /// 상세활동이 대분류 경계에 걸치면 그 구간 전체가 상세활동으로 넓어진다(대표 요청).
+    func testReplaceWidensAcrossMainBoundary() {
+        let work = UUID(), rest = UUID()
+        var track = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(300, 540, "work", sources: [work]),
+            segment(540, 700, "activity", sources: [rest]),
+        ])
+        let study = MapHomeNLEClipEditor.option(forCategoryID: "study", title: "공부", behavior: nil)
+        let anchor = try! XCTUnwrap(track.clip(atMinute: 500))
+        XCTAssertTrue(track.replace(500..<600, with: study, parent: anchor.parent, crossesParents: true))
+
+        let widened = try! XCTUnwrap(track.clip(atMinute: 520))
+        XCTAssertEqual(widened.option.categoryID, "study")
+        XCTAssertEqual(widened.startMinute, 500)
+        XCTAssertEqual(widened.endMinute, 600)
+        XCTAssertEqual(track.clip(atMinute: 499)?.option.categoryID, "work")
+        XCTAssertEqual(track.clip(atMinute: 600)?.option.categoryID, "activity")
+        // 양쪽 원본 구간 모두 저장 요청에 실린다.
+        let sources = Set(track.editRequests(dayStart: dayStart()).flatMap(\.sourceIDs))
+        XCTAssertTrue(sources.isSuperset(of: [work, rest]))
+
+        // 대분류를 통째로 덮어도 그 원본이 저장 요청에서 빠지지 않는다.
+        var covered = MapHomeNLEClipEditor.makeMainTrack(segments: [
+            segment(300, 540, "work", sources: [work]),
+            segment(540, 700, "activity", sources: [rest]),
+        ])
+        let start = try! XCTUnwrap(covered.clip(atMinute: 300))
+        XCTAssertTrue(covered.replace(300..<700, with: study, parent: start.parent, crossesParents: true))
+        XCTAssertEqual(covered.clip(atMinute: 650)?.option.categoryID, "study")
+        let coveredSources = Set(covered.editRequests(dayStart: dayStart()).flatMap(\.sourceIDs))
+        XCTAssertTrue(coveredSources.isSuperset(of: [work, rest]))
+    }
+
     /// 가르기는 같은 원본을 물려받은 조각 둘을 만든다.
     func testSplitCreatesTwoClipsSharingOneOriginalSegment() {
         let source = UUID()

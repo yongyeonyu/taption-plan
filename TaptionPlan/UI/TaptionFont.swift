@@ -5,7 +5,7 @@ import UIKit
 /// 앱 글꼴. 메뉴 > 화면에서 고른다(대표 결정, UIK1102A01). 라이선스는 `Fonts/Fonts-OFL.txt`.
 /// 위젯·워치는 시스템 글꼴을 그대로 쓴다.
 enum TaptionFont: String, CaseIterable, Identifiable, Sendable {
-    case suit, pretendard, sunflower, jua
+    case jua, suit, pretendard, sunflower
 
     static let storageKey = "taptionFontFamily"
     private static let cached = OSAllocatedUnfairLock<TaptionFont?>(initialState: nil)
@@ -16,7 +16,7 @@ enum TaptionFont: String, CaseIterable, Identifiable, Sendable {
     static var current: TaptionFont {
         cached.withLock { value in
             if let value { return value }
-            let stored = UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .suit
+            let stored = UserDefaults.standard.string(forKey: storageKey).flatMap(Self.init(rawValue:)) ?? .jua
             value = stored
             return stored
         }
@@ -72,7 +72,7 @@ extension Font {
 
 /// 글꼴을 고르면 화면을 다시 만들어 모든 글자에 바로 적용한다.
 struct TaptionFontRoot<Content: View>: View {
-    @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.suit.rawValue
+    @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.jua.rawValue
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -85,9 +85,9 @@ struct TaptionFontRoot<Content: View>: View {
 /// 메뉴의 글꼴 고르기 행. 각 항목은 자기 글꼴로 보여 준다.
 struct TaptionFontMenuRow: View {
     let language: MapHomeLanguage
-    @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.suit.rawValue
+    @AppStorage(TaptionFont.storageKey) private var selection = TaptionFont.jua.rawValue
 
-    private var current: TaptionFont { TaptionFont(rawValue: selection) ?? .suit }
+    private var current: TaptionFont { TaptionFont(rawValue: selection) ?? .jua }
 
     var body: some View {
         Menu {

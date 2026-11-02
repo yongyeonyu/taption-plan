@@ -120,7 +120,7 @@ struct MapHomePlacePin: View {
                             .stroke(Color.tpLine.opacity(0.95), lineWidth: 1)
                     }
                     .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
-                Text("Lv.\(floor ?? 1)")
+                Text(AppLanguagePreference.text(korean: FloorLabel.korean(floor ?? 1), english: FloorLabel.english(floor ?? 1)))
                     .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 12)
@@ -130,7 +130,7 @@ struct MapHomePlacePin: View {
                     .shadow(color: Color.tpInk.opacity(0.12), radius: 4, y: 2)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(name), 레벨 \(floor ?? 1)")
+            .accessibilityLabel("\(name), \(FloorLabel.korean(floor ?? 1))")
         }
     }
 

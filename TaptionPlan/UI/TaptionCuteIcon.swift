@@ -367,12 +367,15 @@ private enum Glyph {
 }
 
 /// 하단 메뉴 스티커 색. 어두운 테마에서 글자색(거의 흰색)을 테두리로 쓰면 하얀 선이 도드라진다.
-/// 대표 지시: 야간은 지도의 하늘색 선, 산책은 밝은 연보라 선, 실외는 진한 선.
+/// 대표 지시: 야간은 지도의 하늘색 선, 산책은 흰 선에 안쪽 검은 선, 실외는 진한 선.
 struct TaptionBarPalette {
     let outline, coral, honey, brick, mint, rose, sky, cream, cocoa, weekday: Color
+    /// 바깥 테두리 안쪽에 한 겹 더 넣는 어두운 선. 아이콘 크기는 그대로다.
+    let innerLine: Color?
 
-    private init(_ hexes: [String]) {
+    private init(_ hexes: [String], innerLine: String? = nil) {
         let c = hexes.map { Color(hex: $0) }
+        self.innerLine = innerLine.map { Color(hex: $0) }
         (outline, coral, honey, brick, mint, rose, sky, cream, cocoa, weekday)
             = (c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9])
     }
@@ -387,8 +390,8 @@ struct TaptionBarPalette {
     }
 
     private static let classic = TaptionBarPalette(["#3E3320", "#EE8A5E", "#F3C766", "#D9694F", "#62B7A6", "#E7708F", "#9CC6E8", "#FBF6EA", "#8A5A3C", "#B9A98F"])
-    private static let night = TaptionBarPalette(["#5CCBF0", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#F5F9FF", "#4A6FA8", "#93B6DA"])
-    private static let walk = TaptionBarPalette(["#D6CBF2", "#FFA68F", "#FFDF8A", "#E98AA0", "#8FE3CF", "#FF9CC4", "#B9A8FF", "#F8F5FF", "#7A5FC6", "#BBADDD"])
+    private static let night = TaptionBarPalette(["#5CCBF0", "#FF9E80", "#FFD97A", "#F2836B", "#6FDCC8", "#FF8FB0", "#8CCBFF", "#F5F9FF", "#4A6FA8", "#93B6DA"], innerLine: "#0A101E")
+    private static let walk = TaptionBarPalette(["#FFFFFF", "#FFA68F", "#FFDF8A", "#E98AA0", "#8FE3CF", "#FF9CC4", "#B9A8FF", "#F8F5FF", "#7A5FC6", "#BBADDD"], innerLine: "#191426")
     private static let outdoor = TaptionBarPalette(["#0E0B07", "#FF9A5C", "#FFD35C", "#F07A4F", "#66D4B5", "#FF8FA3", "#8FC4FF", "#FFFBF4", "#A0701C", "#D8CBB4"])
 }
 
@@ -411,6 +414,12 @@ struct TaptionBarIcon: View {
         let ink = palette.outline
         func shape(_ path: Path, _ fill: Color, line: CGFloat = 1.7) {
             context.fill(path, with: .color(fill))
+            if let inner = palette.innerLine {
+                // 면 안쪽에만 그려 바깥 크기를 늘리지 않는다.
+                var inside = context
+                inside.clip(to: path)
+                inside.stroke(path, with: .color(inner), lineWidth: line + 1.5)
+            }
             context.stroke(path, with: .color(ink), style: StrokeStyle(lineWidth: line, lineCap: .round, lineJoin: .round))
         }
         func poly(_ points: [(CGFloat, CGFloat)], round: CGFloat) -> Path {
@@ -437,6 +446,28 @@ struct TaptionBarIcon: View {
             context.stroke(path, with: .color(.white.opacity(0.75)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
         }
         switch systemImage {
+        case "magnifyingglass":
+            var handle = Path()
+            handle.move(to: CGPoint(x: 15.6, y: 15.6))
+            handle.addLine(to: CGPoint(x: 20.4, y: 20.4))
+            context.stroke(handle, with: .color(ink), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            context.stroke(handle, with: .color(palette.coral), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            shape(Path(ellipseIn: CGRect(x: 3, y: 3, width: 14.6, height: 14.6)), palette.sky)
+            gloss((6.6, 9), (8.6, 6.6))
+        case "note.text":
+            shape(Path(roundedRect: CGRect(x: 4, y: 3, width: 16, height: 18), cornerRadius: 4.4), palette.honey)
+            var lines = Path()
+            for (y, end) in [(8.6, 16.4), (12.2, 16.4), (15.8, 12.6)] as [(CGFloat, CGFloat)] {
+                lines.move(to: CGPoint(x: 7.8, y: y))
+                lines.addLine(to: CGPoint(x: end, y: y))
+            }
+            context.stroke(lines, with: .color(palette.innerLine ?? ink), style: StrokeStyle(lineWidth: 1.9, lineCap: .round))
+        case "xmark":
+            var cross = Path()
+            cross.move(to: CGPoint(x: 6.4, y: 6.4)); cross.addLine(to: CGPoint(x: 17.6, y: 17.6))
+            cross.move(to: CGPoint(x: 17.6, y: 6.4)); cross.addLine(to: CGPoint(x: 6.4, y: 17.6))
+            context.stroke(cross, with: .color(ink), style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            context.stroke(cross, with: .color(palette.rose), style: StrokeStyle(lineWidth: 3, lineCap: .round))
         case "line.3.horizontal":
             for (y, width, color) in [(4.4, 18.0, palette.coral), (10, 13.0, palette.honey), (15.6, 18.0, palette.mint)] as [(CGFloat, CGFloat, Color)] {
                 shape(Path(roundedRect: CGRect(x: 3, y: y, width: width, height: 4.2), cornerRadius: 2.1), color, line: 1.5)
@@ -467,7 +498,7 @@ struct TaptionBarIcon: View {
             var plus = Path()
             plus.move(to: CGPoint(x: 12, y: 8.2)); plus.addLine(to: CGPoint(x: 12, y: 15.8))
             plus.move(to: CGPoint(x: 8.2, y: 12)); plus.addLine(to: CGPoint(x: 15.8, y: 12))
-            context.stroke(plus, with: .color(ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
+            context.stroke(plus, with: .color(palette.innerLine ?? ink), style: StrokeStyle(lineWidth: 2.4, lineCap: .round))
         }
     }
 }
@@ -499,6 +530,11 @@ struct TaptionBarCalendarIcon: View {
             var band = context
             band.clip(to: page)
             band.fill(Path(CGRect(x: 3, y: 4.4, width: 18, height: 5)), with: .color(header))
+            if let inner = palette.innerLine {
+                var inside = context
+                inside.clip(to: page)
+                inside.stroke(page, with: .color(inner), lineWidth: 3.2)
+            }
             context.stroke(page, with: .color(ink), style: style)
             var rings = Path()
             for x: CGFloat in [8, 16] {
@@ -514,6 +550,32 @@ struct TaptionBarCalendarIcon: View {
             }
         }
         .frame(width: size, height: size)
+    }
+}
+
+/// 왼쪽 위 원형 단추 바탕. 하단 아이콘과 같은 테두리에 위쪽 광택과 아래 그림자로 도톰해 보이게 한다.
+struct TaptionStickerDisc: View {
+    var side: CGFloat = 40
+
+    var body: some View {
+        let palette = TaptionBarPalette.current
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [palette.cream, palette.cream.mix(with: .black, by: 0.1)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+            if let inner = palette.innerLine {
+                Circle().strokeBorder(inner, lineWidth: 2.4)
+            }
+            Circle().strokeBorder(palette.outline, lineWidth: 1.6)
+            Ellipse()
+                .fill(.white.opacity(0.6))
+                .frame(width: side * 0.46, height: side * 0.16)
+                .offset(y: -side * 0.31)
+        }
+        .frame(width: side, height: side)
+        .shadow(color: .black.opacity(0.22), radius: 2.5, y: 2)
     }
 }
 
