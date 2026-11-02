@@ -615,8 +615,12 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
         }
 
         if CMMotionActivityManager.isActivityAvailable() {
-            activityManager.startActivityUpdates(to: .main) { [weak self] activity in
+            // main을 깨우지 않고 센서 큐에서 값만 꺼낸다. `@Sendable`이 없으면 메인 액터로 추론돼 격리 검사가 앱을 멈춘다(CRS1101A01).
+            activityManager.startActivityUpdates(to: sensorUpdateQueue) { @Sendable [weak self] activity in
                 guard let activity else { return }
+                let motion = Self.motionKind(activity)
+                let confidence = Self.confidence(activity.confidence)
+                let isStationary = activity.stationary
                 Task { @MainActor in
                     guard let self,
                           self.isCollecting,
@@ -624,13 +628,13 @@ final class AppleSensorCollector: NSObject, @preconcurrency CLLocationManagerDel
                           self.sensorStreamGeneration == generation else {
                         return
                     }
-                    self.latestMotion = Self.motionKind(activity)
-                    self.latestMotionConfidence = Self.confidence(activity.confidence)
+                    self.latestMotion = motion
+                    self.latestMotionConfidence = confidence
                     self.updateAutomaticTracking(for: self.latestMotion)
                     if self.configuration.highAccuracyDuringMovement
                         || self.isForegroundLiveLocationTrackingEnabled {
                         self.applyLocationPolicy(
-                            isMoving: !activity.stationary
+                            isMoving: !isStationary
                         )
                     }
                     self.emit()

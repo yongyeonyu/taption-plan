@@ -695,7 +695,7 @@ extension AppleSensorCollector {
             : .approximate
     }
 
-    static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
+    nonisolated static func motionKind(_ activity: CMMotionActivity) -> MotionKind {
         MotionKindResolver.resolve(
             stationary: activity.stationary,
             walking: activity.walking,
@@ -705,7 +705,7 @@ extension AppleSensorCollector {
         )
     }
 
-    static func confidence(
+    nonisolated static func confidence(
         _ confidence: CMMotionActivityConfidence
     ) -> ConfidenceLevel {
         switch confidence {
