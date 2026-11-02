@@ -1085,6 +1085,14 @@ enum MapHomePlaybackProbe {
         isActive = true
     }
 
+    /// 측정 시험이 로그를 거치지 않고 읽는 누적값(ARC1103A01).
+    static func currentTotals() -> [String: (ms: Double, calls: Int, maxMs: Double)] { totals }
+
+    static func stop() {
+        isActive = false
+        totals = [:]
+    }
+
     static func stopAndRecord() {
         guard isActive else { return }
         isActive = false
