@@ -229,18 +229,7 @@ enum MapHomeDayTravelSummary {
 
 extension TravelMode {
     var summarySystemImage: String {
-        switch self {
-        case .walking: "figure.walk"
-        case .running: "figure.run"
-        case .cycling: "bicycle"
-        case .bus: "bus"
-        case .subway: "tram"
-        case .taxi: "car.side"
-        case .car: "car"
-        case .train: "train.side.front.car"
-        case .airplane: "airplane"
-        case .ship: "ferry"
-        }
+        outlineSymbolName
     }
 
     var summaryKoreanTitle: String {

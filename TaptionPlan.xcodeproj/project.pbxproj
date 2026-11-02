@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769EE77192CF9EC73E324782 /* MovementNameTests.swift */; };
 		A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
 		A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
 		A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */; };
@@ -509,6 +510,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		769EE77192CF9EC73E324782 /* MovementNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementNameTests.swift; sourceTree = "<group>"; };
 		F1FA11518EFE631FA33E137B /* StableRecordID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordID.swift; sourceTree = "<group>"; };
 		F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordIDTests.swift; sourceTree = "<group>"; };
 		F1FA11F96060E8351D906AA8 /* OneShotReply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotReply.swift; sourceTree = "<group>"; };
@@ -1019,6 +1021,7 @@
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
 				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
+				769EE77192CF9EC73E324782 /* MovementNameTests.swift */,
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
@@ -2009,6 +2012,7 @@
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
 				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,
+				5624A4986B94396ED9FEC9D5 /* MovementNameTests.swift in Sources */,
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,

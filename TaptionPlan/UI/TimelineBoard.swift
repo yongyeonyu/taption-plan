@@ -1095,7 +1095,7 @@ struct TimelineBoard: View {
             }
             values += assignedPhaseActivities(
                 seed: "travel.\(segment.id.uuidString)",
-                title: travelModeName(segment.mode),
+                title: MovementPresentation.title(for: segment.mode),
                 span: span,
                 phases: phases,
                 categoryID: isWorkout ? "exercise" : "movement",
@@ -1309,7 +1309,7 @@ struct TimelineBoard: View {
     ) -> String {
         if categoryID == "movement",
            let mode = MovementPresentation.mode(for: actual) {
-            return travelModeName(mode)
+            return MovementPresentation.title(for: mode)
         }
         return actual.title
     }
@@ -1725,7 +1725,7 @@ struct TimelineBoard: View {
                 .map { travel in
                     timelineBlock(
                         id: travel.id,
-                        title: travelModeName(travel.mode),
+                        title: MovementPresentation.title(for: travel.mode),
                         span: travel.span,
                         top: top,
                         height: 16,
@@ -1793,21 +1793,6 @@ struct TimelineBoard: View {
                 }
         default:
             return []
-        }
-    }
-
-    private func travelModeName(_ mode: TravelMode) -> String {
-        switch mode {
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .bus: "버스"
-        case .subway: "지하철"
-        case .taxi: "택시"
-        case .car: "자동차"
-        case .train: "기차"
-        case .airplane: "비행기"
-        case .ship: "배"
         }
     }
 

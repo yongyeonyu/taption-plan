@@ -2490,7 +2490,7 @@ struct TimelineDetailPanel: View {
         guard let picked = best?.segment else { return }
         onRouteSelection(
             TimelineSelection(
-                title: timelineTravelModeName(picked.mode),
+                title: MovementPresentation.title(for: picked.mode),
                 span: picked.span,
                 planID: nil,
                 travelID: picked.id,
@@ -2961,18 +2961,7 @@ struct TimelineDetailPanel: View {
     }
 
     private func routeModeSystemImage(_ mode: TravelMode) -> String {
-        switch mode {
-        case .walking: "figure.walk"
-        case .running: "figure.run"
-        case .cycling: "bicycle"
-        case .bus: "bus"
-        case .subway: "tram"
-        case .taxi: "car.side"
-        case .car: "car"
-        case .train: "train.side.front.car"
-        case .airplane: "airplane"
-        case .ship: "ferry"
-        }
+        mode.outlineSymbolName
     }
 
     private func travelModeEditor(for travel: TravelSegment) -> some View {
@@ -3127,7 +3116,7 @@ struct TimelineDetailPanel: View {
 
     private func detailTravelTitle(_ travel: TravelSegment) -> String {
         let kind = isWorkoutWalking(travel) ? "운동 기록" : "알고리즘 결과"
-        return "\(kind) · \(timelineTravelModeName(travel.mode))"
+        return "\(kind) · \(MovementPresentation.title(for: travel.mode))"
     }
 
     private func isWorkoutWalking(_ travel: TravelSegment) -> Bool {

@@ -2265,25 +2265,8 @@ enum GoalActivityMatchingEngine {
             return nil
         }
         guard plan.span.duration > 0 else { return 0 }
-        let covered = unionDuration(spans)
+        let covered = TimeSpan.unionDuration(spans)
         return min(1, max(0, covered / plan.span.duration))
-    }
-
-    static func unionDuration(_ spans: [TimeSpan]) -> TimeInterval {
-        let ordered = spans
-            .filter { $0.duration > 0 }
-            .sorted { $0.start < $1.start }
-        guard var current = ordered.first else { return 0 }
-        var total: TimeInterval = 0
-        for span in ordered.dropFirst() {
-            if span.start <= current.end {
-                current.end = max(current.end, span.end)
-            } else {
-                total += current.duration
-                current = span
-            }
-        }
-        return total + current.duration
     }
 }
 
@@ -2380,7 +2363,7 @@ enum RecordRelationshipEngine {
             append(RecordGraphNode(
                 id: "automatic.travel.\(segment.id.uuidString)",
                 layer: .automatic,
-                title: travelTitle(segment.mode),
+                title: MovementPresentation.title(for: segment.mode),
                 span: segment.span,
                 categoryID: "movement"
             ))
@@ -2588,20 +2571,6 @@ enum RecordRelationshipEngine {
         return nodeID
     }
 
-    private static func travelTitle(_ mode: TravelMode) -> String {
-        switch mode {
-        case .walking: "걷기"
-        case .running: "달리기"
-        case .cycling: "자전거"
-        case .bus: "버스"
-        case .subway: "지하철"
-        case .taxi: "택시"
-        case .car: "자동차"
-        case .train: "기차"
-        case .airplane: "비행기"
-        case .ship: "배"
-        }
-    }
 }
 
 /// 지난 날의 날씨를 그 시각의 GPS 위치 기준으로 고정한다(WTH1020C01). 미래는 현재 위치 예보, 과거는 GPS 위치의 실제 날씨.

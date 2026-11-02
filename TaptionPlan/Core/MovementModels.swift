@@ -18,6 +18,24 @@ enum TravelMode: String, Codable, CaseIterable, Sendable {
 /// records can arrive with a generic title (for example "차량 탑승") while
 /// their classifier evidence contains the actual mode.  Keeping the mapping
 /// here prevents the timeline and 기록 화면 from choosing different icons.
+extension TravelMode {
+    /// 목록·상세에 쓰는 선 아이콘. 채운 아이콘은 `MovementPresentation.symbol`이다.
+    var outlineSymbolName: String {
+        switch self {
+        case .walking: "figure.walk"
+        case .running: "figure.run"
+        case .cycling: "bicycle"
+        case .bus: "bus"
+        case .subway: "tram"
+        case .taxi: "car.side"
+        case .car: "car"
+        case .train: "train.side.front.car"
+        case .airplane: "airplane"
+        case .ship: "ferry"
+        }
+    }
+}
+
 enum MovementPresentation {
     // TimeRail 세그먼트가 후보마다 키워드배열×contains를 반복하던 것을 캐시로
     // 없앤다(CRS0925W01). 순수 함수라 입력이 같으면 결과도 같다.
