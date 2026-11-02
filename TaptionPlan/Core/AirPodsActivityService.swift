@@ -3,6 +3,7 @@ import CallKit
 import Foundation
 import MediaPlayer
 import TaptionPlanCore
+import UIKit
 
 // MARK: - AirPods playback and call observations
 
@@ -26,7 +27,7 @@ struct AirPodsActivityObservation: Equatable, Sendable {
 final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked Sendable {
     private let callObserver = CXCallObserver()
     private var routeObservers: [NSObjectProtocol] = []
-    private var pollTimer: Timer?
+    private var observesMusicPlayer = false
     private var handler: (@MainActor @Sendable (AirPodsActivityObservation) -> Void)?
     private var musicObservation: AirPodsActivityObservation?
     private var callObservation: AirPodsActivityObservation?
@@ -70,6 +71,14 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
             ) { [weak self] _ in
                 self?.refresh()
             },
+            // 앱이 멈춘 동안 놓친 변화를 돌아올 때 맞춘다.
+            center.addObserver(
+                forName: UIApplication.didBecomeActiveNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.refresh()
+            },
         ]
         refresh()
     }
@@ -104,22 +113,14 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
         let output = AVAudioSession.sharedInstance().currentRoute.outputs
             .first(where: Self.isAirPodsOutput)
         guard let output else {
-            pollTimer?.invalidate()
-            pollTimer = nil
+            setObservesMusicPlayer(false)
             finish(&musicObservation, at: date)
             finish(&callObservation, at: date)
             activeCallID = nil
             return
         }
 
-        if pollTimer == nil {
-            pollTimer = Timer.scheduledTimer(
-                withTimeInterval: 15,
-                repeats: true
-            ) { [weak self] _ in
-                self?.refresh()
-            }
-        }
+        setObservesMusicPlayer(true)
 
         let routeName = output.portName
         let nowPlaying = MPNowPlayingInfoCenter.default().nowPlayingInfo
@@ -184,9 +185,20 @@ final class AirPodsActivityService: NSObject, CXCallObserverDelegate, @unchecked
         }
     }
 
+    /// 재생 알림은 켜 둔 동안에만 온다. AirPods가 연결된 동안만 켠다. 15초 타이머가 하던 일을 대신한다.
+    private func setObservesMusicPlayer(_ observes: Bool) {
+        guard observesMusicPlayer != observes else { return }
+        observesMusicPlayer = observes
+        let player = MPMusicPlayerController.systemMusicPlayer
+        if observes {
+            player.beginGeneratingPlaybackNotifications()
+        } else {
+            player.endGeneratingPlaybackNotifications()
+        }
+    }
+
     private func stopObservers() {
-        pollTimer?.invalidate()
-        pollTimer = nil
+        setObservesMusicPlayer(false)
         let center = NotificationCenter.default
         routeObservers.forEach(center.removeObserver)
         routeObservers.removeAll()
