@@ -1346,20 +1346,7 @@ struct TimelineBoard: View {
             String(Int(span.start.timeIntervalSinceReferenceDate.rounded())),
             String(Int(span.end.timeIntervalSinceReferenceDate.rounded())),
         ].joined(separator: "|")
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in value.utf8.enumerated() {
-            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
-            bytes[index % 16] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.foldedFNV(value)
     }
 
     /// 메모 줄. 다른 줄과 달리 손으로 남긴 기록이라 자동 줄의 회색 바탕을

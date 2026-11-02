@@ -679,21 +679,7 @@ enum MovementDisplayEngine {
     }
 
     private static func remainderID(_ id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 
@@ -757,21 +743,7 @@ enum RestSleepDisplayEngine {
     /// 같은 기록을 다시 잘라도 같은 값이 나와야 화면 갱신마다 선택이 풀리지
     /// 않는다. 자동 기록의 안정된 식별자와 같은 방식으로 만든다.
     private static func remainderID(of id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 
@@ -953,21 +925,7 @@ enum SleepActualReconciliationEngine {
     }
 
     private static func remainderID(of id: UUID, offset: Int) -> UUID {
-        var bytes = withUnsafeBytes(of: id.uuid) { Array($0) }
-        var hash = UInt64(14_695_981_039_346_656_037) &+ UInt64(offset)
-        for index in bytes.indices {
-            hash ^= UInt64(bytes[index])
-            hash = hash &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.remainder(of: id, offset: offset)
     }
 }
 

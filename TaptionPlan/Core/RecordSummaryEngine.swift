@@ -973,21 +973,7 @@ enum ReviewCoverageEngine {
     }
 
     private static func stableID(_ seed: String) -> UUID {
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        StableRecordID.foldedFNV(seed)
     }
 }
 
@@ -1039,21 +1025,7 @@ enum ActivityFragmentCorrectionEngine {
             (span.end.timeIntervalSince1970 * 1_000).rounded()
         )
         let seed = "activity-fragment.\(sourceID.uuidString).\(start).\(end)"
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.foldedFNV(seed)
     }
 }
 
@@ -1318,21 +1290,7 @@ enum ActivitySectionOverrideEngine {
             piece.option.behavior ?? "",
             piece.option.title,
         ].joined(separator: ".")
-        var bytes = Array(repeating: UInt8(0), count: 16)
-        var hash = UInt64(14_695_981_039_346_656_037)
-        for (index, byte) in seed.utf8.enumerated() {
-            hash ^= UInt64(byte)
-            hash = hash &* 1_099_511_628_211
-            bytes[index % bytes.count] ^= UInt8(truncatingIfNeeded: hash >> 24)
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.foldedFNV(seed)
     }
 
     private static func milliseconds(_ date: Date) -> String {

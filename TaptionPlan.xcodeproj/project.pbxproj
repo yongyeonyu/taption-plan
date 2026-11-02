@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
+		A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11518EFE631FA33E137B /* StableRecordID.swift */; };
+		A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */; };
 		A1FA11D356722EEA8B293A50 /* OneShotReply.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11F96060E8351D906AA8 /* OneShotReply.swift */; };
 		A1FA111D146A9C217935CC51 /* MapHomeDailyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */; };
 		A1FA1128A1FC3A9AF08DED56 /* MapHomeAlarm.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */; };
@@ -506,6 +509,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1FA11518EFE631FA33E137B /* StableRecordID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordID.swift; sourceTree = "<group>"; };
+		F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StableRecordIDTests.swift; sourceTree = "<group>"; };
 		F1FA11F96060E8351D906AA8 /* OneShotReply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotReply.swift; sourceTree = "<group>"; };
 		F1FA115C43BF0F705C0CC3E6 /* MapHomeDailyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeDailyCard.swift; sourceTree = "<group>"; };
 		F1FA11050C8C616822F8DF6B /* MapHomeAlarm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAlarm.swift; sourceTree = "<group>"; };
@@ -1013,6 +1018,7 @@
 			children = (
 				F1000000000000000000000C /* TimeScaleTests.swift */,
 				F10000000000000000000016 /* FeatureEngineTests.swift */,
+				F1FA11C58FA9883A9A7F8673 /* StableRecordIDTests.swift */,
 				F5B1102A020000000000005B /* FeatureEngineTestFixtures.swift */,
 				F5B1102A0200000000000059 /* MapHomeStickmanTests.swift */,
 				F1A11102A0100000000000F2 /* MemoTextPolishTests.swift */,
@@ -1258,6 +1264,7 @@
 				FBD100600000000000000001 /* PlanActualStorage.swift */,
 				FBD100700000000000000001 /* SensorReadingStorage.swift */,
 				F10000000000000000000011 /* PlanningEngine.swift */,
+				F1FA11518EFE631FA33E137B /* StableRecordID.swift */,
 				F10000000000000000000012 /* TemplatesAndSettings.swift */,
 				F1FA111188F70B2A1E222FD0 /* LocationPrivacyAndTravelDistance.swift */,
 				F1FA114B38DDE757537287B5 /* MotionActivityActualEngine.swift */,
@@ -1896,6 +1903,7 @@
 				ABD100600000000000000001 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000001 /* SensorReadingStorage.swift in Sources */,
 				A10000000000000000000011 /* PlanningEngine.swift in Sources */,
+				A1FA1169BA887967E6373290 /* StableRecordID.swift in Sources */,
 				A10000000000000000000012 /* TemplatesAndSettings.swift in Sources */,
 				A1FA11802C58F99DE64AB619 /* LocationPrivacyAndTravelDistance.swift in Sources */,
 				A1FA116E96B03A38CF1271CF /* MotionActivityActualEngine.swift in Sources */,
@@ -2000,6 +2008,7 @@
 			files = (
 				A1000000000000000000000C /* TimeScaleTests.swift in Sources */,
 				A10000000000000000000016 /* FeatureEngineTests.swift in Sources */,
+				A1FA113776B4F655CB131CBA /* StableRecordIDTests.swift in Sources */,
 				A5B1102A020000000000005C /* FeatureEngineTestFixtures.swift in Sources */,
 				A5B1102A020000000000005A /* MapHomeStickmanTests.swift in Sources */,
 				A1A11102A0100000000000A2 /* MemoTextPolishTests.swift in Sources */,
@@ -2085,6 +2094,7 @@
 				A1FA118E6661E4ED3D1ED73A /* TimelineModels.swift in Sources */,
 				A10000000000000000000023 /* HealthAndSensorModels.swift in Sources */,
 				A10000000000000000000024 /* PlanningEngine.swift in Sources */,
+				A1FA11A6B07C6C7A479E67EE /* StableRecordID.swift in Sources */,
 				A10000000000000000000025 /* PlanRepository.swift in Sources */,
 				ABD100600000000000000002 /* PlanActualStorage.swift in Sources */,
 				ABD100700000000000000002 /* SensorReadingStorage.swift in Sources */,
