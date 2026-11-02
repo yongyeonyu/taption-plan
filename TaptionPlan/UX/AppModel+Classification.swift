@@ -613,11 +613,16 @@ extension AppModel {
         if recentCarAudio != snapshot.settings.recentCarAudioNames {
             snapshot.settings.recentCarAudioNames = recentCarAudio
         }
+        let railJourneys = RailJourneyRecognizer.journeys(readings: readings)
         let travel = CarAudioTravelConfirmation.enforcingRegisteredCar(
-            ActivityClassificationLockEngine.mergingLockedTravel(
-                existing: snapshot.travel,
-                fresh: generatedTravel,
-                inside: span
+            RailJourneyRecognizer.applying(
+                railJourneys,
+                to: ActivityClassificationLockEngine.mergingLockedTravel(
+                    existing: snapshot.travel,
+                    fresh: generatedTravel,
+                    inside: span
+                ),
+                corrections: snapshot.settings.movementCorrections
             ),
             readings: readings,
             registered: Set(settings.registeredCarAudioNames),
@@ -688,6 +693,12 @@ extension AppModel {
             sleepReadings: sleepReadings, sleepSpan: sleepSpan,
             classifiedReadings: readings, gapReadings: sensorQuality.readings
         )) else { return false }
+        snapshot.actuals = RailJourneyRecognizer.retitling(
+            snapshot.actuals,
+            subwaySpans: railJourneys.map(\.span),
+            activityCorrections: snapshot.settings.activityCorrections,
+            asOf: span.end
+        )
 
         if snapshot.settings.locationEnabled || snapshot.settings.weatherEnabled {
             await refreshWeather(

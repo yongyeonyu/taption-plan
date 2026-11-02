@@ -93,7 +93,7 @@ struct MapHomeAttributionSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("지도 출처", "Map attribution"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             attributionRow("OpenFreeMap", "© OpenMapTiles · Data from OpenStreetMap")
             attributionRow(
@@ -103,7 +103,7 @@ struct MapHomeAttributionSheet: View {
             attributionRow(language.text("지도 표시", "Map rendering"), "MapLibre Native")
             Link(destination: URL(string: "https://www.openstreetmap.org/copyright")!) {
                 Label(language.text("OpenStreetMap 저작권 보기", "OpenStreetMap copyright"), systemImage: "arrow.up.right.square")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
             }
             .tint(Color.tpAccent)
             Spacer(minLength: 0)
@@ -116,10 +116,10 @@ struct MapHomeAttributionSheet: View {
     private func attributionRow(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             Text(text)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .medium))
                 .foregroundStyle(Color.tpInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -168,7 +168,7 @@ enum MapHomeLayoutStyle: String, CaseIterable, Sendable {
     var bottomReservedHeight: CGFloat {
         switch self {
         case .classic: 0
-        case .tabBar: 70
+        case .tabBar: MapHomeBottomBarMetrics.reservedHeight
         }
     }
 
@@ -333,7 +333,7 @@ struct MapHomePinPreviewHost: View {
     private var hostBoundsSample: some View {
         VStack(spacing: 6) {
             Text("지도 호스트 \(Int(MapHomePlacePinLayout.appleHomeHostWidth))×\(Int(MapHomePlacePinLayout.appleHomeHostHeight))")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.85))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold)).foregroundStyle(.white.opacity(0.85))
             marker(showsCatAtHome: true, weather: true)
                 .frame(width: MapHomePlacePinLayout.appleHomeHostWidth, height: MapHomePlacePinLayout.appleHomeHostHeight)
                 .overlay { Rectangle().stroke(Color.white.opacity(0.55), style: StrokeStyle(lineWidth: 1, dash: [3, 3])) }

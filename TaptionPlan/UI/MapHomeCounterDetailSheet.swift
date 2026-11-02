@@ -307,11 +307,11 @@ struct MapHomeCounterDetailSheet: View {
     private var titleBar: some View {
         HStack(alignment: .firstTextBaseline) {
             Text("카운터 상세")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             Spacer(minLength: 8)
             Text(dateText)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
         }
         .padding(.horizontal, 20)
@@ -347,7 +347,7 @@ struct MapHomeCounterDetailSheet: View {
             Image(systemName: content.systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
             Text(content.title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
         }
         .foregroundStyle(isSelected ? Color.white : Color.tpInk)
         .padding(.horizontal, 14)
@@ -370,7 +370,7 @@ struct MapHomeCounterDetailSheet: View {
                 if !content.hourly.isEmpty { hourlyChart(content.hourly) }
                 if let note = content.note {
                     Text(note)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
@@ -395,17 +395,17 @@ struct MapHomeCounterDetailSheet: View {
                 .background(Color.tpAccent.opacity(0.12), in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(content.title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                 Text(content.value)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(32)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(32)), weight: .bold))
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                     .foregroundStyle(Color.tpInk)
                 if let caption = content.caption {
                     Text(caption)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -434,7 +434,7 @@ struct MapHomeCounterDetailSheet: View {
             HStack {
                 ForEach([0, 6, 12, 18, 24], id: \.self) { hour in
                     Text("\(hour)")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                     if hour != 24 { Spacer(minLength: 0) }
                 }
@@ -447,7 +447,7 @@ struct MapHomeCounterDetailSheet: View {
     private func sectionCard(_ section: MapHomeCounterDetailContent.Section) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(section.title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.leading, 4)
             VStack(spacing: 0) {
@@ -465,18 +465,18 @@ struct MapHomeCounterDetailSheet: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                         .foregroundStyle(Color.tpInk)
                     if let subtitle = row.subtitle {
                         Text(subtitle)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                 }
                 Spacer(minLength: 8)
                 if !row.value.isEmpty {
                     Text(row.value)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(Color.tpInk)
                 }

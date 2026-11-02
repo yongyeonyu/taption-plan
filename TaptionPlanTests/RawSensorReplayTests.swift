@@ -33,6 +33,10 @@ final class RawSensorReplayTests: XCTestCase {
             for actual in (day.actuals ?? []).sorted(by: { $0.startedAt < $1.startedAt }) where actual.source != .healthKit {
                 print("REPLAY actual \(formatter.string(from: actual.startedAt))–\(formatter.string(from: actual.endedAt ?? actual.startedAt)) \(actual.categoryID) src=\(actual.source.rawValue) model=\(actual.modelVersion ?? "-") locked=\(actual.isClassificationLocked ?? false) manual=\(actual.manuallyCorrected)")
             }
+            for journey in RailJourneyRecognizer.journeys(readings: readings) {
+                print("REPLAY rail-journey \(formatter.string(from: journey.span.start))–\(formatter.string(from: journey.span.end)) "
+                    + "stations=\(journey.stationNames.joined(separator: ">")) lines=\(journey.route.lineNames.joined(separator: ">"))")
+            }
             // 원본 표본만으로 역 궤적 엔진이 지하철을 새로 찾는지 본다(EXP1029A02 — 자차 출근에 회색 지하철 경로).
             for detected in SubwayTravelSegmentEngine.segments(from: readings) {
                 print("REPLAY detected-subway \(formatter.string(from: detected.span.start))–\(formatter.string(from: detected.span.end)) "

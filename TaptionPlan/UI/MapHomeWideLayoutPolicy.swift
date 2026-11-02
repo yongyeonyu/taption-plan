@@ -61,19 +61,12 @@ enum AppOrientationPolicy {
 }
 
 extension View {
-    /// 넓은 화면에서 하단 메뉴를 왼쪽 아래 카드로 붙인다. 좁은 폭에서는 그대로 둔다.
-    @ViewBuilder
+    /// 하단 메뉴 알약 자리. 넓은 화면은 왼쪽 아래에 폭을 정해 두고, 좁은 폭은 좌우 여백까지 채운다.
     func mapHomeWideActionBar(viewportWidth: CGFloat) -> some View {
-        if let width = MapHomeWideLayoutPolicy.actionBarWidth(viewportWidth: viewportWidth) {
-            frame(width: width)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: .black.opacity(0.14), radius: 12, y: 4)
-                .padding(.leading, 10)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            self
-        }
+        frame(width: MapHomeWideLayoutPolicy.actionBarWidth(viewportWidth: viewportWidth))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, MapHomeBottomBarMetrics.edgeMargin)
+            .padding(.bottom, MapHomeBottomBarMetrics.edgeMargin)
     }
 
     /// 넓은 화면에서 검색창 줄을 아이폰 폭으로 왼쪽에 둔다.

@@ -221,6 +221,35 @@ struct MapHomePhotoThumbnail: View {
 }
 
 /// 지도에 놓이는 사진 묶음 핀: 썸네일 + 개수 배지. 선택 시각 주변 사진이면 테두리가 강조된다.
+/// 사진 핀을 화랑이와 등록 지점 아이콘에 겹치지 않는 가까운 자리로 옮긴다. 핀은 아래쪽이 기준점이다(대표 요청).
+enum MapHomePhotoPlacement {
+    private static let pinSide: CGFloat = 54
+    private static let directions: [CGPoint] = [
+        CGPoint(x: -1, y: 0), CGPoint(x: 1, y: 0), CGPoint(x: 0, y: -1), CGPoint(x: -1, y: -1),
+        CGPoint(x: 1, y: -1), CGPoint(x: -1, y: 1), CGPoint(x: 1, y: 1), CGPoint(x: 0, y: 1),
+    ]
+
+    static func obstacle(center: CGPoint, side: CGFloat) -> CGRect {
+        CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side)
+    }
+
+    private static func rect(at point: CGPoint) -> CGRect {
+        CGRect(x: point.x - pinSide / 2, y: point.y - pinSide, width: pinSide, height: pinSide)
+    }
+
+    static func point(for pin: CGPoint, avoiding obstacles: [CGRect]) -> CGPoint {
+        func isClear(_ point: CGPoint) -> Bool { !obstacles.contains { $0.intersects(rect(at: point)) } }
+        if isClear(pin) { return pin }
+        for distance in stride(from: CGFloat(30), through: 150, by: 30) {
+            for direction in directions {
+                let candidate = CGPoint(x: pin.x + direction.x * distance, y: pin.y + direction.y * distance)
+                if isClear(candidate) { return candidate }
+            }
+        }
+        return pin
+    }
+}
+
 struct MapHomePhotoPin: View {
     let coverID: String
     let count: Int
@@ -236,7 +265,7 @@ struct MapHomePhotoPin: View {
             .overlay(alignment: .topTrailing) {
                 if count > 1 {
                     Text("\(count)")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -306,7 +335,7 @@ struct MapHomePhotoPager: View {
                         MapHomePhotoThumbnail(localIdentifier: moment.id, side: 380, contentMode: .fit)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         Text(moment.capturedAt.formatted(date: .abbreviated, time: .shortened))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                             .foregroundStyle(.white.opacity(0.8))
                     }
                     .tag(offset)

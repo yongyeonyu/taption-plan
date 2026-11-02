@@ -53,7 +53,7 @@ extension Font {
         size: CGFloat,
         weight: Font.Weight = .regular
     ) -> Font {
-        .system(size: TaptionType.scaled(TaptionType.snapped(size + 2)), weight: weight)
+        .taptionFixed(size: TaptionType.scaled(TaptionType.snapped(size + 2)), weight: weight)
     }
 }
 
@@ -200,6 +200,10 @@ extension Color {
     // The original product guide's ten-color set, softened by the postcard
     // surfaces above. Map Home uses these as accents rather than repainting
     // every legacy surface.
+    /// 메뉴 아이콘 색. 지도 양피지와 어울리는 흙빛 계열이고, 어두운 테마에서는 면과 대비가 나도록 밝혀 쓴다.
+    static func tpMenuChip(_ hex: String) -> Color {
+        TaptionUITheme.current.palette == nil ? Color(hex: hex) : Color(hex: hex).mix(with: .white, by: 0.42)
+    }
     static let tpReferenceBlue = Color(hex: "#2D9BF0")
     static let tpReferenceRose = Color(hex: "#F15C80")
     static let tpReferenceMint = Color(hex: "#48B38C")
@@ -342,23 +346,6 @@ enum TaptionMenuMetrics {
     static let compactButtonVerticalPadding: CGFloat = 6
     static let sectionHeaderVerticalPadding: CGFloat = 8
     static let scaleControlVerticalPadding: CGFloat = 4.5
-}
-
-/// 메뉴 행 왼쪽의 아이콘 칩.
-///
-/// 예전에는 모든 행이 같은 로즈색이라 색이 아무 정보도 담지 못했다. 행마다 분류 색을
-/// 넘겨, 무엇을 여는 행인지 색으로 먼저 읽히게 한다.
-struct MapHomeMenuIconChip: View {
-    let systemImage: String
-    let tint: Color
-
-    var body: some View {
-        Image(systemName: systemImage)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: 32, height: 32)
-            .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
 }
 
 extension View {

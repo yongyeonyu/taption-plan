@@ -980,6 +980,34 @@ struct MapHomeMenuHeaderCat: View {
     }
 }
 
+/// 메뉴 머리글 문구. 작은 첫 줄 뒤로 큰 둘째 줄을 비껴 놓고 살짝 기울여 일기장에 쓴 느낌을 낸다.
+struct MapHomeMenuHeaderTitle: View {
+    let language: MapHomeLanguage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(language.text("자동으로 기록된", "Quietly written down,"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .foregroundStyle(Color.tpSecondary)
+            Text(language.text("오늘 하루", "today"))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
+                .foregroundStyle(Color.tpInk)
+                .padding(.leading, 16)
+                .background(alignment: .bottomLeading) {
+                    // 형광펜으로 그은 듯한 밑줄. 글자 뒤로 깔린다.
+                    Capsule()
+                        .fill(Color(hex: "#F3C766").opacity(0.55))
+                        .frame(height: 8)
+                        .padding(.leading, 12)
+                        .offset(y: -2)
+                }
+        }
+        .rotationEffect(.degrees(-2.5), anchor: .leading)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+}
+
 enum HwarangClock {
     /// 소수 정밀도를 지키려고 큰 주기로 나머지를 쓴다.
     static func seconds(at date: Date) -> Double {

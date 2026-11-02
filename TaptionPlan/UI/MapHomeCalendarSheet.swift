@@ -714,12 +714,15 @@ struct MapHomeCalendarSheet: View {
                     selectedKind = isOn ? nil : kind
                 } label: {
                     VStack(spacing: 1) {
-                        Label(kind.title(language), systemImage: kind.systemImage)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                        HStack(spacing: 4) {
+                            TaptionCuteIcon(kind.systemImage, size: 18)
+                            Text(kind.title(language))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
                         Text(MapHomeCalendarChipValue.text(kind: kind, value: chipSeconds(of: kind), language: language) ?? "–")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     .foregroundStyle(isOn ? tint : Color.tpInk)
@@ -745,10 +748,9 @@ struct MapHomeCalendarSheet: View {
             showsMonthAverage.toggle()
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: "chart.bar.xaxis")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                TaptionCuteIcon("chart.bar.xaxis", size: 16)
                 Text(language.text("한달 평균", "Month avg"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
@@ -779,10 +781,9 @@ struct MapHomeCalendarSheet: View {
             }
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: "plus")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                TaptionCuteIcon("plus", size: 16)
                 Text(language.text("추가", "Add"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
             }
             .foregroundStyle(Color.tpSecondary)
             .frame(maxWidth: .infinity, minHeight: 44)
@@ -817,22 +818,22 @@ struct MapHomeCalendarSheet: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text(kind.title(language))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
                 if showsMonthAverage {
                     Text(language.text("\(calendar.component(.month, from: monthStart))월 하루 평균", "Monthly daily average"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 } else if selectedInMonth {
                     Text(language.text("\(calendar.component(.month, from: selected))월 \(calendar.component(.day, from: selected))일",
                                        selected.formatted(.dateTime.month(.abbreviated).day())))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
             Text(panelText(showsMonthAverage ? sum / Double(elapsedDays) : (selectedInMonth ? seconds(of: kind, on: selected) : 0), for: kind))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(26)), weight: .bold))
                 .foregroundStyle(tint)
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(Array(days.enumerated()), id: \.offset) { index, day in
@@ -865,12 +866,12 @@ struct MapHomeCalendarSheet: View {
     private var placeVisitList: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(language.text("방문한 곳 (10분 이상 · 30m 이내는 한 곳)", "Visited (10+ min, within 30 m merged)"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
                 .padding(.bottom, 8)
             if visits.isEmpty {
                 Text(language.text("조건에 맞는 방문 장소가 없어요", "No places match"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(.vertical, 8)
             }
@@ -879,21 +880,21 @@ struct MapHomeCalendarSheet: View {
                     Image(systemName: "mappin.circle.fill").foregroundStyle(Color.tpAccent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(visit.name)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                             .foregroundStyle(Color.tpInk)
                         if let building = visit.buildingName, !building.isEmpty, building != visit.name {
                             Text(building)
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         Text("\(visit.arrival.formatted(date: .omitted, time: .shortened)) – \(visit.departure.formatted(date: .omitted, time: .shortened))"
                              + (visit.visitCount > 1 ? language.text(" · \(visit.visitCount)번", " · \(visit.visitCount)x") : ""))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer(minLength: 8)
                     Text(Self.durationText(visit.seconds, language: language))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                 }
                 .padding(.vertical, 8)
@@ -916,8 +917,8 @@ struct MapHomeCalendarSheet: View {
 
     private func timeStat(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
-            Text(value).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded)).foregroundStyle(Color.tpInk)
+            Text(title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+            Text(value).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold)).foregroundStyle(Color.tpInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
@@ -944,7 +945,7 @@ struct MapHomeCalendarSheet: View {
                 jumpToToday()
             } label: {
                 Text(monthTitle)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 8)
                     .frame(minHeight: 34)
@@ -983,7 +984,7 @@ struct MapHomeCalendarSheet: View {
                         .accessibilityHidden(true)
 
                     Text(weekday)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                         .foregroundStyle(weekdayColor(index: index))
                 }
                     .frame(maxWidth: .infinity)
@@ -1027,7 +1028,7 @@ struct MapHomeCalendarSheet: View {
         } label: {
             VStack(spacing: 2) {
                 Text(String(day))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: isSelected ? .bold : .regular, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: isSelected ? .bold : .regular))
                     .foregroundStyle(isSelected ? Color.white : dayColor(weekday: weekday, holiday: holiday))
                     .frame(width: 32, height: 28)
                     .background {
@@ -1040,7 +1041,7 @@ struct MapHomeCalendarSheet: View {
 
                 if let selectedKind {
                     Text(cellValueText(selectedKind, on: date))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                         .foregroundStyle(selectedKind.usesAccentTint ? Color.tpAccent : timeTint(selectedKind.rawValue))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -1272,19 +1273,19 @@ struct MapHomeStrideCalibrationSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(language.text("보폭 보정", "Stride calibration"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                 Text(language.text(
                     "현재 보폭 \(String(format: "%.0f", currentStride * 100))cm · 걸음 수 × 보폭으로 걸음 환산 거리를 계산합니다.",
                     "Stride \(String(format: "%.0f", currentStride * 100)) cm · used for step-based distance."
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(language.text("1. 시작을 누르고 정한 거리를 걸은 뒤 종료를 누르세요.", "1. Tap Start, walk a known distance, then tap Stop."))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     Text(language.text("\(steps)걸음", "\(steps) steps"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(34)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(34)), weight: .bold))
                         .monospacedDigit()
                     Button(isMeasuring ? language.text("종료", "Stop") : language.text("시작", "Start")) {
                         isMeasuring ? stop() : start()
@@ -1293,7 +1294,7 @@ struct MapHomeStrideCalibrationSheet: View {
                     .tint(isMeasuring ? Color.tpHoliday : Color.tpAccent)
                     HStack {
                         Text(language.text("2. 걸은 거리", "2. Distance walked"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                         TextField("10", text: $distanceText)
                             .keyboardType(.decimalPad)
                             .textFieldStyle(.roundedBorder)
@@ -1310,7 +1311,7 @@ struct MapHomeStrideCalibrationSheet: View {
 
                 HStack {
                     Text(language.text("직접 입력", "Manual"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     TextField("75", text: $manualCentimeters)
                         .keyboardType(.decimalPad)
                         .textFieldStyle(.roundedBorder)
@@ -1320,7 +1321,7 @@ struct MapHomeStrideCalibrationSheet: View {
                     Button(language.text("저장", "Save")) { saveManual() }.buttonStyle(.bordered)
                 }
                 if let message {
-                    Text(message).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium)).foregroundStyle(Color.tpAccent)
+                    Text(message).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium)).foregroundStyle(Color.tpAccent)
                 }
             }
             .padding(22)
@@ -2360,12 +2361,12 @@ struct MapHomeAlarmSettingsSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(language.text("알림", "Alerts"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                 Text(language.text(
                     "앱이 기록을 갱신할 때(켜져 있을 때·iOS가 허용한 백그라운드 새로 고침) 찾은 일을 알려요. 위치 '항상 허용'이 있어야 앱이 꺼져 있어도 받을 수 있어요.",
                     "Sent when the app refreshes its records (foreground or iOS-allowed background refresh). 'Always' location access lets alerts arrive while closed."
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
 
                 if isAuthorized == false {
@@ -2373,7 +2374,7 @@ struct MapHomeAlarmSettingsSheet: View {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     } label: {
                         Label(language.text("알림 권한이 꺼져 있어요 · 설정 열기", "Notifications are off · Open Settings"), systemImage: "bell.slash.fill")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             .foregroundStyle(Color.tpHoliday)
                     }
                 }
@@ -2381,7 +2382,7 @@ struct MapHomeAlarmSettingsSheet: View {
                 ForEach(MapHomeAlarmKind.Group.allCases, id: \.self) { group in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(group.title(language))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             .foregroundStyle(Color.tpSecondary)
                         VStack(spacing: 0) {
                             ForEach(MapHomeAlarmKind.allCases.filter { $0.group == group }) { kind in
@@ -2391,8 +2392,8 @@ struct MapHomeAlarmSettingsSheet: View {
                                             .foregroundStyle(Color.tpAccent)
                                             .frame(width: 22)
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text(kind.title(language)).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
-                                            Text(kind.detail(language)).font(.system(size: TaptionType.scaled(TaptionType.snapped(11)))).foregroundStyle(Color.tpSecondary)
+                                            Text(kind.title(language)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                                            Text(kind.detail(language)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)))).foregroundStyle(Color.tpSecondary)
                                         }
                                     }
                                 }
@@ -2406,7 +2407,7 @@ struct MapHomeAlarmSettingsSheet: View {
                     if group == .day {
                         HStack {
                             Text(language.text("하루 카드 알림 시각", "Day card time"))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                             Spacer()
                             DatePicker("", selection: cardTimeBinding, displayedComponents: .hourAndMinute)
                                 .labelsHidden()
@@ -2616,6 +2617,30 @@ enum MapHomeCardMetricSelection {
     }
 }
 
+/// 카드 오른쪽 위 화랑이. 날짜로 장면을 뽑아 미리보기와 저장본이 같고, 날이 바뀌면 다른 장면이 나온다.
+struct MapHomeDailyCardCat: View {
+    let seedText: String
+    let accessoryID: String?
+
+    private var seed: Int {
+        seedText.utf8.reduce(5381) { ($0 &* 33 &+ Int($1)) & 0xFFFF_FFFF }
+    }
+
+    var body: some View {
+        let scenes = HwarangScene.allCases
+        let scene = scenes[seed % scenes.count]
+        HwarangSceneView(
+            scene: scene,
+            sec: Double(scene.totalDuration) * Double(seed % 97) / 97,
+            width: 128,
+            anchorHeight: 96,
+            hatAssetName: MapHomeGrowthAccessoryCatalog.hatAssetName(for: accessoryID),
+            showsBackdrop: false
+        )
+        .frame(width: 96, height: 96)
+    }
+}
+
 /// 540×540pt로 그려 2배로 렌더링하면 1080×1080이 된다.
 struct MapHomeDailyCardView: View {
     static let side: CGFloat = 540
@@ -2639,12 +2664,11 @@ struct MapHomeDailyCardView: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(data.dateText).font(.system(size: TaptionType.scaled(TaptionType.snapped(34)), weight: .bold, design: .rounded))
-                        Text(data.weekdayText).font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+                        Text(data.dateText).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(34)), weight: .bold))
+                        Text(data.weekdayText).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .semibold)).foregroundStyle(Color.tpSecondary)
                     }
                     Spacer()
-                    MapHomeStickmanMarker(action: .activity, equippedAccessoryID: data.accessoryID)
-                        .frame(width: 96, height: 96)
+                    MapHomeDailyCardCat(seedText: data.dateText, accessoryID: data.accessoryID)
                 }
                 if !data.metrics.isEmpty {
                     // 사용자가 고른 항목(최대 4개)을 카드 윗부분에 그대로 보여 준다.
@@ -2656,11 +2680,11 @@ struct MapHomeDailyCardView: View {
                 }
                 // 고른 항목이 없으면 통계 줄을 아예 그리지 않는다. 예전에는 비어 있으면 기본 항목이 채워졌다(대표 지시, ARC1030A11).
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(data.totalText).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded)).foregroundStyle(Color.tpSecondary)
+                    Text(data.totalText).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold)).foregroundStyle(Color.tpSecondary)
                     ForEach(data.categories.prefix(5)) { entry in
                         HStack(spacing: 10) {
-                            Image(systemName: entry.systemImage).foregroundStyle(entry.tint).frame(width: 22)
-                            Text(entry.title).font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold, design: .rounded)).frame(width: 90, alignment: .leading)
+                            TaptionCuteIcon(entry.systemImage).foregroundStyle(entry.tint).frame(width: 22)
+                            Text(entry.title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .semibold)).frame(width: 90, alignment: .leading)
                             GeometryReader { proxy in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.tpLine.opacity(0.5))
@@ -2669,18 +2693,18 @@ struct MapHomeDailyCardView: View {
                             }
                             .frame(height: 12)
                             Text(MapHomeAlarmPolicy.hoursText(entry.seconds))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded)).monospacedDigit()
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold)).monospacedDigit()
                                 .frame(width: 96, alignment: .trailing)
-                            Text("\(Int((entry.ratio * 100).rounded()))%").font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded)).monospacedDigit().frame(width: 46, alignment: .trailing)
+                            Text("\(Int((entry.ratio * 100).rounded()))%").font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold)).monospacedDigit().frame(width: 46, alignment: .trailing)
                         }
                     }
                 }
                 Spacer(minLength: 0)
                 HStack {
-                    Text("BOKKI Plan").font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded)).foregroundStyle(Color.tpAccent)
+                    Text("BOKKI Plan").font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold)).foregroundStyle(Color.tpAccent)
                     Spacer()
                     Text(language.text("자동 기록으로 만든 하루", "A day from automatic records"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
             }
             .padding(36)
@@ -2691,12 +2715,15 @@ struct MapHomeDailyCardView: View {
 
     private func stat(_ title: String, _ value: String, _ symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.tpSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text(value).font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+            HStack(spacing: 4) {
+                TaptionCuteIcon(symbol, size: 16)
+                Text(title)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            .foregroundStyle(Color.tpSecondary)
+            Text(value).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2754,7 +2781,7 @@ struct MapHomeDailyCardSheet: View {
     private var header: some View {
         HStack(spacing: 4) {
             Text(language.text("하루 카드", "Day card"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer(minLength: 4)
@@ -2808,7 +2835,7 @@ struct MapHomeDailyCardSheet: View {
     private var metricPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(language.text("공유할 항목 (최대 4개)", "Items to share (up to 4)"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
             HStack(spacing: 8) {
                 ForEach(0..<MapHomeCardMetricSelection.maximum, id: \.self) { index in
                     slot(index)
@@ -2818,7 +2845,7 @@ struct MapHomeDailyCardSheet: View {
                 isPickerPresented = true
             } label: {
                 Label(language.text("항목 추가", "Add item"), systemImage: "plus.circle.fill")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 40)
             }
             .buttonStyle(.bordered)
@@ -2839,10 +2866,10 @@ struct MapHomeDailyCardSheet: View {
         } label: {
             VStack(spacing: 4) {
                 if let filled {
-                    Image(systemName: filled.systemImage).foregroundStyle(Color.tpAccent)
-                    Text(filled.title(language)).font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                    TaptionCuteIcon(filled.systemImage).foregroundStyle(Color.tpAccent)
+                    Text(filled.title(language)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
                     Text(MapHomeCardMetricSelection.value(for: filled, number: dayValues[filled.rawValue] ?? 0))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.6)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold)).lineLimit(1).minimumScaleFactor(0.6)
                 } else {
                     Image(systemName: "plus").font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold)).foregroundStyle(Color.tpSecondary)
                 }
@@ -2869,7 +2896,7 @@ struct MapHomeDailyCardSheet: View {
                         toggle(kind.rawValue)
                     } label: {
                         HStack {
-                            Image(systemName: kind.systemImage).foregroundStyle(Color.tpAccent).frame(width: 24)
+                            TaptionCuteIcon(kind.systemImage).foregroundStyle(Color.tpAccent).frame(width: 24)
                             Text(kind.title(language))
                             Spacer()
                             Text(MapHomeCardMetricSelection.value(for: kind, number: dayValues[kind.rawValue] ?? 0))
@@ -2921,10 +2948,10 @@ struct MapHomeDailyCardSheet: View {
                 }
                 .disabled(image == nil || !isDayReady)
                 if let message {
-                    Text(message).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium)).foregroundStyle(Color.tpAccent)
+                    Text(message).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium)).foregroundStyle(Color.tpAccent)
                 }
                 Text(language.text("1080×1080 · 인스타그램 피드 크기", "1080×1080 · Instagram feed size"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)))).foregroundStyle(Color.tpSecondary)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)))).foregroundStyle(Color.tpSecondary)
             }
             .padding(22)
         }
@@ -3049,9 +3076,9 @@ struct MapHomeAlarmConfirmSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(kind.title(language))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
             Text(language.text("시간을 확인하고 고쳐 주세요. 확인을 누르면 그 시각부터 기록돼요.", "Check the time and edit if needed. Recording starts from this time."))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             DatePicker("", selection: $at, displayedComponents: [.date, .hourAndMinute])
                 .datePickerStyle(.graphical)

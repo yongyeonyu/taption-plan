@@ -1258,7 +1258,7 @@ struct MapHomeTimeSidebar: View {
                     } label: {
                         ZStack(alignment: .topTrailing) {
                             Image(systemName: "questionmark")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                                 .frame(width: 26, height: 26)
                                 .background(MapHomeTimeSidebarStyle.panelBackground, in: Circle())
@@ -1266,7 +1266,7 @@ struct MapHomeTimeSidebar: View {
                                 .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
                             if group.count > 1 {
                                 Text("\(group.count)")
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 4)
                                     .background(Color.tpReferenceBlue, in: Capsule())
@@ -1538,7 +1538,7 @@ struct MapHomeTimeSidebar: View {
                             window: visibleWindow
                         )
                         Text(rulerLabel(minuteMark))
-                        .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: rulerFontSize, weight: .semibold))
                         .monospacedDigit()
                         .minimumScaleFactor(0.55)
                         .allowsTightening(true)
@@ -1578,7 +1578,7 @@ struct MapHomeTimeSidebar: View {
                                 .frame(width: hour.isMultiple(of: 6) ? 8 : 5, height: 1.5).frame(width: 8, alignment: .leading)
                             Text(timeFormat.hourLabel(hour))
                                 .minimumScaleFactor(0.6)
-                                .font(.system(size: rulerFontSize, weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: rulerFontSize, weight: .semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(Color.tpSidebarTime(hour.isMultiple(of: 6) ? 0.82 : 0.52))
                                 .taptionTextOutline()
@@ -2196,7 +2196,7 @@ struct MapHomeTimeSidebar: View {
         if timeFormat == .twelveHour {
             VStack(spacing: -1) {
                 Text(minute / 60 % 24 < 12 ? MapHomeLanguage.current.text("오전", "AM") : MapHomeLanguage.current.text("오후", "PM"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
                 Text(timeFormat.timeLabel(minute, includesPeriod: false))
             }
         } else {
@@ -2288,7 +2288,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
                                     onDateSelect(day)
                                 } label: {
                                     Text(day.formatted(.dateTime.month().day()))
-                                        .font(.caption.weight(.semibold))
+                                        .font(.taptionFixed(size: 12, weight: .semibold))
                                         .foregroundStyle(selected ? Color.white : Color.tpInk)
                                         .padding(.horizontal, 12)
                                         .frame(minHeight: 34)
@@ -2310,7 +2310,7 @@ struct MapHomeUnconfirmedReviewSheet: View {
                         "활동을 누르면 바로 저장됩니다. 시간을 누르면 자세히 편집할 수 있습니다.",
                         "Tap an activity to save it, or tap the time to edit details."
                     ))
-                    .font(.caption)
+                    .font(.taptionFixed(size: 12))
                     .foregroundStyle(Color.tpSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
@@ -2344,7 +2344,7 @@ Group {
                                                 "\(duration(segment.endMinute - segment.startMinute)) 미확인",
                                                 "\(duration(segment.endMinute - segment.startMinute)) unconfirmed"
                                             ))
-                                            .font(.subheadline)
+                                            .font(.taptionFixed(size: 15))
                                             .foregroundStyle(Color.tpSecondary)
                                         }
                                         Spacer()
@@ -2400,7 +2400,7 @@ Group {
                                         "저장하지 못했습니다. 다시 시도해 주세요.",
                                         "Could not save. Please try again."
                                     ))
-                                    .font(.caption)
+                                    .font(.taptionFixed(size: 12))
                                     .foregroundStyle(.red)
                                 }
                             }

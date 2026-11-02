@@ -107,17 +107,15 @@ private struct MapHomeCounterRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: kind.systemImage)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+            TaptionCuteIcon(kind.systemImage, size: 14)
                 .foregroundStyle(Color.tpCounterIcon)
-                .frame(width: 12)
             Text(kind.badgeTitle(language))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
             Text(text)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
                 .contentTransition(.numericText())
@@ -289,11 +287,10 @@ private struct MapHomeCounterPill: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: kind.systemImage)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+            TaptionCuteIcon(kind.systemImage, size: 14)
                 .foregroundStyle(Color.tpCounterIcon)
             Text(text)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
                 .contentTransition(.numericText())
@@ -318,12 +315,12 @@ private struct MapHomeCounterSalaryRow: View {
                 .foregroundStyle(salary.isWorking ? Color.tpReferenceMint : Color.tpCounterIcon)
                 .frame(width: 12)
             Text(salary.title(language: language))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
             Text(salary.text)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(Color.tpInk)
                 .contentTransition(.numericText())
@@ -349,7 +346,7 @@ private struct MapHomeCounterSalaryPill: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
-        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
         .foregroundStyle(Color.tpInk)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

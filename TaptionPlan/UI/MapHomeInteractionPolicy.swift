@@ -445,9 +445,8 @@ enum MapHomeCatTapRouting {
     static let homeIconHitRadius: CGFloat = 18
     /// 집 아바타의 중심은 지도 좌표와 같다(마커 안에 빈 자리를 두지 않는다).
     static let homeImageCenterOffset = CGPoint.zero
-    /// 아바타 안에서 화랑이가 놓이는 자리(48pt 아트 기준). 아바타 안에서는
-    /// homeArtScale 만큼 키워 적용하므로, 값이 커지면 원 밖으로 잘린다.
-    static let catOffsetInHomeImage = CGPoint(x: 16, y: 6)
+    /// 아바타 위 화랑이 자리(48pt 아트 기준). 날씨 그림을 가리지 않게 오른쪽 아래로 뺀다.
+    static let catOffsetInHomeImage = CGPoint(x: 27, y: 12)
     /// 아바타 안 아트 크기를 기존 48pt와 비교한 비율.
     static let homeArtScale: CGFloat = MapHomePlacePinLayout.artworkSize / 48
     static let homeMarkerOffset = CGPoint(

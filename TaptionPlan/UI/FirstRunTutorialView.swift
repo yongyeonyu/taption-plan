@@ -69,7 +69,7 @@ struct FirstRunTutorialView: View {
             Button(language.text("전체 건너뛰기", "Skip all")) {
                 finish(.skipped)
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
             .foregroundStyle(Color.tpSecondary)
             .buttonStyle(.plain)
             .frame(minHeight: 44)
@@ -82,10 +82,10 @@ struct FirstRunTutorialView: View {
             FirstRunMascot(scene: scene(of: step), size: 72)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title(of: step))
-                    .font(.system(size: TaptionType.scaled(TaptionType.display), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.display), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(detail(of: step))
-                    .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -178,7 +178,7 @@ struct FirstRunTutorialView: View {
     private var bottomBar: some View {
         HStack(spacing: 12) {
             Button(language.text("건너뛰기", "Skip")) { skipStep() }
-                .font(.system(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
                 .buttonStyle(.plain)
                 .frame(minWidth: 88, minHeight: 50)
@@ -186,7 +186,7 @@ struct FirstRunTutorialView: View {
                 Text(step.next == nil
                     ? language.text("시작하기", "Get started")
                     : language.text("다음", "Next"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                     .foregroundStyle(Color.tpSurface)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -335,11 +335,11 @@ private struct FirstRunPlacePicker: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(language.text(destination.koreanName, destination.englishName))
-                        .font(.system(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     if place?.point != nil {
                         Text(savedName ?? language.text("저장됨", "Saved"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .medium, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                             .lineLimit(1)
                     }
@@ -366,7 +366,7 @@ private struct FirstRunPlacePicker: View {
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("firstRunSearch.\(destination.rawValue)")
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
             .padding(.horizontal, 12)
             .frame(minHeight: 44)
             .background(Color.tpBackground, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -380,11 +380,11 @@ private struct FirstRunPlacePicker: View {
                     Button { select(result) } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(result.title)
-                                .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
                                 .foregroundStyle(Color.tpInk)
                             if !result.subtitle.isEmpty {
                                 Text(result.subtitle)
-                                    .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .medium, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                                     .foregroundStyle(Color.tpSecondary)
                             }
                         }
@@ -397,7 +397,7 @@ private struct FirstRunPlacePicker: View {
 
             if searchFailed {
                 Text(language.text("위치를 찾지 못했습니다. 다른 이름으로 검색해 주세요.", "Couldn't find it. Try another name."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
 
@@ -408,7 +408,7 @@ private struct FirstRunPlacePicker: View {
                 clearSearch()
             } label: {
                 Label(language.text("현재 위치로 저장", "Use current location"), systemImage: "location.fill")
-                    .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
@@ -419,7 +419,7 @@ private struct FirstRunPlacePicker: View {
                 Text(model.permissionState(for: .location).isGranted
                     ? language.text("현재 위치를 받는 중입니다. 검색으로도 저장할 수 있습니다.", "Waiting for your location. You can also search.")
                     : language.text("위치를 허용하면 현재 위치로도 저장할 수 있습니다.", "Allow location to use your current position."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -494,11 +494,11 @@ private struct FirstRunPasswordPage: View {
                     // 앱 잠금을 켜면 초기값이 먼저 등록된다. 그래도 번호는 계속 보여 준다.
                     if security.hasPIN, model.rememberedBackupPassword != FirstRunTutorialPolicy.defaultPIN {
                         Text(language.text("등록된 비밀번호가 있습니다", "A password is already set"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.title), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.title), weight: .bold))
                         note(language.text("바꾸지 않으면 그대로 씁니다.", "It stays as is unless you change it."))
                     } else {
                         Text(language.text("초기 비밀번호", "Default password"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
                             .foregroundStyle(Color.tpSecondary)
                         Text(FirstRunTutorialPolicy.defaultPIN)
                             .font(.system(size: TaptionType.scaled(TaptionType.display), weight: .bold, design: .monospaced))
@@ -509,12 +509,12 @@ private struct FirstRunPasswordPage: View {
 
                 card {
                     Text(language.text("새 비밀번호(6자리)", "New password (6 digits)"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
                     pinField(language.text("새 비밀번호", "New password"), text: $pin, id: "firstRunPIN")
                     pinField(language.text("비밀번호 확인", "Confirm password"), text: $confirmation, id: "firstRunPINConfirm")
                     if let message {
                         Text(message)
-                            .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceRose)
                     }
                 }
@@ -524,7 +524,7 @@ private struct FirstRunPasswordPage: View {
                         language.text("앱을 열 때마다 잠금", "Lock whenever the app opens"),
                         isOn: Binding(get: { isAppLockOn }, set: { setAppLock($0) })
                     )
-                    .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
                     .tint(Color.tpAccent)
                     note(language.text("끄면 비밀번호는 백업에만 쓰입니다.", "When off, the password is used only for backups."))
                 }
@@ -549,7 +549,7 @@ private struct FirstRunPasswordPage: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: TaptionType.scaled(TaptionType.label), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.label), weight: .medium))
             .foregroundStyle(Color.tpSecondary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -614,10 +614,10 @@ private struct FirstRunClipEditorPage: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(row.title)
-                                .font(.system(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.bodyStrong), weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                             Text(row.detail)
-                                .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .medium, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .medium))
                                 .foregroundStyle(Color.tpSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -699,7 +699,7 @@ private struct FirstRunCountersPage: View {
             VStack(spacing: 12) {
                 VStack(spacing: 6) {
                     Text(language.text("예시", "Example"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.caption), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                     MapHomeCounterTable(
                         salary: showsSalary && isSalaryConfigured
@@ -719,7 +719,7 @@ private struct FirstRunCountersPage: View {
                             Label(language.text("연봉 카운터", "Salary counter"), systemImage: "wonsign.circle.fill")
                             if !isSalaryConfigured {
                                 Text(language.text("연봉을 적으면 나타납니다", "Appears once you enter a salary"))
-                                    .font(.system(size: TaptionType.scaled(TaptionType.caption), weight: .medium, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.caption), weight: .medium))
                                     .foregroundStyle(Color.tpSecondary)
                             }
                         }
@@ -732,7 +732,7 @@ private struct FirstRunCountersPage: View {
                         .padding(.vertical, 6)
                     }
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.body), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.body), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
                 .tint(Color.tpAccent)
                 .padding(.horizontal, 14)

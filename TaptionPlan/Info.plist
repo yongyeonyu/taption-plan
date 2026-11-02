@@ -2,6 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SUIT-Regular.otf</string>
+		<string>SUIT-Medium.otf</string>
+		<string>SUIT-SemiBold.otf</string>
+		<string>SUIT-Bold.otf</string>
+		<string>SUIT-ExtraBold.otf</string>
+		<string>Pretendard-Regular.otf</string>
+		<string>Pretendard-SemiBold.otf</string>
+		<string>Pretendard-Bold.otf</string>
+		<string>Jua-Regular.ttf</string>
+		<string>Sunflower-Medium.ttf</string>
+		<string>Sunflower-Bold.ttf</string>
+	</array>
 	<key>AIR_QUALITY_PROXY_HOST</key>
 	<string>$(AIR_QUALITY_PROXY_HOST)</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>

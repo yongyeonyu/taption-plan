@@ -93,10 +93,10 @@ struct MapHomeUserLocationActionSheet: View {
                     )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(locationName)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                         .lineLimit(1)
                     Text(locationSubtitle)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -200,13 +200,13 @@ struct MapHomeSearchPinLocationSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("위치 추가", "Add location"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
             VStack(alignment: .leading, spacing: 3) {
                 Text(result.title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 if !result.subtitle.isEmpty {
                     Text(result.subtitle)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -215,7 +215,7 @@ struct MapHomeSearchPinLocationSheet: View {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(FloorLabel.korean(floor))
+                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
@@ -236,7 +236,7 @@ struct MapHomeSearchPinLocationSheet: View {
                                 .scaledToFit()
                                 .frame(width: 24, height: 24)
                             Text(language.text(destination.koreanName, destination.englishName))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             Spacer()
                         }
                         .padding(.horizontal, 10)
@@ -253,7 +253,7 @@ struct MapHomeSearchPinLocationSheet: View {
             Divider()
 
             Text(language.text("대중교통 위치", "Transit location"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(.secondary)
 
             LazyVGrid(
@@ -274,7 +274,7 @@ struct MapHomeSearchPinLocationSheet: View {
                                     kind.englishTitle
                                 )
                             )
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             Spacer()
                         }
                         .padding(.horizontal, 10)

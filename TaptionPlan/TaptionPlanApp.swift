@@ -56,7 +56,7 @@ struct TaptionPlanApp: App {
             } else if ProcessInfo.processInfo.arguments.contains("-pinPreview") {
                 MapHomePinPreviewHost()
             } else {
-                AppShellView()
+                TaptionFontRoot { AppShellView() }
                     .refreshesSupportedOrientations()
             }
             #else

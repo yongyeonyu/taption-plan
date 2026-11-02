@@ -382,7 +382,7 @@ struct AppShellView: View {
                     Image("TaptionSplashIcon").resizable().scaledToFit()
                         .frame(width: 190, height: 190)
                     Text("BOKKI Plan")
-                        .font(.system(size: 25, weight: .semibold))
+                        .font(.taptionFixed(size: 25, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(height: 32)
                         .padding(.top, 10)
@@ -400,9 +400,9 @@ struct AppShellView: View {
                             )
                         )
                     Text("\(Int((initialLaunchProgress * 100).rounded()))%")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: 12, weight: .semibold))
                     Text(launchStatusText)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(maxWidth: .infinity)
@@ -893,7 +893,7 @@ private struct AppLockPINSheet: View {
                 .keyboardType(.numberPad)
                 .textContentType(.password)
                 .multilineTextAlignment(.center)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .padding(.horizontal, 18)
                 .frame(width: 210, height: 48)
@@ -1135,13 +1135,12 @@ struct TaptionProAccessView: View {
 
                 VStack(spacing: TaptionSpacing.cozy) {
                     Text(title)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(25)),
-                            weight: .bold,
-                            design: .rounded
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(25)),
+                            weight: .bold
                         ))
                         .foregroundStyle(Color.tpInk)
                     Text(detail)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1266,7 +1265,7 @@ struct TaptionProAccessView: View {
                     controller.startTrial()
                 } label: {
                     Text(language.text("14일 무료 체험 시작", "Start 14-day free trial"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                 }
@@ -1283,7 +1282,7 @@ struct TaptionProAccessView: View {
                         "개발자 체험 14일 초기화",
                         "Reset developer trial for 14 days"
                     ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                 }
@@ -1299,14 +1298,14 @@ struct TaptionProAccessView: View {
                 } label: {
                     VStack(spacing: 3) {
                         Text(purchaseTitle)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                         Text(
                             language.text(
                                 "한 번 결제 · 자동 갱신 없음",
                                 "One-time purchase · No auto-renewal"
                             )
                         )
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -1316,12 +1315,12 @@ struct TaptionProAccessView: View {
                 Button(language.text("구매 복원", "Restore purchase")) {
                     Task { await controller.restore() }
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.tpReferenceBlue)
             } else if allowsDismiss {
                 Button(language.text("계속 사용", "Continue")) { dismiss() }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17)), weight: .bold))
                     .buttonStyle(.borderedProminent)
                     .tint(Color.tpPrimaryFill)
             }
@@ -1398,7 +1397,7 @@ struct TaptionProAccessView: View {
                 .foregroundStyle(Color.tpReferenceBlue)
                 .frame(width: 24)
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpInk)
         }
     }

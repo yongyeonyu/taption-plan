@@ -42,7 +42,7 @@ struct MapHomePlaceNameEditor: View {
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             VStack(alignment: .leading, spacing: 10) {
                 Text(language.text("이름", "Name"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                 TextField(language.text("장소 이름", "Place name"), text: $name)
                     .textFieldStyle(.roundedBorder)
                 Button(language.text("이름 저장", "Save name")) {
@@ -83,13 +83,13 @@ struct MapHomePlaceRangeEditor: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(language.text("범위 지정", "Range"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     Spacer()
                     Toggle(language.text("지도에 범위 표시", "Show on map"), isOn: $showsRanges)
                         .labelsHidden()
                         .tint(Color.tpAccent)
                     Text(language.text("지도 표시", "Map"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 Map(
@@ -108,10 +108,10 @@ struct MapHomePlaceRangeEditor: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 HStack {
                     Text(language.text("반경", "Radius"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     Spacer()
                     Text("\(Int(radiusMeters.rounded()))m")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 }
                 Slider(value: $radiusMeters, in: 30...500, step: 10)
                     .tint(Color.tpAccent)
@@ -150,12 +150,12 @@ struct MapHomeMarkerInfoSheet: View {
                         .frame(width: 52, height: 52)
                         .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     Text(title)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     Spacer()
                 }
                 Text(detail)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let model, let placeID {
@@ -288,20 +288,20 @@ struct MapHomeDaySummarySheet: View {
                 Label(language.text("오늘 번 돈", "Earned today"), systemImage: "wonsign.circle.fill")
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
-                Text(MapHomeSalaryPolicy.wonText(today)).font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                Text(MapHomeSalaryPolicy.wonText(today)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
             }
             HStack {
                 Text(language.text("이번 달 예상 월급", "Expected this month"))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer()
-                Text(MapHomeSalaryPolicy.wonText(salary.expectedMonthPay)).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                Text(MapHomeSalaryPolicy.wonText(salary.expectedMonthPay)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
             }
             if let month = salary.month {
                 HStack {
                     Text(language.text("이번 달 \(Int(month.workSeconds / 3_600))시간 근무", "This month \(Int(month.workSeconds / 3_600)) h"))
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
-                    Text(MapHomeSalaryPolicy.wonText(month.earnings)).font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    Text(MapHomeSalaryPolicy.wonText(month.earnings)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 }
             }
             HStack {
@@ -312,12 +312,12 @@ struct MapHomeDaySummarySheet: View {
                         .foregroundStyle(Color.tpAccent)
                 }
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
             Text(salary.showsNet ? language.text("세후 추정", "After-tax estimate") : language.text("세전 추정", "Pre-tax estimate"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
-        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -336,16 +336,16 @@ struct MapHomeDaySummarySheet: View {
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(Color.tpAccent)
                 Text("Lv.\(card.level)")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 8)
                 Label(language.text("연속 \(card.streak)일", "\(card.streak)-day streak"), systemImage: "flame.fill")
                 Label(language.text("보상 \(card.pendingWeeklyRewards)", "Rewards \(card.pendingWeeklyRewards)"), systemImage: "gift.fill")
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
             Text(card.status)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(card.isQualifiedToday ? Color.tpAccent : Color.tpSecondary)
                 .lineLimit(2)
             Capsule()
@@ -412,10 +412,10 @@ struct MapHomeDaySummarySheet: View {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(language.text("하루 요약", "Day Summary"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                             .foregroundStyle(Color.tpInk)
                         Text(dateText)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     Spacer(minLength: 8)
@@ -430,7 +430,7 @@ struct MapHomeDaySummarySheet: View {
                             language.text("집 성장", "Home growth"),
                             systemImage: "house.and.flag.fill"
                         )
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                         .foregroundStyle(Color.tpAccent)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -457,7 +457,7 @@ struct MapHomeDaySummarySheet: View {
                         .foregroundStyle(Color.tpSecondary)
                     Spacer()
                     Text(language.text("\(memoCounts.total)개 · 지도 \(memoCounts.map)개", "\(memoCounts.total) · map \(memoCounts.map)"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                 }
             }
 
@@ -473,7 +473,7 @@ struct MapHomeDaySummarySheet: View {
                         .monospacedDigit()
                         .foregroundStyle(Color.tpInk)
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
             }
 
             if categories.isEmpty {
@@ -482,7 +482,7 @@ struct MapHomeDaySummarySheet: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(30)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                     Text(language.text("이 날의 기록이 아직 없습니다", "No records for this day yet"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: 160)
@@ -493,7 +493,7 @@ struct MapHomeDaySummarySheet: View {
                         "\(DurationText.english(totalSeconds)) recorded"
                     )
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
 
                 VStack(spacing: 12) {
@@ -517,7 +517,7 @@ struct MapHomeDaySummarySheet: View {
     private var travelDistanceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(language.text("이동 거리", "Distance by mode"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 .foregroundStyle(Color.tpSecondary)
             ForEach(travelDistances) { entry in
                 HStack(spacing: 10) {
@@ -526,11 +526,11 @@ struct MapHomeDaySummarySheet: View {
                         .foregroundStyle(Color.tpAccent)
                         .frame(width: 24)
                     Text(language.text(entry.mode.summaryKoreanTitle, entry.mode.summaryEnglishTitle))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                         .foregroundStyle(Color.tpInk)
                     Spacer()
                     Text(MapHomeDayTravelSummary.distanceText(entry.meters))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(Color.tpInk)
                 }
@@ -546,14 +546,14 @@ struct MapHomeDaySummarySheet: View {
                     .foregroundStyle(entry.tint)
                     .frame(width: 24)
                 Text(entry.title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
                 Text("\(Int((entry.ratio * 100).rounded()))%")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(DurationText.localized(entry.seconds, english: language == .english))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
             GeometryReader { proxy in

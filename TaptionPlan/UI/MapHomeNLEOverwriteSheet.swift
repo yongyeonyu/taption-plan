@@ -147,12 +147,12 @@ struct MapHomeNLEOverwriteSheet: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(language.text("전체 덮기", "Overwrite all"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                 Text(language.text(
                     "나뉜 클립을 한 번에 같은 분류로 바꿉니다",
                     "Change every split clip to one category at once"
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(2)
             }
@@ -186,7 +186,7 @@ struct MapHomeNLEOverwriteSheet: View {
             .labelsHidden()
             .tint(Color.tpAccent)
             Text(scope.explanation(language))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -229,7 +229,7 @@ struct MapHomeNLEOverwriteSheet: View {
                     .foregroundStyle(category.tint)
                     .frame(width: 16)
                 Text(category.localizedTitle(language))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -261,7 +261,7 @@ struct MapHomeNLEOverwriteSheet: View {
         VStack(alignment: .leading, spacing: 4) {
             Toggle(isOn: $mergesAfter) {
                 Text(language.text("같은 분류끼리 합치기", "Merge same categories"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .foregroundStyle(Color.tpInk)
             }
             .tint(Color.tpAccent)
@@ -270,7 +270,7 @@ struct MapHomeNLEOverwriteSheet: View {
                 "손으로 가른 클립을 하나로 되돌립니다. 지금 합칠 수 있는 곳 \(mergeableCount)군데.",
                 "Joins the clips you split by hand. \(mergeableCount) place(s) can merge now."
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(Color.tpSecondary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -279,7 +279,7 @@ struct MapHomeNLEOverwriteSheet: View {
     private var footer: some View {
         VStack(spacing: 8) {
             Text(summaryLine)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                 .foregroundStyle(pickedCategory == nil ? Color.tpSecondary : Color.tpAccent)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(2)
@@ -291,7 +291,7 @@ struct MapHomeNLEOverwriteSheet: View {
                         dismiss()
                     } label: {
                         Text(language.text("합치기만", "Merge only"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                             .foregroundStyle(Color.tpAccent)
                             .padding(.horizontal, 14)
                             .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
@@ -310,7 +310,7 @@ struct MapHomeNLEOverwriteSheet: View {
                     dismiss()
                 } label: {
                     Text(language.text("덮기", "Overwrite"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 22)
                         .frame(minHeight: TaptionMenuMetrics.minimumHitSize)
@@ -339,7 +339,7 @@ struct MapHomeNLEOverwriteSheet: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .foregroundStyle(Color.tpSecondary)
     }
 }

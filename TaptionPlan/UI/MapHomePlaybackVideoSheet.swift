@@ -24,25 +24,25 @@ struct MapHomePlaybackVideoSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 Text(language.text("재생 영상 만들기", "Make playback video"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Spacer(minLength: 8)
                 Button(phase == .rendering ? language.text("취소", "Cancel") : language.text("닫기", "Close")) {
                     task?.cancel()
                     dismiss()
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text(message)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 if phase == .rendering || phase == .saving {
                     ProgressView(value: progress)
                         .tint(Color.tpAccent)
                     Text("\(Int((progress * 100).rounded(.down)))%")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold).monospacedDigit())
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -85,12 +85,12 @@ struct MapHomePlaybackVideoSheet: View {
             EmptyView()
         case .saved:
             Label(language.text("사진에 저장됨", "Saved to Photos"), systemImage: "checkmark.circle.fill")
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                 .foregroundStyle(Color.tpAccent)
         case .idle, .failed:
             Button(action: start) {
                 Label(language.text("영상 만들기", "Make video"), systemImage: "film")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
                     .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

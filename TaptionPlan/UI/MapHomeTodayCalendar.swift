@@ -24,7 +24,7 @@ struct MapHomeCalendarButton: View {
                 .overlay(alignment: .topTrailing) {
                     if count > 0 {
                         Text("\(count)")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
@@ -67,14 +67,14 @@ struct MapHomeTodayCalendarList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             switch state {
             case .loading:
                 ProgressView().controlSize(.small)
             case .needsPermission:
                 Text(language.text("구글 계정 일정을 보려면 캘린더 접근을 허용해 주세요.", "Allow calendar access to see Google events."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 Button(language.text("캘린더 접근 허용", "Allow calendar access")) {
                     Task {
@@ -82,35 +82,38 @@ struct MapHomeTodayCalendarList: View {
                         await load()
                     }
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
             case .failed:
                 Text(language.text("구글 캘린더를 불러오지 못했어요. 설정에서 연결을 확인해 주세요.", "Could not load Google Calendar. Check the connection in Settings."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             case .denied:
                 Text(language.text("캘린더 접근이 꺼져 있어요. 설정 > 개인정보 보호에서 허용해 주세요.", "Calendar access is off. Enable it in Settings > Privacy."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             case .loaded(let events) where events.isEmpty:
                 Text(emptyText)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             case .loaded(let events):
                 ForEach(events) { event in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(timeText(event))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                             .foregroundStyle(Color.tpSecondary)
                             .frame(width: 52, alignment: .leading)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(event.title)
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                                 .foregroundStyle(Color.tpInk)
-                                .lineLimit(1)
-                            Text(event.calendarTitle)
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
-                                .foregroundStyle(Color.tpSecondary)
-                                .lineLimit(1)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if let notes = event.notes {
+                                Text(notes)
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                                    .foregroundStyle(Color.tpSecondary)
+                                    .lineLimit(6)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                 }

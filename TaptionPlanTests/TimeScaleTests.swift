@@ -5683,8 +5683,8 @@ final class LocalizedMessageContractTests: XCTestCase {
         XCTAssertEqual(ScreenTimeUsageRecordEngine.localizedDurationText(14 * 60, preference: .english), "14 min")
         XCTAssertEqual(ScreenTimeUsageRecordEngine.localizedDurationText(7_200 + 14 * 60, preference: .english), "2 hr 14 min")
         XCTAssertNil(ScreenTimeUsageRecordEngine.localizedDurationText(30, preference: .english))
-        XCTAssertEqual(FloorLabel.english(-2), "B2")
-        XCTAssertEqual(FloorLabel.english(7), "7F")
+        XCTAssertEqual(FloorLabel.english(-2), "B2Floor")
+        XCTAssertEqual(FloorLabel.english(7), "7Floor")
     }
 }
 

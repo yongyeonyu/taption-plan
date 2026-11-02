@@ -102,6 +102,7 @@ final class AppleCalendarService {
                         for: event.recurrenceRules
                     ),
                     occurrenceDate: event.occurrenceDate,
+                    notes: CalendarNotesText.plain(event.notes),
                     attendeeCount: event.attendees?.count,
                     isCancelled: event.status == .canceled
                 ).normalizedForDisplay()
@@ -195,5 +196,20 @@ final class AppleCalendarService {
             Int(green * 255),
             Int(blue * 255)
         )
+    }
+}
+
+enum CalendarNotesText {
+    /// 일정 메모의 HTML 태그와 엔티티를 풀어 글자만 남긴다. 비면 nil이다.
+    static func plain(_ text: String?) -> String? {
+        guard var value = text else { return nil }
+        value = value.replacingOccurrences(of: "<(br|/p|/div|/li)[^>]*>", with: "\n", options: [.regularExpression, .caseInsensitive])
+        value = value.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        for (entity, character) in [("&nbsp;", " "), ("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&amp;", "&")] {
+            value = value.replacingOccurrences(of: entity, with: character)
+        }
+        value = value.replacingOccurrences(of: "\n{2,}", with: "\n", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 }

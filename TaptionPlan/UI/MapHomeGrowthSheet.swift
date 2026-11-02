@@ -52,10 +52,10 @@ struct MapHomeGrowthSheet: View {
                 .foregroundStyle(Color.tpAccent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(language.text("우리 집 성장", "Home growth"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(verbatim: "\(season.year) · Lv.\(season.level)")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
             .contentShape(Rectangle())
@@ -64,7 +64,7 @@ struct MapHomeGrowthSheet: View {
             Spacer()
             if season.pendingWeeklyRewards > 0 {
                 Text(language.text("보상 \(season.pendingWeeklyRewards)", "Rewards \(season.pendingWeeklyRewards)"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                     .foregroundStyle(Color.tpAccent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
@@ -85,16 +85,16 @@ struct MapHomeGrowthSheet: View {
                 .padding(8)
                 .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             VStack(alignment: .leading, spacing: 7) {
-                Text(language.text("올해의 집", "This year's home"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                Text(MapHomeGrowthPolicy.homeTitle(level: season.level, language: language))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(language.text("Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))", "Lv.\(season.level) / \(MapHomeGrowthPolicy.maximumLevel(year: season.year))"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 ProgressView(value: Double(season.level), total: Double(MapHomeGrowthPolicy.maximumLevel(year: season.year)))
                     .tint(Color.tpPastelMint)
                 Text(language.text("연속 달성 \(season.streak)일", "\(season.streak)-day streak"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -111,7 +111,7 @@ struct MapHomeGrowthSheet: View {
             )
             if MapHomeLandmarkCatalog.isCollectionComplete(season) {
                 Text(language.text("액세서리 52개를 모두 모았어요.", "You collected all 52 accessories."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else if season.pendingWeeklyRewards > 0 {
                 ForEach(MapHomeLandmarkCatalog.weeklyChoices(for: season)) { candidate in
@@ -135,10 +135,10 @@ struct MapHomeGrowthSheet: View {
                             .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(displayName(candidate))
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                                     .foregroundStyle(Color.tpInk)
                                 Text("\(countryName(candidate.country)) · \(categoryName(candidate.category))")
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                     .foregroundStyle(Color.tpSecondary)
                             }
                             Spacer()
@@ -154,7 +154,7 @@ struct MapHomeGrowthSheet: View {
             } else {
                 let remaining = MapHomeGrowthPolicy.daysUntilNextWeeklyReward(streak: season.streak)
                 Text(language.text("다음 보상까지 연속 \(remaining)일 남았어요.", "\(remaining) consecutive days until your next reward."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -171,7 +171,7 @@ struct MapHomeGrowthSheet: View {
             )
             if placements.isEmpty && unplacedPlots.isEmpty {
                 Text(language.text("첫 주간 보상을 받으면 땅 조각이 생겨요.", "Your first weekly reward will add a land plot."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 landGrid
@@ -179,20 +179,20 @@ struct MapHomeGrowthSheet: View {
                     "지도에서 집 근처를 최대로 확대하면 이 땅이 집 주변에 그려지고, 점선 칸을 눌러 바로 이어 붙일 수 있어요.",
                     "Zoom all the way in near your home on the map to see this land and attach plots there."
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 if let next = unplacedPlots.first {
                     Text(language.text(
                         "붙이지 않은 땅 \(unplacedPlots.count)개 · 점선 칸을 눌러 이어 붙여요.",
                         "\(unplacedPlots.count) plots left · tap a dashed cell to attach."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                     Button {
                         place(next)
                     } label: {
                         Label(language.text("자동으로 붙이기", "Place automatically"), systemImage: "wand.and.stars")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             .foregroundStyle(Color.tpAccent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
@@ -285,14 +285,14 @@ struct MapHomeGrowthSheet: View {
                     language.text(showsAllAccessories ? "전체 도감 접기" : "전체 도감 보기", showsAllAccessories ? "Hide all" : "Show all"),
                     systemImage: showsAllAccessories ? "chevron.up" : "square.grid.3x3.fill"
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                 .foregroundStyle(Color.tpAccent)
             }
             .buttonStyle(.plain)
             if showsAllAccessories { accessoryCollectionGrid }
             if season.accessories.isEmpty {
                 Text(language.text("아직 모은 액세서리가 없어요.", "No accessories collected yet."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(season.accessories, id: \.self) { accessoryID in
@@ -314,18 +314,18 @@ struct MapHomeGrowthSheet: View {
                                 .background(Color.tpAccent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(accessoryName(accessoryID))
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                                     .foregroundStyle(Color.tpInk)
                                 if let landmark = MapHomeGrowthAccessoryCatalog.landmark(for: accessoryID) {
                                     Text("\(countryName(landmark.country)) · \(categoryName(landmark.category))")
-                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                         .foregroundStyle(Color.tpSecondary)
                                 }
                             }
                             Spacer()
                             if season.equippedAccessory == accessoryID {
                                 Text(language.text("착용 중", "Equipped"))
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                                     .foregroundStyle(Color.tpAccent)
                             }
                             // 지도에서 쓰는 화랑이 아이콘에 이 장식을 단 모습.
@@ -362,7 +362,7 @@ struct MapHomeGrowthSheet: View {
                         }
                         .frame(height: 26)
                         Text(language == .english ? candidate.englishName : candidate.name)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .medium))
                             .foregroundStyle(isOwned ? Color.tpInk : Color.tpSecondary.opacity(0.6))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -397,7 +397,7 @@ struct MapHomeGrowthSheet: View {
             )
             if history.archives.isEmpty {
                 Text(language.text("아직 보관된 집이 없어요.", "No archived homes yet."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             } else {
                 ForEach(history.archives.reversed(), id: \.year) { archive in
@@ -408,15 +408,15 @@ struct MapHomeGrowthSheet: View {
                             .frame(width: 42, height: 42)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: "\(archive.year)")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                                 .foregroundStyle(Color.tpInk)
                             Text("Lv.\(archive.level) · \(archive.chosenEvolutions.count) \(language.text("진화", "evolutions"))")
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(Color.tpSecondary)
                         }
                         Spacer()
                         Text("\(archive.landPlots.count) \(language.text("땅", "plots"))")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                             .foregroundStyle(Color.tpSecondary)
                     }
                     .padding(10)
@@ -429,10 +429,10 @@ struct MapHomeGrowthSheet: View {
     private func sectionTitle(_ title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             Text(subtitle)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
     }
@@ -444,7 +444,7 @@ struct MapHomeGrowthSheet: View {
                 subtitle: language.text("레벨·보상·저장 형식을 임의로 바꿔 기능을 시험해요", "Change level, rewards, and storage shape to test")
             )
             Text(language.text("집 레벨", "Home level"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             testStepper(
                 value: "Lv.\(season.level)",
@@ -454,7 +454,7 @@ struct MapHomeGrowthSheet: View {
                 largeUp: { setTestLevel(season.level + 10) }
             )
             Text(language.text("연속 달성일", "Streak days"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             testStepper(
                 value: language.text("\(season.streak)일", "\(season.streak) days"),
@@ -464,10 +464,10 @@ struct MapHomeGrowthSheet: View {
                 largeUp: { adjustTestStreak(7) }
             )
             Text(language.text("연속 일수가 7의 배수를 넘으면 주간 보상이 하나씩 생겨요.", "Each multiple of 7 streak days adds a weekly reward."))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             Text(language.text("레벨 바로 가기", "Level presets"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                 ForEach([1, 100, 200, 300, MapHomeGrowthPolicy.maximumLevel(year: season.year), 366], id: \.self) { level in
@@ -475,18 +475,18 @@ struct MapHomeGrowthSheet: View {
                 }
             }
             Text(language.text("보상·연속", "Rewards and streak"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
                 testButton(language.text("보상 +1", "Reward +1")) { addTestRewards(streakDays: 0) }
                 testButton(language.text("연속 +7일(보상 +1)", "Streak +7 (reward +1)")) { addTestRewards(streakDays: 7) }
             }
             Text(language.text("저장 형식", "Storage shape"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(Color.tpSecondary)
             testButton(language.text("이전 형식으로 저장 후 다시 읽기", "Save in the old shape and reload")) { saveLegacyShape() }
             Text(language.text("2026은 365일이라 최대 365입니다. 366은 그림 미리보기용이고, 다음 기록 때 365로 돌아갑니다.", "2026 has 365 days, so the cap is 365. Lv.366 is an artwork preview and returns to the cap on the next record."))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
         }
     }
@@ -503,7 +503,7 @@ struct MapHomeGrowthSheet: View {
             testButton("−\(value.contains("일") || value.contains("days") ? 7 : 10)", action: large)
             testButton("−1", action: small)
             Text(value)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(minWidth: 72)
                 .monospacedDigit()
@@ -528,7 +528,7 @@ struct MapHomeGrowthSheet: View {
     private func testButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)

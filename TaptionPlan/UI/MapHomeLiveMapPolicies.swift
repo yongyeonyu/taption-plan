@@ -790,7 +790,7 @@ struct MapHomeWeatherNoticeView: View {
                 ))
             }
         }
-        .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
+        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold))
         .foregroundStyle(Color.tpInk.opacity(0.78))
         .multilineTextAlignment(.trailing)
         .padding(.horizontal, 7)

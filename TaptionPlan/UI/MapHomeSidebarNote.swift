@@ -65,17 +65,17 @@ struct MapHomeSidebarNoteBubble: View {
                         Image("GoogleGLogo").resizable().scaledToFit().frame(width: 12, height: 12)
                     }
                     Text(note.time)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                         .foregroundStyle(Color.tpSecondary)
                         .monospacedDigit()
                 }
                 Text(note.title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .lineLimit(3)
                 if let detail = note.detail, !detail.isEmpty {
                     Text(detail)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                         .lineLimit(3)
                 }

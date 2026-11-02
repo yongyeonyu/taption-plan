@@ -2,9 +2,8 @@ import SwiftUI
 
 /// 오른쪽 위 날짜 배지를 눌러 펼치는 날짜 줄.
 ///
-/// 칸은 가운데 날짜를 기준으로 고정 간격에 놓고, 손가락 이동만큼 옮긴다. 가운데 오는 칸을 강조하고,
-/// 손을 떼면 가까운 칸으로 스냅한다. 날짜는 손을 뗀 순간 먼저 고르고, 그날 데이터는 부모가 그다음에 불러온다.
-/// 칸 목록(요일·공휴일 색)은 가운데 날짜가 바뀔 때만 다시 만들어 끌 때 계산을 줄인다.
+/// 시스템 스크롤 위에 올려 손가락을 끊김 없이 따라가고 관성으로 이어지며, 손을 떼면 가까운 날짜 칸에
+/// 자석처럼 붙는다. 날짜는 스크롤이 멈춘 뒤 한 번만 고른다(그날 데이터를 불러오면 스크롤이 끊긴다).
 struct MapHomeDateStrip: View {
     let language: MapHomeLanguage
     let selectedDate: Date
@@ -13,36 +12,23 @@ struct MapHomeDateStrip: View {
     /// 날짜가 정해졌을 때. 부모가 선택일을 바꾸고 그날 데이터를 불러온다.
     let onSelect: (Date) -> Void
 
-    /// 칸 목록을 만드는 반경(날 수). 줄 너비보다 넉넉하게 잡아 창 크기가 바뀌어도 칸이 모자라지 않게 한다.
-    private static let cellRadius = 10
+    /// 기준 날짜 앞뒤로 스크롤할 수 있는 날 수. 끝에 가까워지면 기준을 옮긴다.
+    private static let scrollRadius = 400
 
     private let calendar = TimelineAxisGrid.normalizedCalendar()
-    /// 줄 가운데에 와 있는 날짜. 밀면 바뀌지만 선택일은 손을 뗄 때까지 그대로다.
-    @State private var centeredDay: Date?
-    /// 가운데 날짜 기준으로 만든 칸 목록. 끌 때는 이 목록의 위치만 바꾼다.
-    @State private var cells: [StripDay] = []
-    /// 손가락을 따라가는 중의 가로 이동량.
-    @State private var dragOffset: CGFloat = 0
+    /// 칸 번호 0에 해당하는 날짜.
+    @State private var anchorDay: Date?
+    /// 줄 가운데에 와 있는 칸 번호. 밀면 바뀌지만 선택일은 스크롤이 멈출 때까지 그대로다.
+    @State private var centeredStep: Int?
 
-    private struct StripDay: Identifiable {
-        let step: Int
-        let date: Date
-        let number: String
-        let weekday: String
-        let tint: Color
-        var id: Int { step }
-    }
+    private var baseDay: Date { anchorDay ?? calendar.startOfDay(for: selectedDate) }
 
-    /// 손가락 이동으로 지금 가운데 와 있는 칸이 기준 날짜에서 몇 칸 옮겨졌는지.
-    private var dragShift: Int {
-        Int((-dragOffset / MapHomeWeekStripMath.dayPitch).rounded())
+    private func date(forStep step: Int) -> Date {
+        calendar.date(byAdding: .day, value: step, to: baseDay) ?? baseDay
     }
 
     /// 지금 화면 가운데 보이는 날짜. 달 표시와 강조가 여기를 따른다.
-    private var visibleDay: Date {
-        let base = centeredDay ?? calendar.startOfDay(for: selectedDate)
-        return calendar.date(byAdding: .day, value: dragShift, to: base) ?? base
-    }
+    private var visibleDay: Date { date(forStep: centeredStep ?? 0) }
 
     var body: some View {
         GeometryReader { proxy in
@@ -51,8 +37,8 @@ struct MapHomeDateStrip: View {
         .frame(height: MapHomeWeekStripMath.height)
         .onAppear { recenter(on: selectedDate) }
         .onChange(of: selectedDate) { _, date in
-            // 선택일이 바뀌면 그 날을 가운데에 둔다. 애니메이션 없이 바로 맞춘다.
-            dragOffset = 0
+            // 선택일이 바뀌면 그 날을 가운데에 둔다. 스크롤이 멈춰 고른 날이면 이미 가운데라 그대로다.
+            guard calendar.startOfDay(for: date) != visibleDay else { return }
             recenter(on: date)
         }
         // 화면 시험에서 이 줄을 이름으로 집는다. 자식(날짜 칸)은 그대로 눌린다.
@@ -76,7 +62,7 @@ struct MapHomeDateStrip: View {
     private var monthLabel: some View {
         let month = calendar.component(.month, from: visibleDay)
         return Text(language.text("\(month)월", monthAbbreviation(for: visibleDay)))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .foregroundStyle(Color.tpInk)
             .lineLimit(1)
             .minimumScaleFactor(0.7)
@@ -87,83 +73,61 @@ struct MapHomeDateStrip: View {
         date.formatted(Date.FormatStyle().month(.abbreviated).locale(Locale(identifier: "en_US")))
     }
 
-    /// 화면 안에 걸친 칸만 놓는다. 위치는 가운데 날짜 기준 간격과 손가락 이동량으로 정한다.
     private func dayArea(width: CGFloat) -> some View {
         let pitch = MapHomeWeekStripMath.dayPitch
-        let shift = dragShift
-        return ZStack {
-            ForEach(cells) { day in
-                let x = width / 2 + CGFloat(day.step) * pitch + dragOffset
-                if abs(x - width / 2) <= width / 2 + pitch {
-                    dayCell(day, isCentered: day.step == shift)
-                        .position(x: x, y: MapHomeWeekStripMath.height / 2)
+        return ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 0) {
+                ForEach(-Self.scrollRadius...Self.scrollRadius, id: \.self) { step in
+                    dayCell(step: step, isCentered: step == (centeredStep ?? 0))
+                        .frame(width: pitch, height: MapHomeWeekStripMath.height)
+                        .id(step)
                 }
             }
+            .scrollTargetLayout()
+        }
+        .contentMargins(.horizontal, max(0, (width - pitch) / 2), for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned(limitBehavior: .never))
+        .scrollPosition(id: $centeredStep, anchor: .center)
+        .onScrollPhaseChange { _, phase in
+            guard phase == .idle else { return }
+            settle()
         }
         .frame(width: width, height: MapHomeWeekStripMath.height)
-        .clipped()
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 6)
-                .onChanged { value in
-                    dragOffset = value.translation.width
-                }
-                .onEnded { value in
-                    let flick = value.predictedEndTranslation.width
-                    let steps = -Int((flick / pitch).rounded())
-                    let base = centeredDay ?? calendar.startOfDay(for: selectedDate)
-                    let next = calendar.date(byAdding: .day, value: steps, to: base) ?? base
-                    // 자석처럼 가까운 칸에 붙인다. 날짜는 같은 순간 고르고, 데이터는 부모가 그다음에 불러온다.
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                        centeredDay = next
-                        dragOffset = 0
-                    }
-                    cells = makeCells(around: next)
-                    Task { @MainActor in onSelect(next) }
-                }
-        )
     }
 
-    /// 가운데 날짜가 정해졌을 때 한 번만 칸 목록을 만든다.
+    /// 스크롤이 멈추면 가운데 날짜를 고른다. 끝에 가까우면 기준을 옮겨 계속 밀 수 있게 한다.
+    private func settle() {
+        let day = visibleDay
+        if abs(centeredStep ?? 0) > Self.scrollRadius - 30 { recenter(on: day) }
+        if day != calendar.startOfDay(for: selectedDate) { onSelect(day) }
+    }
+
     private func recenter(on date: Date) {
-        let center = calendar.startOfDay(for: date)
-        centeredDay = center
-        cells = makeCells(around: center)
+        anchorDay = calendar.startOfDay(for: date)
+        centeredStep = 0
     }
 
-    private func makeCells(around center: Date) -> [StripDay] {
-        (-Self.cellRadius...Self.cellRadius).compactMap { step in
-            guard let day = calendar.date(byAdding: .day, value: step, to: center) else { return nil }
-            let weekday = calendar.component(.weekday, from: day)
-            let isHoliday = MapHomeCalendarDayStyle(date: day, calendar: calendar) == .holiday
-            let tint: Color = isHoliday || weekday == 1
-                ? .tpSundayText
-                : (weekday == 7 ? .tpSaturdayText : .tpInk)
-            return StripDay(
-                step: step,
-                date: day,
-                number: String(calendar.component(.day, from: day)),
-                weekday: day.formatted(
-                    Date.FormatStyle()
-                        .weekday(.narrow)
-                        .locale(Locale(identifier: language.text("ko_KR", "en_US")))
-                ),
-                tint: tint
-            )
-        }
+    private func tint(for day: Date) -> Color {
+        let weekday = calendar.component(.weekday, from: day)
+        if MapHomeCalendarDayStyle(date: day, calendar: calendar) == .holiday || weekday == 1 { return .tpSundayText }
+        return weekday == 7 ? .tpSaturdayText : .tpInk
     }
 
     /// 가운데 오는 날짜 칸을 파랗게 강조한다. 밀면 강조도 같이 옮겨 간다.
-    private func dayCell(_ day: StripDay, isCentered: Bool) -> some View {
-        Button {
-            onSelect(day.date)
+    private func dayCell(step: Int, isCentered: Bool) -> some View {
+        let day = date(forStep: step)
+        let weekday = day.formatted(
+            Date.FormatStyle().weekday(.narrow).locale(Locale(identifier: language.text("ko_KR", "en_US")))
+        )
+        return Button {
+            onSelect(day)
         } label: {
             VStack(spacing: 0) {
-                Text(day.weekday)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
-                    .foregroundStyle(day.tint)
-                Text(day.number)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                Text(weekday)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
+                    .foregroundStyle(tint(for: day))
+                Text(String(calendar.component(.day, from: day)))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .monospacedDigit()
             }
@@ -175,7 +139,7 @@ struct MapHomeDateStrip: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                if markedDays.contains(day.date) {
+                if markedDays.contains(day) {
                     Circle()
                         .fill(Color.tpReferenceBlue)
                         .frame(width: 4, height: 4)

@@ -58,12 +58,12 @@ struct MapHomeCarAudioSheet: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(language.text("내 차 오디오", "My car audio"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                 Text(language.text(
                     "등록한 기기가 연결된 이동은 자동차로 확정합니다",
                     "Trips with a registered device connected are confirmed as car"
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
                 .lineLimit(2)
             }
@@ -108,7 +108,7 @@ struct MapHomeCarAudioSheet: View {
                 "이동 시작·끝과 연결·해제가 맞았던 기기입니다",
                 "Devices whose connect and disconnect matched a trip"
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(Color.tpSecondary)
             if recent.isEmpty {
                 emptyLine(language.text("아직 없습니다", "None yet"))
@@ -149,11 +149,11 @@ struct MapHomeCarAudioSheet: View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .lineLimit(1)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                 }
             }
@@ -168,7 +168,7 @@ struct MapHomeCarAudioSheet: View {
     private func actionButton(_ title: String, filled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(filled ? .white : Color.tpAccent)
                 .padding(.horizontal, 12)
                 .frame(minHeight: 32)
@@ -179,13 +179,13 @@ struct MapHomeCarAudioSheet: View {
 
     private func emptyLine(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
             .foregroundStyle(Color.tpSecondary)
     }
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .foregroundStyle(Color.tpSecondary)
     }
 

@@ -42,15 +42,15 @@ struct MapHomePlaybackHUD: View {
         VStack(spacing: 6) {
             HStack(spacing: 8) {
                 Text(clockText)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(Color.tpInk)
                 Text(speedText)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(Color.tpSecondary)
                 Spacer(minLength: 4)
                 Text(remainingText)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(Color.tpSecondary)
             }

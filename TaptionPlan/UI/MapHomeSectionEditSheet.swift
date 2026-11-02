@@ -114,7 +114,7 @@ struct MapHomeSectionEditSheet: View {
                 dismiss()
             } label: {
                 Text(language.text("닫기", "Close"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .foregroundStyle(Color.tpReferenceRose)
                     .padding(.horizontal, 15)
                     .frame(minHeight: 38)
@@ -126,7 +126,7 @@ struct MapHomeSectionEditSheet: View {
             .buttonStyle(.plain)
             Spacer()
             Text(language.text("행동 구간 편집", "Edit activity section"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer()
@@ -134,7 +134,7 @@ struct MapHomeSectionEditSheet: View {
                 save()
             } label: {
                 Text(language.text("저장", "Save"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 15)
                     .frame(minHeight: 38)
@@ -244,7 +244,7 @@ struct MapHomeSectionEditSheet: View {
                             ? "xmark.circle.fill"
                             : "rectangle.split.1x2"
                     )
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .foregroundStyle(isSlicing ? Color.white : sliceTint)
                     .padding(.horizontal, 14)
                     .frame(minHeight: 36)
@@ -291,7 +291,7 @@ struct MapHomeSectionEditSheet: View {
                         )
                         : language.text("상세 활동 시간으로 분할됨", "Split to detail time")
                 )
-                .font(.caption2)
+                .font(.taptionFixed(size: 11))
                 .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 6)
@@ -305,7 +305,7 @@ struct MapHomeSectionEditSheet: View {
                 Text(language.text("대분류", "Category"))
                     .frame(width: 118)
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
             .foregroundStyle(.secondary)
 
             GeometryReader { proxy in
@@ -367,13 +367,13 @@ struct MapHomeSectionEditSheet: View {
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(language.text("클립 편집", "Clip editor"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                         .foregroundStyle(Color.tpInk)
                     Text(language.text(
                         "24시간 대분류 클립과 서브클립을 동영상처럼 편집",
                         "Edit 24h clips and sub-clips like video"
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -458,7 +458,7 @@ struct MapHomeSectionEditSheet: View {
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(.secondary)
             }
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
@@ -508,8 +508,8 @@ struct MapHomeSectionEditSheet: View {
             }
         } label: {
             VStack(spacing: 1) {
-                Text(title).font(.caption2).foregroundStyle(.secondary)
-                Text(timeLabel(minute)).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                Text(title).font(.taptionFixed(size: 11)).foregroundStyle(.secondary)
+                Text(timeLabel(minute)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
             }
             .frame(width: 70, height: 44)
             .background(Color.tpSurface, in: Capsule())
@@ -526,7 +526,7 @@ struct MapHomeSectionEditSheet: View {
                 }
                 .stroke(Color.tpLine.opacity(0.45), lineWidth: 1)
                 Text(timeLabel(minute))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.leading, 5)
                     .position(x: 23, y: max(7, y + 7))
@@ -785,10 +785,10 @@ struct MapHomeSectionEditSheet: View {
                     Text(piece.category.localizedTitle(language)).lineLimit(1)
                     if blockHeight >= 54 {
                         Text("\(timeLabel(piece.startMinute))–\(timeLabel(piece.endMinute))")
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
                     }
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                 .foregroundStyle(adaptiveLabelColor(on: piece.category.tint))
             }
         }

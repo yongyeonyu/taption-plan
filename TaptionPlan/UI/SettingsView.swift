@@ -1494,7 +1494,7 @@ Group {
                                         Text(location.name)
                                             .foregroundStyle(Color.tpInk)
                                         Text(location.kind.title)
-                                            .font(.caption)
+                                            .font(.taptionFixed(size: 12))
                                             .foregroundStyle(Color.tpSecondary)
                                     }
                                 } icon: {

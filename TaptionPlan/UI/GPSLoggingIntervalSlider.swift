@@ -24,7 +24,7 @@ struct GPSLoggingIntervalSlider<Leading: View>: View {
             HStack(spacing: 8) {
                 leading()
                 Text(GPSLoggingPreferences.intervalText(shownSeconds))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                 Spacer(minLength: 0)
@@ -56,7 +56,7 @@ struct GPSLoggingIntervalSlider<Leading: View>: View {
                         .fill(Color.secondary.opacity(0.6))
                         .frame(width: 1, height: 5)
                     Text(GPSLoggingPreferences.intervalText(GPSLoggingPreferences.majorTickSeconds[index]))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .medium))
                         .foregroundStyle(.secondary)
                         .fixedSize()
                 }

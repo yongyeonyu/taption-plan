@@ -63,7 +63,6 @@ struct HeadPose {
 private enum PoseProp {
     case none
     case book(flip: CGFloat)
-    case lickDrops(s: CGFloat, along: CGFloat, dip: CGFloat)
     case map
 }
 
@@ -180,7 +179,7 @@ private func sit(_ s: CGFloat, _ h: HeadPose = HeadPose(look: 1.4)) -> Pose {
 }
 
 /// 앉아서 뒷다리를 들고 몸을 말아 엉덩이를 핥는 자세. k: 다리 올림, d: 머리 숙임.
-private func lick(_ s: CGFloat, k: CGFloat, d: CGFloat, _ h: HeadPose, spread: CGFloat = 0, shake: CGFloat = 0, along: CGFloat = 0, tw: CGFloat = 0.25, drops: Bool = false) -> Pose {
+private func lick(_ s: CGFloat, k: CGFloat, d: CGFloat, _ h: HeadPose, spread: CGFloat = 0, shake: CGFloat = 0, along: CGFloat = 0, tw: CGFloat = 0.25) -> Pose {
     let up = ease(clamp(k * 1.6, 0, 1)), jitter = shake * sin(s * 30)
     var p = sit(s)
     p.flat = k; p.legUp = k; p.spread = spread
@@ -194,7 +193,6 @@ private func lick(_ s: CGFloat, k: CGFloat, d: CGFloat, _ h: HeadPose, spread: C
     p.ta = lerp(3.25, 3.0, k); p.tc = lerp(-0.95, 0.3, k); p.tw = tw; p.tp = s * 2.2
     p.h = h
     p.h.tilt = h.tilt != 0 ? h.tilt : k * d * lerp(0.72, 0.45, along)
-    if drops { p.prop = .lickDrops(s: s, along: along, dip: d) }
     return p
 }
 
@@ -278,11 +276,11 @@ private func pose(_ scene: HwarangScene, beat i: Int, s: CGFloat, u: CGFloat) ->
         case 1: return lick(s, k: ease(clamp(u * 1.5, 0, 1)), d: 0, HeadPose(look: -1), spread: u)
         case 2:
             let v = (sin(s * 3.2) + 1) / 2, m = (sin(s * 11) + 1) / 2
-            return lick(s, k: 1, d: 1 - m * 0.1, HeadPose(ear: sin(s * 2) * 0.08, look: 1, mouthOpen: 0.3, tongue: 0.5 + m * 0.5, eye: .closed), along: v, tw: 0.3, drops: true)
-        case 3: return lick(s, k: 1, d: 1 - l * 0.12, HeadPose(look: 1, mouthOpen: 0.3, tongue: 0.45 + l * 0.55, eye: .closed), tw: 0.35, drops: true)
+            return lick(s, k: 1, d: 1 - m * 0.1, HeadPose(ear: sin(s * 2) * 0.08, look: 1, mouthOpen: 0.3, tongue: 0.5 + m * 0.5, eye: .closed), along: v, tw: 0.3)
+        case 3: return lick(s, k: 1, d: 1 - l * 0.12, HeadPose(look: 1, mouthOpen: 0.3, tongue: 0.45 + l * 0.55, eye: .closed), tw: 0.35)
         case 4: return lick(s, k: 1, d: 0.05, HeadPose(ear: sin(s * 6) * 0.15, look: 1, mouthOpen: 0.15, tongue: 0.8, eye: wrap(s, 1.2) < 0.12 ? .closed : .open), tw: 0.15)
         case 5: return lick(s, k: 1, d: 0.2, HeadPose(look: 1, tongue: 0.3, eye: .closed), spread: 1, shake: 2.6)
-        case 6: return lick(s, k: 1, d: 1 - l * 0.12, HeadPose(look: 1, mouthOpen: 0.3, tongue: 0.45 + l * 0.55, eye: .closed), drops: true)
+        case 6: return lick(s, k: 1, d: 1 - l * 0.12, HeadPose(look: 1, mouthOpen: 0.3, tongue: 0.45 + l * 0.55, eye: .closed))
         case 7: return lick(s, k: 1 - ease(u), d: 0, HeadPose(look: 1, tongue: 0.4, eye: .happy))
         case 8:
             let m = (sin(s * 11) + 1) / 2
@@ -653,8 +651,17 @@ struct HwarangPainter {
             c.beginPath(); c.move(to: P(mx - 2.4, my + 2)); quad(mx - 1.2, my + 3.6, mx, my + 2); quad(mx + 1.2, my + 3.6, mx + 2.4, my + 2); c.strokePath()
         }
         if o.tongue > 0.05 {
-            fill(0xFF87A3); stroke(outline, 0.9); c.beginPath(); c.move(to: P(mx - 1.9, my + 3)); c.addLine(to: P(mx - 1.9, my + 3 + o.tongue * 3))
-            quad(mx, my + 5.6 + o.tongue * 3.4, mx + 1.9, my + 3 + o.tongue * 3); c.addLine(to: P(mx + 1.9, my + 3)); c.closePath(); c.drawPath(using: .fillStroke)
+            // 작은 크기에서도 보이도록 입 너비보다 넓고 길게, 진한 분홍으로 내민다.
+            let halfWidth: CGFloat = small ? 2.9 : 2.5, top = my + 2.6, length = 1.6 + o.tongue * 3.6
+            let bottom = top + length
+            func tongueEdge() {
+                c.beginPath(); c.move(to: P(mx - halfWidth, top)); c.addLine(to: P(mx - halfWidth, bottom))
+                cubic(mx - halfWidth, bottom + 3, mx + halfWidth, bottom + 3, mx + halfWidth, bottom); c.addLine(to: P(mx + halfWidth, top))
+            }
+            // 입에서 나오는 쪽은 선을 긋지 않아 뿌리가 입 안으로 이어져 보인다.
+            fill(0xFF6E94); tongueEdge(); c.closePath(); c.fillPath()
+            stroke(outline, 0.9); tongueEdge(); c.strokePath()
+            stroke(0xE04E78, 0.6); c.beginPath(); c.move(to: P(mx, top + 0.8)); c.addLine(to: P(mx, bottom)); c.strokePath()
         }
         if !small {
             stroke(outline, 0.75); c.beginPath()
@@ -725,7 +732,14 @@ struct HwarangPainter {
         paint(far, fillColor: farLimb)
         toes = []
         var near: [Blob] = []
-        tail(&near, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
+        if raw.legUp >= 0.5 {
+            // 뒷다리를 든 자세: 꼬리를 먼저 따로 그려 다리 윤곽이 꼬리 위로 살아나게 한다.
+            var behind: [Blob] = []
+            tail(&behind, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
+            paint(behind, fillColor: white)
+        } else {
+            tail(&near, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
+        }
         let spine = catmull([hip, mid, sh])
         for (i, q) in spine.enumerated() {
             let u = CGFloat(i) / CGFloat(spine.count - 1)
@@ -750,6 +764,11 @@ struct HwarangPainter {
         for q in [P(7, 6), P(4, 3), P(2, 9), P(-1, 3), P(-4, 6)] { c.addLine(to: P(sh.x + q.x, sh.y + q.y)) }
         c.closePath(); c.fillPath()
         if raw.legUp >= 0.5 {
+            // 다리를 든 그루밍 자세에서 보이는 엉덩이 표시. 작은 X로 귀엽게 그린다.
+            let mark = P(hip.x - 11, hip.y + 7)
+            stroke(0xC9607E, 1.3); c.setLineCap(.round); c.beginPath()
+            c.move(to: P(mark.x - 1.6, mark.y - 1.6)); c.addLine(to: P(mark.x + 1.6, mark.y + 1.6))
+            c.move(to: P(mark.x + 1.6, mark.y - 1.6)); c.addLine(to: P(mark.x - 1.6, mark.y + 1.6)); c.strokePath()
             fill(0xFFB5C4); c.beginPath(); oval(bn.x + 0.6, bn.y + 0.6, 3.4, 2.8)
             let sp = 1 + raw.spread * 0.28
             for d in [P(-3.8, -2.8), P(-0.2, -4.4), P(3.6, -2.6)] { circle(bn.x + 0.6 + d.x * sp, bn.y + d.y * sp, 1.35 + raw.spread * 0.2) }
@@ -759,7 +778,6 @@ struct HwarangPainter {
         switch raw.prop {
         case .none: break
         case let .book(flip): book(flip)
-        case let .lickDrops(s, along, dip): lickDrops(s, along, dip)
         case .map: foldedMap()
         }
         if raw.foreOver {
@@ -814,15 +832,6 @@ struct HwarangPainter {
         c.addArc(center: P(106, y), radius: 5.4, startAngle: .pi, endAngle: .pi * 0.4 + tau, clockwise: false)
         c.addLine(to: P(106, y + 11)); c.strokePath()
         fill(0x7A5FC6); c.beginPath(); circle(106, y + 16.5, 2.2); c.fillPath()
-    }
-
-    private func lickDrops(_ s: CGFloat, _ along: CGFloat, _ dip: CGFloat) {
-        let z = wrap(s * 1.6, 1)
-        let hx = lerp(70, lerp(62, 54, along), dip) * 0.88 + 6, hy = lerp(58, lerp(74, 64, along), dip) * 0.86 + 12
-        for (i, dx, dy) in [(CGFloat(0), CGFloat(-16), CGFloat(-8)), (0.33, -22, 2), (0.66, -12, 8)] {
-            let q = wrap(z + i, 1)
-            fill(0xBFE3F2, 1 - q); stroke(outline, 0.8, 1 - q); c.beginPath(); circle(hx + dx - q * 5, hy + dy - q * 6, 1.6 + q); c.drawPath(using: .fillStroke)
-        }
     }
 
     private func book(_ flip: CGFloat) {
@@ -1019,8 +1028,8 @@ struct HwarangPainter {
         stroke(0xE96A8A, 1.8); c.setLineDash(phase: 0, lengths: [3, 3]); c.beginPath(); c.move(to: P(34, 104)); quad(52, 84, 66, 98); quad(78, 106, 92, 88); c.strokePath(); c.setLineDash(phase: 0, lengths: [])
     }
 
-    private func pawprint(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat, alpha: CGFloat) {
-        fill(0xF08DA6, alpha); c.beginPath(); oval(x, y + 2.4 * k, 4 * k, 3.2 * k)
+    private func pawprint(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat, alpha: CGFloat, color: UInt32 = 0xF08DA6) {
+        fill(color, alpha); c.beginPath(); oval(x, y + 2.4 * k, 4 * k, 3.2 * k)
         for d in [P(-4.2, -1.4), P(-1.4, -4), P(1.6, -4), P(4.4, -1.4)] { circle(x + d.x * k, y + d.y * k, 1.5 * k) }
         c.fillPath()
     }
@@ -1095,8 +1104,14 @@ struct HwarangPainter {
         case .confused: questionMark(sec)
         case .shower: waterStreams(sec, xs: [52, 64, 76, 84], alpha: 0.5)
         case .atlas:
-            for (i, q) in [P(96, 40), P(110, 26), P(118, 46)].enumerated() {
-                pawprint(q.x, q.y, 1.5, alpha: 0.65 + 0.35 * sin(sec * 1.6 + CGFloat(i)))
+            // 발자국이 하나씩 찍히며 걸어가고, 끝까지 가면 앞에서부터 사라진다.
+            let cycle: CGFloat = 2.8, stepGap: CGFloat = 0.5
+            let t = wrap(sec, cycle)
+            for (i, q) in [P(94, 58), P(110, 44), P(122, 56), P(136, 40)].enumerated() {
+                let age = t - CGFloat(i) * stepGap
+                guard age > 0 else { continue }
+                let fade = clamp((cycle - 0.5 - t) / 0.5, 0, 1)
+                pawprint(q.x, q.y, 1.35, alpha: clamp(age / 0.12, 0, 1) * fade, color: 0xC2415E)
             }
         default: break
         }
@@ -1148,6 +1163,17 @@ struct HwarangSceneView: View {
 
 enum HwarangDiagnostics {
     /// 시험용: 장면을 비트맵에 그려 칠해진 화소 수를 돌려준다.
+    /// 장면 한 프레임을 그림으로 낸다. 자세 검토 시트를 만들 때 쓴다.
+    static func frame(scene: HwarangScene, sec: Double, side: CGFloat = 438) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { renderer in
+            let context = renderer.cgContext
+            context.scaleBy(x: side / 146, y: side / 146)
+            context.translateBy(x: 14, y: -8)
+            var painter = HwarangPainter(c: context, small: false, hatImage: nil)
+            painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
+        }
+    }
+
     static func paintedPixels(scene: HwarangScene, sec: Double, hat: String? = nil, side: Int = 146) -> Int {
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
         return pixels.withUnsafeMutableBytes { raw -> Int in

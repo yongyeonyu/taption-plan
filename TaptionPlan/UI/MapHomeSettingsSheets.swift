@@ -29,7 +29,7 @@ struct MapHomeCategoryAddSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 Text(language.text("행동분류 추가", "Add activity category"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold))
                 Spacer()
                 Button(language.text("닫기", "Close")) { dismiss() }
             }
@@ -75,7 +75,7 @@ struct MapHomeCategoryAddSheet: View {
 
             Button(action: save) {
                 Text(language.text("추가", "Add"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
             }
@@ -89,7 +89,7 @@ struct MapHomeCategoryAddSheet: View {
                         "No unused icons are available."
                     )
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             }
         }
@@ -155,16 +155,16 @@ private struct MapHomeDataProtectionSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(language.text("데이터 보호", "Data Protection"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold))
                     Text(statusTitle)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
                 Button(language.text("닫기", "Close")) { dismiss() }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
             }
 
             Text(
@@ -173,7 +173,7 @@ private struct MapHomeDataProtectionSheet: View {
                     "Creates an on-device protected copy by LZFSE-compressing and AES-GCM-encrypting your current records."
                 )
             )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(.secondary)
 
             Text(
@@ -182,7 +182,7 @@ private struct MapHomeDataProtectionSheet: View {
                     "Face ID or Touch ID only authorizes access to the Keychain encryption key. Biometric data is never stored in the app, iCloud, or the backup."
                 )
             )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(.secondary)
                 .padding(12)
                 .background(
@@ -192,7 +192,7 @@ private struct MapHomeDataProtectionSheet: View {
 
             if let resultMessage {
                 Text(resultMessage)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                     .foregroundStyle(isProtected ? Color.tpReferenceBlue : Color.tpReferenceRose)
             }
 
@@ -213,7 +213,7 @@ private struct MapHomeDataProtectionSheet: View {
                             : language.text("생체 인증으로 보호 시작", "Protect with biometrics")
                     )
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
                 .foregroundStyle(.white)
@@ -230,7 +230,7 @@ private struct MapHomeDataProtectionSheet: View {
                         language.text("생체 인증으로 보호 사본 확인", "Verify protected copy with biometrics"),
                         systemImage: "checkmark.shield.fill"
                     )
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 }
@@ -350,17 +350,17 @@ struct MapHomeSecuritySheet: View {
                         )
                     VStack(alignment: .leading, spacing: 3) {
                         Text(language.text("데이터 보호", "Data Protection"))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(21)), weight: .bold))
                         Text(hasPIN
                             ? language.text("\(securityPINDigits)자리 비밀번호 등록됨", "\(securityPINDigits)-digit password registered")
                             : language.text("백업 전 비밀번호 등록 필요", "Set a password before backup")
                         )
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                     }
                     Spacer()
                     Button(language.text("닫기", "Close")) { dismiss() }
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 }
 
                 card(language.text("iCloud 로그 업로드", "iCloud Log Upload")) {
@@ -368,7 +368,7 @@ struct MapHomeSecuritySheet: View {
                         "iPhone·Apple Watch 진단 로그와 직전 비정상 종료 상태를 iCloud Drive의 TaptionLogs에 저장합니다.",
                         "Saves iPhone and Apple Watch diagnostics plus the previous unfinished session to TaptionLogs in iCloud Drive."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(.secondary)
 
                     HStack(spacing: 10) {
@@ -379,18 +379,21 @@ struct MapHomeSecuritySheet: View {
                                 language.text("로그 업로드", "Upload logs"),
                                 systemImage: "icloud.and.arrow.up"
                             )
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                            .lineLimit(1)
                         }
+                        .fixedSize()
                         .buttonStyle(.bordered)
                         .tint(Color.tpReferenceBlue)
                         .disabled(model.isExportingDiagnostics)
 
                         Text(model.diagnosticsExportStatus)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceBlue)
                     }
 
                     Text(model.diagnosticsLatestLogSummary)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .medium))
                         .foregroundStyle(.secondary)
                     // 어제·오늘 센서 원본(GPS·모션·기압)을 같은 TaptionLogs 폴더에 바로 저장한다(SUB1029A01).
                     HStack(spacing: 10) {
@@ -399,11 +402,14 @@ struct MapHomeSecuritySheet: View {
                             Task { rawExportStatus = await model.exportSensorRawToICloud() }
                         } label: {
                             Label(language.text("어제·오늘 원본 업로드", "Upload raw (2 days)"), systemImage: "location.square")
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
+                                .lineLimit(1)
                         }
+                        .fixedSize()
                         .buttonStyle(.bordered)
                         .tint(Color.tpReferenceBlue)
                         Text(rawExportStatus)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10.5)), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceBlue)
                             .lineLimit(2)
                     }
@@ -431,7 +437,7 @@ struct MapHomeSecuritySheet: View {
                         "비밀번호를 바꾸면 그 뒤에 만드는 백업부터 새 비밀번호를 씁니다. 바꾸기 전에 만든 백업 파일은 그때의 비밀번호로 열립니다.",
                         "After you change the password, new backups use it. Backup files made earlier still open with the password used at that time."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(.secondary)
                 }
 
@@ -456,7 +462,7 @@ struct MapHomeSecuritySheet: View {
                         "생체 인증은 빠른 잠금 해제용이며, 생체 정보는 앱이나 백업에 저장되지 않습니다.",
                         "Biometrics are only a fast local unlock; biometric data is never stored."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(.secondary)
                 }
 
@@ -466,7 +472,7 @@ struct MapHomeSecuritySheet: View {
 
                 if let message {
                     Text(message)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
             }
@@ -521,7 +527,7 @@ struct MapHomeSecuritySheet: View {
                 "iCloud Drive/TaptionBackup에 달마다 파일 하나로 압축·암호화해 저장합니다. 자동으로 올리지 않으며, ‘지금 백업’을 누를 때만 올립니다.",
                 "Saved to iCloud Drive/TaptionBackup as one compressed, encrypted file per month. Nothing is uploaded automatically; it runs only when you tap Back up now."
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
             if needsPasswordEntry {
                 SecureField(language.text("비밀번호", "Password"), text: $backupPassword)
@@ -539,13 +545,13 @@ struct MapHomeSecuritySheet: View {
                     "마지막 백업: \(latestBackupText)",
                     "Last backup: \(latestBackupText)"
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                 .foregroundStyle(Color.tpReferenceBlue)
             }
             if case .backingUp(let completed, let total) = activity {
                 ProgressView(value: Double(completed), total: Double(max(total, 1)))
                 Text(language.text("백업 중 \(completed)/\(total)", "Backing up \(completed)/\(total)"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             Button(language.text(isBusy ? "작업 중입니다" : "지금 백업", isBusy ? "Working" : "Back up now")) {
@@ -557,7 +563,7 @@ struct MapHomeSecuritySheet: View {
             .disabled(!canUseBackupPassword || !model.backupDestinationAvailable)
             if let reason = backupDisabledReason {
                 Text(reason)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
             if let report = model.lastBackupReport, report.operation == .backup {
@@ -579,13 +585,13 @@ struct MapHomeSecuritySheet: View {
                     "이 기기에 남길 최근 \(security.localMonthsToKeep)개 달(이번 달 포함)",
                     "Keep the latest \(security.localMonthsToKeep) months on this device (this month included)"
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
             }
             Text(language.text(
                 "백업을 다시 읽어 확인된 지난 달만 이 기기에서 지웁니다. 먼저 ‘지금 백업’을 해야 하며, 설정은 지우지 않습니다.",
                 "Only past months whose backup was read back and verified are removed from this device. Run ‘Back up now’ first; settings are never removed."
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
             if case .offloading = activity {
                 ProgressView().controlSize(.small)
@@ -607,7 +613,7 @@ struct MapHomeSecuritySheet: View {
                 "월 이름과 파일 크기는 바로 보이고, 행 수와 마지막 기록 시각은 비밀번호를 넣은 뒤 보입니다. 백업은 앱 비밀번호와 같은 비밀번호로 열립니다.",
                 "Row counts and times appear once the password is known. Backups open with your app password."
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
             .foregroundStyle(.secondary)
             if case .restoring(let name) = activity {
                 ProgressView(language.text("\(name) 불러오는 중", "Restoring \(name)"))
@@ -616,7 +622,7 @@ struct MapHomeSecuritySheet: View {
             if model.backupListings.isEmpty {
                 Text(model.backupListingError
                     ?? language.text("iCloud에 백업 파일이 없습니다.", "No backup files in iCloud."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)
             }
             ForEach(model.backupListings) { row in
@@ -640,13 +646,13 @@ struct MapHomeSecuritySheet: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title(of: row))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 Text(listingDetail(row))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(.secondary)
                 if row.isOffloaded {
                     Text(language.text("이 기기에서는 정리됨 · 불러올 수 있음", "Cleared from this device · can be restored"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
             }
@@ -669,7 +675,7 @@ struct MapHomeSecuritySheet: View {
     private func reportView(_ report: PlanBackupReport) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(report.summary)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 .foregroundStyle(report.succeeded ? Color.tpReferenceBlue : Color.tpReferenceRose)
             ForEach(report.items) { item in
                 HStack(alignment: .top, spacing: 6) {
@@ -677,7 +683,7 @@ struct MapHomeSecuritySheet: View {
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                         .foregroundStyle(item.kind == .rejected ? Color.tpReferenceRose : Color.tpReferenceBlue)
                     Text("\(item.name == "settings" ? language.text("설정", "Settings") : item.name) · \(item.detail)")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -701,7 +707,7 @@ struct MapHomeSecuritySheet: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
             content()
         }
         .padding(13)
@@ -839,14 +845,14 @@ struct MapHomeLocationSheet: View {
                         language.text(destination.koreanName, destination.englishName)
                             + language.text(" 위치 설정", " location")
                     )
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                     if let place, place.point != nil {
                         Text(
                             language.text("현재 저장 상태", "Saved")
                                 + " · "
-                                + FloorLabel.korean(place.floor ?? 1)
+                                + language.text(FloorLabel.korean(place.floor ?? 1), FloorLabel.english(place.floor ?? 1))
                         )
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                             .foregroundStyle(.secondary)
                     } else {
                         Text(
@@ -855,7 +861,7 @@ struct MapHomeLocationSheet: View {
                                 "Save this place from your current location"
                             )
                         )
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -873,14 +879,14 @@ struct MapHomeLocationSheet: View {
                         "Waiting for location. Save becomes available when a location is recorded."
                     )
             )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(.secondary)
 
             Stepper(value: $floor, in: FloorCalibrationPrompt.range) {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(FloorLabel.korean(floor))
+                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(destination.tint)
                 }
@@ -899,7 +905,7 @@ struct MapHomeLocationSheet: View {
                         : language.text("현재 위치로 다시 저장", "Update current location"),
                     systemImage: "location.fill"
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .foregroundStyle(.white)
@@ -916,7 +922,7 @@ struct MapHomeLocationSheet: View {
                     language.text("저장된 위치 삭제", "Delete saved location"),
                     systemImage: "trash"
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
                 .foregroundStyle(Color.red)

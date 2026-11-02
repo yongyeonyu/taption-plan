@@ -49,6 +49,18 @@
 		5A00000000000000000000A1 /* PlanTextSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A00000000000000000000F1 /* PlanTextSuggestion.swift */; };
 		A1A11102A0100000000000A1 /* MemoTextPolish.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A11102A0100000000000F1 /* MemoTextPolish.swift */; };
 		A1000000000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000000000B /* Assets.xcassets */; };
+		A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FC /* SUIT-Regular.otf */; };
+		A1000000000000000B1102FD /* SUIT-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FD /* SUIT-Bold.otf */; };
+		A1000000000000000B1102FE /* SUIT-ExtraBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FE /* SUIT-ExtraBold.otf */; };
+		A1000000000000000B1102FF /* Fonts-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FF /* Fonts-OFL.txt */; };
+		A1000000000000000B110302 /* SUIT-Medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110302 /* SUIT-Medium.otf */; };
+		A1000000000000000B110303 /* SUIT-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110303 /* SUIT-SemiBold.otf */; };
+		A1000000000000000B110304 /* Pretendard-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110304 /* Pretendard-Regular.otf */; };
+		A1000000000000000B110305 /* Pretendard-SemiBold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110305 /* Pretendard-SemiBold.otf */; };
+		A1000000000000000B110306 /* Pretendard-Bold.otf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110306 /* Pretendard-Bold.otf */; };
+		A1000000000000000B110307 /* Jua-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110307 /* Jua-Regular.ttf */; };
+		A1000000000000000B110308 /* Sunflower-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110308 /* Sunflower-Medium.ttf */; };
+		A1000000000000000B110309 /* Sunflower-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110309 /* Sunflower-Bold.ttf */; };
 		A10000000000000000000090 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000090 /* LaunchScreen.storyboard */; };
 		A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000001 /* PrivacyInfo.xcprivacy */; };
 		A90000000000000000000002 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F90000000000000000000002 /* PrivacyInfo.xcprivacy */; };
@@ -296,6 +308,11 @@
 		A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */; };
 		A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */; };
 		A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */; };
+		A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F8 /* MapHomeBottomBar.swift */; };
+		A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110301 /* MapHomeHomeNames.swift */; };
+		A1000000000000000B110300 /* TaptionFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110300 /* TaptionFont.swift */; };
+		A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */; };
+		A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102FA /* TaptionCuteIcon.swift */; };
 		A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */; };
 		A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */; };
 		A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */; };
@@ -327,6 +344,7 @@
 		A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */; };
 		A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */; };
 		1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */; };
+		1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */; };
 		A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */; };
 		A51002000000000000000003 /* PlanDaySeal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000003 /* PlanDaySeal.swift */; };
 		A51002000000000000000001 /* PlanDayDataSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51002000000000000000001 /* PlanDayDataSnapshot.swift */; };
@@ -595,6 +613,18 @@
 		F10000000000000000000091 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ../Products.storekit; sourceTree = "<group>"; };
 		F10000000000000000000092 /* PlanDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDayDatabase.swift; sourceTree = "<group>"; };
 		F10000000000000000000093 /* WatchDayDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDayDatabase.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102FC /* SUIT-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = SUIT-Regular.otf; path = Fonts/SUIT-Regular.otf; sourceTree = "<group>"; };
+		F1000000000000000B1102FD /* SUIT-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = SUIT-Bold.otf; path = Fonts/SUIT-Bold.otf; sourceTree = "<group>"; };
+		F1000000000000000B1102FE /* SUIT-ExtraBold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = SUIT-ExtraBold.otf; path = Fonts/SUIT-ExtraBold.otf; sourceTree = "<group>"; };
+		F1000000000000000B1102FF /* Fonts-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = Fonts-OFL.txt; path = Fonts/Fonts-OFL.txt; sourceTree = "<group>"; };
+		F1000000000000000B110302 /* SUIT-Medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = SUIT-Medium.otf; path = Fonts/SUIT-Medium.otf; sourceTree = "<group>"; };
+		F1000000000000000B110303 /* SUIT-SemiBold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = SUIT-SemiBold.otf; path = Fonts/SUIT-SemiBold.otf; sourceTree = "<group>"; };
+		F1000000000000000B110304 /* Pretendard-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Pretendard-Regular.otf; path = Fonts/Pretendard-Regular.otf; sourceTree = "<group>"; };
+		F1000000000000000B110305 /* Pretendard-SemiBold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Pretendard-SemiBold.otf; path = Fonts/Pretendard-SemiBold.otf; sourceTree = "<group>"; };
+		F1000000000000000B110306 /* Pretendard-Bold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Pretendard-Bold.otf; path = Fonts/Pretendard-Bold.otf; sourceTree = "<group>"; };
+		F1000000000000000B110307 /* Jua-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Jua-Regular.ttf; path = Fonts/Jua-Regular.ttf; sourceTree = "<group>"; };
+		F1000000000000000B110308 /* Sunflower-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Sunflower-Medium.ttf; path = Fonts/Sunflower-Medium.ttf; sourceTree = "<group>"; };
+		F1000000000000000B110309 /* Sunflower-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = Sunflower-Bold.ttf; path = Fonts/Sunflower-Bold.ttf; sourceTree = "<group>"; };
 		F10000000000000000000090 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		F20000000000000000000002 /* SensorBackgroundCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinator.swift; sourceTree = "<group>"; };
 		F20000000000000000000004 /* SensorBackgroundCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SensorBackgroundCoordinatorTests.swift; sourceTree = "<group>"; };
@@ -668,6 +698,11 @@
 		F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionOnboardingSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowancePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102F8 /* MapHomeBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeBottomBar.swift; sourceTree = "<group>"; };
+		F1000000000000000B110301 /* MapHomeHomeNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeNames.swift; sourceTree = "<group>"; };
+		F1000000000000000B110300 /* TaptionFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionFont.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeNLERawDetail.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102FA /* TaptionCuteIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionCuteIcon.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSalarySettingsSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeInteractionMonitor.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSidebarNote.swift; sourceTree = "<group>"; };
@@ -698,6 +733,7 @@
 		F1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomePlaybackDriver.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarAudioTravelConfirmation.swift; sourceTree = "<group>"; };
 		224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubwayEvidenceGate.swift; sourceTree = "<group>"; };
+		224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RailJourneyRecognizer.swift; sourceTree = "<group>"; };
 		F1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCarAudioSheet.swift; sourceTree = "<group>"; };
 		F100000000000000000000F4 /* MapHomeSectionDetailEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeSectionDetailEngine.swift; sourceTree = "<group>"; };
 		F10000000000000000000073 /* WatchObjCExceptionCatcher.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchObjCExceptionCatcher.h; sourceTree = "<group>"; };
@@ -828,6 +864,18 @@
 				F90000000000000000000001 /* PrivacyInfo.xcprivacy */,
 				F1000000000000000000000B /* Assets.xcassets */,
 				F10000000000000000000090 /* LaunchScreen.storyboard */,
+				F1000000000000000B110304 /* Pretendard-Regular.otf */,
+				F1000000000000000B110305 /* Pretendard-SemiBold.otf */,
+				F1000000000000000B110306 /* Pretendard-Bold.otf */,
+				F1000000000000000B110307 /* Jua-Regular.ttf */,
+				F1000000000000000B110308 /* Sunflower-Medium.ttf */,
+				F1000000000000000B110309 /* Sunflower-Bold.ttf */,
+				F1000000000000000B110302 /* SUIT-Medium.otf */,
+				F1000000000000000B110303 /* SUIT-SemiBold.otf */,
+				F1000000000000000B1102FC /* SUIT-Regular.otf */,
+				F1000000000000000B1102FD /* SUIT-Bold.otf */,
+				F1000000000000000B1102FE /* SUIT-ExtraBold.otf */,
+				F1000000000000000B1102FF /* Fonts-OFL.txt */,
 				F20000000000000000000005 /* Localizable.xcstrings */,
 				F20000000000000000000009 /* InfoPlist.xcstrings */,
 			);
@@ -948,6 +996,11 @@
 				F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */,
 				F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */,
 				F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */,
+				F1000000000000000B1102F8 /* MapHomeBottomBar.swift */,
+				F1000000000000000B110301 /* MapHomeHomeNames.swift */,
+				F1000000000000000B110300 /* TaptionFont.swift */,
+				F1000000000000000B1102F9 /* MapHomeNLERawDetail.swift */,
+				F1000000000000000B1102FA /* TaptionCuteIcon.swift */,
 				F1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift */,
 				F1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift */,
 				F1000000000000000B1102D1 /* MapHomeSidebarNote.swift */,
@@ -1072,6 +1125,7 @@
 				F1000000000000000000001B /* HealthAndSensorModels.swift */,
 				F1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift */,
 				224225E0023E3C60D75BF00C /* SubwayEvidenceGate.swift */,
+				224225E0023E3C60D75BFFBC /* RailJourneyRecognizer.swift */,
 				F1000000000000000000001C /* SleepAnalysisEngine.swift */,
 				F1000000000000000000001D /* SensorDataServices.swift */,
 				F10000000000000000000040 /* CatAnimationShared.swift */,
@@ -1424,6 +1478,18 @@
 			files = (
 				A1000000000000000000000B /* Assets.xcassets in Resources */,
 				A10000000000000000000090 /* LaunchScreen.storyboard in Resources */,
+				A1000000000000000B110304 /* Pretendard-Regular.otf in Resources */,
+				A1000000000000000B110305 /* Pretendard-SemiBold.otf in Resources */,
+				A1000000000000000B110306 /* Pretendard-Bold.otf in Resources */,
+				A1000000000000000B110307 /* Jua-Regular.ttf in Resources */,
+				A1000000000000000B110308 /* Sunflower-Medium.ttf in Resources */,
+				A1000000000000000B110309 /* Sunflower-Bold.ttf in Resources */,
+				A1000000000000000B110302 /* SUIT-Medium.otf in Resources */,
+				A1000000000000000B110303 /* SUIT-SemiBold.otf in Resources */,
+				A1000000000000000B1102FC /* SUIT-Regular.otf in Resources */,
+				A1000000000000000B1102FD /* SUIT-Bold.otf in Resources */,
+				A1000000000000000B1102FE /* SUIT-ExtraBold.otf in Resources */,
+				A1000000000000000B1102FF /* Fonts-OFL.txt in Resources */,
 				A20000000000000000000008 /* Localizable.xcstrings in Resources */,
 				A2000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 				A90000000000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
@@ -1563,6 +1629,11 @@
 				A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */,
 				A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */,
 				A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */,
+				A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */,
+				A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */,
+				A1000000000000000B110300 /* TaptionFont.swift in Sources */,
+				A1000000000000000B1102F9 /* MapHomeNLERawDetail.swift in Sources */,
+				A1000000000000000B1102FA /* TaptionCuteIcon.swift in Sources */,
 				A1000000000000000B1102E5 /* MapHomeSalarySettingsSheet.swift in Sources */,
 				A1000000000000000B1102A9 /* MapHomeInteractionMonitor.swift in Sources */,
 				A1000000000000000B1102D1 /* MapHomeSidebarNote.swift in Sources */,
@@ -1592,6 +1663,7 @@
 				A1PLY1029A0300000000001 /* MapHomePlaybackDriver.swift in Sources */,
 				A1CA1029A010000000000001 /* CarAudioTravelConfirmation.swift in Sources */,
 				1C417B9717B86DB458FABD4C /* SubwayEvidenceGate.swift in Sources */,
+				1C417B9717B86DB458FABFBC /* RailJourneyRecognizer.swift in Sources */,
 				A1CA1029A010000000000002 /* MapHomeCarAudioSheet.swift in Sources */,
 				A100000000000000000000F4 /* MapHomeSectionDetailEngine.swift in Sources */,
 				A10000000000000000000007 /* GoalsView.swift in Sources */,

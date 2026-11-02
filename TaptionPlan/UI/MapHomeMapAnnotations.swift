@@ -121,7 +121,7 @@ struct MapHomePlacePin: View {
                     }
                     .shadow(color: Color.tpInk.opacity(0.2), radius: 4, y: 2)
                 Text("Lv.\(floor ?? 1)")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
@@ -144,7 +144,7 @@ struct MapHomePlacePin: View {
         .offset(y: MapHomePlacePinLayout.avatarCenterCompensation)
     }
 
-    /// 원형 아바타. 뒤로 부드러운 발광이 번지고, 안쪽에 레벨 아트(집 또는 화랑이)를 넣는다.
+    /// 원형 아바타. 뒤로 부드러운 발광이 번지고, 안쪽에 레벨 아트를 넣는다. 화랑이는 그 위에 얹는다.
     private func homeAvatar(level: Int) -> some View {
         ZStack {
             Circle()
@@ -169,11 +169,7 @@ struct MapHomePlacePin: View {
 
             ZStack {
                 Circle().fill(Color(hex: "#FDF8EC"))
-                if showsCatAtHome {
-                    homeCatArtwork(level: level)
-                } else {
-                    homeMarkerArtwork(level: level)
-                }
+                homeMarkerArtwork(level: level)
                 if let weatherBadge {
                     VStack {
                         homeTemperature(weatherBadge)
@@ -188,6 +184,7 @@ struct MapHomePlacePin: View {
             .clipShape(Circle())
             .overlay { Circle().stroke(Color.white.opacity(0.92), lineWidth: 2) }
             .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+            .overlay { if showsCatAtHome { homeCat } }
             .overlay(alignment: .topTrailing) {
                 if isLeapDay {
                     Image(systemName: "star.fill")
@@ -218,7 +215,7 @@ struct MapHomePlacePin: View {
     @ViewBuilder
     private func homeLevelLabel(level: Int) -> some View {
         let label = Text("Lv.\(level)")
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .bold))
             .monospacedDigit()
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 12)
@@ -240,7 +237,7 @@ struct MapHomePlacePin: View {
     /// 원 위쪽 가운데의 현재 기온. 날씨는 원 안 그림으로 보여 준다.
     private func homeTemperature(_ badge: MapHomeHomeWeatherBadge) -> some View {
         Text(badge.temperatureText)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .heavy, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .heavy))
             .monospacedDigit()
             .foregroundStyle(Color(hex: "#3E2C22"))
             .shadow(color: .white, radius: 1.2)
@@ -278,28 +275,19 @@ struct MapHomePlacePin: View {
         }
     }
 
-    /// 집에 있는 화랑이. 아바타 원 안에 레벨 아트와 함께 그린다.
-    private func homeCatArtwork(level: Int) -> some View {
+    /// 집에 있는 화랑이. 원에 잘리지 않게 아바타 위에 얹는다(대표 요청).
+    private var homeCat: some View {
         let scale = MapHomeCatTapRouting.homeArtScale
-        return ZStack {
-            Image(MapHomeGrowthPolicy.artworkName(level: level))
-                .resizable()
-                .scaledToFit()
-                .frame(
-                    width: MapHomePlacePinLayout.artworkSize,
-                    height: MapHomePlacePinLayout.artworkSize
-                )
-            homeWeatherArt
-            MapHomeStickmanGlyph(
-                action: catAction,
-                size: MapHomeStickmanMarker.size.width,
-                equippedAccessoryID: equippedAccessoryID
-            )
-                .offset(
-                    x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
-                    y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
-                )
-        }
+        return MapHomeStickmanGlyph(
+            action: catAction,
+            size: MapHomeStickmanMarker.size.width,
+            equippedAccessoryID: equippedAccessoryID
+        )
+        .offset(
+            x: MapHomeCatTapRouting.catOffsetInHomeImage.x * scale,
+            y: MapHomeCatTapRouting.catOffsetInHomeImage.y * scale
+        )
+        .allowsHitTesting(false)
     }
 }
 
@@ -721,7 +709,7 @@ struct MapHomeMarkerLabel: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
             .foregroundStyle(Color.tpInk)
             .padding(.horizontal, 13)
             .padding(.vertical, 7)
@@ -825,29 +813,20 @@ struct MapHomeCalendarGlyph: View {
         calendar.component(.weekday, from: date)
     }
 
-    private var assetName: String {
-        if style == .holiday {
-            return "MapHomeCalendarSunday"
-        }
-        switch weekday {
-        case 1: return "MapHomeCalendarSunday"
-        case 2: return "MapHomeCalendarMonday"
-        case 3: return "MapHomeCalendarTuesday"
-        case 4: return "MapHomeCalendarWednesday"
-        case 5: return "MapHomeCalendarThursday"
-        case 6: return "MapHomeCalendarFriday"
-        default: return "MapHomeCalendarSaturday"
-        }
+    /// 일주일 칸 일곱 개 중 채울 수. 월요일 1칸부터 토요일 6칸, 일요일과 공휴일은 전부다.
+    private var filledDays: Int {
+        style == .holiday || weekday == 1 ? 7 : weekday - 1
+    }
+
+    private var tone: TaptionBarCalendarIcon.Tone {
+        if style == .holiday || weekday == 1 { return .sunday }
+        return weekday == 7 ? .saturday : .weekday
     }
 
     var body: some View {
-        Image(assetName)
-            .resizable()
-            .scaledToFit()
-            .frame(width: 24, height: 25)
-        .accessibilityLabel(
-            language.text("\(day)일 달력", "Calendar, day \(day)")
-        )
+        TaptionBarCalendarIcon(filledDays: filledDays, tone: tone)
+            .accessibilityElement()
+            .accessibilityLabel(language.text("\(day)일 달력", "Calendar, day \(day)"))
     }
 }
 

@@ -209,6 +209,23 @@ def sheet(module, out, size="170"):
     img.save(out)
 
 
+def write_names(days):
+    """앱이 집 이름을 보여 줄 수 있게 일자별 이름표를 Swift로 쓴다."""
+    def row(text):
+        return json.dumps(text, ensure_ascii=False)
+    lines = [
+        "/// tools/generate_home_evolution.py가 만든다. 직접 고치지 않는다.",
+        "enum MapHomeHomeNames {",
+        "    /// 1일부터 366일까지 (한국어, 영어).",
+        "    static let names: [(korean: String, english: String)] = [",
+    ]
+    lines += [f"        ({row(r['ko'])}, {row(r['en'])})," for r in days]
+    lines += ["    ]", "}", ""]
+    path = os.path.join(os.path.dirname(TOOLS), "TaptionPlan/UI/MapHomeHomeNames.swift")
+    with open(path, "w", encoding="utf-8") as out:
+        out.write("\n".join(lines))
+
+
 def main():
     if "--sheet" in sys.argv:
         return sheet(*sys.argv[sys.argv.index("--sheet") + 1:])
@@ -218,6 +235,8 @@ def main():
         for i, r in enumerate(days, 1):
             print(i, r["key"], r["ko"], r["era"], r["year"], "OK" if r["key"] in draws else "-")
         return
+    if "--names" in sys.argv:
+        return write_names(days)
     if "--fit" in sys.argv:
         return compute_fits(days, draws)
     errs = check(days, draws)
@@ -226,6 +245,7 @@ def main():
     if "--check" in sys.argv:
         sys.exit(1 if errs else 0)
     write_list(days)
+    write_names(days)
     write_preview(days, draws)
     if not errs:
         print("SVG 합계 바이트", write_assets(days, draws))

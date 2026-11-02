@@ -89,12 +89,12 @@ struct MapHomeSalarySettingsSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 if !showsOnlyPayInput {
                     Text(language.text("연봉 카운터", "Salary counter"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(22)), weight: .bold))
                     Text(language.text(
                         "업무 시간에만 번 돈이 쌓여요. 금액은 이 기기에만 저장돼요.",
                         "Earnings grow only during work time. Stored only on this device."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 }
 
@@ -131,13 +131,13 @@ struct MapHomeSalarySettingsSheet: View {
                         }
                         .pickerStyle(.segmented)
                         Toggle(language.text("주휴수당 포함(주 15시간 이상)", "Include weekly holiday pay"), isOn: $weeklyHoliday)
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             .tint(Color.tpAccent)
                         Text(language.text(
                             "시간 = 돈. 근무 시간이 늘면 금액도 같이 올라요. 입력하지 않은 쪽은 세금 방식으로 자동 계산해요.",
                             "Time = money. Earnings rise with work hours. The other field is computed from the tax method."
                         ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                     } else {
                         let grossWon = MapHomeSalaryPolicy.linkedAnnualGross(settings)
                         let netWon = MapHomeSalaryPolicy.netOfGross(grossWon)
@@ -164,7 +164,7 @@ struct MapHomeSalarySettingsSheet: View {
                             annualText = String(Int(annualPay.rounded()))
                         }
                         Text(language.text("연봉이나 월급 중 하나만 적으면 나머지는 자동 계산돼요(월급제면 월급만).", "Enter either annual or monthly; the other is computed."))
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                     }
                 }
 
@@ -176,7 +176,7 @@ struct MapHomeSalarySettingsSheet: View {
                     }
                     .pickerStyle(.segmented)
                     Text(language.text("연봉·시급 모두 여기서 고른 기준으로 카운터와 누적 금액을 보여 줘요.", "Counter and totals use this basis for annual and hourly pay."))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
 
                 if !showsOnlyPayInput {
@@ -186,11 +186,11 @@ struct MapHomeSalarySettingsSheet: View {
                 // 2-1. 지난달 실제 받은 월급(수당 포함) → 수당 모델
                 card {
                     Text(language.text("받은 월급 기록(실수령 세후, 수당 포함)", "Pay received (net, incl. overtime)"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                     ForEach(pastMonthKeys, id: \.self) { key in
                         let hours = (pastMonthWorkSeconds[key] ?? 0) / 3_600
                         HStack {
-                            Text(monthLabel(key)).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                            Text(monthLabel(key)).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                             Text(language.text("근무 \(String(format: "%.0f", hours))시간", "\(String(format: "%.0f", hours)) h"))
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)))).foregroundStyle(Color.tpSecondary)
                             Spacer()
@@ -202,7 +202,7 @@ struct MapHomeSalarySettingsSheet: View {
                             .multilineTextAlignment(.trailing)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 130)
-                            Text(language.text("원", "USD")).font(.system(size: TaptionType.scaled(TaptionType.snapped(13))))
+                            Text(language.text("원", "USD")).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13))))
                         }
                     }
                     Text(model.sampleCount == 0
@@ -211,7 +211,7 @@ struct MapHomeSalarySettingsSheet: View {
                             "기록 \(model.sampleCount)개월로 맞춤: 고정 \(won(model.fixedMonthly)) + 209시간 초과 1시간당 \(won(model.overtimeHourly)).",
                             "Fitted from \(model.sampleCount) months: fixed \(won(model.fixedMonthly)) + \(won(model.overtimeHourly)) per hour over 209."
                          ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                     if let expectedPay {
                         row(language.text("이번 달 예상 월급(\(basis))", "Expected this month (\(basis))"), won(expectedPay), bold: true)
                     }
@@ -231,7 +231,7 @@ struct MapHomeSalarySettingsSheet: View {
                         "근무 \(String(format: "%.1f", monthWorkSeconds / 3_600))시간 기준 계산값 \(won(computed)). 실제와 다르면 고쳐 주세요(비우면 계산값).",
                         "Computed \(won(computed)) for \(String(format: "%.1f", monthWorkSeconds / 3_600)) h. Edit if different."
                     ))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
 
                 // 4. 누적 시급(고칠 수 없음)
@@ -241,12 +241,12 @@ struct MapHomeSalarySettingsSheet: View {
                         "이번 달 예상 월급 ÷ 예상 근무 \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600))시간(지금까지 \(String(format: "%.0f", monthWorkSeconds / 3_600))시간 + 최근 8주 요일별 추세). 야근이 늘면 수당도 같이 늘고, 월말엔 그 달 월급과 맞아요. 누적을 고쳤으면 누적 ÷ 근무 시간.",
                         "Expected pay ÷ projected \(String(format: "%.0f", max(projectedMonthWorkSeconds, monthWorkSeconds) / 3_600)) h (\(String(format: "%.0f", monthWorkSeconds / 3_600)) h so far + 8-week trend). Overtime raises both; exact at month end."
                     ))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
                 }
 
                 // 5. 간격별 금액
                 Text(language.text("표시 간격", "Update every"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
                 Picker("", selection: $tickSeconds) {
                     ForEach(MapHomeSalaryPolicy.tickChoices, id: \.self) { seconds in
                         Text(MapHomeSalaryPolicy.intervalTitle(seconds, language: language)).tag(seconds)
@@ -300,7 +300,7 @@ struct MapHomeSalarySettingsSheet: View {
             dismiss()
         } label: {
             Text(language.text("저장", "Save"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -339,7 +339,7 @@ struct MapHomeSalarySettingsSheet: View {
                 "근무·수면과 상관없이 24시간 내내 쌓여요. 카운터에는 그날 0시부터 번 돈이 보여요.",
                 "Grows around the clock. The counter shows what you earned since midnight."
             ))
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium)).foregroundStyle(Color.tpSecondary)
         }
     }
 
@@ -356,13 +356,13 @@ struct MapHomeSalarySettingsSheet: View {
             Spacer()
             Text(value).monospacedDigit().fontWeight(bold ? .bold : .medium)
         }
-        .font(.system(size: bold ? 15 : 13, design: .rounded))
+        .font(.taptionFixed(size: bold ? 15 : 13))
     }
 
     /// 입력은 바로 저장한다.
     private func field(_ title: String, text: Binding<String>, unit: String, placeholder: String, onChange: @escaping () -> Void) -> some View {
         HStack {
-            Text(title).font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
+            Text(title).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold))
             Spacer()
             TextField(grouped(placeholder), text: Binding(
                 get: { grouped(text.wrappedValue) },
@@ -373,7 +373,7 @@ struct MapHomeSalarySettingsSheet: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 130)
                 .onChange(of: text.wrappedValue) { _, _ in onChange() }
-            Text(unit).font(.system(size: TaptionType.scaled(TaptionType.snapped(13))))
+            Text(unit).font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13))))
         }
     }
 

@@ -9,6 +9,22 @@ import TaptionPlanCore
 
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
+    /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
+    func testWriteGroomingSheetWhenRequested() throws {
+        guard let folder = ProcessInfo.processInfo.environment["TAPTION_RIG_SHEET"], !folder.isEmpty else {
+            throw XCTSkip("TAPTION_RIG_SHEET 없음")
+        }
+        let times = stride(from: 2.0, to: 18.0, by: 2.0).map { $0 }
+        let side: CGFloat = 330
+        let sheet = UIGraphicsImageRenderer(size: CGSize(width: side * 4, height: side * 2)).image { _ in
+            for (index, sec) in times.enumerated() {
+                HwarangDiagnostics.frame(scene: .groom, sec: sec, side: side)
+                    .draw(at: CGPoint(x: CGFloat(index % 4) * side, y: CGFloat(index / 4) * side))
+            }
+        }
+        try XCTUnwrap(sheet.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("groom.png"))
+    }
+
     func testMapActionLookupCostWithHalfMillionInactiveRecords() {
         let date = Date(timeIntervalSince1970: 1_791_250_000)
         let active = ActualRecord(

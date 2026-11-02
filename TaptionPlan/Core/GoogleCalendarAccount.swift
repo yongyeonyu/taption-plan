@@ -247,6 +247,7 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
     fileprivate struct Event: Decodable {
         var id: String
         var summary: String?
+        var description: String?
         var status: String?
         var start: When?
         var end: When?
@@ -268,7 +269,8 @@ final class GoogleCalendarAccount: NSObject, ASWebAuthenticationPresentationCont
                 isAllDay: isAllDay,
                 calendarTitle: "구글 캘린더",
                 calendarColorHex: nil,
-                sourceTitle: "Google"
+                sourceTitle: "Google",
+                notes: CalendarNotesText.plain(description)
             )
         }
 

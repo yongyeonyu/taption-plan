@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 import UIKit
 import CoreLocation
@@ -234,5 +235,146 @@ final class MapHomeCounterTimelinePolicyTests: XCTestCase {
         var manual = work
         manual.manuallyCorrected = true
         XCTAssertEqual(RestaurantMealActualEngine.carvingMeals(from: [manual, meal], asOf: hours(9)).filter { $0.categoryID == "work" }.count, 1)
+    }
+
+    /// 8층 자리는 겹친 1층 식당 반경 안이어도 회사다. 높이 근거가 없으면 작은 반경이 이긴다(ALT1102A01).
+    func testPlaceHeightSeparatesFloorsInOverlappingRadius() {
+        func geo(_ altitude: Double, vertical: Double = 5) -> GeoPoint {
+            GeoPoint(latitude: 37.5, longitude: 127, altitude: altitude, horizontalAccuracy: 10, verticalAccuracy: vertical)
+        }
+        let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        var company = FrequentPlace(kind: .company, name: "회사", point: geo(50), floor: 8)
+        company.radiusMeters = 200
+        company.floorReferencePoints = [FloorCalibrationPoint(
+            floor: 8, point: geo(50), relativeAltitudeMeters: nil, pressureKilopascals: nil,
+            altimeterSessionID: nil, capturedAt: now.addingTimeInterval(-86_400)
+        )]
+        var restaurant = FrequentPlace(kind: .restaurant, name: "식당", point: geo(0, vertical: -1), floor: 1)
+        restaurant.radiusMeters = 30
+        func reading(_ altitude: Double) -> SensorReading {
+            SensorReading(timestamp: now, point: geo(altitude), motion: .stationary)
+        }
+        let engine = FrequentPlaceResolutionEngine()
+        let here = geo(50)
+        XCTAssertEqual(engine.nearestMatch(to: here, candidates: [company, restaurant], readings: [reading(50)])?.kind, .company)
+        let ground = 50 - 7 * company.floorHeightMeters
+        XCTAssertEqual(engine.nearestMatch(to: here, candidates: [company, restaurant], readings: [reading(ground)])?.kind, .restaurant)
+        XCTAssertEqual(engine.nearestMatch(to: here, candidates: [company, restaurant])?.kind, .restaurant)
+    }
+
+    func testFloorLabelsByLanguage() {
+        XCTAssertEqual(FloorLabel.korean(1), "1층")
+        XCTAssertEqual(FloorLabel.english(1), "1Floor")
+    }
+
+    /// 조각마다가 아니라 탑승 전체로 본다. 등록 차에 연결돼 있으면 같은 길이어도 지하철이 아니다(SUB1102A01).
+    func testRailJourneyIsJudgedOverTheWholeRide() throws {
+        let stations = ["마곡나루", "계양", "검암"].compactMap { name in
+            SubwayStationCatalog.route(for: [name, "서구청"])?.stops.first { $0.stationName.hasPrefix(name) }
+        }
+        XCTAssertEqual(stations.count, 3)
+        let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        func reading(_ stop: SubwayRouteStop, _ minute: Double, speed: Double, kPa: Double, car: String? = nil) -> SensorReading {
+            var value = SensorReading(
+                timestamp: start.addingTimeInterval(minute * 60),
+                point: GeoPoint(latitude: stop.latitude ?? 0, longitude: stop.longitude ?? 0, altitude: 10, horizontalAccuracy: 10, verticalAccuracy: 5),
+                motion: .automotive
+            )
+            value.speedMetersPerSecond = speed
+            value.pressureKilopascals = kPa
+            value.gpsAvailable = true
+            value.carAudioRouteName = car
+            return value
+        }
+        func ride(car: String?) -> [SensorReading] {
+            [
+                reading(stations[0], 0, speed: 1, kPa: 102.40, car: car), reading(stations[0], 6, speed: 1, kPa: 102.38, car: car),
+                reading(stations[1], 16, speed: 1, kPa: 102.00, car: car), reading(stations[1], 17, speed: 20, kPa: 102.00, car: car),
+                reading(stations[2], 23, speed: 1, kPa: 101.90, car: car),
+            ]
+        }
+        let journeys = RailJourneyRecognizer.journeys(readings: ride(car: nil))
+        XCTAssertEqual(journeys.first?.stationNames.count, 3)
+        XCTAssertTrue(RailJourneyRecognizer.journeys(readings: ride(car: "CarPlay")).isEmpty)
+
+        // 노선을 따라가지만 역 사이 신호에 멈추고 탑승역에 머물지 않은 차는 지하철이 아니다.
+        let start0 = try XCTUnwrap(stations[1].latitude), lng0 = try XCTUnwrap(stations[1].longitude)
+        let end0 = try XCTUnwrap(stations[2].latitude), lng1 = try XCTUnwrap(stations[2].longitude)
+        var redLight = SensorReading(
+            timestamp: start.addingTimeInterval(19 * 60),
+            point: GeoPoint(latitude: (start0 + end0) / 2, longitude: (lng0 + lng1) / 2, altitude: 10, horizontalAccuracy: 10, verticalAccuracy: 5),
+            motion: .automotive
+        )
+        redLight.speedMetersPerSecond = 0.5
+        redLight.gpsAvailable = true
+        var moving = redLight
+        moving.timestamp = start.addingTimeInterval(20 * 60)
+        moving.speedMetersPerSecond = 14
+        let carRide = [
+            reading(stations[0], 5.5, speed: 12, kPa: 102.40), reading(stations[0], 6, speed: 14, kPa: 102.38),
+            reading(stations[1], 16, speed: 1, kPa: 102.00), reading(stations[1], 17, speed: 20, kPa: 102.00),
+            redLight, moving,
+            reading(stations[2], 23, speed: 1, kPa: 101.90), reading(stations[2], 24, speed: 14, kPa: 101.90),
+        ]
+        XCTAssertTrue(RailJourneyRecognizer.journeys(readings: carRide).isEmpty)
+
+        // 직접 고친 기록은 이름을 바꾸지 않는다.
+        let span = TimeSpan(start: start.addingTimeInterval(7 * 60), end: start.addingTimeInterval(9 * 60))
+        var corrected = ActualRecord(planID: nil, title: "자동차", categoryID: "movement", startedAt: span.start, endedAt: span.end, source: .motion, behavior: "automotive")
+        corrected.manuallyCorrected = true
+        var automatic = corrected
+        automatic.manuallyCorrected = false
+        automatic.id = UUID()
+        let retitled = RailJourneyRecognizer.retitling([corrected, automatic], subwaySpans: journeys.map(\.span), asOf: span.end)
+        XCTAssertEqual(retitled.map(\.title), ["자동차", "지하철"])
+
+        let car = TravelSegment(
+            mode: .car, span: TimeSpan(start: start.addingTimeInterval(7 * 60), end: start.addingTimeInterval(9 * 60)),
+            distanceMeters: 0, confidence: .high, evidence: [], isConfirmed: false
+        )
+        let applied = RailJourneyRecognizer.applying(journeys, to: [car], corrections: [])
+        XCTAssertEqual(applied.map(\.mode), [.subway])
+        XCTAssertNotNil(applied.first?.subwayRoute)
+    }
+
+    /// 일정 메모는 옛 저장 자료에 없다. 없어도 읽히고, 구글 설명의 HTML은 글자만 남는다.
+    func testCalendarNotesDecodeAndPlainText() throws {
+        let record = CalendarRecord(
+            id: "a", calendarID: "b", title: "제목", span: TimeSpan(start: .distantPast, end: .distantPast),
+            isAllDay: false, calendarTitle: "c", calendarColorHex: nil, sourceTitle: nil
+        )
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(record)) as? [String: Any])
+        object.removeValue(forKey: "notes")
+        let decoded = try JSONDecoder().decode(CalendarRecord.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(decoded.notes)
+        XCTAssertEqual(CalendarNotesText.plain("<p>회의&nbsp;자료</p><br>준비 &amp; 확인"), "회의 자료\n준비 & 확인")
+        XCTAssertNil(CalendarNotesText.plain("  <br> "))
+    }
+
+    func testPhotoPinMovesOffCatAndPlaceIcons() {
+        let pin = CGPoint(x: 200, y: 300)
+        XCTAssertEqual(MapHomePhotoPlacement.point(for: pin, avoiding: []), pin)
+        let cat = MapHomePhotoPlacement.obstacle(center: CGPoint(x: 200, y: 280), side: 72)
+        let home = MapHomePhotoPlacement.obstacle(center: CGPoint(x: 130, y: 280), side: 78)
+        let moved = MapHomePhotoPlacement.point(for: pin, avoiding: [cat, home])
+        XCTAssertNotEqual(moved, pin)
+        let rect = CGRect(x: moved.x - 27, y: moved.y - 54, width: 54, height: 54)
+        XCTAssertFalse(rect.intersects(cat))
+        XCTAssertFalse(rect.intersects(home))
+    }
+
+    func testHomeTitleNamesTheBuilding() {
+        XCTAssertEqual(MapHomeHomeNames.names.count, 366)
+        XCTAssertEqual(MapHomeGrowthPolicy.homeTitle(level: 366, language: .korean), "우리집 (\(MapHomeHomeNames.names[365].korean))")
+        XCTAssertEqual(MapHomeGrowthPolicy.homeTitle(level: 999, language: .korean), MapHomeGrowthPolicy.homeTitle(level: 366, language: .korean))
+    }
+
+    /// 메뉴의 글꼴 넷은 모두 앱에 들어 있고, 굵기마다 실제로 불러올 수 있다.
+    func testEveryFontChoiceLoads() {
+        for font in TaptionFont.allCases {
+            for weight in [Font.Weight.regular, .medium, .semibold, .bold, .heavy] {
+                XCTAssertNotNil(UIFont(name: font.name(for: weight), size: 12), font.name(for: weight))
+            }
+        }
     }
 }

@@ -1767,6 +1767,24 @@ enum HealthRouteMergeEngine {
     }
 }
 
+extension FloorCalibration {
+    /// 층별 기준점. 옛 형식은 기준점 하나를 층별 기준점으로 편다.
+    var resolvedReferencePoints: [FloorCalibrationPoint] {
+        if !referencePoints.isEmpty { return referencePoints }
+        guard let referencePoint else { return [] }
+        return [
+            FloorCalibrationPoint(
+                floor: referenceFloor,
+                point: referencePoint,
+                relativeAltitudeMeters: referenceRelativeAltitudeMeters,
+                pressureKilopascals: referencePressureKilopascals,
+                altimeterSessionID: referenceAltimeterSessionID,
+                capturedAt: capturedAt ?? .now
+            )
+        ]
+    }
+}
+
 struct FloorCalibrationEngine: Sendable {
     var maximumReferenceDistanceMeters: Double = 120
 
@@ -1887,26 +1905,7 @@ struct FloorCalibrationEngine: Sendable {
         at point: GeoPoint?,
         calibration: FloorCalibration
     ) -> CalibratedAltitudeEstimate? {
-        let references: [FloorCalibrationPoint] = {
-            if !calibration.referencePoints.isEmpty {
-                return calibration.referencePoints
-            }
-            guard let point = calibration.referencePoint else { return [] }
-            return [
-                FloorCalibrationPoint(
-                    floor: calibration.referenceFloor,
-                    point: point,
-                    relativeAltitudeMeters:
-                        calibration.referenceRelativeAltitudeMeters,
-                    pressureKilopascals:
-                        calibration.referencePressureKilopascals,
-                    altimeterSessionID:
-                        calibration.referenceAltimeterSessionID,
-                    capturedAt: calibration.capturedAt ?? .now
-                )
-            ]
-        }()
-        let candidates = references.compactMap { reference -> CalibratedAltitudeEstimate? in
+        let candidates = calibration.resolvedReferencePoints.compactMap { reference -> CalibratedAltitudeEstimate? in
             guard isNearReference(
                 point,
                 referencePoint: reference.point
@@ -1966,8 +1965,8 @@ struct FloorCalibrationEngine: Sendable {
         }?.value ?? [candidates[0]]
         var result = winner.max { confidenceRank($0.confidence) < confidenceRank($1.confidence) }
             ?? candidates[0]
-        if references.count > 1 {
-            result.evidence.append("\(references.count)개 층 기준 교차 검증")
+        if calibration.resolvedReferencePoints.count > 1 {
+            result.evidence.append("\(calibration.resolvedReferencePoints.count)개 층 기준 교차 검증")
         }
         return result
     }
@@ -2066,7 +2065,8 @@ struct FrequentPlaceResolutionEngine: Sendable {
             guard let point = place.point,
                   let match = nearestMatch(
                     to: point,
-                    candidates: candidates
+                    candidates: candidates,
+                    readings: readingIndex.readings(in: place.span)
                   ) else {
                 return place
             }
@@ -2213,19 +2213,77 @@ struct FrequentPlaceResolutionEngine: Sendable {
     }
 
     /// 반경이 겹치면 더 작은 반경의 장소가 우선이다. 회사 반경 안의 식당에 있으면 식당이다(대표 지시).
+    /// 반경이 겹칠 때만 높이를 본다. 체류 고도가 장소의 층과 어긋나는 후보를 빼서, 5층 자리가 1층 식당이 되지 않게 한다.
+    /// 높이 근거가 없으면 수평 판정 그대로이고, 하나만 남는 경우 그 하나를 높이로 지우지는 않는다.
     func nearestMatch(
         to point: GeoPoint,
-        candidates: [FrequentPlace]
+        candidates: [FrequentPlace],
+        readings: [SensorReading] = []
     ) -> FrequentPlace? {
-        candidates.compactMap { frequent -> (FrequentPlace, Double)? in
+        let containing = candidates.compactMap { frequent -> (FrequentPlace, Double)? in
             guard let frequentPoint = frequent.point else { return nil }
             let distance = distanceMeters(point, frequentPoint)
             return distance <= frequent.radiusMeters
                 ? (frequent, distance)
                 : nil
         }
-        .min(by: { $0.0.radiusMeters != $1.0.radiusMeters ? $0.0.radiusMeters < $1.0.radiusMeters : $0.1 < $1.1 })?
-        .0
+        let places = containing.map(\.0)
+        let atHeight = containing.filter { !PlaceHeightMatch.isAtOtherHeight($0.0, among: places, readings: readings) }
+        return (atHeight.isEmpty ? containing : atHeight)
+            .min(by: { $0.0.radiusMeters != $1.0.radiusMeters ? $0.0.radiusMeters < $1.0.radiusMeters : $0.1 < $1.1 })?
+            .0
+    }
+}
+
+/// 지정 장소의 층·기준 고도와 체류 고도를 견준다(ALT1102A01).
+enum PlaceHeightMatch {
+    /// 기압 절대값은 날씨로 수십 미터씩 움직이므로 기준을 잡은 지 이 안에서만 믿는다.
+    private static let pressureReferenceLifetime: TimeInterval = 6 * 60 * 60
+    private static let gpsToleranceMeters = 12.0
+
+    static func isAtOtherHeight(_ place: FrequentPlace, among places: [FrequentPlace], readings: [SensorReading]) -> Bool {
+        guard places.count >= 2, !readings.isEmpty, let targetFloor = place.floor else { return false }
+        // 층만 적은 장소는 겹친 다른 장소의 기준 고도에 층 차이를 더해 쓴다(같은 건물이라고 본다).
+        let own = references(of: place)
+        let sources = own.isEmpty ? places.filter { $0.id != place.id }.flatMap(references) : own
+        guard let reference = sources.min(by: { abs($0.0.floor - targetFloor) < abs($1.0.floor - targetFloor) }) else { return false }
+        let floorHeight = max(2.2, reference.1)
+        let measured = readings.compactMap { reading -> (meters: Double, source: AltitudeDelta.Source)? in
+            guard let delta = AltitudeDelta.between(
+                sample(reference.0, at: reading.timestamp),
+                and: currentSample(reading)
+            ) else { return nil }
+            return (delta.meters, delta.source)
+        }
+        guard let source = measured.first?.source else { return false }
+        let values = measured.filter { $0.source == source }.map(\.meters).sorted()
+        let expected = Double(targetFloor - reference.0.floor) * floorHeight
+        let gap = abs(values[values.count / 2] - expected)
+        switch source {
+        case .relativeAltitude: return gap > floorHeight * 0.75
+        case .pressure: return gap > floorHeight * 1.5
+        case .gps: return gap > max(floorHeight * 1.5, gpsToleranceMeters)
+        }
+    }
+
+    private static func references(of place: FrequentPlace) -> [(FloorCalibrationPoint, Double)] {
+        // 지도에서 찍기만 한 장소는 기준 고도가 없다.
+        (place.floorCalibration?.resolvedReferencePoints ?? [])
+            .filter { $0.point.verticalAccuracy >= 0 || $0.pressureKilopascals != nil || $0.relativeAltitudeMeters != nil }
+            .map { ($0, place.floorHeightMeters) }
+    }
+
+    private static func sample(_ reference: FloorCalibrationPoint, at time: Date) -> AltitudeDelta.Sample {
+        var value = AltitudeDelta.Sample(reference)
+        if reference.point.verticalAccuracy < 0 { value.altitudeMeters = nil }
+        if abs(time.timeIntervalSince(reference.capturedAt)) > pressureReferenceLifetime { value.pressureKilopascals = nil }
+        return value
+    }
+
+    private static func currentSample(_ reading: SensorReading) -> AltitudeDelta.Sample {
+        var value = AltitudeDelta.Sample(reading)
+        if (reading.point?.verticalAccuracy ?? -1) < 0 { value.altitudeMeters = nil }
+        return value
     }
 }
 

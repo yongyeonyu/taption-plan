@@ -154,7 +154,7 @@ extension MapHomeNLEClipEditor {
                     if minute.isMultiple(of: labelEvery) {
                         context.draw(
                             Text(rulerLabel(minute))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold))
                                 .foregroundStyle(Color.tpSecondary),
                             at: CGPoint(x: gutterWidth - 7, y: labelY),
                             anchor: .trailing
@@ -164,7 +164,7 @@ extension MapHomeNLEClipEditor {
                     if isDay, minute < track.rangeEndMinute {
                         context.draw(
                             Text(NLEDayWindow.dayLabel(dayIndex: NLEDayWindow.dayIndex(minute), baseDate: date))
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(8)), weight: .bold))
                                 .foregroundStyle(Color.tpAccent),
                             at: CGPoint(x: gutterWidth - 7, y: labelY + 11),
                             anchor: .trailing

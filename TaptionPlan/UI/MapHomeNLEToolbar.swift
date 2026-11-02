@@ -18,7 +18,7 @@ struct NLEToolButton: View {
                 Image(systemName: systemImage)
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                 Text(title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }

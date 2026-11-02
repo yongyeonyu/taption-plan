@@ -890,7 +890,7 @@ struct MapHomeAppleMap: UIViewRepresentable {
                                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                                 .foregroundStyle(Color.tpReferenceBlue.opacity(0.72))
                             Text(title)
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .semibold))
                                 .foregroundStyle(Color.tpInk.opacity(0.72))
                         }
                         .padding(5)

@@ -28,7 +28,7 @@ struct MapHomeMapStickerMarker: View {
             Image(systemName: sticker.systemImage)
                 .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .bold))
             Text(sticker.title)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .bold))
                 .lineLimit(1)
         }
         .foregroundStyle(Color.tpInk)
@@ -60,10 +60,10 @@ struct MapHomeMapMemoMarker: View {
                 Image(systemName: "note.text")
                     .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 Text(memo.occurredAt.formatted(date: .omitted, time: .shortened))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(9)), weight: .bold))
             }
             Text(memo.text)
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(10)), weight: .semibold))
                 .lineLimit(1)
                 .frame(maxWidth: 118, alignment: .leading)
         }
@@ -203,6 +203,7 @@ struct MapHomeStickerEditorSheet: View {
             }
             .background(Color.tpBackground)
             .safeAreaInset(edge: .bottom) { dictationBar }
+            .tint(Color.tpAccent)
             .alert(
                 language.text("위치를 먼저 고르세요", "Choose a location first"),
                 isPresented: $showsMapStickerNeedsLocation
@@ -265,14 +266,14 @@ struct MapHomeStickerEditorSheet: View {
         VStack(spacing: 6) {
             if let message = dictation.errorMessage {
                 Text(message)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpHoliday)
                     .multilineTextAlignment(.center)
                 if MapHomeDictation.isPermissionDenied {
                     Button(language.text("설정 열기", "Open Settings")) {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                 }
             }
             if dictation.isListening {
@@ -329,10 +330,10 @@ struct MapHomeStickerEditorSheet: View {
                         memoPolishButton
                     }
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
                 if let message = memoPolishMessage {
                     Text(message.text)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                         .foregroundStyle(message.isFailure ? Color.tpHoliday : Color.tpSecondary)
                         .multilineTextAlignment(.trailing)
                         .fixedSize(horizontal: false, vertical: true)
@@ -413,7 +414,7 @@ struct MapHomeStickerEditorSheet: View {
         ZStack(alignment: .topLeading) {
             if memoText.isEmpty {
                 (prompt ?? Text(language.text("메모 내용", "Memo text")))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(17))))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(17))))
                     .foregroundStyle(Color.tpSecondary)
                     .allowsHitTesting(false)
             }
@@ -466,15 +467,23 @@ struct MapHomeStickerEditorSheet: View {
     private func editorCard<Content: View>(title: String? = nil, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if let title {
-                Text(title)
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.tpSecondary)
+                HStack(spacing: 5) {
+                    TaptionCuteIcon("figure.walk", size: 15)
+                        .foregroundStyle(Color.tpAccent)
+                    Text(title)
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .bold))
+                        .foregroundStyle(Color.tpSecondary)
+                }
             }
             content()
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.tpSurface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.tpLine, lineWidth: 1)
+        }
     }
 
     /// 메모 추가와 스티커 수정이 같은 화면을 쓴다. 스티커는 제목과 종류·색·위치를 더 고른다.
@@ -528,7 +537,7 @@ struct MapHomeStickerEditorSheet: View {
                 .frame(height: 150)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 Text(String(format: "%.5f, %.5f", point.latitude, point.longitude))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
                 Button(language.text("위치 다시 고르기", "Choose again")) { requestLocation() }
                 Button(language.text("위치 지우기", "Remove location"), role: .destructive) {
@@ -549,7 +558,7 @@ struct MapHomeStickerEditorSheet: View {
                     revertStickerToMemo()
                 }
                 Text(language.text("스티커 내용을 메모로 다시 만들고 스티커는 지워요.", "Creates a memo with this text and removes the sticker."))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                     .foregroundStyle(Color.tpSecondary)
             }
         }

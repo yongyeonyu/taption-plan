@@ -17,7 +17,7 @@ struct MapHomePredictedRouteMenu: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(language.text("선택한 회색 경로", "Selected predicted route"))
-                .font(.headline)
+                .font(.taptionFixed(size: 17, weight: .semibold))
             Button { save(deleting: false) } label: {
                 Label(language.text("변경", "Confirm"), systemImage: "checkmark.circle")
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -32,7 +32,7 @@ struct MapHomePredictedRouteMenu: View {
             .disabled(isSaving)
             if saveFailed {
                 Text(language.text("저장하지 못했습니다. 다시 시도해 주세요.", "Couldn’t save. Please try again."))
-                    .font(.footnote).foregroundStyle(.red)
+                    .font(.taptionFixed(size: 13)).foregroundStyle(.red)
             }
             Spacer(minLength: 0)
         }
@@ -77,7 +77,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                     )
                 VStack(alignment: .leading, spacing: 3) {
                     Text(candidate.name)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(19)), weight: .bold))
                         .lineLimit(1)
                     Text(
                         language.text(
@@ -85,7 +85,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
                             "\(candidate.kind.englishTitle) · \(dwellText)"
                         )
                     )
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                     .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
@@ -144,7 +144,7 @@ struct MapHomeTransitBoardingCandidateSheet: View {
             if saveFailed {
                 Text(language.text("저장하지 못했습니다. 다시 시도해 주세요.",
                     "Couldn’t save. Please try again."))
-                    .font(.footnote)
+                    .font(.taptionFixed(size: 13))
                     .foregroundStyle(.red)
             }
 
@@ -261,7 +261,7 @@ struct MapHomeTransitLocationsSheet: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(language.text("사용자 위치", "User locations"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(24)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(24)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Text(
                     language.text(
@@ -269,7 +269,7 @@ struct MapHomeTransitLocationsSheet: View {
                         "Manage subway stations, bus stops, train stations, airports, and harbors on the map."
                     )
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(.secondary)
             }
             Spacer()
@@ -316,7 +316,7 @@ struct MapHomeTransitLocationsSheet: View {
                 .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
 
                 Button(language.text("검색", "Search")) { search() }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
                     .background(Color.tpPrimaryFill, in: RoundedRectangle(cornerRadius: 13))
@@ -344,7 +344,7 @@ struct MapHomeTransitLocationsSheet: View {
                                 if name.isEmpty { name = result.title }
                                 searchResults = []
                             }
-                            .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold, design: .rounded))
+                            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .semibold))
                             .foregroundStyle(Color.tpReferenceBlue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -421,7 +421,7 @@ struct MapHomeTransitLocationsSheet: View {
                 HStack {
                     Text(language.text("저장할 층수", "Floor to save"))
                     Spacer()
-                    Text(FloorLabel.korean(floor))
+                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
@@ -434,7 +434,7 @@ struct MapHomeTransitLocationsSheet: View {
                     .frame(height: 44)
                     .background(Color.tpCard, in: RoundedRectangle(cornerRadius: 13))
                 Button(language.text("추가", "Add")) { addLocation() }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 64, height: 44)
                     .background(
@@ -454,11 +454,11 @@ struct MapHomeTransitLocationsSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(language.text("등록된 위치", "Saved locations"))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(18)), weight: .bold))
                     .foregroundStyle(Color.tpInk)
                 Spacer()
                 Text(String(model.settings.userTransitLocations.count))
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
                     .foregroundStyle(Color.tpReferenceBlue)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
@@ -474,7 +474,7 @@ struct MapHomeTransitLocationsSheet: View {
                         "No transit locations are saved."
                     )
                 )
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 18)
@@ -503,7 +503,7 @@ struct MapHomeTransitLocationsSheet: View {
                                 )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(location.name)
-                                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+                                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
                                     .foregroundStyle(Color.tpInk)
                                     .lineLimit(1)
                                 Text(
@@ -512,11 +512,11 @@ struct MapHomeTransitLocationsSheet: View {
                                         location.kind.englishTitle
                                     )
                                 )
-                                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                                 .foregroundStyle(.secondary)
                                 if let floor = location.floor {
-                                    Text(FloorLabel.korean(floor))
-                                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold, design: .rounded))
+                                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
+                                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
                                         .foregroundStyle(Color.tpReferenceBlue)
                                 }
                             }
@@ -677,7 +677,7 @@ struct MapHomeTransitLocationNameEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(language.text("위치 이름 수정", "Edit location name"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             TextField(language.text("이름", "Name"), text: $name)
                 .padding(.horizontal, 12)
@@ -687,7 +687,7 @@ struct MapHomeTransitLocationNameEditor: View {
                 HStack {
                     Text(language.text("층수", "Floor"))
                     Spacer()
-                    Text(FloorLabel.korean(floor))
+                    Text(language.text(FloorLabel.korean(floor), FloorLabel.english(floor)))
                         .fontWeight(.bold)
                         .foregroundStyle(Color.tpReferenceBlue)
                 }
@@ -695,7 +695,7 @@ struct MapHomeTransitLocationNameEditor: View {
             .tint(Color.tpReferenceBlue)
             HStack(spacing: 8) {
                 Button(language.text("취소", "Cancel")) { dismiss() }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
                     .background(Color.tpInk.opacity(0.07), in: RoundedRectangle(cornerRadius: 13))
@@ -707,7 +707,7 @@ struct MapHomeTransitLocationNameEditor: View {
                     onSaved(cleanName)
                     dismiss()
                 }
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)

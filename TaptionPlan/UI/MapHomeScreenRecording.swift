@@ -528,10 +528,10 @@ struct MapHomeRecordingOptionsSheet: View {
         ScrollView(showsIndicators: false) {
         VStack(alignment: .leading, spacing: 14) {
             Text(language.text("재생 화면 녹화", "Record playback"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(20)), weight: .bold))
                 .foregroundStyle(Color.tpInk)
             Text(language.text("지도는 항상 보입니다. 영상에 넣을 항목을 고르세요.", "The map is always shown. Choose what to include."))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             permissionRow
             Menu {
@@ -541,11 +541,11 @@ struct MapHomeRecordingOptionsSheet: View {
             } label: {
                 HStack {
                     Text(language.text("지도", "Map"))
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(14)), weight: .semibold))
                         .foregroundStyle(Color.tpInk)
                     Spacer()
                     Text(mapStyleTitle)
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(13)), weight: .medium))
                         .foregroundStyle(Color.tpSecondary)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .semibold))
@@ -565,7 +565,7 @@ struct MapHomeRecordingOptionsSheet: View {
             toggle(language.text("속도에 따라 가변", "Vary zoom with speed"), $adaptiveZoom)
             Button(action: onStart) {
                 Label(language.text("녹화하며 재생", "Record and play"), systemImage: "record.circle")
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                     .frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(.white)
                     .background(Color.tpAccent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -574,7 +574,7 @@ struct MapHomeRecordingOptionsSheet: View {
             if let onRenderVideo {
                 Button(action: onRenderVideo) {
                     Label(language.text("끊김 없는 영상 만들기", "Render smooth video"), systemImage: "film")
-                        .font(.system(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold, design: .rounded))
+                        .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(16)), weight: .bold))
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(Color.tpAccent)
                         .background(Color.tpAccent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -584,7 +584,7 @@ struct MapHomeRecordingOptionsSheet: View {
                     "프레임을 한 장씩 그려 60fps 영상으로 만듭니다. 화면 녹화와 달리 끊기지 않지만 만드는 데 몇 분 걸립니다.",
                     "Draws every frame into a 60 fps video. Unlike screen recording it never stutters, but takes a few minutes."
                 ))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium, design: .rounded))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(11)), weight: .medium))
                 .foregroundStyle(.secondary)
             }
         }
@@ -610,20 +610,20 @@ struct MapHomeRecordingOptionsSheet: View {
             Text(photoAllowed
                  ? language.text("사진 저장 권한 허용됨 · 화면 녹화 권한은 녹화 시작 때 시스템이 묻습니다", "Photo saving allowed · The system asks for screen recording when it starts")
                  : language.text("사진 저장 권한이 필요합니다", "Photo saving permission is needed"))
-                .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
+                .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .medium))
                 .foregroundStyle(Color.tpSecondary)
             Spacer(minLength: 0)
             if !photoAllowed, photoStatus != .notDetermined,
                let url = URL(string: UIApplication.openSettingsURLString) {
                 Button(language.text("설정 열기", "Open Settings")) { UIApplication.shared.open(url) }
-                    .font(.system(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
+                    .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(12)), weight: .bold))
             }
         }
     }
 
     private func toggle(_ title: String, _ isOn: Binding<Bool>) -> some View {
         Toggle(title, isOn: isOn)
-            .font(.system(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold, design: .rounded))
+            .font(.taptionFixed(size: TaptionType.scaled(TaptionType.snapped(15)), weight: .semibold))
             .tint(Color.tpAccent)
     }
 }
