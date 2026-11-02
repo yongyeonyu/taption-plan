@@ -1941,3 +1941,8 @@
 - 원인: 거대 파일과 중복·죽은 코드가 수정 비용을 키운다(`SensorFusion`, `ScheduleView`, `ReviewView`, `FeatureModels`, `MapHomeCalendarSheet`).
 - 해결: 파일 분할은 줄을 그대로 옮기고, 삭제는 심볼마다 컴파일로 확인하고, 저장 ID는 고정값 테스트를 먼저 쓴다.
 - 검증 기준: 관련 단위 테스트, 앱 Debug 빌드, `check-app-engine-import-boundary.sh`, `architecture-metrics.py --check` 통과, 줄어든 예산 낮추기, `test.md` 기록.
+- 진행(11-03): 12, 3, 4, 5, 7, 9, 14, 15, 16, 17, 18 커밋. 결과는 `test.md`의 RFA1102A01 절.
+- 남음: 6번은 일부만 끝났다. 저장소 actor·열 코덱·`PlanRepository`의 나머지는 `SensorReading`·`TaptionDataSnapshot`에 묶여 있어, 로드맵이 UX 마이그레이션 뒤로 미룬 Phase 2가 끝나야 옮길 수 있다.
+- 다른 세션 소유라 두었다: `SleepAnalysisEngine`·`MapHomeView`의 `unionDuration` 사본, `StationaryContextClassifier`의 저장 ID 해시 2벌.
+- 합친 뒤 확인: `testRailJourneyIsJudgedOverTheWholeRide` 포함 단위 테스트 전체, 네 제품 빌드, 기준선 재작성.
+

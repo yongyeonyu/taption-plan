@@ -5286,3 +5286,15 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 이 커밋 시점 검증: 시뮬레이터용 `build-for-testing` 성공(`build/validation/UIK1102A01/pre-split-build.log`), 가드 확인. **이 코드 그대로의 전체 단위 테스트 결과는 아직 없다.** 직전 코드로 아이폰 11 Pro에서 돌린 실행은 최신 수정을 넣으려고 중간에 끊었고, 끊을 때까지 813건 통과·실패 0이었다(`device-unit2.log`).
 - 원본 재생(11-02 18:11 내보낸 원본, 시뮬레이터, 정차 조건을 엄격히 하기 전 코드): 17:43–18:11 마곡나루>계양>검암>검바위 인식, 아침 자동차는 유지. 엄격화 후 재생은 아직 안 했다.
 - 알려진 제한: 아이패드에 깔린 앱은 빌드 256(아이폰 호환 모드)이었다. 빌드 258 산출물은 `UIDeviceFamily` 1·2로 확인했다.
+
+## RFA1102A01 리팩토링 기계적 항목 (2026-11-03)
+- 모두 시뮬레이터(iOS, `RFA1102A01`) 또는 macOS 패키지 시험이다. 실기기 실행·설치는 하지 않았다.
+- 단위(시뮬레이터, 병렬 끔, 코드 커밋 `3e72968e`와 같은 소스): 전체 1,819건 중 통과 1,812, 실패 1, 건너뜀 6(`build/validation/RFA1102A01/full.xcresult`).
+- 실패: `MapHomeCounterTimelinePolicyTests.testRailJourneyIsJudgedOverTheWholeRide`(319행, 역 사이 신호에 선 차가 지하철로 판정됨). 이 브랜치의 분기점 `098ac3f6` 이후 main의 `80a2103e`가 고친 조건이고 이 브랜치에는 그 수정이 없다. 그 한 줄을 임시로 넣으면 이 시험 파일 17건이 모두 통과했다(`railfix.xcresult`). 임시 수정은 되돌렸고, 이 브랜치에서는 실패가 남아 있다. 합친 뒤 다시 돌려 확인해야 한다.
+- 건너뜀 6건: `testMalformedHealthKitAnchorRestartsFromBeginning`, `testMalformedHealthKitHistoryCursorRestartsHistory`, `testRenderSheetImagesWhenRequested`, `testWriteGroomingSheetWhenRequested`, `testCompareStoredTravelWithClassifierTimeline`, `testReplayExportedRawDays`. 이번 변경으로 새로 건너뛰게 됐는지는 항목별로 확인하지 않았다.
+- 패키지: `swift test --package-path Packages/TaptionPlanStore` 8건 통과(macOS).
+- 저장 ID: `StableRecordIDTests` 5건 통과(시뮬레이터). 값은 합치기 전 원본 함수의 복사본으로 뽑았다.
+- 빌드: 시뮬레이터용 `build-for-testing` 성공(`06-build.log`). 서명 끔. Release·아카이브와 네 제품 산출물 확인은 하지 않았다.
+- 가드: `check-app-engine-import-boundary.sh`, `architecture-metrics.py --check` 통과. 기준선은 이 브랜치 기준으로 다시 썼다.
+- 항목별 시험의 한계: 12·3·4·5·7·9·14·15번은 커밋할 때 빌드만 확인했고, 단위 테스트는 마지막에 전체로 한 번 돌렸다. 화면 시험(UI 테스트)은 돌리지 않았다.
+- 파일 분할 중 삭제·분할 스크립트 오류로 빌드가 여러 번 실패해 되돌려 다시 적용했다. 분할은 정렬한 줄 비교로 원본과 같음을 확인했다(`FeatureModels`, `ScheduleView`, `ReviewView`). `MapHomeCalendarSheet`는 비교 없이 빌드만 확인했다.
