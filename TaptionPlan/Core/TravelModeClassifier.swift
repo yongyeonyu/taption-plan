@@ -1281,9 +1281,9 @@ struct TravelModeClassifier: Sendable {
         let stepReadings = readings.compactMap { reading in
             reading.stepCount.map { (reading.timestamp, $0) }
         }
-        let livePhoneCount = cumulativeIncrease(
-            stepReadings.sorted { $0.0 < $1.0 }.map(\.1)
-        )
+        // 아이폰과 워치의 누적 계수기는 따로 잰다. 한 줄로 이으면 값이 오갈 때마다 가짜 증가가 생긴다.
+        let liveSteps = DeviceStepCounter.increases(in: readings)
+        let livePhoneCount = liveSteps[.iPhone] ?? 0
         var groupedCounts: [String: (AppleMovementEvidenceSource, Int)] = [:]
         for record in evidence where record.kind == .steps {
             guard let count = record.stepCount,
@@ -1316,9 +1316,7 @@ struct TravelModeClassifier: Sendable {
             .compactMap(\.currentPaceSecondsPerMeter)
             .filter { $0.isFinite && $0 > 0 }
             .min() ?? 0
-        let liveDistance = cumulativeIncrease(
-            readings.compactMap(\.walkingRunningDistanceMeters)
-        )
+        let liveDistance = DeviceStepCounter.distanceIncrease(in: readings)
         let healthDistance = evidence
             .filter {
                 $0.kind == .steps
@@ -1330,7 +1328,7 @@ struct TravelModeClassifier: Sendable {
         return StepSignal(
             livePhoneCount: livePhoneCount,
             healthPhoneCount: maximum(for: .iPhone),
-            watchCount: maximum(for: .appleWatch),
+            watchCount: max(maximum(for: .appleWatch), liveSteps[.appleWatch] ?? 0),
             otherCount: maximum(for: .other),
             hasCoverage: stepReadings.count >= 2
                 || !groupedCounts.isEmpty
@@ -1340,20 +1338,6 @@ struct TravelModeClassifier: Sendable {
             paceSecondsPerMeter: pace,
             distanceMeters: max(liveDistance, healthDistance)
         )
-    }
-
-    private func cumulativeIncrease(_ values: [Int]) -> Int {
-        guard values.count >= 2 else { return 0 }
-        return zip(values, values.dropFirst()).reduce(0) { total, pair in
-            total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
-        }
-    }
-
-    private func cumulativeIncrease(_ values: [Double]) -> Double {
-        guard values.count >= 2 else { return 0 }
-        return zip(values, values.dropFirst()).reduce(0) { total, pair in
-            total + (pair.1 >= pair.0 ? pair.1 - pair.0 : pair.1)
-        }
     }
 
     private struct WatchAccelerationSignal {
