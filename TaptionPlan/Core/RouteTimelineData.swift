@@ -1820,7 +1820,7 @@ enum ExpectedRouteRequestEngine {
                 operationCount: &operationCount
             ) else { continue }
             let duration = rhs.timestamp.timeIntervalSince(lhs.timestamp)
-            guard duration >= minimumGap else { continue }
+            guard duration >= minimumGap, !TaptionRouteEngineAdapter.isSparseVehicleGap(from: lhs, to: rhs, readings: readings) else { continue }
             // 물리적으로 불가능한 속도의 끊김은 빠진 이동이 아니라 튄 위치다.
             // 이런 구간에 예상 경로를 이으면 회사↔멀리 떨어진 곳 직선이 그려진다.
             guard !isImpossibleJump(
