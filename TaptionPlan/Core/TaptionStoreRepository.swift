@@ -28,8 +28,11 @@ actor TaptionStoreRepository: PlanDataRepository {
     private let memoStore: TaptionStoreV2?
     /// 이 저장소 객체가 알고 있는 전역 삭제 세대. 데이터 삭제가 진행 중이거나 그 뒤에 만들어진 세대와 다르면 쓰지 않는다.
     private var deletionGeneration = TaptionDataDeletionFence.currentGeneration()
-    /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문).
-    private var known: [String: [String: (ord: Int, body: String)]]?
+    /// 마지막으로 저장소와 맞춘 상태: 종류 → id → (순서, 본문 지문).
+    /// 본문 자체를 들고 있으면 장소만 8MB가 상주해 지문만 둔다(ARC1103A01).
+    private var known: [String: [String: (ord: Int, bodyPrint: Int)]]?
+    /// 마지막으로 저장소와 맞춘 스냅샷. 배열이 같으면 그 종류는 항목을 하나도 해시하지 않는다(저장 공간이 같으면 비교가 바로 끝난다).
+    private var lastSynced: TaptionDataSnapshot?
     private var nextOrd: [String: Int] = [:]
     /// 마지막으로 저장소와 맞춘 각 항목의 해시: 종류 → id → hashValue. 저장할 때 해시가 같은 항목은 JSON으로 다시 만들지 않는다
     /// (이전에는 저장할 때마다 모든 기록을 JSON으로 만들어 비교해, 기록이 많으면 미확인 활동 하나를 저장하는 데도 몇 초가 걸렸다).
@@ -90,7 +93,8 @@ actor TaptionStoreRepository: PlanDataRepository {
         }
         let readMilliseconds = Date().timeIntervalSince(readStartedAt) * 1_000
         let state = Self.groupedRecordRows(rows)
-        known = state
+        known = state.mapValues { $0.mapValues { ($0.ord, Self.bodyPrint($0.body)) } }
+        lastSynced = nil
         nextOrd = Self.nextOrdinals(for: state)
         knownHashes = [:]
         // 항목마다 JSONDecoder를 새로 만들면 수만 건을 읽을 때 할당 비용이 그대로 쌓인다.
@@ -156,6 +160,7 @@ actor TaptionStoreRepository: PlanDataRepository {
             settings: header.settings
         )
         knownHashes = hashes
+        lastSynced = snapshot
         Self.recordLoad(
             rowCount: rows.count,
             state: state,
@@ -215,6 +220,16 @@ actor TaptionStoreRepository: PlanDataRepository {
             state[row.kind, default: [:]][row.id] = (row.ord, row.body)
         }
         return state
+    }
+
+    /// 본문 바이트의 지문. 값이 프로세스마다 달라 메모리에서만 쓴다.
+    private nonisolated static func bodyPrint(_ body: String) -> Int {
+        var body = body
+        return body.withUTF8 { bytes in
+            var hasher = Hasher()
+            hasher.combine(bytes: UnsafeRawBufferPointer(bytes))
+            return hasher.finalize()
+        }
     }
 
     private nonisolated static func nextOrdinals(
@@ -280,7 +295,8 @@ actor TaptionStoreRepository: PlanDataRepository {
         // 바뀐 항목마다 JSONEncoder를 새로 만들지 않고 한 번만 만든다.
         let encoder = Self.encoder()
 
-        func sync<T: Encodable & Identifiable & Hashable>(_ kind: Kind, _ items: [T]) throws {
+        func sync<T: Encodable & Identifiable & Hashable>(_ kind: Kind, _ items: [T], _ synced: [T]?) throws {
+            if let synced, synced == items { return }
             let goesToMemoStore = kind == .memo && memoStore != nil
             var previous = newKnown[kind.rawValue] ?? [:]
             var hashes = newHashes[kind.rawValue] ?? [:]
@@ -295,9 +311,10 @@ actor TaptionStoreRepository: PlanDataRepository {
                 let body = try Self.encode(item, using: encoder)
                 encodedItemCount += 1
                 hashes[id] = hash
-                if let existing = previous[id], existing.body == body { continue }
+                let bodyPrint = Self.bodyPrint(body)
+                if let existing = previous[id], existing.bodyPrint == bodyPrint { continue }
                 let ord = previous[id]?.ord ?? takeOrd(kind.rawValue)
-                previous[id] = (ord, body)
+                previous[id] = (ord, bodyPrint)
                 let record = Self.record(kind: kind.rawValue, id: id, ord: ord, body: body,
                                          updatedAt: snapshot.updatedAt)
                 if goesToMemoStore { memoUpserts.append(record) } else { upserts.append(record) }
@@ -312,28 +329,29 @@ actor TaptionStoreRepository: PlanDataRepository {
             newHashes[kind.rawValue] = hashes
         }
 
-        try sync(.plan, snapshot.plans)
-        try sync(.actual, snapshot.actuals)
-        try sync(.recordLink, snapshot.recordLinks)
-        try sync(.memo, snapshot.memos)
-        try sync(.sticker, snapshot.stickers)
-        try sync(.category, snapshot.categories)
-        try sync(.photo, snapshot.photos)
-        try sync(.calendarEvent, snapshot.calendarEvents)
-        try sync(.weather, snapshot.weather)
-        try sync(.place, snapshot.places)
-        try sync(.travel, snapshot.travel)
-        try sync(.floorTransition, snapshot.floorTransitions)
-        try sync(.yearlyReport, snapshot.yearlyReports)
+        try sync(.plan, snapshot.plans, lastSynced?.plans)
+        try sync(.actual, snapshot.actuals, lastSynced?.actuals)
+        try sync(.recordLink, snapshot.recordLinks, lastSynced?.recordLinks)
+        try sync(.memo, snapshot.memos, lastSynced?.memos)
+        try sync(.sticker, snapshot.stickers, lastSynced?.stickers)
+        try sync(.category, snapshot.categories, lastSynced?.categories)
+        try sync(.photo, snapshot.photos, lastSynced?.photos)
+        try sync(.calendarEvent, snapshot.calendarEvents, lastSynced?.calendarEvents)
+        try sync(.weather, snapshot.weather, lastSynced?.weather)
+        try sync(.place, snapshot.places, lastSynced?.places)
+        try sync(.travel, snapshot.travel, lastSynced?.travel)
+        try sync(.floorTransition, snapshot.floorTransitions, lastSynced?.floorTransitions)
+        try sync(.yearlyReport, snapshot.yearlyReports, lastSynced?.yearlyReports)
 
         let header = Header(
             schemaVersion: snapshot.schemaVersion, updatedAt: snapshot.updatedAt, settings: snapshot.settings
         )
         let headerBody = try Self.encode(header, using: encoder)
-        if newKnown[Self.headerKind]?[Self.headerID]?.body != headerBody {
+        let headerPrint = Self.bodyPrint(headerBody)
+        if newKnown[Self.headerKind]?[Self.headerID]?.bodyPrint != headerPrint {
             upserts.append(Self.record(kind: Self.headerKind, id: Self.headerID, ord: 0, body: headerBody,
                                        updatedAt: snapshot.updatedAt))
-            newKnown[Self.headerKind] = [Self.headerID: (0, headerBody)]
+            newKnown[Self.headerKind] = [Self.headerID: (0, headerPrint)]
         }
 
         try await store.applyRecordChanges(upserts: upserts, deletes: deletes, deletedAt: Date())
@@ -346,6 +364,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         }
         known = newKnown
         knownHashes = newHashes
+        lastSynced = snapshot
     }
 
     func deleteAll() async throws {
@@ -353,6 +372,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         if let memoStore { try await memoStore.deleteAllRecords() }
         known = [:]
         knownHashes = [:]
+        lastSynced = nil
         nextOrd = [:]
         deletionGeneration = TaptionDataDeletionFence.currentGeneration()
     }
@@ -361,6 +381,7 @@ actor TaptionStoreRepository: PlanDataRepository {
         // 다음 저장 때 저장소에서 다시 읽어 비교 기준을 만든다.
         known = nil
         knownHashes = [:]
+        lastSynced = nil
     }
 
     func resetEncodedItemCountForTesting() { encodedItemCount = 0 }
