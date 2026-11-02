@@ -356,6 +356,7 @@
 		A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52000000000000000000002 /* MapHomeLiveMapTests.swift */; };
 		A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */; };
 		A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */; };
+		A5200000000000000000C102 /* RuntimeEfficiencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */; };
 		A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */; };
 		5A0000000000000000000010 /* TaptionPlanSmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */; };
 		A5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */; };
@@ -760,6 +761,7 @@
 		F52000000000000000000002 /* MapHomeLiveMapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeLiveMapTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowanceTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicyTests.swift; sourceTree = "<group>"; };
+		F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeEfficiencyTests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCounterDetailTests.swift; sourceTree = "<group>"; };
 		5A0000000000000000000011 /* TaptionPlanSmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanSmokeUITests.swift; sourceTree = "<group>"; };
 		F5200000000000000000F5F9 /* TaptionPlanAllowanceUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaptionPlanAllowanceUITests.swift; sourceTree = "<group>"; };
@@ -928,6 +930,7 @@
 				F52000000000000000000002 /* MapHomeLiveMapTests.swift */,
 				F5200000000000000000F5D2 /* MapHomeAllowanceTests.swift */,
 				F5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift */,
+				F5200000000000000000C102 /* RuntimeEfficiencyTests.swift */,
 				F5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift */,
 				F10000000000000000000077 /* WatchMeasurementAlertTests.swift */,
 				F10000000000000000000086 /* RouteTimelineDataTests.swift */,
@@ -1809,6 +1812,7 @@
 				A52000000000000000000002 /* MapHomeLiveMapTests.swift in Sources */,
 				A5200000000000000000F5D2 /* MapHomeAllowanceTests.swift in Sources */,
 				A5200000000000000000F5F7 /* MapHomeWideLayoutPolicyTests.swift in Sources */,
+				A5200000000000000000C102 /* RuntimeEfficiencyTests.swift in Sources */,
 				A5200000000000000000F5D1 /* MapHomeCounterDetailTests.swift in Sources */,
 				A10000000000000000000076 /* WatchMeasurementAlertTests.swift in Sources */,
 				A10000000000000000000086 /* RouteTimelineDataTests.swift in Sources */,
