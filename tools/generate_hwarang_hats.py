@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""화랑이 모자 52개(랜드마크별)를 SVG 이미지 세트로 만든다(ACC1101A01)."""
-import json, os, sys
+"""화랑이 장식 52개(모자 17·스카프 17·꼬리 리본 18)를 SVG 이미지 세트와 Swift 색 표로 만든다(ACC1101A01, ACC1102A01)."""
+import json, math, os, shutil, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSETS = os.path.join(ROOT, "TaptionPlan/Assets.xcassets/Hats")
+CATALOG = os.path.join(ROOT, "TaptionPlan/Assets.xcassets")
+STYLES = os.path.join(ROOT, "TaptionPlan/UI/HwarangRigAccessoryStyles.swift")
 O = "#3B2A1F"
 
 def S(body):
@@ -96,26 +97,235 @@ HATS = {
     "au.twelve_apostles": S('<path d="M12 40c0-16 9-26 20-26s20 10 20 26z" fill="#F2C21E"/><path d="M6 38c14-4 38-4 52 2l4 12c-16-9-40-10-56-6z" fill="#E0AE12"/><path d="M32 14v24" fill="none" stroke-width="2"/>'),
     "au.harbour_bridge": S('<path d="M10 42c0-18 10-28 22-28s22 10 22 28z" fill="#F2C21E"/><rect x="28" y="10" width="8" height="30" rx="3" fill="#E0AE12"/>' + brim("#E0AE12", 45, 28, 5) + '<path d="M14 36q18-20 36 0M22 36v-8M32 36V24M42 36v-8" fill="none" stroke="#3B2A1F" stroke-width="2"/>'),
 }
+
+# 남기는 모자 17개와 나라별로 고르게 나눈 스카프 17개·리본 18개. MapHomeGrowthPolicy의 후보와 같아야 한다.
+HAT_IDS = ["kr.gyeongbokgung", "kr.namsan", "kr.hallasan", "jp.fuji", "jp.fushimi", "us.liberty", "us.grandcanyon",
+           "gb.bigben", "gb.edinburgh", "fr.eiffel", "fr.versailles", "it.colosseum", "it.venice",
+           "cn.forbidden_city", "es.sagrada", "th.grand_palace", "au.uluru"]
+
+# 모자 위에 얹는 층: 그늘(짙은 반투명)과 빛(흰 반투명), 천 접힘 선.
+SH = 'fill="#1E120A" fill-opacity=".2" stroke="none"'
+HI = 'fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="2.4"'
+FO = 'fill="none" stroke="#1E120A" stroke-opacity=".28" stroke-width="1.6"'
+HAT_LAYERS = {
+    "kr.gyeongbokgung": f'<path d="M23 15c1-3 4-4 7-4" {HI}/><path d="M36 14v18c3 0 4-.4 5-1V15z" {SH}/><path d="M8 45c12 5 36 5 48 0" {FO}/>',
+    "kr.namsan": f'<path d="M16 34c1-8 6-14 12-16" {HI}/><path d="M44 21c5 5 7 13 7 22-2-1-4-2-7-2z" {SH}/>',
+    "kr.hallasan": f'<path d="M16 34c1-8 6-14 11-16" {HI}/><path d="M44 18c6 5 9 13 9 23h-9z" {SH}/>',
+    "jp.fuji": f'<path d="M15 34c1-7 5-13 10-15" {HI}/><path d="M46 20c5 5 7 12 7 20h-8z" {SH}/>',
+    "jp.fushimi": f'<path d="M12 36c6-5 14-6 20-6" {HI}/>',
+    "us.liberty": f'<path d="M11 44c13 4 29 4 42 0v4c-13 4-29 4-42 0z" {SH}/>',
+    "us.grandcanyon": f'<path d="M19 36c0-7 3-13 8-15" {HI}/><path d="M6 45c14 6 38 6 52 0" {FO}/>',
+    "gb.bigben": f'<path d="M20 12v24" {HI}/><path d="M41 8h5v34l-5 1z" {SH}/><path d="M8 47c14 4 34 4 48 0" {FO}/>',
+    "gb.edinburgh": f'<path d="M12 30c3-8 9-14 17-16" {HI}/><path d="M12 38c12-5 28-5 40 0" {FO}/>',
+    "fr.eiffel": f'<path d="M9 34c3-9 11-15 21-16" {HI}/><path d="M16 38c12 4 26 3 38-3l-1 4c-12 5-26 6-37 3z" {SH}/>',
+    "fr.versailles": f'<path d="M11 36l-1-14" {HI}/><path d="M9 45c15-5 31-5 46 0v5c-15-4-31-4-46 0z" {SH}/>',
+    "it.colosseum": f'<path d="M13 34c1-6 6-11 13-12" {HI}/><path d="M44 21c6 3 10 9 10 15v14l-6-2v-8z" {SH}/>',
+    "it.venice": f'<path d="M18 32c0-5 2-9 6-11" {HI}/><path d="M10 45c14 5 30 5 44 0" {FO}/>',
+    "cn.forbidden_city": f'<path d="M20 34c1-6 4-10 8-12" {HI}/><path d="M10 46c14 4 30 4 44 0" {FO}/>',
+    "es.sagrada": f'<path d="M23 44l3-16" {HI}/><path d="M36 30l4-10 5 26c-3 1-6 2-9 2z" {SH}/>',
+    "th.grand_palace": f'<path d="M23 40l5-14" {HI}/><path d="M36 26l4 2 9 19-13 2z" {SH}/>',
+    "au.uluru": f'<path d="M20 36c0-7 3-13 8-15" {HI}/><path d="M6 44c14 6 38 6 52 0" {FO}/>',
+}
+
+# 천 장식 표. (바탕, 그늘, 무늬, 테두리 장식, 무늬 종류, 랜드마크 표식)
+SCARVES = {
+    "kr.hahoe": ("#2F4C86", "#223A69", "#F2DDB0", "#C8473A", "bands", "mask"),
+    "kr.seongsan": ("#6DAA6B", "#4E8A55", "#F2B632", "#3BA6DC", "waves", "sun"),
+    "jp.itsukushima": ("#D9553A", "#B03E28", "#FFF3E0", "#2E6FB0", "scales", "torii"),
+    "jp.arashiyama": ("#7FA650", "#5F8A3A", "#D3E59B", "#3F6B2F", "stripes", "leaf"),
+    "us.golden_gate": ("#D9502E", "#B23B1F", "#F6E2C8", "#7A2A14", "bands", "bridge"),
+    "us.yosemite": ("#4F7F5A", "#3A6347", "#EAD9A8", "#8FC6E2", "zigzag", "mountain"),
+    "gb.tower_bridge": ("#2F5FA8", "#234A86", "#F3F5F7", "#C8473A", "stripes", "tower"),
+    "gb.lake_district": ("#5B8FB0", "#44748F", "#DCEBF2", "#6B8F5A", "check", "wave"),
+    "fr.louvre": ("#7FB7DA", "#5E97BC", "#FFFFFF", "#2F5F86", "diamonds", "pyramid"),
+    "fr.alps": ("#C8473A", "#A23429", "#FFFFFF", "#2F4C86", "stripes", "mountain"),
+    "it.amalfi": ("#F7D24A", "#DDB22C", "#3BA6DC", "#FFFFFF", "dots", "lemon"),
+    "cn.great_wall": ("#6E7F90", "#55636F", "#D8DEE3", "#C8473A", "zigzag", "wall"),
+    "cn.li_river": ("#4FA3A5", "#3A8486", "#E8F5F2", "#2F4C86", "waves", "fish"),
+    "es.park_guell": ("#2BA6D9", "#1E86B3", "#F7C948", "#E8553A", "diamonds", "star"),
+    "es.camino": ("#E7B23C", "#C79324", "#2F5FA8", "#FFF8E6", "scales", "shell"),
+    "th.phiphi": ("#2BB5B2", "#1F918E", "#FFF3B0", "#F7DD93", "waves", "sun"),
+    "au.great_barrier": ("#FF7F6B", "#DE5F4C", "#FFF1E6", "#2BB5B2", "dots", "star"),
+}
+RIBBONS = {
+    "kr.bulguksa": ("#C9A66B", "#A8864E", "#7A5A32", "#FFF8E6", "stripes", "pagoda"),
+    "kr.haeundae": ("#3BA6DC", "#2A86B8", "#FFFFFF", "#F7DD93", "waves", "wave"),
+    "jp.himeji": ("#8FA3B8", "#6F8398", "#FFFFFF", "#2F4C86", "scales", "tower"),
+    "us.mount_rushmore": ("#8C8F96", "#6E7178", "#EDEEF0", "#C8473A", "stripes", "star"),
+    "gb.stonehenge": ("#7E8C7A", "#616E5E", "#DADFD5", "#4A5547", "check", "wall"),
+    "fr.mont_saint_michel": ("#4A6FA5", "#38578A", "#C9D6E8", "#F7DD93", "bands", "tower"),
+    "it.pisa": ("#D8B978", "#B89857", "#FFF8E6", "#7A5A32", "stripes", "tower"),
+    "it.dolomites": ("#D96C8B", "#B84F6E", "#FFE3EA", "#4F6B3C", "zigzag", "mountain"),
+    "cn.zhangjiajie": ("#5E8F7E", "#477263", "#D6E8DF", "#2F4C40", "zigzag", "mountain"),
+    "cn.terracotta": ("#B5683F", "#934F2B", "#F0D3B5", "#5A3A24", "scales", "wall"),
+    "es.alhambra": ("#B8402F", "#96301F", "#F7DD93", "#2F7F6F", "diamonds", "star"),
+    "es.teide": ("#4B4340", "#352F2C", "#E8553A", "#C9BDB5", "dots", "mountain"),
+    "th.ayutthaya": ("#E8922C", "#C67518", "#FFE9B8", "#7A3E12", "bands", "pagoda"),
+    "th.doi_inthanon": ("#A77BD1", "#8860B3", "#FFFFFF", "#7FB069", "dots", "flower"),
+    "th.wat_arun": ("#4FB8B0", "#3A9690", "#F7C948", "#E8553A", "diamonds", "pagoda"),
+    "au.opera": ("#2C6FB5", "#215790", "#FFFFFF", "#F7C948", "scales", "sail"),
+    "au.twelve_apostles": ("#E6A94D", "#C78A30", "#3BA6DC", "#FFF3D6", "waves", "wall"),
+    "au.harbour_bridge": ("#8A97A3", "#6C7884", "#FFFFFF", "#2F5FA8", "zigzag", "bridge"),
+}
+
+# 12칸 안에 그리는 작은 랜드마크 표식. 흰 면에 짙은 선으로 어떤 천 위에서도 보인다.
+MOTIFS = {
+    "mask": '<circle cx="6" cy="6" r="5.4"/><path d="M3 5q1-1.5 2 0M7 5q1-1.5 2 0M3.6 8q2.4 2 4.8 0" fill="none" stroke-width=".9"/>',
+    "sun": '<circle cx="6" cy="6" r="3.4"/><path d="M6 .6v1.2M6 10.2v1.2M.6 6h1.2M10.2 6h1.2M2.2 2.2l.9.9M8.9 8.9l.9.9M9.8 2.2l-.9.9M3.1 8.9l-.9.9" fill="none" stroke-width="1"/>',
+    "torii": '<path d="M.6 2.4c3.6 1 7.2 1 10.8 0v1.8H.6zM2.6 4.2h6.8v1.6H2.6zM3 5.8h1.4v5.6H3zM7.6 5.8H9v5.6H7.6z"/>',
+    "leaf": '<path d="M1.4 10.6C1 4.6 5 1.2 10.6 1.4 10.8 7 7.4 11 1.4 10.6z"/><path d="M1.4 10.6 7.4 4.6" fill="none" stroke-width=".9"/>',
+    "bridge": '<path d="M2 1h1.6v10H2zM8.4 1H10v10H8.4zM.4 7.6h11.2V9H.4z"/><path d="M2.8 1.4C4 5 8 5 9.2 1.4" fill="none" stroke-width=".9"/>',
+    "mountain": '<path d="M.5 10.8 4.6 2.6l1.8 2.8 1.2-1.6 3.9 7z"/>',
+    "tower": '<path d="M4 11.2V3.4L6 .6l2 2.8v7.8z"/><path d="M4.4 6h3.2M4.4 8.6h3.2" fill="none" stroke-width=".8"/>',
+    "wave": '<path d="M.6 8.4C2 3 6.4 1.6 9 3.4c-2 .2-3 1.4-2.4 2.8.6 1.2 2.6 1.2 4.8.2-.4 2.8-2 4.6-4.8 4.6H.6z"/>',
+    "pyramid": '<path d="M6 1 11.4 11H.6z"/><path d="M6 1v10M3.4 6h5.2" fill="none" stroke-width=".8"/>',
+    "lemon": '<ellipse cx="6" cy="6.6" rx="4.8" ry="4"/><path d="M6 2.6c.4-1.2 1.4-2 2.8-2-.2 1.4-1.2 2.2-2.8 2z"/>',
+    "wall": '<path d="M.6 3.4h2.2V1.8h2v1.6h2.4V1.8h2v1.6h2.2v7.4H.6z"/><path d="M.8 6.8h10.4" fill="none" stroke-width=".8"/>',
+    "fish": '<path d="M1 6c2-3 5.4-3 7.4 0l2.8-2.2v4.4L8.4 6C6.4 9 3 9 1 6z"/>',
+    "star": '<path d="M6 .8 7.6 4.3l3.8.4-2.8 2.6.8 3.8L6 9.2l-3.4 1.9.8-3.8L.6 4.7l3.8-.4z"/>',
+    "shell": '<path d="M6 11 1 5.4C2 2 4 1 6 1s4 1 5 4.4z"/><path d="M6 11V2M6 11 3.2 3M6 11l2.8-8" fill="none" stroke-width=".7"/>',
+    "pagoda": '<path d="M6 .4 7 3h2L8 5h2l-1 2.4h1.6L9.4 11H2.6L1.4 7.4H3L2 5h2L3 3h2z"/>',
+    "flower": '<circle cx="6" cy="2.8" r="2.2"/><circle cx="9" cy="5.4" r="2.2"/><circle cx="7.9" cy="9" r="2.2"/><circle cx="4.1" cy="9" r="2.2"/><circle cx="3" cy="5.4" r="2.2"/><circle cx="6" cy="6.4" r="1.6"/>',
+    "sail": '<path d="M1 10.6C1 5 3.6 1.8 7 1c-1 3-1 6 0 9.6zM6.6 10.6c0-4 1.6-6.4 4.4-7-.6 2.4-.6 4.6 0 7z"/>',
+}
+
+def pattern(kind, accent, x0=-4, y0=-4, x1=68, y1=62):
+    """주어진 범위를 무늬로 채운다. 천 모양으로 잘라 쓴다."""
+    out = []
+    if kind == "stripes":
+        out = [f'<path d="M{x} {y0}l18 {y1-y0}" stroke="{accent}" stroke-width="3" fill="none"/>' for x in range(x0 - 30, x1, 9)]
+    elif kind == "bands":
+        out = [f'<path d="M{x0} {y}L{x1} {y-8}" stroke="{accent}" stroke-width="{2.6 if i % 2 else 1.3}" fill="none"/>' for i, y in enumerate(range(y0, y1 + 12, 5))]
+    elif kind == "dots":
+        for row, y in enumerate(range(y0, y1, 7)):
+            out += [f'<circle cx="{x + (row % 2) * 4}" cy="{y}" r="1.7" fill="{accent}"/>' for x in range(x0, x1, 8)]
+    elif kind == "waves":
+        for y in range(y0, y1, 7):
+            d = f"M{x0} {y}" + "".join(f"q2.5 -3 5 0t5 0" for _ in range((x1 - x0) // 10 + 1))
+            out.append(f'<path d="{d}" stroke="{accent}" stroke-width="1.5" fill="none"/>')
+    elif kind == "check":
+        for x in range(x0, x1, 9):
+            out.append(f'<path d="M{x} {y0}V{y1}" stroke="{accent}" stroke-width="2.2" stroke-opacity=".75" fill="none"/>')
+        for y in range(y0, y1, 9):
+            out.append(f'<path d="M{x0} {y}H{x1}" stroke="{accent}" stroke-width="2.2" stroke-opacity=".75" fill="none"/>')
+    elif kind == "diamonds":
+        for row, y in enumerate(range(y0, y1, 6)):
+            for x in range(x0, x1, 10):
+                cx = x + (row % 2) * 5
+                out.append(f'<path d="M{cx} {y-2.4}l2.4 2.4-2.4 2.4-2.4-2.4z" fill="{accent}"/>')
+    elif kind == "zigzag":
+        for y in range(y0, y1, 8):
+            d = f"M{x0} {y}" + "l4 -3.4 4 3.4" * ((x1 - x0) // 8 + 1)
+            out.append(f'<path d="{d}" stroke="{accent}" stroke-width="1.7" fill="none"/>')
+    elif kind == "scales":
+        for row, y in enumerate(range(y0, y1, 5)):
+            for x in range(x0, x1, 8):
+                cx = x + (row % 2) * 4
+                out.append(f'<path d="M{cx-4} {y}a4 4 0 0 1 8 0" stroke="{accent}" stroke-width="1.2" fill="none"/>')
+    return "".join(out)
+
+def cloth(uid, d, base, kind, accent, stroke=True):
+    """바탕을 깔고 무늬를 잘라 얹은 뒤 윤곽을 그린다."""
+    return (f'<clipPath id="{uid}"><path d="{d}"/></clipPath>'
+            f'<path d="{d}" fill="{base}" stroke="none"/><g clip-path="url(#{uid})" stroke-width="0">{pattern(kind, accent)}</g>'
+            + (f'<path d="{d}" fill="none"/>' if stroke else ""))
+
+def motif(name, x, y, k=1.0):
+    return (f'<g transform="translate({x} {y}) scale({k})" fill="#FFFDF6" stroke="{O}" stroke-width=".9" stroke-linejoin="round">{MOTIFS[name]}</g>')
+
+def scarf(style):
+    base, shade, accent, trim, kind, mark = style
+    far = "M20 30 13 49 25 53 34 32z"
+    tail = "M31 31 33 55 47 53 43 30z"
+    wrap = "M8 13C9 35 55 35 56 13 51 20 13 20 8 13z"
+    fringe = "".join(f'<path d="M{x} {y}l{dx} 4" fill="none" stroke-width="1.6"/>' for x, y, dx in [(14.5, 50, -.8), (19, 51.5, -.5), (23.5, 52.8, -.2), (35, 55, .2), (40, 54.4, .4), (45, 53.6, .6)])
+    return S(
+        # 뒤로 돌아가는 고리: 그늘색으로 어둡게 깐다.
+        f'<path d="M8 13C9 3 55 3 56 13 51 20 13 20 8 13z" fill="{shade}"/>'
+        f'<path d="M15 12c6-4 28-4 34 0-6 3.4-28 3.4-34 0z" fill="#1E120A" fill-opacity=".38" stroke="none"/>'
+        + fringe
+        + cloth("f", far, shade, kind, accent)
+        + f'<path d="M23 33 19 46" fill="none" stroke="#1E120A" stroke-opacity=".25" stroke-width="1.4"/>'
+        + cloth("t", tail, base, kind, accent)
+        + f'<path d="M31.4 36c4 1 8 1 12-.2l-.4-5.8-12 1z" fill="#1E120A" fill-opacity=".24" stroke="none"/>'
+        f'<path d="M14.5 48.7 25.6 52.4 26.8 49 15.7 45.4zM33 55 47 53l-.4-3.2-13.8 1.9z" fill="{trim}" stroke="none"/>'
+        f'<path d="{far}" fill="none"/><path d="{tail}" fill="none"/>'
+        + cloth("w", wrap, base, kind, accent)
+        + f'<path d="M12 18c4 5 11 8 20 8.4M52 18c-3 4-7 6.4-11 7.6" fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="1.8"/>'
+        f'<path d="M15 23c6 4 12 5.4 17 5.6M49 23c-3 2.6-7 4.4-10 5" fill="none" stroke="#1E120A" stroke-opacity=".28" stroke-width="1.5"/>'
+        f'<path d="M26 24c3-1.4 12-1.6 15 .4 1.8 3.4 1.2 7.4-.8 9.2-3.4 1.2-10 1.2-13-.2-2-2.6-2.4-6.4-1.2-9.4z" fill="{base}"/>'
+        f'<path d="M28.6 26.4c2 2 2 4.6.6 6.6M38.8 26.4c-1.6 2-1.8 4.6-.6 6.6" fill="none" stroke="#1E120A" stroke-opacity=".35" stroke-width="1.4"/>'
+        + motif(mark, 34.6, 38.5, .92))
+
+def ribbon(style):
+    base, shade, accent, trim, kind, mark = style
+    left = "M29 22C21 9 5 6 3 16 1 27 16 34 29 29z"
+    right = "M35 22C43 9 59 6 61 16 63 27 48 34 35 29z"
+    tl = "M28 31 15 51 24 50 28 57 37 33z"
+    tr = "M36 31 49 49 41 50 38 57 28 33z"
+    return S(
+        cloth("a", tr, shade, kind, accent) + cloth("b", tl, base, kind, accent)
+        + f'<path d="M28 31l9 2-1.6 5.4-10.4-3z" fill="#1E120A" fill-opacity=".26" stroke="none"/>'
+        f'<path d="M16.8 49 24 48.2 27 53.6 26 56 24 50 15 51zM40.8 47.6 49 49 41 50 38 57 37.6 54.4z" fill="{trim}" stroke="none"/>'
+        + cloth("l", left, base, kind, accent) + cloth("r", right, base, kind, accent)
+        # 고리 안쪽 그늘과 접힘.
+        + f'<path d="M26 22C19 13 8 11 7 17.4 6.4 22 16 25 26 24.6z" fill="{shade}" fill-opacity=".92" stroke="none"/>'
+        f'<path d="M38 22C45 13 56 11 57 17.4 57.6 22 48 25 38 24.6z" fill="{shade}" fill-opacity=".92" stroke="none"/>'
+        f'<path d="M29 25.6C22 27 13 26 8 23M35 25.6C42 27 51 26 56 23" fill="none" stroke="#1E120A" stroke-opacity=".3" stroke-width="1.5"/>'
+        f'<path d="M6 13c2-3 8-2.6 12 0M58 13c-2-3-8-2.6-12 0" fill="none" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="1.8"/>'
+        f'<path d="M{left[1:]}" fill="none"/><path d="{right}" fill="none"/>'
+        f'<rect x="25" y="17.5" width="14" height="15.5" rx="4.4" fill="{trim}"/>'
+        + motif(mark, 26.7, 19.8, .88))
+
 VIEW = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 68 60" width="68" height="60">{}</svg>'
 
-def asset_name(landmark):
-    return "Hat_" + landmark.replace(".", "_")
+ASSET_GROUPS = [("Hats", "Hat_"), ("Scarves", "Scarf_"), ("Ribbons", "Ribbon_")]
 
-def write_assets():
-    os.makedirs(ASSETS, exist_ok=True)
-    with open(os.path.join(ASSETS, "Contents.json"), "w") as f:
+def asset_name(prefix, landmark):
+    return prefix + landmark.replace(".", "_")
+
+def write_group(folder, prefix, bodies):
+    root = os.path.join(CATALOG, folder)
+    # 후보에서 빠진 그림은 지운다.
+    if os.path.isdir(root):
+        for name in os.listdir(root):
+            if name.endswith(".imageset") and name[:-9] not in {asset_name(prefix, k) for k in bodies}:
+                shutil.rmtree(os.path.join(root, name))
+    os.makedirs(root, exist_ok=True)
+    with open(os.path.join(root, "Contents.json"), "w") as f:
         json.dump({"info": {"author": "xcode", "version": 1}}, f, indent=2)
-    for landmark, body in HATS.items():
-        d = os.path.join(ASSETS, asset_name(landmark) + ".imageset")
+    for landmark, body in bodies.items():
+        d = os.path.join(root, asset_name(prefix, landmark) + ".imageset")
         os.makedirs(d, exist_ok=True)
-        with open(os.path.join(d, "hat.svg"), "w") as f:
+        with open(os.path.join(d, "art.svg"), "w") as f:
             f.write(VIEW.format(body))
+        stale = os.path.join(d, "hat.svg")
+        if os.path.exists(stale):
+            os.remove(stale)
         with open(os.path.join(d, "Contents.json"), "w") as f:
-            json.dump({"images": [{"filename": "hat.svg", "idiom": "universal"}],
+            json.dump({"images": [{"filename": "art.svg", "idiom": "universal"}],
                        "info": {"author": "xcode", "version": 1},
                        "properties": {"preserves-vector-representation": True}}, f, indent=2)
 
+def hex0x(color):
+    return "0x" + color[1:].upper()
+
+def write_styles():
+    lines = ["// tools/generate_hwarang_hats.py가 만든다. 직접 고치지 않는다.", "",
+             "extension HwarangClothStyle {", "    /// 스카프와 꼬리 리본의 색과 무늬. 키는 랜드마크 id다.",
+             "    static let byLandmark: [String: HwarangClothStyle] = ["]
+    for landmark, (base, shade, accent, trim, kind, _) in {**SCARVES, **RIBBONS}.items():
+        lines.append(f'        "{landmark}": .init(base: {hex0x(base)}, shade: {hex0x(shade)}, accent: {hex0x(accent)}, trim: {hex0x(trim)}, pattern: .{kind}),')
+    lines += ["    ]", "}", ""]
+    with open(STYLES, "w") as f:
+        f.write("\n".join(lines))
+
 if __name__ == "__main__":
     assert len(HATS) == 52, len(HATS)
-    write_assets()
-    print("hats", len(HATS))
+    assert len(HAT_IDS) == 17 and len(SCARVES) == 17 and len(RIBBONS) == 18
+    assert set(HATS) == set(HAT_IDS) | set(SCARVES) | set(RIBBONS), "모든 랜드마크가 한 종류씩 가져야 한다"
+    write_group("Hats", "Hat_", {k: HATS[k].replace("</g>", "", 0) + S(HAT_LAYERS[k]) for k in HAT_IDS})
+    write_group("Scarves", "Scarf_", {k: scarf(v) for k, v in SCARVES.items()})
+    write_group("Ribbons", "Ribbon_", {k: ribbon(v) for k, v in RIBBONS.items()})
+    write_styles()
+    print("hats", len(HAT_IDS), "scarves", len(SCARVES), "ribbons", len(RIBBONS))

@@ -17,7 +17,9 @@ struct MapHomeGrowthSeason: Codable, Equatable {
     var chosenEvolutions: [String] = []
     var landPlots: [String] = []
     var accessories: [String] = []
-    var equippedAccessory: String?
+    var equippedHat: String?
+    var equippedScarf: String?
+    var equippedRibbon: String?
     var landPlotPlacements: [MapHomeGrowthPlotPlacement]?
     var recentCompletionRewardedDays: [String]?
 }
@@ -36,10 +38,51 @@ extension MapHomeGrowthSeason {
         chosenEvolutions = try c.decodeIfPresent([String].self, forKey: .chosenEvolutions) ?? []
         landPlots = try c.decodeIfPresent([String].self, forKey: .landPlots) ?? []
         accessories = try c.decodeIfPresent([String].self, forKey: .accessories) ?? []
-        equippedAccessory = try c.decodeIfPresent(String.self, forKey: .equippedAccessory)
+        equippedHat = try c.decodeIfPresent(String.self, forKey: .equippedHat)
+        equippedScarf = try c.decodeIfPresent(String.self, forKey: .equippedScarf)
+        equippedRibbon = try c.decodeIfPresent(String.self, forKey: .equippedRibbon)
         landPlotPlacements = try c.decodeIfPresent([MapHomeGrowthPlotPlacement].self, forKey: .landPlotPlacements)
         recentCompletionRewardedDays = try c.decodeIfPresent([String].self, forKey: .recentCompletionRewardedDays)
+        // 착용 칸이 하나이던 때의 값을 그 장식의 종류 칸으로 옮긴다. 새 칸이 있으면 옛 값은 보지 않는다.
+        if equippedHat == nil, equippedScarf == nil, equippedRibbon == nil,
+           let legacy = try decoder.container(keyedBy: LegacyKeys.self).decodeIfPresent(String.self, forKey: .equippedAccessory) {
+            setEquipped(legacy, kind: MapHomeGrowthAccessoryCatalog.kind(for: legacy))
+        }
     }
+
+    private enum LegacyKeys: String, CodingKey { case equippedAccessory }
+
+    /// 착용한 장식 전체를 한 문자열로 나타낸 값. 지도·재생·영상까지 이 값 하나로 전달한다.
+    /// 하나만 입었으면 그 장식 id와 같고, 아무것도 안 입었으면 nil이다.
+    var equippedAccessory: String? {
+        let worn = [equippedHat, equippedScarf, equippedRibbon].compactMap { $0 }
+        return worn.isEmpty ? nil : worn.joined(separator: MapHomeGrowthAccessoryCatalog.outfitSeparator)
+    }
+
+    func equipped(_ kind: MapHomeAccessoryKind) -> String? {
+        switch kind {
+        case .hat: equippedHat
+        case .scarf: equippedScarf
+        case .ribbon: equippedRibbon
+        }
+    }
+
+    func isEquipped(_ accessoryID: String) -> Bool {
+        equipped(MapHomeGrowthAccessoryCatalog.kind(for: accessoryID)) == accessoryID
+    }
+
+    mutating func setEquipped(_ accessoryID: String, kind: MapHomeAccessoryKind) {
+        switch kind {
+        case .hat: equippedHat = accessoryID
+        case .scarf: equippedScarf = accessoryID
+        case .ribbon: equippedRibbon = accessoryID
+        }
+    }
+}
+
+/// 화랑이가 몸에 걸치는 장식 종류. 종류마다 하나씩 동시에 착용한다.
+enum MapHomeAccessoryKind: String, CaseIterable {
+    case hat, scarf, ribbon
 }
 
 struct MapHomeGrowthPlotPlacement: Codable, Equatable, Identifiable {
@@ -57,6 +100,7 @@ struct MapHomeLandmarkCandidate: Identifiable, Equatable {
     let englishName: String
     let category: String
     let systemImage: String
+    let accessoryKind: MapHomeAccessoryKind
 
     var artworkName: String {
         "Landmark_" + id.replacingOccurrences(of: ".", with: "_")
@@ -67,59 +111,59 @@ struct MapHomeLandmarkCandidate: Identifiable, Equatable {
 
 enum MapHomeLandmarkCatalog {
     static let candidates: [MapHomeLandmarkCandidate] = [
-        .init(id: "kr.gyeongbokgung", country: "대한민국", name: "경복궁", englishName: "Gyeongbokgung", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "kr.bulguksa", country: "대한민국", name: "불국사", englishName: "Bulguksa", category: "문화", systemImage: "building.2.fill"),
-        .init(id: "kr.seongsan", country: "대한민국", name: "성산일출봉", englishName: "Seongsan Ilchulbong", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "kr.haeundae", country: "대한민국", name: "해운대", englishName: "Haeundae", category: "자연", systemImage: "water.waves"),
-        .init(id: "kr.hahoe", country: "대한민국", name: "하회마을", englishName: "Hahoe Folk Village", category: "문화", systemImage: "house.lodge.fill"),
+        .init(id: "kr.gyeongbokgung", country: "대한민국", name: "경복궁", englishName: "Gyeongbokgung", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "kr.bulguksa", country: "대한민국", name: "불국사", englishName: "Bulguksa", category: "문화", systemImage: "building.2.fill", accessoryKind: .ribbon),
+        .init(id: "kr.seongsan", country: "대한민국", name: "성산일출봉", englishName: "Seongsan Ilchulbong", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .scarf),
+        .init(id: "kr.haeundae", country: "대한민국", name: "해운대", englishName: "Haeundae", category: "자연", systemImage: "water.waves", accessoryKind: .ribbon),
+        .init(id: "kr.hahoe", country: "대한민국", name: "하회마을", englishName: "Hahoe Folk Village", category: "문화", systemImage: "house.lodge.fill", accessoryKind: .scarf),
         // 한 해 주간 보상이 최대 52번이라 52개로 맞췄다. 두 곳은 그림 파일이 아직 없어 심볼로 보인다.
-        .init(id: "kr.namsan", country: "대한민국", name: "N서울타워", englishName: "N Seoul Tower", category: "건축", systemImage: "antenna.radiowaves.left.and.right"),
-        .init(id: "kr.hallasan", country: "대한민국", name: "한라산", englishName: "Hallasan", category: "자연", systemImage: "tree.fill"),
-        .init(id: "jp.fuji", country: "일본", name: "후지산", englishName: "Mount Fuji", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "jp.himeji", country: "일본", name: "히메지성", englishName: "Himeji Castle", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "jp.fushimi", country: "일본", name: "후시미 이나리", englishName: "Fushimi Inari", category: "문화", systemImage: "torii.gate.fill"),
-        .init(id: "jp.itsukushima", country: "일본", name: "이쓰쿠시마 신사", englishName: "Itsukushima Shrine", category: "문화", systemImage: "water.waves"),
-        .init(id: "jp.arashiyama", country: "일본", name: "아라시야마", englishName: "Arashiyama", category: "자연", systemImage: "leaf.fill"),
-        .init(id: "us.liberty", country: "미국", name: "자유의 여신상", englishName: "Statue of Liberty", category: "건축", systemImage: "figure.stand"),
-        .init(id: "us.grandcanyon", country: "미국", name: "그랜드 캐니언", englishName: "Grand Canyon", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "us.golden_gate", country: "미국", name: "금문교", englishName: "Golden Gate Bridge", category: "건축", systemImage: "bridge.fill"),
-        .init(id: "us.yosemite", country: "미국", name: "요세미티", englishName: "Yosemite", category: "자연", systemImage: "waterfall.fill"),
-        .init(id: "us.mount_rushmore", country: "미국", name: "러시모어산", englishName: "Mount Rushmore", category: "문화", systemImage: "mountain.2.fill"),
-        .init(id: "gb.bigben", country: "영국", name: "빅벤", englishName: "Big Ben", category: "건축", systemImage: "clock.fill"),
-        .init(id: "gb.stonehenge", country: "영국", name: "스톤헨지", englishName: "Stonehenge", category: "문화", systemImage: "circle.hexagongrid.fill"),
-        .init(id: "gb.edinburgh", country: "영국", name: "에든버러성", englishName: "Edinburgh Castle", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "gb.lake_district", country: "영국", name: "레이크 디스트릭트", englishName: "Lake District", category: "자연", systemImage: "water.waves"),
-        .init(id: "gb.tower_bridge", country: "영국", name: "타워 브리지", englishName: "Tower Bridge", category: "건축", systemImage: "bridge.fill"),
-        .init(id: "fr.eiffel", country: "프랑스", name: "에펠탑", englishName: "Eiffel Tower", category: "건축", systemImage: "tower.fill"),
-        .init(id: "fr.mont_saint_michel", country: "프랑스", name: "몽생미셸", englishName: "Mont-Saint-Michel", category: "문화", systemImage: "building.columns.fill"),
-        .init(id: "fr.louvre", country: "프랑스", name: "루브르 박물관", englishName: "Louvre Museum", category: "문화", systemImage: "building.columns.fill"),
-        .init(id: "fr.versailles", country: "프랑스", name: "베르사유 궁전", englishName: "Palace of Versailles", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "fr.alps", country: "프랑스", name: "프랑스 알프스", englishName: "French Alps", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "it.colosseum", country: "이탈리아", name: "콜로세움", englishName: "Colosseum", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "it.venice", country: "이탈리아", name: "베네치아", englishName: "Venice", category: "문화", systemImage: "water.waves"),
-        .init(id: "it.pisa", country: "이탈리아", name: "피사의 사탑", englishName: "Leaning Tower of Pisa", category: "건축", systemImage: "building.fill"),
-        .init(id: "it.dolomites", country: "이탈리아", name: "돌로미티", englishName: "Dolomites", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "it.amalfi", country: "이탈리아", name: "아말피 해안", englishName: "Amalfi Coast", category: "자연", systemImage: "water.waves"),
-        .init(id: "cn.great_wall", country: "중국", name: "만리장성", englishName: "Great Wall", category: "건축", systemImage: "wall.3.fill"),
-        .init(id: "cn.forbidden_city", country: "중국", name: "자금성", englishName: "Forbidden City", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "cn.zhangjiajie", country: "중국", name: "장자제", englishName: "Zhangjiajie", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "cn.terracotta", country: "중국", name: "병마용", englishName: "Terracotta Army", category: "문화", systemImage: "figure.stand"),
-        .init(id: "cn.li_river", country: "중국", name: "리강", englishName: "Li River", category: "자연", systemImage: "water.waves"),
-        .init(id: "es.sagrada", country: "스페인", name: "사그라다 파밀리아", englishName: "Sagrada Família", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "es.alhambra", country: "스페인", name: "알람브라", englishName: "Alhambra", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "es.park_guell", country: "스페인", name: "구엘 공원", englishName: "Park Güell", category: "문화", systemImage: "leaf.fill"),
-        .init(id: "es.camino", country: "스페인", name: "산티아고 순례길", englishName: "Camino de Santiago", category: "문화", systemImage: "figure.walk"),
-        .init(id: "es.teide", country: "스페인", name: "테이데산", englishName: "Mount Teide", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "th.grand_palace", country: "태국", name: "왕궁", englishName: "Grand Palace", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "th.phiphi", country: "태국", name: "피피섬", englishName: "Phi Phi Islands", category: "자연", systemImage: "water.waves"),
-        .init(id: "th.ayutthaya", country: "태국", name: "아유타야", englishName: "Ayutthaya", category: "문화", systemImage: "building.columns.fill"),
-        .init(id: "th.doi_inthanon", country: "태국", name: "도이인타논", englishName: "Doi Inthanon", category: "자연", systemImage: "mountain.2.fill"),
-        .init(id: "th.wat_arun", country: "태국", name: "왓 아룬", englishName: "Wat Arun", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "au.opera", country: "호주", name: "시드니 오페라 하우스", englishName: "Sydney Opera House", category: "건축", systemImage: "building.columns.fill"),
-        .init(id: "au.great_barrier", country: "호주", name: "그레이트 배리어 리프", englishName: "Great Barrier Reef", category: "자연", systemImage: "water.waves"),
-        .init(id: "au.uluru", country: "호주", name: "울루루", englishName: "Uluru", category: "문화", systemImage: "mountain.2.fill"),
-        .init(id: "au.twelve_apostles", country: "호주", name: "12사도 바위", englishName: "Twelve Apostles", category: "자연", systemImage: "water.waves"),
-        .init(id: "au.harbour_bridge", country: "호주", name: "시드니 하버 브리지", englishName: "Sydney Harbour Bridge", category: "건축", systemImage: "bridge.fill"),
+        .init(id: "kr.namsan", country: "대한민국", name: "N서울타워", englishName: "N Seoul Tower", category: "건축", systemImage: "antenna.radiowaves.left.and.right", accessoryKind: .hat),
+        .init(id: "kr.hallasan", country: "대한민국", name: "한라산", englishName: "Hallasan", category: "자연", systemImage: "tree.fill", accessoryKind: .hat),
+        .init(id: "jp.fuji", country: "일본", name: "후지산", englishName: "Mount Fuji", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .hat),
+        .init(id: "jp.himeji", country: "일본", name: "히메지성", englishName: "Himeji Castle", category: "건축", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "jp.fushimi", country: "일본", name: "후시미 이나리", englishName: "Fushimi Inari", category: "문화", systemImage: "torii.gate.fill", accessoryKind: .hat),
+        .init(id: "jp.itsukushima", country: "일본", name: "이쓰쿠시마 신사", englishName: "Itsukushima Shrine", category: "문화", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "jp.arashiyama", country: "일본", name: "아라시야마", englishName: "Arashiyama", category: "자연", systemImage: "leaf.fill", accessoryKind: .scarf),
+        .init(id: "us.liberty", country: "미국", name: "자유의 여신상", englishName: "Statue of Liberty", category: "건축", systemImage: "figure.stand", accessoryKind: .hat),
+        .init(id: "us.grandcanyon", country: "미국", name: "그랜드 캐니언", englishName: "Grand Canyon", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .hat),
+        .init(id: "us.golden_gate", country: "미국", name: "금문교", englishName: "Golden Gate Bridge", category: "건축", systemImage: "bridge.fill", accessoryKind: .scarf),
+        .init(id: "us.yosemite", country: "미국", name: "요세미티", englishName: "Yosemite", category: "자연", systemImage: "waterfall.fill", accessoryKind: .scarf),
+        .init(id: "us.mount_rushmore", country: "미국", name: "러시모어산", englishName: "Mount Rushmore", category: "문화", systemImage: "mountain.2.fill", accessoryKind: .ribbon),
+        .init(id: "gb.bigben", country: "영국", name: "빅벤", englishName: "Big Ben", category: "건축", systemImage: "clock.fill", accessoryKind: .hat),
+        .init(id: "gb.stonehenge", country: "영국", name: "스톤헨지", englishName: "Stonehenge", category: "문화", systemImage: "circle.hexagongrid.fill", accessoryKind: .ribbon),
+        .init(id: "gb.edinburgh", country: "영국", name: "에든버러성", englishName: "Edinburgh Castle", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "gb.lake_district", country: "영국", name: "레이크 디스트릭트", englishName: "Lake District", category: "자연", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "gb.tower_bridge", country: "영국", name: "타워 브리지", englishName: "Tower Bridge", category: "건축", systemImage: "bridge.fill", accessoryKind: .scarf),
+        .init(id: "fr.eiffel", country: "프랑스", name: "에펠탑", englishName: "Eiffel Tower", category: "건축", systemImage: "tower.fill", accessoryKind: .hat),
+        .init(id: "fr.mont_saint_michel", country: "프랑스", name: "몽생미셸", englishName: "Mont-Saint-Michel", category: "문화", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "fr.louvre", country: "프랑스", name: "루브르 박물관", englishName: "Louvre Museum", category: "문화", systemImage: "building.columns.fill", accessoryKind: .scarf),
+        .init(id: "fr.versailles", country: "프랑스", name: "베르사유 궁전", englishName: "Palace of Versailles", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "fr.alps", country: "프랑스", name: "프랑스 알프스", englishName: "French Alps", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .scarf),
+        .init(id: "it.colosseum", country: "이탈리아", name: "콜로세움", englishName: "Colosseum", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "it.venice", country: "이탈리아", name: "베네치아", englishName: "Venice", category: "문화", systemImage: "water.waves", accessoryKind: .hat),
+        .init(id: "it.pisa", country: "이탈리아", name: "피사의 사탑", englishName: "Leaning Tower of Pisa", category: "건축", systemImage: "building.fill", accessoryKind: .ribbon),
+        .init(id: "it.dolomites", country: "이탈리아", name: "돌로미티", englishName: "Dolomites", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .ribbon),
+        .init(id: "it.amalfi", country: "이탈리아", name: "아말피 해안", englishName: "Amalfi Coast", category: "자연", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "cn.great_wall", country: "중국", name: "만리장성", englishName: "Great Wall", category: "건축", systemImage: "wall.3.fill", accessoryKind: .scarf),
+        .init(id: "cn.forbidden_city", country: "중국", name: "자금성", englishName: "Forbidden City", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "cn.zhangjiajie", country: "중국", name: "장자제", englishName: "Zhangjiajie", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .ribbon),
+        .init(id: "cn.terracotta", country: "중국", name: "병마용", englishName: "Terracotta Army", category: "문화", systemImage: "figure.stand", accessoryKind: .ribbon),
+        .init(id: "cn.li_river", country: "중국", name: "리강", englishName: "Li River", category: "자연", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "es.sagrada", country: "스페인", name: "사그라다 파밀리아", englishName: "Sagrada Família", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "es.alhambra", country: "스페인", name: "알람브라", englishName: "Alhambra", category: "건축", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "es.park_guell", country: "스페인", name: "구엘 공원", englishName: "Park Güell", category: "문화", systemImage: "leaf.fill", accessoryKind: .scarf),
+        .init(id: "es.camino", country: "스페인", name: "산티아고 순례길", englishName: "Camino de Santiago", category: "문화", systemImage: "figure.walk", accessoryKind: .scarf),
+        .init(id: "es.teide", country: "스페인", name: "테이데산", englishName: "Mount Teide", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .ribbon),
+        .init(id: "th.grand_palace", country: "태국", name: "왕궁", englishName: "Grand Palace", category: "건축", systemImage: "building.columns.fill", accessoryKind: .hat),
+        .init(id: "th.phiphi", country: "태국", name: "피피섬", englishName: "Phi Phi Islands", category: "자연", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "th.ayutthaya", country: "태국", name: "아유타야", englishName: "Ayutthaya", category: "문화", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "th.doi_inthanon", country: "태국", name: "도이인타논", englishName: "Doi Inthanon", category: "자연", systemImage: "mountain.2.fill", accessoryKind: .ribbon),
+        .init(id: "th.wat_arun", country: "태국", name: "왓 아룬", englishName: "Wat Arun", category: "건축", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "au.opera", country: "호주", name: "시드니 오페라 하우스", englishName: "Sydney Opera House", category: "건축", systemImage: "building.columns.fill", accessoryKind: .ribbon),
+        .init(id: "au.great_barrier", country: "호주", name: "그레이트 배리어 리프", englishName: "Great Barrier Reef", category: "자연", systemImage: "water.waves", accessoryKind: .scarf),
+        .init(id: "au.uluru", country: "호주", name: "울루루", englishName: "Uluru", category: "문화", systemImage: "mountain.2.fill", accessoryKind: .hat),
+        .init(id: "au.twelve_apostles", country: "호주", name: "12사도 바위", englishName: "Twelve Apostles", category: "자연", systemImage: "water.waves", accessoryKind: .ribbon),
+        .init(id: "au.harbour_bridge", country: "호주", name: "시드니 하버 브리지", englishName: "Sydney Harbour Bridge", category: "건축", systemImage: "bridge.fill", accessoryKind: .ribbon),
     ]
 
     /// 이번 시즌에 52개를 다 골랐는지. 다 고르면 주간 보상을 더 받지 않는다(대표 지시, ACC1102A01).
@@ -151,9 +195,44 @@ enum MapHomeGrowthAccessoryCatalog {
         return MapHomeLandmarkCatalog.candidates.first { $0.accessoryID == accessoryID }
     }
 
-    /// 화랑이 머리에 쓰는 모자 그림(ACC1101A01). 옛 장식 id처럼 랜드마크를 못 찾으면 nil이다.
-    static func hatAssetName(for accessoryID: String?) -> String? {
-        landmark(for: accessoryID).map { "Hat_" + $0.id.replacingOccurrences(of: ".", with: "_") }
+    /// 장식 종류. 옛 장식 id처럼 랜드마크를 못 찾으면 예전대로 머리 칸에 둔다.
+    static func kind(for accessoryID: String) -> MapHomeAccessoryKind {
+        landmark(for: accessoryID)?.accessoryKind ?? .hat
+    }
+
+    /// 도감과 목록에 쓰는 장식 그림. 옛 장식 id처럼 랜드마크를 못 찾으면 nil이다.
+    static func artworkName(for accessoryID: String?) -> String? {
+        landmark(for: accessoryID).map { landmark in
+            let prefix = switch landmark.accessoryKind {
+            case .hat: "Hat_"
+            case .scarf: "Scarf_"
+            case .ribbon: "Ribbon_"
+            }
+            return prefix + landmark.id.replacingOccurrences(of: ".", with: "_")
+        }
+    }
+
+    static let outfitSeparator = "+"
+
+    /// 착용 값(`MapHomeGrowthSeason.equippedAccessory`)에서 종류별 장식을 찾는다. 장식 id 하나도 그대로 받는다.
+    private static func worn(_ kind: MapHomeAccessoryKind, in outfit: String?) -> MapHomeLandmarkCandidate? {
+        guard let outfit else { return nil }
+        return outfit.components(separatedBy: outfitSeparator).lazy
+            .compactMap { landmark(for: $0) }
+            .first { $0.accessoryKind == kind }
+    }
+
+    /// 화랑이 머리에 쓰는 모자 그림(ACC1101A01). 모자를 안 썼으면 nil이다.
+    static func hatAssetName(for outfit: String?) -> String? {
+        artworkName(for: worn(.hat, in: outfit)?.accessoryID)
+    }
+
+    static func scarfStyle(for outfit: String?) -> HwarangClothStyle? {
+        worn(.scarf, in: outfit).flatMap { HwarangClothStyle.byLandmark[$0.id] }
+    }
+
+    static func ribbonStyle(for outfit: String?) -> HwarangClothStyle? {
+        worn(.ribbon, in: outfit).flatMap { HwarangClothStyle.byLandmark[$0.id] }
     }
 
     /// 화랑이 아이콘에 달리는 무늬. 랜드마크 장식은 그 랜드마크의 심볼(건축·자연·문화)을 쓰고,
@@ -442,7 +521,7 @@ enum MapHomeGrowthPolicy {
         in season: inout MapHomeGrowthSeason
     ) -> Bool {
         guard season.accessories.contains(accessoryID) else { return false }
-        season.equippedAccessory = accessoryID
+        season.setEquipped(accessoryID, kind: MapHomeGrowthAccessoryCatalog.kind(for: accessoryID))
         return true
     }
 

@@ -882,6 +882,8 @@ struct MapHomeStickmanMarker: View {
             ? MapHomeSpeedTier.tier(forMetersPerSecond: speedMetersPerSecond)
             : .idle
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
+        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         TimelineView(
             .animation(
                 minimumInterval: 1.0 / 30,
@@ -913,6 +915,8 @@ struct MapHomeStickmanMarker: View {
                     anchorHeight: Self.size.height,
                     facesLeft: facesLeft && action.isMoving,
                     hatAssetName: hat,
+                    scarf: scarf,
+                    ribbon: ribbon,
                     showsBackdrop: false
                 )
                 .rotationEffect(.degrees(facesLeft ? -tier.leanDegrees * 0.5 : tier.leanDegrees * 0.5))
@@ -942,6 +946,8 @@ struct MapHomeStickmanGlyph: View {
     var body: some View {
         let isStatic = reduceMotion || isLuminanceReduced || !action.animatesPresentation
         let hat = MapHomeGrowthAccessoryCatalog.hatAssetName(for: equippedAccessoryID)
+        let scarf = MapHomeGrowthAccessoryCatalog.scarfStyle(for: equippedAccessoryID)
+        let ribbon = MapHomeGrowthAccessoryCatalog.ribbonStyle(for: equippedAccessoryID)
         // 같은 화면의 화랑이들이 동시에 같은 자세로 겹치지 않게 분류별로 시작을 어긋낸다.
         let offset = Double(MapHomeStickmanAction.allCases.firstIndex(of: action) ?? 0) * 3.7
         TimelineView(.animation(minimumInterval: 1.0 / 24, paused: isStatic)) { context in
@@ -951,6 +957,8 @@ struct MapHomeStickmanGlyph: View {
                 width: size * 1.6,
                 anchorHeight: size,
                 hatAssetName: hat,
+                scarf: scarf,
+                ribbon: ribbon,
                 showsBackdrop: size >= 36,
                 keepsBodySize: false
             )

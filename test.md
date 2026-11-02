@@ -5286,3 +5286,11 @@ UI 테스트 `TaptionPlanPlaybackHUDUITests` 1건을 남겼다 — 재생 → �
 - 이 커밋 시점 검증: 시뮬레이터용 `build-for-testing` 성공(`build/validation/UIK1102A01/pre-split-build.log`), 가드 확인. **이 코드 그대로의 전체 단위 테스트 결과는 아직 없다.** 직전 코드로 아이폰 11 Pro에서 돌린 실행은 최신 수정을 넣으려고 중간에 끊었고, 끊을 때까지 813건 통과·실패 0이었다(`device-unit2.log`).
 - 원본 재생(11-02 18:11 내보낸 원본, 시뮬레이터, 정차 조건을 엄격히 하기 전 코드): 17:43–18:11 마곡나루>계양>검암>검바위 인식, 아침 자동차는 유지. 엄격화 후 재생은 아직 안 했다.
 - 알려진 제한: 아이패드에 깔린 앱은 빌드 256(아이폰 호환 모드)이었다. 빌드 258 산출물은 `UIDeviceFamily` 1·2로 확인했다.
+
+## ACC1102A01 (2026-11-03, 시뮬레이터) 모자 17·스카프 17·꼬리 리본 18, 종류별 동시 착용
+- 단위: `MapHomeGrowthPolicyTests`·`MapHomeStickmanTests`·`MapHomeLiveMapTests` 184건 통과(`build/validation/ACC1102A01/unit-1.xcresult`, ACC-iPhone17 iOS 27.0, 병렬 끔). 새 시험: 옛 `equippedAccessory` JSON 해독, 종류별 동시 착용, 52개 그림·색 표, 22장면 8프레임 몸 밖 이탈, 자동차 턱 밑 띠. 전체 단위·화면 시험은 돌리지 않았다.
+- 이탈: 시험 기준은 큰 크기·`small` 모두 맨몸 윤곽에서 6단위 밖 12화소 이하, 캔버스 잘림 0, 스카프 `fr.alps`·리본 `au.opera` 한 벌. 임시 Catalyst 도구 측정 최대값은 큰 크기 1화소, `small` 7화소(둘 다 시험과 프레임 수·배율이 다름).
+- 시트: 앱 번들 에셋으로 만든 `build/validation/ACC1102A01/sheets/accessories-all-scenes.png`·`accessories-small.png`(22장면×8프레임)·`accessories-catalog.png`(52개)를 눈으로 봤다. 앞의 두 장은 4벌을 장면별로 돌려 입혔고, 52개 전부를 입혀 보지는 않았다. 세 번째로 모든 아이콘의 무늬가 카탈로그에서 그려지는 것을 확인했다.
+- 보이는 부위: 지하철·기차·버스·비행기·배는 목과 꼬리가 가려 시험에서 윤곽 변화 0이고 그리지 않는다. 자동차는 턱 밑 띠만 그린다.
+- 빌드·가드: 앱 Debug 빌드 성공(`debug-build.log`), 경계 가드·구조 지표 통과. 네 제품 빌드, 실기기 설치·화면은 하지 않았다.
+- 제한: 일일 카드는 합칠 때까지 모자만 보인다(`temp.md`). 샤워 장면에서 모자가 샤워기 앞에 겹치는 것은 이번 변경 전부터 있는 그림 순서라 고치지 않았다. 착용 해제 동작은 없다.

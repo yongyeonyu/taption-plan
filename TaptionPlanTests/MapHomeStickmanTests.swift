@@ -10,19 +10,75 @@ import TaptionPlanCore
 @MainActor
 final class MapHomeStickmanTests: XCTestCase {
     /// `TAPTION_RIG_SHEET=<폴더>`일 때 그루밍 장면을 시트 한 장으로 쓴다. 자세를 눈으로 보려는 도구다.
+    /// 장면 22종을 각 8프레임씩 그린 검토 시트. 장식을 걸친 큰 그림·지도 마커 크기 그림·장식 도감을 쓴다(ACC1102A01).
     func testWriteGroomingSheetWhenRequested() throws {
         guard let folder = ProcessInfo.processInfo.environment["TAPTION_RIG_SHEET"], !folder.isEmpty else {
             throw XCTSkip("TAPTION_RIG_SHEET 없음")
         }
-        let times = stride(from: 2.0, to: 18.0, by: 2.0).map { $0 }
-        let side: CGFloat = 330
-        let sheet = UIGraphicsImageRenderer(size: CGSize(width: side * 4, height: side * 2)).image { _ in
-            for (index, sec) in times.enumerated() {
-                HwarangDiagnostics.frame(scene: .groom, sec: sec, side: side)
-                    .draw(at: CGPoint(x: CGFloat(index % 4) * side, y: CGFloat(index / 4) * side))
+        let scarves = ["jp.itsukushima", "fr.alps", "kr.hahoe", "it.amalfi"], ribbons = ["au.opera", "it.dolomites", "th.doi_inthanon", "es.teide"]
+        let hats = ["Hat_kr_namsan", "Hat_gb_bigben", "Hat_kr_gyeongbokgung", "Hat_th_grand_palace"]
+        func sheet(small: Bool, name: String) throws {
+            let side: CGFloat = 220, scenes = HwarangScene.allCases
+            let image = UIGraphicsImageRenderer(size: CGSize(width: side * 8, height: side * CGFloat(scenes.count))).image { renderer in
+                UIColor(white: 0.92, alpha: 1).setFill()
+                renderer.fill(CGRect(x: 0, y: 0, width: side * 8, height: side * CGFloat(scenes.count)))
+                for (row, scene) in scenes.enumerated() {
+                    let set = row % scarves.count
+                    for column in 0..<8 {
+                        let sec = Double(scene.totalDuration) * (Double(column) + 0.37) / 8
+                        HwarangDiagnostics.frame(
+                            scene: scene, sec: sec, side: side, small: small, hat: UIImage(named: hats[set]),
+                            scarf: HwarangClothStyle.byLandmark[scarves[set]], ribbon: HwarangClothStyle.byLandmark[ribbons[set]]
+                        ).draw(at: CGPoint(x: CGFloat(column) * side, y: CGFloat(row) * side))
+                    }
+                }
+            }
+            try XCTUnwrap(image.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent(name))
+        }
+        try sheet(small: false, name: "accessories-all-scenes.png")
+        try sheet(small: true, name: "accessories-small.png")
+        let cell: CGFloat = 120, candidates = MapHomeLandmarkCatalog.candidates
+        let catalog = UIGraphicsImageRenderer(size: CGSize(width: cell * 9, height: cell * 6)).image { renderer in
+            UIColor(white: 0.92, alpha: 1).setFill()
+            renderer.fill(CGRect(x: 0, y: 0, width: cell * 9, height: cell * 6))
+            for (index, candidate) in candidates.enumerated() {
+                guard let art = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID).flatMap({ UIImage(named: $0) }) else { continue }
+                art.draw(in: CGRect(x: CGFloat(index % 9) * cell + 6, y: CGFloat(index / 9) * cell + 12, width: cell - 12, height: (cell - 12) * 60 / 68))
             }
         }
-        try XCTUnwrap(sheet.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("groom.png"))
+        try XCTUnwrap(catalog.pngData()).write(to: URL(fileURLWithPath: folder).appendingPathComponent("accessories-catalog.png"))
+    }
+
+    /// 움직이는 동안 스카프와 리본이 몸에서 떨어져 나가거나 캔버스 밖에서 잘리지 않는다(ACC1102A01).
+    func testScarfAndRibbonStayOnTheBodyInEveryScene() throws {
+        let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"]), ribbon = try XCTUnwrap(HwarangClothStyle.byLandmark["au.opera"])
+        // 창이나 선체에 목 아래와 꼬리가 가리는 장면. 자동차는 턱 밑 띠만 앞유리 안쪽에 그린다.
+        let hidden: Set<HwarangScene> = [.subway, .train, .bus, .airplane, .boat, .carFront]
+        for small in [false, true] {
+            for scene in HwarangScene.allCases {
+                var added = 0
+                for frame in 0..<8 {
+                    let sec = Double(scene.totalDuration) * (Double(frame) + 0.37) / 8
+                    let result = HwarangDiagnostics.accessoryEscape(scene: scene, sec: sec, scarf: scarf, ribbon: ribbon, margin: 6, small: small)
+                    added = max(added, result.added)
+                    XCTAssertLessThanOrEqual(result.escaped, 12, "\(scene) \(frame) small=\(small)")
+                    XCTAssertEqual(result.clipped, 0, "\(scene) \(frame) small=\(small)")
+                }
+                if hidden.contains(scene) {
+                    XCTAssertEqual(added, 0, "\(scene)는 보이는 부위가 없어 윤곽을 넓히지 않는다")
+                } else {
+                    XCTAssertGreaterThan(added, 0, "\(scene) small=\(small)")
+                }
+            }
+        }
+    }
+
+    /// 자동차 앞유리 너머에는 턱 밑 스카프 띠가 보인다.
+    func testScarfIsVisibleThroughTheCarWindshield() throws {
+        let scarf = try XCTUnwrap(HwarangClothStyle.byLandmark["fr.alps"])
+        let bare = try XCTUnwrap(HwarangDiagnostics.frame(scene: .carFront, sec: 1, side: 146).pngData())
+        let worn = try XCTUnwrap(HwarangDiagnostics.frame(scene: .carFront, sec: 1, side: 146, scarf: scarf).pngData())
+        XCTAssertNotEqual(bare, worn)
     }
 
     func testMapActionLookupCostWithHalfMillionInactiveRecords() {

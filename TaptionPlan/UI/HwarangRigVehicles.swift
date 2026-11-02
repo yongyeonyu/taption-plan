@@ -8,10 +8,13 @@ extension HwarangPainter {
     }
 
     /// 탈것 창이나 구멍으로 얼굴만 보여 준다.
-    mutating func face(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat, _ h: HeadPose) {
+    mutating func face(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat, _ h: HeadPose, showsScarf: Bool = false) {
         let saved = lineScale
         lineScale = 1 / k
         c.saveGState(); c.translateBy(x: x, y: y); c.scaleBy(x: k, y: k)
+        if showsScarf, let scarf {
+            drawScarf(scarf, neck: HwarangNeck(head: .zero, shoulder: P(0, 30), tilt: h.tilt), swing: [], wind: 0, phase: 0, showsStrands: false)
+        }
         head(0, 0, h)
         c.restoreGState()
         lineScale = saved
@@ -45,7 +48,8 @@ extension HwarangPainter {
         fill(0xE8675A); stroke(outline, 2.2); c.beginPath(); c.move(to: P(16, 84)); cubic(18, 40, 30, 16, 58, 16); cubic(86, 16, 98, 40, 100, 84); c.closePath(); c.drawPath(using: .fillStroke)
         fill(0xCFE9F5); stroke(outline, 2); c.beginPath(); c.move(to: P(24, 84)); cubic(26, 48, 36, 25, 58, 25); cubic(80, 25, 90, 48, 92, 84); c.closePath(); c.drawPath(using: .fillStroke)
         rounded(38, 34, 40, 50, 12, fillHex: 0xB7695A, line: 1.4)
-        face(58, 57, 0.9, h)
+        // 앞유리 너머로 턱 밑 스카프 띠만 보인다. 끈은 핸들과 차체에 가려 그리지 않는다.
+        face(58, 57, 0.9, h, showsScarf: true)
         // 핸들과 핸들을 쥔 앞발
         let angle = turn * 0.35
         stroke(outline, 5.4); c.beginPath(); oval(58, 80, 16, 7); c.strokePath()
@@ -128,6 +132,27 @@ extension HwarangPainter {
         stroke(outline, 3.4); c.beginPath(); c.move(to: head); c.addLine(to: P(90, 58)); c.addLine(to: P(99, 57)); c.strokePath()
         rounded(38, 66, 20, 5, 2.5, fillHex: 0x5A4033, line: 1)
         stroke(outline, 2.4); c.beginPath(); circle(crank.x, crank.y, 5); c.strokePath()
+    }
+
+    /// 로봇 청소기. x가 움직이면 옆 솔이 돌고 뒤에 먼지가 일어난다.
+    func vacuum(_ x: CGFloat, _ sec: CGFloat, dir: CGFloat) {
+        fill(0x000000, 0.14); c.beginPath(); oval(x, groundY + 1, 42, 5); c.fillPath()
+        fill(0x3A4048); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 5, 38, 8); c.drawPath(using: .fillStroke)
+        c.beginPath(); c.addRect(CGRect(x: x - 38, y: groundY - 12, width: 76, height: 7)); fill(0x3A4048); c.fillPath()
+        stroke(outline, 2.2); c.beginPath(); c.move(to: P(x - 38, groundY - 12)); c.addLine(to: P(x - 38, groundY - 5)); c.move(to: P(x + 38, groundY - 12)); c.addLine(to: P(x + 38, groundY - 5)); c.strokePath()
+        fill(0x68727E); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 12, 38, 8); c.drawPath(using: .fillStroke)
+        let on = wrap(sec, 1) < 0.5
+        fill(on ? 0x62E08A : 0x2F8F54); stroke(outline, 1); c.beginPath(); circle(x + dir * 29, groundY - 12, 2.2); c.drawPath(using: .fillStroke)
+        // 옆 솔
+        let bx = x + dir * 33, by = groundY + 1
+        stroke(outline, 1.3); c.beginPath()
+        for i in 0..<3 { let a = sec * 16 + CGFloat(i) * tau / 3; c.move(to: P(bx, by)); c.addLine(to: P(bx + cos(a) * 7, by + sin(a) * 2.2)) }
+        c.strokePath()
+        // 먼지
+        for i in 0..<3 {
+            let z = wrap(sec * 0.9 + CGFloat(i) * 0.33, 1)
+            fill(0xB9B2A4, 0.8 * (1 - z)); c.beginPath(); circle(x - dir * (40 + z * 14), groundY - 1 - z * 7, 2 + z * 2.4); c.fillPath()
+        }
     }
 
     func cloud(_ x: CGFloat, _ y: CGFloat, _ k: CGFloat) {

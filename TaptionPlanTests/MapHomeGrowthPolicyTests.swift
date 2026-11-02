@@ -462,14 +462,70 @@ final class MapHomeGrowthPolicyTests: XCTestCase {
         XCTAssertEqual(history.season.streak, 0)
     }
 
-    func testEveryLandmarkHasHatAndOldAccessoryFallsBackToSymbol() {
-        XCTAssertEqual(MapHomeLandmarkCatalog.candidates.count, 52)
-        for candidate in MapHomeLandmarkCatalog.candidates {
-            let name = MapHomeGrowthAccessoryCatalog.hatAssetName(for: candidate.accessoryID)
+    func testEveryLandmarkHasItsAccessoryArtworkAndOldAccessoryFallsBackToSymbol() {
+        let candidates = MapHomeLandmarkCatalog.candidates
+        XCTAssertEqual(candidates.count, 52)
+        XCTAssertEqual(candidates.filter { $0.accessoryKind == .hat }.count, 17)
+        XCTAssertEqual(candidates.filter { $0.accessoryKind == .scarf }.count, 17)
+        XCTAssertEqual(candidates.filter { $0.accessoryKind == .ribbon }.count, 18)
+        for candidate in candidates {
+            let name = MapHomeGrowthAccessoryCatalog.artworkName(for: candidate.accessoryID)
             XCTAssertNotNil(name.flatMap { UIImage(named: $0) }, candidate.id)
+            XCTAssertEqual(HwarangClothStyle.byLandmark[candidate.id] == nil, candidate.accessoryKind == .hat, candidate.id)
         }
-        XCTAssertNil(MapHomeGrowthAccessoryCatalog.hatAssetName(for: "cat.accessory.001"))
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.artworkName(for: "cat.accessory.001"))
         XCTAssertNotNil(MapHomeGrowthAccessoryCatalog.symbol(for: "cat.accessory.001"))
+    }
+
+    /// 착용 칸이 하나이던 옛 저장값이 그 장식의 종류 칸으로 옮겨진다(ACC1102A01).
+    func testOldEquippedAccessoryMovesToItsKindSlot() throws {
+        func decode(_ extra: String) throws -> MapHomeGrowthSeason {
+            try JSONDecoder().decode(MapHomeGrowthSeason.self, from: Data("{\"year\":2026,\"accessories\":[]\(extra)}".utf8))
+        }
+        let hat = try decode(#","equippedAccessory":"cat.accessory.kr.namsan""#)
+        XCTAssertEqual(hat.equippedHat, "cat.accessory.kr.namsan")
+        XCTAssertEqual(hat.equippedAccessory, "cat.accessory.kr.namsan")
+        // 예전에 모자로 받은 장식이 이제 스카프·리본이 되어도 같은 id로 이어진다.
+        let scarf = try decode(#","equippedAccessory":"cat.accessory.jp.itsukushima""#)
+        XCTAssertNil(scarf.equippedHat)
+        XCTAssertEqual(scarf.equippedScarf, "cat.accessory.jp.itsukushima")
+        let ribbon = try decode(#","equippedAccessory":"cat.accessory.au.opera""#)
+        XCTAssertEqual(ribbon.equippedRibbon, "cat.accessory.au.opera")
+        // 랜드마크가 없는 옛 id는 머리 칸에 그대로 남아 심볼로 보인다.
+        let old = try decode(#","equippedAccessory":"cat.accessory.001""#)
+        XCTAssertEqual(old.equippedHat, "cat.accessory.001")
+        XCTAssertNil(try decode("").equippedAccessory)
+        // 새 칸이 있으면 옛 값은 보지 않는다.
+        let both = try decode(#","equippedAccessory":"cat.accessory.kr.namsan","equippedRibbon":"cat.accessory.au.opera""#)
+        XCTAssertNil(both.equippedHat)
+        XCTAssertEqual(both.equippedRibbon, "cat.accessory.au.opera")
+        // 다시 저장하면 새 칸으로 남고 옛 키는 없어진다.
+        let encoded = try JSONEncoder().encode(scarf)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        XCTAssertNil(object["equippedAccessory"])
+        XCTAssertEqual(try JSONDecoder().decode(MapHomeGrowthSeason.self, from: encoded), scarf)
+    }
+
+    func testOneAccessoryPerKindIsWornTogether() throws {
+        var season = MapHomeGrowthSeason(year: 2026)
+        let hat = "cat.accessory.kr.namsan", otherHat = "cat.accessory.jp.fuji"
+        let scarf = "cat.accessory.fr.alps", ribbon = "cat.accessory.au.opera"
+        season.accessories = [hat, otherHat, scarf, ribbon]
+        for id in [hat, scarf, ribbon] { XCTAssertTrue(MapHomeGrowthPolicy.equipAccessory(id, in: &season)) }
+        let outfit = try XCTUnwrap(season.equippedAccessory)
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.hatAssetName(for: outfit), "Hat_kr_namsan")
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.scarfStyle(for: outfit), HwarangClothStyle.byLandmark["fr.alps"])
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.ribbonStyle(for: outfit), HwarangClothStyle.byLandmark["au.opera"])
+        XCTAssertTrue(season.isEquipped(scarf))
+        // 같은 종류를 고르면 그 칸만 바뀐다.
+        XCTAssertTrue(MapHomeGrowthPolicy.equipAccessory(otherHat, in: &season))
+        XCTAssertFalse(season.isEquipped(hat))
+        XCTAssertEqual(MapHomeGrowthAccessoryCatalog.hatAssetName(for: season.equippedAccessory), "Hat_jp_fuji")
+        XCTAssertEqual(season.equippedScarf, scarf)
+        XCTAssertEqual(season.equippedRibbon, ribbon)
+        // 스카프 하나만 입었으면 모자 그림이 없다.
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.hatAssetName(for: scarf))
+        XCTAssertNil(MapHomeGrowthAccessoryCatalog.ribbonStyle(for: scarf))
     }
 
     func testEveryLocationDestinationHasDrawnIcon() {

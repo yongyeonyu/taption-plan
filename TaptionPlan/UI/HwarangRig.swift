@@ -489,8 +489,12 @@ struct HwarangPainter {
     let c: CGContext
     let small: Bool
     var hatImage: UIImage?
+    var scarf: HwarangClothStyle? = nil, ribbon: HwarangClothStyle? = nil
     var lineScale: CGFloat = 1
     var toes: [CGPoint] = []
+    /// 스카프 끝이 따라올 지난 머리 속도(최근 것부터)와 달리는 바람, 펄럭임 위상.
+    var scarfSwing: [CGVector] = []
+    var scarfWind: CGFloat = 0, scarfPhase: CGFloat = 0
 
     func rgb(_ hex: UInt32, _ alpha: CGFloat = 1) -> (CGFloat, CGFloat, CGFloat, CGFloat) {
         (CGFloat(hex >> 16 & 0xFF) / 255, CGFloat(hex >> 8 & 0xFF) / 255, CGFloat(hex & 0xFF) / 255, alpha)
@@ -506,7 +510,7 @@ struct HwarangPainter {
     let white: UInt32 = 0xFFFFFF
     private let farLimb: UInt32 = 0xEFE9E0
 
-    private var outlineWidth: CGFloat { (small ? 3.3 : 2.2) * lineScale }
+    var outlineWidth: CGFloat { (small ? 3.3 : 2.2) * lineScale }
 
     private func addBlobs(_ list: [Blob], grow: CGFloat = 0) {
         for b in list { circle(b.x, b.y, b.r + grow) }
@@ -575,7 +579,9 @@ struct HwarangPainter {
         toes.append(P(paw.x + 1.6, paw.y))
     }
 
-    private func tail(_ list: inout [Blob], _ base: CGPoint, _ angle: CGFloat, _ curl: CGFloat, _ amp: CGFloat, _ phase: CGFloat) {
+    /// 꼬리 마디를 덧붙이고 중심선을 돌려준다. 리본이 이 선 위에 묶인다.
+    @discardableResult
+    private func tail(_ list: inout [Blob], _ base: CGPoint, _ angle: CGFloat, _ curl: CGFloat, _ amp: CGFloat, _ phase: CGFloat) -> [CGPoint] {
         var x = base.x, y = base.y
         var points = [base], radii: [CGFloat] = [7.4]
         for i in 1...10 {
@@ -584,6 +590,7 @@ struct HwarangPainter {
             points.append(P(x, y)); radii.append(lerp(7.4, 6.2, u) + sin(u * .pi) * 0.8)
         }
         chain(&list, points, radii)
+        return points
     }
 
     private func headPath() {
@@ -701,6 +708,9 @@ struct HwarangPainter {
         c.beginPath(); addBlobs(parts); c.fillPath()
     }
 
+    /// 엎드린 자세의 꼬리 끝은 캔버스 왼쪽 끝에 가까워 리본을 뿌리 쪽으로 옮겨 잘리지 않게 한다.
+    private static let canvasEdgeRibbonAlong: CGFloat = 0.42
+
     private mutating func deskCat(_ p: Pose) {
         let br = sin(p.tp * 0.9) * 0.7, top = 59 - br, tw = sin(p.tp * 0.8) * 2
         var parts: [Blob] = []
@@ -716,7 +726,13 @@ struct HwarangPainter {
             cubic(66, top, 78, 70, 78, 84); cubic(79, 94, 76, groundY + 1, 70, groundY + 1); c.closePath()
         }, parts: parts)
         drawToes()
-        head(p.head.x + 1, groundY - (groundY - p.head.y) * 0.86 - 7, p.h)
+        if let ribbon { drawTailRibbon(ribbon, tail: tailPoints, radius: 6.3, sway: 0.25, phase: p.tp * 0.8, along: Self.canvasEdgeRibbonAlong) }
+        let headPoint = P(p.head.x + 1, groundY - (groundY - p.head.y) * 0.86 - 7)
+        if let scarf {
+            // 책상 앞 화랑이는 머리가 몸 위에 얹혀 있어 어깨 대신 몸통 윗부분을 향한다.
+            drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: P(54, sh.y + 4), tilt: p.h.tilt), swing: scarfSwing, wind: 0, phase: scarfPhase)
+        }
+        head(headPoint.x, headPoint.y, p.h)
     }
 
     private mutating func cat(_ raw: Pose) {
@@ -732,13 +748,16 @@ struct HwarangPainter {
         paint(far, fillColor: farLimb)
         toes = []
         var near: [Blob] = []
+        var tailLine: [CGPoint]
         if raw.legUp >= 0.5 {
             // 뒷다리를 든 자세: 꼬리를 먼저 따로 그려 다리 윤곽이 꼬리 위로 살아나게 한다.
             var behind: [Blob] = []
-            tail(&behind, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
+            tailLine = tail(&behind, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
             paint(behind, fillColor: white)
+            // 다리가 리본 위로 지나가도록 몸보다 먼저 묶는다.
+            if let ribbon { drawTailRibbon(ribbon, tail: tailLine, radius: 6.6, sway: raw.tw, phase: raw.tp); tailLine = [] }
         } else {
-            tail(&near, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
+            tailLine = tail(&near, P(hip.x - 7, hip.y - 3), raw.ta, raw.tc, raw.tw, raw.tp)
         }
         let spine = catmull([hip, mid, sh])
         for (i, q) in spine.enumerated() {
@@ -759,6 +778,7 @@ struct HwarangPainter {
         if !raw.foreOver { fore(&near, sh, fn, raw.foreBend) }
         paint(near, fillColor: white)
         drawToes()
+        if let ribbon, !tailLine.isEmpty { drawTailRibbon(ribbon, tail: tailLine, radius: 6.6, sway: raw.tw, phase: raw.tp) }
         // 가슴 털
         fill(0xFFF4E4); c.beginPath(); c.move(to: P(sh.x - 6, sh.y - 2)); quad(sh.x + 2, sh.y - 6, sh.x + 10, sh.y - 2)
         for q in [P(7, 6), P(4, 3), P(2, 9), P(-1, 3), P(-4, 6)] { c.addLine(to: P(sh.x + q.x, sh.y + q.y)) }
@@ -773,6 +793,9 @@ struct HwarangPainter {
             let sp = 1 + raw.spread * 0.28
             for d in [P(-3.8, -2.8), P(-0.2, -4.4), P(3.6, -2.6)] { circle(bn.x + 0.6 + d.x * sp, bn.y + d.y * sp, 1.35 + raw.spread * 0.2) }
             c.fillPath()
+        }
+        if let scarf {
+            drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: sh, tilt: raw.h.tilt), swing: scarfSwing, wind: scarfWind, phase: scarfPhase)
         }
         head(headPoint.x, headPoint.y, raw.h)
         switch raw.prop {
@@ -810,9 +833,14 @@ struct HwarangPainter {
             for q in [pawA, pawB] { for d: CGFloat in [-1.4, 1.8] { c.move(to: P(q.x + d, q.y + 4)); c.addLine(to: P(q.x + d, q.y + 0.6)) } }
             c.strokePath()
         }
+        if let ribbon { drawTailRibbon(ribbon, tail: tailPoints, radius: 6.3, sway: 0.22, phase: p.tp * 1.1, along: Self.canvasEdgeRibbonAlong) }
         var h = p.h
         if h.tilt == 0 { h.tilt = 0.03 }
-        head(82, 68 + br * 0.6 + p.drop, h)
+        let headPoint = P(82, 68 + br * 0.6 + p.drop)
+        if let scarf {
+            drawScarf(scarf, neck: HwarangNeck(head: headPoint, shoulder: P(70, 88), tilt: h.tilt), swing: [], wind: 0, phase: 0)
+        }
+        head(headPoint.x, headPoint.y, h)
     }
 
     private func letterZ(_ x: CGFloat, _ y: CGFloat, _ size: CGFloat, alpha: CGFloat) {
@@ -993,27 +1021,6 @@ struct HwarangPainter {
         c.drawPath(using: .fillStroke)
     }
 
-    /// 로봇 청소기. x가 움직이면 옆 솔이 돌고 뒤에 먼지가 일어난다.
-    private func vacuum(_ x: CGFloat, _ sec: CGFloat, dir: CGFloat) {
-        fill(0x000000, 0.14); c.beginPath(); oval(x, groundY + 1, 42, 5); c.fillPath()
-        fill(0x3A4048); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 5, 38, 8); c.drawPath(using: .fillStroke)
-        c.beginPath(); c.addRect(CGRect(x: x - 38, y: groundY - 12, width: 76, height: 7)); fill(0x3A4048); c.fillPath()
-        stroke(outline, 2.2); c.beginPath(); c.move(to: P(x - 38, groundY - 12)); c.addLine(to: P(x - 38, groundY - 5)); c.move(to: P(x + 38, groundY - 12)); c.addLine(to: P(x + 38, groundY - 5)); c.strokePath()
-        fill(0x68727E); stroke(outline, 2.2); c.beginPath(); oval(x, groundY - 12, 38, 8); c.drawPath(using: .fillStroke)
-        let on = wrap(sec, 1) < 0.5
-        fill(on ? 0x62E08A : 0x2F8F54); stroke(outline, 1); c.beginPath(); circle(x + dir * 29, groundY - 12, 2.2); c.drawPath(using: .fillStroke)
-        // 옆 솔
-        let bx = x + dir * 33, by = groundY + 1
-        stroke(outline, 1.3); c.beginPath()
-        for i in 0..<3 { let a = sec * 16 + CGFloat(i) * tau / 3; c.move(to: P(bx, by)); c.addLine(to: P(bx + cos(a) * 7, by + sin(a) * 2.2)) }
-        c.strokePath()
-        // 먼지
-        for i in 0..<3 {
-            let z = wrap(sec * 0.9 + CGFloat(i) * 0.33, 1)
-            fill(0xB9B2A4, 0.8 * (1 - z)); c.beginPath(); circle(x - dir * (40 + z * 14), groundY - 1 - z * 7, 2 + z * 2.4); c.fillPath()
-        }
-    }
-
     private func foldedMap() {
         let top: CGFloat = 78, bottom: CGFloat = 110
         let xs: [CGFloat] = [28, 46, 64, 82, 100]
@@ -1034,6 +1041,33 @@ struct HwarangPainter {
         c.fillPath()
     }
 
+    /// 스카프 끝을 움직일 지난 머리 속도와 바람을 구한다. 자세는 시각만의 함수라 과거 시각을 다시 계산한다.
+    private mutating func prepareScarfMotion(_ scene: HwarangScene, sec: CGFloat, beat: Int) {
+        func anchor(_ t: CGFloat) -> CGPoint {
+            let raw = sceneState(scene, max(0, t)).pose
+            let q = mapBody(raw.head)
+            return P(q.x + raw.headX, q.y - raw.headY)
+        }
+        let step: CGFloat = 0.07
+        var past = anchor(sec)
+        scarfSwing = (1...5).map { i in
+            let older = anchor(sec - step * CGFloat(i))
+            defer { past = older }
+            return CGVector(dx: (past.x - older.x) / step, dy: (past.y - older.y) / step)
+        }
+        let speed = scene.beats[beat].speed
+        scarfWind = switch scene {
+        case .walkLoop: 0.32
+        case .runLoop: 1.0
+        case .stroll: speed / 30 * 0.7
+        case .wheel: speed / 4.4 * 0.9
+        case .bicycle: 0.75
+        case .robotVacuum: 0.12
+        default: 0
+        }
+        scarfPhase = sec * (scarfWind > 0.5 ? 13 : 7)
+    }
+
     /// 세계 좌표(가로 146)로 장면 하나를 그린다.
     mutating func render(_ scene: HwarangScene, sec: CGFloat, facesLeft: Bool, showsBackdrop: Bool) {
         var st = sceneState(scene, sec)
@@ -1049,6 +1083,7 @@ struct HwarangPainter {
             st.pose.h.blink = wrap(sec * 0.29 + CGFloat(scene.beatCount) * 0.13, 1) < 0.035
             st.pose.squash = clamp(1 - abs(vy) * 0.0016 + (vy > 0 ? -0.012 : 0.012) * min(1, abs(vy) * 0.03), 0.9, 1.08)
         }
+        if scarf != nil { prepareScarfMotion(scene, sec: sec, beat: st.beat) }
         if showsBackdrop, scene == .stroll { trees(st.progress) }
         if scene == .wheel { wheel(st.progress) }
         if scene == .work { laptop(sec) }
@@ -1130,6 +1165,8 @@ struct HwarangSceneView: View {
     var anchorHeight: CGFloat
     var facesLeft = false
     var hatAssetName: String? = nil
+    var scarf: HwarangClothStyle? = nil
+    var ribbon: HwarangClothStyle? = nil
     var showsBackdrop = true
     /// 캣휠 안 화랑이도 다른 장면과 같은 몸통 크기로 그린다. 좁은 메뉴 칸에서는 끈다.
     var keepsBodySize = true
@@ -1152,40 +1189,11 @@ struct HwarangSceneView: View {
                 let k = size.width / Self.worldWidth
                 cg.scaleBy(x: k, y: k)
                 cg.translateBy(x: 14, y: headroom - 8)
-                var painter = HwarangPainter(c: cg, small: small, hatImage: hat)
+                var painter = HwarangPainter(c: cg, small: small, hatImage: hat, scarf: scarf, ribbon: ribbon)
                 painter.render(scene, sec: CGFloat(sec), facesLeft: facesLeft, showsBackdrop: showsBackdrop)
             }
         }
         .frame(width: Self.worldWidth * scale, height: height)
         .offset(y: anchorHeight / 2 - (ground - height / 2))
-    }
-}
-
-enum HwarangDiagnostics {
-    /// 시험용: 장면을 비트맵에 그려 칠해진 화소 수를 돌려준다.
-    /// 장면 한 프레임을 그림으로 낸다. 자세 검토 시트를 만들 때 쓴다.
-    static func frame(scene: HwarangScene, sec: Double, side: CGFloat = 438) -> UIImage {
-        UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { renderer in
-            let context = renderer.cgContext
-            context.scaleBy(x: side / 146, y: side / 146)
-            context.translateBy(x: 14, y: -8)
-            var painter = HwarangPainter(c: context, small: false, hatImage: nil)
-            painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: false)
-        }
-    }
-
-    static func paintedPixels(scene: HwarangScene, sec: Double, hat: String? = nil, side: Int = 146) -> Int {
-        var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        return pixels.withUnsafeMutableBytes { raw -> Int in
-            guard let context = CGContext(
-                data: raw.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
-                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-            ) else { return 0 }
-            context.translateBy(x: 14, y: -8)
-            var painter = HwarangPainter(c: context, small: false, hatImage: hat.flatMap { UIImage(named: $0) })
-            painter.render(scene, sec: CGFloat(sec), facesLeft: false, showsBackdrop: true)
-            let bytes = raw.bindMemory(to: UInt8.self)
-            return stride(from: 3, to: bytes.count, by: 4).reduce(0) { $0 + (bytes[$1] > 0 ? 1 : 0) }
-        }
     }
 }

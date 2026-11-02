@@ -1935,3 +1935,8 @@
 - 해결: 간격을 30~1800초·30초 단위로 넓힌다. `isBatteryMinimal`은 저장값이 아니라 15분 이상인지로 계산하고 키는 이전 빌드 호환용으로 계속 쓴다. 이전 기록의 최소 모드는 15분으로 읽는다. 저전력 프로필(정확도·거리 필터)은 15분 이상에 유지한다. 슬라이더는 드래그를 끝낼 때 한 번만 저장·수집 재시작한다.
 - 검증 기준: 간격 변환·30초 스냅·이전 저장값 단위 테스트, 앱 Debug 빌드, 가드 2개, 시뮬레이터 메뉴 화면 확인, `test.md` 기록. 백그라운드 실제 간격은 iOS가 정하므로 화면에서 보장하지 않는다.
 - 남음: 구조 지표 가드가 다른 세션 변경으로 보이는 항목 때문에 실패 중이다. 통과가 확인되면 이 항목을 지운다. 나머지 기준은 `test.md`에 기록했다.
+
+## ACC1102A01 악세사리 52개: 합칠 때 남은 일(대표)
+- 일일 카드: `MapHomeCalendarSheet.swift:2637`은 세션 A 소유라 고치지 않았다. 합친 뒤 `scarf: MapHomeGrowthAccessoryCatalog.scarfStyle(for: accessoryID), ribbon: MapHomeGrowthAccessoryCatalog.ribbonStyle(for: accessoryID)`를 더한다. 그 전까지 일일 카드에는 모자만 보인다.
+- `MapHomeView.swift:7002`의 칸 높이는 착용값이 nil인지로 정한다. 스카프나 리본만 입어도 모자 자리 높이(60)를 쓴다. 합친 뒤 `hatAssetName(for:) == nil`로 바꾼다.
+- 검증 기준: 위 두 곳 수정 뒤 앱 Debug 빌드, 실기기 화면(대표).
