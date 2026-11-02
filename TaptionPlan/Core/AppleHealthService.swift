@@ -765,20 +765,6 @@ final class AppleHealthService: @unchecked Sendable {
             ?? sample.sourceRevision.productType
     }
 
-    private func sleepDetails(in span: TimeSpan) async throws -> [HealthActual] {
-        try await sleepSessions(in: span).map { session in
-            return HealthActual(
-                id: session.id,
-                kind: "수면",
-                span: session.span,
-                duration: session.asleepDuration,
-                distanceMeters: nil,
-                energyKilocalories: nil,
-                sourceName: session.sourceNames.joined(separator: ", ")
-            )
-        }
-    }
-
     private func samples(
         type: HKSampleType,
         span: TimeSpan

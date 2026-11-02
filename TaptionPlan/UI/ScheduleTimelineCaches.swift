@@ -82,32 +82,6 @@ final class TimelineMapFitGate {
 }
 
 @MainActor
-final class TimelineRelationshipGraphCache {
-    struct Key: Equatable {
-        let timelineRevision: UInt64
-        let spanStart: TimeInterval
-        let spanEnd: TimeInterval
-        let focusNodeID: String?
-    }
-
-    private var key: Key?
-    private var graph: RecordRelationshipGraph?
-
-    func value(
-        for key: Key,
-        build: () -> RecordRelationshipGraph
-    ) -> RecordRelationshipGraph {
-        if self.key == key, let graph {
-            return graph
-        }
-        let graph = build()
-        self.key = key
-        self.graph = graph
-        return graph
-    }
-}
-
-@MainActor
 final class TimelinePhotoClusterCache {
     private var timelineRevision: UInt64?
     private var clusters: [PhotoCluster] = []

@@ -436,12 +436,6 @@ actor SensorReadingArchive {
         try await store.allReadingsLoadResult().readings
     }
 
-    func allReadingsForMigration() async throws -> [SensorReading] {
-        let result = try await store.allReadingsLoadResult()
-        guard result.isComplete else { throw Error.conflictingReading }
-        return result.readings
-    }
-
     /// 새 저장소는 보존 기간 정리를 하지 않는다(백업 단계에서 다룬다).
     func compact(now: Date = .now) async throws {
         _ = now

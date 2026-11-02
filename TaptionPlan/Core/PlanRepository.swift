@@ -171,9 +171,6 @@ enum TaptionDataDeletionFence {
         UInt64(defaults.string(forKey: generationKey) ?? "") ?? 0
     }
 
-    private static let repositoryDeletionPendingKey =
-        "TaptionPlan.repositoryDeletionPending"
-
     static func cutoff() -> Date? {
         defaults.object(forKey: cutoffKey) as? Date
     }

@@ -1323,11 +1323,6 @@ private struct TimelineDetailPanel: View {
     // Mutating the gate itself does not invalidate the detail view, unlike a
     // rapidly changing @State timestamp on every live sensor callback.
     @State private var mapFitGate = TimelineMapFitGate()
-    // The relationship graph is stable while the playhead remains inside the
-    // same focused span. Cache it so a 20 Hz playhead update only reprojects
-    // the visible detail cards instead of rebuilding every node and edge.
-    @State private var relationshipGraphCache =
-        TimelineRelationshipGraphCache()
     @State private var photoClusterCache = TimelinePhotoClusterCache()
     // Route geometry is requested by several detail cards and by MapKit in
     // the same render pass. Cache the filtered segments and coordinate
@@ -1542,50 +1537,6 @@ private struct TimelineDetailPanel: View {
                     }
                 }
         )
-    }
-
-    /// The detail graph is anchored to the item under the playhead. A
-    /// repeated rule segment resolves to its root routine, so the panel shows
-    /// the complete routine → action → automatic evidence chain instead of a
-    /// detached one-off segment.
-    private var relationshipFocusNodeID: String? {
-        guard let selection = activeSelection else {
-            guard let routine = focusedRoutineForDetail else { return nil }
-            return "routine.\(routine.id.uuidString)"
-        }
-        if let nodeID = selection.recordNodeID {
-            return nodeID
-        }
-        if let actualID = selection.actualID {
-            return "automatic.actual.\(actualID.uuidString)"
-        }
-        if let travelID = selection.travelID {
-            return "automatic.travel.\(travelID.uuidString)"
-        }
-        guard let planID = selection.planID,
-              let plan = planIndexCache.plan(
-                  id: planID,
-                  timelineRevision: model.timelineRevision,
-                  plans: model.snapshot.plans
-              ) else { return nil }
-        var current = plan
-        var visited = Set<UUID>()
-        while visited.insert(current.id).inserted {
-            if GoalRecordPolicy.isGoal(current) {
-                return "routine.\(current.id.uuidString)"
-            }
-            guard current.origin == .repeatRule,
-                  let parentID = current.parentID,
-                  let parent = planIndexCache.plan(
-                      id: parentID,
-                      timelineRevision: model.timelineRevision,
-                      plans: model.snapshot.plans
-                  ) else { break }
-            current = parent
-        }
-        return current.origin == .repeatRule
-            ? nil
-            : "action.\(current.id.uuidString)"
     }
 
     private var availableDetailSections: [TimelineDetailSection] {
