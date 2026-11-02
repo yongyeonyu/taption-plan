@@ -747,6 +747,8 @@ struct MapHomeVectorMap: UIViewRepresentable {
     let onSingleTap: (CGPoint, [String: CGPoint]) -> Void
     /// 속도 그라데이션으로 나뉜 실제 경로 구간(있으면 `activeRoute` 대신 그린다).
     var activeRouteSegments: [MapHomeVectorRoute] = []
+    /// 재생 중 코디네이터 레이어에 그릴 발자국(그리는 순서). 비어 있으면 레이어를 쓰지 않는다.
+    var layerPawprints: [MapHomeLayerPawprint] = []
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -780,6 +782,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             mapView.contentInset = contentInsets
         }
         context.coordinator.updateContent(in: mapView)
+        context.coordinator.updateMarkerLayer(in: mapView)
         context.coordinator.applyCameraCommandIfNeeded(to: mapView)
         context.coordinator.applyHeadingIfNeeded(to: mapView)
         context.coordinator.updateFrameRate(of: mapView)
@@ -818,12 +821,33 @@ struct MapHomeVectorMap: UIViewRepresentable {
             )
             parent.onPlaybackStickmanPoint(mapView.convert(coordinate, toPointTo: mapView))
             let now = ProcessInfo.processInfo.systemUptime
-            guard now - lastPlaybackViewportUptime >= 1.0 / 60.0 else { return }
+            let publishes = now - lastPlaybackViewportUptime >= Self.playbackViewportInterval
+            // 발자국 레이어는 지도와 같은 틱(최대 120Hz)에 옮긴다. SwiftUI로 가는 뷰포트만 60Hz로 묶는다.
+            guard publishes || !markerLayer.isEmpty else { return }
+            let points = projectedMarkerPoints(in: mapView)
+            markerLayer.apply(points: points, at: parent.playbackDriver.map {
+                $0.inputs.dayStart.addingTimeInterval(frame.minute * 60)
+            } ?? .distantFuture)
+            guard publishes else { return }
             lastPlaybackViewportUptime = now
-            parent.onPlaybackViewport(currentViewport(of: mapView))
+            parent.onPlaybackViewport(currentViewport(of: mapView, markerPoints: points))
         }
 
+        /// 표시 링크 틱의 흔들림으로 한 틱씩 건너뛰지 않게 2ms 여유를 둔다. 없으면 60Hz 화면에서 평가가 40Hz로 떨어졌다.
+        private static let playbackViewportInterval: TimeInterval = 1.0 / 60.0 - 0.002
         private var lastPlaybackViewportUptime: TimeInterval = 0
+        private let markerLayer = MapHomeCoordinatorMarkerLayer()
+
+        func updateMarkerLayer(in mapView: MLNMapView) {
+            let host = markerLayer.host
+            if host.superlayer == nil, !parent.layerPawprints.isEmpty {
+                host.contentsScale = mapView.traitCollection.displayScale
+                mapView.layer.addSublayer(host)
+            }
+            if host.frame != mapView.bounds { host.frame = mapView.bounds }
+            markerLayer.update(parent.layerPawprints)
+            if markerLayer.isEmpty { host.removeFromSuperlayer() }
+        }
 
         private func projectedMarkerPoints(in mapView: MLNMapView) -> [String: CGPoint] {
             let camera = mapView.camera, bounds = mapView.visibleCoordinateBounds
@@ -836,7 +860,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
             )
         }
 
-        private func currentViewport(of mapView: MLNMapView) -> MapHomeVectorViewport {
+        private func currentViewport(of mapView: MLNMapView, markerPoints: [String: CGPoint]) -> MapHomeVectorViewport {
             let span = MLNCoordinateBoundsGetCoordinateSpan(mapView.visibleCoordinateBounds)
             let camera = mapView.camera
             return MapHomeVectorViewport(
@@ -845,7 +869,7 @@ struct MapHomeVectorMap: UIViewRepresentable {
                 cameraDistance: max(camera.altitude, 1),
                 heading: camera.heading,
                 pitch: camera.pitch,
-                markerPoints: projectedMarkerPoints(in: mapView)
+                markerPoints: markerPoints
             )
         }
         private weak var mapView: MLNMapView?

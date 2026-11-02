@@ -308,6 +308,7 @@
 		A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */; };
 		A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */; };
 		A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */; };
+		A1000000000000000B1102C2 /* MapHomeCoordinatorMarkerLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102C2 /* MapHomeCoordinatorMarkerLayer.swift */; };
 		A1000000000000000B1102C1 /* MapHomeMapGestureSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102C1 /* MapHomeMapGestureSupport.swift */; };
 		A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B1102F8 /* MapHomeBottomBar.swift */; };
 		A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000000000000000B110301 /* MapHomeHomeNames.swift */; };
@@ -699,6 +700,7 @@
 		F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionOnboardingSheet.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeAllowancePolicy.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeWideLayoutPolicy.swift; sourceTree = "<group>"; };
+		F1000000000000000B1102C2 /* MapHomeCoordinatorMarkerLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeCoordinatorMarkerLayer.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102C1 /* MapHomeMapGestureSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeMapGestureSupport.swift; sourceTree = "<group>"; };
 		F1000000000000000B1102F8 /* MapHomeBottomBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeBottomBar.swift; sourceTree = "<group>"; };
 		F1000000000000000B110301 /* MapHomeHomeNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapHomeHomeNames.swift; sourceTree = "<group>"; };
@@ -998,6 +1000,7 @@
 				F1000000000000000B1102E4 /* PermissionOnboardingSheet.swift */,
 				F1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift */,
 				F1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift */,
+				F1000000000000000B1102C2 /* MapHomeCoordinatorMarkerLayer.swift */,
 				F1000000000000000B1102C1 /* MapHomeMapGestureSupport.swift */,
 				F1000000000000000B1102F8 /* MapHomeBottomBar.swift */,
 				F1000000000000000B110301 /* MapHomeHomeNames.swift */,
@@ -1632,6 +1635,7 @@
 				A1000000000000000B1102E4 /* PermissionOnboardingSheet.swift in Sources */,
 				A1000000000000000B1102E8 /* MapHomeAllowancePolicy.swift in Sources */,
 				A1000000000000000B1102F7 /* MapHomeWideLayoutPolicy.swift in Sources */,
+				A1000000000000000B1102C2 /* MapHomeCoordinatorMarkerLayer.swift in Sources */,
 				A1000000000000000B1102C1 /* MapHomeMapGestureSupport.swift in Sources */,
 				A1000000000000000B1102F8 /* MapHomeBottomBar.swift in Sources */,
 				A1000000000000000B110301 /* MapHomeHomeNames.swift in Sources */,
