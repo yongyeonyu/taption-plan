@@ -156,7 +156,7 @@ struct AppShellView: View {
         .onChange(of: model.sensorCollectionSessionID) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
-        .onChange(of: model.snapshot.updatedAt) { _, _ in
+        .onChange(of: model.snapshotSavedAt) { _, _ in
             Task { await reconcileSensorLiveActivity() }
         }
         .onReceive(Self.liveActivityTicker) { _ in

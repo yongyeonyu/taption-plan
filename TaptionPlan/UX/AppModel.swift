@@ -72,58 +72,71 @@ final class AppModel {
     var pendingSetupCategoryIDs: Set<String> = []
     var isEditingSetupCategories = false
 
-    var snapshot: TaptionDataSnapshot = .empty {
-        didSet {
-            if isRevertingSnapshotAfterRepositoryFailure { return }
-            if repositoryLoadFailed || isStartupSnapshotPartial {
-                isRevertingSnapshotAfterRepositoryFailure = true
-                timestampOnlySnapshotAssignment = false
-                snapshot = oldValue
-                isRevertingSnapshotAfterRepositoryFailure = false
-                return
-            }
-            if timestampOnlySnapshotAssignment {
-                timestampOnlySnapshotAssignment = false
-                if oldValue.updatedAt != snapshot.updatedAt {
-                    snapshotRevision &+= 1
-                    activityClassificationRevisionFence.advance(to: snapshotRevision)
-                }
-                return
-            }
-            if oldValue == snapshot {
-                timestampOnlySnapshotAssignment = false
-                return
-            }
-            snapshotRevision &+= 1
-            activityClassificationRevisionFence.advance(to: snapshotRevision)
+    /// 앱 데이터 전체. 관찰을 직접 다룬다: 저장 뒤 `updatedAt`만 바뀐 대입은 관찰자를 깨우지 않아,
+    /// 내용이 그대로인 저장이 지도 홈 전체를 다시 평가하지 않는다(ARC1103A01).
+    var snapshot: TaptionDataSnapshot {
+        get {
+            access(keyPath: \.snapshot)
+            return snapshotStorage
+        }
+        set { commitSnapshot(newValue) }
+    }
+    @ObservationIgnored private var snapshotStorage: TaptionDataSnapshot = .empty
+    /// 마지막으로 바뀐 `snapshot.updatedAt`. 저장 시각을 지켜보는 화면은 `snapshot` 대신 이것을 읽는다.
+    private(set) var snapshotSavedAt: Date = .distantPast
+    /// 내용이 바뀔 때만 오른다. `snapshotRevision`과 달리 시각만 바뀐 저장에는 오르지 않는다.
+    @ObservationIgnored private(set) var snapshotContentRevision: UInt64 = 0
 
-            // Device snapshots are frequent. Keep a separate revision for
-            // changes that alter rows, blocks or their detail targets so the
-            // Gantt layout cache survives ordinary live collection.
-            if oldValue.actuals != snapshot.actuals
-                || oldValue.places != snapshot.places
-                || oldValue.travel != snapshot.travel {
-                dayProjectionRevision &+= 1
-                needsLocalRecordNormalization = true
+    private func commitSnapshot(_ newValue: TaptionDataSnapshot) {
+        let isTimestampOnly = timestampOnlySnapshotAssignment
+        timestampOnlySnapshotAssignment = false
+        if repositoryLoadFailed || isStartupSnapshotPartial { return }
+        let oldValue = snapshotStorage
+        if isTimestampOnly {
+            snapshotStorage = newValue
+            if oldValue.updatedAt != newValue.updatedAt {
+                snapshotRevision &+= 1
+                activityClassificationRevisionFence.advance(to: snapshotRevision)
+                snapshotSavedAt = newValue.updatedAt
             }
-            if oldValue.settings.activityCorrections != snapshot.settings.activityCorrections
-                || oldValue.settings.confirmedSleepSpans != snapshot.settings.confirmedSleepSpans {
-                needsLocalRecordNormalization = true
-            }
-            if oldValue.weather != snapshot.weather
-                || oldValue.plans != snapshot.plans
-                || oldValue.actuals != snapshot.actuals
-                || oldValue.travel != snapshot.travel
-                || oldValue.places != snapshot.places
-                || oldValue.calendarEvents != snapshot.calendarEvents
-                || oldValue.photos != snapshot.photos
-                || oldValue.categories != snapshot.categories
-                || oldValue.recordLinks != snapshot.recordLinks
-                || oldValue.memos != snapshot.memos
-                || oldValue.settings.timelineRowOrder
-                    != snapshot.settings.timelineRowOrder {
-                timelineRevision &+= 1
-            }
+            return
+        }
+        if oldValue == newValue {
+            snapshotStorage = newValue
+            return
+        }
+        withMutation(keyPath: \.snapshot) { snapshotStorage = newValue }
+        snapshotRevision &+= 1
+        snapshotContentRevision &+= 1
+        activityClassificationRevisionFence.advance(to: snapshotRevision)
+        if oldValue.updatedAt != newValue.updatedAt { snapshotSavedAt = newValue.updatedAt }
+
+        // Device snapshots are frequent. Keep a separate revision for
+        // changes that alter rows, blocks or their detail targets so the
+        // Gantt layout cache survives ordinary live collection.
+        if oldValue.actuals != newValue.actuals
+            || oldValue.places != newValue.places
+            || oldValue.travel != newValue.travel {
+            dayProjectionRevision &+= 1
+            needsLocalRecordNormalization = true
+        }
+        if oldValue.settings.activityCorrections != newValue.settings.activityCorrections
+            || oldValue.settings.confirmedSleepSpans != newValue.settings.confirmedSleepSpans {
+            needsLocalRecordNormalization = true
+        }
+        if oldValue.weather != newValue.weather
+            || oldValue.plans != newValue.plans
+            || oldValue.actuals != newValue.actuals
+            || oldValue.travel != newValue.travel
+            || oldValue.places != newValue.places
+            || oldValue.calendarEvents != newValue.calendarEvents
+            || oldValue.photos != newValue.photos
+            || oldValue.categories != newValue.categories
+            || oldValue.recordLinks != newValue.recordLinks
+            || oldValue.memos != newValue.memos
+            || oldValue.settings.timelineRowOrder
+                != newValue.settings.timelineRowOrder {
+            timelineRevision &+= 1
         }
     }
     @ObservationIgnored var snapshotRevision: UInt64 = 0
@@ -142,8 +155,6 @@ final class AppModel {
     @ObservationIgnored var timelineRevision: UInt64 = 0
     var backupRestoreRevision: UInt64 = 0
     @ObservationIgnored var timestampOnlySnapshotAssignment = false
-    @ObservationIgnored private var isRevertingSnapshotAfterRepositoryFailure =
-        false
     @ObservationIgnored var needsLocalRecordNormalization = true
     var isBootstrapped = false
     var hasPreparedStartupSettings = false
