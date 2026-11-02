@@ -29,6 +29,18 @@ final class StableRecordIDTests: XCTestCase {
         }
     }
 
+    func testIndexMixedFNVKeepsStoredIDs() {
+        let expected: [(String, String)] = [
+            ("", "2C902C51-BFA7-567E-AC7E-1B17643786E7"),
+            ("a", "97E6329E-3EB5-5F77-8731-B429B38A9BDA"),
+            ("1|1785369600|1785373200", "DAB32650-53A5-5696-9270-C4EAE9678CFC"),
+            ("걷기.지하철|집", "A3CFF01E-FD77-5741-83D0-1446C4079C0B"),
+        ]
+        for (seed, id) in expected {
+            XCTAssertEqual(StableRecordID.indexMixedFNV(seed).uuidString, id, seed)
+        }
+    }
+
     func testFoldedFNVKeepsStoredIDs() {
         let expected: [(String, String)] = [
             ("", "00000000-0000-5000-8000-000000000000"),

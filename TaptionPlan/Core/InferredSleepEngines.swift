@@ -91,23 +91,7 @@ enum ChargingInactivitySleepEngine {
 
     private static func stableID(_ span: TimeSpan) -> UUID {
         let key = "\(modelVersion)|\(Int(span.start.timeIntervalSince1970))|\(Int(span.end.timeIntervalSince1970))"
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for byte in key.utf8 {
-            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
-        }
-        for index in bytes.indices {
-            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3],
-            bytes[4], bytes[5], bytes[6], bytes[7],
-            bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.indexMixedFNV(key)
     }
 }
 
@@ -318,21 +302,6 @@ enum PhoneSleepWakeEngine {
 
     private static func stableID(for span: TimeSpan) -> UUID {
         let key = "\(modelVersion)|\(Int(span.start.timeIntervalSince1970))|\(Int(span.end.timeIntervalSince1970))"
-        var hash: UInt64 = 14_695_981_039_346_656_037
-        var bytes = [UInt8](repeating: 0, count: 16)
-        for byte in key.utf8 {
-            hash = (hash ^ UInt64(byte)) &* 1_099_511_628_211
-        }
-        for index in bytes.indices {
-            hash = (hash ^ UInt64(index + 1)) &* 1_099_511_628_211
-            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
-        }
-        bytes[6] = (bytes[6] & 0x0F) | 0x50
-        bytes[8] = (bytes[8] & 0x3F) | 0x80
-        return UUID(uuid: (
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
-            bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
-            bytes[12], bytes[13], bytes[14], bytes[15]
-        ))
+        return StableRecordID.indexMixedFNV(key)
     }
 }

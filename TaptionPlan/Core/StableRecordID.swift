@@ -19,7 +19,7 @@ enum StableRecordID {
         return version5UUID(bytes)
     }
 
-    /// 앱 사용 기록.
+    /// 앱 사용 기록과 움직임 활동.
     static func goldenMixedFNV(_ key: String) -> UUID {
         var hash = fnvOffset
         var bytes = [UInt8](repeating: 0, count: 16)
@@ -30,6 +30,20 @@ enum StableRecordID {
         for index in bytes.indices {
             hash ^= UInt64(index + 1) * 0x9E37_79B9
             hash = hash &* fnvPrime
+            bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
+        }
+        return version5UUID(bytes)
+    }
+
+    /// 추정 수면.
+    static func indexMixedFNV(_ key: String) -> UUID {
+        var hash = fnvOffset
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for byte in key.utf8 {
+            hash = (hash ^ UInt64(byte)) &* fnvPrime
+        }
+        for index in bytes.indices {
+            hash = (hash ^ UInt64(index + 1)) &* fnvPrime
             bytes[index] = UInt8(truncatingIfNeeded: hash >> ((index % 8) * 8))
         }
         return version5UUID(bytes)
