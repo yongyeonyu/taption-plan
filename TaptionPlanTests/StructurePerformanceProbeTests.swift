@@ -150,6 +150,49 @@ final class StructurePerformanceProbeTests: XCTestCase {
         report("model.init", milliseconds { _ = makeModel() })
     }
 
+    /// `performSensorTimelineRefresh`가 main에서 돌리는 하루치 계산(합친 뒤 A안의 근거).
+    func testProbeDayDerivationOnMain() {
+        let large = largeSnapshot()
+        let start = Date(timeIntervalSince1970: 1_780_000_000)
+        let readings = (0..<1_440).map { index in
+            SensorReading(
+                timestamp: start.addingTimeInterval(Double(index) * 60),
+                point: GeoPoint(
+                    latitude: 37 + Double(index / 60) * 0.002, longitude: 127,
+                    altitude: 30, horizontalAccuracy: 12, verticalAccuracy: 8
+                ),
+                gpsAvailable: true
+            )
+        }
+        report("derive.readingsCount", Double(readings.count), unit: "rows")
+        var stays: [PlaceStay] = []
+        report("derive.detectStays", milliseconds(repeating: 2) {
+            stays = PlaceDetectionEngine().detectStays(readings: readings, knownNames: [:])
+        })
+        report("derive.staysCount", Double(stays.count), unit: "rows")
+        report("derive.floorTimeline", milliseconds(repeating: 2) {
+            _ = FloorTimelineEngine().apply(readings: readings, to: stays, knownPlaces: large.places)
+        })
+        report("derive.walkingLocations", milliseconds(repeating: 2) {
+            _ = WalkingLocationEngine().build(readings: readings)
+        })
+        var places = large.places
+        report("derive.placesSort28k", milliseconds(repeating: 2) {
+            places.sort { $0.span.start < $1.span.start }
+        })
+        let shuffledReadings = readings.shuffled()
+        report("sort.readings1440", milliseconds(repeating: 3) {
+            _ = shuffledReadings.sorted { $0.timestamp < $1.timestamp }
+        })
+        report("filter.readings1440", milliseconds(repeating: 3) {
+            _ = readings.filter(\.gpsAvailable)
+        })
+    }
+
+    func testProbeMapHomeViewSize() {
+        report("stride.MapHomeView", Double(MemoryLayout<MapHomeView>.stride), unit: "bytes")
+    }
+
     // MARK: 저장소
 
     private func makeRepository() throws -> (TaptionStoreRepository, URL) {
@@ -184,6 +227,9 @@ final class StructurePerformanceProbeTests: XCTestCase {
             best = min(best, Double(parts.seconds) * 1_000 + Double(parts.attoseconds) / 1e15)
         }
         report("repository.load", best)
+        report("repository.bodyBytesPlaces", Double(try value.places.reduce(0) { total, place in
+            total + (try JSONEncoder().encode(place).count)
+        }), unit: "bytes")
     }
 
     func testProbePlaceDecodeStrategies() throws {
@@ -266,6 +312,13 @@ final class StructurePerformanceProbeTests: XCTestCase {
         try await measure("saveToken") { index in
             model.sensorSaveToken = index + 100
         }
+        var routeReadings = (0..<4_000).map { index in
+            SensorReading(timestamp: base.addingTimeInterval(Double(index)))
+        }
+        try await measure("liveRoute4000") { index in
+            routeReadings.append(SensorReading(timestamp: base.addingTimeInterval(Double(5_000 + index))))
+            model.liveRouteState.readings = routeReadings
+        }
         try await measure("heartRate") { index in
             model.latestHeartRate = Double(60 + index)
         }
@@ -278,4 +331,144 @@ private final class FireCounter: @unchecked Sendable {
     var value: Int { lock.withLock { count } }
     func add() { lock.withLock { count += 1 } }
     func reset() { lock.withLock { count = 0 } }
+}
+
+/// 시각만 바뀐 저장이 관찰자를 깨우지 않는 계약과, 저장소 건너뛰기가 변경을 놓치지 않는 계약(ARC1103A01).
+@MainActor
+final class SnapshotObservationTests: XCTestCase {
+    private func makeModel() -> AppModel {
+        AppModel(repository: InMemoryPlanRepository(), cloudSyncService: nil, registersHealthBackgroundHandler: false)
+    }
+
+    private func firing(on model: AppModel, _ read: @escaping () -> Void, during write: () -> Void) -> Int {
+        let counter = FireCounter()
+        withObservationTracking { read() } onChange: { counter.add() }
+        write()
+        return counter.value
+    }
+
+    func testTimestampOnlyAssignmentWakesOnlySavedAtObservers() {
+        let model = makeModel()
+        let revision = model.snapshotRevision
+        let contentRevision = model.snapshotContentRevision
+        var stamped = model.snapshot
+        stamped.updatedAt = Date(timeIntervalSince1970: 1_790_000_000)
+        let write = {
+            model.timestampOnlySnapshotAssignment = true
+            model.snapshot = stamped
+        }
+        var snapshotFires = 0
+        var savedAtFires = 0
+        snapshotFires = firing(on: model, { _ = model.snapshot }) {
+            savedAtFires = firing(on: model, { _ = model.snapshotSavedAt }, during: write)
+        }
+        XCTAssertEqual(snapshotFires, 0)
+        XCTAssertEqual(savedAtFires, 1)
+        XCTAssertEqual(model.snapshot.updatedAt, stamped.updatedAt, "새 시각은 값에 그대로 들어가야 한다")
+        XCTAssertEqual(model.snapshotSavedAt, stamped.updatedAt)
+        XCTAssertGreaterThan(model.snapshotRevision, revision, "저장 순서 울타리는 그대로 오른다")
+        XCTAssertEqual(model.snapshotContentRevision, contentRevision)
+        XCTAssertFalse(model.timestampOnlySnapshotAssignment)
+    }
+
+    func testContentChangeWakesObserversAndRaisesContentRevision() {
+        let model = makeModel()
+        let contentRevision = model.snapshotContentRevision
+        let fires = firing(on: model, { _ = model.snapshot }) {
+            model.snapshot.settings.recentCarAudioNames = ["변경"]
+        }
+        XCTAssertEqual(fires, 1)
+        XCTAssertEqual(model.settings.recentCarAudioNames, ["변경"])
+        XCTAssertGreaterThan(model.snapshotContentRevision, contentRevision)
+    }
+
+    func testSameValueDoesNotWakeObservers() {
+        let model = makeModel()
+        let contentRevision = model.snapshotContentRevision
+        let same = model.snapshot
+        let fires = firing(on: model, { _ = model.snapshot }) { model.snapshot = same }
+        XCTAssertEqual(fires, 0)
+        XCTAssertEqual(model.snapshotContentRevision, contentRevision)
+    }
+
+    func testFailedRepositoryLoadRejectsWrites() {
+        let model = makeModel()
+        model.repositoryLoadFailed = true
+        model.snapshot.settings.recentCarAudioNames = ["쓰면 안 됨"]
+        XCTAssertEqual(model.settings.recentCarAudioNames, [])
+    }
+
+    // MARK: 저장소
+
+    private func makeRepository(at root: URL) throws -> TaptionStoreRepository {
+        try TaptionStoreRepository(store: TaptionStoreV2(url: root.appendingPathComponent("store.sqlite")))
+    }
+
+    private func temporaryRoot() throws -> URL {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("arc-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        return root
+    }
+
+    private func stay(_ name: String, at seconds: TimeInterval) -> PlaceStay {
+        let start = Date(timeIntervalSince1970: 1_790_000_000 + seconds)
+        return PlaceStay(
+            placeKey: name, displayName: name,
+            span: TimeSpan(start: start, end: start.addingTimeInterval(60)), confidence: .medium
+        )
+    }
+
+    func testUnchangedSaveEncodesNothingAndChangedRowsStillReachDisk() async throws {
+        let root = try temporaryRoot()
+        let repository = try makeRepository(at: root)
+        var value = TaptionDataSnapshot.empty
+        value.updatedAt = Date(timeIntervalSince1970: 1_790_000_000)
+        value.places = [stay("가", at: 0), stay("나", at: 100), stay("다", at: 200)]
+        try await repository.save(value)
+        await repository.resetEncodedItemCountForTesting()
+
+        value.updatedAt = value.updatedAt.addingTimeInterval(1)
+        try await repository.save(value)
+        let encodedUnchanged = await repository.encodedItemCountForTesting()
+        XCTAssertEqual(encodedUnchanged, 0)
+
+        // 한 행 수정, 한 행 삭제, 한 행 추가가 다음 저장에서 모두 디스크에 간다.
+        value.places[0].displayName = "가-수정"
+        value.places.remove(at: 1)
+        value.places.append(stay("라", at: 300))
+        value.updatedAt = value.updatedAt.addingTimeInterval(1)
+        try await repository.save(value)
+        let encodedChanged = await repository.encodedItemCountForTesting()
+        XCTAssertEqual(encodedChanged, 2)
+
+        // 메모리 압력 뒤에도 변경을 놓치지 않는다.
+        await repository.handleMemoryPressure()
+        value.places[0].displayName = "가-다시"
+        value.updatedAt = value.updatedAt.addingTimeInterval(1)
+        try await repository.save(value)
+
+        let fresh = try makeRepository(at: root)
+        let loaded = try await fresh.load()
+        XCTAssertEqual(Set(loaded.places), Set(value.places))
+        XCTAssertEqual(loaded.updatedAt, value.updatedAt)
+    }
+
+    /// 같은 내용으로 되돌려도(지문이 예전 값과 같아도) 저장돼야 한다.
+    func testRevertingARowToItsEarlierValueReachesDisk() async throws {
+        let root = try temporaryRoot()
+        let repository = try makeRepository(at: root)
+        var value = TaptionDataSnapshot.empty
+        value.updatedAt = Date(timeIntervalSince1970: 1_790_000_000)
+        value.places = [stay("가", at: 0)]
+        try await repository.save(value)
+        let original = value.places[0]
+        value.places[0].displayName = "바뀜"
+        try await repository.save(value)
+        value.places[0] = original
+        try await repository.save(value)
+
+        let loaded = try await makeRepository(at: root).load()
+        XCTAssertEqual(loaded.places, [original])
+    }
 }
